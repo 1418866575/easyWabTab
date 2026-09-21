@@ -11,7 +11,7 @@ import type { DialogId } from '@/stores/settings'
 import type { WorkbenchMenuItem } from '@/composables/workbenchMenuCore'
 import { useAppSettingsDialog } from '@/composables/useAppSettingsDialog'
 import { useToast } from '@/composables/useToast'
-import { idbGet, idbPut, idbImportAll, idbExportAll } from '@/composables/useIdb'
+import { idbGet, idbPut, idbImportAll, idbExportAll, idbClear, IDB_STUDENT_STORES, IDB_CORE_STORES, IDB_AUX_STORES, IDB_ICONS_STORES, WORKBENCH_PREFS_KEYS } from '@/composables/useIdb'
 import { localDateKey } from '@/composables/businessCore'
 import { isEmailConfigured, buildEmailParams } from '@/composables/reminderCore'
 import { sendReminderEmail } from '@/composables/reminderEmail'
@@ -60,7 +60,7 @@ const DIALOG_IDS = Object.keys(DIALOG_DEFAULTS) as DialogId[]
 // 当前激活的设置分组 tab（导航设置 / 工作台设置 / 提醒设置 / 销售记账 / 学生工作台 / 云同步）
 type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'sync'
 // 子 tab keys：每个主 tab 下的子分组（仅内容多的主 tab 定义）
-type NavSubTab = 'nav-appearance' | 'nav-display' | 'nav-site' | 'nav-size'
+type NavSubTab = 'nav-appearance' | 'nav-display' | 'nav-site' | 'nav-size' | 'nav-data'
 type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-cat' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
 type BizSubTab = 'biz-base' | 'biz-backup'
 type StuSubTab = 'stu-stage' | 'stu-info' | 'stu-subject' | 'stu-menu'
@@ -99,7 +99,8 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student', SubTabDef[]> = {
     { key: 'nav-appearance', label: '站点外观' },
     { key: 'nav-display', label: '显示控制' },
     { key: 'nav-site',    label: '站点管理' },
-    { key: 'nav-size',    label: '弹窗尺寸' }
+    { key: 'nav-size',    label: '弹窗尺寸' },
+    { key: 'nav-data',    label: '数据清理' }
   ],
   wb: [
     { key: 'wb-city',     label: '天气城市' },
@@ -192,7 +193,8 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: 'nav-appearance', label: '站点外观', icon: 'monitor', tab: 'nav', sub: 'nav-appearance' },
       { key: 'nav-site', label: '站点管理', icon: 'folder', tab: 'nav', sub: 'nav-site' },
-      { key: 'nav-size', label: '弹窗尺寸', icon: 'package', tab: 'nav', sub: 'nav-size' }
+      { key: 'nav-size', label: '弹窗尺寸', icon: 'package', tab: 'nav', sub: 'nav-size' },
+      { key: 'nav-data', label: '数据清理', icon: 'trash', tab: 'nav', sub: 'nav-data' }
     ]
   },
   {
@@ -630,6 +632,58 @@ function commitCity(): void {
 // 数据存 IDB store 'snapshots'（不进 JSON 备份导出）；恢复流程镜像 WorkbenchView.handleImportFile
 // ========================================
 const toast = useToast()
+
+// ============ 数据清理（导航设置 - 数据清理子标签）============
+// 危险操作：清空各模块数据需二次确认弹框。清空后 reload 让内存状态从空库重载。
+type ClearTarget = 'workbench' | 'business' | 'student' | 'all'
+const clearConfirmVisible = ref(false)
+const clearTarget = ref<ClearTarget | null>(null)
+const CLEAR_SCOPE: Record<ClearTarget, string> = {
+  workbench: '个人工作台全部数据（待办、笔记、日记、倒计时、密码、健康、记账、家谱、设置等），包含本应用设置，此操作不可恢复。',
+  business: '销售记账全部数据（仅 business 信封），此操作不可恢复。',
+  student: '学生工作台全部数据（各模块及图片），此操作不可恢复。',
+  all: '全部数据（个人工作台 + 记账 + 学生工作台 + 自定义图标 + 云同步凭据），并将应用彻底恢复出厂设置，此操作不可恢复。'
+}
+const clearScopeText = computed(() => clearTarget.value ? CLEAR_SCOPE[clearTarget.value] : '')
+
+function confirmClear(target: ClearTarget) {
+  clearTarget.value = target
+  clearConfirmVisible.value = true
+}
+
+async function doClear() {
+  const target = clearTarget.value
+  clearConfirmVisible.value = false
+  if (!target) return
+  try {
+    if (target === 'workbench') {
+      // 清个人工作台全部 store（含 settings），但不清 business / student / 自定义图标
+      const stores = [...IDB_CORE_STORES.filter(st => st !== 'business'), ...IDB_AUX_STORES]
+      for (const st of stores) await idbClear(st)
+    } else if (target === 'business') {
+      await idbClear('business')
+    } else if (target === 'student') {
+      for (const st of IDB_STUDENT_STORES) await idbClear(st)
+    } else {
+      // 一键清空：彻底恢复出厂。逐个清空所有 object store（避免 deleteDatabase 被其它标签页连接阻塞），
+      // 再清导航偏好与云同步本地凭据，效果等同删库重置。
+      const allStores = [...IDB_CORE_STORES, ...IDB_AUX_STORES, ...IDB_ICONS_STORES, ...IDB_STUDENT_STORES]
+      for (const st of allStores) {
+        try { await idbClear(st) } catch { /* 忽略单 store 失败，继续清其余 */ }
+      }
+      for (const k of WORKBENCH_PREFS_KEYS) localStorage.removeItem(k)
+      // 清云同步本地状态（clientId / dirty / 各信封 remoteTs / 上次同步时间）
+      Object.keys(localStorage)
+        .filter(k => k.startsWith('ewt.cloudSync.') || k === 'easy-web-tab-client-id' || k === 'easy-web-tab-last-sync' || k === 'easy-web-tab-dirty')
+        .forEach(k => localStorage.removeItem(k))
+    }
+    toast.success('已清空，正在刷新…')
+    setTimeout(() => location.reload(), 400)
+  } catch (e) {
+    console.error('[数据清理] 失败:', e)
+    toast.error('清空失败：' + (e instanceof Error ? e.message : String(e)))
+  }
+}
 const snapshotList = ref<SnapshotWithSource[]>([])
 const snapshotBusy = ref(false)
 
@@ -1729,6 +1783,19 @@ onUnmounted(() => {
           />
         </div>
 
+        <!-- 数据清理（导航设置 tab - 数据清理）：危险操作，清空各模块数据，需二次确认 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-data'" class="wb-menu-config">
+          <h3 class="wb-menu-title">数据清理</h3>
+          <p class="wb-menu-hint">以下操作将永久删除对应模块的数据且不可恢复，请谨慎操作。建议先到「站点管理」做好备份。</p>
+          <div class="site-actions-grid" data-testid="stg-data-actions">
+            <button type="button" class="site-action-btn" data-testid="stg-clear-wb" @click="confirmClear('workbench')"><Icon name="trash" /> 清空个人工作台</button>
+            <button type="button" class="site-action-btn" data-testid="stg-clear-biz" @click="confirmClear('business')"><Icon name="trash" /> 清空记账管理</button>
+            <button type="button" class="site-action-btn" data-testid="stg-clear-stu" @click="confirmClear('student')"><Icon name="trash" /> 清空学生工作台</button>
+            <button type="button" class="site-action-btn danger" data-testid="stg-clear-all" @click="confirmClear('all')"><Icon name="alert" /> 一键清空所有数据</button>
+          </div>
+          <p class="wb-menu-hint danger-hint">⚠ 「一键清空所有数据」为危险操作：将彻底恢复出厂（个人工作台 + 记账 + 学生工作台 + 自定义图标 + 云同步凭据），不可恢复。</p>
+        </div>
+
         <!-- 天气城市（工作台设置 tab - 天气城市）：配置工作台天气卡显示城市；留空 = 未配置（天气卡显示占位） -->
         <div v-if="activeTab === 'wb' && activeSubTab === 'wb-city'" class="wb-city-config">
           <div class="wb-menu-head">
@@ -2631,6 +2698,25 @@ onUnmounted(() => {
     <CloudSyncConflictModal v-if="cloudSync.conflictData.value" />
   </div>
   </Transition>
+
+    <!-- 数据清理二次确认弹框（危险操作） -->
+    <el-dialog
+      v-model="clearConfirmVisible"
+      title="确认清空数据"
+      width="420px"
+      align-center
+    >
+      <div class="clear-confirm">
+        <p class="clear-confirm-warn">⚠ 危险操作，不可恢复</p>
+        <p class="clear-confirm-scope">{{ clearScopeText }}</p>
+      </div>
+      <template #footer>
+        <div class="ewt-dialog-footer">
+          <el-button @click="clearConfirmVisible = false">取消</el-button>
+          <el-button type="danger" @click="doClear">确认清空</el-button>
+        </div>
+      </template>
+    </el-dialog>
 </template>
 
 <style scoped>
@@ -3379,6 +3465,35 @@ html.dark .site-action-btn:hover:not(:disabled) {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-primary, #3b82f6);
+}
+
+/* 数据清理：危险按钮（红色描边，警示不可恢复） */
+.site-action-btn.danger {
+  color: #dc2626;
+  border-color: #fca5a5;
+  font-weight: 600;
+}
+.site-action-btn.danger:hover:not(:disabled) {
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border-color: #dc2626;
+}
+html.dark .site-action-btn.danger {
+  color: #f87171;
+  border-color: #7f1d1d;
+}
+html.dark .site-action-btn.danger:hover:not(:disabled) {
+  background-color: #2a1414;
+  color: #fca5a5;
+  border-color: #dc2626;
+}
+.danger-hint {
+  margin-top: 12px;
+  color: #dc2626;
+  font-weight: 600;
+}
+html.dark .danger-hint {
+  color: #f87171;
 }
 
 /* ===== 站点外观（导航设置 tab）：favicon 上传行与预览 ===== */
