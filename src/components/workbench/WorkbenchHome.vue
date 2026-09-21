@@ -267,7 +267,7 @@ async function handleQuickNote(): Promise<void> {
               <HomeLayoutCard v-if="menuOn.countdowns" card-id="upcoming" :default-w="1">
                 <section class="bento-card bento-panel">
                   <div class="panel-header">
-                    <h3><span class="panel-icon"><Icon name="countdowns" /></span>即将到期定时提醒</h3>
+                    <h3><span class="panel-icon"><Icon name="countdowns" /></span>即将到期提醒</h3>
                     <button class="nav-btn" data-testid="home-nav-countdowns" @click="navTo('countdowns')">前往 →</button>
                   </div>
                   <ul v-if="upcomingCountdowns.length > 0" class="home-list" data-testid="home-upcoming-list">
@@ -276,7 +276,7 @@ async function handleQuickNote(): Promise<void> {
                       <span class="home-list-meta" :class="statusClass(item.remaining.status)">{{ item.remaining.label }}</span>
                     </li>
                   </ul>
-                  <div v-else class="home-empty" data-testid="home-upcoming-empty">暂无即将到期的定时提醒</div>
+                  <div v-else class="home-empty" data-testid="home-upcoming-empty">暂无即将到期的提醒</div>
                 </section>
               </HomeLayoutCard>
 
@@ -285,7 +285,7 @@ async function handleQuickNote(): Promise<void> {
               </HomeLayoutCard>
 
             </div>
-            <div v-else class="home-empty" data-testid="home-action-empty">快捷添加与定时提醒功能已关闭，可在工作台菜单设置中开启</div>
+            <div v-else class="home-empty" data-testid="home-action-empty">快捷添加与提醒功能已关闭，可在工作台菜单设置中开启</div>
           </div>
 
           <!-- 第 2 屏：数据概览（统计卡；卡按 visibleStatCards 隐藏纯占位，全空时显示空态） -->
@@ -341,7 +341,7 @@ async function handleQuickNote(): Promise<void> {
                 <div class="bento-card bento-stat" data-testid="home-stats-countdowns" @click="navTo('countdowns')">
                   <div class="stat-header">
                     <span class="stat-icon"><Icon name="countdowns" :size="16" /></span>
-                    <span class="stat-label">定时提醒</span>
+                    <span class="stat-label">提醒</span>
                     <button class="nav-btn" data-testid="home-nav-countdowns" @click.stop="navTo('countdowns')">前往 →</button>
                   </div>
                   <div class="stat-value" data-testid="home-stats-value-countdowns">{{ countdownStats.total }}</div>
@@ -428,7 +428,7 @@ async function handleQuickNote(): Promise<void> {
                 <div class="bento-card bento-stat bento-stat-habits" data-testid="home-stats-habits" @click="navTo('habits')">
                   <div class="stat-header">
                     <span class="stat-icon"><Icon name="habits" :size="16" /></span>
-                    <span class="stat-label">习惯打卡</span>
+                    <span class="stat-label">打卡</span>
                     <button class="nav-btn" data-testid="home-nav-habits" @click.stop="navTo('habits')">前往 →</button>
                   </div>
                   <div class="stat-value" data-testid="home-stats-value-habits">{{ habitStats.metCount }}/{{ habitStats.total }}</div>

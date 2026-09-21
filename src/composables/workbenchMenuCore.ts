@@ -1,6 +1,6 @@
 // 工作台菜单纯逻辑模块：11 项菜单（home 恒居首位）的顺序归一化 / 上移下移 / 改名 / 解析渲染。
 // 零 vue/pinia 运行时依赖（node --experimental-strip-types 可运行），无 DOM，纯函数。
-// 默认名称逐字一致（qa-notes-tabs.spec.ts 按文本「个人便签」定位菜单，改动会破坏回归）。
+// 默认名称即菜单显示文案（逐字由 scripts/test-workbench-menu-core.ts 断言，改默认值须同步更新该测试）。
 
 /** 菜单键集合（顺序即默认展示顺序）。 */
 export const WORKBENCH_MENU_KEYS: readonly string[] = [
@@ -23,16 +23,16 @@ export const WORKBENCH_MENU_DEFAULT_ORDER: readonly string[] = [...WORKBENCH_MEN
 /** 菜单默认名称（与现状逐字一致，load-bearing）。 */
 export const MENU_DEFAULT_LABELS: Record<string, string> = {
   home: '主页',
-  todos: '工作待办',
-  notes: '个人便签',
-  diary: '日记本',
-  countdowns: '定时提醒',
+  todos: '待办',
+  notes: '便签',
+  diary: '日记',
+  countdowns: '提醒',
   pomodoro: '番茄钟',
-  habits: '习惯打卡',
-  passwords: '密码管理',
-  health: '健康管理',
+  habits: '打卡',
+  passwords: '密码',
+  health: '健康',
   ledger: '记账',
-  genealogy: '家庭家谱'
+  genealogy: '家谱'
 }
 
 /** 菜单图标映射（内联 SVG path 标识，由 Icon.vue 查表渲染；值 = Icon 表键名，非 emoji）。 */

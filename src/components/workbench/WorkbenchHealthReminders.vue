@@ -4,7 +4,7 @@ import { useCountdownsStore } from '@/stores/countdowns'
 import { calcNextOccurrence, repeatLabel } from '@/composables/countdownCore'
 
 /**
- * 健康面板「定时提醒」只读小模块（纯展示，无编辑/删除/跳转动作）。
+ * 健康面板「提醒」只读小模块（纯展示，无编辑/删除/跳转动作）。
  * 读取倒计时 store，按面板分类（exercise/diet/sleep）1:1 过滤，
  * 展示 名称 + 下次触发时间 + 重复规则，按下次触发时间升序排列。
  */
@@ -56,7 +56,7 @@ onMounted(async () => {
 
 <template>
   <div v-if="reminders.length > 0" class="health-reminders" :data-testid="`${module}-reminders`">
-    <h4 class="hr-title">定时提醒</h4>
+    <h4 class="hr-title">提醒</h4>
     <ul class="hr-list">
       <li v-for="row in reminders" :key="row.id" class="hr-item" :data-testid="`${module}-reminder-item`">
         <span class="hr-name">{{ row.name }}</span>
@@ -70,7 +70,7 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-/* ===== 定时提醒（只读小模块，视觉上从属于面板统计卡）===== */
+/* ===== 提醒（只读小模块，视觉上从属于面板统计卡）===== */
 .health-reminders {
   display: flex;
   flex-direction: column;

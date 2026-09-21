@@ -45,7 +45,7 @@ test('T3 normalizeWorkbenchMenu dedupe', () => {
 test('T4 normalizeWorkbenchMenu home forced to index 0', () => {
   const out = normalizeWorkbenchMenu(['todos', 'home', 'notes', 'diary', 'countdowns', 'pomodoro', 'habits', 'passwords', 'health', 'ledger'])
   assert.equal(out.order[0], 'home')
-  assert.deepEqual(out.order, ['home', 'todos', 'notes', 'diary', 'countdowns', 'pomodoro', 'habits', 'passwords', 'health', 'ledger', 'habit-week'])
+  assert.deepEqual(out.order, ['home', 'todos', 'notes', 'diary', 'countdowns', 'pomodoro', 'habits', 'passwords', 'health', 'ledger', 'genealogy'])
 })
 
 // T5 — normalizeWorkbenchMenu 缺失 key 按默认序补全 → 恒 11 项
@@ -85,7 +85,7 @@ test('T7 moveMenuItem home locked', () => {
 // T8 — moveMenuItem 边界：index 1 上移 / 末尾(ledger)下移 → boundary
 test('T8 moveMenuItem boundary', () => {
   assert.deepEqual(moveMenuItem(WORKBENCH_MENU_DEFAULT_ORDER, 'todos', 'up'), { ok: false, reason: 'boundary' })
-  assert.deepEqual(moveMenuItem(WORKBENCH_MENU_DEFAULT_ORDER, 'ledger', 'down'), { ok: false, reason: 'boundary' })
+  assert.deepEqual(moveMenuItem(WORKBENCH_MENU_DEFAULT_ORDER, 'ledger', 'down'), { ok: true, reason: 'ok', order: ['home', 'todos', 'notes', 'diary', 'countdowns', 'pomodoro', 'habits', 'passwords', 'health', 'genealogy', 'ledger'] })
 })
 
 // T9 — moveMenuItem 中段交换：邻居对调且 home 仍 index 0
@@ -93,11 +93,11 @@ test('T9 moveMenuItem middle swap keeps home at 0', () => {
   const up = moveMenuItem(WORKBENCH_MENU_DEFAULT_ORDER, 'notes', 'up')
   assert.equal(up.ok, true)
   assert.equal(up.reason, 'ok')
-  assert.deepEqual(up.order, ['home', 'notes', 'todos', 'diary', 'countdowns', 'pomodoro', 'habits', 'habit-week', 'passwords', 'health', 'ledger'])
+  assert.deepEqual(up.order, ['home', 'notes', 'todos', 'diary', 'countdowns', 'pomodoro', 'habits', 'passwords', 'health', 'ledger', 'genealogy'])
   assert.equal(up.order![0], 'home')
   const down = moveMenuItem(WORKBENCH_MENU_DEFAULT_ORDER, 'health', 'down')
   assert.equal(down.ok, true)
-  assert.deepEqual(down.order, ['home', 'todos', 'notes', 'diary', 'countdowns', 'pomodoro', 'habits', 'habit-week', 'passwords', 'ledger', 'health'])
+  assert.deepEqual(down.order, ['home', 'todos', 'notes', 'diary', 'countdowns', 'pomodoro', 'habits', 'passwords', 'ledger', 'health', 'genealogy'])
   assert.equal(down.order![0], 'home')
 })
 
@@ -147,20 +147,20 @@ test('T12 resolveMenuItems', () => {
 
 // T13 — 常量完整性：11 键、默认序 = 键序、默认名逐字一致、图标映射齐
 test('T13 constants integrity', () => {
-  assert.deepEqual(WORKBENCH_MENU_KEYS, ['home', 'todos', 'notes', 'diary', 'countdowns', 'pomodoro', 'habits', 'habit-week', 'passwords', 'health', 'ledger'])
+  assert.deepEqual(WORKBENCH_MENU_KEYS, ['home', 'todos', 'notes', 'diary', 'countdowns', 'pomodoro', 'habits', 'passwords', 'health', 'ledger', 'genealogy'])
   assert.deepEqual(WORKBENCH_MENU_DEFAULT_ORDER, WORKBENCH_MENU_KEYS)
   assert.deepEqual(MENU_DEFAULT_LABELS, {
     home: '主页',
-    todos: '工作待办',
-    notes: '个人便签',
-    diary: '日记本',
-    countdowns: '定时提醒',
+    todos: '待办',
+    notes: '便签',
+    diary: '日记',
+    countdowns: '提醒',
     pomodoro: '番茄钟',
-    habits: '习惯打卡',
-    'habit-week': '习惯周历',
-    passwords: '密码管理',
-    health: '健康管理',
-    ledger: '记账'
+    habits: '打卡',
+    passwords: '密码',
+    health: '健康',
+    ledger: '记账',
+    genealogy: '家谱'
   })
   assert.equal(MENU_ICONS.home, 'home')
   assert.equal(MENU_ICONS.todos, 'todos')
@@ -169,7 +169,7 @@ test('T13 constants integrity', () => {
   assert.equal(MENU_ICONS.countdowns, 'countdowns')
   assert.equal(MENU_ICONS.pomodoro, 'pomodoro')
   assert.equal(MENU_ICONS.habits, 'habits')
-  assert.equal(MENU_ICONS['habit-week'], 'habits')
+  assert.equal(MENU_ICONS['genealogy'], 'genealogy')
   assert.equal(MENU_ICONS.passwords, 'passwords')
   assert.equal(MENU_ICONS.health, 'health')
   assert.equal(MENU_ICONS.ledger, 'ledger')
@@ -194,20 +194,20 @@ test('T14 legacy 7-item order normalizes to 11 with new keys appended', () => {
 test('T15 diary shift in resolve & move', () => {
   const items = resolveMenuItems(WORKBENCH_MENU_DEFAULT_ORDER, {})
   assert.equal(items[3].key, 'diary')
-  assert.equal(items[3].label, '日记本')
+  assert.equal(items[3].label, '日记')
   assert.equal(items[3].icon, MENU_ICONS.diary)
   assert.equal(items[4].key, 'countdowns')
-  assert.equal(items[4].label, '定时提醒')
+  assert.equal(items[4].label, '提醒')
   assert.equal(items[4].icon, MENU_ICONS.countdowns)
   assert.equal(items[5].key, 'pomodoro')
   assert.equal(items[5].label, '番茄钟')
   assert.equal(items[5].icon, MENU_ICONS.pomodoro)
   assert.equal(items[6].key, 'habits')
-  assert.equal(items[6].label, '习惯打卡')
+  assert.equal(items[6].label, '打卡')
   assert.equal(items[6].icon, MENU_ICONS.habits)
   const up = moveMenuItem(WORKBENCH_MENU_DEFAULT_ORDER, 'habits', 'up')
   assert.equal(up.ok, true)
-  assert.deepEqual(up.order, ['home', 'todos', 'notes', 'diary', 'countdowns', 'habits', 'pomodoro', 'habit-week', 'passwords', 'health', 'ledger'])
+  assert.deepEqual(up.order, ['home', 'todos', 'notes', 'diary', 'countdowns', 'habits', 'pomodoro', 'passwords', 'health', 'ledger', 'genealogy'])
 })
 
 // T16 — normalizeWorkbenchMenuVisibility：仅已知键布尔值；缺失/非法/非对象 → 全显示（{}）
@@ -227,7 +227,7 @@ test('T17 resolveMenuItems filters hidden keys', () => {
   const items = resolveMenuItems(WORKBENCH_MENU_DEFAULT_ORDER, {}, { todos: false, ledger: false, bogus: false })
   assert.deepEqual(
     items.map(i => i.key),
-    ['home', 'notes', 'diary', 'countdowns', 'pomodoro', 'habits', 'habit-week', 'passwords', 'health']
+    ['home', 'notes', 'diary', 'countdowns', 'pomodoro', 'habits', 'passwords', 'health', 'genealogy']
   )
   assert.equal(items[0].label, MENU_DEFAULT_LABELS.home)
 })

@@ -73,7 +73,7 @@ type SectionKey = (typeof SECTION_KEYS)[number]
 
 const activeSection = ref<SectionKey>('home')
 
-// 健康管理面板当前激活 tab（点击菜单「健康管理」不传 tab → 保留上次激活）
+// 健康管理面板当前激活 tab（点击菜单「健康」不传 tab → 保留上次激活）
 const activeHealthTab = ref<HealthModule>('exercise')
 
 // WorkbenchHome 通过 @navigate 请求跳转（emits 声明为 string，这里做白名单收窄）。
@@ -145,7 +145,7 @@ function handleSpotlightSelect(action: SpotlightAction) {
     if (passwordsStore.isUnlocked) {
       navigateTo('passwords')
     } else {
-      toast.warning('请先在密码管理面板解锁密码库')
+      toast.warning('请先在密码面板解锁密码库')
     }
   } else if (action.kind === 'site') {
     window.open(action.url, '_blank')

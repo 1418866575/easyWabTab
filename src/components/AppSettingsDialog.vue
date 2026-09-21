@@ -772,7 +772,7 @@ async function handleRestoreSnapshot(snapshot: SnapshotRecord): Promise<void> {
       // 强制重新解锁后查看新数据（已锁时 lock 为廉价 no-op）
       passwordsStore.lock()
       if (adoptedIdentity) {
-        toast.success('导入成功：密码库已随备份迁移，请使用原设备的主密码解锁密码管理')
+        toast.success('导入成功：密码库已随备份迁移，请使用原设备的主密码解锁密码')
       }
     }
 
@@ -923,7 +923,7 @@ async function handleWbImportFile(event: Event): Promise<void> {
     } else {
       pwdsStore.lock()
       if (adoptedIdentity) {
-        toast.success('导入成功：密码库已随备份迁移，请使用原设备的主密码解锁密码管理')
+        toast.success('导入成功：密码库已随备份迁移，请使用原设备的主密码解锁密码')
       }
     }
     const healthCount =

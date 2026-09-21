@@ -54,14 +54,14 @@ export const CARD_LABELS: Record<string, string> = {
   // 数据概览
   todos: '待办任务',
   notes: '便签',
-  countdowns: '定时提醒',
+  countdowns: '提醒',
   passwords: '密码',
   exercise: '运动',
   diet: '饮食',
   sleep: '睡眠',
   weight: '体重',
   ledger: '记账',
-  habits: '习惯打卡',
+  habits: '打卡',
   // 工具
   'pending-todos': '未完成待办',
   'calendar-anchor': '日历锚点'

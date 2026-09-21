@@ -26,7 +26,7 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
   <Transition name="dialog">
   <div v-if="state.open && state.items.length > 0" class="reminder-overlay">
     <div class="reminder-card">
-      <h2 class="reminder-title"><Icon name="timer" /> 定时提醒</h2>
+      <h2 class="reminder-title"><Icon name="timer" /> 提醒</h2>
       <ul class="reminder-list">
         <li v-for="item in state.items" :key="item.id" class="reminder-item">
           <span class="reminder-name">{{ item.name }}</span>

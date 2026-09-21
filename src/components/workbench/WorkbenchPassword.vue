@@ -398,7 +398,7 @@ watch(
     <div v-else-if="!passwordsStore.isUnlocked" class="pwd-auth">
       <div class="pwd-auth-card">
         <h3>输入主密码</h3>
-        <p class="pwd-auth-hint">请输入主密码以解锁密码管理器</p>
+        <p class="pwd-auth-hint">请输入主密码以解锁密码</p>
         <el-input
           v-model="masterPasswordInput"
           type="password"
