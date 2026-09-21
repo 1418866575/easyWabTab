@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref, toRaw } from 'vue'
 import type { DiaryData, WorkbenchDiary } from '@/types'
-import { emptyDiaryData, findDiaryByDate, normalizeDiaryData, sortDiaryEntries } from '../composables/diaryCore'
+import { DEFAULT_JOURNAL_ID, emptyDiaryData, findDiaryByDate, normalizeDiaryData, sortDiaryEntries } from '../composables/diaryCore'
 import { idbGet, idbPut } from '../composables/useIdb'
 import { markDirty } from '@/composables/useCloudSync'
 
@@ -22,7 +22,8 @@ export const useStudentDiaryStore = defineStore('student-diary', () => {
 
   async function saveDiary(): Promise<void> {
     try {
-      await idbPut(IDB_STORE, { entries: toRaw(entries.value) })
+      // DiaryData 形状：补 journals:[] 保持与成人日记本 store 一致（normalizeDiaryData 已容错缺字段，仅一致性）
+      await idbPut(IDB_STORE, { journals: [], entries: toRaw(entries.value) })
       markDirty()
     } catch (e) {
       console.error('[StudentDiary] save failed', e)
@@ -40,6 +41,7 @@ export const useStudentDiaryStore = defineStore('student-diary', () => {
     } else {
       entries.value.push({
         id: `sdy_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        journalId: DEFAULT_JOURNAL_ID,
         date,
         content: trimmed,
         createdAt: now,

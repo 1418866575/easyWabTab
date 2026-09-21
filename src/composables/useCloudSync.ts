@@ -608,6 +608,23 @@ function dedupeByDateKeepNewest<T extends { date: string; updatedAt?: string; cr
   return [...map.values()]
 }
 
+/** 多日志本下：同 (journalId, date) 才视为同一天，保留 updatedAt（或 createdAt）最新的一条（避免不同日志本同日条目互相覆盖）。 */
+function dedupeByJournalDateKeepNewest<T extends { journalId?: string; date: string; updatedAt?: string; createdAt?: string; id: string }>(arr: T[]): T[] {
+  const map = new Map<string, T>()
+  for (const item of arr) {
+    const key = `${item.journalId ?? ''}::${item.date}`
+    const existing = map.get(key)
+    if (!existing) {
+      map.set(key, item)
+    } else {
+      const exTs = existing.updatedAt ?? existing.createdAt ?? ''
+      const itemTs = item.updatedAt ?? item.createdAt ?? ''
+      if (itemTs > exTs) map.set(key, item)
+    }
+  }
+  return [...map.values()]
+}
+
 // ========== 模块级合并函数（workbench.json 复用） ==========
 
 function mergeTodos(l: WorkbenchTodo[], r: WorkbenchTodo[]): WorkbenchTodo[] {
@@ -634,9 +651,14 @@ function mergeNotes(l: NoteData | undefined, r: NoteData | undefined): NoteData 
 }
 
 function mergeDiary(l: DiaryData | undefined, r: DiaryData | undefined): DiaryData {
+  const lj = l?.journals ?? []
+  const rj = r?.journals ?? []
+  // 日志本按 id 合并（同 id 取本地），保证多日志本结构不丢
+  const journals = mergeById(lj, rj, 'id')
   const le = l?.entries ?? []
   const re = r?.entries ?? []
-  return { entries: dedupeByDateKeepNewest(mergeById(le, re, 'id', 'updatedAt')) }
+  // 条目按 id + updatedAt 合并，去重键改为 (journalId, date) 复合键（多日志本下同日均可存在）
+  return { journals, entries: dedupeByJournalDateKeepNewest(mergeById(le, re, 'id', 'updatedAt')) }
 }
 
 function mergeCountdowns(l: Countdown[], r: Countdown[]): Countdown[] {

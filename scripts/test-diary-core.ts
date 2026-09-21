@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict'
 import {
+  computeStreak,
   dateKeyOf,
+  DEFAULT_JOURNAL_ID,
+  DEFAULT_JOURNAL_NAME,
+  defaultJournal,
   diaryDateLabel,
   emptyDiaryData,
   findDiaryByDate,
@@ -8,7 +12,7 @@ import {
   normalizeDiaryData,
   sortDiaryEntries
 } from '../src/composables/diaryCore.ts'
-import type { WorkbenchDiary } from '../src/types'
+import type { WorkbenchDiary, WorkbenchJournal } from '../src/types'
 
 const tests: { name: string; fn: () => void }[] = []
 function test(name: string, fn: () => void) {
@@ -41,10 +45,12 @@ function mkEntry(partial: Partial<WorkbenchDiary> & { date: string }): Workbench
   }
 }
 
-// T1 — emptyDiaryData：空 entries + 每次全新结构（不共享引用）
+// T1 — emptyDiaryData：空 journals + 空 entries + 每次全新结构（不共享引用）
 test('T1 emptyDiaryData structure', () => {
-  a.deepEqual(emptyDiaryData(), { entries: [] })
+  a.deepEqual(emptyDiaryData(), { journals: [], entries: [] })
+  a.ok(Array.isArray(emptyDiaryData().journals))
   a.ok(Array.isArray(emptyDiaryData().entries))
+  a.equal(emptyDiaryData().journals.length, 0)
   a.equal(emptyDiaryData().entries.length, 0)
   a.notEqual(emptyDiaryData(), emptyDiaryData()) // 不共享引用
 })
@@ -64,12 +70,12 @@ test('T2 normalizeDiaryData idempotent', () => {
 
 // T3 — normalizeDiaryData 非对象入参（null/数字/字符串/undefined/数组）→ emptyDiaryData
 test('T3 normalizeDiaryData invalid input', () => {
-  a.deepEqual(normalizeDiaryData(null), { entries: [] })
-  a.deepEqual(normalizeDiaryData(42), { entries: [] })
-  a.deepEqual(normalizeDiaryData('str'), { entries: [] })
-  a.deepEqual(normalizeDiaryData(undefined), { entries: [] })
-  a.deepEqual(normalizeDiaryData([{ date: '2026-08-13' }]), { entries: [] }) // 数组不是 DiaryData 对象格式
-  a.deepEqual(normalizeDiaryData({ foo: 1 }), { entries: [] }) // 无 entries 字段 → 空
+  a.deepEqual(normalizeDiaryData(null), { journals: [], entries: [] })
+  a.deepEqual(normalizeDiaryData(42), { journals: [], entries: [] })
+  a.deepEqual(normalizeDiaryData('str'), { journals: [], entries: [] })
+  a.deepEqual(normalizeDiaryData(undefined), { journals: [], entries: [] })
+  a.deepEqual(normalizeDiaryData([{ date: '2026-08-13' }]), { journals: [], entries: [] }) // 数组不是 DiaryData 对象格式
+  a.deepEqual(normalizeDiaryData({ foo: 1 }), { journals: [], entries: [] }) // 无 entries 字段 → 空
 })
 
 // T4 — normalizeDiaryData 非法 date 条目剔除（'2026-13-99'、'2026-02-30' 语义见 T9）；非对象条目剔除
@@ -200,11 +206,89 @@ test('T14 findDiaryByDate miss', () => {
 // T15 — normalizeDiaryData：无 entries 字段 / entries 非数组 → 空 entries；合法 entries 原样归一（roundtrip）
 test('T15 normalizeDiaryData empty entries + roundtrip', () => {
   const empty = normalizeDiaryData({ entries: undefined })
-  a.deepEqual(empty, { entries: [] })
-  a.deepEqual(normalizeDiaryData({ entries: 'nope' }), { entries: [] })
+  a.deepEqual(empty, { journals: [], entries: [] })
+  a.deepEqual(normalizeDiaryData({ entries: 'nope' }), { journals: [], entries: [] })
   // 存库 → 加载 roundtrip：归一化结果再归一化不变（T2 回归守护，含缺失时间戳兜底后的幂等）
   const data = normalizeDiaryData({ entries: [{ id: 'dy_1', date: '2026-08-13', content: 'x' }] })
   a.deepEqual(normalizeDiaryData(data), data)
+})
+
+// T16 — normalizeDiaryData：journals 数组原样归一；条目缺 journalId → 归入默认日志本
+test('T16 normalizeDiaryData journals + journalId default', () => {
+  const data = normalizeDiaryData({
+    journals: [{ id: 'jb_a', name: '学习', createdAt: '2026-01-01T00:00:00.000Z', order: 0 }],
+    entries: [{ id: 'dy_1', date: '2026-08-13', content: 'x' }]
+  })
+  a.equal(data.journals.length, 1)
+  a.equal(data.journals[0].id, 'jb_a')
+  a.equal(data.entries[0].journalId, DEFAULT_JOURNAL_ID) // 缺 journalId → 默认本
+  // journals 非数组/缺失 → []
+  a.deepEqual(normalizeDiaryData({ entries: [] }).journals, [])
+})
+
+// T17 — normalizeDiaryData：条目 kind 缺省 → 'diary'；kind==='idea' 保留；非法 kind → 回退 'diary'
+test('T17 normalizeDiaryData kind coercion', () => {
+  const data = normalizeDiaryData({
+    entries: [
+      { id: 'dy_1', date: '2026-08-13', content: 'x' }, // 缺 kind → diary
+      { id: 'dy_2', date: '2026-08-12', content: 'y', kind: 'idea' }, // 保留
+      { id: 'dy_3', date: '2026-08-11', content: 'z', kind: 'bogus' as unknown as 'idea' } // 非法 → diary
+    ]
+  })
+  a.equal(data.entries[0].kind, 'diary')
+  a.equal(data.entries[1].kind, 'idea')
+  a.equal(data.entries[2].kind, 'diary')
+})
+
+// T18 — defaultJournal：结构 + 默认 id/name 契约
+test('T18 defaultJournal contract', () => {
+  const j = defaultJournal()
+  a.equal(j.id, DEFAULT_JOURNAL_ID)
+  a.equal(j.name, DEFAULT_JOURNAL_NAME)
+  a.ok(isValidDateKey(j.createdAt.slice(0, 10)))
+  const j2 = defaultJournal()
+  a.notEqual(j, j2) // 不共享引用
+})
+
+// T19 — computeStreak：空 → {streak:0,total:0}；total = 条目数；连续天数从今天往回数
+test('T19 computeStreak basics', () => {
+  // 空
+  a.deepEqual(computeStreak([]), { streak: 0, total: 0 })
+  // 今天 / 昨天 / 前天 连续 3 天
+  const today = dateKeyOf(new Date())
+  const y = new Date()
+  y.setDate(y.getDate() - 1)
+  const yy = new Date()
+  yy.setDate(yy.getDate() - 2)
+  const entries: WorkbenchDiary[] = [
+    { id: 'a', journalId: 'jb_default', date: today, content: '', createdAt: '', updatedAt: '' },
+    { id: 'b', journalId: 'jb_default', date: dateKeyOf(y), content: '', createdAt: '', updatedAt: '' },
+    { id: 'c', journalId: 'jb_default', date: dateKeyOf(yy), content: '', createdAt: '', updatedAt: '' }
+  ]
+  a.deepEqual(computeStreak(entries), { streak: 3, total: 3 })
+  // 今天缺、但有昨天+前天 → streak 2（从昨天起算仍连续中）
+  const noToday = entries.filter(e => e.date !== today)
+  a.deepEqual(computeStreak(noToday), { streak: 2, total: 2 })
+  // total 含非连续日（断档）：今天 + 5 天前 → streak 1, total 2
+  const gap = new Date()
+  gap.setDate(gap.getDate() - 5)
+  const g: WorkbenchDiary[] = [
+    { id: 'a', journalId: 'jb_default', date: today, content: '', createdAt: '', updatedAt: '' },
+    { id: 'b', journalId: 'jb_default', date: dateKeyOf(gap), content: '', createdAt: '', updatedAt: '' }
+  ]
+  a.deepEqual(computeStreak(g), { streak: 1, total: 2 })
+})
+
+// T20 — computeStreak：非法 date 条目被忽略（不污染连续天数，但仍计入 total 篇数）
+test('T20 computeStreak ignores invalid dates', () => {
+  const today = dateKeyOf(new Date())
+  const entries: WorkbenchDiary[] = [
+    { id: 'a', journalId: 'jb_default', date: today, content: '', createdAt: '', updatedAt: '' },
+    { id: 'b', journalId: 'jb_default', date: 'not-a-date', content: '', createdAt: '', updatedAt: '' },
+    { id: 'c', journalId: 'jb_default', date: '', content: '', createdAt: '', updatedAt: '' }
+  ]
+  // streak 只数今天（1）；total 含非法日期条目共 3 篇
+  a.deepEqual(computeStreak(entries), { streak: 1, total: 3 })
 })
 
 let passed = 0

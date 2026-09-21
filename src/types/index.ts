@@ -177,17 +177,31 @@ export interface NoteData {
   notes: WorkbenchNote[]
 }
 
-// 工作台日记本：每天一条（date 本地 'YYYY-MM-DD' 唯一，upsert 语义）
+// 工作台日记本：多日志本（journalId 归属某个日志本）；每天每条目唯一（date 本地 'YYYY-MM-DD' 唯一，upsert 语义）
+export interface WorkbenchJournal {
+  id: string // 'jb_' 前缀
+  name: string
+  icon?: string // 可选 emoji 图标
+  createdAt: string
+  order: number // 排序（越小越靠前）
+}
+
 export interface WorkbenchDiary {
   id: string // 'dy_' 前缀
+  journalId: string // 所属日志本 id（'jb_default' 为默认）
   date: string // 'YYYY-MM-DD' 本地日期，唯一（每天一条）
   content: string // Markdown 正文
   createdAt: string
   updatedAt: string
+  kind?: 'diary' | 'idea' // 类型：日记（默认）/ 灵感一句话短记
+  category?: string // 日记专属分类 id（''=未分类），引用 useDiaryCategoriesStore
+  mood?: string // 心情 key（DIARY_MOODS），如 'happy'
+  pinned?: boolean // 是否置顶（默认 false）
 }
 
-// 工作台日记本数据（条目列表）
+// 工作台日记本数据（日志本列表 + 条目列表）
 export interface DiaryData {
+  journals: WorkbenchJournal[]
   entries: WorkbenchDiary[]
 }
 

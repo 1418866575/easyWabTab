@@ -1,11 +1,48 @@
 // 工作台日记本纯逻辑模块：normalizeDiaryData 归一化 → sortDiaryEntries/findDiaryByDate 展示层。
 // 纯函数硬约束：禁止 import vue/pinia（node --experimental-strip-types 测试运行器无法执行）；
 // 类型全部 type-only（与 noteCore 同模式）。
-import type { DiaryData, WorkbenchDiary } from '../types/index.ts'
+import type { DiaryData, WorkbenchDiary, WorkbenchJournal } from '../types/index.ts'
 
-/** 空日记数据：无条目（返回全新结构，不共享任何引用）。 */
+/** 默认日志本（旧数据/外部导入无 journalId 时归入此本）。 */
+export const DEFAULT_JOURNAL_ID = 'jb_default'
+export const DEFAULT_JOURNAL_NAME = '默认日志本'
+
+/** 日记心情预设（存 key，展示 emoji + label）。 */
+export interface DiaryMood {
+  key: string
+  emoji: string
+  label: string
+}
+
+export const DIARY_MOODS: DiaryMood[] = [
+  { key: 'happy', emoji: '😊', label: '开心' },
+  { key: 'calm', emoji: '😐', label: '平淡' },
+  { key: 'sad', emoji: '😢', label: '低落' },
+  { key: 'angry', emoji: '😡', label: '烦躁' },
+  { key: 'tired', emoji: '😴', label: '疲惫' },
+  { key: 'think', emoji: '🤔', label: '思考' },
+  { key: 'warm', emoji: '🥰', label: '温馨' },
+  { key: 'full', emoji: '💪', label: '充实' }
+]
+
+/** 由 mood key 取心情定义（非法 key → undefined）。 */
+export function diaryMoodOf(key?: string): DiaryMood | undefined {
+  return key ? DIARY_MOODS.find(m => m.key === key) : undefined
+}
+
+/** 空日记数据：无日志本、无条目（返回全新结构，不共享任何引用）。 */
 export function emptyDiaryData(): DiaryData {
-  return { entries: [] }
+  return { journals: [], entries: [] }
+}
+
+/** 构造默认日志本（旧数据/外部导入无 journals 时兜底）。 */
+export function defaultJournal(): WorkbenchJournal {
+  return {
+    id: DEFAULT_JOURNAL_ID,
+    name: DEFAULT_JOURNAL_NAME,
+    createdAt: new Date().toISOString(),
+    order: 0
+  }
 }
 
 /** 本地日期键正则：结构 ^\d{4}-\d{2}-\d{2}$（不含时间部分）。 */
@@ -56,29 +93,79 @@ function normalizeDiaryEntry(raw: unknown): WorkbenchDiary | null {
   const nowIso = new Date().toISOString()
   return {
     id: typeof src.id === 'string' && src.id ? src.id : `dy_${date}`,
+    journalId: typeof src.journalId === 'string' && src.journalId ? src.journalId : DEFAULT_JOURNAL_ID,
     date,
     content: typeof src.content === 'string' ? src.content : '',
     createdAt: typeof src.createdAt === 'string' ? src.createdAt : nowIso,
-    updatedAt: typeof src.updatedAt === 'string' ? src.updatedAt : nowIso
+    updatedAt: typeof src.updatedAt === 'string' ? src.updatedAt : nowIso,
+    kind: src.kind === 'idea' ? 'idea' : 'diary',
+    // 结构字段：带安全默认值（旧数据缺字段 → 补 ''/''/false，不丢条目）
+    category: typeof src.category === 'string' ? src.category : '',
+    mood: typeof src.mood === 'string' ? src.mood : '',
+    pinned: src.pinned === true
+  }
+}
+
+/** 单条日志本归一化（安全默认值，缺字段不抛错）。 */
+function normalizeJournal(raw: unknown): WorkbenchJournal | null {
+  if (!raw || typeof raw !== 'object') return null
+  const src = raw as Record<string, unknown>
+  if (typeof src.id !== 'string' || !src.id) return null
+  return {
+    id: src.id,
+    name: typeof src.name === 'string' && src.name ? src.name : DEFAULT_JOURNAL_NAME,
+    icon: typeof src.icon === 'string' ? src.icon : undefined,
+    createdAt: typeof src.createdAt === 'string' ? src.createdAt : new Date().toISOString(),
+    order: typeof src.order === 'number' ? src.order : 0
   }
 }
 
 /**
  * 整库归一化（幂等）：
  * - 非对象入参（null/数字/字符串/数组）→ emptyDiaryData()
- * - 对象含 entries 数组 → 逐条归一（非对象/非法 date 剔除，缺失 id 回退，content 强转）
- * - entries 非数组/缺失 → []
+ * - 对象含 journals/entries 数组 → 逐条归一（非对象/非法 剔除，缺失 id/字段回退安全默认值）
+ * - journals 非数组/缺失 → []（store 加载时保证至少存在默认日志本）
+ * - 条目 journalId 缺省 → 归入 DEFAULT_JOURNAL_ID（保证不悬空）
  */
 export function normalizeDiaryData(raw: unknown): DiaryData {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return emptyDiaryData()
   const src = raw as Record<string, unknown>
+  const journals = Array.isArray(src.journals)
+    ? src.journals.map(normalizeJournal).filter((j): j is WorkbenchJournal => j !== null)
+    : []
   const entries = Array.isArray(src.entries)
     ? src.entries.map(normalizeDiaryEntry).filter((e): e is WorkbenchDiary => e !== null)
     : []
-  return { entries }
+  return { journals, entries }
 }
 
-/** 日记排序：date 降序（新的在前）→ createdAt 降序（同日期后写的在前）。返回新数组，不 mutate 入参。 */
+/**
+ * 连续记录统计：基于日期集合计算「连续天数」（从今天往回数，今天无记录则从昨天起算，仍算连续中）
+ * 与「累计篇数」（条目总数）。纯函数，便于单测。
+ */
+export function computeStreak(entries: WorkbenchDiary[]): { streak: number; total: number } {
+  const total = entries.length
+  const dates = new Set<string>()
+  for (const e of entries) if (isValidDateKey(e.date)) dates.add(e.date)
+  if (dates.size === 0) return { streak: 0, total }
+  // 从今天起算；今天无记录则从昨天开始（streak 仍"进行中"）
+  const cursor = new Date()
+  if (!dates.has(dateKeyOf(cursor))) cursor.setDate(cursor.getDate() - 1)
+  let streak = 0
+  // 防御：最多 3650 天，避免异常数据死循环
+  for (let i = 0; i < 3650; i++) {
+    const key = dateKeyOf(cursor)
+    if (!dates.has(key)) break
+    streak++
+    cursor.setDate(cursor.getDate() - 1)
+  }
+  return { streak, total }
+}
+
+/**
+ * 日记排序：date 降序（最新日期在前）→ 同日期 createdAt 降序（后写的在前）。
+ * 返回新数组，不 mutate 入参。
+ */
 export function sortDiaryEntries(entries: WorkbenchDiary[]): WorkbenchDiary[] {
   return [...entries].sort((a, b) => {
     if (a.date !== b.date) return a.date < b.date ? 1 : -1

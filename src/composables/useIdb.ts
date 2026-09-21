@@ -418,10 +418,11 @@ export async function importWorkbenchData(remote: WorkbenchSyncData): Promise<{ 
   // 2) 读本地 business（idbImportAll 会写 business store，workbench.json 不携带 business 时需保留本地数据）
   // localFamily：云端信封尚无 family 字段时（家谱数据还没推上去 / 云端是 v15 之前的旧信封），
   // 用它兜底保留本地家谱，避免每次自动拉取把本地数据静默清空
-  const [localSettings, localBusiness, localFamily] = await Promise.all([
+  const [localSettings, localBusiness, localFamily, localDiary] = await Promise.all([
     idbGet<AppSettingsData>('settings'),
     idbGet<BusinessData>('business'),
-    idbGet<GenealogyData>('family')
+    idbGet<GenealogyData>('family'),
+    idbGet<DiaryData>('diary')
   ])
 
   // 合并：remote.settings（含同步偏好 cloudSyncInterval/cloudSyncSilentThreshold）+ 本机 cloudSync 凭证/开关 4 字段
@@ -435,7 +436,12 @@ export async function importWorkbenchData(remote: WorkbenchSyncData): Promise<{ 
     exportedAt: remote.exportedAt,
     todos: remote.todos ?? [],
     notes: normalizeNoteData(remote.notes ?? emptyNoteData()),
-    diary: remote.diary ?? emptyDiaryData(),
+    // 多日志本：journals 是新增字段。远端信封若无 journals（旧版/尚未推送）必须回退本地，
+    // 否则后台自动拉取会把本地日志本静默清空（同 family 陷阱）；entries 同样优先远端、缺则空。
+    diary: {
+      journals: remote.diary?.journals ?? localDiary?.journals ?? [],
+      entries: remote.diary?.entries ?? []
+    },
     countdowns: remote.countdowns ?? [],
     passwords: remote.passwords ?? '',
     health: remote.health ?? emptyHealthData(),
