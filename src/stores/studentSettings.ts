@@ -163,6 +163,9 @@ export const useStudentSettingsStore = defineStore('studentSettings', () => {
     if (typeof o.grade === 'string' && o.grade.trim()) {
       out.grade = o.grade.trim()
     }
+    if (typeof o.className === 'string' && o.className.trim()) {
+      out.className = o.className.trim().slice(0, 20)
+    }
     if (typeof o.birthday === 'string' && o.birthday.trim()) {
       out.birthday = o.birthday.trim()
     }
@@ -242,6 +245,11 @@ export const useStudentSettingsStore = defineStore('studentSettings', () => {
 
   function setGrade(grade: string) {
     settings.value = { ...settings.value, grade: grade.trim() }
+    persist()
+  }
+
+  function setClassName(v: string) {
+    settings.value = { ...settings.value, className: v.trim().slice(0, 20) }
     persist()
   }
 
@@ -450,6 +458,7 @@ export const useStudentSettingsStore = defineStore('studentSettings', () => {
     setStudentNo,
     setSchool,
     setGrade,
+    setClassName,
     setBirthday,
     // 菜单
     moveMenuItem,

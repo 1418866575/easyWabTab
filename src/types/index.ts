@@ -759,7 +759,8 @@ export interface StudentSettings {
   nickname?: string            // 学生昵称（1-12 code point；缺失回退「同学」）
   studentNo?: string           // 学号（选填）
   school?: string              // 学校名（选填）
-  grade?: string               // 年级（选填）
+  grade?: string               // 年级（选填；取值见 GRADE_STAGE_GROUPS 中对应学段的 grades）
+  className?: string          // 班级名称（选填，自由填写，如「3 年级 2 班」）
   birthday?: string            // 出生日期 YYYY-MM-DD（选填；主页顶部据此计算年龄）
   /** 菜单顺序（home 恒 index 0；归一化保证恒 15 项） */
   menuOrder?: string[]

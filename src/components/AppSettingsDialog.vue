@@ -37,7 +37,7 @@ import { useWorkbenchPomodoroStore } from '@/stores/workbenchPomodoro'
 import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
-import { STAGE_BADGE, type StudentStage } from '@/types'
+import { STAGE_BADGE, GRADE_STAGE_GROUPS, type StudentStage } from '@/types'
 import type { WorkbenchData } from '@/types'
 import { COUNTDOWN_CATEGORIES } from '@/types'
 import { categoryLabel } from '@/composables/countdownCore'
@@ -1026,6 +1026,19 @@ const studentStageOptions: { key: StudentStage; label: string; desc: string }[] 
 const studentStageBadgeColor = computed(() => STAGE_BADGE[studentStore.stage].color)
 const studentStageBadgeLabel = computed(() => STAGE_BADGE[studentStore.stage].label)
 const studentStageName = computed(() => studentStore.stageLabelName)
+
+/** 当前学段对应的年级下拉选项（取值见 GRADE_STAGE_GROUPS）。
+ * 若已存年级不在当前学段选项内（如切换学段或旧自由文本），将其前置为可见项，避免静默丢失。 */
+const studentGradeOptions = computed<string[]>(() => {
+  const group = GRADE_STAGE_GROUPS.find(g => g.key === studentStore.stage)
+  const base = group?.grades ?? []
+  const cur = studentStore.settings.grade
+  return cur && !base.includes(cur) ? [cur, ...base] : base
+})
+
+function onStudentGradeChange(val: string | null): void {
+  studentStore.setGrade(val ?? '')
+}
 
 const studentNicknameInput = ref<HTMLInputElement | null>(null)
 const studentNewSubject = ref('')
@@ -2371,14 +2384,32 @@ onUnmounted(() => {
           </div>
           <div class="wb-field">
             <label class="wb-field-label">年级</label>
+            <el-select
+              :model-value="studentStore.settings.grade"
+              placeholder="选填，按学段选择"
+              clearable
+              class="wb-menu-select"
+              data-testid="stg-grade-select"
+              @change="onStudentGradeChange"
+            >
+              <el-option
+                v-for="g in studentGradeOptions"
+                :key="g"
+                :label="g"
+                :value="g"
+              />
+            </el-select>
+          </div>
+          <div class="wb-field">
+            <label class="wb-field-label">班级名称</label>
             <input
               type="text"
               class="wb-menu-name-input"
-              :value="studentStore.settings.grade"
-              placeholder="选填，如 三年级 / 初二"
+              :value="studentStore.settings.className"
+              placeholder="选填，如 3 年级 2 班"
               maxlength="20"
-              data-testid="stg-grade-input"
-              @input="studentStore.setGrade(($event.target as HTMLInputElement).value)"
+              data-testid="stg-classname-input"
+              @input="studentStore.setClassName(($event.target as HTMLInputElement).value)"
             />
           </div>
           <div class="wb-menu-field">
@@ -3664,6 +3695,10 @@ html.dark .ld-builtin-tag {
   color: var(--color-text-muted, #6b7280);
   width: 56px;
   flex-shrink: 0;
+}
+.wb-field :deep(.el-select) {
+  flex: 1;
+  min-width: 0;
 }
 .wb-menu-hint-inline {
   font-size: 12px;
