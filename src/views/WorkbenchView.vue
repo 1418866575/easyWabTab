@@ -559,9 +559,13 @@ html.dark .wb-content {
   }
 }
 
-/* 桌面一屏契约：面板根钉满内容区（flex-stretch，不用百分比高度） */
+/* 桌面一屏契约：面板根钉满内容区（flex-stretch，不用百分比高度）。
+   溢出兜底：用 overflow-x:hidden; overflow-y:auto 取代原 overflow:hidden——面板若正确自管理
+   内部滚动则恰好填满内容区、不会溢出，此规则不生效；若某面板内部滚动链（缺 min-height:0 /
+   无 scroll 容器）失效，内容超出部分改为由内容区整体垂直滚动兜底，避免被裁切而「无法下滑查看」
+   （R9）。横向仍裁剪，避免 overflow-y:auto 触发 overflow-x 计算为 auto 而意外出现横向滚动条。 */
 @media (min-width: 769px) {
-  .wb-content { overflow: hidden; }
+  .wb-content { overflow-x: hidden; overflow-y: auto; }
   .wb-content > * { flex: 1; min-height: 0; }
 }
 

@@ -765,7 +765,7 @@ onUnmounted(() => {
 }
 .fg-tree-info { font-size: 13px; color: var(--color-text-secondary, #64748b); }
 .fg-tree-muted { color: var(--color-text-muted, #9ca3af); }
-.fg-mindmap { display: flex; flex-direction: column; gap: 6px; padding: 4px 0; }
+.fg-mindmap { display: flex; flex-direction: column; gap: 6px; padding: 4px 0; flex: 1; min-height: 0; overflow-y: auto; }
 .fg-rel { font-size: 12px; color: var(--color-text-secondary, #6b7280); }
 
 /* ===== 关系弹框 ===== */
