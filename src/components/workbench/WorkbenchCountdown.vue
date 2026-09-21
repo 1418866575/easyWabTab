@@ -1267,4 +1267,58 @@ html.dark .cat-default {
   gap: 8px;
   flex-wrap: wrap;
 }
+
+/* ===== 平板 / 窄桌面（769–1024px）：固定 5 列同样会挤压卡片 =====
+   侧栏占位后内容区仅 ~700–900px，5 列时每列约 150–170px，
+   「剩余 4 小时 24 分」等长文案会贴边。此处改为按 190px 最小宽自适应列数，
+   宽屏（>1024px）仍保持设计稿的 5 列不变。 */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .cd-grid {
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
+}
+
+/* ===== 移动端（≤768px）：卡片墙单列铺满，行高由内容决定 =====
+   原桌面规则固定 5 列 + grid-auto-rows:150px，窄屏（约 390px）下每张卡仅 ~60px 宽，
+   卡内文字被迫逐字竖排；内容又高于 150px 行高，溢出后压住底部分页条。
+   改为单列 + grid-auto-rows:auto：卡片按内容自然撑开，
+   列表整体交回 .wb-content 垂直滚动（内容超出可下滑查看，R-Mobile 定时提醒展示异常）。 */
+@media (max-width: 768px) {
+  .cd-grid {
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+    gap: 10px;
+  }
+
+  .cd-card {
+    gap: 8px;
+    padding: 12px 12px 12px 14px;
+  }
+
+  /* 标题行改为居中对齐，徽章与名称同一视觉中线 */
+  .cd-card-head {
+    align-items: center;
+  }
+
+  /* 名称允许换行完整展示（原 nowrap 在窄屏只能截断） */
+  .cd-name {
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  /* 剩余时间：窄屏收一档字号，并允许换行不挤出卡片 */
+  .cd-remaining {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+
+  .cd-remaining-value {
+    font-size: 15px;
+  }
+
+  /* 触控目标 ≥36px（与工作台移动端 P3-14 约定一致，不破坏单行按钮排布） */
+  .cd-actions .el-button {
+    min-height: 36px;
+  }
+}
 </style>
