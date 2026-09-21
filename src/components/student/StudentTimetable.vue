@@ -361,12 +361,11 @@ onBeforeUnmount(() => {
 
     <!-- 网格 -->
     <div class="stt-grid-wrap">
-      <div v-if="!hasAnyCell" class="stt-empty">
-        <p>还没有排课。点击任意格子添加第一节课～</p>
+      <div v-if="!hasAnyCell" class="stt-empty-banner">
+        <p>还没有排课。点击下方任意格子添加第一节课～</p>
         <p class="stt-empty-hint">提示：可先在「设置 → 学科」里预设常用学科。</p>
       </div>
       <div
-        v-else
         class="stt-grid"
         :style="{ gridTemplateColumns: `48px repeat(7, minmax(0, 1fr))` }"
         role="grid"
@@ -637,10 +636,12 @@ onBeforeUnmount(() => {
 .stt-grid-wrap {
   flex: 1 1 auto;
   min-height: 0;
+  width: 100%;
   height: 100%;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
   background: var(--color-bg-card, #fff);
@@ -648,7 +649,12 @@ onBeforeUnmount(() => {
 .stt-grid {
   display: grid;
   gap: 4px;
-  min-width: 640px;
+  /* 宽屏=100% 铺满；窄屏（<560px）超出容器 → 外层 wrap 横向左滑右滑 */
+  width: 100%;
+  min-width: max(100%, 560px);
+  min-height: 100%;
+  /* 行高自适应铺满容器高度：至少 56px，富余空间均分拉伸（PC/手机端均填满整屏高度） */
+  grid-auto-rows: minmax(56px, 1fr);
   padding: 4px;
 }
 .stt-cell {
@@ -782,20 +788,19 @@ onBeforeUnmount(() => {
   font-weight: 300;
 }
 
-/* 空状态 */
-.stt-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  min-height: 240px;
+/* 空状态提示条（始终保留下方网格，保证可点击空白格新增课程） */
+.stt-empty-banner {
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  background: var(--color-primary-soft, rgba(59, 130, 246, 0.08));
+  border: 1px dashed var(--color-primary, #3b82f6);
+  border-radius: 8px;
+  color: var(--color-text-secondary, #4b5563);
   text-align: center;
-  color: var(--color-text-muted, #6b7280);
 }
-.stt-empty p {
-  margin: 4px 0;
-  font-size: 15px;
+.stt-empty-banner p {
+  margin: 2px 0;
+  font-size: 14px;
 }
 .stt-empty-hint {
   font-size: 13px;
@@ -861,7 +866,6 @@ onBeforeUnmount(() => {
 
 @media (max-width: 768px) {
   .stt-shell { padding: 12px; }
-  .stt-grid { min-width: 560px; }
   .stt-body-cell { min-height: 56px; }
   .form-row { flex-direction: column; }
 }

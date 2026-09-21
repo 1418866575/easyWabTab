@@ -190,16 +190,26 @@ export const useStudentSettingsStore = defineStore('studentSettings', () => {
   // 学段切换
   // ========================================
 
-  /** 切换学段（计算计划 → 应用菜单可见性 → 持久化；M2 起补播种学科/习惯/番茄钟） */
+  /**
+   * 切换学段（计算计划 → 覆盖式应用学段默认菜单可见性 + 重新播种学科 + 写入 stageSeeded → 持久化）。
+   * 关键修复：
+   * 1. menuVisibility 完整覆盖为新学段默认（配合设置页确认文案「菜单可见性将应用该学段默认值」），
+   *    使左侧菜单树随学段即时变化；旧实现 applyStageDefaultVisibility 仅填未配置键、保留已配置项 → 树不变。
+   * 2. 写入 stageSeeded = 新学段，刷新页面后不再误弹「选择学段」引导
+   *    （旧实现从不写 stageSeeded，导致 stageSeeded !== stage，onMounted 反复弹引导）。
+   */
   async function switchStage(newStage: StudentStage): Promise<StageSwitchPlan> {
     const plan = planStageSwitch(settings.value, newStage)
     settings.value = {
       ...settings.value,
       stage: plan.stage,
-      // 学段切换：对未显式配置的菜单键应用学段默认可见性
-      menuVisibility: applyStageDefaultVisibility(menuVisibility.value, plan.menuVisibility)
+      // 学段切换：菜单可见性完整覆盖为新学段默认值（覆盖式，非仅填未配置键）
+      menuVisibility: { ...STAGE_MENU_VISIBILITY[plan.stage] },
+      // 学科清单重新播种为新学段默认（避免沿用旧学段学科，呼应设置页确认文案「默认学科将重新初始化」）
+      subjects: stageDefaultSubjects(plan.stage),
+      // 标记学段已播种：刷新后不再弹「选择学段」引导
+      stageSeeded: plan.stage
     }
-    // M2 起：实际播种由 StudentView 协调各模块 store，成功后调 markStageSeeded 写入标记
     await saveSettings()
     return plan
   }

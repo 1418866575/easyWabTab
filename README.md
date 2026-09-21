@@ -274,7 +274,7 @@ server {
   - 9 核心：`todos` / `notes` / `diary` / `countdowns` / `passwords` / `health` / `ledger` / `settings` / `business`
   - 3 辅助：`pomodoro` / `habits` / `snapshots`
   - 1 图标：`icons`
-  - 16 学生：`student_settings` / `student_habits` / `student_homework` / `student_timetable` / `student_plans` / `student_review` / `student_mistakes` / `student_reading` / `student_countdowns` / `student_education` / `student_diary` / `student_pomodoro` / `student_achievements` / `student_rewards` / `student_parent_tasks` / `student_images`
+  - 15 学生：`student_settings` / `student_habits` / `student_homework` / `student_timetable` / `student_plans` / `student_review` / `student_mistakes` / `student_reading` / `student_countdowns` / `student_education` / `student_pomodoro` / `student_achievements` / `student_rewards` / `student_parent_tasks` / `student_images`
 
 ### 多浏览器 / 设备迁移
 

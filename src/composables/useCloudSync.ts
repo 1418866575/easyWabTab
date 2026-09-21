@@ -906,7 +906,7 @@ function mergeStudent(local: StudentSyncData, remote: StudentSyncData): StudentS
     clientId: getClientId()
   }
   const FIELD_KEYS: Array<keyof StudentSyncData> = [
-    'studentSettings', 'studentHabits', 'studentPomodoro', 'studentDiary', 'studentCountdowns',
+    'studentSettings', 'studentHabits', 'studentPomodoro', 'studentCountdowns',
     'homework', 'timetable', 'plans', 'review', 'mistakes', 'reading',
     'achievements', 'rewards', 'parentTasks', 'studentImages', 'education', 'studentGrades'
   ]
@@ -995,15 +995,13 @@ async function reloadBusinessStore(): Promise<void> {
 }
 
 async function reloadStudentStores(): Promise<void> {
-  // 学生 13 store 全量 reload（数据被云端覆盖后刷新 Vue 状态）
-  // 注：student_diary 数据无独立 Pinia store，直接读 IDB；同步后组件下次访问自动刷新
+  // 学生各模块 store 全量 reload（数据被云端覆盖后刷新 Vue 状态）
   const [
     { useStudentSettingsStore }, { useStudentHabitsStore }, { useStudentPomodoroStore },
     { useStudentExamStore }, { useStudentHomeworkStore },
     { useStudentTimetableStore }, { useStudentPlanStore }, { useStudentReviewStore },
     { useStudentMistakesStore }, { useStudentReadingStore }, { useStudentAchievementsStore },
     { useStudentRewardsStore }, { useStudentParentTasksStore },     { useStudentEducationStore },
-    { useStudentDiaryStore },
     { useStudentGradesStore }
   ] = await Promise.all([
     import('../stores/studentSettings'),
@@ -1020,7 +1018,6 @@ async function reloadStudentStores(): Promise<void> {
     import('../stores/studentRewards'),
     import('../stores/studentParentTasks'),
     import('../stores/studentEducation'),
-    import('../stores/studentDiary'),
     import('../stores/studentGrades')
   ])
   await Promise.all([
@@ -1038,7 +1035,6 @@ async function reloadStudentStores(): Promise<void> {
     useStudentRewardsStore().loadRewards(),
     useStudentParentTasksStore().loadTasks(),
     useStudentEducationStore().loadEducation(),
-    useStudentDiaryStore().loadDiary(),
     useStudentGradesStore().loadGrades()
   ])
 }

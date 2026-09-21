@@ -27,7 +27,7 @@ stores/
 
 学生工作台 15 store（命名 `useStudentXxxStore`，全部薄委托 student*Core 纯函数 + useIdb 持久化；见 WHERE TO LOOK「学生工作台」行与 src/composables/AGENTS.md）：
 ├── studentSettings.ts     # 枢纽：学段 K/P/J + 菜单顺序/开关 + 家长 PIN（setParentPin/verifyPin/lockRemainingSeconds/hasParentPin）(IDB 'student_settings')
-├── studentHabits.ts / studentHomework.ts / studentTimetable.ts / studentPlan.ts / studentReview.ts / studentMistakes.ts / studentReading.ts / studentExam.ts / studentEducation.ts / studentDiary.ts / studentPomodoro.ts / studentAchievements.ts / studentRewards.ts / studentParentTasks.ts  # 各面板数据（studentExam 复用共享 IDB 'student_countdowns'；studentDiary 复用 diaryCore/noteMarkdown；studentParentTasks 存 {tasks} 信封，单事务云端同步）
+├── studentHabits.ts / studentHomework.ts / studentTimetable.ts / studentPlan.ts / studentReview.ts / studentMistakes.ts / studentReading.ts / studentExam.ts / studentEducation.ts / studentPomodoro.ts / studentAchievements.ts / studentRewards.ts / studentParentTasks.ts  # 各面板数据（studentExam 复用共享 IDB 'student_countdowns'；studentParentTasks 存 {tasks} 信封，单事务云端同步）
 ```
 
 ## WHERE TO LOOK
@@ -56,8 +56,8 @@ stores/
 ## CONVENTIONS
 
 - All stores use `defineStore('name', () => { ... })` (Composition API syntax)
-- **Mixed storage**: sites/categories/searchEngines/theme/icons still persist via manual `localStorage.setItem`; countdowns/passwords/workbench todos/notes/diary/health/ledger/settings/pomodoro/habits persist to IndexedDB via `useIdb.ts` (`idbPut` / `idbGet`), DB `easy-web-tab` v12 (9 core stores + 3 aux stores + 1 icons + 16 student stores)
-- **学生 store 规范**: 15 个 `studentXxx` store（`useStudentXxxStore`）全部薄委托 `student*Core` 纯函数 + useIdb 持久化；`studentSettings`=枢纽（学段 K/P/J + 菜单 + 家长 PIN，IDB 'student_settings'）；IDB store `student_settings/_habits/_homework/_timetable/_plans/_review/_mistakes/_reading/_countdowns/_education/_diary/_pomodoro/_achievements/_rewards/_parent_tasks/_images` 共 16 个；`studentExam` 复用共享 'student_countdowns' store；`studentDiary` 复用 diaryCore/noteMarkdown；**学生数据随云端 student.json 信封独立同步，不随工作台备份 v9**（student-backup 信封 STUDENT_DATA_VERSION=1）
+- **Mixed storage**: sites/categories/searchEngines/theme/icons still persist via manual `localStorage.setItem`; countdowns/passwords/workbench todos/notes/diary/health/ledger/settings/pomodoro/habits persist to IndexedDB via `useIdb.ts` (`idbPut` / `idbGet`), DB `easy-web-tab` v12 (9 core stores + 3 aux stores + 1 icons + 15 student stores)
+- **学生 store 规范**: 15 个 `studentXxx` store（`useStudentXxxStore`）全部薄委托 `student*Core` 纯函数 + useIdb 持久化；`studentSettings`=枢纽（学段 K/P/J + 菜单 + 家长 PIN，IDB 'student_settings'）；IDB store `student_settings/_habits/_homework/_timetable/_plans/_review/_mistakes/_reading/_countdowns/_education/_pomodoro/_achievements/_rewards/_parent_tasks/_images` 共 15 个；`studentExam` 复用共享 'student_countdowns' store；**学生数据随云端 student.json 信封独立同步，不随工作台备份 v9**（student-backup 信封 STUDENT_DATA_VERSION=1）
 - Before writing to IndexedDB, pass `toRaw()`-ed plain data — IDB structured clone cannot handle Vue reactive Proxy (DataCloneError). **注意：嵌套 reactive 数组需逐数组 `toRaw`**（整体 `toRaw({...})` 对嵌套数组无效）——如 `idbPut('ledger', toRaw({ categories: toRaw(categories.value), entries: toRaw(entries.value) }))`
 - Built-in data (categories, engines) is hardcoded constant arrays, not loaded from files
 - User data loaded at store initialization: `localStorage` for sites/categories/engines/theme/icons; `idbGet` for countdowns/passwords/workbench todos/notes/diary/health/ledger (with one-time non-destructive migration from legacy localStorage keys)

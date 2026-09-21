@@ -10,7 +10,6 @@ import { useStudentRewardsStore } from '@/stores/studentRewards'
 import { useStudentHabitsStore } from '@/stores/studentHabits'
 import { useStudentHomeworkStore } from '@/stores/studentHomework'
 import { useStudentReadingStore } from '@/stores/studentReading'
-import { useStudentDiaryStore } from '@/stores/studentDiary'
 import { useStudentHealthStore } from '@/stores/studentHealth'
 import { useStudentGradesStore } from '@/stores/studentGrades'
 import { useAppSettingsStore } from '@/stores/settings'
@@ -23,7 +22,6 @@ import StudentTimetable from '@/components/student/StudentTimetable.vue'
 import StudentReading from '@/components/student/StudentReading.vue'
 import StudentExam from '@/components/student/StudentExam.vue'
 import StudentEducation from '@/components/student/StudentEducation.vue'
-import StudentDiary from '@/components/student/StudentDiary.vue'
 import StudentPlan from '@/components/student/StudentPlan.vue'
 import StudentReview from '@/components/student/StudentReview.vue'
 import StudentMistakes from '@/components/student/StudentMistakes.vue'
@@ -46,7 +44,6 @@ const rewardsStore = useStudentRewardsStore()
 const habitsStore = useStudentHabitsStore()
 const homeworkStore = useStudentHomeworkStore()
 const readingStore = useStudentReadingStore()
-const diaryStore = useStudentDiaryStore()
 const healthStore = useStudentHealthStore()
 const gradesStore = useStudentGradesStore()
 const showSettingsDialog = ref(false)
@@ -55,12 +52,12 @@ const showSettingsDialog = ref(false)
 // 15 项（含 health 健康管理）；菜单显示顺序与开关由 studentSettings.menuItems 控制
 type StudentSectionKey =
   | 'home' | 'habits' | 'homework' | 'timetable' | 'plan'
-  | 'review' | 'mistakes' | 'reading' | 'exam' | 'grades' | 'education' | 'diary'
+  | 'review' | 'mistakes' | 'reading' | 'exam' | 'grades' | 'education'
   | 'pomodoro' | 'achievements' | 'rewards' | 'parent' | 'health'
 
 const SECTION_KEYS: readonly StudentSectionKey[] = [
   'home', 'habits', 'homework', 'timetable', 'plan',
-  'review', 'mistakes', 'reading', 'exam', 'grades', 'education', 'diary',
+  'review', 'mistakes', 'reading', 'exam', 'grades', 'education',
   'pomodoro', 'achievements', 'rewards', 'parent', 'health'
 ]
 
@@ -233,7 +230,6 @@ onMounted(async () => {
     await habitsStore.loadHabits()
     await homeworkStore.loadHomework()
     await readingStore.loadReading()
-    await diaryStore.loadDiary()
     await healthStore.loadHealth()
     await gradesStore.loadGrades()
     await rewardsStore.backfillFromAll({
@@ -353,7 +349,6 @@ async function onOnboardingComplete() {
         <StudentReading v-else-if="activeSection === 'reading'" />
         <StudentExam v-else-if="activeSection === 'exam'" />
         <StudentEducation v-else-if="activeSection === 'education'" />
-        <StudentDiary v-else-if="activeSection === 'diary'" />
         <StudentPlan v-else-if="activeSection === 'plan'" />
         <StudentReview v-else-if="activeSection === 'review'" />
         <StudentMistakes v-else-if="activeSection === 'mistakes'" />

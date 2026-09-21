@@ -84,7 +84,7 @@ async function injectIdbStore(page, storeName, payload) {
         const ALL_STORES = [
       "todos","notes","diary","countdowns","passwords","health","ledger","settings","business",
       "pomodoro","habits","snapshots",
-      "student_settings","student_habits","student_pomodoro","student_diary","student_countdowns",
+      "student_settings","student_habits","student_pomodoro","student_countdowns",
       "student_homework","student_timetable","student_plans","student_review",
       "student_mistakes","student_reading","student_achievements","student_rewards",
       "student_parent_tasks","student_images"

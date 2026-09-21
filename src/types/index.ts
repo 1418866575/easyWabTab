@@ -614,7 +614,6 @@ export const STUDENT_MENU_KEYS: readonly string[] = [
   'exam',
   'grades',
   'education',
-  'diary',
   'health',
   'pomodoro',
   'achievements',
@@ -638,7 +637,6 @@ export const STUDENT_MENU_DEFAULT_LABELS: Record<string, string> = {
   exam: '考试倒计时',
   grades: '成绩记录',
   education: '教育经历',
-  diary: '日记本',
   health: '健康管理',
   pomodoro: '番茄钟',
   achievements: '成就勋章',
@@ -659,7 +657,6 @@ export const STUDENT_MENU_ICONS: Record<string, string> = {
   exam: 'countdowns',
   grades: 'ledger',
   education: 'diary',
-  diary: 'diary',
   health: 'health',
   pomodoro: 'pomodoro',
   achievements: 'habits',
@@ -672,31 +669,31 @@ export const STAGE_MENU_VISIBILITY: Record<StudentStage, Record<string, boolean>
   K: {
     home: true, habits: true, homework: false, timetable: false, plan: false,
     review: false, mistakes: false, reading: true, exam: false, education: true,
-    diary: true, health: true, pomodoro: false, achievements: true, rewards: true, parent: true,
+    health: true, pomodoro: false, achievements: true, rewards: true, parent: true,
     grades: false
   },
   P: {
     home: true, habits: true, homework: true, timetable: true, plan: false,
     review: false, mistakes: false, reading: true, exam: false, education: true,
-    diary: true, health: true, pomodoro: false, achievements: true, rewards: true, parent: true,
+    health: true, pomodoro: false, achievements: true, rewards: true, parent: true,
     grades: true
   },
   J: {
     home: true, habits: false, homework: true, timetable: true, plan: true,
     review: true, mistakes: true, reading: true, exam: true, education: true,
-    diary: true, health: true, pomodoro: true, achievements: false, rewards: false, parent: false,
+    health: true, pomodoro: true, achievements: false, rewards: false, parent: false,
     grades: true
   },
   H: {
     home: true, habits: false, homework: true, timetable: true, plan: true,
     review: true, mistakes: true, reading: true, exam: true, education: true,
-    diary: true, health: true, pomodoro: true, achievements: false, rewards: false, parent: false,
+    health: true, pomodoro: true, achievements: false, rewards: false, parent: false,
     grades: true
   },
   U: {
     home: true, habits: false, homework: false, timetable: true, plan: true,
     review: true, mistakes: false, reading: true, exam: true, education: true,
-    diary: true, health: true, pomodoro: true, achievements: false, rewards: false, parent: false,
+    health: true, pomodoro: true, achievements: false, rewards: false, parent: false,
     grades: true
   }
 }
@@ -821,7 +818,6 @@ export interface StudentBackupData {
   rewards?: StudentRewardsData
   // 共享 store 独立副本（严格隔离）
   studentHabits?: StudentHabitsData
-  studentDiary?: DiaryData
   studentPomodoro?: PomodoroData
   studentCountdowns?: { countdowns: Countdown[]; customCategories?: string[]; sortRule?: string }
   clientId?: string
@@ -1211,7 +1207,6 @@ export interface StudentSyncData {
   studentSettings?: unknown
   studentHabits?: unknown
   studentPomodoro?: unknown
-  studentDiary?: unknown
   studentCountdowns?: unknown
   homework?: unknown
   timetable?: unknown

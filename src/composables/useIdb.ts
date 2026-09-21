@@ -489,7 +489,6 @@ const STUDENT_STORE_TO_FIELD: Record<string, keyof StudentSyncData> = {
   student_settings: 'studentSettings',
   student_habits: 'studentHabits',
   student_pomodoro: 'studentPomodoro',
-  student_diary: 'studentDiary',
   student_countdowns: 'studentCountdowns',
   student_homework: 'homework',
   student_timetable: 'timetable',
@@ -507,14 +506,13 @@ const STUDENT_STORE_TO_FIELD: Record<string, keyof StudentSyncData> = {
 
 export async function exportStudent(): Promise<StudentSyncData> {
   const [
-    studentSettings, studentHabits, studentPomodoro, studentDiary, studentCountdowns,
+    studentSettings, studentHabits, studentPomodoro, studentCountdowns,
     homework, timetable, plans, review, mistakes, reading,
     achievements, rewards, parentTasks, education, health, studentImages, studentGrades
   ] = await Promise.all([
     idbGet('student_settings'),
     idbGet('student_habits'),
     idbGet('student_pomodoro'),
-    idbGet('student_diary'),
     idbGet('student_countdowns'),
     idbGet('student_homework'),
     idbGet('student_timetable'),
@@ -536,7 +534,6 @@ export async function exportStudent(): Promise<StudentSyncData> {
     studentSettings,
     studentHabits,
     studentPomodoro,
-    studentDiary,
     studentCountdowns,
     homework,
     timetable,

@@ -143,7 +143,6 @@ description: "当用户要\"记录/新增/添加/修改\"数据到 easy-web-tab 
   "studentSettings": {},
   "studentHabits": {},
   "studentPomodoro": {},
-  "studentDiary": { "entries": [] },
   "studentCountdowns": [],
   "homework": [],
   "timetable": [],
