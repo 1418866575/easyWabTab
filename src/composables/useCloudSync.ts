@@ -270,12 +270,22 @@ async function readDavDiagnostics(res: Response): Promise<{ upstreamStatus: stri
   return { upstreamStatus, snippet, textBody }
 }
 
-function davErrorLabel(method: string, upstreamStatus: string | null, snippet: string | null, textBody: string, fallbackStatus: number): string {
+function davErrorLabel(method: string, upstreamStatus: string | null, snippet: string | null, textBody: string, fallbackStatus: number, direct = false): string {
   const st = upstreamStatus || String(fallbackStatus)
   const detail = snippet || textBody
   if (st === '401') {
-    const base = `WebDAV ${method} ${st}：用户名或应用密码错误。`
-    const tips = [
+    const base = direct
+      ? `WebDAV ${method} ${st}：服务器要求身份验证，当前用户名/密码未被接受。`
+      : `WebDAV ${method} ${st}：用户名或应用密码错误。`
+    const tips = direct
+      ? [
+          '自建服务器用「服务器系统账号 + 系统密码」认证：用户名=服务器账号名，密码=该账号的登录密码',
+          '同步路径为 域名/dav/<用户名>/easy-web-tab，用户名会拼进路径，需与实际系统账号完全一致',
+          '若最近改过服务器系统密码，需用新密码重新生成 nginx 的 htpasswd（/etc/nginx/.ewt_sync_htpasswd_<用户名>）并 reload',
+          '部分手机浏览器会把这个 401 弹成原生「登录」框：核对上面两点后，在「设置 → 云同步」更新密码重试',
+          '云同步凭证只保存在本机、不随云同步，其他设备不会自动带上这组账号密码'
+        ]
+      : [
       '坚果云请使用"账户→安全选项→添加应用"生成的专用「应用密码」（不是登录密码）',
       '用户名通常是登录邮箱全拼，注意大小写',
       '路径格式应为 https://dav.jianguoyun.com/dav/ （尾部带斜杠）'
@@ -407,7 +417,7 @@ async function webdavGet(url: string, username: string, password: string): Promi
   if (res.status === 404) return { data: null, lastModifiedMs: 0, rawText: '' }
   if (!res.ok) {
     const diag = await readDavDiagnostics(res)
-    throw new Error(davErrorLabel('GET', diag.upstreamStatus, diag.snippet, diag.textBody, res.status))
+    throw new Error(davErrorLabel('GET', diag.upstreamStatus, diag.snippet, diag.textBody, res.status, shouldUseDirect(url)))
   }
   const text = await res.text()
   let lastModifiedMs = 0
@@ -442,7 +452,7 @@ async function webdavPut(url: string, username: string, password: string, body: 
   const res = await davRequest(url, 'PUT', username, password, body)
   if (!res.ok) {
     const diag = await readDavDiagnostics(res)
-    throw new Error(davErrorLabel('PUT', diag.upstreamStatus, diag.snippet, diag.textBody, res.status))
+    throw new Error(davErrorLabel('PUT', diag.upstreamStatus, diag.snippet, diag.textBody, res.status, shouldUseDirect(url)))
   }
 }
 
@@ -451,7 +461,7 @@ async function webdavDelete(url: string, username: string, password: string): Pr
   // 404 视作成功（文件本就不存在）
   if (res.ok || res.status === 404) return
   const diag = await readDavDiagnostics(res)
-  throw new Error(davErrorLabel('DELETE', diag.upstreamStatus, diag.snippet, diag.textBody, res.status))
+  throw new Error(davErrorLabel('DELETE', diag.upstreamStatus, diag.snippet, diag.textBody, res.status, shouldUseDirect(url)))
 }
 
 /**
@@ -489,7 +499,7 @@ async function webdavMkcol(url: string, username: string, password: string): Pro
     // 代理模式下的 409 是真错（如坚果云根路径没建），落到下面统一报错
   }
   const diag = await readDavDiagnostics(res)
-  throw new Error(davErrorLabel('MKCOL', diag.upstreamStatus, diag.snippet, diag.textBody, res.status))
+  throw new Error(davErrorLabel('MKCOL', diag.upstreamStatus, diag.snippet, diag.textBody, res.status, shouldUseDirect(url)))
 }
 
 /**
