@@ -152,6 +152,26 @@ test("T15 history 仅最近 MAX_HISTORY（排序后截断）；非对象 → emp
   assert.deepEqual(normalizeRewardsData([]), emptyRewardsData())
 })
 
+
+test("T16 normalizeRewardItem 保留合法 backgroundImage；非法/空丢弃", () => {
+  const ok = normalizeRewardItem({ name: "x", cost: 10, backgroundImage: "data:image/png;base64,AAAA" })
+  assert.equal(ok.backgroundImage, "data:image/png;base64,AAAA")
+  const svg = normalizeRewardItem({ name: "x", cost: 10, backgroundImage: "data:image/svg+xml;base64,AAAA" })
+  assert.ok(!("backgroundImage" in svg))
+  const empty = normalizeRewardItem({ name: "x", cost: 10, backgroundImage: "" })
+  assert.ok(!("backgroundImage" in empty))
+})
+
+test("T17 add/update 透传 backgroundImage；更新 '' 清除，再更新覆盖", () => {
+  const a = addRewardItem([], "A", 10, undefined, "data:image/jpeg;base64,AAA")
+  assert.equal(a.ok, true)
+  assert.equal(a.rewards[0].backgroundImage, "data:image/jpeg;base64,AAA")
+  const u = updateRewardItem(a.rewards, a.rewards[0].id, { backgroundImage: "" })
+  assert.ok(!("backgroundImage" in u.rewards[0]))
+  const u2 = updateRewardItem(a.rewards, a.rewards[0].id, { backgroundImage: "data:image/webp;base64,BBB" })
+  assert.equal(u2.rewards[0].backgroundImage, "data:image/webp;base64,BBB")
+})
+
 let p = 0, f = 0
 for (const t of tests) {
   try { t.fn(); p++; console.log("  OK " + t.name) }

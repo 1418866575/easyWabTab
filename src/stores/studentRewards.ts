@@ -108,8 +108,8 @@ export const useStudentRewardsStore = defineStore('studentRewards', () => {
   // ========================================
 
   /** 新增奖励项 */
-  async function addReward(name: string, cost: number, stock?: number): Promise<StudentRewardOp> {
-    const result = addRewardItemCore(data.value.rewards, name, cost, stock)
+  async function addReward(name: string, cost: number, stock?: number, backgroundImage?: string): Promise<StudentRewardOp> {
+    const result = addRewardItemCore(data.value.rewards, name, cost, stock, backgroundImage)
     if (!result.ok || !result.rewards) return { ok: false, reason: result.reason }
     data.value = { ...data.value, rewards: result.rewards }
     await saveRewards()
@@ -119,7 +119,7 @@ export const useStudentRewardsStore = defineStore('studentRewards', () => {
   /** 更新奖励项 */
   async function updateReward(
     id: string,
-    patch: { name?: string; cost?: number; stock?: number }
+    patch: { name?: string; cost?: number; stock?: number; backgroundImage?: string }
   ): Promise<StudentRewardOp> {
     const result = updateRewardItemCore(data.value.rewards, id, patch)
     if (!result.ok || !result.rewards) return { ok: false, reason: result.reason }

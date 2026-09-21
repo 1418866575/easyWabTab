@@ -8,6 +8,7 @@ import { useStudentParentTasksStore, type ParentTaskOpError } from '@/stores/stu
 import { useStudentHabitsStore } from '@/stores/studentHabits'
 import { useStudentHomeworkStore } from '@/stores/studentHomework'
 import { useStudentRewardsStore } from '@/stores/studentRewards'
+import { ALLOWED_REWARD_IMAGE_TYPES, MAX_REWARD_IMAGE_BYTES } from '@/composables/studentRewardCore'
 import { useStudentAchievementsStore } from '@/stores/studentAchievements'
 import { useToast } from '@/composables/useToast'
 import { useThemeStore } from '@/stores/theme'
@@ -407,6 +408,7 @@ function openAddReward() {
   rewardFormName.value = ''
   rewardFormCost.value = ''
   rewardFormStock.value = ''
+  rewardFormImage.value = ''
   rewardFormVisible.value = true
 }
 function openEditReward(id: string) {
@@ -418,6 +420,7 @@ function openEditReward(id: string) {
   rewardFormName.value = r.name
   rewardFormCost.value = r.cost
   rewardFormStock.value = r.stock === undefined ? '' : r.stock
+  rewardFormImage.value = r.backgroundImage ?? ''
   rewardFormVisible.value = true
 }
 async function submitRewardForm() {
@@ -427,12 +430,13 @@ async function submitRewardForm() {
   if (!name) { toast.error('请填写奖励名称'); return }
   if (!Number.isFinite(cost) || cost < 1 || cost > 9999) { toast.error('积分须 1-9999'); return }
   const stock = stockRaw === undefined ? undefined : (Number.isFinite(stockRaw) ? Math.max(0, Math.floor(stockRaw)) : 0)
+  const backgroundImage = rewardFormImage.value || undefined
   if (rewardFormMode.value === 'add') {
-    const r = await rewardsStore.addReward(name, cost, stock)
+    const r = await rewardsStore.addReward(name, cost, stock, backgroundImage)
     if (r.ok) { toast.success('奖励项已添加'); rewardFormVisible.value = false }
     else toast.error(rewardErrorText(r.reason))
   } else {
-    const r = await rewardsStore.updateReward(rewardFormEditingId.value, { name, cost, stock })
+    const r = await rewardsStore.updateReward(rewardFormEditingId.value, { name, cost, stock, backgroundImage })
     if (r.ok) { toast.success('奖励项已更新'); rewardFormVisible.value = false }
     else toast.error(rewardErrorText(r.reason))
   }
@@ -455,6 +459,45 @@ function rewardErrorText(reason?: string): string {
     default: return '操作失败，请重试'
   }
 }
+
+  // ===== 奖励背景图上传（格式/大小校验）=====
+  const rewardFormImage = ref('')
+  const rewardImageInput = ref<HTMLInputElement | null>(null)
+
+  function triggerRewardImagePick() {
+    if (!props.parentMode) return
+    rewardImageInput.value?.click()
+  }
+
+  function handleRewardImageFile(e: Event) {
+    const input = e.target as HTMLInputElement
+    const file = input.files?.[0]
+    input.value = '' // 允许再次选择同一文件
+    if (!file) return
+    if (!(ALLOWED_REWARD_IMAGE_TYPES as readonly string[]).includes(file.type)) {
+      toast.error('仅支持 PNG / JPG / WebP / GIF 格式图片')
+      return
+    }
+    if (file.size > MAX_REWARD_IMAGE_BYTES) {
+      toast.error('图片大小不能超过 2MB')
+      return
+    }
+    readFileAsDataUrl(file)
+      .then((url) => { rewardFormImage.value = url })
+      .catch(() => toast.error('图片读取失败，请重试'))
+  }
+
+  function readFileAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        if (typeof reader.result === 'string') resolve(reader.result)
+        else reject(new Error('empty'))
+      }
+      reader.onerror = () => reject(reader.error ?? new Error('read error'))
+      reader.readAsDataURL(file)
+    })
+  }
 
 // ===== 重置操作（家长模式：恢复到初始化状态） =====
 const resettingAchievements = ref(false)
@@ -809,7 +852,8 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
               v-for="r in pagedRewards"
               :key="r.id"
               class="stp-reward-card"
-              :class="{ 'out-of-stock': (r.stock ?? 1) === 0 }"
+              :class="{ 'out-of-stock': (r.stock ?? 1) === 0, 'has-bg': !!r.backgroundImage }"
+              :style="r.backgroundImage ? { backgroundImage: 'url(' + r.backgroundImage + ')' } : null"
             >
               <div class="stp-reward-name">{{ r.name }}</div>
               <div class="stp-reward-cost">{{ r.cost }} 积分</div>
@@ -874,6 +918,15 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
         <label class="stp-field">
           <span class="stp-field-label">库存（留空=不限）</span>
           <el-input type="number" min="0" step="1" v-model.number="rewardFormStock" />
+        </label>
+        <label class="stp-field stp-field-block">
+          <span class="stp-field-label">背景图（可选，≤2MB，PNG/JPG/WebP/GIF）</span>
+          <input ref="rewardImageInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="stp-hidden-file" @change="handleRewardImageFile" />
+          <div v-if="rewardFormImage" class="stp-img-preview">
+            <img :src="rewardFormImage" alt="奖励背景预览" />
+            <el-button size="small" type="danger" link @click="rewardFormImage = ''">移除图片</el-button>
+          </div>
+          <el-button v-else size="small" @click="triggerRewardImagePick">选择图片</el-button>
         </label>
       </div>
       <template #footer>
@@ -1217,6 +1270,31 @@ html.dark .stp-pager-info {
 .stp-reward-cost { font-size: 16px; color: var(--color-primary, #10b981); font-weight: 700; }
 .stp-reward-stock { font-size: 12px; color: var(--color-text-secondary, #6b7280); }
 .stp-reward-actions { display: flex; gap: 6px; width: 100%; }
+
+/* 奖励背景图上传 */
+.stp-hidden-file { display: none; }
+.stp-field-block { align-items: stretch; }
+.stp-field-block .stp-field-label { margin-bottom: 2px; }
+.stp-img-preview { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.stp-img-preview img {
+  max-width: 100%;
+  max-height: 150px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  object-fit: cover;
+}
+/* 奖励卡片背景图 + 半透明遮罩保证文字可读 */
+.stp-reward-card { position: relative; }
+.stp-reward-card.has-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.74);
+  z-index: 0;
+}
+html.dark .stp-reward-card.has-bg::before { background: rgba(17, 24, 39, 0.62); }
+.stp-reward-card.has-bg > * { position: relative; z-index: 1; }
 
 .stp-modal-body { display: flex; flex-direction: column; gap: 14px; }
 /* el-dialog 对齐项目卡片风格 */

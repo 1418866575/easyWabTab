@@ -77,6 +77,28 @@ async function redeem(item: StudentRewardItem): Promise<void> {
   toast.success(`兑换成功「${item.name}」，消耗 ${item.cost} 分`)
 }
 
+// ===== 奖励详情弹窗（点击卡片打开，背景图作 hero banner）=====
+const rewardDetailVisible = ref(false)
+const detailItem = ref<StudentRewardItem | null>(null)
+
+function openRewardDetail(item: StudentRewardItem) {
+  detailItem.value = item
+  rewardDetailVisible.value = true
+}
+
+async function detailRedeem(): Promise<void> {
+  if (!detailItem.value) return
+  const item = detailItem.value
+  const result = await store.redeem(item.id)
+  if (!result.ok) {
+    if (result.reason === 'insufficient') toast.error(`积分不足，还差 ${result.shortage ?? 0} 分`)
+    else toast.error(mapRewardError(result.reason))
+    return
+  }
+  toast.success(`兑换成功「${item.name}」，消耗 ${item.cost} 分`)
+  rewardDetailVisible.value = false
+}
+
 // ===== 积分规则弹框 =====
 const showRulesDialog = ref(false)
 const rules = computed(() => store.rulesText())
@@ -153,9 +175,10 @@ onMounted(async () => {
           v-for="item in rewardPageItems"
           :key="item.id"
           class="sr-reward-card"
-          :class="{ 'sold-out': isSoldOut(item) }"
+          :class="{ 'sold-out': isSoldOut(item), 'has-bg': !!item.backgroundImage }"
           :data-testid="`sr-reward-${item.id}`"
-        >
+         :style="item.backgroundImage ? { backgroundImage: 'url(' + item.backgroundImage + ')' } : null"
+            @click="openRewardDetail(item)">
           <div class="sr-reward-head">
             <div class="sr-reward-cost">
               <span class="sr-reward-cost-num">{{ item.cost }}</span>
@@ -263,6 +286,41 @@ onMounted(async () => {
         <el-button type="primary" @click="showRulesDialog = false">知道了</el-button>
       </template>
     </el-dialog>
+
+    <!-- 奖励详情弹窗（背景图作 hero banner） -->
+    <el-dialog v-model="rewardDetailVisible" title="奖励详情" width="460px" append-to-body data-testid="sr-detail-dialog">
+      <div v-if="detailItem" class="sr-detail">
+        <div
+          class="sr-detail-hero"
+          :class="{ 'has-bg': !!detailItem.backgroundImage }"
+          :style="detailItem.backgroundImage ? { backgroundImage: 'url(' + detailItem.backgroundImage + ')' } : null"
+        >
+          <div class="sr-detail-hero-inner">
+            <div class="sr-detail-cost"><span class="sr-detail-cost-num">{{ detailItem.cost }}</span> 分</div>
+            <div class="sr-detail-name">{{ detailItem.name }}</div>
+          </div>
+        </div>
+        <div class="sr-detail-meta">
+          <div class="sr-detail-row">
+            <span class="sr-detail-label">库存</span>
+            <span class="sr-detail-value">{{ detailItem.stock === undefined ? '不限' : (isSoldOut(detailItem) ? '已售罄' : detailItem.stock) }}</span>
+          </div>
+          <div class="sr-detail-row">
+            <span class="sr-detail-label">所需积分</span>
+            <span class="sr-detail-value">{{ detailItem.cost }} 分</span>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="rewardDetailVisible = false">关闭</el-button>
+        <el-button
+          type="primary"
+          :disabled="!detailItem || isSoldOut(detailItem)"
+          @click="detailRedeem"
+          :data-testid="`sr-detail-redeem-${detailItem?.id ?? ''}`"
+        >立即兑换</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -368,6 +426,70 @@ onMounted(async () => {
   background: var(--color-bg, #f9fafb);
   cursor: default;
 }
+.sr-reward-card { position: relative; }
+.sr-reward-card.has-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.74);
+  z-index: 0;
+  pointer-events: none;
+}
+html.dark .sr-reward-card.has-bg::before { background: rgba(17, 24, 39, 0.62); }
+.sr-reward-card.has-bg > * { position: relative; z-index: 1; }
+
+/* 奖励详情弹窗 */
+.sr-detail { display: flex; flex-direction: column; gap: 14px; }
+.sr-detail-hero {
+  position: relative;
+  height: 170px;
+  border-radius: 10px;
+  background-size: cover;
+  background-position: center;
+  background-image: linear-gradient(135deg, #f59e0b, #f97316);
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  color: #fff;
+}
+.sr-detail-hero.has-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0.05) 60%);
+}
+.sr-detail-hero-inner {
+  position: relative;
+  z-index: 1;
+  padding: 14px 16px;
+  width: 100%;
+  color: #fff;
+}
+.sr-detail-cost { font-size: 13px; opacity: 0.92; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
+.sr-detail-cost-num { font-size: 22px; font-weight: 700; }
+.sr-detail-name {
+  font-size: 18px;
+  font-weight: 700;
+  margin-top: 2px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  word-break: break-word;
+}
+.sr-detail-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--color-bg, #f9fafb);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.sr-detail-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+.sr-detail-label { color: var(--color-text-secondary, #6b7280); }
+.sr-detail-value { font-weight: 600; color: var(--color-text, #1f2937); }
+html.dark .sr-detail-meta { background: #111827; border-color: #374151; }
+html.dark .sr-detail-value { color: #f9fafb; }
+
 .sr-reward-head {
   display: flex;
   justify-content: flex-start;

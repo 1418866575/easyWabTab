@@ -1025,6 +1025,8 @@ export interface StudentRewardItem {
   name: string            // 1-30 字符，唯一
   cost: number            // 1-9999 正整数
   stock?: number          // 0=售罄
+  /** 背景图（base64 dataURL，随 student.json 走云同步；仅放行安全位图格式，禁 svg） */
+  backgroundImage?: string
 }
 
 /** 奖励交易记录 */

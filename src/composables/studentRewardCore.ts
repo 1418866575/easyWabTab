@@ -29,6 +29,18 @@ export const POINTS_READING = 5
 /** 阅读加分门槛（分钟） */
 export const READING_MIN_MINUTES = 30
 
+/** 奖励背景图允许的 MIME 类型（禁 svg 防 XSS，对齐日记富媒体白名单） */
+export const ALLOWED_REWARD_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'] as const
+
+/** 奖励背景图大小上限（字节）：2MB */
+export const MAX_REWARD_IMAGE_BYTES = 2 * 1024 * 1024
+
+/** 校验奖励背景图 dataURL 合法性：仅放行安全位图格式，禁 svg+xml（防 XSS） */
+export function isValidRewardImageDataUrl(url: unknown): url is string {
+  if (typeof url !== 'string' || url.length === 0) return false
+  return /^data:image\/(png|jpeg|webp|gif);base64,/.test(url)
+}
+
 /** 操作错误语义 */
 export type RewardOpError =
   | 'empty'
@@ -85,6 +97,9 @@ export function normalizeRewardItem(raw: unknown): StudentRewardItem | null {
   }
   if (typeof r.stock === 'number' && Number.isFinite(r.stock) && r.stock >= 0) {
     out.stock = Math.floor(r.stock)
+  }
+  if (isValidRewardImageDataUrl(r.backgroundImage)) {
+    out.backgroundImage = r.backgroundImage
   }
   return out
 }
@@ -219,7 +234,8 @@ export function addRewardItem(
   rewards: readonly StudentRewardItem[],
   name: string,
   cost: number,
-  stock?: number
+  stock?: number,
+  backgroundImage?: string
 ): RewardOp & { rewards?: StudentRewardItem[] } {
   const trimmed = name.trim()
   if (!trimmed) return { ok: false, reason: 'empty' }
@@ -239,6 +255,9 @@ export function addRewardItem(
   if (stock !== undefined && Number.isFinite(stock) && stock >= 0) {
     item.stock = Math.floor(stock)
   }
+  if (backgroundImage !== undefined && isValidRewardImageDataUrl(backgroundImage)) {
+    item.backgroundImage = backgroundImage
+  }
   const next = [...rewards, item].sort((a, b) => a.cost - b.cost)
   return { ok: true, rewards: next }
 }
@@ -250,7 +269,7 @@ export function addRewardItem(
 export function updateRewardItem(
   rewards: readonly StudentRewardItem[],
   id: string,
-  patch: { name?: string; cost?: number; stock?: number }
+  patch: { name?: string; cost?: number; stock?: number; backgroundImage?: string }
 ): RewardOp & { rewards?: StudentRewardItem[] } {
   const idx = rewards.findIndex(r => r.id === id)
   if (idx === -1) return { ok: false, reason: 'not-found' }
@@ -276,6 +295,13 @@ export function updateRewardItem(
       return { ok: false, reason: 'invalid-cost' }
     }
     next.stock = Math.floor(patch.stock)
+  }
+  if (patch.backgroundImage !== undefined) {
+    if (patch.backgroundImage === '' || !isValidRewardImageDataUrl(patch.backgroundImage)) {
+      delete next.backgroundImage
+    } else {
+      next.backgroundImage = patch.backgroundImage
+    }
   }
   const nextRewards = [...rewards.slice(0, idx), next, ...rewards.slice(idx + 1)]
     .sort((a, b) => a.cost - b.cost)
