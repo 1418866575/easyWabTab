@@ -6,7 +6,8 @@ import {
   localToday,
   isTodoUncategorized,
   moveCustomCategoryInList,
-  migrateLegacyBuiltinCategories
+  migrateLegacyBuiltinCategories,
+  applyCheckIn
 } from '../src/composables/todoCore.ts'
 import * as todoCore from '../src/composables/todoCore.ts'
 import type { WorkbenchTodo } from '../src/types'
@@ -226,6 +227,55 @@ test('T16 purgeLegacyBuiltinCategories no legacy names', () => {
   const result = todoCore.purgeLegacyBuiltinCategories(input)
   assert.deepEqual(result, ['custom'])
   assert.notEqual(result, input, '应返回新数组引用')
+})
+
+// T-C1 — applyCheckIn 写入打卡字段，其余字段与原对象保持一致（且不修改入参）
+test('T-C1 applyCheckIn 写入打卡字段', () => {
+  const base = normalizeTodo({ id: 'a', title: '写周报', priority: 'high' })
+  const after = applyCheckIn(base)
+  assert.equal(after.checkedIn, true)
+  assert.ok(typeof after.checkedInAt === 'string' && after.checkedInAt.length > 0)
+  assert.equal(after.id, base.id)
+  assert.equal(after.title, base.title)
+  assert.equal(after.priority, base.priority)
+  assert.equal(after.completed, base.completed)
+  assert.equal(after.createdAt, base.createdAt)
+  assert.equal(base.checkedIn, undefined)
+})
+
+// T-C2 — applyCheckIn 幂等：已打卡原样返回同一引用
+test('T-C2 applyCheckIn 幂等', () => {
+  const once = applyCheckIn(normalizeTodo({ id: 'b', title: 'x' }))
+  const twice = applyCheckIn(once)
+  assert.equal(twice, once)
+  assert.equal(twice.checkedInAt, once.checkedInAt)
+})
+
+// T-C3 — 核心不变量：打卡不改变列表顺序与索引（即便被打卡项优先级最低）
+test('T-C3 打卡前后列表顺序完全一致', () => {
+  const list: WorkbenchTodo[] = ['t1', 't2', 't3', 't4', 't5'].map((id, i) =>
+    normalizeTodo({ id, title: `任务${i + 1}`, priority: i === 2 ? 'low' : 'high' })
+  )
+  const before = list.map(t => t.id)
+  const idx = 2
+  list[idx] = applyCheckIn(list[idx])
+  assert.deepEqual(list.map(t => t.id), before)
+  assert.equal(list[idx].id, 't3')
+  assert.equal(list[idx].checkedIn, true)
+  assert.equal(list[idx].priority, 'low')
+})
+
+// T-C4 — 打卡与「完成」互不影响，且两者都不导致重排
+test('T-C4 打卡与完成互不干扰且不重排', () => {
+  const list: WorkbenchTodo[] = ['a', 'b', 'c'].map(id => normalizeTodo({ id, title: id }))
+  const before = list.map(t => t.id)
+  list[0] = applyCheckIn(list[0])
+  list[1] = { ...list[1], completed: true }
+  assert.deepEqual(list.map(t => t.id), before)
+  assert.equal(list[0].checkedIn, true)
+  assert.equal(list[0].completed, false)
+  assert.equal(list[1].completed, true)
+  assert.equal(list[1].checkedIn, undefined)
 })
 
 let passed = 0

@@ -5,13 +5,11 @@ import {
   normalizeTodo,
   moveCustomCategoryInList,
   migrateLegacyBuiltinCategories,
-  purgeLegacyBuiltinCategories
+  purgeLegacyBuiltinCategories,
+  applyCheckIn
 } from '@/composables/todoCore'
 import { idbGet, idbPut } from '../composables/useIdb'
 import { markDirty } from '@/composables/useCloudSync'
-
-// 优先级排序权重：高(0) → 中(1) → 低(2)
-const PRIORITY_ORDER: Record<TodoPriority, number> = { high: 0, medium: 1, low: 2 }
 
 // 分类注册表偏好（localStorage，不随 JSON 备份导出——与倒计时分类偏好同策略）：
 // customCategories = 用户自定义分类名数组；tabCategories = 标签页可见分类（默认全部内置）
@@ -214,21 +212,51 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
     }
   }
 
-  // 排序（查询筛选由组件经 filterTodos 应用）：未完成在前 → 优先级(高→低) → 截止日期升序(无截止排最后) → 创建时间降序(新的在前)
-  const sortedTodos = computed<WorkbenchTodo[]>(() =>
-    [...todos.value].sort((a, b) => {
-      if (a.completed !== b.completed) return a.completed ? 1 : -1
-      const pa = PRIORITY_ORDER[a.priority]
-      const pb = PRIORITY_ORDER[b.priority]
-      if (pa !== pb) return pa - pb
-      if (a.dueDate !== b.dueDate) {
-        if (!a.dueDate) return 1
-        if (!b.dueDate) return -1
-        return a.dueDate < b.dueDate ? -1 : 1
-      }
-      return a.createdAt < b.createdAt ? 1 : -1
-    })
-  )
+  // 顺序 = 手工顺序：数组顺序即展示顺序，不做任何自动排序。
+  // 打卡（checkedIn/checkedInAt）与完成（completed）均不参与排序：
+  // 打卡/完成后条目位置保持固定，不置顶、不置底、不移到末尾、不改变相对顺序与索引。
+  const orderedTodos = computed<WorkbenchTodo[]>(() => [...todos.value])
+
+  /** 打卡（一次性）：写 checkedIn=true + checkedInAt；已打卡则幂等忽略。
+   *  关键：只改字段，绝不改动数组顺序——打卡前后条目索引完全一致。 */
+  async function checkInTodo(id: string): Promise<void> {
+    const idx = todos.value.findIndex(t => t.id === id)
+    if (idx === -1) return
+    const next = applyCheckIn(todos.value[idx])
+    // 已打卡时 applyCheckIn 原样返回同一引用 → 直接跳过，不写库
+    if (next === todos.value[idx]) return
+    // 按索引原地替换：位置与索引严格不变
+    todos.value[idx] = next
+    await saveTodos()
+  }
+
+  /** 手工排序：交换两条待办在数组中的位置（卡片拖拽落库）。其余条目相对顺序不变。 */
+  async function reorderTodo(fromId: string, toId: string): Promise<void> {
+    if (fromId === toId) return
+    const arr = [...toRaw(todos.value)]
+    const i = arr.findIndex(t => t.id === fromId)
+    const j = arr.findIndex(t => t.id === toId)
+    if (i === -1 || j === -1) return
+    const tmp = arr[i]
+    arr[i] = arr[j]
+    arr[j] = tmp
+    todos.value = arr
+    await saveTodos()
+  }
+
+  /** 手工排序：上移/下移一格（表格视图用）。已在边界返回 false。 */
+  async function moveTodo(id: string, dir: 'up' | 'down'): Promise<boolean> {
+    const arr = [...toRaw(todos.value)]
+    const i = arr.findIndex(t => t.id === id)
+    const target = dir === 'up' ? i - 1 : i + 1
+    if (i === -1 || target < 0 || target >= arr.length) return false
+    const tmp = arr[i]
+    arr[i] = arr[target]
+    arr[target] = tmp
+    todos.value = arr
+    await saveTodos()
+    return true
+  }
 
   // 页签计数
   const totalCount = computed(() => todos.value.length)
@@ -251,7 +279,10 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
     deleteCategory,
     moveCategory,
     toggleTabCategory,
-    sortedTodos,
+    orderedTodos,
+    checkInTodo,
+    reorderTodo,
+    moveTodo,
     totalCount,
     activeCount,
     completedCount

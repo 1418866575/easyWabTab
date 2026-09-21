@@ -8,6 +8,7 @@ const vm = useViewMode()
 function cardFields(row: any) {
   return [
     { label: '完成', value: row.todo.completed ? '已完成' : '未完成' },
+    { label: '打卡', value: row.todo.checkedIn ? '已打卡' : '未打卡' },
     { label: '标题', value: row.todo.title },
     { label: '描述', value: row.todo.description || '—' },
     { label: '优先级', value: priorityMeta(row.todo.priority).label },
@@ -69,9 +70,10 @@ function resetSearch(): void {
   listPage.value = 1
 }
 
-// 列表渲染用筛选后的数据（标签页与查询条件叠加）；排序由 store 的 sortedTodos 保证
+// 列表渲染用筛选后的数据（标签页与查询条件叠加）；顺序 = store 的 orderedTodos（手工顺序，
+// 无任何自动排序：打卡状态/打卡时间、完成状态均不参与排序，打卡前后条目索引完全一致）
 const filteredTodos = computed(() =>
-  filterTodos(store.sortedTodos, { ...appliedFilters.value, categoryId: activeCategoryId.value || undefined })
+  filterTodos(store.orderedTodos, { ...appliedFilters.value, categoryId: activeCategoryId.value || undefined })
 )
 
 // 预计算卡片主角（含 completed 的「已完成」态），供模板一次取用，避免重复调用
@@ -189,6 +191,45 @@ async function handleToggle(todo: WorkbenchTodo): Promise<void> {
   await store.toggleTodo(todo.id)
 }
 
+// 打卡（一次性）：只写 checkedIn/checkedInAt，不改变条目在列表中的位置与索引
+async function handleCheckIn(id: string): Promise<void> {
+  await store.checkInTodo(id)
+}
+
+// 手工排序：表格视图上移/下移一格
+async function handleMove(id: string, dir: 'up' | 'down'): Promise<void> {
+  await store.moveTodo(id, dir)
+}
+
+// ===== 卡片视图拖拽手工排序（复用 HomeLayoutCard 的原生 HTML5 拖拽交换模式）=====
+const dragSourceId = ref<string | null>(null)
+const dragOverId = ref<string | null>(null)
+
+function onTodoDragStart(id: string): void {
+  dragSourceId.value = id
+}
+
+function onTodoDragOver(id: string, event: DragEvent): void {
+  event.preventDefault()
+  if (dragSourceId.value && dragSourceId.value !== id) dragOverId.value = id
+}
+
+function onTodoDragLeave(): void {
+  dragOverId.value = null
+}
+
+async function onTodoDrop(id: string): Promise<void> {
+  const src = dragSourceId.value
+  if (src && src !== id) await store.reorderTodo(src, id)
+  dragSourceId.value = null
+  dragOverId.value = null
+}
+
+function onTodoDragEnd(): void {
+  dragSourceId.value = null
+  dragOverId.value = null
+}
+
 async function handleDelete(id: string): Promise<void> {
   if (confirm('确定要删除这个待办任务吗？')) {
     await store.deleteTodo(id)
@@ -304,7 +345,7 @@ onUnmounted(() => {
         >{{ cat }}</el-radio-button>
       </el-radio-group>
       <span class="toolbar-count" data-testid="td-toolbar-count">
-        <template v-if="hasActiveFilter">筛选出 {{ filteredTodos.length }} / {{ store.sortedTodos.length }} 个</template>
+        <template v-if="hasActiveFilter">筛选出 {{ filteredTodos.length }} / {{ store.orderedTodos.length }} 个</template>
       </span>
     </div>
 
@@ -317,7 +358,7 @@ onUnmounted(() => {
     </div>
 
     <!-- 空态 / 卡片墙 -->
-    <div v-if="store.sortedTodos.length === 0" class="empty-state empty-invite" data-testid="td-empty" @click="startAdd">
+    <div v-if="store.orderedTodos.length === 0" class="empty-state empty-invite" data-testid="td-empty" @click="startAdd">
       ＋ 新增第一个待办
     </div>
 
@@ -383,7 +424,7 @@ onUnmounted(() => {
               <span v-else class="td-col-empty">未分类</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" class-name="ewt-op-col" width="220" align="center" fixed="right">
+          <el-table-column label="操作" class-name="ewt-op-col" width="360" align="center" fixed="right">
             <template #default="{ row: v }">
               <div class="td-actions" @click.stop>
                 <el-button
@@ -393,6 +434,16 @@ onUnmounted(() => {
                   :title="v.todo.completed ? '点击标记为未完成' : '点击标记为已完成'"
                   @click="handleToggle(v.todo)"
                 >{{ v.todo.completed ? '已完成' : '未完成' }}</el-button>
+                <el-button
+                  size="small"
+                  :type="v.todo.checkedIn ? 'success' : 'default'"
+                  :disabled="v.todo.checkedIn === true"
+                  :data-testid="`td-checkin-${v.todo.id}`"
+                  :title="v.todo.checkedIn ? '已打卡' : '点击打卡'"
+                  @click="handleCheckIn(v.todo.id)"
+                >{{ v.todo.checkedIn ? '已打卡' : '打卡' }}</el-button>
+                <el-button size="small" :data-testid="`td-up-${v.todo.id}`" title="上移（手工排序）" @click="handleMove(v.todo.id, 'up')">↑</el-button>
+                <el-button size="small" :data-testid="`td-down-${v.todo.id}`" title="下移（手工排序）" @click="handleMove(v.todo.id, 'down')">↓</el-button>
                 <el-button size="small" :data-testid="`td-edit-${v.todo.id}`" @click="startEdit(v.todo)">编辑</el-button>
                 <el-button size="small" class="btn-delete" :data-testid="`td-delete-${v.todo.id}`" @click="handleDelete(v.todo.id)">删除</el-button>
               </div>
@@ -400,13 +451,25 @@ onUnmounted(() => {
           </el-table-column>
         </el-table>
         <div v-else class="ewt-card-grid">
-          <RecordsCard
-            @edit="startEdit(item.todo)"
+          <div
             v-for="item in pageTodos"
             :key="item.todo.id"
-            :fields="cardFields(item)"
+            class="td-card-wrap"
+            draggable="true"
+            :data-todo-id="item.todo.id"
+            :class="{ 'is-dragging': dragSourceId === item.todo.id, 'is-dragover': dragOverId === item.todo.id }"
+            @dragstart="onTodoDragStart(item.todo.id)"
+            @dragover="onTodoDragOver(item.todo.id, $event)"
+            @dragleave="onTodoDragLeave"
+            @drop="onTodoDrop(item.todo.id)"
+            @dragend="onTodoDragEnd"
           >
-          </RecordsCard>
+            <RecordsCard
+              @edit="startEdit(item.todo)"
+              :fields="cardFields(item)"
+            >
+            </RecordsCard>
+          </div>
         </div>
 
       </div>
@@ -1276,5 +1339,17 @@ html.dark .btn-add:disabled {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+/* 卡片视图拖拽手工排序：grab 光标 + 拖拽中半透明 + 落点虚线高亮 */
+.td-card-wrap {
+  cursor: grab;
+}
+.td-card-wrap.is-dragging {
+  opacity: 0.5;
+}
+.td-card-wrap.is-dragover {
+  outline: 2px dashed var(--color-primary, #409eff);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm, 4px);
 }
 </style>

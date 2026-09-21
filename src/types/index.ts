@@ -128,6 +128,8 @@ export interface WorkbenchTodo {
   updatedAt: string
   color?: string // 卡片自定义颜色（'#RRGGBB' 或 '#RGB' hex）；undefined = 默认蓝
   categoryId?: string // 待办分类（undefined/'' = 未分类）
+  checkedIn?: boolean // 是否已打卡（一次性：打卡后恒为 true，不自动重置）
+  checkedInAt?: string // 打卡时间 ISO（仅展示用，绝不参与排序）
 }
 
 // 工作台便签

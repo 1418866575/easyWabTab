@@ -52,7 +52,9 @@ export function normalizeTodo(raw: Partial<WorkbenchTodo>): WorkbenchTodo {
     createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : new Date().toISOString(),
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : new Date().toISOString(),
     color: typeof raw.color === 'string' && HEX_COLOR_RE.test(raw.color) ? raw.color : DEFAULT_TODO_COLOR,
-    ...(categoryId ? { categoryId } : {})
+    ...(categoryId ? { categoryId } : {}),
+    ...(raw.checkedIn === true ? { checkedIn: true } : {}),
+    ...(typeof raw.checkedInAt === 'string' ? { checkedInAt: raw.checkedInAt } : {})
   }
 }
 
@@ -133,4 +135,18 @@ export function moveCustomCategoryInList(list: string[], name: string, dir: 'up'
   next[idx] = next[target]
   next[target] = tmp
   return next
+}
+
+/**
+ * 打卡（纯函数，不修改入参）：返回打完卡的新对象。
+ * 已打卡（checkedIn === true）则原样返回同一引用，保证幂等。
+ *
+ * 只写 checkedIn / checkedInAt / updatedAt —— 绝不引入任何排序字段，
+ * 顺序完全由数组本身承载，因此打卡前后列表顺序与各条目索引必然完全一致
+ * （不置顶、不置底、不移到末尾、不改变相对顺序）。
+ */
+export function applyCheckIn(todo: WorkbenchTodo): WorkbenchTodo {
+  if (todo.checkedIn === true) return todo
+  const now = new Date().toISOString()
+  return { ...todo, checkedIn: true, checkedInAt: now, updatedAt: now }
 }
