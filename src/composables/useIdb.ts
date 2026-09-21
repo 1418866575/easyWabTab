@@ -34,7 +34,7 @@ export const IDB_ICONS_STORES = ['icons'] as const
 export const IDB_STUDENT_STORES = [
   'student_settings',
   // 4 共享副本（复用 core 纯函数，严格隔离）
-  'student_habits', 'student_pomodoro', 'student_diary', 'student_countdowns',
+  'student_habits', 'student_diary', 'student_countdowns',
   // 11 独立模块 store（v9 +student_parent_tasks, v12 +student_education, v13 +student_health）
   'student_homework', 'student_timetable', 'student_plans', 'student_review',
   'student_mistakes', 'student_reading', 'student_achievements', 'student_rewards',
@@ -488,7 +488,6 @@ export async function importBusinessData(remote: BusinessSyncData): Promise<void
 const STUDENT_STORE_TO_FIELD: Record<string, keyof StudentSyncData> = {
   student_settings: 'studentSettings',
   student_habits: 'studentHabits',
-  student_pomodoro: 'studentPomodoro',
   student_countdowns: 'studentCountdowns',
   student_homework: 'homework',
   student_timetable: 'timetable',
@@ -506,13 +505,12 @@ const STUDENT_STORE_TO_FIELD: Record<string, keyof StudentSyncData> = {
 
 export async function exportStudent(): Promise<StudentSyncData> {
   const [
-    studentSettings, studentHabits, studentPomodoro, studentCountdowns,
+    studentSettings, studentHabits, studentCountdowns,
     homework, timetable, plans, review, mistakes, reading,
     achievements, rewards, parentTasks, education, health, studentImages, studentGrades
   ] = await Promise.all([
     idbGet('student_settings'),
     idbGet('student_habits'),
-    idbGet('student_pomodoro'),
     idbGet('student_countdowns'),
     idbGet('student_homework'),
     idbGet('student_timetable'),
@@ -533,7 +531,6 @@ export async function exportStudent(): Promise<StudentSyncData> {
     exportedAt: new Date().toISOString(),
     studentSettings,
     studentHabits,
-    studentPomodoro,
     studentCountdowns,
     homework,
     timetable,
@@ -555,7 +552,7 @@ export async function importStudentData(remote: StudentSyncData): Promise<void> 
   if (!remote) return
   const db = await openIdb()
   const remoteFields = remote as unknown as Record<string, unknown>
-  // 单事务覆盖 15 个学生 store：仅写 remote 中存在的字段，缺失字段不写入（不 put undefined）
+  // 单事务覆盖所有学生 store：仅写 remote 中存在的字段，缺失字段不写入（不 put undefined）
   const tx = db.transaction([...IDB_STUDENT_STORES], 'readwrite')
   for (const storeName of [...IDB_STUDENT_STORES]) {
     const fieldName = STUDENT_STORE_TO_FIELD[storeName]

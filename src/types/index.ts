@@ -1,4 +1,3 @@
-import type { PomodoroData } from '../composables/pomodoroCore'
 
 export interface Site {
   name: string
@@ -615,7 +614,6 @@ export const STUDENT_MENU_KEYS: readonly string[] = [
   'grades',
   'education',
   'health',
-  'pomodoro',
   'achievements',
   'rewards',
   'parent'
@@ -638,7 +636,6 @@ export const STUDENT_MENU_DEFAULT_LABELS: Record<string, string> = {
   grades: '成绩记录',
   education: '教育经历',
   health: '健康管理',
-  pomodoro: '番茄钟',
   achievements: '成就勋章',
   rewards: '奖励积分',
   parent: '家长协同'
@@ -658,7 +655,6 @@ export const STUDENT_MENU_ICONS: Record<string, string> = {
   grades: 'ledger',
   education: 'diary',
   health: 'health',
-  pomodoro: 'pomodoro',
   achievements: 'habits',
   rewards: 'ledger',
   parent: 'health'
@@ -669,31 +665,31 @@ export const STAGE_MENU_VISIBILITY: Record<StudentStage, Record<string, boolean>
   K: {
     home: true, habits: true, homework: false, timetable: false, plan: false,
     review: false, mistakes: false, reading: true, exam: false, education: true,
-    health: true, pomodoro: false, achievements: true, rewards: true, parent: true,
+    health: true, achievements: true, rewards: true, parent: true,
     grades: false
   },
   P: {
     home: true, habits: true, homework: true, timetable: true, plan: false,
     review: false, mistakes: false, reading: true, exam: false, education: true,
-    health: true, pomodoro: false, achievements: true, rewards: true, parent: true,
+    health: true, achievements: true, rewards: true, parent: true,
     grades: true
   },
   J: {
     home: true, habits: false, homework: true, timetable: true, plan: true,
     review: true, mistakes: true, reading: true, exam: true, education: true,
-    health: true, pomodoro: true, achievements: false, rewards: false, parent: false,
+    health: true, achievements: false, rewards: false, parent: false,
     grades: true
   },
   H: {
     home: true, habits: false, homework: true, timetable: true, plan: true,
     review: true, mistakes: true, reading: true, exam: true, education: true,
-    health: true, pomodoro: true, achievements: false, rewards: false, parent: false,
+    health: true, achievements: false, rewards: false, parent: false,
     grades: true
   },
   U: {
     home: true, habits: false, homework: false, timetable: true, plan: true,
     review: true, mistakes: false, reading: true, exam: true, education: true,
-    health: true, pomodoro: true, achievements: false, rewards: false, parent: false,
+    health: true, achievements: false, rewards: false, parent: false,
     grades: true
   }
 }
@@ -748,15 +744,6 @@ export const STAGE_DEFAULT_HABITS: Record<StudentStage, { name: string; category
   ]
 }
 
-/** 学段默认番茄钟时长（分钟）：小学 25+5 / 初中·高中 50+10 / 大学 45+10 */
-export const STAGE_DEFAULT_POMODORO: Record<StudentStage, { focus: number; break: number }> = {
-  K: { focus: 15, break: 5 },
-  P: { focus: 25, break: 5 },
-  J: { focus: 50, break: 10 },
-  H: { focus: 50, break: 10 },
-  U: { focus: 45, break: 10 }
-}
-
 /** 学段徽标配置 */
 export const STAGE_BADGE: Record<StudentStage, { label: string; color: string }> = {
   K: { label: 'K', color: '#f59e0b' },
@@ -780,7 +767,7 @@ export interface StudentSettings {
   menuLabels?: Record<string, string>
   /** 菜单可见性（key → 显示开关；缺失=显示） */
   menuVisibility?: Record<string, boolean>
-  /** 学段默认值播种标记：值 !== stage 时触发默认学科/习惯/番茄钟播种 */
+  /** 学段默认值播种标记：值 !== stage 时触发默认学科/习惯播种 */
   stageSeeded?: StudentStage
   /** 学科清单（自定义增删；学段切换自动播种默认学科） */
   subjects?: string[]
@@ -818,7 +805,6 @@ export interface StudentBackupData {
   rewards?: StudentRewardsData
   // 共享 store 独立副本（严格隔离）
   studentHabits?: StudentHabitsData
-  studentPomodoro?: PomodoroData
   studentCountdowns?: { countdowns: Countdown[]; customCategories?: string[]; sortRule?: string }
   clientId?: string
   pushedAt?: number
@@ -995,7 +981,7 @@ export interface StudentReadingData {
 }
 
 /** 勋章分类 */
-export type StudentAchievementCategory = 'habit' | 'study' | 'reading' | 'pomodoro'
+export type StudentAchievementCategory = 'habit' | 'study' | 'reading'
 
 /** 勋章定义（内置 10 枚，不可编辑） */
 export interface StudentAchievementDef {
@@ -1206,7 +1192,6 @@ export interface StudentSyncData {
   pushedAt?: number
   studentSettings?: unknown
   studentHabits?: unknown
-  studentPomodoro?: unknown
   studentCountdowns?: unknown
   homework?: unknown
   timetable?: unknown

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 学生工作台占位面板：M1 基础框架下 13 个未实施面板（habits/homework/timetable/plan/
-// review/mistakes/reading/exam/diary/pomodoro/achievements/rewards/parent）的统一占位。
+// review/mistakes/reading/exam/diary/achievements/rewards/parent）的统一占位。
 // M2-M4 实施各模块时，逐个替换为真实面板组件并接入对应 store。
 // 不依赖任何 student store（占位面板只读视图，无状态变更）
 
@@ -22,7 +22,6 @@ const ROADMAP: Record<string, string> = {
   reading: '阅读记录（M2）：书目 + 阅读时长 + 笔记摘录，全学段开放。',
   exam: '考试倒计时（M3）：复用倒计时引擎，按学科 + 考试类型分类，P/J 段专属。',
   diary: '学习日记（M2）：每日一篇，Markdown 编辑 + 历史回顾，全学段开放。',
-  pomodoro: '番茄钟（M2）：复用成人番茄钟，学段默认时长（K 15+5 / P 25+5 / J 50+10）。',
   achievements: '成就勋章（M4）：完成作业/习惯/阅读自动颁发勋章，K/P 段专属。',
   rewards: '奖励积分（M4）：完成动作自动攒积分，家长可兑换奖励，K/P 段专属。',
   parent: '家长协同（M4）：PIN 解锁后查看孩子学习概况、完成情况、奖励兑换，K/P 段专属。'

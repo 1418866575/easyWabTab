@@ -25,7 +25,6 @@ import StudentEducation from '@/components/student/StudentEducation.vue'
 import StudentPlan from '@/components/student/StudentPlan.vue'
 import StudentReview from '@/components/student/StudentReview.vue'
 import StudentMistakes from '@/components/student/StudentMistakes.vue'
-import StudentPomodoro from '@/components/student/StudentPomodoro.vue'
 import StudentAchievements from '@/components/student/StudentAchievements.vue'
 import StudentReward from '@/components/student/StudentReward.vue'
 import StudentParent from '@/components/student/StudentParent.vue'
@@ -53,12 +52,12 @@ const showSettingsDialog = ref(false)
 type StudentSectionKey =
   | 'home' | 'habits' | 'homework' | 'timetable' | 'plan'
   | 'review' | 'mistakes' | 'reading' | 'exam' | 'grades' | 'education'
-  | 'pomodoro' | 'achievements' | 'rewards' | 'parent' | 'health'
+  | 'achievements' | 'rewards' | 'parent' | 'health'
 
 const SECTION_KEYS: readonly StudentSectionKey[] = [
   'home', 'habits', 'homework', 'timetable', 'plan',
   'review', 'mistakes', 'reading', 'exam', 'grades', 'education',
-  'pomodoro', 'achievements', 'rewards', 'parent', 'health'
+  'achievements', 'rewards', 'parent', 'health'
 ]
 
 const SECTION_SET: ReadonlySet<StudentSectionKey> = new Set(SECTION_KEYS)
@@ -352,7 +351,6 @@ async function onOnboardingComplete() {
         <StudentPlan v-else-if="activeSection === 'plan'" />
         <StudentReview v-else-if="activeSection === 'review'" />
         <StudentMistakes v-else-if="activeSection === 'mistakes'" />
-        <StudentPomodoro v-else-if="activeSection === 'pomodoro'" />
         <StudentAchievements v-else-if="activeSection === 'achievements'" />
         <StudentReward v-else-if="activeSection === 'rewards'" />
         <StudentParent

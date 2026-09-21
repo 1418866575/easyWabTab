@@ -380,12 +380,6 @@ const studentModules: PanelDoc[] = [
     tips: '所有学段默认显示。'
   },
   {
-    icon: 'pomodoro',
-    name: '番茄钟',
-    desc: '复用成人番茄钟，学段默认时长（K 15+5 / P 25+5 / J 50+10 分钟）。',
-    tips: 'J 段默认显示，K/P 段默认隐藏。'
-  },
-  {
     icon: 'habits',
     name: '成就勋章',
     desc: '完成作业/习惯/阅读自动颁发勋章，K/P 段专属。',
@@ -668,9 +662,9 @@ const skillInstall = [
           <section class="help-section">
             <h3 class="section-title"><Icon name="target" /> 学段差异</h3>
             <ul class="storage-list">
-              <li><strong>幼儿园（K）</strong>：游戏化任务卡片、家长主导、图标化界面；7 项默认习惯种子（刷牙/洗脸/收拾玩具/阅读绘本等）；无学科；番茄钟默认 15+5 分钟。</li>
-              <li><strong>小学（P）</strong>：作业管理 + 课程表 + 习惯养成 + 阅读记录；3 科默认学科（语数英）；6 项默认习惯种子；番茄钟默认 25+5 分钟。</li>
-              <li><strong>初中（J）</strong>：学科管理 + 复习计划 + 错题本 + 考试倒计时；9 科默认学科；5 项默认习惯种子；番茄钟默认 50+10 分钟；家长入口隐藏。</li>
+              <li><strong>幼儿园（K）</strong>：游戏化任务卡片、家长主导、图标化界面；7 项默认习惯种子（刷牙/洗脸/收拾玩具/阅读绘本等）；无学科。</li>
+              <li><strong>小学（P）</strong>：作业管理 + 课程表 + 习惯养成 + 阅读记录；3 科默认学科（语数英）；6 项默认习惯种子。</li>
+              <li><strong>初中（J）</strong>：学科管理 + 复习计划 + 错题本 + 考试倒计时；9 科默认学科；5 项默认习惯种子；家长入口隐藏。</li>
             </ul>
           </section>
 

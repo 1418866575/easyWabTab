@@ -130,8 +130,8 @@ export const useStudentSettingsStore = defineStore('studentSettings', () => {
     if (loaded.value && !force) return
     const raw = await idbGet<StudentSettings>(STORE_KEY)
     settings.value = normalizeStudentSettings(raw)
-    // 学段默认值播种：若 stageSeeded !== stage 则应用学段默认学科/番茄钟（M1 仅学科；
-    // 习惯/番茄钟 store 在 M2-M4 实施，stageSeeded 标记暂不写入，待 M2 一起完成）
+    // 学段默认值播种：若 stageSeeded !== stage 则应用学段默认学科（M1 仅学科；
+    // 习惯/其他 store 在 M2-M4 实施，stageSeeded 标记暂不写入，待 M2 一起完成）
     loaded.value = true
   }
 

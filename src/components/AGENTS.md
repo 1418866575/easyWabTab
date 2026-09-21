@@ -65,7 +65,6 @@ components/
     ├── StudentReading.vue         # 阅读面板（EP 全统一；testid 前缀 sr-）
     ├── StudentExam.vue            # 考试面板（EP 全统一；testid 前缀 se-）
     ├── StudentEducation.vue       # 教育经历面板（EP 全统一；el-table + el-pagination；testid 前缀 edu-）
-    ├── StudentPomodoro.vue        # 番茄钟面板（EP 全统一；testid 前缀 spm-）
     ├── StudentAchievements.vue    # 勋章面板（EP 全统一；testid 前缀 sa-）
     ├── StudentReward.vue          # 奖励面板（EP 全统一；testid 前缀 sr-）
     ├── StudentParent.vue          # 家长协同面板（EP 全统一 6-tab：统计/每日任务/孩子报告/手动加分/发放勋章/配置奖励；`stp-tab-<key>` tabs + `stp-task-check` el-checkbox + `stp-pager-*`；testid 前缀 stp-）

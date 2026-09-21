@@ -2,7 +2,7 @@
 // 学生工作台成就勋章墙面板（M3 批次2）
 // 布局：标题 + 统计 + 分类 tabs + 5 列勋章网格 + 详情弹框
 // 数据：useStudentAchievementsStore（独立 IDB store 'student_achievements'，单对象 {definitions, unlocked}）
-// 解锁由各 store 数据聚合触发（onMounted 时加载 habits/homework/reading/pomodoro → recomputeUnlocks）
+// 解锁由各 store 数据聚合触发（onMounted 时加载 habits/homework/reading → recomputeUnlocks）
 // 行高 140px（M3 估值，待 row-heights.json 实测后校准）
 // 内置 10 枚勋章定义不可编辑、不可手动撤销；家长手动发放特殊勋章走 manualUnlock（M3 桩）
 
@@ -11,13 +11,11 @@ import { useStudentAchievementsStore } from '@/stores/studentAchievements'
 import { useStudentHabitsStore } from '@/stores/studentHabits'
 import { useStudentHomeworkStore } from '@/stores/studentHomework'
 import { useStudentReadingStore } from '@/stores/studentReading'
-import { useStudentPomodoroStore } from '@/stores/studentPomodoro'
 import { useStudentReviewStore } from '@/stores/studentReview'
 import { useToast } from '@/composables/useToast'
 import {
   calcMaxStreak,
   calcTotalReadingEntries,
-  calcTotalPomoSessions,
   calcHwCompletionRate,
   calcHwTotal,
   calcReviewCount,
@@ -38,7 +36,6 @@ const store = useStudentAchievementsStore()
 const habitsStore = useStudentHabitsStore()
 const homeworkStore = useStudentHomeworkStore()
 const readingStore = useStudentReadingStore()
-const pomodoroStore = useStudentPomodoroStore()
 const reviewStore = useStudentReviewStore()
 const toast = useToast()
 
@@ -49,8 +46,7 @@ const CATEGORY_TABS: { key: 'all' | StudentAchievementCategory; label: string }[
   { key: 'all', label: '全部' },
   { key: 'habit', label: '习惯' },
   { key: 'study', label: '学习' },
-  { key: 'reading', label: '阅读' },
-  { key: 'pomodoro', label: '专注' }
+  { key: 'reading', label: '阅读' }
 ]
 const activeCategory = ref<'all' | StudentAchievementCategory>('all')
 
@@ -60,7 +56,6 @@ const activeCategory = ref<'all' | StudentAchievementCategory>('all')
 const metrics = computed<AchievementMetrics>(() => ({
   'max-streak': calcMaxStreak(habitsStore.habits, habitsStore.records, today),
   'reading-count': calcTotalReadingEntries(readingStore.entries),
-  'pomo-count': calcTotalPomoSessions(pomodoroStore.data.records),
   'hw-rate': calcHwCompletionRate(homeworkStore.entries),
   'hw-total': calcHwTotal(homeworkStore.entries),
   'review-count': calcReviewCount(reviewStore.entries),
@@ -111,7 +106,6 @@ function metricCurrentOf(def: StudentAchievementDef): number {
   switch (def.metric) {
     case 'max-streak': return metrics.value['max-streak']
     case 'reading-count': return metrics.value['reading-count']
-    case 'pomo-count': return metrics.value['pomo-count']
     case 'hw-rate': return metrics.value['hw-rate']
     default: return 0
   }
@@ -129,7 +123,6 @@ onMounted(async () => {
     habitsStore.loadHabits(),
     homeworkStore.loadHomework(),
     readingStore.loadReading(),
-    pomodoroStore.loadPomodoro(),
     reviewStore.loadReview()
   ])
   // 基于当前指标重算解锁（新达成的写入 IDB，幂等）

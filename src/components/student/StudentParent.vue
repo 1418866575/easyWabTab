@@ -742,11 +742,6 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
                 <div class="stp-summary-value">—</div>
                 <div class="stp-summary-sub">后续接入阅读面板</div>
               </div>
-              <div class="stp-summary-card stp-summary-soft">
-                <div class="stp-summary-label">番茄个数</div>
-                <div class="stp-summary-value">—</div>
-                <div class="stp-summary-sub">后续接入番茄钟面板</div>
-              </div>
             </div>
           </div>
           <div class="stp-report-block">

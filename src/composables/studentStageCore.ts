@@ -7,7 +7,6 @@ import {
   type StudentSettings,
   STAGE_DEFAULT_SUBJECTS,
   STAGE_DEFAULT_HABITS,
-  STAGE_DEFAULT_POMODORO,
   STAGE_BADGE,
   STAGE_MENU_VISIBILITY
 } from '@/types'
@@ -45,11 +44,6 @@ export function stageDefaultHabits(stage: StudentStage): { name: string; categor
   return STAGE_DEFAULT_HABITS[stage].map(h => ({ ...h }))
 }
 
-/** 学段默认番茄钟时长（分钟） */
-export function stageDefaultPomodoro(stage: StudentStage): { focus: number; break: number } {
-  return { ...STAGE_DEFAULT_POMODORO[stage] }
-}
-
 /** 学段默认菜单可见性 */
 export function stageDefaultMenuVisibility(stage: StudentStage): StudentMenuVisibility {
   return { ...STAGE_MENU_VISIBILITY[stage] }
@@ -80,13 +74,12 @@ export function computeStageSwitchVisibility(
 
 /**
  * 学段切换决策结果：store 拿到这个对象后按需执行播种动作。
- * M1 仅返回学段 + 学科 + 番茄钟（习惯/学科 store 在 M2 实施）。
+ * M1 仅返回学段 + 学科（习惯/学科 store 在 M2 实施）。
  */
 export interface StageSwitchPlan {
   stage: StudentStage
   needSeed: boolean
   subjects: string[]
-  pomodoro: { focus: number; break: number }
   menuVisibility: StudentMenuVisibility
 }
 
@@ -121,7 +114,6 @@ export function planStageSwitch(settings: StudentSettings, newStage: StudentStag
     stage: newStage,
     needSeed,
     subjects: stageDefaultSubjects(newStage),
-    pomodoro: stageDefaultPomodoro(newStage),
     menuVisibility: computeStageSwitchVisibility(settings, newStage)
   }
 }

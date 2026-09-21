@@ -1032,7 +1032,7 @@ const studentNewSubject = ref('')
 
 async function onStudentStageSwitch(newStage: StudentStage): Promise<void> {
   if (newStage === studentStore.stage) return
-  // 切学段会重置菜单可见性到学段默认值 + 播种默认学科（M2 起补习惯/番茄钟）
+  // 切学段会重置菜单可见性到学段默认值 + 播种默认学科（M2 起补习惯）
   if (!confirm(`切换到「${studentStageOptions.find(o => o.key === newStage)?.label ?? ''}」学段？\n菜单可见性将应用该学段默认值，已有学段默认学科将重新初始化。`)) return
   try {
     await studentStore.switchStage(newStage)

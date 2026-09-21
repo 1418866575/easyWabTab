@@ -1,7 +1,7 @@
 // 学生工作台成就勋章纯逻辑模块。
 // 内置 27 枚勋章定义（streak-1..6 小红花、streak-7/30/100、book-10/50/100、pomo-50/200/500、hw-rate-95、
 // 首次里程碑5、复习3、收集成就3），
-// 不可编辑、不可手动撤销；解锁由各 store 数据聚合判定（max-streak/reading-count/pomo-count/hw-rate/hw-total/
+// 不可编辑、不可手动撤销；解锁由各 store 数据聚合判定（max-streak/reading-count/hw-rate/hw-total/
 // review-count/review-total/review-mastered-count/achievement-count/all-built-unlocked）。
 // 零 vue/pinia 运行时依赖，纯函数，node --experimental-strip-types 可测。
 
@@ -15,7 +15,6 @@ import type {
   StudentReadingEntry,
   StudentReviewItem
 } from '@/types'
-import type { PomodoroRecord } from '@/composables/pomodoroCore'
 
 /** 内置勋章 id 集合（load-bearing，store 监听按 id 路由） */
 export const BUILTIN_ACHIEVEMENT_IDS: readonly string[] = [
@@ -60,7 +59,6 @@ export const MANUAL_ACHIEVEMENT_IDS: readonly string[] = []
 export const KNOWN_METRICS: readonly string[] = [
   'max-streak',
   'reading-count',
-  'pomo-count',
   'hw-rate',
   'hw-total',
   'review-count',
@@ -74,8 +72,7 @@ export const KNOWN_METRICS: readonly string[] = [
 const CATEGORY_LABELS: Record<StudentAchievementCategory, string> = {
   habit: '习惯',
   study: '学习',
-  reading: '阅读',
-  pomodoro: '专注'
+  reading: '阅读'
 }
 
 function isoNow(): string {
@@ -215,42 +212,6 @@ export function buildBuiltinAchievements(): StudentAchievementDef[] {
       target: 100
     },
     {
-      id: 'pomo-1',
-      name: '蓄势待发',
-      description: '完成第 1 个专注番茄',
-      emoji: '⚡',
-      category: 'pomodoro',
-      metric: 'pomo-count',
-      target: 1
-    },
-    {
-      id: 'pomo-50',
-      name: '专注新手',
-      description: '累计完成 50 个专注番茄',
-      emoji: '⏰',
-      category: 'pomodoro',
-      metric: 'pomo-count',
-      target: 50
-    },
-    {
-      id: 'pomo-200',
-      name: '专注达人',
-      description: '累计完成 200 个专注番茄',
-      emoji: '⚡',
-      category: 'pomodoro',
-      metric: 'pomo-count',
-      target: 200
-    },
-    {
-      id: 'pomo-500',
-      name: '专注大师',
-      description: '累计完成 500 个专注番茄',
-      emoji: '💎',
-      category: 'pomodoro',
-      metric: 'pomo-count',
-      target: 500
-    },
-    {
       id: 'hw-first',
       name: '首战告捷',
       description: '完成第 1 篇作业',
@@ -343,7 +304,7 @@ export function normalizeAchievementDef(raw: unknown): StudentAchievementDef | n
   const emoji = typeof d.emoji === 'string' ? d.emoji.trim() : ''
   if (!id || !name || !description || !emoji) return null
   const category: StudentAchievementCategory | undefined =
-    typeof d.category === 'string' && (['habit', 'study', 'reading', 'pomodoro'] as readonly string[]).includes(d.category)
+    typeof d.category === 'string' && (['habit', 'study', 'reading'] as readonly string[]).includes(d.category)
       ? (d.category as StudentAchievementCategory)
       : undefined
   if (!category) return null
@@ -484,18 +445,6 @@ export function calcTotalReadingEntries(entries: readonly StudentReadingEntry[])
   return entries.length
 }
 
-/**
- * 番茄钟勋章指标：累计专注番茄数（pomo-count）。
- * PomodoroRecord.workSessions 每条记录求和，最小 0 防 NaN/负数。
- */
-export function calcTotalPomoSessions(records: readonly PomodoroRecord[]): number {
-  let total = 0
-  for (const r of records) {
-    const n = typeof r.workSessions === 'number' ? r.workSessions : Number(r.workSessions)
-    if (Number.isFinite(n) && n > 0) total += Math.floor(n)
-  }
-  return total
-}
 
 /**
  * 作业勋章指标：作业完成率百分比（hw-rate，0-100 整数）。
@@ -569,7 +518,6 @@ export function calcAllBuiltUnlocked(unlocked: Record<string, string>): number {
 export interface AchievementMetrics {
   'max-streak': number
   'reading-count': number
-  'pomo-count': number
   'hw-rate': number
   /** 作业总数（hw-rate-95 门槛校验、hw-first 首战告捷用） */
   'hw-total': number
@@ -593,7 +541,6 @@ export function metricValue(metric: string, metrics: AchievementMetrics): number
   switch (metric) {
     case 'max-streak': return metrics['max-streak']
     case 'reading-count': return metrics['reading-count']
-    case 'pomo-count': return metrics['pomo-count']
     case 'hw-rate': return metrics['hw-rate']
     case 'hw-total': return metrics['hw-total']
     case 'review-count': return metrics['review-count']

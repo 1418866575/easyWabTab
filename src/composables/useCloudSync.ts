@@ -906,7 +906,7 @@ function mergeStudent(local: StudentSyncData, remote: StudentSyncData): StudentS
     clientId: getClientId()
   }
   const FIELD_KEYS: Array<keyof StudentSyncData> = [
-    'studentSettings', 'studentHabits', 'studentPomodoro', 'studentCountdowns',
+    'studentSettings', 'studentHabits', 'studentCountdowns',
     'homework', 'timetable', 'plans', 'review', 'mistakes', 'reading',
     'achievements', 'rewards', 'parentTasks', 'studentImages', 'education', 'studentGrades'
   ]
@@ -997,7 +997,7 @@ async function reloadBusinessStore(): Promise<void> {
 async function reloadStudentStores(): Promise<void> {
   // 学生各模块 store 全量 reload（数据被云端覆盖后刷新 Vue 状态）
   const [
-    { useStudentSettingsStore }, { useStudentHabitsStore }, { useStudentPomodoroStore },
+    { useStudentSettingsStore }, { useStudentHabitsStore },
     { useStudentExamStore }, { useStudentHomeworkStore },
     { useStudentTimetableStore }, { useStudentPlanStore }, { useStudentReviewStore },
     { useStudentMistakesStore }, { useStudentReadingStore }, { useStudentAchievementsStore },
@@ -1006,7 +1006,6 @@ async function reloadStudentStores(): Promise<void> {
   ] = await Promise.all([
     import('../stores/studentSettings'),
     import('../stores/studentHabits'),
-    import('../stores/studentPomodoro'),
     import('../stores/studentExam'),
     import('../stores/studentHomework'),
     import('../stores/studentTimetable'),
@@ -1023,7 +1022,6 @@ async function reloadStudentStores(): Promise<void> {
   await Promise.all([
     useStudentSettingsStore().loadSettings(true),
     useStudentHabitsStore().loadHabits(),
-    useStudentPomodoroStore().loadPomodoro(),
     useStudentExamStore().loadExams(),
     useStudentHomeworkStore().loadHomework(),
     useStudentTimetableStore().loadTimetable(),

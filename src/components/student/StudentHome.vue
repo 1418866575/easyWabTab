@@ -141,12 +141,11 @@ const overviewCards = computed(() => [
   { label: '今日阅读', value: todayReadingMin.value + ' 分钟', icon: 'notes' },
   { label: '习惯打卡', value: todayHabitDone.value + '/' + todayHabitTotal.value, icon: 'habits' },
   { label: '积分余额', value: rewardPoints.value + ' 分', icon: 'countdowns' },
-  { label: '复习掌握', value: reviewStore.stats().masteryRate + '%', icon: 'pomodoro' }
+  { label: '复习掌握', value: reviewStore.stats().masteryRate + '%', icon: 'target' }
 ])
 
 // 工具栏快捷入口
 const toolEntries = [
-  { key: 'pomodoro', label: '番茄钟', icon: 'pomodoro' },
   { key: 'timetable', label: '课程表', icon: 'countdowns' },
   { key: 'achievements', label: '勋章墙', icon: 'habits' }
 ]
