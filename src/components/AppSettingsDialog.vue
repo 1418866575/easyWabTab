@@ -1805,6 +1805,7 @@ onUnmounted(() => {
             <button type="button" class="site-action-btn" data-testid="stg-clear-biz" @click="confirmClear('business')"><Icon name="trash" /> 清空记账管理</button>
             <button type="button" class="site-action-btn" data-testid="stg-clear-stu" @click="confirmClear('student')"><Icon name="trash" /> 清空学生工作台</button>
             <button type="button" class="site-action-btn danger" data-testid="stg-clear-all" @click="confirmClear('all')"><Icon name="alert" /> 一键清空所有数据</button>
+            <button type="button" class="site-action-btn" data-testid="stg-reset-all" @click="resetAll"><Icon name="refresh" /> 恢复默认设置</button>
           </div>
           <p class="wb-menu-hint danger-hint">⚠ 「一键清空所有数据」为危险操作：将彻底恢复出厂（个人工作台 + 记账 + 学生工作台 + 自定义图标 + 云同步凭据），不可恢复。</p>
         </div>
@@ -2712,14 +2713,6 @@ onUnmounted(() => {
       </div>
       </section>
       </div>
-
-      <div class="manager-footer">
-        <span class="footer-hint">修改即时生效</span>
-        <div class="footer-actions">
-          <button class="btn-reset-all" @click="resetAll">恢复默认</button>
-          <button class="btn-cancel" @click="emit('close')">取消</button>
-        </div>
-      </div>
     </div>
 
     <!-- 销售记账分类管理（共享弹框，z-index 高于设置弹窗） -->
@@ -2954,68 +2947,21 @@ html.dark .tab-btn.active {
 }
 
 /* 重置类按钮共用样式 */
-.row-reset,
-.btn-reset-all {
+.row-reset {
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
   cursor: pointer;
   color: var(--color-text-secondary, var(--color-text-secondary));
   transition: all var(--transition-fast, 0.15s ease);
-}
-
-.row-reset {
   padding: 4px 10px;
   font-size: 12px;
   border-radius: var(--radius-sm);
   white-space: nowrap;
 }
 
-.btn-reset-all {
-  padding: 10px 16px;
-  font-size: 14px;
-  border-radius: var(--radius-md);
-}
-
-.row-reset:hover,
-.btn-reset-all:hover {
+.row-reset:hover {
   color: var(--color-primary, var(--color-primary));
   border-color: var(--color-primary, var(--color-primary));
-}
-
-/* 底部操作栏 */
-.manager-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px 24px;
-  border-top: 1px solid var(--color-border, var(--color-border));
-  flex-shrink: 0;
-}
-
-.footer-hint {
-  font-size: 12px;
-  color: var(--color-text-muted, var(--color-text-muted));
-}
-
-.footer-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.btn-cancel {
-  padding: 10px 16px;
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  cursor: pointer;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.btn-cancel:hover {
-  background: var(--color-bg-hover, var(--color-bg-active));
 }
 
 /* 工作台菜单/城市配置区块（独立于 .settings-grid，不复用其列定义——R6） */
