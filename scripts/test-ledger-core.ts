@@ -69,6 +69,7 @@ test('T3 calcMonthlyStats empty month', () => {
   assert.equal(stats.balance, 0)
   assert.equal(stats.expenseCount, 0)
   assert.equal(stats.expenseRatio, null)
+  assert.equal(stats.dayCount, 0)
   assert.deepEqual(stats.byCategory, [])
 })
 
@@ -88,6 +89,8 @@ test('T4 calcMonthlyStats income + expense with month filter', () => {
   assert.equal(stats.balance, 7500)
   assert.equal(stats.expenseCount, 3)
   assert.equal(stats.expenseRatio, 0.25)
+  // 2026-08-05/01/02/03 共 4 个有记账日（07-31、09-01 被 month 过滤不计入）
+  assert.equal(stats.dayCount, 4)
 })
 
 // T5 — 结余为负（支出 > 收入）
@@ -135,6 +138,22 @@ test('T8 calcMonthlyStats unknown category', () => {
     { categoryId: 'unknown', total: 80, percent: 0.8 },
     { categoryId: 'breakfast', total: 20, percent: 0.2 }
   ])
+})
+
+// T8b — dayCount：同一天多笔只算 1 天；跨月同日期不计入
+test('T8b calcMonthlyStats dayCount', () => {
+  const entries = [
+    mkEntry('e1', '2026-08-01', 'breakfast', 10),
+    mkEntry('e2', '2026-08-01', 'lunch', 20), // 同日第二笔，不重复计数
+    mkEntry('e3', '2026-08-03', 'dinner', 30),
+    mkEntry('e4', '2026-08-03', 'lunch', 40), // 同日第二笔
+    mkEntry('e5', '2026-08-05', 'salary', 100),
+    mkEntry('e6', '2026-09-01', 'breakfast', 999) // 其他月，过滤
+  ]
+  const stats = calcMonthlyStats(entries, '2026-08', DEFAULT_LEDGER_CATEGORIES)
+  assert.equal(stats.dayCount, 3) // 08-01 / 08-03 / 08-05
+  // 空月
+  assert.equal(calcMonthlyStats([], '2026-08', DEFAULT_LEDGER_CATEGORIES).dayCount, 0)
 })
 
 // T9 — normalizeLedgerData：内置脏改恢复 / 自定义保留 / 空名剔除 / isBuiltIn 脏 true → false / id 冲突重排
