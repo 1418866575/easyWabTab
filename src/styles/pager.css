@@ -98,6 +98,17 @@ html.dark .ewt-pager .el-pagination__total {
     row-gap: 8px !important;
   }
 
+  /* 弹框内的分页器（健康/记账等「查看」弹框）：钉在弹框底部、右对齐，
+     不沿用上面的居中规则。居中的上一页/下一页在大尺寸弹框里会悬在页面中间、
+     与底部脱节，不符合弹框排版规范。覆盖全局居中需更高特异性 + !important。 */
+  .dialog .ewt-pager {
+    justify-content: flex-end !important;
+  }
+  .dialog .ewt-pager > .el-pagination,
+  .dialog .ewt-pager.el-pagination {
+    justify-content: flex-end !important;
+  }
+
   /* 隐藏页码数字与跳转框（窄屏放不下且意义不大） */
   .ewt-pager .el-pager,
   .ewt-pager .el-pagination__jump {
