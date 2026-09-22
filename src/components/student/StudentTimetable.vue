@@ -13,7 +13,10 @@ import { useToast } from '@/composables/useToast'
 import {
   weekdayLabel,
   subjectColor,
-  subjectStyleVars
+  subjectStyleVars,
+  normalizeTiming,
+  computePeriodTime,
+  timeToMinutes
 } from '@/composables/studentTimetableCore'
 import type { StudentTimetableCell } from '@/types'
 import Icon from '@/components/Icon.vue'
@@ -25,12 +28,58 @@ const toast = useToast()
 
 const DAYS = [1, 2, 3, 4, 5, 6, 7] // 周一~周日
 
+/** 节次时间配置（缺省回落默认：08:00 开始 / 45 分钟 / 休息 10 分钟 / 上午 4 节） */
+const timing = computed(() => normalizeTiming(store.data.timing))
+
+/**
+ * 第 N 节起止时间 —— 全表唯一时间来源。
+ * 算法集中在 core.computePeriodTime：开始 = 首节 + (N-1)×(单节时长+课间休息)，结束 = 开始 + 单节时长。
+ */
+function timeOf(period: number): { startHHMM: string; endHHMM: string } {
+  return computePeriodTime(period, timing.value)
+}
+
+/** 上午 / 下午分段：第 1~morningPeriods 节为上午，其余为下午 */
+const morningPeriods = computed(() =>
+  Math.max(1, Math.min(store.data.periodsPerDay, timing.value.morningPeriods))
+)
+const afternoonCount = computed(() => Math.max(0, store.data.periodsPerDay - morningPeriods.value))
+const morningRows = computed(() => Array.from({ length: morningPeriods.value }, (_, i) => i + 1))
+const afternoonRows = computed(() =>
+  Array.from({ length: afternoonCount.value }, (_, i) => morningPeriods.value + i + 1)
+)
+
+/** 网格行高：表头 + [上午标题] + 上午各节 + [下午标题] + 下午各节；剩余高度按 1fr 均分，不产生滚动条 */
+const gridRowsStyle = computed(() => {
+  const parts: string[] = ['var(--stt-head-h)']
+  if (morningRows.value.length) {
+    parts.push('var(--stt-sec-h)')
+    parts.push('repeat(' + morningRows.value.length + ', minmax(var(--stt-row-min), 1fr))')
+  }
+  if (afternoonRows.value.length) {
+    parts.push('var(--stt-sec-h)')
+    parts.push('repeat(' + afternoonRows.value.length + ', minmax(var(--stt-row-min), 1fr))')
+  }
+  return parts.join(' ')
+})
+
 const periods = computed(() => {
   const n = store.data.periodsPerDay
   const arr: number[] = []
   for (let i = 1; i <= n; i++) arr.push(i)
   return arr
 })
+
+/** 格子悬浮提示：课程名 + 时间 + 老师/教室（格子内只显示课程名，避免重复展示时间） */
+function cellTitle(day: number, period: number): string {
+  const cell = getCell(day, period)
+  if (!cell) return weekdayLabel(day) + ' 第' + period + '节（空）'
+  const t = timeOf(period)
+  const parts = [cell.subject, t.startHHMM + '-' + t.endHHMM]
+  if (cell.teacher) parts.push(cell.teacher)
+  if (cell.room) parts.push(cell.room)
+  return parts.join(' · ')
+}
 
 function getCell(day: number, period: number): StudentTimetableCell | undefined {
   return store.getCell(day, period)
@@ -59,14 +108,9 @@ const todayIdx = computed(() => {
 function isCurrent(day: number, period: number): boolean {
   const cell = getCell(day, period)
   if (!cell || day !== todayIdx.value) return false
-  const toMin = (hhmm: string) => {
-    const [h, m] = hhmm.split(':').map(Number)
-    return h * 60 + m
-  }
-  const s = toMin(cell.startHHMM)
-  const e = toMin(cell.endHHMM)
+  const t = timeOf(period)
   const cur = nowMinutes()
-  return cur >= s && cur < e
+  return cur >= timeToMinutes(t.startHHMM) && cur < timeToMinutes(t.endHHMM)
 }
 
 // ===== 学科配色 =====
@@ -78,22 +122,18 @@ function cellVars(subject: string): Record<string, string> {
 // ===== 今日速览 =====
 const todayLessons = computed(() => {
   const d = todayIdx.value
-  const cells = Object.keys(store.data.schedule)
+  return Object.keys(store.data.schedule)
     .filter((k) => k.startsWith(d + '_'))
     .map((k) => {
       const period = Number(k.split('_')[1])
       return { period, ...(store.getCell(d, period) as StudentTimetableCell) }
     })
-    .sort((a, b) => a.startHHMM.localeCompare(b.startHHMM))
-  return cells
+    .sort((a, b) => timeOf(a.period).startHHMM.localeCompare(timeOf(b.period).startHHMM))
 })
-function lessonState(cell: StudentTimetableCell): 'now' | 'upcoming' | 'done' {
-  const toMin = (hhmm: string) => {
-    const [h, m] = hhmm.split(':').map(Number)
-    return h * 60 + m
-  }
-  const s = toMin(cell.startHHMM)
-  const e = toMin(cell.endHHMM)
+function lessonState(period: number): 'now' | 'upcoming' | 'done' {
+  const t = timeOf(period)
+  const s = timeToMinutes(t.startHHMM)
+  const e = timeToMinutes(t.endHHMM)
   const cur = nowMinutes()
   if (cur >= s && cur < e) return 'now'
   if (cur < s) return 'upcoming'
@@ -127,12 +167,12 @@ function exportToExcel() {
   rows.push(['节次', ...dayLabels])
 
   for (const p of ps) {
-    const row: string[] = [String(p)]
+    const pt = timeOf(p)
+    const row: string[] = ['第' + p + '节 ' + pt.startHHMM + '-' + pt.endHHMM]
     for (const d of DAYS) {
       const cell = getCell(d, p)
       if (cell) {
         const parts = [cell.subject]
-        if (cell.startHHMM && cell.endHHMM) parts.push(cell.startHHMM + '-' + cell.endHHMM)
         if (cell.teacher) parts.push(cell.teacher)
         if (cell.room) parts.push(cell.room)
         row.push(parts.join(' / '))
@@ -165,16 +205,37 @@ const showConfigDialog = ref(false)
 const configWeeks = ref(store.data.weeks)
 const configPeriods = ref(store.data.periodsPerDay)
 const configClassroom = ref(store.data.classroom || '')
+// 节次时间配置：上午 / 下午各只需设置第一节开始时间 + 单节时长 + 课间休息，同段内后续各节自动推算
+const configFirstStart = ref(timing.value.firstStart)
+const configAfternoonStart = ref(timing.value.afternoonStart)
+const configLessonMinutes = ref(timing.value.lessonMinutes)
+const configBreakMinutes = ref(timing.value.breakMinutes)
+const configMorningPeriods = ref(timing.value.morningPeriods)
+/** 是否存在下午节次：每日节数 > 上午节数 时才有下午段 */
+const configHasAfternoon = computed(() => configPeriods.value > configMorningPeriods.value)
 
 function openConfigDialog(): void {
   configWeeks.value = store.data.weeks
   configPeriods.value = store.data.periodsPerDay
   configClassroom.value = store.data.classroom || ''
+  configFirstStart.value = timing.value.firstStart
+  configAfternoonStart.value = timing.value.afternoonStart
+  configLessonMinutes.value = timing.value.lessonMinutes
+  configBreakMinutes.value = timing.value.breakMinutes
+  configMorningPeriods.value = timing.value.morningPeriods
   showConfigDialog.value = true
 }
 
 async function saveConfig(): Promise<void> {
   await store.updateConfig(configWeeks.value, configPeriods.value, configClassroom.value)
+  // 时间配置变更 → 按新配置重算全部 cell 的起止时间
+  await store.updateTiming({
+    firstStart: configFirstStart.value,
+    afternoonStart: configAfternoonStart.value,
+    lessonMinutes: configLessonMinutes.value,
+    breakMinutes: configBreakMinutes.value,
+    morningPeriods: configMorningPeriods.value
+  })
   showConfigDialog.value = false
   toast.success('课程表配置已更新')
 }
@@ -186,18 +247,13 @@ const editingPeriod = ref(0)
 const dialogSubject = ref('')
 const dialogTeacher = ref('')
 const dialogRoom = ref('')
-const dialogStart = ref('08:00')
-watch(dialogStart, (val) => {
-  if (!val || !/^\d{2}:\d{2}$/.test(val)) return
-  const [h, m] = val.split(':').map(Number)
-  const total = h * 60 + m + 45
-  const eh = Math.floor(total / 60) % 24
-  const em = total % 60
-  dialogEnd.value = String(eh).padStart(2, '0') + ':' + String(em).padStart(2, '0')
-}, { flush: 'sync' })
-
-const dialogEnd = ref('08:45')
 const dialogSubjectCustom = ref(false)
+
+/** 当前节次起止时间：由节次配置自动推算，只读展示（不再逐节填写） */
+const dialogTimeText = computed(() => {
+  const t = timeOf(editingPeriod.value)
+  return t.startHHMM + ' - ' + t.endHHMM
+})
 
 function openCellDialog(day: number, period: number): void {
   editingDay.value = day
@@ -206,8 +262,6 @@ function openCellDialog(day: number, period: number): void {
   dialogSubject.value = existing?.subject ?? settingsStore.subjects[0] ?? ''
   dialogTeacher.value = existing?.teacher ?? ''
   dialogRoom.value = existing?.room ?? ''
-  dialogStart.value = existing?.startHHMM ?? '08:00'
-  dialogEnd.value = existing?.endHHMM ?? '08:45'
   dialogSubjectCustom.value = existing
     ? !settingsStore.subjects.includes(existing.subject)
     : false
@@ -234,14 +288,12 @@ async function saveCell(): Promise<void> {
     toast.error('学科不能为空')
     return
   }
-  const cell: StudentTimetableCell = {
+  // 起止时间不再逐节填写：由 store 按节次配置自动推算写入
+  const result = await store.setCellAuto(editingDay.value, editingPeriod.value, {
     subject,
-    startHHMM: dialogStart.value,
-    endHHMM: dialogEnd.value,
     teacher: dialogTeacher.value.trim() || undefined,
     room: dialogRoom.value.trim() || undefined
-  }
-  const result = await store.setCell(editingDay.value, editingPeriod.value, cell)
+  })
   if (result.ok) closeCellDialog()
   timetableErrorToast(result)
 }
@@ -329,13 +381,13 @@ onBeforeUnmount(() => {
           v-for="c in todayLessons"
           :key="c.period"
           class="stt-chip"
-          :class="{ 'is-now': lessonState(c) === 'now' }"
+          :class="{ 'is-now': lessonState(c.period) === 'now' }"
           :style="cellVars(c.subject)"
         >
           <span class="stt-chip-subject">{{ c.subject }}</span>
-          <span class="stt-chip-meta">第{{ c.period }}节 · {{ c.startHHMM }}-{{ c.endHHMM }}{{ c.room ? ' · ' + c.room : '' }}</span>
+          <span class="stt-chip-meta">第{{ c.period }}节 · {{ timeOf(c.period).startHHMM }}-{{ timeOf(c.period).endHHMM }}{{ c.room ? ' · ' + c.room : '' }}</span>
           <span class="stt-chip-state">
-            {{ lessonState(c) === 'now' ? '● 正在进行' : lessonState(c) === 'upcoming' ? '○ 待上' : '— 已结束' }}
+            {{ lessonState(c.period) === 'now' ? '● 正在进行' : lessonState(c.period) === 'upcoming' ? '○ 待上' : '— 已结束' }}
           </span>
         </div>
       </div>
@@ -359,7 +411,7 @@ onBeforeUnmount(() => {
       </span>
     </div>
 
-    <!-- 网格 -->
+    <!-- 网格：宽高均 100% 铺满容器、不出现滚动条；按上午 / 下午分段展示 -->
     <div class="stt-grid-wrap">
       <div v-if="!hasAnyCell" class="stt-empty-banner">
         <p>还没有排课。点击下方任意格子添加第一节课～</p>
@@ -367,12 +419,12 @@ onBeforeUnmount(() => {
       </div>
       <div
         class="stt-grid"
-        :style="{ gridTemplateColumns: `48px repeat(7, minmax(0, 1fr))` }"
+        :style="{ gridTemplateRows: gridRowsStyle }"
         role="grid"
         aria-label="课程表"
       >
         <!-- 表头：角落 + 周一~周日 -->
-        <div class="stt-cell stt-corner" role="columnheader">节</div>
+        <div class="stt-cell stt-corner" role="columnheader">节次</div>
         <div
           v-for="d in DAYS"
           :key="`head-${d}`"
@@ -381,9 +433,14 @@ onBeforeUnmount(() => {
           role="columnheader"
         >{{ weekdayLabel(d) }}</div>
 
-        <!-- 每行：节次 + 7 天 -->
-        <template v-for="p in periods" :key="`row-${p}`">
-          <div class="stt-cell stt-period-cell" role="rowheader">{{ p }}</div>
+        <!-- 上午段 -->
+        <template v-if="morningRows.length">
+          <div class="stt-section" role="row">上午</div>
+        <template v-for="p in morningRows" :key="`row-morningRows-${p}`">
+          <div class="stt-cell stt-period-cell" role="rowheader">
+            <span class="stt-period-name">第 {{ p }} 节</span>
+            <span class="stt-period-time">{{ timeOf(p).startHHMM }}-{{ timeOf(p).endHHMM }}</span>
+          </div>
           <div
             v-for="d in DAYS"
             :key="`cell-${d}-${p}`"
@@ -391,25 +448,53 @@ onBeforeUnmount(() => {
             class="stt-cell stt-body-cell"
             :class="{ 'has-lesson': !!getCell(d, p), 'empty': !getCell(d, p), 'col-today': d === todayIdx, 'current': isCurrent(d, p) }"
             :style="getCell(d, p) ? cellVars(getCell(d, p)!.subject) : undefined"
+            :title="cellTitle(d, p)"
             role="gridcell"
             tabindex="0"
-            :aria-label="getCell(d, p) ? `${weekdayLabel(d)} 第${p}节 ${getCell(d, p)!.subject} ${getCell(d, p)!.startHHMM}-${getCell(d, p)!.endHHMM}` : `${weekdayLabel(d)} 第${p}节 空`"
+            :aria-label="getCell(d, p) ? `${weekdayLabel(d)} 第${p}节 ${getCell(d, p)!.subject}` : `${weekdayLabel(d)} 第${p}节 空`"
             @click="openCellDialog(d, p)"
             @keydown="onCellKey($event, d, p)"
           >
             <template v-if="getCell(d, p)">
-              <div class="stt-subject">
-                {{ getCell(d, p)!.subject }}<span v-if="getCell(d, p)!.teacher" class="stt-teacher">（{{ getCell(d, p)!.teacher }}）</span>
-              </div>
-              <div class="stt-time">{{ getCell(d, p)!.startHHMM }}-{{ getCell(d, p)!.endHHMM }}</div>
-              <div class="stt-badges">
-                <span v-if="getCell(d, p)!.room" class="stt-badge">室 {{ getCell(d, p)!.room }}</span>
-              </div>
+              <span class="stt-subject">{{ getCell(d, p)!.subject }}</span>
             </template>
             <template v-else>
               <span class="stt-add-mark">+</span>
             </template>
           </div>
+        </template>
+        </template>
+
+        <!-- 下午段 -->
+        <template v-if="afternoonRows.length">
+          <div class="stt-section" role="row">下午</div>
+        <template v-for="p in afternoonRows" :key="`row-afternoonRows-${p}`">
+          <div class="stt-cell stt-period-cell" role="rowheader">
+            <span class="stt-period-name">第 {{ p }} 节</span>
+            <span class="stt-period-time">{{ timeOf(p).startHHMM }}-{{ timeOf(p).endHHMM }}</span>
+          </div>
+          <div
+            v-for="d in DAYS"
+            :key="`cell-${d}-${p}`"
+            :id="`tt-cell-${d}-${p}`"
+            class="stt-cell stt-body-cell"
+            :class="{ 'has-lesson': !!getCell(d, p), 'empty': !getCell(d, p), 'col-today': d === todayIdx, 'current': isCurrent(d, p) }"
+            :style="getCell(d, p) ? cellVars(getCell(d, p)!.subject) : undefined"
+            :title="cellTitle(d, p)"
+            role="gridcell"
+            tabindex="0"
+            :aria-label="getCell(d, p) ? `${weekdayLabel(d)} 第${p}节 ${getCell(d, p)!.subject}` : `${weekdayLabel(d)} 第${p}节 空`"
+            @click="openCellDialog(d, p)"
+            @keydown="onCellKey($event, d, p)"
+          >
+            <template v-if="getCell(d, p)">
+              <span class="stt-subject">{{ getCell(d, p)!.subject }}</span>
+            </template>
+            <template v-else>
+              <span class="stt-add-mark">+</span>
+            </template>
+          </div>
+        </template>
         </template>
       </div>
     </div>
@@ -429,6 +514,34 @@ onBeforeUnmount(() => {
           <label>教室/班级（可选）</label>
           <el-input v-model="configClassroom" type="text" maxlength="30" placeholder="如：三年二班 / 301" />
         </div>
+        <div class="stt-cfg-title">节次时间（上午 / 下午分别起算，段内后续各节自动推算）</div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>上午第一节开始时间</label>
+            <el-input v-model="configFirstStart" type="time" />
+          </div>
+          <div v-if="configHasAfternoon" class="form-field">
+            <label>下午第一节开始时间</label>
+            <el-input v-model="configAfternoonStart" type="time" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>单节课时长（分钟）</label>
+            <el-input v-model.number="configLessonMinutes" type="number" min="1" max="120" />
+          </div>
+          <div class="form-field">
+            <label>课间休息（分钟）</label>
+            <el-input v-model.number="configBreakMinutes" type="number" min="0" max="60" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>上午节数</label>
+            <el-input v-model.number="configMorningPeriods" type="number" min="1" max="12" />
+          </div>
+        </div>
+        <p class="stt-tip">上午第 N 节开始 = 上午第一节开始 + (N-1) ×（单节时长 + 课间休息）；下午第 N 节开始 = 下午第一节开始 + (N-上午节数-1) ×（单节时长 + 课间休息）；结束 = 开始 + 单节时长。</p>
         <p class="stt-tip">提示：节数减少后，超出范围的课程会保留但不在表格中显示。</p>
       </div>
       <template #footer>
@@ -457,15 +570,8 @@ onBeforeUnmount(() => {
           />
           <el-checkbox class="stt-custom-toggle" v-model="dialogSubjectCustom">自定义学科</el-checkbox>
         </div>
-        <div class="form-row">
-          <div class="form-field">
-            <label>开始时间</label>
-            <el-input v-model="dialogStart" type="time" />
-          </div>
-          <div class="form-field">
-            <label>结束时间</label>
-            <el-input v-model="dialogEnd" type="time" />
-          </div>
+        <div class="stt-dialog-time">
+          上课时间 <b>{{ dialogTimeText }}</b>（按节次配置自动推算）
         </div>
         <div class="form-row">
           <div class="form-field">
@@ -630,31 +736,38 @@ onBeforeUnmount(() => {
   background: var(--c, #64748b);
 }
 
-/* 网格滚动容器：占满父容器（100% 高度），内容超出时内部滚动。
-   PC 端课程信息在 100% 高度内完整展示；移动端内容超出则启用竖向滚动，
-   仅表格内部滚动，工具栏/今日速览/图例保持固定。 */
+/* 网格容器：宽高优先 100% 铺满；行高有 --stt-row-min 保底，空间富余时按 1fr 均分铺满。
+   仅当节数多到装不下时才可滚动，且滚动条 / 滑块隐藏（视觉上不出现滚动条）。 */
 .stt-grid-wrap {
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;
-  height: 100%;
+  display: flex;
+  flex-direction: column;
   overflow: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  touch-action: pan-x pan-y;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
   background: var(--color-bg-card, #fff);
 }
+.stt-grid-wrap::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
 .stt-grid {
-  display: grid;
-  gap: 4px;
-  /* 宽屏=100% 铺满；窄屏（<560px）超出容器 → 外层 wrap 横向左滑右滑 */
+  --stt-period-col: 74px;
+  --stt-head-h: 40px;
+  --stt-sec-h: 32px;
+  /* 每节课行最小高度：保证格子不会因节数变多而被压得过矮 */
+  --stt-row-min: 60px;
+  flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
-  min-width: max(100%, 560px);
-  min-height: 100%;
-  /* 行高自适应铺满容器高度：至少 56px，富余空间均分拉伸（PC/手机端均填满整屏高度） */
-  grid-auto-rows: minmax(56px, 1fr);
+  display: grid;
+  grid-template-columns: var(--stt-period-col) repeat(7, minmax(0, 1fr));
+  gap: 4px;
   padding: 4px;
 }
 .stt-cell {
@@ -700,22 +813,48 @@ onBeforeUnmount(() => {
   margin-top: 1px;
 }
 .stt-period-cell {
-  position: sticky;
-  left: 0;
-  z-index: 2;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
   background: var(--color-hover, #f3f4f6);
   font-weight: 600;
   color: var(--color-text-muted, #6b7280);
-  min-height: 62px;
-  min-width: 48px;
+  min-width: 0;
+  min-height: 0;
+  padding: 2px;
+}
+.stt-period-name {
+  font-size: 13px;
+  white-space: nowrap;
+}
+.stt-period-time {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-muted, #9ca3af);
+  white-space: nowrap;
+}
+/* 上午 / 下午分段标题：独占一行、横跨所有列 */
+.stt-section {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-soft, rgba(59, 130, 246, 0.1));
+  border-radius: 6px;
 }
 .stt-body-cell {
-  flex-direction: column;
-  align-items: stretch;
-  padding: 6px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
   cursor: pointer;
-  min-height: 62px;
-  text-align: left;
+  min-width: 0;
+  min-height: 0;
+  text-align: center;
   transition: background 0.15s, border-color 0.15s, transform 0.15s var(--ease-out, ease);
 }
 .stt-body-cell:hover {
@@ -811,6 +950,24 @@ onBeforeUnmount(() => {
   font-size: 14px;
   color: var(--color-text-muted, #6b7280);
 }
+.stt-cfg-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-secondary, #4b5563);
+  border-left: 3px solid var(--color-primary, #3b82f6);
+  padding-left: 8px;
+}
+.stt-dialog-time {
+  font-size: 14px;
+  color: var(--color-text-muted, #6b7280);
+  padding: 8px 10px;
+  background: var(--color-hover, #f3f4f6);
+  border-radius: 6px;
+}
+.stt-dialog-time b {
+  color: var(--color-primary, #3b82f6);
+  font-weight: 600;
+}
 
 .dialog-body {
   padding: 0;
@@ -866,7 +1023,10 @@ onBeforeUnmount(() => {
 
 @media (max-width: 768px) {
   .stt-shell { padding: 12px; }
-  .stt-body-cell { min-height: 56px; }
+  .stt-grid { --stt-period-col: 60px; --stt-head-h: 36px; --stt-sec-h: 30px; --stt-row-min: 54px; }
+  .stt-period-name { font-size: 12px; }
+  .stt-period-time { font-size: 10px; }
+  .stt-subject { font-size: 14px; }
   .form-row { flex-direction: column; }
 }
 

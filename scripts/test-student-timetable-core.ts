@@ -2,16 +2,18 @@
 import {
   TIMETABLE_VERSION, DEFAULT_PERIODS_PER_DAY, DEFAULT_WEEKS,
   emptyTimetableData, isValidTime, isValidTimeRange, normalizeCell, normalizeTimetableData,
-  cellKey, parseCellKey, weekdayLabel, setCell, clearCell, getCell, sortCellsByStartTime
+  cellKey, parseCellKey, weekdayLabel, setCell, clearCell, getCell, sortCellsByStartTime,
+  normalizeTiming, computePeriodTime, computePeriodTimes, periodSection,
+  applyTimingToSchedule, timeToMinutes, minutesToTime
 } from "../src/composables/studentTimetableCore.ts"
 
 const tests = []
 function test(n, f) { tests.push({ name: n, fn: f }) }
 
 test("T1 常量 / empty schedule 对象", () => {
-  assert.equal(TIMETABLE_VERSION, 1); assert.equal(DEFAULT_PERIODS_PER_DAY, 6); assert.equal(DEFAULT_WEEKS, 20)
+  assert.equal(TIMETABLE_VERSION, 1); assert.equal(DEFAULT_PERIODS_PER_DAY, 7); assert.equal(DEFAULT_WEEKS, 20)
   const d = emptyTimetableData()
-  assert.equal(d.version, 1); assert.equal(d.weeks, 20); assert.equal(d.periodsPerDay, 6)
+  assert.equal(d.version, 1); assert.equal(d.weeks, 20); assert.equal(d.periodsPerDay, 7)
   assert.deepEqual(d.schedule, {})
   assert.equal(Array.isArray((d as any).cells), false)
 })
@@ -110,6 +112,108 @@ test("T11 sortCellsByStartTime startHHMM 升序 + 不改入参", () => {
   const out = sortCellsByStartTime(list)
   assert.equal(out[0].subject, "A"); assert.equal(out[1].subject, "B"); assert.equal(out[2].subject, "C")
   assert.deepEqual(list, copy)
+})
+
+test("T12 normalizeTiming：缺失/非法回落默认，数值按上下限钳位", () => {
+  const d = normalizeTiming(undefined)
+  assert.equal(d.firstStart, "08:00"); assert.equal(d.lessonMinutes, 45)
+  assert.equal(d.breakMinutes, 10); assert.equal(d.morningPeriods, 4)
+  assert.equal(d.afternoonStart, "14:00")
+  assert.deepEqual(normalizeTiming(null), d)
+  assert.deepEqual(normalizeTiming([]), d)
+  assert.equal(normalizeTiming({ firstStart: "bad" }).firstStart, "08:00")
+  assert.equal(normalizeTiming({ afternoonStart: "bad" }).afternoonStart, "14:00")
+  assert.equal(normalizeTiming({ afternoonStart: "" }).afternoonStart, "14:00")
+  assert.equal(normalizeTiming({ lessonMinutes: 999 }).lessonMinutes, 120)
+  assert.equal(normalizeTiming({ lessonMinutes: 0 }).lessonMinutes, 1)
+  assert.equal(normalizeTiming({ breakMinutes: -5 }).breakMinutes, 0)
+  assert.equal(normalizeTiming({ morningPeriods: 99 }).morningPeriods, 12)
+  const custom = normalizeTiming({ firstStart: "07:30", afternoonStart: "13:20", lessonMinutes: 40, breakMinutes: 5, morningPeriods: 3 })
+  assert.equal(custom.firstStart, "07:30"); assert.equal(custom.afternoonStart, "13:20")
+  assert.equal(custom.lessonMinutes, 40)
+  assert.equal(custom.breakMinutes, 5); assert.equal(custom.morningPeriods, 3)
+})
+
+test("T13 computePeriodTime：默认 08:00 起，每节 45 分钟 + 课间休息 10 分钟", () => {
+  assert.deepEqual(computePeriodTime(1), { startHHMM: "08:00", endHHMM: "08:45" })
+  assert.deepEqual(computePeriodTime(2), { startHHMM: "08:55", endHHMM: "09:40" })
+  assert.deepEqual(computePeriodTime(3), { startHHMM: "09:50", endHHMM: "10:35" })
+  assert.deepEqual(computePeriodTime(4), { startHHMM: "10:45", endHHMM: "11:30" })
+  // 下午不与上午连排：第 5 节从下午第一节开始时间 14:00 重新起算
+  assert.deepEqual(computePeriodTime(5), { startHHMM: "14:00", endHHMM: "14:45" })
+  assert.deepEqual(computePeriodTime(6), { startHHMM: "14:55", endHHMM: "15:40" })
+  assert.deepEqual(computePeriodTime(7), { startHHMM: "15:50", endHHMM: "16:35" })
+  // 第 0 / 负数按第 1 节处理
+  assert.deepEqual(computePeriodTime(0), { startHHMM: "08:00", endHHMM: "08:45" })
+})
+
+test("T14 computePeriodTime：自定义首节时间 / 单节时长 / 课间休息", () => {
+  const t = { firstStart: "07:30", afternoonStart: "13:20", lessonMinutes: 40, breakMinutes: 5, morningPeriods: 3 }
+  assert.deepEqual(computePeriodTime(1, t), { startHHMM: "07:30", endHHMM: "08:10" })
+  assert.deepEqual(computePeriodTime(2, t), { startHHMM: "08:15", endHHMM: "08:55" })
+  assert.deepEqual(computePeriodTime(3, t), { startHHMM: "09:00", endHHMM: "09:40" })
+  // 第 4 节 = 下午第一节，从 13:20 起算；第 5 节 = 13:20 + 45
+  assert.deepEqual(computePeriodTime(4, t), { startHHMM: "13:20", endHHMM: "14:00" })
+  assert.deepEqual(computePeriodTime(5, t), { startHHMM: "14:05", endHHMM: "14:45" })
+})
+
+test("T15 computePeriodTimes 批量推算 + timeToMinutes / minutesToTime 往返", () => {
+  const list = computePeriodTimes(3)
+  assert.equal(list.length, 3)
+  assert.equal(list[0].period, 1); assert.equal(list[2].period, 3)
+  assert.equal(list[2].startHHMM, "09:50")
+  assert.deepEqual(computePeriodTimes(0), [])
+  assert.equal(timeToMinutes("08:00"), 480)
+  assert.equal(timeToMinutes("bad"), -1)
+  assert.equal(minutesToTime(480), "08:00")
+  assert.equal(minutesToTime(480 + 55), "08:55")
+  // 跨天取模，始终落在 00:00-23:59
+  assert.equal(minutesToTime(1440 + 60), "01:00")
+  assert.equal(minutesToTime(-60), "23:00")
+})
+
+test("T16 periodSection：第 1~morningPeriods 节为上午，其余为下午", () => {
+  assert.equal(periodSection(1), "morning")
+  assert.equal(periodSection(4), "morning")
+  assert.equal(periodSection(5), "afternoon")
+  assert.equal(periodSection(6), "afternoon")
+  assert.equal(periodSection(2, { morningPeriods: 1 }), "afternoon")
+})
+
+test("T17 applyTimingToSchedule：按配置重刷全部 cell 时间（保留学科，不改入参）", () => {
+  let s = {}
+  s = setCell(s, 1, 1, { subject: "数学", startHHMM: "08:00", endHHMM: "08:45" })
+  s = setCell(s, 2, 3, { subject: "语文", startHHMM: "09:50", endHHMM: "10:35" })
+  const before = JSON.parse(JSON.stringify(s))
+  const out = applyTimingToSchedule(s, { firstStart: "07:30", lessonMinutes: 40, breakMinutes: 5 })
+  assert.equal(out["1_1"].subject, "数学")
+  assert.equal(out["1_1"].startHHMM, "07:30"); assert.equal(out["1_1"].endHHMM, "08:10")
+  assert.equal(out["2_3"].subject, "语文")
+  assert.equal(out["2_3"].startHHMM, "09:00"); assert.equal(out["2_3"].endHHMM, "09:40")
+  assert.deepEqual(s, before)
+})
+
+test("T18 下午第一节开始时间：下午独立起算，与上午互不干扰", () => {
+  const base = { firstStart: "08:00", afternoonStart: "14:00", lessonMinutes: 45, breakMinutes: 10, morningPeriods: 4 }
+  // 只改下午起点 → 上午第 1~4 节完全不变
+  const a = { ...base, afternoonStart: "13:00" }
+  assert.deepEqual(computePeriodTime(1, a), computePeriodTime(1, base))
+  assert.deepEqual(computePeriodTime(4, a), computePeriodTime(4, base))
+  assert.deepEqual(computePeriodTime(5, a), { startHHMM: "13:00", endHHMM: "13:45" })
+  assert.deepEqual(computePeriodTime(7, a), { startHHMM: "14:50", endHHMM: "15:35" })
+  // 改上午起点 / 上午节数 → 下午仍从 afternoonStart 起算，第 morningPeriods+1 节恒为下午第一节
+  const b = { ...base, firstStart: "07:00", morningPeriods: 2 }
+  assert.deepEqual(computePeriodTime(1, b), { startHHMM: "07:00", endHHMM: "07:45" })
+  assert.deepEqual(computePeriodTime(3, b), { startHHMM: "14:00", endHHMM: "14:45" })
+  assert.deepEqual(computePeriodTime(4, b), { startHHMM: "14:55", endHHMM: "15:40" })
+  // 批量推算与逐节推算结果一致
+  const list = computePeriodTimes(7, base)
+  for (let i = 1; i <= 7; i++) assert.deepEqual(list[i - 1], { period: i, ...computePeriodTime(i, base) })
+  // 全部节次均为上午时，afternoonStart 不参与计算
+  const allMorning = { ...base, morningPeriods: 12 }
+  for (let i = 1; i <= 7; i++) {
+    assert.deepEqual(computePeriodTime(i, allMorning), computePeriodTime(i, { ...base, morningPeriods: 12, afternoonStart: "23:00" }))
+  }
 })
 
 let p = 0, f = 0

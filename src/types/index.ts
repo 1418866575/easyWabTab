@@ -882,12 +882,25 @@ export interface StudentTimetableCell {
   subject: string          // 学科
   teacher?: string        // 1-20 字符
   room?: string           // 1-20 字符
-  startHHMM: string       // 'HH:MM'
+  startHHMM: string       // 'HH:MM'（由节次时间配置推算后写入，非用户逐节填写）
   endHHMM: string         // 'HH:MM'，> startHHMM
 }
 
 /** 课程表 schedule：key = `${dayOfWeek}_${period}`（1-7_1-12） */
 export type StudentTimetableSchedule = Record<string, StudentTimetableCell>
+
+/**
+ * 课程表节次时间配置。
+ * 只需设置「第一节开始时间 + 单节课时长 + 课间休息时长」，
+ * 后续各节起止时间由 studentTimetableCore.computePeriodTime 统一推算。
+ */
+export interface StudentTimetableTiming {
+  firstStart: string       // 上午第一节开始时间 'HH:MM'
+  afternoonStart: string   // 下午第一节开始时间 'HH:MM'（下午各节由此独立起算，不与上午连排）
+  lessonMinutes: number    // 单节课时长（分钟）
+  breakMinutes: number     // 课间休息时长（分钟）
+  morningPeriods: number   // 上午节数（第 1~N 节为上午，其余为下午）
+}
 
 /** 学生课程表数据（IDB store 'student_timetable'，单对象） */
 export interface StudentTimetableData {
@@ -895,6 +908,8 @@ export interface StudentTimetableData {
   weeks: number           // 学周数
   periodsPerDay: number   // 每日节数 1-12
   classroom?: string      // 学生所在教室/班级（全局，非按课）
+  /** 节次时间配置（缺省回落默认：08:00 开始 / 45 分钟 / 休息 10 分钟 / 上午 4 节） */
+  timing?: StudentTimetableTiming
   schedule: StudentTimetableSchedule
 }
 
