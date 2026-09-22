@@ -29,6 +29,8 @@ import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
 import { useWorkbenchDiaryStore } from '@/stores/workbenchDiary'
 import ThemeToggle from '@/components/ThemeToggle.vue'
+import DiaryCategoryManager from '@/components/DiaryCategoryManager.vue'
+import DiaryJournalManager from '@/components/DiaryJournalManager.vue'
 import { useCountdownsStore } from '@/stores/countdowns'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
@@ -61,8 +63,8 @@ const DIALOG_IDS = Object.keys(DIALOG_DEFAULTS) as DialogId[]
 type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'sync'
 // 子 tab keys：每个主 tab 下的子分组（仅内容多的主 tab 定义）
 type NavSubTab = 'nav-appearance' | 'nav-display' | 'nav-site' | 'nav-size' | 'nav-data'
-type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-cat' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
-type BizSubTab = 'biz-base' | 'biz-backup'
+type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-todo-cat' | 'wb-cd-cat' | 'wb-note-cat' | 'wb-diary-cat' | 'wb-diary-journals' | 'wb-diary-add' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
+type BizSubTab = 'biz-base' | 'biz-backup' | 'biz-cat'
 type StuSubTab = 'stu-stage' | 'stu-info' | 'stu-subject' | 'stu-menu'
 /** 来源页：nav=导航站、workbench=个人工作台、business=销售记账、student=学生工作台、all=全显示(向后兼容) */
 type SettingsSource = 'nav' | 'workbench' | 'business' | 'student' | 'all'
@@ -106,14 +108,20 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student', SubTabDef[]> = {
     { key: 'wb-city',     label: '天气城市' },
     { key: 'wb-menu',     label: '工作台菜单' },
     { key: 'wb-card',     label: '卡片尺寸' },
-    { key: 'wb-cat',      label: '分类管理' },
+    { key: 'wb-todo-cat', label: '待办分类管理' },
+    { key: 'wb-cd-cat',   label: '倒计时分类管理' },
+    { key: 'wb-note-cat', label: '便签分类管理' },
+    { key: 'wb-diary-cat', label: '日记分类管理' },
+    { key: 'wb-diary-journals', label: '多日记本' },
+    { key: 'wb-diary-add', label: '新增管理' },
     { key: 'wb-backup',   label: '工作台备份' },
     { key: 'wb-snapshot', label: '数据时光机' },
     { key: 'wb-size',     label: '弹窗尺寸' }
   ],
   business: [
     { key: 'biz-base',    label: '基础设置' },
-    { key: 'biz-backup',  label: '备份导入导出' }
+    { key: 'biz-backup',  label: '备份导入导出' },
+    { key: 'biz-cat',     label: '记账分类管理' }
   ],
   student: [
     { key: 'stu-stage',   label: '学段' },
@@ -204,10 +212,21 @@ const NAV_GROUPS: NavGroup[] = [
       { key: 'wb-city', label: '天气城市', icon: 'weather-sunny', tab: 'wb', sub: 'wb-city' },
       { key: 'wb-menu', label: '工作台菜单', icon: 'clipboard', tab: 'wb', sub: 'wb-menu' },
       { key: 'wb-card', label: '卡片尺寸', icon: 'image', tab: 'wb', sub: 'wb-card' },
-      { key: 'wb-cat', label: '分类管理', icon: 'tag', tab: 'wb', sub: 'wb-cat' },
+      { key: 'wb-todo-cat', label: '待办分类管理', icon: 'tag', tab: 'wb', sub: 'wb-todo-cat' },
+      { key: 'wb-cd-cat', label: '倒计时分类管理', icon: 'tag', tab: 'wb', sub: 'wb-cd-cat' },
+      { key: 'wb-note-cat', label: '便签分类管理', icon: 'tag', tab: 'wb', sub: 'wb-note-cat' },
       { key: 'wb-backup', label: '工作台备份', icon: 'save', tab: 'wb', sub: 'wb-backup' },
       { key: 'wb-snapshot', label: '数据时光机', icon: 'refresh', tab: 'wb', sub: 'wb-snapshot' },
       { key: 'wb-size', label: '弹窗尺寸', icon: 'package', tab: 'wb', sub: 'wb-size' }
+    ]
+  },
+  {
+    key: 'diary',
+    label: '日记本设置',
+    items: [
+      { key: 'wb-diary-cat', label: '日记分类管理', icon: 'tag', tab: 'wb', sub: 'wb-diary-cat' },
+      { key: 'wb-diary-journals', label: '多日记本', icon: 'bookmark', tab: 'wb', sub: 'wb-diary-journals' },
+      { key: 'wb-diary-add', label: '新增管理', icon: 'plus', tab: 'wb', sub: 'wb-diary-add' }
     ]
   },
   {
@@ -215,7 +234,8 @@ const NAV_GROUPS: NavGroup[] = [
     label: '销售记账',
     items: [
       { key: 'biz-base', label: '基础设置', icon: 'store', tab: 'business', sub: 'biz-base' },
-      { key: 'biz-backup', label: '备份导入导出', icon: 'archive', tab: 'business', sub: 'biz-backup' }
+      { key: 'biz-backup', label: '备份导入导出', icon: 'archive', tab: 'business', sub: 'biz-backup' },
+      { key: 'biz-cat', label: '记账分类管理', icon: 'tag', tab: 'business', sub: 'biz-cat' }
     ]
   },
   {
@@ -1934,8 +1954,8 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- 待办分类管理（工作台设置 tab - 分类管理）：改名/上下移/删除/新增 + 标签页显示勾选 -->
-        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-cat'" class="wb-menu-config">
+        <!-- 待办分类管理（工作台设置 tab - 待办分类管理）：改名/上下移/删除/新增 + 标签页显示勾选 -->
+        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-todo-cat'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">待办分类</h3>
           </div>
@@ -1973,8 +1993,8 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- 倒计时分类管理（工作台设置 tab - 分类管理）：内置分类标签页显示 + 自定义分类改名/上下移/删除/新增 -->
-        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-cat'" class="wb-menu-config">
+        <!-- 倒计时分类管理（工作台设置 tab - 倒计时分类管理）：内置分类标签页显示 + 自定义分类改名/上下移/删除/新增 -->
+        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-cd-cat'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">倒计时分类</h3>
           </div>
@@ -2032,8 +2052,8 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- 便签分类管理（工作台设置 tab - 分类管理）：改名/上下移/删除/新增 -->
-        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-cat'" class="wb-menu-config">
+        <!-- 便签分类管理（工作台设置 tab - 便签分类管理）：改名/上下移/删除/新增 -->
+        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-note-cat'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">便签分类</h3>
           </div>
@@ -2071,8 +2091,23 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- 记账分类管理（工作台设置 tab - 分类管理）：改名/类型切换/删除/新增；内置 8 分组不可删 -->
-        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-cat'" class="wb-menu-config">
+        <!-- 日记分类管理（工作台设置 tab - 日记本设置）：内联渲染 DiaryCategoryManager -->
+        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-diary-cat'" class="wb-menu-config diary-cat-config">
+          <DiaryCategoryManager />
+        </div>
+
+        <!-- 多日记本（日记本设置 tab - 多日记本）：切换/重命名/删除 -->
+        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-diary-journals'" class="wb-menu-config diary-journal-config">
+          <DiaryJournalManager mode="manage" />
+        </div>
+
+        <!-- 新增管理（日记本设置 tab - 新增管理）：新建日志本 -->
+        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-diary-add'" class="wb-menu-config diary-journal-config">
+          <DiaryJournalManager mode="add" />
+        </div>
+
+        <!-- 记账分类管理（销售记账 tab - 记账分类管理）：改名/类型切换/删除/新增；内置 8 分组不可删 -->
+        <div v-if="activeTab === 'business' && activeSubTab === 'biz-cat'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">记账分类</h3>
           </div>
