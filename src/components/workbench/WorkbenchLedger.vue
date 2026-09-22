@@ -88,15 +88,21 @@ function masked(t: string): string {
   return t === '—' ? t : maskOrReveal(t, !store.showAmount)
 }
 
-// ===== 近 12 月收支趋势（数据/坐标必须走 ledgerCore calcTrendSeries + trendChartScale，禁组件内重算）=====
-// endMonthKey：store 无「当前展示月」状态 → 取当月（today），series 默认 12 个月
+// ===== 近 N 月收支趋势（数据/坐标必须走 ledgerCore calcTrendSeries + trendChartScale，禁组件内重算）=====
+// endMonthKey：store 无「当前展示月」状态 → 取当月（today），PC 默认 12 个月，移动端 ≤768px 用 6 个月减少空月视野浪费
 const TREND_W = 600
 const TREND_H = 220
 
-const trendSeries = computed<TrendMonth[]>(() => calcTrendSeries(store.entries, currentMonth(), store.categories, 12))
+const trendMonths = ref(12)
+function updateTrendMonths(): void {
+  trendMonths.value = window.innerWidth <= 768 ? 6 : 12
+}
+
+const trendSeries = computed<TrendMonth[]>(() => calcTrendSeries(store.entries, currentMonth(), store.categories, trendMonths.value))
 const trendTotalIncome = computed(() => trendSeries.value.reduce((s, m) => s + m.income, 0))
 const trendTotalExpense = computed(() => trendSeries.value.reduce((s, m) => s + m.expense, 0))
 const trendScale = computed<TrendChartScale | null>(() => trendChartScale(trendSeries.value, TREND_W, TREND_H))
+const trendTitle = computed(() => `近 ${trendMonths.value} 个月收支情况`)
 
 // 网格线/柱/柱宽派生态（全 0 序列 trendChartScale → null → 空数组，走 ld-trend-empty 空态）
 const trendGridlines = computed(() => trendScale.value?.gridlines ?? [])
@@ -329,11 +335,14 @@ function handleKeydown(event: KeyboardEvent): void {
 // 面板自管理数据加载（WorkbenchView 后续集成统一加载，这里防御性幂等重载）
 onMounted(async () => {
   await store.loadLedger()
+  updateTrendMonths()
   window.addEventListener('keydown', handleKeydown)
+  window.addEventListener('resize', updateTrendMonths)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener('resize', updateTrendMonths)
 })
 </script>
 
@@ -549,10 +558,10 @@ onUnmounted(() => {
           <span class="ld-daily-total">7 日支出合计 <b>¥{{ masked(formatYuan(dailyTotal)) }}</b></span>
         </div>
       </section>
-      <!-- 近 12 个月收支情况（分组柱状图：收入/支出各一根；跨两列宽度，位于收支占比与近 7 日支出下方；超出屏幕可下滑） -->
+      <!-- 近 N 个月收支情况（分组柱状图：收入/支出各一根；跨两列宽度，位于收支占比与近 7 日支出下方；超出屏幕可下滑） -->
 <section class="ld-card ld-year-card" data-testid="ld-year">
         <div class="ld-trend-header">
-          <h3 class="ld-card-title">近 12 个月收支情况</h3>
+          <h3 class="ld-card-title">{{ trendTitle }}</h3>
           <div class="ld-trend-totals">
             <span class="ld-trend-total ld-trend-total-inc">
               收入合计 <b>¥{{ masked(formatYuan(trendTotalIncome)) }}</b>
@@ -1812,13 +1821,37 @@ html.dark input.form-input {
   .ld-donut-legend {
     width: 100%;
   }
+}
 
-  /* 窄屏：月操作区（本月/显示金额/＋新增/查看/导出CSV）换行，按钮不被压扁 */
+/* 移动端 ≤768px：月份操作区改为整齐 2×2 网格，四个按钮等宽对齐；日期选择器自适应，避免与上月/下月/本月按钮抢空间 */
+@media (max-width: 768px) {
+  .ld-month-bar {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .ld-month-bar > .month-btn {
+    flex: 0 0 auto;
+  }
+
+  .ld-month-bar > .month-input {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 120px;
+  }
+
   .ld-month-actions {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
     margin-left: 0;
     width: 100%;
-    justify-content: flex-start;
+  }
+
+  .ld-month-actions .el-button {
+    width: 100%;
+    margin-left: 0 !important;
+    justify-content: center;
   }
 }
 
