@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>导航站 · 移动端侧边栏修复预览</title>
+<style>
+  :root{
+    --pink:#ec4899; --pink-strong:#db2777;
+    --bg:#fdf2f8; --surface:#fff; --border:#f3d4e3;
+    --text:#3f2a37; --muted:#9c8b95; --bar:rgba(255,255,255,.86);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:22px 16px 40px;color:var(--text);background:linear-gradient(180deg,#fff8fc,#fdeef6);
+       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .page-head{max-width:840px;margin:0 auto 20px}
+  .page-head h1{font-size:18px;margin:0 0 8px}
+  .page-head p{margin:0;font-size:13px;line-height:1.7;color:var(--muted)}
+  .stage{display:flex;gap:22px;flex-wrap:wrap;justify-content:center;max-width:840px;margin:0 auto}
+  .col{width:340px;max-width:100%}
+  .col h2{font-size:14px;margin:0 0 6px}
+  .col h2.bad{color:#dc2626}
+  .col h2.good{color:#059669}
+  .col .desc{font-size:12px;line-height:1.65;color:var(--muted);margin:0 0 10px;min-height:66px}
+  .phone{position:relative;width:100%;height:640px;border:8px solid #241b21;border-radius:28px;overflow:hidden;
+         background:var(--bg);box-shadow:0 14px 34px rgba(0,0,0,.18)}
+  /* 顶部栏（移动端换行成两排） */
+  .appbar{position:absolute;top:0;left:0;right:0;z-index:100;background:var(--bar);backdrop-filter:blur(10px);
+          -webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:8px 10px;
+          display:flex;flex-direction:column;gap:8px}
+  .barrow{display:flex;gap:4px;overflow:hidden}
+  .chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#7b6570;padding:6px 8px;border-radius:8px;white-space:nowrap}
+  .chip .ic{font-size:13px}
+  /* 内容区 */
+  .content{position:absolute;inset:0;padding:100px 12px 12px}
+  .htop{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .search{flex:1;display:flex;align-items:center;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.06)}
+  .engine{font-size:12px;padding:10px;border-right:1px solid #f0e2ea;color:#5b4a53;white-space:nowrap}
+  .sinput{flex:1;font-size:12px;color:#b6a6ae;padding:10px 8px;white-space:nowrap;overflow:hidden}
+  .sbtn{background:var(--pink);color:#fff;padding:10px 12px;font-size:13px}
+  .ham{width:36px;height:36px;flex:none;display:inline-flex;align-items:center;justify-content:center;
+       border:1px solid var(--border);border-radius:8px;color:#8a7480;background:#fff}
+  .ham svg{width:18px;height:18px;fill:currentColor}
+  .count{font-size:12px;color:var(--muted);margin-bottom:8px}
+  .toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+  .pill{font-size:12px;padding:6px 12px;border-radius:16px;border:1px solid var(--border);color:#8a7480;background:#fff}
+  .pill.pri{background:var(--pink);border-color:var(--pink);color:#fff;font-weight:600}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 8px;text-align:center;font-size:12px;color:#5b4a53;position:relative}
+  .card .dot{position:absolute;top:8px;right:10px;color:#c9b6c0;font-size:14px;line-height:1}
+  .card .ico{font-size:26px;display:block;margin-bottom:6px}
+  /* 抽屉 */
+  .drawer{position:absolute;left:0;bottom:0;width:232px;background:#fff;border-right:1px solid var(--border);
+          box-shadow:4px 0 16px rgba(0,0,0,.12);overflow:hidden;padding:12px;z-index:90}
+  .menu{display:flex;flex-direction:column;gap:2px}
+  .mitem{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;font-size:13px;color:#6b5862}
+  .mitem.active{background:rgba(236,72,153,.14);color:var(--pink-strong);font-weight:600}
+  .mitem .mi{width:18px;text-align:center}
+  .mitem .ml{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mitem .mc{font-size:11px;background:#fbe6ef;color:#b98ba2;border-radius:999px;padding:1px 7px}
+  .mitem.active .mc{background:rgba(236,72,153,.22);color:var(--pink-strong)}
+  .backdrop{position:absolute;inset:0;background:rgba(0,0,0,.38);z-index:85}
+  /* 修复前：抽屉从 56px 起 → 顶部被两排顶栏压住；宽度 260px 偏宽 */
+  .before .drawer{top:56px;width:260px}
+  /* 修复后：抽屉从真实顶栏高度（92px）起，不再重叠；宽度收窄到 232px */
+  .after .drawer{top:92px}
+  .after .backdrop{top:92px}
+  .warn{position:absolute;left:10px;right:10px;z-index:120;font-size:11px;line-height:1.4;padding:6px 9px;border-radius:8px;color:#fff;background:#dc2626}
+  .ok{position:absolute;left:10px;right:10px;z-index:120;font-size:11px;line-height:1.4;padding:6px 9px;border-radius:8px;color:#fff;background:#059669}
+  .foot{max-width:840px;margin:22px auto 0;font-size:12px;line-height:1.8;color:var(--muted)}
+  .foot code{background:#fbe6ef;color:#b0367a;padding:1px 5px;border-radius:4px;font-size:11px}
+</style>
+</head>
+<body>
+  <div class="page-head">
+    <h1>导航站 · 移动端侧边栏修复预览</h1>
+    <p>仅移动端（≤768px）改动，PC 端布局与功能零改动。左右对比：左为修复前的问题，右为修复后的效果。</p>
+  </div>
+
+  <div class="stage">
+    <!-- ============ 修复前 ============ -->
+    <div class="col">
+      <h2 class="bad">修复前（问题）</h2>
+      <p class="desc">抽屉从固定 <b>56px</b> 起，而移动端顶栏换行成两排（约 <b>92px</b>），抽屉顶部被顶栏压住 → <b>顶部菜单项点不到</b>；宽度 <b>260px</b> 偏宽；打开按钮在左侧。</p>
+      <div class="phone before">
+        <div class="appbar">
+          <div class="barrow">
+            <span class="chip"><span class="ic">🧰</span>司工作台</span>
+            <span class="chip"><span class="ic">🏪</span>摆摊管理</span>
+            <span class="chip"><span class="ic">📝</span>泽景教育</span>
+          </div>
+          <div class="barrow">
+            <span class="chip">云同步</span><span class="chip">设置</span><span class="chip">帮助</span><span class="chip">倒计时</span>
+          </div>
+        </div>
+        <div class="content">
+          <div class="htop">
+            <span class="ham"><svg viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg></span>
+            <div class="search">
+              <span class="engine">百度 ▾</span>
+              <span class="sinput">输入关键词，按回车</span>
+              <span class="sbtn">🔍</span>
+            </div>
+          </div>
+          <div class="count">筛选出 3 / 81 个</div>
+          <div class="toolbar">
+            <span class="pill pri">＋ 添加网站</span>
+            <span class="pill">清空筛选</span>
+          </div>
+          <div class="cards">
+            <div class="card"><span class="dot">⋯</span><span class="ico">📺</span>哔哩哔哩</div>
+            <div class="card"><span class="dot">⋯</span><span class="ico">🎵</span>抖音</div>
+            <div class="card"><span class="dot">⋯</span><span class="ico">🎧</span>网易云音乐</div>
+          </div>
+        </div>
+        <div class="backdrop"></div>
+        <div class="drawer">
+          <div class="menu" id="menu-before"></div>
+        </div>
+        <div class="warn" style="top:60px">⚠ 抽屉头部被顶栏盖住 →「全部」等顶部项点不到</div>
+      </div>
+    </div>
+
+    <!-- ============ 修复后 ============ -->
+    <div class="col">
+      <h2 class="good">修复后（效果）</h2>
+      <p class="desc">抽屉顶部对齐真实顶栏高度（<code>--app-h</code> 实时测量）→ <b>不再重叠，菜单项全部可点</b>；宽度收窄到 <b>232px</b>，不再遮挡大半屏幕；打开按钮移到<b>右上角</b>。</p>
+      <div class="phone after">
+        <div class="appbar">
+          <div class="barrow">
+            <span class="chip"><span class="ic">🧰</span>司工作台</span>
+            <span class="chip"><span class="ic">🏪</span>摆摊管理</span>
+            <span class="chip"><span class="ic">📝</span>泽景教育</span>
+          </div>
+          <div class="barrow">
+            <span class="chip">云同步</span><span class="chip">设置</span><span class="chip">帮助</span><span class="chip">倒计时</span>
+          </div>
+        </div>
+        <div class="content">
+          <div class="htop">
+            <div class="search">
+              <span class="engine">百度 ▾</span>
+              <span class="sinput">输入关键词，按回车</span>
+              <span class="sbtn">🔍</span>
+            </div>
+            <span class="ham"><svg viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg></span>
+          </div>
+          <div class="count">筛选出 3 / 81 个</div>
+          <div class="toolbar">
+            <span class="pill pri">＋ 添加网站</span>
+            <span class="pill">清空筛选</span>
+          </div>
+          <div class="cards">
+            <div class="card"><span class="dot">⋯</span><span class="ico">📺</span>哔哩哔哩</div>
+            <div class="card"><span class="dot">⋯</span><span class="ico">🎵</span>抖音</div>
+            <div class="card"><span class="dot">⋯</span><span class="ico">🎧</span>网易云音乐</div>
+          </div>
+        </div>
+        <div class="backdrop"></div>
+        <div class="drawer">
+          <div class="menu" id="menu-after"></div>
+        </div>
+        <div class="ok" style="top:96px">✓ 抽屉从顶栏下方开始，全部菜单可点</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <b>本次改动（仅移动端）：</b><br />
+    ① 抽屉 <code>top</code> 改为 <code>var(--app-h)</code>（脚本实时测量真实顶栏高度），彻底消除与顶栏的层叠遮挡；<br />
+    ② 抽屉宽度 260px → <code>min(72vw, 232px)</code>；<br />
+    ③ 汉堡（打开侧边栏）按钮由左侧移到搜索行<b>右侧</b>；<br />
+    ④ 抽屉底部增加 <code>safe-area-inset-bottom</code> 留白，避免最后一项被手机底部横条遮挡；遮罩同样从顶栏下方开始，半透明顶栏不再被压暗。
+  </div>
+
+  <script>
+    var items = [
+      ["🗂️","全部",81,false],
+      ["📺","视频音乐",3,true],
+      ["🧰","日常工具",14,false],
+      ["📚","图书馆",4,false],
+      ["🏢","高伟达",4,false],
+      ["💻","编程技术",35,false],
+      ["📰","新闻资讯",0,false],
+      ["🛒","购物电商",3,false],
+      ["🧭","社交",2,false],
+      ["💡","智能体",10,false],
+      ["✈️","旅游出行",2,false],
+      ["🎮","游戏",3,false],
+      ["🔗","web3",1,false],
+      ["📦","其他",0,false]
+    ];
+    function render(id){
+      var box = document.getElementById(id);
+      if(!box) return;
+      box.innerHTML = items.map(function(it){
+        return '<div class="mitem'+(it[3]?' active':'')+'">'+
+          '<span class="mi">'+it[0]+'</span>'+
+          '<span class="ml">'+it[1]+'</span>'+
+          '<span class="mc">'+it[2]+'</span>'+
+        '</div>';
+      }).join('');
+    }
+    render('menu-before');
+    render('menu-after');
+  </script>
+</body>
+</html>
