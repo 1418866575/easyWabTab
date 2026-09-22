@@ -113,6 +113,8 @@ const { pageSize, PAGE_SIZES } = usePageSize('ex-list-pager', LIST_PAGE_SIZE)
 const showListDialog = ref(false)
 const listPage = ref(1)
 const listPageItems = computed<SleepRecord[]>(() => {
+  // 移动端弹框内卡片全部展示，无需分页
+  if (vm.isMobile) return sortedRecords.value
   const arr = sortedRecords.value
   const start = (listPage.value - 1) * pageSize.value
   return arr.slice(start, start + pageSize.value)
@@ -341,7 +343,7 @@ onUnmounted(() => {
             </div>
 
           </div>
-          <div class="ex-list-pager ewt-pager">
+          <div v-if="!vm.isMobile" class="ex-list-pager ewt-pager">
             <el-pagination
               v-model:current-page="listPage"
               @size-change="listPage = 1"
