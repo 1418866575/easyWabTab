@@ -41,7 +41,8 @@
     "test:student-pomodoro": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-pomodoro-core.ts",
     "test:student-achievement": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-achievement-core.ts",
     "test:student-parenttask": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-parenttask-core.ts",
-    "test:student": "npm run test:student-menu && npm run test:student-habits && npm run test:student-homework && npm run test:student-reward && npm run test:student-plan && npm run test:student-reading && npm run test:student-review && npm run test:student-mistakes && npm run test:student-timetable && npm run test:student-exam && npm run test:student-stage && npm run test:student-pomodoro && npm run test:student-achievement && npm run test:student-parenttask"
+    "test:student-goal": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-goal-core.ts",
+    "test:student": "npm run test:student-menu && npm run test:student-habits && npm run test:student-homework && npm run test:student-reward && npm run test:student-plan && npm run test:student-reading && npm run test:student-review && npm run test:student-mistakes && npm run test:student-timetable && npm run test:student-exam && npm run test:student-stage && npm run test:student-pomodoro && npm run test:student-achievement && npm run test:student-parenttask && npm run test:student-goal"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",

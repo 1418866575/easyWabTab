@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { useWorkbenchDiaryStore } from '@/stores/workbenchDiary'
-import { dateKeyOf, DEFAULT_JOURNAL_ID, diaryDateLabel, findDiaryByDate, DIARY_MOODS, diaryMoodOf } from '@/composables/diaryCore'
+import { dateKeyOf, diaryDateLabel, findDiaryByDate, DIARY_MOODS, diaryMoodOf } from '@/composables/diaryCore'
 import { useDiaryCategoriesStore } from '@/stores/diaryCategories'
 import { renderMarkdown } from '@/composables/noteMarkdown'
 import { useToast } from '@/composables/useToast'
-import type { WorkbenchDiary, WorkbenchJournal } from '@/types'
-import DiaryCategoryManager from '@/components/DiaryCategoryManager.vue'
+import type { WorkbenchDiary } from '@/types'
 import Icon from '@/components/Icon.vue'
 
 const store = useWorkbenchDiaryStore()
@@ -24,14 +23,26 @@ const draftCategory = ref('')
 const draftMood = ref('')
 const draftPinned = ref(false)
 const previewMode = ref(false)
-const showCatManager = ref(false)
 const showListView = ref(false)
-// 多日志本：新建 / 管理弹框状态
-const showAddJournal = ref(false)
-const newJournalName = ref('')
-const showJournalMgr = ref(false)
-const editingJournalId = ref<string | null>(null)
-const editingJournalName = ref('')
+// 草稿内联的图片（base64 data URL）列表：用于在【编辑态】直接渲染图片预览缩略图。
+// 注意：存储方式不变，正文仍是 markdown（`![图片](data:image/...;base64,...)` 字符串），此处仅作展示解析。
+const draftImageUrls = computed<string[]>(() => {
+  const re = /!\[[^\]]*\]\((data:image\/[^)\s]+)\)/g
+  const out: string[] = []
+  let m: RegExpExecArray | null
+  while ((m = re.exec(draft.value))) out.push(m[1])
+  return out
+})
+// 从草稿中移除第 index 张内联图片（连同其 markdown 标记），并压缩多余空行
+function removeDraftImage(index: number): void {
+  const re = /!\[[^\]]*\]\((data:image\/[^)\s]+)\)/g
+  let i = -1
+  draft.value = draft.value.replace(re, (mm) => {
+    i++
+    return i === index ? '' : mm
+  })
+  draft.value = draft.value.replace(/\n{3,}/g, '\n\n').trim()
+}
 
 // 当前选中日期的条目（限定当前日志本，多日志本隔离视图）
 const selectedEntry = computed<WorkbenchDiary | undefined>(() => findDiaryByDate(store.currentEntries, selectedDate.value))
@@ -197,41 +208,6 @@ async function handleInsertImage(e: Event): Promise<void> {
   input.value = ''
 }
 
-// ===== 多日志本 CRUD 接线 =====
-async function confirmAddJournal(): Promise<void> {
-  const name = newJournalName.value.trim()
-  if (!name) return
-  await store.addJournal(name)
-  newJournalName.value = ''
-  showAddJournal.value = false
-  toast.success('已新建日志本')
-}
-
-function startRenameJournal(j: WorkbenchJournal): void {
-  editingJournalId.value = j.id
-  editingJournalName.value = j.name
-}
-
-function confirmRenameJournal(): void {
-  if (editingJournalId.value) store.renameJournal(editingJournalId.value, editingJournalName.value)
-  editingJournalId.value = null
-}
-
-function cancelRenameJournal(): void {
-  editingJournalId.value = null
-}
-
-async function handleDeleteJournal(j: WorkbenchJournal): Promise<void> {
-  if (store.journals.length <= 1) return
-  const target = store.journals.find(x => x.id !== j.id)
-  const promptMsg = target
-    ? `删除「${j.name}」后，其下日记将迁移到「${target.name}」，确定删除？`
-    : `删除「${j.name}」后，其下日记将迁移到默认日志本，确定删除？`
-  if (!confirm(promptMsg)) return
-  await store.deleteJournal(j.id)
-  toast.success('日志本已删除，日记已迁移')
-}
-
 </script>
 
 <template>
@@ -261,8 +237,6 @@ async function handleDeleteJournal(j: WorkbenchJournal): Promise<void> {
               :value="j.id"
             />
           </el-select>
-          <el-button size="small" data-testid="dj-journal-add" @click="showAddJournal = true">+ 新建</el-button>
-          <el-button size="small" text data-testid="dj-journal-manage" @click="showJournalMgr = true">管理</el-button>
         </div>
         <div class="dj-stats" data-testid="dj-stats">
           <span class="dj-stat"><b data-testid="dj-streak">{{ store.stats.streak }}</b> 天连续</span>
@@ -272,6 +246,18 @@ async function handleDeleteJournal(j: WorkbenchJournal): Promise<void> {
       </div>
 
       <div class="dj-toolbar">
+        <div class="dj-lift-row">
+          <el-button
+            size="small"
+            :type="draftPinned ? 'warning' : 'default'"
+            plain
+            :class="{ 'is-active': draftPinned }"
+            data-testid="dj-pin-btn"
+            @click="draftPinned = !draftPinned"
+          >📌 置顶</el-button>
+          <el-button size="small" data-testid="dj-image-btn" @click="triggerImagePicker">🖼️ 图片</el-button>
+          <el-button size="small" data-testid="dj-view-btn" @click="showListView = true">查看</el-button>
+        </div>
         <div class="dj-toolbar-left">
           <el-date-picker
             :model-value="selectedDate"
@@ -297,18 +283,8 @@ async function handleDeleteJournal(j: WorkbenchJournal): Promise<void> {
               :value="c.id"
             />
           </el-select>
-          <el-button
-            size="small"
-            :type="draftPinned ? 'warning' : 'default'"
-            plain
-            :class="{ 'is-active': draftPinned }"
-            data-testid="dj-pin-btn"
-            @click="draftPinned = !draftPinned"
-          >📌 置顶</el-button>
           <el-button size="small" data-testid="dj-today-btn" @click="handleToday">今日</el-button>
-          <el-button size="small" data-testid="dj-image-btn" @click="triggerImagePicker">🖼️ 图片</el-button>
           <el-button type="primary" size="small" data-testid="dj-save-btn" @click="handleSave">保存</el-button>
-          <el-button size="small" data-testid="dj-view-btn" @click="showListView = true">查看</el-button>
           <el-button
             v-if="selectedEntry"
             type="danger"
@@ -319,7 +295,6 @@ async function handleDeleteJournal(j: WorkbenchJournal): Promise<void> {
           >删除</el-button>
         </div>
         <div class="dj-toolbar-right">
-          <el-button size="small" text data-testid="dj-manage-cat" @click="showCatManager = true">分类管理</el-button>
           <el-button
             size="small"
             :type="previewMode ? 'primary' : 'default'"
@@ -361,6 +336,25 @@ async function handleDeleteJournal(j: WorkbenchJournal): Promise<void> {
           resize="vertical"
         />
         <div
+          v-if="!previewMode && draftImageUrls.length"
+          class="dj-image-preview"
+          data-testid="dj-image-preview"
+        >
+          <div
+            v-for="(img, idx) in draftImageUrls"
+            :key="idx"
+            class="dj-image-thumb-wrap"
+          >
+            <img :src="img" alt="图片预览" class="dj-image-thumb" data-testid="dj-image-thumb" />
+            <button
+              type="button"
+              class="dj-image-remove"
+              title="移除图片"
+              @click="removeDraftImage(idx)"
+            >×</button>
+          </div>
+        </div>
+        <div
           v-else
           class="dj-preview"
           data-testid="dj-preview"
@@ -369,65 +363,6 @@ async function handleDeleteJournal(j: WorkbenchJournal): Promise<void> {
       </div>
 
             <!-- 日记分类管理弹框 -->
-      <DiaryCategoryManager v-if="showCatManager" @close="showCatManager = false" />
-
-      <!-- 新建日志本 -->
-      <el-dialog v-model="showAddJournal" title="新建日志本" width="360px" align-center append-to-body>
-        <el-input
-          v-model="newJournalName"
-          placeholder="日志本名称"
-          maxlength="30"
-          show-word-limit
-          data-testid="dj-new-journal-input"
-          @keyup.enter="confirmAddJournal"
-        />
-        <template #footer>
-          <div class="ewt-dialog-footer">
-            <el-button @click="showAddJournal = false">取消</el-button>
-            <el-button type="primary" data-testid="dj-new-journal-confirm" @click="confirmAddJournal">创建</el-button>
-          </div>
-        </template>
-      </el-dialog>
-
-      <!-- 日志本管理：重命名 / 删除（迁移） -->
-      <el-dialog v-model="showJournalMgr" title="日志本管理" width="480px" align-center append-to-body>
-        <div class="dj-journal-list" data-testid="dj-journal-list">
-          <div v-for="j in store.journals" :key="j.id" class="dj-journal-item" :data-testid="`dj-journal-item-${j.id}`">
-            <template v-if="editingJournalId === j.id">
-              <el-input
-                v-model="editingJournalName"
-                size="small"
-                class="dj-journal-edit"
-                data-testid="dj-journal-edit-input"
-                @keyup.enter="confirmRenameJournal"
-              />
-              <el-button size="small" type="primary" data-testid="dj-journal-save" @click="confirmRenameJournal">保存</el-button>
-              <el-button size="small" text @click="cancelRenameJournal">取消</el-button>
-            </template>
-            <template v-else>
-              <span class="dj-journal-name">
-                {{ j.name }}<span v-if="j.id === DEFAULT_JOURNAL_ID" class="dj-journal-default">（默认）</span>
-              </span>
-              <div class="dj-journal-actions">
-                <el-button size="small" text data-testid="dj-journal-rename" @click="startRenameJournal(j)">重命名</el-button>
-                <el-button
-                  size="small"
-                  text
-                  type="danger"
-                  :disabled="store.journals.length <= 1"
-                  data-testid="dj-journal-del"
-                  @click="handleDeleteJournal(j)"
-                >删除</el-button>
-              </div>
-            </template>
-          </div>
-        </div>
-        <template #footer>
-          <div class="ewt-dialog-footer">
-            <el-button type="primary" @click="showJournalMgr = false">完成</el-button>
-          </div>
-        </template>
-      </el-dialog>
 
     </div>
   </div>
@@ -575,6 +510,15 @@ async function handleDeleteJournal(j: WorkbenchJournal): Promise<void> {
 
 .dj-toolbar :deep(.el-button + .el-button) {
   margin-left: 0;
+}
+
+/* 置顶/图片/查看 三个按钮单独成行，位于工具栏最上方（其余按钮位置不变） */
+.dj-lift-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-basis: 100%;
+  flex-wrap: wrap;
 }
 
 .dj-date-input {
@@ -881,10 +825,6 @@ async function handleDeleteJournal(j: WorkbenchJournal): Promise<void> {
   color: var(--color-warning, #f59e0b);
 }
 
-.dj-toolbar-right .el-button[data-testid="dj-manage-cat"] {
-  color: var(--color-text-secondary, #64748b);
-}
-
 /* ===== 心情选择行 ===== */
 .dj-mood-row {
   display: flex;
@@ -1025,49 +965,40 @@ async function handleDeleteJournal(j: WorkbenchJournal): Promise<void> {
   white-space: nowrap;
 }
 
-/* ===== 日志本管理弹框 ===== */
-.dj-journal-list {
+/* 编辑态图片预览条：把草稿里内联的 base64 图片渲染成缩略图，避免用户只能看到一长串 base64 字符串 */
+.dj-image-preview {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 8px;
+  margin-bottom: 10px;
 }
-
-.dj-journal-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 12px;
-  background: var(--color-bg, #fff);
+.dj-image-thumb-wrap {
+  position: relative;
+  width: 96px;
+  height: 96px;
+}
+.dj-image-thumb {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: var(--radius-md, 8px);
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 12px);
 }
-
-.dj-journal-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text, #1e293b);
-}
-
-.dj-journal-default {
+.dj-image-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  line-height: 16px;
+  text-align: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
   font-size: 12px;
-  font-weight: 400;
-  color: var(--color-text-muted, #94a3b8);
-  margin-left: 4px;
 }
-
-.dj-journal-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.dj-journal-edit {
-  flex: 1;
-  min-width: 0;
-}
-
 /* ===== 桌面 769-1099px：单列堆叠、写作区 80% / 历史 20%、历史网格高度受限（自适应分页测量基准） ===== */
 @media (min-width: 769px) and (max-width: 1099.98px) {
   .dj-main {
