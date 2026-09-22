@@ -46,5 +46,13 @@
     "description": "OpenCode AI 编程助手中文学习手册",
     "icon": "/icons/opencode.svg",
     "category": "books"
+  },
+  {
+    "id": "postman",
+    "name": "Postman 指南",
+    "path": "/games/postman/index.html",
+    "description": "Postman 指南 · 从入门到精通",
+    "icon": "/icons/postman.svg",
+    "category": "office"
   }
 ]
