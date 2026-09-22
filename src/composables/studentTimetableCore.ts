@@ -5,14 +5,15 @@
 import type {
   StudentTimetableCell,
   StudentTimetableData,
-  StudentTimetableSchedule
+  StudentTimetableSchedule,
+  StudentTimetableTiming
 } from '@/types'
 
 /** 课程表数据版本 */
 export const TIMETABLE_VERSION = 1
 
-/** 默认每日节数 */
-export const DEFAULT_PERIODS_PER_DAY = 6
+/** 默认每日节数（上午 4 节 + 下午 3 节，支持排到第 7 节） */
+export const DEFAULT_PERIODS_PER_DAY = 7
 /** 默认学周数 */
 export const DEFAULT_WEEKS = 20
 
@@ -191,4 +192,134 @@ export function getCell(
 /** 按开始时间排序同日 cell 列表 */
 export function sortCellsByStartTime(cells: StudentTimetableCell[]): StudentTimetableCell[] {
   return [...cells].sort((a, b) => a.startHHMM.localeCompare(b.startHHMM))
+}
+
+// ==================== 节次时间推算（集中定义区） ====================
+// 全部时间算法常量与函数集中在本区块，改这里即全局生效。
+// 规则（上午、下午各自独立起算，互不连排）：
+//   上午第 N 节（N ≤ morningPeriods）开始 = 上午第一节开始 + (N-1) × (单节时长 + 课间休息)
+//   下午第 N 节（N > morningPeriods）开始 = 下午第一节开始 + (N - morningPeriods - 1) × (单节时长 + 课间休息)
+//   第 N 节结束 = 第 N 节开始 + 单节时长
+// 例：上午首节 08:00、下午首节 14:00、单节 45、休息 10、上午 4 节 →
+//     第1节 08:00-08:45，第2节 08:55-09:40，第3节 09:50-10:35，第4节 10:45-11:30
+//     第5节 14:00-14:45，第6节 14:55-15:40，第7节 15:50-16:35
+
+/** 默认上午第一节开始时间 */
+export const DEFAULT_FIRST_START = '08:00'
+/** 默认下午第一节开始时间 */
+export const DEFAULT_AFTERNOON_START = '14:00'
+/** 默认单节课时长（分钟） */
+export const DEFAULT_LESSON_MINUTES = 45
+/** 默认课间休息时长（分钟） */
+export const DEFAULT_BREAK_MINUTES = 10
+/** 默认上午节数（第 1~N 节为上午，其余为下午） */
+export const DEFAULT_MORNING_PERIODS = 4
+
+/** 配置取值上下限（归一化钳位用） */
+export const TIMING_LIMITS = {
+  lessonMinutes: { min: 1, max: 120 },
+  breakMinutes: { min: 0, max: 60 },
+  morningPeriods: { min: 1, max: 12 }
+} as const
+
+/** 默认节次时间配置 */
+export function emptyTiming(): StudentTimetableTiming {
+  return {
+    firstStart: DEFAULT_FIRST_START,
+    afternoonStart: DEFAULT_AFTERNOON_START,
+    lessonMinutes: DEFAULT_LESSON_MINUTES,
+    breakMinutes: DEFAULT_BREAK_MINUTES,
+    morningPeriods: DEFAULT_MORNING_PERIODS
+  }
+}
+
+/** 'HH:MM' → 当日分钟数；非法返回 -1 */
+export function timeToMinutes(hhmm: unknown): number {
+  if (!isValidTime(hhmm)) return -1
+  const [h, m] = hhmm.split(':').map(Number)
+  return h * 60 + m
+}
+
+/** 分钟数 → 'HH:MM'（跨天取模，保证落在 00:00-23:59） */
+export function minutesToTime(total: number): string {
+  const t = ((Math.floor(total) % 1440) + 1440) % 1440
+  const h = Math.floor(t / 60)
+  const m = t % 60
+  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0')
+}
+
+function clampInt(v: unknown, lim: { min: number; max: number }, fallback: number): number {
+  const n = typeof v === 'number' && Number.isFinite(v) ? Math.floor(v) : fallback
+  return Math.min(lim.max, Math.max(lim.min, n))
+}
+
+/** 归一化节次时间配置（幂等，非法/缺失回落默认并钳位） */
+export function normalizeTiming(raw: unknown): StudentTimetableTiming {
+  const base = emptyTiming()
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return base
+  const o = raw as Record<string, unknown>
+  return {
+    firstStart: isValidTime(o.firstStart) ? o.firstStart : base.firstStart,
+    afternoonStart: isValidTime(o.afternoonStart) ? o.afternoonStart : base.afternoonStart,
+    lessonMinutes: clampInt(o.lessonMinutes, TIMING_LIMITS.lessonMinutes, base.lessonMinutes),
+    breakMinutes: clampInt(o.breakMinutes, TIMING_LIMITS.breakMinutes, base.breakMinutes),
+    morningPeriods: clampInt(o.morningPeriods, TIMING_LIMITS.morningPeriods, base.morningPeriods)
+  }
+}
+
+/**
+ * 推算第 N 节课起止时间（1-based）——节次时间算法的唯一入口。
+ * 展示、保存、导出一律走此函数，保证与配置始终一致。
+ */
+export function computePeriodTime(
+  period: number,
+  timing?: Partial<StudentTimetableTiming>
+): { startHHMM: string; endHHMM: string } {
+  const t = normalizeTiming({ ...emptyTiming(), ...(timing ?? {}) })
+  const p = Math.max(1, Math.floor(period) || 1)
+  const step = t.lessonMinutes + t.breakMinutes
+  // 下午单独起算：第 (morningPeriods+1) 节 = 下午第一节，从 afternoonStart 开始
+  const start =
+    p <= t.morningPeriods
+      ? timeToMinutes(t.firstStart) + (p - 1) * step
+      : timeToMinutes(t.afternoonStart) + (p - t.morningPeriods - 1) * step
+  return {
+    startHHMM: minutesToTime(start),
+    endHHMM: minutesToTime(start + t.lessonMinutes)
+  }
+}
+
+/** 批量推算第 1~count 节的时间 */
+export function computePeriodTimes(
+  count: number,
+  timing?: Partial<StudentTimetableTiming>
+): Array<{ period: number; startHHMM: string; endHHMM: string }> {
+  const n = Math.max(0, Math.floor(count) || 0)
+  const out: Array<{ period: number; startHHMM: string; endHHMM: string }> = []
+  for (let p = 1; p <= n; p++) out.push({ period: p, ...computePeriodTime(p, timing) })
+  return out
+}
+
+/** 节次归属：第 1~morningPeriods 节为上午，其余为下午 */
+export function periodSection(
+  period: number,
+  timing?: Partial<StudentTimetableTiming>
+): 'morning' | 'afternoon' {
+  const t = normalizeTiming({ ...emptyTiming(), ...(timing ?? {}) })
+  return period <= t.morningPeriods ? 'morning' : 'afternoon'
+}
+
+/** 按当前配置把 schedule 内所有 cell 的起止时间重算刷新（改配置后保持数据自洽） */
+export function applyTimingToSchedule(
+  schedule: StudentTimetableSchedule,
+  timing?: Partial<StudentTimetableTiming>
+): StudentTimetableSchedule {
+  const out: StudentTimetableSchedule = {}
+  for (const key of Object.keys(schedule ?? {})) {
+    const cell = schedule[key]
+    if (!cell) continue
+    const parsed = parseCellKey(key)
+    out[key] = parsed ? { ...cell, ...computePeriodTime(parsed.period, timing) } : cell
+  }
+  return out
 }

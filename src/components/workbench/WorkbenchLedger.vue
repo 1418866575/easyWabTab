@@ -419,6 +419,13 @@ onUnmounted(() => {
         </div>
         <div class="stat-value">{{ masked(ratioText) }}</div>
       </div>
+      <div class="stat-card" data-testid="ld-stat-days">
+        <div class="stat-header">
+          <span class="stat-icon"><Icon name="calendar" :size="18" /></span>
+          <span class="stat-label">记账天数</span>
+        </div>
+        <div class="stat-value">{{ monthStats.dayCount }}<span class="stat-unit">天</span></div>
+      </div>
     </div>
 
     <!-- 图表区（可折叠，默认展开）：趋势图 + 环形图。桌面中低宽度（769-1599px）并排压缩纵向占用（一屏契约 R1），
@@ -876,7 +883,7 @@ onUnmounted(() => {
 /* ===== 统计卡 6 张 ===== */
 .ld-stats {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -925,6 +932,13 @@ onUnmounted(() => {
   color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
+}
+
+.stat-unit {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary, #6b7280);
+  margin-left: 3px;
 }
 
 .stat-value.is-income {

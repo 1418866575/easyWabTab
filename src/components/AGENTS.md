@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-24 Vue 3 SFCs in the root plus 20 workbench + 19 student + 8 business SFCs (学生 14 面板已 Element Plus 全统一、4 手写保留) under `workbench/`/`student/`/`business/`, all using `<script setup lang="ts">` with scoped CSS, CSS custom properties, and class-based dark mode.
+24 Vue 3 SFCs in the root plus 20 workbench + 20 student + 8 business SFCs (学生 15 面板已 Element Plus 全统一、4 手写保留) under `workbench/`/`student/`/`business/`, all using `<script setup lang="ts">` with scoped CSS, CSS custom properties, and class-based dark mode.
 
 ## STRUCTURE
 
@@ -60,6 +60,7 @@ components/
     ├── StudentHomework.vue        # 作业面板（EP 全统一；testid 前缀 shw-）
     ├── StudentTimetable.vue       # 课程表面板（EP 全统一；周视图 el-dialog 弹框 + 单元格弹框编辑、`stt-custom-toggle` el-checkbox 自定义学科；无 testid）
     ├── StudentPlan.vue            # 计划面板（EP 全统一；el-table expand 行内目标：`sp-goal-toggle-*` el-checkbox + `sp-goal-range-*` el-slider 进度；testid 前缀 sp-）
+    ├── StudentGoals.vue           # 学习目标面板（EP 全统一；目标类型/状态/进度条/截止剩余天数/列表+卡片双视图；testid 前缀 sg-）
     ├── StudentReview.vue          # 复习面板（EP 全统一；testid 前缀 sr-）
     ├── StudentMistakes.vue        # 错题面板（EP 全统一；testid 前缀 sm-）
     ├── StudentReading.vue         # 阅读面板（EP 全统一；testid 前缀 sr-）
@@ -95,7 +96,7 @@ components/
 | 工作台左菜单渲染 | `src/views/WorkbenchView.vue` | 菜单渲染自 `settingsStore.workbenchMenuItems`（computed 由 `workbenchMenuCore.resolveMenuItems` 解析，顺序/改名/显示开关（false 键剔除）经设置弹窗调整后在此直接生效，视图禁止内联重算）；每项按钮 `data-testid="wb-menu-<key>"` + `:title="item.label"` 全名；label 溢出省略作用于内部 `.wb-menu-label` span（min-width:0 + overflow:hidden + text-overflow:ellipsis + white-space:nowrap，对按钮本身设 ellipsis 不截断子 span 文本）；`navigateTo` 白名单 + `isWorkbenchMenuEnabled` 开关双守卫；watch menuItems 键列表 → 当前激活区被关时回退首个可见项（home 恒可见）；`SECTION_KEYS`/内容 switch 仍 key 驱动不动 |
 | 工作台一屏布局/共享分页条 | `workbench/PanelPager.vue` + `src/composables/usePanelPaging.ts` + `src/composables/panelPagingCore.ts` | 桌面 ≥769px：`.wb-content` flex 列 + 面板根 `flex:1; min-height:0` 钉满（健康 tabs 容器经 `:global(.wb-health)` 补 flex 列）；长列表经 PanelPager 翻页（page/total props + prev/next emit，testid `panel-pager`/`panel-pager-prev`/`panel-pager-info`/`panel-pager-next`，total≤1 不渲染、边界禁用）；11 面板接入，rowHeight 常量（todo 214/notes 287/timeline 2343/diary 192/countdown 158/habits 82/password 116/exercise 533/diet 537/sleep 563/weight 88/ledger 49）与公式唯一来源 `usePanelPaging`/`panelPagingCore`（组件禁止自造）；密码/运动/饮食/睡眠 4 面板为 6 列卡片网格（`repeat(6, minmax(0,1fr))` + gridRef 实测列数）+ `maxRows` 钳制每页行数（password 3 行=18 卡/页、exercise/diet/sleep 1 行=6 卡/页，行数经 clampMaxRows 归一）；`!fitsOnePage` 时列表区回退 overflow-y:auto 区内滚动兜底（`*-scroll` 类）；≤768px 移动端分页惰性 |
 | 销售记账页面 | `src/views/BusinessView.vue` + `business/*.vue` | 左树 7 项固定（bs-menu-<key>，emoji 图标）+ 右内容 switch；支出 tabs 受控（expenseTab 存视图，change emit）；⚙️ 设置按钮打开 AppSettingsDialog；桌面一屏契约复刻 WorkbenchView（.bs-content/.bs-menu ≥769px flex 钉满、≤768px 横排）；BusinessHome 经 @navigate 跳转（视图白名单收窄）；数据经 useWorkbenchBusinessStore（IDB 'business'）自加载 |
-| 学生工作台面板 | `src/views/StudentView.vue` + `student/*.vue` | 左菜单由 studentMenuCore 驱动；14 面板已 Element Plus 全统一（表单/弹框/表格/radio/checkbox/color-picker/slider/分页全 el-*）+ 4 手写保留（StudentHome/StudentOnboarding/StudentPanelPlaceholder/StudentParentPinDialog）+ StudentToolbar 共享工具栏；家长协同=StudentParent.vue 6-tab（统计/每日任务/孩子报告/手动加分/发放勋章/配置奖励）+ PIN 锁态（StudentParentPinDialog，4-8 位、5 次错锁 5 分钟），session 守卫在 StudentView；学段 K/P/J 由 studentSettings/studentStageCore（StudentOnboarding 强制）；testid 前缀 sa/dj/edu/se/sh/student/shw/sm/stg/stp/sp/spm/sr（Reading/Review/Reward 共用 sr），Timetable 无 testid |
+| 学生工作台面板 | `src/views/StudentView.vue` + `student/*.vue` | 左菜单由 studentMenuCore 驱动；15 面板已 Element Plus 全统一（表单/弹框/表格/radio/checkbox/color-picker/slider/分页全 el-*）+ 4 手写保留（StudentHome/StudentOnboarding/StudentPanelPlaceholder/StudentParentPinDialog）+ StudentToolbar 共享工具栏；家长协同=StudentParent.vue 6-tab（统计/每日任务/孩子报告/手动加分/发放勋章/配置奖励）+ PIN 锁态（StudentParentPinDialog，4-8 位、5 次错锁 5 分钟），session 守卫在 StudentView；学段 K/P/J 由 studentSettings/studentStageCore（StudentOnboarding 强制）；testid 前缀 sa/dj/edu/se/sh/student/shw/sm/stg/stp/sp/spm/sr（Reading/Review/Reward 共用 sr），Timetable 无 testid |
 
 ## CONVENTIONS
 

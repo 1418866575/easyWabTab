@@ -154,6 +154,7 @@ export interface MonthlyStats {
   balance: number
   expenseCount: number
   expenseRatio: number | null
+  dayCount: number // 当月有记账的天数（按 entry.date 去重）
   byCategory: { categoryId: string; total: number; percent: number }[]
 }
 
@@ -171,9 +172,11 @@ export function calcMonthlyStats(entries: LedgerEntry[], monthKey: string, categ
   let expense = 0
   let expenseCount = 0
   const byCat = new Map<string, number>()
+  const days = new Set<string>() // 当月有记账的天数（按 entry.date 去重）
 
   for (const e of entries) {
     if (monthKeyOf(e.date) !== monthKey) continue
+    days.add(e.date)
     const cat = findCategory(categories, e.categoryId)
     if (!cat) {
       expense += e.amount
@@ -202,7 +205,7 @@ export function calcMonthlyStats(entries: LedgerEntry[], monthKey: string, categ
           }))
       : []
 
-  return { income, expense, balance: income - expense, expenseCount, expenseRatio, byCategory }
+  return { income, expense, balance: income - expense, expenseCount, expenseRatio, dayCount: days.size, byCategory }
 }
 
 /** 存款统计：从起始月到 upToMonthKey 的每月结余累加（收入 - 支出，未知分类计支出，只累计 ≤ upToMonthKey 的月份）。 */

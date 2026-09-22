@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-4 helper scripts + 30 pure-function test runners (`node --experimental-strip-types`，其中 14 个学生 core 测试需 extensionless loader) + 1 Playwright UI QA。
+4 helper scripts + 31 pure-function test runners (`node --experimental-strip-types`，其中 15 个学生 core 测试需 extensionless loader) + 1 Playwright UI QA。
 一次性 Playwright QA 脚本（`qa-*.mjs` ×36）与已废弃的 IDB 版本校验脚本（`check-idb-v4/v8.ts`）已于开源清理中移除。
 
 **关键：学生 core 测试（test:student-*）必须带 `--experimental-loader ./scripts/resolve-extensionless.mjs`**
@@ -46,7 +46,8 @@ scripts/
 ├── test-student-stage-core.ts       # studentStageCore（npm run test:student-stage）
 ├── test-student-pomodoro-core.ts    # studentPomodoroCore（npm run test:student-pomodoro）
 ├── test-student-achievement-core.ts # studentAchievementCore（12 断言 T1-T11 + T2b；npm run test:student-achievement）
-└── test-student-parenttask-core.ts  # studentParentTaskCore（9 断言；npm run test:student-parenttask）
+├── test-student-parenttask-core.ts  # studentParentTaskCore（9 断言；npm run test:student-parenttask）
+└── test-student-goal-core.ts        # studentGoalCore（16 断言 T1-T16；npm run test:student-goal）
 ```
 
 ## WHERE TO LOOK

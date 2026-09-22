@@ -1,4 +1,4 @@
-// 学生工作台菜单纯逻辑模块：14 项菜单（home 恒居首位）的顺序归一化 / 上移下移 / 改名 / 解析渲染。
+// 学生工作台菜单纯逻辑模块：15 项菜单（home 恒居首位）的顺序归一化 / 上移下移 / 改名 / 解析渲染。
 // 仿 workbenchMenuCore.ts 模式：零 vue/pinia 运行时依赖，纯函数，node --experimental-strip-types 可测。
 // 默认名称逐字一致（load-bearing）。
 
@@ -53,7 +53,7 @@ export function normalizeStudentMenuVisibility(visibility?: unknown): StudentMen
 /**
  * 归一化菜单顺序与名称（幂等）：
  * order → 仅保留已知键、去重（首次出现优先）、home 强制 index 0（缺失则前插、后置则前移）、
- *         缺失已知键按默认序补全 → 恒 14 项；
+ *         缺失已知键按默认序补全 → 恒 15 项；
  * labels → 仅保留已知键、trim、去空、截断 12 code point。
  * 非数组 / 非对象输入按缺省处理（兜底默认）。
  */

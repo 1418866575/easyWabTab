@@ -19,7 +19,7 @@ import { emptyNoteData, normalizeNoteData } from './noteCore'
 import { emptyPomodoroData } from './pomodoroCore'
 
 export const DB_NAME = 'easy-web-tab'
-export const DB_VERSION = 15
+export const DB_VERSION = 16
 /** 核心 9 store：随 JSON 备份导出/导入（v6 新增 business；v15 新增 family 家谱） */
 export const IDB_CORE_STORES = ['todos', 'notes', 'diary', 'countdowns', 'passwords', 'health', 'ledger', 'settings', 'business', 'family'] as const
 /** 辅助 store：pomodoro/habits 随 v5 备份导出/导入；snapshots 仅本地使用，不参与备份 */
@@ -36,7 +36,7 @@ export const IDB_STUDENT_STORES = [
   // 4 共享副本（复用 core 纯函数，严格隔离）
   'student_habits', 'student_diary', 'student_countdowns',
   // 11 独立模块 store（v9 +student_parent_tasks, v12 +student_education, v13 +student_health）
-  'student_homework', 'student_timetable', 'student_plans', 'student_review',
+  'student_homework', 'student_timetable', 'student_plans', 'student_review', 'student_goals',
   'student_mistakes', 'student_reading', 'student_achievements', 'student_rewards',
   'student_parent_tasks', 'student_education', 'student_health', 'student_grades',
   // 图片 Blob 独立 store（错题本拍照，导出时 base64 编码）
@@ -493,6 +493,7 @@ const STUDENT_STORE_TO_FIELD: Record<string, keyof StudentSyncData> = {
   student_timetable: 'timetable',
   student_plans: 'plans',
   student_review: 'review',
+  student_goals: 'goals',
   student_mistakes: 'mistakes',
   student_reading: 'reading',
   student_achievements: 'achievements',
@@ -500,6 +501,7 @@ const STUDENT_STORE_TO_FIELD: Record<string, keyof StudentSyncData> = {
   student_parent_tasks: 'parentTasks',
   student_education: 'education',
   student_health: 'health',
+  student_grades: 'studentGrades',
   student_images: 'studentImages'
 }
 
@@ -507,7 +509,7 @@ export async function exportStudent(): Promise<StudentSyncData> {
   const [
     studentSettings, studentHabits, studentCountdowns,
     homework, timetable, plans, review, mistakes, reading,
-    achievements, rewards, parentTasks, education, health, studentImages, studentGrades
+    achievements, rewards, parentTasks, education, health, studentImages, studentGrades, studentGoals
   ] = await Promise.all([
     idbGet('student_settings'),
     idbGet('student_habits'),
@@ -516,6 +518,7 @@ export async function exportStudent(): Promise<StudentSyncData> {
     idbGet('student_timetable'),
     idbGet('student_plans'),
     idbGet('student_review'),
+    idbGet('student_goals'),
     idbGet('student_mistakes'),
     idbGet('student_reading'),
     idbGet('student_achievements'),
@@ -544,7 +547,8 @@ export async function exportStudent(): Promise<StudentSyncData> {
     education,
     health,
     studentImages,
-    studentGrades
+    studentGrades,
+    goals: studentGoals
   }
 }
 

@@ -52,6 +52,7 @@ composables/
 ├── studentHomeworkCore.ts  # 学生作业纯逻辑（学科筛选/状态排序）
 ├── studentTimetableCore.ts # 学生课表纯逻辑
 ├── studentPlanCore.ts      # 学生学习计划纯逻辑（周/月/学期类型筛选 + 目标进度）
+├── studentGoalCore.ts      # 学生学习目标纯逻辑（类型/状态/进度/逾期派生 + 统计/筛选/校验，node --experimental-strip-types 可测）
 ├── studentReviewCore.ts    # 学生复习纯逻辑（艾宾浩斯 1/2/4/7/15/30 天间隔复习状态机）
 ├── studentMistakesCore.ts  # 学生错题本纯逻辑（学科/状态筛选）
 ├── studentReadingCore.ts   # 学生阅读记录纯逻辑（家长签字 K 强制/P 可选/J 隐藏）
