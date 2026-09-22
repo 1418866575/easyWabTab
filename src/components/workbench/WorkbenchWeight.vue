@@ -150,6 +150,8 @@ const { pageSize, PAGE_SIZES } = usePageSize('wt-list-pager', LIST_PAGE_SIZE)
 const sortedRecords = computed(() => sortedWeightRecords.value)
 
 const listPageItems = computed(() => {
+  // 移动端弹框内卡片全部展示，无需分页
+  if (vm.isMobile) return sortedRecords.value
   const start = (listPage.value - 1) * pageSize.value
   return sortedRecords.value.slice(start, start + pageSize.value)
 })
@@ -563,7 +565,7 @@ onUnmounted(() => {
           </div>
 
         </div>
-        <div class="wt-list-pager ewt-pager">
+        <div v-if="!vm.isMobile" class="wt-list-pager ewt-pager">
           <el-pagination
             v-model:current-page="listPage"
             @size-change="listPage = 1"
