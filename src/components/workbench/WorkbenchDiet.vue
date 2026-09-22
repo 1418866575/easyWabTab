@@ -1097,8 +1097,19 @@ html.dark .btn-delete {
 }
 
 @media (max-width: 768px) {
-  .stat-panel-actions { margin-left: 0; width: 100%; }
+  .stat-header {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .stat-panel-actions {
+    order: 3;
+    margin-left: 0;
+    width: 100%;
+  }
   .stat-panel-actions .btn-add, .stat-panel-actions .btn-manage { flex: 1; text-align: center; }
+  .nav-btn {
+    margin-left: auto;
+  }
 }
 
 /* ===== 记录列表弹框：Element Plus Table + 分页（85vw×85vh，与 Exercise 完全一致）—— 放在 .dialog 基础类之后覆盖 ===== */
