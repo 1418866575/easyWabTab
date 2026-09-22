@@ -10,11 +10,14 @@ import {
   setCell as setCellCore,
   clearCell as clearCellCore,
   getCell as getCellCore,
-  isValidTimeRange
+  isValidTimeRange,
+  computePeriodTime,
+  normalizeTiming,
+  applyTimingToSchedule
 } from '@/composables/studentTimetableCore'
 import { idbGet, idbPut } from '@/composables/useIdb'
 import { markDirty } from '@/composables/useCloudSync'
-import type { StudentTimetableCell, StudentTimetableData } from '@/types'
+import type { StudentTimetableCell, StudentTimetableData, StudentTimetableTiming } from '@/types'
 
 export type StudentTimetableOpError = 'empty' | 'invalid-time' | 'not-found'
 export type StudentTimetableOp = { ok: boolean; reason?: StudentTimetableOpError }
@@ -75,6 +78,38 @@ export const useStudentTimetableStore = defineStore('studentTimetable', () => {
     await saveTimetable()
   }
 
+  /**
+   * 更新节次时间配置（上午第一节开始 / 下午第一节开始 / 单节时长 / 课间休息 / 上午节数）。
+   * 保存时按新配置重算全部 cell 的起止时间，保证展示与存储始终自洽。
+   */
+  async function updateTiming(timing: Partial<StudentTimetableTiming>): Promise<void> {
+    const t = normalizeTiming(timing)
+    data.value = {
+      ...data.value,
+      timing: t,
+      schedule: applyTimingToSchedule(data.value.schedule, t)
+    }
+    await saveTimetable()
+  }
+
+  /**
+   * 新增/更新某节课：起止时间由节次配置自动推算（不再逐节手工填写），
+   * 保证 cell.startHHMM/endHHMM 与当前配置一致。
+   */
+  async function setCellAuto(
+    day: number,
+    period: number,
+    meta: { subject: string; teacher?: string; room?: string }
+  ): Promise<StudentTimetableOp> {
+    const t = normalizeTiming(data.value.timing)
+    return setCell(day, period, {
+      subject: meta.subject,
+      teacher: meta.teacher,
+      room: meta.room,
+      ...computePeriodTime(period, t)
+    })
+  }
+
   /** 清空全部课程 */
   async function clearAll(): Promise<void> {
     data.value = { ...data.value, schedule: {} }
@@ -91,8 +126,10 @@ export const useStudentTimetableStore = defineStore('studentTimetable', () => {
     loadTimetable,
     saveTimetable,
     setCell,
+    setCellAuto,
     clearCell,
     updateConfig,
+    updateTiming,
     clearAll,
     getCell
   }
