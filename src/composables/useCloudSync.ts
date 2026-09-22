@@ -908,7 +908,7 @@ function mergeStudent(local: StudentSyncData, remote: StudentSyncData): StudentS
   const FIELD_KEYS: Array<keyof StudentSyncData> = [
     'studentSettings', 'studentHabits', 'studentCountdowns',
     'homework', 'timetable', 'plans', 'review', 'mistakes', 'reading',
-    'achievements', 'rewards', 'parentTasks', 'studentImages', 'education', 'studentGrades'
+    'achievements', 'rewards', 'parentTasks', 'studentImages', 'education', 'studentGrades', 'goals'
   ]
   for (const key of FIELD_KEYS) {
     const lv = local[key]
@@ -1002,7 +1002,7 @@ async function reloadStudentStores(): Promise<void> {
     { useStudentTimetableStore }, { useStudentPlanStore }, { useStudentReviewStore },
     { useStudentMistakesStore }, { useStudentReadingStore }, { useStudentAchievementsStore },
     { useStudentRewardsStore }, { useStudentParentTasksStore },     { useStudentEducationStore },
-    { useStudentGradesStore }
+    { useStudentGradesStore }, { useStudentGoalsStore }
   ] = await Promise.all([
     import('../stores/studentSettings'),
     import('../stores/studentHabits'),
@@ -1017,7 +1017,8 @@ async function reloadStudentStores(): Promise<void> {
     import('../stores/studentRewards'),
     import('../stores/studentParentTasks'),
     import('../stores/studentEducation'),
-    import('../stores/studentGrades')
+    import('../stores/studentGrades'),
+    import('../stores/studentGoals')
   ])
   await Promise.all([
     useStudentSettingsStore().loadSettings(true),
@@ -1033,7 +1034,8 @@ async function reloadStudentStores(): Promise<void> {
     useStudentRewardsStore().loadRewards(),
     useStudentParentTasksStore().loadTasks(),
     useStudentEducationStore().loadEducation(),
-    useStudentGradesStore().loadGrades()
+    useStudentGradesStore().loadGrades(),
+    useStudentGoalsStore().loadGoals()
   ])
 }
 

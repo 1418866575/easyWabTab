@@ -27,7 +27,7 @@ stores/
 
 学生工作台 15 store（命名 `useStudentXxxStore`，全部薄委托 student*Core 纯函数 + useIdb 持久化；见 WHERE TO LOOK「学生工作台」行与 src/composables/AGENTS.md）：
 ├── studentSettings.ts     # 枢纽：学段 K/P/J + 菜单顺序/开关 + 家长 PIN（setParentPin/verifyPin/lockRemainingSeconds/hasParentPin）(IDB 'student_settings')
-├── studentHabits.ts / studentHomework.ts / studentTimetable.ts / studentPlan.ts / studentReview.ts / studentMistakes.ts / studentReading.ts / studentExam.ts / studentEducation.ts / studentAchievements.ts / studentRewards.ts / studentParentTasks.ts  # 各面板数据（studentExam 复用共享 IDB 'student_countdowns'；studentParentTasks 存 {tasks} 信封，单事务云端同步）
+├── studentHabits.ts / studentHomework.ts / studentTimetable.ts / studentPlan.ts / studentGoals.ts / studentReview.ts / studentMistakes.ts / studentReading.ts / studentExam.ts / studentEducation.ts / studentAchievements.ts / studentRewards.ts / studentParentTasks.ts  # 各面板数据（studentExam 复用共享 IDB 'student_countdowns'；studentGoals 存 {entries} 信封，IDB 'student_goals'；studentParentTasks 存 {tasks} 信封，单事务云端同步）
 ```
 
 ## WHERE TO LOOK

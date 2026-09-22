@@ -614,6 +614,7 @@ export const STUDENT_MENU_KEYS: readonly string[] = [
   'reading',
   'exam',
   'grades',
+  'goal',
   'education',
   'health',
   'achievements',
@@ -636,6 +637,7 @@ export const STUDENT_MENU_DEFAULT_LABELS: Record<string, string> = {
   reading: '阅读记录',
   exam: '考试倒计时',
   grades: '成绩记录',
+  goal: '学习目标',
   education: '教育经历',
   health: '健康管理',
   achievements: '成就勋章',
@@ -655,6 +657,7 @@ export const STUDENT_MENU_ICONS: Record<string, string> = {
   reading: 'notes',
   exam: 'countdowns',
   grades: 'ledger',
+  goal: 'target',
   education: 'diary',
   health: 'health',
   achievements: 'habits',
@@ -668,31 +671,31 @@ export const STAGE_MENU_VISIBILITY: Record<StudentStage, Record<string, boolean>
     home: true, habits: true, homework: false, timetable: false, plan: false,
     review: false, mistakes: false, reading: true, exam: false, education: true,
     health: true, achievements: true, rewards: true, parent: true,
-    grades: false
+    grades: false, goal: false
   },
   P: {
     home: true, habits: true, homework: true, timetable: true, plan: false,
     review: false, mistakes: false, reading: true, exam: false, education: true,
     health: true, achievements: true, rewards: true, parent: true,
-    grades: true
+    grades: true, goal: false
   },
   J: {
     home: true, habits: false, homework: true, timetable: true, plan: true,
     review: true, mistakes: true, reading: true, exam: true, education: true,
     health: true, achievements: false, rewards: false, parent: false,
-    grades: true
+    grades: true, goal: false
   },
   H: {
     home: true, habits: false, homework: true, timetable: true, plan: true,
     review: true, mistakes: true, reading: true, exam: true, education: true,
     health: true, achievements: false, rewards: false, parent: false,
-    grades: true
+    grades: true, goal: false
   },
   U: {
     home: true, habits: false, homework: false, timetable: true, plan: true,
     review: true, mistakes: false, reading: true, exam: true, education: true,
     health: true, achievements: false, rewards: false, parent: false,
-    grades: true
+    grades: true, goal: false
   }
 }
 
@@ -806,6 +809,7 @@ export interface StudentBackupData {
   reading?: StudentReadingData
   achievements?: StudentAchievementsData
   rewards?: StudentRewardsData
+  goals?: StudentGoalData,
   // 共享 store 独立副本（严格隔离）
   studentHabits?: StudentHabitsData
   studentCountdowns?: { countdowns: Countdown[]; customCategories?: string[]; sortRule?: string }
@@ -942,6 +946,32 @@ export interface StudentReviewItem {
 
 export interface StudentReviewData {
   entries: StudentReviewItem[]
+}
+
+/** 学习目标类型（结果导向：量化指标 + 截止日期 + 状态） */
+export type StudentGoalType = 'score' | 'count' | 'days' | 'custom'
+
+/** 目标状态：active=进行中 / completed=已完成 / abandoned=已放弃（overdue 为渲染时派生，不入库） */
+export type StudentGoalStatus = 'active' | 'completed' | 'abandoned'
+
+/** 学生学习目标（IDB store 'student_goals'，数组，前缀 gl_） */
+export interface StudentGoal {
+  id: string                // 前缀 gl_
+  name: string              // 1-50 字符
+  subject: string           // 学科（自由文本，缺省 '其他'）
+  goalType: StudentGoalType // 分数/数量/天数/自定义
+  targetValue: number       // 目标值，>= 0
+  currentValue: number      // 当前值，>= 0
+  unit: string              // 单位，<= 10 字符，如 分/个/天
+  deadline?: string         // 截止日期 'YYYY-MM-DD'（可选）
+  note?: string             // 备注，<= 200 字符
+  status: StudentGoalStatus // 仅存 active/completed/abandoned
+  createdAt: string
+  updatedAt: string
+}
+
+export interface StudentGoalData {
+  entries: StudentGoal[]
 }
 
 /** 错题状态 */
@@ -1211,5 +1241,6 @@ export interface StudentSyncData {
   health?: unknown
   studentImages?: unknown
   studentGrades?: unknown
+  goals?: unknown,
 }
 

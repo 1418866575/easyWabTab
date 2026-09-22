@@ -23,6 +23,7 @@ import StudentReading from '@/components/student/StudentReading.vue'
 import StudentExam from '@/components/student/StudentExam.vue'
 import StudentEducation from '@/components/student/StudentEducation.vue'
 import StudentPlan from '@/components/student/StudentPlan.vue'
+import StudentGoals from '@/components/student/StudentGoals.vue'
 import StudentReview from '@/components/student/StudentReview.vue'
 import StudentMistakes from '@/components/student/StudentMistakes.vue'
 import StudentAchievements from '@/components/student/StudentAchievements.vue'
@@ -50,12 +51,12 @@ const showSettingsDialog = ref(false)
 // 学生菜单键白名单（与 STUDENT_MENU_KEYS 对齐；home 恒居首位）
 // 15 项（含 health 健康管理）；菜单显示顺序与开关由 studentSettings.menuItems 控制
 type StudentSectionKey =
-  | 'home' | 'habits' | 'homework' | 'timetable' | 'plan'
+  | 'home' | 'habits' | 'homework' | 'timetable' | 'plan' | 'goal'
   | 'review' | 'mistakes' | 'reading' | 'exam' | 'grades' | 'education'
   | 'achievements' | 'rewards' | 'parent' | 'health'
 
 const SECTION_KEYS: readonly StudentSectionKey[] = [
-  'home', 'habits', 'homework', 'timetable', 'plan',
+  'home', 'habits', 'homework', 'timetable', 'plan', 'goal',
   'review', 'mistakes', 'reading', 'exam', 'grades', 'education',
   'achievements', 'rewards', 'parent', 'health'
 ]
@@ -349,6 +350,7 @@ async function onOnboardingComplete() {
         <StudentExam v-else-if="activeSection === 'exam'" />
         <StudentEducation v-else-if="activeSection === 'education'" />
         <StudentPlan v-else-if="activeSection === 'plan'" />
+        <StudentGoals v-else-if="activeSection === 'goal'" />
         <StudentReview v-else-if="activeSection === 'review'" />
         <StudentMistakes v-else-if="activeSection === 'mistakes'" />
         <StudentAchievements v-else-if="activeSection === 'achievements'" />
