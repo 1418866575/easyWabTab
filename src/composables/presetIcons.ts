@@ -1,7 +1,7 @@
 /**
  * 预置图标列表 - 自动生成，请勿手动修改
  * 来源: public/icons/ 目录
- * 生成时间: 2026-09-16T08:52:54.558Z
+ * 生成时间: 2026-09-22T21:04:21.794Z
  * 
  * 用户只需将图标文件放入 public/icons/，build 时自动包含
  */
@@ -26,6 +26,7 @@ export const PRESET_ICONS: PresetIcon[] = [
   { name: 'fangge', label: 'Fangge', ext: 'svg', category: '其他' },
   { name: 'gushi', label: 'Gushi', ext: 'svg', category: '其他' },
   { name: 'haoma', label: 'Haoma', ext: 'svg', category: '其他' },
+  { name: 'postman', label: 'Postman', ext: 'svg', category: '其他' },
   { name: 'szbf', label: 'Szbf', ext: 'svg', category: '其他' },
 
 ]

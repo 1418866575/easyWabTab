@@ -7,6 +7,7 @@ const { URL } = require('url')
 
 const PORT = Number(process.env.PORT) || 16718
 const DIST_DIR = path.join(__dirname, '..', 'dist')
+const PID_FILE = process.env.EWT_PID_FILE || path.join(__dirname, '..', '.server.pid')
 const PROXY_PATH = '/api/webdav-proxy'
 const MAX_ERROR_BYTES = 1024
 
@@ -446,6 +447,64 @@ async function handleFetchMeta(req, res) {
   }
 }
 
+/**
+ * 构建产物缺失时的友好提示页。
+ * 历史事故：dist/index.html 不存在时，SPA 回退直接 createReadStream 且没挂 error 监听，
+ * ENOENT 变成 Unhandled 'error' event 把整个 Node 进程带崩，表现为「一访问页面服务就死」。
+ * 这里改成返回 503 提示页，服务继续存活，用户能直接看到该做什么。
+ */
+function sendNotBuilt(res) {
+  const html = `<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<title>EasyWebTab - 尚未构建</title>
+<style>
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+background:#0f1115;color:#e6e6e6;font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+.box{max-width:560px;padding:32px 36px;border:1px solid #2a2f3a;border-radius:12px;background:#171a21}
+h1{margin:0 0 12px;font-size:20px;color:#ff7875}p{margin:8px 0;line-height:1.7;font-size:14px;color:#b8bdc7}
+code{display:block;margin:14px 0;padding:10px 14px;border-radius:6px;background:#0b0d11;
+color:#7ee787;font-family:Consolas,Monaco,monospace;font-size:13px}
+</style></head><body><div class="box">
+<h1>构建产物缺失</h1>
+<p>服务已启动，但找不到 <code style="display:inline;padding:2px 6px;margin:0">dist/index.html</code>，无法返回页面。</p>
+<p>请在项目根目录执行构建后刷新：</p>
+<code>npm run build</code>
+<p>或重新运行 <code style="display:inline;padding:2px 6px;margin:0">run.bat</code>（会自动构建）。</p>
+</div></body></html>`
+  res.writeHead(503, { 'Content-Type': 'text/html; charset=utf-8', 'Retry-After': '10' })
+  res.end(html)
+}
+
+/**
+ * 以流方式返回文件。
+ * 关键：ReadStream 必须挂 error 监听，否则任何读取失败都会升级为未捕获异常并终止进程。
+ */
+function sendFile(fullPath, res, contentType, isSpaFallback) {
+  fs.stat(fullPath, (err, stats) => {
+    if (err || !stats.isFile()) {
+      if (isSpaFallback) {
+        sendNotBuilt(res)
+      } else {
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
+        res.end('Not Found')
+      }
+      return
+    }
+    res.writeHead(200, { 'Content-Type': contentType })
+    const stream = fs.createReadStream(fullPath)
+    stream.on('error', (e) => {
+      console.error(`[static] read failed: ${fullPath} -> ${e.message}`)
+      if (res.headersSent) {
+        try { res.end() } catch { /* noop */ }
+        return
+      }
+      res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
+      res.end('Internal Server Error')
+    })
+    stream.pipe(res)
+  })
+}
+
 function serveStatic(filePath, res) {
   // Security: prevent directory traversal
   const safePath = path.normalize(filePath).replace(/^(\.\.[\/\\])+/, '')
@@ -459,27 +518,21 @@ function serveStatic(filePath, res) {
   }
 
   fs.stat(fullPath, (err, stats) => {
-    if (err || !stats.isFile()) {
-      // Try index.html for directories
-      const indexPath = path.join(fullPath, 'index.html')
-      fs.stat(indexPath, (err2, stats2) => {
-        if (err2 || !stats2.isFile()) {
-          // Fallback to SPA index.html
-          res.writeHead(200, { 'Content-Type': 'text/html' })
-          fs.createReadStream(path.join(DIST_DIR, 'index.html')).pipe(res)
-          return
-        }
-        res.writeHead(200, { 'Content-Type': 'text/html' })
-        fs.createReadStream(indexPath).pipe(res)
-      })
+    if (!err && stats.isFile()) {
+      const ext = path.extname(fullPath).toLowerCase()
+      sendFile(fullPath, res, mimeTypes[ext] || 'application/octet-stream', false)
       return
     }
-
-    const ext = path.extname(fullPath).toLowerCase()
-    const contentType = mimeTypes[ext] || 'application/octet-stream'
-
-    res.writeHead(200, { 'Content-Type': contentType })
-    fs.createReadStream(fullPath).pipe(res)
+    // 目录：优先尝试目录下的 index.html
+    const indexPath = path.join(fullPath, 'index.html')
+    fs.stat(indexPath, (err2, stats2) => {
+      if (!err2 && stats2.isFile()) {
+        sendFile(indexPath, res, 'text/html', false)
+        return
+      }
+      // SPA 回退：index.html 缺失时给 503 提示页，绝不裸奔 createReadStream
+      sendFile(path.join(DIST_DIR, 'index.html'), res, 'text/html', true)
+    })
   })
 }
 
@@ -527,6 +580,57 @@ if (filePath === '/games/tetris') {
   serveStatic(filePath, res)
 })
 
+server.on('error', (err) => {
+  if (err && err.code === 'EADDRINUSE') {
+    console.error('')
+    console.error(`[ERROR] 端口 ${PORT} 已被占用，服务无法启动。`)
+    console.error(`  换端口：   set PORT=16719 && npm run serve`)
+    console.error(`  查占用：   netstat -ano | findstr :${PORT}`)
+    console.error(`  停服务：   运行 stop-server.bat 或 taskkill /PID <pid> /F`)
+    console.error('')
+    process.exit(1)
+  }
+  if (err && err.code === 'EACCES') {
+    console.error(`[ERROR] 无权限监听端口 ${PORT}（可能需要管理员权限或换个端口）。`)
+    process.exit(1)
+  }
+  console.error('[ERROR] 服务异常：', (err && err.message) || err)
+  process.exit(1)
+})
+
+// 最后防线：任何漏网的未捕获异常只记录不退出，避免本地服务被单个请求打死
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', (err && err.stack) || err)
+})
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason)
+})
+
+// 正常退出时清理 PID 文件（taskkill /F 强杀不会触发，由 stop-server.bat 负责删除）
+process.on('exit', removePidFile)
+process.on('SIGINT', () => { removePidFile(); process.exit(0) })
+process.on('SIGTERM', () => { removePidFile(); process.exit(0) })
+
+// 记录 PID：无论以哪种方式启动（run.bat 前台 / start-server.bat 后台 / npm run serve），
+// stop-server.bat 都能据此精确停止；端口反查只作兜底。
+function writePidFile() {
+  try {
+    fs.writeFileSync(PID_FILE, String(process.pid))
+  } catch { /* 无写权限时忽略，不影响服务本身 */ }
+}
+function removePidFile() {
+  try {
+    if (fs.existsSync(PID_FILE)) fs.unlinkSync(PID_FILE)
+  } catch { /* noop */ }
+}
+
 server.listen(PORT, () => {
+  writePidFile()
+  console.log('')
   console.log(`Server running on http://localhost:${PORT} (with WebDAV proxy /api/webdav-proxy)`)
+  if (!fs.existsSync(path.join(DIST_DIR, 'index.html'))) {
+    console.warn(`[WARN] 未检测到构建产物：${path.join(DIST_DIR, 'index.html')}`)
+    console.warn('       访问页面会返回 503 提示页。请先执行： npm run build')
+  }
+  console.log('')
 })
