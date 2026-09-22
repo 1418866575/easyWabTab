@@ -1439,14 +1439,11 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   z-index: 1;
 }
 
-/* 移动端：分页条居中对齐，避免总条数+翻页按钮偏到一边 */
+/* 移动端：分页条保持右对齐（与 PC 一致），仅 padding 适配窄屏 */
 @media (max-width: 768px) {
   .ld-records-pager {
-    justify-content: center;
+    justify-content: flex-end;
     padding: 12px 16px;
-  }
-  .ld-records-pager .el-pagination {
-    justify-content: center;
   }
   .ld-records-body {
     padding: 12px 16px 16px 16px;
