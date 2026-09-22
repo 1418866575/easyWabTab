@@ -24,6 +24,7 @@ import {
   type StudentHabitsData,
   type StudentStage
 } from '@/types'
+import { POINTS_HABIT } from './studentRewardCore'
 
 /** 学生习惯 id 前缀（区别成人 hb_） */
 export const STUDENT_HABIT_ID_PREFIX = 'shb_'
@@ -74,6 +75,27 @@ export function categoryLabel(category: StudentHabitCategory): string {
   }
 }
 
+// ===== 单次打卡积分（与现有积分逻辑对齐：默认取 POINTS_HABIT）=====
+/** 单次打卡积分下限（0 = 本次不加分） */
+export const HABIT_POINTS_MIN = 0
+/** 单次打卡积分上限 */
+export const HABIT_POINTS_MAX = 100
+/** 单次打卡积分默认值（= POINTS_HABIT = 5） */
+export const DEFAULT_HABIT_POINTS = POINTS_HABIT
+
+/** 积分归一：非数字/NaN → 默认 POINTS_HABIT；取整后钳到 [0, 100]。 */
+export function normalizeHabitPoints(v: unknown): number {
+  if (typeof v !== 'number' || !Number.isFinite(v)) return DEFAULT_HABIT_POINTS
+  return Math.min(HABIT_POINTS_MAX, Math.max(HABIT_POINTS_MIN, Math.round(v)))
+}
+
+/** 积分校验：必须是 [0,100] 内整数。合法返回 null。 */
+export function validateHabitPoints(v: unknown): 'not-a-number' | 'out-of-range' | null {
+  if (typeof v !== 'number' || !Number.isFinite(v) || !Number.isInteger(v)) return 'not-a-number'
+  if (v < HABIT_POINTS_MIN || v > HABIT_POINTS_MAX) return 'out-of-range'
+  return null
+}
+
 /** 内置分类判定（life/study/exercise） */
 export function isBuiltinCategory(category: StudentHabitCategory): boolean {
   return (STUDENT_HABIT_BUILTIN_CATEGORIES as readonly string[]).includes(category)
@@ -120,6 +142,7 @@ export function normalizeStudentHabitRecord(raw: unknown): StudentHabitRecord | 
     createdAt: typeof r.createdAt === 'string' ? r.createdAt : isoNow()
   }
   if (r.parentMarked === true) out.parentMarked = true
+  out.points = normalizeHabitPoints(r.points)
   return out
 }
 

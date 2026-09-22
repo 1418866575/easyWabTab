@@ -836,6 +836,8 @@ export interface StudentHabitRecord {
   habitId: string
   date: string             // 'YYYY-MM-DD' 本地日期
   parentMarked?: boolean   // 家长代打卡标记
+  /** 本次打卡积分（0-100 整数；缺省/非法回退 DEFAULT_HABIT_POINTS = POINTS_HABIT = 5） */
+  points?: number
   createdAt: string
 }
 

@@ -1,28 +1,51 @@
 <script setup lang="ts">
+// 月历习惯卡片（成人 / 学生通用）
+// 数据与操作全部由父组件注入：records 提供已打卡日期（及可选积分），
+// streak/week 由父组件 store 计算，打卡动作通过 toggle(date) 事件上抛。
+// 这样成人与学生共用同一份卡片结构与样式，保证两侧展示与交互完全一致。
 import { computed, ref } from 'vue'
-import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
-import { useToast } from '@/composables/useToast'
 import { localToday } from '@/composables/todoCore'
-import { DEFAULT_HABIT_COLOR } from '@/composables/habitCore'
-import type { Habit } from '@/composables/habitCore'
+import type { StreakResult, WeeklyAttainment } from '@/composables/habitCore'
 
-const props = defineProps<{ habit: Habit }>()
-const emit = defineEmits<{ edit: [id: string] }>()
+/** 卡片所需的最小习惯结构（成人 Habit 与学生 StudentHabit 均满足） */
+interface CalendarHabitLike {
+  id: string
+  name: string
+  color?: string
+}
+/** 打卡记录最小结构（学生侧带 points，用于展示本次积分；成人侧无该字段） */
+interface CalendarRecordLike {
+  habitId: string
+  date: string
+  points?: number
+}
 
-const store = useWorkbenchHabitsStore()
-const toast = useToast()
+const props = defineProps<{
+  habit: CalendarHabitLike
+  records: readonly CalendarRecordLike[]
+  streak: StreakResult
+  week: WeeklyAttainment
+  /** habit.color 缺省时的回退色 */
+  defaultColor: string
+}>()
+const emit = defineEmits<{ edit: [id: string]; toggle: [date: string] }>()
 
 // 今天 = 本地日期 YYYY-MM-DD（防 UTC 偏移）
 const today = localToday()
 
 // 该习惯已打卡日期集合（响应式，打卡后自动重算）
 const checkedSet = computed(
-  () => new Set(store.records.filter(r => r.habitId === props.habit.id).map(r => r.date))
+  () => new Set(props.records.filter(r => r.habitId === props.habit.id).map(r => r.date))
 )
 
-// 卡片头部信息：连续 / 本周达成（走 store 薄委托 → habitCore）
-const streak = computed(() => store.streakOf(props.habit.id, props.habit.frequency, today))
-const week = computed(() => store.weeklyAttainmentOf(props.habit.id, props.habit.frequency, today))
+/** 该习惯 日期 → 本次积分（仅学生侧有值；成人侧为空对象 → 不展示积分） */
+const pointsByDate = computed<Record<string, number>>(() => {
+  const m: Record<string, number> = {}
+  for (const r of props.records) {
+    if (r.habitId === props.habit.id && typeof r.points === 'number') m[r.date] = r.points
+  }
+  return m
+})
 
 // ===== 月历视图状态（默认当月，可前后切换补卡/回看）=====
 const now = new Date()
@@ -32,6 +55,16 @@ const viewMonth = ref(now.getMonth()) // 0-based
 const WEEK_LABELS = ['日', '一', '二', '三', '四', '五', '六']
 const pad = (n: number) => String(n).padStart(2, '0')
 
+interface CalCell {
+  blank?: boolean
+  dateStr?: string
+  dayNum?: number
+  isChecked?: boolean
+  isToday?: boolean
+  isFuture?: boolean
+  points?: number
+}
+
 const cells = computed<CalCell[]>(() => {
   const y = viewYear.value
   const m = viewMonth.value
@@ -39,6 +72,7 @@ const cells = computed<CalCell[]>(() => {
   const days = new Date(y, m + 1, 0).getDate()
   const total = Math.ceil((startW + days) / 7) * 7
   const out: CalCell[] = []
+  const pts = pointsByDate.value
   for (let i = 0; i < total; i++) {
     const d = i - startW + 1
     if (d < 1 || d > days) {
@@ -51,20 +85,12 @@ const cells = computed<CalCell[]>(() => {
       dayNum: d,
       isChecked: checkedSet.value.has(ds),
       isToday: ds === today,
-      isFuture: ds > today
+      isFuture: ds > today,
+      ...(typeof pts[ds] === 'number' ? { points: pts[ds] } : {})
     })
   }
   return out
 })
-
-interface CalCell {
-  blank?: boolean
-  dateStr?: string
-  dayNum?: number
-  isChecked?: boolean
-  isToday?: boolean
-  isFuture?: boolean
-}
 
 function prevMonth(): void {
   if (viewMonth.value === 0) {
@@ -84,11 +110,10 @@ function nextMonth(): void {
   }
 }
 
-// 点日历某天 = 打卡 / 取消（仅今天与过去可点，未来置灰）
-async function onDayClick(c: CalCell): Promise<void> {
+// 点日历某天 = 打卡 / 取消（仅今天与过去可点，未来置灰）；具体由父组件执行
+function onDayClick(c: CalCell): void {
   if (!c.dateStr || c.isFuture) return
-  const res = await store.toggleCheckIn(props.habit.id, c.dateStr)
-  if (!res.ok) toast.error('打卡失败，请重试')
+  emit('toggle', c.dateStr)
 }
 
 // 点卡片其它区域（名称/信息/留白）= 打开编辑弹框（由父组件处理）
@@ -100,7 +125,7 @@ function onCardClick(): void {
 <template>
   <div
     class="hb-cal-card"
-    :style="{ '--hb-color': habit.color ?? DEFAULT_HABIT_COLOR }"
+    :style="{ '--hb-color': habit.color ?? defaultColor }"
     :data-testid="`hb-card-${habit.id}`"
     @click="onCardClick"
   >
@@ -112,9 +137,9 @@ function onCardClick(): void {
         <div class="hb-cal-sub">连续 {{ streak.count }}{{ streak.unit }} · 本周 {{ week.completed }}/{{ week.target }}</div>
       </div>
       <div class="hb-cal-nav" @click.stop>
-        <button class="hb-cal-navbtn" type="button" aria-label="上个月" @click="prevMonth">‹</button>
+        <button class="hb-cal-navbtn" type="button" aria-label="上个月" @click="prevMonth">&#8249;</button>
         <span class="hb-cal-month">{{ viewYear }}年{{ viewMonth + 1 }}月</span>
-        <button class="hb-cal-navbtn" type="button" aria-label="下个月" @click="nextMonth">›</button>
+        <button class="hb-cal-navbtn" type="button" aria-label="下个月" @click="nextMonth">&#8250;</button>
       </div>
     </div>
 
@@ -130,9 +155,11 @@ function onCardClick(): void {
           :class="{ checked: c.isChecked, today: c.isToday, future: c.isFuture }"
           :disabled="!!c.isFuture"
           :aria-label="c.dateStr ? (c.isChecked ? '取消打卡 ' + c.dateStr : '打卡 ' + c.dateStr) : ''"
+          :title="c.isChecked && typeof c.points === 'number' ? `已打卡 +${c.points} 分` : (c.dateStr ?? '')"
           @click.stop="onDayClick(c)"
         >
-          {{ c.dayNum }}
+          <span class="hb-cal-daynum">{{ c.dayNum }}</span>
+          <span v-if="c.isChecked && typeof c.points === 'number'" class="hb-cal-pts">+{{ c.points }}</span>
         </button>
       </template>
     </div>
@@ -259,10 +286,23 @@ function onCardClick(): void {
   font-variant-numeric: tabular-nums;
   cursor: pointer;
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 1px;
   padding: 0;
   transition: background-color var(--transition-fast, 0.15s ease), color var(--transition-fast, 0.15s ease);
+}
+
+.hb-cal-daynum {
+  line-height: 1;
+}
+
+/* 本次打卡积分（仅学生侧有值） */
+.hb-cal-pts {
+  font-size: 9px;
+  line-height: 1;
+  opacity: 0.85;
 }
 
 .hb-cal-day:hover:not(.blank):not(.checked):not(:disabled) {

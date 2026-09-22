@@ -5,7 +5,7 @@
 // 2. 增加分类筛选 tabs（全部/生活/学习/运动 + 自定义分类入口）
 // 3. 学段默认习惯播种：首次加载时若 stageHabitsSeeded !== stage 触发
 // 4. 弹框增加 category 字段
-// 5. 行高 82px（与成人一致，PRD 4.2.3：行高 82px+2，maxRows=4，20 卡/页）
+// 5. 卡片栅格/行高与成人 WorkbenchHabits 完全一致（minmax(300px,1fr)，rowHeight 330，自适应每页条数）
 
 import { computed, onMounted, ref, watch } from 'vue'
 import { useStudentHabitsStore } from '@/stores/studentHabits'
@@ -21,6 +21,13 @@ import {
 } from '@/composables/studentHabitsCore'
 import type { HabitFrequency } from '@/composables/habitCore'
 import type { StudentHabitCategory } from '@/types'
+import {
+  DEFAULT_HABIT_POINTS,
+  HABIT_POINTS_MIN,
+  HABIT_POINTS_MAX,
+  validateHabitPoints
+} from '@/composables/studentHabitsCore'
+import HabitCalendarCard from '@/components/workbench/HabitCalendarCard.vue'
 import { STUDENT_HABIT_BUILTIN_CATEGORIES } from '@/types'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import PanelPager from '@/components/workbench/PanelPager.vue'
@@ -76,13 +83,12 @@ const viewHabits = computed(() =>
     }))
 )
 
-// 自适应分页（rowHeight 84 = row-heights.json habits MAX 82 + 2px）
+// 自适应分页（改用月历卡片后行高与成人一致：330）
 const mainEl = ref<HTMLElement | null>(null)
 const listEl = ref<HTMLElement | null>(null)
 const paging = usePanelPaging({
   items: () => viewHabits.value,
-  rowHeight: 84,
-  maxRows: 4,
+  rowHeight: 330,
   containerRef: mainEl,
   gridRef: listEl
 })
@@ -180,9 +186,92 @@ async function handleDelete(id: string): Promise<void> {
   habitErrorToast(result)
 }
 
-async function handleCheck(habitId: string): Promise<void> {
-  const result = await store.toggleCheckIn(habitId, today)
+// 月历卡片点击某天 = 打卡/取消（卡片只上抛 toggle，具体由 store 执行）
+async function onToggleCheckIn(habitId: string, date: string): Promise<void> {
+  const result = await store.toggleCheckIn(habitId, date)
   if (!result.ok) habitErrorToast(result)
+}
+
+// ===== 打卡记录（列表 + 新增/编辑本次积分）=====
+const RECORD_LIMIT = 50
+const recordListVisible = ref(false)
+const recordDialogVisible = ref(false)
+const recordEditingId = ref<string | null>(null)
+const recordFormHabitId = ref('')
+const recordFormDate = ref(today)
+const recordFormPoints = ref<number>(DEFAULT_HABIT_POINTS)
+
+/** 打卡记录行：日期倒序，最多最近 50 条 */
+const recordRows = computed(() =>
+  [...store.records]
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+    .slice(0, RECORD_LIMIT)
+    .map(r => ({
+      id: r.id,
+      date: r.date,
+      habitName: store.habits.find(h => h.id === r.habitId)?.name ?? '（已删除习惯）',
+      points: r.points ?? DEFAULT_HABIT_POINTS,
+      parentMarked: r.parentMarked === true
+    }))
+)
+
+function openRecordList(): void {
+  recordListVisible.value = true
+}
+
+function openRecordAdd(): void {
+  if (store.habits.length === 0) { toast.error('请先新增习惯'); return }
+  recordEditingId.value = null
+  recordFormHabitId.value = store.habits[0]?.id ?? ''
+  recordFormDate.value = today
+  recordFormPoints.value = DEFAULT_HABIT_POINTS
+  recordDialogVisible.value = true
+}
+
+function openRecordEdit(r: { id: string }): void {
+  const rec = store.records.find(x => x.id === r.id)
+  if (!rec) return
+  recordEditingId.value = rec.id
+  recordFormHabitId.value = rec.habitId
+  recordFormDate.value = rec.date
+  recordFormPoints.value = rec.points ?? DEFAULT_HABIT_POINTS
+  recordDialogVisible.value = true
+}
+
+async function saveRecordDialog(): Promise<void> {
+  if (validateHabitPoints(recordFormPoints.value) !== null) {
+    toast.error(`积分需为 ${HABIT_POINTS_MIN}-${HABIT_POINTS_MAX} 的整数`)
+    return
+  }
+  if (!recordFormDate.value) {
+    toast.error('请选择日期')
+    return
+  }
+  if (recordEditingId.value) {
+    const r = await store.updateRecord(recordEditingId.value, { points: recordFormPoints.value })
+    if (!r.ok) { habitErrorToast(r); return }
+    toast.success('打卡记录已更新')
+  } else {
+    if (!recordFormHabitId.value) { toast.error('请选择习惯'); return }
+    const r = await store.addRecord({
+      habitId: recordFormHabitId.value,
+      date: recordFormDate.value,
+      points: recordFormPoints.value
+    })
+    if (!r.ok) {
+      toast.error(r.reason === 'duplicate' ? '该习惯这一天已打卡' : '新增失败')
+      return
+    }
+    toast.success('打卡记录已新增')
+  }
+  recordDialogVisible.value = false
+}
+
+async function handleRecordDelete(id: string): Promise<void> {
+  if (!confirm('确定删除这条打卡记录吗？将同时撤销该次积分。')) return
+  const r = await store.deleteRecord(id)
+  if (!r.ok) { habitErrorToast(r); return }
+  toast.success('打卡记录已删除')
 }
 
 const stageSeeding = ref(false)
@@ -213,6 +302,12 @@ onMounted(async () => {
       <el-button type="primary" size="small" class="sh-add-btn" data-testid="sh-add-btn" @click="openAddDialog">
         <Icon name="plus" :size="16" /> 新增习惯
       </el-button>
+      <el-button size="small" class="sh-record-add-btn" data-testid="sh-toolbar-record-add" @click="openRecordAdd">
+        新增记录
+      </el-button>
+      <el-button size="small" class="sh-view-btn" data-testid="sh-record-view" @click="openRecordList">
+        查看
+      </el-button>
     </StudentToolbar>
 
     <el-radio-group v-model="activeCategory" class="sh-cat-tabs" size="small">
@@ -231,54 +326,17 @@ onMounted(async () => {
 
       <div v-else ref="listEl" class="sh-list" :class="{ 'sh-list-scroll': !fitsOnePage }">
         <TransitionGroup name="grid">
-          <div
+          <HabitCalendarCard
             v-for="v in pageItems"
             :key="v.habit.id"
-            class="sh-card"
-            :class="{ 'is-checked': v.checked }"
-            :data-testid="`sh-card-${v.habit.id}`"
-            :style="{ '--sh-color': v.habit.color ?? DEFAULT_HABIT_COLOR }"
-            @click="openEditDialog(v.habit.id)"
-          >
-            <span class="sh-card-bar"></span>
-            <div class="sh-card-top">
-              <Icon name="habits" :size="20" class="sh-card-icon" />
-              <div class="sh-card-main">
-                <div class="sh-card-name">{{ v.habit.name }}</div>
-                <div class="sh-card-badges">
-                  <span class="sh-badge sh-badge-cat" v-if="v.habit.category">
-                    {{ categoryLabel(v.habit.category) }}
-                  </span>
-                  <span class="sh-badge sh-badge-streak" :data-testid="`sh-streak-${v.habit.id}`">
-                    <Icon name="trending-up" :size="13" /> 连续 {{ v.streak.count }} {{ v.streak.unit }}
-                  </span>
-                  <span class="sh-badge sh-badge-week" :data-testid="`sh-week-${v.habit.id}`">
-                    本周 {{ v.week.completed }}/{{ v.week.target }}
-                  </span>
-                </div>
-                <div class="sh-week-bar" :title="`本周 ${v.week.completed}/${v.week.target}`">
-                  <div
-                    class="sh-week-fill"
-                    :style="{
-                      width: Math.min(100, Math.round(v.week.percent * 100)) + '%',
-                      background: v.habit.color ?? DEFAULT_HABIT_COLOR
-                    }"
-                  ></div>
-                </div>
-              </div>
-              <button
-                class="sh-check-btn"
-                :class="{ 'is-checked': v.checked }"
-                :style="{ '--sh-color': v.habit.color ?? DEFAULT_HABIT_COLOR }"
-                :data-testid="`sh-check-${v.habit.id}`"
-                :aria-label="v.checked ? '取消今日打卡' : '今日打卡'"
-                @click.stop="handleCheck(v.habit.id)"
-              >
-                <Icon name="check" :size="16" />
-                <span>{{ v.checked ? '已打卡' : '打卡' }}</span>
-              </button>
-            </div>
-          </div>
+            :habit="v.habit"
+            :records="store.records"
+            :streak="v.streak"
+            :week="v.week"
+            :default-color="DEFAULT_HABIT_COLOR"
+            @edit="openEditDialog"
+            @toggle="(d: string) => onToggleCheckIn(v.habit.id, d)"
+          />
         </TransitionGroup>
       </div>
     </div>
@@ -340,6 +398,82 @@ onMounted(async () => {
       </template>
     </el-dialog>
   </div>
+    <!-- 打卡记录新增/编辑弹框：可自定义本次打卡积分（0-100，默认 5） -->
+    <el-dialog
+      v-model="recordDialogVisible"
+      :title="recordEditingId ? '编辑打卡记录' : '新增打卡记录'"
+      width="440px"
+      data-testid="sh-record-dialog"
+    >
+      <div class="dialog-body">
+        <div class="field">
+          <label class="field-label">习惯 *</label>
+          <el-select
+            v-model="recordFormHabitId"
+            :disabled="!!recordEditingId"
+            data-testid="sh-record-habit"
+            style="width: 100%"
+          >
+            <el-option v-for="h in store.habits" :key="h.id" :value="h.id" :label="h.name" />
+          </el-select>
+        </div>
+        <div class="field">
+          <label class="field-label">日期 *</label>
+          <input
+            type="date"
+            class="wb-menu-name-input"
+            v-model="recordFormDate"
+            data-testid="sh-record-date"
+          />
+        </div>
+        <div class="field">
+          <label class="field-label">本次积分（{{ HABIT_POINTS_MIN }}-{{ HABIT_POINTS_MAX }}）</label>
+          <el-input-number
+            v-model="recordFormPoints"
+            :min="HABIT_POINTS_MIN"
+            :max="HABIT_POINTS_MAX"
+            :step="1"
+            data-testid="sh-record-points"
+          />
+          <p class="sh-record-hint">默认 {{ DEFAULT_HABIT_POINTS }} 分；0 分表示本次不加分。</p>
+        </div>
+      </div>
+      <template #footer>
+        <div class="ewt-dialog-footer">
+          <el-button @click="recordDialogVisible = false">取消</el-button>
+          <el-button type="primary" data-testid="sh-record-save" @click="saveRecordDialog">保存</el-button>
+        </div>
+      </template>
+    </el-dialog>
+    <!-- 打卡记录弹框（工具栏「查看」打开）：日期/习惯/积分/来源，支持新增与编辑 -->
+    <el-dialog
+      v-model="recordListVisible"
+      title="打卡记录"
+      width="720px"
+      class="sh-dialog"
+      data-testid="sh-record-list-dialog"
+    >
+      <div class="sh-records">
+        <div class="sh-records-head">
+          <span class="sh-records-count">最近 {{ recordRows.length }} 条</span>
+          <el-button size="small" type="primary" data-testid="sh-record-add" @click="openRecordAdd">新增记录</el-button>
+        </div>
+        <div v-if="recordRows.length === 0" class="sh-records-empty" data-testid="sh-record-empty">暂无打卡记录</div>
+        <div v-else class="sh-records-list">
+          <div v-for="r in recordRows" :key="r.id" class="sh-record-row" :data-testid="`sh-record-${r.id}`">
+            <span class="sh-record-date">{{ r.date }}</span>
+            <span class="sh-record-habit">{{ r.habitName }}</span>
+            <span class="sh-record-points" :data-testid="`sh-record-points-${r.id}`">+{{ r.points }} 分</span>
+            <span v-if="r.parentMarked" class="sh-record-tag">家长代打卡</span>
+            <span v-else class="sh-record-tag sh-record-tag-plain">自主</span>
+            <span class="sh-record-ops">
+              <el-button size="small" :data-testid="`sh-record-edit-${r.id}`" @click="openRecordEdit(r)">编辑</el-button>
+              <el-button size="small" class="btn-delete" :data-testid="`sh-record-del-${r.id}`" @click="handleRecordDelete(r.id)">删除</el-button>
+            </span>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
 </template>
 
 <style scoped>
@@ -364,8 +498,9 @@ onMounted(async () => {
 }
 .sh-list {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
+  /* 与成人 WorkbenchHabits .hb-list 完全一致：按 300px 最小宽度自动填充，决定每行卡片个数 */
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 10px;
   align-content: start;
 }
 .sh-list-scroll {
@@ -527,9 +662,6 @@ onMounted(async () => {
 }
 
 @media (max-width: 768px) {
-  .sh-list {
-    grid-template-columns: 1fr;
-  }
   /* 移动端解除高度约束，让面板随内容自然撑开，由外层 .st-content 统一滚动
      （避免记录被 .sh-main overflow:hidden 裁切、且 .sh-list 无高度约束致 overflow-y:auto 失效、无法下滑） */
   .st-habits {
@@ -553,5 +685,90 @@ onMounted(async () => {
     width: 92vw !important;
     max-width: 92vw;
   }
+}
+/* ===== 打卡记录列表 ===== */
+.sh-records {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sh-records-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.sh-records-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text, var(--color-text));
+}
+.sh-records-count {
+  flex: 1;
+  font-size: 12px;
+  color: var(--color-text-muted, #6b7280);
+}
+.sh-records-empty {
+  font-size: 13px;
+  color: var(--color-text-muted, #6b7280);
+  padding: 10px 0;
+}
+.sh-records-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+.sh-record-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border, var(--color-border));
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-bg-card, var(--color-bg-card));
+  font-size: 13px;
+  color: var(--color-text, var(--color-text));
+}
+.sh-record-date {
+  font-variant-numeric: tabular-nums;
+  min-width: 92px;
+}
+.sh-record-habit {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sh-record-points {
+  min-width: 56px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--color-primary, var(--color-primary));
+}
+.sh-record-tag {
+  font-size: 12px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
+  color: var(--color-primary, var(--color-primary));
+}
+.sh-record-tag-plain {
+  background: transparent;
+  color: var(--color-text-muted, #6b7280);
+  border: 1px solid var(--color-border, var(--color-border));
+}
+.sh-record-ops {
+  display: flex;
+  gap: 4px;
+}
+.sh-record-hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--color-text-muted, #6b7280);
 }
 </style>

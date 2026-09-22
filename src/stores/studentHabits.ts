@@ -14,7 +14,9 @@ import {
   weeklyAttainmentOf,
   buildStageSeedHabits,
   mergeStageSeedHabits,
-  filterHabitsByCategory
+  filterHabitsByCategory,
+  normalizeHabitPoints,
+  DEFAULT_HABIT_POINTS
 } from '@/composables/studentHabitsCore'
 import type { HabitFrequency, StreakResult, WeeklyAttainment } from '@/composables/habitCore'
 import { idbGet, idbPut } from '@/composables/useIdb'
@@ -126,42 +128,126 @@ export const useStudentHabitsStore = defineStore('studentHabits', () => {
   }
 
   /** 打卡/取消打卡：同一天已打卡 → 移除（取消），未打卡 → 追加（id 前缀 shr_）；幂等。
-   *  打卡成功时联动积分（earnFromHabit +5），取消打卡时撤销积分（revokeFromHabit -5）。
+   *  打卡成功按「本次积分」联动加分（默认 POINTS_HABIT=5；0 分表示本次不加分），
+   *  取消打卡时撤销该次积分（revokeFromHabit）。
    */
-  async function toggleCheckIn(habitId: string, date: string, parentMarked = false): Promise<StudentHabitOp> {
+  async function toggleCheckIn(
+    habitId: string,
+    date: string,
+    parentMarked = false,
+    points?: number
+  ): Promise<StudentHabitOp> {
     const habit = habits.value.find(h => h.id === habitId)
     if (!habit) return { ok: false, reason: 'not-found' }
     const existing = records.value.find(r => r.habitId === habitId && r.date === date)
-    let shouldEarn = false
     let shouldRevoke = false
+    let earnPoints = 0
     if (existing) {
       records.value = records.value.filter(r => r.id !== existing.id)
       shouldRevoke = true
     } else {
+      earnPoints = normalizeHabitPoints(points)
       records.value.push({
         id: `${STUDENT_HABIT_RECORD_ID_PREFIX}${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         habitId,
         date,
         parentMarked: parentMarked || undefined,
+        points: earnPoints,
         createdAt: new Date().toISOString()
       })
-      shouldEarn = true
     }
     await saveHabits()
     // 积分联动：在 save 后触发，失败仅记录日志不回滚
     const rewardsStore = useStudentRewardsStore()
-    if (shouldEarn) {
-      try {
-        await rewardsStore.earnFromHabit(habit.id, habit.name, date)
-      } catch (e) {
-        console.warn('[studentHabits] earnFromHabit failed', e)
-      }
-    } else if (shouldRevoke) {
+    if (shouldRevoke) {
       try {
         await rewardsStore.revokeFromHabit(habitId, date)
       } catch (e) {
         console.warn('[studentHabits] revokeFromHabit failed', e)
       }
+    } else if (earnPoints > 0) {
+      try {
+        await rewardsStore.earnFromHabit(habit.id, habit.name, date, earnPoints)
+      } catch (e) {
+        console.warn('[studentHabits] earnFromHabit failed', e)
+      }
+    }
+    return { ok: true }
+  }
+
+  /** 新增打卡记录（可自定义本次积分）：同一习惯同一天已打卡 → duplicate。 */
+  async function addRecord(input: {
+    habitId: string
+    date: string
+    points?: number
+    parentMarked?: boolean
+  }): Promise<StudentHabitOp> {
+    const habit = habits.value.find(h => h.id === input.habitId)
+    if (!habit) return { ok: false, reason: 'not-found' }
+    if (records.value.some(r => r.habitId === input.habitId && r.date === input.date)) {
+      return { ok: false, reason: 'duplicate' }
+    }
+    const points = normalizeHabitPoints(input.points)
+    records.value.push({
+      id: `${STUDENT_HABIT_RECORD_ID_PREFIX}${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      habitId: input.habitId,
+      date: input.date,
+      parentMarked: input.parentMarked === true || undefined,
+      points,
+      createdAt: new Date().toISOString()
+    })
+    await saveHabits()
+    if (points > 0) {
+      try {
+        const rewardsStore = useStudentRewardsStore()
+        await rewardsStore.earnFromHabit(habit.id, habit.name, input.date, points)
+      } catch (e) {
+        console.warn('[studentHabits] earnFromHabit (addRecord) failed', e)
+      }
+    }
+    return { ok: true }
+  }
+
+  /** 编辑打卡记录（改积分/改日期）：改积分后先撤销旧分再按新分重加（sourceId 幂等，不会重复加分）。 */
+  async function updateRecord(
+    id: string,
+    patch: { points?: number; date?: string }
+  ): Promise<StudentHabitOp> {
+    const rec = records.value.find(r => r.id === id)
+    if (!rec) return { ok: false, reason: 'not-found' }
+    const nextPoints =
+      patch.points === undefined
+        ? (rec.points ?? DEFAULT_HABIT_POINTS)
+        : normalizeHabitPoints(patch.points)
+    rec.points = nextPoints
+    if (patch.date !== undefined && patch.date !== rec.date) rec.date = patch.date
+    await saveHabits()
+    try {
+      const rewardsStore = useStudentRewardsStore()
+      await rewardsStore.revokeFromHabit(rec.habitId, rec.date)
+      if (nextPoints > 0) {
+        const habit = habits.value.find(h => h.id === rec.habitId)
+        await rewardsStore.earnFromHabit(rec.habitId, habit?.name ?? '', rec.date, nextPoints)
+      }
+    } catch (e) {
+      console.warn('[studentHabits] updateRecord points sync failed', e)
+    }
+    return { ok: true }
+  }
+
+  /** 删除打卡记录：移除记录并撤销该次积分。 */
+  async function deleteRecord(id: string): Promise<StudentHabitOp> {
+    const rec = records.value.find(r => r.id === id)
+    if (!rec) return { ok: false, reason: 'not-found' }
+    const habitId = rec.habitId
+    const date = rec.date
+    records.value = records.value.filter(r => r.id !== id)
+    await saveHabits()
+    try {
+      const rewardsStore = useStudentRewardsStore()
+      await rewardsStore.revokeFromHabit(habitId, date)
+    } catch (e) {
+      console.warn('[studentHabits] revokeFromHabit (deleteRecord) failed', e)
     }
     return { ok: true }
   }
@@ -204,6 +290,9 @@ export const useStudentHabitsStore = defineStore('studentHabits', () => {
     updateHabit,
     deleteHabit,
     toggleCheckIn,
+    addRecord,
+    updateRecord,
+    deleteRecord,
     weekCompletionsOfHabit,
     streakOfHabit,
     weeklyAttainmentOfHabit,

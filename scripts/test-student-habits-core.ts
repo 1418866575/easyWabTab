@@ -4,7 +4,9 @@ import {
   categoryLabel, isBuiltinCategory,
   emptyStudentHabitsData, normalizeStudentHabit, normalizeStudentHabitRecord,
   normalizeStudentHabitsData, shouldSeedStageHabits, buildStageSeedHabits,
-  mergeStageSeedHabits, filterHabitsByCategory
+  mergeStageSeedHabits, filterHabitsByCategory,
+  normalizeHabitPoints, validateHabitPoints,
+  DEFAULT_HABIT_POINTS, HABIT_POINTS_MIN, HABIT_POINTS_MAX
 } from "../src/composables/studentHabitsCore.ts"
 
 const tests = []
@@ -92,6 +94,44 @@ test("T12 filterHabitsByCategory all/uncategorized/精确", () => {
 })
 
 let p = 0, f = 0
+// T13 — normalizeHabitPoints：缺省/非法回退默认 5，越界钳到 [0,100]，小数取整
+test('T13 normalizeHabitPoints 默认值与钳制', () => {
+  assert.equal(DEFAULT_HABIT_POINTS, 5)
+  assert.equal(HABIT_POINTS_MIN, 0)
+  assert.equal(HABIT_POINTS_MAX, 100)
+  assert.equal(normalizeHabitPoints(undefined), 5)
+  assert.equal(normalizeHabitPoints('abc'), 5)
+  assert.equal(normalizeHabitPoints(NaN), 5)
+  assert.equal(normalizeHabitPoints(3), 3)
+  assert.equal(normalizeHabitPoints(-5), 0)
+  assert.equal(normalizeHabitPoints(999), 100)
+  assert.equal(normalizeHabitPoints(7.6), 8)
+})
+
+// T14 — validateHabitPoints：0-100 整数合法，负数/超限/小数/非数字非法
+test('T14 validateHabitPoints 边界校验', () => {
+  assert.equal(validateHabitPoints(0), null)
+  assert.equal(validateHabitPoints(5), null)
+  assert.equal(validateHabitPoints(100), null)
+  assert.equal(validateHabitPoints(-1), 'out-of-range')
+  assert.equal(validateHabitPoints(101), 'out-of-range')
+  assert.equal(validateHabitPoints(1.5), 'not-a-number')
+  assert.equal(validateHabitPoints('5'), 'not-a-number')
+})
+
+// T15 — 打卡记录归一化写入 points：缺省 5，0 保留（本次不加分），超限钳到 100
+test('T15 打卡记录归一化带 points', () => {
+  const base = normalizeStudentHabitRecord({ habitId: 'shb_1', date: '2026-09-22' })
+  assert.ok(base)
+  assert.equal(base.points, 5)
+  const zero = normalizeStudentHabitRecord({ habitId: 'shb_1', date: '2026-09-22', points: 0 })
+  assert.equal(zero.points, 0)
+  const custom = normalizeStudentHabitRecord({ habitId: 'shb_1', date: '2026-09-22', points: 20 })
+  assert.equal(custom.points, 20)
+  const tooBig = normalizeStudentHabitRecord({ habitId: 'shb_1', date: '2026-09-22', points: 500 })
+  assert.equal(tooBig.points, 100)
+})
+
 for (const t of tests) {
   try { t.fn(); p++; console.log("  OK " + t.name) }
   catch (e) { f++; console.error("  FAIL " + t.name); console.error(e) }

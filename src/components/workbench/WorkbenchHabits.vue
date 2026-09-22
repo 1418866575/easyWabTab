@@ -40,6 +40,12 @@ const paging = usePanelPaging({
 })
 const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto } = paging
 
+// 月历卡片点击某天 = 打卡/取消（卡片只上抛 toggle，具体由 store 执行）
+async function onToggleCheckIn(habitId: string, date: string): Promise<void> {
+  const res = await store.toggleCheckIn(habitId, date)
+  if (!res.ok) toast.error('打卡失败，请重试')
+}
+
 // 频率选项与 habitCore HabitFrequency（每周目标次数 1-7）对齐：「每天」即 7
 const FREQUENCY_OPTIONS: { value: HabitFrequency; label: string }[] = [
   { value: 7, label: '每天' },
@@ -153,7 +159,12 @@ onMounted(() => {
             v-for="h in pageItems"
             :key="h.id"
             :habit="h"
+            :records="store.records"
+            :streak="store.streakOf(h.id, h.frequency, today)"
+            :week="store.weeklyAttainmentOf(h.id, h.frequency, today)"
+            :default-color="DEFAULT_HABIT_COLOR"
             @edit="openEditDialog"
+            @toggle="(d: string) => onToggleCheckIn(h.id, d)"
           />
         </TransitionGroup>
       </div>

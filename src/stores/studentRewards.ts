@@ -178,8 +178,13 @@ export const useStudentRewardsStore = defineStore('studentRewards', () => {
    * 习惯打卡完成时触发加分（+5）。
    * sourceId 模板：`habit:${habitId}:${date}`，确保同一习惯同一天只加一次。
    */
-  async function earnFromHabit(habitId: string, habitName: string, date: string): Promise<StudentRewardOp> {
-    return autoAddPoints(POINTS_HABIT, habitEarnReason(habitName), `habit:${habitId}:${date}`)
+  async function earnFromHabit(
+    habitId: string,
+    habitName: string,
+    date: string,
+    points: number = POINTS_HABIT
+  ): Promise<StudentRewardOp> {
+    return autoAddPoints(points, habitEarnReason(habitName), `habit:${habitId}:${date}`)
   }
 
   /**
@@ -337,7 +342,7 @@ export const useStudentRewardsStore = defineStore('studentRewards', () => {
     for (const r of input.habitRecords) {
       const habit = habitMap.get(r.habitId)
       if (!habit) continue
-      const points = POINTS_HABIT
+      const points = r.points ?? POINTS_HABIT
       const reason = habitEarnReason(habit.name)
       const sourceId = `habit:${habit.id}:${r.date}`
       earnCalls.push(() => autoAddPoints(points, reason, sourceId))
