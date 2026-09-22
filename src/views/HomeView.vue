@@ -606,20 +606,6 @@ onUnmounted(() => {
   min-width: 0;
 }
 
-/* ThemeToggle 自带白卡样式，在 App Bar 内统一为 ghost，与其余按钮视觉一致 */
-.app-bar-right :deep(.theme-toggle) {
-  background-color: transparent;
-  color: var(--color-text-secondary, #64748b);
-  border-color: transparent;
-  box-shadow: none;
-}
-
-.app-bar-right :deep(.theme-toggle:hover) {
-  background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-primary, #3b82f6);
-  border-color: var(--color-border, #e2e8f0);
-}
-
 .nav-entry-label {
   white-space: nowrap;
 }
@@ -1007,16 +993,6 @@ html.dark .app-bar .btn-help:hover {
   border-color: var(--color-border, #374151);
 }
 
-html.dark .app-bar-right :deep(.theme-toggle) {
-  color: var(--color-text-secondary, #d1d5db);
-}
-
-html.dark .app-bar-right :deep(.theme-toggle:hover) {
-  background-color: var(--color-bg-hover, #374151);
-  color: var(--color-primary, #3b82f6);
-  border-color: var(--color-border, #374151);
-}
-
 /* 暗色模式下的侧边栏 */
 html.dark .nav-sidebar {
   background-color: var(--color-surface, #1f2937);
@@ -1108,15 +1084,6 @@ html.dark .nav-add-site:hover {
   }
 
   .app-bar-right::-webkit-scrollbar {
-    display: none;
-  }
-
-  /* 视图切换收窄为纯图标，给工具按钮让出空间 */
-  .view-toggle {
-    width: 92px;
-    margin-left: 4px;
-  }
-  .view-toggle-opt span {
     display: none;
   }
 
