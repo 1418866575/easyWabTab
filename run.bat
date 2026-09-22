@@ -11,21 +11,13 @@ cd /d %~dp0
 echo Working directory: %CD%
 echo.
 
-:: 自动定位 WorkBuddy 管理的 Node.js（仅当系统 PATH 中找不到 node 时）
-where node >nul 2>&1
-if %errorlevel% neq 0 (
-    set "WB_NODE_BASE=%USERPROFILE%\.workbuddy\binaries\node\versions"
-    for /d %%d in ("%WB_NODE_BASE%\*") do set "NODEJS_HOME=%%d"
-    if defined NODEJS_HOME (
-        echo [INFO] 使用 WorkBuddy 管理的 Node.js: %NODEJS_HOME%
-        set "PATH=%NODEJS_HOME%;%PATH%"
-    )
-)
+:: Set Node.js path - CHANGE THIS TO YOUR NODE.JS LOCATION
+set PATH=%PATH%;E:\installSoftware\nodejs\
 
 :: Check if node is available
 node --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [ERROR] Node.js not found. 已将 WorkBuddy 管理的 Node 目录加入 PATH 仍失败，请检查安装。
+    echo [ERROR] Node.js not found. Please check the PATH in the script.
     pause
     exit /b 1
 )
