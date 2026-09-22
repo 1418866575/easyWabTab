@@ -1418,7 +1418,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 
 /* el-table 容器：填满剩余空间，overflow 交给 el-table internal */
 .ld-records-body {
-  padding: 16px 20px 0 20px;
+  padding: 16px 20px 16px 20px;
   flex: 1;
   min-height: 0;
   display: flex;
@@ -1427,13 +1427,30 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 
 /* el-pagination 位置：底部分页条 */
 .ld-records-pager {
-  padding: 12px 20px;
+  padding: 14px 20px;
   border-top: 1px solid var(--color-border, #e5e7eb);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.06);
   display: flex;
   justify-content: flex-end;
   align-items: center;
   background: var(--color-surface-2, #fafafa);
   border-radius: 0 0 var(--radius-lg, 12px) var(--radius-lg, 12px);
+  position: relative;
+  z-index: 1;
+}
+
+/* 移动端：分页条居中对齐，避免总条数+翻页按钮偏到一边 */
+@media (max-width: 768px) {
+  .ld-records-pager {
+    justify-content: center;
+    padding: 12px 16px;
+  }
+  .ld-records-pager .el-pagination {
+    justify-content: center;
+  }
+  .ld-records-body {
+    padding: 12px 16px 16px 16px;
+  }
 }
 
 /* 表格内金额样式：沿用旧.ld-record-amount，确保 + 绿 / - 蓝 主题色 */
