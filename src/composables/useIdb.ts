@@ -19,7 +19,7 @@ import { emptyNoteData, normalizeNoteData } from './noteCore'
 import { emptyPomodoroData } from './pomodoroCore'
 
 export const DB_NAME = 'easy-web-tab'
-export const DB_VERSION = 15
+export const DB_VERSION = 16
 /** 核心 9 store：随 JSON 备份导出/导入（v6 新增 business；v15 新增 family 家谱） */
 export const IDB_CORE_STORES = ['todos', 'notes', 'diary', 'countdowns', 'passwords', 'health', 'ledger', 'settings', 'business', 'family'] as const
 /** 辅助 store：pomodoro/habits 随 v5 备份导出/导入；snapshots 仅本地使用，不参与备份 */
@@ -501,6 +501,7 @@ const STUDENT_STORE_TO_FIELD: Record<string, keyof StudentSyncData> = {
   student_parent_tasks: 'parentTasks',
   student_education: 'education',
   student_health: 'health',
+  student_grades: 'studentGrades',
   student_images: 'studentImages'
 }
 
