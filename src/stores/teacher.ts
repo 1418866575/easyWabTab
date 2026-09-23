@@ -21,6 +21,7 @@ import {
   removeStudentCascade,
   resizeSeats,
   resolveCurrent,
+  resolveDefaultSelection,
   swapSeats,
   uid
 } from '@/composables/teacherCore'
@@ -116,6 +117,38 @@ export const useTeacherStore = defineStore('teacher', () => {
   const needsSemester = computed(() => data.value.semesters.length === 0)
   const needsClass = computed(() => !needsSemester.value && classesOfCurrentSem.value.length === 0)
 
+  // ---------- 默认组合（学期 + 班级；进入工作台自动进入，随云同步） ----------
+
+  /** 有效默认组合；未设置或已失效时为 { sem:'', cls:'' } */
+  const defaultSelection = computed<{ sem: string; cls: string }>(
+    () => resolveDefaultSelection(data.value) ?? { sem: '', cls: '' }
+  )
+  /** 当前选中的学期 + 班级是否就是默认组合 */
+  const isDefaultCurrent = computed<boolean>(() => {
+    const d = defaultSelection.value
+    return !!d.sem && d.sem === data.value.current.sem && d.cls === data.value.current.cls
+  })
+  const isDefaultSemester = (semId: string): boolean => defaultSelection.value.sem === semId && !!semId
+  const isDefaultClass = (classId: string): boolean => defaultSelection.value.cls === classId && !!classId
+
+  function defaultLabelOf(semId: string, classId: string): string {
+    return isDefaultSemester(semId) && isDefaultClass(classId) ? '默认' : ''
+  }
+
+  /** 把当前「学期 + 班级」设为默认组合 */
+  async function setDefaultSelection(): Promise<void> {
+    const { sem, cls: cid } = data.value.current
+    if (!sem || !cid) return
+    data.value = { ...data.value, defaultSelection: { sem, cls: cid } }
+    await saveTeacher()
+  }
+
+  /** 取消默认组合（进入工作台时回落到常规解析：最新学期 + 其首个/班主任班级） */
+  async function clearDefaultSelection(): Promise<void> {
+    data.value = { ...data.value, defaultSelection: { sem: '', cls: '' } }
+    await saveTeacher()
+  }
+
   // ---------- 当前桶改写 ----------
 
   function mutateBucket(fn: (b: ClassBucket) => ClassBucket): boolean {
@@ -153,12 +186,15 @@ export const useTeacherStore = defineStore('teacher', () => {
     const c: ClassGroup = { id, semesterId: semId, grade: grade.trim(), name: name.trim(), role: role_, subject: subject.trim() }
     const asg = { id: uid('asg'), teacherId: data.value.teacher.id, semesterId: semId, classId: id, subject: subject.trim() }
     const inner = { ...(data.value.groups[semId] ?? {}), [id]: emptyBucket() }
+    // 首个班级自动成为默认组合，免得用户还要手动点一次「设为默认」
+    const hasDefault = !!(data.value.defaultSelection?.sem && data.value.defaultSelection?.cls)
     data.value = {
       ...data.value,
       classes: [...data.value.classes, c],
       assignments: [...data.value.assignments, asg],
       groups: { ...data.value.groups, [semId]: inner },
-      current: { sem: semId, cls: id }
+      current: { sem: semId, cls: id },
+      defaultSelection: hasDefault ? data.value.defaultSelection : { sem: semId, cls: id }
     }
     await saveTeacher()
     return id
@@ -169,11 +205,15 @@ export const useTeacherStore = defineStore('teacher', () => {
     const inner = { ...(data.value.groups[sem] ?? {}) }
     delete inner[classId]
     const classes = data.value.classes.filter((c) => c.id !== classId)
+    // 删掉的正是默认班级 → 清空默认组合，避免指向不存在的班级
+    const defaultSelection =
+      data.value.defaultSelection?.cls === classId ? { sem: '', cls: '' } : data.value.defaultSelection
     data.value = {
       ...data.value,
       classes,
       assignments: data.value.assignments.filter((a) => a.classId !== classId),
       groups: { ...data.value.groups, [sem]: inner },
+      defaultSelection,
       current: resolveCurrent({
         ...data.value,
         classes,
@@ -189,12 +229,16 @@ export const useTeacherStore = defineStore('teacher', () => {
     delete groups[semId]
     const classes = data.value.classes.filter((c) => c.semesterId !== semId)
     const semesters = data.value.semesters.filter((s) => s.id !== semId)
+    // 删掉的正是默认学期 → 清空默认组合
+    const defaultSelection =
+      data.value.defaultSelection?.sem === semId ? { sem: '', cls: '' } : data.value.defaultSelection
     data.value = {
       ...data.value,
       semesters,
       classes,
       assignments: data.value.assignments.filter((a) => a.semesterId !== semId),
       groups,
+      defaultSelection,
       current: resolveCurrent({ ...data.value, semesters, classes, groups, current: { sem: '', cls: '' } })
     }
     await saveTeacher()
@@ -602,6 +646,13 @@ export const useTeacherStore = defineStore('teacher', () => {
     classesOfCurrentSem,
     needsSemester,
     needsClass,
+    defaultSelection,
+    isDefaultCurrent,
+    isDefaultSemester,
+    isDefaultClass,
+    defaultLabelOf,
+    setDefaultSelection,
+    clearDefaultSelection,
     loadTeacher,
     saveTeacher,
     addSemester,

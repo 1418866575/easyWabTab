@@ -74,14 +74,13 @@ type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-todo-cat' | 'wb-cd-cat' 
 type BizSubTab = 'biz-base' | 'biz-backup' | 'biz-cat'
 type StuSubTab = 'stu-stage' | 'stu-info' | 'stu-subject' | 'stu-timetable' | 'stu-menu'
 /** 教师工作台子 tab：数据管理拆分出的 5 项 + 使用说明（原左侧菜单「工作台」分组，已迁入设置页）+ 菜单设置 */
-// 教师子 tab：原「数据管理」已拆成 5 个独立菜单项（学期与班级 / 班级信息 / 导入表格 /
-// 导入表格修改导入信息 / 备份与恢复），故不再有 teacher-data；各子 tab 复用同一个
+// 教师子 tab：原「数据管理」已拆成 4 个独立菜单项（学期与班级 / 班级信息 / 导入表格 /
+// 备份与恢复），故不再有 teacher-data；各子 tab 复用同一个
 // TeacherDataManage 组件并按 section 显示对应区块（内容、交互、数据不变）。
 type TeacherSubTab =
   | 'teacher-semester'
   | 'teacher-class'
   | 'teacher-import'
-  | 'teacher-import-edit'
   | 'teacher-backup'
   | 'teacher-help'
   | 'teacher-menu'
@@ -160,7 +159,6 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student' | 'teacher', SubTab
     { key: 'teacher-semester', label: '学期与班级' },
     { key: 'teacher-class', label: '班级信息' },
     { key: 'teacher-import', label: '导入表格' },
-    { key: 'teacher-import-edit', label: '导入表格修改导入信息' },
     { key: 'teacher-backup', label: '备份与恢复' },
     { key: 'teacher-help', label: '使用说明' },
     { key: 'teacher-menu', label: '菜单设置' }
@@ -304,7 +302,6 @@ const NAV_GROUPS: NavGroup[] = [
       { key: 'teacher-semester', label: '学期与班级', icon: 'calendar', tab: 'teacher', sub: 'teacher-semester' },
       { key: 'teacher-class', label: '班级信息', icon: 'info', tab: 'teacher', sub: 'teacher-class' },
       { key: 'teacher-import', label: '导入表格', icon: 'upload', tab: 'teacher', sub: 'teacher-import' },
-      { key: 'teacher-import-edit', label: '导入表格修改导入信息', icon: 'pencil', tab: 'teacher', sub: 'teacher-import-edit' },
       { key: 'teacher-backup', label: '备份与恢复', icon: 'save', tab: 'teacher', sub: 'teacher-backup' },
       { key: 'teacher-help', label: '使用说明', icon: 'help', tab: 'teacher', sub: 'teacher-help' },
       { key: 'teacher-menu', label: '菜单设置', icon: 'bookmark', tab: 'teacher', sub: 'teacher-menu' }
@@ -2699,7 +2696,7 @@ onUnmounted(() => {
           </ul>
         </div>
 
-        <!-- 教师工作台 - 数据管理拆分后的 5 个独立菜单项（组件按 section 显示对应区块，自带标题） -->
+        <!-- 教师工作台 - 数据管理拆分后的 4 个独立菜单项（组件按 section 显示对应区块，自带标题） -->
         <div v-if="activeTab === 'teacher' && activeSubTab === 'teacher-semester'" class="wb-menu-config">
           <TeacherDataManage section="semester" />
         </div>
@@ -2710,10 +2707,6 @@ onUnmounted(() => {
 
         <div v-if="activeTab === 'teacher' && activeSubTab === 'teacher-import'" class="wb-menu-config">
           <TeacherDataManage section="import" />
-        </div>
-
-        <div v-if="activeTab === 'teacher' && activeSubTab === 'teacher-import-edit'" class="wb-menu-config">
-          <TeacherDataManage section="import-edit" />
         </div>
 
         <div v-if="activeTab === 'teacher' && activeSubTab === 'teacher-backup'" class="wb-menu-config">
@@ -2732,7 +2725,7 @@ onUnmounted(() => {
             <el-button size="small" data-testid="tcmenu-reset" @click="onResetTeacherMenu">恢复默认</el-button>
           </div>
           <p class="wb-menu-hint">
-            调整左侧菜单的显示顺序与名称，改动随教师数据云同步，多设备一致。「数据管理」（已拆分为学期与班级 / 班级信息 / 导入表格 / 导入表格修改导入信息 / 备份与恢复）与「使用说明」已迁入设置页，不再出现在左侧菜单。
+            调整左侧菜单的显示顺序与名称，改动随教师数据云同步，多设备一致。「数据管理」（已拆分为学期与班级 / 班级信息 / 导入表格 / 备份与恢复）与「使用说明」已迁入设置页，不再出现在左侧菜单。
           </p>
 
           <div v-for="g in teacherStore.menuAllGroups" :key="g.group" class="tc-menu-group">
@@ -2997,17 +2990,22 @@ onUnmounted(() => {
   justify-content: center;
   z-index: 300;
   padding: 20px;
+  /* 面板尺寸已由自身 vw/vh 决定，遮罩层不再产生任何溢出 → 不会带动整页滚动 */
+  overflow: hidden;
 }
 
 .manager {
   background-color: var(--color-bg-card, var(--color-bg-card));
   border-radius: var(--radius-lg);
-  /* 设置弹框默认尺寸：宽度 60vw / 高度 80vh；大屏限 max-width，小屏保底 min-* */
-  width: 60vw;
-  max-width: 1200px;
-  min-width: 320px;
+  /* 设置面板尺寸：以视口为基准 —— 宽 90vw / 高 80vh（水平垂直居中由 .manager-overlay 的 flex 居中实现）。
+     max-width / max-height 用 100%（相对遮罩层内容盒 = 视口 - 40px padding）：
+     小屏下自动收敛并保留外边距，绝不溢出视口；min-* 一律归零，避免矮屏被最小高度顶出屏幕。 */
+  width: 90vw;
   height: 80vh;
-  min-height: 480px;
+  max-width: 100%;
+  max-height: 100%;
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-modal);
@@ -3623,11 +3621,9 @@ html.dark .remind-label {
 }
 
 @media (max-width: 640px) {
-  .manager {
-    width: 100%;
-    height: calc(100vh - 40px);
-    min-height: 0;
-    max-height: calc(100vh - 40px);
+  /* 小屏：遮罩内边距收窄，面板继续按 90vw / 80vh 自适应缩放（已自带左右各 5vw 外边距） */
+  .manager-overlay {
+    padding: 12px;
   }
 
   .grid-header {

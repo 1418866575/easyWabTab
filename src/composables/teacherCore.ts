@@ -84,6 +84,7 @@ export function emptyTeacherData(): TeacherData {
     classes: [],
     assignments: [],
     current: { sem: '', cls: '' },
+    defaultSelection: { sem: '', cls: '' },
     groups: {}
   }
 }
@@ -168,9 +169,20 @@ export function normalizeTeacherData(raw: unknown): TeacherData {
     if (!groups[c.semesterId][c.id]) groups[c.semesterId][c.id] = emptyBucket()
   }
 
+  // 默认组合：只保留「学期存在 + 班级属于该学期」的有效组合，失效（被删）一律清空
+  const defRaw = (d.defaultSelection ?? {}) as Record<string, unknown>
+  const defaultSelection = normalizeDefaultSelection(
+    { sem: str(defRaw.sem), cls: str(defRaw.cls) },
+    semesters,
+    classes
+  )
+
+  // 进入工作台：默认组合优先（命中即直接用，忽略上次的临时切换）；否则走既有解析逻辑
   const curRaw = (d.current ?? {}) as Record<string, unknown>
   let current = { sem: str(curRaw.sem), cls: str(curRaw.cls) }
-  current = resolveCurrent({ semesters, classes, groups, current } as TeacherData)
+  const byDefault = resolveDefaultSelection({ semesters, classes, defaultSelection })
+  current =
+    byDefault ?? resolveCurrent({ semesters, classes, groups, current, defaultSelection } as TeacherData)
 
   // 左侧菜单自定义（顺序 / 名称）：缺省按 TEACHER_PAGES 派生，随云同步一起走 teacher.json
   const menu = normalizeTeacherMenu(d.menuOrder, d.menuLabels)
@@ -182,10 +194,37 @@ export function normalizeTeacherData(raw: unknown): TeacherData {
     classes,
     assignments,
     current,
+    defaultSelection,
     groups,
     menuOrder: menu.order,
     menuLabels: menu.labels
   }
+}
+
+/**
+ * 归一化默认组合：学期或班级不存在（被删除 / 跨设备数据不同步）时清空为空串，
+ * 避免留下指向已不存在实体的悬空 id。
+ */
+export function normalizeDefaultSelection(
+  raw: { sem: string; cls: string },
+  semesters: Semester[],
+  classes: ClassGroup[]
+): { sem: string; cls: string } {
+  const sem = raw.sem && semesters.some((s) => s.id === raw.sem) ? raw.sem : ''
+  if (!sem) return { sem: '', cls: '' }
+  const cls = raw.cls && classes.some((c) => c.id === raw.cls && c.semesterId === sem) ? raw.cls : ''
+  return { sem, cls: cls ? cls : '' }
+}
+
+/** 默认组合有效则返回它，否则返回 null（调用方据此回落到常规解析） */
+export function resolveDefaultSelection(
+  data: Pick<TeacherData, 'semesters' | 'classes' | 'defaultSelection'>
+): { sem: string; cls: string } | null {
+  const d = data.defaultSelection
+  if (!d || !d.sem || !d.cls) return null
+  if (!data.semesters.some((s) => s.id === d.sem)) return null
+  if (!data.classes.some((c) => c.id === d.cls && c.semesterId === d.sem)) return null
+  return { sem: d.sem, cls: d.cls }
 }
 
 export function normalizeBucket(raw: unknown): ClassBucket {
@@ -312,10 +351,15 @@ export function normalizeBucket(raw: unknown): ClassBucket {
 /**
  * 解析当前激活分组：
  * - 无学期 → 空（引导建学期）
- * - 有学期无班级 → 指向该学期首个班级（无班级则空，引导建班）
- * - 指针失效 → 回落到最新学期 + 其首个班级
+ * - 有学期无班级 → 优先该学期的「默认班级」，其次班主任班级，最后首个班级
+ * - 指针失效 → 回落到最新学期 + 其班级（同样按 默认班 → 班主任班 → 首个班 选取）
+ *
+ * 切换学期时班级随之联动：给定学期后 current.cls 若无效，就用默认组合里的班级（若属于该学期）。
+ * 注：进入工作台（normalizeTeacherData）走的是「默认组合优先」，与此处的会话内切换语义不同。
  */
-export function resolveCurrent(data: Pick<TeacherData, 'semesters' | 'classes' | 'groups' | 'current'>): {
+export function resolveCurrent(
+  data: Pick<TeacherData, 'semesters' | 'classes' | 'groups' | 'current' | 'defaultSelection'>
+): {
   sem: string
   cls: string
 } {
@@ -338,7 +382,12 @@ export function resolveCurrent(data: Pick<TeacherData, 'semesters' | 'classes' |
 
   let cls = data.current?.cls && list.some((c) => c.id === data.current.cls) ? data.current.cls : ''
   if (!cls) {
-    // 默认该教师班主任班级，否则首个班级
+    // 默认班级（若属于当前学期）
+    const defCls = data.defaultSelection?.cls
+    if (defCls && list.some((c) => c.id === defCls)) cls = defCls
+  }
+  if (!cls) {
+    // 其次该教师班主任班级，否则首个班级
     const head = list.find((c) => c.role === 'head')
     cls = (head ?? list[0]).id
   }

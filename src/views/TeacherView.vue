@@ -94,19 +94,10 @@ function selectPage(key: TeacherPageKey): void {
 }
 
 // ---------- 选择器 ----------
+// 学期可切换；班级与「本班身份」为只读展示，随所选学期自动联动（切换入口在设置页）。
 async function onSemesterChange(e: Event): Promise<void> {
   const v = (e.target as HTMLSelectElement).value
   if (v) await store.selectSemester(v)
-}
-
-async function onClassChange(e: Event): Promise<void> {
-  const v = (e.target as HTMLSelectElement).value
-  if (v) await store.selectClass(v)
-}
-
-async function onRoleChange(e: Event): Promise<void> {
-  const v = (e.target as HTMLSelectElement).value as TeacherRole
-  await store.setRole(v)
 }
 
 const classLabel = computed(() => {
@@ -114,6 +105,17 @@ const classLabel = computed(() => {
   if (!c) return '未选择班级'
   return `${c.grade}${c.name} · ${c.subject || '未设科目'}`
 })
+
+/** 顶部栏只读展示的班级名（含「默认」标记） */
+const readonlyClass = computed(() => {
+  const c = store.cls
+  if (!c) return '未选择班级'
+  const name = `${c.grade}${c.name}`
+  return store.isDefaultClass(c.id) ? `${name}（默认）` : name
+})
+
+/** 顶部栏只读展示的本班身份 */
+const readonlyRole = computed(() => (store.role === 'head' ? '班主任' : '非班主任 · 科任'))
 
 // ---------- 右上角云同步（共享 useCloudSync 单例，与首页/设置弹窗同一状态） ----------
 const settingsStore = useAppSettingsStore()
@@ -170,29 +172,25 @@ onMounted(() => {
           <label class="tw-label">
             学期
             <select class="tw-select tw-input-sm" :value="store.data.current.sem" @change="onSemesterChange">
-              <option v-for="s in store.semesters" :key="s.id" :value="s.id">{{ s.year }} {{ s.term }}</option>
-            </select>
-          </label>
-          <label class="tw-label">
-            班级
-            <select class="tw-select tw-input-sm" :value="store.data.current.cls" @change="onClassChange">
-              <option v-for="c in store.classesOfCurrentSem" :key="c.id" :value="c.id">
-                {{ c.grade }}{{ c.name }}（{{ c.role === 'head' ? '班主任' : '科任' }}）
+              <option v-for="s in store.semesters" :key="s.id" :value="s.id">
+                {{ s.year }} {{ s.term }}{{ store.isDefaultSemester(s.id) ? '（默认）' : '' }}
               </option>
             </select>
           </label>
-          <label class="tw-label">
-            本班身份
-            <select class="tw-select tw-input-sm" :value="store.role" @change="onRoleChange">
-              <option value="head">班主任</option>
-              <option value="subject">非班主任 · 科任</option>
-            </select>
-          </label>
+          <!-- 只读：随所选学期 / 默认组合自动更新，切换班级请到「设置 → 学期与班级」 -->
+          <div class="tv-field" data-testid="teacher-readonly-class">
+            <span class="tv-field-label">班级</span>
+            <span class="tv-field-value">{{ readonlyClass }}</span>
+          </div>
+          <div class="tv-field" data-testid="teacher-readonly-role">
+            <span class="tv-field-label">本班身份</span>
+            <span class="tv-field-value">{{ readonlyRole }}</span>
+          </div>
         </div>
       </div>
       <div class="tv-topbar-actions">
         <span class="tv-class-label">{{ classLabel }}</span>
-        <!-- 右上角「设置」入口：数据管理（学期与班级 / 班级信息 / 导入表格 / 导入表格修改导入信息 / 备份与恢复）/ 使用说明 / 菜单设置 -->
+        <!-- 右上角「设置」入口：数据管理（学期与班级 / 班级信息 / 导入表格 / 备份与恢复）/ 使用说明 / 菜单设置 -->
         <button
           type="button"
           class="tw-btn tw-btn-sm tv-settings-btn"
@@ -339,6 +337,29 @@ onMounted(() => {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+/* 只读字段（班级 / 本班身份）：与下拉同样式高度，但不可编辑，靠底色与虚框区分 */
+.tv-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px dashed var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-bg-hover, #f1f5f9);
+  font-size: var(--font-size-sm, 12px);
+}
+
+.tv-field-label {
+  color: var(--color-text-muted, #94a3b8);
+}
+
+.tv-field-value {
+  color: var(--color-text, #334155);
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .tv-topbar-actions {

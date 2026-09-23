@@ -2,8 +2,8 @@
 // 数据管理（工作台首页）：班级信息、统计卡、三类表格导入、备份/恢复、学期与班级管理。
 // 导入统一走 teacherImportCore（表头归一、缺列明确报错、重名不静默错配）。
 //
-// section：设置页已把原「数据管理」拆成 5 个独立菜单项（学期与班级 / 班级信息 / 导入表格 /
-// 导入表格修改导入信息 / 备份与恢复），这里不拆组件，只按 section 控制区块显隐 + 换标题，
+// section：设置页已把原「数据管理」拆成 4 个独立菜单项（学期与班级 / 班级信息 / 导入表格 /
+// 备份与恢复），这里不拆组件，只按 section 控制区块显隐 + 换标题，
 // 页面内容、交互逻辑与数据完全复用同一份实现（'all' = 整页，教师工作台内嵌用）。
 
 import { computed, ref } from 'vue'
@@ -42,14 +42,10 @@ const meta = computed<{ label: string; sub: string }>(() => {
 /** 整页模式（'all'）：单区块模式下区块说明已上移为副标题，卡片内的提示语不再重复输出 */
 const isAll = computed(() => props.section === 'all')
 
-/**
- * 区块是否显示：'all' 全部显示；指定 section 时只显示对应区块。
- * 「导入表格」与「导入表格修改导入信息」共用同一个导入区块（仅标题不同），故互相对彼此可见。
- */
+/** 区块是否显示：'all' 全部显示；指定 section 时只显示对应区块 */
 function show(section: TeacherDataSectionKey): boolean {
   const cur = props.section
   if (cur === 'all') return true
-  if (section === 'import') return cur === 'import' || cur === 'import-edit'
   return cur === section
 }
 
@@ -61,23 +57,40 @@ function notify(text: string, kind: 'info' | 'warn' = 'info'): void {
   messageKind.value = kind
 }
 
-// ---------- 班级信息 ----------
-const grade = computed({
-  get: () => store.cls?.grade ?? '',
-  set: (v: string) => void store.updateClassInfo({ grade: v })
-})
-const className = computed({
-  get: () => store.cls?.name ?? '',
-  set: (v: string) => void store.updateClassInfo({ name: v })
-})
-const subject = computed({
-  get: () => store.cls?.subject ?? '',
-  set: (v: string) => void store.updateClassInfo({ subject: v })
-})
-const teacherName = computed({
-  get: () => store.data.teacher.name,
-  set: (v: string) => void store.updateTeacherInfo({ name: v })
-})
+// ---------- 班级信息（只读） ----------
+// 班级信息一律随所选学期 / 班级自动读出，不再提供手改入口：
+// 写错只能删除该班级后重新新建（新建时可指定年级 / 班级 / 科目 / 身份）。
+const grade = computed(() => store.cls?.grade ?? '')
+const className = computed(() => store.cls?.name ?? '')
+const subject = computed(() => store.cls?.subject ?? '')
+const teacherName = computed(() => store.data.teacher.name)
+const roleLabel = computed(() => (store.role === 'head' ? '班主任' : '非班主任 · 科任'))
+
+// ---------- 当前学期（只读派生） ----------
+const curSemester = computed(() => store.semesters.find((s) => s.id === store.data.current.sem) ?? null)
+const semYear = computed(() => curSemester.value?.year ?? '')
+const semTerm = computed(() => curSemester.value?.term ?? '')
+
+// ---------- 学期 / 班级切换（可切换项）与默认组合 ----------
+async function onSemesterChange(e: Event): Promise<void> {
+  const v = (e.target as HTMLSelectElement).value
+  if (v) await store.selectSemester(v)
+}
+
+async function onClassChange(e: Event): Promise<void> {
+  const v = (e.target as HTMLSelectElement).value
+  if (v) await store.selectClass(v)
+}
+
+async function onSetDefault(): Promise<void> {
+  await store.setDefaultSelection()
+  notify('已把当前学期 + 班级设为默认，下次进入工作台自动进入')
+}
+
+async function onClearDefault(): Promise<void> {
+  await store.clearDefaultSelection()
+  notify('已取消默认组合，进入工作台时按常规规则选择学期与班级')
+}
 
 // ---------- 统计 ----------
 const b = computed(() => store.bucket)
@@ -257,12 +270,35 @@ async function onDeleteSemester(): Promise<void> {
 
     <section v-if="show('class')" class="tw-card">
       <h4 class="tw-card-title">班级信息</h4>
-      <p v-if="isAll" class="tw-card-hint">修改后立即生效，影响侧栏班级标题与各页「打印 / 导出 Excel」的班级页眉。</p>
-      <div class="dm-grid">
-        <label class="tw-label">年级<input v-model="grade" class="tw-input" placeholder="如 三年级" /></label>
-        <label class="tw-label">班级<input v-model="className" class="tw-input" placeholder="如 1班" /></label>
-        <label class="tw-label">任教科目<input v-model="subject" class="tw-input" placeholder="如 语文" /></label>
-        <label class="tw-label">班主任<input v-model="teacherName" class="tw-input" placeholder="如 王老师" /></label>
+      <p class="tw-card-hint">
+        以下信息随当前所选学期与班级自动读出，<strong>不可手动修改</strong>；影响侧栏班级标题与各页「打印 / 导出 Excel」的班级页眉。
+        如需更正，请到「学期与班级」删除该班级后重新新建。
+      </p>
+      <div class="dm-readonly-grid">
+        <div class="dm-readonly-item">
+          <span class="dm-ro-label">年级</span>
+          <span class="dm-ro-value">{{ grade || '—' }}</span>
+        </div>
+        <div class="dm-readonly-item">
+          <span class="dm-ro-label">班级</span>
+          <span class="dm-ro-value">{{ className || '—' }}</span>
+        </div>
+        <div class="dm-readonly-item">
+          <span class="dm-ro-label">任教科目</span>
+          <span class="dm-ro-value">{{ subject || '—' }}</span>
+        </div>
+        <div class="dm-readonly-item">
+          <span class="dm-ro-label">班主任</span>
+          <span class="dm-ro-value">{{ teacherName || '—' }}</span>
+        </div>
+        <div class="dm-readonly-item">
+          <span class="dm-ro-label">本班身份</span>
+          <span class="dm-ro-value">{{ roleLabel }}</span>
+        </div>
+        <div class="dm-readonly-item">
+          <span class="dm-ro-label">默认组合</span>
+          <span class="dm-ro-value">{{ store.isDefaultCurrent ? '是（进入工作台自动进入）' : '否' }}</span>
+        </div>
       </div>
     </section>
 
@@ -304,25 +340,104 @@ async function onDeleteSemester(): Promise<void> {
     <section v-if="show('semester')" class="tw-card">
       <h4 class="tw-card-title">学期与班级</h4>
       <p v-if="isAll" class="tw-card-hint">顶层分组为「学期 × 班级」。切换只改指针，不搬动记录；新建班级为独立数据桶。</p>
-      <div class="dm-form-row">
-        <label class="tw-label">学年<input v-model="newSemYear" class="tw-input tw-input-sm" placeholder="2026" /></label>
-        <label class="tw-label">学期<input v-model="newSemTerm" class="tw-input tw-input-sm" placeholder="上学期" /></label>
-        <button type="button" class="tw-btn tw-btn-sm" @click="onCreateSemester">新增学期</button>
-        <button type="button" class="tw-btn tw-btn-sm tw-btn-danger" @click="onDeleteSemester">删除当前学期</button>
+
+      <!-- ① 可切换项：学期 / 班级 + 默认组合 -->
+      <div class="dm-zone" data-testid="dm-zone-switch">
+        <div class="dm-zone-head">可切换项</div>
+        <p class="tw-card-hint">切换学期后，班级自动更新为该学期的默认班级（无默认则取第一个班）。</p>
+        <div class="dm-form-row">
+          <label class="tw-label">
+            学期
+            <select class="tw-select tw-input-sm" :value="store.data.current.sem" @change="onSemesterChange">
+              <option v-for="s in store.semesters" :key="s.id" :value="s.id">
+                {{ s.year }} {{ s.term }}{{ store.isDefaultSemester(s.id) ? '（默认）' : '' }}
+              </option>
+            </select>
+          </label>
+          <label class="tw-label">
+            班级
+            <select class="tw-select tw-input-sm" :value="store.data.current.cls" @change="onClassChange">
+              <option v-for="c in store.classesOfCurrentSem" :key="c.id" :value="c.id">
+                {{ c.grade }}{{ c.name }}（{{ c.role === 'head' ? '班主任' : '科任' }}）{{ store.isDefaultClass(c.id) ? '（默认）' : '' }}
+              </option>
+            </select>
+          </label>
+          <button
+            v-if="!store.isDefaultCurrent"
+            type="button"
+            class="tw-btn tw-btn-sm"
+            data-testid="dm-set-default"
+            @click="onSetDefault"
+          >设为默认</button>
+          <button
+            v-else
+            type="button"
+            class="tw-btn tw-btn-sm"
+            data-testid="dm-clear-default"
+            @click="onClearDefault"
+          >取消默认</button>
+          <span v-if="store.isDefaultCurrent" class="dm-default-tag">当前即默认组合</span>
+        </div>
+        <p class="tw-card-hint">
+          设为默认后，下次进入教室工作台直接进入该学期与班级，无需重新选择（默认组合随云同步，多设备一致）。
+        </p>
       </div>
-      <div class="dm-form-row">
-        <label class="tw-label">年级<input v-model="newClsGrade" class="tw-input tw-input-sm" placeholder="三年级" /></label>
-        <label class="tw-label">班级<input v-model="newClsName" class="tw-input tw-input-sm" placeholder="2班" /></label>
-        <label class="tw-label">科目<input v-model="newClsSubject" class="tw-input tw-input-sm" placeholder="数学" /></label>
-        <label class="tw-label">
-          身份
-          <select v-model="newClsRole" class="tw-select tw-input-sm">
-            <option value="head">班主任</option>
-            <option value="subject">科任</option>
-          </select>
-        </label>
-        <button type="button" class="tw-btn tw-btn-sm" @click="onCreateClass">新增班级</button>
-        <button type="button" class="tw-btn tw-btn-sm tw-btn-danger" @click="onDeleteClass">删除当前班级</button>
+
+      <!-- ② 只读项：随上方选择自动更新 -->
+      <div class="dm-zone" data-testid="dm-zone-readonly">
+        <div class="dm-zone-head">只读信息（随上方选择自动更新）</div>
+        <div class="dm-readonly-grid">
+          <div class="dm-readonly-item">
+            <span class="dm-ro-label">学年</span>
+            <span class="dm-ro-value">{{ semYear || '—' }}</span>
+          </div>
+          <div class="dm-readonly-item">
+            <span class="dm-ro-label">学期</span>
+            <span class="dm-ro-value">{{ semTerm || '—' }}</span>
+          </div>
+          <div class="dm-readonly-item">
+            <span class="dm-ro-label">年级</span>
+            <span class="dm-ro-value">{{ grade || '—' }}</span>
+          </div>
+          <div class="dm-readonly-item">
+            <span class="dm-ro-label">班级</span>
+            <span class="dm-ro-value">{{ className || '—' }}</span>
+          </div>
+          <div class="dm-readonly-item">
+            <span class="dm-ro-label">任教科目</span>
+            <span class="dm-ro-value">{{ subject || '—' }}</span>
+          </div>
+          <div class="dm-readonly-item">
+            <span class="dm-ro-label">本班身份</span>
+            <span class="dm-ro-value">{{ roleLabel }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ③ 新增 / 删除：年级、班级名、科目、身份只能在新建时指定 -->
+      <div class="dm-zone" data-testid="dm-zone-edit">
+        <div class="dm-zone-head">新增与删除</div>
+        <p class="tw-card-hint">学年、年级、班级名、科目与身份均在新建时确定；写错了请删除后重新新建。</p>
+        <div class="dm-form-row">
+          <label class="tw-label">学年<input v-model="newSemYear" class="tw-input tw-input-sm" placeholder="2026" /></label>
+          <label class="tw-label">学期<input v-model="newSemTerm" class="tw-input tw-input-sm" placeholder="上学期" /></label>
+          <button type="button" class="tw-btn tw-btn-sm" @click="onCreateSemester">新增学期</button>
+          <button type="button" class="tw-btn tw-btn-sm tw-btn-danger" @click="onDeleteSemester">删除当前学期</button>
+        </div>
+        <div class="dm-form-row">
+          <label class="tw-label">年级<input v-model="newClsGrade" class="tw-input tw-input-sm" placeholder="三年级" /></label>
+          <label class="tw-label">班级<input v-model="newClsName" class="tw-input tw-input-sm" placeholder="2班" /></label>
+          <label class="tw-label">科目<input v-model="newClsSubject" class="tw-input tw-input-sm" placeholder="数学" /></label>
+          <label class="tw-label">
+            身份
+            <select v-model="newClsRole" class="tw-select tw-input-sm">
+              <option value="head">班主任</option>
+              <option value="subject">科任</option>
+            </select>
+          </label>
+          <button type="button" class="tw-btn tw-btn-sm" @click="onCreateClass">新增班级</button>
+          <button type="button" class="tw-btn tw-btn-sm tw-btn-danger" @click="onDeleteClass">删除当前班级</button>
+        </div>
       </div>
     </section>
 
@@ -331,16 +446,59 @@ async function onDeleteSemester(): Promise<void> {
 </template>
 
 <style scoped>
-.dm-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 10px;
+/* 分区：可切换项 / 只读信息 / 新增与删除 —— 用浅底 + 左侧色条区分层级 */
+.dm-zone {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-left: 3px solid var(--color-primary, #6da3d8);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-bg-card, #ffffff);
 }
 
-.dm-grid .tw-label {
+.dm-zone-head {
+  font-size: var(--font-size-sm, 12px);
+  font-weight: 600;
+  color: var(--color-text-secondary, #64748b);
+  margin-bottom: 4px;
+}
+
+/* 只读信息格子：与输入框同样的栅格，但用虚框底色表明不可编辑 */
+.dm-readonly-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.dm-readonly-item {
+  display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
+  gap: 2px;
+  padding: 6px 8px;
+  border: 1px dashed var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-bg-hover, #f1f5f9);
+}
+
+.dm-ro-label {
+  font-size: var(--font-size-xs, 11px);
+  color: var(--color-text-muted, #94a3b8);
+}
+
+.dm-ro-value {
+  font-size: var(--font-size-sm, 13px);
+  color: var(--color-text, #334155);
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.dm-default-tag {
+  align-self: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: var(--font-size-xs, 11px);
+  color: var(--color-primary, #6da3d8);
+  background: var(--color-primary-soft, #eaf2fb);
 }
 
 .dm-form-row {

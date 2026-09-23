@@ -157,6 +157,12 @@ export interface TeacherData {
   current: TeacherCurrent
   /** groups[semesterId][classId] = 该班本学期的数据桶 */
   groups: Record<string, Record<string, ClassBucket>>
+  /**
+   * 默认进入的「学期 + 班级」组合：进入工作台时自动进入该组合（无需每次重选）。
+   * 只存 id 对，学年 / 年级等信息一律从 semesters / classes 实时读出，避免冗余副本不一致。
+   * 组合失效（学期或班级被删）时自动忽略，回落既有解析逻辑。随云同步。
+   */
+  defaultSelection?: { sem: string; cls: string }
   /** 左侧菜单自定义顺序（仅含可定制的功能页键，缺省按 TEACHER_PAGES 顺序）；随云同步 */
   menuOrder?: string[]
   /** 左侧菜单自定义显示名：key -> 名称，缺省用 TEACHER_PAGES 的 label；随云同步 */
@@ -225,7 +231,7 @@ export const TEACHER_SETTINGS_ONLY_PAGES: TeacherPageKey[] = ['data', 'help']
  * 'all' = 整页（教师工作台内嵌用）；其余 5 项在设置页里各占一个独立菜单项。
  * 拆分只改菜单层级与展示顺序，页面内容 / 交互 / 数据一律不变（同一组件按 section 显隐区块）。
  */
-export type TeacherDataSectionKey = 'all' | 'semester' | 'class' | 'import' | 'import-edit' | 'backup'
+export type TeacherDataSectionKey = 'all' | 'semester' | 'class' | 'import' | 'backup'
 
 export interface TeacherDataSectionMeta {
   key: Exclude<TeacherDataSectionKey, 'all'>
@@ -250,11 +256,6 @@ export const TEACHER_DATA_SECTIONS: TeacherDataSectionMeta[] = [
     key: 'import',
     label: '导入表格',
     sub: '支持 .xlsx / .xls / .csv。学生名单需含「姓名」「性别」（学号列可选，列名带 * 也能识别）；成绩表第一列为姓名、其余数值列各生成一场考试；家长表需含「姓名」「家长」「电话」。'
-  },
-  {
-    key: 'import-edit',
-    label: '导入表格修改导入信息',
-    sub: '导入会按学号 / 姓名覆盖同名记录。导入后如需逐条修正，请到「学生信息 / 成绩信息 / 家长联系方式」页直接编辑表格，修改自动保存。'
   },
   {
     key: 'backup',
