@@ -6,13 +6,14 @@
 //   </StudentToolbar>
 // 左侧标题 h2，右侧默认 slot 放按钮/操作。纯展示，无业务逻辑。
 defineProps<{
-  title: string
+  /** 标题；留空则不渲染（嵌入设置弹窗等已有标题的场景） */
+  title?: string
 }>()
 </script>
 
 <template>
   <div class="st-toolbar">
-    <h2 class="st-title">{{ title }}</h2>
+    <h2 v-if="title" class="st-title">{{ title }}</h2>
     <div class="st-actions">
       <slot />
     </div>

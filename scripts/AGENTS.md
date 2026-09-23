@@ -42,6 +42,7 @@ scripts/
 ├── test-student-review-core.ts      # studentReviewCore（npm run test:student-review）
 ├── test-student-mistakes-core.ts    # studentMistakesCore（npm run test:student-mistakes）
 ├── test-student-timetable-core.ts   # studentTimetableCore（npm run test:student-timetable）
+├── test-student-timetable-import-core.ts # studentTimetableImportCore（14 断言 T1-T14：模板表头/mapHeaders(*) 归一化/parseWeekday/parsePeriod/normalizeWeekRange/正常导入/节次超限/文件内重复/星期写法等价/必填缺失/周次越界/覆盖计数/错误 CSV/摘要文案；npm run test:student-timetable-import）
 ├── test-student-exam-core.ts        # studentExamCore（npm run test:student-exam）
 ├── test-student-stage-core.ts       # studentStageCore（npm run test:student-stage）
 ├── test-student-pomodoro-core.ts    # studentPomodoroCore（npm run test:student-pomodoro）

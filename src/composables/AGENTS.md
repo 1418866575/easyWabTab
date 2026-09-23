@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-53 composable files for reusable business logic. One (`presetIcons.ts`) is auto-generated at build time. Includes the `student*Core.ts` pure-logic family (15 files, one per student store; diary reuses `diaryCore`) plus infra singletons `useCloudSync`/`useSnapshots`/`useHomeLayout`/`useHomeStats`/`useWeather`/`useBackup`/`useDeadLinkChecker`.
+59 composable files for reusable business logic. One (`presetIcons.ts`) is auto-generated at build time. Includes the `student*Core.ts` pure-logic family (15 files, one per student store; diary reuses `diaryCore`) plus infra singletons `useCloudSync`/`useSnapshots`/`useHomeLayout`/`useHomeStats`/`useWeather`/`useBackup`/`useDeadLinkChecker`.
 
 ## STRUCTURE
 
@@ -50,7 +50,8 @@ composables/
 ├── studentStageCore.ts     # 学段纯逻辑（K/P/J 常量 + 归一化 + 默认内容模板）
 ├── studentHabitsCore.ts    # 学生习惯打卡纯逻辑（学段默认习惯播种 K/P/J）
 ├── studentHomeworkCore.ts  # 学生作业纯逻辑（学科筛选/状态排序）
-├── studentTimetableCore.ts # 学生课表纯逻辑
+├── studentTimetableCore.ts # 学生课表纯逻辑（cellKey/computePeriodTime/weekdayLabel/normalizeCell + normalizeCellWeekRange 周次归一化：startWeek/endWeek 只存不展示，两端都缺失时不写字段以兼容存量数据）
+├── studentTimetableImportCore.ts # 课程表 Excel 导入纯逻辑（模板常量 TEMPLATE_HEADERS/REQUIRED_HEADERS/OPTIONAL_HEADERS/TEXT_MAX_LEN/TEMPLATE_INSTRUCTIONS/TEMPLATE_SAMPLE_ROWS + normalizeHeaderName(去空白与 `*` 必填标记，故模板带 `*` 的表头可正常导入)/mapHeaders/index+missing+unknown/parseWeekday(1-7·周一…周日·星期三)/parsePeriod(1-12)/normalizeWeekRange/validateImportRows(校验顺序：必填→类型→范围→文件内「星期+节次」重复；成功行起止时间一律由 computePeriodTime 按节次配置推算，不采信文件时间；返回 {total,success,created,updated,failed,cells,errors})/buildImportErrorCsv/importSummaryText）— 零 vue/pinia/DOM，xlsx 解析由组件负责，`node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs` 可测（scripts/test-student-timetable-import-core.ts 14 断言 T1-T14）
 ├── studentPlanCore.ts      # 学生学习计划纯逻辑（周/月/学期类型筛选 + 目标进度）
 ├── studentGoalCore.ts      # 学生学习目标纯逻辑（类型/状态/进度/逾期派生 + 统计/筛选/校验，node --experimental-strip-types 可测）
 ├── studentReviewCore.ts    # 学生复习纯逻辑（艾宾浩斯 1/2/4/7/15/30 天间隔复习状态机）
@@ -102,6 +103,7 @@ composables/
 - `useToast` and `useHelpModal` are singletons (module-level state, not in Pinia)
 - `useCountdownReminder` is also a singleton (module-level shallowRef + `init()` 幂等守卫)
 - `presetIcons.ts` is auto-generated — never edit manually
+- **Excel（xlsx）只走动态 import**：`StudentTimetableConfig.vue` 里 `await import('xlsx')` 惰性加载，构建产出独立 chunk（约 425 kB，不进主包）；禁止在 composable / store 里静态 `import * as XLSX from 'xlsx'`（会并入主包且纯逻辑模块无法 node 单测）。解析（`XLSX.read` / `sheet_to_json`）属组件职责，校验属 `studentTimetableImportCore` 职责，两者不混
 - `healthCore.ts` / `ledgerCore.ts` / `noteCore.ts` / `diaryCore.ts` / `panelPagingCore.ts` / `reminderCore.ts` are pure-logic engines — **禁止 import vue/pinia/DOM**（`node --experimental-strip-types` 测试运行器无法执行）；组件/面板只调用它们，禁止重算公式
 - **student*Core 扩展名解析 quirk**: 学生 cores 用无扩展名相对导入（`./countdownCore`、`./diaryCore`、`./habitCore`、`./studentMenuCore`）+ `@/` 别名；纯 `node --experimental-strip-types` 报 `ERR_MODULE_NOT_FOUND`/`ERR_UNSUPPORTED_DIR_IMPORT`，测试必须带 `--experimental-loader ./scripts/resolve-extensionless.mjs`（见 scripts/AGENTS.md 与 `npm run test:student`）
 - 便签分类 `showInTabs` 归一化规则：仅布尔值透传（false 隐藏 / true 显式显示），缺失不新增字段（undefined=默认显示）；`normalizeNoteCategory` + `tabCategoriesOf` 是标签页可见性唯一来源，组件禁止自造过滤公式

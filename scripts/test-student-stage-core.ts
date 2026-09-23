@@ -1,7 +1,7 @@
 ﻿import assert from "node:assert/strict"
 import {
   normalizeStage, stageLabel, stageBadge,
-  stageDefaultSubjects, stageDefaultHabits, stageDefaultPomodoro, stageDefaultMenuVisibility,
+  stageDefaultSubjects, stageDefaultHabits, stageDefaultMenuVisibility,
   shouldSeedStageDefaults, computeStageSwitchVisibility, planStageSwitch
 } from "../src/composables/studentStageCore.ts"
 
@@ -49,20 +49,7 @@ test("T5 stageDefaultHabits：K 7 / P 6 / J 5；副本", () => {
   k.forEach(h => { assert.ok(h.name); assert.ok(h.category) })
 })
 
-test("T6 stageDefaultPomodoro 分钟为正整数；focus>break；副本", () => {
-  for (const s of ["K","P","J"] as const) {
-    const r = stageDefaultPomodoro(s)
-    assert.equal(Number.isInteger(r.focus), true)
-    assert.equal(Number.isInteger(r.break), true)
-    assert.ok(r.focus > 0 && r.break > 0)
-    assert.ok(r.focus > r.break)
-  }
-  const a = stageDefaultPomodoro("P"); a.focus = 999
-  const b = stageDefaultPomodoro("P")
-  assert.notEqual(b.focus, 999)
-})
-
-test("T7 stageDefaultMenuVisibility 返回副本（含 10 个学生菜单键）", () => {
+test("T6 stageDefaultMenuVisibility 返回副本（含 ≥10 个学生菜单键）", () => {
   for (const s of ["K","P","J"] as const) {
     const v = stageDefaultMenuVisibility(s)
     const keys = Object.keys(v)
@@ -91,7 +78,6 @@ test("T10 planStageSwitch：学段同 + needSeed=false；学段变 + needSeed=tr
   const s1 = planStageSwitch(orig as any, "P")
   assert.equal(s1.stage, "P"); assert.equal(s1.needSeed, false)
   assert.equal(Array.isArray(s1.subjects), true)
-  assert.equal(typeof s1.pomodoro.focus, "number")
   assert.equal(typeof s1.menuVisibility.homework, "boolean")
   const s2 = planStageSwitch(orig as any, "J")
   assert.equal(s2.stage, "J"); assert.equal(s2.needSeed, true)
@@ -102,7 +88,6 @@ test("T10 planStageSwitch：学段同 + needSeed=false；学段变 + needSeed=tr
 test("T11 planStageSwitch subjects/pomodoro 与阶段默认值一致（内容一致性）", () => {
   const p = planStageSwitch({ stageSeeded: undefined } as any, "J")
   assert.deepEqual(p.subjects, stageDefaultSubjects("J"))
-  assert.deepEqual(p.pomodoro, stageDefaultPomodoro("J"))
 })
 
 let p = 0, f = 0

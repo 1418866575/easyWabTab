@@ -34,7 +34,7 @@ export function stageBadge(stage: StudentStage): { label: string; color: string 
   return STAGE_BADGE[stage]
 }
 
-/** 学段默认学科清单（K 空数组，P 3 科，J 9 科） */
+/** 学段默认学科清单（K 6 项幼儿活动，P 3 科，J 9 科） */
 export function stageDefaultSubjects(stage: StudentStage): string[] {
   return [...STAGE_DEFAULT_SUBJECTS[stage]]
 }

@@ -36,13 +36,14 @@
     "test:student-review": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-review-core.ts",
     "test:student-mistakes": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-mistakes-core.ts",
     "test:student-timetable": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-timetable-core.ts",
+    "test:student-timetable-import": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-timetable-import-core.ts",
     "test:student-exam": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-exam-core.ts",
     "test:student-stage": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-stage-core.ts",
     "test:student-pomodoro": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-pomodoro-core.ts",
     "test:student-achievement": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-achievement-core.ts",
     "test:student-parenttask": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-parenttask-core.ts",
     "test:student-goal": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-goal-core.ts",
-    "test:student": "npm run test:student-menu && npm run test:student-habits && npm run test:student-homework && npm run test:student-reward && npm run test:student-plan && npm run test:student-reading && npm run test:student-review && npm run test:student-mistakes && npm run test:student-timetable && npm run test:student-exam && npm run test:student-stage && npm run test:student-pomodoro && npm run test:student-achievement && npm run test:student-parenttask && npm run test:student-goal"
+    "test:student": "npm run test:student-menu && npm run test:student-habits && npm run test:student-homework && npm run test:student-reward && npm run test:student-plan && npm run test:student-reading && npm run test:student-review && npm run test:student-mistakes && npm run test:student-timetable && npm run test:student-timetable-import && npm run test:student-exam && npm run test:student-stage && npm run test:student-pomodoro && npm run test:student-achievement && npm run test:student-parenttask && npm run test:student-goal"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
@@ -60,7 +61,8 @@
     "playwright": "^1.62.1",
     "vue": "^3.5.30",
     "vue-echarts": "^8.3.0",
-    "vue-router": "^5.0.3"
+    "vue-router": "^5.0.3",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/crypto-js": "^4.2.2",
