@@ -5,6 +5,22 @@
 
 export type TeacherRole = 'head' | 'subject' // 本班身份：班主任 / 非班主任（科任）
 
+export type TeacherStage = '幼儿园' | '小学' | '初中' | '高中' | '大学'
+export type TeacherTerm = '上半年' | '下半年'
+
+/** 学段下拉选项（新增 / 编辑弹框用） */
+export const STAGE_OPTIONS: TeacherStage[] = ['幼儿园', '小学', '初中', '高中', '大学']
+/** 学期下拉选项（仅上半年 / 下半年） */
+export const TERM_OPTIONS: TeacherTerm[] = ['上半年', '下半年']
+/** 班级下拉：按学段区分的年级范围（幼儿园 大班/中班/小班 ~ 大四） */
+export const CLASS_LEVELS_BY_STAGE: Record<TeacherStage, string[]> = {
+  '幼儿园': ['大班', '中班', '小班'],
+  '小学': ['一年级', '二年级', '三年级', '四年级', '五年级', '六年级'],
+  '初中': ['初一', '初二', '初三'],
+  '高中': ['高一', '高二', '高三'],
+  '大学': ['大一', '大二', '大三', '大四']
+}
+
 export interface TeacherInfo {
   id: string
   name: string
@@ -21,8 +37,9 @@ export interface Semester {
 export interface ClassGroup {
   id: string
   semesterId: string
-  grade: string // 如 "三年级"
-  name: string // 如 "1班"
+  stage: TeacherStage // 学段：幼儿园 / 小学 / 初中 / 高中 / 大学
+  grade: string // 如 "三年级" / "大一"（按学段区分的年级）
+  name: string // 班级后缀（如 "1班"），无则留空，仅作展示
   role: TeacherRole
   subject: string // 本班由该教师任教的科目
 }

@@ -23,7 +23,7 @@ import TeacherTimetable from '@/components/teacher/TeacherTimetable.vue'
 import TeacherSpecial from '@/components/teacher/TeacherSpecial.vue'
 import TeacherGrowth from '@/components/teacher/TeacherGrowth.vue'
 import TeacherHelp from '@/components/teacher/TeacherHelp.vue'
-import type { TeacherPageKey, TeacherRole } from '@/types/teacher'
+import { STAGE_OPTIONS, TERM_OPTIONS, type TeacherPageKey, type TeacherRole, type TeacherStage } from '@/types/teacher'
 import '@/styles/teacher.css'
 
 const store = useTeacherStore()
@@ -34,7 +34,8 @@ const showSettings = ref(false)
 
 // ---------- 引导（两步） ----------
 const guideYear = ref('')
-const guideTerm = ref('上学期')
+const guideTerm = ref('上半年')
+const guideStage = ref<TeacherStage>('小学')
 const guideGrade = ref('')
 const guideName = ref('')
 const guideSubject = ref('')
@@ -46,7 +47,7 @@ watch(
     if (v) {
       const now = new Date()
       guideYear.value = String(now.getFullYear())
-      guideTerm.value = now.getMonth() < 7 ? '上学期' : '下学期'
+      guideTerm.value = now.getMonth() < 7 ? '上半年' : '下半年'
     }
   },
   { immediate: true }
@@ -66,7 +67,7 @@ async function createClassFromGuide(): Promise<void> {
   const g = guideGrade.value.trim()
   const n = guideName.value.trim()
   if (!g || !n) return
-  await store.addClass(g, n, guideSubject.value.trim(), guideRole.value)
+  await store.addClass(g, n, guideSubject.value.trim(), guideRole.value, guideStage.value)
 }
 
 // ---------- 页面渲染 ----------
@@ -225,7 +226,12 @@ onMounted(() => {
         <p class="tw-card-hint">学期是最高层分组，切换学期即切换全部数据视图。先建一个学期再继续。</p>
         <div class="tv-guide-form">
           <label class="tw-label">学年<input v-model="guideYear" class="tw-input" placeholder="如 2026" /></label>
-          <label class="tw-label">学期<input v-model="guideTerm" class="tw-input" placeholder="如 上学期" /></label>
+          <label class="tw-label">
+            学期
+            <select v-model="guideTerm" class="tw-select">
+              <option v-for="t in TERM_OPTIONS" :key="t" :value="t">{{ t }}</option>
+            </select>
+          </label>
           <button type="button" class="tw-btn tw-btn-primary" :disabled="!guideYear.trim() || !guideTerm.trim()" @click="createSemesterFromGuide">
             创建学期
           </button>
@@ -240,6 +246,12 @@ onMounted(() => {
         <h2 class="tw-card-title">第 2 步 · 创建班级</h2>
         <p class="tw-card-hint">班级归属当前学期。同一教师可在多个班级任教，「本班身份」决定你能看到哪些班务功能。</p>
         <div class="tv-guide-form">
+          <label class="tw-label">
+            学段
+            <select v-model="guideStage" class="tw-select">
+              <option v-for="s in STAGE_OPTIONS" :key="s" :value="s">{{ s }}</option>
+            </select>
+          </label>
           <label class="tw-label">年级<input v-model="guideGrade" class="tw-input" placeholder="如 三年级" /></label>
           <label class="tw-label">班级<input v-model="guideName" class="tw-input" placeholder="如 1班" /></label>
           <label class="tw-label">任教科目<input v-model="guideSubject" class="tw-input" placeholder="如 语文" /></label>

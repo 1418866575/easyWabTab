@@ -14,6 +14,10 @@ import {
   type TeacherPageKey,
   type TeacherPageMeta,
   type TeacherRole,
+  type TeacherStage,
+  type TeacherTerm,
+  STAGE_OPTIONS,
+  TERM_OPTIONS,
   TEACHER_GROUPS,
   TEACHER_HEAD_ONLY_PAGES,
   TEACHER_PAGES,
@@ -21,6 +25,26 @@ import {
   WEEK_DAYS
 } from '@/types/teacher'
 import { normalizeTeacherMenu } from '@/composables/teacherMenuCore'
+
+/** 学段兜底：非法值回落幼儿园（首个选项），保证下拉可用 */
+export function normalizeStage(v: unknown): TeacherStage {
+  return STAGE_OPTIONS.includes(v as TeacherStage) ? (v as TeacherStage) : STAGE_OPTIONS[0]
+}
+
+/** 学期兜底：旧值「上学期/下学期」等映射到「上半年/下半年」；其余保留原值（兼容自定义学期名） */
+export function normalizeTerm(v: unknown): string {
+  const s = str(v)
+  const alias: Record<string, TeacherTerm> = {
+    '上学期': '上半年',
+    '下学期': '下半年',
+    '上半学年': '上半年',
+    '下半学年': '下半年',
+    '春季': '上半年',
+    '秋季': '下半年'
+  }
+  if (alias[s]) return alias[s]
+  return TERM_OPTIONS.includes(s as TeacherTerm) ? s : s
+}
 
 export const TEACHER_SCHEMA_VER = 1
 
@@ -127,7 +151,7 @@ export function normalizeTeacherData(raw: unknown): TeacherData {
   const semesters: Semester[] = asRecords(d.semesters).map((s) => ({
     id: str(s.id) || uid('sem'),
     year: str(s.year),
-    term: str(s.term),
+    term: normalizeTerm(s.term),
     createdAt: num(s.createdAt, Date.now())
   }))
 
@@ -135,6 +159,7 @@ export function normalizeTeacherData(raw: unknown): TeacherData {
     .map((c) => ({
       id: str(c.id) || uid('cls'),
       semesterId: str(c.semesterId),
+      stage: normalizeStage(c.stage),
       grade: str(c.grade),
       name: str(c.name),
       role: (c.role === 'head' ? 'head' : 'subject') as TeacherRole,

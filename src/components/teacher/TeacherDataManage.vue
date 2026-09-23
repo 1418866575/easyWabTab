@@ -6,7 +6,7 @@
 // 备份与恢复），这里不拆组件，只按 section 控制区块显隐 + 换标题，
 // 页面内容、交互逻辑与数据完全复用同一份实现（'all' = 整页，教师工作台内嵌用）。
 
-import { computed, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useTeacherStore } from '@/stores/teacher'
 import TeacherStatCard from './TeacherStatCard.vue'
 import {
@@ -17,9 +17,16 @@ import {
   rowsToStudents
 } from '@/composables/teacherImportCore'
 import {
+  CLASS_LEVELS_BY_STAGE,
+  STAGE_OPTIONS,
+  TERM_OPTIONS,
   TEACHER_DATA_SECTIONS,
+  type ClassGroup,
+  type Semester,
   type TeacherDataSectionKey,
-  type TeacherRole
+  type TeacherRole,
+  type TeacherStage,
+  type TeacherTerm
 } from '@/types/teacher'
 
 const props = withDefaults(defineProps<{ section?: TeacherDataSectionKey }>(), { section: 'all' })
@@ -65,32 +72,6 @@ const className = computed(() => store.cls?.name ?? '')
 const subject = computed(() => store.cls?.subject ?? '')
 const teacherName = computed(() => store.data.teacher.name)
 const roleLabel = computed(() => (store.role === 'head' ? '班主任' : '非班主任 · 科任'))
-
-// ---------- 当前学期（只读派生） ----------
-const curSemester = computed(() => store.semesters.find((s) => s.id === store.data.current.sem) ?? null)
-const semYear = computed(() => curSemester.value?.year ?? '')
-const semTerm = computed(() => curSemester.value?.term ?? '')
-
-// ---------- 学期 / 班级切换（可切换项）与默认组合 ----------
-async function onSemesterChange(e: Event): Promise<void> {
-  const v = (e.target as HTMLSelectElement).value
-  if (v) await store.selectSemester(v)
-}
-
-async function onClassChange(e: Event): Promise<void> {
-  const v = (e.target as HTMLSelectElement).value
-  if (v) await store.selectClass(v)
-}
-
-async function onSetDefault(): Promise<void> {
-  await store.setDefaultSelection()
-  notify('已把当前学期 + 班级设为默认，下次进入工作台自动进入')
-}
-
-async function onClearDefault(): Promise<void> {
-  await store.clearDefaultSelection()
-  notify('已取消默认组合，进入工作台时按常规规则选择学期与班级')
-}
 
 // ---------- 统计 ----------
 const b = computed(() => store.bucket)
@@ -217,45 +198,115 @@ async function onLoadDemo(): Promise<void> {
   notify('演示数据已载入')
 }
 
-// ---------- 学期 / 班级 ----------
-const newSemYear = ref('')
-const newSemTerm = ref('')
-const newClsGrade = ref('')
-const newClsName = ref('')
-const newClsSubject = ref('')
-const newClsRole = ref<TeacherRole>('subject')
-
-async function onCreateSemester(): Promise<void> {
-  if (!newSemYear.value.trim() || !newSemTerm.value.trim()) return
-  await store.addSemester(newSemYear.value, newSemTerm.value)
-  newSemYear.value = ''
-  newSemTerm.value = ''
-  notify('学期已创建')
+// ---------- 学期与班级：单表格管理 ----------
+interface ClassRow {
+  cls: ClassGroup
+  sem: Semester | null
 }
 
-async function onCreateClass(): Promise<void> {
-  if (!newClsGrade.value.trim() || !newClsName.value.trim()) return
-  await store.addClass(newClsGrade.value, newClsName.value, newClsSubject.value, newClsRole.value)
-  newClsGrade.value = ''
-  newClsName.value = ''
-  newClsSubject.value = ''
-  notify('班级已创建并切换过去')
+const rows = computed<ClassRow[]>(() => {
+  const semMap = new Map(store.data.semesters.map((s) => [s.id, s]))
+  return store.data.classes.map((c) => ({ cls: c, sem: semMap.get(c.semesterId) ?? null }))
+})
+
+function isDefaultRow(row: ClassRow): boolean {
+  return store.isDefaultSemester(row.cls.semesterId) && store.isDefaultClass(row.cls.id)
 }
 
-async function onDeleteClass(): Promise<void> {
-  const c = store.cls
-  if (!c) return
-  if (!window.confirm(`删除「${c.grade}${c.name}」及其全部数据？`)) return
-  await store.deleteClass(c.id)
+// ---------- 新增 / 编辑弹框 ----------
+const dialogVisible = ref(false)
+const dialogMode = ref<'add' | 'edit'>('add')
+const editingId = ref('')
+
+const form = reactive({
+  year: '',
+  stage: '幼儿园' as TeacherStage,
+  term: '上半年' as TeacherTerm,
+  grade: '',
+  role: 'subject' as TeacherRole,
+  subject: ''
+})
+
+const classOptions = computed<string[]>(() => CLASS_LEVELS_BY_STAGE[form.stage] ?? [])
+
+function resetAddForm(): void {
+  form.year = ''
+  form.stage = '幼儿园'
+  form.term = '上半年'
+  form.grade = CLASS_LEVELS_BY_STAGE['幼儿园'][0]
+  form.role = 'subject'
+  form.subject = ''
+}
+
+function openAdd(): void {
+  dialogMode.value = 'add'
+  editingId.value = ''
+  resetAddForm()
+  dialogVisible.value = true
+}
+
+function openEdit(row: ClassRow): void {
+  dialogMode.value = 'edit'
+  editingId.value = row.cls.id
+  form.year = row.sem?.year ?? ''
+  form.stage = row.cls.stage
+  form.term = (row.sem?.term as TeacherTerm) ?? '上半年'
+  form.grade = row.cls.grade
+  form.role = row.cls.role
+  form.subject = row.cls.subject
+  dialogVisible.value = true
+}
+
+// 学段变化 → 班级可选项变化，班级重置为该学段首项
+function onStageChange(): void {
+  form.grade = classOptions.value[0] ?? ''
+}
+
+async function onSave(): Promise<void> {
+  if (!form.year) {
+    notify('请选择学年', 'warn')
+    return
+  }
+  if (!form.grade) {
+    notify('请选择班级', 'warn')
+    return
+  }
+  if (dialogMode.value === 'add') {
+    await store.createClassEntry({
+      year: form.year,
+      term: form.term,
+      stage: form.stage,
+      grade: form.grade,
+      name: '',
+      role: form.role,
+      subject: form.subject
+    })
+    notify('已新增班级')
+  } else {
+    const cls = store.data.classes.find((c) => c.id === editingId.value)
+    await store.updateClassEntry(editingId.value, {
+      year: form.year,
+      term: form.term,
+      stage: form.stage,
+      grade: form.grade,
+      name: cls?.name ?? '',
+      role: form.role,
+      subject: form.subject
+    })
+    notify('已保存修改')
+  }
+  dialogVisible.value = false
+}
+
+async function onRowSetDefault(row: ClassRow): Promise<void> {
+  await store.markDefault(row.cls.semesterId, row.cls.id)
+  notify('已设为默认组合，下次进入工作台自动进入')
+}
+
+async function onRowDelete(row: ClassRow): Promise<void> {
+  if (!window.confirm(`删除「${row.cls.grade}${row.cls.name}」及其全部数据？`)) return
+  await store.deleteClass(row.cls.id)
   notify('班级已删除')
-}
-
-async function onDeleteSemester(): Promise<void> {
-  const semId = store.data.current.sem
-  if (!semId) return
-  if (!window.confirm('删除当前学期及其下所有班级数据？')) return
-  await store.deleteSemester(semId)
-  notify('学期已删除')
 }
 </script>
 
@@ -339,106 +390,93 @@ async function onDeleteSemester(): Promise<void> {
 
     <section v-if="show('semester')" class="tw-card">
       <h4 class="tw-card-title">学期与班级</h4>
-      <p v-if="isAll" class="tw-card-hint">顶层分组为「学期 × 班级」。切换只改指针，不搬动记录；新建班级为独立数据桶。</p>
-
-      <!-- ① 可切换项：学期 / 班级 + 默认组合 -->
-      <div class="dm-zone" data-testid="dm-zone-switch">
-        <div class="dm-zone-head">可切换项</div>
-        <p class="tw-card-hint">切换学期后，班级自动更新为该学期的默认班级（无默认则取第一个班）。</p>
-        <div class="dm-form-row">
-          <label class="tw-label">
-            学期
-            <select class="tw-select tw-input-sm" :value="store.data.current.sem" @change="onSemesterChange">
-              <option v-for="s in store.semesters" :key="s.id" :value="s.id">
-                {{ s.year }} {{ s.term }}{{ store.isDefaultSemester(s.id) ? '（默认）' : '' }}
-              </option>
-            </select>
-          </label>
-          <label class="tw-label">
-            班级
-            <select class="tw-select tw-input-sm" :value="store.data.current.cls" @change="onClassChange">
-              <option v-for="c in store.classesOfCurrentSem" :key="c.id" :value="c.id">
-                {{ c.grade }}{{ c.name }}（{{ c.role === 'head' ? '班主任' : '科任' }}）{{ store.isDefaultClass(c.id) ? '（默认）' : '' }}
-              </option>
-            </select>
-          </label>
-          <button
-            v-if="!store.isDefaultCurrent"
-            type="button"
-            class="tw-btn tw-btn-sm"
-            data-testid="dm-set-default"
-            @click="onSetDefault"
-          >设为默认</button>
-          <button
-            v-else
-            type="button"
-            class="tw-btn tw-btn-sm"
-            data-testid="dm-clear-default"
-            @click="onClearDefault"
-          >取消默认</button>
-          <span v-if="store.isDefaultCurrent" class="dm-default-tag">当前即默认组合</span>
-        </div>
-        <p class="tw-card-hint">
-          设为默认后，下次进入教室工作台直接进入该学期与班级，无需重新选择（默认组合随云同步，多设备一致）。
-        </p>
+      <p v-if="isAll" class="tw-card-hint">
+        以班级为单位管理「学年 × 学段 × 学期 × 班级」组合。每行可编辑、设为默认或删除；设为默认后进入工作台自动进入该组合。
+      </p>
+      <div class="tw-toolbar">
+        <button type="button" class="tw-btn tw-btn-primary" @click="openAdd">新增</button>
       </div>
 
-      <!-- ② 只读项：随上方选择自动更新 -->
-      <div class="dm-zone" data-testid="dm-zone-readonly">
-        <div class="dm-zone-head">只读信息（随上方选择自动更新）</div>
-        <div class="dm-readonly-grid">
-          <div class="dm-readonly-item">
-            <span class="dm-ro-label">学年</span>
-            <span class="dm-ro-value">{{ semYear || '—' }}</span>
-          </div>
-          <div class="dm-readonly-item">
-            <span class="dm-ro-label">学期</span>
-            <span class="dm-ro-value">{{ semTerm || '—' }}</span>
-          </div>
-          <div class="dm-readonly-item">
-            <span class="dm-ro-label">年级</span>
-            <span class="dm-ro-value">{{ grade || '—' }}</span>
-          </div>
-          <div class="dm-readonly-item">
-            <span class="dm-ro-label">班级</span>
-            <span class="dm-ro-value">{{ className || '—' }}</span>
-          </div>
-          <div class="dm-readonly-item">
-            <span class="dm-ro-label">任教科目</span>
-            <span class="dm-ro-value">{{ subject || '—' }}</span>
-          </div>
-          <div class="dm-readonly-item">
-            <span class="dm-ro-label">本班身份</span>
-            <span class="dm-ro-value">{{ roleLabel }}</span>
-          </div>
-        </div>
-      </div>
+      <table v-if="rows.length" class="dm-table">
+        <thead>
+          <tr>
+            <th>学年</th>
+            <th>学段</th>
+            <th>学期</th>
+            <th>班级</th>
+            <th class="dm-op-col">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in rows" :key="row.cls.id">
+            <td>{{ row.sem?.year || '—' }}</td>
+            <td>{{ row.cls.stage }}</td>
+            <td>{{ row.sem?.term || '—' }}</td>
+            <td>{{ row.cls.grade }}{{ row.cls.name }}</td>
+            <td class="dm-op-col">
+              <span v-if="isDefaultRow(row)" class="dm-default-tag">默认</span>
+              <button type="button" class="tw-btn tw-btn-sm" @click="openEdit(row)">编辑</button>
+              <button v-if="!isDefaultRow(row)" type="button" class="tw-btn tw-btn-sm" @click="onRowSetDefault(row)">设为默认</button>
+              <button type="button" class="tw-btn tw-btn-sm tw-btn-danger" @click="onRowDelete(row)">删除</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-else class="tw-note">暂无班级，点击「新增」添加第一个班级。</p>
 
-      <!-- ③ 新增 / 删除：年级、班级名、科目、身份只能在新建时指定 -->
-      <div class="dm-zone" data-testid="dm-zone-edit">
-        <div class="dm-zone-head">新增与删除</div>
-        <p class="tw-card-hint">学年、年级、班级名、科目与身份均在新建时确定；写错了请删除后重新新建。</p>
-        <div class="dm-form-row">
-          <label class="tw-label">学年<input v-model="newSemYear" class="tw-input tw-input-sm" placeholder="2026" /></label>
-          <label class="tw-label">学期<input v-model="newSemTerm" class="tw-input tw-input-sm" placeholder="上学期" /></label>
-          <button type="button" class="tw-btn tw-btn-sm" @click="onCreateSemester">新增学期</button>
-          <button type="button" class="tw-btn tw-btn-sm tw-btn-danger" @click="onDeleteSemester">删除当前学期</button>
-        </div>
-        <div class="dm-form-row">
-          <label class="tw-label">年级<input v-model="newClsGrade" class="tw-input tw-input-sm" placeholder="三年级" /></label>
-          <label class="tw-label">班级<input v-model="newClsName" class="tw-input tw-input-sm" placeholder="2班" /></label>
-          <label class="tw-label">科目<input v-model="newClsSubject" class="tw-input tw-input-sm" placeholder="数学" /></label>
-          <label class="tw-label">
-            身份
-            <select v-model="newClsRole" class="tw-select tw-input-sm">
-              <option value="head">班主任</option>
-              <option value="subject">科任</option>
-            </select>
+      <el-dialog
+        v-model="dialogVisible"
+        :title="dialogMode === 'add' ? '新增班级' : '编辑班级'"
+        width="420px"
+        append-to-body
+        class="dm-dialog"
+      >
+        <div class="dm-form">
+          <label class="dm-field">
+            <span class="dm-field-label">学年</span>
+            <el-date-picker
+              v-model="form.year"
+              type="year"
+              value-format="yyyy"
+              placeholder="选择学年"
+              class="dm-year-picker"
+            />
           </label>
-          <button type="button" class="tw-btn tw-btn-sm" @click="onCreateClass">新增班级</button>
-          <button type="button" class="tw-btn tw-btn-sm tw-btn-danger" @click="onDeleteClass">删除当前班级</button>
+          <label class="dm-field">
+            <span class="dm-field-label">学段</span>
+            <el-select v-model="form.stage" class="dm-select" @change="onStageChange">
+              <el-option v-for="s in STAGE_OPTIONS" :key="s" :label="s" :value="s" />
+            </el-select>
+          </label>
+          <label class="dm-field">
+            <span class="dm-field-label">学期</span>
+            <el-select v-model="form.term" class="dm-select">
+              <el-option v-for="t in TERM_OPTIONS" :key="t" :label="t" :value="t" />
+            </el-select>
+          </label>
+          <label class="dm-field">
+            <span class="dm-field-label">班级</span>
+            <el-select v-model="form.grade" class="dm-select">
+              <el-option v-for="g in classOptions" :key="g" :label="g" :value="g" />
+            </el-select>
+          </label>
+          <label class="dm-field">
+            <span class="dm-field-label">本班身份</span>
+            <el-select v-model="form.role" class="dm-select">
+              <el-option label="班主任" value="head" />
+              <el-option label="科任" value="subject" />
+            </el-select>
+          </label>
+          <label class="dm-field">
+            <span class="dm-field-label">任教科目</span>
+            <el-input v-model="form.subject" placeholder="如 数学" />
+          </label>
         </div>
-      </div>
+        <template #footer>
+          <button type="button" class="tw-btn" @click="dialogVisible = false">取消</button>
+          <button type="button" class="tw-btn tw-btn-primary" @click="onSave">保存</button>
+        </template>
+      </el-dialog>
     </section>
 
     <p v-if="message" class="tw-note" :class="{ 'tw-note-warn': messageKind === 'warn' }">{{ message }}</p>
@@ -446,21 +484,61 @@ async function onDeleteSemester(): Promise<void> {
 </template>
 
 <style scoped>
-/* 分区：可切换项 / 只读信息 / 新增与删除 —— 用浅底 + 左侧色条区分层级 */
-.dm-zone {
-  margin-top: 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-left: 3px solid var(--color-primary, #6da3d8);
-  border-radius: var(--radius-sm, 6px);
-  background: var(--color-bg-card, #ffffff);
+/* 学期与班级：单表格 */
+.dm-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: var(--font-size-sm, 13px);
 }
 
-.dm-zone-head {
-  font-size: var(--font-size-sm, 12px);
+.dm-table th,
+.dm-table td {
+  border: 1px solid var(--color-border, #e2e8f0);
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.dm-table th {
+  background: var(--color-bg-hover, #f1f5f9);
   font-weight: 600;
   color: var(--color-text-secondary, #64748b);
-  margin-bottom: 4px;
+  white-space: nowrap;
+}
+
+.dm-table td {
+  color: var(--color-text, #334155);
+}
+
+.dm-op-col {
+  white-space: nowrap;
+}
+
+.dm-op-col .tw-btn {
+  margin-right: 4px;
+}
+
+/* 新增 / 编辑弹框表单 */
+.dm-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dm-field-label {
+  font-size: var(--font-size-sm, 13px);
+  color: var(--color-text-secondary, #64748b);
+}
+
+.dm-select,
+.dm-year-picker {
+  width: 100%;
 }
 
 /* 只读信息格子：与输入框同样的栅格，但用虚框底色表明不可编辑 */
@@ -499,20 +577,6 @@ async function onDeleteSemester(): Promise<void> {
   font-size: var(--font-size-xs, 11px);
   color: var(--color-primary, #6da3d8);
   background: var(--color-primary-soft, #eaf2fb);
-}
-
-.dm-form-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 8px;
-}
-
-.dm-form-row .tw-label {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
 }
 
 /* 隐藏原生 file input，用按钮触发 */

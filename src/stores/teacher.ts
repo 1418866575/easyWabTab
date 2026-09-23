@@ -18,6 +18,7 @@ import {
   guardPage,
   makeStudentId,
   normalizeTeacherData,
+  normalizeTerm,
   removeStudentCascade,
   resizeSeats,
   resolveCurrent,
@@ -42,6 +43,8 @@ import {
   type TeacherData,
   type TeacherPageKey,
   type TeacherRole,
+  type TeacherStage,
+  type TeacherTerm,
   WEEK_DAYS
 } from '@/types/teacher'
 
@@ -168,7 +171,7 @@ export const useTeacherStore = defineStore('teacher', () => {
 
   async function addSemester(year: string, term: string): Promise<string> {
     const id = uid('sem')
-    const sem = { id, year: year.trim(), term: term.trim(), createdAt: Date.now() }
+    const sem = { id, year: year.trim(), term: normalizeTerm(term), createdAt: Date.now() }
     data.value = {
       ...data.value,
       semesters: [...data.value.semesters, sem],
@@ -179,11 +182,11 @@ export const useTeacherStore = defineStore('teacher', () => {
     return id
   }
 
-  async function addClass(grade: string, name: string, subject: string, role_: TeacherRole): Promise<string> {
+  async function addClass(grade: string, name: string, subject: string, role_: TeacherRole, stage: TeacherStage): Promise<string> {
     const semId = data.value.current.sem
     if (!semId) return ''
     const id = uid('cls')
-    const c: ClassGroup = { id, semesterId: semId, grade: grade.trim(), name: name.trim(), role: role_, subject: subject.trim() }
+    const c: ClassGroup = { id, semesterId: semId, stage, grade: grade.trim(), name: name.trim(), role: role_, subject: subject.trim() }
     const asg = { id: uid('asg'), teacherId: data.value.teacher.id, semesterId: semId, classId: id, subject: subject.trim() }
     const inner = { ...(data.value.groups[semId] ?? {}), [id]: emptyBucket() }
     // 首个班级自动成为默认组合，免得用户还要手动点一次「设为默认」
@@ -201,26 +204,177 @@ export const useTeacherStore = defineStore('teacher', () => {
   }
 
   async function deleteClass(classId: string): Promise<void> {
-    const { sem } = data.value.current
+    const target = data.value.classes.find((c) => c.id === classId)
+    if (!target) return
+    const sem = target.semesterId
     const inner = { ...(data.value.groups[sem] ?? {}) }
     delete inner[classId]
     const classes = data.value.classes.filter((c) => c.id !== classId)
     // 删掉的正是默认班级 → 清空默认组合，避免指向不存在的班级
     const defaultSelection =
       data.value.defaultSelection?.cls === classId ? { sem: '', cls: '' } : data.value.defaultSelection
+    // 该学期已无班级 → 一并删除学期（含其分组与关联 assignment），避免孤立学期
+    const semEmpty = !classes.some((c) => c.semesterId === sem)
+    const groups = semEmpty
+      ? (() => {
+          const g = { ...data.value.groups }
+          delete g[sem]
+          return g
+        })()
+      : { ...data.value.groups, [sem]: inner }
+    const semesters = semEmpty ? data.value.semesters.filter((s) => s.id !== sem) : data.value.semesters
+    const assignments = semEmpty
+      ? data.value.assignments.filter((a) => a.semesterId !== sem)
+      : data.value.assignments.filter((a) => a.classId !== classId)
     data.value = {
       ...data.value,
       classes,
-      assignments: data.value.assignments.filter((a) => a.classId !== classId),
-      groups: { ...data.value.groups, [sem]: inner },
+      assignments,
+      groups,
+      semesters,
       defaultSelection,
       current: resolveCurrent({
         ...data.value,
         classes,
-        groups: { ...data.value.groups, [sem]: inner },
+        groups,
+        semesters,
         current: { sem, cls: '' }
       })
     }
+    await saveTeacher()
+  }
+
+  /** 按 (学年, 学期) 查找已有学期，找不到返回空串 */
+  function findSemesterByYearTerm(year: string, term: string): string {
+    const y = year.trim()
+    const t = term.trim()
+    return data.value.semesters.find((s) => s.year === y && s.term === t)?.id ?? ''
+  }
+
+  /** 新增班级：学年/学段/学期/班级/身份/科目一次写入；学期不存在则自动创建；首个班级自动成为当前与默认组合 */
+  async function createClassEntry(input: {
+    year: string
+    term: TeacherTerm
+    stage: TeacherStage
+    grade: string
+    name: string
+    role: TeacherRole
+    subject: string
+  }): Promise<string> {
+    let semId = findSemesterByYearTerm(input.year, input.term)
+    if (!semId) {
+      semId = uid('sem')
+      data.value = {
+        ...data.value,
+        semesters: [...data.value.semesters, { id: semId, year: input.year.trim(), term: input.term.trim(), createdAt: Date.now() }],
+        groups: { ...data.value.groups, [semId]: {} }
+      }
+    }
+    const clsId = uid('cls')
+    const c: ClassGroup = {
+      id: clsId,
+      semesterId: semId,
+      stage: input.stage,
+      grade: input.grade.trim(),
+      name: input.name.trim(),
+      role: input.role,
+      subject: input.subject.trim()
+    }
+    const asg = { id: uid('asg'), teacherId: data.value.teacher.id, semesterId: semId, classId: clsId, subject: input.subject.trim() }
+    const inner = { ...(data.value.groups[semId] ?? {}), [clsId]: emptyBucket() }
+    const isFirst = data.value.classes.length === 0
+    data.value = {
+      ...data.value,
+      classes: [...data.value.classes, c],
+      assignments: [...data.value.assignments, asg],
+      groups: { ...data.value.groups, [semId]: inner },
+      current: isFirst ? { sem: semId, cls: clsId } : data.value.current,
+      defaultSelection: isFirst ? { sem: semId, cls: clsId } : data.value.defaultSelection
+    }
+    await saveTeacher()
+    return clsId
+  }
+
+  /** 编辑班级：可改学年/学段/学期/班级/身份/科目；若学年或学期变化导致所属学期变化，自动重挂学期并搬移数据桶 */
+  async function updateClassEntry(
+    classId: string,
+    patch: {
+      year: string
+      term: TeacherTerm
+      stage: TeacherStage
+      grade: string
+      name: string
+      role: TeacherRole
+      subject: string
+    }
+  ): Promise<void> {
+    const cls = data.value.classes.find((c) => c.id === classId)
+    if (!cls) return
+    const oldSem = cls.semesterId
+    let newSem = findSemesterByYearTerm(patch.year, patch.term)
+    if (!newSem) {
+      newSem = uid('sem')
+      data.value = {
+        ...data.value,
+        semesters: [...data.value.semesters, { id: newSem, year: patch.year.trim(), term: patch.term.trim(), createdAt: Date.now() }],
+        groups: { ...data.value.groups, [newSem]: {} }
+      }
+    }
+    const reParent = newSem !== oldSem
+    const updatedClass: ClassGroup = {
+      ...cls,
+      semesterId: newSem,
+      stage: patch.stage,
+      grade: patch.grade.trim(),
+      name: patch.name.trim(),
+      role: patch.role,
+      subject: patch.subject.trim()
+    }
+    const classes = data.value.classes.map((c) => (c.id === classId ? updatedClass : c))
+    // 同步 assignment（学期与科目）
+    const exAsg = data.value.assignments.find((a) => a.classId === classId)
+    const assignments = [
+      ...data.value.assignments.filter((a) => a.classId !== classId),
+      exAsg
+        ? { ...exAsg, semesterId: newSem, subject: patch.subject.trim() }
+        : { id: uid('asg'), teacherId: data.value.teacher.id, semesterId: newSem, classId, subject: patch.subject.trim() }
+    ]
+    let groups = data.value.groups
+    if (reParent) {
+      const bucket = groups[oldSem]?.[classId] ?? emptyBucket()
+      const oldInner = { ...(groups[oldSem] ?? {}) }
+      delete oldInner[classId]
+      const newInner = { ...(groups[newSem] ?? {}), [classId]: bucket }
+      groups = { ...groups, [oldSem]: oldInner, [newSem]: newInner }
+    }
+    data.value = { ...data.value, classes, assignments, groups }
+    if (reParent) {
+      // 当前 / 默认组合若指向该类，跟随更新学期
+      if (data.value.current.cls === classId) data.value = { ...data.value, current: { sem: newSem, cls: classId } }
+      if (data.value.defaultSelection?.cls === classId) {
+        data.value = { ...data.value, defaultSelection: { sem: newSem, cls: classId } }
+      }
+      // 旧学期已无班级 → 删除旧学期
+      if (!classes.some((c) => c.semesterId === oldSem)) {
+        const g2 = { ...data.value.groups }
+        delete g2[oldSem]
+        data.value = {
+          ...data.value,
+          groups: g2,
+          semesters: data.value.semesters.filter((s) => s.id !== oldSem),
+          assignments: data.value.assignments.filter((a) => a.semesterId !== oldSem)
+        }
+      }
+    }
+    await saveTeacher()
+  }
+
+  /** 将指定「学期 + 班级」标记为默认组合（进入工作台自动进入） */
+  async function markDefault(semId: string, classId: string): Promise<void> {
+    if (!semId || !classId) return
+    if (!data.value.semesters.some((s) => s.id === semId)) return
+    if (!data.value.classes.some((c) => c.id === classId && c.semesterId === semId)) return
+    data.value = { ...data.value, defaultSelection: { sem: semId, cls: classId } }
     await saveTeacher()
   }
 
@@ -587,8 +741,8 @@ export const useTeacherStore = defineStore('teacher', () => {
     data.value = {
       schemaVer: 1,
       teacher: { id: 'teacher_1', name: '王老师', subjects: ['语文', '数学'] },
-      semesters: [{ id: semId, year: '2026', term: '上学期', createdAt: Date.now() }],
-      classes: [{ id: clsId, semesterId: semId, grade: '三年级', name: '1班', role: 'head', subject: '语文' }],
+      semesters: [{ id: semId, year: '2026', term: '上半年', createdAt: Date.now() }],
+      classes: [{ id: clsId, semesterId: semId, stage: '小学', grade: '三年级', name: '1班', role: 'head', subject: '语文' }],
       assignments: [{ id: uid('asg'), teacherId: 'teacher_1', semesterId: semId, classId: clsId, subject: '语文' }],
       current: { sem: semId, cls: clsId },
       groups: {
@@ -659,6 +813,9 @@ export const useTeacherStore = defineStore('teacher', () => {
     deleteSemester,
     addClass,
     deleteClass,
+    createClassEntry,
+    updateClassEntry,
+    markDefault,
     selectSemester,
     selectClass,
     setRole,
