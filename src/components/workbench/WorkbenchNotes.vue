@@ -39,11 +39,24 @@ import { usePageSize } from '@/composables/usePageSize'
 const store = useWorkbenchNotesStore()
 
 // 便签/时光轴条目内容按 Markdown 渲染（renderer 纯函数，template 经 renderedContent 调用）
-const renderedContent = (md: string): string => renderMarkdown(md)
+// 渲染缓存：列表里每个条目都在 v-for 内调用 renderedContent，且 contentPreview 会对同一份内容
+// 再解析一次；翻页 / 筛选 / 搜索都会触发整页重新解析。相同内容直接复用上次结果，避免重复解析。
+const mdCache = new Map<string, string>()
+function renderMarkdownCached(content: string): string {
+  const hit = mdCache.get(content)
+  if (hit !== undefined) return hit
+  const html = renderMarkdown(content)
+  // 便签内容可编辑，条目多时 key 会持续累积；超过上限整体清空，避免缓存无限膨胀
+  if (mdCache.size > 300) mdCache.clear()
+  mdCache.set(content, html)
+  return html
+}
+
+const renderedContent = (md: string): string => renderMarkdownCached(md)
 
 // 内容纯文本预览（strip HTML tags for el-table tooltip）
 function contentPreview(md: string): string {
-  const html = renderMarkdown(md)
+  const html = renderMarkdownCached(md)
   return html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim().slice(0, 120)
 }
 

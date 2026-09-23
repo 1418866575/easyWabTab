@@ -205,8 +205,13 @@ export default defineConfig({
                 // 传对象会直接报 "Invalid type: Expected Function but received Object"。
                 manualChunks(id) {
                     if (!id.includes('node_modules')) return undefined
-                    // 图表库体积大且只在部分模块使用，单独成块按需加载
-                    if (id.includes('echarts')) return 'vendor-echarts'
+                    // 注意：这里刻意**不**把 echarts 单独分组。
+                    // 实测（Vite 8 / rolldown）：一旦用 manualChunks 把 echarts 抽成
+                    // vendor-echarts，该 chunk 会被提升为「入口 chunk 的静态 import」，
+                    // 于是首屏（/）也必须下载约 600K 的图表库 —— 而 echarts 实际只被
+                    // /student 这条懒加载链路用到，首屏完全用不上。
+                    // 去掉该分组后，echarts 随 StudentView 的动态 chunk 一起加载，
+                    // 首屏不再携带这部分代码（代价是 /student 的 chunk 变大，但那是按需进入）。
                     // Vue 运行时三件套，稳定且被所有模块依赖
                     if (
                         id.includes('/node_modules/vue/') ||

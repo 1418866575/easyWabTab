@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, watchEffect } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, watchEffect, defineAsyncComponent } from 'vue'
 import { showConfirm, toastAlert } from '@/utils/dialog'
 import { useRouter, useRoute } from 'vue-router'
 import type { Site } from '../types'
@@ -8,16 +8,21 @@ import GlobalSearch from '../components/GlobalSearch.vue'
 import CategoryTabs from '../components/CategoryTabs.vue'
 import TagFilter from '../components/TagFilter.vue'
 import Pagination from '../components/Pagination.vue'
-import SiteModal from '../components/SiteModal.vue'
-import BackgroundManager from '../components/BackgroundManager.vue'
-import CategoryManager from '../components/CategoryManager.vue'
-import BackupManager from '../components/BackupManager.vue'
-import IconManager from '../components/IconManager.vue'
-import SearchEngineManager from '../components/SearchEngineManager.vue'
-import HelpModal from '../components/HelpModal.vue'
-import CountdownModal from '@/components/CountdownModal.vue'
 import Icon from '../components/Icon.vue'
-import AppSettingsDialog from '../components/AppSettingsDialog.vue'
+// 弹框 / 管理器改为按需异步加载：这些组件体量大（AppSettingsDialog 近 4000 行、
+// HelpModal 1400+ 行），但都位于 v-if 中、只有用户点开才渲染。原先静态 import 会让它们
+// 全部进入首屏依赖图 —— 首屏必须把这些代码下载并解析完才能渲染，移动端 TTI 被明显拖长。
+// 改为 defineAsyncComponent 后各自独立成 chunk，点开时才拉取，首屏需要下载的代码量下降。
+// 前提：这几个弹框没有被父组件通过 ref 调用实例方法（已确认），异步化不会取到 null。
+const SiteModal = defineAsyncComponent(() => import('../components/SiteModal.vue'))
+const BackgroundManager = defineAsyncComponent(() => import('../components/BackgroundManager.vue'))
+const CategoryManager = defineAsyncComponent(() => import('../components/CategoryManager.vue'))
+const BackupManager = defineAsyncComponent(() => import('../components/BackupManager.vue'))
+const IconManager = defineAsyncComponent(() => import('../components/IconManager.vue'))
+const SearchEngineManager = defineAsyncComponent(() => import('../components/SearchEngineManager.vue'))
+const HelpModal = defineAsyncComponent(() => import('../components/HelpModal.vue'))
+const CountdownModal = defineAsyncComponent(() => import('@/components/CountdownModal.vue'))
+const AppSettingsDialog = defineAsyncComponent(() => import('../components/AppSettingsDialog.vue'))
 import { useSitesStore } from '../stores/sites'
 import { useCategoriesStore } from '../stores/categories'
 import { useThemeStore } from '../stores/theme'
@@ -243,8 +248,26 @@ watch(filteredSites, () => {
 
 // ===== 本站筛选：独立输入框，只过滤下方卡片列表；顶部 GlobalSearch 仍走外部搜索引擎 =====
 const siteFilter = ref(store.searchQuery)
+// 输入防抖：原先每敲一个字符都立即写入 store，触发一次全量 filter + sort（并重置分页、
+// 整列表重渲染），移动端连续输入会逐字掉帧。改为停止输入 250ms 后再落库。
+// 两处细节：
+//   1) 清空操作即时生效 —— 清空是明确意图，不应有 250ms 延迟感；
+//   2) 回调内读取 siteFilter.value 而不是捕获的 v —— 否则与 clearAllFilters 存在竞态：
+//      清空后残留的定时器会把旧关键词重新写回 store，导致筛选「复活」。
+let siteFilterTimer: number | undefined
 watch(siteFilter, (v) => {
-  store.setSearchQuery(v)
+  if (siteFilterTimer !== undefined) {
+    clearTimeout(siteFilterTimer)
+    siteFilterTimer = undefined
+  }
+  if (v === '') {
+    store.setSearchQuery('')
+    return
+  }
+  siteFilterTimer = window.setTimeout(() => {
+    siteFilterTimer = undefined
+    store.setSearchQuery(siteFilter.value)
+  }, 250)
 })
 // 外部改了 store（清空筛选 / 分类联动）时回写输入框，保持双向一致
 watch(
@@ -378,6 +401,11 @@ onMounted(() => {
 onUnmounted(() => {
   pagingMql.removeEventListener('change', syncMobilePaging)
   window.removeEventListener('scroll', maybeLoadMore)
+  // 清理搜索防抖定时器，避免组件卸载后回调仍写入 store
+  if (siteFilterTimer !== undefined) {
+    clearTimeout(siteFilterTimer)
+    siteFilterTimer = undefined
+  }
 })
 
 // ===== App Bar 高度测量（移动端专用）=====
