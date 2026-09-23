@@ -192,7 +192,7 @@ onMounted(() => {
       </div>
       <div class="tv-topbar-actions">
         <span class="tv-class-label">{{ classLabel }}</span>
-        <!-- 右上角「设置」入口：数据管理 / 使用说明 / 菜单设置 -->
+        <!-- 右上角「设置」入口：数据管理（学期与班级 / 班级信息 / 导入表格 / 导入表格修改导入信息 / 备份与恢复）/ 使用说明 / 菜单设置 -->
         <button
           type="button"
           class="tw-btn tw-btn-sm tv-settings-btn"
@@ -203,16 +203,7 @@ onMounted(() => {
           <Icon name="cog" :size="14" />
           <span class="tv-settings-text">设置</span>
         </button>
-        <button
-          type="button"
-          class="tw-btn tw-btn-sm tv-collapse-btn"
-          :aria-expanded="!sidebarCollapsed"
-          :title="sidebarCollapsed ? '展开菜单' : '收起菜单'"
-          @click="sidebarCollapsed = !sidebarCollapsed"
-        >
-          <Icon :name="sidebarCollapsed ? 'chevron-right' : 'chevron-left'" :size="14" />
-          <span class="tv-collapse-text">{{ sidebarCollapsed ? '展开' : '收起' }}</span>
-        </button>
+        <!-- 收起/展开按钮已移到左侧菜单顶部（课程表上方），此处只留云同步 -->
         <!-- 最右上角：云同步（teacher.json 信封；未开启时禁用并引导去设置） -->
         <button
           type="button"
@@ -272,23 +263,32 @@ onMounted(() => {
     <div v-else class="tv-body">
       <aside class="tv-sidebar" aria-label="教师工作台功能导航">
         <nav class="tv-nav">
-          <template v-for="g in store.groups" :key="g.group">
-            <div class="tv-nav-group">{{ g.group }}</div>
-            <button
-              v-for="p in g.pages"
-              :key="p.key"
-              type="button"
-              class="tv-nav-item"
-              :class="{ active: store.activePage === p.key }"
-              :title="p.label"
-              @click="selectPage(p.key)"
-            >
-              <span class="tv-nav-icon"><Icon :name="p.icon" :size="16" /></span>
-              <span class="tv-nav-label">{{ p.label }}</span>
-            </button>
-          </template>
+          <!-- 收起 / 展开：位于左侧菜单顶部（课程表菜单项上方） -->
+          <button
+            type="button"
+            class="tw-btn tw-btn-sm tv-collapse-btn tv-nav-collapse"
+            :aria-expanded="!sidebarCollapsed"
+            :title="sidebarCollapsed ? '展开菜单' : '收起菜单'"
+            data-testid="teacher-collapse-sidebar"
+            @click="sidebarCollapsed = !sidebarCollapsed"
+          >
+            <Icon :name="sidebarCollapsed ? 'chevron-right' : 'chevron-left'" :size="14" />
+            <span class="tv-collapse-text">{{ sidebarCollapsed ? '展开' : '收起' }}</span>
+          </button>
+          <!-- 菜单项扁平展示：分组标题「基础功能」「特色功能」已移除，顺序/名称仍走设置里的自定义 -->
+          <button
+            v-for="p in store.menuItems"
+            :key="p.key"
+            type="button"
+            class="tv-nav-item"
+            :class="{ active: store.activePage === p.key }"
+            :title="p.label"
+            @click="selectPage(p.key)"
+          >
+            <span class="tv-nav-icon"><Icon :name="p.icon" :size="16" /></span>
+            <span class="tv-nav-label">{{ p.label }}</span>
+          </button>
         </nav>
-        <p class="tv-nav-foot">数据保存在本机浏览器，可随时备份。</p>
       </aside>
 
       <main class="tv-content">
@@ -402,6 +402,14 @@ onMounted(() => {
   gap: 2px;
 }
 
+/* 收起 / 展开按钮：位于左侧菜单顶部（课程表上方），与菜单项同宽左对齐 */
+.tv-nav-collapse {
+  justify-content: flex-start;
+  flex-shrink: 0;
+  margin-bottom: 4px;
+}
+
+/* 分组标题（基础功能 / 特色功能）已不再渲染，此规则保留仅为向后兼容 */
 .tv-nav-group {
   margin: 10px 0 4px;
   padding: 0 8px;
@@ -460,13 +468,6 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-.tv-nav-foot {
-  margin: 14px 8px 0;
-  font-size: var(--font-size-xs, 11px);
-  color: var(--color-text-muted, #94a3b8);
-  line-height: var(--line-height-normal, 1.5);
-}
-
 .tv-content {
   flex: 1 1 auto;
   min-width: 0;
@@ -492,11 +493,12 @@ onMounted(() => {
 
 .tv-shell.is-collapsed .tv-nav-label,
 .tv-shell.is-collapsed .tv-nav-group,
-.tv-shell.is-collapsed .tv-nav-foot {
+.tv-shell.is-collapsed .tv-collapse-text {
   display: none;
 }
 
-.tv-shell.is-collapsed .tv-nav-item {
+.tv-shell.is-collapsed .tv-nav-item,
+.tv-shell.is-collapsed .tv-nav-collapse {
   justify-content: center;
   padding: 0;
 }
@@ -535,7 +537,8 @@ onMounted(() => {
     white-space: nowrap;
   }
 
-  .tv-nav-foot {
+  /* 移动端侧栏是横向滚动条，收起会挤成 56px 宽导致错版，故隐藏该按钮 */
+  .tv-nav-collapse {
     display: none;
   }
 

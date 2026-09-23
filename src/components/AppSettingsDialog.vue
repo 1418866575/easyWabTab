@@ -73,8 +73,18 @@ type NavSubTab = 'nav-appearance' | 'nav-display' | 'nav-site' | 'nav-size' | 'n
 type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-todo-cat' | 'wb-cd-cat' | 'wb-note-cat' | 'wb-diary-cat' | 'wb-diary-journals' | 'wb-diary-add' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
 type BizSubTab = 'biz-base' | 'biz-backup' | 'biz-cat'
 type StuSubTab = 'stu-stage' | 'stu-info' | 'stu-subject' | 'stu-timetable' | 'stu-menu'
-/** 教师工作台子 tab：数据管理 / 使用说明（原左侧菜单「工作台」分组，已迁入设置页）+ 菜单设置 */
-type TeacherSubTab = 'teacher-data' | 'teacher-help' | 'teacher-menu'
+/** 教师工作台子 tab：数据管理拆分出的 5 项 + 使用说明（原左侧菜单「工作台」分组，已迁入设置页）+ 菜单设置 */
+// 教师子 tab：原「数据管理」已拆成 5 个独立菜单项（学期与班级 / 班级信息 / 导入表格 /
+// 导入表格修改导入信息 / 备份与恢复），故不再有 teacher-data；各子 tab 复用同一个
+// TeacherDataManage 组件并按 section 显示对应区块（内容、交互、数据不变）。
+type TeacherSubTab =
+  | 'teacher-semester'
+  | 'teacher-class'
+  | 'teacher-import'
+  | 'teacher-import-edit'
+  | 'teacher-backup'
+  | 'teacher-help'
+  | 'teacher-menu'
 /** 来源页：nav=导航站、workbench=个人工作台、business=销售记账、student=学生工作台、teacher=教师工作台、all=全显示(向后兼容) */
 type SettingsSource = 'nav' | 'workbench' | 'business' | 'student' | 'teacher' | 'all'
 const props = withDefaults(defineProps<{ source?: SettingsSource }>(), { source: 'all' })
@@ -147,7 +157,11 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student' | 'teacher', SubTab
     { key: 'stu-menu',    label: '学生菜单' }
   ],
   teacher: [
-    { key: 'teacher-data', label: '数据管理' },
+    { key: 'teacher-semester', label: '学期与班级' },
+    { key: 'teacher-class', label: '班级信息' },
+    { key: 'teacher-import', label: '导入表格' },
+    { key: 'teacher-import-edit', label: '导入表格修改导入信息' },
+    { key: 'teacher-backup', label: '备份与恢复' },
     { key: 'teacher-help', label: '使用说明' },
     { key: 'teacher-menu', label: '菜单设置' }
   ]
@@ -287,7 +301,11 @@ const NAV_GROUPS: NavGroup[] = [
     key: 'teacher',
     label: '教师工作台',
     items: [
-      { key: 'teacher-data', label: '数据管理', icon: 'database', tab: 'teacher', sub: 'teacher-data' },
+      { key: 'teacher-semester', label: '学期与班级', icon: 'calendar', tab: 'teacher', sub: 'teacher-semester' },
+      { key: 'teacher-class', label: '班级信息', icon: 'info', tab: 'teacher', sub: 'teacher-class' },
+      { key: 'teacher-import', label: '导入表格', icon: 'upload', tab: 'teacher', sub: 'teacher-import' },
+      { key: 'teacher-import-edit', label: '导入表格修改导入信息', icon: 'pencil', tab: 'teacher', sub: 'teacher-import-edit' },
+      { key: 'teacher-backup', label: '备份与恢复', icon: 'save', tab: 'teacher', sub: 'teacher-backup' },
       { key: 'teacher-help', label: '使用说明', icon: 'help', tab: 'teacher', sub: 'teacher-help' },
       { key: 'teacher-menu', label: '菜单设置', icon: 'bookmark', tab: 'teacher', sub: 'teacher-menu' }
     ]
@@ -2681,9 +2699,25 @@ onUnmounted(() => {
           </ul>
         </div>
 
-        <!-- 教师工作台 - 数据管理（原左侧菜单「工作台」分组，已迁入设置页；组件自带标题，此处不重复输出） -->
-        <div v-if="activeTab === 'teacher' && activeSubTab === 'teacher-data'" class="wb-menu-config">
-          <TeacherDataManage />
+        <!-- 教师工作台 - 数据管理拆分后的 5 个独立菜单项（组件按 section 显示对应区块，自带标题） -->
+        <div v-if="activeTab === 'teacher' && activeSubTab === 'teacher-semester'" class="wb-menu-config">
+          <TeacherDataManage section="semester" />
+        </div>
+
+        <div v-if="activeTab === 'teacher' && activeSubTab === 'teacher-class'" class="wb-menu-config">
+          <TeacherDataManage section="class" />
+        </div>
+
+        <div v-if="activeTab === 'teacher' && activeSubTab === 'teacher-import'" class="wb-menu-config">
+          <TeacherDataManage section="import" />
+        </div>
+
+        <div v-if="activeTab === 'teacher' && activeSubTab === 'teacher-import-edit'" class="wb-menu-config">
+          <TeacherDataManage section="import-edit" />
+        </div>
+
+        <div v-if="activeTab === 'teacher' && activeSubTab === 'teacher-backup'" class="wb-menu-config">
+          <TeacherDataManage section="backup" />
         </div>
 
         <!-- 教师工作台 - 使用说明（同上，迁入设置页） -->
@@ -2698,7 +2732,7 @@ onUnmounted(() => {
             <el-button size="small" data-testid="tcmenu-reset" @click="onResetTeacherMenu">恢复默认</el-button>
           </div>
           <p class="wb-menu-hint">
-            调整左侧菜单的显示顺序与名称，改动随教师数据云同步，多设备一致。「数据管理 / 使用说明」已迁入设置页，不再出现在左侧菜单。
+            调整左侧菜单的显示顺序与名称，改动随教师数据云同步，多设备一致。「数据管理」（已拆分为学期与班级 / 班级信息 / 导入表格 / 导入表格修改导入信息 / 备份与恢复）与「使用说明」已迁入设置页，不再出现在左侧菜单。
           </p>
 
           <div v-for="g in teacherStore.menuAllGroups" :key="g.group" class="tc-menu-group">

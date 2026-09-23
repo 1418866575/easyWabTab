@@ -1,6 +1,10 @@
 <script setup lang="ts">
 // 数据管理（工作台首页）：班级信息、统计卡、三类表格导入、备份/恢复、学期与班级管理。
 // 导入统一走 teacherImportCore（表头归一、缺列明确报错、重名不静默错配）。
+//
+// section：设置页已把原「数据管理」拆成 5 个独立菜单项（学期与班级 / 班级信息 / 导入表格 /
+// 导入表格修改导入信息 / 备份与恢复），这里不拆组件，只按 section 控制区块显隐 + 换标题，
+// 页面内容、交互逻辑与数据完全复用同一份实现（'all' = 整页，教师工作台内嵌用）。
 
 import { computed, ref } from 'vue'
 import { useTeacherStore } from '@/stores/teacher'
@@ -12,9 +16,42 @@ import {
   rowsToParents,
   rowsToStudents
 } from '@/composables/teacherImportCore'
-import type { TeacherRole } from '@/types/teacher'
+import {
+  TEACHER_DATA_SECTIONS,
+  type TeacherDataSectionKey,
+  type TeacherRole
+} from '@/types/teacher'
+
+const props = withDefaults(defineProps<{ section?: TeacherDataSectionKey }>(), { section: 'all' })
 
 const store = useTeacherStore()
+
+/** 当前区块的标题 / 副标题（'all' 时仍是「数据管理」整页说明） */
+const meta = computed<{ label: string; sub: string }>(() => {
+  if (props.section === 'all') {
+    return {
+      label: '数据管理',
+      sub: '班级信息、数据导入导出与备份恢复。数据保存在本机浏览器，可随时备份带走。'
+    }
+  }
+  return (
+    TEACHER_DATA_SECTIONS.find((s) => s.key === props.section) ?? { label: '数据管理', sub: '' }
+  )
+})
+
+/** 整页模式（'all'）：单区块模式下区块说明已上移为副标题，卡片内的提示语不再重复输出 */
+const isAll = computed(() => props.section === 'all')
+
+/**
+ * 区块是否显示：'all' 全部显示；指定 section 时只显示对应区块。
+ * 「导入表格」与「导入表格修改导入信息」共用同一个导入区块（仅标题不同），故互相对彼此可见。
+ */
+function show(section: TeacherDataSectionKey): boolean {
+  const cur = props.section
+  if (cur === 'all') return true
+  if (section === 'import') return cur === 'import' || cur === 'import-edit'
+  return cur === section
+}
 
 const message = ref('')
 const messageKind = ref<'info' | 'warn'>('info')
@@ -213,14 +250,14 @@ async function onDeleteSemester(): Promise<void> {
   <div class="tw-page">
     <div class="tw-head">
       <div>
-        <h3 class="tw-title">数据管理</h3>
-        <p class="tw-subtitle">班级信息、数据导入导出与备份恢复。数据保存在本机浏览器，可随时备份带走。</p>
+        <h3 class="tw-title">{{ meta.label }}</h3>
+        <p class="tw-subtitle">{{ meta.sub }}</p>
       </div>
     </div>
 
-    <section class="tw-card">
+    <section v-if="show('class')" class="tw-card">
       <h4 class="tw-card-title">班级信息</h4>
-      <p class="tw-card-hint">修改后立即生效，影响侧栏班级标题与各页「打印 / 导出 Excel」的班级页眉。</p>
+      <p v-if="isAll" class="tw-card-hint">修改后立即生效，影响侧栏班级标题与各页「打印 / 导出 Excel」的班级页眉。</p>
       <div class="dm-grid">
         <label class="tw-label">年级<input v-model="grade" class="tw-input" placeholder="如 三年级" /></label>
         <label class="tw-label">班级<input v-model="className" class="tw-input" placeholder="如 1班" /></label>
@@ -229,16 +266,16 @@ async function onDeleteSemester(): Promise<void> {
       </div>
     </section>
 
-    <section class="tw-stat-grid">
+    <section v-if="show('class')" class="tw-stat-grid">
       <TeacherStatCard :value="b?.students.length ?? 0" label="学生人数" accent="#6da3d8" />
       <TeacherStatCard :value="b?.exams.length ?? 0" label="考试成绩（场）" accent="#3fa37c" />
       <TeacherStatCard :value="b?.papers.length ?? 0" label="试卷分析（卷）" accent="#f0b429" />
-      <TeacherStatCard :value="growthCount" label="成长记录（条）" accent="#8b7ec8" />
+      <TeacherStatCard :value="growthCount" label="奖励记录（条）" accent="#8b7ec8" />
     </section>
 
-    <section class="tw-card">
+    <section v-if="show('import')" class="tw-card">
       <h4 class="tw-card-title">导入表格</h4>
-      <p class="tw-card-hint">
+      <p v-if="isAll" class="tw-card-hint">
         支持 .xlsx / .xls / .csv。学生名单需含「姓名」「性别」（学号列可选，列名带 * 也能识别）；
         成绩表第一列为姓名、其余数值列各生成一场考试；家长表需含「姓名」「家长」「电话」。
       </p>
@@ -252,7 +289,7 @@ async function onDeleteSemester(): Promise<void> {
       </div>
     </section>
 
-    <section class="tw-card">
+    <section v-if="show('backup')" class="tw-card">
       <h4 class="tw-card-title">备份与恢复</h4>
       <div class="tw-toolbar">
         <button type="button" class="tw-btn tw-btn-primary" @click="downloadBackup">备份数据</button>
@@ -264,9 +301,9 @@ async function onDeleteSemester(): Promise<void> {
       </div>
     </section>
 
-    <section class="tw-card">
+    <section v-if="show('semester')" class="tw-card">
       <h4 class="tw-card-title">学期与班级</h4>
-      <p class="tw-card-hint">顶层分组为「学期 × 班级」。切换只改指针，不搬动记录；新建班级为独立数据桶。</p>
+      <p v-if="isAll" class="tw-card-hint">顶层分组为「学期 × 班级」。切换只改指针，不搬动记录；新建班级为独立数据桶。</p>
       <div class="dm-form-row">
         <label class="tw-label">学年<input v-model="newSemYear" class="tw-input tw-input-sm" placeholder="2026" /></label>
         <label class="tw-label">学期<input v-model="newSemTerm" class="tw-input tw-input-sm" placeholder="上学期" /></label>

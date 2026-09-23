@@ -109,7 +109,7 @@ async function exportExcelFile(): Promise<void> {
           <span class="tw-chip-no">{{ s.no }}</span>
         </div>
       </div>
-      <p v-else class="tw-empty">还没有学生，请在下方添加或到「数据管理」导入名单。</p>
+      <p v-else class="tw-empty">还没有学生，请在下方添加或到设置页「导入表格」导入名单。</p>
     </section>
 
     <section class="tw-card">

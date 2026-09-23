@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// 课程表：行=节次（时间可配置），列=周一~周六；点击格子即可编辑科目，修改自动保存。
+// 课程表：行=节次，列=周一~周六；点击格子即可编辑科目，修改自动保存。
+// 节次名称与时间由数据自带（表格首列展示），页面底部不再提供「节次时间」编辑区（已删除）。
 // 支持清空课程表与打印（打印按钮已加 tw-no-print，打印样式隐藏无关元素）。
 
 import { computed, nextTick, ref } from 'vue'
@@ -46,11 +47,6 @@ async function onClear(): Promise<void> {
   await store.clearTimetable()
 }
 
-async function onPeriodField(i: number, field: 'label' | 'time', value: string): Promise<void> {
-  const next = periods.value.map((p, idx) => (idx === i ? { ...p, [field]: value } : p))
-  await store.setTimetablePeriods(next)
-}
-
 function exportPaper(): void {
   window.print()
 }
@@ -68,7 +64,7 @@ async function exportExcelFile(): Promise<void> {
     <div class="tw-head">
       <div>
         <h3 class="tw-title">课程表</h3>
-        <p class="tw-subtitle">点击任意格子即可编辑科目；节次名称与时间可直接修改。</p>
+        <p class="tw-subtitle">点击任意格子即可编辑科目，修改后自动保存。</p>
       </div>
       <div class="tw-toolbar tw-no-print">
         <button type="button" class="tw-btn" @click="exportPaper">打印</button>
@@ -122,15 +118,6 @@ async function exportExcelFile(): Promise<void> {
       </div>
     </section>
 
-    <section class="tw-card tw-no-print">
-      <h4 class="tw-card-title">节次时间</h4>
-      <div class="tt-periods">
-        <div v-for="(p, i) in periods" :key="i" class="tt-period-row">
-          <input class="tw-input tw-input-sm tt-p-label" :value="p.label" @change="onPeriodField(i, 'label', ($event.target as HTMLInputElement).value)" />
-          <input class="tw-input tw-input-sm tt-p-time" :value="p.time" @change="onPeriodField(i, 'time', ($event.target as HTMLInputElement).value)" />
-        </div>
-      </div>
-    </section>
   </div>
 </template>
 
@@ -187,23 +174,4 @@ async function exportExcelFile(): Promise<void> {
   width: 100%;
 }
 
-.tt-periods {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 8px;
-}
-
-.tt-period-row {
-  display: flex;
-  gap: 6px;
-}
-
-.tt-p-label {
-  width: 72px;
-}
-
-.tt-p-time {
-  flex: 1 1 auto;
-  min-width: 0;
-}
 </style>

@@ -190,19 +190,22 @@ export interface TeacherPageMeta {
  * 12 个页面，数组顺序即左侧导航顺序。
  * 基础功能前两位为「课程表 / 点名」（高频日常入口，全员可见）；
  * 奖励记录（原学生成长档案）归入基础功能，全员可见。
- * 班务类（座位表/值日生表/家长联系方式）与特异体质按角色隐藏。
+ * 班务类（座位表/值日生表/家长联系方式）与隐私信息（原特异体质学生）按角色隐藏。
+ *
+ * 注意：左侧导航不再渲染分组标题（「基础功能」「特色功能」文字已移除），
+ * group 字段仅用于排序约束（菜单设置里移动限制在同组内部）。
  */
 export const TEACHER_PAGES: TeacherPageMeta[] = [
   { key: 'timetable', label: '课程表', icon: 'calendar', group: '基础功能' },
   { key: 'random', label: '点名', icon: 'dice', group: '基础功能' },
-  { key: 'students', label: '学生名单', icon: 'notes', group: '基础功能' },
+  { key: 'students', label: '学生信息', icon: 'notes', group: '基础功能' },
   { key: 'seats', label: '座位表', icon: 'grid', group: '基础功能' },
-  { key: 'exams', label: '成绩分析', icon: 'chart', group: '基础功能' },
+  { key: 'exams', label: '成绩信息', icon: 'chart', group: '基础功能' },
   { key: 'papers', label: '试卷分析', icon: 'target', group: '基础功能' },
   { key: 'duty', label: '值日生表', icon: 'check', group: '基础功能' },
   { key: 'parents', label: '家长联系方式', icon: 'phone', group: '基础功能' },
   { key: 'growth', label: '奖励记录', icon: 'star', group: '基础功能' },
-  { key: 'special', label: '特异体质学生', icon: 'heart', group: '特色功能' },
+  { key: 'special', label: '隐私信息', icon: 'heart', group: '特色功能' },
   { key: 'data', label: '数据管理', icon: 'database', group: '工作台' },
   { key: 'help', label: '使用说明', icon: 'help', group: '工作台' }
 ]
@@ -216,6 +219,49 @@ export const TEACHER_HEAD_ONLY_PAGES: TeacherPageKey[] = ['seats', 'duty', 'pare
  * 页面组件仍保留（设置页直接复用），故 TeacherPageKey 不变。
  */
 export const TEACHER_SETTINGS_ONLY_PAGES: TeacherPageKey[] = ['data', 'help']
+
+/**
+ * 「数据管理」页拆分后的区块键。
+ * 'all' = 整页（教师工作台内嵌用）；其余 5 项在设置页里各占一个独立菜单项。
+ * 拆分只改菜单层级与展示顺序，页面内容 / 交互 / 数据一律不变（同一组件按 section 显隐区块）。
+ */
+export type TeacherDataSectionKey = 'all' | 'semester' | 'class' | 'import' | 'import-edit' | 'backup'
+
+export interface TeacherDataSectionMeta {
+  key: Exclude<TeacherDataSectionKey, 'all'>
+  label: string
+  /** 该区块独立成页时的副标题 */
+  sub: string
+}
+
+/** 设置页「数据管理」拆分后的独立菜单项，数组顺序即菜单顺序（学期与班级必须第一） */
+export const TEACHER_DATA_SECTIONS: TeacherDataSectionMeta[] = [
+  {
+    key: 'semester',
+    label: '学期与班级',
+    sub: '顶层分组为「学期 × 班级」。切换只改指针，不搬动记录；新建班级为独立数据桶。'
+  },
+  {
+    key: 'class',
+    label: '班级信息',
+    sub: '修改后立即生效，影响侧栏班级标题与各页「打印 / 导出 Excel」的班级页眉。'
+  },
+  {
+    key: 'import',
+    label: '导入表格',
+    sub: '支持 .xlsx / .xls / .csv。学生名单需含「姓名」「性别」（学号列可选，列名带 * 也能识别）；成绩表第一列为姓名、其余数值列各生成一场考试；家长表需含「姓名」「家长」「电话」。'
+  },
+  {
+    key: 'import-edit',
+    label: '导入表格修改导入信息',
+    sub: '导入会按学号 / 姓名覆盖同名记录。导入后如需逐条修正，请到「学生信息 / 成绩信息 / 家长联系方式」页直接编辑表格，修改自动保存。'
+  },
+  {
+    key: 'backup',
+    label: '备份与恢复',
+    sub: '数据保存在本机浏览器，可随时备份带走；恢复会整体覆盖当前数据，建议先备份一次。'
+  }
+]
 
 export const TEACHER_GROUPS: ('基础功能' | '特色功能' | '工作台')[] = ['基础功能', '特色功能', '工作台']
 

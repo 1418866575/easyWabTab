@@ -87,6 +87,8 @@ export const useTeacherStore = defineStore('teacher', () => {
   const menuAllGroups = computed(() =>
     groupTeacherMenuItems(resolveTeacherMenuItems(menu.value.order, menu.value.labels))
   )
+  /** 导航用：扁平列表（左侧不再渲染分组标题），按自定义顺序 + 身份过滤 */
+  const menuItems = computed(() => resolveTeacherMenuItems(menu.value.order, menu.value.labels, role.value))
 
   async function moveMenuItem(key: string, dir: 'up' | 'down'): Promise<void> {
     const res = moveTeacherMenuItem(menu.value.order, key, dir)
@@ -595,6 +597,7 @@ export const useTeacherStore = defineStore('teacher', () => {
     isHead,
     groups,
     menuAllGroups,
+    menuItems,
     semesters,
     classesOfCurrentSem,
     needsSemester,

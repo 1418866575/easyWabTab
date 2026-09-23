@@ -135,7 +135,7 @@ async function exportExcelFile(): Promise<void> {
         </table>
       </div>
       <p v-if="warning" class="tw-note tw-note-warn">{{ warning }}</p>
-      <p v-if="!students.length" class="tw-empty">请先到「数据管理」导入学生名单。</p>
+      <p v-if="!students.length" class="tw-empty">请先到设置页「导入表格」导入学生名单。</p>
     </section>
 
     <section class="tw-card">
