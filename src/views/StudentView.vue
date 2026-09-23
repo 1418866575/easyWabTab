@@ -5,7 +5,6 @@
 // 学段首次进入未初始化时强制弹框选择学段（StageOnboarding 内嵌）
 
 import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue'
-import { showConfirm, toastAlert } from '@/utils/dialog'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
 import { useStudentRewardsStore } from '@/stores/studentRewards'
 import { useStudentHabitsStore } from '@/stores/studentHabits'
@@ -38,6 +37,7 @@ import PageSwitcher from '@/components/PageSwitcher.vue'
 import Icon from '@/components/Icon.vue'
 import { useCloudSync } from '@/composables/useCloudSync'
 import type { SyncStatus } from '@/composables/useCloudSync'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 
 const studentStore = useStudentSettingsStore()
 const settingsStore = useAppSettingsStore()
@@ -813,3 +813,4 @@ html.dark .st-parent-bar-btn:hover {
   color: var(--color-text);
 }
 </style>
+

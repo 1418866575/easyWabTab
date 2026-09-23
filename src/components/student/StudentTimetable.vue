@@ -201,46 +201,6 @@ ${rows.slice(1).map((r) => '<tr><td class="period">' + r[0] + '</td>' + r.slice(
   toast.success('课程表已导出')
 }
 
-// ===== 配置弹框（周数/节数）=====
-const showConfigDialog = ref(false)
-const configWeeks = ref(store.data.weeks)
-const configPeriods = ref(store.data.periodsPerDay)
-const configClassroom = ref(store.data.classroom || '')
-// 节次时间配置：上午 / 下午各只需设置第一节开始时间 + 单节时长 + 课间休息，同段内后续各节自动推算
-const configFirstStart = ref(timing.value.firstStart)
-const configAfternoonStart = ref(timing.value.afternoonStart)
-const configLessonMinutes = ref(timing.value.lessonMinutes)
-const configBreakMinutes = ref(timing.value.breakMinutes)
-const configMorningPeriods = ref(timing.value.morningPeriods)
-/** 是否存在下午节次：每日节数 > 上午节数 时才有下午段 */
-const configHasAfternoon = computed(() => configPeriods.value > configMorningPeriods.value)
-
-function openConfigDialog(): void {
-  configWeeks.value = store.data.weeks
-  configPeriods.value = store.data.periodsPerDay
-  configClassroom.value = store.data.classroom || ''
-  configFirstStart.value = timing.value.firstStart
-  configAfternoonStart.value = timing.value.afternoonStart
-  configLessonMinutes.value = timing.value.lessonMinutes
-  configBreakMinutes.value = timing.value.breakMinutes
-  configMorningPeriods.value = timing.value.morningPeriods
-  showConfigDialog.value = true
-}
-
-async function saveConfig(): Promise<void> {
-  await store.updateConfig(configWeeks.value, configPeriods.value, configClassroom.value)
-  // 时间配置变更 → 按新配置重算全部 cell 的起止时间
-  await store.updateTiming({
-    firstStart: configFirstStart.value,
-    afternoonStart: configAfternoonStart.value,
-    lessonMinutes: configLessonMinutes.value,
-    breakMinutes: configBreakMinutes.value,
-    morningPeriods: configMorningPeriods.value
-  })
-  showConfigDialog.value = false
-  toast.success('课程表配置已更新')
-}
-
 // ===== cell 编辑弹框 =====
 const showCellDialog = ref(false)
 const editingDay = ref(0)
@@ -362,9 +322,6 @@ onBeforeUnmount(() => {
       <span class="stt-meta">{{ store.data.classroom || '未设班级' }} · 每日 {{ store.data.periodsPerDay }} 节</span>
       <el-button size="small" @click="exportToExcel">
         <Icon name="download" :size="14" /> 导出Excel
-      </el-button>
-      <el-button size="small" @click="openConfigDialog">
-        <Icon name="countdowns" :size="14" /> 配置
       </el-button>
       <el-button size="small" type="danger" plain @click="clearAllCells">
         <Icon name="close" :size="14" /> 清空
@@ -500,56 +457,6 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <!-- 配置弹框 -->
-    <el-dialog v-model="showConfigDialog" title="课程表配置" width="460px" class="stt-config-dialog" append-to-body>
-      <div class="dialog-body">
-        <div class="form-field">
-          <label>学周数（1-52）</label>
-          <el-input v-model.number="configWeeks" type="number" min="1" max="52" />
-        </div>
-        <div class="form-field">
-          <label>每日节数（1-12）</label>
-          <el-input v-model.number="configPeriods" type="number" min="1" max="12" />
-        </div>
-        <div class="form-field">
-          <label>教室/班级（可选）</label>
-          <el-input v-model="configClassroom" type="text" maxlength="30" placeholder="如：三年二班 / 301" />
-        </div>
-        <div class="stt-cfg-title">节次时间（上午 / 下午分别起算，段内后续各节自动推算）</div>
-        <div class="form-row">
-          <div class="form-field">
-            <label>上午第一节开始时间</label>
-            <el-input v-model="configFirstStart" type="time" />
-          </div>
-          <div v-if="configHasAfternoon" class="form-field">
-            <label>下午第一节开始时间</label>
-            <el-input v-model="configAfternoonStart" type="time" />
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-field">
-            <label>单节课时长（分钟）</label>
-            <el-input v-model.number="configLessonMinutes" type="number" min="1" max="120" />
-          </div>
-          <div class="form-field">
-            <label>课间休息（分钟）</label>
-            <el-input v-model.number="configBreakMinutes" type="number" min="0" max="60" />
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-field">
-            <label>上午节数</label>
-            <el-input v-model.number="configMorningPeriods" type="number" min="1" max="12" />
-          </div>
-        </div>
-        <p class="stt-tip">上午第 N 节开始 = 上午第一节开始 + (N-1) ×（单节时长 + 课间休息）；下午第 N 节开始 = 下午第一节开始 + (N-上午节数-1) ×（单节时长 + 课间休息）；结束 = 开始 + 单节时长。</p>
-        <p class="stt-tip">提示：节数减少后，超出范围的课程会保留但不在表格中显示。</p>
-      </div>
-      <template #footer>
-        <el-button @click="showConfigDialog = false">取消</el-button>
-        <el-button type="primary" @click="saveConfig">保存</el-button>
-      </template>
-    </el-dialog>
 
     <!-- cell 编辑弹框 -->
     <el-dialog v-model="showCellDialog" :title="getCell(editingDay, editingPeriod) ? '编辑课程' : '新增课程'" width="460px" class="stt-cell-dialog" append-to-body>
@@ -608,6 +515,17 @@ onBeforeUnmount(() => {
   min-height: 0;
   gap: 12px;
   padding: 16px;
+  /* 页面级滚动：工具栏 / 今日速览 / 图例 / 课程网格作为一个整体滚动，
+     网格自身不再产生内部滚动条 —— 滚动条只出现在页面这一层 */
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  /* 网格保底宽度：保证星期列不被压得不可读；超出屏幕时由页面横向滚动查看。
+     想让表格始终收进屏幕内，把此值改小（如 320px）即可 */
+  --stt-grid-min: 560px;
+}
+/* 子块不收缩：内容超出时由 .stt-shell 整体滚动，避免各块被压扁 */
+.stt-shell > * {
+  flex-shrink: 0;
 }
 
 .stt-meta {
@@ -680,9 +598,8 @@ onBeforeUnmount(() => {
 }
 .stt-chips {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 4px;
 }
 .stt-chip {
   flex: 0 0 auto;
@@ -737,54 +654,28 @@ onBeforeUnmount(() => {
   background: var(--c, #64748b);
 }
 
-/* 网格容器：宽高优先 100% 铺满；行高有 --stt-row-min 保底，空间富余时按 1fr 均分铺满。
-   仅当节数多到装不下时才可滚动，且滚动条 / 滑块隐藏（视觉上不出现滚动条）。 */
+/* 网格容器：高度随内容自然撑开（不再抢占剩余高度、不再内部滚动），
+   宽度有 --stt-grid-min 保底；超出部分统一交给 .stt-shell 做页面级滚动。
+   表头 / 节次列仍 position:sticky，滚动时相对页面吸顶 / 吸左。 */
 .stt-grid-wrap {
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 0 0 auto;
   width: 100%;
+  min-width: var(--stt-grid-min, 560px);
   display: flex;
   flex-direction: column;
-  overflow: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  overflow: visible;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
   background: var(--color-bg-card, #fff);
 }
-.stt-grid-wrap::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-  display: none;
-}
-
-/* ===== 移动端适配 =====
-   问题：格子列宽为「节次列 + repeat(7, 1fr)」，375px 下每列仅剩约 36px，
-   学科名被 nowrap + 省略号截成单字，格子触控宽度也远低于 44px。
-   改法：给每列设 64px 最小宽度，放不下时容器横向滚动（min-width: max-content），
-   并在移动端显示细滚动条作为「还能横向滑动」的视觉提示。 */
+/* ===== 移动端适配（与远程页面级滚动 .stt-shell 兼容：横向滚动交由页面层，此处只保证可读与触控）=====
+   问题：375px 下每列仅剩约 36px，学科名被截成单字，触控宽度远低于 44px。
+   改法：每列 64px 最小宽度 + 字号收敛 + 周次按钮 44px 触控目标；超宽时由 .stt-shell 页面级横向滚动。 */
 @media (max-width: 768px) {
   .stt-grid {
     --stt-period-col: 52px;
     grid-template-columns: var(--stt-period-col) repeat(7, minmax(64px, 1fr));
-    /* 宽度由内容决定，不再被压缩到不可读 */
     min-width: max-content;
-  }
-
-  .stt-grid-wrap {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* 移动端恢复 4px 细横向滚动条：既是可滚动提示，也不遮挡内容 */
-  .stt-grid-wrap::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
-    display: block;
-  }
-  .stt-grid-wrap::-webkit-scrollbar-thumb {
-    background: var(--color-border, #d1d5db);
-    border-radius: 2px;
   }
 
   /* 格子字号收敛，配合更紧凑的布局 */
@@ -804,8 +695,7 @@ onBeforeUnmount(() => {
   --stt-sec-h: 32px;
   /* 每节课行最小高度：保证格子不会因节数变多而被压得过矮 */
   --stt-row-min: 60px;
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 0 0 auto;
   width: 100%;
   display: grid;
   grid-template-columns: var(--stt-period-col) repeat(7, minmax(0, 1fr));
@@ -992,13 +882,6 @@ onBeforeUnmount(() => {
   font-size: 14px;
   color: var(--color-text-muted, #6b7280);
 }
-.stt-cfg-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text-secondary, #4b5563);
-  border-left: 3px solid var(--color-primary, #3b82f6);
-  padding-left: 8px;
-}
 .stt-dialog-time {
   font-size: 14px;
   color: var(--color-text-muted, #6b7280);
@@ -1064,7 +947,7 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 768px) {
-  .stt-shell { padding: 12px; }
+  .stt-shell { padding: 12px; --stt-grid-min: 480px; }
   .stt-grid { --stt-period-col: 60px; --stt-head-h: 36px; --stt-sec-h: 30px; --stt-row-min: 54px; }
   .stt-period-name { font-size: 12px; }
   .stt-period-time { font-size: 10px; }
@@ -1073,7 +956,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 480px) {
-  .stt-config-dialog :deep(.el-dialog),
   .stt-cell-dialog :deep(.el-dialog) {
     width: 92vw !important;
     max-width: 92vw;

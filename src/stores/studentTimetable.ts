@@ -13,7 +13,8 @@ import {
   isValidTimeRange,
   computePeriodTime,
   normalizeTiming,
-  applyTimingToSchedule
+  applyTimingToSchedule,
+  parseCellKey
 } from '@/composables/studentTimetableCore'
 import { idbGet, idbPut } from '@/composables/useIdb'
 import { markDirty } from '@/composables/useCloudSync'
@@ -121,6 +122,30 @@ export const useStudentTimetableStore = defineStore('studentTimetable', () => {
     return getCellCore(data.value.schedule, day, period)
   }
 
+  /**
+   * 批量导入课程（Excel 导入）：cells 的 key 为 `${day}_${period}`，同 key 覆盖已有课程。
+   * 入参应为 studentTimetableImportCore.validateImportRows 校验通过的 cells。
+   * @returns 实际写入条数
+   */
+  async function importCells(cells: Record<string, StudentTimetableCell>): Promise<number> {
+    const keys = Object.keys(cells ?? {})
+    if (!keys.length) return 0
+    const schedule = { ...data.value.schedule }
+    let n = 0
+    for (const key of keys) {
+      const parsed = parseCellKey(key)
+      const cell = cells[key]
+      if (!parsed || !cell || !cell.subject.trim()) continue
+      if (!isValidTimeRange(cell.startHHMM, cell.endHHMM)) continue
+      schedule[key] = { ...cell, subject: cell.subject.trim() }
+      n++
+    }
+    if (!n) return 0
+    data.value = { ...data.value, schedule }
+    await saveTimetable()
+    return n
+  }
+
   return {
     data,
     loadTimetable,
@@ -131,6 +156,7 @@ export const useStudentTimetableStore = defineStore('studentTimetable', () => {
     updateConfig,
     updateTiming,
     clearAll,
+    importCells,
     getCell
   }
 })

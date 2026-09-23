@@ -58,7 +58,35 @@ export function normalizeCell(raw: unknown): StudentTimetableCell | null {
   if (typeof c.room === 'string' && c.room.trim()) {
     cell.room = Array.from(c.room.trim()).slice(0, 20).join('')
   }
+  // 周次范围（Excel 导入写入，展示层暂不使用）：非法/越界则缺省不写
+  const range = normalizeCellWeekRange(c.startWeek, c.endWeek)
+  if (range) {
+    cell.startWeek = range.startWeek
+    cell.endWeek = range.endWeek
+  }
   return cell
+}
+
+/** 单元格周次范围归一化：缺省 1-52；非法或 start>end 返回 null */
+export function normalizeCellWeekRange(
+  start: unknown,
+  end: unknown
+): { startWeek: number; endWeek: number } | null {
+  // 两个都没提供 → 不写字段（保持存量数据结构完全不变）
+  const missing = (v: unknown) => v === undefined || v === null || v === ''
+  if (missing(start) && missing(end)) return null
+  const parse = (v: unknown, fallback: number): number | null => {
+    if (v === undefined || v === null || v === '') return fallback
+    const n = typeof v === 'number' ? v : Number(String(v).trim())
+    if (!Number.isFinite(n)) return null
+    const i = Math.floor(n)
+    if (i < 1 || i > 52) return null
+    return i
+  }
+  const s = parse(start, 1)
+  const e = parse(end, 52)
+  if (s === null || e === null || s > e) return null
+  return { startWeek: s, endWeek: e }
 }
 
 /** 归一化课程表数据（幂等） */

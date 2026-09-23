@@ -668,7 +668,7 @@ export const STUDENT_MENU_ICONS: Record<string, string> = {
 /** 学段-菜单可见性矩阵：true=默认显示 / false=默认隐藏（用户可在设置内单独开启） */
 export const STAGE_MENU_VISIBILITY: Record<StudentStage, Record<string, boolean>> = {
   K: {
-    home: true, habits: true, homework: false, timetable: false, plan: false,
+    home: true, habits: true, homework: false, timetable: true, plan: false,
     review: false, mistakes: false, reading: true, exam: false, education: true,
     health: true, achievements: true, rewards: true, parent: true,
     grades: false, goal: false
@@ -699,9 +699,9 @@ export const STAGE_MENU_VISIBILITY: Record<StudentStage, Record<string, boolean>
   }
 }
 
-/** 学段默认学科清单（小学 3 科 / 初中·高中 9 科 / 大学 3 类；K 无学科） */
+/** 学段默认学科清单（K 6 项幼儿活动 / 小学 3 科 / 初中·高中 9 科 / 大学 3 类） */
 export const STAGE_DEFAULT_SUBJECTS: Record<StudentStage, string[]> = {
-  K: [],
+  K: ['游戏活动', '绘本阅读', '手工', '音乐', '户外', '午睡'],
   P: ['语文', '数学', '英语'],
   J: ['语文', '数学', '英语', '政治', '历史', '地理', '生物', '物理', '化学'],
   H: ['语文', '数学', '英语', '物理', '化学', '生物', '政治', '历史', '地理'],
@@ -884,6 +884,10 @@ export interface StudentTimetableCell {
   room?: string           // 1-20 字符
   startHHMM: string       // 'HH:MM'（由节次时间配置推算后写入，非用户逐节填写）
   endHHMM: string         // 'HH:MM'，> startHHMM
+  /** 起始周次（可选；缺省 1，由 Excel 导入写入，展示层暂不使用） */
+  startWeek?: number
+  /** 结束周次（可选；缺省 = 总学周数，由 Excel 导入写入，展示层暂不使用） */
+  endWeek?: number
 }
 
 /** 课程表 schedule：key = `${dayOfWeek}_${period}`（1-7_1-12） */

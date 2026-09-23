@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-24 Vue 3 SFCs in the root plus 20 workbench + 20 student + 8 business SFCs (学生 15 面板已 Element Plus 全统一、4 手写保留) under `workbench/`/`student/`/`business/`, all using `<script setup lang="ts">` with scoped CSS, CSS custom properties, and class-based dark mode.
+24 Vue 3 SFCs in the root plus 20 workbench + 22 student + 8 business SFCs (学生 15 面板已 Element Plus 全统一、4 手写保留) under `workbench/`/`student/`/`business/`, all using `<script setup lang="ts">` with scoped CSS, CSS custom properties, and class-based dark mode.
 
 ## STRUCTURE
 
@@ -51,14 +51,15 @@ components/
     ├── WorkbenchLedger.vue      # 记账面板（月份切换 + 六指标统计含存款累计 + 图表区可折叠（ld-charts-toggle + ld-charts-chevron，chartsExpanded 默认展开；toggleList 展开记录 → 自动收起图表、收起记录 → 恢复，防图表压塌列表区只剩 2-91px/0-1 行）+ 近 6 月收支趋势柱状图（ld-trend-*，内联 SVG，坐标全走 trendChartScale）+ 支出分类占比环形图（ld-donut-*，R=90 周长不变量）+ 行式记录列表可折叠 + 分组管理 + 自适应分页 usePanelPaging（rowHeight 49）+ PanelPager（月份切换/本月/新增/编辑/删除/分组管理/展开收起 goto(1)，折叠未挂载时分页惰性），前缀 ld-）
     ├── WorkbenchHabits.vue     # 习惯打卡面板（左栏 .hb-side=本周统计卡 + 新增/编辑表单；右栏 .hb-main=习惯卡片网格 .hb-list（repeat(auto-fill, minmax(250px,1fr)) 多列并排，gridRef=listEl 实测列数）+ PanelPager；≥1200px 双栏 grid（minmax(280px,340px) 1fr），其余单列；自适应分页 usePanelPaging（rowHeight 82，每页=rowsPerPage×colsPerRow）；testid hb-* 全保留）
     └── PanelPager.vue          # 工作台共享分页条（纯展示：props page/total，emit prev/next，无默认值/校验/业务逻辑；← 第 X / Y 页 →，testid panel-pager/panel-pager-prev/panel-pager-info/panel-pager-next，total≤1 不渲染、page≤1 上一页 disabled、page≥total 下一页 disabled；.panel-pager 置面板 flex 列底部 flex-shrink:0、面板自管上下间距，亮暗双主题 --color-* token + legacy 家族兜底；消费方绑 usePanelPaging 返回值 <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />）
-└── student/             # 学生工作台 19 SFC：14 面板已 Element Plus 全统一（表单/弹框/表格/radio/checkbox/color-picker/slider/分页全 el-*，data-testid 全保）+ 4 手写保留（Home/Onboarding/Placeholder/PinDialog）+ StudentToolbar 共享工具栏；testid 前缀：sa/dj/edu/se/sh/student/shw/sm/stg/stp/sp/spm/sr（Reading/Review/Reward 共用 sr），Timetable 无 testid；家长协同 PIN 锁（4-8 位、5 次错锁 5 分钟）；学段 K/P/J 由 studentSettings/studentStageCore（StudentOnboarding 强制）
+└── student/             # 学生工作台 22 SFC：15 面板已 Element Plus 全统一（表单/弹框/表格/radio/checkbox/color-picker/slider/分页全 el-*，data-testid 全保）+ 4 手写保留（Home/Onboarding/Placeholder/PinDialog）+ StudentToolbar 共享工具栏；testid 前缀：sa/dj/edu/se/sh/student/shw/sm/stg/stp/sp/spm/sr（Reading/Review/Reward 共用 sr），Timetable 无 testid；家长协同 PIN 锁（4-8 位、5 次错锁 5 分钟）；学段 K/P/J 由 studentSettings/studentStageCore（StudentOnboarding 强制）
     ├── StudentHome.vue            # 手写保留首页（问候 + 概览，testid 前缀 student-）
     ├── StudentOnboarding.vue      # 手写保留学段引导（K/P/J 强制，testid 前缀 stg-）
     ├── StudentPanelPlaceholder.vue # 手写保留占位面板（无 testid）
     ├── StudentParentPinDialog.vue  # 手写保留家长 PIN 锁弹框（4-8 位、5 次错锁 5 分钟，无 testid）
     ├── StudentHabits.vue          # 习惯打卡面板（EP 全统一；新增/编辑弹框 el-color-picker `sh-form-color`；testid 前缀 sh-）
     ├── StudentHomework.vue        # 作业面板（EP 全统一；testid 前缀 shw-）
-    ├── StudentTimetable.vue       # 课程表面板（EP 全统一；周视图 el-dialog 弹框 + 单元格弹框编辑、`stt-custom-toggle` el-checkbox 自定义学科；无 testid）
+    ├── StudentTimetable.vue       # 课程表面板（EP 全统一；周视图 el-dialog 弹框 + 单元格弹框编辑、`stt-custom-toggle` el-checkbox 自定义学科；无 testid；**仅展示**——学周数/每日节数等配置已迁出到 StudentTimetableConfig（入口：设置弹窗 → 学生工作台 → 课程表配置），本面板不再有配置弹框、也不占学生侧边菜单；滚动为**页面级**：`.stt-shell` overflow:auto 是唯一滚动容器，`.stt-grid-wrap` overflow:visible 自然撑开不再内部滚动，网格保底宽 `--stt-grid-min`（桌面 560px / 移动端 480px）超出时整页横向滚动；表头/节次列 position:sticky 相对 `.stt-shell` 吸顶吸左）
+    ├── StudentTimetableConfig.vue # 课程表配置面板（EP 全统一；**入口在设置弹窗**：AppSettingsDialog 学生工作台 tab 的子 tab `stu-timetable`（课程表配置），不占学生侧边菜单；prop `embedded` 隐藏自带标题并取消自身撑满/内滚动；承载原课程表内的基础配置：学周数/每日节数/班级/上午第一节开始/下午第一节开始/单节时长/课间休息/上午节数；+ Excel 模板下载（xlsx 动态 import，3 sheet：填写说明/示例数据/课程表模板，必填列名带 `*`）+ Excel 导入（扩展名校验 → sheet_to_json({header:1}) → mapHeaders → validateImportRows → 结果区（共/成功/新增/覆盖/失败 + 前 20 条错误明细 + 下载错误明细 CSV）→ confirmImport 调 store.importCells 整体写入，同 key 覆盖）；校验与纯逻辑全委托 studentTimetableImportCore，起止时间一律由 computePeriodTime 按节次配置推算（不采信文件时间）；data-testid：sttc-file-input/sttc-result/sttc-confirm-import）
     ├── StudentPlan.vue            # 计划面板（EP 全统一；el-table expand 行内目标：`sp-goal-toggle-*` el-checkbox + `sp-goal-range-*` el-slider 进度；testid 前缀 sp-）
     ├── StudentGoals.vue           # 学习目标面板（EP 全统一；目标类型/状态/进度条/截止剩余天数/列表+卡片双视图；testid 前缀 sg-）
     ├── StudentReview.vue          # 复习面板（EP 全统一；testid 前缀 sr-）

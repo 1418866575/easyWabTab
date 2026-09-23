@@ -54,6 +54,7 @@ import {
 import type { ContainerId } from '@/composables/useHomeLayout'
 import Icon from '@/components/Icon.vue'
 import BusinessCategoryManager from '@/components/business/BusinessCategoryManager.vue'
+import StudentTimetableConfig from '@/components/student/StudentTimetableConfig.vue'
 import CloudSyncConflictModal from './CloudSyncConflictModal.vue'
 
 // 弹窗 id 列表：从导出的契约表派生（与 store 内部 DIALOG_IDS 顺序一致），
@@ -66,7 +67,7 @@ type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'sync'
 type NavSubTab = 'nav-appearance' | 'nav-display' | 'nav-site' | 'nav-size' | 'nav-data'
 type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-todo-cat' | 'wb-cd-cat' | 'wb-note-cat' | 'wb-diary-cat' | 'wb-diary-journals' | 'wb-diary-add' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
 type BizSubTab = 'biz-base' | 'biz-backup' | 'biz-cat'
-type StuSubTab = 'stu-stage' | 'stu-info' | 'stu-subject' | 'stu-menu'
+type StuSubTab = 'stu-stage' | 'stu-info' | 'stu-subject' | 'stu-timetable' | 'stu-menu'
 /** 来源页：nav=导航站、workbench=个人工作台、business=销售记账、student=学生工作台、all=全显示(向后兼容) */
 type SettingsSource = 'nav' | 'workbench' | 'business' | 'student' | 'all'
 const props = withDefaults(defineProps<{ source?: SettingsSource }>(), { source: 'all' })
@@ -128,6 +129,7 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student', SubTabDef[]> = {
     { key: 'stu-stage',   label: '学段' },
     { key: 'stu-info',    label: '学生信息' },
     { key: 'stu-subject', label: '学科清单' },
+    { key: 'stu-timetable', label: '课程表配置' },
     { key: 'stu-menu',    label: '学生菜单' }
   ]
 }
@@ -246,6 +248,7 @@ const NAV_GROUPS: NavGroup[] = [
       { key: 'stu-stage', label: '学段', icon: 'trending-up', tab: 'student', sub: 'stu-stage' },
       { key: 'stu-info', label: '学生信息', icon: 'info', tab: 'student', sub: 'stu-info' },
       { key: 'stu-subject', label: '学科清单', icon: 'document', tab: 'student', sub: 'stu-subject' },
+      { key: 'stu-timetable', label: '课程表配置', icon: 'cog', tab: 'student', sub: 'stu-timetable' },
       { key: 'stu-menu', label: '学生菜单', icon: 'bookmark', tab: 'student', sub: 'stu-menu' }
     ]
   },
@@ -2504,6 +2507,17 @@ onUnmounted(() => {
               @click="onStudentAddSubject"
             >新增</button>
           </div>
+        </div>
+
+        <!-- 课程表配置（学生工作台 tab - 课程表配置）：基础配置 + Excel 模板下载 / 导入 -->
+        <div v-if="activeTab === 'student' && activeSubTab === 'stu-timetable'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">课程表配置</h3>
+          </div>
+          <p class="wb-menu-hint">
+            配置学周数 / 每日节数与节次时间；下载 Excel 模板批量导入课程。同一「星期 + 节次」的已有课程默认被覆盖。
+          </p>
+          <StudentTimetableConfig embedded />
         </div>
 
         <!-- 学生菜单（学生工作台 tab - 学生菜单）：菜单列表上下移/改名/显示开关 + 恢复默认 -->

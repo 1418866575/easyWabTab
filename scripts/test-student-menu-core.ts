@@ -136,7 +136,7 @@ test("T11 applyStageDefaultVisibility keeps user overrides", () => {
 test("T12 resolveStudentMenu vs resolveStudentMenuAll hidden items", () => {
   const settings = {
     menuOrder: undefined, menuLabels: undefined,
-    menuVisibility: { pomodoro: false },
+    menuVisibility: { homework: false },
     stage: "J1" as StudentStage, childName: "",
     parentPinHash: undefined, parentPinSalt: undefined,
     navFiltersExpanded: false
@@ -145,9 +145,9 @@ test("T12 resolveStudentMenu vs resolveStudentMenuAll hidden items", () => {
   const all = resolveStudentMenuAll(settings)
   assert.equal(all.length, 16)
   assert.equal(items.length, 15)
-  assert.ok(!items.map(i => i.key).includes("pomodoro"))
+  assert.ok(!items.map(i => i.key).includes("homework"))
   assert.equal(isStudentMenuEnabled(settings, "home"), true)
-  assert.equal(isStudentMenuEnabled(settings, "pomodoro"), false)
+  assert.equal(isStudentMenuEnabled(settings, "homework"), false)
 })
 
 // T13 defaultStudentMenuOrder 返回新数组（引用安全）

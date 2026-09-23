@@ -663,7 +663,7 @@ const skillInstall = [
           <section class="help-section">
             <h3 class="section-title"><Icon name="target" /> 学段差异</h3>
             <ul class="storage-list">
-              <li><strong>幼儿园（K）</strong>：游戏化任务卡片、家长主导、图标化界面；7 项默认习惯种子（刷牙/洗脸/收拾玩具/阅读绘本等）；无学科。</li>
+              <li><strong>幼儿园（K）</strong>：游戏化任务卡片、家长主导、图标化界面；含课程表（6 项幼儿活动：游戏活动/绘本阅读/手工/音乐/户外/午睡，可继续自定义）；7 项默认习惯种子（刷牙/洗脸/收拾玩具/阅读绘本等）。</li>
               <li><strong>小学（P）</strong>：作业管理 + 课程表 + 习惯养成 + 阅读记录；3 科默认学科（语数英）；6 项默认习惯种子。</li>
               <li><strong>初中（J）</strong>：学科管理 + 复习计划 + 错题本 + 考试倒计时；9 科默认学科；5 项默认习惯种子；家长入口隐藏。</li>
             </ul>
