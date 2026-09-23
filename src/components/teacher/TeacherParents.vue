@@ -7,6 +7,7 @@ import { useTeacherStore } from '@/stores/teacher'
 import TeacherStatCard from './TeacherStatCard.vue'
 import { sortedStudents } from '@/composables/teacherCore'
 import { fileToRows, rowsToParents } from '@/composables/teacherImportCore'
+import { exportExcel, excelFileName } from '@/composables/teacherExcelCore'
 
 const store = useTeacherStore()
 
@@ -60,6 +61,20 @@ async function onFile(e: Event): Promise<void> {
 function exportPaper(): void {
   window.print()
 }
+
+async function exportExcelFile(): Promise<void> {
+  const dataRows = rows.value.map((r) => [
+    r.student.no,
+    r.student.name,
+    r.student.gender,
+    r.parent?.parentName ?? '',
+    r.parent?.relation ?? '',
+    r.parent?.phone ?? ''
+  ])
+  await exportExcel(excelFileName('家长联系方式', store.cls ? `${store.cls.grade}${store.cls.name}` : '班级'), [
+    { name: '家长联系表', headers: ['学号', '学生姓名', '性别', '家长姓名', '关系', '联系电话'], rows: dataRows }
+  ])
+}
 </script>
 
 <template>
@@ -72,7 +87,8 @@ function exportPaper(): void {
       <div class="tw-toolbar tw-no-print">
         <button type="button" class="tw-btn tw-btn-primary" @click="fileInput?.click()">导入表格</button>
         <input ref="fileInput" type="file" accept=".xlsx,.xls,.csv" class="pt-file" @change="onFile" />
-        <button type="button" class="tw-btn" @click="exportPaper">导出纸质版</button>
+        <button type="button" class="tw-btn tw-no-print" @click="exportPaper">打印</button>
+        <button type="button" class="tw-btn tw-no-print" @click="exportExcelFile">导出 Excel</button>
       </div>
     </div>
 

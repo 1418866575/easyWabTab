@@ -6,6 +6,7 @@ import { computed, ref } from 'vue'
 import { useTeacherStore } from '@/stores/teacher'
 import TeacherStatCard from './TeacherStatCard.vue'
 import { sortedStudents } from '@/composables/teacherCore'
+import { exportExcel, excelFileName } from '@/composables/teacherExcelCore'
 
 const store = useTeacherStore()
 
@@ -36,6 +37,21 @@ async function onUnmark(id: string): Promise<void> {
 function exportPaper(): void {
   window.print()
 }
+
+async function exportExcelFile(): Promise<void> {
+  const rows = specials.value.map((s) => [
+    s.name,
+    s.no,
+    s.gender,
+    s.health.allergy,
+    s.health.disease,
+    s.health.emergencyPhone,
+    s.health.notes
+  ])
+  await exportExcel(excelFileName('特异体质学生', store.cls ? `${store.cls.grade}${store.cls.name}` : '班级'), [
+    { name: '特异体质学生', headers: ['姓名', '学号', '性别', '过敏原', '慢性疾病', '家长紧急电话', '注意事项'], rows }
+  ])
+}
 </script>
 
 <template>
@@ -46,7 +62,8 @@ function exportPaper(): void {
         <p class="tw-subtitle">属隐私敏感信息，仅班主任可见；标记后花名册与座位表会显示红色「!」角标。</p>
       </div>
       <div class="tw-toolbar tw-no-print">
-        <button type="button" class="tw-btn" @click="exportPaper">导出纸质版</button>
+        <button type="button" class="tw-btn" @click="exportPaper">打印</button>
+        <button type="button" class="tw-btn" @click="exportExcelFile">导出 Excel</button>
       </div>
     </div>
 

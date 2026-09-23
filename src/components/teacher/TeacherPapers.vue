@@ -5,6 +5,7 @@
 import { computed, ref, watch } from 'vue'
 import { useTeacherStore } from '@/stores/teacher'
 import { examStats } from '@/composables/teacherCore'
+import { exportExcel, excelFileName } from '@/composables/teacherExcelCore'
 
 const store = useTeacherStore()
 
@@ -86,6 +87,13 @@ function onRemoveQuestion(i: number): void {
 function exportPaper(): void {
   window.print()
 }
+
+async function exportExcelFile(): Promise<void> {
+  const rows = questions.value.map((q) => [q.no, q.type, q.point, q.wrongCount, errorRate(q.wrongCount)])
+  await exportExcel(excelFileName(`试卷_${paper.value?.title ?? ''}`, store.cls ? `${store.cls.grade}${store.cls.name}` : '班级'), [
+    { name: '题目明细', headers: ['题号', '题型', '知识点', '我班错误人数', '错误率'], rows }
+  ])
+}
 </script>
 
 <template>
@@ -96,7 +104,8 @@ function exportPaper(): void {
         <p class="tw-subtitle">录题后自动计算错误率，并按知识点排出易错题，便于讲评。</p>
       </div>
       <div class="tw-toolbar tw-no-print">
-        <button type="button" class="tw-btn" @click="exportPaper">导出纸质版</button>
+        <button type="button" class="tw-btn" @click="exportPaper">打印</button>
+        <button type="button" class="tw-btn" @click="exportExcelFile">导出 Excel</button>
       </div>
     </div>
 

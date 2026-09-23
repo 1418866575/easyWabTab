@@ -7,6 +7,7 @@ import { useTeacherStore } from '@/stores/teacher'
 import TeacherStatCard from './TeacherStatCard.vue'
 import { bandCounts, examStats, rankRows } from '@/composables/teacherCore'
 import { SCORE_BANDS } from '@/types/teacher'
+import { exportExcel, excelFileName } from '@/composables/teacherExcelCore'
 
 const store = useTeacherStore()
 
@@ -78,6 +79,13 @@ const linePoints = computed(() => {
 function exportPaper(): void {
   window.print()
 }
+
+async function exportExcelFile(): Promise<void> {
+  const dataRows = rows.value.map((r) => [r.rank, r.no, r.name, r.gender, r.score, r.comment])
+  await exportExcel(excelFileName(`成绩_${exam.value?.name ?? ''}`, store.cls ? `${store.cls.grade}${store.cls.name}` : '班级'), [
+    { name: '成绩排名', headers: ['排名', '学号', '姓名', '性别', '成绩', '评价'], rows: dataRows }
+  ])
+}
 </script>
 
 <template>
@@ -88,7 +96,8 @@ function exportPaper(): void {
         <p class="tw-subtitle">按考试查看分布与排名；成绩可直接编辑，修改后自动保存。</p>
       </div>
       <div class="tw-toolbar tw-no-print">
-        <button type="button" class="tw-btn" @click="exportPaper">导出纸质版</button>
+        <button type="button" class="tw-btn" @click="exportPaper">打印</button>
+        <button type="button" class="tw-btn" @click="exportExcelFile">导出 Excel</button>
       </div>
     </div>
 

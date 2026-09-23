@@ -6,6 +6,7 @@ import { computed, ref } from 'vue'
 import { useTeacherStore } from '@/stores/teacher'
 import TeacherStatCard from './TeacherStatCard.vue'
 import { sortedStudents } from '@/composables/teacherCore'
+import { exportExcel, excelFileName } from '@/composables/teacherExcelCore'
 import type { Student } from '@/types/teacher'
 
 const store = useTeacherStore()
@@ -55,6 +56,16 @@ async function onRemove(s: Student): Promise<void> {
 function exportPaper(): void {
   window.print()
 }
+
+async function exportExcelFile(): Promise<void> {
+  const rows = students.value.map((s) => {
+    const p = b.value?.parents[s.id]
+    return [s.no, s.name, s.gender, p?.parentName ?? '', p?.relation ?? '', p?.phone ?? '']
+  })
+  await exportExcel(excelFileName('学生名单', store.cls ? `${store.cls.grade}${store.cls.name}` : '班级'), [
+    { name: '学生名单', headers: ['学号', '姓名', '性别', '家长姓名', '关系', '联系电话'], rows }
+  ])
+}
 </script>
 
 <template>
@@ -65,7 +76,8 @@ function exportPaper(): void {
         <p class="tw-subtitle">花名册按学号排序；明细表可直接修改，修改后自动保存。</p>
       </div>
       <div class="tw-toolbar">
-        <button type="button" class="tw-btn" @click="exportPaper">导出纸质版</button>
+        <button type="button" class="tw-btn tw-no-print" @click="exportPaper">打印</button>
+        <button type="button" class="tw-btn tw-no-print" @click="exportExcelFile">导出 Excel</button>
       </div>
     </div>
 

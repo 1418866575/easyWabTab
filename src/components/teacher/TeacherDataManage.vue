@@ -220,7 +220,7 @@ async function onDeleteSemester(): Promise<void> {
 
     <section class="tw-card">
       <h4 class="tw-card-title">班级信息</h4>
-      <p class="tw-card-hint">修改后立即生效，影响侧栏班级标题与各页导出纸质版的页眉。</p>
+      <p class="tw-card-hint">修改后立即生效，影响侧栏班级标题与各页「打印 / 导出 Excel」的班级页眉。</p>
       <div class="dm-grid">
         <label class="tw-label">年级<input v-model="grade" class="tw-input" placeholder="如 三年级" /></label>
         <label class="tw-label">班级<input v-model="className" class="tw-input" placeholder="如 1班" /></label>

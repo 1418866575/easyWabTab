@@ -5,6 +5,7 @@
 import { computed, ref } from 'vue'
 import { useTeacherStore } from '@/stores/teacher'
 import { sortedStudents } from '@/composables/teacherCore'
+import { exportExcel, excelFileName } from '@/composables/teacherExcelCore'
 
 const store = useTeacherStore()
 
@@ -67,6 +68,15 @@ async function onRemoveCommittee(i: number): Promise<void> {
 function exportPaper(): void {
   window.print()
 }
+
+async function exportExcelFile(): Promise<void> {
+  const dutyRows = days.value.map((d) => [d.day, membersText(d.members), nameOf(d.leader)])
+  const committeeRows = committee.value.map((c, i) => [i + 1, c.role, c.name, c.duty])
+  await exportExcel(excelFileName('值日生表', store.cls ? `${store.cls.grade}${store.cls.name}` : '班级'), [
+    { name: '值日生安排', headers: ['星期', '值日生名单', '小组长'], rows: dutyRows },
+    { name: '班委名单', headers: ['序号', '职务', '姓名', '职责'], rows: committeeRows }
+  ])
+}
 </script>
 
 <template>
@@ -77,7 +87,8 @@ function exportPaper(): void {
         <p class="tw-subtitle">值日生名单用顿号「、」分隔，可直接编辑；修改后自动保存。</p>
       </div>
       <div class="tw-toolbar tw-no-print">
-        <button type="button" class="tw-btn" @click="exportPaper">导出纸质版</button>
+        <button type="button" class="tw-btn" @click="exportPaper">打印</button>
+        <button type="button" class="tw-btn" @click="exportExcelFile">导出 Excel</button>
       </div>
     </div>
 

@@ -1,10 +1,11 @@
 <script setup lang="ts">
 // 课程表：行=节次（时间可配置），列=周一~周六；点击格子即可编辑科目，修改自动保存。
-// 支持清空课程表与导出纸质版（打印样式隐藏无关元素）。
+// 支持清空课程表与打印（打印按钮已加 tw-no-print，打印样式隐藏无关元素）。
 
 import { computed, nextTick, ref } from 'vue'
 import { useTeacherStore } from '@/stores/teacher'
 import { WEEK_DAYS } from '@/types/teacher'
+import { exportExcel, excelFileName } from '@/composables/teacherExcelCore'
 
 const store = useTeacherStore()
 
@@ -53,6 +54,13 @@ async function onPeriodField(i: number, field: 'label' | 'time', value: string):
 function exportPaper(): void {
   window.print()
 }
+
+async function exportExcelFile(): Promise<void> {
+  const rows = periods.value.map((p, i) => [`${p.label} ${p.time}`, ...(grid.value[i] ?? [])])
+  await exportExcel(excelFileName('课程表', store.cls ? `${store.cls.grade}${store.cls.name}` : '班级'), [
+    { name: '课程表', headers: ['节次', ...WEEK_DAYS], rows }
+  ])
+}
 </script>
 
 <template>
@@ -63,7 +71,8 @@ function exportPaper(): void {
         <p class="tw-subtitle">点击任意格子即可编辑科目；节次名称与时间可直接修改。</p>
       </div>
       <div class="tw-toolbar tw-no-print">
-        <button type="button" class="tw-btn" @click="exportPaper">导出纸质版</button>
+        <button type="button" class="tw-btn" @click="exportPaper">打印</button>
+        <button type="button" class="tw-btn" @click="exportExcelFile">导出 Excel</button>
         <button type="button" class="tw-btn tw-btn-danger" @click="onClear">清空课程表</button>
       </div>
     </div>

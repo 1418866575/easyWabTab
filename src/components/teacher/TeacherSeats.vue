@@ -4,6 +4,7 @@
 
 import { computed, ref, watch } from 'vue'
 import { useTeacherStore } from '@/stores/teacher'
+import { exportExcel, excelFileName } from '@/composables/teacherExcelCore'
 
 const store = useTeacherStore()
 
@@ -75,6 +76,20 @@ async function onArrange(mode: 'roster' | 'random'): Promise<void> {
 function exportPaper(): void {
   window.print()
 }
+
+async function exportExcelFile(): Promise<void> {
+  const st = seats.value
+  const cols = st.cols || 0
+  const headers = ['', ...Array.from({ length: cols }, (_, i) => `${i + 1}`)]
+  const rows: Array<Array<string | number | null>> = []
+  for (let r = 0; r < (st.rows || 0); r++) {
+    const cells = (st.grid || []).slice(r * cols, r * cols + cols).map((sid) => studentOf(sid)?.name ?? '')
+    rows.push([`第${r + 1}行`, ...cells])
+  }
+  await exportExcel(excelFileName('座位表', store.cls ? `${store.cls.grade}${store.cls.name}` : '班级'), [
+    { name: '座位表', headers, rows }
+  ])
+}
 </script>
 
 <template>
@@ -87,7 +102,8 @@ function exportPaper(): void {
       <div class="tw-toolbar tw-no-print">
         <button type="button" class="tw-btn tw-btn-primary" @click="onArrange('roster')">按名单排座</button>
         <button type="button" class="tw-btn tw-btn-primary" @click="onArrange('random')">随机排座</button>
-        <button type="button" class="tw-btn" @click="exportPaper">导出纸质版</button>
+        <button type="button" class="tw-btn tw-no-print" @click="exportPaper">打印</button>
+        <button type="button" class="tw-btn tw-no-print" @click="exportExcelFile">导出 Excel</button>
       </div>
     </div>
 
