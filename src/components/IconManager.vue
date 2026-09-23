@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useIconsStore, type MergedIcon, type CustomIcon, type IconExportData } from '@/stores/icons'
 import { PRESET_ICONS, type PresetIcon } from '@/composables/presetIcons'
@@ -36,7 +37,7 @@ function handleUpload(event: Event) {
   if (!file) return
 
   if (file.size > MAX_SIZE) {
-    alert('图标文件不能超过 500KB')
+    toastAlert('图标文件不能超过 500KB')
     input.value = ''
     return
   }
@@ -60,9 +61,9 @@ function handleUpload(event: Event) {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e ?? '')
       if (/Quota|配额|space|exceed/i.test(msg)) {
-        alert('图标保存失败：存储空间不足，请减少自定义图标数量后重试')
+        toastAlert('图标保存失败：存储空间不足，请减少自定义图标数量后重试')
       } else {
-        alert('图标保存失败：' + (msg || '未知错误'))
+        toastAlert('图标保存失败：' + (msg || '未知错误'))
       }
     } finally {
       input.value = ''
@@ -103,7 +104,7 @@ const filteredIcons = computed(() => {
 const editingId = ref<string | null>(null)
 const editingLabel = ref('')
 
-function startEdit(icon: MergedIcon) {
+async function startEdit(icon: MergedIcon) {
   editingId.value = 'isCustom' in icon && icon.isCustom ? icon.id : null
   editingLabel.value = icon.label
 }
@@ -115,18 +116,18 @@ async function saveEdit() {
     cancelEdit()
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e ?? '')
-    alert('保存失败：' + (msg || '未知错误'))
+    toastAlert('保存失败：' + (msg || '未知错误'))
   }
 }
 
-function cancelEdit() {
+async function cancelEdit() {
   editingId.value = null
   editingLabel.value = ''
 }
 
 // 删除
 async function handleDelete(iconId: string) {
-  if (!confirm('确定删除该图标？')) return
+  if (!await showConfirm('确定删除该图标？')) return
   try {
     await store.deleteIcon(iconId)
     if (editingId.value === iconId) {
@@ -134,7 +135,7 @@ async function handleDelete(iconId: string) {
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e ?? '')
-    alert('删除失败：' + (msg || '未知错误'))
+    toastAlert('删除失败：' + (msg || '未知错误'))
   }
 }
 
@@ -165,13 +166,13 @@ function handleImport(event: Event) {
     try {
       data = JSON.parse(reader.result as string) as IconExportData
     } catch {
-      alert('导入失败：文件不是合法的 JSON，请确认文件未损坏或编码正确')
+      toastAlert('导入失败：文件不是合法的 JSON，请确认文件未损坏或编码正确')
       input.value = ''
       return
     }
     // 阶段 2：结构校验
     if (!data || typeof data !== 'object' || data.version !== 1 || !Array.isArray(data.icons)) {
-      alert('导入失败：文件格式不正确（必须是 icons 导出文件，含 version=1 和 icons 数组）')
+      toastAlert('导入失败：文件格式不正确（必须是 icons 导出文件，含 version=1 和 icons 数组）')
       input.value = ''
       return
     }
@@ -179,18 +180,18 @@ function handleImport(event: Event) {
     try {
       const { added } = await store.importIcons(data)
       if (added > 0) {
-        alert('导入成功：新增 ' + added + ' 个图标（重复 ID 已自动跳过）')
+        toastAlert('导入成功：新增 ' + added + ' 个图标（重复 ID 已自动跳过）')
       } else {
-        alert('导入完成：没有新增图标（全部为已存在的重复 ID）')
+        toastAlert('导入完成：没有新增图标（全部为已存在的重复 ID）')
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e ?? '')
       if (/Quota|配额|space|exceed/i.test(msg)) {
-        alert('导入失败：存储空间不足，请减少自定义图标后再试')
+        toastAlert('导入失败：存储空间不足，请减少自定义图标后再试')
       } else if (/格式/.test(msg)) {
-        alert('导入失败：' + msg)
+        toastAlert('导入失败：' + msg)
       } else {
-        alert('导入失败：保存图标出错 - ' + (msg || '未知错误'))
+        toastAlert('导入失败：保存图标出错 - ' + (msg || '未知错误'))
       }
     } finally {
       input.value = ''

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { ref, onMounted } from 'vue'
 import {
   getBackups,
@@ -51,8 +52,8 @@ const getBackupSummary = (backup: BackupData) => {
 }
 
 // 恢复备份
-const handleRestore = (backup: BackupData) => {
-  if (!confirm('确定要恢复此备份吗？当前数据将被覆盖。')) {
+const handleRestore = async (backup: BackupData) => {
+  if (!await showConfirm('确定要恢复此备份吗？当前数据将被覆盖。')) {
     return
   }
 
@@ -70,18 +71,18 @@ const handleRestore = (backup: BackupData) => {
     localStorage.setItem('user-search-engines', JSON.stringify(data.searchEngines))
 
     // 刷新页面以加载新数据
-    alert('恢复成功！页面将刷新。')
+    toastAlert('恢复成功！页面将刷新。')
     window.location.reload()
   } catch (e) {
-    alert('恢复失败：' + e)
+    toastAlert('恢复失败：' + e)
   } finally {
     loading.value = false
   }
 }
 
 // 删除单个备份
-const handleDelete = (timestamp: string) => {
-  if (!confirm('确定要删除此备份吗？')) {
+const handleDelete = async (timestamp: string) => {
+  if (!await showConfirm('确定要删除此备份吗？')) {
     return
   }
   deleteBackup(timestamp)
@@ -89,8 +90,8 @@ const handleDelete = (timestamp: string) => {
 }
 
 // 清空所有备份
-const handleClearAll = () => {
-  if (!confirm('确定要清空所有备份吗？此操作不可恢复！')) {
+const handleClearAll = async () => {
+  if (!await showConfirm('确定要清空所有备份吗？此操作不可恢复！')) {
     return
   }
   clearAllBackups()
@@ -103,7 +104,7 @@ const handleExport = () => {
   const categories = categoriesStore.customCategories
   const engines = enginesStore.customEngines
   exportToMarkdownFile(sites, categories, engines)
-  alert('导出成功！文件已下载。')
+  toastAlert('导出成功！文件已下载。')
 }
 
 // 切换自动备份

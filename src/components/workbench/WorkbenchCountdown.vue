@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Icon from '../Icon.vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useCountdownsStore, calcRemaining } from '@/stores/countdowns'
 import { useViewMode } from '@/composables/useViewMode'
@@ -213,7 +214,7 @@ function startEdit(item: CountdownItem): void {
   showDialog.value = true
 }
 
-function cancelForm(): void {
+async function cancelForm(): void {
   showDialog.value = false
   editingId.value = null
 }
@@ -243,7 +244,7 @@ async function handleSave(): Promise<void> {
 }
 
 async function handleDelete(id: string): Promise<void> {
-  if (confirm('确定要删除这个倒计时吗？')) {
+  if (await showConfirm('确定要删除这个倒计时吗？')) {
     await store.deleteCountdown(id)
   }
 }

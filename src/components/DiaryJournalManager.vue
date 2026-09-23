@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { useWorkbenchDiaryStore } from '../stores/workbenchDiary'
 import { useToast } from '../composables/useToast'
 import { DEFAULT_JOURNAL_ID } from '../composables/diaryCore'
@@ -33,13 +34,13 @@ function confirmRename() {
 function cancelRename() {
   editingId.value = null
 }
-function handleDelete(j: WorkbenchJournal) {
+async function handleDelete(j: WorkbenchJournal) {
   if (store.journals.length <= 1) return
   const target = store.journals.find(x => x.id !== j.id)
   const msg = target
     ? `删除「${j.name}」后，其下日记将迁移到「${target.name}」，确定删除？`
     : `删除「${j.name}」后，其下日记将迁移到默认日志本，确定删除？`
-  if (!confirm(msg)) return
+  if (!await showConfirm(msg)) return
   store.deleteJournal(j.id)
   toast.success('日志本已删除，日记已迁移')
 }
@@ -239,5 +240,45 @@ function setCurrent(j: WorkbenchJournal) {
 .djm-btn-icon:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+/* ===== 移动端适配 =====
+   该组件此前完全没有移动端规则（0 条 @media），窄屏下：
+   内边距吃掉大量可用宽度、列表项单行导致长名称与三个按钮互相挤压、
+   图标按钮实测仅约 24px 远低于触控标准。 */
+@media (max-width: 768px) {
+  /* 内边距收敛（原 20px 24px，叠加父级 14px 后窄屏可用宽度损失近 80px） */
+  .djm {
+    padding: 14px 12px;
+  }
+
+  /* 列表项改两行：名称独占首行，操作区换到次行右对齐，长名称不再与按钮重叠 */
+  .djm-item {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .djm-name {
+    flex: 1 1 100%;
+    word-break: break-all;
+  }
+  .djm-actions {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+  }
+
+  /* 触控目标放大到 44px（原约 24px） */
+  .djm-btn-icon {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 4px 12px;
+  }
+  .djm-btn-add {
+    min-height: 44px;
+  }
+
+  /* 新增行允许换行，避免输入框在 375px 被压到不可用宽度 */
+  .djm-add-row {
+    flex-wrap: wrap;
+  }
 }
 </style>

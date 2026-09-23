@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -164,11 +165,11 @@ function startEdit(record: BusinessDailyRecord): void {
   showDialog.value = true
 }
 
-function addRow(): void {
+async function addRow(): void {
   rows.push(emptyRow())
 }
 
-function removeRow(index: number): void {
+async function removeRow(index: number): void {
   rows.splice(index, 1)
 }
 
@@ -192,7 +193,7 @@ async function handleSave(): Promise<void> {
 }
 
 async function handleDelete(id: string): Promise<void> {
-  if (!confirm('确定要删除这条收摊记录吗？删除后统计将重新计算。')) return
+  if (!await showConfirm('确定要删除这条收摊记录吗？删除后统计将重新计算。')) return
   await store.deleteDailyRecord(id)
 }
 </script>

@@ -14,8 +14,12 @@
    4. 卡片保留 overflow-y:auto：即便某些弹窗内部结构不支持 flex 收缩，
       内容也能整体滚动查看，绝不被裁切。
    ============================================ */
-@media (max-width: 767px) {
-  /* 1) 遮罩层：去掉用于居中的留白内边距，铺满视口 */
+@media (max-width: 768px) {
+  /* 1) 遮罩层：
+        - 顶部保留 44px 命中区域，让 @click.self 与 Element Plus 的
+          close-on-click-modal 重新生效（此前 padding:0 铺满导致点空白关不掉）；
+        - 底部补 env(safe-area-inset-bottom)，避免全面屏 Home 指示条压住弹框底部按钮。
+        遮罩是 flex 容器，其 padding 会压缩内容区，卡片 height:100% 自动扣除这两段。 */
   .dialog-overlay,
   .manager-overlay,
   .modal-overlay,
@@ -26,10 +30,10 @@
   .biz-dialog-overlay,
   .bizcat-overlay,
   .el-overlay {
-    padding: 0 !important;
+    padding: 44px 0 env(safe-area-inset-bottom, 0px) !important;
   }
 
-  /* 2) 手写弹窗卡片（遮罩层直接子元素）：全屏化，保留自身滚动 */
+  /* 2) 手写弹窗卡片（遮罩层直接子元素）：铺满遮罩内容区，保留自身滚动 */
   .dialog-overlay > *,
   .manager-overlay > *,
   .modal-overlay > *,
@@ -43,18 +47,20 @@
     max-width: 100% !important;
     height: 100% !important;
     max-height: 100% !important;
-    border-radius: 0 !important;
+    border-radius: 12px 12px 0 0 !important;
     overflow-y: auto !important;
+    /* 滑到尽头不再带动背景页面（橡皮筋/滚动穿透） */
+    overscroll-behavior: contain !important;
   }
 
-  /* 3) Element Plus 弹窗：全屏 + body 区独立滚动（结构统一，可安全固定头尾） */
+  /* 3) Element Plus 弹窗：铺满遮罩内容区 + body 区独立滚动（结构统一，可安全固定头尾） */
   .el-dialog {
     width: 100% !important;
     max-width: 100% !important;
     height: 100% !important;
     max-height: 100% !important;
     margin: 0 !important;
-    border-radius: 0 !important;
+    border-radius: 12px 12px 0 0 !important;
     display: flex !important;
     flex-direction: column !important;
     overflow: hidden !important;
@@ -64,6 +70,12 @@
     flex: 1 !important;
     min-height: 0 !important;
     overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+  }
+
+  /* 4) 弹窗底部操作区补安全区，保证「保存/取消」不被 Home 指示条压住 */
+  .el-dialog__footer {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 
@@ -76,7 +88,7 @@
    ============================================ */
 
 /* 1) 分类 / 状态 / 分段切换器：≤767px 允许换行，长标签不再横向挤出 */
-@media (max-width: 767px) {
+@media (max-width: 768px) {
   .el-radio-group {
     flex-wrap: wrap !important;
     row-gap: 6px;
@@ -103,7 +115,7 @@
 /* 3) 工具行「新增/操作」按钮：≤767px 不被同行挤压变形（与 2) 同根因）
    针对已确认不换行的工具行（记账月操作区、销售各面板表格工具条）做双保险，
    并保护通用 .btn-add 系不被压缩成不规则形状。 */
-@media (max-width: 767px) {
+@media (max-width: 768px) {
   .ld-month-actions,
   .bizday-toolbar-left,
   .bizexp-toolbar-left,
@@ -145,3 +157,37 @@
 /* 移动端分页精简已统一迁移到 styles/pager.css（挂在共享类 .ewt-pager 上）。
    原先此处硬编码 9 个容器类名，后加的面板（笔记/家谱/倒计时/待办/销售/运动/记账）
    都没进名单导致移动端没优化；改为按类匹配后全部面板一并生效。 */
+
+/* ============================================
+   移动端确认弹框（替代原生 confirm）适配
+   showConfirm 基于 ElMessageBox.confirm：移动端改为大块居中弹框、按钮 ≥44px、
+   文案保留换行（white-space:pre-line 让 \n 生效，规避 dangerouslyUseHTMLString 的 XSS 风险）。
+   ============================================ */
+@media (max-width: 768px) {
+  .el-message-box {
+    width: 90vw !important;
+    max-width: 90vw !important;
+    --el-messagebox-padding-primary: 16px;
+    border-radius: 12px !important;
+  }
+  .el-message-box__message {
+    white-space: pre-line !important;
+    line-height: 1.6;
+    font-size: 15px !important;
+  }
+  .el-message-box__title {
+    font-size: 17px !important;
+    font-weight: 600 !important;
+  }
+  .el-message-box__btns {
+    display: flex !important;
+    gap: 10px;
+    padding: 4px 16px 16px !important;
+  }
+  .el-message-box__btns .el-button {
+    flex: 1 1 0 !important;
+    margin: 0 !important;
+    min-height: 44px !important;
+    font-size: 16px !important;
+  }
+}

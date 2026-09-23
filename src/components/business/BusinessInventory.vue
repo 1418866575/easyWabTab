@@ -421,6 +421,7 @@ function exportInventoryCsv(): void {
   width: 380px;
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
   display: flex;
   flex-direction: column;
   background: var(--color-bg-card, var(--color-bg-card));
@@ -543,6 +544,7 @@ function exportInventoryCsv(): void {
 /* el-dialog 换皮：溯源弹框 */
 .bizinv-trace :deep(.el-dialog) {
   max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
   display: flex;
   flex-direction: column;
 }

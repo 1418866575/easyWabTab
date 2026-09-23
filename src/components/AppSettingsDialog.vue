@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { reactive, ref, computed, onMounted, onUnmounted, watch, nextTick, toRaw } from 'vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import {
   useAppSettingsStore,
   DIALOG_LABELS,
@@ -707,14 +708,14 @@ async function doClear() {
 const snapshotList = ref<SnapshotWithSource[]>([])
 const snapshotBusy = ref(false)
 
-function snapshotTime(createdAt: string): string {
+async function snapshotTime(createdAt: string): string {
   const d = new Date(createdAt)
   const p = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
 }
 
 // 来源展示：手动快照/自动快照（旧记录缺 source 回退「自动」）
-function snapshotSourceLabel(s: SnapshotRecord): string {
+async function snapshotSourceLabel(s: SnapshotRecord): string {
   return (s as SnapshotWithSource).source === 'manual' ? '手动' : '自动'
 }
 
@@ -747,7 +748,7 @@ async function handleSnapshotNow(): Promise<void> {
 // 恢复快照：confirm → 密码双分支 → idbImportAll → 重载各 store → 清理更新快照 → toast
 // （镜像 WorkbenchView.handleImportFile：备份携带完整加密身份则接管，password-verification-v2 缺失且无身份时跳过密码恢复）
 async function handleRestoreSnapshot(snapshot: SnapshotRecord): Promise<void> {
-  if (!confirm(`确定要恢复到 ${snapshotTime(snapshot.createdAt)} 的快照吗？当前工作台数据将被覆盖。`)) return
+  if (!await showConfirm(`确定要恢复到 ${snapshotTime(snapshot.createdAt)} 的快照吗？当前工作台数据将被覆盖。`)) return
   if (snapshotBusy.value) return
   snapshotBusy.value = true
   try {
@@ -992,7 +993,7 @@ function handleBizExport(): void {
     toast.error('导出失败')
   }
 }
-function handleBizImportClick(): void {
+async function handleBizImportClick(): void {
   bizImportInput.value?.click()
 }
 async function handleBizImportFile(event: Event): Promise<void> {
@@ -1020,7 +1021,7 @@ async function handleBizImportFile(event: Event): Promise<void> {
       toast.error('文件格式不正确（不是销售记账备份）')
       return
     }
-    if (!confirm('确定要导入此备份吗？当前销售记账数据将被覆盖。')) return
+    if (!await showConfirm('确定要导入此备份吗？当前销售记账数据将被覆盖。')) return
     try {
       const data = await businessStore.importData(parsed.data)
       toast.success(
@@ -1056,7 +1057,7 @@ const studentGradeOptions = computed<string[]>(() => {
   return cur && !base.includes(cur) ? [cur, ...base] : base
 })
 
-function onStudentGradeChange(val: string | null): void {
+async function onStudentGradeChange(val: string | null): void {
   studentStore.setGrade(val ?? '')
 }
 
@@ -1066,7 +1067,7 @@ const studentNewSubject = ref('')
 async function onStudentStageSwitch(newStage: StudentStage): Promise<void> {
   if (newStage === studentStore.stage) return
   // 切学段会重置菜单可见性到学段默认值 + 播种默认学科（M2 起补习惯）
-  if (!confirm(`切换到「${studentStageOptions.find(o => o.key === newStage)?.label ?? ''}」学段？\n菜单可见性将应用该学段默认值，已有学段默认学科将重新初始化。`)) return
+  if (!await showConfirm(`切换到「${studentStageOptions.find(o => o.key === newStage)?.label ?? ''}」学段？\n菜单可见性将应用该学段默认值，已有学段默认学科将重新初始化。`)) return
   try {
     await studentStore.switchStage(newStage)
     toast.success(`已切换到「${studentStageName.value}」学段`)
@@ -1076,7 +1077,7 @@ async function onStudentStageSwitch(newStage: StudentStage): Promise<void> {
   }
 }
 
-function onStudentNicknameCommit(): void {
+async function onStudentNicknameCommit(): void {
   const input = studentNicknameInput.value
   if (!input) return
   const name = input.value.trim()
@@ -1084,7 +1085,7 @@ function onStudentNicknameCommit(): void {
   toast.success(name ? `昵称已更新为「${name}」` : '昵称已清空')
 }
 
-function onStudentAddSubject(): void {
+async function onStudentAddSubject(): void {
   const name = studentNewSubject.value.trim()
   if (!name) return
   const ok = studentStore.addSubject(name)
@@ -1096,15 +1097,15 @@ function onStudentAddSubject(): void {
   }
 }
 
-function onStudentRemoveSubject(name: string): void {
-  if (!confirm(`删除学科「${name}」？\n已有作业/复习/错题记录不会自动迁移到其他学科。`)) return
+async function onStudentRemoveSubject(name: string): void {
+  if (!await showConfirm(`删除学科「${name}」？\n已有作业/复习/错题记录不会自动迁移到其他学科。`)) return
   const ok = studentStore.removeSubject(name)
   if (ok) toast.success(`已删除学科「${name}」`)
   else toast.error('删除失败')
 }
 
-function onStudentResetMenu(): void {
-  if (!confirm('恢复学生菜单为当前学段默认顺序与可见性？')) return
+async function onStudentResetMenu(): void {
+  if (!await showConfirm('恢复学生菜单为当前学段默认顺序与可见性？')) return
   studentStore.resetMenu()
   toast.success('学生菜单已恢复默认')
 }
@@ -1116,7 +1117,7 @@ function onStudentMoveMenu(key: string, dir: 'up' | 'down'): void {
   }
 }
 
-function onStudentRenameMenu(key: string): void {
+async function onStudentRenameMenu(key: string): void {
   // 简易内联改名：使用 prompt（避免引入额外弹窗组件）
   const current = studentStore.menuLabels[key] ?? ''
   const next = window.prompt('请输入菜单名称', current)
@@ -1125,7 +1126,7 @@ function onStudentRenameMenu(key: string): void {
   if (!r.ok && r.reason === 'empty') toast.error('名称不能为空')
 }
 
-function onStudentToggleMenu(key: string, visible: boolean): void {
+async function onStudentToggleMenu(key: string, visible: boolean): void {
   studentStore.setMenuVisibility(key, visible)
 }
 
@@ -1187,7 +1188,7 @@ async function handleSyncNow(): Promise<void> {
 /** 以云端覆盖本地：外部工具改过云端 JSON 后常规同步不生效时的兜底入口 */
 async function handleForcePull(): Promise<void> {
   if (forcePullBusy.value) return
-  const confirmed = window.confirm(
+  const confirmed = await showConfirm(
     '将忽略本地未推送的改动，无条件用云端数据覆盖本地。\n\n适用于：用备份编辑技能或手工改过云端文件后，「立即同步」未生效的情况。\n\n确定继续吗？'
   )
   if (!confirmed) return
@@ -1199,7 +1200,7 @@ async function handleForcePull(): Promise<void> {
 /** 本地推送云端：跳过远端变更检测守卫，强制以本地数据覆盖云端 */
 async function handlePushLocal(): Promise<void> {
   if (pushLocalBusy.value) return
-  const confirmed = window.confirm(
+  const confirmed = await showConfirm(
     '将用本地数据覆盖云端（其他设备 / 外部工具对云端的改动会丢失）。\n\n适用于：要把本机最新改动强制推上云、且不在乎云端旧版本时。\n\n确定继续吗？'
   )
   if (!confirmed) return
@@ -1247,7 +1248,7 @@ function revertTodoCatName(name: string): void {
   todoCatDrafts[name] = name
 }
 
-function handleAddTodoCat(): void {
+async function handleAddTodoCat(): void {
   const name = newTodoCatName.value.trim()
   if (!name) return
   const res = todosCatStore.addCategory(name)
@@ -1259,8 +1260,8 @@ function handleAddTodoCat(): void {
   newTodoCatName.value = ''
 }
 
-function handleDeleteTodoCat(name: string): void {
-  if (!confirm(`确定要删除待办分类「${name}」吗？该分类下的待办将变为未分类`)) return
+async function handleDeleteTodoCat(name: string): void {
+  if (!await showConfirm(`确定要删除待办分类「${name}」吗？该分类下的待办将变为未分类`)) return
   const res = todosCatStore.deleteCategory(name)
   if (!res.ok) {
     toast.error(res.reason === 'in-use' ? '该分类下有待办，无法删除' : '删除失败')
@@ -1298,7 +1299,7 @@ function revertCdCatName(name: string): void {
   cdCatDrafts[name] = name
 }
 
-function handleAddCdCat(): void {
+async function handleAddCdCat(): void {
   const name = newCdCatName.value.trim()
   if (!name) return
   const res = countdownsCatStore.addCustomCategory(name)
@@ -1310,8 +1311,8 @@ function handleAddCdCat(): void {
   newCdCatName.value = ''
 }
 
-function handleDeleteCdCat(name: string): void {
-  if (!confirm(`确定要删除倒计时分类「${name}」吗？该分类下的倒计时将变为未分类`)) return
+async function handleDeleteCdCat(name: string): void {
+  if (!await showConfirm(`确定要删除倒计时分类「${name}」吗？该分类下的倒计时将变为未分类`)) return
   const res = countdownsCatStore.deleteCustomCategory(name)
   if (!res.ok) {
     toast.error(res.reason === 'in-use' ? '该分类下有倒计时，无法删除' : '删除失败')
@@ -1349,7 +1350,7 @@ async function commitNoteCatName(cat: { id: string; name: string }): Promise<voi
   }
 }
 
-function revertNoteCatName(cat: { id: string; name: string }): void {
+async function revertNoteCatName(cat: { id: string; name: string }): void {
   noteCatDrafts[cat.id] = cat.name
 }
 
@@ -1365,7 +1366,7 @@ async function handleAddNoteCat(): Promise<void> {
 }
 
 async function handleDeleteNoteCat(cat: { id: string; name: string }): Promise<void> {
-  if (!confirm(`确定要删除便签分类「${cat.name}」吗？该分类下的便签将变为未分类`)) return
+  if (!await showConfirm(`确定要删除便签分类「${cat.name}」吗？该分类下的便签将变为未分类`)) return
   const ok = await notesCatStore.deleteCategory(cat.id)
   if (!ok) {
     toast.error('便签分类删除失败')
@@ -1406,7 +1407,7 @@ async function ledgerCatStartEdit(c: { id: string; name: string; type: 'income' 
   ledgerCatDrafts[c.id] = c.name
   ledgerCatEditType[c.id] = c.type
 }
-function ledgerCatCancelEdit(): void { ledgerCatEditingId.value = null }
+async function ledgerCatCancelEdit(): void { ledgerCatEditingId.value = null }
 
 async function ledgerCatSave(id: string): Promise<void> {
   if (ledgerCatEditingId.value !== id) return
@@ -1429,7 +1430,7 @@ async function handleAddLedgerCat(): Promise<void> {
 async function handleDeleteLedgerCat(id: string): Promise<void> {
   const c = sortedLedgerCategories.value.find(x => x.id === id)
   if (!c) return
-  if (!confirm(`确定要删除记账分类「${c.name}」吗？\n\n该分类被记账记录使用时将无法删除。`)) return
+  if (!await showConfirm(`确定要删除记账分类「${c.name}」吗？\n\n该分类被记账记录使用时将无法删除。`)) return
   const res = await ledStore.deleteCategory(id)
   if (!res.ok) {
     if (res.reason === 'in-use') toast.error('该分类已被记账记录使用，无法删除')
@@ -3405,8 +3406,10 @@ html.dark .remind-label {
   .manager {
     width: 100%;
     height: calc(100vh - 40px);
+    height: calc(100dvh - 40px);
     min-height: 0;
     max-height: calc(100vh - 40px);
+    max-height: calc(100dvh - 40px);
   }
 
   .grid-header {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -298,7 +299,7 @@ function startEdit(view: EntryView): void {
   showDialog.value = true
 }
 
-function cancelForm(): void {
+async function cancelForm(): void {
   showDialog.value = false
   editingId.value = null
 }
@@ -317,7 +318,7 @@ async function handleSave(): Promise<void> {
 }
 
 async function handleDelete(id: string): Promise<void> {
-  if (confirm('确定要删除这笔记账吗？')) {
+  if (await showConfirm('确定要删除这笔记账吗？')) {
     await store.deleteEntry(id)
     paging.goto(1) // 删除后列表回第 1 页
   }
@@ -1427,6 +1428,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
     min-width: 0 !important;
     max-width: 100% !important;
     height: 90vh !important;
+    height: 90dvh !important;
   }
 }
 

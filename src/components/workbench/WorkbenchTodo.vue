@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -214,7 +215,7 @@ function onTodoDragOver(id: string, event: DragEvent): void {
   if (dragSourceId.value && dragSourceId.value !== id) dragOverId.value = id
 }
 
-function onTodoDragLeave(): void {
+async function onTodoDragLeave(): void {
   dragOverId.value = null
 }
 
@@ -225,13 +226,13 @@ async function onTodoDrop(id: string): Promise<void> {
   dragOverId.value = null
 }
 
-function onTodoDragEnd(): void {
+async function onTodoDragEnd(): void {
   dragSourceId.value = null
   dragOverId.value = null
 }
 
 async function handleDelete(id: string): Promise<void> {
-  if (confirm('确定要删除这个待办任务吗？')) {
+  if (await showConfirm('确定要删除这个待办任务吗？')) {
     await store.deleteTodo(id)
   }
 }

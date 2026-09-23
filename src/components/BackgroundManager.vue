@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useThemeStore, type BackgroundType, type CustomBackground } from '../stores/theme'
 
@@ -75,7 +76,7 @@ function handleUpload(event: Event) {
   if (!file) return
 
   if (file.size > MAX_BG_SIZE) {
-    alert('背景图片文件不能超过 5MB')
+    toastAlert('背景图片文件不能超过 5MB')
     input.value = ''
     return
   }

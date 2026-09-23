@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -170,7 +171,7 @@ async function saveDialog(): Promise<void> {
   }
 }
 
-function gradeErrorMsg(reason?: string): string {
+async function gradeErrorMsg(reason?: string): string {
   switch (reason) {
     case 'empty': return '考试名称不能为空'
     case 'invalid-date': return '考试日期格式不正确'
@@ -184,7 +185,7 @@ function gradeErrorMsg(reason?: string): string {
 async function handleDelete(id: string): Promise<void> {
   const g = store.grades.find(x => x.id === id)
   if (!g) return
-  if (!confirm(`确定删除「${g.examName}」的成绩记录吗？`)) return
+  if (!await showConfirm(`确定删除「${g.examName}」的成绩记录吗？`)) return
   const r = await store.deleteGrade(id)
   if (r.ok) {
     if (editingId.value === id) closeDialog()

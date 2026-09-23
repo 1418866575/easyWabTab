@@ -7,6 +7,7 @@
 // K 段菜单默认关闭此面板；P/J 段空表，用户自填
 
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { useStudentTimetableStore } from '@/stores/studentTimetable'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
 import { useToast } from '@/composables/useToast'
@@ -277,7 +278,7 @@ const TIMETABLE_ERROR_MESSAGES: Record<string, string> = {
   'invalid-time': '时间格式错误或结束时间需晚于开始时间',
   'not-found': '课程不存在'
 }
-function timetableErrorToast(result: { ok: boolean; reason?: string }): void {
+async function timetableErrorToast(result: { ok: boolean; reason?: string }): void {
   if (result.ok) return
   toast.error(TIMETABLE_ERROR_MESSAGES[result.reason ?? ''] ?? '操作失败')
 }
@@ -305,7 +306,7 @@ async function removeCell(): Promise<void> {
 }
 
 async function clearAllCells(): Promise<void> {
-  if (!confirm('确定要清空全部课程吗？此操作不可撤销。')) return
+  if (!await showConfirm('确定要清空全部课程吗？此操作不可撤销。')) return
   await store.clearAll()
   toast.success('已清空全部课程')
 }
@@ -755,6 +756,47 @@ onBeforeUnmount(() => {
   width: 0;
   height: 0;
   display: none;
+}
+
+/* ===== 移动端适配 =====
+   问题：格子列宽为「节次列 + repeat(7, 1fr)」，375px 下每列仅剩约 36px，
+   学科名被 nowrap + 省略号截成单字，格子触控宽度也远低于 44px。
+   改法：给每列设 64px 最小宽度，放不下时容器横向滚动（min-width: max-content），
+   并在移动端显示细滚动条作为「还能横向滑动」的视觉提示。 */
+@media (max-width: 768px) {
+  .stt-grid {
+    --stt-period-col: 52px;
+    grid-template-columns: var(--stt-period-col) repeat(7, minmax(64px, 1fr));
+    /* 宽度由内容决定，不再被压缩到不可读 */
+    min-width: max-content;
+  }
+
+  .stt-grid-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 移动端恢复 4px 细横向滚动条：既是可滚动提示，也不遮挡内容 */
+  .stt-grid-wrap::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+    display: block;
+  }
+  .stt-grid-wrap::-webkit-scrollbar-thumb {
+    background: var(--color-border, #d1d5db);
+    border-radius: 2px;
+  }
+
+  /* 格子字号收敛，配合更紧凑的布局 */
+  .stt-cell {
+    font-size: 12px;
+  }
+
+  /* 周次切换按钮触控目标 44px（原 28×28px） */
+  .stt-week-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
 }
 .stt-grid {
   --stt-period-col: 74px;

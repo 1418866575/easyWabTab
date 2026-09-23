@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -202,7 +203,7 @@ function startEdit(note: WorkbenchNote): void {
   formOpen.value = true
 }
 
-function cancelForm(): void {
+async function cancelForm(): void {
   formOpen.value = false
 }
 
@@ -225,7 +226,7 @@ async function handlePin(note: WorkbenchNote): Promise<void> {
 }
 
 async function handleDelete(id: string): Promise<void> {
-  if (confirm('确定要删除这个便签吗？')) {
+  if (await showConfirm('确定要删除这个便签吗？')) {
     await store.deleteNote(id)
     cancelForm()
   }
@@ -329,11 +330,11 @@ function startEditEntry(noteId: string, entry: TimelineEntry): void {
   entryEditContent.value = entry.content
 }
 
-function cancelEditEntry(): void {
+async function cancelEditEntry(): void {
   editingEntry.value = null
 }
 
-function canSaveEntry(): boolean {
+async function canSaveEntry(): boolean {
   return isValidDatetime(entryEditDatetime.value.trim()) && entryEditContent.value.trim().length > 0
 }
 
@@ -347,7 +348,7 @@ async function handleSaveEntry(noteId: string, entryId: string): Promise<void> {
 }
 
 async function handleDeleteEntry(noteId: string, entryId: string): Promise<void> {
-  if (confirm('确定要删除这条时光记录吗？')) {
+  if (await showConfirm('确定要删除这条时光记录吗？')) {
     await store.deleteTimelineEntry(noteId, entryId)
     if (editingEntry.value?.entryId === entryId) editingEntry.value = null
   }
@@ -938,6 +939,7 @@ onUnmounted(() => {
 .note-form {
   width: 100%; max-width: var(--dlg-w-notes, 1000px);
   height: var(--dlg-h-notes, 90vh); max-height: calc(100vh - 40px); overflow-y: auto;
+  height: var(--dlg-h-notes, 90dvh); max-height: calc(100dvh - 40px); overflow-y: auto;
   display: flex; flex-direction: column; gap: 12px; padding: 20px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));

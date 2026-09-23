@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -150,7 +151,7 @@ function removeGoalInput(idx: number): void {
   dialogGoalInputs.value.splice(idx, 1)
 }
 
-function onTypeChange(e: Event): void {
+async function onTypeChange(e: Event): void {
   const val = (e.target as HTMLSelectElement).value as StudentPlanType
   dialogType.value = val
   if (editingId.value === null) {
@@ -203,7 +204,7 @@ async function saveEditDialog(): Promise<void> {
 }
 
 async function handleDelete(id: string): Promise<void> {
-  if (!confirm('确定删除该计划？目标进度数据将一并删除。')) return
+  if (!await showConfirm('确定删除该计划？目标进度数据将一并删除。')) return
   await store.deletePlan(id)
   toast.success('计划已删除')
   listPage.value = 1

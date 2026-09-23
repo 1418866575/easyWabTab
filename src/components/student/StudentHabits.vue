@@ -8,6 +8,7 @@
 // 5. 卡片栅格/行高与成人 WorkbenchHabits 完全一致（minmax(300px,1fr)，rowHeight 330，自适应每页条数）
 
 import { computed, onMounted, ref, watch } from 'vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { useStudentHabitsStore } from '@/stores/studentHabits'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
 import { useToast } from '@/composables/useToast'
@@ -144,7 +145,7 @@ function openEditDialog(id: string): void {
   showEditDialog.value = true
 }
 
-function closeEditDialog(): void {
+async function closeEditDialog(): void {
   showEditDialog.value = false
   editingId.value = null
 }
@@ -177,7 +178,7 @@ async function saveEditDialog(): Promise<void> {
 async function handleDelete(id: string): Promise<void> {
   const h = store.habits.find(x => x.id === id)
   if (!h) return
-  if (!confirm(`确定要删除习惯「${h.name}」吗？删除后打卡记录一并清除。`)) return
+  if (!await showConfirm(`确定要删除习惯「${h.name}」吗？删除后打卡记录一并清除。`)) return
   const result = await store.deleteHabit(id)
   if (result.ok) {
     if (editingId.value === id) closeEditDialog()
@@ -228,7 +229,7 @@ function openRecordAdd(): void {
   recordDialogVisible.value = true
 }
 
-function openRecordEdit(r: { id: string }): void {
+async function openRecordEdit(r: { id: string }): void {
   const rec = store.records.find(x => x.id === r.id)
   if (!rec) return
   recordEditingId.value = rec.id
@@ -268,7 +269,7 @@ async function saveRecordDialog(): Promise<void> {
 }
 
 async function handleRecordDelete(id: string): Promise<void> {
-  if (!confirm('确定删除这条打卡记录吗？将同时撤销该次积分。')) return
+  if (!await showConfirm('确定删除这条打卡记录吗？将同时撤销该次积分。')) return
   const r = await store.deleteRecord(id)
   if (!r.ok) { habitErrorToast(r); return }
   toast.success('打卡记录已删除')

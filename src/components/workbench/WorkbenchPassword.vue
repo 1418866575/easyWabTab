@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { usePasswordsStore } from '@/stores/passwords'
 import type { PasswordSaveResult } from '@/stores/passwords'
 import { useSitesStore } from '@/stores/sites'
@@ -59,7 +60,7 @@ async function handleUnlock(): Promise<void> {
   }
 }
 
-function handleLock(): void {
+async function handleLock(): void {
   passwordsStore.lock()
   masterPasswordInput.value = ''
   masterPasswordConfirm.value = ''
@@ -72,7 +73,7 @@ function handleLock(): void {
 // 破坏性操作，二次确认后执行；已启用云同步时清空状态会同步到其他设备。
 async function handleResetVault(): Promise<void> {
   if (
-    !confirm(
+    !await showConfirm(
       '确定要重置密码吗？\n\n此操作将清空所有已保存的密码条目，并清除主密码。\n重置后需重新设置主密码，已保存的密码无法恢复。'
     )
   ) {
@@ -255,7 +256,7 @@ function cancelForm(): void {
  * 密码改动会立即主动推送云端，所以"同步成功"必须如实告知；
  * 推送失败也要讲清楚——否则用户会以为什么都好了，下次拉取被云端覆盖才发现丢了。
  */
-function toastSaved(verb: string, r: PasswordSaveResult): void {
+async function toastSaved(verb: string, r: PasswordSaveResult): void {
   if (r.synced) toast.success(`${verb}成功，已同步到云端`)
   else if (r.cloudEnabled) toast.warning(`${verb}成功，但云同步失败，请稍后手动同步`)
   else toast.success(`${verb}成功`)
@@ -284,7 +285,7 @@ async function handleSave(): Promise<void> {
 }
 
 async function handleDelete(id: string): Promise<void> {
-  if (confirm('确定要删除这个密码条目吗？')) {
+  if (await showConfirm('确定要删除这个密码条目吗？')) {
     const result = await passwordsStore.deletePassword(id)
     if (!result.saved) {
       toast.error('删除失败：密码库已锁定，请重新解锁后重试')
@@ -979,6 +980,7 @@ watch(
   width: 100%;
   max-width: var(--dlg-w-wb-password, 520px);
   max-height: var(--dlg-h-wb-password, 90vh);
+  max-height: var(--dlg-h-wb-password, 90dvh);
   overflow-y: auto;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -52,13 +53,13 @@ const isTargetValid = computed(() => {
   return Number.isFinite(t) && t > 0
 })
 
-function openTargetDialog(): void {
+async function openTargetDialog(): void {
   const plan = store.plans.diet
   formTarget.value = plan ? String(plan.target) : ''
   showTargetDialog.value = true
 }
 
-function closeTargetDialog(): void {
+async function closeTargetDialog(): void {
   showTargetDialog.value = false
 }
 
@@ -69,7 +70,7 @@ async function handleSaveTarget(): Promise<void> {
 }
 
 async function handleClearTarget(): Promise<void> {
-  if (confirm('确定要清除每日热量目标吗？')) {
+  if (await showConfirm('确定要清除每日热量目标吗？')) {
     await store.setPlan('diet', null)
     closeTargetDialog()
   }
@@ -150,7 +151,7 @@ function startEditRecord(id: string): void {
   showRecordDialog.value = true
 }
 
-function cancelRecordForm(): void {
+async function cancelRecordForm(): void {
   showRecordDialog.value = false
   editingId.value = null
 }
@@ -175,7 +176,7 @@ async function handleSaveRecord(): Promise<void> {
 }
 
 async function handleDeleteRecord(id: string): Promise<void> {
-  if (confirm('确定要删除这条饮食记录吗？')) {
+  if (await showConfirm('确定要删除这条饮食记录吗？')) {
     await store.deleteRecord('diet', id)
     listPage.value = 1
   }

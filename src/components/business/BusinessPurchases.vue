@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -130,7 +131,7 @@ function startAdd(): void {
   showDialog.value = true
 }
 
-function startEdit(p: BusinessPurchase): void {
+async function startEdit(p: BusinessPurchase): void {
   editingId.value = p.id
   formProductId.value = p.productId
   formDate.value = p.date
@@ -158,7 +159,7 @@ async function handleSave(): Promise<void> {
 }
 
 async function handleDelete(id: string): Promise<void> {
-  if (!confirm('确定要删除这笔记货吗？')) return
+  if (!await showConfirm('确定要删除这笔记货吗？')) return
   await store.deletePurchase(id)
 }
 </script>

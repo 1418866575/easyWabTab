@@ -5,6 +5,7 @@
 // 复用 countdownCore 的 calcRemaining/sortCountdowns/filterCountdowns/repeatLabel/categoryLabel
 
 import { computed, onMounted, ref, watch } from 'vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { useStudentExamStore } from '@/stores/studentExam'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
 import { useToast } from '@/composables/useToast'
@@ -140,7 +141,7 @@ function closeEditDialog(): void {
   editingId.value = null
 }
 
-function buildRepeat(): CountdownRepeat | null {
+async function buildRepeat(): CountdownRepeat | null {
   return formRepeatType.value === 'yearly' ? { type: 'yearly' } : null
 }
 
@@ -185,7 +186,7 @@ async function saveEditDialog(): Promise<void> {
 async function handleDelete(id: string): Promise<void> {
   const c = store.countdowns.find(x => x.id === id)
   if (!c) return
-  if (!confirm(`确定要删除「${c.name}」吗？`)) return
+  if (!await showConfirm(`确定要删除「${c.name}」吗？`)) return
   const result = await store.deleteExam(id)
   if (result.ok) {
     if (editingId.value === id) closeEditDialog()

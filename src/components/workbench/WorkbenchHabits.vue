@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
 import { useToast } from '@/composables/useToast'
 import { localToday } from '@/composables/todoCore'
@@ -91,7 +92,7 @@ function openEditDialog(id: string): void {
   showEditDialog.value = true
 }
 
-function closeEditDialog(): void {
+async function closeEditDialog(): void {
   showEditDialog.value = false
   editingId.value = null
 }
@@ -119,7 +120,7 @@ async function saveEditDialog(): Promise<void> {
 
 async function handleDelete(id: string): Promise<void> {
   const h = store.habits.find(x => x.id === id)
-  if (!confirm(`确定要删除习惯「${h?.name ?? ''}」吗？删除后打卡记录一并清除。`)) return
+  if (!await showConfirm(`确定要删除习惯「${h?.name ?? ''}」吗？删除后打卡记录一并清除。`)) return
   const result = await store.deleteHabit(id)
   if (result.ok) {
     if (editingId.value === id) closeEditDialog()

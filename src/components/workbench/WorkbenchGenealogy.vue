@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { useViewMode } from '@/composables/useViewMode'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 import RecordsCard from '@/components/common/RecordsCard.vue'
@@ -167,7 +168,7 @@ function startEdit(m: FamilyMember): void {
   showMemberDialog.value = true
 }
 
-function cancelMember(): void {
+async function cancelMember(): void {
   showMemberDialog.value = false
   editingId.value = null
 }
@@ -198,7 +199,7 @@ async function handleSaveMember(): Promise<void> {
 async function handleDelete(m: FamilyMember): Promise<void> {
   const children = getChildren(store.members, m.id)
   const childTip = children.length > 0 ? `其子/女（${children.map((c) => c.name).join('、')}）将保留为孤儿。` : ''
-  if (window.confirm(`确定删除「${m.name}」吗？\n${childTip}\n（仅删除该成员，并清理他人对其的父母/配偶引用，不做级联删除。）`)) {
+  if (await showConfirm(`确定删除「${m.name}」吗？\n${childTip}\n（仅删除该成员，并清理他人对其的父母/配偶引用，不做级联删除。）`)) {
     await store.deleteMember(m.id)
     toast.success('已删除')
   }

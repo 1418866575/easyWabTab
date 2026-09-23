@@ -14,21 +14,33 @@ interface CacheEntry {
 type IconCache = Record<string, CacheEntry>
 
 /**
- * 从 localStorage 获取完整缓存
+ * 内存缓存：原先每次 getCache() 都要同步 localStorage.getItem + JSON.parse
+ * 整份 base64 图标缓存（可达 MB 级），而每张站点卡片渲染都会调用一次，
+ * 首页渲染与滚动时被反复解析，造成明显的主线程阻塞。
+ * 改为进程内保留一份，只在首次读取或写入时才真正解析 / 落盘。
+ */
+let memoryCache: IconCache | null = null
+
+/**
+ * 从缓存获取完整数据（优先走内存，避免重复 JSON.parse）
  */
 function getCache(): IconCache {
+  if (memoryCache) return memoryCache
   try {
     const raw = localStorage.getItem(ICON_CACHE_KEY)
-    return raw ? JSON.parse(raw) : {}
+    memoryCache = raw ? JSON.parse(raw) : {}
   } catch {
-    return {}
+    memoryCache = {}
   }
+  return memoryCache
 }
 
 /**
  * 保存缓存到 localStorage
  */
 function saveCache(cache: IconCache): void {
+  // 同步内存副本，让后续读取直接命中，不再重复解析 localStorage
+  memoryCache = cache
   try {
     localStorage.setItem(ICON_CACHE_KEY, JSON.stringify(cache))
   } catch {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, watchEffect } from 'vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { useRouter, useRoute } from 'vue-router'
 import type { Site } from '../types'
 import SiteCard from '../components/SiteCard.vue'
@@ -215,6 +216,31 @@ watchEffect(() => {
 
 const filteredSites = computed(() => store.paginatedSites)
 
+// ===== 移动端长列表分批渲染 =====
+// 问题：移动端 pageSize=99999 会一次性渲染全部站点，每张卡片 10+ 个节点，
+// 站点多时单页可达数千 DOM，首页渲染与滚动明显掉帧。
+// 改法：数据层保持全量（保留「移动端不分页、无需翻页」的手感），
+// 仅在渲染层按批输出，滚动接近底部时自动追加下一批。
+const MOBILE_BATCH = 40
+const mobileRenderLimit = ref(MOBILE_BATCH)
+const isMobilePaging = ref(false)
+const visibleSites = computed(() => {
+  if (!isMobilePaging.value) return filteredSites.value
+  return filteredSites.value.slice(0, mobileRenderLimit.value)
+})
+async function maybeLoadMore(): void {
+  if (!isMobilePaging.value) return
+  const doc = document.documentElement
+  const nearBottom = doc.scrollHeight - window.scrollY - window.innerHeight < 600
+  if (nearBottom && mobileRenderLimit.value < filteredSites.value.length) {
+    mobileRenderLimit.value += MOBILE_BATCH
+  }
+}
+// 筛选/搜索变化后重新从第一批开始渲染
+watch(filteredSites, () => {
+  mobileRenderLimit.value = MOBILE_BATCH
+})
+
 // ===== 本站筛选：独立输入框，只过滤下方卡片列表；顶部 GlobalSearch 仍走外部搜索引擎 =====
 const siteFilter = ref(store.searchQuery)
 watch(siteFilter, (v) => {
@@ -242,7 +268,7 @@ const filterCountText = computed(() => {
   return hasAnyFilter.value ? `筛选出 ${shown} / ${total} 个` : `共 ${total} 个`
 })
 
-function clearAllFilters(): void {
+async function clearAllFilters(): void {
   store.clearFilters()
   store.showOnlyInvalid = false
   siteFilter.value = ''
@@ -268,7 +294,7 @@ const closeAllModals = () => {
 // 注册键盘快捷键
 useKeyboardShortcuts({
   onCloseModal: closeAllModals,
-  onToggleTheme: () => themeStore.toggleTheme()
+  onToggleTheme: async () => themeStore.toggleTheme()
 })
 
 const handleEdit = (site: Site) => {
@@ -276,14 +302,14 @@ const handleEdit = (site: Site) => {
   router.push({ query: { modal: 'edit', url: encodeURIComponent(site.url) } })
 }
 
-const handleDelete = (url: string) => {
-  if (confirm('确定要删除这个网站吗？')) {
+const handleDelete = async (url: string) => {
+  if (await showConfirm('确定要删除这个网站吗？')) {
     store.deleteSite(url)
   }
 }
 
-const handleUnmark = (url: string) => {
-  if (confirm('确定要取消失效标记吗？')) {
+const handleUnmark = async (url: string) => {
+  if (await showConfirm('确定要取消失效标记吗？')) {
     store.unmarkInvalid(url)
   }
 }
@@ -293,7 +319,7 @@ const handleAdd = () => {
   router.push({ query: { modal: 'add' } })
 }
 
-const handleSave = (site: Site) => {
+const handleSave = async (site: Site) => {
   if (editingSite.value) {
     // 编辑模式 - 直接更新
     store.updateSite(editingSite.value.url, site)
@@ -304,7 +330,7 @@ const handleSave = (site: Site) => {
   // 添加模式 - 检查重复
   const existing = store.sites.find(s => s.url === site.url)
   if (existing) {
-    const action = confirm(`该网址已存在：${existing.name}\n\n确定更新？取消则跳过。`)
+    const action = await showConfirm(`该网址已存在：${existing.name}\n\n确定更新？取消则跳过。`)
     if (action) {
       store.updateSite(site.url, site)
     }
@@ -334,8 +360,10 @@ const pagingMql = window.matchMedia('(min-width: 769px)')
 let desktopPageSize = 18
 function syncMobilePaging(): void {
   if (pagingMql.matches) {
+    isMobilePaging.value = false
     store.setPageSize(desktopPageSize)
   } else {
+    isMobilePaging.value = true
     if (store.pageSize !== 99999) desktopPageSize = store.pageSize
     store.setPageSize(99999)
     store.setPage(1)
@@ -344,9 +372,12 @@ function syncMobilePaging(): void {
 onMounted(() => {
   syncMobilePaging()
   pagingMql.addEventListener('change', syncMobilePaging)
+  // 移动端分批渲染：滚动接近底部时追加下一批（passive 避免影响滚动性能）
+  window.addEventListener('scroll', maybeLoadMore, { passive: true })
 })
 onUnmounted(() => {
   pagingMql.removeEventListener('change', syncMobilePaging)
+  window.removeEventListener('scroll', maybeLoadMore)
 })
 
 // ===== App Bar 高度测量（移动端专用）=====
@@ -514,7 +545,7 @@ onUnmounted(() => {
 
       <main ref="sitesGridRef" class="sites-grid">
         <SiteCard
-          v-for="site in filteredSites"
+          v-for="site in visibleSites"
           :key="site.url"
           :site="site"
           :readonly="false"

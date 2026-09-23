@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
 import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
@@ -71,7 +71,18 @@ const SECTION_KEYS = [
 ] as const
 type SectionKey = (typeof SECTION_KEYS)[number]
 
-const activeSection = ref<SectionKey>('home')
+// 当前面板写入 URL query：此前 activeSection 只是组件内局部状态，
+// 跳到导航站再回来必然回落「首页」，分页/筛选/滚动位置一起丢失，
+// 移动端返回体验很差。写入 query 后，刷新、返回、分享链接都停在同一面板。
+const route = useRoute()
+const activeSection = ref<SectionKey>(
+  (SECTION_KEYS as readonly string[]).includes(route.query.section as string)
+    ? (route.query.section as SectionKey)
+    : 'home'
+)
+watch(activeSection, (v) => {
+  router.replace({ query: { ...route.query, section: v } }).catch(() => {})
+})
 
 // 健康管理面板当前激活 tab（点击菜单「健康」不传 tab → 保留上次激活）
 const activeHealthTab = ref<HealthModule>('exercise')

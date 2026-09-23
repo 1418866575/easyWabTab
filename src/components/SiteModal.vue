@@ -641,6 +641,7 @@ const handleSubmit = () => {
   width: 100%;
   max-width: var(--dlg-w-site, 864px); /* 增加 80% (原 480px * 1.8) */
   max-height: var(--dlg-h-site, 90vh);
+  max-height: var(--dlg-h-site, 90dvh);
   overflow-y: auto;
 }
 

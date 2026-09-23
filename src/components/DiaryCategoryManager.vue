@@ -442,4 +442,52 @@ const sortedCustomCategories = computed(() =>
   font-size: 14px;
   padding: 20px;
 }
+
+/* ===== 移动端适配 =====
+   该组件此前完全没有 @media 规则（全文仅一处固定 max-width:720px），窄屏下：
+   内嵌设置弹框时横向溢出需左右拖动；排序按钮仅 20×16px，是全项目最小触控目标。 */
+@media (max-width: 768px) {
+  /* 宽度自适应，内嵌弹框不再横向溢出 */
+  .dm-manager {
+    max-width: 100%;
+  }
+
+  /* 内边距收敛，把可用宽度还给内容 */
+  .dm-header {
+    padding: 14px 12px;
+  }
+  .dm-body {
+    padding: 14px 12px;
+  }
+
+  /* 新增行换行：图标 + 名称 + 按钮在 375px 下不再把输入框压到不可用宽度 */
+  .dm-add-row {
+    flex-wrap: wrap;
+  }
+
+  /* 列表项允许换行，避免名称与操作区互相挤压 */
+  .dm-item {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  /* 排序按钮放大到可点（原 20×16px 几乎无法命中），并改为横向排列便于点击 */
+  .dm-sort-controls {
+    flex-direction: row;
+    gap: 6px;
+  }
+  .dm-btn-sort {
+    width: 32px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  /* 编辑/删除按钮触控目标 44px（原约 22px，误删风险高） */
+  .dm-btn-icon {
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+  }
+}
 </style>

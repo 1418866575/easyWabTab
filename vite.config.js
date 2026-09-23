@@ -193,5 +193,34 @@ export default defineConfig({
     },
     server: {
         port: 16718
+    },
+    build: {
+        // 手动分包：原先 vendor 与业务代码混成单个 ~1.85MB chunk，
+        // 首屏必须整包下载完才能渲染。拆出稳定的第三方库后：
+        //   1) 首屏体积下降；2) 业务代码更新不会让 vendor 缓存失效。
+        // 配合路由懒加载，非当前模块的图表库等资源不再进入首屏关键路径。
+        rollupOptions: {
+            output: {
+                // 注意：本项目跑在 Rolldown（Vite 8）上，manualChunks 只接受**函数**形式，
+                // 传对象会直接报 "Invalid type: Expected Function but received Object"。
+                manualChunks(id) {
+                    if (!id.includes('node_modules')) return undefined
+                    // 图表库体积大且只在部分模块使用，单独成块按需加载
+                    if (id.includes('echarts')) return 'vendor-echarts'
+                    // Vue 运行时三件套，稳定且被所有模块依赖
+                    if (
+                        id.includes('/node_modules/vue/') ||
+                        id.includes('/node_modules/@vue/') ||
+                        id.includes('/node_modules/vue-router/') ||
+                        id.includes('/node_modules/pinia/')
+                    ) {
+                        return 'vendor-vue'
+                    }
+                    return undefined
+                }
+            }
+        },
+        // 分包后单 chunk 仍可能偏大，放宽阈值避免噪音警告淹没真实问题
+        chunkSizeWarningLimit: 900
     }
 });

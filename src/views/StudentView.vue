@@ -5,6 +5,7 @@
 // 学段首次进入未初始化时强制弹框选择学段（StageOnboarding 内嵌）
 
 import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
 import { useStudentRewardsStore } from '@/stores/studentRewards'
 import { useStudentHabitsStore } from '@/stores/studentHabits'
@@ -121,16 +122,16 @@ function openParentPinDialog() {
  * PIN 弹窗回调：无论 setup 成功 或 verify 成功，都表示家长身份已确认
  * → 开启 5 分钟会话；手动锁定/超时/关闭标签页 即失效
  */
-function onParentPinAuthenticated() {
+async function onParentPinAuthenticated() {
   parentModeUnlocked.value = true
   parentPinDialogVisible.value = false
   extendParentSession()
   startParentLockTick()
 }
 /** 家长模式下横条「锁定」按钮：立即失效 */
-function handleLockParentMode() {
+async function handleLockParentMode() {
   if (!parentModeUnlocked.value) return
-  if (!confirm('确定立即锁定家长模式？（需要再次输入 PIN 解锁）')) return
+  if (!await showConfirm('确定立即锁定家长模式？（需要再次输入 PIN 解锁）')) return
   lockParentMode()
 }
 

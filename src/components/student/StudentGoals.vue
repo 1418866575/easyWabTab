@@ -4,6 +4,7 @@
 // 数据：useStudentGoalsStore（独立 IDB store 'student_goals'，严格隔离）
 
 import { computed, onMounted, ref, watch } from 'vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { useViewMode } from '@/composables/useViewMode'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
@@ -161,7 +162,7 @@ function openEditDialog(id: string): void {
   showEditDialog.value = true
 }
 
-function closeEditDialog(): void {
+async function closeEditDialog(): void {
   showEditDialog.value = false
   editingId.value = null
 }
@@ -201,7 +202,7 @@ async function saveEditDialog(): Promise<void> {
 }
 
 async function handleDelete(id: string): Promise<void> {
-  if (!confirm('确定删除该学习目标？')) return
+  if (!await showConfirm('确定删除该学习目标？')) return
   await store.deleteGoal(id)
   toast.success('已删除')
   listPage.value = 1

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { ref, computed } from 'vue'
 import { useSearchEnginesStore } from '../stores/searchEngines'
 import type { SearchEngine } from '../stores/searchEngines'
@@ -59,7 +60,7 @@ function cancelEdit() {
 }
 
 // 保存编辑
-function saveEdit() {
+async function saveEdit() {
   if (!editingId.value || !editingName.value.trim()) return
   
   store.updateEngine(editingId.value, {
@@ -70,20 +71,20 @@ function saveEdit() {
 }
 
 // 删除引擎
-function handleDelete(id: string) {
-  if (confirm('确定要删除这个搜索引擎吗？')) {
+async function handleDelete(id: string) {
+  if (await showConfirm('确定要删除这个搜索引擎吗？')) {
     store.deleteEngine(id)
   }
 }
 
 // 移动排序
-function handleMove(id: string, direction: 'up' | 'down') {
+async function handleMove(id: string, direction: 'up' | 'down') {
   store.moveEngine(id, direction)
 }
 
 // 恢复默认引擎
-function handleReset() {
-  if (confirm('确定要恢复默认搜索引擎吗？当前自定义引擎将被覆盖。')) {
+async function handleReset() {
+  if (await showConfirm('确定要恢复默认搜索引擎吗？当前自定义引擎将被覆盖。')) {
     store.resetToDefault()
   }
 }
