@@ -1,0 +1,587 @@
+// 教师工作台核心计算（纯函数，零 vue/pinia 运行时依赖，node 可直接单测）
+// 职责：数据归一化 / 学期×班级分组 / 角色可见性 / 成绩统计 / 排座 / 值日轮排 / 级联清理。
+// store 只做「读档 + 调这里 + 存档」，禁止内联重算。
+
+import {
+  type ClassBucket,
+  type ClassGroup,
+  type DutyData,
+  type Exam,
+  type SeatData,
+  type Semester,
+  type Student,
+  type TeacherData,
+  type TeacherPageKey,
+  type TeacherPageMeta,
+  type TeacherRole,
+  TEACHER_GROUPS,
+  TEACHER_HEAD_ONLY_PAGES,
+  TEACHER_PAGES,
+  SCORE_BANDS,
+  WEEK_DAYS
+} from '@/types/teacher'
+
+export const TEACHER_SCHEMA_VER = 1
+
+/** 生成唯一 id（时间前缀保证字典序≈创建序） */
+export function uid(prefix = 'id'): string {
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+}
+
+/**
+ * 生成稳定学生主键：学号+班级+学期复合。
+ * 姓名仅作展示，任何时候都不要用姓名做匹配（重名会静默错配数据）。
+ */
+export function makeStudentId(semesterId: string, classId: string, no: string, name: string): string {
+  return `s_${semesterId}_${classId}_${no || name}`
+}
+
+// ---------- 空数据 / 归一化 ----------
+
+export function emptySeats(): SeatData {
+  return { rows: 6, cols: 8, grid: Array.from({ length: 48 }, () => null) }
+}
+
+export function emptyDuty(): DutyData {
+  return {
+    days: WEEK_DAYS.slice(0, 5).map((day) => ({ day, members: [], leader: '' })),
+    committee: []
+  }
+}
+
+export function emptyBucket(): ClassBucket {
+  return {
+    students: [],
+    parents: {},
+    exams: [],
+    papers: [],
+    seats: emptySeats(),
+    duty: emptyDuty(),
+    timetable: {
+      periods: [
+        { label: '第1节', time: '08:00-08:40' },
+        { label: '第2节', time: '08:50-09:30' },
+        { label: '第3节', time: '10:00-10:40' },
+        { label: '第4节', time: '10:50-11:30' },
+        { label: '第5节', time: '14:00-14:40' },
+        { label: '第6节', time: '14:50-15:30' },
+        { label: '第7节', time: '15:40-16:20' },
+        { label: '第8节', time: '16:30-17:10' }
+      ],
+      grid: Array.from({ length: 8 }, () => Array.from({ length: 6 }, () => null))
+    },
+    growth: {},
+    random: { history: [], mode: 'all' }
+  }
+}
+
+export function emptyTeacherData(): TeacherData {
+  return {
+    schemaVer: TEACHER_SCHEMA_VER,
+    teacher: { id: 'teacher_1', name: '王老师', subjects: ['语文'] },
+    semesters: [],
+    classes: [],
+    assignments: [],
+    current: { sem: '', cls: '' },
+    groups: {}
+  }
+}
+
+function num(v: unknown, fallback: number): number {
+  const n = typeof v === 'number' ? v : Number(v)
+  return Number.isFinite(n) ? n : fallback
+}
+
+function str(v: unknown, fallback = ''): string {
+  return typeof v === 'string' ? v : fallback
+}
+
+function bool(v: unknown): boolean {
+  return v === true
+}
+
+/**
+ * 把任意来源的数组统一成「对象数组」再逐字段兜底。
+ * 先转 unknown[] 再过滤，避免对已具名类型的数组做 Record 断言（TS2677）。
+ */
+function asRecords(v: unknown): Record<string, unknown>[] {
+  if (!Array.isArray(v)) return []
+  return (v as unknown[]).filter((x): x is Record<string, unknown> => !!x && typeof x === 'object')
+}
+
+/** 归一化任意来源（IndexedDB / 备份导入）的数据，缺失字段一律兜底，绝不抛错 */
+export function normalizeTeacherData(raw: unknown): TeacherData {
+  const base = emptyTeacherData()
+  if (!raw || typeof raw !== 'object') return base
+  const d = raw as Partial<TeacherData> & Record<string, unknown>
+
+  const teacherRaw = (d.teacher ?? {}) as Record<string, unknown>
+  const teacher = {
+    id: str(teacherRaw.id, base.teacher.id),
+    name: str(teacherRaw.name, base.teacher.name),
+    subjects: Array.isArray(teacherRaw.subjects) ? teacherRaw.subjects.map((s) => str(s)).filter(Boolean) : base.teacher.subjects
+  }
+
+  const semesters: Semester[] = asRecords(d.semesters).map((s) => ({
+    id: str(s.id) || uid('sem'),
+    year: str(s.year),
+    term: str(s.term),
+    createdAt: num(s.createdAt, Date.now())
+  }))
+
+  const classes: ClassGroup[] = asRecords(d.classes)
+    .map((c) => ({
+      id: str(c.id) || uid('cls'),
+      semesterId: str(c.semesterId),
+      grade: str(c.grade),
+      name: str(c.name),
+      role: (c.role === 'head' ? 'head' : 'subject') as TeacherRole,
+      subject: str(c.subject)
+    }))
+    .filter((c) => !!c.semesterId)
+
+  const assignments = asRecords(d.assignments)
+    .map((a) => ({
+      id: str(a.id) || uid('asg'),
+      teacherId: str(a.teacherId, teacher.id),
+      semesterId: str(a.semesterId),
+      classId: str(a.classId),
+      subject: str(a.subject)
+    }))
+    .filter((a) => !!a.semesterId && !!a.classId)
+
+  // groups：逐桶归一化，保证每个存在的班级都有桶
+  const groups: Record<string, Record<string, ClassBucket>> = {}
+  const groupsRaw = (d.groups ?? {}) as Record<string, unknown>
+  for (const semId of Object.keys(groupsRaw)) {
+    const inner = groupsRaw[semId]
+    if (!inner || typeof inner !== 'object') continue
+    groups[semId] = {}
+    for (const clsId of Object.keys(inner as Record<string, unknown>)) {
+      groups[semId][clsId] = normalizeBucket((inner as Record<string, unknown>)[clsId])
+    }
+  }
+  // 补齐：班级存在但无桶 → 建空桶
+  for (const c of classes) {
+    if (!groups[c.semesterId]) groups[c.semesterId] = {}
+    if (!groups[c.semesterId][c.id]) groups[c.semesterId][c.id] = emptyBucket()
+  }
+
+  const curRaw = (d.current ?? {}) as Record<string, unknown>
+  let current = { sem: str(curRaw.sem), cls: str(curRaw.cls) }
+  current = resolveCurrent({ semesters, classes, groups, current } as TeacherData)
+
+  return { schemaVer: TEACHER_SCHEMA_VER, teacher, semesters, classes, assignments, current, groups }
+}
+
+export function normalizeBucket(raw: unknown): ClassBucket {
+  const base = emptyBucket()
+  if (!raw || typeof raw !== 'object') return base
+  const b = raw as Partial<ClassBucket> & Record<string, unknown>
+
+  const students: Student[] = asRecords(b.students)
+    .map((s): Student => {
+      const healthRaw = (s.health ?? {}) as unknown as Record<string, unknown>
+      return {
+        id: str(s.id) || uid('stu'),
+        no: str(s.no),
+        name: str(s.name),
+        gender: s.gender === '男' ? '男' : '女',
+        special: bool(s.special),
+        health: {
+          allergy: str(healthRaw.allergy),
+          disease: str(healthRaw.disease),
+          notes: str(healthRaw.notes),
+          emergencyPhone: str(healthRaw.emergencyPhone)
+        }
+      }
+    })
+    .filter((s) => !!s.name)
+
+  const parents: Record<string, { parentName: string; relation: string; phone: string }> = {}
+  const parentsRaw = (b.parents ?? {}) as Record<string, unknown>
+  for (const k of Object.keys(parentsRaw)) {
+    const p = parentsRaw[k] as Record<string, unknown> | undefined
+    if (!p || typeof p !== 'object') continue
+    parents[k] = { parentName: str(p.parentName), relation: str(p.relation), phone: str(p.phone) }
+  }
+
+  const exams: Exam[] = asRecords(b.exams).map((e) => {
+    const scoresRaw = (e.scores ?? {}) as Record<string, unknown>
+    const scores: Record<string, number> = {}
+    for (const sid of Object.keys(scoresRaw)) {
+      const v = Number(scoresRaw[sid])
+      if (Number.isFinite(v)) scores[sid] = v
+    }
+    return { id: str(e.id) || uid('exam'), subject: str(e.subject), name: str(e.name), date: str(e.date), scores }
+  })
+
+  const papers = asRecords(b.papers).map((p) => ({
+    id: str(p.id) || uid('paper'),
+    examId: str(p.examId),
+    title: str(p.title),
+    questions: asRecords(p.questions).map((q) => ({
+      no: num(q.no, 0),
+      type: str(q.type),
+      point: str(q.point),
+      wrongCount: num(q.wrongCount, 0)
+    }))
+  }))
+
+  const seatsRaw = (b.seats ?? {}) as Record<string, unknown>
+  const rows = Math.max(1, Math.min(12, Math.floor(num(seatsRaw.rows, base.seats.rows))))
+  const cols = Math.max(1, Math.min(12, Math.floor(num(seatsRaw.cols, base.seats.cols))))
+  const gridIn = Array.isArray(seatsRaw.grid) ? seatsRaw.grid : []
+  const grid: (string | null)[] = Array.from({ length: rows * cols }, (_, i) => {
+    const v = gridIn[i]
+    return typeof v === 'string' && v ? v : null
+  })
+
+  const dutyRaw = (b.duty ?? {}) as Record<string, unknown>
+  const daysIn = Array.isArray(dutyRaw.days) ? dutyRaw.days : []
+  const days = WEEK_DAYS.slice(0, 5).map((day) => {
+    const found = daysIn.find((x): x is Record<string, unknown> => !!x && typeof x === 'object' && x.day === day)
+    return {
+      day,
+      members: Array.isArray(found?.members) ? found!.members.map((m) => str(m)).filter(Boolean) : [],
+      leader: str(found?.leader)
+    }
+  })
+  const committee = Array.isArray(dutyRaw.committee)
+    ? dutyRaw.committee
+        .filter((c): c is Record<string, unknown> => !!c && typeof c === 'object')
+        .map((c) => ({ role: str(c.role), name: str(c.name), duty: str(c.duty) }))
+    : []
+
+  const ttRaw = (b.timetable ?? {}) as Record<string, unknown>
+  const periodsIn = Array.isArray(ttRaw.periods) ? ttRaw.periods : []
+  const periods = base.timetable.periods.map((def, i) => {
+    const p = periodsIn[i] as Record<string, unknown> | undefined
+    return { label: str(p?.label, def.label), time: str(p?.time, def.time) }
+  })
+  const gridIn2 = Array.isArray(ttRaw.grid) ? ttRaw.grid : []
+  const timetableGrid: (string | null)[][] = periods.map((_, pi) => {
+    const rowIn = Array.isArray(gridIn2[pi]) ? gridIn2[pi] : []
+    return Array.from({ length: 6 }, (_, di) => {
+      const v = rowIn[di]
+      return typeof v === 'string' && v ? v : null
+    })
+  })
+
+  const growth: Record<string, { id: string; date: string; title: string; content: string; photos: string[] }[]> = {}
+  const growthRaw = (b.growth ?? {}) as Record<string, unknown>
+  for (const k of Object.keys(growthRaw)) {
+    const list = growthRaw[k]
+    if (!Array.isArray(list)) continue
+    growth[k] = list
+      .filter((g): g is Record<string, unknown> => !!g && typeof g === 'object')
+      .map((g) => ({
+        id: str(g.id) || uid('grow'),
+        date: str(g.date),
+        title: str(g.title),
+        content: str(g.content),
+        photos: Array.isArray(g.photos) ? g.photos.map((p) => str(p)).filter(Boolean) : []
+      }))
+  }
+
+  const randomRaw = (b.random ?? {}) as Record<string, unknown>
+  const random = {
+    history: Array.isArray(randomRaw.history) ? randomRaw.history.map((h) => str(h)).filter(Boolean) : [],
+    mode: randomRaw.mode === 'once' ? 'once' : 'all'
+  } as const
+
+  return { students, parents, exams, papers, seats: { rows, cols, grid }, duty: { days, committee }, timetable: { periods, grid: timetableGrid }, growth, random: { ...random } }
+}
+
+// ---------- 当前分组解析 ----------
+
+/**
+ * 解析当前激活分组：
+ * - 无学期 → 空（引导建学期）
+ * - 有学期无班级 → 指向该学期首个班级（无班级则空，引导建班）
+ * - 指针失效 → 回落到最新学期 + 其首个班级
+ */
+export function resolveCurrent(data: Pick<TeacherData, 'semesters' | 'classes' | 'groups' | 'current'>): {
+  sem: string
+  cls: string
+} {
+  const { semesters, classes } = data
+  if (!semesters.length) return { sem: '', cls: '' }
+
+  const semExists = (id: string) => semesters.some((s) => s.id === id)
+  const clsOfSem = (semId: string) => classes.filter((c) => c.semesterId === semId)
+
+  let sem = data.current?.sem && semExists(data.current.sem) ? data.current.sem : ''
+  if (!sem) {
+    // 默认最新学期（createdAt 大者优先）
+    const sorted = [...semesters].sort((a, b) => b.createdAt - a.createdAt)
+    sem = sorted[0]?.id ?? ''
+  }
+  if (!sem) return { sem: '', cls: '' }
+
+  const list = clsOfSem(sem)
+  if (!list.length) return { sem, cls: '' }
+
+  let cls = data.current?.cls && list.some((c) => c.id === data.current.cls) ? data.current.cls : ''
+  if (!cls) {
+    // 默认该教师班主任班级，否则首个班级
+    const head = list.find((c) => c.role === 'head')
+    cls = (head ?? list[0]).id
+  }
+  return { sem, cls }
+}
+
+/** 取当前分组的数据桶（只读出口；不存在返回 null） */
+export function currentBucket(data: TeacherData): ClassBucket | null {
+  const { sem, cls } = data.current
+  if (!sem || !cls) return null
+  return data.groups?.[sem]?.[cls] ?? null
+}
+
+export function currentClass(data: TeacherData): ClassGroup | null {
+  const { sem, cls } = data.current
+  if (!sem || !cls) return null
+  return data.classes.find((c) => c.id === cls && c.semesterId === sem) ?? null
+}
+
+/** 本班身份：班主任 / 科任 */
+export function currentRole(data: TeacherData): TeacherRole {
+  return currentClass(data)?.role ?? 'head'
+}
+
+// ---------- 角色可见性 ----------
+
+/** 某页在当前身份下是否可见 */
+export function isTeacherPageVisible(page: TeacherPageKey, role: TeacherRole): boolean {
+  if (role === 'head') return true
+  return !TEACHER_HEAD_ONLY_PAGES.includes(page)
+}
+
+/** 当前身份下可见的页面（保持 TEACHER_PAGES 顺序） */
+export function visibleTeacherPages(role: TeacherRole): TeacherPageMeta[] {
+  return TEACHER_PAGES.filter((p) => isTeacherPageVisible(p.key, role))
+}
+
+/** 可见页面按分组聚合；整组为空则该组不返回（分组标题一并隐藏） */
+export function visibleTeacherGroups(role: TeacherRole): { group: string; pages: TeacherPageMeta[] }[] {
+  return TEACHER_GROUPS.map((group) => ({
+    group,
+    pages: TEACHER_PAGES.filter((p) => p.group === group && isTeacherPageVisible(p.key, role))
+  })).filter((g) => g.pages.length > 0)
+}
+
+/** 当前页被隐藏时的回落页（学生名单始终可见） */
+export function fallbackPage(role: TeacherRole): TeacherPageKey {
+  return isTeacherPageVisible('students', role) ? 'students' : (visibleTeacherPages(role)[0]?.key ?? 'data')
+}
+
+/** 若目标页不可见，返回回落页 */
+export function guardPage(page: TeacherPageKey, role: TeacherRole): TeacherPageKey {
+  return isTeacherPageVisible(page, role) ? page : fallbackPage(role)
+}
+
+// ---------- 成绩统计 ----------
+
+export interface ExamStats {
+  count: number
+  max: number
+  min: number
+  avg: number
+  passRate: number // ≥60
+  poorRate: number // <40
+  excellentRate: number // ≥90
+}
+
+/** 统计一场考试；除数为「有成绩的人数」 */
+export function examStats(scores: Record<string, number>): ExamStats {
+  const vals = Object.values(scores ?? {}).filter((v) => Number.isFinite(v))
+  const count = vals.length
+  if (!count) return { count: 0, max: 0, min: 0, avg: 0, passRate: 0, poorRate: 0, excellentRate: 0 }
+  const max = Math.max(...vals)
+  const min = Math.min(...vals)
+  const avg = vals.reduce((a, b) => a + b, 0) / count
+  const rate = (fn: (v: number) => boolean) => Math.round((vals.filter(fn).length / count) * 1000) / 10
+  return {
+    count,
+    max,
+    min,
+    avg: Math.round(avg * 10) / 10,
+    passRate: rate((v) => v >= 60),
+    poorRate: rate((v) => v < 40),
+    excellentRate: rate((v) => v >= 90)
+  }
+}
+
+/** 七段分布计数（与 SCORE_BANDS 顺序一致） */
+export function bandCounts(scores: Record<string, number>): number[] {
+  const vals = Object.values(scores ?? {}).filter((v) => Number.isFinite(v))
+  return SCORE_BANDS.map((b) => vals.filter((v) => v >= b.min && v <= b.max).length)
+}
+
+export interface RankRow {
+  studentId: string
+  name: string
+  no: string
+  gender: '男' | '女'
+  score: number
+  rank: number
+  comment: string
+}
+
+export function scoreComment(score: number): string {
+  if (score >= 90) return '优秀'
+  if (score >= 80) return '良好'
+  if (score >= 60) return '合格'
+  return '待努力'
+}
+
+/** 成绩排名表（降序；同分并列同名次） */
+export function rankRows(exam: Exam, students: Student[]): RankRow[] {
+  const map = new Map(students.map((s) => [s.id, s]))
+  const rows = Object.entries(exam.scores ?? {})
+    .filter(([sid]) => map.has(sid))
+    .map(([sid, score]) => {
+      const s = map.get(sid)!
+      return { studentId: sid, name: s.name, no: s.no, gender: s.gender, score, rank: 0, comment: scoreComment(score) }
+    })
+    .sort((a, b) => b.score - a.score)
+  let prev = Number.NaN
+  let rank = 0
+  rows.forEach((r, i) => {
+    if (r.score !== prev) {
+      rank = i + 1
+      prev = r.score
+    }
+    r.rank = rank
+  })
+  return rows
+}
+
+/** 折线图用：按排名顺序的学生分数序列 */
+export function trendSeries(exam: Exam, students: Student[]): { name: string; score: number }[] {
+  return rankRows(exam, students).map((r) => ({ name: r.name, score: r.score }))
+}
+
+// ---------- 座位表 ----------
+
+/** 调整行列后重排：已有学生按原顺序填入新网格，多余截断、不足留空 */
+export function resizeSeats(seats: SeatData, rows: number, cols: number): SeatData {
+  const r = Math.max(1, Math.min(12, Math.floor(rows) || 1))
+  const c = Math.max(1, Math.min(12, Math.floor(cols) || 1))
+  const existing = seats.grid.filter((v): v is string => !!v)
+  const grid: (string | null)[] = Array.from({ length: r * c }, (_, i) => existing[i] ?? null)
+  return { rows: r, cols: c, grid }
+}
+
+/** 按名单排座：按学号升序依次填入前 N 格 */
+export function arrangeByRoster(students: Student[], rows: number, cols: number): SeatData {
+  const sorted = [...students].sort((a, b) => cmpNo(a.no, b.no))
+  const grid: (string | null)[] = Array.from({ length: rows * cols }, (_, i) => sorted[i]?.id ?? null)
+  return { rows, cols, grid }
+}
+
+/** 随机排座：洗牌后填入 */
+export function arrangeRandom(students: Student[], rows: number, cols: number): SeatData {
+  const arr = [...students]
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arrangeByRoster(arr, rows, cols)
+}
+
+/** 交换两个座位；任一为空位则视为「移动到该空位」 */
+export function swapSeats(grid: (string | null)[], i: number, j: number): (string | null)[] {
+  if (i === j || i < 0 || j < 0 || i >= grid.length || j >= grid.length) return grid
+  const next = [...grid]
+  const a = next[i]
+  const b = next[j]
+  if (a && !b) {
+    // 移动到空位
+    next[j] = a
+    next[i] = null
+  } else if (!a && b) {
+    next[i] = b
+    next[j] = null
+  } else {
+    next[i] = b
+    next[j] = a
+  }
+  return next
+}
+
+/** 学号比较（数字优先，其次字典序） */
+export function cmpNo(a: string, b: string): number {
+  const na = Number(a)
+  const nb = Number(b)
+  if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb
+  return String(a).localeCompare(String(b), 'zh-Hans-CN')
+}
+
+// ---------- 值日 / 班委 ----------
+
+/** 按名单自动轮排：学号升序循环分配到周一~周五，组长=组内学号最靠前者 */
+export function autoArrangeDuty(students: Student[], groupSize = 8): DutyData {
+  const sorted = [...students].sort((a, b) => cmpNo(a.no, b.no))
+  const days = WEEK_DAYS.slice(0, 5).map((day) => ({ day, members: [] as string[], leader: '' }))
+  if (!sorted.length) return { days, committee: [] }
+  const size = Math.max(1, Math.floor(groupSize) || 1)
+  let idx = 0
+  for (const d of days) {
+    const members: string[] = []
+    for (; idx < sorted.length && members.length < size; idx++) members.push(sorted[idx].id)
+    d.members = members
+    d.leader = members[0] ?? ''
+  }
+  // 剩余学生继续回填（保证不漏人）
+  let di = 0
+  for (; idx < sorted.length; idx++) {
+    days[di % days.length].members.push(sorted[idx].id)
+    di++
+  }
+  return { days, committee: [] }
+}
+
+// ---------- 级联清理 ----------
+
+/**
+ * 删除学生：级联清理 parents / 成绩 / 座位 / 值日 / 点名历史。
+ * 奖励记录（growth 桶）保留（历史记录不因学生离班而消失），由调用方提示用户。
+ */
+export function removeStudentCascade(bucket: ClassBucket, studentId: string): ClassBucket {
+  return {
+    ...bucket,
+    students: bucket.students.filter((s) => s.id !== studentId),
+    parents: omitKey(bucket.parents, studentId),
+    exams: bucket.exams.map((e) => ({ ...e, scores: omitKey(e.scores, studentId) })),
+    seats: { ...bucket.seats, grid: bucket.seats.grid.map((v) => (v === studentId ? null : v)) },
+    duty: {
+      ...bucket.duty,
+      days: bucket.duty.days.map((d) => ({
+        ...d,
+        members: d.members.filter((m) => m !== studentId),
+        leader: d.leader === studentId ? '' : d.leader
+      })),
+      committee: bucket.duty.committee.map((c) => (c.name === studentId ? { ...c, name: '' } : c))
+    },
+    random: { ...bucket.random, history: bucket.random.history.filter((h) => h !== studentId) }
+  }
+}
+
+function omitKey<T>(obj: Record<string, T>, key: string): Record<string, T> {
+  if (!(key in obj)) return obj
+  const next = { ...obj }
+  delete next[key]
+  return next
+}
+
+/** 学生名册排序（学号升序） */
+export function sortedStudents(students: Student[]): Student[] {
+  return [...students].sort((a, b) => cmpNo(a.no, b.no))
+}
+
+/** 供展示的班级标题，如「示例小学 三年级1班 · 王老师」 */
+export function classTitle(cls: ClassGroup | null, teacherName: string, school = ''): string {
+  if (!cls) return '教师工作台'
+  return [school, `${cls.grade}${cls.name}`, teacherName].filter(Boolean).join(' · ')
+}

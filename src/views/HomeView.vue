@@ -376,9 +376,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- 顶部统一 App Bar：左=工作台/销售台/学生台入口，右=同步/设置/帮助/倒计时；主题与经典侧边栏已迁入 设置→导航设置→显示控制 -->
+  <!-- 顶部统一 App Bar：左=教师台/工作台/销售台/学生台入口（教师台居首），右=同步/设置/帮助/倒计时；主题与经典侧边栏已迁入 设置→导航设置→显示控制 -->
   <div ref="appBarRef" class="app-bar">
     <div class="app-bar-left">
+      <button v-if="settingsStore.teacherPageVisible !== false" class="btn-help" data-testid="nav-teacher-entry" @click="router.push('/teacher')" :title="settingsStore.teacherPageDisplayName"><Icon name="teacher" /> <span class="nav-entry-label">{{ settingsStore.teacherPageDisplayName }}</span></button>
       <button v-if="settingsStore.workbenchPageVisible !== false" class="btn-help" @click="router.push('/workbench')" :title="settingsStore.workbenchPageDisplayName"><Icon name="toolbox" /> <span class="nav-entry-label">{{ settingsStore.workbenchPageDisplayName }}</span></button>
       <button v-if="settingsStore.businessPageVisible !== false" class="btn-help" data-testid="nav-business-entry" @click="router.push('/business')" :title="settingsStore.businessPageDisplayName"><Icon name="store" /> <span class="nav-entry-label">{{ settingsStore.businessPageDisplayName }}</span></button>
       <button v-if="settingsStore.studentPageVisible !== false" class="btn-help" data-testid="nav-student-entry" @click="router.push('/student')" :title="settingsStore.studentPageDisplayName"><Icon name="notes" /> <span class="nav-entry-label">{{ settingsStore.studentPageDisplayName }}</span></button>

@@ -1,0 +1,542 @@
+<script setup lang="ts">
+// 教师工作台主视图（路由 /teacher）
+// 布局与 StudentView 一致：顶部 PageSwitcher + 学期/班级/身份选择器，左菜单 + 右内容条件渲染。
+// 首次进入无学期/无班级时走两步引导（建学期 → 建班级），与原型行为一致。
+// 「是否班主任」是按班级的身份：切换班级即切换身份与可见模块（导航移除 + 直达拦截 + 自动回落）。
+
+import { computed, onMounted, ref, watch } from 'vue'
+import { useTeacherStore } from '@/stores/teacher'
+import { useAppSettingsStore } from '@/stores/settings'
+import { useCloudSync, type SyncStatus } from '@/composables/useCloudSync'
+import PageSwitcher from '@/components/PageSwitcher.vue'
+import Icon from '@/components/Icon.vue'
+import TeacherDataManage from '@/components/teacher/TeacherDataManage.vue'
+import TeacherStudents from '@/components/teacher/TeacherStudents.vue'
+import TeacherSeats from '@/components/teacher/TeacherSeats.vue'
+import TeacherExams from '@/components/teacher/TeacherExams.vue'
+import TeacherPapers from '@/components/teacher/TeacherPapers.vue'
+import TeacherDuty from '@/components/teacher/TeacherDuty.vue'
+import TeacherParents from '@/components/teacher/TeacherParents.vue'
+import TeacherRandom from '@/components/teacher/TeacherRandom.vue'
+import TeacherTimetable from '@/components/teacher/TeacherTimetable.vue'
+import TeacherSpecial from '@/components/teacher/TeacherSpecial.vue'
+import TeacherGrowth from '@/components/teacher/TeacherGrowth.vue'
+import TeacherHelp from '@/components/teacher/TeacherHelp.vue'
+import type { TeacherPageKey, TeacherRole } from '@/types/teacher'
+import '@/styles/teacher.css'
+
+const store = useTeacherStore()
+
+const sidebarCollapsed = ref(false)
+
+// ---------- 引导（两步） ----------
+const guideYear = ref('')
+const guideTerm = ref('上学期')
+const guideGrade = ref('')
+const guideName = ref('')
+const guideSubject = ref('')
+const guideRole = ref<TeacherRole>('head')
+
+watch(
+  () => store.needsSemester,
+  (v) => {
+    if (v) {
+      const now = new Date()
+      guideYear.value = String(now.getFullYear())
+      guideTerm.value = now.getMonth() < 7 ? '上学期' : '下学期'
+    }
+  },
+  { immediate: true }
+)
+
+async function createSemesterFromGuide(): Promise<void> {
+  const y = guideYear.value.trim()
+  const t = guideTerm.value.trim()
+  if (!y || !t) return
+  await store.addSemester(y, t)
+  guideGrade.value = ''
+  guideName.value = ''
+  guideSubject.value = ''
+}
+
+async function createClassFromGuide(): Promise<void> {
+  const g = guideGrade.value.trim()
+  const n = guideName.value.trim()
+  if (!g || !n) return
+  await store.addClass(g, n, guideSubject.value.trim(), guideRole.value)
+}
+
+// ---------- 页面渲染 ----------
+const COMPONENTS: Record<TeacherPageKey, unknown> = {
+  data: TeacherDataManage,
+  students: TeacherStudents,
+  seats: TeacherSeats,
+  exams: TeacherExams,
+  papers: TeacherPapers,
+  duty: TeacherDuty,
+  parents: TeacherParents,
+  random: TeacherRandom,
+  timetable: TeacherTimetable,
+  special: TeacherSpecial,
+  growth: TeacherGrowth,
+  help: TeacherHelp
+}
+
+// 页面标题由各页面组件自己渲染（含副标题），外壳不重复输出，避免出现两个标题
+const currentComp = computed(() => COMPONENTS[store.activePage] ?? TeacherStudents)
+
+function selectPage(key: TeacherPageKey): void {
+  store.setActivePage(key) // 内部含可见性拦截
+  if (window.innerWidth <= 768) sidebarCollapsed.value = true
+}
+
+// ---------- 选择器 ----------
+async function onSemesterChange(e: Event): Promise<void> {
+  const v = (e.target as HTMLSelectElement).value
+  if (v) await store.selectSemester(v)
+}
+
+async function onClassChange(e: Event): Promise<void> {
+  const v = (e.target as HTMLSelectElement).value
+  if (v) await store.selectClass(v)
+}
+
+async function onRoleChange(e: Event): Promise<void> {
+  const v = (e.target as HTMLSelectElement).value as TeacherRole
+  await store.setRole(v)
+}
+
+const classLabel = computed(() => {
+  const c = store.cls
+  if (!c) return '未选择班级'
+  return `${c.grade}${c.name} · ${c.subject || '未设科目'}`
+})
+
+// ---------- 右上角云同步（共享 useCloudSync 单例，与首页/设置弹窗同一状态） ----------
+const settingsStore = useAppSettingsStore()
+const cloudSync = useCloudSync()
+const cloudEnabled = computed((): boolean => settingsStore.cloudSyncEnabled === true)
+const syncBusy = computed(
+  (): boolean => cloudSync.status.value === 'pulling' || cloudSync.status.value === 'pushing'
+)
+const syncStatusClass = computed(
+  (): Record<string, boolean> => ({
+    'tv-sync-btn-pending': cloudSync.status.value === 'pulling' || cloudSync.status.value === 'pushing',
+    'tv-sync-btn-conflict': cloudSync.status.value === 'conflict',
+    'tv-sync-btn-error': cloudSync.status.value === 'error'
+  })
+)
+const syncLabel = computed((): string => {
+  if (!cloudEnabled.value) return '云同步'
+  switch (cloudSync.status.value as SyncStatus) {
+    case 'pulling': return '拉取中…'
+    case 'pushing': return '推送中…'
+    case 'conflict': return '处理冲突'
+    case 'error': return '同步失败'
+    default: return '云同步'
+  }
+})
+const syncTip = computed((): string => {
+  if (!cloudEnabled.value) return '云同步未开启，请在「设置 → 云同步」中开启后使用'
+  const t = cloudSync.lastSyncAt.value
+  if (!t) return '未同步过；点击立即同步（教师数据走 teacher.json 信封）'
+  const d = new Date(t)
+  const p = (n: number) => (n < 10 ? '0' + n : String(n))
+  return `上次同步：${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}；点击立即同步`
+})
+async function handleSyncNowClick(): Promise<void> {
+  if (!cloudEnabled.value) {
+    window.alert('云同步未开启。请到「设置 → 云同步」填写 WebDAV 地址与账号后开启。')
+    return
+  }
+  await cloudSync.syncNow()
+}
+
+onMounted(() => {
+  void store.loadTeacher()
+})
+</script>
+
+<template>
+  <div class="tv-shell" :class="{ 'is-collapsed': sidebarCollapsed }">
+    <!-- 顶部：页面切换 + 学期/班级/身份 -->
+    <header class="tv-topbar">
+      <div class="tv-topbar-left">
+        <PageSwitcher current="teacher" />
+        <div class="tv-selectors">
+          <label class="tw-label">
+            学期
+            <select class="tw-select tw-input-sm" :value="store.data.current.sem" @change="onSemesterChange">
+              <option v-for="s in store.semesters" :key="s.id" :value="s.id">{{ s.year }} {{ s.term }}</option>
+            </select>
+          </label>
+          <label class="tw-label">
+            班级
+            <select class="tw-select tw-input-sm" :value="store.data.current.cls" @change="onClassChange">
+              <option v-for="c in store.classesOfCurrentSem" :key="c.id" :value="c.id">
+                {{ c.grade }}{{ c.name }}（{{ c.role === 'head' ? '班主任' : '科任' }}）
+              </option>
+            </select>
+          </label>
+          <label class="tw-label">
+            本班身份
+            <select class="tw-select tw-input-sm" :value="store.role" @change="onRoleChange">
+              <option value="head">班主任</option>
+              <option value="subject">非班主任 · 科任</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div class="tv-topbar-actions">
+        <span class="tv-class-label">{{ classLabel }}</span>
+        <button
+          type="button"
+          class="tw-btn tw-btn-sm tv-collapse-btn"
+          :aria-expanded="!sidebarCollapsed"
+          :title="sidebarCollapsed ? '展开菜单' : '收起菜单'"
+          @click="sidebarCollapsed = !sidebarCollapsed"
+        >
+          <Icon :name="sidebarCollapsed ? 'chevron-right' : 'chevron-left'" :size="14" />
+          <span class="tv-collapse-text">{{ sidebarCollapsed ? '展开' : '收起' }}</span>
+        </button>
+        <!-- 最右上角：云同步（teacher.json 信封；未开启时禁用并引导去设置） -->
+        <button
+          type="button"
+          class="tw-btn tw-btn-sm tv-sync-btn"
+          :class="syncStatusClass"
+          :title="syncTip"
+          data-testid="teacher-sync-now"
+          :disabled="syncBusy"
+          @click="handleSyncNowClick"
+        >
+          <Icon name="cloud" :size="14" />
+          <span class="tv-sync-text">{{ syncLabel }}</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- 引导：第一步建学期 -->
+    <section v-if="store.needsSemester" class="tv-guide">
+      <div class="tw-card tv-guide-card">
+        <h2 class="tw-card-title">第 1 步 · 创建学期</h2>
+        <p class="tw-card-hint">学期是最高层分组，切换学期即切换全部数据视图。先建一个学期再继续。</p>
+        <div class="tv-guide-form">
+          <label class="tw-label">学年<input v-model="guideYear" class="tw-input" placeholder="如 2026" /></label>
+          <label class="tw-label">学期<input v-model="guideTerm" class="tw-input" placeholder="如 上学期" /></label>
+          <button type="button" class="tw-btn tw-btn-primary" :disabled="!guideYear.trim() || !guideTerm.trim()" @click="createSemesterFromGuide">
+            创建学期
+          </button>
+          <button type="button" class="tw-btn" @click="store.loadDemoData()">用演示数据快速体验</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 引导：第二步建班级 -->
+    <section v-else-if="store.needsClass" class="tv-guide">
+      <div class="tw-card tv-guide-card">
+        <h2 class="tw-card-title">第 2 步 · 创建班级</h2>
+        <p class="tw-card-hint">班级归属当前学期。同一教师可在多个班级任教，「本班身份」决定你能看到哪些班务功能。</p>
+        <div class="tv-guide-form">
+          <label class="tw-label">年级<input v-model="guideGrade" class="tw-input" placeholder="如 三年级" /></label>
+          <label class="tw-label">班级<input v-model="guideName" class="tw-input" placeholder="如 1班" /></label>
+          <label class="tw-label">任教科目<input v-model="guideSubject" class="tw-input" placeholder="如 语文" /></label>
+          <label class="tw-label">
+            本班身份
+            <select v-model="guideRole" class="tw-select">
+              <option value="head">班主任</option>
+              <option value="subject">非班主任 · 科任</option>
+            </select>
+          </label>
+          <button type="button" class="tw-btn tw-btn-primary" :disabled="!guideGrade.trim() || !guideName.trim()" @click="createClassFromGuide">
+            创建班级
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 正常主体 -->
+    <div v-else class="tv-body">
+      <aside class="tv-sidebar" aria-label="教师工作台功能导航">
+        <nav class="tv-nav">
+          <template v-for="g in store.groups" :key="g.group">
+            <div class="tv-nav-group">{{ g.group }}</div>
+            <button
+              v-for="p in g.pages"
+              :key="p.key"
+              type="button"
+              class="tv-nav-item"
+              :class="{ active: store.activePage === p.key }"
+              :title="p.label"
+              @click="selectPage(p.key)"
+            >
+              <span class="tv-nav-icon"><Icon :name="p.icon" :size="16" /></span>
+              <span class="tv-nav-label">{{ p.label }}</span>
+            </button>
+          </template>
+        </nav>
+        <p class="tv-nav-foot">数据保存在本机浏览器，可随时备份。</p>
+      </aside>
+
+      <main class="tv-content">
+        <!-- 仅科任身份时补一条提示；标题不在这里输出，避免与页面组件内的标题重复 -->
+        <p v-if="!store.isHead" class="tv-content-head tv-role-tip tw-note">
+          当前为「非班主任 · 科任」身份，座位表 / 值日生表 / 家长联系方式 / 特异体质学生已隐藏。
+        </p>
+        <component :is="currentComp" />
+      </main>
+    </div>
+
+    <!-- 设置弹窗（与工作台一致） -->
+  </div>
+</template>
+
+<style scoped>
+.tv-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--color-bg, #f8fafc);
+  color: var(--color-text, #0f172a);
+}
+
+/* ---------- 顶栏 ---------- */
+.tv-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background-color: var(--color-bg-card, #ffffff);
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+}
+
+.tv-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.tv-selectors {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tv-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tv-class-label {
+  font-size: var(--font-size-sm, 12px);
+  color: var(--color-text-secondary, #64748b);
+}
+
+/* ---------- 引导 ---------- */
+.tv-guide {
+  padding: 24px 16px;
+}
+
+.tv-guide-card {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.tv-guide-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tv-guide-form .tw-label {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+/* ---------- 主体 ---------- */
+.tv-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.tv-sidebar {
+  flex: 0 0 200px;
+  width: 200px;
+  padding: 12px 10px;
+  background-color: var(--color-bg-card, #ffffff);
+  border-right: 1px solid var(--color-border, #e2e8f0);
+  position: sticky;
+  top: 0;
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+}
+
+.tv-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tv-nav-group {
+  margin: 10px 0 4px;
+  padding: 0 8px;
+  font-size: var(--font-size-xs, 11px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-muted, #94a3b8);
+  letter-spacing: 0.04em;
+}
+
+.tv-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  border: none;
+  border-radius: var(--radius-sm, 8px);
+  background-color: transparent;
+  color: var(--color-text, #0f172a);
+  font-family: inherit;
+  font-size: var(--font-size-sm, 13px);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
+    color var(--motion-duration, 0.2s) var(--motion-ease, ease);
+}
+
+.tv-nav-item:hover {
+  background-color: var(--color-bg-hover, #f1f5f9);
+}
+
+.tv-nav-item.active {
+  background-color: var(--color-primary-soft, #eff6ff);
+  color: var(--color-primary, #3b82f6);
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.tv-nav-item:focus-visible {
+  outline: 2px solid var(--color-primary, #3b82f6);
+  outline-offset: -2px;
+}
+
+.tv-nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  color: inherit;
+}
+
+.tv-nav-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tv-nav-foot {
+  margin: 14px 8px 0;
+  font-size: var(--font-size-xs, 11px);
+  color: var(--color-text-muted, #94a3b8);
+  line-height: var(--line-height-normal, 1.5);
+}
+
+.tv-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 16px;
+}
+
+.tv-content-head {
+  margin-bottom: 12px;
+}
+
+/* 提示条已独立成块（上方不再有外壳标题），无需顶部间距 */
+.tv-role-tip {
+  margin-top: 0;
+}
+
+/* ---------- 收起态 ---------- */
+.tv-shell.is-collapsed .tv-sidebar {
+  flex-basis: 56px;
+  width: 56px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.tv-shell.is-collapsed .tv-nav-label,
+.tv-shell.is-collapsed .tv-nav-group,
+.tv-shell.is-collapsed .tv-nav-foot {
+  display: none;
+}
+
+.tv-shell.is-collapsed .tv-nav-item {
+  justify-content: center;
+  padding: 0;
+}
+
+/* ---------- 移动端：侧栏变底部横向滚动菜单 ---------- */
+@media (max-width: 768px) {
+  .tv-body {
+    flex-direction: column;
+  }
+
+  .tv-sidebar {
+    position: static;
+    flex: 0 0 auto;
+    width: 100%;
+    max-height: none;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border, #e2e8f0);
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .tv-nav {
+    flex-direction: row;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+
+  .tv-nav-group {
+    display: none;
+  }
+
+  .tv-nav-item {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 0 12px;
+    white-space: nowrap;
+  }
+
+  .tv-nav-foot {
+    display: none;
+  }
+
+  .tv-content {
+    padding: 12px;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .tv-collapse-text {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tv-nav-item {
+    transition: none;
+  }
+}
+</style>

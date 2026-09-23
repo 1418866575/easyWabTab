@@ -7,7 +7,7 @@
  * 所有请求失败均 reject，由调用方自行 try/catch 降级（不做 localStorage 回退写）
  */
 import { WORKBENCH_DATA_VERSION, emptyAppSettingsData } from '../types'
-import type { AppSettingsData, AppSettingsDataNoCloudSync, BusinessData, BusinessSyncData, Countdown, DiaryData, GenealogyData, HealthData, IconsSyncData, LedgerData, NavSyncData, NoteData, StudentSyncData, WorkbenchData, WorkbenchSyncData, WorkbenchTodo } from '../types'
+import type { AppSettingsData, AppSettingsDataNoCloudSync, BusinessData, BusinessSyncData, Countdown, DiaryData, GenealogyData, HealthData, IconsSyncData, LedgerData, NavSyncData, NoteData, StudentSyncData, TeacherSyncData, WorkbenchData, WorkbenchSyncData, WorkbenchTodo } from '../types'
 import { adoptPasswordIdentity, getStoredSaltHex, getStoredVerification } from './useCrypto'
 import { emptyBusinessData } from './businessCore.ts'
 import { emptyDiaryData } from './diaryCore'
@@ -17,9 +17,10 @@ import { emptyHealthData } from './healthCore'
 import { emptyLedgerData } from './ledgerCore'
 import { emptyNoteData, normalizeNoteData } from './noteCore'
 import { emptyPomodoroData } from './pomodoroCore'
+import { normalizeTeacherData } from './teacherCore'
 
 export const DB_NAME = 'easy-web-tab'
-export const DB_VERSION = 16
+export const DB_VERSION = 17
 /** 核心 9 store：随 JSON 备份导出/导入（v6 新增 business；v15 新增 family 家谱） */
 export const IDB_CORE_STORES = ['todos', 'notes', 'diary', 'countdowns', 'passwords', 'health', 'ledger', 'settings', 'business', 'family'] as const
 /** 辅助 store：pomodoro/habits 随 v5 备份导出/导入；snapshots 仅本地使用，不参与备份 */
@@ -42,6 +43,8 @@ export const IDB_STUDENT_STORES = [
   // 图片 Blob 独立 store（错题本拍照，导出时 base64 编码）
   'student_images'
 ] as const
+/** 教师工作台 store（v17 新增：teacher_workbench 单对象，含学期×班级全部分组数据） */
+export const IDB_TEACHER_STORES = ['teacher_workbench'] as const
 export const IDB_KEY = 'items'
 
 export type IdbStore =
@@ -49,6 +52,7 @@ export type IdbStore =
   | (typeof IDB_AUX_STORES)[number]
   | (typeof IDB_ICONS_STORES)[number]
   | (typeof IDB_STUDENT_STORES)[number]
+  | (typeof IDB_TEACHER_STORES)[number]
 
 let dbPromise: Promise<IDBDatabase> | undefined
 
@@ -59,7 +63,13 @@ export function openIdb(): Promise<IDBDatabase> {
       request.onupgradeneeded = () => {
         const db = request.result
         // 幂等 contains 守卫：旧库升级到新版本时自动补建缺失 store（v5 新增 diary / v11 新增 icons），不清空旧数据
-        for (const name of [...IDB_CORE_STORES, ...IDB_AUX_STORES, ...IDB_ICONS_STORES, ...IDB_STUDENT_STORES]) {
+        for (const name of [
+          ...IDB_CORE_STORES,
+          ...IDB_AUX_STORES,
+          ...IDB_ICONS_STORES,
+          ...IDB_STUDENT_STORES,
+          ...IDB_TEACHER_STORES
+        ]) {
           if (!db.objectStoreNames.contains(name)) {
             db.createObjectStore(name) // 无 keyPath → out-of-line 键 'items'
           }
@@ -283,7 +293,7 @@ export async function idbImportAll(data: WorkbenchData): Promise<{ adoptedPasswo
 }
 
 // ==================== 云同步多文件信封（v10 拆分）====================
-// 5 份独立信封：nav.json / icons.json / workbench.json / business.json / student.json
+// 6 份独立信封：nav.json / icons.json / workbench.json / business.json / student.json / teacher.json
 // workbench 不含 business（独立走 business.json）；settings 不含 cloudSync* 5 字段（保留本地凭证）
 // 自定义图标 v11 起从 localStorage 迁移至 IDB icons store（localStorage ~5MB 容量瓶颈）
 
@@ -550,6 +560,25 @@ export async function exportStudent(): Promise<StudentSyncData> {
     studentGrades,
     goals: studentGoals
   }
+}
+
+// ---------- teacher.json（教师工作台独立信封，v17 新增 store teacher_workbench） ----------
+
+export async function exportTeacher(): Promise<TeacherSyncData> {
+  const teacher = await idbGet('teacher_workbench')
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    // 本机从未用过教师工作台时保持 null（而非空壳）：推送不会把其他设备的真实数据冲掉，
+    // 对端 importTeacherData 遇到 null 会跳过、保留本地
+    teacher: teacher ?? null
+  }
+}
+
+export async function importTeacherData(remote: TeacherSyncData): Promise<void> {
+  // 云端尚无 teacher 字段（老信封 / 尚未推送）时不写入，保留本地数据，避免被静默清空
+  if (!remote || remote.teacher === undefined || remote.teacher === null) return
+  await idbPut('teacher_workbench', normalizeTeacherData(remote.teacher))
 }
 
 export async function importStudentData(remote: StudentSyncData): Promise<void> {

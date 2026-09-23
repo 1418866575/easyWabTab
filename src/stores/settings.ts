@@ -270,6 +270,12 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   if (typeof data.studentPageVisible === 'boolean') {
     out.studentPageVisible = data.studentPageVisible
   }
+  if (typeof data.teacherPageName === 'string') {
+    out.teacherPageName = data.teacherPageName.trim()
+  }
+  if (typeof data.teacherPageVisible === 'boolean') {
+    out.teacherPageVisible = data.teacherPageVisible
+  }
   // 工作台城市：仅采纳 trim 后非空字符串；空串/undefined/null/非字符串一律视为「未配置」
   // （清除城市后重载不复活旧值，非法值回退默认即未配置）
   if (typeof data.workbenchCity === 'string' && data.workbenchCity.trim() !== '') {
@@ -346,6 +352,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const businessPageVisible = ref<boolean>(true)
   const studentPageName = ref<string>('')
   const studentPageVisible = ref<boolean>(true)
+  const teacherPageName = ref<string>('')
+  const teacherPageVisible = ref<boolean>(true)
 
   // 站点外观（浏览器标签标题 + favicon）：localStorage 驱动（site-title / site-favicon），
   // 与主题同构——不进 IDB persist，经 nav.json prefs 云同步跨设备生效；空值回退默认
@@ -396,6 +404,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       businessPageVisible: businessPageVisible.value,
       studentPageName: studentPageName.value,
       studentPageVisible: studentPageVisible.value,
+      teacherPageName: teacherPageName.value,
+      teacherPageVisible: teacherPageVisible.value,
       desktopNotifyEnabled: desktopNotifyEnabled.value,
       reminderEmailEnabled: reminderEmailEnabled.value,
       reminderEmailTo: reminderEmailTo.value,
@@ -518,6 +528,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       businessPageVisible.value = effective.businessPageVisible !== false
       studentPageName.value = typeof effective.studentPageName === 'string' ? effective.studentPageName.trim() : ''
       studentPageVisible.value = effective.studentPageVisible !== false
+      teacherPageName.value = typeof effective.teacherPageName === 'string' ? effective.teacherPageName.trim() : ''
+      teacherPageVisible.value = effective.teacherPageVisible !== false
       for (const id of DIALOG_IDS) {
         const size = effective.dialogSizes[id]
         if (size) {
@@ -652,6 +664,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     businessPageVisible.value = true
     studentPageName.value = ''
     studentPageVisible.value = true
+    teacherPageName.value = ''
+    teacherPageVisible.value = true
     desktopNotifyEnabled.value = false
     reminderEmailEnabled.value = false
     reminderEmailTo.value = ''
@@ -778,11 +792,20 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     studentPageVisible.value = v
     persist()
   }
+  function setTeacherPageName(s: string) {
+    teacherPageName.value = s
+    persist()
+  }
+  function setTeacherPageVisible(v: boolean) {
+    teacherPageVisible.value = v
+    persist()
+  }
 
   // 页面显示名 computed
   const workbenchPageDisplayName = computed(() => workbenchPageName.value || '工作台')
   const businessPageDisplayName = computed(() => businessPageName.value || '销售记账')
   const studentPageDisplayName = computed(() => studentPageName.value || '学生工作台')
+  const teacherPageDisplayName = computed(() => teacherPageName.value || '教师工作台')
 
   // ========================================
   // 站点外观：浏览器标签标题 + favicon（localStorage 驱动，云同步经 nav.json prefs；空值回退默认）
@@ -937,11 +960,14 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     businessPageVisible,
     studentPageName,
     studentPageVisible,
+    teacherPageName,
+    teacherPageVisible,
     siteTitle,
     siteFavicon,
     workbenchPageDisplayName,
     businessPageDisplayName,
     studentPageDisplayName,
+    teacherPageDisplayName,
     desktopNotifyEnabled,
     reminderEmailEnabled,
     reminderEmailTo,
@@ -975,6 +1001,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     setBusinessPageVisible,
     setStudentPageName,
     setStudentPageVisible,
+    setTeacherPageName,
+    setTeacherPageVisible,
     initSiteMeta,
     applySiteMeta,
     setSiteTitle,

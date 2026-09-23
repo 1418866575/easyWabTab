@@ -238,6 +238,8 @@ export interface AppSettingsData {
   businessActiveSection?: string       // 销售记账工作台当前模块（home/products/purchases/daily/expenses/inventory/stats；缺失 = 首页）
   studentPageName?: string             // 学生工作台页面自定义名称（默认 '学生工作台'）
   studentPageVisible?: boolean         // 学生工作台页面可见性开关（默认 true；缺失 = 显示）
+  teacherPageName?: string             // 教师工作台页面自定义名称（默认 '教师工作台'）
+  teacherPageVisible?: boolean         // 教师工作台页面可见性开关（默认 true；缺失 = 显示）
   cloudSyncEnabled?: boolean           // 云同步总开关（默认 false）
   cloudSyncUrl?: string                // WebDAV URL（空串 = 未配置）
   cloudSyncUsername?: string           // WebDAV 用户名（空串 = 未配置）
@@ -1236,6 +1238,15 @@ export interface BusinessSyncData {
   clientId?: string
   pushedAt?: number
   business: BusinessData
+}
+
+/** TeacherSyncData：教师工作台独立同步信封（v17 新增 teacher_workbench 单对象；含 base64 图片故体积偏大） */
+export interface TeacherSyncData {
+  version: 1
+  exportedAt: string
+  clientId?: string
+  pushedAt?: number
+  teacher?: unknown
 }
 
 /** StudentSyncData：学生工作台独立同步信封（16 store 字段名映射，逐字段透传为 unknown） */

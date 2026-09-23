@@ -20,7 +20,8 @@ const MODULE_LABELS: Record<string, string> = {
   'icons.json': '自定义图标',
   'workbench.json': '工作台',
   'business.json': '销售记账',
-  'student.json': '学生工作台'
+  'student.json': '学生工作台',
+  'teacher.json': '教师工作台'
 }
 
 function formatTime(isoOrTs: string | number): string {

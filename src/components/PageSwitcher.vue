@@ -7,7 +7,7 @@ import { useRouter } from 'vue-router'
 import { useAppSettingsStore } from '@/stores/settings'
 import Icon from '@/components/Icon.vue'
 
-type PageKey = 'home' | 'workbench' | 'business' | 'student'
+type PageKey = 'home' | 'workbench' | 'business' | 'student' | 'teacher'
 
 const props = defineProps<{ current: Exclude<PageKey, 'home'> }>()
 
@@ -21,7 +21,8 @@ const PAGES: Record<PageKey, { path: string; icon: string }> = {
   home: { path: '/', icon: 'home' },
   workbench: { path: '/workbench', icon: 'toolbox' },
   business: { path: '/business', icon: 'store' },
-  student: { path: '/student', icon: 'notes' }
+  student: { path: '/student', icon: 'notes' },
+  teacher: { path: '/teacher', icon: 'teacher' }
 }
 
 const nameOf = (key: PageKey): string => {
@@ -34,6 +35,8 @@ const nameOf = (key: PageKey): string => {
       return settings.businessPageDisplayName
     case 'student':
       return settings.studentPageDisplayName
+    case 'teacher':
+      return settings.teacherPageDisplayName
   }
 }
 
@@ -42,6 +45,7 @@ const visiblePages = computed<PageKey[]>(() => {
   if (settings.workbenchPageVisible !== false) list.push('workbench')
   if (settings.businessPageVisible !== false) list.push('business')
   if (settings.studentPageVisible !== false) list.push('student')
+  if (settings.teacherPageVisible !== false) list.push('teacher')
   return list
 })
 

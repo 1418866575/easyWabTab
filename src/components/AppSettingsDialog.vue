@@ -1773,6 +1773,34 @@ onUnmounted(() => {
           </p>
         </div>
 
+        <!-- 教师工作台 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <span class="wb-menu-label">教师工作台</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                :value="store.teacherPageName"
+                placeholder="教师工作台"
+                maxlength="20"
+                @input="store.setTeacherPageName(($event.target as HTMLInputElement).value)"
+              />
+              <button type="button" class="switch-btn"
+                :class="{ on: store.teacherPageVisible !== false }"
+                role="switch"
+                :aria-checked="store.teacherPageVisible !== false"
+                data-testid="teacher-visible-switch"
+                @click="store.setTeacherPageVisible(store.teacherPageVisible === false)">
+                <span class="switch-thumb"></span>
+              </button>
+            </div>
+          </div>
+          <p class="wb-menu-hint">
+            控制导航站左上角「教师工作台」按钮的显示。关闭后该入口隐藏（不影响已保存的数据）。
+          </p>
+        </div>
+
         <!-- 站点管理（导航设置 tab - 站点管理）：原导航站工具栏九动作迁移入口；弹窗类先关设置再开目标，纯动作就地执行 -->
         <div v-if="activeTab === 'nav' && activeSubTab === 'nav-site'" class="wb-menu-config">
           <h3 class="wb-menu-title">站点管理</h3>
@@ -2596,7 +2624,7 @@ onUnmounted(() => {
             </button>
           </div>
           <p class="wb-menu-hint">
-            启用后将通过 WebDAV 同步导航、自定义图标、工作台、销售记账、学生工作台等全部数据（含自定义图标），按 5 份独立信封（nav.json / icons.json / workbench.json / business.json / student.json）分别上传。推荐使用坚果云（国内访问稳定）或任意支持 WebDAV 的服务。
+            启用后将通过 WebDAV 同步导航、自定义图标、工作台、销售记账、学生工作台、教师工作台等全部数据（含自定义图标），按 6 份独立信封（nav.json / icons.json / workbench.json / business.json / student.json / teacher.json）分别上传。推荐使用坚果云（国内访问稳定）或任意支持 WebDAV 的服务。
           </p>
           <p v-if="!store.cloudSyncEnabled" class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; margin-top: 0;">
             首次使用指引：① 注册坚果云账号；② 账户信息 → 安全选项 → 添加应用，获取应用密码（非账户密码）；③ 开启开关，填入下方配置；④ 点「测试连接」确认无误后点「立即同步」。
