@@ -22,9 +22,16 @@ import {
   resizeSeats,
   resolveCurrent,
   swapSeats,
-  uid,
-  visibleTeacherGroups
+  uid
 } from '@/composables/teacherCore'
+import {
+  defaultTeacherMenu,
+  groupTeacherMenuItems,
+  moveTeacherMenuItem,
+  normalizeTeacherMenu,
+  renameTeacherMenuLabel,
+  resolveTeacherMenuItems
+} from '@/composables/teacherMenuCore'
 import {
   type ClassBucket,
   type ClassGroup,
@@ -69,7 +76,37 @@ export const useTeacherStore = defineStore('teacher', () => {
   const cls = computed<ClassGroup | null>(() => currentClass(data.value))
   const role = computed<TeacherRole>(() => currentRole(data.value))
   const isHead = computed(() => role.value === 'head')
-  const groups = computed(() => visibleTeacherGroups(role.value))
+
+  // ---------- 左侧菜单（自定义顺序 / 名称；「工作台」分组已迁入设置页，不再作为菜单项） ----------
+  const menu = computed(() => normalizeTeacherMenu(data.value.menuOrder, data.value.menuLabels))
+  /** 导航用：按身份过滤 + 自定义顺序/名称，仍按 group 分组输出 */
+  const groups = computed(() =>
+    groupTeacherMenuItems(resolveTeacherMenuItems(menu.value.order, menu.value.labels, role.value))
+  )
+  /** 设置页用：全部菜单项（不过滤身份），同样按 group 分组 */
+  const menuAllGroups = computed(() =>
+    groupTeacherMenuItems(resolveTeacherMenuItems(menu.value.order, menu.value.labels))
+  )
+
+  async function moveMenuItem(key: string, dir: 'up' | 'down'): Promise<void> {
+    const res = moveTeacherMenuItem(menu.value.order, key, dir)
+    if (!res.ok || !res.order) return
+    data.value = { ...data.value, menuOrder: res.order }
+    await saveTeacher()
+  }
+
+  async function renameMenuItem(key: string, name: string): Promise<void> {
+    const res = renameTeacherMenuLabel(menu.value.labels, key, name)
+    if (!res.ok || !res.labels) return
+    data.value = { ...data.value, menuLabels: res.labels }
+    await saveTeacher()
+  }
+
+  async function resetMenu(): Promise<void> {
+    const def = defaultTeacherMenu()
+    data.value = { ...data.value, menuOrder: def.order, menuLabels: def.labels }
+    await saveTeacher()
+  }
   const semesters = computed(() => data.value.semesters)
   const classesOfCurrentSem = computed(() =>
     data.value.classes.filter((c) => c.semesterId === data.value.current.sem)
@@ -557,6 +594,7 @@ export const useTeacherStore = defineStore('teacher', () => {
     role,
     isHead,
     groups,
+    menuAllGroups,
     semesters,
     classesOfCurrentSem,
     needsSemester,
@@ -573,6 +611,9 @@ export const useTeacherStore = defineStore('teacher', () => {
     updateClassInfo,
     updateTeacherInfo,
     setActivePage,
+    moveMenuItem,
+    renameMenuItem,
+    resetMenu,
     addStudent,
     updateStudent,
     removeStudent,

@@ -20,6 +20,7 @@ import {
   SCORE_BANDS,
   WEEK_DAYS
 } from '@/types/teacher'
+import { normalizeTeacherMenu } from '@/composables/teacherMenuCore'
 
 export const TEACHER_SCHEMA_VER = 1
 
@@ -171,7 +172,20 @@ export function normalizeTeacherData(raw: unknown): TeacherData {
   let current = { sem: str(curRaw.sem), cls: str(curRaw.cls) }
   current = resolveCurrent({ semesters, classes, groups, current } as TeacherData)
 
-  return { schemaVer: TEACHER_SCHEMA_VER, teacher, semesters, classes, assignments, current, groups }
+  // 左侧菜单自定义（顺序 / 名称）：缺省按 TEACHER_PAGES 派生，随云同步一起走 teacher.json
+  const menu = normalizeTeacherMenu(d.menuOrder, d.menuLabels)
+
+  return {
+    schemaVer: TEACHER_SCHEMA_VER,
+    teacher,
+    semesters,
+    classes,
+    assignments,
+    current,
+    groups,
+    menuOrder: menu.order,
+    menuLabels: menu.labels
+  }
 }
 
 export function normalizeBucket(raw: unknown): ClassBucket {

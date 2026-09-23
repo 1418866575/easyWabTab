@@ -10,6 +10,7 @@ import { useAppSettingsStore } from '@/stores/settings'
 import { useCloudSync, type SyncStatus } from '@/composables/useCloudSync'
 import PageSwitcher from '@/components/PageSwitcher.vue'
 import Icon from '@/components/Icon.vue'
+import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
 import TeacherDataManage from '@/components/teacher/TeacherDataManage.vue'
 import TeacherStudents from '@/components/teacher/TeacherStudents.vue'
 import TeacherSeats from '@/components/teacher/TeacherSeats.vue'
@@ -28,6 +29,8 @@ import '@/styles/teacher.css'
 const store = useTeacherStore()
 
 const sidebarCollapsed = ref(false)
+// 右上角「设置」入口：数据管理 / 使用说明 / 菜单设置 均收进设置弹窗（左侧菜单已移除「工作台」分组）
+const showSettings = ref(false)
 
 // ---------- 引导（两步） ----------
 const guideYear = ref('')
@@ -189,6 +192,17 @@ onMounted(() => {
       </div>
       <div class="tv-topbar-actions">
         <span class="tv-class-label">{{ classLabel }}</span>
+        <!-- 右上角「设置」入口：数据管理 / 使用说明 / 菜单设置 -->
+        <button
+          type="button"
+          class="tw-btn tw-btn-sm tv-settings-btn"
+          title="数据管理 / 使用说明 / 菜单设置"
+          data-testid="teacher-settings-entry"
+          @click="showSettings = true"
+        >
+          <Icon name="cog" :size="14" />
+          <span class="tv-settings-text">设置</span>
+        </button>
         <button
           type="button"
           class="tw-btn tw-btn-sm tv-collapse-btn"
@@ -286,7 +300,8 @@ onMounted(() => {
       </main>
     </div>
 
-    <!-- 设置弹窗（与工作台一致） -->
+    <!-- 设置弹窗：source=teacher → 左侧 rail 只显示「教师工作台」（通知与同步仅在导航站设置中显示） -->
+    <AppSettingsDialog v-if="showSettings" source="teacher" @close="showSettings = false" />
   </div>
 </template>
 
@@ -529,7 +544,8 @@ onMounted(() => {
     padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   }
 
-  .tv-collapse-text {
+  .tv-collapse-text,
+  .tv-settings-text {
     display: none;
   }
 }

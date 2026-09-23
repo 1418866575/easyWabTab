@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 家长联系方式：搜索（学生/家长/电话）+ 导入表格 + 导出纸质版；「拨打」用 tel: 唤起拨号（移动端直接打电话）。
+// 家长联系方式：搜索（学生/家长/电话）+ 导入表格 + 导出纸质版；联系电话以文本展示，不提供一键拨号。
 // 该页仅班主任可见（由 TeacherView 的可见性矩阵控制）。
 
 import { computed, ref } from 'vue'
@@ -35,6 +35,7 @@ const filtered = computed(() => {
 
 const registered = computed(() => Object.values(b.value?.parents ?? {}).filter((p) => p.phone || p.parentName).length)
 const phoneCount = computed(() => Object.values(b.value?.parents ?? {}).filter((p) => p.phone).length)
+const missingPhone = computed(() => Object.values(b.value?.parents ?? {}).filter((p) => !p.phone).length)
 
 const fileInput = ref<HTMLInputElement | null>(null)
 
@@ -82,7 +83,6 @@ async function exportExcelFile(): Promise<void> {
     <div class="tw-head">
       <div>
         <h3 class="tw-title">家长联系方式</h3>
-        <p class="tw-subtitle">家长电话属敏感信息，仅班主任可见。手机端点「拨打」可直接拨号。</p>
       </div>
       <div class="tw-toolbar tw-no-print">
         <button type="button" class="tw-btn tw-btn-primary" @click="fileInput?.click()">导入表格</button>
@@ -95,6 +95,7 @@ async function exportExcelFile(): Promise<void> {
     <section class="tw-stat-grid">
       <TeacherStatCard :value="registered" label="已登记家长（人）" accent="#3fa37c" />
       <TeacherStatCard :value="phoneCount" label="联系电话（个）" accent="#6da3d8" />
+      <TeacherStatCard :value="missingPhone" label="未填家长联系方式（人）" accent="#d98c3f" />
     </section>
 
     <section class="tw-card">
@@ -114,7 +115,6 @@ async function exportExcelFile(): Promise<void> {
               <th>家长姓名</th>
               <th>关系</th>
               <th>联系电话</th>
-              <th class="tw-no-print">拨打</th>
             </tr>
           </thead>
           <tbody>
@@ -125,10 +125,6 @@ async function exportExcelFile(): Promise<void> {
               <td>{{ r.parent?.parentName || '-' }}</td>
               <td class="tw-num">{{ r.parent?.relation || '-' }}</td>
               <td class="tw-num">{{ r.parent?.phone || '-' }}</td>
-              <td class="tw-no-print">
-                <a v-if="r.parent?.phone" class="tw-btn tw-btn-sm tw-btn-primary pt-call" :href="`tel:${r.parent.phone}`">拨打</a>
-                <span v-else class="tw-label">-</span>
-              </td>
             </tr>
           </tbody>
         </table>
@@ -142,9 +138,5 @@ async function exportExcelFile(): Promise<void> {
 <style scoped>
 .pt-file {
   display: none;
-}
-
-.pt-call {
-  text-decoration: none;
 }
 </style>

@@ -39,6 +39,7 @@ import { useWorkbenchPomodoroStore } from '@/stores/workbenchPomodoro'
 import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
+import { useTeacherStore } from '@/stores/teacher'
 import { STAGE_BADGE, GRADE_STAGE_GROUPS, type StudentStage } from '@/types'
 import type { WorkbenchData } from '@/types'
 import { COUNTDOWN_CATEGORIES } from '@/types'
@@ -54,30 +55,43 @@ import type { ContainerId } from '@/composables/useHomeLayout'
 import Icon from '@/components/Icon.vue'
 import BusinessCategoryManager from '@/components/business/BusinessCategoryManager.vue'
 import StudentTimetableConfig from '@/components/student/StudentTimetableConfig.vue'
+import TeacherDataManage from '@/components/teacher/TeacherDataManage.vue'
+import TeacherHelp from '@/components/teacher/TeacherHelp.vue'
+// 教师工作台 .tw-* 全局样式：设置页内嵌 TeacherDataManage / TeacherHelp 时依赖，
+// 非 /teacher 路由（source='all'）打开设置也能正常渲染这些组件
+import '@/styles/teacher.css'
 import CloudSyncConflictModal from './CloudSyncConflictModal.vue'
 
 // 弹窗 id 列表：从导出的契约表派生（与 store 内部 DIALOG_IDS 顺序一致），
 // 作为 drafts/syncAll 的全量来源；渲染分组用下方导出的 NAV/WB 数组
 const DIALOG_IDS = Object.keys(DIALOG_DEFAULTS) as DialogId[]
 
-// 当前激活的设置分组 tab（导航设置 / 工作台设置 / 提醒设置 / 销售记账 / 学生工作台 / 云同步）
-type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'sync'
+// 当前激活的设置分组 tab（导航设置 / 工作台设置 / 提醒设置 / 销售记账 / 学生工作台 / 教师工作台 / 云同步）
+type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'teacher' | 'sync'
 // 子 tab keys：每个主 tab 下的子分组（仅内容多的主 tab 定义）
 type NavSubTab = 'nav-appearance' | 'nav-display' | 'nav-site' | 'nav-size' | 'nav-data'
 type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-todo-cat' | 'wb-cd-cat' | 'wb-note-cat' | 'wb-diary-cat' | 'wb-diary-journals' | 'wb-diary-add' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
 type BizSubTab = 'biz-base' | 'biz-backup' | 'biz-cat'
 type StuSubTab = 'stu-stage' | 'stu-info' | 'stu-subject' | 'stu-timetable' | 'stu-menu'
-/** 来源页：nav=导航站、workbench=个人工作台、business=销售记账、student=学生工作台、all=全显示(向后兼容) */
-type SettingsSource = 'nav' | 'workbench' | 'business' | 'student' | 'all'
+/** 教师工作台子 tab：数据管理 / 使用说明（原左侧菜单「工作台」分组，已迁入设置页）+ 菜单设置 */
+type TeacherSubTab = 'teacher-data' | 'teacher-help' | 'teacher-menu'
+/** 来源页：nav=导航站、workbench=个人工作台、business=销售记账、student=学生工作台、teacher=教师工作台、all=全显示(向后兼容) */
+type SettingsSource = 'nav' | 'workbench' | 'business' | 'student' | 'teacher' | 'all'
 const props = withDefaults(defineProps<{ source?: SettingsSource }>(), { source: 'all' })
 
-/** 来源页 → 允许显示的 tab keys：按需求始终保留 sync 云同步 + remind 提醒设置，其余只显示来源页自己的 */
+/**
+ * 来源页 → 允许显示的 tab keys。
+ * 「通知与同步」（remind 提醒设置 + sync 云同步）**仅在导航站显示**；
+ * 四个工作台（个人工作台 / 销售记账 / 学生工作台 / 教师工作台）打开设置时只显示自己那一组，
+ * 左侧 rail 不再出现「通知与同步」（全局类设置统一收在导航站的设置里）。
+ */
 const SOURCE_TABS: Record<SettingsSource, SettingsTabKey[]> = {
   nav:        ['nav',      'sync', 'remind'],
-  workbench:  ['wb',       'sync', 'remind'],
-  business:   ['business', 'sync', 'remind'],
-  student:    ['student',  'sync', 'remind'],
-  all:        ['nav', 'wb', 'remind', 'business', 'student', 'sync']
+  workbench:  ['wb'],
+  business:   ['business'],
+  student:    ['student'],
+  teacher:    ['teacher'],
+  all:        ['nav', 'wb', 'remind', 'business', 'student', 'teacher', 'sync']
 }
 
 /** 来源页默认激活的 tab（第一个=自己页面的设置tab），若不在可见集合里会被 visibleTabs watcher 回退到第一个可见 */
@@ -86,6 +100,7 @@ const DEFAULT_TAB_FOR_SOURCE: Record<SettingsSource, SettingsTabKey> = {
   workbench: 'wb',
   business: 'business',
   student: 'student',
+  teacher: 'teacher',
   all: 'nav'
 }
 const activeTab = ref<SettingsTabKey>(DEFAULT_TAB_FOR_SOURCE[props.source] ?? 'nav')
@@ -94,10 +109,10 @@ const activeTab = ref<SettingsTabKey>(DEFAULT_TAB_FOR_SOURCE[props.source] ?? 'n
 // 第二层：子 tab（每个内容较多的主 tab 内部再分组）
 // 子 tab 列表定义：key + 显示名称；主 tab 切换时 activeSubTab 回退到该主 tab 默认的第一个
 // ========================================
-type SubTabKey = NavSubTab | WbSubTab | BizSubTab | StuSubTab
+type SubTabKey = NavSubTab | WbSubTab | BizSubTab | StuSubTab | TeacherSubTab
 interface SubTabDef { key: SubTabKey; label: string }
 /** 主 tab → 子 tab 列表（顺序即显示顺序，第一个 = 默认选中） */
-const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student', SubTabDef[]> = {
+const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student' | 'teacher', SubTabDef[]> = {
   nav: [
     { key: 'nav-appearance', label: '站点外观' },
     { key: 'nav-display', label: '显示控制' },
@@ -130,6 +145,11 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student', SubTabDef[]> = {
     { key: 'stu-subject', label: '学科清单' },
     { key: 'stu-timetable', label: '课程表配置' },
     { key: 'stu-menu',    label: '学生菜单' }
+  ],
+  teacher: [
+    { key: 'teacher-data', label: '数据管理' },
+    { key: 'teacher-help', label: '使用说明' },
+    { key: 'teacher-menu', label: '菜单设置' }
   ]
 }
 /** 当前激活的子 tab（主 tab 为 remind/sync 时此值无意义，模板不会渲染第二层） */
@@ -138,7 +158,7 @@ const activeSubTab = ref<SubTabKey>((SUB_TABS[DEFAULT_TAB_FOR_SOURCE[props.sourc
 /** 当前主 tab 的子 tab 列表（用于模板渲染第二层子 tab 条；主 tab 无 sub-tabs 时返回空数组） */
 const currentSubTabs = computed<SubTabDef[]>(() => {
   const k = activeTab.value as SettingsTabKey
-  if (k === 'nav' || k === 'wb' || k === 'business' || k === 'student') return SUB_TABS[k]
+  if (k === 'nav' || k === 'wb' || k === 'business' || k === 'student' || k === 'teacher') return SUB_TABS[k]
   return []
 })
 
@@ -158,6 +178,17 @@ const emit = defineEmits<{
 const store = useAppSettingsStore()
 const businessStore = useWorkbenchBusinessStore()
 const studentStore = useStudentSettingsStore()
+const teacherStore = useTeacherStore()
+
+// 教师 tab 用到教师数据（菜单顺序/名称存在其中）。从 /teacher 打开时已加载；
+// 从其它页面（source='all'）打开时必须先加载，否则后续改动会把空数据写回 IndexedDB 覆盖真实数据。
+watch(
+  () => activeTab.value,
+  (tab) => {
+    if (tab === 'teacher') void teacherStore.loadTeacher()
+  },
+  { immediate: true }
+)
 
 /**
  * 最终可见 tabs：
@@ -170,6 +201,7 @@ const visibleTabs = computed<SettingsTabKey[]>(() => {
     if (tab === 'wb' || tab === 'remind') return store.workbenchPageVisible !== false
     if (tab === 'business') return store.businessPageVisible !== false
     if (tab === 'student') return store.studentPageVisible !== false
+    if (tab === 'teacher') return store.teacherPageVisible !== false
     return true
   })
 })
@@ -249,6 +281,15 @@ const NAV_GROUPS: NavGroup[] = [
       { key: 'stu-subject', label: '学科清单', icon: 'document', tab: 'student', sub: 'stu-subject' },
       { key: 'stu-timetable', label: '课程表配置', icon: 'cog', tab: 'student', sub: 'stu-timetable' },
       { key: 'stu-menu', label: '学生菜单', icon: 'bookmark', tab: 'student', sub: 'stu-menu' }
+    ]
+  },
+  {
+    key: 'teacher',
+    label: '教师工作台',
+    items: [
+      { key: 'teacher-data', label: '数据管理', icon: 'database', tab: 'teacher', sub: 'teacher-data' },
+      { key: 'teacher-help', label: '使用说明', icon: 'help', tab: 'teacher', sub: 'teacher-help' },
+      { key: 'teacher-menu', label: '菜单设置', icon: 'bookmark', tab: 'teacher', sub: 'teacher-menu' }
     ]
   },
   {
@@ -640,6 +681,39 @@ function commitMenuName(key: string): void {
 // Esc 还原：删除暂存，输入框回落到 store 当前值（不调 store）
 function revertMenuName(key: string): void {
   delete menuEditing[key]
+}
+
+// ========================================
+// 教师工作台菜单（仅教师 tab - 菜单设置）：排序 + 改名 + 恢复默认
+// 与 wb-menu 同构（内联输入 + 上移/下移 + 恢复默认），但不含可见性开关（教师侧按角色身份控制显示）。
+// 数据存教师工作台数据内（随 teacher.json 云同步），跨设备一致。
+// 移动限制在同一分组内：教师导航按 group 重新分组渲染，跨组调换不会改变界面呈现。
+// ========================================
+const teacherMenuEditing = reactive<Record<string, string>>({})
+
+function onMoveTeacherMenu(key: string, dir: 'up' | 'down'): void {
+  void teacherStore.moveMenuItem(key, dir)
+}
+
+// 改名提交（blur / Enter）：按 code point 校验 ≤ 12；trim 后为空 → 还原；store 拒绝则回落到旧值
+function commitTeacherMenuName(key: string): void {
+  const raw = teacherMenuEditing[key] ?? ''
+  const name = raw.trim()
+  if (!name || Array.from(name).length > 12) {
+    delete teacherMenuEditing[key]
+    return
+  }
+  void teacherStore.renameMenuItem(key, name)
+  delete teacherMenuEditing[key]
+}
+
+// Esc 还原：删除暂存，输入框回落到当前值
+function revertTeacherMenuName(key: string): void {
+  delete teacherMenuEditing[key]
+}
+
+function onResetTeacherMenu(): void {
+  void teacherStore.resetMenu()
 }
 
 // ========================================
@@ -1717,7 +1791,7 @@ onUnmounted(() => {
             </div>
           </div>
           <p class="wb-menu-hint">
-            控制导航站「工作台」按钮的显示。关闭后工作台设置和提醒设置一并隐藏。
+            控制导航站「工作台」按钮的显示，默认关闭：打开后导航站出现工作台入口，设置里也会出现工作台与提醒设置；关闭则一并隐藏。
           </p>
 
           <!-- 销售记账 -->
@@ -2607,6 +2681,65 @@ onUnmounted(() => {
           </ul>
         </div>
 
+        <!-- 教师工作台 - 数据管理（原左侧菜单「工作台」分组，已迁入设置页；组件自带标题，此处不重复输出） -->
+        <div v-if="activeTab === 'teacher' && activeSubTab === 'teacher-data'" class="wb-menu-config">
+          <TeacherDataManage />
+        </div>
+
+        <!-- 教师工作台 - 使用说明（同上，迁入设置页） -->
+        <div v-if="activeTab === 'teacher' && activeSubTab === 'teacher-help'" class="wb-menu-config">
+          <TeacherHelp />
+        </div>
+
+        <!-- 教师工作台 - 菜单设置：左侧菜单排序 + 改名（限制在同一分组内移动） -->
+        <div v-if="activeTab === 'teacher' && activeSubTab === 'teacher-menu'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">菜单设置</h3>
+            <el-button size="small" data-testid="tcmenu-reset" @click="onResetTeacherMenu">恢复默认</el-button>
+          </div>
+          <p class="wb-menu-hint">
+            调整左侧菜单的显示顺序与名称，改动随教师数据云同步，多设备一致。「数据管理 / 使用说明」已迁入设置页，不再出现在左侧菜单。
+          </p>
+
+          <div v-for="g in teacherStore.menuAllGroups" :key="g.group" class="tc-menu-group">
+            <div class="tc-menu-group-title">{{ g.group }}</div>
+            <div class="wb-menu-list">
+              <div
+                v-for="(item, index) in g.pages"
+                :key="item.key"
+                class="wb-menu-row"
+                :data-testid="`tcmenu-row-${item.key}`"
+              >
+                <span class="wb-menu-icon"><Icon :name="item.icon" /></span>
+                <el-input
+                  :maxlength="12"
+                  :data-testid="`tcmenu-name-${item.key}`"
+                  :aria-label="`${item.label}名称`"
+                  :model-value="teacherMenuEditing[item.key] ?? item.label"
+                  @update:model-value="teacherMenuEditing[item.key] = $event"
+                  @blur="commitTeacherMenuName(item.key)"
+                  @keydown.enter="commitTeacherMenuName(item.key)"
+                  @keydown.esc.stop="revertTeacherMenuName(item.key)"
+                />
+                <div class="wb-menu-actions">
+                  <el-button
+                    size="small"
+                    :data-testid="`tcmenu-up-${item.key}`"
+                    :disabled="index === 0"
+                    @click="onMoveTeacherMenu(item.key, 'up')"
+                  >上移</el-button>
+                  <el-button
+                    size="small"
+                    :data-testid="`tcmenu-down-${item.key}`"
+                    :disabled="index === g.pages.length - 1"
+                    @click="onMoveTeacherMenu(item.key, 'down')"
+                  >下移</el-button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- 云同步（仅云同步 tab）：WebDAV 配置（开关 + 三字段 + 测试连接 + 立即同步 + 上次同步时间 + 首次使用引导） -->
         <div v-if="activeTab === 'sync'" class="wb-menu-config">
           <div class="wb-menu-head">
@@ -3069,6 +3202,18 @@ html.dark .tab-btn.active {
   margin: 6px 0 12px;
   font-size: 12px;
   color: var(--color-text-muted, var(--color-text-muted));
+}
+
+/* 教师工作台菜单设置：按分组（基础功能 / 特色功能）分段 */
+.tc-menu-group {
+  margin-bottom: 14px;
+}
+
+.tc-menu-group-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-muted, #94a3b8);
 }
 
 .wb-menu-list {

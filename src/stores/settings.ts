@@ -345,9 +345,10 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   // 导航站视图模式：经典网格 / 侧边栏导航（默认 classic）
   const viewMode = ref<'classic' | 'sidebar'>('classic')
 
-  // 页面命名与可见性（工作台/销售记账/学生工作台）
+  // 页面命名与可见性（工作台/销售记账/学生工作台/教师工作台）
+  // 工作台默认「关闭」：需用户在「设置 → 主题与外观 → 页面导航」主动打开后，导航站按钮与其设置页才显示
   const workbenchPageName = ref<string>('')
-  const workbenchPageVisible = ref<boolean>(true)
+  const workbenchPageVisible = ref<boolean>(false)
   const businessPageName = ref<string>('')
   const businessPageVisible = ref<boolean>(true)
   const studentPageName = ref<string>('')
@@ -523,7 +524,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       navFiltersExpanded.value = effective.navFiltersExpanded === true
       viewMode.value = effective.viewMode === 'sidebar' ? 'sidebar' : 'classic'
       workbenchPageName.value = typeof effective.workbenchPageName === 'string' ? effective.workbenchPageName.trim() : ''
-      workbenchPageVisible.value = effective.workbenchPageVisible !== false
+      // 工作台默认关闭：只有明确存过 true 才显示（undefined / false 一律视为关闭）
+      workbenchPageVisible.value = effective.workbenchPageVisible === true
       businessPageName.value = typeof effective.businessPageName === 'string' ? effective.businessPageName.trim() : ''
       businessPageVisible.value = effective.businessPageVisible !== false
       studentPageName.value = typeof effective.studentPageName === 'string' ? effective.studentPageName.trim() : ''
@@ -659,7 +661,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     navFiltersExpanded.value = false
     viewMode.value = 'classic'
     workbenchPageName.value = ''
-    workbenchPageVisible.value = true
+    workbenchPageVisible.value = false
     businessPageName.value = ''
     businessPageVisible.value = true
     studentPageName.value = ''

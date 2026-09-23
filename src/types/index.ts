@@ -232,7 +232,7 @@ export interface AppSettingsData {
   reminderEmailTemplateId?: string // EmailJS Template ID
   reminderEmailPublicKey?: string // EmailJS Public Key
   workbenchPageName?: string           // 工作台页面自定义名称（默认 '工作台'）
-  workbenchPageVisible?: boolean       // 工作台页面可见性开关（默认 true）
+  workbenchPageVisible?: boolean       // 工作台页面可见性开关（默认 false：用户在设置 → 主题与外观 → 页面导航主动打开后才显示）
   businessPageName?: string            // 销售记账页面自定义名称（默认 '销售记账'）
   businessPageVisible?: boolean        // 销售记账页面可见性开关（默认 true）
   businessActiveSection?: string       // 销售记账工作台当前模块（home/products/purchases/daily/expenses/inventory/stats；缺失 = 首页）

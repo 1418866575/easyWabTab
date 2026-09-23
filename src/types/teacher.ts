@@ -157,6 +157,10 @@ export interface TeacherData {
   current: TeacherCurrent
   /** groups[semesterId][classId] = 该班本学期的数据桶 */
   groups: Record<string, Record<string, ClassBucket>>
+  /** 左侧菜单自定义顺序（仅含可定制的功能页键，缺省按 TEACHER_PAGES 顺序）；随云同步 */
+  menuOrder?: string[]
+  /** 左侧菜单自定义显示名：key -> 名称，缺省用 TEACHER_PAGES 的 label；随云同步 */
+  menuLabels?: Record<string, string>
 }
 
 // ---------- 页面与可见性 ----------
@@ -205,6 +209,13 @@ export const TEACHER_PAGES: TeacherPageMeta[] = [
 
 /** 仅班主任可见的班务模块（选「非班主任」时隐藏：导航移除 + 直达拦截） */
 export const TEACHER_HEAD_ONLY_PAGES: TeacherPageKey[] = ['seats', 'duty', 'parents', 'special']
+
+/**
+ * 已迁入「设置页」的功能（数据管理 / 使用说明）：不再是左侧菜单项，
+ * 入口改为顶部右上角「设置」按钮 → 设置弹窗的对应子 tab。
+ * 页面组件仍保留（设置页直接复用），故 TeacherPageKey 不变。
+ */
+export const TEACHER_SETTINGS_ONLY_PAGES: TeacherPageKey[] = ['data', 'help']
 
 export const TEACHER_GROUPS: ('基础功能' | '特色功能' | '工作台')[] = ['基础功能', '特色功能', '工作台']
 
