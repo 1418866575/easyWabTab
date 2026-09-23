@@ -54,8 +54,58 @@ export function normalizeTodo(raw: Partial<WorkbenchTodo>): WorkbenchTodo {
     color: typeof raw.color === 'string' && HEX_COLOR_RE.test(raw.color) ? raw.color : DEFAULT_TODO_COLOR,
     ...(categoryId ? { categoryId } : {}),
     ...(raw.checkedIn === true ? { checkedIn: true } : {}),
-    ...(typeof raw.checkedInAt === 'string' ? { checkedInAt: raw.checkedInAt } : {})
+    ...(typeof raw.checkedInAt === 'string' ? { checkedInAt: raw.checkedInAt } : {}),
+    ...(typeof raw.completedAt === 'string' ? { completedAt: raw.completedAt } : {}),
+    // 归档只对已完成的条目有意义：未完成的一律不保留归档标记，避免脏数据把未完成项藏起来
+    ...(raw.archived === true && raw.completed === true ? { archived: true } : {})
   }
+}
+
+/** 已完成距今超过 N 天（默认 30）自动归档。 */
+export const ARCHIVE_AFTER_DAYS = 30
+
+/**
+ * 是否应自动归档：仅对「已完成且未归档」的条目成立。
+ * 判定基准 = completedAt ?? updatedAt（旧数据没有 completedAt，用最后更新时间兜底）。
+ */
+export function shouldArchive(
+  todo: WorkbenchTodo,
+  now: number = Date.now(),
+  days: number = ARCHIVE_AFTER_DAYS
+): boolean {
+  if (!todo.completed || todo.archived === true) return false
+  const base = typeof todo.completedAt === 'string' ? todo.completedAt : todo.updatedAt
+  const ts = base ? Date.parse(base) : NaN
+  if (!Number.isFinite(ts)) return false
+  return now - ts > days * 24 * 60 * 60 * 1000
+}
+
+/**
+ * 批量自动归档：把符合 shouldArchive 的条目补上 archived=true，其余保持原引用。
+ * 返回新数组（不 mutate 入参）；changed 为本次被归档的条目，便于 UI 提示条数。
+ */
+export function autoArchiveTodos<T extends WorkbenchTodo>(
+  items: T[],
+  now: number = Date.now(),
+  days: number = ARCHIVE_AFTER_DAYS
+): { items: T[]; changed: T[] } {
+  const changed: T[] = []
+  const next = items.map((t) => {
+    if (!shouldArchive(t, now, days)) return t
+    const archived = { ...t, archived: true } as T
+    changed.push(archived)
+    return archived
+  })
+  return { items: next, changed }
+}
+
+/**
+ * 展示排序：未完成 → 已完成（未归档）→ 已归档，段内严格保持手工顺序。
+ * 稳定排序（Array.prototype.sort 在现代引擎稳定），用于替换原先「数组顺序即展示顺序」。
+ */
+export function sortTodosByStatus<T extends WorkbenchTodo>(items: T[]): T[] {
+  const rank = (t: WorkbenchTodo): number => (t.archived === true ? 2 : t.completed ? 1 : 0)
+  return [...items].sort((a, b) => rank(a) - rank(b))
 }
 
 /** 查询筛选条件：标题模糊匹配标题 / 描述模糊匹配描述 / 两者同时非空为 AND / priority 精确 / status 完成态；空串或 undefined 表示不限制。 */
@@ -63,7 +113,7 @@ export interface TodoFilterCriteria {
   title?: string
   description?: string
   priority?: '' | TodoPriority
-  status?: '' | 'all' | 'active' | 'completed'
+  status?: '' | 'all' | 'active' | 'completed' | 'archived'
   /** 分类筛选：undefined/'' = 全部不过滤；'uncategorized' 字面量 = 未分类；其他 = 分类名精确匹配。 */
   categoryId?: string
 }
@@ -79,8 +129,10 @@ export function filterTodos<T extends WorkbenchTodo>(items: T[], criteria: TodoF
     if (title && !todo.title.toLowerCase().includes(title)) return false
     if (description && !(todo.description ?? '').toLowerCase().includes(description)) return false
     if (priority !== undefined && todo.priority !== priority) return false
-    if (status === 'active' && todo.completed) return false
-    if (status === 'completed' && !todo.completed) return false
+    // 归档项独立成段：不出现在「未完成」「已完成」里，只在「已归档」筛选下可见
+    if (status === 'active' && (todo.completed || todo.archived === true)) return false
+    if (status === 'completed' && (!todo.completed || todo.archived === true)) return false
+    if (status === 'archived' && todo.archived !== true) return false
     if (categoryId !== undefined) {
       if (categoryId === 'uncategorized') {
         if (!isTodoUncategorized(todo)) return false

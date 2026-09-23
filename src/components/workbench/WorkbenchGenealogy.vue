@@ -7,7 +7,15 @@ import RecordsCard from '@/components/common/RecordsCard.vue'
 import GenealogyTreeNode from '@/components/workbench/GenealogyTreeNode.vue'
 import { useToast } from '@/composables/useToast'
 import { useGenealogyStore } from '@/stores/genealogy'
-import { buildTree, getChildren, getDescendants } from '@/composables/genealogyCore'
+import {
+  buildTree,
+  getChildren,
+  getDescendants,
+  calcAge,
+  genealogyStats,
+  AGE_GROUPS
+} from '@/composables/genealogyCore'
+import type { AgeGroupKey } from '@/composables/genealogyCore'
 import type { FamilyMember } from '@/types'
 import { usePageSize } from '@/composables/usePageSize'
 
@@ -53,6 +61,16 @@ function relationSummary(m: FamilyMember): string {
   return `父${m.parents.length} · 子${children} · 偶${m.spouses.length}`
 }
 
+/**
+ * 年龄文本：在世按今天算周岁，已故按去世日期算「享年 N」。
+ * 出生日期缺失或非法 → '—'（不臆造年龄）；死亡在出生之前同样按 '—' 处理。
+ */
+function ageText(m: FamilyMember): string {
+  const age = calcAge(m.birthDate, m.deathDate)
+  if (age === null) return '—'
+  return m.deathDate ? `享年 ${age}` : `${age}`
+}
+
 function memberName(id: string): string {
   return store.members.find((m) => m.id === id)?.name ?? '(已删除)'
 }
@@ -62,9 +80,22 @@ function cardFields(m: FamilyMember) {
     { label: '姓名', value: m.name, emphasis: true },
     { label: '性别', value: GENDER_LABEL[m.gender ?? ''] ?? '未知' },
     { label: '出生日期', value: m.birthDate || '—' },
+    { label: '年龄', value: ageText(m) },
     { label: '关系', value: relationSummary(m) }
   ]
 }
+
+// ===== 人口统计（总数 / 男女 / 年龄段）=====
+// 依赖 store.members，成员或出生日期变化自动重算；纯函数 genealogyStats 出结果，组件不做计算。
+const stats = computed(() => genealogyStats(store.members))
+const ageStatRows = computed(() =>
+  AGE_GROUPS.map((g) => ({
+    key: g.key as AgeGroupKey,
+    label: g.label,
+    basis: g.basis,
+    count: stats.value.groups[g.key]
+  }))
+)
 
 // ===== 成员新增/编辑弹框 =====
 const showMemberDialog = ref(false)
@@ -143,6 +174,13 @@ function triggerAvatarInput(): void {
 const isMemberFormValid = computed(() => {
   const n = formName.value.trim().length
   return n > 0 && n <= 50
+})
+
+/** 表单内年龄预览：随出生/去世日期实时计算（在世算周岁，已故算享年），无需手填 */
+const formAgeText = computed(() => {
+  const age = calcAge(formBirth.value || undefined, formDeath.value || undefined)
+  if (age === null) return formBirth.value ? '—' : '填写出生日期后自动计算'
+  return formDeath.value ? `享年 ${age} 岁` : `${age} 岁`
 })
 
 function startAdd(): void {
@@ -418,6 +456,12 @@ onUnmounted(() => {
                 <span v-else class="td-col-empty">—</span>
               </template>
             </el-table-column>
+            <el-table-column label="年龄" width="110" align="center">
+              <template #default="{ row }">
+                <span v-if="ageText(row) !== '—'" :data-testid="`fg-age-${row.id}`">{{ ageText(row) }}</span>
+                <span v-else class="td-col-empty">—</span>
+              </template>
+            </el-table-column>
             <el-table-column label="关系" min-width="160" align="center">
               <template #default="{ row }">
                 <span class="fg-rel">{{ relationSummary(row) }}</span>
@@ -476,6 +520,38 @@ onUnmounted(() => {
           <el-button size="small" class="btn-cancel" data-testid="fg-clear-root" @click="clearRoot">取消主根</el-button>
         </template>
         <span v-else class="fg-tree-info fg-tree-muted">未设主根，按「无父母的成员」展示为多棵根树</span>
+      </div>
+
+      <!-- 人口统计：总数 / 男女 / 年龄段（年龄段按国家规定口径，悬停看判定依据） -->
+      <div class="fg-stats" data-testid="fg-stats">
+        <div class="fg-stats-row">
+          <span class="fg-stat-chip fg-stat-total">
+            成员总数 <b data-testid="fg-stat-total">{{ stats.total }}</b>
+          </span>
+          <span class="fg-stat-chip">
+            男 <b class="is-male" data-testid="fg-stat-male">{{ stats.male }}</b>
+          </span>
+          <span class="fg-stat-chip">
+            女 <b class="is-female" data-testid="fg-stat-female">{{ stats.female }}</b>
+          </span>
+          <span v-if="stats.unknownGender > 0" class="fg-stat-chip">
+            性别未知 <b>{{ stats.unknownGender }}</b>
+          </span>
+        </div>
+        <div class="fg-stats-row fg-stats-row-age">
+          <span
+            v-for="g in ageStatRows"
+            :key="g.key"
+            class="fg-stat-chip"
+            :title="g.basis"
+            :data-testid="`fg-stat-${g.key}`"
+          >{{ g.label }} <b>{{ g.count }}</b></span>
+          <span
+            v-if="stats.unknownAge > 0"
+            class="fg-stat-chip fg-stat-unknown"
+            title="未填写出生日期，无法判定年龄段"
+          >年龄未知 <b>{{ stats.unknownAge }}</b></span>
+        </div>
       </div>
 
       <div v-if="treeRoots.length === 0" class="empty-state" data-testid="fg-tree-empty">
@@ -546,6 +622,10 @@ onUnmounted(() => {
               data-testid="fg-birth"
             />
           </div>
+        </div>
+        <div class="form-group">
+          <label>年龄（自动计算）</label>
+          <div class="fg-age-preview" data-testid="fg-form-age">{{ formAgeText }}</div>
         </div>
         <div class="form-group">
           <label>去世日期（可选）</label>
@@ -784,6 +864,46 @@ onUnmounted(() => {
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 10px;
 }
+/* ===== 家谱树：人口统计 ===== */
+.fg-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  background: var(--color-bg-card, #fff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 10px;
+}
+.fg-stats-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fg-stat-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--color-text-secondary, #64748b);
+  background: var(--color-bg-hover, #f1f5f9);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.fg-stat-chip b { font-size: 14px; color: var(--color-text, #111827); }
+.fg-stat-chip b.is-male { color: #3b82f6; }
+.fg-stat-chip b.is-female { color: #ec4899; }
+.fg-stat-total { background: var(--color-primary-light, #eff6ff); }
+.fg-stat-unknown { opacity: 0.85; }
+/* 年龄预览（编辑弹框只读） */
+.fg-age-preview {
+  font-size: 14px;
+  color: var(--color-text-secondary, #64748b);
+  padding: 6px 10px;
+  border: 1px dashed var(--color-border, #e5e7eb);
+  border-radius: 6px;
+}
+html.dark .fg-stats { background-color: var(--color-bg-card, #1f2937); border-color: var(--color-border, #374151); }
+html.dark .fg-stat-chip { background-color: var(--color-bg-hover, #374151); }
+html.dark .fg-stat-chip b { color: var(--color-text, #f9fafb); }
+html.dark .fg-age-preview { border-color: var(--color-border, #374151); }
+
 .fg-tree-info { font-size: 13px; color: var(--color-text-secondary, #64748b); }
 .fg-tree-muted { color: var(--color-text-muted, #9ca3af); }
 .fg-mindmap { display: flex; flex-direction: column; gap: 6px; padding: 4px 0; flex: 1; min-height: 0; overflow-y: auto; }

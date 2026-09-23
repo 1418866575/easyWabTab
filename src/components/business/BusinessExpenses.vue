@@ -21,13 +21,17 @@ import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { findExpenseCategory, formatYuanOf, localDateKey, sortExpenses } from '@/composables/businessCore'
 import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
 import type { BusinessExpense } from '@/types'
-import BusinessCategoryManager from './BusinessCategoryManager.vue'
 import Icon from '@/components/Icon.vue'
 import { usePageSize } from '@/composables/usePageSize'
+import { useAppSettingsDialog } from '@/composables/useAppSettingsDialog'
 
 const store = useWorkbenchBusinessStore()
 
-const showCatManager = ref(false)
+// 分类管理入口已迁移到「设置 → 销售记账 → 基础设置」：这里只负责跳转，不再内嵌弹框
+const appSettings = useAppSettingsDialog()
+function openCategorySettings(): void {
+  appSettings.openAppSettings({ tab: 'business', sub: 'biz-base', action: 'expense-cats' })
+}
 
 // ===== 按天分组（date 降序） =====
 interface ExpenseDayGroup {
@@ -178,7 +182,7 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
       </div>
       <div class="bizexp-toolbar-right">
         <ViewModeToggle v-if="dayGroups.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
-        <el-button size="small" data-testid="bizexp-cat-manager" title="支出分类管理" @click="showCatManager = true"><Icon name="cog" :size="15" /></el-button>
+        <el-button size="small" data-testid="bizexp-cat-manager" title="支出分类管理（设置）" @click="openCategorySettings"><Icon name="cog" :size="15" /></el-button>
       </div>
     </div>
 
@@ -348,7 +352,7 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
       </form>
     </el-dialog>
 
-    <BusinessCategoryManager v-if="showCatManager" kind="expense" @close="showCatManager = false" />
+    <!-- 支出分类管理已迁移到「设置 → 销售记账 → 基础设置」 -->
   </div>
 </template>
 

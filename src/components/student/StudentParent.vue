@@ -1281,15 +1281,21 @@ html.dark .stp-pager-info {
 }
 /* 奖励卡片背景图 + 半透明遮罩保证文字可读 */
 .stp-reward-card { position: relative; }
+/* 缺 background-size 时原图 1:1 平铺，卡片只露左上角 → 表现为"图片不显示"，必须补齐 */
+.stp-reward-card.has-bg {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
 .stp-reward-card.has-bg::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: rgba(255, 255, 255, 0.74);
+  background: rgba(255, 255, 255, 0.58);
   z-index: 0;
 }
-html.dark .stp-reward-card.has-bg::before { background: rgba(17, 24, 39, 0.62); }
+html.dark .stp-reward-card.has-bg::before { background: rgba(17, 24, 39, 0.55); }
 .stp-reward-card.has-bg > * { position: relative; z-index: 1; }
 
 .stp-modal-body { display: flex; flex-direction: column; gap: 14px; }

@@ -11,6 +11,7 @@ import {
 import type { DialogId } from '@/stores/settings'
 import type { WorkbenchMenuItem } from '@/composables/workbenchMenuCore'
 import { useAppSettingsDialog } from '@/composables/useAppSettingsDialog'
+import type { SettingsTarget } from '@/composables/useAppSettingsDialog'
 import { useToast } from '@/composables/useToast'
 import { idbGet, idbPut, idbImportAll, idbExportAll, idbClear, IDB_STUDENT_STORES, IDB_CORE_STORES, IDB_AUX_STORES, IDB_ICONS_STORES, WORKBENCH_PREFS_KEYS } from '@/composables/useIdb'
 import { localDateKey } from '@/composables/businessCore'
@@ -65,7 +66,7 @@ const DIALOG_IDS = Object.keys(DIALOG_DEFAULTS) as DialogId[]
 type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'sync'
 // 子 tab keys：每个主 tab 下的子分组（仅内容多的主 tab 定义）
 type NavSubTab = 'nav-appearance' | 'nav-display' | 'nav-site' | 'nav-size' | 'nav-data'
-type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-todo-cat' | 'wb-cd-cat' | 'wb-note-cat' | 'wb-diary-cat' | 'wb-diary-journals' | 'wb-diary-add' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
+type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-todo-cat' | 'wb-cd-cat' | 'wb-note-cat' | 'wb-pwd-cat' | 'wb-diary-cat' | 'wb-diary-journals' | 'wb-diary-add' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
 type BizSubTab = 'biz-base' | 'biz-backup' | 'biz-cat'
 type StuSubTab = 'stu-stage' | 'stu-info' | 'stu-subject' | 'stu-timetable' | 'stu-menu'
 /** 来源页：nav=导航站、workbench=个人工作台、business=销售记账、student=学生工作台、all=全显示(向后兼容) */
@@ -113,6 +114,7 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student', SubTabDef[]> = {
     { key: 'wb-todo-cat', label: '待办分类管理' },
     { key: 'wb-cd-cat',   label: '倒计时分类管理' },
     { key: 'wb-note-cat', label: '便签分类管理' },
+    { key: 'wb-pwd-cat', label: '密码分类管理' },
     { key: 'wb-diary-cat', label: '日记分类管理' },
     { key: 'wb-diary-journals', label: '多日记本' },
     { key: 'wb-diary-add', label: '新增管理' },
@@ -218,6 +220,7 @@ const NAV_GROUPS: NavGroup[] = [
       { key: 'wb-todo-cat', label: '待办分类管理', icon: 'tag', tab: 'wb', sub: 'wb-todo-cat' },
       { key: 'wb-cd-cat', label: '倒计时分类管理', icon: 'tag', tab: 'wb', sub: 'wb-cd-cat' },
       { key: 'wb-note-cat', label: '便签分类管理', icon: 'tag', tab: 'wb', sub: 'wb-note-cat' },
+      { key: 'wb-pwd-cat', label: '密码分类管理', icon: 'lock', tab: 'wb', sub: 'wb-pwd-cat' },
       { key: 'wb-backup', label: '工作台备份', icon: 'save', tab: 'wb', sub: 'wb-backup' },
       { key: 'wb-snapshot', label: '数据时光机', icon: 'refresh', tab: 'wb', sub: 'wb-snapshot' },
       { key: 'wb-size', label: '弹窗尺寸', icon: 'package', tab: 'wb', sub: 'wb-size' }
@@ -1389,6 +1392,69 @@ async function handleToggleNoteCatTab(cat: { id: string; showInTabs?: boolean })
   if (!ok) toast.error('分类更新失败')
 }
 
+// --- 密码分类（镜像便签分类；分类与条目同库加密，必须解锁密码库才能读写）---
+const pwdCatStore = usePasswordsStore()
+const pwdCatDrafts = reactive<Record<string, string>>({})
+const newPwdCatName = ref('')
+
+/** 密码库是否可写：未解锁时分类读写都会失败（savePasswords 返回 saved:false） */
+const pwdVaultUnlocked = computed(() => pwdCatStore.isUnlocked === true)
+
+const sortedPwdCategories = computed(() =>
+  [...pwdCatStore.categories].sort((a, b) => (a.sort ?? 999) - (b.sort ?? 999))
+)
+
+function initPwdCats(): void {
+  for (const c of pwdCatStore.categories) {
+    if (!(c.id in pwdCatDrafts)) pwdCatDrafts[c.id] = c.name
+  }
+}
+
+async function commitPwdCatName(cat: { id: string; name: string }): Promise<void> {
+  const draft = pwdCatDrafts[cat.id]
+  if (draft === undefined || draft.trim() === cat.name) return
+  const ok = await pwdCatStore.updateCategory(cat.id, { name: draft.trim() })
+  if (!ok) {
+    toast.error('密码分类名称已存在或为空（也可能是密码库已锁定）')
+    pwdCatDrafts[cat.id] = cat.name
+  }
+}
+
+function revertPwdCatName(cat: { id: string; name: string }): void {
+  pwdCatDrafts[cat.id] = cat.name
+}
+
+async function handleAddPwdCat(): Promise<void> {
+  const name = newPwdCatName.value.trim()
+  if (!name) return
+  const ok = await pwdCatStore.addCategory(name)
+  if (!ok) {
+    toast.error('密码分类名称已存在，或密码库已锁定无法写入')
+    return
+  }
+  newPwdCatName.value = ''
+}
+
+async function handleDeletePwdCat(cat: { id: string; name: string }): Promise<void> {
+  if (!await showConfirm(`确定要删除密码分类「${cat.name}」吗？该分类下的密码条目将变为未分类`)) return
+  const ok = await pwdCatStore.deleteCategory(cat.id)
+  if (!ok) {
+    toast.error('密码分类删除失败（密码库可能已锁定）')
+    return
+  }
+  delete pwdCatDrafts[cat.id]
+}
+
+async function handleMovePwdCat(catId: string, dir: 'up' | 'down'): Promise<void> {
+  const ok = await pwdCatStore.moveCategory(catId, dir)
+  if (!ok) toast.warning('已到边界，无法移动')
+}
+
+async function handleTogglePwdCatTab(cat: { id: string; showInTabs?: boolean }): Promise<void> {
+  const ok = await pwdCatStore.toggleTabCategory(cat.id, cat.showInTabs === false)
+  if (!ok) toast.error('分类更新失败（密码库可能已锁定）')
+}
+
 // --- 记账分类（复用 workbenchLedger 的 addCategory/updateCategory/deleteCategory，内置8分组不可删） ---
 const ledgerCatDrafts = reactive<Record<string, string>>({})
 const ledgerCatEditType = reactive<Record<string, 'income' | 'expense'>>({})
@@ -1457,6 +1523,7 @@ onMounted(async () => {
   initTodoCats()
   initCdCats()
   initNoteCats()
+  initPwdCats()
   // 记账 store 可能还未随工作台挂载加载 → 防御性加载一次
   try { await ledStore.loadLedger() } catch { /* ignore */ }
   initLedgerCats()
@@ -1464,16 +1531,30 @@ onMounted(async () => {
     () => appSettings.showAppSettings.value,
     async (open) => {
       if (open) {
-        // WeatherCard 入口只在工作台页面有意义；如果来源页不含 wb（极端来源），仍然选首个可见 tab
-        if (visibleTabs.value.includes('wb')) {
-          activeTab.value = 'wb'
-        } else if (visibleTabs.value.length > 0 && !visibleTabs.value.includes(activeTab.value)) {
-          activeTab.value = visibleTabs.value[0]
+        // 指定了定位目标（页面「去设置」入口，如销售记账的分类管理）→ 优先跳到该区块；
+        // 否则沿用老行为：WeatherCard 入口跳工作台设置 tab，极端来源回退首个可见 tab。
+        const target = appSettings.consumeSettingsTarget() as SettingsTarget | null
+        let jumped = false
+        if (target && visibleTabs.value.includes(target.tab)) {
+          activeTab.value = target.tab
+          if (target.sub) activeSubTab.value = target.sub as SubTabKey
+          // 销售记账页面「去设置」入口：定位后直接展开对应管理弹框，省掉一次点击
+          if (target.action === 'product-cats') bizCatManagerKind.value = 'product'
+          else if (target.action === 'expense-cats') bizCatManagerKind.value = 'expense'
+          jumped = true
+        }
+        if (!jumped) {
+          if (visibleTabs.value.includes('wb')) {
+            activeTab.value = 'wb'
+          } else if (visibleTabs.value.length > 0 && !visibleTabs.value.includes(activeTab.value)) {
+            activeTab.value = visibleTabs.value[0]
+          }
         }
         // 每次打开设置弹窗，重新拉取记账分类（与工作台页面保持最新）
         try { await ledStore.loadLedger() } catch { /* ignore */ }
         initLedgerCats()
-        nextTick(() => cityInput.value?.focus())
+        // 只有定位到工作台默认区块时才聚焦城市输入框（指定目标时聚焦无意义，还会滚动打断视线）
+        if (!jumped) nextTick(() => cityInput.value?.focus())
         appSettings.closeAppSettings()
       }
     }
@@ -2095,6 +2176,51 @@ onUnmounted(() => {
           </div>
         </div>
 
+        <!-- 密码分类管理（工作台设置 tab - 密码分类管理）：改名/上下移/删除/新增/标签页显隐 -->
+        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-pwd-cat'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">密码分类</h3>
+          </div>
+          <p class="wb-menu-hint">
+            管理密码面板的分类标签页（全部 + 各分类）；删除分类后该分类下的密码条目将变为未分类。
+            分类与密码条目一起加密保存，<b>需先解锁密码库</b>才能读写。
+          </p>
+          <p v-if="!pwdVaultUnlocked" class="wb-menu-hint" data-testid="wbcfg-pwd-locked" style="color: var(--color-warning, #f59e0b);">
+            当前密码库未解锁，请先到「个人工作台 → 密码」输入主密码解锁，再回来管理分类。
+          </p>
+          <div class="wb-menu-list">
+            <div v-for="(cat, idx) in sortedPwdCategories" :key="cat.id" class="wb-menu-row">
+              <el-input
+                :model-value="pwdCatDrafts[cat.id] ?? cat.name"
+                @update:model-value="pwdCatDrafts[cat.id] = $event"
+                @blur="commitPwdCatName(cat)"
+                @keydown.enter="commitPwdCatName(cat)"
+                @keydown.esc="revertPwdCatName(cat)"
+                :data-testid="`wbcfg-pwd-name-${cat.id}`"
+              />
+              <div class="wb-menu-actions">
+                <el-button size="small" :disabled="idx <= 0" :data-testid="`wbcfg-pwd-up-${cat.id}`" @click="handleMovePwdCat(cat.id, 'up')">上移</el-button>
+                <el-button size="small" :disabled="idx >= sortedPwdCategories.length - 1" :data-testid="`wbcfg-pwd-down-${cat.id}`" @click="handleMovePwdCat(cat.id, 'down')">下移</el-button>
+              </div>
+              <el-button size="small" type="danger" :data-testid="`wbcfg-pwd-del-${cat.id}`" @click="handleDeletePwdCat(cat)">删除</el-button>
+              <el-switch
+                :model-value="cat.showInTabs !== false"
+                @change="handleTogglePwdCatTab({ id: cat.id, showInTabs: cat.showInTabs })"
+                :data-testid="`wbcfg-pwd-tab-${cat.id}`"
+              />
+            </div>
+          </div>
+          <div class="wb-cat-add-row">
+            <el-input
+              v-model="newPwdCatName"
+              placeholder="新分类名称"
+              data-testid="wbcfg-pwd-new"
+              @keydown.enter="handleAddPwdCat"
+            />
+            <el-button size="small" :disabled="newPwdCatName.trim() === ''" data-testid="wbcfg-pwd-add" @click="handleAddPwdCat">添加</el-button>
+          </div>
+        </div>
+
         <!-- 日记分类管理（工作台设置 tab - 日记本设置）：内联渲染 DiaryCategoryManager -->
         <div v-if="activeTab === 'wb' && activeSubTab === 'wb-diary-cat'" class="wb-menu-config diary-cat-config">
           <DiaryCategoryManager />
@@ -2649,7 +2775,7 @@ onUnmounted(() => {
             </label>
           </div>
 
-          <div v-if="store.cloudSyncEnabled" class="remind-actions" style="display: flex; align-items: center; gap: 12px;">
+          <div v-if="store.cloudSyncEnabled" class="remind-actions sync-actions" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
             <button
               type="button"
               class="wb-menu-btn"
@@ -2681,7 +2807,7 @@ onUnmounted(() => {
               :disabled="pushLocalBusy || !store.cloudSyncUrl || !store.cloudSyncUsername || !store.cloudSyncPassword"
               @click="handlePushLocal"
             >本地推送云端</button>
-            <span data-testid="sync-last" class="wb-menu-hint" style="margin-left: auto;">上次同步：{{ lastSyncText }}</span>
+            <span data-testid="sync-last" class="wb-menu-hint sync-last-hint">上次同步：{{ lastSyncText }}</span>
           </div>
           <p v-if="store.cloudSyncEnabled" class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px; margin-top: 6px;">
             用外部工具改过云端文件后若「立即同步」未生效，点「以云端覆盖本地」强制采纳云端（本地未推送的改动会被覆盖）。
@@ -3412,6 +3538,12 @@ html.dark .wb-snapshot-empty {
   margin-top: 12px;
 }
 
+/* 上次同步时间：桌面靠右与按钮同排；窄屏独占一行，避免与 4 个同步按钮挤在一行被裁掉 */
+.sync-last-hint {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
 html.dark .remind-label {
   color: var(--color-text, #f9fafb);
 }
@@ -3961,6 +4093,13 @@ html.dark .status-pill { color: #4ade80; background-color: rgba(74, 222, 128, 0.
   .rail-item .rail-item-label { font-size: 12px; }
   .settings-content-head { padding: 12px 16px; }
   .settings-scroll { padding: 16px; }
+  /* 云同步「上次同步」换到下一行整行显示（原与 4 个按钮同排，窄屏必然超出屏幕） */
+  .sync-last-hint {
+    margin-left: 0;
+    flex: 0 0 100%;
+    white-space: normal;
+    word-break: break-all;
+  }
 }
 
 </style>

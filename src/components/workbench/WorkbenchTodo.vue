@@ -8,7 +8,7 @@ const vm = useViewMode()
 
 function cardFields(row: any) {
   return [
-    { label: '完成', value: row.todo.completed ? '已完成' : '未完成' },
+    { label: '完成', value: row.todo.archived ? '已归档' : (row.todo.completed ? '已完成' : '未完成') },
     { label: '打卡', value: row.todo.checkedIn ? '已打卡' : '未打卡' },
     { label: '标题', value: row.todo.title },
     { label: '描述', value: row.todo.description || '—' },
@@ -25,6 +25,9 @@ import type { TodoFilterCriteria } from '@/composables/todoCore'
 import type { TodoPriority, WorkbenchTodo } from '@/types'
 import { DEFAULT_TODO_COLOR } from '@/types'
 import { usePageSize } from '@/composables/usePageSize'
+import { useToast } from '@/composables/useToast'
+
+const toast = useToast()
 
 const store = useWorkbenchTodosStore()
 
@@ -32,7 +35,7 @@ const store = useWorkbenchTodosStore()
 const searchTitle = ref('')
 const searchDescription = ref('')
 const searchPriority = ref<'' | TodoPriority>('')
-const searchStatus = ref<'' | 'all' | 'active' | 'completed'>('')
+const searchStatus = ref<'' | 'all' | 'active' | 'completed' | 'archived'>('')
 const appliedFilters = ref<TodoFilterCriteria>({})
 
 // ===== 分类筛选标签页（点击即时生效，与查询条件叠加；'' = 全部，选中值 = 分类名字符串）=====
@@ -80,10 +83,12 @@ const filteredTodos = computed(() =>
 // 预计算卡片主角（含 completed 的「已完成」态），供模板一次取用，避免重复调用
 interface TodoHero {
   label: string
-  status: 'done' | 'normal' | 'today' | 'overdue'
+  status: 'done' | 'archived' | 'normal' | 'today' | 'overdue'
 }
 
 function heroOf(todo: WorkbenchTodo): TodoHero | null {
+  // 归档优先于完成：已归档项主角显示「已归档」，避免与未归档的已完成项混淆
+  if (todo.archived === true) return { label: '已归档', status: 'archived' }
   if (todo.completed) return { label: '已完成', status: 'done' }
   const info = dueInfo(todo.dueDate, false)
   if (info === null) return null
@@ -190,6 +195,20 @@ async function handleSave(): Promise<void> {
 
 async function handleToggle(todo: WorkbenchTodo): Promise<void> {
   await store.toggleTodo(todo.id)
+}
+
+/**
+ * 手动归档 / 取消归档。
+ * 自动归档已在加载时按「完成超过 30 天」执行，这里只是给用户的即时入口：
+ * 想提前收起就归档，归档后仍可一键放回"已完成"。
+ */
+async function handleArchive(todo: WorkbenchTodo): Promise<void> {
+  const ok = await store.archiveTodo(todo.id)
+  if (!ok) toast.info('只有已完成的待办才能归档')
+}
+
+async function handleUnarchive(todo: WorkbenchTodo): Promise<void> {
+  await store.unarchiveTodo(todo.id)
 }
 
 // 打卡（一次性）：只写 checkedIn/checkedInAt，不改变条目在列表中的位置与索引
@@ -325,6 +344,7 @@ onUnmounted(() => {
             <el-option value="" label="全部状态" />
             <el-option value="active" label="待办" />
             <el-option value="completed" label="已完成" />
+            <el-option value="archived" label="已归档" data-testid="td-search-status-archived" />
           </el-select>
         </label>
       </div>
@@ -347,6 +367,9 @@ onUnmounted(() => {
       </el-radio-group>
       <span class="toolbar-count" data-testid="td-toolbar-count">
         <template v-if="hasActiveFilter">筛选出 {{ filteredTodos.length }} / {{ store.orderedTodos.length }} 个</template>
+        <template v-else>
+          待办 {{ store.activeCount }} · 已完成 {{ store.completedCount }}<template v-if="store.archivedCount > 0"> · 已归档 {{ store.archivedCount }}</template>
+        </template>
       </span>
     </div>
 
@@ -383,7 +406,10 @@ onUnmounted(() => {
         >
           <el-table-column label="标题" min-width="200" align="center" show-overflow-tooltip>
             <template #default="{ row: v }">
-              <div class="td-title" :class="{ 'is-done': v.todo.completed }">{{ v.todo.title }}</div>
+              <div class="td-title" :class="{ 'is-done': v.todo.completed }">
+                {{ v.todo.title }}
+                <span v-if="v.todo.archived === true" class="td-archived-badge" :data-testid="`td-archived-badge-${v.todo.id}`">已归档</span>
+              </div>
             </template>
           </el-table-column>
           <el-table-column label="描述" min-width="160" align="center" show-overflow-tooltip>
@@ -443,6 +469,20 @@ onUnmounted(() => {
                   :title="v.todo.checkedIn ? '已打卡' : '点击打卡'"
                   @click="handleCheckIn(v.todo.id)"
                 >{{ v.todo.checkedIn ? '已打卡' : '打卡' }}</el-button>
+                <el-button
+                  v-if="v.todo.completed && v.todo.archived !== true"
+                  size="small"
+                  :data-testid="`td-archive-${v.todo.id}`"
+                  title="立即归档（不点也会在完成满 30 天后自动归档）"
+                  @click="handleArchive(v.todo)"
+                >归档</el-button>
+                <el-button
+                  v-if="v.todo.archived === true"
+                  size="small"
+                  :data-testid="`td-unarchive-${v.todo.id}`"
+                  title="取消归档，放回已完成"
+                  @click="handleUnarchive(v.todo)"
+                >取消归档</el-button>
                 <el-button size="small" :data-testid="`td-up-${v.todo.id}`" title="上移（手工排序）" @click="handleMove(v.todo.id, 'up')">↑</el-button>
                 <el-button size="small" :data-testid="`td-down-${v.todo.id}`" title="下移（手工排序）" @click="handleMove(v.todo.id, 'down')">↓</el-button>
                 <el-button size="small" :data-testid="`td-edit-${v.todo.id}`" @click="startEdit(v.todo)">编辑</el-button>
@@ -841,6 +881,27 @@ onUnmounted(() => {
   color: var(--color-text-muted, var(--color-text-muted));
   font-size: 14px;
   font-weight: 600;
+}
+
+/* 归档主角：比"已完成"更弱一档（灰），与已完成区分开 */
+.td-archived {
+  color: var(--color-text-muted, var(--color-text-muted));
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* 标题后的归档徽标 */
+.td-archived-badge {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: var(--radius-full, 999px);
+  color: var(--color-text-secondary, #64748b);
+  background: var(--color-bg-hover, #f1f5f9);
+  border: 1px solid var(--color-border, #e2e8f0);
+  vertical-align: middle;
 }
 
 .td-desc {

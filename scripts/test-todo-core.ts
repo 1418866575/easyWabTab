@@ -7,7 +7,11 @@ import {
   isTodoUncategorized,
   moveCustomCategoryInList,
   migrateLegacyBuiltinCategories,
-  applyCheckIn
+  applyCheckIn,
+  shouldArchive,
+  autoArchiveTodos,
+  sortTodosByStatus,
+  ARCHIVE_AFTER_DAYS
 } from '../src/composables/todoCore.ts'
 import * as todoCore from '../src/composables/todoCore.ts'
 import type { WorkbenchTodo } from '../src/types'
@@ -276,6 +280,95 @@ test('T-C4 打卡与完成互不干扰且不重排', () => {
   assert.equal(list[0].completed, false)
   assert.equal(list[1].completed, true)
   assert.equal(list[1].checkedIn, undefined)
+})
+
+// T-D1 — shouldArchive 口径：仅「已完成 + 超 30 天」命中，未完成/已归档/无时间戳一律不归档
+test('T-D1 shouldArchive 判定口径', () => {
+  const now = Date.parse('2026-09-24T00:00:00.000Z')
+  const DAY = 24 * 60 * 60 * 1000
+  const done40d = { ...normalizeTodo({ id: 'a', title: 'a', completed: true }), completedAt: new Date(now - 40 * DAY).toISOString() }
+  const done10d = { ...normalizeTodo({ id: 'b', title: 'b', completed: true }), completedAt: new Date(now - 10 * DAY).toISOString() }
+  const active = { ...normalizeTodo({ id: 'c', title: 'c' }), completedAt: new Date(now - 40 * DAY).toISOString() }
+  const already = { ...done40d, id: 'd', archived: true }
+
+  assert.equal(ARCHIVE_AFTER_DAYS, 30)
+  assert.equal(shouldArchive(done40d, now), true)
+  assert.equal(shouldArchive(done10d, now), false)
+  assert.equal(shouldArchive(active, now), false)
+  assert.equal(shouldArchive(already, now), false)
+  // 边界：刚好 30 天不归档（> 才归档），31 天才归档
+  const exact30 = { ...done40d, id: 'e', completedAt: new Date(now - 30 * DAY).toISOString() }
+  assert.equal(shouldArchive(exact30, now), false)
+  assert.equal(shouldArchive({ ...exact30, completedAt: new Date(now - 30 * DAY - 1).toISOString() }, now), true)
+  // 无 completedAt 时退化为 updatedAt
+  const byUpdated = { ...normalizeTodo({ id: 'f', title: 'f', completed: true }), updatedAt: new Date(now - 40 * DAY).toISOString() }
+  assert.equal(shouldArchive(byUpdated, now), true)
+})
+
+// T-D2 — autoArchiveTodos：只给命中项补 archived=true，其余保持原引用（不 mutate 入参）
+test('T-D2 autoArchiveTodos 批量归档', () => {
+  const now = Date.parse('2026-09-24T00:00:00.000Z')
+  const DAY = 24 * 60 * 60 * 1000
+  const old = { ...normalizeTodo({ id: 'old', title: '旧任务', completed: true }), completedAt: new Date(now - 60 * DAY).toISOString() }
+  const recent = { ...normalizeTodo({ id: 'new', title: '新任务', completed: true }), completedAt: new Date(now - 2 * DAY).toISOString() }
+  const todo = normalizeTodo({ id: 'todo', title: '未完成' })
+  const list: WorkbenchTodo[] = [old, recent, todo]
+
+  const { items, changed } = autoArchiveTodos(list, now)
+  assert.equal(changed.length, 1)
+  assert.equal(changed[0].id, 'old')
+  assert.equal(items[0].archived, true)
+  assert.equal(items[1].archived, undefined)
+  assert.equal(items[2].archived, undefined)
+  // 其余条目保持同一引用 → 不会触发无谓的写盘/重渲染
+  assert.equal(items[1], recent)
+  assert.equal(items[2], todo)
+  // 入参未被修改（纯函数）
+  assert.equal(list[0].archived, undefined)
+  // 幂等：第二次调用不再产生变更
+  const again = autoArchiveTodos(items, now)
+  assert.equal(again.changed.length, 0)
+})
+
+// T-D3 — sortTodosByStatus：未完成 → 已完成（未归档）→ 已归档，段内保持手工顺序
+test('T-D3 sortTodosByStatus 未完成优先', () => {
+  const mk = (id: string, patch: Partial<WorkbenchTodo>): WorkbenchTodo =>
+    ({ ...normalizeTodo({ id, title: id }), ...patch }) as WorkbenchTodo
+  const list: WorkbenchTodo[] = [
+    mk('d1', { completed: true }),
+    mk('a1', {}),
+    mk('ar1', { completed: true, archived: true }),
+    mk('a2', {}),
+    mk('d2', { completed: true }),
+    mk('ar2', { completed: true, archived: true })
+  ]
+  const sorted = sortTodosByStatus(list).map(t => t.id)
+  assert.deepEqual(sorted, ['a1', 'a2', 'd1', 'd2', 'ar1', 'ar2'])
+  // 原数组不被修改
+  assert.deepEqual(list.map(t => t.id), ['d1', 'a1', 'ar1', 'a2', 'd2', 'ar2'])
+})
+
+// T-D4 — filterTodos 增加 archived 状态筛选
+test('T-D4 filterTodos 已归档状态', () => {
+  const mk = (id: string, patch: Partial<WorkbenchTodo>): WorkbenchTodo =>
+    ({ ...normalizeTodo({ id, title: id }), ...patch }) as WorkbenchTodo
+  const list: WorkbenchTodo[] = [
+    mk('a', {}),
+    mk('b', { completed: true }),
+    mk('c', { completed: true, archived: true })
+  ]
+  assert.deepEqual(filterTodos(list, { status: 'archived' }).map(t => t.id), ['c'])
+  // 已归属「已归档」的条目不再出现在「已完成」里（互斥，避免重复计数）
+  assert.deepEqual(filterTodos(list, { status: 'completed' }).map(t => t.id), ['b'])
+  assert.deepEqual(filterTodos(list, { status: 'active' }).map(t => t.id), ['a'])
+  assert.deepEqual(filterTodos(list, { status: 'all' }).map(t => t.id), ['a', 'b', 'c'])
+})
+
+// T-D5 — normalizeTodo：archived 只在 completed 为真时保留（防脏数据出现「未完成却已归档」）
+test('T-D5 normalizeTodo archived 字段校验', () => {
+  assert.equal(normalizeTodo({ archived: true, completed: true }).archived, true)
+  assert.equal(normalizeTodo({ archived: true }).archived, undefined)
+  assert.equal(normalizeTodo({}).archived, undefined)
 })
 
 let passed = 0

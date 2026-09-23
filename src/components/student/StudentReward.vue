@@ -427,16 +427,25 @@ onMounted(async () => {
   cursor: default;
 }
 .sr-reward-card { position: relative; }
+/* 有背景图的卡片：必须补齐 cover/center/no-repeat。
+   缺 background-size 时原图按自身像素 1:1 平铺，150px 高的卡片只露出左上角一小块，
+   视觉上等同于"图片没显示"——这是奖励卡片背景图看不到的根因。 */
+.sr-reward-card.has-bg {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
 .sr-reward-card.has-bg::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: rgba(255, 255, 255, 0.74);
+  /* 遮罩过重（原 0.74）会把图片压得几乎看不见，降到 0.58 兼顾底图可见与文字可读 */
+  background: rgba(255, 255, 255, 0.58);
   z-index: 0;
   pointer-events: none;
 }
-html.dark .sr-reward-card.has-bg::before { background: rgba(17, 24, 39, 0.62); }
+html.dark .sr-reward-card.has-bg::before { background: rgba(17, 24, 39, 0.55); }
 .sr-reward-card.has-bg > * { position: relative; z-index: 1; }
 
 /* 奖励详情弹窗 */
