@@ -106,6 +106,8 @@ const LIST_PAGE_SIZE = 10
 const { pageSize, PAGE_SIZES } = usePageSize('dt-list-pager', LIST_PAGE_SIZE)
 
 const listPageItems = computed(() => {
+  // 移动端弹框内卡片全部展示，无需分页
+  if (vm.isMobile) return sortedRecords.value
   const start = (listPage.value - 1) * pageSize.value
   return sortedRecords.value.slice(start, start + pageSize.value)
 })
@@ -298,7 +300,7 @@ onUnmounted(() => {
               </RecordsCard>
             </div>
           </div>
-          <div class="dt-list-pager ewt-pager">
+          <div v-if="!vm.isMobile" class="dt-list-pager ewt-pager">
             <el-pagination v-model:current-page="listPage" v-model:page-size="pageSize" :page-sizes="PAGE_SIZES" layout="total, prev, pager, next, jumper" :total="sortedRecords.length" background small prev-text="上一页" next-text="下一页" @size-change="listPage = 1" />
           </div>
         </div>
@@ -1097,8 +1099,19 @@ html.dark .btn-delete {
 }
 
 @media (max-width: 768px) {
-  .stat-panel-actions { margin-left: 0; width: 100%; }
+  .stat-header {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .stat-panel-actions {
+    order: 3;
+    margin-left: 0;
+    width: 100%;
+  }
   .stat-panel-actions .btn-add, .stat-panel-actions .btn-manage { flex: 1; text-align: center; }
+  .nav-btn {
+    margin-left: auto;
+  }
 }
 
 /* ===== 记录列表弹框：Element Plus Table + 分页（85vw×85vh，与 Exercise 完全一致）—— 放在 .dialog 基础类之后覆盖 ===== */

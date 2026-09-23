@@ -20,7 +20,7 @@
   margin-left: 0;
 }
 
-/* 4. 卡片视图网格容器：PC 自适应多列；移动端每行 1 个（超出屏幕可下滑） */
+/* 4. 卡片视图网格容器：PC 自适应多列；移动端每行 2 个（无需分页，可滚动查看） */
 .ewt-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -29,7 +29,7 @@
 }
 @media (max-width: 768px) {
   .ewt-card-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: 10px;
   }
 }
@@ -88,4 +88,25 @@
   border-color: var(--color-primary-300) !important;
   color: #ffffff !important;
   opacity: 0.6;
+}
+
+/* ===== 弹框内记录列表容器：移动端内容区自己滚动，分页器固定在底部 =====
+   问题：弹框为 flex column + height:85/90vh，列表容器 flex:1 但没有 overflow，
+   卡片/表格增多时会撑开整个弹框一起滚动，导致分页器被顶到滚动内容中间。
+   修复：移动端给弹框 body 容器加 overflow-y:auto，内容在其内部滚动，
+   分页器始终贴在弹框底部。 */
+@media (max-width: 768px) {
+  .dialog .ex-list,
+  .dialog .dt-list,
+  .dialog .wt-list,
+  .dialog .ld-records-body {
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  /* 双列卡片下，避免固定高度 156px 在窄屏被压塌，改为自动高度 */
+  .ewt-card {
+    height: auto;
+    min-height: 120px;
+  }
 }

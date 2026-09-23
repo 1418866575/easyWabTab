@@ -386,18 +386,52 @@ html.dark .cat-default {
   border-radius: var(--radius-md);
 }
 
-@media (max-width: 640px) {
+/* ===== 移动端：卡片改为「标题独占一行」+「时间 / 还剩」一行 =====
+   原问题：右侧「还剩 X」为 flex-shrink:0，把标题行挤到只剩一个字的宽度（如「下…」「高…」）。
+   方案：把 .countdown-info 扁平化（display:contents），让 标题 / 时间 / 剩余 直接参与换行排布，
+   标题占满一整行（名称不再被挤压），时间与「还剩 X」并排在第二行。 */
+@media (max-width: 768px) {
   .manager {
-    max-height: 90vh;
+    max-height: 92vh;
+  }
+
+  .manager-header {
+    padding: 16px;
+  }
+
+  .manager-body {
+    padding: 16px;
+  }
+
+  /* 扁平化中间层，使子元素成为 main-row 的直接换行项 */
+  .countdown-info {
+    display: contents;
   }
 
   .countdown-main-row {
     flex-wrap: wrap;
+    row-gap: 4px;
+    column-gap: 12px;
+    align-items: center;
+  }
+
+  /* 第 1 行：名称 + 徽标 独占整行 → 名称不再被「还剩」挤压 */
+  .countdown-title {
+    flex: 1 1 100%;
+    order: 1;
+    margin-bottom: 0;
+  }
+
+  /* 第 2 行：时间（左）+ 还剩 X（右） */
+  .countdown-time {
+    order: 2;
   }
 
   .countdown-remaining {
-    margin-left: 0;
-    text-align: left;
+    order: 3;
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: right;
   }
 }
 </style>

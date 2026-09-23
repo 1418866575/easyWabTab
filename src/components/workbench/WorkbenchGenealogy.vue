@@ -285,6 +285,23 @@ async function clearRoot(): Promise<void> {
   toast.info('已取消主根')
 }
 
+// 移动端编辑弹框内快捷入口：打开关系管理 / 设为主根
+function openRelFromEdit(): void {
+  if (!editingId.value) return
+  const m = store.members.find((x) => x.id === editingId.value)
+  if (!m) return
+  cancelMember()
+  openRel(m)
+}
+
+async function setRootFromEdit(): Promise<void> {
+  if (!editingId.value) return
+  const m = store.members.find((x) => x.id === editingId.value)
+  if (!m) return
+  await setRoot(m)
+  cancelMember()
+}
+
 // ===== 家谱树（递归思维导图组件，折叠态由各节点内部维护）=====
 const treeRoots = computed(() => buildTree(store.members, store.rootId))
 const hasRoot = computed(() => store.rootId !== null && store.members.some((m) => m.id === store.rootId))
@@ -554,6 +571,9 @@ onUnmounted(() => {
             {{ editingId ? '保存' : '添加' }}
           </el-button>
           <el-button v-if="editingId" type="danger" size="small" native-type="button" data-testid="fg-record-delete" @click="handleDelete({ id: editingId, name: formName } as FamilyMember)">删除</el-button>
+          <!-- 移动端独占：编辑页快捷入口，PC 端隐藏 -->
+          <el-button v-if="editingId" size="small" class="mobile-only-action" data-testid="fg-edit-rel-button" @click="openRelFromEdit">关系</el-button>
+          <el-button v-if="editingId && store.rootId !== editingId" size="small" type="warning" class="mobile-only-action" data-testid="fg-edit-root-button" @click="setRootFromEdit">设主根</el-button>
         </div>
       </form>
     </el-dialog>
@@ -795,6 +815,17 @@ onUnmounted(() => {
 .field-gender { width: 140px; }
 .field-date { width: 170px; }
 .form-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* PC 端隐藏移动端独占按钮 */
+.mobile-only-action { display: none !important; }
+
+/* 移动端：编辑弹框底部按钮允许换行，避免「取消/保存/删除/关系/设主根」挤爆 */
+@media (max-width: 768px) {
+  .form-actions { flex-wrap: wrap; justify-content: stretch; }
+  .form-actions .el-button { flex: 1 1 calc(33.333% - 6px); min-width: 0; }
+  .form-actions .el-button + .el-button { margin-left: 0 !important; }
+  .mobile-only-action { display: inline-flex !important; }
+}
 
 /* ===== 头像上传 ===== */
 .avatar-uploader { display: flex; align-items: center; gap: 14px; }

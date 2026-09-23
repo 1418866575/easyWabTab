@@ -348,11 +348,36 @@ onMounted(() => {
 onUnmounted(() => {
   pagingMql.removeEventListener('change', syncMobilePaging)
 })
+
+// ===== App Bar 高度测量（移动端专用）=====
+// 移动端 App Bar 会换行成两排，高度不再固定 56px；侧边栏抽屉顶部需对齐真实高度，
+// 否则抽屉头部会被 App Bar 盖住 → 菜单项点不到。这里实时测量并写入 --app-h 供移动端 CSS 使用。
+// 桌面端 CSS 不使用 --app-h（仍走 56px），因此不影响 PC 显示。
+const appBarRef = ref<HTMLElement | null>(null)
+const appBarHeight = ref(56)
+let appBarResizeObserver: ResizeObserver | null = null
+function measureAppBar(): void {
+  const el = appBarRef.value
+  if (el) appBarHeight.value = el.offsetHeight || 56
+}
+onMounted(() => {
+  measureAppBar()
+  window.addEventListener('resize', measureAppBar)
+  if (typeof ResizeObserver !== 'undefined' && appBarRef.value) {
+    appBarResizeObserver = new ResizeObserver(measureAppBar)
+    appBarResizeObserver.observe(appBarRef.value)
+  }
+})
+onUnmounted(() => {
+  window.removeEventListener('resize', measureAppBar)
+  appBarResizeObserver?.disconnect()
+  appBarResizeObserver = null
+})
 </script>
 
 <template>
   <!-- 顶部统一 App Bar：左=工作台/销售台/学生台入口，右=同步/设置/帮助/倒计时；主题与经典侧边栏已迁入 设置→导航设置→显示控制 -->
-  <div class="app-bar">
+  <div ref="appBarRef" class="app-bar">
     <div class="app-bar-left">
       <button v-if="settingsStore.workbenchPageVisible !== false" class="btn-help" @click="router.push('/workbench')" :title="settingsStore.workbenchPageDisplayName"><Icon name="toolbox" /> <span class="nav-entry-label">{{ settingsStore.workbenchPageDisplayName }}</span></button>
       <button v-if="settingsStore.businessPageVisible !== false" class="btn-help" data-testid="nav-business-entry" @click="router.push('/business')" :title="settingsStore.businessPageDisplayName"><Icon name="store" /> <span class="nav-entry-label">{{ settingsStore.businessPageDisplayName }}</span></button>
@@ -376,7 +401,11 @@ onUnmounted(() => {
   </div>
 
   <!-- 视图外壳：侧边栏模式下挂左侧菜单；经典模式无额外包裹，布局完全不变 -->
-  <div class="home-shell" :class="{ 'is-sidebar': viewMode === 'sidebar' }">
+  <div
+    class="home-shell"
+    :class="{ 'is-sidebar': viewMode === 'sidebar' }"
+    :style="{ '--app-h': appBarHeight + 'px' }"
+  >
     <aside
       v-if="viewMode === 'sidebar'"
       class="nav-sidebar"
@@ -424,6 +453,9 @@ onUnmounted(() => {
     <div class="container" :class="{ 'container-sidebar': viewMode === 'sidebar' }">
       <header class="header">
         <div class="header-top">
+          <div class="search-section">
+            <GlobalSearch class="global-search-bar" />
+          </div>
           <button
             v-if="viewMode === 'sidebar'"
             type="button"
@@ -433,9 +465,6 @@ onUnmounted(() => {
           >
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z" /></svg>
           </button>
-          <div class="search-section">
-            <GlobalSearch class="global-search-bar" />
-          </div>
         </div>
       </header>
 
@@ -575,20 +604,6 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   min-width: 0;
-}
-
-/* ThemeToggle 自带白卡样式，在 App Bar 内统一为 ghost，与其余按钮视觉一致 */
-.app-bar-right :deep(.theme-toggle) {
-  background-color: transparent;
-  color: var(--color-text-secondary, #64748b);
-  border-color: transparent;
-  box-shadow: none;
-}
-
-.app-bar-right :deep(.theme-toggle:hover) {
-  background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-primary, #3b82f6);
-  border-color: var(--color-border, #e2e8f0);
 }
 
 .nav-entry-label {
@@ -978,16 +993,6 @@ html.dark .app-bar .btn-help:hover {
   border-color: var(--color-border, #374151);
 }
 
-html.dark .app-bar-right :deep(.theme-toggle) {
-  color: var(--color-text-secondary, #d1d5db);
-}
-
-html.dark .app-bar-right :deep(.theme-toggle:hover) {
-  background-color: var(--color-bg-hover, #374151);
-  color: var(--color-primary, #3b82f6);
-  border-color: var(--color-border, #374151);
-}
-
 /* 暗色模式下的侧边栏 */
 html.dark .nav-sidebar {
   background-color: var(--color-surface, #1f2937);
@@ -1082,15 +1087,6 @@ html.dark .nav-add-site:hover {
     display: none;
   }
 
-  /* 视图切换收窄为纯图标，给工具按钮让出空间 */
-  .view-toggle {
-    width: 92px;
-    margin-left: 4px;
-  }
-  .view-toggle-opt span {
-    display: none;
-  }
-
   .nav-entry-label {
     display: inline; /* 移动端恢复显示名称，与「学生工作台」一致（图标+文字） */
   }
@@ -1132,14 +1128,25 @@ html.dark .nav-add-site:hover {
     font-size: 15px;
   }
 
-  /* 移动端侧边栏：改为抽屉（默认移出视口，open 时滑入） */
+  /* 移动端侧边栏：改为抽屉（默认移出视口，open 时滑入）
+     ① top 对齐真实 App Bar 高度（--app-h 由脚本实时测量），避免抽屉被顶部栏压住导致菜单点不到；
+     ② 宽度收窄到合适尺寸，减少对右侧内容的遮挡 */
   .nav-sidebar {
+    top: var(--app-h, 56px);
     transform: translateX(-100%);
-    width: 260px;
+    width: min(72vw, 232px);
     box-shadow: 4px 0 16px rgba(0, 0, 0, 0.25);
   }
   .nav-sidebar.open {
     transform: translateX(0);
+  }
+  /* 抽屉内容底部留出安全区（iPhone 底部横条），避免最后一项被遮挡 */
+  .nav-sidebar-scroll {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+  /* 遮罩同样从 App Bar 下方开始，避免半透明顶栏被压暗 */
+  .nav-sidebar-backdrop {
+    top: var(--app-h, 56px);
   }
   .view-hamburger {
     display: inline-flex;

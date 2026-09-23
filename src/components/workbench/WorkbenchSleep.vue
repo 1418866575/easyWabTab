@@ -113,6 +113,8 @@ const { pageSize, PAGE_SIZES } = usePageSize('ex-list-pager', LIST_PAGE_SIZE)
 const showListDialog = ref(false)
 const listPage = ref(1)
 const listPageItems = computed<SleepRecord[]>(() => {
+  // 移动端弹框内卡片全部展示，无需分页
+  if (vm.isMobile) return sortedRecords.value
   const arr = sortedRecords.value
   const start = (listPage.value - 1) * pageSize.value
   return arr.slice(start, start + pageSize.value)
@@ -341,7 +343,7 @@ onUnmounted(() => {
             </div>
 
           </div>
-          <div class="ex-list-pager ewt-pager">
+          <div v-if="!vm.isMobile" class="ex-list-pager ewt-pager">
             <el-pagination
               v-model:current-page="listPage"
               @size-change="listPage = 1"
@@ -1121,10 +1123,21 @@ html.dark .btn-delete {
 .sl-quality-4 { color:#10b981; font-weight:700; }
 .sl-quality-5 { color:#059669; font-weight:700; }
 
-/* 移动端 ≤768px：表单字段全宽 */
+/* 移动端 ≤768px：header 换行，按钮组独占一行 */
 @media (max-width: 768px) {
-  .stat-panel-actions { margin-left: 0; width: 100%; }
+  .stat-header {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .stat-panel-actions {
+    order: 3;
+    margin-left: 0;
+    width: 100%;
+  }
   .stat-panel-actions .btn-add, .stat-panel-actions .btn-manage { flex: 1; text-align: center; }
+  .nav-btn {
+    margin-left: auto;
+  }
 }
 
 /* ===== 记录列表弹框：Element Plus Table + 分页（85vw×85vh，与 Exercise 完全一致）—— 必须放在 .dialog 基础类之后覆盖 ===== */
