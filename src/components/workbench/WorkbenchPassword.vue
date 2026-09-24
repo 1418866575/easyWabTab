@@ -949,10 +949,10 @@ html.dark .pwd-cat-badge {
   }
 }
 
-/* 移动端（≤768px）分页惰性（全量渲染）：网格收窄为 2 列 */
+/* 移动端（≤768px）分页惰性（全量渲染）：每行 1 个卡片 */
 @media (max-width: 768px) {
   .pwd-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

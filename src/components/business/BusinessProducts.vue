@@ -37,7 +37,9 @@ const paging = usePanelPaging({
   rowHeight: 200,
   gap: 12,
   containerRef: listEl,
-  gridRef: gridEl
+  gridRef: gridEl,
+  // 移动端（≤768px）默认分页惰性，这里开启固定每页 6 个卡片
+  mobilePageSize: 6
 })
 const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto } = paging
 watch(activeCat, () => goto(1))

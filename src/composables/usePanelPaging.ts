@@ -26,6 +26,9 @@ export interface PanelPagingOptions<T> {
   gap?: number
   /** 每页行数上限（可选）：经 clampMaxRows 归一化后钳制 calcRowsPerPage 结果；未传/Infinity 不限制（其余面板不变）。密码 maxRows:3、运动/饮食/睡眠 maxRows:1。 */
   maxRows?: number
+  /** 移动端（≤768px）固定每页条数（可选）。未传 → 维持 R2 惰性（全量渲染、totalPages 恒 1、pager 隐藏）；
+      传入（如商品面板 6）→ 移动端按该固定值分页，totalPages 正常计算、PanelPager 显示。 */
+  mobilePageSize?: number
   /** flex:1 列表区 DOM（ResizeObserver 测量可用高度）；条件渲染列表未挂载时为 null → 分页惰性（R8）。 */
   containerRef: Ref<HTMLElement | null>
   /** 可选：网格元素（auto-fill minmax 网格），实时读取真实列数（R3）；行式列表不传 → colsPerRow 恒 1。 */
@@ -80,17 +83,30 @@ export function usePanelPaging<T>(opts: PanelPagingOptions<T>): PanelPaging<T> {
   mql.addEventListener('change', onMediaChange)
 
   // --- 分页参数（核心公式走 panelPagingCore）
-  const pageSize = computed(() => rowsPerPage.value * colsPerRow.value)
+  // mobileSize：移动端固定每页条数；0 = 未配置 → 移动端维持 R2 惰性（全量渲染、不分页）
+  const mobileSize = opts.mobilePageSize ?? 0
+
+  const pageSize = computed(() => {
+    if (!isDesktop.value && mobileSize > 0) return mobileSize
+    return rowsPerPage.value * colsPerRow.value
+  })
 
   const totalPages = computed(() => {
-    if (!isDesktop.value) return 1 // R2：移动端惰性
+    if (!isDesktop.value) {
+      // 移动端：仅当配置了固定每页条数才分页，否则惰性（R2）
+      if (mobileSize > 0) return Math.max(1, Math.ceil(opts.items().length / mobileSize))
+      return 1
+    }
     const size = pageSize.value
     if (size <= 0) return 1 // R8：区域未渲染/未测量 → 惰性
     return Math.max(1, Math.ceil(opts.items().length / size))
   })
 
   const pageItems = computed<T[]>(() => {
-    if (!isDesktop.value) return opts.items() // R2：移动端渲染全量
+    if (!isDesktop.value) {
+      if (mobileSize > 0) return slicePage(opts.items(), currentPage.value, mobileSize)
+      return opts.items() // R2：移动端渲染全量
+    }
     return slicePage(opts.items(), currentPage.value, pageSize.value)
   })
 

@@ -106,18 +106,27 @@ function rowKeyOf(row: { todo: WorkbenchTodo }): string {
 
 // ===== 固定分页（el-table 列表，10 条/页）=====
 const LIST_PAGE_SIZE = 10
+/** 移动端（正方形卡片网格）固定每页 6 个 */
+const MOBILE_PAGE_SIZE = 6
 const { pageSize, PAGE_SIZES } = usePageSize('td-list-pager', LIST_PAGE_SIZE)
 const listPage = ref(1)
+/** 移动端固定 6/页，桌面沿用持久化 pageSize；setter 在移动端忽略写入，避免污染用户偏好 */
+const activePageSize = computed({
+  get: () => (vm.isMobile ? MOBILE_PAGE_SIZE : pageSize.value),
+  set: (v: number) => {
+    if (!vm.isMobile) pageSize.value = v
+  }
+})
 const pageTodos = computed(() => {
-  const start = (listPage.value - 1) * pageSize.value
-  return viewTodos.value.slice(start, start + pageSize.value)
+  const start = (listPage.value - 1) * activePageSize.value
+  return viewTodos.value.slice(start, start + activePageSize.value)
 })
 
 // 条目数缩减后钳制页码，避免末页渲染为空
 watch(
   () => viewTodos.value.length,
   (n) => {
-    const maxPage = Math.max(1, Math.ceil(n / pageSize.value))
+    const maxPage = Math.max(1, Math.ceil(n / activePageSize.value))
     if (listPage.value > maxPage) listPage.value = maxPage
   }
 )
@@ -534,7 +543,7 @@ onUnmounted(() => {
         <el-pagination
           v-model:current-page="listPage"
           @size-change="listPage = 1"
-          v-model:page-size="pageSize"
+          v-model:page-size="activePageSize"
           :page-sizes="PAGE_SIZES"
           layout="total, prev, pager, next, jumper"
           :total="viewTodos.length"
@@ -1387,6 +1396,14 @@ html.dark .btn-add:disabled {
   .td-field-title,
   .td-field-grow {
     width: 100%;
+  }
+}
+
+/* 移动端卡片视图：卡片正方形（每页 6 个，见 MOBILE_PAGE_SIZE）。
+   仅作用于本组件内的 .ewt-card-grid（scoped 后代选择器），不影响其它复用该全局类的面板 */
+@media (max-width: 768px) {
+  .ewt-card-grid :deep(.ewt-card) {
+    aspect-ratio: 1;
   }
 }
 

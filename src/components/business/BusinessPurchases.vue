@@ -92,11 +92,20 @@ const filteredWithProductFilter = computed(() => {
 
 // ===== el-pagination 分页（固定 10 条/页） =====
 const LIST_PAGE_SIZE = 10
+/** 移动端（卡片视图）固定每页 6 个 */
+const MOBILE_PAGE_SIZE = 6
 const { pageSize, PAGE_SIZES } = usePageSize('bizpur-list-pager', LIST_PAGE_SIZE)
 const listPage = ref(1)
+/** 移动端固定 6/页，桌面沿用持久化 pageSize；setter 在移动端忽略写入，避免污染用户偏好 */
+const activePageSize = computed({
+  get: () => (vm.isMobile ? MOBILE_PAGE_SIZE : pageSize.value),
+  set: (v: number) => {
+    if (!vm.isMobile) pageSize.value = v
+  }
+})
 const pageItems = computed<BusinessPurchase[]>(() => {
-  const start = (listPage.value - 1) * pageSize.value
-  return filteredWithProductFilter.value.slice(start, start + pageSize.value)
+  const start = (listPage.value - 1) * activePageSize.value
+  return filteredWithProductFilter.value.slice(start, start + activePageSize.value)
 })
 watch(activeCat, () => { listPage.value = 1 })
 watch(() => props.productFilter, () => { listPage.value = 1 })
@@ -293,7 +302,7 @@ async function handleDelete(id: string): Promise<void> {
         <el-pagination
           v-model:current-page="listPage"
           @size-change="listPage = 1"
-          v-model:page-size="pageSize"
+          v-model:page-size="activePageSize"
           :page-sizes="PAGE_SIZES"
           layout="total, prev, pager, next, jumper"
           :total="filteredWithProductFilter.length"
