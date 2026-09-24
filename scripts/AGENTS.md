@@ -83,8 +83,10 @@ scripts/
 - SPA fallback: unknown paths serve `dist/index.html` (single-page routing for /display etc.)
 - Build pipeline: `node scripts/generate-preset-icons.cjs && vue-tsc -b && vite build` — icons must regenerate BEFORE type-check
 - 本机内存紧张时构建需 `NODE_OPTIONS=--max-old-space-size=3072 npm run build`（默认会 OOM）
-- `test-student-achievement-core.ts` 曾因内置勋章从 10 个扩到 26 个而失效——改 `studentAchievementCore.ts` 的
-  `BUILTIN_ACHIEVEMENT_IDS` 后**必须同步更新该测试的期望值**（T1 长度 / T2 首条 name / T2b 分类分布 / T11 统计口径）
+- `test-student-achievement-core.ts` 曾因内置勋章从 10 个扩到 26 个而失效（学生番茄钟下线后又减到 22 个）——
+  改 `studentAchievementCore.ts` 的 `BUILTIN_ACHIEVEMENT_IDS` 后**必须同步更新该测试的期望值**
+  （T1 长度 / T2 首条 name / T2b 分类分布 / T11 统计口径）。T2b 末尾有「ids 与 defs 一一对应」的守卫断言：
+  若只改 ids 不删对应定义（或反之），该断言会失败——因为孤儿 id 会让 `calcAllBuiltUnlocked`（全能学霸）永远返回 0
 - `store/workbenchBusiness.saveBusiness()` 对商品/支出两个分类数组做 `toRaw().map(c => ({...toRaw(c)}))` 元素级深拷贝：
   `businessCore` 分类 CRUD 把 reactive 数组传入后经 `[...list, next]` / `list.map(...)` 返回新数组，元素仍是 Proxy——整体
   `toRaw` 只解外层、IDB structured clone 抛 `DataCloneError`；勿改回仅整体 `toRaw`
