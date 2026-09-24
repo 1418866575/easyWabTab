@@ -370,7 +370,7 @@ async function handleInsertImage(e: Event): Promise<void> {
           </div>
         </div>
         <div
-          v-else
+          v-if="previewMode"
           class="dj-preview"
           data-testid="dj-preview"
           v-html="renderMarkdown(draft)"

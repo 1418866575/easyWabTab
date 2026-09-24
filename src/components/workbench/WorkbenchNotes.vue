@@ -525,7 +525,7 @@ onUnmounted(() => {
             <span v-else class="nt-content-preview">{{ contentPreview(row.content) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="分类" width="100" align="center">
+        <el-table-column label="分类" width="150" align="center" show-overflow-tooltip>
           <template #default="{ row }">
             <span v-if="catNameOf(row)" class="nt-cat-badge">{{ catNameOf(row) }}</span>
             <span v-else style="color: var(--color-text-secondary, #9ca3af);">未分类</span>

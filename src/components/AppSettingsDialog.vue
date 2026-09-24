@@ -66,7 +66,7 @@ const DIALOG_IDS = Object.keys(DIALOG_DEFAULTS) as DialogId[]
 type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'sync'
 // 子 tab keys：每个主 tab 下的子分组（仅内容多的主 tab 定义）
 type NavSubTab = 'nav-appearance' | 'nav-display' | 'nav-site' | 'nav-size' | 'nav-data'
-type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-todo-cat' | 'wb-cd-cat' | 'wb-note-cat' | 'wb-pwd-cat' | 'wb-diary-cat' | 'wb-diary-journals' | 'wb-diary-add' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
+type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-todo-cat' | 'wb-cd-cat' | 'wb-note-cat' | 'wb-pwd-cat' | 'wb-diary-cat' | 'wb-diary-journals' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
 type BizSubTab = 'biz-base' | 'biz-backup' | 'biz-cat'
 type StuSubTab = 'stu-stage' | 'stu-info' | 'stu-subject' | 'stu-timetable' | 'stu-menu'
 /** 来源页：nav=导航站、workbench=个人工作台、business=销售记账、student=学生工作台、all=全显示(向后兼容) */
@@ -116,8 +116,7 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student', SubTabDef[]> = {
     { key: 'wb-note-cat', label: '便签分类管理' },
     { key: 'wb-pwd-cat', label: '密码分类管理' },
     { key: 'wb-diary-cat', label: '日记分类管理' },
-    { key: 'wb-diary-journals', label: '多日记本' },
-    { key: 'wb-diary-add', label: '新增管理' },
+    { key: 'wb-diary-journals', label: '日记本管理' },
     { key: 'wb-backup',   label: '工作台备份' },
     { key: 'wb-snapshot', label: '数据时光机' },
     { key: 'wb-size',     label: '弹窗尺寸' }
@@ -231,8 +230,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: '日记本设置',
     items: [
       { key: 'wb-diary-cat', label: '日记分类管理', icon: 'tag', tab: 'wb', sub: 'wb-diary-cat' },
-      { key: 'wb-diary-journals', label: '多日记本', icon: 'bookmark', tab: 'wb', sub: 'wb-diary-journals' },
-      { key: 'wb-diary-add', label: '新增管理', icon: 'plus', tab: 'wb', sub: 'wb-diary-add' }
+      { key: 'wb-diary-journals', label: '日记本管理', icon: 'bookmark', tab: 'wb', sub: 'wb-diary-journals' }
     ]
   },
   {
@@ -2226,14 +2224,9 @@ onUnmounted(() => {
           <DiaryCategoryManager />
         </div>
 
-        <!-- 多日记本（日记本设置 tab - 多日记本）：切换/重命名/删除 -->
+        <!-- 日记本管理（日记本设置 tab - 日记本管理）：切换/重命名/删除 + 新建日志本 -->
         <div v-if="activeTab === 'wb' && activeSubTab === 'wb-diary-journals'" class="wb-menu-config diary-journal-config">
-          <DiaryJournalManager mode="manage" />
-        </div>
-
-        <!-- 新增管理（日记本设置 tab - 新增管理）：新建日志本 -->
-        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-diary-add'" class="wb-menu-config diary-journal-config">
-          <DiaryJournalManager mode="add" />
+          <DiaryJournalManager />
         </div>
 
         <!-- 记账分类管理（销售记账 tab - 记账分类管理）：改名/类型切换/删除/新增；内置 8 分组不可删 -->

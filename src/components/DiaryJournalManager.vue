@@ -6,8 +6,6 @@ import { useToast } from '../composables/useToast'
 import { DEFAULT_JOURNAL_ID } from '../composables/diaryCore'
 import type { WorkbenchJournal } from '@/types'
 
-const props = withDefaults(defineProps<{ mode?: 'manage' | 'add' }>(), { mode: 'manage' })
-
 const store = useWorkbenchDiaryStore()
 const toast = useToast()
 
@@ -51,9 +49,44 @@ function setCurrent(j: WorkbenchJournal) {
 
 <template>
   <div class="djm">
-    <template v-if="props.mode === 'add'">
-      <h3 class="djm-title">新增日志本</h3>
-      <p class="djm-hint">创建一个新的日志本，用于归类不同主题或阶段的日记。</p>
+    <h3 class="djm-title">日记本管理</h3>
+    <p class="djm-hint">切换当前日志本、新建、重命名或删除。删除时其下日记会迁移到其它日志本，避免数据丢失。</p>
+    <div class="djm-list">
+      <div
+        v-for="j in store.journals"
+        :key="j.id"
+        class="djm-item"
+        :class="{ 'is-current': j.id === store.currentJournalId }"
+      >
+        <template v-if="editingId === j.id">
+          <input v-model="editingName" class="djm-edit" @keyup.enter="confirmRename" />
+          <button class="djm-btn-icon" @click="confirmRename">保存</button>
+          <button class="djm-btn-icon" @click="cancelRename">取消</button>
+        </template>
+        <template v-else>
+          <span class="djm-name">
+            {{ j.name }}
+            <span v-if="j.id === store.currentJournalId" class="djm-tag djm-tag-current">当前</span>
+            <span v-if="j.id === DEFAULT_JOURNAL_ID" class="djm-tag djm-tag-default">默认</span>
+          </span>
+          <div class="djm-actions">
+            <button
+              v-if="j.id !== store.currentJournalId"
+              class="djm-btn-icon"
+              @click="setCurrent(j)"
+            >切换</button>
+            <button class="djm-btn-icon" @click="startRename(j)">重命名</button>
+            <button
+              class="djm-btn-icon danger"
+              :disabled="store.journals.length <= 1"
+              @click="handleDelete(j)"
+            >删除</button>
+          </div>
+        </template>
+      </div>
+    </div>
+    <div class="djm-add-block">
+      <div class="djm-add-label">新建日志本</div>
       <div class="djm-add-row">
         <input
           v-model="newName"
@@ -63,48 +96,9 @@ function setCurrent(j: WorkbenchJournal) {
           maxlength="30"
           @keyup.enter="confirmAdd"
         />
-        <button class="djm-btn-add" :disabled="!newName.trim()" @click="confirmAdd">创建</button>
+        <button class="djm-btn-add" :disabled="!newName.trim()" @click="confirmAdd">新增日志本</button>
       </div>
-    </template>
-
-    <template v-else>
-      <h3 class="djm-title">多日记本</h3>
-      <p class="djm-hint">切换当前日志本、重命名或删除。删除时其下日记会迁移到其它日志本，避免数据丢失。</p>
-      <div class="djm-list">
-        <div
-          v-for="j in store.journals"
-          :key="j.id"
-          class="djm-item"
-          :class="{ 'is-current': j.id === store.currentJournalId }"
-        >
-          <template v-if="editingId === j.id">
-            <input v-model="editingName" class="djm-edit" @keyup.enter="confirmRename" />
-            <button class="djm-btn-icon" @click="confirmRename">保存</button>
-            <button class="djm-btn-icon" @click="cancelRename">取消</button>
-          </template>
-          <template v-else>
-            <span class="djm-name">
-              {{ j.name }}
-              <span v-if="j.id === store.currentJournalId" class="djm-tag djm-tag-current">当前</span>
-              <span v-if="j.id === DEFAULT_JOURNAL_ID" class="djm-tag djm-tag-default">默认</span>
-            </span>
-            <div class="djm-actions">
-              <button
-                v-if="j.id !== store.currentJournalId"
-                class="djm-btn-icon"
-                @click="setCurrent(j)"
-              >切换</button>
-              <button class="djm-btn-icon" @click="startRename(j)">重命名</button>
-              <button
-                class="djm-btn-icon danger"
-                :disabled="store.journals.length <= 1"
-                @click="handleDelete(j)"
-              >删除</button>
-            </div>
-          </template>
-        </div>
-      </div>
-    </template>
+    </div>
   </div>
 </template>
 
@@ -126,6 +120,17 @@ function setCurrent(j: WorkbenchJournal) {
   color: var(--color-text-muted, #94a3b8);
   margin: 0 0 16px 0;
   line-height: 1.5;
+}
+.djm-add-block {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--color-border, #e2e8f0);
+}
+.djm-add-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary, #475569);
+  margin: 0 0 8px 0;
 }
 .djm-add-row {
   display: flex;
