@@ -31,6 +31,7 @@ import { useWorkbenchDiaryStore } from '@/stores/workbenchDiary'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import DiaryCategoryManager from '@/components/DiaryCategoryManager.vue'
 import DiaryJournalManager from '@/components/DiaryJournalManager.vue'
+import IconPickerDialog from '@/components/IconPickerDialog.vue'
 import { useCountdownsStore } from '@/stores/countdowns'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
@@ -191,6 +192,48 @@ const store = useAppSettingsStore()
 const businessStore = useWorkbenchBusinessStore()
 const studentStore = useStudentSettingsStore()
 const teacherStore = useTeacherStore()
+
+// ========================================
+// 入口图标选择（工作台 / 销售记账 / 学生 / 教师）：图标来自图标管理库，弹框形式选择
+// ========================================
+type IconTarget = 'workbench' | 'business' | 'student' | 'teacher'
+const ICON_TARGET_LABEL: Record<IconTarget, string> = {
+  workbench: '工作台',
+  business: '销售记账',
+  student: '学生工作台',
+  teacher: '教师工作台'
+}
+/** 当前正在编辑哪个入口的图标（空串 = 弹框关闭） */
+const iconPickerTarget = ref<IconTarget | ''>('')
+function openIconPicker(target: IconTarget): void {
+  iconPickerTarget.value = target
+}
+function closeIconPicker(): void {
+  iconPickerTarget.value = ''
+}
+const iconPickerTitle = computed(() =>
+  iconPickerTarget.value ? `${ICON_TARGET_LABEL[iconPickerTarget.value]} · 选择图标` : '选择图标'
+)
+const iconPickerCurrent = computed(() => {
+  switch (iconPickerTarget.value) {
+    case 'workbench': return store.workbenchPageIcon
+    case 'business': return store.businessPageIcon
+    case 'student': return store.studentPageIcon
+    case 'teacher': return store.teacherPageIcon
+    default: return ''
+  }
+})
+/** 选中即写入；回传空串 = 恢复默认（回退到内置图标） */
+function onPickIcon(src: string): void {
+  switch (iconPickerTarget.value) {
+    case 'workbench': store.setWorkbenchPageIcon(src); break
+    case 'business': store.setBusinessPageIcon(src); break
+    case 'student': store.setStudentPageIcon(src); break
+    case 'teacher': store.setTeacherPageIcon(src); break
+    default: break
+  }
+  closeIconPicker()
+}
 
 // 教师 tab 用到教师数据（菜单顺序/名称存在其中）。从 /teacher 打开时已加载；
 // 从其它页面（source='all'）打开时必须先加载，否则后续改动会把空数据写回 IndexedDB 覆盖真实数据。
@@ -1795,6 +1838,17 @@ onUnmounted(() => {
                 maxlength="20"
                 @input="store.setWorkbenchPageName(($event.target as HTMLInputElement).value)"
               />
+              <button
+                type="button"
+                class="wb-menu-icon-btn"
+                :class="{ 'is-set': !!store.workbenchPageIcon }"
+                :title="store.workbenchPageIcon ? '已设置图标，点击更换' : '选择图标'"
+                data-testid="workbench-icon-btn"
+                @click="openIconPicker('workbench')"
+              >
+                <img v-if="store.workbenchPageIcon" :src="store.workbenchPageIcon" alt="" class="wb-menu-icon-img" />
+                <Icon v-else name="image" />
+              </button>
               <button type="button" class="switch-btn"
                 :class="{ on: store.workbenchPageVisible !== false }"
                 role="switch"
@@ -1806,7 +1860,7 @@ onUnmounted(() => {
             </div>
           </div>
           <p class="wb-menu-hint">
-            控制导航站「工作台」按钮的显示，默认关闭：打开后导航站出现工作台入口，设置里也会出现工作台与提醒设置；关闭则一并隐藏。
+            控制「工作台管理」面板中是否显示工作台，默认关闭：打开后面板出现工作台卡片，设置里也会出现工作台与提醒设置；关闭则一并隐藏。
           </p>
 
           <!-- 销售记账 -->
@@ -1821,6 +1875,17 @@ onUnmounted(() => {
                 maxlength="20"
                 @input="store.setBusinessPageName(($event.target as HTMLInputElement).value)"
               />
+              <button
+                type="button"
+                class="wb-menu-icon-btn"
+                :class="{ 'is-set': !!store.businessPageIcon }"
+                :title="store.businessPageIcon ? '已设置图标，点击更换' : '选择图标'"
+                data-testid="business-icon-btn"
+                @click="openIconPicker('business')"
+              >
+                <img v-if="store.businessPageIcon" :src="store.businessPageIcon" alt="" class="wb-menu-icon-img" />
+                <Icon v-else name="image" />
+              </button>
               <button type="button" class="switch-btn"
                 :class="{ on: store.businessPageVisible !== false }"
                 role="switch"
@@ -1832,7 +1897,7 @@ onUnmounted(() => {
             </div>
           </div>
           <p class="wb-menu-hint">
-            控制导航站「销售记账」按钮的显示。关闭后销售记账设置页一并隐藏。
+            控制「工作台管理」面板中是否显示销售记账。关闭后面板中不显示，销售记账设置页一并隐藏。
           </p>
 
           <!-- 学生工作台 -->
@@ -1847,6 +1912,17 @@ onUnmounted(() => {
                 maxlength="20"
                 @input="store.setStudentPageName(($event.target as HTMLInputElement).value)"
               />
+              <button
+                type="button"
+                class="wb-menu-icon-btn"
+                :class="{ 'is-set': !!store.studentPageIcon }"
+                :title="store.studentPageIcon ? '已设置图标，点击更换' : '选择图标'"
+                data-testid="student-icon-btn"
+                @click="openIconPicker('student')"
+              >
+                <img v-if="store.studentPageIcon" :src="store.studentPageIcon" alt="" class="wb-menu-icon-img" />
+                <Icon v-else name="image" />
+              </button>
               <button type="button" class="switch-btn"
                 :class="{ on: store.studentPageVisible !== false }"
                 role="switch"
@@ -1858,7 +1934,7 @@ onUnmounted(() => {
             </div>
           </div>
           <p class="wb-menu-hint">
-            控制导航站「学生工作台」按钮的显示。关闭后学生工作台设置页一并隐藏。
+            控制「工作台管理」面板中是否显示学生工作台。关闭后面板中不显示，学生工作台设置页一并隐藏。
           </p>
         </div>
 
@@ -1875,6 +1951,17 @@ onUnmounted(() => {
                 maxlength="20"
                 @input="store.setTeacherPageName(($event.target as HTMLInputElement).value)"
               />
+              <button
+                type="button"
+                class="wb-menu-icon-btn"
+                :class="{ 'is-set': !!store.teacherPageIcon }"
+                :title="store.teacherPageIcon ? '已设置图标，点击更换' : '选择图标'"
+                data-testid="teacher-icon-btn"
+                @click="openIconPicker('teacher')"
+              >
+                <img v-if="store.teacherPageIcon" :src="store.teacherPageIcon" alt="" class="wb-menu-icon-img" />
+                <Icon v-else name="image" />
+              </button>
               <button type="button" class="switch-btn"
                 :class="{ on: store.teacherPageVisible !== false }"
                 role="switch"
@@ -1886,7 +1973,35 @@ onUnmounted(() => {
             </div>
           </div>
           <p class="wb-menu-hint">
-            控制导航站左上角「教师工作台」按钮的显示。关闭后该入口隐藏（不影响已保存的数据）。
+            控制「工作台管理」面板中是否显示教师工作台。关闭后面板中不显示（不影响已保存的数据）。
+          </p>
+        </div>
+
+        <!-- 工作台管理按钮（导航站右上角）：名称 + 开关；该按钮固定使用内置图标，不支持自定义 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <span class="wb-menu-label">工作台管理</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                :value="store.workbenchManageName"
+                placeholder="工作台管理"
+                maxlength="20"
+                @input="store.setWorkbenchManageName(($event.target as HTMLInputElement).value)"
+              />
+              <button type="button" class="switch-btn"
+                :class="{ on: store.workbenchManageVisible !== false }"
+                role="switch"
+                :aria-checked="store.workbenchManageVisible !== false"
+                data-testid="workbench-manage-visible-switch"
+                @click="store.setWorkbenchManageVisible(store.workbenchManageVisible === false)">
+                <span class="switch-thumb"></span>
+              </button>
+            </div>
+          </div>
+          <p class="wb-menu-hint">
+            控制导航站左上角「工作台管理」按钮的显示与名称。开启后点击按钮，在按钮正下方弹出面板，以卡片形式列出已启用的工作台（被关闭的工作台不出现在面板中）。
           </p>
         </div>
 
@@ -2957,6 +3072,15 @@ onUnmounted(() => {
 
     <!-- 云同步冲突弹框（z-index 高于设置弹窗） -->
     <CloudSyncConflictModal v-if="cloudSync.conflictData.value" />
+
+    <!-- 入口图标选择弹框（z-index 高于设置弹窗，ESC 仅关本弹框） -->
+    <IconPickerDialog
+      v-if="iconPickerTarget"
+      :title="iconPickerTitle"
+      :current="iconPickerCurrent"
+      @select="onPickIcon"
+      @close="closeIconPicker"
+    />
   </div>
   </Transition>
 
@@ -3284,6 +3408,42 @@ html.dark .tab-btn.active {
 .wb-menu-name-input:focus {
   outline: none;
   border-color: var(--color-primary, var(--color-primary));
+}
+
+/* 入口图标按钮：显示当前图标缩略图（未设置时为占位图标），点击从图标管理库选择 */
+.wb-menu-icon-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--color-text-secondary, #64748b);
+  background-color: var(--color-bg-input, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color var(--transition-fast, 0.15s ease), color var(--transition-fast, 0.15s ease);
+}
+
+.wb-menu-icon-btn:hover {
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
+}
+
+/* 已设置自定义图标：主色描边提示 */
+.wb-menu-icon-btn.is-set {
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
+}
+
+.wb-menu-icon-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  border-radius: 3px;
 }
 
 /* EP 换皮：wb/remind 分支 el-input/el-select/el-input-number 在 flex 行内撑满（替代原 .wb-menu-name-input 的 flex:1） */

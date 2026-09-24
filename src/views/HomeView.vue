@@ -17,6 +17,7 @@ import HelpModal from '../components/HelpModal.vue'
 import CountdownModal from '@/components/CountdownModal.vue'
 import Icon from '../components/Icon.vue'
 import AppSettingsDialog from '../components/AppSettingsDialog.vue'
+import WorkbenchManagePanel from '../components/WorkbenchManagePanel.vue'
 import { useSitesStore } from '../stores/sites'
 import { useCategoriesStore } from '../stores/categories'
 import { useThemeStore } from '../stores/theme'
@@ -379,10 +380,8 @@ onUnmounted(() => {
   <!-- 顶部统一 App Bar：左=教师台/工作台/销售台/学生台入口（教师台居首），右=同步/设置/帮助/倒计时；主题与经典侧边栏已迁入 设置→导航设置→显示控制 -->
   <div ref="appBarRef" class="app-bar">
     <div class="app-bar-left">
-      <button v-if="settingsStore.teacherPageVisible !== false" class="btn-help" data-testid="nav-teacher-entry" @click="router.push('/teacher')" :title="settingsStore.teacherPageDisplayName"><Icon name="teacher" /> <span class="nav-entry-label">{{ settingsStore.teacherPageDisplayName }}</span></button>
-      <button v-if="settingsStore.workbenchPageVisible !== false" class="btn-help" @click="router.push('/workbench')" :title="settingsStore.workbenchPageDisplayName"><Icon name="toolbox" /> <span class="nav-entry-label">{{ settingsStore.workbenchPageDisplayName }}</span></button>
-      <button v-if="settingsStore.businessPageVisible !== false" class="btn-help" data-testid="nav-business-entry" @click="router.push('/business')" :title="settingsStore.businessPageDisplayName"><Icon name="store" /> <span class="nav-entry-label">{{ settingsStore.businessPageDisplayName }}</span></button>
-      <button v-if="settingsStore.studentPageVisible !== false" class="btn-help" data-testid="nav-student-entry" @click="router.push('/student')" :title="settingsStore.studentPageDisplayName"><Icon name="notes" /> <span class="nav-entry-label">{{ settingsStore.studentPageDisplayName }}</span></button>
+      <!-- 工作台管理：按钮 + 正下方弹出面板（卡片列表）；可在 设置 → 主题与外观 → 页面导航 中关闭 / 改名 -->
+      <WorkbenchManagePanel />
     </div>
     <div class="app-bar-right">
       <button
@@ -607,11 +606,11 @@ onUnmounted(() => {
   min-width: 0;
 }
 
-.nav-entry-label {
-  white-space: nowrap;
-}
-
-.btn-help {
+/* 顶栏按钮基础样式。
+   「工作台管理」按钮位于子组件 WorkbenchManagePanel 内部（非根元素），
+   父组件 scoped 选择器默认命中不到 → 用 :deep() 让它共用同一份声明，避免样式两处维护。 */
+.btn-help,
+:deep(.wmp-trigger) {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -625,10 +624,16 @@ onUnmounted(() => {
   transition: all 0.2s;
 }
 
-.btn-help:hover {
+.btn-help:hover,
+:deep(.wmp-trigger):hover {
   background-color: var(--color-bg-hover, #f1f5f9);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-border, #e2e8f0);
+}
+
+/* 「工作台管理」按钮过渡与云同步按钮（.wb-sync-btn）保持一致 */
+:deep(.wmp-trigger) {
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, opacity 120ms ease;
 }
 
 /* ===== 侧边栏导航布局 ===== */
@@ -983,12 +988,14 @@ html.dark .app-bar {
   border-bottom-color: var(--color-border, #374151);
 }
 
-/* 左上角入口按钮（暗色，与全局 .btn-help 暗色一致） */
-html.dark .app-bar .btn-help {
+/* 顶栏按钮暗色（含「工作台管理」按钮，后者需 :deep 穿透到子组件内部） */
+html.dark .app-bar .btn-help,
+html.dark .app-bar :deep(.wmp-trigger) {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-html.dark .app-bar .btn-help:hover {
+html.dark .app-bar .btn-help:hover,
+html.dark .app-bar :deep(.wmp-trigger):hover {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-border, #374151);
@@ -1088,11 +1095,8 @@ html.dark .nav-add-site:hover {
     display: none;
   }
 
-  .nav-entry-label {
-    display: inline; /* 移动端恢复显示名称，与「学生工作台」一致（图标+文字） */
-  }
-
-  .btn-help {
+  .btn-help,
+  :deep(.wmp-trigger) {
     padding: 8px 10px;
   }
 
