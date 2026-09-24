@@ -270,6 +270,32 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   if (typeof data.studentPageVisible === 'boolean') {
     out.studentPageVisible = data.studentPageVisible
   }
+  if (typeof data.teacherPageName === 'string') {
+    out.teacherPageName = data.teacherPageName.trim()
+  }
+  if (typeof data.teacherPageVisible === 'boolean') {
+    out.teacherPageVisible = data.teacherPageVisible
+  }
+  // 入口自定义图标：仅采纳字符串（原样透传，可能是 /icons/xxx.svg 或 base64 dataUrl）；空串即「回退内置图标」
+  if (typeof data.workbenchPageIcon === 'string') {
+    out.workbenchPageIcon = data.workbenchPageIcon
+  }
+  if (typeof data.businessPageIcon === 'string') {
+    out.businessPageIcon = data.businessPageIcon
+  }
+  if (typeof data.studentPageIcon === 'string') {
+    out.studentPageIcon = data.studentPageIcon
+  }
+  if (typeof data.teacherPageIcon === 'string') {
+    out.teacherPageIcon = data.teacherPageIcon
+  }
+  // 「工作台管理」按钮：名称仅采纳字符串；开关仅采纳布尔（缺失 = 显示）
+  if (typeof data.workbenchManageName === 'string') {
+    out.workbenchManageName = data.workbenchManageName.trim()
+  }
+  if (typeof data.workbenchManageVisible === 'boolean') {
+    out.workbenchManageVisible = data.workbenchManageVisible
+  }
   // 工作台城市：仅采纳 trim 后非空字符串；空串/undefined/null/非字符串一律视为「未配置」
   // （清除城市后重载不复活旧值，非法值回退默认即未配置）
   if (typeof data.workbenchCity === 'string' && data.workbenchCity.trim() !== '') {
@@ -339,13 +365,24 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   // 导航站视图模式：经典网格 / 侧边栏导航（默认 classic）
   const viewMode = ref<'classic' | 'sidebar'>('classic')
 
-  // 页面命名与可见性（工作台/销售记账/学生工作台）
+  // 页面命名与可见性（工作台/销售记账/学生工作台/教师工作台）
+  // 工作台默认「关闭」：需用户在「设置 → 主题与外观 → 页面导航」主动打开后，导航站按钮与其设置页才显示
   const workbenchPageName = ref<string>('')
-  const workbenchPageVisible = ref<boolean>(true)
+  const workbenchPageVisible = ref<boolean>(false)
   const businessPageName = ref<string>('')
   const businessPageVisible = ref<boolean>(true)
   const studentPageName = ref<string>('')
   const studentPageVisible = ref<boolean>(true)
+  const teacherPageName = ref<string>('')
+  const teacherPageVisible = ref<boolean>(true)
+  // 入口自定义图标（空串 = 用内置默认图标）：来源为图标管理 / 预置图标库的路径或 dataUrl
+  const workbenchPageIcon = ref<string>('')
+  const businessPageIcon = ref<string>('')
+  const studentPageIcon = ref<string>('')
+  const teacherPageIcon = ref<string>('')
+  // 导航站右上角「工作台管理」按钮：默认显示、默认名称「工作台管理」（该按钮不支持自定义图标）
+  const workbenchManageName = ref<string>('')
+  const workbenchManageVisible = ref<boolean>(true)
 
   // 站点外观（浏览器标签标题 + favicon）：localStorage 驱动（site-title / site-favicon），
   // 与主题同构——不进 IDB persist，经 nav.json prefs 云同步跨设备生效；空值回退默认
@@ -396,6 +433,14 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       businessPageVisible: businessPageVisible.value,
       studentPageName: studentPageName.value,
       studentPageVisible: studentPageVisible.value,
+      teacherPageName: teacherPageName.value,
+      teacherPageVisible: teacherPageVisible.value,
+      workbenchPageIcon: workbenchPageIcon.value,
+      businessPageIcon: businessPageIcon.value,
+      studentPageIcon: studentPageIcon.value,
+      teacherPageIcon: teacherPageIcon.value,
+      workbenchManageName: workbenchManageName.value,
+      workbenchManageVisible: workbenchManageVisible.value,
       desktopNotifyEnabled: desktopNotifyEnabled.value,
       reminderEmailEnabled: reminderEmailEnabled.value,
       reminderEmailTo: reminderEmailTo.value,
@@ -513,11 +558,21 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       navFiltersExpanded.value = effective.navFiltersExpanded === true
       viewMode.value = effective.viewMode === 'sidebar' ? 'sidebar' : 'classic'
       workbenchPageName.value = typeof effective.workbenchPageName === 'string' ? effective.workbenchPageName.trim() : ''
-      workbenchPageVisible.value = effective.workbenchPageVisible !== false
+      // 工作台默认关闭：只有明确存过 true 才显示（undefined / false 一律视为关闭）
+      workbenchPageVisible.value = effective.workbenchPageVisible === true
       businessPageName.value = typeof effective.businessPageName === 'string' ? effective.businessPageName.trim() : ''
       businessPageVisible.value = effective.businessPageVisible !== false
       studentPageName.value = typeof effective.studentPageName === 'string' ? effective.studentPageName.trim() : ''
       studentPageVisible.value = effective.studentPageVisible !== false
+      teacherPageName.value = typeof effective.teacherPageName === 'string' ? effective.teacherPageName.trim() : ''
+      teacherPageVisible.value = effective.teacherPageVisible !== false
+      // 入口图标：非字符串一律回退空串（= 用内置默认图标）
+      workbenchPageIcon.value = typeof effective.workbenchPageIcon === 'string' ? effective.workbenchPageIcon : ''
+      businessPageIcon.value = typeof effective.businessPageIcon === 'string' ? effective.businessPageIcon : ''
+      studentPageIcon.value = typeof effective.studentPageIcon === 'string' ? effective.studentPageIcon : ''
+      teacherPageIcon.value = typeof effective.teacherPageIcon === 'string' ? effective.teacherPageIcon : ''
+      workbenchManageName.value = typeof effective.workbenchManageName === 'string' ? effective.workbenchManageName.trim() : ''
+      workbenchManageVisible.value = effective.workbenchManageVisible !== false
       for (const id of DIALOG_IDS) {
         const size = effective.dialogSizes[id]
         if (size) {
@@ -647,11 +702,19 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     navFiltersExpanded.value = false
     viewMode.value = 'classic'
     workbenchPageName.value = ''
-    workbenchPageVisible.value = true
+    workbenchPageVisible.value = false
     businessPageName.value = ''
     businessPageVisible.value = true
     studentPageName.value = ''
     studentPageVisible.value = true
+    teacherPageName.value = ''
+    teacherPageVisible.value = true
+    workbenchPageIcon.value = ''
+    businessPageIcon.value = ''
+    studentPageIcon.value = ''
+    teacherPageIcon.value = ''
+    workbenchManageName.value = ''
+    workbenchManageVisible.value = true
     desktopNotifyEnabled.value = false
     reminderEmailEnabled.value = false
     reminderEmailTo.value = ''
@@ -778,11 +841,47 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     studentPageVisible.value = v
     persist()
   }
+  function setTeacherPageName(s: string) {
+    teacherPageName.value = s
+    persist()
+  }
+  function setTeacherPageVisible(v: boolean) {
+    teacherPageVisible.value = v
+    persist()
+  }
+  // 入口自定义图标 setters（传空串 = 恢复内置默认图标）
+  function setWorkbenchPageIcon(s: string) {
+    workbenchPageIcon.value = s
+    persist()
+  }
+  function setBusinessPageIcon(s: string) {
+    businessPageIcon.value = s
+    persist()
+  }
+  function setStudentPageIcon(s: string) {
+    studentPageIcon.value = s
+    persist()
+  }
+  function setTeacherPageIcon(s: string) {
+    teacherPageIcon.value = s
+    persist()
+  }
+  // 「工作台管理」按钮 setters
+  function setWorkbenchManageName(s: string) {
+    workbenchManageName.value = s
+    persist()
+  }
+  function setWorkbenchManageVisible(v: boolean) {
+    workbenchManageVisible.value = v
+    persist()
+  }
 
   // 页面显示名 computed
   const workbenchPageDisplayName = computed(() => workbenchPageName.value || '工作台')
   const businessPageDisplayName = computed(() => businessPageName.value || '销售记账')
   const studentPageDisplayName = computed(() => studentPageName.value || '学生工作台')
+  const teacherPageDisplayName = computed(() => teacherPageName.value || '教师工作台')
+  const workbenchManageDisplayName = computed(() => workbenchManageName.value || '工作台管理')
 
   // ========================================
   // 站点外观：浏览器标签标题 + favicon（localStorage 驱动，云同步经 nav.json prefs；空值回退默认）
@@ -937,11 +1036,21 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     businessPageVisible,
     studentPageName,
     studentPageVisible,
+    teacherPageName,
+    teacherPageVisible,
+    workbenchPageIcon,
+    businessPageIcon,
+    studentPageIcon,
+    teacherPageIcon,
+    workbenchManageName,
+    workbenchManageVisible,
     siteTitle,
     siteFavicon,
     workbenchPageDisplayName,
     businessPageDisplayName,
     studentPageDisplayName,
+    teacherPageDisplayName,
+    workbenchManageDisplayName,
     desktopNotifyEnabled,
     reminderEmailEnabled,
     reminderEmailTo,
@@ -975,6 +1084,14 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     setBusinessPageVisible,
     setStudentPageName,
     setStudentPageVisible,
+    setTeacherPageName,
+    setTeacherPageVisible,
+    setWorkbenchPageIcon,
+    setBusinessPageIcon,
+    setStudentPageIcon,
+    setTeacherPageIcon,
+    setWorkbenchManageName,
+    setWorkbenchManageVisible,
     initSiteMeta,
     applySiteMeta,
     setSiteTitle,

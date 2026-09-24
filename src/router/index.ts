@@ -7,6 +7,8 @@ const HomeView = () => import('../views/HomeView.vue')
 const WorkbenchView = () => import('../views/WorkbenchView.vue')
 const BusinessView = () => import('../views/BusinessView.vue')
 const StudentView = () => import('../views/StudentView.vue')
+// TeacherView 同样懒加载：与上面保持一致的按需策略，不拖累导航站首屏
+const TeacherView = () => import('../views/TeacherView.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -35,6 +37,11 @@ const router = createRouter({
       path: '/student',
       name: 'student',
       component: StudentView
+    },
+    {
+      path: '/teacher',
+      name: 'teacher',
+      component: TeacherView
     }
   ]
 })

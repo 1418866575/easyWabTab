@@ -1,12 +1,13 @@
 ﻿/**
  * 云同步 composable（WebDAV + v10 多文件同步信封）
  *
- * 5 份独立信封：nav.json / icons.json / workbench.json / business.json / student.json
+ * 6 份独立信封：nav.json / icons.json / workbench.json / business.json / student.json / teacher.json
  *   - nav.json：localStorage 偏好打包（user-sites/categories/engines/theme/countdown-* 等）
  *   - icons.json：自定义图标（localStorage user-custom-icons）
  *   - workbench.json：工作台核心 9 store（不含 business；settings 不含 cloudSync* 5 字段）
  *   - business.json：销售记账独立信封
  *   - student.json：学生工作台 15 store 独立信封
+ *   - teacher.json：教师工作台单对象（teacher_workbench；含 base64 图片，体积偏大）
  *
  * 单例设计：模块级 ref 持有全局状态（参考 useCountdownReminder / useToast 的单例模式）
  * 触发器：
@@ -18,8 +19,8 @@
  * 冲突判定：本地 dirty=true 且 远端 pushedAt > lastSyncAt（逐文件独立判定，累积到 conflictData Record）
  * 冲突解决：3 选 1（全部云端覆盖 / 全部本地覆盖 / 全部合并）
  *
- * 首次迁移：5 份都 404 但 backup.json 存在 → 读 backup.json → idbImportAll 落本地 →
- *           export 5 份 → 上传 → DELETE backup.json
+ * 首次迁移：6 份都 404 但 backup.json 存在 → 读 backup.json → idbImportAll 落本地 →
+ *           export 6 份 → 上传 → DELETE backup.json
  *
  * CORS 兼容：WebDAV 原生自定义方法（MKCOL）+ Authorization 会触发浏览器预检（OPTIONS），
  * 坚果云/Nextcloud 默认不回 Access-Control-Allow-Origin。
@@ -38,7 +39,9 @@ import {
   exportNav,
   importNavData,
   exportIcons,
-  importIconsData
+  importIconsData,
+  exportTeacher,
+  importTeacherData
 } from './useIdb'
 import { useAppSettingsStore } from '../stores/settings'
 import { useToast } from './useToast'
@@ -55,19 +58,21 @@ import type {
   NavSyncData,
   NoteData,
   StudentSyncData,
+  TeacherSyncData,
   WorkbenchData,
   WorkbenchSyncData,
   WorkbenchTodo
 } from '../types'
 import type { PomodoroData } from './pomodoroCore'
 import type { HabitsData } from './habitCore'
+import type { TeacherData } from '../types/teacher'
 
 const CLIENT_ID_KEY = 'easy-web-tab-client-id'
 const LAST_SYNC_KEY = 'easy-web-tab-last-sync'
 const DIRTY_KEY = 'easy-web-tab-dirty'
 const PROXY_PATH = '/api/webdav-proxy'
 const DATA_DIR = 'easy-web-tab'
-/** 5 份多文件信封（顺序：nav → icons → workbench → business → student），见下方 FILE_CONFIGS */
+/** 6 份多文件信封（顺序：nav → icons → workbench → business → student → teacher），见下方 FILE_CONFIGS */
 /** 仅用于首次迁移检测（v9 单文件 backup.json） */
 const LEGACY_BACKUP_FILE = 'backup.json'
 
@@ -345,6 +350,7 @@ function sigNav(data: NavSyncData): string { return envelopeSignature(data as un
 function sigIcons(data: IconsSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
 function sigBusiness(data: BusinessSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
 function sigStudent(data: StudentSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
+function sigTeacher(data: TeacherSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
 
 /**
  * 计算本地与远程的总差异量（Σ|local_len - remote_len|）。
@@ -432,7 +438,7 @@ async function webdavGet(url: string, username: string, password: string): Promi
 
 /**
  * 轻量 HEAD：只取云端文件的 Last-Modified，用于推送前探查是否被外部改过。
- * 刻意不用 webdavGet —— 5 份信封合计 3MB+，每次推送前全量下载代价过高。
+ * 刻意不用 webdavGet —— 6 份信封合计 3MB+，每次推送前全量下载代价过高。
  * 不支持 HEAD 或出错时保守返回 0：调用方会跳过该文件的保险检测，不影响主流程。
  */
 async function webdavHead(url: string, username: string, password: string): Promise<number> {
@@ -959,6 +965,68 @@ function mergeStudentValue(lv: unknown, rv: unknown): unknown {
   return lv ?? rv
 }
 
+/** 按 id 并集去重：同 id 保留本地（进入合并时本地 dirty，用户刚做的改动优先） */
+function unionById<T extends { id: string }>(local: T[], remote: T[]): T[] {
+  const out: T[] = [...local]
+  const seen = new Set(local.map((x) => x.id))
+  for (const r of remote) {
+    if (!seen.has(r.id)) out.push(r)
+  }
+  return out
+}
+
+/**
+ * teacher.json 合并：以「学期 × 班级」数据桶为最小单位。
+ * 教师数据内含座位网格、点名历史、奖励记录（含 base64 图片）等无法按 id 粒度安全合并的结构，
+ * 因此：两端都有的班级 → 本地桶整体优先（本地 dirty，用户刚做的改动必须保留）；
+ * 仅远端有的班级 → 补入，避免丢掉其他设备上建的班；
+ * 学期 / 班级 / 任教关系等列表按 id 并集去重。
+ */
+function mergeTeacher(local: TeacherSyncData, remote: TeacherSyncData): TeacherSyncData {
+  const lv = local.teacher as TeacherData | undefined
+  const rv = remote.teacher as TeacherData | undefined
+  const base = { version: 1 as const, exportedAt: new Date().toISOString(), clientId: getClientId() }
+  if (!lv) return { ...base, teacher: rv }
+  if (!rv) return { ...base, teacher: lv }
+  const lGroups = (lv.groups ?? {}) as Record<string, Record<string, unknown>>
+  const rGroups = (rv.groups ?? {}) as Record<string, Record<string, unknown>>
+  // 删除标记并集：任一侧删过的学期/班级，合并后都要剔除（否则被远端旧数据「复活」）
+  const lTomb = lv.tombstones ?? {}
+  const rTomb = rv.tombstones ?? {}
+  const tomb = {
+    semesters: new Set([...(lTomb.semesters ?? []), ...(rTomb.semesters ?? [])]),
+    classes: new Set([...(lTomb.classes ?? []), ...(rTomb.classes ?? [])])
+  }
+  const semesters = unionById(lv.semesters ?? [], rv.semesters ?? []).filter((s) => !tomb.semesters.has(s.id))
+  const classes = unionById(lv.classes ?? [], rv.classes ?? []).filter((c) => !tomb.classes.has(c.id))
+  const assignments = unionById(lv.assignments ?? [], rv.assignments ?? []).filter(
+    (a) => !tomb.semesters.has(a.semesterId) && !tomb.classes.has(a.classId)
+  )
+  // 合并双方的班级数据桶，剔除被删学期/班级（同班级本地桶优先）
+  const groups: Record<string, Record<string, unknown>> = {}
+  for (const semId of Object.keys({ ...rGroups, ...lGroups })) {
+    if (tomb.semesters.has(semId)) continue
+    const inR = rGroups[semId] ?? {}
+    const inL = lGroups[semId] ?? {}
+    const inner: Record<string, unknown> = {}
+    for (const clsId of Object.keys({ ...inR, ...inL })) {
+      if (tomb.classes.has(clsId)) continue
+      inner[clsId] = { ...(inR[clsId] ?? {}), ...(inL[clsId] ?? {}) }
+    }
+    if (Object.keys(inner).length) groups[semId] = inner
+  }
+  const merged = {
+    ...lv,
+    semesters,
+    classes,
+    assignments,
+    groups: groups as unknown as TeacherData['groups'],
+    // 保留双方删除记录，确保删除跨设备传播、且不会被下一次并集重新加回
+    tombstones: { semesters: [...tomb.semesters], classes: [...tomb.classes] }
+  }
+  return { ...base, teacher: merged }
+}
+
 // ========== 导入后各 store reload ==========
 
 async function reloadWorkbenchStores(): Promise<void> {
@@ -1068,11 +1136,21 @@ async function reloadIconsStores(): Promise<void> {
   }
 }
 
+async function reloadTeacherStores(): Promise<void> {
+  try {
+    const { useTeacherStore } = await import('../stores/teacher')
+    await useTeacherStore().loadTeacher()
+  } catch {
+    // store 未就绪（首次同步早于教师页挂载）→ 静默跳过，下次进入教师工作台会从 IDB 自然读取
+  }
+}
+
 async function reloadAllStores(): Promise<void> {
   await Promise.all([
     reloadWorkbenchStores(),
     reloadBusinessStore(),
     reloadStudentStores(),
+    reloadTeacherStores(),
     reloadNavStores(),
     reloadIconsStores()
   ])
@@ -1125,6 +1203,15 @@ const FILE_CONFIGS: FileConfig[] = [
     merge: (l, r) => mergeStudent(l as StudentSyncData, r as StudentSyncData),
     reload: reloadStudentStores,
     diffSize: (l, r) => totalDiffSize(l, r)
+  },
+  {
+    name: 'teacher.json',
+    exportLocal: () => exportTeacher(),
+    importRemote: async (data) => { await importTeacherData(data as TeacherSyncData); return undefined },
+    signature: (data) => sigTeacher(data as TeacherSyncData),
+    merge: (l, r) => mergeTeacher(l as TeacherSyncData, r as TeacherSyncData),
+    reload: reloadTeacherStores,
+    diffSize: (l, r) => totalDiffSize(l, r)
   }
 ]
 
@@ -1134,9 +1221,9 @@ const FILE_CONFIGS: FileConfig[] = [
  * 首次迁移流程：
  * 1. 已读 backup.json（WorkbenchData）传入
  * 2. idbImportAll 落本地 IDB（含密码身份接管）
- * 3. 调用 5 个 export 函数从本地拆出 5 份信封
+ * 3. 调用 6 个 export 函数从本地拆出 6 份信封
  * 4. 为每份信封设置 clientId + pushedAt
- * 5. PUT 5 份到 cloud
+ * 5. PUT 6 份到 cloud
  * 6. DELETE cloud 上的 backup.json
  * 7. 更新 lastSyncAt + clearDirty + reloadAllStores
  */
@@ -1152,15 +1239,16 @@ async function migrateFromLegacyBackup(
   const localVerificationBefore = getStoredVerification()
   // 2) 落本地 IDB（idbImportAll 会接管密码身份）
   const importResult = await idbImportAll(legacyBackup)
-  // 3) 5 个 export 函数从本地拆出 5 份信封
+  // 3) 6 个 export 函数从本地拆出 6 份信封
   const clientId = getClientId()
   const pushedAt = Date.now()
-  const [nav, icons, workbench, business, student] = await Promise.all([
+  const [nav, icons, workbench, business, student, teacher] = await Promise.all([
     exportNav(),
     exportIcons(),
     exportWorkbench(),
     exportBusiness(),
-    exportStudent()
+    exportStudent(),
+    exportTeacher()
   ])
   // 4) 设置 clientId + pushedAt
   const envelopes: Array<{ name: string; data: unknown }> = [
@@ -1168,9 +1256,10 @@ async function migrateFromLegacyBackup(
     { name: 'icons.json', data: { ...(icons as unknown as Record<string, unknown>), clientId, pushedAt } },
     { name: 'workbench.json', data: { ...(workbench as unknown as Record<string, unknown>), clientId, pushedAt } },
     { name: 'business.json', data: { ...(business as unknown as Record<string, unknown>), clientId, pushedAt } },
-    { name: 'student.json', data: { ...(student as unknown as Record<string, unknown>), clientId, pushedAt } }
+    { name: 'student.json', data: { ...(student as unknown as Record<string, unknown>), clientId, pushedAt } },
+    { name: 'teacher.json', data: { ...(teacher as unknown as Record<string, unknown>), clientId, pushedAt } }
   ]
-  // 5) PUT 5 份到 cloud（任一失败标记 error 不中断后续）
+  // 5) PUT 6 份到 cloud（任一失败标记 error 不中断后续）
   let pushError: string | null = null
   for (const env of envelopes) {
     try {
@@ -1179,11 +1268,11 @@ async function migrateFromLegacyBackup(
       if (!pushError) pushError = e instanceof Error ? e.message : '推送失败'
     }
   }
-  // 6) DELETE backup.json（即使 5 份中有失败，仍尝试删除 legacy 文件，避免下次再次走迁移）
+  // 6) DELETE backup.json（即使 6 份中有失败，仍尝试删除 legacy 文件，避免下次再次走迁移）
   try {
     await webdavDelete(`${dir}/${LEGACY_BACKUP_FILE}`, username, password)
   } catch {
-    // 删除失败不阻塞：下次 pullNow 会检测到 5 份已存在，跳过迁移分支
+    // 删除失败不阻塞：下次 pullNow 会检测到 6 份已存在，跳过迁移分支
   }
   // 7) 更新 lastSyncAt + clearDirty + reload
   localStorage.setItem(LAST_SYNC_KEY, String(pushedAt))
@@ -1211,7 +1300,7 @@ async function migrateFromLegacyBackup(
 // ========== 核心同步流程 ==========
 
 /**
- * 推送前保险：探查云端 5 份信封是否在本机上次同步之后被外部改过
+ * 推送前保险：探查云端 6 份信封是否在本机上次同步之后被外部改过
  * （备份编辑技能写入、手工编辑坚果云文件、其他设备推送）。
  *
  * 命中则中止本次盲推：此时本地数据并不包含云端的外部修改，直接 PUT 会用本地内容
@@ -1272,7 +1361,7 @@ async function pushNow(silent = false, skipRemoteGuard = false): Promise<boolean
     } catch {
       // 目录已存在或 MKCOL 失败，后续 PUT 直接尝试
     }
-    // 串行 export → PUT 5 份；任一失败累积到 errors 但不中断后续
+    // 串行 export → PUT 6 份；任一失败累积到 errors 但不中断后续
     const clientId = getClientId()
     const pushedAt = Date.now()
     let hasError = false
@@ -1347,7 +1436,7 @@ async function pullNow(silent = false): Promise<void> {
   const password = settings.cloudSyncPassword ?? ''
   const dir = dirUrl(settings.cloudSyncUrl!, username)
   try {
-    // ===== 1) 串行 GET 5 份文件，记录 data + lastModifiedMs =====
+    // ===== 1) 串行 GET 6 份文件，记录 data + lastModifiedMs =====
     const remoteResults: Record<string, { data: unknown; lastModifiedMs: number }> = {}
     let allMissing = true
     for (const cfg of FILE_CONFIGS) {
@@ -1358,7 +1447,7 @@ async function pullNow(silent = false): Promise<void> {
       }
     }
 
-    // ===== 2) 首次迁移检测：5 份全 404 但 backup.json 存在 =====
+    // ===== 2) 首次迁移检测：6 份全 404 但 backup.json 存在 =====
     if (allMissing) {
       let legacyBackup: WorkbenchData | null = null
       try {
@@ -1633,7 +1722,7 @@ export async function syncNow(silent = false): Promise<void> {
 }
 
 /**
- * 强制以云端覆盖本地（忽略本地 dirty 标记与时间戳比较，无条件采纳远端 5 份信封）。
+ * 强制以云端覆盖本地（忽略本地 dirty 标记与时间戳比较，无条件采纳远端 6 份信封）。
  *
  * 使用场景：用外部工具（备份编辑技能 add_entry.py、或手工编辑坚果云同步文件夹里的 JSON）
  * 直接改写云端数据后，程序内的常规同步可能不生效——常规 pullNow 在

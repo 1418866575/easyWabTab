@@ -33,6 +33,7 @@ import { useWorkbenchDiaryStore } from '@/stores/workbenchDiary'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import DiaryCategoryManager from '@/components/DiaryCategoryManager.vue'
 import DiaryJournalManager from '@/components/DiaryJournalManager.vue'
+import IconPickerDialog from '@/components/IconPickerDialog.vue'
 import { useCountdownsStore } from '@/stores/countdowns'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
@@ -41,6 +42,7 @@ import { useWorkbenchPomodoroStore } from '@/stores/workbenchPomodoro'
 import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
+import { useTeacherStore } from '@/stores/teacher'
 import { STAGE_BADGE, GRADE_STAGE_GROUPS, type StudentStage } from '@/types'
 import type { WorkbenchData } from '@/types'
 import { COUNTDOWN_CATEGORIES } from '@/types'
@@ -56,30 +58,52 @@ import type { ContainerId } from '@/composables/useHomeLayout'
 import Icon from '@/components/Icon.vue'
 import BusinessCategoryManager from '@/components/business/BusinessCategoryManager.vue'
 import StudentTimetableConfig from '@/components/student/StudentTimetableConfig.vue'
+import TeacherDataManage from '@/components/teacher/TeacherDataManage.vue'
+import TeacherHelp from '@/components/teacher/TeacherHelp.vue'
+// 教师工作台 .tw-* 全局样式：设置页内嵌 TeacherDataManage / TeacherHelp 时依赖，
+// 非 /teacher 路由（source='all'）打开设置也能正常渲染这些组件
+import '@/styles/teacher.css'
 import CloudSyncConflictModal from './CloudSyncConflictModal.vue'
 
 // 弹窗 id 列表：从导出的契约表派生（与 store 内部 DIALOG_IDS 顺序一致），
 // 作为 drafts/syncAll 的全量来源；渲染分组用下方导出的 NAV/WB 数组
 const DIALOG_IDS = Object.keys(DIALOG_DEFAULTS) as DialogId[]
 
-// 当前激活的设置分组 tab（导航设置 / 工作台设置 / 提醒设置 / 销售记账 / 学生工作台 / 云同步）
-type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'sync'
+// 当前激活的设置分组 tab（导航设置 / 工作台设置 / 提醒设置 / 销售记账 / 学生工作台 / 教师工作台 / 云同步）
+type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'teacher' | 'sync'
 // 子 tab keys：每个主 tab 下的子分组（仅内容多的主 tab 定义）
 type NavSubTab = 'nav-appearance' | 'nav-display' | 'nav-site' | 'nav-size' | 'nav-data'
 type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-todo-cat' | 'wb-cd-cat' | 'wb-note-cat' | 'wb-pwd-cat' | 'wb-diary-cat' | 'wb-diary-journals' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
 type BizSubTab = 'biz-base' | 'biz-backup' | 'biz-cat' | 'biz-product-cat' | 'biz-expense-cat'
 type StuSubTab = 'stu-stage' | 'stu-info' | 'stu-subject' | 'stu-timetable' | 'stu-menu'
-/** 来源页：nav=导航站、workbench=个人工作台、business=销售记账、student=学生工作台、all=全显示(向后兼容) */
-type SettingsSource = 'nav' | 'workbench' | 'business' | 'student' | 'all'
+/** 教师工作台子 tab：数据管理拆分出的 5 项 + 使用说明（原左侧菜单「工作台」分组，已迁入设置页）+ 菜单设置 */
+// 教师子 tab：原「数据管理」已拆成 4 个独立菜单项（学期与班级 / 班级信息 / 导入数据 /
+// 备份与恢复），故不再有 teacher-data；各子 tab 复用同一个
+// TeacherDataManage 组件并按 section 显示对应区块（内容、交互、数据不变）。
+type TeacherSubTab =
+  | 'teacher-semester'
+  | 'teacher-class'
+  | 'teacher-import'
+  | 'teacher-backup'
+  | 'teacher-help'
+  | 'teacher-menu'
+/** 来源页：nav=导航站、workbench=个人工作台、business=销售记账、student=学生工作台、teacher=教师工作台、all=全显示(向后兼容) */
+type SettingsSource = 'nav' | 'workbench' | 'business' | 'student' | 'teacher' | 'all'
 const props = withDefaults(defineProps<{ source?: SettingsSource }>(), { source: 'all' })
 
-/** 来源页 → 允许显示的 tab keys：按需求始终保留 sync 云同步 + remind 提醒设置，其余只显示来源页自己的 */
+/**
+ * 来源页 → 允许显示的 tab keys。
+ * 「通知与同步」（remind 提醒设置 + sync 云同步）**仅在导航站显示**；
+ * 四个工作台（个人工作台 / 销售记账 / 学生工作台 / 教师工作台）打开设置时只显示自己那一组，
+ * 左侧 rail 不再出现「通知与同步」（全局类设置统一收在导航站的设置里）。
+ */
 const SOURCE_TABS: Record<SettingsSource, SettingsTabKey[]> = {
   nav:        ['nav',      'sync', 'remind'],
-  workbench:  ['wb',       'sync', 'remind'],
-  business:   ['business', 'sync', 'remind'],
-  student:    ['student',  'sync', 'remind'],
-  all:        ['nav', 'wb', 'remind', 'business', 'student', 'sync']
+  workbench:  ['wb'],
+  business:   ['business'],
+  student:    ['student'],
+  teacher:    ['teacher'],
+  all:        ['nav', 'wb', 'remind', 'business', 'student', 'teacher', 'sync']
 }
 
 /** 来源页默认激活的 tab（第一个=自己页面的设置tab），若不在可见集合里会被 visibleTabs watcher 回退到第一个可见 */
@@ -88,6 +112,7 @@ const DEFAULT_TAB_FOR_SOURCE: Record<SettingsSource, SettingsTabKey> = {
   workbench: 'wb',
   business: 'business',
   student: 'student',
+  teacher: 'teacher',
   all: 'nav'
 }
 const activeTab = ref<SettingsTabKey>(DEFAULT_TAB_FOR_SOURCE[props.source] ?? 'nav')
@@ -96,10 +121,10 @@ const activeTab = ref<SettingsTabKey>(DEFAULT_TAB_FOR_SOURCE[props.source] ?? 'n
 // 第二层：子 tab（每个内容较多的主 tab 内部再分组）
 // 子 tab 列表定义：key + 显示名称；主 tab 切换时 activeSubTab 回退到该主 tab 默认的第一个
 // ========================================
-type SubTabKey = NavSubTab | WbSubTab | BizSubTab | StuSubTab
+type SubTabKey = NavSubTab | WbSubTab | BizSubTab | StuSubTab | TeacherSubTab
 interface SubTabDef { key: SubTabKey; label: string }
 /** 主 tab → 子 tab 列表（顺序即显示顺序，第一个 = 默认选中） */
-const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student', SubTabDef[]> = {
+const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student' | 'teacher', SubTabDef[]> = {
   nav: [
     { key: 'nav-appearance', label: '站点外观' },
     { key: 'nav-display', label: '显示控制' },
@@ -134,6 +159,14 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student', SubTabDef[]> = {
     { key: 'stu-subject', label: '学科清单' },
     { key: 'stu-timetable', label: '课程表配置' },
     { key: 'stu-menu',    label: '学生菜单' }
+  ],
+  teacher: [
+    { key: 'teacher-semester', label: '学期与班级' },
+    { key: 'teacher-class', label: '班级信息' },
+    { key: 'teacher-import', label: '导入数据' },
+    { key: 'teacher-backup', label: '备份与恢复' },
+    { key: 'teacher-help', label: '使用说明' },
+    { key: 'teacher-menu', label: '菜单设置' }
   ]
 }
 /** 当前激活的子 tab（主 tab 为 remind/sync 时此值无意义，模板不会渲染第二层） */
@@ -142,7 +175,7 @@ const activeSubTab = ref<SubTabKey>((SUB_TABS[DEFAULT_TAB_FOR_SOURCE[props.sourc
 /** 当前主 tab 的子 tab 列表（用于模板渲染第二层子 tab 条；主 tab 无 sub-tabs 时返回空数组） */
 const currentSubTabs = computed<SubTabDef[]>(() => {
   const k = activeTab.value as SettingsTabKey
-  if (k === 'nav' || k === 'wb' || k === 'business' || k === 'student') return SUB_TABS[k]
+  if (k === 'nav' || k === 'wb' || k === 'business' || k === 'student' || k === 'teacher') return SUB_TABS[k]
   return []
 })
 
@@ -162,6 +195,59 @@ const emit = defineEmits<{
 const store = useAppSettingsStore()
 const businessStore = useWorkbenchBusinessStore()
 const studentStore = useStudentSettingsStore()
+const teacherStore = useTeacherStore()
+
+// ========================================
+// 入口图标选择（工作台 / 销售记账 / 学生 / 教师）：图标来自图标管理库，弹框形式选择
+// ========================================
+type IconTarget = 'workbench' | 'business' | 'student' | 'teacher'
+const ICON_TARGET_LABEL: Record<IconTarget, string> = {
+  workbench: '工作台',
+  business: '销售记账',
+  student: '学生工作台',
+  teacher: '教师工作台'
+}
+/** 当前正在编辑哪个入口的图标（空串 = 弹框关闭） */
+const iconPickerTarget = ref<IconTarget | ''>('')
+function openIconPicker(target: IconTarget): void {
+  iconPickerTarget.value = target
+}
+function closeIconPicker(): void {
+  iconPickerTarget.value = ''
+}
+const iconPickerTitle = computed(() =>
+  iconPickerTarget.value ? `${ICON_TARGET_LABEL[iconPickerTarget.value]} · 选择图标` : '选择图标'
+)
+const iconPickerCurrent = computed(() => {
+  switch (iconPickerTarget.value) {
+    case 'workbench': return store.workbenchPageIcon
+    case 'business': return store.businessPageIcon
+    case 'student': return store.studentPageIcon
+    case 'teacher': return store.teacherPageIcon
+    default: return ''
+  }
+})
+/** 选中即写入；回传空串 = 恢复默认（回退到内置图标） */
+function onPickIcon(src: string): void {
+  switch (iconPickerTarget.value) {
+    case 'workbench': store.setWorkbenchPageIcon(src); break
+    case 'business': store.setBusinessPageIcon(src); break
+    case 'student': store.setStudentPageIcon(src); break
+    case 'teacher': store.setTeacherPageIcon(src); break
+    default: break
+  }
+  closeIconPicker()
+}
+
+// 教师 tab 用到教师数据（菜单顺序/名称存在其中）。从 /teacher 打开时已加载；
+// 从其它页面（source='all'）打开时必须先加载，否则后续改动会把空数据写回 IndexedDB 覆盖真实数据。
+watch(
+  () => activeTab.value,
+  (tab) => {
+    if (tab === 'teacher') void teacherStore.loadTeacher()
+  },
+  { immediate: true }
+)
 
 /**
  * 最终可见 tabs：
@@ -174,6 +260,7 @@ const visibleTabs = computed<SettingsTabKey[]>(() => {
     if (tab === 'wb' || tab === 'remind') return store.workbenchPageVisible !== false
     if (tab === 'business') return store.businessPageVisible !== false
     if (tab === 'student') return store.studentPageVisible !== false
+    if (tab === 'teacher') return store.teacherPageVisible !== false
     return true
   })
 })
@@ -255,6 +342,18 @@ const NAV_GROUPS: NavGroup[] = [
       { key: 'stu-subject', label: '学科清单', icon: 'document', tab: 'student', sub: 'stu-subject' },
       { key: 'stu-timetable', label: '课程表配置', icon: 'cog', tab: 'student', sub: 'stu-timetable' },
       { key: 'stu-menu', label: '学生菜单', icon: 'bookmark', tab: 'student', sub: 'stu-menu' }
+    ]
+  },
+  {
+    key: 'teacher',
+    label: '教师工作台',
+    items: [
+      { key: 'teacher-semester', label: '学期与班级', icon: 'calendar', tab: 'teacher', sub: 'teacher-semester' },
+      { key: 'teacher-class', label: '班级信息', icon: 'info', tab: 'teacher', sub: 'teacher-class' },
+      { key: 'teacher-import', label: '导入数据', icon: 'upload', tab: 'teacher', sub: 'teacher-import' },
+      { key: 'teacher-backup', label: '备份与恢复', icon: 'save', tab: 'teacher', sub: 'teacher-backup' },
+      { key: 'teacher-help', label: '使用说明', icon: 'help', tab: 'teacher', sub: 'teacher-help' },
+      { key: 'teacher-menu', label: '菜单设置', icon: 'bookmark', tab: 'teacher', sub: 'teacher-menu' }
     ]
   },
   {
@@ -646,6 +745,39 @@ function commitMenuName(key: string): void {
 // Esc 还原：删除暂存，输入框回落到 store 当前值（不调 store）
 function revertMenuName(key: string): void {
   delete menuEditing[key]
+}
+
+// ========================================
+// 教师工作台菜单（仅教师 tab - 菜单设置）：排序 + 改名 + 恢复默认
+// 与 wb-menu 同构（内联输入 + 上移/下移 + 恢复默认），但不含可见性开关（教师侧按角色身份控制显示）。
+// 数据存教师工作台数据内（随 teacher.json 云同步），跨设备一致。
+// 移动限制在同一分组内：教师导航按 group 重新分组渲染，跨组调换不会改变界面呈现。
+// ========================================
+const teacherMenuEditing = reactive<Record<string, string>>({})
+
+function onMoveTeacherMenu(key: string, dir: 'up' | 'down'): void {
+  void teacherStore.moveMenuItem(key, dir)
+}
+
+// 改名提交（blur / Enter）：按 code point 校验 ≤ 12；trim 后为空 → 还原；store 拒绝则回落到旧值
+function commitTeacherMenuName(key: string): void {
+  const raw = teacherMenuEditing[key] ?? ''
+  const name = raw.trim()
+  if (!name || Array.from(name).length > 12) {
+    delete teacherMenuEditing[key]
+    return
+  }
+  void teacherStore.renameMenuItem(key, name)
+  delete teacherMenuEditing[key]
+}
+
+// Esc 还原：删除暂存，输入框回落到当前值
+function revertTeacherMenuName(key: string): void {
+  delete teacherMenuEditing[key]
+}
+
+function onResetTeacherMenu(): void {
+  void teacherStore.resetMenu()
 }
 
 // ========================================
@@ -1790,6 +1922,17 @@ onUnmounted(() => {
                 maxlength="20"
                 @input="store.setWorkbenchPageName(($event.target as HTMLInputElement).value)"
               />
+              <button
+                type="button"
+                class="wb-menu-icon-btn"
+                :class="{ 'is-set': !!store.workbenchPageIcon }"
+                :title="store.workbenchPageIcon ? '已设置图标，点击更换' : '选择图标'"
+                data-testid="workbench-icon-btn"
+                @click="openIconPicker('workbench')"
+              >
+                <img v-if="store.workbenchPageIcon" :src="store.workbenchPageIcon" alt="" class="wb-menu-icon-img" />
+                <Icon v-else name="image" />
+              </button>
               <button type="button" class="switch-btn"
                 :class="{ on: store.workbenchPageVisible !== false }"
                 role="switch"
@@ -1801,7 +1944,7 @@ onUnmounted(() => {
             </div>
           </div>
           <p class="wb-menu-hint">
-            控制导航站「工作台」按钮的显示。关闭后工作台设置和提醒设置一并隐藏。
+            控制「工作台管理」面板中是否显示工作台，默认关闭：打开后面板出现工作台卡片，设置里也会出现工作台与提醒设置；关闭则一并隐藏。
           </p>
 
           <!-- 销售记账 -->
@@ -1816,6 +1959,17 @@ onUnmounted(() => {
                 maxlength="20"
                 @input="store.setBusinessPageName(($event.target as HTMLInputElement).value)"
               />
+              <button
+                type="button"
+                class="wb-menu-icon-btn"
+                :class="{ 'is-set': !!store.businessPageIcon }"
+                :title="store.businessPageIcon ? '已设置图标，点击更换' : '选择图标'"
+                data-testid="business-icon-btn"
+                @click="openIconPicker('business')"
+              >
+                <img v-if="store.businessPageIcon" :src="store.businessPageIcon" alt="" class="wb-menu-icon-img" />
+                <Icon v-else name="image" />
+              </button>
               <button type="button" class="switch-btn"
                 :class="{ on: store.businessPageVisible !== false }"
                 role="switch"
@@ -1827,7 +1981,7 @@ onUnmounted(() => {
             </div>
           </div>
           <p class="wb-menu-hint">
-            控制导航站「销售记账」按钮的显示。关闭后销售记账设置页一并隐藏。
+            控制「工作台管理」面板中是否显示销售记账。关闭后面板中不显示，销售记账设置页一并隐藏。
           </p>
 
           <!-- 学生工作台 -->
@@ -1842,6 +1996,17 @@ onUnmounted(() => {
                 maxlength="20"
                 @input="store.setStudentPageName(($event.target as HTMLInputElement).value)"
               />
+              <button
+                type="button"
+                class="wb-menu-icon-btn"
+                :class="{ 'is-set': !!store.studentPageIcon }"
+                :title="store.studentPageIcon ? '已设置图标，点击更换' : '选择图标'"
+                data-testid="student-icon-btn"
+                @click="openIconPicker('student')"
+              >
+                <img v-if="store.studentPageIcon" :src="store.studentPageIcon" alt="" class="wb-menu-icon-img" />
+                <Icon v-else name="image" />
+              </button>
               <button type="button" class="switch-btn"
                 :class="{ on: store.studentPageVisible !== false }"
                 role="switch"
@@ -1853,7 +2018,74 @@ onUnmounted(() => {
             </div>
           </div>
           <p class="wb-menu-hint">
-            控制导航站「学生工作台」按钮的显示。关闭后学生工作台设置页一并隐藏。
+            控制「工作台管理」面板中是否显示学生工作台。关闭后面板中不显示，学生工作台设置页一并隐藏。
+          </p>
+        </div>
+
+        <!-- 教师工作台 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <span class="wb-menu-label">教师工作台</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                :value="store.teacherPageName"
+                placeholder="教师工作台"
+                maxlength="20"
+                @input="store.setTeacherPageName(($event.target as HTMLInputElement).value)"
+              />
+              <button
+                type="button"
+                class="wb-menu-icon-btn"
+                :class="{ 'is-set': !!store.teacherPageIcon }"
+                :title="store.teacherPageIcon ? '已设置图标，点击更换' : '选择图标'"
+                data-testid="teacher-icon-btn"
+                @click="openIconPicker('teacher')"
+              >
+                <img v-if="store.teacherPageIcon" :src="store.teacherPageIcon" alt="" class="wb-menu-icon-img" />
+                <Icon v-else name="image" />
+              </button>
+              <button type="button" class="switch-btn"
+                :class="{ on: store.teacherPageVisible !== false }"
+                role="switch"
+                :aria-checked="store.teacherPageVisible !== false"
+                data-testid="teacher-visible-switch"
+                @click="store.setTeacherPageVisible(store.teacherPageVisible === false)">
+                <span class="switch-thumb"></span>
+              </button>
+            </div>
+          </div>
+          <p class="wb-menu-hint">
+            控制「工作台管理」面板中是否显示教师工作台。关闭后面板中不显示（不影响已保存的数据）。
+          </p>
+        </div>
+
+        <!-- 工作台管理按钮（导航站右上角）：名称 + 开关；该按钮固定使用内置图标，不支持自定义 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <span class="wb-menu-label">工作台管理</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                :value="store.workbenchManageName"
+                placeholder="工作台管理"
+                maxlength="20"
+                @input="store.setWorkbenchManageName(($event.target as HTMLInputElement).value)"
+              />
+              <button type="button" class="switch-btn"
+                :class="{ on: store.workbenchManageVisible !== false }"
+                role="switch"
+                :aria-checked="store.workbenchManageVisible !== false"
+                data-testid="workbench-manage-visible-switch"
+                @click="store.setWorkbenchManageVisible(store.workbenchManageVisible === false)">
+                <span class="switch-thumb"></span>
+              </button>
+            </div>
+          </div>
+          <p class="wb-menu-hint">
+            控制导航站左上角「工作台管理」按钮的显示与名称。开启后点击按钮，在按钮正下方弹出面板，以卡片形式列出已启用的工作台（被关闭的工作台不出现在面板中）。
           </p>
         </div>
 
@@ -2715,6 +2947,77 @@ onUnmounted(() => {
           </ul>
         </div>
 
+        <!-- 教师工作台 - 数据管理拆分后的 4 个独立菜单项（组件按 section 显示对应区块，自带标题） -->
+        <div v-if="activeTab === 'teacher' && activeSubTab === 'teacher-semester'" class="wb-menu-config">
+          <TeacherDataManage section="semester" />
+        </div>
+
+        <div v-if="activeTab === 'teacher' && activeSubTab === 'teacher-class'" class="wb-menu-config">
+          <TeacherDataManage section="class" />
+        </div>
+
+        <div v-if="activeTab === 'teacher' && activeSubTab === 'teacher-import'" class="wb-menu-config">
+          <TeacherDataManage section="import" />
+        </div>
+
+        <div v-if="activeTab === 'teacher' && activeSubTab === 'teacher-backup'" class="wb-menu-config">
+          <TeacherDataManage section="backup" />
+        </div>
+
+        <!-- 教师工作台 - 使用说明（同上，迁入设置页） -->
+        <div v-if="activeTab === 'teacher' && activeSubTab === 'teacher-help'" class="wb-menu-config">
+          <TeacherHelp />
+        </div>
+
+        <!-- 教师工作台 - 菜单设置：左侧菜单排序 + 改名（限制在同一分组内移动） -->
+        <div v-if="activeTab === 'teacher' && activeSubTab === 'teacher-menu'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">菜单设置</h3>
+            <el-button size="small" data-testid="tcmenu-reset" @click="onResetTeacherMenu">恢复默认</el-button>
+          </div>
+          <p class="wb-menu-hint">
+            调整左侧菜单的显示顺序与名称，改动随教师数据云同步，多设备一致。「数据管理」（已拆分为学期与班级 / 班级信息 / 导入数据 / 备份与恢复）与「使用说明」已迁入设置页，不再出现在左侧菜单。
+          </p>
+
+          <div v-for="g in teacherStore.menuAllGroups" :key="g.group" class="tc-menu-group">
+            <div class="tc-menu-group-title">{{ g.group }}</div>
+            <div class="wb-menu-list">
+              <div
+                v-for="(item, index) in g.pages"
+                :key="item.key"
+                class="wb-menu-row"
+                :data-testid="`tcmenu-row-${item.key}`"
+              >
+                <span class="wb-menu-icon"><Icon :name="item.icon" /></span>
+                <el-input
+                  :maxlength="12"
+                  :data-testid="`tcmenu-name-${item.key}`"
+                  :aria-label="`${item.label}名称`"
+                  :model-value="teacherMenuEditing[item.key] ?? item.label"
+                  @update:model-value="teacherMenuEditing[item.key] = $event"
+                  @blur="commitTeacherMenuName(item.key)"
+                  @keydown.enter="commitTeacherMenuName(item.key)"
+                  @keydown.esc.stop="revertTeacherMenuName(item.key)"
+                />
+                <div class="wb-menu-actions">
+                  <el-button
+                    size="small"
+                    :data-testid="`tcmenu-up-${item.key}`"
+                    :disabled="index === 0"
+                    @click="onMoveTeacherMenu(item.key, 'up')"
+                  >上移</el-button>
+                  <el-button
+                    size="small"
+                    :data-testid="`tcmenu-down-${item.key}`"
+                    :disabled="index === g.pages.length - 1"
+                    @click="onMoveTeacherMenu(item.key, 'down')"
+                  >下移</el-button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- 云同步（仅云同步 tab）：WebDAV 配置（开关 + 三字段 + 测试连接 + 立即同步 + 上次同步时间 + 首次使用引导） -->
         <div v-if="activeTab === 'sync'" class="wb-menu-config">
           <div class="wb-menu-head">
@@ -2732,7 +3035,7 @@ onUnmounted(() => {
             </button>
           </div>
           <p class="wb-menu-hint">
-            启用后将通过 WebDAV 同步导航、自定义图标、工作台、销售记账、学生工作台等全部数据（含自定义图标），按 5 份独立信封（nav.json / icons.json / workbench.json / business.json / student.json）分别上传。推荐使用坚果云（国内访问稳定）或任意支持 WebDAV 的服务。
+            启用后将通过 WebDAV 同步导航、自定义图标、工作台、销售记账、学生工作台、教师工作台等全部数据（含自定义图标），按 6 份独立信封（nav.json / icons.json / workbench.json / business.json / student.json / teacher.json）分别上传。推荐使用坚果云（国内访问稳定）或任意支持 WebDAV 的服务。
           </p>
           <p v-if="!store.cloudSyncEnabled" class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; margin-top: 0;">
             首次使用指引：① 注册坚果云账号；② 账户信息 → 安全选项 → 添加应用，获取应用密码（非账户密码）；③ 开启开关，填入下方配置；④ 点「测试连接」确认无误后点「立即同步」。
@@ -2902,6 +3205,15 @@ onUnmounted(() => {
 
     <!-- 云同步冲突弹框（z-index 高于设置弹窗） -->
     <CloudSyncConflictModal v-if="cloudSync.conflictData.value" />
+
+    <!-- 入口图标选择弹框（z-index 高于设置弹窗，ESC 仅关本弹框） -->
+    <IconPickerDialog
+      v-if="iconPickerTarget"
+      :title="iconPickerTitle"
+      :current="iconPickerCurrent"
+      @select="onPickIcon"
+      @close="closeIconPicker"
+    />
   </div>
   </Transition>
 
@@ -2935,17 +3247,22 @@ onUnmounted(() => {
   justify-content: center;
   z-index: 300;
   padding: 20px;
+  /* 面板尺寸已由自身 vw/vh 决定，遮罩层不再产生任何溢出 → 不会带动整页滚动 */
+  overflow: hidden;
 }
 
 .manager {
   background-color: var(--color-bg-card, var(--color-bg-card));
   border-radius: var(--radius-lg);
-  /* 设置弹框默认尺寸：宽度 60vw / 高度 80vh；大屏限 max-width，小屏保底 min-* */
-  width: 60vw;
-  max-width: 1200px;
-  min-width: 320px;
-  height: 80vh;
-  min-height: 480px;
+  /* 设置面板尺寸：以视口为基准 —— 宽 90vw / 高 90vh（水平垂直居中由 .manager-overlay 的 flex 居中实现）。
+     max-width / max-height 用 100%（相对遮罩层内容盒 = 视口 - 40px padding）：
+     小屏下自动收敛并保留外边距，绝不溢出视口；min-* 一律归零，避免矮屏被最小高度顶出屏幕。 */
+  width: 90vw;
+  height: 90vh;
+  max-width: 100%;
+  max-height: 100%;
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-modal);
@@ -3176,6 +3493,18 @@ html.dark .tab-btn.active {
   color: var(--color-text-muted, var(--color-text-muted));
 }
 
+/* 教师工作台菜单设置：按分组（基础功能 / 特色功能）分段 */
+.tc-menu-group {
+  margin-bottom: 14px;
+}
+
+.tc-menu-group-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-muted, #94a3b8);
+}
+
 .wb-menu-list {
   display: flex;
   flex-direction: column;
@@ -3212,6 +3541,42 @@ html.dark .tab-btn.active {
 .wb-menu-name-input:focus {
   outline: none;
   border-color: var(--color-primary, var(--color-primary));
+}
+
+/* 入口图标按钮：显示当前图标缩略图（未设置时为占位图标），点击从图标管理库选择 */
+.wb-menu-icon-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--color-text-secondary, #64748b);
+  background-color: var(--color-bg-input, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color var(--transition-fast, 0.15s ease), color var(--transition-fast, 0.15s ease);
+}
+
+.wb-menu-icon-btn:hover {
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
+}
+
+/* 已设置自定义图标：主色描边提示 */
+.wb-menu-icon-btn.is-set {
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
+}
+
+.wb-menu-icon-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  border-radius: 3px;
 }
 
 /* EP 换皮：wb/remind 分支 el-input/el-select/el-input-number 在 flex 行内撑满（替代原 .wb-menu-name-input 的 flex:1） */
@@ -3555,6 +3920,7 @@ html.dark .remind-label {
 }
 
 @media (max-width: 640px) {
+  /* 小屏：面板铺满遮罩可用区（dvh 兜住移动端浏览器地址栏伸缩） */
   .manager {
     width: 100%;
     height: calc(100vh - 40px);
@@ -3562,6 +3928,10 @@ html.dark .remind-label {
     min-height: 0;
     max-height: calc(100vh - 40px);
     max-height: calc(100dvh - 40px);
+  }
+  /* 遮罩内边距收窄，给上面的全屏面板留出左右各 12px 呼吸位 */
+  .manager-overlay {
+    padding: 12px;
   }
 
   .grid-header {
