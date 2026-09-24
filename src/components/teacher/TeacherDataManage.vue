@@ -14,7 +14,8 @@ import {
   fileToRows,
   rowsToExams,
   rowsToParents,
-  rowsToStudents
+  rowsToStudents,
+  rowsToTimetable
 } from '@/composables/teacherImportCore'
 import {
   exportExcel,
@@ -30,7 +31,8 @@ import {
   type TeacherDataSectionKey,
   type TeacherRole,
   type TeacherStage,
-  type TeacherTerm
+  type TeacherTerm,
+  WEEK_DAYS
 } from '@/types/teacher'
 
 const props = withDefaults(defineProps<{ section?: TeacherDataSectionKey }>(), { section: 'all' })
@@ -87,6 +89,7 @@ const growthCount = computed(() =>
 const studentFile = ref<HTMLInputElement | null>(null)
 const examFile = ref<HTMLInputElement | null>(null)
 const parentFile = ref<HTMLInputElement | null>(null)
+const timetableFile = ref<HTMLInputElement | null>(null)
 const backupFile = ref<HTMLInputElement | null>(null)
 
 async function onStudentFile(e: Event): Promise<void> {
@@ -161,6 +164,26 @@ async function onParentFile(e: Event): Promise<void> {
   }
 }
 
+async function onTimetableFile(e: Event): Promise<void> {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  try {
+    const rows = await fileToRows(file)
+    const res = rowsToTimetable(rows)
+    if (res.errors.length) {
+      notify(`导入失败：${res.errors.join('；')}`, 'warn')
+      return
+    }
+    await store.importTimetable(res.periods, res.grid)
+    notify(`已导入课程表（${res.periods.length} 节次 × ${WEEK_DAYS.length} 天）`, 'info')
+  } catch (err) {
+    notify(`读取失败：${err instanceof Error ? err.message : String(err)}`, 'warn')
+  } finally {
+    input.value = ''
+  }
+}
+
 // ---------- 下载 Excel 模板 ----------
 // 模板表头与导入解析（teacherImportCore.mapHeaders）严格对齐，便于用户照填。
 // 各模板含一行示例数据，导入时按「姓名」为空自动跳过，不会误写库。
@@ -192,6 +215,24 @@ async function downloadParentTemplate(): Promise<void> {
   notify('家长信息 Excel 模板已下载')
 }
 
+async function downloadTimetableTemplate(): Promise<void> {
+  await exportExcel(
+    excelFileName('课程表模板', classTitleForTemplate()),
+    [
+      {
+        name: '课程表',
+        headers: ['节次', ...WEEK_DAYS],
+        rows: [
+          ['第1节', '语文', '数学', '英语', '语文', '数学', '自习'],
+          ['第2节', '数学', '英语', '语文', '体育', '美术', '音乐'],
+          ['第3节', '英语', '语文', '数学', '科学', '书法', '班会']
+        ]
+      }
+    ]
+  )
+  notify('课程表 Excel 模板已下载')
+}
+
 // ---------- 备份 / 恢复 ----------
 function downloadBackup(): void {
   const json = JSON.stringify(store.data, null, 2)
@@ -212,9 +253,9 @@ async function onBackupFile(e: Event): Promise<void> {
   try {
     const text = await file.text()
     await store.importBackup(JSON.parse(text))
-    notify('已从备份文件恢复数据')
+    notify('已从备份文件导入数据')
   } catch (err) {
-    notify(`恢复失败：${err instanceof Error ? err.message : String(err)}`, 'warn')
+    notify(`导入失败：${err instanceof Error ? err.message : String(err)}`, 'warn')
   } finally {
     input.value = ''
   }
@@ -399,27 +440,31 @@ async function onRowDelete(row: ClassRow): Promise<void> {
       <h4 v-if="isAll" class="tw-card-title">导入表格</h4>
       <p v-if="isAll" class="tw-card-hint">
         支持 .xlsx / .xls / .csv。学生名单需含「姓名」「性别」（学号列可选，列名带 * 也能识别）；
-        成绩表第一列为姓名、其余数值列各生成一场考试；家长表需含「姓名」「家长」「电话」。
+        成绩表第一列为姓名、其余数值列各生成一场考试；家长表需含「姓名」「家长」「电话」；
+        课程表首列为节次、其后每列依次对应 周一~周六。
         不确定列名？点击右侧「下载模板」获取对应 Excel 模板（含示例行，导入时按姓名自动跳过，不会误写库）。
       </p>
       <div class="tw-toolbar">
         <button type="button" class="tw-btn tw-btn-primary" @click="studentFile?.click()">导入学生信息</button>
         <button type="button" class="tw-btn tw-btn-primary" @click="examFile?.click()">导入成绩</button>
         <button type="button" class="tw-btn tw-btn-primary" @click="parentFile?.click()">导入家长信息</button>
+        <button type="button" class="tw-btn tw-btn-primary" @click="timetableFile?.click()">导入课程表</button>
         <button type="button" class="tw-btn" @click="downloadStudentTemplate">下载学生名单模板</button>
         <button type="button" class="tw-btn" @click="downloadExamTemplate">下载成绩模板</button>
         <button type="button" class="tw-btn" @click="downloadParentTemplate">下载家长信息模板</button>
+        <button type="button" class="tw-btn" @click="downloadTimetableTemplate">下载课程表模板</button>
         <input ref="studentFile" type="file" accept=".xlsx,.xls,.csv" class="dm-file" @change="onStudentFile" />
         <input ref="examFile" type="file" accept=".xlsx,.xls,.csv" class="dm-file" @change="onExamFile" />
         <input ref="parentFile" type="file" accept=".xlsx,.xls,.csv" class="dm-file" @change="onParentFile" />
+        <input ref="timetableFile" type="file" accept=".xlsx,.xls,.csv" class="dm-file" @change="onTimetableFile" />
       </div>
     </section>
 
     <section v-if="show('backup')" class="tw-card">
       <h4 v-if="isAll" class="tw-card-title">备份与恢复</h4>
       <div class="tw-toolbar">
-        <button type="button" class="tw-btn tw-btn-primary" @click="downloadBackup">备份数据</button>
-        <button type="button" class="tw-btn" @click="backupFile?.click()">恢复数据</button>
+        <button type="button" class="tw-btn tw-btn-primary" @click="downloadBackup">导出</button>
+        <button type="button" class="tw-btn" @click="backupFile?.click()">导入</button>
         <input ref="backupFile" type="file" accept=".json" class="dm-file" @change="onBackupFile" />
         <button type="button" class="tw-btn" @click="onLoadDemo">恢复示例数据</button>
         <span class="tw-spacer"></span>

@@ -45,6 +45,7 @@ import {
   type TeacherRole,
   type TeacherStage,
   type TeacherTerm,
+  type TimetablePeriod,
   WEEK_DAYS
 } from '@/types/teacher'
 
@@ -644,6 +645,12 @@ export const useTeacherStore = defineStore('teacher', () => {
     await saveTeacher()
   }
 
+  /** 整体导入课程表（节次 + grid[节次][星期]），用于「导入课程表」 */
+  async function importTimetable(periods: TimetablePeriod[], grid: (string | null)[][]): Promise<void> {
+    mutateBucket((b) => ({ ...b, timetable: { periods, grid } }))
+    await saveTeacher()
+  }
+
   // ---------- 奖励记录（growth 桶，原「学生成长档案」） ----------
 
   async function addGrowth(studentId: string, rec: Omit<GrowthRecord, 'id'>): Promise<void> {
@@ -847,6 +854,7 @@ export const useTeacherStore = defineStore('teacher', () => {
     setTimetableCell,
     setTimetablePeriods,
     clearTimetable,
+    importTimetable,
     addGrowth,
     updateGrowth,
     removeGrowth,

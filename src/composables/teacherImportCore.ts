@@ -5,8 +5,9 @@
 //   家长表  ：表头须含「姓名」「家长」「电话」，按姓名匹配学生
 // 表头匹配统一归一化（去空白、去 * 号），与课程表导入行为一致。
 
-import type { Exam, ParentInfo, Student } from '@/types/teacher'
+import type { Exam, ParentInfo, Student, TimetablePeriod } from '@/types/teacher'
 import { makeStudentId } from './teacherCore'
+import { WEEK_DAYS } from '@/types/teacher'
 
 /** 表头归一化：去空白 + 去 * / ＊ */
 export function normalizeHeader(v: unknown): string {
@@ -250,6 +251,49 @@ export function rowsToParents(rows: string[][], students: Student[]): ParentPars
   }
   if (!Object.keys(parents).length) warnings.push('未匹配到任何家长信息')
   return { parents, errors, warnings }
+}
+
+export interface TimetableParseResult {
+  periods: TimetablePeriod[]
+  grid: (string | null)[][]
+  errors: string[]
+  warnings: string[]
+}
+
+/**
+ * 课程表行 → 节次列表 + grid[节次][星期]。
+ * 约定：首列为节次名称（空则按行号补「第N节」）；其后每列按位置对应 周一~周六（最多取 6 列）。
+ * 首列与当日均为空的整行视为空行跳过。表头行（第 0 行）仅作展示、不参与解析。
+ */
+export function rowsToTimetable(rows: string[][]): TimetableParseResult {
+  const errors: string[] = []
+  const warnings: string[] = []
+  if (!rows.length) return { periods: [], grid: [], errors: ['表格为空'], warnings }
+
+  const dayCount = WEEK_DAYS.length
+  const periods: TimetablePeriod[] = []
+  const grid: (string | null)[][] = []
+
+  let r = 0
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i]
+    const label = (row[0] ?? '').trim()
+    const cells: (string | null)[] = []
+    let anySubject = false
+    for (let d = 0; d < dayCount; d++) {
+      const raw = (row[d + 1] ?? '').trim()
+      const v = raw === '' ? null : raw
+      if (v) anySubject = true
+      cells.push(v)
+    }
+    if (!label && !anySubject) continue // 空行跳过
+    r++
+    periods.push({ label: label || `第${r}节`, time: '' })
+    grid.push(cells)
+  }
+
+  if (!periods.length) errors.push('未解析到任何课程（每行首列应为节次名称）')
+  return { periods, grid, errors, warnings }
 }
 
 /** 按扩展名选择解析方式；xlsx 走动态 import，避免打进主包 */
