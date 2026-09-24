@@ -2,7 +2,7 @@
 // 数据管理（工作台首页）：班级信息、统计卡、三类表格导入、备份/恢复、学期与班级管理。
 // 导入统一走 teacherImportCore（表头归一、缺列明确报错、重名不静默错配）。
 //
-// section：设置页已把原「数据管理」拆成 4 个独立菜单项（学期与班级 / 班级信息 / 导入表格 /
+// section：设置页已把原「数据管理」拆成 4 个独立菜单项（学期与班级 / 班级信息 / 导入数据 /
 // 备份与恢复），这里不拆组件，只按 section 控制区块显隐 + 换标题，
 // 页面内容、交互逻辑与数据完全复用同一份实现（'all' = 整页，教师工作台内嵌用）。
 
@@ -384,6 +384,34 @@ async function onRowDelete(row: ClassRow): Promise<void> {
   await store.deleteClass(row.cls.id)
   notify('班级已删除')
 }
+
+// ---------- 删除学期（整学期 + 其全部班级） ----------
+const semesterToDelete = ref('')
+const semesterOptions = computed(() => store.data.semesters)
+async function onDeleteSemester(): Promise<void> {
+  const semId = semesterToDelete.value
+  if (!semId) return
+  const sem = store.data.semesters.find((s) => s.id === semId)
+  const label = sem ? `${sem.year} ${sem.term}` : '该学期'
+  if (!window.confirm(`确定删除「${label}」及其全部班级与数据？此操作会通过云同步传播，删除后无法恢复。`)) return
+  await store.deleteSemester(semId)
+  semesterToDelete.value = ''
+  notify('已删除学期')
+}
+
+async function onClearSemesterData(): Promise<void> {
+  const semId = semesterToDelete.value
+  if (!semId) return
+  const sem = store.data.semesters.find((s) => s.id === semId)
+  const label = sem ? `${sem.year} ${sem.term}` : '该学期'
+  if (!window.confirm(`确定清空「${label}」的全部数据记录（学生 / 家长 / 成绩 / 试卷 / 座位 / 值日 / 课程表 / 奖励 / 点名等）？学期与班级结构保留，数据不可恢复。`)) return
+  try {
+    await store.clearSemesterData(semId)
+    notify(`已清空「${label}」的数据`)
+  } catch (e) {
+    notify(`清空失败：${e instanceof Error ? e.message : String(e)}`, 'warn')
+  }
+}
 </script>
 
 <template>
@@ -437,7 +465,7 @@ async function onRowDelete(row: ClassRow): Promise<void> {
     </section>
 
     <section v-if="show('import')" class="tw-card">
-      <h4 v-if="isAll" class="tw-card-title">导入表格</h4>
+      <h4 v-if="isAll" class="tw-card-title">导入数据</h4>
       <p v-if="isAll" class="tw-card-hint">
         支持 .xlsx / .xls / .csv。学生名单需含「姓名」「性别」（学号列可选，列名带 * 也能识别）；
         成绩表第一列为姓名、其余数值列各生成一场考试；家长表需含「姓名」「家长」「电话」；
@@ -466,7 +494,7 @@ async function onRowDelete(row: ClassRow): Promise<void> {
         <button type="button" class="tw-btn tw-btn-primary" @click="downloadBackup">导出</button>
         <button type="button" class="tw-btn" @click="backupFile?.click()">导入</button>
         <input ref="backupFile" type="file" accept=".json" class="dm-file" @change="onBackupFile" />
-        <button type="button" class="tw-btn" @click="onLoadDemo">恢复示例数据</button>
+        <button type="button" class="tw-btn" @click="onLoadDemo">演示数据</button>
         <span class="tw-spacer"></span>
         <button type="button" class="tw-btn tw-btn-danger" @click="onClearAll">清空所有数据</button>
       </div>
@@ -479,6 +507,16 @@ async function onRowDelete(row: ClassRow): Promise<void> {
       </p>
       <div class="tw-toolbar">
         <button type="button" class="tw-btn tw-btn-primary" @click="openAdd">新增</button>
+        <span class="dm-toolbar-sep"></span>
+        <label class="dm-inline-field">
+          <span class="dm-field-label">学期</span>
+          <el-select v-model="semesterToDelete" class="dm-select-sm" placeholder="选择学期" :disabled="!semesterOptions.length">
+            <el-option v-for="s in semesterOptions" :key="s.id" :label="`${s.year} ${s.term}`" :value="s.id" />
+          </el-select>
+        </label>
+        <button type="button" class="tw-btn tw-btn-danger" :disabled="!semesterToDelete" @click="onDeleteSemester">删除学期</button>
+        <span class="dm-toolbar-sep"></span>
+        <button type="button" class="tw-btn tw-btn-danger" :disabled="!semesterToDelete" @click="onClearSemesterData">清空数据</button>
       </div>
 
       <table v-if="rows.length" class="dm-table">
@@ -623,6 +661,24 @@ async function onRowDelete(row: ClassRow): Promise<void> {
 .dm-select,
 .dm-year-picker {
   width: 100%;
+}
+
+/* 行内「选择学期 + 删除学期」控件 */
+.dm-inline-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dm-select-sm {
+  width: 160px;
+}
+
+.dm-toolbar-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 4px;
+  background: var(--color-border, #e2e8f0);
 }
 
 /* 只读信息格子：与输入框同样的栅格，但用虚框底色表明不可编辑 */

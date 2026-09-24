@@ -990,17 +990,39 @@ function mergeTeacher(local: TeacherSyncData, remote: TeacherSyncData): TeacherS
   if (!rv) return { ...base, teacher: lv }
   const lGroups = (lv.groups ?? {}) as Record<string, Record<string, unknown>>
   const rGroups = (rv.groups ?? {}) as Record<string, Record<string, unknown>>
-  const groups: Record<string, Record<string, unknown>> = { ...rGroups }
-  for (const semId of Object.keys(lGroups)) {
-    // 同班级：本地桶整体优先；远端独有班级已在初始展开中保留
-    groups[semId] = { ...(rGroups[semId] ?? {}), ...(lGroups[semId] ?? {}) }
+  // 删除标记并集：任一侧删过的学期/班级，合并后都要剔除（否则被远端旧数据「复活」）
+  const lTomb = lv.tombstones ?? {}
+  const rTomb = rv.tombstones ?? {}
+  const tomb = {
+    semesters: new Set([...(lTomb.semesters ?? []), ...(rTomb.semesters ?? [])]),
+    classes: new Set([...(lTomb.classes ?? []), ...(rTomb.classes ?? [])])
+  }
+  const semesters = unionById(lv.semesters ?? [], rv.semesters ?? []).filter((s) => !tomb.semesters.has(s.id))
+  const classes = unionById(lv.classes ?? [], rv.classes ?? []).filter((c) => !tomb.classes.has(c.id))
+  const assignments = unionById(lv.assignments ?? [], rv.assignments ?? []).filter(
+    (a) => !tomb.semesters.has(a.semesterId) && !tomb.classes.has(a.classId)
+  )
+  // 合并双方的班级数据桶，剔除被删学期/班级（同班级本地桶优先）
+  const groups: Record<string, Record<string, unknown>> = {}
+  for (const semId of Object.keys({ ...rGroups, ...lGroups })) {
+    if (tomb.semesters.has(semId)) continue
+    const inR = rGroups[semId] ?? {}
+    const inL = lGroups[semId] ?? {}
+    const inner: Record<string, unknown> = {}
+    for (const clsId of Object.keys({ ...inR, ...inL })) {
+      if (tomb.classes.has(clsId)) continue
+      inner[clsId] = { ...(inR[clsId] ?? {}), ...(inL[clsId] ?? {}) }
+    }
+    if (Object.keys(inner).length) groups[semId] = inner
   }
   const merged = {
     ...lv,
-    semesters: unionById(lv.semesters ?? [], rv.semesters ?? []),
-    classes: unionById(lv.classes ?? [], rv.classes ?? []),
-    assignments: unionById(lv.assignments ?? [], rv.assignments ?? []),
-    groups: groups as unknown as TeacherData['groups']
+    semesters,
+    classes,
+    assignments,
+    groups: groups as unknown as TeacherData['groups'],
+    // 保留双方删除记录，确保删除跨设备传播、且不会被下一次并集重新加回
+    tombstones: { semesters: [...tomb.semesters], classes: [...tomb.classes] }
   }
   return { ...base, teacher: merged }
 }

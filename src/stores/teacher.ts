@@ -227,6 +227,13 @@ export const useTeacherStore = defineStore('teacher', () => {
     const assignments = semEmpty
       ? data.value.assignments.filter((a) => a.semesterId !== sem)
       : data.value.assignments.filter((a) => a.classId !== classId)
+    // 写入删除标记：让云同步合并也能剔除该班级（否则会被远端旧数据「复活」）
+    const tombstones = {
+      semesters: [...(data.value.tombstones?.semesters ?? [])],
+      classes: [...(data.value.tombstones?.classes ?? [])]
+    }
+    if (!tombstones.classes.includes(classId)) tombstones.classes.push(classId)
+    if (semEmpty && !tombstones.semesters.includes(sem)) tombstones.semesters.push(sem)
     data.value = {
       ...data.value,
       classes,
@@ -234,6 +241,7 @@ export const useTeacherStore = defineStore('teacher', () => {
       groups,
       semesters,
       defaultSelection,
+      tombstones,
       current: resolveCurrent({
         ...data.value,
         classes,
@@ -387,6 +395,13 @@ export const useTeacherStore = defineStore('teacher', () => {
     // 删掉的正是默认学期 → 清空默认组合
     const defaultSelection =
       data.value.defaultSelection?.sem === semId ? { sem: '', cls: '' } : data.value.defaultSelection
+    // 写入删除标记：学期及其全部班级一并记入，云同步合并据此剔除，避免被远端「复活」
+    const removedClasses = data.value.classes.filter((c) => c.semesterId === semId).map((c) => c.id)
+    const tombstones = {
+      semesters: [...(data.value.tombstones?.semesters ?? [])],
+      classes: [...(data.value.tombstones?.classes ?? []), ...removedClasses]
+    }
+    if (!tombstones.semesters.includes(semId)) tombstones.semesters.push(semId)
     data.value = {
       ...data.value,
       semesters,
@@ -394,8 +409,23 @@ export const useTeacherStore = defineStore('teacher', () => {
       assignments: data.value.assignments.filter((a) => a.semesterId !== semId),
       groups,
       defaultSelection,
+      tombstones,
       current: resolveCurrent({ ...data.value, semesters, classes, groups, current: { sem: '', cls: '' } })
     }
+    await saveTeacher()
+  }
+
+  /**
+   * 清空某学期下的全部数据记录（学生/家长/成绩/试卷/座位/值日/课程表/奖励/点名等），
+   * 但保留该学期与班级结构本身（区别于 deleteSemester 整学期删除）。
+   */
+  async function clearSemesterData(semId: string): Promise<void> {
+    if (!data.value.semesters.some((s) => s.id === semId)) return
+    const clsIds = data.value.classes.filter((c) => c.semesterId === semId).map((c) => c.id)
+    const nextGroups = { ...data.value.groups }
+    nextGroups[semId] = {}
+    for (const clsId of clsIds) nextGroups[semId][clsId] = emptyBucket()
+    data.value = { ...data.value, groups: nextGroups }
     await saveTeacher()
   }
 
@@ -819,6 +849,7 @@ export const useTeacherStore = defineStore('teacher', () => {
     saveTeacher,
     addSemester,
     deleteSemester,
+    clearSemesterData,
     addClass,
     deleteClass,
     createClassEntry,

@@ -184,6 +184,12 @@ export interface TeacherData {
   menuOrder?: string[]
   /** 左侧菜单自定义显示名：key -> 名称，缺省用 TEACHER_PAGES 的 label；随云同步 */
   menuLabels?: Record<string, string>
+  /**
+   * 删除标记（tombstone）：云同步合并是「按 id 并集、只增不删」，本地删除的学期/班级
+   * 会被远端旧数据「复活」。故把被删 id 记入此处，合并双方各自剔除命中项，
+   * 让删除也能通过云同步传播。重建同名学期会生成全新 uid，不会误命中。随云同步；缺失视为空。
+   */
+  tombstones?: { semesters?: string[]; classes?: string[] }
 }
 
 // ---------- 页面与可见性 ----------
@@ -226,7 +232,7 @@ export const TEACHER_PAGES: TeacherPageMeta[] = [
   { key: 'exams', label: '成绩信息', icon: 'chart', group: '基础功能' },
   { key: 'papers', label: '试卷分析', icon: 'target', group: '基础功能' },
   { key: 'duty', label: '值日生表', icon: 'check', group: '基础功能' },
-  { key: 'parents', label: '家长联系方式', icon: 'phone', group: '基础功能' },
+  { key: 'parents', label: '联系家长', icon: 'phone', group: '基础功能' },
   { key: 'growth', label: '奖励记录', icon: 'star', group: '基础功能' },
   { key: 'special', label: '隐私信息', icon: 'heart', group: '特色功能' },
   { key: 'data', label: '数据管理', icon: 'database', group: '工作台' },
@@ -271,7 +277,7 @@ export const TEACHER_DATA_SECTIONS: TeacherDataSectionMeta[] = [
   },
   {
     key: 'import',
-    label: '导入表格',
+    label: '导入数据',
     sub: '支持 .xlsx / .xls / .csv。学生名单需含「姓名」「性别」（学号列可选，列名带 * 也能识别）；成绩表第一列为姓名、其余数值列各生成一场考试；家长表需含「姓名」「家长」「电话」。'
   },
   {

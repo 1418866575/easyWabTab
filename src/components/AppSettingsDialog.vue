@@ -74,7 +74,7 @@ type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-todo-cat' | 'wb-cd-cat' 
 type BizSubTab = 'biz-base' | 'biz-backup' | 'biz-cat'
 type StuSubTab = 'stu-stage' | 'stu-info' | 'stu-subject' | 'stu-timetable' | 'stu-menu'
 /** 教师工作台子 tab：数据管理拆分出的 5 项 + 使用说明（原左侧菜单「工作台」分组，已迁入设置页）+ 菜单设置 */
-// 教师子 tab：原「数据管理」已拆成 4 个独立菜单项（学期与班级 / 班级信息 / 导入表格 /
+// 教师子 tab：原「数据管理」已拆成 4 个独立菜单项（学期与班级 / 班级信息 / 导入数据 /
 // 备份与恢复），故不再有 teacher-data；各子 tab 复用同一个
 // TeacherDataManage 组件并按 section 显示对应区块（内容、交互、数据不变）。
 type TeacherSubTab =
@@ -158,7 +158,7 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student' | 'teacher', SubTab
   teacher: [
     { key: 'teacher-semester', label: '学期与班级' },
     { key: 'teacher-class', label: '班级信息' },
-    { key: 'teacher-import', label: '导入表格' },
+    { key: 'teacher-import', label: '导入数据' },
     { key: 'teacher-backup', label: '备份与恢复' },
     { key: 'teacher-help', label: '使用说明' },
     { key: 'teacher-menu', label: '菜单设置' }
@@ -301,7 +301,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: 'teacher-semester', label: '学期与班级', icon: 'calendar', tab: 'teacher', sub: 'teacher-semester' },
       { key: 'teacher-class', label: '班级信息', icon: 'info', tab: 'teacher', sub: 'teacher-class' },
-      { key: 'teacher-import', label: '导入表格', icon: 'upload', tab: 'teacher', sub: 'teacher-import' },
+      { key: 'teacher-import', label: '导入数据', icon: 'upload', tab: 'teacher', sub: 'teacher-import' },
       { key: 'teacher-backup', label: '备份与恢复', icon: 'save', tab: 'teacher', sub: 'teacher-backup' },
       { key: 'teacher-help', label: '使用说明', icon: 'help', tab: 'teacher', sub: 'teacher-help' },
       { key: 'teacher-menu', label: '菜单设置', icon: 'bookmark', tab: 'teacher', sub: 'teacher-menu' }
@@ -2725,7 +2725,7 @@ onUnmounted(() => {
             <el-button size="small" data-testid="tcmenu-reset" @click="onResetTeacherMenu">恢复默认</el-button>
           </div>
           <p class="wb-menu-hint">
-            调整左侧菜单的显示顺序与名称，改动随教师数据云同步，多设备一致。「数据管理」（已拆分为学期与班级 / 班级信息 / 导入表格 / 备份与恢复）与「使用说明」已迁入设置页，不再出现在左侧菜单。
+            调整左侧菜单的显示顺序与名称，改动随教师数据云同步，多设备一致。「数据管理」（已拆分为学期与班级 / 班级信息 / 导入数据 / 备份与恢复）与「使用说明」已迁入设置页，不再出现在左侧菜单。
           </p>
 
           <div v-for="g in teacherStore.menuAllGroups" :key="g.group" class="tc-menu-group">

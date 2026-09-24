@@ -109,7 +109,8 @@ export function emptyTeacherData(): TeacherData {
     assignments: [],
     current: { sem: '', cls: '' },
     defaultSelection: { sem: '', cls: '' },
-    groups: {}
+    groups: {},
+    tombstones: { semesters: [], classes: [] }
   }
 }
 
@@ -124,6 +125,12 @@ function str(v: unknown, fallback = ''): string {
 
 function bool(v: unknown): boolean {
   return v === true
+}
+
+/** 把任意来源字段归一为字符串数组（用于 tombstones 等）；非数组 / 非字符串一律丢弃 */
+function strArray(v: unknown): string[] {
+  if (!Array.isArray(v)) return []
+  return v.map((x) => str(x)).filter(Boolean)
 }
 
 /**
@@ -141,6 +148,13 @@ export function normalizeTeacherData(raw: unknown): TeacherData {
   if (!raw || typeof raw !== 'object') return base
   const d = raw as Partial<TeacherData> & Record<string, unknown>
 
+  // 删除标记：被删的学期/班级 id 集合，合并双方各自剔除命中项（避免云同步复活）
+  const tombRaw = (d.tombstones ?? {}) as Record<string, unknown>
+  const tomb = {
+    semesters: new Set(strArray(tombRaw.semesters)),
+    classes: new Set(strArray(tombRaw.classes))
+  }
+
   const teacherRaw = (d.teacher ?? {}) as Record<string, unknown>
   const teacher = {
     id: str(teacherRaw.id, base.teacher.id),
@@ -148,12 +162,14 @@ export function normalizeTeacherData(raw: unknown): TeacherData {
     subjects: Array.isArray(teacherRaw.subjects) ? teacherRaw.subjects.map((s) => str(s)).filter(Boolean) : base.teacher.subjects
   }
 
-  const semesters: Semester[] = asRecords(d.semesters).map((s) => ({
-    id: str(s.id) || uid('sem'),
-    year: str(s.year),
-    term: normalizeTerm(s.term),
-    createdAt: num(s.createdAt, Date.now())
-  }))
+  const semesters: Semester[] = asRecords(d.semesters)
+    .map((s) => ({
+      id: str(s.id) || uid('sem'),
+      year: str(s.year),
+      term: normalizeTerm(s.term),
+      createdAt: num(s.createdAt, Date.now())
+    }))
+    .filter((s) => !tomb.semesters.has(s.id))
 
   const classes: ClassGroup[] = asRecords(d.classes)
     .map((c) => ({
@@ -165,7 +181,7 @@ export function normalizeTeacherData(raw: unknown): TeacherData {
       role: (c.role === 'head' ? 'head' : 'subject') as TeacherRole,
       subject: str(c.subject)
     }))
-    .filter((c) => !!c.semesterId)
+    .filter((c) => !!c.semesterId && !tomb.classes.has(c.id))
 
   const assignments = asRecords(d.assignments)
     .map((a) => ({
@@ -175,16 +191,20 @@ export function normalizeTeacherData(raw: unknown): TeacherData {
       classId: str(a.classId),
       subject: str(a.subject)
     }))
-    .filter((a) => !!a.semesterId && !!a.classId)
+    .filter(
+      (a) => !!a.semesterId && !!a.classId && !tomb.semesters.has(a.semesterId) && !tomb.classes.has(a.classId)
+    )
 
-  // groups：逐桶归一化，保证每个存在的班级都有桶
+  // groups：逐桶归一化，保证每个存在的班级都有桶；被删学期/班级整桶跳过
   const groups: Record<string, Record<string, ClassBucket>> = {}
   const groupsRaw = (d.groups ?? {}) as Record<string, unknown>
   for (const semId of Object.keys(groupsRaw)) {
+    if (tomb.semesters.has(semId)) continue
     const inner = groupsRaw[semId]
     if (!inner || typeof inner !== 'object') continue
     groups[semId] = {}
     for (const clsId of Object.keys(inner as Record<string, unknown>)) {
+      if (tomb.classes.has(clsId)) continue
       groups[semId][clsId] = normalizeBucket((inner as Record<string, unknown>)[clsId])
     }
   }
@@ -222,7 +242,8 @@ export function normalizeTeacherData(raw: unknown): TeacherData {
     defaultSelection,
     groups,
     menuOrder: menu.order,
-    menuLabels: menu.labels
+    menuLabels: menu.labels,
+    tombstones: { semesters: [...tomb.semesters], classes: [...tomb.classes] }
   }
 }
 

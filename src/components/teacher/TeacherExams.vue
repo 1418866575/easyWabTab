@@ -116,7 +116,7 @@ async function exportExcelFile(): Promise<void> {
         <label class="tw-label">科目<input v-model="newSubject" class="tw-input tw-input-sm" placeholder="如 语文" /></label>
         <label class="tw-label">日期<input v-model="newDate" class="tw-input tw-input-sm" placeholder="如 2026-04" /></label>
         <button type="button" class="tw-btn tw-btn-sm tw-btn-primary" :disabled="!newName.trim()" @click="onAddExam">新增考试</button>
-        <span class="tw-label">批量成绩请到设置页「导入表格」</span>
+        <span class="tw-label">批量成绩请到设置页「导入数据」</span>
       </div>
     </section>
 
@@ -215,7 +215,7 @@ async function exportExcelFile(): Promise<void> {
       </section>
     </template>
 
-    <p v-else class="tw-empty">还没有考试，请先「新增考试」或到设置页「导入表格」导入成绩。</p>
+    <p v-else class="tw-empty">还没有考试，请先「新增考试」或到设置页「导入数据」导入成绩。</p>
   </div>
 </template>
 
