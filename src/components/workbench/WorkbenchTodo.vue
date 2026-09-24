@@ -9,7 +9,6 @@ const vm = useViewMode()
 function cardFields(row: any) {
   return [
     { label: '完成', value: row.todo.archived ? '已归档' : (row.todo.completed ? '已完成' : '未完成') },
-    { label: '打卡', value: row.todo.checkedIn ? '已打卡' : '未打卡' },
     { label: '标题', value: row.todo.title },
     { label: '描述', value: row.todo.description || '—' },
     { label: '优先级', value: priorityMeta(row.todo.priority).label },
@@ -211,10 +210,7 @@ async function handleUnarchive(todo: WorkbenchTodo): Promise<void> {
   await store.unarchiveTodo(todo.id)
 }
 
-// 打卡（一次性）：只写 checkedIn/checkedInAt，不改变条目在列表中的位置与索引
-async function handleCheckIn(id: string): Promise<void> {
-  await store.checkInTodo(id)
-}
+// 打卡入口按需求从列表操作区移除（store.checkInTodo / applyCheckIn 保留：存量数据的 checkedIn 字段仍需兼容）
 
 // 手工排序：表格视图上移/下移一格
 async function handleMove(id: string, dir: 'up' | 'down'): Promise<void> {
@@ -462,14 +458,6 @@ onUnmounted(() => {
                   @click="handleToggle(v.todo)"
                 >{{ v.todo.completed ? '已完成' : '未完成' }}</el-button>
                 <el-button
-                  size="small"
-                  :type="v.todo.checkedIn ? 'success' : 'default'"
-                  :disabled="v.todo.checkedIn === true"
-                  :data-testid="`td-checkin-${v.todo.id}`"
-                  :title="v.todo.checkedIn ? '已打卡' : '点击打卡'"
-                  @click="handleCheckIn(v.todo.id)"
-                >{{ v.todo.checkedIn ? '已打卡' : '打卡' }}</el-button>
-                <el-button
                   v-if="v.todo.completed && v.todo.archived !== true"
                   size="small"
                   :data-testid="`td-archive-${v.todo.id}`"
@@ -540,10 +528,10 @@ onUnmounted(() => {
       @close="cancelForm"
       @update:model-value="(v: boolean) => { if (!v) cancelForm() }"
     >
+      <!-- 只保留 el-dialog 自带的右上角关闭按钮，此处不再叠加自定义 X（否则出现两个关闭） -->
       <template #header>
         <div class="dialog-header">
           <h3>{{ editingId ? '编辑待办' : '新增待办' }}</h3>
-          <el-button class="close-btn" @click="cancelForm"><Icon name="close" /></el-button>
         </div>
       </template>
       <form class="dialog-body" @submit.prevent="handleSave">
@@ -1068,21 +1056,6 @@ onUnmounted(() => {
   font-weight: 600;
   color: var(--color-text, var(--color-text));
   margin: 0;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: var(--color-text-muted, var(--color-text-muted));
-  cursor: pointer;
-  padding: 4px;
-  border-radius: var(--radius-sm, 6px);
-  transition: color var(--transition-fast, 0.15s ease);
-}
-
-.close-btn:hover {
-  color: var(--color-text, var(--color-text));
 }
 
 .dialog-body {
