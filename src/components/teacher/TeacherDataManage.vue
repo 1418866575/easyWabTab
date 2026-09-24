@@ -17,6 +17,10 @@ import {
   rowsToStudents
 } from '@/composables/teacherImportCore'
 import {
+  exportExcel,
+  excelFileName
+} from '@/composables/teacherExcelCore'
+import {
   CLASS_LEVELS_BY_STAGE,
   STAGE_OPTIONS,
   TERM_OPTIONS,
@@ -155,6 +159,37 @@ async function onParentFile(e: Event): Promise<void> {
   } finally {
     input.value = ''
   }
+}
+
+// ---------- 下载 Excel 模板 ----------
+// 模板表头与导入解析（teacherImportCore.mapHeaders）严格对齐，便于用户照填。
+// 各模板含一行示例数据，导入时按「姓名」为空自动跳过，不会误写库。
+function classTitleForTemplate(): string {
+  return `${store.cls?.grade ?? ''}${store.cls?.name ?? ''}`
+}
+
+async function downloadStudentTemplate(): Promise<void> {
+  await exportExcel(
+    excelFileName('学生名单模板', classTitleForTemplate()),
+    [{ name: '学生名单', headers: ['姓名', '性别', '学号'], rows: [['张三', '男', '1']] }]
+  )
+  notify('学生名单 Excel 模板已下载')
+}
+
+async function downloadExamTemplate(): Promise<void> {
+  await exportExcel(
+    excelFileName('成绩模板', classTitleForTemplate()),
+    [{ name: '成绩', headers: ['姓名', '期中成绩', '期末成绩'], rows: [['张三', 90, 85]] }]
+  )
+  notify('成绩 Excel 模板已下载')
+}
+
+async function downloadParentTemplate(): Promise<void> {
+  await exportExcel(
+    excelFileName('家长信息模板', classTitleForTemplate()),
+    [{ name: '家长信息', headers: ['姓名', '家长', '电话', '关系'], rows: [['张三', '张父', '13800000000', '父亲']] }]
+  )
+  notify('家长信息 Excel 模板已下载')
 }
 
 // ---------- 备份 / 恢复 ----------
@@ -320,10 +355,10 @@ async function onRowDelete(row: ClassRow): Promise<void> {
     </div>
 
     <section v-if="show('class')" class="tw-card">
-      <h4 class="tw-card-title">班级信息</h4>
-      <p class="tw-card-hint">
+      <h4 v-if="isAll" class="tw-card-title">班级信息</h4>
+      <p v-if="isAll" class="tw-card-hint">
         以下信息随当前所选学期与班级自动读出，<strong>不可手动修改</strong>；影响侧栏班级标题与各页「打印 / 导出 Excel」的班级页眉。
-        如需更正，请到「学期与班级」删除该班级后重新新建。
+        如需更正，请到「学期与班级」编辑或删除该班级后重新新建。
       </p>
       <div class="dm-readonly-grid">
         <div class="dm-readonly-item">
@@ -361,15 +396,19 @@ async function onRowDelete(row: ClassRow): Promise<void> {
     </section>
 
     <section v-if="show('import')" class="tw-card">
-      <h4 class="tw-card-title">导入表格</h4>
+      <h4 v-if="isAll" class="tw-card-title">导入表格</h4>
       <p v-if="isAll" class="tw-card-hint">
         支持 .xlsx / .xls / .csv。学生名单需含「姓名」「性别」（学号列可选，列名带 * 也能识别）；
         成绩表第一列为姓名、其余数值列各生成一场考试；家长表需含「姓名」「家长」「电话」。
+        不确定列名？点击右侧「下载模板」获取对应 Excel 模板（含示例行，导入时按姓名自动跳过，不会误写库）。
       </p>
       <div class="tw-toolbar">
-        <button type="button" class="tw-btn tw-btn-primary" @click="studentFile?.click()">导入学生名单</button>
+        <button type="button" class="tw-btn tw-btn-primary" @click="studentFile?.click()">导入学生信息</button>
         <button type="button" class="tw-btn tw-btn-primary" @click="examFile?.click()">导入成绩</button>
         <button type="button" class="tw-btn tw-btn-primary" @click="parentFile?.click()">导入家长信息</button>
+        <button type="button" class="tw-btn" @click="downloadStudentTemplate">下载学生名单模板</button>
+        <button type="button" class="tw-btn" @click="downloadExamTemplate">下载成绩模板</button>
+        <button type="button" class="tw-btn" @click="downloadParentTemplate">下载家长信息模板</button>
         <input ref="studentFile" type="file" accept=".xlsx,.xls,.csv" class="dm-file" @change="onStudentFile" />
         <input ref="examFile" type="file" accept=".xlsx,.xls,.csv" class="dm-file" @change="onExamFile" />
         <input ref="parentFile" type="file" accept=".xlsx,.xls,.csv" class="dm-file" @change="onParentFile" />
@@ -377,7 +416,7 @@ async function onRowDelete(row: ClassRow): Promise<void> {
     </section>
 
     <section v-if="show('backup')" class="tw-card">
-      <h4 class="tw-card-title">备份与恢复</h4>
+      <h4 v-if="isAll" class="tw-card-title">备份与恢复</h4>
       <div class="tw-toolbar">
         <button type="button" class="tw-btn tw-btn-primary" @click="downloadBackup">备份数据</button>
         <button type="button" class="tw-btn" @click="backupFile?.click()">恢复数据</button>
@@ -389,7 +428,7 @@ async function onRowDelete(row: ClassRow): Promise<void> {
     </section>
 
     <section v-if="show('semester')" class="tw-card">
-      <h4 class="tw-card-title">学期与班级</h4>
+      <h4 v-if="isAll" class="tw-card-title">学期与班级</h4>
       <p v-if="isAll" class="tw-card-hint">
         以班级为单位管理「学年 × 学段 × 学期 × 班级」组合。每行可编辑、设为默认或删除；设为默认后进入工作台自动进入该组合。
       </p>
@@ -437,7 +476,7 @@ async function onRowDelete(row: ClassRow): Promise<void> {
             <el-date-picker
               v-model="form.year"
               type="year"
-              value-format="yyyy"
+              value-format="YYYY"
               placeholder="选择学年"
               class="dm-year-picker"
             />

@@ -2997,11 +2997,11 @@ onUnmounted(() => {
 .manager {
   background-color: var(--color-bg-card, var(--color-bg-card));
   border-radius: var(--radius-lg);
-  /* 设置面板尺寸：以视口为基准 —— 宽 90vw / 高 80vh（水平垂直居中由 .manager-overlay 的 flex 居中实现）。
+  /* 设置面板尺寸：以视口为基准 —— 宽 90vw / 高 90vh（水平垂直居中由 .manager-overlay 的 flex 居中实现）。
      max-width / max-height 用 100%（相对遮罩层内容盒 = 视口 - 40px padding）：
      小屏下自动收敛并保留外边距，绝不溢出视口；min-* 一律归零，避免矮屏被最小高度顶出屏幕。 */
   width: 90vw;
-  height: 80vh;
+  height: 90vh;
   max-width: 100%;
   max-height: 100%;
   min-width: 0;
