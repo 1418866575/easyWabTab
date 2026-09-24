@@ -106,6 +106,11 @@ function rowStock(productId: string): number {
   return stockMap.value[productId] ?? 0
 }
 
+/** 获取商品单位：单位属于商品，收摊记录本身不存；回退「件」仅用于商品已删除/缺值的兜底 */
+function rowUnit(productId: string): string {
+  return rowProduct(productId)?.unit || '件'
+}
+
 /** 带出后预计库存 */
 function rowExpectedStock(productId: string, broughtOut: number): number {
   return rowStock(productId) - broughtOut
@@ -379,7 +384,7 @@ async function handleDelete(id: string): Promise<void> {
                   <span class="bizday-row-price">
                     {{ formatYuanOf(rowProduct(row.productId)!.purchasePrice) }}→{{ formatYuanOf(rowProduct(row.productId)!.sellingPrice) }}
                   </span>
-                  <span class="bizday-row-stock">当前库存：{{ rowStock(row.productId) }} 件</span>
+                  <span class="bizday-row-stock">当前库存：{{ rowStock(row.productId) }} {{ rowUnit(row.productId) }}</span>
                 </div>
               </div>
               <div class="bizday-nums">
@@ -404,7 +409,7 @@ async function handleDelete(id: string): Promise<void> {
                 class="bizday-row-expected"
                 :class="{ 'stock-warn': rowExpectedStock(row.productId, row.broughtOut) < 0 }"
               >
-                带出后预计库存：{{ rowStock(row.productId) }} - {{ row.broughtOut }} = {{ rowExpectedStock(row.productId, row.broughtOut) }} 件
+                带出后预计库存：{{ rowStock(row.productId) }} - {{ row.broughtOut }} = {{ rowExpectedStock(row.productId, row.broughtOut) }} {{ rowUnit(row.productId) }}
                 <span v-if="rowExpectedStock(row.productId, row.broughtOut) < 0" class="bizday-stock-warn">超出库存</span>
               </span>
               <span class="bizday-row-subtotal">

@@ -16,7 +16,7 @@ function cardFields(row: any) {
     { label: '数量', value: '×' + row.quantity },
     { label: '单价', value: '@' + formatYuanOf(row.unitPrice) },
     { label: '合计', value: formatYuanOf(row.total) },
-    { label: '售价', value: p ? formatYuanOf(productSellingPrice(row.productId)!) + '/件' : '—' },
+    { label: '售价', value: p ? formatYuanOf(productSellingPrice(row.productId)!) + '/' + productUnitOf(row.productId) : '—' },
     { label: '加价率', value: m != null ? m + '%' : '—' },
     { label: '备注', value: row.note || '—' }
   ]
@@ -69,6 +69,12 @@ function exportPurchasesCsv(): void {
 // P0-2：获取商品售价
 function productSellingPrice(productId: string): number | null {
   return findProduct(store.products, productId)?.sellingPrice ?? null
+}
+
+// 获取商品单位：进货记录本身不存 unit（BusinessPurchase 无该字段），单位属于商品，
+// 显示时必须从关联商品取，回退「件」仅用于商品已删除/缺值的兜底
+function productUnitOf(productId: string): string {
+  return findProduct(store.products, productId)?.unit || '件'
 }
 
 // P0-2：计算加价率（售价 vs 进价）
@@ -254,7 +260,7 @@ async function handleDelete(id: string): Promise<void> {
           </el-table-column>
           <el-table-column label="售价" width="100" align="right">
             <template #default="{ row }">
-              <span v-if="findProduct(store.products, row.productId)">{{ formatYuanOf(productSellingPrice(row.productId)!) }}/件</span>
+              <span v-if="findProduct(store.products, row.productId)">{{ formatYuanOf(productSellingPrice(row.productId)!) }}/{{ productUnitOf(row.productId) }}</span>
               <span v-else style="color: var(--color-text-muted, #9ca3af);">—</span>
             </template>
           </el-table-column>
@@ -343,7 +349,7 @@ async function handleDelete(id: string): Promise<void> {
           </el-select>
           <!-- P0-2：选中商品后回显当前售价作为参考 -->
           <span v-if="formProductId && findProduct(store.products, formProductId)" class="bizpur-form-price-ref">
-            当前售价参考：{{ formatYuanOf(findProduct(store.products, formProductId)!.sellingPrice) }}/件
+            当前售价参考：{{ formatYuanOf(findProduct(store.products, formProductId)!.sellingPrice) }}/{{ productUnitOf(formProductId) }}
           </span>
         </div>
         <div class="biz-form-row">
