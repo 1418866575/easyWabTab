@@ -4,9 +4,10 @@
   "description": "简洁的个人网址导航页，支持分类管理、全文搜索、键盘快捷键、暗色模式，以及导入/导出为 Markdown 文件。",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "node scripts/generate-preset-icons.cjs && vue-tsc -b && vite build",
-    "preview": "vite preview",
+    "dev": "node node_modules/vite/bin/vite.js",
+    "build": "node scripts/generate-preset-icons.cjs && node node_modules/vite/bin/vite.js build",
+    "preview": "node node_modules/vite/bin/vite.js preview",
+    "typecheck": "node node_modules/vue-tsc/bin/vue-tsc.js -b",
     "serve": "node scripts/serve-with-rewrites.cjs",
     "webdav-proxy": "node scripts/webdav-proxy-only.cjs",
     "fetch-meta-proxy": "node scripts/fetch-meta-only.cjs",
