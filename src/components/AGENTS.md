@@ -12,7 +12,7 @@ components/
 ├── GlobalSearch.vue      # Multi-engine search bar (583 lines)
 ├── BackgroundManager.vue # Background image picker (876 lines)
 ├── BackupManager.vue     # Import/export UI
-├── AppSettingsDialog.vue # 设置弹窗：弹窗尺寸设置 UI + 「导航设置」tab「导航筛选栏」开关（navfilter-switch，控制导航站分类/标签栏展开收起）+ 「导航设置」tab「站点管理」区块（原导航站工具栏九动作迁移入口：容器 stg-site-actions + 九钮 stg-act-import/export/add/check-links/engines/background/category/backup/icons；弹窗类先 emit close 再经 URL query modal=<key> 打开目标，导出/断链检测就地执行，导入走隐藏 file input 含搜索引擎整链）+ 「工作台设置」tab「工作台菜单」区块（排序/改名/显示开关/恢复默认，testid 前缀 wbmenu-；列表走 store.workbenchMenuAllItems 全量渲染保证关闭项可重新开启；uses `useAppSettingsStore` from settings.ts）+ 「提醒设置」tab（activeTab 'nav'|'wb'|'remind'，testid 前缀 remind-）+ 「销售记账」tab（activeTab +'business'：摊位名称 bizsettings-stall/低库存阈值 bizsettings-threshold/商品与支出分类管理入口 bizsettings-product-cats、bizsettings-expense-cats → 打开共享 BusinessCategoryManager 弹框；uses `useWorkbenchBusinessStore`）
+├── AppSettingsDialog.vue # 设置弹窗：弹窗尺寸设置 UI + 「导航设置」tab「导航筛选栏」开关（navfilter-switch，控制导航站分类/标签栏展开收起）+ 「导航设置」tab「站点管理」区块（原导航站工具栏九动作迁移入口：容器 stg-site-actions + 九钮 stg-act-import/export/add/check-links/engines/background/category/backup/icons；弹窗类先 emit close 再经 URL query modal=<key> 打开目标，导出/断链检测就地执行，导入走隐藏 file input 含搜索引擎整链）+ 「工作台设置」tab「工作台菜单」区块（排序/改名/显示开关/恢复默认，testid 前缀 wbmenu-；列表走 store.workbenchMenuAllItems 全量渲染保证关闭项可重新开启；uses `useAppSettingsStore` from settings.ts）+ 「提醒设置」tab（activeTab 'nav'|'wb'|'remind'，testid 前缀 remind-）+ 「销售记账」tab（activeTab +'business'：基础设置 biz-base（摊位名称 bizsettings-stall/低库存阈值 bizsettings-threshold）、备份导入导出 biz-backup、记账分类管理 biz-cat、商品分类管理 biz-product-cat、支出分类管理 biz-expense-cat；后两者为独立菜单，内联渲染 <BusinessCategoryManager kind embedded>（不再走共享弹框，已删 bizCatManagerKind）；页面「去设置」action product-cats/expense-cats 直接定位到这两个子菜单；uses `useWorkbenchBusinessStore`）
 ├── CategoryManager.vue   # Category CRUD modal (built-in: only `video` locked)
 ├── CategoryTabs.vue      # Horizontal tab bar
 ├── CountdownModal.vue    # 倒计时弹框（导航站 App Bar，repeatLabel + categoryLabel 徽标；卡片底部新增可交互邮件提醒开关 `cd-email-toggle`/`cd-email-switch`：`:checked="item.emailReminder === true"` 缺省关，@change → `store.updateCountdown(id, { emailReminder })` 即时持久化 IndexedDB；启用成功 toast 提示需在设置-提醒设置配置邮箱）
@@ -23,13 +23,13 @@ components/
 ├── SiteCard.vue          # Bookmark card (hover → edit/delete)
 ├── TagFilter.vue         # Tag filter bar
 └── business/              # 销售记账（摆摊进销存）8 SFC：BusinessView 页面的 7 功能面板 + 共享分类管理弹框
-    ├── BusinessHome.vue        # 首页：5 统计卡（营业额/成本/支出/利润/毛利率，calcBusinessStats 含 expenseTotal）+ 摊位名称编辑 + 低库存概览 + 分类/商品排行（calcCategoryRanking/calcProductRanking top 8，仅含有销量条目；容器 bizhome-rank-cat/prod，行 bizhome-cat-<categoryId>/bizhome-prod-<productId>）
-    ├── BusinessProducts.vue    # 商品管理：分类 tabs（全部+可见分类+⚙️）+ 商品卡片网格（进价/售价/在售开关/编辑/删除）+ 新增/编辑弹框
-    ├── BusinessPurchases.vue   # 进货记录：分类筛选 tabs（全部+可见商品分类，bizpur-cat-all/bizpur-cat-<id>，分类取自关联商品 categoryId）+ 卡片网格（桌面固定 5 列 repeat(5,minmax(0,1fr))、≤640px 单列，卡片 testid bizpur-card-<id>，含分类徽标 bizpur-cat-badge-<purchaseId>，已删商品/未分类仅在「全部」可见）+ 新增/编辑弹框（数量×单价自动合计）
+    ├── BusinessHome.vue        # 首页：6 统计卡（出摊总天数/营业额/成本/支出/利润/毛利率；出摊总天数=收摊记录不同 date 数，累计不随 今日/本月 切换，点击跳收摊页；calcBusinessStats 含 expenseTotal）+ 摊位名称编辑 + 低库存概览 + 分类/商品排行（calcCategoryRanking/calcProductRanking top 8，仅含有销量条目；容器 bizhome-rank-cat/prod，行 bizhome-cat-<categoryId>/bizhome-prod-<productId>）
+    ├── BusinessProducts.vue    # 商品管理：分类 tabs（全部+可见分类）+ 商品卡片网格（进价/售价/在售开关/编辑/详情+抽屉）+ 新增/编辑弹框（商品分类管理已迁至「设置→销售记账→基础设置」）
+    ├── BusinessPurchases.vue   # 进货记录：分类筛选 tabs（全部+可见商品分类，bizpur-cat-all/bizpur-cat-<id>，分类取自关联商品 categoryId）+ 列表（表格操作栏：编辑/复制/删除；卡片网格≤640px单列，卡片 testid bizpur-card-<id>，含分类徽标 bizpur-cat-badge-<purchaseId>，已删商品/未分类仅在「全部」可见）+ 新增/编辑弹框（复制=以当前记录预填开新增弹框；数量×单价自动合计）
     ├── BusinessDaily.vue       # 收摊记录：日记录卡片四项（date 唯一 upsert；营业额=落库 totalRevenue + 成本/利润/损耗实时按 items×现价走 calcDailyCost/calcDailyLossAmount，testid bizday-revenue/cost/profit/loss-<id>）+ 编辑弹框（动态商品行：带出/剩余/损耗 + 四项预览 营业额/成本/利润/损耗，bizday-form-revenue/cost/profit/loss）
     ├── BusinessExpenses.vue    # 支出记录：tabs 容器（受控 activeTab+change，仿 WorkbenchHealth）+ 4 列卡片 + ⚙️
     ├── BusinessInventory.vue   # 库存管理：低库存预警清单（停售商品排除）+ 库存卡片网格（桌面 5 列/≤640px 单列，bizinv-card-<id> 五项：商品/单位/进货合计/带出合计/库存剩余（row.stock 走 calcInventory），聚合走 businessCore.calcPurchaseTotals/calcBroughtOutTotals）+ 阈值可配置
-    ├── BusinessStats.vue       # 统计报表：近 7/14/30 天趋势每日一柱堆叠分色 SVG 按收摊记录口径（仅收摊日有柱；盈利=成本琥珀+利润绿两段段高和=营业额、亏损红段悬挂零下、单标签、TREND_H 320/柱宽≤48 放大、全部/营业额/利润模式切换 bizstats-mode-*；坐标走 businessCore.businessTrendBars；分类/商品排行已移至 BusinessHome）
+    ├── BusinessStats.vue       # 统计报表：近 7/14/30 天趋势每日一柱堆叠分色 SVG 按收摊记录口径（仅收摊日有柱；盈利=成本琥珀+利润绿两段段高和=营业额、亏损红段悬挂零下、单标签、TREND_H 320/柱宽≤48 放大、全部/营业额/利润模式切换 bizstats-mode-*；坐标走 businessCore.businessTrendBars；无数据占位 .bizstats-empty 需保持高度防折叠：趋势占位 .bizstats-empty-trend 用 aspect-ratio 900/320 对齐 SVG 宽高比，环形卡片内 .bizstats-pies .bizstats-empty 用 flex:1 + min-height 100px 撑满卡片；分类/商品排行已移至 BusinessHome）
     └── BusinessCategoryManager.vue # 共享分类管理弹框（props kind: product/expense；标签页勾选/改名/上下移/删除/新增；Esc 关闭）
 ├── ThemeToggle.vue       # Dark mode toggle
 ├── HelpModal.vue         # Keyboard shortcuts help

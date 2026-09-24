@@ -7,7 +7,6 @@ import { showConfirm, toastAlert } from '@/utils/dialog'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { calcMarkupRate, calcProductSummary, findProductCategory, formatYuanOf, sortProducts, visibleProductCategories } from '@/composables/businessCore'
 import { useToast } from '@/composables/useToast'
-import { useAppSettingsDialog } from '@/composables/useAppSettingsDialog'
 import type { BusinessProduct } from '@/types'
 import Icon from '@/components/Icon.vue'
 import { usePanelPaging } from '@/composables/usePanelPaging'
@@ -21,11 +20,6 @@ const store = useWorkbenchBusinessStore()
 const toast = useToast()
 
 const activeCat = ref('all')
-// 分类管理入口已迁移到「设置 → 销售记账 → 基础设置」：这里只负责跳转，不再内嵌弹框
-const appSettings = useAppSettingsDialog()
-function openCategorySettings(): void {
-  appSettings.openAppSettings({ tab: 'business', sub: 'biz-base', action: 'product-cats' })
-}
 
 const tabs = computed(() => visibleProductCategories(store.productCategories))
 
@@ -189,7 +183,6 @@ function drawerMarkupRate(): number | null {
             :data-testid="`bizprod-cat-${cat.id}`"
           >{{ cat.name }}</el-radio-button>
         </el-radio-group>
-        <el-button data-testid="bizprod-cat-manager" title="商品分类管理（设置）" @click="openCategorySettings"><Icon name="cog" :size="15" /></el-button>
       </div>
       <el-button type="primary" data-testid="bizprod-add" @click="startAdd">＋ 新增商品</el-button>
     </div>

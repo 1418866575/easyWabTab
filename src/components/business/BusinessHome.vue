@@ -76,6 +76,9 @@ const periodDailyRecords = computed(() =>
 )
 const periodStats = computed(() => calcBusinessStats({ ...data.value, dailyRecords: periodDailyRecords.value }))
 
+// 出摊总天数：全部收摊记录的不同日期数（累计，不随 今日/本月 切换）
+const totalStallDays = computed(() => new Set(data.value.dailyRecords.map(r => r.date)).size)
+
 // 上一周期（今日→昨日；本月→上月）用于环比
 const prevDailyRecords = computed(() => {
   if (periodMode.value === 'today') {
@@ -236,6 +239,10 @@ async function saveTarget(): Promise<void> {
 
       <!-- 主指标：营业额/利润总额/成本/支出/毛利率（随 今日/本月 切换） -->
       <section class="bizhome-hero">
+        <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-stalldays" @click="go('daily')" @keydown.enter="go('daily')">
+          <span class="hero-label">出摊总天数</span>
+          <span class="hero-value">{{ totalStallDays }}<small class="hero-unit">天</small></span>
+        </div>
         <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-revenue" @click="go('stats')" @keydown.enter="go('stats')">
           <span class="hero-label">营业额</span>
           <span class="hero-value">{{ formatYuanOf(periodStats.revenue) }}</span>
@@ -408,7 +415,7 @@ html.dark .sk-block::after {
 /* ===== 主指标：营业额 + 利润总额 ===== */
 .bizhome-hero {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -458,6 +465,13 @@ html.dark .sk-block::after {
 
 .hero-value.negative {
   color: var(--color-error, var(--color-error));
+}
+
+.hero-unit {
+  font-size: 13px;
+  font-weight: 600;
+  margin-left: 2px;
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .hero-sub {

@@ -168,7 +168,7 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
           </template>
         </div>
       </div>
-      <p v-else class="bizstats-empty" data-testid="bizstats-trend-empty">暂无趋势数据，先添加进货与收摊记录吧</p>
+      <p v-else class="bizstats-empty bizstats-empty-trend" data-testid="bizstats-trend-empty">暂无趋势数据，先添加进货与收摊记录吧</p>
     </section>
 
     <!-- 右侧：支出占比（上）+ 营业额占比（下），垂直排列 -->
@@ -505,6 +505,23 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
   text-align: center;
   font-size: 13px;
   color: var(--color-text-muted, var(--color-text-muted));
+  /* 无数据时保持占位高度、内容垂直居中，避免页面折叠 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+/* 趋势图占位：与 .bizstats-svg 同宽高比（viewBox 900×320 + width:100%/height:auto），
+   无数据时高度与有数据时一致，不再塌陷 */
+.bizstats-empty-trend {
+  aspect-ratio: 900 / 320;
+}
+
+/* 环形图卡片占位：撑满卡片剩余高度（对齐有数据时的 .bizstats-pie-wrap） */
+.bizstats-pies .bizstats-empty {
+  flex: 1;
+  min-height: 100px;
 }
 
 html.dark .bizstats-card {

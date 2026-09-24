@@ -141,6 +141,17 @@ async function startEdit(p: BusinessPurchase): void {
   showDialog.value = true
 }
 
+// 复制：以当前进货记录预填表单，打开「新增」弹框（editingId 置空 → 生成新记录）
+function startCopy(p: BusinessPurchase): void {
+  editingId.value = null
+  formProductId.value = p.productId
+  formDate.value = p.date
+  formQuantity.value = String(p.quantity)
+  formUnitPrice.value = String(p.unitPrice)
+  formNote.value = p.note ?? ''
+  showDialog.value = true
+}
+
 async function handleSave(): Promise<void> {
   if (!isFormValid.value) return
   const payload = {
@@ -257,10 +268,11 @@ async function handleDelete(id: string): Promise<void> {
               <span v-else style="color: var(--color-text-muted, #9ca3af);">—</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" class-name="ewt-op-col" width="140" align="center" fixed="right">
+          <el-table-column label="操作" class-name="ewt-op-col" width="200" align="center" fixed="right">
             <template #default="{ row }">
               <div class="bizpur-actions" @click.stop>
                 <el-button size="small" :data-testid="`bizpur-edit-${row.id}`" @click="startEdit(row)">编辑</el-button>
+                <el-button size="small" :data-testid="`bizpur-copy-${row.id}`" @click="startCopy(row)">复制</el-button>
                 <el-button size="small" type="danger" :data-testid="`bizpur-del-${row.id}`" @click="handleDelete(row.id)">删除</el-button>
               </div>
             </template>

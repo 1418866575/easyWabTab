@@ -6,12 +6,14 @@ import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { useToast } from '@/composables/useToast'
 import Icon from '@/components/Icon.vue'
 
-const props = defineProps<{ kind: 'product' | 'expense' }>()
+const props = defineProps<{ kind: 'product' | 'expense'; embedded?: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 
 // ESC 关闭弹框
 function handleKeydown(event: KeyboardEvent): void {
   if (event.key === 'Escape') {
+    // 内联（embedded）模式不自行关闭：ESC 交由外层设置弹窗处理
+    if (props.embedded) return
     event.preventDefault()
     emit('close')
   }
@@ -100,11 +102,11 @@ function handleAdd(): void {
 </script>
 
 <template>
-  <el-dialog
-    :model-value="true"
-    width="420px"
-    :title="isProduct ? '商品分类管理' : '支出分类管理'"
-    :data-testid="`bizcat-dialog-${kind}`"
+  <component
+    :is="embedded ? 'div' : 'el-dialog'"
+    v-bind="embedded
+      ? { 'data-testid': `bizcat-embed-${kind}`, class: 'bizcat-embed' }
+      : { 'model-value': true, width: '420px', title: isProduct ? '商品分类管理' : '支出分类管理', 'data-testid': `bizcat-dialog-${kind}` }"
     @close="emit('close')"
   >
     <div class="bizcat-body">
@@ -156,7 +158,7 @@ function handleAdd(): void {
         <el-button size="small" type="primary" :data-testid="`bizcat-add-${kind}`" @click="handleAdd">添加</el-button>
       </div>
     </div>
-  </el-dialog>
+  </component>
 </template>
 
 <style scoped>

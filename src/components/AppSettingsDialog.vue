@@ -67,7 +67,7 @@ type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'sync'
 // 子 tab keys：每个主 tab 下的子分组（仅内容多的主 tab 定义）
 type NavSubTab = 'nav-appearance' | 'nav-display' | 'nav-site' | 'nav-size' | 'nav-data'
 type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-todo-cat' | 'wb-cd-cat' | 'wb-note-cat' | 'wb-pwd-cat' | 'wb-diary-cat' | 'wb-diary-journals' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
-type BizSubTab = 'biz-base' | 'biz-backup' | 'biz-cat'
+type BizSubTab = 'biz-base' | 'biz-backup' | 'biz-cat' | 'biz-product-cat' | 'biz-expense-cat'
 type StuSubTab = 'stu-stage' | 'stu-info' | 'stu-subject' | 'stu-timetable' | 'stu-menu'
 /** 来源页：nav=导航站、workbench=个人工作台、business=销售记账、student=学生工作台、all=全显示(向后兼容) */
 type SettingsSource = 'nav' | 'workbench' | 'business' | 'student' | 'all'
@@ -124,7 +124,9 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student', SubTabDef[]> = {
   business: [
     { key: 'biz-base',    label: '基础设置' },
     { key: 'biz-backup',  label: '备份导入导出' },
-    { key: 'biz-cat',     label: '记账分类管理' }
+    { key: 'biz-cat',     label: '记账分类管理' },
+    { key: 'biz-product-cat', label: '商品分类管理' },
+    { key: 'biz-expense-cat', label: '支出分类管理' }
   ],
   student: [
     { key: 'stu-stage',   label: '学段' },
@@ -239,7 +241,9 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: 'biz-base', label: '基础设置', icon: 'store', tab: 'business', sub: 'biz-base' },
       { key: 'biz-backup', label: '备份导入导出', icon: 'archive', tab: 'business', sub: 'biz-backup' },
-      { key: 'biz-cat', label: '记账分类管理', icon: 'tag', tab: 'business', sub: 'biz-cat' }
+      { key: 'biz-cat', label: '记账分类管理', icon: 'tag', tab: 'business', sub: 'biz-cat' },
+      { key: 'biz-product-cat', label: '商品分类管理', icon: 'tag', tab: 'business', sub: 'biz-product-cat' },
+      { key: 'biz-expense-cat', label: '支出分类管理', icon: 'tag', tab: 'business', sub: 'biz-expense-cat' }
     ]
   },
   {
@@ -303,7 +307,7 @@ const currentGroupLabel = computed(() => currentNavMeta.value?.group ?? '')
 const currentItemLabel = computed(() => currentNavMeta.value?.item ?? '')
 
 // 销售记账分类管理弹框（复用页面内共享组件；null = 关闭）
-const bizCatManagerKind = ref<'product' | 'expense' | null>(null)
+
 // 设置弹窗「去设置」入口单例（WeatherCard 等调用 openAppSettings() → 本组件订阅后定位到城市输入框）
 const appSettings = useAppSettingsDialog()
 const cityInput = ref<HTMLInputElement | null>(null)
@@ -1536,9 +1540,9 @@ onMounted(async () => {
         if (target && visibleTabs.value.includes(target.tab)) {
           activeTab.value = target.tab
           if (target.sub) activeSubTab.value = target.sub as SubTabKey
-          // 销售记账页面「去设置」入口：定位后直接展开对应管理弹框，省掉一次点击
-          if (target.action === 'product-cats') bizCatManagerKind.value = 'product'
-          else if (target.action === 'expense-cats') bizCatManagerKind.value = 'expense'
+          // 销售记账页面「去设置」入口：定位后直接跳到对应的独立分类管理菜单
+          if (target.action === 'product-cats') activeSubTab.value = 'biz-product-cat'
+          else if (target.action === 'expense-cats') activeSubTab.value = 'biz-expense-cat'
           jumped = true
         }
         if (!jumped) {
@@ -2448,10 +2452,22 @@ onUnmounted(() => {
               />
             </label>
           </div>
-          <div class="remind-actions">
-            <el-button size="small" data-testid="bizsettings-product-cats" @click="bizCatManagerKind = 'product'">管理商品分类</el-button>
-            <el-button size="small" data-testid="bizsettings-expense-cats" @click="bizCatManagerKind = 'expense'">管理支出分类</el-button>
+        </div>
+
+        <!-- 商品分类管理（销售记账 tab - 商品分类管理）：内联 BusinessCategoryManager(embedded)，与工作台分类管理菜单一致 -->
+        <div v-if="activeTab === 'business' && activeSubTab === 'biz-product-cat'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">商品分类管理</h3>
           </div>
+          <BusinessCategoryManager kind="product" embedded />
+        </div>
+
+        <!-- 支出分类管理（销售记账 tab - 支出分类管理）：内联 BusinessCategoryManager(embedded) -->
+        <div v-if="activeTab === 'business' && activeSubTab === 'biz-expense-cat'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">支出分类管理</h3>
+          </div>
+          <BusinessCategoryManager kind="expense" embedded />
         </div>
 
         <!-- 销售记账备份（销售记账 tab - 备份导入导出）：独立导出/导入销售记账七字段 -->
@@ -2883,9 +2899,6 @@ onUnmounted(() => {
       </section>
       </div>
     </div>
-
-    <!-- 销售记账分类管理（共享弹框，z-index 高于设置弹窗） -->
-    <BusinessCategoryManager v-if="bizCatManagerKind" :kind="bizCatManagerKind" @close="bizCatManagerKind = null" />
 
     <!-- 云同步冲突弹框（z-index 高于设置弹窗） -->
     <CloudSyncConflictModal v-if="cloudSync.conflictData.value" />
