@@ -96,6 +96,14 @@ function heroOf(todo: WorkbenchTodo): TodoHero | null {
 
 const viewTodos = computed(() => filteredTodos.value.map(todo => ({ todo, hero: heroOf(todo) })))
 
+/**
+ * 表格行身份：归档/取消归档会让条目在数组里跨段移动（已归档段 ⇄ 已完成段），
+ * 没有 row-key 时 el-table 按索引复用行 DOM，会出现"点了取消归档、那一行还显示已归档"的错位。
+ */
+function rowKeyOf(row: { todo: WorkbenchTodo }): string {
+  return row.todo.id
+}
+
 // ===== 固定分页（el-table 列表，10 条/页）=====
 const LIST_PAGE_SIZE = 10
 const { pageSize, PAGE_SIZES } = usePageSize('td-list-pager', LIST_PAGE_SIZE)
@@ -203,11 +211,24 @@ async function handleToggle(todo: WorkbenchTodo): Promise<void> {
  */
 async function handleArchive(todo: WorkbenchTodo): Promise<void> {
   const ok = await store.archiveTodo(todo.id)
-  if (!ok) toast.info('只有已完成的待办才能归档')
+  if (ok) toast.success('已归档，条目已移到列表末尾')
+  else toast.info('只有已完成的待办才能归档')
 }
 
 async function handleUnarchive(todo: WorkbenchTodo): Promise<void> {
-  await store.unarchiveTodo(todo.id)
+  const ok = await store.unarchiveTodo(todo.id)
+  // 取消归档后条目会从「已归档」段回到「已完成」段（可能不在当前页）→ 必须给出反馈，
+  // 否则列表原地换成下一条已归档数据，看着像"取消归档没生效"
+  if (ok) {
+    // 当前正好按「已归档」筛选时，条目会直接从列表消失 —— 同步把筛选切到「已完成」，保证条目仍可见
+    if (appliedFilters.value.status === 'archived') {
+      searchStatus.value = 'completed'
+      appliedFilters.value = { ...appliedFilters.value, status: 'completed' }
+    }
+    toast.success('已取消归档，条目已放回「已完成」')
+  } else {
+    toast.info('该待办未处于归档状态')
+  }
 }
 
 // 打卡入口按需求从列表操作区移除（store.checkInTodo / applyCheckIn 保留：存量数据的 checkedIn 字段仍需兼容）
@@ -391,6 +412,7 @@ onUnmounted(() => {
       <div class="td-table-wrap">
         <el-table v-if="vm.mode === 'list'" class="ewt-table"
           :data="pageTodos"
+          :row-key="rowKeyOf"
           data-testid="td-table"
           @row-click="rowClick"
           stripe
@@ -436,7 +458,13 @@ onUnmounted(() => {
                 >已逾期</span>
               </div>
               <span v-else class="td-col-empty">—</span>
-              <div v-if="v.hero && v.hero.status !== 'done'" class="td-hero" :class="'td-' + v.hero.status">
+              <!-- 截止日期列只展示与日期相关的提示（今日/逾期/N天）；「已归档」属完成态，
+                   由标题列的 td-archived-badge 与详情字段展示，不混进日期列 -->
+              <div
+                v-if="v.hero && v.hero.status !== 'done' && v.hero.status !== 'archived'"
+                class="td-hero"
+                :class="'td-' + v.hero.status"
+              >
                 <span class="td-hero-value">{{ v.hero.label }}</span>
               </div>
             </template>
@@ -871,14 +899,7 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-/* 归档主角：比"已完成"更弱一档（灰），与已完成区分开 */
-.td-archived {
-  color: var(--color-text-muted, var(--color-text-muted));
-  font-size: 14px;
-  font-weight: 600;
-}
-
-/* 标题后的归档徽标 */
+/* 标题后的归档徽标（归档态的唯一展示位：日期列不再显示「已归档」） */
 .td-archived-badge {
   display: inline-block;
   margin-left: 6px;
