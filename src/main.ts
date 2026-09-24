@@ -15,6 +15,8 @@ import './styles/records.css'
 import './styles/pager.css'
 import { useThemeStore } from './stores/theme'
 import { useAppSettingsStore } from './stores/settings'
+// 弹框打开时锁定背景滚动：手写弹框没有 Element Plus 的 lock-scroll，需全局兜底
+import { initScrollLock } from './utils/scrollLock'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -29,5 +31,6 @@ const themeStore = useThemeStore()
 themeStore.initTheme()
 themeStore.initBackground()
 useAppSettingsStore().initSettings()
+initScrollLock()
 
 app.mount('#app')

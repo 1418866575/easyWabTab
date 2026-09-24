@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useThemeStore, type BackgroundType, type CustomBackground } from '../stores/theme'
 
@@ -23,6 +24,9 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
+  // 断开缩略图观察器，避免弹框关闭后监听常驻
+  thumbObserver?.disconnect()
+  thumbObserver = null
 })
 
 // 当前选中的类型
@@ -75,7 +79,7 @@ function handleUpload(event: Event) {
   if (!file) return
 
   if (file.size > MAX_BG_SIZE) {
-    alert('背景图片文件不能超过 5MB')
+    toastAlert('背景图片文件不能超过 5MB')
     input.value = ''
     return
   }
@@ -180,8 +184,44 @@ function selectPresetImage(img: CustomBackground) {
 }
 
 // 获取缩略图 URL（现在使用本地路径）
+// ===== 背景缩略图懒加载 =====
+// 30 张预设背景合计约 7.5MB；原先打开弹框即通过 CSS background-image 全量拉取原图，
+// 移动端首次打开要一次性下载数 MB。改为格子进入视口（含 200px 预取）后才真正加载，
+// DOM 结构与视觉表现保持不变。
+const canObserve = typeof IntersectionObserver !== 'undefined'
+const loadedThumbs = ref<Set<string>>(new Set())
+let thumbObserver: IntersectionObserver | null = null
+
+function ensureThumbObserver(): IntersectionObserver | null {
+  if (!canObserve) return null
+  if (thumbObserver) return thumbObserver
+  thumbObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue
+        const id = (entry.target as HTMLElement).dataset.thumbId
+        if (!id) continue
+        const next = new Set(loadedThumbs.value)
+        next.add(id)
+        loadedThumbs.value = next
+        thumbObserver?.unobserve(entry.target)
+      }
+    },
+    { rootMargin: '200px' }
+  )
+  return thumbObserver
+}
+
+function bindThumb(id: string, el: unknown): void {
+  if (!canObserve || !(el instanceof HTMLElement)) return
+  el.dataset.thumbId = id
+  ensureThumbObserver()?.observe(el)
+}
+
+// 不支持 IntersectionObserver 时回退为原行为（直接加载原图）
 function getThumbnailUrl(img: CustomBackground): string {
-  return img.value
+  if (!canObserve) return img.value
+  return loadedThumbs.value.has(img.id) ? img.value : ''
 }
 
 // 添加自定义图片
@@ -385,9 +425,10 @@ function clearBackground() {
               <div
                 v-for="img in themeStore.customBackgrounds"
                 :key="img.id"
+                :ref="(el) => bindThumb(img.id, el)"
                 class="background-option custom-background-item"
                 :class="{ active: selectedValue === img.value }"
-                :style="{ backgroundImage: `url(${img.value})`, backgroundSize: 'cover', backgroundPosition: 'center' }"
+                :style="{ backgroundImage: getThumbnailUrl(img) ? `url(${getThumbnailUrl(img)})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center' }"
                 :title="img.name"
                 @click="selectCustomImage(img)"
               >
@@ -403,9 +444,10 @@ function clearBackground() {
               <div
                 v-for="img in themeStore.presetBackgrounds.filter(p => p.type === 'image')"
                 :key="img.id"
+                :ref="(el) => bindThumb(img.id, el)"
                 class="background-option"
                 :class="{ active: selectedValue === img.value }"
-                :style="{ backgroundImage: `url(${getThumbnailUrl(img)})`, backgroundSize: 'cover', backgroundPosition: 'center' }"
+                :style="{ backgroundImage: getThumbnailUrl(img) ? `url(${getThumbnailUrl(img)})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center' }"
                 :title="img.name"
                 @click="selectPresetImage(img)"
               ></div>

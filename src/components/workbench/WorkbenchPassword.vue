@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { usePasswordsStore } from '@/stores/passwords'
 import type { PasswordSaveResult } from '@/stores/passwords'
 import { useSitesStore } from '@/stores/sites'
@@ -59,7 +60,7 @@ async function handleUnlock(): Promise<void> {
   }
 }
 
-function handleLock(): void {
+async function handleLock(): void {
   passwordsStore.lock()
   masterPasswordInput.value = ''
   masterPasswordConfirm.value = ''
@@ -72,7 +73,7 @@ function handleLock(): void {
 // 破坏性操作，二次确认后执行；已启用云同步时清空状态会同步到其他设备。
 async function handleResetVault(): Promise<void> {
   if (
-    !confirm(
+    !await showConfirm(
       '确定要重置密码吗？\n\n此操作将清空所有已保存的密码条目，并清除主密码。\n重置后需重新设置主密码，已保存的密码无法恢复。'
     )
   ) {
@@ -135,11 +136,36 @@ function stopIdleWatch(): void {
   IDLE_ACTIVITY_EVENTS.forEach((e) => window.removeEventListener(e, onIdleActivity))
 }
 
-// ===== 搜索（按网站名称）=====
+// ===== 搜索（按网站名称）+ 分类标签页（'' = 全部）=====
 const searchQuery = ref('')
+const activeCategoryId = ref('')
+
+/** 分类按 sort 升序（undefined 视作 999 排末尾），标签页只显示 showInTabs !== false 的 */
+const sortedCategories = computed(() =>
+  [...passwordsStore.categories].sort((a, b) => (a.sort ?? 999) - (b.sort ?? 999))
+)
+const tabCategories = computed(() => sortedCategories.value.filter(c => c.showInTabs !== false))
+
+function categoryName(id?: string): string {
+  if (!id) return '未分类'
+  return passwordsStore.categories.find(c => c.id === id)?.name ?? '未分类'
+}
+
+function selectCategory(id: string): void {
+  activeCategoryId.value = id
+  paging.goto(1)
+}
+
 const filteredPasswords = computed<PasswordEntry[]>(() => {
-  if (!searchQuery.value) return passwordsStore.passwords
-  return passwordsStore.searchPasswords(searchQuery.value)
+  let list = passwordsStore.passwords
+  // 分类筛选：'' = 全部；其余按 categoryId 精确匹配（未分类条目 categoryId 为空 → 归入「未分类」时筛不到，
+  // 这里只筛显式挂了该分类的条目，未分类项在「全部」里可见）
+  if (activeCategoryId.value) {
+    list = list.filter(p => (p.categoryId ?? '') === activeCategoryId.value)
+  }
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return list
+  return list.filter(p => (p.siteName ?? '').toLowerCase().includes(q))
 })
 
 // ===== 自适应分页（桌面 ≥769px；锁定/未解锁时列表不渲染 → containerRef 为 null → 分页惰性 R8）=====
@@ -155,8 +181,8 @@ const paging = reactive(
   })
 )
 
-// 搜索变化 → 回第 1 页（输入与清除按钮两条路径都经 searchQuery 变化触发）
-watch(searchQuery, () => paging.goto(1))
+// 搜索或分类变化 → 回第 1 页（输入与清除按钮两条路径都经这两个值变化触发）
+watch([searchQuery, activeCategoryId], () => paging.goto(1))
 
 // ===== 新增/编辑弹窗（共用表单，四字段全部必填）=====
 const showForm = ref(false)
@@ -165,6 +191,7 @@ const formSiteName = ref('')
 const formUrl = ref('')
 const formUsername = ref('')
 const formPassword = ref('')
+const formCategoryId = ref('')
 const showFormPassword = ref(false)
 
 // 站点关联下拉（从书签库匹配网站，选中自动带出名称 + URL）
@@ -220,6 +247,8 @@ function startAdd(): void {
   formUrl.value = ''
   formUsername.value = ''
   formPassword.value = ''
+  // 新增默认落在当前标签页分类下（在「全部」页新增则为未分类）
+  formCategoryId.value = activeCategoryId.value
   showFormPassword.value = false
   siteSearchQuery.value = ''
   showSiteDropdown.value = false
@@ -232,6 +261,7 @@ function startEdit(entry: PasswordEntry): void {
   formUrl.value = entry.url
   formUsername.value = entry.username
   formPassword.value = entry.password
+  formCategoryId.value = entry.categoryId ?? ''
   showFormPassword.value = false
   siteSearchQuery.value = ''
   showSiteDropdown.value = false
@@ -245,6 +275,7 @@ function cancelForm(): void {
   formUrl.value = ''
   formUsername.value = ''
   formPassword.value = ''
+  formCategoryId.value = ''
   showFormPassword.value = false
   siteSearchQuery.value = ''
   showSiteDropdown.value = false
@@ -255,7 +286,7 @@ function cancelForm(): void {
  * 密码改动会立即主动推送云端，所以"同步成功"必须如实告知；
  * 推送失败也要讲清楚——否则用户会以为什么都好了，下次拉取被云端覆盖才发现丢了。
  */
-function toastSaved(verb: string, r: PasswordSaveResult): void {
+async function toastSaved(verb: string, r: PasswordSaveResult): void {
   if (r.synced) toast.success(`${verb}成功，已同步到云端`)
   else if (r.cloudEnabled) toast.warning(`${verb}成功，但云同步失败，请稍后手动同步`)
   else toast.success(`${verb}成功`)
@@ -267,7 +298,8 @@ async function handleSave(): Promise<void> {
     siteName: formSiteName.value.trim(),
     url: formUrl.value.trim(),
     username: formUsername.value.trim(),
-    password: formPassword.value.trim()
+    password: formPassword.value.trim(),
+    categoryId: formCategoryId.value || undefined
   }
   const isEdit = Boolean(editingId.value)
   const result = isEdit
@@ -284,7 +316,7 @@ async function handleSave(): Promise<void> {
 }
 
 async function handleDelete(id: string): Promise<void> {
-  if (confirm('确定要删除这个密码条目吗？')) {
+  if (await showConfirm('确定要删除这个密码条目吗？')) {
     const result = await passwordsStore.deletePassword(id)
     if (!result.saved) {
       toast.error('删除失败：密码库已锁定，请重新解锁后重试')
@@ -458,6 +490,19 @@ watch(
         </el-button>
       </div>
 
+      <!-- 分类标签页：全部 + 各分类（分类在「设置 → 密码分类管理」维护） -->
+      <div v-if="tabCategories.length > 0" class="pwd-cat-tabs" data-testid="pwd-cat-tabs">
+        <el-radio-group v-model="activeCategoryId" class="pwd-cat-tabs-group" size="small" @update:model-value="selectCategory">
+          <el-radio-button value="" data-testid="pwd-cat-all">全部</el-radio-button>
+          <el-radio-button
+            v-for="cat in tabCategories"
+            :key="cat.id"
+            :value="cat.id"
+            :data-testid="`pwd-cat-${cat.id}`"
+          >{{ cat.name }}</el-radio-button>
+        </el-radio-group>
+      </div>
+
       <!-- 空态 -->
       <div v-if="filteredPasswords.length === 0" class="pwd-empty" data-testid="pwd-empty">
         {{ searchQuery ? '没有找到匹配的密码' : '暂无保存的密码' }}
@@ -477,6 +522,7 @@ watch(
               @error="(e: Event) => ((e.target as HTMLImageElement).style.display = 'none')"
             />
             <span class="pwd-site-name" :title="entry.siteName">{{ entry.siteName }}</span>
+            <span class="pwd-cat-badge" :data-testid="`pwd-cat-badge-${entry.id}`">{{ categoryName(entry.categoryId) }}</span>
             <a
               class="pwd-icon-btn pwd-open"
               :href="entry.url"
@@ -624,6 +670,26 @@ watch(
                 />
               </div>
             </div>
+            <div class="form-group">
+              <label>分类（可选）</label>
+              <el-select
+                v-model="formCategoryId"
+                class="pwd-form-cat"
+                size="default"
+                placeholder="未分类"
+                clearable
+                data-testid="pwd-form-category"
+              >
+                <el-option value="" label="未分类" />
+                <el-option
+                  v-for="cat in sortedCategories"
+                  :key="cat.id"
+                  :value="cat.id"
+                  :label="cat.name"
+                />
+              </el-select>
+              <p class="pwd-form-hint">分类在「设置 → 密码分类管理」中维护</p>
+            </div>
             <div class="pwd-form-actions">
 <el-button type="button" class="pwd-btn-cancel" data-testid="pwd-cancel-btn" @click="cancelForm">
               取消
@@ -769,6 +835,42 @@ watch(
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+/* ===== 分类标签页（全部 + 各分类）===== */
+.pwd-cat-tabs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pwd-cat-tabs-group {
+  flex-wrap: wrap;
+}
+/* 卡片头部分类徽标 */
+.pwd-cat-badge {
+  flex-shrink: 0;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: var(--radius-full, 999px);
+  color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-light, #eff6ff);
+}
+.pwd-form-cat {
+  width: 100%;
+}
+.pwd-form-hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--color-text-muted, #9ca3af);
+}
+html.dark .pwd-cat-badge {
+  background: #1e3a5f;
+  color: #60a5fa;
 }
 
 .pwd-search-wrap {
@@ -979,6 +1081,7 @@ watch(
   width: 100%;
   max-width: var(--dlg-w-wb-password, 520px);
   max-height: var(--dlg-h-wb-password, 90vh);
+  max-height: var(--dlg-h-wb-password, 90dvh);
   overflow-y: auto;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));

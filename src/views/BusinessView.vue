@@ -14,6 +14,7 @@ import BusinessStats from '@/components/business/BusinessStats.vue'
 import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
 import PageSwitcher from '@/components/PageSwitcher.vue'
 import Icon from '@/components/Icon.vue'
+import SkeletonBlock from '@/components/SkeletonBlock.vue'
 import { useCloudSync } from '@/composables/useCloudSync'
 import type { SyncStatus } from '@/composables/useCloudSync'
 import { useWorkbenchShortcuts } from '@/composables/useWorkbenchShortcuts'
@@ -114,8 +115,17 @@ async function handleSyncNowClick(): Promise<void> {
   syncBusy.value = false
 }
 
-onMounted(() => {
-  void store.loadBusiness()
+// 首屏初始化占位：数据加载完成前内容区全空且无反馈（加载逻辑本身不变）
+const initializing = ref(true)
+
+onMounted(async () => {
+  try {
+    await store.loadBusiness()
+  } catch {
+    // 保持原先 fire-and-forget 的静默行为，仅确保骨架屏一定收起
+  } finally {
+    initializing.value = false
+  }
 })
 </script>
 
@@ -172,15 +182,18 @@ onMounted(() => {
       </nav>
 
       <main class="bs-content">
-        <BusinessHome v-if="activeSection === 'home'" @navigate="navigateTo" />
-        <BusinessProducts v-else-if="activeSection === 'products'" :highlight-id="productFilter" @navigate="navigateTo" />
-        <BusinessPurchases v-else-if="activeSection === 'purchases'" :product-filter="purchaseFilter" @navigate="navigateTo" />
-        <BusinessDaily v-else-if="activeSection === 'daily'" @navigate="navigateTo" />
-        <BusinessExpenses
-          v-else-if="activeSection === 'expenses'"
-        />
-        <BusinessInventory v-else-if="activeSection === 'inventory'" @navigate="navigateTo" />
-        <BusinessStats v-else-if="activeSection === 'stats'" />
+        <SkeletonBlock v-if="initializing" :rows="5" label="正在加载销售记账数据" />
+        <template v-else>
+          <BusinessHome v-if="activeSection === 'home'" @navigate="navigateTo" />
+          <BusinessProducts v-else-if="activeSection === 'products'" :highlight-id="productFilter" @navigate="navigateTo" />
+          <BusinessPurchases v-else-if="activeSection === 'purchases'" :product-filter="purchaseFilter" @navigate="navigateTo" />
+          <BusinessDaily v-else-if="activeSection === 'daily'" @navigate="navigateTo" />
+          <BusinessExpenses
+            v-else-if="activeSection === 'expenses'"
+          />
+          <BusinessInventory v-else-if="activeSection === 'inventory'" @navigate="navigateTo" />
+          <BusinessStats v-else-if="activeSection === 'stats'" />
+        </template>
       </main>
     </div>
 
@@ -511,18 +524,18 @@ html.dark .bs-stall-name {
     text-overflow: clip;
   }
 
-  /* P3-14 移动端触控目标 ≥40px（侧栏菜单项 / 头部按钮） */
+  /* 移动端触控目标 ≥44px（侧栏菜单项 / 头部按钮）：
+     原为 40px，低于 iOS/Android 44px 触控下限，误触率偏高 */
   .bs-menu-item {
-    min-height: 40px;
-    min-width: 40px;
+    min-height: 44px;
+    min-width: 44px;
   }
 
   .bs-btn {
-    min-height: 40px;
+    min-height: 44px;
   }
 
-  /* P3-13 窄屏间距压缩：内容区内边距收窄、首页卡片间距收紧；
-     底部留白避让固定 Tab Bar（40px 触控 + 内边距 + 安全区） */
+  /* 窄屏间距压缩：内容区内边距收窄、首页卡片间距收紧；底部留白避让固定 Tab Bar（44px 触控 + 内边距 + 安全区） */
   .bs-content {
     padding: 12px 12px calc(64px + env(safe-area-inset-bottom, 0px));
   }

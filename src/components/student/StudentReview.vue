@@ -5,6 +5,7 @@
 // 间隔序列：1/2/4/7/15/30 天，6 阶段，末阶段自动标记掌握
 
 import { computed, onMounted, ref, watch } from 'vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { useStudentReviewStore } from '@/stores/studentReview'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
 import { useToast } from '@/composables/useToast'
@@ -73,7 +74,7 @@ function openAddDialog(): void {
   showEditDialog.value = true
 }
 
-function openEditDialog(id: string): void {
+async function openEditDialog(id: string): void {
   const r = store.entries.find(x => x.id === id)
   if (!r) return
   editingId.value = r.id
@@ -84,7 +85,7 @@ function openEditDialog(id: string): void {
   showEditDialog.value = true
 }
 
-function closeEditDialog(): void {
+async function closeEditDialog(): void {
   showEditDialog.value = false
   editingId.value = null
 }
@@ -121,7 +122,7 @@ async function saveEditDialog(): Promise<void> {
 }
 
 async function handleDelete(id: string): Promise<void> {
-  if (!confirm('确定删除该复习条目？')) return
+  if (!await showConfirm('确定删除该复习条目？')) return
   await store.deleteReview(id)
   toast.success('已删除')
   currentPage.value = 1
@@ -134,7 +135,7 @@ async function handleAdvance(id: string): Promise<void> {
 }
 
 async function handleReset(id: string): Promise<void> {
-  if (!confirm('确定重置到阶段 1？该条目的复习进度将回退。')) return
+  if (!await showConfirm('确定重置到阶段 1？该条目的复习进度将回退。')) return
   const result = await store.reset(id)
   reviewErrorToast(result)
   if (result.ok) toast.success('已重置到阶段 1')

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { injectHealthStore, type HealthStoreLike } from '@/composables/healthStoreContext'
 import { calcExerciseAttainment, calcYearDistanceTotals } from '@/composables/healthCore'
@@ -71,7 +72,7 @@ const isTargetValid = computed(() => {
   return Number.isFinite(t) && t > 0
 })
 
-function openTargetDialog(): void {
+async function openTargetDialog(): void {
   const plan = store.plans.exercise
   formMetric.value =
     plan && METRIC_OPTIONS.some(o => o.value === plan.metric) ? plan.metric : 'times'
@@ -79,7 +80,7 @@ function openTargetDialog(): void {
   showTargetDialog.value = true
 }
 
-function closeTargetDialog(): void {
+async function closeTargetDialog(): void {
   showTargetDialog.value = false
 }
 
@@ -90,7 +91,7 @@ async function handleSaveTarget(): Promise<void> {
 }
 
 async function handleClearTarget(): Promise<void> {
-  if (confirm('确定要清除运动目标吗？')) {
+  if (await showConfirm('确定要清除运动目标吗？')) {
     await store.setPlan('exercise', null)
     closeTargetDialog()
   }
@@ -172,7 +173,7 @@ function startEditRecord(id: string): void {
   showRecordDialog.value = true
 }
 
-function cancelRecordForm(): void {
+async function cancelRecordForm(): void {
   showRecordDialog.value = false
   editingId.value = null
 }
@@ -200,7 +201,7 @@ async function handleSaveRecord(): Promise<void> {
 }
 
 async function handleDeleteRecord(id: string): Promise<void> {
-  if (confirm('确定要删除这条运动记录吗？')) {
+  if (await showConfirm('确定要删除这条运动记录吗？')) {
     await store.deleteRecord('exercise', id)
     listPage.value = 1 // 删除后回到第 1 页
   }
@@ -687,6 +688,7 @@ onUnmounted(() => {
     min-width: 0 !important;
     max-width: 100% !important;
     height: 90vh !important;
+    height: 90dvh !important;
   }
 }
 
@@ -1128,6 +1130,7 @@ html.dark input.form-input {
     min-width: 0 !important;
     max-width: 100% !important;
     height: 90vh !important;
+    height: 90dvh !important;
   }
 }
 

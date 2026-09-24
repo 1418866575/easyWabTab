@@ -35,8 +35,10 @@ import StudentOnboarding from '@/components/student/StudentOnboarding.vue'
 import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
 import PageSwitcher from '@/components/PageSwitcher.vue'
 import Icon from '@/components/Icon.vue'
+import SkeletonBlock from '@/components/SkeletonBlock.vue'
 import { useCloudSync } from '@/composables/useCloudSync'
 import type { SyncStatus } from '@/composables/useCloudSync'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 
 const studentStore = useStudentSettingsStore()
 const settingsStore = useAppSettingsStore()
@@ -121,16 +123,16 @@ function openParentPinDialog() {
  * PIN 弹窗回调：无论 setup 成功 或 verify 成功，都表示家长身份已确认
  * → 开启 5 分钟会话；手动锁定/超时/关闭标签页 即失效
  */
-function onParentPinAuthenticated() {
+async function onParentPinAuthenticated() {
   parentModeUnlocked.value = true
   parentPinDialogVisible.value = false
   extendParentSession()
   startParentLockTick()
 }
 /** 家长模式下横条「锁定」按钮：立即失效 */
-function handleLockParentMode() {
+async function handleLockParentMode() {
   if (!parentModeUnlocked.value) return
-  if (!confirm('确定立即锁定家长模式？（需要再次输入 PIN 解锁）')) return
+  if (!await showConfirm('确定立即锁定家长模式？（需要再次输入 PIN 解锁）')) return
   lockParentMode()
 }
 
@@ -211,35 +213,44 @@ async function handleSyncNowClick(): Promise<void> {
   syncBusy.value = false
 }
 
+// 首屏初始化占位：onMounted 串行加载 6 个 store 并做存量回溯补分，
+// 期间内容区全空且无反馈；骨架屏让「在忙」可见（加载逻辑本身不变）。
+const initializing = ref(true)
+
 // onMounted：加载学生设置；若未初始化（stageSeeded !== stage）弹学段引导
 // 修复历史数据：加载 rewards+habits+homework+reading 后，存量回溯补分（sourceId 幂等）
 onMounted(async () => {
-  await studentStore.loadSettings()
-  // 首次进入或学段未播种 → 弹学段引导
-  const s = studentStore.settings
-  if (s.stageSeeded !== studentStore.stage) {
-    onboardingVisible.value = true
-  }
-  // 当前激活区被关 → 回退首个可见项
-  if (activeSection.value !== 'home' && !isSectionEnabled(activeSection.value)) {
-    activeSection.value = 'home'
-  }
-  // 存量回溯加分：顺序串行，避免并发 IDB 事务互相覆盖
   try {
-    await rewardsStore.loadRewards()
-    await habitsStore.loadHabits()
-    await homeworkStore.loadHomework()
-    await readingStore.loadReading()
-    await healthStore.loadHealth()
-    await gradesStore.loadGrades()
-    await rewardsStore.backfillFromAll({
-      habits: habitsStore.habits,
-      habitRecords: habitsStore.records,
-      homeworks: homeworkStore.entries,
-      readings: readingStore.entries
-    })
-  } catch (e) {
-    console.warn('[StudentView] backfill earn failed', e)
+    await studentStore.loadSettings()
+    // 首次进入或学段未播种 → 弹学段引导
+    const s = studentStore.settings
+    if (s.stageSeeded !== studentStore.stage) {
+      onboardingVisible.value = true
+    }
+    // 当前激活区被关 → 回退首个可见项
+    if (activeSection.value !== 'home' && !isSectionEnabled(activeSection.value)) {
+      activeSection.value = 'home'
+    }
+    // 存量回溯加分：顺序串行，避免并发 IDB 事务互相覆盖
+    try {
+      await rewardsStore.loadRewards()
+      await habitsStore.loadHabits()
+      await homeworkStore.loadHomework()
+      await readingStore.loadReading()
+      await healthStore.loadHealth()
+      await gradesStore.loadGrades()
+      await rewardsStore.backfillFromAll({
+        habits: habitsStore.habits,
+        habitRecords: habitsStore.records,
+        homeworks: homeworkStore.entries,
+        readings: readingStore.entries
+      })
+    } catch (e) {
+      console.warn('[StudentView] backfill earn failed', e)
+    }
+  } finally {
+    // 即使加载失败也要收起骨架屏，避免卡在占位状态
+    initializing.value = false
   }
 })
 
@@ -342,31 +353,34 @@ async function onOnboardingComplete() {
       </nav>
 
       <main class="st-content">
-        <StudentHome v-if="activeSection === 'home'" @navigate="(s: string) => navigateTo(s as StudentSectionKey)" />
-        <StudentHabits v-else-if="activeSection === 'habits'" />
-        <StudentHomework v-else-if="activeSection === 'homework'" />
-        <StudentTimetable v-else-if="activeSection === 'timetable'" />
-        <StudentReading v-else-if="activeSection === 'reading'" />
-        <StudentExam v-else-if="activeSection === 'exam'" />
-        <StudentEducation v-else-if="activeSection === 'education'" />
-        <StudentPlan v-else-if="activeSection === 'plan'" />
-        <StudentGoals v-else-if="activeSection === 'goal'" />
-        <StudentReview v-else-if="activeSection === 'review'" />
-        <StudentMistakes v-else-if="activeSection === 'mistakes'" />
-        <StudentAchievements v-else-if="activeSection === 'achievements'" />
-        <StudentReward v-else-if="activeSection === 'rewards'" />
-        <StudentParent
-          v-else-if="activeSection === 'parent'"
-          :parent-mode="parentModeUnlocked"
-          @open-pin="openParentPinDialog"
-        />
-        <StudentHealth v-else-if="activeSection === 'health'" />
-        <StudentGrades v-else-if="activeSection === 'grades'" />
-        <StudentPanelPlaceholder
-          v-else
-          :section="activeSection"
-          :section-label="menuItems.find(i => i.key === activeSection)?.label ?? ''"
-        />
+        <SkeletonBlock v-if="initializing" :rows="5" label="正在加载学生工作台数据" />
+        <template v-else>
+          <StudentHome v-if="activeSection === 'home'" @navigate="(s: string) => navigateTo(s as StudentSectionKey)" />
+          <StudentHabits v-else-if="activeSection === 'habits'" />
+          <StudentHomework v-else-if="activeSection === 'homework'" />
+          <StudentTimetable v-else-if="activeSection === 'timetable'" />
+          <StudentReading v-else-if="activeSection === 'reading'" />
+          <StudentExam v-else-if="activeSection === 'exam'" />
+          <StudentEducation v-else-if="activeSection === 'education'" />
+          <StudentPlan v-else-if="activeSection === 'plan'" />
+          <StudentGoals v-else-if="activeSection === 'goal'" />
+          <StudentReview v-else-if="activeSection === 'review'" />
+          <StudentMistakes v-else-if="activeSection === 'mistakes'" />
+          <StudentAchievements v-else-if="activeSection === 'achievements'" />
+          <StudentReward v-else-if="activeSection === 'rewards'" />
+          <StudentParent
+            v-else-if="activeSection === 'parent'"
+            :parent-mode="parentModeUnlocked"
+            @open-pin="openParentPinDialog"
+          />
+          <StudentHealth v-else-if="activeSection === 'health'" />
+          <StudentGrades v-else-if="activeSection === 'grades'" />
+          <StudentPanelPlaceholder
+            v-else
+            :section="activeSection"
+            :section-label="menuItems.find(i => i.key === activeSection)?.label ?? ''"
+          />
+        </template>
       </main>
     </div>
 
@@ -682,7 +696,7 @@ async function onOnboardingComplete() {
     min-width: 0;
   }
   .st-btn {
-    min-height: 40px;
+    min-height: 44px;
   }
 
   /* 菜单降级为底部固定 Tab Bar（与「个人工作台」WorkbenchView 移动端一致）：

@@ -525,13 +525,14 @@ const handleClick = () => {
 /* ===== 触屏 / 窄屏：放大菜单触发区（44px 触控目标下限） ===== */
 @media (max-width: 768px), (pointer: coarse) {
   .menu-trigger {
-    width: 34px;
-    height: 34px;
+    width: 44px;
+    height: 44px;
     opacity: 0.85;
     background: var(--color-bg-hover, #f1f5f9);
   }
   .card-menu {
-    top: 40px;
+    /* 触发区放大到 44px 后，菜单相应下移避免与之重叠 */
+    top: 48px;
     min-width: 160px;
   }
   .card-menu-item {

@@ -44,6 +44,25 @@ export interface PasswordEntry {
   password: string // 加密存储 (base64)
   createdAt: string
   updatedAt: string
+  categoryId?: string // 密码分类（undefined/'' = 未分类）
+}
+
+/** 密码分类（镜像 NoteCategory：id + 名称 + 排序权重 + 标签页显隐） */
+export interface PasswordCategory {
+  id: string
+  name: string
+  sort?: number
+  showInTabs?: boolean
+}
+
+/**
+ * 密码库明文结构（加密后整体写入 IDB store 'passwords'）。
+ * v1 = 裸数组 PasswordEntry[]（历史数据）；v2 = { categories, entries }。
+ * 加载时按形状自动识别，v1 → v2 升级（空分类表），保证旧库可正常解密。
+ */
+export interface PasswordVault {
+  categories: PasswordCategory[]
+  entries: PasswordEntry[]
 }
 
 // 倒计时提醒分类：内置 6 类（COUNTDOWN_CATEGORIES）+ 用户自定义分类名（string，分类管理新增）
@@ -130,6 +149,8 @@ export interface WorkbenchTodo {
   categoryId?: string // 待办分类（undefined/'' = 未分类）
   checkedIn?: boolean // 是否已打卡（一次性：打卡后恒为 true，不自动重置）
   checkedInAt?: string // 打卡时间 ISO（仅展示用，绝不参与排序）
+  completedAt?: string // 完成时间 ISO（自动归档的判定基准；旧数据缺失时回退 updatedAt）
+  archived?: boolean // 已归档（已完成且超过归档期限自动置为 true；归档项排在列表最后）
 }
 
 // 工作台便签

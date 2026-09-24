@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -88,21 +89,18 @@ function masked(t: string): string {
   return t === '—' ? t : maskOrReveal(t, !store.showAmount)
 }
 
-// ===== 近 N 月收支趋势（数据/坐标必须走 ledgerCore calcTrendSeries + trendChartScale，禁组件内重算）=====
-// endMonthKey：store 无「当前展示月」状态 → 取当月（today），PC 默认 12 个月，移动端 ≤768px 用 6 个月减少空月视野浪费
+// ===== 近 12 月收支趋势（数据/坐标必须走 ledgerCore calcTrendSeries + trendChartScale，禁组件内重算）=====
+// 固定展示 12 个月：画布 600×300 一次铺满，不需要左右滑动（更早的月份按需求不再纳入本图）。
+const TREND_H = 300
+/** 画布宽度（12 个月 × 50px/月，同月两柱 + 间隙 + 月标签，铺满卡片不滚动） */
 const TREND_W = 600
-const TREND_H = 220
+const TREND_MONTHS = 12
 
-const trendMonths = ref(12)
-function updateTrendMonths(): void {
-  trendMonths.value = window.innerWidth <= 768 ? 6 : 12
-}
-
-const trendSeries = computed<TrendMonth[]>(() => calcTrendSeries(store.entries, currentMonth(), store.categories, trendMonths.value))
+const trendSeries = computed<TrendMonth[]>(() => calcTrendSeries(store.entries, currentMonth(), store.categories, TREND_MONTHS))
 const trendTotalIncome = computed(() => trendSeries.value.reduce((s, m) => s + m.income, 0))
 const trendTotalExpense = computed(() => trendSeries.value.reduce((s, m) => s + m.expense, 0))
 const trendScale = computed<TrendChartScale | null>(() => trendChartScale(trendSeries.value, TREND_W, TREND_H))
-const trendTitle = computed(() => `近 ${trendMonths.value} 个月收支情况`)
+const trendTitle = computed(() => `近 ${TREND_MONTHS} 个月收支情况`)
 
 // 网格线/柱/柱宽派生态（全 0 序列 trendChartScale → null → 空数组，走 ld-trend-empty 空态）
 const trendGridlines = computed(() => trendScale.value?.gridlines ?? [])
@@ -110,13 +108,15 @@ const trendBars = computed(() => trendScale.value?.bars ?? [])
 const trendBarWidth = computed(() => trendScale.value?.barWidth ?? 0)
 
 // 月标签短格式（'2026-08' → '8月'），x 坐标来自 scale.monthLabels（几何唯一来源）
-const trendMonthLabels = computed(() =>
-  (trendScale.value?.monthLabels ?? []).map(l => ({
-    x: l.x,
-    monthKey: l.monthKey,
-    label: `${Number(l.monthKey.slice(5, 7))}月`
-  }))
-)
+const trendMonthLabels = computed(() => {
+  const firstYear = trendSeries.value[0]?.monthKey.slice(0, 4)
+  return (trendScale.value?.monthLabels ?? []).map(l => {
+    const m = Number(l.monthKey.slice(5, 7))
+    // 跨年可辨识：1 月或与序列首月不同年份 → 带年份（'26/1'），否则只显示 '8月'
+    const label = m === 1 || l.monthKey.slice(0, 4) !== firstYear ? `${l.monthKey.slice(2, 4)}/${m}` : `${m}月`
+    return { x: l.x, monthKey: l.monthKey, label }
+  })
+})
 
 // ===== 支出分类占比环形图（总面积 SVG 220×220 不变，增粗彩色环 stroke-width 增大色彩面积）=====
 const RING_R = 80
@@ -298,7 +298,7 @@ function startEdit(view: EntryView): void {
   showDialog.value = true
 }
 
-function cancelForm(): void {
+async function cancelForm(): void {
   showDialog.value = false
   editingId.value = null
 }
@@ -317,7 +317,7 @@ async function handleSave(): Promise<void> {
 }
 
 async function handleDelete(id: string): Promise<void> {
-  if (confirm('确定要删除这笔记账吗？')) {
+  if (await showConfirm('确定要删除这笔记账吗？')) {
     await store.deleteEntry(id)
     paging.goto(1) // 删除后列表回第 1 页
   }
@@ -335,14 +335,11 @@ function handleKeydown(event: KeyboardEvent): void {
 // 面板自管理数据加载（WorkbenchView 后续集成统一加载，这里防御性幂等重载）
 onMounted(async () => {
   await store.loadLedger()
-  updateTrendMonths()
   window.addEventListener('keydown', handleKeydown)
-  window.addEventListener('resize', updateTrendMonths)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
-  window.removeEventListener('resize', updateTrendMonths)
 })
 </script>
 
@@ -578,25 +575,28 @@ onUnmounted(() => {
             </span>
           </div>
         </div>
-        <svg
-          v-if="trendScale"
-          viewBox="0 0 600 220"
-          width="100%"
-          height="220"
-          preserveAspectRatio="xMidYMid meet"
-          class="ld-trend-svg"
-        >
-          <!-- 5 条水平网格线 + 数值标签（顶部为 maxY，data-testid=ld-trend-max） -->
-          <g>
-            <line
-              v-for="(g, gi) in trendGridlines"
-              :key="'grid-' + gi"
-              class="ld-trend-gridline"
+        <!-- 横向滚动容器：月份多时画布比卡片宽，左右滑动查看全部月份 -->
+        <div class="ld-trend-scroll" data-testid="ld-trend-scroll">
+          <svg
+            v-if="trendScale"
+            :viewBox="`0 0 ${TREND_W} ${TREND_H}`"
+            width="100%"
+            :height="TREND_H"
+            preserveAspectRatio="xMidYMid meet"
+            class="ld-trend-svg"
+            data-testid="ld-trend-svg"
+          >
+            <!-- 5 条水平网格线 + 数值标签（顶部为 maxY，data-testid=ld-trend-max） -->
+            <g>
+              <line
+                v-for="(g, gi) in trendGridlines"
+                :key="'grid-' + gi"
+                class="ld-trend-gridline"
               x1="0"
-              x2="600"
-              :y1="g.y"
-              :y2="g.y"
-            />
+              :x2="TREND_W"
+                :y1="g.y"
+                :y2="g.y"
+              />
             <text
               v-for="(g, gi) in trendGridlines"
               :key="'val-' + gi"
@@ -626,20 +626,21 @@ onUnmounted(() => {
           />
 
           <!-- 月标签：data-testid=ld-trend-month-<月索引> -->
-          <text
-            v-for="(l, li) in trendMonthLabels"
-            :key="l.monthKey"
-            :data-testid="`ld-trend-month-${li}`"
-            class="ld-trend-axis-label"
-            :x="l.x"
-            y="214"
-            font-size="11"
-            text-anchor="middle"
-          >
-            {{ l.label }}
-          </text>
-        </svg>
-        <div v-else class="ld-trend-empty" data-testid="ld-trend-empty">暂无收支数据</div>
+            <text
+              v-for="(l, li) in trendMonthLabels"
+              :key="l.monthKey"
+              :data-testid="`ld-trend-month-${li}`"
+              class="ld-trend-axis-label"
+              :x="l.x"
+              :y="TREND_H - 6"
+              font-size="11"
+              text-anchor="middle"
+            >
+              {{ l.label }}
+            </text>
+          </svg>
+          <div v-else class="ld-trend-empty" data-testid="ld-trend-empty">暂无收支数据</div>
+        </div>
       </section>
       </div>
     </div>
@@ -1042,10 +1043,17 @@ onUnmounted(() => {
 html.dark .ld-trend-total-inc b { color: #34d399; }
 html.dark .ld-trend-total-exp b { color: #f87171; }
 
+/* 画布 600×300 自适应铺满（12 个月一次展示完，无需左右滑动）；容器保留 overflow-x 仅作极端窄屏兜底 */
+.ld-trend-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 高度由模板 :height 指定（300px），此处不再写死，避免与画布实际高度不一致导致留白 */
 .ld-trend-svg {
   display: block;
-  width: 100%;
-  height: 220px;
 }
 
 .ld-trend-gridline {
@@ -1427,6 +1435,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
     min-width: 0 !important;
     max-width: 100% !important;
     height: 90vh !important;
+    height: 90dvh !important;
   }
 }
 

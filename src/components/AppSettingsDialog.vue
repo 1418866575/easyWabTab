@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { reactive, ref, computed, onMounted, onUnmounted, watch, nextTick, toRaw } from 'vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import {
   useAppSettingsStore,
   DIALOG_LABELS,
@@ -10,6 +11,7 @@ import {
 import type { DialogId } from '@/stores/settings'
 import type { WorkbenchMenuItem } from '@/composables/workbenchMenuCore'
 import { useAppSettingsDialog } from '@/composables/useAppSettingsDialog'
+import type { SettingsTarget } from '@/composables/useAppSettingsDialog'
 import { useToast } from '@/composables/useToast'
 import { idbGet, idbPut, idbImportAll, idbExportAll, idbClear, IDB_STUDENT_STORES, IDB_CORE_STORES, IDB_AUX_STORES, IDB_ICONS_STORES, WORKBENCH_PREFS_KEYS } from '@/composables/useIdb'
 import { localDateKey } from '@/composables/businessCore'
@@ -64,7 +66,7 @@ const DIALOG_IDS = Object.keys(DIALOG_DEFAULTS) as DialogId[]
 type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'sync'
 // 子 tab keys：每个主 tab 下的子分组（仅内容多的主 tab 定义）
 type NavSubTab = 'nav-appearance' | 'nav-display' | 'nav-site' | 'nav-size' | 'nav-data'
-type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-todo-cat' | 'wb-cd-cat' | 'wb-note-cat' | 'wb-diary-cat' | 'wb-diary-journals' | 'wb-diary-add' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
+type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-todo-cat' | 'wb-cd-cat' | 'wb-note-cat' | 'wb-pwd-cat' | 'wb-diary-cat' | 'wb-diary-journals' | 'wb-diary-add' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
 type BizSubTab = 'biz-base' | 'biz-backup' | 'biz-cat'
 type StuSubTab = 'stu-stage' | 'stu-info' | 'stu-subject' | 'stu-timetable' | 'stu-menu'
 /** 来源页：nav=导航站、workbench=个人工作台、business=销售记账、student=学生工作台、all=全显示(向后兼容) */
@@ -112,6 +114,7 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student', SubTabDef[]> = {
     { key: 'wb-todo-cat', label: '待办分类管理' },
     { key: 'wb-cd-cat',   label: '倒计时分类管理' },
     { key: 'wb-note-cat', label: '便签分类管理' },
+    { key: 'wb-pwd-cat', label: '密码分类管理' },
     { key: 'wb-diary-cat', label: '日记分类管理' },
     { key: 'wb-diary-journals', label: '多日记本' },
     { key: 'wb-diary-add', label: '新增管理' },
@@ -217,6 +220,7 @@ const NAV_GROUPS: NavGroup[] = [
       { key: 'wb-todo-cat', label: '待办分类管理', icon: 'tag', tab: 'wb', sub: 'wb-todo-cat' },
       { key: 'wb-cd-cat', label: '倒计时分类管理', icon: 'tag', tab: 'wb', sub: 'wb-cd-cat' },
       { key: 'wb-note-cat', label: '便签分类管理', icon: 'tag', tab: 'wb', sub: 'wb-note-cat' },
+      { key: 'wb-pwd-cat', label: '密码分类管理', icon: 'lock', tab: 'wb', sub: 'wb-pwd-cat' },
       { key: 'wb-backup', label: '工作台备份', icon: 'save', tab: 'wb', sub: 'wb-backup' },
       { key: 'wb-snapshot', label: '数据时光机', icon: 'refresh', tab: 'wb', sub: 'wb-snapshot' },
       { key: 'wb-size', label: '弹窗尺寸', icon: 'package', tab: 'wb', sub: 'wb-size' }
@@ -710,14 +714,14 @@ async function doClear() {
 const snapshotList = ref<SnapshotWithSource[]>([])
 const snapshotBusy = ref(false)
 
-function snapshotTime(createdAt: string): string {
+async function snapshotTime(createdAt: string): string {
   const d = new Date(createdAt)
   const p = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
 }
 
 // 来源展示：手动快照/自动快照（旧记录缺 source 回退「自动」）
-function snapshotSourceLabel(s: SnapshotRecord): string {
+async function snapshotSourceLabel(s: SnapshotRecord): string {
   return (s as SnapshotWithSource).source === 'manual' ? '手动' : '自动'
 }
 
@@ -750,7 +754,7 @@ async function handleSnapshotNow(): Promise<void> {
 // 恢复快照：confirm → 密码双分支 → idbImportAll → 重载各 store → 清理更新快照 → toast
 // （镜像 WorkbenchView.handleImportFile：备份携带完整加密身份则接管，password-verification-v2 缺失且无身份时跳过密码恢复）
 async function handleRestoreSnapshot(snapshot: SnapshotRecord): Promise<void> {
-  if (!confirm(`确定要恢复到 ${snapshotTime(snapshot.createdAt)} 的快照吗？当前工作台数据将被覆盖。`)) return
+  if (!await showConfirm(`确定要恢复到 ${snapshotTime(snapshot.createdAt)} 的快照吗？当前工作台数据将被覆盖。`)) return
   if (snapshotBusy.value) return
   snapshotBusy.value = true
   try {
@@ -995,7 +999,7 @@ function handleBizExport(): void {
     toast.error('导出失败')
   }
 }
-function handleBizImportClick(): void {
+async function handleBizImportClick(): void {
   bizImportInput.value?.click()
 }
 async function handleBizImportFile(event: Event): Promise<void> {
@@ -1023,7 +1027,7 @@ async function handleBizImportFile(event: Event): Promise<void> {
       toast.error('文件格式不正确（不是销售记账备份）')
       return
     }
-    if (!confirm('确定要导入此备份吗？当前销售记账数据将被覆盖。')) return
+    if (!await showConfirm('确定要导入此备份吗？当前销售记账数据将被覆盖。')) return
     try {
       const data = await businessStore.importData(parsed.data)
       toast.success(
@@ -1059,7 +1063,7 @@ const studentGradeOptions = computed<string[]>(() => {
   return cur && !base.includes(cur) ? [cur, ...base] : base
 })
 
-function onStudentGradeChange(val: string | null): void {
+async function onStudentGradeChange(val: string | null): void {
   studentStore.setGrade(val ?? '')
 }
 
@@ -1069,7 +1073,7 @@ const studentNewSubject = ref('')
 async function onStudentStageSwitch(newStage: StudentStage): Promise<void> {
   if (newStage === studentStore.stage) return
   // 切学段会重置菜单可见性到学段默认值 + 播种默认学科（M2 起补习惯）
-  if (!confirm(`切换到「${studentStageOptions.find(o => o.key === newStage)?.label ?? ''}」学段？\n菜单可见性将应用该学段默认值，已有学段默认学科将重新初始化。`)) return
+  if (!await showConfirm(`切换到「${studentStageOptions.find(o => o.key === newStage)?.label ?? ''}」学段？\n菜单可见性将应用该学段默认值，已有学段默认学科将重新初始化。`)) return
   try {
     await studentStore.switchStage(newStage)
     toast.success(`已切换到「${studentStageName.value}」学段`)
@@ -1079,7 +1083,7 @@ async function onStudentStageSwitch(newStage: StudentStage): Promise<void> {
   }
 }
 
-function onStudentNicknameCommit(): void {
+async function onStudentNicknameCommit(): void {
   const input = studentNicknameInput.value
   if (!input) return
   const name = input.value.trim()
@@ -1087,7 +1091,7 @@ function onStudentNicknameCommit(): void {
   toast.success(name ? `昵称已更新为「${name}」` : '昵称已清空')
 }
 
-function onStudentAddSubject(): void {
+async function onStudentAddSubject(): void {
   const name = studentNewSubject.value.trim()
   if (!name) return
   const ok = studentStore.addSubject(name)
@@ -1099,15 +1103,15 @@ function onStudentAddSubject(): void {
   }
 }
 
-function onStudentRemoveSubject(name: string): void {
-  if (!confirm(`删除学科「${name}」？\n已有作业/复习/错题记录不会自动迁移到其他学科。`)) return
+async function onStudentRemoveSubject(name: string): void {
+  if (!await showConfirm(`删除学科「${name}」？\n已有作业/复习/错题记录不会自动迁移到其他学科。`)) return
   const ok = studentStore.removeSubject(name)
   if (ok) toast.success(`已删除学科「${name}」`)
   else toast.error('删除失败')
 }
 
-function onStudentResetMenu(): void {
-  if (!confirm('恢复学生菜单为当前学段默认顺序与可见性？')) return
+async function onStudentResetMenu(): void {
+  if (!await showConfirm('恢复学生菜单为当前学段默认顺序与可见性？')) return
   studentStore.resetMenu()
   toast.success('学生菜单已恢复默认')
 }
@@ -1119,7 +1123,7 @@ function onStudentMoveMenu(key: string, dir: 'up' | 'down'): void {
   }
 }
 
-function onStudentRenameMenu(key: string): void {
+async function onStudentRenameMenu(key: string): void {
   // 简易内联改名：使用 prompt（避免引入额外弹窗组件）
   const current = studentStore.menuLabels[key] ?? ''
   const next = window.prompt('请输入菜单名称', current)
@@ -1128,7 +1132,7 @@ function onStudentRenameMenu(key: string): void {
   if (!r.ok && r.reason === 'empty') toast.error('名称不能为空')
 }
 
-function onStudentToggleMenu(key: string, visible: boolean): void {
+async function onStudentToggleMenu(key: string, visible: boolean): void {
   studentStore.setMenuVisibility(key, visible)
 }
 
@@ -1190,7 +1194,7 @@ async function handleSyncNow(): Promise<void> {
 /** 以云端覆盖本地：外部工具改过云端 JSON 后常规同步不生效时的兜底入口 */
 async function handleForcePull(): Promise<void> {
   if (forcePullBusy.value) return
-  const confirmed = window.confirm(
+  const confirmed = await showConfirm(
     '将忽略本地未推送的改动，无条件用云端数据覆盖本地。\n\n适用于：用备份编辑技能或手工改过云端文件后，「立即同步」未生效的情况。\n\n确定继续吗？'
   )
   if (!confirmed) return
@@ -1202,7 +1206,7 @@ async function handleForcePull(): Promise<void> {
 /** 本地推送云端：跳过远端变更检测守卫，强制以本地数据覆盖云端 */
 async function handlePushLocal(): Promise<void> {
   if (pushLocalBusy.value) return
-  const confirmed = window.confirm(
+  const confirmed = await showConfirm(
     '将用本地数据覆盖云端（其他设备 / 外部工具对云端的改动会丢失）。\n\n适用于：要把本机最新改动强制推上云、且不在乎云端旧版本时。\n\n确定继续吗？'
   )
   if (!confirmed) return
@@ -1250,7 +1254,7 @@ function revertTodoCatName(name: string): void {
   todoCatDrafts[name] = name
 }
 
-function handleAddTodoCat(): void {
+async function handleAddTodoCat(): void {
   const name = newTodoCatName.value.trim()
   if (!name) return
   const res = todosCatStore.addCategory(name)
@@ -1262,8 +1266,8 @@ function handleAddTodoCat(): void {
   newTodoCatName.value = ''
 }
 
-function handleDeleteTodoCat(name: string): void {
-  if (!confirm(`确定要删除待办分类「${name}」吗？该分类下的待办将变为未分类`)) return
+async function handleDeleteTodoCat(name: string): void {
+  if (!await showConfirm(`确定要删除待办分类「${name}」吗？该分类下的待办将变为未分类`)) return
   const res = todosCatStore.deleteCategory(name)
   if (!res.ok) {
     toast.error(res.reason === 'in-use' ? '该分类下有待办，无法删除' : '删除失败')
@@ -1301,7 +1305,7 @@ function revertCdCatName(name: string): void {
   cdCatDrafts[name] = name
 }
 
-function handleAddCdCat(): void {
+async function handleAddCdCat(): void {
   const name = newCdCatName.value.trim()
   if (!name) return
   const res = countdownsCatStore.addCustomCategory(name)
@@ -1313,8 +1317,8 @@ function handleAddCdCat(): void {
   newCdCatName.value = ''
 }
 
-function handleDeleteCdCat(name: string): void {
-  if (!confirm(`确定要删除倒计时分类「${name}」吗？该分类下的倒计时将变为未分类`)) return
+async function handleDeleteCdCat(name: string): void {
+  if (!await showConfirm(`确定要删除倒计时分类「${name}」吗？该分类下的倒计时将变为未分类`)) return
   const res = countdownsCatStore.deleteCustomCategory(name)
   if (!res.ok) {
     toast.error(res.reason === 'in-use' ? '该分类下有倒计时，无法删除' : '删除失败')
@@ -1352,7 +1356,7 @@ async function commitNoteCatName(cat: { id: string; name: string }): Promise<voi
   }
 }
 
-function revertNoteCatName(cat: { id: string; name: string }): void {
+async function revertNoteCatName(cat: { id: string; name: string }): void {
   noteCatDrafts[cat.id] = cat.name
 }
 
@@ -1368,7 +1372,7 @@ async function handleAddNoteCat(): Promise<void> {
 }
 
 async function handleDeleteNoteCat(cat: { id: string; name: string }): Promise<void> {
-  if (!confirm(`确定要删除便签分类「${cat.name}」吗？该分类下的便签将变为未分类`)) return
+  if (!await showConfirm(`确定要删除便签分类「${cat.name}」吗？该分类下的便签将变为未分类`)) return
   const ok = await notesCatStore.deleteCategory(cat.id)
   if (!ok) {
     toast.error('便签分类删除失败')
@@ -1386,6 +1390,69 @@ async function handleMoveNoteCat(catId: string, dir: 'up' | 'down'): Promise<voi
 async function handleToggleNoteCatTab(cat: { id: string; showInTabs?: boolean }): Promise<void> {
   const ok = await notesCatStore.updateCategory(cat.id, { showInTabs: cat.showInTabs === false })
   if (!ok) toast.error('分类更新失败')
+}
+
+// --- 密码分类（镜像便签分类；分类与条目同库加密，必须解锁密码库才能读写）---
+const pwdCatStore = usePasswordsStore()
+const pwdCatDrafts = reactive<Record<string, string>>({})
+const newPwdCatName = ref('')
+
+/** 密码库是否可写：未解锁时分类读写都会失败（savePasswords 返回 saved:false） */
+const pwdVaultUnlocked = computed(() => pwdCatStore.isUnlocked === true)
+
+const sortedPwdCategories = computed(() =>
+  [...pwdCatStore.categories].sort((a, b) => (a.sort ?? 999) - (b.sort ?? 999))
+)
+
+function initPwdCats(): void {
+  for (const c of pwdCatStore.categories) {
+    if (!(c.id in pwdCatDrafts)) pwdCatDrafts[c.id] = c.name
+  }
+}
+
+async function commitPwdCatName(cat: { id: string; name: string }): Promise<void> {
+  const draft = pwdCatDrafts[cat.id]
+  if (draft === undefined || draft.trim() === cat.name) return
+  const ok = await pwdCatStore.updateCategory(cat.id, { name: draft.trim() })
+  if (!ok) {
+    toast.error('密码分类名称已存在或为空（也可能是密码库已锁定）')
+    pwdCatDrafts[cat.id] = cat.name
+  }
+}
+
+function revertPwdCatName(cat: { id: string; name: string }): void {
+  pwdCatDrafts[cat.id] = cat.name
+}
+
+async function handleAddPwdCat(): Promise<void> {
+  const name = newPwdCatName.value.trim()
+  if (!name) return
+  const ok = await pwdCatStore.addCategory(name)
+  if (!ok) {
+    toast.error('密码分类名称已存在，或密码库已锁定无法写入')
+    return
+  }
+  newPwdCatName.value = ''
+}
+
+async function handleDeletePwdCat(cat: { id: string; name: string }): Promise<void> {
+  if (!await showConfirm(`确定要删除密码分类「${cat.name}」吗？该分类下的密码条目将变为未分类`)) return
+  const ok = await pwdCatStore.deleteCategory(cat.id)
+  if (!ok) {
+    toast.error('密码分类删除失败（密码库可能已锁定）')
+    return
+  }
+  delete pwdCatDrafts[cat.id]
+}
+
+async function handleMovePwdCat(catId: string, dir: 'up' | 'down'): Promise<void> {
+  const ok = await pwdCatStore.moveCategory(catId, dir)
+  if (!ok) toast.warning('已到边界，无法移动')
+}
+
+async function handleTogglePwdCatTab(cat: { id: string; showInTabs?: boolean }): Promise<void> {
+  const ok = await pwdCatStore.toggleTabCategory(cat.id, cat.showInTabs === false)
+  if (!ok) toast.error('分类更新失败（密码库可能已锁定）')
 }
 
 // --- 记账分类（复用 workbenchLedger 的 addCategory/updateCategory/deleteCategory，内置8分组不可删） ---
@@ -1409,7 +1476,7 @@ async function ledgerCatStartEdit(c: { id: string; name: string; type: 'income' 
   ledgerCatDrafts[c.id] = c.name
   ledgerCatEditType[c.id] = c.type
 }
-function ledgerCatCancelEdit(): void { ledgerCatEditingId.value = null }
+async function ledgerCatCancelEdit(): void { ledgerCatEditingId.value = null }
 
 async function ledgerCatSave(id: string): Promise<void> {
   if (ledgerCatEditingId.value !== id) return
@@ -1432,7 +1499,7 @@ async function handleAddLedgerCat(): Promise<void> {
 async function handleDeleteLedgerCat(id: string): Promise<void> {
   const c = sortedLedgerCategories.value.find(x => x.id === id)
   if (!c) return
-  if (!confirm(`确定要删除记账分类「${c.name}」吗？\n\n该分类被记账记录使用时将无法删除。`)) return
+  if (!await showConfirm(`确定要删除记账分类「${c.name}」吗？\n\n该分类被记账记录使用时将无法删除。`)) return
   const res = await ledStore.deleteCategory(id)
   if (!res.ok) {
     if (res.reason === 'in-use') toast.error('该分类已被记账记录使用，无法删除')
@@ -1456,6 +1523,7 @@ onMounted(async () => {
   initTodoCats()
   initCdCats()
   initNoteCats()
+  initPwdCats()
   // 记账 store 可能还未随工作台挂载加载 → 防御性加载一次
   try { await ledStore.loadLedger() } catch { /* ignore */ }
   initLedgerCats()
@@ -1463,16 +1531,30 @@ onMounted(async () => {
     () => appSettings.showAppSettings.value,
     async (open) => {
       if (open) {
-        // WeatherCard 入口只在工作台页面有意义；如果来源页不含 wb（极端来源），仍然选首个可见 tab
-        if (visibleTabs.value.includes('wb')) {
-          activeTab.value = 'wb'
-        } else if (visibleTabs.value.length > 0 && !visibleTabs.value.includes(activeTab.value)) {
-          activeTab.value = visibleTabs.value[0]
+        // 指定了定位目标（页面「去设置」入口，如销售记账的分类管理）→ 优先跳到该区块；
+        // 否则沿用老行为：WeatherCard 入口跳工作台设置 tab，极端来源回退首个可见 tab。
+        const target = appSettings.consumeSettingsTarget() as SettingsTarget | null
+        let jumped = false
+        if (target && visibleTabs.value.includes(target.tab)) {
+          activeTab.value = target.tab
+          if (target.sub) activeSubTab.value = target.sub as SubTabKey
+          // 销售记账页面「去设置」入口：定位后直接展开对应管理弹框，省掉一次点击
+          if (target.action === 'product-cats') bizCatManagerKind.value = 'product'
+          else if (target.action === 'expense-cats') bizCatManagerKind.value = 'expense'
+          jumped = true
+        }
+        if (!jumped) {
+          if (visibleTabs.value.includes('wb')) {
+            activeTab.value = 'wb'
+          } else if (visibleTabs.value.length > 0 && !visibleTabs.value.includes(activeTab.value)) {
+            activeTab.value = visibleTabs.value[0]
+          }
         }
         // 每次打开设置弹窗，重新拉取记账分类（与工作台页面保持最新）
         try { await ledStore.loadLedger() } catch { /* ignore */ }
         initLedgerCats()
-        nextTick(() => cityInput.value?.focus())
+        // 只有定位到工作台默认区块时才聚焦城市输入框（指定目标时聚焦无意义，还会滚动打断视线）
+        if (!jumped) nextTick(() => cityInput.value?.focus())
         appSettings.closeAppSettings()
       }
     }
@@ -2094,6 +2176,51 @@ onUnmounted(() => {
           </div>
         </div>
 
+        <!-- 密码分类管理（工作台设置 tab - 密码分类管理）：改名/上下移/删除/新增/标签页显隐 -->
+        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-pwd-cat'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">密码分类</h3>
+          </div>
+          <p class="wb-menu-hint">
+            管理密码面板的分类标签页（全部 + 各分类）；删除分类后该分类下的密码条目将变为未分类。
+            分类与密码条目一起加密保存，<b>需先解锁密码库</b>才能读写。
+          </p>
+          <p v-if="!pwdVaultUnlocked" class="wb-menu-hint" data-testid="wbcfg-pwd-locked" style="color: var(--color-warning, #f59e0b);">
+            当前密码库未解锁，请先到「个人工作台 → 密码」输入主密码解锁，再回来管理分类。
+          </p>
+          <div class="wb-menu-list">
+            <div v-for="(cat, idx) in sortedPwdCategories" :key="cat.id" class="wb-menu-row">
+              <el-input
+                :model-value="pwdCatDrafts[cat.id] ?? cat.name"
+                @update:model-value="pwdCatDrafts[cat.id] = $event"
+                @blur="commitPwdCatName(cat)"
+                @keydown.enter="commitPwdCatName(cat)"
+                @keydown.esc="revertPwdCatName(cat)"
+                :data-testid="`wbcfg-pwd-name-${cat.id}`"
+              />
+              <div class="wb-menu-actions">
+                <el-button size="small" :disabled="idx <= 0" :data-testid="`wbcfg-pwd-up-${cat.id}`" @click="handleMovePwdCat(cat.id, 'up')">上移</el-button>
+                <el-button size="small" :disabled="idx >= sortedPwdCategories.length - 1" :data-testid="`wbcfg-pwd-down-${cat.id}`" @click="handleMovePwdCat(cat.id, 'down')">下移</el-button>
+              </div>
+              <el-button size="small" type="danger" :data-testid="`wbcfg-pwd-del-${cat.id}`" @click="handleDeletePwdCat(cat)">删除</el-button>
+              <el-switch
+                :model-value="cat.showInTabs !== false"
+                @change="handleTogglePwdCatTab({ id: cat.id, showInTabs: cat.showInTabs })"
+                :data-testid="`wbcfg-pwd-tab-${cat.id}`"
+              />
+            </div>
+          </div>
+          <div class="wb-cat-add-row">
+            <el-input
+              v-model="newPwdCatName"
+              placeholder="新分类名称"
+              data-testid="wbcfg-pwd-new"
+              @keydown.enter="handleAddPwdCat"
+            />
+            <el-button size="small" :disabled="newPwdCatName.trim() === ''" data-testid="wbcfg-pwd-add" @click="handleAddPwdCat">添加</el-button>
+          </div>
+        </div>
+
         <!-- 日记分类管理（工作台设置 tab - 日记本设置）：内联渲染 DiaryCategoryManager -->
         <div v-if="activeTab === 'wb' && activeSubTab === 'wb-diary-cat'" class="wb-menu-config diary-cat-config">
           <DiaryCategoryManager />
@@ -2648,7 +2775,7 @@ onUnmounted(() => {
             </label>
           </div>
 
-          <div v-if="store.cloudSyncEnabled" class="remind-actions" style="display: flex; align-items: center; gap: 12px;">
+          <div v-if="store.cloudSyncEnabled" class="remind-actions sync-actions" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
             <button
               type="button"
               class="wb-menu-btn"
@@ -2680,7 +2807,7 @@ onUnmounted(() => {
               :disabled="pushLocalBusy || !store.cloudSyncUrl || !store.cloudSyncUsername || !store.cloudSyncPassword"
               @click="handlePushLocal"
             >本地推送云端</button>
-            <span data-testid="sync-last" class="wb-menu-hint" style="margin-left: auto;">上次同步：{{ lastSyncText }}</span>
+            <span data-testid="sync-last" class="wb-menu-hint sync-last-hint">上次同步：{{ lastSyncText }}</span>
           </div>
           <p v-if="store.cloudSyncEnabled" class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px; margin-top: 6px;">
             用外部工具改过云端文件后若「立即同步」未生效，点「以云端覆盖本地」强制采纳云端（本地未推送的改动会被覆盖）。
@@ -3411,6 +3538,12 @@ html.dark .wb-snapshot-empty {
   margin-top: 12px;
 }
 
+/* 上次同步时间：桌面靠右与按钮同排；窄屏独占一行，避免与 4 个同步按钮挤在一行被裁掉 */
+.sync-last-hint {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
 html.dark .remind-label {
   color: var(--color-text, #f9fafb);
 }
@@ -3419,8 +3552,10 @@ html.dark .remind-label {
   .manager {
     width: 100%;
     height: calc(100vh - 40px);
+    height: calc(100dvh - 40px);
     min-height: 0;
     max-height: calc(100vh - 40px);
+    max-height: calc(100dvh - 40px);
   }
 
   .grid-header {
@@ -3958,6 +4093,13 @@ html.dark .status-pill { color: #4ade80; background-color: rgba(74, 222, 128, 0.
   .rail-item .rail-item-label { font-size: 12px; }
   .settings-content-head { padding: 12px 16px; }
   .settings-scroll { padding: 16px; }
+  /* 云同步「上次同步」换到下一行整行显示（原与 4 个按钮同排，窄屏必然超出屏幕） */
+  .sync-last-hint {
+    margin-left: 0;
+    flex: 0 0 100%;
+    white-space: normal;
+    word-break: break-all;
+  }
 }
 
 </style>

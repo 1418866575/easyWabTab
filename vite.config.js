@@ -193,5 +193,39 @@ export default defineConfig({
     },
     server: {
         port: 16718
+    },
+    build: {
+        // 手动分包：原先 vendor 与业务代码混成单个 ~1.85MB chunk，
+        // 首屏必须整包下载完才能渲染。拆出稳定的第三方库后：
+        //   1) 首屏体积下降；2) 业务代码更新不会让 vendor 缓存失效。
+        // 配合路由懒加载，非当前模块的图表库等资源不再进入首屏关键路径。
+        rollupOptions: {
+            output: {
+                // 注意：本项目跑在 Rolldown（Vite 8）上，manualChunks 只接受**函数**形式，
+                // 传对象会直接报 "Invalid type: Expected Function but received Object"。
+                manualChunks(id) {
+                    if (!id.includes('node_modules')) return undefined
+                    // 注意：这里刻意**不**把 echarts 单独分组。
+                    // 实测（Vite 8 / rolldown）：一旦用 manualChunks 把 echarts 抽成
+                    // vendor-echarts，该 chunk 会被提升为「入口 chunk 的静态 import」，
+                    // 于是首屏（/）也必须下载约 600K 的图表库 —— 而 echarts 实际只被
+                    // /student 这条懒加载链路用到，首屏完全用不上。
+                    // 去掉该分组后，echarts 随 StudentView 的动态 chunk 一起加载，
+                    // 首屏不再携带这部分代码（代价是 /student 的 chunk 变大，但那是按需进入）。
+                    // Vue 运行时三件套，稳定且被所有模块依赖
+                    if (
+                        id.includes('/node_modules/vue/') ||
+                        id.includes('/node_modules/@vue/') ||
+                        id.includes('/node_modules/vue-router/') ||
+                        id.includes('/node_modules/pinia/')
+                    ) {
+                        return 'vendor-vue'
+                    }
+                    return undefined
+                }
+            }
+        },
+        // 分包后单 chunk 仍可能偏大，放宽阈值避免噪音警告淹没真实问题
+        chunkSizeWarningLimit: 900
     }
 });

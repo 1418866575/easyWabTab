@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -38,11 +39,24 @@ import { usePageSize } from '@/composables/usePageSize'
 const store = useWorkbenchNotesStore()
 
 // 便签/时光轴条目内容按 Markdown 渲染（renderer 纯函数，template 经 renderedContent 调用）
-const renderedContent = (md: string): string => renderMarkdown(md)
+// 渲染缓存：列表里每个条目都在 v-for 内调用 renderedContent，且 contentPreview 会对同一份内容
+// 再解析一次；翻页 / 筛选 / 搜索都会触发整页重新解析。相同内容直接复用上次结果，避免重复解析。
+const mdCache = new Map<string, string>()
+function renderMarkdownCached(content: string): string {
+  const hit = mdCache.get(content)
+  if (hit !== undefined) return hit
+  const html = renderMarkdown(content)
+  // 便签内容可编辑，条目多时 key 会持续累积；超过上限整体清空，避免缓存无限膨胀
+  if (mdCache.size > 300) mdCache.clear()
+  mdCache.set(content, html)
+  return html
+}
+
+const renderedContent = (md: string): string => renderMarkdownCached(md)
 
 // 内容纯文本预览（strip HTML tags for el-table tooltip）
 function contentPreview(md: string): string {
-  const html = renderMarkdown(md)
+  const html = renderMarkdownCached(md)
   return html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim().slice(0, 120)
 }
 
@@ -202,7 +216,7 @@ function startEdit(note: WorkbenchNote): void {
   formOpen.value = true
 }
 
-function cancelForm(): void {
+async function cancelForm(): void {
   formOpen.value = false
 }
 
@@ -225,7 +239,7 @@ async function handlePin(note: WorkbenchNote): Promise<void> {
 }
 
 async function handleDelete(id: string): Promise<void> {
-  if (confirm('确定要删除这个便签吗？')) {
+  if (await showConfirm('确定要删除这个便签吗？')) {
     await store.deleteNote(id)
     cancelForm()
   }
@@ -329,11 +343,11 @@ function startEditEntry(noteId: string, entry: TimelineEntry): void {
   entryEditContent.value = entry.content
 }
 
-function cancelEditEntry(): void {
+async function cancelEditEntry(): void {
   editingEntry.value = null
 }
 
-function canSaveEntry(): boolean {
+async function canSaveEntry(): boolean {
   return isValidDatetime(entryEditDatetime.value.trim()) && entryEditContent.value.trim().length > 0
 }
 
@@ -347,7 +361,7 @@ async function handleSaveEntry(noteId: string, entryId: string): Promise<void> {
 }
 
 async function handleDeleteEntry(noteId: string, entryId: string): Promise<void> {
-  if (confirm('确定要删除这条时光记录吗？')) {
+  if (await showConfirm('确定要删除这条时光记录吗？')) {
     await store.deleteTimelineEntry(noteId, entryId)
     if (editingEntry.value?.entryId === entryId) editingEntry.value = null
   }
@@ -938,6 +952,7 @@ onUnmounted(() => {
 .note-form {
   width: 100%; max-width: var(--dlg-w-notes, 1000px);
   height: var(--dlg-h-notes, 90vh); max-height: calc(100vh - 40px); overflow-y: auto;
+  height: var(--dlg-h-notes, 90dvh); max-height: calc(100dvh - 40px); overflow-y: auto;
   display: flex; flex-direction: column; gap: 12px; padding: 20px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));

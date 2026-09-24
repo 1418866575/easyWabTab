@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -7,8 +8,7 @@ const vm = useViewMode()
 
 function cardFields(row: any) {
   return [
-    { label: '完成', value: row.todo.completed ? '已完成' : '未完成' },
-    { label: '打卡', value: row.todo.checkedIn ? '已打卡' : '未打卡' },
+    { label: '完成', value: row.todo.archived ? '已归档' : (row.todo.completed ? '已完成' : '未完成') },
     { label: '标题', value: row.todo.title },
     { label: '描述', value: row.todo.description || '—' },
     { label: '优先级', value: priorityMeta(row.todo.priority).label },
@@ -24,6 +24,9 @@ import type { TodoFilterCriteria } from '@/composables/todoCore'
 import type { TodoPriority, WorkbenchTodo } from '@/types'
 import { DEFAULT_TODO_COLOR } from '@/types'
 import { usePageSize } from '@/composables/usePageSize'
+import { useToast } from '@/composables/useToast'
+
+const toast = useToast()
 
 const store = useWorkbenchTodosStore()
 
@@ -31,7 +34,7 @@ const store = useWorkbenchTodosStore()
 const searchTitle = ref('')
 const searchDescription = ref('')
 const searchPriority = ref<'' | TodoPriority>('')
-const searchStatus = ref<'' | 'all' | 'active' | 'completed'>('')
+const searchStatus = ref<'' | 'all' | 'active' | 'completed' | 'archived'>('')
 const appliedFilters = ref<TodoFilterCriteria>({})
 
 // ===== 分类筛选标签页（点击即时生效，与查询条件叠加；'' = 全部，选中值 = 分类名字符串）=====
@@ -79,10 +82,12 @@ const filteredTodos = computed(() =>
 // 预计算卡片主角（含 completed 的「已完成」态），供模板一次取用，避免重复调用
 interface TodoHero {
   label: string
-  status: 'done' | 'normal' | 'today' | 'overdue'
+  status: 'done' | 'archived' | 'normal' | 'today' | 'overdue'
 }
 
 function heroOf(todo: WorkbenchTodo): TodoHero | null {
+  // 归档优先于完成：已归档项主角显示「已归档」，避免与未归档的已完成项混淆
+  if (todo.archived === true) return { label: '已归档', status: 'archived' }
   if (todo.completed) return { label: '已完成', status: 'done' }
   const info = dueInfo(todo.dueDate, false)
   if (info === null) return null
@@ -90,6 +95,14 @@ function heroOf(todo: WorkbenchTodo): TodoHero | null {
 }
 
 const viewTodos = computed(() => filteredTodos.value.map(todo => ({ todo, hero: heroOf(todo) })))
+
+/**
+ * 表格行身份：归档/取消归档会让条目在数组里跨段移动（已归档段 ⇄ 已完成段），
+ * 没有 row-key 时 el-table 按索引复用行 DOM，会出现"点了取消归档、那一行还显示已归档"的错位。
+ */
+function rowKeyOf(row: { todo: WorkbenchTodo }): string {
+  return row.todo.id
+}
 
 // ===== 固定分页（el-table 列表，10 条/页）=====
 const LIST_PAGE_SIZE = 10
@@ -191,10 +204,34 @@ async function handleToggle(todo: WorkbenchTodo): Promise<void> {
   await store.toggleTodo(todo.id)
 }
 
-// 打卡（一次性）：只写 checkedIn/checkedInAt，不改变条目在列表中的位置与索引
-async function handleCheckIn(id: string): Promise<void> {
-  await store.checkInTodo(id)
+/**
+ * 手动归档 / 取消归档。
+ * 自动归档已在加载时按「完成超过 30 天」执行，这里只是给用户的即时入口：
+ * 想提前收起就归档，归档后仍可一键放回"已完成"。
+ */
+async function handleArchive(todo: WorkbenchTodo): Promise<void> {
+  const ok = await store.archiveTodo(todo.id)
+  if (ok) toast.success('已归档，条目已移到列表末尾')
+  else toast.info('只有已完成的待办才能归档')
 }
+
+async function handleUnarchive(todo: WorkbenchTodo): Promise<void> {
+  const ok = await store.unarchiveTodo(todo.id)
+  // 取消归档后条目会从「已归档」段回到「已完成」段（可能不在当前页）→ 必须给出反馈，
+  // 否则列表原地换成下一条已归档数据，看着像"取消归档没生效"
+  if (ok) {
+    // 当前正好按「已归档」筛选时，条目会直接从列表消失 —— 同步把筛选切到「已完成」，保证条目仍可见
+    if (appliedFilters.value.status === 'archived') {
+      searchStatus.value = 'completed'
+      appliedFilters.value = { ...appliedFilters.value, status: 'completed' }
+    }
+    toast.success('已取消归档，条目已放回「已完成」')
+  } else {
+    toast.info('该待办未处于归档状态')
+  }
+}
+
+// 打卡入口按需求从列表操作区移除（store.checkInTodo / applyCheckIn 保留：存量数据的 checkedIn 字段仍需兼容）
 
 // 手工排序：表格视图上移/下移一格
 async function handleMove(id: string, dir: 'up' | 'down'): Promise<void> {
@@ -214,7 +251,7 @@ function onTodoDragOver(id: string, event: DragEvent): void {
   if (dragSourceId.value && dragSourceId.value !== id) dragOverId.value = id
 }
 
-function onTodoDragLeave(): void {
+async function onTodoDragLeave(): void {
   dragOverId.value = null
 }
 
@@ -225,13 +262,13 @@ async function onTodoDrop(id: string): Promise<void> {
   dragOverId.value = null
 }
 
-function onTodoDragEnd(): void {
+async function onTodoDragEnd(): void {
   dragSourceId.value = null
   dragOverId.value = null
 }
 
 async function handleDelete(id: string): Promise<void> {
-  if (confirm('确定要删除这个待办任务吗？')) {
+  if (await showConfirm('确定要删除这个待办任务吗？')) {
     await store.deleteTodo(id)
   }
 }
@@ -324,6 +361,7 @@ onUnmounted(() => {
             <el-option value="" label="全部状态" />
             <el-option value="active" label="待办" />
             <el-option value="completed" label="已完成" />
+            <el-option value="archived" label="已归档" data-testid="td-search-status-archived" />
           </el-select>
         </label>
       </div>
@@ -346,6 +384,9 @@ onUnmounted(() => {
       </el-radio-group>
       <span class="toolbar-count" data-testid="td-toolbar-count">
         <template v-if="hasActiveFilter">筛选出 {{ filteredTodos.length }} / {{ store.orderedTodos.length }} 个</template>
+        <template v-else>
+          待办 {{ store.activeCount }} · 已完成 {{ store.completedCount }}<template v-if="store.archivedCount > 0"> · 已归档 {{ store.archivedCount }}</template>
+        </template>
       </span>
     </div>
 
@@ -371,6 +412,7 @@ onUnmounted(() => {
       <div class="td-table-wrap">
         <el-table v-if="vm.mode === 'list'" class="ewt-table"
           :data="pageTodos"
+          :row-key="rowKeyOf"
           data-testid="td-table"
           @row-click="rowClick"
           stripe
@@ -382,7 +424,10 @@ onUnmounted(() => {
         >
           <el-table-column label="标题" min-width="200" align="center" show-overflow-tooltip>
             <template #default="{ row: v }">
-              <div class="td-title" :class="{ 'is-done': v.todo.completed }">{{ v.todo.title }}</div>
+              <div class="td-title" :class="{ 'is-done': v.todo.completed }">
+                {{ v.todo.title }}
+                <span v-if="v.todo.archived === true" class="td-archived-badge" :data-testid="`td-archived-badge-${v.todo.id}`">已归档</span>
+              </div>
             </template>
           </el-table-column>
           <el-table-column label="描述" min-width="160" align="center" show-overflow-tooltip>
@@ -413,7 +458,13 @@ onUnmounted(() => {
                 >已逾期</span>
               </div>
               <span v-else class="td-col-empty">—</span>
-              <div v-if="v.hero && v.hero.status !== 'done'" class="td-hero" :class="'td-' + v.hero.status">
+              <!-- 截止日期列只展示与日期相关的提示（今日/逾期/N天）；「已归档」属完成态，
+                   由标题列的 td-archived-badge 与详情字段展示，不混进日期列 -->
+              <div
+                v-if="v.hero && v.hero.status !== 'done' && v.hero.status !== 'archived'"
+                class="td-hero"
+                :class="'td-' + v.hero.status"
+              >
                 <span class="td-hero-value">{{ v.hero.label }}</span>
               </div>
             </template>
@@ -435,13 +486,19 @@ onUnmounted(() => {
                   @click="handleToggle(v.todo)"
                 >{{ v.todo.completed ? '已完成' : '未完成' }}</el-button>
                 <el-button
+                  v-if="v.todo.completed && v.todo.archived !== true"
                   size="small"
-                  :type="v.todo.checkedIn ? 'success' : 'default'"
-                  :disabled="v.todo.checkedIn === true"
-                  :data-testid="`td-checkin-${v.todo.id}`"
-                  :title="v.todo.checkedIn ? '已打卡' : '点击打卡'"
-                  @click="handleCheckIn(v.todo.id)"
-                >{{ v.todo.checkedIn ? '已打卡' : '打卡' }}</el-button>
+                  :data-testid="`td-archive-${v.todo.id}`"
+                  title="立即归档（不点也会在完成满 30 天后自动归档）"
+                  @click="handleArchive(v.todo)"
+                >归档</el-button>
+                <el-button
+                  v-if="v.todo.archived === true"
+                  size="small"
+                  :data-testid="`td-unarchive-${v.todo.id}`"
+                  title="取消归档，放回已完成"
+                  @click="handleUnarchive(v.todo)"
+                >取消归档</el-button>
                 <el-button size="small" :data-testid="`td-up-${v.todo.id}`" title="上移（手工排序）" @click="handleMove(v.todo.id, 'up')">↑</el-button>
                 <el-button size="small" :data-testid="`td-down-${v.todo.id}`" title="下移（手工排序）" @click="handleMove(v.todo.id, 'down')">↓</el-button>
                 <el-button size="small" :data-testid="`td-edit-${v.todo.id}`" @click="startEdit(v.todo)">编辑</el-button>
@@ -499,10 +556,10 @@ onUnmounted(() => {
       @close="cancelForm"
       @update:model-value="(v: boolean) => { if (!v) cancelForm() }"
     >
+      <!-- 只保留 el-dialog 自带的右上角关闭按钮，此处不再叠加自定义 X（否则出现两个关闭） -->
       <template #header>
         <div class="dialog-header">
           <h3>{{ editingId ? '编辑待办' : '新增待办' }}</h3>
-          <el-button class="close-btn" @click="cancelForm"><Icon name="close" /></el-button>
         </div>
       </template>
       <form class="dialog-body" @submit.prevent="handleSave">
@@ -842,6 +899,20 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
+/* 标题后的归档徽标（归档态的唯一展示位：日期列不再显示「已归档」） */
+.td-archived-badge {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: var(--radius-full, 999px);
+  color: var(--color-text-secondary, #64748b);
+  background: var(--color-bg-hover, #f1f5f9);
+  border: 1px solid var(--color-border, #e2e8f0);
+  vertical-align: middle;
+}
+
 .td-desc {
   font-size: 12px;
   color: var(--color-text-secondary, var(--color-text-secondary));
@@ -1006,21 +1077,6 @@ onUnmounted(() => {
   font-weight: 600;
   color: var(--color-text, var(--color-text));
   margin: 0;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: var(--color-text-muted, var(--color-text-muted));
-  cursor: pointer;
-  padding: 4px;
-  border-radius: var(--radius-sm, 6px);
-  transition: color var(--transition-fast, 0.15s ease);
-}
-
-.close-btn:hover {
-  color: var(--color-text, var(--color-text));
 }
 
 .dialog-body {

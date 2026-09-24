@@ -8,6 +8,7 @@ import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import PanelPager from '@/components/workbench/PanelPager.vue'
 import Icon from '@/components/Icon.vue'
+import { useAppSettingsDialog } from '@/composables/useAppSettingsDialog'
 
 // P1-3：跨模块联动跳转 emit
 const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
@@ -50,14 +51,10 @@ const lowStock = computed(() => lowStockProducts({
   settings: store.settings
 }))
 
-const thresholdDraft = ref('')
-
-async function commitThreshold(): Promise<void> {
-  const n = Number(thresholdDraft.value)
-  if (Number.isFinite(n) && n >= 0) {
-    await store.setLowStockThreshold(Math.floor(n))
-    thresholdDraft.value = ''
-  }
+// 低库存阈值已迁移到「设置 → 销售记账 → 基础设置」：库存页只展示当前值并提供跳转入口
+const appSettings = useAppSettingsDialog()
+function openThresholdSettings(): void {
+  appSettings.openAppSettings({ tab: 'business', sub: 'biz-base' })
 }
 
 // 溯源弹框
@@ -101,21 +98,9 @@ function exportInventoryCsv(): void {
         <span class="bizinv-alert-title"><Icon name="alert" :size="15" /> 低库存预警</span>
         <div class="bizinv-alert-actions">
           <el-button class="btn-export-csv" size="small" data-testid="bizinv-export" :disabled="store.products.length === 0" @click="exportInventoryCsv">导出 CSV</el-button>
-          <label class="bizinv-threshold">
-          阈值
-          <el-input
-            type="number"
-            min="0"
-            step="1"
-            size="small"
-            class="bizinv-th-input"
-            data-testid="bizinv-threshold"
-            :model-value="thresholdDraft || String(store.settings.lowStockThreshold)"
-            @input="thresholdDraft = $event"
-            @blur="commitThreshold"
-            @keydown.enter="commitThreshold"
-          />
-        </label>
+          <el-button size="small" data-testid="bizinv-threshold" title="低库存阈值（设置）" @click="openThresholdSettings">
+            <Icon name="cog" :size="14" /> 阈值 {{ store.settings.lowStockThreshold }}
+          </el-button>
         </div>
       </div>
       <p v-if="lowStock.length === 0" class="bizinv-empty" data-testid="bizinv-low-empty">库存充足，暂无预警商品</p>
@@ -421,6 +406,7 @@ function exportInventoryCsv(): void {
   width: 380px;
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
   display: flex;
   flex-direction: column;
   background: var(--color-bg-card, var(--color-bg-card));
@@ -543,6 +529,7 @@ function exportInventoryCsv(): void {
 /* el-dialog 换皮：溯源弹框 */
 .bizinv-trace :deep(.el-dialog) {
   max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
   display: flex;
   flex-direction: column;
 }

@@ -104,9 +104,12 @@
     min-height: 0;
   }
 
-  /* 双列卡片下，避免固定高度 156px 在窄屏被压塌，改为自动高度 */
+  /* 双列卡片下，避免固定高度 156px 在窄屏被压塌，改为自动高度。
+     ⚠ 必须 !important：RecordsCard.vue 的 scoped 规则带 [data-v-xxx]（特异性 0,2,0），
+     会压过本文件的全局 .ewt-card（0,1,0），导致这条规则形同虚设、
+     卡片内容被 overflow:hidden 裁掉第 4 行。 */
   .ewt-card {
-    height: auto;
-    min-height: 120px;
+    height: auto !important;
+    min-height: 120px !important;
   }
 }

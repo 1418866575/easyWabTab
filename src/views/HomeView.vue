@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, watchEffect } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, watchEffect, defineAsyncComponent } from 'vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { useRouter, useRoute } from 'vue-router'
 import type { Site } from '../types'
 import SiteCard from '../components/SiteCard.vue'
@@ -7,16 +8,21 @@ import GlobalSearch from '../components/GlobalSearch.vue'
 import CategoryTabs from '../components/CategoryTabs.vue'
 import TagFilter from '../components/TagFilter.vue'
 import Pagination from '../components/Pagination.vue'
-import SiteModal from '../components/SiteModal.vue'
-import BackgroundManager from '../components/BackgroundManager.vue'
-import CategoryManager from '../components/CategoryManager.vue'
-import BackupManager from '../components/BackupManager.vue'
-import IconManager from '../components/IconManager.vue'
-import SearchEngineManager from '../components/SearchEngineManager.vue'
-import HelpModal from '../components/HelpModal.vue'
-import CountdownModal from '@/components/CountdownModal.vue'
 import Icon from '../components/Icon.vue'
-import AppSettingsDialog from '../components/AppSettingsDialog.vue'
+// 弹框 / 管理器改为按需异步加载：这些组件体量大（AppSettingsDialog 近 4000 行、
+// HelpModal 1400+ 行），但都位于 v-if 中、只有用户点开才渲染。原先静态 import 会让它们
+// 全部进入首屏依赖图 —— 首屏必须把这些代码下载并解析完才能渲染，移动端 TTI 被明显拖长。
+// 改为 defineAsyncComponent 后各自独立成 chunk，点开时才拉取，首屏需要下载的代码量下降。
+// 前提：这几个弹框没有被父组件通过 ref 调用实例方法（已确认），异步化不会取到 null。
+const SiteModal = defineAsyncComponent(() => import('../components/SiteModal.vue'))
+const BackgroundManager = defineAsyncComponent(() => import('../components/BackgroundManager.vue'))
+const CategoryManager = defineAsyncComponent(() => import('../components/CategoryManager.vue'))
+const BackupManager = defineAsyncComponent(() => import('../components/BackupManager.vue'))
+const IconManager = defineAsyncComponent(() => import('../components/IconManager.vue'))
+const SearchEngineManager = defineAsyncComponent(() => import('../components/SearchEngineManager.vue'))
+const HelpModal = defineAsyncComponent(() => import('../components/HelpModal.vue'))
+const CountdownModal = defineAsyncComponent(() => import('@/components/CountdownModal.vue'))
+const AppSettingsDialog = defineAsyncComponent(() => import('../components/AppSettingsDialog.vue'))
 import { useSitesStore } from '../stores/sites'
 import { useCategoriesStore } from '../stores/categories'
 import { useThemeStore } from '../stores/theme'
@@ -215,10 +221,53 @@ watchEffect(() => {
 
 const filteredSites = computed(() => store.paginatedSites)
 
+// ===== 移动端长列表分批渲染 =====
+// 问题：移动端 pageSize=99999 会一次性渲染全部站点，每张卡片 10+ 个节点，
+// 站点多时单页可达数千 DOM，首页渲染与滚动明显掉帧。
+// 改法：数据层保持全量（保留「移动端不分页、无需翻页」的手感），
+// 仅在渲染层按批输出，滚动接近底部时自动追加下一批。
+const MOBILE_BATCH = 40
+const mobileRenderLimit = ref(MOBILE_BATCH)
+const isMobilePaging = ref(false)
+const visibleSites = computed(() => {
+  if (!isMobilePaging.value) return filteredSites.value
+  return filteredSites.value.slice(0, mobileRenderLimit.value)
+})
+async function maybeLoadMore(): void {
+  if (!isMobilePaging.value) return
+  const doc = document.documentElement
+  const nearBottom = doc.scrollHeight - window.scrollY - window.innerHeight < 600
+  if (nearBottom && mobileRenderLimit.value < filteredSites.value.length) {
+    mobileRenderLimit.value += MOBILE_BATCH
+  }
+}
+// 筛选/搜索变化后重新从第一批开始渲染
+watch(filteredSites, () => {
+  mobileRenderLimit.value = MOBILE_BATCH
+})
+
 // ===== 本站筛选：独立输入框，只过滤下方卡片列表；顶部 GlobalSearch 仍走外部搜索引擎 =====
 const siteFilter = ref(store.searchQuery)
+// 输入防抖：原先每敲一个字符都立即写入 store，触发一次全量 filter + sort（并重置分页、
+// 整列表重渲染），移动端连续输入会逐字掉帧。改为停止输入 250ms 后再落库。
+// 两处细节：
+//   1) 清空操作即时生效 —— 清空是明确意图，不应有 250ms 延迟感；
+//   2) 回调内读取 siteFilter.value 而不是捕获的 v —— 否则与 clearAllFilters 存在竞态：
+//      清空后残留的定时器会把旧关键词重新写回 store，导致筛选「复活」。
+let siteFilterTimer: number | undefined
 watch(siteFilter, (v) => {
-  store.setSearchQuery(v)
+  if (siteFilterTimer !== undefined) {
+    clearTimeout(siteFilterTimer)
+    siteFilterTimer = undefined
+  }
+  if (v === '') {
+    store.setSearchQuery('')
+    return
+  }
+  siteFilterTimer = window.setTimeout(() => {
+    siteFilterTimer = undefined
+    store.setSearchQuery(siteFilter.value)
+  }, 250)
 })
 // 外部改了 store（清空筛选 / 分类联动）时回写输入框，保持双向一致
 watch(
@@ -242,7 +291,7 @@ const filterCountText = computed(() => {
   return hasAnyFilter.value ? `筛选出 ${shown} / ${total} 个` : `共 ${total} 个`
 })
 
-function clearAllFilters(): void {
+async function clearAllFilters(): void {
   store.clearFilters()
   store.showOnlyInvalid = false
   siteFilter.value = ''
@@ -268,7 +317,7 @@ const closeAllModals = () => {
 // 注册键盘快捷键
 useKeyboardShortcuts({
   onCloseModal: closeAllModals,
-  onToggleTheme: () => themeStore.toggleTheme()
+  onToggleTheme: async () => themeStore.toggleTheme()
 })
 
 const handleEdit = (site: Site) => {
@@ -276,14 +325,14 @@ const handleEdit = (site: Site) => {
   router.push({ query: { modal: 'edit', url: encodeURIComponent(site.url) } })
 }
 
-const handleDelete = (url: string) => {
-  if (confirm('确定要删除这个网站吗？')) {
+const handleDelete = async (url: string) => {
+  if (await showConfirm('确定要删除这个网站吗？')) {
     store.deleteSite(url)
   }
 }
 
-const handleUnmark = (url: string) => {
-  if (confirm('确定要取消失效标记吗？')) {
+const handleUnmark = async (url: string) => {
+  if (await showConfirm('确定要取消失效标记吗？')) {
     store.unmarkInvalid(url)
   }
 }
@@ -293,7 +342,7 @@ const handleAdd = () => {
   router.push({ query: { modal: 'add' } })
 }
 
-const handleSave = (site: Site) => {
+const handleSave = async (site: Site) => {
   if (editingSite.value) {
     // 编辑模式 - 直接更新
     store.updateSite(editingSite.value.url, site)
@@ -304,7 +353,7 @@ const handleSave = (site: Site) => {
   // 添加模式 - 检查重复
   const existing = store.sites.find(s => s.url === site.url)
   if (existing) {
-    const action = confirm(`该网址已存在：${existing.name}\n\n确定更新？取消则跳过。`)
+    const action = await showConfirm(`该网址已存在：${existing.name}\n\n确定更新？取消则跳过。`)
     if (action) {
       store.updateSite(site.url, site)
     }
@@ -334,8 +383,10 @@ const pagingMql = window.matchMedia('(min-width: 769px)')
 let desktopPageSize = 18
 function syncMobilePaging(): void {
   if (pagingMql.matches) {
+    isMobilePaging.value = false
     store.setPageSize(desktopPageSize)
   } else {
+    isMobilePaging.value = true
     if (store.pageSize !== 99999) desktopPageSize = store.pageSize
     store.setPageSize(99999)
     store.setPage(1)
@@ -344,9 +395,17 @@ function syncMobilePaging(): void {
 onMounted(() => {
   syncMobilePaging()
   pagingMql.addEventListener('change', syncMobilePaging)
+  // 移动端分批渲染：滚动接近底部时追加下一批（passive 避免影响滚动性能）
+  window.addEventListener('scroll', maybeLoadMore, { passive: true })
 })
 onUnmounted(() => {
   pagingMql.removeEventListener('change', syncMobilePaging)
+  window.removeEventListener('scroll', maybeLoadMore)
+  // 清理搜索防抖定时器，避免组件卸载后回调仍写入 store
+  if (siteFilterTimer !== undefined) {
+    clearTimeout(siteFilterTimer)
+    siteFilterTimer = undefined
+  }
 })
 
 // ===== App Bar 高度测量（移动端专用）=====
@@ -514,7 +573,7 @@ onUnmounted(() => {
 
       <main ref="sitesGridRef" class="sites-grid">
         <SiteCard
-          v-for="site in filteredSites"
+          v-for="site in visibleSites"
           :key="site.url"
           :site="site"
           :readonly="false"

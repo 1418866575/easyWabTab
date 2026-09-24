@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -20,13 +21,17 @@ import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { findExpenseCategory, formatYuanOf, localDateKey, sortExpenses } from '@/composables/businessCore'
 import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
 import type { BusinessExpense } from '@/types'
-import BusinessCategoryManager from './BusinessCategoryManager.vue'
 import Icon from '@/components/Icon.vue'
 import { usePageSize } from '@/composables/usePageSize'
+import { useAppSettingsDialog } from '@/composables/useAppSettingsDialog'
 
 const store = useWorkbenchBusinessStore()
 
-const showCatManager = ref(false)
+// 分类管理入口已迁移到「设置 → 销售记账 → 基础设置」：这里只负责跳转，不再内嵌弹框
+const appSettings = useAppSettingsDialog()
+function openCategorySettings(): void {
+  appSettings.openAppSettings({ tab: 'business', sub: 'biz-base', action: 'expense-cats' })
+}
 
 // ===== 按天分组（date 降序） =====
 interface ExpenseDayGroup {
@@ -128,7 +133,7 @@ function addRow(): void {
   rows.push(emptyRow())
 }
 
-function removeRow(i: number): void {
+async function removeRow(i: number): void {
   rows.splice(i, 1)
 }
 
@@ -136,7 +141,7 @@ async function handleSave(): Promise<void> {
   if (!isFormValid.value) return
   // 新增模式：同日期已有记录 → 阻止，提示编辑
   if (!editingDateOrig.value && store.expenses.some(e => e.date === editingDate.value)) {
-    alert(`${editingDate.value} 当天已有支出记录，不能新增，请点击编辑追加。`)
+    toastAlert(`${editingDate.value} 当天已有支出记录，不能新增，请点击编辑追加。`)
     return
   }
   // 编辑模式：先删除旧日期下所有支出（若日期变更则删旧日期，也删目标日期确保幂等）
@@ -162,7 +167,7 @@ async function handleSave(): Promise<void> {
 }
 
 async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
-  if (!confirm(`确定要删除 ${g.date} 当天的 ${g.items.length} 笔支出吗？`)) return
+  if (!await showConfirm(`确定要删除 ${g.date} 当天的 ${g.items.length} 笔支出吗？`)) return
   for (const e of g.items) await store.deleteExpense(e.id)
 }
 </script>
@@ -177,7 +182,7 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
       </div>
       <div class="bizexp-toolbar-right">
         <ViewModeToggle v-if="dayGroups.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
-        <el-button size="small" data-testid="bizexp-cat-manager" title="支出分类管理" @click="showCatManager = true"><Icon name="cog" :size="15" /></el-button>
+        <el-button size="small" data-testid="bizexp-cat-manager" title="支出分类管理（设置）" @click="openCategorySettings"><Icon name="cog" :size="15" /></el-button>
       </div>
     </div>
 
@@ -347,7 +352,7 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
       </form>
     </el-dialog>
 
-    <BusinessCategoryManager v-if="showCatManager" kind="expense" @close="showCatManager = false" />
+    <!-- 支出分类管理已迁移到「设置 → 销售记账 → 基础设置」 -->
   </div>
 </template>
 

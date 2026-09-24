@@ -4,6 +4,7 @@
 // （容器样式参考个人工作台健康管理 WorkbenchHealth.vue 的 tabs 容器）
 
 import { ref, computed, onMounted, watch } from 'vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { useStudentParentTasksStore, type ParentTaskOpError } from '@/stores/studentParentTasks'
 import { useStudentHabitsStore } from '@/stores/studentHabits'
 import { useStudentHomeworkStore } from '@/stores/studentHomework'
@@ -139,7 +140,7 @@ function openAddTask() {
   taskFormDate.value = toolbarDate.value
   taskFormVisible.value = true
 }
-function openEditTask(t: StudentParentTask) {
+async function openEditTask(t: StudentParentTask) {
   if (!props.parentMode) return
   taskFormMode.value = 'edit'
   taskFormEditingId.value = t.id
@@ -162,7 +163,7 @@ async function submitTaskForm() {
 }
 async function removeTask(t: StudentParentTask) {
   if (!props.parentMode) return
-  if (!confirm(`确定删除任务「${t.title}」？`)) return
+  if (!await showConfirm(`确定删除任务「${t.title}」？`)) return
   const r = await tasksStore.deleteTask(t.id)
   if (r.ok) toast.success('已删除')
   else toast.error(taskErrorText(r.reason))
@@ -411,7 +412,7 @@ function openAddReward() {
   rewardFormImage.value = ''
   rewardFormVisible.value = true
 }
-function openEditReward(id: string) {
+async function openEditReward(id: string) {
   if (!props.parentMode) return
   const r = rewardsStore.allRewards().find(x => x.id === id)
   if (!r) return
@@ -445,7 +446,7 @@ async function deleteReward(id: string) {
   if (!props.parentMode) return
   const rw = rewardsStore.allRewards().find(x => x.id === id)
   if (!rw) return
-  if (!confirm(`确定删除奖励项「${rw.name}」？`)) return
+  if (!await showConfirm(`确定删除奖励项「${rw.name}」？`)) return
   const r = await rewardsStore.deleteReward(id)
   if (r.ok) toast.success('已删除')
   else toast.error(rewardErrorText(r.reason))
@@ -469,7 +470,7 @@ function rewardErrorText(reason?: string): string {
     rewardImageInput.value?.click()
   }
 
-  function handleRewardImageFile(e: Event) {
+  async function handleRewardImageFile(e: Event) {
     const input = e.target as HTMLInputElement
     const file = input.files?.[0]
     input.value = '' // 允许再次选择同一文件
@@ -487,7 +488,7 @@ function rewardErrorText(reason?: string): string {
       .catch(() => toast.error('图片读取失败，请重试'))
   }
 
-  function readFileAsDataUrl(file: File): Promise<string> {
+  async function readFileAsDataUrl(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
       reader.onload = () => {
@@ -505,7 +506,7 @@ const resettingRewards = ref(false)
 
 async function handleResetAchievements() {
   if (!props.parentMode) return
-  if (!confirm('确定要重置所有成就勋章吗？\n\n27 枚内置勋章将全部变回未解锁状态，\n已获得的勋章解锁时间记录会被清空。此操作不可撤销！')) return
+  if (!await showConfirm('确定要重置所有成就勋章吗？\n\n27 枚内置勋章将全部变回未解锁状态，\n已获得的勋章解锁时间记录会被清空。此操作不可撤销！')) return
   resettingAchievements.value = true
   try {
     await achievementsStore.resetAchievements()
@@ -519,7 +520,7 @@ async function handleResetAchievements() {
 
 async function handleResetRewards() {
   if (!props.parentMode) return
-  if (!confirm('确定要重置奖励积分吗？\n\n当前积分将归零、所有加分/兑换历史将清空，\n家长配置的奖励兑换项也会全部删除。此操作不可撤销！')) return
+  if (!await showConfirm('确定要重置奖励积分吗？\n\n当前积分将归零、所有加分/兑换历史将清空，\n家长配置的奖励兑换项也会全部删除。此操作不可撤销！')) return
   resettingRewards.value = true
   try {
     await rewardsStore.resetRewards()
@@ -1280,15 +1281,21 @@ html.dark .stp-pager-info {
 }
 /* 奖励卡片背景图 + 半透明遮罩保证文字可读 */
 .stp-reward-card { position: relative; }
+/* 缺 background-size 时原图 1:1 平铺，卡片只露左上角 → 表现为"图片不显示"，必须补齐 */
+.stp-reward-card.has-bg {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
 .stp-reward-card.has-bg::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: rgba(255, 255, 255, 0.74);
+  background: rgba(255, 255, 255, 0.58);
   z-index: 0;
 }
-html.dark .stp-reward-card.has-bg::before { background: rgba(17, 24, 39, 0.62); }
+html.dark .stp-reward-card.has-bg::before { background: rgba(17, 24, 39, 0.55); }
 .stp-reward-card.has-bg > * { position: relative; z-index: 1; }
 
 .stp-modal-body { display: flex; flex-direction: column; gap: 14px; }

@@ -6,7 +6,10 @@ import {
   moveCustomCategoryInList,
   migrateLegacyBuiltinCategories,
   purgeLegacyBuiltinCategories,
-  applyCheckIn
+  applyCheckIn,
+  autoArchiveTodos,
+  sortTodosByStatus,
+  ARCHIVE_AFTER_DAYS
 } from '@/composables/todoCore'
 import { idbGet, idbPut } from '../composables/useIdb'
 import { markDirty } from '@/composables/useCloudSync'
@@ -142,10 +145,24 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
       } else {
         todos.value = loaded
       }
+      // 加载即自动归档：已完成超过 30 天的条目在本次会话就置为已归档（纯函数判定，无变更不写库）
+      await runAutoArchive()
     } catch (e) {
       console.error('[Todos] load failed', e)
       todos.value = []
     }
+  }
+
+  /**
+   * 自动归档：把「已完成且超过 ARCHIVE_AFTER_DAYS 天」的条目置为 archived=true。
+   * 无符合条目时不写库（避免无谓的 IndexedDB 写入与云同步 markDirty）。
+   */
+  async function runAutoArchive(): Promise<number> {
+    const { items, changed } = autoArchiveTodos(todos.value)
+    if (changed.length === 0) return 0
+    todos.value = items
+    await saveTodos()
+    return changed.length
   }
 
   async function saveTodos(): Promise<void> {
@@ -207,15 +224,44 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
     const todo = todos.value.find(t => t.id === id)
     if (todo) {
       todo.completed = !todo.completed
+      if (todo.completed) {
+        // 记录完成时间：自动归档以它为准（回退 updatedAt 会把"改过一次"误判成"刚完成"）
+        todo.completedAt = new Date().toISOString()
+      } else {
+        // 重新打开 → 清掉完成时间与归档标记（未完成项不该处于归档态）
+        delete todo.completedAt
+        delete todo.archived
+      }
       todo.updatedAt = new Date().toISOString()
       await saveTodos()
     }
   }
 
-  // 顺序 = 手工顺序：数组顺序即展示顺序，不做任何自动排序。
-  // 打卡（checkedIn/checkedInAt）与完成（completed）均不参与排序：
-  // 打卡/完成后条目位置保持固定，不置顶、不置底、不移到末尾、不改变相对顺序与索引。
-  const orderedTodos = computed<WorkbenchTodo[]>(() => [...todos.value])
+  /** 手动归档单条（只能归档已完成项）；已是归档态返回 false，不写库。 */
+  async function archiveTodo(id: string): Promise<boolean> {
+    const todo = todos.value.find(t => t.id === id)
+    if (!todo || !todo.completed || todo.archived === true) return false
+    todo.archived = true
+    todo.updatedAt = new Date().toISOString()
+    await saveTodos()
+    return true
+  }
+
+  /** 取消归档（回到"已完成"段）：非归档项返回 false，不写库。 */
+  async function unarchiveTodo(id: string): Promise<boolean> {
+    const todo = todos.value.find(t => t.id === id)
+    if (!todo || todo.archived !== true) return false
+    delete todo.archived
+    // 重置完成时间，避免下次自动归档立刻又把它归档回去
+    todo.completedAt = new Date().toISOString()
+    todo.updatedAt = new Date().toISOString()
+    await saveTodos()
+    return true
+  }
+
+  // 顺序：未完成优先 → 已完成（未归档）→ 已归档；段内严格保持手工顺序，
+  // 原「数组顺序即展示顺序」改为按状态分段（需求：优先显示未完成的）。
+  const orderedTodos = computed<WorkbenchTodo[]>(() => sortTodosByStatus(todos.value))
 
   /** 打卡（一次性）：写 checkedIn=true + checkedInAt；已打卡则幂等忽略。
    *  关键：只改字段，绝不改动数组顺序——打卡前后条目索引完全一致。 */
@@ -261,7 +307,9 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
   // 页签计数
   const totalCount = computed(() => todos.value.length)
   const activeCount = computed(() => todos.value.filter(t => !t.completed).length)
-  const completedCount = computed(() => todos.value.filter(t => t.completed).length)
+  // 已完成（不含已归档）：归档项独立计数，避免"已完成 N"与列表分段不一致
+  const completedCount = computed(() => todos.value.filter(t => t.completed && t.archived !== true).length)
+  const archivedCount = computed(() => todos.value.filter(t => t.archived === true).length)
 
   return {
     todos,
@@ -274,6 +322,9 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
     updateTodo,
     deleteTodo,
     toggleTodo,
+    runAutoArchive,
+    archiveTodo,
+    unarchiveTodo,
     addCategory,
     updateCategory,
     deleteCategory,
@@ -285,6 +336,8 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
     moveTodo,
     totalCount,
     activeCount,
-    completedCount
+    completedCount,
+    archivedCount,
+    ARCHIVE_AFTER_DAYS
   }
 })

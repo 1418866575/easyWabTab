@@ -1,8 +1,10 @@
 // 学生工作台成就勋章纯逻辑模块。
-// 内置 27 枚勋章定义（streak-1..6 小红花、streak-7/30/100、book-10/50/100、pomo-50/200/500、hw-rate-95、
-// 首次里程碑5、复习3、收集成就3），
+// 内置 22 枚勋章定义（streak-1..6 小红花、streak-7/30/100/365、book-1/10/50/100、hw-first/hw-rate-95、
+// review-first/50/total-7/mastered-3、achievement-collector-20、all-built-unlocked），
 // 不可编辑、不可手动撤销；解锁由各 store 数据聚合判定（max-streak/reading-count/hw-rate/hw-total/
 // review-count/review-total/review-mastered-count/achievement-count/all-built-unlocked）。
+// 注：番茄钟（学生工作台）已下线，pomo-* 勋章与 pomo-count 指标随之移除；
+// BUILTIN_ACHIEVEMENT_IDS 必须与此处的定义一一对应，否则 calcAllBuiltUnlocked 会因孤儿 id 永远返回 0。
 // 零 vue/pinia 运行时依赖，纯函数，node --experimental-strip-types 可测。
 
 import type {
@@ -34,11 +36,6 @@ export const BUILTIN_ACHIEVEMENT_IDS: readonly string[] = [
   'book-10',
   'book-50',
   'book-100',
-  // 番茄专注
-  'pomo-1',
-  'pomo-50',
-  'pomo-200',
-  'pomo-500',
   // 作业
   'hw-first',
   'hw-rate-95',

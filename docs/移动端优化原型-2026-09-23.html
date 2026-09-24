@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EasyWebTab 移动端优化原型 · 现状 vs 改进</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1d212a; --line:#2a2f3a;
+    --tx:#e6e6e6; --tx2:#9aa3b2; --bad:#ff7875; --good:#7ee787;
+    --accent:#58a6ff; --warn:#ffa657;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--tx); min-height:100vh;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;
+    padding:28px 20px 48px;
+  }
+  .wrap{max-width:1080px;margin:0 auto}
+
+  header{margin-bottom:24px}
+  h1{font-size:22px;font-weight:600;margin-bottom:8px}
+  .sub{font-size:13px;color:var(--tx2);line-height:1.7}
+  .stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .stat{
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    padding:8px 14px;font-size:12px;color:var(--tx2)
+  }
+  .stat b{font-size:16px;color:var(--tx);margin-right:6px}
+  .stat.p0 b{color:var(--bad)} .stat.p1 b{color:var(--warn)} .stat.p2 b{color:var(--tx2)}
+
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0 18px}
+  .tab{
+    background:var(--panel);border:1px solid var(--line);color:var(--tx2);
+    padding:8px 15px;border-radius:20px;font-size:13px;cursor:pointer;
+    transition:.18s; user-select:none;
+  }
+  .tab:hover{border-color:var(--accent);color:var(--tx)}
+  .tab.on{background:var(--accent);border-color:var(--accent);color:#0b0d11;font-weight:600}
+
+  .scene{display:none}
+  .scene.on{display:block}
+  .scene-title{font-size:16px;font-weight:600;margin-bottom:6px}
+  .scene-desc{font-size:13px;color:var(--tx2);line-height:1.75;margin-bottom:18px;max-width:900px}
+  .scene-desc .loc{
+    display:inline-block;background:var(--panel2);border:1px solid var(--line);
+    border-radius:4px;padding:1px 7px;font-size:11px;color:var(--tx);margin:0 2px;
+  }
+
+  .compare{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start}
+  .col{flex:1;min-width:280px}
+  .col-label{
+    font-size:12px;font-weight:600;letter-spacing:.5px;margin-bottom:10px;
+    display:flex;align-items:center;gap:7px;
+  }
+  .col-label.bad{color:var(--bad)} .col-label.good{color:var(--good)}
+  .dot{width:7px;height:7px;border-radius:50%}
+  .dot.bad{background:var(--bad)} .dot.good{background:var(--good)}
+
+  .phone{
+    width:272px;height:546px;background:#0b0d11;border:2px solid var(--line);
+    border-radius:30px;position:relative;overflow:hidden;margin:0 auto;
+    box-shadow:0 8px 26px rgba(0,0,0,.45);
+  }
+  .screen{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    background:linear-gradient(180deg,#141821,#0f131a);
+  }
+  .statusbar{
+    height:26px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 16px;font-size:9px;color:var(--tx2);flex:none;
+  }
+  .appbar{
+    height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;
+    padding:0 14px;border-bottom:1px solid var(--line);font-size:12px;font-weight:600;
+  }
+  .appbar .ico{width:16px;height:16px;border-radius:4px;background:var(--line)}
+  .content{flex:1;overflow:hidden;padding:10px;position:relative}
+  .card{
+    background:var(--panel2);border:1px solid var(--line);border-radius:8px;
+    padding:10px;margin-bottom:8px;font-size:10px;color:var(--tx2);
+  }
+  .card .t{color:var(--tx);font-size:11px;font-weight:600;margin-bottom:5px}
+  .bar{height:6px;border-radius:3px;background:var(--line);margin-top:6px}
+  .bar.w60{width:60%} .bar.w40{width:40%} .bar.w80{width:80%}
+  .skeleton .card{background:linear-gradient(90deg,#1d212a 25%,#252b36 37%,#1d212a 63%);background-size:400% 100%;animation:sh 1.2s ease infinite}
+  @keyframes sh{0%{background-position:100% 50%}100%{background-position:0 50%}}
+
+  .tabbar{
+    height:52px;flex:none;display:flex;align-items:center;justify-content:space-around;
+    border-top:1px solid var(--line);background:var(--panel);padding-bottom:0;
+  }
+  .tabbar .item{
+    font-size:8px;color:var(--tx2);display:flex;flex-direction:column;align-items:center;gap:3px;
+  }
+  .tabbar .bx{width:16px;height:16px;border-radius:4px;background:var(--line)}
+  .tabbar .item.act{color:var(--accent)} .tabbar .item.act .bx{background:var(--accent)}
+
+  .homebar{
+    height:18px;flex:none;display:flex;align-items:center;justify-content:center;
+  }
+  .homebar i{display:block;width:96px;height:4px;border-radius:2px;background:#4a5160}
+
+  /* 问题标注 */
+  .mark{
+    position:absolute;font-size:9px;line-height:1.4;padding:3px 7px;border-radius:5px;
+    z-index:5;max-width:150px;
+  }
+  .mark.bad{background:rgba(255,120,117,.16);border:1px solid var(--bad);color:#ffb3b1}
+  .mark.good{background:rgba(126,231,135,.14);border:1px solid var(--good);color:#b7f5bd}
+  .arrow{position:absolute;width:1px;background:var(--bad);z-index:4}
+
+  /* 遮挡示意 */
+  .covered{position:relative}
+  .covered::after{
+    content:"";position:absolute;left:0;right:0;bottom:-6px;height:26px;
+    background:repeating-linear-gradient(45deg,rgba(255,120,117,.28) 0 6px,rgba(255,120,117,.12) 6px 12px);
+    border-top:1px dashed var(--bad);
+  }
+
+  .overlay{
+    position:absolute;inset:0;background:rgba(0,0,0,.6);
+    display:flex;align-items:center;justify-content:center;z-index:8;
+  }
+  .modal{
+    width:100%;height:100%;background:var(--panel);display:flex;flex-direction:column;
+  }
+  .modal.full{border-radius:0}
+  .modal-h{
+    height:42px;flex:none;display:flex;align-items:center;justify-content:space-between;
+    padding:0 14px;border-bottom:1px solid var(--line);font-size:11px;font-weight:600;
+  }
+  .modal-h .x{
+    width:20px;height:20px;border-radius:50%;background:var(--line);
+    display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--tx2);
+  }
+  .modal-b{flex:1;padding:12px;overflow:hidden}
+  .modal-f{
+    flex:none;height:52px;display:flex;align-items:center;justify-content:flex-end;gap:8px;
+    padding:0 14px;border-top:1px solid var(--line);
+  }
+  .btn{font-size:10px;padding:6px 14px;border-radius:6px;border:1px solid var(--line);color:var(--tx2)}
+  .btn.pri{background:var(--accent);border-color:var(--accent);color:#0b0d11;font-weight:600}
+  .tapzone{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:9px;color:rgba(126,231,135,.75);pointer-events:none;
+  }
+
+  .note{
+    margin-top:14px;font-size:12px;color:var(--tx2);line-height:1.7;
+    background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:6px;padding:10px 14px;
+  }
+  .note b{color:var(--tx)}
+
+  footer{margin-top:34px;font-size:11px;color:#6b7480;line-height:1.8;border-top:1px solid var(--line);padding-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>EasyWebTab · 移动端优化原型（现状 vs 改进）</h1>
+  <div class="sub">
+    审查范围：移动端视觉呈现 / 交互操作 / 性能体验。共定位约 31 项可提升点，
+    本原型可视化其中 5 项高优先级（P0）问题，供拍板确认方向后再进入实现。
+  </div>
+  <div class="stats">
+    <div class="stat p0"><b>11</b>高优先级</div>
+    <div class="stat p1"><b>14</b>中优先级</div>
+    <div class="stat p2"><b>6</b>低优先级</div>
+    <div class="stat"><b>3</b>审查维度</div>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab on" data-s="safe">① 安全区被压</div>
+  <div class="tab" data-s="dialog">② 弹框关闭困难</div>
+  <div class="tab" data-s="boot">③ 首屏加载过重</div>
+  <div class="tab" data-s="list">④ 长列表全量渲染</div>
+  <div class="tab" data-s="state">⑤ 返回即丢状态</div>
+</div>
+
+<!-- 场景 1：安全区 -->
+<section class="scene on" data-scene="safe">
+  <div class="scene-title">P0-1　底部操作区被系统 Home 指示条压住</div>
+  <div class="scene-desc">
+    <span class="loc">index.html:6</span> viewport 缺 <code>viewport-fit=cover</code>，
+    代码中约 8 处 <code>env(safe-area-inset-bottom)</code> 恒为 0；
+    <span class="loc">mobile.css:42-47</span> 弹框全屏化只设高度、未补安全区内边距。
+    影响全部全面屏 iPhone 与手势条安卓机。
+  </div>
+  <div class="compare">
+    <div class="col">
+      <div class="col-label bad"><span class="dot bad"></span>现状：按钮被压、点不到</div>
+      <div class="phone">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span>EasyWebTab</span></div>
+          <div class="appbar"><span>个人工作台</span><span class="ico"></span></div>
+          <div class="content">
+            <div class="card"><div class="t">健康</div><div class="bar w80"></div></div>
+            <div class="card"><div class="t">记账</div><div class="bar w60"></div></div>
+            <div class="card"><div class="t">日记</div><div class="bar w40"></div></div>
+          </div>
+          <div class="tabbar covered">
+            <div class="item act"><span class="bx"></span>首页</div>
+            <div class="item"><span class="bx"></span>健康</div>
+            <div class="item"><span class="bx"></span>记账</div>
+            <div class="item"><span class="bx"></span>我的</div>
+          </div>
+          <div class="homebar"><i></i></div>
+          <div class="mark bad" style="right:8px;bottom:22px">Tab Bar 下半截与 Home 条重叠，点击落到系统手势</div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="col-label good"><span class="dot good"></span>改进：补 viewport 属性 + 安全区内边距</div>
+      <div class="phone">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span>EasyWebTab</span></div>
+          <div class="appbar"><span>个人工作台</span><span class="ico"></span></div>
+          <div class="content">
+            <div class="card"><div class="t">健康</div><div class="bar w80"></div></div>
+            <div class="card"><div class="t">记账</div><div class="bar w60"></div></div>
+            <div class="card"><div class="t">日记</div><div class="bar w40"></div></div>
+          </div>
+          <div class="tabbar" style="padding-bottom:10px">
+            <div class="item act"><span class="bx"></span>首页</div>
+            <div class="item"><span class="bx"></span>健康</div>
+            <div class="item"><span class="bx"></span>记账</div>
+            <div class="item"><span class="bx"></span>我的</div>
+          </div>
+          <div class="homebar"><i></i></div>
+          <div class="mark good" style="right:8px;bottom:22px">菜单整体上移，完整露出且可稳定点中</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note"><b>改动量极小、收益全局</b>：一行 viewport 属性 + 弹框/底栏补安全区内边距，即可消除"按钮点不动"这一类问题。</div>
+</section>
+
+<!-- 场景 2：弹框关闭 -->
+<section class="scene" data-scene="dialog">
+  <div class="scene-title">P0-2　全屏弹框点空白关不掉，只能找小叉</div>
+  <div class="scene-desc">
+    <span class="loc">mobile.css:29</span> 遮罩 <code>padding:0</code>、卡片 <code>height:100%</code>，
+    遮罩无裸露区域，<code>@click.self</code> 与 Element Plus 的 <code>close-on-click-modal</code> 全部失效。
+    已确认影响备份管理、站点弹框、帮助弹框、设置弹框等。
+  </div>
+  <div class="compare">
+    <div class="col">
+      <div class="col-label bad"><span class="dot bad"></span>现状：唯一出口是头部小叉</div>
+      <div class="phone">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span>编辑记录</span></div>
+          <div class="overlay">
+            <div class="modal full">
+              <div class="modal-h"><span>编辑运动记录</span><span class="x">×</span></div>
+              <div class="modal-b">
+                <div class="card"><div class="t">日期</div><div class="bar w60"></div></div>
+                <div class="card"><div class="t">时长</div><div class="bar w40"></div></div>
+                <div class="card"><div class="t">备注</div><div class="bar w80"></div></div>
+              </div>
+              <div class="modal-f"><span class="btn">取消</span><span class="btn pri">保存</span></div>
+            </div>
+          </div>
+          <div class="homebar"><i></i></div>
+          <div class="mark bad" style="left:8px;top:52px">整个屏幕被弹框铺满，无任何"空白"可点</div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="col-label good"><span class="dot good"></span>改进：底部抽屉式 + 点空白/下滑关闭</div>
+      <div class="phone">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span>编辑记录</span></div>
+          <div class="overlay" style="align-items:flex-end">
+            <div class="modal" style="height:78%;border-radius:16px 16px 0 0">
+              <div class="modal-h">
+                <span class="x">×</span><span>编辑运动记录</span><span style="width:20px"></span>
+              </div>
+              <div class="modal-b">
+                <div class="card"><div class="t">日期</div><div class="bar w60"></div></div>
+                <div class="card"><div class="t">时长</div><div class="bar w40"></div></div>
+                <div class="card"><div class="t">备注</div><div class="bar w80"></div></div>
+              </div>
+              <div class="modal-f" style="padding-bottom:10px"><span class="btn">取消</span><span class="btn pri">保存</span></div>
+            </div>
+          </div>
+          <div class="homebar"><i></i></div>
+          <div class="mark good" style="right:8px;top:44px">上方露出遮罩：点击即可关闭，也支持下滑收起</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note"><b>方向</b>：移动端弹框由"全屏铺满"改为"底部抽屉"，保留顶部标题栏与底部操作区，遮罩可点、支持下滑关闭，同时补安全区内边距。</div>
+</section>
+
+<!-- 场景 3：首屏加载 -->
+<section class="scene" data-scene="boot">
+  <div class="scene-title">P0-3　打开首页即下载全部模块</div>
+  <div class="scene-desc">
+    <span class="loc">router/index.ts:2-5</span> 4 个 View 全部静态导入、零懒加载；
+    产物主 chunk 约 1.85MB（gzip 594KB）+ 705KB 单文件 CSS 全量阻塞；
+    <span class="loc">dist/index.html</span> 还有 29 个 <code>modulepreload</code> 首屏并发抢占带宽。
+  </div>
+  <div class="compare">
+    <div class="col">
+      <div class="col-label bad"><span class="dot bad"></span>现状：白屏等待，无反馈</div>
+      <div class="phone">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span></span></div>
+          <div class="content" style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px">
+            <div style="width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite"></div>
+            <div style="font-size:10px;color:var(--tx2)">白屏 · 无内容 · 无进度</div>
+          </div>
+          <div class="homebar"><i></i></div>
+          <div class="mark bad" style="left:8px;bottom:64px">全部模块 + 图表库 + 29 个预载一起下载</div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="col-label good"><span class="dot good"></span>改进：路由懒加载 + 骨架屏占位</div>
+      <div class="phone">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span>网页导航</span></div>
+          <div class="appbar"><span>我的导航</span><span class="ico"></span></div>
+          <div class="content skeleton">
+            <div class="card" style="height:52px"></div>
+            <div class="card" style="height:52px"></div>
+            <div class="card" style="height:52px"></div>
+            <div class="card" style="height:52px"></div>
+            <div class="card" style="height:52px"></div>
+          </div>
+          <div class="homebar"><i></i></div>
+          <div class="mark good" style="right:8px;bottom:64px">首屏只下载导航站代码，先出骨架再填内容</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note"><b>方向</b>：路由级懒加载、手动分包拆分 vendor 与业务、精简首屏预载、关键资源预连接；同时为异步区域补骨架屏，让等待可见。</div>
+</section>
+
+<!-- 场景 4：长列表 -->
+<section class="scene" data-scene="list">
+  <div class="scene-title">P0-4　移动端反而关掉分页、全量渲染</div>
+  <div class="scene-desc">
+    <span class="loc">HomeView.vue:333-343</span> 移动端强制 <code>pageSize=99999</code>；
+    <span class="loc">usePanelPaging.ts:91-93</span> 在移动端直接返回全量记录；
+    全局搜索结果也未设上限。站点多时单页 DOM 可达数千节点。
+  </div>
+  <div class="compare">
+    <div class="col">
+      <div class="col-label bad"><span class="dot bad"></span>现状：一次性铺满，滚动掉帧</div>
+      <div class="phone">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span>全部记录</span></div>
+          <div class="appbar"><span>运动记录</span><span class="ico"></span></div>
+          <div class="content" style="display:flex;flex-direction:column;gap:5px;padding:8px">
+            <div style="font-size:9px;color:var(--bad);text-align:center">↓ 一次性渲染 500+ 条 · 滚动卡顿</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+              <div class="card" style="margin:0;height:34px"></div><div class="card" style="margin:0;height:34px"></div>
+              <div class="card" style="margin:0;height:34px"></div><div class="card" style="margin:0;height:34px"></div>
+              <div class="card" style="margin:0;height:34px"></div><div class="card" style="margin:0;height:34px"></div>
+              <div class="card" style="margin:0;height:34px"></div><div class="card" style="margin:0;height:34px"></div>
+              <div class="card" style="margin:0;height:34px"></div><div class="card" style="margin:0;height:34px"></div>
+              <div class="card" style="margin:0;height:34px"></div><div class="card" style="margin:0;height:34px"></div>
+            </div>
+          </div>
+          <div class="homebar"><i></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="col-label good"><span class="dot good"></span>改进：分批加载 / 触底追加</div>
+      <div class="phone">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span>全部记录</span></div>
+          <div class="appbar"><span>运动记录</span><span class="ico"></span></div>
+          <div class="content" style="display:flex;flex-direction:column;gap:5px;padding:8px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+              <div class="card" style="margin:0;height:34px"></div><div class="card" style="margin:0;height:34px"></div>
+              <div class="card" style="margin:0;height:34px"></div><div class="card" style="margin:0;height:34px"></div>
+              <div class="card" style="margin:0;height:34px"></div><div class="card" style="margin:0;height:34px"></div>
+            </div>
+            <div style="font-size:9px;color:var(--good);text-align:center;padding:6px 0">
+              ↑ 已加载 30 条 · 继续下滑自动追加
+            </div>
+            <div class="card skeleton" style="height:34px;margin:0"></div>
+            <div class="card skeleton" style="height:34px;margin:0"></div>
+          </div>
+          <div class="homebar"><i></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note"><b>方向</b>：保留"移动端不分页"的操作简洁性，但改为触底追加/分批渲染，配合骨架占位与回到顶部入口，兼顾流畅与可达。</div>
+</section>
+
+<!-- 场景 5：状态保持 -->
+<section class="scene" data-scene="state">
+  <div class="scene-title">P0-8　跳走再回来，滚动位置与筛选全丢</div>
+  <div class="scene-desc">
+    <span class="loc">router/index.ts:7-31</span> 未定义 <code>scrollBehavior</code>；
+    <span class="loc">App.vue:59</span> 用 <code>:key="$route.path"</code> 强制重建组件树；
+    工作台 <code>activeSection</code> 只是局部状态，未持久化也未写入 URL。
+  </div>
+  <div class="compare">
+    <div class="col">
+      <div class="col-label bad"><span class="dot bad"></span>现状：返回即回到顶部、面板重置</div>
+      <div class="phone">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span>工作台</span></div>
+          <div class="appbar"><span>个人工作台</span><span class="ico"></span></div>
+          <div class="content">
+            <div class="card" style="opacity:.35"><div class="t">运动</div><div class="bar w60"></div></div>
+            <div class="card" style="opacity:.35"><div class="t">饮食</div><div class="bar w80"></div></div>
+            <div style="font-size:9px;color:var(--bad);padding:8px 2px">
+              ✕ 回到「首页」面板<br>✕ 滚动位置归零<br>✕ 筛选条件丢失
+            </div>
+          </div>
+          <div class="tabbar">
+            <div class="item act"><span class="bx"></span>首页</div>
+            <div class="item"><span class="bx"></span>健康</div>
+            <div class="item"><span class="bx"></span>记账</div>
+            <div class="item"><span class="bx"></span>我的</div>
+          </div>
+          <div class="homebar"><i></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="col-label good"><span class="dot good"></span>改进：滚动恢复 + 面板状态进 URL</div>
+      <div class="phone">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span>工作台</span></div>
+          <div class="appbar"><span>个人工作台</span><span class="ico"></span></div>
+          <div class="content">
+            <div class="card"><div class="t">运动</div><div class="bar w60"></div></div>
+            <div class="card"><div class="t">饮食</div><div class="bar w80"></div></div>
+            <div style="font-size:9px;color:var(--good);padding:8px 2px">
+              ✓ 回到原「健康」面板<br>✓ 滚动位置还原<br>✓ 筛选条件保留
+            </div>
+          </div>
+          <div class="tabbar">
+            <div class="item"><span class="bx"></span>首页</div>
+            <div class="item act"><span class="bx"></span>健康</div>
+            <div class="item"><span class="bx"></span>记账</div>
+            <div class="item"><span class="bx"></span>我的</div>
+          </div>
+          <div class="homebar"><i></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note"><b>方向</b>：补路由滚动行为、收敛强制重建、把当前面板与关键筛选写入 URL query——既符合移动端返回直觉，也让刷新与分享链接可用。</div>
+</section>
+
+<footer>
+  原型说明：本页仅用于方向确认（现状 vs 改进对比），界面为示意简化，非最终视觉稿。<br>
+  完整清单共约 31 项，详见《移动端体验审查报告-2026-09-23.md》。确认方向后再进入实现阶段。
+</footer>
+
+</div>
+
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+<script>
+  document.querySelectorAll('.tab').forEach(function(t){
+    t.addEventListener('click', function(){
+      document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on')});
+      t.classList.add('on');
+      var key = t.getAttribute('data-s');
+      document.querySelectorAll('.scene').forEach(function(s){
+        s.classList.toggle('on', s.getAttribute('data-scene') === key);
+      });
+    });
+  });
+</script>
+</body>
+</html>

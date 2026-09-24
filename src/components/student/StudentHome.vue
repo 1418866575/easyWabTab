@@ -69,10 +69,29 @@ function onTouchEnd(e: TouchEvent) {
   else nextSlide()
 }
 
+// 时钟刷新间隔（原先内联 30000，提成常量便于统一调整）
+const CLOCK_TICK_MS = 30000
+
+// 页面切到后台时暂停定时器（轮播 + 时钟），回到前台再恢复。
+// 后台标签页里定时器照常触发，会让 Vue 更新与样式重算白跑一遍，移动端尤其耗电；
+// 恢复时先校正一次时间，避免回到前台的首帧还显示切走前的旧时间。
+function handleVisibilityChange() {
+  if (document.hidden) {
+    if (nowTimer) clearInterval(nowTimer)
+    stopAutoplay()
+    return
+  }
+  now.value = new Date()
+  nowTimer = window.setInterval(() => { now.value = new Date() }, CLOCK_TICK_MS)
+  // hover 暂停中的轮播保持暂停，不因回到前台被强制重启
+  if (!carouselPaused.value) startAutoplay()
+}
+
 // 加载所有学生 store 数据（主页需要聚合统计）
 onMounted(async () => {
-  nowTimer = window.setInterval(() => { now.value = new Date() }, 30000)
+  nowTimer = window.setInterval(() => { now.value = new Date() }, CLOCK_TICK_MS)
   startAutoplay()
+  document.addEventListener('visibilitychange', handleVisibilityChange)
   await Promise.all([
     hwStore.loadHomework(),
     reviewStore.loadReview(),
@@ -84,6 +103,7 @@ onMounted(async () => {
 onUnmounted(() => {
   if (nowTimer) clearInterval(nowTimer)
   stopAutoplay()
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
 
 // 昵称

@@ -29,9 +29,11 @@ test("T3 stageBadge 每学段 label+color", () => {
   assert.notEqual(k.color, p.color); assert.notEqual(p.color, j.color)
 })
 
-test("T4 stageDefaultSubjects 返回副本；K 空 / P 少 / J 多", () => {
+test("T4 stageDefaultSubjects 返回副本；K 幼儿园口径有种子学科 / P 少 / J 多", () => {
   const k = stageDefaultSubjects("K"); const p = stageDefaultSubjects("P"); const j = stageDefaultSubjects("J")
-  assert.deepEqual(k, [])
+  // 幼儿园口径已改为带 6 项活动类默认学科（非学科制），只校验有种子且与小学口径不同
+  assert.ok(k.length >= 3)
+  assert.notDeepEqual(k, p)
   assert.ok(p.length >= 3)
   assert.ok(j.length >= 9)
   const p2 = stageDefaultSubjects("P")

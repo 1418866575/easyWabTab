@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -146,7 +147,7 @@ function openEditDialog(id: string): void {
   showEditDialog.value = true
 }
 
-function closeEditDialog(): void {
+async function closeEditDialog(): void {
   showEditDialog.value = false
   editingId.value = null
 }
@@ -187,7 +188,7 @@ async function saveEditDialog(): Promise<void> {
 async function handleDelete(id: string): Promise<void> {
   const h = store.entries.find(e => e.id === id)
   if (!h) return
-  if (!confirm(`确定要删除作业「${h.title}」吗？`)) return
+  if (!await showConfirm(`确定要删除作业「${h.title}」吗？`)) return
   const result = await store.deleteHomework(id)
   if (result.ok) {
     if (editingId.value === id) closeEditDialog()

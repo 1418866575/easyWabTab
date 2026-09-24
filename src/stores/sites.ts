@@ -387,6 +387,48 @@ export const useSitesStore = defineStore('sites', () => {
     saveUserSites()
   }
 
+  // ===== 写盘调度 =====
+  // 原先每次操作（尤其点击站点）都同步执行 JSON.stringify 全量数据 + setItem，
+  // 主线程阻塞明显。改为合并延迟写盘：连续操作只序列化一次。
+  // 页面隐藏/卸载时立即 flush，保证数据不会因防抖而丢失。
+  const SAVE_DEBOUNCE_MS = 400
+  let saveTimer: ReturnType<typeof setTimeout> | null = null
+  let pendingClickCountsWrite = false
+
+  function flushSave(): void {
+    if (saveTimer) {
+      clearTimeout(saveTimer)
+      saveTimer = null
+    }
+    try {
+      localStorage.setItem('user-sites', JSON.stringify(sites.value))
+    } catch {
+      // 配额不足等异常保持原行为（原先同样会抛出）
+    }
+    if (pendingClickCountsWrite) {
+      try {
+        localStorage.setItem('site-click-counts', JSON.stringify(clickCountsCache ?? {}))
+      } catch {
+        // 同上
+      }
+      pendingClickCountsWrite = false
+    }
+  }
+
+  function onPageHide(): void {
+    flushSave()
+  }
+
+  function onVisibilityChange(): void {
+    if (document.visibilityState === 'hidden') flushSave()
+  }
+
+  // store 为单例，生命周期等同应用，监听无需移除
+  if (typeof window !== 'undefined') {
+    window.addEventListener('pagehide', onPageHide)
+    document.addEventListener('visibilitychange', onVisibilityChange)
+  }
+
   // 点击网站时增加 sort 值（使用频率排序）
   function incrementClick(url: string) {
     const site = sites.value.find(s => s.url === url)
@@ -395,31 +437,33 @@ export const useSitesStore = defineStore('sites', () => {
     // sort 值加 1
     site.sort = (site.sort ?? 1) + 1
 
-    // 保存点击计数到 localStorage
-    const clickCounts = loadClickCounts()
-    clickCounts[url] = (clickCounts[url] ?? 0) + 1
-    localStorage.setItem('site-click-counts', JSON.stringify(clickCounts))
+    // 点击计数走内存缓存，不再每次 JSON.parse 全量历史
+    const counts = loadClickCounts()
+    counts[url] = (counts[url] ?? 0) + 1
+    pendingClickCountsWrite = true
 
-    // 持久化网站数据
+    // 持久化网站数据（合并延迟写盘）
     saveUserSites()
   }
 
+  // 点击计数内存缓存（避免每次点击解析整份 JSON）
+  let clickCountsCache: Record<string, number> | null = null
+
   // 加载点击计数
   function loadClickCounts(): Record<string, number> {
+    if (clickCountsCache) return clickCountsCache
     try {
       const data = localStorage.getItem('site-click-counts')
-      return data ? JSON.parse(data) : {}
+      clickCountsCache = data ? JSON.parse(data) : {}
     } catch {
-      return {}
+      clickCountsCache = {}
     }
+    return clickCountsCache
   }
 
   function saveUserSites() {
-    // 只保存非内置的网站（这里简化处理，保存所有）
-    localStorage.setItem('user-sites', JSON.stringify(sites.value))
+    // 脏标记与自动备份调度保持即时执行（轻量，且不改变云同步语义）
     markDirty()
-    
-    // 触发自动备份（5分钟后执行，如中途有修改则重新计时）
     const categoriesStore = useCategoriesStore()
     const enginesStore = useSearchEnginesStore()
     scheduleAutoBackup(
@@ -427,6 +471,13 @@ export const useSitesStore = defineStore('sites', () => {
       categoriesStore.customCategories,
       enginesStore.customEngines
     )
+
+    // 实际写盘合并到下一次微任务窗口后执行，连续操作只写一次
+    if (saveTimer) clearTimeout(saveTimer)
+    saveTimer = setTimeout(() => {
+      saveTimer = null
+      flushSave()
+    }, SAVE_DEBOUNCE_MS)
   }
 
   // 导出为 Markdown 文件

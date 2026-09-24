@@ -7,6 +7,7 @@
 // K 段菜单默认关闭此面板；P/J 段空表，用户自填
 
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { useStudentTimetableStore } from '@/stores/studentTimetable'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
 import { useToast } from '@/composables/useToast'
@@ -237,7 +238,7 @@ const TIMETABLE_ERROR_MESSAGES: Record<string, string> = {
   'invalid-time': '时间格式错误或结束时间需晚于开始时间',
   'not-found': '课程不存在'
 }
-function timetableErrorToast(result: { ok: boolean; reason?: string }): void {
+async function timetableErrorToast(result: { ok: boolean; reason?: string }): void {
   if (result.ok) return
   toast.error(TIMETABLE_ERROR_MESSAGES[result.reason ?? ''] ?? '操作失败')
 }
@@ -265,7 +266,7 @@ async function removeCell(): Promise<void> {
 }
 
 async function clearAllCells(): Promise<void> {
-  if (!confirm('确定要清空全部课程吗？此操作不可撤销。')) return
+  if (!await showConfirm('确定要清空全部课程吗？此操作不可撤销。')) return
   await store.clearAll()
   toast.success('已清空全部课程')
 }
@@ -666,6 +667,27 @@ onBeforeUnmount(() => {
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
   background: var(--color-bg-card, #fff);
+}
+/* ===== 移动端适配（与远程页面级滚动 .stt-shell 兼容：横向滚动交由页面层，此处只保证可读与触控）=====
+   问题：375px 下每列仅剩约 36px，学科名被截成单字，触控宽度远低于 44px。
+   改法：每列 64px 最小宽度 + 字号收敛 + 周次按钮 44px 触控目标；超宽时由 .stt-shell 页面级横向滚动。 */
+@media (max-width: 768px) {
+  .stt-grid {
+    --stt-period-col: 52px;
+    grid-template-columns: var(--stt-period-col) repeat(7, minmax(64px, 1fr));
+    min-width: max-content;
+  }
+
+  /* 格子字号收敛，配合更紧凑的布局 */
+  .stt-cell {
+    font-size: 12px;
+  }
+
+  /* 周次切换按钮触控目标 44px（原 28×28px） */
+  .stt-week-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
 }
 .stt-grid {
   --stt-period-col: 74px;

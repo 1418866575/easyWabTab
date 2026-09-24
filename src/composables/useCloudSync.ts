@@ -1704,6 +1704,9 @@ export function waitForPull(): Promise<void> {
 
 let initialized = false
 let intervalTimer: ReturnType<typeof setInterval> | null = null
+let watchdogTimer: ReturnType<typeof setInterval> | null = null
+// 最近一次生效的轮询间隔（分钟），用于判断是否需要重启定时器
+let lastIntervalMinutes = -1
 
 function stopInterval(): void {
   if (intervalTimer) {
@@ -1716,6 +1719,7 @@ function startInterval(): void {
   stopInterval()
   const settings = useAppSettingsStore()
   const minutes = Number(settings.cloudSyncInterval) || 0
+  lastIntervalMinutes = minutes
   if (minutes <= 0) return
   const ms = minutes * 60 * 1000
   intervalTimer = setInterval(() => {
@@ -1724,6 +1728,35 @@ function startInterval(): void {
       void syncNow(true)
     }
   }, ms)
+}
+
+/** 看门狗：仅在轮询间隔发生变化时才重启定时器。
+ *  原实现每分钟无条件重建，导致间隔大于 1 分钟的轮询永远走不到触发点
+ *  （每次都在 60s 处被 stopInterval 清掉），自动同步实际从不触发。 */
+function restartIntervalIfChanged(): void {
+  const settings = useAppSettingsStore()
+  const minutes = Number(settings.cloudSyncInterval) || 0
+  if (minutes === lastIntervalMinutes) return
+  startInterval()
+}
+
+/** 页面重新可见 → 拉取远程更新（技能改文件/其他设备推送都会被检测到） */
+function onVisibilityChange(): void {
+  if (status.value !== 'idle' && status.value !== 'error') return
+  // 间隔=0（关闭自动同步）时，不主动做任何同步，仅手动按钮生效
+  if ((Number(useAppSettingsStore().cloudSyncInterval) || 0) <= 0) return
+  if (document.visibilityState === 'visible') {
+    // 静默执行：切回标签页就弹「云同步完成」会严重打扰使用
+    // 设置栅栏 Promise 供其他模块（倒计时提醒）await 后再 tick
+    pendingPull = pullNow(true).finally(() => { pendingPull = null })
+  }
+  // hidden 时不自动推送（避免盲推覆盖技能修改的远程文件）
+  // 推送统一由定时轮询 + 手动「立即同步」触发，都会先 pullNow 检测冲突
+}
+
+/** 卸载前不做额外推送：beforeunload 中 fetch 可能被中断，hidden 分支已兜底 */
+function onBeforeUnload(): void {
+  /* 保持空实现：依赖 visibilitychange hidden 推送 */
 }
 
 /** 在 App.vue onMounted 调用；幂等 */
@@ -1741,28 +1774,29 @@ export function init(): void {
       /* ignore: store 未就绪，下一次修改会重启 */
     }
   })
-  setInterval(() => {
-    try { startInterval() } catch { /* ignore */ }
-  }, 60 * 1000).unref?.()
+  // 句柄保存下来，dispose 时可释放（原先未保存，单例永不释放）
+  watchdogTimer = setInterval(() => {
+    try { restartIntervalIfChanged() } catch { /* ignore */ }
+  }, 60 * 1000)
+  // unref 仅存在于 Node 定时器对象上，浏览器环境为 number，可选调用兼容
+  ;(watchdogTimer as unknown as { unref?: () => void } | null)?.unref?.()
 
-  document.addEventListener('visibilitychange', () => {
-    if (status.value !== 'idle' && status.value !== 'error') return
-    // 间隔=0（关闭自动同步）时，不主动做任何同步，仅手动按钮生效
-    if ((Number(useAppSettingsStore().cloudSyncInterval) || 0) <= 0) return
-    if (document.visibilityState === 'visible') {
-      // 页面重新可见 → 拉取远程更新（技能改文件/其他设备推送都会被检测到）
-      // 静默执行：切回标签页就弹「云同步完成」会严重打扰使用
-      // 设置栅栏 Promise 供其他模块（倒计时提醒）await 后再 tick
-      pendingPull = pullNow(true).finally(() => { pendingPull = null })
-    }
-    // hidden 时不自动推送（避免盲推覆盖技能修改的远程文件）
-    // 推送统一由定时轮询 + 手动「立即同步」触发，都会先 pullNow 检测冲突
-  })
+  document.addEventListener('visibilitychange', onVisibilityChange)
+  window.addEventListener('beforeunload', onBeforeUnload)
+}
 
-  window.addEventListener('beforeunload', () => {
-    // beforeunload 中 fetch 可能被中断（尤其是异步）；仅在 visibilitychange hidden 已兜底
-    // 简化：依赖 visibilitychange hidden 推送，beforeunload 不额外推送
-  })
+/** 释放云同步触发器占用的定时器与全局监听（dispose 后可重新 init）。
+ *  原先看门狗句柄与两个监听回调都未保存，无法移除，单例永不释放。 */
+export function dispose(): void {
+  stopInterval()
+  if (watchdogTimer) {
+    clearInterval(watchdogTimer)
+    watchdogTimer = null
+  }
+  document.removeEventListener('visibilitychange', onVisibilityChange)
+  window.removeEventListener('beforeunload', onBeforeUnload)
+  lastIntervalMinutes = -1
+  initialized = false
 }
 
 export function useCloudSync() {
@@ -1780,6 +1814,7 @@ export function useCloudSync() {
     testConnection,
     markDirty,
     isDirty,
-    startInterval
+    startInterval,
+    dispose
   }
 }

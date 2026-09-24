@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -66,13 +67,13 @@ const isTargetValid = computed(() => {
   return Number.isFinite(t) && t > 0
 })
 
-function openTargetDialog(): void {
+async function openTargetDialog(): void {
   const plan = store.plans.sleep
   formTarget.value = plan ? String(plan.target) : '8'
   showTargetDialog.value = true
 }
 
-function closeTargetDialog(): void {
+async function closeTargetDialog(): void {
   showTargetDialog.value = false
 }
 
@@ -83,7 +84,7 @@ async function handleSaveTarget(): Promise<void> {
 }
 
 async function handleClearTarget(): Promise<void> {
-  if (confirm('确定要清除每日睡眠目标吗？')) {
+  if (await showConfirm('确定要清除每日睡眠目标吗？')) {
     await store.setPlan('sleep', null)
     closeTargetDialog()
   }
@@ -160,7 +161,7 @@ function startEditRecord(id: string): void {
   showRecordDialog.value = true
 }
 
-function cancelRecordForm(): void {
+async function cancelRecordForm(): void {
   showRecordDialog.value = false
   editingId.value = null
 }
@@ -186,7 +187,7 @@ async function handleSaveRecord(): Promise<void> {
 }
 
 async function handleDeleteRecord(id: string): Promise<void> {
-  if (confirm('确定要删除这条睡眠记录吗？')) {
+  if (await showConfirm('确定要删除这条睡眠记录吗？')) {
     await store.deleteRecord('sleep', id)
     listPage.value = 1
   }

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { PasswordEntry } from '../types'
+import type { PasswordCategory, PasswordEntry, PasswordVault } from '../types'
 import {
   encrypt,
   decrypt,
@@ -17,6 +17,22 @@ import { useAppSettingsStore } from '@/stores/settings'
 
 const STORAGE_KEY = 'user-passwords'
 
+/**
+ * 密文解析：v1 是裸数组（PasswordEntry[]），v2 是 { categories, entries }。
+ * 按形状自动识别，非法输入一律降级为空库（不抛错，避免解锁即白屏）。
+ */
+function parseVault(raw: unknown): PasswordVault {
+  if (Array.isArray(raw)) return { categories: [], entries: raw as PasswordEntry[] }
+  if (raw && typeof raw === 'object') {
+    const o = raw as { categories?: unknown; entries?: unknown }
+    return {
+      categories: Array.isArray(o.categories) ? (o.categories as PasswordCategory[]) : [],
+      entries: Array.isArray(o.entries) ? (o.entries as PasswordEntry[]) : []
+    }
+  }
+  return { categories: [], entries: [] }
+}
+
 /** 写操作结果：落盘与云推送分别报告，便于 UI 给出准确提示 */
 export interface PasswordSaveResult {
   /** 是否已写入 IndexedDB（false = 未落盘，通常是密码库已锁定） */
@@ -29,6 +45,8 @@ export interface PasswordSaveResult {
 
 export const usePasswordsStore = defineStore('passwords', () => {
   const passwords = ref<PasswordEntry[]>([])
+  /** 密码分类（与条目同库加密：分类名也算隐私信息，不单独明文落盘） */
+  const categories = ref<PasswordCategory[]>([])
   const isUnlocked = ref(false)
   let currentMasterPassword = ''
 
@@ -55,6 +73,7 @@ export const usePasswordsStore = defineStore('passwords', () => {
     }
     if (!stored) {
       passwords.value = []
+      categories.value = []
       isUnlocked.value = true
       currentMasterPassword = masterPassword
       return true
@@ -62,7 +81,9 @@ export const usePasswordsStore = defineStore('passwords', () => {
 
     try {
       const decrypted = await decrypt(stored, masterPassword)
-      passwords.value = JSON.parse(decrypted)
+      const vault = parseVault(JSON.parse(decrypted))
+      passwords.value = vault.entries
+      categories.value = vault.categories
       isUnlocked.value = true
       currentMasterPassword = masterPassword
       return true
@@ -109,7 +130,7 @@ export const usePasswordsStore = defineStore('passwords', () => {
       console.warn('[Passwords] save skipped: vault is locked (no master password)')
       return { saved: false, synced: false, cloudEnabled: false }
     }
-    const json = JSON.stringify(passwords.value)
+    const json = JSON.stringify({ categories: categories.value, entries: passwords.value })
     const encrypted = await encrypt(json, currentMasterPassword)
     try {
       await idbPut('passwords', encrypted)
@@ -128,6 +149,7 @@ export const usePasswordsStore = defineStore('passwords', () => {
     currentMasterPassword = password
     isUnlocked.value = true
     passwords.value = []
+    categories.value = []
     await savePasswords()
   }
 
@@ -140,11 +162,80 @@ export const usePasswordsStore = defineStore('passwords', () => {
     return valid
   }
 
-  // 锁定
+  // 锁定：清空内存中的条目与分类（分类同属密文，锁定后一并不可见）
   function lock(): void {
     isUnlocked.value = false
     currentMasterPassword = ''
     passwords.value = []
+    categories.value = []
+  }
+
+  // ============================================================
+  // 密码分类 CRUD（镜像便签分类 workbenchNotes：名称唯一 + sort 排序 + 标签页显隐）
+  // 全部走 savePasswords 落盘（同步加密 + 主动推云端）；库锁定时返回 false。
+  // ============================================================
+
+  /** 新增分类：名称 trim 非空且（大小写不敏感）不重名；sort 取现有最大 +1。 */
+  async function addCategory(name: string): Promise<boolean> {
+    const trimmed = name.trim()
+    if (!trimmed) return false
+    if (categories.value.some(c => c.name.trim().toLowerCase() === trimmed.toLowerCase())) return false
+    const maxSort = categories.value.reduce((max, c) => Math.max(max, c.sort ?? 0), 0)
+    categories.value.push({ id: `pc_${Date.now()}`, name: trimmed, sort: maxSort + 1, showInTabs: true })
+    const r = await savePasswords()
+    return r.saved
+  }
+
+  /** 改名 / 改排序权重 / 标签页显隐：名称唯一性排除自身；空名或未找到 → false。 */
+  async function updateCategory(id: string, patch: { name?: string; sort?: number; showInTabs?: boolean }): Promise<boolean> {
+    const index = categories.value.findIndex(c => c.id === id)
+    if (index === -1) return false
+    const changes: Partial<PasswordCategory> = {}
+    if (patch.name !== undefined) {
+      const name = patch.name.trim()
+      if (!name) return false
+      if (categories.value.some(c => c.id !== id && c.name.trim().toLowerCase() === name.toLowerCase())) return false
+      changes.name = name
+    }
+    if (patch.sort !== undefined) changes.sort = patch.sort
+    if (patch.showInTabs !== undefined) changes.showInTabs = patch.showInTabs
+    categories.value[index] = { ...categories.value[index], ...changes }
+    const r = await savePasswords()
+    return r.saved
+  }
+
+  /** 上移/下移：与相邻分类交换 sort；已在边界 → false 不写库。 */
+  async function moveCategory(id: string, dir: 'up' | 'down'): Promise<boolean> {
+    const sorted = [...categories.value].sort((a, b) => (a.sort ?? 999) - (b.sort ?? 999))
+    const index = sorted.findIndex(c => c.id === id)
+    if (index === -1) return false
+    if (dir === 'up' && index === 0) return false
+    if (dir === 'down' && index >= sorted.length - 1) return false
+    const target = sorted[index]
+    const neighbor = sorted[dir === 'up' ? index - 1 : index + 1]
+    const tempSort = neighbor.sort
+    neighbor.sort = target.sort
+    target.sort = tempSort ?? 999
+    const r = await savePasswords()
+    return r.saved
+  }
+
+  /** 删除分类：同时把该分类下的密码条目置为未分类（不删条目）。 */
+  async function deleteCategory(id: string): Promise<boolean> {
+    if (!categories.value.some(c => c.id === id)) return false
+    categories.value = categories.value.filter(c => c.id !== id)
+    passwords.value = passwords.value.map(p => (p.categoryId === id ? { ...p, categoryId: undefined } : p))
+    const r = await savePasswords()
+    return r.saved
+  }
+
+  /** 标签页显隐切换 */
+  async function toggleTabCategory(id: string, visible: boolean): Promise<boolean> {
+    const c = categories.value.find(x => x.id === id)
+    if (!c) return false
+    c.showInTabs = visible
+    const r = await savePasswords()
+    return r.saved
   }
 
   /**
@@ -155,6 +246,7 @@ export const usePasswordsStore = defineStore('passwords', () => {
    */
   async function resetVault(): Promise<PasswordSaveResult> {
     passwords.value = []
+    categories.value = []
     currentMasterPassword = ''
     isUnlocked.value = false
     let saved = true
@@ -328,6 +420,7 @@ export const usePasswordsStore = defineStore('passwords', () => {
 
   return {
     passwords,
+    categories,
     isUnlocked,
     hasMasterPassword,
     loadPasswords,
@@ -339,6 +432,11 @@ export const usePasswordsStore = defineStore('passwords', () => {
     updatePassword,
     deletePassword,
     searchPasswords,
+    addCategory,
+    updateCategory,
+    moveCategory,
+    deleteCategory,
+    toggleTabCategory,
     exportPasswords,
     exportEncryptedPasswords,
     importPasswords,

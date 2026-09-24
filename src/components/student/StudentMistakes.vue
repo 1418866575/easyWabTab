@@ -5,6 +5,7 @@
 // M3 决策：纯文字录入，不支持图片上传（imageIds 恒为 []）
 
 import { computed, onMounted, ref, watch } from 'vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { useStudentMistakesStore } from '@/stores/studentMistakes'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
 import { useToast } from '@/composables/useToast'
@@ -118,7 +119,7 @@ function closeEditDialog(): void {
   editingId.value = null
 }
 
-function parseTagsInput(input: string): string[] {
+async function parseTagsInput(input: string): string[] {
   return input
     .split(/[,，\s]+/)
     .map(t => t.trim())
@@ -164,7 +165,7 @@ async function saveEditDialog(): Promise<void> {
 }
 
 async function handleDelete(id: string): Promise<void> {
-  if (!confirm('确定删除该错题？')) return
+  if (!await showConfirm('确定删除该错题？')) return
   await store.deleteMistake(id)
   toast.success('错题已删除')
   currentPage.value = 1

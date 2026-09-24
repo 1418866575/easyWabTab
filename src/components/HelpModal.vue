@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import Icon from './Icon.vue'
 import { useAppSettingsStore } from '@/stores/settings'
 import { incrementHelpAckCount } from '../composables/useHelpModal'
@@ -28,7 +29,7 @@ async function downloadExample() {
     a.click()
     URL.revokeObjectURL(url)
   } catch (e) {
-    alert('示例文件下载失败，请稍后重试')
+    toastAlert('示例文件下载失败，请稍后重试')
   }
 }
 
@@ -45,7 +46,7 @@ async function downloadIcons() {
     a.click()
     URL.revokeObjectURL(url)
   } catch (e) {
-    alert('图标文件下载失败，请稍后重试')
+    toastAlert('图标文件下载失败，请稍后重试')
   }
 }
 
@@ -61,7 +62,7 @@ async function downloadSkill() {
     a.click()
     URL.revokeObjectURL(url)
   } catch (e) {
-    alert('技能文件下载失败，请稍后重试')
+    toastAlert('技能文件下载失败，请稍后重试')
   }
 }
 
@@ -72,7 +73,7 @@ async function copyText(text: string, field: string) {
     copied.value = field
     setTimeout(() => { if (copied.value === field) copied.value = '' }, 1500)
   } catch {
-    alert('复制失败，请手动复制')
+    toastAlert('复制失败，请手动复制')
   }
 }
 
@@ -1387,6 +1388,7 @@ const skillInstall = [
 
   .help-modal {
     max-height: 90vh;
+    max-height: 90dvh;
   }
 
   .download-card {

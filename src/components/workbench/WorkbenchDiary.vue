@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { useWorkbenchDiaryStore } from '@/stores/workbenchDiary'
 import { dateKeyOf, diaryDateLabel, findDiaryByDate, DIARY_MOODS, diaryMoodOf } from '@/composables/diaryCore'
 import { useDiaryCategoriesStore } from '@/stores/diaryCategories'
@@ -7,6 +8,20 @@ import { renderMarkdown } from '@/composables/noteMarkdown'
 import { useToast } from '@/composables/useToast'
 import type { WorkbenchDiary } from '@/types'
 import Icon from '@/components/Icon.vue'
+
+// Markdown 渲染缓存：列表里每篇日记都在 v-for 内直接调用 renderMarkdown，
+// 任何一次响应式更新都会让「全部日记」重新解析一次全文，日记积累后移动端明显卡顿。
+// 这里按正文内容缓存解析结果，内容未变则直接复用。
+const mdCache = new Map<string, string>()
+function renderMarkdownCached(content: string): string {
+  const hit = mdCache.get(content)
+  if (hit !== undefined) return hit
+  const html = renderMarkdown(content)
+  // 限制缓存规模，避免长期运行无限增长
+  if (mdCache.size > 300) mdCache.clear()
+  mdCache.set(content, html)
+  return html
+}
 
 const store = useWorkbenchDiaryStore()
 const diaryCatStore = useDiaryCategoriesStore()
@@ -34,7 +49,7 @@ const draftImageUrls = computed<string[]>(() => {
   return out
 })
 // 从草稿中移除第 index 张内联图片（连同其 markdown 标记），并压缩多余空行
-function removeDraftImage(index: number): void {
+async function removeDraftImage(index: number): void {
   const re = /!\[[^\]]*\]\((data:image\/[^)\s]+)\)/g
   let i = -1
   draft.value = draft.value.replace(re, (mm) => {
@@ -70,9 +85,9 @@ const filteredEntries = computed<WorkbenchDiary[]>(() => {
 // 高度链 .dj-history{flex:1;min-height:0} → .dj-grid{flex:1;min-height:0} 约束滚动容器，避免内容被分页藏起。
 
 // ===== 日期切换（统一脏检查入口：日期输入 / 今日按钮 / 卡片点击）=====
-function selectDate(dateKey: string): void {
+async function selectDate(dateKey: string): void {
   if (dateKey === selectedDate.value) return
-  if (isDirty.value && !confirm('当前内容未保存，确定切换日期？')) return
+  if (isDirty.value && !await showConfirm('当前内容未保存，确定切换日期？')) return
   selectedDate.value = dateKey
   // 该日期已有条目（当前日志本内）→ 载入其内容为草稿 + 结构字段；无条目 → 空草稿（查找走 diaryCore.findDiaryByDate）
   const entry = findDiaryByDate(store.currentEntries, dateKey)
@@ -99,7 +114,7 @@ function handleToday(): void {
   selectDate(todayKey)
 }
 
-function onCardPreviewClick(e: MouseEvent): void {
+async function onCardPreviewClick(e: MouseEvent): void {
   const t = e.target as Element | null
   if (t && t.closest('a')) e.stopPropagation()
 }
@@ -125,7 +140,7 @@ async function handleSave(): Promise<void> {
 async function handleDelete(): Promise<void> {
   const entry = selectedEntry.value
   if (!entry) return
-  if (!confirm('确定要删除这篇日记吗？')) return
+  if (!await showConfirm('确定要删除这篇日记吗？')) return
   await store.deleteEntry(entry.id)
   // 选中日期已无条目：清空草稿（与空内容一致，不误判脏态）
   draft.value = ''
@@ -425,7 +440,7 @@ async function handleInsertImage(e: Event): Promise<void> {
                       <span v-if="entry.pinned" class="dj-card-pin" :data-testid="`dj-card-pin-${entry.id}`">📌</span>
                       <span v-if="diaryCatName(entry)" class="dj-card-cat" :data-testid="`dj-card-cat-${entry.id}`">{{ diaryCatName(entry) }}</span>
                     </div>
-                    <div class="dj-card-preview" :data-testid="`dj-card-preview-${entry.id}`" v-html="renderMarkdown(entry.content)" @click="onCardPreviewClick"></div>
+                    <div class="dj-card-preview" :data-testid="`dj-card-preview-${entry.id}`" v-html="renderMarkdownCached(entry.content)" @click="onCardPreviewClick"></div>
                     <div class="dj-card-foot">
                       <span class="dj-card-words">{{ entry.content.length }} 字</span>
                       <span class="dj-card-read" v-if="readingMinutes(entry.content) > 0">{{ readingMinutes(entry.content) }} 分钟阅读</span>
@@ -1175,6 +1190,7 @@ async function handleInsertImage(e: Event): Promise<void> {
     min-width: 0 !important;
     max-width: 100% !important;
     height: 90vh !important;
+    height: 90dvh !important;
   }
   /* 窄屏卡片改 2 列，避免 4 列过窄不可用 */
   .dj-grid {

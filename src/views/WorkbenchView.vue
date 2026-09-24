@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
 import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
@@ -28,6 +28,7 @@ import WorkbenchLedger from '@/components/workbench/WorkbenchLedger.vue'
 import WorkbenchDiary from '@/components/workbench/WorkbenchDiary.vue'
 import WorkbenchGenealogy from '@/components/workbench/WorkbenchGenealogy.vue'
 import Icon from '@/components/Icon.vue'
+import SkeletonBlock from '@/components/SkeletonBlock.vue'
 import SpotlightOverlay from '@/components/SpotlightOverlay.vue'
 import type { SpotlightAction } from '@/components/SpotlightOverlay.vue'
 import type { SpotlightData } from '@/composables/spotlightCore'
@@ -71,7 +72,18 @@ const SECTION_KEYS = [
 ] as const
 type SectionKey = (typeof SECTION_KEYS)[number]
 
-const activeSection = ref<SectionKey>('home')
+// 当前面板写入 URL query：此前 activeSection 只是组件内局部状态，
+// 跳到导航站再回来必然回落「首页」，分页/筛选/滚动位置一起丢失，
+// 移动端返回体验很差。写入 query 后，刷新、返回、分享链接都停在同一面板。
+const route = useRoute()
+const activeSection = ref<SectionKey>(
+  (SECTION_KEYS as readonly string[]).includes(route.query.section as string)
+    ? (route.query.section as SectionKey)
+    : 'home'
+)
+watch(activeSection, (v) => {
+  router.replace({ query: { ...route.query, section: v } }).catch(() => {})
+})
 
 // 健康管理面板当前激活 tab（点击菜单「健康」不传 tab → 保留上次激活）
 const activeHealthTab = ref<HealthModule>('exercise')
@@ -171,20 +183,29 @@ function formatDate(d: Date): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
 }
 
+// 首屏初始化占位：onMounted 需并发加载 10 个 store，期间内容区全空、用户无从判断是否在加载。
+// 骨架屏让「在忙」可见，加载完成后切换为真实面板（加载逻辑本身不变）。
+const initializing = ref(true)
+
 onMounted(async () => {
-  await Promise.all([
-    todosStore.loadTodos(),
-    notesStore.loadNotes(),
-    diaryStore.loadDiary(),
-    countdownsStore.loadCountdowns(),
-    healthStore.loadHealth(),
-    ledgerStore.loadLedger(),
-    sitesStore.loadSites(),
-    pomodoroStore.loadPomodoro(),
-    genealogyStore.load()
-  ])
-  // 习惯面板自管理数据加载（不接入上方 Promise.all，仿 WorkbenchPomodoro onMounted 自加载）
-  await habitsStore.loadHabits()
+  try {
+    await Promise.all([
+      todosStore.loadTodos(),
+      notesStore.loadNotes(),
+      diaryStore.loadDiary(),
+      countdownsStore.loadCountdowns(),
+      healthStore.loadHealth(),
+      ledgerStore.loadLedger(),
+      sitesStore.loadSites(),
+      pomodoroStore.loadPomodoro(),
+      genealogyStore.load()
+    ])
+    // 习惯面板自管理数据加载（不接入上方 Promise.all，仿 WorkbenchPomodoro onMounted 自加载）
+    await habitsStore.loadHabits()
+  } finally {
+    // 即使某个 store 加载失败也要收起骨架屏，避免卡在占位状态
+    initializing.value = false
+  }
   // 进入工作台自动快照（fire-and-forget：非阻塞、静默失败，绝不阻塞渲染；同日去重由 captureSnapshot 处理）
   captureSnapshot().catch(() => {})
 })
@@ -276,17 +297,20 @@ async function handleSyncNowClick(): Promise<void> {
       </nav>
 
       <main class="wb-content">
-        <WorkbenchHome v-if="activeSection === 'home'" @navigate="navigateTo" />
-        <WorkbenchTodo v-else-if="activeSection === 'todos'" />
-        <WorkbenchNotes v-else-if="activeSection === 'notes'" />
-        <WorkbenchDiary v-else-if="activeSection === 'diary'" />
-        <WorkbenchCountdown v-else-if="activeSection === 'countdowns'" />
-        <WorkbenchPomodoro v-else-if="activeSection === 'pomodoro'" />
-        <WorkbenchHabits v-else-if="activeSection === 'habits'" />
-        <WorkbenchPassword v-else-if="activeSection === 'passwords'" />
-        <WorkbenchHealth v-else-if="activeSection === 'health'" :active-tab="activeHealthTab" @change="activeHealthTab = $event" />
-        <WorkbenchLedger v-else-if="activeSection === 'ledger'" />
-        <WorkbenchGenealogy v-else-if="activeSection === 'genealogy'" />
+        <SkeletonBlock v-if="initializing" :rows="5" label="正在加载工作台数据" />
+        <template v-else>
+          <WorkbenchHome v-if="activeSection === 'home'" @navigate="navigateTo" />
+          <WorkbenchTodo v-else-if="activeSection === 'todos'" />
+          <WorkbenchNotes v-else-if="activeSection === 'notes'" />
+          <WorkbenchDiary v-else-if="activeSection === 'diary'" />
+          <WorkbenchCountdown v-else-if="activeSection === 'countdowns'" />
+          <WorkbenchPomodoro v-else-if="activeSection === 'pomodoro'" />
+          <WorkbenchHabits v-else-if="activeSection === 'habits'" />
+          <WorkbenchPassword v-else-if="activeSection === 'passwords'" />
+          <WorkbenchHealth v-else-if="activeSection === 'health'" :active-tab="activeHealthTab" @change="activeHealthTab = $event" />
+          <WorkbenchLedger v-else-if="activeSection === 'ledger'" />
+          <WorkbenchGenealogy v-else-if="activeSection === 'genealogy'" />
+        </template>
       </main>
     </div>
 
@@ -636,17 +660,18 @@ html.dark .wb-content {
     white-space: nowrap;
   }
 
-  /* P3-14 移动端触控目标 ≥40px（侧栏菜单项 / 头部按钮） */
+  /* 移动端触控目标 ≥44px（侧栏菜单项 / 头部按钮）：
+     原为 40px，低于 iOS/Android 44px 触控下限，误触率偏高 */
   .wb-menu-item {
-    min-height: 40px;
-    min-width: 40px;
+    min-height: 44px;
+    min-width: 44px;
   }
 
   .wb-btn {
-    min-height: 40px;
+    min-height: 44px;
   }
 
-  /* P3-13 窄屏间距压缩：内容区内边距收窄；底部留白避让固定 Tab Bar（40px 触控 + 内边距 + 安全区） */
+  /* 窄屏间距压缩：内容区内边距收窄；底部留白避让固定 Tab Bar（44px 触控 + 内边距 + 安全区） */
   .wb-content {
     padding: 12px 12px calc(64px + env(safe-area-inset-bottom, 0px));
   }

@@ -38,7 +38,7 @@ defineProps<{
   flex-wrap: wrap;
 }
 
-/* 移动端：标题与操作区换行堆叠，避免窄屏按钮被挤出；触控目标 ≥40px */
+/* 移动端：标题与操作区换行堆叠，避免窄屏按钮被挤出；触控目标 ≥44px */
 @media (max-width: 768px) {
   .st-toolbar {
     flex-direction: column;
@@ -49,7 +49,7 @@ defineProps<{
     width: 100%;
   }
   .st-actions > * {
-    min-height: 40px;
+    min-height: 44px;
   }
 }
 </style>
