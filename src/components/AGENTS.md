@@ -8,7 +8,8 @@
 
 ```
 components/
-├── SiteModal.vue         # Add/edit bookmark modal (auto-fetch metadata, 1175 lines — largest file)；支持 embedded 内嵌模式
+├── SiteModal.vue         # Add/edit bookmark modal；支持 embedded 内嵌模式；「选择图标」改为弹框（site-icon-picker-btn → IconPickerDialog，选中即回填并关闭，取消/遮罩/ESC 不改原值；弹框必须放在 <form> 之外，否则弹框内回车会误提交新增网址）；原内联 .icon-picker-panel 已删除，仅保留手动图标 URL 输入（site-icon-url-input + 应用）
+├── IconPickerDialog.vue  # 图标选择弹框（.ipd-*，z-index 400 高于设置弹窗）：预置 + 自定义图标库，搜索 .ipd-search / 分类 .ipd-cats / 网格 .ipd-item；搜索框上方新增「导入图标 / 上传图标」（ipd-import-btn/ipd-upload-btn + 隐藏 file input ipd-import-input/ipd-upload-input），校验与提示同图标管理页：上传限 image/* 且 ≤500KB（超限/非图片/读取失败/配额不足均有 toast），导入限 version=1 + icons 数组（非法 JSON/结构错/保存失败均有 toast）；成功后清空筛选并 toast，新图标即时出现在列表且可选中
 ├── GlobalSearch.vue      # Multi-engine search bar (583 lines)
 ├── BackgroundManager.vue # Background image picker (876 lines)；支持 embedded 内嵌模式
 ├── BackupManager.vue     # Import/export UI；支持 embedded 内嵌模式
