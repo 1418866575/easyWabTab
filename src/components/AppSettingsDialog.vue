@@ -341,15 +341,15 @@ const NAV_GROUPS: NavGroup[] = [
     key: 'nav',
     label: '导航站',
     items: [
+      // 「弹窗尺寸 nav-size」与「备份 nav-backup」已从菜单移除（不再显示入口，页面代码保留备用）；
+      // 「图标管理」按需求提到第 2 位（紧跟备份恢复）
       { key: 'nav-backup-restore', label: '备份恢复', icon: 'save', tab: 'nav', sub: 'nav-backup-restore' },
+      { key: 'nav-icons', label: '图标管理', icon: 'palette', tab: 'nav', sub: 'nav-icons' },
       { key: 'nav-add-site', label: '添加网址', icon: 'plus', tab: 'nav', sub: 'nav-add-site' },
       { key: 'nav-check-links', label: '检测断链', icon: 'link', tab: 'nav', sub: 'nav-check-links' },
       { key: 'nav-engines', label: '引擎管理', icon: 'search', tab: 'nav', sub: 'nav-engines' },
       { key: 'nav-background', label: '背景', icon: 'image', tab: 'nav', sub: 'nav-background' },
       { key: 'nav-category', label: '分类管理', icon: 'cog', tab: 'nav', sub: 'nav-category' },
-      { key: 'nav-backup', label: '备份', icon: 'package', tab: 'nav', sub: 'nav-backup' },
-      { key: 'nav-icons', label: '图标管理', icon: 'palette', tab: 'nav', sub: 'nav-icons' },
-      { key: 'nav-size', label: '弹窗尺寸', icon: 'package', tab: 'nav', sub: 'nav-size' },
       { key: 'nav-data', label: '数据清理', icon: 'trash', tab: 'nav', sub: 'nav-data' }
     ]
   },
@@ -2348,7 +2348,7 @@ onUnmounted(() => {
         <!-- 数据清理（导航设置 tab - 数据清理）：危险操作，清空各模块数据，需二次确认 -->
         <div v-if="activeTab === 'nav' && activeSubTab === 'nav-data'" class="wb-menu-config">
           <h3 class="wb-menu-title">数据清理</h3>
-          <p class="wb-menu-hint">以下操作将永久删除对应模块的数据且不可恢复，请谨慎操作。建议先到「备份恢复」导出网址，或到「备份」留存快照。</p>
+          <p class="wb-menu-hint">以下操作将永久删除对应模块的数据且不可恢复，请谨慎操作。建议先到「备份恢复」导出网址留存数据。</p>
           <div class="site-actions-grid" data-testid="stg-data-actions">
             <button type="button" class="site-action-btn" data-testid="stg-clear-wb" @click="confirmClear('workbench')"><Icon name="trash" /> 清空个人工作台</button>
             <button type="button" class="site-action-btn" data-testid="stg-clear-biz" @click="confirmClear('business')"><Icon name="trash" /> 清空记账管理</button>

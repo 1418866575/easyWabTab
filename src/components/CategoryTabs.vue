@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useSitesStore } from '../stores/sites'
 import { useCategoriesStore } from '../stores/categories'
+import { isImageIcon } from '../composables/categoryIcon'
 
 const store = useSitesStore()
 const categoriesStore = useCategoriesStore()
@@ -57,7 +58,9 @@ const handleCategoryClick = (categoryId: string) => {
         :class="{ active: store.selectedCategory === cat.id }"
         @click="handleCategoryClick(cat.id)"
       >
-        {{ cat.icon }} {{ cat.name }}
+        <img v-if="isImageIcon(cat.icon)" :src="cat.icon" class="cat-tab-icon" alt="" />
+        <span v-else class="cat-tab-emoji">{{ cat.icon }}</span>
+        {{ cat.name }}
         <span class="category-count">({{ countByCategory[cat.id] ?? 0 }})</span>
       </button>
     </div>
@@ -91,6 +94,19 @@ const handleCategoryClick = (categoryId: string) => {
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+}
+
+/* 分类图标：图片（图标库）与旧 emoji 文本两种形态共存 */
+.cat-tab-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+  object-fit: contain;
+  vertical-align: -3px;
+}
+
+.cat-tab-emoji {
+  margin-right: 2px;
 }
 
 .category-tab:hover {

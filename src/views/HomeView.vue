@@ -32,6 +32,7 @@ import { useAppSettingsStore } from '../stores/settings'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { useHelpModal } from '../composables/useHelpModal'
 import { useCloudSync } from '../composables/useCloudSync'
+import { isImageIcon } from '../composables/categoryIcon'
 import type { SyncStatus } from '../composables/useCloudSync'
 
 const store = useSitesStore()
@@ -508,7 +509,10 @@ onUnmounted(() => {
             :class="{ active: store.selectedCategory === cat.id }"
             @click="selectCategory(cat.id)"
           >
-            <span class="nav-menu-icon">{{ cat.icon }}</span>
+            <span class="nav-menu-icon">
+              <img v-if="isImageIcon(cat.icon)" :src="cat.icon" class="nav-menu-icon-img" alt="" />
+              <template v-else>{{ cat.icon }}</template>
+            </span>
             <span class="nav-menu-label">{{ cat.name }}</span>
             <span class="nav-menu-count">{{ countByCategory[cat.id] ?? 0 }}</span>
           </button>
@@ -780,10 +784,21 @@ onUnmounted(() => {
   outline-offset: 1px;
 }
 .nav-menu-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 20px;
+  height: 20px;
   flex: none;
   text-align: center;
   font-size: 15px;
+  overflow: hidden;
+}
+/* 分类图标来自图标管理时为图片地址，按图片渲染（旧的 emoji 仍走文本） */
+.nav-menu-icon-img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
 }
 .nav-menu-label {
   flex: 1;
