@@ -13,14 +13,21 @@ const categoriesStore = useCategoriesStore()
 const sitesStore = useSitesStore()
 const iconsStore = useIconsStore()
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   site: Site | null
-}>()
+  /** embedded = true：作为常驻面板内嵌在设置页（无遮罩、无自带标题栏、不响应遮罩点击关闭） */
+  embedded?: boolean
+}>(), { embedded: false })
 
 const emit = defineEmits<{
   save: [site: Site]
   close: []
 }>()
+
+/** 遮罩点击关闭：仅弹框模式生效（内嵌面板点击空白不应关闭） */
+function onOverlayClick(): void {
+  if (!props.embedded) emit('close')
+}
 
 const form = ref({
   name: '',
@@ -355,9 +362,9 @@ const handleSubmit = () => {
 
 <template>
   <Transition name="modal">
-    <div class="modal-overlay" @click.self="emit('close')">
-      <div class="modal">
-      <div class="modal-header">
+    <div :class="embedded ? 'mgr-embed' : 'modal-overlay'" @click.self="onOverlayClick">
+      <div :class="embedded ? 'mgr-embed-inner' : 'modal'">
+      <div v-if="!embedded" class="modal-header">
         <h2>{{ isEditing ? '编辑网站' : '添加网站' }}</h2>
         <button class="close-btn" @click="emit('close')"><Icon name="close" /></button>
       </div>
@@ -564,7 +571,7 @@ const handleSubmit = () => {
         -->
 
         <div class="modal-footer">
-          <button type="button" class="btn-cancel" @click="emit('close')">取消</button>
+          <button v-if="!embedded" type="button" class="btn-cancel" @click="emit('close')">取消</button>
           <button type="submit" class="btn-submit">
             {{ isEditing ? '保存' : '添加' }}
           </button>
@@ -1196,5 +1203,30 @@ const handleSubmit = () => {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* ============================================================
+   embedded 模式：常驻面板内嵌在「设置 → 导航站 → 添加网址」
+   无遮罩 / 无固定定位，宽度撑满父面板，超高由外层面板滚动。
+   ============================================================ */
+.mgr-embed {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  display: block;
+  width: 100%;
+  padding: 0;
+  background-color: transparent;
+  overflow: visible;
+}
+
+.mgr-embed-inner {
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+  border-radius: 12px;
+  background-color: var(--color-bg-card, #fff);
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
 }
 </style>

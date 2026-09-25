@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, computed, onMounted, onUnmounted, watch, nextTick, toRaw } from 'vue'
+import { reactive, ref, computed, onMounted, onUnmounted, watch, nextTick, toRaw, defineAsyncComponent, type Component } from 'vue'
 import { showConfirm, toastAlert } from '@/utils/dialog'
 import {
   useAppSettingsStore,
@@ -19,7 +19,7 @@ import { isEmailConfigured, buildEmailParams } from '@/composables/reminderCore'
 import { sendReminderEmail } from '@/composables/reminderEmail'
 import { requestNotifyPermission } from '@/composables/useDesktopNotify'
 import yaml from 'js-yaml'
-import { useRouter } from 'vue-router'
+import type { Site } from '@/types'
 import { ICP_NUMBER, PSB_NUMBER, MIIT_BEIAN_URL } from '@/config/beian'
 import { useSitesStore } from '@/stores/sites'
 import { useSearchEnginesStore } from '@/stores/searchEngines'
@@ -60,6 +60,14 @@ import BusinessCategoryManager from '@/components/business/BusinessCategoryManag
 import StudentTimetableConfig from '@/components/student/StudentTimetableConfig.vue'
 import TeacherDataManage from '@/components/teacher/TeacherDataManage.vue'
 import TeacherHelp from '@/components/teacher/TeacherHelp.vue'
+// 导航站管理类组件：原本是「设置里点按钮 → 关闭设置 → 弹框」的二级弹窗，现改为内嵌常驻面板
+// （embedded 模式）。沿用 defineAsyncComponent 懒加载，避免把 6 个大组件打进设置页 chunk。
+const SiteModal = defineAsyncComponent(() => import('@/components/SiteModal.vue'))
+const SearchEngineManager = defineAsyncComponent(() => import('@/components/SearchEngineManager.vue'))
+const BackgroundManager = defineAsyncComponent(() => import('@/components/BackgroundManager.vue'))
+const CategoryManager = defineAsyncComponent(() => import('@/components/CategoryManager.vue'))
+const BackupManager = defineAsyncComponent(() => import('@/components/BackupManager.vue'))
+const IconManager = defineAsyncComponent(() => import('@/components/IconManager.vue'))
 // 教师工作台 .tw-* 全局样式：设置页内嵌 TeacherDataManage / TeacherHelp 时依赖，
 // 非 /teacher 路由（source='all'）打开设置也能正常渲染这些组件
 import '@/styles/teacher.css'
@@ -72,7 +80,21 @@ const DIALOG_IDS = Object.keys(DIALOG_DEFAULTS) as DialogId[]
 // 当前激活的设置分组 tab（导航设置 / 工作台设置 / 提醒设置 / 销售记账 / 学生工作台 / 教师工作台 / 云同步）
 type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'teacher' | 'sync'
 // 子 tab keys：每个主 tab 下的子分组（仅内容多的主 tab 定义）
-type NavSubTab = 'nav-appearance' | 'nav-display' | 'nav-site' | 'nav-size' | 'nav-data'
+// 导航站子 tab：原「站点管理」九动作已整体拆为独立页——导入/导出合并为「备份恢复」，
+// 其余各动作一页一项（菜单名沿用原按钮名：添加网址 / 检测断链 / 引擎管理 / 背景 / 分类管理 / 备份 / 图标管理）
+type NavSubTab =
+  | 'nav-appearance'
+  | 'nav-display'
+  | 'nav-backup-restore'
+  | 'nav-add-site'
+  | 'nav-check-links'
+  | 'nav-engines'
+  | 'nav-background'
+  | 'nav-category'
+  | 'nav-backup'
+  | 'nav-icons'
+  | 'nav-size'
+  | 'nav-data'
 type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-todo-cat' | 'wb-cd-cat' | 'wb-note-cat' | 'wb-pwd-cat' | 'wb-diary-cat' | 'wb-diary-journals' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
 type BizSubTab = 'biz-base' | 'biz-backup' | 'biz-cat' | 'biz-product-cat' | 'biz-expense-cat'
 type StuSubTab = 'stu-stage' | 'stu-info' | 'stu-subject' | 'stu-timetable' | 'stu-menu'
@@ -126,11 +148,18 @@ interface SubTabDef { key: SubTabKey; label: string }
 /** 主 tab → 子 tab 列表（顺序即显示顺序，第一个 = 默认选中） */
 const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student' | 'teacher', SubTabDef[]> = {
   nav: [
-    { key: 'nav-appearance', label: '站点外观' },
-    { key: 'nav-display', label: '显示控制' },
-    { key: 'nav-site',    label: '站点管理' },
-    { key: 'nav-size',    label: '弹窗尺寸' },
-    { key: 'nav-data',    label: '数据清理' }
+    { key: 'nav-appearance',      label: '站点外观' },
+    { key: 'nav-display',         label: '显示控制' },
+    { key: 'nav-backup-restore',  label: '备份恢复' },
+    { key: 'nav-add-site',        label: '添加网址' },
+    { key: 'nav-check-links',     label: '检测断链' },
+    { key: 'nav-engines',         label: '引擎管理' },
+    { key: 'nav-background',      label: '背景' },
+    { key: 'nav-category',        label: '分类管理' },
+    { key: 'nav-backup',          label: '备份' },
+    { key: 'nav-icons',           label: '图标管理' },
+    { key: 'nav-size',            label: '弹窗尺寸' },
+    { key: 'nav-data',            label: '数据清理' }
   ],
   wb: [
     { key: 'wb-city',     label: '天气城市' },
@@ -293,7 +322,14 @@ const NAV_GROUPS: NavGroup[] = [
     label: '导航站',
     items: [
       { key: 'nav-appearance', label: '站点外观', icon: 'monitor', tab: 'nav', sub: 'nav-appearance' },
-      { key: 'nav-site', label: '站点管理', icon: 'folder', tab: 'nav', sub: 'nav-site' },
+      { key: 'nav-backup-restore', label: '备份恢复', icon: 'save', tab: 'nav', sub: 'nav-backup-restore' },
+      { key: 'nav-add-site', label: '添加网址', icon: 'plus', tab: 'nav', sub: 'nav-add-site' },
+      { key: 'nav-check-links', label: '检测断链', icon: 'link', tab: 'nav', sub: 'nav-check-links' },
+      { key: 'nav-engines', label: '引擎管理', icon: 'search', tab: 'nav', sub: 'nav-engines' },
+      { key: 'nav-background', label: '背景', icon: 'image', tab: 'nav', sub: 'nav-background' },
+      { key: 'nav-category', label: '分类管理', icon: 'cog', tab: 'nav', sub: 'nav-category' },
+      { key: 'nav-backup', label: '备份', icon: 'package', tab: 'nav', sub: 'nav-backup' },
+      { key: 'nav-icons', label: '图标管理', icon: 'palette', tab: 'nav', sub: 'nav-icons' },
       { key: 'nav-size', label: '弹窗尺寸', icon: 'package', tab: 'nav', sub: 'nav-size' },
       { key: 'nav-data', label: '数据清理', icon: 'trash', tab: 'nav', sub: 'nav-data' }
     ]
@@ -439,20 +475,84 @@ async function syncVercount() {
 }
 
 // ========================================
-// 站点管理（导航设置 tab）：原导航站工具栏九动作的迁移入口。
-// 弹窗类动作 = 先关本设置弹窗，再经 URL query 打开目标（与 HomeView 既有 URL 协议一致）；
-// 纯动作（导出/检测断链/导入）= 就地执行，不关设置。
+// 导航站动作页（原「站点管理」九动作拆分后的独立页）
+// 纯动作（导出/检测断链/导入）= 在各自页面内就地执行；
+// 原「弹窗类动作」= 组件以 embedded 模式内嵌为常驻面板，进入菜单即可直接操作，不再二次点击。
 // ========================================
-const router = useRouter()
 const sitesStore = useSitesStore()
 const enginesStore = useSearchEnginesStore()
 const siteImportInput = ref<HTMLInputElement | null>(null)
 
-type SiteActionModalKey = 'add' | 'engines' | 'background' | 'category' | 'backup' | 'icons'
+/**
+ * 内嵌面板页配置：一页一项，菜单名 = 原按钮名。
+ * 顺序 = 原「站点管理」九动作网格顺序（导入/导出合并为备份恢复页后剩下的部分）。
+ */
+interface NavEmbedPage {
+  sub: NavSubTab
+  title: string
+  /** 内嵌的管理组件（均以 embedded 模式渲染） */
+  comp: Component
+  /** 传给组件的额外 props（SiteModal 需要 site=null 表示新增） */
+  props?: Record<string, unknown>
+  hint: string
+  testid: string
+}
+const NAV_EMBED_PAGES: NavEmbedPage[] = [
+  {
+    sub: 'nav-add-site',
+    title: '添加网址',
+    comp: SiteModal,
+    props: { site: null },
+    testid: 'navpanel-add-site',
+    hint: '填入网址后可自动抓取标题、描述与图标，也可手动选择分类与标签；保存后直接出现在导航站。'
+  },
+  {
+    sub: 'nav-engines',
+    title: '引擎管理',
+    comp: SearchEngineManager,
+    testid: 'navpanel-engines',
+    hint: '管理搜索框可用的搜索引擎（新增、改名、排序、删除），改动即时生效。'
+  },
+  {
+    sub: 'nav-background',
+    title: '背景',
+    comp: BackgroundManager,
+    testid: 'navpanel-background',
+    hint: '设置导航站页面背景：纯色、渐变或上传图片，并可调整模糊与遮罩强度。'
+  },
+  {
+    sub: 'nav-category',
+    title: '分类管理',
+    comp: CategoryManager,
+    testid: 'navpanel-category',
+    hint: '管理网址分类（新增、改名、排序、删除）；内置分类不可删除。'
+  },
+  {
+    sub: 'nav-backup',
+    title: '备份',
+    comp: BackupManager,
+    testid: 'navpanel-backup',
+    hint: '查看与管理自动备份快照：可浏览历史快照并回滚到指定时间点的数据。'
+  },
+  {
+    sub: 'nav-icons',
+    title: '图标管理',
+    comp: IconManager,
+    testid: 'navpanel-icons',
+    hint: '管理图标库与各入口图标：新增自定义图标，或替换工作台入口图标。'
+  }
+]
 
-function openSiteManagerViaQuery(key: SiteActionModalKey) {
-  emit('close')
-  router.push({ query: { modal: key } })
+/** 添加网址（内嵌 SiteModal）提交：与 HomeView 的新增逻辑一致（网址重复时询问是否更新） */
+async function onEmbedSiteSave(site: Site): Promise<void> {
+  const existing = sitesStore.sites.find(s => s.url === site.url)
+  if (existing) {
+    const ok = await showConfirm(`该网址已存在：${existing.name}\n\n确定更新？取消则跳过。`)
+    if (ok) sitesStore.updateSite(site.url, site)
+    return
+  }
+  sitesStore.addSite(site)
+  toast.success('网址已添加')
 }
 
 // ========================================
@@ -2089,13 +2189,34 @@ onUnmounted(() => {
           </p>
         </div>
 
-        <!-- 站点管理（导航设置 tab - 站点管理）：原导航站工具栏九动作迁移入口；弹窗类先关设置再开目标，纯动作就地执行 -->
-        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-site'" class="wb-menu-config">
-          <h3 class="wb-menu-title">站点管理</h3>
-          <div class="site-actions-grid" data-testid="stg-site-actions">
-            <button type="button" class="site-action-btn" data-testid="stg-act-import" @click="triggerSiteImport"><Icon name="download" /> 导入</button>
+        <!-- 备份恢复（导航设置 tab - 备份恢复）：原「站点管理」的导入 + 导出合并为一页，两个动作都在此执行 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-backup-restore'" class="wb-menu-config">
+          <h3 class="wb-menu-title">备份恢复</h3>
+          <p class="wb-menu-hint">
+            导出：把全部网址与搜索引擎保存为 Markdown 文件，便于留存或迁移；
+            导入：从该 Markdown 文件恢复（自动跳过已存在的重复网址），文件中若包含搜索引擎配置也会一并导入。
+            建议定期导出留存。
+          </p>
+          <div class="site-actions-grid" data-testid="stg-backup-restore">
             <button type="button" class="site-action-btn" data-testid="stg-act-export" @click="sitesStore.exportToMarkdown()"><Icon name="upload" /> 导出</button>
-            <button type="button" class="site-action-btn" data-testid="stg-act-add" @click="openSiteManagerViaQuery('add')">＋ 添加网址</button>
+            <button type="button" class="site-action-btn" data-testid="stg-act-import" @click="triggerSiteImport"><Icon name="download" /> 导入</button>
+          </div>
+          <input
+            ref="siteImportInput"
+            type="file"
+            accept=".md,text/markdown"
+            style="display: none"
+            @change="handleSiteImport"
+          />
+        </div>
+
+        <!-- 检测断链（导航设置 tab - 检测断链）：纯动作，就地执行并显示进度 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-check-links'" class="wb-menu-config">
+          <h3 class="wb-menu-title">检测断链</h3>
+          <p class="wb-menu-hint">
+            逐个访问已保存的网址，把访问异常的站点标记出来（按钮上显示当前异常数量）。网址较多时耗时较长，检测中请勿关闭页面。
+          </p>
+          <div class="site-actions-grid">
             <button
               type="button"
               class="site-action-btn"
@@ -2106,39 +2227,27 @@ onUnmounted(() => {
               <span v-if="sitesStore.isCheckingLinks"><Icon name="timer-sand" /> 检测中 ({{ sitesStore.linkCheckProgress?.current }}/{{ sitesStore.linkCheckProgress?.total }})</span>
               <span v-else><Icon name="link" /> 检测断链<span v-if="sitesStore.invalidCount > 0" class="site-invalid-count">({{ sitesStore.invalidCount }})</span></span>
             </button>
-            <button type="button" class="site-action-btn" data-testid="stg-act-engines" @click="openSiteManagerViaQuery('engines')"><Icon name="search" /> 引擎管理</button>
-            <button type="button" class="site-action-btn" data-testid="stg-act-background" @click="openSiteManagerViaQuery('background')"><Icon name="image" /> 背景</button>
-            <button type="button" class="site-action-btn" data-testid="stg-act-category" @click="openSiteManagerViaQuery('category')"><Icon name="cog" /> 分类管理</button>
-            <button type="button" class="site-action-btn" data-testid="stg-act-backup" @click="openSiteManagerViaQuery('backup')"><Icon name="package" /> 备份</button>
-            <button type="button" class="site-action-btn" data-testid="stg-act-icons" @click="openSiteManagerViaQuery('icons')"><Icon name="palette" /> 图标管理</button>
           </div>
-          <input
-            ref="siteImportInput"
-            type="file"
-            accept=".md,text/markdown"
-            style="display: none"
-            @change="handleSiteImport"
-          />
-          <input
-            ref="wbImportInput"
-            type="file"
-            accept=".json,application/json"
-            style="display: none"
-            @change="handleWbImportFile"
-          />
-          <input
-            ref="bizImportInput"
-            type="file"
-            accept=".json,application/json"
-            style="display: none"
-            @change="handleBizImportFile"
-          />
         </div>
+
+        <!-- 导航站管理面板（添加网址 / 引擎管理 / 背景 / 分类管理 / 备份 / 图标管理）：
+             原「点按钮 → 弹框」改为组件以内嵌模式常驻展示，进入菜单即可直接操作；
+             排版与「检测断链」等动作页一致：标题 → 说明 → 内容面板；
+             面板始终展开，内容超出高度时在面板内部滚动，不撑高页面。 -->
+        <template v-for="p in NAV_EMBED_PAGES" :key="p.sub">
+          <div v-if="activeTab === 'nav' && activeSubTab === p.sub" class="nav-embed-page" :data-testid="p.testid">
+            <h3 class="wb-menu-title">{{ p.title }}</h3>
+            <p class="wb-menu-hint">{{ p.hint }}</p>
+            <div :id="`${p.testid}-panel`" class="nav-embed-panel">
+              <component :is="p.comp" embedded v-bind="p.props || {}" @save="onEmbedSiteSave" />
+            </div>
+          </div>
+        </template>
 
         <!-- 数据清理（导航设置 tab - 数据清理）：危险操作，清空各模块数据，需二次确认 -->
         <div v-if="activeTab === 'nav' && activeSubTab === 'nav-data'" class="wb-menu-config">
           <h3 class="wb-menu-title">数据清理</h3>
-          <p class="wb-menu-hint">以下操作将永久删除对应模块的数据且不可恢复，请谨慎操作。建议先到「站点管理」做好备份。</p>
+          <p class="wb-menu-hint">以下操作将永久删除对应模块的数据且不可恢复，请谨慎操作。建议先到「备份恢复」导出网址，或到「备份」留存快照。</p>
           <div class="site-actions-grid" data-testid="stg-data-actions">
             <button type="button" class="site-action-btn" data-testid="stg-clear-wb" @click="confirmClear('workbench')"><Icon name="trash" /> 清空个人工作台</button>
             <button type="button" class="site-action-btn" data-testid="stg-clear-biz" @click="confirmClear('business')"><Icon name="trash" /> 清空记账管理</button>
@@ -3201,6 +3310,23 @@ onUnmounted(() => {
       </div>
       </section>
       </div>
+
+      <!-- 常驻隐藏文件输入框：工作台备份导入 / 销售记账备份导入。
+           原挂在「站点管理」区块内，随该区块移除会导致对应页面的导入按钮失效，故上提为常驻（不随子 tab 显隐）。 -->
+      <input
+        ref="wbImportInput"
+        type="file"
+        accept=".json,application/json"
+        style="display: none"
+        @change="handleWbImportFile"
+      />
+      <input
+        ref="bizImportInput"
+        type="file"
+        accept=".json,application/json"
+        style="display: none"
+        @change="handleBizImportFile"
+      />
     </div>
 
     <!-- 云同步冲突弹框（z-index 高于设置弹窗） -->
@@ -3954,7 +4080,7 @@ html.dark .remind-label {
 }
 
 /* ========================================
-   站点管理（导航设置 tab）：原导航站工具栏九动作按钮网格。
+   导航站动作页（原「站点管理」九动作拆分后的各独立页）：动作按钮网格。
    风格沿用导航站原 .btn-action（白底灰字蓝 hover）；暗色走文件既有 html.dark 变量惯例
    ======================================== */
 .site-actions-grid {
@@ -3991,7 +4117,42 @@ html.dark .remind-label {
   color: #ef4444;
 }
 
-/* 站点管理暗色模式 */
+/* ============================================================
+   导航站管理面板：原二级弹框内容以 embedded 模式常驻展示。
+   排版与「检测断链」等动作页一致：标题 → 说明 → 内容面板（单栏铺满）。
+   高度受限 + 内部滚动，内容再多也不会撑高设置页；窄屏放宽可视高度。
+   ============================================================ */
+.nav-embed-page {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nav-embed-page .wb-menu-title {
+  margin: 0;
+}
+
+.nav-embed-page .wb-menu-hint {
+  margin: 0;
+}
+
+/* 面板本体：限制高度、内部纵向滚动（overscroll-behavior 防止滚动穿透到设置页） */
+.nav-embed-panel {
+  min-width: 0;
+  width: 100%;
+  max-height: min(52vh, 520px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* 窄屏（手机）：放宽面板可视高度，保证表单与列表可用 */
+@media (max-width: 768px) {
+  .nav-embed-panel {
+    max-height: 56vh;
+  }
+}
+
+/* 站点管理暗色模式（动作按钮沿用至拆分后的各独立页） */
 html.dark .site-action-btn {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);

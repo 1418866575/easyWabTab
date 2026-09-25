@@ -5,14 +5,23 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useIconsStore, type MergedIcon, type CustomIcon, type IconExportData } from '@/stores/icons'
 import { PRESET_ICONS, type PresetIcon } from '@/composables/presetIcons'
 
+/** embedded = true：作为常驻面板内嵌在设置页（无遮罩、无自带标题栏、不响应 ESC 与遮罩点击关闭） */
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+
 const emit = defineEmits<{
   close: []
 }>()
 
 const store = useIconsStore()
 
-// ESC 键关闭弹框
+/** 遮罩点击关闭：仅弹框模式生效（内嵌面板点击空白不应关闭） */
+function onOverlayClick(): void {
+  if (!props.embedded) emit('close')
+}
+
+// ESC 键关闭弹框（内嵌模式下交给外层容器处理，避免把整个设置页一起关掉）
 function handleKeydown(event: KeyboardEvent) {
+  if (props.embedded) return
   if (event.key === 'Escape') {
     event.preventDefault()
     emit('close')
@@ -222,9 +231,9 @@ function getIconId(icon: MergedIcon): string {
 
 <template>
   <Transition name="dialog">
-  <div class="manager-overlay" @click.self="emit('close')">
-    <div class="manager">
-      <div class="manager-header">
+  <div :class="embedded ? 'mgr-embed' : 'manager-overlay'" @click.self="onOverlayClick">
+    <div :class="embedded ? 'mgr-embed-inner' : 'manager'">
+      <div v-if="!embedded" class="manager-header">
         <h2><Icon name="palette" /> 图标管理</h2>
         <button class="close-btn" @click="emit('close')"><Icon name="close" /></button>
       </div>
@@ -660,5 +669,30 @@ function getIconId(icon: MergedIcon): string {
   color: #94a3b8;
   font-size: 14px;
   padding: 40px 20px;
+}
+
+/* ============================================================
+   embedded 模式：常驻面板内嵌在「设置 → 导航站 → 图标管理」
+   无遮罩 / 无固定定位，宽度撑满父面板，超高由外层面板滚动。
+   ============================================================ */
+.mgr-embed {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  display: block;
+  width: 100%;
+  padding: 0;
+  background-color: transparent;
+  overflow: visible;
+}
+
+.mgr-embed-inner {
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+  border-radius: 12px;
+  background-color: var(--color-bg-card, #fff);
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
 }
 </style>
