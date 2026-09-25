@@ -253,7 +253,7 @@ export interface AppSettingsData {
   reminderEmailTemplateId?: string // EmailJS Template ID
   reminderEmailPublicKey?: string // EmailJS Public Key
   workbenchPageName?: string           // 工作台页面自定义名称（默认 '工作台'）
-  workbenchPageVisible?: boolean       // 工作台页面可见性开关（默认 false：用户在设置 → 主题与外观 → 页面导航主动打开后才显示）
+  workbenchPageVisible?: boolean       // 工作台页面可见性开关（默认 false：用户在设置 → 个性化 → 工作台设置 主动打开后才显示）
   businessPageName?: string            // 销售记账页面自定义名称（默认 '销售记账'）
   businessPageVisible?: boolean        // 销售记账页面可见性开关（默认 true）
   businessActiveSection?: string       // 销售记账工作台当前模块（home/products/purchases/daily/expenses/inventory/stats；缺失 = 首页）
@@ -267,6 +267,9 @@ export interface AppSettingsData {
   teacherPageIcon?: string             // 教师工作台入口自定义图标（空串或缺失 = 内置默认）
   workbenchManageName?: string         // 导航站右上角「工作台管理」按钮自定义名称（默认 '工作台管理'）
   workbenchManageVisible?: boolean     // 「工作台管理」按钮可见性开关（默认 true；缺失 = 显示）
+  workbenchManageIcon?: string         // 「工作台管理」按钮自定义图标（图标库路径 / dataUrl；空串或缺失 = 用内置默认图标）
+  countdownButtonName?: string         // 导航站右上角「倒计时」按钮自定义名称（默认 '倒计时'）
+  countdownButtonVisible?: boolean     // 「倒计时」按钮可见性开关（默认 true；缺失 = 显示）
   cloudSyncEnabled?: boolean           // 云同步总开关（默认 false）
   cloudSyncUrl?: string                // WebDAV URL（空串 = 未配置）
   cloudSyncUsername?: string           // WebDAV 用户名（空串 = 未配置）

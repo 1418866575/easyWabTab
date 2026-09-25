@@ -440,7 +440,7 @@ onUnmounted(() => {
   <!-- 顶部统一 App Bar：左=教师台/工作台/销售台/学生台入口（教师台居首），右=同步/设置/帮助/倒计时；主题与经典侧边栏已迁入 设置→导航设置→显示控制 -->
   <div ref="appBarRef" class="app-bar">
     <div class="app-bar-left">
-      <!-- 工作台管理：按钮 + 正下方弹出面板（卡片列表）；可在 设置 → 主题与外观 → 页面导航 中关闭 / 改名 -->
+      <!-- 工作台管理：按钮 + 正下方弹出面板（卡片列表）；可在 设置 → 个性化 → 工作台设置 中关闭 / 改名 -->
       <WorkbenchManagePanel />
     </div>
     <div class="app-bar-right">
@@ -455,7 +455,15 @@ onUnmounted(() => {
       >{{ syncLabel }}</button>
       <button class="btn-help" @click="showSettingsDialog = true" title="设置" aria-label="设置">设置</button>
       <button class="btn-help" @click="openHelp" title="帮助" aria-label="帮助">帮助</button>
-      <button class="btn-help" @click="showCountdownModal = true" title="倒计时" aria-label="倒计时">倒计时</button>
+      <!-- 倒计时按钮：可在 设置 → 个性化 → 主题 中关闭 / 改名 -->
+      <button
+        v-if="settingsStore.countdownButtonVisible !== false"
+        class="btn-help"
+        data-testid="home-countdown-btn"
+        @click="showCountdownModal = true"
+        :title="settingsStore.countdownButtonDisplayName"
+        :aria-label="settingsStore.countdownButtonDisplayName"
+      >{{ settingsStore.countdownButtonDisplayName }}</button>
 
     </div>
   </div>

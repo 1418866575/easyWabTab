@@ -85,6 +85,7 @@ type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'teache
 type NavSubTab =
   | 'nav-appearance'
   | 'nav-display'
+  | 'nav-workbench'
   | 'nav-backup-restore'
   | 'nav-add-site'
   | 'nav-check-links'
@@ -150,6 +151,7 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student' | 'teacher', SubTab
   nav: [
     { key: 'nav-appearance',      label: '站点外观' },
     { key: 'nav-display',         label: '显示控制' },
+    { key: 'nav-workbench',       label: '工作台设置' },
     { key: 'nav-backup-restore',  label: '备份恢复' },
     { key: 'nav-add-site',        label: '添加网址' },
     { key: 'nav-check-links',     label: '检测断链' },
@@ -229,12 +231,13 @@ const teacherStore = useTeacherStore()
 // ========================================
 // 入口图标选择（工作台 / 销售记账 / 学生 / 教师）：图标来自图标管理库，弹框形式选择
 // ========================================
-type IconTarget = 'workbench' | 'business' | 'student' | 'teacher'
+type IconTarget = 'workbench' | 'business' | 'student' | 'teacher' | 'manage'
 const ICON_TARGET_LABEL: Record<IconTarget, string> = {
   workbench: '工作台',
   business: '销售记账',
   student: '学生工作台',
-  teacher: '教师工作台'
+  teacher: '教师工作台',
+  manage: '工作台管理'
 }
 /** 当前正在编辑哪个入口的图标（空串 = 弹框关闭） */
 const iconPickerTarget = ref<IconTarget | ''>('')
@@ -253,6 +256,7 @@ const iconPickerCurrent = computed(() => {
     case 'business': return store.businessPageIcon
     case 'student': return store.studentPageIcon
     case 'teacher': return store.teacherPageIcon
+    case 'manage': return store.workbenchManageIcon
     default: return ''
   }
 })
@@ -263,6 +267,7 @@ function onPickIcon(src: string): void {
     case 'business': store.setBusinessPageIcon(src); break
     case 'student': store.setStudentPageIcon(src); break
     case 'teacher': store.setTeacherPageIcon(src); break
+    case 'manage': store.setWorkbenchManageIcon(src); break
     default: break
   }
   closeIconPicker()
@@ -314,7 +319,9 @@ const NAV_GROUPS: NavGroup[] = [
     key: 'personal',
     label: '个性化',
     items: [
-      { key: 'theme', label: '主题与外观', icon: 'palette', tab: 'nav', sub: 'nav-display' }
+      { key: 'theme', label: '主题', icon: 'palette', tab: 'nav', sub: 'nav-display' },
+      { key: 'nav-workbench', label: '工作台设置', icon: 'toolbox', tab: 'nav', sub: 'nav-workbench' },
+      { key: 'nav-appearance', label: '站点外观', icon: 'monitor', tab: 'nav', sub: 'nav-appearance' }
     ]
   },
   {
@@ -329,7 +336,6 @@ const NAV_GROUPS: NavGroup[] = [
     key: 'nav',
     label: '导航站',
     items: [
-      { key: 'nav-appearance', label: '站点外观', icon: 'monitor', tab: 'nav', sub: 'nav-appearance' },
       { key: 'nav-backup-restore', label: '备份恢复', icon: 'save', tab: 'nav', sub: 'nav-backup-restore' },
       { key: 'nav-add-site', label: '添加网址', icon: 'plus', tab: 'nav', sub: 'nav-add-site' },
       { key: 'nav-check-links', label: '检测断链', icon: 'link', tab: 'nav', sub: 'nav-check-links' },
@@ -2013,11 +2019,79 @@ onUnmounted(() => {
           </p>
         </div>
 
-        <!-- 页面导航名称与可见性（导航设置 tab - 显示控制） -->
+        <!-- 倒计时按钮（导航站右上角）：名称 + 开关；固定文本按钮，不支持自定义图标 -->
         <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
-          <h3 class="wb-menu-title">页面导航</h3>
+          <div class="wb-menu-head">
+            <span class="wb-menu-label">倒计时</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                :value="store.countdownButtonName"
+                placeholder="倒计时"
+                maxlength="20"
+                data-testid="countdown-button-name-input"
+                @input="store.setCountdownButtonName(($event.target as HTMLInputElement).value)"
+              />
+              <button type="button" class="switch-btn"
+                :class="{ on: store.countdownButtonVisible !== false }"
+                role="switch"
+                :aria-checked="store.countdownButtonVisible !== false"
+                data-testid="countdown-button-visible-switch"
+                @click="store.setCountdownButtonVisible(store.countdownButtonVisible === false)">
+                <span class="switch-thumb"></span>
+              </button>
+            </div>
+          </div>
+          <p class="wb-menu-hint">
+            控制导航站右上角「倒计时」按钮的显示与名称。开启后点击按钮打开倒计时弹框，可查看与管理工作台里的倒计时；关闭后该按钮不再出现在右上角。
+          </p>
+        </div>
 
-          <!-- 工作台 -->
+        <!-- 工作台设置（个性化 → 工作台设置）：5 项各自独立成一个配置块，不再有「页面导航」分组标题；
+             块内顺序 = 工作台管理 → 工作台 → 销售记账 → 学生工作台 → 教师工作台 -->
+
+        <!-- 工作台管理（导航站右上角按钮）：名称 + 图标 + 开关，排在工作台设置首位 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-workbench'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <span class="wb-menu-label">工作台管理</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                :value="store.workbenchManageName"
+                placeholder="工作台管理"
+                maxlength="20"
+                @input="store.setWorkbenchManageName(($event.target as HTMLInputElement).value)"
+              />
+              <button
+                type="button"
+                class="wb-menu-icon-btn"
+                :class="{ 'is-set': !!store.workbenchManageIcon }"
+                :title="store.workbenchManageIcon ? '已设置图标，点击更换' : '选择图标'"
+                data-testid="workbench-manage-icon-btn"
+                @click="openIconPicker('manage')"
+              >
+                <img v-if="store.workbenchManageIcon" :src="store.workbenchManageIcon" alt="" class="wb-menu-icon-img" />
+                <Icon v-else name="image" />
+              </button>
+              <button type="button" class="switch-btn"
+                :class="{ on: store.workbenchManageVisible !== false }"
+                role="switch"
+                :aria-checked="store.workbenchManageVisible !== false"
+                data-testid="workbench-manage-visible-switch"
+                @click="store.setWorkbenchManageVisible(store.workbenchManageVisible === false)">
+                <span class="switch-thumb"></span>
+              </button>
+            </div>
+          </div>
+          <p class="wb-menu-hint">
+            控制导航站左上角「工作台管理」按钮的显示、名称与图标。开启后点击按钮，在按钮正下方弹出面板，以卡片形式列出已启用的工作台（被关闭的工作台不出现在面板中）；点「选择图标」可从图标库（预置图标 + 已上传的自定义图标）为按钮挑选图标，未设置时使用内置默认图标。
+          </p>
+        </div>
+
+        <!-- 工作台 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-workbench'" class="wb-menu-config">
           <div class="wb-menu-head">
             <span class="wb-menu-label">工作台</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -2053,8 +2127,10 @@ onUnmounted(() => {
           <p class="wb-menu-hint">
             控制「工作台管理」面板中是否显示工作台，默认关闭：打开后面板出现工作台卡片，设置里也会出现工作台与提醒设置；关闭则一并隐藏。
           </p>
+        </div>
 
-          <!-- 销售记账 -->
+        <!-- 销售记账 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-workbench'" class="wb-menu-config">
           <div class="wb-menu-head">
             <span class="wb-menu-label">销售记账</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -2090,8 +2166,10 @@ onUnmounted(() => {
           <p class="wb-menu-hint">
             控制「工作台管理」面板中是否显示销售记账。关闭后面板中不显示，销售记账设置页一并隐藏。
           </p>
+        </div>
 
-          <!-- 学生工作台 -->
+        <!-- 学生工作台 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-workbench'" class="wb-menu-config">
           <div class="wb-menu-head">
             <span class="wb-menu-label">学生工作台</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -2129,8 +2207,8 @@ onUnmounted(() => {
           </p>
         </div>
 
-        <!-- 教师工作台 -->
-        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
+        <!-- 教师工作台（已迁入「个性化 → 工作台设置」） -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-workbench'" class="wb-menu-config">
           <div class="wb-menu-head">
             <span class="wb-menu-label">教师工作台</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -2165,34 +2243,6 @@ onUnmounted(() => {
           </div>
           <p class="wb-menu-hint">
             控制「工作台管理」面板中是否显示教师工作台。关闭后面板中不显示（不影响已保存的数据）。
-          </p>
-        </div>
-
-        <!-- 工作台管理按钮（导航站右上角）：名称 + 开关；该按钮固定使用内置图标，不支持自定义 -->
-        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
-          <div class="wb-menu-head">
-            <span class="wb-menu-label">工作台管理</span>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <input
-                type="text"
-                class="wb-menu-name-input"
-                :value="store.workbenchManageName"
-                placeholder="工作台管理"
-                maxlength="20"
-                @input="store.setWorkbenchManageName(($event.target as HTMLInputElement).value)"
-              />
-              <button type="button" class="switch-btn"
-                :class="{ on: store.workbenchManageVisible !== false }"
-                role="switch"
-                :aria-checked="store.workbenchManageVisible !== false"
-                data-testid="workbench-manage-visible-switch"
-                @click="store.setWorkbenchManageVisible(store.workbenchManageVisible === false)">
-                <span class="switch-thumb"></span>
-              </button>
-            </div>
-          </div>
-          <p class="wb-menu-hint">
-            控制导航站左上角「工作台管理」按钮的显示与名称。开启后点击按钮，在按钮正下方弹出面板，以卡片形式列出已启用的工作台（被关闭的工作台不出现在面板中）。
           </p>
         </div>
 

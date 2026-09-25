@@ -296,6 +296,17 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   if (typeof data.workbenchManageVisible === 'boolean') {
     out.workbenchManageVisible = data.workbenchManageVisible
   }
+  // 导航站右上角「倒计时」按钮：名称仅采纳字符串；开关仅采纳布尔（缺失 = 显示）
+  // 「工作台管理」按钮自定义图标：仅采纳字符串（空串 = 回退内置图标）
+  if (typeof data.workbenchManageIcon === 'string') {
+    out.workbenchManageIcon = data.workbenchManageIcon
+  }
+  if (typeof data.countdownButtonName === 'string') {
+    out.countdownButtonName = data.countdownButtonName.trim()
+  }
+  if (typeof data.countdownButtonVisible === 'boolean') {
+    out.countdownButtonVisible = data.countdownButtonVisible
+  }
   // 工作台城市：仅采纳 trim 后非空字符串；空串/undefined/null/非字符串一律视为「未配置」
   // （清除城市后重载不复活旧值，非法值回退默认即未配置）
   if (typeof data.workbenchCity === 'string' && data.workbenchCity.trim() !== '') {
@@ -366,7 +377,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const viewMode = ref<'classic' | 'sidebar'>('classic')
 
   // 页面命名与可见性（工作台/销售记账/学生工作台/教师工作台）
-  // 工作台默认「关闭」：需用户在「设置 → 主题与外观 → 页面导航」主动打开后，导航站按钮与其设置页才显示
+  // 工作台默认「关闭」：需用户在「设置 → 个性化 → 工作台设置」主动打开后，导航站按钮与其设置页才显示
   const workbenchPageName = ref<string>('')
   const workbenchPageVisible = ref<boolean>(false)
   const businessPageName = ref<string>('')
@@ -380,9 +391,14 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const businessPageIcon = ref<string>('')
   const studentPageIcon = ref<string>('')
   const teacherPageIcon = ref<string>('')
-  // 导航站右上角「工作台管理」按钮：默认显示、默认名称「工作台管理」（该按钮不支持自定义图标）
+  // 导航站右上角「工作台管理」按钮：默认显示、默认名称「工作台管理」；
+  // workbenchManageIcon 为该按钮的自定义图标（空串 = 用内置默认图标，可在 设置 → 个性化 → 工作台设置 中改）
   const workbenchManageName = ref<string>('')
   const workbenchManageVisible = ref<boolean>(true)
+  const workbenchManageIcon = ref<string>('')
+  // 导航站右上角「倒计时」按钮：默认显示、默认名称「倒计时」（固定文本按钮，不支持自定义图标）
+  const countdownButtonName = ref<string>('')
+  const countdownButtonVisible = ref<boolean>(true)
 
   // 站点外观（浏览器标签标题 + favicon）：localStorage 驱动（site-title / site-favicon），
   // 与主题同构——不进 IDB persist，经 nav.json prefs 云同步跨设备生效；空值回退默认
@@ -441,6 +457,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       teacherPageIcon: teacherPageIcon.value,
       workbenchManageName: workbenchManageName.value,
       workbenchManageVisible: workbenchManageVisible.value,
+      workbenchManageIcon: workbenchManageIcon.value,
+      countdownButtonName: countdownButtonName.value,
+      countdownButtonVisible: countdownButtonVisible.value,
       desktopNotifyEnabled: desktopNotifyEnabled.value,
       reminderEmailEnabled: reminderEmailEnabled.value,
       reminderEmailTo: reminderEmailTo.value,
@@ -573,6 +592,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       teacherPageIcon.value = typeof effective.teacherPageIcon === 'string' ? effective.teacherPageIcon : ''
       workbenchManageName.value = typeof effective.workbenchManageName === 'string' ? effective.workbenchManageName.trim() : ''
       workbenchManageVisible.value = effective.workbenchManageVisible !== false
+      workbenchManageIcon.value = typeof effective.workbenchManageIcon === 'string' ? effective.workbenchManageIcon : ''
+      countdownButtonName.value = typeof effective.countdownButtonName === 'string' ? effective.countdownButtonName.trim() : ''
+      countdownButtonVisible.value = effective.countdownButtonVisible !== false
       for (const id of DIALOG_IDS) {
         const size = effective.dialogSizes[id]
         if (size) {
@@ -715,6 +737,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     teacherPageIcon.value = ''
     workbenchManageName.value = ''
     workbenchManageVisible.value = true
+    workbenchManageIcon.value = ''
+    countdownButtonName.value = ''
+    countdownButtonVisible.value = true
     desktopNotifyEnabled.value = false
     reminderEmailEnabled.value = false
     reminderEmailTo.value = ''
@@ -875,6 +900,21 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     workbenchManageVisible.value = v
     persist()
   }
+  /** 「工作台管理」按钮自定义图标；传空串 = 恢复内置默认图标 */
+  function setWorkbenchManageIcon(s: string) {
+    workbenchManageIcon.value = s
+    persist()
+  }
+
+  // 导航站右上角「倒计时」按钮 setters
+  function setCountdownButtonName(s: string) {
+    countdownButtonName.value = s
+    persist()
+  }
+  function setCountdownButtonVisible(v: boolean) {
+    countdownButtonVisible.value = v
+    persist()
+  }
 
   // 页面显示名 computed
   const workbenchPageDisplayName = computed(() => workbenchPageName.value || '工作台')
@@ -882,6 +922,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const studentPageDisplayName = computed(() => studentPageName.value || '学生工作台')
   const teacherPageDisplayName = computed(() => teacherPageName.value || '教师工作台')
   const workbenchManageDisplayName = computed(() => workbenchManageName.value || '工作台管理')
+  const countdownButtonDisplayName = computed(() => countdownButtonName.value || '倒计时')
 
   // ========================================
   // 站点外观：浏览器标签标题 + favicon（localStorage 驱动，云同步经 nav.json prefs；空值回退默认）
@@ -1044,6 +1085,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     teacherPageIcon,
     workbenchManageName,
     workbenchManageVisible,
+    workbenchManageIcon,
+    countdownButtonName,
+    countdownButtonVisible,
     siteTitle,
     siteFavicon,
     workbenchPageDisplayName,
@@ -1051,6 +1095,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     studentPageDisplayName,
     teacherPageDisplayName,
     workbenchManageDisplayName,
+    countdownButtonDisplayName,
     desktopNotifyEnabled,
     reminderEmailEnabled,
     reminderEmailTo,
@@ -1092,6 +1137,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     setTeacherPageIcon,
     setWorkbenchManageName,
     setWorkbenchManageVisible,
+    setWorkbenchManageIcon,
+    setCountdownButtonName,
+    setCountdownButtonVisible,
     initSiteMeta,
     applySiteMeta,
     setSiteTitle,
