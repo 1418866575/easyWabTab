@@ -7,7 +7,7 @@
  */
 
 /** 微信公众号名称 */
-export const WECHAT_MP_NAME = '网页导航'
+export const WECHAT_MP_NAME = '司伊娃'
 
 /** 公众号二维码图片地址（public 目录静态资源，构建后原样拷贝） */
 export const WECHAT_MP_QRCODE = '/wechat-mp-qrcode.jpg'

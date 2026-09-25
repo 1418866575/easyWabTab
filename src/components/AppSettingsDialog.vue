@@ -2053,6 +2053,35 @@ onUnmounted(() => {
           </p>
         </div>
 
+        <!-- 帮助按钮（导航站右上角）：名称 + 开关；固定文本按钮，不支持自定义图标 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <span class="wb-menu-label">帮助</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                :value="store.helpButtonName"
+                placeholder="帮助"
+                maxlength="20"
+                data-testid="help-button-name-input"
+                @input="store.setHelpButtonName(($event.target as HTMLInputElement).value)"
+              />
+              <button type="button" class="switch-btn"
+                :class="{ on: store.helpButtonVisible !== false }"
+                role="switch"
+                :aria-checked="store.helpButtonVisible !== false"
+                data-testid="help-button-visible-switch"
+                @click="store.setHelpButtonVisible(store.helpButtonVisible === false)">
+                <span class="switch-thumb"></span>
+              </button>
+            </div>
+          </div>
+          <p class="wb-menu-hint">
+            控制导航站右上角「帮助」按钮的显示与名称。开启后点击按钮打开使用说明弹框；关闭后该按钮不再出现在右上角（首次访问自动弹出的引导不受影响）。
+          </p>
+        </div>
+
         <!-- 工作台设置（个性化 → 工作台设置）：5 项各自独立成一个配置块，不再有「页面导航」分组标题；
              块内顺序 = 工作台管理 → 工作台 → 销售记账 → 学生工作台 → 教师工作台 -->
 
@@ -3221,16 +3250,6 @@ onUnmounted(() => {
           <p v-if="!store.cloudSyncEnabled" class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; margin-top: 0;">
             首次使用指引：① 注册坚果云账号；② 账户信息 → 安全选项 → 添加应用，获取应用密码（非账户密码）；③ 开启开关，填入下方配置；④ 点「测试连接」确认无误后点「立即同步」。
           </p>
-          <div class="wb-menu-hint" style="background: var(--color-bg-2); border-left: 3px solid var(--color-primary); padding: 10px 14px; border-radius: 4px; margin: 8px 0 16px;">
-            <strong style="color: var(--color-text);">CORS 兼容说明：</strong>坚果云 / Nextcloud 等 WebDAV 服务商默认不返回 CORS 预检响应头（浏览器 MKCOL+Authorization 会触发 OPTIONS 拦截）。<br />
-            本应用已自动在以下三种启动方式内置「同源代理」<code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">/api/webdav-proxy</code>，可直接跨域：
-            <ul style="margin: 6px 0 0 20px; padding: 0;">
-              <li>开发环境：<code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">npm run dev</code>（Vite dev 中间件）</li>
-              <li>预览环境：<code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">npm run serve / node server.cjs / pm2 start pm2.config.cjs</code>（内置 Node HTTP 服务）</li>
-              <li>预览构建包：<code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">npm run preview</code>（Vite preview 已附加代理）</li>
-            </ul>
-            <Icon name="alert" /> 若将 <code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">dist/</code> 部署到其他纯静态托管（Nginx、GitHub Pages 等）但未挂载代理，会出现「Failed to fetch / CORS」报错。需自行在同域部署 <code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">/api/webdav-proxy</code>，或改成使用本项目的 <code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">node server.cjs</code> 启动。
-          </div>
 
           <div v-if="store.cloudSyncEnabled" class="remind-fields">
             <label class="remind-field">
@@ -3332,6 +3351,22 @@ onUnmounted(() => {
               @input="store.setCloudSyncSilentThreshold(Number(($event.target as HTMLInputElement).value))"
             />
             <span class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px;">本地与云端内容差异小于此值时，后台自动静默合并而不弹冲突框</span>
+          </div>
+
+          <!-- CORS 兼容说明（排在云同步页最后：属排查类补充说明，不打断「开关 → 配置 → 操作」的主流程） -->
+          <div
+            class="wb-menu-hint"
+            data-testid="sync-cors-note"
+            style="background: var(--color-bg-2); border-left: 3px solid var(--color-primary); padding: 10px 14px; border-radius: 4px; margin: 14px 0 0;"
+          >
+            <strong style="color: var(--color-text);">CORS 兼容说明：</strong>坚果云 / Nextcloud 等 WebDAV 服务商默认不返回 CORS 预检响应头（浏览器 MKCOL+Authorization 会触发 OPTIONS 拦截）。<br />
+            本应用已自动在以下三种启动方式内置「同源代理」<code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">/api/webdav-proxy</code>，可直接跨域：
+            <ul style="margin: 6px 0 0 20px; padding: 0;">
+              <li>开发环境：<code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">npm run dev</code>（Vite dev 中间件）</li>
+              <li>预览环境：<code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">npm run serve / node server.cjs / pm2 start pm2.config.cjs</code>（内置 Node HTTP 服务）</li>
+              <li>预览构建包：<code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">npm run preview</code>（Vite preview 已附加代理）</li>
+            </ul>
+            <Icon name="alert" /> 若将 <code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">dist/</code> 部署到其他纯静态托管（Nginx、GitHub Pages 等）但未挂载代理，会出现「Failed to fetch / CORS」报错。需自行在同域部署 <code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">/api/webdav-proxy</code>，或改成使用本项目的 <code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">node server.cjs</code> 启动。
           </div>
         </div>
 

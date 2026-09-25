@@ -454,7 +454,15 @@ onUnmounted(() => {
         @click="handleSyncNowClick"
       >{{ syncLabel }}</button>
       <button class="btn-help" @click="showSettingsDialog = true" title="设置" aria-label="设置">设置</button>
-      <button class="btn-help" @click="openHelp" title="帮助" aria-label="帮助">帮助</button>
+      <!-- 帮助按钮：可在 设置 → 个性化 → 主题 中关闭 / 改名 -->
+      <button
+        v-if="settingsStore.helpButtonVisible !== false"
+        class="btn-help"
+        data-testid="home-help-btn"
+        @click="openHelp"
+        :title="settingsStore.helpButtonDisplayName"
+        :aria-label="settingsStore.helpButtonDisplayName"
+      >{{ settingsStore.helpButtonDisplayName }}</button>
       <!-- 倒计时按钮：可在 设置 → 个性化 → 主题 中关闭 / 改名 -->
       <button
         v-if="settingsStore.countdownButtonVisible !== false"
