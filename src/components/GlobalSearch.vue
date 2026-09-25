@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useSearchEnginesStore } from '../stores/searchEngines'
 import { useSitesStore } from '../stores/sites'
 import { useCategoriesStore } from '../stores/categories'
@@ -62,9 +62,18 @@ function selectHistoryItem(item: string) {
 
 onMounted(() => {
   loadHistory()
-  // 默认选择第一个非 local 的引擎
-  selectedEngineId.value = store.allEngines.find(e => e.id !== 'local')?.id || 'baidu'
+  // 默认选中默认引擎（下拉里它也排在第一位）
+  selectedEngineId.value = store.defaultEngine?.id || 'baidu'
 })
+
+// 默认引擎变更（设置里设为默认 / 默认引擎被删除或禁用后转移）时，搜索框同步跟随，
+// 保证「下拉第一项 = 当前选中项 = 默认引擎」三者一致，刷新前后表现相同
+watch(
+  () => store.defaultEngineId,
+  id => {
+    if (id) selectedEngineId.value = id
+  }
+)
 
 // 是否为本地搜索模式
 const isLocalSearch = computed(() => selectedEngineId.value === 'local')
@@ -106,8 +115,8 @@ const handleSearch = () => {
     return
   }
   
-  // 外部搜索引擎
-  const engine = store.allEngines.find(e => e.id === selectedEngineId.value)
+  // 外部搜索引擎（若当前选中的引擎已被禁用/删除，回退到默认引擎）
+  const engine = store.availableEngines.find(e => e.id === selectedEngineId.value) ?? store.defaultEngine
   if (engine) {
     // 保存到历史
     addToHistory(searchQuery.value)
@@ -219,7 +228,7 @@ function openSite(url: string) {
   <div class="global-search-wrapper">
     <div class="global-search">
       <select v-model="selectedEngineId" class="engine-select">
-        <option v-for="engine in store.allEngines" :key="engine.id" :value="engine.id">
+        <option v-for="engine in store.sortedAvailableEngines" :key="engine.id" :value="engine.id">
           {{ engine.name }}
         </option>
       </select>

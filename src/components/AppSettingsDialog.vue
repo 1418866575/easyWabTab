@@ -122,12 +122,17 @@ const props = withDefaults(defineProps<{ source?: SettingsSource }>(), { source:
  * 左侧 rail 不再出现「通知与同步」（全局类设置统一收在导航站的设置里）。
  */
 const SOURCE_TABS: Record<SettingsSource, SettingsTabKey[]> = {
-  nav:        ['nav',      'sync', 'remind', 'about'],
-  workbench:  ['wb'],
+  // 提醒设置只保留在「个人工作台」页的设置弹框里（天气城市之后）：
+  //   - nav 来源移除 remind，避免导航站设置里出现只有一个「提醒设置」的「个人工作台」分组
+  //   - all 为兜底默认值（当前无页面使用），同样移除，保证「只在个人工作台出现」
+  nav:        ['nav',      'sync', 'about'],
+  // workbench 来源放行 remind：「提醒设置」已归入「个人工作台」分组（天气城市之后），
+  // 且它与 wb 同样受 workbenchPageVisible 控制，工作台关闭时两者一起隐藏
+  workbench:  ['wb', 'remind'],
   business:   ['business'],
   student:    ['student'],
   teacher:    ['teacher'],
-  all:        ['nav', 'wb', 'remind', 'business', 'student', 'teacher', 'sync', 'about']
+  all:        ['nav', 'wb', 'business', 'student', 'teacher', 'sync', 'about']
 }
 
 /** 来源页默认激活的 tab（第一个=自己页面的设置tab），若不在可见集合里会被 visibleTabs watcher 回退到第一个可见 */
@@ -332,7 +337,7 @@ const NAV_GROUPS: NavGroup[] = [
     key: 'notify',
     label: '通知与同步',
     items: [
-      { key: 'remind', label: '提醒设置', icon: 'timer', tab: 'remind' },
+      // 「提醒设置」已移到「个人工作台 → 天气城市」之后（与工作台同开关：workbenchPageVisible）
       { key: 'sync', label: '云同步', icon: 'cloud', tab: 'sync' },
       { key: 'about', label: '关于', icon: 'info', tab: 'about' }
     ]
@@ -358,6 +363,8 @@ const NAV_GROUPS: NavGroup[] = [
     label: '个人工作台',
     items: [
       { key: 'wb-city', label: '天气城市', icon: 'weather-sunny', tab: 'wb', sub: 'wb-city' },
+      // 原属「通知与同步」，按需求移到「天气城市」之后
+      { key: 'remind', label: '提醒设置', icon: 'timer', tab: 'remind' },
       { key: 'wb-menu', label: '工作台菜单', icon: 'clipboard', tab: 'wb', sub: 'wb-menu' },
       { key: 'wb-card', label: '卡片尺寸', icon: 'image', tab: 'wb', sub: 'wb-card' },
       { key: 'wb-todo-cat', label: '待办分类管理', icon: 'tag', tab: 'wb', sub: 'wb-todo-cat' },
