@@ -21,6 +21,7 @@ import { requestNotifyPermission } from '@/composables/useDesktopNotify'
 import yaml from 'js-yaml'
 import type { Site } from '@/types'
 import { ICP_NUMBER, PSB_NUMBER, MIIT_BEIAN_URL } from '@/config/beian'
+import { WECHAT_MP_NAME, WECHAT_MP_QRCODE, WECHAT_MP_HINT, OPEN_SOURCE_LINKS } from '@/config/about'
 import { useSitesStore } from '@/stores/sites'
 import { useSearchEnginesStore } from '@/stores/searchEngines'
 import { captureSnapshot } from '@/composables/useSnapshots'
@@ -77,8 +78,8 @@ import CloudSyncConflictModal from './CloudSyncConflictModal.vue'
 // 作为 drafts/syncAll 的全量来源；渲染分组用下方导出的 NAV/WB 数组
 const DIALOG_IDS = Object.keys(DIALOG_DEFAULTS) as DialogId[]
 
-// 当前激活的设置分组 tab（导航设置 / 工作台设置 / 提醒设置 / 销售记账 / 学生工作台 / 教师工作台 / 云同步）
-type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'teacher' | 'sync'
+// 当前激活的设置分组 tab（导航设置 / 工作台设置 / 提醒设置 / 销售记账 / 学生工作台 / 教师工作台 / 云同步 / 关于）
+type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'teacher' | 'sync' | 'about'
 // 子 tab keys：每个主 tab 下的子分组（仅内容多的主 tab 定义）
 // 导航站子 tab：原「站点管理」九动作已整体拆为独立页——导入/导出合并为「备份恢复」，
 // 其余各动作一页一项（菜单名沿用原按钮名：添加网址 / 检测断链 / 引擎管理 / 背景 / 分类管理 / 备份 / 图标管理）
@@ -116,17 +117,17 @@ const props = withDefaults(defineProps<{ source?: SettingsSource }>(), { source:
 
 /**
  * 来源页 → 允许显示的 tab keys。
- * 「通知与同步」（remind 提醒设置 + sync 云同步）**仅在导航站显示**；
+ * 「通知与同步」（remind 提醒设置 + sync 云同步）与「关于」（about）**仅在导航站显示**；
  * 四个工作台（个人工作台 / 销售记账 / 学生工作台 / 教师工作台）打开设置时只显示自己那一组，
  * 左侧 rail 不再出现「通知与同步」（全局类设置统一收在导航站的设置里）。
  */
 const SOURCE_TABS: Record<SettingsSource, SettingsTabKey[]> = {
-  nav:        ['nav',      'sync', 'remind'],
+  nav:        ['nav',      'sync', 'remind', 'about'],
   workbench:  ['wb'],
   business:   ['business'],
   student:    ['student'],
   teacher:    ['teacher'],
-  all:        ['nav', 'wb', 'remind', 'business', 'student', 'teacher', 'sync']
+  all:        ['nav', 'wb', 'remind', 'business', 'student', 'teacher', 'sync', 'about']
 }
 
 /** 来源页默认激活的 tab（第一个=自己页面的设置tab），若不在可见集合里会被 visibleTabs watcher 回退到第一个可见 */
@@ -227,6 +228,9 @@ const store = useAppSettingsStore()
 const businessStore = useWorkbenchBusinessStore()
 const studentStore = useStudentSettingsStore()
 const teacherStore = useTeacherStore()
+
+// 「关于」页：公众号 + 开源地址（配置集中在 src/config/about.ts，追加仓库无需改组件）
+const mpQrFailed = ref(false)
 
 // ========================================
 // 入口图标选择（工作台 / 销售记账 / 学生 / 教师）：图标来自图标管理库，弹框形式选择
@@ -329,7 +333,8 @@ const NAV_GROUPS: NavGroup[] = [
     label: '通知与同步',
     items: [
       { key: 'remind', label: '提醒设置', icon: 'timer', tab: 'remind' },
-      { key: 'sync', label: '云同步', icon: 'cloud', tab: 'sync' }
+      { key: 'sync', label: '云同步', icon: 'cloud', tab: 'sync' },
+      { key: 'about', label: '关于', icon: 'info', tab: 'about' }
     ]
   },
   {
@@ -3330,6 +3335,61 @@ onUnmounted(() => {
           </div>
         </div>
 
+        <!-- 关于（仅导航站来源显示）：公众号信息 + 开源地址；配置集中在 src/config/about.ts -->
+        <div v-if="activeTab === 'about'" class="wb-menu-config about-config" data-testid="about-page">
+          <h3 class="wb-menu-title">关于</h3>
+          <p class="wb-menu-hint">了解项目的最新动态与源码仓库，欢迎关注与 Star。</p>
+
+          <!-- 微信公众号 -->
+          <div class="about-card">
+            <span class="about-label">微信公众号</span>
+            <div class="about-mp-row">
+              <div class="about-qr">
+                <img
+                  v-if="!mpQrFailed"
+                  :src="WECHAT_MP_QRCODE"
+                  :alt="`${WECHAT_MP_NAME} 公众号二维码`"
+                  class="about-qr-img"
+                  data-testid="about-qr-img"
+                  @error="mpQrFailed = true"
+                />
+                <div v-else class="about-qr-placeholder" data-testid="about-qr-placeholder">
+                  <Icon name="image" />
+                  <span>二维码占位</span>
+                </div>
+              </div>
+              <div class="about-mp-info">
+                <span class="about-mp-name">{{ WECHAT_MP_NAME }}</span>
+                <p class="wb-menu-hint">{{ WECHAT_MP_HINT }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 开源地址（列表驱动，追加仓库只需改 src/config/about.ts） -->
+          <div class="about-card">
+            <span class="about-label">开源地址</span>
+            <div
+              v-for="(link, i) in OPEN_SOURCE_LINKS"
+              :key="link.homeUrl"
+              class="about-link-row"
+              :data-testid="`about-link-${i}`"
+            >
+              <div class="about-link-main">
+                <span class="about-link-name">{{ link.label }}</span>
+                <code class="about-link-url" :title="`git clone ${link.cloneUrl}`">{{ link.cloneUrl }}</code>
+                <p class="wb-menu-hint">{{ link.description }}</p>
+              </div>
+              <a
+                class="site-action-btn about-goto"
+                :href="link.homeUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                :data-testid="`about-goto-${i}`"
+              >前往</a>
+            </div>
+          </div>
+        </div>
+
         <div class="settings-grid" v-if="(activeTab === 'nav' && activeSubTab === 'nav-size') || (activeTab === 'wb' && activeSubTab === 'wb-size')">
           <div class="grid-header">
             <span class="col-label">弹窗</span>
@@ -4176,6 +4236,127 @@ html.dark .remind-label {
 .site-action-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+/* ===== 「关于」页（设置 → 通知与同步 → 关于）：公众号 + 开源地址 ===== */
+.about-config .wb-menu-hint {
+  margin: 0;
+}
+
+.about-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--color-border, var(--color-border));
+  border-radius: 10px;
+  background-color: var(--color-bg-hover, var(--color-bg-hover));
+}
+
+.about-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text, var(--color-text));
+}
+
+/* 公众号：二维码 + 名称/引导文案横排（窄屏自动换行） */
+.about-mp-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.about-qr {
+  flex: none;
+  width: 132px;
+  height: 132px;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.about-qr-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+.about-qr-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  color: var(--color-text-muted, var(--color-text-muted));
+  font-size: 12px;
+}
+
+.about-mp-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.about-mp-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text, var(--color-text));
+}
+
+/* 开源地址：每行 = 信息（名称/clone 地址/说明）+ 前往按钮 */
+.about-link-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 10px;
+  border-top: 1px dashed var(--color-border, var(--color-border));
+}
+
+.about-link-row:first-of-type {
+  padding-top: 0;
+  border-top: none;
+}
+
+.about-link-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.about-link-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text, var(--color-text));
+}
+
+.about-link-url {
+  font-size: 12px;
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  word-break: break-all;
+}
+
+/* 前往按钮：复用 .site-action-btn，补齐 <a> 的下划线与行内对齐 */
+.about-goto {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  text-decoration: none;
 }
 
 .site-invalid-count {
