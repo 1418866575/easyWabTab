@@ -318,6 +318,14 @@ const NAV_GROUPS: NavGroup[] = [
     ]
   },
   {
+    key: 'notify',
+    label: '通知与同步',
+    items: [
+      { key: 'remind', label: '提醒设置', icon: 'timer', tab: 'remind' },
+      { key: 'sync', label: '云同步', icon: 'cloud', tab: 'sync' }
+    ]
+  },
+  {
     key: 'nav',
     label: '导航站',
     items: [
@@ -390,14 +398,6 @@ const NAV_GROUPS: NavGroup[] = [
       { key: 'teacher-backup', label: '备份与恢复', icon: 'save', tab: 'teacher', sub: 'teacher-backup' },
       { key: 'teacher-help', label: '使用说明', icon: 'help', tab: 'teacher', sub: 'teacher-help' },
       { key: 'teacher-menu', label: '菜单设置', icon: 'bookmark', tab: 'teacher', sub: 'teacher-menu' }
-    ]
-  },
-  {
-    key: 'notify',
-    label: '通知与同步',
-    items: [
-      { key: 'remind', label: '提醒设置', icon: 'timer', tab: 'remind' },
-      { key: 'sync', label: '云同步', icon: 'cloud', tab: 'sync' }
     ]
   }
 ]
