@@ -543,6 +543,13 @@ const NAV_EMBED_PAGES: NavEmbedPage[] = [
   }
 ]
 
+/** 停止断链检测：中断后续 URL 请求，已检测部分的结果由 store 正常落盘保留 */
+function stopLinkCheck(): void {
+  if (!sitesStore.isCheckingLinks) return
+  sitesStore.stopLinkCheck()
+  toast.success('已停止检测，已检测部分的结果已保留')
+}
+
 /** 添加网址（内嵌 SiteModal）提交：与 HomeView 的新增逻辑一致（网址重复时询问是否更新） */
 async function onEmbedSiteSave(site: Site): Promise<void> {
   const existing = sitesStore.sites.find(s => s.url === site.url)
@@ -2214,7 +2221,7 @@ onUnmounted(() => {
         <div v-if="activeTab === 'nav' && activeSubTab === 'nav-check-links'" class="wb-menu-config">
           <h3 class="wb-menu-title">检测断链</h3>
           <p class="wb-menu-hint">
-            逐个访问已保存的网址，把访问异常的站点标记出来（按钮上显示当前异常数量）。网址较多时耗时较长，检测中请勿关闭页面。
+            逐个访问已保存的网址，把访问异常的站点标记出来（按钮上显示当前异常数量）。网址较多时耗时较长，检测过程中可随时点「停止检测」中断，已检测的部分结果会保留。
           </p>
           <div class="site-actions-grid">
             <button
@@ -2226,6 +2233,16 @@ onUnmounted(() => {
             >
               <span v-if="sitesStore.isCheckingLinks"><Icon name="timer-sand" /> 检测中 ({{ sitesStore.linkCheckProgress?.current }}/{{ sitesStore.linkCheckProgress?.total }})</span>
               <span v-else><Icon name="link" /> 检测断链<span v-if="sitesStore.invalidCount > 0" class="site-invalid-count">({{ sitesStore.invalidCount }})</span></span>
+            </button>
+            <!-- 停止检测：仅在检测进行中可用，中断后续 URL 请求并保留已检测部分 -->
+            <button
+              type="button"
+              class="site-action-btn stop"
+              data-testid="stg-act-stop-links"
+              :disabled="!sitesStore.isCheckingLinks"
+              @click="stopLinkCheck"
+            >
+              <Icon name="close" /> 停止检测
             </button>
           </div>
         </div>
@@ -4163,6 +4180,16 @@ html.dark .site-action-btn:hover:not(:disabled) {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-primary, #3b82f6);
+}
+
+/* 停止检测：仅在检测进行中可用（橙色描边区分于普通动作） */
+.site-action-btn.stop:not(:disabled) {
+  color: #d97706;
+  border-color: #fcd34d;
+}
+html.dark .site-action-btn.stop:not(:disabled) {
+  color: #fbbf24;
+  border-color: #92400e;
 }
 
 /* 数据清理：危险按钮（红色描边，警示不可恢复） */
