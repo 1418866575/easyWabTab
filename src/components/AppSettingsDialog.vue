@@ -240,13 +240,14 @@ const mpQrFailed = ref(false)
 // ========================================
 // 入口图标选择（工作台 / 销售记账 / 学生 / 教师）：图标来自图标管理库，弹框形式选择
 // ========================================
-type IconTarget = 'workbench' | 'business' | 'student' | 'teacher' | 'manage'
+type IconTarget = 'workbench' | 'business' | 'student' | 'teacher' | 'manage' | 'favicon'
 const ICON_TARGET_LABEL: Record<IconTarget, string> = {
   workbench: '工作台',
   business: '销售记账',
   student: '学生工作台',
   teacher: '教师工作台',
-  manage: '工作台管理'
+  manage: '工作台管理',
+  favicon: '站点图标'
 }
 /** 当前正在编辑哪个入口的图标（空串 = 弹框关闭） */
 const iconPickerTarget = ref<IconTarget | ''>('')
@@ -266,6 +267,7 @@ const iconPickerCurrent = computed(() => {
     case 'student': return store.studentPageIcon
     case 'teacher': return store.teacherPageIcon
     case 'manage': return store.workbenchManageIcon
+    case 'favicon': return store.siteFavicon
     default: return ''
   }
 })
@@ -277,6 +279,7 @@ function onPickIcon(src: string): void {
     case 'student': store.setStudentPageIcon(src); break
     case 'teacher': store.setTeacherPageIcon(src); break
     case 'manage': store.setWorkbenchManageIcon(src); break
+    case 'favicon': store.setSiteFavicon(src); break
     default: break
   }
   closeIconPicker()
@@ -581,59 +584,8 @@ async function onEmbedSiteSave(site: Site): Promise<void> {
 }
 
 // ========================================
-// 站点外观（导航设置 tab）：浏览器标签标题 + favicon 上传/重置
+// 站点外观（导航设置 tab）：浏览器标签标题 + 站点图标（从图标库选择）/ 重置
 // ========================================
-const faviconFileInput = ref<HTMLInputElement | null>(null)
-
-function triggerFaviconPick() {
-  faviconFileInput.value?.click()
-}
-
-/** 读文件为 data URL（Promise 包装 FileReader） */
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result))
-    reader.onerror = () => reject(new Error('read failed'))
-    reader.readAsDataURL(file)
-  })
-}
-
-/** 图片文件 → favicon data URL：SVG 原样保留，位图经 canvas 压缩至 ≤128px PNG 控体积 */
-async function readFaviconFile(file: File): Promise<string> {
-  if (file.type === 'image/svg+xml') return readFileAsDataUrl(file)
-  const dataUrl = await readFileAsDataUrl(file)
-  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const el = new Image()
-    el.onload = () => resolve(el)
-    el.onerror = () => reject(new Error('decode failed'))
-    el.src = dataUrl
-  })
-  const MAX = 128
-  const longest = Math.max(img.width || 1, img.height || 1)
-  const scale = Math.min(1, MAX / longest)
-  const w = Math.max(1, Math.round((img.width || MAX) * scale))
-  const h = Math.max(1, Math.round((img.height || MAX) * scale))
-  const canvas = document.createElement('canvas')
-  canvas.width = w
-  canvas.height = h
-  canvas.getContext('2d')?.drawImage(img, 0, 0, w, h)
-  return canvas.toDataURL('image/png')
-}
-
-async function onFaviconFileChange(e: Event) {
-  const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-  try {
-    const dataUrl = await readFaviconFile(file)
-    store.setSiteFavicon(dataUrl)
-  } catch {
-    toast.error('图片读取失败，请换一张图片试试')
-  } finally {
-    input.value = ''
-  }
-}
 
 function resetSiteFavicon() {
   store.setSiteFavicon('')
@@ -1938,20 +1890,12 @@ onUnmounted(() => {
             <span class="wb-menu-label">站点图标</span>
             <div class="site-favicon-row">
               <img class="site-favicon-preview" :src="store.siteFavicon || '/vite.svg'" alt="站点图标预览" />
-              <input
-                ref="faviconFileInput"
-                type="file"
-                accept="image/*"
-                class="site-favicon-file"
-                data-testid="site-favicon-file"
-                @change="onFaviconFileChange"
-              />
-              <button type="button" class="site-action-btn" data-testid="site-favicon-upload" @click="triggerFaviconPick">上传图标</button>
+              <button type="button" class="site-action-btn" data-testid="site-favicon-pick" @click="openIconPicker('favicon')">选择图标</button>
               <button type="button" class="site-action-btn" data-testid="site-favicon-reset" @click="resetSiteFavicon">恢复默认</button>
             </div>
           </div>
           <p class="wb-menu-hint">
-            浏览器标签页的图标，支持 PNG / JPG / SVG / ICO，自动压缩至 128px；「恢复默认」还原为内置图标。
+            浏览器标签页的图标。点击「选择图标」从图标库（预置图标 + 已上传的自定义图标）中挑选，选中的图标即为当前站点图标；「恢复默认」还原为内置图标。
           </p>
 
           <!-- 访问统计（Vercount）：锚点在页脚常驻，此处读取展示 -->
@@ -4494,7 +4438,7 @@ html.dark .danger-hint {
   color: #f87171;
 }
 
-/* ===== 站点外观（导航设置 tab）：favicon 上传行与预览 ===== */
+/* ===== 站点外观（导航设置 tab）：站点图标选择行与预览 ===== */
 .site-favicon-row {
   display: flex;
   align-items: center;
@@ -4510,10 +4454,6 @@ html.dark .danger-hint {
   background: var(--color-bg-input, #f1f5f9);
   object-fit: contain;
   flex-shrink: 0;
-}
-
-.site-favicon-file {
-  display: none;
 }
 
 /* ===== 站点外观（导航设置 tab）：Vercount 访问统计展示 ===== */
