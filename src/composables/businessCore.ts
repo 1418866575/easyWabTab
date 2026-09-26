@@ -145,6 +145,10 @@ function normProduct(raw: unknown): BusinessProduct | null {
     unit: typeof p.unit === 'string' ? p.unit.trim().slice(0, 8) || '件' : '件',
     purchasePrice: Math.max(0, numOf(p.purchasePrice)),
     sellingPrice: Math.max(0, numOf(p.sellingPrice)),
+    // 会员价：可选字段，仅记录展示；非法值（负数/NaN/非数字）一律按「未设置」处理
+    ...(typeof p.memberPrice === 'number' && Number.isFinite(p.memberPrice) && p.memberPrice >= 0
+      ? { memberPrice: Math.round(p.memberPrice * 100) / 100 }
+      : {}),
     active: p.active !== false,
     createdAt: typeof p.createdAt === 'string' ? p.createdAt : new Date(0).toISOString()
   }
@@ -554,6 +558,129 @@ export function calcBroughtOutTotals(dailyRecords: BusinessDailyRecord[]): Recor
     }
   }
   return totals
+}
+
+// ===== 进货批次剩余状态（先进先出）与未售完批次均价 =====
+
+/** 按商品累计售出数量（收摊记录口径：带出 − 剩余 − 损耗） */
+export function calcSoldTotals(dailyRecords: BusinessDailyRecord[]): Record<string, number> {
+  const totals: Record<string, number> = {}
+  for (const r of dailyRecords ?? []) {
+    for (const item of r.items ?? []) {
+      totals[item.productId] = (totals[item.productId] ?? 0) + soldCount(item)
+    }
+  }
+  return totals
+}
+
+/** 单笔记货批次的剩余状态：按「先进先出」消耗（最旧批次优先售出） */
+export interface PurchaseStockStatus {
+  purchaseId: string
+  productId: string
+  quantity: number // 本批进货数量
+  sold: number // 本批已售出（FIFO 消耗量，不超过 quantity）
+  remaining: number // 本批剩余 = quantity − sold
+  soldOut: boolean // 是否已全部售出（remaining ≤ 0）
+  /** 是否该商品 FIFO 队列中最旧的一批（判定「最旧那一笔是否已售完」的对象） */
+  isOldest: boolean
+  totalSold: number // 该商品累计售出（全部收摊记录）
+}
+
+/** 进货排序：先进先出 = 日期升序（同日按创建时间/ id 升序，保证稳定） */
+function fifoCompare(a: BusinessPurchase, b: BusinessPurchase): number {
+  if (a.date !== b.date) return a.date < b.date ? -1 : 1
+  const ca = typeof a.createdAt === 'string' ? a.createdAt : ''
+  const cb = typeof b.createdAt === 'string' ? b.createdAt : ''
+  if (ca !== cb) return ca < cb ? -1 : 1
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
+}
+
+/**
+ * 进货批次剩余状态表（purchaseId → 状态）。
+ * 规则：同一商品的进货按日期从旧到新排队，收摊售出数量从最旧批次开始依次消耗；
+ * 因此「最旧那一笔是否已全部售出」等价于队首批次的 soldOut。
+ */
+export function calcPurchaseStockStatus(
+  purchases: BusinessPurchase[],
+  dailyRecords: BusinessDailyRecord[]
+): Record<string, PurchaseStockStatus> {
+  const soldTotals = calcSoldTotals(dailyRecords)
+  const byProduct = new Map<string, BusinessPurchase[]>()
+  for (const p of purchases ?? []) {
+    const list = byProduct.get(p.productId) ?? []
+    list.push(p)
+    byProduct.set(p.productId, list)
+  }
+  const out: Record<string, PurchaseStockStatus> = {}
+  for (const [productId, list] of byProduct) {
+    const queue = [...list].sort(fifoCompare)
+    let left = Math.max(0, soldTotals[productId] ?? 0)
+    queue.forEach((p, index) => {
+      const sold = Math.max(0, Math.min(p.quantity, left))
+      left -= sold
+      out[p.id] = {
+        purchaseId: p.id,
+        productId,
+        quantity: p.quantity,
+        sold,
+        remaining: Math.max(0, p.quantity - sold),
+        soldOut: p.quantity - sold <= 0,
+        isOldest: index === 0,
+        totalSold: Math.max(0, soldTotals[productId] ?? 0)
+      }
+    })
+  }
+  return out
+}
+
+/** 某商品「未售完」批次的进货单价列表（按 FIFO 顺序） */
+export function unsoldPurchaseUnitPrices(
+  purchases: BusinessPurchase[],
+  dailyRecords: BusinessDailyRecord[],
+  productId: string
+): number[] {
+  const status = calcPurchaseStockStatus(purchases, dailyRecords)
+  return (purchases ?? [])
+    .filter(p => p.productId === productId && status[p.id] && !status[p.id].soldOut)
+    .sort(fifoCompare)
+    .map(p => p.unitPrice)
+}
+
+/**
+ * 全部商品「未售完批次单价均值」表（内部只算一次 FIFO，供列表反显批量使用）。
+ * 口径：未售完批次进货单价的**简单平均**（非按剩余数量加权），保留两位小数。
+ */
+export function avgUnsoldUnitPriceMap(
+  purchases: BusinessPurchase[],
+  dailyRecords: BusinessDailyRecord[]
+): Record<string, number> {
+  const status = calcPurchaseStockStatus(purchases, dailyRecords)
+  const acc: Record<string, { total: number; count: number }> = {}
+  for (const p of purchases ?? []) {
+    const st = status[p.id]
+    if (!st || st.soldOut) continue
+    const cur = acc[p.productId] ?? { total: 0, count: 0 }
+    cur.total += p.unitPrice
+    cur.count += 1
+    acc[p.productId] = cur
+  }
+  const out: Record<string, number> = {}
+  for (const [productId, cur] of Object.entries(acc)) {
+    out[productId] = Math.round((cur.total / cur.count) * 100) / 100
+  }
+  return out
+}
+
+/**
+ * 商品进货价自动反显值：未售完批次进货单价的简单平均（两位小数）。
+ * 无进货记录或所有批次都已售完 → null（此时沿用商品自身进货价）
+ */
+export function avgUnsoldUnitPrice(
+  purchases: BusinessPurchase[],
+  dailyRecords: BusinessDailyRecord[],
+  productId: string
+): number | null {
+  return avgUnsoldUnitPriceMap(purchases, dailyRecords)[productId] ?? null
 }
 
 /** 总统计：营业额 = Σ日记录收入；成本 = 纯 COGS（Σ售出数量 × 进货价，按收摊记录，不计支出）；利润/毛利率；支出 = Σ支出金额 */

@@ -411,6 +411,10 @@ async function handleDelete(id: string): Promise<void> {
                   <span class="bizday-row-price">
                     {{ formatYuanOf(rowProduct(row.productId)!.purchasePrice) }}→{{ formatYuanOf(rowProduct(row.productId)!.sellingPrice) }}
                   </span>
+                  <span
+                    v-if="typeof rowProduct(row.productId)!.memberPrice === 'number'"
+                    class="bizday-row-member"
+                  >会员 {{ formatYuanOf(rowProduct(row.productId)!.memberPrice) }}</span>
                   <span class="bizday-row-stock">当前库存：{{ rowStock(row.productId) }} {{ rowUnit(row.productId) }}</span>
                 </div>
               </div>
@@ -689,6 +693,14 @@ async function handleDelete(id: string): Promise<void> {
 }
 
 .bizday-row-price {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 会员价（仅展示参考，不参与营业额自动合计） */
+.bizday-row-member {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-warning, #f59e0b);
   font-variant-numeric: tabular-nums;
 }
 

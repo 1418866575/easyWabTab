@@ -5,7 +5,15 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { showConfirm, toastAlert } from '@/utils/dialog'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { calcMarkupRate, calcProductSummary, findProductCategory, formatYuanOf, sortProducts, visibleProductCategories } from '@/composables/businessCore'
+import {
+  avgUnsoldUnitPriceMap,
+  calcMarkupRate,
+  calcProductSummary,
+  findProductCategory,
+  formatYuanOf,
+  sortProducts,
+  visibleProductCategories
+} from '@/composables/businessCore'
 import { useToast } from '@/composables/useToast'
 import type { BusinessProduct } from '@/types'
 import Icon from '@/components/Icon.vue'
@@ -50,6 +58,33 @@ function catNameOf(categoryId?: string): string {
   return findProductCategory(store.productCategories, categoryId)?.name ?? '未分类'
 }
 
+/** 进货价自动反显：按「未售完」进货批次的单价求简单平均；无未售完批次 → 沿用商品自身进货价 */
+const avgPriceMap = computed<Record<string, number>>(() =>
+  avgUnsoldUnitPriceMap(store.purchases, store.dailyRecords)
+)
+
+/** 卡片/详情展示的进货价：优先自动均价，无均价时回退商品进货价 */
+function displayedPurchasePrice(p: BusinessProduct): number {
+  return avgPriceMap.value[p.id] ?? p.purchasePrice
+}
+
+/** 当前编辑商品的自动均价（弹框提示用；新增时为空） */
+const editingAvgPrice = computed<number | null>(() => {
+  if (!editingId.value) return null
+  return avgPriceMap.value[editingId.value] ?? null
+})
+
+/** 当前展示值是否为自动均价（用于「均价」标记与提示文案） */
+function isAutoAvg(p: BusinessProduct): boolean {
+  return avgPriceMap.value[p.id] !== undefined
+}
+
+function avgTip(p: BusinessProduct): string {
+  return isAutoAvg(p)
+    ? `按未售完进货批次单价自动平均（${formatYuanOf(avgPriceMap.value[p.id])}）；商品原始进货价 ${formatYuanOf(p.purchasePrice)}`
+    : '暂无未售完进货批次，显示商品自身进货价'
+}
+
 // ===== 新增/编辑弹框 =====
 const showDialog = ref(false)
 const editingId = ref<string | null>(null)
@@ -58,6 +93,7 @@ const formCategoryId = ref('')
 const formUnit = ref('件')
 const formPurchasePrice = ref('')
 const formSellingPrice = ref('')
+const formMemberPrice = ref('')
 const formActive = ref(true)
 
 function numOf(raw: string): number {
@@ -76,6 +112,7 @@ function startAdd(): void {
   formUnit.value = '件'
   formPurchasePrice.value = ''
   formSellingPrice.value = ''
+  formMemberPrice.value = ''
   formActive.value = true
   showDialog.value = true
 }
@@ -85,8 +122,10 @@ async function startEdit(p: BusinessProduct): void {
   formName.value = p.name
   formCategoryId.value = p.categoryId ?? ''
   formUnit.value = p.unit
-  formPurchasePrice.value = String(p.purchasePrice)
+  // 进货价自动反显：存在未售完进货批次时填其均价（可手动改），否则填商品自身进货价
+  formPurchasePrice.value = String(displayedPurchasePrice(p))
   formSellingPrice.value = String(p.sellingPrice)
+  formMemberPrice.value = typeof p.memberPrice === 'number' ? String(p.memberPrice) : ''
   formActive.value = p.active
   showDialog.value = true
 }
@@ -99,6 +138,8 @@ async function handleSave(): Promise<void> {
     unit: formUnit.value.trim() || '件',
     purchasePrice: numOf(formPurchasePrice.value),
     sellingPrice: numOf(formSellingPrice.value),
+    // 会员价留空 → null（store 侧移除该字段，表示未设置）
+    memberPrice: formMemberPrice.value.trim() === '' ? null : numOf(formMemberPrice.value),
     active: formActive.value
   }
   if (editingId.value) {
@@ -212,8 +253,20 @@ function drawerMarkupRate(): number | null {
           <span class="bizprod-cat">{{ catNameOf(p.categoryId) }}</span>
         </div>
         <div class="bizprod-prices">
-          <span class="bizprod-price buy">进价 {{ formatYuanOf(p.purchasePrice) }}/{{ p.unit }}</span>
+          <span
+            class="bizprod-price buy"
+            :data-testid="`bizprod-price-buy-${p.id}`"
+            :title="avgTip(p)"
+          >
+            进价 {{ formatYuanOf(displayedPurchasePrice(p)) }}/{{ p.unit }}
+            <span v-if="isAutoAvg(p)" class="bizprod-price-auto" :data-testid="`bizprod-price-auto-${p.id}`">均价</span>
+          </span>
           <span class="bizprod-price sell">售价 {{ formatYuanOf(p.sellingPrice) }}/{{ p.unit }}</span>
+          <span
+            v-if="typeof p.memberPrice === 'number'"
+            class="bizprod-price member"
+            :data-testid="`bizprod-price-member-${p.id}`"
+          >会员 {{ formatYuanOf(p.memberPrice) }}/{{ p.unit }}</span>
         </div>
         <div class="bizprod-foot" @click.stop>
           <el-checkbox
@@ -287,6 +340,23 @@ function drawerMarkupRate(): number | null {
               data-testid="bizprod-form-selling"
             />
           </div>
+          <div class="biz-field">
+            <label>会员价</label>
+            <el-input-number
+              size="small"
+              :min="0"
+              :step="0.01"
+              :precision="2"
+              :model-value="formMemberPrice === '' ? undefined : Number(formMemberPrice)"
+              @update:model-value="formMemberPrice = String($event ?? '')"
+              data-testid="bizprod-form-member"
+            />
+          </div>
+        </div>
+        <p class="bizprod-form-hint" data-testid="bizprod-form-member-hint">会员价可选，留空表示未设置（仅作记录与展示，不参与营业额自动合计）。</p>
+        <!-- 进货价自动反显：未售完批次单价的简单平均，可手动修改 -->
+        <div v-if="editingId && editingAvgPrice !== null" class="bizprod-form-avg" data-testid="bizprod-form-avg">
+          已按未售完进货批次均价自动填充：{{ formatYuanOf(editingAvgPrice) }}（可手动修改）
         </div>
         <div class="biz-field">
           <el-checkbox v-model="formActive" data-testid="bizprod-form-active">上架在售</el-checkbox>
@@ -333,10 +403,22 @@ function drawerMarkupRate(): number | null {
           <div class="bizprod-drawer-info-row">
             <span class="bizprod-drawer-label">进价/售价</span>
             <span class="bizprod-drawer-value">
-              {{ formatYuanOf(drawerSummary.product.purchasePrice) }} → {{ formatYuanOf(drawerSummary.product.sellingPrice) }}
+              {{ formatYuanOf(displayedPurchasePrice(drawerSummary.product)) }} → {{ formatYuanOf(drawerSummary.product.sellingPrice) }}
               <span class="bizprod-drawer-markup" :class="{ 'rate-high': (drawerMarkupRate() ?? 0) > 0, 'rate-low': (drawerMarkupRate() ?? 0) <= 0 }">
                 加价率 {{ drawerMarkupRate() ?? '—' }}%
               </span>
+            </span>
+          </div>
+          <div class="bizprod-drawer-info-row">
+            <span class="bizprod-drawer-label">会员价</span>
+            <span class="bizprod-drawer-value" data-testid="bizprod-drawer-member">
+              {{ typeof drawerSummary.product.memberPrice === 'number' ? formatYuanOf(drawerSummary.product.memberPrice) : '未设置' }}
+            </span>
+          </div>
+          <div class="bizprod-drawer-info-row">
+            <span class="bizprod-drawer-label">进货价来源</span>
+            <span class="bizprod-drawer-value" data-testid="bizprod-drawer-avg">
+              {{ isAutoAvg(drawerSummary.product) ? '未售完批次均价 ' + formatYuanOf(avgPriceMap[drawerSummary.product.id]) : '商品设定值（无未售完批次）' }}
             </span>
           </div>
         </div>
@@ -582,6 +664,38 @@ function drawerMarkupRate(): number | null {
   font-weight: 600;
 }
 
+/* 会员价 */
+.bizprod-price.member {
+  color: var(--color-warning, #f59e0b);
+  font-weight: 600;
+}
+
+/* 进货价自动反显标记（未售完批次均价） */
+.bizprod-price-auto {
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: var(--radius-full, 999px);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-light, #eff6ff);
+}
+
+.bizprod-form-hint {
+  margin: -4px 0 0;
+  font-size: 12px;
+  color: var(--color-text-muted, var(--color-text-muted));
+}
+
+.bizprod-form-avg {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm, 6px);
+  font-size: 12px;
+  color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-light, #eff6ff);
+  font-variant-numeric: tabular-nums;
+}
+
 .bizprod-foot {
   display: flex;
   align-items: center;
@@ -677,6 +791,16 @@ html.dark .bizprod-card {
 
 html.dark .bizprod-name {
   color: var(--color-text, #f9fafb);
+}
+
+html.dark .bizprod-price-auto {
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.2);
+}
+
+html.dark .bizprod-form-avg {
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.15);
 }
 
 @media (max-width: 640px) {

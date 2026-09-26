@@ -320,6 +320,8 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     unit: string
     purchasePrice: number
     sellingPrice: number
+    /** 会员价（可选，仅记录展示；未设置不写入，保持字段缺省） */
+    memberPrice?: number
     active?: boolean
   }): Promise<void> {
     products.value.push({
@@ -329,6 +331,9 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
       unit: input.unit.trim().slice(0, 8) || '件',
       purchasePrice: Math.max(0, input.purchasePrice),
       sellingPrice: Math.max(0, input.sellingPrice),
+      ...(typeof input.memberPrice === 'number' && Number.isFinite(input.memberPrice) && input.memberPrice >= 0
+        ? { memberPrice: Math.round(input.memberPrice * 100) / 100 }
+        : {}),
       active: input.active !== false,
       createdAt: new Date().toISOString()
     })
@@ -337,11 +342,21 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
 
   async function updateProduct(
     id: string,
-    patch: Partial<Omit<BusinessProduct, 'id' | 'createdAt'>>
+    // memberPrice 允许传 null：表示「清空会员价」（内部会移除该字段）
+    patch: Partial<Omit<BusinessProduct, 'id' | 'createdAt'>> & { memberPrice?: number | null }
   ): Promise<void> {
     const index = products.value.findIndex(p => p.id === id)
     if (index === -1) return
-    products.value[index] = { ...toRaw(products.value[index]), ...patch, id }
+    const merged = { ...toRaw(products.value[index]), ...patch, id }
+    // 会员价：传值则校验（有限且 ≥0）后保留两位小数，清空/undefined 则移除字段
+    if (patch.memberPrice !== undefined) {
+      if (Number.isFinite(patch.memberPrice) && patch.memberPrice >= 0) {
+        merged.memberPrice = Math.round(patch.memberPrice * 100) / 100
+      } else {
+        delete merged.memberPrice
+      }
+    }
+    products.value[index] = merged
     await saveBusiness()
   }
 

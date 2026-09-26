@@ -1,10 +1,13 @@
 // businessCore.ts 纯函数测试（node --experimental-strip-types 直跑，npm run test:business）
 // T1-T24：归一化/种子分类/内置支出补回/分类 CRUD/库存/日收入/统计/排行/趋势坐标
 // T25-T32：账本容器（默认名/同年唯一/旧扁平迁移/年份去重/空态/按年份并集合并）
+// T33-T36：账本删除/清空守卫；T37-T41：进货关联支出、数量/单价联动、月度统计
+// T42-T45：会员价归一化、进货批次 FIFO 剩余状态、未售完批次单价与自动均价
 import assert from 'node:assert/strict'
 import {
   addExpenseCategory,
   addProductCategory,
+  avgUnsoldUnitPrice,
   calcBroughtOutTotals,
   calcBusinessStats,
   calcBusinessTrend,
@@ -17,6 +20,8 @@ import {
   calcProductRanking,
   calcPurchaseTotals,
   calcPurchaseTotal,
+  calcPurchaseStockStatus,
+  calcSoldTotals,
   businessTrendBars,
   compactAmount,
   clearLedgerRecords,
@@ -53,6 +58,7 @@ import {
   sortedLedgers,
   sumExpenseAmounts,
   toggleCategoryVisible,
+  unsoldPurchaseUnitPrices,
   visibleExpenseCategories,
   visibleProductCategories
 } from '../src/composables/businessCore.ts'
@@ -833,6 +839,105 @@ test('T41 calcMonthlyStats', () => {
   const empty = calcMonthlyStats(emptyBusinessData(), 2026)
   assert.equal(empty.length, 12)
   assert.equal(empty.every(m => m.revenue === 0 && m.expense === 0 && m.days === 0), true)
+})
+
+// T42 — 会员价归一化：合法值保留两位小数；负数/NaN/非数字按「未设置」剔除
+test('T42 会员价 normalize', () => {
+  const d = normalizeBusinessData({
+    products: [
+      { id: 'p1', name: '烤肠', unit: '根', purchasePrice: 2, sellingPrice: 5, memberPrice: 4.5, active: true },
+      { id: 'p2', name: '可乐', unit: '瓶', purchasePrice: 1.5, sellingPrice: 3, memberPrice: -1, active: true },
+      { id: 'p3', name: '面包', unit: '个', purchasePrice: 3, sellingPrice: 6, memberPrice: 'x', active: true }
+    ]
+  })
+  assert.equal(d.products[0].memberPrice, 4.5)
+  assert.equal(d.products[1].memberPrice, undefined, '负数会员价按未设置')
+  assert.equal(d.products[2].memberPrice, undefined, '非数字会员价按未设置')
+  const rounded = normalizeBusinessData({
+    products: [{ id: 'p4', name: '糖', unit: '包', purchasePrice: 1, sellingPrice: 2, memberPrice: 1.555, active: true }]
+  })
+  assert.equal(rounded.products[0].memberPrice, 1.56, '会员价保留两位小数')
+})
+
+// T43 — calcSoldTotals / calcPurchaseStockStatus：先进先出，最旧批次优先被售出
+test('T43 进货批次 FIFO 剩余状态', () => {
+  const purchases: BusinessPurchase[] = [
+    { id: 'b1', productId: 'p1', quantity: 10, unitPrice: 2, total: 20, date: '2026-01-01', createdAt: 'a' },
+    { id: 'b2', productId: 'p1', quantity: 10, unitPrice: 3, total: 30, date: '2026-02-01', createdAt: 'b' },
+    { id: 'b3', productId: 'p2', quantity: 5, unitPrice: 1, total: 5, date: '2026-01-05', createdAt: 'c' }
+  ]
+  const dailyRecords: BusinessDailyRecord[] = [
+    // p1 售出 12：带出 12 − 剩余 0 − 损耗 0
+    { id: 'd1', date: '2026-03-01', items: [{ productId: 'p1', broughtOut: 12, remaining: 0, loss: 0 }], totalRevenue: 60, createdAt: 'x', updatedAt: 'x' }
+  ]
+  const sold = calcSoldTotals(dailyRecords)
+  assert.equal(sold['p1'], 12)
+  assert.equal(sold['p2'], undefined)
+  const st = calcPurchaseStockStatus(purchases, dailyRecords)
+  // 最旧批次 b1（10）被完全消耗 → 已售完
+  assert.equal(st.b1.soldOut, true)
+  assert.equal(st.b1.sold, 10)
+  assert.equal(st.b1.remaining, 0)
+  assert.equal(st.b1.isOldest, true)
+  // 次旧批次 b2 只卖出 2 → 未售完，剩 8
+  assert.equal(st.b2.soldOut, false)
+  assert.equal(st.b2.sold, 2)
+  assert.equal(st.b2.remaining, 8)
+  assert.equal(st.b2.isOldest, false)
+  // 其它商品无售出 → 未售完且全量剩余
+  assert.equal(st.b3.soldOut, false)
+  assert.equal(st.b3.remaining, 5)
+  assert.equal(st.b3.isOldest, true)
+  // 售出超过进货总量：全部批次售完，剩余不为负
+  const over: BusinessDailyRecord[] = [
+    { id: 'd2', date: '2026-04-01', items: [{ productId: 'p1', broughtOut: 99, remaining: 0, loss: 0 }], totalRevenue: 0, createdAt: 'x', updatedAt: 'x' }
+  ]
+  const st2 = calcPurchaseStockStatus(purchases, over)
+  assert.equal(st2.b1.remaining, 0)
+  assert.equal(st2.b2.remaining, 0)
+  assert.equal(st2.b2.soldOut, true)
+})
+
+// T44 — unsoldPurchaseUnitPrices：只取未售完批次的单价（FIFO 顺序）
+test('T44 未售完批次单价列表', () => {
+  const purchases: BusinessPurchase[] = [
+    { id: 'b1', productId: 'p1', quantity: 10, unitPrice: 2, total: 20, date: '2026-01-01', createdAt: 'a' },
+    { id: 'b2', productId: 'p1', quantity: 10, unitPrice: 4, total: 40, date: '2026-02-01', createdAt: 'b' }
+  ]
+  const none: BusinessDailyRecord[] = []
+  assert.deepEqual(unsoldPurchaseUnitPrices(purchases, none, 'p1'), [2, 4])
+  const some: BusinessDailyRecord[] = [
+    { id: 'd1', date: '2026-03-01', items: [{ productId: 'p1', broughtOut: 10, remaining: 0, loss: 0 }], totalRevenue: 50, createdAt: 'x', updatedAt: 'x' }
+  ]
+  assert.deepEqual(unsoldPurchaseUnitPrices(purchases, some, 'p1'), [4], '最旧批次售完后只剩 b2')
+  assert.deepEqual(unsoldPurchaseUnitPrices(purchases, some, 'p9'), [])
+})
+
+// T45 — avgUnsoldUnitPrice：未售完批次单价简单平均（两位小数）；全售完/无进货 → null
+test('T45 进货价自动均价', () => {
+  const purchases: BusinessPurchase[] = [
+    { id: 'b1', productId: 'p1', quantity: 10, unitPrice: 2, total: 20, date: '2026-01-01', createdAt: 'a' },
+    { id: 'b2', productId: 'p1', quantity: 10, unitPrice: 3, total: 30, date: '2026-02-01', createdAt: 'b' },
+    { id: 'b3', productId: 'p1', quantity: 10, unitPrice: 4.1, total: 41, date: '2026-03-01', createdAt: 'c' }
+  ]
+  // 无收摊：三批都未售完 → (2 + 3 + 4.1) / 3 = 3.033… → 3.03
+  assert.equal(avgUnsoldUnitPrice(purchases, [], 'p1'), 3.03)
+  // 售出 10 → 最旧批次 b1 售完 → (3 + 4.1) / 2 = 3.55
+  const sold10: BusinessDailyRecord[] = [
+    { id: 'd1', date: '2026-04-01', items: [{ productId: 'p1', broughtOut: 10, remaining: 0, loss: 0 }], totalRevenue: 50, createdAt: 'x', updatedAt: 'x' }
+  ]
+  assert.equal(avgUnsoldUnitPrice(purchases, sold10, 'p1'), 3.55)
+  // 售出 30（全部售完）→ null，沿用商品自身进货价
+  const soldAll: BusinessDailyRecord[] = [
+    { id: 'd2', date: '2026-05-01', items: [{ productId: 'p1', broughtOut: 30, remaining: 0, loss: 0 }], totalRevenue: 150, createdAt: 'x', updatedAt: 'x' }
+  ]
+  assert.equal(avgUnsoldUnitPrice(purchases, soldAll, 'p1'), null)
+  assert.equal(avgUnsoldUnitPrice(purchases, [], 'nope'), null)
+  // 损耗不计入售出：带出 10 / 损耗 10 → 售出 0，全部未售完
+  const lossOnly: BusinessDailyRecord[] = [
+    { id: 'd3', date: '2026-06-01', items: [{ productId: 'p1', broughtOut: 10, remaining: 0, loss: 10 }], totalRevenue: 0, createdAt: 'x', updatedAt: 'x' }
+  ]
+  assert.equal(avgUnsoldUnitPrice(purchases, lossOnly, 'p1'), 3.03)
 })
 
 let passed = 0

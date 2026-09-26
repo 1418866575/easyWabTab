@@ -526,6 +526,8 @@ export interface BusinessProduct {
   unit: string
   purchasePrice: number // 进货单价
   sellingPrice: number // 售价
+  /** 会员价（可选；仅作记录与展示，不参与营业额自动合计）。0/undefined = 未设置 */
+  memberPrice?: number
   active: boolean // 在售/停售（停售不出现在收摊带出选择）
   createdAt: string
 }

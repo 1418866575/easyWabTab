@@ -18,6 +18,7 @@ function cardFields(row: any) {
     { label: '合计', value: formatYuanOf(row.total) },
     { label: '售价', value: p ? formatYuanOf(productSellingPrice(row.productId)!) + '/' + productUnitOf(row.productId) : '—' },
     { label: '加价率', value: m != null ? m + '%' : '—' },
+    { label: '剩余状态', value: stockLabel(row) },
     { label: '备注', value: row.note || '—' }
   ]
 }
@@ -30,6 +31,7 @@ import { computed, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import {
   calcMarkupRate,
+  calcPurchaseStockStatus,
   calcPurchaseTotal,
   deriveQuantity,
   deriveUnitPrice,
@@ -66,7 +68,7 @@ function catNameOf(productId: string): string {
 
 // ===== 一键导出 CSV（进货记录：按当前分类/商品筛选导出）=====
 function exportPurchasesCsv(): void {
-  const headers = ['日期', '商品', '分类', '数量', '进货单价', '金额', '备注']
+  const headers = ['日期', '商品', '分类', '数量', '进货单价', '金额', '剩余状态', '备注']
   const rows: (string | number)[][] = filteredWithProductFilter.value.map(p => [
     p.date,
     productNameOf(p.productId),
@@ -74,6 +76,7 @@ function exportPurchasesCsv(): void {
     p.quantity,
     p.unitPrice.toFixed(2),
     p.total.toFixed(2),
+    stockLabel(p),
     p.note ?? ''
   ])
   downloadCsv(csvFileName('进货记录'), buildCsv(headers, rows))
@@ -99,6 +102,39 @@ function markupRateOf(productId: string, unitPrice: number): number | null {
 
 // P1-3：按商品筛选 prop
 const props = defineProps<{ productFilter?: string }>()
+
+/**
+ * 进货批次剩余状态（先进先出：最旧批次优先被售出消耗）。
+ * 取全量 purchases/dailyRecords 计算（不按筛选），保证跨分类 tab 结果一致。
+ */
+const stockStatus = computed(() => calcPurchaseStockStatus(store.purchases, store.dailyRecords))
+
+/** 某笔记货的剩余状态（数据异常/新记录时返回 null，表格显示 —） */
+function stockOf(purchaseId: string) {
+  return stockStatus.value[purchaseId] ?? null
+}
+
+/** 剩余状态文案：已售完 / 未售完（剩 N） */
+function stockLabel(row: BusinessPurchase): string {
+  const st = stockOf(row.id)
+  if (!st) return '—'
+  return st.soldOut ? '已售完' : `未售完 · 剩 ${st.remaining}`
+}
+
+/** 剩余状态样式：sold-out（已售完）/ unsold（未售完）/ none（无数据） */
+function stockClass(row: BusinessPurchase): string {
+  const st = stockOf(row.id)
+  if (!st) return 'none'
+  return st.soldOut ? 'sold-out' : 'unsold'
+}
+
+/** 剩余状态悬浮说明（说明 FIFO 口径与本批消耗情况） */
+function stockTip(row: BusinessPurchase): string {
+  const st = stockOf(row.id)
+  if (!st) return '暂无数据'
+  const base = `按先进先出消耗（最旧批次优先售出）：本批进货 ${st.quantity}，已售 ${st.sold}，剩余 ${st.remaining}；该商品累计售出 ${st.totalSold}`
+  return st.isOldest ? `${base}（本批为该商品最旧批次）` : base
+}
 
 // P1-3：实际过滤后的列表（叠加 productFilter）
 const filteredWithProductFilter = computed(() => {
@@ -349,6 +385,20 @@ async function handleDelete(id: string): Promise<void> {
                 }"
               >{{ markupRateOf(row.productId, row.unitPrice) }}%</span>
               <span v-else style="color: var(--color-text-muted, #9ca3af);">—</span>
+            </template>
+          </el-table-column>
+          <!-- 剩余状态：按收摊售出数量先进先出消耗，判定该批（最旧批次优先）是否已全部售出 -->
+          <el-table-column label="剩余状态" width="140" align="center">
+            <template #default="{ row }">
+              <span
+                class="bizpur-stock"
+                :class="stockClass(row)"
+                :data-testid="`bizpur-stock-${row.id}`"
+                :title="stockTip(row)"
+              >
+                {{ stockLabel(row) }}
+                <span v-if="stockOf(row.id)?.isOldest" class="bizpur-stock-oldest">最旧</span>
+              </span>
             </template>
           </el-table-column>
           <el-table-column label="备注" min-width="140" align="left" show-overflow-tooltip>
@@ -712,6 +762,44 @@ async function handleDelete(id: string): Promise<void> {
   color: var(--color-text-muted, #6b7280);
 }
 
+/* ===== 剩余状态（先进先出消耗：已售完 / 未售完 · 剩 N） ===== */
+.bizpur-stock {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  border-radius: var(--radius-full, 999px);
+  border: 1px solid transparent;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.bizpur-stock.sold-out {
+  color: var(--color-success, #16a34a);
+  background: color-mix(in srgb, var(--color-success, #16a34a) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-success, #16a34a) 32%, transparent);
+}
+
+.bizpur-stock.unsold {
+  color: var(--color-warning, #b45309);
+  background: color-mix(in srgb, var(--color-warning, #f59e0b) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-warning, #f59e0b) 34%, transparent);
+}
+
+.bizpur-stock.none {
+  color: var(--color-text-muted, #9ca3af);
+}
+
+.bizpur-stock-oldest {
+  padding: 0 5px;
+  border-radius: var(--radius-full, 999px);
+  font-size: 11px;
+  background: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-text-muted, #6b7280);
+}
+
 .bizpur-linked-badge {
   margin-left: 6px;
   padding: 1px 6px;
@@ -835,6 +923,23 @@ async function handleDelete(id: string): Promise<void> {
 html.dark .biz-dialog {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
+}
+
+html.dark .bizpur-stock.sold-out {
+  color: #6ee7b7;
+  background: rgba(22, 163, 74, 0.2);
+  border-color: rgba(22, 163, 74, 0.45);
+}
+
+html.dark .bizpur-stock.unsold {
+  color: #fcd34d;
+  background: rgba(245, 158, 11, 0.18);
+  border-color: rgba(245, 158, 11, 0.45);
+}
+
+html.dark .bizpur-stock-oldest {
+  background: rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
 }
 
 html.dark .bizpur-cat-badge {
