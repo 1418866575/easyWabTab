@@ -7,6 +7,7 @@
 import { computed, ref } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { ledgerDefaultName } from '@/composables/businessCore'
+import Icon from '@/components/Icon.vue'
 
 const store = useWorkbenchBusinessStore()
 
@@ -30,15 +31,17 @@ function onSelect(id: string): void {
 
 <template>
   <div class="bls-wrap">
+    <!-- 样式/结构与「云同步」按钮完全一致：class 同为 bs-btn + wb-sync-btn（基础样式由 BusinessView :deep 透传） -->
     <button
       type="button"
-      class="bs-btn bls-trigger"
+      class="bs-btn wb-sync-btn bls-trigger"
       :title="`当前账本：${label}（点击切换；新建/删除账本在右上角设置 → 基础设置）`"
       data-testid="bs-ledger-switcher"
       @click="toggle"
     >
+      <Icon name="ledger" :size="14" />
       <span class="bls-name">{{ label }}</span>
-      <span class="bls-caret">▾</span>
+      <Icon name="chevron-down" :size="12" />
     </button>
 
     <!-- 点击空白处关闭下拉 -->
@@ -71,22 +74,18 @@ function onSelect(id: string): void {
   position: relative;
 }
 
+/* 仅保留与「云同步」按钮的差异项（配色/字号/间距/圆角由 BusinessView 的 .bs-btn 统一提供）；
+   transition 与 .wb-sync-btn 同源（该样式为 BusinessView scoped，子组件按钮需自带一份） */
 .bls-trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
   max-width: 220px;
+  gap: 6px;
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, opacity 120ms ease;
 }
 
 .bls-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.bls-caret {
-  font-size: 11px;
-  color: var(--color-text-secondary, #64748b);
 }
 
 .bls-mask {

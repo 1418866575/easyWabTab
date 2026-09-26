@@ -9,6 +9,7 @@ import {
   calcExpenseCategoryBreakdown,
   calcExpenseTrend,
   calcCategoryRevenueBreakdown,
+  calcMonthlyStats,
   compactAmount,
   formatYuanOf,
   localDateKey
@@ -83,6 +84,25 @@ const donutSegments = computed(() => {
 
 // 支出分类占比
 const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value))
+
+// ===== 近 12 个月（严格限定在当前账本年份的 12 个月，不跨年；无数据月份为 0） =====
+const monthMode = ref<'revenue' | 'profit' | 'expense'>('revenue')
+const ledgerYear = computed(() => store.currentLedgerYear)
+const monthlyStats = computed(() => calcMonthlyStats(data.value, ledgerYear.value))
+const monthBars = computed(() => {
+  const valueOf = (m: { revenue: number; profit: number; expense: number }): number =>
+    monthMode.value === 'revenue' ? m.revenue : monthMode.value === 'profit' ? m.profit : m.expense
+  const max = Math.max(1, ...monthlyStats.value.map(m => Math.abs(valueOf(m))))
+  return monthlyStats.value.map(m => {
+    const value = valueOf(m)
+    return { ...m, value, pct: (Math.abs(value) / max) * 100 }
+  })
+})
+const monthModeLabel = computed(() =>
+  monthMode.value === 'revenue' ? '营业额' : monthMode.value === 'profit' ? '利润' : '支出'
+)
+/** 12 个月合计（当前模式） */
+const monthTotal = computed(() => Math.round(monthBars.value.reduce((s, b) => s + b.value, 0) * 100) / 100)
 </script>
 
 <template>
@@ -242,6 +262,39 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
       </section>
     </div>
     </div>
+
+    <!-- 近 12 个月：范围严格限定在当前账本年份内的 12 个月（不跨年），未产生数据的月份以 0 展示 -->
+    <section class="bizstats-card bizstats-monthly" data-testid="bizstats-monthly">
+      <div class="bizstats-head">
+        <h3>{{ ledgerYear }} 年 12 个月{{ monthModeLabel }}（不跨年，无数据月份记 0）</h3>
+        <div class="bizstats-days">
+          <el-radio-group v-model="monthMode" size="small">
+            <el-radio-button value="revenue" data-testid="bizstats-month-revenue">营业额</el-radio-button>
+            <el-radio-button value="profit" data-testid="bizstats-month-profit">利润</el-radio-button>
+            <el-radio-button value="expense" data-testid="bizstats-month-expense">支出</el-radio-button>
+          </el-radio-group>
+        </div>
+      </div>
+      <div class="bizstats-month-bars" data-testid="bizstats-month-bars">
+        <div
+          v-for="m in monthBars"
+          :key="m.month"
+          class="bizstats-month-col"
+          :class="{ negative: m.value < 0 }"
+          :data-testid="`bizstats-month-${m.month}`"
+          :title="`${m.label}：${monthModeLabel} ${formatYuanOf(m.value)}｜营业额 ${formatYuanOf(m.revenue)}｜成本 ${formatYuanOf(m.cost)}｜支出 ${formatYuanOf(m.expense)}｜${m.transactionCount} 笔`"
+        >
+          <span class="bizstats-month-value">{{ compactAmount(m.value) }}</span>
+          <div class="bizstats-month-track">
+            <div class="bizstats-month-bar" :style="{ height: m.pct + '%' }"></div>
+          </div>
+          <span class="bizstats-month-label">{{ m.label }}</span>
+        </div>
+      </div>
+      <p class="bizstats-month-total" data-testid="bizstats-month-total">
+        全年{{ monthModeLabel }}合计：{{ formatYuanOf(monthTotal) }}（共 {{ monthlyStats.reduce((s, m) => s + m.days, 0) }} 天收摊记录）
+      </p>
+    </section>
   </div>
 </template>
 
@@ -263,6 +316,72 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
 .bizstats-trend-section {
   flex: 7 1 0;
   min-width: 0;
+}
+
+/* ===== 近 12 个月（限定当前年份，不跨年；空月为 0） ===== */
+.bizstats-monthly {
+  margin-top: 4px;
+}
+
+.bizstats-month-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 180px;
+  padding: 16px 4px 0;
+}
+
+.bizstats-month-col {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.bizstats-month-value {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary, #6b7280);
+  white-space: nowrap;
+}
+
+/* 柱轨道：占满列内剩余高度，柱子按百分比从底部生长（0 值月份仅剩 2px 底座） */
+.bizstats-month-track {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.bizstats-month-bar {
+  width: 100%;
+  max-width: 40px;
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(180deg, var(--color-primary, #3b82f6), color-mix(in srgb, var(--color-primary, #3b82f6) 55%, transparent));
+  transition: height var(--transition-fast, 0.3s ease);
+}
+
+.bizstats-month-col.negative .bizstats-month-bar {
+  background: linear-gradient(180deg, var(--color-danger, #ef4444), color-mix(in srgb, var(--color-danger, #ef4444) 55%, transparent));
+}
+
+.bizstats-month-label {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--color-text-muted, #9ca3af);
+}
+
+.bizstats-month-total {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-secondary, #6b7280);
 }
 
 .bizstats-card {

@@ -32,9 +32,11 @@ import {
   newId,
   normalizeBusinessData,
   normalizeBusinessStore,
+  normalizeExpenseIds,
   pickDefaultLedger,
   renameCategory,
   sortedLedgers,
+  sumExpenseAmounts,
   toggleCategoryVisible
 } from '@/composables/businessCore'
 import type { CategoryOpResult, LedgerDeleteGuard, LedgerMutateResult, LedgerOpResult } from '@/composables/businessCore'
@@ -363,16 +365,21 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     unitPrice: number
     date: string
     note?: string
+    /** 关联的支出记录 id（进货优化：合计金额 = 已关联支出金额之和） */
+    expenseIds?: string[]
   }): Promise<void> {
     const quantity = Math.max(0, Math.floor(input.quantity))
     const unitPrice = Math.max(0, input.unitPrice)
+    const ids = normalizeExpenseIds(input.expenseIds)
     purchases.value.push({
       id: newId('bpr_'),
       productId: input.productId,
       quantity,
       unitPrice,
-      total: Math.round(quantity * unitPrice * 100) / 100,
+      // 关联了支出 → 合计取支出汇总（UI 与之一致）；否则沿用 数量 × 单价
+      total: ids.length ? sumExpenseAmounts(expenses.value, ids) : Math.round(quantity * unitPrice * 100) / 100,
       date: input.date,
+      ...(ids.length ? { expenseIds: ids } : {}),
       note: input.note?.trim() || undefined,
       createdAt: new Date().toISOString()
     })
@@ -389,7 +396,15 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     const merged = { ...old, ...patch, id }
     merged.quantity = Math.max(0, Math.floor(merged.quantity))
     merged.unitPrice = Math.max(0, merged.unitPrice)
-    merged.total = Math.round(merged.quantity * merged.unitPrice * 100) / 100
+    // 关联了支出 → 合计取支出汇总；否则 数量 × 单价（与 addPurchase 同口径）
+    const ids = normalizeExpenseIds(patch.expenseIds ?? old.expenseIds)
+    if (ids.length) {
+      merged.expenseIds = ids
+      merged.total = sumExpenseAmounts(expenses.value, ids)
+    } else {
+      delete merged.expenseIds
+      merged.total = Math.round(merged.quantity * merged.unitPrice * 100) / 100
+    }
     purchases.value[index] = merged
     await saveBusiness()
   }
@@ -399,15 +414,22 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     await saveBusiness()
   }
 
-  // ===== 收摊日记录（date 唯一 upsert 语义；totalRevenue 由 core 算好落库） =====
+  // ===== 收摊日记录（date 唯一 upsert 语义；totalRevenue 默认由 core 算，传 revenueOverride 则以手动金额为准） =====
   async function upsertDailyRecord(input: {
     date: string
     items: DailyRecordItem[]
     note?: string
     transactionCount?: number
+    /** 手动填写的营业额（收摊优化）：传入则覆盖自动合计，保留两位小数 */
+    revenueOverride?: number | null
   }): Promise<void> {
     const now = new Date().toISOString()
-    const totalRevenue = calcDailyRevenue(input.items, toRaw(products.value))
+    const autoRevenue = calcDailyRevenue(input.items, toRaw(products.value))
+    // 手动营业额：仅接受有限且 ≥0 的数值，否则回退自动合计（防止 NaN/负数入库）
+    const totalRevenue =
+      typeof input.revenueOverride === 'number' && Number.isFinite(input.revenueOverride) && input.revenueOverride >= 0
+        ? Math.round(input.revenueOverride * 100) / 100
+        : autoRevenue
     const transactionCount = typeof input.transactionCount === 'number' && Number.isFinite(input.transactionCount) ? Math.max(0, Math.floor(input.transactionCount)) : undefined
     const existing = dailyRecords.value.findIndex(r => r.date === input.date)
     if (existing !== -1) {

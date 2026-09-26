@@ -536,8 +536,10 @@ export interface BusinessPurchase {
   productId: string
   quantity: number
   unitPrice: number
-  total: number // quantity × unitPrice（表单自动算）
+  total: number // quantity × unitPrice；关联了支出时 = 已关联支出金额之和
   date: string // YYYY-MM-DD
+  /** 关联的支出记录 id（进货优化：一笔进货可同时关联多条支出，合计金额自动汇总） */
+  expenseIds?: string[]
   note?: string
   createdAt: string
 }

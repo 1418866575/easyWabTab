@@ -29,9 +29,9 @@ const settingsStore = useAppSettingsStore()
 const SECTIONS = [
   { key: 'home', icon: 'home', label: '首页' },
   { key: 'products', icon: 'products', label: '商品' },
+  { key: 'expenses', icon: 'expenses', label: '支出' },
   { key: 'purchases', icon: 'purchases', label: '进货' },
   { key: 'daily', icon: 'daily', label: '收摊' },
-  { key: 'expenses', icon: 'expenses', label: '支出' },
   { key: 'inventory', icon: 'inventory', label: '库存' },
   { key: 'stats', icon: 'stats', label: '统计' }
 ] as const
@@ -333,7 +333,9 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-.bs-btn {
+/* 头部按钮基础样式：经 :deep 透传给子组件（账本切换器按钮与「云同步」共用同一份配色/字号/间距/圆角） */
+.bs-btn,
+.bs-header-right :deep(.bs-btn) {
   padding: 8px 12px;
   background-color: var(--color-bg-card, #ffffff);
   color: var(--color-text-secondary, #64748b);
@@ -344,9 +346,13 @@ onMounted(async () => {
   transition: all 0.2s;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.bs-btn:hover {
+.bs-btn:hover,
+.bs-header-right :deep(.bs-btn:hover) {
   background-color: var(--color-bg-hover, #f1f5f9);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-primary, #3b82f6);
@@ -573,13 +579,15 @@ html.dark .bs-header-left h1 {
   color: var(--color-text, #f9fafb);
 }
 
-html.dark .bs-btn {
+html.dark .bs-btn,
+html.dark .bs-header-right :deep(.bs-btn) {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-html.dark .bs-btn:hover {
+html.dark .bs-btn:hover,
+html.dark .bs-header-right :deep(.bs-btn:hover) {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-primary, #3b82f6);

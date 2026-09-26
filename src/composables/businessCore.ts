@@ -164,10 +164,87 @@ function normPurchase(raw: unknown): BusinessPurchase | null {
     quantity,
     unitPrice,
     total,
+    // 进货优化：关联支出 id 列表（旧数据无该字段 → undefined，向后兼容）
+    ...(Array.isArray(p.expenseIds)
+      ? {
+          expenseIds: Array.from(
+            new Set((p.expenseIds as unknown[]).filter((x): x is string => typeof x === 'string' && !!x))
+          )
+        }
+      : {}),
     date: p.date,
     note: typeof p.note === 'string' && p.note.trim() ? p.note.trim().slice(0, 100) : undefined,
     createdAt: typeof p.createdAt === 'string' ? p.createdAt : new Date(0).toISOString()
   }
+}
+
+// ===== 进货优化：关联支出 + 数量/单价双向联动 =====
+
+/** 支出 id → 占用它的进货记录 id（用于「同一笔支出不可重复关联」校验；首次占用者为准） */
+export function expenseLinkOwners(purchases: BusinessPurchase[]): Map<string, string> {
+  const map = new Map<string, string>()
+  for (const p of purchases ?? []) {
+    for (const eid of p.expenseIds ?? []) {
+      if (!map.has(eid)) map.set(eid, p.id)
+    }
+  }
+  return map
+}
+
+/** 指定支出金额合计（进货合计 = 已关联支出金额之和；未知 id 忽略，非有限值按 0） */
+export function sumExpenseAmounts(expenses: BusinessExpense[], ids: string[]): number {
+  const set = new Set(ids ?? [])
+  if (set.size === 0) return 0
+  const sum = (expenses ?? [])
+    .filter(e => set.has(e.id))
+    .reduce((s, e) => s + (typeof e.amount === 'number' && Number.isFinite(e.amount) ? e.amount : 0), 0)
+  return Math.round(sum * 100) / 100
+}
+
+/** 可选支出项：linkedPurchaseId 为空表示可选，非空表示已被该进货记录占用（编辑自身时不算冲突） */
+export interface ExpenseLinkOption {
+  expense: BusinessExpense
+  linkedPurchaseId?: string
+}
+
+/** 支出候选列表（日期倒序）；已被其它进货占用的支出带 linkedPurchaseId，UI 据此禁用并标注关联商品 */
+export function selectableExpenses(
+  expenses: BusinessExpense[],
+  purchases: BusinessPurchase[],
+  editingId?: string | null
+): ExpenseLinkOption[] {
+  const owners = expenseLinkOwners(purchases ?? [])
+  return [...(expenses ?? [])]
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+    .map(e => {
+      const owner = owners.get(e.id)
+      return { expense: e, linkedPurchaseId: owner && owner !== editingId ? owner : undefined }
+    })
+}
+
+/** 合计 ÷ 数量 = 单价；合计为 0 或数量 ≤ 0（除零）→ null（调用方保持原值，不写 NaN/Infinity） */
+export function deriveUnitPrice(total: number, quantity: number): number | null {
+  if (!(total > 0) || !(quantity > 0)) return null
+  return Math.round((total / quantity) * 100) / 100
+}
+
+/** 合计 ÷ 单价 = 数量（取整，至少 1）；合计为 0 或单价 ≤ 0（除零）→ null */
+export function deriveQuantity(total: number, unitPrice: number): number | null {
+  if (!(total > 0) || !(unitPrice > 0)) return null
+  return Math.max(1, Math.round(total / unitPrice))
+}
+
+/** 归一化关联支出 id：去空、去重、保持顺序（非法输入 → 空数组） */
+export function normalizeExpenseIds(ids: unknown): string[] {
+  if (!Array.isArray(ids)) return []
+  return Array.from(new Set(ids.filter((x): x is string => typeof x === 'string' && !!x)))
+}
+
+/** 未关联支出时的常规合计：数量 × 单价（两位小数） */
+export function calcPurchaseTotal(quantity: number, unitPrice: number): number {
+  const q = Math.max(0, Math.floor(quantity))
+  const p = Math.max(0, unitPrice)
+  return Math.round(q * p * 100) / 100
 }
 
 function normDailyItem(raw: unknown): DailyRecordItem | null {
@@ -611,6 +688,56 @@ export function calcBusinessTrend(data: BusinessData, endDate: string, days = 30
     const revenueR = Math.round(revenue * 100) / 100
     const costR = Math.round(cost * 100) / 100
     out.push({ date: key, revenue: revenueR, cost: costR, profit: Math.round((revenueR - costR) * 100) / 100, transactionCount: count })
+  }
+  return out
+}
+
+/** 月度聚合（统计模块「近 12 个月」）：严格限定在同一自然年内的 12 个月，不跨年；无数据月份全 0 */
+export interface MonthlyStat {
+  month: number // 1-12
+  label: string // 「1月」
+  revenue: number
+  cost: number
+  profit: number
+  expense: number
+  transactionCount: number
+  days: number // 当月有收摊记录的天数
+}
+
+/**
+ * 按自然年聚合 12 个月的营业额/成本/利润/支出/笔数。
+ * 只取 date 前缀为 `YYYY-MM` 的记录（不跨年），无数据的月份返回全 0，便于图表连续展示。
+ */
+export function calcMonthlyStats(data: BusinessData, year: number): MonthlyStat[] {
+  const round2 = (n: number): number => Math.round(n * 100) / 100
+  const y = Math.floor(year)
+  const records = (data?.dailyRecords ?? []).filter(r => typeof r?.date === 'string')
+  const expenses = (data?.expenses ?? []).filter(e => typeof e?.date === 'string')
+  const out: MonthlyStat[] = []
+  for (let m = 1; m <= 12; m++) {
+    const prefix = `${y}-${String(m).padStart(2, '0')}`
+    const monthRecords = records.filter(r => r.date.startsWith(prefix))
+    const revenue = round2(monthRecords.reduce((s, r) => s + (typeof r.totalRevenue === 'number' && Number.isFinite(r.totalRevenue) ? r.totalRevenue : 0), 0))
+    const cost = round2(monthRecords.reduce((s, r) => s + calcDailyCost(r.items, data?.products ?? []), 0))
+    const transactionCount = monthRecords.reduce(
+      (s, r) => s + (typeof r.transactionCount === 'number' && Number.isFinite(r.transactionCount) ? r.transactionCount : 0),
+      0
+    )
+    const expense = round2(
+      expenses
+        .filter(e => e.date.startsWith(prefix))
+        .reduce((s, e) => s + (typeof e.amount === 'number' && Number.isFinite(e.amount) ? e.amount : 0), 0)
+    )
+    out.push({
+      month: m,
+      label: `${m}月`,
+      revenue,
+      cost,
+      profit: round2(revenue - cost),
+      expense,
+      transactionCount,
+      days: monthRecords.length
+    })
   }
   return out
 }

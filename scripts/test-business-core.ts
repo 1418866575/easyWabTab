@@ -13,8 +13,10 @@ import {
   calcDailyLossAmount,
   calcDailyRevenue,
   calcInventory,
+  calcMonthlyStats,
   calcProductRanking,
   calcPurchaseTotals,
+  calcPurchaseTotal,
   businessTrendBars,
   compactAmount,
   clearLedgerRecords,
@@ -23,7 +25,10 @@ import {
   deleteExpenseCategory,
   deleteLedger,
   deleteProductCategory,
+  deriveQuantity,
+  deriveUnitPrice,
   emptyBusinessData,
+  expenseLinkOwners,
   filterPurchasesByCategory,
   findLedgerByYear,
   hasLedgerForYear,
@@ -39,16 +44,19 @@ import {
   normalizeBusinessData,
   normalizeBusinessStore,
   normalizeExpenseCategories,
+  normalizeExpenseIds,
   normalizeProductCategories,
   pickDefaultLedger,
   renameCategory,
+  selectableExpenses,
   soldCount,
   sortedLedgers,
+  sumExpenseAmounts,
   toggleCategoryVisible,
   visibleExpenseCategories,
   visibleProductCategories
 } from '../src/composables/businessCore.ts'
-import type { BusinessData, BusinessDailyRecord, BusinessProduct, BusinessPurchase } from '../src/types/index.ts'
+import type { BusinessData, BusinessDailyRecord, BusinessExpense, BusinessProduct, BusinessPurchase } from '../src/types/index.ts'
 
 const tests: { name: string; fn: () => void }[] = []
 function test(name: string, fn: () => void) {
@@ -707,6 +715,124 @@ test('T36 deleteLedger', () => {
   assert.deepEqual(deleteLedger(list, 'a', 'a'), { ok: false, reason: 'is-current' })
   assert.deepEqual(deleteLedger(list, 'ghost', 'a'), { ok: false, reason: 'not-found' })
   assert.deepEqual(deleteLedger([list[0]], 'a', 'a'), { ok: false, reason: 'last-one' })
+})
+
+// T37 — 进货 ↔ 支出关联：金额汇总与 id 归一化
+test('T37 expense link sum & normalize', () => {
+  const expenses: BusinessExpense[] = [
+    { id: 'e1', date: '2026-08-01', categoryId: 'expense-stall', amount: 30, createdAt: 'c' },
+    { id: 'e2', date: '2026-08-02', categoryId: 'expense-gas', amount: 12.5, createdAt: 'c' },
+    { id: 'e3', date: '2026-08-03', categoryId: 'expense-other', amount: 7.25, createdAt: 'c' }
+  ]
+  assert.equal(sumExpenseAmounts(expenses, ['e1', 'e3']), 37.25)
+  assert.equal(sumExpenseAmounts(expenses, []), 0)
+  assert.equal(sumExpenseAmounts(expenses, ['ghost']), 0)
+  assert.equal(sumExpenseAmounts([], ['e1']), 0)
+  // 去重后只算一次
+  assert.equal(sumExpenseAmounts(expenses, ['e1', 'e1']), 30)
+  // id 归一化：去空、去重、过滤非字符串
+  assert.deepEqual(normalizeExpenseIds(['e1', 'e1', '', null, 'e2']), ['e1', 'e2'])
+  assert.deepEqual(normalizeExpenseIds(undefined), [])
+  assert.deepEqual(normalizeExpenseIds('e1'), [])
+})
+
+// T38 — selectableExpenses：已被其它进货关联的支出带 linkedPurchaseId；编辑自身时不算冲突
+test('T38 selectableExpenses occupancy', () => {
+  const d = buildData()
+  const expenses: BusinessExpense[] = [
+    { id: 'e1', date: '2026-08-02', categoryId: 'expense-stall', amount: 30, createdAt: 'c' },
+    { id: 'e2', date: '2026-08-05', categoryId: 'expense-gas', amount: 12, createdAt: 'c' }
+  ]
+  const purchases: BusinessPurchase[] = [
+    { id: 'b1', productId: 'p1', quantity: 10, unitPrice: 2, total: 20, date: '2026-08-01', expenseIds: ['e1'], createdAt: 'c' },
+    { id: 'b2', productId: 'p2', quantity: 5, unitPrice: 1, total: 5, date: '2026-08-01', createdAt: 'c' }
+  ]
+  // 新建态：e1 已被 b1 占用 → 不可选
+  const opts = selectableExpenses(expenses, purchases, null)
+  assert.equal(opts.length, 2)
+  assert.deepEqual(opts.map(o => o.expense.date), ['2026-08-05', '2026-08-02'], '按日期倒序')
+  assert.equal(opts.find(o => o.expense.id === 'e1')?.linkedPurchaseId, 'b1')
+  assert.equal(opts.find(o => o.expense.id === 'e2')?.linkedPurchaseId, undefined)
+  // 编辑 b1 自身：e1 的占用者是 b1 → 不算冲突（仍可选，且保持已勾选）
+  const editOpts = selectableExpenses(expenses, purchases, 'b1')
+  assert.equal(editOpts.find(o => o.expense.id === 'e1')?.linkedPurchaseId, undefined)
+  // 编辑 b2：e1 仍被 b1 占用
+  const editB2 = selectableExpenses(expenses, purchases, 'b2')
+  assert.equal(editB2.find(o => o.expense.id === 'e1')?.linkedPurchaseId, 'b1')
+  // 归属表
+  assert.equal(expenseLinkOwners(purchases).get('e1'), 'b1')
+  assert.equal(expenseLinkOwners(d.purchases).size, 0)
+})
+
+// T39 — 数量/单价双向联动：合计为 0 或除零 → null（不产生 NaN/Infinity）
+test('T39 derive unit price & quantity', () => {
+  assert.equal(deriveUnitPrice(100, 4), 25)
+  assert.equal(deriveUnitPrice(10, 3), 3.33, '两位小数四舍五入')
+  assert.equal(deriveUnitPrice(0, 4), null, '合计为 0 → 不算')
+  assert.equal(deriveUnitPrice(100, 0), null, '数量为 0（除零）→ 不算')
+  assert.equal(deriveUnitPrice(-100, 4), null, '负数合计 → 不算')
+  assert.equal(deriveQuantity(100, 25), 4)
+  assert.equal(deriveQuantity(100, 3), 33, '取整')
+  assert.equal(deriveQuantity(0.4, 3), 1, '至少 1')
+  assert.equal(deriveQuantity(0, 25), null, '合计为 0 → 不算')
+  assert.equal(deriveQuantity(100, 0), null, '单价为 0（除零）→ 不算')
+  assert.equal(deriveQuantity(-100, 25), null, '负数合计 → 不算')
+})
+
+// T40 — calcPurchaseTotal：未关联支出时的常规合计（数量取整、单价钳 0、两位小数）
+test('T40 calcPurchaseTotal', () => {
+  assert.equal(calcPurchaseTotal(3, 2.5), 7.5)
+  assert.equal(calcPurchaseTotal(3.7, 2), 6, '数量向下取整')
+  assert.equal(calcPurchaseTotal(-5, 2), 0, '负数量钳 0')
+  assert.equal(calcPurchaseTotal(3, -2), 0, '负单价钳 0')
+  // 两位小数（7 × 1.005 = 7.035，二进制浮点四舍五入后为 7.03）
+  assert.equal(calcPurchaseTotal(7, 1.005), 7.03)
+  assert.equal(calcPurchaseTotal(9, 1.05), 9.45)
+})
+
+// T41 — calcMonthlyStats：12 个月全量返回、严格按年份不跨年、无数据月份为 0
+test('T41 calcMonthlyStats', () => {
+  const base = emptyBusinessData()
+  const data: BusinessData = {
+    ...base,
+    products: [{ id: 'p1', name: '烤肠', unit: '根', purchasePrice: 2, sellingPrice: 5, active: true, createdAt: 'c' }],
+    dailyRecords: [
+      { id: 'd1', date: '2026-03-05', totalRevenue: 100, items: [{ productId: 'p1', broughtOut: 20, remaining: 0, loss: 0 }], transactionCount: 4, createdAt: 'c', updatedAt: 'c' },
+      { id: 'd2', date: '2026-03-20', totalRevenue: 50, items: [{ productId: 'p1', broughtOut: 10, remaining: 0, loss: 0 }], transactionCount: 2, createdAt: 'c', updatedAt: 'c' },
+      { id: 'd3', date: '2025-12-31', totalRevenue: 999, items: [], createdAt: 'c', updatedAt: 'c' },
+      { id: 'd4', date: '2027-01-01', totalRevenue: 888, items: [], createdAt: 'c', updatedAt: 'c' }
+    ],
+    expenses: [
+      { id: 'e1', date: '2026-03-05', categoryId: 'expense-stall', amount: 30, createdAt: 'c' },
+      { id: 'e2', date: '2025-12-31', categoryId: 'expense-stall', amount: 77, createdAt: 'c' }
+    ]
+  }
+  const stats = calcMonthlyStats(data, 2026)
+  assert.equal(stats.length, 12, '恒返回 12 个月')
+  assert.deepEqual(stats.map(s => s.month), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+  assert.equal(stats[0].label, '1月')
+  // 3 月：营业额 150、笔数 6、天数 2、支出 30
+  const march = stats[2]
+  assert.equal(march.revenue, 150)
+  assert.equal(march.transactionCount, 6)
+  assert.equal(march.days, 2)
+  assert.equal(march.expense, 30)
+  // 成本 = 售出 30 × 进价 2 = 60 → 利润 90
+  assert.equal(march.cost, 60)
+  assert.equal(march.profit, 90)
+  // 无数据月份全 0
+  const jan = stats[0]
+  assert.deepEqual(
+    { revenue: jan.revenue, cost: jan.cost, profit: jan.profit, expense: jan.expense, transactionCount: jan.transactionCount, days: jan.days },
+    { revenue: 0, cost: 0, profit: 0, expense: 0, transactionCount: 0, days: 0 }
+  )
+  // 不跨年：2025-12-31 / 2027-01-01 的记录与支出均不计入
+  assert.equal(stats.reduce((s, m) => s + m.revenue, 0), 150)
+  assert.equal(stats.reduce((s, m) => s + m.expense, 0), 30)
+  // 空数据 → 12 个月全 0
+  const empty = calcMonthlyStats(emptyBusinessData(), 2026)
+  assert.equal(empty.length, 12)
+  assert.equal(empty.every(m => m.revenue === 0 && m.expense === 0 && m.days === 0), true)
 })
 
 let passed = 0
