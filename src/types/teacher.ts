@@ -142,6 +142,38 @@ export interface GrowthRecord {
   photos: string[] // base64 dataURL
 }
 
+// ---------- 请假信息（页面「请假信息」，班主任专属；leaves 桶） ----------
+
+/** 请假类型 */
+export type LeaveType = '事假' | '病假' | '公假' | '丧假' | '其他'
+/** 请假状态：待审批 → 已批准 / 未批准；已批准 → 已销假 */
+export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'closed'
+
+export interface LeaveRecord {
+  id: string
+  studentId: string // 关联 Student.id（学号复合 id，勿用姓名匹配）
+  type: LeaveType
+  startDate: string // YYYY-MM-DD
+  endDate: string // YYYY-MM-DD
+  days: number // 请假天数（默认结束日 - 开始日 + 1，可手动覆盖）
+  reason: string // 请假事由
+  applicant: string // 申请人（家长 / 学生本人）
+  approver: string // 审批人（默认班主任姓名）
+  status: LeaveStatus
+  remark: string // 备注（销假情况等）
+  createdAt: string // 登记时间 YYYY-MM-DD
+}
+
+export const LEAVE_TYPES: LeaveType[] = ['事假', '病假', '公假', '丧假', '其他']
+
+/** 状态展示元数据（label / 语义色 class），渲染与统计共用 */
+export const LEAVE_STATUS_META: { key: LeaveStatus; label: string; tone: string }[] = [
+  { key: 'pending', label: '待审批', tone: 'warn' },
+  { key: 'approved', label: '已批准', tone: 'info' },
+  { key: 'rejected', label: '未批准', tone: 'danger' },
+  { key: 'closed', label: '已销假', tone: 'ok' }
+]
+
 export interface RandomState {
   history: string[] // studentId[]
   mode: 'all' | 'once'
@@ -158,6 +190,8 @@ export interface ClassBucket {
   timetable: TimetableData
   growth: Record<string, GrowthRecord[]> // studentId -> 记录
   random: RandomState
+  /** 请假记录流水（班级维度，按开始日期倒序展示；随学期×班级隔离） */
+  leaves: LeaveRecord[]
 }
 
 export interface TeacherCurrent {
@@ -206,6 +240,7 @@ export type TeacherPageKey =
   | 'timetable'
   | 'special'
   | 'growth'
+  | 'leave'
   | 'help'
 
 export interface TeacherPageMeta {
@@ -234,13 +269,14 @@ export const TEACHER_PAGES: TeacherPageMeta[] = [
   { key: 'duty', label: '值日生表', icon: 'check', group: '基础功能' },
   { key: 'parents', label: '联系家长', icon: 'phone', group: '基础功能' },
   { key: 'growth', label: '奖励记录', icon: 'star', group: '基础功能' },
+  { key: 'leave', label: '请假信息', icon: 'clipboard', group: '基础功能' },
   { key: 'special', label: '隐私信息', icon: 'heart', group: '特色功能' },
   { key: 'data', label: '数据管理', icon: 'database', group: '工作台' },
   { key: 'help', label: '使用说明', icon: 'help', group: '工作台' }
 ]
 
 /** 仅班主任可见的班务模块（选「非班主任」时隐藏：导航移除 + 直达拦截） */
-export const TEACHER_HEAD_ONLY_PAGES: TeacherPageKey[] = ['seats', 'duty', 'parents', 'special']
+export const TEACHER_HEAD_ONLY_PAGES: TeacherPageKey[] = ['seats', 'duty', 'parents', 'special', 'leave']
 
 /**
  * 已迁入「设置页」的功能（数据管理 / 使用说明）：不再是左侧菜单项，

@@ -16,6 +16,7 @@ import {
   emptyBucket,
   emptyTeacherData,
   guardPage,
+  leaveStats,
   makeStudentId,
   normalizeTeacherData,
   normalizeTerm,
@@ -24,6 +25,7 @@ import {
   resolveCurrent,
   resolveDefaultSelection,
   swapSeats,
+  todayStr,
   uid
 } from '@/composables/teacherCore'
 import {
@@ -38,6 +40,9 @@ import {
   type ClassBucket,
   type ClassGroup,
   type GrowthRecord,
+  type LeaveRecord,
+  type LeaveStats,
+  type LeaveStatus,
   type ParentInfo,
   type Student,
   type TeacherData,
@@ -710,6 +715,44 @@ export const useTeacherStore = defineStore('teacher', () => {
     await saveTeacher()
   }
 
+  // ---------- 请假信息（leaves 桶，班主任专属） ----------
+
+  /** 新增请假：id / createdAt 由 store 生成；天数缺省按起止日期自动计算 */
+  async function addLeave(rec: Omit<LeaveRecord, 'id' | 'createdAt'>): Promise<void> {
+    mutateBucket((b) => ({
+      ...b,
+      leaves: [...(b.leaves ?? []), { ...rec, id: uid('leave'), createdAt: todayStr() }]
+    }))
+    await saveTeacher()
+  }
+
+  async function updateLeave(rec: LeaveRecord): Promise<void> {
+    mutateBucket((b) => ({
+      ...b,
+      leaves: (b.leaves ?? []).map((l) => (l.id === rec.id ? { ...rec } : l))
+    }))
+    await saveTeacher()
+  }
+
+  async function removeLeave(id: string): Promise<void> {
+    mutateBucket((b) => ({ ...b, leaves: (b.leaves ?? []).filter((l) => l.id !== id) }))
+    await saveTeacher()
+  }
+
+  /** 状态流转：批准 / 不批准 / 销假（销假时 remark 追加销假说明） */
+  async function setLeaveStatus(id: string, status: LeaveStatus, remark?: string): Promise<void> {
+    mutateBucket((b) => ({
+      ...b,
+      leaves: (b.leaves ?? []).map((l) =>
+        l.id === id ? { ...l, status, remark: remark === undefined ? l.remark : remark } : l
+      )
+    }))
+    await saveTeacher()
+  }
+
+  /** 当前班级请假统计（页面直接消费，store 不内联重算） */
+  const leaveSummary = computed<LeaveStats>(() => leaveStats(bucket.value?.leaves ?? []))
+
   // ---------- 随机点名 ----------
 
   async function setRandomMode(mode: 'all' | 'once'): Promise<void> {
@@ -890,6 +933,11 @@ export const useTeacherStore = defineStore('teacher', () => {
     addGrowth,
     updateGrowth,
     removeGrowth,
+    addLeave,
+    updateLeave,
+    removeLeave,
+    setLeaveStatus,
+    leaveSummary,
     setRandomMode,
     pushRandomHistory,
     resetRandomHistory,
