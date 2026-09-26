@@ -22,6 +22,7 @@ import TeacherRandom from '@/components/teacher/TeacherRandom.vue'
 import TeacherTimetable from '@/components/teacher/TeacherTimetable.vue'
 import TeacherSpecial from '@/components/teacher/TeacherSpecial.vue'
 import TeacherGrowth from '@/components/teacher/TeacherGrowth.vue'
+import TeacherLeave from '@/components/teacher/TeacherLeave.vue'
 import TeacherHelp from '@/components/teacher/TeacherHelp.vue'
 import { STAGE_OPTIONS, TERM_OPTIONS, type TeacherPageKey, type TeacherRole, type TeacherStage } from '@/types/teacher'
 import '@/styles/teacher.css'
@@ -83,6 +84,7 @@ const COMPONENTS: Record<TeacherPageKey, unknown> = {
   timetable: TeacherTimetable,
   special: TeacherSpecial,
   growth: TeacherGrowth,
+  leave: TeacherLeave,
   help: TeacherHelp
 }
 

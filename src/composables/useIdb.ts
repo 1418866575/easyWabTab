@@ -7,9 +7,9 @@
  * 所有请求失败均 reject，由调用方自行 try/catch 降级（不做 localStorage 回退写）
  */
 import { WORKBENCH_DATA_VERSION, emptyAppSettingsData } from '../types'
-import type { AppSettingsData, AppSettingsDataNoCloudSync, BusinessData, BusinessSyncData, Countdown, DiaryData, GenealogyData, HealthData, IconsSyncData, LedgerData, NavSyncData, NoteData, StudentSyncData, TeacherSyncData, WorkbenchData, WorkbenchSyncData, WorkbenchTodo } from '../types'
+import type { AppSettingsData, AppSettingsDataNoCloudSync, BusinessData, BusinessStoreData, BusinessSyncData, Countdown, DiaryData, GenealogyData, HealthData, IconsSyncData, LedgerData, NavSyncData, NoteData, StudentSyncData, TeacherSyncData, WorkbenchData, WorkbenchSyncData, WorkbenchTodo } from '../types'
 import { adoptPasswordIdentity, getStoredSaltHex, getStoredVerification } from './useCrypto'
-import { emptyBusinessData } from './businessCore.ts'
+import { normalizeBusinessStore } from './businessCore.ts'
 import { emptyDiaryData } from './diaryCore'
 import { emptyGenealogyData } from './genealogyCore'
 import { emptyHabitsData } from './habitCore'
@@ -156,7 +156,7 @@ export const WORKBENCH_PREFS_KEYS = [
 ] as const
 
 /**
- * 导航偏好键（v18 起由 localStorage 迁移至 IDB `nav` store 的整体集合，共 13 键）。
+ * 导航偏好键（v18 起由 localStorage 迁移至 IDB `nav` store 的整体集合，共 14 键）。
  * 涵盖：站点/分类/搜索引擎/主题/背景/站点标题与图标/点击计数/图标缓存等所有原 localStorage 导航键。
  * 注意：`site-click-counts` 与 `icon-cache` 不在 WORKBENCH_PREFS_KEYS 中（历史上从未进云同步信封），
  * 故仅迁 IDB 做持久化，不参与 nav.json / workbench.json 信封（保持迁移前行为）。
@@ -168,6 +168,7 @@ export const NAV_STORE_KEYS = [
   'user-deleted-legacy-ids',
   'user-search-engines',
   'user-deleted-engine-ids',
+  'user-disabled-engine-ids',
   'built-in-engine-overrides',
   'built-in-engine-default',
   'user-theme',
@@ -252,7 +253,7 @@ export async function idbExportAll(): Promise<WorkbenchData> {
     idbGet<AppSettingsData>('settings'),
     idbGet('pomodoro'),
     idbGet('habits'),
-    idbGet<BusinessData>('business'),
+    idbGet<BusinessStoreData | BusinessData>('business'),
     idbGet<GenealogyData>('family')
   ])
   return {
@@ -268,7 +269,8 @@ export async function idbExportAll(): Promise<WorkbenchData> {
     settings: settings ?? emptyAppSettingsData(),
     pomodoro: pomodoro ?? emptyPomodoroData(),
     habits: habits ?? emptyHabitsData(),
-    business: business ?? emptyBusinessData(),
+    // business 归一为账本容器：旧库/旧备份的扁平 BusinessData 自动迁入当年账本
+    business: normalizeBusinessStore(business),
     family: family ?? emptyGenealogyData(),
     passwordsSalt: getStoredSaltHex() ?? undefined,
     passwordVerification: getStoredVerification() ?? undefined,
@@ -319,8 +321,9 @@ export async function idbImportAll(data: WorkbenchData): Promise<{ adoptedPasswo
   // diary 兼容 v1-v5 备份（无该字段 → empty 兜底）；v6 备份原样透传。
   // 兜底同样放在写入循环之前 → 键存在性守卫对 diary 恒有键可写（v1-v5 导入后日记为空）
   data = { ...data, diary: data.diary ?? emptyDiaryData() }
-  // business 兼容 v1-v7 备份（无该字段 → empty 兜底）；v8 备份原样透传（含内置种子分类契约）
-  data = { ...data, business: data.business ?? emptyBusinessData() }
+  // business 兼容 v1-v7 备份（无该字段 → 空账本容器兜底）；v8+ 原样归一（含内置种子分类契约）。
+  // 统一走 normalizeBusinessStore：扁平 BusinessData（账本化之前的备份）迁入当年账本，历史数据不丢。
+  data = { ...data, business: normalizeBusinessStore(data.business) }
   // family 兼容 v1-v14 备份（无该字段 → empty 兜底）；v15 起原样透传
   data = { ...data, family: data.family ?? emptyGenealogyData() }
   // prefs 兼容 v1-v8 备份（无该字段 → {} 空对象兜底，导入后不回写任何 localStorage）
@@ -512,7 +515,7 @@ export async function importWorkbenchData(remote: WorkbenchSyncData): Promise<{ 
   // 用它兜底保留本地家谱，避免每次自动拉取把本地数据静默清空
   const [localSettings, localBusiness, localFamily, localDiary] = await Promise.all([
     idbGet<AppSettingsData>('settings'),
-    idbGet<BusinessData>('business'),
+    idbGet<BusinessStoreData | BusinessData>('business'),
     idbGet<GenealogyData>('family'),
     idbGet<DiaryData>('diary')
   ])
@@ -546,8 +549,9 @@ export async function importWorkbenchData(remote: WorkbenchSyncData): Promise<{ 
     // 此时必须保留本地 family，绝不能覆盖成空——否则后台自动拉取会静默清空本地家谱。
     // 仅当远端明确带 family（哪怕是空数组）时才应用远端。
     family: remote.family ?? localFamily ?? emptyGenealogyData(),
-    // 保留本地 business（workbench.json 不携带；idbImportAll 会写入此值，等同 no-op）
-    business: localBusiness ?? emptyBusinessData(),
+    // 保留本地 business（workbench.json 不携带；idbImportAll 会写入此值，等同 no-op）。
+    // 归一为账本容器后再回写，避免把本地新结构降级成扁平数据（会丢失多账本）
+    business: normalizeBusinessStore(localBusiness),
     passwordsSalt: remote.passwordsSalt,
     passwordVerification: remote.passwordVerification,
     prefs: remote.prefs,
@@ -560,18 +564,19 @@ export async function importWorkbenchData(remote: WorkbenchSyncData): Promise<{ 
 
 // ---------- business.json（销售记账独立信封） ----------
 
+/** business.json：读本地账本容器（旧扁平数据经 normalizeBusinessStore 迁入当年账本） */
 export async function exportBusiness(): Promise<BusinessSyncData> {
-  const business = await idbGet<BusinessData>('business')
+  const business = await idbGet<BusinessStoreData | BusinessData>('business')
   return {
     version: 1,
     exportedAt: new Date().toISOString(),
-    business: business ?? emptyBusinessData()
+    business: normalizeBusinessStore(business)
   }
 }
 
 export async function importBusinessData(remote: BusinessSyncData): Promise<void> {
-  const data = remote?.business ?? emptyBusinessData()
-  await idbPut('business', data)
+  // 云端旧信封可能是扁平 BusinessData → 归一为账本容器后再落库，保证 store 读到的一定是 v2 结构
+  await idbPut('business', normalizeBusinessStore(remote?.business))
 }
 
 // ---------- student.json（学生工作台 15 store 单事务写入） ----------

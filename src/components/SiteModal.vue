@@ -1,26 +1,33 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
+import IconPickerDialog from './IconPickerDialog.vue'
 import { ref, watch, computed } from 'vue'
 import type { Site } from '../types'
 import { useUrlMetadata } from '../composables/useUrlMetadata'
 import { useCategoriesStore } from '../stores/categories'
 import { useSitesStore } from '../stores/sites'
-import { PRESET_ICONS, findPresetIconByUrl, getIconPath, type PresetIcon } from '../composables/presetIcons'
+import { findPresetIconByUrl, getIconPath } from '../composables/presetIcons'
 import { getIconUrl } from '../composables/useIconCache'
-import { useIconsStore, type MergedIcon } from '@/stores/icons'
+import type { MergedIcon } from '@/stores/icons'
 
 const categoriesStore = useCategoriesStore()
 const sitesStore = useSitesStore()
-const iconsStore = useIconsStore()
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   site: Site | null
-}>()
+  /** embedded = true：作为常驻面板内嵌在设置页（无遮罩、无自带标题栏、不响应遮罩点击关闭） */
+  embedded?: boolean
+}>(), { embedded: false })
 
 const emit = defineEmits<{
   save: [site: Site]
   close: []
 }>()
+
+/** 遮罩点击关闭：仅弹框模式生效（内嵌面板点击空白不应关闭） */
+function onOverlayClick(): void {
+  if (!props.embedded) emit('close')
+}
 
 const form = ref({
   name: '',
@@ -37,52 +44,28 @@ const errors = ref<Record<string, string>>({})
 const isLoading = ref(false)
 
 // ===== 图标选择器状态 =====
-const showIconPicker = ref(false)
-const iconSearchQuery = ref('')
+// 「选择图标」改为弹出独立的图标选择弹框（IconPickerDialog）：选中即回填到表单并关闭，
+// 取消 / 点遮罩 / ESC 关闭都不修改原值。图标库（预置 + 自定义）的搜索、分类筛选以及
+// 「导入图标 / 上传图标」都在弹框内完成，表单侧只负责回填结果。
+const iconPickerOpen = ref(false)
+/** 手动填写图标 URL：弹框未覆盖的补漏入口（例如直接粘贴外链 favicon） */
 const iconManualInput = ref('')
-const iconCategoryFilter = ref('all')
 
-// 所有分类
-const iconCategories = computed(() => {
-  const cats = new Set(PRESET_ICONS.map(i => i.category))
-  if (iconsStore.customIcons.length > 0) cats.add('自定义')
-  return ['all', ...Array.from(cats)]
-})
-
-// 分类显示名称
-const categoryLabels: Record<string, string> = {
-  all: '全部',
-  '社交与社区': '社交',
-  '国内常用网站': '国内常用',
-  '工具与开发': '开发工具',
-  '前端技术': '前端',
-  '后端与数据库': '后端/数据库',
-  '云服务与平台': '云平台',
-  '大模型与 AI': 'AI',
-  '视频与媒体': '视频',
-  '其他': '其他',
-  '自定义': '自定义',
+function openIconPicker(): void {
+  iconPickerOpen.value = true
 }
 
-// 过滤后的预置图标
-const filteredPresetIcons = computed(() => {
-  const customMapped = iconsStore.customIcons.map(c => ({ ...c, isCustom: true as const }))
-  let icons: MergedIcon[] = [...PRESET_ICONS, ...customMapped]
-  // 分类过滤
-  if (iconCategoryFilter.value !== 'all') {
-    icons = icons.filter(i => i.category === iconCategoryFilter.value)
-  }
-  // 搜索过滤
-  const query = iconSearchQuery.value.toLowerCase().trim()
-  if (query) {
-    icons = icons.filter(icon =>
-      icon.label.toLowerCase().includes(query) ||
-      icon.name.toLowerCase().includes(query) ||
-      (icon as PresetIcon).url?.toLowerCase()?.includes(query)
-    )
-  }
-  return icons
-})
+function closeIconPicker(): void {
+  iconPickerOpen.value = false
+}
+
+/** 弹框选中图标：立即回填并关闭弹框；回传空串 = 恢复默认（清空图标字段） */
+function onPickIcon(src: string): void {
+  form.value.icon = src
+  iconManualInput.value = ''
+  errors.value.icon = ''
+  closeIconPicker()
+}
 
 // 获取图标的显示 URL（优先 form.icon，其次自动检测 URL）
 const iconDisplaySrc = computed(() => {
@@ -99,13 +82,7 @@ const iconDisplaySrc = computed(() => {
 })
 
 
-// 获取图标 src
-function getIconSrc(icon: MergedIcon): string {
-  if ('isCustom' in icon) return icon.dataUrl
-  return `/icons/${icon.name}.${icon.ext}`
-}
-
-// 选择预置图标
+// 选择预置图标（推荐位点击沿用同一逻辑）
 function selectPresetIcon(icon: MergedIcon) {
   if ('isCustom' in icon) {
     form.value.icon = icon.dataUrl
@@ -113,15 +90,14 @@ function selectPresetIcon(icon: MergedIcon) {
     form.value.icon = `/icons/${icon.name}.${icon.ext}`
   }
   iconManualInput.value = ''
-  showIconPicker.value = false
-  iconSearchQuery.value = ''
+  errors.value.icon = ''
 }
 
 // 手动输入图标 URL
 function applyManualIcon() {
   if (iconManualInput.value.trim()) {
     form.value.icon = iconManualInput.value.trim()
-    showIconPicker.value = false
+    errors.value.icon = ''
   }
 }
 
@@ -355,9 +331,9 @@ const handleSubmit = () => {
 
 <template>
   <Transition name="modal">
-    <div class="modal-overlay" @click.self="emit('close')">
-      <div class="modal">
-      <div class="modal-header">
+    <div :class="embedded ? 'mgr-embed' : 'modal-overlay'" @click.self="onOverlayClick">
+      <div :class="embedded ? 'mgr-embed-inner' : 'modal'">
+      <div v-if="!embedded" class="modal-header">
         <h2>{{ isEditing ? '编辑网站' : '添加网站' }}</h2>
         <button class="close-btn" @click="emit('close')"><Icon name="close" /></button>
       </div>
@@ -471,9 +447,15 @@ const handleSubmit = () => {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.86 6.69 2.3"/><path d="M21 3v6h-6"/></svg>
                 自动获取
               </button> -->
-              <button type="button" class="btn-icon-action" @click="showIconPicker = !showIconPicker" title="选择图标">
+              <button
+                type="button"
+                class="btn-icon-action"
+                data-testid="site-icon-picker-btn"
+                title="从图标库选择图标"
+                @click="openIconPicker"
+              >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
-                {{ showIconPicker ? '收起' : '选择图标' }}
+                选择图标
               </button>
               <button v-if="form.icon" type="button" class="btn-icon-action btn-icon-clear" @click="clearIcon" title="清除">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -490,64 +472,22 @@ const handleSubmit = () => {
             </div>
           </div>
 
-          <!-- 图标选择面板 -->
-          <div v-if="showIconPicker" class="icon-picker-panel">
-            <!-- 搜索框 -->
-            <div class="icon-picker-search">
-              <input
-                v-model="iconSearchQuery"
-                type="text"
-                placeholder="搜索图标..."
-                class="icon-search-input"
-              />
-            </div>
-
-            <!-- 分类过滤 -->
-            <div class="icon-category-tabs">
-              <button
-                v-for="cat in iconCategories"
-                :key="cat"
-                type="button"
-                class="icon-category-tab"
-                :class="{ active: iconCategoryFilter === cat }"
-                @click="iconCategoryFilter = cat"
-              >
-                {{ categoryLabels[cat] || cat }}
-              </button>
-            </div>
-
-            <!-- 预置图标网格 -->
-            <div class="icon-grid">
-              <button
-                v-for="icon in filteredPresetIcons"
-                :key="getIconSrc(icon)"
-                type="button"
-                class="icon-grid-item"
-                :class="{ active: form.icon === getIconSrc(icon) }"
-                :title="icon.label"
-                @click="selectPresetIcon(icon)"
-              >
-                <img :src="getIconSrc(icon)" :alt="icon.label" class="grid-icon-img" />
-                <span class="grid-icon-label">{{ icon.label }}</span>
-              </button>
-            </div>
-
-            <!-- 手动输入 -->
-            <div class="icon-manual-input">
-              <input
-                v-model="iconManualInput"
-                type="text"
-                placeholder="或输入图标 URL..."
-                class="icon-url-input"
-                @keyup.enter="applyManualIcon"
-              />
-              <button type="button" class="btn-apply-icon" @click="applyManualIcon" :disabled="!iconManualInput.trim()">应用</button>
-            </div>
-
-            <span v-if="errors.icon" class="error-msg">{{ errors.icon }}</span>
+          <!-- 手动输入图标 URL：保留原内联面板里的补漏入口（弹框只覆盖图标库内的图标） -->
+          <div class="icon-manual-input">
+            <input
+              v-model="iconManualInput"
+              type="text"
+              placeholder="或输入图标 URL..."
+              class="icon-url-input"
+              data-testid="site-icon-url-input"
+              @keyup.enter="applyManualIcon"
+            />
+            <button type="button" class="btn-apply-icon" @click="applyManualIcon" :disabled="!iconManualInput.trim()">应用</button>
           </div>
 
-          <span v-if="!showIconPicker && !form.icon" class="form-hint">可选，点击「自动获取」或「选择图标」</span>
+          <span v-if="errors.icon" class="error-msg">{{ errors.icon }}</span>
+
+          <span v-if="!form.icon" class="form-hint">可选，点击「选择图标」从图标库挑选，或直接粘贴图标链接</span>
         </div>
 
         <!-- 排序权重 - 已改为点击频率自动排序，此处隐藏 -->
@@ -564,12 +504,22 @@ const handleSubmit = () => {
         -->
 
         <div class="modal-footer">
-          <button type="button" class="btn-cancel" @click="emit('close')">取消</button>
+          <button v-if="!embedded" type="button" class="btn-cancel" @click="emit('close')">取消</button>
           <button type="submit" class="btn-submit">
             {{ isEditing ? '保存' : '添加' }}
           </button>
         </div>
       </form>
+
+      <!-- 图标选择弹框：选中即回填并关闭；取消 / 遮罩点击 / ESC 关闭均不修改原值。
+           必须放在 <form> 之外：弹框内搜索框按回车会触发隐式表单提交，导致误提交新增网址 -->
+      <IconPickerDialog
+        v-if="iconPickerOpen"
+        title="选择网站图标"
+        :current="form.icon"
+        @select="onPickIcon"
+        @close="closeIconPicker"
+      />
     </div>
     </div>
   </Transition>
@@ -729,8 +679,8 @@ const handleSubmit = () => {
   margin-left: 96px; /* 84px 标签宽 + 12px 间距 */
 }
 
-/* 图标选择面板整行显示在控件下方 */
-.form-group > .icon-picker-panel {
+/* 手动输入图标 URL 整行显示在控件下方 */
+.form-group > .icon-manual-input {
   flex-basis: 100%;
 }
 
@@ -1030,116 +980,6 @@ const handleSubmit = () => {
   height: 16px;
   border-radius: 4px;
 }
-
-/* 图标选择面板 */
-.icon-picker-panel {
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 10px;
-  padding: 14px;
-  background: var(--color-bg-hover, #f8fafc);
-  margin-top: 4px;
-  animation: dropdownIn 0.15s ease;
-}
-
-.icon-picker-search {
-  margin-bottom: 12px;
-}
-
-.icon-search-input {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 6px;
-  font-size: 13px;
-  outline: none;
-  transition: border-color 0.15s;
-  background: white;
-}
-
-.icon-search-input:focus {
-  border-color: var(--color-primary, #3b82f6);
-}
-
-/* 分类标签 */
-.icon-category-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 12px;
-}
-
-.icon-category-tab {
-  padding: 4px 10px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 16px;
-  background: white;
-  color: var(--color-text-secondary, #64748b);
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-
-.icon-category-tab:hover {
-  border-color: var(--color-primary, #3b82f6);
-  color: var(--color-primary, #3b82f6);
-}
-
-.icon-category-tab.active {
-  background: var(--color-primary, #3b82f6);
-  color: white;
-  border-color: var(--color-primary, #3b82f6);
-}
-
-/* 图标网格 */
-.icon-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-  gap: 8px;
-  max-height: 220px;
-  overflow-y: auto;
-  margin-bottom: 12px;
-}
-
-.icon-grid-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 10px 6px;
-  border: 1.5px solid transparent;
-  border-radius: 8px;
-  background: white;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.icon-grid-item:hover {
-  border-color: var(--color-primary, #3b82f6);
-  background: var(--color-primary-light, #eff6ff);
-}
-
-.icon-grid-item.active {
-  border-color: var(--color-primary, #3b82f6);
-  background: var(--color-primary-light, #eff6ff);
-}
-
-.grid-icon-img {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-}
-
-.grid-icon-label {
-  font-size: 11px;
-  color: var(--color-text-secondary, #64748b);
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
-}
-
 .icon-grid-item.active .grid-icon-label {
   color: var(--color-primary, #3b82f6);
 }
@@ -1196,5 +1036,30 @@ const handleSubmit = () => {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* ============================================================
+   embedded 模式：常驻面板内嵌在「设置 → 导航站 → 添加网址」
+   无遮罩 / 无固定定位，宽度撑满父面板，超高由外层面板滚动。
+   ============================================================ */
+.mgr-embed {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  display: block;
+  width: 100%;
+  padding: 0;
+  background-color: transparent;
+  overflow: visible;
+}
+
+.mgr-embed-inner {
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+  border-radius: 12px;
+  background-color: var(--color-bg-card, #fff);
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
 }
 </style>

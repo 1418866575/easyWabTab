@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
+import IconPickerDialog from './IconPickerDialog.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useCategoriesStore } from '../stores/categories'
 import { useSitesStore } from '../stores/sites'
+import { isImageIcon } from '../composables/categoryIcon'
+
+/** embedded = true：作为常驻面板内嵌在设置页（无遮罩、无自带标题栏、不响应 ESC 与遮罩点击关闭） */
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
 const emit = defineEmits<{
   close: []
@@ -11,8 +16,14 @@ const emit = defineEmits<{
 const categoriesStore = useCategoriesStore()
 const sitesStore = useSitesStore()
 
-// ESC 键关闭弹框
+/** 遮罩点击关闭：仅弹框模式生效（内嵌面板点击空白不应关闭） */
+function onOverlayClick(): void {
+  if (!props.embedded) emit('close')
+}
+
+// ESC 键关闭弹框（内嵌模式下交给外层容器处理，避免把整个设置页一起关掉）
 function handleKeydown(event: KeyboardEvent) {
+  if (props.embedded) return
   if (event.key === 'Escape') {
     event.preventDefault()
     emit('close')
@@ -28,12 +39,58 @@ onUnmounted(() => {
 })
 
 const newCategoryName = ref('')
-const newCategoryIcon = ref('📂')
+const newCategoryIcon = ref('')
 const editingId = ref<string | null>(null)
 const editingName = ref('')
 const editingIcon = ref('')
 
-const defaultIcons = ['📂', '🔧', '⚙️', '🔗', '🌟', '💡', '🚀', '🎯', '📌', '🏷️', '📰', '🎮', '🎬', '🛒', '🏠', '📚', '💰', '🏛️', '✈️', '🏥', '🎨', '📁', '🌐', '💻', '📱', '🎵', '🎥', '📷', '🎨', '📝', '📊', '📈', '📉', '💼', '📋', '📌', '🔖', '🏷️', '🎫', '🎟️', '🎪', '🎭', '🎨', '🎬', '🎤', '🎧', '🎵', '🎶', '🔊', '🔈', '📺', '📻', '☎️', '📞', '📧', '📩', '📬', '📭', '📮', '📯', '📜', '📃', '📄', '📑', '🔍', '🔎', '🔏', '🔐', '🔑', '🗝️', '🔒', '🔓', '💳', '💵', '💴', '💶', '💷', '💸', '💹', '📦', '📫', '📬', '📭', '🏠', '🏢', '🏣', '🏤', '🏥', '🏦', '🏧', '🏨', '🏩', '🏪', '🏫', '🏬', '🏭', '🏮', '🏯', '🏰', '🗼', '🗽', '⛪', '🕌', '🕍', '⛩️', '🛕', '🛤️', '🛣️', '🗾', '🗻', '🌋', '🗾', '🏔️', '⛰️', '🌄', '🌅', '🌈', '�天使', '🌊', '⛵', '🚢', '✈️', '🚀', '🛩️', '💺', '🛰️', '🛸', '🚁', '🚂', '🚃', '🚄', '🚅', '🚇', '🚉', '🚊', '🚝', '🚞', '🚋', '🚌', '🚍', '🚎', '🚐', '🚑', '🚒', '🚓', '🚔', '🚕', '🚖', '🚗', '🚘', '🚙', '🚚', '🚛', '🚜', '🏎️', '🏍️', '🛵', '🚲', '🛴', '🛹', '🛼', '🚏', '🛤️', '🛣️', '🗺️', '🧭', '⏰', '⏱️', '⏲️', '⏰', '🕰️', '⏳', '⌛', '⏰', '⏱️', '⏲️', '⏰', '🕰️', '⏳', '⌛', '🔔', '🔕', '🔇', '🔈', '🔉', '🔊', '📢', '📣', '🔔', '🔕']
+// ========================================
+// 分类图标：统一从「图标管理」的图标库选择（IconPickerDialog），不再使用 emoji 输入与快速选择列表
+// 三种入口：新增表单（new）/ 编辑表单（edit）/ 列表项直接改（item，选中即写回该分类并持久化）
+// ========================================
+type IconPickerMode = 'new' | 'edit' | 'item'
+const iconPicker = ref<{ mode: IconPickerMode; id: string | null } | null>(null)
+
+const iconPickerTitle = computed(() => {
+  if (!iconPicker.value) return '选择分类图标'
+  return iconPicker.value.mode === 'new' ? '新分类 · 选择图标' : '分类 · 选择图标'
+})
+
+/** 弹框里高亮"当前图标"：新增/编辑取表单值，列表项取该分类已存的值 */
+const iconPickerCurrent = computed(() => {
+  const p = iconPicker.value
+  if (!p) return ''
+  if (p.mode === 'new') return newCategoryIcon.value
+  if (p.mode === 'edit') return editingIcon.value
+  const cat = categoriesStore.allCategories.find(c => c.id === p.id)
+  return cat?.icon ?? ''
+})
+
+function openIconPicker(mode: IconPickerMode, id: string | null = null): void {
+  iconPicker.value = { mode, id }
+}
+
+function closeIconPicker(): void {
+  iconPicker.value = null
+}
+
+/** 选中即回填：回传空串 = 清除图标（恢复默认） */
+function onPickIcon(src: string): void {
+  const p = iconPicker.value
+  closeIconPicker()
+  if (!p) return
+  if (p.mode === 'new') {
+    newCategoryIcon.value = src
+    return
+  }
+  if (p.mode === 'edit') {
+    editingIcon.value = src
+    return
+  }
+  // 列表项：直接写回该分类并持久化
+  if (!p.id) return
+  categoriesStore.updateCategory(p.id, { icon: src })
+}
 
 // 获取使用某分类的网站数量
 function getSiteCount(categoryId: string): number {
@@ -46,7 +103,7 @@ function handleAdd() {
   
   categoriesStore.addCategory(newCategoryName.value.trim(), newCategoryIcon.value)
   newCategoryName.value = ''
-  newCategoryIcon.value = '📂'
+  newCategoryIcon.value = ''
 }
 
 // 开始编辑
@@ -103,9 +160,9 @@ const sortedCustomCategories = computed(() =>
 
 <template>
   <Transition name="dialog">
-  <div class="manager-overlay" @click.self="emit('close')">
-    <div class="manager">
-      <div class="manager-header">
+  <div :class="embedded ? 'mgr-embed' : 'manager-overlay'" @click.self="onOverlayClick">
+    <div :class="embedded ? 'mgr-embed-inner' : 'manager'">
+      <div v-if="!embedded" class="manager-header">
         <h2>分类管理</h2>
         <button class="close-btn" @click="emit('close')"><Icon name="close" /></button>
       </div>
@@ -115,13 +172,19 @@ const sortedCustomCategories = computed(() =>
         <div class="add-form">
           <h3>添加分类</h3>
           <div class="add-form-row">
-            <input
-              v-model="newCategoryIcon"
-              type="text"
-              class="icon-input"
-              placeholder="图标"
-              maxlength="2"
-            />
+            <!-- 分类图标：点击从图标管理（图标库）选择，选中后回填；未选时显示占位 -->
+            <button
+              type="button"
+              class="cat-icon-btn"
+              :class="{ 'is-empty': !newCategoryIcon }"
+              title="从图标管理选择分类图标"
+              data-testid="cat-new-icon-btn"
+              @click="openIconPicker('new')"
+            >
+              <img v-if="isImageIcon(newCategoryIcon)" :src="newCategoryIcon" alt="" class="cat-icon-img" />
+              <span v-else-if="newCategoryIcon" class="cat-icon-emoji">{{ newCategoryIcon }}</span>
+              <Icon v-else name="image" />
+            </button>
             <input
               v-model="newCategoryName"
               type="text"
@@ -131,18 +194,6 @@ const sortedCustomCategories = computed(() =>
             />
             <button class="btn-add" @click="handleAdd" :disabled="!newCategoryName.trim()">
               添加
-            </button>
-          </div>
-          <div class="icon-suggestions">
-            <span class="icon-label">快速选择:</span>
-            <button
-              v-for="icon in defaultIcons"
-              :key="icon"
-              class="icon-btn"
-              :class="{ active: newCategoryIcon === icon }"
-              @click="newCategoryIcon = icon"
-            >
-              {{ icon }}
             </button>
           </div>
         </div>
@@ -160,7 +211,10 @@ const sortedCustomCategories = computed(() =>
               class="category-item built-in"
             >
               <span class="sort-hint"><Icon name="lock" /></span>
-              <span class="category-icon">{{ cat.icon }}</span>
+              <span class="category-icon">
+                <img v-if="isImageIcon(cat.icon)" :src="cat.icon" alt="" class="cat-icon-img" />
+                <template v-else>{{ cat.icon }}</template>
+              </span>
               <span class="category-name">{{ cat.name }}</span>
               <span class="site-count">({{ getSiteCount(cat.id) }})</span>
             </div>
@@ -175,12 +229,18 @@ const sortedCustomCategories = computed(() =>
               class="category-item custom"
             >
               <template v-if="editingId === cat.id">
-                <input
-                  v-model="editingIcon"
-                  type="text"
-                  class="edit-input icon-input"
-                  maxlength="2"
-                />
+                <button
+                  type="button"
+                  class="cat-icon-btn"
+                  :class="{ 'is-empty': !editingIcon }"
+                  title="从图标管理选择分类图标"
+                  data-testid="cat-edit-icon-btn"
+                  @click="openIconPicker('edit')"
+                >
+                  <img v-if="isImageIcon(editingIcon)" :src="editingIcon" alt="" class="cat-icon-img" />
+                  <span v-else-if="editingIcon" class="cat-icon-emoji">{{ editingIcon }}</span>
+                  <Icon v-else name="image" />
+                </button>
                 <input
                   v-model="editingName"
                   type="text"
@@ -190,19 +250,6 @@ const sortedCustomCategories = computed(() =>
                 />
                 <button class="btn-icon" @click="saveEdit"><Icon name="check" /></button>
                 <button class="btn-icon" @click="cancelEdit"><Icon name="close" /></button>
-              </template>
-              <template v-if="editingId === cat.id">
-                <div class="edit-icon-suggestions">
-                  <button
-                    v-for="icon in defaultIcons.slice(0, 20)"
-                    :key="icon"
-                    class="icon-btn-small"
-                    :class="{ active: editingIcon === icon }"
-                    @click="editingIcon = icon"
-                  >
-                    {{ icon }}
-                  </button>
-                </div>
               </template>
               <template v-else>
                 <div class="sort-controls">
@@ -219,7 +266,18 @@ const sortedCustomCategories = computed(() =>
                     title="下移"
                   >↓</button>
                 </div>
-                <span class="category-icon">{{ cat.icon }}</span>
+                <button
+                  type="button"
+                  class="cat-icon-btn"
+                  :class="{ 'is-empty': !cat.icon }"
+                  title="点击从图标管理更换图标"
+                  :data-testid="`cat-item-icon-${cat.id}`"
+                  @click="openIconPicker('item', cat.id)"
+                >
+                  <img v-if="isImageIcon(cat.icon)" :src="cat.icon" alt="" class="cat-icon-img" />
+                  <span v-else-if="cat.icon" class="cat-icon-emoji">{{ cat.icon }}</span>
+                  <Icon v-else name="image" />
+                </button>
                 <span class="category-name">{{ cat.name }}</span>
                 <span class="site-count">({{ getSiteCount(cat.id) }})</span>
                 <button class="btn-icon" @click="startEdit(cat)"><Icon name="pencil" /></button>
@@ -236,6 +294,16 @@ const sortedCustomCategories = computed(() =>
     </div>
   </div>
   </Transition>
+
+  <!-- 分类图标选择弹框：从图标管理（图标库）选择，选中即回填；取消/关闭不改原值。
+       必须放在 <Transition> 之外（Transition 只接受单个子元素），也放在表单之外避免回车误提交 -->
+  <IconPickerDialog
+    v-if="iconPicker"
+    :title="iconPickerTitle"
+    :current="iconPickerCurrent"
+    @select="onPickIcon"
+    @close="closeIconPicker"
+  />
 </template>
 
 <style scoped>
@@ -314,10 +382,43 @@ const sortedCustomCategories = computed(() =>
   gap: 8px;
 }
 
-.icon-input {
-  width: 48px;
-  text-align: center;
+/* 分类图标按钮：点击弹出图标管理（图标库）选择；图片类图标用 <img>，旧 emoji 仍按文本显示 */
+.cat-icon-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 3px;
+  background-color: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.cat-icon-btn:hover {
+  border-color: #3b82f6;
+  background-color: #f1f5f9;
+}
+
+/* 未设置图标时以浅色占位提示可点击 */
+.cat-icon-btn.is-empty {
+  color: #94a3b8;
+}
+
+.cat-icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.cat-icon-emoji {
   font-size: 18px;
+  line-height: 1;
 }
 
 .name-input {
@@ -342,38 +443,6 @@ const sortedCustomCategories = computed(() =>
 .btn-add:disabled {
   background-color: #94a3b8;
   cursor: not-allowed;
-}
-
-.icon-suggestions {
-  margin-top: 8px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.icon-label {
-  font-size: 12px;
-  color: #94a3b8;
-}
-
-.icon-btn {
-  padding: 4px 8px;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.2s;
-}
-
-.icon-btn:hover {
-  background: #e2e8f0;
-}
-
-.icon-btn.active {
-  background: #3b82f6;
-  border-color: #3b82f6;
 }
 
 .category-list {
@@ -447,7 +516,13 @@ const sortedCustomCategories = computed(() =>
 }
 
 .category-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
   font-size: 18px;
+  overflow: hidden;
 }
 
 .category-name {
@@ -478,40 +553,6 @@ const sortedCustomCategories = computed(() =>
   flex: 1;
 }
 
-.edit-icon-suggestions {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  width: 100%;
-  padding: 8px;
-  background: #f8fafc;
-  border-radius: 4px;
-  margin-top: 4px;
-}
-
-.icon-btn-small {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.icon-btn-small:hover {
-  background: #e2e8f0;
-}
-
-.icon-btn-small.active {
-  background: #3b82f6;
-  border-color: #3b82f6;
-}
-
 .btn-icon {
   padding: 4px 8px;
   background: none;
@@ -535,5 +576,31 @@ const sortedCustomCategories = computed(() =>
   color: #94a3b8;
   font-size: 14px;
   padding: 20px;
+}
+
+/* ============================================================
+   embedded 模式：常驻面板内嵌在「设置 → 导航站 → 分类管理」
+   —— 不再铺满视口（无遮罩、无固定定位），宽度撑满父面板；
+   高度超出时由外层面板容器滚动，避免撑高整页。
+   ============================================================ */
+.mgr-embed {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  display: block;
+  width: 100%;
+  padding: 0;
+  background-color: transparent;
+  overflow: visible;
+}
+
+.mgr-embed-inner {
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+  border-radius: 12px;
+  background-color: var(--color-bg-card, #fff);
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
 }
 </style>

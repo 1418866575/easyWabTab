@@ -143,7 +143,10 @@ onBeforeUnmount(() => {
       :aria-label="store.workbenchManageDisplayName"
       data-testid="wmp-trigger"
       @click="toggle"
-    >{{ store.workbenchManageDisplayName }}</button>
+    >
+      <img v-if="store.workbenchManageIcon" :src="store.workbenchManageIcon" alt="" class="wmp-trigger-img" data-testid="wmp-trigger-icon" />
+      {{ store.workbenchManageDisplayName }}
+    </button>
 
     <Teleport to="body">
       <Transition name="wmp-fade">
@@ -175,7 +178,7 @@ onBeforeUnmount(() => {
             </button>
           </div>
           <p v-else class="wmp-empty">
-            暂无已启用的工作台，可在「设置 → 主题与外观」中开启。
+            暂无已启用的工作台，可在「设置 → 个性化 → 工作台设置」中开启。
           </p>
         </div>
       </Transition>
@@ -187,6 +190,15 @@ onBeforeUnmount(() => {
 .wmp-root {
   display: inline-flex;
   align-items: center;
+}
+
+/* 自定义图标（设置 → 个性化 → 工作台设置 → 工作台管理 选择）：16px 与按钮文字同排，
+   未设置时不渲染，按钮保持纯文字（gap 6px 由 HomeView 的 :deep(.wmp-trigger) 提供） */
+.wmp-trigger-img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex: none;
 }
 
 /* 面板：fixed 定位（脚本按按钮实际位置计算 top/right），层级高于 app-bar(100)、低于弹窗(300) */

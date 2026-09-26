@@ -10,7 +10,7 @@
 stores/
 ├── sites.ts              # Core data store (628 lines) — CRUD, filtering, pagination, import/export (localStorage `user-sites`)
 ├── categories.ts         # Legacy category migration + custom categories
-├── searchEngines.ts      # 3 built-in (immutable) + custom engines (3 localStorage keys)
+├── searchEngines.ts      # 3 built-in (immutable) + custom engines (4 localStorage keys)
 ├── theme.ts              # Dark mode (class toggle) + background image state (two concerns)
 ├── settings.ts           # Dialog size settings contract + 工作台菜单状态/变更（顺序/名称/显示开关）+ 导航筛选栏展开态 + 提醒设置 6 字段（desktopNotifyEnabled + reminderEmailEnabled/reminderEmailTo/reminderEmailServiceId/reminderEmailTemplateId/reminderEmailPublicKey，6 个 setter set 后 persist；parseSettingsData 白名单归一：布尔仅采纳 true/false、字符串原样透传不 trim） (useAppSettingsStore, DIALOG_DEFAULTS / DIALOG_LABELS)
 ├── passwords.ts          # crypto-js AES-CBC encrypted password vault (171 lines, IndexedDB store 'passwords')
@@ -75,7 +75,8 @@ stores/
 - **Legacy categories** (office, tech, etc.) are seeded once as user-deletable custom categories — tracked via `user-deleted-legacy-ids` in localStorage
 - **Built-in engines** (local, baidu, bing) — cannot be deleted; local engine URL is immutable
 - **Data merge logic** in `loadSites()`: built-in data → user localStorage overlay (same-URL override)
-- **`searchEngines.ts`** has 3 separate localStorage keys for 3 concerns: `user-search-engines`, `built-in-engine-overrides`, and `built-in-engine-default`
+- **`searchEngines.ts`** has 4 separate localStorage keys for 4 concerns: `user-search-engines`, `built-in-engine-overrides`, `built-in-engine-default`, and `user-disabled-engine-ids`
+- **Default engine is globally unique**: `defaultEngineId` computed = 自定义引擎 `isDefault` 优先，否则内置 `builtInDefault`；`builtInEngines` 的 `isDefault` 一律由 `defaultEngineId` 派生，因此设置自定义引擎为默认时内置「默认」标识自动消失。`setDefault(id)` 引擎不存在返回 false；内置分支会清空自定义默认标记，自定义分支会把 `builtInDefault` 置空；写入异常会回滚到设置前状态并返回 false。删除/禁用当前默认引擎时由 `pickFallbackDefaultId()` 转移（优先百度 → 首个非 local 可用引擎），`getFallbackDefaultName(id)` 供 UI 预览转移目标文案；`availableEngines` 排除已禁用引擎（全禁用时回退全量，避免搜索无引擎可选）；`sortedAvailableEngines` 在可用引擎基础上把默认引擎置顶，供搜索框下拉使用（下拉第一项永远是默认引擎）
 - **`theme.ts`** manages both dark mode AND background images — two concerns in one store
 - **`passwords.ts`** stores encrypted data in IndexedDB (store 'passwords'); the `isUnlocked` flag is in-memory only (not persisted)
 - **`countdowns.ts` / `passwords.ts`** switched to IndexedDB — `user-countdowns` / `user-passwords` legacy localStorage keys are one-time non-destructive migration sources only (IDB empty + legacy snapshot present → copy to IDB); do NOT read/write them directly

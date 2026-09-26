@@ -18,6 +18,7 @@ function cardFields(row: any) {
     { label: '合计', value: formatYuanOf(row.total) },
     { label: '售价', value: p ? formatYuanOf(productSellingPrice(row.productId)!) + '/' + productUnitOf(row.productId) : '—' },
     { label: '加价率', value: m != null ? m + '%' : '—' },
+    { label: '剩余状态', value: stockLabel(row) },
     { label: '备注', value: row.note || '—' }
   ]
 }
@@ -28,7 +29,21 @@ import Icon from '../Icon.vue'
 // P1-3：跨模块联动跳转
 import { computed, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { calcMarkupRate, filterPurchasesByCategory, findProduct, findProductCategory, formatYuanOf, localDateKey, visibleProductCategories } from '@/composables/businessCore'
+import {
+  calcMarkupRate,
+  calcPurchaseStockStatus,
+  calcPurchaseTotal,
+  deriveQuantity,
+  deriveUnitPrice,
+  filterPurchasesByCategory,
+  findProduct,
+  findProductCategory,
+  formatYuanOf,
+  localDateKey,
+  selectableExpenses,
+  sumExpenseAmounts,
+  visibleProductCategories
+} from '@/composables/businessCore'
 import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
 import type { BusinessPurchase } from '@/types'
 import { usePageSize } from '@/composables/usePageSize'
@@ -53,7 +68,7 @@ function catNameOf(productId: string): string {
 
 // ===== 一键导出 CSV（进货记录：按当前分类/商品筛选导出）=====
 function exportPurchasesCsv(): void {
-  const headers = ['日期', '商品', '分类', '数量', '进货单价', '金额', '备注']
+  const headers = ['日期', '商品', '分类', '数量', '进货单价', '金额', '剩余状态', '备注']
   const rows: (string | number)[][] = filteredWithProductFilter.value.map(p => [
     p.date,
     productNameOf(p.productId),
@@ -61,6 +76,7 @@ function exportPurchasesCsv(): void {
     p.quantity,
     p.unitPrice.toFixed(2),
     p.total.toFixed(2),
+    stockLabel(p),
     p.note ?? ''
   ])
   downloadCsv(csvFileName('进货记录'), buildCsv(headers, rows))
@@ -86,6 +102,39 @@ function markupRateOf(productId: string, unitPrice: number): number | null {
 
 // P1-3：按商品筛选 prop
 const props = defineProps<{ productFilter?: string }>()
+
+/**
+ * 进货批次剩余状态（先进先出：最旧批次优先被售出消耗）。
+ * 取全量 purchases/dailyRecords 计算（不按筛选），保证跨分类 tab 结果一致。
+ */
+const stockStatus = computed(() => calcPurchaseStockStatus(store.purchases, store.dailyRecords))
+
+/** 某笔记货的剩余状态（数据异常/新记录时返回 null，表格显示 —） */
+function stockOf(purchaseId: string) {
+  return stockStatus.value[purchaseId] ?? null
+}
+
+/** 剩余状态文案：已售完 / 未售完（剩 N） */
+function stockLabel(row: BusinessPurchase): string {
+  const st = stockOf(row.id)
+  if (!st) return '—'
+  return st.soldOut ? '已售完' : `未售完 · 剩 ${st.remaining}`
+}
+
+/** 剩余状态样式：sold-out（已售完）/ unsold（未售完）/ none（无数据） */
+function stockClass(row: BusinessPurchase): string {
+  const st = stockOf(row.id)
+  if (!st) return 'none'
+  return st.soldOut ? 'sold-out' : 'unsold'
+}
+
+/** 剩余状态悬浮说明（说明 FIFO 口径与本批消耗情况） */
+function stockTip(row: BusinessPurchase): string {
+  const st = stockOf(row.id)
+  if (!st) return '暂无数据'
+  const base = `按先进先出消耗（最旧批次优先售出）：本批进货 ${st.quantity}，已售 ${st.sold}，剩余 ${st.remaining}；该商品累计售出 ${st.totalSold}`
+  return st.isOldest ? `${base}（本批为该商品最旧批次）` : base
+}
 
 // P1-3：实际过滤后的列表（叠加 productFilter）
 const filteredWithProductFilter = computed(() => {
@@ -125,12 +174,61 @@ const formDate = ref(localDateKey())
 const formQuantity = ref('')
 const formUnitPrice = ref('')
 const formNote = ref('')
+/** 进货优化：本次进货关联的支出记录 id（可多条；合计金额由支出金额自动汇总） */
+const formExpenseIds = ref<string[]>([])
 
-const formTotal = computed(() => {
-  const q = Number(formQuantity.value) || 0
-  const p = Number(formUnitPrice.value) || 0
-  return Math.round(q * p * 100) / 100
-})
+/** 可选支出列表（日期倒序）：已被其它进货关联的置灰并标注关联商品，不可重复关联 */
+const expenseOptions = computed(() => selectableExpenses(store.expenses, store.purchases, editingId.value))
+
+/** 已关联支出金额合计 */
+const linkedExpenseTotal = computed(() => sumExpenseAmounts(store.expenses, formExpenseIds.value))
+/** 是否走「支出汇总」口径：关联了支出 → 合计由支出决定；否则 数量 × 单价 */
+const useExpenseTotal = computed(() => formExpenseIds.value.length > 0)
+
+const formTotal = computed(() =>
+  useExpenseTotal.value ? linkedExpenseTotal.value : calcPurchaseTotal(Number(formQuantity.value) || 0, Number(formUnitPrice.value) || 0)
+)
+
+/** 关联支出后：输入数量 → 自动反算单价（合计 ÷ 数量；合计为 0 或数量为 0 时不算，避免除零） */
+function onQuantityInput(): void {
+  if (!useExpenseTotal.value) return
+  const price = deriveUnitPrice(linkedExpenseTotal.value, Number(formQuantity.value) || 0)
+  if (price !== null) formUnitPrice.value = String(price)
+}
+
+/** 关联支出后：输入单价 → 自动反算数量（合计 ÷ 单价；合计为 0 或单价为 0 时不算，避免除零） */
+function onUnitPriceInput(): void {
+  if (!useExpenseTotal.value) return
+  const qty = deriveQuantity(linkedExpenseTotal.value, Number(formUnitPrice.value) || 0)
+  if (qty !== null) formQuantity.value = String(qty)
+}
+
+/** 勾选/取消关联支出后同步联动一次（数量为空时按单价反推，保证合计始终等于支出汇总） */
+function onExpenseChange(): void {
+  if (!useExpenseTotal.value) return
+  if (Number(formQuantity.value) > 0) onQuantityInput()
+  else if (Number(formUnitPrice.value) > 0) onUnitPriceInput()
+}
+
+/** 支出项是否可选（已被其它进货记录占用 → 不可再关联） */
+function isExpenseTaken(opt: { linkedPurchaseId?: string }): boolean {
+  return !!opt.linkedPurchaseId
+}
+
+/** 占用该支出的进货记录所属商品名（用于在可选列表中标注「已被谁关联」） */
+function linkedPurchaseProductName(purchaseId: string): string {
+  const p = store.purchases.find(x => x.id === purchaseId)
+  return p ? productNameOf(p.productId) : '（已删除记录）'
+}
+
+function toggleExpense(id: string): void {
+  if (formExpenseIds.value.includes(id)) {
+    formExpenseIds.value = formExpenseIds.value.filter(x => x !== id)
+  } else {
+    formExpenseIds.value = [...formExpenseIds.value, id]
+  }
+  onExpenseChange()
+}
 
 const isFormValid = computed(
   () => formProductId.value !== '' && formDate.value !== '' && formTotal.value > 0
@@ -143,20 +241,24 @@ function startAdd(): void {
   formQuantity.value = ''
   formUnitPrice.value = ''
   formNote.value = ''
+  formExpenseIds.value = []
   showDialog.value = true
 }
 
-function startEdit(p: BusinessPurchase): void {
+async function startEdit(p: BusinessPurchase): Promise<void> {
   editingId.value = p.id
   formProductId.value = p.productId
   formDate.value = p.date
   formQuantity.value = String(p.quantity)
   formUnitPrice.value = String(p.unitPrice)
   formNote.value = p.note ?? ''
+  // 编辑时回填已关联支出（含已被本记录占用的，自身占用不算冲突）
+  formExpenseIds.value = [...(p.expenseIds ?? [])]
   showDialog.value = true
 }
 
-// 复制：以当前进货记录预填表单，打开「新增」弹框（editingId 置空 → 生成新记录）
+// 复制：以当前进货记录预填表单，打开「新增」弹框（editingId 置空 → 生成新记录）。
+// 关联支出不复制：同一笔支出不可被两笔记货同时关联（复制后由用户重新选择）
 function startCopy(p: BusinessPurchase): void {
   editingId.value = null
   formProductId.value = p.productId
@@ -164,6 +266,7 @@ function startCopy(p: BusinessPurchase): void {
   formQuantity.value = String(p.quantity)
   formUnitPrice.value = String(p.unitPrice)
   formNote.value = p.note ?? ''
+  formExpenseIds.value = []
   showDialog.value = true
 }
 
@@ -174,6 +277,7 @@ async function handleSave(): Promise<void> {
     date: formDate.value,
     quantity: Number(formQuantity.value),
     unitPrice: Number(formUnitPrice.value),
+    expenseIds: [...formExpenseIds.value],
     note: formNote.value.trim() || undefined
   }
   if (editingId.value) {
@@ -253,9 +357,15 @@ async function handleDelete(id: string): Promise<void> {
           <el-table-column label="单价" width="100" align="right">
             <template #default="{ row }">@{{ formatYuanOf(row.unitPrice) }}</template>
           </el-table-column>
-          <el-table-column label="合计" width="110" align="right">
+          <el-table-column label="合计" width="140" align="right">
             <template #default="{ row }">
               <span class="bizpur-total-text">{{ formatYuanOf(row.total) }}</span>
+              <span
+                v-if="row.expenseIds && row.expenseIds.length"
+                class="bizpur-linked-badge"
+                :data-testid="`bizpur-linked-${row.id}`"
+                :title="`已关联 ${row.expenseIds.length} 笔支出`"
+              >关联{{ row.expenseIds.length }}笔</span>
             </template>
           </el-table-column>
           <el-table-column label="售价" width="100" align="right">
@@ -275,6 +385,20 @@ async function handleDelete(id: string): Promise<void> {
                 }"
               >{{ markupRateOf(row.productId, row.unitPrice) }}%</span>
               <span v-else style="color: var(--color-text-muted, #9ca3af);">—</span>
+            </template>
+          </el-table-column>
+          <!-- 剩余状态：按收摊售出数量先进先出消耗，判定该批（最旧批次优先）是否已全部售出 -->
+          <el-table-column label="剩余状态" width="140" align="center">
+            <template #default="{ row }">
+              <span
+                class="bizpur-stock"
+                :class="stockClass(row)"
+                :data-testid="`bizpur-stock-${row.id}`"
+                :title="stockTip(row)"
+              >
+                {{ stockLabel(row) }}
+                <span v-if="stockOf(row.id)?.isOldest" class="bizpur-stock-oldest">最旧</span>
+              </span>
             </template>
           </el-table-column>
           <el-table-column label="备注" min-width="140" align="left" show-overflow-tooltip>
@@ -372,7 +496,7 @@ async function handleDelete(id: string): Promise<void> {
               size="small"
               controls-position="right"
               :model-value="formQuantity === '' ? undefined : Number(formQuantity)"
-              @update:model-value="formQuantity = String($event ?? '')"
+              @update:model-value="formQuantity = String($event ?? ''); onQuantityInput()"
               data-testid="bizpur-form-qty"
             />
           </div>
@@ -381,16 +505,46 @@ async function handleDelete(id: string): Promise<void> {
             <el-input-number
               :min="0"
               :step="0.01"
+              :precision="2"
               size="small"
               controls-position="right"
               :model-value="formUnitPrice === '' ? undefined : Number(formUnitPrice)"
-              @update:model-value="formUnitPrice = String($event ?? '')"
+              @update:model-value="formUnitPrice = String($event ?? ''); onUnitPriceInput()"
               data-testid="bizpur-form-price"
             />
           </div>
         </div>
+        <!-- 进货优化：关联支出（可多条）；合计金额 = 已关联支出金额之和，数量与单价随合计双向联动 -->
         <div class="biz-field">
-          <label>合计（自动计算）</label>
+          <label>关联支出（可选，可多选）</label>
+          <p v-if="expenseOptions.length === 0" class="bizpur-expense-empty" data-testid="bizpur-expense-empty">当前账本暂无支出记录</p>
+          <div v-else class="bizpur-expense-list" data-testid="bizpur-expense-list">
+            <label
+              v-for="opt in expenseOptions"
+              :key="opt.expense.id"
+              class="bizpur-expense-item"
+              :class="{ taken: isExpenseTaken(opt), checked: formExpenseIds.includes(opt.expense.id) }"
+              :data-testid="`bizpur-expense-${opt.expense.id}`"
+            >
+              <input
+                type="checkbox"
+                :checked="formExpenseIds.includes(opt.expense.id)"
+                :disabled="isExpenseTaken(opt)"
+                :data-testid="`bizpur-expense-check-${opt.expense.id}`"
+                @change="toggleExpense(opt.expense.id)"
+              />
+              <span class="bizpur-expense-date">{{ opt.expense.date }}</span>
+              <span class="bizpur-expense-amount">{{ formatYuanOf(opt.expense.amount) }}</span>
+              <span v-if="opt.expense.note" class="bizpur-expense-note">{{ opt.expense.note }}</span>
+              <span v-if="isExpenseTaken(opt)" class="bizpur-expense-taken">已关联：{{ linkedPurchaseProductName(opt.linkedPurchaseId!) }}</span>
+            </label>
+          </div>
+          <p class="bizpur-expense-hint" data-testid="bizpur-expense-hint">
+            已选 {{ formExpenseIds.length }} 笔，关联金额合计 {{ formatYuanOf(linkedExpenseTotal) }}；勾选后修改数量自动算单价、修改单价自动反算数量。
+          </p>
+        </div>
+        <div class="biz-field">
+          <label>{{ useExpenseTotal ? '合计（= 关联支出汇总）' : '合计（自动计算）' }}</label>
           <div class="bizpur-total-preview" data-testid="bizpur-form-total">{{ formatYuanOf(formTotal) }}</div>
         </div>
         <div class="biz-field">
@@ -530,6 +684,136 @@ async function handleDelete(id: string): Promise<void> {
   color: var(--color-primary, var(--color-primary));
   font-variant-numeric: tabular-nums;
 }
+
+/* ===== 进货优化：关联支出（多选列表 + 已占用标记 + 关联笔数徽章） ===== */
+.bizpur-expense-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-muted, #9ca3af);
+}
+
+.bizpur-expense-list {
+  display: grid;
+  gap: 6px;
+  max-height: 168px;
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--color-bg-input, #f9fafb);
+}
+
+.bizpur-expense-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--color-text, #111827);
+  cursor: pointer;
+}
+
+.bizpur-expense-item:hover {
+  background: var(--color-bg-hover, #f1f5f9);
+}
+
+.bizpur-expense-item.checked {
+  background: var(--color-primary-soft, #eff6ff);
+}
+
+/* 已被其它进货关联：置灰 + 禁止勾选 */
+.bizpur-expense-item.taken {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.bizpur-expense-date {
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.bizpur-expense-amount {
+  color: var(--color-primary, #3b82f6);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.bizpur-expense-note {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-muted, #9ca3af);
+}
+
+.bizpur-expense-taken {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-text-muted, #6b7280);
+}
+
+.bizpur-expense-hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--color-text-muted, #6b7280);
+}
+
+/* ===== 剩余状态（先进先出消耗：已售完 / 未售完 · 剩 N） ===== */
+.bizpur-stock {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  border-radius: var(--radius-full, 999px);
+  border: 1px solid transparent;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.bizpur-stock.sold-out {
+  color: var(--color-success, #16a34a);
+  background: color-mix(in srgb, var(--color-success, #16a34a) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-success, #16a34a) 32%, transparent);
+}
+
+.bizpur-stock.unsold {
+  color: var(--color-warning, #b45309);
+  background: color-mix(in srgb, var(--color-warning, #f59e0b) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-warning, #f59e0b) 34%, transparent);
+}
+
+.bizpur-stock.none {
+  color: var(--color-text-muted, #9ca3af);
+}
+
+.bizpur-stock-oldest {
+  padding: 0 5px;
+  border-radius: var(--radius-full, 999px);
+  font-size: 11px;
+  background: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-text-muted, #6b7280);
+}
+
+.bizpur-linked-badge {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 400;
+  background: var(--color-primary-soft, #eff6ff);
+  color: var(--color-primary, #3b82f6);
+}
+
+:global(html.dark) .bizpur-expense-list {
+  background: var(--color-bg-hover, #111827);
+  border-color: var(--color-border, #374151);
+}
 .bizpur-markup-rate.rate-high {
   color: var(--color-success, var(--color-success));
   font-weight: 600;
@@ -639,6 +923,23 @@ async function handleDelete(id: string): Promise<void> {
 html.dark .biz-dialog {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
+}
+
+html.dark .bizpur-stock.sold-out {
+  color: #6ee7b7;
+  background: rgba(22, 163, 74, 0.2);
+  border-color: rgba(22, 163, 74, 0.45);
+}
+
+html.dark .bizpur-stock.unsold {
+  color: #fcd34d;
+  background: rgba(245, 158, 11, 0.18);
+  border-color: rgba(245, 158, 11, 0.45);
+}
+
+html.dark .bizpur-stock-oldest {
+  background: rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
 }
 
 html.dark .bizpur-cat-badge {

@@ -253,7 +253,7 @@ export interface AppSettingsData {
   reminderEmailTemplateId?: string // EmailJS Template ID
   reminderEmailPublicKey?: string // EmailJS Public Key
   workbenchPageName?: string           // 工作台页面自定义名称（默认 '工作台'）
-  workbenchPageVisible?: boolean       // 工作台页面可见性开关（默认 false：用户在设置 → 主题与外观 → 页面导航主动打开后才显示）
+  workbenchPageVisible?: boolean       // 工作台页面可见性开关（默认 false：用户在设置 → 个性化 → 工作台设置 主动打开后才显示）
   businessPageName?: string            // 销售记账页面自定义名称（默认 '销售记账'）
   businessPageVisible?: boolean        // 销售记账页面可见性开关（默认 true）
   businessActiveSection?: string       // 销售记账工作台当前模块（home/products/purchases/daily/expenses/inventory/stats；缺失 = 首页）
@@ -267,6 +267,11 @@ export interface AppSettingsData {
   teacherPageIcon?: string             // 教师工作台入口自定义图标（空串或缺失 = 内置默认）
   workbenchManageName?: string         // 导航站右上角「工作台管理」按钮自定义名称（默认 '工作台管理'）
   workbenchManageVisible?: boolean     // 「工作台管理」按钮可见性开关（默认 true；缺失 = 显示）
+  workbenchManageIcon?: string         // 「工作台管理」按钮自定义图标（图标库路径 / dataUrl；空串或缺失 = 用内置默认图标）
+  countdownButtonName?: string         // 导航站右上角「倒计时」按钮自定义名称（默认 '倒计时'）
+  countdownButtonVisible?: boolean     // 「倒计时」按钮可见性开关（默认 true；缺失 = 显示）
+  helpButtonName?: string              // 导航站右上角「帮助」按钮自定义名称（默认 '帮助'）
+  helpButtonVisible?: boolean          // 「帮助」按钮可见性开关（默认 true；缺失 = 显示）
   cloudSyncEnabled?: boolean           // 云同步总开关（默认 false）
   cloudSyncUrl?: string                // WebDAV URL（空串 = 未配置）
   cloudSyncUsername?: string           // WebDAV 用户名（空串 = 未配置）
@@ -297,7 +302,10 @@ export interface WorkbenchData {
   settings: AppSettingsData
   pomodoro?: unknown // v5 新增：番茄钟数据（后续 Todo 定义具体类型后收紧）
   habits?: unknown // v5 新增：习惯打卡数据（后续 Todo 定义具体类型后收紧）
-  business?: BusinessData // v7 新增：摆摊进销存（v1-v6 导入补空、v7 原样透传）
+  // v7 新增：摆摊进销存（v1-v6 导入补空、v7 原样透传）
+  // v9 起业务侧升级为「账本容器」BusinessStoreData；旧备份仍是扁平 BusinessData，
+  // 由 normalizeBusinessStore() 在导入时统一迁移为当年账本，二者在信封层兼容共存
+  business?: BusinessData | BusinessStoreData
   passwordsSalt?: string // v8 新增：密码库 PBKDF2 盐 hex（内嵌自 localStorage password-salt-v2；与 passwordVerification 成对出现才有效）
   passwordVerification?: string // v8 新增：主密码验证串密文（内嵌自 localStorage password-verification-v2 原样）
   clientId?: string          // v9 新增：推送设备标识（首次同步时生成 uuid，存 localStorage）
@@ -518,6 +526,8 @@ export interface BusinessProduct {
   unit: string
   purchasePrice: number // 进货单价
   sellingPrice: number // 售价
+  /** 会员价（可选；仅作记录与展示，不参与营业额自动合计）。0/undefined/null = 未设置 */
+  memberPrice?: number | null
   active: boolean // 在售/停售（停售不出现在收摊带出选择）
   createdAt: string
 }
@@ -528,8 +538,10 @@ export interface BusinessPurchase {
   productId: string
   quantity: number
   unitPrice: number
-  total: number // quantity × unitPrice（表单自动算）
+  total: number // quantity × unitPrice；关联了支出时 = 已关联支出金额之和
   date: string // YYYY-MM-DD
+  /** 关联的支出记录 id（进货优化：一笔进货可同时关联多条支出，合计金额自动汇总） */
+  expenseIds?: string[]
   note?: string
   createdAt: string
 }
@@ -571,7 +583,7 @@ export interface BusinessSettings {
   monthlyRevenueTarget: number // 本月营业额目标（0 = 未设定，不显示进度环）
 }
 
-/** 销售记账数据（IndexedDB store 'business'，键 'items'） */
+/** 销售记账数据（单个账本内的业务数据；IndexedDB store 'business' 的账本 data 字段） */
 export interface BusinessData {
   productCategories: BusinessProductCategory[]
   expenseCategories: BusinessExpenseCategory[]
@@ -580,6 +592,27 @@ export interface BusinessData {
   dailyRecords: BusinessDailyRecord[]
   expenses: BusinessExpense[]
   settings: BusinessSettings
+}
+
+/**
+ * 账本：销售记账的最外层数据容器，按自然年创建，同一年份唯一。
+ * 所有业务数据（商品 / 进货 / 收摊 / 支出 / 分类 / 设置）都挂在 data 下，以账本 id 隔离。
+ */
+export interface BusinessLedger {
+  id: string
+  year: number // 自然年，如 2026；同一年份只允许一个账本
+  name: string // 账本名称，默认「YYYY年账本」
+  createdAt: string // ISO 字符串
+  updatedAt: string // ISO 字符串
+  data: BusinessData
+}
+
+/** 销售记账在 IndexedDB 中的存储结构（store 'business'，键 'items'） */
+export interface BusinessStoreData {
+  schemaVer: number
+  ledgers: BusinessLedger[]
+  /** 当前选中的账本（刷新后记住上次选择）；为空表示尚无账本 */
+  currentLedgerId: string
 }
 
 /** 内置支出分类（不可删，可改名/排序/标签页显隐） */
@@ -1264,7 +1297,9 @@ export interface BusinessSyncData {
   exportedAt: string
   clientId?: string
   pushedAt?: number
-  business: BusinessData
+  // v1 早期为扁平 BusinessData；账本化后为 BusinessStoreData（多账本容器）。
+  // 读取侧一律经 normalizeBusinessStore() 归一，旧信封自动迁入当年账本，不丢数据。
+  business: BusinessStoreData | BusinessData
 }
 
 /** TeacherSyncData：教师工作台独立同步信封（v17 新增 teacher_workbench 单对象；含 base64 图片故体积偏大） */

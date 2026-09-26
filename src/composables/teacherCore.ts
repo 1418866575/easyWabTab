@@ -10,6 +10,9 @@ import {
   type SeatData,
   type Semester,
   type Student,
+  type LeaveRecord,
+  type LeaveStatus,
+  type LeaveType,
   type TeacherData,
   type TeacherPageKey,
   type TeacherPageMeta,
@@ -22,6 +25,8 @@ import {
   TEACHER_HEAD_ONLY_PAGES,
   TEACHER_PAGES,
   SCORE_BANDS,
+  LEAVE_TYPES,
+  LEAVE_STATUS_META,
   WEEK_DAYS
 } from '@/types/teacher'
 import { normalizeTeacherMenu } from '@/composables/teacherMenuCore'
@@ -96,7 +101,8 @@ export function emptyBucket(): ClassBucket {
       grid: Array.from({ length: 8 }, () => Array.from({ length: 6 }, () => null))
     },
     growth: {},
-    random: { history: [], mode: 'all' }
+    random: { history: [], mode: 'all' },
+    leaves: []
   }
 }
 
@@ -133,8 +139,80 @@ function strArray(v: unknown): string[] {
   return v.map((x) => str(x)).filter(Boolean)
 }
 
-/**
- * 把任意来源的数组统一成「对象数组」再逐字段兜底。
+// ---------- 请假信息（leaves 桶） ----------
+
+/** 本地日期 YYYY-MM-DD（不依赖 toISOString，避免时区偏移） */
+export function todayStr(d: Date = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
+/** 请假类型兜底：非法值回落「事假」 */
+export function normalizeLeaveType(v: unknown): LeaveType {
+  return LEAVE_TYPES.includes(v as LeaveType) ? (v as LeaveType) : '事假'
+}
+
+/** 请假状态兜底：非法值回落「待审批」 */
+export function normalizeLeaveStatus(v: unknown): LeaveStatus {
+  return LEAVE_STATUS_META.some((s) => s.key === v) ? (v as LeaveStatus) : 'pending'
+}
+
+/** 含首尾的天数差（同日 = 1 天）；日期非法返回 0 */
+export function diffDays(start: string, end: string): number {
+  const a = Date.parse(`${start}T00:00:00`)
+  const b = Date.parse(`${end}T00:00:00`)
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return 0
+  return Math.max(0, Math.round((b - a) / 86400000) + 1)
+}
+
+/** 列表排序：开始日期倒序（同日按登记时间倒序） */
+export function sortedLeaves(leaves: LeaveRecord[]): LeaveRecord[] {
+  return [...leaves].sort((a, b) => {
+    if (a.startDate !== b.startDate) return a.startDate < b.startDate ? 1 : -1
+    return a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0
+  })
+}
+
+export interface LeaveStats {
+  /** 正在请假：已批准且今天落在起止区间内 */
+  ongoing: number
+  /** 本月（按起止日期任一落入本月计）人次 */
+  monthCount: number
+  /** 本月累计天数 */
+  monthDays: number
+  /** 待审批条数 */
+  pending: number
+  /** 各类型人次（全量，顺序固定） */
+  byType: { type: LeaveType; count: number }[]
+}
+
+/** 请假统计（纯函数，today 可注入便于单测） */
+export function leaveStats(leaves: LeaveRecord[], today = todayStr()): LeaveStats {
+  const month = today.slice(0, 7)
+  let ongoing = 0
+  let monthCount = 0
+  let monthDays = 0
+  let pending = 0
+  const typeMap = new Map<LeaveType, number>()
+  for (const l of leaves) {
+    if (l.status === 'pending') pending++
+    if (l.status === 'approved' && l.startDate <= today && today <= l.endDate) ongoing++
+    if ((l.startDate || '').slice(0, 7) === month || (l.endDate || '').slice(0, 7) === month) {
+      monthCount++
+      monthDays += l.days || 0
+    }
+    typeMap.set(l.type, (typeMap.get(l.type) ?? 0) + 1)
+  }
+  return {
+    ongoing,
+    monthCount,
+    monthDays,
+    pending,
+    byType: LEAVE_TYPES.map((type) => ({ type, count: typeMap.get(type) ?? 0 }))
+  }
+}
+
+/** 把任意来源的数组统一成「对象数组」再逐字段兜底。
  * 先转 unknown[] 再过滤，避免对已具名类型的数组做 Record 断言（TS2677）。
  */
 function asRecords(v: unknown): Record<string, unknown>[] {
@@ -383,13 +461,33 @@ export function normalizeBucket(raw: unknown): ClassBucket {
       }))
   }
 
+  // 请假记录（leaves 桶）：班级维度流水，逐字段兜底；缺失视为空数组
+  const leaves: LeaveRecord[] = asRecords(b.leaves).map((l) => {
+    const start = str(l.startDate)
+    const end = str(l.endDate)
+    return {
+      id: str(l.id) || uid('leave'),
+      studentId: str(l.studentId),
+      type: normalizeLeaveType(l.type),
+      startDate: start,
+      endDate: end || start,
+      days: Math.max(0, Math.round(num(l.days, diffDays(start, end)))),
+      reason: str(l.reason),
+      applicant: str(l.applicant),
+      approver: str(l.approver),
+      status: normalizeLeaveStatus(l.status),
+      remark: str(l.remark),
+      createdAt: str(l.createdAt)
+    }
+  })
+
   const randomRaw = (b.random ?? {}) as Record<string, unknown>
   const random = {
     history: Array.isArray(randomRaw.history) ? randomRaw.history.map((h) => str(h)).filter(Boolean) : [],
     mode: randomRaw.mode === 'once' ? 'once' : 'all'
   } as const
 
-  return { students, parents, exams, papers, seats: { rows, cols, grid }, duty: { days, committee }, timetable: { periods, grid: timetableGrid }, growth, random: { ...random } }
+  return { students, parents, exams, papers, seats: { rows, cols, grid }, duty: { days, committee }, timetable: { periods, grid: timetableGrid }, growth, random: { ...random }, leaves }
 }
 
 // ---------- 当前分组解析 ----------
@@ -673,7 +771,8 @@ export function removeStudentCascade(bucket: ClassBucket, studentId: string): Cl
       })),
       committee: bucket.duty.committee.map((c) => (c.name === studentId ? { ...c, name: '' } : c))
     },
-    random: { ...bucket.random, history: bucket.random.history.filter((h) => h !== studentId) }
+    random: { ...bucket.random, history: bucket.random.history.filter((h) => h !== studentId) },
+    leaves: bucket.leaves.filter((l) => l.studentId !== studentId)
   }
 }
 

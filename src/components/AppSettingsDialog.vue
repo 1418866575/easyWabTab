@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, computed, onMounted, onUnmounted, watch, nextTick, toRaw } from 'vue'
+import { reactive, ref, computed, onMounted, onUnmounted, watch, nextTick, toRaw, defineAsyncComponent, type Component } from 'vue'
 import { showConfirm } from '@/utils/dialog'
 import {
   useAppSettingsStore,
@@ -14,13 +14,20 @@ import { useAppSettingsDialog } from '@/composables/useAppSettingsDialog'
 import type { SettingsTarget } from '@/composables/useAppSettingsDialog'
 import { useToast } from '@/composables/useToast'
 import { idbGet, idbPut, idbImportAll, idbExportAll, idbClear, IDB_STUDENT_STORES, IDB_CORE_STORES, IDB_AUX_STORES, IDB_ICONS_STORES } from '@/composables/useIdb'
-import { localDateKey } from '@/composables/businessCore'
+import {
+  currentYear,
+  ledgerDefaultName,
+  ledgerRecordCounts,
+  localDateKey
+} from '@/composables/businessCore'
+import type { LedgerDeleteGuard, LedgerDeleteScope } from '@/composables/businessCore'
 import { isEmailConfigured, buildEmailParams } from '@/composables/reminderCore'
 import { sendReminderEmail } from '@/composables/reminderEmail'
 import { requestNotifyPermission } from '@/composables/useDesktopNotify'
 import yaml from 'js-yaml'
-import { useRouter } from 'vue-router'
+import type { Site } from '@/types'
 import { ICP_NUMBER, PSB_NUMBER, MIIT_BEIAN_URL } from '@/config/beian'
+import { WECHAT_MP_NAME, WECHAT_MP_QRCODE, WECHAT_MP_HINT, OPEN_SOURCE_LINKS } from '@/config/about'
 import { useSitesStore } from '@/stores/sites'
 import { useSearchEnginesStore } from '@/stores/searchEngines'
 import { captureSnapshot } from '@/composables/useSnapshots'
@@ -61,6 +68,14 @@ import BusinessCategoryManager from '@/components/business/BusinessCategoryManag
 import StudentTimetableConfig from '@/components/student/StudentTimetableConfig.vue'
 import TeacherDataManage from '@/components/teacher/TeacherDataManage.vue'
 import TeacherHelp from '@/components/teacher/TeacherHelp.vue'
+// 导航站管理类组件：原本是「设置里点按钮 → 关闭设置 → 弹框」的二级弹窗，现改为内嵌常驻面板
+// （embedded 模式）。沿用 defineAsyncComponent 懒加载，避免把 6 个大组件打进设置页 chunk。
+const SiteModal = defineAsyncComponent(() => import('@/components/SiteModal.vue'))
+const SearchEngineManager = defineAsyncComponent(() => import('@/components/SearchEngineManager.vue'))
+const BackgroundManager = defineAsyncComponent(() => import('@/components/BackgroundManager.vue'))
+const CategoryManager = defineAsyncComponent(() => import('@/components/CategoryManager.vue'))
+const BackupManager = defineAsyncComponent(() => import('@/components/BackupManager.vue'))
+const IconManager = defineAsyncComponent(() => import('@/components/IconManager.vue'))
 // 教师工作台 .tw-* 全局样式：设置页内嵌 TeacherDataManage / TeacherHelp 时依赖，
 // 非 /teacher 路由（source='all'）打开设置也能正常渲染这些组件
 import '@/styles/teacher.css'
@@ -70,10 +85,25 @@ import CloudSyncConflictModal from './CloudSyncConflictModal.vue'
 // 作为 drafts/syncAll 的全量来源；渲染分组用下方导出的 NAV/WB 数组
 const DIALOG_IDS = Object.keys(DIALOG_DEFAULTS) as DialogId[]
 
-// 当前激活的设置分组 tab（导航设置 / 工作台设置 / 提醒设置 / 销售记账 / 学生工作台 / 教师工作台 / 云同步）
-type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'teacher' | 'sync'
+// 当前激活的设置分组 tab（导航设置 / 工作台设置 / 提醒设置 / 销售记账 / 学生工作台 / 教师工作台 / 云同步 / 关于）
+type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'teacher' | 'sync' | 'about'
 // 子 tab keys：每个主 tab 下的子分组（仅内容多的主 tab 定义）
-type NavSubTab = 'nav-appearance' | 'nav-display' | 'nav-site' | 'nav-size' | 'nav-data'
+// 导航站子 tab：原「站点管理」九动作已整体拆为独立页——导入/导出合并为「备份恢复」，
+// 其余各动作一页一项（菜单名沿用原按钮名：添加网址 / 检测断链 / 引擎管理 / 背景 / 分类管理 / 备份 / 图标管理）
+type NavSubTab =
+  | 'nav-appearance'
+  | 'nav-display'
+  | 'nav-workbench'
+  | 'nav-backup-restore'
+  | 'nav-add-site'
+  | 'nav-check-links'
+  | 'nav-engines'
+  | 'nav-background'
+  | 'nav-category'
+  | 'nav-backup'
+  | 'nav-icons'
+  | 'nav-size'
+  | 'nav-data'
 type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-todo-cat' | 'wb-cd-cat' | 'wb-note-cat' | 'wb-pwd-cat' | 'wb-diary-cat' | 'wb-diary-journals' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
 type BizSubTab = 'biz-base' | 'biz-backup' | 'biz-cat' | 'biz-product-cat' | 'biz-expense-cat'
 type StuSubTab = 'stu-stage' | 'stu-info' | 'stu-subject' | 'stu-timetable' | 'stu-menu'
@@ -94,17 +124,22 @@ const props = withDefaults(defineProps<{ source?: SettingsSource }>(), { source:
 
 /**
  * 来源页 → 允许显示的 tab keys。
- * 「通知与同步」（remind 提醒设置 + sync 云同步）**仅在导航站显示**；
+ * 「通知与同步」（remind 提醒设置 + sync 云同步）与「关于」（about）**仅在导航站显示**；
  * 四个工作台（个人工作台 / 销售记账 / 学生工作台 / 教师工作台）打开设置时只显示自己那一组，
  * 左侧 rail 不再出现「通知与同步」（全局类设置统一收在导航站的设置里）。
  */
 const SOURCE_TABS: Record<SettingsSource, SettingsTabKey[]> = {
-  nav:        ['nav',      'sync', 'remind'],
-  workbench:  ['wb'],
+  // 提醒设置只保留在「个人工作台」页的设置弹框里（天气城市之后）：
+  //   - nav 来源移除 remind，避免导航站设置里出现只有一个「提醒设置」的「个人工作台」分组
+  //   - all 为兜底默认值（当前无页面使用），同样移除，保证「只在个人工作台出现」
+  nav:        ['nav',      'sync', 'about'],
+  // workbench 来源放行 remind：「提醒设置」已归入「个人工作台」分组（天气城市之后），
+  // 且它与 wb 同样受 workbenchPageVisible 控制，工作台关闭时两者一起隐藏
+  workbench:  ['wb', 'remind'],
   business:   ['business'],
   student:    ['student'],
   teacher:    ['teacher'],
-  all:        ['nav', 'wb', 'remind', 'business', 'student', 'teacher', 'sync']
+  all:        ['nav', 'wb', 'business', 'student', 'teacher', 'sync', 'about']
 }
 
 /** 来源页默认激活的 tab（第一个=自己页面的设置tab），若不在可见集合里会被 visibleTabs watcher 回退到第一个可见 */
@@ -127,11 +162,19 @@ interface SubTabDef { key: SubTabKey; label: string }
 /** 主 tab → 子 tab 列表（顺序即显示顺序，第一个 = 默认选中） */
 const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student' | 'teacher', SubTabDef[]> = {
   nav: [
-    { key: 'nav-appearance', label: '站点外观' },
-    { key: 'nav-display', label: '显示控制' },
-    { key: 'nav-site',    label: '站点管理' },
-    { key: 'nav-size',    label: '弹窗尺寸' },
-    { key: 'nav-data',    label: '数据清理' }
+    { key: 'nav-appearance',      label: '站点外观' },
+    { key: 'nav-display',         label: '显示控制' },
+    { key: 'nav-workbench',       label: '工作台设置' },
+    { key: 'nav-backup-restore',  label: '备份恢复' },
+    { key: 'nav-add-site',        label: '添加网址' },
+    { key: 'nav-check-links',     label: '检测断链' },
+    { key: 'nav-engines',         label: '引擎管理' },
+    { key: 'nav-background',      label: '背景' },
+    { key: 'nav-category',        label: '分类管理' },
+    { key: 'nav-backup',          label: '备份' },
+    { key: 'nav-icons',           label: '图标管理' },
+    { key: 'nav-size',            label: '弹窗尺寸' },
+    { key: 'nav-data',            label: '数据清理' }
   ],
   wb: [
     { key: 'wb-city',     label: '天气城市' },
@@ -198,15 +241,20 @@ const businessStore = useWorkbenchBusinessStore()
 const studentStore = useStudentSettingsStore()
 const teacherStore = useTeacherStore()
 
+// 「关于」页：公众号 + 开源地址（配置集中在 src/config/about.ts，追加仓库无需改组件）
+const mpQrFailed = ref(false)
+
 // ========================================
 // 入口图标选择（工作台 / 销售记账 / 学生 / 教师）：图标来自图标管理库，弹框形式选择
 // ========================================
-type IconTarget = 'workbench' | 'business' | 'student' | 'teacher'
+type IconTarget = 'workbench' | 'business' | 'student' | 'teacher' | 'manage' | 'favicon'
 const ICON_TARGET_LABEL: Record<IconTarget, string> = {
   workbench: '工作台',
   business: '销售记账',
   student: '学生工作台',
-  teacher: '教师工作台'
+  teacher: '教师工作台',
+  manage: '工作台管理',
+  favicon: '站点图标'
 }
 /** 当前正在编辑哪个入口的图标（空串 = 弹框关闭） */
 const iconPickerTarget = ref<IconTarget | ''>('')
@@ -225,6 +273,8 @@ const iconPickerCurrent = computed(() => {
     case 'business': return store.businessPageIcon
     case 'student': return store.studentPageIcon
     case 'teacher': return store.teacherPageIcon
+    case 'manage': return store.workbenchManageIcon
+    case 'favicon': return store.siteFavicon
     default: return ''
   }
 })
@@ -235,6 +285,8 @@ function onPickIcon(src: string): void {
     case 'business': store.setBusinessPageIcon(src); break
     case 'student': store.setStudentPageIcon(src); break
     case 'teacher': store.setTeacherPageIcon(src); break
+    case 'manage': store.setWorkbenchManageIcon(src); break
+    case 'favicon': store.setSiteFavicon(src); break
     default: break
   }
   closeIconPicker()
@@ -286,16 +338,33 @@ const NAV_GROUPS: NavGroup[] = [
     key: 'personal',
     label: '个性化',
     items: [
-      { key: 'theme', label: '主题与外观', icon: 'palette', tab: 'nav', sub: 'nav-display' }
+      { key: 'theme', label: '主题', icon: 'palette', tab: 'nav', sub: 'nav-display' },
+      { key: 'nav-workbench', label: '工作台设置', icon: 'toolbox', tab: 'nav', sub: 'nav-workbench' },
+      { key: 'nav-appearance', label: '站点外观', icon: 'monitor', tab: 'nav', sub: 'nav-appearance' }
+    ]
+  },
+  {
+    key: 'notify',
+    label: '通知与同步',
+    items: [
+      // 「提醒设置」已移到「个人工作台 → 天气城市」之后（与工作台同开关：workbenchPageVisible）
+      { key: 'sync', label: '云同步', icon: 'cloud', tab: 'sync' },
+      { key: 'about', label: '关于', icon: 'info', tab: 'about' }
     ]
   },
   {
     key: 'nav',
     label: '导航站',
     items: [
-      { key: 'nav-appearance', label: '站点外观', icon: 'monitor', tab: 'nav', sub: 'nav-appearance' },
-      { key: 'nav-site', label: '站点管理', icon: 'folder', tab: 'nav', sub: 'nav-site' },
-      { key: 'nav-size', label: '弹窗尺寸', icon: 'package', tab: 'nav', sub: 'nav-size' },
+      // 「弹窗尺寸 nav-size」与「备份 nav-backup」已从菜单移除（不再显示入口，页面代码保留备用）；
+      // 「图标管理」按需求提到第 2 位（紧跟备份恢复）
+      { key: 'nav-backup-restore', label: '备份恢复', icon: 'save', tab: 'nav', sub: 'nav-backup-restore' },
+      { key: 'nav-icons', label: '图标管理', icon: 'palette', tab: 'nav', sub: 'nav-icons' },
+      { key: 'nav-add-site', label: '添加网址', icon: 'plus', tab: 'nav', sub: 'nav-add-site' },
+      { key: 'nav-check-links', label: '检测断链', icon: 'link', tab: 'nav', sub: 'nav-check-links' },
+      { key: 'nav-engines', label: '引擎管理', icon: 'search', tab: 'nav', sub: 'nav-engines' },
+      { key: 'nav-background', label: '背景', icon: 'image', tab: 'nav', sub: 'nav-background' },
+      { key: 'nav-category', label: '分类管理', icon: 'cog', tab: 'nav', sub: 'nav-category' },
       { key: 'nav-data', label: '数据清理', icon: 'trash', tab: 'nav', sub: 'nav-data' }
     ]
   },
@@ -304,6 +373,8 @@ const NAV_GROUPS: NavGroup[] = [
     label: '个人工作台',
     items: [
       { key: 'wb-city', label: '天气城市', icon: 'weather-sunny', tab: 'wb', sub: 'wb-city' },
+      // 原属「通知与同步」，按需求移到「天气城市」之后
+      { key: 'remind', label: '提醒设置', icon: 'timer', tab: 'remind' },
       { key: 'wb-menu', label: '工作台菜单', icon: 'clipboard', tab: 'wb', sub: 'wb-menu' },
       { key: 'wb-card', label: '卡片尺寸', icon: 'image', tab: 'wb', sub: 'wb-card' },
       { key: 'wb-todo-cat', label: '待办分类管理', icon: 'tag', tab: 'wb', sub: 'wb-todo-cat' },
@@ -355,14 +426,6 @@ const NAV_GROUPS: NavGroup[] = [
       { key: 'teacher-backup', label: '备份与恢复', icon: 'save', tab: 'teacher', sub: 'teacher-backup' },
       { key: 'teacher-help', label: '使用说明', icon: 'help', tab: 'teacher', sub: 'teacher-help' },
       { key: 'teacher-menu', label: '菜单设置', icon: 'bookmark', tab: 'teacher', sub: 'teacher-menu' }
-    ]
-  },
-  {
-    key: 'notify',
-    label: '通知与同步',
-    items: [
-      { key: 'remind', label: '提醒设置', icon: 'timer', tab: 'remind' },
-      { key: 'sync', label: '云同步', icon: 'cloud', tab: 'sync' }
     ]
   }
 ]
@@ -440,76 +503,96 @@ async function syncVercount() {
 }
 
 // ========================================
-// 站点管理（导航设置 tab）：原导航站工具栏九动作的迁移入口。
-// 弹窗类动作 = 先关本设置弹窗，再经 URL query 打开目标（与 HomeView 既有 URL 协议一致）；
-// 纯动作（导出/检测断链/导入）= 就地执行，不关设置。
+// 导航站动作页（原「站点管理」九动作拆分后的独立页）
+// 纯动作（导出/检测断链/导入）= 在各自页面内就地执行；
+// 原「弹窗类动作」= 组件以 embedded 模式内嵌为常驻面板，进入菜单即可直接操作，不再二次点击。
 // ========================================
-const router = useRouter()
 const sitesStore = useSitesStore()
 const enginesStore = useSearchEnginesStore()
 const siteImportInput = ref<HTMLInputElement | null>(null)
 
-type SiteActionModalKey = 'add' | 'engines' | 'background' | 'category' | 'backup' | 'icons'
-
-function openSiteManagerViaQuery(key: SiteActionModalKey) {
-  emit('close')
-  router.push({ query: { modal: key } })
+/**
+ * 内嵌面板页配置：一页一项，菜单名 = 原按钮名。
+ * 顺序 = 原「站点管理」九动作网格顺序（导入/导出合并为备份恢复页后剩下的部分）。
+ */
+interface NavEmbedPage {
+  sub: NavSubTab
+  title: string
+  /** 内嵌的管理组件（均以 embedded 模式渲染） */
+  comp: Component
+  /** 传给组件的额外 props（SiteModal 需要 site=null 表示新增） */
+  props?: Record<string, unknown>
+  hint: string
+  testid: string
 }
-
-// ========================================
-// 站点外观（导航设置 tab）：浏览器标签标题 + favicon 上传/重置
-// ========================================
-const faviconFileInput = ref<HTMLInputElement | null>(null)
-
-function triggerFaviconPick() {
-  faviconFileInput.value?.click()
-}
-
-/** 读文件为 data URL（Promise 包装 FileReader） */
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result))
-    reader.onerror = () => reject(new Error('read failed'))
-    reader.readAsDataURL(file)
-  })
-}
-
-/** 图片文件 → favicon data URL：SVG 原样保留，位图经 canvas 压缩至 ≤128px PNG 控体积 */
-async function readFaviconFile(file: File): Promise<string> {
-  if (file.type === 'image/svg+xml') return readFileAsDataUrl(file)
-  const dataUrl = await readFileAsDataUrl(file)
-  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const el = new Image()
-    el.onload = () => resolve(el)
-    el.onerror = () => reject(new Error('decode failed'))
-    el.src = dataUrl
-  })
-  const MAX = 128
-  const longest = Math.max(img.width || 1, img.height || 1)
-  const scale = Math.min(1, MAX / longest)
-  const w = Math.max(1, Math.round((img.width || MAX) * scale))
-  const h = Math.max(1, Math.round((img.height || MAX) * scale))
-  const canvas = document.createElement('canvas')
-  canvas.width = w
-  canvas.height = h
-  canvas.getContext('2d')?.drawImage(img, 0, 0, w, h)
-  return canvas.toDataURL('image/png')
-}
-
-async function onFaviconFileChange(e: Event) {
-  const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-  try {
-    const dataUrl = await readFaviconFile(file)
-    store.setSiteFavicon(dataUrl)
-  } catch {
-    toast.error('图片读取失败，请换一张图片试试')
-  } finally {
-    input.value = ''
+const NAV_EMBED_PAGES: NavEmbedPage[] = [
+  {
+    sub: 'nav-add-site',
+    title: '添加网址',
+    comp: SiteModal,
+    props: { site: null },
+    testid: 'navpanel-add-site',
+    hint: '填入网址后可自动抓取标题、描述与图标，也可手动选择分类与标签；保存后直接出现在导航站。'
+  },
+  {
+    sub: 'nav-engines',
+    title: '引擎管理',
+    comp: SearchEngineManager,
+    testid: 'navpanel-engines',
+    hint: '管理搜索框可用的搜索引擎（新增、改名、排序、删除），改动即时生效。'
+  },
+  {
+    sub: 'nav-background',
+    title: '背景',
+    comp: BackgroundManager,
+    testid: 'navpanel-background',
+    hint: '设置导航站页面背景：纯色、渐变或上传图片，并可调整模糊与遮罩强度。'
+  },
+  {
+    sub: 'nav-category',
+    title: '分类管理',
+    comp: CategoryManager,
+    testid: 'navpanel-category',
+    hint: '管理网址分类（新增、改名、排序、删除）；内置分类不可删除。'
+  },
+  {
+    sub: 'nav-backup',
+    title: '备份',
+    comp: BackupManager,
+    testid: 'navpanel-backup',
+    hint: '查看与管理自动备份快照：可浏览历史快照并回滚到指定时间点的数据。'
+  },
+  {
+    sub: 'nav-icons',
+    title: '图标管理',
+    comp: IconManager,
+    testid: 'navpanel-icons',
+    hint: '管理图标库与各入口图标：新增自定义图标，或替换工作台入口图标。'
   }
+]
+
+/** 停止断链检测：中断后续 URL 请求，已检测部分的结果由 store 正常落盘保留 */
+function stopLinkCheck(): void {
+  if (!sitesStore.isCheckingLinks) return
+  sitesStore.stopLinkCheck()
+  toast.success('已停止检测，已检测部分的结果已保留')
 }
+
+/** 添加网址（内嵌 SiteModal）提交：与 HomeView 的新增逻辑一致（网址重复时询问是否更新） */
+async function onEmbedSiteSave(site: Site): Promise<void> {
+  const existing = sitesStore.sites.find(s => s.url === site.url)
+  if (existing) {
+    const ok = await showConfirm(`该网址已存在：${existing.name}\n\n确定更新？取消则跳过。`)
+    if (ok) sitesStore.updateSite(site.url, site)
+    return
+  }
+  sitesStore.addSite(site)
+  toast.success('网址已添加')
+}
+
+// ========================================
+// 站点外观（导航设置 tab）：浏览器标签标题 + 站点图标（从图标库选择）/ 重置
+// ========================================
 
 function resetSiteFavicon() {
   store.setSiteFavicon('')
@@ -1177,6 +1260,96 @@ async function handleBizImportFile(event: Event): Promise<void> {
 }
 
 // ====================
+// 销售记账 · 账本管理（基础设置分组）
+// 新建：按自然年、同年唯一，创建成功后自动切换为当前账本；
+// 删除：先选范围（仅清空交易流水 / 连同账本一并删除），二次确认后再执行。
+// 保护规则：删除账本时「当前正在使用的账本」与「最后一个账本」禁止删除（清空流水不受此限，账本本体仍在）。
+// ====================
+const newLedgerYear = ref<number>(currentYear())
+const newLedgerName = ref('')
+const newLedgerError = ref('')
+const newLedgerPlaceholder = computed(() => ledgerDefaultName(Number(newLedgerYear.value) || currentYear()))
+
+const deleteTargetId = ref('')
+const deleteScope = ref<LedgerDeleteScope>('records')
+
+const deleteTarget = computed(() => businessStore.ledgers.find(l => l.id === deleteTargetId.value) ?? null)
+const deleteCounts = computed(() => ledgerRecordCounts(deleteTarget.value?.data))
+const deleteGuard = computed<LedgerDeleteGuard>(() =>
+  deleteTargetId.value ? businessStore.ledgerDeleteGuard(deleteTargetId.value) : 'not-found'
+)
+/** 禁用原因文案（空串 = 可执行）；「仅清空交易记录」不删除账本本体，故不受当前/最后一个限制 */
+const deleteBlockReason = computed((): string => {
+  if (!deleteTargetId.value) return '请先选择要处理的账本'
+  if (deleteGuard.value === 'not-found') return '账本不存在或已被删除，请重新选择'
+  if (deleteScope.value === 'ledger') {
+    if (deleteGuard.value === 'is-current') return '该账本是当前正在使用的账本：请先在销售记账页顶部切换到其他账本，再执行删除'
+    if (deleteGuard.value === 'last-one') return '至少需要保留一个账本，最后一个账本不可删除'
+  }
+  return ''
+})
+const canDelete = computed(() => !!deleteTargetId.value && deleteGuard.value !== 'not-found' && !deleteBlockReason.value)
+
+function handleCreateLedger(): void {
+  const year = Number(newLedgerYear.value)
+  const name = newLedgerName.value.trim()
+  if (!name) {
+    newLedgerError.value = '请输入账本名称'
+    return
+  }
+  const r = businessStore.createLedger(year, name)
+  if (!r.ok) {
+    newLedgerError.value =
+      r.reason === 'duplicate'
+        ? `${year} 年账本已存在，请换一个年份或直接在页面顶部切换`
+        : r.reason === 'invalid-year'
+          ? '请输入有效年份（1970 - 9999）'
+          : '账本名称不能为空'
+    return
+  }
+  newLedgerError.value = ''
+  newLedgerName.value = ''
+  newLedgerYear.value = currentYear()
+  // 账本列表已刷新：清空删除目标，避免下拉残留已失效的选中项
+  deleteTargetId.value = ''
+  toast.success(`已创建并切换到「${r.ledger.name}」`)
+}
+
+async function handleDeleteLedgerData(): Promise<void> {
+  if (!canDelete.value) return
+  const target = deleteTarget.value
+  if (!target) return
+  const c = deleteCounts.value
+  const isRecords = deleteScope.value === 'records'
+  const detail = isRecords
+    ? `仅清空交易记录：删除进货 ${c.purchases} 条、收摊记录 ${c.dailyRecords} 条、支出 ${c.expenses} 笔。\n商品 ${c.products} 个、商品/支出分类、账本设置（摊位名称、低库存阈值、月营业额目标）均保留，账本「${target.name}」仍然保留。`
+    : `删除账本「${target.name}」：其下商品 ${c.products} 个、进货 ${c.purchases} 条、收摊记录 ${c.dailyRecords} 条、支出 ${c.expenses} 笔，以及分类与账本设置（摊位名称、低库存阈值、月营业额目标）将全部移除。`
+  const ok = await showConfirm(
+    `${detail}\n\n⚠ 该操作不可恢复，建议先到「销售记账备份（导入/导出）」导出留存。`,
+    isRecords ? '清空交易记录确认' : '删除账本确认'
+  )
+  if (!ok) return
+  try {
+    const r = isRecords ? businessStore.clearLedgerRecords(target.id) : businessStore.deleteLedger(target.id)
+    if (!r.ok) {
+      toast.error(
+        r.reason === 'is-current'
+          ? '删除失败：该账本正在使用，请先切换到其他账本'
+          : r.reason === 'last-one'
+            ? '删除失败：至少需要保留一个账本'
+            : '删除失败：账本不存在或已被删除'
+      )
+      return
+    }
+    deleteTargetId.value = ''
+    toast.success(isRecords ? `已清空「${target.name}」的交易记录` : `已删除账本「${target.name}」`)
+  } catch (e) {
+    console.error('[AppSettings] ledger delete failed', e)
+    toast.error('删除失败，请重试')
+  }
+}
+
+// ====================
 // 学生工作台（仅学生工作台 tab）：页面名称/可见性 + 学段切换 + 昵称 + 学科清单
 // ====================
 const studentStageOptions: { key: StudentStage; label: string; desc: string }[] = [
@@ -1663,6 +1836,10 @@ onMounted(async () => {
   // 记账 store 可能还未随工作台挂载加载 → 防御性加载一次
   try { await ledStore.loadLedger() } catch { /* ignore */ }
   initLedgerCats()
+  // 销售记账 store 同理：从导航站打开设置弹窗时账本列表可能尚未加载
+  if (!businessStore.loaded) {
+    try { await businessStore.loadBusiness() } catch { /* ignore */ }
+  }
   stopWatchSettings = watch(
     () => appSettings.showAppSettings.value,
     async (open) => {
@@ -1815,20 +1992,12 @@ onUnmounted(() => {
             <span class="wb-menu-label">站点图标</span>
             <div class="site-favicon-row">
               <img class="site-favicon-preview" :src="store.siteFavicon || '/vite.svg'" alt="站点图标预览" />
-              <input
-                ref="faviconFileInput"
-                type="file"
-                accept="image/*"
-                class="site-favicon-file"
-                data-testid="site-favicon-file"
-                @change="onFaviconFileChange"
-              />
-              <button type="button" class="site-action-btn" data-testid="site-favicon-upload" @click="triggerFaviconPick">上传图标</button>
+              <button type="button" class="site-action-btn" data-testid="site-favicon-pick" @click="openIconPicker('favicon')">选择图标</button>
               <button type="button" class="site-action-btn" data-testid="site-favicon-reset" @click="resetSiteFavicon">恢复默认</button>
             </div>
           </div>
           <p class="wb-menu-hint">
-            浏览器标签页的图标，支持 PNG / JPG / SVG / ICO，自动压缩至 128px；「恢复默认」还原为内置图标。
+            浏览器标签页的图标。点击「选择图标」从图标库（预置图标 + 已上传的自定义图标）中挑选，选中的图标即为当前站点图标；「恢复默认」还原为内置图标。
           </p>
 
           <!-- 访问统计（Vercount）：锚点在页脚常驻，此处读取展示 -->
@@ -1908,11 +2077,108 @@ onUnmounted(() => {
           </p>
         </div>
 
-        <!-- 页面导航名称与可见性（导航设置 tab - 显示控制） -->
+        <!-- 倒计时按钮（导航站右上角）：名称 + 开关；固定文本按钮，不支持自定义图标 -->
         <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
-          <h3 class="wb-menu-title">页面导航</h3>
+          <div class="wb-menu-head">
+            <span class="wb-menu-label">倒计时</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                :value="store.countdownButtonName"
+                placeholder="倒计时"
+                maxlength="20"
+                data-testid="countdown-button-name-input"
+                @input="store.setCountdownButtonName(($event.target as HTMLInputElement).value)"
+              />
+              <button type="button" class="switch-btn"
+                :class="{ on: store.countdownButtonVisible !== false }"
+                role="switch"
+                :aria-checked="store.countdownButtonVisible !== false"
+                data-testid="countdown-button-visible-switch"
+                @click="store.setCountdownButtonVisible(store.countdownButtonVisible === false)">
+                <span class="switch-thumb"></span>
+              </button>
+            </div>
+          </div>
+          <p class="wb-menu-hint">
+            控制导航站右上角「倒计时」按钮的显示与名称。开启后点击按钮打开倒计时弹框，可查看与管理工作台里的倒计时；关闭后该按钮不再出现在右上角。
+          </p>
+        </div>
 
-          <!-- 工作台 -->
+        <!-- 帮助按钮（导航站右上角）：名称 + 开关；固定文本按钮，不支持自定义图标 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <span class="wb-menu-label">帮助</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                :value="store.helpButtonName"
+                placeholder="帮助"
+                maxlength="20"
+                data-testid="help-button-name-input"
+                @input="store.setHelpButtonName(($event.target as HTMLInputElement).value)"
+              />
+              <button type="button" class="switch-btn"
+                :class="{ on: store.helpButtonVisible !== false }"
+                role="switch"
+                :aria-checked="store.helpButtonVisible !== false"
+                data-testid="help-button-visible-switch"
+                @click="store.setHelpButtonVisible(store.helpButtonVisible === false)">
+                <span class="switch-thumb"></span>
+              </button>
+            </div>
+          </div>
+          <p class="wb-menu-hint">
+            控制导航站右上角「帮助」按钮的显示与名称。开启后点击按钮打开使用说明弹框；关闭后该按钮不再出现在右上角（首次访问自动弹出的引导不受影响）。
+          </p>
+        </div>
+
+        <!-- 工作台设置（个性化 → 工作台设置）：5 项各自独立成一个配置块，不再有「页面导航」分组标题；
+             块内顺序 = 工作台管理 → 工作台 → 销售记账 → 学生工作台 → 教师工作台 -->
+
+        <!-- 工作台管理（导航站右上角按钮）：名称 + 图标 + 开关，排在工作台设置首位 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-workbench'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <span class="wb-menu-label">工作台管理</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                :value="store.workbenchManageName"
+                placeholder="工作台管理"
+                maxlength="20"
+                @input="store.setWorkbenchManageName(($event.target as HTMLInputElement).value)"
+              />
+              <button
+                type="button"
+                class="wb-menu-icon-btn"
+                :class="{ 'is-set': !!store.workbenchManageIcon }"
+                :title="store.workbenchManageIcon ? '已设置图标，点击更换' : '选择图标'"
+                data-testid="workbench-manage-icon-btn"
+                @click="openIconPicker('manage')"
+              >
+                <img v-if="store.workbenchManageIcon" :src="store.workbenchManageIcon" alt="" class="wb-menu-icon-img" />
+                <Icon v-else name="image" />
+              </button>
+              <button type="button" class="switch-btn"
+                :class="{ on: store.workbenchManageVisible !== false }"
+                role="switch"
+                :aria-checked="store.workbenchManageVisible !== false"
+                data-testid="workbench-manage-visible-switch"
+                @click="store.setWorkbenchManageVisible(store.workbenchManageVisible === false)">
+                <span class="switch-thumb"></span>
+              </button>
+            </div>
+          </div>
+          <p class="wb-menu-hint">
+            控制导航站左上角「工作台管理」按钮的显示、名称与图标。开启后点击按钮，在按钮正下方弹出面板，以卡片形式列出已启用的工作台（被关闭的工作台不出现在面板中）；点「选择图标」可从图标库（预置图标 + 已上传的自定义图标）为按钮挑选图标，未设置时使用内置默认图标。
+          </p>
+        </div>
+
+        <!-- 工作台 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-workbench'" class="wb-menu-config">
           <div class="wb-menu-head">
             <span class="wb-menu-label">工作台</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -1948,8 +2214,10 @@ onUnmounted(() => {
           <p class="wb-menu-hint">
             控制「工作台管理」面板中是否显示工作台，默认关闭：打开后面板出现工作台卡片，设置里也会出现工作台与提醒设置；关闭则一并隐藏。
           </p>
+        </div>
 
-          <!-- 销售记账 -->
+        <!-- 销售记账 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-workbench'" class="wb-menu-config">
           <div class="wb-menu-head">
             <span class="wb-menu-label">销售记账</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -1985,8 +2253,10 @@ onUnmounted(() => {
           <p class="wb-menu-hint">
             控制「工作台管理」面板中是否显示销售记账。关闭后面板中不显示，销售记账设置页一并隐藏。
           </p>
+        </div>
 
-          <!-- 学生工作台 -->
+        <!-- 学生工作台 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-workbench'" class="wb-menu-config">
           <div class="wb-menu-head">
             <span class="wb-menu-label">学生工作台</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -2024,8 +2294,8 @@ onUnmounted(() => {
           </p>
         </div>
 
-        <!-- 教师工作台 -->
-        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
+        <!-- 教师工作台（已迁入「个性化 → 工作台设置」） -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-workbench'" class="wb-menu-config">
           <div class="wb-menu-head">
             <span class="wb-menu-label">教师工作台</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -2063,41 +2333,34 @@ onUnmounted(() => {
           </p>
         </div>
 
-        <!-- 工作台管理按钮（导航站右上角）：名称 + 开关；该按钮固定使用内置图标，不支持自定义 -->
-        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
-          <div class="wb-menu-head">
-            <span class="wb-menu-label">工作台管理</span>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <input
-                type="text"
-                class="wb-menu-name-input"
-                :value="store.workbenchManageName"
-                placeholder="工作台管理"
-                maxlength="20"
-                @input="store.setWorkbenchManageName(($event.target as HTMLInputElement).value)"
-              />
-              <button type="button" class="switch-btn"
-                :class="{ on: store.workbenchManageVisible !== false }"
-                role="switch"
-                :aria-checked="store.workbenchManageVisible !== false"
-                data-testid="workbench-manage-visible-switch"
-                @click="store.setWorkbenchManageVisible(store.workbenchManageVisible === false)">
-                <span class="switch-thumb"></span>
-              </button>
-            </div>
-          </div>
+        <!-- 备份恢复（导航设置 tab - 备份恢复）：原「站点管理」的导入 + 导出合并为一页，两个动作都在此执行 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-backup-restore'" class="wb-menu-config">
+          <h3 class="wb-menu-title">备份恢复</h3>
           <p class="wb-menu-hint">
-            控制导航站左上角「工作台管理」按钮的显示与名称。开启后点击按钮，在按钮正下方弹出面板，以卡片形式列出已启用的工作台（被关闭的工作台不出现在面板中）。
+            导出：把全部网址与搜索引擎保存为 Markdown 文件，便于留存或迁移；
+            导入：从该 Markdown 文件恢复（自动跳过已存在的重复网址），文件中若包含搜索引擎配置也会一并导入。
+            建议定期导出留存。
           </p>
+          <div class="site-actions-grid" data-testid="stg-backup-restore">
+            <button type="button" class="site-action-btn" data-testid="stg-act-export" @click="sitesStore.exportToMarkdown()"><Icon name="upload" /> 导出</button>
+            <button type="button" class="site-action-btn" data-testid="stg-act-import" @click="triggerSiteImport"><Icon name="download" /> 导入</button>
+          </div>
+          <input
+            ref="siteImportInput"
+            type="file"
+            accept=".md,text/markdown"
+            style="display: none"
+            @change="handleSiteImport"
+          />
         </div>
 
-        <!-- 站点管理（导航设置 tab - 站点管理）：原导航站工具栏九动作迁移入口；弹窗类先关设置再开目标，纯动作就地执行 -->
-        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-site'" class="wb-menu-config">
-          <h3 class="wb-menu-title">站点管理</h3>
-          <div class="site-actions-grid" data-testid="stg-site-actions">
-            <button type="button" class="site-action-btn" data-testid="stg-act-import" @click="triggerSiteImport"><Icon name="download" /> 导入</button>
-            <button type="button" class="site-action-btn" data-testid="stg-act-export" @click="sitesStore.exportToMarkdown()"><Icon name="upload" /> 导出</button>
-            <button type="button" class="site-action-btn" data-testid="stg-act-add" @click="openSiteManagerViaQuery('add')">＋ 添加网址</button>
+        <!-- 检测断链（导航设置 tab - 检测断链）：纯动作，就地执行并显示进度 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-check-links'" class="wb-menu-config">
+          <h3 class="wb-menu-title">检测断链</h3>
+          <p class="wb-menu-hint">
+            逐个访问已保存的网址，把访问异常的站点标记出来（按钮上显示当前异常数量）。网址较多时耗时较长，检测过程中可随时点「停止检测」中断，已检测的部分结果会保留。
+          </p>
+          <div class="site-actions-grid">
             <button
               type="button"
               class="site-action-btn"
@@ -2108,39 +2371,37 @@ onUnmounted(() => {
               <span v-if="sitesStore.isCheckingLinks"><Icon name="timer-sand" /> 检测中 ({{ sitesStore.linkCheckProgress?.current }}/{{ sitesStore.linkCheckProgress?.total }})</span>
               <span v-else><Icon name="link" /> 检测断链<span v-if="sitesStore.invalidCount > 0" class="site-invalid-count">({{ sitesStore.invalidCount }})</span></span>
             </button>
-            <button type="button" class="site-action-btn" data-testid="stg-act-engines" @click="openSiteManagerViaQuery('engines')"><Icon name="search" /> 引擎管理</button>
-            <button type="button" class="site-action-btn" data-testid="stg-act-background" @click="openSiteManagerViaQuery('background')"><Icon name="image" /> 背景</button>
-            <button type="button" class="site-action-btn" data-testid="stg-act-category" @click="openSiteManagerViaQuery('category')"><Icon name="cog" /> 分类管理</button>
-            <button type="button" class="site-action-btn" data-testid="stg-act-backup" @click="openSiteManagerViaQuery('backup')"><Icon name="package" /> 备份</button>
-            <button type="button" class="site-action-btn" data-testid="stg-act-icons" @click="openSiteManagerViaQuery('icons')"><Icon name="palette" /> 图标管理</button>
+            <!-- 停止检测：仅在检测进行中可用，中断后续 URL 请求并保留已检测部分 -->
+            <button
+              type="button"
+              class="site-action-btn stop"
+              data-testid="stg-act-stop-links"
+              :disabled="!sitesStore.isCheckingLinks"
+              @click="stopLinkCheck"
+            >
+              <Icon name="close" /> 停止检测
+            </button>
           </div>
-          <input
-            ref="siteImportInput"
-            type="file"
-            accept=".md,text/markdown"
-            style="display: none"
-            @change="handleSiteImport"
-          />
-          <input
-            ref="wbImportInput"
-            type="file"
-            accept=".json,application/json"
-            style="display: none"
-            @change="handleWbImportFile"
-          />
-          <input
-            ref="bizImportInput"
-            type="file"
-            accept=".json,application/json"
-            style="display: none"
-            @change="handleBizImportFile"
-          />
         </div>
+
+        <!-- 导航站管理面板（添加网址 / 引擎管理 / 背景 / 分类管理 / 备份 / 图标管理）：
+             原「点按钮 → 弹框」改为组件以内嵌模式常驻展示，进入菜单即可直接操作；
+             排版与「检测断链」等动作页一致：标题 → 说明 → 内容面板；
+             面板始终展开，内容超出高度时在面板内部滚动，不撑高页面。 -->
+        <template v-for="p in NAV_EMBED_PAGES" :key="p.sub">
+          <div v-if="activeTab === 'nav' && activeSubTab === p.sub" class="nav-embed-page" :data-testid="p.testid">
+            <h3 class="wb-menu-title">{{ p.title }}</h3>
+            <p class="wb-menu-hint">{{ p.hint }}</p>
+            <div :id="`${p.testid}-panel`" class="nav-embed-panel">
+              <component :is="p.comp" embedded v-bind="p.props || {}" @save="onEmbedSiteSave" />
+            </div>
+          </div>
+        </template>
 
         <!-- 数据清理（导航设置 tab - 数据清理）：危险操作，清空各模块数据，需二次确认 -->
         <div v-if="activeTab === 'nav' && activeSubTab === 'nav-data'" class="wb-menu-config">
           <h3 class="wb-menu-title">数据清理</h3>
-          <p class="wb-menu-hint">以下操作将永久删除对应模块的数据且不可恢复，请谨慎操作。建议先到「站点管理」做好备份。</p>
+          <p class="wb-menu-hint">以下操作将永久删除对应模块的数据且不可恢复，请谨慎操作。建议先到「备份恢复」导出网址留存数据。</p>
           <div class="site-actions-grid" data-testid="stg-data-actions">
             <button type="button" class="site-action-btn" data-testid="stg-clear-wb" @click="confirmClear('workbench')"><Icon name="trash" /> 清空个人工作台</button>
             <button type="button" class="site-action-btn" data-testid="stg-clear-biz" @click="confirmClear('business')"><Icon name="trash" /> 清空记账管理</button>
@@ -2686,6 +2947,93 @@ onUnmounted(() => {
               />
             </label>
           </div>
+
+          <!-- 账本管理：新建（同年唯一）+ 删除（清空交易记录 / 连账本删除），与页面顶部切换器解耦 -->
+          <div class="bl-manage" data-testid="biz-ledger-manage">
+            <div class="bl-block">
+              <h4 class="bl-subtitle">新建账本</h4>
+              <p class="wb-menu-hint">账本按自然年创建，同一年份只有一个；创建成功后自动切换为当前账本。</p>
+              <div class="remind-fields">
+                <label class="remind-field">
+                  <span class="remind-label">年份</span>
+                  <el-input-number
+                    :min="1970"
+                    :max="9999"
+                    :step="1"
+                    data-testid="biz-ledger-new-year"
+                    v-model="newLedgerYear"
+                  />
+                </label>
+                <label class="remind-field">
+                  <span class="remind-label">名称</span>
+                  <el-input
+                    maxlength="30"
+                    :placeholder="newLedgerPlaceholder"
+                    data-testid="biz-ledger-new-name"
+                    v-model="newLedgerName"
+                  />
+                </label>
+              </div>
+              <div class="remind-actions">
+                <el-button size="small" type="primary" data-testid="biz-ledger-create" @click="handleCreateLedger">
+                  <Icon name="plus" /> 新建并切换
+                </el-button>
+              </div>
+              <p v-if="newLedgerError" class="wb-menu-hint bl-error" data-testid="biz-ledger-new-error">{{ newLedgerError }}</p>
+            </div>
+
+            <div class="bl-block">
+              <h4 class="bl-subtitle">删除账本数据</h4>
+              <p class="wb-menu-hint">删除前会二次确认并列出受影响的数据；操作不可恢复，建议先导出销售记账备份。</p>
+              <div class="remind-fields">
+                <label class="remind-field">
+                  <span class="remind-label">目标账本</span>
+                  <el-select
+                    v-model="deleteTargetId"
+                    placeholder="请选择账本"
+                    data-testid="biz-ledger-delete-target"
+                  >
+                    <el-option
+                      v-for="l in businessStore.ledgers"
+                      :key="l.id"
+                      :value="l.id"
+                      :label="`${l.year} 年 · ${l.name}${l.id === businessStore.currentLedgerId ? '（当前）' : ''}`"
+                    />
+                  </el-select>
+                </label>
+              </div>
+              <div class="bl-scopes" data-testid="biz-ledger-scopes">
+                <label class="bl-radio">
+                  <input
+                    type="radio"
+                    value="records"
+                    v-model="deleteScope"
+                    data-testid="biz-ledger-scope-records"
+                  />
+                  <span>仅清空该账本的交易记录（进货 / 收摊 / 支出），保留商品、分类与账本设置</span>
+                </label>
+                <label class="bl-radio">
+                  <input
+                    type="radio"
+                    value="ledger"
+                    v-model="deleteScope"
+                    data-testid="biz-ledger-scope-ledger"
+                  />
+                  <span>连同账本本身一并删除（该账本下所有数据随之移除）</span>
+                </label>
+              </div>
+              <p v-if="deleteBlockReason" class="wb-menu-hint bl-error" data-testid="biz-ledger-delete-block">{{ deleteBlockReason }}</p>
+              <div class="remind-actions">
+                <el-button
+                  size="small"
+                  type="danger"
+                  :disabled="!canDelete"
+                  data-testid="biz-ledger-delete"
+                  @click="handleDeleteLedgerData"
+                ><Icon name="trash" /> 删除账本数据</el-button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- 商品分类管理（销售记账 tab - 商品分类管理）：内联 BusinessCategoryManager(embedded)，与工作台分类管理菜单一致 -->
@@ -3042,16 +3390,6 @@ onUnmounted(() => {
           <p v-if="!store.cloudSyncEnabled" class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; margin-top: 0;">
             首次使用指引：① 注册坚果云账号；② 账户信息 → 安全选项 → 添加应用，获取应用密码（非账户密码）；③ 开启开关，填入下方配置；④ 点「测试连接」确认无误后点「立即同步」。
           </p>
-          <div class="wb-menu-hint" style="background: var(--color-bg-2); border-left: 3px solid var(--color-primary); padding: 10px 14px; border-radius: 4px; margin: 8px 0 16px;">
-            <strong style="color: var(--color-text);">CORS 兼容说明：</strong>坚果云 / Nextcloud 等 WebDAV 服务商默认不返回 CORS 预检响应头（浏览器 MKCOL+Authorization 会触发 OPTIONS 拦截）。<br />
-            本应用已自动在以下三种启动方式内置「同源代理」<code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">/api/webdav-proxy</code>，可直接跨域：
-            <ul style="margin: 6px 0 0 20px; padding: 0;">
-              <li>开发环境：<code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">npm run dev</code>（Vite dev 中间件）</li>
-              <li>预览环境：<code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">npm run serve / node server.cjs / pm2 start pm2.config.cjs</code>（内置 Node HTTP 服务）</li>
-              <li>预览构建包：<code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">npm run preview</code>（Vite preview 已附加代理）</li>
-            </ul>
-            <Icon name="alert" /> 若将 <code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">dist/</code> 部署到其他纯静态托管（Nginx、GitHub Pages 等）但未挂载代理，会出现「Failed to fetch / CORS」报错。需自行在同域部署 <code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">/api/webdav-proxy</code>，或改成使用本项目的 <code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">node server.cjs</code> 启动。
-          </div>
 
           <div v-if="store.cloudSyncEnabled" class="remind-fields">
             <label class="remind-field">
@@ -3154,6 +3492,77 @@ onUnmounted(() => {
             />
             <span class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px;">本地与云端内容差异小于此值时，后台自动静默合并而不弹冲突框</span>
           </div>
+
+          <!-- CORS 兼容说明（排在云同步页最后：属排查类补充说明，不打断「开关 → 配置 → 操作」的主流程） -->
+          <div
+            class="wb-menu-hint"
+            data-testid="sync-cors-note"
+            style="background: var(--color-bg-2); border-left: 3px solid var(--color-primary); padding: 10px 14px; border-radius: 4px; margin: 14px 0 0;"
+          >
+            <strong style="color: var(--color-text);">CORS 兼容说明：</strong>坚果云 / Nextcloud 等 WebDAV 服务商默认不返回 CORS 预检响应头（浏览器 MKCOL+Authorization 会触发 OPTIONS 拦截）。<br />
+            本应用已自动在以下三种启动方式内置「同源代理」<code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">/api/webdav-proxy</code>，可直接跨域：
+            <ul style="margin: 6px 0 0 20px; padding: 0;">
+              <li>开发环境：<code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">npm run dev</code>（Vite dev 中间件）</li>
+              <li>预览环境：<code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">npm run serve / node server.cjs / pm2 start pm2.config.cjs</code>（内置 Node HTTP 服务）</li>
+              <li>预览构建包：<code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">npm run preview</code>（Vite preview 已附加代理）</li>
+            </ul>
+            <Icon name="alert" /> 若将 <code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">dist/</code> 部署到其他纯静态托管（Nginx、GitHub Pages 等）但未挂载代理，会出现「Failed to fetch / CORS」报错。需自行在同域部署 <code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">/api/webdav-proxy</code>，或改成使用本项目的 <code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">node server.cjs</code> 启动。
+          </div>
+        </div>
+
+        <!-- 关于（仅导航站来源显示）：公众号信息 + 开源地址；配置集中在 src/config/about.ts -->
+        <div v-if="activeTab === 'about'" class="wb-menu-config about-config" data-testid="about-page">
+          <h3 class="wb-menu-title">关于</h3>
+          <p class="wb-menu-hint">了解项目的最新动态与源码仓库，欢迎关注与 Star。</p>
+
+          <!-- 微信公众号 -->
+          <div class="about-card">
+            <span class="about-label">微信公众号</span>
+            <div class="about-mp-row">
+              <div class="about-qr">
+                <img
+                  v-if="!mpQrFailed"
+                  :src="WECHAT_MP_QRCODE"
+                  :alt="`${WECHAT_MP_NAME} 公众号二维码`"
+                  class="about-qr-img"
+                  data-testid="about-qr-img"
+                  @error="mpQrFailed = true"
+                />
+                <div v-else class="about-qr-placeholder" data-testid="about-qr-placeholder">
+                  <Icon name="image" />
+                  <span>二维码占位</span>
+                </div>
+              </div>
+              <div class="about-mp-info">
+                <span class="about-mp-name">{{ WECHAT_MP_NAME }}</span>
+                <p class="wb-menu-hint">{{ WECHAT_MP_HINT }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 开源地址（列表驱动，追加仓库只需改 src/config/about.ts） -->
+          <div class="about-card">
+            <span class="about-label">开源地址</span>
+            <div
+              v-for="(link, i) in OPEN_SOURCE_LINKS"
+              :key="link.homeUrl"
+              class="about-link-row"
+              :data-testid="`about-link-${i}`"
+            >
+              <div class="about-link-main">
+                <span class="about-link-name">{{ link.label }}</span>
+                <code class="about-link-url" :title="`git clone ${link.cloneUrl}`">{{ link.cloneUrl }}</code>
+                <p class="wb-menu-hint">{{ link.description }}</p>
+              </div>
+              <a
+                class="site-action-btn about-goto"
+                :href="link.homeUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                :data-testid="`about-goto-${i}`"
+              >前往</a>
+            </div>
+          </div>
         </div>
 
         <div class="settings-grid" v-if="(activeTab === 'nav' && activeSubTab === 'nav-size') || (activeTab === 'wb' && activeSubTab === 'wb-size')">
@@ -3203,6 +3612,23 @@ onUnmounted(() => {
       </div>
       </section>
       </div>
+
+      <!-- 常驻隐藏文件输入框：工作台备份导入 / 销售记账备份导入。
+           原挂在「站点管理」区块内，随该区块移除会导致对应页面的导入按钮失效，故上提为常驻（不随子 tab 显隐）。 -->
+      <input
+        ref="wbImportInput"
+        type="file"
+        accept=".json,application/json"
+        style="display: none"
+        @change="handleWbImportFile"
+      />
+      <input
+        ref="bizImportInput"
+        type="file"
+        accept=".json,application/json"
+        style="display: none"
+        @change="handleBizImportFile"
+      />
     </div>
 
     <!-- 云同步冲突弹框（z-index 高于设置弹窗） -->
@@ -3493,6 +3919,59 @@ html.dark .tab-btn.active {
   margin: 6px 0 12px;
   font-size: 12px;
   color: var(--color-text-muted, var(--color-text-muted));
+}
+
+/* ===== 销售记账 · 账本管理（新建 / 删除）：两块卡片式分区，沿用 wb-menu 排版 ===== */
+.bl-manage {
+  display: grid;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.bl-block {
+  padding: 12px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 10px;
+  background-color: var(--color-bg, #f8fafc);
+}
+
+.bl-subtitle {
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text, #1e293b);
+}
+
+.bl-scopes {
+  display: grid;
+  gap: 6px;
+  margin: 4px 0 10px;
+}
+
+.bl-radio {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-text, #1e293b);
+  cursor: pointer;
+}
+
+.bl-radio input {
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: var(--color-primary, #3b82f6);
+}
+
+/* 校验/阻断提示（红色，区别于普通 hint） */
+.bl-error {
+  color: var(--color-danger, #ef4444);
+}
+
+html.dark .bl-block {
+  background-color: var(--color-bg-hover, #374151);
+  border-color: var(--color-border, #374151);
 }
 
 /* 教师工作台菜单设置：按分组（基础功能 / 特色功能）分段 */
@@ -3956,7 +4435,7 @@ html.dark .remind-label {
 }
 
 /* ========================================
-   站点管理（导航设置 tab）：原导航站工具栏九动作按钮网格。
+   导航站动作页（原「站点管理」九动作拆分后的各独立页）：动作按钮网格。
    风格沿用导航站原 .btn-action（白底灰字蓝 hover）；暗色走文件既有 html.dark 变量惯例
    ======================================== */
 .site-actions-grid {
@@ -3987,13 +4466,169 @@ html.dark .remind-label {
   cursor: not-allowed;
 }
 
+/* ===== 「关于」页（设置 → 通知与同步 → 关于）：公众号 + 开源地址 ===== */
+.about-config .wb-menu-hint {
+  margin: 0;
+}
+
+.about-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--color-border, var(--color-border));
+  border-radius: 10px;
+  background-color: var(--color-bg-hover, var(--color-bg-hover));
+}
+
+.about-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text, var(--color-text));
+}
+
+/* 公众号：二维码 + 名称/引导文案横排（窄屏自动换行） */
+.about-mp-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.about-qr {
+  flex: none;
+  width: 132px;
+  height: 132px;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.about-qr-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+.about-qr-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  color: var(--color-text-muted, var(--color-text-muted));
+  font-size: 12px;
+}
+
+.about-mp-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.about-mp-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text, var(--color-text));
+}
+
+/* 开源地址：每行 = 信息（名称/clone 地址/说明）+ 前往按钮 */
+.about-link-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 10px;
+  border-top: 1px dashed var(--color-border, var(--color-border));
+}
+
+.about-link-row:first-of-type {
+  padding-top: 0;
+  border-top: none;
+}
+
+.about-link-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.about-link-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text, var(--color-text));
+}
+
+.about-link-url {
+  font-size: 12px;
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  word-break: break-all;
+}
+
+/* 前往按钮：复用 .site-action-btn，补齐 <a> 的下划线与行内对齐 */
+.about-goto {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  text-decoration: none;
+}
+
 .site-invalid-count {
   margin-left: 4px;
   font-weight: 600;
   color: #ef4444;
 }
 
-/* 站点管理暗色模式 */
+/* ============================================================
+   导航站管理面板：原二级弹框内容以 embedded 模式常驻展示。
+   排版与「检测断链」等动作页一致：标题 → 说明 → 内容面板（单栏铺满）。
+   高度受限 + 内部滚动，内容再多也不会撑高设置页；窄屏放宽可视高度。
+   ============================================================ */
+.nav-embed-page {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nav-embed-page .wb-menu-title {
+  margin: 0;
+}
+
+.nav-embed-page .wb-menu-hint {
+  margin: 0;
+}
+
+/* 面板本体：限制高度、内部纵向滚动（overscroll-behavior 防止滚动穿透到设置页） */
+.nav-embed-panel {
+  min-width: 0;
+  width: 100%;
+  max-height: min(52vh, 520px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* 窄屏（手机）：放宽面板可视高度，保证表单与列表可用 */
+@media (max-width: 768px) {
+  .nav-embed-panel {
+    max-height: 56vh;
+  }
+}
+
+/* 站点管理暗色模式（动作按钮沿用至拆分后的各独立页） */
 html.dark .site-action-btn {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
@@ -4004,6 +4639,16 @@ html.dark .site-action-btn:hover:not(:disabled) {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-primary, #3b82f6);
+}
+
+/* 停止检测：仅在检测进行中可用（橙色描边区分于普通动作） */
+.site-action-btn.stop:not(:disabled) {
+  color: #d97706;
+  border-color: #fcd34d;
+}
+html.dark .site-action-btn.stop:not(:disabled) {
+  color: #fbbf24;
+  border-color: #92400e;
 }
 
 /* 数据清理：危险按钮（红色描边，警示不可恢复） */
@@ -4035,7 +4680,7 @@ html.dark .danger-hint {
   color: #f87171;
 }
 
-/* ===== 站点外观（导航设置 tab）：favicon 上传行与预览 ===== */
+/* ===== 站点外观（导航设置 tab）：站点图标选择行与预览 ===== */
 .site-favicon-row {
   display: flex;
   align-items: center;
@@ -4051,10 +4696,6 @@ html.dark .danger-hint {
   background: var(--color-bg-input, #f1f5f9);
   object-fit: contain;
   flex-shrink: 0;
-}
-
-.site-favicon-file {
-  display: none;
 }
 
 /* ===== 站点外观（导航设置 tab）：Vercount 访问统计展示 ===== */

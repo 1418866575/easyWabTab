@@ -1,15 +1,23 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
-import { showConfirm } from '@/utils/dialog'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import { ref, computed } from 'vue'
 import { useSearchEnginesStore } from '../stores/searchEngines'
 import type { SearchEngine } from '../stores/searchEngines'
+
+/** embedded = true：作为常驻面板内嵌在设置页（无遮罩、无自带标题栏、不响应遮罩点击关闭） */
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
 const emit = defineEmits<{
   close: []
 }>()
 
 const store = useSearchEnginesStore()
+
+/** 遮罩点击关闭：仅弹框模式生效（内嵌面板点击空白不应关闭） */
+function onOverlayClick(): void {
+  if (!props.embedded) emit('close')
+}
 
 const newEngineName = ref('')
 const newEngineUrl = ref('')
@@ -70,10 +78,57 @@ async function saveEdit() {
   cancelEdit()
 }
 
-// 删除引擎
-async function handleDelete(id: string) {
-  if (await showConfirm('确定要删除这个搜索引擎吗？')) {
-    store.deleteEngine(id)
+// 设置默认引擎（全局唯一，设置新的会自动取消旧的）
+function handleSetDefault(engine: SearchEngine) {
+  if (engine.id === store.defaultEngineId) return
+  const previousName = store.defaultEngine?.name || '原引擎'
+  if (!store.setDefault(engine.id)) {
+    toastAlert(`设置默认引擎失败，仍保持「${previousName}」为默认`)
+    return
+  }
+  toastAlert(`已将「${engine.name}」设为默认搜索引擎`)
+}
+
+// 删除引擎（删除前若它是默认引擎，提示默认状态将转移到哪个引擎）
+async function handleDelete(engine: SearchEngine) {
+  const fallbackName = store.getFallbackDefaultName(engine.id)
+  const message = fallbackName
+    ? `「${engine.name}」是当前默认引擎，删除后默认引擎将切换为「${fallbackName}」。确定删除吗？`
+    : `确定要删除搜索引擎「${engine.name}」吗？`
+  if (!(await showConfirm(message))) return
+
+  const result = store.deleteEngine(engine.id)
+  if (!result.ok) {
+    toastAlert('删除失败，请重试')
+    return
+  }
+  if (result.transferredTo) {
+    toastAlert(`默认引擎已切换为「${result.transferredTo}」`)
+  }
+}
+
+// 启用 / 禁用引擎（禁用默认引擎时提示并自动转移默认状态）
+async function handleToggleEnabled(engine: SearchEngine) {
+  if (engine.disabled) {
+    if (!store.setEngineEnabled(engine.id, true).ok) {
+      toastAlert('启用失败，请重试')
+    }
+    return
+  }
+
+  const fallbackName = store.getFallbackDefaultName(engine.id)
+  const message = fallbackName
+    ? `「${engine.name}」是当前默认引擎，禁用后默认引擎将切换为「${fallbackName}」。确定禁用吗？`
+    : `确定要禁用搜索引擎「${engine.name}」吗？禁用后将不在搜索框的引擎列表中出现。`
+  if (!(await showConfirm(message))) return
+
+  const result = store.setEngineEnabled(engine.id, false)
+  if (!result.ok) {
+    toastAlert('禁用失败，请重试')
+    return
+  }
+  if (result.transferredTo) {
+    toastAlert(`「${engine.name}」已禁用，默认引擎已切换为「${result.transferredTo}」`)
   }
 }
 
@@ -118,9 +173,9 @@ function truncateUrl(url: string, maxLength = 40) {
 
 <template>
   <Transition name="dialog">
-  <div class="manager-overlay" @click.self="emit('close')">
-    <div class="manager">
-      <div class="manager-header">
+  <div :class="embedded ? 'mgr-embed' : 'manager-overlay'" @click.self="onOverlayClick">
+    <div :class="embedded ? 'mgr-embed-inner' : 'manager'">
+      <div v-if="!embedded" class="manager-header">
         <h2>搜索引擎管理</h2>
         <button class="close-btn" @click="emit('close')"><Icon name="close" /></button>
       </div>
@@ -168,7 +223,7 @@ function truncateUrl(url: string, maxLength = 40) {
             v-for="engine in store.builtInEngines"
             :key="engine.id"
             class="engine-item built-in"
-            :class="{ 'is-default': engine.isDefault }"
+            :class="{ 'is-default': engine.isDefault, 'is-disabled': engine.disabled }"
           >
             <div class="sort-controls">
               <span class="lock-icon"><Icon name="lock" /></span>
@@ -191,14 +246,29 @@ function truncateUrl(url: string, maxLength = 40) {
               <span class="engine-name">
                 {{ engine.name }}
                 <span v-if="engine.isDefault" class="default-tag">默认</span>
+                <span v-if="engine.disabled" class="disabled-tag">已禁用</span>
               </span>
               <span class="engine-url" :title="engine.url">{{ truncateUrl(engine.url) }}</span>
-              <button 
+              <button
                 v-if="engine.id !== 'local'"
-                class="btn-icon" 
-                @click="startEditBuiltIn(engine)" 
+                class="btn-icon"
+                @click="startEditBuiltIn(engine)"
                 title="编辑URL"
               ><Icon name="pencil" /></button>
+              <button
+                class="btn-icon set-default"
+                :class="{ 'is-active': engine.isDefault }"
+                :disabled="engine.isDefault"
+                :title="engine.isDefault ? '当前默认引擎' : '设为默认引擎'"
+                :data-testid="`builtin-default-${engine.id}`"
+                @click="handleSetDefault(engine)"
+              ><Icon name="star" /></button>
+              <button
+                class="btn-icon toggle"
+                :title="engine.disabled ? '启用引擎' : '禁用引擎'"
+                :data-testid="`builtin-toggle-${engine.id}`"
+                @click="handleToggleEnabled(engine)"
+              ><Icon :name="engine.disabled ? 'eye-off' : 'eye'" /></button>
             </template>
           </div>
         </div>
@@ -211,7 +281,7 @@ function truncateUrl(url: string, maxLength = 40) {
             v-for="engine in sortedEngines"
             :key="engine.id"
             class="engine-item custom"
-            :class="{ 'is-default': engine.isDefault }"
+            :class="{ 'is-default': engine.isDefault, 'is-disabled': engine.disabled }"
           >
             <template v-if="editingId === engine.id">
               <input
@@ -247,10 +317,25 @@ function truncateUrl(url: string, maxLength = 40) {
               <span class="engine-name">
                 {{ engine.name }}
                 <span v-if="engine.isDefault" class="default-tag">默认</span>
+                <span v-if="engine.disabled" class="disabled-tag">已禁用</span>
               </span>
               <span class="engine-url" :title="engine.url">{{ truncateUrl(engine.url) }}</span>
               <button class="btn-icon" @click="startEdit(engine)"><Icon name="pencil" /></button>
-              <button class="btn-icon delete" @click="handleDelete(engine.id)"><Icon name="trash" /></button>
+              <button
+                class="btn-icon set-default"
+                :class="{ 'is-active': engine.isDefault }"
+                :disabled="engine.isDefault"
+                :title="engine.isDefault ? '当前默认引擎' : '设为默认引擎'"
+                :data-testid="`custom-default-${engine.id}`"
+                @click="handleSetDefault(engine)"
+              ><Icon name="star" /></button>
+              <button
+                class="btn-icon toggle"
+                :title="engine.disabled ? '启用引擎' : '禁用引擎'"
+                :data-testid="`custom-toggle-${engine.id}`"
+                @click="handleToggleEnabled(engine)"
+              ><Icon :name="engine.disabled ? 'eye-off' : 'eye'" /></button>
+              <button class="btn-icon delete" @click="handleDelete(engine)"><Icon name="trash" /></button>
             </template>
           </div>
         </div>
@@ -412,6 +497,26 @@ function truncateUrl(url: string, maxLength = 40) {
   border-color: #fbbf24;
 }
 
+/* 已禁用引擎：弱化显示，与「默认」高亮区分 */
+.engine-item.is-disabled {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  border-style: dashed;
+}
+
+.engine-item.is-disabled .engine-name,
+.engine-item.is-disabled .engine-url {
+  color: #94a3b8;
+}
+
+.disabled-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  background: #e2e8f0;
+  color: #64748b;
+  border-radius: 4px;
+}
+
 .sort-controls {
   display: flex;
   flex-direction: column;
@@ -506,8 +611,22 @@ function truncateUrl(url: string, maxLength = 40) {
   color: #ef4444;
 }
 
+/* 设为默认：未选中为常规图标按钮，已是默认时高亮为金色且不可点击 */
 .btn-icon.set-default:hover {
   color: #fbbf24;
+}
+
+.btn-icon.set-default.is-active {
+  opacity: 1;
+  color: #f59e0b;
+}
+
+.btn-icon.set-default:disabled {
+  cursor: default;
+}
+
+.btn-icon.toggle:hover {
+  color: #3b82f6;
 }
 
 .btn-reset {
@@ -523,5 +642,30 @@ function truncateUrl(url: string, maxLength = 40) {
 
 .btn-reset:hover {
   background: #2563eb;
+}
+
+/* ============================================================
+   embedded 模式：常驻面板内嵌在「设置 → 导航站 → 引擎管理」
+   无遮罩 / 无固定定位，宽度撑满父面板，超高由外层面板滚动。
+   ============================================================ */
+.mgr-embed {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  display: block;
+  width: 100%;
+  padding: 0;
+  background-color: transparent;
+  overflow: visible;
+}
+
+.mgr-embed-inner {
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+  border-radius: 12px;
+  background-color: var(--color-bg-card, #fff);
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
 }
 </style>

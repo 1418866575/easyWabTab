@@ -2,7 +2,7 @@
 // 销售记账首页：营业额/利润总额主指标 + 成本/支出/毛利率统计卡 + 低库存概览 + 销售排行（树状）
 import { computed, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { calcBusinessStats, calcBusinessTrend, calcCategoryProductRanking, localDateKey, formatYuanOf, lowStockProducts } from '@/composables/businessCore'
+import { calcBusinessStats, calcCategoryProductRanking, calcMonthlyStats, formatYuanOf, lowStockProducts } from '@/composables/businessCore'
 import Icon from '@/components/Icon.vue'
 
 const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
@@ -57,60 +57,46 @@ function maxProductRevenue(node: { products: { revenue: number }[] }): number {
   return Math.max(1, ...node.products.map(p => p.revenue))
 }
 
-// ===== 今日/本月 切换 + 环比 + 目标进度环 + 迷你柱状图 =====
-const periodMode = ref<'month' | 'today'>('month')
+// ===== 账本统计维度：按年 / 按账本（取消原按月、按日维度） =====
+// 账本按自然年创建且同年唯一，两维度口径差异：
+//  - 按年：只统计「当前账本年份」内的收摊记录（不跨年）
+//  - 按账本：统计当前账本内的全部记录（含账本内记的非本年日期）
+const periodMode = ref<'year' | 'ledger'>('year')
 
-const todayKey = computed(() => localDateKey())
-const monthKey = computed(() => todayKey.value.slice(0, 7))
-const prevMonthKey = computed(() => {
-  const [y, m] = monthKey.value.split('-').map(Number)
-  const d = new Date(y, m - 2, 1)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-})
+const ledgerYear = computed(() => store.currentLedgerYear)
+const ledgerName = computed(() => store.currentLedgerName)
+const yearPrefix = computed(() => String(ledgerYear.value))
 
-// 选中周期的日记录（今日=当天；本月=当月）
+// 选中维度的日记录
 const periodDailyRecords = computed(() =>
-  periodMode.value === 'today'
-    ? data.value.dailyRecords.filter(r => r.date === todayKey.value)
-    : data.value.dailyRecords.filter(r => r.date.startsWith(monthKey.value))
+  periodMode.value === 'year'
+    ? data.value.dailyRecords.filter(r => typeof r.date === 'string' && r.date.startsWith(yearPrefix.value))
+    : data.value.dailyRecords
 )
 const periodStats = computed(() => calcBusinessStats({ ...data.value, dailyRecords: periodDailyRecords.value }))
+/** 维度说明文案（点出两个口径的差异，避免误解） */
+const periodHint = computed(() =>
+  periodMode.value === 'year'
+    ? `${ledgerYear.value} 年内记录（不跨年）`
+    : `账本「${ledgerName.value}」内全部记录`
+)
 
-// 出摊总天数：全部收摊记录的不同日期数（累计，不随 今日/本月 切换）
-const totalStallDays = computed(() => new Set(data.value.dailyRecords.map(r => r.date)).size)
+// 出摊总天数：当前维度下的不同日期数
+const totalStallDays = computed(() => new Set(periodDailyRecords.value.map(r => r.date)).size)
 
-// 上一周期（今日→昨日；本月→上月）用于环比
-const prevDailyRecords = computed(() => {
-  if (periodMode.value === 'today') {
-    const [y, m, d] = todayKey.value.split('-').map(Number)
-    const pd = new Date(y, m - 1, d - 1)
-    const key = `${pd.getFullYear()}-${String(pd.getMonth() + 1).padStart(2, '0')}-${String(pd.getDate()).padStart(2, '0')}`
-    return data.value.dailyRecords.filter(r => r.date === key)
-  }
-  return data.value.dailyRecords.filter(r => r.date.startsWith(prevMonthKey.value))
-})
-const prevStats = computed(() => calcBusinessStats({ ...data.value, dailyRecords: prevDailyRecords.value }))
-
-// 营业额环比（%）：上一周期无数据 → null（不显示）
-const revenueDelta = computed<number | null>(() => {
-  if (prevStats.value.revenue <= 0) return null
-  return ((periodStats.value.revenue - prevStats.value.revenue) / prevStats.value.revenue) * 100
-})
-const deltaUp = computed(() => revenueDelta.value !== null && revenueDelta.value >= 0)
-const deltaText = computed(() => (revenueDelta.value === null ? '' : `${Math.abs(revenueDelta.value).toFixed(1)}%`))
-
-// 目标进度环（仅本月 + 已设目标）
+// 目标进度环：年目标 = 设置里的月目标 × 12（沿用现有 monthlyRevenueTarget 字段，不新增字段）
+const yearlyTarget = computed(() => Math.max(0, store.settings.monthlyRevenueTarget) * 12)
 const targetPct = computed(() =>
-  periodMode.value === 'month' && store.settings.monthlyRevenueTarget > 0
-    ? Math.min(100, (periodStats.value.revenue / store.settings.monthlyRevenueTarget) * 100)
+  periodMode.value === 'year' && yearlyTarget.value > 0
+    ? Math.min(100, (periodStats.value.revenue / yearlyTarget.value) * 100)
     : 0
 )
 
-// 近 30 天每日营业额迷你柱状图
-const trendBars = computed(() => {
-  const trend = calcBusinessTrend(data.value, todayKey.value, 30)
-  const max = Math.max(1, ...trend.map(t => t.revenue))
-  return trend.map(t => ({ date: t.date, revenue: t.revenue, pct: (t.revenue / max) * 100 }))
+// 迷你柱状图：当前账本年份 12 个月营业额（无数据月份为 0，与统计模块同口径）
+const monthlyStats = computed(() => calcMonthlyStats(data.value, ledgerYear.value))
+const monthBars = computed(() => {
+  const max = Math.max(1, ...monthlyStats.value.map(m => m.revenue))
+  return monthlyStats.value.map(m => ({ label: m.label, revenue: m.revenue, pct: (m.revenue / max) * 100 }))
 })
 
 // 问候语（按当前时段）
@@ -172,8 +158,8 @@ async function saveTarget(): Promise<void> {
           <p class="bizhome-greeting-sub">{{ dateText }}</p>
         </div>
         <div class="bizhome-greeting-right">
-          <!-- 目标进度环（仅本月 + 已设目标） -->
-          <div v-if="periodMode === 'month' && store.settings.monthlyRevenueTarget > 0" class="bizhome-target">
+          <!-- 目标进度环（按年维度 + 已设月目标；年目标由月目标 ×12 折算） -->
+          <div v-if="periodMode === 'year' && yearlyTarget > 0" class="bizhome-target" :title="`年目标 ${formatYuanOf(yearlyTarget)}（月目标 ${formatYuanOf(store.settings.monthlyRevenueTarget)} × 12）`">
             <svg class="target-ring" viewBox="0 0 36 36" aria-hidden="true">
               <circle class="target-track" cx="18" cy="18" r="15.9155" fill="none" />
               <circle
@@ -187,7 +173,7 @@ async function saveTarget(): Promise<void> {
             </svg>
             <div class="target-meta">
               <span class="target-pct">{{ targetPct.toFixed(0) }}%</span>
-              <span class="target-label">月目标</span>
+              <span class="target-label">年目标</span>
             </div>
           </div>
           <!-- 目标内联编辑器 -->
@@ -207,34 +193,32 @@ async function saveTarget(): Promise<void> {
           <button v-else class="bizhome-target-btn" data-testid="bizhome-set-target" @click="startEditTarget">
             {{ store.settings.monthlyRevenueTarget > 0 ? '改目标' : '设目标' }}
           </button>
-          <!-- 今日/本月 分段切换 -->
-          <div class="bizhome-period-toggle" role="tablist" aria-label="统计周期">
+          <!-- 按年 / 按账本 分段切换 -->
+          <div class="bizhome-period-toggle" role="tablist" aria-label="统计维度">
             <button
               class="bizhome-period-btn"
-              :class="{ active: periodMode === 'month' }"
+              :class="{ active: periodMode === 'year' }"
               role="tab"
-              :aria-selected="periodMode === 'month'"
-              data-testid="bizhome-period-month"
-              @click="periodMode = 'month'"
-            >本月</button>
+              :aria-selected="periodMode === 'year'"
+              data-testid="bizhome-period-year"
+              @click="periodMode = 'year'"
+            >按年</button>
             <button
               class="bizhome-period-btn"
-              :class="{ active: periodMode === 'today' }"
+              :class="{ active: periodMode === 'ledger' }"
               role="tab"
-              :aria-selected="periodMode === 'today'"
-              data-testid="bizhome-period-today"
-              @click="periodMode = 'today'"
-            >今日</button>
+              :aria-selected="periodMode === 'ledger'"
+              data-testid="bizhome-period-ledger"
+              @click="periodMode = 'ledger'"
+            >按账本</button>
           </div>
         </div>
       </section>
 
-      <!-- 环比（vs 上一周期） -->
-      <div v-if="revenueDelta !== null" class="bizhome-delta" data-testid="bizhome-delta">
-        <span class="delta-label">{{ periodMode === 'month' ? '环比上月' : '较昨日' }}</span>
-        <span class="delta-value" :class="deltaUp ? 'up' : 'down'">
-          {{ deltaUp ? '▲' : '▼' }} {{ deltaText }}
-        </span>
+      <!-- 统计范围说明（替代原「环比上月/较昨日」） -->
+      <div class="bizhome-delta" data-testid="bizhome-scope">
+        <span class="delta-label">{{ ledgerYear }} 年 · {{ ledgerName }}</span>
+        <span class="delta-value up">统计范围：{{ periodHint }}，共 {{ periodDailyRecords.length }} 条收摊记录</span>
       </div>
 
       <!-- 主指标：营业额/利润总额/成本/支出/毛利率（随 今日/本月 切换） -->
@@ -323,18 +307,21 @@ async function saveTarget(): Promise<void> {
         </section>
       </div>
 
-      <!-- 近 30 天营业额迷你柱状图 -->
+      <!-- {{ ledgerYear }} 年 12 个月营业额迷你柱状图（无数据月份为 0） -->
       <section class="bizhome-card bizhome-mini-chart" data-testid="bizhome-mini-chart">
-        <div class="bizhome-card-title"><Icon name="stats" :size="15" />近 30 天营业额</div>
-        <div v-if="trendBars.length === 0" class="bizhome-empty">暂无收摊记录</div>
-        <div v-else class="mini-bars" role="img" :aria-label="`近30天营业额，最高 ${formatYuanOf(Math.max(...trendBars.map(b => b.revenue)))}`">
+        <div class="bizhome-card-title"><Icon name="stats" :size="15" />{{ ledgerYear }} 年 12 个月营业额</div>
+        <div class="mini-bars" role="img" :aria-label="`${ledgerYear} 年 12 个月营业额，最高 ${formatYuanOf(Math.max(0, ...monthBars.map(b => b.revenue)))}`">
           <div
-            v-for="bar in trendBars"
-            :key="bar.date"
+            v-for="bar in monthBars"
+            :key="bar.label"
             class="mini-bar-col"
-            :title="`${bar.date}：${formatYuanOf(bar.revenue)}`"
+            :data-testid="`bizhome-month-bar-${bar.label}`"
+            :title="`${bar.label}：${formatYuanOf(bar.revenue)}`"
           >
-            <div class="mini-bar" :style="{ height: bar.pct + '%' }"></div>
+            <div class="mini-bar-track">
+              <div class="mini-bar" :style="{ height: bar.pct + '%' }"></div>
+            </div>
+            <span class="mini-bar-label">{{ bar.label }}</span>
           </div>
         </div>
       </section>
@@ -951,6 +938,26 @@ html.dark .sk-block::after {
   min-width: 0;
   height: 100%;
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+/* 月份标签（12 个月柱状图） */
+.mini-bar-label {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--color-text-muted, #9ca3af);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 柱轨道：占满列内剩余高度，柱子按百分比从底部生长 */
+.mini-bar-track {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
   align-items: flex-end;
   justify-content: center;
 }
@@ -958,10 +965,10 @@ html.dark .sk-block::after {
 .mini-bar {
   width: 100%;
   max-width: 14px;
+  min-height: 2px;
   border-radius: 3px 3px 0 0;
   background: linear-gradient(180deg, var(--color-primary, #3b82f6), color-mix(in srgb, var(--color-primary, #3b82f6) 60%, transparent));
   transition: height var(--transition-fast, 0.3s ease);
-  min-height: 2px;
 }
 
 .mini-bar-col:hover .mini-bar {

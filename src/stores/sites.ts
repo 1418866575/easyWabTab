@@ -80,6 +80,17 @@ export const useSitesStore = defineStore('sites', () => {
     checkAbortController = null
   }
 
+  /**
+   * 停止正在进行的断链检测。
+   * 只中断后续 URL 的请求（checkDeadLinks 每个 URL 前检查 signal），
+   * 已检测完成的部分由 checkDeadLinksAction 正常落盘保存，不会丢失。
+   */
+  function stopLinkCheckAction(): void {
+    if (!isCheckingLinks.value) return
+    checkAbortController?.abort()
+    isCheckingLinks.value = false
+  }
+
   // 获取无效站点数量
   const invalidCount = computed(() =>
     sites.value.filter(s => s.isValid === false).length
@@ -661,6 +672,7 @@ ${sitesList}
     showOnlyInvalid,
     invalidCount,
     checkDeadLinks: checkDeadLinksAction,
+    stopLinkCheck: stopLinkCheckAction,
     // 拖拽排序
     swapSort,
     // 点击频率排序

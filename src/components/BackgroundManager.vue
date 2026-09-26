@@ -4,14 +4,23 @@ import { toastAlert } from '@/utils/dialog'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useThemeStore, type BackgroundType, type CustomBackground } from '../stores/theme'
 
+/** embedded = true：作为常驻面板内嵌在设置页（无遮罩、无自带标题栏、不响应 ESC 与遮罩点击关闭） */
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+
 const emit = defineEmits<{
   close: []
 }>()
 
 const themeStore = useThemeStore()
 
-// ESC 键关闭弹框
+/** 遮罩点击关闭：仅弹框模式生效（内嵌面板点击空白不应关闭） */
+function onOverlayClick(): void {
+  if (!props.embedded) emit('close')
+}
+
+// ESC 键关闭弹框（内嵌模式下交给外层容器处理，避免把整个设置页一起关掉）
 function handleKeydown(event: KeyboardEvent) {
+  if (props.embedded) return
   if (event.key === 'Escape') {
     event.preventDefault()
     emit('close')
@@ -270,9 +279,9 @@ function clearBackground() {
 </script>
 
 <template>
-  <div class="modal-overlay" @click.self="emit('close')">
+  <div :class="embedded ? 'mgr-embed' : 'modal-overlay'" @click.self="onOverlayClick">
     <div class="background-manager">
-      <div class="modal-header">
+      <div v-if="!embedded" class="modal-header">
         <h2><Icon name="palette" /> 背景管理</h2>
         <button class="close-btn" @click="emit('close')" title="关闭">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -982,5 +991,30 @@ function clearBackground() {
     padding: 10px 12px;
     font-size: 13px;
   }
+}
+
+/* ============================================================
+   embedded 模式：常驻面板内嵌在「设置 → 导航站 → 背景」
+   无遮罩 / 无固定定位，宽度撑满父面板，超高由外层面板滚动。
+   ============================================================ */
+.mgr-embed {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  display: block;
+  width: 100%;
+  padding: 0;
+  background-color: transparent;
+  overflow: visible;
+}
+
+/* 内嵌时取消弹框尺寸约束（原 .background-manager 的 max-width / max-height / 阴影） */
+.mgr-embed .background-manager {
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  box-shadow: none;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
+  background-color: var(--color-bg-card, #fff);
 }
 </style>

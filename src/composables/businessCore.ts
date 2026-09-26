@@ -7,10 +7,12 @@ import type {
   BusinessData,
   BusinessExpense,
   BusinessExpenseCategory,
+  BusinessLedger,
   BusinessProduct,
   BusinessProductCategory,
   BusinessPurchase,
   BusinessSettings,
+  BusinessStoreData,
   DailyRecordItem
 } from '../types'
 import { formatYuan } from './ledgerCore.ts'
@@ -25,6 +27,16 @@ export const ID_PREFIX = { product: 'bp_', productCat: 'bpc_', expense: 'be_', e
 
 /** 低库存预警阈值默认值 */
 export const DEFAULT_LOW_STOCK_THRESHOLD = 20
+
+/** 存储结构版本：1 = 旧扁平 BusinessData；2 = 账本容器 BusinessStoreData */
+export const BUSINESS_STORE_SCHEMA_VER = 2
+
+/** 账本 id 前缀 */
+export const LEDGER_ID_PREFIX = 'bl_'
+
+/** 账本年份合法区间（防止手输异常年份） */
+export const LEDGER_YEAR_MIN = 1970
+export const LEDGER_YEAR_MAX = 9999
 
 // ===== 工具 =====
 
@@ -133,6 +145,10 @@ function normProduct(raw: unknown): BusinessProduct | null {
     unit: typeof p.unit === 'string' ? p.unit.trim().slice(0, 8) || '件' : '件',
     purchasePrice: Math.max(0, numOf(p.purchasePrice)),
     sellingPrice: Math.max(0, numOf(p.sellingPrice)),
+    // 会员价：可选字段，仅记录展示；非法值（负数/NaN/非数字）一律按「未设置」处理
+    ...(typeof p.memberPrice === 'number' && Number.isFinite(p.memberPrice) && p.memberPrice >= 0
+      ? { memberPrice: Math.round(p.memberPrice * 100) / 100 }
+      : {}),
     active: p.active !== false,
     createdAt: typeof p.createdAt === 'string' ? p.createdAt : new Date(0).toISOString()
   }
@@ -152,10 +168,87 @@ function normPurchase(raw: unknown): BusinessPurchase | null {
     quantity,
     unitPrice,
     total,
+    // 进货优化：关联支出 id 列表（旧数据无该字段 → undefined，向后兼容）
+    ...(Array.isArray(p.expenseIds)
+      ? {
+          expenseIds: Array.from(
+            new Set((p.expenseIds as unknown[]).filter((x): x is string => typeof x === 'string' && !!x))
+          )
+        }
+      : {}),
     date: p.date,
     note: typeof p.note === 'string' && p.note.trim() ? p.note.trim().slice(0, 100) : undefined,
     createdAt: typeof p.createdAt === 'string' ? p.createdAt : new Date(0).toISOString()
   }
+}
+
+// ===== 进货优化：关联支出 + 数量/单价双向联动 =====
+
+/** 支出 id → 占用它的进货记录 id（用于「同一笔支出不可重复关联」校验；首次占用者为准） */
+export function expenseLinkOwners(purchases: BusinessPurchase[]): Map<string, string> {
+  const map = new Map<string, string>()
+  for (const p of purchases ?? []) {
+    for (const eid of p.expenseIds ?? []) {
+      if (!map.has(eid)) map.set(eid, p.id)
+    }
+  }
+  return map
+}
+
+/** 指定支出金额合计（进货合计 = 已关联支出金额之和；未知 id 忽略，非有限值按 0） */
+export function sumExpenseAmounts(expenses: BusinessExpense[], ids: string[]): number {
+  const set = new Set(ids ?? [])
+  if (set.size === 0) return 0
+  const sum = (expenses ?? [])
+    .filter(e => set.has(e.id))
+    .reduce((s, e) => s + (typeof e.amount === 'number' && Number.isFinite(e.amount) ? e.amount : 0), 0)
+  return Math.round(sum * 100) / 100
+}
+
+/** 可选支出项：linkedPurchaseId 为空表示可选，非空表示已被该进货记录占用（编辑自身时不算冲突） */
+export interface ExpenseLinkOption {
+  expense: BusinessExpense
+  linkedPurchaseId?: string
+}
+
+/** 支出候选列表（日期倒序）；已被其它进货占用的支出带 linkedPurchaseId，UI 据此禁用并标注关联商品 */
+export function selectableExpenses(
+  expenses: BusinessExpense[],
+  purchases: BusinessPurchase[],
+  editingId?: string | null
+): ExpenseLinkOption[] {
+  const owners = expenseLinkOwners(purchases ?? [])
+  return [...(expenses ?? [])]
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+    .map(e => {
+      const owner = owners.get(e.id)
+      return { expense: e, linkedPurchaseId: owner && owner !== editingId ? owner : undefined }
+    })
+}
+
+/** 合计 ÷ 数量 = 单价；合计为 0 或数量 ≤ 0（除零）→ null（调用方保持原值，不写 NaN/Infinity） */
+export function deriveUnitPrice(total: number, quantity: number): number | null {
+  if (!(total > 0) || !(quantity > 0)) return null
+  return Math.round((total / quantity) * 100) / 100
+}
+
+/** 合计 ÷ 单价 = 数量（取整，至少 1）；合计为 0 或单价 ≤ 0（除零）→ null */
+export function deriveQuantity(total: number, unitPrice: number): number | null {
+  if (!(total > 0) || !(unitPrice > 0)) return null
+  return Math.max(1, Math.round(total / unitPrice))
+}
+
+/** 归一化关联支出 id：去空、去重、保持顺序（非法输入 → 空数组） */
+export function normalizeExpenseIds(ids: unknown): string[] {
+  if (!Array.isArray(ids)) return []
+  return Array.from(new Set(ids.filter((x): x is string => typeof x === 'string' && !!x)))
+}
+
+/** 未关联支出时的常规合计：数量 × 单价（两位小数） */
+export function calcPurchaseTotal(quantity: number, unitPrice: number): number {
+  const q = Math.max(0, Math.floor(quantity))
+  const p = Math.max(0, unitPrice)
+  return Math.round(q * p * 100) / 100
 }
 
 function normDailyItem(raw: unknown): DailyRecordItem | null {
@@ -467,6 +560,129 @@ export function calcBroughtOutTotals(dailyRecords: BusinessDailyRecord[]): Recor
   return totals
 }
 
+// ===== 进货批次剩余状态（先进先出）与未售完批次均价 =====
+
+/** 按商品累计售出数量（收摊记录口径：带出 − 剩余 − 损耗） */
+export function calcSoldTotals(dailyRecords: BusinessDailyRecord[]): Record<string, number> {
+  const totals: Record<string, number> = {}
+  for (const r of dailyRecords ?? []) {
+    for (const item of r.items ?? []) {
+      totals[item.productId] = (totals[item.productId] ?? 0) + soldCount(item)
+    }
+  }
+  return totals
+}
+
+/** 单笔记货批次的剩余状态：按「先进先出」消耗（最旧批次优先售出） */
+export interface PurchaseStockStatus {
+  purchaseId: string
+  productId: string
+  quantity: number // 本批进货数量
+  sold: number // 本批已售出（FIFO 消耗量，不超过 quantity）
+  remaining: number // 本批剩余 = quantity − sold
+  soldOut: boolean // 是否已全部售出（remaining ≤ 0）
+  /** 是否该商品 FIFO 队列中最旧的一批（判定「最旧那一笔是否已售完」的对象） */
+  isOldest: boolean
+  totalSold: number // 该商品累计售出（全部收摊记录）
+}
+
+/** 进货排序：先进先出 = 日期升序（同日按创建时间/ id 升序，保证稳定） */
+function fifoCompare(a: BusinessPurchase, b: BusinessPurchase): number {
+  if (a.date !== b.date) return a.date < b.date ? -1 : 1
+  const ca = typeof a.createdAt === 'string' ? a.createdAt : ''
+  const cb = typeof b.createdAt === 'string' ? b.createdAt : ''
+  if (ca !== cb) return ca < cb ? -1 : 1
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
+}
+
+/**
+ * 进货批次剩余状态表（purchaseId → 状态）。
+ * 规则：同一商品的进货按日期从旧到新排队，收摊售出数量从最旧批次开始依次消耗；
+ * 因此「最旧那一笔是否已全部售出」等价于队首批次的 soldOut。
+ */
+export function calcPurchaseStockStatus(
+  purchases: BusinessPurchase[],
+  dailyRecords: BusinessDailyRecord[]
+): Record<string, PurchaseStockStatus> {
+  const soldTotals = calcSoldTotals(dailyRecords)
+  const byProduct = new Map<string, BusinessPurchase[]>()
+  for (const p of purchases ?? []) {
+    const list = byProduct.get(p.productId) ?? []
+    list.push(p)
+    byProduct.set(p.productId, list)
+  }
+  const out: Record<string, PurchaseStockStatus> = {}
+  for (const [productId, list] of byProduct) {
+    const queue = [...list].sort(fifoCompare)
+    let left = Math.max(0, soldTotals[productId] ?? 0)
+    queue.forEach((p, index) => {
+      const sold = Math.max(0, Math.min(p.quantity, left))
+      left -= sold
+      out[p.id] = {
+        purchaseId: p.id,
+        productId,
+        quantity: p.quantity,
+        sold,
+        remaining: Math.max(0, p.quantity - sold),
+        soldOut: p.quantity - sold <= 0,
+        isOldest: index === 0,
+        totalSold: Math.max(0, soldTotals[productId] ?? 0)
+      }
+    })
+  }
+  return out
+}
+
+/** 某商品「未售完」批次的进货单价列表（按 FIFO 顺序） */
+export function unsoldPurchaseUnitPrices(
+  purchases: BusinessPurchase[],
+  dailyRecords: BusinessDailyRecord[],
+  productId: string
+): number[] {
+  const status = calcPurchaseStockStatus(purchases, dailyRecords)
+  return (purchases ?? [])
+    .filter(p => p.productId === productId && status[p.id] && !status[p.id].soldOut)
+    .sort(fifoCompare)
+    .map(p => p.unitPrice)
+}
+
+/**
+ * 全部商品「未售完批次单价均值」表（内部只算一次 FIFO，供列表反显批量使用）。
+ * 口径：未售完批次进货单价的**简单平均**（非按剩余数量加权），保留两位小数。
+ */
+export function avgUnsoldUnitPriceMap(
+  purchases: BusinessPurchase[],
+  dailyRecords: BusinessDailyRecord[]
+): Record<string, number> {
+  const status = calcPurchaseStockStatus(purchases, dailyRecords)
+  const acc: Record<string, { total: number; count: number }> = {}
+  for (const p of purchases ?? []) {
+    const st = status[p.id]
+    if (!st || st.soldOut) continue
+    const cur = acc[p.productId] ?? { total: 0, count: 0 }
+    cur.total += p.unitPrice
+    cur.count += 1
+    acc[p.productId] = cur
+  }
+  const out: Record<string, number> = {}
+  for (const [productId, cur] of Object.entries(acc)) {
+    out[productId] = Math.round((cur.total / cur.count) * 100) / 100
+  }
+  return out
+}
+
+/**
+ * 商品进货价自动反显值：未售完批次进货单价的简单平均（两位小数）。
+ * 无进货记录或所有批次都已售完 → null（此时沿用商品自身进货价）
+ */
+export function avgUnsoldUnitPrice(
+  purchases: BusinessPurchase[],
+  dailyRecords: BusinessDailyRecord[],
+  productId: string
+): number | null {
+  return avgUnsoldUnitPriceMap(purchases, dailyRecords)[productId] ?? null
+}
+
 /** 总统计：营业额 = Σ日记录收入；成本 = 纯 COGS（Σ售出数量 × 进货价，按收摊记录，不计支出）；利润/毛利率；支出 = Σ支出金额 */
 export interface BusinessStats {
   revenue: number
@@ -599,6 +815,56 @@ export function calcBusinessTrend(data: BusinessData, endDate: string, days = 30
     const revenueR = Math.round(revenue * 100) / 100
     const costR = Math.round(cost * 100) / 100
     out.push({ date: key, revenue: revenueR, cost: costR, profit: Math.round((revenueR - costR) * 100) / 100, transactionCount: count })
+  }
+  return out
+}
+
+/** 月度聚合（统计模块「近 12 个月」）：严格限定在同一自然年内的 12 个月，不跨年；无数据月份全 0 */
+export interface MonthlyStat {
+  month: number // 1-12
+  label: string // 「1月」
+  revenue: number
+  cost: number
+  profit: number
+  expense: number
+  transactionCount: number
+  days: number // 当月有收摊记录的天数
+}
+
+/**
+ * 按自然年聚合 12 个月的营业额/成本/利润/支出/笔数。
+ * 只取 date 前缀为 `YYYY-MM` 的记录（不跨年），无数据的月份返回全 0，便于图表连续展示。
+ */
+export function calcMonthlyStats(data: BusinessData, year: number): MonthlyStat[] {
+  const round2 = (n: number): number => Math.round(n * 100) / 100
+  const y = Math.floor(year)
+  const records = (data?.dailyRecords ?? []).filter(r => typeof r?.date === 'string')
+  const expenses = (data?.expenses ?? []).filter(e => typeof e?.date === 'string')
+  const out: MonthlyStat[] = []
+  for (let m = 1; m <= 12; m++) {
+    const prefix = `${y}-${String(m).padStart(2, '0')}`
+    const monthRecords = records.filter(r => r.date.startsWith(prefix))
+    const revenue = round2(monthRecords.reduce((s, r) => s + (typeof r.totalRevenue === 'number' && Number.isFinite(r.totalRevenue) ? r.totalRevenue : 0), 0))
+    const cost = round2(monthRecords.reduce((s, r) => s + calcDailyCost(r.items, data?.products ?? []), 0))
+    const transactionCount = monthRecords.reduce(
+      (s, r) => s + (typeof r.transactionCount === 'number' && Number.isFinite(r.transactionCount) ? r.transactionCount : 0),
+      0
+    )
+    const expense = round2(
+      expenses
+        .filter(e => e.date.startsWith(prefix))
+        .reduce((s, e) => s + (typeof e.amount === 'number' && Number.isFinite(e.amount) ? e.amount : 0), 0)
+    )
+    out.push({
+      month: m,
+      label: `${m}月`,
+      revenue,
+      cost,
+      profit: round2(revenue - cost),
+      expense,
+      transactionCount,
+      days: monthRecords.length
+    })
   }
   return out
 }
@@ -1008,4 +1274,283 @@ export function calcInventorySources(
     })
   }
   return sources.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+}
+
+// ===== 账本（最外层数据容器：按自然年创建，同年唯一） =====
+
+/** 当前自然年（可注入便于单测） */
+export function currentYear(d: Date = new Date()): number {
+  return d.getFullYear()
+}
+
+/** 账本默认名称：「YYYY年账本」 */
+export function ledgerDefaultName(year: number): string {
+  return `${year}年账本`
+}
+
+/** 账本排序：年份倒序（新账本在前） */
+export function sortedLedgers(list: BusinessLedger[]): BusinessLedger[] {
+  return [...list].sort((a, b) => b.year - a.year)
+}
+
+export function findLedgerByYear(list: BusinessLedger[], year: number): BusinessLedger | undefined {
+  return list.find(l => l.year === year)
+}
+
+export function hasLedgerForYear(list: BusinessLedger[], year: number): boolean {
+  return !!findLedgerByYear(list, year)
+}
+
+/** 默认选中：优先当前年账本，其次年份最大的账本 */
+export function pickDefaultLedger(list: BusinessLedger[], year: number = currentYear()): BusinessLedger | undefined {
+  return findLedgerByYear(list, year) ?? sortedLedgers(list)[0]
+}
+
+/** 归一化单个账本：年份非法视为脏数据丢弃，其余字段逐项兜底 */
+export function normalizeLedger(raw: unknown): BusinessLedger | null {
+  if (raw === null || typeof raw !== 'object') return null
+  const l = raw as Record<string, unknown>
+  const rawYear = typeof l.year === 'number' ? l.year : Number(l.year)
+  if (!Number.isFinite(rawYear)) return null
+  const year = Math.floor(rawYear)
+  if (year < LEDGER_YEAR_MIN || year > LEDGER_YEAR_MAX) return null
+  const createdAt = typeof l.createdAt === 'string' && l.createdAt ? l.createdAt : new Date().toISOString()
+  return {
+    id: typeof l.id === 'string' && l.id ? l.id : newId(LEDGER_ID_PREFIX),
+    year,
+    name: (typeof l.name === 'string' && l.name.trim() ? l.name.trim() : ledgerDefaultName(year)).slice(0, 30),
+    createdAt,
+    updatedAt: typeof l.updatedAt === 'string' && l.updatedAt ? l.updatedAt : createdAt,
+    data: normalizeBusinessData(l.data)
+  }
+}
+
+/**
+ * 归一化存储结构（幂等）：
+ * - 新结构（含 ledgers 数组）→ 逐项归一，年份去重，currentLedgerId 失效时回落默认账本
+ * - 旧结构（v1 扁平 BusinessData，无 ledgers）→ 整体迁入一个「当前年账本」，历史数据不丢
+ */
+export function normalizeBusinessStore(raw: unknown): BusinessStoreData {
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { schemaVer: BUSINESS_STORE_SCHEMA_VER, ledgers: [], currentLedgerId: '' }
+  }
+  const r = raw as Record<string, unknown>
+  if (!Array.isArray(r.ledgers)) {
+    // 旧数据迁移：把整个扁平业务数据作为当前年账本的 data
+    const year = currentYear()
+    const now = new Date().toISOString()
+    const ledger: BusinessLedger = {
+      id: newId(LEDGER_ID_PREFIX),
+      year,
+      name: ledgerDefaultName(year),
+      createdAt: now,
+      updatedAt: now,
+      data: normalizeBusinessData(raw)
+    }
+    return { schemaVer: BUSINESS_STORE_SCHEMA_VER, ledgers: [ledger], currentLedgerId: ledger.id }
+  }
+  // 年份去重（同年份保留首个，防御脏数据 / 云端合并）
+  const seen = new Set<number>()
+  const ledgers: BusinessLedger[] = []
+  for (const item of r.ledgers) {
+    const l = normalizeLedger(item)
+    if (!l || seen.has(l.year)) continue
+    seen.add(l.year)
+    ledgers.push(l)
+  }
+  const sorted = sortedLedgers(ledgers)
+  const wanted = typeof r.currentLedgerId === 'string' ? r.currentLedgerId : ''
+  const currentLedgerId = sorted.some(l => l.id === wanted) ? wanted : (pickDefaultLedger(sorted)?.id ?? '')
+  return { schemaVer: BUSINESS_STORE_SCHEMA_VER, ledgers: sorted, currentLedgerId }
+}
+
+export type LedgerOpResult =
+  | { ok: true; reason: 'ok'; ledgers: BusinessLedger[]; ledger: BusinessLedger }
+  | { ok: false; reason: 'invalid-year' | 'empty-name' | 'duplicate' }
+
+/**
+ * 新建账本（同年唯一）：年份非法 / 名称空白 / 年份已存在 均返回失败原因，由 UI 给出明确提示。
+ * 名称可留空（自动用「YYYY年账本」）。不改入参，返回新列表（已按年份倒序）。
+ */
+export function createLedger(list: BusinessLedger[], year: number, name?: string): LedgerOpResult {
+  const rawYear = typeof year === 'number' ? year : Number(year)
+  if (!Number.isFinite(rawYear)) return { ok: false, reason: 'invalid-year' }
+  const y = Math.floor(rawYear)
+  if (y < LEDGER_YEAR_MIN || y > LEDGER_YEAR_MAX) return { ok: false, reason: 'invalid-year' }
+  const trimmed = typeof name === 'string' ? name.trim() : ''
+  if (typeof name === 'string' && name.length > 0 && !trimmed) return { ok: false, reason: 'empty-name' }
+  if (list.some(l => l.year === y)) return { ok: false, reason: 'duplicate' }
+  const now = new Date().toISOString()
+  const ledger: BusinessLedger = {
+    id: newId(LEDGER_ID_PREFIX),
+    year: y,
+    name: (trimmed || ledgerDefaultName(y)).slice(0, 30),
+    createdAt: now,
+    updatedAt: now,
+    data: emptyBusinessData()
+  }
+  return { ok: true, reason: 'ok', ledgers: sortedLedgers([...list, ledger]), ledger }
+}
+
+/** 账本内数据是否有内容（用于空状态文案判断） */
+export function isLedgerEmpty(data: BusinessData): boolean {
+  return (
+    !data.products.length &&
+    !data.purchases.length &&
+    !data.dailyRecords.length &&
+    !data.expenses.length
+  )
+}
+
+// ===== 账本合并（云同步 business.json 用；与 genealogyCore.mergeFamily 一样放在领域 core 内） =====
+
+/** 按 id 并集：本地先入 map，同 id 时远端仅在 tsKey 更新时胜出（本地优先，与云同步 mergeById 同语义） */
+function mergeByIdKeepNewest<T>(local: T[] | undefined, remote: T[] | undefined, idKey: keyof T, tsKey?: keyof T): T[] {
+  const map = new Map<string, T>()
+  for (const item of local ?? []) map.set(String(item[idKey]), item)
+  for (const item of remote ?? []) {
+    const id = String(item[idKey])
+    const existing = map.get(id)
+    if (!existing) {
+      map.set(id, item)
+    } else if (tsKey) {
+      const lTs = existing[tsKey]
+      const rTs = item[tsKey]
+      const rNewer =
+        typeof lTs === 'number' && typeof rTs === 'number'
+          ? rTs > lTs
+          : typeof lTs === 'string' && typeof rTs === 'string'
+            ? rTs > lTs
+            : false
+      if (rNewer) map.set(id, item)
+    }
+  }
+  return [...map.values()]
+}
+
+/** 收摊记录按日期唯一：同 date 只保留 updatedAt（缺失取 createdAt）最新的一条 */
+function dedupeDailyByDate(records: BusinessDailyRecord[]): BusinessDailyRecord[] {
+  const map = new Map<string, BusinessDailyRecord>()
+  for (const item of records) {
+    const existing = map.get(item.date)
+    if (!existing) {
+      map.set(item.date, item)
+      continue
+    }
+    const exTs = existing.updatedAt ?? existing.createdAt ?? ''
+    const ts = item.updatedAt ?? item.createdAt ?? ''
+    if (ts > exTs) map.set(item.date, item)
+  }
+  return [...map.values()]
+}
+
+/** 单个账本内的业务数据合并（分类同 id 取本地；实体按时间戳较新者胜；收摊按日期去重） */
+function mergeLedgerData(l: BusinessData | undefined, r: BusinessData | undefined): BusinessData {
+  return {
+    productCategories: mergeByIdKeepNewest(l?.productCategories, r?.productCategories, 'id'),
+    expenseCategories: mergeByIdKeepNewest(l?.expenseCategories, r?.expenseCategories, 'id'),
+    products: mergeByIdKeepNewest(l?.products, r?.products, 'id', 'createdAt'),
+    purchases: mergeByIdKeepNewest(l?.purchases, r?.purchases, 'id', 'createdAt'),
+    dailyRecords: dedupeDailyByDate(mergeByIdKeepNewest(l?.dailyRecords, r?.dailyRecords, 'id', 'updatedAt')),
+    expenses: mergeByIdKeepNewest(l?.expenses, r?.expenses, 'id', 'createdAt'),
+    // 档口设置是单例对象、无时间戳可比 → 本地优先，缺失时取远端，都没有才回默认
+    settings: l?.settings ?? r?.settings ?? emptyBusinessData().settings
+  }
+}
+
+/** 账本删除保护判定：不存在 / 最后一个 / 当前正在使用 → 禁止删除（UI 据此禁用按钮并给出原因） */
+export type LedgerDeleteGuard = 'ok' | 'not-found' | 'is-current' | 'last-one'
+
+/** 账本删除范围：records = 仅清空交易流水（保留商品/分类/账本设置）；ledger = 连同账本一并删除 */
+export type LedgerDeleteScope = 'records' | 'ledger'
+
+export type LedgerMutateResult =
+  | { ok: true; reason: 'ok'; ledgers: BusinessLedger[]; ledger: BusinessLedger }
+  | { ok: false; reason: 'not-found' | 'is-current' | 'last-one' }
+
+/** 账本内数据条数（用于删除前的关联数据提示；商品属主数据，单独列出） */
+export function ledgerRecordCounts(data: BusinessData | undefined): {
+  products: number
+  purchases: number
+  dailyRecords: number
+  expenses: number
+} {
+  return {
+    products: data?.products?.length ?? 0,
+    purchases: data?.purchases?.length ?? 0,
+    dailyRecords: data?.dailyRecords?.length ?? 0,
+    expenses: data?.expenses?.length ?? 0
+  }
+}
+
+/** 删前守卫：账本不存在 / 仅剩最后一个（至少保留一个）/ 当前正在使用（需先切换） → 不可删 */
+export function ledgerDeleteGuard(
+  list: BusinessLedger[],
+  id: string,
+  currentLedgerId: string
+): LedgerDeleteGuard {
+  const target = list.find(l => l.id === id)
+  if (!target) return 'not-found'
+  if (list.length <= 1) return 'last-one'
+  if (currentLedgerId && target.id === currentLedgerId) return 'is-current'
+  return 'ok'
+}
+
+/** 清空某账本的交易流水（进货/收摊/支出），保留商品、分类与账本设置；不改入参 */
+export function clearLedgerRecords(list: BusinessLedger[], id: string, now: string = new Date().toISOString()): LedgerMutateResult {
+  const index = list.findIndex(l => l.id === id)
+  if (index === -1) return { ok: false, reason: 'not-found' }
+  const target = list[index]
+  const ledger: BusinessLedger = {
+    ...target,
+    updatedAt: now,
+    data: { ...target.data, purchases: [], dailyRecords: [], expenses: [] }
+  }
+  const ledgers = [...list]
+  ledgers[index] = ledger
+  return { ok: true, reason: 'ok', ledgers, ledger }
+}
+
+/** 删除账本整体（含其下全部数据）；受 ledgerDeleteGuard 保护，不改入参 */
+export function deleteLedger(list: BusinessLedger[], id: string, currentLedgerId: string): LedgerMutateResult {
+  const guard = ledgerDeleteGuard(list, id, currentLedgerId)
+  if (guard !== 'ok') return { ok: false, reason: guard }
+  const target = list.find(l => l.id === id) as BusinessLedger
+  const ledgers = sortedLedgers(list.filter(l => l.id !== id))
+  return { ok: true, reason: 'ok', ledgers, ledger: target }
+}
+/**
+ * 账本容器合并（business.json 信封专用，幂等）：
+ * - 两侧先经 normalizeBusinessStore 归一（旧扁平信封自动迁入当年账本），确保拿到的一定是 v2 结构；
+ * - 账本按「年份」并集而非 id —— 不同设备各自创建的同年账本 id 不同，按 id 并集会破坏同年唯一约束；
+ * - 同年账本：外壳取本地（id/name 本地优先），业务数据走 mergeLedgerData 逐字段并集；
+ * - currentLedgerId：本地选中优先，失效回落远端，再回落默认（当前年 → 最大年份）。
+ */
+export function mergeBusinessStore(
+  l: BusinessStoreData | BusinessData | undefined,
+  r: BusinessStoreData | BusinessData | undefined
+): BusinessStoreData {
+  const ll = normalizeBusinessStore(l)
+  const rr = normalizeBusinessStore(r)
+  const byYear = new Map<number, BusinessLedger>()
+  // 本地先入 map → 同年冲突时 existing 恒为本地账本（本地优先）
+  for (const ledger of [...ll.ledgers, ...rr.ledgers]) {
+    const existing = byYear.get(ledger.year)
+    if (!existing) {
+      byYear.set(ledger.year, ledger)
+      continue
+    }
+    byYear.set(ledger.year, {
+      id: existing.id,
+      year: ledger.year,
+      name: existing.name,
+      createdAt: existing.createdAt < ledger.createdAt ? existing.createdAt : ledger.createdAt,
+      updatedAt: existing.updatedAt > ledger.updatedAt ? existing.updatedAt : ledger.updatedAt,
+      data: mergeLedgerData(existing.data, ledger.data)
+    })
+  }
+  const ledgers = sortedLedgers([...byYear.values()])
+  const wanted = ll.currentLedgerId || rr.currentLedgerId || ''
+  const currentLedgerId = ledgers.some(x => x.id === wanted) ? wanted : (pickDefaultLedger(ledgers)?.id ?? '')
+  return { schemaVer: BUSINESS_STORE_SCHEMA_VER, ledgers, currentLedgerId }
 }

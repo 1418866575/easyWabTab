@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useIconsStore, type MergedIcon } from '@/stores/icons'
+import Icon from './Icon.vue'
+import { toastAlert } from '@/utils/dialog'
+import { useIconsStore, type MergedIcon, type IconExportData } from '@/stores/icons'
 
 // 图标选择弹框：从「图标管理」的图标库（预置图标 + 自定义图标）中挑选一个图标。
 // 与新增网站的图标选择同源（useIconsStore.allIcons），仅交互形态改为弹框。
 // 选中后回传图标 src（/icons/<name>.<ext> 或 base64 dataUrl）；「恢复默认」回传空串，由调用方回退内置图标。
+// 搜索框上方提供「导入图标 / 上传图标」，与图标管理页同一套校验与提示：导入走 JSON 导出文件、
+// 上传走图片文件（类型 + 500KB 大小校验），成功后写入图标库并即时出现在列表中。
 const props = withDefaults(
   defineProps<{
     title?: string
@@ -19,6 +23,11 @@ const emit = defineEmits<{
 }>()
 
 const iconsStore = useIconsStore()
+
+// 首次打开前确保图标库已从 IndexedDB 载入（导入/上传要基于已加载的列表去重与合并）
+onMounted(() => {
+  void iconsStore.ensureLoaded()
+})
 
 const keyword = ref('')
 const category = ref('all')
@@ -65,6 +74,129 @@ function handleReset(): void {
   emit('select', '')
 }
 
+// ========================================
+// 导入图标 / 上传图标（与图标管理页同一套校验与提示）
+// ========================================
+const importInput = ref<HTMLInputElement | null>(null)
+const uploadInput = ref<HTMLInputElement | null>(null)
+/** 上传中：禁用按钮避免重复选择同一文件 */
+const uploading = ref(false)
+const MAX_SIZE = 500 * 1024 // 500KB
+const ALLOWED_MIME = /^image\//
+
+/** 导入/上传成功后清空筛选，保证新图标一定出现在可见列表中 */
+function resetFilters(): void {
+  category.value = 'all'
+  keyword.value = ''
+}
+
+/** 导入图标：JSON 导出文件（icons 导出格式 version=1 + icons 数组） */
+function handleImport(event: Event): void {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  const reader = new FileReader()
+  reader.onerror = () => {
+    toastAlert('导入失败：文件读取出错，请重试')
+    input.value = ''
+  }
+  reader.onload = async () => {
+    let data: unknown
+    try {
+      data = JSON.parse(reader.result as string)
+    } catch {
+      toastAlert('导入失败：文件不是合法的 JSON，请确认文件未损坏或编码正确')
+      input.value = ''
+      return
+    }
+    const parsed = data as IconExportData
+    if (!parsed || typeof parsed !== 'object' || parsed.version !== 1 || !Array.isArray(parsed.icons)) {
+      toastAlert('导入失败：文件格式不正确（必须是 icons 导出文件，含 version=1 和 icons 数组）')
+      input.value = ''
+      return
+    }
+    try {
+      const { added } = await iconsStore.importIcons(parsed)
+      resetFilters()
+      if (added > 0) {
+        toastAlert('导入成功：新增 ' + added + ' 个图标（重复 ID 已自动跳过），可在列表中选择')
+      } else {
+        toastAlert('导入完成：没有新增图标（全部为已存在的重复 ID）')
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e ?? '')
+      if (/Quota|配额|space|exceed/i.test(msg)) {
+        toastAlert('导入失败：存储空间不足，请减少自定义图标后再试')
+      } else if (/格式/.test(msg)) {
+        toastAlert('导入失败：' + msg)
+      } else {
+        toastAlert('导入失败：保存图标出错 - ' + (msg || '未知错误'))
+      }
+    } finally {
+      input.value = ''
+    }
+  }
+  reader.readAsText(file)
+}
+
+/** 上传图标：图片文件（类型 + 大小校验），成功后以文件名作为图标名称入库 */
+function handleUpload(event: Event): void {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  if (uploading.value) {
+    input.value = ''
+    return
+  }
+
+  // 先取文件名再校验，失败提示里可带上具体文件名
+  const baseName = file.name.replace(/\.[^.]+$/, '').trim() || '自定义图标'
+
+  if (!ALLOWED_MIME.test(file.type)) {
+    toastAlert('上传失败：' + file.name + ' 不是图片文件，请选择 PNG / JPG / SVG / GIF / WebP 图片')
+    input.value = ''
+    return
+  }
+  if (file.size > MAX_SIZE) {
+    toastAlert('上传失败：图标文件不能超过 500KB（当前 ' + (file.size / 1024).toFixed(0) + 'KB）')
+    input.value = ''
+    return
+  }
+
+  uploading.value = true
+  const reader = new FileReader()
+  reader.onerror = () => {
+    uploading.value = false
+    toastAlert('上传失败：文件读取出错，请重试')
+    input.value = ''
+  }
+  reader.onload = async () => {
+    const dataUrl = reader.result as string
+    try {
+      await iconsStore.addIcon({
+        name: baseName,
+        label: baseName,
+        dataUrl,
+        category: '其他'
+      })
+      resetFilters()
+      toastAlert('上传成功：已添加「' + baseName + '」，可在列表中选择')
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e ?? '')
+      if (/Quota|配额|space|exceed/i.test(msg)) {
+        toastAlert('上传失败：存储空间不足，请减少自定义图标数量后重试')
+      } else {
+        toastAlert('上传失败：' + (msg || '未知错误'))
+      }
+    } finally {
+      uploading.value = false
+      input.value = ''
+    }
+  }
+  reader.readAsDataURL(file)
+}
+
 // ESC 只关本弹框：注册在 document 捕获阶段（早于设置弹窗 window 冒泡监听），
 // 命中后阻止继续传播，避免连带关闭外层设置弹窗。
 function handleKeydown(event: KeyboardEvent): void {
@@ -93,6 +225,46 @@ onUnmounted(() => {
       </div>
 
       <div class="ipd-body">
+        <!-- 导入 / 上传：导入走 JSON 导出文件，上传走图片文件（≤500KB） -->
+        <div class="ipd-actions">
+          <input
+            ref="importInput"
+            type="file"
+            accept=".json,application/json"
+            class="ipd-file-input"
+            data-testid="ipd-import-input"
+            @change="handleImport"
+          />
+          <button
+            type="button"
+            class="ipd-action-btn"
+            data-testid="ipd-import-btn"
+            title="从图标管理的导出文件（JSON）批量导入图标"
+            @click="importInput?.click()"
+          >
+            <Icon name="download" /> 导入图标
+          </button>
+          <input
+            ref="uploadInput"
+            type="file"
+            accept="image/*"
+            class="ipd-file-input"
+            data-testid="ipd-upload-input"
+            @change="handleUpload"
+          />
+          <button
+            type="button"
+            class="ipd-action-btn"
+            :disabled="uploading"
+            data-testid="ipd-upload-btn"
+            title="上传本地图片（PNG / JPG / SVG / GIF / WebP，最大 500KB）作为自定义图标"
+            @click="uploadInput?.click()"
+          >
+            <Icon name="upload" /> {{ uploading ? '上传中…' : '上传图标' }}
+          </button>
+          <span class="ipd-action-hint">自定义 {{ iconsStore.customIcons.length }} 个 · 图片 ≤500KB</span>
+        </div>
+
         <input
           v-model="keyword"
           type="text"
@@ -208,6 +380,51 @@ onUnmounted(() => {
   min-height: 0;
   flex: 1;
   padding: 12px 16px;
+}
+
+/* 导入 / 上传入口：位于搜索框上方，与弹框内其它按钮同一套尺寸与配色 */
+.ipd-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+/* 隐藏的 file input：不占布局，由按钮代理点击 */
+.ipd-file-input {
+  display: none;
+}
+
+.ipd-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--color-bg-card, #ffffff);
+  color: var(--color-text-secondary, #64748b);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.ipd-action-btn:hover:not(:disabled) {
+  background: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
+}
+
+.ipd-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ipd-action-hint {
+  font-size: 11px;
+  color: var(--color-text-muted, #94a3b8);
 }
 
 .ipd-search {

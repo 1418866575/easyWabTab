@@ -91,6 +91,8 @@ const showDialog = ref(false)
 const editingDate = ref(localDateKey())
 const formNote = ref('')
 const formTransactionCount = ref(0)
+/** 手动营业额：null = 跟随商品明细自动合计；有值则以手动金额为准保存（两位小数） */
+const formRevenueManual = ref<number | null>(null)
 const rows = reactive<{ productId: string; broughtOut: number; remaining: number; loss: number }[]>([])
 
 // P0-3：当前库存 map（编辑弹框用）
@@ -126,6 +128,24 @@ function rowSubtotal(productId: string, broughtOut: number, remaining: number, l
 const formRevenue = computed(() =>
   calcDailyRevenue(rows.map(r => ({ ...r })), store.products)
 )
+
+/** 实际保存的营业额：手动填写优先（保留两位小数），否则用商品明细自动合计 */
+const effectiveRevenue = computed(() =>
+  typeof formRevenueManual.value === 'number' && Number.isFinite(formRevenueManual.value)
+    ? Math.round(Math.max(0, formRevenueManual.value) * 100) / 100
+    : formRevenue.value
+)
+/** 手动值输入框的显示值（未手动时回显自动合计，用户一改即变手动） */
+const revenueInput = computed({
+  get: () => (typeof formRevenueManual.value === 'number' ? formRevenueManual.value : formRevenue.value),
+  set: (v: number | null | undefined) => {
+    formRevenueManual.value = typeof v === 'number' && Number.isFinite(v) ? Math.round(Math.max(0, v) * 100) / 100 : null
+  }
+})
+/** 恢复为按商品明细自动合计 */
+function resetRevenueToAuto(): void {
+  formRevenueManual.value = null
+}
 
 const formCost = computed(() =>
   calcDailyCost(rows.map(r => ({ ...r })), store.products)
@@ -163,6 +183,7 @@ function startAdd(): void {
   editingDate.value = localDateKey()
   formNote.value = ''
   formTransactionCount.value = 0
+  formRevenueManual.value = null
   rows.splice(0, rows.length, emptyRow())
   showDialog.value = true
 }
@@ -171,6 +192,10 @@ function startEdit(record: BusinessDailyRecord): void {
   editingDate.value = record.date
   formNote.value = record.note ?? ''
   formTransactionCount.value = typeof record.transactionCount === 'number' && Number.isFinite(record.transactionCount) ? record.transactionCount : 0
+  // 手动改过营业额时回显库内存值（与自动合计不一致即视为手动值）
+  const auto = calcDailyRevenue(record.items, store.products)
+  formRevenueManual.value =
+    typeof record.totalRevenue === 'number' && Math.abs(record.totalRevenue - auto) > 0.005 ? record.totalRevenue : null
   rows.splice(
     0,
     rows.length,
@@ -201,7 +226,9 @@ async function handleSave(): Promise<void> {
     date: editingDate.value,
     items,
     note: formNote.value.trim() || undefined,
-    transactionCount: Number.isFinite(formTransactionCount.value) ? Math.max(0, Math.floor(formTransactionCount.value)) : undefined
+    transactionCount: Number.isFinite(formTransactionCount.value) ? Math.max(0, Math.floor(formTransactionCount.value)) : undefined,
+    // 手动填写过营业额才覆盖自动合计；未手动（null）时由 store 按明细计算
+    revenueOverride: formRevenueManual.value
   })
   showDialog.value = false
 }
@@ -384,6 +411,10 @@ async function handleDelete(id: string): Promise<void> {
                   <span class="bizday-row-price">
                     {{ formatYuanOf(rowProduct(row.productId)!.purchasePrice) }}→{{ formatYuanOf(rowProduct(row.productId)!.sellingPrice) }}
                   </span>
+                  <span
+                    v-if="typeof rowProduct(row.productId)!.memberPrice === 'number'"
+                    class="bizday-row-member"
+                  >会员 {{ formatYuanOf(rowProduct(row.productId)!.memberPrice as number) }}</span>
                   <span class="bizday-row-stock">当前库存：{{ rowStock(row.productId) }} {{ rowUnit(row.productId) }}</span>
                 </div>
               </div>
@@ -421,7 +452,8 @@ async function handleDelete(id: string): Promise<void> {
         </div>
 
         <div class="bizday-revenue-preview">
-          营业额：<strong data-testid="bizday-form-revenue">{{ formatYuanOf(formRevenue) }}</strong>
+          营业额：<strong data-testid="bizday-form-revenue">{{ formatYuanOf(effectiveRevenue) }}</strong>
+          <span v-if="formRevenueManual !== null" class="bizday-revenue-manual-tag" data-testid="bizday-form-revenue-manual">手动</span>
           <span class="bizday-preview-sep">成本 <strong data-testid="bizday-form-cost">{{ formatYuanOf(formCost) }}</strong></span>
           <span class="bizday-preview-sep">利润 <strong data-testid="bizday-form-profit">{{ formatYuanOf(formProfit) }}</strong></span>
           <span class="bizday-preview-sep">损耗 <strong data-testid="bizday-form-loss">{{ formatYuanOf(formLossAmount) }}</strong></span>
@@ -430,6 +462,30 @@ async function handleDelete(id: string): Promise<void> {
         <div class="biz-field">
           <label>交易笔数（可选，当天顾客买单次数）</label>
           <el-input-number v-model="formTransactionCount" :min="0" :step="1" size="small" controls-position="right" data-testid="bizday-form-transaction-count" />
+        </div>
+        <!-- 收摊优化：笔数后新增营业额字段，可手动修改（保留两位小数），未手动时自动跟随商品明细合计 -->
+        <div class="biz-field">
+          <label>营业额（默认按商品明细自动合计，可手动修改）</label>
+          <div class="bizday-revenue-field">
+            <el-input-number
+              v-model="revenueInput"
+              :min="0"
+              :step="0.01"
+              :precision="2"
+              size="small"
+              controls-position="right"
+              data-testid="bizday-form-revenue-input"
+            />
+            <el-button
+              v-if="formRevenueManual !== null"
+              size="small"
+              data-testid="bizday-form-revenue-auto"
+              @click="resetRevenueToAuto"
+            >恢复自动</el-button>
+          </div>
+          <span class="bizday-revenue-hint" data-testid="bizday-form-revenue-tip">
+            {{ formRevenueManual !== null ? '已手动设置，保存后以该金额为准' : `自动合计：${formatYuanOf(formRevenue)}` }}
+          </span>
         </div>
         <div class="biz-field">
           <label>备注（可选）</label>
@@ -640,6 +696,14 @@ async function handleDelete(id: string): Promise<void> {
   font-variant-numeric: tabular-nums;
 }
 
+/* 会员价（仅展示参考，不参与营业额自动合计） */
+.bizday-row-member {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-warning, #f59e0b);
+  font-variant-numeric: tabular-nums;
+}
+
 .bizday-row-preview {
   display: flex;
   gap: 12px;
@@ -702,6 +766,27 @@ async function handleDelete(id: string): Promise<void> {
 .bizday-num .biz-input {
   width: 70px;
   padding: 6px 8px;
+}
+
+/* ===== 收摊优化：手动营业额（笔数之后） ===== */
+.bizday-revenue-manual-tag {
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: var(--color-primary-soft, #eff6ff);
+  color: var(--color-primary, #3b82f6);
+}
+
+.bizday-revenue-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bizday-revenue-hint {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--color-text-muted, #6b7280);
 }
 
 .bizday-revenue-preview {

@@ -1,9 +1,13 @@
 // businessCore.ts 纯函数测试（node --experimental-strip-types 直跑，npm run test:business）
-// T1-T18：归一化/种子分类/内置支出补回/分类 CRUD/库存/日收入/统计/排行/趋势坐标
+// T1-T24：归一化/种子分类/内置支出补回/分类 CRUD/库存/日收入/统计/排行/趋势坐标
+// T25-T32：账本容器（默认名/同年唯一/旧扁平迁移/年份去重/空态/按年份并集合并）
+// T33-T36：账本删除/清空守卫；T37-T41：进货关联支出、数量/单价联动、月度统计
+// T42-T45：会员价归一化、进货批次 FIFO 剩余状态、未售完批次单价与自动均价
 import assert from 'node:assert/strict'
 import {
   addExpenseCategory,
   addProductCategory,
+  avgUnsoldUnitPrice,
   calcBroughtOutTotals,
   calcBusinessStats,
   calcBusinessTrend,
@@ -12,28 +16,53 @@ import {
   calcDailyLossAmount,
   calcDailyRevenue,
   calcInventory,
+  calcMonthlyStats,
   calcProductRanking,
   calcPurchaseTotals,
+  calcPurchaseTotal,
+  calcPurchaseStockStatus,
+  calcSoldTotals,
   businessTrendBars,
   compactAmount,
+  clearLedgerRecords,
+  createLedger,
+  currentYear,
   deleteExpenseCategory,
+  deleteLedger,
   deleteProductCategory,
+  deriveQuantity,
+  deriveUnitPrice,
   emptyBusinessData,
+  expenseLinkOwners,
   filterPurchasesByCategory,
+  findLedgerByYear,
+  hasLedgerForYear,
   isCategoryNameTaken,
+  isLedgerEmpty,
   isValidDateKey,
+  ledgerDefaultName,
+  ledgerDeleteGuard,
+  ledgerRecordCounts,
   lowStockProducts,
+  mergeBusinessStore,
   moveCategory,
   normalizeBusinessData,
+  normalizeBusinessStore,
   normalizeExpenseCategories,
+  normalizeExpenseIds,
   normalizeProductCategories,
+  pickDefaultLedger,
   renameCategory,
+  selectableExpenses,
   soldCount,
+  sortedLedgers,
+  sumExpenseAmounts,
   toggleCategoryVisible,
+  unsoldPurchaseUnitPrices,
   visibleExpenseCategories,
   visibleProductCategories
 } from '../src/composables/businessCore.ts'
-import type { BusinessData, BusinessDailyRecord, BusinessProduct, BusinessPurchase } from '../src/types/index.ts'
+import type { BusinessData, BusinessDailyRecord, BusinessExpense, BusinessProduct, BusinessPurchase } from '../src/types/index.ts'
 
 const tests: { name: string; fn: () => void }[] = []
 function test(name: string, fn: () => void) {
@@ -473,6 +502,442 @@ test('T24 calcBroughtOutTotals', () => {
   assert.ok(!('ghost' in both))
   // 空数组 → {}
   assert.deepEqual(calcBroughtOutTotals([]), {})
+})
+
+// ===== 账本容器（T25-T32） =====
+
+// T25 — 账本基础纯函数：默认名 / 年份查找 / 倒序 / 默认选中（当前年优先，其次最大年份）
+test('T25 ledger basics', () => {
+  assert.equal(currentYear(new Date('2026-03-05T00:00:00Z')), 2026)
+  assert.equal(ledgerDefaultName(2026), '2026年账本')
+  const list = [
+    { id: 'a', year: 2024, name: '2024年账本', createdAt: 'c', updatedAt: 'c', data: emptyBusinessData() },
+    { id: 'b', year: 2026, name: '2026年账本', createdAt: 'c', updatedAt: 'c', data: emptyBusinessData() },
+    { id: 'c', year: 2025, name: '2025年账本', createdAt: 'c', updatedAt: 'c', data: emptyBusinessData() }
+  ]
+  assert.deepEqual(sortedLedgers(list).map(l => l.year), [2026, 2025, 2024])
+  assert.equal(hasLedgerForYear(list, 2025), true)
+  assert.equal(hasLedgerForYear(list, 2027), false)
+  assert.equal(findLedgerByYear(list, 2024)?.id, 'a')
+  // 当前年存在 → 选当前年；不存在 → 年份最大者
+  assert.equal(pickDefaultLedger(list, 2026)?.id, 'b')
+  assert.equal(pickDefaultLedger(list, 2027)?.id, 'b')
+  assert.equal(pickDefaultLedger([], 2027), undefined)
+})
+
+// T26 — createLedger：同年唯一（duplicate）/ 年份非法（invalid-year）/ 名称空白（empty-name）/ 名称留空自动默认
+test('T26 createLedger uniqueness', () => {
+  const empty = emptyBusinessData()
+  const r1 = createLedger([], 2026)
+  assert.equal(r1.ok, true)
+  assert.equal(r1.ok && r1.ledgers.length, 1)
+  assert.equal(r1.ok && r1.ledger.name, '2026年账本')
+  assert.ok(r1.ok && r1.ledger.id.startsWith('bl_'))
+  assert.deepEqual(r1.ok ? r1.ledger.data : null, empty)
+
+  const list = r1.ok ? r1.ledgers : []
+  const dup = createLedger(list, 2026)
+  assert.deepEqual(dup, { ok: false, reason: 'duplicate' })
+  assert.deepEqual(createLedger(list, 0), { ok: false, reason: 'invalid-year' })
+  assert.deepEqual(createLedger(list, Number.NaN), { ok: false, reason: 'invalid-year' })
+  assert.deepEqual(createLedger(list, 2027, '   '), { ok: false, reason: 'empty-name' })
+  const named = createLedger(list, 2027, ' 夜市账本 ')
+  assert.equal(named.ok && named.ledger.name, '夜市账本')
+  assert.deepEqual(named.ok ? named.ledgers.map(l => l.year) : [], [2027, 2026])
+  // 不改入参
+  assert.equal(list.length, 1)
+})
+
+// T27 — normalizeBusinessStore：旧扁平 BusinessData（无 ledgers）整体迁入当年账本，历史数据不丢
+test('T27 normalizeBusinessStore legacy migration', () => {
+  const legacy = buildData()
+  const store = normalizeBusinessStore(legacy)
+  assert.equal(store.schemaVer, 2)
+  assert.equal(store.ledgers.length, 1)
+  assert.equal(store.ledgers[0].year, currentYear())
+  assert.equal(store.ledgers[0].name, ledgerDefaultName(currentYear()))
+  assert.equal(store.currentLedgerId, store.ledgers[0].id)
+  assert.equal(store.ledgers[0].data.products.length, legacy.products.length)
+  assert.equal(store.ledgers[0].data.dailyRecords.length, legacy.dailyRecords.length)
+  // 空态兜底
+  assert.deepEqual(normalizeBusinessStore(undefined), { schemaVer: 2, ledgers: [], currentLedgerId: '' })
+  assert.deepEqual(normalizeBusinessStore(null), { schemaVer: 2, ledgers: [], currentLedgerId: '' })
+  assert.deepEqual(normalizeBusinessStore([1, 2]), { schemaVer: 2, ledgers: [], currentLedgerId: '' })
+})
+
+// T28 — normalizeBusinessStore：年份去重（同年份保留首个）、年份非法丢弃、currentLedgerId 失效回落默认
+test('T28 normalizeBusinessStore dedupe & fallback', () => {
+  const store = normalizeBusinessStore({
+    schemaVer: 2,
+    currentLedgerId: 'ghost',
+    ledgers: [
+      { id: 'l1', year: 2026, name: 'A', createdAt: 'c1', updatedAt: 'c1', data: { products: [{ id: 'p1', name: '苹果' }] } },
+      { id: 'l2', year: 2026, name: 'B', createdAt: 'c2', updatedAt: 'c2', data: { products: [{ id: 'p2', name: '香蕉' }] } },
+      { id: 'l3', year: 1, name: '脏数据', createdAt: 'c3', updatedAt: 'c3', data: {} },
+      { id: 'l4', year: 2025, name: 'C', createdAt: 'c4', updatedAt: 'c4', data: {} }
+    ]
+  })
+  assert.deepEqual(store.ledgers.map(l => l.year), [2026, 2025])
+  assert.equal(store.ledgers[0].id, 'l1')
+  assert.equal(store.ledgers[0].name, 'A')
+  // currentLedgerId 无效 → 回落当前年/最大年份账本
+  assert.equal(store.currentLedgerId, 'l1')
+  const keep = normalizeBusinessStore({ schemaVer: 2, currentLedgerId: 'l4', ledgers: [{ id: 'l4', year: 2025, name: 'C' }] })
+  assert.equal(keep.currentLedgerId, 'l4')
+})
+
+// T29 — isLedgerEmpty：空账本 vs 有任一业务数据
+test('T29 isLedgerEmpty', () => {
+  assert.equal(isLedgerEmpty(emptyBusinessData()), true)
+  const d = buildData()
+  assert.equal(isLedgerEmpty(d), false)
+  assert.equal(isLedgerEmpty({ ...emptyBusinessData(), expenses: d.expenses }), false)
+})
+
+// T30 — mergeBusinessStore：同年不同 id（两台设备各自创建）合并为一个账本，业务数据并集
+test('T30 mergeBusinessStore same year different id', () => {
+  const local = normalizeBusinessStore({
+    schemaVer: 2, currentLedgerId: 'L2026',
+    ledgers: [{ id: 'L2026', year: 2026, name: '本机账本', createdAt: '2026-01-01', updatedAt: '2026-05-01', data: { products: [{ id: 'p1', name: '苹果', sellingPrice: 5, purchasePrice: 3, unit: '斤', active: true }] } }]
+  })
+  const remote = normalizeBusinessStore({
+    schemaVer: 2, currentLedgerId: 'R2026',
+    ledgers: [{ id: 'R2026', year: 2026, name: '云端账本', createdAt: '2026-02-01', updatedAt: '2026-04-01', data: { products: [{ id: 'p2', name: '香蕉', sellingPrice: 4, purchasePrice: 2, unit: '斤', active: true }] } }]
+  })
+  const merged = mergeBusinessStore(local, remote)
+  assert.equal(merged.ledgers.length, 1, '同年账本必须合并为一个')
+  const l = merged.ledgers[0]
+  assert.equal(l.year, 2026)
+  assert.equal(l.id, 'L2026', '外壳取本地（本地优先）')
+  assert.equal(l.name, '本机账本')
+  assert.equal(l.createdAt, '2026-01-01')
+  assert.equal(l.updatedAt, '2026-05-01')
+  assert.deepEqual(l.data.products.map(p => p.id).sort(), ['p1', 'p2'])
+  assert.equal(merged.currentLedgerId, 'L2026')
+})
+
+// T31 — mergeBusinessStore：不同年份取并集并按年份倒序；本地无选中时回落默认账本
+test('T31 mergeBusinessStore union & order', () => {
+  const local = normalizeBusinessStore({
+    schemaVer: 2, currentLedgerId: '',
+    ledgers: [
+      { id: 'L24', year: 2024, name: '2024', createdAt: 'c', updatedAt: 'c', data: {} },
+      { id: 'L26', year: 2026, name: '2026', createdAt: 'c', updatedAt: 'c', data: {} }
+    ]
+  })
+  const remote = normalizeBusinessStore({
+    schemaVer: 2, currentLedgerId: 'R25',
+    ledgers: [{ id: 'R25', year: 2025, name: '2025', createdAt: 'c', updatedAt: 'c', data: {} }]
+  })
+  const merged = mergeBusinessStore(local, remote)
+  assert.deepEqual(merged.ledgers.map(l => l.year), [2026, 2025, 2024])
+  assert.deepEqual(merged.ledgers.map(l => l.id), ['L26', 'R25', 'L24'])
+  assert.equal(merged.currentLedgerId, 'L26', '本地未选中 → 远端 R25 存在但优先回落默认（当前年/最大年份）')
+  // 空对空
+  assert.deepEqual(mergeBusinessStore(undefined, undefined), { schemaVer: 2, ledgers: [], currentLedgerId: '' })
+})
+
+// T32 — mergeBusinessStore：云端旧信封（扁平 BusinessData）→ 迁入当年账本后与本地同年账本合并，不丢数据
+test('T32 mergeBusinessStore legacy envelope', () => {
+  const legacy = buildData()
+  const local = normalizeBusinessStore({
+    schemaVer: 2, currentLedgerId: 'L',
+    ledgers: [{ id: 'L', year: currentYear(), name: '本机', createdAt: 'c', updatedAt: 'c', data: { products: [{ id: 'mine', name: '自有商品', sellingPrice: 1, purchasePrice: 1, unit: '件', active: true }] } }]
+  })
+  const merged = mergeBusinessStore(local, legacy)
+  assert.equal(merged.ledgers.length, 1)
+  const ids = merged.ledgers[0].data.products.map(p => p.id)
+  assert.ok(ids.includes('mine'), '本地商品保留')
+  assert.ok(ids.includes('p1'), '云端旧信封商品迁入')
+  assert.equal(merged.ledgers[0].id, 'L')
+  assert.equal(merged.currentLedgerId, 'L')
+})
+
+// T33 — ledgerRecordCounts：商品/进货/收摊/支出条数统计（删除前的关联数据提示口径）
+test('T33 ledgerRecordCounts', () => {
+  const d = buildData()
+  const c = ledgerRecordCounts(d)
+  assert.equal(c.products, d.products.length)
+  assert.equal(c.purchases, d.purchases.length)
+  assert.equal(c.dailyRecords, d.dailyRecords.length)
+  assert.equal(c.expenses, d.expenses.length)
+  assert.deepEqual(ledgerRecordCounts(undefined), { products: 0, purchases: 0, dailyRecords: 0, expenses: 0 })
+  assert.deepEqual(ledgerRecordCounts(emptyBusinessData()), { products: 0, purchases: 0, dailyRecords: 0, expenses: 0 })
+})
+
+// T34 — ledgerDeleteGuard：不存在 / 最后一个 / 当前正在使用 均禁止删除
+test('T34 ledgerDeleteGuard', () => {
+  const list = [
+    { id: 'a', year: 2026, name: 'A', createdAt: 'c', updatedAt: 'c', data: emptyBusinessData() },
+    { id: 'b', year: 2025, name: 'B', createdAt: 'c', updatedAt: 'c', data: emptyBusinessData() }
+  ]
+  assert.equal(ledgerDeleteGuard(list, 'ghost', 'a'), 'not-found')
+  // 当前正在使用的账本不可删
+  assert.equal(ledgerDeleteGuard(list, 'a', 'a'), 'is-current')
+  // 非当前账本可删
+  assert.equal(ledgerDeleteGuard(list, 'b', 'a'), 'ok')
+  // 仅剩一个账本时（无论是否当前）都不可删
+  assert.equal(ledgerDeleteGuard([list[0]], 'a', 'a'), 'last-one')
+  assert.equal(ledgerDeleteGuard([list[0]], 'a', ''), 'last-one')
+  // 未选中任何账本时不因 is-current 拦截
+  assert.equal(ledgerDeleteGuard(list, 'a', ''), 'ok')
+})
+
+// T35 — clearLedgerRecords：清空进货/收摊/支出流水，保留商品、分类与账本设置
+test('T35 clearLedgerRecords', () => {
+  const d = buildData()
+  const list = [{ id: 'a', year: 2026, name: 'A', createdAt: 'c', updatedAt: 'c', data: d }]
+  const r = clearLedgerRecords(list, 'a', '2026-09-26T00:00:00.000Z')
+  assert.equal(r.ok, true)
+  const ledger = r.ok ? r.ledger : null
+  assert.ok(ledger)
+  assert.equal(ledger?.data.purchases.length, 0)
+  assert.equal(ledger?.data.dailyRecords.length, 0)
+  assert.equal(ledger?.data.expenses.length, 0)
+  assert.equal(ledger?.data.products.length, d.products.length, '商品是主数据，应保留')
+  assert.equal(ledger?.data.productCategories.length, d.productCategories.length)
+  assert.equal(ledger?.data.settings.stallName, d.settings.stallName)
+  assert.equal(ledger?.updatedAt, '2026-09-26T00:00:00.000Z')
+  // 不改入参
+  assert.equal(list[0].data.purchases.length, d.purchases.length)
+  // 账本不存在
+  assert.deepEqual(clearLedgerRecords(list, 'ghost'), { ok: false, reason: 'not-found' })
+})
+
+// T36 — deleteLedger：连账本一并删除并按年份倒序；守卫拦截时返回原因
+test('T36 deleteLedger', () => {
+  const list = [
+    { id: 'a', year: 2026, name: 'A', createdAt: 'c', updatedAt: 'c', data: emptyBusinessData() },
+    { id: 'b', year: 2025, name: 'B', createdAt: 'c', updatedAt: 'c', data: emptyBusinessData() },
+    { id: 'c', year: 2024, name: 'C', createdAt: 'c', updatedAt: 'c', data: emptyBusinessData() }
+  ]
+  const r = deleteLedger(list, 'c', 'a')
+  assert.equal(r.ok, true)
+  assert.deepEqual(r.ok ? r.ledgers.map(l => l.year) : [], [2026, 2025])
+  assert.equal(r.ok ? r.ledger.id : '', 'c')
+  // 不改入参
+  assert.equal(list.length, 3)
+  // 守卫拦截
+  assert.deepEqual(deleteLedger(list, 'a', 'a'), { ok: false, reason: 'is-current' })
+  assert.deepEqual(deleteLedger(list, 'ghost', 'a'), { ok: false, reason: 'not-found' })
+  assert.deepEqual(deleteLedger([list[0]], 'a', 'a'), { ok: false, reason: 'last-one' })
+})
+
+// T37 — 进货 ↔ 支出关联：金额汇总与 id 归一化
+test('T37 expense link sum & normalize', () => {
+  const expenses: BusinessExpense[] = [
+    { id: 'e1', date: '2026-08-01', categoryId: 'expense-stall', amount: 30, createdAt: 'c' },
+    { id: 'e2', date: '2026-08-02', categoryId: 'expense-gas', amount: 12.5, createdAt: 'c' },
+    { id: 'e3', date: '2026-08-03', categoryId: 'expense-other', amount: 7.25, createdAt: 'c' }
+  ]
+  assert.equal(sumExpenseAmounts(expenses, ['e1', 'e3']), 37.25)
+  assert.equal(sumExpenseAmounts(expenses, []), 0)
+  assert.equal(sumExpenseAmounts(expenses, ['ghost']), 0)
+  assert.equal(sumExpenseAmounts([], ['e1']), 0)
+  // 去重后只算一次
+  assert.equal(sumExpenseAmounts(expenses, ['e1', 'e1']), 30)
+  // id 归一化：去空、去重、过滤非字符串
+  assert.deepEqual(normalizeExpenseIds(['e1', 'e1', '', null, 'e2']), ['e1', 'e2'])
+  assert.deepEqual(normalizeExpenseIds(undefined), [])
+  assert.deepEqual(normalizeExpenseIds('e1'), [])
+})
+
+// T38 — selectableExpenses：已被其它进货关联的支出带 linkedPurchaseId；编辑自身时不算冲突
+test('T38 selectableExpenses occupancy', () => {
+  const d = buildData()
+  const expenses: BusinessExpense[] = [
+    { id: 'e1', date: '2026-08-02', categoryId: 'expense-stall', amount: 30, createdAt: 'c' },
+    { id: 'e2', date: '2026-08-05', categoryId: 'expense-gas', amount: 12, createdAt: 'c' }
+  ]
+  const purchases: BusinessPurchase[] = [
+    { id: 'b1', productId: 'p1', quantity: 10, unitPrice: 2, total: 20, date: '2026-08-01', expenseIds: ['e1'], createdAt: 'c' },
+    { id: 'b2', productId: 'p2', quantity: 5, unitPrice: 1, total: 5, date: '2026-08-01', createdAt: 'c' }
+  ]
+  // 新建态：e1 已被 b1 占用 → 不可选
+  const opts = selectableExpenses(expenses, purchases, null)
+  assert.equal(opts.length, 2)
+  assert.deepEqual(opts.map(o => o.expense.date), ['2026-08-05', '2026-08-02'], '按日期倒序')
+  assert.equal(opts.find(o => o.expense.id === 'e1')?.linkedPurchaseId, 'b1')
+  assert.equal(opts.find(o => o.expense.id === 'e2')?.linkedPurchaseId, undefined)
+  // 编辑 b1 自身：e1 的占用者是 b1 → 不算冲突（仍可选，且保持已勾选）
+  const editOpts = selectableExpenses(expenses, purchases, 'b1')
+  assert.equal(editOpts.find(o => o.expense.id === 'e1')?.linkedPurchaseId, undefined)
+  // 编辑 b2：e1 仍被 b1 占用
+  const editB2 = selectableExpenses(expenses, purchases, 'b2')
+  assert.equal(editB2.find(o => o.expense.id === 'e1')?.linkedPurchaseId, 'b1')
+  // 归属表
+  assert.equal(expenseLinkOwners(purchases).get('e1'), 'b1')
+  assert.equal(expenseLinkOwners(d.purchases).size, 0)
+})
+
+// T39 — 数量/单价双向联动：合计为 0 或除零 → null（不产生 NaN/Infinity）
+test('T39 derive unit price & quantity', () => {
+  assert.equal(deriveUnitPrice(100, 4), 25)
+  assert.equal(deriveUnitPrice(10, 3), 3.33, '两位小数四舍五入')
+  assert.equal(deriveUnitPrice(0, 4), null, '合计为 0 → 不算')
+  assert.equal(deriveUnitPrice(100, 0), null, '数量为 0（除零）→ 不算')
+  assert.equal(deriveUnitPrice(-100, 4), null, '负数合计 → 不算')
+  assert.equal(deriveQuantity(100, 25), 4)
+  assert.equal(deriveQuantity(100, 3), 33, '取整')
+  assert.equal(deriveQuantity(0.4, 3), 1, '至少 1')
+  assert.equal(deriveQuantity(0, 25), null, '合计为 0 → 不算')
+  assert.equal(deriveQuantity(100, 0), null, '单价为 0（除零）→ 不算')
+  assert.equal(deriveQuantity(-100, 25), null, '负数合计 → 不算')
+})
+
+// T40 — calcPurchaseTotal：未关联支出时的常规合计（数量取整、单价钳 0、两位小数）
+test('T40 calcPurchaseTotal', () => {
+  assert.equal(calcPurchaseTotal(3, 2.5), 7.5)
+  assert.equal(calcPurchaseTotal(3.7, 2), 6, '数量向下取整')
+  assert.equal(calcPurchaseTotal(-5, 2), 0, '负数量钳 0')
+  assert.equal(calcPurchaseTotal(3, -2), 0, '负单价钳 0')
+  // 两位小数（7 × 1.005 = 7.035，二进制浮点四舍五入后为 7.03）
+  assert.equal(calcPurchaseTotal(7, 1.005), 7.03)
+  assert.equal(calcPurchaseTotal(9, 1.05), 9.45)
+})
+
+// T41 — calcMonthlyStats：12 个月全量返回、严格按年份不跨年、无数据月份为 0
+test('T41 calcMonthlyStats', () => {
+  const base = emptyBusinessData()
+  const data: BusinessData = {
+    ...base,
+    products: [{ id: 'p1', name: '烤肠', unit: '根', purchasePrice: 2, sellingPrice: 5, active: true, createdAt: 'c' }],
+    dailyRecords: [
+      { id: 'd1', date: '2026-03-05', totalRevenue: 100, items: [{ productId: 'p1', broughtOut: 20, remaining: 0, loss: 0 }], transactionCount: 4, createdAt: 'c', updatedAt: 'c' },
+      { id: 'd2', date: '2026-03-20', totalRevenue: 50, items: [{ productId: 'p1', broughtOut: 10, remaining: 0, loss: 0 }], transactionCount: 2, createdAt: 'c', updatedAt: 'c' },
+      { id: 'd3', date: '2025-12-31', totalRevenue: 999, items: [], createdAt: 'c', updatedAt: 'c' },
+      { id: 'd4', date: '2027-01-01', totalRevenue: 888, items: [], createdAt: 'c', updatedAt: 'c' }
+    ],
+    expenses: [
+      { id: 'e1', date: '2026-03-05', categoryId: 'expense-stall', amount: 30, createdAt: 'c' },
+      { id: 'e2', date: '2025-12-31', categoryId: 'expense-stall', amount: 77, createdAt: 'c' }
+    ]
+  }
+  const stats = calcMonthlyStats(data, 2026)
+  assert.equal(stats.length, 12, '恒返回 12 个月')
+  assert.deepEqual(stats.map(s => s.month), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+  assert.equal(stats[0].label, '1月')
+  // 3 月：营业额 150、笔数 6、天数 2、支出 30
+  const march = stats[2]
+  assert.equal(march.revenue, 150)
+  assert.equal(march.transactionCount, 6)
+  assert.equal(march.days, 2)
+  assert.equal(march.expense, 30)
+  // 成本 = 售出 30 × 进价 2 = 60 → 利润 90
+  assert.equal(march.cost, 60)
+  assert.equal(march.profit, 90)
+  // 无数据月份全 0
+  const jan = stats[0]
+  assert.deepEqual(
+    { revenue: jan.revenue, cost: jan.cost, profit: jan.profit, expense: jan.expense, transactionCount: jan.transactionCount, days: jan.days },
+    { revenue: 0, cost: 0, profit: 0, expense: 0, transactionCount: 0, days: 0 }
+  )
+  // 不跨年：2025-12-31 / 2027-01-01 的记录与支出均不计入
+  assert.equal(stats.reduce((s, m) => s + m.revenue, 0), 150)
+  assert.equal(stats.reduce((s, m) => s + m.expense, 0), 30)
+  // 空数据 → 12 个月全 0
+  const empty = calcMonthlyStats(emptyBusinessData(), 2026)
+  assert.equal(empty.length, 12)
+  assert.equal(empty.every(m => m.revenue === 0 && m.expense === 0 && m.days === 0), true)
+})
+
+// T42 — 会员价归一化：合法值保留两位小数；负数/NaN/非数字按「未设置」剔除
+test('T42 会员价 normalize', () => {
+  const d = normalizeBusinessData({
+    products: [
+      { id: 'p1', name: '烤肠', unit: '根', purchasePrice: 2, sellingPrice: 5, memberPrice: 4.5, active: true },
+      { id: 'p2', name: '可乐', unit: '瓶', purchasePrice: 1.5, sellingPrice: 3, memberPrice: -1, active: true },
+      { id: 'p3', name: '面包', unit: '个', purchasePrice: 3, sellingPrice: 6, memberPrice: 'x', active: true }
+    ]
+  })
+  assert.equal(d.products[0].memberPrice, 4.5)
+  assert.equal(d.products[1].memberPrice, undefined, '负数会员价按未设置')
+  assert.equal(d.products[2].memberPrice, undefined, '非数字会员价按未设置')
+  const rounded = normalizeBusinessData({
+    products: [{ id: 'p4', name: '糖', unit: '包', purchasePrice: 1, sellingPrice: 2, memberPrice: 1.555, active: true }]
+  })
+  assert.equal(rounded.products[0].memberPrice, 1.56, '会员价保留两位小数')
+})
+
+// T43 — calcSoldTotals / calcPurchaseStockStatus：先进先出，最旧批次优先被售出
+test('T43 进货批次 FIFO 剩余状态', () => {
+  const purchases: BusinessPurchase[] = [
+    { id: 'b1', productId: 'p1', quantity: 10, unitPrice: 2, total: 20, date: '2026-01-01', createdAt: 'a' },
+    { id: 'b2', productId: 'p1', quantity: 10, unitPrice: 3, total: 30, date: '2026-02-01', createdAt: 'b' },
+    { id: 'b3', productId: 'p2', quantity: 5, unitPrice: 1, total: 5, date: '2026-01-05', createdAt: 'c' }
+  ]
+  const dailyRecords: BusinessDailyRecord[] = [
+    // p1 售出 12：带出 12 − 剩余 0 − 损耗 0
+    { id: 'd1', date: '2026-03-01', items: [{ productId: 'p1', broughtOut: 12, remaining: 0, loss: 0 }], totalRevenue: 60, createdAt: 'x', updatedAt: 'x' }
+  ]
+  const sold = calcSoldTotals(dailyRecords)
+  assert.equal(sold['p1'], 12)
+  assert.equal(sold['p2'], undefined)
+  const st = calcPurchaseStockStatus(purchases, dailyRecords)
+  // 最旧批次 b1（10）被完全消耗 → 已售完
+  assert.equal(st.b1.soldOut, true)
+  assert.equal(st.b1.sold, 10)
+  assert.equal(st.b1.remaining, 0)
+  assert.equal(st.b1.isOldest, true)
+  // 次旧批次 b2 只卖出 2 → 未售完，剩 8
+  assert.equal(st.b2.soldOut, false)
+  assert.equal(st.b2.sold, 2)
+  assert.equal(st.b2.remaining, 8)
+  assert.equal(st.b2.isOldest, false)
+  // 其它商品无售出 → 未售完且全量剩余
+  assert.equal(st.b3.soldOut, false)
+  assert.equal(st.b3.remaining, 5)
+  assert.equal(st.b3.isOldest, true)
+  // 售出超过进货总量：全部批次售完，剩余不为负
+  const over: BusinessDailyRecord[] = [
+    { id: 'd2', date: '2026-04-01', items: [{ productId: 'p1', broughtOut: 99, remaining: 0, loss: 0 }], totalRevenue: 0, createdAt: 'x', updatedAt: 'x' }
+  ]
+  const st2 = calcPurchaseStockStatus(purchases, over)
+  assert.equal(st2.b1.remaining, 0)
+  assert.equal(st2.b2.remaining, 0)
+  assert.equal(st2.b2.soldOut, true)
+})
+
+// T44 — unsoldPurchaseUnitPrices：只取未售完批次的单价（FIFO 顺序）
+test('T44 未售完批次单价列表', () => {
+  const purchases: BusinessPurchase[] = [
+    { id: 'b1', productId: 'p1', quantity: 10, unitPrice: 2, total: 20, date: '2026-01-01', createdAt: 'a' },
+    { id: 'b2', productId: 'p1', quantity: 10, unitPrice: 4, total: 40, date: '2026-02-01', createdAt: 'b' }
+  ]
+  const none: BusinessDailyRecord[] = []
+  assert.deepEqual(unsoldPurchaseUnitPrices(purchases, none, 'p1'), [2, 4])
+  const some: BusinessDailyRecord[] = [
+    { id: 'd1', date: '2026-03-01', items: [{ productId: 'p1', broughtOut: 10, remaining: 0, loss: 0 }], totalRevenue: 50, createdAt: 'x', updatedAt: 'x' }
+  ]
+  assert.deepEqual(unsoldPurchaseUnitPrices(purchases, some, 'p1'), [4], '最旧批次售完后只剩 b2')
+  assert.deepEqual(unsoldPurchaseUnitPrices(purchases, some, 'p9'), [])
+})
+
+// T45 — avgUnsoldUnitPrice：未售完批次单价简单平均（两位小数）；全售完/无进货 → null
+test('T45 进货价自动均价', () => {
+  const purchases: BusinessPurchase[] = [
+    { id: 'b1', productId: 'p1', quantity: 10, unitPrice: 2, total: 20, date: '2026-01-01', createdAt: 'a' },
+    { id: 'b2', productId: 'p1', quantity: 10, unitPrice: 3, total: 30, date: '2026-02-01', createdAt: 'b' },
+    { id: 'b3', productId: 'p1', quantity: 10, unitPrice: 4.1, total: 41, date: '2026-03-01', createdAt: 'c' }
+  ]
+  // 无收摊：三批都未售完 → (2 + 3 + 4.1) / 3 = 3.033… → 3.03
+  assert.equal(avgUnsoldUnitPrice(purchases, [], 'p1'), 3.03)
+  // 售出 10 → 最旧批次 b1 售完 → (3 + 4.1) / 2 = 3.55
+  const sold10: BusinessDailyRecord[] = [
+    { id: 'd1', date: '2026-04-01', items: [{ productId: 'p1', broughtOut: 10, remaining: 0, loss: 0 }], totalRevenue: 50, createdAt: 'x', updatedAt: 'x' }
+  ]
+  assert.equal(avgUnsoldUnitPrice(purchases, sold10, 'p1'), 3.55)
+  // 售出 30（全部售完）→ null，沿用商品自身进货价
+  const soldAll: BusinessDailyRecord[] = [
+    { id: 'd2', date: '2026-05-01', items: [{ productId: 'p1', broughtOut: 30, remaining: 0, loss: 0 }], totalRevenue: 150, createdAt: 'x', updatedAt: 'x' }
+  ]
+  assert.equal(avgUnsoldUnitPrice(purchases, soldAll, 'p1'), null)
+  assert.equal(avgUnsoldUnitPrice(purchases, [], 'nope'), null)
+  // 损耗不计入售出：带出 10 / 损耗 10 → 售出 0，全部未售完
+  const lossOnly: BusinessDailyRecord[] = [
+    { id: 'd3', date: '2026-06-01', items: [{ productId: 'p1', broughtOut: 10, remaining: 0, loss: 10 }], totalRevenue: 0, createdAt: 'x', updatedAt: 'x' }
+  ]
+  assert.equal(avgUnsoldUnitPrice(purchases, lossOnly, 'p1'), 3.03)
 })
 
 let passed = 0
