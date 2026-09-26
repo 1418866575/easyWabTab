@@ -18,7 +18,10 @@ import {
   BUSINESS_STORE_SCHEMA_VER,
   calcDailyRevenue,
   createLedger as createLedgerCore,
+  clearLedgerRecords as clearLedgerRecordsCore,
   currentYear,
+  deleteLedger as deleteLedgerCore,
+  ledgerDeleteGuard as ledgerDeleteGuardCore,
   deleteExpenseCategory as deleteExpenseCategoryCore,
   deleteProductCategory as deleteProductCategoryCore,
   emptyBusinessData,
@@ -29,11 +32,12 @@ import {
   newId,
   normalizeBusinessData,
   normalizeBusinessStore,
+  pickDefaultLedger,
   renameCategory,
   sortedLedgers,
   toggleCategoryVisible
 } from '@/composables/businessCore'
-import type { CategoryOpResult, LedgerOpResult } from '@/composables/businessCore'
+import type { CategoryOpResult, LedgerDeleteGuard, LedgerMutateResult, LedgerOpResult } from '@/composables/businessCore'
 import { idbGet, idbPut } from '../composables/useIdb'
 import { markDirty } from '@/composables/useCloudSync'
 
@@ -178,6 +182,37 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
   function switchLedgerByYear(year: number): boolean {
     const target = ledgers.value.find(l => l.year === year)
     return target ? switchLedger(target.id) : false
+  }
+
+  // ===== 账本删除（设置弹窗「基础设置 → 账本管理」入口） =====
+
+  /** 删前守卫：not-found / last-one（至少保留一个）/ is-current（当前使用中，需先切换） */
+  function ledgerDeleteGuard(id: string): LedgerDeleteGuard {
+    return ledgerDeleteGuardCore(ledgers.value, id, currentLedgerId.value)
+  }
+
+  /** 仅清空某账本的交易流水（进货/收摊/支出），账本本体与商品/分类/设置保留 */
+  function clearLedgerRecords(id: string): LedgerMutateResult {
+    const r = clearLedgerRecordsCore(ledgers.value, id)
+    if (r.ok) {
+      ledgers.value = r.ledgers
+      void saveBusiness()
+    }
+    return r
+  }
+
+  /** 删除账本整体（受守卫保护）；成功后重置当前选中（被删账本失效时回落默认账本） */
+  function deleteLedger(id: string): LedgerMutateResult {
+    const r = deleteLedgerCore(ledgers.value, id, currentLedgerId.value)
+    if (r.ok) {
+      ledgers.value = r.ledgers
+      // 刷新选中：原选中仍在则保留，否则回落到默认账本（当前年 → 最大年份）
+      if (!r.ledgers.some(l => l.id === currentLedgerId.value)) {
+        currentLedgerId.value = pickDefaultLedger(r.ledgers)?.id ?? ''
+      }
+      void saveBusiness()
+    }
+    return r
   }
 
   // ===== 商品分类 CRUD（全部委托 businessCore 纯函数，store 只做薄委托 + 持久化） =====
@@ -489,6 +524,9 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     ensureCurrentYearLedger,
     switchLedger,
     switchLedgerByYear,
+    ledgerDeleteGuard,
+    clearLedgerRecords,
+    deleteLedger,
     // 当前账本内的业务数据（可写 computed，业务面板无需感知账本）
     productCategories,
     expenseCategories,

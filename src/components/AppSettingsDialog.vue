@@ -14,7 +14,13 @@ import { useAppSettingsDialog } from '@/composables/useAppSettingsDialog'
 import type { SettingsTarget } from '@/composables/useAppSettingsDialog'
 import { useToast } from '@/composables/useToast'
 import { idbGet, idbPut, idbImportAll, idbExportAll, idbClear, IDB_STUDENT_STORES, IDB_CORE_STORES, IDB_AUX_STORES, IDB_ICONS_STORES, WORKBENCH_PREFS_KEYS } from '@/composables/useIdb'
-import { localDateKey } from '@/composables/businessCore'
+import {
+  currentYear,
+  ledgerDefaultName,
+  ledgerRecordCounts,
+  localDateKey
+} from '@/composables/businessCore'
+import type { LedgerDeleteGuard, LedgerDeleteScope } from '@/composables/businessCore'
 import { isEmailConfigured, buildEmailParams } from '@/composables/reminderCore'
 import { sendReminderEmail } from '@/composables/reminderEmail'
 import { requestNotifyPermission } from '@/composables/useDesktopNotify'
@@ -1252,6 +1258,96 @@ async function handleBizImportFile(event: Event): Promise<void> {
 }
 
 // ====================
+// 销售记账 · 账本管理（基础设置分组）
+// 新建：按自然年、同年唯一，创建成功后自动切换为当前账本；
+// 删除：先选范围（仅清空交易流水 / 连同账本一并删除），二次确认后再执行。
+// 保护规则：删除账本时「当前正在使用的账本」与「最后一个账本」禁止删除（清空流水不受此限，账本本体仍在）。
+// ====================
+const newLedgerYear = ref<number>(currentYear())
+const newLedgerName = ref('')
+const newLedgerError = ref('')
+const newLedgerPlaceholder = computed(() => ledgerDefaultName(Number(newLedgerYear.value) || currentYear()))
+
+const deleteTargetId = ref('')
+const deleteScope = ref<LedgerDeleteScope>('records')
+
+const deleteTarget = computed(() => businessStore.ledgers.find(l => l.id === deleteTargetId.value) ?? null)
+const deleteCounts = computed(() => ledgerRecordCounts(deleteTarget.value?.data))
+const deleteGuard = computed<LedgerDeleteGuard>(() =>
+  deleteTargetId.value ? businessStore.ledgerDeleteGuard(deleteTargetId.value) : 'not-found'
+)
+/** 禁用原因文案（空串 = 可执行）；「仅清空交易记录」不删除账本本体，故不受当前/最后一个限制 */
+const deleteBlockReason = computed((): string => {
+  if (!deleteTargetId.value) return '请先选择要处理的账本'
+  if (deleteGuard.value === 'not-found') return '账本不存在或已被删除，请重新选择'
+  if (deleteScope.value === 'ledger') {
+    if (deleteGuard.value === 'is-current') return '该账本是当前正在使用的账本：请先在销售记账页顶部切换到其他账本，再执行删除'
+    if (deleteGuard.value === 'last-one') return '至少需要保留一个账本，最后一个账本不可删除'
+  }
+  return ''
+})
+const canDelete = computed(() => !!deleteTargetId.value && deleteGuard.value !== 'not-found' && !deleteBlockReason.value)
+
+function handleCreateLedger(): void {
+  const year = Number(newLedgerYear.value)
+  const name = newLedgerName.value.trim()
+  if (!name) {
+    newLedgerError.value = '请输入账本名称'
+    return
+  }
+  const r = businessStore.createLedger(year, name)
+  if (!r.ok) {
+    newLedgerError.value =
+      r.reason === 'duplicate'
+        ? `${year} 年账本已存在，请换一个年份或直接在页面顶部切换`
+        : r.reason === 'invalid-year'
+          ? '请输入有效年份（1970 - 9999）'
+          : '账本名称不能为空'
+    return
+  }
+  newLedgerError.value = ''
+  newLedgerName.value = ''
+  newLedgerYear.value = currentYear()
+  // 账本列表已刷新：清空删除目标，避免下拉残留已失效的选中项
+  deleteTargetId.value = ''
+  toast.success(`已创建并切换到「${r.ledger.name}」`)
+}
+
+async function handleDeleteLedgerData(): Promise<void> {
+  if (!canDelete.value) return
+  const target = deleteTarget.value
+  if (!target) return
+  const c = deleteCounts.value
+  const isRecords = deleteScope.value === 'records'
+  const detail = isRecords
+    ? `仅清空交易记录：删除进货 ${c.purchases} 条、收摊记录 ${c.dailyRecords} 条、支出 ${c.expenses} 笔。\n商品 ${c.products} 个、商品/支出分类、账本设置（摊位名称、低库存阈值、月营业额目标）均保留，账本「${target.name}」仍然保留。`
+    : `删除账本「${target.name}」：其下商品 ${c.products} 个、进货 ${c.purchases} 条、收摊记录 ${c.dailyRecords} 条、支出 ${c.expenses} 笔，以及分类与账本设置（摊位名称、低库存阈值、月营业额目标）将全部移除。`
+  const ok = await showConfirm(
+    `${detail}\n\n⚠ 该操作不可恢复，建议先到「销售记账备份（导入/导出）」导出留存。`,
+    isRecords ? '清空交易记录确认' : '删除账本确认'
+  )
+  if (!ok) return
+  try {
+    const r = isRecords ? businessStore.clearLedgerRecords(target.id) : businessStore.deleteLedger(target.id)
+    if (!r.ok) {
+      toast.error(
+        r.reason === 'is-current'
+          ? '删除失败：该账本正在使用，请先切换到其他账本'
+          : r.reason === 'last-one'
+            ? '删除失败：至少需要保留一个账本'
+            : '删除失败：账本不存在或已被删除'
+      )
+      return
+    }
+    deleteTargetId.value = ''
+    toast.success(isRecords ? `已清空「${target.name}」的交易记录` : `已删除账本「${target.name}」`)
+  } catch (e) {
+    console.error('[AppSettings] ledger delete failed', e)
+    toast.error('删除失败，请重试')
+  }
+}
+
+// ====================
 // 学生工作台（仅学生工作台 tab）：页面名称/可见性 + 学段切换 + 昵称 + 学科清单
 // ====================
 const studentStageOptions: { key: StudentStage; label: string; desc: string }[] = [
@@ -1738,6 +1834,10 @@ onMounted(async () => {
   // 记账 store 可能还未随工作台挂载加载 → 防御性加载一次
   try { await ledStore.loadLedger() } catch { /* ignore */ }
   initLedgerCats()
+  // 销售记账 store 同理：从导航站打开设置弹窗时账本列表可能尚未加载
+  if (!businessStore.loaded) {
+    try { await businessStore.loadBusiness() } catch { /* ignore */ }
+  }
   stopWatchSettings = watch(
     () => appSettings.showAppSettings.value,
     async (open) => {
@@ -2845,6 +2945,93 @@ onUnmounted(() => {
               />
             </label>
           </div>
+
+          <!-- 账本管理：新建（同年唯一）+ 删除（清空交易记录 / 连账本删除），与页面顶部切换器解耦 -->
+          <div class="bl-manage" data-testid="biz-ledger-manage">
+            <div class="bl-block">
+              <h4 class="bl-subtitle">新建账本</h4>
+              <p class="wb-menu-hint">账本按自然年创建，同一年份只有一个；创建成功后自动切换为当前账本。</p>
+              <div class="remind-fields">
+                <label class="remind-field">
+                  <span class="remind-label">年份</span>
+                  <el-input-number
+                    :min="1970"
+                    :max="9999"
+                    :step="1"
+                    data-testid="biz-ledger-new-year"
+                    v-model="newLedgerYear"
+                  />
+                </label>
+                <label class="remind-field">
+                  <span class="remind-label">名称</span>
+                  <el-input
+                    maxlength="30"
+                    :placeholder="newLedgerPlaceholder"
+                    data-testid="biz-ledger-new-name"
+                    v-model="newLedgerName"
+                  />
+                </label>
+              </div>
+              <div class="remind-actions">
+                <el-button size="small" type="primary" data-testid="biz-ledger-create" @click="handleCreateLedger">
+                  <Icon name="plus" /> 新建并切换
+                </el-button>
+              </div>
+              <p v-if="newLedgerError" class="wb-menu-hint bl-error" data-testid="biz-ledger-new-error">{{ newLedgerError }}</p>
+            </div>
+
+            <div class="bl-block">
+              <h4 class="bl-subtitle">删除账本数据</h4>
+              <p class="wb-menu-hint">删除前会二次确认并列出受影响的数据；操作不可恢复，建议先导出销售记账备份。</p>
+              <div class="remind-fields">
+                <label class="remind-field">
+                  <span class="remind-label">目标账本</span>
+                  <el-select
+                    v-model="deleteTargetId"
+                    placeholder="请选择账本"
+                    data-testid="biz-ledger-delete-target"
+                  >
+                    <el-option
+                      v-for="l in businessStore.ledgers"
+                      :key="l.id"
+                      :value="l.id"
+                      :label="`${l.year} 年 · ${l.name}${l.id === businessStore.currentLedgerId ? '（当前）' : ''}`"
+                    />
+                  </el-select>
+                </label>
+              </div>
+              <div class="bl-scopes" data-testid="biz-ledger-scopes">
+                <label class="bl-radio">
+                  <input
+                    type="radio"
+                    value="records"
+                    v-model="deleteScope"
+                    data-testid="biz-ledger-scope-records"
+                  />
+                  <span>仅清空该账本的交易记录（进货 / 收摊 / 支出），保留商品、分类与账本设置</span>
+                </label>
+                <label class="bl-radio">
+                  <input
+                    type="radio"
+                    value="ledger"
+                    v-model="deleteScope"
+                    data-testid="biz-ledger-scope-ledger"
+                  />
+                  <span>连同账本本身一并删除（该账本下所有数据随之移除）</span>
+                </label>
+              </div>
+              <p v-if="deleteBlockReason" class="wb-menu-hint bl-error" data-testid="biz-ledger-delete-block">{{ deleteBlockReason }}</p>
+              <div class="remind-actions">
+                <el-button
+                  size="small"
+                  type="danger"
+                  :disabled="!canDelete"
+                  data-testid="biz-ledger-delete"
+                  @click="handleDeleteLedgerData"
+                ><Icon name="trash" /> 删除账本数据</el-button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- 商品分类管理（销售记账 tab - 商品分类管理）：内联 BusinessCategoryManager(embedded)，与工作台分类管理菜单一致 -->
@@ -3730,6 +3917,59 @@ html.dark .tab-btn.active {
   margin: 6px 0 12px;
   font-size: 12px;
   color: var(--color-text-muted, var(--color-text-muted));
+}
+
+/* ===== 销售记账 · 账本管理（新建 / 删除）：两块卡片式分区，沿用 wb-menu 排版 ===== */
+.bl-manage {
+  display: grid;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.bl-block {
+  padding: 12px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 10px;
+  background-color: var(--color-bg, #f8fafc);
+}
+
+.bl-subtitle {
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text, #1e293b);
+}
+
+.bl-scopes {
+  display: grid;
+  gap: 6px;
+  margin: 4px 0 10px;
+}
+
+.bl-radio {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-text, #1e293b);
+  cursor: pointer;
+}
+
+.bl-radio input {
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: var(--color-primary, #3b82f6);
+}
+
+/* 校验/阻断提示（红色，区别于普通 hint） */
+.bl-error {
+  color: var(--color-danger, #ef4444);
+}
+
+html.dark .bl-block {
+  background-color: var(--color-bg-hover, #374151);
+  border-color: var(--color-border, #374151);
 }
 
 /* 教师工作台菜单设置：按分组（基础功能 / 特色功能）分段 */

@@ -17,9 +17,11 @@ import {
   calcPurchaseTotals,
   businessTrendBars,
   compactAmount,
+  clearLedgerRecords,
   createLedger,
   currentYear,
   deleteExpenseCategory,
+  deleteLedger,
   deleteProductCategory,
   emptyBusinessData,
   filterPurchasesByCategory,
@@ -29,6 +31,8 @@ import {
   isLedgerEmpty,
   isValidDateKey,
   ledgerDefaultName,
+  ledgerDeleteGuard,
+  ledgerRecordCounts,
   lowStockProducts,
   mergeBusinessStore,
   moveCategory,
@@ -633,6 +637,76 @@ test('T32 mergeBusinessStore legacy envelope', () => {
   assert.ok(ids.includes('p1'), '云端旧信封商品迁入')
   assert.equal(merged.ledgers[0].id, 'L')
   assert.equal(merged.currentLedgerId, 'L')
+})
+
+// T33 — ledgerRecordCounts：商品/进货/收摊/支出条数统计（删除前的关联数据提示口径）
+test('T33 ledgerRecordCounts', () => {
+  const d = buildData()
+  const c = ledgerRecordCounts(d)
+  assert.equal(c.products, d.products.length)
+  assert.equal(c.purchases, d.purchases.length)
+  assert.equal(c.dailyRecords, d.dailyRecords.length)
+  assert.equal(c.expenses, d.expenses.length)
+  assert.deepEqual(ledgerRecordCounts(undefined), { products: 0, purchases: 0, dailyRecords: 0, expenses: 0 })
+  assert.deepEqual(ledgerRecordCounts(emptyBusinessData()), { products: 0, purchases: 0, dailyRecords: 0, expenses: 0 })
+})
+
+// T34 — ledgerDeleteGuard：不存在 / 最后一个 / 当前正在使用 均禁止删除
+test('T34 ledgerDeleteGuard', () => {
+  const list = [
+    { id: 'a', year: 2026, name: 'A', createdAt: 'c', updatedAt: 'c', data: emptyBusinessData() },
+    { id: 'b', year: 2025, name: 'B', createdAt: 'c', updatedAt: 'c', data: emptyBusinessData() }
+  ]
+  assert.equal(ledgerDeleteGuard(list, 'ghost', 'a'), 'not-found')
+  // 当前正在使用的账本不可删
+  assert.equal(ledgerDeleteGuard(list, 'a', 'a'), 'is-current')
+  // 非当前账本可删
+  assert.equal(ledgerDeleteGuard(list, 'b', 'a'), 'ok')
+  // 仅剩一个账本时（无论是否当前）都不可删
+  assert.equal(ledgerDeleteGuard([list[0]], 'a', 'a'), 'last-one')
+  assert.equal(ledgerDeleteGuard([list[0]], 'a', ''), 'last-one')
+  // 未选中任何账本时不因 is-current 拦截
+  assert.equal(ledgerDeleteGuard(list, 'a', ''), 'ok')
+})
+
+// T35 — clearLedgerRecords：清空进货/收摊/支出流水，保留商品、分类与账本设置
+test('T35 clearLedgerRecords', () => {
+  const d = buildData()
+  const list = [{ id: 'a', year: 2026, name: 'A', createdAt: 'c', updatedAt: 'c', data: d }]
+  const r = clearLedgerRecords(list, 'a', '2026-09-26T00:00:00.000Z')
+  assert.equal(r.ok, true)
+  const ledger = r.ok ? r.ledger : null
+  assert.ok(ledger)
+  assert.equal(ledger?.data.purchases.length, 0)
+  assert.equal(ledger?.data.dailyRecords.length, 0)
+  assert.equal(ledger?.data.expenses.length, 0)
+  assert.equal(ledger?.data.products.length, d.products.length, '商品是主数据，应保留')
+  assert.equal(ledger?.data.productCategories.length, d.productCategories.length)
+  assert.equal(ledger?.data.settings.stallName, d.settings.stallName)
+  assert.equal(ledger?.updatedAt, '2026-09-26T00:00:00.000Z')
+  // 不改入参
+  assert.equal(list[0].data.purchases.length, d.purchases.length)
+  // 账本不存在
+  assert.deepEqual(clearLedgerRecords(list, 'ghost'), { ok: false, reason: 'not-found' })
+})
+
+// T36 — deleteLedger：连账本一并删除并按年份倒序；守卫拦截时返回原因
+test('T36 deleteLedger', () => {
+  const list = [
+    { id: 'a', year: 2026, name: 'A', createdAt: 'c', updatedAt: 'c', data: emptyBusinessData() },
+    { id: 'b', year: 2025, name: 'B', createdAt: 'c', updatedAt: 'c', data: emptyBusinessData() },
+    { id: 'c', year: 2024, name: 'C', createdAt: 'c', updatedAt: 'c', data: emptyBusinessData() }
+  ]
+  const r = deleteLedger(list, 'c', 'a')
+  assert.equal(r.ok, true)
+  assert.deepEqual(r.ok ? r.ledgers.map(l => l.year) : [], [2026, 2025])
+  assert.equal(r.ok ? r.ledger.id : '', 'c')
+  // 不改入参
+  assert.equal(list.length, 3)
+  // 守卫拦截
+  assert.deepEqual(deleteLedger(list, 'a', 'a'), { ok: false, reason: 'is-current' })
+  assert.deepEqual(deleteLedger(list, 'ghost', 'a'), { ok: false, reason: 'not-found' })
+  assert.deepEqual(deleteLedger([list[0]], 'a', 'a'), { ok: false, reason: 'last-one' })
 })
 
 let passed = 0

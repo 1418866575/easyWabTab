@@ -1204,6 +1204,67 @@ function mergeLedgerData(l: BusinessData | undefined, r: BusinessData | undefine
   }
 }
 
+/** 账本删除保护判定：不存在 / 最后一个 / 当前正在使用 → 禁止删除（UI 据此禁用按钮并给出原因） */
+export type LedgerDeleteGuard = 'ok' | 'not-found' | 'is-current' | 'last-one'
+
+/** 账本删除范围：records = 仅清空交易流水（保留商品/分类/账本设置）；ledger = 连同账本一并删除 */
+export type LedgerDeleteScope = 'records' | 'ledger'
+
+export type LedgerMutateResult =
+  | { ok: true; reason: 'ok'; ledgers: BusinessLedger[]; ledger: BusinessLedger }
+  | { ok: false; reason: 'not-found' | 'is-current' | 'last-one' }
+
+/** 账本内数据条数（用于删除前的关联数据提示；商品属主数据，单独列出） */
+export function ledgerRecordCounts(data: BusinessData | undefined): {
+  products: number
+  purchases: number
+  dailyRecords: number
+  expenses: number
+} {
+  return {
+    products: data?.products?.length ?? 0,
+    purchases: data?.purchases?.length ?? 0,
+    dailyRecords: data?.dailyRecords?.length ?? 0,
+    expenses: data?.expenses?.length ?? 0
+  }
+}
+
+/** 删前守卫：账本不存在 / 仅剩最后一个（至少保留一个）/ 当前正在使用（需先切换） → 不可删 */
+export function ledgerDeleteGuard(
+  list: BusinessLedger[],
+  id: string,
+  currentLedgerId: string
+): LedgerDeleteGuard {
+  const target = list.find(l => l.id === id)
+  if (!target) return 'not-found'
+  if (list.length <= 1) return 'last-one'
+  if (currentLedgerId && target.id === currentLedgerId) return 'is-current'
+  return 'ok'
+}
+
+/** 清空某账本的交易流水（进货/收摊/支出），保留商品、分类与账本设置；不改入参 */
+export function clearLedgerRecords(list: BusinessLedger[], id: string, now: string = new Date().toISOString()): LedgerMutateResult {
+  const index = list.findIndex(l => l.id === id)
+  if (index === -1) return { ok: false, reason: 'not-found' }
+  const target = list[index]
+  const ledger: BusinessLedger = {
+    ...target,
+    updatedAt: now,
+    data: { ...target.data, purchases: [], dailyRecords: [], expenses: [] }
+  }
+  const ledgers = [...list]
+  ledgers[index] = ledger
+  return { ok: true, reason: 'ok', ledgers, ledger }
+}
+
+/** 删除账本整体（含其下全部数据）；受 ledgerDeleteGuard 保护，不改入参 */
+export function deleteLedger(list: BusinessLedger[], id: string, currentLedgerId: string): LedgerMutateResult {
+  const guard = ledgerDeleteGuard(list, id, currentLedgerId)
+  if (guard !== 'ok') return { ok: false, reason: guard }
+  const target = list.find(l => l.id === id) as BusinessLedger
+  const ledgers = sortedLedgers(list.filter(l => l.id !== id))
+  return { ok: true, reason: 'ok', ledgers, ledger: target }
+}
 /**
  * 账本容器合并（business.json 信封专用，幂等）：
  * - 两侧先经 normalizeBusinessStore 归一（旧扁平信封自动迁入当年账本），确保拿到的一定是 v2 结构；
