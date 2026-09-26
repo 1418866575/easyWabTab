@@ -302,7 +302,10 @@ export interface WorkbenchData {
   settings: AppSettingsData
   pomodoro?: unknown // v5 新增：番茄钟数据（后续 Todo 定义具体类型后收紧）
   habits?: unknown // v5 新增：习惯打卡数据（后续 Todo 定义具体类型后收紧）
-  business?: BusinessData // v7 新增：摆摊进销存（v1-v6 导入补空、v7 原样透传）
+  // v7 新增：摆摊进销存（v1-v6 导入补空、v7 原样透传）
+  // v9 起业务侧升级为「账本容器」BusinessStoreData；旧备份仍是扁平 BusinessData，
+  // 由 normalizeBusinessStore() 在导入时统一迁移为当年账本，二者在信封层兼容共存
+  business?: BusinessData | BusinessStoreData
   passwordsSalt?: string // v8 新增：密码库 PBKDF2 盐 hex（内嵌自 localStorage password-salt-v2；与 passwordVerification 成对出现才有效）
   passwordVerification?: string // v8 新增：主密码验证串密文（内嵌自 localStorage password-verification-v2 原样）
   clientId?: string          // v9 新增：推送设备标识（首次同步时生成 uuid，存 localStorage）
@@ -576,7 +579,7 @@ export interface BusinessSettings {
   monthlyRevenueTarget: number // 本月营业额目标（0 = 未设定，不显示进度环）
 }
 
-/** 销售记账数据（IndexedDB store 'business'，键 'items'） */
+/** 销售记账数据（单个账本内的业务数据；IndexedDB store 'business' 的账本 data 字段） */
 export interface BusinessData {
   productCategories: BusinessProductCategory[]
   expenseCategories: BusinessExpenseCategory[]
@@ -585,6 +588,27 @@ export interface BusinessData {
   dailyRecords: BusinessDailyRecord[]
   expenses: BusinessExpense[]
   settings: BusinessSettings
+}
+
+/**
+ * 账本：销售记账的最外层数据容器，按自然年创建，同一年份唯一。
+ * 所有业务数据（商品 / 进货 / 收摊 / 支出 / 分类 / 设置）都挂在 data 下，以账本 id 隔离。
+ */
+export interface BusinessLedger {
+  id: string
+  year: number // 自然年，如 2026；同一年份只允许一个账本
+  name: string // 账本名称，默认「YYYY年账本」
+  createdAt: string // ISO 字符串
+  updatedAt: string // ISO 字符串
+  data: BusinessData
+}
+
+/** 销售记账在 IndexedDB 中的存储结构（store 'business'，键 'items'） */
+export interface BusinessStoreData {
+  schemaVer: number
+  ledgers: BusinessLedger[]
+  /** 当前选中的账本（刷新后记住上次选择）；为空表示尚无账本 */
+  currentLedgerId: string
 }
 
 /** 内置支出分类（不可删，可改名/排序/标签页显隐） */
@@ -1269,7 +1293,9 @@ export interface BusinessSyncData {
   exportedAt: string
   clientId?: string
   pushedAt?: number
-  business: BusinessData
+  // v1 早期为扁平 BusinessData；账本化后为 BusinessStoreData（多账本容器）。
+  // 读取侧一律经 normalizeBusinessStore() 归一，旧信封自动迁入当年账本，不丢数据。
+  business: BusinessStoreData | BusinessData
 }
 
 /** TeacherSyncData：教师工作台独立同步信封（v17 新增 teacher_workbench 单对象；含 base64 图片故体积偏大） */

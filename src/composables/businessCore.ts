@@ -7,10 +7,12 @@ import type {
   BusinessData,
   BusinessExpense,
   BusinessExpenseCategory,
+  BusinessLedger,
   BusinessProduct,
   BusinessProductCategory,
   BusinessPurchase,
   BusinessSettings,
+  BusinessStoreData,
   DailyRecordItem
 } from '../types'
 import { formatYuan } from './ledgerCore.ts'
@@ -25,6 +27,16 @@ export const ID_PREFIX = { product: 'bp_', productCat: 'bpc_', expense: 'be_', e
 
 /** 低库存预警阈值默认值 */
 export const DEFAULT_LOW_STOCK_THRESHOLD = 20
+
+/** 存储结构版本：1 = 旧扁平 BusinessData；2 = 账本容器 BusinessStoreData */
+export const BUSINESS_STORE_SCHEMA_VER = 2
+
+/** 账本 id 前缀 */
+export const LEDGER_ID_PREFIX = 'bl_'
+
+/** 账本年份合法区间（防止手输异常年份） */
+export const LEDGER_YEAR_MIN = 1970
+export const LEDGER_YEAR_MAX = 9999
 
 // ===== 工具 =====
 
@@ -1008,4 +1020,222 @@ export function calcInventorySources(
     })
   }
   return sources.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+}
+
+// ===== 账本（最外层数据容器：按自然年创建，同年唯一） =====
+
+/** 当前自然年（可注入便于单测） */
+export function currentYear(d: Date = new Date()): number {
+  return d.getFullYear()
+}
+
+/** 账本默认名称：「YYYY年账本」 */
+export function ledgerDefaultName(year: number): string {
+  return `${year}年账本`
+}
+
+/** 账本排序：年份倒序（新账本在前） */
+export function sortedLedgers(list: BusinessLedger[]): BusinessLedger[] {
+  return [...list].sort((a, b) => b.year - a.year)
+}
+
+export function findLedgerByYear(list: BusinessLedger[], year: number): BusinessLedger | undefined {
+  return list.find(l => l.year === year)
+}
+
+export function hasLedgerForYear(list: BusinessLedger[], year: number): boolean {
+  return !!findLedgerByYear(list, year)
+}
+
+/** 默认选中：优先当前年账本，其次年份最大的账本 */
+export function pickDefaultLedger(list: BusinessLedger[], year: number = currentYear()): BusinessLedger | undefined {
+  return findLedgerByYear(list, year) ?? sortedLedgers(list)[0]
+}
+
+/** 归一化单个账本：年份非法视为脏数据丢弃，其余字段逐项兜底 */
+export function normalizeLedger(raw: unknown): BusinessLedger | null {
+  if (raw === null || typeof raw !== 'object') return null
+  const l = raw as Record<string, unknown>
+  const rawYear = typeof l.year === 'number' ? l.year : Number(l.year)
+  if (!Number.isFinite(rawYear)) return null
+  const year = Math.floor(rawYear)
+  if (year < LEDGER_YEAR_MIN || year > LEDGER_YEAR_MAX) return null
+  const createdAt = typeof l.createdAt === 'string' && l.createdAt ? l.createdAt : new Date().toISOString()
+  return {
+    id: typeof l.id === 'string' && l.id ? l.id : newId(LEDGER_ID_PREFIX),
+    year,
+    name: (typeof l.name === 'string' && l.name.trim() ? l.name.trim() : ledgerDefaultName(year)).slice(0, 30),
+    createdAt,
+    updatedAt: typeof l.updatedAt === 'string' && l.updatedAt ? l.updatedAt : createdAt,
+    data: normalizeBusinessData(l.data)
+  }
+}
+
+/**
+ * 归一化存储结构（幂等）：
+ * - 新结构（含 ledgers 数组）→ 逐项归一，年份去重，currentLedgerId 失效时回落默认账本
+ * - 旧结构（v1 扁平 BusinessData，无 ledgers）→ 整体迁入一个「当前年账本」，历史数据不丢
+ */
+export function normalizeBusinessStore(raw: unknown): BusinessStoreData {
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { schemaVer: BUSINESS_STORE_SCHEMA_VER, ledgers: [], currentLedgerId: '' }
+  }
+  const r = raw as Record<string, unknown>
+  if (!Array.isArray(r.ledgers)) {
+    // 旧数据迁移：把整个扁平业务数据作为当前年账本的 data
+    const year = currentYear()
+    const now = new Date().toISOString()
+    const ledger: BusinessLedger = {
+      id: newId(LEDGER_ID_PREFIX),
+      year,
+      name: ledgerDefaultName(year),
+      createdAt: now,
+      updatedAt: now,
+      data: normalizeBusinessData(raw)
+    }
+    return { schemaVer: BUSINESS_STORE_SCHEMA_VER, ledgers: [ledger], currentLedgerId: ledger.id }
+  }
+  // 年份去重（同年份保留首个，防御脏数据 / 云端合并）
+  const seen = new Set<number>()
+  const ledgers: BusinessLedger[] = []
+  for (const item of r.ledgers) {
+    const l = normalizeLedger(item)
+    if (!l || seen.has(l.year)) continue
+    seen.add(l.year)
+    ledgers.push(l)
+  }
+  const sorted = sortedLedgers(ledgers)
+  const wanted = typeof r.currentLedgerId === 'string' ? r.currentLedgerId : ''
+  const currentLedgerId = sorted.some(l => l.id === wanted) ? wanted : (pickDefaultLedger(sorted)?.id ?? '')
+  return { schemaVer: BUSINESS_STORE_SCHEMA_VER, ledgers: sorted, currentLedgerId }
+}
+
+export type LedgerOpResult =
+  | { ok: true; reason: 'ok'; ledgers: BusinessLedger[]; ledger: BusinessLedger }
+  | { ok: false; reason: 'invalid-year' | 'empty-name' | 'duplicate' }
+
+/**
+ * 新建账本（同年唯一）：年份非法 / 名称空白 / 年份已存在 均返回失败原因，由 UI 给出明确提示。
+ * 名称可留空（自动用「YYYY年账本」）。不改入参，返回新列表（已按年份倒序）。
+ */
+export function createLedger(list: BusinessLedger[], year: number, name?: string): LedgerOpResult {
+  const rawYear = typeof year === 'number' ? year : Number(year)
+  if (!Number.isFinite(rawYear)) return { ok: false, reason: 'invalid-year' }
+  const y = Math.floor(rawYear)
+  if (y < LEDGER_YEAR_MIN || y > LEDGER_YEAR_MAX) return { ok: false, reason: 'invalid-year' }
+  const trimmed = typeof name === 'string' ? name.trim() : ''
+  if (typeof name === 'string' && name.length > 0 && !trimmed) return { ok: false, reason: 'empty-name' }
+  if (list.some(l => l.year === y)) return { ok: false, reason: 'duplicate' }
+  const now = new Date().toISOString()
+  const ledger: BusinessLedger = {
+    id: newId(LEDGER_ID_PREFIX),
+    year: y,
+    name: (trimmed || ledgerDefaultName(y)).slice(0, 30),
+    createdAt: now,
+    updatedAt: now,
+    data: emptyBusinessData()
+  }
+  return { ok: true, reason: 'ok', ledgers: sortedLedgers([...list, ledger]), ledger }
+}
+
+/** 账本内数据是否有内容（用于空状态文案判断） */
+export function isLedgerEmpty(data: BusinessData): boolean {
+  return (
+    !data.products.length &&
+    !data.purchases.length &&
+    !data.dailyRecords.length &&
+    !data.expenses.length
+  )
+}
+
+// ===== 账本合并（云同步 business.json 用；与 genealogyCore.mergeFamily 一样放在领域 core 内） =====
+
+/** 按 id 并集：本地先入 map，同 id 时远端仅在 tsKey 更新时胜出（本地优先，与云同步 mergeById 同语义） */
+function mergeByIdKeepNewest<T>(local: T[] | undefined, remote: T[] | undefined, idKey: keyof T, tsKey?: keyof T): T[] {
+  const map = new Map<string, T>()
+  for (const item of local ?? []) map.set(String(item[idKey]), item)
+  for (const item of remote ?? []) {
+    const id = String(item[idKey])
+    const existing = map.get(id)
+    if (!existing) {
+      map.set(id, item)
+    } else if (tsKey) {
+      const lTs = existing[tsKey]
+      const rTs = item[tsKey]
+      const rNewer =
+        typeof lTs === 'number' && typeof rTs === 'number'
+          ? rTs > lTs
+          : typeof lTs === 'string' && typeof rTs === 'string'
+            ? rTs > lTs
+            : false
+      if (rNewer) map.set(id, item)
+    }
+  }
+  return [...map.values()]
+}
+
+/** 收摊记录按日期唯一：同 date 只保留 updatedAt（缺失取 createdAt）最新的一条 */
+function dedupeDailyByDate(records: BusinessDailyRecord[]): BusinessDailyRecord[] {
+  const map = new Map<string, BusinessDailyRecord>()
+  for (const item of records) {
+    const existing = map.get(item.date)
+    if (!existing) {
+      map.set(item.date, item)
+      continue
+    }
+    const exTs = existing.updatedAt ?? existing.createdAt ?? ''
+    const ts = item.updatedAt ?? item.createdAt ?? ''
+    if (ts > exTs) map.set(item.date, item)
+  }
+  return [...map.values()]
+}
+
+/** 单个账本内的业务数据合并（分类同 id 取本地；实体按时间戳较新者胜；收摊按日期去重） */
+function mergeLedgerData(l: BusinessData | undefined, r: BusinessData | undefined): BusinessData {
+  return {
+    productCategories: mergeByIdKeepNewest(l?.productCategories, r?.productCategories, 'id'),
+    expenseCategories: mergeByIdKeepNewest(l?.expenseCategories, r?.expenseCategories, 'id'),
+    products: mergeByIdKeepNewest(l?.products, r?.products, 'id', 'createdAt'),
+    purchases: mergeByIdKeepNewest(l?.purchases, r?.purchases, 'id', 'createdAt'),
+    dailyRecords: dedupeDailyByDate(mergeByIdKeepNewest(l?.dailyRecords, r?.dailyRecords, 'id', 'updatedAt')),
+    expenses: mergeByIdKeepNewest(l?.expenses, r?.expenses, 'id', 'createdAt'),
+    // 档口设置是单例对象、无时间戳可比 → 本地优先，缺失时取远端，都没有才回默认
+    settings: l?.settings ?? r?.settings ?? emptyBusinessData().settings
+  }
+}
+
+/**
+ * 账本容器合并（business.json 信封专用，幂等）：
+ * - 两侧先经 normalizeBusinessStore 归一（旧扁平信封自动迁入当年账本），确保拿到的一定是 v2 结构；
+ * - 账本按「年份」并集而非 id —— 不同设备各自创建的同年账本 id 不同，按 id 并集会破坏同年唯一约束；
+ * - 同年账本：外壳取本地（id/name 本地优先），业务数据走 mergeLedgerData 逐字段并集；
+ * - currentLedgerId：本地选中优先，失效回落远端，再回落默认（当前年 → 最大年份）。
+ */
+export function mergeBusinessStore(
+  l: BusinessStoreData | BusinessData | undefined,
+  r: BusinessStoreData | BusinessData | undefined
+): BusinessStoreData {
+  const ll = normalizeBusinessStore(l)
+  const rr = normalizeBusinessStore(r)
+  const byYear = new Map<number, BusinessLedger>()
+  // 本地先入 map → 同年冲突时 existing 恒为本地账本（本地优先）
+  for (const ledger of [...ll.ledgers, ...rr.ledgers]) {
+    const existing = byYear.get(ledger.year)
+    if (!existing) {
+      byYear.set(ledger.year, ledger)
+      continue
+    }
+    byYear.set(ledger.year, {
+      id: existing.id,
+      year: ledger.year,
+      name: existing.name,
+      createdAt: existing.createdAt < ledger.createdAt ? existing.createdAt : ledger.createdAt,
+      updatedAt: existing.updatedAt > ledger.updatedAt ? existing.updatedAt : ledger.updatedAt,
+      data: mergeLedgerData(existing.data, ledger.data)
+    })
+  }
+  const ledgers = sortedLedgers([...byYear.values()])
+  const wanted = ll.currentLedgerId || rr.currentLedgerId || ''
+  const currentLedgerId = ledgers.some(x => x.id === wanted) ? wanted : (pickDefaultLedger(ledgers)?.id ?? '')
+  return { schemaVer: BUSINESS_STORE_SCHEMA_VER, ledgers, currentLedgerId }
 }

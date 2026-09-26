@@ -47,8 +47,8 @@ import { useAppSettingsStore } from '../stores/settings'
 import { useToast } from './useToast'
 import { getStoredSaltHex, getStoredVerification } from './useCrypto'
 import { mergeFamily } from './genealogyCore'
+import { mergeBusinessStore } from './businessCore'
 import type {
-  BusinessData,
   BusinessSyncData,
   Countdown,
   DiaryData,
@@ -608,22 +608,6 @@ function mergeByDateWithMax<T extends { date: string; workSessions: number }>(lo
   return [...map.values()]
 }
 
-/** 用于 diary.entries / business.dailyRecords 的二次去重：同 date 只保留 updatedAt（或 createdAt）最新的一条。 */
-function dedupeByDateKeepNewest<T extends { date: string; updatedAt?: string; createdAt?: string; id: string }>(arr: T[]): T[] {
-  const map = new Map<string, T>()
-  for (const item of arr) {
-    const existing = map.get(item.date)
-    if (!existing) {
-      map.set(item.date, item)
-    } else {
-      const exTs = existing.updatedAt ?? existing.createdAt ?? ''
-      const itemTs = item.updatedAt ?? item.createdAt ?? ''
-      if (itemTs > exTs) map.set(item.date, item)
-    }
-  }
-  return [...map.values()]
-}
-
 /** 多日志本下：同 (journalId, date) 才视为同一天，保留 updatedAt（或 createdAt）最新的一条（避免不同日志本同日条目互相覆盖）。 */
 function dedupeByJournalDateKeepNewest<T extends { journalId?: string; date: string; updatedAt?: string; createdAt?: string; id: string }>(arr: T[]): T[] {
   const map = new Map<string, T>()
@@ -719,16 +703,7 @@ function mergeHabits(l: HabitsData | undefined, r: HabitsData | undefined): Habi
   }
 }
 
-function mergeBusiness(l: BusinessData | undefined, r: BusinessData | undefined): BusinessData {
-  const productCategories = mergeById(l?.productCategories ?? [], r?.productCategories ?? [], 'id')
-  const expenseCategories = mergeById(l?.expenseCategories ?? [], r?.expenseCategories ?? [], 'id')
-  const products = mergeById(l?.products ?? [], r?.products ?? [], 'id', 'createdAt')
-  const purchases = mergeById(l?.purchases ?? [], r?.purchases ?? [], 'id', 'createdAt')
-  const dailyRecords = dedupeByDateKeepNewest(mergeById(l?.dailyRecords ?? [], r?.dailyRecords ?? [], 'id', 'updatedAt'))
-  const expenses = mergeById(l?.expenses ?? [], r?.expenses ?? [], 'id', 'createdAt')
-  const settings = l?.settings ?? r?.settings ?? { stallName: '', lowStockThreshold: 20, monthlyRevenueTarget: 0 }
-  return { productCategories, expenseCategories, products, purchases, dailyRecords, expenses, settings }
-}
+/** business.json：账本容器合并下沉到 businessCore.mergeBusinessStore（账本按年份并集 + 账本内逐字段并集），此处只包装信封 */
 
 function mergePomodoro(l: PomodoroData | undefined, r: PomodoroData | undefined): PomodoroData {
   return {
@@ -890,13 +865,13 @@ function mergeWorkbench(local: WorkbenchSyncData, remote: WorkbenchSyncData): Wo
   }
 }
 
-/** business.json：复用 mergeBusiness，包装信封 */
+/** business.json：复用 mergeBusinessStore（账本按年份并集 + 账本内逐字段并集），包装信封 */
 function mergeBusinessEnvelope(local: BusinessSyncData, remote: BusinessSyncData): BusinessSyncData {
   return {
     version: 1,
     exportedAt: new Date().toISOString(),
     clientId: getClientId(),
-    business: mergeBusiness(local.business, remote.business)
+    business: mergeBusinessStore(local?.business, remote?.business)
   }
 }
 

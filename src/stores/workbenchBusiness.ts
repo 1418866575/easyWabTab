@@ -1,58 +1,115 @@
 import { defineStore } from 'pinia'
-import { ref, toRaw } from 'vue'
+import { computed, ref, toRaw } from 'vue'
 import type {
   BusinessDailyRecord,
   BusinessData,
   BusinessExpense,
   BusinessExpenseCategory,
+  BusinessLedger,
   BusinessProduct,
   BusinessProductCategory,
   BusinessPurchase,
+  BusinessStoreData,
   DailyRecordItem
 } from '@/types'
 import {
   addExpenseCategory as addExpenseCategoryCore,
   addProductCategory as addProductCategoryCore,
+  BUSINESS_STORE_SCHEMA_VER,
   calcDailyRevenue,
+  createLedger as createLedgerCore,
+  currentYear,
   deleteExpenseCategory as deleteExpenseCategoryCore,
   deleteProductCategory as deleteProductCategoryCore,
   emptyBusinessData,
+  hasLedgerForYear,
+  isLedgerEmpty,
+  ledgerDefaultName,
   moveCategory,
   newId,
   normalizeBusinessData,
+  normalizeBusinessStore,
   renameCategory,
+  sortedLedgers,
   toggleCategoryVisible
 } from '@/composables/businessCore'
-import type { CategoryOpResult } from '@/composables/businessCore'
+import type { CategoryOpResult, LedgerOpResult } from '@/composables/businessCore'
 import { idbGet, idbPut } from '../composables/useIdb'
 import { markDirty } from '@/composables/useCloudSync'
 
 // 销售记账 store（数据存 IndexedDB store 'business'，key 'items'；随备份 v7 导出/导入）
+//
+// v2 结构：账本（BusinessLedger）是最外层数据容器，按自然年创建、同年唯一；
+// 所有业务数据挂在「当前账本」的 data 下，切换账本即整体切换数据集。
+// 对外仍暴露与旧版同名的 products / purchases / dailyRecords / expenses / settings / 两类分类，
+// 但它们现在是「指向当前账本」的可写 computed —— 业务面板无需感知账本即可继续工作。
 export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => {
-  const productCategories = ref<BusinessProductCategory[]>(emptyBusinessData().productCategories)
-  const expenseCategories = ref<BusinessExpenseCategory[]>(emptyBusinessData().expenseCategories)
-  const products = ref<BusinessProduct[]>([])
-  const purchases = ref<BusinessPurchase[]>([])
-  const dailyRecords = ref<BusinessDailyRecord[]>([])
-  const expenses = ref<BusinessExpense[]>([])
-  const settings = ref<BusinessData['settings']>({ stallName: '', lowStockThreshold: 20, monthlyRevenueTarget: 0 })
+  const ledgers = ref<BusinessLedger[]>([])
+  const currentLedgerId = ref('')
   // 首屏数据加载态：loadBusiness 完成（成功或失败）后置 true，驱动首页骨架屏
   const loaded = ref(false)
 
+  /** 当前账本（不存在为 null：尚未创建任何账本） */
+  const currentLedger = computed<BusinessLedger | null>(
+    () => ledgers.value.find(l => l.id === currentLedgerId.value) ?? null
+  )
+  /** 当前账本的业务数据（无账本时返回空数据快照，仅供读取兜底） */
+  function currentData(): BusinessData {
+    return currentLedger.value?.data ?? emptyBusinessData()
+  }
+  /** 写回当前账本：更新 data 与 updatedAt（无账本时静默忽略，UI 已由引导拦截） */
+  function patchCurrentData(patch: Partial<BusinessData>): void {
+    const index = ledgers.value.findIndex(l => l.id === currentLedgerId.value)
+    if (index === -1) return
+    const target = toRaw(ledgers.value[index])
+    ledgers.value[index] = {
+      ...target,
+      updatedAt: new Date().toISOString(),
+      data: { ...toRaw(target.data), ...patch }
+    }
+  }
+
+  /** 可写 computed：读当前账本字段，写回当前账本（业务面板零改动的关键） */
+  function ledgerField<K extends keyof BusinessData>(key: K) {
+    return computed<BusinessData[K]>({
+      get: () => currentData()[key],
+      set: (value: BusinessData[K]) => patchCurrentData({ [key]: value } as Partial<BusinessData>)
+    })
+  }
+
+  const productCategories = ledgerField('productCategories')
+  const expenseCategories = ledgerField('expenseCategories')
+  const products = ledgerField('products')
+  const purchases = ledgerField('purchases')
+  const dailyRecords = ledgerField('dailyRecords')
+  const expenses = ledgerField('expenses')
+  const settings = ledgerField('settings')
+
+  // ===== 账本元信息（供视图渲染切换器 / 引导 / 空状态） =====
+  const ledgerList = computed<BusinessLedger[]>(() => sortedLedgers(ledgers.value))
+  const hasLedgers = computed(() => ledgers.value.length > 0)
+  const currentYearLedgerExists = computed(() => hasLedgerForYear(ledgers.value, currentYear()))
+  /** 当前自然年还没有账本：视图据此展示创建引导 / 跨年提示（不允许在无账本时进入业务模块） */
+  const needsCurrentYearLedger = computed(() => !currentYearLedgerExists.value)
+  const currentLedgerName = computed(() => currentLedger.value?.name ?? '')
+  const currentLedgerYear = computed(() => currentLedger.value?.year ?? currentYear())
+  const currentLedgerIsEmpty = computed(() => (currentLedger.value ? isLedgerEmpty(currentLedger.value.data) : true))
+
   async function loadBusiness(): Promise<void> {
     try {
-      // IDB 存量旧结构/脏数据经 normalizeBusinessData 幂等归一（内置支出分类缺失自动补回）
-      const data = normalizeBusinessData(await idbGet<BusinessData>('business'))
-      productCategories.value = data.productCategories
-      expenseCategories.value = data.expenseCategories
-      products.value = data.products
-      purchases.value = data.purchases
-      dailyRecords.value = data.dailyRecords
-      expenses.value = data.expenses
-      settings.value = data.settings
+      // IDB 存量旧结构（扁平 BusinessData）经 normalizeBusinessStore 自动迁入「当前年账本」
+      const raw = await idbGet<BusinessStoreData | BusinessData>('business')
+      // 旧结构（无 ledgers 数组）判定：迁移后立刻落库，保证备份导出/云同步/其它标签页读到的一定是 v2 结构
+      const isLegacy = !raw || typeof raw !== 'object' || !Array.isArray((raw as Record<string, unknown>).ledgers)
+      const store = normalizeBusinessStore(raw)
+      ledgers.value = store.ledgers
+      currentLedgerId.value = store.currentLedgerId
+      if (isLegacy) await saveBusiness()
     } catch (e) {
-      // 加载失败降级为空态（保持种子默认），不向上抛
+      // 加载失败降级为空态（无账本，由引导承接），不向上抛
       console.error('[workbenchBusiness] loadBusiness', e)
+      ledgers.value = []
+      currentLedgerId.value = ''
     } finally {
       loaded.value = true
     }
@@ -60,20 +117,67 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
 
   async function saveBusiness(): Promise<void> {
     try {
-      // 嵌套 reactive 数组必须逐字段 toRaw（整体 toRaw 解不掉内层 Proxy，DataCloneError 实证）
-      await idbPut('business', {
-        productCategories: toRaw(productCategories.value).map((c) => ({ ...toRaw(c) })),
-        expenseCategories: toRaw(expenseCategories.value).map((c) => ({ ...toRaw(c) })),
-        products: toRaw(products.value),
-        purchases: toRaw(purchases.value),
-        dailyRecords: toRaw(dailyRecords.value),
-        expenses: toRaw(expenses.value),
-        settings: toRaw(settings.value)
-      })
+      // 嵌套 reactive 数组必须逐层 toRaw（整体 toRaw 解不掉内层 Proxy，DataCloneError 实证）
+      const raw: BusinessStoreData = {
+        schemaVer: BUSINESS_STORE_SCHEMA_VER,
+        ledgers: toRaw(ledgers.value).map(l => ({
+          ...toRaw(l),
+          data: {
+            productCategories: toRaw(toRaw(l).data.productCategories).map(c => ({ ...toRaw(c) })),
+            expenseCategories: toRaw(toRaw(l).data.expenseCategories).map(c => ({ ...toRaw(c) })),
+            products: toRaw(toRaw(l).data.products),
+            purchases: toRaw(toRaw(l).data.purchases),
+            dailyRecords: toRaw(toRaw(l).data.dailyRecords),
+            expenses: toRaw(toRaw(l).data.expenses),
+            settings: toRaw(toRaw(l).data.settings)
+          }
+        })),
+        currentLedgerId: currentLedgerId.value
+      }
+      await idbPut('business', raw)
       markDirty()
     } catch (e) {
       console.error('[workbenchBusiness] saveBusiness', e)
     }
+  }
+
+  // ===== 账本 CRUD =====
+
+  /** 创建账本（同年唯一）；成功后自动切换为当前账本。失败原因交由 UI 提示 */
+  function createLedger(year: number, name?: string): LedgerOpResult {
+    const r = createLedgerCore(ledgers.value, year, name)
+    if (r.ok) {
+      ledgers.value = r.ledgers
+      currentLedgerId.value = r.ledger.id
+      void saveBusiness()
+    }
+    return r
+  }
+
+  /** 快捷创建当前年账本（引导页 / 跨年提示条使用），已存在则直接切过去 */
+  function ensureCurrentYearLedger(name?: string): LedgerOpResult {
+    const year = currentYear()
+    const existing = ledgers.value.find(l => l.year === year)
+    if (existing) {
+      currentLedgerId.value = existing.id
+      void saveBusiness()
+      return { ok: true, reason: 'ok', ledgers: ledgers.value, ledger: existing }
+    }
+    return createLedger(year, name ?? ledgerDefaultName(year))
+  }
+
+  /** 切换账本：id 无效时保持原状 */
+  function switchLedger(id: string): boolean {
+    if (!ledgers.value.some(l => l.id === id)) return false
+    currentLedgerId.value = id
+    void saveBusiness()
+    return true
+  }
+
+  /** 按年份切换（存在该年账本才切） */
+  function switchLedgerByYear(year: number): boolean {
+    const target = ledgers.value.find(l => l.year === year)
+    return target ? switchLedger(target.id) : false
   }
 
   // ===== 商品分类 CRUD（全部委托 businessCore 纯函数，store 只做薄委托 + 持久化） =====
@@ -337,17 +441,22 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
   }
 
   // ===== 整包导入（销售记账独立 JSON 备份，BusinessView 头部「导入」按钮入口） =====
+  // 兼容两种信封：v2 整包（含 ledgers）→ 替换全部账本；v1 单账本（扁平 BusinessData）→ 覆盖当前账本
   async function importData(raw: unknown): Promise<BusinessData> {
+    const isBundle =
+      raw !== null && typeof raw === 'object' && !Array.isArray(raw) && Array.isArray((raw as Record<string, unknown>).ledgers)
+    if (isBundle) {
+      const bundle = normalizeBusinessStore(raw)
+      ledgers.value = bundle.ledgers
+      currentLedgerId.value = bundle.currentLedgerId
+      await saveBusiness()
+      return currentData()
+    }
     const data = normalizeBusinessData(raw)
-    productCategories.value = data.productCategories
-    expenseCategories.value = data.expenseCategories
-    products.value = data.products
-    purchases.value = data.purchases
-    dailyRecords.value = data.dailyRecords
-    expenses.value = data.expenses
-    settings.value = data.settings
+    if (!currentLedger.value) ensureCurrentYearLedger()
+    patchCurrentData(data)
     await saveBusiness()
-    return data
+    return currentData()
   }
 
   // ===== 设置 =====
@@ -367,6 +476,20 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
   }
 
   return {
+    // 账本（最外层容器）
+    ledgers: ledgerList,
+    currentLedger,
+    currentLedgerId,
+    hasLedgers,
+    needsCurrentYearLedger,
+    currentLedgerName,
+    currentLedgerYear,
+    currentLedgerIsEmpty,
+    createLedger,
+    ensureCurrentYearLedger,
+    switchLedger,
+    switchLedgerByYear,
+    // 当前账本内的业务数据（可写 computed，业务面板无需感知账本）
     productCategories,
     expenseCategories,
     products,

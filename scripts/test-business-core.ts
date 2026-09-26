@@ -1,5 +1,6 @@
 // businessCore.ts 纯函数测试（node --experimental-strip-types 直跑，npm run test:business）
-// T1-T18：归一化/种子分类/内置支出补回/分类 CRUD/库存/日收入/统计/排行/趋势坐标
+// T1-T24：归一化/种子分类/内置支出补回/分类 CRUD/库存/日收入/统计/排行/趋势坐标
+// T25-T32：账本容器（默认名/同年唯一/旧扁平迁移/年份去重/空态/按年份并集合并）
 import assert from 'node:assert/strict'
 import {
   addExpenseCategory,
@@ -16,19 +17,29 @@ import {
   calcPurchaseTotals,
   businessTrendBars,
   compactAmount,
+  createLedger,
+  currentYear,
   deleteExpenseCategory,
   deleteProductCategory,
   emptyBusinessData,
   filterPurchasesByCategory,
+  findLedgerByYear,
+  hasLedgerForYear,
   isCategoryNameTaken,
+  isLedgerEmpty,
   isValidDateKey,
+  ledgerDefaultName,
   lowStockProducts,
+  mergeBusinessStore,
   moveCategory,
   normalizeBusinessData,
+  normalizeBusinessStore,
   normalizeExpenseCategories,
   normalizeProductCategories,
+  pickDefaultLedger,
   renameCategory,
   soldCount,
+  sortedLedgers,
   toggleCategoryVisible,
   visibleExpenseCategories,
   visibleProductCategories
@@ -473,6 +484,155 @@ test('T24 calcBroughtOutTotals', () => {
   assert.ok(!('ghost' in both))
   // 空数组 → {}
   assert.deepEqual(calcBroughtOutTotals([]), {})
+})
+
+// ===== 账本容器（T25-T32） =====
+
+// T25 — 账本基础纯函数：默认名 / 年份查找 / 倒序 / 默认选中（当前年优先，其次最大年份）
+test('T25 ledger basics', () => {
+  assert.equal(currentYear(new Date('2026-03-05T00:00:00Z')), 2026)
+  assert.equal(ledgerDefaultName(2026), '2026年账本')
+  const list = [
+    { id: 'a', year: 2024, name: '2024年账本', createdAt: 'c', updatedAt: 'c', data: emptyBusinessData() },
+    { id: 'b', year: 2026, name: '2026年账本', createdAt: 'c', updatedAt: 'c', data: emptyBusinessData() },
+    { id: 'c', year: 2025, name: '2025年账本', createdAt: 'c', updatedAt: 'c', data: emptyBusinessData() }
+  ]
+  assert.deepEqual(sortedLedgers(list).map(l => l.year), [2026, 2025, 2024])
+  assert.equal(hasLedgerForYear(list, 2025), true)
+  assert.equal(hasLedgerForYear(list, 2027), false)
+  assert.equal(findLedgerByYear(list, 2024)?.id, 'a')
+  // 当前年存在 → 选当前年；不存在 → 年份最大者
+  assert.equal(pickDefaultLedger(list, 2026)?.id, 'b')
+  assert.equal(pickDefaultLedger(list, 2027)?.id, 'b')
+  assert.equal(pickDefaultLedger([], 2027), undefined)
+})
+
+// T26 — createLedger：同年唯一（duplicate）/ 年份非法（invalid-year）/ 名称空白（empty-name）/ 名称留空自动默认
+test('T26 createLedger uniqueness', () => {
+  const empty = emptyBusinessData()
+  const r1 = createLedger([], 2026)
+  assert.equal(r1.ok, true)
+  assert.equal(r1.ok && r1.ledgers.length, 1)
+  assert.equal(r1.ok && r1.ledger.name, '2026年账本')
+  assert.ok(r1.ok && r1.ledger.id.startsWith('bl_'))
+  assert.deepEqual(r1.ok ? r1.ledger.data : null, empty)
+
+  const list = r1.ok ? r1.ledgers : []
+  const dup = createLedger(list, 2026)
+  assert.deepEqual(dup, { ok: false, reason: 'duplicate' })
+  assert.deepEqual(createLedger(list, 0), { ok: false, reason: 'invalid-year' })
+  assert.deepEqual(createLedger(list, Number.NaN), { ok: false, reason: 'invalid-year' })
+  assert.deepEqual(createLedger(list, 2027, '   '), { ok: false, reason: 'empty-name' })
+  const named = createLedger(list, 2027, ' 夜市账本 ')
+  assert.equal(named.ok && named.ledger.name, '夜市账本')
+  assert.deepEqual(named.ok ? named.ledgers.map(l => l.year) : [], [2027, 2026])
+  // 不改入参
+  assert.equal(list.length, 1)
+})
+
+// T27 — normalizeBusinessStore：旧扁平 BusinessData（无 ledgers）整体迁入当年账本，历史数据不丢
+test('T27 normalizeBusinessStore legacy migration', () => {
+  const legacy = buildData()
+  const store = normalizeBusinessStore(legacy)
+  assert.equal(store.schemaVer, 2)
+  assert.equal(store.ledgers.length, 1)
+  assert.equal(store.ledgers[0].year, currentYear())
+  assert.equal(store.ledgers[0].name, ledgerDefaultName(currentYear()))
+  assert.equal(store.currentLedgerId, store.ledgers[0].id)
+  assert.equal(store.ledgers[0].data.products.length, legacy.products.length)
+  assert.equal(store.ledgers[0].data.dailyRecords.length, legacy.dailyRecords.length)
+  // 空态兜底
+  assert.deepEqual(normalizeBusinessStore(undefined), { schemaVer: 2, ledgers: [], currentLedgerId: '' })
+  assert.deepEqual(normalizeBusinessStore(null), { schemaVer: 2, ledgers: [], currentLedgerId: '' })
+  assert.deepEqual(normalizeBusinessStore([1, 2]), { schemaVer: 2, ledgers: [], currentLedgerId: '' })
+})
+
+// T28 — normalizeBusinessStore：年份去重（同年份保留首个）、年份非法丢弃、currentLedgerId 失效回落默认
+test('T28 normalizeBusinessStore dedupe & fallback', () => {
+  const store = normalizeBusinessStore({
+    schemaVer: 2,
+    currentLedgerId: 'ghost',
+    ledgers: [
+      { id: 'l1', year: 2026, name: 'A', createdAt: 'c1', updatedAt: 'c1', data: { products: [{ id: 'p1', name: '苹果' }] } },
+      { id: 'l2', year: 2026, name: 'B', createdAt: 'c2', updatedAt: 'c2', data: { products: [{ id: 'p2', name: '香蕉' }] } },
+      { id: 'l3', year: 1, name: '脏数据', createdAt: 'c3', updatedAt: 'c3', data: {} },
+      { id: 'l4', year: 2025, name: 'C', createdAt: 'c4', updatedAt: 'c4', data: {} }
+    ]
+  })
+  assert.deepEqual(store.ledgers.map(l => l.year), [2026, 2025])
+  assert.equal(store.ledgers[0].id, 'l1')
+  assert.equal(store.ledgers[0].name, 'A')
+  // currentLedgerId 无效 → 回落当前年/最大年份账本
+  assert.equal(store.currentLedgerId, 'l1')
+  const keep = normalizeBusinessStore({ schemaVer: 2, currentLedgerId: 'l4', ledgers: [{ id: 'l4', year: 2025, name: 'C' }] })
+  assert.equal(keep.currentLedgerId, 'l4')
+})
+
+// T29 — isLedgerEmpty：空账本 vs 有任一业务数据
+test('T29 isLedgerEmpty', () => {
+  assert.equal(isLedgerEmpty(emptyBusinessData()), true)
+  const d = buildData()
+  assert.equal(isLedgerEmpty(d), false)
+  assert.equal(isLedgerEmpty({ ...emptyBusinessData(), expenses: d.expenses }), false)
+})
+
+// T30 — mergeBusinessStore：同年不同 id（两台设备各自创建）合并为一个账本，业务数据并集
+test('T30 mergeBusinessStore same year different id', () => {
+  const local = normalizeBusinessStore({
+    schemaVer: 2, currentLedgerId: 'L2026',
+    ledgers: [{ id: 'L2026', year: 2026, name: '本机账本', createdAt: '2026-01-01', updatedAt: '2026-05-01', data: { products: [{ id: 'p1', name: '苹果', sellingPrice: 5, purchasePrice: 3, unit: '斤', active: true }] } }]
+  })
+  const remote = normalizeBusinessStore({
+    schemaVer: 2, currentLedgerId: 'R2026',
+    ledgers: [{ id: 'R2026', year: 2026, name: '云端账本', createdAt: '2026-02-01', updatedAt: '2026-04-01', data: { products: [{ id: 'p2', name: '香蕉', sellingPrice: 4, purchasePrice: 2, unit: '斤', active: true }] } }]
+  })
+  const merged = mergeBusinessStore(local, remote)
+  assert.equal(merged.ledgers.length, 1, '同年账本必须合并为一个')
+  const l = merged.ledgers[0]
+  assert.equal(l.year, 2026)
+  assert.equal(l.id, 'L2026', '外壳取本地（本地优先）')
+  assert.equal(l.name, '本机账本')
+  assert.equal(l.createdAt, '2026-01-01')
+  assert.equal(l.updatedAt, '2026-05-01')
+  assert.deepEqual(l.data.products.map(p => p.id).sort(), ['p1', 'p2'])
+  assert.equal(merged.currentLedgerId, 'L2026')
+})
+
+// T31 — mergeBusinessStore：不同年份取并集并按年份倒序；本地无选中时回落默认账本
+test('T31 mergeBusinessStore union & order', () => {
+  const local = normalizeBusinessStore({
+    schemaVer: 2, currentLedgerId: '',
+    ledgers: [
+      { id: 'L24', year: 2024, name: '2024', createdAt: 'c', updatedAt: 'c', data: {} },
+      { id: 'L26', year: 2026, name: '2026', createdAt: 'c', updatedAt: 'c', data: {} }
+    ]
+  })
+  const remote = normalizeBusinessStore({
+    schemaVer: 2, currentLedgerId: 'R25',
+    ledgers: [{ id: 'R25', year: 2025, name: '2025', createdAt: 'c', updatedAt: 'c', data: {} }]
+  })
+  const merged = mergeBusinessStore(local, remote)
+  assert.deepEqual(merged.ledgers.map(l => l.year), [2026, 2025, 2024])
+  assert.deepEqual(merged.ledgers.map(l => l.id), ['L26', 'R25', 'L24'])
+  assert.equal(merged.currentLedgerId, 'L26', '本地未选中 → 远端 R25 存在但优先回落默认（当前年/最大年份）')
+  // 空对空
+  assert.deepEqual(mergeBusinessStore(undefined, undefined), { schemaVer: 2, ledgers: [], currentLedgerId: '' })
+})
+
+// T32 — mergeBusinessStore：云端旧信封（扁平 BusinessData）→ 迁入当年账本后与本地同年账本合并，不丢数据
+test('T32 mergeBusinessStore legacy envelope', () => {
+  const legacy = buildData()
+  const local = normalizeBusinessStore({
+    schemaVer: 2, currentLedgerId: 'L',
+    ledgers: [{ id: 'L', year: currentYear(), name: '本机', createdAt: 'c', updatedAt: 'c', data: { products: [{ id: 'mine', name: '自有商品', sellingPrice: 1, purchasePrice: 1, unit: '件', active: true }] } }]
+  })
+  const merged = mergeBusinessStore(local, legacy)
+  assert.equal(merged.ledgers.length, 1)
+  const ids = merged.ledgers[0].data.products.map(p => p.id)
+  assert.ok(ids.includes('mine'), '本地商品保留')
+  assert.ok(ids.includes('p1'), '云端旧信封商品迁入')
+  assert.equal(merged.ledgers[0].id, 'L')
+  assert.equal(merged.currentLedgerId, 'L')
 })
 
 let passed = 0

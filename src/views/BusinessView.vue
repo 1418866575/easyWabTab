@@ -11,6 +11,7 @@ import BusinessDaily from '@/components/business/BusinessDaily.vue'
 import BusinessExpenses from '@/components/business/BusinessExpenses.vue'
 import BusinessInventory from '@/components/business/BusinessInventory.vue'
 import BusinessStats from '@/components/business/BusinessStats.vue'
+import BusinessLedgerSwitcher from '@/components/business/BusinessLedgerSwitcher.vue'
 import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
 import PageSwitcher from '@/components/PageSwitcher.vue'
 import Icon from '@/components/Icon.vue'
@@ -18,6 +19,7 @@ import SkeletonBlock from '@/components/SkeletonBlock.vue'
 import { useCloudSync } from '@/composables/useCloudSync'
 import type { SyncStatus } from '@/composables/useCloudSync'
 import { useWorkbenchShortcuts } from '@/composables/useWorkbenchShortcuts'
+import { currentYear, ledgerDefaultName } from '@/composables/businessCore'
 
 const router = useRouter()
 const store = useWorkbenchBusinessStore()
@@ -115,6 +117,39 @@ async function handleSyncNowClick(): Promise<void> {
   syncBusy.value = false
 }
 
+// ===== 账本（最外层数据容器，按自然年唯一） =====
+// 进入流程：加载完成后若「一个账本都没有」→ 阻断式引导，必须先创建当年账本才能进入业务模块；
+// 若已有账本但当前年缺失（跨年首次进入）→ 顶部提示条一键创建，不阻断（避免锁死历史账本数据）。
+const thisYear = currentYear()
+const gateVisible = computed(() => store.loaded && !store.hasLedgers)
+const crossYearBannerVisible = computed(() => store.loaded && store.hasLedgers && store.needsCurrentYearLedger)
+
+const gateYear = ref<number>(thisYear)
+const gateName = ref('')
+const gateError = ref('')
+
+function onCreateFromGate(): void {
+  const year = Number(gateYear.value)
+  const r = store.createLedger(year, gateName.value)
+  if (!r.ok) {
+    gateError.value =
+      r.reason === 'duplicate'
+        ? `${year} 年账本已存在`
+        : r.reason === 'invalid-year'
+          ? '请输入有效年份（1970 - 9999）'
+          : '账本名称不能为空'
+    return
+  }
+  gateError.value = ''
+  gateName.value = ''
+  gateYear.value = thisYear
+}
+
+function onCreateCurrentYear(): void {
+  const r = store.ensureCurrentYearLedger()
+  if (!r.ok && r.reason === 'duplicate') store.switchLedgerByYear(thisYear)
+}
+
 // 首屏初始化占位：数据加载完成前内容区全空且无反馈（加载逻辑本身不变）
 const initializing = ref(true)
 
@@ -138,6 +173,8 @@ onMounted(async () => {
         <span v-if="store.settings.stallName" class="bs-stall-name">{{ store.settings.stallName }}</span>
       </div>
       <div class="bs-header-right">
+        <!-- 账本切换（常驻入口）：有账本时才展示，无账本时由引导页承接 -->
+        <BusinessLedgerSwitcher v-if="store.hasLedgers" />
         <button
           v-if="cloudEnabled"
           class="bs-btn wb-sync-btn"
@@ -153,7 +190,7 @@ onMounted(async () => {
 
     <!-- 主体：左树 + 右内容区 -->
     <div class="bs-body">
-      <nav class="bs-menu" :class="{ collapsed: sidebarCollapsed }">
+      <nav v-if="!gateVisible" class="bs-menu" :class="{ collapsed: sidebarCollapsed }">
         <button
           class="bs-sidebar-toggle"
           data-testid="bs-sidebar-toggle"
@@ -183,7 +220,47 @@ onMounted(async () => {
 
       <main class="bs-content">
         <SkeletonBlock v-if="initializing" :rows="5" label="正在加载销售记账数据" />
+
+        <!-- 无账本：阻断式引导，必须先创建当年账本才能进入 -->
+        <div v-else-if="gateVisible" class="bs-gate" data-testid="bs-ledger-gate">
+          <div class="bs-gate-card">
+            <h2 class="bs-gate-title">还没有账本</h2>
+            <p class="bs-gate-desc">
+              账本是销售记账的最外层容器，按自然年创建、同一年份只有一个。所有商品、进货、收摊、支出都会记在账本下。
+              请先创建 {{ thisYear }} 年账本，再开始记账。
+            </p>
+            <div class="bs-gate-form">
+              <label class="bs-gate-field">
+                年份
+                <input v-model.number="gateYear" type="number" min="1970" max="9999" class="bs-gate-input" data-testid="bs-gate-year" />
+              </label>
+              <label class="bs-gate-field">
+                名称
+                <input
+                  v-model="gateName"
+                  type="text"
+                  maxlength="30"
+                  class="bs-gate-input"
+                  :placeholder="ledgerDefaultName(Number(gateYear) || thisYear)"
+                  data-testid="bs-gate-name"
+                />
+              </label>
+            </div>
+            <p v-if="gateError" class="bs-gate-error" data-testid="bs-gate-error">{{ gateError }}</p>
+            <button type="button" class="bs-btn bs-btn-primary" data-testid="bs-gate-submit" @click="onCreateFromGate">
+              创建并进入
+            </button>
+          </div>
+        </div>
+
         <template v-else>
+          <!-- 跨年首次进入：当前年还没有账本，提示一键创建（不阻断历史账本查看） -->
+          <div v-if="crossYearBannerVisible" class="bs-year-banner" data-testid="bs-cross-year-banner">
+            <span>{{ thisYear }} 年还没有账本，创建后才能记录今年的收支。</span>
+            <button type="button" class="bs-btn bs-btn-primary" data-testid="bs-cross-year-create" @click="onCreateCurrentYear">
+              创建 {{ thisYear }} 年账本
+            </button>
+          </div>
           <BusinessHome v-if="activeSection === 'home'" @navigate="navigateTo" />
           <BusinessProducts v-else-if="activeSection === 'products'" :highlight-id="productFilter" @navigate="navigateTo" />
           <BusinessPurchases v-else-if="activeSection === 'purchases'" :product-filter="purchaseFilter" @navigate="navigateTo" />
@@ -291,6 +368,102 @@ onMounted(async () => {
   background-color: var(--color-bg-card, #ffffff);
   border-right: 1px solid var(--color-border, #e2e8f0);
   transition: width 0.2s ease;
+}
+
+/* ===== 主色按钮（账本引导 / 跨年提示复用） ===== */
+.bs-btn-primary {
+  background-color: var(--color-primary, #3b82f6);
+  color: #fff;
+  border-color: var(--color-primary, #3b82f6);
+}
+
+.bs-btn-primary:hover {
+  background-color: var(--color-primary-hover, #2563eb);
+  color: #fff;
+  border-color: var(--color-primary-hover, #2563eb);
+}
+
+/* ===== 无账本引导（阻断式） ===== */
+.bs-gate {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.bs-gate-card {
+  width: 100%;
+  max-width: 460px;
+  padding: 24px;
+  background-color: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.bs-gate-title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text, #1e293b);
+}
+
+.bs-gate-desc {
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--color-text-secondary, #64748b);
+}
+
+.bs-gate-form {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.bs-gate-field {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-secondary, #64748b);
+}
+
+.bs-gate-input {
+  padding: 8px 10px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--color-text, #1e293b);
+  background-color: var(--color-bg-card, #ffffff);
+}
+
+.bs-gate-input:focus {
+  outline: none;
+  border-color: var(--color-primary, #3b82f6);
+}
+
+.bs-gate-error {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: #ef4444;
+}
+
+/* ===== 跨年提示条（不阻断） ===== */
+.bs-year-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  background-color: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #92400e;
 }
 
 /* 侧栏折叠：56px 仅图标（label 隐藏、图标居中），展开宽度 200px 平滑过渡 */
