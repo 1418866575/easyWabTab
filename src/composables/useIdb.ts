@@ -20,7 +20,8 @@ import { emptyPomodoroData } from './pomodoroCore'
 import { normalizeTeacherData } from './teacherCore'
 
 export const DB_NAME = 'easy-web-tab'
-export const DB_VERSION = 17
+/** v18：新增 `nav` object store，承载原 localStorage 的导航偏好（13 键），根治移动端 localStorage 被系统回收导致导航数据丢失 */
+export const DB_VERSION = 18
 /** 核心 9 store：随 JSON 备份导出/导入（v6 新增 business；v15 新增 family 家谱） */
 export const IDB_CORE_STORES = ['todos', 'notes', 'diary', 'countdowns', 'passwords', 'health', 'ledger', 'settings', 'business', 'family'] as const
 /** 辅助 store：pomodoro/habits 随 v5 备份导出/导入；snapshots 仅本地使用，不参与备份 */
@@ -45,6 +46,8 @@ export const IDB_STUDENT_STORES = [
 ] as const
 /** 教师工作台 store（v17 新增：teacher_workbench 单对象，含学期×班级全部分组数据） */
 export const IDB_TEACHER_STORES = ['teacher_workbench'] as const
+/** 导航偏好 store（v18 新增：原 localStorage 13 键整体迁移，根治移动端被系统回收导致导航数据丢失） */
+export const IDB_NAV_STORES = ['nav'] as const
 export const IDB_KEY = 'items'
 
 export type IdbStore =
@@ -53,6 +56,7 @@ export type IdbStore =
   | (typeof IDB_ICONS_STORES)[number]
   | (typeof IDB_STUDENT_STORES)[number]
   | (typeof IDB_TEACHER_STORES)[number]
+  | (typeof IDB_NAV_STORES)[number]
 
 let dbPromise: Promise<IDBDatabase> | undefined
 
@@ -68,7 +72,8 @@ export function openIdb(): Promise<IDBDatabase> {
           ...IDB_AUX_STORES,
           ...IDB_ICONS_STORES,
           ...IDB_STUDENT_STORES,
-          ...IDB_TEACHER_STORES
+          ...IDB_TEACHER_STORES,
+          ...IDB_NAV_STORES
         ]) {
           if (!db.objectStoreNames.contains(name)) {
             db.createObjectStore(name) // 无 keyPath → out-of-line 键 'items'
@@ -150,26 +155,88 @@ export const WORKBENCH_PREFS_KEYS = [
   'help-ack-count'
 ] as const
 
-/** 打包 localStorage 偏好为 Record<string, string>；idbExportAll 直接调用 */
-export function packPrefsFromLocalStorage(): Record<string, string> {
+/**
+ * 导航偏好键（v18 起由 localStorage 迁移至 IDB `nav` store 的整体集合，共 13 键）。
+ * 涵盖：站点/分类/搜索引擎/主题/背景/站点标题与图标/点击计数/图标缓存等所有原 localStorage 导航键。
+ * 注意：`site-click-counts` 与 `icon-cache` 不在 WORKBENCH_PREFS_KEYS 中（历史上从未进云同步信封），
+ * 故仅迁 IDB 做持久化，不参与 nav.json / workbench.json 信封（保持迁移前行为）。
+ */
+export const NAV_STORE_KEYS = [
+  'user-sites',
+  'site-click-counts',
+  'user-categories',
+  'user-deleted-legacy-ids',
+  'user-search-engines',
+  'user-deleted-engine-ids',
+  'built-in-engine-overrides',
+  'built-in-engine-default',
+  'user-theme',
+  'user-background',
+  'site-title',
+  'site-favicon',
+  'icon-cache'
+] as const
+
+/** 导航键中属于云同步信封的子集（WORKBENCH_PREFS_KEYS 的导航部分，共 10 键），用于 nav.json / workbench.json 打包 */
+export const NAV_SYNC_KEYS = [
+  'user-sites',
+  'user-categories',
+  'user-deleted-legacy-ids',
+  'user-search-engines',
+  'built-in-engine-overrides',
+  'built-in-engine-default',
+  'user-theme',
+  'user-background',
+  'site-title',
+  'site-favicon'
+] as const
+
+/** `nav` store 值结构：所有导航键 → JSON 字符串 */
+export type NavPrefsRecord = Record<string, string>
+
+/** 导航同步键集合（用于按来源分别读写，避免触碰非导航 prefs） */
+const NAV_SYNC_KEY_SET = new Set<string>(NAV_SYNC_KEYS)
+/**
+ * 打包同步偏好（workbench.json 信封用）：导航键读 `nav` IDB store，其余非导航 prefs 仍读 localStorage，
+ * 以保证信封契约与迁移前完全一致（10 导航键 + 6 非导航键）。idbExportAll 直接调用。
+ */
+export async function packPrefsFromIdb(): Promise<Record<string, string>> {
   const out: Record<string, string> = {}
+  const navRecord = (await idbGet<NavPrefsRecord>('nav')) ?? {}
+  for (const k of NAV_SYNC_KEYS) {
+    const v = navRecord[k]
+    if (v !== undefined) out[k] = v
+  }
   for (const k of WORKBENCH_PREFS_KEYS) {
+    if (NAV_SYNC_KEY_SET.has(k)) continue // 导航键已自 nav store 读取
     const v = localStorage.getItem(k)
     if (v !== null) out[k] = v
   }
   return out
 }
 
-/** 从 WorkbenchData.prefs 回写 localStorage；idbImportAll 事务成功后调用 */
-export function applyPrefsToLocalStorage(prefs: Record<string, string> | undefined): void {
+/**
+ * 从 workbench.json 信封回写：导航键写 `nav` IDB store，其余非导航 prefs 写 localStorage。
+ * idbImportAll 事务成功后调用。缺失的导航键会从 nav store 删除（等同旧 removeItem 语义）。
+ */
+export async function applyPrefsToIdb(prefs: Record<string, string> | undefined): Promise<void> {
   if (!prefs) return
-  for (const k of WORKBENCH_PREFS_KEYS) {
+  const navRecord: NavPrefsRecord = (await idbGet<NavPrefsRecord>('nav')) ?? {}
+  let navChanged = false
+  for (const k of NAV_SYNC_KEYS) {
     const v = prefs[k]
     if (v !== undefined) {
-      localStorage.setItem(k, v)
-    } else {
-      localStorage.removeItem(k)
+      if (navRecord[k] !== v) { navRecord[k] = v; navChanged = true }
+    } else if (k in navRecord) {
+      delete navRecord[k]; navChanged = true
     }
+  }
+  if (navChanged) await idbPut('nav', navRecord)
+  for (const k of WORKBENCH_PREFS_KEYS) {
+    if (NAV_SYNC_KEY_SET.has(k)) continue // 导航键已写 nav store
+    const v = prefs[k]
+    if (v !== undefined) localStorage.setItem(k, v)
+    else localStorage.removeItem(k)
   }
 }
 
@@ -205,7 +272,7 @@ export async function idbExportAll(): Promise<WorkbenchData> {
     family: family ?? emptyGenealogyData(),
     passwordsSalt: getStoredSaltHex() ?? undefined,
     passwordVerification: getStoredVerification() ?? undefined,
-    prefs: packPrefsFromLocalStorage()
+    prefs: await packPrefsFromIdb()
   }
 }
 
@@ -286,9 +353,9 @@ export async function idbImportAll(data: WorkbenchData): Promise<{ adoptedPasswo
   if (adoptedPasswordIdentity && backupSalt && backupVerification) {
     adoptPasswordIdentity(backupSalt, backupVerification)
   }
-  // v9 prefs 回写 localStorage（事务成功后再回写，失败不影响 localStorage）
+  // v9 prefs 回写（事务成功后再回写，失败不影响 localStorage）：导航键 → nav store，非导航键 → localStorage
   const hasPrefs = typeof data.prefs === 'object' && data.prefs !== null && Object.keys(data.prefs).length > 0
-  if (hasPrefs) applyPrefsToLocalStorage(data.prefs)
+  if (hasPrefs) await applyPrefsToIdb(data.prefs)
   return { adoptedPasswordIdentity, appliedPrefs: hasPrefs }
 }
 
@@ -326,18 +393,33 @@ function pickLocalCloudSyncSettings(local: AppSettingsData | undefined): Partial
   return picked as Partial<AppSettingsData>
 }
 
-// ---------- nav.json（localStorage 偏好打包） ----------
+// ---------- nav.json（v18 起偏好存 IDB `nav` store） ----------
 
-export function exportNav(): NavSyncData {
+/** 从 nav store 打包导航同步信封（仅含 10 个导航同步键，site-click-counts/icon-cache 不进信封） */
+export async function exportNav(): Promise<NavSyncData> {
+  const navRecord = (await idbGet<NavPrefsRecord>('nav')) ?? {}
+  const prefs: Record<string, string> = {}
+  for (const k of NAV_SYNC_KEYS) {
+    const v = navRecord[k]
+    if (v !== undefined) prefs[k] = v
+  }
   return {
     version: 1,
     exportedAt: new Date().toISOString(),
-    prefs: packPrefsFromLocalStorage()
+    prefs
   }
 }
 
-export function importNavData(remote: NavSyncData): void {
-  applyPrefsToLocalStorage(remote?.prefs)
+/** 把远端导航信封写回 nav store（仅写 10 个导航同步键，不影响非导航 localStorage） */
+export async function importNavData(remote: NavSyncData): Promise<void> {
+  if (!remote || !remote.prefs) return
+  const navRecord: NavPrefsRecord = (await idbGet<NavPrefsRecord>('nav')) ?? {}
+  for (const k of NAV_SYNC_KEYS) {
+    const v = remote.prefs[k]
+    if (v !== undefined) navRecord[k] = v
+    else if (k in navRecord) delete navRecord[k]
+  }
+  await idbPut('nav', navRecord)
 }
 
 // ---------- icons.json（v11 起存 IDB 'icons' object store，值为 CustomIcon[] 数组；首次从 localStorage 迁移） ----------

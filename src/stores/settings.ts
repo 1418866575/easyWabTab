@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed, toRaw } from 'vue'
 import { idbGet, idbPut, idbClear } from '@/composables/useIdb'
 import { markDirty } from '@/composables/useCloudSync'
+import { getPref, setPref } from '@/composables/useNavPrefs'
 import {
   WORKBENCH_MENU_DEFAULT_ORDER,
   WORKBENCH_MENU_KEYS,
@@ -908,19 +909,19 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   }
 
   /**
-   * 从 localStorage 读入站点外观并应用。
+   * 从 nav store 读入站点外观并应用。
    * App 启动（initSettings 末尾）与云同步拉取 nav.json 后各调用一次，幂等。
    */
   function initSiteMeta() {
-    siteTitle.value = localStorage.getItem(SITE_TITLE_KEY) ?? ''
-    siteFavicon.value = localStorage.getItem(SITE_FAVICON_KEY) ?? ''
+    siteTitle.value = getPref(SITE_TITLE_KEY) ?? ''
+    siteFavicon.value = getPref(SITE_FAVICON_KEY) ?? ''
     applySiteMeta()
   }
 
   /** 设置站点名称（浏览器标签标题）：trim 后空串 = 恢复默认「网页导航」 */
   function setSiteTitle(v: string) {
     siteTitle.value = v
-    localStorage.setItem(SITE_TITLE_KEY, v)
+    setPref(SITE_TITLE_KEY, v)
     markDirty()
     applySiteMeta()
   }
@@ -928,7 +929,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   /** 设置站点图标（data URL 或相对路径；空串 = 恢复默认 vite.svg） */
   function setSiteFavicon(v: string) {
     siteFavicon.value = v
-    localStorage.setItem(SITE_FAVICON_KEY, v)
+    setPref(SITE_FAVICON_KEY, v)
     markDirty()
     applySiteMeta()
   }

@@ -2,7 +2,7 @@
  * 云同步 composable（WebDAV + v10 多文件同步信封）
  *
  * 6 份独立信封：nav.json / icons.json / workbench.json / business.json / student.json / teacher.json
- *   - nav.json：localStorage 偏好打包（user-sites/categories/engines/theme/countdown-* 等）
+ *   - nav.json：导航偏好（存 IDB nav store；user-sites/categories/engines/theme/background 等）
  *   - icons.json：自定义图标（localStorage user-custom-icons）
  *   - workbench.json：工作台核心 9 store（不含 business；settings 不含 cloudSync* 5 字段）
  *   - business.json：销售记账独立信封
@@ -43,6 +43,7 @@ import {
   exportTeacher,
   importTeacherData
 } from './useIdb'
+import { useNavPrefs } from './useNavPrefs'
 import { useAppSettingsStore } from '../stores/settings'
 import { useToast } from './useToast'
 import { getStoredSaltHex, getStoredVerification } from './useCrypto'
@@ -1108,23 +1109,8 @@ async function reloadStudentStores(): Promise<void> {
 }
 
 async function reloadNavStores(): Promise<void> {
-  // Nav prefs 写入 localStorage 后刷新消费 store（loadSites 内部会 loadGames；
-  // categories/engines 等无 reload 方法的 store 由页面刷新或下次渲染自然刷新）
-  try {
-    const [{ useSitesStore }, { useThemeStore }] = await Promise.all([
-      import('../stores/sites'),
-      import('../stores/theme')
-    ])
-    await useSitesStore().loadSites()
-    // 主题选择经 nav.json 的 user-theme 同步；拉取写回 localStorage 后须重新应用，
-    // 否则跨设备 / 云同步拉取后主题不会切换（initTheme 仅在 App 启动调用一次，幂等可重复）
-    useThemeStore().initTheme()
-    // 站点外观（标签标题 + favicon）经 nav.json 的 site-title / site-favicon 同步，同上须重应用
-    // （settings store 顶部已静态导入，此处直接调用，勿改成动态导入否则触发打包警告）
-    useAppSettingsStore().initSiteMeta()
-  } catch {
-    // store 未就绪（如首次同步早于组件树挂载）→ 静默跳过，下次访问会从 localStorage 自然读取
-  }
+  // nav.json 拉取写回 nav store（IndexedDB）后，统一刷新各消费 store（站点/主题/背景/站点外观）
+  await useNavPrefs().refreshAfterImport()
 }
 
 async function reloadIconsStores(): Promise<void> {
@@ -1162,7 +1148,7 @@ const FILE_CONFIGS: FileConfig[] = [
   {
     name: 'nav.json',
     exportLocal: () => exportNav(),
-    importRemote: async (data) => { importNavData(data as NavSyncData); return undefined },
+    importRemote: async (data) => { await importNavData(data as NavSyncData); return undefined },
     signature: (data) => sigNav(data as NavSyncData),
     merge: (l, r) => mergeNav(l as NavSyncData, r as NavSyncData),
     reload: reloadNavStores,

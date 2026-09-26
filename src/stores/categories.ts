@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import type { Category } from '../types'
 import { DEFAULT_CATEGORIES } from '../types'
 import { markDirty } from '@/composables/useCloudSync'
+import { getPref, setPref } from '@/composables/useNavPrefs'
 
 const STORAGE_KEY = 'user-categories'
 const DELETED_LEGACY_KEY = 'user-deleted-legacy-ids'
@@ -15,18 +16,18 @@ const LEGACY_CATEGORIES: Category[] = [
 
 // 加载用户已删除的遗留分类 ID 集合
 function loadDeletedLegacyIds(): Set<string> {
-  const raw = localStorage.getItem(DELETED_LEGACY_KEY)
+  const raw = getPref(DELETED_LEGACY_KEY)
   return raw ? new Set(JSON.parse(raw)) : new Set()
 }
 
 function saveDeletedLegacyIds(ids: Set<string>) {
-  localStorage.setItem(DELETED_LEGACY_KEY, JSON.stringify([...ids]))
+  setPref(DELETED_LEGACY_KEY, JSON.stringify([...ids]))
 }
 
 export const useCategoriesStore = defineStore('categories', () => {
-  // Load custom categories from localStorage
+  // 从 nav store 加载自定义分类
   const customCategories = ref<Category[]>(
-    JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+    JSON.parse(getPref(STORAGE_KEY) || '[]')
   )
 
   // 已删除的遗留分类 ID（防止迁移重新添加）
@@ -48,9 +49,9 @@ export const useCategoriesStore = defineStore('categories', () => {
   }
   saveCustomCategories()
 
-  // Persist to localStorage
+  // Persist to nav store
   function saveCustomCategories() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(customCategories.value))
+    setPref(STORAGE_KEY, JSON.stringify(customCategories.value))
     markDirty()
   }
 

@@ -16,6 +16,7 @@ import {
 } from '../composables/useDeadLinkChecker'
 import { scheduleAutoBackup } from '../composables/useBackup'
 import { markDirty } from '@/composables/useCloudSync'
+import { getPref, setPrefNow } from '@/composables/useNavPrefs'
 
 export const useSitesStore = defineStore('sites', () => {
   const sites = ref<Site[]>([])
@@ -239,11 +240,11 @@ export const useSitesStore = defineStore('sites', () => {
       const content = await response.text()
       const { sites: builtInSites } = parseSitesFromMarkdown(content)
 
-      // 获取 localStorage 数据
-      const savedData = localStorage.getItem('user-sites')
+      // 从 nav store 读取用户站点
+      const savedData = getPref('user-sites')
       const savedSites: Site[] = savedData ? JSON.parse(savedData) : []
 
-      // 使用 Map 合并数据，localStorage 优先
+      // 使用 Map 合并数据，nav store 优先
       const sitesMap = new Map<string, Site>()
 
       // 先添加内置数据
@@ -251,7 +252,7 @@ export const useSitesStore = defineStore('sites', () => {
         sitesMap.set(site.url, site)
       }
 
-      // 再添加 localStorage 数据（会覆盖同名 URL）
+      // 再添加 nav store 数据（会覆盖同名 URL）
       for (const site of savedSites) {
         sitesMap.set(site.url, site)
       }
@@ -401,13 +402,13 @@ export const useSitesStore = defineStore('sites', () => {
       saveTimer = null
     }
     try {
-      localStorage.setItem('user-sites', JSON.stringify(sites.value))
+      setPrefNow('user-sites', JSON.stringify(sites.value))
     } catch {
-      // 配额不足等异常保持原行为（原先同样会抛出）
+      // 配额不足等异常保持原行为（IDB 写入失败由 setPrefNow 内部 catch 静默）
     }
     if (pendingClickCountsWrite) {
       try {
-        localStorage.setItem('site-click-counts', JSON.stringify(clickCountsCache ?? {}))
+        setPrefNow('site-click-counts', JSON.stringify(clickCountsCache ?? {}))
       } catch {
         // 同上
       }
@@ -454,7 +455,7 @@ export const useSitesStore = defineStore('sites', () => {
     if (clickCountsCache) return clickCountsCache
     let counts: Record<string, number>
     try {
-      const data = localStorage.getItem('site-click-counts')
+      const data = getPref('site-click-counts')
       // JSON.parse 返回 any，直接赋给闭包变量会让 TS 把类型放宽回 Record | null
       counts = data ? (JSON.parse(data) as Record<string, number>) : {}
     } catch {
@@ -594,16 +595,16 @@ ${sitesList}
       console.log(`[Import] 倒计时：导入 ${cdResult.imported} 条，跳过 ${cdResult.skipped} 条`)
     }
     
-    // 获取现有的 localStorage 数据
-    const existingData = localStorage.getItem('user-sites')
+    // 获取现有的 nav store 数据
+    const existingData = getPref('user-sites')
     const existingSites: Site[] = existingData ? JSON.parse(existingData) : []
-    
-    // 建立 URL 到站点的映射（只检查 localStorage 中的用户数据）
+
+    // 建立 URL 到站点的映射（只检查 nav store 中的用户数据）
     const existingMap = new Map(existingSites.map(s => [s.url, s]))
-    
+
     let added = 0
     let skipped = 0
-    
+
     // 合并数据：新数据中 URL 不存在的才添加
     for (const site of validSites) {
       if (!existingMap.has(site.url)) {
@@ -614,9 +615,9 @@ ${sitesList}
         skipped++
       }
     }
-    
-    // 保存到 localStorage
-    localStorage.setItem('user-sites', JSON.stringify(existingSites))
+
+    // 保存到 nav store（立即落盘，确保 loadSites 重载前已持久）
+    setPrefNow('user-sites', JSON.stringify(existingSites))
     
     // 重新加载数据以更新显示
     loadSites()

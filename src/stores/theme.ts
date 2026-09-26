@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { markDirty } from '@/composables/useCloudSync'
+import { getPref, setPref } from '@/composables/useNavPrefs'
 
 const THEME_STORAGE_KEY = 'user-theme'
 const BG_STORAGE_KEY = 'user-background'
@@ -85,7 +86,7 @@ export const useThemeStore = defineStore('theme', () => {
   // 初始化主题
   const initTheme = () => {
     updateSystemPrefers()
-    const saved = localStorage.getItem(THEME_STORAGE_KEY)
+    const saved = getPref(THEME_STORAGE_KEY)
     if (saved && THEMES.some(t => t.id === saved)) {
       currentThemeId.value = saved
     } else if (saved === 'light' || saved === 'dark' || saved === 'dark-blue') {
@@ -102,7 +103,7 @@ export const useThemeStore = defineStore('theme', () => {
   function setTheme(id: string) {
     if (!THEMES.some(t => t.id === id)) return
     currentThemeId.value = id
-    localStorage.setItem(THEME_STORAGE_KEY, id)
+    setPref(THEME_STORAGE_KEY, id)
     markDirty()
     applyTheme()
   }
@@ -189,8 +190,8 @@ export const useThemeStore = defineStore('theme', () => {
 
   // 初始化背景
   const initBackground = () => {
-    // 从 localStorage 读取背景设置
-    const saved = localStorage.getItem(BG_STORAGE_KEY)
+    // 从 nav store 读取背景设置
+    const saved = getPref(BG_STORAGE_KEY)
     if (saved) {
       try {
         const data = JSON.parse(saved)
@@ -205,7 +206,7 @@ export const useThemeStore = defineStore('theme', () => {
     applyBackground()
   }
 
-  // 保存背景设置到 localStorage
+  // 保存背景设置到 nav store
   function saveBackgroundSettings() {
     const data = {
       type: backgroundType.value,
@@ -213,7 +214,7 @@ export const useThemeStore = defineStore('theme', () => {
       opacity: backgroundOpacity.value,
       customs: customBackgrounds.value
     }
-    localStorage.setItem(BG_STORAGE_KEY, JSON.stringify(data))
+    setPref(BG_STORAGE_KEY, JSON.stringify(data))
     markDirty()
   }
 

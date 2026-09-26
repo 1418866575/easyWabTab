@@ -16,6 +16,7 @@ import {
 import { useSitesStore } from '../stores/sites'
 import { useCategoriesStore } from '../stores/categories'
 import { useSearchEnginesStore } from '../stores/searchEngines'
+import { useNavPrefs } from '@/composables/useNavPrefs'
 
 const emit = defineEmits(['close'])
 
@@ -60,15 +61,14 @@ const handleRestore = async (backup: BackupData) => {
   loading.value = true
   try {
     const data = restoreFromBackup(backup)
-
-    // 恢复网站数据
-    localStorage.setItem('user-sites', JSON.stringify(data.sites))
-
-    // 恢复分类数据
-    localStorage.setItem('user-categories', JSON.stringify(data.categories))
-
-    // 恢复搜索引擎
-    localStorage.setItem('user-search-engines', JSON.stringify(data.searchEngines))
+    const nav = useNavPrefs()
+    // 确保内存已有全量 nav 数据，setPref 合并而非覆盖其它键
+    await nav.ensureLoaded()
+    nav.setPref('user-sites', JSON.stringify(data.sites))
+    nav.setPref('user-categories', JSON.stringify(data.categories))
+    nav.setPref('user-search-engines', JSON.stringify(data.searchEngines))
+    // 立即落盘，确保 reload 前已写入 nav store（IndexedDB）
+    await nav.flushNow()
 
     // 刷新页面以加载新数据
     toastAlert('恢复成功！页面将刷新。')

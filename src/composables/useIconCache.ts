@@ -1,7 +1,10 @@
 /**
  * 图标缓存服务
- * 将获取到的网站图标 base64 存入 localStorage，避免重复请求
+ * 将获取到的网站图标 base64 存入 nav store（IndexedDB），避免重复请求，
+ * 同时规避 localStorage ~5MB 配额瓶颈（图标缓存可达 MB 级）
  */
+
+import { getPref, setPref } from '@/composables/useNavPrefs'
 
 const ICON_CACHE_KEY = 'icon-cache'
 const CACHE_EXPIRY_DAYS = 30
@@ -28,7 +31,7 @@ function getCache(): IconCache {
   if (memoryCache) return memoryCache
   let cache: IconCache
   try {
-    const raw = localStorage.getItem(ICON_CACHE_KEY)
+    const raw = getPref(ICON_CACHE_KEY)
     // JSON.parse 返回 any，直接赋给模块级变量会让 TS 把类型放宽回 IconCache | null
     cache = raw ? (JSON.parse(raw) as IconCache) : {}
   } catch {
@@ -42,15 +45,15 @@ function getCache(): IconCache {
  * 保存缓存到 localStorage
  */
 function saveCache(cache: IconCache): void {
-  // 同步内存副本，让后续读取直接命中，不再重复解析 localStorage
+  // 同步内存副本，让后续读取直接命中，不再重复解析 nav store
   memoryCache = cache
   try {
-    localStorage.setItem(ICON_CACHE_KEY, JSON.stringify(cache))
+    setPref(ICON_CACHE_KEY, JSON.stringify(cache))
   } catch {
     // 存储满时清理过期项
     cleanExpiredCache()
     try {
-      localStorage.setItem(ICON_CACHE_KEY, JSON.stringify(cache))
+      setPref(ICON_CACHE_KEY, JSON.stringify(cache))
     } catch {
       // 仍然失败，忽略
     }
@@ -92,7 +95,7 @@ export function cacheIcon(domain: string, dataUrl: string): void {
   }
   // 检查大小，超限时清理最旧的
   try {
-    localStorage.setItem(ICON_CACHE_KEY, JSON.stringify(cache))
+    setPref(ICON_CACHE_KEY, JSON.stringify(cache))
   } catch {
     // 超出容量，删除最旧的
     const entries = Object.entries(cache).sort((a, b) => a[1].timestamp - b[1].timestamp)
@@ -101,7 +104,7 @@ export function cacheIcon(domain: string, dataUrl: string): void {
     for (const [key] of toDelete) {
       delete cache[key]
     }
-    localStorage.setItem(ICON_CACHE_KEY, JSON.stringify(cache))
+    setPref(ICON_CACHE_KEY, JSON.stringify(cache))
   }
 }
 

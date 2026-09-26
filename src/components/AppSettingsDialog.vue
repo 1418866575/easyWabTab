@@ -13,7 +13,7 @@ import type { WorkbenchMenuItem } from '@/composables/workbenchMenuCore'
 import { useAppSettingsDialog } from '@/composables/useAppSettingsDialog'
 import type { SettingsTarget } from '@/composables/useAppSettingsDialog'
 import { useToast } from '@/composables/useToast'
-import { idbGet, idbPut, idbImportAll, idbExportAll, idbClear, IDB_STUDENT_STORES, IDB_CORE_STORES, IDB_AUX_STORES, IDB_ICONS_STORES, WORKBENCH_PREFS_KEYS } from '@/composables/useIdb'
+import { idbGet, idbPut, idbImportAll, idbExportAll, idbClear, IDB_STUDENT_STORES, IDB_CORE_STORES, IDB_AUX_STORES, IDB_ICONS_STORES } from '@/composables/useIdb'
 import { localDateKey } from '@/composables/businessCore'
 import { isEmailConfigured, buildEmailParams } from '@/composables/reminderCore'
 import { sendReminderEmail } from '@/composables/reminderEmail'
@@ -48,6 +48,7 @@ import type { WorkbenchData } from '@/types'
 import { COUNTDOWN_CATEGORIES } from '@/types'
 import { categoryLabel } from '@/composables/countdownCore'
 import { useCloudSync } from '@/composables/useCloudSync'
+import { useNavPrefs } from '@/composables/useNavPrefs'
 import {
   useHomeLayout,
   LAYOUT_CONTAINERS,
@@ -832,7 +833,8 @@ async function doClear() {
       for (const st of allStores) {
         try { await idbClear(st) } catch { /* 忽略单 store 失败，继续清其余 */ }
       }
-      for (const k of WORKBENCH_PREFS_KEYS) localStorage.removeItem(k)
+      // 清空导航偏好（nav store + 残留 localStorage prefs，含 6 个非导航 prefs 与迁移前残留键）
+      await useNavPrefs().clearAll()
       // 清云同步本地状态（clientId / dirty / 各信封 remoteTs / 上次同步时间）
       Object.keys(localStorage)
         .filter(k => k.startsWith('ewt.cloudSync.') || k === 'easy-web-tab-client-id' || k === 'easy-web-tab-last-sync' || k === 'easy-web-tab-dirty')

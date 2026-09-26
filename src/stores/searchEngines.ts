@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { markDirty } from '@/composables/useCloudSync'
+import { getPref, setPref } from '@/composables/useNavPrefs'
 
 export interface SearchEngine {
   id: string
@@ -18,12 +19,12 @@ const DELETED_ENGINE_IDS_KEY = 'user-deleted-engine-ids'
 
 // 加载用户已删除的默认引擎 ID 集合
 function loadDeletedEngineIds(): Set<string> {
-  const raw = localStorage.getItem(DELETED_ENGINE_IDS_KEY)
+  const raw = getPref(DELETED_ENGINE_IDS_KEY)
   return raw ? new Set(JSON.parse(raw)) : new Set()
 }
 
 function saveDeletedEngineIds(ids: Set<string>) {
-  localStorage.setItem(DELETED_ENGINE_IDS_KEY, JSON.stringify([...ids]))
+  setPref(DELETED_ENGINE_IDS_KEY, JSON.stringify([...ids]))
 }
 
 // 默认内置搜索引擎 (不可删除)
@@ -40,9 +41,9 @@ const DEFAULT_ENGINES: SearchEngine[] = [
 ]
 
 export const useSearchEnginesStore = defineStore('searchEngines', () => {
-  // 从 localStorage 加载自定义引擎
+  // 从 nav store 加载自定义引擎
   const customEngines = ref<SearchEngine[]>(
-    JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') || []
+    JSON.parse(getPref(STORAGE_KEY) || 'null') || []
   )
 
   // 已删除的默认引擎 ID（防止迁移重新添加）
@@ -77,14 +78,14 @@ export const useSearchEnginesStore = defineStore('searchEngines', () => {
   }
   saveEngines()
 
-  // 从 localStorage 加载内置引擎 URL 覆盖
+  // 从 nav store 加载内置引擎 URL 覆盖
   const builtInOverrides = ref<Record<string, string>>(
-    JSON.parse(localStorage.getItem(BUILT_IN_OVERRIDES_KEY) || '{}')
+    JSON.parse(getPref(BUILT_IN_OVERRIDES_KEY) || '{}')
   )
 
   // 内置引擎默认设置
   const builtInDefault = ref<string>(
-    localStorage.getItem(BUILT_IN_OVERRIDES_STORAGE_KEY) || 'baidu'
+    getPref(BUILT_IN_OVERRIDES_STORAGE_KEY) || 'baidu'
   )
 
   // 获取带覆盖的完整内置引擎列表
@@ -120,13 +121,13 @@ export const useSearchEnginesStore = defineStore('searchEngines', () => {
 
   // 持久化自定义引擎
   function saveEngines() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(customEngines.value))
+    setPref(STORAGE_KEY, JSON.stringify(customEngines.value))
     markDirty()
   }
 
   // 持久化内置引擎覆盖
   function saveBuiltInOverrides() {
-    localStorage.setItem(BUILT_IN_OVERRIDES_KEY, JSON.stringify(builtInOverrides.value))
+    setPref(BUILT_IN_OVERRIDES_KEY, JSON.stringify(builtInOverrides.value))
     markDirty()
   }
 
@@ -188,7 +189,7 @@ export const useSearchEnginesStore = defineStore('searchEngines', () => {
     if (BUILT_IN_ENGINES.some(e => e.id === id)) {
       // 设置内置引擎为默认
       builtInDefault.value = id
-      localStorage.setItem(BUILT_IN_OVERRIDES_STORAGE_KEY, id)
+      setPref(BUILT_IN_OVERRIDES_STORAGE_KEY, id)
       return
     }
     // 设置自定义引擎为默认
