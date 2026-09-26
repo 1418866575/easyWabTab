@@ -3,7 +3,7 @@
 // P1-3：跨模块联动跳转（商品名可点击跳转进货页）
 // P2-2：商品详情抽屉
 import { computed, nextTick, ref, watch } from 'vue'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { calcMarkupRate, calcProductSummary, findProductCategory, formatYuanOf, sortProducts, visibleProductCategories } from '@/composables/businessCore'
 import { useToast } from '@/composables/useToast'
@@ -80,7 +80,7 @@ function startAdd(): void {
   showDialog.value = true
 }
 
-async function startEdit(p: BusinessProduct): void {
+function startEdit(p: BusinessProduct): void {
   editingId.value = p.id
   formName.value = p.name
   formCategoryId.value = p.categoryId ?? ''

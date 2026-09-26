@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 销售记账共享分类管理弹框（product 商品分类 / expense 支出分类 双模式，页面 ⚙️ 与设置弹窗 tab 复用）
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { useToast } from '@/composables/useToast'
 import Icon from '@/components/Icon.vue'
@@ -85,7 +85,7 @@ function onMove(id: string, dir: 'up' | 'down'): void {
   handleResult(r)
 }
 
-async function onDelete(id: string): void {
+async function onDelete(id: string): Promise<void> {
   const target = list.value.find(c => c.id === id)
   if (!await showConfirm(`确定要删除分类「${target?.name ?? ''}」吗？`)) return
   const r = isProduct.value ? store.deleteProductCategory(id) : store.deleteExpenseCategory(id)

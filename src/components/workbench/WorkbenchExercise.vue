@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { injectHealthStore, type HealthStoreLike } from '@/composables/healthStoreContext'
 import { calcExerciseAttainment, calcYearDistanceTotals } from '@/composables/healthCore'
@@ -72,7 +72,7 @@ const isTargetValid = computed(() => {
   return Number.isFinite(t) && t > 0
 })
 
-async function openTargetDialog(): void {
+function openTargetDialog(): void {
   const plan = store.plans.exercise
   formMetric.value =
     plan && METRIC_OPTIONS.some(o => o.value === plan.metric) ? plan.metric : 'times'
@@ -80,7 +80,7 @@ async function openTargetDialog(): void {
   showTargetDialog.value = true
 }
 
-async function closeTargetDialog(): void {
+function closeTargetDialog(): void {
   showTargetDialog.value = false
 }
 
@@ -173,7 +173,7 @@ function startEditRecord(id: string): void {
   showRecordDialog.value = true
 }
 
-async function cancelRecordForm(): void {
+function cancelRecordForm(): void {
   showRecordDialog.value = false
   editingId.value = null
 }

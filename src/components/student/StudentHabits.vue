@@ -8,7 +8,7 @@
 // 5. 卡片栅格/行高与成人 WorkbenchHabits 完全一致（minmax(300px,1fr)，rowHeight 330，自适应每页条数）
 
 import { computed, onMounted, ref, watch } from 'vue'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import { useStudentHabitsStore } from '@/stores/studentHabits'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
 import { useToast } from '@/composables/useToast'
@@ -145,7 +145,7 @@ function openEditDialog(id: string): void {
   showEditDialog.value = true
 }
 
-async function closeEditDialog(): void {
+function closeEditDialog(): void {
   showEditDialog.value = false
   editingId.value = null
 }
@@ -229,7 +229,7 @@ function openRecordAdd(): void {
   recordDialogVisible.value = true
 }
 
-async function openRecordEdit(r: { id: string }): void {
+function openRecordEdit(r: { id: string }): void {
   const rec = store.records.find(x => x.id === r.id)
   if (!rec) return
   recordEditingId.value = rec.id

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -102,7 +102,7 @@ function openEditDialog(id: string): void {
   showEditDialog.value = true
 }
 
-async function closeEditDialog(): void {
+function closeEditDialog(): void {
   showEditDialog.value = false
   editingId.value = null
 }

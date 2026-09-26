@@ -26,13 +26,16 @@ let memoryCache: IconCache | null = null
  */
 function getCache(): IconCache {
   if (memoryCache) return memoryCache
+  let cache: IconCache
   try {
     const raw = localStorage.getItem(ICON_CACHE_KEY)
-    memoryCache = raw ? JSON.parse(raw) : {}
+    // JSON.parse 返回 any，直接赋给模块级变量会让 TS 把类型放宽回 IconCache | null
+    cache = raw ? (JSON.parse(raw) as IconCache) : {}
   } catch {
-    memoryCache = {}
+    cache = {}
   }
-  return memoryCache
+  memoryCache = cache
+  return cache
 }
 
 /**

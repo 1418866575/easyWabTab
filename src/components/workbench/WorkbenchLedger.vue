@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -298,7 +298,7 @@ function startEdit(view: EntryView): void {
   showDialog.value = true
 }
 
-async function cancelForm(): void {
+function cancelForm(): void {
   showDialog.value = false
   editingId.value = null
 }

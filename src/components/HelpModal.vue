@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { toastAlert } from '@/utils/dialog'
 import Icon from './Icon.vue'
 import { useAppSettingsStore } from '@/stores/settings'
 import { incrementHelpAckCount } from '../composables/useHelpModal'

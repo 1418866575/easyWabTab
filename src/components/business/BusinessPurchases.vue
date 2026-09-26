@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -146,7 +146,7 @@ function startAdd(): void {
   showDialog.value = true
 }
 
-async function startEdit(p: BusinessPurchase): void {
+function startEdit(p: BusinessPurchase): void {
   editingId.value = p.id
   formProductId.value = p.productId
   formDate.value = p.date

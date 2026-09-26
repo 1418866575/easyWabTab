@@ -5,7 +5,7 @@
 // 复用 countdownCore 的 calcRemaining/sortCountdowns/filterCountdowns/repeatLabel/categoryLabel
 
 import { computed, onMounted, ref, watch } from 'vue'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import { useStudentExamStore } from '@/stores/studentExam'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
 import { useToast } from '@/composables/useToast'
@@ -141,7 +141,7 @@ function closeEditDialog(): void {
   editingId.value = null
 }
 
-async function buildRepeat(): CountdownRepeat | null {
+function buildRepeat(): CountdownRepeat | null {
   return formRepeatType.value === 'yearly' ? { type: 'yearly' } : null
 }
 

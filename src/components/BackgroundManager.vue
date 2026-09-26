@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { toastAlert } from '@/utils/dialog'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useThemeStore, type BackgroundType, type CustomBackground } from '../stores/theme'
 

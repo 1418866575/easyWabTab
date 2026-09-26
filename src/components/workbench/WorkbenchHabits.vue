@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
 import { useToast } from '@/composables/useToast'
 import { localToday } from '@/composables/todoCore'
@@ -92,7 +92,7 @@ function openEditDialog(id: string): void {
   showEditDialog.value = true
 }
 
-async function closeEditDialog(): void {
+function closeEditDialog(): void {
   showEditDialog.value = false
   editingId.value = null
 }

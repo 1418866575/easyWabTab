@@ -5,7 +5,7 @@
 // 间隔序列：1/2/4/7/15/30 天，6 阶段，末阶段自动标记掌握
 
 import { computed, onMounted, ref, watch } from 'vue'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import { useStudentReviewStore } from '@/stores/studentReview'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
 import { useToast } from '@/composables/useToast'
@@ -74,7 +74,7 @@ function openAddDialog(): void {
   showEditDialog.value = true
 }
 
-async function openEditDialog(id: string): void {
+function openEditDialog(id: string): void {
   const r = store.entries.find(x => x.id === id)
   if (!r) return
   editingId.value = r.id
@@ -85,7 +85,7 @@ async function openEditDialog(id: string): void {
   showEditDialog.value = true
 }
 
-async function closeEditDialog(): void {
+function closeEditDialog(): void {
   showEditDialog.value = false
   editingId.value = null
 }

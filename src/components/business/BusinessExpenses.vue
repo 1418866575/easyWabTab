@@ -133,7 +133,7 @@ function addRow(): void {
   rows.push(emptyRow())
 }
 
-async function removeRow(i: number): void {
+function removeRow(i: number): void {
   rows.splice(i, 1)
 }
 

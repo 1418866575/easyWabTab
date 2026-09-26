@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import { useWorkbenchDiaryStore } from '@/stores/workbenchDiary'
 import { dateKeyOf, diaryDateLabel, findDiaryByDate, DIARY_MOODS, diaryMoodOf } from '@/composables/diaryCore'
 import { useDiaryCategoriesStore } from '@/stores/diaryCategories'
@@ -49,7 +49,7 @@ const draftImageUrls = computed<string[]>(() => {
   return out
 })
 // 从草稿中移除第 index 张内联图片（连同其 markdown 标记），并压缩多余空行
-async function removeDraftImage(index: number): void {
+function removeDraftImage(index: number): void {
   const re = /!\[[^\]]*\]\((data:image\/[^)\s]+)\)/g
   let i = -1
   draft.value = draft.value.replace(re, (mm) => {
@@ -85,7 +85,7 @@ const filteredEntries = computed<WorkbenchDiary[]>(() => {
 // 高度链 .dj-history{flex:1;min-height:0} → .dj-grid{flex:1;min-height:0} 约束滚动容器，避免内容被分页藏起。
 
 // ===== 日期切换（统一脏检查入口：日期输入 / 今日按钮 / 卡片点击）=====
-async function selectDate(dateKey: string): void {
+async function selectDate(dateKey: string): Promise<void> {
   if (dateKey === selectedDate.value) return
   if (isDirty.value && !await showConfirm('当前内容未保存，确定切换日期？')) return
   selectedDate.value = dateKey
@@ -114,7 +114,7 @@ function handleToday(): void {
   selectDate(todayKey)
 }
 
-async function onCardPreviewClick(e: MouseEvent): void {
+function onCardPreviewClick(e: MouseEvent): void {
   const t = e.target as Element | null
   if (t && t.closest('a')) e.stopPropagation()
 }

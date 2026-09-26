@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -225,7 +225,7 @@ function startEdit(note: WorkbenchNote): void {
   formOpen.value = true
 }
 
-async function cancelForm(): void {
+function cancelForm(): void {
   formOpen.value = false
 }
 
@@ -352,11 +352,11 @@ function startEditEntry(noteId: string, entry: TimelineEntry): void {
   entryEditContent.value = entry.content
 }
 
-async function cancelEditEntry(): void {
+function cancelEditEntry(): void {
   editingEntry.value = null
 }
 
-async function canSaveEntry(): boolean {
+function canSaveEntry(): boolean {
   return isValidDatetime(entryEditDatetime.value.trim()) && entryEditContent.value.trim().length > 0
 }
 

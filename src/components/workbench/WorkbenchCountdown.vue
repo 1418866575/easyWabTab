@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import Icon from '../Icon.vue'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useCountdownsStore, calcRemaining } from '@/stores/countdowns'
 import { useViewMode } from '@/composables/useViewMode'
@@ -214,7 +214,7 @@ function startEdit(item: CountdownItem): void {
   showDialog.value = true
 }
 
-async function cancelForm(): void {
+function cancelForm(): void {
   showDialog.value = false
   editingId.value = null
 }

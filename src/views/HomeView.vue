@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, watchEffect, defineAsyncComponent } from 'vue'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import { useRouter, useRoute } from 'vue-router'
 import type { Site } from '../types'
 import SiteCard from '../components/SiteCard.vue'
@@ -235,7 +235,7 @@ const visibleSites = computed(() => {
   if (!isMobilePaging.value) return filteredSites.value
   return filteredSites.value.slice(0, mobileRenderLimit.value)
 })
-async function maybeLoadMore(): void {
+function maybeLoadMore(): void {
   if (!isMobilePaging.value) return
   const doc = document.documentElement
   const nearBottom = doc.scrollHeight - window.scrollY - window.innerHeight < 600
@@ -293,7 +293,7 @@ const filterCountText = computed(() => {
   return hasAnyFilter.value ? `筛选出 ${shown} / ${total} 个` : `共 ${total} 个`
 })
 
-async function clearAllFilters(): void {
+function clearAllFilters(): void {
   store.clearFilters()
   store.showOnlyInvalid = false
   siteFilter.value = ''

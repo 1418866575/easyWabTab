@@ -38,7 +38,7 @@ import Icon from '@/components/Icon.vue'
 import SkeletonBlock from '@/components/SkeletonBlock.vue'
 import { useCloudSync } from '@/composables/useCloudSync'
 import type { SyncStatus } from '@/composables/useCloudSync'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 
 const studentStore = useStudentSettingsStore()
 const settingsStore = useAppSettingsStore()

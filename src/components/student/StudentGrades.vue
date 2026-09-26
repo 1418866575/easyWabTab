@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -171,7 +171,7 @@ async function saveDialog(): Promise<void> {
   }
 }
 
-async function gradeErrorMsg(reason?: string): string {
+function gradeErrorMsg(reason?: string): string {
   switch (reason) {
     case 'empty': return '考试名称不能为空'
     case 'invalid-date': return '考试日期格式不正确'

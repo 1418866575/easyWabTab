@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -179,11 +179,11 @@ function startEdit(record: BusinessDailyRecord): void {
   showDialog.value = true
 }
 
-async function addRow(): void {
+function addRow(): void {
   rows.push(emptyRow())
 }
 
-async function removeRow(index: number): void {
+function removeRow(index: number): void {
   rows.splice(index, 1)
 }
 

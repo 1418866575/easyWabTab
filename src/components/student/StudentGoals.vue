@@ -4,7 +4,7 @@
 // 数据：useStudentGoalsStore（独立 IDB store 'student_goals'，严格隔离）
 
 import { computed, onMounted, ref, watch } from 'vue'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import { useViewMode } from '@/composables/useViewMode'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
@@ -162,7 +162,7 @@ function openEditDialog(id: string): void {
   showEditDialog.value = true
 }
 
-async function closeEditDialog(): void {
+function closeEditDialog(): void {
   showEditDialog.value = false
   editingId.value = null
 }

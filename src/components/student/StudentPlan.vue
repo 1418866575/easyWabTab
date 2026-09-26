@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -151,7 +151,7 @@ function removeGoalInput(idx: number): void {
   dialogGoalInputs.value.splice(idx, 1)
 }
 
-async function onTypeChange(e: Event): void {
+function onTypeChange(e: Event): void {
   const val = (e.target as HTMLSelectElement).value as StudentPlanType
   dialogType.value = val
   if (editingId.value === null) {

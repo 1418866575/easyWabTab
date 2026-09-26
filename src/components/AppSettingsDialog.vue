@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { reactive, ref, computed, onMounted, onUnmounted, watch, nextTick, toRaw } from 'vue'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import {
   useAppSettingsStore,
   DIALOG_LABELS,
@@ -848,14 +848,14 @@ async function doClear() {
 const snapshotList = ref<SnapshotWithSource[]>([])
 const snapshotBusy = ref(false)
 
-async function snapshotTime(createdAt: string): string {
+function snapshotTime(createdAt: string): string {
   const d = new Date(createdAt)
   const p = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
 }
 
 // 来源展示：手动快照/自动快照（旧记录缺 source 回退「自动」）
-async function snapshotSourceLabel(s: SnapshotRecord): string {
+function snapshotSourceLabel(s: SnapshotRecord): string {
   return (s as SnapshotWithSource).source === 'manual' ? '手动' : '自动'
 }
 
@@ -1133,7 +1133,7 @@ function handleBizExport(): void {
     toast.error('导出失败')
   }
 }
-async function handleBizImportClick(): void {
+function handleBizImportClick(): void {
   bizImportInput.value?.click()
 }
 async function handleBizImportFile(event: Event): Promise<void> {
@@ -1197,7 +1197,7 @@ const studentGradeOptions = computed<string[]>(() => {
   return cur && !base.includes(cur) ? [cur, ...base] : base
 })
 
-async function onStudentGradeChange(val: string | null): void {
+function onStudentGradeChange(val: string | null): void {
   studentStore.setGrade(val ?? '')
 }
 
@@ -1217,7 +1217,7 @@ async function onStudentStageSwitch(newStage: StudentStage): Promise<void> {
   }
 }
 
-async function onStudentNicknameCommit(): void {
+function onStudentNicknameCommit(): void {
   const input = studentNicknameInput.value
   if (!input) return
   const name = input.value.trim()
@@ -1225,7 +1225,7 @@ async function onStudentNicknameCommit(): void {
   toast.success(name ? `昵称已更新为「${name}」` : '昵称已清空')
 }
 
-async function onStudentAddSubject(): void {
+function onStudentAddSubject(): void {
   const name = studentNewSubject.value.trim()
   if (!name) return
   const ok = studentStore.addSubject(name)
@@ -1237,14 +1237,14 @@ async function onStudentAddSubject(): void {
   }
 }
 
-async function onStudentRemoveSubject(name: string): void {
+async function onStudentRemoveSubject(name: string): Promise<void> {
   if (!await showConfirm(`删除学科「${name}」？\n已有作业/复习/错题记录不会自动迁移到其他学科。`)) return
   const ok = studentStore.removeSubject(name)
   if (ok) toast.success(`已删除学科「${name}」`)
   else toast.error('删除失败')
 }
 
-async function onStudentResetMenu(): void {
+async function onStudentResetMenu(): Promise<void> {
   if (!await showConfirm('恢复学生菜单为当前学段默认顺序与可见性？')) return
   studentStore.resetMenu()
   toast.success('学生菜单已恢复默认')
@@ -1257,7 +1257,7 @@ function onStudentMoveMenu(key: string, dir: 'up' | 'down'): void {
   }
 }
 
-async function onStudentRenameMenu(key: string): void {
+function onStudentRenameMenu(key: string): void {
   // 简易内联改名：使用 prompt（避免引入额外弹窗组件）
   const current = studentStore.menuLabels[key] ?? ''
   const next = window.prompt('请输入菜单名称', current)
@@ -1266,7 +1266,7 @@ async function onStudentRenameMenu(key: string): void {
   if (!r.ok && r.reason === 'empty') toast.error('名称不能为空')
 }
 
-async function onStudentToggleMenu(key: string, visible: boolean): void {
+function onStudentToggleMenu(key: string, visible: boolean): void {
   studentStore.setMenuVisibility(key, visible)
 }
 
@@ -1388,7 +1388,7 @@ function revertTodoCatName(name: string): void {
   todoCatDrafts[name] = name
 }
 
-async function handleAddTodoCat(): void {
+function handleAddTodoCat(): void {
   const name = newTodoCatName.value.trim()
   if (!name) return
   const res = todosCatStore.addCategory(name)
@@ -1400,7 +1400,7 @@ async function handleAddTodoCat(): void {
   newTodoCatName.value = ''
 }
 
-async function handleDeleteTodoCat(name: string): void {
+async function handleDeleteTodoCat(name: string): Promise<void> {
   if (!await showConfirm(`确定要删除待办分类「${name}」吗？该分类下的待办将变为未分类`)) return
   const res = todosCatStore.deleteCategory(name)
   if (!res.ok) {
@@ -1439,7 +1439,7 @@ function revertCdCatName(name: string): void {
   cdCatDrafts[name] = name
 }
 
-async function handleAddCdCat(): void {
+function handleAddCdCat(): void {
   const name = newCdCatName.value.trim()
   if (!name) return
   const res = countdownsCatStore.addCustomCategory(name)
@@ -1451,7 +1451,7 @@ async function handleAddCdCat(): void {
   newCdCatName.value = ''
 }
 
-async function handleDeleteCdCat(name: string): void {
+async function handleDeleteCdCat(name: string): Promise<void> {
   if (!await showConfirm(`确定要删除倒计时分类「${name}」吗？该分类下的倒计时将变为未分类`)) return
   const res = countdownsCatStore.deleteCustomCategory(name)
   if (!res.ok) {
@@ -1490,7 +1490,7 @@ async function commitNoteCatName(cat: { id: string; name: string }): Promise<voi
   }
 }
 
-async function revertNoteCatName(cat: { id: string; name: string }): void {
+function revertNoteCatName(cat: { id: string; name: string }): void {
   noteCatDrafts[cat.id] = cat.name
 }
 
@@ -1610,7 +1610,7 @@ async function ledgerCatStartEdit(c: { id: string; name: string; type: 'income' 
   ledgerCatDrafts[c.id] = c.name
   ledgerCatEditType[c.id] = c.type
 }
-async function ledgerCatCancelEdit(): void { ledgerCatEditingId.value = null }
+function ledgerCatCancelEdit(): void { ledgerCatEditingId.value = null }
 
 async function ledgerCatSave(id: string): Promise<void> {
   if (ledgerCatEditingId.value !== id) return

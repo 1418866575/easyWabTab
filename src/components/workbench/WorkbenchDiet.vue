@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -53,13 +53,13 @@ const isTargetValid = computed(() => {
   return Number.isFinite(t) && t > 0
 })
 
-async function openTargetDialog(): void {
+function openTargetDialog(): void {
   const plan = store.plans.diet
   formTarget.value = plan ? String(plan.target) : ''
   showTargetDialog.value = true
 }
 
-async function closeTargetDialog(): void {
+function closeTargetDialog(): void {
   showTargetDialog.value = false
 }
 
@@ -151,7 +151,7 @@ function startEditRecord(id: string): void {
   showRecordDialog.value = true
 }
 
-async function cancelRecordForm(): void {
+function cancelRecordForm(): void {
   showRecordDialog.value = false
   editingId.value = null
 }

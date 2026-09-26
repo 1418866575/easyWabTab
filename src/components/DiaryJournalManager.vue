@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import { useWorkbenchDiaryStore } from '../stores/workbenchDiary'
 import { useToast } from '../composables/useToast'
 import { DEFAULT_JOURNAL_ID } from '../composables/diaryCore'

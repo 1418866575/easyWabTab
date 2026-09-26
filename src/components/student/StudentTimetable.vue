@@ -7,7 +7,7 @@
 // K 段菜单默认关闭此面板；P/J 段空表，用户自填
 
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import { useStudentTimetableStore } from '@/stores/studentTimetable'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
 import { useToast } from '@/composables/useToast'
@@ -238,7 +238,7 @@ const TIMETABLE_ERROR_MESSAGES: Record<string, string> = {
   'invalid-time': '时间格式错误或结束时间需晚于开始时间',
   'not-found': '课程不存在'
 }
-async function timetableErrorToast(result: { ok: boolean; reason?: string }): void {
+function timetableErrorToast(result: { ok: boolean; reason?: string }): void {
   if (result.ok) return
   toast.error(TIMETABLE_ERROR_MESSAGES[result.reason ?? ''] ?? '操作失败')
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import { useViewMode } from '@/composables/useViewMode'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 import RecordsCard from '@/components/common/RecordsCard.vue'
@@ -206,7 +206,7 @@ function startEdit(m: FamilyMember): void {
   showMemberDialog.value = true
 }
 
-async function cancelMember(): void {
+function cancelMember(): void {
   showMemberDialog.value = false
   editingId.value = null
 }

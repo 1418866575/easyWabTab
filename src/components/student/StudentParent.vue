@@ -4,7 +4,7 @@
 // （容器样式参考个人工作台健康管理 WorkbenchHealth.vue 的 tabs 容器）
 
 import { ref, computed, onMounted, watch } from 'vue'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import { useStudentParentTasksStore, type ParentTaskOpError } from '@/stores/studentParentTasks'
 import { useStudentHabitsStore } from '@/stores/studentHabits'
 import { useStudentHomeworkStore } from '@/stores/studentHomework'

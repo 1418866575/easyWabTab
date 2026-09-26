@@ -452,13 +452,16 @@ export const useSitesStore = defineStore('sites', () => {
   // 加载点击计数
   function loadClickCounts(): Record<string, number> {
     if (clickCountsCache) return clickCountsCache
+    let counts: Record<string, number>
     try {
       const data = localStorage.getItem('site-click-counts')
-      clickCountsCache = data ? JSON.parse(data) : {}
+      // JSON.parse 返回 any，直接赋给闭包变量会让 TS 把类型放宽回 Record | null
+      counts = data ? (JSON.parse(data) as Record<string, number>) : {}
     } catch {
-      clickCountsCache = {}
+      counts = {}
     }
-    return clickCountsCache
+    clickCountsCache = counts
+    return counts
   }
 
   function saveUserSites() {

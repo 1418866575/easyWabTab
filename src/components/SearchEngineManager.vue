@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import { ref, computed } from 'vue'
 import { useSearchEnginesStore } from '../stores/searchEngines'
 import type { SearchEngine } from '../stores/searchEngines'

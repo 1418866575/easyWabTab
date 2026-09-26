@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import { usePasswordsStore } from '@/stores/passwords'
 import type { PasswordSaveResult } from '@/stores/passwords'
 import { useSitesStore } from '@/stores/sites'
@@ -60,7 +60,7 @@ async function handleUnlock(): Promise<void> {
   }
 }
 
-async function handleLock(): void {
+function handleLock(): void {
   passwordsStore.lock()
   masterPasswordInput.value = ''
   masterPasswordConfirm.value = ''
@@ -286,7 +286,7 @@ function cancelForm(): void {
  * 密码改动会立即主动推送云端，所以"同步成功"必须如实告知；
  * 推送失败也要讲清楚——否则用户会以为什么都好了，下次拉取被云端覆盖才发现丢了。
  */
-async function toastSaved(verb: string, r: PasswordSaveResult): void {
+function toastSaved(verb: string, r: PasswordSaveResult): void {
   if (r.synced) toast.success(`${verb}成功，已同步到云端`)
   else if (r.cloudEnabled) toast.warning(`${verb}成功，但云同步失败，请稍后手动同步`)
   else toast.success(`${verb}成功`)
