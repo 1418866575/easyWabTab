@@ -16,7 +16,7 @@ import {
   formatYuanOf,
   localDateKey
 } from '@/composables/businessCore'
-import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
+import { exportXlsx } from '@/composables/xlsxExport'
 
 const store = useWorkbenchBusinessStore()
 
@@ -133,8 +133,8 @@ function pick(row: { revenue: number; profit: number; memberRevenue: number; mem
 }
 const memberPriceCount = computed(() => productProfit.value.filter(r => r.hasMemberPrice).length)
 
-/** 导出当前毛利报表 CSV */
-function exportProfitCsv(): void {
+/** 导出当前毛利报表 Excel（按商品 / 按分类，跟随当前口径） */
+function exportProfitExcel(): void {
   if (reportMode.value === 'product') {
     const headers = ['商品', '分类', '单位', '售出数量', '营业额', '成本', '毛利', '毛利率', '会员价模拟营业额', '会员价模拟毛利']
     const rows = productProfit.value.map(r => [
@@ -149,7 +149,7 @@ function exportProfitCsv(): void {
       r.memberRevenue.toFixed(2),
       r.memberProfit.toFixed(2)
     ])
-    downloadCsv(csvFileName('商品毛利报表'), buildCsv(headers, rows))
+    void exportXlsx('商品毛利报表', headers, rows)
     return
   }
   const headers = ['分类', '售出数量', '营业额', '成本', '毛利', '毛利率', '会员价模拟营业额', '会员价模拟毛利']
@@ -163,11 +163,11 @@ function exportProfitCsv(): void {
     r.memberRevenue.toFixed(2),
     r.memberProfit.toFixed(2)
   ])
-  downloadCsv(csvFileName('分类毛利报表'), buildCsv(headers, rows))
+  void exportXlsx('分类毛利报表', headers, rows)
 }
 
-/** 导出近 12 个月数据 CSV（当前口径） */
-function exportMonthlyCsv(): void {
+/** 导出近 12 个月数据 Excel（当前口径） */
+function exportMonthlyExcel(): void {
   const headers = ['月份', '营业额', '成本', '利润', '支出', '交易笔数', '收摊天数', '会员价模拟营业额', '会员价模拟毛利']
   const rows = monthlyStats.value.map(m => [
     m.label,
@@ -180,7 +180,7 @@ function exportMonthlyCsv(): void {
     m.memberRevenue.toFixed(2),
     m.memberProfit.toFixed(2)
   ])
-  downloadCsv(csvFileName(`${ledgerYear.value}年月度报表`), buildCsv(headers, rows))
+  void exportXlsx(`${ledgerYear.value}年月度报表`, headers, rows)
 }
 
 /** 打印报表（隐藏页面框架与操作按钮，仅保留报表内容） */
@@ -360,7 +360,7 @@ function printReport(): void {
               <el-radio-button value="member" data-testid="bizstats-month-member">会员价模拟</el-radio-button>
             </el-radio-group>
           </div>
-          <el-button class="btn-export-csv" size="small" data-testid="bizstats-month-export" @click="exportMonthlyCsv">导出 CSV</el-button>
+          <el-button class="btn-export-xlsx" size="small" data-testid="bizstats-month-export" @click="exportMonthlyExcel">导出 Excel</el-button>
         </div>
       </div>
       <div class="bizstats-month-bars" data-testid="bizstats-month-bars">
@@ -401,7 +401,7 @@ function printReport(): void {
               <el-radio-button value="member" data-testid="bizstats-price-member">会员价模拟</el-radio-button>
             </el-radio-group>
           </div>
-          <el-button class="btn-export-csv" size="small" data-testid="bizstats-profit-export" @click="exportProfitCsv">导出 CSV</el-button>
+          <el-button class="btn-export-xlsx" size="small" data-testid="bizstats-profit-export" @click="exportProfitExcel">导出 Excel</el-button>
           <el-button size="small" data-testid="bizstats-profit-print" @click="printReport">打印</el-button>
         </div>
       </div>

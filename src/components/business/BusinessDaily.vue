@@ -26,7 +26,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { calcDailyCostFifo, calcDailyItemDetails, calcDailyLossAmount, calcDailyRevenue, calcFifoAllocation, calcInventory, checkRevenueOverride, dailyTemplateFromLast, findProduct, formatYuanOf, lastDailyBefore, localDateKey, sortDailyRecords, validateDailyRows } from '@/composables/businessCore'
 import { useToast } from '@/composables/useToast'
-import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
+import { exportXlsx } from '@/composables/xlsxExport'
 import type { BusinessDailyRecord, DailyRecordItem } from '@/types'
 import { usePageSize } from '@/composables/usePageSize'
 
@@ -77,8 +77,8 @@ function dailyItemDetails(record: BusinessDailyRecord) {
   return calcDailyItemDetails(record, store.products)
 }
 
-// ===== 一键导出 CSV（收摊记录：按「日期 × 商品」展开，便于 Excel 透视）=====
-function exportDailyCsv(): void {
+// ===== 一键导出 Excel（收摊记录：按「日期 × 商品」展开，便于透视）=====
+function exportDailyExcel(): void {
   const headers = ['日期', '商品', '带出', '售出', '损耗', '单价', '小计', '当日营业额', '交易笔数']
   const rows: (string | number)[][] = []
   for (const rec of sorted.value) {
@@ -100,7 +100,7 @@ function exportDailyCsv(): void {
       rows.push([rec.date, '（无商品明细）', '', '', '', '', '', rec.totalRevenue.toFixed(2), rec.transactionCount ?? ''])
     }
   }
-  downloadCsv(csvFileName('收摊记录'), buildCsv(headers, rows))
+  void exportXlsx('收摊记录', headers, rows)
 }
 
 // ===== 编辑弹框（动态商品行） =====
@@ -299,7 +299,7 @@ async function handleDelete(id: string): Promise<void> {
     <div class="ewt-table-toolbar is-split">
       <div class="bizday-toolbar-left">
         <el-button type="primary" data-testid="bizday-add" @click="startAdd">＋ 收摊记录</el-button>
-        <el-button class="btn-export-csv" data-testid="bizday-export" :disabled="sorted.length === 0" @click="exportDailyCsv">导出 CSV</el-button>
+        <el-button class="btn-export-xlsx" data-testid="bizday-export" :disabled="sorted.length === 0" @click="exportDailyExcel">导出 Excel</el-button>
       </div>
       <ViewModeToggle v-if="sorted.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
     </div>

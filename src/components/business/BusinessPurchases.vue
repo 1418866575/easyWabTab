@@ -47,7 +47,7 @@ import {
   validatePurchaseInput,
   visibleProductCategories
 } from '@/composables/businessCore'
-import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
+import { exportXlsx } from '@/composables/xlsxExport'
 import type { BusinessPurchase } from '@/types'
 import { usePageSize } from '@/composables/usePageSize'
 import { useToast } from '@/composables/useToast'
@@ -72,8 +72,8 @@ function catNameOf(productId: string): string {
   return catId ? (findProductCategory(store.productCategories, catId)?.name ?? '未分类') : '未分类'
 }
 
-// ===== 一键导出 CSV（库存记录：按当前分类/商品筛选导出）=====
-function exportPurchasesCsv(): void {
+// ===== 一键导出 Excel（库存记录：按当前分类/商品筛选导出）=====
+function exportPurchasesExcel(): void {
   const headers = ['日期', '商品', '分类', '数量', '进价', '金额', '剩余状态', '备注']
   const rows: (string | number)[][] = filteredWithProductFilter.value.map(p => [
     p.date,
@@ -85,7 +85,7 @@ function exportPurchasesCsv(): void {
     stockLabel(p),
     p.note ?? ''
   ])
-  downloadCsv(csvFileName('库存记录'), buildCsv(headers, rows))
+  void exportXlsx('库存记录', headers, rows)
 }
 
 // P0-2：获取商品售价
@@ -397,7 +397,7 @@ async function handleDelete(id: string): Promise<void> {
     <div class="ewt-table-toolbar is-split">
       <div class="bizpur-toolbar-left">
         <el-button type="primary" data-testid="bizpur-add" @click="startAdd">＋ 新增库存记录</el-button>
-        <el-button class="btn-export-csv" data-testid="bizpur-export" :disabled="filteredWithProductFilter.length === 0" @click="exportPurchasesCsv">导出 CSV</el-button>
+        <el-button class="btn-export-xlsx" data-testid="bizpur-export" :disabled="filteredWithProductFilter.length === 0" @click="exportPurchasesExcel">导出 Excel</el-button>
       </div>
       <ViewModeToggle v-if="filteredWithProductFilter.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
     </div>

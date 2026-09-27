@@ -4,7 +4,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { agingBatches, calcBroughtOutTotals, calcBatchStock, calcInventory, calcInventorySources, calcPurchaseTotals, findProductCategory, formatYuanOf, localDateKey, lowStockProducts, slowMovingProducts, sortProducts } from '@/composables/businessCore'
-import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
+import { exportXlsx } from '@/composables/xlsxExport'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import PanelPager from '@/components/workbench/PanelPager.vue'
 import Icon from '@/components/Icon.vue'
@@ -124,8 +124,8 @@ function closeTraceModal(): void {
   traceModalProductId.value = null
 }
 
-// ===== 一键导出 CSV（库存总览：全部商品，含当前库存）=====
-function exportInventoryCsv(): void {
+// ===== 一键导出 Excel（库存总览：全部商品，含当前库存）=====
+function exportInventoryExcel(): void {
   const headers = ['商品名称', '分类', '单位', '进货价', '售价', '当前库存', '状态']
   const rows: (string | number)[][] = sortProducts(store.products).map(p => [
     p.name,
@@ -136,7 +136,7 @@ function exportInventoryCsv(): void {
     stockMap.value[p.id] ?? 0,
     p.active ? '在售' : '停售'
   ])
-  downloadCsv(csvFileName('库存总览'), buildCsv(headers, rows))
+  void exportXlsx('库存总览', headers, rows)
 }
 </script>
 
@@ -147,7 +147,7 @@ function exportInventoryCsv(): void {
       <div class="bizinv-alert-head">
         <span class="bizinv-alert-title"><Icon name="alert" :size="15" /> 低库存预警</span>
         <div class="bizinv-alert-actions">
-          <el-button class="btn-export-csv" size="small" data-testid="bizinv-export" :disabled="store.products.length === 0" @click="exportInventoryCsv">导出 CSV</el-button>
+          <el-button class="btn-export-xlsx" size="small" data-testid="bizinv-export" :disabled="store.products.length === 0" @click="exportInventoryExcel">导出 Excel</el-button>
           <el-button size="small" data-testid="bizinv-threshold" title="低库存阈值（设置）" @click="openThresholdSettings">
             <Icon name="cog" :size="14" /> 阈值 {{ store.settings.lowStockThreshold }}
           </el-button>

@@ -21,7 +21,7 @@ function cardFields(e: any) {
 import { computed, reactive, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { EXPENSE_TITLE_MAX, validateExpenseRow, findExpenseCategory, formatYuanOf, localDateKey, sortExpenses } from '@/composables/businessCore'
-import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
+import { exportXlsx } from '@/composables/xlsxExport'
 import type { BusinessExpense } from '@/types'
 import Icon from '@/components/Icon.vue'
 import { usePageSize } from '@/composables/usePageSize'
@@ -35,8 +35,8 @@ function catNameOf(id: string): string {
 // 逐笔列表（日期倒序、同日按创建时间倒序）；同一天不合并，每笔一行
 const allExpenses = computed<BusinessExpense[]>(() => sortExpenses(store.expenses))
 
-// ===== 一键导出 CSV（逐笔：日期/标题/分类/金额/备注）=====
-function exportExpensesCsv(): void {
+// ===== 一键导出 Excel（逐笔：日期/标题/分类/金额/备注）=====
+function exportExpensesExcel(): void {
   const headers = ['日期', '标题', '分类', '金额', '备注']
   const rows: (string | number)[][] = allExpenses.value.map(e => [
     e.date,
@@ -45,7 +45,7 @@ function exportExpensesCsv(): void {
     e.amount.toFixed(2),
     e.note ?? ''
   ])
-  downloadCsv(csvFileName('支出记录'), buildCsv(headers, rows))
+  void exportXlsx('支出记录', headers, rows)
 }
 
 // ===== 分页（逐笔：列表一行一笔，卡片一卡一笔） =====
@@ -131,7 +131,7 @@ async function handleDeleteFromDialog(): Promise<void> {
     <div class="ewt-table-toolbar is-split">
       <div class="bizexp-toolbar-left">
         <el-button type="primary" data-testid="bizexp-add" @click="startAdd">＋ 新增支出</el-button>
-        <el-button class="btn-export-csv" data-testid="bizexp-export" :disabled="store.expenses.length === 0" @click="exportExpensesCsv">导出 CSV</el-button>
+        <el-button class="btn-export-xlsx" data-testid="bizexp-export" :disabled="store.expenses.length === 0" @click="exportExpensesExcel">导出 Excel</el-button>
       </div>
       <div class="bizexp-toolbar-right">
         <ViewModeToggle v-if="allExpenses.length > 0" :mode="vm.mode" @toggle="vm.toggle" />

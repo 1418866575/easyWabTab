@@ -28,7 +28,8 @@ scripts/
 ├── test-workbench-menu-core.ts # workbenchMenuCore.ts（18 断言 T1-T18；npm run test:menu）
 ├── test-diary-core.ts        # diaryCore.ts（15 断言/55 assertions；npm run test:diary）
 ├── test-panel-paging-core.ts # panelPagingCore.ts（20 断言 T1-T20；npm run test:paging）
-├── test-business-core.ts     # businessCore.ts（65 断言 T1-T65；T25-T32 账本容器、T33-T36 删除/清空守卫、T37-T41 进货关联支出与月度统计、T42-T45 会员价/进货批次 FIFO 剩余状态/未售完批次自动均价、T46-T49 录入提效与录入校验、T50-T52 对账、T53-T54 毛利报表与会员价模拟、T55 批次库存与滞销久存预警、T56-T60 支出标题归一化与历史兼容/expenseLabel/支出行校验/同日多笔可选支出/对账 expenseLabels、T61 成本单价 costUnitPriceOf（未售完批次实际进货单价优先，回退商品维护价）、T62 毛利率=（营业收入−成本价）/营业收入 与 数量0/收入0 边界、T63 严格 FIFO 成本结转（calcFifoAllocation/calcDailyCostFifo：逐批从最旧批次消耗、各段用该批进价，超卖按维护价兜底；总统计/趋势/月度/毛利报表/商品摘要同口径）、T64 待销售估值 calcPendingSales（剩余批次进价 vs 售价）、T65 损耗出库口径（损耗不计 COGS 但消耗批次，库存与 calcInventory 一致）；npm run test:business）
+├── test-business-core.ts     # businessCore.ts（66 断言 T1-T65；T25-T32 账本容器、T33-T36 删除/清空守卫、T37-T41 进货关联支出与月度统计、T42-T45 会员价/进货批次 FIFO 剩余状态/未售完批次自动均价、T46-T49 录入提效与录入校验、T50-T52 对账、T53-T54 毛利报表与会员价模拟、T55 批次库存与滞销久存预警、T56-T60 支出标题归一化与历史兼容/expenseLabel/支出行校验/同日多笔可选支出/对账 expenseLabels、T61 成本单价 costUnitPriceOf（未售完批次实际进货单价优先，回退商品维护价）、T62 毛利率=（营业收入−成本价）/营业收入 与 数量0/收入0 边界、T63 严格 FIFO 成本结转（calcFifoAllocation/calcDailyCostFifo：逐批从最旧批次消耗、各段用该批进价，超卖按维护价兜底；总统计/趋势/月度/毛利报表/商品摘要同口径）、T64 待销售估值 calcPendingSales（剩余批次进价 vs 售价）、T65 损耗出库口径（损耗不计 COGS 但消耗批次，库存与 calcInventory 一致）；npm run test:business）
+├── test-xlsx-export.ts       # xlsxExport.ts（5 用例 T1-T5 / 26 断言；npm run test:xlsx）：xlsxFileName 文件名形状、safeSheetName 非法字符与 31 字符截断、displayWidth 中文按 2 计、colWidths 自适应与 8~30 钳制；exportXlsx 依赖 DOM + 动态 import('xlsx') 不在此覆盖
 ├── test-habit-core.ts        # habitCore.ts（15 断言/73 assertions；npm run test:habits）
 ├── test-pomodoro-core.ts     # pomodoroCore.ts（13 断言；npm run test:pomodoro）
 ├── test-spotlight-core.ts    # spotlightCore.ts（21 断言；npm run test:spotlight）

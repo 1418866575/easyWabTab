@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 对账：① 账本应收 vs 实收（手填营业额/漏填商品行造成的差异）② 按月账实差异 ③ 进货 ↔ 支出关联对账
-// 全部计算委托 businessCore 纯函数；本组件只做取数、渲染与 CSV 导出
+// 全部计算委托 businessCore 纯函数；本组件只做取数、渲染与 Excel 导出
 import { computed } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import {
@@ -11,7 +11,7 @@ import {
   findExpenseCategory,
   formatYuanOf
 } from '@/composables/businessCore'
-import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
+import { exportXlsx } from '@/composables/xlsxExport'
 import Icon from '@/components/Icon.vue'
 
 const store = useWorkbenchBusinessStore()
@@ -42,8 +42,8 @@ function expenseCatName(categoryId: string): string {
   return findExpenseCategory(store.expenseCategories, categoryId)?.name ?? '未分类'
 }
 
-// ===== CSV 导出 =====
-function exportReceivableCsv(): void {
+// ===== Excel 导出 =====
+function exportReceivableExcel(): void {
   const headers = ['日期', '应收(商品明细)', '实收(记录)', '差异', '是否手动', '交易笔数']
   const rows: (string | number)[][] = receivable.value.rows.map(r => [
     r.date,
@@ -53,10 +53,10 @@ function exportReceivableCsv(): void {
     r.manual ? '手动' : '自动',
     r.transactionCount
   ])
-  downloadCsv(csvFileName(`应收实收对账-${ledgerYear.value}`), buildCsv(headers, rows))
+  void exportXlsx(`应收实收对账-${ledgerYear.value}`, headers, rows)
 }
 
-function exportMonthlyCsv(): void {
+function exportMonthlyExcel(): void {
   const headers = ['月份', '应收', '实收', '差异', '收摊天数', '手动天数']
   const rows: (string | number)[][] = monthly.value.map(m => [
     m.label,
@@ -66,10 +66,10 @@ function exportMonthlyCsv(): void {
     m.days,
     m.manualDays
   ])
-  downloadCsv(csvFileName(`按月账实差异-${ledgerYear.value}`), buildCsv(headers, rows))
+  void exportXlsx(`按月账实差异-${ledgerYear.value}`, headers, rows)
 }
 
-function exportExpenseCsv(): void {
+function exportExpenseExcel(): void {
   const headers = ['类型', '日期', '对象', '金额', '关联支出（日期 标题）', '差异']
   const rows: (string | number)[][] = []
   for (const r of expenseRec.value.linked) {
@@ -81,7 +81,7 @@ function exportExpenseCsv(): void {
   for (const e of expenseRec.value.unlinkedExpenses) {
     rows.push(['未匹配支出', e.date, expenseLabel(e) + '（' + expenseCatName(e.categoryId) + '）' + (e.note ? `（${e.note}）` : ''), e.amount.toFixed(2), '', ''])
   }
-  downloadCsv(csvFileName('进货支储对账'), buildCsv(headers, rows))
+  void exportXlsx('进货支储对账', headers, rows)
 }
 </script>
 
@@ -91,7 +91,7 @@ function exportExpenseCsv(): void {
     <section class="bizrec-card" data-testid="bizrec-receivable">
       <div class="bizrec-head">
         <h3><Icon name="daily" :size="15" /> 应收 vs 实收（{{ ledgerYear }} 年账本）</h3>
-        <el-button class="btn-export-csv" size="small" data-testid="bizrec-receivable-export" :disabled="receivable.rows.length === 0" @click="exportReceivableCsv">导出 CSV</el-button>
+        <el-button class="btn-export-xlsx" size="small" data-testid="bizrec-receivable-export" :disabled="receivable.rows.length === 0" @click="exportReceivableExcel">导出 Excel</el-button>
       </div>
       <div class="bizrec-stats">
         <div class="bizrec-stat">
@@ -152,7 +152,7 @@ function exportExpenseCsv(): void {
     <section class="bizrec-card" data-testid="bizrec-monthly">
       <div class="bizrec-head">
         <h3><Icon name="stats" :size="15" /> 按月账实差异（{{ ledgerYear }} 年，不跨年）</h3>
-        <el-button class="btn-export-csv" size="small" data-testid="bizrec-monthly-export" :disabled="monthlyWithData.length === 0" @click="exportMonthlyCsv">导出 CSV</el-button>
+        <el-button class="btn-export-xlsx" size="small" data-testid="bizrec-monthly-export" :disabled="monthlyWithData.length === 0" @click="exportMonthlyExcel">导出 Excel</el-button>
       </div>
       <div class="bizrec-month-grid" data-testid="bizrec-month-grid">
         <div
@@ -177,7 +177,7 @@ function exportExpenseCsv(): void {
     <section class="bizrec-card" data-testid="bizrec-expense">
       <div class="bizrec-head">
         <h3><Icon name="expenses" :size="15" /> 进货 ↔ 支出关联对账</h3>
-        <el-button class="btn-export-csv" size="small" data-testid="bizrec-expense-export" :disabled="store.purchases.length === 0 && store.expenses.length === 0" @click="exportExpenseCsv">导出 CSV</el-button>
+        <el-button class="btn-export-xlsx" size="small" data-testid="bizrec-expense-export" :disabled="store.purchases.length === 0 && store.expenses.length === 0" @click="exportExpenseExcel">导出 Excel</el-button>
       </div>
       <div class="bizrec-stats">
         <div class="bizrec-stat">
