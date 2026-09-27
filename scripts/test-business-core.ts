@@ -27,6 +27,7 @@ import {
   slowMovingProducts,
   daysBetween,
   calcProductRanking,
+  calcExpenseMargin,
   calcPurchaseTotals,
   calcPurchaseTotal,
   calcPurchaseStockStatus,
@@ -1360,6 +1361,30 @@ test('T60 calcExpenseReconciliation expenseLabels', () => {
   assert.equal(rec.unlinkedExpenses[0].id, 'e3')
   assert.equal(rec.unlinkedExpenses[0].title, '摊位费')
   assert.equal(rec.unlinkedExpenseTotal, 50)
+})
+
+// T61 — 首页毛利率口径：=（营业额 − 支出）/ 营业额（营业额 ≤ 0 → 0，不产生 NaN/Infinity）
+test('T61 calcExpenseMargin', () => {
+  assert.equal(calcExpenseMargin(1000, 300), 0.7, '（1000-300）/1000')
+  assert.equal(calcExpenseMargin(200, 0), 1, '无支出 → 100%')
+  assert.equal(calcExpenseMargin(200, 200), 0, '支出=营业额 → 0%')
+  assert.equal(calcExpenseMargin(200, 260), -0.3, '支出 > 营业额 → 负毛利率')
+  assert.equal(calcExpenseMargin(0, 50), 0, '营业额 0 → 0（除零守卫）')
+  assert.equal(calcExpenseMargin(-100, 50), 0, '营业额负 → 0')
+  assert.equal(calcExpenseMargin(Number.NaN, 10), 0, '非法值 → 0')
+  assert.equal(calcExpenseMargin(100, Number.NaN), 1, '支出非法按 0 计')
+  // 与 calcBusinessStats.margin（扣 COGS）区分：同一批数据两个口径不同
+  const data = {
+    ...emptyBusinessData(),
+    products: [{ id: 'p1', name: '烤肠', unit: '根', purchasePrice: 2, sellingPrice: 5, active: true, createdAt: 'c' }],
+    dailyRecords: [{ id: 'd1', date: '2026-05-01', items: [{ productId: 'p1', broughtOut: 10, remaining: 0, loss: 0 }], totalRevenue: 50, createdAt: 'c' }],
+    expenses: [{ id: 'e1', date: '2026-05-01', categoryId: 'expense-stall', amount: 10, title: '摊位费', createdAt: 'c' }]
+  } as BusinessData
+  const stats = calcBusinessStats(data)
+  assert.equal(stats.revenue, 50)
+  assert.equal(stats.cost, 20, 'COGS = 10 × 2')
+  assert.equal(stats.margin, 0.6, '统计口径毛利率 =（50-20）/50')
+  assert.equal(calcExpenseMargin(stats.revenue, stats.expenseTotal), 0.8, '首页口径 =（50-10）/50')
 })
 
 let passed = 0

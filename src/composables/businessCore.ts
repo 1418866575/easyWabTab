@@ -1330,6 +1330,19 @@ export function calcBusinessStats(data: BusinessData): BusinessStats {
   }
 }
 
+/**
+ * 首页毛利率口径：毛利率 =（营业额 − 支出）/ 营业额。
+ * 与 calcBusinessStats.margin（营业额 − 售出成本 COGS）不同：这里只扣「支出的钱」，不扣进货成本。
+ * 营业额 ≤ 0 → 0（不产生 Infinity / NaN；负数营收同样按 0 处理）。
+ * 返回值是比率（0.35 = 35%），保留 4 位小数。
+ */
+export function calcExpenseMargin(revenue: number, expenseTotal: number): number {
+  const r = Number.isFinite(revenue) ? revenue : 0
+  const e = Number.isFinite(expenseTotal) ? expenseTotal : 0
+  if (r <= 0) return 0
+  return Math.round(((r - e) / r) * 10000) / 10000
+}
+
 /** 低库存预警清单：在售商品（停售商品不参与预警）库存 < 阈值，按库存升序 */
 export interface LowStockItem {
   product: BusinessProduct

@@ -2,7 +2,7 @@
 // 销售记账首页：营业额/利润总额主指标 + 成本/支出/毛利率统计卡 + 低库存概览 + 销售排行（树状）
 import { computed, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { calcBusinessStats, calcCategoryProductRanking, calcMonthlyStats, formatYuanOf, lowStockProducts } from '@/composables/businessCore'
+import { calcBusinessStats, calcCategoryProductRanking, calcExpenseMargin, calcMonthlyStats, formatYuanOf, lowStockProducts } from '@/composables/businessCore'
 import Icon from '@/components/Icon.vue'
 
 const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
@@ -57,40 +57,24 @@ function maxProductRevenue(node: { products: { revenue: number }[] }): number {
   return Math.max(1, ...node.products.map(p => p.revenue))
 }
 
-// ===== 账本统计维度：按年 / 按账本（取消原按月、按日维度） =====
-// 账本按自然年创建且同年唯一，两维度口径差异：
-//  - 按年：只统计「当前账本年份」内的收摊记录（不跨年）
-//  - 按账本：统计当前账本内的全部记录（含账本内记的非本年日期）
-const periodMode = ref<'year' | 'ledger'>('year')
-
+// ===== 统计维度：按账本（一个账本 = 一年的数据，切换账本即切换统计年度） =====
+// 账本按自然年创建且同年唯一，默认落在「当年账本」→ 首屏即按当年统计；
+// 因此首页不再提供「按年 / 按账本」切换，口径统一为「当前账本内全部记录」。
 const ledgerYear = computed(() => store.currentLedgerYear)
 const ledgerName = computed(() => store.currentLedgerName)
-const yearPrefix = computed(() => String(ledgerYear.value))
 
-// 选中维度的日记录
-const periodDailyRecords = computed(() =>
-  periodMode.value === 'year'
-    ? data.value.dailyRecords.filter(r => typeof r.date === 'string' && r.date.startsWith(yearPrefix.value))
-    : data.value.dailyRecords
-)
-const periodStats = computed(() => calcBusinessStats({ ...data.value, dailyRecords: periodDailyRecords.value }))
-/** 维度说明文案（点出两个口径的差异，避免误解） */
-const periodHint = computed(() =>
-  periodMode.value === 'year'
-    ? `${ledgerYear.value} 年内记录（不跨年）`
-    : `账本「${ledgerName.value}」内全部记录`
-)
+// 当前账本内的收摊记录（账本即年度容器，不做二次按年过滤）
+const ledgerDailyRecords = computed(() => data.value.dailyRecords)
+const ledgerStats = computed(() => calcBusinessStats(data.value))
 
-// 出摊总天数：当前维度下的不同日期数
-const totalStallDays = computed(() => new Set(periodDailyRecords.value.map(r => r.date)).size)
+/**
+ * 首页毛利率：=（营业额 − 支出）/ 营业额 × 100%
+ * 营业额 = 账本内收摊营业额合计；支出 = 账本内支出合计（进货成本不计入）
+ */
+const grossMargin = computed(() => calcExpenseMargin(ledgerStats.value.revenue, ledgerStats.value.expenseTotal))
 
-// 目标进度环：年目标 = 设置里的月目标 × 12（沿用现有 monthlyRevenueTarget 字段，不新增字段）
-const yearlyTarget = computed(() => Math.max(0, store.settings.monthlyRevenueTarget) * 12)
-const targetPct = computed(() =>
-  periodMode.value === 'year' && yearlyTarget.value > 0
-    ? Math.min(100, (periodStats.value.revenue / yearlyTarget.value) * 100)
-    : 0
-)
+// 出摊总天数：当前账本内的不同日期数
+const totalStallDays = computed(() => new Set(ledgerDailyRecords.value.map(r => r.date)).size)
 
 // 迷你柱状图：当前账本年份 12 个月营业额（无数据月份为 0，与统计模块同口径）
 const monthlyStats = computed(() => calcMonthlyStats(data.value, ledgerYear.value))
@@ -111,18 +95,6 @@ const greeting = computed(() => {
 const dateText = computed(() =>
   new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })
 )
-
-// 月目标内联编辑
-const editingTarget = ref(false)
-const targetInput = ref<number>(store.settings.monthlyRevenueTarget)
-function startEditTarget(): void {
-  targetInput.value = store.settings.monthlyRevenueTarget
-  editingTarget.value = true
-}
-async function saveTarget(): Promise<void> {
-  await store.setMonthlyRevenueTarget(Number.isFinite(targetInput.value) ? targetInput.value : 0)
-  editingTarget.value = false
-}
 </script>
 
 <template>
@@ -151,77 +123,29 @@ async function saveTarget(): Promise<void> {
     </template>
 
     <template v-else>
-      <!-- 问候头：问候语 + 日期 + 今日/本月切换 + 目标进度环 -->
+      <!-- 问候头：问候语 + 日期（统计维度已统一为「按账本」，目标入口移除） -->
       <section class="bizhome-greeting" data-testid="bizhome-greeting">
         <div class="bizhome-greeting-info">
           <h2 class="bizhome-greeting-title">{{ greeting }}{{ store.settings.stallName ? '，' + store.settings.stallName : '' }}</h2>
           <p class="bizhome-greeting-sub">{{ dateText }}</p>
         </div>
-        <div class="bizhome-greeting-right">
-          <!-- 目标进度环（按年维度 + 已设月目标；年目标由月目标 ×12 折算） -->
-          <div v-if="periodMode === 'year' && yearlyTarget > 0" class="bizhome-target" :title="`年目标 ${formatYuanOf(yearlyTarget)}（月目标 ${formatYuanOf(store.settings.monthlyRevenueTarget)} × 12）`">
-            <svg class="target-ring" viewBox="0 0 36 36" aria-hidden="true">
-              <circle class="target-track" cx="18" cy="18" r="15.9155" fill="none" />
-              <circle
-                class="target-bar"
-                cx="18"
-                cy="18"
-                r="15.9155"
-                fill="none"
-                :stroke-dasharray="`${targetPct} 100`"
-              />
-            </svg>
-            <div class="target-meta">
-              <span class="target-pct">{{ targetPct.toFixed(0) }}%</span>
-              <span class="target-label">年目标</span>
-            </div>
-          </div>
-          <!-- 目标内联编辑器 -->
-          <div v-if="editingTarget" class="bizhome-target-edit">
-            <el-input
-              v-model.number="targetInput"
-              type="number"
-              min="0"
-              size="small"
-              class="bizhome-target-input"
-              placeholder="月目标营业额"
-              @keyup.enter="saveTarget"
-            />
-            <el-button size="small" type="primary" @click="saveTarget">保存</el-button>
-            <el-button size="small" @click="editingTarget = false">取消</el-button>
-          </div>
-          <button v-else class="bizhome-target-btn" data-testid="bizhome-set-target" @click="startEditTarget">
-            {{ store.settings.monthlyRevenueTarget > 0 ? '改目标' : '设目标' }}
-          </button>
-          <!-- 按年 / 按账本 分段切换 -->
-          <div class="bizhome-period-toggle" role="tablist" aria-label="统计维度">
-            <button
-              class="bizhome-period-btn"
-              :class="{ active: periodMode === 'year' }"
-              role="tab"
-              :aria-selected="periodMode === 'year'"
-              data-testid="bizhome-period-year"
-              @click="periodMode = 'year'"
-            >按年</button>
-            <button
-              class="bizhome-period-btn"
-              :class="{ active: periodMode === 'ledger' }"
-              role="tab"
-              :aria-selected="periodMode === 'ledger'"
-              data-testid="bizhome-period-ledger"
-              @click="periodMode = 'ledger'"
-            >按账本</button>
-          </div>
-        </div>
       </section>
 
-      <!-- 统计范围说明（替代原「环比上月/较昨日」） -->
-      <div class="bizhome-delta" data-testid="bizhome-scope">
-        <span class="delta-label">{{ ledgerYear }} 年 · {{ ledgerName }}</span>
-        <span class="delta-value up">统计范围：{{ periodHint }}，共 {{ periodDailyRecords.length }} 条收摊记录</span>
+      <!-- 统计范围 + 毛利率计算公式（一个账本 = 一年数据，切换账本即切换统计年度） -->
+      <div class="bizhome-scope" data-testid="bizhome-scope">
+        <div class="scope-head">
+          <span class="scope-label" data-testid="bizhome-scope-label">{{ ledgerYear }} 年 · {{ ledgerName }}</span>
+          <span class="scope-hint">统计维度：按账本（一个账本对应一年的数据，切换账本即切换统计年度）</span>
+        </div>
+        <div class="scope-formula" data-testid="bizhome-margin-formula">
+          <span class="formula-main">毛利率 =（营业额 − 支出）/ 营业额 × 100%</span>
+          <span class="formula-vars">
+            营业额 = 账本内收摊营业额合计；支出 = 账本内支出合计；差值即扣除支出后的毛利
+          </span>
+        </div>
       </div>
 
-      <!-- 主指标：营业额/利润总额/成本/支出/毛利率（随 今日/本月 切换） -->
+      <!-- 主指标：出摊天数/营业额/利润总额/支出/毛利率（按账本统计） -->
       <section class="bizhome-hero">
         <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-stalldays" @click="go('daily')" @keydown.enter="go('daily')">
           <span class="hero-label">出摊总天数</span>
@@ -229,23 +153,19 @@ async function saveTarget(): Promise<void> {
         </div>
         <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-revenue" @click="go('stats')" @keydown.enter="go('stats')">
           <span class="hero-label">营业额</span>
-          <span class="hero-value">{{ formatYuanOf(periodStats.revenue) }}</span>
+          <span class="hero-value">{{ formatYuanOf(ledgerStats.revenue) }}</span>
         </div>
         <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-profit" @click="go('stats')" @keydown.enter="go('stats')">
           <span class="hero-label">利润总额</span>
-          <span class="hero-value" :class="{ negative: periodStats.profit < 0 }">{{ formatYuanOf(periodStats.profit) }}</span>
-        </div>
-        <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-cost" @click="go('stats')" @keydown.enter="go('stats')">
-          <span class="hero-label">成本</span>
-          <span class="hero-value">{{ formatYuanOf(periodStats.cost) }}</span>
+          <span class="hero-value" :class="{ negative: ledgerStats.profit < 0 }">{{ formatYuanOf(ledgerStats.profit) }}</span>
         </div>
         <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-expense" @click="go('expenses')" @keydown.enter="go('expenses')">
           <span class="hero-label">支出</span>
-          <span class="hero-value">{{ formatYuanOf(periodStats.expenseTotal) }}</span>
+          <span class="hero-value">{{ formatYuanOf(ledgerStats.expenseTotal) }}</span>
         </div>
         <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-margin" @click="go('stats')" @keydown.enter="go('stats')">
           <span class="hero-label">毛利率</span>
-          <span class="hero-value">{{ (periodStats.margin * 100).toFixed(1) }}%</span>
+          <span class="hero-value" :class="{ negative: grossMargin < 0 }">{{ (grossMargin * 100).toFixed(1) }}%</span>
         </div>
       </section>
 
@@ -399,10 +319,10 @@ html.dark .sk-block::after {
   .sk-block::after { animation: none; }
 }
 
-/* ===== 主指标：营业额 + 利润总额 ===== */
+/* ===== 主指标：出摊天数 + 营业额 + 利润总额 + 支出 + 毛利率（5 卡） ===== */
 .bizhome-hero {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -789,136 +709,52 @@ html.dark .sk-block::after {
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
-.bizhome-greeting-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
-}
-
-/* 目标进度环 */
-.bizhome-target {
-  position: relative;
-  width: 52px;
-  height: 52px;
-  flex-shrink: 0;
-}
-
-.target-ring {
-  width: 52px;
-  height: 52px;
-  transform: rotate(-90deg);
-}
-
-.target-track {
-  stroke: var(--color-border, var(--color-border));
-  stroke-width: 3.5;
-}
-
-.target-bar {
-  stroke: var(--color-success, var(--color-success));
-  stroke-width: 3.5;
-  stroke-linecap: round;
-  transition: stroke-dasharray var(--transition-fast, 0.3s ease);
-}
-
-.target-meta {
-  position: absolute;
-  inset: 0;
+/* ===== 统计范围 + 毛利率公式 ===== */
+.bizhome-scope {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  line-height: 1.1;
-}
-
-.target-pct {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--color-text, var(--color-text));
-  font-variant-numeric: tabular-nums;
-}
-
-.target-label {
-  font-size: 10px;
-  color: var(--color-text-muted, var(--color-text-muted));
-}
-
-.bizhome-target-btn {
-  padding: 6px 12px;
-  font-size: 13px;
-  border-radius: var(--radius-full, 999px);
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  color: var(--color-primary, var(--color-primary));
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.bizhome-target-btn:hover {
-  background: var(--color-primary, var(--color-primary));
-  color: #fff;
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.bizhome-target-edit {
-  display: flex;
-  align-items: center;
   gap: 6px;
-}
-
-.bizhome-target-input {
-  width: 130px;
-}
-
-/* 今日/本月 分段切换 */
-.bizhome-period-toggle {
-  display: inline-flex;
-  padding: 3px;
-  border-radius: var(--radius-full, 999px);
-  background: var(--color-bg-card, var(--color-bg-hover));
+  padding: 12px 14px;
+  background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
-  gap: 2px;
+  border-radius: var(--radius-md, 10px);
 }
 
-.bizhome-period-btn {
-  padding: 5px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  border: none;
-  border-radius: var(--radius-full, 999px);
-  background: transparent;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  cursor: pointer;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.bizhome-period-btn.active {
-  background: var(--color-primary, var(--color-primary));
-  color: #fff;
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.12));
-}
-
-/* 环比 */
-.bizhome-delta {
+.scope-head {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
   font-size: 13px;
 }
 
-.delta-label {
+.scope-label {
+  font-weight: 700;
+  color: var(--color-text, var(--color-text));
+}
+
+.scope-hint {
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
-.delta-value {
+.scope-formula {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.formula-main {
+  font-size: 14px;
   font-weight: 700;
+  color: var(--color-primary, var(--color-primary));
   font-variant-numeric: tabular-nums;
 }
 
-.delta-value.up { color: var(--color-success, var(--color-success)); }
-.delta-value.down { color: var(--color-error, var(--color-error)); }
+.formula-vars {
+  font-size: 12px;
+  color: var(--color-text-muted, var(--color-text-muted));
+  line-height: 1.5;
+}
 
 /* 迷你柱状图 */
 .bizhome-mini-chart {
@@ -1025,32 +861,17 @@ html.dark .bizhome-greeting-title {
   color: var(--color-text, #f9fafb);
 }
 
-html.dark .target-track {
-  stroke: var(--color-border, #374151);
+html.dark .bizhome-scope {
+  background-color: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
 }
 
-html.dark .target-pct {
+html.dark .scope-label {
   color: var(--color-text, #f9fafb);
 }
 
-html.dark .bizhome-target-btn {
-  background-color: var(--color-bg-card, #1f2937);
+html.dark .formula-main {
   color: #93c5fd;
-  border-color: var(--color-border, #374151);
-}
-
-html.dark .bizhome-target-btn:hover {
-  background-color: var(--color-primary, #3b82f6);
-  color: #fff;
-}
-
-html.dark .bizhome-period-toggle {
-  background-color: var(--color-bg-card, #1f2937);
-  border-color: var(--color-border, #374151);
-}
-
-html.dark .bizhome-period-btn {
-  color: var(--color-text-secondary, #d1d5db);
 }
 
 html.dark .mini-bar {
@@ -1079,14 +900,11 @@ html.dark .mini-bar-col:hover .mini-bar {
   .bizhome-col-40,
   .bizhome-col-60 { flex-basis: auto; }
 
-  /* 问候头窄屏换行，按钮区整体下移 */
+  /* 问候头窄屏：单列排布（已无右侧按钮区） */
   .bizhome-greeting {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
-  }
-  .bizhome-greeting-right {
-    flex-wrap: wrap;
+    gap: 8px;
   }
 }
 
