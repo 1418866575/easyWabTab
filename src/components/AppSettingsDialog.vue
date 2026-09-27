@@ -427,6 +427,7 @@ const NAV_GROUPS: NavGroup[] = [
       { key: 'teacher-class', label: '班级信息', icon: 'info', tab: 'teacher', sub: 'teacher-class' },
       { key: 'teacher-import', label: '导入数据', icon: 'upload', tab: 'teacher', sub: 'teacher-import' },
       { key: 'teacher-backup', label: '备份与恢复', icon: 'save', tab: 'teacher', sub: 'teacher-backup' },
+      { key: 'teacher-timetable', label: '课程表配置', icon: 'cog', tab: 'teacher', sub: 'teacher-timetable' },
       { key: 'teacher-help', label: '使用说明', icon: 'help', tab: 'teacher', sub: 'teacher-help' },
       { key: 'teacher-menu', label: '菜单设置', icon: 'bookmark', tab: 'teacher', sub: 'teacher-menu' }
     ]
