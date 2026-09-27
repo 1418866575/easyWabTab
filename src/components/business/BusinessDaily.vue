@@ -24,7 +24,7 @@ import Icon from '../Icon.vue'
 // P0-3：编辑弹框增加库存上下文（当前库存、预计库存、小计实时计算）
 import { computed, reactive, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { avgUnsoldUnitPriceMap, calcDailyCost, calcDailyItemDetails, calcDailyLossAmount, calcDailyRevenue, calcInventory, checkRevenueOverride, dailyTemplateFromLast, findProduct, formatYuanOf, frequentProductIds, lastDailyBefore, localDateKey, sortDailyRecords, validateDailyRows } from '@/composables/businessCore'
+import { calcDailyCostFifo, calcDailyItemDetails, calcDailyLossAmount, calcDailyRevenue, calcFifoAllocation, calcInventory, checkRevenueOverride, dailyTemplateFromLast, findProduct, formatYuanOf, lastDailyBefore, localDateKey, sortDailyRecords, validateDailyRows } from '@/composables/businessCore'
 import { useToast } from '@/composables/useToast'
 import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
 import type { BusinessDailyRecord, DailyRecordItem } from '@/types'
@@ -36,11 +36,9 @@ const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
 const store = useWorkbenchBusinessStore()
 const toast = useToast()
 
-// ===== 录入提效：复制上日 / 常用商品（近 30 天高频带出的在售商品） =====
+// ===== 录入提效：复制上日（上一条收摊记录的商品 + 带出数量） =====
 /** 早于当前编辑日期的最近一条收摊记录（编辑当天时不会复制自己） */
 const lastRecord = computed(() => lastDailyBefore(store.dailyRecords, editingDate.value))
-/** 常用商品 id（近 30 天带出次数排序） */
-const frequentIds = computed(() => frequentProductIds(store.dailyRecords, store.products, 30, editingDate.value))
 
 /** 复制上日：用上一条记录的商品 + 带出数量替换当前行，剩余/损耗归零 */
 function copyFromLast(): void {
@@ -51,23 +49,6 @@ function copyFromLast(): void {
   }
   rows.splice(0, rows.length, ...tpl.map(r => ({ ...r })))
   formRevenueManual.value = null
-}
-
-/** 常用商品：把高频商品补进行尾（已存在的跳过，不覆盖已填数量） */
-function fillFrequent(): void {
-  const ids = frequentIds.value
-  if (ids.length === 0) {
-    toast.info('近 30 天暂无收摊记录，无法推断常用商品')
-    return
-  }
-  const existing = new Set(rows.map(r => r.productId).filter(Boolean))
-  let added = 0
-  for (const id of ids) {
-    if (existing.has(id)) continue
-    rows.push({ productId: id, broughtOut: 0, remaining: 0, loss: 0 })
-    added++
-  }
-  if (added === 0) toast.info('常用商品都已在列表中')
 }
 
 const sorted = computed(() => sortDailyRecords(store.dailyRecords))
@@ -183,11 +164,32 @@ function resetRevenueToAuto(): void {
   formRevenueManual.value = null
 }
 
-/** 成本单价表：未售完进货批次的实际进货单价均值（无批次时回退商品维护的进货单价） */
-const costAvgMap = computed(() => avgUnsoldUnitPriceMap(store.purchases, store.dailyRecords))
+/**
+ * 成本口径：严格先进先出（FIFO）——收摊按日期升序逐条结转，售出/损耗从最旧进货批次开始消耗，
+ * 各段用该批次自己的进货单价，因此同一商品多次进货时成本会随批次自动变化。
+ */
+/** 已保存记录的结转表（列表展示用） */
+const fifoAlloc = computed(() => calcFifoAllocation(store.purchases, store.dailyRecords, store.products))
+
+/** 弹框草稿在结转表中的占位 id（收摊按日期 upsert，草稿替换同一天的旧记录参与结转） */
+const FORM_RECORD_ID = '__daily_form__'
+/** 弹框未保存时的结转表：把草稿按当前日期并入，保证预览成本 = 保存后的成本 */
+const fifoAllocWithForm = computed(() => {
+  if (!showDialog.value) return fifoAlloc.value
+  const draft: BusinessDailyRecord = {
+    id: FORM_RECORD_ID,
+    date: editingDate.value,
+    items: rows.map(r => ({ productId: r.productId, broughtOut: r.broughtOut, remaining: r.remaining, loss: r.loss })),
+    totalRevenue: 0,
+    createdAt: '',
+    updatedAt: ''
+  }
+  const others = store.dailyRecords.filter(r => r.date !== editingDate.value)
+  return calcFifoAllocation(store.purchases, [...others, draft], store.products)
+})
 
 const formCost = computed(() =>
-  calcDailyCost(rows.map(r => ({ ...r })), store.products, costAvgMap.value)
+  calcDailyCostFifo(FORM_RECORD_ID, rows.map(r => ({ ...r })), store.products, fifoAllocWithForm.value)
 )
 
 const formLossAmount = computed(() =>
@@ -199,11 +201,11 @@ const formProfit = computed(() =>
 )
 
 function recordProfit(record: BusinessDailyRecord): number {
-  return Math.round((record.totalRevenue - calcDailyCost(record.items, store.products, costAvgMap.value)) * 100) / 100
+  return Math.round((record.totalRevenue - recordCost(record)) * 100) / 100
 }
 
 function recordCost(record: BusinessDailyRecord): number {
-  return calcDailyCost(record.items, store.products, costAvgMap.value)
+  return calcDailyCostFifo(record.id, record.items, store.products, fifoAlloc.value)
 }
 
 function recordLossAmount(record: BusinessDailyRecord): number {
@@ -424,7 +426,7 @@ async function handleDelete(id: string): Promise<void> {
       v-if="showDialog"
       :model-value="true"
       :show-close="false"
-      width="680px"
+      width="80%"
       data-testid="bizday-dialog"
       @close="showDialog = false"
     >
@@ -447,7 +449,7 @@ async function handleDelete(id: string): Promise<void> {
           </div>
         </div>
 
-        <!-- 录入提效：复制上日 / 常用商品（减少重复勾选） -->
+        <!-- 录入提效：复制上日（减少重复勾选） -->
         <div class="bizday-row-tools">
           <el-button
             size="small"
@@ -455,12 +457,6 @@ async function handleDelete(id: string): Promise<void> {
             :disabled="!lastRecord"
             @click="copyFromLast"
           >复制上日{{ lastRecord ? '（' + lastRecord.date + '）' : '（无）' }}</el-button>
-          <el-button
-            size="small"
-            data-testid="bizday-fill-frequent"
-            :disabled="frequentIds.length === 0"
-            @click="fillFrequent"
-          >常用商品（近 30 天）</el-button>
         </div>
 
         <div class="bizday-rows">

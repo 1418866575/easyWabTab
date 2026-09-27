@@ -586,9 +586,9 @@ export function calcDailyRevenue(items: DailyRecordItem[], products: BusinessPro
 }
 
 /**
- * 成本单价（唯一口径）：优先取「未售完进货批次」的实际进货单价均值——商品有多次进货记录时，
- * 以实际使用的那批进货单价为准；没有未售完批次时回退商品信息里维护的进货单价 purchasePrice。
- * avgMap 由 avgUnsoldUnitPriceMap 预计算后传入（调用方复用，避免逐项重算）；不传则只用商品维护价。
+ * 成本单价（兜底口径，仅供估算/无进货批次时使用）。
+ * 严格 FIFO 成本一律走 calcFifoAllocation / calcDailyCostFifo；本函数只在拿不到结转结果时提供退路：
+ * 优先未售完批次的实际进货单价均值（avgMap 由 avgUnsoldUnitPriceMap 预计算后传入），否则回退商品维护价。
  */
 export function costUnitPriceOf(
   productId: string,
@@ -601,7 +601,7 @@ export function costUnitPriceOf(
   return Number.isFinite(fallback) && fallback > 0 ? fallback : 0
 }
 
-/** 日记录成本（纯 COGS）：Σ 售出数量 × 成本单价（成本单价走 costUnitPriceOf，与首页/报表同口径） */
+/** 日记录成本（兜底口径：Σ 售出数量 × 成本单价）。严格 FIFO 场景请改用 calcDailyCostFifo */
 export function calcDailyCost(
   items: DailyRecordItem[],
   products: BusinessProduct[],
@@ -678,17 +678,36 @@ export function calcSoldTotals(dailyRecords: BusinessDailyRecord[]): Record<stri
   return totals
 }
 
-/** 单笔记货批次的剩余状态：按「先进先出」消耗（最旧批次优先售出） */
+/** 按商品累计损耗数量（损耗同样离开库存，只是不计入售出与营业额） */
+export function calcLossTotals(dailyRecords: BusinessDailyRecord[]): Record<string, number> {
+  const totals: Record<string, number> = {}
+  for (const r of dailyRecords ?? []) {
+    for (const item of r.items ?? []) {
+      const loss = Number.isFinite(item?.loss) ? Math.max(0, item.loss) : 0
+      if (loss <= 0) continue
+      totals[item.productId] = (totals[item.productId] ?? 0) + loss
+    }
+  }
+  return totals
+}
+
+/** 单笔记货批次的剩余状态：按「先进先出」消耗（最旧批次优先出库）
+ *  出库量 = 售出 + 损耗（带出 − 剩余），因此 remaining 与 calcInventory 的库存口径一致。 */
 export interface PurchaseStockStatus {
   purchaseId: string
   productId: string
   quantity: number // 本批进货数量
   sold: number // 本批已售出（FIFO 消耗量，不超过 quantity）
-  remaining: number // 本批剩余 = quantity − sold
-  soldOut: boolean // 是否已全部售出（remaining ≤ 0）
+  /** 本批已损耗出库（不计入售出，但同样离开库存） */
+  writtenOff: number
+  /** 本批剩余 = quantity − sold − writtenOff */
+  remaining: number
+  soldOut: boolean // 是否已全部出库（remaining ≤ 0）
   /** 是否该商品 FIFO 队列中最旧的一批（判定「最旧那一笔是否已售完」的对象） */
   isOldest: boolean
   totalSold: number // 该商品累计售出（全部收摊记录）
+  /** 该商品累计损耗（全部收摊记录） */
+  totalWrittenOff: number
 }
 
 /** 进货排序：先进先出 = 日期升序（同日按创建时间/ id 升序，保证稳定） */
@@ -710,6 +729,7 @@ export function calcPurchaseStockStatus(
   dailyRecords: BusinessDailyRecord[]
 ): Record<string, PurchaseStockStatus> {
   const soldTotals = calcSoldTotals(dailyRecords)
+  const lossTotals = calcLossTotals(dailyRecords)
   const byProduct = new Map<string, BusinessPurchase[]>()
   for (const p of purchases ?? []) {
     const list = byProduct.get(p.productId) ?? []
@@ -719,19 +739,27 @@ export function calcPurchaseStockStatus(
   const out: Record<string, PurchaseStockStatus> = {}
   for (const [productId, list] of byProduct) {
     const queue = [...list].sort(fifoCompare)
-    let left = Math.max(0, soldTotals[productId] ?? 0)
+    const totalSold = Math.max(0, soldTotals[productId] ?? 0)
+    const totalLoss = Math.max(0, lossTotals[productId] ?? 0)
+    // 同一批次内先扣售出、再扣损耗：两者都出库，只有售出计入 COGS
+    let leftSold = totalSold
+    let leftLoss = totalLoss
     queue.forEach((p, index) => {
-      const sold = Math.max(0, Math.min(p.quantity, left))
-      left -= sold
+      const sold = Math.max(0, Math.min(p.quantity, leftSold))
+      leftSold -= sold
+      const writtenOff = Math.max(0, Math.min(Math.max(0, p.quantity - sold), leftLoss))
+      leftLoss -= writtenOff
       out[p.id] = {
         purchaseId: p.id,
         productId,
         quantity: p.quantity,
         sold,
-        remaining: Math.max(0, p.quantity - sold),
-        soldOut: p.quantity - sold <= 0,
+        writtenOff,
+        remaining: Math.max(0, p.quantity - sold - writtenOff),
+        soldOut: p.quantity - sold - writtenOff <= 0,
         isOldest: index === 0,
-        totalSold: Math.max(0, soldTotals[productId] ?? 0)
+        totalSold,
+        totalWrittenOff: totalLoss
       }
     })
   }
@@ -786,6 +814,208 @@ export function avgUnsoldUnitPrice(
   productId: string
 ): number | null {
   return avgUnsoldUnitPriceMap(purchases, dailyRecords)[productId] ?? null
+}
+
+// ===== 严格先进先出（FIFO）成本结转 =====
+
+/** 收摊记录升序：日期升序（同日按 updatedAt / id 升序，保证结转顺序稳定） */
+function dailyAscCompare(a: BusinessDailyRecord, b: BusinessDailyRecord): number {
+  if (a.date !== b.date) return a.date < b.date ? -1 : 1
+  const ua = typeof a.updatedAt === 'string' ? a.updatedAt : ''
+  const ub = typeof b.updatedAt === 'string' ? b.updatedAt : ''
+  if (ua !== ub) return ua < ub ? -1 : 1
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
+}
+
+/** 一次出库切片：从某个进货批次消耗的数量与金额 */
+export interface FifoSlice {
+  /** 进货批次 id；'' 表示进货库存不足（先卖后记等异常数据），按商品维护的进货单价兜底 */
+  purchaseId: string
+  quantity: number
+  unitPrice: number
+  amount: number
+}
+
+/** 某条收摊记录中某个商品的当日结转明细 */
+export interface FifoItemAllocation {
+  /** 售出部分的切片（计入 COGS） */
+  soldSlices: FifoSlice[]
+  /** 损耗部分的切片（同样离开库存，但不计入毛利成本） */
+  lossSlices: FifoSlice[]
+  /** 售出成本 = Σ soldSlices.amount */
+  cost: number
+  /** 损耗出库成本 = Σ lossSlices.amount */
+  lossCost: number
+}
+
+/** 严格 FIFO 结转结果 */
+export interface FifoAllocation {
+  /** recordId → productId → 当日结转明细 */
+  byRecord: Record<string, Record<string, FifoItemAllocation>>
+  /** recordId → 当日售出成本（COGS） */
+  costByRecord: Record<string, number>
+  /** recordId → 当日损耗出库成本 */
+  lossCostByRecord: Record<string, number>
+  /** productId → 累计售出成本 */
+  costByProduct: Record<string, number>
+  /** purchaseId → 结转后剩余数量 */
+  remainingByPurchase: Record<string, number>
+  /** productId → 结转后剩余数量（与 calcInventory 的库存一致） */
+  remainingByProduct: Record<string, number>
+}
+
+/**
+ * 严格先进先出成本结转（唯一权威口径）。
+ * 规则：同一商品的进货按「日期 → 创建时间 → id」排队；收摊记录按日期升序逐条处理；
+ * 每条记录的出库量 = 售出 + 损耗（= 带出 − 剩余），从队首批次依次消耗，各段按**该批次自己的进货单价**计价。
+ * 只有「售出」部分计入 COGS，「损耗」部分单独记 lossCost（不计入毛利）。
+ * 进货库存被消耗完仍不够（先卖后记等异常）→ 超出的数量按商品维护的进货单价 purchasePrice 兜底。
+ */
+export function calcFifoAllocation(
+  purchases: BusinessPurchase[],
+  dailyRecords: BusinessDailyRecord[],
+  products: BusinessProduct[] = []
+): FifoAllocation {
+  const round2 = (n: number): number => Math.round(n * 100) / 100
+  const byProduct = new Map<string, BusinessPurchase[]>()
+  for (const p of purchases ?? []) {
+    if (!p?.productId) continue
+    const list = byProduct.get(p.productId) ?? []
+    list.push(p)
+    byProduct.set(p.productId, list)
+  }
+  /** 每商品一条 FIFO 队列：游标 + 当前批次剩余可用量 */
+  const queues = new Map<string, { list: BusinessPurchase[]; idx: number; left: number }>()
+  for (const [pid, list] of byProduct) {
+    const sorted = [...list].sort(fifoCompare)
+    queues.set(pid, { list: sorted, idx: 0, left: sorted.length > 0 ? Math.max(0, sorted[0].quantity) : 0 })
+  }
+
+  /** 从队首依次消耗 n 件，返回切片（不修改入参） */
+  function consume(productId: string, n: number): FifoSlice[] {
+    const slices: FifoSlice[] = []
+    let need = Math.max(0, n)
+    if (need <= 0) return slices
+    const q = queues.get(productId) ?? { list: [], idx: 0, left: 0 }
+    while (need > 0) {
+      if (q.idx >= q.list.length) {
+        // 进货库存耗尽：剩余数量按商品维护的进货单价兜底
+        const price = products.find(p => p.id === productId)?.purchasePrice ?? 0
+        const unit = Number.isFinite(price) && price > 0 ? price : 0
+        slices.push({ purchaseId: '', quantity: need, unitPrice: unit, amount: need * unit })
+        need = 0
+        break
+      }
+      const take = Math.min(q.left, need)
+      if (take > 0) {
+        const batch = q.list[q.idx]
+        const unit = Number.isFinite(batch.unitPrice) ? batch.unitPrice : 0
+        slices.push({ purchaseId: batch.id, quantity: take, unitPrice: unit, amount: take * unit })
+        need -= take
+        q.left -= take
+      }
+      if (q.left <= 0) {
+        q.idx += 1
+        q.left = q.idx < q.list.length ? Math.max(0, q.list[q.idx].quantity) : 0
+      }
+    }
+    queues.set(productId, q)
+    return slices
+  }
+
+  const byRecord: Record<string, Record<string, FifoItemAllocation>> = {}
+  const costByRecord: Record<string, number> = {}
+  const lossCostByRecord: Record<string, number> = {}
+  const costByProduct: Record<string, number> = {}
+
+  const records = [...(dailyRecords ?? [])].sort(dailyAscCompare)
+  for (const r of records) {
+    const perProduct: Record<string, FifoItemAllocation> = {}
+    let dayCost = 0
+    let dayLossCost = 0
+    for (const item of r.items ?? []) {
+      if (!item?.productId) continue
+      const soldQty = soldCount(item)
+      const lossQty = Number.isFinite(item.loss) ? Math.max(0, item.loss) : 0
+      // 同一天内先结转售出、再结转损耗（两者都出库）
+      const soldSlices = consume(item.productId, soldQty)
+      const lossSlices = consume(item.productId, lossQty)
+      const cost = soldSlices.reduce((s, x) => s + x.amount, 0)
+      const lossCost = lossSlices.reduce((s, x) => s + x.amount, 0)
+      perProduct[item.productId] = { soldSlices, lossSlices, cost: round2(cost), lossCost: round2(lossCost) }
+      dayCost += cost
+      dayLossCost += lossCost
+      costByProduct[item.productId] = round2((costByProduct[item.productId] ?? 0) + cost)
+    }
+    byRecord[r.id] = perProduct
+    costByRecord[r.id] = round2(dayCost)
+    lossCostByRecord[r.id] = round2(dayLossCost)
+  }
+
+  const remainingByPurchase: Record<string, number> = {}
+  const remainingByProduct: Record<string, number> = {}
+  for (const [productId, q] of queues) {
+    let sum = 0
+    q.list.forEach((p, i) => {
+      const used = i < q.idx ? Math.max(0, p.quantity) : i === q.idx ? Math.max(0, p.quantity - q.left) : 0
+      const rest = Math.max(0, Math.max(0, p.quantity) - used)
+      remainingByPurchase[p.id] = rest
+      sum += rest
+    })
+    remainingByProduct[productId] = sum
+  }
+  return { byRecord, costByRecord, lossCostByRecord, costByProduct, remainingByPurchase, remainingByProduct }
+}
+
+/**
+ * 单条收摊记录的严格 FIFO 成本（COGS）。
+ * 优先取结转表里的当日成本；拿不到（未纳入结转/异常）时回退 calcDailyCost（商品维护的进货单价）。
+ */
+export function calcDailyCostFifo(
+  recordId: string,
+  items: DailyRecordItem[],
+  products: BusinessProduct[],
+  alloc?: FifoAllocation | null
+): number {
+  const hit = alloc?.costByRecord?.[recordId]
+  if (typeof hit === 'number' && Number.isFinite(hit)) return hit
+  return calcDailyCost(items, products)
+}
+
+// ===== 待销售（在库未售出）估值 =====
+
+export interface PendingSalesStats {
+  /** 待销售数量合计（各商品单位不同，仅作参考） */
+  quantity: number
+  /** 待销售成本 = Σ 剩余批次数量 × 该批次进货单价（严格 FIFO 结转后） */
+  cost: number
+  /** 待销售营业额 = Σ 商品剩余数量 × 售价（预期收入，尚未发生） */
+  revenue: number
+  /** 待销售利润 = 待销售营业额 − 待销售成本 */
+  profit: number
+}
+
+/** 待销售（当前库存）估值：成本按 FIFO 剩余批次的实际进货单价，营业额按商品售价 */
+export function calcPendingSales(data: BusinessData, alloc?: FifoAllocation): PendingSalesStats {
+  const round2 = (n: number): number => Math.round(n * 100) / 100
+  const allocation = alloc ?? calcFifoAllocation(data?.purchases ?? [], data?.dailyRecords ?? [], data?.products ?? [])
+  let quantity = 0
+  let cost = 0
+  let revenue = 0
+  for (const p of data?.purchases ?? []) {
+    const rest = allocation.remainingByPurchase[p.id] ?? 0
+    if (rest <= 0) continue
+    quantity += rest
+    cost += rest * (Number.isFinite(p.unitPrice) ? p.unitPrice : 0)
+    const product = (data?.products ?? []).find(x => x.id === p.productId)
+    revenue += rest * (product?.sellingPrice ?? 0)
+  }
+  return {
+    quantity,
+    cost: round2(cost),
+    revenue: round2(revenue),
+    profit: round2(revenue - cost)
+  }
 }
 
 // ===== 录入提效：上日模板 / 常用商品 =====
@@ -1121,7 +1351,7 @@ export function calcProductProfitReport(data: BusinessData): ProductProfitRow[] 
   const products = data.products ?? []
   const catName = (id?: string): string =>
     id ? (findProductCategory(data.productCategories ?? [], id)?.name ?? '未分类') : '未分类'
-  const avgMap = avgUnsoldUnitPriceMap(data.purchases ?? [], data.dailyRecords ?? [])
+  const fifo = calcFifoAllocation(data.purchases ?? [], data.dailyRecords ?? [], products)
   const out: ProductProfitRow[] = []
   for (const p of products) {
     let sold = 0
@@ -1131,7 +1361,8 @@ export function calcProductProfitReport(data: BusinessData): ProductProfitRow[] 
       }
     }
     const revenue = Math.round(sold * p.sellingPrice * 100) / 100
-    const cost = Math.round(sold * costUnitPriceOf(p.id, products, avgMap) * 100) / 100
+    // 成本 = 严格 FIFO 逐批结转的累计售出成本
+    const cost = Math.round((fifo.costByProduct[p.id] ?? 0) * 100) / 100
     const unitPrice = typeof p.memberPrice === 'number' ? p.memberPrice : p.sellingPrice
     const memberRevenue = Math.round(sold * unitPrice * 100) / 100
     out.push({
@@ -1319,34 +1550,45 @@ export function frequentProductIds(
     .map(([pid]) => pid)
 }
 
-/** 总统计：营业额 = Σ日记录收入；成本 = 纯 COGS（Σ售出数量 × 进货价，按收摊记录，不计支出）；利润/毛利率；支出 = Σ支出金额 */
+/** 总统计：营业额 = Σ日记录收入；成本 = 纯 COGS（严格 FIFO 逐批结转，按收摊记录，不计支出）；利润/毛利率；支出 = Σ支出金额 */
 export interface BusinessStats {
   revenue: number
   cost: number
   profit: number
   margin: number // 0-1 小数（营业额 0 → 0）
   expenseTotal: number // Σ支出金额（全部支出记录）
+  /** 待销售（在库未售出）：数量合计（单位不同仅供参考） */
+  pendingQuantity: number
+  /** 待销售成本 = Σ FIFO 剩余批次数量 × 该批进货单价 */
+  pendingCost: number
+  /** 待销售营业额 = Σ 剩余数量 × 售价 */
+  pendingRevenue: number
+  /** 待销售利润 = 待销售营业额 − 待销售成本 */
+  pendingProfit: number
 }
 
 export function calcBusinessStats(data: BusinessData): BusinessStats {
   const revenue = data.dailyRecords.reduce((s, r) => s + r.totalRevenue, 0)
-  // 成本 = 售出商品成本（COGS）：Σ 售出数量 × 成本单价（未售完批次实际进货单价均值，回退商品维护的进货单价）
-  const avgMap = avgUnsoldUnitPriceMap(data.purchases, data.dailyRecords)
+  // 成本 = 售出商品成本（COGS）：严格 FIFO——按收摊日期升序，逐批从最旧进货批次结转，各段用该批次自己的进货单价
+  const fifo = calcFifoAllocation(data.purchases, data.dailyRecords, data.products)
   let cost = 0
   for (const r of data.dailyRecords) {
-    for (const item of r.items) {
-      cost += soldCount(item) * costUnitPriceOf(item.productId, data.products, avgMap)
-    }
+    cost += calcDailyCostFifo(r.id, r.items, data.products, fifo)
   }
   const profit = revenue - cost
   const margin = revenue > 0 ? profit / revenue : 0
   const expenseTotal = data.expenses.reduce((s, e) => s + e.amount, 0)
+  const pending = calcPendingSales(data, fifo)
   return {
     revenue: Math.round(revenue * 100) / 100,
     cost: Math.round(cost * 100) / 100,
     profit: Math.round(profit * 100) / 100,
     margin: Math.round(margin * 10000) / 10000,
-    expenseTotal: Math.round(expenseTotal * 100) / 100
+    expenseTotal: Math.round(expenseTotal * 100) / 100,
+    pendingQuantity: pending.quantity,
+    pendingCost: pending.cost,
+    pendingRevenue: pending.revenue,
+    pendingProfit: pending.profit
   }
 }
 
@@ -1440,14 +1682,14 @@ export interface TrendPoint {
 export function calcBusinessTrend(data: BusinessData, endDate: string, days = 30): TrendPoint[] {
   if (!isValidDateKey(endDate) || days <= 0) return []
   const end = new Date(endDate + 'T00:00:00')
-  const avgMap = avgUnsoldUnitPriceMap(data.purchases, data.dailyRecords)
+  const fifo = calcFifoAllocation(data.purchases, data.dailyRecords, data.products)
   const out: TrendPoint[] = []
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(end.getFullYear(), end.getMonth(), end.getDate() - i)
     const key = localDateKey(d)
     const dayRecords = data.dailyRecords.filter(r => r.date === key)
     const revenue = dayRecords.reduce((s, r) => s + r.totalRevenue, 0)
-    const cost = dayRecords.reduce((s, r) => s + calcDailyCost(r.items, data.products, avgMap), 0)
+    const cost = dayRecords.reduce((s, r) => s + calcDailyCostFifo(r.id, r.items, data.products, fifo), 0)
     const count = dayRecords.reduce((s, r) => s + (typeof r.transactionCount === 'number' && Number.isFinite(r.transactionCount) ? r.transactionCount : 0), 0)
     const revenueR = Math.round(revenue * 100) / 100
     const costR = Math.round(cost * 100) / 100
@@ -1480,13 +1722,13 @@ export function calcMonthlyStats(data: BusinessData, year: number): MonthlyStat[
   const y = Math.floor(year)
   const records = (data?.dailyRecords ?? []).filter(r => typeof r?.date === 'string')
   const expenses = (data?.expenses ?? []).filter(e => typeof e?.date === 'string')
-  const avgMap = avgUnsoldUnitPriceMap(data?.purchases ?? [], data?.dailyRecords ?? [])
+  const fifo = calcFifoAllocation(data?.purchases ?? [], data?.dailyRecords ?? [], data?.products ?? [])
   const out: MonthlyStat[] = []
   for (let m = 1; m <= 12; m++) {
     const prefix = `${y}-${String(m).padStart(2, '0')}`
     const monthRecords = records.filter(r => r.date.startsWith(prefix))
     const revenue = round2(monthRecords.reduce((s, r) => s + (typeof r.totalRevenue === 'number' && Number.isFinite(r.totalRevenue) ? r.totalRevenue : 0), 0))
-    const cost = round2(monthRecords.reduce((s, r) => s + calcDailyCost(r.items, data?.products ?? [], avgMap), 0))
+    const cost = round2(monthRecords.reduce((s, r) => s + calcDailyCostFifo(r.id, r.items, data?.products ?? [], fifo), 0))
     const transactionCount = monthRecords.reduce(
       (s, r) => s + (typeof r.transactionCount === 'number' && Number.isFinite(r.transactionCount) ? r.transactionCount : 0),
       0
@@ -1842,7 +2084,7 @@ export interface ProductSummary {
 export function calcProductSummary(data: BusinessData, productId: string): ProductSummary {
   const product = data.products.find(p => p.id === productId) ?? null
   const stock = calcInventory(data.products, data.purchases, data.dailyRecords)
-  const avgMap = avgUnsoldUnitPriceMap(data.purchases, data.dailyRecords)
+  const fifo = calcFifoAllocation(data.purchases, data.dailyRecords, data.products)
   const purchases = data.purchases.filter(p => p.productId === productId)
   const dailyRecords = data.dailyRecords.filter(r => r.items.some(it => it.productId === productId))
 
@@ -1853,7 +2095,6 @@ export function calcProductSummary(data: BusinessData, productId: string): Produ
   let totalSold = 0
   let totalLoss = 0
   let totalRevenue = 0
-  let totalCost = 0
   for (const r of dailyRecords) {
     for (const item of r.items) {
       if (item.productId !== productId) continue
@@ -1862,9 +2103,11 @@ export function calcProductSummary(data: BusinessData, productId: string): Produ
       const sold = soldCount(item)
       totalSold += sold
       totalRevenue = Math.round((totalRevenue + sold * (product?.sellingPrice ?? 0)) * 100) / 100
-      totalCost = Math.round((totalCost + sold * costUnitPriceOf(item.productId, data.products, avgMap)) * 100) / 100
     }
   }
+
+  // 总成本 = 严格 FIFO 逐批结转的累计售出成本
+  const totalCost = Math.round((fifo.costByProduct[productId] ?? 0) * 100) / 100
 
   const recentPurchases = sortPurchases(purchases).slice(0, 5)
   const recentDailyRecords = sortDailyRecords(dailyRecords).slice(0, 5)

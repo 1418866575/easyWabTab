@@ -69,7 +69,7 @@ const ledgerStats = computed(() => calcBusinessStats(data.value))
 
 /**
  * 毛利率 =（营业收入 − 成本价）/ 营业收入 × 100%
- * 成本价 = Σ 售出数量 × 进货单价（多次进货时取未售完批次的实际进货单价均值，无批次回退商品维护的进货单价）
+ * 成本价 = 严格先进先出（FIFO）逐批结转：收摊按日期升序，售出数量从最旧进货批次开始消耗，各段用该批次自己的进货单价
  * 直接取 calcBusinessStats.margin（内部已按同一口径算成本），营业收入为 0 时为 0，不会出现 NaN
  */
 const grossMargin = computed(() => ledgerStats.value.margin)
@@ -103,7 +103,7 @@ const dateText = computed(() =>
     <!-- 骨架屏：首屏数据（IndexedDB）加载中显示占位，加载完成淡入真实内容 -->
     <template v-if="loading">
       <div class="bizhome-hero">
-        <div v-for="i in 5" :key="'sk-hero-' + i" class="bizhome-hero-card sk-block">
+        <div v-for="i in 9" :key="'sk-hero-' + i" class="bizhome-hero-card sk-block">
           <span class="sk-line sk-line-sm"></span>
           <span class="sk-line sk-line-lg"></span>
         </div>
@@ -140,13 +140,10 @@ const dateText = computed(() =>
         </div>
         <div class="scope-formula" data-testid="bizhome-margin-formula">
           <span class="formula-main">毛利率 =（营业收入 − 成本价）/ 营业收入 × 100%</span>
-          <span class="formula-vars">
-            营业收入 = 账本内收摊营业额合计；成本价 = Σ（售出数量 × 进货单价）；商品有多次进货时，进货单价取未售完批次的实际进货单价均值（无批次时取商品信息里维护的进货单价）
-          </span>
         </div>
       </div>
 
-      <!-- 主指标：出摊天数/营业额/利润总额/支出/毛利率（按账本统计） -->
+      <!-- 主指标（按账本统计）：出摊天数 → 营业收入 → 成本 → 毛利率 → 利润 → 支出 → 待销售（成本/营业额/利润） -->
       <section class="bizhome-hero">
         <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-stalldays" @click="go('daily')" @keydown.enter="go('daily')">
           <span class="hero-label">出摊总天数</span>
@@ -156,21 +153,33 @@ const dateText = computed(() =>
           <span class="hero-label">营业收入</span>
           <span class="hero-value">{{ formatYuanOf(ledgerStats.revenue) }}</span>
         </div>
-        <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-profit" @click="go('stats')" @keydown.enter="go('stats')">
-          <span class="hero-label">利润总额</span>
-          <span class="hero-value" :class="{ negative: ledgerStats.profit < 0 }">{{ formatYuanOf(ledgerStats.profit) }}</span>
-        </div>
         <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-cost" @click="go('stats')" @keydown.enter="go('stats')">
-          <span class="hero-label">成本合计</span>
+          <span class="hero-label">成本</span>
           <span class="hero-value">{{ formatYuanOf(ledgerStats.cost) }}</span>
+        </div>
+        <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-margin" @click="go('stats')" @keydown.enter="go('stats')">
+          <span class="hero-label">毛利率</span>
+          <span class="hero-value" :class="{ negative: grossMargin < 0 }">{{ (grossMargin * 100).toFixed(1) }}%</span>
+        </div>
+        <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-profit" @click="go('stats')" @keydown.enter="go('stats')">
+          <span class="hero-label">利润</span>
+          <span class="hero-value" :class="{ negative: ledgerStats.profit < 0 }">{{ formatYuanOf(ledgerStats.profit) }}</span>
         </div>
         <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-expense" @click="go('expenses')" @keydown.enter="go('expenses')">
           <span class="hero-label">支出</span>
           <span class="hero-value">{{ formatYuanOf(ledgerStats.expenseTotal) }}</span>
         </div>
-        <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-margin" @click="go('stats')" @keydown.enter="go('stats')">
-          <span class="hero-label">毛利率</span>
-          <span class="hero-value" :class="{ negative: grossMargin < 0 }">{{ (grossMargin * 100).toFixed(1) }}%</span>
+        <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-pending-cost" @click="go('inventory')" @keydown.enter="go('inventory')">
+          <span class="hero-label">待销售成本</span>
+          <span class="hero-value">{{ formatYuanOf(ledgerStats.pendingCost) }}</span>
+        </div>
+        <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-pending-revenue" @click="go('inventory')" @keydown.enter="go('inventory')">
+          <span class="hero-label">待销售营业额</span>
+          <span class="hero-value">{{ formatYuanOf(ledgerStats.pendingRevenue) }}</span>
+        </div>
+        <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-pending-profit" @click="go('inventory')" @keydown.enter="go('inventory')">
+          <span class="hero-label">待销售利润</span>
+          <span class="hero-value" :class="{ negative: ledgerStats.pendingProfit < 0 }">{{ formatYuanOf(ledgerStats.pendingProfit) }}</span>
         </div>
       </section>
 
@@ -324,10 +333,10 @@ html.dark .sk-block::after {
   .sk-block::after { animation: none; }
 }
 
-/* ===== 主指标：出摊天数 + 营业收入 + 利润总额 + 成本合计 + 支出 + 毛利率（6 卡） ===== */
+/* ===== 主指标 9 卡（3 行 × 3 列）：出摊天数 / 营业收入 / 成本 / 毛利率 / 利润 / 支出 / 待销售成本 / 待销售营业额 / 待销售利润 ===== */
 .bizhome-hero {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -755,12 +764,6 @@ html.dark .sk-block::after {
   font-variant-numeric: tabular-nums;
 }
 
-.formula-vars {
-  font-size: 12px;
-  color: var(--color-text-muted, var(--color-text-muted));
-  line-height: 1.5;
-}
-
 /* 迷你柱状图 */
 .bizhome-mini-chart {
   gap: 14px;
@@ -899,7 +902,6 @@ html.dark .mini-bar-col:hover .mini-bar {
   .bizhome-hero {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
   /* 窄屏下双列堆叠为上下，各自 100% 宽度 */
   .bizhome-split-row { flex-direction: column; }
   .bizhome-col-40,

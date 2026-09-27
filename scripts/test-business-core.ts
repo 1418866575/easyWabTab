@@ -3,6 +3,7 @@
 // T25-T32：账本容器（默认名/同年唯一/旧扁平迁移/年份去重/空态/按年份并集合并）
 // T33-T36：账本删除/清空守卫；T37-T41：进货关联支出、数量/单价联动、月度统计
 // T42-T45：会员价归一化、进货批次 FIFO 剩余状态、未售完批次单价与自动均价
+// T63-T65：严格先进先出（FIFO）成本结转、待销售估值、损耗出库口径
 import assert from 'node:assert/strict'
 import {
   addExpenseCategory,
@@ -24,6 +25,9 @@ import {
   calcProductProfitReport,
   calcCategoryProfitReport,
   calcBatchStock,
+  calcDailyCostFifo,
+  calcFifoAllocation,
+  calcPendingSales,
   agingBatches,
   slowMovingProducts,
   daysBetween,
@@ -66,6 +70,7 @@ import {
   renameCategory,
   selectableExpenses,
   soldCount,
+  calcProductSummary,
   sortedLedgers,
   sumExpenseAmounts,
   toggleCategoryVisible,
@@ -958,11 +963,11 @@ test('T45 进货价自动均价', () => {
   ]
   assert.equal(avgUnsoldUnitPrice(purchases, soldAll, 'p1'), null)
   assert.equal(avgUnsoldUnitPrice(purchases, [], 'nope'), null)
-  // 损耗不计入售出：带出 10 / 损耗 10 → 售出 0，全部未售完
+  // 损耗同样离开库存（只是不计入售出）：带出 10 / 损耗 10 → 售出 0 但出库 10 → 最旧批次 b1 出库完 → (3 + 4.1) / 2 = 3.55
   const lossOnly: BusinessDailyRecord[] = [
     { id: 'd3', date: '2026-06-01', items: [{ productId: 'p1', broughtOut: 10, remaining: 0, loss: 10 }], totalRevenue: 0, createdAt: 'x', updatedAt: 'x' }
   ]
-  assert.equal(avgUnsoldUnitPrice(purchases, lossOnly, 'p1'), 3.03)
+  assert.equal(avgUnsoldUnitPrice(purchases, lossOnly, 'p1'), 3.55)
 })
 
 // T46 — 录入提效：日期位移 / 上日模板 / 常用商品
@@ -1456,6 +1461,125 @@ test('T62 毛利率与成本价边界', () => {
   const report = calcProductProfitReport(data)
   assert.equal(report[0].cost, 20)
   assert.equal(report[0].revenue, 50)
+})
+
+// T63 — 严格先进先出（FIFO）成本结转：售出从最旧批次开始消耗，各段用该批次自己的进货单价
+test('T63 严格 FIFO 成本结转', () => {
+  const products = [
+    { id: 'p1', name: '烤肠', unit: '根', purchasePrice: 2, sellingPrice: 5, active: true, createdAt: 'c' }
+  ] as BusinessProduct[]
+  // b1 = 10 根 @2（05-01，最旧）；b2 = 10 根 @4（05-02）
+  const purchases = [
+    { id: 'b1', productId: 'p1', quantity: 10, unitPrice: 2, total: 20, date: '2026-05-01', createdAt: 'a' },
+    { id: 'b2', productId: 'p1', quantity: 10, unitPrice: 4, total: 40, date: '2026-05-02', createdAt: 'b' }
+  ] as BusinessPurchase[]
+  const dailyRecords = [
+    // d1 售出 12：先用完 b1（10×2=20），再从 b2 出 2（2×4=8） → 28
+    { id: 'd1', date: '2026-05-03', items: [{ productId: 'p1', broughtOut: 12, remaining: 0, loss: 0 }], totalRevenue: 60, createdAt: 'c', updatedAt: 'c' },
+    // d2 售出 5：继续从 b2 出（5×4=20） → 20；b2 剩 3
+    { id: 'd2', date: '2026-05-04', items: [{ productId: 'p1', broughtOut: 5, remaining: 0, loss: 0 }], totalRevenue: 25, createdAt: 'c', updatedAt: 'c' }
+  ] as BusinessDailyRecord[]
+
+  const alloc = calcFifoAllocation(purchases, dailyRecords, products)
+  assert.equal(alloc.costByRecord['d1'], 28, 'd1：10×2 + 2×4 = 28')
+  assert.equal(alloc.costByRecord['d2'], 20, 'd2：5×4 = 20')
+  assert.equal(alloc.costByProduct['p1'], 48, '累计售出成本 48')
+  assert.equal(alloc.remainingByPurchase['b1'], 0)
+  assert.equal(alloc.remainingByPurchase['b2'], 3, 'b2 剩 3 根')
+  assert.equal(alloc.remainingByProduct['p1'], 3, '剩余库存与 calcInventory 一致')
+  // 切片明细：d1 跨两批
+  const d1 = alloc.byRecord['d1']['p1']
+  assert.deepEqual(d1.soldSlices.map(s => [s.purchaseId, s.quantity, s.unitPrice]), [['b1', 10, 2], ['b2', 2, 4]])
+  assert.equal(d1.lossSlices.length, 0)
+
+  // 单条记录成本走 FIFO（而非均价）
+  assert.equal(calcDailyCostFifo('d1', dailyRecords[0].items, products, alloc), 28)
+  assert.equal(calcDailyCostFifo('d2', dailyRecords[1].items, products, alloc), 20)
+  assert.equal(calcDailyCostFifo('nope', dailyRecords[1].items, products, alloc), 10, '无结转结果 → 回退商品维护价 5×2')
+
+  // 总统计 / 趋势 / 月度 / 毛利报表 全部同口径
+  const data = { ...emptyBusinessData(), products, purchases, dailyRecords } as BusinessData
+  assert.equal(calcBusinessStats(data).cost, 48)
+  const trend = calcBusinessTrend(data, '2026-05-04', 2)
+  assert.equal(trend[0].cost, 28)
+  assert.equal(trend[1].cost, 20)
+  assert.equal(calcMonthlyStats(data, 2026)[4].cost, 48)
+  const report = calcProductProfitReport(data)
+  assert.equal(report[0].cost, 48)
+  assert.equal(calcProductSummary(data, 'p1').totalCost, 48)
+
+  // 售出超过进货总量 → 超出部分按商品维护的进货单价兜底，不产生负库存
+  const over = [
+    { id: 'd9', date: '2026-05-05', items: [{ productId: 'p1', broughtOut: 30, remaining: 0, loss: 0 }], totalRevenue: 150, createdAt: 'c', updatedAt: 'c' }
+  ] as BusinessDailyRecord[]
+  const overAlloc = calcFifoAllocation(purchases, over, products)
+  assert.equal(overAlloc.costByRecord['d9'], 60 + 10 * 2, '20 根按批次结转 60，超出 10 根按维护价 2 兜底')
+  assert.equal(overAlloc.remainingByProduct['p1'], 0, '剩余不为负')
+})
+
+// T64 — 待销售（在库未售出）：成本按 FIFO 剩余批次的实际进货单价，营业额按售价
+test('T64 待销售估值', () => {
+  const products = [
+    { id: 'p1', name: '烤肠', unit: '根', purchasePrice: 2, sellingPrice: 5, active: true, createdAt: 'c' }
+  ] as BusinessProduct[]
+  const purchases = [
+    { id: 'b1', productId: 'p1', quantity: 10, unitPrice: 2, total: 20, date: '2026-05-01', createdAt: 'a' },
+    { id: 'b2', productId: 'p1', quantity: 10, unitPrice: 4, total: 40, date: '2026-05-02', createdAt: 'b' }
+  ] as BusinessPurchase[]
+  const dailyRecords = [
+    { id: 'd1', date: '2026-05-03', items: [{ productId: 'p1', broughtOut: 12, remaining: 0, loss: 0 }], totalRevenue: 60, createdAt: 'c', updatedAt: 'c' }
+  ] as BusinessDailyRecord[]
+  const data = { ...emptyBusinessData(), products, purchases, dailyRecords } as BusinessData
+  const pending = calcPendingSales(data)
+  assert.equal(pending.quantity, 8, '剩余 8 根')
+  assert.equal(pending.cost, 32, '待销售成本 = 8 × 4（剩余批次进价）')
+  assert.equal(pending.revenue, 40, '待销售营业额 = 8 × 5（售价）')
+  assert.equal(pending.profit, 8, '待销售利润 = 40 − 32')
+  // 与总统计一致
+  const stats = calcBusinessStats(data)
+  assert.equal(stats.pendingCost, 32)
+  assert.equal(stats.pendingRevenue, 40)
+  assert.equal(stats.pendingProfit, 8)
+  // 全部售完 → 待销售三项全 0
+  const allSold = {
+    ...data,
+    dailyRecords: [
+      { id: 'd2', date: '2026-05-03', items: [{ productId: 'p1', broughtOut: 20, remaining: 0, loss: 0 }], totalRevenue: 100, createdAt: 'c', updatedAt: 'c' }
+    ]
+  } as BusinessData
+  const none = calcPendingSales(allSold)
+  assert.equal(none.quantity, 0)
+  assert.equal(none.cost, 0)
+  assert.equal(none.revenue, 0)
+  assert.equal(none.profit, 0)
+  // 无进货记录 → 全 0
+  const bare = { ...emptyBusinessData(), products } as BusinessData
+  assert.equal(calcPendingSales(bare).cost, 0)
+})
+
+// T65 — 损耗同样出库：不计入 COGS，但消耗 FIFO 批次（库存口径与 calcInventory 一致）
+test('T65 损耗出库口径', () => {
+  const products = [
+    { id: 'p1', name: '烤肠', unit: '根', purchasePrice: 2, sellingPrice: 5, active: true, createdAt: 'c' }
+  ] as BusinessProduct[]
+  const purchases = [
+    { id: 'b1', productId: 'p1', quantity: 10, unitPrice: 2, total: 20, date: '2026-05-01', createdAt: 'a' }
+  ] as BusinessPurchase[]
+  // 带出 10：售出 6、损耗 3、剩余 1 → 出库 9，b1 剩 1
+  const dailyRecords = [
+    { id: 'd1', date: '2026-05-03', items: [{ productId: 'p1', broughtOut: 10, remaining: 1, loss: 3 }], totalRevenue: 30, createdAt: 'c', updatedAt: 'c' }
+  ] as BusinessDailyRecord[]
+  const alloc = calcFifoAllocation(purchases, dailyRecords, products)
+  assert.equal(alloc.costByRecord['d1'], 12, 'COGS 只算售出 6×2')
+  assert.equal(alloc.lossCostByRecord['d1'], 6, '损耗成本单列 3×2（不计入毛利）')
+  assert.equal(alloc.remainingByProduct['p1'], 1, '剩余 = 10 − 6 − 3 = 1')
+  assert.equal(calcInventory(products, purchases, dailyRecords)['p1'], 1, '与库存口径一致')
+  // 批次状态同步：sold 6 / writtenOff 3
+  const st = calcPurchaseStockStatus(purchases, dailyRecords)
+  assert.equal(st.b1.sold, 6)
+  assert.equal(st.b1.writtenOff, 3)
+  assert.equal(st.b1.remaining, 1)
+  assert.equal(calcBusinessStats({ ...emptyBusinessData(), products, purchases, dailyRecords } as BusinessData).cost, 12)
 })
 
 let passed = 0
