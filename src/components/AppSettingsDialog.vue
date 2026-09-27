@@ -2924,7 +2924,7 @@ onUnmounted(() => {
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">销售记账设置</h3>
           </div>
-          <p class="wb-menu-hint">摊位名称显示在销售记账页头部；库存低于阈值时在库存页与首页预警</p>
+          <p class="wb-menu-hint">摊位名称显示在销售记账页头部；库存低于阈值时在「库存预警」页与首页预警</p>
           <div class="remind-fields">
             <label class="remind-field">
               <span class="remind-label">摊位名称</span>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 商品管理：分类 tabs（全部 + 可见分类）+ 商品卡片网格 + 新增/编辑弹框 + ⚙️ 分类管理
-// P1-3：跨模块联动跳转（商品名可点击跳转进货页）
+// P1-3：跨模块联动跳转（商品名可点击跳转「库存」页）
 // P2-2：商品详情抽屉
 import { computed, nextTick, ref, watch } from 'vue'
 import { showConfirm } from '@/utils/dialog'

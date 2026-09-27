@@ -94,7 +94,7 @@ function batchStatusText(row: { soldOut: boolean; remaining: number }): string {
   return row.soldOut ? '已售完' : `未售完 · 剩 ${row.remaining}`
 }
 
-// 低库存阈值已迁移到「设置 → 销售记账 → 基础设置」：库存页只展示当前值并提供跳转入口
+// 低库存阈值已迁移到「设置 → 销售记账 → 基础设置」：「库存预警」页只展示当前值并提供跳转入口
 const appSettings = useAppSettingsDialog()
 function openThresholdSettings(): void {
   appSettings.openAppSettings({ tab: 'business', sub: 'biz-base' })

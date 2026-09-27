@@ -24,7 +24,8 @@ function cardFields(row: any) {
 }
 
 import Icon from '../Icon.vue'
-// 进货记录：分类 tabs（全部+可见分类）+ el-table 行式列表 + 新增/编辑弹框
+// 库存记录（菜单「库存」）：分类 tabs（全部+可见分类）+ el-table 行式列表 + 新增/编辑弹框
+// 页面内仍保留「进货」作为数据动作用语（进货价/进价、进货批次、进货明细），仅模块级文案跟随菜单改名
 // P0-2：进货行展示售价与加价率对照
 // P1-3：跨模块联动跳转
 import { computed, ref, watch } from 'vue'
@@ -71,7 +72,7 @@ function catNameOf(productId: string): string {
   return catId ? (findProductCategory(store.productCategories, catId)?.name ?? '未分类') : '未分类'
 }
 
-// ===== 一键导出 CSV（进货记录：按当前分类/商品筛选导出）=====
+// ===== 一键导出 CSV（库存记录：按当前分类/商品筛选导出）=====
 function exportPurchasesCsv(): void {
   const headers = ['日期', '商品', '分类', '数量', '进价', '金额', '剩余状态', '备注']
   const rows: (string | number)[][] = filteredWithProductFilter.value.map(p => [
@@ -84,7 +85,7 @@ function exportPurchasesCsv(): void {
     stockLabel(p),
     p.note ?? ''
   ])
-  downloadCsv(csvFileName('进货记录'), buildCsv(headers, rows))
+  downloadCsv(csvFileName('库存记录'), buildCsv(headers, rows))
 }
 
 // P0-2：获取商品售价
@@ -337,7 +338,7 @@ async function handleSave(): Promise<void> {
     formExpenseIds.value = []
     formProductId.value = keepProduct
     formDate.value = keepDate
-    toast.success(`已保存「${productNameOf(keepProduct)}」进货，可继续录入下一笔`)
+    toast.success(`已保存「${productNameOf(keepProduct)}」库存记录，可继续录入下一笔`)
     return
   }
   showDialog.value = false
@@ -368,13 +369,13 @@ async function handleDelete(id: string): Promise<void> {
 
     <div class="ewt-table-toolbar is-split">
       <div class="bizpur-toolbar-left">
-        <el-button type="primary" data-testid="bizpur-add" @click="startAdd">＋ 新增进货</el-button>
+        <el-button type="primary" data-testid="bizpur-add" @click="startAdd">＋ 新增库存记录</el-button>
         <el-button class="btn-export-csv" data-testid="bizpur-export" :disabled="filteredWithProductFilter.length === 0" @click="exportPurchasesCsv">导出 CSV</el-button>
       </div>
       <ViewModeToggle v-if="filteredWithProductFilter.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
     </div>
 
-    <div v-if="filteredWithProductFilter.length === 0" class="bizpur-empty" data-testid="bizpur-empty">暂无进货记录</div>
+    <div v-if="filteredWithProductFilter.length === 0" class="bizpur-empty" data-testid="bizpur-empty">暂无库存记录</div>
     <template v-else>
       <div class="bizpur-table-wrap">
         <el-table v-if="vm.mode === 'list'" class="ewt-table"
@@ -385,7 +386,7 @@ async function handleDelete(id: string): Promise<void> {
           size="default"
           style="width: 100%"
           height="100%"
-          empty-text="暂无进货记录"
+          empty-text="暂无库存记录"
         >
           <el-table-column label="日期" width="120" align="center">
             <template #default="{ row }">
@@ -511,7 +512,7 @@ async function handleDelete(id: string): Promise<void> {
     >
       <template #header>
         <div class="biz-dialog-header">
-          <h3>{{ editingId ? '编辑进货' : '新增进货' }}</h3>
+          <h3>{{ editingId ? '编辑库存记录' : '新增库存记录' }}</h3>
           <button class="biz-dialog-close" @click="showDialog = false"><Icon name="close" /></button>
         </div>
       </template>

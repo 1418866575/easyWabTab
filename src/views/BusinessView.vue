@@ -26,14 +26,15 @@ const router = useRouter()
 const store = useWorkbenchBusinessStore()
 const settingsStore = useAppSettingsStore()
 
-// 左树 7 项（固定顺序，SVG 图标经 Icon 组件渲染，不接工作台菜单开关系统）
+// 左树 8 项（固定顺序，SVG 图标经 Icon 组件渲染，不接工作台菜单开关系统）
+// 菜单文案：purchases = 库存（进货/入库记录）、inventory = 库存预警（低库存/滞销/久存预警）
 const SECTIONS = [
   { key: 'home', icon: 'home', label: '首页' },
   { key: 'products', icon: 'products', label: '商品' },
   { key: 'expenses', icon: 'expenses', label: '支出' },
-  { key: 'purchases', icon: 'purchases', label: '进货' },
+  { key: 'purchases', icon: 'purchases', label: '库存' },
   { key: 'daily', icon: 'daily', label: '收摊' },
-  { key: 'inventory', icon: 'inventory', label: '库存' },
+  { key: 'inventory', icon: 'inventory', label: '库存预警' },
   { key: 'stats', icon: 'stats', label: '统计' },
   { key: 'reconcile', icon: 'ledger', label: '对账' }
 ] as const
