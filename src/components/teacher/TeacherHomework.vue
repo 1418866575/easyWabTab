@@ -15,6 +15,7 @@ import { countMisses } from '@/composables/teacherCore'
 import { usePageSize } from '@/composables/usePageSize'
 import type { TeacherHomework, TeacherHomeworkMiss, HomeworkMissStatus } from '@/types/teacher'
 import { HOMEWORK_MISS_STATUS_META } from '@/types/teacher'
+import SubjectSelect from '@/components/teacher/SubjectSelect.vue'
 
 const store = useTeacherStore()
 const vm = useViewMode()
@@ -56,12 +57,10 @@ const formContent = ref('')
 const formAssign = ref('')
 const formDue = ref('')
 
-const subjectOptions = computed(() => store.data.teacher.subjects ?? [])
-
 function resetForm(): void {
   editingId.value = null
-  // 学科默认反显当前班级的任教学科（ClassGroup.subject）；若未设置则回退到任教学科列表首项
-  formSubject.value = store.cls?.subject || subjectOptions.value[0] || ''
+  // 学科默认反显当前班级的任教学科（ClassGroup.subject）；未设置则留空由用户选择
+  formSubject.value = store.cls?.subject || ''
   formTitle.value = ''
   formContent.value = ''
   formAssign.value = todayLocal()
@@ -353,9 +352,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
       <div class="hw-dialog-body">
         <div class="hw-form-row">
           <label class="hw-form-label">学科</label>
-          <el-select v-model="formSubject" filterable allow-create default-first-option placeholder="选择或输入学科" data-testid="hw-form-subject">
-            <el-option v-for="s in subjectOptions" :key="s" :value="s" :label="s" />
-          </el-select>
+          <SubjectSelect v-model="formSubject" placeholder="请选择学科" data-testid="hw-form-subject" />
         </div>
         <div class="hw-form-row">
           <label class="hw-form-label">标题 <span class="hw-required">*</span></label>

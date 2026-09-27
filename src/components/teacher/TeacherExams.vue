@@ -8,6 +8,7 @@ import TeacherStatCard from './TeacherStatCard.vue'
 import { bandCounts, examStats, rankRows } from '@/composables/teacherCore'
 import { SCORE_BANDS } from '@/types/teacher'
 import { exportExcel, excelFileName } from '@/composables/teacherExcelCore'
+import SubjectSelect from '@/components/teacher/SubjectSelect.vue'
 
 const store = useTeacherStore()
 
@@ -113,7 +114,10 @@ async function exportExcelFile(): Promise<void> {
       </div>
       <div class="tw-toolbar ex-add">
         <label class="tw-label">考试名<input v-model="newName" class="tw-input tw-input-sm" placeholder="如 语文期中" /></label>
-        <label class="tw-label">科目<input v-model="newSubject" class="tw-input tw-input-sm" placeholder="如 语文" /></label>
+        <label class="tw-label">
+          科目
+          <SubjectSelect v-model="newSubject" placeholder="请选择学科" size="small" />
+        </label>
         <label class="tw-label">日期<input v-model="newDate" class="tw-input tw-input-sm" placeholder="如 2026-04" /></label>
         <button type="button" class="tw-btn tw-btn-sm tw-btn-primary" :disabled="!newName.trim()" @click="onAddExam">新增考试</button>
         <span class="tw-label">批量成绩请到设置页「导入数据」</span>

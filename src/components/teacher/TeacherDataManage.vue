@@ -9,6 +9,7 @@
 import { computed, reactive, ref } from 'vue'
 import { useTeacherStore } from '@/stores/teacher'
 import TeacherStatCard from './TeacherStatCard.vue'
+import SubjectSelect from './SubjectSelect.vue'
 import {
   backupFileName,
   fileToRows,
@@ -591,7 +592,7 @@ async function onClearSemesterData(): Promise<void> {
           </label>
           <label class="dm-field">
             <span class="dm-field-label">任教科目</span>
-            <el-input v-model="form.subject" placeholder="如 数学" />
+            <SubjectSelect v-model="form.subject" placeholder="请选择学科" extra-class="dm-select" />
           </label>
         </div>
         <template #footer>

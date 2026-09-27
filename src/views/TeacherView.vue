@@ -25,6 +25,7 @@ import TeacherGrowth from '@/components/teacher/TeacherGrowth.vue'
 import TeacherLeave from '@/components/teacher/TeacherLeave.vue'
 import TeacherHomework from '@/components/teacher/TeacherHomework.vue'
 import TeacherHelp from '@/components/teacher/TeacherHelp.vue'
+import SubjectSelect from '@/components/teacher/SubjectSelect.vue'
 import { STAGE_OPTIONS, TERM_OPTIONS, type TeacherPageKey, type TeacherRole, type TeacherStage } from '@/types/teacher'
 import '@/styles/teacher.css'
 
@@ -258,7 +259,10 @@ onMounted(() => {
           </label>
           <label class="tw-label">年级<input v-model="guideGrade" class="tw-input" placeholder="如 三年级" /></label>
           <label class="tw-label">班级<input v-model="guideName" class="tw-input" placeholder="如 1班" /></label>
-          <label class="tw-label">任教科目<input v-model="guideSubject" class="tw-input" placeholder="如 语文" /></label>
+          <label class="tw-label">
+            任教科目
+            <SubjectSelect v-model="guideSubject" placeholder="请选择学科" size="small" />
+          </label>
           <label class="tw-label">
             本班身份
             <select v-model="guideRole" class="tw-select">

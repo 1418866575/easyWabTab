@@ -7,6 +7,7 @@ import { computed, nextTick, ref } from 'vue'
 import { useTeacherStore } from '@/stores/teacher'
 import { WEEK_DAYS } from '@/types/teacher'
 import { exportExcel, excelFileName } from '@/composables/teacherExcelCore'
+import SubjectSelect from '@/components/teacher/SubjectSelect.vue'
 
 const store = useTeacherStore()
 
@@ -16,19 +17,11 @@ const grid = computed(() => b.value?.timetable.grid ?? [])
 
 const editing = ref<{ p: number; d: number } | null>(null)
 const draft = ref('')
-const inputRef = ref<HTMLInputElement | null>(null)
-
-/** 用函数式 ref：单元格输入框位于 v-for 内，字符串 ref 会退化成数组 */
-function setInputRef(el: unknown): void {
-  inputRef.value = (el as HTMLInputElement | null) ?? null
-}
 
 async function beginEdit(p: number, d: number): Promise<void> {
   editing.value = { p, d }
   draft.value = grid.value[p]?.[d] ?? ''
   await nextTick()
-  inputRef.value?.focus()
-  inputRef.value?.select()
 }
 
 async function commit(): Promise<void> {
@@ -36,10 +29,6 @@ async function commit(): Promise<void> {
   const { p, d } = editing.value
   editing.value = null
   await store.setTimetableCell(p, d, draft.value)
-}
-
-function cancel(): void {
-  editing.value = null
 }
 
 async function onClear(): Promise<void> {
@@ -98,15 +87,12 @@ async function exportExcelFile(): Promise<void> {
                 >
                   保存
                 </button>
-                <input
+                <SubjectSelect
                   v-if="editing && editing.p === pi && editing.d === di"
-                  :ref="setInputRef"
                   v-model="draft"
-                  class="tw-input tw-input-sm tt-input"
                   placeholder="科目"
-                  @keyup.enter="commit"
-                  @keyup.esc="cancel"
-                  @blur="commit"
+                  size="small"
+                  @change="commit"
                 />
                 <button v-else type="button" class="tt-cell-btn tt-cell-empty" @click="beginEdit(pi, di)">
                   {{ grid[pi]?.[di] || '＋' }}
