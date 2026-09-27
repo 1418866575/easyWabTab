@@ -2,7 +2,7 @@
 // 销售记账首页：营业额/利润总额主指标 + 成本/支出/毛利率统计卡 + 低库存概览 + 销售排行（树状）
 import { computed, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { calcBusinessStats, calcCategoryProductRanking, calcExpenseMargin, calcMonthlyStats, formatYuanOf, lowStockProducts } from '@/composables/businessCore'
+import { calcBusinessStats, calcCategoryProductRanking, calcMonthlyStats, formatYuanOf, lowStockProducts } from '@/composables/businessCore'
 import Icon from '@/components/Icon.vue'
 
 const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
@@ -68,10 +68,11 @@ const ledgerDailyRecords = computed(() => data.value.dailyRecords)
 const ledgerStats = computed(() => calcBusinessStats(data.value))
 
 /**
- * 首页毛利率：=（营业额 − 支出）/ 营业额 × 100%
- * 营业额 = 账本内收摊营业额合计；支出 = 账本内支出合计（进货成本不计入）
+ * 毛利率 =（营业收入 − 成本价）/ 营业收入 × 100%
+ * 成本价 = Σ 售出数量 × 进货单价（多次进货时取未售完批次的实际进货单价均值，无批次回退商品维护的进货单价）
+ * 直接取 calcBusinessStats.margin（内部已按同一口径算成本），营业收入为 0 时为 0，不会出现 NaN
  */
-const grossMargin = computed(() => calcExpenseMargin(ledgerStats.value.revenue, ledgerStats.value.expenseTotal))
+const grossMargin = computed(() => ledgerStats.value.margin)
 
 // 出摊总天数：当前账本内的不同日期数
 const totalStallDays = computed(() => new Set(ledgerDailyRecords.value.map(r => r.date)).size)
@@ -138,9 +139,9 @@ const dateText = computed(() =>
           <span class="scope-hint">统计维度：按账本（一个账本对应一年的数据，切换账本即切换统计年度）</span>
         </div>
         <div class="scope-formula" data-testid="bizhome-margin-formula">
-          <span class="formula-main">毛利率 =（营业额 − 支出）/ 营业额 × 100%</span>
+          <span class="formula-main">毛利率 =（营业收入 − 成本价）/ 营业收入 × 100%</span>
           <span class="formula-vars">
-            营业额 = 账本内收摊营业额合计；支出 = 账本内支出合计；差值即扣除支出后的毛利
+            营业收入 = 账本内收摊营业额合计；成本价 = Σ（售出数量 × 进货单价）；商品有多次进货时，进货单价取未售完批次的实际进货单价均值（无批次时取商品信息里维护的进货单价）
           </span>
         </div>
       </div>
@@ -152,12 +153,16 @@ const dateText = computed(() =>
           <span class="hero-value">{{ totalStallDays }}<small class="hero-unit">天</small></span>
         </div>
         <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-revenue" @click="go('stats')" @keydown.enter="go('stats')">
-          <span class="hero-label">营业额</span>
+          <span class="hero-label">营业收入</span>
           <span class="hero-value">{{ formatYuanOf(ledgerStats.revenue) }}</span>
         </div>
         <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-profit" @click="go('stats')" @keydown.enter="go('stats')">
           <span class="hero-label">利润总额</span>
           <span class="hero-value" :class="{ negative: ledgerStats.profit < 0 }">{{ formatYuanOf(ledgerStats.profit) }}</span>
+        </div>
+        <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-cost" @click="go('stats')" @keydown.enter="go('stats')">
+          <span class="hero-label">成本合计</span>
+          <span class="hero-value">{{ formatYuanOf(ledgerStats.cost) }}</span>
         </div>
         <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-expense" @click="go('expenses')" @keydown.enter="go('expenses')">
           <span class="hero-label">支出</span>
@@ -319,10 +324,10 @@ html.dark .sk-block::after {
   .sk-block::after { animation: none; }
 }
 
-/* ===== 主指标：出摊天数 + 营业额 + 利润总额 + 支出 + 毛利率（5 卡） ===== */
+/* ===== 主指标：出摊天数 + 营业收入 + 利润总额 + 成本合计 + 支出 + 毛利率（6 卡） ===== */
 .bizhome-hero {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
 }
 

@@ -192,7 +192,7 @@ function normPurchase(raw: unknown): BusinessPurchase | null {
   }
 }
 
-// ===== 进货优化：关联支出 + 数量/单价双向联动 =====
+// ===== 进货优化：关联支出 + 数量/进价双向联动 =====
 
 /** 支出 id → 占用它的进货记录 id（用于「同一笔支出不可重复关联」校验；首次占用者为准） */
 export function expenseLinkOwners(purchases: BusinessPurchase[]): Map<string, string> {
@@ -241,13 +241,13 @@ export function selectableExpenses(
     })
 }
 
-/** 合计 ÷ 数量 = 单价；合计为 0 或数量 ≤ 0（除零）→ null（调用方保持原值，不写 NaN/Infinity） */
+/** 合计 ÷ 数量 = 进价；合计为 0 或数量 ≤ 0（除零）→ null（调用方保持原值，不写 NaN/Infinity） */
 export function deriveUnitPrice(total: number, quantity: number): number | null {
   if (!(total > 0) || !(quantity > 0)) return null
   return Math.round((total / quantity) * 100) / 100
 }
 
-/** 合计 ÷ 单价 = 数量（取整，至少 1）；合计为 0 或单价 ≤ 0（除零）→ null */
+/** 合计 ÷ 进价 = 数量（取整，至少 1）；合计为 0 或进价 ≤ 0（除零）→ null */
 export function deriveQuantity(total: number, unitPrice: number): number | null {
   if (!(total > 0) || !(unitPrice > 0)) return null
   return Math.max(1, Math.round(total / unitPrice))
@@ -259,7 +259,7 @@ export function normalizeExpenseIds(ids: unknown): string[] {
   return Array.from(new Set(ids.filter((x): x is string => typeof x === 'string' && !!x)))
 }
 
-/** 未关联支出时的常规合计：数量 × 单价（两位小数） */
+/** 未关联支出时的常规合计：数量 × 进价（两位小数） */
 export function calcPurchaseTotal(quantity: number, unitPrice: number): number {
   const q = Math.max(0, Math.floor(quantity))
   const p = Math.max(0, unitPrice)
@@ -585,12 +585,31 @@ export function calcDailyRevenue(items: DailyRecordItem[], products: BusinessPro
   return Math.round(total * 100) / 100
 }
 
-/** 日记录成本（纯 COGS）：Σ 销售数量 × 商品进货价（商品已删除计 0，与 calcBusinessStats 同口径） */
-export function calcDailyCost(items: DailyRecordItem[], products: BusinessProduct[]): number {
+/**
+ * 成本单价（唯一口径）：优先取「未售完进货批次」的实际进货单价均值——商品有多次进货记录时，
+ * 以实际使用的那批进货单价为准；没有未售完批次时回退商品信息里维护的进货单价 purchasePrice。
+ * avgMap 由 avgUnsoldUnitPriceMap 预计算后传入（调用方复用，避免逐项重算）；不传则只用商品维护价。
+ */
+export function costUnitPriceOf(
+  productId: string,
+  products: BusinessProduct[],
+  avgMap?: Record<string, number | null>
+): number {
+  const auto = avgMap ? avgMap[productId] : undefined
+  if (typeof auto === 'number' && Number.isFinite(auto) && auto > 0) return auto
+  const fallback = products.find(p => p.id === productId)?.purchasePrice ?? 0
+  return Number.isFinite(fallback) && fallback > 0 ? fallback : 0
+}
+
+/** 日记录成本（纯 COGS）：Σ 售出数量 × 成本单价（成本单价走 costUnitPriceOf，与首页/报表同口径） */
+export function calcDailyCost(
+  items: DailyRecordItem[],
+  products: BusinessProduct[],
+  avgMap?: Record<string, number | null>
+): number {
   let total = 0
   for (const item of items) {
-    const product = products.find(p => p.id === item.productId)
-    total += soldCount(item) * (product?.purchasePrice ?? 0)
+    total += soldCount(item) * costUnitPriceOf(item.productId, products, avgMap)
   }
   return Math.round(total * 100) / 100
 }
@@ -830,7 +849,7 @@ export function validatePurchaseInput(input: {
   if (!linked && price <= 0) {
     issues.push({ level: 'error', message: '进货单价必须 > 0（若成本记在支出里，请改为关联支出记录）' })
   } else if (linked && price <= 0) {
-    issues.push({ level: 'warn', message: '单价为 0：合计取自关联支出，该批单位成本按 0 参与均价计算' })
+    issues.push({ level: 'warn', message: '进价为 0：合计取自关联支出，该批单位成本按 0 参与均价计算' })
   }
   if (linked && Math.abs(total - (input.expenseTotal ?? 0)) > 0.01) {
     issues.push({
@@ -839,7 +858,7 @@ export function validatePurchaseInput(input: {
     })
   }
   if (!linked && qty > 0 && price > 0 && Math.abs(total - qty * price) > 0.01) {
-    issues.push({ level: 'warn', message: `合计 ${total.toFixed(2)} 与「数量 × 单价」${(qty * price).toFixed(2)} 不一致` })
+    issues.push({ level: 'warn', message: `合计 ${total.toFixed(2)} 与「数量 × 进价」${(qty * price).toFixed(2)} 不一致` })
   }
   return issues
 }
@@ -1102,6 +1121,7 @@ export function calcProductProfitReport(data: BusinessData): ProductProfitRow[] 
   const products = data.products ?? []
   const catName = (id?: string): string =>
     id ? (findProductCategory(data.productCategories ?? [], id)?.name ?? '未分类') : '未分类'
+  const avgMap = avgUnsoldUnitPriceMap(data.purchases ?? [], data.dailyRecords ?? [])
   const out: ProductProfitRow[] = []
   for (const p of products) {
     let sold = 0
@@ -1111,7 +1131,7 @@ export function calcProductProfitReport(data: BusinessData): ProductProfitRow[] 
       }
     }
     const revenue = Math.round(sold * p.sellingPrice * 100) / 100
-    const cost = Math.round(sold * p.purchasePrice * 100) / 100
+    const cost = Math.round(sold * costUnitPriceOf(p.id, products, avgMap) * 100) / 100
     const unitPrice = typeof p.memberPrice === 'number' ? p.memberPrice : p.sellingPrice
     const memberRevenue = Math.round(sold * unitPrice * 100) / 100
     out.push({
@@ -1310,12 +1330,12 @@ export interface BusinessStats {
 
 export function calcBusinessStats(data: BusinessData): BusinessStats {
   const revenue = data.dailyRecords.reduce((s, r) => s + r.totalRevenue, 0)
-  // 成本 = 售出商品成本（COGS）：按收摊记录售出数量 × 商品进货价；缺失商品计 0（与 calcDailyRevenue 同口径）
+  // 成本 = 售出商品成本（COGS）：Σ 售出数量 × 成本单价（未售完批次实际进货单价均值，回退商品维护的进货单价）
+  const avgMap = avgUnsoldUnitPriceMap(data.purchases, data.dailyRecords)
   let cost = 0
   for (const r of data.dailyRecords) {
     for (const item of r.items) {
-      const product = data.products.find(p => p.id === item.productId)
-      cost += soldCount(item) * (product?.purchasePrice ?? 0)
+      cost += soldCount(item) * costUnitPriceOf(item.productId, data.products, avgMap)
     }
   }
   const profit = revenue - cost
@@ -1328,19 +1348,6 @@ export function calcBusinessStats(data: BusinessData): BusinessStats {
     margin: Math.round(margin * 10000) / 10000,
     expenseTotal: Math.round(expenseTotal * 100) / 100
   }
-}
-
-/**
- * 首页毛利率口径：毛利率 =（营业额 − 支出）/ 营业额。
- * 与 calcBusinessStats.margin（营业额 − 售出成本 COGS）不同：这里只扣「支出的钱」，不扣进货成本。
- * 营业额 ≤ 0 → 0（不产生 Infinity / NaN；负数营收同样按 0 处理）。
- * 返回值是比率（0.35 = 35%），保留 4 位小数。
- */
-export function calcExpenseMargin(revenue: number, expenseTotal: number): number {
-  const r = Number.isFinite(revenue) ? revenue : 0
-  const e = Number.isFinite(expenseTotal) ? expenseTotal : 0
-  if (r <= 0) return 0
-  return Math.round(((r - e) / r) * 10000) / 10000
 }
 
 /** 低库存预警清单：在售商品（停售商品不参与预警）库存 < 阈值，按库存升序 */
@@ -1433,13 +1440,14 @@ export interface TrendPoint {
 export function calcBusinessTrend(data: BusinessData, endDate: string, days = 30): TrendPoint[] {
   if (!isValidDateKey(endDate) || days <= 0) return []
   const end = new Date(endDate + 'T00:00:00')
+  const avgMap = avgUnsoldUnitPriceMap(data.purchases, data.dailyRecords)
   const out: TrendPoint[] = []
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(end.getFullYear(), end.getMonth(), end.getDate() - i)
     const key = localDateKey(d)
     const dayRecords = data.dailyRecords.filter(r => r.date === key)
     const revenue = dayRecords.reduce((s, r) => s + r.totalRevenue, 0)
-    const cost = dayRecords.reduce((s, r) => s + calcDailyCost(r.items, data.products), 0)
+    const cost = dayRecords.reduce((s, r) => s + calcDailyCost(r.items, data.products, avgMap), 0)
     const count = dayRecords.reduce((s, r) => s + (typeof r.transactionCount === 'number' && Number.isFinite(r.transactionCount) ? r.transactionCount : 0), 0)
     const revenueR = Math.round(revenue * 100) / 100
     const costR = Math.round(cost * 100) / 100
@@ -1472,12 +1480,13 @@ export function calcMonthlyStats(data: BusinessData, year: number): MonthlyStat[
   const y = Math.floor(year)
   const records = (data?.dailyRecords ?? []).filter(r => typeof r?.date === 'string')
   const expenses = (data?.expenses ?? []).filter(e => typeof e?.date === 'string')
+  const avgMap = avgUnsoldUnitPriceMap(data?.purchases ?? [], data?.dailyRecords ?? [])
   const out: MonthlyStat[] = []
   for (let m = 1; m <= 12; m++) {
     const prefix = `${y}-${String(m).padStart(2, '0')}`
     const monthRecords = records.filter(r => r.date.startsWith(prefix))
     const revenue = round2(monthRecords.reduce((s, r) => s + (typeof r.totalRevenue === 'number' && Number.isFinite(r.totalRevenue) ? r.totalRevenue : 0), 0))
-    const cost = round2(monthRecords.reduce((s, r) => s + calcDailyCost(r.items, data?.products ?? []), 0))
+    const cost = round2(monthRecords.reduce((s, r) => s + calcDailyCost(r.items, data?.products ?? [], avgMap), 0))
     const transactionCount = monthRecords.reduce(
       (s, r) => s + (typeof r.transactionCount === 'number' && Number.isFinite(r.transactionCount) ? r.transactionCount : 0),
       0
@@ -1833,6 +1842,7 @@ export interface ProductSummary {
 export function calcProductSummary(data: BusinessData, productId: string): ProductSummary {
   const product = data.products.find(p => p.id === productId) ?? null
   const stock = calcInventory(data.products, data.purchases, data.dailyRecords)
+  const avgMap = avgUnsoldUnitPriceMap(data.purchases, data.dailyRecords)
   const purchases = data.purchases.filter(p => p.productId === productId)
   const dailyRecords = data.dailyRecords.filter(r => r.items.some(it => it.productId === productId))
 
@@ -1852,7 +1862,7 @@ export function calcProductSummary(data: BusinessData, productId: string): Produ
       const sold = soldCount(item)
       totalSold += sold
       totalRevenue = Math.round((totalRevenue + sold * (product?.sellingPrice ?? 0)) * 100) / 100
-      totalCost = Math.round((totalCost + sold * (product?.purchasePrice ?? 0)) * 100) / 100
+      totalCost = Math.round((totalCost + sold * costUnitPriceOf(item.productId, data.products, avgMap)) * 100) / 100
     }
   }
 

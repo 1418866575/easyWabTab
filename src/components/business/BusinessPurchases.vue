@@ -14,7 +14,7 @@ function cardFields(row: any) {
     { label: '商品', value: productNameOf(row.productId) },
     { label: '分类', value: catNameOf(row.productId) },
     { label: '数量', value: '×' + row.quantity },
-    { label: '单价', value: '@' + formatYuanOf(row.unitPrice) },
+    { label: '进价', value: '@' + formatYuanOf(row.unitPrice) },
     { label: '合计', value: formatYuanOf(row.total) },
     { label: '售价', value: p ? formatYuanOf(productSellingPrice(row.productId)!) + '/' + productUnitOf(row.productId) : '—' },
     { label: '加价率', value: m != null ? m + '%' : '—' },
@@ -73,7 +73,7 @@ function catNameOf(productId: string): string {
 
 // ===== 一键导出 CSV（进货记录：按当前分类/商品筛选导出）=====
 function exportPurchasesCsv(): void {
-  const headers = ['日期', '商品', '分类', '数量', '进货单价', '金额', '剩余状态', '备注']
+  const headers = ['日期', '商品', '分类', '数量', '进价', '金额', '剩余状态', '备注']
   const rows: (string | number)[][] = filteredWithProductFilter.value.map(p => [
     p.date,
     productNameOf(p.productId),
@@ -187,28 +187,28 @@ const expenseOptions = computed(() => selectableExpenses(store.expenses, store.p
 
 /** 已关联支出金额合计 */
 const linkedExpenseTotal = computed(() => sumExpenseAmounts(store.expenses, formExpenseIds.value))
-/** 是否走「支出汇总」口径：关联了支出 → 合计由支出决定；否则 数量 × 单价 */
+/** 是否走「支出汇总」口径：关联了支出 → 合计由支出决定；否则 数量 × 进价 */
 const useExpenseTotal = computed(() => formExpenseIds.value.length > 0)
 
 const formTotal = computed(() =>
   useExpenseTotal.value ? linkedExpenseTotal.value : calcPurchaseTotal(Number(formQuantity.value) || 0, Number(formUnitPrice.value) || 0)
 )
 
-/** 关联支出后：输入数量 → 自动反算单价（合计 ÷ 数量；合计为 0 或数量为 0 时不算，避免除零） */
+/** 关联支出后：输入数量 → 自动反算进价（合计 ÷ 数量；合计为 0 或数量为 0 时不算，避免除零） */
 function onQuantityInput(): void {
   if (!useExpenseTotal.value) return
   const price = deriveUnitPrice(linkedExpenseTotal.value, Number(formQuantity.value) || 0)
   if (price !== null) formUnitPrice.value = String(price)
 }
 
-/** 关联支出后：输入单价 → 自动反算数量（合计 ÷ 单价；合计为 0 或单价为 0 时不算，避免除零） */
+/** 关联支出后：输入进价 → 自动反算数量（合计 ÷ 进价；合计为 0 或进价为 0 时不算，避免除零） */
 function onUnitPriceInput(): void {
   if (!useExpenseTotal.value) return
   const qty = deriveQuantity(linkedExpenseTotal.value, Number(formUnitPrice.value) || 0)
   if (qty !== null) formQuantity.value = String(qty)
 }
 
-/** 勾选/取消关联支出后同步联动一次（数量为空时按单价反推，保证合计始终等于支出汇总） */
+/** 勾选/取消关联支出后同步联动一次（数量为空时按进价反推，保证合计始终等于支出汇总） */
 function onExpenseChange(): void {
   if (!useExpenseTotal.value) return
   if (Number(formQuantity.value) > 0) onQuantityInput()
@@ -252,7 +252,7 @@ function toggleExpense(id: string): void {
   onExpenseChange()
 }
 
-// ===== 录入校验（数量为 0 / 单价为 0 / 合计与关联支出汇总不符）=====
+// ===== 录入校验（数量为 0 / 进价为 0 / 合计与关联支出汇总不符）=====
 const purchaseIssues = computed(() =>
   validatePurchaseInput({
     quantity: Number(formQuantity.value) || 0,
@@ -327,7 +327,7 @@ async function handleSave(): Promise<void> {
     return
   }
   await store.addPurchase(payload)
-  // 连续录入：保留商品与日期，清空数量/单价/备注/关联支出，弹框继续开
+  // 连续录入：保留商品与日期，清空数量/进价/备注/关联支出，弹框继续开
   if (continuous.value) {
     const keepProduct = formProductId.value
     const keepDate = formDate.value
@@ -409,7 +409,7 @@ async function handleDelete(id: string): Promise<void> {
           <el-table-column label="数量" width="80" align="right">
             <template #default="{ row }">×{{ row.quantity }}</template>
           </el-table-column>
-          <el-table-column label="单价" width="100" align="right">
+          <el-table-column label="进价" width="100" align="right">
             <template #default="{ row }">@{{ formatYuanOf(row.unitPrice) }}</template>
           </el-table-column>
           <el-table-column label="合计" width="140" align="right">
@@ -556,7 +556,7 @@ async function handleDelete(id: string): Promise<void> {
             />
           </div>
           <div class="biz-field">
-            <label>单价 *</label>
+            <label>进价 *</label>
             <el-input-number
               :min="0"
               :step="0.01"
@@ -569,7 +569,7 @@ async function handleDelete(id: string): Promise<void> {
             />
           </div>
         </div>
-        <!-- 进货优化：关联支出（可多条）；合计金额 = 已关联支出金额之和，数量与单价随合计双向联动 -->
+        <!-- 进货优化：关联支出（可多条）；合计金额 = 已关联支出金额之和，数量与进价随合计双向联动 -->
         <div class="biz-field">
           <label>关联支出（可选，可多选）</label>
           <p v-if="expenseOptions.length === 0" class="bizpur-expense-empty" data-testid="bizpur-expense-empty">当前账本暂无支出记录</p>
@@ -596,7 +596,7 @@ async function handleDelete(id: string): Promise<void> {
             </label>
           </div>
           <p class="bizpur-expense-hint" data-testid="bizpur-expense-hint">
-            已选 {{ formExpenseIds.length }} 笔，关联金额合计 {{ formatYuanOf(linkedExpenseTotal) }}；勾选后修改数量自动算单价、修改单价自动反算数量。
+            已选 {{ formExpenseIds.length }} 笔，关联金额合计 {{ formatYuanOf(linkedExpenseTotal) }}；勾选后修改数量自动算进价、修改进价自动反算数量。
           </p>
         </div>
         <div class="biz-field">

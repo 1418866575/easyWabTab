@@ -24,7 +24,7 @@ import Icon from '../Icon.vue'
 // P0-3：编辑弹框增加库存上下文（当前库存、预计库存、小计实时计算）
 import { computed, reactive, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { calcDailyCost, calcDailyItemDetails, calcDailyLossAmount, calcDailyRevenue, calcInventory, checkRevenueOverride, dailyTemplateFromLast, findProduct, formatYuanOf, frequentProductIds, lastDailyBefore, localDateKey, sortDailyRecords, validateDailyRows } from '@/composables/businessCore'
+import { avgUnsoldUnitPriceMap, calcDailyCost, calcDailyItemDetails, calcDailyLossAmount, calcDailyRevenue, calcInventory, checkRevenueOverride, dailyTemplateFromLast, findProduct, formatYuanOf, frequentProductIds, lastDailyBefore, localDateKey, sortDailyRecords, validateDailyRows } from '@/composables/businessCore'
 import { useToast } from '@/composables/useToast'
 import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
 import type { BusinessDailyRecord, DailyRecordItem } from '@/types'
@@ -183,8 +183,11 @@ function resetRevenueToAuto(): void {
   formRevenueManual.value = null
 }
 
+/** 成本单价表：未售完进货批次的实际进货单价均值（无批次时回退商品维护的进货单价） */
+const costAvgMap = computed(() => avgUnsoldUnitPriceMap(store.purchases, store.dailyRecords))
+
 const formCost = computed(() =>
-  calcDailyCost(rows.map(r => ({ ...r })), store.products)
+  calcDailyCost(rows.map(r => ({ ...r })), store.products, costAvgMap.value)
 )
 
 const formLossAmount = computed(() =>
@@ -196,11 +199,11 @@ const formProfit = computed(() =>
 )
 
 function recordProfit(record: BusinessDailyRecord): number {
-  return Math.round((record.totalRevenue - calcDailyCost(record.items, store.products)) * 100) / 100
+  return Math.round((record.totalRevenue - calcDailyCost(record.items, store.products, costAvgMap.value)) * 100) / 100
 }
 
 function recordCost(record: BusinessDailyRecord): number {
-  return calcDailyCost(record.items, store.products)
+  return calcDailyCost(record.items, store.products, costAvgMap.value)
 }
 
 function recordLossAmount(record: BusinessDailyRecord): number {

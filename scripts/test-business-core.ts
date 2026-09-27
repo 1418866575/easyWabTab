@@ -8,6 +8,7 @@ import {
   addExpenseCategory,
   addProductCategory,
   avgUnsoldUnitPrice,
+  avgUnsoldUnitPriceMap,
   calcBroughtOutTotals,
   calcBusinessStats,
   calcExpenseReconciliation,
@@ -27,7 +28,7 @@ import {
   slowMovingProducts,
   daysBetween,
   calcProductRanking,
-  calcExpenseMargin,
+  costUnitPriceOf,
   calcPurchaseTotals,
   calcPurchaseTotal,
   calcPurchaseStockStatus,
@@ -1001,7 +1002,7 @@ test('T47 进货录入校验', () => {
   assert.equal(zeroPrice.some(i => i.level === 'error' && i.message.includes('单价')), true)
   // 关联支出时单价为 0 只警告（合计来自支出）
   const linkedZeroPrice = validatePurchaseInput({ quantity: 10, unitPrice: 0, total: 100, expenseTotal: 100 })
-  assert.equal(linkedZeroPrice.some(i => i.level === 'warn' && i.message.includes('单价为 0')), true)
+  assert.equal(linkedZeroPrice.some(i => i.level === 'warn' && i.message.includes('进价为 0')), true)
   assert.equal(linkedZeroPrice.some(i => i.level === 'error'), false)
   // 合计与支出汇总不符 → error
   const mismatch = validatePurchaseInput({ quantity: 10, unitPrice: 2, total: 20, expenseTotal: 100 })
@@ -1363,28 +1364,98 @@ test('T60 calcExpenseReconciliation expenseLabels', () => {
   assert.equal(rec.unlinkedExpenseTotal, 50)
 })
 
-// T61 — 首页毛利率口径：=（营业额 − 支出）/ 营业额（营业额 ≤ 0 → 0，不产生 NaN/Infinity）
-test('T61 calcExpenseMargin', () => {
-  assert.equal(calcExpenseMargin(1000, 300), 0.7, '（1000-300）/1000')
-  assert.equal(calcExpenseMargin(200, 0), 1, '无支出 → 100%')
-  assert.equal(calcExpenseMargin(200, 200), 0, '支出=营业额 → 0%')
-  assert.equal(calcExpenseMargin(200, 260), -0.3, '支出 > 营业额 → 负毛利率')
-  assert.equal(calcExpenseMargin(0, 50), 0, '营业额 0 → 0（除零守卫）')
-  assert.equal(calcExpenseMargin(-100, 50), 0, '营业额负 → 0')
-  assert.equal(calcExpenseMargin(Number.NaN, 10), 0, '非法值 → 0')
-  assert.equal(calcExpenseMargin(100, Number.NaN), 1, '支出非法按 0 计')
-  // 与 calcBusinessStats.margin（扣 COGS）区分：同一批数据两个口径不同
+// T61 — 成本单价口径：优先未售完批次实际进货单价均值（多次进货以实际批次价为准），无批次回退商品维护价
+test('T61 costUnitPriceOf 成本单价', () => {
+  const products = [
+    { id: 'p1', name: '烤肠', unit: '根', purchasePrice: 2, sellingPrice: 5, active: true, createdAt: 'c' },
+    { id: 'p2', name: '可乐', unit: '瓶', purchasePrice: 1, sellingPrice: 3, active: true, createdAt: 'c' }
+  ] as BusinessProduct[]
+  // p1 两批：第一批 2 元已售完、第二批 4 元未售完 → 成本单价取未售完批次均价 4（不是写死的 2）
+  const purchases = [
+    { id: 'b1', productId: 'p1', quantity: 10, unitPrice: 2, total: 20, date: '2026-05-01', createdAt: 'a' },
+    { id: 'b2', productId: 'p1', quantity: 10, unitPrice: 4, total: 40, date: '2026-05-02', createdAt: 'b' }
+  ] as BusinessPurchase[]
+  // 售出 12 → 第一批 10 全部售完，第二批售出 2（剩 8 未售完）
+  const dailyRecords = [
+    { id: 'd1', date: '2026-05-03', items: [{ productId: 'p1', broughtOut: 12, remaining: 0, loss: 0 }], totalRevenue: 60, createdAt: 'c' }
+  ] as BusinessDailyRecord[]
+  const avgMap = avgUnsoldUnitPriceMap(purchases, dailyRecords)
+  assert.equal(costUnitPriceOf('p1', products, avgMap), 4, '取未售完批次的实际进货单价')
+  assert.equal(costUnitPriceOf('p2', products, avgMap), 1, '无进货批次 → 回退商品维护的进货单价')
+  assert.equal(costUnitPriceOf('p1', products), 2, '不传 avgMap → 商品维护价')
+  assert.equal(costUnitPriceOf('ghost', products, avgMap), 0, '商品不存在 → 0')
+
+  // 成本价 = 进货单价 × 售出数量：12 × 4 = 48（不再用写死的 2 → 24）
+  assert.equal(calcDailyCost(dailyRecords[0].items, products, avgMap), 48)
+  assert.equal(calcDailyCost(dailyRecords[0].items, products), 24, '不传 avgMap 时按商品维护价')
+  assert.equal(calcDailyCost([], products, avgMap), 0)
+  assert.equal(
+    calcDailyCost([{ productId: 'p1', broughtOut: 0, remaining: 0, loss: 0 }], products, avgMap),
+    0,
+    '数量为 0 → 成本 0'
+  )
+  assert.equal(
+    calcDailyCost([{ productId: 'ghost', broughtOut: 9, remaining: 0, loss: 0 }], products, avgMap),
+    0,
+    '商品缺失 → 成本 0'
+  )
+})
+
+// T62 — 毛利率 =（营业收入 − 成本价）/ 营业收入；数量 0 / 营业收入 0 → 0，不出 NaN
+test('T62 毛利率与成本价边界', () => {
   const data = {
     ...emptyBusinessData(),
     products: [{ id: 'p1', name: '烤肠', unit: '根', purchasePrice: 2, sellingPrice: 5, active: true, createdAt: 'c' }],
-    dailyRecords: [{ id: 'd1', date: '2026-05-01', items: [{ productId: 'p1', broughtOut: 10, remaining: 0, loss: 0 }], totalRevenue: 50, createdAt: 'c' }],
+    purchases: [{ id: 'b1', productId: 'p1', quantity: 10, unitPrice: 2, total: 20, date: '2026-05-01', createdAt: 'a' }],
+    dailyRecords: [
+      { id: 'd1', date: '2026-05-02', items: [{ productId: 'p1', broughtOut: 10, remaining: 0, loss: 0 }], totalRevenue: 50, createdAt: 'c' }
+    ],
     expenses: [{ id: 'e1', date: '2026-05-01', categoryId: 'expense-stall', amount: 10, title: '摊位费', createdAt: 'c' }]
   } as BusinessData
   const stats = calcBusinessStats(data)
-  assert.equal(stats.revenue, 50)
-  assert.equal(stats.cost, 20, 'COGS = 10 × 2')
-  assert.equal(stats.margin, 0.6, '统计口径毛利率 =（50-20）/50')
-  assert.equal(calcExpenseMargin(stats.revenue, stats.expenseTotal), 0.8, '首页口径 =（50-10）/50')
+  assert.equal(stats.revenue, 50, '营业收入 = 收摊营业额')
+  assert.equal(stats.cost, 20, '成本价 = 售出 10 × 进货单价 2')
+  assert.equal(stats.margin, 0.6, '（50 − 20）/ 50 = 60%')
+  assert.equal(stats.expenseTotal, 10, '支出单独统计，不计入成本价')
+
+  // 售罄后无未售完批次 → 成本单价回退商品维护价（仍是 2）
+  const soldOut = {
+    ...data,
+    dailyRecords: [
+      { id: 'd1', date: '2026-05-02', items: [{ productId: 'p1', broughtOut: 10, remaining: 0, loss: 0 }], totalRevenue: 50, createdAt: 'c' }
+    ]
+  } as BusinessData
+  assert.equal(calcBusinessStats(soldOut).cost, 20)
+
+  // 数量为 0：成本 0、营业收入 0 → 毛利率 0（不产生 NaN）
+  const zeroQty = {
+    ...data,
+    dailyRecords: [
+      { id: 'd1', date: '2026-05-02', items: [{ productId: 'p1', broughtOut: 0, remaining: 0, loss: 0 }], totalRevenue: 0, createdAt: 'c' }
+    ]
+  } as BusinessData
+  const z = calcBusinessStats(zeroQty)
+  assert.equal(z.revenue, 0)
+  assert.equal(z.cost, 0, '数量 0 → 成本价 0')
+  assert.equal(z.margin, 0, '营业收入 0 → 毛利率 0（除零守卫）')
+  assert.ok(!Number.isNaN(z.margin))
+
+  // 成本单价为 0（商品未维护进货价且无批次）→ 毛利率 100%
+  const noCost = {
+    ...emptyBusinessData(),
+    products: [{ id: 'p3', name: '赠品', unit: '个', purchasePrice: 0, sellingPrice: 5, active: true, createdAt: 'c' }],
+    dailyRecords: [
+      { id: 'd1', date: '2026-05-02', items: [{ productId: 'p3', broughtOut: 2, remaining: 0, loss: 0 }], totalRevenue: 10, createdAt: 'c' }
+    ]
+  } as BusinessData
+  const nc = calcBusinessStats(noCost)
+  assert.equal(nc.cost, 0)
+  assert.equal(nc.margin, 1, '成本 0 → 毛利率 100%')
+
+  // 报表口径一致：毛利报表的成本同样走未售完批次均价
+  const report = calcProductProfitReport(data)
+  assert.equal(report[0].cost, 20)
+  assert.equal(report[0].revenue, 50)
 })
 
 let passed = 0
