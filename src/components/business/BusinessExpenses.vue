@@ -25,15 +25,8 @@ import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
 import type { BusinessExpense } from '@/types'
 import Icon from '@/components/Icon.vue'
 import { usePageSize } from '@/composables/usePageSize'
-import { useAppSettingsDialog } from '@/composables/useAppSettingsDialog'
 
 const store = useWorkbenchBusinessStore()
-
-// 分类管理入口已迁移到「设置 → 销售记账 → 基础设置」：这里只负责跳转，不再内嵌弹框
-const appSettings = useAppSettingsDialog()
-function openCategorySettings(): void {
-  appSettings.openAppSettings({ tab: 'business', sub: 'biz-base', action: 'expense-cats' })
-}
 
 function catNameOf(id: string): string {
   return findExpenseCategory(store.expenseCategories, id)?.name ?? '未知'
@@ -134,7 +127,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 
 <template>
   <div class="bizexp">
-    <!-- 单行工具条：左=新增/导出，右=视图切换 + 分类管理 -->
+    <!-- 单行工具条：左=新增/导出，右=视图切换（分类管理入口已移除，统一走「设置 → 销售记账 → 基础设置」） -->
     <div class="ewt-table-toolbar is-split">
       <div class="bizexp-toolbar-left">
         <el-button type="primary" data-testid="bizexp-add" @click="startAdd">＋ 新增支出</el-button>
@@ -142,7 +135,6 @@ async function handleDeleteFromDialog(): Promise<void> {
       </div>
       <div class="bizexp-toolbar-right">
         <ViewModeToggle v-if="allExpenses.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
-        <el-button size="small" data-testid="bizexp-cat-manager" title="支出分类管理（设置）" @click="openCategorySettings"><Icon name="cog" :size="15" /></el-button>
       </div>
     </div>
 
