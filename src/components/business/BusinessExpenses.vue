@@ -1,24 +1,26 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
 const vm = useViewMode()
 
-function cardFields(row: any) {
+// 卡片视图：一笔支出一张卡（日期/标题/分类/金额/备注）
+function cardFields(e: any) {
   return [
-    { label: '日期', value: row.date },
-    { label: '支出合计', value: formatYuanOf(row.total) },
-    { label: '笔数', value: row.items.length + ' 笔' },
-    { label: '首笔分类', value: catNameOf(row.items[0].categoryId) }
+    { label: '日期', value: e.date },
+    { label: '标题', value: e.title },
+    { label: '分类', value: catNameOf(e.categoryId) },
+    { label: '金额', value: formatYuanOf(e.amount) },
+    { label: '备注', value: e.note || '—' }
   ]
 }
 
-// 支出记录：按天分组 el-table（对齐收摊记录），展开行展示当日支出条目（分类+金额+备注）
+// 支出记录：逐笔一条一行（不按天合并），日期倒序 + 同日按创建时间倒序
 import { computed, reactive, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { findExpenseCategory, formatYuanOf, localDateKey, sortExpenses } from '@/composables/businessCore'
+import { EXPENSE_TITLE_MAX, validateExpenseRow, findExpenseCategory, formatYuanOf, localDateKey, sortExpenses } from '@/composables/businessCore'
 import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
 import type { BusinessExpense } from '@/types'
 import Icon from '@/components/Icon.vue'
@@ -33,36 +35,19 @@ function openCategorySettings(): void {
   appSettings.openAppSettings({ tab: 'business', sub: 'biz-base', action: 'expense-cats' })
 }
 
-// ===== 按天分组（date 降序） =====
-interface ExpenseDayGroup {
-  date: string
-  items: BusinessExpense[]
-  total: number
-}
-const dayGroups = computed<ExpenseDayGroup[]>(() => {
-  const map = new Map<string, BusinessExpense[]>()
-  for (const e of sortExpenses(store.expenses)) {
-    if (!map.has(e.date)) map.set(e.date, [])
-    map.get(e.date)!.push(e)
-  }
-  return [...map.keys()]
-    .sort((a, b) => (a < b ? 1 : -1))
-    .map(date => {
-      const items = map.get(date)!
-      const total = items.reduce((s, i) => s + i.amount, 0)
-      return { date, items, total }
-    })
-})
-
 function catNameOf(id: string): string {
   return findExpenseCategory(store.expenseCategories, id)?.name ?? '未知'
 }
 
-// ===== 一键导出 CSV（支出记录：逐笔展开）=====
+// 逐笔列表（日期倒序、同日按创建时间倒序）；同一天不合并，每笔一行
+const allExpenses = computed<BusinessExpense[]>(() => sortExpenses(store.expenses))
+
+// ===== 一键导出 CSV（逐笔：日期/标题/分类/金额/备注）=====
 function exportExpensesCsv(): void {
-  const headers = ['日期', '分类', '金额', '备注']
-  const rows: (string | number)[][] = sortExpenses(store.expenses).map(e => [
+  const headers = ['日期', '标题', '分类', '金额', '备注']
+  const rows: (string | number)[][] = allExpenses.value.map(e => [
     e.date,
+    e.title,
     catNameOf(e.categoryId),
     e.amount.toFixed(2),
     e.note ?? ''
@@ -70,105 +55,80 @@ function exportExpensesCsv(): void {
   downloadCsv(csvFileName('支出记录'), buildCsv(headers, rows))
 }
 
-// ===== el-pagination 分页（固定 10 条/页，每个日组一行） =====
+// ===== 分页（逐笔：列表一行一笔，卡片一卡一笔） =====
 const LIST_PAGE_SIZE = 10
 const { pageSize, PAGE_SIZES } = usePageSize('bizexp-list-pager', LIST_PAGE_SIZE)
 const listPage = ref(1)
-const pageItems = computed<ExpenseDayGroup[]>(() => {
+const pageItems = computed<BusinessExpense[]>(() => {
   const start = (listPage.value - 1) * pageSize.value
-  return dayGroups.value.slice(start, start + pageSize.value)
+  return allExpenses.value.slice(start, start + pageSize.value)
 })
-watch(dayGroups, () => { listPage.value = 1 })
+watch([allExpenses, () => vm.mode], () => { listPage.value = 1 })
 
-// 当日全部支出分类名称（去重、保持出现顺序，中文逗号分隔）
-function dayCategoryNames(g: ExpenseDayGroup): string {
-  const names: string[] = []
-  for (const it of g.items) {
-    const n = catNameOf(it.categoryId)
-    if (!names.includes(n)) names.push(n)
-  }
-  return names.join('，')
-}
-
-// ===== 新增/编辑弹框（多行支出行） =====
+// ===== 新增/编辑弹框：一笔支出 = 一条记录 = 一个标题（同一天想记多笔 → 多次新增） =====
 const showDialog = ref(false)
-const editingDate = ref(localDateKey())
-const editingDateOrig = ref<string | null>(null) // 编辑时的原日期，用于定位删除旧行
-const rows = reactive<{ categoryId: string; amount: string; note: string }[]>([])
+const editingId = ref<string | null>(null) // null = 新增模式
+const form = reactive<{ title: string; date: string; categoryId: string; amount: string; note: string }>({
+  title: '',
+  date: localDateKey(),
+  categoryId: '',
+  amount: '',
+  note: ''
+})
 
-const isFormValid = computed(
-  () =>
-    editingDate.value !== '' &&
-    rows.length > 0 &&
-    rows.every(r => r.categoryId !== '' && Number(r.amount) > 0)
-)
+/** 表单校验：标题必填且 ≤20 字、分类必选、金额 > 0（全部为 error，阻断保存） */
+const formIssues = computed(() => validateExpenseRow(form))
+const isFormValid = computed(() => form.date !== '' && formIssues.value.length === 0)
 
-function emptyRow(): { categoryId: string; amount: string; note: string } {
-  return { categoryId: store.expenseCategories[0]?.id ?? '', amount: '', note: '' }
+function resetForm(date?: string): void {
+  form.title = ''
+  form.date = date ?? localDateKey()
+  form.categoryId = store.expenseCategories[0]?.id ?? ''
+  form.amount = ''
+  form.note = ''
 }
 
 function startAdd(): void {
-  editingDateOrig.value = null
-  editingDate.value = localDateKey()
-  rows.splice(0, rows.length, emptyRow())
+  editingId.value = null
+  resetForm()
   showDialog.value = true
 }
 
-function startEdit(g: ExpenseDayGroup): void {
-  editingDateOrig.value = g.date
-  editingDate.value = g.date
-  rows.splice(
-    0,
-    rows.length,
-    ...g.items.map(e => ({
-      categoryId: e.categoryId,
-      amount: String(e.amount),
-      note: e.note ?? ''
-    }))
-  )
+function startEdit(e: BusinessExpense): void {
+  editingId.value = e.id
+  form.title = e.title ?? ''
+  form.date = e.date
+  form.categoryId = e.categoryId
+  form.amount = String(e.amount)
+  form.note = e.note ?? ''
   showDialog.value = true
-}
-
-function addRow(): void {
-  rows.push(emptyRow())
-}
-
-function removeRow(i: number): void {
-  rows.splice(i, 1)
 }
 
 async function handleSave(): Promise<void> {
   if (!isFormValid.value) return
-  // 新增模式：同日期已有记录 → 阻止，提示编辑
-  if (!editingDateOrig.value && store.expenses.some(e => e.date === editingDate.value)) {
-    toastAlert(`${editingDate.value} 当天已有支出记录，不能新增，请点击编辑追加。`)
-    return
+  const payload = {
+    title: form.title.trim(),
+    date: form.date,
+    categoryId: form.categoryId,
+    amount: Number(form.amount),
+    note: form.note.trim() || undefined
   }
-  // 编辑模式：先删除旧日期下所有支出（若日期变更则删旧日期，也删目标日期确保幂等）
-  const datesToClear: string[] = []
-  if (editingDateOrig.value) datesToClear.push(editingDateOrig.value)
-  if (!datesToClear.includes(editingDate.value)) datesToClear.push(editingDate.value)
-  for (const d of datesToClear) {
-    for (const old of store.expenses.filter(e => e.date === d)) {
-      await store.deleteExpense(old.id)
-    }
-  }
-  // 逐条添加新行
-  for (const r of rows) {
-    const note = r.note.trim() || undefined
-    await store.addExpense({
-      date: editingDate.value,
-      categoryId: r.categoryId,
-      amount: Number(r.amount),
-      note
-    })
-  }
+  if (editingId.value) await store.updateExpense(editingId.value, payload)
+  else await store.addExpense(payload)
   showDialog.value = false
 }
 
-async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
-  if (!await showConfirm(`确定要删除 ${g.date} 当天的 ${g.items.length} 笔支出吗？`)) return
-  for (const e of g.items) await store.deleteExpense(e.id)
+async function handleDelete(e: BusinessExpense): Promise<void> {
+  if (!await showConfirm(`确定要删除「${e.date} ${e.title}」这笔支出吗？`)) return
+  await store.deleteExpense(e.id)
+}
+
+/** 弹框内删除：删完直接关闭（避免停留在已删除的记录上） */
+async function handleDeleteFromDialog(): Promise<void> {
+  const target = allExpenses.value.find(e => e.id === editingId.value)
+  if (!target) return
+  await handleDelete(target)
+  showDialog.value = false
 }
 </script>
 
@@ -181,13 +141,13 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
         <el-button class="btn-export-csv" data-testid="bizexp-export" :disabled="store.expenses.length === 0" @click="exportExpensesCsv">导出 CSV</el-button>
       </div>
       <div class="bizexp-toolbar-right">
-        <ViewModeToggle v-if="dayGroups.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
+        <ViewModeToggle v-if="allExpenses.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
         <el-button size="small" data-testid="bizexp-cat-manager" title="支出分类管理（设置）" @click="openCategorySettings"><Icon name="cog" :size="15" /></el-button>
       </div>
     </div>
 
-    <!-- el-table 表格列表：一天一行，展开行展示当日支出条目 -->
-    <div v-if="dayGroups.length === 0" class="bizexp-empty" data-testid="bizexp-empty">暂无支出记录，点击左上角记下今天的第一笔</div>
+    <!-- 逐笔列表：一笔支出一行（同一天不合并） -->
+    <div v-if="allExpenses.length === 0" class="bizexp-empty" data-testid="bizexp-empty">暂无支出记录，点击「＋ 新增支出」记下第一笔</div>
     <template v-else>
       <div class="bizexp-table-wrap">
         <el-table v-if="vm.mode === 'list'" class="ewt-table"
@@ -199,54 +159,38 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
           style="width: 100%"
           height="100%"
           empty-text="暂无支出记录"
-          row-key="date"
+          row-key="id"
         >
-          <!-- 展开行：当日支出条目明细 -->
-          <el-table-column type="expand">
-            <template #default="{ row }">
-              <div class="bizexp-expand" @click.stop>
-                <div class="bizexp-expand-title">支出明细（{{ row.items.length }} 笔）</div>
-                <div class="bizexp-detail-head">
-                  <span class="bizexp-detail-th name">分类</span>
-                  <span class="bizexp-detail-th amount">金额</span>
-                  <span class="bizexp-detail-th note">备注</span>
-                </div>
-                <div
-                  v-for="e in row.items"
-                  :key="e.id"
-                  class="bizexp-detail-row"
-                  :data-testid="`bizexp-detail-${e.id}`"
-                >
-                  <span class="bizexp-detail-td name bizexp-cat">{{ catNameOf(e.categoryId) }}</span>
-                  <span class="bizexp-detail-td amount bizexp-amt">{{ formatYuanOf(e.amount) }}</span>
-                  <span class="bizexp-detail-td note">{{ e.note || '—' }}</span>
-                </div>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column label="日期" width="140" align="center">
+          <el-table-column label="日期" width="130" align="center">
             <template #default="{ row }">
               <span style="font-weight: 600;">{{ row.date }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="支出合计" width="140" align="right">
+          <el-table-column label="标题" min-width="180" align="left" show-overflow-tooltip>
             <template #default="{ row }">
-              <span class="bizexp-total-text" :data-testid="`bizexp-total-${row.date}`">{{ formatYuanOf(row.total) }}</span>
+              <span class="bizexp-title-text" :data-testid="`bizexp-title-${row.id}`">{{ row.title }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="笔数" width="90" align="center">
-            <template #default="{ row }">{{ row.items.length }} 笔</template>
-          </el-table-column>
-          <el-table-column label="分类" min-width="160" align="left" show-overflow-tooltip>
+          <el-table-column label="分类" width="130" align="left" show-overflow-tooltip>
             <template #default="{ row }">
-              <span class="bizexp-cat">{{ dayCategoryNames(row) }}</span>
+              <span class="bizexp-cat">{{ catNameOf(row.categoryId) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" class-name="ewt-op-col" width="140" align="center" fixed="right">
+          <el-table-column label="金额" width="120" align="right">
+            <template #default="{ row }">
+              <span class="bizexp-amt" :data-testid="`bizexp-amount-${row.id}`">{{ formatYuanOf(row.amount) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="备注" min-width="160" align="left" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span class="bizexp-note">{{ row.note || '—' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" class-name="ewt-op-col" width="130" align="center" fixed="right">
             <template #default="{ row }">
               <div class="bizexp-actions" @click.stop>
-                <el-button size="small" :data-testid="`bizexp-edit-${row.date}`" @click="startEdit(row)">编辑</el-button>
-                <el-button size="small" type="danger" :data-testid="`bizexp-del-${row.date}`" @click="handleDeleteGroup(row)">删除</el-button>
+                <el-button size="small" :data-testid="`bizexp-edit-${row.id}`" @click="startEdit(row)">编辑</el-button>
+                <el-button size="small" type="danger" :data-testid="`bizexp-del-${row.id}`" @click="handleDelete(row)">删除</el-button>
               </div>
             </template>
           </el-table-column>
@@ -255,7 +199,7 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
           <RecordsCard
             @edit="startEdit(item)"
             v-for="item in pageItems"
-            :key="item.date"
+            :key="item.id"
             :fields="cardFields(item)"
           >
           </RecordsCard>
@@ -269,7 +213,7 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
           v-model:page-size="pageSize"
           :page-sizes="PAGE_SIZES"
           layout="total, prev, pager, next, jumper"
-          :total="dayGroups.length"
+          :total="allExpenses.length"
           background
           small
           prev-text="上一页"
@@ -279,28 +223,28 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
       </div>
     </template>
 
-    <!-- 新增/编辑弹框（多行支出） -->
+    <!-- 新增/编辑弹框：一笔支出 = 一条记录（日期 + 标题 + 分类 + 金额 + 备注） -->
     <el-dialog
       v-if="showDialog"
       :model-value="true"
       :show-close="false"
-      width="640px"
+      width="560px"
       class="bizexp-dialog"
       data-testid="bizexp-dialog"
       @close="showDialog = false"
     >
       <template #header>
         <div class="biz-dialog-header">
-          <h3>{{ editingDateOrig ? '编辑支出记录' : '新增支出记录' }}</h3>
+          <h3>{{ editingId ? '编辑支出' : '新增支出' }}</h3>
           <button class="biz-dialog-close" @click="showDialog = false"><Icon name="close" /></button>
         </div>
       </template>
       <form class="biz-dialog-body" @submit.prevent="handleSave">
         <div class="biz-field">
-          <label>日期 *（同一天将自动合并到同一张卡片）</label>
+          <label>日期 *（同一天可记多笔，列表按日合并、组内按录入先后排序）</label>
           <div data-testid="bizexp-form-date">
             <el-date-picker
-              v-model="editingDate"
+              v-model="form.date"
               type="date"
               value-format="YYYY-MM-DD"
               size="small"
@@ -308,46 +252,72 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
           </div>
         </div>
 
-        <!-- 多行支出行 -->
-        <div class="bizexp-rows">
-          <div v-for="(row, i) in rows" :key="i" class="bizexp-row" data-testid="bizexp-row">
-            <el-select v-model="row.categoryId" size="small" class="bizexp-row-cat" data-testid="bizexp-row-category">
-              <el-option v-for="cat in store.expenseCategories" :key="cat.id" :value="cat.id" :label="cat.name" />
-            </el-select>
-            <el-input-number
-              :model-value="row.amount === '' ? undefined : Number(row.amount)"
-              :min="0"
-              :step="0.01"
-              size="small"
-              class="bizexp-row-amt"
-              data-testid="bizexp-row-amount"
-              placeholder="金额"
-              @update:model-value="row.amount = $event == null ? '' : String($event)"
-            />
-            <el-input
-              v-model="row.note"
-              size="small"
-              maxlength="100"
-              placeholder="备注（可选）"
-              class="bizexp-row-note"
-              data-testid="bizexp-row-note"
-            />
-            <el-button type="danger" size="small" :data-testid="`bizexp-row-del-${i}`" @click="removeRow(i)">移除</el-button>
-          </div>
-          <el-button size="small" data-testid="bizexp-row-add" @click="addRow">＋ 添加支出行</el-button>
+        <div class="biz-field">
+          <label>标题 *（简短说明这笔支出，≤{{ EXPENSE_TITLE_MAX }} 字）</label>
+          <el-input
+            v-model="form.title"
+            size="small"
+            :maxlength="EXPENSE_TITLE_MAX"
+            placeholder="如：采购原料、摊位费、燃气"
+            data-testid="bizexp-form-title"
+          />
         </div>
 
-        <!-- 当天合计预览 -->
-        <div class="bizexp-preview">
-          当天合计：<strong data-testid="bizexp-form-total">{{ formatYuanOf(rows.reduce((s, r) => s + (Number(r.amount) || 0), 0)) }}</strong>
+        <div class="biz-field">
+          <label>分类 *</label>
+          <el-select v-model="form.categoryId" size="small" class="bizexp-form-cat" data-testid="bizexp-form-category">
+            <el-option v-for="cat in store.expenseCategories" :key="cat.id" :value="cat.id" :label="cat.name" />
+          </el-select>
         </div>
+
+        <div class="biz-field">
+          <label>金额 *</label>
+          <el-input-number
+            :model-value="form.amount === '' ? undefined : Number(form.amount)"
+            :min="0"
+            :step="0.01"
+            size="small"
+            class="bizexp-form-amt"
+            data-testid="bizexp-form-amount"
+            placeholder="金额"
+            @update:model-value="form.amount = $event == null ? '' : String($event)"
+          />
+        </div>
+
+        <div class="biz-field">
+          <label>备注（可选）</label>
+          <el-input
+            v-model="form.note"
+            size="small"
+            maxlength="100"
+            placeholder="备注"
+            data-testid="bizexp-form-note"
+          />
+        </div>
+
+        <!-- 表单校验提示（标题/分类/金额，均为 error → 保存按钮禁用） -->
+        <ul v-if="formIssues.length > 0" class="bizexp-issues" data-testid="bizexp-form-issues">
+          <li
+            v-for="(issue, idx) in formIssues"
+            :key="idx"
+            class="bizexp-issue"
+            :class="issue.level"
+            :data-testid="`bizexp-issue-${idx}`"
+          >{{ issue.message }}</li>
+        </ul>
 
         <div class="biz-form-actions ewt-dialog-footer">
           <el-button size="small" @click="showDialog = false">取消</el-button>
           <el-button type="primary" size="small" native-type="submit" :disabled="!isFormValid" data-testid="bizexp-save">
-            {{ editingDateOrig ? '保存' : '添加' }}
+            {{ editingId ? '保存' : '添加' }}
           </el-button>
-          <el-button v-if="editingDateOrig" size="small" type="danger" data-testid="bizexp-delete" @click="handleDeleteGroup(dayGroups.find(g => g.date === editingDateOrig)!)">删除</el-button>
+          <el-button
+            v-if="editingId"
+            size="small"
+            type="danger"
+            data-testid="bizexp-delete"
+            @click="handleDeleteFromDialog"
+          >删除</el-button>
         </div>
       </form>
     </el-dialog>
@@ -438,63 +408,10 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
 }
 
 /* ===== 表格内文本样式 ===== */
-.bizexp-total-text {
-  font-weight: 700;
-  color: var(--color-error, var(--color-error));
-  font-variant-numeric: tabular-nums;
-}
 .bizexp-actions {
   display: flex;
   gap: 6px;
   justify-content: center;
-}
-
-/* ===== 展开行内支出明细 ===== */
-.bizexp-expand { padding: 12px 24px 12px 48px; }
-.bizexp-expand-title {
-  font-size: 13px; font-weight: 600;
-  color: var(--color-text-secondary, #6b7280);
-  margin-bottom: 8px;
-}
-.bizexp-detail-head {
-  display: grid;
-  grid-template-columns: minmax(80px, 1fr) minmax(70px, 0.7fr) minmax(120px, 1.3fr);
-  gap: 6px;
-  font-size: 11px;
-  color: var(--color-text-muted, var(--color-text-muted));
-  padding: 0 4px 6px;
-  border-bottom: 1px solid var(--color-border, var(--color-border));
-}
-.bizexp-detail-th {
-  text-align: right;
-  font-weight: 600;
-}
-.bizexp-detail-th.name,
-.bizexp-detail-th.note {
-  text-align: left;
-}
-.bizexp-detail-row {
-  display: grid;
-  grid-template-columns: minmax(80px, 1fr) minmax(70px, 0.7fr) minmax(120px, 1.3fr);
-  gap: 6px;
-  padding: 4px 4px;
-  font-size: 12px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  font-variant-numeric: tabular-nums;
-  align-items: center;
-}
-.bizexp-detail-td {
-  text-align: right;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.bizexp-detail-td.name,
-.bizexp-detail-td.note {
-  text-align: left;
-}
-.bizexp-detail-td.note {
-  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 /* 分类徽标 */
@@ -511,41 +428,44 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
 .bizexp-amt {
   font-weight: 700;
   color: var(--color-error, var(--color-error));
+  font-variant-numeric: tabular-nums;
+}
+.bizexp-note {
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
-/* ===== 弹框多行编辑 ===== */
-.bizexp-rows {
+/* ===== 弹框单条表单 ===== */
+.bizexp-form-cat { width: 100%; }
+.bizexp-form-amt { width: 100%; }
+
+/* 表单校验提示（标题/分类/金额） */
+.bizexp-issues {
+  list-style: none;
+  margin: 0;
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-}
-
-.bizexp-row {
-  display: grid;
-  grid-template-columns: 1.1fr 0.9fr 1.4fr auto;
-  gap: 8px;
-  padding: 8px;
-  background: var(--color-bg-card, var(--color-bg-hover));
+  gap: 4px;
+  background: var(--color-bg-hover, #f3f4f6);
   border-radius: var(--radius-md, 8px);
-  align-items: center;
+  border: 1px solid var(--color-border, #e5e7eb);
+}
+.bizexp-issue {
+  font-size: 12px;
+  line-height: 1.5;
+}
+.bizexp-issue.error {
+  color: var(--color-error, #dc2626);
+}
+.bizexp-issue.warn {
+  color: var(--color-warning, #d97706);
 }
 
-.bizexp-row-cat { min-width: 0; width: 100%; }
-.bizexp-row-amt { min-width: 0; width: 100%; }
-.bizexp-row-note { min-width: 0; }
-
-.bizexp-preview {
-  padding: 10px 12px;
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-}
-
-.bizexp-preview strong {
-  color: var(--color-error, var(--color-error));
-  font-size: 18px;
-  font-weight: 700;
+/* 标题文本（表格列 / 展开行） */
+.bizexp-title-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text, var(--color-text));
 }
 
 /* 弹框通用样式 */
@@ -632,14 +552,21 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
 }
 
 /* ===== 暗色模式 ===== */
-:global(html.dark) .bizexp-total-text,
-:global(html.dark) .bizexp-amt,
-:global(html.dark) .bizexp-preview strong {
+:global(html.dark) .bizexp-amt {
   color: #f87171;
 }
 
-:global(html.dark) .bizexp-row {
-  background-color: var(--color-bg-card, #1f2937);
+:global(html.dark) .bizexp-issues {
+  background-color: var(--color-bg-hover, #111827);
+  border-color: var(--color-border, #374151);
+}
+
+:global(html.dark) .bizexp-issue.error {
+  color: #f87171;
+}
+
+:global(html.dark) .bizexp-title-text {
+  color: var(--color-text, #f9fafb);
 }
 
 :global(html.dark) .biz-input {
@@ -655,8 +582,9 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
 }
 
 @media (max-width: 640px) {
-  .bizexp-row {
-    grid-template-columns: 1fr 1fr;
+  .bizexp-actions {
+    flex-direction: column;
+    gap: 4px;
   }
 }
 </style>

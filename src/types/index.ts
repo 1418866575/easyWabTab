@@ -566,9 +566,10 @@ export interface BusinessDailyRecord {
   updatedAt: string
 }
 
-/** 支出记录 */
+/** 支出记录（同一天可有多笔，按 id 唯一；列表按日期分组、组内按创建时间排序） */
 export interface BusinessExpense {
   id: string // be_ 前缀
+  title: string // 简短标题（必填，≤20 字；历史数据缺失时按分类名/默认标题补齐）
   date: string // YYYY-MM-DD
   categoryId: string
   amount: number

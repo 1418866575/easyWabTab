@@ -77,7 +77,13 @@ import {
   lastDailyBefore,
   shiftDateKey,
   visibleExpenseCategories,
-  visibleProductCategories
+  visibleProductCategories,
+  DEFAULT_EXPENSE_TITLE,
+  EXPENSE_TITLE_MAX,
+  normalizeExpenseTitle,
+  expenseLabel,
+  validateExpenseRow,
+  validateExpenseRows
 } from '../src/composables/businessCore.ts'
 import type { BusinessData, BusinessDailyRecord, BusinessExpense, BusinessProduct, BusinessPurchase } from '../src/types/index.ts'
 
@@ -229,7 +235,7 @@ function buildData(): BusinessData {
     purchases,
     dailyRecords: daily,
     expenses: [
-      { id: 'e1', date: '2026-08-02', categoryId: 'expense-stall', amount: 30, createdAt: '2026-08-02T00:00:00.000Z' }
+      { id: 'e1', date: '2026-08-02', categoryId: 'expense-stall', amount: 30, title: '摊位费', createdAt: '2026-08-02T00:00:00.000Z' }
     ]
   }
 }
@@ -743,9 +749,9 @@ test('T36 deleteLedger', () => {
 // T37 — 进货 ↔ 支出关联：金额汇总与 id 归一化
 test('T37 expense link sum & normalize', () => {
   const expenses: BusinessExpense[] = [
-    { id: 'e1', date: '2026-08-01', categoryId: 'expense-stall', amount: 30, createdAt: 'c' },
-    { id: 'e2', date: '2026-08-02', categoryId: 'expense-gas', amount: 12.5, createdAt: 'c' },
-    { id: 'e3', date: '2026-08-03', categoryId: 'expense-other', amount: 7.25, createdAt: 'c' }
+    { id: 'e1', date: '2026-08-01', categoryId: 'expense-stall', amount: 30, title: '摊位费', createdAt: 'c' },
+    { id: 'e2', date: '2026-08-02', categoryId: 'expense-gas', amount: 12.5, title: '燃气', createdAt: 'c' },
+    { id: 'e3', date: '2026-08-03', categoryId: 'expense-other', amount: 7.25, title: '杂支', createdAt: 'c' }
   ]
   assert.equal(sumExpenseAmounts(expenses, ['e1', 'e3']), 37.25)
   assert.equal(sumExpenseAmounts(expenses, []), 0)
@@ -763,8 +769,8 @@ test('T37 expense link sum & normalize', () => {
 test('T38 selectableExpenses occupancy', () => {
   const d = buildData()
   const expenses: BusinessExpense[] = [
-    { id: 'e1', date: '2026-08-02', categoryId: 'expense-stall', amount: 30, createdAt: 'c' },
-    { id: 'e2', date: '2026-08-05', categoryId: 'expense-gas', amount: 12, createdAt: 'c' }
+    { id: 'e1', date: '2026-08-02', categoryId: 'expense-stall', amount: 30, title: '摊位费', createdAt: 'c' },
+    { id: 'e2', date: '2026-08-05', categoryId: 'expense-gas', amount: 12, title: '燃气', createdAt: 'c' }
   ]
   const purchases: BusinessPurchase[] = [
     { id: 'b1', productId: 'p1', quantity: 10, unitPrice: 2, total: 20, date: '2026-08-01', expenseIds: ['e1'], createdAt: 'c' },
@@ -826,8 +832,8 @@ test('T41 calcMonthlyStats', () => {
       { id: 'd4', date: '2027-01-01', totalRevenue: 888, items: [], createdAt: 'c', updatedAt: 'c' }
     ],
     expenses: [
-      { id: 'e1', date: '2026-03-05', categoryId: 'expense-stall', amount: 30, createdAt: 'c' },
-      { id: 'e2', date: '2025-12-31', categoryId: 'expense-stall', amount: 77, createdAt: 'c' }
+      { id: 'e1', date: '2026-03-05', categoryId: 'expense-stall', amount: 30, title: '摊位费', createdAt: 'c' },
+      { id: 'e2', date: '2025-12-31', categoryId: 'expense-stall', amount: 77, title: '摊位费', createdAt: 'c' }
     ]
   }
   const stats = calcMonthlyStats(data, 2026)
@@ -1098,8 +1104,8 @@ test('T52 进货支出对账', () => {
       { id: 'b2', productId: 'p1', quantity: 5, unitPrice: 2, total: 10, date: '2026-02-01', createdAt: 'b' }
     ],
     expenses: [
-      { id: 'e1', date: '2026-01-01', categoryId: 'expense-stall', amount: 40, createdAt: 'c' },
-      { id: 'e2', date: '2026-03-01', categoryId: 'expense-transport', amount: 15, note: '车费', createdAt: 'c' }
+      { id: 'e1', date: '2026-01-01', categoryId: 'expense-stall', amount: 40, title: '进货货款', createdAt: 'c' },
+      { id: 'e2', date: '2026-03-01', categoryId: 'expense-transport', amount: 15, title: '车费', note: '车费', createdAt: 'c' }
     ]
   }
   const r = calcExpenseReconciliation(data)
@@ -1240,6 +1246,120 @@ test('T55 批次库存与滞销久存预警', () => {
     dailyRecords: []
   })
   assert.equal(slowMovingProducts(stopped, 30, '2026-04-30').length, 0)
+})
+
+// T56 — 支出标题归一化与历史兼容：trim/截断、空值 → 分类名 → 默认标题
+test('T56 normalizeExpenseTitle + 历史数据补标题', () => {
+  assert.equal(normalizeExpenseTitle('  采购原料  '), '采购原料')
+  assert.equal(normalizeExpenseTitle(''), DEFAULT_EXPENSE_TITLE)
+  assert.equal(normalizeExpenseTitle(undefined), DEFAULT_EXPENSE_TITLE)
+  assert.equal(normalizeExpenseTitle('', '摊位费'), '摊位费')
+  assert.equal(normalizeExpenseTitle(null, '  燃气  '), '燃气')
+  assert.equal(normalizeExpenseTitle('一二三四五六七八九十一二三四五六七八九十X').length, EXPENSE_TITLE_MAX)
+  // 历史数据（无 title）经归一化后按分类名兜底；分类不存在时退回默认标题
+  const d = normalizeBusinessData({
+    products: [],
+    purchases: [],
+    dailyRecords: [],
+    expenses: [
+      { id: 'e1', date: '2026-04-01', categoryId: 'expense-gas', amount: 50 },
+      { id: 'e2', date: '2026-04-01', categoryId: 'expense-not-exist', amount: 30 }
+    ]
+  })
+  assert.equal(d.expenses.length, 2)
+  assert.equal(d.expenses[0].title, '燃气费', '无 title 的历史支出按分类名补齐')
+  assert.equal(d.expenses[1].title, DEFAULT_EXPENSE_TITLE, '分类缺失 → 默认标题')
+  // 已有 title 的历史数据保持原值（不被分类名覆盖）
+  const keep = normalizeBusinessData({
+    expenses: [{ id: 'e3', date: '2026-04-02', categoryId: 'expense-gas', amount: 20, title: '自家灌气' }]
+  })
+  assert.equal(keep.expenses[0].title, '自家灌气')
+  // 同一天两笔均可保留（不再有「一天一条」限制）
+  const sameDay = normalizeBusinessData({
+    expenses: [
+      { id: 'e4', date: '2026-04-03', categoryId: 'expense-gas', amount: 10, title: '上午进货' },
+      { id: 'e5', date: '2026-04-03', categoryId: 'expense-gas', amount: 15, title: '下午补货' }
+    ]
+  })
+  assert.equal(sameDay.expenses.length, 2)
+})
+
+// T57 — expenseLabel：`YYYY-MM-DD 标题`；标题缺失 → 默认标题
+test('T57 expenseLabel', () => {
+  assert.equal(expenseLabel({ id: 'e', date: '2024-05-06', categoryId: 'c', amount: 10, title: '采购原料', createdAt: 'a' }), '2024-05-06 采购原料')
+  assert.equal(expenseLabel({ id: 'e', date: '2024-05-06', categoryId: 'c', amount: 10, title: '', createdAt: 'a' }), '2024-05-06 未命名支出')
+  assert.equal(expenseLabel({ id: 'e', date: '2024-05-07', categoryId: 'c', amount: 10, createdAt: 'a' } as BusinessExpense), '2024-05-07 未命名支出')
+})
+
+// T58 — 支出行校验：标题必填/≤20 字、分类必选、金额 > 0
+test('T58 validateExpenseRow(s)', () => {
+  assert.equal(validateExpenseRow({ title: '买菜', categoryId: 'c', amount: 10 }).length, 0)
+  const emptyTitle = validateExpenseRow({ title: '   ', categoryId: 'c', amount: 10 })
+  assert.equal(emptyTitle.length, 1)
+  assert.equal(emptyTitle[0].level, 'error')
+  assert.match(emptyTitle[0].message, /标题/)
+  assert.ok(validateExpenseRow({ title: 'x'.repeat(21), categoryId: 'c', amount: 10 }).some(i => /20 个字/.test(i.message)))
+  assert.ok(validateExpenseRow({ title: '买菜', categoryId: '', amount: 10 }).some(i => /分类/.test(i.message)))
+  assert.ok(validateExpenseRow({ title: '买菜', categoryId: 'c', amount: 0 }).some(i => /金额/.test(i.message)))
+  assert.ok(validateExpenseRow({ title: '买菜', categoryId: 'c', amount: 'abc' }).some(i => /金额/.test(i.message)))
+  // 多行：错误带「第 N 行」前缀，且全部为 error
+  const rows = [
+    { title: 'ok', categoryId: 'c', amount: 1 },
+    { title: '', categoryId: 'c', amount: 1 },
+    { title: 'ok', categoryId: '', amount: 1 }
+  ]
+  const res = validateExpenseRows(rows)
+  assert.equal(res.errors.length, 2)
+  assert.match(res.errors[0], /^第 2 行：/)
+  assert.match(res.errors[1], /^第 3 行：/)
+  assert.equal(res.warns.length, 0)
+})
+
+// T59 — selectableExpenses：同日多笔按创建时间倒序、label 含日期+标题、已被占用带 linkedPurchaseId
+test('T59 selectableExpenses 同日多笔', () => {
+  const expenses: BusinessExpense[] = [
+    { id: 'e1', date: '2024-05-06', categoryId: 'c', amount: 10, title: '上午采购', createdAt: '2024-05-06T08:00:00.000Z' },
+    { id: 'e2', date: '2024-05-06', categoryId: 'c', amount: 20, title: '下午补货', createdAt: '2024-05-06T15:00:00.000Z' },
+    { id: 'e3', date: '2024-05-07', categoryId: 'c', amount: 30, title: '次日摊位费', createdAt: '2024-05-07T08:00:00.000Z' }
+  ]
+  const opts = selectableExpenses(expenses, [])
+  assert.equal(opts.length, 3)
+  // 日期倒序：05-07 在前；同日按 createdAt 倒序：下午在前
+  assert.deepEqual(opts.map(o => o.expense.id), ['e3', 'e2', 'e1'])
+  assert.equal(opts[1].label, '2024-05-06 下午补货')
+  assert.equal(opts[2].label, '2024-05-06 上午采购')
+  assert.equal(opts[0].linkedPurchaseId, undefined)
+  // 被其它进货占用 → 带占用方；编辑自身（editingId）时不算冲突
+  const purchases = [{ id: 'p1', productId: 'x', quantity: 1, unitPrice: 1, total: 1, date: '2024-05-06', expenseIds: ['e2'], createdAt: 'z' }] as BusinessPurchase[]
+  const taken = selectableExpenses(expenses, purchases)
+  assert.equal(taken.find(o => o.expense.id === 'e2')!.linkedPurchaseId, 'p1')
+  const self = selectableExpenses(expenses, purchases, 'p1')
+  assert.equal(self.find(o => o.expense.id === 'e2')!.linkedPurchaseId, undefined)
+})
+
+// T60 — 进货 ↔ 支出对账：expenseLabels 逐笔「日期 标题」并按日期+创建时间升序
+test('T60 calcExpenseReconciliation expenseLabels', () => {
+  const base = emptyBusinessData()
+  const data: BusinessData = {
+    ...base,
+    products: [{ id: 'p1', name: '烤肠', unit: '根', purchasePrice: 2, sellingPrice: 5, active: true, createdAt: 'a' }],
+    purchases: [{ id: 'b1', productId: 'p1', quantity: 10, unitPrice: 4, total: 40, date: '2024-05-06', expenseIds: ['e2', 'e1'], createdAt: 'z' }],
+    expenses: [
+      { id: 'e1', date: '2024-05-06', categoryId: 'expense-gas', amount: 10, title: '上午采购', createdAt: '2024-05-06T08:00:00.000Z' },
+      { id: 'e2', date: '2024-05-06', categoryId: 'expense-gas', amount: 30, title: '下午补货', createdAt: '2024-05-06T15:00:00.000Z' },
+      { id: 'e3', date: '2024-05-08', categoryId: 'expense-stall', amount: 50, title: '摊位费', createdAt: '2024-05-08T08:00:00.000Z' }
+    ]
+  }
+  const rec = calcExpenseReconciliation(data)
+  assert.equal(rec.linked.length, 1)
+  assert.deepEqual(rec.linked[0].expenseLabels, ['2024-05-06 上午采购', '2024-05-06 下午补货'])
+  assert.equal(rec.linked[0].expenseTotal, 40)
+  assert.equal(rec.linked[0].diff, 0)
+  // 未匹配支出逐条保留（含标题），不再按天去重
+  assert.equal(rec.unlinkedExpenses.length, 1)
+  assert.equal(rec.unlinkedExpenses[0].id, 'e3')
+  assert.equal(rec.unlinkedExpenses[0].title, '摊位费')
+  assert.equal(rec.unlinkedExpenseTotal, 50)
 })
 
 let passed = 0

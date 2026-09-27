@@ -32,6 +32,7 @@ import {
   normalizeBusinessData,
   normalizeBusinessStore,
   normalizeExpenseIds,
+  normalizeExpenseTitle,
   pickDefaultLedger,
   renameCategory,
   sortedLedgers,
@@ -476,15 +477,18 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     await saveBusiness()
   }
 
-  // ===== 支出 CRUD =====
+  // ===== 支出 CRUD（同一天可有多笔；title 必填，缺省按分类名/默认标题补齐） =====
   async function addExpense(input: {
+    title: string
     date: string
     categoryId: string
     amount: number
     note?: string
   }): Promise<void> {
+    const categoryName = expenseCategories.value.find(c => c.id === input.categoryId)?.name
     expenses.value.push({
       id: newId('be_'),
+      title: normalizeExpenseTitle(input.title, categoryName),
       date: input.date,
       categoryId: input.categoryId,
       amount: Math.max(0, input.amount),
@@ -501,6 +505,11 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     const index = expenses.value.findIndex(e => e.id === id)
     if (index === -1) return
     const merged = { ...toRaw(expenses.value[index]), ...patch, id }
+    // 标题：显式传值则归一化（空串 → 分类名 → 默认标题），未传则保持原值
+    if (patch.title !== undefined || merged.title === undefined) {
+      const categoryName = expenseCategories.value.find(c => c.id === merged.categoryId)?.name
+      merged.title = normalizeExpenseTitle(merged.title, categoryName)
+    }
     merged.amount = Math.max(0, merged.amount)
     expenses.value[index] = merged
     await saveBusiness()

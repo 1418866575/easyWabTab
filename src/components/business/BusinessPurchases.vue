@@ -35,6 +35,7 @@ import {
   calcPurchaseTotal,
   deriveQuantity,
   deriveUnitPrice,
+  expenseLabel,
   filterPurchasesByCategory,
   findProduct,
   findProductCategory,
@@ -225,6 +226,23 @@ function linkedPurchaseProductName(purchaseId: string): string {
   return p ? productNameOf(p.productId) : '（已删除记录）'
 }
 
+/** 已关联支出标签列表（「日期 标题」，按日期+创建时间升序），用于徽章悬浮与提示 */
+function linkedExpenseLabels(purchase: { expenseIds?: string[] }): string[] {
+  const ids = purchase.expenseIds ?? []
+  if (ids.length === 0) return []
+  return store.expenses
+    .filter(e => ids.includes(e.id))
+    .sort((a, b) => (a.date === b.date ? (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0) : a.date < b.date ? -1 : 1))
+    .map(e => expenseLabel(e))
+}
+
+/** 徽章悬浮文案：逐笔列出「日期 标题」 */
+function linkedExpenseTip(purchase: { expenseIds?: string[] }): string {
+  const labels = linkedExpenseLabels(purchase)
+  if (labels.length === 0) return ''
+  return `已关联 ${labels.length} 笔支出：\n${labels.join('\n')}`
+}
+
 function toggleExpense(id: string): void {
   if (formExpenseIds.value.includes(id)) {
     formExpenseIds.value = formExpenseIds.value.filter(x => x !== id)
@@ -401,7 +419,7 @@ async function handleDelete(id: string): Promise<void> {
                 v-if="row.expenseIds && row.expenseIds.length"
                 class="bizpur-linked-badge"
                 :data-testid="`bizpur-linked-${row.id}`"
-                :title="`已关联 ${row.expenseIds.length} 笔支出`"
+                :title="linkedExpenseTip(row)"
               >关联{{ row.expenseIds.length }}笔</span>
             </template>
           </el-table-column>
@@ -570,7 +588,8 @@ async function handleDelete(id: string): Promise<void> {
                 :data-testid="`bizpur-expense-check-${opt.expense.id}`"
                 @change="toggleExpense(opt.expense.id)"
               />
-              <span class="bizpur-expense-date">{{ opt.expense.date }}</span>
+              <!-- 日期 + 标题：同一天可能有多笔支出，靠标题区分 -->
+              <span class="bizpur-expense-date">{{ opt.label }}</span>
               <span class="bizpur-expense-amount">{{ formatYuanOf(opt.expense.amount) }}</span>
               <span v-if="opt.expense.note" class="bizpur-expense-note">{{ opt.expense.note }}</span>
               <span v-if="isExpenseTaken(opt)" class="bizpur-expense-taken">已关联：{{ linkedPurchaseProductName(opt.linkedPurchaseId!) }}</span>

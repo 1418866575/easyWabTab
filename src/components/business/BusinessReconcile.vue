@@ -7,6 +7,7 @@ import {
   calcExpenseReconciliation,
   calcMonthlyReconciliation,
   calcReceivableVsActual,
+  expenseLabel,
   findExpenseCategory,
   formatYuanOf
 } from '@/composables/businessCore'
@@ -69,16 +70,16 @@ function exportMonthlyCsv(): void {
 }
 
 function exportExpenseCsv(): void {
-  const headers = ['类型', '日期', '对象', '金额', '关联支出日期', '差异']
+  const headers = ['类型', '日期', '对象', '金额', '关联支出（日期 标题）', '差异']
   const rows: (string | number)[][] = []
   for (const r of expenseRec.value.linked) {
-    rows.push(['已关联进货', r.date, r.productName, r.total.toFixed(2), r.expenseDates, r.diff.toFixed(2)])
+    rows.push(['已关联进货', r.date, r.productName, r.total.toFixed(2), r.expenseLabels.join('、'), r.diff.toFixed(2)])
   }
   for (const p of expenseRec.value.unlinkedPurchases) {
     rows.push(['未关联进货', p.date, p.productName, p.total.toFixed(2), '', ''])
   }
   for (const e of expenseRec.value.unlinkedExpenses) {
-    rows.push(['未匹配支出', e.date, expenseCatName(e.categoryId) + (e.note ? `（${e.note}）` : ''), e.amount.toFixed(2), '', ''])
+    rows.push(['未匹配支出', e.date, expenseLabel(e) + '（' + expenseCatName(e.categoryId) + '）' + (e.note ? `（${e.note}）` : ''), e.amount.toFixed(2), '', ''])
   }
   downloadCsv(csvFileName('进货支储对账'), buildCsv(headers, rows))
 }
@@ -213,7 +214,11 @@ function exportExpenseCsv(): void {
         <el-table-column label="进货合计" width="120" align="right">
           <template #default="{ row }">{{ formatYuanOf(row.total) }}</template>
         </el-table-column>
-        <el-table-column label="关联支出日期" min-width="160" align="left" prop="expenseDates" />
+        <el-table-column label="关联支出（日期 标题）" min-width="220" align="left">
+          <template #default="{ row }">
+            <span :data-testid="`bizrec-linked-labels-${row.purchaseId}`">{{ row.expenseLabels.join('、') }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="支出汇总" width="120" align="right">
           <template #default="{ row }">{{ formatYuanOf(row.expenseTotal) }}</template>
         </el-table-column>
@@ -230,7 +235,7 @@ function exportExpenseCsv(): void {
       <p v-if="expenseRec.unlinkedExpenses.length === 0" class="bizrec-empty" data-testid="bizrec-unlinked-empty">全部支出都已关联进货</p>
       <ul v-else class="bizrec-list" data-testid="bizrec-unlinked-list">
         <li v-for="e in expenseRec.unlinkedExpenses" :key="e.id" class="bizrec-list-item" :data-testid="`bizrec-unlinked-${e.id}`">
-          <span class="bizrec-list-date">{{ e.date }}</span>
+          <span class="bizrec-list-date">{{ expenseLabel(e) }}</span>
           <span class="bizrec-list-cat">{{ expenseCatName(e.categoryId) }}</span>
           <span class="bizrec-list-amount">{{ formatYuanOf(e.amount) }}</span>
           <span class="bizrec-list-note">{{ e.note || '—' }}</span>

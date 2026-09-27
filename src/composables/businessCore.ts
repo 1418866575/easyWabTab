@@ -219,9 +219,11 @@ export function sumExpenseAmounts(expenses: BusinessExpense[], ids: string[]): n
 export interface ExpenseLinkOption {
   expense: BusinessExpense
   linkedPurchaseId?: string
+  /** 展示标签：`YYYY-MM-DD 标题`（同一天多笔时用于区分） */
+  label: string
 }
 
-/** 支出候选列表（日期倒序）；已被其它进货占用的支出带 linkedPurchaseId，UI 据此禁用并标注关联商品 */
+/** 支出候选列表（日期倒序，同日按创建时间倒序）；已被其它进货占用的支出带 linkedPurchaseId，UI 据此禁用并标注关联商品 */
 export function selectableExpenses(
   expenses: BusinessExpense[],
   purchases: BusinessPurchase[],
@@ -229,10 +231,13 @@ export function selectableExpenses(
 ): ExpenseLinkOption[] {
   const owners = expenseLinkOwners(purchases ?? [])
   return [...(expenses ?? [])]
-    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+    .sort((a, b) => {
+      if (a.date !== b.date) return a.date < b.date ? 1 : -1
+      return a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0
+    })
     .map(e => {
       const owner = owners.get(e.id)
-      return { expense: e, linkedPurchaseId: owner && owner !== editingId ? owner : undefined }
+      return { expense: e, linkedPurchaseId: owner && owner !== editingId ? owner : undefined, label: expenseLabel(e) }
     })
 }
 
@@ -291,14 +296,71 @@ function normDailyRecord(raw: unknown): BusinessDailyRecord | null {
   }
 }
 
-function normExpense(raw: unknown): BusinessExpense | null {
+/** 历史支出无标题时的兜底标题 */
+export const DEFAULT_EXPENSE_TITLE = '未命名支出'
+/** 支出标题最大长度（汉字/字符同计） */
+export const EXPENSE_TITLE_MAX = 20
+
+/**
+ * 支出标题归一化：去空白 + 截断；为空时用 fallback（迁移时传分类名）再退回默认标题。
+ * 保证「标题必填」的同时，历史数据在归一化后一定拿到可读标题。
+ */
+export function normalizeExpenseTitle(raw: unknown, fallback?: string): string {
+  const trimmed = typeof raw === 'string' ? raw.trim() : ''
+  if (trimmed) return trimmed.slice(0, EXPENSE_TITLE_MAX)
+  const fb = typeof fallback === 'string' ? fallback.trim() : ''
+  if (fb) return fb.slice(0, EXPENSE_TITLE_MAX)
+  return DEFAULT_EXPENSE_TITLE
+}
+
+/** 支出展示标签：`YYYY-MM-DD 标题`（同一天多笔时用它区分） */
+export function expenseLabel(e: BusinessExpense): string {
+  const title = typeof e?.title === 'string' && e.title.trim() ? e.title.trim() : DEFAULT_EXPENSE_TITLE
+  return `${e?.date ?? ''} ${title}`
+}
+
+/** 单笔支出录入校验（标题必填且不超长 / 金额 > 0 / 分类必选） */
+export function validateExpenseRow(row: {
+  title?: string
+  categoryId?: string
+  amount?: number | string
+}): ValidationIssue[] {
+  const issues: ValidationIssue[] = []
+  const title = typeof row.title === 'string' ? row.title.trim() : ''
+  const amount = Number(row.amount)
+  if (!title) issues.push({ level: 'error', message: '请填写支出标题' })
+  else if (title.length > EXPENSE_TITLE_MAX) {
+    issues.push({ level: 'error', message: `标题不能超过 ${EXPENSE_TITLE_MAX} 个字` })
+  }
+  if (!row.categoryId) issues.push({ level: 'error', message: '请选择支出分类' })
+  if (!Number.isFinite(amount) || amount <= 0) issues.push({ level: 'error', message: '支出金额必须 > 0' })
+  return issues
+}
+
+/** 多行支出录入校验汇总 */
+export function validateExpenseRows(
+  rows: { title?: string; categoryId?: string; amount?: number | string }[]
+): { errors: string[]; warns: string[] } {
+  const errors: string[] = []
+  ;(rows ?? []).forEach((row, i) => {
+    for (const issue of validateExpenseRow(row)) {
+      if (issue.level === 'error') errors.push(`第 ${i + 1} 行：${issue.message}`)
+    }
+  })
+  return { errors, warns: [] }
+}
+
+function normExpense(raw: unknown, categories?: BusinessExpenseCategory[]): BusinessExpense | null {
   if (raw === null || typeof raw !== 'object') return null
   const e = raw as Record<string, unknown>
   if (typeof e.id !== 'string' || !e.id) return null
   if (typeof e.date !== 'string' || !isValidDateKey(e.date)) return null
   if (typeof e.categoryId !== 'string' || !e.categoryId) return null
+  const categoryName = categories?.find(c => c.id === e.categoryId)?.name
   return {
     id: e.id,
+    // 历史数据无 title → 用分类名兜底，再退回「未命名支出」（保证兼容且可读）
+    title: normalizeExpenseTitle(e.title, categoryName),
     date: e.date,
     categoryId: e.categoryId,
     amount: Math.max(0, numOf(e.amount)),
@@ -343,7 +405,9 @@ export function normalizeBusinessData(raw: unknown): BusinessData {
     products: Array.isArray(data.products) ? (data.products.map(normProduct).filter(Boolean) as BusinessProduct[]) : [],
     purchases: Array.isArray(data.purchases) ? (data.purchases.map(normPurchase).filter(Boolean) as BusinessPurchase[]) : [],
     dailyRecords: Array.isArray(data.dailyRecords) ? (data.dailyRecords.map(normDailyRecord).filter(Boolean) as BusinessDailyRecord[]) : [],
-    expenses: Array.isArray(data.expenses) ? (data.expenses.map(normExpense).filter(Boolean) as BusinessExpense[]) : [],
+    expenses: Array.isArray(data.expenses)
+      ? (data.expenses.map(e => normExpense(e, normalizeExpenseCategories(data.expenseCategories))).filter(Boolean) as BusinessExpense[])
+      : [],
     settings: normalizeSettings(data.settings)
   }
 }
@@ -862,6 +926,8 @@ export interface ExpenseLinkRow {
   expenseTotal: number
   /** 关联支出的日期（多笔用 / 连接，便于人工核对） */
   expenseDates: string
+  /** 关联支出标签（日期 + 标题，多笔用 / 连接；同一天多笔时靠标题区分） */
+  expenseLabels: string[]
   diff: number // 进货合计 − 关联支出汇总（正常为 0）
 }
 
@@ -902,6 +968,10 @@ export function calcExpenseReconciliation(data: BusinessData): ExpenseReconcilia
       expenseIds: ids,
       expenseTotal,
       expenseDates: picked.map(e => e.date).sort().join(' / '),
+      expenseLabels: picked
+        .slice()
+        .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.createdAt < b.createdAt ? -1 : 1))
+        .map(e => expenseLabel(e)),
       diff: Math.round((p.total - expenseTotal) * 100) / 100
     })
   }
