@@ -13,7 +13,8 @@ import { showConfirm } from '@/utils/dialog'
 import { useToast } from '@/composables/useToast'
 import { countMisses } from '@/composables/teacherCore'
 import { usePageSize } from '@/composables/usePageSize'
-import type { TeacherHomework, TeacherHomeworkMiss } from '@/types/teacher'
+import type { TeacherHomework, TeacherHomeworkMiss, HomeworkMissStatus } from '@/types/teacher'
+import { HOMEWORK_MISS_STATUS_META } from '@/types/teacher'
 
 const store = useTeacherStore()
 const vm = useViewMode()
@@ -130,7 +131,7 @@ const detailHw = computed<TeacherHomework | undefined>(() =>
   b.value?.homeworks.find((h) => h.id === detailId.value)
 )
 const detailCounts = computed(() =>
-  detailHw.value ? countMisses(detailHw.value.misses) : { pending: 0, madeup: 0 }
+  detailHw.value ? countMisses(detailHw.value.misses) : { pending: 0, submitted: 0, madeup: 0 }
 )
 
 function openDetail(hw: TeacherHomework): void {
@@ -188,17 +189,20 @@ async function saveMark(): Promise<void> {
   closeMark()
 }
 
-async function onRevert(miss: TeacherHomeworkMiss): Promise<void> {
-  if (!detailId.value) return
-  await store.revertMadeup(detailId.value, miss.id)
-  toast.success('已撤销补交')
+function statusMeta(status: HomeworkMissStatus) {
+  return HOMEWORK_MISS_STATUS_META.find((m) => m.key === status) ?? HOMEWORK_MISS_STATUS_META[0]
 }
 
-function statusTone(status: 'pending' | 'madeup'): string {
-  return status === 'madeup' ? 'ok' : 'danger'
+async function onSubmit(miss: TeacherHomeworkMiss): Promise<void> {
+  if (!detailId.value) return
+  await store.markSubmitted(detailId.value, miss.id)
+  toast.success('已标记为已交')
 }
-function statusLabel(status: 'pending' | 'madeup'): string {
-  return status === 'madeup' ? '已补交' : '未交'
+
+async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
+  if (!detailId.value) return
+  await store.markPending(detailId.value, miss.id)
+  toast.success('已标记为未交')
 }
 </script>
 
@@ -208,7 +212,7 @@ function statusLabel(status: 'pending' | 'madeup'): string {
       <div>
         <h3 class="tw-title">作业记录</h3>
         <p class="tw-subtitle">
-          布置作业后自动为每位同学生成「未交」记录；同学补交后由老师手动标记「已补交」，可补填时间/备注。支持导出未交名单 Excel。
+          布置作业后自动为每位同学生成「未交」记录；老师可手动标记「已交」「已补交」或撤销回「未交」，已补交可补填时间/备注。支持导出未交名单 Excel。
         </p>
       </div>
       <div class="tw-toolbar tw-no-print">
@@ -229,6 +233,10 @@ function statusLabel(status: 'pending' | 'madeup'): string {
         <div class="tw-stat-label">未交（人次）</div>
       </div>
       <div class="tw-stat" style="--tw-accent: #10b981">
+        <div class="tw-stat-value">{{ stats.submitted }}</div>
+        <div class="tw-stat-label">已交（人次）</div>
+      </div>
+      <div class="tw-stat" style="--tw-accent: #3b82f6">
         <div class="tw-stat-value">{{ stats.madeup }}</div>
         <div class="tw-stat-label">已补交（人次）</div>
       </div>
@@ -266,10 +274,11 @@ function statusLabel(status: 'pending' | 'madeup'): string {
             <el-table-column label="截止日" width="120" align="center">
               <template #default="{ row }">{{ row.dueDate || '—' }}</template>
             </el-table-column>
-            <el-table-column label="未交/已补交" width="140" align="center">
+            <el-table-column label="未交/已交/已补交" width="170" align="center">
               <template #default="{ row }">
                 <span class="hw-miss-badge is-danger">{{ row.misses.filter((m: TeacherHomeworkMiss) => m.status === 'pending').length }} 未交</span>
-                <span class="hw-miss-badge is-ok">{{ row.misses.filter((m: TeacherHomeworkMiss) => m.status === 'madeup').length }} 补交</span>
+                <span class="hw-miss-badge is-ok">{{ row.misses.filter((m: TeacherHomeworkMiss) => m.status === 'submitted').length }} 已交</span>
+                <span class="hw-miss-badge is-info">{{ row.misses.filter((m: TeacherHomeworkMiss) => m.status === 'madeup').length }} 补交</span>
               </template>
             </el-table-column>
             <el-table-column label="操作" class-name="ewt-op-col" width="200" align="center" fixed="right">
@@ -297,7 +306,8 @@ function statusLabel(status: 'pending' | 'madeup'): string {
             <div class="hw-card-dates">{{ hw.assignDate }} → {{ hw.dueDate }}</div>
             <div class="hw-card-misses">
               <span class="hw-miss-badge is-danger">{{ hw.misses.filter((m) => m.status === 'pending').length }} 未交</span>
-              <span class="hw-miss-badge is-ok">{{ hw.misses.filter((m) => m.status === 'madeup').length }} 补交</span>
+              <span class="hw-miss-badge is-ok">{{ hw.misses.filter((m) => m.status === 'submitted').length }} 已交</span>
+              <span class="hw-miss-badge is-info">{{ hw.misses.filter((m) => m.status === 'madeup').length }} 补交</span>
             </div>
             <div class="hw-card-foot">
               <el-button size="small" class="hw-detail-btn" :data-testid="`hw-detail-${hw.id}`" @click="openDetail(hw)">详情</el-button>
@@ -393,7 +403,8 @@ function statusLabel(status: 'pending' | 'madeup'): string {
             <span>布置日：{{ detailHw.assignDate }}</span>
             <span>截止日：{{ detailHw.dueDate }}</span>
             <span class="hw-miss-badge is-danger">未交 {{ detailCounts.pending }}</span>
-            <span class="hw-miss-badge is-ok">已补交 {{ detailCounts.madeup }}</span>
+            <span class="hw-miss-badge is-ok">已交 {{ detailCounts.submitted }}</span>
+            <span class="hw-miss-badge is-info">已补交 {{ detailCounts.madeup }}</span>
           </div>
           <p v-if="detailHw.content" class="hw-detail-content">{{ detailHw.content }}</p>
         </div>
@@ -420,7 +431,7 @@ function statusLabel(status: 'pending' | 'madeup'): string {
             </el-table-column>
             <el-table-column label="状态" width="100" align="center">
               <template #default="{ row }">
-                <span class="hw-tag" :class="`is-${statusTone(row.status)}`">{{ statusLabel(row.status) }}</span>
+                <span class="hw-tag" :class="`is-${statusMeta(row.status).tone}`">{{ statusMeta(row.status).label }}</span>
               </template>
             </el-table-column>
             <el-table-column label="补交时间" min-width="120" align="center" show-overflow-tooltip>
@@ -429,20 +440,26 @@ function statusLabel(status: 'pending' | 'madeup'): string {
             <el-table-column label="备注" min-width="120" align="left" show-overflow-tooltip>
               <template #default="{ row }">{{ row.note || '—' }}</template>
             </el-table-column>
-            <el-table-column label="操作" class-name="ewt-op-col" width="180" align="center" fixed="right">
+            <el-table-column label="操作" class-name="ewt-op-col" width="240" align="center" fixed="right">
               <template #default="{ row }">
                 <button
-                  v-if="row.status === 'pending'"
+                  v-if="row.status !== 'madeup'"
                   class="btn-madeup"
                   :data-testid="`hw-mark-${row.id}`"
                   @click="openMark(row)"
-                >标记为已补交</button>
+                >已补交</button>
                 <button
-                  v-if="row.status === 'madeup'"
-                  class="btn-revert"
-                  :data-testid="`hw-revert-${row.id}`"
-                  @click="onRevert(row)"
-                >撤销补交</button>
+                  v-if="row.status !== 'submitted'"
+                  class="btn-submit"
+                  :data-testid="`hw-submit-${row.id}`"
+                  @click="onSubmit(row)"
+                >已交</button>
+                <button
+                  v-if="row.status !== 'pending'"
+                  class="btn-pending"
+                  :data-testid="`hw-pending-${row.id}`"
+                  @click="onPending(row)"
+                >未交</button>
               </template>
             </el-table-column>
           </el-table>
@@ -458,7 +475,7 @@ function statusLabel(status: 'pending' | 'madeup'): string {
     <!-- 标记已补交弹窗 -->
     <el-dialog
       v-model="showMark"
-      title="标记为已补交"
+      title="已补交"
       width="420px"
       data-testid="hw-mark-dialog"
       @close="closeMark"
@@ -476,7 +493,7 @@ function statusLabel(status: 'pending' | 'madeup'): string {
       <template #footer>
         <div class="ewt-dialog-footer">
           <el-button @click="closeMark">取消</el-button>
-          <el-button type="primary" data-testid="hw-mark-save" @click="saveMark">确认补交</el-button>
+          <el-button type="primary" data-testid="hw-mark-save" @click="saveMark">确认</el-button>
         </div>
       </template>
     </el-dialog>
@@ -492,7 +509,7 @@ function statusLabel(status: 'pending' | 'madeup'): string {
 
 .hw-stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -628,13 +645,15 @@ function statusLabel(status: 'pending' | 'madeup'): string {
 }
 .hw-miss-badge.is-danger { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
 .hw-miss-badge.is-ok { background: rgba(16, 185, 129, 0.12); color: #10b981; }
+.hw-miss-badge.is-info { background: rgba(59, 130, 246, 0.12); color: #3b82f6; }
 
 /* ===== 表格内按钮（与 StudentMistakes 一致） ===== */
 .btn-detail,
 .btn-edit,
 .btn-delete,
 .btn-madeup,
-.btn-revert {
+.btn-submit,
+.btn-pending {
   padding: 5px 12px;
   font-size: 12px;
   border: 1px solid transparent;
@@ -663,17 +682,23 @@ function statusLabel(status: 'pending' | 'madeup'): string {
 }
 .btn-delete:hover { background: rgba(239, 68, 68, 0.18); }
 .btn-madeup {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #3b82f6;
+}
+.btn-madeup:hover { background: rgba(59, 130, 246, 0.18); }
+.btn-submit {
   background: rgba(16, 185, 129, 0.1);
   border-color: rgba(16, 185, 129, 0.3);
   color: #10b981;
 }
-.btn-madeup:hover { background: rgba(16, 185, 129, 0.18); }
-.btn-revert {
-  background: rgba(245, 158, 11, 0.1);
-  border-color: rgba(245, 158, 11, 0.3);
-  color: #f59e0b;
+.btn-submit:hover { background: rgba(16, 185, 129, 0.18); }
+.btn-pending {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
 }
-.btn-revert:hover { background: rgba(245, 158, 11, 0.18); }
+.btn-pending:hover { background: rgba(239, 68, 68, 0.18); }
 
 .hw-tag {
   display: inline-block;
@@ -684,6 +709,7 @@ function statusLabel(status: 'pending' | 'madeup'): string {
 }
 .hw-tag.is-danger { background-color: #ef4444; }
 .hw-tag.is-ok { background-color: #10b981; }
+.hw-tag.is-info { background-color: #3b82f6; }
 
 /* ===== 弹框 ===== */
 .hw-dialog-body {
@@ -761,7 +787,7 @@ function statusLabel(status: 'pending' | 'madeup'): string {
     grid-template-columns: 1fr;
   }
   .hw-stats {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .hw-form-row.hw-form-inline {
     flex-direction: column;

@@ -758,15 +758,16 @@ export const useTeacherStore = defineStore('teacher', () => {
 
   // ---------- 作业记录（homeworks 桶；仅记录未交同学，每人一条独立记录） ----------
 
-  /** 新增作业：按当前名册为每位在册同学生成一条 pending 未交记录（冗余姓名/学号） */
+  /** 新增作业：初始状态为「已布置」，按当前名册为每位在册同学生成一条 pending 未交记录（冗余姓名/学号） */
   async function addHomework(
-    input: Omit<TeacherHomework, 'id' | 'createdAt' | 'updatedAt' | 'misses'>
+    input: Omit<TeacherHomework, 'id' | 'createdAt' | 'updatedAt' | 'misses' | 'status'>
   ): Promise<void> {
     const students = bucket.value?.students ?? []
     const now = todayStr()
     const hw: TeacherHomework = {
       ...input,
       id: uid('thw'),
+      status: 'assigned',
       createdAt: now,
       updatedAt: now,
       misses: initMissesFromRoster(students)
@@ -789,7 +790,43 @@ export const useTeacherStore = defineStore('teacher', () => {
     await saveTeacher()
   }
 
-  /** 标记某条未交记录为已补交（人工填写补交时间/备注，留空则保持空） */
+  /** 标记某条记录为「已交」（按时提交；清空补交时间/备注） */
+  async function markSubmitted(homeworkId: string, missId: string): Promise<void> {
+    mutateBucket((b) => ({
+      ...b,
+      homeworks: b.homeworks.map((h) => {
+        if (h.id !== homeworkId) return h
+        return {
+          ...h,
+          updatedAt: todayStr(),
+          misses: h.misses.map((m) =>
+            m.id === missId ? { ...m, status: 'submitted', madeUpAt: undefined, note: undefined } : m
+          )
+        }
+      })
+    }))
+    await saveTeacher()
+  }
+
+  /** 标记某条记录为「未交」（回到待提交；清空补交时间/备注） */
+  async function markPending(homeworkId: string, missId: string): Promise<void> {
+    mutateBucket((b) => ({
+      ...b,
+      homeworks: b.homeworks.map((h) => {
+        if (h.id !== homeworkId) return h
+        return {
+          ...h,
+          updatedAt: todayStr(),
+          misses: h.misses.map((m) =>
+            m.id === missId ? { ...m, status: 'pending', madeUpAt: undefined, note: undefined } : m
+          )
+        }
+      })
+    }))
+    await saveTeacher()
+  }
+
+  /** 标记某条记录为「已补交」（人工填写补交时间/备注，留空则保持空） */
   async function markMadeup(
     homeworkId: string,
     missId: string,
@@ -838,18 +875,20 @@ export const useTeacherStore = defineStore('teacher', () => {
     await exportHomeworkMissesExcel(hw, classTitle(cls.value, data.value.teacher.name))
   }
 
-  /** 当前班级作业统计（聚合所有作业的未交/已补交人数） */
+  /** 当前班级作业统计（聚合所有作业的未交/已交/已补交人数） */
   const homeworkSummary = computed(() => {
     const homeworks = bucket.value?.homeworks ?? []
     let pending = 0
+    let submitted = 0
     let madeup = 0
     for (const h of homeworks) {
       for (const m of h.misses) {
         if (m.status === 'madeup') madeup++
+        else if (m.status === 'submitted') submitted++
         else pending++
       }
     }
-    return { homeworkCount: homeworks.length, pending, madeup }
+    return { homeworkCount: homeworks.length, pending, submitted, madeup }
   })
 
   // ---------- 随机点名 ----------
@@ -1040,6 +1079,8 @@ export const useTeacherStore = defineStore('teacher', () => {
     addHomework,
     updateHomework,
     removeHomework,
+    markSubmitted,
+    markPending,
     markMadeup,
     revertMadeup,
     exportMissesExcel,

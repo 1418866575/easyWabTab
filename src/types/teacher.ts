@@ -192,17 +192,30 @@ export interface ClassBucket {
   random: RandomState
   /** 请假记录流水（班级维度，按开始日期倒序展示；随学期×班级隔离） */
   leaves: LeaveRecord[]
-  /** 作业记录（页面「作业记录」；只记录未交同学，每次作业每人一条），随学期×班级隔离 */
+  /** 作业记录（页面「作业记录」；每次作业为每位同学生成一条提交记录），随学期×班级隔离 */
   homeworks: TeacherHomework[]
 }
 
-// ---------- 作业记录（页面「作业记录」；作业与未交名单） ----------
+// ---------- 作业记录（页面「作业记录」；作业与提交名单） ----------
 
-/** 未交状态：未交 / 已补交（人工标记） */
-export type HomeworkMissStatus = 'pending' | 'madeup'
-// pending = 未交；madeup = 已补交（人工标记）
+/** 作业状态（作业维度）：当前仅用到「已布置」，其余预留便于后续扩展 */
+export type HomeworkStatus = 'assigned'
+export const HOMEWORK_STATUS_LABEL: Record<HomeworkStatus, string> = {
+  assigned: '已布置'
+}
 
-/** 单次作业的未交记录（每人一条，独立） */
+/** 提交状态（学生维度）：未交 / 已交 / 已补交 */
+export type HomeworkMissStatus = 'pending' | 'submitted' | 'madeup'
+// pending = 未交；submitted = 已交（按时提交）；madeup = 已补交（逾期后补交，人工标记）
+
+/** 提交状态展示元数据（label / 语义色 class），渲染与统计共用 */
+export const HOMEWORK_MISS_STATUS_META: { key: HomeworkMissStatus; label: string; tone: string }[] = [
+  { key: 'pending', label: '未交', tone: 'danger' },
+  { key: 'submitted', label: '已交', tone: 'ok' },
+  { key: 'madeup', label: '已补交', tone: 'info' }
+]
+
+/** 单次作业的提交记录（每位同学一条，独立） */
 export interface TeacherHomeworkMiss {
   id: string // 前缀 thwm_
   studentId: string // 关联 Student.id（主键，杜绝重名错配）
@@ -213,7 +226,7 @@ export interface TeacherHomeworkMiss {
   note?: string // 备注
 }
 
-/** 作业（元数据 + 未交名单） */
+/** 作业（元数据 + 提交名单） */
 export interface TeacherHomework {
   id: string // 前缀 thw_
   subject: string // 学科
@@ -221,9 +234,10 @@ export interface TeacherHomework {
   content?: string // 作业要求 / 描述
   assignDate: string // 布置日期 'YYYY-MM-DD'，必填
   dueDate: string // 截止日期 'YYYY-MM-DD'，必填
+  status: HomeworkStatus // 作业状态，新建时默认为「已布置」
   createdAt: string
   updatedAt: string
-  misses: TeacherHomeworkMiss[] // 每位未交同学一条
+  misses: TeacherHomeworkMiss[] // 每位同学一条提交记录
 }
 
 export interface TeacherCurrent {

@@ -228,7 +228,9 @@ function asRecords(v: unknown): Record<string, unknown>[] {
 
 /** 未交状态兜底：非法值回落 pending（未交） */
 export function normalizeHomeworkMissStatus(v: unknown): HomeworkMissStatus {
-  return v === 'madeup' ? 'madeup' : 'pending'
+  if (v === 'submitted') return 'submitted'
+  if (v === 'madeup') return 'madeup'
+  return 'pending'
 }
 
 /** 归一化单条未交记录，缺失字段兜底 */
@@ -258,6 +260,7 @@ export function normalizeHomework(raw: unknown): TeacherHomework {
     content: str(h.content) || undefined,
     assignDate: assign,
     dueDate: due,
+    status: h.status === 'assigned' ? 'assigned' : 'assigned',
     createdAt: str(h.createdAt) || now,
     updatedAt: str(h.updatedAt) || now,
     misses: asRecords(h.misses).map((x) => normalizeHomeworkMiss(x))
@@ -275,15 +278,17 @@ export function initMissesFromRoster(students: Student[]): TeacherHomeworkMiss[]
   }))
 }
 
-/** 统计未交 / 已补交人数（不持久化的派生） */
-export function countMisses(misses: TeacherHomeworkMiss[]): { pending: number; madeup: number } {
+/** 统计各提交状态人数（不持久化的派生）：未交 / 已交 / 已补交 */
+export function countMisses(misses: TeacherHomeworkMiss[]): { pending: number; submitted: number; madeup: number } {
   let pending = 0
+  let submitted = 0
   let madeup = 0
   for (const m of misses) {
     if (m.status === 'madeup') madeup++
+    else if (m.status === 'submitted') submitted++
     else pending++
   }
-  return { pending, madeup }
+  return { pending, submitted, madeup }
 }
 
 /** 归一化任意来源（IndexedDB / 备份导入）的数据，缺失字段一律兜底，绝不抛错 */
