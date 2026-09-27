@@ -14,6 +14,7 @@ import {
   calcBroughtOutTotals,
   calcBusinessStats,
   calcExpenseReconciliation,
+  calcExpenseLinkStats,
   calcMonthlyReconciliation,
   calcReceivableVsActual,
   calcBusinessTrend,
@@ -1616,6 +1617,53 @@ test('T66 关联支出候选过滤', () => {
   assert.equal(selectableExpenses(expenses, allLinked, null).length, 0)
   // 空入参健壮性
   assert.deepEqual(selectableExpenses(undefined as unknown as BusinessExpense[], undefined as unknown as BusinessPurchase[], null), [])
+})
+
+// T67 — 支出关联统计：已关联库存 / 未关联库存 的金额与笔数（首页支出拆分口径）
+test('T67 支出关联统计', () => {
+  const expenses = [
+    { id: 'e1', date: '2026-09-01', title: '进货A', categoryId: 'c', amount: 100, createdAt: 'a' },
+    { id: 'e2', date: '2026-09-02', title: '进货B', categoryId: 'c', amount: 50.5, createdAt: 'b' },
+    { id: 'e3', date: '2026-09-03', title: '摊位费', categoryId: 'c', amount: 30, createdAt: 'c' },
+    { id: 'e4', date: '2026-09-04', title: '水电', categoryId: 'c', amount: 20.25, createdAt: 'd' }
+  ] as BusinessExpense[]
+  const purchases = [
+    { id: 'p1', productId: 'x', quantity: 10, unitPrice: 10, total: 100, date: '2026-09-01', expenseIds: ['e1', 'e2'], createdAt: 'a' }
+  ] as BusinessPurchase[]
+  const st = calcExpenseLinkStats({ expenses, purchases } as unknown as BusinessData)
+  assert.equal(st.linkedAmount, 150.5, 'e1+e2 已关联')
+  assert.equal(st.linkedCount, 2)
+  assert.equal(st.unlinkedAmount, 50.25, 'e3+e4 未关联')
+  assert.equal(st.unlinkedCount, 2)
+  assert.equal(st.total, 200.75, '两组之和 = 支出总额')
+  // 全部未关联（无进货记录）
+  const noLink = calcExpenseLinkStats({ expenses, purchases: [] } as unknown as BusinessData)
+  assert.equal(noLink.linkedAmount, 0)
+  assert.equal(noLink.linkedCount, 0)
+  assert.equal(noLink.unlinkedAmount, 200.75)
+  assert.equal(noLink.unlinkedCount, 4)
+  // 全部已关联
+  const allLink = calcExpenseLinkStats({
+    expenses,
+    purchases: [
+      { id: 'p1', productId: 'x', quantity: 1, unitPrice: 1, total: 1, date: '2026-09-01', expenseIds: ['e1', 'e2', 'e3', 'e4'], createdAt: 'a' }
+    ] as BusinessPurchase[]
+  } as unknown as BusinessData)
+  assert.equal(allLink.unlinkedAmount, 0)
+  assert.equal(allLink.unlinkedCount, 0)
+  assert.equal(allLink.linkedCount, 4)
+  // 空数据健壮性
+  const empty = calcExpenseLinkStats({} as unknown as BusinessData)
+  assert.equal(empty.total, 0)
+  assert.equal(empty.linkedCount, 0)
+  assert.equal(empty.unlinkedCount, 0)
+  // 非有限金额按 0 计（不污染合计）
+  const dirty = calcExpenseLinkStats({
+    expenses: [{ id: 'e9', date: '2026-09-05', title: 'x', categoryId: 'c', amount: NaN as unknown as number, createdAt: 'e' }] as BusinessExpense[],
+    purchases: []
+  } as unknown as BusinessData)
+  assert.equal(dirty.unlinkedAmount, 0)
+  assert.equal(dirty.unlinkedCount, 1, '笔数仍计入')
 })
 
 let passed = 0

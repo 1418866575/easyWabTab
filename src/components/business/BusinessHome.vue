@@ -2,7 +2,7 @@
 // 销售记账首页：营业额/利润总额主指标 + 成本/支出/毛利率统计卡 + 低库存概览 + 销售排行（树状）
 import { computed, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { calcBusinessStats, calcCategoryProductRanking, calcMonthlyStats, formatYuanOf, lowStockProducts } from '@/composables/businessCore'
+import { calcBusinessStats, calcCategoryProductRanking, calcExpenseLinkStats, calcMonthlyStats, formatYuanOf, lowStockProducts } from '@/composables/businessCore'
 import Icon from '@/components/Icon.vue'
 
 const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
@@ -74,6 +74,9 @@ const ledgerStats = computed(() => calcBusinessStats(data.value))
  */
 const grossMargin = computed(() => ledgerStats.value.margin)
 
+// 支出关联统计：已关联库存（被进货记录挂 expenseIds）/ 未关联库存
+const expenseLink = computed(() => calcExpenseLinkStats(data.value))
+
 // 出摊总天数：当前账本内的不同日期数
 const totalStallDays = computed(() => new Set(ledgerDailyRecords.value.map(r => r.date)).size)
 
@@ -103,7 +106,7 @@ const dateText = computed(() =>
     <!-- 骨架屏：首屏数据（IndexedDB）加载中显示占位，加载完成淡入真实内容 -->
     <template v-if="loading">
       <div class="bizhome-hero">
-        <div v-for="i in 9" :key="'sk-hero-' + i" class="bizhome-hero-card sk-block">
+        <div v-for="i in 11" :key="'sk-hero-' + i" class="bizhome-hero-card sk-block">
           <span class="sk-line sk-line-sm"></span>
           <span class="sk-line sk-line-lg"></span>
         </div>
@@ -143,7 +146,7 @@ const dateText = computed(() =>
         </div>
       </div>
 
-      <!-- 主指标（按账本统计）：出摊天数 → 营业收入 → 成本 → 毛利率 → 利润 → 支出 → 待销售（成本/营业额/利润） -->
+      <!-- 主指标（按账本统计）：出摊天数 → 营业收入 → 成本 → 毛利率 → 利润 → 支出 → 已关联库存支出 → 未关联库存支出 → 待销售（成本/营业额/利润） -->
       <section class="bizhome-hero">
         <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-stalldays" @click="go('daily')" @keydown.enter="go('daily')">
           <span class="hero-label">出摊总天数</span>
@@ -168,6 +171,17 @@ const dateText = computed(() =>
         <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-expense" @click="go('expenses')" @keydown.enter="go('expenses')">
           <span class="hero-label">支出</span>
           <span class="hero-value">{{ formatYuanOf(ledgerStats.expenseTotal) }}</span>
+        </div>
+        <!-- 支出拆分：已关联库存（挂在进货记录上）/ 未关联库存（可能漏记进货，可到对账页核对） -->
+        <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-expense-linked" @click="go('purchases')" @keydown.enter="go('purchases')">
+          <span class="hero-label">已关联库存支出</span>
+          <span class="hero-value linked">{{ formatYuanOf(expenseLink.linkedAmount) }}</span>
+          <span class="hero-sub">{{ expenseLink.linkedCount }} 笔{{ expenseLink.total > 0 ? ` · 占支出 ${((expenseLink.linkedAmount / expenseLink.total) * 100).toFixed(1)}%` : '' }}</span>
+        </div>
+        <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-expense-unlinked" @click="go('reconcile')" @keydown.enter="go('reconcile')">
+          <span class="hero-label">未关联库存支出</span>
+          <span class="hero-value unlinked">{{ formatYuanOf(expenseLink.unlinkedAmount) }}</span>
+          <span class="hero-sub">{{ expenseLink.unlinkedCount }} 笔{{ expenseLink.total > 0 ? ` · 占支出 ${((expenseLink.unlinkedAmount / expenseLink.total) * 100).toFixed(1)}%` : '' }}</span>
         </div>
         <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-pending-cost" @click="go('inventory')" @keydown.enter="go('inventory')">
           <span class="hero-label">待销售成本</span>
@@ -333,7 +347,7 @@ html.dark .sk-block::after {
   .sk-block::after { animation: none; }
 }
 
-/* ===== 主指标 9 卡（3 行 × 3 列）：出摊天数 / 营业收入 / 成本 / 毛利率 / 利润 / 支出 / 待销售成本 / 待销售营业额 / 待销售利润 ===== */
+/* ===== 主指标 11 卡（3 列）：出摊天数 / 营业收入 / 成本 / 毛利率 / 利润 / 支出 / 已关联库存支出 / 未关联库存支出 / 待销售成本 / 待销售营业额 / 待销售利润 ===== */
 .bizhome-hero {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -386,6 +400,15 @@ html.dark .sk-block::after {
 
 .hero-value.negative {
   color: var(--color-error, var(--color-error));
+}
+
+/* 支出拆分：已关联库存（主色蓝）/ 未关联库存（警示橙） */
+.hero-value.linked {
+  color: var(--color-primary, #3b82f6);
+}
+
+.hero-value.unlinked {
+  color: var(--color-warning, #b45309);
 }
 
 .hero-unit {
@@ -838,6 +861,14 @@ html.dark .hero-value {
 
 html.dark .hero-value.negative {
   color: #f87171;
+}
+
+html.dark .hero-value.linked {
+  color: #60a5fa;
+}
+
+html.dark .hero-value.unlinked {
+  color: #fbbf24;
 }
 
 html.dark .stat-card:hover,

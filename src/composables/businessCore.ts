@@ -1272,6 +1272,51 @@ export function calcExpenseReconciliation(data: BusinessData): ExpenseReconcilia
   }
 }
 
+/** 支出按「是否关联库存（进货）」拆分统计：已关联 = 被任意进货记录挂在 expenseIds 里 */
+export interface ExpenseLinkStats {
+  /** 支出总额（与 calcBusinessStats.expenseTotal 同口径） */
+  total: number
+  /** 已关联库存记录的支出金额 / 笔数 */
+  linkedAmount: number
+  linkedCount: number
+  /** 未关联任何库存记录的支出金额 / 笔数（可能漏记进货，也可能本就与进货无关） */
+  unlinkedAmount: number
+  unlinkedCount: number
+}
+
+/**
+ * 支出关联统计：把当前账本支出拆成「已关联库存」与「未关联库存」两组。
+ * 归属口径与 `expenseLinkOwners` 一致（首次占用者为准），与对账页「未匹配支出」同源。
+ */
+export function calcExpenseLinkStats(data: BusinessData): ExpenseLinkStats {
+  const purchases = data.purchases ?? []
+  const expenses = data.expenses ?? []
+  const owners = expenseLinkOwners(purchases)
+  const amountOf = (e: BusinessExpense): number =>
+    typeof e.amount === 'number' && Number.isFinite(e.amount) ? e.amount : 0
+  let linkedAmount = 0
+  let linkedCount = 0
+  let unlinkedAmount = 0
+  let unlinkedCount = 0
+  for (const e of expenses) {
+    if (owners.has(e.id)) {
+      linkedAmount += amountOf(e)
+      linkedCount += 1
+    } else {
+      unlinkedAmount += amountOf(e)
+      unlinkedCount += 1
+    }
+  }
+  const round = (n: number): number => Math.round(n * 100) / 100
+  return {
+    total: round(linkedAmount + unlinkedAmount),
+    linkedAmount: round(linkedAmount),
+    linkedCount,
+    unlinkedAmount: round(unlinkedAmount),
+    unlinkedCount
+  }
+}
+
 /** 单日应收（按商品明细自动合计）vs 实收（库内营业额，可能手动填写） */
 export interface ReceivableRow {
   date: string
