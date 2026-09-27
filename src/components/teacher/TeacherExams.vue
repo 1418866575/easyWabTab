@@ -9,6 +9,7 @@ import { bandCounts, examStats, rankRows } from '@/composables/teacherCore'
 import { SCORE_BANDS } from '@/types/teacher'
 import { exportExcel, excelFileName } from '@/composables/teacherExcelCore'
 import SubjectSelect from '@/components/teacher/SubjectSelect.vue'
+import ExamNameSelect from '@/components/ExamNameSelect.vue'
 
 const store = useTeacherStore()
 
@@ -113,7 +114,7 @@ async function exportExcelFile(): Promise<void> {
         <button type="button" class="tw-btn tw-btn-sm tw-btn-danger" :disabled="!exam" @click="onDeleteExam">删除本场考试</button>
       </div>
       <div class="tw-toolbar ex-add">
-        <label class="tw-label">考试名<input v-model="newName" class="tw-input tw-input-sm" placeholder="如 语文期中" /></label>
+        <label class="tw-label">考试名<ExamNameSelect v-model="newName" placeholder="如 语文期中" size="small" /></label>
         <label class="tw-label">
           科目
           <SubjectSelect v-model="newSubject" placeholder="请选择学科" size="small" />

@@ -20,6 +20,7 @@ import { useViewMode } from '@/composables/useViewMode'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 import Icon from '@/components/Icon.vue'
 import StudentToolbar from '@/components/student/StudentToolbar.vue'
+import ExamNameSelect from '@/components/ExamNameSelect.vue'
 import { usePageSize } from '@/composables/usePageSize'
 
 const store = useStudentExamStore()
@@ -391,14 +392,7 @@ onMounted(async () => {
       <div class="dialog-body">
         <div class="form-field">
           <label>考试名称</label>
-          <el-input
-            v-model="formName"
-            type="text"
-            placeholder="如：期中考试-数学"
-            maxlength="30"
-            data-testid="se-form-name"
-            @keyup.enter="saveEditDialog"
-          />
+          <ExamNameSelect v-model="formName" placeholder="如：期中考试-数学" />
         </div>
         <div class="form-row">
           <div class="form-field">
