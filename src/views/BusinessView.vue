@@ -11,6 +11,7 @@ import BusinessDaily from '@/components/business/BusinessDaily.vue'
 import BusinessExpenses from '@/components/business/BusinessExpenses.vue'
 import BusinessInventory from '@/components/business/BusinessInventory.vue'
 import BusinessStats from '@/components/business/BusinessStats.vue'
+import BusinessReconcile from '@/components/business/BusinessReconcile.vue'
 import BusinessLedgerSwitcher from '@/components/business/BusinessLedgerSwitcher.vue'
 import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
 import PageSwitcher from '@/components/PageSwitcher.vue'
@@ -33,7 +34,8 @@ const SECTIONS = [
   { key: 'purchases', icon: 'purchases', label: '进货' },
   { key: 'daily', icon: 'daily', label: '收摊' },
   { key: 'inventory', icon: 'inventory', label: '库存' },
-  { key: 'stats', icon: 'stats', label: '统计' }
+  { key: 'stats', icon: 'stats', label: '统计' },
+  { key: 'reconcile', icon: 'ledger', label: '对账' }
 ] as const
 type SectionKey = (typeof SECTIONS)[number]['key']
 
@@ -270,6 +272,7 @@ onMounted(async () => {
           />
           <BusinessInventory v-else-if="activeSection === 'inventory'" @navigate="navigateTo" />
           <BusinessStats v-else-if="activeSection === 'stats'" />
+          <BusinessReconcile v-else-if="activeSection === 'reconcile'" />
         </template>
       </main>
     </div>

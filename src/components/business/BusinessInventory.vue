@@ -3,7 +3,7 @@
 // P1-2：库存卡片增加展开溯源功能（进货明细 + 收摊带出记录）
 import { computed, nextTick, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { calcBroughtOutTotals, calcInventory, calcInventorySources, calcPurchaseTotals, findProductCategory, formatYuanOf, lowStockProducts, sortProducts } from '@/composables/businessCore'
+import { agingBatches, calcBroughtOutTotals, calcBatchStock, calcInventory, calcInventorySources, calcPurchaseTotals, findProductCategory, formatYuanOf, localDateKey, lowStockProducts, slowMovingProducts, sortProducts } from '@/composables/businessCore'
 import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import PanelPager from '@/components/workbench/PanelPager.vue'
@@ -50,6 +50,49 @@ const lowStock = computed(() => lowStockProducts({
   expenses: store.expenses,
   settings: store.settings
 }))
+
+// ===== 滞销 / 久存预警（阈值走「设置 → 销售记账 → 基础设置」） =====
+const slowDays = computed(() => store.settings.slowMovingDays ?? 30)
+const agingDays = computed(() => store.settings.agingBatchDays ?? 60)
+const today = computed(() => localDateKey())
+
+const data = computed(() => ({
+  productCategories: store.productCategories,
+  expenseCategories: store.expenseCategories,
+  products: store.products,
+  purchases: store.purchases,
+  dailyRecords: store.dailyRecords,
+  expenses: store.expenses,
+  settings: store.settings
+}))
+
+/** 滞销商品：在售、有库存且近 N 天没有售出 */
+const slowMoving = computed(() => slowMovingProducts(data.value, slowDays.value, today.value))
+/** 久存批次：入库超过 N 天仍未售完 */
+const aging = computed(() => agingBatches(data.value, agingDays.value, today.value))
+
+/** 批次明细弹框（按商品的 FIFO 批次库存） */
+const batchProductId = ref<string | null>(null)
+const batchRows = computed(() => {
+  if (!batchProductId.value) return []
+  return calcBatchStock(data.value, today.value).filter(b => b.productId === batchProductId.value)
+})
+const batchProduct = computed(() =>
+  batchProductId.value ? store.products.find(p => p.id === batchProductId.value) ?? null : null
+)
+/** 该商品未售完批次占用的资金合计 */
+const batchOpenAmount = computed(() =>
+  Math.round(batchRows.value.filter(b => !b.soldOut).reduce((s, b) => s + b.amount, 0) * 100) / 100
+)
+function openBatchModal(productId: string): void {
+  batchProductId.value = productId
+}
+function closeBatchModal(): void {
+  batchProductId.value = null
+}
+function batchStatusText(row: { soldOut: boolean; remaining: number }): string {
+  return row.soldOut ? '已售完' : `未售完 · 剩 ${row.remaining}`
+}
 
 // 低库存阈值已迁移到「设置 → 销售记账 → 基础设置」：库存页只展示当前值并提供跳转入口
 const appSettings = useAppSettingsDialog()
@@ -117,6 +160,55 @@ function exportInventoryCsv(): void {
       </div>
     </div>
 
+    <!-- 滞销预警 + 久存批次预警 -->
+    <div class="bizinv-warns">
+      <div class="bizinv-warn" data-testid="bizinv-slow">
+        <div class="bizinv-warn-head">
+          <span class="bizinv-warn-title"><Icon name="alert" :size="15" /> 滞销预警（{{ slowDays }} 天无售出）</span>
+          <el-button size="small" data-testid="bizinv-slow-threshold" title="滞销天数（设置）" @click="openThresholdSettings">
+            <Icon name="cog" :size="14" /> {{ slowDays }} 天
+          </el-button>
+        </div>
+        <p v-if="slowMoving.length === 0" class="bizinv-empty" data-testid="bizinv-slow-empty">暂无滞销商品</p>
+        <ul v-else class="bizinv-warn-list">
+          <li
+            v-for="item in slowMoving"
+            :key="item.product.id"
+            class="bizinv-warn-item"
+            :data-testid="'bizinv-slow-' + item.product.id"
+          >
+            <span class="bizinv-warn-name">{{ item.product.name }}</span>
+            <span class="bizinv-warn-meta">库存 {{ item.stock }} {{ item.product.unit }}</span>
+            <span class="bizinv-warn-days">
+              {{ item.lastSoldDate ? `${item.idleDays} 天未售出（${item.lastSoldDate}）` : '从未售出' }}
+            </span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="bizinv-warn" data-testid="bizinv-aging">
+        <div class="bizinv-warn-head">
+          <span class="bizinv-warn-title"><Icon name="purchases" :size="15" /> 久存批次（入库 ≥ {{ agingDays }} 天未售完）</span>
+          <el-button size="small" data-testid="bizinv-aging-threshold" title="久存天数（设置）" @click="openThresholdSettings">
+            <Icon name="cog" :size="14" /> {{ agingDays }} 天
+          </el-button>
+        </div>
+        <p v-if="aging.length === 0" class="bizinv-empty" data-testid="bizinv-aging-empty">暂无久存批次</p>
+        <ul v-else class="bizinv-warn-list">
+          <li
+            v-for="b in aging"
+            :key="b.purchaseId"
+            class="bizinv-warn-item"
+            :data-testid="'bizinv-aging-' + b.purchaseId"
+          >
+            <span class="bizinv-warn-name">{{ b.productName }}</span>
+            <span class="bizinv-warn-meta">剩 {{ b.remaining }} {{ b.unit }} · 占用 {{ formatYuanOf(b.amount) }}</span>
+            <span class="bizinv-warn-days">{{ b.date }} 入库 · 库龄 {{ b.ageDays }} 天</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
     <!-- 库存总览卡片网格 -->
     <div ref="listEl" class="bizinv-list" :class="{ 'bizinv-list-scroll': !fitsOnePage }">
       <div ref="gridEl" class="bizinv-grid" data-testid="bizinv-grid">
@@ -134,7 +226,10 @@ function exportInventoryCsv(): void {
           </div>
           <div class="bizinv-card-right">
             <!-- 查看溯源按钮（卡片右上角） -->
-            <el-button size="small" @click="openTraceModal(row.product.id)">查看溯源</el-button>
+            <div class="bizinv-card-actions">
+              <el-button size="small" @click="openTraceModal(row.product.id)">查看溯源</el-button>
+              <el-button size="small" :data-testid="'bizinv-batch-' + row.product.id" @click="openBatchModal(row.product.id)">批次明细</el-button>
+            </div>
             <span class="bizinv-num num-brought">带出合计：<b>{{ broughtOutTotals[row.product.id] ?? 0 }}</b> {{ row.product.unit }}</span>
             <span class="bizinv-num num-stock">库存剩余：<b>{{ row.stock }}</b> {{ row.product.unit }}</span>
           </div>
@@ -150,6 +245,39 @@ function exportInventoryCsv(): void {
         @next="next()"
       />
     </div>
+
+    <!-- 批次明细弹框（FIFO 剩余量 / 库龄 / 占用资金） -->
+    <el-dialog
+      v-if="batchProductId"
+      :model-value="true"
+      width="560px"
+      class="bizinv-batch"
+      data-testid="bizinv-batch-modal"
+      :title="`批次库存 · ${batchProduct?.name ?? '未知商品'}`"
+      @close="closeBatchModal"
+    >
+      <div class="bizinv-batch-body">
+        <p v-if="batchRows.length === 0" class="bizinv-trace-empty">暂无进货批次</p>
+        <template v-else>
+          <div
+            v-for="b in batchRows"
+            :key="b.purchaseId"
+            class="bizinv-batch-row"
+            :class="{ 'sold-out': b.soldOut }"
+            :data-testid="'bizinv-batch-row-' + b.purchaseId"
+          >
+            <span class="bizinv-batch-date">{{ b.date }}</span>
+            <span class="bizinv-batch-detail">进货 {{ b.quantity }} · 已售 {{ b.sold }} · 剩 {{ b.remaining }} {{ b.unit }}</span>
+            <span class="bizinv-batch-price">@{{ formatYuanOf(b.unitPrice) }}</span>
+            <span class="bizinv-batch-amount">{{ b.soldOut ? '—' : formatYuanOf(b.amount) }}</span>
+            <span class="bizinv-batch-status" :class="b.soldOut ? 'done' : 'open'">{{ batchStatusText(b) }}</span>
+          </div>
+          <p class="bizinv-batch-summary" data-testid="bizinv-batch-summary">
+            未售完批次占用资金合计：{{ formatYuanOf(batchOpenAmount) }}（按先进先出，最旧批次优先售出）
+          </p>
+        </template>
+      </div>
+    </el-dialog>
 
     <!-- 溯源弹框（屏幕居中） -->
     <el-dialog
@@ -191,6 +319,155 @@ function exportInventoryCsv(): void {
   gap: 16px;
   flex: 1;
   min-height: 0;
+}
+
+/* 卡片操作按钮组 */
+.bizinv-card-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+/* 滞销 / 久存预警 */
+.bizinv-warns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.bizinv-warn {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--color-bg-card, #fff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 10px);
+}
+
+.bizinv-warn-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.bizinv-warn-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text, #1e293b);
+}
+
+.bizinv-warn-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 168px;
+  overflow-y: auto;
+}
+
+.bizinv-warn-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  background: var(--color-bg-hover, #f9fafb);
+  border-radius: var(--radius-sm, 6px);
+  font-variant-numeric: tabular-nums;
+}
+
+.bizinv-warn-name {
+  font-weight: 600;
+  color: var(--color-text, #111827);
+  flex-shrink: 0;
+}
+
+.bizinv-warn-meta {
+  flex: 1;
+  color: var(--color-text-secondary, #64748b);
+}
+
+.bizinv-warn-days {
+  flex-shrink: 0;
+  color: var(--color-warning, #b45309);
+}
+
+/* 批次明细 */
+.bizinv-batch-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bizinv-batch-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+  background: var(--color-bg-hover, #f9fafb);
+  border-radius: var(--radius-sm, 6px);
+  font-variant-numeric: tabular-nums;
+}
+
+.bizinv-batch-row.sold-out {
+  opacity: 0.6;
+}
+
+.bizinv-batch-date {
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.bizinv-batch-detail {
+  flex: 1;
+  color: var(--color-text-secondary, #64748b);
+}
+
+.bizinv-batch-price {
+  flex-shrink: 0;
+}
+
+.bizinv-batch-amount {
+  flex-shrink: 0;
+  font-weight: 700;
+  color: var(--color-primary, #3b82f6);
+}
+
+.bizinv-batch-status {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.bizinv-batch-status.done {
+  color: var(--color-success, #16a34a);
+  background: color-mix(in srgb, var(--color-success, #16a34a) 12%, transparent);
+}
+
+.bizinv-batch-status.open {
+  color: var(--color-warning, #b45309);
+  background: color-mix(in srgb, var(--color-warning, #f59e0b) 14%, transparent);
+}
+
+.bizinv-batch-summary {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--color-text-muted, #6b7280);
+}
+
+@media (max-width: 768px) {
+  .bizinv-warns {
+    grid-template-columns: 1fr;
+  }
 }
 
 .bizinv-list {

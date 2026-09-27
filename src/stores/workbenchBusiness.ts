@@ -546,6 +546,18 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     await saveBusiness()
   }
 
+  /** 滞销预警天数：在售商品超过该天数无售出即预警 */
+  async function setSlowMovingDays(n: number): Promise<void> {
+    settings.value.slowMovingDays = Math.max(1, Math.floor(n))
+    await saveBusiness()
+  }
+
+  /** 久存（临期）批次预警天数：进货入库超过该天数仍未售完即预警 */
+  async function setAgingBatchDays(n: number): Promise<void> {
+    settings.value.agingBatchDays = Math.max(1, Math.floor(n))
+    await saveBusiness()
+  }
+
   return {
     // 账本（最外层容器）
     ledgers: ledgerList,
@@ -598,6 +610,8 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     deleteExpense,
     setStallName,
     setLowStockThreshold,
-    setMonthlyRevenueTarget
+    setMonthlyRevenueTarget,
+    setSlowMovingDays,
+    setAgingBatchDays
   }
 })

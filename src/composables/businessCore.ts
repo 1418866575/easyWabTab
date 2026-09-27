@@ -27,6 +27,10 @@ export const ID_PREFIX = { product: 'bp_', productCat: 'bpc_', expense: 'be_', e
 
 /** 低库存预警阈值默认值 */
 export const DEFAULT_LOW_STOCK_THRESHOLD = 20
+/** 滞销预警默认天数（在售商品超过该天数无售出） */
+export const DEFAULT_SLOW_MOVING_DAYS = 30
+/** 久存批次预警默认天数（进货入库后仍未售完的天数） */
+export const DEFAULT_AGING_BATCH_DAYS = 60
 
 /** 存储结构版本：1 = 旧扁平 BusinessData；2 = 账本容器 BusinessStoreData */
 export const BUSINESS_STORE_SCHEMA_VER = 2
@@ -78,7 +82,13 @@ export function emptyBusinessData(): BusinessData {
     purchases: [],
     dailyRecords: [],
     expenses: [],
-    settings: { stallName: '', lowStockThreshold: DEFAULT_LOW_STOCK_THRESHOLD, monthlyRevenueTarget: 0 }
+    settings: {
+      stallName: '',
+      lowStockThreshold: DEFAULT_LOW_STOCK_THRESHOLD,
+      monthlyRevenueTarget: 0,
+      slowMovingDays: DEFAULT_SLOW_MOVING_DAYS,
+      agingBatchDays: DEFAULT_AGING_BATCH_DAYS
+    }
   }
 }
 
@@ -298,12 +308,24 @@ function normExpense(raw: unknown): BusinessExpense | null {
 }
 
 function normalizeSettings(raw: unknown): BusinessSettings {
-  const out: BusinessSettings = { stallName: '', lowStockThreshold: DEFAULT_LOW_STOCK_THRESHOLD, monthlyRevenueTarget: 0 }
+  const out: BusinessSettings = {
+    stallName: '',
+    lowStockThreshold: DEFAULT_LOW_STOCK_THRESHOLD,
+    monthlyRevenueTarget: 0,
+    slowMovingDays: DEFAULT_SLOW_MOVING_DAYS,
+    agingBatchDays: DEFAULT_AGING_BATCH_DAYS
+  }
   if (raw === null || typeof raw !== 'object') return out
   const s = raw as Record<string, unknown>
   if (typeof s.stallName === 'string') out.stallName = s.stallName.trim().slice(0, 30)
   if (typeof s.lowStockThreshold === 'number' && Number.isFinite(s.lowStockThreshold)) {
     out.lowStockThreshold = Math.max(0, Math.floor(s.lowStockThreshold))
+  }
+  if (typeof s.slowMovingDays === 'number' && Number.isFinite(s.slowMovingDays)) {
+    out.slowMovingDays = Math.max(1, Math.floor(s.slowMovingDays))
+  }
+  if (typeof s.agingBatchDays === 'number' && Number.isFinite(s.agingBatchDays)) {
+    out.agingBatchDays = Math.max(1, Math.floor(s.agingBatchDays))
   }
   if (typeof s.monthlyRevenueTarget === 'number' && Number.isFinite(s.monthlyRevenueTarget)) {
     out.monthlyRevenueTarget = Math.max(0, Math.floor(s.monthlyRevenueTarget))
@@ -683,6 +705,530 @@ export function avgUnsoldUnitPrice(
   return avgUnsoldUnitPriceMap(purchases, dailyRecords)[productId] ?? null
 }
 
+// ===== 录入提效：上日模板 / 常用商品 =====
+
+/** 日期键按天位移（用于「近 N 天」窗口；本地构造避免 UTC 偏移） */
+export function shiftDateKey(date: string, days: number): string {
+  const parts = (date ?? '').split('-').map(Number)
+  if (parts.length !== 3 || parts.some(n => !Number.isFinite(n))) return date
+  const dt = new Date(parts[0], parts[1] - 1, parts[2] + days)
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+}
+
+/** 最近的「早于 date」的收摊记录（编辑当天时不会复制自己） */
+export function lastDailyBefore(records: BusinessDailyRecord[], date: string): BusinessDailyRecord | null {
+  return (
+    (records ?? [])
+      .filter(r => r.date < date)
+      .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))[0] ?? null
+  )
+}
+
+/** 复制上日得到的商品行（带上日的商品与带出数量，剩余/损耗归零由当天重填） */
+export interface DailyTemplateRow {
+  productId: string
+  broughtOut: number
+  remaining: number
+  loss: number
+}
+
+export function dailyTemplateFromLast(records: BusinessDailyRecord[], date: string): DailyTemplateRow[] {
+  const last = lastDailyBefore(records, date)
+  if (!last) return []
+  return (last.items ?? [])
+    .filter(it => it.broughtOut > 0)
+    .map(it => ({ productId: it.productId, broughtOut: it.broughtOut, remaining: 0, loss: 0 }))
+}
+
+// ===== 录入校验（进货 / 收摊 / 手填营业额） =====
+
+export type IssueLevel = 'error' | 'warn'
+
+export interface ValidationIssue {
+  level: IssueLevel
+  message: string
+}
+
+/** 进货录入校验：数量为 0、单价为 0、合计与关联支出汇总不符 */
+export function validatePurchaseInput(input: {
+  quantity: number
+  unitPrice: number
+  total: number
+  /** 关联支出金额汇总；null/undefined = 未关联支出（合计按 数量 × 单价） */
+  expenseTotal?: number | null
+}): ValidationIssue[] {
+  const issues: ValidationIssue[] = []
+  const qty = Number.isFinite(input.quantity) ? input.quantity : 0
+  const price = Number.isFinite(input.unitPrice) ? input.unitPrice : 0
+  const total = Number.isFinite(input.total) ? input.total : 0
+  const linked = typeof input.expenseTotal === 'number' && Number.isFinite(input.expenseTotal)
+  if (qty <= 0) issues.push({ level: 'error', message: '进货数量必须 ≥ 1' })
+  if (!linked && price <= 0) {
+    issues.push({ level: 'error', message: '进货单价必须 > 0（若成本记在支出里，请改为关联支出记录）' })
+  } else if (linked && price <= 0) {
+    issues.push({ level: 'warn', message: '单价为 0：合计取自关联支出，该批单位成本按 0 参与均价计算' })
+  }
+  if (linked && Math.abs(total - (input.expenseTotal ?? 0)) > 0.01) {
+    issues.push({
+      level: 'error',
+      message: `合计 ${total.toFixed(2)} 与关联支出汇总 ${(input.expenseTotal ?? 0).toFixed(2)} 不一致，请重新勾选`
+    })
+  }
+  if (!linked && qty > 0 && price > 0 && Math.abs(total - qty * price) > 0.01) {
+    issues.push({ level: 'warn', message: `合计 ${total.toFixed(2)} 与「数量 × 单价」${(qty * price).toFixed(2)} 不一致` })
+  }
+  return issues
+}
+
+/** 收摊单行校验：剩余/损耗不得大于带出，剩余 + 损耗不得大于带出 */
+export function validateDailyRow(row: {
+  productId?: string
+  broughtOut: number
+  remaining: number
+  loss: number
+}): ValidationIssue[] {
+  const issues: ValidationIssue[] = []
+  const b = Math.max(0, Math.floor(Number.isFinite(row.broughtOut) ? row.broughtOut : 0))
+  const r = Math.max(0, Math.floor(Number.isFinite(row.remaining) ? row.remaining : 0))
+  const l = Math.max(0, Math.floor(Number.isFinite(row.loss) ? row.loss : 0))
+  if (b === 0 && r === 0 && l === 0) {
+    issues.push({ level: 'warn', message: '该行未填写带出数量，保存时不会计入营业额' })
+  }
+  // 三条互斥，保证一行最多一条 error（避免叠加同类提示）
+  if (r + l > b) {
+    issues.push({ level: 'error', message: `剩余 ${r} + 损耗 ${l} = ${r + l} 大于带出 ${b}，售出数量会为负` })
+  } else if (r > b) {
+    issues.push({ level: 'error', message: `剩余 ${r} 大于带出 ${b}` })
+  } else if (l > b) {
+    issues.push({ level: 'error', message: `损耗 ${l} 大于带出 ${b}` })
+  }
+  return issues
+}
+
+/** 收摊全部行校验汇总（errors 阻断保存，warns 仅提示） */
+export function validateDailyRows(
+  rows: { productId?: string; broughtOut: number; remaining: number; loss: number }[]
+): { errors: string[]; warns: string[] } {
+  const errors: string[] = []
+  const warns: string[] = []
+  ;(rows ?? []).forEach((row, i) => {
+    for (const issue of validateDailyRow(row)) {
+      const text = `第 ${i + 1} 行：${issue.message}`
+      if (issue.level === 'error') errors.push(text)
+      else warns.push(text)
+    }
+  })
+  return { errors, warns }
+}
+
+/** 手填营业额校验：与商品明细自动合计偏离超过阈值（默认 20%）时提示 */
+export interface RevenueOverrideCheck {
+  level: 'ok' | 'warn'
+  diff: number // 手动 − 自动
+  rate: number // 偏离率（0-1 以上）
+  message: string
+}
+
+export function checkRevenueOverride(auto: number, manual: number | null, threshold = 0.2): RevenueOverrideCheck {
+  const ok: RevenueOverrideCheck = { level: 'ok', diff: 0, rate: 0, message: '' }
+  if (typeof manual !== 'number' || !Number.isFinite(manual)) return ok
+  const base = Number.isFinite(auto) ? auto : 0
+  const diff = Math.round((manual - base) * 100) / 100
+  if (base <= 0) {
+    return manual > 0
+      ? { level: 'warn', diff, rate: 1, message: `商品明细自动合计为 0，手动值 ${manual.toFixed(2)} 将直接作为当日营业额` }
+      : ok
+  }
+  const rate = Math.abs(diff) / base
+  if (rate <= threshold) return { level: 'ok', diff, rate: Math.round(rate * 10000) / 10000, message: '' }
+  return {
+    level: 'warn',
+    diff,
+    rate: Math.round(rate * 10000) / 10000,
+    message: `手动营业额与商品明细自动合计（${base.toFixed(2)}）相差 ${(rate * 100).toFixed(1)}%（${diff > 0 ? '+' : ''}${diff.toFixed(2)}），请确认是否漏填商品行或金额录错`
+  }
+}
+
+// ===== 对账：进货↔支出关联 / 应收 vs 实收 / 按月账实差异 =====
+
+/** 已关联的进货（含对应支出明细） */
+export interface ExpenseLinkRow {
+  purchaseId: string
+  productId: string
+  productName: string
+  date: string
+  total: number
+  expenseIds: string[]
+  expenseTotal: number
+  /** 关联支出的日期（多笔用 / 连接，便于人工核对） */
+  expenseDates: string
+  diff: number // 进货合计 − 关联支出汇总（正常为 0）
+}
+
+export interface ExpenseReconciliation {
+  linked: ExpenseLinkRow[]
+  /** 未关联任何支出的进货（成本只体现在 COGS，不影响对账结论，供人工确认） */
+  unlinkedPurchases: { id: string; productId: string; productName: string; date: string; total: number }[]
+  /** 未被任何进货关联的支出（可能漏记进货，也可能本就与进货无关） */
+  unlinkedExpenses: BusinessExpense[]
+  linkedTotal: number
+  unlinkedPurchaseTotal: number
+  unlinkedExpenseTotal: number
+}
+
+/** 进货 ↔ 支出对账：已关联 / 未关联进货 / 未匹配支出 */
+export function calcExpenseReconciliation(data: BusinessData): ExpenseReconciliation {
+  const products = data.products ?? []
+  const purchases = data.purchases ?? []
+  const expenses = data.expenses ?? []
+  const nameOf = (pid: string): string => products.find(p => p.id === pid)?.name ?? '（已删除商品）'
+  const owners = expenseLinkOwners(purchases)
+  const linked: ExpenseLinkRow[] = []
+  const unlinkedPurchases: ExpenseReconciliation['unlinkedPurchases'] = []
+  for (const p of purchases) {
+    const ids = (p.expenseIds ?? []).filter(id => !!id)
+    if (ids.length === 0) {
+      unlinkedPurchases.push({ id: p.id, productId: p.productId, productName: nameOf(p.productId), date: p.date, total: p.total })
+      continue
+    }
+    const picked = expenses.filter(e => ids.includes(e.id))
+    const expenseTotal = sumExpenseAmounts(expenses, ids)
+    linked.push({
+      purchaseId: p.id,
+      productId: p.productId,
+      productName: nameOf(p.productId),
+      date: p.date,
+      total: p.total,
+      expenseIds: ids,
+      expenseTotal,
+      expenseDates: picked.map(e => e.date).sort().join(' / '),
+      diff: Math.round((p.total - expenseTotal) * 100) / 100
+    })
+  }
+  const unlinkedExpenses = expenses.filter(e => !owners.has(e.id))
+  const round = (n: number): number => Math.round(n * 100) / 100
+  return {
+    linked: linked.sort((a, b) => (a.date < b.date ? 1 : -1)),
+    unlinkedPurchases: unlinkedPurchases.sort((a, b) => (a.date < b.date ? 1 : -1)),
+    unlinkedExpenses: unlinkedExpenses.sort((a, b) => (a.date < b.date ? 1 : -1)),
+    linkedTotal: round(linked.reduce((s, r) => s + r.total, 0)),
+    unlinkedPurchaseTotal: round(unlinkedPurchases.reduce((s, r) => s + r.total, 0)),
+    unlinkedExpenseTotal: round(unlinkedExpenses.reduce((s, e) => s + e.amount, 0))
+  }
+}
+
+/** 单日应收（按商品明细自动合计）vs 实收（库内营业额，可能手动填写） */
+export interface ReceivableRow {
+  date: string
+  receivable: number
+  actual: number
+  diff: number // 实收 − 应收
+  manual: boolean
+  transactionCount: number
+}
+
+export interface ReceivableSummary {
+  rows: ReceivableRow[] // 日期倒序
+  receivable: number
+  actual: number
+  diff: number
+  manualDays: number // 手填营业额的天数
+  diffDays: number // 有差异的天数
+}
+
+/** 账本维度应收/实收核对（差异来源于手填营业额、漏填商品行或售价调整） */
+export function calcReceivableVsActual(data: BusinessData): ReceivableSummary {
+  const products = data.products ?? []
+  const rows: ReceivableRow[] = (data.dailyRecords ?? []).map(r => {
+    const receivable = calcDailyRevenue(r.items, products)
+    const actual = r.totalRevenue ?? 0
+    return {
+      date: r.date,
+      receivable,
+      actual,
+      diff: Math.round((actual - receivable) * 100) / 100,
+      manual: Math.abs(actual - receivable) > 0.005,
+      transactionCount: r.transactionCount ?? 0
+    }
+  })
+  rows.sort((a, b) => (a.date < b.date ? 1 : -1))
+  const round = (n: number): number => Math.round(n * 100) / 100
+  return {
+    rows,
+    receivable: round(rows.reduce((s, r) => s + r.receivable, 0)),
+    actual: round(rows.reduce((s, r) => s + r.actual, 0)),
+    diff: round(rows.reduce((s, r) => s + r.diff, 0)),
+    manualDays: rows.filter(r => r.manual).length,
+    diffDays: rows.filter(r => Math.abs(r.diff) > 0.005).length
+  }
+}
+
+/** 按月账实差异（严格限定在 year 年内，不跨年；无数据月份为 0） */
+export interface MonthlyReconcileRow {
+  month: number
+  label: string
+  receivable: number
+  actual: number
+  diff: number
+  days: number
+  manualDays: number
+}
+
+export function calcMonthlyReconciliation(data: BusinessData, year: number): MonthlyReconcileRow[] {
+  const summary = calcReceivableVsActual(data)
+  const prefix = `${year}-`
+  const out: MonthlyReconcileRow[] = []
+  for (let m = 1; m <= 12; m++) {
+    const key = `${prefix}${String(m).padStart(2, '0')}`
+    const rows = summary.rows.filter(r => r.date.startsWith(key))
+    out.push({
+      month: m,
+      label: `${m}月`,
+      receivable: Math.round(rows.reduce((s, r) => s + r.receivable, 0) * 100) / 100,
+      actual: Math.round(rows.reduce((s, r) => s + r.actual, 0) * 100) / 100,
+      diff: Math.round(rows.reduce((s, r) => s + r.diff, 0) * 100) / 100,
+      days: rows.length,
+      manualDays: rows.filter(r => r.manual).length
+    })
+  }
+  return out
+}
+
+/** 按商品毛利行（含会员价模拟口径） */
+export interface ProductProfitRow {
+  productId: string
+  name: string
+  categoryId?: string
+  categoryName: string
+  unit: string
+  sold: number
+  revenue: number
+  cost: number
+  profit: number
+  margin: number // 0-1 小数
+  /** 该商品是否设置了会员价（决定会员价模拟是否等于售价口径） */
+  hasMemberPrice: boolean
+  /** 会员价模拟：售出 ×（会员价 ?? 售价） */
+  memberRevenue: number
+  memberProfit: number
+  memberMargin: number
+}
+
+/** 按分类毛利行（含会员价模拟口径） */
+export interface CategoryProfitRow {
+  categoryId: string
+  name: string
+  sold: number
+  revenue: number
+  cost: number
+  profit: number
+  margin: number
+  memberRevenue: number
+  memberProfit: number
+}
+
+/** 按商品毛利报表（含会员价模拟口径）：售出 = Σ(带出 − 剩余 − 损耗)；成本按商品进货价 */
+export function calcProductProfitReport(data: BusinessData): ProductProfitRow[] {
+  const products = data.products ?? []
+  const catName = (id?: string): string =>
+    id ? (findProductCategory(data.productCategories ?? [], id)?.name ?? '未分类') : '未分类'
+  const out: ProductProfitRow[] = []
+  for (const p of products) {
+    let sold = 0
+    for (const r of data.dailyRecords ?? []) {
+      for (const it of r.items ?? []) {
+        if (it.productId === p.id) sold += soldCount(it)
+      }
+    }
+    const revenue = Math.round(sold * p.sellingPrice * 100) / 100
+    const cost = Math.round(sold * p.purchasePrice * 100) / 100
+    const unitPrice = typeof p.memberPrice === 'number' ? p.memberPrice : p.sellingPrice
+    const memberRevenue = Math.round(sold * unitPrice * 100) / 100
+    out.push({
+      productId: p.id,
+      name: p.name,
+      categoryId: p.categoryId,
+      categoryName: catName(p.categoryId),
+      unit: p.unit,
+      sold,
+      revenue,
+      cost,
+      profit: Math.round((revenue - cost) * 100) / 100,
+      margin: revenue > 0 ? Math.round(((revenue - cost) / revenue) * 10000) / 10000 : 0,
+      hasMemberPrice: typeof p.memberPrice === 'number',
+      memberRevenue,
+      memberProfit: Math.round((memberRevenue - cost) * 100) / 100,
+      memberMargin: memberRevenue > 0 ? Math.round(((memberRevenue - cost) / memberRevenue) * 10000) / 10000 : 0
+    })
+  }
+  return out.sort((a, b) => b.profit - a.profit || b.revenue - a.revenue)
+}
+
+/** 按分类毛利汇总（含会员价模拟口径；未分类归到 id 为 '' 的一组） */
+export function calcCategoryProfitReport(data: BusinessData): CategoryProfitRow[] {
+  const rows = calcProductProfitReport(data)
+  const map = new Map<string, CategoryProfitRow>()
+  for (const r of rows) {
+    const key = r.categoryId ?? ''
+    const cur =
+      map.get(key) ??
+      { categoryId: key, name: r.categoryName, sold: 0, revenue: 0, cost: 0, profit: 0, margin: 0, memberRevenue: 0, memberProfit: 0 }
+    cur.sold += r.sold
+    cur.revenue += r.revenue
+    cur.cost += r.cost
+    cur.profit += r.profit
+    cur.memberRevenue += r.memberRevenue
+    cur.memberProfit += r.memberProfit
+    map.set(key, cur)
+  }
+  const round = (n: number): number => Math.round(n * 100) / 100
+  return [...map.values()]
+    .map(r => ({
+      ...r,
+      revenue: round(r.revenue),
+      cost: round(r.cost),
+      profit: round(r.profit),
+      memberRevenue: round(r.memberRevenue),
+      memberProfit: round(r.memberProfit),
+      margin: r.revenue > 0 ? Math.round((r.profit / r.revenue) * 10000) / 10000 : 0
+    }))
+    .sort((a, b) => b.profit - a.profit)
+}
+
+// ===== 批次级库存与滞销 / 久存预警 =====
+
+/** 两个日期键之间相差的天数（b − a，可为负） */
+export function daysBetween(a: string, b: string): number {
+  const pa = (a ?? '').split('-').map(Number)
+  const pb = (b ?? '').split('-').map(Number)
+  if (pa.length !== 3 || pb.length !== 3 || [...pa, ...pb].some(n => !Number.isFinite(n))) return 0
+  const da = Date.UTC(pa[0], pa[1] - 1, pa[2])
+  const db = Date.UTC(pb[0], pb[1] - 1, pb[2])
+  return Math.round((db - da) / 86400000)
+}
+
+/** 单个进货批次的库存状态（基于先进先出剩余量） */
+export interface BatchStockRow {
+  purchaseId: string
+  productId: string
+  productName: string
+  unit: string
+  date: string
+  quantity: number
+  sold: number
+  remaining: number
+  unitPrice: number
+  /** 剩余占用的资金 = 剩余 × 进货单价 */
+  amount: number
+  /** 入库至今的天数（库龄） */
+  ageDays: number
+  soldOut: boolean
+  isOldest: boolean
+}
+
+/** 批次级库存：按商品聚合的 FIFO 剩余量 + 库龄 + 占用资金 */
+export function calcBatchStock(data: BusinessData, today: string = localDateKey()): BatchStockRow[] {
+  const status = calcPurchaseStockStatus(data.purchases ?? [], data.dailyRecords ?? [])
+  const out: BatchStockRow[] = (data.purchases ?? []).map(p => {
+    const st = status[p.id]
+    const remaining = st ? st.remaining : p.quantity
+    const product = (data.products ?? []).find(x => x.id === p.productId)
+    return {
+      purchaseId: p.id,
+      productId: p.productId,
+      productName: product?.name ?? '（已删除商品）',
+      unit: product?.unit ?? '件',
+      date: p.date,
+      quantity: p.quantity,
+      sold: st ? st.sold : 0,
+      remaining,
+      unitPrice: p.unitPrice,
+      amount: Math.round(remaining * p.unitPrice * 100) / 100,
+      ageDays: Math.max(0, daysBetween(p.date, today)),
+      soldOut: st ? st.soldOut : false,
+      isOldest: st ? st.isOldest : false
+    }
+  })
+  // 未售完的排前面（在售批次优先），再按入库日期从旧到新
+  return out.sort((a, b) => Number(a.soldOut) - Number(b.soldOut) || (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+}
+
+/** 滞销商品：在售、当前库存 > 0，且最近 days 天内没有售出记录（从未售出也算） */
+export interface SlowMovingItem {
+  product: BusinessProduct
+  stock: number
+  /** 最近一次售出日期；null = 从未售出 */
+  lastSoldDate: string | null
+  /** 距最近售出已过去的天数；从未售出时为 null */
+  idleDays: number | null
+}
+
+export function slowMovingProducts(
+  data: BusinessData,
+  days = 30,
+  today: string = localDateKey()
+): SlowMovingItem[] {
+  const stock = calcInventory(data.products ?? [], data.purchases ?? [], data.dailyRecords ?? [])
+  const lastSold = new Map<string, string>()
+  for (const r of data.dailyRecords ?? []) {
+    for (const it of r.items ?? []) {
+      if (soldCount(it) <= 0) continue
+      const cur = lastSold.get(it.productId)
+      if (!cur || r.date > cur) lastSold.set(it.productId, r.date)
+    }
+  }
+  const out: SlowMovingItem[] = []
+  for (const p of data.products ?? []) {
+    if (!p.active) continue
+    const s = stock[p.id] ?? 0
+    if (s <= 0) continue
+    const last = lastSold.get(p.id) ?? null
+    const idle = last ? daysBetween(last, today) : null
+    if (last && idle !== null && idle <= days) continue
+    out.push({ product: p, stock: s, lastSoldDate: last, idleDays: idle })
+  }
+  return out.sort((a, b) => (b.idleDays ?? 9999) - (a.idleDays ?? 9999) || b.stock - a.stock)
+}
+
+/** 久存（临期）批次：入库超过 agingDays 天且仍有剩余（未售完） */
+export function agingBatches(data: BusinessData, agingDays = 60, today: string = localDateKey()): BatchStockRow[] {
+  return calcBatchStock(data, today).filter(b => !b.soldOut && b.remaining > 0 && b.ageDays >= agingDays)
+}
+
+/** 常用商品：近 withinDays 天内「带出次数」最多的在售商品（次数相同比带出总量，再比最近日期） */
+export function frequentProductIds(
+  records: BusinessDailyRecord[],
+  products: BusinessProduct[],
+  withinDays = 30,
+  today: string = localDateKey(),
+  limit = 6
+): string[] {
+  const from = shiftDateKey(today, -(withinDays - 1))
+  const stat = new Map<string, { count: number; qty: number; lastDate: string }>()
+  for (const r of records ?? []) {
+    if (r.date < from || r.date > today) continue
+    for (const it of r.items ?? []) {
+      if (it.broughtOut <= 0) continue
+      const cur = stat.get(it.productId) ?? { count: 0, qty: 0, lastDate: '' }
+      cur.count += 1
+      cur.qty += it.broughtOut
+      if (r.date > cur.lastDate) cur.lastDate = r.date
+      stat.set(it.productId, cur)
+    }
+  }
+  const active = new Set((products ?? []).filter(p => p.active).map(p => p.id))
+  return [...stat.entries()]
+    .filter(([pid]) => active.has(pid))
+    .sort(
+      (a, b) =>
+        b[1].count - a[1].count ||
+        b[1].qty - a[1].qty ||
+        (a[1].lastDate < b[1].lastDate ? 1 : a[1].lastDate > b[1].lastDate ? -1 : 0)
+    )
+    .slice(0, limit)
+    .map(([pid]) => pid)
+}
+
 /** 总统计：营业额 = Σ日记录收入；成本 = 纯 COGS（Σ售出数量 × 进货价，按收摊记录，不计支出）；利润/毛利率；支出 = Σ支出金额 */
 export interface BusinessStats {
   revenue: number
@@ -829,6 +1375,9 @@ export interface MonthlyStat {
   expense: number
   transactionCount: number
   days: number // 当月有收摊记录的天数
+  /** 会员价模拟营业额：Σ售出 ×（会员价 ?? 售价）（用于「如果全按会员价卖」的毛利模拟） */
+  memberRevenue: number
+  memberProfit: number
 }
 
 /**
@@ -855,6 +1404,19 @@ export function calcMonthlyStats(data: BusinessData, year: number): MonthlyStat[
         .filter(e => e.date.startsWith(prefix))
         .reduce((s, e) => s + (typeof e.amount === 'number' && Number.isFinite(e.amount) ? e.amount : 0), 0)
     )
+    // 会员价模拟：售出数量 ×（会员价 ?? 售价），成本口径不变
+    const memberRevenue = round2(
+      monthRecords.reduce((s, r) => {
+        let sub = 0
+        for (const it of r.items ?? []) {
+          const product = (data?.products ?? []).find(p => p.id === it.productId)
+          if (!product) continue
+          const unit = typeof product.memberPrice === 'number' ? product.memberPrice : product.sellingPrice
+          sub += soldCount(it) * unit
+        }
+        return s + sub
+      }, 0)
+    )
     out.push({
       month: m,
       label: `${m}月`,
@@ -863,7 +1425,9 @@ export function calcMonthlyStats(data: BusinessData, year: number): MonthlyStat[
       profit: round2(revenue - cost),
       expense,
       transactionCount,
-      days: monthRecords.length
+      days: monthRecords.length,
+      memberRevenue,
+      memberProfit: round2(memberRevenue - cost)
     })
   }
   return out

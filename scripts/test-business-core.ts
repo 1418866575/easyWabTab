@@ -10,6 +10,9 @@ import {
   avgUnsoldUnitPrice,
   calcBroughtOutTotals,
   calcBusinessStats,
+  calcExpenseReconciliation,
+  calcMonthlyReconciliation,
+  calcReceivableVsActual,
   calcBusinessTrend,
   calcCategoryRanking,
   calcDailyCost,
@@ -17,6 +20,12 @@ import {
   calcDailyRevenue,
   calcInventory,
   calcMonthlyStats,
+  calcProductProfitReport,
+  calcCategoryProfitReport,
+  calcBatchStock,
+  agingBatches,
+  slowMovingProducts,
+  daysBetween,
   calcProductRanking,
   calcPurchaseTotals,
   calcPurchaseTotal,
@@ -59,6 +68,14 @@ import {
   sumExpenseAmounts,
   toggleCategoryVisible,
   unsoldPurchaseUnitPrices,
+  validateDailyRow,
+  validateDailyRows,
+  validatePurchaseInput,
+  checkRevenueOverride,
+  dailyTemplateFromLast,
+  frequentProductIds,
+  lastDailyBefore,
+  shiftDateKey,
   visibleExpenseCategories,
   visibleProductCategories
 } from '../src/composables/businessCore.ts'
@@ -938,6 +955,291 @@ test('T45 进货价自动均价', () => {
     { id: 'd3', date: '2026-06-01', items: [{ productId: 'p1', broughtOut: 10, remaining: 0, loss: 10 }], totalRevenue: 0, createdAt: 'x', updatedAt: 'x' }
   ]
   assert.equal(avgUnsoldUnitPrice(purchases, lossOnly, 'p1'), 3.03)
+})
+
+// T46 — 录入提效：日期位移 / 上日模板 / 常用商品
+test('T46 录入提效（上日模板与常用商品）', () => {
+  assert.equal(shiftDateKey('2026-03-01', -1), '2026-02-28')
+  assert.equal(shiftDateKey('2026-01-01', -1), '2025-12-31')
+  assert.equal(shiftDateKey('2026-03-01', 30), '2026-03-31')
+  const records: BusinessDailyRecord[] = [
+    { id: 'd1', date: '2026-03-01', items: [{ productId: 'p1', broughtOut: 10, remaining: 0, loss: 0 }], totalRevenue: 50, createdAt: 'x', updatedAt: 'x' },
+    { id: 'd2', date: '2026-03-02', items: [{ productId: 'p1', broughtOut: 8, remaining: 0, loss: 0 }, { productId: 'p2', broughtOut: 5, remaining: 0, loss: 0 }], totalRevenue: 60, createdAt: 'x', updatedAt: 'x' }
+  ]
+  // 上日模板：取早于 date 的最近一条，剩余/损耗归零
+  const tpl = dailyTemplateFromLast(records, '2026-03-03')
+  assert.deepEqual(tpl, [
+    { productId: 'p1', broughtOut: 8, remaining: 0, loss: 0 },
+    { productId: 'p2', broughtOut: 5, remaining: 0, loss: 0 }
+  ])
+  assert.deepEqual(dailyTemplateFromLast(records, '2026-03-01'), [], '没有更早的记录 → 空模板')
+  assert.equal(lastDailyBefore(records, '2026-03-02')?.id, 'd1')
+  // 常用商品：p1 出现 2 次排在 p2（1 次）前；停售商品不参与
+  const products: BusinessProduct[] = [
+    { id: 'p1', name: '烤肠', unit: '根', purchasePrice: 2, sellingPrice: 5, active: true, createdAt: 'c' },
+    { id: 'p2', name: '可乐', unit: '瓶', purchasePrice: 1, sellingPrice: 3, active: true, createdAt: 'c' },
+    { id: 'p3', name: '停售品', unit: '个', purchasePrice: 1, sellingPrice: 2, active: false, createdAt: 'c' }
+  ]
+  assert.deepEqual(frequentProductIds(records, products, 30, '2026-03-02'), ['p1', 'p2'])
+  // 窗口外（30 天以外）不计入
+  assert.deepEqual(frequentProductIds(records, products, 30, '2026-05-01'), [])
+})
+
+// T47 — validatePurchaseInput：数量/单价为 0、合计与关联支出不符
+test('T47 进货录入校验', () => {
+  assert.deepEqual(validatePurchaseInput({ quantity: 10, unitPrice: 2, total: 20 }), [])
+  const zeroQty = validatePurchaseInput({ quantity: 0, unitPrice: 2, total: 0 })
+  assert.equal(zeroQty.some(i => i.level === 'error' && i.message.includes('数量')), true)
+  const zeroPrice = validatePurchaseInput({ quantity: 10, unitPrice: 0, total: 0 })
+  assert.equal(zeroPrice.some(i => i.level === 'error' && i.message.includes('单价')), true)
+  // 关联支出时单价为 0 只警告（合计来自支出）
+  const linkedZeroPrice = validatePurchaseInput({ quantity: 10, unitPrice: 0, total: 100, expenseTotal: 100 })
+  assert.equal(linkedZeroPrice.some(i => i.level === 'warn' && i.message.includes('单价为 0')), true)
+  assert.equal(linkedZeroPrice.some(i => i.level === 'error'), false)
+  // 合计与支出汇总不符 → error
+  const mismatch = validatePurchaseInput({ quantity: 10, unitPrice: 2, total: 20, expenseTotal: 100 })
+  assert.equal(mismatch.some(i => i.level === 'error' && i.message.includes('不一致')), true)
+  // 未关联支出时合计与 数量×单价 不符 → warn
+  const drift = validatePurchaseInput({ quantity: 10, unitPrice: 2, total: 25 })
+  assert.equal(drift.some(i => i.level === 'warn'), true)
+  assert.equal(drift.some(i => i.level === 'error'), false)
+})
+
+// T48 — validateDailyRow/validateDailyRows：剩余/损耗 > 带出 → error；空行 → warn
+test('T48 收摊行校验', () => {
+  assert.deepEqual(validateDailyRow({ broughtOut: 10, remaining: 2, loss: 1 }), [])
+  assert.equal(validateDailyRow({ broughtOut: 5, remaining: 6, loss: 0 }).some(i => i.level === 'error' && i.message.includes('剩余')), true)
+  assert.equal(validateDailyRow({ broughtOut: 5, remaining: 0, loss: 6 }).some(i => i.level === 'error' && i.message.includes('损耗')), true)
+  assert.equal(validateDailyRow({ broughtOut: 5, remaining: 3, loss: 3 }).some(i => i.level === 'error' && i.message.includes('售出数量会为负')), true)
+  assert.equal(validateDailyRow({ broughtOut: 0, remaining: 0, loss: 0 }).some(i => i.level === 'warn'), true)
+  const all = validateDailyRows([
+    { broughtOut: 5, remaining: 0, loss: 0 },
+    { broughtOut: 5, remaining: 9, loss: 0 }
+  ])
+  assert.equal(all.errors.length, 1)
+  assert.ok(all.errors[0].startsWith('第 2 行'))
+})
+
+// T49 — checkRevenueOverride：手填营业额偏离自动合计超 20% 提示
+test('T49 手填营业额校验', () => {
+  assert.equal(checkRevenueOverride(100, null).level, 'ok')
+  assert.equal(checkRevenueOverride(100, 110).level, 'ok', '偏离 10% 不提示')
+  const warn = checkRevenueOverride(100, 150)
+  assert.equal(warn.level, 'warn')
+  assert.equal(warn.diff, 50)
+  assert.equal(warn.rate, 0.5)
+  assert.ok(warn.message.includes('50.0%'))
+  const low = checkRevenueOverride(100, 60)
+  assert.equal(low.level, 'warn')
+  assert.equal(low.diff, -40)
+  // 自动合计为 0 而手填有值 → 提示
+  assert.equal(checkRevenueOverride(0, 88).level, 'warn')
+  assert.equal(checkRevenueOverride(0, 0).level, 'ok')
+})
+
+// T50 — 应收 vs 实收：差异来自手填营业额
+test('T50 应收实收对账', () => {
+  const base = emptyBusinessData()
+  const data: BusinessData = {
+    ...base,
+    products: [{ id: 'p1', name: '烤肠', unit: '根', purchasePrice: 2, sellingPrice: 5, active: true, createdAt: 'c' }],
+    dailyRecords: [
+      // 售出 10 × 5 = 50 应收，实收 50 → 自动
+      { id: 'd1', date: '2026-03-01', items: [{ productId: 'p1', broughtOut: 10, remaining: 0, loss: 0 }], totalRevenue: 50, createdAt: 'x', updatedAt: 'x' },
+      // 售出 6 × 5 = 30 应收，实收 40 → 手填，差异 +10
+      { id: 'd2', date: '2026-03-02', items: [{ productId: 'p1', broughtOut: 6, remaining: 0, loss: 0 }], totalRevenue: 40, transactionCount: 3, createdAt: 'x', updatedAt: 'x' }
+    ]
+  }
+  const r = calcReceivableVsActual(data)
+  assert.equal(r.rows.length, 2)
+  assert.equal(r.rows[0].date, '2026-03-02', '日期倒序')
+  assert.equal(r.receivable, 80)
+  assert.equal(r.actual, 90)
+  assert.equal(r.diff, 10)
+  assert.equal(r.manualDays, 1)
+  assert.equal(r.diffDays, 1)
+  assert.equal(r.rows[0].manual, true)
+  assert.equal(r.rows[1].manual, false)
+})
+
+// T51 — 按月账实差异：12 个月全量、严格按年不跨年
+test('T51 按月账实差异', () => {
+  const base = emptyBusinessData()
+  const data: BusinessData = {
+    ...base,
+    products: [{ id: 'p1', name: '烤肠', unit: '根', purchasePrice: 2, sellingPrice: 5, active: true, createdAt: 'c' }],
+    dailyRecords: [
+      { id: 'd1', date: '2026-02-01', items: [{ productId: 'p1', broughtOut: 4, remaining: 0, loss: 0 }], totalRevenue: 25, createdAt: 'x', updatedAt: 'x' },
+      { id: 'd2', date: '2025-02-01', items: [{ productId: 'p1', broughtOut: 10, remaining: 0, loss: 0 }], totalRevenue: 999, createdAt: 'x', updatedAt: 'x' }
+    ]
+  }
+  const rows = calcMonthlyReconciliation(data, 2026)
+  assert.equal(rows.length, 12)
+  const feb = rows[1]
+  assert.equal(feb.label, '2月')
+  assert.equal(feb.receivable, 20, '售出 4 × 5')
+  assert.equal(feb.actual, 25)
+  assert.equal(feb.diff, 5)
+  assert.equal(feb.days, 1)
+  assert.equal(feb.manualDays, 1)
+  // 不跨年：2025 的记录不计入
+  assert.equal(rows.reduce((s, m) => s + m.actual, 0), 25)
+  assert.equal(rows[0].days, 0)
+})
+
+// T52 — 进货 ↔ 支出对账：已关联 / 未关联进货 / 未匹配支出
+test('T52 进货支出对账', () => {
+  const base = emptyBusinessData()
+  const data: BusinessData = {
+    ...base,
+    products: [{ id: 'p1', name: '烤肠', unit: '根', purchasePrice: 2, sellingPrice: 5, active: true, createdAt: 'c' }],
+    purchases: [
+      { id: 'b1', productId: 'p1', quantity: 10, unitPrice: 2, total: 40, date: '2026-01-01', expenseIds: ['e1'], createdAt: 'a' },
+      { id: 'b2', productId: 'p1', quantity: 5, unitPrice: 2, total: 10, date: '2026-02-01', createdAt: 'b' }
+    ],
+    expenses: [
+      { id: 'e1', date: '2026-01-01', categoryId: 'expense-stall', amount: 40, createdAt: 'c' },
+      { id: 'e2', date: '2026-03-01', categoryId: 'expense-transport', amount: 15, note: '车费', createdAt: 'c' }
+    ]
+  }
+  const r = calcExpenseReconciliation(data)
+  assert.equal(r.linked.length, 1)
+  assert.equal(r.linked[0].purchaseId, 'b1')
+  assert.equal(r.linked[0].expenseTotal, 40)
+  assert.equal(r.linked[0].diff, 0)
+  assert.equal(r.linked[0].expenseDates, '2026-01-01')
+  assert.equal(r.unlinkedPurchases.length, 1)
+  assert.equal(r.unlinkedPurchases[0].id, 'b2')
+  assert.equal(r.unlinkedExpenses.length, 1)
+  assert.equal(r.unlinkedExpenses[0].id, 'e2')
+  assert.equal(r.linkedTotal, 40)
+  assert.equal(r.unlinkedPurchaseTotal, 10)
+  assert.equal(r.unlinkedExpenseTotal, 15)
+})
+
+// T53 — 商品毛利报表（含会员价模拟）
+test('T53 商品毛利报表', () => {
+  const base = emptyBusinessData()
+  const data: BusinessData = {
+    ...base,
+    productCategories: [{ id: 'c1', name: '小吃', sortOrder: 1, visible: true }],
+    products: [
+      { id: 'p1', name: '烤肠', categoryId: 'c1', unit: '根', purchasePrice: 2, sellingPrice: 5, memberPrice: 4.5, active: true, createdAt: 'c' },
+      { id: 'p2', name: '可乐', unit: '瓶', purchasePrice: 1, sellingPrice: 3, active: true, createdAt: 'c' }
+    ],
+    dailyRecords: [
+      { id: 'd1', date: '2026-03-01', items: [{ productId: 'p1', broughtOut: 10, remaining: 0, loss: 0 }], totalRevenue: 50, createdAt: 'x', updatedAt: 'x' },
+      { id: 'd2', date: '2026-03-02', items: [{ productId: 'p2', broughtOut: 4, remaining: 1, loss: 0 }], totalRevenue: 9, createdAt: 'x', updatedAt: 'x' }
+    ]
+  }
+  const rows = calcProductProfitReport(data)
+  const p1 = rows.find(r => r.productId === 'p1')!
+  assert.equal(p1.sold, 10)
+  assert.equal(p1.revenue, 50)
+  assert.equal(p1.cost, 20)
+  assert.equal(p1.profit, 30)
+  assert.equal(p1.margin, 0.6)
+  assert.equal(p1.hasMemberPrice, true)
+  assert.equal(p1.memberRevenue, 45, '会员价 4.5 × 10')
+  assert.equal(p1.memberProfit, 25)
+  assert.equal(p1.categoryName, '小吃')
+  const p2 = rows.find(r => r.productId === 'p2')!
+  assert.equal(p2.sold, 3, '带出 4 − 剩余 1')
+  assert.equal(p2.hasMemberPrice, false)
+  assert.equal(p2.memberRevenue, p2.revenue, '无会员价时与售价口径一致')
+  assert.equal(p2.categoryName, '未分类')
+  assert.equal(rows[0].productId, 'p1', '按毛利降序')
+})
+
+// T54 — 分类毛利汇总 + 月度会员价模拟
+test('T54 分类毛利与月度会员价模拟', () => {
+  const base = emptyBusinessData()
+  const data: BusinessData = {
+    ...base,
+    productCategories: [{ id: 'c1', name: '小吃', sortOrder: 1, visible: true }],
+    products: [
+      { id: 'p1', name: '烤肠', categoryId: 'c1', unit: '根', purchasePrice: 2, sellingPrice: 5, memberPrice: 4, active: true, createdAt: 'c' },
+      { id: 'p2', name: '可乐', categoryId: 'c1', unit: '瓶', purchasePrice: 1, sellingPrice: 3, active: true, createdAt: 'c' }
+    ],
+    dailyRecords: [
+      { id: 'd1', date: '2026-03-01', items: [
+        { productId: 'p1', broughtOut: 10, remaining: 0, loss: 0 },
+        { productId: 'p2', broughtOut: 5, remaining: 0, loss: 0 }
+      ], totalRevenue: 65, createdAt: 'x', updatedAt: 'x' }
+    ]
+  }
+  const cats = calcCategoryProfitReport(data)
+  assert.equal(cats.length, 1)
+  assert.equal(cats[0].name, '小吃')
+  assert.equal(cats[0].sold, 15)
+  assert.equal(cats[0].revenue, 65)
+  assert.equal(cats[0].cost, 25)
+  assert.equal(cats[0].profit, 40)
+  assert.equal(cats[0].memberRevenue, 55, '10×4 + 5×3')
+  assert.equal(cats[0].memberProfit, 30)
+  // MonthlyStat 新增会员价模拟字段（成本口径不变）
+  const march = calcMonthlyStats(data, 2026)[2]
+  assert.equal(march.revenue, 65)
+  assert.equal(march.cost, 25)
+  assert.equal(march.memberRevenue, 55)
+  assert.equal(march.memberProfit, 30)
+  const jan = calcMonthlyStats(data, 2026)[0]
+  assert.equal(jan.memberRevenue, 0)
+  assert.equal(jan.memberProfit, 0)
+})
+
+// T55 — 批次库存 + 滞销 / 久存预警
+test('T55 批次库存与滞销久存预警', () => {
+  const base = emptyBusinessData()
+  const mk = (over: Partial<BusinessData>): BusinessData => ({ ...base, ...over })
+  const products: BusinessProduct[] = [
+    { id: 'p1', name: '烤肠', unit: '根', purchasePrice: 2, sellingPrice: 5, active: true, createdAt: 'c' },
+    { id: 'p2', name: '矿泉水', unit: '瓶', purchasePrice: 1, sellingPrice: 2, active: true, createdAt: 'c' }
+  ]
+  const data = mk({
+    products,
+    purchases: [
+      // 2026-01-01 入库，库龄 120 天（相对 2026-04-30）
+      { id: 'b1', productId: 'p1', quantity: 10, unitPrice: 2, total: 20, date: '2026-01-01', createdAt: 'a' },
+      { id: 'b2', productId: 'p1', quantity: 10, unitPrice: 2.5, total: 25, date: '2026-04-20', createdAt: 'b' },
+      { id: 'b3', productId: 'p2', quantity: 20, unitPrice: 1, total: 20, date: '2026-01-10', createdAt: 'c' }
+    ],
+    dailyRecords: [
+      // p1 售出 12 → b1 售完，b2 剩 8；p2 从未售出
+      { id: 'd1', date: '2026-04-25', items: [{ productId: 'p1', broughtOut: 12, remaining: 0, loss: 0 }], totalRevenue: 60, createdAt: 'x', updatedAt: 'x' }
+    ]
+  })
+  assert.equal(daysBetween('2026-01-01', '2026-04-30'), 119)
+  const batches = calcBatchStock(data, '2026-04-30')
+  const b1 = batches.find(b => b.purchaseId === 'b1')!
+  const b2 = batches.find(b => b.purchaseId === 'b2')!
+  assert.equal(b1.soldOut, true)
+  assert.equal(b1.remaining, 0)
+  assert.equal(b1.ageDays, 119)
+  assert.equal(b2.soldOut, false)
+  assert.equal(b2.remaining, 8)
+  assert.equal(b2.amount, 20, '剩余 8 × 2.5')
+  assert.equal(b2.isOldest, false)
+  // 久存：入库 ≥ 60 天且未售完 → 只有 b3（b1 已售完、b2 仅 10 天）
+  const aging = agingBatches(data, 60, '2026-04-30')
+  assert.equal(aging.length, 1)
+  assert.equal(aging[0].purchaseId, 'b3')
+  // 滞销：近 30 天无售出 → p2（库存 20，从未售出）；p1 在 5 天前售出 → 不算
+  const slow = slowMovingProducts(data, 30, '2026-04-30')
+  assert.equal(slow.length, 1)
+  assert.equal(slow[0].product.id, 'p2')
+  assert.equal(slow[0].lastSoldDate, null)
+  assert.equal(slow[0].idleDays, null)
+  assert.equal(slow[0].stock, 20)
+  // 放宽到 3 天：p1 距上次售出 5 天 → 也算滞销
+  assert.equal(slowMovingProducts(data, 3, '2026-04-30').length, 2)
+  // 停售商品不参与滞销预警
+  const stopped = mk({
+    products: [{ ...products[0], active: false }],
+    purchases: [{ id: 'b9', productId: 'p1', quantity: 5, unitPrice: 2, total: 10, date: '2026-01-01', createdAt: 'a' }],
+    dailyRecords: []
+  })
+  assert.equal(slowMovingProducts(stopped, 30, '2026-04-30').length, 0)
 })
 
 let passed = 0

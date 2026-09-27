@@ -24,7 +24,8 @@ import Icon from '../Icon.vue'
 // P0-3：编辑弹框增加库存上下文（当前库存、预计库存、小计实时计算）
 import { computed, reactive, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { calcDailyCost, calcDailyItemDetails, calcDailyLossAmount, calcDailyRevenue, calcInventory, findProduct, formatYuanOf, localDateKey, sortDailyRecords } from '@/composables/businessCore'
+import { calcDailyCost, calcDailyItemDetails, calcDailyLossAmount, calcDailyRevenue, calcInventory, checkRevenueOverride, dailyTemplateFromLast, findProduct, formatYuanOf, frequentProductIds, lastDailyBefore, localDateKey, sortDailyRecords, validateDailyRows } from '@/composables/businessCore'
+import { useToast } from '@/composables/useToast'
 import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
 import type { BusinessDailyRecord, DailyRecordItem } from '@/types'
 import { usePageSize } from '@/composables/usePageSize'
@@ -33,6 +34,41 @@ import { usePageSize } from '@/composables/usePageSize'
 const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
 
 const store = useWorkbenchBusinessStore()
+const toast = useToast()
+
+// ===== 录入提效：复制上日 / 常用商品（近 30 天高频带出的在售商品） =====
+/** 早于当前编辑日期的最近一条收摊记录（编辑当天时不会复制自己） */
+const lastRecord = computed(() => lastDailyBefore(store.dailyRecords, editingDate.value))
+/** 常用商品 id（近 30 天带出次数排序） */
+const frequentIds = computed(() => frequentProductIds(store.dailyRecords, store.products, 30, editingDate.value))
+
+/** 复制上日：用上一条记录的商品 + 带出数量替换当前行，剩余/损耗归零 */
+function copyFromLast(): void {
+  const tpl = dailyTemplateFromLast(store.dailyRecords, editingDate.value)
+  if (tpl.length === 0) {
+    toast.info('上一条收摊记录没有带出商品')
+    return
+  }
+  rows.splice(0, rows.length, ...tpl.map(r => ({ ...r })))
+  formRevenueManual.value = null
+}
+
+/** 常用商品：把高频商品补进行尾（已存在的跳过，不覆盖已填数量） */
+function fillFrequent(): void {
+  const ids = frequentIds.value
+  if (ids.length === 0) {
+    toast.info('近 30 天暂无收摊记录，无法推断常用商品')
+    return
+  }
+  const existing = new Set(rows.map(r => r.productId).filter(Boolean))
+  let added = 0
+  for (const id of ids) {
+    if (existing.has(id)) continue
+    rows.push({ productId: id, broughtOut: 0, remaining: 0, loss: 0 })
+    added++
+  }
+  if (added === 0) toast.info('常用商品都已在列表中')
+}
 
 const sorted = computed(() => sortDailyRecords(store.dailyRecords))
 
@@ -171,8 +207,22 @@ function recordLossAmount(record: BusinessDailyRecord): number {
   return calcDailyLossAmount(record.items, store.products)
 }
 
+// ===== 录入校验（剩余/损耗不得大于带出；手填营业额偏离提示） =====
+/** 全部行的校验结果：errors 阻断保存，warns 仅提示 */
+const rowChecks = computed(() => validateDailyRows(rows))
+/** 单行 error 文案（行内红字） */
+function rowError(index: number): string {
+  return validateDailyRows([rows[index]]).errors[0] ?? ''
+}
+/** 手填营业额偏离检查 */
+const revenueCheck = computed(() => checkRevenueOverride(formRevenue.value, formRevenueManual.value))
+
 const isFormValid = computed(
-  () => editingDate.value !== '' && rows.length > 0 && rows.every(r => r.productId !== '' && (r.broughtOut > 0 || r.remaining > 0 || r.loss > 0))
+  () =>
+    editingDate.value !== '' &&
+    rows.length > 0 &&
+    rows.every(r => r.productId !== '' && (r.broughtOut > 0 || r.remaining > 0 || r.loss > 0)) &&
+    rowChecks.value.errors.length === 0
 )
 
 function emptyRow(): { productId: string; broughtOut: number; remaining: number; loss: number } {
@@ -394,6 +444,22 @@ async function handleDelete(id: string): Promise<void> {
           </div>
         </div>
 
+        <!-- 录入提效：复制上日 / 常用商品（减少重复勾选） -->
+        <div class="bizday-row-tools">
+          <el-button
+            size="small"
+            data-testid="bizday-copy-last"
+            :disabled="!lastRecord"
+            @click="copyFromLast"
+          >复制上日{{ lastRecord ? '（' + lastRecord.date + '）' : '（无）' }}</el-button>
+          <el-button
+            size="small"
+            data-testid="bizday-fill-frequent"
+            :disabled="frequentIds.length === 0"
+            @click="fillFrequent"
+          >常用商品（近 30 天）</el-button>
+        </div>
+
         <div class="bizday-rows">
           <div v-for="(row, i) in rows" :key="i" class="bizday-row" data-testid="bizday-row">
             <div class="bizday-row-main">
@@ -434,6 +500,8 @@ async function handleDelete(id: string): Promise<void> {
               </div>
               <el-button type="danger" size="small" :data-testid="`bizday-row-del-${i}`" @click="removeRow(i)">移除</el-button>
             </div>
+            <!-- 行级校验提示（剩余/损耗 > 带出等） -->
+            <p v-if="rowError(i)" class="bizday-row-issue" :data-testid="`bizday-row-issue-${i}`">{{ rowError(i) }}</p>
             <!-- P0-3：带出后预计库存 + 行小计 -->
             <div v-if="row.productId" class="bizday-row-preview">
               <span
@@ -486,6 +554,12 @@ async function handleDelete(id: string): Promise<void> {
           <span class="bizday-revenue-hint" data-testid="bizday-form-revenue-tip">
             {{ formRevenueManual !== null ? '已手动设置，保存后以该金额为准' : `自动合计：${formatYuanOf(formRevenue)}` }}
           </span>
+          <!-- 手填营业额合理性提示：与自动合计偏离超 20% 时提醒 -->
+          <span
+            v-if="revenueCheck.level === 'warn'"
+            class="bizday-revenue-warn"
+            data-testid="bizday-revenue-warn"
+          >{{ revenueCheck.message }}</span>
         </div>
         <div class="biz-field">
           <label>备注（可选）</label>
@@ -727,6 +801,31 @@ async function handleDelete(id: string): Promise<void> {
   font-variant-numeric: tabular-nums;
   color: var(--color-success, var(--color-success));
   font-weight: 600;
+}
+
+/* 手填营业额偏离提示 */
+.bizday-revenue-warn {
+  font-size: 12px;
+  color: var(--color-warning, #b45309);
+  background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-warning, #f59e0b) 30%, transparent);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+/* 行级校验错误 */
+.bizday-row-issue {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--color-error, #dc2626);
+}
+
+/* 录入提效按钮条 */
+.bizday-row-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .bizday-rows {

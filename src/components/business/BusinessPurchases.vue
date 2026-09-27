@@ -42,11 +42,15 @@ import {
   localDateKey,
   selectableExpenses,
   sumExpenseAmounts,
+  validatePurchaseInput,
   visibleProductCategories
 } from '@/composables/businessCore'
 import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
 import type { BusinessPurchase } from '@/types'
 import { usePageSize } from '@/composables/usePageSize'
+import { useToast } from '@/composables/useToast'
+
+const toast = useToast()
 
 // P1-3：跨模块联动跳转 emit
 const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
@@ -230,8 +234,24 @@ function toggleExpense(id: string): void {
   onExpenseChange()
 }
 
+// ===== 录入校验（数量为 0 / 单价为 0 / 合计与关联支出汇总不符）=====
+const purchaseIssues = computed(() =>
+  validatePurchaseInput({
+    quantity: Number(formQuantity.value) || 0,
+    unitPrice: Number(formUnitPrice.value) || 0,
+    total: formTotal.value,
+    expenseTotal: useExpenseTotal.value ? linkedExpenseTotal.value : null
+  })
+)
+/** error 级问题阻断保存，warn 级仅提示 */
+const purchaseErrors = computed(() => purchaseIssues.value.filter(i => i.level === 'error'))
+
 const isFormValid = computed(
-  () => formProductId.value !== '' && formDate.value !== '' && formTotal.value > 0
+  () =>
+    formProductId.value !== '' &&
+    formDate.value !== '' &&
+    formTotal.value > 0 &&
+    purchaseErrors.value.length === 0
 )
 
 function startAdd(): void {
@@ -270,6 +290,9 @@ function startCopy(p: BusinessPurchase): void {
   showDialog.value = true
 }
 
+/** 连续录入：新增保存后不关闭弹框，自动带出上次商品与日期，便于连开多单 */
+const continuous = ref(true)
+
 async function handleSave(): Promise<void> {
   if (!isFormValid.value) return
   const payload = {
@@ -282,8 +305,22 @@ async function handleSave(): Promise<void> {
   }
   if (editingId.value) {
     await store.updatePurchase(editingId.value, payload)
-  } else {
-    await store.addPurchase(payload)
+    showDialog.value = false
+    return
+  }
+  await store.addPurchase(payload)
+  // 连续录入：保留商品与日期，清空数量/单价/备注/关联支出，弹框继续开
+  if (continuous.value) {
+    const keepProduct = formProductId.value
+    const keepDate = formDate.value
+    formQuantity.value = ''
+    formUnitPrice.value = ''
+    formNote.value = ''
+    formExpenseIds.value = []
+    formProductId.value = keepProduct
+    formDate.value = keepDate
+    toast.success(`已保存「${productNameOf(keepProduct)}」进货，可继续录入下一笔`)
+    return
   }
   showDialog.value = false
 }
@@ -547,11 +584,22 @@ async function handleDelete(id: string): Promise<void> {
           <label>{{ useExpenseTotal ? '合计（= 关联支出汇总）' : '合计（自动计算）' }}</label>
           <div class="bizpur-total-preview" data-testid="bizpur-form-total">{{ formatYuanOf(formTotal) }}</div>
         </div>
+        <!-- 录入校验提示（error 阻断保存 / warn 仅提示） -->
+        <ul v-if="purchaseIssues.length > 0" class="bizpur-issues" data-testid="bizpur-form-issues">
+          <li
+            v-for="(issue, idx) in purchaseIssues"
+            :key="idx"
+            class="bizpur-issue"
+            :class="issue.level"
+            :data-testid="`bizpur-issue-${idx}`"
+          >{{ issue.level === 'error' ? '✕ ' : '! ' }}{{ issue.message }}</li>
+        </ul>
         <div class="biz-field">
           <label>备注（可选）</label>
           <el-input v-model="formNote" size="small" maxlength="100" data-testid="bizpur-form-note" />
         </div>
         <div class="biz-form-actions ewt-dialog-footer">
+          <el-checkbox v-if="!editingId" v-model="continuous" data-testid="bizpur-continuous" title="勾选后保存不关闭弹框，自动带出上次商品与日期">连续录入</el-checkbox>
           <el-button @click="showDialog = false">取消</el-button>
           <el-button type="primary" native-type="submit" :disabled="!isFormValid" data-testid="bizpur-save">
             {{ editingId ? '保存' : '添加' }}
@@ -754,6 +802,35 @@ async function handleDelete(id: string): Promise<void> {
   font-size: 11px;
   background: var(--color-bg-hover, #f1f5f9);
   color: var(--color-text-muted, #6b7280);
+}
+
+/* 录入校验提示 */
+.bizpur-issues {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bizpur-issue {
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+
+.bizpur-issue.error {
+  color: var(--color-error, #dc2626);
+  background: color-mix(in srgb, var(--color-error, #dc2626) 10%, transparent);
+  border-color: color-mix(in srgb, var(--color-error, #dc2626) 30%, transparent);
+}
+
+.bizpur-issue.warn {
+  color: var(--color-warning, #b45309);
+  background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-warning, #f59e0b) 30%, transparent);
 }
 
 .bizpur-expense-hint {

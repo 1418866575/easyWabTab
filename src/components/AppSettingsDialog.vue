@@ -2946,6 +2946,26 @@ onUnmounted(() => {
                 @change="businessStore.setLowStockThreshold(Number($event) || 0)"
               />
             </label>
+            <label class="remind-field">
+              <span class="remind-label">滞销预警天数</span>
+              <el-input-number
+                :min="1"
+                :step="1"
+                data-testid="bizsettings-slow-days"
+                :model-value="businessStore.settings.slowMovingDays ?? 30"
+                @change="businessStore.setSlowMovingDays(Number($event) || 30)"
+              />
+            </label>
+            <label class="remind-field">
+              <span class="remind-label">久存批次预警天数</span>
+              <el-input-number
+                :min="1"
+                :step="1"
+                data-testid="bizsettings-aging-days"
+                :model-value="businessStore.settings.agingBatchDays ?? 60"
+                @change="businessStore.setAgingBatchDays(Number($event) || 60)"
+              />
+            </label>
           </div>
 
           <!-- 账本管理：新建（同年唯一）+ 删除（清空交易记录 / 连账本删除），与页面顶部切换器解耦 -->

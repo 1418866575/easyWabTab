@@ -6,14 +6,17 @@ import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import {
   businessTrendBars,
   calcBusinessTrend,
+  calcCategoryProfitReport,
   calcExpenseCategoryBreakdown,
   calcExpenseTrend,
   calcCategoryRevenueBreakdown,
   calcMonthlyStats,
+  calcProductProfitReport,
   compactAmount,
   formatYuanOf,
   localDateKey
 } from '@/composables/businessCore'
+import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
 
 const store = useWorkbenchBusinessStore()
 
@@ -86,12 +89,18 @@ const donutSegments = computed(() => {
 const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value))
 
 // ===== 近 12 个月（严格限定在当前账本年份的 12 个月，不跨年；无数据月份为 0） =====
-const monthMode = ref<'revenue' | 'profit' | 'expense'>('revenue')
+const monthMode = ref<'revenue' | 'profit' | 'expense' | 'member'>('revenue')
 const ledgerYear = computed(() => store.currentLedgerYear)
 const monthlyStats = computed(() => calcMonthlyStats(data.value, ledgerYear.value))
 const monthBars = computed(() => {
-  const valueOf = (m: { revenue: number; profit: number; expense: number }): number =>
-    monthMode.value === 'revenue' ? m.revenue : monthMode.value === 'profit' ? m.profit : m.expense
+  const valueOf = (m: { revenue: number; profit: number; expense: number; memberRevenue: number }): number =>
+    monthMode.value === 'revenue'
+      ? m.revenue
+      : monthMode.value === 'profit'
+        ? m.profit
+        : monthMode.value === 'expense'
+          ? m.expense
+          : m.memberRevenue
   const max = Math.max(1, ...monthlyStats.value.map(m => Math.abs(valueOf(m))))
   return monthlyStats.value.map(m => {
     const value = valueOf(m)
@@ -99,10 +108,85 @@ const monthBars = computed(() => {
   })
 })
 const monthModeLabel = computed(() =>
-  monthMode.value === 'revenue' ? '营业额' : monthMode.value === 'profit' ? '利润' : '支出'
+  monthMode.value === 'revenue'
+    ? '营业额'
+    : monthMode.value === 'profit'
+      ? '利润'
+      : monthMode.value === 'expense'
+        ? '支出'
+        : '会员价模拟营业额'
 )
 /** 12 个月合计（当前模式） */
 const monthTotal = computed(() => Math.round(monthBars.value.reduce((s, b) => s + b.value, 0) * 100) / 100)
+
+// ===== 毛利报表（按商品 / 按分类；含会员价模拟口径） =====
+const reportMode = ref<'product' | 'category'>('product')
+/** 报表口径：按售价 / 按会员价模拟 */
+const priceMode = ref<'selling' | 'member'>('selling')
+const productProfit = computed(() => calcProductProfitReport(data.value))
+const categoryProfit = computed(() => calcCategoryProfitReport(data.value))
+/** 当前口径下的取数字段 */
+function pick(row: { revenue: number; profit: number; memberRevenue: number; memberProfit: number }): { revenue: number; profit: number } {
+  return priceMode.value === 'member'
+    ? { revenue: row.memberRevenue, profit: row.memberProfit }
+    : { revenue: row.revenue, profit: row.profit }
+}
+const memberPriceCount = computed(() => productProfit.value.filter(r => r.hasMemberPrice).length)
+
+/** 导出当前毛利报表 CSV */
+function exportProfitCsv(): void {
+  if (reportMode.value === 'product') {
+    const headers = ['商品', '分类', '单位', '售出数量', '营业额', '成本', '毛利', '毛利率', '会员价模拟营业额', '会员价模拟毛利']
+    const rows = productProfit.value.map(r => [
+      r.name,
+      r.categoryName,
+      r.unit,
+      r.sold,
+      r.revenue.toFixed(2),
+      r.cost.toFixed(2),
+      r.profit.toFixed(2),
+      (r.margin * 100).toFixed(1) + '%',
+      r.memberRevenue.toFixed(2),
+      r.memberProfit.toFixed(2)
+    ])
+    downloadCsv(csvFileName('商品毛利报表'), buildCsv(headers, rows))
+    return
+  }
+  const headers = ['分类', '售出数量', '营业额', '成本', '毛利', '毛利率', '会员价模拟营业额', '会员价模拟毛利']
+  const rows = categoryProfit.value.map(r => [
+    r.name,
+    r.sold,
+    r.revenue.toFixed(2),
+    r.cost.toFixed(2),
+    r.profit.toFixed(2),
+    (r.margin * 100).toFixed(1) + '%',
+    r.memberRevenue.toFixed(2),
+    r.memberProfit.toFixed(2)
+  ])
+  downloadCsv(csvFileName('分类毛利报表'), buildCsv(headers, rows))
+}
+
+/** 导出近 12 个月数据 CSV（当前口径） */
+function exportMonthlyCsv(): void {
+  const headers = ['月份', '营业额', '成本', '利润', '支出', '交易笔数', '收摊天数', '会员价模拟营业额', '会员价模拟毛利']
+  const rows = monthlyStats.value.map(m => [
+    m.label,
+    m.revenue.toFixed(2),
+    m.cost.toFixed(2),
+    m.profit.toFixed(2),
+    m.expense.toFixed(2),
+    m.transactionCount,
+    m.days,
+    m.memberRevenue.toFixed(2),
+    m.memberProfit.toFixed(2)
+  ])
+  downloadCsv(csvFileName(`${ledgerYear.value}年月度报表`), buildCsv(headers, rows))
+}
+
+/** 打印报表（隐藏页面框架与操作按钮，仅保留报表内容） */
+function printReport(): void {
+  window.print()
+}
 </script>
 
 <template>
@@ -267,12 +351,16 @@ const monthTotal = computed(() => Math.round(monthBars.value.reduce((s, b) => s 
     <section class="bizstats-card bizstats-monthly" data-testid="bizstats-monthly">
       <div class="bizstats-head">
         <h3>{{ ledgerYear }} 年 12 个月{{ monthModeLabel }}（不跨年，无数据月份记 0）</h3>
-        <div class="bizstats-days">
-          <el-radio-group v-model="monthMode" size="small">
-            <el-radio-button value="revenue" data-testid="bizstats-month-revenue">营业额</el-radio-button>
-            <el-radio-button value="profit" data-testid="bizstats-month-profit">利润</el-radio-button>
-            <el-radio-button value="expense" data-testid="bizstats-month-expense">支出</el-radio-button>
-          </el-radio-group>
+        <div class="bizstats-head-btns">
+          <div class="bizstats-days">
+            <el-radio-group v-model="monthMode" size="small">
+              <el-radio-button value="revenue" data-testid="bizstats-month-revenue">营业额</el-radio-button>
+              <el-radio-button value="profit" data-testid="bizstats-month-profit">利润</el-radio-button>
+              <el-radio-button value="expense" data-testid="bizstats-month-expense">支出</el-radio-button>
+              <el-radio-button value="member" data-testid="bizstats-month-member">会员价模拟</el-radio-button>
+            </el-radio-group>
+          </div>
+          <el-button class="btn-export-csv" size="small" data-testid="bizstats-month-export" @click="exportMonthlyCsv">导出 CSV</el-button>
         </div>
       </div>
       <div class="bizstats-month-bars" data-testid="bizstats-month-bars">
@@ -294,6 +382,105 @@ const monthTotal = computed(() => Math.round(monthBars.value.reduce((s, b) => s 
       <p class="bizstats-month-total" data-testid="bizstats-month-total">
         全年{{ monthModeLabel }}合计：{{ formatYuanOf(monthTotal) }}（共 {{ monthlyStats.reduce((s, m) => s + m.days, 0) }} 天收摊记录）
       </p>
+    </section>
+
+    <!-- 毛利报表：按商品 / 按分类；口径可在「售价」与「会员价模拟」间切换 -->
+    <section class="bizstats-card bizstats-profit" data-testid="bizstats-profit">
+      <div class="bizstats-head">
+        <h3>毛利报表（{{ reportMode === 'product' ? '按商品' : '按分类' }} · {{ priceMode === 'member' ? '会员价模拟' : '售价' }}口径）</h3>
+        <div class="bizstats-head-btns">
+          <div class="bizstats-days">
+            <el-radio-group v-model="reportMode" size="small">
+              <el-radio-button value="product" data-testid="bizstats-profit-product">按商品</el-radio-button>
+              <el-radio-button value="category" data-testid="bizstats-profit-category">按分类</el-radio-button>
+            </el-radio-group>
+          </div>
+          <div class="bizstats-days">
+            <el-radio-group v-model="priceMode" size="small">
+              <el-radio-button value="selling" data-testid="bizstats-price-selling">售价</el-radio-button>
+              <el-radio-button value="member" data-testid="bizstats-price-member">会员价模拟</el-radio-button>
+            </el-radio-group>
+          </div>
+          <el-button class="btn-export-csv" size="small" data-testid="bizstats-profit-export" @click="exportProfitCsv">导出 CSV</el-button>
+          <el-button size="small" data-testid="bizstats-profit-print" @click="printReport">打印</el-button>
+        </div>
+      </div>
+      <p class="bizstats-profit-tip" data-testid="bizstats-profit-tip">
+        售出数量取自收摊记录（带出 − 剩余 − 损耗），成本按商品进货价计算；共 {{ memberPriceCount }} 个商品设置了会员价。
+      </p>
+
+      <!-- 按商品 -->
+      <el-table
+        v-if="reportMode === 'product'"
+        class="ewt-table"
+        :data="productProfit"
+        data-testid="bizstats-profit-product-table"
+        stripe
+        border
+        size="small"
+        max-height="320"
+        empty-text="暂无商品"
+      >
+        <el-table-column label="商品" min-width="120" align="left" prop="name" />
+        <el-table-column label="分类" width="110" align="center" prop="categoryName" />
+        <el-table-column label="售出" width="90" align="right">
+          <template #default="{ row }">{{ row.sold }} {{ row.unit }}</template>
+        </el-table-column>
+        <el-table-column label="营业额" width="110" align="right">
+          <template #default="{ row }">{{ formatYuanOf(pick(row).revenue) }}</template>
+        </el-table-column>
+        <el-table-column label="成本" width="100" align="right">
+          <template #default="{ row }">{{ formatYuanOf(row.cost) }}</template>
+        </el-table-column>
+        <el-table-column label="毛利" width="110" align="right">
+          <template #default="{ row }">
+            <span :class="{ negative: pick(row).profit < 0 }">{{ formatYuanOf(pick(row).profit) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="毛利率" width="100" align="right">
+          <template #default="{ row }">
+            {{ pick(row).revenue > 0 ? ((pick(row).profit / pick(row).revenue) * 100).toFixed(1) + '%' : '—' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="会员价" width="90" align="center">
+          <template #default="{ row }">
+            <span v-if="row.hasMemberPrice" class="bizstats-member-tag">已设</span>
+            <span v-else class="bizstats-member-none">—</span>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 按分类 -->
+      <el-table
+        v-else
+        class="ewt-table"
+        :data="categoryProfit"
+        data-testid="bizstats-profit-category-table"
+        stripe
+        border
+        size="small"
+        max-height="320"
+        empty-text="暂无数据"
+      >
+        <el-table-column label="分类" min-width="140" align="left" prop="name" />
+        <el-table-column label="售出" width="100" align="right" prop="sold" />
+        <el-table-column label="营业额" width="120" align="right">
+          <template #default="{ row }">{{ formatYuanOf(pick(row).revenue) }}</template>
+        </el-table-column>
+        <el-table-column label="成本" width="110" align="right">
+          <template #default="{ row }">{{ formatYuanOf(row.cost) }}</template>
+        </el-table-column>
+        <el-table-column label="毛利" width="120" align="right">
+          <template #default="{ row }">
+            <span :class="{ negative: pick(row).profit < 0 }">{{ formatYuanOf(pick(row).profit) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="毛利率" width="110" align="right">
+          <template #default="{ row }">
+            {{ pick(row).revenue > 0 ? ((pick(row).profit / pick(row).revenue) * 100).toFixed(1) + '%' : '—' }}
+          </template>
+        </el-table-column>
+      </el-table>
     </section>
   </div>
 </template>
@@ -419,6 +606,29 @@ const monthTotal = computed(() => Math.round(monthBars.value.reduce((s, b) => s 
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+/* 毛利报表 */
+.bizstats-profit-tip {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-muted, #6b7280);
+}
+
+.bizstats-member-tag {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--color-warning, #b45309);
+  background: color-mix(in srgb, var(--color-warning, #f59e0b) 15%, transparent);
+}
+
+.bizstats-member-none {
+  color: var(--color-text-muted, #9ca3af);
+}
+
+.bizstats-profit :deep(.negative) {
+  color: var(--color-error, #dc2626);
 }
 
 .bizstats-days {
@@ -704,6 +914,36 @@ html.dark .dot.expense {
   .bizstats-pie-wrap {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+</style>
+
+<!-- 打印样式（非 scoped：打印时需隐藏页面框架与操作按钮，并放开表格高度限制） -->
+<style>
+@media print {
+  .bs-header,
+  .bs-menu,
+  .bs-year-banner,
+  .bizstats-head-btns,
+  .bizstats-profit-tip {
+    display: none !important;
+  }
+
+  .bs-body,
+  .bs-content,
+  .bizstats {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  .bizstats .el-table__body-wrapper {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
   }
 }
 </style>

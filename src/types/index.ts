@@ -581,6 +581,10 @@ export interface BusinessSettings {
   stallName: string // 摊位名称（仅展示）
   lowStockThreshold: number // 低库存预警阈值，默认 20
   monthlyRevenueTarget: number // 本月营业额目标（0 = 未设定，不显示进度环）
+  /** 滞销预警：在售商品超过该天数没有售出即预警，默认 30 */
+  slowMovingDays?: number
+  /** 久存（临期）批次预警：进货批次入库超过该天数仍未售完即预警，默认 60 */
+  agingBatchDays?: number
 }
 
 /** 销售记账数据（单个账本内的业务数据；IndexedDB store 'business' 的账本 data 字段） */
