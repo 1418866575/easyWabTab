@@ -521,14 +521,19 @@ onBeforeUnmount(() => {
 .stt-shell {
   display: flex;
   flex-direction: column;
-  min-height: 0;
   gap: 12px;
   padding: 0;
-  /* 教师工作台内容区由 .tv-content 提供 16px 外边距，这里不再额外内边距；
-     页面级滚动：工具栏 / 今日速览 / 图例 / 课程网格作为一个整体随页面滚动，
-     网格自身不内部滚动，表头 / 节次列 position:sticky 相对页面吸顶 / 吸左。 */
-  overflow: visible;
-  /* 网格保底宽度：保证星期列不被压得不可读；超出屏幕时由页面横向滚动查看。 */
+  /* 关键修复：教师工作台内容区无定高（min-height:100vh），整页不滚动，
+     导致课程表超出视口底部被截断且无法查看。此处把面板自身变为独立滚动容器：
+     - max-height 以视口为准（减顶部栏与内容内边距预留量），内容短时不强制撑高（仅 max-height）；
+     - overflow:auto 使内容超高时在本容器内垂直滚动，不撑破页面、不影响其他内容；
+     - overscroll-behavior:contain 阻止滚动穿透到页面；表头 / 节次列 sticky 相对本容器吸顶。 */
+  max-height: calc(100dvh - 130px);
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  /* 网格保底宽度：保证星期列不被压得不可读；超出时由本容器横向滚动查看。 */
   --stt-grid-min: 560px;
 }
 
@@ -948,6 +953,8 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 768px) {
+  /* 移动端顶部栏换行更高、底部有安全区，预留更多余量避免被截断 */
+  .stt-shell { max-height: calc(100dvh - 168px); }
   .stt-grid { --stt-period-col: 60px; --stt-head-h: 36px; --stt-sec-h: 30px; --stt-row-min: 54px; }
   .stt-period-name { font-size: 12px; }
   .stt-period-time { font-size: 10px; }
