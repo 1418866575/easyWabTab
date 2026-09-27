@@ -44,7 +44,7 @@ import {
   computePeriodTime,
   cellKey
 } from '@/composables/studentTimetableCore'
-import { exportHomeworkMissesExcel } from '@/composables/teacherExcelCore'
+import { exportHomeworkMissesExcel, exportTalksExcel as exportTalksExcelFile } from '@/composables/teacherExcelCore'
 import {
   type ClassBucket,
   type ClassGroup,
@@ -58,6 +58,7 @@ import {
   type StudentTimetableSchedule,
   type TeacherData,
   type TeacherHomework,
+  type HomeSchoolTalkRecord,
   type TeacherPageKey,
   type TeacherRole,
   type TeacherStage,
@@ -912,6 +913,62 @@ export const useTeacherStore = defineStore('teacher', () => {
     return { homeworkCount: homeworks.length, pending, submitted, madeup }
   })
 
+  // ---------- 家校谈话记录（talks 桶；班主任专属；随学期×班级隔离） ----------
+
+  /** 新增谈话：自动补全冗余姓名/学号（若未传则按 studentId 反查名册） */
+  async function addTalk(
+    input: Omit<HomeSchoolTalkRecord, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<void> {
+    const students = bucket.value?.students ?? []
+    const stu = students.find((s) => s.id === input.studentId)
+    const now = Date.now()
+    const talk: HomeSchoolTalkRecord = {
+      ...input,
+      studentName: input.studentName || stu?.name || '',
+      studentNo: input.studentNo || stu?.no || undefined,
+      id: uid('talk'),
+      createdAt: now,
+      updatedAt: now
+    }
+    mutateBucket((b) => ({ ...b, talks: [...b.talks, talk] }))
+    await saveTeacher()
+  }
+
+  /** 编辑谈话（回显后保存；updatedAt 刷新） */
+  async function updateTalk(talk: HomeSchoolTalkRecord): Promise<void> {
+    mutateBucket((b) => ({
+      ...b,
+      talks: b.talks.map((t) => (t.id === talk.id ? { ...talk, updatedAt: Date.now() } : t))
+    }))
+    await saveTeacher()
+  }
+
+  async function removeTalk(id: string): Promise<void> {
+    mutateBucket((b) => ({ ...b, talks: b.talks.filter((t) => t.id !== id) }))
+    await saveTeacher()
+  }
+
+  /** 导出当前筛选后的谈话记录为 Excel */
+  async function exportTalksExcel(talks: HomeSchoolTalkRecord[]): Promise<void> {
+    await exportTalksExcelFile(talks, classTitle(cls.value, data.value.teacher.name))
+  }
+
+  /** 本班谈话统计：总数 / 本月次数 / 待跟进数 / 涉及分类数 */
+  const talksSummary = computed(() => {
+    const talks = bucket.value?.talks ?? []
+    const now = new Date()
+    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    let thisMonth = 0
+    let needFollowUp = 0
+    const cats = new Set<string>()
+    for (const t of talks) {
+      if (t.date && t.date.startsWith(ym)) thisMonth++
+      if (t.needFollowUp) needFollowUp++
+      if (t.category) cats.add(t.category)
+    }
+    return { total: talks.length, thisMonth, needFollowUp, categories: cats.size }
+  })
+
   // ---------- 随机点名 ----------
 
   async function setRandomMode(mode: 'all' | 'once'): Promise<void> {
@@ -926,6 +983,14 @@ export const useTeacherStore = defineStore('teacher', () => {
 
   async function resetRandomHistory(): Promise<void> {
     mutateBucket((b) => ({ ...b, random: { ...b.random, history: [] } }))
+    await saveTeacher()
+  }
+
+  async function removeRandomHistory(studentId: string): Promise<void> {
+    mutateBucket((b) => ({
+      ...b,
+      random: { ...b.random, history: b.random.history.filter((id) => id !== studentId) }
+    }))
     await saveTeacher()
   }
 
@@ -1030,7 +1095,42 @@ export const useTeacherStore = defineStore('teacher', () => {
                 { id: uid('grow'), date: '2026-05-08', title: '期中进步之星', content: '数学期中成绩进步明显。', photos: [] }
               ]
             },
-            random: { history: [], mode: 'all' }
+            random: { history: [], mode: 'all' },
+            talks: [
+              {
+                id: uid('talk'),
+                studentId: students[0].id,
+                studentName: students[0].name,
+                studentNo: students[0].no,
+                date: '2026-05-10',
+                time: '19:30',
+                mode: '电话',
+                counterpart: '母亲',
+                counterpartName: '',
+                category: '学业',
+                content: '近期数学成绩下滑，已沟通课后辅导计划，家长配合督促完成每日练习。',
+                result: '约定每周五反馈一次练习完成情况。',
+                needFollowUp: true,
+                followUpNote: '下周五前回访练习完成情况。',
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+              },
+              {
+                id: uid('talk'),
+                studentId: students[1].id,
+                studentName: students[1].name,
+                studentNo: students[1].no,
+                date: '2026-05-15',
+                mode: '微信',
+                counterpart: '父亲',
+                category: '心理情绪',
+                content: '家长反映孩子近期情绪低落，了解后疑似亲子沟通较少，建议多陪伴。',
+                result: '已提供亲子沟通建议，家长表示会调整。',
+                needFollowUp: false,
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+              }
+            ]
           }
         }
       }
@@ -1116,9 +1216,15 @@ export const useTeacherStore = defineStore('teacher', () => {
     revertMadeup,
     exportMissesExcel,
     homeworkSummary,
+    addTalk,
+    updateTalk,
+    removeTalk,
+    exportTalksExcel,
+    talksSummary,
     setRandomMode,
     pushRandomHistory,
     resetRandomHistory,
+    removeRandomHistory,
     importBackup,
     clearAll,
     loadDemoData

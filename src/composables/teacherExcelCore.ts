@@ -1,7 +1,7 @@
 // 教师工作台 Excel 导出（写入，与 teacherImportCore 共用 xlsx 依赖，动态 import 不进主包）。
 // 浏览器环境 XLSX.writeFile 会直接触发文件下载；filename 自动补 .xlsx。
 
-import type { TeacherHomework } from '@/types/teacher'
+import type { TeacherHomework, HomeSchoolTalkRecord } from '@/types/teacher'
 
 export interface ExcelSheet {
   /** 工作表名（自动截断到 31 字符，Excel 限制） */
@@ -62,4 +62,32 @@ export async function exportHomeworkMissesExcel(homework: TeacherHomework, class
   const safeTitle = (homework.title || '作业').replace(/[\\/:*?"<>|]/g, '_')
   const filename = excelFileName(`未交名单_${safeTitle}`, classTitle)
   await exportExcel(filename, [buildMissesSheet(homework)])
+}
+
+/** 家校谈话记录 sheet：全字段导出（按当前筛选结果导出） */
+export function buildTalksSheet(talks: HomeSchoolTalkRecord[]): ExcelSheet {
+  return {
+    name: '家校谈话',
+    headers: ['日期', '时间', '学生姓名', '学号', '沟通方式', '谈话对象', '对象姓名', '分类', '谈话内容', '处理结论', '需跟进', '跟进事项'],
+    rows: talks.map((t) => [
+      t.date,
+      t.time ?? '',
+      t.studentName,
+      t.studentNo ?? '',
+      t.mode,
+      t.counterpart,
+      t.counterpartName ?? '',
+      t.category,
+      t.content,
+      t.result ?? '',
+      t.needFollowUp ? '是' : '否',
+      t.followUpNote ?? ''
+    ])
+  }
+}
+
+/** 导出家校谈话记录为 .xlsx 并触发下载 */
+export async function exportTalksExcel(talks: HomeSchoolTalkRecord[], classTitle: string): Promise<void> {
+  const filename = excelFileName('家校谈话', classTitle)
+  await exportExcel(filename, [buildTalksSheet(talks)])
 }

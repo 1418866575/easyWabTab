@@ -207,6 +207,8 @@ export interface ClassBucket {
   leaves: LeaveRecord[]
   /** 作业记录（页面「作业记录」；每次作业为每位同学生成一条提交记录），随学期×班级隔离 */
   homeworks: TeacherHomework[]
+  /** 家校谈话记录（班主任专属；页面「家校谈话」；随学期×班级隔离） */
+  talks: HomeSchoolTalkRecord[]
 }
 
 // ---------- 作业记录（页面「作业记录」；作业与提交名单） ----------
@@ -251,6 +253,39 @@ export interface TeacherHomework {
   createdAt: string
   updatedAt: string
   misses: TeacherHomeworkMiss[] // 每位同学一条提交记录
+}
+
+// ---------- 家校谈话记录（班主任专属；页面「家校谈话」） ----------
+
+/** 沟通方式预设（下拉 + 可自定义，复用 el-select filterable allow-create default-first-option） */
+export const TALK_MODES: string[] = ['电话', '微信', 'QQ', '面谈', '家访', '其他']
+
+/** 谈话对象身份预设（下拉 + 可自定义） */
+export const TALK_COUNTERPARTS: string[] = ['父亲', '母亲', '祖父母', '监护人', '学生本人', '其他']
+
+/** 谈话主题分类预设（下拉） */
+export const TALK_CATEGORIES: string[] = [
+  '学业', '行为纪律', '心理情绪', '家庭情况', '出勤请假', '安全', '政策资助', '其他'
+]
+
+/** 单条家校谈话记录（关联单名学生；班主任专属，随学期×班级隔离） */
+export interface HomeSchoolTalkRecord {
+  id: string // 前缀 talk_
+  studentId: string // 关联 Student.id（主键，杜绝重名错配）
+  studentName: string // 姓名冗余副本（名册变动后仍可读）
+  studentNo?: string // 学号冗余副本（便于导出/核对）
+  date: string // 谈话日期 'YYYY-MM-DD'，必填
+  time?: string // 具体时间 'HH:MM'，选填
+  mode: string // 沟通方式（TALK_MODES 预设 + 可自定义）
+  counterpart: string // 谈话对象身份（TALK_COUNTERPARTS 预设 + 可自定义）
+  counterpartName?: string // 对方姓名（选填，counterpart 为「其他」时填写）
+  category: string // 主题分类（TALK_CATEGORIES 预设）
+  content: string // 谈话内容摘要，必填
+  result?: string // 达成的共识 / 处理结论（选填）
+  needFollowUp: boolean // 是否需后续跟进
+  followUpNote?: string // 跟进事项 / 下次计划（needFollowUp 为真时填写）
+  createdAt: number // 创建时间戳
+  updatedAt: number // 更新时间戳
 }
 
 export interface TeacherCurrent {
@@ -302,6 +337,7 @@ export type TeacherPageKey =
   | 'growth'
   | 'leave'
   | 'homework'
+  | 'talks'
   | 'help'
 
 export interface TeacherPageMeta {
@@ -333,13 +369,14 @@ export const TEACHER_PAGES: TeacherPageMeta[] = [
   { key: 'growth', label: '奖励记录', icon: 'star', group: '基础功能' },
   { key: 'leave', label: '请假信息', icon: 'clipboard', group: '基础功能' },
   { key: 'homework', label: '作业记录', icon: 'document', group: '基础功能' },
+  { key: 'talks', label: '家校谈话', icon: 'email', group: '特色功能' },
   { key: 'special', label: '隐私信息', icon: 'heart', group: '特色功能' },
   { key: 'data', label: '数据管理', icon: 'database', group: '工作台' },
   { key: 'help', label: '使用说明', icon: 'help', group: '工作台' }
 ]
 
 /** 仅班主任可见的班务模块（选「非班主任」时隐藏：导航移除 + 直达拦截） */
-export const TEACHER_HEAD_ONLY_PAGES: TeacherPageKey[] = ['seats', 'duty', 'parents', 'special', 'leave']
+export const TEACHER_HEAD_ONLY_PAGES: TeacherPageKey[] = ['seats', 'duty', 'parents', 'special', 'leave', 'talks']
 
 /**
  * 已迁入「设置页」的功能（数据管理 / 使用说明）：不再是左侧菜单项，

@@ -25,6 +25,7 @@ import TeacherSpecial from '@/components/teacher/TeacherSpecial.vue'
 import TeacherGrowth from '@/components/teacher/TeacherGrowth.vue'
 import TeacherLeave from '@/components/teacher/TeacherLeave.vue'
 import TeacherHomework from '@/components/teacher/TeacherHomework.vue'
+import TeacherTalks from '@/components/teacher/TeacherTalks.vue'
 import TeacherHelp from '@/components/teacher/TeacherHelp.vue'
 import SubjectSelect from '@/components/teacher/SubjectSelect.vue'
 import { STAGE_OPTIONS, TERM_OPTIONS, type TeacherPageKey, type TeacherRole, type TeacherStage } from '@/types/teacher'
@@ -90,6 +91,7 @@ const COMPONENTS: Record<TeacherPageKey, unknown> = {
   growth: TeacherGrowth,
   leave: TeacherLeave,
   homework: TeacherHomework,
+  talks: TeacherTalks,
   help: TeacherHelp
 }
 
@@ -108,11 +110,8 @@ async function onSemesterChange(e: Event): Promise<void> {
   if (v) await store.selectSemester(v)
 }
 
-const classLabel = computed(() => {
-  const c = store.cls
-  if (!c) return '未选择班级'
-  return `${c.grade}${c.name} · ${c.subject || '未设学科'}`
-})
+/** 顶部栏只读展示的任教学科（当前班级任教科目） */
+const readonlySubject = computed(() => store.cls?.subject || '未设学科')
 
 /** 顶部栏只读展示的班级名（含「默认」标记） */
 const readonlyClass = computed(() => {
@@ -194,10 +193,13 @@ onMounted(() => {
             <span class="tv-field-label">本班身份</span>
             <span class="tv-field-value">{{ readonlyRole }}</span>
           </div>
+          <div class="tv-field" data-testid="teacher-readonly-subject">
+            <span class="tv-field-label">学科</span>
+            <span class="tv-field-value">{{ readonlySubject }}</span>
+          </div>
         </div>
       </div>
       <div class="tv-topbar-actions">
-        <span class="tv-class-label">{{ classLabel }}</span>
         <!-- 右上角「设置」入口：数据管理（学期与班级 / 班级信息 / 导入表格 / 备份与恢复）/ 使用说明 / 菜单设置 -->
         <button
           type="button"
@@ -388,11 +390,6 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-.tv-class-label {
-  font-size: var(--font-size-sm, 12px);
-  color: var(--color-text-secondary, #64748b);
 }
 
 /* ---------- 引导 ---------- */

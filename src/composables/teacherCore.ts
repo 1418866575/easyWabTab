@@ -16,6 +16,7 @@ import {
   type LeaveType,
   type TeacherHomework,
   type TeacherHomeworkMiss,
+  type HomeSchoolTalkRecord,
   type HomeworkMissStatus,
   type TeacherData,
   type TeacherPageKey,
@@ -104,7 +105,8 @@ export function emptyBucket(): ClassBucket {
     growth: {},
     random: { history: [], mode: 'all' },
     leaves: [],
-    homeworks: []
+    homeworks: [],
+    talks: []
   }
 }
 
@@ -242,6 +244,30 @@ export function normalizeHomeworkMiss(raw: unknown): TeacherHomeworkMiss {
     status: normalizeHomeworkMissStatus(m.status),
     madeUpAt: str(m.madeUpAt) || undefined,
     note: str(m.note) || undefined
+  }
+}
+
+/** 归一化单条家校谈话记录，缺失字段兜底 */
+export function normalizeTalk(raw: unknown): HomeSchoolTalkRecord {
+  const t = (raw ?? {}) as Record<string, unknown>
+  const now = Date.now()
+  return {
+    id: str(t.id) || uid('talk'),
+    studentId: str(t.studentId),
+    studentName: str(t.studentName),
+    studentNo: str(t.studentNo) || undefined,
+    date: str(t.date),
+    time: str(t.time) || undefined,
+    mode: str(t.mode) || '其他',
+    counterpart: str(t.counterpart) || '其他',
+    counterpartName: str(t.counterpartName) || undefined,
+    category: str(t.category) || '其他',
+    content: str(t.content),
+    result: str(t.result) || undefined,
+    needFollowUp: !!t.needFollowUp,
+    followUpNote: str(t.followUpNote) || undefined,
+    createdAt: num(t.createdAt, now),
+    updatedAt: num(t.updatedAt, now)
   }
 }
 
@@ -573,13 +599,16 @@ export function normalizeBucket(raw: unknown): ClassBucket {
   // 作业记录（homeworks 桶）：班级维度流水，逐字段兜底；缺失视为空数组
   const homeworks: TeacherHomework[] = asRecords(b.homeworks).map((h) => normalizeHomework(h))
 
+  // 家校谈话记录（talks 桶）：班级维度流水，逐字段兜底；缺失视为空数组
+  const talks: HomeSchoolTalkRecord[] = asRecords(b.talks).map((t) => normalizeTalk(t))
+
   const randomRaw = (b.random ?? {}) as Record<string, unknown>
   const random = {
     history: Array.isArray(randomRaw.history) ? randomRaw.history.map((h) => str(h)).filter(Boolean) : [],
     mode: randomRaw.mode === 'once' ? 'once' : 'all'
   } as const
 
-  return { students, parents, exams, papers, seats: { rows, cols, grid }, duty: { days }, committee, timetable, growth, random: { ...random }, leaves, homeworks }
+  return { students, parents, exams, papers, seats: { rows, cols, grid }, duty: { days }, committee, timetable, growth, random: { ...random }, leaves, homeworks, talks }
 }
 
 // ---------- 当前分组解析 ----------
