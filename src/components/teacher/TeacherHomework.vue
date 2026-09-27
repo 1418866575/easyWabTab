@@ -133,6 +133,12 @@ const detailHw = computed<TeacherHomework | undefined>(() =>
 const detailCounts = computed(() =>
   detailHw.value ? countMisses(detailHw.value.misses) : { pending: 0, submitted: 0, madeup: 0 }
 )
+// 详情列表按提交状态排序：未交(pending) 排最前，其次已交、已补交，便于优先处理未交同学
+const STATUS_SORT_ORDER: Record<HomeworkMissStatus, number> = { pending: 0, submitted: 1, madeup: 2 }
+const detailMissesSorted = computed<TeacherHomeworkMiss[]>(() => {
+  const list = detailHw.value?.misses ?? []
+  return [...list].sort((a, b) => STATUS_SORT_ORDER[a.status] - STATUS_SORT_ORDER[b.status])
+})
 
 function openDetail(hw: TeacherHomework): void {
   detailId.value = hw.id
@@ -388,8 +394,8 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
     <!-- 详情弹框：未交名单 -->
     <el-dialog
       v-model="showDetail"
-      title="作业未交名单"
-      width="720px"
+      title="作业记录"
+      width="80%"
       data-testid="hw-detail-dialog"
       @close="showDetail = false"
     >
@@ -414,7 +420,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
             <span class="hw-count">共 {{ detailHw.misses.length }} 条记录</span>
           </div>
           <button type="button" class="tw-btn tw-btn-sm" data-testid="hw-export" @click="onExportMisses">
-            <Icon name="document" :size="14" /> 下载未交名单(Excel)
+            <Icon name="document" :size="14" /> 导出 Excel<span class="hw-export-hint">（未交）</span>
           </button>
         </div>
 
@@ -422,7 +428,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
           <p>班级还没有学生，未生成未交记录。请先在「学生信息」中添加学生。</p>
         </div>
         <div v-else class="hw-miss-area">
-          <el-table class="ewt-table" :data="detailHw.misses" stripe border size="default" style="width: 100%">
+          <el-table class="ewt-table" :data="detailMissesSorted" stripe border size="default" style="width: 100%">
             <el-table-column label="学号" width="110" align="center" show-overflow-tooltip>
               <template #default="{ row }">{{ row.studentNo || '—' }}</template>
             </el-table-column>
@@ -775,6 +781,11 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
   font-size: 13px;
   color: var(--color-text, #334155);
   white-space: pre-wrap;
+}
+.hw-export-hint {
+  font-size: 11px;
+  opacity: 0.7;
+  margin-left: 2px;
 }
 .hw-miss-area :deep(.el-table) {
   font-size: 13px;
