@@ -27,14 +27,21 @@ const rows = computed(() =>
     .sort((a, b) => a.stock - b.stock)
 )
 
-// ===== 自适应分页（5 列，rowHeight 实测 ~110，maxRows 3 = 每页最多 15 卡）=====
+/** 商品分类名（未分类兜底）：卡片加宽后展示，避免只靠商品名辨识 */
+function categoryNameOf(productId: string): string {
+  const p = store.products.find(x => x.id === productId)
+  const catId = p?.categoryId
+  return catId ? (findProductCategory(store.productCategories, catId)?.name ?? '未分类') : '未分类'
+}
+
+// ===== 自适应分页（2 列宽卡，rowHeight 实测 ~124，maxRows 4 = 每页最多 8 卡）=====
 const listEl = ref<HTMLElement | null>(null)
 const gridEl = ref<HTMLElement | null>(null)
 const paging = usePanelPaging({
   items: () => rows.value,
-  rowHeight: 110,
+  rowHeight: 124,
   gap: 12,
-  maxRows: 3,
+  maxRows: 4,
   containerRef: listEl,
   gridRef: gridEl
 })
@@ -218,20 +225,35 @@ function exportInventoryCsv(): void {
         class="bizinv-card"
         :data-testid="'bizinv-card-' + row.product.id"
       >
-        <div class="bizinv-card-top">
-          <div class="bizinv-card-left">
-            <span class="bizinv-name">{{ row.product.name }}{{ row.product.active ? '' : '（停售）' }}</span>
-            <span class="bizinv-unit">单位：{{ row.product.unit }}</span>
-            <span class="bizinv-num num-purchase">进货合计：<b>{{ purchaseTotals[row.product.id] ?? 0 }}</b> {{ row.product.unit }}</span>
+        <!-- 卡片头：商品名 + 状态 + 单位/分类 + 操作按钮（宽卡横向排布，不再挤压截断） -->
+        <div class="bizinv-card-head">
+          <div class="bizinv-card-title">
+            <span class="bizinv-name">{{ row.product.name }}</span>
+            <span class="bizinv-badge" :class="row.product.active ? 'on' : 'off'">{{ row.product.active ? '在售' : '停售' }}</span>
           </div>
-          <div class="bizinv-card-right">
-            <!-- 查看溯源按钮（卡片右上角） -->
-            <div class="bizinv-card-actions">
-              <el-button size="small" @click="openTraceModal(row.product.id)">查看溯源</el-button>
-              <el-button size="small" :data-testid="'bizinv-batch-' + row.product.id" @click="openBatchModal(row.product.id)">批次明细</el-button>
-            </div>
-            <span class="bizinv-num num-brought">带出合计：<b>{{ broughtOutTotals[row.product.id] ?? 0 }}</b> {{ row.product.unit }}</span>
-            <span class="bizinv-num num-stock">库存剩余：<b>{{ row.stock }}</b> {{ row.product.unit }}</span>
+          <div class="bizinv-card-actions">
+            <el-button size="small" @click="openTraceModal(row.product.id)">查看溯源</el-button>
+            <el-button size="small" :data-testid="'bizinv-batch-' + row.product.id" @click="openBatchModal(row.product.id)">批次明细</el-button>
+          </div>
+        </div>
+        <div class="bizinv-card-meta">
+          <span>单位：{{ row.product.unit }}</span>
+          <span class="bizinv-meta-sep">·</span>
+          <span>分类：{{ categoryNameOf(row.product.id) }}</span>
+        </div>
+        <!-- 三项指标横向铺开：进货合计（蓝）/ 带出合计（橙）/ 库存剩余（绿） -->
+        <div class="bizinv-card-metrics">
+          <div class="bizinv-metric num-purchase">
+            <span class="metric-label">进货合计</span>
+            <span class="metric-value"><b>{{ purchaseTotals[row.product.id] ?? 0 }}</b> {{ row.product.unit }}</span>
+          </div>
+          <div class="bizinv-metric num-brought">
+            <span class="metric-label">带出合计</span>
+            <span class="metric-value"><b>{{ broughtOutTotals[row.product.id] ?? 0 }}</b> {{ row.product.unit }}</span>
+          </div>
+          <div class="bizinv-metric num-stock">
+            <span class="metric-label">库存剩余</span>
+            <span class="metric-value"><b>{{ row.stock }}</b> {{ row.product.unit }}</span>
           </div>
         </div>
       </div>
@@ -566,9 +588,10 @@ function exportInventoryCsv(): void {
   font-variant-numeric: tabular-nums;
 }
 
+/* 宽卡网格：每行 2 个（信息横向铺开，不再挤压截断）；≤640px 回退单列 */
 .bizinv-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   align-content: start;
 }
@@ -576,8 +599,8 @@ function exportInventoryCsv(): void {
 .bizinv-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 14px 16px;
+  gap: 10px;
+  padding: 14px 18px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
@@ -589,32 +612,82 @@ function exportInventoryCsv(): void {
   border-color: var(--color-primary, var(--color-primary));
 }
 
-/* 卡片左右布局：左侧商品名/单位/进货合计，右侧带出/库存 */
-.bizinv-card-top {
+/* 卡片头：商品名 + 在售/停售徽标（左） + 操作按钮（右） */
+.bizinv-card-head {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
 }
 
-.bizinv-card-left {
+.bizinv-card-title {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
-  flex: 1;
 }
 
-.bizinv-card-right {
+.bizinv-badge {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.bizinv-badge.on {
+  color: var(--color-success, #16a34a);
+  background: color-mix(in srgb, var(--color-success, #16a34a) 12%, transparent);
+}
+
+.bizinv-badge.off {
+  color: var(--color-text-muted, #6b7280);
+  background: var(--color-bg-hover, #f1f5f9);
+}
+
+/* 单位 / 分类一行 */
+.bizinv-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-secondary, var(--color-text-secondary));
+}
+
+.bizinv-meta-sep {
+  color: var(--color-text-muted, #9ca3af);
+}
+
+/* 三项指标：横向等分铺开 */
+.bizinv-card-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--color-border, #e2e8f0);
+}
+
+.bizinv-metric {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  align-items: flex-end;
-  flex-shrink: 0;
+  gap: 2px;
+  min-width: 0;
+}
+
+.metric-label {
+  font-size: 12px;
+  color: var(--color-text-secondary, var(--color-text-secondary));
+}
+
+.metric-value {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text, var(--color-text));
 }
 
 .bizinv-name {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--color-text, var(--color-text));
   overflow: hidden;
@@ -634,15 +707,15 @@ function exportInventoryCsv(): void {
 }
 
 /* 三色区分：进货合计（蓝）、带出合计（橙）、库存剩余（绿） */
-.bizinv-num.num-purchase b {
+.bizinv-metric.num-purchase .metric-value b {
   color: #3b82f6;
 }
 
-.bizinv-num.num-brought b {
+.bizinv-metric.num-brought .metric-value b {
   color: #f59e0b;
 }
 
-.bizinv-num.num-stock b {
+.bizinv-metric.num-stock .metric-value b {
   color: #22c55e;
 }
 
@@ -843,15 +916,15 @@ html.dark .bizinv-low-stock {
 }
 
 /* 暗色模式：三色适配 */
-html.dark .bizinv-num.num-purchase b {
+html.dark .bizinv-metric.num-purchase .metric-value b {
   color: #60a5fa;
 }
 
-html.dark .bizinv-num.num-brought b {
+html.dark .bizinv-metric.num-brought .metric-value b {
   color: #fbbf24;
 }
 
-html.dark .bizinv-num.num-stock b {
+html.dark .bizinv-metric.num-stock .metric-value b {
   color: #4ade80;
 }
 
