@@ -13,6 +13,9 @@ import {
   type LeaveRecord,
   type LeaveStatus,
   type LeaveType,
+  type TeacherHomework,
+  type TeacherHomeworkMiss,
+  type HomeworkMissStatus,
   type TeacherData,
   type TeacherPageKey,
   type TeacherPageMeta,
@@ -102,7 +105,8 @@ export function emptyBucket(): ClassBucket {
     },
     growth: {},
     random: { history: [], mode: 'all' },
-    leaves: []
+    leaves: [],
+    homeworks: []
   }
 }
 
@@ -218,6 +222,68 @@ export function leaveStats(leaves: LeaveRecord[], today = todayStr()): LeaveStat
 function asRecords(v: unknown): Record<string, unknown>[] {
   if (!Array.isArray(v)) return []
   return (v as unknown[]).filter((x): x is Record<string, unknown> => !!x && typeof x === 'object')
+}
+
+// ---------- 作业记录（homeworks 桶） ----------
+
+/** 未交状态兜底：非法值回落 pending（未交） */
+export function normalizeHomeworkMissStatus(v: unknown): HomeworkMissStatus {
+  return v === 'madeup' ? 'madeup' : 'pending'
+}
+
+/** 归一化单条未交记录，缺失字段兜底 */
+export function normalizeHomeworkMiss(raw: unknown): TeacherHomeworkMiss {
+  const m = (raw ?? {}) as Record<string, unknown>
+  return {
+    id: str(m.id) || uid('thwm'),
+    studentId: str(m.studentId),
+    studentName: str(m.studentName),
+    studentNo: str(m.studentNo) || undefined,
+    status: normalizeHomeworkMissStatus(m.status),
+    madeUpAt: str(m.madeUpAt) || undefined,
+    note: str(m.note) || undefined
+  }
+}
+
+/** 归一化单条作业记录 */
+export function normalizeHomework(raw: unknown): TeacherHomework {
+  const h = (raw ?? {}) as Record<string, unknown>
+  const now = todayStr()
+  const assign = str(h.assignDate)
+  const due = str(h.dueDate) || assign
+  return {
+    id: str(h.id) || uid('thw'),
+    subject: str(h.subject),
+    title: str(h.title),
+    content: str(h.content) || undefined,
+    assignDate: assign,
+    dueDate: due,
+    createdAt: str(h.createdAt) || now,
+    updatedAt: str(h.updatedAt) || now,
+    misses: asRecords(h.misses).map((x) => normalizeHomeworkMiss(x))
+  }
+}
+
+/** 按当前名册为每位在册同学生成一条 pending 未交记录（冗余姓名/学号） */
+export function initMissesFromRoster(students: Student[]): TeacherHomeworkMiss[] {
+  return students.map((s) => ({
+    id: uid('thwm'),
+    studentId: s.id,
+    studentName: s.name,
+    studentNo: s.no || undefined,
+    status: 'pending'
+  }))
+}
+
+/** 统计未交 / 已补交人数（不持久化的派生） */
+export function countMisses(misses: TeacherHomeworkMiss[]): { pending: number; madeup: number } {
+  let pending = 0
+  let madeup = 0
+  for (const m of misses) {
+    if (m.status === 'madeup') madeup++
+    else pending++
+  }
+  return { pending, madeup }
 }
 
 /** 归一化任意来源（IndexedDB / 备份导入）的数据，缺失字段一律兜底，绝不抛错 */
@@ -481,13 +547,16 @@ export function normalizeBucket(raw: unknown): ClassBucket {
     }
   })
 
+  // 作业记录（homeworks 桶）：班级维度流水，逐字段兜底；缺失视为空数组
+  const homeworks: TeacherHomework[] = asRecords(b.homeworks).map((h) => normalizeHomework(h))
+
   const randomRaw = (b.random ?? {}) as Record<string, unknown>
   const random = {
     history: Array.isArray(randomRaw.history) ? randomRaw.history.map((h) => str(h)).filter(Boolean) : [],
     mode: randomRaw.mode === 'once' ? 'once' : 'all'
   } as const
 
-  return { students, parents, exams, papers, seats: { rows, cols, grid }, duty: { days, committee }, timetable: { periods, grid: timetableGrid }, growth, random: { ...random }, leaves }
+  return { students, parents, exams, papers, seats: { rows, cols, grid }, duty: { days, committee }, timetable: { periods, grid: timetableGrid }, growth, random: { ...random }, leaves, homeworks }
 }
 
 // ---------- 当前分组解析 ----------

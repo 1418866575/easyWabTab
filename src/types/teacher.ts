@@ -192,6 +192,38 @@ export interface ClassBucket {
   random: RandomState
   /** 请假记录流水（班级维度，按开始日期倒序展示；随学期×班级隔离） */
   leaves: LeaveRecord[]
+  /** 作业记录（页面「作业记录」；只记录未交同学，每次作业每人一条），随学期×班级隔离 */
+  homeworks: TeacherHomework[]
+}
+
+// ---------- 作业记录（页面「作业记录」；作业与未交名单） ----------
+
+/** 未交状态：未交 / 已补交（人工标记） */
+export type HomeworkMissStatus = 'pending' | 'madeup'
+// pending = 未交；madeup = 已补交（人工标记）
+
+/** 单次作业的未交记录（每人一条，独立） */
+export interface TeacherHomeworkMiss {
+  id: string // 前缀 thwm_
+  studentId: string // 关联 Student.id（主键，杜绝重名错配）
+  studentName: string // 姓名冗余副本（名册变动后仍可读）
+  studentNo?: string // 学号（冗余副本，便于导出/核对）
+  status: HomeworkMissStatus
+  madeUpAt?: string // 补交时间（人工填写，可选，留空手填）
+  note?: string // 备注
+}
+
+/** 作业（元数据 + 未交名单） */
+export interface TeacherHomework {
+  id: string // 前缀 thw_
+  subject: string // 学科
+  title: string // 标题，必填
+  content?: string // 作业要求 / 描述
+  assignDate: string // 布置日期 'YYYY-MM-DD'，必填
+  dueDate: string // 截止日期 'YYYY-MM-DD'，必填
+  createdAt: string
+  updatedAt: string
+  misses: TeacherHomeworkMiss[] // 每位未交同学一条
 }
 
 export interface TeacherCurrent {
@@ -241,6 +273,7 @@ export type TeacherPageKey =
   | 'special'
   | 'growth'
   | 'leave'
+  | 'homework'
   | 'help'
 
 export interface TeacherPageMeta {
@@ -270,6 +303,7 @@ export const TEACHER_PAGES: TeacherPageMeta[] = [
   { key: 'parents', label: '联系家长', icon: 'phone', group: '基础功能' },
   { key: 'growth', label: '奖励记录', icon: 'star', group: '基础功能' },
   { key: 'leave', label: '请假信息', icon: 'clipboard', group: '基础功能' },
+  { key: 'homework', label: '作业记录', icon: 'document', group: '基础功能' },
   { key: 'special', label: '隐私信息', icon: 'heart', group: '特色功能' },
   { key: 'data', label: '数据管理', icon: 'database', group: '工作台' },
   { key: 'help', label: '使用说明', icon: 'help', group: '工作台' }

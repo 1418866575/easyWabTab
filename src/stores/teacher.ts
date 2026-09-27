@@ -10,12 +10,14 @@ import {
   arrangeByRoster,
   arrangeRandom,
   autoArrangeDuty,
+  classTitle,
   currentBucket,
   currentClass,
   currentRole,
   emptyBucket,
   emptyTeacherData,
   guardPage,
+  initMissesFromRoster,
   leaveStats,
   makeStudentId,
   normalizeTeacherData,
@@ -36,6 +38,7 @@ import {
   renameTeacherMenuLabel,
   resolveTeacherMenuItems
 } from '@/composables/teacherMenuCore'
+import { exportHomeworkMissesExcel } from '@/composables/teacherExcelCore'
 import {
   type ClassBucket,
   type ClassGroup,
@@ -45,6 +48,7 @@ import {
   type ParentInfo,
   type Student,
   type TeacherData,
+  type TeacherHomework,
   type TeacherPageKey,
   type TeacherRole,
   type TeacherStage,
@@ -752,6 +756,102 @@ export const useTeacherStore = defineStore('teacher', () => {
   /** 当前班级请假统计（页面直接消费，store 不内联重算） */
   const leaveSummary = computed(() => leaveStats(bucket.value?.leaves ?? []))
 
+  // ---------- 作业记录（homeworks 桶；仅记录未交同学，每人一条独立记录） ----------
+
+  /** 新增作业：按当前名册为每位在册同学生成一条 pending 未交记录（冗余姓名/学号） */
+  async function addHomework(
+    input: Omit<TeacherHomework, 'id' | 'createdAt' | 'updatedAt' | 'misses'>
+  ): Promise<void> {
+    const students = bucket.value?.students ?? []
+    const now = todayStr()
+    const hw: TeacherHomework = {
+      ...input,
+      id: uid('thw'),
+      createdAt: now,
+      updatedAt: now,
+      misses: initMissesFromRoster(students)
+    }
+    mutateBucket((b) => ({ ...b, homeworks: [...b.homeworks, hw] }))
+    await saveTeacher()
+  }
+
+  /** 编辑作业元信息（不改未交名单）；标题等可修正 */
+  async function updateHomework(hw: TeacherHomework): Promise<void> {
+    mutateBucket((b) => ({
+      ...b,
+      homeworks: b.homeworks.map((h) => (h.id === hw.id ? { ...hw, updatedAt: todayStr() } : h))
+    }))
+    await saveTeacher()
+  }
+
+  async function removeHomework(id: string): Promise<void> {
+    mutateBucket((b) => ({ ...b, homeworks: b.homeworks.filter((h) => h.id !== id) }))
+    await saveTeacher()
+  }
+
+  /** 标记某条未交记录为已补交（人工填写补交时间/备注，留空则保持空） */
+  async function markMadeup(
+    homeworkId: string,
+    missId: string,
+    patch: { madeUpAt?: string; note?: string }
+  ): Promise<void> {
+    mutateBucket((b) => ({
+      ...b,
+      homeworks: b.homeworks.map((h) => {
+        if (h.id !== homeworkId) return h
+        return {
+          ...h,
+          updatedAt: todayStr(),
+          misses: h.misses.map((m) =>
+            m.id === missId
+              ? { ...m, status: 'madeup', madeUpAt: patch.madeUpAt ?? m.madeUpAt ?? '', note: patch.note ?? m.note ?? '' }
+              : m
+          )
+        }
+      })
+    }))
+    await saveTeacher()
+  }
+
+  /** 撤销补交：状态回到未交，清空补交时间/备注 */
+  async function revertMadeup(homeworkId: string, missId: string): Promise<void> {
+    mutateBucket((b) => ({
+      ...b,
+      homeworks: b.homeworks.map((h) => {
+        if (h.id !== homeworkId) return h
+        return {
+          ...h,
+          updatedAt: todayStr(),
+          misses: h.misses.map((m) =>
+            m.id === missId ? { ...m, status: 'pending', madeUpAt: undefined, note: undefined } : m
+          )
+        }
+      })
+    }))
+    await saveTeacher()
+  }
+
+  /** 导出当前作业的未交名单（仅 pending）为 Excel */
+  async function exportMissesExcel(homeworkId: string): Promise<void> {
+    const hw = bucket.value?.homeworks.find((h) => h.id === homeworkId)
+    if (!hw) return
+    await exportHomeworkMissesExcel(hw, classTitle(cls.value, data.value.teacher.name))
+  }
+
+  /** 当前班级作业统计（聚合所有作业的未交/已补交人数） */
+  const homeworkSummary = computed(() => {
+    const homeworks = bucket.value?.homeworks ?? []
+    let pending = 0
+    let madeup = 0
+    for (const h of homeworks) {
+      for (const m of h.misses) {
+        if (m.status === 'madeup') madeup++
+        else pending++
+      }
+    }
+    return { homeworkCount: homeworks.length, pending, madeup }
+  })
+
   // ---------- 随机点名 ----------
 
   async function setRandomMode(mode: 'all' | 'once'): Promise<void> {
@@ -937,6 +1037,13 @@ export const useTeacherStore = defineStore('teacher', () => {
     removeLeave,
     setLeaveStatus,
     leaveSummary,
+    addHomework,
+    updateHomework,
+    removeHomework,
+    markMadeup,
+    revertMadeup,
+    exportMissesExcel,
+    homeworkSummary,
     setRandomMode,
     pushRandomHistory,
     resetRandomHistory,
