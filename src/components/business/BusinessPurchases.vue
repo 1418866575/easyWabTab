@@ -183,8 +183,44 @@ const formNote = ref('')
 /** 进货优化：本次进货关联的支出记录 id（可多条；合计金额由支出金额自动汇总） */
 const formExpenseIds = ref<string[]>([])
 
-/** 可选支出列表（日期倒序）：已被其它进货关联的置灰并标注关联商品，不可重复关联 */
-const expenseOptions = computed(() => selectableExpenses(store.expenses, store.purchases, editingId.value))
+/**
+ * 可选支出列表（日期倒序）：已被其它库存记录关联的支出由 core 直接排除，不再出现在候选项里；
+ * 本记录自身已勾选的支出始终保留（可取消勾选）。分页/搜索都基于这份结果，口径一致。
+ */
+const expenseOptions = computed(() =>
+  selectableExpenses(store.expenses, store.purchases, editingId.value, formExpenseIds.value)
+)
+
+/** 候选搜索：日期 / 标题 / 备注 / 金额（本地过滤，不改 core 结果） */
+const expenseQuery = ref('')
+/** 候选分页：每页 8 条，点「显示更多」增量展开 */
+const EXPENSE_PAGE_SIZE = 8
+const expensePage = ref(1)
+
+const filteredExpenseOptions = computed(() => {
+  const q = expenseQuery.value.trim().toLowerCase()
+  if (!q) return expenseOptions.value
+  return expenseOptions.value.filter(o =>
+    o.label.toLowerCase().includes(q) ||
+    (o.expense.note ?? '').toLowerCase().includes(q) ||
+    String(o.expense.amount).includes(q)
+  )
+})
+const pagedExpenseOptions = computed(() => {
+  const page = Math.min(Math.max(1, expensePage.value), Math.max(1, Math.ceil(filteredExpenseOptions.value.length / EXPENSE_PAGE_SIZE)))
+  return filteredExpenseOptions.value.slice(0, page * EXPENSE_PAGE_SIZE)
+})
+const hasMoreExpenses = computed(() => filteredExpenseOptions.value.length > pagedExpenseOptions.value.length)
+function showMoreExpenses(): void { expensePage.value += 1 }
+function collapseExpenses(): void { expensePage.value = 1 }
+/** 关键字变化 / 候选集合刷新后回到第 1 页，避免停在空白页 */
+watch([expenseQuery, expenseOptions], () => { expensePage.value = 1 })
+
+/** 弹框每次打开都重置搜索与分页，保证与最新数据一致 */
+function resetExpensePicker(): void {
+  expenseQuery.value = ''
+  expensePage.value = 1
+}
 
 /** 已关联支出金额合计 */
 const linkedExpenseTotal = computed(() => sumExpenseAmounts(store.expenses, formExpenseIds.value))
@@ -214,17 +250,6 @@ function onExpenseChange(): void {
   if (!useExpenseTotal.value) return
   if (Number(formQuantity.value) > 0) onQuantityInput()
   else if (Number(formUnitPrice.value) > 0) onUnitPriceInput()
-}
-
-/** 支出项是否可选（已被其它进货记录占用 → 不可再关联） */
-function isExpenseTaken(opt: { linkedPurchaseId?: string }): boolean {
-  return !!opt.linkedPurchaseId
-}
-
-/** 占用该支出的进货记录所属商品名（用于在可选列表中标注「已被谁关联」） */
-function linkedPurchaseProductName(purchaseId: string): string {
-  const p = store.purchases.find(x => x.id === purchaseId)
-  return p ? productNameOf(p.productId) : '（已删除记录）'
 }
 
 /** 已关联支出标签列表（「日期 标题」，按日期+创建时间升序），用于徽章悬浮与提示 */
@@ -293,6 +318,7 @@ async function startEdit(p: BusinessPurchase): Promise<void> {
   formNote.value = p.note ?? ''
   // 编辑时回填已关联支出（含已被本记录占用的，自身占用不算冲突）
   formExpenseIds.value = [...(p.expenseIds ?? [])]
+  resetExpensePicker()
   showDialog.value = true
 }
 
@@ -306,6 +332,7 @@ function startCopy(p: BusinessPurchase): void {
   formUnitPrice.value = String(p.unitPrice)
   formNote.value = p.note ?? ''
   formExpenseIds.value = []
+  resetExpensePicker()
   showDialog.value = true
 }
 
@@ -572,32 +599,52 @@ async function handleDelete(id: string): Promise<void> {
         </div>
         <!-- 进货优化：关联支出（可多条）；合计金额 = 已关联支出金额之和，数量与进价随合计双向联动 -->
         <div class="biz-field">
-          <label>关联支出（可选，可多选）</label>
-          <p v-if="expenseOptions.length === 0" class="bizpur-expense-empty" data-testid="bizpur-expense-empty">当前账本暂无支出记录</p>
-          <div v-else class="bizpur-expense-list" data-testid="bizpur-expense-list">
-            <label
-              v-for="opt in expenseOptions"
-              :key="opt.expense.id"
-              class="bizpur-expense-item"
-              :class="{ taken: isExpenseTaken(opt), checked: formExpenseIds.includes(opt.expense.id) }"
-              :data-testid="`bizpur-expense-${opt.expense.id}`"
-            >
-              <input
-                type="checkbox"
-                :checked="formExpenseIds.includes(opt.expense.id)"
-                :disabled="isExpenseTaken(opt)"
-                :data-testid="`bizpur-expense-check-${opt.expense.id}`"
-                @change="toggleExpense(opt.expense.id)"
-              />
-              <!-- 日期 + 标题：同一天可能有多笔支出，靠标题区分 -->
-              <span class="bizpur-expense-date">{{ opt.label }}</span>
-              <span class="bizpur-expense-amount">{{ formatYuanOf(opt.expense.amount) }}</span>
-              <span v-if="opt.expense.note" class="bizpur-expense-note">{{ opt.expense.note }}</span>
-              <span v-if="isExpenseTaken(opt)" class="bizpur-expense-taken">已关联：{{ linkedPurchaseProductName(opt.linkedPurchaseId!) }}</span>
-            </label>
-          </div>
+          <label>关联支出（可选，可多选；已被其它库存记录关联的支出不再列出）</label>
+          <!-- 空状态 ①：账本里还没有支出记录 -->
+          <p v-if="store.expenses.length === 0" class="bizpur-expense-empty" data-testid="bizpur-expense-empty">当前账本暂无支出记录</p>
+          <!-- 空状态 ②：有支出，但全部已被其它库存记录关联 -->
+          <p v-else-if="expenseOptions.length === 0" class="bizpur-expense-empty" data-testid="bizpur-expense-all-linked">
+            暂无可关联的支出：已有支出均已关联到其它库存记录
+          </p>
+          <template v-else>
+            <el-input
+              v-model="expenseQuery"
+              size="small"
+              class="bizpur-expense-search"
+              placeholder="搜索可关联支出：日期 / 标题 / 备注"
+              data-testid="bizpur-expense-search"
+            />
+            <div class="bizpur-expense-list" data-testid="bizpur-expense-list">
+              <label
+                v-for="opt in pagedExpenseOptions"
+                :key="opt.expense.id"
+                class="bizpur-expense-item"
+                :class="{ checked: formExpenseIds.includes(opt.expense.id) }"
+                :data-testid="`bizpur-expense-${opt.expense.id}`"
+              >
+                <input
+                  type="checkbox"
+                  :checked="formExpenseIds.includes(opt.expense.id)"
+                  :data-testid="`bizpur-expense-check-${opt.expense.id}`"
+                  @change="toggleExpense(opt.expense.id)"
+                />
+                <!-- 日期 + 标题：同一天可能有多笔支出，靠标题区分 -->
+                <span class="bizpur-expense-date">{{ opt.label }}</span>
+                <span class="bizpur-expense-amount">{{ formatYuanOf(opt.expense.amount) }}</span>
+                <span v-if="opt.expense.note" class="bizpur-expense-note">{{ opt.expense.note }}</span>
+              </label>
+            </div>
+            <!-- 空状态 ③：搜索无匹配 -->
+            <p v-if="filteredExpenseOptions.length === 0" class="bizpur-expense-empty" data-testid="bizpur-expense-no-match">没有匹配的支出，试试其它关键字</p>
+            <div v-if="hasMoreExpenses || expensePage > 1" class="bizpur-expense-more">
+              <el-button v-if="hasMoreExpenses" size="small" data-testid="bizpur-expense-more" @click="showMoreExpenses">
+                显示更多（还有 {{ filteredExpenseOptions.length - pagedExpenseOptions.length }} 笔）
+              </el-button>
+              <el-button v-else size="small" data-testid="bizpur-expense-collapse" @click="collapseExpenses">收起</el-button>
+            </div>
+          </template>
           <p class="bizpur-expense-hint" data-testid="bizpur-expense-hint">
-            已选 {{ formExpenseIds.length }} 笔，关联金额合计 {{ formatYuanOf(linkedExpenseTotal) }}；勾选后修改数量自动算进价、修改进价自动反算数量。
+            可关联 {{ filteredExpenseOptions.length }} 笔（共 {{ store.expenses.length }} 笔支出，已关联的不再列出）；已选 {{ formExpenseIds.length }} 笔，关联金额合计 {{ formatYuanOf(linkedExpenseTotal) }}；勾选后修改数量自动算进价、修改进价自动反算数量。
           </p>
         </div>
         <div class="biz-field">
@@ -753,11 +800,21 @@ async function handleDelete(id: string): Promise<void> {
   font-variant-numeric: tabular-nums;
 }
 
-/* ===== 进货优化：关联支出（多选列表 + 已占用标记 + 关联笔数徽章） ===== */
+/* ===== 进货优化：关联支出（多选列表 + 搜索 + 分页 + 关联笔数徽章） ===== */
 .bizpur-expense-empty {
   margin: 0;
   font-size: 12px;
   color: var(--color-text-muted, #9ca3af);
+}
+
+.bizpur-expense-search {
+  margin-bottom: 6px;
+}
+
+.bizpur-expense-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 6px;
 }
 
 .bizpur-expense-list {
@@ -790,11 +847,7 @@ async function handleDelete(id: string): Promise<void> {
   background: var(--color-primary-soft, #eff6ff);
 }
 
-/* 已被其它进货关联：置灰 + 禁止勾选 */
-.bizpur-expense-item.taken {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
+/* 已被其它进货关联的支出不再出现在候选里，故无需置灰样式 */
 
 .bizpur-expense-date {
   font-weight: 600;
@@ -813,15 +866,6 @@ async function handleDelete(id: string): Promise<void> {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--color-text-muted, #9ca3af);
-}
-
-.bizpur-expense-taken {
-  flex-shrink: 0;
-  padding: 1px 6px;
-  border-radius: 999px;
-  font-size: 11px;
-  background: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-text-muted, #6b7280);
 }
 
 /* 录入校验提示 */

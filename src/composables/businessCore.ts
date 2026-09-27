@@ -215,30 +215,66 @@ export function sumExpenseAmounts(expenses: BusinessExpense[], ids: string[]): n
   return Math.round(sum * 100) / 100
 }
 
-/** 可选支出项：linkedPurchaseId 为空表示可选，非空表示已被该进货记录占用（编辑自身时不算冲突） */
+/** 金额比较容差（分）：剩余金额 ≤ 该值视为已全额关联 */
+const AMOUNT_EPS = 0.005
+
+/**
+ * 单笔记货记录对某笔支出的占用金额。
+ * 当前数据模型是「整笔关联」（expenseIds 里出现即占用该笔支出全额）；
+ * 若后续支持按金额部分关联，只需改这里读取记录里保存的占用额即可，候选筛选逻辑无需改动。
+ */
+function occupiedAmountOf(_purchase: BusinessPurchase, expense: BusinessExpense): number {
+  return typeof expense.amount === 'number' && Number.isFinite(expense.amount) ? Math.max(0, expense.amount) : 0
+}
+
+/** 可关联支出项（已被其它进货记录全额关联的支出不出现在候选里） */
 export interface ExpenseLinkOption {
   expense: BusinessExpense
-  linkedPurchaseId?: string
+  /** 仍可关联的余额 = 支出金额 − 已被「其它」进货记录占用的金额（整笔关联模型下可关联时等于全额） */
+  remaining: number
+  /** 当前记录自身是否已勾选（自身勾选的必须保留并显示为选中，便于取消） */
+  selfLinked: boolean
   /** 展示标签：`YYYY-MM-DD 标题`（同一天多笔时用于区分） */
   label: string
 }
 
-/** 支出候选列表（日期倒序，同日按创建时间倒序）；已被其它进货占用的支出带 linkedPurchaseId，UI 据此禁用并标注关联商品 */
+/**
+ * 支出候选列表（日期倒序，同日按创建时间倒序）。
+ * 过滤规则：
+ *  1. 已被「任意其它」进货记录全额关联的支出**直接排除**，不再出现在候选中；
+ *  2. 若未来支持按金额部分关联：已全额关联的隐藏，仍有余额的保留（remaining 即余额）；
+ *  3. 当前记录自身已勾选的支出（selectedIds，编辑态即本记录 expenseIds）始终保留并显示为选中；
+ *  4. 过滤在纯函数内一次完成 —— 分页 / 搜索 / 刷新都基于同一份结果，口径始终一致。
+ */
 export function selectableExpenses(
   expenses: BusinessExpense[],
   purchases: BusinessPurchase[],
-  editingId?: string | null
+  editingId?: string | null,
+  selectedIds?: string[]
 ): ExpenseLinkOption[] {
-  const owners = expenseLinkOwners(purchases ?? [])
-  return [...(expenses ?? [])]
+  const list = expenses ?? []
+  const selected = new Set((selectedIds ?? []).filter(x => typeof x === 'string' && !!x))
+  /** 支出 id → 已被其它进货记录占用的金额（正在编辑的那笔记货不算占用） */
+  const occupied = new Map<string, number>()
+  for (const p of purchases ?? []) {
+    if (editingId && p.id === editingId) continue
+    for (const eid of p.expenseIds ?? []) {
+      const e = list.find(x => x.id === eid)
+      if (!e) continue
+      occupied.set(eid, (occupied.get(eid) ?? 0) + occupiedAmountOf(p, e))
+    }
+  }
+  return [...list]
     .sort((a, b) => {
       if (a.date !== b.date) return a.date < b.date ? 1 : -1
       return a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0
     })
     .map(e => {
-      const owner = owners.get(e.id)
-      return { expense: e, linkedPurchaseId: owner && owner !== editingId ? owner : undefined, label: expenseLabel(e) }
+      const amount = typeof e.amount === 'number' && Number.isFinite(e.amount) ? Math.max(0, e.amount) : 0
+      const remaining = Math.round((amount - (occupied.get(e.id) ?? 0)) * 100) / 100
+      return { expense: e, remaining: Math.max(0, remaining), selfLinked: selected.has(e.id), label: expenseLabel(e) }
     })
+    .filter(o => o.selfLinked || o.remaining > AMOUNT_EPS)
 }
 
 /** 合计 ÷ 数量 = 进价；合计为 0 或数量 ≤ 0（除零）→ null（调用方保持原值，不写 NaN/Infinity） */

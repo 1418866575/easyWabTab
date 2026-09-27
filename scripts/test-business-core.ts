@@ -4,6 +4,7 @@
 // T33-T36：账本删除/清空守卫；T37-T41：进货关联支出、数量/单价联动、月度统计
 // T42-T45：会员价归一化、进货批次 FIFO 剩余状态、未售完批次单价与自动均价
 // T63-T65：严格先进先出（FIFO）成本结转、待销售估值、损耗出库口径
+// T66：可关联支出候选过滤（已关联排除 / 自身已勾选保留 / 余额边界）
 import assert from 'node:assert/strict'
 import {
   addExpenseCategory,
@@ -783,18 +784,20 @@ test('T38 selectableExpenses occupancy', () => {
     { id: 'b1', productId: 'p1', quantity: 10, unitPrice: 2, total: 20, date: '2026-08-01', expenseIds: ['e1'], createdAt: 'c' },
     { id: 'b2', productId: 'p2', quantity: 5, unitPrice: 1, total: 5, date: '2026-08-01', createdAt: 'c' }
   ]
-  // 新建态：e1 已被 b1 占用 → 不可选
+  // 新建态：e1 已被 b1 全额关联 → 直接从候选里排除（不再展示）
   const opts = selectableExpenses(expenses, purchases, null)
-  assert.equal(opts.length, 2)
-  assert.deepEqual(opts.map(o => o.expense.date), ['2026-08-05', '2026-08-02'], '按日期倒序')
-  assert.equal(opts.find(o => o.expense.id === 'e1')?.linkedPurchaseId, 'b1')
-  assert.equal(opts.find(o => o.expense.id === 'e2')?.linkedPurchaseId, undefined)
-  // 编辑 b1 自身：e1 的占用者是 b1 → 不算冲突（仍可选，且保持已勾选）
-  const editOpts = selectableExpenses(expenses, purchases, 'b1')
-  assert.equal(editOpts.find(o => o.expense.id === 'e1')?.linkedPurchaseId, undefined)
-  // 编辑 b2：e1 仍被 b1 占用
+  assert.equal(opts.length, 1, 'e1 已被关联 → 只剩 e2')
+  assert.deepEqual(opts.map(o => o.expense.id), ['e2'])
+  assert.equal(opts[0].remaining, 12, '未关联的支出可关联余额 = 全额')
+  assert.equal(opts[0].selfLinked, false)
+  // 编辑 b1 自身：e1 的占用者是 b1 → 保留并按日期倒序
+  const editOpts = selectableExpenses(expenses, purchases, 'b1', ['e1'])
+  assert.equal(editOpts.length, 2)
+  assert.deepEqual(editOpts.map(o => o.expense.id), ['e2', 'e1'], '按日期倒序')
+  assert.equal(editOpts.find(o => o.expense.id === 'e1')?.selfLinked, true, '自身已勾选 → 保留并标记 selfLinked')
+  // 编辑 b2：e1 仍被 b1 占用 → 排除
   const editB2 = selectableExpenses(expenses, purchases, 'b2')
-  assert.equal(editB2.find(o => o.expense.id === 'e1')?.linkedPurchaseId, 'b1')
+  assert.deepEqual(editB2.map(o => o.expense.id), ['e2'])
   // 归属表
   assert.equal(expenseLinkOwners(purchases).get('e1'), 'b1')
   assert.equal(expenseLinkOwners(d.purchases).size, 0)
@@ -1335,13 +1338,15 @@ test('T59 selectableExpenses 同日多笔', () => {
   assert.deepEqual(opts.map(o => o.expense.id), ['e3', 'e2', 'e1'])
   assert.equal(opts[1].label, '2024-05-06 下午补货')
   assert.equal(opts[2].label, '2024-05-06 上午采购')
-  assert.equal(opts[0].linkedPurchaseId, undefined)
-  // 被其它进货占用 → 带占用方；编辑自身（editingId）时不算冲突
+  // 被其它进货占用 → 直接排除（不再只是打标记）
   const purchases = [{ id: 'p1', productId: 'x', quantity: 1, unitPrice: 1, total: 1, date: '2024-05-06', expenseIds: ['e2'], createdAt: 'z' }] as BusinessPurchase[]
   const taken = selectableExpenses(expenses, purchases)
-  assert.equal(taken.find(o => o.expense.id === 'e2')!.linkedPurchaseId, 'p1')
-  const self = selectableExpenses(expenses, purchases, 'p1')
-  assert.equal(self.find(o => o.expense.id === 'e2')!.linkedPurchaseId, undefined)
+  assert.deepEqual(taken.map(o => o.expense.id), ['e3', 'e1'], 'e2 已被 p1 关联 → 不出现在候选')
+  // 编辑 p1 自身：e2 保留（自身占用不算冲突），且已勾选时 selfLinked = true
+  const self = selectableExpenses(expenses, purchases, 'p1', ['e2'])
+  assert.deepEqual(self.map(o => o.expense.id), ['e3', 'e2', 'e1'])
+  assert.equal(self.find(o => o.expense.id === 'e2')!.selfLinked, true)
+  assert.equal(self.find(o => o.expense.id === 'e2')!.remaining, 20, '自身占用不计入余额扣减')
 })
 
 // T60 — 进货 ↔ 支出对账：expenseLabels 逐笔「日期 标题」并按日期+创建时间升序
@@ -1580,6 +1585,37 @@ test('T65 损耗出库口径', () => {
   assert.equal(st.b1.writtenOff, 3)
   assert.equal(st.b1.remaining, 1)
   assert.equal(calcBusinessStats({ ...emptyBusinessData(), products, purchases, dailyRecords } as BusinessData).cost, 12)
+})
+
+// T66 — 可关联支出候选：已关联的排除、自身已勾选的保留、0 金额与余额边界
+test('T66 关联支出候选过滤', () => {
+  const expenses: BusinessExpense[] = [
+    { id: 'e1', date: '2026-09-01', categoryId: 'c', amount: 100, title: '批发', createdAt: 'a' },
+    { id: 'e2', date: '2026-09-02', categoryId: 'c', amount: 50, title: '补货', createdAt: 'b' },
+    { id: 'e3', date: '2026-09-03', categoryId: 'c', amount: 0, title: '零金额', createdAt: 'c' }
+  ]
+  const purchases: BusinessPurchase[] = [
+    { id: 'p1', productId: 'x', quantity: 10, unitPrice: 10, total: 100, date: '2026-09-01', expenseIds: ['e1'], createdAt: 'a' }
+  ]
+  // e1 已被 p1 关联 → 排除；e3 金额 0 → 无可关联余额，排除；只剩 e2
+  const opts = selectableExpenses(expenses, purchases, null)
+  assert.deepEqual(opts.map(o => o.expense.id), ['e2'])
+  // 新建态传 selectedIds：即便该笔已被占用（异常数据），也要保留以便取消勾选
+  const withSel = selectableExpenses(expenses, purchases, null, ['e1'])
+  assert.deepEqual(withSel.map(o => o.expense.id), ['e2', 'e1'], '自身已勾选的保留在最前排序之外仍按日期倒序')
+  assert.equal(withSel.find(o => o.expense.id === 'e1')!.selfLinked, true)
+  assert.equal(withSel.find(o => o.expense.id === 'e1')!.remaining, 0, '已被占用 → 余额 0')
+  // 无支出 / 无进货
+  assert.deepEqual(selectableExpenses([], purchases, null), [])
+  assert.equal(selectableExpenses(expenses, [], null).length, 2, '无进货占用时 e1/e2 可关联，e3 因金额 0 排除')
+  // 全部被关联 → 空候选（UI 展示空状态）
+  const allLinked = [
+    { id: 'p1', productId: 'x', quantity: 1, unitPrice: 100, total: 100, date: '2026-09-01', expenseIds: ['e1'], createdAt: 'a' },
+    { id: 'p2', productId: 'x', quantity: 1, unitPrice: 50, total: 50, date: '2026-09-02', expenseIds: ['e2'], createdAt: 'b' }
+  ] as BusinessPurchase[]
+  assert.equal(selectableExpenses(expenses, allLinked, null).length, 0)
+  // 空入参健壮性
+  assert.deepEqual(selectableExpenses(undefined as unknown as BusinessExpense[], undefined as unknown as BusinessPurchase[], null), [])
 })
 
 let passed = 0
