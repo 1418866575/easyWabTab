@@ -3,6 +3,11 @@
 // 教师↔班级↔课程 的多对多由 TeachingAssignment 枢纽表达。
 // 学生一律以 studentId 为主键（姓名仅作展示），规避重名学生静默错配。
 
+import type { StudentTimetableData, StudentTimetableSchedule } from '@/types'
+
+// 教师课程表复用学生课程表富模型，重新导出以便其他模块从 @/types/teacher 统一引入
+export type { StudentTimetableData, StudentTimetableSchedule }
+
 export type TeacherRole = 'head' | 'subject' // 本班身份：班主任 / 非班主任（科任）
 
 export type TeacherStage = '幼儿园' | '小学' | '初中' | '高中' | '大学'
@@ -122,16 +127,12 @@ export interface DutyData {
   committee: CommitteeMember[]
 }
 
-export interface TimetablePeriod {
-  label: string
-  time: string
-}
-
-/** 课程表：grid[节次][星期]，值为科目名或 null */
-export interface TimetableData {
-  periods: TimetablePeriod[]
-  grid: (string | null)[][]
-}
+/**
+ * 课程表：复用学生课程表富模型（按班级隔离，落在 ClassBucket.timetable）。
+ * schedule: Record<`${dayOfWeek}_${period}`, StudentTimetableCell>，day 1-7（周一~周日）、period 1-12。
+ * 旧极简模型（{ periods, grid }）在 teacherCore.normalizeBucket 中自动迁移为 schedule。
+ */
+export type TeacherTimetable = StudentTimetableData
 
 /** 奖励记录条目（页面「奖励记录」，原学生成长档案；沿用 growth 桶字段名不变） */
 export interface GrowthRecord {
@@ -187,7 +188,7 @@ export interface ClassBucket {
   papers: Paper[]
   seats: SeatData
   duty: DutyData
-  timetable: TimetableData
+  timetable: TeacherTimetable
   growth: Record<string, GrowthRecord[]> // studentId -> 记录
   random: RandomState
   /** 请假记录流水（班级维度，按开始日期倒序展示；随学期×班级隔离） */

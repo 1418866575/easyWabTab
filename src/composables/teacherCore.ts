@@ -22,6 +22,8 @@ import {
   type TeacherRole,
   type TeacherStage,
   type TeacherTerm,
+  type StudentTimetableData,
+  type StudentTimetableSchedule,
   STAGE_OPTIONS,
   TERM_OPTIONS,
   TEACHER_GROUPS,
@@ -33,6 +35,13 @@ import {
   WEEK_DAYS
 } from '@/types/teacher'
 import { normalizeTeacherMenu } from '@/composables/teacherMenuCore'
+import {
+  emptyTimetableData,
+  normalizeTimetableData,
+  cellKey,
+  computePeriodTime,
+  emptyTiming
+} from '@/composables/studentTimetableCore'
 
 /** 学段兜底：非法值回落幼儿园（首个选项），保证下拉可用 */
 export function normalizeStage(v: unknown): TeacherStage {
@@ -90,19 +99,7 @@ export function emptyBucket(): ClassBucket {
     papers: [],
     seats: emptySeats(),
     duty: emptyDuty(),
-    timetable: {
-      periods: [
-        { label: '第1节', time: '08:00-08:40' },
-        { label: '第2节', time: '08:50-09:30' },
-        { label: '第3节', time: '10:00-10:40' },
-        { label: '第4节', time: '10:50-11:30' },
-        { label: '第5节', time: '14:00-14:40' },
-        { label: '第6节', time: '14:50-15:30' },
-        { label: '第7节', time: '15:40-16:20' },
-        { label: '第8节', time: '16:30-17:10' }
-      ],
-      grid: Array.from({ length: 8 }, () => Array.from({ length: 6 }, () => null))
-    },
+    timetable: emptyTimetableData(),
     growth: {},
     random: { history: [], mode: 'all' },
     leaves: [],
@@ -502,19 +499,29 @@ export function normalizeBucket(raw: unknown): ClassBucket {
     : []
 
   const ttRaw = (b.timetable ?? {}) as Record<string, unknown>
-  const periodsIn = Array.isArray(ttRaw.periods) ? ttRaw.periods : []
-  const periods = base.timetable.periods.map((def, i) => {
-    const p = periodsIn[i] as Record<string, unknown> | undefined
-    return { label: str(p?.label, def.label), time: str(p?.time, def.time) }
-  })
-  const gridIn2 = Array.isArray(ttRaw.grid) ? ttRaw.grid : []
-  const timetableGrid: (string | null)[][] = periods.map((_, pi) => {
-    const rowIn = Array.isArray(gridIn2[pi]) ? gridIn2[pi] : []
-    return Array.from({ length: 6 }, (_, di) => {
-      const v = rowIn[di]
-      return typeof v === 'string' && v ? v : null
-    })
-  })
+  // 旧极简模型 { periods: TimetablePeriod[], grid: (string|null)[][]（grid[节次][星期 0..5=周一..周六]）}
+  // 自动迁移为富模型：逐格转成 schedule[`${day}_${period}`]，时间按节次配置推算，老师/教室留空。
+  let timetable: StudentTimetableData
+  if (Array.isArray(ttRaw.grid) && !ttRaw.schedule) {
+    const srcGrid = ttRaw.grid as (string | null)[][]
+    const timing = emptyTiming()
+    const schedule: StudentTimetableSchedule = {}
+    for (let pi = 0; pi < srcGrid.length; pi++) {
+      const row = Array.isArray(srcGrid[pi]) ? srcGrid[pi] : []
+      for (let di = 0; di < row.length; di++) {
+        const subject = typeof row[di] === 'string' ? (row[di] as string).trim() : ''
+        if (!subject) continue
+        const day = di + 1 // 旧列 0..5 → 新 day 1..6（周一..周六）
+        const period = pi + 1
+        if (day < 1 || day > 7 || period < 1 || period > 12) continue
+        const { startHHMM, endHHMM } = computePeriodTime(period, timing)
+        schedule[cellKey(day, period)] = { subject, startHHMM, endHHMM }
+      }
+    }
+    timetable = { ...emptyTimetableData(), schedule }
+  } else {
+    timetable = normalizeTimetableData(ttRaw)
+  }
 
   const growth: Record<string, { id: string; date: string; title: string; content: string; photos: string[] }[]> = {}
   const growthRaw = (b.growth ?? {}) as Record<string, unknown>
@@ -561,7 +568,7 @@ export function normalizeBucket(raw: unknown): ClassBucket {
     mode: randomRaw.mode === 'once' ? 'once' : 'all'
   } as const
 
-  return { students, parents, exams, papers, seats: { rows, cols, grid }, duty: { days, committee }, timetable: { periods, grid: timetableGrid }, growth, random: { ...random }, leaves, homeworks }
+  return { students, parents, exams, papers, seats: { rows, cols, grid }, duty: { days, committee }, timetable, growth, random: { ...random }, leaves, homeworks }
 }
 
 // ---------- 当前分组解析 ----------

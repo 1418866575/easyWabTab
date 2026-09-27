@@ -38,6 +38,12 @@ import {
   renameTeacherMenuLabel,
   resolveTeacherMenuItems
 } from '@/composables/teacherMenuCore'
+import {
+  emptyTimetableData,
+  emptyTiming,
+  computePeriodTime,
+  cellKey
+} from '@/composables/studentTimetableCore'
 import { exportHomeworkMissesExcel } from '@/composables/teacherExcelCore'
 import {
   type ClassBucket,
@@ -47,14 +53,14 @@ import {
   type LeaveStatus,
   type ParentInfo,
   type Student,
+  type StudentTimetableData,
+  type StudentTimetableSchedule,
   type TeacherData,
   type TeacherHomework,
   type TeacherPageKey,
   type TeacherRole,
   type TeacherStage,
-  type TeacherTerm,
-  type TimetablePeriod,
-  WEEK_DAYS
+  type TeacherTerm
 } from '@/types/teacher'
 
 export const useTeacherStore = defineStore('teacher', () => {
@@ -655,37 +661,11 @@ export const useTeacherStore = defineStore('teacher', () => {
     await saveTeacher()
   }
 
-  // ---------- 课程表 ----------
+  // ---------- 课程表（富模型，按班级隔离，落在 ClassBucket.timetable） ----------
 
-  async function setTimetableCell(period: number, day: number, subject: string): Promise<void> {
-    mutateBucket((b) => {
-      const grid = b.timetable.grid.map((row, pi) =>
-        pi === period ? row.map((v, di) => (di === day ? (subject.trim() || null) : v)) : row
-      )
-      return { ...b, timetable: { ...b.timetable, grid } }
-    })
-    await saveTeacher()
-  }
-
-  async function setTimetablePeriods(periods: { label: string; time: string }[]): Promise<void> {
-    mutateBucket((b) => {
-      const grid = periods.map((_, pi) => b.timetable.grid[pi] ?? Array.from({ length: WEEK_DAYS.length }, () => null))
-      return { ...b, timetable: { periods, grid } }
-    })
-    await saveTeacher()
-  }
-
-  async function clearTimetable(): Promise<void> {
-    mutateBucket((b) => ({
-      ...b,
-      timetable: { ...b.timetable, grid: b.timetable.grid.map((row) => row.map(() => null)) }
-    }))
-    await saveTeacher()
-  }
-
-  /** 整体导入课程表（节次 + grid[节次][星期]），用于「导入课程表」 */
-  async function importTimetable(periods: TimetablePeriod[], grid: (string | null)[][]): Promise<void> {
-    mutateBucket((b) => ({ ...b, timetable: { periods, grid } }))
+  /** 整体写入当前班级课程表（富模型 StudentTimetableData），供教师课程表面板 / 配置 / 数据管理导入统一调用 */
+  async function updateTimetable(timetable: StudentTimetableData): Promise<void> {
+    mutateBucket((b) => ({ ...b, timetable }))
     await saveTeacher()
   }
 
@@ -985,12 +965,22 @@ export const useTeacherStore = defineStore('teacher', () => {
                 ]
               }
             ],
-            timetable: {
-              periods: b.timetable.periods,
-              grid: b.timetable.grid.map((row, pi) =>
-                row.map((_, di) => (pi < 4 && di < 5 ? ['语文', '数学', '语文', '英语', '体育'][di] : null))
-              )
-            },
+            timetable: (() => {
+              const timing = emptyTiming()
+              const schedule: StudentTimetableSchedule = {}
+              // 演示课表：周一~周四各 4 节（di+1=day，pi+1=period），时间按节次配置推算
+              const demo: [number, number, string][] = [
+                [1, 1, '语文'], [1, 2, '数学'], [1, 3, '英语'], [1, 4, '体育'],
+                [2, 1, '数学'], [2, 2, '语文'], [2, 3, '音乐'], [2, 4, '美术'],
+                [3, 1, '英语'], [3, 2, '科学'], [3, 3, '语文'], [3, 4, '书法'],
+                [4, 1, '语文'], [4, 2, '数学'], [4, 3, '体育'], [4, 4, '班会']
+              ]
+              for (const [day, period, subject] of demo) {
+                const { startHHMM, endHHMM } = computePeriodTime(period, timing)
+                schedule[cellKey(day, period)] = { subject, startHHMM, endHHMM }
+              }
+              return { ...emptyTimetableData(), classroom: '三年级1班', schedule }
+            })(),
             growth: {
               [students[0].id]: [
                 { id: uid('grow'), date: '2026-05-08', title: '期中进步之星', content: '数学期中成绩进步明显。', photos: [] }
@@ -1064,10 +1054,7 @@ export const useTeacherStore = defineStore('teacher', () => {
     setDutyMembers,
     autoDuty,
     setCommittee,
-    setTimetableCell,
-    setTimetablePeriods,
-    clearTimetable,
-    importTimetable,
+    updateTimetable,
     addGrowth,
     updateGrowth,
     removeGrowth,

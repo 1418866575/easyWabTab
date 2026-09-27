@@ -32,8 +32,7 @@ import {
   type TeacherDataSectionKey,
   type TeacherRole,
   type TeacherStage,
-  type TeacherTerm,
-  WEEK_DAYS
+  type TeacherTerm
 } from '@/types/teacher'
 
 const props = withDefaults(defineProps<{ section?: TeacherDataSectionKey }>(), { section: 'all' })
@@ -176,8 +175,11 @@ async function onTimetableFile(e: Event): Promise<void> {
       notify(`导入失败：${res.errors.join('；')}`, 'warn')
       return
     }
-    await store.importTimetable(res.periods, res.grid)
-    notify(`已导入课程表（${res.periods.length} 节次 × ${WEEK_DAYS.length} 天）`, 'info')
+    // 保留当前已配置的学周数（history 模型无此概念，迁移后回落默认值也无妨）
+    const prevWeeks = (store.bucket?.timetable as { weeks?: number } | undefined)?.weeks
+    const data: typeof res.data = prevWeeks ? { ...res.data, weeks: prevWeeks } : res.data
+    await store.updateTimetable(data)
+    notify(`已导入课程表（${res.data.periodsPerDay} 节次 × 7 天）`, 'info')
   } catch (err) {
     notify(`读取失败：${err instanceof Error ? err.message : String(err)}`, 'warn')
   } finally {
@@ -222,11 +224,11 @@ async function downloadTimetableTemplate(): Promise<void> {
     [
       {
         name: '课程表',
-        headers: ['节次', ...WEEK_DAYS],
+        headers: ['节次', '周一', '周二', '周三', '周四', '周五', '周六', '周日'],
         rows: [
-          ['第1节', '语文', '数学', '英语', '语文', '数学', '自习'],
-          ['第2节', '数学', '英语', '语文', '体育', '美术', '音乐'],
-          ['第3节', '英语', '语文', '数学', '科学', '书法', '班会']
+          ['第1节', '语文', '数学', '英语', '语文', '数学', '自习', '兴趣'],
+          ['第2节', '数学', '英语', '语文', '体育', '美术', '音乐', '兴趣'],
+          ['第3节', '英语', '语文', '数学', '科学', '书法', '班会', '兴趣']
         ]
       }
     ]
@@ -470,7 +472,7 @@ async function onClearSemesterData(): Promise<void> {
       <p v-if="isAll" class="tw-card-hint">
         支持 .xlsx / .xls / .csv。学生名单需含「姓名」「性别」（学号列可选，列名带 * 也能识别）；
         成绩表第一列为姓名、其余数值列各生成一场考试；家长表需含「姓名」「家长」「电话」；
-        课程表首列为节次、其后每列依次对应 周一~周六。
+        课程表首列为节次、其后每列依次对应 周一~周日。
         不确定列名？点击右侧「下载模板」获取对应 Excel 模板（含示例行，导入时按姓名自动跳过，不会误写库）。
       </p>
       <div class="tw-toolbar">
