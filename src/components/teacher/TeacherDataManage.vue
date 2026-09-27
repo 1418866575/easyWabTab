@@ -593,7 +593,7 @@ async function onClearSemesterData(): Promise<void> {
             </el-select>
           </label>
           <label class="dm-field">
-            <span class="dm-field-label">任教科目</span>
+            <span class="dm-field-label">学科</span>
             <SubjectSelect v-model="form.subject" placeholder="请选择学科" extra-class="dm-select" />
           </label>
         </div>

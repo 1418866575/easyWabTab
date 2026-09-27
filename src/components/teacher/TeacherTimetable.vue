@@ -9,6 +9,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { showConfirm } from '@/utils/dialog'
 import { useTeacherTimetableStore } from '@/stores/teacherTimetable'
+import { useTeacherStore } from '@/stores/teacher'
 import { useToast } from '@/composables/useToast'
 import {
   weekdayLabel,
@@ -24,6 +25,7 @@ import Icon from '@/components/Icon.vue'
 import SubjectSelect from '@/components/teacher/SubjectSelect.vue'
 
 const store = useTeacherTimetableStore()
+const teacherStore = useTeacherStore()
 const toast = useToast()
 
 /** 教师学科全集（四阶段分组），用于判断已有课程的学科是否「自定义」（不在预设列表里） */
@@ -351,7 +353,7 @@ onBeforeUnmount(() => {
           v-for="c in todayLessons"
           :key="c.period"
           class="stt-chip"
-          :class="{ 'is-now': lessonState(c.period) === 'now' }"
+          :class="{ 'is-now': lessonState(c.period) === 'now', 'is-teaching': c.subject === teacherStore.cls?.subject }"
           :style="cellVars(c.subject)"
         >
           <span class="stt-chip-subject">{{ c.subject }}</span>
@@ -416,7 +418,7 @@ onBeforeUnmount(() => {
             :key="`cell-${d}-${p}`"
             :id="`tt-cell-${d}-${p}`"
             class="stt-cell stt-body-cell"
-            :class="{ 'has-lesson': !!getCell(d, p), 'empty': !getCell(d, p), 'col-today': d === todayIdx, 'current': isCurrent(d, p) }"
+            :class="{ 'has-lesson': !!getCell(d, p), 'empty': !getCell(d, p), 'col-today': d === todayIdx, 'current': isCurrent(d, p), 'is-teaching': !!getCell(d, p) && getCell(d, p)!.subject === teacherStore.cls?.subject }"
             :style="getCell(d, p) ? cellVars(getCell(d, p)!.subject) : undefined"
             :title="cellTitle(d, p)"
             role="gridcell"
@@ -448,7 +450,7 @@ onBeforeUnmount(() => {
             :key="`cell-${d}-${p}`"
             :id="`tt-cell-${d}-${p}`"
             class="stt-cell stt-body-cell"
-            :class="{ 'has-lesson': !!getCell(d, p), 'empty': !getCell(d, p), 'col-today': d === todayIdx, 'current': isCurrent(d, p) }"
+            :class="{ 'has-lesson': !!getCell(d, p), 'empty': !getCell(d, p), 'col-today': d === todayIdx, 'current': isCurrent(d, p), 'is-teaching': !!getCell(d, p) && getCell(d, p)!.subject === teacherStore.cls?.subject }"
             :style="getCell(d, p) ? cellVars(getCell(d, p)!.subject) : undefined"
             :title="cellTitle(d, p)"
             role="gridcell"
@@ -836,6 +838,15 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+}
+/* 课程表中与「当前班级任教科目」相同的格子：醒目高亮，便于快速区分任教学科 */
+.stt-body-cell.is-teaching {
+  background: rgba(245, 158, 11, 0.22);
+  box-shadow: inset 0 0 0 2px #f59e0b;
+}
+.stt-chip.is-teaching {
+  background: rgba(245, 158, 11, 0.22);
+  box-shadow: inset 0 0 0 2px #f59e0b;
 }
 .stt-teacher {
   font-weight: 500;

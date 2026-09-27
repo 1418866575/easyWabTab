@@ -42,7 +42,7 @@ const guideTerm = ref('上半年')
 const guideStage = ref<TeacherStage>('小学')
 const guideGrade = ref('')
 const guideName = ref('')
-const guideSubject = ref('')
+const guideSubject = ref(store.cls?.subject || '')
 const guideRole = ref<TeacherRole>('head')
 
 watch(
@@ -64,7 +64,7 @@ async function createSemesterFromGuide(): Promise<void> {
   await store.addSemester(y, t)
   guideGrade.value = ''
   guideName.value = ''
-  guideSubject.value = ''
+  guideSubject.value = store.cls?.subject || ''
 }
 
 async function createClassFromGuide(): Promise<void> {
@@ -111,7 +111,7 @@ async function onSemesterChange(e: Event): Promise<void> {
 const classLabel = computed(() => {
   const c = store.cls
   if (!c) return '未选择班级'
-  return `${c.grade}${c.name} · ${c.subject || '未设科目'}`
+  return `${c.grade}${c.name} · ${c.subject || '未设学科'}`
 })
 
 /** 顶部栏只读展示的班级名（含「默认」标记） */
@@ -262,7 +262,7 @@ onMounted(() => {
           <label class="tw-label">年级<input v-model="guideGrade" class="tw-input" placeholder="如 三年级" /></label>
           <label class="tw-label">班级<input v-model="guideName" class="tw-input" placeholder="如 1班" /></label>
           <label class="tw-label">
-            任教科目
+            学科
             <SubjectSelect v-model="guideSubject" placeholder="请选择学科" size="small" />
           </label>
           <label class="tw-label">

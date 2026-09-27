@@ -35,8 +35,13 @@ const rows = computed(() => (exam.value ? rankRows(exam.value, students.value) :
 
 // ---------- 新增考试 ----------
 const newName = ref('')
-const newSubject = ref('')
+const newSubject = ref(store.cls?.subject || '')
 const newDate = ref('')
+
+watch(
+  () => store.cls?.subject,
+  (s) => { if (!newSubject.value.trim()) newSubject.value = s || '' }
+)
 
 async function onAddExam(): Promise<void> {
   if (!newName.value.trim()) return
@@ -116,7 +121,7 @@ async function exportExcelFile(): Promise<void> {
       <div class="tw-toolbar ex-add">
         <label class="tw-label">考试名<ExamNameSelect v-model="newName" placeholder="如 语文期中" size="small" /></label>
         <label class="tw-label">
-          科目
+          学科
           <SubjectSelect v-model="newSubject" placeholder="请选择学科" size="small" />
         </label>
         <label class="tw-label">日期<input v-model="newDate" class="tw-input tw-input-sm" placeholder="如 2026-04" /></label>
