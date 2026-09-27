@@ -104,8 +104,8 @@ type NavSubTab =
   | 'nav-icons'
   | 'nav-size'
   | 'nav-data'
-type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-todo-cat' | 'wb-cd-cat' | 'wb-note-cat' | 'wb-pwd-cat' | 'wb-diary-cat' | 'wb-diary-journals' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
-type BizSubTab = 'biz-base' | 'biz-backup' | 'biz-cat' | 'biz-product-cat' | 'biz-expense-cat'
+type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-todo-cat' | 'wb-cd-cat' | 'wb-note-cat' | 'wb-pwd-cat' | 'wb-ledger-cat' | 'wb-diary-cat' | 'wb-diary-journals' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
+type BizSubTab = 'biz-base' | 'biz-backup' | 'biz-product-cat' | 'biz-expense-cat'
 type StuSubTab = 'stu-stage' | 'stu-info' | 'stu-subject' | 'stu-timetable' | 'stu-menu'
 /** 教师工作台子 tab：数据管理拆分出的 5 项 + 使用说明（原左侧菜单「工作台」分组，已迁入设置页）+ 菜单设置 */
 // 教师子 tab：原「数据管理」已拆成 4 个独立菜单项（学期与班级 / 班级信息 / 导入数据 /
@@ -184,6 +184,7 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student' | 'teacher', SubTab
     { key: 'wb-cd-cat',   label: '倒计时分类管理' },
     { key: 'wb-note-cat', label: '便签分类管理' },
     { key: 'wb-pwd-cat', label: '密码分类管理' },
+    { key: 'wb-ledger-cat', label: '记账分类管理' },
     { key: 'wb-diary-cat', label: '日记分类管理' },
     { key: 'wb-diary-journals', label: '日记本管理' },
     { key: 'wb-backup',   label: '工作台备份' },
@@ -193,7 +194,6 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student' | 'teacher', SubTab
   business: [
     { key: 'biz-base',    label: '基础设置' },
     { key: 'biz-backup',  label: '备份导入导出' },
-    { key: 'biz-cat',     label: '记账分类管理' },
     { key: 'biz-product-cat', label: '商品分类管理' },
     { key: 'biz-expense-cat', label: '支出分类管理' }
   ],
@@ -381,6 +381,8 @@ const NAV_GROUPS: NavGroup[] = [
       { key: 'wb-cd-cat', label: '倒计时分类管理', icon: 'tag', tab: 'wb', sub: 'wb-cd-cat' },
       { key: 'wb-note-cat', label: '便签分类管理', icon: 'tag', tab: 'wb', sub: 'wb-note-cat' },
       { key: 'wb-pwd-cat', label: '密码分类管理', icon: 'lock', tab: 'wb', sub: 'wb-pwd-cat' },
+      // 「记账分类管理」管理的是个人工作台「记账」面板的分类（ledger store），已由销售记账 tab 迁到此处
+      { key: 'wb-ledger-cat', label: '记账分类管理', icon: 'tag', tab: 'wb', sub: 'wb-ledger-cat' },
       { key: 'wb-backup', label: '工作台备份', icon: 'save', tab: 'wb', sub: 'wb-backup' },
       { key: 'wb-snapshot', label: '数据时光机', icon: 'refresh', tab: 'wb', sub: 'wb-snapshot' },
       { key: 'wb-size', label: '弹窗尺寸', icon: 'package', tab: 'wb', sub: 'wb-size' }
@@ -400,7 +402,6 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: 'biz-base', label: '基础设置', icon: 'store', tab: 'business', sub: 'biz-base' },
       { key: 'biz-backup', label: '备份导入导出', icon: 'archive', tab: 'business', sub: 'biz-backup' },
-      { key: 'biz-cat', label: '记账分类管理', icon: 'tag', tab: 'business', sub: 'biz-cat' },
       { key: 'biz-product-cat', label: '商品分类管理', icon: 'tag', tab: 'business', sub: 'biz-product-cat' },
       { key: 'biz-expense-cat', label: '支出分类管理', icon: 'tag', tab: 'business', sub: 'biz-expense-cat' }
     ]
@@ -2718,22 +2719,13 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- 日记分类管理（工作台设置 tab - 日记本设置）：内联渲染 DiaryCategoryManager -->
-        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-diary-cat'" class="wb-menu-config diary-cat-config">
-          <DiaryCategoryManager />
-        </div>
-
-        <!-- 日记本管理（日记本设置 tab - 日记本管理）：切换/重命名/删除 + 新建日志本 -->
-        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-diary-journals'" class="wb-menu-config diary-journal-config">
-          <DiaryJournalManager />
-        </div>
-
-        <!-- 记账分类管理（销售记账 tab - 记账分类管理）：改名/类型切换/删除/新增；内置 8 分组不可删 -->
-        <div v-if="activeTab === 'business' && activeSubTab === 'biz-cat'" class="wb-menu-config">
+        <!-- 记账分类管理（个人工作台 tab - 记账分类管理）：改名/类型切换/删除/新增；内置 8 分组不可删
+             管理的是工作台「记账」面板的分类（ledger store），故归入个人工作台设置，不再放销售记账 tab -->
+        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-ledger-cat'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">记账分类</h3>
           </div>
-          <p class="wb-menu-hint">管理记账面板的分类列表；收入类分组（含内置「工资」）、支出类分组（含内置「房贷/车贷/早餐/午餐/晚餐/通勤/日常」共 7 个）共 8 个内置分组不可删除</p>
+          <p class="wb-menu-hint">管理工作台「记账」面板的分类列表；收入类分组（含内置「工资」）、支出类分组（含内置「房贷/车贷/早餐/午餐/晚餐/通勤/日常」共 7 个）共 8 个内置分组不可删除</p>
           <div class="wb-menu-list">
             <div v-for="c in sortedLedgerCategories" :key="c.id" class="wb-menu-row" :data-testid="`ldcfg-ledgercat-row-${c.id}`">
               <template v-if="ledgerCatEditingId === c.id">
@@ -2793,6 +2785,16 @@ onUnmounted(() => {
             </el-select>
             <el-button size="small" :disabled="newLedgerCatName.trim() === ''" data-testid="ldcfg-ledgercat-add" @click="handleAddLedgerCat">添加</el-button>
           </div>
+        </div>
+
+        <!-- 日记分类管理（工作台设置 tab - 日记本设置）：内联渲染 DiaryCategoryManager -->
+        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-diary-cat'" class="wb-menu-config diary-cat-config">
+          <DiaryCategoryManager />
+        </div>
+
+        <!-- 日记本管理（日记本设置 tab - 日记本管理）：切换/重命名/删除 + 新建日志本 -->
+        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-diary-journals'" class="wb-menu-config diary-journal-config">
+          <DiaryJournalManager />
         </div>
 
         <!-- 工作台导入/导出（工作台设置 tab - 工作台备份；原 WorkbenchView 头部按钮迁移入口） -->
