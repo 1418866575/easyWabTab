@@ -60,7 +60,8 @@ const subjectOptions = computed(() => store.data.teacher.subjects ?? [])
 
 function resetForm(): void {
   editingId.value = null
-  formSubject.value = subjectOptions.value[0] ?? ''
+  // 学科默认反显当前班级的任教学科（ClassGroup.subject）；若未设置则回退到任教学科列表首项
+  formSubject.value = store.cls?.subject || subjectOptions.value[0] || ''
   formTitle.value = ''
   formContent.value = ''
   formAssign.value = todayLocal()
