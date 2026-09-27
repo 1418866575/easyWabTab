@@ -13,6 +13,7 @@ import Icon from '@/components/Icon.vue'
 import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
 import TeacherDataManage from '@/components/teacher/TeacherDataManage.vue'
 import TeacherStudents from '@/components/teacher/TeacherStudents.vue'
+import TeacherCommittee from '@/components/teacher/TeacherCommittee.vue'
 import TeacherSeats from '@/components/teacher/TeacherSeats.vue'
 import TeacherExams from '@/components/teacher/TeacherExams.vue'
 import TeacherPapers from '@/components/teacher/TeacherPapers.vue'
@@ -77,6 +78,7 @@ async function createClassFromGuide(): Promise<void> {
 const COMPONENTS: Record<TeacherPageKey, unknown> = {
   data: TeacherDataManage,
   students: TeacherStudents,
+  committee: TeacherCommittee,
   seats: TeacherSeats,
   exams: TeacherExams,
   papers: TeacherPapers,

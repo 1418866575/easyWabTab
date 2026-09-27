@@ -48,6 +48,7 @@ import { exportHomeworkMissesExcel } from '@/composables/teacherExcelCore'
 import {
   type ClassBucket,
   type ClassGroup,
+  type CommitteeMember,
   type GrowthRecord,
   type LeaveRecord,
   type LeaveStatus,
@@ -62,6 +63,22 @@ import {
   type TeacherStage,
   type TeacherTerm
 } from '@/types/teacher'
+
+/** 班委 → 学生职务 同步：按 committee 汇总每个学生职务（多职务用「、」连接），返回新 students（仅变更者重建） */
+function syncStudentPosts(b: ClassBucket): Student[] {
+  const postMap = new Map<string, string[]>()
+  for (const c of b.committee) {
+    if (!c.studentId || !c.role) continue
+    const arr = postMap.get(c.studentId) ?? []
+    arr.push(c.role)
+    postMap.set(c.studentId, arr)
+  }
+  return b.students.map((s) => {
+    const roles = postMap.get(s.id)
+    const post = roles && roles.length ? roles.join('、') : ''
+    return s.post === post ? s : { ...s, post }
+  })
+}
 
 export const useTeacherStore = defineStore('teacher', () => {
   const data = ref<TeacherData>(emptyTeacherData())
@@ -508,6 +525,7 @@ export const useTeacherStore = defineStore('teacher', () => {
       name: input.name.trim(),
       gender: input.gender,
       special: false,
+      post: '',
       health: { allergy: '', disease: '', notes: '', emergencyPhone: '' }
     }
     mutateBucket((b) => ({ ...b, students: [...b.students.filter((x) => x.id !== s.id), s] }))
@@ -515,10 +533,30 @@ export const useTeacherStore = defineStore('teacher', () => {
   }
 
   async function updateStudent(studentId: string, patch: Partial<Student>): Promise<void> {
-    mutateBucket((b) => ({
-      ...b,
-      students: b.students.map((s) => (s.id === studentId ? { ...s, ...patch, id: s.id } : s))
-    }))
+    if (patch.post !== undefined) {
+      // 反向同步：手动改学生职务 → 回写班委（保留已有条目职责，新增缺失职务，移除多余职务）
+      mutateBucket((b) => {
+        const roles = (patch.post || '').split(/[、,，]/).map((r) => r.trim()).filter(Boolean)
+        const roleSet = new Set(roles)
+        const kept = b.committee.filter((c) => c.studentId === studentId && roleSet.has(c.role))
+        const keptRoles = new Set(kept.map((c) => c.role))
+        const added: CommitteeMember[] = roles
+          .filter((r) => !keptRoles.has(r))
+          .map((role) => ({ studentId, role, duty: '' }))
+        const committee = [...b.committee.filter((c) => c.studentId !== studentId), ...kept, ...added]
+        const next = {
+          ...b,
+          students: b.students.map((s) => (s.id === studentId ? { ...s, ...patch, id: s.id } : s)),
+          committee
+        }
+        return { ...next, students: syncStudentPosts(next) }
+      })
+    } else {
+      mutateBucket((b) => ({
+        ...b,
+        students: b.students.map((s) => (s.id === studentId ? { ...s, ...patch, id: s.id } : s))
+      }))
+    }
     await saveTeacher()
   }
 
@@ -656,8 +694,11 @@ export const useTeacherStore = defineStore('teacher', () => {
     await saveTeacher()
   }
 
-  async function setCommittee(list: { role: string; name: string; duty: string }[]): Promise<void> {
-    mutateBucket((b) => ({ ...b, duty: { ...b.duty, committee: list } }))
+  async function setCommittee(list: CommitteeMember[]): Promise<void> {
+    mutateBucket((b) => {
+      const next = { ...b, committee: list }
+      return { ...next, students: syncStudentPosts(next) }
+    })
     await saveTeacher()
   }
 
@@ -918,6 +959,7 @@ export const useTeacherStore = defineStore('teacher', () => {
       name,
       gender,
       special: [2, 9, 15].includes(i),
+      post: '',
       health: {
         allergy: [2, 9, 15].includes(i) ? '花生' : '',
         disease: '',
@@ -925,6 +967,7 @@ export const useTeacherStore = defineStore('teacher', () => {
         emergencyPhone: ''
       }
     }))
+    students[0].post = '班长' // 演示数据：首名学生任班长，与班委信息联动
     const b = emptyBucket()
     const seats = arrangeByRoster(students, b.seats.rows, b.seats.cols)
     const duty = autoArrangeDuty(students, 4)
@@ -950,7 +993,8 @@ export const useTeacherStore = defineStore('teacher', () => {
             ...b,
             students,
             seats,
-            duty: { days: duty.days, committee: [{ role: '班长', name: students[0].id, duty: '全面负责班级事务' }] },
+            duty: { days: duty.days },
+            committee: [{ studentId: students[0].id, role: '班长', duty: '全面负责班级事务' }],
             parents,
             exams: [{ id: uid('exam'), name: '语文期中', subject: '语文', date: '2026-04', scores: examScores }],
             papers: [

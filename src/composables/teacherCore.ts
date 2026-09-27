@@ -5,6 +5,7 @@
 import {
   type ClassBucket,
   type ClassGroup,
+  type CommitteeMember,
   type DutyData,
   type Exam,
   type SeatData,
@@ -86,8 +87,7 @@ export function emptySeats(): SeatData {
 
 export function emptyDuty(): DutyData {
   return {
-    days: WEEK_DAYS.slice(0, 5).map((day) => ({ day, members: [], leader: '' })),
-    committee: []
+    days: WEEK_DAYS.slice(0, 5).map((day) => ({ day, members: [], leader: '' }))
   }
 }
 
@@ -99,6 +99,7 @@ export function emptyBucket(): ClassBucket {
     papers: [],
     seats: emptySeats(),
     duty: emptyDuty(),
+    committee: [],
     timetable: emptyTimetableData(),
     growth: {},
     random: { history: [], mode: 'all' },
@@ -433,6 +434,7 @@ export function normalizeBucket(raw: unknown): ClassBucket {
         name: str(s.name),
         gender: s.gender === '男' ? '男' : '女',
         special: bool(s.special),
+        post: str(s.post),
         health: {
           allergy: str(healthRaw.allergy),
           disease: str(healthRaw.disease),
@@ -492,11 +494,20 @@ export function normalizeBucket(raw: unknown): ClassBucket {
       leader: str(found?.leader)
     }
   })
-  const committee = Array.isArray(dutyRaw.committee)
-    ? dutyRaw.committee
-        .filter((c): c is Record<string, unknown> => !!c && typeof c === 'object')
-        .map((c) => ({ role: str(c.role), name: str(c.name), duty: str(c.duty) }))
-    : []
+  // 班委信息：优先取顶层 b.committee（新结构），兼容旧数据落在 duty.committee 的情况；
+  // 旧字段为 name（实为 studentId），新结构为 studentId，统一归一化为 studentId。
+  const rawCommittee = Array.isArray((b as Record<string, unknown>).committee)
+    ? ((b as Record<string, unknown>).committee as unknown[])
+    : Array.isArray(dutyRaw.committee)
+      ? dutyRaw.committee
+      : []
+  const committee: CommitteeMember[] = rawCommittee
+    .filter((c): c is Record<string, unknown> => !!c && typeof c === 'object')
+    .map((c) => ({
+      studentId: str(c.studentId) || str(c.name),
+      role: str(c.role),
+      duty: str(c.duty)
+    }))
 
   const ttRaw = (b.timetable ?? {}) as Record<string, unknown>
   // 旧极简模型 { periods: TimetablePeriod[], grid: (string|null)[][]（grid[节次][星期 0..5=周一..周六]）}
@@ -568,7 +579,7 @@ export function normalizeBucket(raw: unknown): ClassBucket {
     mode: randomRaw.mode === 'once' ? 'once' : 'all'
   } as const
 
-  return { students, parents, exams, papers, seats: { rows, cols, grid }, duty: { days, committee }, timetable, growth, random: { ...random }, leaves, homeworks }
+  return { students, parents, exams, papers, seats: { rows, cols, grid }, duty: { days }, committee, timetable, growth, random: { ...random }, leaves, homeworks }
 }
 
 // ---------- 当前分组解析 ----------
@@ -812,7 +823,7 @@ export function cmpNo(a: string, b: string): number {
 export function autoArrangeDuty(students: Student[], groupSize = 8): DutyData {
   const sorted = [...students].sort((a, b) => cmpNo(a.no, b.no))
   const days = WEEK_DAYS.slice(0, 5).map((day) => ({ day, members: [] as string[], leader: '' }))
-  if (!sorted.length) return { days, committee: [] }
+  if (!sorted.length) return { days }
   const size = Math.max(1, Math.floor(groupSize) || 1)
   let idx = 0
   for (const d of days) {
@@ -827,7 +838,7 @@ export function autoArrangeDuty(students: Student[], groupSize = 8): DutyData {
     days[di % days.length].members.push(sorted[idx].id)
     di++
   }
-  return { days, committee: [] }
+  return { days }
 }
 
 // ---------- 级联清理 ----------
@@ -849,9 +860,9 @@ export function removeStudentCascade(bucket: ClassBucket, studentId: string): Cl
         ...d,
         members: d.members.filter((m) => m !== studentId),
         leader: d.leader === studentId ? '' : d.leader
-      })),
-      committee: bucket.duty.committee.map((c) => (c.name === studentId ? { ...c, name: '' } : c))
+      }))
     },
+    committee: bucket.committee.filter((c) => c.studentId !== studentId),
     random: { ...bucket.random, history: bucket.random.history.filter((h) => h !== studentId) },
     leaves: bucket.leaves.filter((l) => l.studentId !== studentId)
   }

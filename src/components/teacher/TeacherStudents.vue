@@ -60,10 +60,10 @@ function exportPaper(): void {
 async function exportExcelFile(): Promise<void> {
   const rows = students.value.map((s) => {
     const p = b.value?.parents[s.id]
-    return [s.no, s.name, s.gender, p?.parentName ?? '', p?.relation ?? '', p?.phone ?? '']
+    return [s.no, s.name, s.gender, s.post, p?.parentName ?? '', p?.relation ?? '', p?.phone ?? '']
   })
   await exportExcel(excelFileName('学生名单', store.cls ? `${store.cls.grade}${store.cls.name}` : '班级'), [
-    { name: '学生名单', headers: ['学号', '姓名', '性别', '家长姓名', '关系', '联系电话'], rows }
+    { name: '学生名单', headers: ['学号', '姓名', '性别', '职务', '家长姓名', '关系', '联系电话'], rows }
   ])
 }
 </script>
@@ -134,6 +134,7 @@ async function exportExcelFile(): Promise<void> {
               <th>学号</th>
               <th>姓名</th>
               <th>性别</th>
+              <th>职务</th>
               <th>家长姓名</th>
               <th>关系</th>
               <th>联系电话</th>
@@ -157,6 +158,9 @@ async function exportExcelFile(): Promise<void> {
                   <option value="男">男</option>
                   <option value="女">女</option>
                 </select>
+              </td>
+              <td>
+                <input class="tw-input tw-input-sm" :value="s.post" placeholder="如 班长" @change="onStudentField(s, { post: ($event.target as HTMLInputElement).value })" />
               </td>
               <td>
                 <input class="tw-input tw-input-sm" :value="b?.parents[s.id]?.parentName ?? ''" @change="onParentField(s.id, 'parentName', ($event.target as HTMLInputElement).value)" />

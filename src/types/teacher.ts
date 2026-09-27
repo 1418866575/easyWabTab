@@ -73,6 +73,8 @@ export interface Student {
   gender: '男' | '女'
   special: boolean // 特异体质
   health: StudentHealth
+  /** 职务（如 班长；由班委信息自动同步，多职务用「、」连接）；学生信息侧可反向编辑回写班委 */
+  post: string
 }
 
 export interface ParentInfo {
@@ -116,15 +118,23 @@ export interface DutyDay {
   leader: string // studentId
 }
 
+/** 班委候选职务（下拉候选；支持输入自定义新增） */
+export const COMMITTEE_ROLES: string[] = [
+  '班长', '副班长', '学习委员', '纪律委员', '体育委员', '文艺委员',
+  '劳动委员', '生活委员', '宣传委员', '组织委员', '团支书', '心理委员'
+]
+
 export interface CommitteeMember {
+  /** 关联学生主键（studentId）；学号/姓名由该学生反查得到，保证数据一致 */
+  studentId: string
+  /** 职务（如 班长；允许输入自定义新增） */
   role: string
-  name: string // studentId
+  /** 职责说明 */
   duty: string
 }
 
 export interface DutyData {
   days: DutyDay[]
-  committee: CommitteeMember[]
 }
 
 /**
@@ -188,6 +198,8 @@ export interface ClassBucket {
   papers: Paper[]
   seats: SeatData
   duty: DutyData
+  /** 班委信息（从值日生模块迁出，按班级隔离）；studentId 关联 Student，post 自动同步 */
+  committee: CommitteeMember[]
   timetable: TeacherTimetable
   growth: Record<string, GrowthRecord[]> // studentId -> 记录
   random: RandomState
@@ -278,6 +290,7 @@ export interface TeacherData {
 export type TeacherPageKey =
   | 'data'
   | 'students'
+  | 'committee'
   | 'seats'
   | 'exams'
   | 'papers'
@@ -311,6 +324,7 @@ export const TEACHER_PAGES: TeacherPageMeta[] = [
   { key: 'timetable', label: '课程表', icon: 'calendar', group: '基础功能' },
   { key: 'random', label: '点名', icon: 'dice', group: '基础功能' },
   { key: 'students', label: '学生信息', icon: 'notes', group: '基础功能' },
+  { key: 'committee', label: '班委信息', icon: 'teacher', group: '基础功能' },
   { key: 'seats', label: '座位表', icon: 'grid', group: '基础功能' },
   { key: 'exams', label: '成绩信息', icon: 'chart', group: '基础功能' },
   { key: 'papers', label: '试卷分析', icon: 'target', group: '基础功能' },

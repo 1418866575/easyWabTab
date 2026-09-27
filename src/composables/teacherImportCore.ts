@@ -128,6 +128,7 @@ export function rowsToStudents(rows: string[][], semesterId: string, classId: st
       name,
       gender,
       special: false,
+      post: '',
       health: { allergy: '', disease: '', notes: '', emergencyPhone: '' }
     })
   }
