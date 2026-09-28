@@ -528,7 +528,7 @@ export interface BusinessProduct {
   sellingPrice: number // 售价
   /** 会员价（可选；仅作记录与展示，不参与营业额自动合计）。0/undefined/null = 未设置 */
   memberPrice?: number | null
-  active: boolean // 在售/停售（停售不出现在收摊带出选择）
+  active: boolean // 在售/停售（停售不出现在销售带出选择）
   createdAt: string
 }
 
@@ -546,7 +546,7 @@ export interface BusinessPurchase {
   createdAt: string
 }
 
-/** 收摊日记录条目：sold = broughtOut - remaining - loss（core 计算，不存储） */
+/** 销售日记录条目：sold = broughtOut - remaining - loss（core 计算，不存储） */
 export interface DailyRecordItem {
   productId: string
   broughtOut: number
@@ -554,7 +554,7 @@ export interface DailyRecordItem {
   loss: number
 }
 
-/** 收摊日记录：date 唯一（upsert 语义）；totalRevenue 由 core 按 items×售价 算好落库 */
+/** 销售日记录：date 唯一（upsert 语义）；totalRevenue 由 core 按 items×售价 算好落库 */
 export interface BusinessDailyRecord {
   id: string // bd_ 前缀
   date: string // YYYY-MM-DD 本地日期
@@ -602,7 +602,7 @@ export interface BusinessData {
 /**
  * 账本：销售记账的最外层数据容器，按自然年创建，同一年份可创建多个账本。
  * 每个账本在所属年份内分配唯一序号 seq（从 1 开始），与 year 一起构成可读的账本编号「YYYY-NN」（如 2026-02）。
- * 所有业务数据（商品 / 进货 / 收摊 / 支出 / 分类 / 设置）都挂在 data 下，以账本 id 隔离；
+ * 所有业务数据（商品 / 进货 / 销售 / 支出 / 分类 / 设置）都挂在 data 下，以账本 id 隔离；
  * 且只允许记录该账本所属年份的数据（跨年写入会被拦截），不同年份的数据不会混入同一账本。
  */
 export interface BusinessLedger {

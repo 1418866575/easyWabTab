@@ -690,7 +690,7 @@ export function calcPurchaseTotals(purchases: BusinessPurchase[]): Record<string
   return totals
 }
 
-/** 带出合计：按商品 Σ带出数量（跨全部收摊记录） */
+/** 带出合计：按商品 Σ带出数量（跨全部销售记录） */
 export function calcBroughtOutTotals(dailyRecords: BusinessDailyRecord[]): Record<string, number> {
   const totals: Record<string, number> = {}
   for (const r of dailyRecords) {
@@ -703,7 +703,7 @@ export function calcBroughtOutTotals(dailyRecords: BusinessDailyRecord[]): Recor
 
 // ===== 进货批次剩余状态（先进先出）与未售完批次均价 =====
 
-/** 按商品累计售出数量（收摊记录口径：带出 − 剩余 − 损耗） */
+/** 按商品累计售出数量（销售记录口径：带出 − 剩余 − 损耗） */
 export function calcSoldTotals(dailyRecords: BusinessDailyRecord[]): Record<string, number> {
   const totals: Record<string, number> = {}
   for (const r of dailyRecords ?? []) {
@@ -741,8 +741,8 @@ export interface PurchaseStockStatus {
   soldOut: boolean // 是否已全部出库（remaining ≤ 0）
   /** 是否该商品 FIFO 队列中最旧的一批（判定「最旧那一笔是否已售完」的对象） */
   isOldest: boolean
-  totalSold: number // 该商品累计售出（全部收摊记录）
-  /** 该商品累计损耗（全部收摊记录） */
+  totalSold: number // 该商品累计售出（全部销售记录）
+  /** 该商品累计损耗（全部销售记录） */
   totalWrittenOff: number
 }
 
@@ -757,7 +757,7 @@ function fifoCompare(a: BusinessPurchase, b: BusinessPurchase): number {
 
 /**
  * 进货批次剩余状态表（purchaseId → 状态）。
- * 规则：同一商品的进货按日期从旧到新排队，收摊售出数量从最旧批次开始依次消耗；
+ * 规则：同一商品的进货按日期从旧到新排队，销售售出数量从最旧批次开始依次消耗；
  * 因此「最旧那一笔是否已全部售出」等价于队首批次的 soldOut。
  */
 export function calcPurchaseStockStatus(
@@ -854,7 +854,7 @@ export function avgUnsoldUnitPrice(
 
 // ===== 严格先进先出（FIFO）成本结转 =====
 
-/** 收摊记录升序：日期升序（同日按 updatedAt / id 升序，保证结转顺序稳定） */
+/** 销售记录升序：日期升序（同日按 updatedAt / id 升序，保证结转顺序稳定） */
 function dailyAscCompare(a: BusinessDailyRecord, b: BusinessDailyRecord): number {
   if (a.date !== b.date) return a.date < b.date ? -1 : 1
   const ua = typeof a.updatedAt === 'string' ? a.updatedAt : ''
@@ -872,7 +872,7 @@ export interface FifoSlice {
   amount: number
 }
 
-/** 某条收摊记录中某个商品的当日结转明细 */
+/** 某条销售记录中某个商品的当日结转明细 */
 export interface FifoItemAllocation {
   /** 售出部分的切片（计入 COGS） */
   soldSlices: FifoSlice[]
@@ -902,7 +902,7 @@ export interface FifoAllocation {
 
 /**
  * 严格先进先出成本结转（唯一权威口径）。
- * 规则：同一商品的进货按「日期 → 创建时间 → id」排队；收摊记录按日期升序逐条处理；
+ * 规则：同一商品的进货按「日期 → 创建时间 → id」排队；销售记录按日期升序逐条处理；
  * 每条记录的出库量 = 售出 + 损耗（= 带出 − 剩余），从队首批次依次消耗，各段按**该批次自己的进货单价**计价。
  * 只有「售出」部分计入 COGS，「损耗」部分单独记 lossCost（不计入毛利）。
  * 进货库存被消耗完仍不够（先卖后记等异常）→ 超出的数量按商品维护的进货单价 purchasePrice 兜底。
@@ -1004,7 +1004,7 @@ export function calcFifoAllocation(
 }
 
 /**
- * 单条收摊记录的严格 FIFO 成本（COGS）。
+ * 单条销售记录的严格 FIFO 成本（COGS）。
  * 优先取结转表里的当日成本；拿不到（未纳入结转/异常）时回退 calcDailyCost（商品维护的进货单价）。
  */
 export function calcDailyCostFifo(
@@ -1064,7 +1064,7 @@ export function shiftDateKey(date: string, days: number): string {
   return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
 }
 
-/** 最近的「早于 date」的收摊记录（编辑当天时不会复制自己） */
+/** 最近的「早于 date」的销售记录（编辑当天时不会复制自己） */
 export function lastDailyBefore(records: BusinessDailyRecord[], date: string): BusinessDailyRecord | null {
   return (
     (records ?? [])
@@ -1089,7 +1089,7 @@ export function dailyTemplateFromLast(records: BusinessDailyRecord[], date: stri
     .map(it => ({ productId: it.productId, broughtOut: it.broughtOut, remaining: 0, loss: 0 }))
 }
 
-// ===== 录入校验（进货 / 收摊 / 手填营业额） =====
+// ===== 录入校验（进货 / 销售 / 手填营业额） =====
 
 export type IssueLevel = 'error' | 'warn'
 
@@ -1129,7 +1129,7 @@ export function validatePurchaseInput(input: {
   return issues
 }
 
-/** 收摊单行校验：剩余/损耗不得大于带出，剩余 + 损耗不得大于带出 */
+/** 销售单行校验：剩余/损耗不得大于带出，剩余 + 损耗不得大于带出 */
 export function validateDailyRow(row: {
   productId?: string
   broughtOut: number
@@ -1154,7 +1154,7 @@ export function validateDailyRow(row: {
   return issues
 }
 
-/** 收摊全部行校验汇总（errors 阻断保存，warns 仅提示） */
+/** 销售全部行校验汇总（errors 阻断保存，warns 仅提示） */
 export function validateDailyRows(
   rows: { productId?: string; broughtOut: number; remaining: number; loss: number }[]
 ): { errors: string[]; warns: string[] } {
@@ -1631,7 +1631,7 @@ export function frequentProductIds(
     .map(([pid]) => pid)
 }
 
-/** 总统计：营业额 = Σ日记录收入；成本 = 纯 COGS（严格 FIFO 逐批结转，按收摊记录，不计支出）；利润/毛利率；支出 = Σ支出金额 */
+/** 总统计：营业额 = Σ日记录收入；成本 = 纯 COGS（严格 FIFO 逐批结转，按销售记录，不计支出）；利润/毛利率；支出 = Σ支出金额 */
 export interface BusinessStats {
   revenue: number
   cost: number
@@ -1650,7 +1650,7 @@ export interface BusinessStats {
 
 export function calcBusinessStats(data: BusinessData): BusinessStats {
   const revenue = data.dailyRecords.reduce((s, r) => s + r.totalRevenue, 0)
-  // 成本 = 售出商品成本（COGS）：严格 FIFO——按收摊日期升序，逐批从最旧进货批次结转，各段用该批次自己的进货单价
+  // 成本 = 售出商品成本（COGS）：严格 FIFO——按销售日期升序，逐批从最旧进货批次结转，各段用该批次自己的进货单价
   const fifo = calcFifoAllocation(data.purchases, data.dailyRecords, data.products)
   let cost = 0
   for (const r of data.dailyRecords) {
@@ -1756,10 +1756,10 @@ export interface TrendPoint {
   revenue: number
   cost: number
   profit: number
-  transactionCount?: number // 当日交易笔数（Σ 各收摊记录 transactionCount）
+  transactionCount?: number // 当日交易笔数（Σ 各销售记录 transactionCount）
 }
 
-/** 近 days 天趋势（含 endDate 当天，升序）：按收摊记录口径——revenue=当日收摊收入；cost=当日收摊 COGS（售出×进货价，缺失商品计 0）；profit=差；进货/支出不入趋势（无收摊记录日全 0） */
+/** 近 days 天趋势（含 endDate 当天，升序）：按销售记录口径——revenue=当日销售收入；cost=当日销售 COGS（售出×进货价，缺失商品计 0）；profit=差；进货/支出不入趋势（无销售记录日全 0） */
 export function calcBusinessTrend(data: BusinessData, endDate: string, days = 30): TrendPoint[] {
   if (!isValidDateKey(endDate) || days <= 0) return []
   const end = new Date(endDate + 'T00:00:00')
@@ -1788,7 +1788,7 @@ export interface MonthlyStat {
   profit: number
   expense: number
   transactionCount: number
-  days: number // 当月有收摊记录的天数
+  days: number // 当月有销售记录的天数
   /** 会员价模拟营业额：Σ售出 ×（会员价 ?? 售价）（用于「如果全按会员价卖」的毛利模拟） */
   memberRevenue: number
   memberProfit: number
@@ -2009,7 +2009,7 @@ export function calcMarkupRate(sellingPrice: number, purchasePrice: number): num
   return Math.round(((sellingPrice - purchasePrice) / purchasePrice) * 10000) / 100
 }
 
-/** P0-1：收摊记录结构化商品明细行 */
+/** P0-1：销售记录结构化商品明细行 */
 export interface DailyItemDetail {
   productId: string
   name: string
@@ -2023,7 +2023,7 @@ export interface DailyItemDetail {
   deleted: boolean
 }
 
-/** 计算收摊记录的结构化商品明细行列表 */
+/** 计算销售记录的结构化商品明细行列表 */
 export function calcDailyItemDetails(
   record: BusinessDailyRecord,
   products: BusinessProduct[]
@@ -2208,7 +2208,7 @@ export function calcProductSummary(data: BusinessData, productId: string): Produ
   }
 }
 
-/** P1-2：库存溯源明细（某商品的进货记录 + 收摊带出记录） */
+/** P1-2：库存溯源明细（某商品的进货记录 + 销售带出记录） */
 export interface InventorySourcePurchase {
   type: 'purchase'
   id: string
@@ -2511,7 +2511,7 @@ function mergeByIdKeepNewest<T>(local: T[] | undefined, remote: T[] | undefined,
   return [...map.values()]
 }
 
-/** 收摊记录按日期唯一：同 date 只保留 updatedAt（缺失取 createdAt）最新的一条 */
+/** 销售记录按日期唯一：同 date 只保留 updatedAt（缺失取 createdAt）最新的一条 */
 function dedupeDailyByDate(records: BusinessDailyRecord[]): BusinessDailyRecord[] {
   const map = new Map<string, BusinessDailyRecord>()
   for (const item of records) {
@@ -2527,7 +2527,7 @@ function dedupeDailyByDate(records: BusinessDailyRecord[]): BusinessDailyRecord[
   return [...map.values()]
 }
 
-/** 单个账本内的业务数据合并（分类同 id 取本地；实体按时间戳较新者胜；收摊按日期去重） */
+/** 单个账本内的业务数据合并（分类同 id 取本地；实体按时间戳较新者胜；销售按日期去重） */
 function mergeLedgerData(l: BusinessData | undefined, r: BusinessData | undefined): BusinessData {
   return {
     productCategories: mergeByIdKeepNewest(l?.productCategories, r?.productCategories, 'id'),
@@ -2579,7 +2579,7 @@ export function ledgerDeleteGuard(
   return 'ok'
 }
 
-/** 清空某账本的交易流水（进货/收摊/支出），保留商品、分类与账本设置；不改入参 */
+/** 清空某账本的交易流水（进货/销售/支出），保留商品、分类与账本设置；不改入参 */
 export function clearLedgerRecords(list: BusinessLedger[], id: string, now: string = new Date().toISOString()): LedgerMutateResult {
   const index = list.findIndex(l => l.id === id)
   if (index === -1) return { ok: false, reason: 'not-found' }

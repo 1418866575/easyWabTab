@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 库存管理：库存总览卡片网格（商品/单位/进货合计/带出合计）+ 低库存预警清单 + 阈值可配置
-// P1-2：库存卡片增加展开溯源功能（进货明细 + 收摊带出记录）
+// P1-2：库存卡片增加展开溯源功能（进货明细 + 销售带出记录）
 import { computed, nextTick, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { agingBatches, calcBroughtOutTotals, calcBatchStock, calcInventory, calcInventorySources, calcPurchaseTotals, findProductCategory, formatYuanOf, localDateKey, lowStockProducts, slowMovingProducts, sortProducts } from '@/composables/businessCore'
@@ -323,7 +323,7 @@ function exportInventoryExcel(): void {
           @click="emit('navigate', src.type === 'purchase' ? 'purchases' : 'daily', traceModalProductId!)"
         >
           <span v-if="src.type === 'purchase'" class="bizinv-source-type purchase">进货</span>
-          <span v-else class="bizinv-source-type daily">收摊</span>
+          <span v-else class="bizinv-source-type daily">销售</span>
           <span class="bizinv-source-date">{{ src.date }}</span>
           <span v-if="src.type === 'purchase'" class="bizinv-source-detail">
             ×{{ src.quantity }} @{{ formatYuanOf(src.unitPrice) }} {{ formatYuanOf(src.total) }}

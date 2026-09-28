@@ -60,7 +60,7 @@ function exportReceivableExcel(): void {
 }
 
 function exportMonthlyExcel(): void {
-  const headers = ['月份', '应收', '实收', '差异', '收摊天数', '手动天数']
+  const headers = ['月份', '应收', '实收', '差异', '销售天数', '手动天数']
   const rows: (string | number)[][] = monthly.value.map(m => [
     m.label,
     m.receivable.toFixed(2),
@@ -116,7 +116,7 @@ function exportExpenseExcel(): void {
           <span class="bizrec-stat-value" data-testid="bizrec-manual-days">{{ receivable.manualDays }} / {{ receivable.diffDays }} 天</span>
         </div>
       </div>
-      <p v-if="receivable.rows.length === 0" class="bizrec-empty" data-testid="bizrec-receivable-empty">暂无收摊记录，无法对账</p>
+      <p v-if="receivable.rows.length === 0" class="bizrec-empty" data-testid="bizrec-receivable-empty">暂无销售记录，无法对账</p>
       <el-table
         v-else
         class="ewt-table"
@@ -126,7 +126,7 @@ function exportExpenseExcel(): void {
         border
         size="small"
         max-height="280"
-        empty-text="暂无收摊记录"
+        empty-text="暂无销售记录"
       >
         <el-table-column label="日期" width="120" align="center" prop="date" />
         <el-table-column label="应收（商品明细）" min-width="140" align="right">
@@ -164,7 +164,7 @@ function exportExpenseExcel(): void {
           class="bizrec-month"
           :class="{ 'has-diff': Math.abs(m.diff) > 0.005 }"
           :data-testid="`bizrec-month-${m.month}`"
-          :title="`${m.label}：应收 ${formatYuanOf(m.receivable)}｜实收 ${formatYuanOf(m.actual)}｜差异 ${formatYuanOf(m.diff)}｜${m.days} 天收摊（${m.manualDays} 天手动）`"
+          :title="`${m.label}：应收 ${formatYuanOf(m.receivable)}｜实收 ${formatYuanOf(m.actual)}｜差异 ${formatYuanOf(m.diff)}｜${m.days} 天销售（${m.manualDays} 天手动）`"
         >
           <span class="bizrec-month-label">{{ m.label }}</span>
           <span class="bizrec-month-actual">{{ formatYuanOf(m.actual) }}</span>
@@ -173,7 +173,7 @@ function exportExpenseExcel(): void {
           </span>
         </div>
       </div>
-      <p class="bizrec-tip">差异 = 实收（收摊记录营业额，可能手动填写）− 应收（售出数量 × 售价自动合计）；有差异的月份标红。</p>
+      <p class="bizrec-tip">差异 = 实收（销售记录营业额，可能手动填写）− 应收（售出数量 × 售价自动合计）；有差异的月份标红。</p>
     </section>
 
     <!-- ③ 进货 ↔ 支出对账 -->

@@ -47,7 +47,7 @@
   justify-content: flex-end;
   margin-bottom: 8px;
 }
-/* 左侧放操作按钮、右侧放视图切换（与进货/收摊的工具条一致） */
+/* 左侧放操作按钮、右侧放视图切换（与进货/销售的工具条一致） */
 .ewt-table-toolbar.is-split {
   justify-content: space-between;
 }

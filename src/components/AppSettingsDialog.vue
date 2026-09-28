@@ -1254,7 +1254,7 @@ async function handleBizImportFile(event: Event): Promise<void> {
     try {
       const data = await businessStore.importData(parsed.data)
       toast.success(
-        `导入成功：商品 ${data.products.length} 个，进货 ${data.purchases.length} 条，收摊记录 ${data.dailyRecords.length} 条，支出 ${data.expenses.length} 笔`
+        `导入成功：商品 ${data.products.length} 个，进货 ${data.purchases.length} 条，销售记录 ${data.dailyRecords.length} 条，支出 ${data.expenses.length} 笔`
       )
     } catch (err) {
       toast.error(`导入失败：${err instanceof Error ? err.message : '文件格式无效'}`)
@@ -1331,7 +1331,7 @@ function ledgerDeleteBlockReason(l: BusinessLedger): string {
 async function handleClearLedger(l: BusinessLedger): Promise<void> {
   const c = ledgerRecordCounts(l.data)
   const ok = await showConfirm(
-    `仅清空交易记录：删除进货 ${c.purchases} 条、收摊记录 ${c.dailyRecords} 条、支出 ${c.expenses} 笔。\n商品/分类/账本设置保留，账本「${l.name}」仍然保留。\n\n⚠ 该操作不可恢复，建议先导出销售记账备份。`,
+    `仅清空交易记录：删除进货 ${c.purchases} 条、销售记录 ${c.dailyRecords} 条、支出 ${c.expenses} 笔。\n商品/分类/账本设置保留，账本「${l.name}」仍然保留。\n\n⚠ 该操作不可恢复，建议先导出销售记账备份。`,
     '清空交易记录确认'
   )
   if (!ok) return
@@ -1351,7 +1351,7 @@ async function handleDeleteLedgerRow(l: BusinessLedger): Promise<void> {
   }
   const c = ledgerRecordCounts(l.data)
   const ok = await showConfirm(
-    `删除账本「${l.name}」：其下商品 ${c.products} 个、进货 ${c.purchases} 条、收摊记录 ${c.dailyRecords} 条、支出 ${c.expenses} 笔，以及分类与账本设置将全部移除。\n\n⚠ 该操作不可恢复，建议先导出销售记账备份。`,
+    `删除账本「${l.name}」：其下商品 ${c.products} 个、进货 ${c.purchases} 条、销售记录 ${c.dailyRecords} 条、支出 ${c.expenses} 笔，以及分类与账本设置将全部移除。\n\n⚠ 该操作不可恢复，建议先导出销售记账备份。`,
     '删除账本确认'
   )
   if (!ok) return
@@ -3158,7 +3158,7 @@ onUnmounted(() => {
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">销售记账备份（导入/导出）</h3>
           </div>
-          <p class="wb-menu-hint">独立导出销售记账七字段（商品/进货/收摊/支出/分类/设置）为 JSON 文件；导入时当前销售记账数据将被覆盖</p>
+          <p class="wb-menu-hint">独立导出销售记账七字段（商品/进货/销售/支出/分类/设置）为 JSON 文件；导入时当前销售记账数据将被覆盖</p>
           <div class="remind-actions">
             <el-button size="small" data-testid="bizsettings-export" @click="handleBizExport"><Icon name="upload" /> 导出销售备份</el-button>
             <el-button size="small" data-testid="bizsettings-import" @click="handleBizImportClick"><Icon name="download" /> 导入销售备份</el-button>

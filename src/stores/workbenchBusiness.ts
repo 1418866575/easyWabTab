@@ -50,7 +50,7 @@ import { markDirty } from '@/composables/useCloudSync'
 //
 // v2 结构：账本（BusinessLedger）是最外层数据容器，按自然年创建、**同一年份可有多本**（年内序号 seq 唯一，编号 YYYY-NN）；
 // 所有业务数据挂在「当前账本」的 data 下，切换账本即整体切换数据集；
-// 每本账本只记录其所属年份的数据：写入（进货/收摊/支出）时按日期做跨年守卫，跨年数据不混入同一账本。
+// 每本账本只记录其所属年份的数据：写入（进货/销售/支出）时按日期做跨年守卫，跨年数据不混入同一账本。
 // 对外仍暴露与旧版同名的 products / purchases / dailyRecords / expenses / settings / 两类分类，
 // 但它们现在是「指向当前账本」的可写 computed —— 业务面板无需感知账本即可继续工作。
 export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => {
@@ -205,7 +205,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     return ledgerDeleteGuardCore(ledgers.value, id, currentLedgerId.value)
   }
 
-  /** 仅清空某账本的交易流水（进货/收摊/支出），账本本体与商品/分类/设置保留 */
+  /** 仅清空某账本的交易流水（进货/销售/支出），账本本体与商品/分类/设置保留 */
   function clearLedgerRecords(id: string): LedgerMutateResult {
     const r = clearLedgerRecordsCore(ledgers.value, id)
     if (r.ok) {
@@ -385,7 +385,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
   async function deleteProduct(id: string): Promise<{ ok: boolean; reason: 'not-found' | 'in-use' | 'ok' }> {
     const index = products.value.findIndex(p => p.id === id)
     if (index === -1) return { ok: false, reason: 'not-found' }
-    // 被进货/收摊记录引用 → 禁删（防历史统计失真）；停售请用 active 开关
+    // 被进货/销售记录引用 → 禁删（防历史统计失真）；停售请用 active 开关
     const inUse =
       purchases.value.some(p => p.productId === id) ||
       dailyRecords.value.some(r => r.items.some(it => it.productId === id))
@@ -459,13 +459,13 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     await saveBusiness()
   }
 
-  // ===== 收摊日记录（date 唯一 upsert 语义；totalRevenue 默认由 core 算，传 revenueOverride 则以手动金额为准） =====
+  // ===== 销售日记录（date 唯一 upsert 语义；totalRevenue 默认由 core 算，传 revenueOverride 则以手动金额为准） =====
   async function upsertDailyRecord(input: {
     date: string
     items: DailyRecordItem[]
     note?: string
     transactionCount?: number
-    /** 手动填写的营业额（收摊优化）：传入则覆盖自动合计，保留两位小数 */
+    /** 手动填写的营业额（销售优化）：传入则覆盖自动合计，保留两位小数 */
     revenueOverride?: number | null
   }): Promise<LedgerWriteResult> {
     const guard = guardLedgerYear(input.date)

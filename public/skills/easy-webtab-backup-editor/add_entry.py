@@ -412,7 +412,7 @@ def h_edit(data, args):
     if "updatedAt" in entry:
         entry["updatedAt"] = ts()
 
-    # 特殊：收摊记录改了 items 则重算营业额
+    # 特殊：销售记录改了 items 则重算营业额
     if args.target == "business.dailyRecords" and "items" in fields:
         products = {p["id"]: p for p in business_root(data).get("products", [])}
         entry["totalRevenue"] = sum(
@@ -503,7 +503,7 @@ def build_parser():
     pex.add_argument("--date", required=True); pex.add_argument("--category", required=True)
     pex.add_argument("--amount", required=True, type=float); add_common(pex)
 
-    pdr = sub.add_parser("daily-record", parents=[common], help="新增/追加收摊记录 → business.json")
+    pdr = sub.add_parser("daily-record", parents=[common], help="新增/追加销售记录 → business.json")
     pdr.add_argument("--date", required=True)
     pdr.add_argument("--items-json", required=True, dest="items_json",
                      help='JSON 数组，如 [{"productId":"bp_1","broughtOut":30,"remaining":5,"loss":1}]')

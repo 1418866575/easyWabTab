@@ -64,13 +64,13 @@ const ledgerYear = computed(() => store.currentLedgerYear)
 const ledgerName = computed(() => store.currentLedgerName)
 const ledgerCode = computed(() => store.currentLedgerCode)
 
-// 当前账本内的收摊记录（账本即年度容器，不做二次按年过滤）
+// 当前账本内的销售记录（账本即年度容器，不做二次按年过滤）
 const ledgerDailyRecords = computed(() => data.value.dailyRecords)
 const ledgerStats = computed(() => calcBusinessStats(data.value))
 
 /**
  * 毛利率 =（营业收入 − 成本价）/ 营业收入 × 100%
- * 成本价 = 严格先进先出（FIFO）逐批结转：收摊按日期升序，售出数量从最旧进货批次开始消耗，各段用该批次自己的进货单价
+ * 成本价 = 严格先进先出（FIFO）逐批结转：销售按日期升序，售出数量从最旧进货批次开始消耗，各段用该批次自己的进货单价
  * 直接取 calcBusinessStats.margin（内部已按同一口径算成本），营业收入为 0 时为 0，不会出现 NaN
  */
 const grossMargin = computed(() => ledgerStats.value.margin)
@@ -128,7 +128,7 @@ const dateText = computed(() =>
     </template>
 
     <template v-else>
-      <!-- 问候头：问候语 + 日期 + 出摊总天数（右上角，点击进入收摊记录） -->
+      <!-- 问候头：问候语 + 日期 + 出摊总天数（右上角，点击进入销售记录） -->
       <section class="bizhome-greeting" data-testid="bizhome-greeting">
         <div class="bizhome-greeting-info">
           <h2 class="bizhome-greeting-title">{{ greeting }}{{ store.settings.stallName ? '，' + store.settings.stallName : '' }}</h2>
@@ -138,7 +138,7 @@ const dateText = computed(() =>
           class="bizhome-greeting-stat clickable"
           role="button"
           tabindex="0"
-          title="出摊总天数（进入收摊记录）"
+          title="出摊总天数（进入销售记录）"
           data-testid="bizhome-stalldays"
           @click="go('daily')"
           @keydown.enter="go('daily')"
@@ -755,7 +755,7 @@ html.dark .sk-block::after {
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
-/* 出摊总天数：问候头右上角，点击进入收摊记录 */
+/* 出摊总天数：问候头右上角，点击进入销售记录 */
 .bizhome-greeting-stat {
   display: flex;
   flex-direction: column;

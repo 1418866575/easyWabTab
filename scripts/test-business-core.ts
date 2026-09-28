@@ -343,7 +343,7 @@ test('T16 rankings', () => {
   assert.equal(cat[1].name, '饮品')
 })
 
-// T17 — calcBusinessTrend：窗口/缺失补零/收摊记录口径（进货/支出不入趋势）
+// T17 — calcBusinessTrend：窗口/缺失补零/销售记录口径（进货/支出不入趋势）
 test('T17 calcBusinessTrend', () => {
   const d = buildData()
   const t = calcBusinessTrend(d, '2026-08-05', 7)
@@ -351,9 +351,9 @@ test('T17 calcBusinessTrend', () => {
   assert.equal(t[0].date, '2026-07-30')
   const day = t.find(x => x.date === '2026-08-02')!
   assert.equal(day.revenue, 100)
-  assert.equal(day.cost, 68) // 当日收摊 COGS：售出 24×2 + 20×1 = 68（进货/支出不入趋势）
+  assert.equal(day.cost, 68) // 当日销售 COGS：售出 24×2 + 20×1 = 68（进货/支出不入趋势）
   assert.equal(day.profit, 32)
-  const purchaseDay = t.find(x => x.date === '2026-08-01')! // 进货日无收摊记录 → 全 0
+  const purchaseDay = t.find(x => x.date === '2026-08-01')! // 进货日无销售记录 → 全 0
   assert.equal(purchaseDay.revenue, 0)
   assert.equal(purchaseDay.cost, 0)
   assert.equal(purchaseDay.profit, 0)
@@ -524,7 +524,7 @@ test('T23 calcPurchaseTotals', () => {
   assert.deepEqual(calcPurchaseTotals([]), {})
 })
 
-// T24 — calcBroughtOutTotals：按商品 Σ带出数量（跨全部收摊记录累加/无记录无键/空数组）
+// T24 — calcBroughtOutTotals：按商品 Σ带出数量（跨全部销售记录累加/无记录无键/空数组）
 test('T24 calcBroughtOutTotals', () => {
   const d = buildData()
   const totals = calcBroughtOutTotals(d.dailyRecords)
@@ -538,7 +538,7 @@ test('T24 calcBroughtOutTotals', () => {
   }
   const both = calcBroughtOutTotals([...d.dailyRecords, second])
   assert.equal(both.p1, 35)
-  // 无收摊记录的商品无键
+  // 无销售记录的商品无键
   assert.ok(!('ghost' in both))
   // 空数组 → {}
   assert.deepEqual(calcBroughtOutTotals([]), {})
@@ -736,7 +736,7 @@ test('T32 mergeBusinessStore legacy envelope', () => {
   assert.equal(merged.currentLedgerId, 'L')
 })
 
-// T33 — ledgerRecordCounts：商品/进货/收摊/支出条数统计（删除前的关联数据提示口径）
+// T33 — ledgerRecordCounts：商品/进货/销售/支出条数统计（删除前的关联数据提示口径）
 test('T33 ledgerRecordCounts', () => {
   const d = buildData()
   const c = ledgerRecordCounts(d)
@@ -766,7 +766,7 @@ test('T34 ledgerDeleteGuard', () => {
   assert.equal(ledgerDeleteGuard(list, 'a', ''), 'ok')
 })
 
-// T35 — clearLedgerRecords：清空进货/收摊/支出流水，保留商品、分类与账本设置
+// T35 — clearLedgerRecords：清空进货/销售/支出流水，保留商品、分类与账本设置
 test('T35 clearLedgerRecords', () => {
   const d = buildData()
   const list = [{ id: 'a', year: 2026, name: 'A', createdAt: 'c', updatedAt: 'c', data: d }]
@@ -1005,7 +1005,7 @@ test('T45 进货价自动均价', () => {
     { id: 'b2', productId: 'p1', quantity: 10, unitPrice: 3, total: 30, date: '2026-02-01', createdAt: 'b' },
     { id: 'b3', productId: 'p1', quantity: 10, unitPrice: 4.1, total: 41, date: '2026-03-01', createdAt: 'c' }
   ]
-  // 无收摊：三批都未售完 → (2 + 3 + 4.1) / 3 = 3.033… → 3.03
+  // 无销售：三批都未售完 → (2 + 3 + 4.1) / 3 = 3.033… → 3.03
   assert.equal(avgUnsoldUnitPrice(purchases, [], 'p1'), 3.03)
   // 售出 10 → 最旧批次 b1 售完 → (3 + 4.1) / 2 = 3.55
   const sold10: BusinessDailyRecord[] = [
@@ -1074,7 +1074,7 @@ test('T47 进货录入校验', () => {
 })
 
 // T48 — validateDailyRow/validateDailyRows：剩余/损耗 > 带出 → error；空行 → warn
-test('T48 收摊行校验', () => {
+test('T48 销售行校验', () => {
   assert.deepEqual(validateDailyRow({ broughtOut: 10, remaining: 2, loss: 1 }), [])
   assert.equal(validateDailyRow({ broughtOut: 5, remaining: 6, loss: 0 }).some(i => i.level === 'error' && i.message.includes('剩余')), true)
   assert.equal(validateDailyRow({ broughtOut: 5, remaining: 0, loss: 6 }).some(i => i.level === 'error' && i.message.includes('损耗')), true)
@@ -1475,7 +1475,7 @@ test('T62 毛利率与成本价边界', () => {
     expenses: [{ id: 'e1', date: '2026-05-01', categoryId: 'expense-stall', amount: 10, title: '摊位费', createdAt: 'c' }]
   } as BusinessData
   const stats = calcBusinessStats(data)
-  assert.equal(stats.revenue, 50, '营业收入 = 收摊营业额')
+  assert.equal(stats.revenue, 50, '营业收入 = 销售营业额')
   assert.equal(stats.cost, 20, '成本价 = 售出 10 × 进货单价 2')
   assert.equal(stats.margin, 0.6, '（50 − 20）/ 50 = 60%')
   assert.equal(stats.expenseTotal, 10, '支出单独统计，不计入成本价')

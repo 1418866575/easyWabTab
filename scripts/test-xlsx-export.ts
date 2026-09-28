@@ -27,15 +27,15 @@ const a: typeof assert = new Proxy(assert, {
 test('T1 xlsxFileName 形状', () => {
   const d = new Date()
   const pad = (n: number) => String(n).padStart(2, '0')
-  const expect = `收摊记录_${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.xlsx`
-  a.equal(xlsxFileName('收摊记录'), expect)
+  const expect = `销售记录_${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.xlsx`
+  a.equal(xlsxFileName('销售记录'), expect)
   a.match(xlsxFileName('库存总览'), /^库存总览_\d{4}-\d{2}-\d{2}\.xlsx$/)
   a.match(xlsxFileName('2026年月度报表'), /_\d{4}-\d{2}-\d{2}\.xlsx$/)
 })
 
 // T2 — 工作表名清洗：非法字符、长度、空串回退
 test('T2 safeSheetName 清洗', () => {
-  a.equal(safeSheetName('收摊记录'), '收摊记录')
+  a.equal(safeSheetName('销售记录'), '销售记录')
   a.equal(safeSheetName('应收实收对账-2026'), '应收实收对账-2026')
   a.equal(safeSheetName('a\\b/c?d*e[f]:g'), 'abcdefg')
   a.equal(safeSheetName('一二三四五六七八九十'.repeat(5)), '一二三四五六七八九十'.repeat(4).slice(0, 31))
@@ -84,7 +84,7 @@ test('T6 xlsxFileName 账本前缀与容错', () => {
   const pad = (n: number) => String(n).padStart(2, '0')
   const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
   // 年份（数字）+ 账本名 + 主体
-  a.equal(xlsxFileName('收摊记录', { year: 2026, ledgerName: '师范大学西门口' }), `2026_师范大学西门口_收摊记录_${date}.xlsx`)
+  a.equal(xlsxFileName('销售记录', { year: 2026, ledgerName: '师范大学西门口' }), `2026_师范大学西门口_销售记录_${date}.xlsx`)
   // 只有年份：省略账本名段，不出现连续下划线
   a.equal(xlsxFileName('支出记录', { year: 2026 }), `2026_支出记录_${date}.xlsx`)
   a.equal(xlsxFileName('支出记录', { year: 2026, ledgerName: '' }), `2026_支出记录_${date}.xlsx`)
@@ -113,8 +113,8 @@ test('T7 sanitizeFileNamePart 非法字符', () => {
   const pad = (n: number) => String(n).padStart(2, '0')
   const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
   a.equal(
-    xlsxFileName('收摊/记录', { year: 2026, ledgerName: '师大*西门:口' }),
-    `2026_师大西门口_收摊记录_${date}.xlsx`
+    xlsxFileName('销售/记录', { year: 2026, ledgerName: '师大*西门:口' }),
+    `2026_师大西门口_销售记录_${date}.xlsx`
   )
 })
 

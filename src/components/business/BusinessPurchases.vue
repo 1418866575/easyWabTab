@@ -481,7 +481,7 @@ async function handleDelete(id: string): Promise<void> {
               <span v-else style="color: var(--color-text-muted, #9ca3af);">—</span>
             </template>
           </el-table-column>
-          <!-- 剩余状态：按收摊售出数量先进先出消耗，判定该批（最旧批次优先）是否已全部售出 -->
+          <!-- 剩余状态：按销售售出数量先进先出消耗，判定该批（最旧批次优先）是否已全部售出 -->
           <el-table-column label="剩余状态" width="140" align="center">
             <template #default="{ row }">
               <span

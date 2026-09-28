@@ -171,7 +171,7 @@ function exportProfitExcel(): void {
 
 /** 导出近 12 个月数据 Excel（当前口径） */
 function exportMonthlyExcel(): void {
-  const headers = ['月份', '营业额', '成本', '利润', '支出', '交易笔数', '收摊天数', '会员价模拟营业额', '会员价模拟毛利']
+  const headers = ['月份', '营业额', '成本', '利润', '支出', '交易笔数', '销售天数', '会员价模拟营业额', '会员价模拟毛利']
   const rows = monthlyStats.value.map(m => [
     m.label,
     m.revenue.toFixed(2),
@@ -275,7 +275,7 @@ function printReport(): void {
           </template>
         </div>
       </div>
-      <p v-else class="bizstats-empty bizstats-empty-trend" data-testid="bizstats-trend-empty">暂无趋势数据，先添加进货与收摊记录吧</p>
+      <p v-else class="bizstats-empty bizstats-empty-trend" data-testid="bizstats-trend-empty">暂无趋势数据，先添加进货与销售记录吧</p>
     </section>
 
     <!-- 右侧：支出占比（上）+ 营业额占比（下），垂直排列 -->
@@ -383,7 +383,7 @@ function printReport(): void {
         </div>
       </div>
       <p class="bizstats-month-total" data-testid="bizstats-month-total">
-        全年{{ monthModeLabel }}合计：{{ formatYuanOf(monthTotal) }}（共 {{ monthlyStats.reduce((s, m) => s + m.days, 0) }} 天收摊记录）
+        全年{{ monthModeLabel }}合计：{{ formatYuanOf(monthTotal) }}（共 {{ monthlyStats.reduce((s, m) => s + m.days, 0) }} 天销售记录）
       </p>
     </section>
 
@@ -409,7 +409,7 @@ function printReport(): void {
         </div>
       </div>
       <p class="bizstats-profit-tip" data-testid="bizstats-profit-tip">
-        售出数量取自收摊记录（带出 − 剩余 − 损耗），成本按商品进货价计算；共 {{ memberPriceCount }} 个商品设置了会员价。
+        售出数量取自销售记录（带出 − 剩余 − 损耗），成本按商品进货价计算；共 {{ memberPriceCount }} 个商品设置了会员价。
       </p>
 
       <!-- 按商品 -->

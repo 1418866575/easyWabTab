@@ -19,7 +19,7 @@ function cardFields(row: any) {
 }
 
 import Icon from '../Icon.vue'
-// 收摊记录：日记录表格（date 唯一 upsert）+ 编辑弹框（商品行：带出/剩余/损耗，收入自动合计）
+// 销售记录：日记录表格（date 唯一 upsert）+ 编辑弹框（商品行：带出/剩余/损耗，收入自动合计）
 // P0-1：结构化商品明细行（展开行展示）
 // P0-3：编辑弹框增加库存上下文（当前库存、预计库存、小计实时计算）
 import { computed, reactive, ref, watch } from 'vue'
@@ -36,15 +36,15 @@ const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
 const store = useWorkbenchBusinessStore()
 const toast = useToast()
 
-// ===== 录入提效：复制上日（上一条收摊记录的商品 + 带出数量） =====
-/** 早于当前编辑日期的最近一条收摊记录（编辑当天时不会复制自己） */
+// ===== 录入提效：复制上日（上一条销售记录的商品 + 带出数量） =====
+/** 早于当前编辑日期的最近一条销售记录（编辑当天时不会复制自己） */
 const lastRecord = computed(() => lastDailyBefore(store.dailyRecords, editingDate.value))
 
 /** 复制上日：用上一条记录的商品 + 带出数量替换当前行，剩余/损耗归零 */
 function copyFromLast(): void {
   const tpl = dailyTemplateFromLast(store.dailyRecords, editingDate.value)
   if (tpl.length === 0) {
-    toast.info('上一条收摊记录没有带出商品')
+    toast.info('上一条销售记录没有带出商品')
     return
   }
   rows.splice(0, rows.length, ...tpl.map(r => ({ ...r })))
@@ -80,7 +80,7 @@ function dailyItemDetails(record: BusinessDailyRecord) {
 /** 导出文件名前缀：账本年份 + 账本名称（缺失时由 xlsxFileName 自动省略该段） */
 const ledgerMeta = computed(() => ({ year: store.currentLedgerYear, ledgerName: store.currentLedgerName }))
 
-// ===== 一键导出 Excel（收摊记录：按「日期 × 商品」展开，便于透视）=====
+// ===== 一键导出 Excel（销售记录：按「日期 × 商品」展开，便于透视）=====
 function exportDailyExcel(): void {
   const headers = ['日期', '商品', '带出', '售出', '损耗', '单价', '小计', '当日营业额', '交易笔数']
   const rows: (string | number)[][] = []
@@ -103,7 +103,7 @@ function exportDailyExcel(): void {
       rows.push([rec.date, '（无商品明细）', '', '', '', '', '', rec.totalRevenue.toFixed(2), rec.transactionCount ?? ''])
     }
   }
-  void exportXlsx('收摊记录', headers, rows, ledgerMeta.value)
+  void exportXlsx('销售记录', headers, rows, ledgerMeta.value)
 }
 
 // ===== 编辑弹框（动态商品行） =====
@@ -128,7 +128,7 @@ function rowStock(productId: string): number {
   return stockMap.value[productId] ?? 0
 }
 
-/** 获取商品单位：单位属于商品，收摊记录本身不存；回退「件」仅用于商品已删除/缺值的兜底 */
+/** 获取商品单位：单位属于商品，销售记录本身不存；回退「件」仅用于商品已删除/缺值的兜底 */
 function rowUnit(productId: string): string {
   return rowProduct(productId)?.unit || '件'
 }
@@ -168,13 +168,13 @@ function resetRevenueToAuto(): void {
 }
 
 /**
- * 成本口径：严格先进先出（FIFO）——收摊按日期升序逐条结转，售出/损耗从最旧进货批次开始消耗，
+ * 成本口径：严格先进先出（FIFO）——销售按日期升序逐条结转，售出/损耗从最旧进货批次开始消耗，
  * 各段用该批次自己的进货单价，因此同一商品多次进货时成本会随批次自动变化。
  */
 /** 已保存记录的结转表（列表展示用） */
 const fifoAlloc = computed(() => calcFifoAllocation(store.purchases, store.dailyRecords, store.products))
 
-/** 弹框草稿在结转表中的占位 id（收摊按日期 upsert，草稿替换同一天的旧记录参与结转） */
+/** 弹框草稿在结转表中的占位 id（销售按日期 upsert，草稿替换同一天的旧记录参与结转） */
 const FORM_RECORD_ID = '__daily_form__'
 /** 弹框未保存时的结转表：把草稿按当前日期并入，保证预览成本 = 保存后的成本 */
 const fifoAllocWithForm = computed(() => {
@@ -299,7 +299,7 @@ async function handleSave(): Promise<void> {
 }
 
 async function handleDelete(id: string): Promise<void> {
-  if (!await showConfirm('确定要删除这条收摊记录吗？删除后统计将重新计算。')) return
+  if (!await showConfirm('确定要删除这条销售记录吗？删除后统计将重新计算。')) return
   await store.deleteDailyRecord(id)
 }
 </script>
@@ -308,13 +308,13 @@ async function handleDelete(id: string): Promise<void> {
   <div class="bizday">
     <div class="ewt-table-toolbar is-split">
       <div class="bizday-toolbar-left">
-        <el-button type="primary" data-testid="bizday-add" @click="startAdd">＋ 收摊记录</el-button>
+        <el-button type="primary" data-testid="bizday-add" @click="startAdd">＋ 销售记录</el-button>
         <el-button class="btn-export-xlsx" data-testid="bizday-export" :disabled="sorted.length === 0" @click="exportDailyExcel">导出 Excel</el-button>
       </div>
       <ViewModeToggle v-if="sorted.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
     </div>
 
-    <div v-if="sorted.length === 0" class="bizday-empty" data-testid="bizday-empty">暂无收摊记录，点击左上角记下今天的第一笔</div>
+    <div v-if="sorted.length === 0" class="bizday-empty" data-testid="bizday-empty">暂无销售记录，点击左上角记下今天的第一笔</div>
     <template v-else>
       <div class="bizday-table-wrap">
         <el-table v-if="vm.mode === 'list'" class="ewt-table"
@@ -325,7 +325,7 @@ async function handleDelete(id: string): Promise<void> {
           size="default"
           style="width: 100%"
           height="100%"
-          empty-text="暂无收摊记录"
+          empty-text="暂无销售记录"
           row-key="id"
         >
           <!-- 展开行：商品明细 -->
@@ -442,7 +442,7 @@ async function handleDelete(id: string): Promise<void> {
     >
       <template #header>
         <div class="biz-dialog-header">
-          <h3>收摊记录</h3>
+          <h3>销售记录</h3>
           <button class="biz-dialog-close" @click="showDialog = false"><Icon name="close" /></button>
         </div>
       </template>
@@ -541,7 +541,7 @@ async function handleDelete(id: string): Promise<void> {
           <label>交易笔数（可选，当天顾客买单次数）</label>
           <el-input-number v-model="formTransactionCount" :min="0" :step="1" size="small" controls-position="right" data-testid="bizday-form-transaction-count" />
         </div>
-        <!-- 收摊优化：笔数后新增营业额字段，可手动修改（保留两位小数），未手动时自动跟随商品明细合计 -->
+        <!-- 销售优化：笔数后新增营业额字段，可手动修改（保留两位小数），未手动时自动跟随商品明细合计 -->
         <div class="biz-field">
           <label>营业额（默认按商品明细自动合计，可手动修改）</label>
           <div class="bizday-revenue-field">
@@ -877,7 +877,7 @@ async function handleDelete(id: string): Promise<void> {
   padding: 6px 8px;
 }
 
-/* ===== 收摊优化：手动营业额（笔数之后） ===== */
+/* ===== 销售优化：手动营业额（笔数之后） ===== */
 .bizday-revenue-manual-tag {
   padding: 1px 6px;
   border-radius: 999px;
@@ -1035,7 +1035,7 @@ html.dark .biz-input {
   width: 90px;
 }
 
-/* 移动端：表格工具行（收摊记录 + 导出 + 视图切换）换行，按钮不被压扁变形 */
+/* 移动端：表格工具行（销售记录 + 导出 + 视图切换）换行，按钮不被压扁变形 */
 @media (max-width: 767px) {
   .ewt-table-toolbar.is-split {
     flex-wrap: wrap;

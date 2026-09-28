@@ -1,6 +1,6 @@
 ﻿---
 name: "easy-webtab-backup-editor"
-description: "当用户要\"记录/新增/添加/修改\"数据到 easy-web-tab 备份时触发。支持：新增网站、待办、便签、倒计时、记账、运动/体重、习惯、商品/进货/收摊/支出；修改上述已有条目（按 id 定位、只更新指定字段）。禁止：删除已有数据。数据目录由环境变量 EASY_WEBTAB_DIR 或 --dir 指定（5 个独立 JSON 文件：nav.json / icons.json / workbench.json / business.json / student.json）"
+description: "当用户要\"记录/新增/添加/修改\"数据到 easy-web-tab 备份时触发。支持：新增网站、待办、便签、倒计时、记账、运动/体重、习惯、商品/进货/销售/支出；修改上述已有条目（按 id 定位、只更新指定字段）。禁止：删除已有数据。数据目录由环境变量 EASY_WEBTAB_DIR 或 --dir 指定（5 个独立 JSON 文件：nav.json / icons.json / workbench.json / business.json / student.json）"
 ---
 
 # easy-web-tab 备份数据编辑器
@@ -30,7 +30,7 @@ description: "当用户要\"记录/新增/添加/修改\"数据到 easy-web-tab 
 | `nav.json` | 网站导航、分类、搜索引擎、主题、背景、倒计时/待办分类注册表（prefs） | 新增网站 |
 | `icons.json` | 自定义图标（Base64 dataUrl 数组） | 本技能不提供新增命令（走前端上传） |
 | `workbench.json` | 待办、便签、日记、倒计时、记账、健康、习惯、番茄钟、设置、密码 | 新增待办/便签/倒计时/记账/运动/体重/习惯 |
-| `business.json` | 销售记账（商品/进货/收摊/支出） | 新增商品/进货/收摊/支出 |
+| `business.json` | 销售记账（商品/进货/销售/支出） | 新增商品/进货/销售/支出 |
 | `student.json` | 学生工作台 15 模块（作业/错题/阅读/复习/计划/奖励等） | 仅 generic 兜底，本批次不提供专用命令 |
 
 **文件自动路由**：脚本根据子命令自动选择目标文件，无需手动指定。
@@ -332,7 +332,7 @@ description: "当用户要\"记录/新增/添加/修改\"数据到 easy-web-tab 
 }
 ```
 
-### 11. 新增收摊记录 → business.json 的 `business.dailyRecords[]`（BusinessDailyRecord）
+### 11. 新增销售记录 → business.json 的 `business.dailyRecords[]`（BusinessDailyRecord）
 
 **新增逻辑：先查同日期记录是否存在，存在则 items 追加，不存在直接新增。**
 
@@ -437,7 +437,7 @@ description: "当用户要\"记录/新增/添加/修改\"数据到 easy-web-tab 
 | 8 | "习惯"/"打卡" | habits.habits | workbench.json |
 | 9 | "商品"/"产品" | business.products | business.json |
 | 10 | "进货"/"采购"+商品+数量 | business.purchases | business.json |
-| 11 | "收摊"/"营业额"+日期 | business.dailyRecords | business.json |
+| 11 | "销售"/"营业额"+日期 | business.dailyRecords | business.json |
 | 12 | "支出"+"充电"/"摊位费"/"交通费"等+金额+日期 | business.expenses | business.json |
 
 **无法判定时必须询问**：当用户输入无法匹配上表任何关键词，或语义模糊可归属多个模块时，**不要猜测**，直接列出可能的模块选项让用户确认。例如：
@@ -526,14 +526,14 @@ python add_entry.py edit --target ledger.entries --id ld_20260825_xxxx --set-jso
 # 修改：网站（prefs.user-sites 用 url 作为 id）
 python add_entry.py edit --target prefs.user-sites --id https://www.taobao.com --set-json "{\"name\":\"淘宝(改名)\"}"
 
-# 修改：收摊记录改了 items 会自动重算 totalRevenue
+# 修改：销售记录改了 items 会自动重算 totalRevenue
 python add_entry.py edit --target business.dailyRecords --id bd_20260825_xxxx --set-json "{\"items\":[{\"productId\":\"bp_1\",\"broughtOut\":30,\"remaining\":5,\"loss\":1}]}"
 ```
 
-**注意**：`daily-record` 的 `--items-json` 中 `productId` 必须已存在于 `business.products`，营业额按 `(broughtOut-remaining-loss) × sellingPrice` 自动计算；同日期已存在收摊记录时自动追加而非新建。
+**注意**：`daily-record` 的 `--items-json` 中 `productId` 必须已存在于 `business.products`，营业额按 `(broughtOut-remaining-loss) × sellingPrice` 自动计算；同日期已存在销售记录时自动追加而非新建。
 
 **`edit` 使用要点**：
 - `--id` 必须能唯一定位一条已有记录；网站用 `url` 当 id，其余用条目自身的 `id`。不知道 id 时先让我在对应 JSON 文件里查。
 - `--set-json` 是**部分更新**：只写你要改的字段，其他字段（含 `createdAt`、密码字段）一律不动；`updatedAt` 会自动刷新为当前时间。
-- `business.dailyRecords` 若改了 `items`，`totalRevenue` 会按最新 items 重算；但 `business.products` 改售价**不会**级联重算历史收摊记录的营业额（避免误改），请以应用内数据为准。
+- `business.dailyRecords` 若改了 `items`，`totalRevenue` 会按最新 items 重算；但 `business.products` 改售价**不会**级联重算历史销售记录的营业额（避免误改），请以应用内数据为准。
 - 找不到 id → 脚本报错并停止，**绝不**新增或删除。

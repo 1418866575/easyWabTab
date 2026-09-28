@@ -158,13 +158,13 @@ async function handleDelete(p: BusinessProduct): Promise<boolean> {
   if (!await showConfirm(`确定要删除商品「${p.name}」吗？`)) return false
   const r = await store.deleteProduct(p.id)
   if (!r.ok) {
-    toast.error(r.reason === 'in-use' ? '该商品已有进货或收摊记录，无法删除（可改为停售）' : '商品不存在')
+    toast.error(r.reason === 'in-use' ? '该商品已有进货或销售记录，无法删除（可改为停售）' : '商品不存在')
     return false
   }
   return true
 }
 
-// 编辑弹框内删除：成功后关闭弹框；失败（如已有进货/收摊记录）保留弹框看提示
+// 编辑弹框内删除：成功后关闭弹框；失败（如已有进货/销售记录）保留弹框看提示
 async function handleDeleteCurrent(): Promise<void> {
   const p = store.products.find(x => x.id === editingId.value)
   if (!p) return
@@ -480,10 +480,10 @@ function drawerMarkupRate(): number | null {
           </div>
         </div>
 
-        <!-- 收摊记录（最近 5 笔） -->
+        <!-- 销售记录（最近 5 笔） -->
         <div class="bizprod-drawer-section">
-          <div class="bizprod-drawer-section-title"><Icon name="daily" :size="15" /> 收摊记录（最近 5 笔）</div>
-          <p v-if="drawerSummary.recentDailyRecords.length === 0" class="bizprod-drawer-empty">暂无收摊记录</p>
+          <div class="bizprod-drawer-section-title"><Icon name="daily" :size="15" /> 销售记录（最近 5 笔）</div>
+          <p v-if="drawerSummary.recentDailyRecords.length === 0" class="bizprod-drawer-empty">暂无销售记录</p>
           <div v-else class="bizprod-drawer-records">
             <div
               v-for="rec in drawerSummary.recentDailyRecords"

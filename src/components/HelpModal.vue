@@ -275,8 +275,8 @@ const bsModules: PanelDoc[] = [
   },
   {
     icon: 'daily',
-    name: '收摊',
-    desc: '每日收摊登记：每件商品带出多少、剩余多少、损耗多少，自动算出当日营业额。',
+    name: '销售',
+    desc: '每日销售登记：每件商品带出多少、剩余多少、损耗多少，自动算出当日营业额。',
     tips: '核心数据入口，营业额与成本全部由这里的三条数量推导。'
   },
   {
@@ -288,7 +288,7 @@ const bsModules: PanelDoc[] = [
   {
     icon: 'inventory',
     name: '库存预警',
-    desc: '低库存预警与库存总览：库存由进货与收摊记录自动推导，低于阈值、长期未售出或批次久存时提醒。',
+    desc: '低库存预警与库存总览：库存由进货与销售记录自动推导，低于阈值、长期未售出或批次久存时提醒。',
     tips: '可查看每个商品的库存构成来源（进货、带出、剩余明细）。'
   },
   {
@@ -313,7 +313,7 @@ const bsFormulas = [
 const bsFlow = [
   { step: '1', text: '建商品档案：先录入商品与进货价、售价' },
   { step: '2', text: '记进货：每次进货登记数量，库存随之增加' },
-  { step: '3', text: '每日收摊：填带出、剩余、损耗，当日营业额自动生成' },
+  { step: '3', text: '每日销售：填带出、剩余、损耗，当日营业额自动生成' },
   { step: '4', text: '记支出：登记摊位费等经营支出' },
   { step: '5', text: '看统计：在统计页查看趋势、占比与排行' }
 ]
@@ -436,7 +436,7 @@ const skillPrompts = [
   { scenario: '新增网站', text: '帮我在导航里加一个网站：淘宝，链接 https://www.taobao.com，标签 购物' },
   { scenario: '记一笔消费', text: '记一笔消费：今天早餐 16.5 元，备注两杯豆浆一个馅饼' },
   { scenario: '新增商品', text: '新增商品 烤冷面，进货价 3 元，售价 8 元' },
-  { scenario: '记收摊记录', text: '记今天收摊：烤冷面带出 30 份、剩余 5 份、损耗 1 份' },
+  { scenario: '记销售记录', text: '记今天销售：烤冷面带出 30 份、剩余 5 份、损耗 1 份' },
   { scenario: '加一条待办', text: '加一条待办：周五前写完周报，优先级高' },
   { scenario: '写便签', text: '写个便签：购物清单，内容 牛奶、面包、鸡蛋' }
 ]
@@ -605,7 +605,7 @@ const skillInstall = [
           <section class="help-section">
             <h3 class="section-title"><Icon name="store" /> 销售记账台</h3>
             <div class="panel-intro">
-              <p>路由 <code>/business</code>。面向摆摊与小微零售的进销存闭环：只需录入进货、收摊、支出三类动作，库存与利润全部自动推导。</p>
+              <p>路由 <code>/business</code>。面向摆摊与小微零售的进销存闭环：只需录入进货、销售、支出三类动作，库存与利润全部自动推导。</p>
             </div>
             <div class="panels-grid">
               <div v-for="m in bsModules" :key="m.name" class="panel-item">
