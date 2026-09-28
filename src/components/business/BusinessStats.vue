@@ -517,7 +517,7 @@ function printReport(): void {
   display: flex;
   align-items: flex-end;
   gap: 8px;
-  height: 360px;
+  height: 350px;
   padding: 16px 4px 0;
 }
 

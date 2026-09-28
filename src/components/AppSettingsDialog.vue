@@ -108,7 +108,7 @@ type NavSubTab =
   | 'nav-size'
   | 'nav-data'
 type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-todo-cat' | 'wb-cd-cat' | 'wb-note-cat' | 'wb-pwd-cat' | 'wb-ledger-cat' | 'wb-diary-cat' | 'wb-diary-journals' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
-type BizSubTab = 'biz-base' | 'biz-backup' | 'biz-product-cat' | 'biz-expense-cat'
+type BizSubTab = 'biz-base' | 'biz-backup' | 'biz-ledger' | 'biz-product-cat' | 'biz-expense-cat'
 type StuSubTab = 'stu-stage' | 'stu-info' | 'stu-subject' | 'stu-timetable' | 'stu-menu'
 /** 教师工作台子 tab：数据管理拆分出的 5 项 + 使用说明（原左侧菜单「工作台」分组，已迁入设置页）+ 菜单设置 */
 // 教师子 tab：原「数据管理」已拆成 4 个独立菜单项（学期与班级 / 班级信息 / 导入数据 /
@@ -196,6 +196,7 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student' | 'teacher', SubTab
   ],
   business: [
     { key: 'biz-base',    label: '基础设置' },
+    { key: 'biz-ledger',  label: '账本管理' },
     { key: 'biz-backup',  label: '备份导入导出' },
     { key: 'biz-product-cat', label: '商品分类管理' },
     { key: 'biz-expense-cat', label: '支出分类管理' }
@@ -404,6 +405,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: '销售记账',
     items: [
       { key: 'biz-base', label: '基础设置', icon: 'store', tab: 'business', sub: 'biz-base' },
+      { key: 'biz-ledger', label: '账本管理', icon: 'ledger', tab: 'business', sub: 'biz-ledger' },
       { key: 'biz-backup', label: '备份导入导出', icon: 'archive', tab: 'business', sub: 'biz-backup' },
       { key: 'biz-product-cat', label: '商品分类管理', icon: 'tag', tab: 'business', sub: 'biz-product-cat' },
       { key: 'biz-expense-cat', label: '支出分类管理', icon: 'tag', tab: 'business', sub: 'biz-expense-cat' }
@@ -3007,7 +3009,15 @@ onUnmounted(() => {
             </label>
           </div>
 
-          <!-- 账本管理（基础设置内独立入口，可折叠）：新建账本 + 账本类别徽标 + 账本列表（年份/名称/操作） -->
+        </div>
+
+        <!-- 账本管理（销售记账 tab - 账本管理）：独立菜单页面，提供单独入口 -->
+        <div v-if="activeTab === 'business' && activeSubTab === 'biz-ledger'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">账本管理</h3>
+          </div>
+          <p class="wb-menu-hint">同一年份可有多本，每本自动分配编号（如 {{ newLedgerCode }}），只记录该年份数据</p>
+          <!-- 账本管理卡片（从基础设置内迁出，现为独立入口） -->
           <div class="bl-manage-card" data-testid="biz-ledger-manage">
             <button
               type="button"
