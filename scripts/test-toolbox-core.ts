@@ -1,6 +1,7 @@
 // 工具箱纯函数测试（node --experimental-strip-types 直跑，npm run test:toolbox）
 // 覆盖：搜索与筛选（名称/描述/标签、分词 AND、分类叠加、排序）、高亮片段、
-// 最近使用（去重/倒序/截断/相对时间）、颜色转换、CSV↔JSON、行级 diff
+// 分类归一化（站内模块专属分类）、最近使用（去重/倒序/截断/相对时间）、
+// 颜色转换、CSV↔JSON、行级 diff
 import assert from 'node:assert/strict'
 import {
   countByCategory,
@@ -8,6 +9,12 @@ import {
   matchTool,
   tokens
 } from '../src/toolbox/core/search.ts'
+import {
+  MODULE_CATEGORY_ID,
+  isModuleCategory,
+  normalizeToolMeta,
+  normalizeToolMetas
+} from '../src/toolbox/core/category.ts'
 import { splitHighlight } from '../src/toolbox/core/highlight.ts'
 import { RECENT_LIMIT, recordRecent, relativeTime } from '../src/toolbox/core/recent.ts'
 import { hexToHsl, hexToRgb, hslToHex, rgbToHsl } from '../src/toolbox/core/color.ts'
@@ -38,6 +45,16 @@ assert.deepEqual(
   ['a', 'b'],
   '按 order 排序'
 )
+
+/* ===== 分类归一化：站内模块专属分类 ===== */
+const modTool = normalizeToolMeta({ ...tools[2], category: 'effi' })
+assert.equal(modTool.category, MODULE_CATEGORY_ID, '站内模块自动归入专属分类')
+assert.ok(isModuleCategory(modTool.category), 'isModuleCategory 应判定为站内模块分类')
+assert.equal(normalizeToolMeta(tools[0]).category, 'dev', '站内自建保持原业务分类')
+assert.equal(normalizeToolMeta(modTool).category, MODULE_CATEGORY_ID, '已归一化的模块工具幂等')
+assert.equal(normalizeToolMetas(tools).filter(t => t.category === MODULE_CATEGORY_ID).length, 1, '批量归一化只归入模块工具')
+assert.equal(filterTools(normalizeToolMetas(tools), { category: MODULE_CATEGORY_ID }).length, 1, '站内模块分类筛选')
+assert.equal(countByCategory(normalizeToolMetas(tools), 'effi'), 0, '模块工具不再计入原业务分类')
 
 /* ===== 高亮 ===== */
 const parts = splitHighlight('JSON 格式化工具', 'json')

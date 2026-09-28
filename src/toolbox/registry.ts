@@ -8,13 +8,18 @@
  */
 
 import type { ToolboxToolEntry, ToolboxToolMeta } from './types'
+import { normalizeToolMeta } from './core/category'
 
 const modules = import.meta.glob<{ default: ToolboxToolEntry }>('./tools/*/index.ts', { eager: true })
 
-/** 全部工具条目（按 order 排序） */
+/**
+ * 全部工具条目（按 order 排序）
+ * 统一过一遍分类归一化：kind: 'module' 的工具自动归入「站内模块」分类。
+ */
 export const TOOLBOX_ENTRIES: ToolboxToolEntry[] = Object.values(modules)
   .map(m => m.default)
-  .filter(Boolean)
+  .filter((e): e is ToolboxToolEntry => !!e && !!e.meta)
+  .map(e => ({ ...e, meta: normalizeToolMeta(e.meta) }))
   .sort((a, b) => (a.meta?.order ?? 999) - (b.meta?.order ?? 999))
 
 /** 全部工具元数据（列表渲染只用它） */
