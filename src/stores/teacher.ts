@@ -516,7 +516,7 @@ export const useTeacherStore = defineStore('teacher', () => {
 
   // ---------- 学生 ----------
 
-  async function addStudent(input: { no: string; name: string; gender: '男' | '女' }): Promise<void> {
+  async function addStudent(input: { no: string; name: string; gender: '男' | '女'; boarding?: boolean }): Promise<void> {
     const { sem, cls: cid } = data.value.current
     if (!sem || !cid || !input.name.trim()) return
     const no = input.no.trim() || String((bucket.value?.students.length ?? 0) + 1)
@@ -528,6 +528,7 @@ export const useTeacherStore = defineStore('teacher', () => {
       special: false,
       post: '',
       address: '',
+      boarding: input.boarding ?? false,
       health: { allergy: '', disease: '', notes: '', emergencyPhone: '' }
     }
     mutateBucket((b) => ({ ...b, students: [...b.students.filter((x) => x.id !== s.id), s] }))
@@ -1027,6 +1028,7 @@ export const useTeacherStore = defineStore('teacher', () => {
       special: [2, 9, 15].includes(i),
       post: '',
       address: '',
+      boarding: [3, 11, 16].includes(i),
       health: {
         allergy: [2, 9, 15].includes(i) ? '花生' : '',
         disease: '',

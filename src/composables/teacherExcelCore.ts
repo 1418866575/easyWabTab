@@ -93,14 +93,14 @@ export async function exportTalksExcel(talks: HomeSchoolTalkRecord[], classTitle
 }
 
 /** 学生名单导入模板：表头与 teacherImportCore.mapHeaders 严格对齐；含一行示例（导入时姓名为空会跳过） */
-export const STUDENT_TEMPLATE_HEADERS: string[] = ['姓名', '性别', '学号', '家庭地址']
+export const STUDENT_TEMPLATE_HEADERS: string[] = ['姓名', '性别', '学号', '家庭地址', '是否住校']
 
 /** 学生名单导入模板 sheet（含示例行） */
 export function buildStudentTemplateSheet(): ExcelSheet {
   return {
     name: '学生名单',
     headers: STUDENT_TEMPLATE_HEADERS,
-    rows: [['张三', '男', '1', '示例：XX市XX区XX路XX号']]
+    rows: [['张三', '男', '1', '示例：XX市XX区XX路XX号', '否']]
   }
 }
 

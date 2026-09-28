@@ -67,6 +67,7 @@ export interface HeaderMap {
   gender: number
   no: number
   address: number
+  boarding: number
   parent: number
   phone: number
   relation: number
@@ -81,6 +82,7 @@ export function mapHeaders(headerRow: string[]): HeaderMap {
     gender: find('性别'),
     no: find('学号', '编号'),
     address: find('家庭地址', '地址', '住址', '家庭住址'),
+    boarding: find('是否住校', '住校'),
     parent: find('家长', '家长姓名', '监护人'),
     phone: find('电话', '联系电话', '手机号', '家长电话'),
     relation: find('关系', '与学生关系')
@@ -132,6 +134,7 @@ export function rowsToStudents(rows: string[][], semesterId: string, classId: st
       special: false,
       post: '',
       address: map.address >= 0 ? (r[map.address] ?? '').trim() : '',
+      boarding: map.boarding >= 0 ? /^(是|true|yes|y)$/i.test((r[map.boarding] ?? '').trim()) : false,
       health: { allergy: '', disease: '', notes: '', emergencyPhone: '' }
     })
   }

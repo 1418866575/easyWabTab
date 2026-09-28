@@ -4,7 +4,8 @@
 // 「导入学生信息 / 下载模板」复用设置页「导入数据」的既有能力（teacherImportCore + store.importStudents），
 // 模板表头与学生名单解析（mapHeaders）共用 teacherExcelCore 的 exportStudentTemplateExcel，避免两处不一致。
 
-import { computed, ref } from 'vue'
+import { computed, ref, reactive, watch } from 'vue'
+import { usePageSize } from '@/composables/usePageSize'
 import { useTeacherStore } from '@/stores/teacher'
 import TeacherStatCard from './TeacherStatCard.vue'
 import { sortedStudents } from '@/composables/teacherCore'
@@ -30,17 +31,77 @@ const maleCount = computed(() => students.value.filter((s) => s.gender === '男'
 const femaleCount = computed(() => students.value.filter((s) => s.gender === '女').length)
 const specialCount = computed(() => students.value.filter((s) => s.special).length)
 const parentCount = computed(() => Object.keys(b.value?.parents ?? {}).length)
+const boardingCount = computed(() => students.value.filter((s) => s.boarding).length)
+
+const LIST_PAGE_SIZE = 10
+
+// ---------- 明细表组合搜索（学号精确 / 名称精确 / 名称模糊 / 是否班委 / 是否住校；多条件 AND） ----------
+const searchNo = ref('')
+const searchNameExact = ref('')
+const searchNameFuzzy = ref('')
+const searchCommittee = ref<'all' | 'yes' | 'no'>('all')
+const searchBoarding = ref<'all' | 'yes' | 'no'>('all')
+
+// applied 为「已点击搜索」生效的查询条件；草稿（searchXxx）仅在点击搜索/重置时写入，符合「点击搜索按钮才过滤」
+const applied = reactive({
+  no: '',
+  nameExact: '',
+  nameFuzzy: '',
+  committee: 'all' as 'all' | 'yes' | 'no',
+  boarding: 'all' as 'all' | 'yes' | 'no'
+})
+
+function runSearch(): void {
+  applied.no = searchNo.value.trim()
+  applied.nameExact = searchNameExact.value.trim()
+  applied.nameFuzzy = searchNameFuzzy.value.trim().toLowerCase()
+  applied.committee = searchCommittee.value
+  applied.boarding = searchBoarding.value
+}
+
+function resetSearch(): void {
+  searchNo.value = ''
+  searchNameExact.value = ''
+  searchNameFuzzy.value = ''
+  searchCommittee.value = 'all'
+  searchBoarding.value = 'all'
+  runSearch()
+}
+
+const detailFiltered = computed(() =>
+  students.value.filter((s) => {
+    if (applied.no && s.no !== applied.no) return false
+    if (applied.nameExact && s.name !== applied.nameExact) return false
+    if (applied.nameFuzzy && !s.name.toLowerCase().includes(applied.nameFuzzy)) return false
+    if (applied.committee === 'yes' && !s.post.trim()) return false
+    if (applied.committee === 'no' && s.post.trim()) return false
+    if (applied.boarding === 'yes' && !s.boarding) return false
+    if (applied.boarding === 'no' && s.boarding) return false
+    return true
+  })
+)
+
+// ---------- 分页（复用项目 usePageSize + el-pagination 范式） ----------
+const { pageSize, PAGE_SIZES } = usePageSize('teacher-students-pager', LIST_PAGE_SIZE)
+const currentPage = ref(1)
+const pagedRows = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return detailFiltered.value.slice(start, start + pageSize.value)
+})
+watch(applied, () => { currentPage.value = 1 }, { deep: true })
 
 // ---------- 新增 ----------
 const newNo = ref('')
 const newName = ref('')
 const newGender = ref<'男' | '女'>('男')
+const newBoarding = ref(false)
 
 async function onAdd(): Promise<void> {
   if (!newName.value.trim()) return
-  await store.addStudent({ no: newNo.value, name: newName.value, gender: newGender.value })
+  await store.addStudent({ no: newNo.value, name: newName.value, gender: newGender.value, boarding: newBoarding.value })
   newNo.value = ''
   newName.value = ''
+  newBoarding.value = false
 }
 
 // ---------- 编辑 ----------
@@ -65,10 +126,10 @@ function exportPaper(): void {
 async function exportExcelFile(): Promise<void> {
   const rows = students.value.map((s) => {
     const p = b.value?.parents[s.id]
-    return [s.no, s.name, s.gender, s.post, p?.parentName ?? '', p?.relation ?? '', p?.phone ?? '', s.address ?? '']
+    return [s.no, s.name, s.gender, s.post, p?.parentName ?? '', p?.relation ?? '', p?.phone ?? '', s.address ?? '', s.boarding ? '是' : '否']
   })
   await exportExcel(excelFileName('学生名单', store.cls ? `${store.cls.grade}${store.cls.name}` : '班级'), [
-    { name: '学生名单', headers: ['学号', '姓名', '性别', '职务', '家长姓名', '关系', '联系电话', '家庭地址'], rows }
+    { name: '学生名单', headers: ['学号', '姓名', '性别', '职务', '家长姓名', '关系', '联系电话', '家庭地址', '是否住校'], rows }
   ])
 }
 
@@ -125,6 +186,7 @@ async function downloadTemplate(): Promise<void> {
       <TeacherStatCard :value="femaleCount" label="女生人数" accent="#e989a6" />
       <TeacherStatCard :value="specialCount" label="特异体质人数" accent="#ef4444" />
       <TeacherStatCard :value="parentCount" label="家长已登记" accent="#3fa37c" />
+      <TeacherStatCard :value="boardingCount" label="住校人数" accent="#9b6dd8" />
     </section>
 
     <section class="tw-card">
@@ -152,6 +214,31 @@ async function downloadTemplate(): Promise<void> {
 
     <section class="tw-card">
       <h4 class="tw-card-title">学生明细表</h4>
+      <div class="tw-toolbar tw-no-print stu-search">
+        <label class="tw-label">学号<input v-model="searchNo" class="tw-input tw-input-sm" placeholder="精确匹配" /></label>
+        <label class="tw-label">名称(精确)<input v-model="searchNameExact" class="tw-input tw-input-sm" placeholder="精确匹配" /></label>
+        <label class="tw-label">名称(模糊)<input v-model="searchNameFuzzy" class="tw-input tw-input-sm" placeholder="关键字" /></label>
+        <label class="tw-label">
+          是否班委
+          <select v-model="searchCommittee" class="tw-select tw-input-sm">
+            <option value="all">全部</option>
+            <option value="yes">是</option>
+            <option value="no">否</option>
+          </select>
+        </label>
+        <label class="tw-label">
+          是否住校
+          <select v-model="searchBoarding" class="tw-select tw-input-sm">
+            <option value="all">全部</option>
+            <option value="yes">是</option>
+            <option value="no">否</option>
+          </select>
+        </label>
+        <button type="button" class="tw-btn tw-btn-sm tw-btn-primary" @click="runSearch">搜索</button>
+        <button type="button" class="tw-btn tw-btn-sm" @click="resetSearch">重置</button>
+        <span class="tw-spacer"></span>
+        <span class="tw-label">共 {{ detailFiltered.length }} 人</span>
+      </div>
       <div class="tw-toolbar tw-no-print">
         <label class="tw-label">学号<input v-model="newNo" class="tw-input tw-input-sm" placeholder="自动" /></label>
         <label class="tw-label">姓名<input v-model="newName" class="tw-input tw-input-sm" placeholder="必填" /></label>
@@ -162,10 +249,17 @@ async function downloadTemplate(): Promise<void> {
             <option value="女">女</option>
           </select>
         </label>
+        <label class="tw-label">
+          是否住校
+          <select v-model="newBoarding" class="tw-select tw-input-sm">
+            <option :value="false">否</option>
+            <option :value="true">是</option>
+          </select>
+        </label>
         <button type="button" class="tw-btn tw-btn-sm tw-btn-primary" :disabled="!newName.trim()" @click="onAdd">添加学生</button>
       </div>
 
-      <div v-if="filtered.length" class="tw-table-wrap">
+      <div v-if="detailFiltered.length" class="tw-table-wrap">
         <table class="tw-table">
           <thead>
             <tr>
@@ -177,11 +271,12 @@ async function downloadTemplate(): Promise<void> {
               <th>关系</th>
               <th>联系电话</th>
               <th>家庭地址</th>
+              <th>是否住校</th>
               <th class="tw-no-print">操作</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="s in filtered" :key="s.id">
+            <tr v-for="s in pagedRows" :key="s.id">
               <td>
                 <input class="tw-input tw-input-sm stu-no" :value="s.no" @change="onStudentField(s, { no: ($event.target as HTMLInputElement).value })" />
               </td>
@@ -213,12 +308,35 @@ async function downloadTemplate(): Promise<void> {
               <td>
                 <input class="tw-input tw-input-sm stu-address" :value="s.address" placeholder="家庭地址" @change="onStudentField(s, { address: ($event.target as HTMLInputElement).value })" />
               </td>
+              <td>
+                <select
+                  class="tw-select tw-input-sm"
+                  :value="s.boarding ? '是' : '否'"
+                  @change="onStudentField(s, { boarding: (($event.target as HTMLSelectElement).value) === '是' })"
+                >
+                  <option value="否">否</option>
+                  <option value="是">是</option>
+                </select>
+              </td>
               <td class="tw-no-print">
                 <button type="button" class="tw-btn tw-btn-sm tw-btn-danger" @click="onRemove(s)">删除</button>
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+      <div v-if="detailFiltered.length > 0" class="stu-list-pager ewt-pager">
+        <el-pagination
+          v-model:current-page="currentPage"
+          @size-change="currentPage = 1"
+          v-model:page-size="pageSize"
+          :page-sizes="PAGE_SIZES"
+          layout="total, prev, pager, next, jumper"
+          :total="detailFiltered.length"
+          background
+          prev-text="上一页"
+          next-text="下一页"
+        />
       </div>
       <p v-else class="tw-empty">暂无学生记录。</p>
     </section>
@@ -237,6 +355,16 @@ async function downloadTemplate(): Promise<void> {
 
 .stu-address {
   min-width: 180px;
+}
+
+/* 明细表组合搜索区：允许换行，避免控件挤压 */
+.stu-search {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+
+.stu-list-pager {
+  margin-top: 12px;
 }
 
 @media (max-width: 768px) {

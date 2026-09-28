@@ -77,6 +77,8 @@ export interface Student {
   post: string
   /** 家庭地址（明细表可编辑；随导入模板 / 导出 Excel 流转） */
   address: string
+  /** 是否住校（下拉选项：是 / 否；随导入 / 导出 Excel 流转） */
+  boarding: boolean
 }
 
 export interface ParentInfo {
