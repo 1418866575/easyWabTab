@@ -461,6 +461,7 @@ export function normalizeBucket(raw: unknown): ClassBucket {
         gender: s.gender === '男' ? '男' : '女',
         special: bool(s.special),
         post: str(s.post),
+        address: str(s.address),
         health: {
           allergy: str(healthRaw.allergy),
           disease: str(healthRaw.disease),

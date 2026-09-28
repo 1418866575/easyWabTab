@@ -316,7 +316,7 @@ onMounted(() => {
       <main class="tv-content">
         <!-- 仅科任身份时补一条提示；标题不在这里输出，避免与页面组件内的标题重复 -->
         <p v-if="!store.isHead" class="tv-content-head tv-role-tip tw-note">
-          当前为「非班主任 · 科任」身份，座位表 / 值日生表 / 家长联系方式 / 特异体质学生已隐藏。
+          当前为「非班主任 · 科任」身份，座位表 / 值日生表 / 联系家长 / 隐私信息已隐藏。
         </p>
         <component :is="currentComp" />
       </main>

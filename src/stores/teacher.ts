@@ -527,6 +527,7 @@ export const useTeacherStore = defineStore('teacher', () => {
       gender: input.gender,
       special: false,
       post: '',
+      address: '',
       health: { allergy: '', disease: '', notes: '', emergencyPhone: '' }
     }
     mutateBucket((b) => ({ ...b, students: [...b.students.filter((x) => x.id !== s.id), s] }))
@@ -1025,6 +1026,7 @@ export const useTeacherStore = defineStore('teacher', () => {
       gender,
       special: [2, 9, 15].includes(i),
       post: '',
+      address: '',
       health: {
         allergy: [2, 9, 15].includes(i) ? '花生' : '',
         disease: '',

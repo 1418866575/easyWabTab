@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 成绩分析：考试选择 + 七项统计卡 + 分段柱状图 + 排名走势折线图 + 可编辑成绩表。
+// 成绩信息：考试选择 + 七项统计卡 + 分段柱状图 + 排名走势折线图 + 可编辑成绩表。
 // 图表全部内联 SVG 手写（项目约定：不使用 echarts），纯计算委托 teacherCore。
 
 import { computed, ref, watch } from 'vue'
@@ -99,7 +99,7 @@ async function exportExcelFile(): Promise<void> {
   <div class="tw-page">
     <div class="tw-head">
       <div>
-        <h3 class="tw-title">成绩分析</h3>
+        <h3 class="tw-title">成绩信息</h3>
         <p class="tw-subtitle">按考试查看分布与排名；成绩可直接编辑，修改后自动保存。</p>
       </div>
       <div class="tw-toolbar tw-no-print">

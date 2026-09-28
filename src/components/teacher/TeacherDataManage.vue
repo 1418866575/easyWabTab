@@ -20,7 +20,8 @@ import {
 } from '@/composables/teacherImportCore'
 import {
   exportExcel,
-  excelFileName
+  excelFileName,
+  exportStudentTemplateExcel
 } from '@/composables/teacherExcelCore'
 import {
   CLASS_LEVELS_BY_STAGE,
@@ -195,10 +196,8 @@ function classTitleForTemplate(): string {
 }
 
 async function downloadStudentTemplate(): Promise<void> {
-  await exportExcel(
-    excelFileName('学生名单模板', classTitleForTemplate()),
-    [{ name: '学生名单', headers: ['姓名', '性别', '学号'], rows: [['张三', '男', '1']] }]
-  )
+  // 与学生信息页「下载模板」共用同一份模板（含家庭地址），避免两处表头不一致
+  await exportStudentTemplateExcel(classTitleForTemplate())
   notify('学生名单 Excel 模板已下载')
 }
 
@@ -470,7 +469,7 @@ async function onClearSemesterData(): Promise<void> {
     <section v-if="show('import')" class="tw-card">
       <h4 v-if="isAll" class="tw-card-title">导入数据</h4>
       <p v-if="isAll" class="tw-card-hint">
-        支持 .xlsx / .xls / .csv。学生名单需含「姓名」「性别」（学号列可选，列名带 * 也能识别）；
+        支持 .xlsx / .xls / .csv。学生名单需含「姓名」「性别」（学号、家庭地址列可选，列名带 * 也能识别）；
         成绩表第一列为姓名、其余数值列各生成一场考试；家长表需含「姓名」「家长」「电话」；
         课程表首列为节次、其后每列依次对应 周一~周日。
         不确定列名？点击右侧「下载模板」获取对应 Excel 模板（含示例行，导入时按姓名自动跳过，不会误写库）。

@@ -238,7 +238,7 @@ function truncate(text: string, n = 30): string {
   <div class="tk-shell">
     <div class="tw-head">
       <div>
-        <h3 class="tw-title">家校谈话记录</h3>
+        <h3 class="tw-title">家校谈话</h3>
         <p class="tw-subtitle">
           把与家长的沟通（电话 / 微信 / 面谈 / 家访等）结构化记录，便于回溯、统计与跟进。班主任专属，按当前班级隔离。
         </p>
