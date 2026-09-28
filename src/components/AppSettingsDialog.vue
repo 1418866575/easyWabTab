@@ -23,7 +23,6 @@ import {
   nextLedgerSeq,
   sortedLedgers
 } from '@/composables/businessCore'
-import type { LedgerDeleteGuard } from '@/composables/businessCore'
 import { isEmailConfigured, buildEmailParams } from '@/composables/reminderCore'
 import { sendReminderEmail } from '@/composables/reminderEmail'
 import { requestNotifyPermission } from '@/composables/useDesktopNotify'
