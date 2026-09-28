@@ -16,11 +16,13 @@ import {
   addProductCategory as addProductCategoryCore,
   BUSINESS_STORE_SCHEMA_VER,
   calcDailyRevenue,
+  checkLedgerYearWrite,
   createLedger as createLedgerCore,
   clearLedgerRecords as clearLedgerRecordsCore,
   currentYear,
   deleteLedger as deleteLedgerCore,
   ledgerDeleteGuard as ledgerDeleteGuardCore,
+  ledgerCodeOf,
   deleteExpenseCategory as deleteExpenseCategoryCore,
   deleteProductCategory as deleteProductCategoryCore,
   emptyBusinessData,
@@ -39,14 +41,15 @@ import {
   sumExpenseAmounts,
   toggleCategoryVisible
 } from '@/composables/businessCore'
-import type { CategoryOpResult, LedgerDeleteGuard, LedgerMutateResult, LedgerOpResult } from '@/composables/businessCore'
+import type { CategoryOpResult, LedgerDeleteGuard, LedgerMutateResult, LedgerOpResult, LedgerWriteResult } from '@/composables/businessCore'
 import { idbGet, idbPut } from '../composables/useIdb'
 import { markDirty } from '@/composables/useCloudSync'
 
 // 销售记账 store（数据存 IndexedDB store 'business'，key 'items'；随备份 v7 导出/导入）
 //
-// v2 结构：账本（BusinessLedger）是最外层数据容器，按自然年创建、同年唯一；
-// 所有业务数据挂在「当前账本」的 data 下，切换账本即整体切换数据集。
+// v2 结构：账本（BusinessLedger）是最外层数据容器，按自然年创建、**同一年份可有多本**（年内序号 seq 唯一，编号 YYYY-NN）；
+// 所有业务数据挂在「当前账本」的 data 下，切换账本即整体切换数据集；
+// 每本账本只记录其所属年份的数据：写入（进货/收摊/支出）时按日期做跨年守卫，跨年数据不混入同一账本。
 // 对外仍暴露与旧版同名的 products / purchases / dailyRecords / expenses / settings / 两类分类，
 // 但它们现在是「指向当前账本」的可写 computed —— 业务面板无需感知账本即可继续工作。
 export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => {
@@ -98,6 +101,8 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
   /** 当前自然年还没有账本：视图据此展示创建引导 / 跨年提示（不允许在无账本时进入业务模块） */
   const needsCurrentYearLedger = computed(() => !currentYearLedgerExists.value)
   const currentLedgerName = computed(() => currentLedger.value?.name ?? '')
+  /** 当前账本编号（YYYY-NN）：年份 + 年内序号，唯一且可读 */
+  const currentLedgerCode = computed(() => (currentLedger.value ? ledgerCodeOf(currentLedger.value) : ''))
   const currentLedgerYear = computed(() => currentLedger.value?.year ?? currentYear())
   const currentLedgerIsEmpty = computed(() => (currentLedger.value ? isLedgerEmpty(currentLedger.value.data) : true))
 
@@ -147,9 +152,15 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     }
   }
 
+  // ===== 账本归属年份守卫：跨年数据不混入同一账本 =====
+  /** 写入前校验日期是否属于当前账本年份；跨年 / 无账本时拒绝写入（返回提示文案给 UI） */
+  function guardLedgerYear(date: string): LedgerWriteResult {
+    return checkLedgerYearWrite(date, currentLedger.value?.year ?? null)
+  }
+
   // ===== 账本 CRUD =====
 
-  /** 创建账本（同年唯一）；成功后自动切换为当前账本。失败原因交由 UI 提示 */
+  /** 创建账本（同一年份可有多本，年内序号 seq 自动分配，编号 = 年份-序号）；成功后自动切换为当前账本。失败原因交由 UI 提示 */
   function createLedger(year: number, name?: string): LedgerOpResult {
     const r = createLedgerCore(ledgers.value, year, name)
     if (r.ok) {
@@ -382,7 +393,9 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     note?: string
     /** 关联的支出记录 id（进货优化：合计金额 = 已关联支出金额之和） */
     expenseIds?: string[]
-  }): Promise<void> {
+  }): Promise<LedgerWriteResult> {
+    const guard = guardLedgerYear(input.date)
+    if (!guard.ok) return guard
     const quantity = Math.max(0, Math.floor(input.quantity))
     const unitPrice = Math.max(0, input.unitPrice)
     const ids = normalizeExpenseIds(input.expenseIds)
@@ -399,14 +412,19 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
       createdAt: new Date().toISOString()
     })
     await saveBusiness()
+    return { ok: true, reason: 'ok' }
   }
 
   async function updatePurchase(
     id: string,
     patch: Partial<Omit<BusinessPurchase, 'id' | 'createdAt' | 'total'>>
-  ): Promise<void> {
+  ): Promise<LedgerWriteResult> {
     const index = purchases.value.findIndex(p => p.id === id)
-    if (index === -1) return
+    if (index === -1) return { ok: false, reason: 'no-ledger', message: '记录不存在或已被删除' }
+    if (patch.date !== undefined) {
+      const guard = guardLedgerYear(patch.date)
+      if (!guard.ok) return guard
+    }
     const old = toRaw(purchases.value[index])
     const merged = { ...old, ...patch, id }
     merged.quantity = Math.max(0, Math.floor(merged.quantity))
@@ -422,6 +440,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     }
     purchases.value[index] = merged
     await saveBusiness()
+    return { ok: true, reason: 'ok' }
   }
 
   async function deletePurchase(id: string): Promise<void> {
@@ -437,7 +456,9 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     transactionCount?: number
     /** 手动填写的营业额（收摊优化）：传入则覆盖自动合计，保留两位小数 */
     revenueOverride?: number | null
-  }): Promise<void> {
+  }): Promise<LedgerWriteResult> {
+    const guard = guardLedgerYear(input.date)
+    if (!guard.ok) return guard
     const now = new Date().toISOString()
     const autoRevenue = calcDailyRevenue(input.items, toRaw(products.value))
     // 手动营业额：仅接受有限且 ≥0 的数值，否则回退自动合计（防止 NaN/负数入库）
@@ -470,6 +491,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
       })
     }
     await saveBusiness()
+    return { ok: true, reason: 'ok' }
   }
 
   async function deleteDailyRecord(id: string): Promise<void> {
@@ -484,7 +506,9 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     categoryId: string
     amount: number
     note?: string
-  }): Promise<void> {
+  }): Promise<LedgerWriteResult> {
+    const guard = guardLedgerYear(input.date)
+    if (!guard.ok) return guard
     const categoryName = expenseCategories.value.find(c => c.id === input.categoryId)?.name
     expenses.value.push({
       id: newId('be_'),
@@ -496,14 +520,19 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
       createdAt: new Date().toISOString()
     })
     await saveBusiness()
+    return { ok: true, reason: 'ok' }
   }
 
   async function updateExpense(
     id: string,
     patch: Partial<Omit<BusinessExpense, 'id' | 'createdAt'>>
-  ): Promise<void> {
+  ): Promise<LedgerWriteResult> {
     const index = expenses.value.findIndex(e => e.id === id)
-    if (index === -1) return
+    if (index === -1) return { ok: false, reason: 'no-ledger', message: '记录不存在或已被删除' }
+    if (patch.date !== undefined) {
+      const guard = guardLedgerYear(patch.date)
+      if (!guard.ok) return guard
+    }
     const merged = { ...toRaw(expenses.value[index]), ...patch, id }
     // 标题：显式传值则归一化（空串 → 分类名 → 默认标题），未传则保持原值
     if (patch.title !== undefined || merged.title === undefined) {
@@ -513,6 +542,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     merged.amount = Math.max(0, merged.amount)
     expenses.value[index] = merged
     await saveBusiness()
+    return { ok: true, reason: 'ok' }
   }
 
   async function deleteExpense(id: string): Promise<void> {
@@ -575,6 +605,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     hasLedgers,
     needsCurrentYearLedger,
     currentLedgerName,
+    currentLedgerCode,
     currentLedgerYear,
     currentLedgerIsEmpty,
     createLedger,

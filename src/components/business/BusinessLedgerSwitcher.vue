@@ -1,12 +1,12 @@
 <script setup lang="ts">
 // 账本切换器（销售记账头部常驻入口）：
-// 展示当前账本 → 下拉列出所有年份账本 → 切换后全局数据随账本隔离刷新。
+// 展示当前账本（编号 YYYY-NN + 名称）→ 下拉列出所有账本（同一年份可有多本，按编号区分）→ 切换后全局数据随账本隔离刷新。
 // 「新建 / 删除账本」统一收进右上角设置弹窗的「销售记账 → 基础设置 → 账本管理」，本组件只负责切换。
 // 数据全部经 store 读写，账本逻辑由 businessCore 纯函数裁决，本组件不做业务计算。
 
 import { computed, ref } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { ledgerDefaultName } from '@/composables/businessCore'
+import { ledgerCodeOf, ledgerDefaultName } from '@/composables/businessCore'
 import Icon from '@/components/Icon.vue'
 
 const store = useWorkbenchBusinessStore()
@@ -14,6 +14,11 @@ const store = useWorkbenchBusinessStore()
 const open = ref(false)
 
 const label = computed(() => store.currentLedgerName || ledgerDefaultName(store.currentLedgerYear))
+/** 账本编号（YYYY-NN）：同年份多本时按序号区分，与名称一起展示 */
+const code = computed(() => store.currentLedgerCode)
+function codeOf(l: { year: number; seq: number }): string {
+  return ledgerCodeOf(l)
+}
 
 function close(): void {
   open.value = false
@@ -40,6 +45,7 @@ function onSelect(id: string): void {
       @click="toggle"
     >
       <Icon name="ledger" :size="14" />
+      <span v-if="code" class="bls-code">{{ code }}</span>
       <span class="bls-name">{{ label }}</span>
       <Icon name="chevron-down" :size="12" />
     </button>
@@ -55,10 +61,10 @@ function onSelect(id: string): void {
             type="button"
             class="bs-ledger-item"
             :class="{ active: l.id === store.currentLedgerId }"
-            :data-testid="`bs-ledger-item-${l.year}`"
+            :data-testid="`bs-ledger-item-${codeOf(l)}`"
             @click="onSelect(l.id)"
           >
-            <span class="bs-ledger-year">{{ l.year }} 年</span>
+            <span class="bs-ledger-code">{{ codeOf(l) }}</span>
             <span class="bs-ledger-name">{{ l.name }}</span>
             <span v-if="l.id === store.currentLedgerId" class="bs-ledger-tag">当前</span>
           </button>
@@ -72,6 +78,18 @@ function onSelect(id: string): void {
 <style scoped>
 .bls-wrap {
   position: relative;
+}
+
+/* 账本编号（YYYY-NN）：等宽、主色浅底，与名称区分 */
+.bls-code {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-soft, #eff6ff);
 }
 
 /* 仅保留与「云同步」按钮的差异项（配色/字号/间距/圆角由 BusinessView 的 .bs-btn 统一提供）；
@@ -148,9 +166,11 @@ function onSelect(id: string): void {
   color: var(--color-primary, #3b82f6);
 }
 
-.bs-ledger-year {
-  font-weight: 600;
+.bs-ledger-code {
+  font-weight: 700;
   flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text, #1e293b);
 }
 
 .bs-ledger-name {

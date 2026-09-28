@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
+import { useToast } from '@/composables/useToast'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -27,6 +28,7 @@ import Icon from '@/components/Icon.vue'
 import { usePageSize } from '@/composables/usePageSize'
 
 const store = useWorkbenchBusinessStore()
+const toast = useToast()
 
 function catNameOf(id: string): string {
   return findExpenseCategory(store.expenseCategories, id)?.name ?? '未知'
@@ -100,6 +102,12 @@ function startEdit(e: BusinessExpense): void {
   showDialog.value = true
 }
 
+/** 账本只记录其所属年份的数据：日期选择器禁用其它年份 */
+const ledgerYear = computed(() => store.currentLedgerYear)
+function disabledDate(d: Date): boolean {
+  return d.getFullYear() !== ledgerYear.value
+}
+
 async function handleSave(): Promise<void> {
   if (!isFormValid.value) return
   const payload = {
@@ -109,8 +117,10 @@ async function handleSave(): Promise<void> {
     amount: Number(form.amount),
     note: form.note.trim() || undefined
   }
-  if (editingId.value) await store.updateExpense(editingId.value, payload)
-  else await store.addExpense(payload)
+  const r = editingId.value
+    ? await store.updateExpense(editingId.value, payload)
+    : await store.addExpense(payload)
+  if (!r.ok) { toast.error(r.message); return }
   showDialog.value = false
 }
 
@@ -243,6 +253,7 @@ async function handleDeleteFromDialog(): Promise<void> {
               type="date"
               value-format="YYYY-MM-DD"
               size="small"
+              :disabled-date="disabledDate"
             />
           </div>
         </div>

@@ -57,11 +57,12 @@ function maxProductRevenue(node: { products: { revenue: number }[] }): number {
   return Math.max(1, ...node.products.map(p => p.revenue))
 }
 
-// ===== 统计维度：按账本（一个账本 = 一年的数据，切换账本即切换统计年度） =====
-// 账本按自然年创建且同年唯一，默认落在「当年账本」→ 首屏即按当年统计；
+// ===== 统计维度：按账本（同一年份可有多本，每本只记录所属年份的数据） =====
+// 账本按自然年创建、年内自动分配序号（编号 = 年份-序号，如 2026-02），默认落在「当年第一本」→ 首屏即按当年统计；
 // 因此首页不再提供「按年 / 按账本」切换，口径统一为「当前账本内全部记录」。
 const ledgerYear = computed(() => store.currentLedgerYear)
 const ledgerName = computed(() => store.currentLedgerName)
+const ledgerCode = computed(() => store.currentLedgerCode)
 
 // 当前账本内的收摊记录（账本即年度容器，不做二次按年过滤）
 const ledgerDailyRecords = computed(() => data.value.dailyRecords)
@@ -147,11 +148,11 @@ const dateText = computed(() =>
         </div>
       </section>
 
-      <!-- 统计范围 + 毛利率计算公式（一个账本 = 一年数据，切换账本即切换统计年度） -->
+      <!-- 统计范围 + 毛利率计算公式（每本账本只记录所属年份的数据，同一年份可有多本） -->
       <div class="bizhome-scope" data-testid="bizhome-scope">
         <div class="scope-head">
-          <span class="scope-label" data-testid="bizhome-scope-label">{{ ledgerYear }} 年 · {{ ledgerName }}</span>
-          <span class="scope-hint">统计维度：按账本（一个账本对应一年的数据，切换账本即切换统计年度）</span>
+          <span class="scope-label" data-testid="bizhome-scope-label">{{ ledgerCode }} · {{ ledgerName }}</span>
+          <span class="scope-hint">统计维度：按账本（同一年份可有多本账本，每本只记录所属年份的数据）</span>
         </div>
         <div class="scope-formula" data-testid="bizhome-margin-formula">
           <span class="formula-main">毛利率 =（营业收入 − 成本价）/ 营业收入 × 100%</span>

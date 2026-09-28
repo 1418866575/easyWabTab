@@ -1,10 +1,12 @@
 // businessCore.ts 纯函数测试（node --experimental-strip-types 直跑，npm run test:business）
 // T1-T24：归一化/种子分类/内置支出补回/分类 CRUD/库存/日收入/统计/排行/趋势坐标
-// T25-T32：账本容器（默认名/同年唯一/旧扁平迁移/年份去重/空态/按年份并集合并）
+// T25-T32：账本容器（默认名/同年多本与编号/旧扁平迁移/按 年份#seq 去重与 seq 补发/空态/按年份并集合并）
 // T33-T36：账本删除/清空守卫；T37-T41：进货关联支出、数量/单价联动、月度统计
 // T42-T45：会员价归一化、进货批次 FIFO 剩余状态、未售完批次单价与自动均价
 // T63-T65：严格先进先出（FIFO）成本结转、待销售估值、损耗出库口径
 // T66：可关联支出候选过滤（已关联排除 / 自身已勾选保留 / 余额边界）
+// T67：支出关联统计 calcExpenseLinkStats（金额/笔数/全关联/全未关联/空数据/NaN）
+// T68-T70：同年多账本编号与排序、mergeBusinessStore 同年多本、账本归属年份守卫（跨年隔离）
 import assert from 'node:assert/strict'
 import {
   addExpenseCategory,
@@ -57,9 +59,14 @@ import {
   isCategoryNameTaken,
   isLedgerEmpty,
   isValidDateKey,
+  ledgerCodeOf,
   ledgerDefaultName,
+  nextLedgerSeq,
   ledgerDeleteGuard,
   ledgerRecordCounts,
+  yearOfDate,
+  isDateInLedgerYear,
+  checkLedgerYearWrite,
   lowStockProducts,
   mergeBusinessStore,
   moveCategory,
@@ -94,7 +101,7 @@ import {
   validateExpenseRow,
   validateExpenseRows
 } from '../src/composables/businessCore.ts'
-import type { BusinessData, BusinessDailyRecord, BusinessExpense, BusinessProduct, BusinessPurchase } from '../src/types/index.ts'
+import type { BusinessData, BusinessDailyRecord, BusinessExpense, BusinessLedger, BusinessProduct, BusinessPurchase } from '../src/types/index.ts'
 
 const tests: { name: string; fn: () => void }[] = []
 function test(name: string, fn: () => void) {
@@ -543,9 +550,9 @@ test('T25 ledger basics', () => {
   assert.equal(currentYear(new Date('2026-03-05T00:00:00Z')), 2026)
   assert.equal(ledgerDefaultName(2026), '2026年账本')
   const list = [
-    { id: 'a', year: 2024, name: '2024年账本', createdAt: 'c', updatedAt: 'c', data: emptyBusinessData() },
-    { id: 'b', year: 2026, name: '2026年账本', createdAt: 'c', updatedAt: 'c', data: emptyBusinessData() },
-    { id: 'c', year: 2025, name: '2025年账本', createdAt: 'c', updatedAt: 'c', data: emptyBusinessData() }
+    { id: 'a', year: 2024, seq: 1, name: '2024年账本', createdAt: 'c', updatedAt: 'c', data: emptyBusinessData() },
+    { id: 'b', year: 2026, seq: 1, name: '2026年账本', createdAt: 'c', updatedAt: 'c', data: emptyBusinessData() },
+    { id: 'c', year: 2025, seq: 1, name: '2025年账本', createdAt: 'c', updatedAt: 'c', data: emptyBusinessData() }
   ]
   assert.deepEqual(sortedLedgers(list).map(l => l.year), [2026, 2025, 2024])
   assert.equal(hasLedgerForYear(list, 2025), true)
@@ -555,21 +562,45 @@ test('T25 ledger basics', () => {
   assert.equal(pickDefaultLedger(list, 2026)?.id, 'b')
   assert.equal(pickDefaultLedger(list, 2027)?.id, 'b')
   assert.equal(pickDefaultLedger([], 2027), undefined)
+  // 编号：年份 + 两位序号；默认名同年第 2 本起带序号
+  assert.equal(ledgerCodeOf({ year: 2026, seq: 1 }), '2026-01')
+  assert.equal(ledgerCodeOf({ year: 2026, seq: 12 }), '2026-12')
+  assert.equal(ledgerCodeOf({ year: 2026 } as { year: number; seq: number }), '2026-01')
+  assert.equal(ledgerDefaultName(2026), '2026年账本')
+  assert.equal(ledgerDefaultName(2026, 1), '2026年账本')
+  assert.equal(ledgerDefaultName(2026, 2), '2026年账本（02）')
+  assert.equal(nextLedgerSeq(list, 2026), 2)
+  assert.equal(nextLedgerSeq(list, 2030), 1)
+  assert.equal(nextLedgerSeq([], 2026), 1)
 })
 
-// T26 — createLedger：同年唯一（duplicate）/ 年份非法（invalid-year）/ 名称空白（empty-name）/ 名称留空自动默认
-test('T26 createLedger uniqueness', () => {
+// T26 — createLedger：**同一年份可创建多本**，seq 自动递增；年份非法（invalid-year）/ 名称空白（empty-name）/ 名称留空自动默认
+test('T26 createLedger multi-per-year', () => {
   const empty = emptyBusinessData()
   const r1 = createLedger([], 2026)
   assert.equal(r1.ok, true)
   assert.equal(r1.ok && r1.ledgers.length, 1)
   assert.equal(r1.ok && r1.ledger.name, '2026年账本')
+  assert.equal(r1.ok && r1.ledger.seq, 1)
+  assert.equal(r1.ok ? ledgerCodeOf(r1.ledger) : '', '2026-01')
   assert.ok(r1.ok && r1.ledger.id.startsWith('bl_'))
   assert.deepEqual(r1.ok ? r1.ledger.data : null, empty)
 
   const list = r1.ok ? r1.ledgers : []
-  const dup = createLedger(list, 2026)
-  assert.deepEqual(dup, { ok: false, reason: 'duplicate' })
+  // 同年第二本：允许创建，序号 2、编号 2026-02、默认名带序号
+  const r2 = createLedger(list, 2026)
+  assert.equal(r2.ok, true)
+  assert.equal(r2.ok && r2.ledger.seq, 2)
+  assert.equal(r2.ok ? ledgerCodeOf(r2.ledger) : '', '2026-02')
+  assert.equal(r2.ok && r2.ledger.name, '2026年账本（02）')
+  assert.equal(r2.ok && r2.ledgers.length, 2)
+  // 排序：同年按序号升序
+  assert.deepEqual(r2.ok ? r2.ledgers.map(l => l.seq) : [], [1, 2])
+  // 第三本（显式命名）
+  const list2 = r2.ok ? r2.ledgers : []
+  const r3 = createLedger(list2, 2026, '夜市专用')
+  assert.equal(r3.ok && r3.ledger.seq, 3)
+  assert.equal(r3.ok && r3.ledger.name, '夜市专用')
   assert.deepEqual(createLedger(list, 0), { ok: false, reason: 'invalid-year' })
   assert.deepEqual(createLedger(list, Number.NaN), { ok: false, reason: 'invalid-year' })
   assert.deepEqual(createLedger(list, 2027, '   '), { ok: false, reason: 'empty-name' })
@@ -597,8 +628,8 @@ test('T27 normalizeBusinessStore legacy migration', () => {
   assert.deepEqual(normalizeBusinessStore([1, 2]), { schemaVer: 2, ledgers: [], currentLedgerId: '' })
 })
 
-// T28 — normalizeBusinessStore：年份去重（同年份保留首个）、年份非法丢弃、currentLedgerId 失效回落默认
-test('T28 normalizeBusinessStore dedupe & fallback', () => {
+// T28 — normalizeBusinessStore：同一年份多本共存（缺失/冲突的 seq 自动补发）、年份非法丢弃、currentLedgerId 失效回落默认
+test('T28 normalizeBusinessStore seq backfill & fallback', () => {
   const store = normalizeBusinessStore({
     schemaVer: 2,
     currentLedgerId: 'ghost',
@@ -609,13 +640,32 @@ test('T28 normalizeBusinessStore dedupe & fallback', () => {
       { id: 'l4', year: 2025, name: 'C', createdAt: 'c4', updatedAt: 'c4', data: {} }
     ]
   })
-  assert.deepEqual(store.ledgers.map(l => l.year), [2026, 2025])
+  // 同年两本都保留（旧逻辑会丢掉第二本），seq 缺失自动补 1/2
+  assert.deepEqual(store.ledgers.map(l => l.year), [2026, 2026, 2025])
+  assert.deepEqual(store.ledgers.map(l => l.seq), [1, 2, 1])
+  assert.deepEqual(store.ledgers.map(l => ledgerCodeOf(l)), ['2026-01', '2026-02', '2025-01'])
   assert.equal(store.ledgers[0].id, 'l1')
   assert.equal(store.ledgers[0].name, 'A')
+  assert.equal(store.ledgers[1].id, 'l2')
+  assert.equal(store.ledgers[1].data.products.length, 1, '同年第二本的数据不丢')
   // currentLedgerId 无效 → 回落当前年/最大年份账本
   assert.equal(store.currentLedgerId, 'l1')
   const keep = normalizeBusinessStore({ schemaVer: 2, currentLedgerId: 'l4', ledgers: [{ id: 'l4', year: 2025, name: 'C' }] })
   assert.equal(keep.currentLedgerId, 'l4')
+  // 显式 seq 保留；非法 seq（0 / 负数 / 非数字）补 1
+  const withSeq = normalizeBusinessStore({
+    schemaVer: 2,
+    currentLedgerId: 'x',
+    ledgers: [
+      { id: 'x', year: 2026, seq: 3, name: '第三本' },
+      { id: 'y', year: 2026, seq: 0, name: '非法序号' },
+      { id: 'z', year: 2027, seq: -2, name: '负序号' }
+    ]
+  })
+  // 排序：年份倒序（2027 在前）+ 同年序号升序
+  assert.deepEqual(withSeq.ledgers.map(l => l.id), ['z', 'y', 'x'])
+  assert.deepEqual(withSeq.ledgers.map(l => l.seq), [1, 1, 3])
+  assert.deepEqual(withSeq.ledgers.map(l => ledgerCodeOf(l)), ['2027-01', '2026-01', '2026-03'])
 })
 
 // T29 — isLedgerEmpty：空账本 vs 有任一业务数据
@@ -1664,6 +1714,82 @@ test('T67 支出关联统计', () => {
   } as unknown as BusinessData)
   assert.equal(dirty.unlinkedAmount, 0)
   assert.equal(dirty.unlinkedCount, 1, '笔数仍计入')
+})
+
+// T68 — 同一年份多账本：编号唯一可读、排序同年按序号升序、find/pick 取序号最小者
+test('T68 同年多账本编号与排序', () => {
+  const base = [
+    { id: 'a', year: 2026, seq: 2, name: '2026年账本（02）', createdAt: 'c2', updatedAt: 'c2', data: emptyBusinessData() },
+    { id: 'b', year: 2026, seq: 1, name: '2026年账本', createdAt: 'c1', updatedAt: 'c1', data: emptyBusinessData() },
+    { id: 'c', year: 2025, seq: 1, name: '2025年账本', createdAt: 'c0', updatedAt: 'c0', data: emptyBusinessData() }
+  ] as BusinessLedger[]
+  assert.deepEqual(sortedLedgers(base).map(l => l.id), ['b', 'a', 'c'], '年份倒序 + 同年序号升序')
+  assert.deepEqual(sortedLedgers(base).map(l => ledgerCodeOf(l)), ['2026-01', '2026-02', '2025-01'])
+  assert.equal(findLedgerByYear(base, 2026)?.id, 'b', '同年多本 → 取序号最小者')
+  assert.equal(pickDefaultLedger(base, 2026)?.id, 'b')
+  assert.equal(hasLedgerForYear(base, 2026), true)
+  // 连续创建 3 本同年份账本：编号 01/02/03 互不重复
+  let list: BusinessLedger[] = []
+  for (let i = 0; i < 3; i++) {
+    const r = createLedger(list, 2026)
+    assert.equal(r.ok, true)
+    list = r.ok ? r.ledgers : list
+  }
+  assert.deepEqual(list.map(l => ledgerCodeOf(l)), ['2026-01', '2026-02', '2026-03'])
+  assert.equal(new Set(list.map(l => ledgerCodeOf(l))).size, 3, '编号唯一')
+  // 归一化后仍保持 3 本（幂等）
+  const again = normalizeBusinessStore({ schemaVer: 2, currentLedgerId: list[0].id, ledgers: list })
+  assert.equal(again.ledgers.length, 3)
+  assert.deepEqual(again.ledgers.map(l => ledgerCodeOf(l)), ['2026-01', '2026-02', '2026-03'])
+})
+
+// T69 — mergeBusinessStore：同年同序号合并为一本，同年不同序号各自保留
+test('T69 mergeBusinessStore 同年多账本', () => {
+  const local = normalizeBusinessStore({
+    schemaVer: 2, currentLedgerId: 'L1',
+    ledgers: [
+      { id: 'L1', year: 2026, seq: 1, name: '本机一本', createdAt: '2026-01-01', updatedAt: '2026-05-01', data: { products: [{ id: 'p1', name: '苹果', sellingPrice: 5, purchasePrice: 3, unit: '斤', active: true }] } },
+      { id: 'L2', year: 2026, seq: 2, name: '本机二本', createdAt: '2026-02-01', updatedAt: '2026-02-01', data: { products: [{ id: 'p2', name: '香蕉', sellingPrice: 4, purchasePrice: 2, unit: '斤', active: true }] } }
+    ]
+  })
+  const remote = normalizeBusinessStore({
+    schemaVer: 2, currentLedgerId: 'R1',
+    ledgers: [
+      { id: 'R1', year: 2026, seq: 1, name: '云端一本', createdAt: '2026-03-01', updatedAt: '2026-04-01', data: { products: [{ id: 'p3', name: '梨', sellingPrice: 3, purchasePrice: 1, unit: '斤', active: true }] } },
+      { id: 'R3', year: 2026, seq: 3, name: '云端三本', createdAt: '2026-03-02', updatedAt: '2026-03-02', data: {} }
+    ]
+  })
+  const merged = mergeBusinessStore(local, remote)
+  assert.equal(merged.ledgers.length, 3, '序号 1 合并、序号 2/3 各自保留')
+  assert.deepEqual(merged.ledgers.map(l => ledgerCodeOf(l)), ['2026-01', '2026-02', '2026-03'])
+  // 同年同序号：外壳取本地，数据并集
+  const first = merged.ledgers[0]
+  assert.equal(first.id, 'L1')
+  assert.equal(first.name, '本机一本')
+  assert.deepEqual(first.data.products.map(p => p.id).sort(), ['p1', 'p3'])
+  assert.equal(merged.currentLedgerId, 'L1')
+})
+
+// T70 — 跨年写入守卫：账本只记录所属年份的数据
+test('T70 账本归属年份守卫', () => {
+  assert.equal(yearOfDate('2026-09-28'), 2026)
+  assert.equal(yearOfDate('2025-12-31'), 2025)
+  assert.equal(yearOfDate(''), null)
+  assert.equal(yearOfDate('不是日期'), null)
+  assert.equal(isDateInLedgerYear('2026-09-28', 2026), true)
+  assert.equal(isDateInLedgerYear('2025-12-31', 2026), false)
+  assert.equal(isDateInLedgerYear('2027-01-01', 2026), false)
+  // 写入守卫
+  assert.deepEqual(checkLedgerYearWrite('2026-09-28', 2026), { ok: true, reason: 'ok' })
+  const bad = checkLedgerYearWrite('2025-12-31', 2026)
+  assert.equal(bad.ok, false)
+  assert.equal(bad.ok === false && bad.reason, 'cross-year')
+  assert.match(bad.ok === false ? bad.message : '', /2026 年的数据/)
+  assert.match(bad.ok === false ? bad.message : '', /2025 年/)
+  // 无账本
+  const none = checkLedgerYearWrite('2026-01-01', null)
+  assert.equal(none.ok, false)
+  assert.equal(none.ok === false && none.reason, 'no-ledger')
 })
 
 let passed = 0

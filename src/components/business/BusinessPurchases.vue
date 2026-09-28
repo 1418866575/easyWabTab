@@ -339,6 +339,12 @@ function startCopy(p: BusinessPurchase): void {
   showDialog.value = true
 }
 
+/** 账本只记录其所属年份的数据：日期选择器禁用其它年份（与 store 写入守卫同口径） */
+const ledgerYear = computed(() => store.currentLedgerYear)
+function disabledDate(d: Date): boolean {
+  return d.getFullYear() !== ledgerYear.value
+}
+
 /** 连续录入：新增保存后不关闭弹框，自动带出上次商品与日期，便于连开多单 */
 const continuous = ref(true)
 
@@ -353,11 +359,13 @@ async function handleSave(): Promise<void> {
     note: formNote.value.trim() || undefined
   }
   if (editingId.value) {
-    await store.updatePurchase(editingId.value, payload)
+    const r = await store.updatePurchase(editingId.value, payload)
+    if (!r.ok) { toast.error(r.message); return }
     showDialog.value = false
     return
   }
-  await store.addPurchase(payload)
+  const added = await store.addPurchase(payload)
+  if (!added.ok) { toast.error(added.message); return }
   // 连续录入：保留商品与日期，清空数量/进价/备注/关联支出，弹框继续开
   if (continuous.value) {
     const keepProduct = formProductId.value
@@ -571,6 +579,7 @@ async function handleDelete(id: string): Promise<void> {
                 type="date"
                 value-format="YYYY-MM-DD"
                 size="small"
+                :disabled-date="disabledDate"
               />
             </div>
           </div>

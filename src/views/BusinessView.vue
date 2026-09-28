@@ -120,7 +120,8 @@ async function handleSyncNowClick(): Promise<void> {
   syncBusy.value = false
 }
 
-// ===== 账本（最外层数据容器，按自然年唯一） =====
+// ===== 账本（最外层数据容器：按自然年创建，同一年份可有多本，编号 = 年份-序号） =====
+// 每本账本只记录其所属年份的数据：录入日期跨年会被拦截，需切换到对应年份的账本。
 // 进入流程：加载完成后若「一个账本都没有」→ 阻断式引导，必须先创建当年账本才能进入业务模块；
 // 若已有账本但当前年缺失（跨年首次进入）→ 顶部提示条一键创建，不阻断（避免锁死历史账本数据）。
 const thisYear = currentYear()
@@ -135,12 +136,7 @@ function onCreateFromGate(): void {
   const year = Number(gateYear.value)
   const r = store.createLedger(year, gateName.value)
   if (!r.ok) {
-    gateError.value =
-      r.reason === 'duplicate'
-        ? `${year} 年账本已存在`
-        : r.reason === 'invalid-year'
-          ? '请输入有效年份（1970 - 9999）'
-          : '账本名称不能为空'
+    gateError.value = r.reason === 'invalid-year' ? '请输入有效年份（1970 - 9999）' : '账本名称不能为空'
     return
   }
   gateError.value = ''
@@ -229,7 +225,8 @@ onMounted(async () => {
           <div class="bs-gate-card">
             <h2 class="bs-gate-title">还没有账本</h2>
             <p class="bs-gate-desc">
-              账本是销售记账的最外层容器，按自然年创建、同一年份只有一个。所有商品、进货、收摊、支出都会记在账本下。
+              账本是销售记账的最外层容器，按自然年创建，同一年份可以创建多本（自动编号「年份-序号」，如 {{ thisYear }}-01）。
+              每本账本只记录其所属年份的数据，跨年数据不会混入同一账本。所有商品、进货、收摊、支出都会记在账本下。
               请先创建 {{ thisYear }} 年账本，再开始记账。
             </p>
             <div class="bs-gate-form">

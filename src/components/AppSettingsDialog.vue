@@ -16,9 +16,11 @@ import { useToast } from '@/composables/useToast'
 import { idbGet, idbPut, idbImportAll, idbExportAll, idbClear, IDB_STUDENT_STORES, IDB_CORE_STORES, IDB_AUX_STORES, IDB_ICONS_STORES } from '@/composables/useIdb'
 import {
   currentYear,
+  ledgerCodeOf,
   ledgerDefaultName,
   ledgerRecordCounts,
-  localDateKey
+  localDateKey,
+  nextLedgerSeq
 } from '@/composables/businessCore'
 import type { LedgerDeleteGuard, LedgerDeleteScope } from '@/composables/businessCore'
 import { isEmailConfigured, buildEmailParams } from '@/composables/reminderCore'
@@ -1262,14 +1264,24 @@ async function handleBizImportFile(event: Event): Promise<void> {
 
 // ====================
 // 销售记账 · 账本管理（基础设置分组）
-// 新建：按自然年、同年唯一，创建成功后自动切换为当前账本；
+// 新建：按自然年创建，**同一年份可有多本**，年内序号自动生成（账本编号 YYYY-NN），创建成功后自动切换为当前账本；
+// 每本账本只记录其所属年份的数据，跨年录入会被拦截（提示切换到对应年份的账本）；
 // 删除：先选范围（仅清空交易流水 / 连同账本一并删除），二次确认后再执行。
 // 保护规则：删除账本时「当前正在使用的账本」与「最后一个账本」禁止删除（清空流水不受此限，账本本体仍在）。
 // ====================
 const newLedgerYear = ref<number>(currentYear())
 const newLedgerName = ref('')
 const newLedgerError = ref('')
-const newLedgerPlaceholder = computed(() => ledgerDefaultName(Number(newLedgerYear.value) || currentYear()))
+const newLedgerPlaceholder = computed(() => {
+  const year = Number(newLedgerYear.value) || currentYear()
+  const seq = nextLedgerSeq(businessStore.ledgers, year)
+  return ledgerDefaultName(year, seq)
+})
+/** 即将创建的账本编号（YYYY-NN），创建前即可预览 */
+const newLedgerCode = computed(() => {
+  const year = Number(newLedgerYear.value) || currentYear()
+  return ledgerCodeOf({ year, seq: nextLedgerSeq(businessStore.ledgers, year) })
+})
 
 const deleteTargetId = ref('')
 const deleteScope = ref<LedgerDeleteScope>('records')
@@ -1300,12 +1312,7 @@ function handleCreateLedger(): void {
   }
   const r = businessStore.createLedger(year, name)
   if (!r.ok) {
-    newLedgerError.value =
-      r.reason === 'duplicate'
-        ? `${year} 年账本已存在，请换一个年份或直接在页面顶部切换`
-        : r.reason === 'invalid-year'
-          ? '请输入有效年份（1970 - 9999）'
-          : '账本名称不能为空'
+    newLedgerError.value = r.reason === 'invalid-year' ? '请输入有效年份（1970 - 9999）' : '账本名称不能为空'
     return
   }
   newLedgerError.value = ''
@@ -1313,7 +1320,7 @@ function handleCreateLedger(): void {
   newLedgerYear.value = currentYear()
   // 账本列表已刷新：清空删除目标，避免下拉残留已失效的选中项
   deleteTargetId.value = ''
-  toast.success(`已创建并切换到「${r.ledger.name}」`)
+  toast.success(`已创建并切换到「${ledgerCodeOf(r.ledger)} ${r.ledger.name}」`)
 }
 
 async function handleDeleteLedgerData(): Promise<void> {
@@ -2970,11 +2977,11 @@ onUnmounted(() => {
             </label>
           </div>
 
-          <!-- 账本管理：新建（同年唯一）+ 删除（清空交易记录 / 连账本删除），与页面顶部切换器解耦 -->
+          <!-- 账本管理：新建（同年多本，自动分配编号）+ 删除（清空交易记录 / 连账本删除），与页面顶部切换器解耦 -->
           <div class="bl-manage" data-testid="biz-ledger-manage">
             <div class="bl-block">
               <h4 class="bl-subtitle">新建账本</h4>
-              <p class="wb-menu-hint">账本按自然年创建，同一年份只有一个；创建成功后自动切换为当前账本。</p>
+              <p class="wb-menu-hint">账本按自然年创建，同一年份可以有多本；每本自动分配编号（年份-序号，如 {{ newLedgerCode }}），且只记录该年份的数据。创建成功后自动切换为当前账本。</p>
               <div class="remind-fields">
                 <label class="remind-field">
                   <span class="remind-label">年份</span>
@@ -3019,7 +3026,7 @@ onUnmounted(() => {
                       v-for="l in businessStore.ledgers"
                       :key="l.id"
                       :value="l.id"
-                      :label="`${l.year} 年 · ${l.name}${l.id === businessStore.currentLedgerId ? '（当前）' : ''}`"
+                      :label="`${ledgerCodeOf(l)} · ${l.name}${l.id === businessStore.currentLedgerId ? '（当前）' : ''}`"
                     />
                   </el-select>
                 </label>

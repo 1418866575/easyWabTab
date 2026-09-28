@@ -2257,25 +2257,49 @@ export function calcInventorySources(
   return sources.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
 }
 
-// ===== 账本（最外层数据容器：按自然年创建，同年唯一） =====
+// ===== 账本（最外层数据容器：按自然年创建，同一年份可有多个账本，年内序号唯一） =====
 
 /** 当前自然年（可注入便于单测） */
 export function currentYear(d: Date = new Date()): number {
   return d.getFullYear()
 }
 
-/** 账本默认名称：「YYYY年账本」 */
-export function ledgerDefaultName(year: number): string {
-  return `${year}年账本`
+function padSeq(n: number): string {
+  return String(n).padStart(2, '0')
 }
 
-/** 账本排序：年份倒序（新账本在前） */
+/** 账本默认名称：同年第 1 本「YYYY年账本」，第 2 本起「YYYY年账本（02）」 */
+export function ledgerDefaultName(year: number, seq: number = 1): string {
+  const s = Math.max(1, Math.floor(seq))
+  return s <= 1 ? `${year}年账本` : `${year}年账本（${padSeq(s)}）`
+}
+
+/** 账本编号：「YYYY-NN」（年份 + 两位年内序号），唯一且可读；缺失 seq 时按 1 处理 */
+export function ledgerCodeOf(ledger: Pick<BusinessLedger, 'year' | 'seq'>): string {
+  if (!ledger || typeof ledger.year !== 'number') return ''
+  const seq = typeof ledger.seq === 'number' && Number.isFinite(ledger.seq) && ledger.seq >= 1 ? Math.floor(ledger.seq) : 1
+  return `${ledger.year}-${padSeq(seq)}`
+}
+
+/** 某年份下一个可用的账本序号（已有最大序号 + 1；无账本时为 1） */
+export function nextLedgerSeq(list: BusinessLedger[], year: number): number {
+  let max = 0
+  for (const l of list ?? []) {
+    if (l.year !== year) continue
+    const s = typeof l.seq === 'number' && Number.isFinite(l.seq) ? Math.floor(l.seq) : 0
+    if (s > max) max = s
+  }
+  return max + 1
+}
+
+/** 账本排序：年份倒序（新年份在前），同年份按序号升序（先建的在前） */
 export function sortedLedgers(list: BusinessLedger[]): BusinessLedger[] {
-  return [...list].sort((a, b) => b.year - a.year)
+  return [...list].sort((a, b) => (b.year - a.year) || (a.seq - b.seq))
 }
 
+/** 查找某年份的账本：同年份多本时取序号最小的一本（最早的账本） */
 export function findLedgerByYear(list: BusinessLedger[], year: number): BusinessLedger | undefined {
-  return list.find(l => l.year === year)
+  return sortedLedgers(list ?? []).find(l => l.year === year)
 }
 
 export function hasLedgerForYear(list: BusinessLedger[], year: number): boolean {
@@ -2296,10 +2320,13 @@ export function normalizeLedger(raw: unknown): BusinessLedger | null {
   const year = Math.floor(rawYear)
   if (year < LEDGER_YEAR_MIN || year > LEDGER_YEAR_MAX) return null
   const createdAt = typeof l.createdAt === 'string' && l.createdAt ? l.createdAt : new Date().toISOString()
+  const rawSeq = typeof l.seq === 'number' ? l.seq : Number(l.seq)
+  const seq = Number.isFinite(rawSeq) && Math.floor(rawSeq) >= 1 ? Math.floor(rawSeq) : 1
   return {
     id: typeof l.id === 'string' && l.id ? l.id : newId(LEDGER_ID_PREFIX),
     year,
-    name: (typeof l.name === 'string' && l.name.trim() ? l.name.trim() : ledgerDefaultName(year)).slice(0, 30),
+    seq,
+    name: (typeof l.name === 'string' && l.name.trim() ? l.name.trim() : ledgerDefaultName(year, seq)).slice(0, 30),
     createdAt,
     updatedAt: typeof l.updatedAt === 'string' && l.updatedAt ? l.updatedAt : createdAt,
     data: normalizeBusinessData(l.data)
@@ -2308,8 +2335,10 @@ export function normalizeLedger(raw: unknown): BusinessLedger | null {
 
 /**
  * 归一化存储结构（幂等）：
- * - 新结构（含 ledgers 数组）→ 逐项归一，年份去重，currentLedgerId 失效时回落默认账本
- * - 旧结构（v1 扁平 BusinessData，无 ledgers）→ 整体迁入一个「当前年账本」，历史数据不丢
+ * - 新结构（含 ledgers 数组）→ 逐项归一，**按「年份 + 年内序号」唯一**；
+ *   缺失 / 冲突 / 非法的 seq 会被自动补发（同年多账本迁移旧数据时不会丢账本），
+ *   currentLedgerId 失效时回落默认账本
+ * - 旧结构（v1 扁平 BusinessData，无 ledgers）→ 整体迁入一个「当前年账本」（seq=1），历史数据不丢
  */
 export function normalizeBusinessStore(raw: unknown): BusinessStoreData {
   if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
@@ -2323,6 +2352,7 @@ export function normalizeBusinessStore(raw: unknown): BusinessStoreData {
     const ledger: BusinessLedger = {
       id: newId(LEDGER_ID_PREFIX),
       year,
+      seq: 1,
       name: ledgerDefaultName(year),
       createdAt: now,
       updatedAt: now,
@@ -2330,14 +2360,22 @@ export function normalizeBusinessStore(raw: unknown): BusinessStoreData {
     }
     return { schemaVer: BUSINESS_STORE_SCHEMA_VER, ledgers: [ledger], currentLedgerId: ledger.id }
   }
-  // 年份去重（同年份保留首个，防御脏数据 / 云端合并）
-  const seen = new Set<number>()
+  // 按（年份 + 序号）唯一：旧数据无 seq 一律补 1；序号冲突时顺延补发，保证同年份可共存多本
+  const taken = new Set<string>()
+  const yearMaxSeq = new Map<number, number>()
   const ledgers: BusinessLedger[] = []
   for (const item of r.ledgers) {
     const l = normalizeLedger(item)
-    if (!l || seen.has(l.year)) continue
-    seen.add(l.year)
-    ledgers.push(l)
+    if (!l) continue
+    let seq = l.seq
+    const keyOf = (s: number) => `${l.year}#${s}`
+    if (taken.has(keyOf(seq))) {
+      const next = (yearMaxSeq.get(l.year) ?? 0) + 1
+      seq = next
+    }
+    taken.add(keyOf(seq))
+    yearMaxSeq.set(l.year, Math.max(yearMaxSeq.get(l.year) ?? 0, seq))
+    ledgers.push(seq === l.seq ? l : { ...l, seq })
   }
   const sorted = sortedLedgers(ledgers)
   const wanted = typeof r.currentLedgerId === 'string' ? r.currentLedgerId : ''
@@ -2347,11 +2385,13 @@ export function normalizeBusinessStore(raw: unknown): BusinessStoreData {
 
 export type LedgerOpResult =
   | { ok: true; reason: 'ok'; ledgers: BusinessLedger[]; ledger: BusinessLedger }
-  | { ok: false; reason: 'invalid-year' | 'empty-name' | 'duplicate' }
+  | { ok: false; reason: 'invalid-year' | 'empty-name' }
 
 /**
- * 新建账本（同年唯一）：年份非法 / 名称空白 / 年份已存在 均返回失败原因，由 UI 给出明确提示。
- * 名称可留空（自动用「YYYY年账本」）。不改入参，返回新列表（已按年份倒序）。
+ * 新建账本：**同一年份允许创建多个**，年内序号 seq 自动分配（该年份已有最大序号 + 1），
+ * 编号 = 「年份-序号」（如 2026-02），账本只记录该年份的数据。
+ * 年份非法 / 名称空白 返回失败原因，由 UI 给出明确提示。
+ * 名称可留空（自动用「YYYY年账本（NN）」）。不改入参，返回新列表（已按年份倒序、同年份序号升序）。
  */
 export function createLedger(list: BusinessLedger[], year: number, name?: string): LedgerOpResult {
   const rawYear = typeof year === 'number' ? year : Number(year)
@@ -2360,17 +2400,53 @@ export function createLedger(list: BusinessLedger[], year: number, name?: string
   if (y < LEDGER_YEAR_MIN || y > LEDGER_YEAR_MAX) return { ok: false, reason: 'invalid-year' }
   const trimmed = typeof name === 'string' ? name.trim() : ''
   if (typeof name === 'string' && name.length > 0 && !trimmed) return { ok: false, reason: 'empty-name' }
-  if (list.some(l => l.year === y)) return { ok: false, reason: 'duplicate' }
+  const seq = nextLedgerSeq(list ?? [], y)
   const now = new Date().toISOString()
   const ledger: BusinessLedger = {
     id: newId(LEDGER_ID_PREFIX),
     year: y,
-    name: (trimmed || ledgerDefaultName(y)).slice(0, 30),
+    seq,
+    name: (trimmed || ledgerDefaultName(y, seq)).slice(0, 30),
     createdAt: now,
     updatedAt: now,
     data: emptyBusinessData()
   }
   return { ok: true, reason: 'ok', ledgers: sortedLedgers([...list, ledger]), ledger }
+}
+
+// ===== 账本归属年份守卫（跨年数据不混入同一账本） =====
+
+/** 日期（YYYY-MM-DD）所属年份；空 / 非法返回 null */
+export function yearOfDate(date: string): number | null {
+  if (typeof date !== 'string') return null
+  const y = Number(date.slice(0, 4))
+  return Number.isFinite(y) && date.length >= 4 ? Math.floor(y) : null
+}
+
+/** 日期是否属于该账本的年份 */
+export function isDateInLedgerYear(date: string, ledgerYear: number): boolean {
+  const y = yearOfDate(date)
+  return y !== null && y === ledgerYear
+}
+
+/** 跨年写入提示文案（store 写入守卫与 UI 共用同一口径） */
+export function crossYearMessage(date: string, ledgerYear: number): string {
+  const y = yearOfDate(date)
+  return `账本编号 ${ledgerYear}-… 只记录 ${ledgerYear} 年的数据，${date} 属于 ${y ?? '未知'} 年；请切换到 ${y ?? '对应'} 年的账本后再录入`
+}
+
+/** 写入结果：跨年 / 无账本时拒绝写入（不改数据） */
+export type LedgerWriteResult =
+  | { ok: true; reason: 'ok' }
+  | { ok: false; reason: 'cross-year' | 'no-ledger'; message: string }
+
+/** 跨年写入守卫：日期不在当前账本年份 → 拒绝并给出提示（纯函数，便于单测） */
+export function checkLedgerYearWrite(date: string, ledgerYear: number | null | undefined): LedgerWriteResult {
+  if (ledgerYear === null || ledgerYear === undefined || !Number.isFinite(ledgerYear)) {
+    return { ok: false, reason: 'no-ledger', message: '请先创建账本，再录入数据' }
+  }
+  if (isDateInLedgerYear(date, ledgerYear)) return { ok: true, reason: 'ok' }
+  return { ok: false, reason: 'cross-year', message: crossYearMessage(date, ledgerYear) }
 }
 
 /** 账本内数据是否有内容（用于空状态文案判断） */
@@ -2503,8 +2579,9 @@ export function deleteLedger(list: BusinessLedger[], id: string, currentLedgerId
 /**
  * 账本容器合并（business.json 信封专用，幂等）：
  * - 两侧先经 normalizeBusinessStore 归一（旧扁平信封自动迁入当年账本），确保拿到的一定是 v2 结构；
- * - 账本按「年份」并集而非 id —— 不同设备各自创建的同年账本 id 不同，按 id 并集会破坏同年唯一约束；
- * - 同年账本：外壳取本地（id/name 本地优先），业务数据走 mergeLedgerData 逐字段并集；
+ * - 账本按「年份 + 年内序号」并集而非 id —— 不同设备各自创建的同年账本 id 不同，按 id 并集会拆成多本；
+ *   同年同序号的账本合并为一本（本地优先），不同序号各自保留（支持同年多账本）；
+ * - 同年同序号账本：外壳取本地（id/name 本地优先），业务数据走 mergeLedgerData 逐字段并集；
  * - currentLedgerId：本地选中优先，失效回落远端，再回落默认（当前年 → 最大年份）。
  */
 export function mergeBusinessStore(
@@ -2513,24 +2590,26 @@ export function mergeBusinessStore(
 ): BusinessStoreData {
   const ll = normalizeBusinessStore(l)
   const rr = normalizeBusinessStore(r)
-  const byYear = new Map<number, BusinessLedger>()
-  // 本地先入 map → 同年冲突时 existing 恒为本地账本（本地优先）
+  const byKey = new Map<string, BusinessLedger>()
+  // 本地先入 map → 同年同序号冲突时 existing 恒为本地账本（本地优先）
   for (const ledger of [...ll.ledgers, ...rr.ledgers]) {
-    const existing = byYear.get(ledger.year)
+    const key = `${ledger.year}#${ledger.seq}`
+    const existing = byKey.get(key)
     if (!existing) {
-      byYear.set(ledger.year, ledger)
+      byKey.set(key, ledger)
       continue
     }
-    byYear.set(ledger.year, {
+    byKey.set(key, {
       id: existing.id,
       year: ledger.year,
+      seq: ledger.seq,
       name: existing.name,
       createdAt: existing.createdAt < ledger.createdAt ? existing.createdAt : ledger.createdAt,
       updatedAt: existing.updatedAt > ledger.updatedAt ? existing.updatedAt : ledger.updatedAt,
       data: mergeLedgerData(existing.data, ledger.data)
     })
   }
-  const ledgers = sortedLedgers([...byYear.values()])
+  const ledgers = sortedLedgers([...byKey.values()])
   const wanted = ll.currentLedgerId || rr.currentLedgerId || ''
   const currentLedgerId = ledgers.some(x => x.id === wanted) ? wanted : (pickDefaultLedger(ledgers)?.id ?? '')
   return { schemaVer: BUSINESS_STORE_SCHEMA_VER, ledgers, currentLedgerId }

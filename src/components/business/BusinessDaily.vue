@@ -270,6 +270,12 @@ function removeRow(index: number): void {
   rows.splice(index, 1)
 }
 
+/** 账本只记录其所属年份的数据：日期选择器禁用其它年份 */
+const ledgerYear = computed(() => store.currentLedgerYear)
+function disabledDate(d: Date): boolean {
+  return d.getFullYear() !== ledgerYear.value
+}
+
 async function handleSave(): Promise<void> {
   if (!isFormValid.value) return
   const items: DailyRecordItem[] = rows
@@ -280,7 +286,7 @@ async function handleSave(): Promise<void> {
       remaining: Math.max(0, Math.floor(r.remaining)),
       loss: Math.max(0, Math.floor(r.loss))
     }))
-  await store.upsertDailyRecord({
+  const r = await store.upsertDailyRecord({
     date: editingDate.value,
     items,
     note: formNote.value.trim() || undefined,
@@ -288,6 +294,7 @@ async function handleSave(): Promise<void> {
     // 手动填写过营业额才覆盖自动合计；未手动（null）时由 store 按明细计算
     revenueOverride: formRevenueManual.value
   })
+  if (!r.ok) { toast.error(r.message); return }
   showDialog.value = false
 }
 
@@ -448,6 +455,7 @@ async function handleDelete(id: string): Promise<void> {
               type="date"
               value-format="YYYY-MM-DD"
               size="small"
+              :disabled-date="disabledDate"
             />
           </div>
         </div>

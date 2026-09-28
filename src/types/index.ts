@@ -600,13 +600,17 @@ export interface BusinessData {
 }
 
 /**
- * 账本：销售记账的最外层数据容器，按自然年创建，同一年份唯一。
- * 所有业务数据（商品 / 进货 / 收摊 / 支出 / 分类 / 设置）都挂在 data 下，以账本 id 隔离。
+ * 账本：销售记账的最外层数据容器，按自然年创建，同一年份可创建多个账本。
+ * 每个账本在所属年份内分配唯一序号 seq（从 1 开始），与 year 一起构成可读的账本编号「YYYY-NN」（如 2026-02）。
+ * 所有业务数据（商品 / 进货 / 收摊 / 支出 / 分类 / 设置）都挂在 data 下，以账本 id 隔离；
+ * 且只允许记录该账本所属年份的数据（跨年写入会被拦截），不同年份的数据不会混入同一账本。
  */
 export interface BusinessLedger {
   id: string
-  year: number // 自然年，如 2026；同一年份只允许一个账本
-  name: string // 账本名称，默认「YYYY年账本」
+  year: number // 自然年，如 2026
+  /** 年内序号（从 1 开始，同一年份内唯一）；与 year 构成账本编号 YYYY-NN */
+  seq: number
+  name: string // 账本名称，默认「YYYY年账本」（同年第 2 本起为「YYYY年账本（02）」）
   createdAt: string // ISO 字符串
   updatedAt: string // ISO 字符串
   data: BusinessData
