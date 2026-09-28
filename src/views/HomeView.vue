@@ -443,6 +443,14 @@ onUnmounted(() => {
     <div class="app-bar-left">
       <!-- 工作台管理：按钮 + 正下方弹出面板（卡片列表）；可在 设置 → 个性化 → 工作台设置 中关闭 / 改名 -->
       <WorkbenchManagePanel />
+      <!-- 工具箱入口：跳转到 /toolbox（站内自建工具集合，不跳第三方） -->
+      <button
+        class="btn-help"
+        data-testid="home-toolbox-btn"
+        title="工具箱"
+        aria-label="打开工具箱"
+        @click="router.push({ name: 'toolbox' })"
+      >🧰 工具箱</button>
     </div>
     <div class="app-bar-right">
       <button
