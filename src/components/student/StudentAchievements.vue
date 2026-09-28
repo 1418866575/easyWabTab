@@ -27,8 +27,6 @@ import {
 } from '@/composables/studentAchievementCore'
 import type { StudentAchievementCategory, StudentAchievementDef } from '@/types'
 import { localToday } from '@/composables/todoCore'
-import { usePanelPaging } from '@/composables/usePanelPaging'
-import PanelPager from '@/components/workbench/PanelPager.vue'
 import Icon from '@/components/Icon.vue'
 import StudentToolbar from '@/components/student/StudentToolbar.vue'
 
@@ -67,17 +65,6 @@ const metrics = computed<AchievementMetrics>(() => ({
 
 // 视图数据：按分类筛选
 const viewDefs = computed<StudentAchievementDef[]>(() => store.filterByCategory(activeCategory.value))
-
-// 自适应分页（5 列网格，行高 109px，row-heights.json achievements MAX 107 + 2）
-const mainEl = ref<HTMLElement | null>(null)
-const gridEl = ref<HTMLElement | null>(null)
-const paging = usePanelPaging({
-  items: () => viewDefs.value,
-  rowHeight: 109,
-  containerRef: mainEl,
-  gridRef: gridEl
-})
-const { pageItems, currentPage, totalPages, fitsOnePage, next, prev } = paging
 
 // 统计卡数据（薄委托 core）
 const stats = computed(() => store.stats())
@@ -171,14 +158,14 @@ onMounted(async () => {
       <span class="sa-count">{{ viewDefs.length }} 枚</span>
     </div>
 
-    <div ref="mainEl" class="sa-main">
+    <div class="sa-main">
       <div v-if="viewDefs.length === 0" class="empty-state" data-testid="sa-empty">
         <p>当前分类暂无勋章</p>
       </div>
 
-      <div v-else ref="gridEl" class="sa-grid" :class="{ 'sa-grid-scroll': !fitsOnePage }">
+      <div v-else class="sa-grid">
         <button
-          v-for="def in pageItems"
+          v-for="def in viewDefs"
           :key="def.id"
           class="sa-badge-card"
           :class="{ unlocked: store.isUnlocked(def.id), locked: !store.isUnlocked(def.id) }"
@@ -197,14 +184,6 @@ onMounted(async () => {
         </button>
       </div>
     </div>
-
-    <PanelPager
-      v-if="totalPages > 1"
-      :page="currentPage"
-      :total="totalPages"
-      @prev="prev"
-      @next="next"
-    />
 
     <!-- 详情弹框 -->
     <el-dialog
@@ -332,12 +311,10 @@ onMounted(async () => {
   color: var(--color-text-soft, #6b7280);
 }
 
+/* 页面级滚动：勋章墙随内容自然撑开，由页面统一滚动（不再自建内部滚动容器） */
 .sa-main {
-  flex: 1;
-  min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .empty-state {
@@ -353,7 +330,6 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
-  overflow: hidden;
   align-content: start;
 }
 .sa-badge-card {
