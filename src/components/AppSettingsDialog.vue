@@ -3028,7 +3028,6 @@ onUnmounted(() => {
             >
               <Icon name="book" />
               <span class="bl-entry-title">账本管理</span>
-              <span class="bl-entry-sub">同一年份可有多本，每本自动分配编号（如 {{ newLedgerCode }}），只记录该年份数据</span>
               <Icon class="bl-entry-caret" :name="ledgerManageOpen ? 'chevron-up' : 'chevron-down'" />
             </button>
 
