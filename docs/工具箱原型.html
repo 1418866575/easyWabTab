@@ -374,11 +374,15 @@
 /* ==================================================================
    1. 配置：分类与工具（唯一数据源 —— 新增工具 = 追加一条）
    ================================================================== */
+/* 站内模块专属分类：kind: 'module' 的工具自动归入，元数据里不必手写 category */
+const MODULE_CATEGORY_ID = 'site-module';
+
 const TOOLBOX_CATEGORIES = [
   { id: 'dev',   name: '开发工具', icon: '🛠', order: 1 },
   { id: 'data',  name: '数据工具', icon: '📊', order: 2 },
   { id: 'media', name: '媒体工具', icon: '🎬', order: 3 },
   { id: 'effi',  name: '效率工具', icon: '⚡',  order: 4 },
+  { id: MODULE_CATEGORY_ID, name: '站内模块', icon: '🧭', order: 5 },
   { id: 'other', name: '其他',     icon: '📁', order: 999 }
 ];
 
@@ -398,13 +402,16 @@ const TOOLBOX_TOOLS = [
   { id:'img-compress',  name:'图片压缩',          icon:'🖼️', description:'本地压缩图片体积，不上传任何服务器',      category:'media', tags:['图片','压缩'],        status:'active',      kind:'internal' },
   { id:'color-picker',  name:'取色与色值转换',     icon:'💧', description:'拾取颜色并输出 HEX / RGB / HSL 色值',    category:'media', tags:['取色','颜色'],        status:'active',      kind:'internal' },
   { id:'media-convert', name:'音视频格式转换',     icon:'🎞️', description:'常见音视频格式互转与压缩',              category:'media', tags:['音视频','转换'],      status:'maintenance', kind:'internal' },
-  { id:'todo',          name:'待办清单',          icon:'✅', description:'个人工作台待办面板（站内模块）',          category:'effi',  tags:['待办','任务'],        status:'active',      kind:'module', url:'/workbench' },
-  { id:'password',      name:'密码本',            icon:'🔐', description:'加密密码管理（站内模块）',                category:'effi',  tags:['密码','安全'],        status:'active',      kind:'module', url:'/workbench' },
-  { id:'ledger',        name:'销售记账',          icon:'🧾', description:'摆摊进销存与统计报表（站内模块）',        category:'effi',  tags:['记账','销售'],        status:'active',      kind:'module', url:'/business' },
-  { id:'backup',        name:'备份导入导出',       icon:'📦', description:'数据备份与恢复（站内模块）',              category:'effi',  tags:['备份','恢复'],        status:'active',      kind:'module', url:'/' },
-  { id:'icon-mgr',      name:'图标管理',          icon:'🌟', description:'自定义图标的上传与管理（站内模块）',      category:'other', tags:['图标'],               status:'active',      kind:'module', url:'/' },
-  { id:'help',          name:'使用帮助',          icon:'❓', description:'查看快捷键与各模块功能说明（站内模块）',  category:'other', tags:['帮助','文档'],        status:'active',      kind:'module', url:'/' }
+  { id:'todo',          name:'待办清单',          icon:'✅', description:'个人工作台待办面板（站内模块）',          category:MODULE_CATEGORY_ID, tags:['待办','任务'],        status:'active',      kind:'module', url:'/workbench' },
+  { id:'password',      name:'密码本',            icon:'🔐', description:'加密密码管理（站内模块）',                category:MODULE_CATEGORY_ID, tags:['密码','安全'],        status:'active',      kind:'module', url:'/workbench' },
+  { id:'ledger',        name:'销售记账',          icon:'🧾', description:'摆摊进销存与统计报表（站内模块）',        category:MODULE_CATEGORY_ID, tags:['记账','销售'],        status:'active',      kind:'module', url:'/business' },
+  { id:'backup',        name:'备份导入导出',       icon:'📦', description:'数据备份与恢复（站内模块）',              category:MODULE_CATEGORY_ID, tags:['备份','恢复'],        status:'active',      kind:'module', url:'/' },
+  { id:'icon-mgr',      name:'图标管理',          icon:'🌟', description:'自定义图标的上传与管理（站内模块）',      category:MODULE_CATEGORY_ID, tags:['图标'],               status:'active',      kind:'module', url:'/' },
+  { id:'help',          name:'使用帮助',          icon:'❓', description:'查看快捷键与各模块功能说明（站内模块）',  category:MODULE_CATEGORY_ID, tags:['帮助','文档'],        status:'active',      kind:'module', url:'/' }
 ];
+
+/* 归一化兜底：kind: 'module' 一律归入「站内模块」分类（新增模块工具不写 category 也不会漏） */
+TOOLBOX_TOOLS.forEach(t => { if (t.kind === 'module') t.category = MODULE_CATEGORY_ID; });
 
 /* ==================================================================
    2. 状态与本地持久化（收藏 / 最近使用）
@@ -999,7 +1006,9 @@ function renderCats() {
   };
   let html = mk('', '🗂️', '全部', TOOLBOX_TOOLS.length);
   TOOLBOX_CATEGORIES.forEach(c => {
-    html += mk(c.id, c.icon, c.name, TOOLBOX_TOOLS.filter(t => t.category === c.id).length);
+    const cnt = TOOLBOX_TOOLS.filter(t => t.category === c.id).length;
+    if (!cnt) return; /* 数量为 0 的分类不展示，避免空页签 */
+    html += mk(c.id, c.icon, c.name, cnt);
   });
   box.innerHTML = html;
   box.querySelectorAll('[data-cat]').forEach(b => {
@@ -1046,7 +1055,10 @@ function render() {
   renderGrid(document.getElementById('gridAll'), all, 'no-result');
   document.getElementById('allTitle').textContent =
     state.category ? catName(state.category) : '全部工具';
-  document.getElementById('allSub').textContent = '· ' + all.length + ' 个工具';
+  document.getElementById('allSub').textContent =
+    state.category === MODULE_CATEGORY_ID
+      ? '· ' + all.length + ' 个模块，点击直达站内对应页面'
+      : '· ' + all.length + ' 个工具';
 
   // 页头计数
   document.getElementById('tbCount').textContent =

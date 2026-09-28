@@ -16,6 +16,7 @@ import ToolboxEmpty from '../components/ToolboxEmpty.vue'
 import ToolboxToolPanel from '../components/ToolboxToolPanel.vue'
 import { TOOLBOX_TOOLS, getToolEntry, getToolMeta } from '../registry'
 import { filterTools } from '../core/search'
+import { MODULE_CATEGORY_ID } from '../core/category'
 import { relativeTime } from '../core/recent'
 import { categoryName } from '../config/categories'
 import { useToolboxPrefs } from '../prefs/useToolboxPrefs'
@@ -42,6 +43,13 @@ const recentTools = computed(() =>
 )
 
 const hasFavorite = computed(() => favorites.value.length > 0)
+
+/** 站内模块分类给出更明确的副标题（点击直达站内页面） */
+const allSectionSub = computed(() =>
+  category.value === MODULE_CATEGORY_ID
+    ? `· ${visibleTools.value.length} 个模块，点击直达站内对应页面`
+    : `· ${visibleTools.value.length} 个工具`
+)
 
 const STATUS_LABEL: Record<string, string> = {
   active: '可用',
@@ -153,7 +161,7 @@ function goBack() {
       <!-- 全部工具 -->
       <ToolboxSection
         :title="category ? categoryName(category) : '全部工具'"
-        :sub="'· ' + visibleTools.length + ' 个工具'"
+        :sub="allSectionSub"
         data-testid="tb-section-all"
       >
         <div class="tb-grid">

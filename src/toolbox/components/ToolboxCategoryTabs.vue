@@ -5,6 +5,7 @@
 import { computed } from 'vue'
 import { TOOLBOX_CATEGORIES } from '../config/categories'
 import { countByCategory } from '../core/search'
+import { MODULE_CATEGORY_ID } from '../core/category'
 import type { ToolboxToolMeta } from '../types'
 
 const props = defineProps<{
@@ -16,9 +17,17 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
 }>()
 
+/**
+ * 页签：「全部」+ 有工具的分类（数量为 0 的分类自动隐藏，避免空页签干扰）。
+ * 站内模块专属分类单独成一项，方便直达站内既有功能。
+ */
 const tabs = computed(() => [
-  { id: '', name: '全部', icon: '🗂️', count: props.tools.length },
-  ...TOOLBOX_CATEGORIES.map(c => ({ ...c, count: countByCategory(props.tools, c.id) }))
+  { id: '', name: '全部', icon: '🗂️', count: props.tools.length, module: false },
+  ...TOOLBOX_CATEGORIES.map(c => ({
+    ...c,
+    count: countByCategory(props.tools, c.id),
+    module: c.id === MODULE_CATEGORY_ID
+  })).filter(c => c.count > 0)
 ])
 </script>
 
@@ -32,6 +41,7 @@ const tabs = computed(() => [
       :class="{ 'is-on': props.modelValue === t.id }"
       :data-testid="'tb-cat-' + (t.id || 'all')"
       :aria-pressed="props.modelValue === t.id"
+      :title="t.module ? '站内已有模块的直达入口（不会跳转第三方）' : undefined"
       @click="emit('update:modelValue', t.id)"
     >
       <span aria-hidden="true">{{ t.icon }}</span>
