@@ -3092,6 +3092,7 @@ onUnmounted(() => {
                   <table class="bl-table">
                     <thead>
                       <tr>
+                        <th class="bl-col-index">序号</th>
                         <th class="bl-col-year">年份</th>
                         <th class="bl-col-name">名称</th>
                         <th class="bl-col-ops">操作</th>
@@ -3099,10 +3100,11 @@ onUnmounted(() => {
                     </thead>
                     <tbody>
                       <tr
-                        v-for="l in ledgerList"
+                        v-for="(l, i) in ledgerList"
                         :key="l.id"
                         :data-testid="`biz-ledger-row-${ledgerCodeOf(l)}`"
                       >
+                        <td class="bl-col-index">{{ i + 1 }}</td>
                         <td class="bl-col-year">{{ l.year }}</td>
                         <td class="bl-col-name">
                           <span class="bl-code-badge">{{ ledgerCodeOf(l) }}</span>
@@ -4194,6 +4196,7 @@ html.dark .tab-btn.active {
   white-space: nowrap;
 }
 .bl-table tbody tr:last-child td { border-bottom: none; }
+.bl-col-index { width: 56px; text-align: center; color: var(--color-text-secondary, #6b7280); }
 .bl-col-year { width: 84px; }
 .bl-col-ops { width: 220px; white-space: nowrap; }
 .bl-col-name { min-width: 200px; }

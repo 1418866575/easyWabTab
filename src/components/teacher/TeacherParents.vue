@@ -109,6 +109,7 @@ async function exportExcelFile(): Promise<void> {
         <table class="tw-table">
           <thead>
             <tr>
+              <th class="tw-col-index">序号</th>
               <th>学号</th>
               <th>学生姓名</th>
               <th>性别</th>
@@ -118,7 +119,8 @@ async function exportExcelFile(): Promise<void> {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="r in filtered" :key="r.student.id">
+            <tr v-for="(r, i) in filtered" :key="r.student.id">
+              <td class="tw-col-index">{{ i + 1 }}</td>
               <td class="tw-num">{{ r.student.no }}</td>
               <td>{{ r.student.name }}</td>
               <td class="tw-num">{{ r.student.gender }}</td>

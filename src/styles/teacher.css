@@ -482,3 +482,11 @@
     margin: 12mm;
   }
 }
+
+/* ===== 列表序号列（各 tw-table 首列）：窄列居中、弱化色，不抢占视觉重心 ===== */
+.tw-col-index {
+  width: 56px;
+  text-align: center;
+  color: var(--color-text-secondary, #6b7280);
+  font-variant-numeric: tabular-nums;
+}

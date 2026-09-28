@@ -524,6 +524,7 @@ async function onClearSemesterData(): Promise<void> {
       <table v-if="rows.length" class="dm-table">
         <thead>
           <tr>
+            <th class="tw-col-index">序号</th>
             <th>学年</th>
             <th>学段</th>
             <th>学期</th>
@@ -532,7 +533,8 @@ async function onClearSemesterData(): Promise<void> {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in rows" :key="row.cls.id">
+          <tr v-for="(row, i) in rows" :key="row.cls.id">
+            <td class="tw-col-index">{{ i + 1 }}</td>
             <td>{{ row.sem?.year || '—' }}</td>
             <td>{{ row.cls.stage }}</td>
             <td>{{ row.sem?.term || '—' }}</td>
