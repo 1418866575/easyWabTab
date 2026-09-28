@@ -106,7 +106,7 @@ const dateText = computed(() =>
   <div class="bizhome">
     <!-- 骨架屏：首屏数据（IndexedDB）加载中显示占位，加载完成淡入真实内容 -->
     <template v-if="loading">
-      <div class="bizhome-hero">
+      <div class="bizhome-hero-skeleton">
         <div v-for="i in 10" :key="'sk-hero-' + i" class="bizhome-hero-card sk-block">
           <span class="sk-line sk-line-sm"></span>
           <span class="sk-line sk-line-lg"></span>
@@ -159,50 +159,58 @@ const dateText = computed(() =>
         </div>
       </div>
 
-      <!-- 主指标（按账本统计）：营业收入 → 成本 → 毛利率 → 利润 → 支出 → 已关联库存支出 → 未关联库存支出 → 待销售（成本/营业额/利润）；出摊总天数移至问候头右上角 -->
+      <!-- 主指标按账本统计，分三组各占一行（组间分隔 + 组内竖向分隔线）：①待销售（成本/营业额/利润）②支出拆分（支出/已关联/未关联）③营收（营业收入/成本/毛利率/利润）；出摊总天数移至问候头右上角 -->
       <section class="bizhome-hero">
-        <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-revenue" @click="go('stats')" @keydown.enter="go('stats')">
-          <span class="hero-label">营业收入</span>
-          <span class="hero-value">{{ formatYuanOf(ledgerStats.revenue) }}</span>
+        <div class="bizhome-hero-group cols-3" data-testid="bizhome-group-pending">
+          <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-pending-cost" @click="go('inventory')" @keydown.enter="go('inventory')">
+            <span class="hero-label">待销售成本</span>
+            <span class="hero-value">{{ formatYuanOf(ledgerStats.pendingCost) }}</span>
+          </div>
+          <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-pending-revenue" @click="go('inventory')" @keydown.enter="go('inventory')">
+            <span class="hero-label">待销售营业额</span>
+            <span class="hero-value">{{ formatYuanOf(ledgerStats.pendingRevenue) }}</span>
+          </div>
+          <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-pending-profit" @click="go('inventory')" @keydown.enter="go('inventory')">
+            <span class="hero-label">待销售利润</span>
+            <span class="hero-value" :class="{ negative: ledgerStats.pendingProfit < 0 }">{{ formatYuanOf(ledgerStats.pendingProfit) }}</span>
+          </div>
         </div>
-        <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-cost" @click="go('stats')" @keydown.enter="go('stats')">
-          <span class="hero-label">成本</span>
-          <span class="hero-value">{{ formatYuanOf(ledgerStats.cost) }}</span>
+
+        <div class="bizhome-hero-group cols-3" data-testid="bizhome-group-expense">
+          <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-expense" @click="go('expenses')" @keydown.enter="go('expenses')">
+            <span class="hero-label">支出</span>
+            <span class="hero-value">{{ formatYuanOf(ledgerStats.expenseTotal) }}</span>
+          </div>
+          <!-- 支出拆分：已关联库存（挂在进货记录上）/ 未关联库存（可能漏记进货，可到对账页核对） -->
+          <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-expense-linked" @click="go('purchases')" @keydown.enter="go('purchases')">
+            <span class="hero-label">已关联库存支出</span>
+            <span class="hero-value linked">{{ formatYuanOf(expenseLink.linkedAmount) }}</span>
+            <span class="hero-sub">{{ expenseLink.linkedCount }} 笔{{ expenseLink.total > 0 ? ` · 占支出 ${((expenseLink.linkedAmount / expenseLink.total) * 100).toFixed(1)}%` : '' }}</span>
+          </div>
+          <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-expense-unlinked" @click="go('reconcile')" @keydown.enter="go('reconcile')">
+            <span class="hero-label">未关联库存支出</span>
+            <span class="hero-value unlinked">{{ formatYuanOf(expenseLink.unlinkedAmount) }}</span>
+            <span class="hero-sub">{{ expenseLink.unlinkedCount }} 笔{{ expenseLink.total > 0 ? ` · 占支出 ${((expenseLink.unlinkedAmount / expenseLink.total) * 100).toFixed(1)}%` : '' }}</span>
+          </div>
         </div>
-        <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-margin" @click="go('stats')" @keydown.enter="go('stats')">
-          <span class="hero-label">毛利率</span>
-          <span class="hero-value" :class="{ negative: grossMargin < 0 }">{{ (grossMargin * 100).toFixed(1) }}%</span>
-        </div>
-        <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-profit" @click="go('stats')" @keydown.enter="go('stats')">
-          <span class="hero-label">利润</span>
-          <span class="hero-value" :class="{ negative: ledgerStats.profit < 0 }">{{ formatYuanOf(ledgerStats.profit) }}</span>
-        </div>
-        <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-expense" @click="go('expenses')" @keydown.enter="go('expenses')">
-          <span class="hero-label">支出</span>
-          <span class="hero-value">{{ formatYuanOf(ledgerStats.expenseTotal) }}</span>
-        </div>
-        <!-- 支出拆分：已关联库存（挂在进货记录上）/ 未关联库存（可能漏记进货，可到对账页核对） -->
-        <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-expense-linked" @click="go('purchases')" @keydown.enter="go('purchases')">
-          <span class="hero-label">已关联库存支出</span>
-          <span class="hero-value linked">{{ formatYuanOf(expenseLink.linkedAmount) }}</span>
-          <span class="hero-sub">{{ expenseLink.linkedCount }} 笔{{ expenseLink.total > 0 ? ` · 占支出 ${((expenseLink.linkedAmount / expenseLink.total) * 100).toFixed(1)}%` : '' }}</span>
-        </div>
-        <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-expense-unlinked" @click="go('reconcile')" @keydown.enter="go('reconcile')">
-          <span class="hero-label">未关联库存支出</span>
-          <span class="hero-value unlinked">{{ formatYuanOf(expenseLink.unlinkedAmount) }}</span>
-          <span class="hero-sub">{{ expenseLink.unlinkedCount }} 笔{{ expenseLink.total > 0 ? ` · 占支出 ${((expenseLink.unlinkedAmount / expenseLink.total) * 100).toFixed(1)}%` : '' }}</span>
-        </div>
-        <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-pending-cost" @click="go('inventory')" @keydown.enter="go('inventory')">
-          <span class="hero-label">待销售成本</span>
-          <span class="hero-value">{{ formatYuanOf(ledgerStats.pendingCost) }}</span>
-        </div>
-        <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-pending-revenue" @click="go('inventory')" @keydown.enter="go('inventory')">
-          <span class="hero-label">待销售营业额</span>
-          <span class="hero-value">{{ formatYuanOf(ledgerStats.pendingRevenue) }}</span>
-        </div>
-        <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-pending-profit" @click="go('inventory')" @keydown.enter="go('inventory')">
-          <span class="hero-label">待销售利润</span>
-          <span class="hero-value" :class="{ negative: ledgerStats.pendingProfit < 0 }">{{ formatYuanOf(ledgerStats.pendingProfit) }}</span>
+
+        <div class="bizhome-hero-group cols-4" data-testid="bizhome-group-main">
+          <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-revenue" @click="go('stats')" @keydown.enter="go('stats')">
+            <span class="hero-label">营业收入</span>
+            <span class="hero-value">{{ formatYuanOf(ledgerStats.revenue) }}</span>
+          </div>
+          <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-cost" @click="go('stats')" @keydown.enter="go('stats')">
+            <span class="hero-label">成本</span>
+            <span class="hero-value">{{ formatYuanOf(ledgerStats.cost) }}</span>
+          </div>
+          <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-margin" @click="go('stats')" @keydown.enter="go('stats')">
+            <span class="hero-label">毛利率</span>
+            <span class="hero-value" :class="{ negative: grossMargin < 0 }">{{ (grossMargin * 100).toFixed(1) }}%</span>
+          </div>
+          <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-profit" @click="go('stats')" @keydown.enter="go('stats')">
+            <span class="hero-label">利润</span>
+            <span class="hero-value" :class="{ negative: ledgerStats.profit < 0 }">{{ formatYuanOf(ledgerStats.profit) }}</span>
+          </div>
         </div>
       </section>
 
@@ -356,11 +364,42 @@ html.dark .sk-block::after {
   .sk-block::after { animation: none; }
 }
 
-/* ===== 主指标 10 卡（3 列）：营业收入 / 成本 / 毛利率 / 利润 / 支出 / 已关联库存支出 / 未关联库存支出 / 待销售成本 / 待销售营业额 / 待销售利润（出摊总天数已移至问候头右上角） ===== */
-.bizhome-hero {
+/* ===== 主指标：分三组，每组各占一行独立显示（组间分隔 + 组内竖向分隔线） ===== */
+/* 骨架屏：首屏占位仍用 3 列网格，避免与分组布局耦合 */
+.bizhome-hero-skeleton {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
+}
+
+/* 分组容器：纵向堆叠三组，组间用间距 + 分隔线区分 */
+.bizhome-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 每组为一行：等宽单元格 + 组内竖向分隔线 */
+.bizhome-hero-group {
+  display: grid;
+  border: 1px solid var(--color-border, var(--color-border));
+  border-radius: var(--radius-lg, 12px);
+  overflow: hidden;
+  background: var(--color-bg-card, var(--color-bg-card));
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
+}
+
+.bizhome-hero-group.cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.bizhome-hero-group.cols-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* 组内各项之间竖向分隔线（首列无） */
+.bizhome-hero-group .bizhome-hero-card + .bizhome-hero-card {
+  border-left: 1px solid var(--color-border, var(--color-border));
 }
 
 .bizhome-hero-card {
@@ -369,19 +408,11 @@ html.dark .sk-block::after {
   align-items: center;
   gap: 4px;
   padding: 16px 12px;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--color-primary, #3b82f6) 10%, transparent), transparent),
-    var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-lg, 12px);
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
-  transition: box-shadow var(--transition-fast, 0.15s ease), border-color var(--transition-fast, 0.15s ease);
+  transition: background var(--transition-fast, 0.15s ease);
 }
 
 .bizhome-hero-card:hover {
-  border-color: var(--color-primary, var(--color-primary));
-  box-shadow: var(--shadow-card-hover, 0 8px 24px rgba(0, 0, 0, 0.12));
-  transform: translateY(-2px);
+  background: color-mix(in srgb, var(--color-primary, #3b82f6) 10%, transparent);
 }
 
 .bizhome-hero-card.clickable {
@@ -390,7 +421,7 @@ html.dark .sk-block::after {
 
 .bizhome-hero-card.clickable:focus-visible {
   outline: 2px solid var(--color-primary, var(--color-primary));
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 .hero-label {
@@ -898,15 +929,17 @@ html.dark .sk-block::after {
 
 html.dark .stat-card,
 html.dark .bizhome-card,
-html.dark .bizhome-hero-card {
+html.dark .bizhome-hero-group {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
 html.dark .bizhome-hero-card {
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--color-primary, #3b82f6) 14%, transparent), transparent),
-    var(--color-bg-card, #1f2937);
+  background: transparent;
+}
+
+html.dark .bizhome-hero-group .bizhome-hero-card + .bizhome-hero-card {
+  border-left-color: var(--color-border, #374151);
 }
 
 html.dark .hero-value {
@@ -926,9 +959,12 @@ html.dark .hero-value.unlinked {
 }
 
 html.dark .stat-card:hover,
-html.dark .bizhome-card:hover,
-html.dark .bizhome-hero-card:hover {
+html.dark .bizhome-card:hover {
   box-shadow: var(--shadow-card-hover, 0 8px 24px rgba(0, 0, 0, 0.4));
+}
+
+html.dark .bizhome-hero-card:hover {
+  background: color-mix(in srgb, var(--color-primary, #3b82f6) 18%, transparent);
 }
 
 html.dark .bizhome-low-item {
@@ -988,7 +1024,9 @@ html.dark .mini-bar-col:hover .mini-bar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .bizhome-hero {
+  /* 窄屏：每组改为每行 2 列，组内竖向分隔线保留 */
+  .bizhome-hero-group.cols-3,
+  .bizhome-hero-group.cols-4 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   /* 窄屏下双列堆叠为上下，各自 100% 宽度 */
@@ -1011,6 +1049,16 @@ html.dark .mini-bar-col:hover .mini-bar {
 @media (max-width: 480px) {
   .bizhome-stats {
     grid-template-columns: 1fr;
+  }
+
+  /* 超窄屏：每组内单列堆叠，竖向分隔线改为横向分隔线 */
+  .bizhome-hero-group.cols-3,
+  .bizhome-hero-group.cols-4 {
+    grid-template-columns: 1fr;
+  }
+  .bizhome-hero-group .bizhome-hero-card + .bizhome-hero-card {
+    border-left: none;
+    border-top: 1px solid var(--color-border, var(--color-border));
   }
 }
 </style>

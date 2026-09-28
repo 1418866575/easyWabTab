@@ -323,44 +323,81 @@ async function handleDeleteFromDialog(): Promise<void> {
           />
         </div>
 
-        <div class="biz-field">
-          <label>分类 *</label>
-          <el-select v-model="form.categoryId" size="small" class="bizexp-form-cat" data-testid="bizexp-form-category">
-            <el-option v-for="cat in store.expenseCategories" :key="cat.id" :value="cat.id" :label="cat.name" />
-          </el-select>
+        <!-- 分类 / 金额 / 单位 / 订货电话 / 订货地址 / 业务员：每行两列网格排列，标签与输入框对齐 -->
+        <div class="biz-form-grid">
+          <div class="biz-field">
+            <label>分类 *</label>
+            <el-select v-model="form.categoryId" size="small" class="bizexp-form-cat" data-testid="bizexp-form-category">
+              <el-option v-for="cat in store.expenseCategories" :key="cat.id" :value="cat.id" :label="cat.name" />
+            </el-select>
+          </div>
+
+          <div class="biz-field">
+            <label>金额 *</label>
+            <el-input-number
+              :model-value="form.amount === '' ? undefined : Number(form.amount)"
+              :min="0"
+              :step="0.01"
+              size="small"
+              class="bizexp-form-amt"
+              data-testid="bizexp-form-amount"
+              placeholder="金额"
+              @update:model-value="form.amount = $event == null ? '' : String($event)"
+            />
+          </div>
+
+          <div class="biz-field">
+            <label>单位（可选，可自定义）</label>
+            <el-select
+              v-model="form.unit"
+              size="small"
+              class="bizexp-form-unit"
+              data-testid="bizexp-form-unit"
+              placeholder="选择或输入单位"
+              clearable
+              filterable
+              allow-create
+              default-first-option
+            >
+              <el-option v-for="u in EXPENSE_UNITS" :key="u" :value="u" :label="u" />
+            </el-select>
+          </div>
+
+          <div class="biz-field">
+            <label>订货电话（可选）</label>
+            <el-input
+              v-model="form.orderPhone"
+              size="small"
+              maxlength="30"
+              placeholder="订货联系电话"
+              data-testid="bizexp-form-order-phone"
+            />
+          </div>
+
+          <div class="biz-field">
+            <label>订货地址（可选）</label>
+            <el-input
+              v-model="form.orderAddress"
+              size="small"
+              maxlength="100"
+              placeholder="订货地址"
+              data-testid="bizexp-form-order-address"
+            />
+          </div>
+
+          <div class="biz-field">
+            <label>业务员信息（可选）</label>
+            <el-input
+              v-model="form.salesman"
+              size="small"
+              maxlength="30"
+              placeholder="业务员姓名/工号"
+              data-testid="bizexp-form-salesman"
+            />
+          </div>
         </div>
 
-        <div class="biz-field">
-          <label>金额 *</label>
-          <el-input-number
-            :model-value="form.amount === '' ? undefined : Number(form.amount)"
-            :min="0"
-            :step="0.01"
-            size="small"
-            class="bizexp-form-amt"
-            data-testid="bizexp-form-amount"
-            placeholder="金额"
-            @update:model-value="form.amount = $event == null ? '' : String($event)"
-          />
-        </div>
-
-        <div class="biz-field">
-          <label>单位（可选，可自定义）</label>
-          <el-select
-            v-model="form.unit"
-            size="small"
-            class="bizexp-form-unit"
-            data-testid="bizexp-form-unit"
-            placeholder="选择或输入单位"
-            clearable
-            filterable
-            allow-create
-            default-first-option
-          >
-            <el-option v-for="u in EXPENSE_UNITS" :key="u" :value="u" :label="u" />
-          </el-select>
-        </div>
-
+        <!-- 备注：单独置于表单最底部，占满整行 -->
         <div class="biz-field">
           <label>备注（可选）</label>
           <el-input
@@ -369,39 +406,6 @@ async function handleDeleteFromDialog(): Promise<void> {
             maxlength="100"
             placeholder="备注"
             data-testid="bizexp-form-note"
-          />
-        </div>
-
-        <div class="biz-field">
-          <label>订货电话（可选）</label>
-          <el-input
-            v-model="form.orderPhone"
-            size="small"
-            maxlength="30"
-            placeholder="订货联系电话"
-            data-testid="bizexp-form-order-phone"
-          />
-        </div>
-
-        <div class="biz-field">
-          <label>订货地址（可选）</label>
-          <el-input
-            v-model="form.orderAddress"
-            size="small"
-            maxlength="100"
-            placeholder="订货地址"
-            data-testid="bizexp-form-order-address"
-          />
-        </div>
-
-        <div class="biz-field">
-          <label>业务员信息（可选）</label>
-          <el-input
-            v-model="form.salesman"
-            size="small"
-            maxlength="30"
-            placeholder="业务员姓名/工号"
-            data-testid="bizexp-form-salesman"
           />
         </div>
 
@@ -564,6 +568,18 @@ async function handleDeleteFromDialog(): Promise<void> {
 .bizexp-form-amt { width: 100%; }
 .bizexp-form-unit { width: 100%; }
 
+/* 网格：分类/金额/单位/订货电话/订货地址/业务员 每行两列，标签与输入框对齐 */
+.biz-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.biz-form-grid .biz-field > .el-input,
+.biz-form-grid .biz-field > .el-select,
+.biz-form-grid .biz-field > .el-input-number {
+  width: 100%;
+}
+
 /* 表单校验提示（标题/分类/金额） */
 .bizexp-issues {
   list-style: none;
@@ -711,6 +727,9 @@ async function handleDeleteFromDialog(): Promise<void> {
   .bizexp-actions {
     flex-direction: column;
     gap: 4px;
+  }
+  .biz-form-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
