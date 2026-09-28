@@ -332,6 +332,7 @@ function truncate(text: string, n = 30): string {
         <!-- 列表视图 -->
         <div v-if="vm.mode === 'list'" class="tk-list-area">
           <el-table class="ewt-table" :data="pageItems" stripe border size="default" style="width: 100%" empty-text="没有匹配的谈话记录">
+            <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (currentPage - 1) * pageSize + i + 1" />
             <el-table-column label="日期" width="120" align="center">
               <template #default="{ row }">
                 <div>{{ row.date || '—' }}</div>

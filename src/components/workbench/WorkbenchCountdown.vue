@@ -446,6 +446,7 @@ onUnmounted(() => {
       </div>
       <div v-else class="cd-table-wrap">
         <el-table class="ewt-table" :data="pageItems" data-testid="cd-table" @row-click="rowClick" stripe border size="default" style="width: 100%" height="100%">
+          <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (currentPage - 1) * pageSize + i + 1" />
           <el-table-column label="名称" min-width="200" align="center" show-overflow-tooltip>
             <template #default="{ row }">
               <span class="cd-name">{{ row.name }}</span>

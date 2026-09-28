@@ -437,6 +437,7 @@ onUnmounted(() => {
             height="100%"
             empty-text="没有符合搜索条件的成员"
           >
+            <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (listPage - 1) * pageSize + i + 1" />
             <el-table-column label="姓名" min-width="160" align="center" show-overflow-tooltip>
               <template #default="{ row }">
                 <div class="fg-name">

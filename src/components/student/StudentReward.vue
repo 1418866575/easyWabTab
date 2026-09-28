@@ -220,6 +220,7 @@ onMounted(async () => {
             height="100%"
             empty-text="暂无交易记录"
           >
+            <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (historyPage - 1) * pageSize + i + 1" />
             <el-table-column label="时间" width="170" align="center">
               <template #default="{ row }">{{ txnDateText(row.createdAt) }}</template>
             </el-table-column>

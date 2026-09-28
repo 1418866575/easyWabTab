@@ -270,6 +270,7 @@ onUnmounted(() => {
           </div>
           <div class="dt-list">
             <el-table v-if="vm.mode === 'list'" class="ewt-table" :data="listPageItems" stripe border size="default" style="width: 100%" height="100%" empty-text="暂无饮食记录">
+              <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (listPage - 1) * pageSize + i + 1" />
               <el-table-column label="日期" width="130" align="center">
                 <template #default="{ row }">{{ row.date }}</template>
               </el-table-column>

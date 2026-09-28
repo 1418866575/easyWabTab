@@ -71,94 +71,31 @@ const dateText = computed(() =>
   now.value.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })
 )
 
-// ===== 轮播图：3 屏（0=行动台 / 1=数据概览 / 2=工具），6s 自动轮播，hover 暂停，手动切换重置计时 =====
-const SLIDE_COUNT = 3
-const AUTOPLAY_MS = 6000
-const slideIndex = ref(0)
-const carouselPaused = ref(false)
-let carouselTimer = 0
-
-function stopAutoplay(): void {
-  window.clearInterval(carouselTimer)
-}
-
-function startAutoplay(): void {
-  stopAutoplay()
-  if (carouselPaused.value) return
-  carouselTimer = window.setInterval(() => nextSlide(), AUTOPLAY_MS)
-}
-
-function goToSlide(index: number): void {
-  slideIndex.value = ((index % SLIDE_COUNT) + SLIDE_COUNT) % SLIDE_COUNT
-  startAutoplay()
-}
-
-function nextSlide(): void {
-  goToSlide(slideIndex.value + 1)
-}
-
-function prevSlide(): void {
-  goToSlide(slideIndex.value - 1)
-}
-
-function pauseCarousel(): void {
-  carouselPaused.value = true
-  stopAutoplay()
-}
-
-function resumeCarousel(): void {
-  carouselPaused.value = false
-  startAutoplay()
-}
-
-// ===== 触摸滑动手势（移动端 swipe left/right 切换轮播）=====
-const SWIPE_THRESHOLD = 50
-let touchStartX = 0
-
-function onTouchStart(e: TouchEvent): void {
-  touchStartX = e.touches[0].clientX
-}
-
-function onTouchEnd(e: TouchEvent): void {
-  const deltaX = e.changedTouches[0].clientX - touchStartX
-  if (Math.abs(deltaX) < SWIPE_THRESHOLD) return
-  if (deltaX < 0) {
-    nextSlide()
-  } else {
-    prevSlide()
-  }
-}
-
 // 时钟刷新间隔（原先直接内联 30000，提成常量便于统一调整）
 const CLOCK_TICK_MS = 30000
 
-// 页面切到后台时暂停定时器（轮播 + 时钟），回到前台再恢复。
+// 页面切到后台时暂停定时器（时钟），回到前台再恢复。
 // 后台标签页里定时器照常触发，会让 Vue 更新与样式重算白跑一遍，移动端尤其耗电；
 // 恢复时先校正一次时间，避免回到前台的首帧还显示切走前的旧时间。
 function handleVisibilityChange(): void {
   if (document.hidden) {
     window.clearInterval(nowTimer)
-    stopAutoplay()
     return
   }
   now.value = new Date()
   nowTimer = window.setInterval(() => {
     now.value = new Date()
   }, CLOCK_TICK_MS)
-  // hover 暂停中的轮播保持暂停，不因回到前台被强制重启
-  if (!carouselPaused.value) startAutoplay()
 }
 
 onMounted(() => {
   nowTimer = window.setInterval(() => {
     now.value = new Date()
   }, CLOCK_TICK_MS)
-  startAutoplay()
   document.addEventListener('visibilitychange', handleVisibilityChange)
 })
 onUnmounted(() => {
   window.clearInterval(nowTimer)
-  stopAutoplay()
   document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
 
@@ -228,20 +165,13 @@ async function handleQuickNote(): Promise<void> {
       </button>
     </section>
 
-    <!-- 轮播区：行动台 / 数据概览 / 工具 三屏自动轮播（hover 暂停，箭头/圆点/触摸滑动手势切换） -->
+    <!-- 平铺区：行动台 / 数据概览 / 工具 纵向依次展开（原三屏轮播已取消，内容一次性展示） -->
     <section
-      class="home-carousel"
+      class="home-carousel home-flat"
       data-testid="home-carousel"
-      aria-label="主页轮播"
-      @mouseenter="pauseCarousel"
-      @mouseleave="resumeCarousel"
+      aria-label="主页内容"
     >
-      <div
-        class="home-carousel-window"
-        @touchstart="onTouchStart"
-        @touchend="onTouchEnd"
-      >
-        <div class="home-carousel-track" :style="{ transform: `translateX(-${slideIndex * 100}%)` }">
+      <div class="home-flat-inner">
           <!-- 第 1 屏：行动台（快捷添加待办/便签 + 即将到期提醒 + 天气 + 日历锚点） -->
           <div class="home-slide" data-testid="home-slide-action">
             <div
@@ -527,25 +457,6 @@ async function handleQuickNote(): Promise<void> {
               data-testid="home-tools-empty"
             >功能已关闭，可在设置中开启</div>
           </div>
-        </div>
-      </div>
-
-      <!-- 轮播控制条：箭头 + 圆点 -->
-      <div class="home-carousel-bar">
-        <el-button class="home-carousel-arrow" data-testid="home-carousel-prev" aria-label="上一屏" @click="prevSlide" size="small">‹</el-button>
-        <div class="home-carousel-dots">
-          <el-button
-            v-for="i in SLIDE_COUNT"
-            :key="i"
-            class="home-carousel-dot"
-            :class="{ active: slideIndex === i - 1 }"
-            :data-testid="`home-carousel-dot-${i - 1}`"
-            :aria-label="`第 ${i} 屏`"
-            @click="goToSlide(i - 1)"
-            size="small"
-          />
-        </div>
-        <el-button class="home-carousel-arrow" data-testid="home-carousel-next" aria-label="下一屏" @click="nextSlide" size="small">›</el-button>
       </div>
     </section>
   </div>
@@ -559,31 +470,15 @@ async function handleQuickNote(): Promise<void> {
   gap: 16px;
 }
 
-/* 桌面一屏契约（T3 shell 已给 .wb-home flex:1 + min-height:0；轮播区独占剩余高度并区内滚动兜底） */
-@media (min-width: 769px) {
-  .home-carousel {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-}
-
-/* ===== 轮播图 ===== */
-.home-carousel-window {
-  flex: 1;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-
-.home-carousel-track {
+/* ===== 平铺区（原轮播容器改为纵向平铺）：三块内容依次展开，间距 16px 不拥挤 ===== */
+.home-carousel.home-flat,
+.home-flat-inner {
   display: flex;
-  transition: transform 0.4s ease;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .home-slide {
-  min-width: 100%;
   box-sizing: border-box;
 }
 
@@ -1124,64 +1019,6 @@ async function handleQuickNote(): Promise<void> {
   border-radius: var(--radius-md, 10px);
 }
 
-/* ===== 轮播控制条 ===== */
-.home-carousel-bar {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding-top: 10px;
-}
-
-.home-carousel-arrow {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  min-width: auto;
-  border-radius: 50%;
-  border: 1px solid var(--color-border, var(--color-border));
-  background: var(--color-bg-card, var(--color-bg-card));
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.home-carousel-arrow:hover {
-  color: #fff;
-  background: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.home-carousel-dots {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.home-carousel-dot {
-  width: 10px;
-  height: 10px;
-  min-width: 10px;
-  padding: 0;
-  border-radius: 50%;
-  border: none;
-  background: var(--color-border, var(--color-border));
-  cursor: pointer;
-  transition: all var(--transition-fast, 0.2s ease);
-  font-size: 0;
-  line-height: 1;
-}
-
-.home-carousel-dot.active {
-  width: 22px;
-  min-width: 22px;
-  border-radius: 999px;
-  background: var(--color-primary, var(--color-primary));
-}
-
 /* ===== 暗色模式覆盖 ===== */
 html.dark .bento-card {
   background-color: var(--color-bg-card, #1f2937);
@@ -1259,16 +1096,6 @@ html.dark .habit-detail-name {
 
 html.dark .habit-detail-bar {
   background-color: #374151;
-}
-
-html.dark .home-carousel-arrow {
-  background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
-  border-color: var(--color-border, #374151);
-}
-
-html.dark .home-carousel-dot {
-  background-color: var(--color-border, #4b5563);
 }
 
 html.dark .prio-high {

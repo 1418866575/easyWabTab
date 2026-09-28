@@ -274,40 +274,46 @@ async function handleInsertImage(e: Event): Promise<void> {
           <el-button size="small" data-testid="dj-view-btn" @click="showListView = true">查看</el-button>
         </div>
         <div class="dj-toolbar-left">
-          <el-date-picker
-            :model-value="selectedDate"
-            type="date"
-            value-format="YYYY-MM-DD"
-            class="dj-date-input"
-            data-testid="dj-date-input"
-            size="small"
-            @change="(v: unknown) => handleDateInput({ target: { value: String(v ?? '') } } as unknown as Event)"
-          />
-          <el-select
-            v-model="draftCategory"
-            placeholder="分类"
-            size="small"
-            class="dj-cat-select"
-            data-testid="dj-cat-select"
-          >
-            <el-option label="未分类" value="" />
-            <el-option
-              v-for="c in diaryCatStore.allCategories"
-              :key="c.id"
-              :label="c.name"
-              :value="c.id"
+          <!-- 第一行：日历 + 分类下拉（同一行，窄屏自动换行） -->
+          <div class="dj-toolbar-controls">
+            <el-date-picker
+              :model-value="selectedDate"
+              type="date"
+              value-format="YYYY-MM-DD"
+              class="dj-date-input"
+              data-testid="dj-date-input"
+              size="small"
+              @change="(v: unknown) => handleDateInput({ target: { value: String(v ?? '') } } as unknown as Event)"
             />
-          </el-select>
-          <el-button size="small" data-testid="dj-today-btn" @click="handleToday">今日</el-button>
-          <el-button type="primary" size="small" data-testid="dj-save-btn" @click="handleSave">保存</el-button>
-          <el-button
-            v-if="selectedEntry"
-            type="danger"
-            plain
-            size="small"
-            data-testid="dj-delete-btn"
-            @click="handleDelete"
-          >删除</el-button>
+            <el-select
+              v-model="draftCategory"
+              placeholder="分类"
+              size="small"
+              class="dj-cat-select"
+              data-testid="dj-cat-select"
+            >
+              <el-option label="未分类" value="" />
+              <el-option
+                v-for="c in diaryCatStore.allCategories"
+                :key="c.id"
+                :label="c.name"
+                :value="c.id"
+              />
+            </el-select>
+          </div>
+          <!-- 第二行：操作按钮单独成行 -->
+          <div class="dj-toolbar-actions">
+            <el-button size="small" data-testid="dj-today-btn" @click="handleToday">今日</el-button>
+            <el-button type="primary" size="small" data-testid="dj-save-btn" @click="handleSave">保存</el-button>
+            <el-button
+              v-if="selectedEntry"
+              type="danger"
+              plain
+              size="small"
+              data-testid="dj-delete-btn"
+              @click="handleDelete"
+            >删除</el-button>
+          </div>
         </div>
         <div class="dj-toolbar-right">
           <el-button
@@ -515,6 +521,22 @@ async function handleInsertImage(e: Event): Promise<void> {
 
 .dj-toolbar-left,
 .dj-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 左侧改为纵向两段：上段「日历 + 分类下拉」同一行，下段操作按钮单独一行；
+   每段内部 flex-wrap，窄屏自动换行，不挤压、不错位 */
+.dj-toolbar-left {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.dj-toolbar-controls,
+.dj-toolbar-actions {
   display: flex;
   align-items: center;
   gap: 8px;

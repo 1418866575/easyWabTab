@@ -200,6 +200,7 @@ async function handleDeleteFromDialog(): Promise<void> {
           empty-text="暂无支出记录"
           row-key="id"
         >
+          <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (listPage - 1) * pageSize + i + 1" />
           <el-table-column label="日期" width="130" align="center">
             <template #default="{ row }">
               <span style="font-weight: 600;">{{ row.date }}</span>

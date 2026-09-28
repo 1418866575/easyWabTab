@@ -396,6 +396,7 @@ onMounted(async () => {
         row-key="id"
         @row-click="onRowClick"
       >
+        <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" />
         <el-table-column prop="examName" label="考试名称" min-width="160" align="center" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="sg-t-name">{{ row.examName }}</span>

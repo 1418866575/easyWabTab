@@ -740,6 +740,7 @@ onUnmounted(() => {
               height="100%"
               empty-text="本月暂无记录"
             >
+              <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (recordsPage - 1) * pageSize + i + 1" />
               <el-table-column prop="entry.date" label="日期" width="130" align="center">
                 <template #default="{ row }: { row: EntryView }">
                   {{ row.entry.date }}

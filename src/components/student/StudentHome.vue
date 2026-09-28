@@ -31,66 +31,24 @@ const greeting = computed(() => {
   return '晚上好'
 })
 
-// 三屏轮播骨架
-const SLIDE_COUNT = 3
-const AUTOPLAY_MS = 6000
-const slideIndex = ref(0)
-const carouselPaused = ref(false)
-let carouselTimer = 0
-
-function startAutoplay() {
-  stopAutoplay()
-  if (carouselPaused.value) return
-  carouselTimer = window.setInterval(() => goToSlide(slideIndex.value + 1), AUTOPLAY_MS)
-}
-function stopAutoplay() {
-  if (carouselTimer) {
-    clearInterval(carouselTimer)
-    carouselTimer = 0
-  }
-}
-function goToSlide(index: number) {
-  slideIndex.value = ((index % SLIDE_COUNT) + SLIDE_COUNT) % SLIDE_COUNT
-  startAutoplay()
-}
-function nextSlide() { goToSlide(slideIndex.value + 1) }
-function prevSlide() { goToSlide(slideIndex.value - 1) }
-function pauseCarousel() { carouselPaused.value = true; stopAutoplay() }
-function resumeCarousel() { carouselPaused.value = false; startAutoplay() }
-
-// 触摸手势
-const SWIPE_THRESHOLD = 50
-let touchStartX = 0
-function onTouchStart(e: TouchEvent) { touchStartX = e.touches[0].clientX }
-function onTouchEnd(e: TouchEvent) {
-  const dx = e.changedTouches[0].clientX - touchStartX
-  if (Math.abs(dx) < SWIPE_THRESHOLD) return
-  if (dx > 0) prevSlide()
-  else nextSlide()
-}
-
 // 时钟刷新间隔（原先内联 30000，提成常量便于统一调整）
 const CLOCK_TICK_MS = 30000
 
-// 页面切到后台时暂停定时器（轮播 + 时钟），回到前台再恢复。
+// 页面切到后台时暂停定时器（时钟），回到前台再恢复。
 // 后台标签页里定时器照常触发，会让 Vue 更新与样式重算白跑一遍，移动端尤其耗电；
 // 恢复时先校正一次时间，避免回到前台的首帧还显示切走前的旧时间。
 function handleVisibilityChange() {
   if (document.hidden) {
     if (nowTimer) clearInterval(nowTimer)
-    stopAutoplay()
     return
   }
   now.value = new Date()
   nowTimer = window.setInterval(() => { now.value = new Date() }, CLOCK_TICK_MS)
-  // hover 暂停中的轮播保持暂停，不因回到前台被强制重启
-  if (!carouselPaused.value) startAutoplay()
 }
 
 // 加载所有学生 store 数据（主页需要聚合统计）
 onMounted(async () => {
   nowTimer = window.setInterval(() => { now.value = new Date() }, CLOCK_TICK_MS)
-  startAutoplay()
   document.addEventListener('visibilitychange', handleVisibilityChange)
   await Promise.all([
     hwStore.loadHomework(),
@@ -102,7 +60,6 @@ onMounted(async () => {
 })
 onUnmounted(() => {
   if (nowTimer) clearInterval(nowTimer)
-  stopAutoplay()
   document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
 
@@ -189,15 +146,8 @@ function onActionClick(section: string) {
       </div>
     </div>
 
-    <!-- 轮播区 -->
-    <div
-      class="carousel"
-      @mouseenter="pauseCarousel"
-      @mouseleave="resumeCarousel"
-      @touchstart="onTouchStart"
-      @touchend="onTouchEnd"
-    >
-      <div class="carousel-track" :style="{ transform: `translateX(-${slideIndex * 100}%)` }">
+    <!-- 平铺区：行动台 / 数据概览 / 工具栏 纵向依次展开（原三屏轮播已取消） -->
+    <div class="carousel student-flat">
         <!-- 屏 1：行动台 -->
         <section class="slide slide-action" data-testid="student-slide-action">
           <h3 class="slide-title">行动台</h3>
@@ -250,22 +200,6 @@ function onActionClick(section: string) {
             </button>
           </div>
         </section>
-      </div>
-
-      <!-- 翻页箭头 + 圆点 -->
-      <div class="carousel-bar">
-        <button class="carousel-arrow" data-testid="student-carousel-prev" @click="prevSlide">‹</button>
-        <div class="carousel-dots">
-          <button
-            v-for="i in SLIDE_COUNT"
-            :key="i"
-            class="carousel-dot"
-            :class="{ active: slideIndex === i - 1 }"
-            @click="goToSlide(i - 1)"
-          />
-        </div>
-        <button class="carousel-arrow" data-testid="student-carousel-next" @click="nextSlide">›</button>
-      </div>
     </div>
   </div>
 </template>
@@ -275,10 +209,8 @@ function onActionClick(section: string) {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  /* 页面级滚动：不再钉满一屏（原 height:100% + 各 slide 内部滚动）。
-     overflow:hidden 仍需保留——轮播轨道横向平移依赖它裁剪相邻屏；
-     .carousel-track 为 flex 行，各 slide 等高，纵向不会溢出。 */
-  overflow: hidden;
+  /* 页面级滚动：不再钉满一屏（原 height:100% + 各 slide 内部滚动），
+     内容随三块平铺区自然撑开，纵向滚动交回 .st-content */
 }
 
 .greeting-card {
@@ -304,27 +236,20 @@ function onActionClick(section: string) {
   color: var(--color-text-muted, #6b7280);
 }
 
-.carousel {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
+/* 平铺区（原轮播容器）：三块内容纵向依次展开，间距 16px */
+.carousel.student-flat {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   border-radius: 12px;
   background: var(--color-surface, #ffffff);
   border: 1px solid var(--color-border, #e5e7eb);
-  min-height: 0;
-}
-.carousel-track {
-  display: flex;
-  height: 100%;
-  transition: transform 0.4s ease;
 }
 .slide {
-  flex: 0 0 100%;
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  overflow-y: auto;
 }
 .slide-title {
   font-size: 16px;
@@ -438,47 +363,6 @@ function onActionClick(section: string) {
   font-size: 14px;
 }
 
-.carousel-bar {
-  position: absolute;
-  bottom: 12px;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 12px;
-}
-.carousel-arrow {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 1px solid var(--color-border, #e5e7eb);
-  background: var(--color-surface, #ffffff);
-  color: inherit;
-  cursor: pointer;
-  font-size: 18px;
-  line-height: 1;
-}
-.carousel-arrow:hover {
-  background: var(--color-hover, #f3f4f6);
-}
-.carousel-dots {
-  display: flex;
-  gap: 6px;
-}
-.carousel-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  border: none;
-  background: var(--color-border-strong, #d1d5db);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.carousel-dot.active {
-  background: var(--color-primary, #3b82f6);
-}
-
 @media (max-width: 768px) {
   .action-grid,
   .tools-grid {
@@ -492,7 +376,7 @@ function onActionClick(section: string) {
   margin-left: 6px;
 }
 
-/* ===== 移动端：轮播改为竖向堆叠（去掉 height:100%/overflow:hidden 锁死，整体随页面滚动） ===== */
+/* ===== 移动端：平铺区窄屏间距压缩，整体随页面滚动 ===== */
 @media (max-width: 768px) {
   .student-home {
     height: auto;
@@ -502,19 +386,8 @@ function onActionClick(section: string) {
     flex: none;
     overflow: visible;
   }
-  .carousel-track {
-    flex-direction: column;
-    transform: none !important;
-  }
   .slide {
-    flex: none;
-    height: auto;
-    overflow: visible;
     padding: 16px;
-  }
-  /* 堆叠后无需翻页箭头/圆点 */
-  .carousel-bar {
-    display: none;
   }
   .action-grid,
   .tools-grid,

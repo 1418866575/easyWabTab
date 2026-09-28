@@ -128,6 +128,7 @@ function exportExpenseExcel(): void {
         max-height="280"
         empty-text="暂无销售记录"
       >
+        <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" />
         <el-table-column label="日期" width="120" align="center" prop="date" />
         <el-table-column label="应收（商品明细）" min-width="140" align="right">
           <template #default="{ row }">{{ formatYuanOf(row.receivable) }}</template>
@@ -212,6 +213,7 @@ function exportExpenseExcel(): void {
         max-height="220"
         empty-text="暂无关联记录"
       >
+        <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" />
         <el-table-column label="进货日期" width="120" align="center" prop="date" />
         <el-table-column label="商品" min-width="140" align="left" prop="productName" />
         <el-table-column label="进货合计" width="120" align="right">

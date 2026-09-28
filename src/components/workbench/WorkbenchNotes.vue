@@ -473,6 +473,7 @@ onUnmounted(() => {
         empty-text="当前分类/搜索下无便签"
       >
         <!-- 展开行：仅时光轴便签渲染条目管理（普通便签隐藏展开箭头） -->
+        <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (listPage - 1) * pageSize + i + 1" />
         <el-table-column type="expand">
           <template #default="{ row }">
             <div v-if="isTimeline(row)" class="nt-timeline-expand" @click.stop>

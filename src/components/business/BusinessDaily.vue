@@ -329,6 +329,7 @@ async function handleDelete(id: string): Promise<void> {
           row-key="id"
         >
           <!-- 展开行：商品明细 -->
+          <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (listPage - 1) * activePageSize + i + 1" />
           <el-table-column type="expand">
             <template #default="{ row }">
               <div class="bizday-expand" @click.stop>

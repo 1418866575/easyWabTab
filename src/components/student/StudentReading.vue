@@ -202,6 +202,7 @@ onMounted(async () => {
           height="100%"
           empty-text="还没有阅读记录，点上方「新增记录」开始吧"
         >
+          <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (listPage - 1) * pageSize + i + 1" />
           <el-table-column label="书名" min-width="200" align="left" show-overflow-tooltip>
             <template #default="{ row }">
               <span style="font-weight: 600;">📖 {{ row.bookTitle }}</span>

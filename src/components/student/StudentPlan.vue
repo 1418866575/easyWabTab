@@ -282,6 +282,7 @@ onMounted(() => {
           empty-text="还没有学习计划，点上方「新增计划」开始吧"
         >
           <!-- 展开行：目标管理 -->
+          <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (listPage - 1) * pageSize + i + 1" />
           <el-table-column type="expand">
             <template #default="{ row }">
               <div class="sp-goals-expand" @click.stop>

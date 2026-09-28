@@ -227,6 +227,7 @@ function daysClass(days: number): string {
             height="100%"
             empty-text="还没有复习条目，点左上角「新增复习」开始吧"
           >
+            <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (currentPage - 1) * pageSize + i + 1" />
             <el-table-column label="学科" width="90" align="center">
               <template #default="{ row }">
                 <span class="sr-subject-badge">{{ row.subject }}</span>
