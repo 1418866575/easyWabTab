@@ -2097,6 +2097,40 @@ onUnmounted(() => {
             </div>
           </div>
           <p class="wb-menu-hint">导航站布局：经典 = 卡片网格铺满；侧边栏 = 左侧分类导航 + 右侧内容。选择随刷新保留。</p>
+
+          <!-- 滚动条显示模式（全局外观开关）：auto / ghost / hidden -->
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">滚动条</h3>
+            <div class="seg-control" role="group" aria-label="滚动条显示模式">
+              <button
+                type="button"
+                class="seg-opt"
+                :class="{ active: store.scrollbarMode === 'auto' }"
+                :aria-pressed="store.scrollbarMode === 'auto'"
+                data-testid="scrollbar-mode-auto"
+                @click="store.setScrollbarMode('auto')"
+              >默认</button>
+              <button
+                type="button"
+                class="seg-opt"
+                :class="{ active: store.scrollbarMode === 'ghost' }"
+                :aria-pressed="store.scrollbarMode === 'ghost'"
+                data-testid="scrollbar-mode-ghost"
+                @click="store.setScrollbarMode('ghost')"
+              >隐形</button>
+              <button
+                type="button"
+                class="seg-opt"
+                :class="{ active: store.scrollbarMode === 'hidden' }"
+                :aria-pressed="store.scrollbarMode === 'hidden'"
+                data-testid="scrollbar-mode-hidden"
+                @click="store.setScrollbarMode('hidden')"
+              >常隐</button>
+            </div>
+          </div>
+          <p class="wb-menu-hint">
+            默认 = 浏览器原生滚动条；隐形 = 平时看不见，鼠标移入或用键盘聚焦时才显形，滚轮、触控板、触屏滑动、方向键以及在原滑块位置拖动都照常可用（推荐）；常隐 = 始终不显示，但原滑块区域将无法拖动。三种模式互切不会改变内容宽度。
+          </p>
         </div>
 
         <!-- 导航筛选栏（导航设置 tab - 显示控制）：控制导航站分类/标签栏展开或收起（默认收起） -->

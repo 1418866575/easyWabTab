@@ -252,6 +252,10 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   if (data.viewMode === 'classic' || data.viewMode === 'sidebar') {
     out.viewMode = data.viewMode
   }
+  // 滚动条显示模式：仅采纳合法枚举；非法/缺失回退默认（auto = 浏览器默认样式）
+  if (data.scrollbarMode === 'ghost' || data.scrollbarMode === 'hidden') {
+    out.scrollbarMode = data.scrollbarMode
+  }
   // 页面命名与可见性（工作台/销售记账）
   if (typeof data.workbenchPageName === 'string') {
     out.workbenchPageName = data.workbenchPageName.trim()
@@ -384,6 +388,10 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   // 导航站视图模式：经典网格 / 侧边栏导航（默认 classic）
   const viewMode = ref<'classic' | 'sidebar'>('classic')
 
+  // 滚动条显示模式（全局外观开关）：auto = 浏览器默认；ghost = 隐形但保留槽位/拖动，悬停或聚焦时显形；
+  // hidden = 常隐（槽位一并移除）。由 applySettings 写到 <html data-scrollbar="…"> 驱动 CSS
+  const scrollbarMode = ref<'auto' | 'ghost' | 'hidden'>('auto')
+
   // 页面命名与可见性（工作台/销售记账/学生工作台/教师工作台）
   // 工作台默认「关闭」：需用户在「设置 → 个性化 → 工作台设置」主动打开后，导航站按钮与其设置页才显示
   const workbenchPageName = ref<string>('')
@@ -454,6 +462,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       businessActiveSection: toRaw(businessActiveSection.value),
       navFiltersExpanded: navFiltersExpanded.value,
       viewMode: viewMode.value,
+      scrollbarMode: scrollbarMode.value,
       workbenchPageName: workbenchPageName.value,
       workbenchPageVisible: workbenchPageVisible.value,
       businessPageName: businessPageName.value,
@@ -533,6 +542,13 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     } else {
       root.style.removeProperty('--app-bg-opacity')
     }
+    // 滚动条显示模式：ghost/hidden 时挂 data-scrollbar 属性驱动 CSS；
+    // auto（默认）移除属性，让浏览器原生滚动条样式生效（不写死 auto，保证回默认时与各浏览器默认一致）
+    if (scrollbarMode.value === 'ghost' || scrollbarMode.value === 'hidden') {
+      root.setAttribute('data-scrollbar', scrollbarMode.value)
+    } else {
+      root.removeAttribute('data-scrollbar')
+    }
   }
 
   // ========================================
@@ -589,6 +605,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       workbenchMenuVisibility.value = normalizeWorkbenchMenuVisibility(effective.workbenchMenuVisibility)
       navFiltersExpanded.value = effective.navFiltersExpanded === true
       viewMode.value = effective.viewMode === 'sidebar' ? 'sidebar' : 'classic'
+      // 滚动条模式：仅采纳合法枚举；非法/缺失回退默认（auto）
+      scrollbarMode.value =
+        effective.scrollbarMode === 'ghost' || effective.scrollbarMode === 'hidden' ? effective.scrollbarMode : 'auto'
       workbenchPageName.value = typeof effective.workbenchPageName === 'string' ? effective.workbenchPageName.trim() : ''
       // 工作台默认关闭：只有明确存过 true 才显示（undefined / false 一律视为关闭）
       workbenchPageVisible.value = effective.workbenchPageVisible === true
@@ -738,6 +757,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     homeCardLayout.value = {}
     navFiltersExpanded.value = false
     viewMode.value = 'classic'
+    scrollbarMode.value = 'auto'
     workbenchPageName.value = ''
     workbenchPageVisible.value = false
     businessPageName.value = ''
@@ -770,6 +790,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     }
     root.style.removeProperty('--ui-btn-opacity')
     root.style.removeProperty('--app-bg-opacity')
+    root.removeAttribute('data-scrollbar')
     void idbClear('settings').catch(() => {
       // IDB 清除失败静默忽略（不抛错）
     })
@@ -831,6 +852,13 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
 
   function setViewMode(v: 'classic' | 'sidebar') {
     viewMode.value = v
+    persist()
+  }
+
+  // 滚动条显示模式：立即应用到 <html data-scrollbar>（applySettings）→ 持久化
+  function setScrollbarMode(v: 'auto' | 'ghost' | 'hidden') {
+    scrollbarMode.value = v
+    applySettings()
     persist()
   }
 
@@ -1099,6 +1127,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     businessActiveSection,
     navFiltersExpanded,
     viewMode,
+    scrollbarMode,
     workbenchPageName,
     workbenchPageVisible,
     businessPageName,
@@ -1154,6 +1183,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     isWorkbenchMenuEnabled,
     setNavFiltersExpanded,
     setViewMode,
+    setScrollbarMode,
     setWorkbenchPageName,
     setWorkbenchPageVisible,
     setBusinessPageName,

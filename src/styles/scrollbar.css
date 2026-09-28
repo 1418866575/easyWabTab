@@ -1,0 +1,147 @@
+/* ============================================================================
+   滚动条显示模式（全局开关 + 局部工具类）
+   ----------------------------------------------------------------------------
+   前提（务必遵守）：
+   1) 滚动能力只能来自 overflow: auto / scroll。本文件**绝不**把 overflow 改成
+      hidden / clip——那会直接丧失滚轮、键盘、触屏与拖动滚动。这里只改「外观」。
+   2) 不使用「把滚动条挤出容器」的 hack（负 margin / width: calc(100% + Npx)）：
+      滚动条宽度随平台（Windows 经典 ~17px、Linux ~15px、macOS overlay 0）与页面
+      缩放变化，必然导致内容被裁或布局错位。
+   3) 槽位宽度必须与全局基础滚动条一致（src/style.css 的 ::-webkit-scrollbar 为
+      8px），才能做到「切换模式时内容宽度零变化、无抖动、无裁剪」。
+
+   三种模式：
+   - auto（默认）：不挂 data-scrollbar 属性，浏览器原生样式（style.css 的 8px 美化）。
+   - ghost（推荐）：隐形但**保留槽位与命中区**——滑块/轨道透明，滚轮、触控板、
+     触屏、键盘方向键、原滑块区域拖动全部照常；指针悬停或键盘聚焦时显形，兼顾
+     滚动可发现性。
+   - hidden：常隐，槽位一并移除（原滑块区域不再可拖动，Windows 经典滚动条下内容
+     会变宽约 8px，故保留 scrollbar-gutter 预留以尽量抵消跳变）。
+
+   全局开关由 <html data-scrollbar="ghost|hidden"> 驱动（settings store 的
+   scrollbarMode 写入）；局部工具类 .ewt-scrollbar-ghost / .ewt-scrollbar-hidden
+   用于不需要跟随全局开关的单个容器。
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   模式 B：ghost —— 隐形但保留槽位与拖动（推荐）
+   ------------------------------------------------------------------------ */
+
+/* Firefox 64+ / Safari 18.2+：滑块与轨道透明（不是 none，槽位与命中区都保留） */
+html[data-scrollbar='ghost'] {
+  scrollbar-color: transparent transparent;
+}
+
+/* Chrome / Edge / Safari：::-webkit-scrollbar 系伪元素。
+   用 @supports selector() 包裹，避免 Safari 18.2+ 同时支持标准属性时两套规则打架 */
+@supports selector(::-webkit-scrollbar) {
+  /* ① 槽位宽度保持 8px（与全局基础滚动条一致）→ 切换模式不产生宽度突变/抖动 */
+  html[data-scrollbar='ghost'] ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  /* ② 轨道透明：看不见，但仍是可滚动的容器轨道 */
+  html[data-scrollbar='ghost'] ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* ③ 滑块透明（不用 display: none / width: 0，保留命中区 → 原滑块区域仍可拖动） */
+  html[data-scrollbar='ghost'] ::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: var(--radius-full, 9999px);
+  }
+
+  /* ④ 可发现性兜底：指针悬停 / 键盘聚焦进入容器时显形（仅精确指针设备，
+     触屏设备滚动条本就是 overlay、悬停无意义） */
+  @media (hover: hover) and (pointer: fine) {
+    html[data-scrollbar='ghost'] :hover::-webkit-scrollbar-thumb {
+      background: var(--color-border, #e5e7eb);
+    }
+  }
+  html[data-scrollbar='ghost'] :focus-visible::-webkit-scrollbar-thumb {
+    background: var(--color-border, #e5e7eb);
+  }
+}
+
+/* Firefox / Safari 侧的悬停显形（标准属性无法做伪元素 hover，直接切 scrollbar-color） */
+@media (hover: hover) and (pointer: fine) {
+  html[data-scrollbar='ghost'] :hover {
+    scrollbar-color: var(--color-border, #e5e7eb) transparent;
+  }
+}
+html[data-scrollbar='ghost'] :focus-visible {
+  scrollbar-color: var(--color-border, #e5e7eb) transparent;
+}
+
+/* ---------------------------------------------------------------------------
+   模式 A：hidden —— 常隐（无槽位）
+   ------------------------------------------------------------------------ */
+html[data-scrollbar='hidden'] {
+  /* ⑤ Firefox 64+ / Safari 18.2+：不绘制滚动条 */
+  scrollbar-width: none;
+  /* ⑥ IE11 / 旧 Edge(EdgeHTML)：隐外观但保留滚动 */
+  -ms-overflow-style: none;
+  /* ⑦ 预留槽位：尽量抵消「滚动条消失 → 内容变宽」的跳变（居中布局可用 both-edges 对称留白） */
+  scrollbar-gutter: stable;
+}
+
+@supports selector(::-webkit-scrollbar) {
+  /* ⑧ Chrome / Edge / Safari：滚动条宽度归零（槽位随之移除） */
+  html[data-scrollbar='hidden'] ::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   局部工具类：单个容器单独指定模式（不跟随全局开关）
+   用法：<div class="ewt-scrollbar-ghost">…</div>
+   ------------------------------------------------------------------------ */
+.ewt-scrollbar-ghost {
+  scrollbar-color: transparent transparent;
+}
+@supports selector(::-webkit-scrollbar) {
+  .ewt-scrollbar-ghost::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .ewt-scrollbar-ghost::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .ewt-scrollbar-ghost::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: var(--radius-full, 9999px);
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .ewt-scrollbar-ghost:hover::-webkit-scrollbar-thumb {
+    background: var(--color-border, #e5e7eb);
+  }
+  .ewt-scrollbar-ghost:hover {
+    scrollbar-color: var(--color-border, #e5e7eb) transparent;
+  }
+}
+
+.ewt-scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scrollbar-gutter: stable;
+}
+@supports selector(::-webkit-scrollbar) {
+  .ewt-scrollbar-hidden::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   可访问性：减弱动效偏好下不做任何过渡动画（本文件本就没有 transition，
+   此处仅为显式声明，避免后续有人补动画时踩坑）
+   ------------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  html[data-scrollbar] ::-webkit-scrollbar-thumb,
+  .ewt-scrollbar-ghost::-webkit-scrollbar-thumb {
+    transition: none;
+  }
+}

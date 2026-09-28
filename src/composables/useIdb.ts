@@ -523,7 +523,9 @@ export async function importWorkbenchData(remote: WorkbenchSyncData): Promise<{ 
   // 合并：remote.settings（含同步偏好 cloudSyncInterval/cloudSyncSilentThreshold）+ 本机 cloudSync 凭证/开关 4 字段
   const mergedSettings: AppSettingsData = {
     ...(remote.settings ?? emptyAppSettingsData()),
-    ...pickLocalCloudSyncSettings(localSettings)
+    ...pickLocalCloudSyncSettings(localSettings),
+    // 滚动条显示模式：远端信封为旧版（尚无该字段）时保留本机选择，避免被静默重置为默认
+    scrollbarMode: remote.settings?.scrollbarMode ?? localSettings?.scrollbarMode ?? 'auto'
   }
 
   const workbenchData: WorkbenchData = {
