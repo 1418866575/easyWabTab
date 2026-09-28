@@ -9,6 +9,8 @@ const BusinessView = () => import('../views/BusinessView.vue')
 const StudentView = () => import('../views/StudentView.vue')
 // TeacherView 同样懒加载：与上面保持一致的按需策略，不拖累导航站首屏
 const TeacherView = () => import('../views/TeacherView.vue')
+// 工具箱：新增模块，同样懒加载（站内自建工具的实现组件各自再按需加载）
+const ToolboxView = () => import('../toolbox/views/ToolboxView.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -42,6 +44,11 @@ const router = createRouter({
       path: '/teacher',
       name: 'teacher',
       component: TeacherView
+    },
+    {
+      path: '/toolbox',
+      name: 'toolbox',
+      component: ToolboxView
     }
   ]
 })
