@@ -517,10 +517,6 @@ function drawerMarkupRate(): number | null {
   flex: 1;
   min-height: 0;
 }
-.bizprod-list.bizprod-list-scroll {
-  overflow-y: auto;
-}
-
 @media (max-width: 768px) {
   .bizprod { min-height: 0; }
   .bizprod-list { flex: none; overflow: visible; }

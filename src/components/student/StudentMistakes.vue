@@ -488,7 +488,6 @@ onMounted(() => {
 .sm-shell {
   display: flex;
   flex-direction: column;
-  height: 100%;
   min-height: 0;
   gap: 10px;
 }
@@ -609,18 +608,18 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
   color: var(--color-text-soft, #6b7280);
   font-size: 14px;
+  min-height: 200px;
 }
 
 .sm-list {
-  flex: 1;
+  flex: 0 0 auto;
   min-height: 0;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  overflow-y: auto;
+  
 }
 
 .sm-card {

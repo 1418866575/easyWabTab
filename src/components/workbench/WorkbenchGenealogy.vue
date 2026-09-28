@@ -906,7 +906,7 @@ html.dark .fg-age-preview { border-color: var(--color-border, #374151); }
 
 .fg-tree-info { font-size: 13px; color: var(--color-text-secondary, #64748b); }
 .fg-tree-muted { color: var(--color-text-muted, #9ca3af); }
-.fg-mindmap { display: flex; flex-direction: column; gap: 6px; padding: 4px 0; flex: 1; min-height: 0; overflow-y: auto; }
+.fg-mindmap { display: flex; flex-direction: column; gap: 6px; padding: 4px 0; flex: 0 0 auto; min-height: 0;  }
 .fg-rel { font-size: 12px; color: var(--color-text-secondary, #6b7280); }
 
 /* ===== 关系弹框 ===== */

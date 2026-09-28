@@ -511,13 +511,11 @@ onBeforeUnmount(() => {
 .stt-shell {
   display: flex;
   flex-direction: column;
-  height: 100%;
   min-height: 0;
   gap: 12px;
   padding: 16px;
   /* 页面级滚动：工具栏 / 今日速览 / 图例 / 课程网格作为一个整体滚动，
      网格自身不再产生内部滚动条 —— 滚动条只出现在页面这一层 */
-  overflow: auto;
   -webkit-overflow-scrolling: touch;
   /* 网格保底宽度：保证星期列不被压得不可读；超出屏幕时由页面横向滚动查看。
      想让表格始终收进屏幕内，把此值改小（如 320px）即可 */

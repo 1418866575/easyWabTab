@@ -655,12 +655,14 @@ async function onOnboardingComplete() {
 }
 
 @media (min-width: 769px) {
+  /* 页面级滚动：内容区统一纵向滚动（原 overflow:hidden 会把超一屏的内容直接裁掉） */
   .st-content {
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
+  /* 面板随内容自然撑开（原 flex:1 把面板钉满一屏，迫使各面板自建内部滚动条） */
   .st-content > * {
-    flex: 1;
-    min-height: 0;
+    flex: 0 0 auto;
   }
 }
 

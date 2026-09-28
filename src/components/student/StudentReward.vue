@@ -328,7 +328,6 @@ onMounted(async () => {
 .sr-shell {
   display: flex;
   flex-direction: column;
-  height: 100%;
   min-height: 0;
   gap: 10px;
 }
@@ -400,8 +399,6 @@ onMounted(async () => {
   gap: 10px;
   align-content: start;
 }
-.sr-grid-scroll { overflow-y: auto; }
-
 .sr-reward-card {
   position: relative;
   background: var(--color-surface, #fff);

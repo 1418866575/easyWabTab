@@ -411,7 +411,6 @@ function daysClass(days: number): string {
 .sr-shell {
   display: flex;
   flex-direction: column;
-  height: 100%;
   min-height: 0;
   gap: 12px;
 }
@@ -422,8 +421,6 @@ function daysClass(days: number): string {
   align-items: center;
   padding: 0 4px;
 }
-
-
 .sr-stats {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
@@ -516,17 +513,13 @@ function daysClass(days: number): string {
 }
 
 .sr-list {
-  flex: 1;
+  flex: 0 0 auto;
   min-height: 0;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  overflow-y: auto;
+  
 }
-.sr-list-scroll {
-  overflow-y: auto;
-}
-
 .sr-card {
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #e5e7eb);

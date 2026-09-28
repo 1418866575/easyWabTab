@@ -363,9 +363,5 @@ html.dark .empty-state {
     flex: 1;
     min-height: 0;
   }
-
-  .hb-list-scroll {
-    overflow-y: auto;
-  }
 }
 </style>

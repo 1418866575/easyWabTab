@@ -275,7 +275,9 @@ function onActionClick(section: string) {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  height: 100%;
+  /* 页面级滚动：不再钉满一屏（原 height:100% + 各 slide 内部滚动）。
+     overflow:hidden 仍需保留——轮播轨道横向平移依赖它裁剪相邻屏；
+     .carousel-track 为 flex 行，各 slide 等高，纵向不会溢出。 */
   overflow: hidden;
 }
 

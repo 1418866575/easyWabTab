@@ -253,8 +253,8 @@ function exportExpenseExcel(): void {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  overflow-y: auto;
-  flex: 1;
+  
+  flex: 0 0 auto;
   min-height: 0;
 }
 

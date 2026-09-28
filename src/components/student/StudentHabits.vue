@@ -481,7 +481,6 @@ onMounted(async () => {
 .st-habits {
   display: flex;
   flex-direction: column;
-  height: 100%;
   min-height: 0;
   gap: 12px;
   padding: 16px;
@@ -504,10 +503,6 @@ onMounted(async () => {
   gap: 10px;
   align-content: start;
 }
-.sh-list-scroll {
-  overflow-y: auto;
-}
-
 .sh-card {
   position: relative;
   display: flex;
@@ -719,8 +714,6 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 46vh;
-  overflow-y: auto;
 }
 .sh-record-row {
   display: flex;

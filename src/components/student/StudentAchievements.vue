@@ -257,7 +257,6 @@ onMounted(async () => {
 .sa-shell {
   display: flex;
   flex-direction: column;
-  height: 100%;
   min-height: 0;
   gap: 10px;
 }
@@ -345,9 +344,9 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
   color: var(--color-text-soft, #6b7280);
   font-size: 14px;
+  min-height: 200px;
 }
 
 .sa-grid {
@@ -357,10 +356,6 @@ onMounted(async () => {
   overflow: hidden;
   align-content: start;
 }
-.sa-grid-scroll {
-  overflow-y: auto;
-}
-
 .sa-badge-card {
   background: var(--color-surface, #fff);
   border: 2px solid var(--color-border, #e5e7eb);

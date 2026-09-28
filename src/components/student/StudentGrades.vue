@@ -595,9 +595,8 @@ onMounted(async () => {
   flex-direction: column;
   gap: 14px;
   padding: 4px;
-  height: 100%;
   min-height: 0;
-  overflow-y: auto;
+  
 }
 
 .sg-add-btn {

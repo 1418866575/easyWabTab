@@ -393,8 +393,6 @@ function exportInventoryExcel(): void {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 168px;
-  overflow-y: auto;
 }
 
 .bizinv-warn-item {
@@ -502,10 +500,6 @@ function exportInventoryExcel(): void {
   flex: 1;
   min-height: 0;
 }
-.bizinv-list.bizinv-list-scroll {
-  overflow-y: auto;
-}
-
 @media (max-width: 768px) {
   .bizinv { min-height: 0; }
   .bizinv-list { flex: none; overflow: visible; }

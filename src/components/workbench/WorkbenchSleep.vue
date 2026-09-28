@@ -1171,9 +1171,5 @@ html.dark .btn-delete {
     flex: 1;
     min-height: 0;
   }
-
-  .ex-list-scroll {
-    overflow-y: auto;
-  }
 }
 </style>

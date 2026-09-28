@@ -456,8 +456,6 @@ async function handleInsertImage(e: Event): Promise<void> {
     </Transition>
 
 </template>
-
-
 <style scoped>
 /* 面板容器（与 WorkbenchNotes .wb-notes 同构） */
 .wb-diary {
@@ -611,8 +609,6 @@ async function handleInsertImage(e: Event): Promise<void> {
   gap: 12px;
   min-height: 0;
 }
-
-
 /* 卡片网格：弹框内固定每行 4 个（minmax(0,1fr) 防长内容溢出） */
 .dj-grid {
   display: grid;
@@ -1041,10 +1037,11 @@ async function handleInsertImage(e: Event): Promise<void> {
     min-height: 0;
   }
 
+  /* 页面级滚动后面板不再钉满一屏：原 height:100% 依赖父链撑满已失效，
+     改为显式最小高度，保证编辑/预览区体感稳定（内容超出随页面滚动） */
   .dj-main .dj-content-input,
   .dj-main .dj-preview {
-    height: 100%;
-    min-height: 0;
+    min-height: 420px;
   }
 
   .dj-main .dj-preview {
@@ -1053,6 +1050,7 @@ async function handleInsertImage(e: Event): Promise<void> {
 
   .dj-main .dj-content-input :deep(.el-textarea__inner) {
     height: 100%;
+    min-height: 420px !important;
   }
 }
 
@@ -1078,10 +1076,11 @@ async function handleInsertImage(e: Event): Promise<void> {
     min-height: 0;
   }
 
+  /* 页面级滚动后面板不再钉满一屏：原 height:100% 依赖父链撑满已失效，
+     改为显式最小高度，保证编辑/预览区体感稳定（内容超出随页面滚动） */
   .dj-main .dj-content-input,
   .dj-main .dj-preview {
-    height: 100%;
-    min-height: 0;
+    min-height: 420px;
   }
 
   .dj-main .dj-preview {
@@ -1090,14 +1089,13 @@ async function handleInsertImage(e: Event): Promise<void> {
 
   .dj-main .dj-content-input :deep(.el-textarea__inner) {
     height: 100%;
+    min-height: 420px !important;
   }
 }
 
 /* 历史区改为可滚动列表：桌面作用域内 .dj-grid-scroll 启用内部滚动；移动端页面滚动（.wb-content overflow-y:auto），不在此叠加 */
 @media (min-width: 769px) {
-  .dj-grid-scroll {
-    overflow-y: auto;
-  }
+
 }
 /* ===== 日记列表弹框（DialogOverlay 范式，与 WorkbenchExercise 一致；base 类本组件 scoped 内定义） ===== */
 .dialog-overlay {

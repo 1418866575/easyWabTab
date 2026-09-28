@@ -832,8 +832,6 @@ async function handleDelete(id: string): Promise<void> {
 .bizpur-expense-list {
   display: grid;
   gap: 6px;
-  max-height: 168px;
-  overflow-y: auto;
   padding: 8px;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;

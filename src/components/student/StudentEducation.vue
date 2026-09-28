@@ -371,7 +371,6 @@ const degreeOptions = DEGREE_OPTIONS
 .edu-panel {
   display: flex;
   flex-direction: column;
-  height: 100%;
   min-height: 0;
 }
 .edu-toolbar-left {

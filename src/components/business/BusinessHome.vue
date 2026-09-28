@@ -300,7 +300,7 @@ const dateText = computed(() =>
   display: flex;
   flex-direction: column;
   gap: 16px;
-  overflow-y: auto;
+  
 }
 
 /* ===== 骨架屏（首屏加载占位 + shimmer 微动效） ===== */

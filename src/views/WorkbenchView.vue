@@ -589,8 +589,10 @@ html.dark .wb-content {
    无 scroll 容器）失效，内容超出部分改为由内容区整体垂直滚动兜底，避免被裁切而「无法下滑查看」
    （R9）。横向仍裁剪，避免 overflow-y:auto 触发 overflow-x 计算为 auto 而意外出现横向滚动条。 */
 @media (min-width: 769px) {
+  /* 页面级滚动：.wb-content 是唯一滚动容器，横向裁剪、纵向由内容区统一滚动 */
   .wb-content { overflow-x: hidden; overflow-y: auto; }
-  .wb-content > * { flex: 1; min-height: 0; }
+  /* 面板随内容自然撑开（原 flex:1 把面板钉满一屏，迫使各面板自建内部滚动条） */
+  .wb-content > * { flex: 0 0 auto; }
 }
 
 @media (max-width: 768px) {

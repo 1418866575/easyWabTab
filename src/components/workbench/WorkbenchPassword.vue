@@ -943,10 +943,6 @@ html.dark .pwd-cat-badge {
     flex: 1;
     min-height: 0;
   }
-
-  .pwd-list-scroll {
-    overflow-y: auto;
-  }
 }
 
 /* 移动端（≤768px）分页惰性（全量渲染）：每行 1 个卡片 */

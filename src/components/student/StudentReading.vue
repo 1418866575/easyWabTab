@@ -364,7 +364,6 @@ onMounted(async () => {
 .sr-shell {
   display: flex;
   flex-direction: column;
-  height: 100%;
   min-height: 0;
   gap: 12px;
   padding: 16px;

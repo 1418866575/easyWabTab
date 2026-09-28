@@ -493,7 +493,7 @@ function printReport(): void {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  overflow-y: auto;
+  
 }
 
 /* 布局：趋势图 70% + 环形图 30%，左右排列；高度对齐 */

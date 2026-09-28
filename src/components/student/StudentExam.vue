@@ -448,7 +448,6 @@ onMounted(async () => {
 .se-shell {
   display: flex;
   flex-direction: column;
-  height: 100%;
   min-height: 0;
   gap: 12px;
   padding: 16px;
@@ -580,13 +579,13 @@ onMounted(async () => {
 }
 
 .se-grid {
-  flex: 1;
+  flex: 0 0 auto;
   min-height: 0;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
   align-content: start;
-  overflow-y: auto;
+  
 }
 
 .se-card {

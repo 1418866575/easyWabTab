@@ -249,8 +249,6 @@ onUnmounted(() => {
 
     <!-- 定时提醒（只读小模块） -->
     <WorkbenchHealthReminders module="diet" />
-
-
     <!-- 空态 -->
     <div
       v-if="store.records.diet.length === 0"
@@ -1144,10 +1142,6 @@ html.dark .btn-delete {
   .wb-diet {
     flex: 1;
     min-height: 0;
-  }
-
-  .dt-list-scroll {
-    overflow-y: auto;
   }
 }
 </style>

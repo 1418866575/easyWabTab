@@ -731,15 +731,16 @@ html.dark .bs-stall-name {
   }
 }
 
-/* 桌面一屏契约：面板根钉满内容区（复刻 WorkbenchView T3 shell） */
+/* 桌面页面级滚动：内容区为唯一滚动容器，面板随内容自然撑开
+   （原「一屏契约」把面板根钉满内容区，迫使各面板自建内部滚动条） */
 @media (min-width: 769px) {
   .bs-content {
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .bs-content > * {
-    flex: 1;
-    min-height: 0;
+    flex: 0 0 auto;
   }
 }
 
