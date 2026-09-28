@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 销售记账首页：营业额/利润总额主指标 + 成本/支出/毛利率统计卡 + 低库存概览 + 销售排行（树状）
+// 销售记账首页：问候头（含出摊总天数，右上角）+ 营业额/利润等主指标卡 + 低库存概览 + 销售排行（树状）
 import { computed, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { calcBusinessStats, calcCategoryProductRanking, calcExpenseLinkStats, calcMonthlyStats, formatYuanOf, lowStockProducts } from '@/composables/businessCore'
@@ -106,7 +106,7 @@ const dateText = computed(() =>
     <!-- 骨架屏：首屏数据（IndexedDB）加载中显示占位，加载完成淡入真实内容 -->
     <template v-if="loading">
       <div class="bizhome-hero">
-        <div v-for="i in 11" :key="'sk-hero-' + i" class="bizhome-hero-card sk-block">
+        <div v-for="i in 10" :key="'sk-hero-' + i" class="bizhome-hero-card sk-block">
           <span class="sk-line sk-line-sm"></span>
           <span class="sk-line sk-line-lg"></span>
         </div>
@@ -127,11 +127,23 @@ const dateText = computed(() =>
     </template>
 
     <template v-else>
-      <!-- 问候头：问候语 + 日期（统计维度已统一为「按账本」，目标入口移除） -->
+      <!-- 问候头：问候语 + 日期 + 出摊总天数（右上角，点击进入收摊记录） -->
       <section class="bizhome-greeting" data-testid="bizhome-greeting">
         <div class="bizhome-greeting-info">
           <h2 class="bizhome-greeting-title">{{ greeting }}{{ store.settings.stallName ? '，' + store.settings.stallName : '' }}</h2>
           <p class="bizhome-greeting-sub">{{ dateText }}</p>
+        </div>
+        <div
+          class="bizhome-greeting-stat clickable"
+          role="button"
+          tabindex="0"
+          title="出摊总天数（进入收摊记录）"
+          data-testid="bizhome-stalldays"
+          @click="go('daily')"
+          @keydown.enter="go('daily')"
+        >
+          <span class="greeting-stat-value">{{ totalStallDays }}<small class="greeting-stat-unit">天</small></span>
+          <span class="greeting-stat-label">出摊总天数</span>
         </div>
       </section>
 
@@ -146,12 +158,8 @@ const dateText = computed(() =>
         </div>
       </div>
 
-      <!-- 主指标（按账本统计）：出摊天数 → 营业收入 → 成本 → 毛利率 → 利润 → 支出 → 已关联库存支出 → 未关联库存支出 → 待销售（成本/营业额/利润） -->
+      <!-- 主指标（按账本统计）：营业收入 → 成本 → 毛利率 → 利润 → 支出 → 已关联库存支出 → 未关联库存支出 → 待销售（成本/营业额/利润）；出摊总天数移至问候头右上角 -->
       <section class="bizhome-hero">
-        <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-stalldays" @click="go('daily')" @keydown.enter="go('daily')">
-          <span class="hero-label">出摊总天数</span>
-          <span class="hero-value">{{ totalStallDays }}<small class="hero-unit">天</small></span>
-        </div>
         <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-revenue" @click="go('stats')" @keydown.enter="go('stats')">
           <span class="hero-label">营业收入</span>
           <span class="hero-value">{{ formatYuanOf(ledgerStats.revenue) }}</span>
@@ -347,7 +355,7 @@ html.dark .sk-block::after {
   .sk-block::after { animation: none; }
 }
 
-/* ===== 主指标 11 卡（3 列）：出摊天数 / 营业收入 / 成本 / 毛利率 / 利润 / 支出 / 已关联库存支出 / 未关联库存支出 / 待销售成本 / 待销售营业额 / 待销售利润 ===== */
+/* ===== 主指标 10 卡（3 列）：营业收入 / 成本 / 毛利率 / 利润 / 支出 / 已关联库存支出 / 未关联库存支出 / 待销售成本 / 待销售营业额 / 待销售利润（出摊总天数已移至问候头右上角） ===== */
 .bizhome-hero {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -746,6 +754,51 @@ html.dark .sk-block::after {
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
+/* 出摊总天数：问候头右上角，点击进入收摊记录 */
+.bizhome-greeting-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border-radius: var(--radius-md, 10px);
+  transition: background var(--transition-fast, 0.15s ease);
+}
+
+.bizhome-greeting-stat.clickable {
+  cursor: pointer;
+}
+
+.bizhome-greeting-stat.clickable:focus-visible {
+  outline: 2px solid var(--color-primary, var(--color-primary));
+  outline-offset: 2px;
+}
+
+.bizhome-greeting-stat:hover {
+  background: color-mix(in srgb, var(--color-primary, var(--color-primary)) 10%, transparent);
+}
+
+.greeting-stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--color-primary, var(--color-primary));
+  font-variant-numeric: tabular-nums;
+}
+
+.greeting-stat-unit {
+  font-size: 13px;
+  font-weight: 600;
+  margin-left: 2px;
+  color: var(--color-text-secondary, var(--color-text-secondary));
+}
+
+.greeting-stat-label {
+  font-size: 12px;
+  color: var(--color-text-secondary, var(--color-text-secondary));
+}
+
 /* ===== 统计范围 + 毛利率公式 ===== */
 .bizhome-scope {
   display: flex;
@@ -913,6 +966,10 @@ html.dark .formula-main {
   color: #93c5fd;
 }
 
+html.dark .greeting-stat-value {
+  color: #93c5fd;
+}
+
 html.dark .mini-bar {
   background: linear-gradient(180deg, #60a5fa, rgba(96, 165, 250, 0.5));
 }
@@ -938,11 +995,15 @@ html.dark .mini-bar-col:hover .mini-bar {
   .bizhome-col-40,
   .bizhome-col-60 { flex-basis: auto; }
 
-  /* 问候头窄屏：单列排布（已无右侧按钮区） */
+  /* 问候头窄屏：单列排布（出摊总天数仍靠右） */
   .bizhome-greeting {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
+  }
+
+  .bizhome-greeting-stat {
+    align-self: flex-end;
   }
 }
 
