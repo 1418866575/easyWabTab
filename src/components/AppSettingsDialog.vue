@@ -71,6 +71,7 @@ import BusinessCategoryManager from '@/components/business/BusinessCategoryManag
 import StudentTimetableConfig from '@/components/student/StudentTimetableConfig.vue'
 import TeacherDataManage from '@/components/teacher/TeacherDataManage.vue'
 import TeacherHelp from '@/components/teacher/TeacherHelp.vue'
+import TeacherTimetableConfig from '@/components/teacher/TeacherTimetableConfig.vue'
 // 导航站管理类组件：原本是「设置里点按钮 → 关闭设置 → 弹框」的二级弹窗，现改为内嵌常驻面板
 // （embedded 模式）。沿用 defineAsyncComponent 懒加载，避免把 6 个大组件打进设置页 chunk。
 const SiteModal = defineAsyncComponent(() => import('@/components/SiteModal.vue'))
@@ -121,6 +122,7 @@ type TeacherSubTab =
   | 'teacher-backup'
   | 'teacher-help'
   | 'teacher-menu'
+  | 'teacher-timetable'
 /** 来源页：nav=导航站、workbench=个人工作台、business=销售记账、student=学生工作台、teacher=教师工作台、all=全显示(向后兼容) */
 type SettingsSource = 'nav' | 'workbench' | 'business' | 'student' | 'teacher' | 'all'
 const props = withDefaults(defineProps<{ source?: SettingsSource }>(), { source: 'all' })
@@ -213,6 +215,7 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student' | 'teacher', SubTab
     { key: 'teacher-class', label: '班级信息' },
     { key: 'teacher-import', label: '导入数据' },
     { key: 'teacher-backup', label: '备份与恢复' },
+    { key: 'teacher-timetable', label: '课程表配置' },
     { key: 'teacher-help', label: '使用说明' },
     { key: 'teacher-menu', label: '菜单设置' }
   ]
@@ -430,6 +433,7 @@ const NAV_GROUPS: NavGroup[] = [
       { key: 'teacher-class', label: '班级信息', icon: 'info', tab: 'teacher', sub: 'teacher-class' },
       { key: 'teacher-import', label: '导入数据', icon: 'upload', tab: 'teacher', sub: 'teacher-import' },
       { key: 'teacher-backup', label: '备份与恢复', icon: 'save', tab: 'teacher', sub: 'teacher-backup' },
+      { key: 'teacher-timetable', label: '课程表配置', icon: 'cog', tab: 'teacher', sub: 'teacher-timetable' },
       { key: 'teacher-help', label: '使用说明', icon: 'help', tab: 'teacher', sub: 'teacher-help' },
       { key: 'teacher-menu', label: '菜单设置', icon: 'bookmark', tab: 'teacher', sub: 'teacher-menu' }
     ]
@@ -3422,6 +3426,11 @@ onUnmounted(() => {
 
         <div v-if="activeTab === 'teacher' && activeSubTab === 'teacher-backup'" class="wb-menu-config">
           <TeacherDataManage section="backup" />
+        </div>
+
+        <!-- 教师工作台 - 课程表配置：内嵌教师版课程表配置（基础配置 + Excel 模板下载 + 导入校验预览） -->
+        <div v-if="activeTab === 'teacher' && activeSubTab === 'teacher-timetable'" class="wb-menu-config">
+          <TeacherTimetableConfig embedded />
         </div>
 
         <!-- 教师工作台 - 使用说明（同上，迁入设置页） -->

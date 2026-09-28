@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 特异体质学生：名单 + 逐人档案（过敏原 / 慢性疾病 / 注意事项 / 家长紧急电话）。
+// 隐私信息：名单 + 逐人档案（过敏原 / 慢性疾病 / 注意事项 / 家长紧急电话）。
 // special 标记会同步到花名册与座位表的红色「!」角标；该页仅班主任可见。
 
 import { computed, ref } from 'vue'
@@ -58,7 +58,7 @@ async function exportExcelFile(): Promise<void> {
   <div class="tw-page">
     <div class="tw-head">
       <div>
-        <h3 class="tw-title">特异体质学生</h3>
+        <h3 class="tw-title">隐私信息</h3>
         <p class="tw-subtitle">属隐私敏感信息，仅班主任可见；标记后花名册与座位表会显示红色「!」角标。</p>
       </div>
       <div class="tw-toolbar tw-no-print">

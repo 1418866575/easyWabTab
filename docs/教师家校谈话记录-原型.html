@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>家校谈话记录 · 原型（教师工作台）</title>
+<style>
+  /* ===== 复用项目的设计令牌 ===== */
+  :root {
+    --color-primary: #3b82f6;
+    --color-primary-soft: #eff6ff;
+    --color-bg: #f8fafc;
+    --color-bg-card: #ffffff;
+    --color-bg-hover: #f1f5f9;
+    --color-border: #e2e8f0;
+    --color-text: #334155;
+    --color-text-strong: #0f172a;
+    --color-text-secondary: #64748b;
+    --color-text-muted: #94a3b8;
+    --radius-md: 12px;
+    --radius-sm: 6px;
+    --font-size-sm: 12px;
+    --font-size: 14px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: var(--font-size);
+  }
+
+  /* ===== 工作台外壳 ===== */
+  .app { display: flex; min-height: 100vh; }
+  .tv-sidebar {
+    width: 210px; flex: none; background: var(--color-bg-card);
+    border-right: 1px solid var(--color-border); padding: 14px 10px;
+  }
+  .tv-sidebar h4 { margin: 4px 8px 10px; font-size: 12px; color: var(--color-text-muted); }
+  .tv-menu { list-style: none; margin: 0; padding: 0; }
+  .tv-menu li {
+    padding: 9px 12px; border-radius: var(--radius-sm); font-size: 13px;
+    color: var(--color-text-secondary); cursor: pointer; margin-bottom: 2px;
+  }
+  .tv-menu li:hover { background: var(--color-bg-hover); }
+  .tv-menu li.active { background: var(--color-primary-soft); color: var(--color-primary); font-weight: 600; }
+  .tv-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+  .tv-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; background: var(--color-bg-card);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .tv-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .tv-field {
+    display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 8px;
+    border: 1px dashed var(--color-border); border-radius: var(--radius-sm);
+    background: var(--color-bg-hover); font-size: var(--font-size-sm);
+  }
+  .tv-field-label { color: var(--color-text-muted); }
+  .tv-field-value { color: var(--color-text); font-weight: 500; }
+  .tv-actions { display: flex; gap: 8px; }
+  .tw-btn {
+    border: 1px solid var(--color-border); background: var(--color-bg-card);
+    color: var(--color-text); border-radius: var(--radius-sm); padding: 6px 12px;
+    font-size: var(--font-size-sm); cursor: pointer;
+  }
+  .tw-btn:hover { border-color: var(--color-primary); }
+  .tw-btn-primary { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+  .tw-btn-sm { padding: 5px 10px; }
+
+  /* ===== 内容区（复用 .tw-page / .tw-head / .tw-card） ===== */
+  .tw-page { padding: 18px; }
+  .tw-head { margin-bottom: 14px; }
+  .tw-title { margin: 0; font-size: 18px; color: var(--color-text-strong); }
+  .tw-subtitle { margin: 4px 0 0; font-size: var(--font-size-sm); color: var(--color-text-secondary); }
+
+  /* 统计概览 */
+  .tk-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 14px; }
+  .tk-stat {
+    background: var(--color-bg-card); border: 1px solid var(--color-border);
+    border-radius: var(--radius-md); padding: 14px 16px;
+  }
+  .tk-stat .n { font-size: 24px; font-weight: 700; color: var(--color-text-strong); }
+  .tk-stat .l { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-top: 2px; }
+  .tk-stat.warn .n { color: #f59e0b; }
+
+  .tw-card {
+    background: var(--color-bg-card); border: 1px solid var(--color-border);
+    border-radius: var(--radius-md); padding: 16px; margin-bottom: 14px;
+  }
+  .tw-card-title { margin: 0 0 12px; font-size: 15px; color: var(--color-text-strong); }
+
+  /* 过滤 + 工具条（对齐 records 范式） */
+  .tk-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .tk-filters select, .tk-filters input {
+    height: 30px; border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+    padding: 0 8px; font-size: var(--font-size-sm); background: #fff; color: var(--color-text);
+  }
+  .tk-filters input { width: 180px; }
+  .ewt-table-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .view-toggle { display: inline-flex; border: 1px solid var(--color-border); border-radius: var(--radius-sm); overflow: hidden; }
+  .view-toggle button {
+    border: none; background: #fff; padding: 5px 12px; font-size: var(--font-size-sm); cursor: pointer; color: var(--color-text-secondary);
+  }
+  .view-toggle button.active { background: var(--color-primary-soft); color: var(--color-primary); font-weight: 600; }
+
+  /* 列表视图（.ewt-table） */
+  .ewt-table { width: 100%; border-collapse: collapse; font-size: var(--font-size-sm); }
+  .ewt-table th, .ewt-table td { padding: 9px 10px; border-bottom: 1px solid var(--color-border); text-align: left; }
+  .ewt-table th { color: var(--color-text-muted); font-weight: 600; background: var(--color-bg-hover); text-align: center; }
+  .ewt-table td { text-align: center; color: var(--color-text); }
+  .ewt-table td.l { text-align: left; }
+  .ewt-op-col { width: 120px; }
+  .ewt-table .link { color: var(--color-primary); cursor: pointer; margin-right: 8px; }
+  .ewt-table .link.danger { color: #ef4444; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; background: var(--color-bg-hover); color: var(--color-text-secondary); }
+  .tag.c-学业 { background: #eff6ff; color: #2563eb; }
+  .tag.c-行为纪律 { background: #fef2f2; color: #dc2626; }
+  .tag.c-心理情绪 { background: #f0fdf4; color: #16a34a; }
+  .tag.c-家庭情况 { background: #fff7ed; color: #ea580c; }
+  .tag.c-出勤请假 { background: #faf5ff; color: #9333ea; }
+  .tag.follow { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+
+  /* 卡片视图（.ewt-card-grid） */
+  .ewt-card-grid { display: none; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .ewt-card-grid.show { display: grid; }
+  .ewt-table-wrap.hide { display: none; }
+  .talk-card { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 12px; }
+  .talk-card .hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .talk-card .stu { font-weight: 600; color: var(--color-text-strong); }
+  .talk-card .date { font-size: 11px; color: var(--color-text-muted); }
+  .talk-card .meta { font-size: 12px; color: var(--color-text-secondary); margin: 4px 0; }
+  .talk-card .content { font-size: 13px; color: var(--color-text); margin-top: 6px; }
+  .talk-card .ops { margin-top: 8px; font-size: 12px; }
+  .talk-card .ops .link { color: var(--color-primary); cursor: pointer; margin-right: 10px; }
+  .talk-card .ops .link.danger { color: #ef4444; }
+
+  /* 分页（.ewt-pager） */
+  .ewt-pager { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 12px; font-size: var(--font-size-sm); color: var(--color-text-secondary); }
+  .ewt-pager button { border: 1px solid var(--color-border); background: #fff; border-radius: var(--radius-sm); padding: 4px 10px; cursor: pointer; }
+
+  /* 弹框（.el-dialog 风格） */
+  .mask { display: none; position: fixed; inset: 0; background: rgba(15,23,42,.45); align-items: center; justify-content: center; }
+  .mask.show { display: flex; }
+  .el-dialog { width: 520px; background: #fff; border-radius: var(--radius-md); overflow: hidden; }
+  .el-dialog h3 { margin: 0; padding: 14px 18px; border-bottom: 1px solid var(--color-border); font-size: 15px; }
+  .el-dialog .body { padding: 16px 18px; max-height: 60vh; overflow: auto; }
+  .form-row { display: flex; gap: 12px; margin-bottom: 12px; }
+  .form-field { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+  .form-field label { font-size: var(--font-size-sm); color: var(--color-text-secondary); }
+  .form-field select, .form-field input, .form-field textarea {
+    border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 7px 9px; font-size: var(--font-size-sm); font-family: inherit;
+  }
+  .form-field textarea { min-height: 70px; resize: vertical; }
+  .ewt-dialog-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--color-border); }
+  .chk { display: flex; align-items: center; gap: 6px; font-size: var(--font-size-sm); color: var(--color-text-secondary); }
+  .hint { font-size: 11px; color: var(--color-text-muted); margin-top: 2px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- 左侧菜单（仅示意，家校谈话高亮） -->
+  <aside class="tv-sidebar">
+    <h4>基础功能</h4>
+    <ul class="tv-menu">
+      <li>学期与班级</li>
+      <li>学生信息</li>
+      <li>班委信息</li>
+      <li>作业记录</li>
+      <li>成绩分析</li>
+      <li>值日生</li>
+      <li class="active">家校谈话</li>
+      <li>课程表</li>
+    </ul>
+  </aside>
+
+  <main class="tv-main">
+    <!-- 顶栏 -->
+    <header class="tv-topbar">
+      <div class="tv-left">
+        <div class="tv-field"><span class="tv-field-label">班级</span><span class="tv-field-value">三年级1班</span></div>
+        <div class="tv-field"><span class="tv-field-label">本班身份</span><span class="tv-field-value">班主任</span></div>
+        <div class="tv-field"><span class="tv-field-label">学科</span><span class="tv-field-value">语文</span></div>
+      </div>
+      <div class="tv-actions">
+        <button class="tw-btn tw-btn-sm">设置</button>
+        <button class="tw-btn tw-btn-sm">云同步</button>
+      </div>
+    </header>
+
+    <div class="tw-page">
+      <div class="tw-head">
+        <h3 class="tw-title">家校谈话记录</h3>
+        <p class="tw-subtitle">记录与家长的每一次沟通（电话 / 微信 / 面谈 / 家访），便于回溯、统计与跟进。</p>
+      </div>
+
+      <!-- 统计概览 -->
+      <div class="tk-stats">
+        <div class="tk-stat"><div class="n">18</div><div class="l">谈话总数</div></div>
+        <div class="tk-stat"><div class="n">5</div><div class="l">本月谈话</div></div>
+        <div class="tk-stat"><div class="n">6</div><div class="l">各分类占比见下</div></div>
+        <div class="tk-stat warn"><div class="n">3</div><div class="l">待跟进</div></div>
+      </div>
+
+      <!-- 过滤 + 工具条 -->
+      <section class="tw-card">
+        <div class="tk-filters">
+          <select><option>全部学生</option><option>张明</option><option>李华</option></select>
+          <select><option>全部方式</option><option>电话</option><option>微信</option><option>面谈</option><option>家访</option></select>
+          <select><option>全部分类</option><option>学业</option><option>行为纪律</option><option>心理情绪</option><option>家庭情况</option><option><option>出勤请假</option><option><option>安全</option><option>政策资助</option></select>
+          <select><option>全部</option><option>仅待跟进</option></select>
+          <select><option>本学期</option><option>近 30 天</option><option>全部</option></select>
+          <input placeholder="搜索内容 / 对方姓名" />
+        </div>
+
+        <div class="ewt-table-toolbar">
+          <div class="view-toggle">
+            <button id="btnList" class="active" onclick="setView('list')">列表</button>
+            <button id="btnCard" onclick="setView('card')">卡片</button>
+          </div>
+          <button class="tw-btn tw-btn-primary tw-btn-sm" onclick="openDialog()">+ 新增谈话</button>
+        </div>
+
+        <!-- 列表视图 -->
+        <div class="ewt-table-wrap" id="listView">
+          <table class="ewt-table">
+            <thead>
+              <tr>
+                <th style="width:90px">日期</th>
+                <th style="width:80px">学生</th>
+                <th style="width:70px">方式</th>
+                <th style="width:80px">对象</th>
+                <th style="width:90px">分类</th>
+                <th class="l">内容摘要</th>
+                <th style="width:70px">跟进</th>
+                <th class="ewt-op-col">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>2026-09-20</td><td>张明</td><td>电话</td><td>母亲</td>
+                <td><span class="tag c-学业">学业</span></td>
+                <td class="l">数学连续两次不及格，约定每日额外练习 20 分钟，家长监督。</td>
+                <td><span class="tag follow">待跟进</span></td>
+                <td class="ewt-op-col"><span class="link">编辑</span><span class="link danger">删除</span></td>
+              </tr>
+              <tr>
+                <td>2026-09-18</td><td>李华</td><td>家访</td><td>祖父母</td>
+                <td><span class="tag c-家庭情况">家庭情况</span></td>
+                <td class="l">祖辈溺爱，作业常代写；与老人沟通独立完成要求。</td>
+                <td>—</td>
+                <td class="ewt-op-col"><span class="link">编辑</span><span class="link danger">删除</span></td>
+              </tr>
+              <tr>
+                <td>2026-09-15</td><td>王芳</td><td>微信</td><td>母亲</td>
+                <td><span class="tag c-心理情绪">心理情绪</span></td>
+                <td class="l">近期沉默寡言，家长反映家中二胎出生后关注减少，约定多陪伴。</td>
+                <td><span class="tag follow">待跟进</span></td>
+                <td class="ewt-op-col"><span class="link">编辑</span><span class="link danger">删除</span></td>
+              </tr>
+              <tr>
+                <td>2026-09-12</td><td>陈强</td><td>面谈</td><td>父亲</td>
+                <td><span class="tag c-行为纪律">行为纪律</span></td>
+                <td class="l">课间与同学争执，家校约定违纪扣星、表现好即奖励。</td>
+                <td>—</td>
+                <td class="ewt-op-col"><span class="link">编辑</span><span class="link danger">删除</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 卡片视图 -->
+        <div class="ewt-card-grid" id="cardView">
+          <div class="talk-card">
+            <div class="hd"><span class="stu">张明</span><span class="date">2026-09-20 · 电话</span></div>
+            <div class="meta">对象：母亲 ｜ 分类：<span class="tag c-学业">学业</span> ｜ <span class="tag follow">待跟进</span></div>
+            <div class="content">数学连续两次不及格，约定每日额外练习 20 分钟，家长监督。</div>
+            <div class="ops"><span class="link">编辑</span><span class="link danger">删除</span></div>
+          </div>
+          <div class="talk-card">
+            <div class="hd"><span class="stu">李华</span><span class="date">2026-09-18 · 家访</span></div>
+            <div class="meta">对象：祖父母 ｜ 分类：<span class="tag c-家庭情况">家庭情况</span></div>
+            <div class="content">祖辈溺爱，作业常代写；与老人沟通独立完成要求。</div>
+            <div class="ops"><span class="link">编辑</span><span class="link danger">删除</span></div>
+          </div>
+          <div class="talk-card">
+            <div class="hd"><span class="stu">王芳</span><span class="date">2026-09-15 · 微信</span></div>
+            <div class="meta">对象：母亲 ｜ 分类：<span class="tag c-心理情绪">心理情绪</span> ｜ <span class="tag follow">待跟进</span></div>
+            <div class="content">近期沉默寡言，家长反映家中二胎出生后关注减少，约定多陪伴。</div>
+            <div class="ops"><span class="link">编辑</span><span class="link danger">删除</span></div>
+          </div>
+        </div>
+
+        <div class="ewt-pager">
+          <span>共 18 条</span>
+          <button>上一页</button>
+          <button style="border-color:var(--color-primary);color:var(--color-primary)">1</button>
+          <button>2</button>
+          <button>下一页</button>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- 新增 / 编辑弹框 -->
+<div class="mask" id="mask">
+  <div class="el-dialog">
+    <h3>新增谈话记录</h3>
+    <div class="body">
+      <div class="form-row">
+        <div class="form-field" style="flex:0 0 50%">
+          <label>学生 <span style="color:#ef4444">*</span></label>
+          <select><option>张明</option><option>李华</option><option>王芳</option><option>陈强</option></select>
+        </div>
+        <div class="form-field" style="flex:0 0 50%">
+          <label>日期 <span style="color:#ef4444">*</span></label>
+          <input type="date" value="2026-09-21" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label>方式</label>
+          <select><option>电话</option><option>微信</option><option>QQ</option><option>面谈</option><option>家访</option><option>其他</option></select>
+        </div>
+        <div class="form-field">
+          <label>谈话对象</label>
+          <select><option>父亲</option><option>母亲</option><option>祖父母</option><option>监护人</option><option>学生本人</option><option>其他</option></select>
+        </div>
+        <div class="form-field">
+          <label>主题分类</label>
+          <select><option>学业</option><option>行为纪律</option><option>心理情绪</option><option>家庭情况</option><option>出勤请假</option><option>安全</option><option>政策资助</option><option>其他</option></select>
+        </div>
+      </div>
+      <div class="form-field" style="margin-bottom:12px">
+        <label>谈话内容 <span style="color:#ef4444">*</span></label>
+        <textarea placeholder="如：数学连续两次不及格，约定每日额外练习 20 分钟，由家长监督。"></textarea>
+      </div>
+      <div class="form-field" style="margin-bottom:8px">
+        <label>处理结论 / 达成共识</label>
+        <textarea placeholder="选填"></textarea>
+      </div>
+      <label class="chk"><input type="checkbox" /> 需要后续跟进</label>
+      <div class="form-field" style="margin-top:8px">
+        <label>跟进事项 / 下次计划</label>
+        <input placeholder="选填，标记需跟进时填写" />
+      </div>
+    </div>
+    <div class="ewt-dialog-footer">
+      <button class="tw-btn tw-btn-sm" onclick="closeDialog()">取消</button>
+      <button class="tw-btn tw-btn-primary tw-btn-sm" onclick="closeDialog()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function setView(v) {
+    var list = document.getElementById('listView');
+    var card = document.getElementById('cardView');
+    var bL = document.getElementById('btnList');
+    var bC = document.getElementById('btnCard');
+    if (v === 'card') {
+      list.classList.add('hide'); card.classList.add('show');
+      bC.classList.add('active'); bL.classList.remove('active');
+    } else {
+      list.classList.remove('hide'); card.classList.remove('show');
+      bL.classList.add('active'); bC.classList.remove('active');
+    }
+  }
+  function openDialog() { document.getElementById('mask').classList.add('show'); }
+  function closeDialog() { document.getElementById('mask').classList.remove('show'); }
+  document.getElementById('mask').addEventListener('click', function (e) {
+    if (e.target === this) closeDialog();
+  });
+</script>
+</body>
+</html>

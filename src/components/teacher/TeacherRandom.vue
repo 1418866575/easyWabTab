@@ -13,9 +13,62 @@ const students = computed(() => sortedStudents(b.value?.students ?? []))
 const state = computed(() => b.value?.random ?? { history: [], mode: 'all' as const })
 const history = computed(() => state.value.history)
 
+// ---------- 名单筛选：男生 / 女生 / 班委（单一或组合，组合取交集）----------
+type FilterMode = 'male' | 'female' | 'committee'
+const FILTER_LABELS: Record<FilterMode, string> = { male: '男生', female: '女生', committee: '班委' }
+const filterModes: FilterMode[] = ['male', 'female', 'committee']
+const activeFilters = ref<FilterMode[]>([])
+
+const committeeRoleMap = computed(() => {
+  const m = new Map<string, string>()
+  for (const c of b.value?.committee ?? []) {
+    const prev = m.get(c.studentId)
+    m.set(c.studentId, prev ? `${prev}、${c.role}` : c.role)
+  }
+  return m
+})
+const isCommittee = (id: string): boolean => committeeRoleMap.value.has(id)
+function roleOf(id: string): string {
+  return committeeRoleMap.value.get(id) ?? ''
+}
+
+const filteredStudents = computed(() => {
+  if (!activeFilters.value.length) return students.value
+  return students.value.filter((s) =>
+    activeFilters.value.every((f) => {
+      if (f === 'male') return s.gender === '男'
+      if (f === 'female') return s.gender === '女'
+      return isCommittee(s.id)
+    })
+  )
+})
+
+const filterSummary = computed(() =>
+  activeFilters.value.length ? activeFilters.value.map((f) => FILTER_LABELS[f]).join(' + ') : '全部学生'
+)
+
+const stats = computed(() => {
+  const all = students.value
+  return {
+    total: all.length,
+    male: all.filter((s) => s.gender === '男').length,
+    female: all.filter((s) => s.gender === '女').length,
+    committee: all.filter((s) => isCommittee(s.id)).length
+  }
+})
+
+function toggleFilter(f: FilterMode): void {
+  activeFilters.value = activeFilters.value.includes(f)
+    ? activeFilters.value.filter((x) => x !== f)
+    : [...activeFilters.value, f]
+}
+function clearFilters(): void {
+  activeFilters.value = []
+}
+
 const pool = computed(() => {
-  if (state.value.mode === 'once') return students.value.filter((s) => !history.value.includes(s.id))
-  return students.value
+  if (state.value.mode === 'once') return filteredStudents.value.filter((s) => !history.value.includes(s.id))
+  return filteredStudents.value
 })
 
 const rolling = ref(false)
@@ -35,7 +88,12 @@ function stopTimer(): void {
 function start(): void {
   if (rolling.value) return
   if (!pool.value.length) {
-    display.value = state.value.mode === 'once' ? '全部学生都已点过' : '还没有学生'
+    display.value =
+      state.value.mode === 'once'
+        ? '该范围内学生都已点过'
+        : activeFilters.value.length
+          ? '当前筛选条件下没有学生'
+          : '还没有学生'
     return
   }
   rolling.value = true
@@ -67,6 +125,10 @@ async function reset(): Promise<void> {
   display.value = '准备点名'
 }
 
+async function removeHistory(id: string): Promise<void> {
+  await store.removeRandomHistory(id)
+}
+
 function nameOf(id: string): string {
   return students.value.find((s) => s.id === id)?.name ?? '（已移除）'
 }
@@ -79,7 +141,7 @@ onBeforeUnmount(stopTimer)
     <div class="tw-head">
       <div>
         <h3 class="tw-title">点名</h3>
-        <p class="tw-subtitle">课堂提问随机抽人；「只点一遍」模式下已点过的学生不再出现。</p>
+        <p class="tw-subtitle">课堂提问随机抽人；可按「男生 / 女生 / 班委」单一或组合筛选点名范围，「只点一遍」模式下已点过的学生不再出现。</p>
       </div>
     </div>
 
@@ -105,9 +167,48 @@ onBeforeUnmount(stopTimer)
     </section>
 
     <section class="tw-card">
+      <h4 class="tw-card-title">名单筛选</h4>
+      <div class="rd-filters">
+        <button type="button" class="rd-chip" :class="{ 'is-active': activeFilters.length === 0 }" @click="clearFilters">全部</button>
+        <button
+          v-for="f in filterModes"
+          :key="f"
+          type="button"
+          class="rd-chip"
+          :class="{ 'is-active': activeFilters.includes(f) }"
+          @click="toggleFilter(f)"
+        >{{ FILTER_LABELS[f] }}</button>
+      </div>
+      <p class="rd-filter-summary">当前筛选：{{ filterSummary }}（共 {{ filteredStudents.length }} 人）</p>
+      <div class="rd-stats">
+        <span class="rd-stat">总人数 {{ stats.total }}</span>
+        <span class="rd-stat">男生 {{ stats.male }}</span>
+        <span class="rd-stat">女生 {{ stats.female }}</span>
+        <span class="rd-stat">班委 {{ stats.committee }}</span>
+      </div>
+      <div v-if="filteredStudents.length" class="rd-roster">
+        <span
+          v-for="s in filteredStudents"
+          :key="s.id"
+          class="rd-roster-tag"
+          :class="{ 'is-committee': isCommittee(s.id) }"
+        >
+          {{ s.name }}
+          <em v-if="s.gender === '男'" class="rd-gender rd-male">♂</em>
+          <em v-else-if="s.gender === '女'" class="rd-gender rd-female">♀</em>
+          <em v-if="isCommittee(s.id)" class="rd-role">{{ roleOf(s.id) }}</em>
+        </span>
+      </div>
+      <p v-else class="tw-empty">当前筛选条件下没有学生。</p>
+    </section>
+
+    <section class="tw-card">
       <h4 class="tw-card-title">点名历史</h4>
       <div v-if="history.length" class="rd-history">
-        <span v-for="(id, i) in history" :key="`${id}-${i}`" class="rd-tag">{{ nameOf(id) }}</span>
+        <span v-for="(id, i) in history" :key="`${id}-${i}`" class="rd-tag">
+          {{ nameOf(id) }}
+          <button type="button" class="rd-tag-remove" :title="`移除 ${nameOf(id)}`" @click="removeHistory(id)">×</button>
+        </span>
       </div>
       <p v-else class="tw-empty">还没有点名记录。</p>
     </section>
@@ -151,11 +252,132 @@ onBeforeUnmount(stopTimer)
 }
 
 .rd-tag {
-  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px 3px 10px;
   border-radius: 999px;
   background-color: var(--color-primary-soft, #eff6ff);
   color: var(--color-primary, #3b82f6);
   font-size: var(--font-size-sm, 12px);
+}
+
+.rd-tag-remove {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.rd-tag-remove:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* ---------- 名单筛选 ---------- */
+.rd-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.rd-chip {
+  padding: 5px 14px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 999px;
+  background: var(--color-bg-card, #fff);
+  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-sm, 12px);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.rd-chip:hover {
+  border-color: var(--color-primary, #3b82f6);
+}
+
+.rd-chip.is-active {
+  background: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
+  color: #fff;
+}
+
+.rd-filter-summary {
+  margin: 0 0 8px;
+  font-size: var(--font-size-sm, 12px);
+  color: var(--color-text-secondary, #64748b);
+}
+
+.rd-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-bottom: 12px;
+}
+
+.rd-stat {
+  font-size: var(--font-size-sm, 12px);
+  color: var(--color-text, #334155);
+}
+
+.rd-stat::before {
+  content: '·';
+  margin-right: 6px;
+  color: var(--color-border, #cbd5e1);
+}
+
+.rd-roster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rd-roster-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-text, #334155);
+  font-size: var(--font-size-sm, 12px);
+}
+
+.rd-roster-tag.is-committee {
+  background: var(--color-primary-soft, #eff6ff);
+  color: var(--color-primary, #3b82f6);
+}
+
+.rd-gender {
+  font-style: normal;
+  opacity: 0.65;
+}
+
+.rd-gender.rd-male {
+  color: #2563eb;
+}
+
+.rd-gender.rd-female {
+  color: #db2777;
+}
+
+.rd-role {
+  font-style: normal;
+  font-size: 11px;
+  opacity: 0.9;
 }
 
 @media (max-width: 768px) {

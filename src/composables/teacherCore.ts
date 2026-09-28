@@ -5,6 +5,7 @@
 import {
   type ClassBucket,
   type ClassGroup,
+  type CommitteeMember,
   type DutyData,
   type Exam,
   type SeatData,
@@ -13,12 +14,18 @@ import {
   type LeaveRecord,
   type LeaveStatus,
   type LeaveType,
+  type TeacherHomework,
+  type TeacherHomeworkMiss,
+  type HomeSchoolTalkRecord,
+  type HomeworkMissStatus,
   type TeacherData,
   type TeacherPageKey,
   type TeacherPageMeta,
   type TeacherRole,
   type TeacherStage,
   type TeacherTerm,
+  type StudentTimetableData,
+  type StudentTimetableSchedule,
   STAGE_OPTIONS,
   TERM_OPTIONS,
   TEACHER_GROUPS,
@@ -30,6 +37,13 @@ import {
   WEEK_DAYS
 } from '@/types/teacher'
 import { normalizeTeacherMenu } from '@/composables/teacherMenuCore'
+import {
+  emptyTimetableData,
+  normalizeTimetableData,
+  cellKey,
+  computePeriodTime,
+  emptyTiming
+} from '@/composables/studentTimetableCore'
 
 /** 学段兜底：非法值回落幼儿园（首个选项），保证下拉可用 */
 export function normalizeStage(v: unknown): TeacherStage {
@@ -74,8 +88,7 @@ export function emptySeats(): SeatData {
 
 export function emptyDuty(): DutyData {
   return {
-    days: WEEK_DAYS.slice(0, 5).map((day) => ({ day, members: [], leader: '' })),
-    committee: []
+    days: WEEK_DAYS.slice(0, 5).map((day) => ({ day, members: [], leader: '' }))
   }
 }
 
@@ -87,22 +100,13 @@ export function emptyBucket(): ClassBucket {
     papers: [],
     seats: emptySeats(),
     duty: emptyDuty(),
-    timetable: {
-      periods: [
-        { label: '第1节', time: '08:00-08:40' },
-        { label: '第2节', time: '08:50-09:30' },
-        { label: '第3节', time: '10:00-10:40' },
-        { label: '第4节', time: '10:50-11:30' },
-        { label: '第5节', time: '14:00-14:40' },
-        { label: '第6节', time: '14:50-15:30' },
-        { label: '第7节', time: '15:40-16:20' },
-        { label: '第8节', time: '16:30-17:10' }
-      ],
-      grid: Array.from({ length: 8 }, () => Array.from({ length: 6 }, () => null))
-    },
+    committee: [],
+    timetable: emptyTimetableData(),
     growth: {},
     random: { history: [], mode: 'all' },
-    leaves: []
+    leaves: [],
+    homeworks: [],
+    talks: []
   }
 }
 
@@ -218,6 +222,97 @@ export function leaveStats(leaves: LeaveRecord[], today = todayStr()): LeaveStat
 function asRecords(v: unknown): Record<string, unknown>[] {
   if (!Array.isArray(v)) return []
   return (v as unknown[]).filter((x): x is Record<string, unknown> => !!x && typeof x === 'object')
+}
+
+// ---------- 作业记录（homeworks 桶） ----------
+
+/** 未交状态兜底：非法值回落 pending（未交） */
+export function normalizeHomeworkMissStatus(v: unknown): HomeworkMissStatus {
+  if (v === 'submitted') return 'submitted'
+  if (v === 'madeup') return 'madeup'
+  return 'pending'
+}
+
+/** 归一化单条未交记录，缺失字段兜底 */
+export function normalizeHomeworkMiss(raw: unknown): TeacherHomeworkMiss {
+  const m = (raw ?? {}) as Record<string, unknown>
+  return {
+    id: str(m.id) || uid('thwm'),
+    studentId: str(m.studentId),
+    studentName: str(m.studentName),
+    studentNo: str(m.studentNo) || undefined,
+    status: normalizeHomeworkMissStatus(m.status),
+    madeUpAt: str(m.madeUpAt) || undefined,
+    note: str(m.note) || undefined
+  }
+}
+
+/** 归一化单条家校谈话记录，缺失字段兜底 */
+export function normalizeTalk(raw: unknown): HomeSchoolTalkRecord {
+  const t = (raw ?? {}) as Record<string, unknown>
+  const now = Date.now()
+  return {
+    id: str(t.id) || uid('talk'),
+    studentId: str(t.studentId),
+    studentName: str(t.studentName),
+    studentNo: str(t.studentNo) || undefined,
+    date: str(t.date),
+    time: str(t.time) || undefined,
+    mode: str(t.mode) || '其他',
+    counterpart: str(t.counterpart) || '其他',
+    counterpartName: str(t.counterpartName) || undefined,
+    category: str(t.category) || '其他',
+    content: str(t.content),
+    result: str(t.result) || undefined,
+    needFollowUp: !!t.needFollowUp,
+    followUpNote: str(t.followUpNote) || undefined,
+    createdAt: num(t.createdAt, now),
+    updatedAt: num(t.updatedAt, now)
+  }
+}
+
+/** 归一化单条作业记录 */
+export function normalizeHomework(raw: unknown): TeacherHomework {
+  const h = (raw ?? {}) as Record<string, unknown>
+  const now = todayStr()
+  const assign = str(h.assignDate)
+  const due = str(h.dueDate) || assign
+  return {
+    id: str(h.id) || uid('thw'),
+    subject: str(h.subject),
+    title: str(h.title),
+    content: str(h.content) || undefined,
+    assignDate: assign,
+    dueDate: due,
+    status: h.status === 'assigned' ? 'assigned' : 'assigned',
+    createdAt: str(h.createdAt) || now,
+    updatedAt: str(h.updatedAt) || now,
+    misses: asRecords(h.misses).map((x) => normalizeHomeworkMiss(x))
+  }
+}
+
+/** 按当前名册为每位在册同学生成一条 pending 未交记录（冗余姓名/学号） */
+export function initMissesFromRoster(students: Student[]): TeacherHomeworkMiss[] {
+  return students.map((s) => ({
+    id: uid('thwm'),
+    studentId: s.id,
+    studentName: s.name,
+    studentNo: s.no || undefined,
+    status: 'pending'
+  }))
+}
+
+/** 统计各提交状态人数（不持久化的派生）：未交 / 已交 / 已补交 */
+export function countMisses(misses: TeacherHomeworkMiss[]): { pending: number; submitted: number; madeup: number } {
+  let pending = 0
+  let submitted = 0
+  let madeup = 0
+  for (const m of misses) {
+    if (m.status === 'madeup') madeup++
+    else if (m.status === 'submitted') submitted++
+    else pending++
+  }
+  return { pending, submitted, madeup }
 }
 
 /** 归一化任意来源（IndexedDB / 备份导入）的数据，缺失字段一律兜底，绝不抛错 */
@@ -365,6 +460,9 @@ export function normalizeBucket(raw: unknown): ClassBucket {
         name: str(s.name),
         gender: s.gender === '男' ? '男' : '女',
         special: bool(s.special),
+        post: str(s.post),
+        address: str(s.address),
+        boarding: bool(s.boarding),
         health: {
           allergy: str(healthRaw.allergy),
           disease: str(healthRaw.disease),
@@ -424,26 +522,45 @@ export function normalizeBucket(raw: unknown): ClassBucket {
       leader: str(found?.leader)
     }
   })
-  const committee = Array.isArray(dutyRaw.committee)
-    ? dutyRaw.committee
-        .filter((c): c is Record<string, unknown> => !!c && typeof c === 'object')
-        .map((c) => ({ role: str(c.role), name: str(c.name), duty: str(c.duty) }))
-    : []
+  // 班委信息：优先取顶层 b.committee（新结构），兼容旧数据落在 duty.committee 的情况；
+  // 旧字段为 name（实为 studentId），新结构为 studentId，统一归一化为 studentId。
+  const rawCommittee = Array.isArray((b as Record<string, unknown>).committee)
+    ? ((b as Record<string, unknown>).committee as unknown[])
+    : Array.isArray(dutyRaw.committee)
+      ? dutyRaw.committee
+      : []
+  const committee: CommitteeMember[] = rawCommittee
+    .filter((c): c is Record<string, unknown> => !!c && typeof c === 'object')
+    .map((c) => ({
+      studentId: str(c.studentId) || str(c.name),
+      role: str(c.role),
+      duty: str(c.duty)
+    }))
 
   const ttRaw = (b.timetable ?? {}) as Record<string, unknown>
-  const periodsIn = Array.isArray(ttRaw.periods) ? ttRaw.periods : []
-  const periods = base.timetable.periods.map((def, i) => {
-    const p = periodsIn[i] as Record<string, unknown> | undefined
-    return { label: str(p?.label, def.label), time: str(p?.time, def.time) }
-  })
-  const gridIn2 = Array.isArray(ttRaw.grid) ? ttRaw.grid : []
-  const timetableGrid: (string | null)[][] = periods.map((_, pi) => {
-    const rowIn = Array.isArray(gridIn2[pi]) ? gridIn2[pi] : []
-    return Array.from({ length: 6 }, (_, di) => {
-      const v = rowIn[di]
-      return typeof v === 'string' && v ? v : null
-    })
-  })
+  // 旧极简模型 { periods: TimetablePeriod[], grid: (string|null)[][]（grid[节次][星期 0..5=周一..周六]）}
+  // 自动迁移为富模型：逐格转成 schedule[`${day}_${period}`]，时间按节次配置推算，老师/教室留空。
+  let timetable: StudentTimetableData
+  if (Array.isArray(ttRaw.grid) && !ttRaw.schedule) {
+    const srcGrid = ttRaw.grid as (string | null)[][]
+    const timing = emptyTiming()
+    const schedule: StudentTimetableSchedule = {}
+    for (let pi = 0; pi < srcGrid.length; pi++) {
+      const row = Array.isArray(srcGrid[pi]) ? srcGrid[pi] : []
+      for (let di = 0; di < row.length; di++) {
+        const subject = typeof row[di] === 'string' ? (row[di] as string).trim() : ''
+        if (!subject) continue
+        const day = di + 1 // 旧列 0..5 → 新 day 1..6（周一..周六）
+        const period = pi + 1
+        if (day < 1 || day > 7 || period < 1 || period > 12) continue
+        const { startHHMM, endHHMM } = computePeriodTime(period, timing)
+        schedule[cellKey(day, period)] = { subject, startHHMM, endHHMM }
+      }
+    }
+    timetable = { ...emptyTimetableData(), schedule }
+  } else {
+    timetable = normalizeTimetableData(ttRaw)
+  }
 
   const growth: Record<string, { id: string; date: string; title: string; content: string; photos: string[] }[]> = {}
   const growthRaw = (b.growth ?? {}) as Record<string, unknown>
@@ -481,13 +598,19 @@ export function normalizeBucket(raw: unknown): ClassBucket {
     }
   })
 
+  // 作业记录（homeworks 桶）：班级维度流水，逐字段兜底；缺失视为空数组
+  const homeworks: TeacherHomework[] = asRecords(b.homeworks).map((h) => normalizeHomework(h))
+
+  // 家校谈话记录（talks 桶）：班级维度流水，逐字段兜底；缺失视为空数组
+  const talks: HomeSchoolTalkRecord[] = asRecords(b.talks).map((t) => normalizeTalk(t))
+
   const randomRaw = (b.random ?? {}) as Record<string, unknown>
   const random = {
     history: Array.isArray(randomRaw.history) ? randomRaw.history.map((h) => str(h)).filter(Boolean) : [],
     mode: randomRaw.mode === 'once' ? 'once' : 'all'
   } as const
 
-  return { students, parents, exams, papers, seats: { rows, cols, grid }, duty: { days, committee }, timetable: { periods, grid: timetableGrid }, growth, random: { ...random }, leaves }
+  return { students, parents, exams, papers, seats: { rows, cols, grid }, duty: { days }, committee, timetable, growth, random: { ...random }, leaves, homeworks, talks }
 }
 
 // ---------- 当前分组解析 ----------
@@ -731,7 +854,7 @@ export function cmpNo(a: string, b: string): number {
 export function autoArrangeDuty(students: Student[], groupSize = 8): DutyData {
   const sorted = [...students].sort((a, b) => cmpNo(a.no, b.no))
   const days = WEEK_DAYS.slice(0, 5).map((day) => ({ day, members: [] as string[], leader: '' }))
-  if (!sorted.length) return { days, committee: [] }
+  if (!sorted.length) return { days }
   const size = Math.max(1, Math.floor(groupSize) || 1)
   let idx = 0
   for (const d of days) {
@@ -746,7 +869,7 @@ export function autoArrangeDuty(students: Student[], groupSize = 8): DutyData {
     days[di % days.length].members.push(sorted[idx].id)
     di++
   }
-  return { days, committee: [] }
+  return { days }
 }
 
 // ---------- 级联清理 ----------
@@ -768,9 +891,9 @@ export function removeStudentCascade(bucket: ClassBucket, studentId: string): Cl
         ...d,
         members: d.members.filter((m) => m !== studentId),
         leader: d.leader === studentId ? '' : d.leader
-      })),
-      committee: bucket.duty.committee.map((c) => (c.name === studentId ? { ...c, name: '' } : c))
+      }))
     },
+    committee: bucket.committee.filter((c) => c.studentId !== studentId),
     random: { ...bucket.random, history: bucket.random.history.filter((h) => h !== studentId) },
     leaves: bucket.leaves.filter((l) => l.studentId !== studentId)
   }
