@@ -12,7 +12,6 @@ const store = useTeacherStore()
 const b = computed(() => store.bucket)
 const students = computed(() => sortedStudents(b.value?.students ?? []))
 const days = computed(() => b.value?.duty.days ?? [])
-const committee = computed(() => b.value?.duty.committee ?? [])
 
 const nameOf = (id: string): string => students.value.find((s) => s.id === id)?.name ?? ''
 const idOf = (name: string): string => students.value.find((s) => s.name === name.trim())?.id ?? ''
@@ -51,30 +50,14 @@ async function onAuto(): Promise<void> {
   warning.value = ''
 }
 
-// ---------- 班委 ----------
-async function onCommitteeField(i: number, field: 'role' | 'name' | 'duty', value: string): Promise<void> {
-  const next = committee.value.map((c, idx) => (idx === i ? { ...c, [field]: value } : c))
-  await store.setCommittee(next)
-}
-
-async function onAddCommittee(): Promise<void> {
-  await store.setCommittee([...committee.value, { role: '', name: '', duty: '' }])
-}
-
-async function onRemoveCommittee(i: number): Promise<void> {
-  await store.setCommittee(committee.value.filter((_, idx) => idx !== i))
-}
-
 function exportPaper(): void {
   window.print()
 }
 
 async function exportExcelFile(): Promise<void> {
   const dutyRows = days.value.map((d) => [d.day, membersText(d.members), nameOf(d.leader)])
-  const committeeRows = committee.value.map((c, i) => [i + 1, c.role, c.name, c.duty])
   await exportExcel(excelFileName('值日生表', store.cls ? `${store.cls.grade}${store.cls.name}` : '班级'), [
-    { name: '值日生安排', headers: ['星期', '值日生名单', '小组长'], rows: dutyRows },
-    { name: '班委名单', headers: ['序号', '职务', '姓名', '职责'], rows: committeeRows }
+    { name: '值日生安排', headers: ['星期', '值日生名单', '小组长'], rows: dutyRows }
   ])
 }
 </script>
@@ -136,38 +119,6 @@ async function exportExcelFile(): Promise<void> {
       </div>
       <p v-if="warning" class="tw-note tw-note-warn">{{ warning }}</p>
       <p v-if="!students.length" class="tw-empty">请先到设置页「导入数据」导入学生名单。</p>
-    </section>
-
-    <section class="tw-card">
-      <h4 class="tw-card-title">班委名单与职责</h4>
-      <div class="tw-toolbar tw-no-print">
-        <button type="button" class="tw-btn tw-btn-sm tw-btn-primary" @click="onAddCommittee">添加班委</button>
-      </div>
-      <div class="tw-table-wrap">
-        <table class="tw-table">
-          <thead>
-            <tr>
-              <th>序号</th>
-              <th>职务</th>
-              <th>姓名</th>
-              <th>职责</th>
-              <th class="tw-no-print">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(c, i) in committee" :key="i">
-              <td class="tw-num">{{ i + 1 }}</td>
-              <td><input class="tw-input tw-input-sm" :value="c.role" placeholder="如 班长" @change="onCommitteeField(i, 'role', ($event.target as HTMLInputElement).value)" /></td>
-              <td><input class="tw-input tw-input-sm" :value="c.name" placeholder="姓名" @change="onCommitteeField(i, 'name', ($event.target as HTMLInputElement).value)" /></td>
-              <td><input class="tw-input tw-input-sm" :value="c.duty" placeholder="职责说明" @change="onCommitteeField(i, 'duty', ($event.target as HTMLInputElement).value)" /></td>
-              <td class="tw-no-print">
-                <button type="button" class="tw-btn tw-btn-sm tw-btn-danger" @click="onRemoveCommittee(i)">删除</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <p v-if="!committee.length" class="tw-empty">还没有班委，点击「添加班委」新增。</p>
     </section>
   </div>
 </template>

@@ -13,6 +13,7 @@ import Icon from '@/components/Icon.vue'
 import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
 import TeacherDataManage from '@/components/teacher/TeacherDataManage.vue'
 import TeacherStudents from '@/components/teacher/TeacherStudents.vue'
+import TeacherCommittee from '@/components/teacher/TeacherCommittee.vue'
 import TeacherSeats from '@/components/teacher/TeacherSeats.vue'
 import TeacherExams from '@/components/teacher/TeacherExams.vue'
 import TeacherPapers from '@/components/teacher/TeacherPapers.vue'
@@ -23,7 +24,10 @@ import TeacherTimetable from '@/components/teacher/TeacherTimetable.vue'
 import TeacherSpecial from '@/components/teacher/TeacherSpecial.vue'
 import TeacherGrowth from '@/components/teacher/TeacherGrowth.vue'
 import TeacherLeave from '@/components/teacher/TeacherLeave.vue'
+import TeacherHomework from '@/components/teacher/TeacherHomework.vue'
+import TeacherTalks from '@/components/teacher/TeacherTalks.vue'
 import TeacherHelp from '@/components/teacher/TeacherHelp.vue'
+import SubjectSelect from '@/components/teacher/SubjectSelect.vue'
 import { STAGE_OPTIONS, TERM_OPTIONS, type TeacherPageKey, type TeacherRole, type TeacherStage } from '@/types/teacher'
 import '@/styles/teacher.css'
 
@@ -39,7 +43,7 @@ const guideTerm = ref('上半年')
 const guideStage = ref<TeacherStage>('小学')
 const guideGrade = ref('')
 const guideName = ref('')
-const guideSubject = ref('')
+const guideSubject = ref(store.cls?.subject || '')
 const guideRole = ref<TeacherRole>('head')
 
 watch(
@@ -61,7 +65,7 @@ async function createSemesterFromGuide(): Promise<void> {
   await store.addSemester(y, t)
   guideGrade.value = ''
   guideName.value = ''
-  guideSubject.value = ''
+  guideSubject.value = store.cls?.subject || ''
 }
 
 async function createClassFromGuide(): Promise<void> {
@@ -75,6 +79,7 @@ async function createClassFromGuide(): Promise<void> {
 const COMPONENTS: Record<TeacherPageKey, unknown> = {
   data: TeacherDataManage,
   students: TeacherStudents,
+  committee: TeacherCommittee,
   seats: TeacherSeats,
   exams: TeacherExams,
   papers: TeacherPapers,
@@ -85,6 +90,8 @@ const COMPONENTS: Record<TeacherPageKey, unknown> = {
   special: TeacherSpecial,
   growth: TeacherGrowth,
   leave: TeacherLeave,
+  homework: TeacherHomework,
+  talks: TeacherTalks,
   help: TeacherHelp
 }
 
@@ -103,11 +110,8 @@ async function onSemesterChange(e: Event): Promise<void> {
   if (v) await store.selectSemester(v)
 }
 
-const classLabel = computed(() => {
-  const c = store.cls
-  if (!c) return '未选择班级'
-  return `${c.grade}${c.name} · ${c.subject || '未设科目'}`
-})
+/** 顶部栏只读展示的任教学科（当前班级任教科目） */
+const readonlySubject = computed(() => store.cls?.subject || '未设学科')
 
 /** 顶部栏只读展示的班级名（含「默认」标记） */
 const readonlyClass = computed(() => {
@@ -189,10 +193,13 @@ onMounted(() => {
             <span class="tv-field-label">本班身份</span>
             <span class="tv-field-value">{{ readonlyRole }}</span>
           </div>
+          <div class="tv-field" data-testid="teacher-readonly-subject">
+            <span class="tv-field-label">学科</span>
+            <span class="tv-field-value">{{ readonlySubject }}</span>
+          </div>
         </div>
       </div>
       <div class="tv-topbar-actions">
-        <span class="tv-class-label">{{ classLabel }}</span>
         <!-- 右上角「设置」入口：数据管理（学期与班级 / 班级信息 / 导入表格 / 备份与恢复）/ 使用说明 / 菜单设置 -->
         <button
           type="button"
@@ -256,7 +263,10 @@ onMounted(() => {
           </label>
           <label class="tw-label">年级<input v-model="guideGrade" class="tw-input" placeholder="如 三年级" /></label>
           <label class="tw-label">班级<input v-model="guideName" class="tw-input" placeholder="如 1班" /></label>
-          <label class="tw-label">任教科目<input v-model="guideSubject" class="tw-input" placeholder="如 语文" /></label>
+          <label class="tw-label">
+            学科
+            <SubjectSelect v-model="guideSubject" placeholder="请选择学科" size="small" />
+          </label>
           <label class="tw-label">
             本班身份
             <select v-model="guideRole" class="tw-select">
@@ -306,7 +316,7 @@ onMounted(() => {
       <main class="tv-content">
         <!-- 仅科任身份时补一条提示；标题不在这里输出，避免与页面组件内的标题重复 -->
         <p v-if="!store.isHead" class="tv-content-head tv-role-tip tw-note">
-          当前为「非班主任 · 科任」身份，座位表 / 值日生表 / 家长联系方式 / 特异体质学生已隐藏。
+          当前为「非班主任 · 科任」身份，座位表 / 值日生表 / 联系家长 / 隐私信息已隐藏。
         </p>
         <component :is="currentComp" />
       </main>
@@ -380,11 +390,6 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-.tv-class-label {
-  font-size: var(--font-size-sm, 12px);
-  color: var(--color-text-secondary, #64748b);
 }
 
 /* ---------- 引导 ---------- */

@@ -148,6 +148,11 @@ async function exportExcelFile(): Promise<void> {
         </div>
       </div>
       <p v-else class="tw-empty">暂无座位数据。</p>
+      <div v-if="seats.grid.length" class="st-podium-wrap">
+        <span class="st-podium-side">左</span>
+        <div class="st-podium"><span>讲台</span></div>
+        <span class="st-podium-side">右</span>
+      </div>
       <p class="tw-note st-tip">提示：电脑端可直接拖动方块；手机端点一下 A 再点一下 B 即可互换（选中块会高亮）。</p>
     </section>
   </div>
@@ -164,5 +169,55 @@ async function exportExcelFile(): Promise<void> {
 
 .tw-seat-placeholder {
   font-size: var(--font-size-xs, 11px);
+}
+
+/* 讲台：座位编排区域正下方，梯形图形 + 左右方位标识 */
+.st-podium-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.st-podium {
+  position: relative;
+  width: min(60%, 440px);
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 4px;
+  background: var(--color-primary, #6da3d8);
+  clip-path: polygon(10% 0, 90% 0, 100% 100%, 0 100%);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.st-podium-side {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 15px;
+  background: var(--color-bg-hover, #eef1f5);
+  color: var(--color-text-secondary, #8a93a0);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .st-podium {
+    width: 72%;
+    height: 36px;
+  }
+  .st-podium-side {
+    min-width: 26px;
+    height: 26px;
+    padding: 0 9px;
+  }
 }
 </style>

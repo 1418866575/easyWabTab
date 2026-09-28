@@ -3,6 +3,11 @@
 // 教师↔班级↔课程 的多对多由 TeachingAssignment 枢纽表达。
 // 学生一律以 studentId 为主键（姓名仅作展示），规避重名学生静默错配。
 
+import type { StudentTimetableData, StudentTimetableSchedule } from '@/types'
+
+// 教师课程表复用学生课程表富模型，重新导出以便其他模块从 @/types/teacher 统一引入
+export type { StudentTimetableData, StudentTimetableSchedule }
+
 export type TeacherRole = 'head' | 'subject' // 本班身份：班主任 / 非班主任（科任）
 
 export type TeacherStage = '幼儿园' | '小学' | '初中' | '高中' | '大学'
@@ -68,6 +73,12 @@ export interface Student {
   gender: '男' | '女'
   special: boolean // 特异体质
   health: StudentHealth
+  /** 职务（如 班长；由班委信息自动同步，多职务用「、」连接）；学生信息侧可反向编辑回写班委 */
+  post: string
+  /** 家庭地址（明细表可编辑；随导入模板 / 导出 Excel 流转） */
+  address: string
+  /** 是否住校（下拉选项：是 / 否；随导入 / 导出 Excel 流转） */
+  boarding: boolean
 }
 
 export interface ParentInfo {
@@ -111,27 +122,31 @@ export interface DutyDay {
   leader: string // studentId
 }
 
+/** 班委候选职务（下拉候选；支持输入自定义新增） */
+export const COMMITTEE_ROLES: string[] = [
+  '班长', '副班长', '学习委员', '纪律委员', '体育委员', '文艺委员',
+  '劳动委员', '生活委员', '宣传委员', '组织委员', '团支书', '心理委员'
+]
+
 export interface CommitteeMember {
+  /** 关联学生主键（studentId）；学号/姓名由该学生反查得到，保证数据一致 */
+  studentId: string
+  /** 职务（如 班长；允许输入自定义新增） */
   role: string
-  name: string // studentId
+  /** 职责说明 */
   duty: string
 }
 
 export interface DutyData {
   days: DutyDay[]
-  committee: CommitteeMember[]
 }
 
-export interface TimetablePeriod {
-  label: string
-  time: string
-}
-
-/** 课程表：grid[节次][星期]，值为科目名或 null */
-export interface TimetableData {
-  periods: TimetablePeriod[]
-  grid: (string | null)[][]
-}
+/**
+ * 课程表：复用学生课程表富模型（按班级隔离，落在 ClassBucket.timetable）。
+ * schedule: Record<`${dayOfWeek}_${period}`, StudentTimetableCell>，day 1-7（周一~周日）、period 1-12。
+ * 旧极简模型（{ periods, grid }）在 teacherCore.normalizeBucket 中自动迁移为 schedule。
+ */
+export type TeacherTimetable = StudentTimetableData
 
 /** 奖励记录条目（页面「奖励记录」，原学生成长档案；沿用 growth 桶字段名不变） */
 export interface GrowthRecord {
@@ -187,11 +202,94 @@ export interface ClassBucket {
   papers: Paper[]
   seats: SeatData
   duty: DutyData
-  timetable: TimetableData
+  /** 班委信息（从值日生模块迁出，按班级隔离）；studentId 关联 Student，post 自动同步 */
+  committee: CommitteeMember[]
+  timetable: TeacherTimetable
   growth: Record<string, GrowthRecord[]> // studentId -> 记录
   random: RandomState
   /** 请假记录流水（班级维度，按开始日期倒序展示；随学期×班级隔离） */
   leaves: LeaveRecord[]
+  /** 作业记录（页面「作业记录」；每次作业为每位同学生成一条提交记录），随学期×班级隔离 */
+  homeworks: TeacherHomework[]
+  /** 家校谈话记录（班主任专属；页面「家校谈话」；随学期×班级隔离） */
+  talks: HomeSchoolTalkRecord[]
+}
+
+// ---------- 作业记录（页面「作业记录」；作业与提交名单） ----------
+
+/** 作业状态（作业维度）：当前仅用到「已布置」，其余预留便于后续扩展 */
+export type HomeworkStatus = 'assigned'
+export const HOMEWORK_STATUS_LABEL: Record<HomeworkStatus, string> = {
+  assigned: '已布置'
+}
+
+/** 提交状态（学生维度）：未交 / 已交 / 已补交 */
+export type HomeworkMissStatus = 'pending' | 'submitted' | 'madeup'
+// pending = 未交；submitted = 已交（按时提交）；madeup = 已补交（逾期后补交，人工标记）
+
+/** 提交状态展示元数据（label / 语义色 class），渲染与统计共用 */
+export const HOMEWORK_MISS_STATUS_META: { key: HomeworkMissStatus; label: string; tone: string }[] = [
+  { key: 'pending', label: '未交', tone: 'danger' },
+  { key: 'submitted', label: '已交', tone: 'ok' },
+  { key: 'madeup', label: '已补交', tone: 'info' }
+]
+
+/** 单次作业的提交记录（每位同学一条，独立） */
+export interface TeacherHomeworkMiss {
+  id: string // 前缀 thwm_
+  studentId: string // 关联 Student.id（主键，杜绝重名错配）
+  studentName: string // 姓名冗余副本（名册变动后仍可读）
+  studentNo?: string // 学号（冗余副本，便于导出/核对）
+  status: HomeworkMissStatus
+  madeUpAt?: string // 补交时间（人工填写，可选，留空手填）
+  note?: string // 备注
+}
+
+/** 作业（元数据 + 提交名单） */
+export interface TeacherHomework {
+  id: string // 前缀 thw_
+  subject: string // 学科
+  title: string // 标题，必填
+  content?: string // 作业要求 / 描述
+  assignDate: string // 布置日期 'YYYY-MM-DD'，必填
+  dueDate: string // 截止日期 'YYYY-MM-DD'，必填
+  status: HomeworkStatus // 作业状态，新建时默认为「已布置」
+  createdAt: string
+  updatedAt: string
+  misses: TeacherHomeworkMiss[] // 每位同学一条提交记录
+}
+
+// ---------- 家校谈话记录（班主任专属；页面「家校谈话」） ----------
+
+/** 沟通方式预设（下拉 + 可自定义，复用 el-select filterable allow-create default-first-option） */
+export const TALK_MODES: string[] = ['电话', '微信', 'QQ', '面谈', '家访', '其他']
+
+/** 谈话对象身份预设（下拉 + 可自定义） */
+export const TALK_COUNTERPARTS: string[] = ['父亲', '母亲', '祖父母', '监护人', '学生本人', '其他']
+
+/** 谈话主题分类预设（下拉） */
+export const TALK_CATEGORIES: string[] = [
+  '学业', '行为纪律', '心理情绪', '家庭情况', '出勤请假', '安全', '政策资助', '其他'
+]
+
+/** 单条家校谈话记录（关联单名学生；班主任专属，随学期×班级隔离） */
+export interface HomeSchoolTalkRecord {
+  id: string // 前缀 talk_
+  studentId: string // 关联 Student.id（主键，杜绝重名错配）
+  studentName: string // 姓名冗余副本（名册变动后仍可读）
+  studentNo?: string // 学号冗余副本（便于导出/核对）
+  date: string // 谈话日期 'YYYY-MM-DD'，必填
+  time?: string // 具体时间 'HH:MM'，选填
+  mode: string // 沟通方式（TALK_MODES 预设 + 可自定义）
+  counterpart: string // 谈话对象身份（TALK_COUNTERPARTS 预设 + 可自定义）
+  counterpartName?: string // 对方姓名（选填，counterpart 为「其他」时填写）
+  category: string // 主题分类（TALK_CATEGORIES 预设）
+  content: string // 谈话内容摘要，必填
+  result?: string // 达成的共识 / 处理结论（选填）
+  needFollowUp: boolean // 是否需后续跟进
+  followUpNote?: string // 跟进事项 / 下次计划（needFollowUp 为真时填写）
+  createdAt: number // 创建时间戳
+  updatedAt: number // 更新时间戳
 }
 
 export interface TeacherCurrent {
@@ -231,6 +329,7 @@ export interface TeacherData {
 export type TeacherPageKey =
   | 'data'
   | 'students'
+  | 'committee'
   | 'seats'
   | 'exams'
   | 'papers'
@@ -241,6 +340,8 @@ export type TeacherPageKey =
   | 'special'
   | 'growth'
   | 'leave'
+  | 'homework'
+  | 'talks'
   | 'help'
 
 export interface TeacherPageMeta {
@@ -254,7 +355,7 @@ export interface TeacherPageMeta {
  * 12 个页面，数组顺序即左侧导航顺序。
  * 基础功能前两位为「课程表 / 点名」（高频日常入口，全员可见）；
  * 奖励记录（原学生成长档案）归入基础功能，全员可见。
- * 班务类（座位表/值日生表/家长联系方式）与隐私信息（原特异体质学生）按角色隐藏。
+ * 班务类（座位表/值日生表/联系家长）与隐私信息（原特异体质学生）按角色隐藏。
  *
  * 注意：左侧导航不再渲染分组标题（「基础功能」「特色功能」文字已移除），
  * group 字段仅用于排序约束（菜单设置里移动限制在同组内部）。
@@ -263,6 +364,7 @@ export const TEACHER_PAGES: TeacherPageMeta[] = [
   { key: 'timetable', label: '课程表', icon: 'calendar', group: '基础功能' },
   { key: 'random', label: '点名', icon: 'dice', group: '基础功能' },
   { key: 'students', label: '学生信息', icon: 'notes', group: '基础功能' },
+  { key: 'committee', label: '班委信息', icon: 'teacher', group: '基础功能' },
   { key: 'seats', label: '座位表', icon: 'grid', group: '基础功能' },
   { key: 'exams', label: '成绩信息', icon: 'chart', group: '基础功能' },
   { key: 'papers', label: '试卷分析', icon: 'target', group: '基础功能' },
@@ -270,13 +372,15 @@ export const TEACHER_PAGES: TeacherPageMeta[] = [
   { key: 'parents', label: '联系家长', icon: 'phone', group: '基础功能' },
   { key: 'growth', label: '奖励记录', icon: 'star', group: '基础功能' },
   { key: 'leave', label: '请假信息', icon: 'clipboard', group: '基础功能' },
+  { key: 'homework', label: '作业记录', icon: 'document', group: '基础功能' },
+  { key: 'talks', label: '家校谈话', icon: 'email', group: '特色功能' },
   { key: 'special', label: '隐私信息', icon: 'heart', group: '特色功能' },
   { key: 'data', label: '数据管理', icon: 'database', group: '工作台' },
   { key: 'help', label: '使用说明', icon: 'help', group: '工作台' }
 ]
 
 /** 仅班主任可见的班务模块（选「非班主任」时隐藏：导航移除 + 直达拦截） */
-export const TEACHER_HEAD_ONLY_PAGES: TeacherPageKey[] = ['seats', 'duty', 'parents', 'special', 'leave']
+export const TEACHER_HEAD_ONLY_PAGES: TeacherPageKey[] = ['seats', 'duty', 'parents', 'special', 'leave', 'talks']
 
 /**
  * 已迁入「设置页」的功能（数据管理 / 使用说明）：不再是左侧菜单项，
@@ -314,7 +418,7 @@ export const TEACHER_DATA_SECTIONS: TeacherDataSectionMeta[] = [
   {
     key: 'import',
     label: '导入数据',
-    sub: '支持 .xlsx / .xls / .csv。学生名单需含「姓名」「性别」（学号列可选，列名带 * 也能识别）；成绩表第一列为姓名、其余数值列各生成一场考试；家长表需含「姓名」「家长」「电话」。'
+    sub: '支持 .xlsx / .xls / .csv。学生名单需含「姓名」「性别」（学号、家庭地址列可选，列名带 * 也能识别）；成绩表第一列为姓名、其余数值列各生成一场考试；家长表需含「姓名」「家长」「电话」。'
   },
   {
     key: 'backup',

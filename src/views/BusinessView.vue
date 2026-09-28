@@ -146,7 +146,7 @@ function onCreateFromGate(): void {
 
 function onCreateCurrentYear(): void {
   const r = store.ensureCurrentYearLedger()
-  if (!r.ok && r.reason === 'duplicate') store.switchLedgerByYear(thisYear)
+  if (!r.ok) store.switchLedgerByYear(thisYear)
 }
 
 // 首屏初始化占位：数据加载完成前内容区全空且无反馈（加载逻辑本身不变）

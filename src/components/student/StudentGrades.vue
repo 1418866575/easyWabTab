@@ -33,6 +33,7 @@ import { subjectUniverse } from '@/composables/studentGradesCore'
 import { GRADE_EXAM_TYPES, STUDENT_GRADE_LEVELS, GRADE_LEVEL_ALL, GRADE_STAGE_GROUPS } from '@/types'
 import type { StudentGradeSubject, StudentGradeRecord } from '@/types'
 import StudentToolbar from '@/components/student/StudentToolbar.vue'
+import ExamNameSelect from '@/components/ExamNameSelect.vue'
 import Icon from '@/components/Icon.vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -514,13 +515,7 @@ onMounted(async () => {
         </div>
         <div class="sg-form-field">
           <label>考试名称</label>
-          <el-input
-            v-model="formExamName"
-            placeholder="如：2026春季期中考试"
-            maxlength="30"
-            data-testid="sg-form-name"
-            @keyup.enter="saveDialog"
-          />
+          <ExamNameSelect v-model="formExamName" placeholder="如：2026春季期中考试" />
         </div>
         <div class="sg-form-field">
           <label>考试日期</label>

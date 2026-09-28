@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 成绩分析：考试选择 + 七项统计卡 + 分段柱状图 + 排名走势折线图 + 可编辑成绩表。
+// 成绩信息：考试选择 + 七项统计卡 + 分段柱状图 + 排名走势折线图 + 可编辑成绩表。
 // 图表全部内联 SVG 手写（项目约定：不使用 echarts），纯计算委托 teacherCore。
 
 import { computed, ref, watch } from 'vue'
@@ -8,6 +8,8 @@ import TeacherStatCard from './TeacherStatCard.vue'
 import { bandCounts, examStats, rankRows } from '@/composables/teacherCore'
 import { SCORE_BANDS } from '@/types/teacher'
 import { exportExcel, excelFileName } from '@/composables/teacherExcelCore'
+import SubjectSelect from '@/components/teacher/SubjectSelect.vue'
+import ExamNameSelect from '@/components/ExamNameSelect.vue'
 
 const store = useTeacherStore()
 
@@ -33,8 +35,13 @@ const rows = computed(() => (exam.value ? rankRows(exam.value, students.value) :
 
 // ---------- 新增考试 ----------
 const newName = ref('')
-const newSubject = ref('')
+const newSubject = ref(store.cls?.subject || '')
 const newDate = ref('')
+
+watch(
+  () => store.cls?.subject,
+  (s) => { if (!newSubject.value.trim()) newSubject.value = s || '' }
+)
 
 async function onAddExam(): Promise<void> {
   if (!newName.value.trim()) return
@@ -92,7 +99,7 @@ async function exportExcelFile(): Promise<void> {
   <div class="tw-page">
     <div class="tw-head">
       <div>
-        <h3 class="tw-title">成绩分析</h3>
+        <h3 class="tw-title">成绩信息</h3>
         <p class="tw-subtitle">按考试查看分布与排名；成绩可直接编辑，修改后自动保存。</p>
       </div>
       <div class="tw-toolbar tw-no-print">
@@ -112,8 +119,11 @@ async function exportExcelFile(): Promise<void> {
         <button type="button" class="tw-btn tw-btn-sm tw-btn-danger" :disabled="!exam" @click="onDeleteExam">删除本场考试</button>
       </div>
       <div class="tw-toolbar ex-add">
-        <label class="tw-label">考试名<input v-model="newName" class="tw-input tw-input-sm" placeholder="如 语文期中" /></label>
-        <label class="tw-label">科目<input v-model="newSubject" class="tw-input tw-input-sm" placeholder="如 语文" /></label>
+        <label class="tw-label">考试名<ExamNameSelect v-model="newName" placeholder="如 语文期中" size="small" /></label>
+        <label class="tw-label">
+          学科
+          <SubjectSelect v-model="newSubject" placeholder="请选择学科" size="small" />
+        </label>
         <label class="tw-label">日期<input v-model="newDate" class="tw-input tw-input-sm" placeholder="如 2026-04" /></label>
         <button type="button" class="tw-btn tw-btn-sm tw-btn-primary" :disabled="!newName.trim()" @click="onAddExam">新增考试</button>
         <span class="tw-label">批量成绩请到设置页「导入数据」</span>

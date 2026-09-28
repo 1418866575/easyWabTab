@@ -10,12 +10,14 @@ import {
   arrangeByRoster,
   arrangeRandom,
   autoArrangeDuty,
+  classTitle,
   currentBucket,
   currentClass,
   currentRole,
   emptyBucket,
   emptyTeacherData,
   guardPage,
+  initMissesFromRoster,
   leaveStats,
   makeStudentId,
   normalizeTeacherData,
@@ -37,21 +39,47 @@ import {
   resolveTeacherMenuItems
 } from '@/composables/teacherMenuCore'
 import {
+  emptyTimetableData,
+  emptyTiming,
+  computePeriodTime,
+  cellKey
+} from '@/composables/studentTimetableCore'
+import { exportHomeworkMissesExcel, exportTalksExcel as exportTalksExcelFile } from '@/composables/teacherExcelCore'
+import {
   type ClassBucket,
   type ClassGroup,
+  type CommitteeMember,
   type GrowthRecord,
   type LeaveRecord,
   type LeaveStatus,
   type ParentInfo,
   type Student,
+  type StudentTimetableData,
+  type StudentTimetableSchedule,
   type TeacherData,
+  type TeacherHomework,
+  type HomeSchoolTalkRecord,
   type TeacherPageKey,
   type TeacherRole,
   type TeacherStage,
-  type TeacherTerm,
-  type TimetablePeriod,
-  WEEK_DAYS
+  type TeacherTerm
 } from '@/types/teacher'
+
+/** 班委 → 学生职务 同步：按 committee 汇总每个学生职务（多职务用「、」连接），返回新 students（仅变更者重建） */
+function syncStudentPosts(b: ClassBucket): Student[] {
+  const postMap = new Map<string, string[]>()
+  for (const c of b.committee) {
+    if (!c.studentId || !c.role) continue
+    const arr = postMap.get(c.studentId) ?? []
+    arr.push(c.role)
+    postMap.set(c.studentId, arr)
+  }
+  return b.students.map((s) => {
+    const roles = postMap.get(s.id)
+    const post = roles && roles.length ? roles.join('、') : ''
+    return s.post === post ? s : { ...s, post }
+  })
+}
 
 export const useTeacherStore = defineStore('teacher', () => {
   const data = ref<TeacherData>(emptyTeacherData())
@@ -488,7 +516,7 @@ export const useTeacherStore = defineStore('teacher', () => {
 
   // ---------- 学生 ----------
 
-  async function addStudent(input: { no: string; name: string; gender: '男' | '女' }): Promise<void> {
+  async function addStudent(input: { no: string; name: string; gender: '男' | '女'; boarding?: boolean }): Promise<void> {
     const { sem, cls: cid } = data.value.current
     if (!sem || !cid || !input.name.trim()) return
     const no = input.no.trim() || String((bucket.value?.students.length ?? 0) + 1)
@@ -498,6 +526,9 @@ export const useTeacherStore = defineStore('teacher', () => {
       name: input.name.trim(),
       gender: input.gender,
       special: false,
+      post: '',
+      address: '',
+      boarding: input.boarding ?? false,
       health: { allergy: '', disease: '', notes: '', emergencyPhone: '' }
     }
     mutateBucket((b) => ({ ...b, students: [...b.students.filter((x) => x.id !== s.id), s] }))
@@ -505,10 +536,30 @@ export const useTeacherStore = defineStore('teacher', () => {
   }
 
   async function updateStudent(studentId: string, patch: Partial<Student>): Promise<void> {
-    mutateBucket((b) => ({
-      ...b,
-      students: b.students.map((s) => (s.id === studentId ? { ...s, ...patch, id: s.id } : s))
-    }))
+    if (patch.post !== undefined) {
+      // 反向同步：手动改学生职务 → 回写班委（保留已有条目职责，新增缺失职务，移除多余职务）
+      mutateBucket((b) => {
+        const roles = (patch.post || '').split(/[、,，]/).map((r) => r.trim()).filter(Boolean)
+        const roleSet = new Set(roles)
+        const kept = b.committee.filter((c) => c.studentId === studentId && roleSet.has(c.role))
+        const keptRoles = new Set(kept.map((c) => c.role))
+        const added: CommitteeMember[] = roles
+          .filter((r) => !keptRoles.has(r))
+          .map((role) => ({ studentId, role, duty: '' }))
+        const committee = [...b.committee.filter((c) => c.studentId !== studentId), ...kept, ...added]
+        const next = {
+          ...b,
+          students: b.students.map((s) => (s.id === studentId ? { ...s, ...patch, id: s.id } : s)),
+          committee
+        }
+        return { ...next, students: syncStudentPosts(next) }
+      })
+    } else {
+      mutateBucket((b) => ({
+        ...b,
+        students: b.students.map((s) => (s.id === studentId ? { ...s, ...patch, id: s.id } : s))
+      }))
+    }
     await saveTeacher()
   }
 
@@ -646,42 +697,19 @@ export const useTeacherStore = defineStore('teacher', () => {
     await saveTeacher()
   }
 
-  async function setCommittee(list: { role: string; name: string; duty: string }[]): Promise<void> {
-    mutateBucket((b) => ({ ...b, duty: { ...b.duty, committee: list } }))
-    await saveTeacher()
-  }
-
-  // ---------- 课程表 ----------
-
-  async function setTimetableCell(period: number, day: number, subject: string): Promise<void> {
+  async function setCommittee(list: CommitteeMember[]): Promise<void> {
     mutateBucket((b) => {
-      const grid = b.timetable.grid.map((row, pi) =>
-        pi === period ? row.map((v, di) => (di === day ? (subject.trim() || null) : v)) : row
-      )
-      return { ...b, timetable: { ...b.timetable, grid } }
+      const next = { ...b, committee: list }
+      return { ...next, students: syncStudentPosts(next) }
     })
     await saveTeacher()
   }
 
-  async function setTimetablePeriods(periods: { label: string; time: string }[]): Promise<void> {
-    mutateBucket((b) => {
-      const grid = periods.map((_, pi) => b.timetable.grid[pi] ?? Array.from({ length: WEEK_DAYS.length }, () => null))
-      return { ...b, timetable: { periods, grid } }
-    })
-    await saveTeacher()
-  }
+  // ---------- 课程表（富模型，按班级隔离，落在 ClassBucket.timetable） ----------
 
-  async function clearTimetable(): Promise<void> {
-    mutateBucket((b) => ({
-      ...b,
-      timetable: { ...b.timetable, grid: b.timetable.grid.map((row) => row.map(() => null)) }
-    }))
-    await saveTeacher()
-  }
-
-  /** 整体导入课程表（节次 + grid[节次][星期]），用于「导入课程表」 */
-  async function importTimetable(periods: TimetablePeriod[], grid: (string | null)[][]): Promise<void> {
-    mutateBucket((b) => ({ ...b, timetable: { periods, grid } }))
+  /** 整体写入当前班级课程表（富模型 StudentTimetableData），供教师课程表面板 / 配置 / 数据管理导入统一调用 */
+  async function updateTimetable(timetable: StudentTimetableData): Promise<void> {
+    mutateBucket((b) => ({ ...b, timetable }))
     await saveTeacher()
   }
 
@@ -752,6 +780,197 @@ export const useTeacherStore = defineStore('teacher', () => {
   /** 当前班级请假统计（页面直接消费，store 不内联重算） */
   const leaveSummary = computed(() => leaveStats(bucket.value?.leaves ?? []))
 
+  // ---------- 作业记录（homeworks 桶；仅记录未交同学，每人一条独立记录） ----------
+
+  /** 新增作业：初始状态为「已布置」，按当前名册为每位在册同学生成一条 pending 未交记录（冗余姓名/学号） */
+  async function addHomework(
+    input: Omit<TeacherHomework, 'id' | 'createdAt' | 'updatedAt' | 'misses' | 'status'>
+  ): Promise<void> {
+    const students = bucket.value?.students ?? []
+    const now = todayStr()
+    const hw: TeacherHomework = {
+      ...input,
+      id: uid('thw'),
+      status: 'assigned',
+      createdAt: now,
+      updatedAt: now,
+      misses: initMissesFromRoster(students)
+    }
+    mutateBucket((b) => ({ ...b, homeworks: [...b.homeworks, hw] }))
+    await saveTeacher()
+  }
+
+  /** 编辑作业元信息（不改未交名单）；标题等可修正 */
+  async function updateHomework(hw: TeacherHomework): Promise<void> {
+    mutateBucket((b) => ({
+      ...b,
+      homeworks: b.homeworks.map((h) => (h.id === hw.id ? { ...hw, updatedAt: todayStr() } : h))
+    }))
+    await saveTeacher()
+  }
+
+  async function removeHomework(id: string): Promise<void> {
+    mutateBucket((b) => ({ ...b, homeworks: b.homeworks.filter((h) => h.id !== id) }))
+    await saveTeacher()
+  }
+
+  /** 标记某条记录为「已交」（按时提交；清空补交时间/备注） */
+  async function markSubmitted(homeworkId: string, missId: string): Promise<void> {
+    mutateBucket((b) => ({
+      ...b,
+      homeworks: b.homeworks.map((h) => {
+        if (h.id !== homeworkId) return h
+        return {
+          ...h,
+          updatedAt: todayStr(),
+          misses: h.misses.map((m) =>
+            m.id === missId ? { ...m, status: 'submitted', madeUpAt: undefined, note: undefined } : m
+          )
+        }
+      })
+    }))
+    await saveTeacher()
+  }
+
+  /** 标记某条记录为「未交」（回到待提交；清空补交时间/备注） */
+  async function markPending(homeworkId: string, missId: string): Promise<void> {
+    mutateBucket((b) => ({
+      ...b,
+      homeworks: b.homeworks.map((h) => {
+        if (h.id !== homeworkId) return h
+        return {
+          ...h,
+          updatedAt: todayStr(),
+          misses: h.misses.map((m) =>
+            m.id === missId ? { ...m, status: 'pending', madeUpAt: undefined, note: undefined } : m
+          )
+        }
+      })
+    }))
+    await saveTeacher()
+  }
+
+  /** 标记某条记录为「已补交」（人工填写补交时间/备注，留空则保持空） */
+  async function markMadeup(
+    homeworkId: string,
+    missId: string,
+    patch: { madeUpAt?: string; note?: string }
+  ): Promise<void> {
+    mutateBucket((b) => ({
+      ...b,
+      homeworks: b.homeworks.map((h) => {
+        if (h.id !== homeworkId) return h
+        return {
+          ...h,
+          updatedAt: todayStr(),
+          misses: h.misses.map((m) =>
+            m.id === missId
+              ? { ...m, status: 'madeup', madeUpAt: patch.madeUpAt ?? m.madeUpAt ?? '', note: patch.note ?? m.note ?? '' }
+              : m
+          )
+        }
+      })
+    }))
+    await saveTeacher()
+  }
+
+  /** 撤销补交：状态回到未交，清空补交时间/备注 */
+  async function revertMadeup(homeworkId: string, missId: string): Promise<void> {
+    mutateBucket((b) => ({
+      ...b,
+      homeworks: b.homeworks.map((h) => {
+        if (h.id !== homeworkId) return h
+        return {
+          ...h,
+          updatedAt: todayStr(),
+          misses: h.misses.map((m) =>
+            m.id === missId ? { ...m, status: 'pending', madeUpAt: undefined, note: undefined } : m
+          )
+        }
+      })
+    }))
+    await saveTeacher()
+  }
+
+  /** 导出当前作业的未交名单（仅 pending）为 Excel */
+  async function exportMissesExcel(homeworkId: string): Promise<void> {
+    const hw = bucket.value?.homeworks.find((h) => h.id === homeworkId)
+    if (!hw) return
+    await exportHomeworkMissesExcel(hw, classTitle(cls.value, data.value.teacher.name))
+  }
+
+  /** 当前班级作业统计（聚合所有作业的未交/已交/已补交人数） */
+  const homeworkSummary = computed(() => {
+    const homeworks = bucket.value?.homeworks ?? []
+    let pending = 0
+    let submitted = 0
+    let madeup = 0
+    for (const h of homeworks) {
+      for (const m of h.misses) {
+        if (m.status === 'madeup') madeup++
+        else if (m.status === 'submitted') submitted++
+        else pending++
+      }
+    }
+    return { homeworkCount: homeworks.length, pending, submitted, madeup }
+  })
+
+  // ---------- 家校谈话记录（talks 桶；班主任专属；随学期×班级隔离） ----------
+
+  /** 新增谈话：自动补全冗余姓名/学号（若未传则按 studentId 反查名册） */
+  async function addTalk(
+    input: Omit<HomeSchoolTalkRecord, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<void> {
+    const students = bucket.value?.students ?? []
+    const stu = students.find((s) => s.id === input.studentId)
+    const now = Date.now()
+    const talk: HomeSchoolTalkRecord = {
+      ...input,
+      studentName: input.studentName || stu?.name || '',
+      studentNo: input.studentNo || stu?.no || undefined,
+      id: uid('talk'),
+      createdAt: now,
+      updatedAt: now
+    }
+    mutateBucket((b) => ({ ...b, talks: [...b.talks, talk] }))
+    await saveTeacher()
+  }
+
+  /** 编辑谈话（回显后保存；updatedAt 刷新） */
+  async function updateTalk(talk: HomeSchoolTalkRecord): Promise<void> {
+    mutateBucket((b) => ({
+      ...b,
+      talks: b.talks.map((t) => (t.id === talk.id ? { ...talk, updatedAt: Date.now() } : t))
+    }))
+    await saveTeacher()
+  }
+
+  async function removeTalk(id: string): Promise<void> {
+    mutateBucket((b) => ({ ...b, talks: b.talks.filter((t) => t.id !== id) }))
+    await saveTeacher()
+  }
+
+  /** 导出当前筛选后的谈话记录为 Excel */
+  async function exportTalksExcel(talks: HomeSchoolTalkRecord[]): Promise<void> {
+    await exportTalksExcelFile(talks, classTitle(cls.value, data.value.teacher.name))
+  }
+
+  /** 本班谈话统计：总数 / 本月次数 / 待跟进数 / 涉及分类数 */
+  const talksSummary = computed(() => {
+    const talks = bucket.value?.talks ?? []
+    const now = new Date()
+    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    let thisMonth = 0
+    let needFollowUp = 0
+    const cats = new Set<string>()
+    for (const t of talks) {
+      if (t.date && t.date.startsWith(ym)) thisMonth++
+      if (t.needFollowUp) needFollowUp++
+      if (t.category) cats.add(t.category)
+    }
+    return { total: talks.length, thisMonth, needFollowUp, categories: cats.size }
+  })
+
   // ---------- 随机点名 ----------
 
   async function setRandomMode(mode: 'all' | 'once'): Promise<void> {
@@ -766,6 +985,14 @@ export const useTeacherStore = defineStore('teacher', () => {
 
   async function resetRandomHistory(): Promise<void> {
     mutateBucket((b) => ({ ...b, random: { ...b.random, history: [] } }))
+    await saveTeacher()
+  }
+
+  async function removeRandomHistory(studentId: string): Promise<void> {
+    mutateBucket((b) => ({
+      ...b,
+      random: { ...b.random, history: b.random.history.filter((id) => id !== studentId) }
+    }))
     await saveTeacher()
   }
 
@@ -799,6 +1026,9 @@ export const useTeacherStore = defineStore('teacher', () => {
       name,
       gender,
       special: [2, 9, 15].includes(i),
+      post: '',
+      address: '',
+      boarding: [3, 11, 16].includes(i),
       health: {
         allergy: [2, 9, 15].includes(i) ? '花生' : '',
         disease: '',
@@ -806,6 +1036,7 @@ export const useTeacherStore = defineStore('teacher', () => {
         emergencyPhone: ''
       }
     }))
+    students[0].post = '班长' // 演示数据：首名学生任班长，与班委信息联动
     const b = emptyBucket()
     const seats = arrangeByRoster(students, b.seats.rows, b.seats.cols)
     const duty = autoArrangeDuty(students, 4)
@@ -831,7 +1062,8 @@ export const useTeacherStore = defineStore('teacher', () => {
             ...b,
             students,
             seats,
-            duty: { days: duty.days, committee: [{ role: '班长', name: students[0].id, duty: '全面负责班级事务' }] },
+            duty: { days: duty.days },
+            committee: [{ studentId: students[0].id, role: '班长', duty: '全面负责班级事务' }],
             parents,
             exams: [{ id: uid('exam'), name: '语文期中', subject: '语文', date: '2026-04', scores: examScores }],
             papers: [
@@ -846,18 +1078,63 @@ export const useTeacherStore = defineStore('teacher', () => {
                 ]
               }
             ],
-            timetable: {
-              periods: b.timetable.periods,
-              grid: b.timetable.grid.map((row, pi) =>
-                row.map((_, di) => (pi < 4 && di < 5 ? ['语文', '数学', '语文', '英语', '体育'][di] : null))
-              )
-            },
+            timetable: (() => {
+              const timing = emptyTiming()
+              const schedule: StudentTimetableSchedule = {}
+              // 演示课表：周一~周四各 4 节（di+1=day，pi+1=period），时间按节次配置推算
+              const demo: [number, number, string][] = [
+                [1, 1, '语文'], [1, 2, '数学'], [1, 3, '英语'], [1, 4, '体育'],
+                [2, 1, '数学'], [2, 2, '语文'], [2, 3, '音乐'], [2, 4, '美术'],
+                [3, 1, '英语'], [3, 2, '科学'], [3, 3, '语文'], [3, 4, '书法'],
+                [4, 1, '语文'], [4, 2, '数学'], [4, 3, '体育'], [4, 4, '班会']
+              ]
+              for (const [day, period, subject] of demo) {
+                const { startHHMM, endHHMM } = computePeriodTime(period, timing)
+                schedule[cellKey(day, period)] = { subject, startHHMM, endHHMM }
+              }
+              return { ...emptyTimetableData(), classroom: '三年级1班', schedule }
+            })(),
             growth: {
               [students[0].id]: [
                 { id: uid('grow'), date: '2026-05-08', title: '期中进步之星', content: '数学期中成绩进步明显。', photos: [] }
               ]
             },
-            random: { history: [], mode: 'all' }
+            random: { history: [], mode: 'all' },
+            talks: [
+              {
+                id: uid('talk'),
+                studentId: students[0].id,
+                studentName: students[0].name,
+                studentNo: students[0].no,
+                date: '2026-05-10',
+                time: '19:30',
+                mode: '电话',
+                counterpart: '母亲',
+                counterpartName: '',
+                category: '学业',
+                content: '近期数学成绩下滑，已沟通课后辅导计划，家长配合督促完成每日练习。',
+                result: '约定每周五反馈一次练习完成情况。',
+                needFollowUp: true,
+                followUpNote: '下周五前回访练习完成情况。',
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+              },
+              {
+                id: uid('talk'),
+                studentId: students[1].id,
+                studentName: students[1].name,
+                studentNo: students[1].no,
+                date: '2026-05-15',
+                mode: '微信',
+                counterpart: '父亲',
+                category: '心理情绪',
+                content: '家长反映孩子近期情绪低落，了解后疑似亲子沟通较少，建议多陪伴。',
+                result: '已提供亲子沟通建议，家长表示会调整。',
+                needFollowUp: false,
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+              }
+            ]
           }
         }
       }
@@ -925,10 +1202,7 @@ export const useTeacherStore = defineStore('teacher', () => {
     setDutyMembers,
     autoDuty,
     setCommittee,
-    setTimetableCell,
-    setTimetablePeriods,
-    clearTimetable,
-    importTimetable,
+    updateTimetable,
     addGrowth,
     updateGrowth,
     removeGrowth,
@@ -937,9 +1211,24 @@ export const useTeacherStore = defineStore('teacher', () => {
     removeLeave,
     setLeaveStatus,
     leaveSummary,
+    addHomework,
+    updateHomework,
+    removeHomework,
+    markSubmitted,
+    markPending,
+    markMadeup,
+    revertMadeup,
+    exportMissesExcel,
+    homeworkSummary,
+    addTalk,
+    updateTalk,
+    removeTalk,
+    exportTalksExcel,
+    talksSummary,
     setRandomMode,
     pushRandomHistory,
     resetRandomHistory,
+    removeRandomHistory,
     importBackup,
     clearAll,
     loadDemoData

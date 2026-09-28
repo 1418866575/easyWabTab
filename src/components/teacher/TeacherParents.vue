@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 家长联系方式：搜索（学生/家长/电话）+ 导入表格 + 导出纸质版；联系电话以文本展示，不提供一键拨号。
+// 联系家长：搜索（学生/家长/电话）+ 导入表格 + 导出纸质版；联系电话以文本展示，不提供一键拨号。
 // 该页仅班主任可见（由 TeacherView 的可见性矩阵控制）。
 
 import { computed, ref } from 'vue'
@@ -82,7 +82,7 @@ async function exportExcelFile(): Promise<void> {
   <div class="tw-page">
     <div class="tw-head">
       <div>
-        <h3 class="tw-title">家长联系方式</h3>
+        <h3 class="tw-title">联系家长</h3>
       </div>
       <div class="tw-toolbar tw-no-print">
         <button type="button" class="tw-btn tw-btn-primary" @click="fileInput?.click()">导入表格</button>
@@ -129,7 +129,7 @@ async function exportExcelFile(): Promise<void> {
           </tbody>
         </table>
       </div>
-      <p v-if="!filtered.length" class="tw-empty">还没有家长信息，可导入表格或在「学生名单」里补录。</p>
+      <p v-if="!filtered.length" class="tw-empty">还没有家长信息，可导入表格或在「学生信息」里补录。</p>
       <p v-if="message" class="tw-note">{{ message }}</p>
     </section>
   </div>

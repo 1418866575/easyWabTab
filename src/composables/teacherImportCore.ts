@@ -5,9 +5,10 @@
 //   家长表  ：表头须含「姓名」「家长」「电话」，按姓名匹配学生
 // 表头匹配统一归一化（去空白、去 * 号），与课程表导入行为一致。
 
-import type { Exam, ParentInfo, Student, TimetablePeriod } from '@/types/teacher'
+import type { Exam, ParentInfo, Student } from '@/types/teacher'
 import { makeStudentId } from './teacherCore'
-import { WEEK_DAYS } from '@/types/teacher'
+import type { StudentTimetableData, StudentTimetableSchedule } from '@/types'
+import { cellKey, computePeriodTime, emptyTiming, emptyTimetableData } from '@/composables/studentTimetableCore'
 
 /** 表头归一化：去空白 + 去 * / ＊ */
 export function normalizeHeader(v: unknown): string {
@@ -65,6 +66,8 @@ export interface HeaderMap {
   name: number
   gender: number
   no: number
+  address: number
+  boarding: number
   parent: number
   phone: number
   relation: number
@@ -78,6 +81,8 @@ export function mapHeaders(headerRow: string[]): HeaderMap {
     name: find('姓名', '学生姓名', '名字'),
     gender: find('性别'),
     no: find('学号', '编号'),
+    address: find('家庭地址', '地址', '住址', '家庭住址'),
+    boarding: find('是否住校', '住校'),
     parent: find('家长', '家长姓名', '监护人'),
     phone: find('电话', '联系电话', '手机号', '家长电话'),
     relation: find('关系', '与学生关系')
@@ -127,6 +132,9 @@ export function rowsToStudents(rows: string[][], semesterId: string, classId: st
       name,
       gender,
       special: false,
+      post: '',
+      address: map.address >= 0 ? (r[map.address] ?? '').trim() : '',
+      boarding: map.boarding >= 0 ? /^(是|true|yes|y)$/i.test((r[map.boarding] ?? '').trim()) : false,
       health: { allergy: '', disease: '', notes: '', emergencyPhone: '' }
     })
   }
@@ -254,46 +262,52 @@ export function rowsToParents(rows: string[][], students: Student[]): ParentPars
 }
 
 export interface TimetableParseResult {
-  periods: TimetablePeriod[]
-  grid: (string | null)[][]
+  data: StudentTimetableData
   errors: string[]
   warnings: string[]
 }
 
+/** 课程表导入固定 7 天（周一~周日），与教师课程表富模型一致 */
+const TIMETABLE_DAY_COUNT = 7
+
 /**
- * 课程表行 → 节次列表 + grid[节次][星期]。
- * 约定：首列为节次名称（空则按行号补「第N节」）；其后每列按位置对应 周一~周六（最多取 6 列）。
+ * 课程表行 → StudentTimetableData（富模型，7 天 + schedule）。
+ * 约定：首列为节次名称（仅占位，读取时忽略）；其后每列按位置对应 周一~周日（最多取 7 列）。
+ * 每个非空单元格写入 schedule[`${day}_${period}`]，起止时间由 computePeriodTime 按默认节次配置推算。
  * 首列与当日均为空的整行视为空行跳过。表头行（第 0 行）仅作展示、不参与解析。
  */
 export function rowsToTimetable(rows: string[][]): TimetableParseResult {
   const errors: string[] = []
   const warnings: string[] = []
-  if (!rows.length) return { periods: [], grid: [], errors: ['表格为空'], warnings }
+  if (!rows.length) return { data: emptyTimetableData(), errors: ['表格为空'], warnings }
 
-  const dayCount = WEEK_DAYS.length
-  const periods: TimetablePeriod[] = []
-  const grid: (string | null)[][] = []
-
-  let r = 0
+  const schedule: StudentTimetableSchedule = {}
+  const timing = emptyTiming()
+  let period = 0
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i]
     const label = (row[0] ?? '').trim()
-    const cells: (string | null)[] = []
     let anySubject = false
-    for (let d = 0; d < dayCount; d++) {
+    const periodIdx = period + 1
+    for (let d = 0; d < TIMETABLE_DAY_COUNT; d++) {
       const raw = (row[d + 1] ?? '').trim()
-      const v = raw === '' ? null : raw
-      if (v) anySubject = true
-      cells.push(v)
+      if (!raw) continue
+      anySubject = true
+      const { startHHMM, endHHMM } = computePeriodTime(periodIdx, timing)
+      schedule[cellKey(d + 1, periodIdx)] = { subject: raw, startHHMM, endHHMM }
     }
     if (!label && !anySubject) continue // 空行跳过
-    r++
-    periods.push({ label: label || `第${r}节`, time: '' })
-    grid.push(cells)
+    period = periodIdx
   }
 
-  if (!periods.length) errors.push('未解析到任何课程（每行首列应为节次名称）')
-  return { periods, grid, errors, warnings }
+  if (!period) errors.push('未解析到任何课程（每行首列应为节次名称）')
+
+  const data: StudentTimetableData = {
+    ...emptyTimetableData(),
+    periodsPerDay: period,
+    schedule
+  }
+  return { data, errors, warnings }
 }
 
 /** 按扩展名选择解析方式；xlsx 走动态 import，避免打进主包 */

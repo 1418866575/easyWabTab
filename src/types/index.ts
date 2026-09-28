@@ -1182,6 +1182,15 @@ export interface StudentParentTasksData {
 /** 成绩考试类型（录入下拉预设；用户可自由输入自定义类型） */
 export const GRADE_EXAM_TYPES: readonly string[] = ['期中', '期末', '月考', '单元测试', '随堂测验']
 
+/** 考试名称录入预设（下拉候选项；用户可自由输入自定义名称） */
+export const EXAM_NAME_PRESETS: readonly string[] = [
+  '第一次月考', '第二次月考', '第三次月考',
+  '期中考试', '期末考试',
+  '单元测试一', '单元测试二', '单元测试三',
+  '一模', '二模', '三模', '模拟考',
+  '随堂测验一', '随堂测验二'
+]
+
 /** 年级分类（标签页顺序）：幼儿园小班/中班/大班 → 小学一年级~六年级 → 初中初一~初三 → 高中高一~高三 → 大学大一~大四 */
 export const STUDENT_GRADE_LEVELS: readonly string[] = [
   '小班', '中班', '大班',
