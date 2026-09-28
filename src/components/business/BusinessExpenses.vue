@@ -287,7 +287,7 @@ async function handleDeleteFromDialog(): Promise<void> {
       v-if="showDialog"
       :model-value="true"
       :show-close="false"
-      width="560px"
+      width="80%"
       class="bizexp-dialog"
       data-testid="bizexp-dialog"
       @close="showDialog = false"
