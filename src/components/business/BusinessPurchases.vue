@@ -72,6 +72,9 @@ function catNameOf(productId: string): string {
   return catId ? (findProductCategory(store.productCategories, catId)?.name ?? '未分类') : '未分类'
 }
 
+/** 导出文件名前缀：账本年份 + 账本名称（缺失时由 xlsxFileName 自动省略该段） */
+const ledgerMeta = computed(() => ({ year: store.currentLedgerYear, ledgerName: store.currentLedgerName }))
+
 // ===== 一键导出 Excel（库存记录：按当前分类/商品筛选导出）=====
 function exportPurchasesExcel(): void {
   const headers = ['日期', '商品', '分类', '数量', '进价', '金额', '剩余状态', '备注']
@@ -85,7 +88,7 @@ function exportPurchasesExcel(): void {
     stockLabel(p),
     p.note ?? ''
   ])
-  void exportXlsx('库存记录', headers, rows)
+  void exportXlsx('库存记录', headers, rows, ledgerMeta.value)
 }
 
 // P0-2：获取商品售价

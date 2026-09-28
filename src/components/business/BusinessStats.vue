@@ -91,6 +91,9 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
 // ===== 近 12 个月（严格限定在当前账本年份的 12 个月，不跨年；无数据月份为 0） =====
 const monthMode = ref<'revenue' | 'profit' | 'expense' | 'member'>('revenue')
 const ledgerYear = computed(() => store.currentLedgerYear)
+/** 导出文件名前缀：账本年份 + 账本名称 */
+const ledgerName = computed(() => store.currentLedgerName)
+const ledgerMeta = computed(() => ({ year: ledgerYear.value, ledgerName: ledgerName.value }))
 const monthlyStats = computed(() => calcMonthlyStats(data.value, ledgerYear.value))
 const monthBars = computed(() => {
   const valueOf = (m: { revenue: number; profit: number; expense: number; memberRevenue: number }): number =>
@@ -149,7 +152,7 @@ function exportProfitExcel(): void {
       r.memberRevenue.toFixed(2),
       r.memberProfit.toFixed(2)
     ])
-    void exportXlsx('商品毛利报表', headers, rows)
+    void exportXlsx('商品毛利报表', headers, rows, ledgerMeta.value)
     return
   }
   const headers = ['分类', '售出数量', '营业额', '成本', '毛利', '毛利率', '会员价模拟营业额', '会员价模拟毛利']
@@ -163,7 +166,7 @@ function exportProfitExcel(): void {
     r.memberRevenue.toFixed(2),
     r.memberProfit.toFixed(2)
   ])
-  void exportXlsx('分类毛利报表', headers, rows)
+  void exportXlsx('分类毛利报表', headers, rows, ledgerMeta.value)
 }
 
 /** 导出近 12 个月数据 Excel（当前口径） */
@@ -180,7 +183,7 @@ function exportMonthlyExcel(): void {
     m.memberRevenue.toFixed(2),
     m.memberProfit.toFixed(2)
   ])
-  void exportXlsx(`${ledgerYear.value}年月度报表`, headers, rows)
+  void exportXlsx(`${ledgerYear.value}年月度报表`, headers, rows, ledgerMeta.value)
 }
 
 /** 打印报表（隐藏页面框架与操作按钮，仅保留报表内容） */

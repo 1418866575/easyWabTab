@@ -2,7 +2,7 @@
 // 结构镜像 scripts/test-panel-paging-core.ts（node:assert/strict Proxy 计数 + test 注册表 + 汇总退出码）
 // 说明：exportXlsx 依赖 DOM 与动态 import('xlsx')，不在此测试；这里只覆盖零依赖的纯函数。
 import assert from 'node:assert/strict'
-import { colWidths, displayWidth, safeSheetName, xlsxFileName } from '../src/composables/xlsxExport.ts'
+import { colWidths, displayWidth, safeSheetName, sanitizeFileNamePart, xlsxFileName } from '../src/composables/xlsxExport.ts'
 
 const tests: { name: string; fn: () => void }[] = []
 function test(name: string, fn: () => void) {
@@ -78,6 +78,55 @@ test('T5 colWidths 边界', () => {
   a.equal(colWidths([], []).length, 0)
 })
 
+// T6 — 文件名账本前缀：[年份_]?[账本名_]?主体_YYYY-MM-DD.xlsx，缺失段落直接省略
+test('T6 xlsxFileName 账本前缀与容错', () => {
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  // 年份（数字）+ 账本名 + 主体
+  a.equal(xlsxFileName('收摊记录', { year: 2026, ledgerName: '师范大学西门口' }), `2026_师范大学西门口_收摊记录_${date}.xlsx`)
+  // 只有年份：省略账本名段，不出现连续下划线
+  a.equal(xlsxFileName('支出记录', { year: 2026 }), `2026_支出记录_${date}.xlsx`)
+  a.equal(xlsxFileName('支出记录', { year: 2026, ledgerName: '' }), `2026_支出记录_${date}.xlsx`)
+  // 只有账本名
+  a.equal(xlsxFileName('库存总览', { ledgerName: '夜市摊' }), `夜市摊_库存总览_${date}.xlsx`)
+  a.equal(xlsxFileName('库存总览', { year: '', ledgerName: '夜市摊' }), `夜市摊_库存总览_${date}.xlsx`)
+  // 两者都缺（含 undefined / 空白串 / null）→ 退化为原文件名
+  a.equal(xlsxFileName('库存记录', {}), `库存记录_${date}.xlsx`)
+  a.equal(xlsxFileName('库存记录', { year: undefined, ledgerName: undefined }), `库存记录_${date}.xlsx`)
+  a.equal(xlsxFileName('库存记录', { year: '  ', ledgerName: '   ' }), `库存记录_${date}.xlsx`)
+  a.equal(xlsxFileName('库存记录', { year: null, ledgerName: null }), `库存记录_${date}.xlsx`)
+  // 主体本身为空：只剩日期
+  a.equal(xlsxFileName('', { year: 2026 }), `2026_${date}.xlsx`)
+})
+
+// T7 — 文件名非法字符过滤：\ / : * ? " < > | 全部剔除，首尾空白 trim
+test('T7 sanitizeFileNamePart 非法字符', () => {
+  a.equal(sanitizeFileNamePart('a\\b/c:d*e?f"g<h>i|j'), 'abcdefghij')
+  a.equal(sanitizeFileNamePart('  2026 年账本  '), '2026 年账本')
+  a.equal(sanitizeFileNamePart(''), '')
+  a.equal(sanitizeFileNamePart(undefined), '')
+  a.equal(sanitizeFileNamePart(null), '')
+  a.equal(sanitizeFileNamePart(2026), '2026')
+  // 端到端：账本名带非法字符时文件名不残留
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  a.equal(
+    xlsxFileName('收摊/记录', { year: 2026, ledgerName: '师大*西门:口' }),
+    `2026_师大西门口_收摊记录_${date}.xlsx`
+  )
+})
+
+// T8 — 文件名不影响工作表名：sheetName 默认取 prefix，可显式覆盖
+test('T8 工作表名与文件名解耦', () => {
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  // 文件名带账本前缀，但工作表名仍只由 prefix 决定（此处只验证两者输入不互相污染）
+  a.match(xlsxFileName('库存总览', { year: 2026, ledgerName: 'A', sheetName: '自定义表' }), new RegExp(`^2026_A_库存总览_${date}\\.xlsx$`))
+  a.equal(safeSheetName('库存总览'), '库存总览')
+})
 let passed = 0
 let failed = 0
 for (const t of tests) {

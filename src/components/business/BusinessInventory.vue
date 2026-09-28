@@ -124,6 +124,9 @@ function closeTraceModal(): void {
   traceModalProductId.value = null
 }
 
+/** 导出文件名前缀：账本年份 + 账本名称（缺失时由 xlsxFileName 自动省略该段） */
+const ledgerMeta = computed(() => ({ year: store.currentLedgerYear, ledgerName: store.currentLedgerName }))
+
 // ===== 一键导出 Excel（库存总览：全部商品，含当前库存）=====
 function exportInventoryExcel(): void {
   const headers = ['商品名称', '分类', '单位', '进货价', '售价', '当前库存', '状态']
@@ -136,7 +139,7 @@ function exportInventoryExcel(): void {
     stockMap.value[p.id] ?? 0,
     p.active ? '在售' : '停售'
   ])
-  void exportXlsx('库存总览', headers, rows)
+  void exportXlsx('库存总览', headers, rows, ledgerMeta.value)
 }
 </script>
 

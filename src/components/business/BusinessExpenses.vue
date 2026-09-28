@@ -35,6 +35,9 @@ function catNameOf(id: string): string {
 // 逐笔列表（日期倒序、同日按创建时间倒序）；同一天不合并，每笔一行
 const allExpenses = computed<BusinessExpense[]>(() => sortExpenses(store.expenses))
 
+/** 导出文件名前缀：账本年份 + 账本名称（缺失时由 xlsxFileName 自动省略该段） */
+const ledgerMeta = computed(() => ({ year: store.currentLedgerYear, ledgerName: store.currentLedgerName }))
+
 // ===== 一键导出 Excel（逐笔：日期/标题/分类/金额/备注）=====
 function exportExpensesExcel(): void {
   const headers = ['日期', '标题', '分类', '金额', '备注']
@@ -45,7 +48,7 @@ function exportExpensesExcel(): void {
     e.amount.toFixed(2),
     e.note ?? ''
   ])
-  void exportXlsx('支出记录', headers, rows)
+  void exportXlsx('支出记录', headers, rows, ledgerMeta.value)
 }
 
 // ===== 分页（逐笔：列表一行一笔，卡片一卡一笔） =====

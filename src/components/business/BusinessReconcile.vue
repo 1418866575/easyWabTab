@@ -27,6 +27,9 @@ const data = computed(() => ({
 }))
 
 const ledgerYear = computed(() => store.currentLedgerYear)
+/** 导出文件名前缀：账本年份 + 账本名称 */
+const ledgerName = computed(() => store.currentLedgerName)
+const ledgerMeta = computed(() => ({ year: ledgerYear.value, ledgerName: ledgerName.value }))
 
 // ===== ① 应收 vs 实收 =====
 const receivable = computed(() => calcReceivableVsActual(data.value))
@@ -53,7 +56,7 @@ function exportReceivableExcel(): void {
     r.manual ? '手动' : '自动',
     r.transactionCount
   ])
-  void exportXlsx(`应收实收对账-${ledgerYear.value}`, headers, rows)
+  void exportXlsx(`应收实收对账-${ledgerYear.value}`, headers, rows, ledgerMeta.value)
 }
 
 function exportMonthlyExcel(): void {
@@ -66,7 +69,7 @@ function exportMonthlyExcel(): void {
     m.days,
     m.manualDays
   ])
-  void exportXlsx(`按月账实差异-${ledgerYear.value}`, headers, rows)
+  void exportXlsx(`按月账实差异-${ledgerYear.value}`, headers, rows, ledgerMeta.value)
 }
 
 function exportExpenseExcel(): void {
@@ -81,7 +84,7 @@ function exportExpenseExcel(): void {
   for (const e of expenseRec.value.unlinkedExpenses) {
     rows.push(['未匹配支出', e.date, expenseLabel(e) + '（' + expenseCatName(e.categoryId) + '）' + (e.note ? `（${e.note}）` : ''), e.amount.toFixed(2), '', ''])
   }
-  void exportXlsx('进货支储对账', headers, rows)
+  void exportXlsx('进货支储对账', headers, rows, ledgerMeta.value)
 }
 </script>
 

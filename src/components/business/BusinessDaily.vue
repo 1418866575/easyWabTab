@@ -77,6 +77,9 @@ function dailyItemDetails(record: BusinessDailyRecord) {
   return calcDailyItemDetails(record, store.products)
 }
 
+/** 导出文件名前缀：账本年份 + 账本名称（缺失时由 xlsxFileName 自动省略该段） */
+const ledgerMeta = computed(() => ({ year: store.currentLedgerYear, ledgerName: store.currentLedgerName }))
+
 // ===== 一键导出 Excel（收摊记录：按「日期 × 商品」展开，便于透视）=====
 function exportDailyExcel(): void {
   const headers = ['日期', '商品', '带出', '售出', '损耗', '单价', '小计', '当日营业额', '交易笔数']
@@ -100,7 +103,7 @@ function exportDailyExcel(): void {
       rows.push([rec.date, '（无商品明细）', '', '', '', '', '', rec.totalRevenue.toFixed(2), rec.transactionCount ?? ''])
     }
   }
-  void exportXlsx('收摊记录', headers, rows)
+  void exportXlsx('收摊记录', headers, rows, ledgerMeta.value)
 }
 
 // ===== 编辑弹框（动态商品行） =====

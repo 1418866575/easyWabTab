@@ -16,15 +16,50 @@ const SHEET_NAME_MAX = 31
 const COL_MIN_WIDTH = 8
 const COL_MAX_WIDTH = 30
 
+/** 导出元信息（只影响文件名与工作表名，不影响单元格内容） */
+export interface XlsxExportMeta {
+  /** 工作表名（默认取 prefix，自动清洗非法字符与 31 字符上限） */
+  sheetName?: string
+  /** 账本年份：作为文件名第一段前缀（空则省略） */
+  year?: string | number
+  /** 账本名称：作为文件名第二段前缀（空则省略） */
+  ledgerName?: string
+}
+
 function pad2(n: number): string {
   return String(n).padStart(2, '0')
 }
 
-/** 生成带日期的文件名：prefix_YYYY-MM-DD.xlsx */
-export function xlsxFileName(prefix: string): string {
+/** 文件名非法字符（Windows / macOS 通用）：\ / : * ? " < > | */
+const FILE_NAME_ILLEGAL = /[\\/:*?"<>|]/g
+
+/**
+ * 文件名片段清洗：去掉 \ / : * ? " < > | 等非法字符并去首尾空白。
+ * 空值返回空串，由调用方决定是否拼入（缺少的段落直接省略，不产生多余分隔符）。
+ */
+export function sanitizeFileNamePart(part: string | number | null | undefined): string {
+  if (part === null || part === undefined) return ''
+  return String(part).replace(FILE_NAME_ILLEGAL, '').trim()
+}
+
+/**
+ * 生成导出文件名：[账本年份_]?[账本名称_]?前缀_YYYY-MM-DD.xlsx
+ * - 账本年份 / 账本名称为空（或清洗后为空）时该段直接省略，不留下多余下划线
+ * - 各段与日期之间统一用下划线分隔（日期本身含短横线，整体仍可读）
+ * - 全部片段都会过滤文件名非法字符，避免导出/保存失败
+ */
+export function xlsxFileName(prefix: string, meta: XlsxExportMeta = {}): string {
   const d = new Date()
   const date = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
-  return `${prefix}_${date}.xlsx`
+  const parts: string[] = []
+  const year = sanitizeFileNamePart(meta.year)
+  if (year) parts.push(year)
+  const ledgerName = sanitizeFileNamePart(meta.ledgerName)
+  if (ledgerName) parts.push(ledgerName)
+  const main = sanitizeFileNamePart(prefix)
+  if (main) parts.push(main)
+  parts.push(date)
+  return `${parts.join('_')}.xlsx`
 }
 
 /**
@@ -81,23 +116,23 @@ function downloadBlob(filename: string, blob: Blob): void {
 /**
  * 导出 Excel（.xlsx）：表头 + 二维行 → 单 sheet 工作簿 → 浏览器下载。
  * 字段、列顺序、表头命名、数据筛选与排序全部由调用方决定，本函数只负责格式与落盘。
- * @param prefix 文件名前缀（自动补 _YYYY-MM-DD.xlsx）
+ * @param prefix 文件名主体（最终文件名 = [年份_]?[账本名_]?prefix_YYYY-MM-DD.xlsx）
  * @param headers 表头行
  * @param rows 数据行
- * @param sheetName 工作表名（默认取 prefix，自动清洗非法字符与 31 字符上限）
+ * @param meta 元信息：sheetName（默认 prefix）、year / ledgerName（文件名前缀，空则省略）
  */
 export async function exportXlsx(
   prefix: string,
   headers: XlsxRow,
   rows: readonly XlsxRow[],
-  sheetName: string = prefix
+  meta: XlsxExportMeta = {}
 ): Promise<void> {
   const XLSX = await import('xlsx')
   const aoa: XlsxCell[][] = [[...headers], ...rows.map(r => [...r])].map(r => r.map(v => v ?? ''))
   const ws = XLSX.utils.aoa_to_sheet(aoa)
   ws['!cols'] = colWidths(headers, rows).map(wch => ({ wch }))
   const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, safeSheetName(sheetName))
+  XLSX.utils.book_append_sheet(wb, ws, safeSheetName(meta.sheetName ?? prefix))
   const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer
-  downloadBlob(xlsxFileName(prefix), new Blob([buf], { type: XLSX_MIME }))
+  downloadBlob(xlsxFileName(prefix, meta), new Blob([buf], { type: XLSX_MIME }))
 }
