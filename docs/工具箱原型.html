@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>工具箱 · 原型（easy-web-tab）</title>
+<style>
+  /* ============ Design Tokens（沿用项目 src/style.css） ============ */
+  :root {
+    --color-primary: #3b82f6;
+    --color-primary-hover: #2563eb;
+    --color-primary-soft: rgba(59,130,246,0.10);
+    --color-success: #10b981;
+    --color-success-soft: #d1fae5;
+    --color-warning: #f59e0b;
+    --color-warning-soft: #fef3c7;
+    --color-bg: #f8fafc;
+    --color-bg-card: #ffffff;
+    --color-bg-hover: #f1f5f9;
+    --color-bg-input: #f1f5f9;
+    --color-text: #1e293b;
+    --color-text-secondary: #64748b;
+    --color-text-muted: #94a3b8;
+    --color-border: #e2e8f0;
+    --color-border-hover: #cbd5e1;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.10);
+    --shadow-card: 0 1px 3px rgba(0,0,0,0.10);
+    --shadow-card-hover: 0 8px 24px rgba(0,0,0,0.12);
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-full: 9999px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    --motion: 220ms cubic-bezier(0.4,0,0.2,1);
+  }
+  html.dark {
+    --color-primary: #60a5fa;
+    --color-primary-hover: #93c5fd;
+    --color-primary-soft: rgba(96,165,250,0.16);
+    --color-success: #34d399;
+    --color-success-soft: rgba(52,211,153,0.16);
+    --color-warning: #fbbf24;
+    --color-warning-soft: rgba(251,191,36,0.16);
+    --color-bg: #0f172a;
+    --color-bg-card: #1e293b;
+    --color-bg-hover: #334155;
+    --color-bg-input: #334155;
+    --color-text: #f1f5f9;
+    --color-text-secondary: #cbd5e1;
+    --color-text-muted: #94a3b8;
+    --color-border: #334155;
+    --color-border-hover: #475569;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.30);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.40);
+    --shadow-card: 0 1px 3px rgba(0,0,0,0.35);
+    --shadow-card-hover: 0 10px 28px rgba(0,0,0,0.45);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-family);
+    background: var(--color-bg);
+    color: var(--color-text);
+    -webkit-font-smoothing: antialiased;
+    transition: background-color var(--motion), color var(--motion);
+    line-height: 1.6;
+  }
+  button { font-family: var(--font-family); cursor: pointer; }
+  a { color: inherit; text-decoration: none; }
+  *:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
+  /* ============ 顶栏（沿用项目 App Bar） ============ */
+  .topbar {
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+    padding: 10px 16px;
+    background: color-mix(in srgb, var(--color-bg-card) 82%, transparent);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .topbar-left, .topbar-right { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+  .tb-entry {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: var(--radius-md);
+    font-size: 13px; font-weight: 500; color: var(--color-text-secondary);
+    background: transparent; border: 1px solid transparent; white-space: nowrap;
+    transition: all var(--motion); min-height: 36px;
+  }
+  .tb-entry:hover { background: var(--color-bg-hover); color: var(--color-primary); border-color: var(--color-border); }
+  .tb-entry.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+  .ghost-btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px;
+    border-radius: var(--radius-md); font-size: 13px; color: var(--color-text-secondary);
+    background: transparent; border: 1px solid transparent; transition: all var(--motion); min-height: 36px;
+  }
+  .ghost-btn:hover { background: var(--color-bg-hover); color: var(--color-primary); border-color: var(--color-border); }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 clamp(12px,3vw,24px) 96px; }
+
+  /* ============ 首页（入口演示） ============ */
+  .hero { text-align: center; padding: clamp(32px,8vw,72px) 0 0; }
+  .hero h1 { margin: 0 0 10px; font-size: clamp(24px,3vw,34px); }
+  .hero p { margin: 0 auto 22px; max-width: 560px; color: var(--color-text-secondary); font-size: 15px; }
+  .hero .hint-card {
+    display: inline-block; text-align: left; max-width: 560px;
+    background: var(--color-bg-card); border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg); padding: 16px 18px; box-shadow: var(--shadow-sm);
+  }
+  .hero .hint-card b { color: var(--color-primary); }
+
+  /* ============ 工具箱页头 ============ */
+  .tb-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 22px 0 4px; }
+  .tb-head h1 { margin: 0; font-size: clamp(20px,2.2vw,26px); }
+  .tb-head .sub { color: var(--color-text-secondary); font-size: 13px; }
+
+  /* ============ 搜索框 ============ */
+  .search-box {
+    display: flex; align-items: center; gap: 10px; width: 100%; max-width: 720px;
+    background: var(--color-bg-card); border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg); padding: 10px 14px; box-shadow: var(--shadow-sm);
+    transition: border-color var(--motion), box-shadow var(--motion); margin: 14px 0 10px;
+  }
+  .search-box:focus-within { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-soft); }
+  .search-box svg { color: var(--color-text-muted); flex: none; }
+  .search-box input {
+    flex: 1; min-width: 0; border: none; outline: none; background: transparent;
+    color: var(--color-text); font-size: 15px; font-family: var(--font-family);
+  }
+  .search-box input::placeholder { color: var(--color-text-muted); }
+  .search-clear {
+    flex: none; border: none; background: transparent; color: var(--color-text-muted);
+    font-size: 16px; padding: 2px 6px; border-radius: 6px; line-height: 1;
+  }
+  .search-clear:hover { color: var(--color-primary); background: var(--color-bg-hover); }
+
+  /* ============ 分类筛选 ============ */
+  .cat-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 4px; }
+  .cat-tab {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: var(--radius-full); font-size: 13px; font-weight: 500;
+    background: var(--color-bg-card); color: var(--color-text-secondary);
+    border: 1px solid var(--color-border); transition: all var(--motion); min-height: 34px;
+  }
+  .cat-tab:hover { color: var(--color-primary); border-color: var(--color-primary); }
+  .cat-tab[aria-pressed="true"] { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+  .cat-tab .cnt { font-size: 12px; opacity: .78; }
+
+  /* ============ 分组 ============ */
+  .tb-section { margin-top: 26px; }
+  .tb-section-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; }
+  .tb-section-head h2 { margin: 0; font-size: 16px; font-weight: 600; }
+  .tb-section-head .sub { font-size: 12px; color: var(--color-text-muted); }
+
+  /* ============ 卡片网格 ============ */
+  .tb-grid { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+
+  .tb-card {
+    position: relative; display: flex; flex-direction: column; gap: 8px;
+    padding: 16px 14px; text-align: left;
+    background: var(--color-bg-card); border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow-card);
+    transition: transform var(--motion), box-shadow var(--motion), border-color var(--motion);
+    min-height: 44px; font-family: var(--font-family);
+  }
+  .tb-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-card-hover); border-color: var(--color-primary); }
+  .tb-card:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .tb-card.is-disabled { opacity: .62; cursor: not-allowed; }
+  .tb-card.is-disabled:hover { transform: none; box-shadow: var(--shadow-card); border-color: var(--color-border); }
+
+  .tb-card-top { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .tb-icon {
+    width: 38px; height: 38px; flex: none; border-radius: 10px;
+    display: grid; place-items: center; font-size: 19px;
+    background: var(--color-primary-soft); color: var(--color-primary);
+  }
+  .tb-name { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tb-card.is-disabled .tb-name { color: var(--color-text-secondary); }
+  .tb-fav {
+    margin-left: auto; flex: none; border: none; background: transparent;
+    font-size: 15px; line-height: 1; padding: 6px; border-radius: 6px;
+    color: var(--color-text-muted); transition: all var(--motion); min-width: 30px; min-height: 30px;
+  }
+  .tb-fav:hover { background: var(--color-bg-hover); color: var(--color-warning); }
+  .tb-fav[aria-pressed="true"] { color: var(--color-warning); }
+  .tb-desc {
+    font-size: 12.5px; color: var(--color-text-secondary); line-height: 1.5;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.9em;
+  }
+  .tb-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: auto; }
+  .tb-tag {
+    font-size: 11px; padding: 1px 7px; border-radius: var(--radius-full);
+    background: var(--color-bg-hover); color: var(--color-text-secondary); border: 1px solid var(--color-border);
+  }
+  .tb-badge { font-size: 11px; padding: 1px 7px; border-radius: var(--radius-full); font-weight: 600; border: 1px solid transparent; }
+  .tb-badge.maintenance { background: var(--color-warning-soft); color: var(--color-warning); }
+  .tb-badge.coming { background: var(--color-bg-hover); color: var(--color-text-secondary); }
+  .tb-badge.internal { background: var(--color-success-soft); color: var(--color-success); }
+
+  mark { background: var(--color-primary-soft); color: var(--color-primary); border-radius: 3px; padding: 0 1px; }
+
+  /* ============ 最近使用（紧凑行） ============ */
+  .tb-recent { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tb-recent-item {
+    display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px;
+    background: var(--color-bg-card); border: 1px solid var(--color-border);
+    border-radius: var(--radius-full); font-size: 13px; min-height: 36px;
+    transition: all var(--motion);
+  }
+  .tb-recent-item:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .tb-recent-item .ic { font-size: 15px; }
+  .tb-recent-item .tm { font-size: 11px; color: var(--color-text-muted); }
+
+  /* ============ 空状态 ============ */
+  .tb-empty {
+    grid-column: 1 / -1; text-align: center; padding: clamp(28px,6vw,48px) 16px;
+    color: var(--color-text-secondary); background: var(--color-bg-card);
+    border: 1px dashed var(--color-border); border-radius: var(--radius-lg);
+  }
+  .tb-empty .ico { font-size: 32px; display: block; margin-bottom: 10px; opacity: .8; }
+  .tb-empty p { margin: 0 0 12px; font-size: 14px; }
+  .tb-empty .kw { color: var(--color-primary); font-weight: 600; }
+  .tb-empty-btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; min-height: 36px;
+    border-radius: var(--radius-md); border: 1px solid var(--color-primary);
+    background: transparent; color: var(--color-primary); font-size: 13px; transition: all var(--motion);
+  }
+  .tb-empty-btn:hover { background: var(--color-primary); color: #fff; }
+
+  /* ============ 配置驱动说明 ============ */
+  .tb-note {
+    margin-top: 34px; padding: 14px 16px; font-size: 12.5px; line-height: 1.7;
+    background: var(--color-bg-card); border: 1px solid var(--color-border);
+    border-left: 3px solid var(--color-primary); border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+  }
+  .tb-note code { background: var(--color-bg-hover); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+
+  /* ============ Toast ============ */
+  #toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px);
+    background: var(--color-text); color: var(--color-bg); padding: 10px 18px;
+    border-radius: var(--radius-full); font-size: 13px; box-shadow: var(--shadow-md);
+    opacity: 0; pointer-events: none; transition: opacity var(--motion), transform var(--motion); z-index: 400;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ============ 响应式 ============ */
+  @media (max-width: 768px) {
+    .topbar { flex-wrap: wrap; gap: 6px; }
+    .container { padding: 0 12px 96px; }
+    .tb-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+    .tb-head { margin-top: 16px; }
+  }
+  @media (max-width: 359px) {
+    .tb-grid { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+    .tb-card:hover { transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ======== 视图 1：首页（左上角「工具箱」入口按钮） ======== -->
+<div id="view-home">
+  <header class="topbar">
+    <div class="topbar-left">
+      <!-- 左上角入口按钮：点击跳转工具箱 -->
+      <button type="button" class="tb-entry" data-testid="home-toolbox-btn" title="打开工具箱" aria-label="打开工具箱" onclick="go('toolbox')">🧰 工具箱</button>
+      <button type="button" class="ghost-btn" title="原型仅演示工具箱">🧭 导航站</button>
+    </div>
+    <div class="topbar-right">
+      <button type="button" class="ghost-btn" id="themeBtnHome" onclick="toggleTheme()" title="切换主题">🌙 暗色</button>
+    </div>
+  </header>
+  <main class="container">
+    <div class="hero">
+      <h1>easy-web-tab</h1>
+      <p>本原型演示新增的「工具箱」模块接入方式。</p>
+      <div class="hint-card">
+        <div>👉 点击<strong>左上角「🧰 工具箱」</strong>按钮即可进入工具箱页面（模拟路由跳转 <code>/toolbox</code>）。</div>
+        <div style="margin-top:8px">工具箱提供：卡片网格、即时搜索、分类筛选、收藏（常用）、最近使用、状态徽标与空状态；全部<strong>由配置驱动</strong>。</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ======== 视图 2：工具箱 ======== -->
+<div id="view-toolbox" hidden>
+  <header class="topbar">
+    <div class="topbar-left">
+      <button type="button" class="tb-entry active" aria-current="page">🧰 工具箱</button>
+      <button type="button" class="ghost-btn" onclick="go('home')" title="返回导航站">← 返回</button>
+    </div>
+    <div class="topbar-right">
+      <button type="button" class="ghost-btn" id="themeBtnBox" onclick="toggleTheme()" title="切换主题">🌙 暗色</button>
+    </div>
+  </header>
+  <main class="container">
+    <div class="tb-head">
+      <h1>🧰 工具箱</h1>
+      <span class="sub" id="tbCount"></span>
+    </div>
+
+    <!-- 搜索框 -->
+    <div class="search-box">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input id="tbSearch" type="search" placeholder="搜索工具名称、描述或标签…" aria-label="搜索工具" autocomplete="off" />
+      <button type="button" class="search-clear" id="tbClear" onclick="clearSearch()" title="清空搜索" aria-label="清空搜索">✕</button>
+    </div>
+
+    <!-- 分类筛选 -->
+    <div class="cat-tabs" id="tbCats" role="group" aria-label="工具分类筛选"></div>
+
+    <!-- 常用工具（收藏） -->
+    <section class="tb-section" id="secFav" hidden>
+      <div class="tb-section-head"><h2>★ 常用工具</h2><span class="sub">点击卡片右上角 ☆ 可收藏</span></div>
+      <div class="tb-grid" id="gridFav"></div>
+    </section>
+
+    <!-- 全部工具 -->
+    <section class="tb-section" id="secAll">
+      <div class="tb-section-head"><h2 id="allTitle">全部工具</h2><span class="sub" id="allSub"></span></div>
+      <div class="tb-grid" id="gridAll"></div>
+    </section>
+
+    <!-- 最近使用 -->
+    <section class="tb-section" id="secRecent" hidden>
+      <div class="tb-section-head">
+        <h2>🕘 最近使用</h2>
+        <span class="sub"><button type="button" class="ghost-btn" style="padding:2px 8px;min-height:26px;font-size:12px" onclick="clearRecent()">清空</button></span>
+      </div>
+      <div class="tb-recent" id="listRecent"></div>
+    </section>
+
+    <!-- 配置驱动说明 -->
+    <div class="tb-note">
+      <strong>配置驱动：</strong>新增工具只需在 <code>TOOLBOX_TOOLS</code> 数组追加一条元数据
+      （<code>id / name / icon / description / category / tags / status / url</code>），
+      页面渲染、搜索、筛选、收藏与最近使用<strong>全部自动生效，无需改动任何页面逻辑</strong>。
+      本原型数据即按该契约组织，可对照 <code>docs/工具箱设计方案.md</code> 的字段定义。
+    </div>
+  </main>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ==================================================================
+   1. 配置：分类与工具（唯一数据源 —— 新增工具 = 追加一条）
+   ================================================================== */
+const TOOLBOX_CATEGORIES = [
+  { id: 'dev',   name: '开发工具', icon: '🛠', order: 1 },
+  { id: 'data',  name: '数据工具', icon: '📊', order: 2 },
+  { id: 'media', name: '媒体工具', icon: '🎬', order: 3 },
+  { id: 'effi',  name: '效率工具', icon: '⚡',  order: 4 },
+  { id: 'other', name: '其他',     icon: '📁', order: 999 }
+];
+
+/* ✅ 新增工具：在下面数组追加一条即可，页面无需任何改动 */
+const TOOLBOX_TOOLS = [
+  { id:'json-format',   name:'JSON 格式化',      icon:'🧩', description:'在线格式化、压缩与校验 JSON 数据',        category:'dev',   tags:['json','格式化','校验'], status:'active',      url:'https://www.json.cn/' },
+  { id:'regex-test',    name:'正则表达式测试',    icon:'🔍', description:'编写与调试正则表达式，实时查看匹配结果',  category:'dev',   tags:['正则','regex','调试'], status:'active',      url:'https://regex101.com/' },
+  { id:'timestamp',     name:'时间戳转换',        icon:'🕒', description:'Unix 时间戳与日期时间互转，支持毫秒精度',  category:'dev',   tags:['时间戳','转换'],       status:'active',      url:'https://tool.lu/timestamp/' },
+  { id:'code-diff',     name:'代码对比',          icon:'↔️', description:'两段文本差异对比，高亮增删改',            category:'dev',   tags:['diff','对比'],        status:'maintenance', url:'' },
+  { id:'csv-json',      name:'CSV 转 JSON',       icon:'🔄', description:'CSV 与 JSON 互转，支持自定义分隔符',      category:'data',  tags:['csv','json','转换'],  status:'active',      url:'https://www.csvjson.com/csv2json' },
+  { id:'chart-color',   name:'图表配色',          icon:'🎨', description:'生成协调的图表配色方案并输出色值',        category:'data',  tags:['配色','设计'],        status:'active',      url:'https://coolors.co/' },
+  { id:'data-board',    name:'数据看板',          icon:'📈', description:'汇总各模块关键指标的可视化看板',          category:'data',  tags:['看板','统计'],        status:'coming',      url:'' },
+  { id:'img-compress',  name:'图片压缩',          icon:'🖼️', description:'在线压缩图片体积，尽量保持清晰度',        category:'media', tags:['图片','压缩'],        status:'active',      url:'https://tinypng.com/' },
+  { id:'color-picker',  name:'屏幕取色',          icon:'💧', description:'拾取颜色并输出 HEX / RGB / HSL 色值',      category:'media', tags:['取色','颜色'],        status:'active',      url:'https://imagecolorpicker.com/' },
+  { id:'media-convert', name:'音视频格式转换',     icon:'🎞️', description:'常见音视频格式互转与压缩',              category:'media', tags:['音视频','转换'],      status:'coming',      url:'' },
+  { id:'todo',          name:'待办清单',          icon:'✅', description:'个人工作台待办面板（站内）',              category:'effi',  tags:['待办','任务'],        status:'active',      url:'/workbench' },
+  { id:'password',      name:'密码本',            icon:'🔐', description:'加密密码管理（站内）',                    category:'effi',  tags:['密码','安全'],        status:'active',      url:'/workbench' },
+  { id:'ledger',        name:'销售记账',          icon:'🧾', description:'摆摊进销存与统计报表（站内）',            category:'effi',  tags:['记账','销售'],        status:'active',      url:'/business' },
+  { id:'backup',        name:'备份导入导出',       icon:'📦', description:'数据备份与恢复（站内）',                  category:'effi',  tags:['备份','恢复'],        status:'active',      url:'/' },
+  { id:'icon-mgr',      name:'图标管理',          icon:'🌟', description:'自定义图标的上传与管理（站内）',          category:'other', tags:['图标'],               status:'active',      url:'/' },
+  { id:'help',          name:'使用帮助',          icon:'❓', description:'查看快捷键与各模块功能说明',              category:'other', tags:['帮助','文档'],        status:'active',      url:'/' }
+];
+
+/* ==================================================================
+   2. 状态与本地持久化（收藏 / 最近使用）
+   ================================================================== */
+const LS_KEY = 'easy-web-tab:toolbox';
+const RECENT_LIMIT = 8;
+
+function loadPrefs() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return { favorites: [], recent: [] };
+    const p = JSON.parse(raw);
+    return {
+      favorites: Array.isArray(p.favorites) ? p.favorites.filter(x => typeof x === 'string') : [],
+      recent: Array.isArray(p.recent) ? p.recent.filter(r => r && typeof r.id === 'string') : []
+    };
+  } catch (e) {
+    return { favorites: [], recent: [] }; // 脏数据 / 隐私模式 → 回落默认值
+  }
+}
+function savePrefs() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(prefs)); } catch (e) { /* 隐私模式降级为内存态 */ }
+}
+const prefs = loadPrefs();
+
+const state = { q: '', category: '' };
+
+/* ==================================================================
+   3. 纯函数：搜索匹配 / 过滤 / 高亮 / 最近使用
+   ================================================================== */
+const norm = s => (s || '').toLowerCase().trim();
+function tokens(q) { return norm(q).split(/\s+/).filter(Boolean); }
+function haystack(t) { return norm(t.name + ' ' + t.description + ' ' + (t.tags || []).join(' ')); }
+/** 名称 + 描述 + 标签 的即时模糊匹配；空格分词需全部命中 */
+function matchTool(t, q) {
+  const ts = tokens(q);
+  if (!ts.length) return true;
+  const h = haystack(t);
+  return ts.every(x => h.includes(x));
+}
+function filterTools(list, opts) {
+  const q = opts.q || '', cat = opts.category || '';
+  return list
+    .filter(t => !cat || t.category === cat)
+    .filter(t => matchTool(t, q))
+    .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+}
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+function highlight(text, q) {
+  const ts = tokens(q);
+  if (!ts.length) return esc(text);
+  const pat = ts.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  return esc(text).replace(new RegExp('(' + pat + ')', 'gi'), '<mark>$1</mark>');
+}
+function recordRecent(id) {
+  prefs.recent = [{ id, ts: Date.now() }]
+    .concat(prefs.recent.filter(r => r.id !== id))
+    .slice(0, RECENT_LIMIT);
+  savePrefs();
+}
+const STATUS_LABEL = { active: '可用', maintenance: '维护中', coming: '即将上线' };
+const catName = id => (TOOLBOX_CATEGORIES.find(c => c.id === id) || {}).name || '其他';
+const catIcon = id => (TOOLBOX_CATEGORIES.find(c => c.id === id) || {}).icon || '📁';
+const isInternal = url => typeof url === 'string' && url.startsWith('/');
+const statusLabel = s => STATUS_LABEL[s] || '未知';
+
+/* ==================================================================
+   4. 交互行为
+   ================================================================== */
+function openTool(t) {
+  if (t.status !== 'active') {
+    toast('「' + t.name + '」当前' + statusLabel(t.status) + '，暂不可打开');
+    return;
+  }
+  recordRecent(t.id);
+  render();
+  if (isInternal(t.url)) {
+    toast('原型：站内跳转 → ' + t.url);
+  } else if (t.url) {
+    window.open(t.url, '_blank', 'noopener,noreferrer');
+  } else {
+    toast('原型：打开 ' + t.name);
+  }
+}
+function toggleFav(id, ev) {
+  if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+  const i = prefs.favorites.indexOf(id);
+  const t = TOOLBOX_TOOLS.find(x => x.id === id);
+  if (i >= 0) { prefs.favorites.splice(i, 1); toast('已取消收藏 ' + (t ? t.name : '')); }
+  else { prefs.favorites.push(id); toast('已收藏 ' + (t ? t.name : '') + '，可在「常用工具」快速访问'); }
+  savePrefs();
+  render();
+}
+function clearRecent() { prefs.recent = []; savePrefs(); render(); toast('已清空最近使用'); }
+function clearSearch() { state.q = ''; document.getElementById('tbSearch').value = ''; render(); document.getElementById('tbSearch').focus(); }
+function resetFilters() { state.q = ''; state.category = ''; document.getElementById('tbSearch').value = ''; render(); }
+
+/* ==================================================================
+   5. 渲染
+   ================================================================== */
+function cardHtml(t) {
+  const disabled = t.status !== 'active';
+  const favOn = prefs.favorites.includes(t.id);
+  const tags = (t.tags || []).slice(0, 3)
+    .map(x => '<span class="tb-tag">' + highlight(x, state.q) + '</span>').join('');
+  const badge = t.status === 'active'
+    ? (isInternal(t.url) ? '<span class="tb-badge internal">站内</span>' : '')
+    : '<span class="tb-badge ' + t.status + '">' + statusLabel(t.status) + '</span>';
+  const ariaLabel = '打开 ' + t.name + (disabled ? '（' + statusLabel(t.status) + '，暂不可用）' : '');
+  return '<button type="button" class="tb-card' + (disabled ? ' is-disabled' : '') + '"'
+    + ' data-testid="tb-card-' + t.id + '" data-id="' + t.id + '"'
+    + ' aria-label="' + esc(ariaLabel) + '"'
+    + (disabled ? ' aria-disabled="true"' : '') + '>'
+    + '<span class="tb-card-top">'
+    +   '<span class="tb-icon" aria-hidden="true">' + t.icon + '</span>'
+    +   '<span class="tb-name">' + highlight(t.name, state.q) + '</span>'
+    +   '<span class="tb-fav" role="button" tabindex="0" data-fav="' + t.id + '"'
+    +     ' aria-pressed="' + favOn + '" aria-label="' + (favOn ? '取消收藏 ' : '收藏 ') + esc(t.name) + '">'
+    +     (favOn ? '★' : '☆') + '</span>'
+    + '</span>'
+    + '<span class="tb-desc">' + highlight(t.description, state.q) + '</span>'
+    + '<span class="tb-meta">' + tags + badge + '</span>'
+    + '</button>';
+}
+
+function renderGrid(el, list, emptyKind) {
+  if (!list.length) {
+    el.innerHTML = emptyHtml(emptyKind);
+    return;
+  }
+  el.innerHTML = list.map(cardHtml).join('');
+  el.querySelectorAll('.tb-card').forEach(c => {
+    const t = TOOLBOX_TOOLS.find(x => x.id === c.dataset.id);
+    c.addEventListener('click', () => openTool(t));
+  });
+  el.querySelectorAll('[data-fav]').forEach(f => {
+    f.addEventListener('click', e => toggleFav(f.dataset.fav, e));
+    f.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); toggleFav(f.dataset.fav, e); }
+    });
+  });
+}
+
+function emptyHtml(kind) {
+  if (kind === 'no-result') {
+    return '<div class="tb-empty" data-testid="tb-empty" data-kind="no-result">'
+      + '<span class="ico">🔍</span>'
+      + '<p>没有找到匹配的工具' + (state.q ? '：<span class="kw">' + esc(state.q) + '</span>' : '') + '</p>'
+      + '<button type="button" class="tb-empty-btn" onclick="resetFilters()">清空筛选条件</button></div>';
+  }
+  if (kind === 'no-fav') {
+    return '<div class="tb-empty" data-kind="no-fav"><span class="ico">☆</span>'
+      + '<p>还没有收藏的工具<br>点击任意卡片右上角的 ☆ 即可加入常用</p></div>';
+  }
+  return '<div class="tb-empty" data-kind="empty"><span class="ico">🧰</span>'
+    + '<p>工具箱暂无工具<br>在配置中追加一条工具元数据即可显示</p></div>';
+}
+
+function renderCats() {
+  const box = document.getElementById('tbCats');
+  const mk = (id, icon, name, cnt) => {
+    const on = state.category === id;
+    return '<button type="button" class="cat-tab" data-testid="tb-cat-' + (id || 'all') + '"'
+      + ' aria-pressed="' + on + '" data-cat="' + id + '">'
+      + icon + ' ' + name + ' <span class="cnt">' + cnt + '</span></button>';
+  };
+  let html = mk('', '🗂️', '全部', TOOLBOX_TOOLS.length);
+  TOOLBOX_CATEGORIES.forEach(c => {
+    html += mk(c.id, c.icon, c.name, TOOLBOX_TOOLS.filter(t => t.category === c.id).length);
+  });
+  box.innerHTML = html;
+  box.querySelectorAll('[data-cat]').forEach(b => {
+    b.addEventListener('click', () => { state.category = b.dataset.cat; render(); });
+  });
+}
+
+function renderRecent() {
+  const sec = document.getElementById('secRecent');
+  const list = prefs.recent
+    .map(r => ({ r, t: TOOLBOX_TOOLS.find(x => x.id === r.id) }))
+    .filter(x => x.t);
+  if (!list.length) { sec.hidden = true; return; }
+  sec.hidden = false;
+  document.getElementById('listRecent').innerHTML = list.map(({ r, t }) => {
+    const mins = Math.max(0, Math.round((Date.now() - r.ts) / 60000));
+    const tm = mins < 1 ? '刚刚' : (mins < 60 ? mins + ' 分钟前' : Math.round(mins / 60) + ' 小时前');
+    return '<button type="button" class="tb-recent-item" data-id="' + t.id + '">'
+      + '<span class="ic" aria-hidden="true">' + t.icon + '</span>' + esc(t.name)
+      + '<span class="tm">' + tm + '</span></button>';
+  }).join('');
+  document.getElementById('listRecent').querySelectorAll('.tb-recent-item').forEach(b => {
+    b.addEventListener('click', () => openTool(TOOLBOX_TOOLS.find(x => x.id === b.dataset.id)));
+  });
+}
+
+function render() {
+  renderCats();
+
+  // 常用工具（收藏）
+  const favTools = filterTools(
+    TOOLBOX_TOOLS.filter(t => prefs.favorites.includes(t.id)),
+    { q: state.q, category: state.category }
+  );
+  const secFav = document.getElementById('secFav');
+  const hasFavSetting = prefs.favorites.length > 0;
+  secFav.hidden = !hasFavSetting;
+  if (hasFavSetting) {
+    renderGrid(document.getElementById('gridFav'), favTools, 'no-result');
+  }
+
+  // 全部工具
+  const all = filterTools(TOOLBOX_TOOLS, { q: state.q, category: state.category });
+  renderGrid(document.getElementById('gridAll'), all, 'no-result');
+  document.getElementById('allTitle').textContent =
+    state.category ? catName(state.category) : '全部工具';
+  document.getElementById('allSub').textContent = '· ' + all.length + ' 个工具';
+
+  // 页头计数
+  document.getElementById('tbCount').textContent =
+    '共 ' + TOOLBOX_TOOLS.length + ' 个工具' + (state.q || state.category ? '，当前筛选出 ' + all.length + ' 个' : '');
+
+  renderRecent();
+}
+
+/* ==================================================================
+   6. 视图切换 / 主题 / Toast
+   ================================================================== */
+function go(view) {
+  const home = document.getElementById('view-home');
+  const box = document.getElementById('view-toolbox');
+  const isBox = view === 'toolbox';
+  home.hidden = isBox;
+  box.hidden = !isBox;
+  if (isBox) { render(); document.getElementById('tbSearch').focus(); }
+  window.scrollTo({ top: 0 });
+}
+function isDark() { return document.documentElement.classList.contains('dark'); }
+function syncTheme() {
+  const label = isDark() ? '🌙 暗色' : '☀️ 亮色';
+  const a = document.getElementById('themeBtnHome'), b = document.getElementById('themeBtnBox');
+  if (a) a.textContent = label;
+  if (b) b.textContent = label;
+}
+function toggleTheme() { document.documentElement.classList.toggle('dark'); syncTheme(); }
+let toastTimer = null;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+/* ==================================================================
+   7. 初始化
+   ================================================================== */
+document.getElementById('tbSearch').addEventListener('input', e => {
+  state.q = e.target.value;
+  render();
+});
+syncTheme();
+render();
+</script>
+</body>
+</html>
