@@ -4,76 +4,14 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>工具箱 · 原型（easy-web-tab）</title>
+<!-- 主题统一复用项目共用主题：Design Token 来自 src/style.css，暗色变量来自 src/styles/dark.css。
+     本原型不再自带任何亮/暗主题变量与主题切换样式，杜绝与项目主题重复或漂移。 -->
+<link rel="stylesheet" href="../src/style.css" />
+<link rel="stylesheet" href="../src/styles/dark.css" />
 <style>
-  /* ============ Design Tokens（沿用项目 src/style.css） ============ */
-  :root {
-    --color-primary: #3b82f6;
-    --color-primary-hover: #2563eb;
-    --color-primary-soft: rgba(59,130,246,0.10);
-    --color-success: #10b981;
-    --color-success-soft: #d1fae5;
-    --color-warning: #f59e0b;
-    --color-warning-soft: #fef3c7;
-    --color-bg: #f8fafc;
-    --color-bg-card: #ffffff;
-    --color-bg-hover: #f1f5f9;
-    --color-bg-input: #f1f5f9;
-    --color-text: #1e293b;
-    --color-text-secondary: #64748b;
-    --color-text-muted: #94a3b8;
-    --color-border: #e2e8f0;
-    --color-border-hover: #cbd5e1;
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
-    --shadow-md: 0 4px 12px rgba(0,0,0,0.10);
-    --shadow-card: 0 1px 3px rgba(0,0,0,0.10);
-    --shadow-card-hover: 0 8px 24px rgba(0,0,0,0.12);
-    --radius-md: 8px;
-    --radius-lg: 12px;
-    --radius-full: 9999px;
-    --space-2: 8px;
-    --space-3: 12px;
-    --space-4: 16px;
-    --space-5: 20px;
-    --space-6: 24px;
-    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-    --motion: 220ms cubic-bezier(0.4,0,0.2,1);
-  }
-  html.dark {
-    --color-primary: #60a5fa;
-    --color-primary-hover: #93c5fd;
-    --color-primary-soft: rgba(96,165,250,0.16);
-    --color-success: #34d399;
-    --color-success-soft: rgba(52,211,153,0.16);
-    --color-warning: #fbbf24;
-    --color-warning-soft: rgba(251,191,36,0.16);
-    --color-bg: #0f172a;
-    --color-bg-card: #1e293b;
-    --color-bg-hover: #334155;
-    --color-bg-input: #334155;
-    --color-text: #f1f5f9;
-    --color-text-secondary: #cbd5e1;
-    --color-text-muted: #94a3b8;
-    --color-border: #334155;
-    --color-border-hover: #475569;
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.30);
-    --shadow-md: 0 4px 12px rgba(0,0,0,0.40);
-    --shadow-card: 0 1px 3px rgba(0,0,0,0.35);
-    --shadow-card-hover: 0 10px 28px rgba(0,0,0,0.45);
-  }
-
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; }
-  body {
-    font-family: var(--font-family);
-    background: var(--color-bg);
-    color: var(--color-text);
-    -webkit-font-smoothing: antialiased;
-    transition: background-color var(--motion), color var(--motion);
-    line-height: 1.6;
-  }
-  button { font-family: var(--font-family); cursor: pointer; }
+  /* ===== 原型自身的布局与组件样式：颜色/圆角/阴影一律取自共用 Token，此处不定义任何主题变量 ===== */
+  button, input, textarea, select { font-family: var(--font-family); }
   a { color: inherit; text-decoration: none; }
-  *:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 
   /* ============ 顶栏（沿用项目 App Bar） ============ */
   .topbar {
@@ -90,18 +28,18 @@
     padding: 8px 14px; border-radius: var(--radius-md);
     font-size: 13px; font-weight: 500; color: var(--color-text-secondary);
     background: transparent; border: 1px solid transparent; white-space: nowrap;
-    transition: all var(--motion); min-height: 36px;
+    transition: all var(--motion-duration) var(--motion-ease); min-height: 36px;
   }
   .tb-entry:hover { background: var(--color-bg-hover); color: var(--color-primary); border-color: var(--color-border); }
-  .tb-entry.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
   .ghost-btn {
     display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px;
     border-radius: var(--radius-md); font-size: 13px; color: var(--color-text-secondary);
-    background: transparent; border: 1px solid transparent; transition: all var(--motion); min-height: 36px;
+    background: transparent; border: 1px solid transparent; transition: all var(--motion-duration) var(--motion-ease); min-height: 36px;
   }
   .ghost-btn:hover { background: var(--color-bg-hover); color: var(--color-primary); border-color: var(--color-border); }
 
-  .container { max-width: 1200px; margin: 0 auto; padding: 0 clamp(12px,3vw,24px) 96px; }
+  /* 容器：复用项目共用类 .wb-container（src/style.css），此处仅补底部留白，避免自定义容器与暗色覆盖冲突 */
+  main.wb-container { padding-bottom: 96px; }
 
   /* ============ 首页（入口演示） ============ */
   .hero { text-align: center; padding: clamp(32px,8vw,72px) 0 0; }
@@ -123,8 +61,10 @@
   .search-box {
     display: flex; align-items: center; gap: 10px; width: 100%; max-width: 720px;
     background: var(--color-bg-card); border: 1px solid var(--color-border);
+    /* 水平居中：父容器内 margin-inline auto（宽屏受 max-width 限制后居中，窄屏自适应铺满） */
     border-radius: var(--radius-lg); padding: 10px 14px; box-shadow: var(--shadow-sm);
-    transition: border-color var(--motion), box-shadow var(--motion); margin: 14px 0 10px;
+    transition: border-color var(--motion-duration) var(--motion-ease), box-shadow var(--motion-duration) var(--motion-ease);
+    margin-inline: auto; margin-top: 14px; margin-bottom: 10px;
   }
   .search-box:focus-within { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-soft); }
   .search-box svg { color: var(--color-text-muted); flex: none; }
@@ -145,7 +85,7 @@
     display: inline-flex; align-items: center; gap: 6px;
     padding: 7px 14px; border-radius: var(--radius-full); font-size: 13px; font-weight: 500;
     background: var(--color-bg-card); color: var(--color-text-secondary);
-    border: 1px solid var(--color-border); transition: all var(--motion); min-height: 34px;
+    border: 1px solid var(--color-border); transition: all var(--motion-duration) var(--motion-ease); min-height: 34px;
   }
   .cat-tab:hover { color: var(--color-primary); border-color: var(--color-primary); }
   .cat-tab[aria-pressed="true"] { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
@@ -165,7 +105,7 @@
     padding: 16px 14px; text-align: left;
     background: var(--color-bg-card); border: 1px solid var(--color-border);
     border-radius: var(--radius-lg); box-shadow: var(--shadow-card);
-    transition: transform var(--motion), box-shadow var(--motion), border-color var(--motion);
+    transition: transform var(--motion-duration) var(--motion-ease), box-shadow var(--motion-duration) var(--motion-ease), border-color var(--motion-duration) var(--motion-ease);
     min-height: 44px; font-family: var(--font-family);
   }
   .tb-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-card-hover); border-color: var(--color-primary); }
@@ -184,7 +124,7 @@
   .tb-fav {
     margin-left: auto; flex: none; border: none; background: transparent;
     font-size: 15px; line-height: 1; padding: 6px; border-radius: 6px;
-    color: var(--color-text-muted); transition: all var(--motion); min-width: 30px; min-height: 30px;
+    color: var(--color-text-muted); transition: all var(--motion-duration) var(--motion-ease); min-width: 30px; min-height: 30px;
   }
   .tb-fav:hover { background: var(--color-bg-hover); color: var(--color-warning); }
   .tb-fav[aria-pressed="true"] { color: var(--color-warning); }
@@ -210,7 +150,7 @@
     display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px;
     background: var(--color-bg-card); border: 1px solid var(--color-border);
     border-radius: var(--radius-full); font-size: 13px; min-height: 36px;
-    transition: all var(--motion);
+    transition: all var(--motion-duration) var(--motion-ease);
   }
   .tb-recent-item:hover { border-color: var(--color-primary); color: var(--color-primary); }
   .tb-recent-item .ic { font-size: 15px; }
@@ -228,7 +168,7 @@
   .tb-empty-btn {
     display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; min-height: 36px;
     border-radius: var(--radius-md); border: 1px solid var(--color-primary);
-    background: transparent; color: var(--color-primary); font-size: 13px; transition: all var(--motion);
+    background: transparent; color: var(--color-primary); font-size: 13px; transition: all var(--motion-duration) var(--motion-ease);
   }
   .tb-empty-btn:hover { background: var(--color-primary); color: #fff; }
 
@@ -241,21 +181,87 @@
   }
   .tb-note code { background: var(--color-bg-hover); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
 
+  /* ============ 站内工具面板（自建功能在站内打开，不跳转第三方） ============ */
+  .tb-panel { position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center; }
+  .tb-panel[hidden] { display: none; }
+  body.tb-lock { overflow: hidden; }
+  .tb-mask { position: absolute; inset: 0; background: rgba(15, 23, 42, .55); }
+  .tb-panel-body {
+    position: relative; display: flex; flex-direction: column;
+    width: min(920px, 100%); max-height: 92vh; margin: 16px;
+    background: var(--color-bg-card); color: var(--color-text);
+    border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-modal); overflow: hidden;
+  }
+  .tb-panel-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--color-border); }
+  .tb-panel-head .ic { font-size: 20px; }
+  .tb-panel-head h2 { margin: 0; font-size: 16px; font-weight: 600; }
+  .tb-panel-close {
+    margin-left: auto; border: 1px solid var(--color-border); background: transparent;
+    color: var(--color-text-secondary); border-radius: var(--radius-md);
+    min-width: 34px; min-height: 34px; font-size: 15px;
+  }
+  .tb-panel-close:hover { color: var(--color-primary); border-color: var(--color-primary); }
+  .tb-panel-content { padding: 16px; overflow: auto; }
+
+  /* 工具通用表单（各站内工具复用，新增工具无需写样式） */
+  .tb-field { margin-bottom: 12px; }
+  .tb-label { display: block; font-size: 12px; color: var(--color-text-secondary); margin-bottom: 6px; }
+  .tb-input, .tb-textarea {
+    width: 100%; background: var(--color-bg-input); color: var(--color-text);
+    border: 1px solid var(--color-border); border-radius: var(--radius-md);
+    padding: 8px 10px; font-size: 13px;
+  }
+  .tb-input:focus, .tb-textarea:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-soft); }
+  .tb-textarea { min-height: 120px; resize: vertical; font-family: var(--font-family-mono); line-height: 1.5; }
+  .tb-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .tb-btn {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 8px 14px;
+    border-radius: var(--radius-md); border: 1px solid var(--color-primary);
+    background: var(--color-primary); color: #fff; font-size: 13px;
+    transition: background-color var(--motion-duration) var(--motion-ease);
+  }
+  .tb-btn:hover { background: var(--color-primary-hover); }
+  .tb-btn.ghost { background: transparent; color: var(--color-text-secondary); border-color: var(--color-border); }
+  .tb-btn.ghost:hover { color: var(--color-primary); border-color: var(--color-primary); }
+  .tb-out {
+    background: var(--color-bg-input); border: 1px solid var(--color-border); border-radius: var(--radius-md);
+    padding: 10px; font-size: 12.5px; white-space: pre-wrap; word-break: break-all;
+    max-height: 300px; overflow: auto; font-family: var(--font-family-mono); color: var(--color-text);
+  }
+  .tb-hint { font-size: 12px; color: var(--color-text-muted); margin-top: 8px; }
+  .tb-swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tb-swatch {
+    width: 72px; height: 60px; border-radius: var(--radius-md); border: 1px solid var(--color-border);
+    display: grid; place-items: center; font-size: 10px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.45);
+    font-family: var(--font-family-mono);
+  }
+  .tb-diff { font-family: var(--font-family-mono); font-size: 12.5px; border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: auto; max-height: 300px; }
+  .tb-diff div { padding: 2px 10px; white-space: pre-wrap; word-break: break-all; }
+  .tb-diff .same { color: var(--color-text-secondary); }
+  .tb-diff .del { background: var(--color-error-soft); color: var(--color-error); }
+  .tb-diff .add { background: var(--color-success-soft); color: var(--color-success); }
+  .tb-match { font-size: 12.5px; }
+  .tb-match .hit { background: var(--color-primary-soft); color: var(--color-primary); border-radius: 3px; }
+
   /* ============ Toast ============ */
   #toast {
     position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px);
     background: var(--color-text); color: var(--color-bg); padding: 10px 18px;
     border-radius: var(--radius-full); font-size: 13px; box-shadow: var(--shadow-md);
-    opacity: 0; pointer-events: none; transition: opacity var(--motion), transform var(--motion); z-index: 400;
+    opacity: 0; pointer-events: none; transition: opacity var(--motion-duration) var(--motion-ease), transform var(--motion-duration) var(--motion-ease); z-index: 400;
   }
   #toast.show { opacity: 1; transform: translate(-50%, 0); }
 
   /* ============ 响应式 ============ */
   @media (max-width: 768px) {
     .topbar { flex-wrap: wrap; gap: 6px; }
-    .container { padding: 0 12px 96px; }
+    main.wb-container { padding-bottom: 72px; }
     .tb-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
     .tb-head { margin-top: 16px; }
+    .tb-panel-body { width: 100%; max-width: 100%; height: 100%; border-radius: 0; }
+    .tb-panel-head { padding: 12px 14px; }
+    .tb-panel-content { padding: 14px; }
   }
   @media (max-width: 359px) {
     .tb-grid { grid-template-columns: 1fr; }
@@ -274,13 +280,12 @@
     <div class="topbar-left">
       <!-- 左上角入口按钮：点击跳转工具箱 -->
       <button type="button" class="tb-entry" data-testid="home-toolbox-btn" title="打开工具箱" aria-label="打开工具箱" onclick="go('toolbox')">🧰 工具箱</button>
-      <button type="button" class="ghost-btn" title="原型仅演示工具箱">🧭 导航站</button>
     </div>
     <div class="topbar-right">
       <button type="button" class="ghost-btn" id="themeBtnHome" onclick="toggleTheme()" title="切换主题">🌙 暗色</button>
     </div>
   </header>
-  <main class="container">
+  <main class="wb-container">
     <div class="hero">
       <h1>easy-web-tab</h1>
       <p>本原型演示新增的「工具箱」模块接入方式。</p>
@@ -295,15 +300,12 @@
 <!-- ======== 视图 2：工具箱 ======== -->
 <div id="view-toolbox" hidden>
   <header class="topbar">
+    <!-- 顶栏只保留一个返回按钮（其余顶部元素已移除）；主题统一复用项目共用主题，不在此处切换 -->
     <div class="topbar-left">
-      <button type="button" class="tb-entry active" aria-current="page">🧰 工具箱</button>
-      <button type="button" class="ghost-btn" onclick="go('home')" title="返回导航站">← 返回</button>
-    </div>
-    <div class="topbar-right">
-      <button type="button" class="ghost-btn" id="themeBtnBox" onclick="toggleTheme()" title="切换主题">🌙 暗色</button>
+      <button type="button" class="ghost-btn" data-testid="tb-back-btn" onclick="go('home')" title="返回" aria-label="返回">← 返回</button>
     </div>
   </header>
-  <main class="container">
+  <main class="wb-container">
     <div class="tb-head">
       <h1>🧰 工具箱</h1>
       <span class="sub" id="tbCount"></span>
@@ -342,12 +344,28 @@
 
     <!-- 配置驱动说明 -->
     <div class="tb-note">
-      <strong>配置驱动：</strong>新增工具只需在 <code>TOOLBOX_TOOLS</code> 数组追加一条元数据
-      （<code>id / name / icon / description / category / tags / status / url</code>），
+      <strong>配置驱动 · 站内自建：</strong>新增工具只需在 <code>TOOLBOX_TOOLS</code> 数组追加一条元数据
+      （<code>id / name / icon / description / category / tags / status / kind</code>），
       页面渲染、搜索、筛选、收藏与最近使用<strong>全部自动生效，无需改动任何页面逻辑</strong>。
-      本原型数据即按该契约组织，可对照 <code>docs/工具箱设计方案.md</code> 的字段定义。
+      其中 <code>kind: 'internal'</code> 表示本站自己实现的工具（在 <code>TOOLBOX_HANDLERS</code> 补一个同名实现函数即可，面板内直接可用）；
+      <code>kind: 'module'</code> 表示复用站内已有模块（走站内路由）。
+      <strong>所有工具均在站内打开，不会跳转任何第三方网站。</strong>
     </div>
   </main>
+</div>
+
+<!-- ======== 站内工具面板：本站自建功能在此打开（不跳转任何第三方） ======== -->
+<div class="tb-panel" id="tbPanel" hidden role="dialog" aria-modal="true" aria-labelledby="tbPanelTitle" data-testid="tb-panel">
+  <div class="tb-mask" onclick="closeTool()"></div>
+  <div class="tb-panel-body">
+    <header class="tb-panel-head">
+      <span class="ic" id="tbPanelIcon" aria-hidden="true">🧰</span>
+      <h2 id="tbPanelTitle">工具</h2>
+      <span class="tb-badge internal">站内自建</span>
+      <button type="button" class="tb-panel-close" id="tbPanelClose" onclick="closeTool()" aria-label="关闭工具">✕</button>
+    </header>
+    <div class="tb-panel-content" id="tbPanelContent"></div>
+  </div>
 </div>
 
 <div id="toast" role="status" aria-live="polite"></div>
@@ -364,24 +382,28 @@ const TOOLBOX_CATEGORIES = [
   { id: 'other', name: '其他',     icon: '📁', order: 999 }
 ];
 
-/* ✅ 新增工具：在下面数组追加一条即可，页面无需任何改动 */
+/* ✅ 新增工具：在下面数组追加一条即可，页面渲染/搜索/筛选/收藏/最近使用全部自动生效。
+   全部工具均为【站内自建】，不再跳转任何第三方网站：
+   - kind: 'internal' → 站内自建工具（本站自己实现的功能，配 TOOLBOX_HANDLERS 同名实现函数）
+   - kind: 'module'   → 站内已有模块（url 为站内路由，如 /workbench）
+   - status: 'active' 可用 | 'maintenance' 维护中 | 'coming' 即将上线（非 active 禁入） */
 const TOOLBOX_TOOLS = [
-  { id:'json-format',   name:'JSON 格式化',      icon:'🧩', description:'在线格式化、压缩与校验 JSON 数据',        category:'dev',   tags:['json','格式化','校验'], status:'active',      url:'https://www.json.cn/' },
-  { id:'regex-test',    name:'正则表达式测试',    icon:'🔍', description:'编写与调试正则表达式，实时查看匹配结果',  category:'dev',   tags:['正则','regex','调试'], status:'active',      url:'https://regex101.com/' },
-  { id:'timestamp',     name:'时间戳转换',        icon:'🕒', description:'Unix 时间戳与日期时间互转，支持毫秒精度',  category:'dev',   tags:['时间戳','转换'],       status:'active',      url:'https://tool.lu/timestamp/' },
-  { id:'code-diff',     name:'代码对比',          icon:'↔️', description:'两段文本差异对比，高亮增删改',            category:'dev',   tags:['diff','对比'],        status:'maintenance', url:'' },
-  { id:'csv-json',      name:'CSV 转 JSON',       icon:'🔄', description:'CSV 与 JSON 互转，支持自定义分隔符',      category:'data',  tags:['csv','json','转换'],  status:'active',      url:'https://www.csvjson.com/csv2json' },
-  { id:'chart-color',   name:'图表配色',          icon:'🎨', description:'生成协调的图表配色方案并输出色值',        category:'data',  tags:['配色','设计'],        status:'active',      url:'https://coolors.co/' },
-  { id:'data-board',    name:'数据看板',          icon:'📈', description:'汇总各模块关键指标的可视化看板',          category:'data',  tags:['看板','统计'],        status:'coming',      url:'' },
-  { id:'img-compress',  name:'图片压缩',          icon:'🖼️', description:'在线压缩图片体积，尽量保持清晰度',        category:'media', tags:['图片','压缩'],        status:'active',      url:'https://tinypng.com/' },
-  { id:'color-picker',  name:'屏幕取色',          icon:'💧', description:'拾取颜色并输出 HEX / RGB / HSL 色值',      category:'media', tags:['取色','颜色'],        status:'active',      url:'https://imagecolorpicker.com/' },
-  { id:'media-convert', name:'音视频格式转换',     icon:'🎞️', description:'常见音视频格式互转与压缩',              category:'media', tags:['音视频','转换'],      status:'coming',      url:'' },
-  { id:'todo',          name:'待办清单',          icon:'✅', description:'个人工作台待办面板（站内）',              category:'effi',  tags:['待办','任务'],        status:'active',      url:'/workbench' },
-  { id:'password',      name:'密码本',            icon:'🔐', description:'加密密码管理（站内）',                    category:'effi',  tags:['密码','安全'],        status:'active',      url:'/workbench' },
-  { id:'ledger',        name:'销售记账',          icon:'🧾', description:'摆摊进销存与统计报表（站内）',            category:'effi',  tags:['记账','销售'],        status:'active',      url:'/business' },
-  { id:'backup',        name:'备份导入导出',       icon:'📦', description:'数据备份与恢复（站内）',                  category:'effi',  tags:['备份','恢复'],        status:'active',      url:'/' },
-  { id:'icon-mgr',      name:'图标管理',          icon:'🌟', description:'自定义图标的上传与管理（站内）',          category:'other', tags:['图标'],               status:'active',      url:'/' },
-  { id:'help',          name:'使用帮助',          icon:'❓', description:'查看快捷键与各模块功能说明',              category:'other', tags:['帮助','文档'],        status:'active',      url:'/' }
+  { id:'json-format',   name:'JSON 格式化',      icon:'🧩', description:'格式化、压缩与校验 JSON，站内实现',        category:'dev',   tags:['json','格式化','校验'], status:'active',      kind:'internal' },
+  { id:'regex-test',    name:'正则表达式测试',    icon:'🔍', description:'编写与调试正则表达式，实时查看匹配结果',  category:'dev',   tags:['正则','regex','调试'], status:'active',      kind:'internal' },
+  { id:'timestamp',     name:'时间戳转换',        icon:'🕒', description:'Unix 时间戳与日期互转，支持毫秒精度',      category:'dev',   tags:['时间戳','转换'],       status:'active',      kind:'internal' },
+  { id:'code-diff',     name:'文本对比',          icon:'↔️', description:'两段文本差异对比，高亮增删行',            category:'dev',   tags:['diff','对比'],        status:'active',      kind:'internal' },
+  { id:'csv-json',      name:'CSV 与 JSON 互转',  icon:'🔄', description:'CSV 与 JSON 双向转换，支持自定义分隔符',  category:'data',  tags:['csv','json','转换'],  status:'active',      kind:'internal' },
+  { id:'chart-color',   name:'图表配色',          icon:'🎨', description:'按基色生成协调配色方案并输出色值',        category:'data',  tags:['配色','设计'],        status:'active',      kind:'internal' },
+  { id:'data-board',    name:'数据看板',          icon:'📈', description:'汇总各模块关键指标的可视化看板',          category:'data',  tags:['看板','统计'],        status:'coming',      kind:'internal' },
+  { id:'img-compress',  name:'图片压缩',          icon:'🖼️', description:'本地压缩图片体积，不上传任何服务器',      category:'media', tags:['图片','压缩'],        status:'active',      kind:'internal' },
+  { id:'color-picker',  name:'取色与色值转换',     icon:'💧', description:'拾取颜色并输出 HEX / RGB / HSL 色值',    category:'media', tags:['取色','颜色'],        status:'active',      kind:'internal' },
+  { id:'media-convert', name:'音视频格式转换',     icon:'🎞️', description:'常见音视频格式互转与压缩',              category:'media', tags:['音视频','转换'],      status:'maintenance', kind:'internal' },
+  { id:'todo',          name:'待办清单',          icon:'✅', description:'个人工作台待办面板（站内模块）',          category:'effi',  tags:['待办','任务'],        status:'active',      kind:'module', url:'/workbench' },
+  { id:'password',      name:'密码本',            icon:'🔐', description:'加密密码管理（站内模块）',                category:'effi',  tags:['密码','安全'],        status:'active',      kind:'module', url:'/workbench' },
+  { id:'ledger',        name:'销售记账',          icon:'🧾', description:'摆摊进销存与统计报表（站内模块）',        category:'effi',  tags:['记账','销售'],        status:'active',      kind:'module', url:'/business' },
+  { id:'backup',        name:'备份导入导出',       icon:'📦', description:'数据备份与恢复（站内模块）',              category:'effi',  tags:['备份','恢复'],        status:'active',      kind:'module', url:'/' },
+  { id:'icon-mgr',      name:'图标管理',          icon:'🌟', description:'自定义图标的上传与管理（站内模块）',      category:'other', tags:['图标'],               status:'active',      kind:'module', url:'/' },
+  { id:'help',          name:'使用帮助',          icon:'❓', description:'查看快捷键与各模块功能说明（站内模块）',  category:'other', tags:['帮助','文档'],        status:'active',      kind:'module', url:'/' }
 ];
 
 /* ==================================================================
@@ -448,7 +470,8 @@ function recordRecent(id) {
 const STATUS_LABEL = { active: '可用', maintenance: '维护中', coming: '即将上线' };
 const catName = id => (TOOLBOX_CATEGORIES.find(c => c.id === id) || {}).name || '其他';
 const catIcon = id => (TOOLBOX_CATEGORIES.find(c => c.id === id) || {}).icon || '📁';
-const isInternal = url => typeof url === 'string' && url.startsWith('/');
+/** 站内已有模块：仅在站内路由打开（或复用站内能力），绝不跳第三方 */
+const isModule = t => t.kind === 'module';
 const statusLabel = s => STATUS_LABEL[s] || '未知';
 
 /* ==================================================================
@@ -461,14 +484,437 @@ function openTool(t) {
   }
   recordRecent(t.id);
   render();
-  if (isInternal(t.url)) {
-    toast('原型：站内跳转 → ' + t.url);
-  } else if (t.url) {
-    window.open(t.url, '_blank', 'noopener,noreferrer');
-  } else {
-    toast('原型：打开 ' + t.name);
+  // 站内已有模块：原型内提示目标路由（实际项目用 router.push 打开本站页面）
+  if (isModule(t)) {
+    toast('站内模块 → ' + (t.url || '/') + '（本站页面，不会跳转外部站点）');
+    return;
   }
+  // 站内自建工具：在站内面板打开本站自己实现的功能，不跳转任何第三方
+  openToolPanel(t);
 }
+
+/* ---- 站内工具面板：本站自建功能在此打开 ---- */
+function openToolPanel(t) {
+  const panel = document.getElementById('tbPanel');
+  document.getElementById('tbPanelIcon').textContent = t.icon;
+  document.getElementById('tbPanelTitle').textContent = t.name;
+  const box = document.getElementById('tbPanelContent');
+  box.innerHTML = '';
+  const fn = TOOLBOX_HANDLERS[t.id];
+  if (typeof fn === 'function') {
+    fn(box);
+  } else {
+    const p = document.createElement('p');
+    p.className = 'tb-hint';
+    p.textContent = '该工具的实现函数尚未接入（TOOLBOX_HANDLERS.' + t.id + '）。页面逻辑无需改动，补一个实现函数即可。';
+    box.appendChild(p);
+  }
+  panel.hidden = false;
+  document.body.classList.add('tb-lock');
+  document.getElementById('tbPanelClose').focus();
+}
+function closeTool() {
+  document.getElementById('tbPanel').hidden = true;
+  document.body.classList.remove('tb-lock');
+}
+/* ==================================================================
+   4.1 站内自建工具的实现（本站自己开发的功能，不依赖任何第三方站点）
+   —— id → render(container)：新增工具 = 配置追加一条 + 此处补一个实现函数，
+      页面渲染 / 搜索 / 筛选 / 收藏 / 最近使用 / 打开等逻辑零改动。
+   ================================================================== */
+
+/* --- 通用 DOM 与格式小工具（各工具复用） --- */
+function h(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+function addField(parent, labelText, control) {
+  const w = h('div', 'tb-field');
+  w.appendChild(h('span', 'tb-label', labelText));
+  w.appendChild(control);
+  parent.appendChild(w);
+  return control;
+}
+function rowOf() {
+  const r = h('div', 'tb-row');
+  Array.prototype.forEach.call(arguments, function (e) { if (e) r.appendChild(e); });
+  return r;
+}
+function textarea(ph, val) {
+  const t = document.createElement('textarea');
+  t.className = 'tb-textarea';
+  if (ph) t.placeholder = ph;
+  if (val != null) t.value = val;
+  return t;
+}
+function input(type, val, ph) {
+  const i = document.createElement('input');
+  i.className = 'tb-input';
+  i.type = type || 'text';
+  if (val != null) i.value = val;
+  if (ph) i.placeholder = ph;
+  return i;
+}
+function button(label, fn, ghost) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'tb-btn' + (ghost ? ' ghost' : '');
+  b.textContent = label;
+  b.addEventListener('click', fn);
+  return b;
+}
+function output(cls) {
+  const o = document.createElement('div');
+  o.className = 'tb-out' + (cls ? ' ' + cls : '');
+  return o;
+}
+function copyBtn(getText) {
+  return button('复制', function () {
+    const s = (getText() || '').trim();
+    if (!s) { toast('暂无可复制内容'); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(s).then(
+        function () { toast('已复制到剪贴板'); },
+        function () { toast('复制失败，请手动选择'); }
+      );
+    } else { toast('当前环境不支持自动复制，请手动选择'); }
+  }, true);
+}
+const errText = e => '出错：' + (e && e.message ? e.message : String(e));
+
+/* --- 颜色转换（站内实现） --- */
+function hexToRgb(hex) {
+  const s = hex.replace('#', '');
+  return { r: parseInt(s.slice(0, 2), 16), g: parseInt(s.slice(2, 4), 16), b: parseInt(s.slice(4, 6), 16) };
+}
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, l = (mx + mn) / 2;
+  let hh = 0, s = 0;
+  if (d) {
+    s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+    if (mx === r) hh = (g - b) / d + (g < b ? 6 : 0);
+    else if (mx === g) hh = (b - r) / d + 2;
+    else hh = (r - g) / d + 4;
+    hh *= 60;
+  }
+  return { h: hh, s: s * 100, l: l * 100 };
+}
+const hexToHsl = hex => { const c = hexToRgb(hex); return rgbToHsl(c.r, c.g, c.b); };
+function hslToHex(hh, ss, ll) {
+  ss /= 100; ll /= 100;
+  const k = n => (n + hh / 30) % 12;
+  const a = ss * Math.min(ll, 1 - ll);
+  const f = n => ll - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  const to = x => Math.round(255 * f(x)).toString(16).padStart(2, '0');
+  return '#' + to(0) + to(8) + to(4);
+}
+
+/* --- CSV 行解析（支持引号包裹与转义） --- */
+function parseCsvLine(line, d) {
+  const res = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { if (inQ && line[i + 1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
+    else if (c === d && !inQ) { res.push(cur); cur = ''; }
+    else cur += c;
+  }
+  res.push(cur);
+  return res;
+}
+
+/* --- 行级 diff（LCS；超长文本退化为逐行对比） --- */
+function diffLines(A, B) {
+  const n = A.length, m = B.length, rows = [];
+  if (n > 600 || m > 600) {
+    for (let i = 0; i < Math.max(n, m); i++) {
+      if (i >= n) rows.push({ type: 'add', text: B[i] });
+      else if (i >= m) rows.push({ type: 'del', text: A[i] });
+      else rows.push(A[i] === B[i] ? { type: 'same', text: A[i] } : { type: 'add', text: B[i] });
+    }
+    return rows;
+  }
+  const dp = [];
+  for (let i = 0; i <= n; i++) dp.push(new Uint16Array(m + 1));
+  for (let i = n - 1; i >= 0; i--) {
+    for (let j = m - 1; j >= 0; j--) {
+      dp[i][j] = A[i] === B[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    }
+  }
+  let i = 0, j = 0;
+  while (i < n && j < m) {
+    if (A[i] === B[j]) { rows.push({ type: 'same', text: A[i] }); i++; j++; }
+    else if (dp[i + 1][j] >= dp[i][j + 1]) { rows.push({ type: 'del', text: A[i] }); i++; }
+    else { rows.push({ type: 'add', text: B[j] }); j++; }
+  }
+  while (i < n) rows.push({ type: 'del', text: A[i++] });
+  while (j < m) rows.push({ type: 'add', text: B[j++] });
+  return rows;
+}
+
+const TOOLBOX_HANDLERS = {
+  /* JSON 格式化 / 压缩 / 校验 */
+  'json-format': function (box) {
+    const ta = textarea('在此粘贴 JSON，例如 {"a":1,"b":[2,3]}');
+    addField(box, '输入 JSON', ta);
+    const out = output();
+    const parse = () => JSON.parse(ta.value);
+    box.appendChild(rowOf(
+      button('格式化', function () { try { out.textContent = JSON.stringify(parse(), null, 2); } catch (e) { out.textContent = errText(e); } }),
+      button('压缩', function () { try { out.textContent = JSON.stringify(parse()); } catch (e) { out.textContent = errText(e); } }, true),
+      button('校验', function () { try { parse(); out.textContent = '✅ 合法 JSON'; } catch (e) { out.textContent = '❌ ' + errText(e); } }, true),
+      copyBtn(function () { return out.textContent; })
+    ));
+    addField(box, '结果', out);
+  },
+
+  /* 时间戳 ↔ 日期 */
+  'timestamp': function (box) {
+    const ta = input('text', String(Math.floor(Date.now() / 1000)), '10 位秒 / 13 位毫秒时间戳，或 2026-09-29 10:00:00');
+    addField(box, '时间戳或日期', ta);
+    const out = output();
+    const p2 = n => String(n).padStart(2, '0');
+    const parse = function () {
+      const s = ta.value.trim();
+      if (!s) return null;
+      if (/^\d{10}$/.test(s)) return new Date(Number(s) * 1000);
+      if (/^\d{13}$/.test(s)) return new Date(Number(s));
+      const d = new Date(s.replace(/-/g, '/'));
+      return isNaN(d.getTime()) ? null : d;
+    };
+    box.appendChild(rowOf(
+      button('转换', function () {
+        const d = parse();
+        if (!d) { out.textContent = '无法识别：请输入 10 位（秒）或 13 位（毫秒）时间戳，或常见日期字符串'; return; }
+        const fmt = d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()) + ' '
+          + p2(d.getHours()) + ':' + p2(d.getMinutes()) + ':' + p2(d.getSeconds());
+        out.textContent = [
+          '本地时间：' + fmt,
+          'ISO 8601：' + d.toISOString(),
+          'UTC：' + d.toUTCString(),
+          '秒级时间戳：' + Math.floor(d.getTime() / 1000),
+          '毫秒时间戳：' + d.getTime()
+        ].join('\n');
+      }),
+      button('填入当前时间', function () { ta.value = String(Math.floor(Date.now() / 1000)); toast('已填入当前秒级时间戳'); }, true),
+      copyBtn(function () { return out.textContent; })
+    ));
+    addField(box, '结果', out);
+  },
+
+  /* CSV ↔ JSON 互转 */
+  'csv-json': function (box) {
+    const ta = textarea('CSV 或 JSON 文本，例如：\nname,age\n张三,18\n李四,20');
+    addField(box, 'CSV / JSON 文本', ta);
+    const sep = input('text', ',', '分隔符');
+    sep.style.maxWidth = '120px';
+    const out = output();
+    box.appendChild(rowOf(h('span', 'tb-label', '分隔符'), sep,
+      button('CSV → JSON', function () {
+        try {
+          const d = sep.value || ',';
+          const lines = ta.value.replace(/\r/g, '').split('\n').filter(l => l.length);
+          if (!lines.length) { out.textContent = '请输入 CSV 内容'; return; }
+          const header = parseCsvLine(lines[0], d);
+          const rows = lines.slice(1).map(l => {
+            const cells = parseCsvLine(l, d);
+            const o = {};
+            header.forEach((k, i) => { o[k] = cells[i] !== undefined ? cells[i] : ''; });
+            return o;
+          });
+          out.textContent = JSON.stringify(rows, null, 2);
+        } catch (e) { out.textContent = errText(e); }
+      }),
+      button('JSON → CSV', function () {
+        try {
+          const d = sep.value || ',';
+          const arr = JSON.parse(ta.value);
+          if (!Array.isArray(arr) || !arr.length) { out.textContent = '请输入非空的 JSON 数组（对象数组）'; return; }
+          const keys = Object.keys(arr[0]);
+          const q = v => { const s = String(v == null ? '' : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+          out.textContent = [keys.join(d)].concat(arr.map(o => keys.map(k => q(o[k])).join(d))).join('\n');
+        } catch (e) { out.textContent = errText(e); }
+      }, true),
+      copyBtn(function () { return out.textContent; })
+    ));
+    addField(box, '结果', out);
+  },
+
+  /* 图表配色生成 */
+  'chart-color': function (box) {
+    const base = input('color', '#3b82f6');
+    base.style.maxWidth = '90px';
+    const cnt = input('number', '6');
+    cnt.style.maxWidth = '110px';
+    const sw = h('div', 'tb-swatches');
+    const out = output();
+    const gen = function () {
+      const n = Math.max(2, Math.min(12, Number(cnt.value) || 6));
+      const hsl = hexToHsl(base.value || '#3b82f6');
+      sw.innerHTML = '';
+      const list = [];
+      for (let i = 0; i < n; i++) {
+        const hh = (hsl.h + Math.round(360 / n) * i) % 360;
+        const ss = Math.max(35, Math.min(90, hsl.s + (i % 2 ? 8 : -8)));
+        const ll = Math.max(35, Math.min(78, hsl.l + ((i % 3) - 1) * 10));
+        const c = hslToHex(hh, ss, ll);
+        list.push(c.toUpperCase());
+        const d = h('div', 'tb-swatch', c.toUpperCase());
+        d.style.background = c;
+        sw.appendChild(d);
+      }
+      out.textContent = list.join('  ');
+    };
+    box.appendChild(rowOf(h('span', 'tb-label', '基色'), base, h('span', 'tb-label', '数量'), cnt,
+      button('生成配色', gen), copyBtn(function () { return out.textContent; })));
+    addField(box, '配色方案', sw);
+    addField(box, '色值', out);
+    gen();
+  },
+
+  /* 图片压缩（本地 canvas 处理，不上传） */
+  'img-compress': function (box) {
+    const file = document.createElement('input');
+    file.type = 'file'; file.accept = 'image/*'; file.className = 'tb-input';
+    const q = input('number', '0.8');
+    q.step = '0.05'; q.min = '0.1'; q.max = '1'; q.style.maxWidth = '110px';
+    const mw = input('number', '1600');
+    mw.style.maxWidth = '130px';
+    const out = output();
+    out.textContent = '选择图片后点击「开始压缩」';
+    const dl = h('div', 'tb-row');
+    addField(box, '选择图片（本地处理，不上传任何服务器）', file);
+    box.appendChild(rowOf(h('span', 'tb-label', '质量'), q, h('span', 'tb-label', '最大宽度(px)'), mw,
+      button('开始压缩', function () {
+        const f = file.files && file.files[0];
+        if (!f) { toast('请先选择一张图片'); return; }
+        const img = new Image();
+        const url = URL.createObjectURL(f);
+        img.onload = function () {
+          const maxW = Math.max(100, Number(mw.value) || 1600);
+          const scale = Math.min(1, maxW / img.width);
+          const w = Math.round(img.width * scale), hh = Math.round(img.height * scale);
+          const c = document.createElement('canvas');
+          c.width = w; c.height = hh;
+          c.getContext('2d').drawImage(img, 0, 0, w, hh);
+          const quality = Math.min(1, Math.max(0.1, Number(q.value) || 0.8));
+          c.toBlob(function (blob) {
+            URL.revokeObjectURL(url);
+            if (!blob) { out.textContent = '压缩失败，请更换图片重试'; return; }
+            const rate = ((1 - blob.size / f.size) * 100).toFixed(1);
+            out.textContent = [
+              '原图：' + (f.size / 1024).toFixed(1) + ' KB（' + img.width + '×' + img.height + '）',
+              '压缩后：' + (blob.size / 1024).toFixed(1) + ' KB（' + w + '×' + hh + '）',
+              '质量：' + quality + '，体积减少：' + rate + '%'
+            ].join('\n');
+            dl.innerHTML = '';
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'compressed-' + f.name;
+            a.className = 'tb-btn ghost';
+            a.textContent = '下载压缩后的图片';
+            dl.appendChild(a);
+          }, 'image/jpeg', quality);
+        };
+        img.onerror = function () { URL.revokeObjectURL(url); out.textContent = '图片读取失败'; };
+        img.src = url;
+      })));
+    addField(box, '压缩结果', out);
+    box.appendChild(dl);
+  },
+
+  /* 取色与色值转换 */
+  'color-picker': function (box) {
+    const pick = input('color', '#3b82f6');
+    pick.style.maxWidth = '90px';
+    const hex = input('text', '#3b82f6', 'HEX，如 #3b82f6');
+    hex.style.maxWidth = '180px';
+    const out = output();
+    const conv = function () {
+      const v = hex.value.trim();
+      if (!/^#?[0-9a-fA-F]{6}$/.test(v)) { out.textContent = '请输入 6 位 HEX 色值，如 #3b82f6'; return; }
+      const s = v.startsWith('#') ? v : '#' + v;
+      pick.value = s;
+      const c = hexToRgb(s);
+      const hsl = rgbToHsl(c.r, c.g, c.b);
+      out.textContent = [
+        'HEX：' + s.toUpperCase(),
+        'RGB：rgb(' + c.r + ', ' + c.g + ', ' + c.b + ')',
+        'HSL：hsl(' + Math.round(hsl.h) + ', ' + Math.round(hsl.s) + '%, ' + Math.round(hsl.l) + '%)'
+      ].join('\n');
+    };
+    pick.addEventListener('input', function () { hex.value = pick.value; conv(); });
+    box.appendChild(rowOf(h('span', 'tb-label', '取色'), pick, h('span', 'tb-label', 'HEX'), hex,
+      button('转换', conv), copyBtn(function () { return out.textContent; })));
+    addField(box, '色值结果', out);
+    conv();
+  },
+
+  /* 正则表达式测试 */
+  'regex-test': function (box) {
+    const pat = input('text', '\\d{4}-\\d{2}-\\d{2}', '正则表达式');
+    const flags = input('text', 'g', 'flags');
+    flags.style.maxWidth = '110px';
+    const text = textarea('在此粘贴待匹配的文本…', '今天是 2026-09-29，明天是 2026-09-30。');
+    const out = output('tb-match');
+    addField(box, '正则表达式', pat);
+    box.appendChild(rowOf(h('span', 'tb-label', 'flags'), flags));
+    addField(box, '测试文本', text);
+    box.appendChild(rowOf(button('测试', function () {
+      out.innerHTML = '';
+      let re;
+      try { re = new RegExp(pat.value, flags.value || ''); } catch (e) { out.textContent = '正则不合法：' + e.message; return; }
+      const src = text.value;
+      const res = [];
+      if (re.global) {
+        let m;
+        while ((m = re.exec(src)) !== null) {
+          res.push({ index: m.index, text: m[0] });
+          if (m[0] === '') re.lastIndex++;
+          if (res.length >= 500) break;
+        }
+      } else {
+        const m = re.exec(src);
+        if (m) res.push({ index: m.index, text: m[0] });
+      }
+      if (!res.length) { out.textContent = '没有匹配结果'; return; }
+      out.appendChild(h('div', '', '共匹配 ' + res.length + ' 处：'));
+      res.slice(0, 50).forEach(function (r) {
+        const line = h('div', '');
+        line.appendChild(h('span', '', '· '));
+        line.appendChild(h('span', 'hit', r.text));
+        line.appendChild(h('span', '', '（位置 ' + r.index + '）'));
+        out.appendChild(line);
+      });
+      if (res.length > 50) out.appendChild(h('div', 'tb-hint', '仅展示前 50 条'));
+    }), copyBtn(function () { return out.textContent; })));
+    addField(box, '匹配结果', out);
+  },
+
+  /* 文本对比（行级 diff） */
+  'code-diff': function (box) {
+    const a = textarea('左侧文本（原始）', '第一行\n第二行\n第三行');
+    const b = textarea('右侧文本（修改后）', '第一行\n第二行改\n第三行\n新增行');
+    const out = h('div', 'tb-diff');
+    addField(box, '文本 A（原始）', a);
+    addField(box, '文本 B（修改后）', b);
+    box.appendChild(rowOf(button('对比', function () {
+      const rows = diffLines(a.value.split(/\r?\n/), b.value.split(/\r?\n/));
+      out.innerHTML = '';
+      const adds = rows.filter(r => r.type === 'add').length;
+      const dels = rows.filter(r => r.type === 'del').length;
+      out.appendChild(h('div', 'tb-hint', '新增 ' + adds + ' 行，删除 ' + dels + ' 行'));
+      rows.forEach(function (r) {
+        const d = h('div', r.type, (r.type === 'add' ? '+ ' : r.type === 'del' ? '- ' : '  ') + r.text);
+        out.appendChild(d);
+      });
+    })));
+    addField(box, '差异', out);
+  }
+};
+
 function toggleFav(id, ev) {
   if (ev) { ev.preventDefault(); ev.stopPropagation(); }
   const i = prefs.favorites.indexOf(id);
@@ -491,7 +937,7 @@ function cardHtml(t) {
   const tags = (t.tags || []).slice(0, 3)
     .map(x => '<span class="tb-tag">' + highlight(x, state.q) + '</span>').join('');
   const badge = t.status === 'active'
-    ? (isInternal(t.url) ? '<span class="tb-badge internal">站内</span>' : '')
+    ? '<span class="tb-badge internal">' + (isModule(t) ? '站内模块' : '站内自建') + '</span>'
     : '<span class="tb-badge ' + t.status + '">' + statusLabel(t.status) + '</span>';
   const ariaLabel = '打开 ' + t.name + (disabled ? '（' + statusLabel(t.status) + '，暂不可用）' : '');
   return '<button type="button" class="tb-card' + (disabled ? ' is-disabled' : '') + '"'
@@ -623,10 +1069,10 @@ function go(view) {
 }
 function isDark() { return document.documentElement.classList.contains('dark'); }
 function syncTheme() {
+  // 主题由项目共用主题文件提供（src/style.css + src/styles/dark.css），此处仅同步按钮文案
   const label = isDark() ? '🌙 暗色' : '☀️ 亮色';
-  const a = document.getElementById('themeBtnHome'), b = document.getElementById('themeBtnBox');
+  const a = document.getElementById('themeBtnHome');
   if (a) a.textContent = label;
-  if (b) b.textContent = label;
 }
 function toggleTheme() { document.documentElement.classList.toggle('dark'); syncTheme(); }
 let toastTimer = null;
@@ -644,6 +1090,10 @@ function toast(msg) {
 document.getElementById('tbSearch').addEventListener('input', e => {
   state.q = e.target.value;
   render();
+});
+// Esc 关闭站内工具面板
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeTool();
 });
 syncTheme();
 render();
