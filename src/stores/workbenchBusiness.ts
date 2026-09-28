@@ -28,6 +28,10 @@ import {
   emptyBusinessData,
   hasLedgerForYear,
   isLedgerEmpty,
+  EXPENSE_UNIT_MAX,
+  EXPENSE_ORDER_PHONE_MAX,
+  EXPENSE_ORDER_ADDRESS_MAX,
+  EXPENSE_SALESMAN_MAX,
   ledgerDefaultName,
   moveCategory,
   newId,
@@ -517,6 +521,10 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     categoryId: string
     amount: number
     note?: string
+    unit?: string
+    orderPhone?: string
+    orderAddress?: string
+    salesman?: string
   }): Promise<LedgerWriteResult> {
     const guard = guardLedgerYear(input.date)
     if (!guard.ok) return guard
@@ -528,6 +536,10 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
       categoryId: input.categoryId,
       amount: Math.max(0, input.amount),
       note: input.note?.trim() || undefined,
+      unit: input.unit?.trim() || undefined,
+      orderPhone: input.orderPhone?.trim() || undefined,
+      orderAddress: input.orderAddress?.trim() || undefined,
+      salesman: input.salesman?.trim() || undefined,
       createdAt: new Date().toISOString()
     })
     await saveBusiness()
@@ -551,6 +563,11 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
       merged.title = normalizeExpenseTitle(merged.title, categoryName)
     }
     merged.amount = Math.max(0, merged.amount)
+    // 新增可选字段：空串/缺省 → undefined（与 normExpense 保持一致）
+    merged.unit = merged.unit?.trim() ? merged.unit.trim().slice(0, EXPENSE_UNIT_MAX) : undefined
+    merged.orderPhone = merged.orderPhone?.trim() ? merged.orderPhone.trim().slice(0, EXPENSE_ORDER_PHONE_MAX) : undefined
+    merged.orderAddress = merged.orderAddress?.trim() ? merged.orderAddress.trim().slice(0, EXPENSE_ORDER_ADDRESS_MAX) : undefined
+    merged.salesman = merged.salesman?.trim() ? merged.salesman.trim().slice(0, EXPENSE_SALESMAN_MAX) : undefined
     expenses.value[index] = merged
     await saveBusiness()
     return { ok: true, reason: 'ok' }

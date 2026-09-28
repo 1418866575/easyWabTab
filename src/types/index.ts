@@ -574,6 +574,14 @@ export interface BusinessExpense {
   categoryId: string
   amount: number
   note?: string
+  /** 单位（如「件」「包」「根」）；下拉预设可选，也支持自定义；可选，旧数据缺省为空 */
+  unit?: string
+  /** 订货电话；可选，旧数据缺省为空 */
+  orderPhone?: string
+  /** 订货地址；可选，旧数据缺省为空 */
+  orderAddress?: string
+  /** 业务员信息；可选，旧数据缺省为空 */
+  salesman?: string
   createdAt: string
 }
 

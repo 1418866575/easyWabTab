@@ -337,6 +337,14 @@ export const DEFAULT_EXPENSE_TITLE = '未命名支出'
 /** 支出标题最大长度（汉字/字符同计） */
 export const EXPENSE_TITLE_MAX = 20
 
+/** 支出单位预设（下拉可选项；支持自定义输入） */
+export const EXPENSE_UNITS = ['件', '包', '根', '箱', '袋', '个', '斤', '盒', '瓶', '条', '只', '套', '台', '米', '卷']
+/** 支出新增可选字段最大长度 */
+export const EXPENSE_UNIT_MAX = 10
+export const EXPENSE_ORDER_PHONE_MAX = 30
+export const EXPENSE_ORDER_ADDRESS_MAX = 100
+export const EXPENSE_SALESMAN_MAX = 30
+
 /**
  * 支出标题归一化：去空白 + 截断；为空时用 fallback（迁移时传分类名）再退回默认标题。
  * 保证「标题必填」的同时，历史数据在归一化后一定拿到可读标题。
@@ -360,6 +368,10 @@ export function validateExpenseRow(row: {
   title?: string
   categoryId?: string
   amount?: number | string
+  unit?: string
+  orderPhone?: string
+  orderAddress?: string
+  salesman?: string
 }): ValidationIssue[] {
   const issues: ValidationIssue[] = []
   const title = typeof row.title === 'string' ? row.title.trim() : ''
@@ -401,6 +413,11 @@ function normExpense(raw: unknown, categories?: BusinessExpenseCategory[]): Busi
     categoryId: e.categoryId,
     amount: Math.max(0, numOf(e.amount)),
     note: typeof e.note === 'string' && e.note.trim() ? e.note.trim().slice(0, 100) : undefined,
+    // 新增可选字段：空串/缺失 → 不写入；否则截断（保持旧数据缺省为 undefined）
+    unit: typeof e.unit === 'string' && e.unit.trim() ? e.unit.trim().slice(0, EXPENSE_UNIT_MAX) : undefined,
+    orderPhone: typeof e.orderPhone === 'string' && e.orderPhone.trim() ? e.orderPhone.trim().slice(0, EXPENSE_ORDER_PHONE_MAX) : undefined,
+    orderAddress: typeof e.orderAddress === 'string' && e.orderAddress.trim() ? e.orderAddress.trim().slice(0, EXPENSE_ORDER_ADDRESS_MAX) : undefined,
+    salesman: typeof e.salesman === 'string' && e.salesman.trim() ? e.salesman.trim().slice(0, EXPENSE_SALESMAN_MAX) : undefined,
     createdAt: typeof e.createdAt === 'string' ? e.createdAt : new Date(0).toISOString()
   }
 }

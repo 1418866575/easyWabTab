@@ -7,13 +7,17 @@ import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
 const vm = useViewMode()
 
-// 卡片视图：一笔支出一张卡（日期/标题/分类/金额/备注）
+// 卡片视图：一笔支出一张卡（日期/标题/分类/金额/单位/订货电话/订货地址/业务员/备注）
 function cardFields(e: any) {
   return [
     { label: '日期', value: e.date },
     { label: '标题', value: e.title },
     { label: '分类', value: catNameOf(e.categoryId) },
     { label: '金额', value: formatYuanOf(e.amount) },
+    { label: '单位', value: e.unit || '—' },
+    { label: '订货电话', value: e.orderPhone || '—' },
+    { label: '订货地址', value: e.orderAddress || '—' },
+    { label: '业务员', value: e.salesman || '—' },
     { label: '备注', value: e.note || '—' }
   ]
 }
@@ -21,7 +25,7 @@ function cardFields(e: any) {
 // 支出记录：逐笔一条一行（不按天合并），日期倒序 + 同日按创建时间倒序
 import { computed, reactive, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { EXPENSE_TITLE_MAX, validateExpenseRow, findExpenseCategory, formatYuanOf, localDateKey, sortExpenses } from '@/composables/businessCore'
+import { EXPENSE_TITLE_MAX, EXPENSE_UNITS, validateExpenseRow, findExpenseCategory, formatYuanOf, localDateKey, sortExpenses } from '@/composables/businessCore'
 import { exportXlsx } from '@/composables/xlsxExport'
 import type { BusinessExpense } from '@/types'
 import Icon from '@/components/Icon.vue'
@@ -40,14 +44,18 @@ const allExpenses = computed<BusinessExpense[]>(() => sortExpenses(store.expense
 /** 导出文件名前缀：账本年份 + 账本名称（缺失时由 xlsxFileName 自动省略该段） */
 const ledgerMeta = computed(() => ({ year: store.currentLedgerYear, ledgerName: store.currentLedgerName }))
 
-// ===== 一键导出 Excel（逐笔：日期/标题/分类/金额/备注）=====
+// ===== 一键导出 Excel（逐笔：日期/标题/分类/金额/单位/订货电话/订货地址/业务员/备注）=====
 function exportExpensesExcel(): void {
-  const headers = ['日期', '标题', '分类', '金额', '备注']
+  const headers = ['日期', '标题', '分类', '金额', '单位', '订货电话', '订货地址', '业务员', '备注']
   const rows: (string | number)[][] = allExpenses.value.map(e => [
     e.date,
     e.title,
     catNameOf(e.categoryId),
     e.amount.toFixed(2),
+    e.unit ?? '',
+    e.orderPhone ?? '',
+    e.orderAddress ?? '',
+    e.salesman ?? '',
     e.note ?? ''
   ])
   void exportXlsx('支出记录', headers, rows, ledgerMeta.value)
@@ -66,12 +74,26 @@ watch([allExpenses, () => vm.mode], () => { listPage.value = 1 })
 // ===== 新增/编辑弹框：一笔支出 = 一条记录 = 一个标题（同一天想记多笔 → 多次新增） =====
 const showDialog = ref(false)
 const editingId = ref<string | null>(null) // null = 新增模式
-const form = reactive<{ title: string; date: string; categoryId: string; amount: string; note: string }>({
+const form = reactive<{
+  title: string
+  date: string
+  categoryId: string
+  amount: string
+  note: string
+  unit: string
+  orderPhone: string
+  orderAddress: string
+  salesman: string
+}>({
   title: '',
   date: localDateKey(),
   categoryId: '',
   amount: '',
-  note: ''
+  note: '',
+  unit: '',
+  orderPhone: '',
+  orderAddress: '',
+  salesman: ''
 })
 
 /** 表单校验：标题必填且 ≤20 字、分类必选、金额 > 0（全部为 error，阻断保存） */
@@ -84,6 +106,10 @@ function resetForm(date?: string): void {
   form.categoryId = store.expenseCategories[0]?.id ?? ''
   form.amount = ''
   form.note = ''
+  form.unit = ''
+  form.orderPhone = ''
+  form.orderAddress = ''
+  form.salesman = ''
 }
 
 function startAdd(): void {
@@ -99,6 +125,10 @@ function startEdit(e: BusinessExpense): void {
   form.categoryId = e.categoryId
   form.amount = String(e.amount)
   form.note = e.note ?? ''
+  form.unit = e.unit ?? ''
+  form.orderPhone = e.orderPhone ?? ''
+  form.orderAddress = e.orderAddress ?? ''
+  form.salesman = e.salesman ?? ''
   showDialog.value = true
 }
 
@@ -115,7 +145,11 @@ async function handleSave(): Promise<void> {
     date: form.date,
     categoryId: form.categoryId,
     amount: Number(form.amount),
-    note: form.note.trim() || undefined
+    note: form.note.trim() || undefined,
+    unit: form.unit.trim() || undefined,
+    orderPhone: form.orderPhone.trim() || undefined,
+    orderAddress: form.orderAddress.trim() || undefined,
+    salesman: form.salesman.trim() || undefined
   }
   const r = editingId.value
     ? await store.updateExpense(editingId.value, payload)
@@ -189,6 +223,26 @@ async function handleDeleteFromDialog(): Promise<void> {
           <el-table-column label="备注" min-width="160" align="left" show-overflow-tooltip>
             <template #default="{ row }">
               <span class="bizexp-note">{{ row.note || '—' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="单位" width="90" align="left" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span class="bizexp-unit">{{ row.unit || '—' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="订货电话" width="130" align="left" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span class="bizexp-phone">{{ row.orderPhone || '—' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="订货地址" min-width="160" align="left" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span class="bizexp-addr">{{ row.orderAddress || '—' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="业务员" width="120" align="left" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span class="bizexp-salesman">{{ row.salesman || '—' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="操作" class-name="ewt-op-col" width="130" align="center" fixed="right">
@@ -291,6 +345,23 @@ async function handleDeleteFromDialog(): Promise<void> {
         </div>
 
         <div class="biz-field">
+          <label>单位（可选，可自定义）</label>
+          <el-select
+            v-model="form.unit"
+            size="small"
+            class="bizexp-form-unit"
+            data-testid="bizexp-form-unit"
+            placeholder="选择或输入单位"
+            clearable
+            filterable
+            allow-create
+            default-first-option
+          >
+            <el-option v-for="u in EXPENSE_UNITS" :key="u" :value="u" :label="u" />
+          </el-select>
+        </div>
+
+        <div class="biz-field">
           <label>备注（可选）</label>
           <el-input
             v-model="form.note"
@@ -298,6 +369,39 @@ async function handleDeleteFromDialog(): Promise<void> {
             maxlength="100"
             placeholder="备注"
             data-testid="bizexp-form-note"
+          />
+        </div>
+
+        <div class="biz-field">
+          <label>订货电话（可选）</label>
+          <el-input
+            v-model="form.orderPhone"
+            size="small"
+            maxlength="30"
+            placeholder="订货联系电话"
+            data-testid="bizexp-form-order-phone"
+          />
+        </div>
+
+        <div class="biz-field">
+          <label>订货地址（可选）</label>
+          <el-input
+            v-model="form.orderAddress"
+            size="small"
+            maxlength="100"
+            placeholder="订货地址"
+            data-testid="bizexp-form-order-address"
+          />
+        </div>
+
+        <div class="biz-field">
+          <label>业务员信息（可选）</label>
+          <el-input
+            v-model="form.salesman"
+            size="small"
+            maxlength="30"
+            placeholder="业务员姓名/工号"
+            data-testid="bizexp-form-salesman"
           />
         </div>
 
@@ -439,10 +543,26 @@ async function handleDeleteFromDialog(): Promise<void> {
 .bizexp-note {
   color: var(--color-text-muted, var(--color-text-muted));
 }
+.bizexp-unit {
+  color: var(--color-text-secondary, #6b7280);
+  white-space: nowrap;
+}
+.bizexp-phone,
+.bizexp-addr,
+.bizexp-salesman {
+  color: var(--color-text, #111827);
+  font-variant-numeric: tabular-nums;
+}
+:global(html.dark) .bizexp-phone,
+:global(html.dark) .bizexp-addr,
+:global(html.dark) .bizexp-salesman {
+  color: var(--color-text, #f9fafb);
+}
 
 /* ===== 弹框单条表单 ===== */
 .bizexp-form-cat { width: 100%; }
 .bizexp-form-amt { width: 100%; }
+.bizexp-form-unit { width: 100%; }
 
 /* 表单校验提示（标题/分类/金额） */
 .bizexp-issues {

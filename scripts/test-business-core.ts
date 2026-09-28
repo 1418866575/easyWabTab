@@ -1817,6 +1817,35 @@ test('T71 重命名账本（renameLedger）', () => {
   assert.equal(renameLedger(seed, 'nope', 'x').ok, false)
 })
 
+// T72 — 支出新增字段（单位/订货电话/订货地址/业务员）透明归一至 BusinessExpense
+test('T72 支出新增字段（单位/订货电话/订货地址/业务员）', () => {
+  const d = normalizeBusinessData({
+    expenseCategories: [{ id: 'c1', name: '采购', builtin: true, visible: true, seq: 0 }],
+    expenses: [{
+      id: 'be_1', date: '2026-09-28', categoryId: 'c1', amount: 12.5, title: '原料',
+      unit: '包', orderPhone: '13800000000', orderAddress: '幸福路1号', salesman: '张三'
+    }]
+  })
+  const e = d.expenses[0]
+  assert.equal(e.unit, '包')
+  assert.equal(e.orderPhone, '13800000000')
+  assert.equal(e.orderAddress, '幸福路1号')
+  assert.equal(e.salesman, '张三')
+  // 空串/缺省 → undefined（旧数据兼容）
+  const d2 = normalizeBusinessData({
+    expenseCategories: [{ id: 'c1', name: '采购', builtin: true, visible: true, seq: 0 }],
+    expenses: [{
+      id: 'be_2', date: '2026-09-28', categoryId: 'c1', amount: 1, title: 'x',
+      unit: '   ', orderPhone: '', orderAddress: '', salesman: ''
+    }]
+  })
+  const e2 = d2.expenses[0]
+  assert.equal(e2.unit, undefined)
+  assert.equal(e2.orderPhone, undefined)
+  assert.equal(e2.orderAddress, undefined)
+  assert.equal(e2.salesman, undefined)
+})
+
 let passed = 0
 let failed = 0
 for (const t of tests) {
