@@ -2414,7 +2414,33 @@ export function createLedger(list: BusinessLedger[], year: number, name?: string
   return { ok: true, reason: 'ok', ledgers: sortedLedgers([...list, ledger]), ledger }
 }
 
-// ===== 账本归属年份守卫（跨年数据不混入同一账本） =====
+/**
+ * 重命名账本：仅修改 name（自动补 updatedAt），编号（年份-序号）与年份不变。
+ * 名称空白 / 账本不存在返回失败原因，由 UI 给出明确提示。不改入参。
+ */
+export type LedgerRenameResult =
+  | { ok: true; reason: 'ok'; ledgers: BusinessLedger[]; ledger: BusinessLedger }
+  | { ok: false; reason: 'not-found' | 'empty-name' }
+
+export function renameLedger(
+  list: BusinessLedger[],
+  id: string,
+  name: string
+): LedgerRenameResult {
+  const index = (list ?? []).findIndex(l => l.id === id)
+  if (index === -1) return { ok: false, reason: 'not-found' }
+  const trimmed = typeof name === 'string' ? name.trim() : ''
+  if (!trimmed) return { ok: false, reason: 'empty-name' }
+  const target = list[index]
+  const ledger: BusinessLedger = {
+    ...target,
+    name: trimmed.slice(0, 30),
+    updatedAt: new Date().toISOString()
+  }
+  const ledgers = [...list]
+  ledgers[index] = ledger
+  return { ok: true, reason: 'ok', ledgers, ledger }
+}
 
 /** 日期（YYYY-MM-DD）所属年份；空 / 非法返回 null */
 export function yearOfDate(date: string): number | null {

@@ -36,12 +36,13 @@ import {
   normalizeExpenseIds,
   normalizeExpenseTitle,
   pickDefaultLedger,
+  renameLedger as renameLedgerCore,
   renameCategory,
   sortedLedgers,
   sumExpenseAmounts,
   toggleCategoryVisible
 } from '@/composables/businessCore'
-import type { CategoryOpResult, LedgerDeleteGuard, LedgerMutateResult, LedgerOpResult, LedgerWriteResult } from '@/composables/businessCore'
+import type { CategoryOpResult, LedgerDeleteGuard, LedgerMutateResult, LedgerOpResult, LedgerRenameResult, LedgerWriteResult } from '@/composables/businessCore'
 import { idbGet, idbPut } from '../composables/useIdb'
 import { markDirty } from '@/composables/useCloudSync'
 
@@ -223,6 +224,16 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
       if (!r.ledgers.some(l => l.id === currentLedgerId.value)) {
         currentLedgerId.value = pickDefaultLedger(r.ledgers)?.id ?? ''
       }
+      void saveBusiness()
+    }
+    return r
+  }
+
+  /** 重命名账本：仅改名称（编号/年份不变）；成功持久化。失败原因交由 UI 提示 */
+  function renameLedger(id: string, name: string): LedgerRenameResult {
+    const r = renameLedgerCore(ledgers.value, id, name)
+    if (r.ok) {
+      ledgers.value = r.ledgers
       void saveBusiness()
     }
     return r
@@ -615,6 +626,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     ledgerDeleteGuard,
     clearLedgerRecords,
     deleteLedger,
+    renameLedger,
     // 当前账本内的业务数据（可写 computed，业务面板无需感知账本）
     productCategories,
     expenseCategories,

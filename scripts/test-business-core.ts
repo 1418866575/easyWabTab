@@ -6,7 +6,7 @@
 // T63-T65：严格先进先出（FIFO）成本结转、待销售估值、损耗出库口径
 // T66：可关联支出候选过滤（已关联排除 / 自身已勾选保留 / 余额边界）
 // T67：支出关联统计 calcExpenseLinkStats（金额/笔数/全关联/全未关联/空数据/NaN）
-// T68-T70：同年多账本编号与排序、mergeBusinessStore 同年多本、账本归属年份守卫（跨年隔离）
+// T68-T71：同年多账本编号与排序、mergeBusinessStore 同年多本、账本归属年份守卫（跨年隔离）、重命名账本
 import assert from 'node:assert/strict'
 import {
   addExpenseCategory,
@@ -61,6 +61,7 @@ import {
   isValidDateKey,
   ledgerCodeOf,
   ledgerDefaultName,
+  renameLedger,
   nextLedgerSeq,
   ledgerDeleteGuard,
   ledgerRecordCounts,
@@ -1790,6 +1791,30 @@ test('T70 账本归属年份守卫', () => {
   const none = checkLedgerYearWrite('2026-01-01', null)
   assert.equal(none.ok, false)
   assert.equal(none.ok === false && none.reason, 'no-ledger')
+})
+
+// T71 — 重命名账本：仅改名称，编号/年份不变；空名/不存在返回失败
+test('T71 重命名账本（renameLedger）', () => {
+  const seed = [
+    createLedger([], 2026, '夜市A').ledger,
+    createLedger([], 2026, '夜市B').ledger
+  ]
+  const a = seed[0]
+  // 改名成功：year/seq/编号不变
+  const r = renameLedger(seed, a.id, '  周末市集  ')
+  assert.equal(r.ok, true)
+  if (!r.ok) return
+  assert.equal(r.ledger.year, 2026)
+  assert.equal(r.ledger.seq, 1)
+  assert.equal(r.ledger.name, '周末市集')
+  assert.equal(ledgerCodeOf(r.ledger), '2026-01')
+  // 不改入参
+  assert.equal(seed[0].name, '夜市A')
+  // 空名失败
+  assert.equal(renameLedger(seed, a.id, '   ').ok, false)
+  assert.equal(renameLedger(seed, a.id, '').ok === false && (renameLedger(seed, a.id, '') as any).reason, 'empty-name')
+  // 不存在失败
+  assert.equal(renameLedger(seed, 'nope', 'x').ok, false)
 })
 
 let passed = 0

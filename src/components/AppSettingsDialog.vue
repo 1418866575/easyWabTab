@@ -20,9 +20,10 @@ import {
   ledgerDefaultName,
   ledgerRecordCounts,
   localDateKey,
-  nextLedgerSeq
+  nextLedgerSeq,
+  sortedLedgers
 } from '@/composables/businessCore'
-import type { LedgerDeleteGuard, LedgerDeleteScope } from '@/composables/businessCore'
+import type { LedgerDeleteGuard } from '@/composables/businessCore'
 import { isEmailConfigured, buildEmailParams } from '@/composables/reminderCore'
 import { sendReminderEmail } from '@/composables/reminderEmail'
 import { requestNotifyPermission } from '@/composables/useDesktopNotify'
@@ -53,7 +54,7 @@ import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
 import { useTeacherStore } from '@/stores/teacher'
 import { STAGE_BADGE, GRADE_STAGE_GROUPS, type StudentStage } from '@/types'
-import type { WorkbenchData } from '@/types'
+import type { WorkbenchData, BusinessLedger } from '@/types'
 import { COUNTDOWN_CATEGORIES } from '@/types'
 import { categoryLabel } from '@/composables/countdownCore'
 import { useCloudSync } from '@/composables/useCloudSync'
@@ -1283,25 +1284,90 @@ const newLedgerCode = computed(() => {
   return ledgerCodeOf({ year, seq: nextLedgerSeq(businessStore.ledgers, year) })
 })
 
-const deleteTargetId = ref('')
-const deleteScope = ref<LedgerDeleteScope>('records')
+/** 账本管理卡片（基础设置内独立入口，可折叠） */
+const ledgerManageOpen = ref(true)
 
-const deleteTarget = computed(() => businessStore.ledgers.find(l => l.id === deleteTargetId.value) ?? null)
-const deleteCounts = computed(() => ledgerRecordCounts(deleteTarget.value?.data))
-const deleteGuard = computed<LedgerDeleteGuard>(() =>
-  deleteTargetId.value ? businessStore.ledgerDeleteGuard(deleteTargetId.value) : 'not-found'
-)
-/** 禁用原因文案（空串 = 可执行）；「仅清空交易记录」不删除账本本体，故不受当前/最后一个限制 */
-const deleteBlockReason = computed((): string => {
-  if (!deleteTargetId.value) return '请先选择要处理的账本'
-  if (deleteGuard.value === 'not-found') return '账本不存在或已被删除，请重新选择'
-  if (deleteScope.value === 'ledger') {
-    if (deleteGuard.value === 'is-current') return '该账本是当前正在使用的账本：请先在销售记账页顶部切换到其他账本，再执行删除'
-    if (deleteGuard.value === 'last-one') return '至少需要保留一个账本，最后一个账本不可删除'
+/** 账本管理列表（年份倒序 + 同年序号升序） */
+const ledgerList = computed(() => sortedLedgers(businessStore.ledgers))
+
+// 行内修改账本名称（仅改 name，编号/年份不变）
+const editingId = ref('')
+const editingName = ref('')
+const editingError = ref('')
+function startEditLedger(l: BusinessLedger): void {
+  editingId.value = l.id
+  editingName.value = l.name
+  editingError.value = ''
+}
+function cancelEditLedger(): void {
+  editingId.value = ''
+  editingName.value = ''
+  editingError.value = ''
+}
+async function saveEditLedger(l: BusinessLedger): Promise<void> {
+  const name = editingName.value.trim()
+  if (!name) {
+    editingError.value = '名称不能为空'
+    return
   }
+  const r = businessStore.renameLedger(l.id, name)
+  if (!r.ok) {
+    editingError.value = r.reason === 'not-found' ? '账本不存在或已被删除' : '名称不能为空'
+    return
+  }
+  toast.success(`已重命名为「${ledgerCodeOf(r.ledger)} ${r.ledger.name}」`)
+  cancelEditLedger()
+}
+
+/** 某行「清空 / 删除」的禁用原因（空串 = 可执行）；清空只删流水，故不受当前/最后一本限制 */
+function ledgerDeleteBlockReason(l: BusinessLedger): string {
+  const guard = businessStore.ledgerDeleteGuard(l.id)
+  if (guard === 'not-found') return '账本不存在或已被删除'
+  if (guard === 'is-current') return '该账本是当前正在使用的账本：请先在销售记账页顶部切换到其他账本，再执行删除'
+  if (guard === 'last-one') return '至少需要保留一个账本，最后一个账本不可删除'
   return ''
-})
-const canDelete = computed(() => !!deleteTargetId.value && deleteGuard.value !== 'not-found' && !deleteBlockReason.value)
+}
+
+async function handleClearLedger(l: BusinessLedger): Promise<void> {
+  const c = ledgerRecordCounts(l.data)
+  const ok = await showConfirm(
+    `仅清空交易记录：删除进货 ${c.purchases} 条、收摊记录 ${c.dailyRecords} 条、支出 ${c.expenses} 笔。\n商品/分类/账本设置保留，账本「${l.name}」仍然保留。\n\n⚠ 该操作不可恢复，建议先导出销售记账备份。`,
+    '清空交易记录确认'
+  )
+  if (!ok) return
+  const r = businessStore.clearLedgerRecords(l.id)
+  if (!r.ok) {
+    toast.error('清空失败，请重试')
+    return
+  }
+  toast.success(`已清空「${l.name}」的交易记录`)
+}
+
+async function handleDeleteLedgerRow(l: BusinessLedger): Promise<void> {
+  const reason = ledgerDeleteBlockReason(l)
+  if (reason) {
+    toast.error(reason)
+    return
+  }
+  const c = ledgerRecordCounts(l.data)
+  const ok = await showConfirm(
+    `删除账本「${l.name}」：其下商品 ${c.products} 个、进货 ${c.purchases} 条、收摊记录 ${c.dailyRecords} 条、支出 ${c.expenses} 笔，以及分类与账本设置将全部移除。\n\n⚠ 该操作不可恢复，建议先导出销售记账备份。`,
+    '删除账本确认'
+  )
+  if (!ok) return
+  const r = businessStore.deleteLedger(l.id)
+  if (!r.ok) {
+    toast.error(
+      r.reason === 'is-current'
+        ? '删除失败：请先切换到其他账本'
+        : r.reason === 'last-one'
+          ? '删除失败：至少需要保留一个账本'
+          : '删除失败：账本不存在或已被删除'
+    )
+    return
+  }
+  toast.success(`已删除账本「${l.name}」`)
+}
 
 function handleCreateLedger(): void {
   const year = Number(newLedgerYear.value)
@@ -1318,43 +1384,7 @@ function handleCreateLedger(): void {
   newLedgerError.value = ''
   newLedgerName.value = ''
   newLedgerYear.value = currentYear()
-  // 账本列表已刷新：清空删除目标，避免下拉残留已失效的选中项
-  deleteTargetId.value = ''
   toast.success(`已创建并切换到「${ledgerCodeOf(r.ledger)} ${r.ledger.name}」`)
-}
-
-async function handleDeleteLedgerData(): Promise<void> {
-  if (!canDelete.value) return
-  const target = deleteTarget.value
-  if (!target) return
-  const c = deleteCounts.value
-  const isRecords = deleteScope.value === 'records'
-  const detail = isRecords
-    ? `仅清空交易记录：删除进货 ${c.purchases} 条、收摊记录 ${c.dailyRecords} 条、支出 ${c.expenses} 笔。\n商品 ${c.products} 个、商品/支出分类、账本设置（摊位名称、低库存阈值、月营业额目标）均保留，账本「${target.name}」仍然保留。`
-    : `删除账本「${target.name}」：其下商品 ${c.products} 个、进货 ${c.purchases} 条、收摊记录 ${c.dailyRecords} 条、支出 ${c.expenses} 笔，以及分类与账本设置（摊位名称、低库存阈值、月营业额目标）将全部移除。`
-  const ok = await showConfirm(
-    `${detail}\n\n⚠ 该操作不可恢复，建议先到「销售记账备份（导入/导出）」导出留存。`,
-    isRecords ? '清空交易记录确认' : '删除账本确认'
-  )
-  if (!ok) return
-  try {
-    const r = isRecords ? businessStore.clearLedgerRecords(target.id) : businessStore.deleteLedger(target.id)
-    if (!r.ok) {
-      toast.error(
-        r.reason === 'is-current'
-          ? '删除失败：该账本正在使用，请先切换到其他账本'
-          : r.reason === 'last-one'
-            ? '删除失败：至少需要保留一个账本'
-            : '删除失败：账本不存在或已被删除'
-      )
-      return
-    }
-    deleteTargetId.value = ''
-    toast.success(isRecords ? `已清空「${target.name}」的交易记录` : `已删除账本「${target.name}」`)
-  } catch (e) {
-    console.error('[AppSettings] ledger delete failed', e)
-    toast.error('删除失败，请重试')
-  }
 }
 
 // ====================
@@ -2977,89 +3007,131 @@ onUnmounted(() => {
             </label>
           </div>
 
-          <!-- 账本管理：新建（同年多本，自动分配编号）+ 删除（清空交易记录 / 连账本删除），与页面顶部切换器解耦 -->
-          <div class="bl-manage" data-testid="biz-ledger-manage">
-            <div class="bl-block">
-              <h4 class="bl-subtitle">新建账本</h4>
-              <p class="wb-menu-hint">账本按自然年创建，同一年份可以有多本；每本自动分配编号（年份-序号，如 {{ newLedgerCode }}），且只记录该年份的数据。创建成功后自动切换为当前账本。</p>
-              <div class="remind-fields">
-                <label class="remind-field">
-                  <span class="remind-label">年份</span>
-                  <el-input-number
-                    :min="1970"
-                    :max="9999"
-                    :step="1"
-                    data-testid="biz-ledger-new-year"
-                    v-model="newLedgerYear"
-                  />
-                </label>
-                <label class="remind-field">
-                  <span class="remind-label">名称</span>
-                  <el-input
-                    maxlength="30"
-                    :placeholder="newLedgerPlaceholder"
-                    data-testid="biz-ledger-new-name"
-                    v-model="newLedgerName"
-                  />
-                </label>
-              </div>
-              <div class="remind-actions">
-                <el-button size="small" type="primary" data-testid="biz-ledger-create" @click="handleCreateLedger">
-                  <Icon name="plus" /> 新建并切换
-                </el-button>
-              </div>
-              <p v-if="newLedgerError" class="wb-menu-hint bl-error" data-testid="biz-ledger-new-error">{{ newLedgerError }}</p>
-            </div>
+          <!-- 账本管理（基础设置内独立入口，可折叠）：新建账本 + 账本类别徽标 + 账本列表（年份/名称/操作） -->
+          <div class="bl-manage-card" data-testid="biz-ledger-manage">
+            <button
+              type="button"
+              class="bl-entry"
+              :class="{ open: ledgerManageOpen }"
+              data-testid="biz-ledger-entry"
+              @click="ledgerManageOpen = !ledgerManageOpen"
+            >
+              <Icon name="book" />
+              <span class="bl-entry-title">账本管理</span>
+              <span class="bl-entry-sub">同一年份可有多本，每本自动分配编号（如 {{ newLedgerCode }}），只记录该年份数据</span>
+              <Icon class="bl-entry-caret" :name="ledgerManageOpen ? 'chevron-up' : 'chevron-down'" />
+            </button>
 
-            <div class="bl-block">
-              <h4 class="bl-subtitle">删除账本数据</h4>
-              <p class="wb-menu-hint">删除前会二次确认并列出受影响的数据；操作不可恢复，建议先导出销售记账备份。</p>
-              <div class="remind-fields">
-                <label class="remind-field">
-                  <span class="remind-label">目标账本</span>
-                  <el-select
-                    v-model="deleteTargetId"
-                    placeholder="请选择账本"
-                    data-testid="biz-ledger-delete-target"
+            <div v-show="ledgerManageOpen" class="bl-entry-body">
+              <!-- 账本类别总览：每本账本的编号徽标（当前账本高亮） -->
+              <div class="bl-categories" data-testid="biz-ledger-categories">
+                <span class="bl-cat-label">账本类别</span>
+                <div class="bl-cat-list">
+                  <span
+                    v-for="l in ledgerList"
+                    :key="l.id"
+                    class="bl-cat-badge"
+                    :class="{ current: l.id === businessStore.currentLedgerId }"
+                    :data-testid="`biz-ledger-cat-${ledgerCodeOf(l)}`"
                   >
-                    <el-option
-                      v-for="l in businessStore.ledgers"
-                      :key="l.id"
-                      :value="l.id"
-                      :label="`${ledgerCodeOf(l)} · ${l.name}${l.id === businessStore.currentLedgerId ? '（当前）' : ''}`"
+                    <b>{{ ledgerCodeOf(l) }}</b> {{ l.name }}
+                    <em v-if="l.id === businessStore.currentLedgerId">当前</em>
+                  </span>
+                </div>
+              </div>
+
+              <!-- 新建账本（原布局不变：年份 + 名称 + 新建并切换） -->
+              <div class="bl-block">
+                <h4 class="bl-subtitle">新建账本</h4>
+                <p class="wb-menu-hint">账本按自然年创建，同一年份可以有多本；每本自动分配编号（年份-序号，如 {{ newLedgerCode }}），且只记录该年份的数据。创建成功后自动切换为当前账本。</p>
+                <div class="remind-fields">
+                  <label class="remind-field">
+                    <span class="remind-label">年份</span>
+                    <el-input-number
+                      :min="1970"
+                      :max="9999"
+                      :step="1"
+                      data-testid="biz-ledger-new-year"
+                      v-model="newLedgerYear"
                     />
-                  </el-select>
-                </label>
+                  </label>
+                  <label class="remind-field">
+                    <span class="remind-label">名称</span>
+                    <el-input
+                      maxlength="30"
+                      :placeholder="newLedgerPlaceholder"
+                      data-testid="biz-ledger-new-name"
+                      v-model="newLedgerName"
+                    />
+                  </label>
+                </div>
+                <div class="remind-actions">
+                  <el-button size="small" type="primary" data-testid="biz-ledger-create" @click="handleCreateLedger">
+                    <Icon name="plus" /> 新建并切换
+                  </el-button>
+                </div>
+                <p v-if="newLedgerError" class="wb-menu-hint bl-error" data-testid="biz-ledger-new-error">{{ newLedgerError }}</p>
               </div>
-              <div class="bl-scopes" data-testid="biz-ledger-scopes">
-                <label class="bl-radio">
-                  <input
-                    type="radio"
-                    value="records"
-                    v-model="deleteScope"
-                    data-testid="biz-ledger-scope-records"
-                  />
-                  <span>仅清空该账本的交易记录（进货 / 收摊 / 支出），保留商品、分类与账本设置</span>
-                </label>
-                <label class="bl-radio">
-                  <input
-                    type="radio"
-                    value="ledger"
-                    v-model="deleteScope"
-                    data-testid="biz-ledger-scope-ledger"
-                  />
-                  <span>连同账本本身一并删除（该账本下所有数据随之移除）</span>
-                </label>
-              </div>
-              <p v-if="deleteBlockReason" class="wb-menu-hint bl-error" data-testid="biz-ledger-delete-block">{{ deleteBlockReason }}</p>
-              <div class="remind-actions">
-                <el-button
-                  size="small"
-                  type="danger"
-                  :disabled="!canDelete"
-                  data-testid="biz-ledger-delete"
-                  @click="handleDeleteLedgerData"
-                ><Icon name="trash" /> 删除账本数据</el-button>
+
+              <!-- 账本列表：年份 / 名称 / 操作（修改 / 清空 / 删除） -->
+              <div class="bl-block">
+                <h4 class="bl-subtitle">账本列表</h4>
+                <div class="bl-table-wrap" data-testid="biz-ledger-list">
+                  <table class="bl-table">
+                    <thead>
+                      <tr>
+                        <th class="bl-col-year">年份</th>
+                        <th class="bl-col-name">名称</th>
+                        <th class="bl-col-ops">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr
+                        v-for="l in ledgerList"
+                        :key="l.id"
+                        :data-testid="`biz-ledger-row-${ledgerCodeOf(l)}`"
+                      >
+                        <td class="bl-col-year">{{ l.year }}</td>
+                        <td class="bl-col-name">
+                          <span class="bl-code-badge">{{ ledgerCodeOf(l) }}</span>
+                          <template v-if="editingId !== l.id">{{ l.name }}</template>
+                          <template v-else>
+                            <el-input
+                              size="small"
+                              maxlength="30"
+                              class="bl-edit-input"
+                              data-testid="biz-ledger-edit-name"
+                              v-model="editingName"
+                            />
+                            <span v-if="editingError" class="wb-menu-hint bl-error">{{ editingError }}</span>
+                          </template>
+                        </td>
+                        <td class="bl-col-ops">
+                          <template v-if="editingId !== l.id">
+                            <el-button size="small" data-testid="biz-ledger-edit" @click="startEditLedger(l)">修改</el-button>
+                            <el-button
+                              size="small"
+                              data-testid="biz-ledger-clear"
+                              @click="handleClearLedger(l)"
+                            >清空</el-button>
+                            <el-button
+                              size="small"
+                              type="danger"
+                              :disabled="!!ledgerDeleteBlockReason(l)"
+                              :title="ledgerDeleteBlockReason(l) || '删除该账本及其全部数据'"
+                              data-testid="biz-ledger-delete"
+                              @click="handleDeleteLedgerRow(l)"
+                            >删除</el-button>
+                          </template>
+                          <template v-else>
+                            <el-button size="small" type="primary" data-testid="biz-ledger-edit-save" @click="saveEditLedger(l)">保存</el-button>
+                            <el-button size="small" data-testid="biz-ledger-edit-cancel" @click="cancelEditLedger">取消</el-button>
+                          </template>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
@@ -3951,10 +4023,92 @@ html.dark .tab-btn.active {
 }
 
 /* ===== 销售记账 · 账本管理（新建 / 删除）：两块卡片式分区，沿用 wb-menu 排版 ===== */
-.bl-manage {
+.bl-manage-card {
+  margin-top: 14px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 12px;
+  background-color: var(--color-bg-card, #ffffff);
+  overflow: hidden;
+}
+
+.bl-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--color-text, #1e293b);
+}
+.bl-entry:hover { background-color: var(--color-bg-hover, rgba(0, 0, 0, 0.04)); }
+.bl-entry > svg:first-child { color: var(--color-primary, #3b82f6); flex-shrink: 0; }
+.bl-entry-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+.bl-entry-sub {
+  flex: 1;
+  font-size: 12px;
+  color: var(--color-text-muted, #94a3b8);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bl-entry-caret { flex-shrink: 0; color: var(--color-text-muted, #94a3b8); }
+
+.bl-entry-body {
+  padding: 4px 16px 16px;
   display: grid;
   gap: 14px;
-  margin-top: 4px;
+}
+
+.bl-categories {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.bl-cat-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted, #94a3b8);
+  padding-top: 4px;
+  flex-shrink: 0;
+}
+.bl-cat-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.bl-cat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+  background-color: var(--color-bg, #f1f5f9);
+  border: 1px solid var(--color-border, #e2e8f0);
+  color: var(--color-text, #1e293b);
+}
+.bl-cat-badge b {
+  font-family: var(--font-mono, monospace);
+  color: var(--color-primary, #3b82f6);
+}
+.bl-cat-badge em {
+  font-style: normal;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background-color: var(--color-primary, #3b82f6);
+  color: #fff;
+}
+.bl-cat-badge.current {
+  background-color: color-mix(in srgb, var(--color-primary, #3b82f6) 12%, transparent);
+  border-color: var(--color-primary, #3b82f6);
 }
 
 .bl-block {
@@ -3996,12 +4150,55 @@ html.dark .tab-btn.active {
 /* 校验/阻断提示（红色，区别于普通 hint） */
 .bl-error {
   color: var(--color-danger, #ef4444);
+  margin: 6px 0 0;
 }
+
+.bl-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+}
+.bl-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.bl-table th,
+.bl-table td {
+  padding: 9px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  color: var(--color-text, #1e293b);
+}
+.bl-table thead th {
+  background-color: var(--color-bg, #f1f5f9);
+  font-weight: 600;
+  color: var(--color-text-muted, #64748b);
+  white-space: nowrap;
+}
+.bl-table tbody tr:last-child td { border-bottom: none; }
+.bl-col-year { width: 84px; }
+.bl-col-ops { width: 220px; white-space: nowrap; }
+.bl-col-name { min-width: 200px; }
+.bl-code-badge {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 7px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  border-radius: 6px;
+  background-color: color-mix(in srgb, var(--color-primary, #3b82f6) 12%, transparent);
+  color: var(--color-primary, #3b82f6);
+  vertical-align: middle;
+}
+.bl-edit-input { width: 200px; }
 
 html.dark .bl-block {
   background-color: var(--color-bg-hover, #374151);
   border-color: var(--color-border, #374151);
 }
+html.dark .bl-table thead th { background-color: var(--color-bg-hover, #374151); }
+html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
 
 /* 教师工作台菜单设置：按分组（基础功能 / 特色功能）分段 */
 .tc-menu-group {
