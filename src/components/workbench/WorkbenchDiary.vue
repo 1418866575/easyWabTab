@@ -274,40 +274,46 @@ async function handleInsertImage(e: Event): Promise<void> {
           <el-button size="small" data-testid="dj-view-btn" @click="showListView = true">查看</el-button>
         </div>
         <div class="dj-toolbar-left">
-          <el-date-picker
-            :model-value="selectedDate"
-            type="date"
-            value-format="YYYY-MM-DD"
-            class="dj-date-input"
-            data-testid="dj-date-input"
-            size="small"
-            @change="(v: unknown) => handleDateInput({ target: { value: String(v ?? '') } } as unknown as Event)"
-          />
-          <el-select
-            v-model="draftCategory"
-            placeholder="分类"
-            size="small"
-            class="dj-cat-select"
-            data-testid="dj-cat-select"
-          >
-            <el-option label="未分类" value="" />
-            <el-option
-              v-for="c in diaryCatStore.allCategories"
-              :key="c.id"
-              :label="c.name"
-              :value="c.id"
+          <!-- 第一行：日历 + 分类下拉（同一行，窄屏自动换行） -->
+          <div class="dj-toolbar-controls">
+            <el-date-picker
+              :model-value="selectedDate"
+              type="date"
+              value-format="YYYY-MM-DD"
+              class="dj-date-input"
+              data-testid="dj-date-input"
+              size="small"
+              @change="(v: unknown) => handleDateInput({ target: { value: String(v ?? '') } } as unknown as Event)"
             />
-          </el-select>
-          <el-button size="small" data-testid="dj-today-btn" @click="handleToday">今日</el-button>
-          <el-button type="primary" size="small" data-testid="dj-save-btn" @click="handleSave">保存</el-button>
-          <el-button
-            v-if="selectedEntry"
-            type="danger"
-            plain
-            size="small"
-            data-testid="dj-delete-btn"
-            @click="handleDelete"
-          >删除</el-button>
+            <el-select
+              v-model="draftCategory"
+              placeholder="分类"
+              size="small"
+              class="dj-cat-select"
+              data-testid="dj-cat-select"
+            >
+              <el-option label="未分类" value="" />
+              <el-option
+                v-for="c in diaryCatStore.allCategories"
+                :key="c.id"
+                :label="c.name"
+                :value="c.id"
+              />
+            </el-select>
+          </div>
+          <!-- 第二行：操作按钮单独成行 -->
+          <div class="dj-toolbar-actions">
+            <el-button size="small" data-testid="dj-today-btn" @click="handleToday">今日</el-button>
+            <el-button type="primary" size="small" data-testid="dj-save-btn" @click="handleSave">保存</el-button>
+            <el-button
+              v-if="selectedEntry"
+              type="danger"
+              plain
+              size="small"
+              data-testid="dj-delete-btn"
+              @click="handleDelete"
+            >删除</el-button>
+          </div>
         </div>
         <div class="dj-toolbar-right">
           <el-button
@@ -456,8 +462,6 @@ async function handleInsertImage(e: Event): Promise<void> {
     </Transition>
 
 </template>
-
-
 <style scoped>
 /* 面板容器（与 WorkbenchNotes .wb-notes 同构） */
 .wb-diary {
@@ -517,6 +521,22 @@ async function handleInsertImage(e: Event): Promise<void> {
 
 .dj-toolbar-left,
 .dj-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 左侧改为纵向两段：上段「日历 + 分类下拉」同一行，下段操作按钮单独一行；
+   每段内部 flex-wrap，窄屏自动换行，不挤压、不错位 */
+.dj-toolbar-left {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.dj-toolbar-controls,
+.dj-toolbar-actions {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -611,8 +631,6 @@ async function handleInsertImage(e: Event): Promise<void> {
   gap: 12px;
   min-height: 0;
 }
-
-
 /* 卡片网格：弹框内固定每行 4 个（minmax(0,1fr) 防长内容溢出） */
 .dj-grid {
   display: grid;
@@ -1041,10 +1059,11 @@ async function handleInsertImage(e: Event): Promise<void> {
     min-height: 0;
   }
 
+  /* 页面级滚动后面板不再钉满一屏：原 height:100% 依赖父链撑满已失效，
+     改为显式最小高度，保证编辑/预览区体感稳定（内容超出随页面滚动） */
   .dj-main .dj-content-input,
   .dj-main .dj-preview {
-    height: 100%;
-    min-height: 0;
+    min-height: 420px;
   }
 
   .dj-main .dj-preview {
@@ -1053,6 +1072,7 @@ async function handleInsertImage(e: Event): Promise<void> {
 
   .dj-main .dj-content-input :deep(.el-textarea__inner) {
     height: 100%;
+    min-height: 420px !important;
   }
 }
 
@@ -1078,10 +1098,11 @@ async function handleInsertImage(e: Event): Promise<void> {
     min-height: 0;
   }
 
+  /* 页面级滚动后面板不再钉满一屏：原 height:100% 依赖父链撑满已失效，
+     改为显式最小高度，保证编辑/预览区体感稳定（内容超出随页面滚动） */
   .dj-main .dj-content-input,
   .dj-main .dj-preview {
-    height: 100%;
-    min-height: 0;
+    min-height: 420px;
   }
 
   .dj-main .dj-preview {
@@ -1090,14 +1111,13 @@ async function handleInsertImage(e: Event): Promise<void> {
 
   .dj-main .dj-content-input :deep(.el-textarea__inner) {
     height: 100%;
+    min-height: 420px !important;
   }
 }
 
 /* 历史区改为可滚动列表：桌面作用域内 .dj-grid-scroll 启用内部滚动；移动端页面滚动（.wb-content overflow-y:auto），不在此叠加 */
 @media (min-width: 769px) {
-  .dj-grid-scroll {
-    overflow-y: auto;
-  }
+
 }
 /* ===== 日记列表弹框（DialogOverlay 范式，与 WorkbenchExercise 一致；base 类本组件 scoped 内定义） ===== */
 .dialog-overlay {

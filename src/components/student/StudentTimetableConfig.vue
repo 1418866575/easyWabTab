@@ -392,9 +392,7 @@ onMounted(async () => {
   flex-direction: column;
   gap: 14px;
   padding: 16px;
-  height: 100%;
   min-height: 0;
-  overflow: auto;
 }
 /* 嵌入设置弹窗：由外层容器负责内边距与滚动，自身不再撑满高度 */
 .sttc-shell.is-embedded {
@@ -527,8 +525,6 @@ onMounted(async () => {
   margin-bottom: 6px;
 }
 .sttc-errors-list {
-  max-height: 220px;
-  overflow-y: auto;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
   background: var(--color-bg-card, #fff);

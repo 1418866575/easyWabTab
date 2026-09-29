@@ -439,8 +439,6 @@ onUnmounted(() => {
         <span class="ld-charts-chevron" :class="{ open: chartsExpanded }">▾</span>
       </el-button>
       <div v-show="chartsExpanded" class="ld-charts-row">
-
-
       <!-- 支出分类占比环形图（当月 expense>0 才显示整块；ring 常量同 WorkbenchPomodoro） -->
       <div v-if="monthStats.expense > 0" class="ld-ratio-block" data-testid="ld-ratio-block">
         <div class="ld-ratio-title">支出占比</div>
@@ -742,6 +740,7 @@ onUnmounted(() => {
               height="100%"
               empty-text="本月暂无记录"
             >
+              <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (recordsPage - 1) * pageSize + i + 1" />
               <el-table-column prop="entry.date" label="日期" width="130" align="center">
                 <template #default="{ row }: { row: EntryView }">
                   {{ row.entry.date }}
@@ -815,10 +814,8 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  /* 桌面端 .wb-content 为 overflow:hidden 且本面板 flex:1 min-height:0，
-     图表区（含下方「近 12 个月收支情况」）变高时需自身可滚动，否则被裁切无法下滑查看 */
-  overflow-y: auto;
-  min-height: 0;
+  /* 页面级滚动：本面板随内容自然撑开（.wb-content > * 已由 flex:1 改为 flex:0 0 auto），
+     纵向滚动统一交给 .wb-content，面板内不再自建滚动容器 */
 }
 
 /* 防止 flex 列内子项被压缩而导致内容无法滚动（显式作用于三块主区域；
@@ -1894,16 +1891,13 @@ html.dark input.form-input {
 
 /* ===== 桌面端 ≥769px：自适应分页契约（Wave-2 T11，R1/R2/R7）===== */
 @media (min-width: 769px) {
-  /* flex 列内可收缩占满剩余高度（T3 shell 契约 .wb-content > * flex:1 min-height:0 已在视图层就位） */
+  /* 页面级滚动：列表随内容撑开（原 flex:1 依赖「面板钉满一屏」契约，视图层已改为随内容撑开） */
   .ld-list {
-    flex: 1;
-    min-height: 0;
+    flex: 0 0 auto;
   }
 
   /* 列表区滚动兜底：仅 !fitsOnePage（一屏放不下）时由模板类绑定启用（R7） */
-  .ld-list-scroll {
-    overflow-y: auto;
-  }
+
 }
 
 /* ===== 桌面中低宽度（769-1599px）：图表区并排压缩纵向占用（R1 一屏契约，1366×768 ledger 头部溢出修复；≥1600px 保持上下堆叠）===== */

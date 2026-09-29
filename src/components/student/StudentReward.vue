@@ -220,6 +220,7 @@ onMounted(async () => {
             height="100%"
             empty-text="暂无交易记录"
           >
+            <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (historyPage - 1) * pageSize + i + 1" />
             <el-table-column label="时间" width="170" align="center">
               <template #default="{ row }">{{ txnDateText(row.createdAt) }}</template>
             </el-table-column>
@@ -328,7 +329,6 @@ onMounted(async () => {
 .sr-shell {
   display: flex;
   flex-direction: column;
-  height: 100%;
   min-height: 0;
   gap: 10px;
 }
@@ -400,8 +400,6 @@ onMounted(async () => {
   gap: 10px;
   align-content: start;
 }
-.sr-grid-scroll { overflow-y: auto; }
-
 .sr-reward-card {
   position: relative;
   background: var(--color-surface, #fff);

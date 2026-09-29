@@ -937,10 +937,9 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
 .st-parent-panel {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  flex: 0 0 auto;
   min-height: 0;
   padding: 18px 20px;
-  overflow: auto;
   gap: 16px;
   background: var(--color-bg, #f5f5f5);
 }
@@ -1045,11 +1044,9 @@ html.dark .stp-tab.active {
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 12px; padding: 16px;
   display: flex; flex-direction: column; gap: 18px;
-  flex: 1; min-height: 0;
-  /* 各 Tab 内容独立滚动：桌面端 .st-content 为 overflow:hidden + 子元素 flex:1 min-height:0，
-     若此处不滚动则超长内容（如孩子报告的折线图）会被截断且无法下滑。 */
-  overflow-y: auto;
-  overflow-x: hidden;
+  flex: 0 0 auto; min-height: 0;
+  /* 页面级滚动：Tab 内容随内容撑开，纵向滚动统一交给 .st-content
+     （原 .st-content 桌面端为 overflow:hidden，各 Tab 只能内部独立滚动） */
 }
 .stp-tab-pane { display: flex; flex-direction: column; gap: 16px; }
 

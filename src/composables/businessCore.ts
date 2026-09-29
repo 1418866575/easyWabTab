@@ -6,6 +6,7 @@ import type {
   BusinessDailyRecord,
   BusinessData,
   BusinessExpense,
+  BusinessExpenseDaily,
   BusinessExpenseCategory,
   BusinessLedger,
   BusinessProduct,
@@ -23,7 +24,7 @@ import { formatYuan } from './ledgerCore.ts'
 export const BUSINESS_EXPENSE_BUILTIN_IDS = DEFAULT_BUSINESS_EXPENSE_CATEGORIES.map(c => c.id)
 
 /** 商品分类 id 前缀 / 支出自定义分类 id 前缀 / 其余实体 id 前缀 */
-export const ID_PREFIX = { product: 'bp_', productCat: 'bpc_', expense: 'be_', expenseCat: 'bec_', purchase: 'bpr_', daily: 'bd_' } as const
+export const ID_PREFIX = { product: 'bp_', productCat: 'bpc_', expense: 'be_', expenseCat: 'bec_', purchase: 'bpr_', daily: 'bd_', expenseDaily: 'bed_' } as const
 
 /** 低库存预警阈值默认值 */
 export const DEFAULT_LOW_STOCK_THRESHOLD = 20
@@ -81,7 +82,7 @@ export function emptyBusinessData(): BusinessData {
     products: [],
     purchases: [],
     dailyRecords: [],
-    expenses: [],
+    expenseDailies: [],
     settings: {
       stallName: '',
       lowStockThreshold: DEFAULT_LOW_STOCK_THRESHOLD,
@@ -126,7 +127,14 @@ export function normalizeExpenseCategories(raw: unknown): BusinessExpenseCategor
       name: c.name.trim().slice(0, 20),
       sortOrder: typeof c.sortOrder === 'number' && Number.isFinite(c.sortOrder) ? c.sortOrder : out.length + 1,
       visible: c.visible !== false,
-      isBuiltIn: c.isBuiltIn === true || BUSINESS_EXPENSE_BUILTIN_IDS.includes(c.id)
+      isBuiltIn: c.isBuiltIn === true || BUSINESS_EXPENSE_BUILTIN_IDS.includes(c.id),
+      // 产品默认单位/单价（可选）：与 normExpense 同口径归一，非法/非正数 → undefined
+      unit: typeof c.unit === 'string' && c.unit.trim() ? c.unit.trim().slice(0, EXPENSE_UNIT_MAX) : undefined,
+      unitPrice: typeof c.unitPrice === 'number' && Number.isFinite(c.unitPrice) && c.unitPrice > 0 ? c.unitPrice : undefined,
+      // 商品数量（可选）：正数才保留，否则 undefined（用于 单价 ÷ 商品数量 = 商品单价）
+      productQuantity: typeof c.productQuantity === 'number' && Number.isFinite(c.productQuantity) && c.productQuantity > 0 ? c.productQuantity : undefined,
+      // 关联商品（可选）：指向 BusinessProduct.id；空串/非字符串 → undefined
+      productId: typeof c.productId === 'string' && c.productId ? c.productId : undefined
     })
   }
   // 内置缺失补回（按默认序插到已有项之后，sortOrder 递增）
@@ -152,7 +160,7 @@ function normProduct(raw: unknown): BusinessProduct | null {
     id: p.id,
     name: p.name.trim().slice(0, 40),
     categoryId: typeof p.categoryId === 'string' && p.categoryId ? p.categoryId : undefined,
-    unit: typeof p.unit === 'string' ? p.unit.trim().slice(0, 8) || '件' : '件',
+    unit: typeof p.unit === 'string' ? p.unit.trim().slice(0, BIZ_UNIT_MAX) || '件' : '件',
     purchasePrice: Math.max(0, numOf(p.purchasePrice)),
     sellingPrice: Math.max(0, numOf(p.sellingPrice)),
     // 会员价：可选字段，仅记录展示；非法值（负数/NaN/非数字）一律按「未设置」处理
@@ -215,6 +223,232 @@ export function sumExpenseAmounts(expenses: BusinessExpense[], ids: string[]): n
   return Math.round(sum * 100) / 100
 }
 
+/** 扁平化：取出所有日容器下的支出明细（items），不携带日期（仅供金额/数量统计） */
+export function flatExpenseItems(dailies: BusinessExpenseDaily[] | undefined): BusinessExpense[] {
+  const out: BusinessExpense[] = []
+  for (const d of dailies ?? []) for (const it of d.items) out.push(it)
+  return out
+}
+
+/** 扁平化（带日期与日容器 id）：用于关联候选、对账标签等需要日期上下文的场景 */
+export interface ExpenseItemWithDay {
+  item: BusinessExpense
+  date: string
+  dailyId: string
+}
+export function expenseItemsWithDay(dailies: BusinessExpenseDaily[] | undefined): ExpenseItemWithDay[] {
+  const out: ExpenseItemWithDay[] = []
+  for (const d of dailies ?? []) for (const it of d.items) out.push({ item: it, date: d.date, dailyId: d.id })
+  return out
+}
+
+// ===== 需求 D：新增库存按商品名自动关联同名未关联支出 + 派生库存数量 =====
+
+/**
+ * 自动关联筛选：给定库存目标商品（BusinessProduct.id），从「尚未被任何库存记录关联」的支出明细中，
+ * 筛出「其所属支出产品的 productId === targetProductId」的明细 id 并返回。
+ * 即「新增库存按商品名自动关联同名、未关联支出」的核心筛选。
+ *
+ * 过滤口径：
+ * - 已计入「支出关联统计」的支出（被任一库存占用的，见 expenseLinkOwners）一律排除 → 仅剩「尚未关联」；
+ * - 再按「支出产品配置的商品绑定 productId」与目标商品匹配 → 实现「同名（同一商品）」。
+ *
+ * @returns 命中且可关联的支出明细 id 列表（顺序：日记账顺序 → 同日明细顺序）
+ */
+export function autoLinkExpensesForProduct(
+  targetProductId: string,
+  dailies: BusinessExpenseDaily[] | undefined,
+  purchases: BusinessPurchase[] | undefined,
+  categories: BusinessExpenseCategory[] | undefined
+): string[] {
+  if (!targetProductId) return []
+  const owned = expenseLinkOwners(purchases ?? [])
+  const matched: string[] = []
+  for (const d of dailies ?? []) {
+    for (const it of d.items) {
+      if (owned.has(it.id)) continue
+      const cat = (categories ?? []).find(c => c.id === it.categoryId)
+      if (cat && cat.productId === targetProductId) matched.push(it.id)
+    }
+  }
+  return matched
+}
+
+/**
+ * 派生库存数量：对每条「已关联支出明细」，取
+ *   「支出数量(item.quantity) × 该支出产品配置的商品数量(category.productQuantity)」
+ * 多笔关联时累加求和（需求 D：一笔库存关联多笔支出 → 各笔计算结果求和汇总）。
+ *
+ * 兜底：
+ * - productQuantity 缺省（旧数据 / 未配置）按 1 处理 → 即只计支出数量本身、不放大；
+ * - item.quantity 缺省或非有限值按 0 处理（缺数量则该笔不贡献，避免凭空放大）。
+ *
+ * @returns 派生出的库存数量（两位小数四舍五入）
+ */
+export function deriveInventoryQuantity(
+  linkedExpenseIds: string[],
+  dailies: BusinessExpenseDaily[] | undefined,
+  categories: BusinessExpenseCategory[] | undefined
+): number {
+  const ids = new Set(linkedExpenseIds ?? [])
+  if (ids.size === 0) return 0
+  const catMap = new Map<string, BusinessExpenseCategory>()
+  for (const c of categories ?? []) catMap.set(c.id, c)
+  let sum = 0
+  for (const d of dailies ?? []) {
+    for (const it of d.items) {
+      if (!ids.has(it.id)) continue
+      const qty = typeof it.quantity === 'number' && Number.isFinite(it.quantity) ? it.quantity : 0
+      const cat = catMap.get(it.categoryId)
+      const pq =
+        cat && typeof cat.productQuantity === 'number' && Number.isFinite(cat.productQuantity) && cat.productQuantity > 0
+          ? cat.productQuantity
+          : 1
+      sum += qty * pq
+    }
+  }
+  return Math.round(sum * 100) / 100
+}
+
+/** 新增支出明细的输入（不含 id；amount 由调用方算好：数量 × 单价） */
+export interface ExpenseItemInput {
+  categoryId: string
+  amount: number
+  title?: string
+  note?: string
+  quantity?: number
+  unitPrice?: number
+  unit?: string
+  orderPhone?: string
+  orderAddress?: string
+  salesman?: string
+  paymentMethod?: string
+}
+
+/**
+ * 向某一天的支出日记账追加一条产品明细；若该日尚无记录则新建日容器。
+ * 「添加同一天自动合并」：同日多次新增都归入同一天记录（一天一笔支出）。不改入参，返回新数组。
+ */
+export function addExpenseItem(
+  dailies: BusinessExpenseDaily[],
+  date: string,
+  input: ExpenseItemInput
+): BusinessExpenseDaily[] {
+  const item: BusinessExpense = { id: newId(ID_PREFIX.expense), ...input }
+  const now = new Date().toISOString()
+  const idx = (dailies ?? []).findIndex(d => d.date === date)
+  if (idx === -1) {
+    return [...(dailies ?? []), { id: newId(ID_PREFIX.expenseDaily), date, items: [item], createdAt: now, updatedAt: now }]
+  }
+  const next = [...dailies]
+  next[idx] = { ...next[idx], items: [...next[idx].items, item], updatedAt: now }
+  return next
+}
+
+/** 更新某条支出明细（按 item id）；找不到则返回原数组。不改入参。 */
+export function updateExpenseItem(
+  dailies: BusinessExpenseDaily[],
+  itemId: string,
+  patch: Partial<ExpenseItemInput>
+): BusinessExpenseDaily[] {
+  let changed = false
+  const next = (dailies ?? []).map(d => {
+    const i = d.items.findIndex(it => it.id === itemId)
+    if (i === -1) return d
+    changed = true
+    const items = [...d.items]
+    items[i] = { ...items[i], ...patch }
+    return { ...d, items, updatedAt: new Date().toISOString() }
+  })
+  return changed ? next : (dailies ?? [])
+}
+
+/** 删除某条支出明细（按 item id）；当日无其他明细则整日删除；找不到则返回原数组。不改入参。 */
+export function deleteExpenseItem(dailies: BusinessExpenseDaily[], itemId: string): BusinessExpenseDaily[] {
+  let changed = false
+  const next = (dailies ?? [])
+    .map(d => {
+      if (!d.items.some(it => it.id === itemId)) return d
+      changed = true
+      const items = d.items.filter(it => it.id !== itemId)
+      if (items.length === 0) return null
+      return { ...d, items, updatedAt: new Date().toISOString() }
+    })
+    .filter((d): d is BusinessExpenseDaily => d !== null)
+  return changed ? next : (dailies ?? [])
+}
+
+/** 弹框草稿行：新增行无 id，编辑行带原 item id（保存时保留 id 以不破坏库存关联 expenseIds 指向） */
+export interface ExpenseItemDraft extends ExpenseItemInput {
+  /** 编辑态保留原明细 id；新增行缺省 → 保存时生成新 id */
+  id?: string
+}
+
+/**
+ * 支出日记账 upsert（与销售 upsertDailyRecord 对应）：以「日期」为容器键，明细整体替换/合并。
+ *  - 新增（originalDailyId 为 null）：把明细并入该日期的日容器（同日自动合并，不存在则新建）。
+ *  - 编辑（originalDailyId 非空）：
+ *      · 日期未变 → 整体替换该日明细（保留传入的 id，新行生成 id，被删行自然消失）；
+ *      · 日期变更 → 移除原日容器，将明细并入目标日期（目标日已存在则追加，id 唯一不冲突）；
+ *  - 明细为空 → 删除原日容器（若有），保证不产生空日记账。
+ * 不改入参，返回新数组；调用方（store）负责年守卫与持久化。标题归一化（产品名兜底）由调用方在传入前完成。
+ */
+export function upsertExpenseDaily(
+  dailies: BusinessExpenseDaily[] | undefined,
+  originalDailyId: string | null,
+  date: string,
+  items: ExpenseItemDraft[]
+): BusinessExpenseDaily[] {
+  const base = dailies ?? []
+  const now = new Date().toISOString()
+  const resolved: BusinessExpense[] = (items ?? [])
+    .filter(it => it.categoryId)
+    .map(it => {
+      const e: BusinessExpense = {
+        id: typeof it.id === 'string' && it.id ? it.id : newId(ID_PREFIX.expense),
+        categoryId: it.categoryId,
+        amount: Math.max(0, Number(it.amount) || 0)
+      }
+      if (typeof it.title === 'string' && it.title.trim()) e.title = it.title.trim().slice(0, EXPENSE_TITLE_MAX)
+      if (typeof it.note === 'string' && it.note.trim()) e.note = it.note.trim().slice(0, 100)
+      if (Number.isFinite(it.quantity as number) && Number(it.quantity) > 0) e.quantity = Number(it.quantity)
+      if (Number.isFinite(it.unitPrice as number) && Number(it.unitPrice) > 0) e.unitPrice = Number(it.unitPrice)
+      if (typeof it.unit === 'string' && it.unit.trim()) e.unit = it.unit.trim().slice(0, EXPENSE_UNIT_MAX)
+      if (typeof it.orderPhone === 'string' && it.orderPhone.trim()) e.orderPhone = it.orderPhone.trim().slice(0, EXPENSE_ORDER_PHONE_MAX)
+      if (typeof it.orderAddress === 'string' && it.orderAddress.trim()) e.orderAddress = it.orderAddress.trim().slice(0, EXPENSE_ORDER_ADDRESS_MAX)
+      if (typeof it.salesman === 'string' && it.salesman.trim()) e.salesman = it.salesman.trim().slice(0, EXPENSE_SALESMAN_MAX)
+      if (typeof it.paymentMethod === 'string' && it.paymentMethod.trim()) e.paymentMethod = it.paymentMethod.trim().slice(0, EXPENSE_PAYMENT_METHOD_MAX)
+      return e
+    })
+
+  // 无明细 → 删除原日容器（若有），不残留空日记账
+  if (resolved.length === 0) {
+    return originalDailyId ? base.filter(d => d.id !== originalDailyId) : base
+  }
+
+  const original = originalDailyId ? base.find(d => d.id === originalDailyId) : undefined
+  const sameDay = !!original && original.date === date
+
+  let next = base
+  // 日期变更：先移除原日容器，明细整体迁到新日期
+  if (original && !sameDay) {
+    next = next.filter(d => d.id !== original.id)
+  }
+
+  if (sameDay && original) {
+    next = next.map(d => (d.id === original.id ? { ...d, items: resolved, updatedAt: now } : d))
+  } else {
+    const idx = next.findIndex(d => d.date === date)
+    if (idx !== -1) {
+      // 目标日已存在（含日期变更后的合并）：追加明细（id 唯一，不冲突）
+      next = next.map(d => (d.date === date ? { ...d, items: [...d.items, ...resolved], updatedAt: now } : d))
+    } else {
+      next = [...next, { id: newId(ID_PREFIX.expenseDaily), date, items: resolved, createdAt: now, updatedAt: now }]
+    }
+  }
+  return next
+}
+
 /** 金额比较容差（分）：剩余金额 ≤ 该值视为已全额关联 */
 const AMOUNT_EPS = 0.005
 
@@ -229,50 +463,54 @@ function occupiedAmountOf(_purchase: BusinessPurchase, expense: BusinessExpense)
 
 /** 可关联支出项（已被其它进货记录全额关联的支出不出现在候选里） */
 export interface ExpenseLinkOption {
+  /** 具体某一笔支出明细（某一天的某产品） */
   expense: BusinessExpense
+  /** 其所属日容器的日期（YYYY-MM-DD） */
+  date: string
   /** 仍可关联的余额 = 支出金额 − 已被「其它」进货记录占用的金额（整笔关联模型下可关联时等于全额） */
   remaining: number
   /** 当前记录自身是否已勾选（自身勾选的必须保留并显示为选中，便于取消） */
   selfLinked: boolean
-  /** 展示标签：`YYYY-MM-DD 标题`（同一天多笔时用于区分） */
+  /** 展示标签：`YYYY-MM-DD 产品名 [数量单位]`（同一天多产品时用于区分） */
   label: string
 }
 
 /**
- * 支出候选列表（日期倒序，同日按创建时间倒序）。
+ * 支出候选列表（按所属日期倒序）。每条候选是「某一天的某产品」明细。
  * 过滤规则：
- *  1. 已被「任意其它」进货记录全额关联的支出**直接排除**，不再出现在候选中；
+ *  1. 已被「任意其它」进货记录全额关联的明细**直接排除**，不再出现在候选中；
  *  2. 若未来支持按金额部分关联：已全额关联的隐藏，仍有余额的保留（remaining 即余额）；
- *  3. 当前记录自身已勾选的支出（selectedIds，编辑态即本记录 expenseIds）始终保留并显示为选中；
+ *  3. 当前记录自身已勾选的明细（selectedIds，编辑态即本记录 expenseIds）始终保留并显示为选中；
  *  4. 过滤在纯函数内一次完成 —— 分页 / 搜索 / 刷新都基于同一份结果，口径始终一致。
  */
 export function selectableExpenses(
-  expenses: BusinessExpense[],
+  expenseDailies: BusinessExpenseDaily[],
   purchases: BusinessPurchase[],
   editingId?: string | null,
   selectedIds?: string[]
 ): ExpenseLinkOption[] {
-  const list = expenses ?? []
+  const all = expenseItemsWithDay(expenseDailies)
   const selected = new Set((selectedIds ?? []).filter(x => typeof x === 'string' && !!x))
-  /** 支出 id → 已被其它进货记录占用的金额（正在编辑的那笔记货不算占用） */
+  /** 支出明细 id → 已被其它进货记录占用的金额（正在编辑的那笔记货不算占用） */
   const occupied = new Map<string, number>()
   for (const p of purchases ?? []) {
     if (editingId && p.id === editingId) continue
     for (const eid of p.expenseIds ?? []) {
-      const e = list.find(x => x.id === eid)
-      if (!e) continue
-      occupied.set(eid, (occupied.get(eid) ?? 0) + occupiedAmountOf(p, e))
+      const found = all.find(x => x.item.id === eid)
+      if (!found) continue
+      occupied.set(eid, (occupied.get(eid) ?? 0) + occupiedAmountOf(p, found.item))
     }
   }
-  return [...list]
+  return all
     .sort((a, b) => {
       if (a.date !== b.date) return a.date < b.date ? 1 : -1
-      return a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0
+      return a.item.id < b.item.id ? 1 : a.item.id > b.item.id ? -1 : 0
     })
-    .map(e => {
+    .map(x => {
+      const e = x.item
       const amount = typeof e.amount === 'number' && Number.isFinite(e.amount) ? Math.max(0, e.amount) : 0
       const remaining = Math.round((amount - (occupied.get(e.id) ?? 0)) * 100) / 100
-      return { expense: e, remaining: Math.max(0, remaining), selfLinked: selected.has(e.id), label: expenseLabel(e) }
+      return { expense: e, date: x.date, remaining: Math.max(0, remaining), selfLinked: selected.has(e.id), label: expenseLabel(e, x.date) }
     })
     .filter(o => o.selfLinked || o.remaining > AMOUNT_EPS)
 }
@@ -337,13 +575,20 @@ export const DEFAULT_EXPENSE_TITLE = '未命名支出'
 /** 支出标题最大长度（汉字/字符同计） */
 export const EXPENSE_TITLE_MAX = 20
 
-/** 支出单位预设（下拉可选项；支持自定义输入） */
-export const EXPENSE_UNITS = ['件', '包', '根', '箱', '袋', '个', '斤', '盒', '瓶', '条', '只', '套', '台', '米', '卷']
-/** 支出新增可选字段最大长度 */
-export const EXPENSE_UNIT_MAX = 10
+/** 单位预设（下拉可选项；支持自定义输入）——商品单位与支出单位共用同一份预设，保证两处口径一致 */
+export const BIZ_UNITS = ['件', '包', '根', '箱', '袋', '个', '斤', '盒', '瓶', '条', '只', '套', '台', '米', '卷']
+/** 支出单位预设（= 通用 BIZ_UNITS，保留原名兼容既有引用） */
+export const EXPENSE_UNITS = BIZ_UNITS
+/** 支出新增可选字段最大长度（单位上限 BIZ_UNIT_MAX 与商品共用） */
+export const BIZ_UNIT_MAX = 10
+export const EXPENSE_UNIT_MAX = BIZ_UNIT_MAX
 export const EXPENSE_ORDER_PHONE_MAX = 30
 export const EXPENSE_ORDER_ADDRESS_MAX = 100
 export const EXPENSE_SALESMAN_MAX = 30
+/** 支付方式预设（下拉可选项；支持自定义输入）；可选，旧数据缺省为空 */
+export const EXPENSE_PAYMENT_METHODS = ['现金', '微信', '支付宝', '银行卡', '其他'] as const
+/** 支付方式最大长度（自定义输入截断上限） */
+export const EXPENSE_PAYMENT_METHOD_MAX = 20
 
 /**
  * 支出标题归一化：去空白 + 截断；为空时用 fallback（迁移时传分类名）再退回默认标题。
@@ -357,31 +602,81 @@ export function normalizeExpenseTitle(raw: unknown, fallback?: string): string {
   return DEFAULT_EXPENSE_TITLE
 }
 
-/** 支出展示标签：`YYYY-MM-DD 标题`（同一天多笔时用它区分） */
-export function expenseLabel(e: BusinessExpense): string {
+/** 支出展示标签：`YYYY-MM-DD 产品名`（明细无 date，由调用方传入所属日容器的 date；数量单位由调用处用 expenseQtyUnit 另行展示） */
+export function expenseLabel(e: BusinessExpense, date?: string): string {
   const title = typeof e?.title === 'string' && e.title.trim() ? e.title.trim() : DEFAULT_EXPENSE_TITLE
-  return `${e?.date ?? ''} ${title}`
+  return `${date ?? ''} ${title}`
+}
+
+/**
+ * 支出数量+单位展示文本：如「3件」「1.5斤」。
+ * 数量必须为正数才展示；缺失 / 0 / 非有限值返回空串（旧数据无 quantity 时不影响既有标签）。
+ * 用于进货「关联支出」候选列表与已关联徽章提示，直观呈现该笔支出买了多少。
+ */
+export function expenseQtyUnit(e: BusinessExpense): string {
+  const q = typeof e?.quantity === 'number' && Number.isFinite(e.quantity) ? e.quantity : NaN
+  if (!(q > 0)) return ''
+  const unit = typeof e?.unit === 'string' && e.unit.trim() ? e.unit.trim() : ''
+  const qStr = Number.isInteger(q) ? String(q) : String(Math.round(q * 100) / 100)
+  return `${qStr}${unit}`
+}
+
+/**
+ * 支出产品的「商品单价」= 单价 ÷ 商品数量（派生，只读）。
+ * 单价（unitPrice）与商品数量（productQuantity）均须为正数才有效，否则返回 undefined。
+ * 用于「支出产品管理」里单价之后的商品单价展示（如 单价 60 ÷ 商品数量 12 = 商品单价 5）。
+ */
+export function productUnitPriceOf(c: BusinessExpenseCategory): number | undefined {
+  const up = typeof c?.unitPrice === 'number' && Number.isFinite(c.unitPrice) ? c.unitPrice : NaN
+  const qty = typeof c?.productQuantity === 'number' && Number.isFinite(c.productQuantity) ? c.productQuantity : NaN
+  if (!(up > 0) || !(qty > 0)) return undefined
+  return Math.round((up / qty) * 100) / 100
 }
 
 /** 单笔支出录入校验（标题必填且不超长 / 金额 > 0 / 分类必选） */
-export function validateExpenseRow(row: {
-  title?: string
-  categoryId?: string
-  amount?: number | string
-  unit?: string
-  orderPhone?: string
-  orderAddress?: string
-  salesman?: string
-}): ValidationIssue[] {
+/** 支出金额：数量 × 单价（两位小数；非法值按 0 处理） */
+export function calcExpenseAmount(quantity: number | string, unitPrice: number | string): number {
+  const q = Number(quantity)
+  const p = Number(unitPrice)
+  if (!Number.isFinite(q) || !Number.isFinite(p)) return 0
+  return Math.round(Math.max(0, q) * Math.max(0, p) * 100) / 100
+}
+
+export function validateExpenseRow(
+  row: {
+    title?: string
+    categoryId?: string
+    amount?: number | string
+    quantity?: number | string
+    unitPrice?: number | string
+    unit?: string
+    orderPhone?: string
+    orderAddress?: string
+    salesman?: string
+  },
+  /** 标题是否必填：支出弹框里标题已改为可选（留空取产品名兜底），故传 false */
+  opts?: { titleRequired?: boolean }
+): ValidationIssue[] {
   const issues: ValidationIssue[] = []
   const title = typeof row.title === 'string' ? row.title.trim() : ''
   const amount = Number(row.amount)
-  if (!title) issues.push({ level: 'error', message: '请填写支出标题' })
-  else if (title.length > EXPENSE_TITLE_MAX) {
+  const titleRequired = opts?.titleRequired !== false
+  if (!title) {
+    if (titleRequired) issues.push({ level: 'error', message: '请填写支出标题' })
+  } else if (title.length > EXPENSE_TITLE_MAX) {
     issues.push({ level: 'error', message: `标题不能超过 ${EXPENSE_TITLE_MAX} 个字` })
   }
-  if (!row.categoryId) issues.push({ level: 'error', message: '请选择支出分类' })
-  if (!Number.isFinite(amount) || amount <= 0) issues.push({ level: 'error', message: '支出金额必须 > 0' })
+  if (!row.categoryId) issues.push({ level: 'error', message: '请选择产品' })
+  // 数量 / 单价（金额 = 数量 × 单价 自动算出时）：给了就一并校验，避免填了 0 却看不出原因
+  if (row.quantity !== undefined) {
+    const q = Number(row.quantity)
+    if (!Number.isFinite(q) || q <= 0) issues.push({ level: 'error', message: '数量必须 > 0' })
+  }
+  if (row.unitPrice !== undefined) {
+    const p = Number(row.unitPrice)
+    if (!Number.isFinite(p) || p <= 0) issues.push({ level: 'error', message: '单价必须 > 0' })
+  }
+  if (!Number.isFinite(amount) || amount <= 0) issues.push({ level: 'error', message: '支出金额必须 > 0（金额 = 数量 × 单价）' })
   return issues
 }
 
@@ -398,28 +693,91 @@ export function validateExpenseRows(
   return { errors, warns: [] }
 }
 
+/** 归一化单条支出明细（用于日容器 BusinessExpenseDaily.items；无 date，date 挂在日容器上） */
 function normExpense(raw: unknown, categories?: BusinessExpenseCategory[]): BusinessExpense | null {
   if (raw === null || typeof raw !== 'object') return null
   const e = raw as Record<string, unknown>
   if (typeof e.id !== 'string' || !e.id) return null
-  if (typeof e.date !== 'string' || !isValidDateKey(e.date)) return null
   if (typeof e.categoryId !== 'string' || !e.categoryId) return null
   const categoryName = categories?.find(c => c.id === e.categoryId)?.name
   return {
     id: e.id,
-    // 历史数据无 title → 用分类名兜底，再退回「未命名支出」（保证兼容且可读）
-    title: normalizeExpenseTitle(e.title, categoryName),
-    date: e.date,
     categoryId: e.categoryId,
     amount: Math.max(0, numOf(e.amount)),
+    // 历史数据无 title → 用分类名兜底，再退回「未命名支出」（保证兼容且可读）
+    title: normalizeExpenseTitle(e.title, categoryName),
     note: typeof e.note === 'string' && e.note.trim() ? e.note.trim().slice(0, 100) : undefined,
-    // 新增可选字段：空串/缺失 → 不写入；否则截断（保持旧数据缺省为 undefined）
+    // 数量/单价：金额 = 数量 × 单价；旧数据缺省 undefined（展示时按数量 1 / 单价=金额 回显）
+    quantity: Number.isFinite(numOf(e.quantity)) && numOf(e.quantity) > 0 ? numOf(e.quantity) : undefined,
+    unitPrice: Number.isFinite(numOf(e.unitPrice)) && numOf(e.unitPrice) > 0 ? numOf(e.unitPrice) : undefined,
     unit: typeof e.unit === 'string' && e.unit.trim() ? e.unit.trim().slice(0, EXPENSE_UNIT_MAX) : undefined,
     orderPhone: typeof e.orderPhone === 'string' && e.orderPhone.trim() ? e.orderPhone.trim().slice(0, EXPENSE_ORDER_PHONE_MAX) : undefined,
     orderAddress: typeof e.orderAddress === 'string' && e.orderAddress.trim() ? e.orderAddress.trim().slice(0, EXPENSE_ORDER_ADDRESS_MAX) : undefined,
     salesman: typeof e.salesman === 'string' && e.salesman.trim() ? e.salesman.trim().slice(0, EXPENSE_SALESMAN_MAX) : undefined,
-    createdAt: typeof e.createdAt === 'string' ? e.createdAt : new Date(0).toISOString()
+    // 支付方式：可选；仅当非空字符串才写入，保持旧数据/旧断言的对象形状不变
+    ...(typeof e.paymentMethod === 'string' && e.paymentMethod.trim()
+      ? { paymentMethod: e.paymentMethod.trim().slice(0, EXPENSE_PAYMENT_METHOD_MAX) }
+      : {})
   }
+}
+
+/**
+ * 支出日记账归一化：兼容两种持久化格式。
+ *  - 新格式（data.expenseDailies）：直接逐日归一，items 走 normExpense。
+ *  - 旧格式（data.expenses 扁平、每条带 date）：按 date 分组迁移为「一天一笔」日容器，
+ *    同日多条按原 createdAt 排序作为明细顺序；迁移后 date 从明细移除、仅保留在日容器上。
+ */
+export function normalizeExpenseDailies(data: Record<string, unknown>, categories: BusinessExpenseCategory[]): BusinessExpenseDaily[] {
+  if (Array.isArray(data.expenseDailies)) {
+    return data.expenseDailies
+      .map((d): BusinessExpenseDaily | null => {
+        if (!d || typeof d !== 'object') return null
+        const dd = d as Record<string, unknown>
+        if (typeof dd.date !== 'string' || !isValidDateKey(dd.date)) return null
+        const id = typeof dd.id === 'string' && dd.id ? dd.id : newId(ID_PREFIX.expenseDaily)
+        const items = Array.isArray(dd.items)
+          ? dd.items.map(it => normExpense(it, categories)).filter(Boolean) as BusinessExpense[]
+          : []
+        return {
+          id,
+          date: dd.date,
+          items,
+          note: typeof dd.note === 'string' && dd.note.trim() ? dd.note.trim().slice(0, 100) : undefined,
+          createdAt: typeof dd.createdAt === 'string' ? dd.createdAt : new Date(0).toISOString(),
+          updatedAt: typeof dd.updatedAt === 'string' ? dd.updatedAt : new Date(0).toISOString()
+        }
+      })
+      .filter(Boolean) as BusinessExpenseDaily[]
+  }
+  // 旧格式：扁平 expenses 按 date 分组
+  const flat = Array.isArray(data.expenses) ? (data.expenses as unknown[]) : []
+  const byDate = new Map<string, unknown[]>()
+  for (const raw of flat) {
+    if (raw === null || typeof raw !== 'object') continue
+    const r = raw as Record<string, unknown>
+    const date = typeof r.date === 'string' && isValidDateKey(r.date) ? r.date : null
+    if (!date) continue
+    if (!byDate.has(date)) byDate.set(date, [])
+    byDate.get(date)!.push(raw)
+  }
+  const dailies: BusinessExpenseDaily[] = []
+  for (const [date, raws] of byDate) {
+    const sorted = [...raws].sort((a, b) => {
+      const ca = (a as Record<string, unknown>).createdAt ?? ''
+      const cb = (b as Record<string, unknown>).createdAt ?? ''
+      return ca < cb ? -1 : ca > cb ? 1 : 0
+    })
+    const items = sorted.map(r => normExpense(r, categories)).filter(Boolean) as BusinessExpense[]
+    dailies.push({
+      id: newId(ID_PREFIX.expenseDaily),
+      date,
+      items,
+      createdAt: typeof (sorted[0] as Record<string, unknown>)?.createdAt === 'string' ? ((sorted[0] as Record<string, unknown>).createdAt as string) : new Date(0).toISOString(),
+      updatedAt: new Date(0).toISOString()
+    })
+  }
+  dailies.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)) // 日期倒序，与列表一致
+  return dailies
 }
 
 function normalizeSettings(raw: unknown): BusinessSettings {
@@ -458,9 +816,7 @@ export function normalizeBusinessData(raw: unknown): BusinessData {
     products: Array.isArray(data.products) ? (data.products.map(normProduct).filter(Boolean) as BusinessProduct[]) : [],
     purchases: Array.isArray(data.purchases) ? (data.purchases.map(normPurchase).filter(Boolean) as BusinessPurchase[]) : [],
     dailyRecords: Array.isArray(data.dailyRecords) ? (data.dailyRecords.map(normDailyRecord).filter(Boolean) as BusinessDailyRecord[]) : [],
-    expenses: Array.isArray(data.expenses)
-      ? (data.expenses.map(e => normExpense(e, normalizeExpenseCategories(data.expenseCategories))).filter(Boolean) as BusinessExpense[])
-      : [],
+    expenseDailies: normalizeExpenseDailies(data, normalizeExpenseCategories(data.expenseCategories)),
     settings: normalizeSettings(data.settings)
   }
 }
@@ -492,8 +848,12 @@ export function addProductCategory(list: BusinessProductCategory[], name: string
   return { ok: true, reason: 'ok', list: [...list, next] }
 }
 
-/** 新增支出分类（自定义 bec_ 前缀） */
-export function addExpenseCategory(list: BusinessExpenseCategory[], name: string): CategoryOpResult<BusinessExpenseCategory> {
+/** 新增支出产品（自定义 bec_ 前缀）；opts.unit/unitPrice 为产品默认单位与单价，新增支出选该产品时自动回填 */
+export function addExpenseCategory(
+  list: BusinessExpenseCategory[],
+  name: string,
+  opts?: { unit?: string; unitPrice?: number; productQuantity?: number; productId?: string }
+): CategoryOpResult<BusinessExpenseCategory> {
   const trimmed = name.trim()
   if (!trimmed) return { ok: false, reason: 'empty' }
   if (isCategoryNameTaken(trimmed, '', list)) return { ok: false, reason: 'duplicate' }
@@ -502,9 +862,46 @@ export function addExpenseCategory(list: BusinessExpenseCategory[], name: string
     name: trimmed.slice(0, 20),
     sortOrder: list.reduce((m, c) => Math.max(m, c.sortOrder), 0) + 1,
     visible: true,
-    isBuiltIn: false
+    isBuiltIn: false,
+    unit: opts?.unit ? opts.unit.trim().slice(0, EXPENSE_UNIT_MAX) || undefined : undefined,
+    unitPrice: typeof opts?.unitPrice === 'number' && Number.isFinite(opts?.unitPrice) && (opts.unitPrice as number) > 0 ? opts.unitPrice : undefined,
+    productQuantity: typeof opts?.productQuantity === 'number' && Number.isFinite(opts?.productQuantity) && (opts.productQuantity as number) > 0 ? opts.productQuantity : undefined,
+    productId: typeof opts?.productId === 'string' && opts.productId ? opts.productId : undefined
   }
   return { ok: true, reason: 'ok', list: [...list, next] }
+}
+
+/** 更新支出产品的默认单位/单价/商品数量（不校验名称；与 normExpense 同口径归一，空值/非法 → 清除） */
+export function updateExpenseCategory(
+  list: BusinessExpenseCategory[],
+  id: string,
+  patch: { unit?: string | null; unitPrice?: number | null; productQuantity?: number | null; productId?: string | null }
+): CategoryOpResult<BusinessExpenseCategory> {
+  const target = list.find(c => c.id === id)
+  if (!target) return { ok: false, reason: 'not-found' }
+  return {
+    ok: true,
+    reason: 'ok',
+    list: list.map(c => {
+      if (c.id !== id) return c
+      const next: BusinessExpenseCategory = { ...c }
+      if (patch.unit !== undefined) {
+        next.unit = typeof patch.unit === 'string' && patch.unit.trim() ? patch.unit.trim().slice(0, EXPENSE_UNIT_MAX) : undefined
+      }
+      if (patch.unitPrice !== undefined) {
+        next.unitPrice =
+          typeof patch.unitPrice === 'number' && Number.isFinite(patch.unitPrice) && patch.unitPrice > 0 ? patch.unitPrice : undefined
+      }
+      if (patch.productQuantity !== undefined) {
+        next.productQuantity =
+          typeof patch.productQuantity === 'number' && Number.isFinite(patch.productQuantity) && patch.productQuantity > 0 ? patch.productQuantity : undefined
+      }
+      if (patch.productId !== undefined) {
+        next.productId = typeof patch.productId === 'string' && patch.productId ? patch.productId : undefined
+      }
+      return next
+    })
+  }
 }
 
 /** 通用改名：商品/支出分类均允许（含支出内置）；名称唯一（除自身外） */
@@ -616,8 +1013,9 @@ export function sortDailyRecords(records: BusinessDailyRecord[]): BusinessDailyR
   return [...records].sort((a, b) => (a.date === b.date ? (a.updatedAt < b.updatedAt ? 1 : -1) : a.date < b.date ? 1 : -1))
 }
 
-export function sortExpenses(expenses: BusinessExpense[]): BusinessExpense[] {
-  return [...expenses].sort((a, b) => (a.date === b.date ? (a.createdAt < b.createdAt ? 1 : -1) : a.date < b.date ? 1 : -1))
+/** 支出日记账按日期倒序（与销售记录同序；同日保持数组顺序） */
+export function sortExpenseDailies(dailies: BusinessExpenseDaily[]): BusinessExpenseDaily[] {
+  return [...dailies].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
 }
 
 // ===== 销售/库存/统计 =====
@@ -1237,8 +1635,8 @@ export interface ExpenseReconciliation {
   linked: ExpenseLinkRow[]
   /** 未关联任何支出的进货（成本只体现在 COGS，不影响对账结论，供人工确认） */
   unlinkedPurchases: { id: string; productId: string; productName: string; date: string; total: number }[]
-  /** 未被任何进货关联的支出（可能漏记进货，也可能本就与进货无关） */
-  unlinkedExpenses: BusinessExpense[]
+  /** 未被任何进货关联的支出（可能漏记进货，也可能本就与进货无关）；附带其所属日容器日期便于展示 */
+  unlinkedExpenses: (BusinessExpense & { date: string })[]
   linkedTotal: number
   unlinkedPurchaseTotal: number
   unlinkedExpenseTotal: number
@@ -1248,7 +1646,9 @@ export interface ExpenseReconciliation {
 export function calcExpenseReconciliation(data: BusinessData): ExpenseReconciliation {
   const products = data.products ?? []
   const purchases = data.purchases ?? []
-  const expenses = data.expenses ?? []
+  const itemsWithDay = expenseItemsWithDay(data.expenseDailies)
+  const expenses = itemsWithDay.map(x => x.item)
+  const dateOf = new Map(itemsWithDay.map(x => [x.item.id, x.date]))
   const nameOf = (pid: string): string => products.find(p => p.id === pid)?.name ?? '（已删除商品）'
   const owners = expenseLinkOwners(purchases)
   const linked: ExpenseLinkRow[] = []
@@ -1269,20 +1669,30 @@ export function calcExpenseReconciliation(data: BusinessData): ExpenseReconcilia
       total: p.total,
       expenseIds: ids,
       expenseTotal,
-      expenseDates: picked.map(e => e.date).sort().join(' / '),
+      expenseDates: picked.map(e => dateOf.get(e.id) ?? '').sort().join(' / '),
       expenseLabels: picked
         .slice()
-        .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.createdAt < b.createdAt ? -1 : 1))
-        .map(e => expenseLabel(e)),
+        .sort((a, b) => {
+          const da = dateOf.get(a.id) ?? ''
+          const db = dateOf.get(b.id) ?? ''
+          return da < db ? -1 : da > db ? 1 : 0
+        })
+        .map(e => expenseLabel(e, dateOf.get(e.id))),
       diff: Math.round((p.total - expenseTotal) * 100) / 100
     })
   }
-  const unlinkedExpenses = expenses.filter(e => !owners.has(e.id))
+  const unlinkedExpenses = expenses
+    .filter(e => !owners.has(e.id))
+    .map(e => ({ ...e, date: dateOf.get(e.id) ?? '' }))
   const round = (n: number): number => Math.round(n * 100) / 100
   return {
     linked: linked.sort((a, b) => (a.date < b.date ? 1 : -1)),
     unlinkedPurchases: unlinkedPurchases.sort((a, b) => (a.date < b.date ? 1 : -1)),
-    unlinkedExpenses: unlinkedExpenses.sort((a, b) => (a.date < b.date ? 1 : -1)),
+    unlinkedExpenses: unlinkedExpenses.sort((a, b) => {
+      const da = dateOf.get(a.id) ?? ''
+      const db = dateOf.get(b.id) ?? ''
+      return da < db ? 1 : da > db ? -1 : 0
+    }),
     linkedTotal: round(linked.reduce((s, r) => s + r.total, 0)),
     unlinkedPurchaseTotal: round(unlinkedPurchases.reduce((s, r) => s + r.total, 0)),
     unlinkedExpenseTotal: round(unlinkedExpenses.reduce((s, e) => s + e.amount, 0))
@@ -1307,7 +1717,7 @@ export interface ExpenseLinkStats {
  */
 export function calcExpenseLinkStats(data: BusinessData): ExpenseLinkStats {
   const purchases = data.purchases ?? []
-  const expenses = data.expenses ?? []
+  const expenses = flatExpenseItems(data.expenseDailies)
   const owners = expenseLinkOwners(purchases)
   const amountOf = (e: BusinessExpense): number =>
     typeof e.amount === 'number' && Number.isFinite(e.amount) ? e.amount : 0
@@ -1675,7 +2085,7 @@ export function calcBusinessStats(data: BusinessData): BusinessStats {
   }
   const profit = revenue - cost
   const margin = revenue > 0 ? profit / revenue : 0
-  const expenseTotal = data.expenses.reduce((s, e) => s + e.amount, 0)
+  const expenseTotal = flatExpenseItems(data.expenseDailies).reduce((s, e) => s + e.amount, 0)
   const pending = calcPendingSales(data, fifo)
   return {
     revenue: Math.round(revenue * 100) / 100,
@@ -1819,7 +2229,7 @@ export function calcMonthlyStats(data: BusinessData, year: number): MonthlyStat[
   const round2 = (n: number): number => Math.round(n * 100) / 100
   const y = Math.floor(year)
   const records = (data?.dailyRecords ?? []).filter(r => typeof r?.date === 'string')
-  const expenses = (data?.expenses ?? []).filter(e => typeof e?.date === 'string')
+  const expenseItems = expenseItemsWithDay(data?.expenseDailies)
   const fifo = calcFifoAllocation(data?.purchases ?? [], data?.dailyRecords ?? [], data?.products ?? [])
   const out: MonthlyStat[] = []
   for (let m = 1; m <= 12; m++) {
@@ -1832,9 +2242,9 @@ export function calcMonthlyStats(data: BusinessData, year: number): MonthlyStat[
       0
     )
     const expense = round2(
-      expenses
-        .filter(e => e.date.startsWith(prefix))
-        .reduce((s, e) => s + (typeof e.amount === 'number' && Number.isFinite(e.amount) ? e.amount : 0), 0)
+      expenseItems
+        .filter(x => x.date.startsWith(prefix))
+        .reduce((s, x) => s + (typeof x.item.amount === 'number' && Number.isFinite(x.item.amount) ? x.item.amount : 0), 0)
     )
     // 会员价模拟：售出数量 ×（会员价 ?? 售价），成本口径不变
     const memberRevenue = round2(
@@ -2103,13 +2513,14 @@ export interface ExpenseTrendPoint {
 export function calcExpenseTrend(data: BusinessData, endDate: string, days = 30): ExpenseTrendPoint[] {
   if (!isValidDateKey(endDate) || days <= 0) return []
   const end = new Date(endDate + 'T00:00:00')
+  const items = expenseItemsWithDay(data.expenseDailies)
   const out: ExpenseTrendPoint[] = []
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(end.getFullYear(), end.getMonth(), end.getDate() - i)
     const key = localDateKey(d)
-    const amount = data.expenses
-      .filter(e => e.date === key)
-      .reduce((s, e) => s + e.amount, 0)
+    const amount = items
+      .filter(x => x.date === key)
+      .reduce((s, x) => s + (typeof x.item.amount === 'number' && Number.isFinite(x.item.amount) ? x.item.amount : 0), 0)
     out.push({ date: key, amount: Math.round(amount * 100) / 100 })
   }
   return out
@@ -2125,9 +2536,10 @@ export interface ExpenseCategoryBreakdown {
 
 /** 计算各支出分类金额占比 */
 export function calcExpenseCategoryBreakdown(data: BusinessData): ExpenseCategoryBreakdown[] {
-  const total = data.expenses.reduce((s, e) => s + e.amount, 0)
+  const expenses = flatExpenseItems(data.expenseDailies)
+  const total = expenses.reduce((s, e) => s + e.amount, 0)
   const byCat: Record<string, number> = {}
-  for (const e of data.expenses) {
+  for (const e of expenses) {
     byCat[e.categoryId] = (byCat[e.categoryId] ?? 0) + e.amount
   }
   return Object.entries(byCat)
@@ -2498,7 +2910,7 @@ export function isLedgerEmpty(data: BusinessData): boolean {
     !data.products.length &&
     !data.purchases.length &&
     !data.dailyRecords.length &&
-    !data.expenses.length
+    !data.expenseDailies.length
   )
 }
 
@@ -2552,7 +2964,7 @@ function mergeLedgerData(l: BusinessData | undefined, r: BusinessData | undefine
     products: mergeByIdKeepNewest(l?.products, r?.products, 'id', 'createdAt'),
     purchases: mergeByIdKeepNewest(l?.purchases, r?.purchases, 'id', 'createdAt'),
     dailyRecords: dedupeDailyByDate(mergeByIdKeepNewest(l?.dailyRecords, r?.dailyRecords, 'id', 'updatedAt')),
-    expenses: mergeByIdKeepNewest(l?.expenses, r?.expenses, 'id', 'createdAt'),
+    expenseDailies: mergeByIdKeepNewest(l?.expenseDailies, r?.expenseDailies, 'id', 'updatedAt'),
     // 档口设置是单例对象、无时间戳可比 → 本地优先，缺失时取远端，都没有才回默认
     settings: l?.settings ?? r?.settings ?? emptyBusinessData().settings
   }
@@ -2573,13 +2985,13 @@ export function ledgerRecordCounts(data: BusinessData | undefined): {
   products: number
   purchases: number
   dailyRecords: number
-  expenses: number
+  expenseDailies: number
 } {
   return {
     products: data?.products?.length ?? 0,
     purchases: data?.purchases?.length ?? 0,
     dailyRecords: data?.dailyRecords?.length ?? 0,
-    expenses: data?.expenses?.length ?? 0
+    expenseDailies: data?.expenseDailies?.length ?? 0
   }
 }
 
@@ -2604,7 +3016,7 @@ export function clearLedgerRecords(list: BusinessLedger[], id: string, now: stri
   const ledger: BusinessLedger = {
     ...target,
     updatedAt: now,
-    data: { ...target.data, purchases: [], dailyRecords: [], expenses: [] }
+    data: { ...target.data, purchases: [], dailyRecords: [], expenseDailies: [] }
   }
   const ledgers = [...list]
   ledgers[index] = ledger

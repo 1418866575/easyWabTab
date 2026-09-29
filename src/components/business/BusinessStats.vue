@@ -26,7 +26,7 @@ const data = computed(() => ({
   products: store.products,
   purchases: store.purchases,
   dailyRecords: store.dailyRecords,
-  expenses: store.expenses,
+  expenseDailies: store.expenseDailies,
   settings: store.settings
 }))
 
@@ -424,6 +424,7 @@ function printReport(): void {
         max-height="320"
         empty-text="暂无商品"
       >
+        <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" />
         <el-table-column label="商品" min-width="120" align="left" prop="name" />
         <el-table-column label="分类" width="110" align="center" prop="categoryName" />
         <el-table-column label="售出" width="90" align="right">
@@ -465,6 +466,7 @@ function printReport(): void {
         max-height="320"
         empty-text="暂无数据"
       >
+        <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" />
         <el-table-column label="分类" min-width="140" align="left" prop="name" />
         <el-table-column label="售出" width="100" align="right" prop="sold" />
         <el-table-column label="营业额" width="120" align="right">
@@ -493,7 +495,7 @@ function printReport(): void {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  overflow-y: auto;
+  
 }
 
 /* 布局：趋势图 70% + 环形图 30%，左右排列；高度对齐 */

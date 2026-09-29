@@ -7,7 +7,7 @@
 // 4. 弹框增加 category 字段
 // 5. 卡片栅格/行高与成人 WorkbenchHabits 完全一致（minmax(300px,1fr)，rowHeight 330，自适应每页条数）
 
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { showConfirm } from '@/utils/dialog'
 import { useStudentHabitsStore } from '@/stores/studentHabits'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
@@ -30,8 +30,6 @@ import {
 } from '@/composables/studentHabitsCore'
 import HabitCalendarCard from '@/components/workbench/HabitCalendarCard.vue'
 import { STUDENT_HABIT_BUILTIN_CATEGORIES } from '@/types'
-import { usePanelPaging } from '@/composables/usePanelPaging'
-import PanelPager from '@/components/workbench/PanelPager.vue'
 import Icon from '@/components/Icon.vue'
 import StudentToolbar from '@/components/student/StudentToolbar.vue'
 
@@ -84,18 +82,7 @@ const viewHabits = computed(() =>
     }))
 )
 
-// 自适应分页（改用月历卡片后行高与成人一致：330）
-const mainEl = ref<HTMLElement | null>(null)
-const listEl = ref<HTMLElement | null>(null)
-const paging = usePanelPaging({
-  items: () => viewHabits.value,
-  rowHeight: 330,
-  containerRef: mainEl,
-  gridRef: listEl
-})
-const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto } = paging
-
-watch(activeCategory, () => goto(1))
+// 一次性展示全部习惯（无分页）：月历卡片随内容撑开，由页面统一滚动
 
 const FREQUENCY_OPTIONS: { value: HabitFrequency; label: string }[] = [
   { value: 7, label: '每天' },
@@ -170,7 +157,6 @@ async function saveEditDialog(): Promise<void> {
   const result = await store.addHabit(name, dialogCategory.value, dialogFrequency.value, dialogColor.value)
   if (result.ok) {
     closeEditDialog()
-    goto(1)
   }
   habitErrorToast(result)
 }
@@ -182,7 +168,6 @@ async function handleDelete(id: string): Promise<void> {
   const result = await store.deleteHabit(id)
   if (result.ok) {
     if (editingId.value === id) closeEditDialog()
-    goto(1)
   }
   habitErrorToast(result)
 }
@@ -320,15 +305,15 @@ onMounted(async () => {
       >{{ tab.label }}</el-radio-button>
     </el-radio-group>
 
-    <div ref="mainEl" class="sh-main">
+    <div class="sh-main">
       <div v-if="store.habits.length === 0" class="empty-state" data-testid="sh-empty">
         <p>还没有习惯{{ stageSeeding ? '，正在为你准备学段默认习惯...' : '，点上方「新增习惯」开始吧' }}</p>
       </div>
 
-      <div v-else ref="listEl" class="sh-list" :class="{ 'sh-list-scroll': !fitsOnePage }">
+      <div v-else class="sh-list">
         <TransitionGroup name="grid">
           <HabitCalendarCard
-            v-for="v in pageItems"
+            v-for="v in viewHabits"
             :key="v.habit.id"
             :habit="v.habit"
             :records="store.records"
@@ -341,14 +326,6 @@ onMounted(async () => {
         </TransitionGroup>
       </div>
     </div>
-
-    <PanelPager
-      v-if="totalPages > 1"
-      :page="currentPage"
-      :total="totalPages"
-      @prev="prev"
-      @next="next"
-    />
 
     <el-dialog
       v-model="showEditDialog"
@@ -481,7 +458,6 @@ onMounted(async () => {
 .st-habits {
   display: flex;
   flex-direction: column;
-  height: 100%;
   min-height: 0;
   gap: 12px;
   padding: 16px;
@@ -504,10 +480,6 @@ onMounted(async () => {
   gap: 10px;
   align-content: start;
 }
-.sh-list-scroll {
-  overflow-y: auto;
-}
-
 .sh-card {
   position: relative;
   display: flex;
@@ -719,8 +691,6 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 46vh;
-  overflow-y: auto;
 }
 .sh-record-row {
   display: flex;

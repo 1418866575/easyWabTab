@@ -54,7 +54,7 @@ const lowStock = computed(() => lowStockProducts({
   products: store.products,
   purchases: store.purchases,
   dailyRecords: store.dailyRecords,
-  expenses: store.expenses,
+  expenseDailies: store.expenseDailies,
   settings: store.settings
 }))
 
@@ -69,7 +69,7 @@ const data = computed(() => ({
   products: store.products,
   purchases: store.purchases,
   dailyRecords: store.dailyRecords,
-  expenses: store.expenses,
+  expenseDailies: store.expenseDailies,
   settings: store.settings
 }))
 
@@ -393,8 +393,6 @@ function exportInventoryExcel(): void {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 168px;
-  overflow-y: auto;
 }
 
 .bizinv-warn-item {
@@ -502,10 +500,6 @@ function exportInventoryExcel(): void {
   flex: 1;
   min-height: 0;
 }
-.bizinv-list.bizinv-list-scroll {
-  overflow-y: auto;
-}
-
 @media (max-width: 768px) {
   .bizinv { min-height: 0; }
   .bizinv-list { flex: none; overflow: visible; }

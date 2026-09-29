@@ -13,6 +13,7 @@ import { useStudentReadingStore } from '@/stores/studentReading'
 import { useStudentHealthStore } from '@/stores/studentHealth'
 import { useStudentGradesStore } from '@/stores/studentGrades'
 import { useAppSettingsStore } from '@/stores/settings'
+import WorkbenchManagePanel from '@/components/WorkbenchManagePanel.vue'
 import StudentHealth from '@/components/student/StudentHealth.vue'
 import StudentGrades from '@/components/student/StudentGrades.vue'
 import StudentHome from '@/components/student/StudentHome.vue'
@@ -33,7 +34,6 @@ import StudentParentPinDialog from '@/components/student/StudentParentPinDialog.
 import StudentPanelPlaceholder from '@/components/student/StudentPanelPlaceholder.vue'
 import StudentOnboarding from '@/components/student/StudentOnboarding.vue'
 import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
-import PageSwitcher from '@/components/PageSwitcher.vue'
 import Icon from '@/components/Icon.vue'
 import SkeletonBlock from '@/components/SkeletonBlock.vue'
 import { useCloudSync } from '@/composables/useCloudSync'
@@ -275,7 +275,13 @@ async function onOnboardingComplete() {
   <div class="st-shell">
     <header class="st-header">
       <div class="st-header-left">
-        <PageSwitcher current="student" />
+        <!-- 左上角「工作台管理」同款入口：站点图标 + 点击弹出工作台切换面板（替换原 PageSwitcher 下拉，与导航站行为一致） -->
+        <WorkbenchManagePanel
+          :trigger-icon="settingsStore.studentPageIcon"
+          trigger-builtin="notes"
+          :trigger-label="settingsStore.studentPageDisplayName"
+          force-show
+        />
         <span
           class="st-stage-badge"
           :style="{ backgroundColor: stageBadge.color }"
@@ -655,12 +661,14 @@ async function onOnboardingComplete() {
 }
 
 @media (min-width: 769px) {
+  /* 页面级滚动：内容区统一纵向滚动（原 overflow:hidden 会把超一屏的内容直接裁掉） */
   .st-content {
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
+  /* 面板随内容自然撑开（原 flex:1 把面板钉满一屏，迫使各面板自建内部滚动条） */
   .st-content > * {
-    flex: 1;
-    min-height: 0;
+    flex: 0 0 auto;
   }
 }
 

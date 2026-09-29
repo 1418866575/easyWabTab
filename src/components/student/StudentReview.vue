@@ -227,6 +227,7 @@ function daysClass(days: number): string {
             height="100%"
             empty-text="还没有复习条目，点左上角「新增复习」开始吧"
           >
+            <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (currentPage - 1) * pageSize + i + 1" />
             <el-table-column label="学科" width="90" align="center">
               <template #default="{ row }">
                 <span class="sr-subject-badge">{{ row.subject }}</span>
@@ -411,7 +412,6 @@ function daysClass(days: number): string {
 .sr-shell {
   display: flex;
   flex-direction: column;
-  height: 100%;
   min-height: 0;
   gap: 12px;
 }
@@ -422,8 +422,6 @@ function daysClass(days: number): string {
   align-items: center;
   padding: 0 4px;
 }
-
-
 .sr-stats {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
@@ -516,17 +514,13 @@ function daysClass(days: number): string {
 }
 
 .sr-list {
-  flex: 1;
+  flex: 0 0 auto;
   min-height: 0;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  overflow-y: auto;
+  
 }
-.sr-list-scroll {
-  overflow-y: auto;
-}
-
 .sr-card {
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #e5e7eb);

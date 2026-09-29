@@ -437,6 +437,7 @@ onUnmounted(() => {
             height="100%"
             empty-text="没有符合搜索条件的成员"
           >
+            <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (listPage - 1) * pageSize + i + 1" />
             <el-table-column label="姓名" min-width="160" align="center" show-overflow-tooltip>
               <template #default="{ row }">
                 <div class="fg-name">
@@ -906,7 +907,7 @@ html.dark .fg-age-preview { border-color: var(--color-border, #374151); }
 
 .fg-tree-info { font-size: 13px; color: var(--color-text-secondary, #64748b); }
 .fg-tree-muted { color: var(--color-text-muted, #9ca3af); }
-.fg-mindmap { display: flex; flex-direction: column; gap: 6px; padding: 4px 0; flex: 1; min-height: 0; overflow-y: auto; }
+.fg-mindmap { display: flex; flex-direction: column; gap: 6px; padding: 4px 0; flex: 0 0 auto; min-height: 0;  }
 .fg-rel { font-size: 12px; color: var(--color-text-secondary, #6b7280); }
 
 /* ===== 关系弹框 ===== */

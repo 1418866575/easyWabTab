@@ -297,6 +297,7 @@ onUnmounted(() => {
               height="100%"
               empty-text="暂无睡眠记录"
             >
+              <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (listPage - 1) * pageSize + i + 1" />
               <el-table-column label="日期" width="130" align="center">
                 <template #default="{ row }">{{ row.date }}</template>
               </el-table-column>
@@ -1170,10 +1171,6 @@ html.dark .btn-delete {
   .wb-exercise {
     flex: 1;
     min-height: 0;
-  }
-
-  .ex-list-scroll {
-    overflow-y: auto;
   }
 }
 </style>

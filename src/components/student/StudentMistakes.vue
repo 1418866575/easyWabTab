@@ -285,6 +285,7 @@ onMounted(() => {
             height="100%"
             empty-text="还没有错题，点左上角「新增错题」开始吧"
           >
+            <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (currentPage - 1) * pageSize + i + 1" />
             <el-table-column label="学科" width="90" align="center">
               <template #default="{ row }">
                 <span class="sm-subject-badge">{{ row.subject }}</span>
@@ -488,7 +489,6 @@ onMounted(() => {
 .sm-shell {
   display: flex;
   flex-direction: column;
-  height: 100%;
   min-height: 0;
   gap: 10px;
 }
@@ -609,18 +609,18 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
   color: var(--color-text-soft, #6b7280);
   font-size: 14px;
+  min-height: 200px;
 }
 
 .sm-list {
-  flex: 1;
+  flex: 0 0 auto;
   min-height: 0;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  overflow-y: auto;
+  
 }
 
 .sm-card {

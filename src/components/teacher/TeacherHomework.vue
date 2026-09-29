@@ -264,6 +264,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
         <!-- 列表视图 -->
         <div v-if="vm.mode === 'list'" class="hw-list-area">
           <el-table class="ewt-table" :data="pageItems" stripe border size="default" style="width: 100%" empty-text="还没有作业记录">
+            <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (currentPage - 1) * pageSize + i + 1" />
             <el-table-column label="学科" width="110" align="center">
               <template #default="{ row }">
                 <span class="hw-subject-badge">{{ row.subject || '—' }}</span>
@@ -427,6 +428,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
         </div>
         <div v-else class="hw-miss-area">
           <el-table class="ewt-table" :data="detailMissesSorted" stripe border size="default" style="width: 100%">
+            <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" />
             <el-table-column label="学号" width="110" align="center" show-overflow-tooltip>
               <template #default="{ row }">{{ row.studentNo || '—' }}</template>
             </el-table-column>

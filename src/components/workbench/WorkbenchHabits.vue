@@ -6,8 +6,6 @@ import { useToast } from '@/composables/useToast'
 import { localToday } from '@/composables/todoCore'
 import { DEFAULT_HABIT_COLOR } from '@/composables/habitCore'
 import type { HabitFrequency } from '@/composables/habitCore'
-import { usePanelPaging } from '@/composables/usePanelPaging'
-import PanelPager from './PanelPager.vue'
 import Icon from '@/components/Icon.vue'
 import HabitCalendarCard from './HabitCalendarCard.vue'
 
@@ -31,15 +29,7 @@ const viewHabits = computed(() =>
     .map(({ h }) => h)
 )
 
-// ===== 自适应分页（月历卡片更高，rowHeight 取到 ~330）=====
-const listEl = ref<HTMLElement | null>(null)
-const paging = usePanelPaging({
-  items: () => viewHabits.value,
-  rowHeight: 330,
-  containerRef: listEl,
-  gridRef: listEl
-})
-const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto } = paging
+// 一次性展示全部习惯（无分页）：月历卡片随内容撑开，由页面统一滚动
 
 // 月历卡片点击某天 = 打卡/取消（卡片只上抛 toggle，具体由 store 执行）
 async function onToggleCheckIn(habitId: string, date: string): Promise<void> {
@@ -113,7 +103,6 @@ async function saveEditDialog(): Promise<void> {
   const result = await store.addHabit(name, dialogFrequency.value, dialogColor.value)
   if (result.ok) {
     closeEditDialog()
-    goto(1)
   }
   habitErrorToast(result)
 }
@@ -124,7 +113,6 @@ async function handleDelete(id: string): Promise<void> {
   const result = await store.deleteHabit(id)
   if (result.ok) {
     if (editingId.value === id) closeEditDialog()
-    goto(1)
   }
   habitErrorToast(result)
 }
@@ -154,10 +142,10 @@ onMounted(() => {
         还没有习惯，点上方「新增习惯」开始吧
       </div>
 
-      <div v-else ref="listEl" class="hb-list" :class="{ 'hb-list-scroll': !fitsOnePage }">
+      <div v-else class="hb-list">
         <TransitionGroup name="grid">
           <HabitCalendarCard
-            v-for="h in pageItems"
+            v-for="h in viewHabits"
             :key="h.id"
             :habit="h"
             :records="store.records"
@@ -169,8 +157,6 @@ onMounted(() => {
           />
         </TransitionGroup>
       </div>
-
-      <PanelPager :page="currentPage" :total="totalPages" @prev="prev()" @next="next()" />
     </div>
 
     <!-- 新增/编辑弹框（顶部按钮与卡片点击共用） -->
@@ -362,10 +348,6 @@ html.dark .empty-state {
   .hb-list {
     flex: 1;
     min-height: 0;
-  }
-
-  .hb-list-scroll {
-    overflow-y: auto;
   }
 }
 </style>

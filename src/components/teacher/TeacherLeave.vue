@@ -302,6 +302,7 @@ function exportCsv(): void {
         <table class="tw-table lv-table">
           <thead>
             <tr>
+              <th class="tw-col-index">序号</th>
               <th>学生</th>
               <th>类型</th>
               <th>起止日期</th>
@@ -313,7 +314,8 @@ function exportCsv(): void {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="r in filtered" :key="r.id">
+            <tr v-for="(r, i) in filtered" :key="r.id">
+              <td class="tw-col-index" data-label="序号">{{ i + 1 }}</td>
               <td data-label="学生">{{ nameOf(r.studentId) }}</td>
               <td data-label="类型">{{ r.type }}</td>
               <td data-label="起止日期">{{ r.startDate }} ~ {{ r.endDate }}</td>

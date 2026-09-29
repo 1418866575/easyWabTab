@@ -263,6 +263,7 @@ async function downloadTemplate(): Promise<void> {
         <table class="tw-table">
           <thead>
             <tr>
+              <th class="tw-col-index">序号</th>
               <th>学号</th>
               <th>姓名</th>
               <th>性别</th>
@@ -276,7 +277,8 @@ async function downloadTemplate(): Promise<void> {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="s in pagedRows" :key="s.id">
+            <tr v-for="(s, i) in pagedRows" :key="s.id">
+              <td class="tw-col-index">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
               <td>
                 <input class="tw-input tw-input-sm stu-no" :value="s.no" @change="onStudentField(s, { no: ($event.target as HTMLInputElement).value })" />
               </td>

@@ -1,14 +1,14 @@
 <script setup lang="ts">
 // 教师工作台主视图（路由 /teacher）
-// 布局与 StudentView 一致：顶部 PageSwitcher + 学期/班级/身份选择器，左菜单 + 右内容条件渲染。
+// 布局与 StudentView 一致：顶部工作台切换入口（WorkbenchManagePanel 同款，替换原 PageSwitcher 下拉）+ 学期/班级/身份选择器，左菜单 + 右内容条件渲染。
 // 首次进入无学期/无班级时走两步引导（建学期 → 建班级），与原型行为一致。
 // 「是否班主任」是按班级的身份：切换班级即切换身份与可见模块（导航移除 + 直达拦截 + 自动回落）。
 
 import { computed, onMounted, ref, watch } from 'vue'
 import { useTeacherStore } from '@/stores/teacher'
 import { useAppSettingsStore } from '@/stores/settings'
+import WorkbenchManagePanel from '@/components/WorkbenchManagePanel.vue'
 import { useCloudSync, type SyncStatus } from '@/composables/useCloudSync'
-import PageSwitcher from '@/components/PageSwitcher.vue'
 import Icon from '@/components/Icon.vue'
 import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
 import TeacherDataManage from '@/components/teacher/TeacherDataManage.vue'
@@ -174,7 +174,13 @@ onMounted(() => {
     <!-- 顶部：页面切换 + 学期/班级/身份 -->
     <header class="tv-topbar">
       <div class="tv-topbar-left">
-        <PageSwitcher current="teacher" />
+        <!-- 左上角「工作台管理」同款入口：站点图标 + 点击弹出工作台切换面板（替换原 PageSwitcher 下拉，与导航站行为一致） -->
+        <WorkbenchManagePanel
+          :trigger-icon="settingsStore.teacherPageIcon"
+          trigger-builtin="teacher"
+          :trigger-label="settingsStore.teacherPageDisplayName"
+          force-show
+        />
         <div class="tv-selectors">
           <label class="tw-label">
             学期

@@ -87,13 +87,15 @@ async function exportExcelFile(): Promise<void> {
         <table class="tw-table">
           <thead>
             <tr>
+              <th class="tw-col-index">序号</th>
               <th>星期</th>
               <th>值日生名单（顿号分隔）</th>
               <th>小组长</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="d in days" :key="d.day">
+            <tr v-for="(d, i) in days" :key="d.day">
+              <td class="tw-col-index">{{ i + 1 }}</td>
               <td class="tw-num">{{ d.day }}</td>
               <td>
                 <input

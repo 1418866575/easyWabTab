@@ -200,7 +200,7 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student' | 'teacher', SubTab
     { key: 'biz-ledger',  label: '账本管理' },
     { key: 'biz-backup',  label: '备份导入导出' },
     { key: 'biz-product-cat', label: '商品分类管理' },
-    { key: 'biz-expense-cat', label: '支出分类管理' }
+    { key: 'biz-expense-cat', label: '支出产品管理' }
   ],
   student: [
     { key: 'stu-stage',   label: '学段' },
@@ -410,7 +410,7 @@ const NAV_GROUPS: NavGroup[] = [
       { key: 'biz-ledger', label: '账本管理', icon: 'ledger', tab: 'business', sub: 'biz-ledger' },
       { key: 'biz-backup', label: '备份导入导出', icon: 'archive', tab: 'business', sub: 'biz-backup' },
       { key: 'biz-product-cat', label: '商品分类管理', icon: 'tag', tab: 'business', sub: 'biz-product-cat' },
-      { key: 'biz-expense-cat', label: '支出分类管理', icon: 'tag', tab: 'business', sub: 'biz-expense-cat' }
+      { key: 'biz-expense-cat', label: '支出产品管理', icon: 'tag', tab: 'business', sub: 'biz-expense-cat' }
     ]
   },
   {
@@ -1208,7 +1208,7 @@ function handleBizExport(): void {
         products: toRaw(businessStore.products),
         purchases: toRaw(businessStore.purchases),
         dailyRecords: toRaw(businessStore.dailyRecords),
-        expenses: toRaw(businessStore.expenses),
+        expenseDailies: toRaw(businessStore.expenseDailies),
         settings: toRaw(businessStore.settings)
       }
     }
@@ -1259,7 +1259,7 @@ async function handleBizImportFile(event: Event): Promise<void> {
     try {
       const data = await businessStore.importData(parsed.data)
       toast.success(
-        `导入成功：商品 ${data.products.length} 个，进货 ${data.purchases.length} 条，销售记录 ${data.dailyRecords.length} 条，支出 ${data.expenses.length} 笔`
+        `导入成功：商品 ${data.products.length} 个，进货 ${data.purchases.length} 条，销售记录 ${data.dailyRecords.length} 条，支出 ${data.expenseDailies.length} 笔`
       )
     } catch (err) {
       toast.error(`导入失败：${err instanceof Error ? err.message : '文件格式无效'}`)
@@ -1336,7 +1336,7 @@ function ledgerDeleteBlockReason(l: BusinessLedger): string {
 async function handleClearLedger(l: BusinessLedger): Promise<void> {
   const c = ledgerRecordCounts(l.data)
   const ok = await showConfirm(
-    `仅清空交易记录：删除进货 ${c.purchases} 条、销售记录 ${c.dailyRecords} 条、支出 ${c.expenses} 笔。\n商品/分类/账本设置保留，账本「${l.name}」仍然保留。\n\n⚠ 该操作不可恢复，建议先导出销售记账备份。`,
+    `仅清空交易记录：删除进货 ${c.purchases} 条、销售记录 ${c.dailyRecords} 条、支出 ${c.expenseDailies} 笔。\n商品/分类/账本设置保留，账本「${l.name}」仍然保留。\n\n⚠ 该操作不可恢复，建议先导出销售记账备份。`,
     '清空交易记录确认'
   )
   if (!ok) return
@@ -1356,7 +1356,7 @@ async function handleDeleteLedgerRow(l: BusinessLedger): Promise<void> {
   }
   const c = ledgerRecordCounts(l.data)
   const ok = await showConfirm(
-    `删除账本「${l.name}」：其下商品 ${c.products} 个、进货 ${c.purchases} 条、销售记录 ${c.dailyRecords} 条、支出 ${c.expenses} 笔，以及分类与账本设置将全部移除。\n\n⚠ 该操作不可恢复，建议先导出销售记账备份。`,
+    `删除账本「${l.name}」：其下商品 ${c.products} 个、进货 ${c.purchases} 条、销售记录 ${c.dailyRecords} 条、支出 ${c.expenseDailies} 笔，以及分类与账本设置将全部移除。\n\n⚠ 该操作不可恢复，建议先导出销售记账备份。`,
     '删除账本确认'
   )
   if (!ok) return
@@ -2097,6 +2097,40 @@ onUnmounted(() => {
             </div>
           </div>
           <p class="wb-menu-hint">导航站布局：经典 = 卡片网格铺满；侧边栏 = 左侧分类导航 + 右侧内容。选择随刷新保留。</p>
+
+          <!-- 滚动条显示模式（全局外观开关）：auto / ghost / hidden -->
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">滚动条</h3>
+            <div class="seg-control" role="group" aria-label="滚动条显示模式">
+              <button
+                type="button"
+                class="seg-opt"
+                :class="{ active: store.scrollbarMode === 'auto' }"
+                :aria-pressed="store.scrollbarMode === 'auto'"
+                data-testid="scrollbar-mode-auto"
+                @click="store.setScrollbarMode('auto')"
+              >默认</button>
+              <button
+                type="button"
+                class="seg-opt"
+                :class="{ active: store.scrollbarMode === 'ghost' }"
+                :aria-pressed="store.scrollbarMode === 'ghost'"
+                data-testid="scrollbar-mode-ghost"
+                @click="store.setScrollbarMode('ghost')"
+              >隐形</button>
+              <button
+                type="button"
+                class="seg-opt"
+                :class="{ active: store.scrollbarMode === 'hidden' }"
+                :aria-pressed="store.scrollbarMode === 'hidden'"
+                data-testid="scrollbar-mode-hidden"
+                @click="store.setScrollbarMode('hidden')"
+              >常隐</button>
+            </div>
+          </div>
+          <p class="wb-menu-hint">
+            默认 = 浏览器原生滚动条；隐形 = 平时看不见，鼠标移入或用键盘聚焦时才显形，滚轮、触控板、触屏滑动、方向键以及在原滑块位置拖动都照常可用（推荐）；常隐 = 始终不显示，但原滑块区域将无法拖动。三种模式互切不会改变内容宽度。
+          </p>
         </div>
 
         <!-- 导航筛选栏（导航设置 tab - 显示控制）：控制导航站分类/标签栏展开或收起（默认收起） -->
@@ -2963,7 +2997,7 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- 销售记账（销售记账 tab - 基础设置）：摊位名称 + 低库存阈值 + 商品/支出分类管理（复用页面内共享弹框） -->
+        <!-- 销售记账（销售记账 tab - 基础设置）：摊位名称 + 低库存阈值 + 商品/支出产品管理（复用页面内共享弹框） -->
         <div v-if="activeTab === 'business' && activeSubTab === 'biz-base'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">销售记账设置</h3>
@@ -3092,6 +3126,7 @@ onUnmounted(() => {
                   <table class="bl-table">
                     <thead>
                       <tr>
+                        <th class="bl-col-index">序号</th>
                         <th class="bl-col-year">年份</th>
                         <th class="bl-col-name">名称</th>
                         <th class="bl-col-ops">操作</th>
@@ -3099,10 +3134,11 @@ onUnmounted(() => {
                     </thead>
                     <tbody>
                       <tr
-                        v-for="l in ledgerList"
+                        v-for="(l, i) in ledgerList"
                         :key="l.id"
                         :data-testid="`biz-ledger-row-${ledgerCodeOf(l)}`"
                       >
+                        <td class="bl-col-index">{{ i + 1 }}</td>
                         <td class="bl-col-year">{{ l.year }}</td>
                         <td class="bl-col-name">
                           <span class="bl-code-badge">{{ ledgerCodeOf(l) }}</span>
@@ -3157,10 +3193,10 @@ onUnmounted(() => {
           <BusinessCategoryManager kind="product" embedded />
         </div>
 
-        <!-- 支出分类管理（销售记账 tab - 支出分类管理）：内联 BusinessCategoryManager(embedded) -->
+        <!-- 支出产品管理（销售记账 tab - 支出产品管理）：内联 BusinessCategoryManager(embedded) -->
         <div v-if="activeTab === 'business' && activeSubTab === 'biz-expense-cat'" class="wb-menu-config">
           <div class="wb-menu-head">
-            <h3 class="wb-menu-title">支出分类管理</h3>
+            <h3 class="wb-menu-title">支出产品管理</h3>
           </div>
           <BusinessCategoryManager kind="expense" embedded />
         </div>
@@ -4194,6 +4230,7 @@ html.dark .tab-btn.active {
   white-space: nowrap;
 }
 .bl-table tbody tr:last-child td { border-bottom: none; }
+.bl-col-index { width: 56px; text-align: center; color: var(--color-text-secondary, #6b7280); }
 .bl-col-year { width: 84px; }
 .bl-col-ops { width: 220px; white-space: nowrap; }
 .bl-col-name { min-width: 200px; }

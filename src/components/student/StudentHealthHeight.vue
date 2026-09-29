@@ -292,6 +292,7 @@ const chartOption = computed(() => {
         style="width: 100%"
         empty-text="还没有身高记录，点右上角「记录身高」开始吧"
       >
+        <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" />
         <el-table-column label="日期" width="130" align="center">
           <template #default="{ row }">{{ row.date }}</template>
         </el-table-column>

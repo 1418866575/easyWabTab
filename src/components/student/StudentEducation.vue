@@ -194,6 +194,7 @@ const degreeOptions = DEGREE_OPTIONS
         height="100%"
         empty-text="暂无教育经历记录，点击「＋ 新增」添加"
       >
+        <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (listPage - 1) * pageSize + i + 1" />
         <el-table-column label="学校名称" min-width="220" align="left" show-overflow-tooltip>
           <template #default="{ row }"><span style="font-weight:600;">{{ row.schoolName }}</span></template>
         </el-table-column>
@@ -371,7 +372,6 @@ const degreeOptions = DEGREE_OPTIONS
 .edu-panel {
   display: flex;
   flex-direction: column;
-  height: 100%;
   min-height: 0;
 }
 .edu-toolbar-left {

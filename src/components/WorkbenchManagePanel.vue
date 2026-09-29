@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import Icon from './Icon.vue'
 import { useAppSettingsStore } from '../stores/settings'
 
@@ -10,7 +10,26 @@ import { useAppSettingsStore } from '../stores/settings'
 // 面板用 Teleport 挂到 body + fixed 定位：app-bar 有 backdrop-filter 会成为 fixed 包含块，
 // 且移动端 .app-bar-right 是 overflow-x:auto，直接 absolute 会被裁切。
 const router = useRouter()
+const route = useRoute()
 const store = useAppSettingsStore()
+
+// 允许各工作台页面复用本组件：通过 props 自定义触发器图标（站点图标）/ 文字 / 强制显示，
+// 从而与导航站「工作台管理」保持同一套面板与卡片交互，仅触发器外观不同。
+const props = withDefaults(defineProps<{
+  /** 触发器自定义图标（图标库路径 / dataUrl）；空串回退到 triggerBuiltin */
+  triggerIcon?: string
+  /** 触发器内置图标名（无自定义图标时显示） */
+  triggerBuiltin?: string
+  /** 触发器文字；空串回退到 store.workbenchManageDisplayName */
+  triggerLabel?: string
+  /** 强制显示触发器（绕过「工作台管理」全局可见性开关），用于各工作台页面右上角 */
+  forceShow?: boolean
+}>(), {
+  triggerIcon: '',
+  triggerBuiltin: '',
+  triggerLabel: '',
+  forceShow: false
+})
 
 interface Entry {
   key: string
@@ -22,8 +41,18 @@ interface Entry {
   visible: boolean
 }
 
-// 顺序与左上角入口按钮保持一致：教师台 → 工作台 → 销售记账 → 学生台
+// 顺序：导航站（首页）置首，其后与左上角入口按钮保持一致：教师台 → 工作台 → 销售记账 → 学生台
 const entries = computed<Entry[]>(() => [
+  {
+    key: 'nav',
+    path: '/',
+    name: '导航站',
+    // 站点图标取「导航设置 → 站点图标」（store.siteFavicon）；未设置时回退内置 home 图标
+    icon: store.siteFavicon || '',
+    builtin: 'home',
+    // 已在导航站首页（/）时隐藏自身入口，避免「点了还在原地」的无效卡片
+    visible: route.path !== '/'
+  },
   {
     key: 'teacher',
     path: '/teacher',
@@ -59,6 +88,10 @@ const entries = computed<Entry[]>(() => [
 ])
 
 const visibleEntries = computed<Entry[]>(() => entries.value.filter((e) => e.visible))
+// 网格列数随可见卡片数自适应（在导航站首页时隐藏导航站卡片 → 4 列，否则 5 列），避免末尾留空列
+const gridStyle = computed<Record<string, string>>(() => ({
+  gridTemplateColumns: `repeat(${visibleEntries.value.length}, minmax(0, 1fr))`
+}))
 
 const open = ref(false)
 const triggerRef = ref<HTMLElement | null>(null)
@@ -134,18 +167,20 @@ onBeforeUnmount(() => {
 <template>
   <div class="wmp-root">
     <button
-      v-if="store.workbenchManageVisible !== false"
+      v-if="props.forceShow || store.workbenchManageVisible !== false"
       ref="triggerRef"
       type="button"
       class="wmp-trigger"
       :aria-expanded="open"
-      :title="store.workbenchManageDisplayName"
-      :aria-label="store.workbenchManageDisplayName"
+      :title="triggerLabel || store.workbenchManageDisplayName"
+      :aria-label="triggerLabel || store.workbenchManageDisplayName"
       data-testid="wmp-trigger"
       @click="toggle"
     >
-      <img v-if="store.workbenchManageIcon" :src="store.workbenchManageIcon" alt="" class="wmp-trigger-img" data-testid="wmp-trigger-icon" />
-      {{ store.workbenchManageDisplayName }}
+      <img v-if="props.triggerIcon" :src="props.triggerIcon" alt="" class="wmp-trigger-img" data-testid="wmp-trigger-icon" />
+      <Icon v-else-if="props.triggerBuiltin" :name="props.triggerBuiltin" :size="16" class="wmp-trigger-svg" />
+      <img v-else-if="store.workbenchManageIcon" :src="store.workbenchManageIcon" alt="" class="wmp-trigger-img" data-testid="wmp-trigger-icon" />
+      {{ triggerLabel || store.workbenchManageDisplayName }}
     </button>
 
     <Teleport to="body">
@@ -159,7 +194,7 @@ onBeforeUnmount(() => {
           role="menu"
           :aria-label="store.workbenchManageDisplayName"
         >
-          <div v-if="visibleEntries.length > 0" class="wmp-grid">
+          <div v-if="visibleEntries.length > 0" class="wmp-grid" :style="gridStyle">
             <button
               v-for="entry in visibleEntries"
               :key="entry.key"
@@ -192,8 +227,33 @@ onBeforeUnmount(() => {
   align-items: center;
 }
 
-/* 自定义图标（设置 → 个性化 → 工作台设置 → 工作台管理 选择）：16px 与按钮文字同排，
-   未设置时不渲染，按钮保持纯文字（gap 6px 由 HomeView 的 :deep(.wmp-trigger) 提供） */
+/* 触发器按钮：自包含基础样式，导航站与各工作台页面一致；inline-flex + gap 让图标与文字同排，
+   视觉对齐导航站 .btn-help */
+.wmp-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background-color: transparent;
+  color: var(--color-text-secondary, #64748b);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+.wmp-trigger:hover {
+  background-color: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-border, #e2e8f0);
+}
+/* 内置图标（无自定义站点图标时）：16px、跟随按钮文字色 */
+.wmp-trigger-svg {
+  color: currentColor;
+}
+
+/* 自定义图标（设置 → 个性化 → 工作台设置 → 工作台管理 选择，或各工作台页面传入的站点图标）：
+   16px 与按钮文字同排；未设置时回退到内置图标（props.triggerBuiltin）或纯文字 */
 .wmp-trigger-img {
   width: 16px;
   height: 16px;
@@ -213,10 +273,9 @@ onBeforeUnmount(() => {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
-/* 固定 4 列：一行放 4 个工作台（不再 auto-fill，避免列数随宽度变化） */
+/* 列数随可见卡片数自适应（见 gridStyle）：导航站首页隐藏导航站卡片时为 4 列、否则 5 列，避免末尾留空列 */
 .wmp-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
