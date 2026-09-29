@@ -26,7 +26,7 @@ const data = computed(() => ({
   products: store.products,
   purchases: store.purchases,
   dailyRecords: store.dailyRecords,
-  expenses: store.expenses,
+  expenseDailies: store.expenseDailies,
   settings: store.settings
 }))
 

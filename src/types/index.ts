@@ -573,13 +573,17 @@ export interface BusinessDailyRecord {
   updatedAt: string
 }
 
-/** 支出记录（同一天可有多笔，按 id 唯一；列表按日期分组、组内按创建时间排序） */
+/**
+ * 支出明细行（一天一笔支出中的「一件产品」）。
+ * 与销售 BusinessDailyRecord.items 对应：日期挂在日容器 BusinessExpenseDaily 上，明细本身无 date。
+ * id 即唯一标识，亦作为库存关联 purchase.expenseIds 的指向（精确到「某天的某产品」）。
+ */
 export interface BusinessExpense {
   id: string // be_ 前缀
-  title: string // 简短标题（必填，≤20 字；历史数据缺失时按分类名/默认标题补齐）
-  date: string // YYYY-MM-DD
   categoryId: string
   amount: number
+  /** 简短标题（可选，≤20 字；缺省按分类名补齐） */
+  title?: string
   note?: string
   /** 数量（与 unitPrice 相乘得 amount）；新增字段，旧数据缺省为 undefined */
   quantity?: number
@@ -593,7 +597,16 @@ export interface BusinessExpense {
   orderAddress?: string
   /** 业务员信息；可选，旧数据缺省为空 */
   salesman?: string
+}
+
+/** 支出日记账：一天一笔支出，含多件产品明细（与销售 BusinessDailyRecord 同构） */
+export interface BusinessExpenseDaily {
+  id: string // bed_ 前缀
+  date: string // YYYY-MM-DD 本地日期
+  items: BusinessExpense[]
+  note?: string
   createdAt: string
+  updatedAt: string
 }
 
 /** 销售记账设置 */
@@ -614,7 +627,7 @@ export interface BusinessData {
   products: BusinessProduct[]
   purchases: BusinessPurchase[]
   dailyRecords: BusinessDailyRecord[]
-  expenses: BusinessExpense[]
+  expenseDailies: BusinessExpenseDaily[]
   settings: BusinessSettings
 }
 
