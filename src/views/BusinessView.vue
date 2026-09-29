@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { useAppSettingsStore } from '@/stores/settings'
+import WorkbenchManagePanel from '@/components/WorkbenchManagePanel.vue'
 import BusinessHome from '@/components/business/BusinessHome.vue'
 import BusinessProducts from '@/components/business/BusinessProducts.vue'
 import BusinessPurchases from '@/components/business/BusinessPurchases.vue'
@@ -172,6 +173,13 @@ onMounted(async () => {
         <span v-if="store.settings.stallName" class="bs-stall-name">{{ store.settings.stallName }}</span>
       </div>
       <div class="bs-header-right">
+        <!-- 右上角「工作台管理」同款入口：站点图标 + 点击弹出工作台切换面板（与导航站行为一致） -->
+        <WorkbenchManagePanel
+          :trigger-icon="settingsStore.businessPageIcon"
+          trigger-builtin="store"
+          :trigger-label="settingsStore.businessPageDisplayName"
+          force-show
+        />
         <!-- 账本切换（常驻入口）：有账本时才展示，无账本时由引导页承接 -->
         <BusinessLedgerSwitcher v-if="store.hasLedgers" />
         <button

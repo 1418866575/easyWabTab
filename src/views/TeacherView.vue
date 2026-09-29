@@ -7,6 +7,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useTeacherStore } from '@/stores/teacher'
 import { useAppSettingsStore } from '@/stores/settings'
+import WorkbenchManagePanel from '@/components/WorkbenchManagePanel.vue'
 import { useCloudSync, type SyncStatus } from '@/composables/useCloudSync'
 import PageSwitcher from '@/components/PageSwitcher.vue'
 import Icon from '@/components/Icon.vue'
@@ -200,6 +201,13 @@ onMounted(() => {
         </div>
       </div>
       <div class="tv-topbar-actions">
+        <!-- 右上角「工作台管理」同款入口：站点图标 + 点击弹出工作台切换面板（与导航站行为一致） -->
+        <WorkbenchManagePanel
+          :trigger-icon="settingsStore.teacherPageIcon"
+          trigger-builtin="teacher"
+          :trigger-label="settingsStore.teacherPageDisplayName"
+          force-show
+        />
         <!-- 右上角「设置」入口：数据管理（学期与班级 / 班级信息 / 导入表格 / 备份与恢复）/ 使用说明 / 菜单设置 -->
         <button
           type="button"
