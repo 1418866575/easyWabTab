@@ -6,34 +6,11 @@
 
 import { ID_CARD_AREAS, ID_CARD_REGIONS } from './idAreas.ts'
 
-/** 号码类型 id */
-export type NumberTypeId =
-  | 'idcard'
-  | 'orgcode'
-  | 'creditcode'
-  | 'bankcard'
-  | 'phone'
-  | 'email'
-  | 'ip'
-
-export interface NumberTypeMeta {
-  id: NumberTypeId
-  name: string
-  desc: string
-  /** 示例输出（用于占位/说明） */
-  sample: string
+/** 号码校验结果：valid + 人类可读说明（UI 直接展示） */
+export interface ValidateResult {
+  valid: boolean
+  message: string
 }
-
-/** 号码类型清单（UI 顺序即此顺序） */
-export const NUMBER_TYPES: NumberTypeMeta[] = [
-  { id: 'idcard', name: '身份证号', desc: '18 位，含地区码 + 出生日期 + 顺序码 + ISO 7064 校验码', sample: '110101199003071234' },
-  { id: 'orgcode', name: '组织机构代码', desc: 'GB/T 11714，8 位主体 + 1 位校验码（可选连字符）', sample: '70281846-8' },
-  { id: 'creditcode', name: '统一社会信用代码', desc: 'GB 32100-2015，18 位，ISO 7064 Mod 31,31 校验', sample: '91310000702818468A' },
-  { id: 'bankcard', name: '银行卡号', desc: '常见发卡行前缀 + 随机账号 + Luhn 校验位', sample: '6222021234567890123' },
-  { id: 'phone', name: '手机号', desc: '11 位，使用在用的运营商号段', sample: '13800138000' },
-  { id: 'email', name: '邮箱', desc: '常见邮箱域名，QQ/狐狸邮箱为纯数字账号', sample: '1008611@qq.com' },
-  { id: 'ip', name: 'IP 地址', desc: '默认随机私网地址，可指定前缀（如 10.5）', sample: '192.168.1.23' }
-]
 
 /* ==================== 通用工具 ==================== */
 
@@ -59,11 +36,19 @@ function randomAlnum(len: number): string {
   return s
 }
 
-/** 数量归一：非数字/越界时收敛到 [1, 1000] */
+/** 数量归一：非数字/越界时收敛到 [1, max] */
 export function normalizeCount(count: unknown, max = 1000): number {
   const n = Math.floor(Number(count))
   if (!Number.isFinite(n)) return 1
   return Math.min(Math.max(n, 1), max)
+}
+
+/** 批量执行生成器（数量自动收敛到 1-max，供各号码工具复用） */
+export function generateBatch(count: unknown, fn: () => string, max = 1000): string[] {
+  const n = normalizeCount(count, max)
+  const out: string[] = []
+  for (let i = 0; i < n; i++) out.push(fn())
+  return out
 }
 
 /* ==================== 字符集常量 ==================== */
@@ -355,10 +340,12 @@ export function luhnCheckDigit(body: string): number {
   return (10 - (sum % 10)) % 10
 }
 
-/** 生成银行卡号（16-19 位，含 Luhn 校验位） */
-export function generateBankCard(): string {
-  const prefix = randomFrom(BANK_CARD_PREFIXES)
-  const length = randomInt(16, 19)
+/** 生成银行卡号（16-19 位，含 Luhn 校验位）；可指定发卡行前缀与长度 */
+export function generateBankCard(opts: { prefix?: string; length?: number } = {}): string {
+  const want = (opts.prefix || '').trim()
+  const prefix = BANK_CARD_PREFIXES.includes(want) ? want : randomFrom(BANK_CARD_PREFIXES)
+  const len = Math.floor(Number(opts.length))
+  const length = Number.isFinite(len) && len >= 16 && len <= 19 ? len : randomInt(16, 19)
   const body = prefix + randomDigits(Math.max(length - prefix.length - 1, 1))
   return body + String(luhnCheckDigit(body))
 }
@@ -376,9 +363,11 @@ export function validateBankCard(value: string): ValidateResult {
 
 /* ==================== 手机号 ==================== */
 
-/** 生成手机号：3 位号段 + 8 位随机数字 */
-export function generatePhone(): string {
-  return randomFrom(PHONE_PREFIXES) + randomDigits(8)
+/** 生成手机号：3 位号段 + 8 位随机数字；可指定号段（非法号段回退随机） */
+export function generatePhone(opts: { prefix?: string } = {}): string {
+  const want = (opts.prefix || '').trim()
+  const prefix = PHONE_PREFIXES.includes(want) ? want : randomFrom(PHONE_PREFIXES)
+  return prefix + randomDigits(8)
 }
 
 /** 校验手机号 */
@@ -457,74 +446,3 @@ export function validateIP(value: string): ValidateResult {
   return { valid: true, message: isPrivate ? '格式正确（私网地址）' : '格式正确（公网地址）' }
 }
 
-/* ==================== 统一入口 ==================== */
-
-export interface ValidateResult {
-  valid: boolean
-  message: string
-}
-
-/** 生成选项（各类型按需取用字段） */
-export interface NumberGenOptions {
-  count?: number
-  area?: string
-  province?: string
-  city?: string
-  gender?: GenderOption
-  ageRange?: AgeRange
-  hyphen?: boolean
-  domain?: string
-  ipPrefix?: string
-}
-
-/** 生成单个号码（未知类型返回空串） */
-export function generateNumber(type: NumberTypeId, opts: NumberGenOptions = {}): string {
-  switch (type) {
-    case 'idcard':
-      return generateIdCard(opts)
-    case 'orgcode':
-      return generateOrgCode({ hyphen: opts.hyphen })
-    case 'creditcode':
-      return generateCreditCode(opts)
-    case 'bankcard':
-      return generateBankCard()
-    case 'phone':
-      return generatePhone()
-    case 'email':
-      return generateEmail({ domain: opts.domain })
-    case 'ip':
-      return generateIP({ prefix: opts.ipPrefix })
-    default:
-      return ''
-  }
-}
-
-/** 批量生成（数量自动收敛到 1-1000） */
-export function generateNumbers(type: NumberTypeId, opts: NumberGenOptions = {}): string[] {
-  const count = normalizeCount(opts.count)
-  const out: string[] = []
-  for (let i = 0; i < count; i++) out.push(generateNumber(type, opts))
-  return out
-}
-
-/** 按类型校验 */
-export function validateNumber(type: NumberTypeId, value: string): ValidateResult {
-  switch (type) {
-    case 'idcard':
-      return validateIdCard(value)
-    case 'orgcode':
-      return validateOrgCode(value)
-    case 'creditcode':
-      return validateCreditCode(value)
-    case 'bankcard':
-      return validateBankCard(value)
-    case 'phone':
-      return validatePhone(value)
-    case 'email':
-      return validateEmail(value)
-    case 'ip':
-      return validateIP(value)
-    default:
-      return { valid: false, message: '未知号码类型' }
-  }
-}

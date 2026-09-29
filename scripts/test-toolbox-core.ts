@@ -80,24 +80,23 @@ import {
   wcagLevel
 } from '../src/toolbox/core/color.ts'
 import {
-  NUMBER_TYPES,
   generateBankCard,
+  generateBatch,
   generateCreditCode,
   generateEmail,
   generateIdCard,
   generateIP,
-  generateNumbers,
   generateOrgCode,
   generatePhone,
   idCardInfo,
   listCities,
   listProvinces,
+  normalizeCount,
   validateBankCard,
   validateCreditCode,
   validateEmail,
   validateIdCard,
   validateIP,
-  validateNumber,
   validateOrgCode,
   validatePhone
 } from '../src/toolbox/core/idnumber.ts'
@@ -528,7 +527,7 @@ assert.equal(nextExecutions('0 9 * * 1-5', 2, base)[0].includes('('), true, '执
 assert.equal(formatDateTime(new Date(2026, 8, 30, 9, 5, 3)), '2026-09-30 09:05:03', '日期格式化')
 assert.ok(formatDateTime(new Date(2026, 8, 30), true).includes('周三'), '日期格式化带星期')
 
-/* ===== 号码生成器 ===== */
+/* ===== 号码类工具（身份证 / 组织机构代码 / 统一社会信用代码 / 银行卡 / 手机号 / 邮箱 / IP） ===== */
 const idc = generateIdCard({ province: '11', gender: 'male', ageRange: '26-35' })
 assert.equal(validateIdCard(idc).valid, true, '生成的身份证通过校验')
 assert.match(idc, /^11\d{4}(19|20)\d{2}\d{4}\d{3}[\dX]$/, '身份证结构与地区码')
@@ -582,17 +581,39 @@ assert.equal(validateIP('256.1.1.1').valid, false, 'IP 越界应报错')
 assert.equal(validateIP('10.5').valid, false, 'IP 段数不足应报错')
 assert.equal(validateIP(generateIP({ prefix: '999.1' })).valid, true, '非法前缀回退随机私网')
 
-assert.equal(generateNumbers('phone', { count: 5 }).length, 5, '批量生成条数')
-assert.equal(generateNumbers('phone', { count: 0 }).length, 1, '数量下限收敛为 1')
-assert.equal(generateNumbers('phone', { count: 99999 }).length, 1000, '数量上限收敛为 1000')
-assert.equal(generateNumbers('phone', { count: NaN }).length, 1, '非法数量收敛为 1')
-assert.equal(NUMBER_TYPES.length, 7, '号码类型数量')
-NUMBER_TYPES.forEach(t => {
-  const one = generateNumbers(t.id, { count: 3 })
-  assert.equal(one.length, 3, `批量生成：${t.name}`)
-  assert.equal(validateNumber(t.id, one[0]).valid, true, `自校验通过：${t.name}`)
-  assert.equal(validateNumber(t.id, 'x').valid, false, `非法值被拦截：${t.name}`)
+assert.equal(normalizeCount(5), 5, '数量归一：合法值')
+assert.equal(normalizeCount(0), 1, '数量下限收敛为 1')
+assert.equal(normalizeCount(99999), 1000, '数量上限收敛为 1000')
+assert.equal(normalizeCount(NaN), 1, '非法数量收敛为 1')
+assert.equal(generateBatch(5, () => generatePhone()).length, 5, '批量生成条数')
+assert.equal(generateBatch(0, () => generatePhone()).length, 1, '批量数量下限收敛')
+assert.equal(generateBatch(99999, () => generatePhone()).length, 1000, '批量数量上限收敛')
+assert.equal(generateBatch('x', () => generatePhone()).length, 1, '批量数量非法收敛')
+
+// 七类号码各自独立：生成 + 自校验 + 非法值拦截
+const numberCases: { name: string; gen: () => string; check: (v: string) => { valid: boolean } }[] = [
+  { name: '身份证号', gen: () => generateIdCard(), check: validateIdCard },
+  { name: '组织机构代码', gen: () => generateOrgCode(), check: validateOrgCode },
+  { name: '统一社会信用代码', gen: () => generateCreditCode(), check: validateCreditCode },
+  { name: '银行卡号', gen: () => generateBankCard(), check: validateBankCard },
+  { name: '手机号', gen: () => generatePhone(), check: validatePhone },
+  { name: '邮箱', gen: () => generateEmail(), check: validateEmail },
+  { name: 'IP 地址', gen: () => generateIP(), check: validateIP }
+]
+numberCases.forEach(c => {
+  assert.equal(c.gen().length > 0, true, `生成非空：${c.name}`)
+  assert.equal(c.check(c.gen()).valid, true, `自校验通过：${c.name}`)
+  assert.equal(c.check('x').valid, false, `非法值被拦截：${c.name}`)
 })
+
+// 指定前缀 / 号段时仍满足校验
+assert.ok(generateBankCard({ prefix: '622202', length: 19 }).startsWith('622202'), '银行卡前缀生效')
+assert.equal(generateBankCard({ prefix: '999999', length: 19 }).length, 19, '非法前缀回退且位数生效')
+assert.equal(validateBankCard(generateBankCard({ prefix: '622202', length: 19 })).valid, true, '指定前缀的卡号通过 Luhn')
+assert.ok(generatePhone({ prefix: '138' }).startsWith('138'), '手机号段生效')
+assert.ok(generatePhone({ prefix: '100' }).startsWith('1'), '非法号段回退随机号段')
+assert.ok(generatePhone({ prefix: '138' }).length === 11, '手机号固定 11 位')
+
 assert.ok(listProvinces().length > 20, '省份选项数量')
 assert.ok(listCities('11').length > 0, '城市选项数量')
 assert.equal(listCities('9999').length, 0, '未知省份无城市')
