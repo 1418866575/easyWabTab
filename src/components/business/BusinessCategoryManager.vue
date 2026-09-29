@@ -5,7 +5,7 @@ import { showConfirm } from '@/utils/dialog'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { useToast } from '@/composables/useToast'
 import type { BusinessProductCategory, BusinessExpenseCategory } from '@/types'
-import { EXPENSE_UNITS } from '@/composables/businessCore'
+import { EXPENSE_UNITS, productUnitPriceOf } from '@/composables/businessCore'
 import Icon from '@/components/Icon.vue'
 
 const props = defineProps<{ kind: 'product' | 'expense'; embedded?: boolean }>()
@@ -36,19 +36,35 @@ const newName = ref('')
 // 新增支出产品时一并配置的默认单位 / 单价（元）；product 模式不涉及
 const newUnit = ref('')
 const newUnitPrice = ref<number | undefined>(undefined)
+// 新增支出产品时一并配置的默认商品数量（用于 单价 ÷ 商品数量 = 商品单价）；product 模式不涉及
+const newProductQty = ref<number | undefined>(undefined)
 
 // 名词：expense 模式称「产品」，product 模式称「分类」（用于提示/报错/确认文案）
 function noun(): string {
   return isExpense.value ? '产品' : '分类'
 }
 
-// 支出产品的默认单位/单价（product 模式无这两个字段，渲染前已用 v-if 隔离，这里做类型收窄）
+// 支出产品的默认单位/单价/商品数量（product 模式无这些字段，渲染前已用 v-if 隔离，这里做类型收窄）
 function unitOf(c: BusinessProductCategory | BusinessExpenseCategory): string {
   return (c as BusinessExpenseCategory).unit ?? ''
 }
 function priceOf(c: BusinessProductCategory | BusinessExpenseCategory): number | undefined {
   return (c as BusinessExpenseCategory).unitPrice
 }
+function productQtyOf(c: BusinessProductCategory | BusinessExpenseCategory): number | undefined {
+  return (c as BusinessExpenseCategory).productQuantity
+}
+// 商品单价（派生只读）：单价 ÷ 商品数量；两者齐备才有效（core 同款逻辑，这里供模板展示）
+function productPriceOf(c: BusinessProductCategory | BusinessExpenseCategory): number | undefined {
+  return productUnitPriceOf(c as BusinessExpenseCategory)
+}
+// 新增表单里的商品单价预览（单价 ÷ 商品数量，派生只读）
+const newProductPrice = computed<number | undefined>(() => {
+  const up = typeof newUnitPrice.value === 'number' ? newUnitPrice.value : NaN
+  const qty = typeof newProductQty.value === 'number' ? newProductQty.value : NaN
+  if (!(up > 0) || !(qty > 0)) return undefined
+  return Math.round((up / qty) * 100) / 100
+})
 
 function isBuiltInOf(id: string): boolean {
   if (isProduct.value) return false
@@ -120,6 +136,11 @@ function onCatPrice(id: string, val: number | undefined): void {
   const r = store.updateExpenseCategory(id, { unitPrice: val ?? null })
   handleResult(r)
 }
+// 支出产品：编辑单行的默认商品数量；空值/0 即清除（商品单价 = 单价 ÷ 商品数量 派生只读）
+function onCatProductQty(id: string, val: number | undefined): void {
+  const r = store.updateExpenseCategory(id, { productQuantity: val ?? null })
+  handleResult(r)
+}
 
 function handleAdd(): void {
   const name = newName.value.trim()
@@ -128,12 +149,14 @@ function handleAdd(): void {
     ? store.addProductCategory(name)
     : store.addExpenseCategory(name, {
         unit: newUnit.value.trim() || undefined,
-        unitPrice: typeof newUnitPrice.value === 'number' && newUnitPrice.value > 0 ? newUnitPrice.value : undefined
+        unitPrice: typeof newUnitPrice.value === 'number' && newUnitPrice.value > 0 ? newUnitPrice.value : undefined,
+        productQuantity: typeof newProductQty.value === 'number' && newProductQty.value > 0 ? newProductQty.value : undefined
       })
   if (r.ok) {
     newName.value = ''
     newUnit.value = ''
     newUnitPrice.value = undefined
+    newProductQty.value = undefined
   }
   handleResult(r)
 }
@@ -148,7 +171,7 @@ function handleAdd(): void {
     @close="emit('close')"
   >
     <div class="bizcat-body">
-      <p class="bizcat-hint">勾选控制标签页显示；{{ isProduct ? '内置分类可删除（删除后该分类商品归未分类）' : '内置产品不可删除，可改名、排序与配置默认单位/单价' }}</p>
+      <p class="bizcat-hint">勾选控制标签页显示；{{ isProduct ? '内置分类可删除（删除后该分类商品归未分类）' : '内置产品不可删除，可改名、排序与配置默认单位/单价/商品数量' }}</p>
       <div class="bizcat-list">
         <div
           v-for="cat in list"
@@ -218,6 +241,24 @@ function handleAdd(): void {
                 @change="onCatPrice(cat.id, $event)"
               />
             </div>
+            <div class="bizcat-config-field">
+              <label>商品数量</label>
+              <el-input-number
+                size="small"
+                class="bizcat-price"
+                :model-value="productQtyOf(cat)"
+                :min="0"
+                :step="1"
+                :precision="0"
+                placeholder="数量"
+                :data-testid="`bizcat-prodqty-${cat.id}`"
+                @change="onCatProductQty(cat.id, $event)"
+              />
+            </div>
+            <div class="bizcat-config-field">
+              <label>商品单价（元）</label>
+              <span class="bizcat-prodprice" :data-testid="`bizcat-prodprice-${cat.id}`">{{ productPriceOf(cat) != null ? productPriceOf(cat) : '—' }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -263,6 +304,23 @@ function handleAdd(): void {
             placeholder="单价"
             :data-testid="`bizcat-new-price`"
           />
+        </div>
+        <div class="bizcat-config-field">
+          <label>商品数量</label>
+          <el-input-number
+            v-model="newProductQty"
+            size="small"
+            class="bizcat-price"
+            :min="0"
+            :step="1"
+            :precision="0"
+            placeholder="数量"
+            :data-testid="`bizcat-new-prodqty`"
+          />
+        </div>
+        <div class="bizcat-config-field">
+          <label>商品单价（元）</label>
+          <span class="bizcat-prodprice" :data-testid="`bizcat-new-prodprice`">{{ newProductPrice != null ? newProductPrice : '—' }}</span>
         </div>
       </div>
     </div>
@@ -326,6 +384,21 @@ function handleAdd(): void {
 }
 .bizcat-price {
   width: 120px;
+}
+.bizcat-prodprice {
+  min-width: 56px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--color-bg-tag, #f1f5f9);
+  color: var(--color-text, #111827);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+}
+:global(html.dark) .bizcat-prodprice {
+  background: var(--color-bg-tag-dark, #1f2937);
+  color: var(--color-text, #e5e7eb);
 }
 
 :global(html.dark) .bizcat-config-field > label {
