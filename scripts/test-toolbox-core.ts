@@ -20,7 +20,7 @@ import { splitHighlight } from '../src/toolbox/core/highlight.ts'
 import { RECENT_LIMIT, recordRecent, relativeTime } from '../src/toolbox/core/recent.ts'
 import { hexToHsl, hexToRgb, hslToHex, rgbToHsl } from '../src/toolbox/core/color.ts'
 import { csvToJson, jsonToCsv, parseCsvLine } from '../src/toolbox/core/csv.ts'
-import { diffLines } from '../src/toolbox/core/diff.ts'
+import { diffLines, diffChars, diffTexts } from '../src/toolbox/core/diff.ts'
 import type { ToolboxToolMeta } from '../src/toolbox/types.ts'
 
 /* ===== 扩展：新增核心能力的用例 ===== */
@@ -44,7 +44,7 @@ import { buildUrl, decodeUrl, encodeUrl, parseUrl, paramsToText, textToParams } 
 import { HASH_ALGS, hashMany, hashText, hmacText } from '../src/toolbox/core/hash.ts'
 import { collectHeaders, flattenRows, jsonToSheetData, jsonToXml } from '../src/toolbox/core/xml.ts'
 import { decodeJwt, tsToLocal, verifyJwt } from '../src/toolbox/core/jwt.ts'
-import { parseCron, parseField } from '../src/toolbox/core/cron.ts'
+import { parseCron, parseField, buildCron, CRON_BUILDER_FIELDS, CRON_TEMPLATES, humanizeCron, nextExecutions, formatDateTime } from '../src/toolbox/core/cron.ts'
 import { genIds, nanoid, objectId, parseUuid, shortId, ulid, uuidV4, uuidV7 } from '../src/toolbox/core/ids.ts'
 import { analyzePassword, estimateEntropy, generatePassword, generatePasswords } from '../src/toolbox/core/password.ts'
 import { coin, dice, pick, randomInt, shuffle, spinWheel } from '../src/toolbox/core/random.ts'
@@ -79,7 +79,28 @@ import {
   rgbToHsv,
   wcagLevel
 } from '../src/toolbox/core/color.ts'
-import { diffChars, diffTexts } from '../src/toolbox/core/diff.ts'
+import {
+  NUMBER_TYPES,
+  generateBankCard,
+  generateCreditCode,
+  generateEmail,
+  generateIdCard,
+  generateIP,
+  generateNumbers,
+  generateOrgCode,
+  generatePhone,
+  idCardInfo,
+  listCities,
+  listProvinces,
+  validateBankCard,
+  validateCreditCode,
+  validateEmail,
+  validateIdCard,
+  validateIP,
+  validateNumber,
+  validateOrgCode,
+  validatePhone
+} from '../src/toolbox/core/idnumber.ts'
 
 const tools: ToolboxToolMeta[] = [
   { id: 'a', name: 'JSON 格式化', icon: '🧩', description: '格式化与校验 JSON', category: 'dev', tags: ['json'], status: 'active', kind: 'internal', order: 1 },
@@ -468,5 +489,112 @@ assert.equal(diffTexts('A', 'a', { ignoreCase: true }).stats.modify, 0, '忽略�
 assert.equal(diffTexts('a b', 'ab', { ignoreWhitespace: true }).stats.same, 1, '忽略空白后视为相同')
 assert.equal(diffTexts('a\n\nb', 'a\nb', { ignoreBlankLines: true }).stats.add, 0, '忽略空行')
 assert.ok(diffTexts('hello', 'heLLO', { charLevel: true }).lines.some(l => l.rightParts), '修改行含字符级片段')
+
+/* ===== Cron 构建器 / 扩展语法 ===== */
+assert.equal(
+  buildCron({ minute: '0', hour: '9', day: '*', month: '*', weekday: '1-5' }).expr,
+  '0 9 * * 1-5',
+  '构建器拼装表达式'
+)
+assert.equal(buildCron({}).expr, '* * * * *', '空值兜底为星号')
+assert.equal(buildCron({ minute: '99' }).ok, false, '越界字段应构建失败')
+assert.ok(buildCron({ minute: '99' }).error?.includes('分钟'), '错误定位到具体字段')
+assert.equal(CRON_BUILDER_FIELDS.length, 5, '构建器字段数')
+assert.ok(CRON_BUILDER_FIELDS.every(f => f.options.length > 0), '每个字段有预设选项')
+assert.ok(CRON_TEMPLATES.length >= 6, '内置模板数量')
+CRON_TEMPLATES.forEach(t => {
+  assert.equal(buildCron(t.parts).ok, true, `模板可构建：${t.text}`)
+})
+assert.equal(humanizeCron('0 9 * * 1-5'), '在 09:00，工作日 执行', '工作日描述')
+assert.ok(humanizeCron('*/5 * * * *').includes('每 5 分钟'), '步长分钟描述')
+assert.ok(humanizeCron('0 0 L * *').includes('每月最后一天'), 'L 描述')
+assert.ok(humanizeCron('0 9 * * 1#1').includes('第 1 个周一'), 'n#m 描述')
+assert.ok(humanizeCron('30 8 * * 5L').includes('最后一个周五'), 'nL 描述')
+assert.ok(humanizeCron('0 0 15W * *').includes('工作日'), 'nW 描述')
+assert.ok(humanizeCron('* * * * *').includes('每分钟'), '全星号描述')
+assert.equal(humanizeCron('a b c d e').length > 0, true, '非法表达式给出错误文案')
+
+// 扩展语法：L / L-n / nW / LW / nL / n#m / ?
+const base = new Date('2026-09-30T10:00:00')
+assert.equal(parseCron('0 0 L * *', false, base, 2).ok, true, 'L 语法可解析')
+assert.deepEqual(parseCron('0 0 L * *', false, base, 2).next, ['2026-10-31 00:00:00', '2026-11-30 00:00:00'], 'L 命中月末')
+assert.equal(parseCron('0 12 * * 1#1', false, base, 2).next[0], '2026-10-05 12:00:00', 'n#m 命中第 1 个周一')
+assert.equal(parseCron('0 12 * * 5L', false, base, 1).next[0], '2026-10-30 12:00:00', 'nL 命中最后一个周五')
+assert.equal(parseCron('0 12 L-2 * *', false, base, 1).next[0], '2026-10-29 12:00:00', 'L-n 命中倒数第 3 天')
+assert.equal(parseCron('0 12 15W * *', false, base, 1).next[0], '2026-10-15 12:00:00', 'nW 命中最近工作日')
+assert.equal(parseCron('0 12 ? * *', false, base, 1).ok, true, '? 视为星号')
+assert.ok(parseCron('0 0 L * 9').error, '星期越界仍报错')
+assert.equal(nextExecutions('0 9 * * 1-5', 2, base)[0].includes('('), true, '执行时间含星期')
+assert.equal(formatDateTime(new Date(2026, 8, 30, 9, 5, 3)), '2026-09-30 09:05:03', '日期格式化')
+assert.ok(formatDateTime(new Date(2026, 8, 30), true).includes('周三'), '日期格式化带星期')
+
+/* ===== 号码生成器 ===== */
+const idc = generateIdCard({ province: '11', gender: 'male', ageRange: '26-35' })
+assert.equal(validateIdCard(idc).valid, true, '生成的身份证通过校验')
+assert.match(idc, /^11\d{4}(19|20)\d{2}\d{4}\d{3}[\dX]$/, '身份证结构与地区码')
+assert.equal(Number(idc.charAt(16)) % 2, 1, '性别为男（顺序码末位奇数）')
+const idcF = generateIdCard({ gender: 'female' })
+assert.equal(Number(idcF.charAt(16)) % 2, 0, '性别为女（顺序码末位偶数）')
+assert.equal(idCardInfo(idc)?.gender, '男', '解析性别')
+assert.ok((idCardInfo(idc)?.birthday || '').includes('-'), '解析出生日期')
+assert.equal(validateIdCard('11010119900307123').valid, false, '长度不足应报错')
+assert.equal(validateIdCard('110101199003071234').valid, false, '校验码错误应报错')
+assert.equal(validateIdCard('').valid, false, '空值应报错')
+
+const org = generateOrgCode({ hyphen: true })
+assert.match(org, /^[0-9A-HJ-NP-RT-UW-Y]{8}-[0-9A-HJ-NP-RT-UW-Y]$/, '组织机构代码带连字符格式')
+assert.equal(validateOrgCode(org).valid, true, '组织机构代码通过校验')
+assert.equal(validateOrgCode(org.replace('-', '')).valid, true, '组织机构代码不带连字符也能校验')
+assert.equal(validateOrgCode('70281846-9').valid, false, '错误校验码应报错')
+assert.equal(validateOrgCode('7028184I8').valid, false, '含非法字符应报错')
+
+const credit = generateCreditCode({ province: '44' })
+assert.equal(credit.length, 18, '统一社会信用代码长度')
+assert.equal(validateCreditCode(credit).valid, true, '统一社会信用代码通过校验')
+assert.equal(validateCreditCode('91310000702818468B').valid, false, '错误校验码应报错')
+assert.equal(validateCreditCode('9131000070281846').valid, false, '长度不足应报错')
+
+const card = generateBankCard()
+assert.ok(card.length >= 16 && card.length <= 19, '银行卡号长度')
+assert.equal(validateBankCard(card).valid, true, '银行卡号通过 Luhn 校验')
+assert.equal(validateBankCard(card.slice(0, -1) + ((Number(card.slice(-1)) + 1) % 10)).valid, false, '篡改校验位应报错')
+assert.equal(validateBankCard('6222').valid, false, '过短银行卡应报错')
+assert.equal(validateBankCard('6222a123456789012').valid, false, '非数字银行卡应报错')
+
+const phone = generatePhone()
+assert.match(phone, /^1[3-9]\d{9}$/, '手机号格式')
+assert.equal(validatePhone(phone).valid, true, '手机号通过校验')
+assert.equal(validatePhone('12345678901').valid, false, '非法号段应报错')
+assert.equal(validatePhone('1380013800').valid, false, '位数不足应报错')
+
+const mail = generateEmail({ domain: 'qq.com' })
+assert.ok(mail.endsWith('@qq.com'), '指定邮箱域名')
+assert.match(mail.split('@')[0], /^\d{5,11}$/, 'QQ 邮箱为纯数字账号')
+assert.equal(validateEmail(mail).valid, true, '邮箱通过校验')
+assert.equal(validateEmail('not-an-email').valid, false, '非法邮箱应报错')
+assert.equal(validateEmail('a@b').valid, false, '缺顶级域应报错')
+
+const ipWithPrefix = generateIP({ prefix: '10.5' })
+assert.ok(ipWithPrefix.startsWith('10.5.'), 'IP 前缀生效')
+assert.equal(validateIP(ipWithPrefix).valid, true, 'IP 通过校验')
+assert.equal(validateIP(generateIP()).valid, true, '随机私网 IP 通过校验')
+assert.equal(validateIP('256.1.1.1').valid, false, 'IP 越界应报错')
+assert.equal(validateIP('10.5').valid, false, 'IP 段数不足应报错')
+assert.equal(validateIP(generateIP({ prefix: '999.1' })).valid, true, '非法前缀回退随机私网')
+
+assert.equal(generateNumbers('phone', { count: 5 }).length, 5, '批量生成条数')
+assert.equal(generateNumbers('phone', { count: 0 }).length, 1, '数量下限收敛为 1')
+assert.equal(generateNumbers('phone', { count: 99999 }).length, 1000, '数量上限收敛为 1000')
+assert.equal(generateNumbers('phone', { count: NaN }).length, 1, '非法数量收敛为 1')
+assert.equal(NUMBER_TYPES.length, 7, '号码类型数量')
+NUMBER_TYPES.forEach(t => {
+  const one = generateNumbers(t.id, { count: 3 })
+  assert.equal(one.length, 3, `批量生成：${t.name}`)
+  assert.equal(validateNumber(t.id, one[0]).valid, true, `自校验通过：${t.name}`)
+  assert.equal(validateNumber(t.id, 'x').valid, false, `非法值被拦截：${t.name}`)
+})
+assert.ok(listProvinces().length > 20, '省份选项数量')
+assert.ok(listCities('11').length > 0, '城市选项数量')
+assert.equal(listCities('9999').length, 0, '未知省份无城市')
 
 console.log('✓ toolbox core 全部用例通过')

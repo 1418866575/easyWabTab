@@ -94,6 +94,9 @@ function usePreset(p: { text: string; expr: string; six?: boolean }) {
     </TuOutput>
 
     <div class="tu-row">
+      <button type="button" class="tu-btn ghost" :disabled="!expr.trim()" @click="copy(expr.trim(), '已复制 Cron 表达式')">
+        复制表达式
+      </button>
       <button type="button" class="tu-btn ghost" :disabled="!!res.error" @click="copy(res.description)">
         复制中文描述
       </button>
@@ -104,6 +107,10 @@ function usePreset(p: { text: string; expr: string; six?: boolean }) {
       <div class="tu-folding-body">
         <ol>
           <li>支持 <code>*</code>、<code>*/n</code>、<code>a</code>、<code>a-b</code>、<code>a-b/n</code>、<code>a,b,c</code> 语法。</li>
+          <li>
+            另支持扩展语法：<code>L</code>（最后一天）、<code>L-n</code>、<code>nW</code>、<code>LW</code>、
+            <code>nL</code>（当月最后一个星期 n）、<code>n#m</code>（第 m 个星期 n）、<code>?</code>。
+          </li>
           <li>切换到 6 段模式可在最前面增加「秒」字段。</li>
           <li>执行时间基于浏览器本地时区计算，最多迭代 5 年内的匹配点。</li>
         </ol>
