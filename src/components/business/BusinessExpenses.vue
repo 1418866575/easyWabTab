@@ -205,18 +205,11 @@ function rowIssues(index: number) {
   )
 }
 
-/** 全部行的 error 文案（阻断保存）；标题/分类/金额，均为 error → 保存按钮禁用 */
-const formErrors = computed(() => {
-  const errs: string[] = []
-  rows.forEach((_, i) => {
-    rowIssues(i)
-      .filter(x => x.level === 'error')
-      .forEach(x => errs.push(`第 ${i + 1} 行：${x.message}`))
-  })
-  return errs
+/** 表单是否有效（阻断保存）：日期已选、至少一笔产品、且所有行无 error 级校验问题 */
+const isFormValid = computed(() => {
+  if (editingDate.value === '' || rows.length === 0) return false
+  return !rows.some((_, i) => rowIssues(i).some(x => x.level === 'error'))
 })
-
-const isFormValid = computed(() => editingDate.value !== '' && rows.length > 0 && formErrors.value.length === 0)
 
 /** 账本只记录其所属年份的数据：日期选择器禁用其它年份 */
 const ledgerYear = computed(() => store.currentLedgerYear)
@@ -544,15 +537,6 @@ async function handleDeleteFromDialog(): Promise<void> {
           </div>
         </div>
 
-        <!-- 表单校验提示（产品/金额，均为 error → 保存按钮禁用） -->
-        <ul v-if="formErrors.length > 0" class="bizexp-issues" data-testid="bizexp-form-issues">
-          <li
-            v-for="(issue, idx) in formErrors"
-            :key="idx"
-            class="bizexp-issue error"
-            :data-testid="`bizexp-issue-${idx}`"
-          >{{ issue }}</li>
-        </ul>
 
         <div class="biz-form-actions ewt-dialog-footer">
           <el-button size="small" @click="showDialog = false">取消</el-button>
@@ -950,25 +934,6 @@ async function handleDeleteFromDialog(): Promise<void> {
   justify-content: flex-end;
 }
 
-/* 表单校验提示 */
-.bizexp-issues {
-  list-style: none;
-  margin: 0;
-  padding: 8px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background: var(--color-bg-hover, #f3f4f6);
-  border-radius: var(--radius-md, 8px);
-  border: 1px solid var(--color-border, #e5e7eb);
-}
-.bizexp-issue {
-  font-size: 12px;
-  line-height: 1.5;
-}
-.bizexp-issue.error {
-  color: var(--color-error, #dc2626);
-}
 
 .bizexp-dialog :deep(.el-dialog) {
   border-radius: var(--radius-lg, 12px);
@@ -992,10 +957,6 @@ async function handleDeleteFromDialog(): Promise<void> {
 :global(html.dark) .bizexp-detail-td.sub-bold,
 :global(html.dark) .biz-kv-amount {
   color: #f87171;
-}
-:global(html.dark) .bizexp-issues {
-  background-color: var(--color-bg-hover, #111827);
-  border-color: var(--color-border, #374151);
 }
 :global(html.dark) .bizexp-table th,
 :global(html.dark) .bizexp-table td {
