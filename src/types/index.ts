@@ -502,13 +502,21 @@ export interface LedgerData {
 
 // ==================== 摆摊进销存（销售记账，备份 v7 新增） ====================
 
-/** 支出分类：内置 5（isBuiltIn 不可删）+ 自定义；visible 控制支出 Tab 栏显示 */
+/** 支出产品（原「支出分类」改名）：内置 5（isBuiltIn 不可删）+ 自定义；visible 控制支出 Tab 栏显示；unit/unitPrice 为产品默认单位与单价，新增支出选该产品时自动回填 */
 export interface BusinessExpenseCategory {
   id: string // bec_ 前缀；内置 id 固定 expense-stall/gas/seasoning/transport/other
   name: string
   sortOrder: number
   visible: boolean
   isBuiltIn: boolean
+  /** 单位（如「件」「包」「根」）；可选，新增支出选该产品时自动回填到支出单位 */
+  unit?: string
+  /** 单价（元）；可选，新增支出选该产品时自动回填到支出单价（金额 = 数量 × 单价） */
+  unitPrice?: number
+  /** 商品数量（一件/一份内所含个数）；可选，用于由「单价 ÷ 商品数量」推算商品单价；旧数据缺省为 undefined */
+  productQuantity?: number
+  /** 关联商品（bp_ 前缀，指向 BusinessProduct.id）；可选，用于将支出产品与具体商品绑定（如库存关联支出时选择关联到某商品）；旧数据缺省为 undefined */
+  productId?: string
 }
 
 /** 商品分类：内置 5 种子可删（删除后商品归未分类）；visible 控制商品页标签页显示 */
@@ -567,14 +575,22 @@ export interface BusinessDailyRecord {
   updatedAt: string
 }
 
-/** 支出记录（同一天可有多笔，按 id 唯一；列表按日期分组、组内按创建时间排序） */
+/**
+ * 支出明细行（一天一笔支出中的「一件产品」）。
+ * 与销售 BusinessDailyRecord.items 对应：日期挂在日容器 BusinessExpenseDaily 上，明细本身无 date。
+ * id 即唯一标识，亦作为库存关联 purchase.expenseIds 的指向（精确到「某天的某产品」）。
+ */
 export interface BusinessExpense {
   id: string // be_ 前缀
-  title: string // 简短标题（必填，≤20 字；历史数据缺失时按分类名/默认标题补齐）
-  date: string // YYYY-MM-DD
   categoryId: string
   amount: number
+  /** 简短标题（可选，≤20 字；缺省按分类名补齐） */
+  title?: string
   note?: string
+  /** 数量（与 unitPrice 相乘得 amount）；新增字段，旧数据缺省为 undefined */
+  quantity?: number
+  /** 单价（与 quantity 相乘得 amount）；新增字段，旧数据缺省为 undefined */
+  unitPrice?: number
   /** 单位（如「件」「包」「根」）；下拉预设可选，也支持自定义；可选，旧数据缺省为空 */
   unit?: string
   /** 订货电话；可选，旧数据缺省为空 */
@@ -583,7 +599,18 @@ export interface BusinessExpense {
   orderAddress?: string
   /** 业务员信息；可选，旧数据缺省为空 */
   salesman?: string
+  /** 支付方式（现金/微信/支付宝/银行卡/其他，或自定义）；可选，旧数据缺省为空 */
+  paymentMethod?: string
+}
+
+/** 支出日记账：一天一笔支出，含多件产品明细（与销售 BusinessDailyRecord 同构） */
+export interface BusinessExpenseDaily {
+  id: string // bed_ 前缀
+  date: string // YYYY-MM-DD 本地日期
+  items: BusinessExpense[]
+  note?: string
   createdAt: string
+  updatedAt: string
 }
 
 /** 销售记账设置 */
@@ -604,7 +631,7 @@ export interface BusinessData {
   products: BusinessProduct[]
   purchases: BusinessPurchase[]
   dailyRecords: BusinessDailyRecord[]
-  expenses: BusinessExpense[]
+  expenseDailies: BusinessExpenseDaily[]
   settings: BusinessSettings
 }
 

@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { computed, ref, toRaw } from 'vue'
 import type {
   BusinessData,
-  BusinessExpense,
   BusinessExpenseCategory,
   BusinessLedger,
   BusinessProduct,
@@ -13,7 +12,13 @@ import type {
 } from '@/types'
 import {
   addExpenseCategory as addExpenseCategoryCore,
+  addExpenseItem,
   addProductCategory as addProductCategoryCore,
+  updateExpenseCategory as updateExpenseCategoryCore,
+  updateExpenseItem,
+  deleteExpenseItem,
+  upsertExpenseDaily as coreUpsertExpenseDaily,
+  flatExpenseItems,
   BUSINESS_STORE_SCHEMA_VER,
   calcDailyRevenue,
   checkLedgerYearWrite,
@@ -28,10 +33,7 @@ import {
   emptyBusinessData,
   hasLedgerForYear,
   isLedgerEmpty,
-  EXPENSE_UNIT_MAX,
-  EXPENSE_ORDER_PHONE_MAX,
-  EXPENSE_ORDER_ADDRESS_MAX,
-  EXPENSE_SALESMAN_MAX,
+  BIZ_UNIT_MAX,
   ledgerDefaultName,
   moveCategory,
   newId,
@@ -46,7 +48,7 @@ import {
   sumExpenseAmounts,
   toggleCategoryVisible
 } from '@/composables/businessCore'
-import type { CategoryOpResult, LedgerDeleteGuard, LedgerMutateResult, LedgerOpResult, LedgerRenameResult, LedgerWriteResult } from '@/composables/businessCore'
+import type { CategoryOpResult, ExpenseItemDraft, LedgerDeleteGuard, LedgerMutateResult, LedgerOpResult, LedgerRenameResult, LedgerWriteResult } from '@/composables/businessCore'
 import { idbGet, idbPut } from '../composables/useIdb'
 import { markDirty } from '@/composables/useCloudSync'
 
@@ -55,7 +57,7 @@ import { markDirty } from '@/composables/useCloudSync'
 // v2 结构：账本（BusinessLedger）是最外层数据容器，按自然年创建、**同一年份可有多本**（年内序号 seq 唯一，编号 YYYY-NN）；
 // 所有业务数据挂在「当前账本」的 data 下，切换账本即整体切换数据集；
 // 每本账本只记录其所属年份的数据：写入（进货/销售/支出）时按日期做跨年守卫，跨年数据不混入同一账本。
-// 对外仍暴露与旧版同名的 products / purchases / dailyRecords / expenses / settings / 两类分类，
+// 对外仍暴露与旧版同名的 products / purchases / dailyRecords / expenseDailies / settings / 两类分类，
 // 但它们现在是「指向当前账本」的可写 computed —— 业务面板无需感知账本即可继续工作。
 export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => {
   const ledgers = ref<BusinessLedger[]>([])
@@ -96,7 +98,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
   const products = ledgerField('products')
   const purchases = ledgerField('purchases')
   const dailyRecords = ledgerField('dailyRecords')
-  const expenses = ledgerField('expenses')
+  const expenseDailies = ledgerField('expenseDailies')
   const settings = ledgerField('settings')
 
   // ===== 账本元信息（供视图渲染切换器 / 引导 / 空状态） =====
@@ -144,7 +146,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
             products: toRaw(toRaw(l).data.products),
             purchases: toRaw(toRaw(l).data.purchases),
             dailyRecords: toRaw(toRaw(l).data.dailyRecords),
-            expenses: toRaw(toRaw(l).data.expenses),
+            expenseDailies: toRaw(toRaw(l).data.expenseDailies),
             settings: toRaw(toRaw(l).data.settings)
           }
         })),
@@ -292,9 +294,24 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     return r
   }
 
-  // ===== 支出分类 CRUD =====
-  function addExpenseCategory(name: string): CategoryOpResult<BusinessExpenseCategory> {
-    const r = addExpenseCategoryCore(expenseCategories.value, name)
+  // ===== 支出产品 CRUD（原「支出分类」，改名支出产品管理） =====
+  function addExpenseCategory(
+    name: string,
+    opts?: { unit?: string; unitPrice?: number; productQuantity?: number; productId?: string }
+  ): CategoryOpResult<BusinessExpenseCategory> {
+    const r = addExpenseCategoryCore(expenseCategories.value, name, opts)
+    if (r.ok) {
+      expenseCategories.value = r.list
+      void saveBusiness()
+    }
+    return r
+  }
+
+  function updateExpenseCategory(
+    id: string,
+    patch: { unit?: string | null; unitPrice?: number | null; productQuantity?: number | null; productId?: string | null }
+  ): CategoryOpResult<BusinessExpenseCategory> {
+    const r = updateExpenseCategoryCore(expenseCategories.value, id, patch)
     if (r.ok) {
       expenseCategories.value = r.list
       void saveBusiness()
@@ -330,7 +347,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
   }
 
   function deleteExpenseCategory(id: string): CategoryOpResult<BusinessExpenseCategory> {
-    const inUse = expenses.value.some(e => e.categoryId === id)
+    const inUse = flatExpenseItems(expenseDailies.value).some(e => e.categoryId === id)
     const r = deleteExpenseCategoryCore(expenseCategories.value, id, inUse)
     if (r.ok) {
       expenseCategories.value = r.list
@@ -354,7 +371,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
       id: newId('bp_'),
       name: input.name.trim().slice(0, 40),
       categoryId: input.categoryId ?? undefined,
-      unit: input.unit.trim().slice(0, 8) || '件',
+      unit: input.unit.trim().slice(0, BIZ_UNIT_MAX) || '件',
       purchasePrice: Math.max(0, input.purchasePrice),
       sellingPrice: Math.max(0, input.sellingPrice),
       ...(typeof input.memberPrice === 'number' && Number.isFinite(input.memberPrice) && input.memberPrice >= 0
@@ -374,6 +391,10 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     const index = products.value.findIndex(p => p.id === id)
     if (index === -1) return
     const merged = { ...toRaw(products.value[index]), ...patch, id }
+    // 单位：与支出同口径（trim + BIZ_UNIT_MAX 截断），空值回退「件」
+    if (typeof patch.unit === 'string') {
+      merged.unit = patch.unit.trim().slice(0, BIZ_UNIT_MAX) || '件'
+    }
     // 会员价：传值则校验（有限且 ≥0）后保留两位小数，清空/undefined 则移除字段
     if (patch.memberPrice !== undefined && patch.memberPrice !== null) {
       if (Number.isFinite(patch.memberPrice) && patch.memberPrice >= 0) {
@@ -420,7 +441,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
       quantity,
       unitPrice,
       // 关联了支出 → 合计取支出汇总（UI 与之一致）；否则沿用 数量 × 单价
-      total: ids.length ? sumExpenseAmounts(expenses.value, ids) : Math.round(quantity * unitPrice * 100) / 100,
+      total: ids.length ? sumExpenseAmounts(flatExpenseItems(expenseDailies.value), ids) : Math.round(quantity * unitPrice * 100) / 100,
       date: input.date,
       ...(ids.length ? { expenseIds: ids } : {}),
       note: input.note?.trim() || undefined,
@@ -448,7 +469,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     const ids = normalizeExpenseIds(patch.expenseIds ?? old.expenseIds)
     if (ids.length) {
       merged.expenseIds = ids
-      merged.total = sumExpenseAmounts(expenses.value, ids)
+      merged.total = sumExpenseAmounts(flatExpenseItems(expenseDailies.value), ids)
     } else {
       delete merged.expenseIds
       merged.total = Math.round(merged.quantity * merged.unitPrice * 100) / 100
@@ -516,11 +537,17 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
 
   // ===== 支出 CRUD（同一天可有多笔；title 必填，缺省按分类名/默认标题补齐） =====
   async function addExpense(input: {
-    title: string
+    /** 所属日期（决定归入哪一天的支出日记账；同日多次新增自动合并到同一天） */
     date: string
     categoryId: string
+    /** 金额（调用方按 数量 × 单价 算好） */
     amount: number
+    title?: string
     note?: string
+    /** 数量（金额 = 数量 × 单价；可选，旧数据缺省） */
+    quantity?: number
+    /** 单价（金额 = 数量 × 单价；可选，旧数据缺省） */
+    unitPrice?: number
     unit?: string
     orderPhone?: string
     orderAddress?: string
@@ -529,52 +556,110 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     const guard = guardLedgerYear(input.date)
     if (!guard.ok) return guard
     const categoryName = expenseCategories.value.find(c => c.id === input.categoryId)?.name
-    expenses.value.push({
-      id: newId('be_'),
-      title: normalizeExpenseTitle(input.title, categoryName),
-      date: input.date,
+    // 标题可选：留空时用产品（分类）名兜底，再退回「未命名支出」
+    const title = normalizeExpenseTitle(input.title, categoryName)
+    expenseDailies.value = addExpenseItem(expenseDailies.value, input.date, {
       categoryId: input.categoryId,
       amount: Math.max(0, input.amount),
+      title,
       note: input.note?.trim() || undefined,
+      quantity: Number.isFinite(input.quantity) && (input.quantity as number) > 0 ? input.quantity : undefined,
+      unitPrice: Number.isFinite(input.unitPrice) && (input.unitPrice as number) > 0 ? input.unitPrice : undefined,
       unit: input.unit?.trim() || undefined,
       orderPhone: input.orderPhone?.trim() || undefined,
       orderAddress: input.orderAddress?.trim() || undefined,
-      salesman: input.salesman?.trim() || undefined,
-      createdAt: new Date().toISOString()
+      salesman: input.salesman?.trim() || undefined
     })
     await saveBusiness()
     return { ok: true, reason: 'ok' }
   }
 
+  /** 编辑某条支出明细（按 item id，跨日容器查找）；日期属于日容器，不在明细上，编辑不改所属日 */
   async function updateExpense(
     id: string,
-    patch: Partial<Omit<BusinessExpense, 'id' | 'createdAt'>>
+    patch: {
+      categoryId?: string
+      amount?: number
+      title?: string
+      note?: string
+      quantity?: number
+      unitPrice?: number
+      unit?: string
+      orderPhone?: string
+      orderAddress?: string
+      salesman?: string
+    }
   ): Promise<LedgerWriteResult> {
-    const index = expenses.value.findIndex(e => e.id === id)
-    if (index === -1) return { ok: false, reason: 'no-ledger', message: '记录不存在或已被删除' }
-    if (patch.date !== undefined) {
-      const guard = guardLedgerYear(patch.date)
-      if (!guard.ok) return guard
+    const found = flatExpenseItems(expenseDailies.value).find(e => e.id === id)
+    if (!found) return { ok: false, reason: 'no-ledger', message: '支出明细不存在或已被删除' }
+    const nextPatch: Record<string, unknown> = { ...patch }
+    if (patch.title !== undefined || found.title === undefined) {
+      const categoryName = expenseCategories.value.find(c => c.id === (patch.categoryId ?? found.categoryId))?.name
+      nextPatch.title = normalizeExpenseTitle(patch.title ?? found.title, categoryName)
     }
-    const merged = { ...toRaw(expenses.value[index]), ...patch, id }
-    // 标题：显式传值则归一化（空串 → 分类名 → 默认标题），未传则保持原值
-    if (patch.title !== undefined || merged.title === undefined) {
-      const categoryName = expenseCategories.value.find(c => c.id === merged.categoryId)?.name
-      merged.title = normalizeExpenseTitle(merged.title, categoryName)
-    }
-    merged.amount = Math.max(0, merged.amount)
-    // 新增可选字段：空串/缺省 → undefined（与 normExpense 保持一致）
-    merged.unit = merged.unit?.trim() ? merged.unit.trim().slice(0, EXPENSE_UNIT_MAX) : undefined
-    merged.orderPhone = merged.orderPhone?.trim() ? merged.orderPhone.trim().slice(0, EXPENSE_ORDER_PHONE_MAX) : undefined
-    merged.orderAddress = merged.orderAddress?.trim() ? merged.orderAddress.trim().slice(0, EXPENSE_ORDER_ADDRESS_MAX) : undefined
-    merged.salesman = merged.salesman?.trim() ? merged.salesman.trim().slice(0, EXPENSE_SALESMAN_MAX) : undefined
-    expenses.value[index] = merged
+    if (patch.unit !== undefined) nextPatch.unit = patch.unit?.trim() || undefined
+    if (patch.orderPhone !== undefined) nextPatch.orderPhone = patch.orderPhone?.trim() || undefined
+    if (patch.orderAddress !== undefined) nextPatch.orderAddress = patch.orderAddress?.trim() || undefined
+    if (patch.salesman !== undefined) nextPatch.salesman = patch.salesman?.trim() || undefined
+    if (patch.amount !== undefined) nextPatch.amount = Math.max(0, patch.amount)
+    expenseDailies.value = updateExpenseItem(expenseDailies.value, id, nextPatch as never)
     await saveBusiness()
     return { ok: true, reason: 'ok' }
   }
 
+  /** 移除进货记录里对这些支出明细的关联，避免删除后 expenseIds 悬空（仅当确有引用时才改 purchases） */
+  function detachExpenseIds(ids: string[]): void {
+    if (!ids.length) return
+    const set = new Set(ids)
+    let changed = false
+    const next = toRaw(purchases.value).map(p => {
+      if (!p.expenseIds || p.expenseIds.length === 0) return p
+      const kept = p.expenseIds.filter(eid => !set.has(eid))
+      if (kept.length !== p.expenseIds.length) {
+        changed = true
+        return { ...p, expenseIds: kept }
+      }
+      return p
+    })
+    if (changed) purchases.value = next
+  }
+
   async function deleteExpense(id: string): Promise<void> {
-    expenses.value = toRaw(expenses.value).filter(e => e.id !== id)
+    if (!flatExpenseItems(expenseDailies.value).some(e => e.id === id)) return
+    expenseDailies.value = deleteExpenseItem(expenseDailies.value, id)
+    detachExpenseIds([id])
+    await saveBusiness()
+  }
+
+  /**
+   * 支出日记账 upsert（对应销售 upsertDailyRecord）：以日期为容器键，明细整体替换/合并。
+   * 标题归一化（产品名兜底）在此完成；年守卫拦截跨年写入。删除某天整日容器由 deleteExpenseDaily 负责。
+   */
+  async function upsertExpenseDaily(input: {
+    /** 编辑态原日容器 id（新增为 null）；用于同日期整体替换或日期变更时迁移 */
+    originalDailyId: string | null
+    date: string
+    items: ExpenseItemDraft[]
+  }): Promise<LedgerWriteResult> {
+    const guard = guardLedgerYear(input.date)
+    if (!guard.ok) return guard
+    const items: ExpenseItemDraft[] = input.items.map(it => ({
+      ...it,
+      // 标题可选：留空时用产品（分类）名兜底，再退回「未命名支出」
+      title: normalizeExpenseTitle(it.title, expenseCategories.value.find(c => c.id === it.categoryId)?.name)
+    }))
+    expenseDailies.value = coreUpsertExpenseDaily(expenseDailies.value, input.originalDailyId, input.date, items)
+    await saveBusiness()
+    return { ok: true, reason: 'ok' }
+  }
+
+  /** 删除整天的支出日记账（连同其下所有产品明细）；同时清理进货记录中对这些明细的关联 */
+  async function deleteExpenseDaily(id: string): Promise<void> {
+    const day = expenseDailies.value.find(d => d.id === id)
+    if (!day) return
+    const removedIds = day.items.map(e => e.id)
+    expenseDailies.value = toRaw(expenseDailies.value).filter(d => d.id !== id)
+    detachExpenseIds(removedIds)
     await saveBusiness()
   }
 
@@ -650,7 +735,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     products,
     purchases,
     dailyRecords,
-    expenses,
+    expenseDailies,
     settings,
     loaded,
     loadBusiness,
@@ -662,6 +747,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     moveProductCategory,
     deleteProductCategory,
     addExpenseCategory,
+    updateExpenseCategory,
     renameExpenseCategory,
     toggleExpenseCategoryVisible,
     moveExpenseCategory,
@@ -677,6 +763,8 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     addExpense,
     updateExpense,
     deleteExpense,
+    upsertExpenseDaily,
+    deleteExpenseDaily,
     setStallName,
     setLowStockThreshold,
     setMonthlyRevenueTarget,

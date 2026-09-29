@@ -22,7 +22,7 @@ const data = computed(() => ({
   products: store.products,
   purchases: store.purchases,
   dailyRecords: store.dailyRecords,
-  expenses: store.expenses,
+  expenseDailies: store.expenseDailies,
   settings: store.settings
 }))
 
@@ -82,7 +82,7 @@ function exportExpenseExcel(): void {
     rows.push(['未关联进货', p.date, p.productName, p.total.toFixed(2), '', ''])
   }
   for (const e of expenseRec.value.unlinkedExpenses) {
-    rows.push(['未匹配支出', e.date, expenseLabel(e) + '（' + expenseCatName(e.categoryId) + '）' + (e.note ? `（${e.note}）` : ''), e.amount.toFixed(2), '', ''])
+    rows.push(['未匹配支出', e.date, expenseLabel(e, e.date) + '（' + expenseCatName(e.categoryId) + '）' + (e.note ? `（${e.note}）` : ''), e.amount.toFixed(2), '', ''])
   }
   void exportXlsx('进货支储对账', headers, rows, ledgerMeta.value)
 }
@@ -181,7 +181,7 @@ function exportExpenseExcel(): void {
     <section class="bizrec-card" data-testid="bizrec-expense">
       <div class="bizrec-head">
         <h3><Icon name="expenses" :size="15" /> 进货 ↔ 支出关联对账</h3>
-        <el-button class="btn-export-xlsx" size="small" data-testid="bizrec-expense-export" :disabled="store.purchases.length === 0 && store.expenses.length === 0" @click="exportExpenseExcel">导出 Excel</el-button>
+        <el-button class="btn-export-xlsx" size="small" data-testid="bizrec-expense-export" :disabled="store.purchases.length === 0 && store.expenseDailies.length === 0" @click="exportExpenseExcel">导出 Excel</el-button>
       </div>
       <div class="bizrec-stats">
         <div class="bizrec-stat">

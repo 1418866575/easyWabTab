@@ -200,7 +200,7 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student' | 'teacher', SubTab
     { key: 'biz-ledger',  label: '账本管理' },
     { key: 'biz-backup',  label: '备份导入导出' },
     { key: 'biz-product-cat', label: '商品分类管理' },
-    { key: 'biz-expense-cat', label: '支出分类管理' }
+    { key: 'biz-expense-cat', label: '支出产品管理' }
   ],
   student: [
     { key: 'stu-stage',   label: '学段' },
@@ -410,7 +410,7 @@ const NAV_GROUPS: NavGroup[] = [
       { key: 'biz-ledger', label: '账本管理', icon: 'ledger', tab: 'business', sub: 'biz-ledger' },
       { key: 'biz-backup', label: '备份导入导出', icon: 'archive', tab: 'business', sub: 'biz-backup' },
       { key: 'biz-product-cat', label: '商品分类管理', icon: 'tag', tab: 'business', sub: 'biz-product-cat' },
-      { key: 'biz-expense-cat', label: '支出分类管理', icon: 'tag', tab: 'business', sub: 'biz-expense-cat' }
+      { key: 'biz-expense-cat', label: '支出产品管理', icon: 'tag', tab: 'business', sub: 'biz-expense-cat' }
     ]
   },
   {
@@ -1208,7 +1208,7 @@ function handleBizExport(): void {
         products: toRaw(businessStore.products),
         purchases: toRaw(businessStore.purchases),
         dailyRecords: toRaw(businessStore.dailyRecords),
-        expenses: toRaw(businessStore.expenses),
+        expenseDailies: toRaw(businessStore.expenseDailies),
         settings: toRaw(businessStore.settings)
       }
     }
@@ -1259,7 +1259,7 @@ async function handleBizImportFile(event: Event): Promise<void> {
     try {
       const data = await businessStore.importData(parsed.data)
       toast.success(
-        `导入成功：商品 ${data.products.length} 个，进货 ${data.purchases.length} 条，销售记录 ${data.dailyRecords.length} 条，支出 ${data.expenses.length} 笔`
+        `导入成功：商品 ${data.products.length} 个，进货 ${data.purchases.length} 条，销售记录 ${data.dailyRecords.length} 条，支出 ${data.expenseDailies.length} 笔`
       )
     } catch (err) {
       toast.error(`导入失败：${err instanceof Error ? err.message : '文件格式无效'}`)
@@ -1336,7 +1336,7 @@ function ledgerDeleteBlockReason(l: BusinessLedger): string {
 async function handleClearLedger(l: BusinessLedger): Promise<void> {
   const c = ledgerRecordCounts(l.data)
   const ok = await showConfirm(
-    `仅清空交易记录：删除进货 ${c.purchases} 条、销售记录 ${c.dailyRecords} 条、支出 ${c.expenses} 笔。\n商品/分类/账本设置保留，账本「${l.name}」仍然保留。\n\n⚠ 该操作不可恢复，建议先导出销售记账备份。`,
+    `仅清空交易记录：删除进货 ${c.purchases} 条、销售记录 ${c.dailyRecords} 条、支出 ${c.expenseDailies} 笔。\n商品/分类/账本设置保留，账本「${l.name}」仍然保留。\n\n⚠ 该操作不可恢复，建议先导出销售记账备份。`,
     '清空交易记录确认'
   )
   if (!ok) return
@@ -1356,7 +1356,7 @@ async function handleDeleteLedgerRow(l: BusinessLedger): Promise<void> {
   }
   const c = ledgerRecordCounts(l.data)
   const ok = await showConfirm(
-    `删除账本「${l.name}」：其下商品 ${c.products} 个、进货 ${c.purchases} 条、销售记录 ${c.dailyRecords} 条、支出 ${c.expenses} 笔，以及分类与账本设置将全部移除。\n\n⚠ 该操作不可恢复，建议先导出销售记账备份。`,
+    `删除账本「${l.name}」：其下商品 ${c.products} 个、进货 ${c.purchases} 条、销售记录 ${c.dailyRecords} 条、支出 ${c.expenseDailies} 笔，以及分类与账本设置将全部移除。\n\n⚠ 该操作不可恢复，建议先导出销售记账备份。`,
     '删除账本确认'
   )
   if (!ok) return
@@ -2997,7 +2997,7 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- 销售记账（销售记账 tab - 基础设置）：摊位名称 + 低库存阈值 + 商品/支出分类管理（复用页面内共享弹框） -->
+        <!-- 销售记账（销售记账 tab - 基础设置）：摊位名称 + 低库存阈值 + 商品/支出产品管理（复用页面内共享弹框） -->
         <div v-if="activeTab === 'business' && activeSubTab === 'biz-base'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">销售记账设置</h3>
@@ -3193,10 +3193,10 @@ onUnmounted(() => {
           <BusinessCategoryManager kind="product" embedded />
         </div>
 
-        <!-- 支出分类管理（销售记账 tab - 支出分类管理）：内联 BusinessCategoryManager(embedded) -->
+        <!-- 支出产品管理（销售记账 tab - 支出产品管理）：内联 BusinessCategoryManager(embedded) -->
         <div v-if="activeTab === 'business' && activeSubTab === 'biz-expense-cat'" class="wb-menu-config">
           <div class="wb-menu-head">
-            <h3 class="wb-menu-title">支出分类管理</h3>
+            <h3 class="wb-menu-title">支出产品管理</h3>
           </div>
           <BusinessCategoryManager kind="expense" embedded />
         </div>
