@@ -15,6 +15,7 @@ import {
   updateExpenseCategory,
   avgUnsoldUnitPrice,
   avgUnsoldUnitPriceMap,
+  autoLinkExpensesForProduct,
   calcBroughtOutTotals,
   calcBusinessStats,
   calcExpenseReconciliation,
@@ -54,6 +55,7 @@ import {
   deleteProductCategory,
   deriveQuantity,
   deriveUnitPrice,
+  deriveInventoryQuantity,
   emptyBusinessData,
   expenseItemsWithDay,
   flatExpenseItems,
@@ -2212,6 +2214,58 @@ test('T85 支出产品关联商品 productId（归一/新增/更新）', () => {
   const cleared = updateExpenseCategory(upd.list, upd.list[0].id, { productId: '' })
   assert.equal(cleared.list[0].productId, undefined, '清空 productId')
   assert.equal(updateExpenseCategory(upd.list, 'nope', { productId: 'x' }).ok, false, '不存在 id 返回 false')
+})
+
+// T86 — 需求 D：新增库存按商品名自动关联同名未关联支出
+test('T86 autoLinkExpensesForProduct（同名筛选 + 已关联排除 + 空串）', () => {
+  const categories = [
+    { id: 'bec_a', name: '采购A', sortOrder: 1, visible: true, isBuiltIn: false, productId: 'bp_x' },
+    { id: 'bec_b', name: '采购B', sortOrder: 2, visible: true, isBuiltIn: false, productId: 'bp_y' },
+    { id: 'bec_c', name: '采购C', sortOrder: 3, visible: true, isBuiltIn: false } // 无 productId 绑定
+  ]
+  const dailies = [
+    {
+      id: 'bed_1', date: '2026-09-28',
+      items: [
+        { id: 'be_1', categoryId: 'bec_a', amount: 10 },
+        { id: 'be_2', categoryId: 'bec_b', amount: 20 },
+        { id: 'be_3', categoryId: 'bec_c', amount: 30 }
+      ],
+      createdAt: '', updatedAt: ''
+    }
+  ]
+  // 空目标商品 → 空
+  assert.deepEqual(autoLinkExpensesForProduct('', dailies as any, [], categories as any), [])
+  // 仅 bp_x 命中（bec_a 绑定），bec_c 无绑定不命中
+  const hit = autoLinkExpensesForProduct('bp_x', dailies as any, [], categories as any)
+  assert.deepEqual(hit, ['be_1'], '只命中同商品绑定的支出')
+  // 已关联（被其它库存占用 be_1）→ 排除
+  const purchases = [{ id: 'bpr_1', productId: 'bp_x', quantity: 1, unitPrice: 10, total: 10, date: '2026-09-28', expenseIds: ['be_1'], note: undefined, createdAt: '' }]
+  assert.deepEqual(autoLinkExpensesForProduct('bp_x', dailies as any, purchases as any, categories as any), [], '已关联的不再自动选')
+})
+
+// T87 — 需求 D：派生库存数量 = Σ(支出数量 × 商品数量)
+test('T87 deriveInventoryQuantity（数量×商品数量 + 多笔求和 + 兜底）', () => {
+  const categories = [
+    { id: 'bec_a', name: '采购A', sortOrder: 1, visible: true, isBuiltIn: false, productQuantity: 12 }, // 1 件=12 个
+    { id: 'bec_b', name: '采购B', sortOrder: 2, visible: true, isBuiltIn: false } // 未配置 productQuantity → 按 1
+  ]
+  const dailies = [{
+    id: 'bed_1', date: '2026-09-28',
+    items: [
+      { id: 'be_1', categoryId: 'bec_a', amount: 36, quantity: 3 }, // 3 × 12 = 36
+      { id: 'be_2', categoryId: 'bec_b', amount: 5, quantity: 5 }   // 5 × 1 = 5
+    ],
+    createdAt: '', updatedAt: ''
+  }]
+  // 两笔关联：36 + 5 = 41
+  assert.equal(deriveInventoryQuantity(['be_1', 'be_2'], dailies as any, categories as any), 41, '多笔求和 3×12 + 5×1')
+  // 单笔 bec_a：3 × 12 = 36
+  assert.equal(deriveInventoryQuantity(['be_1'], dailies as any, categories as any), 36, '单笔 3×12')
+  // 空关联 → 0
+  assert.equal(deriveInventoryQuantity([], dailies as any, categories as any), 0, '空关联返回 0')
+  // 未知 id 忽略
+  assert.equal(deriveInventoryQuantity(['nope'], dailies as any, categories as any), 0, '未知 id 返回 0')
 })
 
 let passed = 0

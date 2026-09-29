@@ -242,6 +242,74 @@ export function expenseItemsWithDay(dailies: BusinessExpenseDaily[] | undefined)
   return out
 }
 
+// ===== 需求 D：新增库存按商品名自动关联同名未关联支出 + 派生库存数量 =====
+
+/**
+ * 自动关联筛选：给定库存目标商品（BusinessProduct.id），从「尚未被任何库存记录关联」的支出明细中，
+ * 筛出「其所属支出产品的 productId === targetProductId」的明细 id 并返回。
+ * 即「新增库存按商品名自动关联同名、未关联支出」的核心筛选。
+ *
+ * 过滤口径：
+ * - 已计入「支出关联统计」的支出（被任一库存占用的，见 expenseLinkOwners）一律排除 → 仅剩「尚未关联」；
+ * - 再按「支出产品配置的商品绑定 productId」与目标商品匹配 → 实现「同名（同一商品）」。
+ *
+ * @returns 命中且可关联的支出明细 id 列表（顺序：日记账顺序 → 同日明细顺序）
+ */
+export function autoLinkExpensesForProduct(
+  targetProductId: string,
+  dailies: BusinessExpenseDaily[] | undefined,
+  purchases: BusinessPurchase[] | undefined,
+  categories: BusinessExpenseCategory[] | undefined
+): string[] {
+  if (!targetProductId) return []
+  const owned = expenseLinkOwners(purchases ?? [])
+  const matched: string[] = []
+  for (const d of dailies ?? []) {
+    for (const it of d.items) {
+      if (owned.has(it.id)) continue
+      const cat = (categories ?? []).find(c => c.id === it.categoryId)
+      if (cat && cat.productId === targetProductId) matched.push(it.id)
+    }
+  }
+  return matched
+}
+
+/**
+ * 派生库存数量：对每条「已关联支出明细」，取
+ *   「支出数量(item.quantity) × 该支出产品配置的商品数量(category.productQuantity)」
+ * 多笔关联时累加求和（需求 D：一笔库存关联多笔支出 → 各笔计算结果求和汇总）。
+ *
+ * 兜底：
+ * - productQuantity 缺省（旧数据 / 未配置）按 1 处理 → 即只计支出数量本身、不放大；
+ * - item.quantity 缺省或非有限值按 0 处理（缺数量则该笔不贡献，避免凭空放大）。
+ *
+ * @returns 派生出的库存数量（两位小数四舍五入）
+ */
+export function deriveInventoryQuantity(
+  linkedExpenseIds: string[],
+  dailies: BusinessExpenseDaily[] | undefined,
+  categories: BusinessExpenseCategory[] | undefined
+): number {
+  const ids = new Set(linkedExpenseIds ?? [])
+  if (ids.size === 0) return 0
+  const catMap = new Map<string, BusinessExpenseCategory>()
+  for (const c of categories ?? []) catMap.set(c.id, c)
+  let sum = 0
+  for (const d of dailies ?? []) {
+    for (const it of d.items) {
+      if (!ids.has(it.id)) continue
+      const qty = typeof it.quantity === 'number' && Number.isFinite(it.quantity) ? it.quantity : 0
+      const cat = catMap.get(it.categoryId)
+      const pq =
+        cat && typeof cat.productQuantity === 'number' && Number.isFinite(cat.productQuantity) && cat.productQuantity > 0
+          ? cat.productQuantity
+          : 1
+      sum += qty * pq
+    }
+  }
+  return Math.round(sum * 100) / 100
+}
+
 /** 新增支出明细的输入（不含 id；amount 由调用方算好：数量 × 单价） */
 export interface ExpenseItemInput {
   categoryId: string

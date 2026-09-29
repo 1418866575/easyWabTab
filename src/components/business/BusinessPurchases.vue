@@ -13,7 +13,7 @@ function cardFields(row: any) {
     { label: '日期', value: row.date },
     { label: '商品', value: productNameOf(row.productId) },
     { label: '分类', value: catNameOf(row.productId) },
-    { label: '数量', value: '×' + row.quantity },
+    { label: '数量', value: '×' + displayQuantity(row) },
     { label: '进价', value: '@' + formatYuanOf(row.unitPrice) },
     { label: '合计', value: formatYuanOf(row.total) },
     { label: '售价', value: p ? formatYuanOf(productSellingPrice(row.productId)!) + '/' + productUnitOf(row.productId) : '—' },
@@ -33,9 +33,11 @@ import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import {
   avgUnsoldUnitPrice,
   avgUnsoldUnitPriceMap,
+  autoLinkExpensesForProduct,
   calcMarkupRate,
   calcPurchaseStockStatus,
   calcPurchaseTotal,
+  deriveInventoryQuantity,
   deriveQuantity,
   deriveUnitPrice,
   expenseLabel,
@@ -77,6 +79,15 @@ function catNameOf(productId: string): string {
   return catId ? (findProductCategory(store.productCategories, catId)?.name ?? '未分类') : '未分类'
 }
 
+/** 库存数量展示（需求 D）：已关联支出时显示「派生库存数量」（Σ 支出数量 × 商品数量），否则显示录入数量 */
+function displayQuantity(row: BusinessPurchase): number {
+  if (row.expenseIds && row.expenseIds.length > 0) {
+    const dq = deriveInventoryQuantity(row.expenseIds, store.expenseDailies, store.expenseCategories)
+    if (dq > 0) return dq
+  }
+  return row.quantity
+}
+
 /** 导出文件名前缀：账本年份 + 账本名称（缺失时由 xlsxFileName 自动省略该段） */
 const ledgerMeta = computed(() => ({ year: store.currentLedgerYear, ledgerName: store.currentLedgerName }))
 
@@ -87,7 +98,7 @@ function exportPurchasesExcel(): void {
     p.date,
     productNameOf(p.productId),
     catNameOf(p.productId),
-    p.quantity,
+    displayQuantity(p),
     p.unitPrice.toFixed(2),
     p.total.toFixed(2),
     stockLabel(p),
@@ -237,6 +248,13 @@ const expenseItemCount = computed(() => flatExpenseItems(store.expenseDailies).l
 /** 是否走「支出汇总」口径：关联了支出 → 合计由支出决定；否则 数量 × 进价 */
 const useExpenseTotal = computed(() => formExpenseIds.value.length > 0)
 
+/** 派生库存数量（需求 D）：已关联支出数量 × 各支出产品配置的商品数量 之和 */
+const derivedLinkedQuantity = computed(() =>
+  deriveInventoryQuantity(formExpenseIds.value, store.expenseDailies, store.expenseCategories)
+)
+/** 数量是否由关联支出派生锁定：关联了支出且派生值 > 0 → 数量字段只读、自动填入派生值 */
+const quantityAuto = computed(() => useExpenseTotal.value && derivedLinkedQuantity.value > 0)
+
 const formTotal = computed(() =>
   useExpenseTotal.value ? linkedExpenseTotal.value : calcPurchaseTotal(Number(formQuantity.value) || 0, Number(formUnitPrice.value) || 0)
 )
@@ -248,9 +266,11 @@ function onQuantityInput(): void {
   if (price !== null) formUnitPrice.value = String(price)
 }
 
-/** 关联支出后：输入进价 → 自动反算数量（合计 ÷ 进价；合计为 0 或进价为 0 时不算，避免除零） */
+/** 关联支出后：输入进价 → 自动反算数量（合计 ÷ 进价）。
+ *  数量已被派生锁定时（quantityAuto）不反算，保持「派生库存数量」不变（数量以支出派生值为准）。 */
 function onUnitPriceInput(): void {
   if (!useExpenseTotal.value) return
+  if (quantityAuto.value) return
   const qty = deriveQuantity(linkedExpenseTotal.value, Number(formUnitPrice.value) || 0)
   if (qty !== null) formQuantity.value = String(qty)
 }
@@ -258,9 +278,39 @@ function onUnitPriceInput(): void {
 /** 勾选/取消关联支出后同步联动一次（数量为空时按进价反推，保证合计始终等于支出汇总） */
 function onExpenseChange(): void {
   if (!useExpenseTotal.value) return
-  if (Number(formQuantity.value) > 0) onQuantityInput()
-  else if (Number(formUnitPrice.value) > 0) onUnitPriceInput()
+  if (!quantityAuto.value) {
+    if (Number(formQuantity.value) > 0) onQuantityInput()
+    else if (Number(formUnitPrice.value) > 0) onUnitPriceInput()
+  }
+  syncQuantityFromDerived()
 }
+
+/**
+ * 自动关联：新增 / 复制（非编辑态）选定商品时，按「同名且未关联」自动选入支出。
+ * 依赖 core.autoLinkExpensesForProduct：只筛「支出产品 productId === 当前商品」且「未计入任何库存」的支出。
+ * 选中后数量以派生值（Σ 支出数量 × 商品数量）为准回填。
+ */
+function autoLinkForCurrentProduct(): void {
+  if (editingId.value) return
+  const pid = formProductId.value
+  if (!pid) {
+    formExpenseIds.value = []
+    return
+  }
+  const auto = autoLinkExpensesForProduct(pid, store.expenseDailies, store.purchases, store.expenseCategories)
+  formExpenseIds.value = [...auto]
+  syncQuantityFromDerived()
+}
+
+/** 关联变化后：数量以「派生库存数量」为准（关联且派生 > 0 时回填数量字段并反算进价） */
+function syncQuantityFromDerived(): void {
+  if (!quantityAuto.value) return
+  formQuantity.value = String(derivedLinkedQuantity.value)
+  onQuantityInput() // 数量已定，反算进价 = 合计 ÷ 数量，保持口径一致
+}
+
+/** 商品切换（新增 / 复制态）自动重新关联同名未关联支出 */
+watch(formProductId, () => autoLinkForCurrentProduct())
 
 /** 已关联支出标签列表（「日期 产品名 数量单位」，按日期升序），用于徽章悬浮与提示 */
 function linkedExpenseLabels(purchase: { expenseIds?: string[] }): string[] {
@@ -371,6 +421,8 @@ function startAdd(): void {
   formNote.value = ''
   formExpenseIds.value = []
   showDialog.value = true
+  // 按当前商品自动关联同名未关联支出（商品值未变化时不触发 watcher，这里显式调用兜底）
+  autoLinkForCurrentProduct()
 }
 
 async function startEdit(p: BusinessPurchase): Promise<void> {
@@ -382,6 +434,9 @@ async function startEdit(p: BusinessPurchase): Promise<void> {
   formNote.value = p.note ?? ''
   // 编辑时回填已关联支出（含已被本记录占用的，自身占用不算冲突）
   formExpenseIds.value = [...(p.expenseIds ?? [])]
+  // 编辑态不自动新增关联，但数量按「派生库存数量」回填（关联支出数量 × 商品数量）
+  const dq = deriveInventoryQuantity(formExpenseIds.value, store.expenseDailies, store.expenseCategories)
+  if (dq > 0) formQuantity.value = String(dq)
   resetExpensePicker()
   showDialog.value = true
 }
@@ -398,6 +453,8 @@ function startCopy(p: BusinessPurchase): void {
   formExpenseIds.value = []
   resetExpensePicker()
   showDialog.value = true
+  // 复制本质是一笔新库存：按当前商品自动关联同名未关联支出
+  autoLinkForCurrentProduct()
 }
 
 /** 账本只记录其所属年份的数据：日期选择器禁用其它年份（与 store 写入守卫同口径） */
@@ -454,6 +511,8 @@ async function handleSave(): Promise<void> {
     formExpenseIds.value = []
     formProductId.value = keepProduct
     formDate.value = keepDate
+    // 商品值未变化不触发 watcher，显式重新自动关联同名未关联支出
+    autoLinkForCurrentProduct()
     toast.success(`已保存「${productNameOf(keepProduct)}」库存记录，可继续录入下一笔`)
     return
   }
@@ -525,7 +584,7 @@ async function handleDelete(id: string): Promise<void> {
             </template>
           </el-table-column>
           <el-table-column label="数量" width="80" align="right">
-            <template #default="{ row }">×{{ row.quantity }}</template>
+            <template #default="{ row }">×{{ displayQuantity(row) }}</template>
           </el-table-column>
           <el-table-column label="进价" width="100" align="right">
             <template #default="{ row }">@{{ formatYuanOf(row.unitPrice) }}</template>
@@ -727,10 +786,14 @@ async function handleDelete(id: string): Promise<void> {
               :step="1"
               size="small"
               controls-position="right"
+              :disabled="quantityAuto"
               :model-value="formQuantity === '' ? undefined : Number(formQuantity)"
               @update:model-value="formQuantity = String($event ?? ''); onQuantityInput()"
               data-testid="bizpur-form-qty"
             />
+            <p v-if="quantityAuto" class="bizpur-qty-derived" data-testid="bizpur-qty-derived">
+              数量由关联支出自动计算：Σ(支出数量 × 商品数量) = {{ derivedLinkedQuantity }}
+            </p>
           </div>
           <div class="biz-field">
             <label>进价 *</label>
@@ -1023,6 +1086,23 @@ async function handleDelete(id: string): Promise<void> {
   margin: 4px 0 0;
   font-size: 12px;
   color: var(--color-text-muted, #6b7280);
+}
+
+/* 需求 D：数量由关联支出派生时的只读提示 */
+.bizpur-qty-derived {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-soft, #eff6ff);
+  border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-variant-numeric: tabular-nums;
+}
+:global(html.dark) .bizpur-qty-derived {
+  background: rgba(59, 130, 246, 0.16);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.45);
 }
 
 /* ===== 剩余状态（先进先出消耗：已售完 / 未售完 · 剩 N） ===== */
