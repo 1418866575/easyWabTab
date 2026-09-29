@@ -515,6 +515,8 @@ export interface BusinessExpenseCategory {
   unitPrice?: number
   /** 商品数量（一件/一份内所含个数）；可选，用于由「单价 ÷ 商品数量」推算商品单价；旧数据缺省为 undefined */
   productQuantity?: number
+  /** 关联商品（bp_ 前缀，指向 BusinessProduct.id）；可选，用于将支出产品与具体商品绑定（如库存关联支出时选择关联到某商品）；旧数据缺省为 undefined */
+  productId?: string
 }
 
 /** 商品分类：内置 5 种子可删（删除后商品归未分类）；visible 控制商品页标签页显示 */

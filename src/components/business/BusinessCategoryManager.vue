@@ -38,6 +38,8 @@ const newUnit = ref('')
 const newUnitPrice = ref<number | undefined>(undefined)
 // 新增支出产品时一并配置的默认商品数量（用于 单价 ÷ 商品数量 = 商品单价）；product 模式不涉及
 const newProductQty = ref<number | undefined>(undefined)
+// 新增支出产品时一并绑定的关联商品（指向 BusinessProduct.id）；product 模式不涉及
+const newProductId = ref<string | undefined>(undefined)
 
 // 名词：expense 模式称「产品」，product 模式称「分类」（用于提示/报错/确认文案）
 function noun(): string {
@@ -57,6 +59,10 @@ function productQtyOf(c: BusinessProductCategory | BusinessExpenseCategory): num
 // 商品单价（派生只读）：单价 ÷ 商品数量；两者齐备才有效（core 同款逻辑，这里供模板展示）
 function productPriceOf(c: BusinessProductCategory | BusinessExpenseCategory): number | undefined {
   return productUnitPriceOf(c as BusinessExpenseCategory)
+}
+// 支出产品绑定的关联商品 id（指向 BusinessProduct.id）；product 模式无此字段
+function productIdOf(c: BusinessProductCategory | BusinessExpenseCategory): string | undefined {
+  return (c as BusinessExpenseCategory).productId
 }
 // 新增表单里的商品单价预览（单价 ÷ 商品数量，派生只读）
 const newProductPrice = computed<number | undefined>(() => {
@@ -141,6 +147,11 @@ function onCatProductQty(id: string, val: number | undefined): void {
   const r = store.updateExpenseCategory(id, { productQuantity: val ?? null })
   handleResult(r)
 }
+// 支出产品：编辑单行绑定的关联商品；空值即清除（productId 指向 BusinessProduct.id）
+function onCatProduct(id: string, val: string | undefined): void {
+  const r = store.updateExpenseCategory(id, { productId: val ?? null })
+  handleResult(r)
+}
 
 function handleAdd(): void {
   const name = newName.value.trim()
@@ -150,13 +161,15 @@ function handleAdd(): void {
     : store.addExpenseCategory(name, {
         unit: newUnit.value.trim() || undefined,
         unitPrice: typeof newUnitPrice.value === 'number' && newUnitPrice.value > 0 ? newUnitPrice.value : undefined,
-        productQuantity: typeof newProductQty.value === 'number' && newProductQty.value > 0 ? newProductQty.value : undefined
+        productQuantity: typeof newProductQty.value === 'number' && newProductQty.value > 0 ? newProductQty.value : undefined,
+        productId: newProductId.value || undefined
       })
   if (r.ok) {
     newName.value = ''
     newUnit.value = ''
     newUnitPrice.value = undefined
     newProductQty.value = undefined
+    newProductId.value = undefined
   }
   handleResult(r)
 }
@@ -208,8 +221,23 @@ function handleAdd(): void {
               <el-button size="small" type="danger" :data-testid="`bizcat-del-${kind}-${cat.id}`" @click="onDelete(cat.id)">删除</el-button>
             </div>
           </div>
-          <!-- 支出产品：每行可配置默认单位 / 单价（元）；新增支出选该产品时自动回填 -->
+          <!-- 支出产品：每行可配置默认单位 / 单价（元）/ 关联商品；新增支出选该产品时自动回填 -->
           <div v-if="isExpense" class="bizcat-config">
+            <div class="bizcat-config-field">
+              <label>商品</label>
+              <el-select
+                size="small"
+                class="bizcat-product"
+                :model-value="productIdOf(cat)"
+                placeholder="绑定商品"
+                clearable
+                filterable
+                :data-testid="`bizcat-product-${cat.id}`"
+                @change="onCatProduct(cat.id, $event)"
+              >
+                <el-option v-for="p in store.products" :key="p.id" :value="p.id" :label="p.name" />
+              </el-select>
+            </div>
             <div class="bizcat-config-field">
               <label>单位</label>
               <el-select
@@ -274,8 +302,22 @@ function handleAdd(): void {
         />
         <el-button size="small" type="primary" :data-testid="`bizcat-add-${kind}`" @click="handleAdd">添加</el-button>
       </div>
-      <!-- 支出产品：新增时一并配置默认单位 / 单价（元） -->
+      <!-- 支出产品：新增时一并配置默认单位 / 单价（元）/ 关联商品 -->
       <div v-if="isExpense" class="bizcat-add-config">
+        <div class="bizcat-config-field">
+          <label>商品</label>
+          <el-select
+            v-model="newProductId"
+            size="small"
+            class="bizcat-product"
+            placeholder="绑定商品"
+            clearable
+            filterable
+            :data-testid="`bizcat-new-product`"
+          >
+            <el-option v-for="p in store.products" :key="p.id" :value="p.id" :label="p.name" />
+          </el-select>
+        </div>
         <div class="bizcat-config-field">
           <label>单位</label>
           <el-select
@@ -381,6 +423,9 @@ function handleAdd(): void {
 }
 .bizcat-unit {
   width: 92px;
+}
+.bizcat-product {
+  width: 150px;
 }
 .bizcat-price {
   width: 120px;

@@ -297,7 +297,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
   // ===== 支出产品 CRUD（原「支出分类」，改名支出产品管理） =====
   function addExpenseCategory(
     name: string,
-    opts?: { unit?: string; unitPrice?: number; productQuantity?: number }
+    opts?: { unit?: string; unitPrice?: number; productQuantity?: number; productId?: string }
   ): CategoryOpResult<BusinessExpenseCategory> {
     const r = addExpenseCategoryCore(expenseCategories.value, name, opts)
     if (r.ok) {
@@ -309,7 +309,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
 
   function updateExpenseCategory(
     id: string,
-    patch: { unit?: string | null; unitPrice?: number | null; productQuantity?: number | null }
+    patch: { unit?: string | null; unitPrice?: number | null; productQuantity?: number | null; productId?: string | null }
   ): CategoryOpResult<BusinessExpenseCategory> {
     const r = updateExpenseCategoryCore(expenseCategories.value, id, patch)
     if (r.ok) {

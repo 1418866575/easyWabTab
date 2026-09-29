@@ -132,7 +132,9 @@ export function normalizeExpenseCategories(raw: unknown): BusinessExpenseCategor
       unit: typeof c.unit === 'string' && c.unit.trim() ? c.unit.trim().slice(0, EXPENSE_UNIT_MAX) : undefined,
       unitPrice: typeof c.unitPrice === 'number' && Number.isFinite(c.unitPrice) && c.unitPrice > 0 ? c.unitPrice : undefined,
       // 商品数量（可选）：正数才保留，否则 undefined（用于 单价 ÷ 商品数量 = 商品单价）
-      productQuantity: typeof c.productQuantity === 'number' && Number.isFinite(c.productQuantity) && c.productQuantity > 0 ? c.productQuantity : undefined
+      productQuantity: typeof c.productQuantity === 'number' && Number.isFinite(c.productQuantity) && c.productQuantity > 0 ? c.productQuantity : undefined,
+      // 关联商品（可选）：指向 BusinessProduct.id；空串/非字符串 → undefined
+      productId: typeof c.productId === 'string' && c.productId ? c.productId : undefined
     })
   }
   // 内置缺失补回（按默认序插到已有项之后，sortOrder 递增）
@@ -782,7 +784,7 @@ export function addProductCategory(list: BusinessProductCategory[], name: string
 export function addExpenseCategory(
   list: BusinessExpenseCategory[],
   name: string,
-  opts?: { unit?: string; unitPrice?: number; productQuantity?: number }
+  opts?: { unit?: string; unitPrice?: number; productQuantity?: number; productId?: string }
 ): CategoryOpResult<BusinessExpenseCategory> {
   const trimmed = name.trim()
   if (!trimmed) return { ok: false, reason: 'empty' }
@@ -795,7 +797,8 @@ export function addExpenseCategory(
     isBuiltIn: false,
     unit: opts?.unit ? opts.unit.trim().slice(0, EXPENSE_UNIT_MAX) || undefined : undefined,
     unitPrice: typeof opts?.unitPrice === 'number' && Number.isFinite(opts?.unitPrice) && (opts.unitPrice as number) > 0 ? opts.unitPrice : undefined,
-    productQuantity: typeof opts?.productQuantity === 'number' && Number.isFinite(opts?.productQuantity) && (opts.productQuantity as number) > 0 ? opts.productQuantity : undefined
+    productQuantity: typeof opts?.productQuantity === 'number' && Number.isFinite(opts?.productQuantity) && (opts.productQuantity as number) > 0 ? opts.productQuantity : undefined,
+    productId: typeof opts?.productId === 'string' && opts.productId ? opts.productId : undefined
   }
   return { ok: true, reason: 'ok', list: [...list, next] }
 }
@@ -804,7 +807,7 @@ export function addExpenseCategory(
 export function updateExpenseCategory(
   list: BusinessExpenseCategory[],
   id: string,
-  patch: { unit?: string | null; unitPrice?: number | null; productQuantity?: number | null }
+  patch: { unit?: string | null; unitPrice?: number | null; productQuantity?: number | null; productId?: string | null }
 ): CategoryOpResult<BusinessExpenseCategory> {
   const target = list.find(c => c.id === id)
   if (!target) return { ok: false, reason: 'not-found' }
@@ -824,6 +827,9 @@ export function updateExpenseCategory(
       if (patch.productQuantity !== undefined) {
         next.productQuantity =
           typeof patch.productQuantity === 'number' && Number.isFinite(patch.productQuantity) && patch.productQuantity > 0 ? patch.productQuantity : undefined
+      }
+      if (patch.productId !== undefined) {
+        next.productId = typeof patch.productId === 'string' && patch.productId ? patch.productId : undefined
       }
       return next
     })

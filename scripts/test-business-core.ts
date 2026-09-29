@@ -2186,6 +2186,34 @@ test('T84 expense paymentMethod', () => {
   assert.equal((add[0].items[0] as Record<string, unknown>).paymentMethod, '现金')
 })
 
+// T85 — 支出产品关联商品（productId）：归一保留、新增带配置、更新/清空（库存关联支出时选择关联到某商品的基础）
+test('T85 支出产品关联商品 productId（归一/新增/更新）', () => {
+  // 归一保留 productId
+  const d = normalizeBusinessData({
+    expenseCategories: [{ id: 'c1', name: '采购', productId: 'bp_abc', visible: true }],
+    expenses: []
+  })
+  assert.equal(d.expenseCategories[0].productId, 'bp_abc', '归一保留 productId')
+  // 空串 productId → undefined（向后兼容旧数据）
+  const d2 = normalizeBusinessData({
+    expenseCategories: [{ id: 'c2', name: '采购', productId: '', visible: true }],
+    expenses: []
+  })
+  assert.equal(d2.expenseCategories[0].productId, undefined, '空串 productId 不保留')
+  // 新增带 productId
+  const base = normalizeExpenseCategories([{ id: 'expense-stall', name: '摊位费', sortOrder: 1, visible: true, isBuiltIn: true }])
+  const added = addExpenseCategory(base, '蔬菜', { productId: 'bp_veg' })
+  assert.ok(added.ok)
+  assert.equal(added.list[added.list.length - 1].productId, 'bp_veg', '新增带 productId')
+  // 更新：改 productId、清空、不存在
+  const upd = updateExpenseCategory(d.expenseCategories, d.expenseCategories[0].id, { productId: 'bp_new' })
+  assert.ok(upd.ok)
+  assert.equal(upd.list[0].productId, 'bp_new', '更新 productId')
+  const cleared = updateExpenseCategory(upd.list, upd.list[0].id, { productId: '' })
+  assert.equal(cleared.list[0].productId, undefined, '清空 productId')
+  assert.equal(updateExpenseCategory(upd.list, 'nope', { productId: 'x' }).ok, false, '不存在 id 返回 false')
+})
+
 let passed = 0
 let failed = 0
 for (const t of tests) {
