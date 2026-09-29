@@ -513,6 +513,8 @@ export interface BusinessExpenseCategory {
   unit?: string
   /** 单价（元）；可选，新增支出选该产品时自动回填到支出单价（金额 = 数量 × 单价） */
   unitPrice?: number
+  /** 商品数量（一件/一份内所含个数）；可选，用于由「单价 ÷ 商品数量」推算商品单价；旧数据缺省为 undefined */
+  productQuantity?: number
 }
 
 /** 商品分类：内置 5 种子可删（删除后商品归未分类）；visible 控制商品页标签页显示 */

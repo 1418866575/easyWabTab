@@ -39,6 +39,7 @@ import {
   deriveQuantity,
   deriveUnitPrice,
   expenseLabel,
+  expenseQtyUnit,
   filterPurchasesByCategory,
   findProduct,
   findProductCategory,
@@ -264,7 +265,11 @@ function linkedExpenseLabels(purchase: { expenseIds?: string[] }): string[] {
   return store.expenses
     .filter(e => ids.includes(e.id))
     .sort((a, b) => (a.date === b.date ? (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0) : a.date < b.date ? -1 : 1))
-    .map(e => expenseLabel(e))
+    .map(e => {
+      const base = expenseLabel(e)
+      const qu = expenseQtyUnit(e)
+      return qu ? `${base} ${qu}` : base
+    })
 }
 
 /** 徽章悬浮文案：逐笔列出「日期 标题」 */
@@ -690,6 +695,8 @@ async function handleDelete(id: string): Promise<void> {
                 />
                 <!-- 日期 + 标题：同一天可能有多笔支出，靠标题区分 -->
                 <span class="bizpur-expense-date">{{ opt.label }}</span>
+                <!-- 数量 + 单位：直观呈现该笔支出买了多少（如「3件」），无数量时不显 -->
+                <span v-if="expenseQtyUnit(opt.expense)" class="bizpur-expense-qty" :data-testid="`bizpur-expense-qty-${opt.expense.id}`">{{ expenseQtyUnit(opt.expense) }}</span>
                 <span class="bizpur-expense-amount">{{ formatYuanOf(opt.expense.amount) }}</span>
                 <span v-if="opt.expense.note" class="bizpur-expense-note">{{ opt.expense.note }}</span>
               </label>
@@ -954,6 +961,21 @@ async function handleDelete(id: string): Promise<void> {
   color: var(--color-primary, #3b82f6);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+.bizpur-expense-qty {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--color-bg-tag, #f1f5f9);
+  color: var(--color-text-muted, #6b7280);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+:global(html.dark) .bizpur-expense-qty {
+  background: var(--color-bg-tag-dark, #1f2937);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 .bizpur-expense-note {

@@ -101,6 +101,8 @@ import {
   normalizeExpenseTitle,
   calcExpenseAmount,
   expenseLabel,
+  expenseQtyUnit,
+  productUnitPriceOf,
   validateExpenseRow,
   validateExpenseRows
 } from '../src/composables/businessCore.ts'
@@ -1913,6 +1915,61 @@ test('T74 支出产品默认单位/单价（新增/归一/更新）', () => {
   assert.equal(cleared.list[0].unit, undefined)
   assert.equal(cleared.list[0].unitPrice, undefined)
   assert.equal(updateExpenseCategory(upd.list, 'nope', { unit: 'x' }).ok, false)
+})
+
+// T75 — expenseQtyUnit：数量+单位展示文本（如「3件」「1.5斤」），数量非正数/缺失返回空串
+test('T75 expenseQtyUnit（数量+单位展示文本）', () => {
+  const mk = (over: Partial<BusinessExpense>): BusinessExpense => ({
+    id: 'e', date: '2024-05-06', categoryId: 'c', amount: 10, title: '采购', createdAt: 'a', ...over
+  })
+  assert.equal(expenseQtyUnit(mk({ quantity: 3, unit: '件' })), '3件')
+  assert.equal(expenseQtyUnit(mk({ quantity: 1.5, unit: '斤' })), '1.5斤', '小数数量保留')
+  assert.equal(expenseQtyUnit(mk({ quantity: 2 })), '2', '无单位只显示数量')
+  assert.equal(expenseQtyUnit(mk({ quantity: 0, unit: '件' })), '', '数量为 0 → 空串')
+  assert.equal(expenseQtyUnit(mk({ unit: '件' })), '', '缺数量 → 空串')
+  assert.equal(expenseQtyUnit(mk({ quantity: NaN, unit: '件' })), '', '非有限数量 → 空串')
+  assert.equal(expenseQtyUnit(mk({ quantity: -1, unit: '件' })), '', '负数 → 空串')
+  assert.equal(expenseQtyUnit(mk({ quantity: 2.0, unit: '箱' })), '2箱', '整数小数位被抹去 2.0→2')
+})
+
+// T76 — 支出产品的商品数量（productQuantity）归一/新增/更新 + 商品单价派生（单价 ÷ 商品数量）
+test('T76 支出产品商品数量与商品单价派生', () => {
+  // 归一保留 productQuantity
+  const d = normalizeBusinessData({
+    expenseCategories: [{ id: 'c1', name: '采购', unitPrice: 60, productQuantity: 12, visible: true }],
+    expenses: []
+  })
+  assert.equal(d.expenseCategories[0].unitPrice, 60)
+  assert.equal(d.expenseCategories[0].productQuantity, 12)
+  assert.equal(productUnitPriceOf(d.expenseCategories[0]), 5, '商品单价 = 单价 60 ÷ 商品数量 12 = 5')
+  // 缺商品数量 → 商品单价 undefined
+  const d2 = normalizeBusinessData({
+    expenseCategories: [{ id: 'c2', name: '采购', unitPrice: 60, visible: true }],
+    expenses: []
+  })
+  assert.equal(d2.expenseCategories[0].productQuantity, undefined)
+  assert.equal(productUnitPriceOf(d2.expenseCategories[0]), undefined, '缺商品数量 → 商品单价 undefined')
+  // 0 / 负数商品数量 → 不保留
+  const d3 = normalizeBusinessData({
+    expenseCategories: [{ id: 'c3', name: '采购', unitPrice: 60, productQuantity: 0, visible: true }],
+    expenses: []
+  })
+  assert.equal(d3.expenseCategories[0].productQuantity, undefined, '0 商品数量不保留')
+  // 新增带 productQuantity
+  const base = normalizeExpenseCategories([{ id: 'expense-stall', name: '摊位费', sortOrder: 1, visible: true, isBuiltIn: true }])
+  const added = addExpenseCategory(base, '蔬菜', { unitPrice: 30, productQuantity: 10 })
+  assert.ok(added.ok)
+  assert.equal(added.list[added.list.length - 1].productQuantity, 10)
+  assert.equal(productUnitPriceOf(added.list[added.list.length - 1]), 3, '30 ÷ 10 = 3')
+  // 更新：改商品数量、清空、不存在
+  const upd = updateExpenseCategory(d.expenseCategories, d.expenseCategories[0].id, { productQuantity: 6 })
+  assert.ok(upd.ok)
+  assert.equal(upd.list[0].productQuantity, 6)
+  assert.equal(productUnitPriceOf(upd.list[0]), 10, '60 ÷ 6 = 10')
+  const cleared = updateExpenseCategory(upd.list, upd.list[0].id, { productQuantity: 0 })
+  assert.equal(cleared.list[0].productQuantity, undefined)
+  assert.equal(productUnitPriceOf(cleared.list[0]), undefined)
+  assert.equal(updateExpenseCategory(upd.list, 'nope', { productQuantity: 3 }).ok, false)
 })
 
 let passed = 0
