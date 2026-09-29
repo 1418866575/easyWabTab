@@ -15,7 +15,6 @@ import { useGenealogyStore } from '@/stores/genealogy'
 import { useAppSettingsStore } from '@/stores/settings'
 import WorkbenchManagePanel from '@/components/WorkbenchManagePanel.vue'
 import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
-import PageSwitcher from '@/components/PageSwitcher.vue'
 import { HEALTH_TABS, type HealthModule } from '@/types'
 import WorkbenchHome from '@/components/workbench/WorkbenchHome.vue'
 import WorkbenchTodo from '@/components/workbench/WorkbenchTodo.vue'
@@ -250,16 +249,15 @@ async function handleSyncNowClick(): Promise<void> {
     <!-- 头部：左 = 返回 + 标题；右 = 全局搜索 + 云同步（开关显示）+ 设置 -->
     <header class="wb-header">
       <div class="wb-header-left">
-        <PageSwitcher current="workbench" />
-      </div>
-      <div class="wb-header-right">
-        <!-- 右上角「工作台管理」同款入口：站点图标 + 点击弹出工作台切换面板（与导航站行为一致） -->
+        <!-- 左上角「工作台管理」同款入口：站点图标 + 点击弹出工作台切换面板（替换原 PageSwitcher 下拉，与导航站行为一致） -->
         <WorkbenchManagePanel
           :trigger-icon="settingsStore.workbenchPageIcon"
           trigger-builtin="toolbox"
           :trigger-label="settingsStore.workbenchPageDisplayName"
           force-show
         />
+      </div>
+      <div class="wb-header-right">
         <button class="wb-btn" data-testid="wb-spotlight-open" title="全局搜索 (Alt+K)" @click="spotlightOpen = true"><Icon name="search" /> 全局搜索</button>
         <button
           v-if="cloudEnabled"

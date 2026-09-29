@@ -34,7 +34,6 @@ import StudentParentPinDialog from '@/components/student/StudentParentPinDialog.
 import StudentPanelPlaceholder from '@/components/student/StudentPanelPlaceholder.vue'
 import StudentOnboarding from '@/components/student/StudentOnboarding.vue'
 import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
-import PageSwitcher from '@/components/PageSwitcher.vue'
 import Icon from '@/components/Icon.vue'
 import SkeletonBlock from '@/components/SkeletonBlock.vue'
 import { useCloudSync } from '@/composables/useCloudSync'
@@ -276,7 +275,13 @@ async function onOnboardingComplete() {
   <div class="st-shell">
     <header class="st-header">
       <div class="st-header-left">
-        <PageSwitcher current="student" />
+        <!-- 左上角「工作台管理」同款入口：站点图标 + 点击弹出工作台切换面板（替换原 PageSwitcher 下拉，与导航站行为一致） -->
+        <WorkbenchManagePanel
+          :trigger-icon="settingsStore.studentPageIcon"
+          trigger-builtin="notes"
+          :trigger-label="settingsStore.studentPageDisplayName"
+          force-show
+        />
         <span
           class="st-stage-badge"
           :style="{ backgroundColor: stageBadge.color }"
@@ -284,13 +289,6 @@ async function onOnboardingComplete() {
         >{{ stageBadge.label }}</span>
       </div>
       <div class="st-header-right">
-        <!-- 右上角「工作台管理」同款入口：站点图标 + 点击弹出工作台切换面板（与导航站行为一致） -->
-        <WorkbenchManagePanel
-          :trigger-icon="settingsStore.studentPageIcon"
-          trigger-builtin="notes"
-          :trigger-label="settingsStore.studentPageDisplayName"
-          force-show
-        />
         <!-- 家长模式横条：在任意 section 都可快捷解锁/设置 PIN -->
         <div
           class="st-parent-bar"

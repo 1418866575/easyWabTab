@@ -15,7 +15,6 @@ import BusinessStats from '@/components/business/BusinessStats.vue'
 import BusinessReconcile from '@/components/business/BusinessReconcile.vue'
 import BusinessLedgerSwitcher from '@/components/business/BusinessLedgerSwitcher.vue'
 import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
-import PageSwitcher from '@/components/PageSwitcher.vue'
 import Icon from '@/components/Icon.vue'
 import SkeletonBlock from '@/components/SkeletonBlock.vue'
 import { useCloudSync } from '@/composables/useCloudSync'
@@ -169,17 +168,16 @@ onMounted(async () => {
     <!-- 头部：左 = 返回 + 标题；右 = 云同步（开关显示）+ 设置 -->
     <header class="bs-header">
       <div class="bs-header-left">
-        <PageSwitcher current="business" />
-        <span v-if="store.settings.stallName" class="bs-stall-name">{{ store.settings.stallName }}</span>
-      </div>
-      <div class="bs-header-right">
-        <!-- 右上角「工作台管理」同款入口：站点图标 + 点击弹出工作台切换面板（与导航站行为一致） -->
+        <!-- 左上角「工作台管理」同款入口：站点图标 + 点击弹出工作台切换面板（替换原 PageSwitcher 下拉，与导航站行为一致） -->
         <WorkbenchManagePanel
           :trigger-icon="settingsStore.businessPageIcon"
           trigger-builtin="store"
           :trigger-label="settingsStore.businessPageDisplayName"
           force-show
         />
+        <span v-if="store.settings.stallName" class="bs-stall-name">{{ store.settings.stallName }}</span>
+      </div>
+      <div class="bs-header-right">
         <!-- 账本切换（常驻入口）：有账本时才展示，无账本时由引导页承接 -->
         <BusinessLedgerSwitcher v-if="store.hasLedgers" />
         <button
