@@ -3,6 +3,8 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import Icon from './Icon.vue'
 import { useAppSettingsStore } from '../stores/settings'
+import { useSitesStore } from '../stores/sites'
+import { getFaviconImgSrc } from '../composables/useIconCache'
 
 // 导航站右上角「工作台管理」按钮 + 按钮正下方的下拉面板。
 // 面板以卡片形式列出各工作台，卡片视觉对齐导航站网站卡片（SiteCard）。
@@ -11,6 +13,9 @@ import { useAppSettingsStore } from '../stores/settings'
 // 且移动端 .app-bar-right 是 overflow-x:auto，直接 absolute 会被裁切。
 const router = useRouter()
 const store = useAppSettingsStore()
+const sitesStore = useSitesStore()
+// 导航站书签（排除隐藏分类），供弹框内「导航站」快捷区展示站点图标
+const navSites = computed(() => sitesStore.visibleSites)
 
 // 允许各工作台页面复用本组件：通过 props 自定义触发器图标（站点图标）/ 文字 / 强制显示，
 // 从而与导航站「工作台管理」保持同一套面板与卡片交互，仅触发器外观不同。
@@ -109,7 +114,13 @@ function toggle(): void {
       width: `${Math.round(width)}px`
     }
   }
+  // 弹框内「导航站」区依赖书签数据；工作台页面不一定已加载，首次打开按需加载一次
+  if (sitesStore.sites.length === 0) void sitesStore.loadSites()
   open.value = true
+}
+
+function closePanel(): void {
+  open.value = false
 }
 
 function go(entry: Entry): void {
@@ -200,6 +211,32 @@ onBeforeUnmount(() => {
           <p v-else class="wmp-empty">
             暂无已启用的工作台，可在「设置 → 个性化 → 工作台设置」中开启。
           </p>
+
+          <!-- 导航站快捷区：展示书签站点图标，点击新标签页打开对应站点 -->
+          <div v-if="navSites.length > 0" class="wmp-nav">
+            <div class="wmp-nav-head">导航站</div>
+            <div class="wmp-nav-grid">
+              <a
+                v-for="site in navSites"
+                :key="site.url"
+                class="wmp-nav-item"
+                :href="site.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                :title="site.name"
+                :aria-label="site.name"
+                :data-testid="`wmp-nav-${site.url}`"
+                @click="closePanel"
+              >
+                <img
+                  :src="getFaviconImgSrc(site.url, site.icon)"
+                  :alt="site.name"
+                  class="wmp-nav-icon"
+                  loading="lazy"
+                />
+              </a>
+            </div>
+          </div>
         </div>
       </Transition>
     </Teleport>
@@ -327,6 +364,52 @@ onBeforeUnmount(() => {
   color: var(--color-text-muted, #94a3b8);
 }
 
+/* 导航站快捷区：4 张工作台卡片下方，展示书签站点图标（favicon），点击新标签页打开 */
+.wmp-nav {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border, #e2e8f0);
+}
+.wmp-nav-head {
+  margin: 0 0 8px 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted, #94a3b8);
+}
+.wmp-nav-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+  gap: 8px;
+  /* 书签较多时内部滚动，避免弹框无限撑高 */
+  max-height: 144px;
+  overflow-y: auto;
+  padding: 2px;
+}
+.wmp-nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 8px;
+  background: var(--color-bg-hover, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  text-decoration: none;
+  overflow: hidden;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.wmp-nav-item:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-primary, #3b82f6);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.wmp-nav-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
 .wmp-fade-enter-active,
 .wmp-fade-leave-active {
   transition: opacity 0.15s ease, transform 0.15s ease;
@@ -364,5 +447,11 @@ html.dark .wmp-card {
 }
 html.dark .wmp-card:hover {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+}
+html.dark .wmp-nav {
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+html.dark .wmp-nav-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 </style>
