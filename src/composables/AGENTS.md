@@ -118,3 +118,7 @@ composables/
 - **`useToast.ts`** and **`useHelpModal.ts`** deviate from Pinia pattern — use module-level `shallowRef` for singleton state
 - **`useIdb.ts`** rejects on failure and does NOT fall back to localStorage — callers must `toRaw()` reactive arrays before `idbPut` (IDB structured clone throws DataCloneError on Vue Proxy); nested reactive arrays need per-array `toRaw` (whole-object `toRaw({...})` doesn't unwrap nested proxies)
 - **Icon fetch timeout** in `useIconCache.ts`: 8000ms (`AbortSignal.timeout(8000)`) — may need adjustment for slow networks
+
+## UI 组件备注
+
+- **`BusinessExpenses.vue`（销售记账 → 支出）新增/编辑支出弹框**：产品明细采用**表格布局**（`table.bizexp-table`，每一笔产品一行、字段为列：产品/分类、数量、单价（元）、金额（只读=数量×单价）、单位、支付方式、标题、订货电话、订货地址、业务员、备注、操作；表头 `position:sticky` 吸顶）。外层 `.bizexp-table-wrap` 横向滚动（`min-width:1180px`，窄屏/弹框内滚动）；`.bizexp-prod-row` 悬停高亮，行内校验错误用跨列 `tr.bizexp-row-issue-row` 展示。日期与当天备注仍为日级键值行（`.biz-kv-row`）。所有 `data-testid` 保持不变（`bizexp-row`、`bizexp-row-del-${i}`、`bizexp-row-category/quantity/unit-price/unit/payment/title/order-phone/order-address/salesman/note`、`bizexp-row-issue-${i}`、`bizexp-row-add`、`bizexp-form-date`、`bizexp-form-note`）。
