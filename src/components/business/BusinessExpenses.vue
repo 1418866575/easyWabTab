@@ -22,6 +22,7 @@ import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import {
   EXPENSE_TITLE_MAX,
   EXPENSE_UNITS,
+  EXPENSE_PAYMENT_METHODS,
   calcExpenseAmount,
   validateExpenseRow,
   findExpenseCategory,
@@ -57,7 +58,7 @@ const ledgerMeta = computed(() => ({ year: store.currentLedgerYear, ledgerName: 
 
 // ===== 一键导出 Excel（按「日期 × 产品」展开）=====
 function exportExpensesExcel(): void {
-  const headers = ['日期', '产品', '单位', '数量', '单价', '金额', '标题', '订货电话', '订货地址', '业务员', '备注']
+  const headers = ['日期', '产品', '单位', '数量', '单价', '金额', '支付方式', '标题', '订货电话', '订货地址', '业务员', '备注']
   const rows: (string | number)[][] = []
   for (const d of sorted.value) {
     for (const e of d.items) {
@@ -68,6 +69,7 @@ function exportExpensesExcel(): void {
         e.quantity ?? '',
         typeof e.unitPrice === 'number' ? e.unitPrice.toFixed(2) : '',
         e.amount.toFixed(2),
+        e.paymentMethod ?? '',
         e.title ?? '',
         e.orderPhone ?? '',
         e.orderAddress ?? '',
@@ -119,6 +121,7 @@ interface ExpenseRow {
   orderPhone: string
   orderAddress: string
   salesman: string
+  paymentMethod: string
 }
 const rows = reactive<ExpenseRow[]>([])
 
@@ -146,7 +149,8 @@ function emptyRow(): ExpenseRow {
     note: '',
     orderPhone: '',
     orderAddress: '',
-    salesman: ''
+    salesman: '',
+    paymentMethod: ''
   }
 }
 
@@ -176,7 +180,8 @@ function startEdit(d: BusinessExpenseDaily): void {
       note: e.note ?? '',
       orderPhone: e.orderPhone ?? '',
       orderAddress: e.orderAddress ?? '',
-      salesman: e.salesman ?? ''
+      salesman: e.salesman ?? '',
+      paymentMethod: e.paymentMethod ?? ''
     }))
   )
   showDialog.value = true
@@ -234,7 +239,8 @@ async function handleSave(): Promise<void> {
       unit: r.unit.trim() || undefined,
       orderPhone: r.orderPhone.trim() || undefined,
       orderAddress: r.orderAddress.trim() || undefined,
-      salesman: r.salesman.trim() || undefined
+      salesman: r.salesman.trim() || undefined,
+      paymentMethod: r.paymentMethod.trim() || undefined
     }))
   const r = await store.upsertExpenseDaily({ originalDailyId: editingDailyId.value, date: editingDate.value, items })
   if (!r.ok) { toast.error(r.message); return }
@@ -297,6 +303,7 @@ async function handleDeleteFromDialog(): Promise<void> {
                   <span class="bizexp-detail-th">数量</span>
                   <span class="bizexp-detail-th">单价</span>
                   <span class="bizexp-detail-th sub">金额</span>
+                  <span class="bizexp-detail-th">支付方式</span>
                   <span class="bizexp-detail-th name">标题 / 备注</span>
                 </div>
                 <div v-for="e in row.items" :key="e.id" class="bizexp-detail-row" :data-testid="`bizexp-detail-${e.id}`">
@@ -305,6 +312,7 @@ async function handleDeleteFromDialog(): Promise<void> {
                   <span class="bizexp-detail-td">{{ e.quantity ?? '—' }}</span>
                   <span class="bizexp-detail-td">¥{{ typeof e.unitPrice === 'number' ? e.unitPrice.toFixed(2) : '—' }}</span>
                   <span class="bizexp-detail-td sub-bold">{{ formatYuanOf(e.amount) }}</span>
+                  <span class="bizexp-detail-td">{{ e.paymentMethod || '—' }}</span>
                   <span class="bizexp-detail-td name bizexp-detail-note">{{ e.title || '—' }}{{ e.note ? '（' + e.note + '）' : '' }}</span>
                 </div>
                 <div v-if="row.items.length === 0" class="bizexp-detail-empty">（无产品明细）</div>
@@ -393,111 +401,169 @@ async function handleDeleteFromDialog(): Promise<void> {
         </div>
       </template>
       <form class="biz-dialog-body" @submit.prevent="handleSave">
-        <div class="biz-field">
-          <label>日期 *（同一天重复保存将合并到同一天）</label>
-          <div data-testid="bizexp-form-date">
-            <el-date-picker
-              v-model="editingDate"
-              type="date"
-              value-format="YYYY-MM-DD"
-              size="small"
-              :disabled-date="disabledDate"
-            />
+        <!-- 日期（日级字段，独立成行：左字段名 / 右控件） -->
+        <div class="biz-kv-row">
+          <label class="biz-kv-label">日期 <span class="req">*</span></label>
+          <div class="biz-kv-ctrl">
+            <div data-testid="bizexp-form-date">
+              <el-date-picker
+                v-model="editingDate"
+                type="date"
+                value-format="YYYY-MM-DD"
+                size="small"
+                :disabled-date="disabledDate"
+              />
+            </div>
+            <span class="biz-kv-hint">同一天重复保存将自动合并到同一天</span>
           </div>
         </div>
 
-        <div class="bizexp-rows">
-          <div v-for="(row, i) in rows" :key="i" class="bizexp-row" data-testid="bizexp-row">
-            <div class="bizexp-row-main">
-              <div class="bizexp-product-wrap">
-                <el-select v-model="row.categoryId" size="small" class="bizexp-product" data-testid="bizexp-row-category" @change="onCategoryChange(row)">
+        <!-- 产品明细：一天可记多笔，每笔作为一组，组内每条信息独立成行 -->
+        <div class="bizexp-products">
+          <div v-for="(row, i) in rows" :key="i" class="bizexp-prod" data-testid="bizexp-row">
+            <div class="bizexp-prod-head">
+              <span class="bizexp-prod-title">产品 {{ i + 1 }}</span>
+              <el-button type="danger" size="small" plain :data-testid="`bizexp-row-del-${i}`" @click="removeRow(i)">移除</el-button>
+            </div>
+
+            <div class="biz-kv-row">
+              <label class="biz-kv-label">产品/分类 <span class="req">*</span></label>
+              <div class="biz-kv-ctrl">
+                <el-select v-model="row.categoryId" size="small" class="bizexp-row-cat" data-testid="bizexp-row-category" @change="onCategoryChange(row)">
                   <el-option v-for="cat in store.expenseCategories" :key="cat.id" :value="cat.id" :label="cat.name + (cat.visible ? '' : '（隐藏）')" />
                 </el-select>
-                <span v-if="rowAmount(row) > 0" class="bizexp-row-amount">金额 {{ formatYuanOf(rowAmount(row)) }}</span>
               </div>
-              <div class="bizexp-nums">
-                <label class="bizexp-num">
-                  单位
-                  <el-select
-                    v-model="row.unit"
-                    size="small"
-                    class="bizexp-form-unit"
-                    data-testid="bizexp-row-unit"
-                    placeholder="选择或输入单位"
-                    clearable
-                    filterable
-                    allow-create
-                    default-first-option
-                  >
-                    <el-option v-for="u in EXPENSE_UNITS" :key="u" :value="u" :label="u" />
-                  </el-select>
-                </label>
-                <label class="bizexp-num">
-                  数量
-                  <el-input-number
-                    :model-value="row.quantity === '' ? undefined : Number(row.quantity)"
-                    :min="0"
-                    :step="1"
-                    size="small"
-                    class="bizexp-row-input"
-                    controls-position="right"
-                    data-testid="bizexp-row-quantity"
-                    placeholder="数量"
-                    @update:model-value="row.quantity = $event == null ? '' : String($event)"
-                  />
-                </label>
-                <label class="bizexp-num">
-                  单价
-                  <el-input-number
-                    :model-value="row.unitPrice === '' ? undefined : Number(row.unitPrice)"
-                    :min="0"
-                    :step="0.01"
-                    :precision="2"
-                    size="small"
-                    class="bizexp-row-input"
-                    controls-position="right"
-                    data-testid="bizexp-row-unit-price"
-                    placeholder="单价"
-                    @update:model-value="row.unitPrice = $event == null ? '' : String($event)"
-                  />
-                </label>
-              </div>
-              <el-button type="danger" size="small" :data-testid="`bizexp-row-del-${i}`" @click="removeRow(i)">移除</el-button>
             </div>
-            <!-- 行级校验提示 -->
+
+            <div class="biz-kv-row">
+              <label class="biz-kv-label">数量</label>
+              <div class="biz-kv-ctrl">
+                <el-input-number
+                  :model-value="row.quantity === '' ? undefined : Number(row.quantity)"
+                  :min="0"
+                  :step="1"
+                  size="small"
+                  class="bizexp-kv-num"
+                  controls-position="right"
+                  data-testid="bizexp-row-quantity"
+                  placeholder="数量"
+                  @update:model-value="row.quantity = $event == null ? '' : String($event)"
+                />
+              </div>
+            </div>
+
+            <div class="biz-kv-row">
+              <label class="biz-kv-label">单价（元）</label>
+              <div class="biz-kv-ctrl">
+                <el-input-number
+                  :model-value="row.unitPrice === '' ? undefined : Number(row.unitPrice)"
+                  :min="0"
+                  :step="0.01"
+                  :precision="2"
+                  size="small"
+                  class="bizexp-kv-num"
+                  controls-position="right"
+                  data-testid="bizexp-row-unit-price"
+                  placeholder="单价"
+                  @update:model-value="row.unitPrice = $event == null ? '' : String($event)"
+                />
+              </div>
+            </div>
+
+            <div class="biz-kv-row">
+              <label class="biz-kv-label">金额</label>
+              <div class="biz-kv-ctrl">
+                <span class="biz-kv-amount">{{ formatYuanOf(rowAmount(row)) }}</span>
+                <span class="biz-kv-hint">自动 = 数量 × 单价</span>
+              </div>
+            </div>
+
+            <div class="biz-kv-row">
+              <label class="biz-kv-label">单位</label>
+              <div class="biz-kv-ctrl">
+                <el-select
+                  v-model="row.unit"
+                  size="small"
+                  class="bizexp-row-unit"
+                  data-testid="bizexp-row-unit"
+                  placeholder="选择或输入单位"
+                  clearable
+                  filterable
+                  allow-create
+                  default-first-option
+                >
+                  <el-option v-for="u in EXPENSE_UNITS" :key="u" :value="u" :label="u" />
+                </el-select>
+              </div>
+            </div>
+
+            <div class="biz-kv-row">
+              <label class="biz-kv-label">支付方式</label>
+              <div class="biz-kv-ctrl">
+                <el-select
+                  v-model="row.paymentMethod"
+                  size="small"
+                  class="bizexp-row-pay"
+                  data-testid="bizexp-row-payment"
+                  placeholder="选择或输入支付方式"
+                  clearable
+                  filterable
+                  allow-create
+                  default-first-option
+                >
+                  <el-option v-for="m in EXPENSE_PAYMENT_METHODS" :key="m" :value="m" :label="m" />
+                </el-select>
+              </div>
+            </div>
+
+            <div class="biz-kv-row">
+              <label class="biz-kv-label">标题（可选）</label>
+              <div class="biz-kv-ctrl">
+                <el-input v-model="row.title" size="small" :maxlength="EXPENSE_TITLE_MAX" placeholder="留空用产品名" data-testid="bizexp-row-title" />
+              </div>
+            </div>
+
+            <div class="biz-kv-row">
+              <label class="biz-kv-label">订货电话</label>
+              <div class="biz-kv-ctrl">
+                <el-input v-model="row.orderPhone" size="small" maxlength="30" placeholder="订货联系电话" data-testid="bizexp-row-order-phone" />
+              </div>
+            </div>
+
+            <div class="biz-kv-row">
+              <label class="biz-kv-label">订货地址</label>
+              <div class="biz-kv-ctrl">
+                <el-input v-model="row.orderAddress" size="small" maxlength="100" placeholder="订货地址" data-testid="bizexp-row-order-address" />
+              </div>
+            </div>
+
+            <div class="biz-kv-row">
+              <label class="biz-kv-label">业务员</label>
+              <div class="biz-kv-ctrl">
+                <el-input v-model="row.salesman" size="small" maxlength="30" placeholder="业务员姓名/工号" data-testid="bizexp-row-salesman" />
+              </div>
+            </div>
+
+            <div class="biz-kv-row">
+              <label class="biz-kv-label">备注</label>
+              <div class="biz-kv-ctrl">
+                <el-input v-model="row.note" size="small" maxlength="100" placeholder="备注" data-testid="bizexp-row-note" />
+              </div>
+            </div>
+
             <p v-if="rowIssues(i).some(x => x.level === 'error')" class="bizexp-row-issue" :data-testid="`bizexp-row-issue-${i}`">
               {{ rowIssues(i).find(x => x.level === 'error')?.message }}
             </p>
-            <!-- 标题 / 订货电话 / 订货地址 / 业务员 / 备注：每行的附加信息 -->
-            <div class="bizexp-row-extra">
-              <label class="bizexp-extra-field">
-                标题（可选，≤{{ EXPENSE_TITLE_MAX }} 字）
-                <el-input v-model="row.title" size="small" :maxlength="EXPENSE_TITLE_MAX" placeholder="留空用产品名" data-testid="bizexp-row-title" />
-              </label>
-              <label class="bizexp-extra-field">
-                订货电话
-                <el-input v-model="row.orderPhone" size="small" maxlength="30" placeholder="订货联系电话" data-testid="bizexp-row-order-phone" />
-              </label>
-              <label class="bizexp-extra-field">
-                订货地址
-                <el-input v-model="row.orderAddress" size="small" maxlength="100" placeholder="订货地址" data-testid="bizexp-row-order-address" />
-              </label>
-              <label class="bizexp-extra-field">
-                业务员
-                <el-input v-model="row.salesman" size="small" maxlength="30" placeholder="业务员姓名/工号" data-testid="bizexp-row-salesman" />
-              </label>
-              <label class="bizexp-extra-field bizexp-extra-note">
-                备注
-                <el-input v-model="row.note" size="small" maxlength="100" placeholder="备注" data-testid="bizexp-row-note" />
-              </label>
-            </div>
           </div>
           <el-button data-testid="bizexp-row-add" @click="addRow">＋ 添加产品行</el-button>
         </div>
 
-        <div class="biz-field">
-          <label>当天备注（可选）</label>
-          <el-input v-model="formNote" size="small" maxlength="200" data-testid="bizexp-form-note" placeholder="如：本周合计、临时采购" />
+        <!-- 当天备注（日级字段，独立成行） -->
+        <div class="biz-kv-row">
+          <label class="biz-kv-label">当天备注</label>
+          <div class="biz-kv-ctrl">
+            <el-input v-model="formNote" size="small" maxlength="200" data-testid="bizexp-form-note" placeholder="如：本周合计、临时采购" />
+          </div>
         </div>
 
         <!-- 表单校验提示（产品/金额，均为 error → 保存按钮禁用） -->
@@ -633,7 +699,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 }
 .bizexp-detail-head {
   display: grid;
-  grid-template-columns: minmax(80px, 1.4fr) minmax(40px, 0.6fr) minmax(40px, 0.6fr) minmax(60px, 0.7fr) minmax(70px, 0.85fr) minmax(80px, 1.4fr);
+  grid-template-columns: minmax(80px, 1.4fr) minmax(40px, 0.6fr) minmax(40px, 0.6fr) minmax(60px, 0.7fr) minmax(70px, 0.85fr) minmax(70px, 0.8fr) minmax(80px, 1.4fr);
   gap: 6px;
   font-size: 11px;
   color: var(--color-text-muted, var(--color-text-muted));
@@ -650,7 +716,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 }
 .bizexp-detail-row {
   display: grid;
-  grid-template-columns: minmax(80px, 1.4fr) minmax(40px, 0.6fr) minmax(40px, 0.6fr) minmax(60px, 0.7fr) minmax(70px, 0.85fr) minmax(80px, 1.4fr);
+  grid-template-columns: minmax(80px, 1.4fr) minmax(40px, 0.6fr) minmax(40px, 0.6fr) minmax(60px, 0.7fr) minmax(70px, 0.85fr) minmax(70px, 0.8fr) minmax(80px, 1.4fr);
   gap: 6px;
   padding: 4px 4px;
   font-size: 12px;
@@ -705,79 +771,88 @@ async function handleDeleteFromDialog(): Promise<void> {
   color: var(--color-text-secondary, #9ca3af);
 }
 
-/* ===== 弹框动态产品行 ===== */
-.bizexp-rows {
+/* ===== 弹框：支出信息垂直列表（左字段名 / 右控件） ===== */
+.bizexp-products {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
-.bizexp-row {
+.bizexp-prod {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 10px;
+  gap: 2px;
+  padding: 12px;
   background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 8px);
 }
-.bizexp-row-main {
+.bizexp-prod-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  width: 100%;
+  justify-content: space-between;
+  margin-bottom: 4px;
 }
-.bizexp-product-wrap {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 140px;
-  flex: 1;
-}
-.bizexp-product {
-  min-width: 140px;
-  flex: 1;
-}
-.bizexp-row-amount {
-  font-size: 12px;
+.bizexp-prod-title {
+  font-size: 13px;
   font-weight: 600;
+  color: var(--color-text-secondary, #6b7280);
+}
+
+/* 键值行：左字段名 / 右控件，每条信息独立成行 */
+.biz-kv-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border, #eef0f2);
+}
+.biz-kv-row:last-child {
+  border-bottom: none;
+}
+.biz-kv-label {
+  flex: 0 0 96px;
+  font-size: 13px;
+  color: var(--color-text-secondary, #6b7280);
+  text-align: right;
+  line-height: 1.4;
+}
+.biz-kv-label .req {
+  color: var(--color-error, #dc2626);
+}
+.biz-kv-ctrl {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.biz-kv-ctrl .el-select,
+.biz-kv-ctrl .el-input,
+.biz-kv-ctrl .el-input-number {
+  max-width: 240px;
+}
+.bizexp-row-cat,
+.bizexp-row-unit,
+.bizexp-row-pay {
+  min-width: 160px;
+  max-width: 240px;
+}
+.bizexp-kv-num {
+  width: 140px;
+}
+.biz-kv-amount {
+  font-size: 14px;
+  font-weight: 700;
   color: var(--color-error, #dc2626);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
-.bizexp-nums {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: flex-end;
-}
-.bizexp-num {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.biz-kv-hint {
   font-size: 11px;
   color: var(--color-text-muted, var(--color-text-muted));
-}
-.bizexp-num .el-select,
-.bizexp-num .bizexp-row-input {
-  width: 90px;
-}
-.bizexp-row-extra {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 12px;
-}
-.bizexp-extra-field {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 11px;
-  color: var(--color-text-muted, var(--color-text-muted));
-}
-.bizexp-extra-note {
-  grid-column: 1 / -1;
 }
 .bizexp-row-issue {
-  margin: 0;
+  margin: 2px 0 0;
   font-size: 12px;
   color: var(--color-error, #dc2626);
 }
@@ -864,15 +939,22 @@ async function handleDeleteFromDialog(): Promise<void> {
 /* ===== 暗色模式 ===== */
 :global(html.dark) .bizexp-amt,
 :global(html.dark) .bizexp-detail-td.sub-bold,
-:global(html.dark) .bizexp-row-amount {
+:global(html.dark) .biz-kv-amount {
   color: #f87171;
 }
 :global(html.dark) .bizexp-issues {
   background-color: var(--color-bg-hover, #111827);
   border-color: var(--color-border, #374151);
 }
-:global(html.dark) .bizexp-row {
+:global(html.dark) .bizexp-prod {
   background-color: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
+}
+:global(html.dark) .biz-kv-row {
+  border-bottom-color: var(--color-border, #374151);
+}
+:global(html.dark) .biz-kv-label {
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 @media (max-width: 767px) {
@@ -884,8 +966,24 @@ async function handleDeleteFromDialog(): Promise<void> {
     flex-wrap: wrap;
     width: 100%;
   }
-  .bizexp-row-extra {
-    grid-template-columns: 1fr;
+  .biz-kv-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+  .biz-kv-label {
+    flex-basis: auto;
+    text-align: left;
+  }
+  .biz-kv-ctrl .el-select,
+  .biz-kv-ctrl .el-input,
+  .biz-kv-ctrl .el-input-number,
+  .bizexp-row-cat,
+  .bizexp-row-unit,
+  .bizexp-row-pay,
+  .bizexp-kv-num {
+    max-width: 100%;
+    width: 100%;
   }
 }
 </style>
