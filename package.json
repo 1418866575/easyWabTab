@@ -28,6 +28,7 @@
     "test:snapshot": "node --experimental-strip-types scripts/test-snapshot-core.ts",
     "test:pomodoro": "node --experimental-strip-types scripts/test-pomodoro-core.ts",
     "test:business": "node --experimental-strip-types scripts/test-business-core.ts",
+    "test:toolbox": "node --experimental-strip-types scripts/test-toolbox-core.ts",
     "test:xlsx": "node --experimental-strip-types scripts/test-xlsx-export.ts",
     "qa:student-ui": "node scripts/qa-student-ui.mjs",
     "test:student-menu": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-menu-core.ts",
