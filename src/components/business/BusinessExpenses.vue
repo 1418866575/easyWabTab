@@ -433,11 +433,6 @@ async function handleDeleteFromDialog(): Promise<void> {
                 <th>金额<span class="req">*</span></th>
                 <th>单位</th>
                 <th>支付方式</th>
-                <th>标题</th>
-                <th>订货电话</th>
-                <th>订货地址</th>
-                <th>业务员</th>
-                <th>备注</th>
                 <th class="col-ops">操作</th>
               </tr>
             </thead>
@@ -506,17 +501,12 @@ async function handleDeleteFromDialog(): Promise<void> {
                       <el-option v-for="m in EXPENSE_PAYMENT_METHODS" :key="m" :value="m" :label="m" />
                     </el-select>
                   </td>
-                  <td><el-input v-model="row.title" size="small" :maxlength="EXPENSE_TITLE_MAX" data-testid="bizexp-row-title" /></td>
-                  <td><el-input v-model="row.orderPhone" size="small" maxlength="30" data-testid="bizexp-row-order-phone" /></td>
-                  <td><el-input v-model="row.orderAddress" size="small" maxlength="100" data-testid="bizexp-row-order-address" /></td>
-                  <td><el-input v-model="row.salesman" size="small" maxlength="30" data-testid="bizexp-row-salesman" /></td>
-                  <td><el-input v-model="row.note" size="small" maxlength="100" data-testid="bizexp-row-note" /></td>
                   <td class="col-ops">
                     <el-button type="danger" size="small" plain :data-testid="`bizexp-row-del-${i}`" @click="removeRow(i)">移除</el-button>
                   </td>
                 </tr>
                 <tr v-if="rowIssues(i).some(x => x.level === 'error')" class="bizexp-row-issue-row">
-                  <td class="bizexp-row-issue" :colspan="13" :data-testid="`bizexp-row-issue-${i}`">
+                  <td class="bizexp-row-issue" :colspan="8" :data-testid="`bizexp-row-issue-${i}`">
                     {{ rowIssues(i).find(x => x.level === 'error')?.message }}
                   </td>
                 </tr>
@@ -525,11 +515,32 @@ async function handleDeleteFromDialog(): Promise<void> {
           </table>
         </div>
 
-        <!-- 当天备注（日级字段，独立成行） -->
-        <div class="biz-kv-row">
-          <label class="biz-kv-label">当天备注</label>
-          <div class="biz-kv-ctrl">
-            <el-input v-model="formNote" size="small" maxlength="200" data-testid="bizexp-form-note" />
+        <!-- 产品明细补充信息（标题/订货电话/订货地址/业务员/备注），每笔产品一行，置于表格下方 -->
+        <div class="bizexp-row-details">
+          <div v-for="(row, i) in rows" :key="i" class="bizexp-row-detail">
+            <div class="bizexp-row-detail-title">产品 {{ i + 1 }}</div>
+            <div class="bizexp-row-detail-grid">
+              <div class="bizexp-detail-field">
+                <label>标题</label>
+                <el-input v-model="row.title" size="small" :maxlength="EXPENSE_TITLE_MAX" data-testid="bizexp-row-title" />
+              </div>
+              <div class="bizexp-detail-field">
+                <label>订货电话</label>
+                <el-input v-model="row.orderPhone" size="small" maxlength="30" data-testid="bizexp-row-order-phone" />
+              </div>
+              <div class="bizexp-detail-field">
+                <label>订货地址</label>
+                <el-input v-model="row.orderAddress" size="small" maxlength="100" data-testid="bizexp-row-order-address" />
+              </div>
+              <div class="bizexp-detail-field">
+                <label>业务员</label>
+                <el-input v-model="row.salesman" size="small" maxlength="30" data-testid="bizexp-row-salesman" />
+              </div>
+              <div class="bizexp-detail-field bizexp-detail-field-wide">
+                <label>备注</label>
+                <el-input v-model="row.note" size="small" maxlength="100" data-testid="bizexp-row-note" />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -750,9 +761,45 @@ async function handleDeleteFromDialog(): Promise<void> {
   justify-content: flex-end;
   margin: 2px 0 8px;
 }
+.bizexp-row-details {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.bizexp-row-detail {
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: var(--radius-md, 8px);
+  padding: 10px 12px;
+  background: var(--color-bg-card, var(--color-bg-hover));
+}
+.bizexp-row-detail-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary, #6b7280);
+  margin-bottom: 8px;
+}
+.bizexp-row-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.bizexp-detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.bizexp-detail-field label {
+  font-size: 12px;
+  color: var(--color-text-secondary, #6b7280);
+}
+.bizexp-detail-field-wide {
+  grid-column: 1 / -1;
+}
 .bizexp-table {
   width: 100%;
-  min-width: 1180px;
+  min-width: 820px;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -815,7 +862,7 @@ async function handleDeleteFromDialog(): Promise<void> {
   background: var(--color-bg-hover, #fef2f2);
 }
 
-/* ===== 弹框：日级字段（日期 / 当天备注）键值行 ===== */
+/* ===== 弹框：日级字段（日期）键值行 ===== */
 .biz-kv-row {
   display: flex;
   align-items: center;
@@ -964,6 +1011,13 @@ async function handleDeleteFromDialog(): Promise<void> {
 :global(html.dark) .bizexp-row-issue-row .bizexp-row-issue {
   background-color: var(--color-bg-hover, #2a1414);
 }
+:global(html.dark) .bizexp-row-detail {
+  background-color: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
+}
+:global(html.dark) .bizexp-row-detail-title {
+  color: var(--color-text-secondary, #d1d5db);
+}
 :global(html.dark) .biz-kv-row {
   border-bottom-color: var(--color-border, #374151);
 }
@@ -998,6 +1052,9 @@ async function handleDeleteFromDialog(): Promise<void> {
   .bizexp-kv-num {
     max-width: 100%;
     width: 100%;
+  }
+  .bizexp-row-detail-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
