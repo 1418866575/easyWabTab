@@ -417,6 +417,10 @@ async function handleDeleteFromDialog(): Promise<void> {
           </div>
         </div>
 
+        <div class="bizexp-add-bar">
+          <el-button data-testid="bizexp-row-add" @click="addRow">＋ 添加支出</el-button>
+        </div>
+
         <!-- 产品明细：一天可记多笔，以表格方式展示；每行一笔产品，列即字段 -->
         <div class="bizexp-table-wrap">
           <table class="bizexp-table">
@@ -520,7 +524,6 @@ async function handleDeleteFromDialog(): Promise<void> {
             </tbody>
           </table>
         </div>
-        <el-button data-testid="bizexp-row-add" @click="addRow">＋ 添加产品行</el-button>
 
         <!-- 当天备注（日级字段，独立成行） -->
         <div class="biz-kv-row">
@@ -741,6 +744,11 @@ async function handleDeleteFromDialog(): Promise<void> {
   overflow-x: auto;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 8px);
+}
+.bizexp-add-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin: 2px 0 8px;
 }
 .bizexp-table {
   width: 100%;
