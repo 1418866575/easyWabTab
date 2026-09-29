@@ -40,8 +40,17 @@ interface Entry {
   visible: boolean
 }
 
-// 顺序与左上角入口按钮保持一致：教师台 → 工作台 → 销售记账 → 学生台
+// 顺序：导航站（首页）置首，其后与左上角入口按钮保持一致：教师台 → 工作台 → 销售记账 → 学生台
 const entries = computed<Entry[]>(() => [
+  {
+    key: 'nav',
+    path: '/',
+    name: '导航站',
+    // 站点图标取「导航设置 → 站点图标」（store.siteFavicon）；未设置时回退内置 home 图标
+    icon: store.siteFavicon || '',
+    builtin: 'home',
+    visible: true
+  },
   {
     key: 'teacher',
     path: '/teacher',
@@ -110,12 +119,6 @@ function toggle(): void {
     }
   }
   open.value = true
-}
-
-/** 返回导航站（首页）；点击后关闭弹框并跳转 */
-function goNavStation(): void {
-  open.value = false
-  void router.push('/')
 }
 
 function go(entry: Entry): void {
@@ -206,22 +209,6 @@ onBeforeUnmount(() => {
           <p v-else class="wmp-empty">
             暂无已启用的工作台，可在「设置 → 个性化 → 工作台设置」中开启。
           </p>
-
-          <!-- 导航站入口：单一图标按钮，清晰标识为导航站入口，点击返回导航站（首页） -->
-          <div class="wmp-home">
-            <button
-              type="button"
-              class="wmp-home-btn"
-              role="menuitem"
-              data-testid="wmp-nav-home"
-              :title="'返回导航站（首页）'"
-              :aria-label="'返回导航站（首页）'"
-              @click="goNavStation"
-            >
-              <Icon name="home" :size="18" class="wmp-home-icon" />
-              <span>导航站</span>
-            </button>
-          </div>
         </div>
       </Transition>
     </Teleport>
@@ -280,10 +267,10 @@ onBeforeUnmount(() => {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
-/* 固定 4 列：一行放 4 个工作台（不再 auto-fill，避免列数随宽度变化） */
+/* 固定 5 列：导航站（首页）置首 + 4 个工作台，等宽等高同尺寸（不再 auto-fill，避免列数随宽度变化） */
 .wmp-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -349,41 +336,6 @@ onBeforeUnmount(() => {
   color: var(--color-text-muted, #94a3b8);
 }
 
-/* 导航站入口：4 张工作台卡片下方的单一图标按钮，点击返回导航站（首页）。
-   视觉对齐 .wmp-trigger（inline-flex + gap + hover 主色），提供明确 hover/active 反馈。 */
-.wmp-home {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--color-border, #e2e8f0);
-}
-.wmp-home-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 9px 12px;
-  background-color: transparent;
-  color: var(--color-text-secondary, #64748b);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
-}
-.wmp-home-btn:hover {
-  background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-primary, #3b82f6);
-  border-color: var(--color-primary, #3b82f6);
-}
-.wmp-home-btn:active {
-  transform: scale(0.98);
-}
-.wmp-home-icon {
-  color: currentColor;
-  flex: none;
-}
-
 .wmp-fade-enter-active,
 .wmp-fade-leave-active {
   transition: opacity 0.15s ease, transform 0.15s ease;
@@ -421,11 +373,5 @@ html.dark .wmp-card {
 }
 html.dark .wmp-card:hover {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
-}
-html.dark .wmp-home {
-  border-top-color: rgba(255, 255, 255, 0.08);
-}
-html.dark .wmp-home-btn:hover {
-  background-color: rgba(255, 255, 255, 0.06);
 }
 </style>
