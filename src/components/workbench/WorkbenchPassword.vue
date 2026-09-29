@@ -1,14 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { showConfirm } from '@/utils/dialog'
 import { usePasswordsStore } from '@/stores/passwords'
 import type { PasswordSaveResult } from '@/stores/passwords'
 import { useSitesStore } from '@/stores/sites'
 import { useToast } from '@/composables/useToast'
-import { usePanelPaging } from '@/composables/usePanelPaging'
 import { getIconUrl } from '@/composables/useIconCache'
 import type { PasswordEntry } from '@/types'
-import PanelPager from './PanelPager.vue'
 import Icon from '@/components/Icon.vue'
 
 const passwordsStore = usePasswordsStore()
@@ -153,7 +151,6 @@ function categoryName(id?: string): string {
 
 function selectCategory(id: string): void {
   activeCategoryId.value = id
-  paging.goto(1)
 }
 
 const filteredPasswords = computed<PasswordEntry[]>(() => {
@@ -168,21 +165,7 @@ const filteredPasswords = computed<PasswordEntry[]>(() => {
   return list.filter(p => (p.siteName ?? '').toLowerCase().includes(q))
 })
 
-// ===== 自适应分页（桌面 ≥769px；锁定/未解锁时列表不渲染 → containerRef 为 null → 分页惰性 R8）=====
-const listEl = ref<HTMLElement | null>(null)
-// reactive() 包裹：模板访问 paging.currentPage/pageItems/totalPages/fitsOnePage 时 ref 自动解包（PanelPager 消费契约）
-const paging = reactive(
-  usePanelPaging({
-    items: () => filteredPasswords.value,
-    rowHeight: 116, // row-heights.json: password = 116（6 列卡片实测 MAX 113.17 + 2px，R4）
-    containerRef: listEl,
-    gridRef: listEl, // 与 containerRef 同元素：getComputedStyle(gridTemplateColumns) 实测列数 → 6
-    maxRows: 3 // 6 列 × 3 行 = 18 卡/页（行数经 clampMaxRows 钳制）
-  })
-)
-
-// 搜索或分类变化 → 回第 1 页（输入与清除按钮两条路径都经这两个值变化触发）
-watch([searchQuery, activeCategoryId], () => paging.goto(1))
+// 列表全量渲染，不再分页；滚动由 .wb-content 页面级滚动承载
 
 // ===== 新增/编辑弹窗（共用表单，四字段全部必填）=====
 const showForm = ref(false)
@@ -508,10 +491,10 @@ watch(
         {{ searchQuery ? '没有找到匹配的密码' : '暂无保存的密码' }}
       </div>
 
-      <!-- 条目列表（6 列卡片网格：桌面 3 行 × 6 列 = 18 卡/页；移动端 2 列全量渲染） -->
-      <div v-else class="pwd-list" :class="{ 'pwd-list-scroll': !paging.fitsOnePage }" ref="listEl">
+      <!-- 条目列表（6 列卡片网格，全量渲染不再分页；移动端单列） -->
+      <div v-else class="pwd-list">
         <TransitionGroup name="grid">
-        <div v-for="entry in paging.pageItems" :key="entry.id" class="pwd-item" data-testid="pwd-item">
+        <div v-for="entry in filteredPasswords" :key="entry.id" class="pwd-item" data-testid="pwd-item">
           <div class="pwd-card-head">
             <img
               v-if="getSiteIcon(entry.url)"
@@ -584,8 +567,6 @@ watch(
         </TransitionGroup>
       </div>
 
-      <!-- 自适应分页（仅已解锁列表可见时渲染；totalPages>1 才显示） -->
-      <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
     </div>
 
     <!-- 新增/编辑弹窗 -->
@@ -931,21 +912,7 @@ html.dark .pwd-cat-badge {
   align-content: start;
 }
 
-/* 桌面（≥769px）自适应分页：主体撑满面板高度，列表区 flex:1 撑满剩余高度供 RO 测量；
-   一屏放不下时 overflow-y:auto 兜底（R7） */
-@media (min-width: 769px) {
-  .pwd-main {
-    flex: 1;
-    min-height: 0;
-  }
-
-  .pwd-list {
-    flex: 1;
-    min-height: 0;
-  }
-}
-
-/* 移动端（≤768px）分页惰性（全量渲染）：每行 1 个卡片 */
+/* 移动端（≤768px）：单列全量渲染 */
 @media (max-width: 768px) {
   .pwd-list {
     grid-template-columns: minmax(0, 1fr);
