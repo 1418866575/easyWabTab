@@ -79,7 +79,7 @@ const ariaLabel = computed(
       <span v-for="t in meta.tags.slice(0, 3)" :key="t" class="tb-tag">{{ t }}</span>
       <span v-if="hits" class="tb-hits" :title="`已使用 ${hits} 次`">🔥 {{ hits }}</span>
       <span v-if="disabled" class="tb-badge" :class="meta.status">{{ statusLabel }}</span>
-      <span v-else class="tb-badge internal">{{ meta.kind === 'module' ? '站内模块' : '站内自建' }}</span>
+      <span v-else-if="meta.kind === 'module'" class="tb-badge internal">站内模块</span>
     </span>
   </button>
 </template>

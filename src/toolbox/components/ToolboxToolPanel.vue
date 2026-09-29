@@ -4,12 +4,13 @@
  *
  * 规范（v2）：
  * - 尺寸档：S 480 / M 720 / L 960 / XL 1120，移动端一律全屏
- * - 结构：头部（图标/名称/描述/关闭）+ 内容区（工具组件自渲染五段式）+ 底部提示
- * - 关闭：✕ / Esc / 点击遮罩；输入有内容且未复制/下载过则二次确认
+ * - 结构：头部（图标/名称/描述/全屏切换/关闭）+ 内容区（工具组件自渲染五段式）+ 底部提示
+ * - 关闭：✕ / Esc / 点击遮罩 / 底部「关闭」，一律一步关闭（不再二次确认）
+ * - 全屏：头部 ⛶ 按钮在「铺满视口」与「恢复原尺寸档」之间切换，图标与提示随状态变化
  * - 焦点：打开时移入弹框并循环（Tab 不逸出），关闭后归还触发元素
  */
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onErrorCaptured, ref, watch } from 'vue'
-import { resetDirty, useToolDirty } from '../prefs/useToolDirty'
+import { resetDirty } from '../prefs/useToolDirty'
 import type { ToolboxToolEntry } from '../types'
 
 const props = defineProps<{
@@ -21,10 +22,11 @@ const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
-const { dirty, saved } = useToolDirty()
 const loadError = ref('')
 const bodyRef = ref<HTMLElement | null>(null)
 const lastFocused = ref<HTMLElement | null>(null)
+/** 全屏态：true = 铺满整个视口，false = 工具自带的尺寸档 */
+const fullscreen = ref(false)
 
 const SIZE_CLASS: Record<string, string> = { S: 'is-s', M: 'is-m', L: 'is-l', XL: 'is-xl' }
 
@@ -57,7 +59,7 @@ function onKeydown(e: KeyboardEvent) {
   if (!props.visible) return
   if (e.key === 'Escape') {
     e.preventDefault()
-    tryClose()
+    close()
     return
   }
   if (e.key === 'Tab') {
@@ -76,12 +78,13 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
-/** 关闭：有未保存输入时二次确认 */
-function tryClose() {
-  if (dirty.value && !saved.value) {
-    const ok = window.confirm('工具内有未保存的内容，确认关闭？')
-    if (!ok) return
-  }
+/** 切换全屏：铺满视口 ⇄ 恢复工具自带的尺寸档 */
+function toggleFullscreen() {
+  fullscreen.value = !fullscreen.value
+}
+
+/** 关闭：一步关闭，不做「未保存」二次确认 */
+function close() {
   emit('close')
 }
 
@@ -95,6 +98,7 @@ watch(
     loadError.value = ''
     if (v) {
       lastFocused.value = document.activeElement as HTMLElement | null
+      fullscreen.value = false // 每次打开都从工具自带尺寸档开始
       document.addEventListener('keydown', onKeydown)
       lockScroll(true)
       await nextTick()
@@ -103,6 +107,7 @@ watch(
     } else {
       document.removeEventListener('keydown', onKeydown)
       lockScroll(false)
+      fullscreen.value = false
       resetDirty()
       lastFocused.value?.focus?.()
       lastFocused.value = null
@@ -113,6 +118,7 @@ watch(
 watch(
   () => props.entry?.meta?.id,
   () => {
+    fullscreen.value = false
     resetDirty()
   }
 )
@@ -127,13 +133,13 @@ onBeforeUnmount(() => {
   <div
     v-if="props.visible && props.entry"
     class="tb-modal"
-    :class="sizeClass"
+    :class="[sizeClass, { 'is-full': fullscreen }]"
     data-testid="tb-modal"
     role="dialog"
     aria-modal="true"
     aria-labelledby="tbModalTitle"
   >
-    <div class="tb-modal-mask" @click="tryClose" />
+    <div class="tb-modal-mask" @click="close" />
 
     <div ref="bodyRef" class="tb-modal-body" tabindex="-1">
       <header class="tb-modal-head">
@@ -143,14 +149,47 @@ onBeforeUnmount(() => {
           <p>{{ props.entry.meta.description }}</p>
         </div>
         <span class="tb-modal-badge">站内自建</span>
-        <button
-          type="button"
-          class="tb-modal-close"
-          data-testid="tb-modal-close"
-          title="关闭（Esc）"
-          aria-label="关闭工具"
-          @click="tryClose"
-        >✕</button>
+        <div class="tb-modal-acts">
+          <button
+            type="button"
+            class="tb-modal-ico tb-modal-full"
+            :class="{ 'is-on': fullscreen }"
+            data-testid="tb-modal-fullscreen"
+            :title="fullscreen ? '退出全屏（恢复原尺寸）' : '全屏展示（铺满视口）'"
+            :aria-label="fullscreen ? '退出全屏' : '全屏展示'"
+            :aria-pressed="fullscreen ? 'true' : 'false'"
+            @click="toggleFullscreen"
+          >
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
+              <path
+                v-if="fullscreen"
+                d="M6.5 2.5v4h-4M9.5 2.5v4h4M6.5 13.5v-4h-4M9.5 13.5v-4h4"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                v-else
+                d="M2.5 6v-3.5H6M14 6V2.5H10.5M2.5 10v3.5H6M14 10v3.5h-3.5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="tb-modal-ico tb-modal-close"
+            data-testid="tb-modal-close"
+            title="关闭（Esc）"
+            aria-label="关闭工具"
+            @click="close"
+          >✕</button>
+        </div>
       </header>
 
       <div class="tb-modal-content" :data-layout="layout">
@@ -166,7 +205,7 @@ onBeforeUnmount(() => {
 
       <footer class="tb-modal-foot">
         <span class="tb-modal-tip">所有计算均在本机浏览器完成，数据不会上传</span>
-        <button type="button" class="tb-modal-btn" @click="tryClose">关闭</button>
+        <button type="button" class="tb-modal-btn" @click="close">关闭</button>
       </footer>
     </div>
   </div>
@@ -207,6 +246,15 @@ onBeforeUnmount(() => {
 .tb-modal.is-m .tb-modal-body { width: min(720px, 100%); }
 .tb-modal.is-l .tb-modal-body { width: min(960px, 100%); }
 .tb-modal.is-xl .tb-modal-body { width: min(1120px, 100%); }
+/* 全屏态：铺满整个视口（放在尺寸档之后，同特异性后者生效） */
+.tb-modal.is-full .tb-modal-body {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
+  margin: 0;
+  border-radius: 0;
+}
 
 .tb-modal-head {
   display: flex;
@@ -236,19 +284,28 @@ onBeforeUnmount(() => {
   background: var(--color-success-soft);
   color: var(--color-success);
 }
-.tb-modal-close {
+.tb-modal-acts { margin-left: auto; flex: none; display: flex; align-items: center; gap: 6px; }
+.tb-modal-ico {
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 34px;
   min-height: 34px;
+  padding: 0;
+  font-family: var(--font-family);
+  font-size: 15px;
+  line-height: 1;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: transparent;
   color: var(--color-text-secondary);
-  font-size: 15px;
   transition: color var(--motion-duration) var(--motion-ease),
-    border-color var(--motion-duration) var(--motion-ease);
+    border-color var(--motion-duration) var(--motion-ease),
+    background-color var(--motion-duration) var(--motion-ease);
 }
-.tb-modal-close:hover { color: var(--color-primary); border-color: var(--color-primary); }
+.tb-modal-ico:hover { color: var(--color-primary); border-color: var(--color-primary); }
+.tb-modal-ico.is-on { color: var(--color-primary); border-color: var(--color-primary); background: var(--color-primary-soft); }
 
 .tb-modal-content { padding: 16px; overflow: auto; flex: 1; }
 .tb-modal-foot {
@@ -284,6 +341,8 @@ onBeforeUnmount(() => {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
+/* 全屏切换时不做位移动画，避免抖动 */
+.tb-modal.is-full .tb-modal-body { animation: none; }
 
 @media (max-width: 768px) {
   .tb-modal-body,
@@ -299,6 +358,8 @@ onBeforeUnmount(() => {
     border-radius: 0;
   }
   .tb-modal-foot { padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+  /* 移动端弹框本就铺满视口，全屏切换无意义，隐藏 */
+  .tb-modal-full { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .tb-modal-mask,
