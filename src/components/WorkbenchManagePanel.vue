@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import Icon from './Icon.vue'
 import { useAppSettingsStore } from '../stores/settings'
 
@@ -10,6 +10,7 @@ import { useAppSettingsStore } from '../stores/settings'
 // 面板用 Teleport 挂到 body + fixed 定位：app-bar 有 backdrop-filter 会成为 fixed 包含块，
 // 且移动端 .app-bar-right 是 overflow-x:auto，直接 absolute 会被裁切。
 const router = useRouter()
+const route = useRoute()
 const store = useAppSettingsStore()
 
 // 允许各工作台页面复用本组件：通过 props 自定义触发器图标（站点图标）/ 文字 / 强制显示，
@@ -49,7 +50,8 @@ const entries = computed<Entry[]>(() => [
     // 站点图标取「导航设置 → 站点图标」（store.siteFavicon）；未设置时回退内置 home 图标
     icon: store.siteFavicon || '',
     builtin: 'home',
-    visible: true
+    // 已在导航站首页（/）时隐藏自身入口，避免「点了还在原地」的无效卡片
+    visible: route.path !== '/'
   },
   {
     key: 'teacher',
@@ -86,6 +88,10 @@ const entries = computed<Entry[]>(() => [
 ])
 
 const visibleEntries = computed<Entry[]>(() => entries.value.filter((e) => e.visible))
+// 网格列数随可见卡片数自适应（在导航站首页时隐藏导航站卡片 → 4 列，否则 5 列），避免末尾留空列
+const gridStyle = computed<Record<string, string>>(() => ({
+  gridTemplateColumns: `repeat(${visibleEntries.value.length}, minmax(0, 1fr))`
+}))
 
 const open = ref(false)
 const triggerRef = ref<HTMLElement | null>(null)
@@ -188,7 +194,7 @@ onBeforeUnmount(() => {
           role="menu"
           :aria-label="store.workbenchManageDisplayName"
         >
-          <div v-if="visibleEntries.length > 0" class="wmp-grid">
+          <div v-if="visibleEntries.length > 0" class="wmp-grid" :style="gridStyle">
             <button
               v-for="entry in visibleEntries"
               :key="entry.key"
@@ -267,10 +273,9 @@ onBeforeUnmount(() => {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
-/* 固定 5 列：导航站（首页）置首 + 4 个工作台，等宽等高同尺寸（不再 auto-fill，避免列数随宽度变化） */
+/* 列数随可见卡片数自适应（见 gridStyle）：导航站首页隐藏导航站卡片时为 4 列、否则 5 列，避免末尾留空列 */
 .wmp-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
 }
 
