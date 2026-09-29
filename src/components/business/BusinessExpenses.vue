@@ -195,7 +195,7 @@ function removeRow(index: number): void {
   rows.splice(index, 1)
 }
 
-/** 单行校验（标题在支出里可选，故传 titleRequired: false）：产品必选、金额 > 0 */
+/** 单行校验（标题在支出里可选，故传 titleRequired: false）：产品必选、数量 / 单价 / 金额均须 > 0 */
 function rowIssues(index: number) {
   const r = rows[index]
   if (!r) return []
@@ -414,7 +414,6 @@ async function handleDeleteFromDialog(): Promise<void> {
                 :disabled-date="disabledDate"
               />
             </div>
-            <span class="biz-kv-hint">同一天重复保存将自动合并到同一天</span>
           </div>
         </div>
 
@@ -425,9 +424,9 @@ async function handleDeleteFromDialog(): Promise<void> {
               <tr>
                 <th class="col-idx">#</th>
                 <th>产品/分类<span class="req">*</span></th>
-                <th>数量</th>
-                <th>单价（元）</th>
-                <th>金额</th>
+                <th>数量<span class="req">*</span></th>
+                <th>单价（元）<span class="req">*</span></th>
+                <th>金额<span class="req">*</span></th>
                 <th>单位</th>
                 <th>支付方式</th>
                 <th>标题</th>
@@ -454,10 +453,9 @@ async function handleDeleteFromDialog(): Promise<void> {
                       :step="1"
                       size="small"
                       class="bizexp-kv-num"
-                      controls-position="right"
-                      data-testid="bizexp-row-quantity"
-                      placeholder="数量"
-                      @update:model-value="row.quantity = $event == null ? '' : String($event)"
+                  controls-position="right"
+                  data-testid="bizexp-row-quantity"
+                  @update:model-value="row.quantity = $event == null ? '' : String($event)"
                     />
                   </td>
                   <td>
@@ -468,10 +466,9 @@ async function handleDeleteFromDialog(): Promise<void> {
                       :precision="2"
                       size="small"
                       class="bizexp-kv-num"
-                      controls-position="right"
-                      data-testid="bizexp-row-unit-price"
-                      placeholder="单价"
-                      @update:model-value="row.unitPrice = $event == null ? '' : String($event)"
+                  controls-position="right"
+                  data-testid="bizexp-row-unit-price"
+                  @update:model-value="row.unitPrice = $event == null ? '' : String($event)"
                     />
                   </td>
                   <td class="bizexp-td-amount">
@@ -482,9 +479,8 @@ async function handleDeleteFromDialog(): Promise<void> {
                       v-model="row.unit"
                       size="small"
                       class="bizexp-row-unit"
-                      data-testid="bizexp-row-unit"
-                      placeholder="单位"
-                      clearable
+                  data-testid="bizexp-row-unit"
+                  clearable
                       filterable
                       allow-create
                       default-first-option
@@ -497,9 +493,8 @@ async function handleDeleteFromDialog(): Promise<void> {
                       v-model="row.paymentMethod"
                       size="small"
                       class="bizexp-row-pay"
-                      data-testid="bizexp-row-payment"
-                      placeholder="支付方式"
-                      clearable
+                  data-testid="bizexp-row-payment"
+                  clearable
                       filterable
                       allow-create
                       default-first-option
@@ -507,11 +502,11 @@ async function handleDeleteFromDialog(): Promise<void> {
                       <el-option v-for="m in EXPENSE_PAYMENT_METHODS" :key="m" :value="m" :label="m" />
                     </el-select>
                   </td>
-                  <td><el-input v-model="row.title" size="small" :maxlength="EXPENSE_TITLE_MAX" placeholder="留空用产品名" data-testid="bizexp-row-title" /></td>
-                  <td><el-input v-model="row.orderPhone" size="small" maxlength="30" placeholder="电话" data-testid="bizexp-row-order-phone" /></td>
-                  <td><el-input v-model="row.orderAddress" size="small" maxlength="100" placeholder="地址" data-testid="bizexp-row-order-address" /></td>
-                  <td><el-input v-model="row.salesman" size="small" maxlength="30" placeholder="业务员" data-testid="bizexp-row-salesman" /></td>
-                  <td><el-input v-model="row.note" size="small" maxlength="100" placeholder="备注" data-testid="bizexp-row-note" /></td>
+                  <td><el-input v-model="row.title" size="small" :maxlength="EXPENSE_TITLE_MAX" data-testid="bizexp-row-title" /></td>
+                  <td><el-input v-model="row.orderPhone" size="small" maxlength="30" data-testid="bizexp-row-order-phone" /></td>
+                  <td><el-input v-model="row.orderAddress" size="small" maxlength="100" data-testid="bizexp-row-order-address" /></td>
+                  <td><el-input v-model="row.salesman" size="small" maxlength="30" data-testid="bizexp-row-salesman" /></td>
+                  <td><el-input v-model="row.note" size="small" maxlength="100" data-testid="bizexp-row-note" /></td>
                   <td class="col-ops">
                     <el-button type="danger" size="small" plain :data-testid="`bizexp-row-del-${i}`" @click="removeRow(i)">移除</el-button>
                   </td>
@@ -525,14 +520,13 @@ async function handleDeleteFromDialog(): Promise<void> {
             </tbody>
           </table>
         </div>
-        <p class="bizexp-table-hint"><span class="biz-kv-hint">金额 = 数量 × 单价（自动计算，无需填写）</span></p>
         <el-button data-testid="bizexp-row-add" @click="addRow">＋ 添加产品行</el-button>
 
         <!-- 当天备注（日级字段，独立成行） -->
         <div class="biz-kv-row">
           <label class="biz-kv-label">当天备注</label>
           <div class="biz-kv-ctrl">
-            <el-input v-model="formNote" size="small" maxlength="200" data-testid="bizexp-form-note" placeholder="如：本周合计、临时采购" />
+            <el-input v-model="formNote" size="small" maxlength="200" data-testid="bizexp-form-note" />
           </div>
         </div>
 
@@ -807,9 +801,6 @@ async function handleDeleteFromDialog(): Promise<void> {
 .bizexp-table .req {
   color: var(--color-error, #dc2626);
 }
-.bizexp-table-hint {
-  margin: 6px 0 0;
-}
 .bizexp-row-issue-row .bizexp-row-issue {
   font-size: 12px;
   color: var(--color-error, #dc2626);
@@ -855,10 +846,6 @@ async function handleDeleteFromDialog(): Promise<void> {
   font-weight: 700;
   color: var(--color-error, #dc2626);
   font-variant-numeric: tabular-nums;
-}
-.biz-kv-hint {
-  font-size: 11px;
-  color: var(--color-text-muted, var(--color-text-muted));
 }
 .bizexp-row-issue {
   margin: 2px 0 0;
