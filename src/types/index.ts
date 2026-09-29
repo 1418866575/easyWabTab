@@ -597,6 +597,8 @@ export interface BusinessExpense {
   orderAddress?: string
   /** 业务员信息；可选，旧数据缺省为空 */
   salesman?: string
+  /** 支付方式（现金/微信/支付宝/银行卡/其他，或自定义）；可选，旧数据缺省为空 */
+  paymentMethod?: string
 }
 
 /** 支出日记账：一天一笔支出，含多件产品明细（与销售 BusinessDailyRecord 同构） */

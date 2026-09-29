@@ -2150,6 +2150,42 @@ test('T83 upsertExpenseDaily', () => {
   assert.equal(noop.length, 0)
 })
 
+// T84 — 支付方式 paymentMethod：归一化保留 + upsert/add 写入透传
+test('T84 expense paymentMethod', () => {
+  // 读取路径：normalizeExpenseDailies 保留 paymentMethod
+  const dailies = normalizeExpenseDailies(
+    {
+      expenseDailies: [
+        { id: 'bed_x', date: '2026-09-28', items: [{ id: 'be_x', categoryId: 'c1', amount: 10, paymentMethod: '微信' }], note: '' }
+      ]
+    },
+    []
+  )
+  assert.equal(dailies.length, 1)
+  assert.equal((dailies[0].items[0] as Record<string, unknown>).paymentMethod, '微信')
+
+  // 缺省 paymentMethod → 归一化后不挂该属性（保持旧数据/旧断言形状，向后兼容）
+  const noPm = normalizeExpenseDailies(
+    {
+      expenseDailies: [
+        { id: 'bed_y', date: '2026-09-28', items: [{ id: 'be_y', categoryId: 'c1', amount: 10 }], note: '' }
+      ]
+    },
+    []
+  )
+  assert.equal('paymentMethod' in (noPm[0].items[0] as Record<string, unknown>), false)
+
+  // 写入路径：upsertExpenseDaily 透传 paymentMethod
+  const up = upsertExpenseDaily([], null, '2026-09-28', [
+    { categoryId: 'c1', amount: 20, paymentMethod: '支付宝' }
+  ])
+  assert.equal((up[0].items[0] as Record<string, unknown>).paymentMethod, '支付宝')
+
+  // 写入路径：addExpenseItem 透传 paymentMethod
+  const add = addExpenseItem([], '2026-09-28', { categoryId: 'c1', amount: 30, paymentMethod: '现金' })
+  assert.equal((add[0].items[0] as Record<string, unknown>).paymentMethod, '现金')
+})
+
 let passed = 0
 let failed = 0
 for (const t of tests) {

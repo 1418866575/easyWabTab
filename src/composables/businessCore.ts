@@ -252,6 +252,7 @@ export interface ExpenseItemInput {
   orderPhone?: string
   orderAddress?: string
   salesman?: string
+  paymentMethod?: string
 }
 
 /**
@@ -346,6 +347,7 @@ export function upsertExpenseDaily(
       if (typeof it.orderPhone === 'string' && it.orderPhone.trim()) e.orderPhone = it.orderPhone.trim().slice(0, EXPENSE_ORDER_PHONE_MAX)
       if (typeof it.orderAddress === 'string' && it.orderAddress.trim()) e.orderAddress = it.orderAddress.trim().slice(0, EXPENSE_ORDER_ADDRESS_MAX)
       if (typeof it.salesman === 'string' && it.salesman.trim()) e.salesman = it.salesman.trim().slice(0, EXPENSE_SALESMAN_MAX)
+      if (typeof it.paymentMethod === 'string' && it.paymentMethod.trim()) e.paymentMethod = it.paymentMethod.trim().slice(0, EXPENSE_PAYMENT_METHOD_MAX)
       return e
     })
 
@@ -513,6 +515,10 @@ export const EXPENSE_UNIT_MAX = BIZ_UNIT_MAX
 export const EXPENSE_ORDER_PHONE_MAX = 30
 export const EXPENSE_ORDER_ADDRESS_MAX = 100
 export const EXPENSE_SALESMAN_MAX = 30
+/** 支付方式预设（下拉可选项；支持自定义输入）；可选，旧数据缺省为空 */
+export const EXPENSE_PAYMENT_METHODS = ['现金', '微信', '支付宝', '银行卡', '其他'] as const
+/** 支付方式最大长度（自定义输入截断上限） */
+export const EXPENSE_PAYMENT_METHOD_MAX = 20
 
 /**
  * 支出标题归一化：去空白 + 截断；为空时用 fallback（迁移时传分类名）再退回默认标题。
@@ -637,7 +643,11 @@ function normExpense(raw: unknown, categories?: BusinessExpenseCategory[]): Busi
     unit: typeof e.unit === 'string' && e.unit.trim() ? e.unit.trim().slice(0, EXPENSE_UNIT_MAX) : undefined,
     orderPhone: typeof e.orderPhone === 'string' && e.orderPhone.trim() ? e.orderPhone.trim().slice(0, EXPENSE_ORDER_PHONE_MAX) : undefined,
     orderAddress: typeof e.orderAddress === 'string' && e.orderAddress.trim() ? e.orderAddress.trim().slice(0, EXPENSE_ORDER_ADDRESS_MAX) : undefined,
-    salesman: typeof e.salesman === 'string' && e.salesman.trim() ? e.salesman.trim().slice(0, EXPENSE_SALESMAN_MAX) : undefined
+    salesman: typeof e.salesman === 'string' && e.salesman.trim() ? e.salesman.trim().slice(0, EXPENSE_SALESMAN_MAX) : undefined,
+    // 支付方式：可选；仅当非空字符串才写入，保持旧数据/旧断言的对象形状不变
+    ...(typeof e.paymentMethod === 'string' && e.paymentMethod.trim()
+      ? { paymentMethod: e.paymentMethod.trim().slice(0, EXPENSE_PAYMENT_METHOD_MAX) }
+      : {})
   }
 }
 
