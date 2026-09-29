@@ -575,6 +575,10 @@ export interface BusinessExpense {
   categoryId: string
   amount: number
   note?: string
+  /** 数量（与 unitPrice 相乘得 amount）；新增字段，旧数据缺省为 undefined */
+  quantity?: number
+  /** 单价（与 quantity 相乘得 amount）；新增字段，旧数据缺省为 undefined */
+  unitPrice?: number
   /** 单位（如「件」「包」「根」）；下拉预设可选，也支持自定义；可选，旧数据缺省为空 */
   unit?: string
   /** 订货电话；可选，旧数据缺省为空 */

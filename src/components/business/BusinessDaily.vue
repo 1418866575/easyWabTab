@@ -108,6 +108,8 @@ function exportDailyExcel(): void {
 
 // ===== 编辑弹框（动态商品行） =====
 const showDialog = ref(false)
+/** 编辑中的原记录 id（新增为 null）：删除必须按 id，不能拿日期当 id（日期 ≠ id 会导致删不掉） */
+const editingRecordId = ref<string | null>(null)
 const editingDate = ref(localDateKey())
 const formNote = ref('')
 const formTransactionCount = ref(0)
@@ -121,6 +123,12 @@ const stockMap = computed(() => calcInventory(store.products, store.purchases, s
 /** 获取行的商品对象 */
 function rowProduct(productId: string) {
   return findProduct(store.products, productId)
+}
+
+/** 商品进价文案：0（尚无进货记录）时显示「—」，避免 0.00 被当成真实进价 */
+function purchasePriceLabel(productId: string): string {
+  const p = rowProduct(productId)
+  return p && p.purchasePrice > 0 ? formatYuanOf(p.purchasePrice) : '—'
 }
 
 /** 获取行当前库存 */
@@ -238,6 +246,7 @@ function emptyRow(): { productId: string; broughtOut: number; remaining: number;
 }
 
 function startAdd(): void {
+  editingRecordId.value = null
   editingDate.value = localDateKey()
   formNote.value = ''
   formTransactionCount.value = 0
@@ -247,6 +256,7 @@ function startAdd(): void {
 }
 
 function startEdit(record: BusinessDailyRecord): void {
+  editingRecordId.value = record.id
   editingDate.value = record.date
   formNote.value = record.note ?? ''
   formTransactionCount.value = typeof record.transactionCount === 'number' && Number.isFinite(record.transactionCount) ? record.transactionCount : 0
@@ -298,9 +308,15 @@ async function handleSave(): Promise<void> {
   showDialog.value = false
 }
 
-async function handleDelete(id: string): Promise<void> {
+async function handleDelete(id: string | null): Promise<void> {
+  if (!id) return
   if (!await showConfirm('确定要删除这条销售记录吗？删除后统计将重新计算。')) return
   await store.deleteDailyRecord(id)
+  // 弹框内删除：成功后关闭弹框（列表删除时 editingRecordId 为其它值或 null，不影响）
+  if (editingRecordId.value === id) {
+    showDialog.value = false
+    editingRecordId.value = null
+  }
 }
 </script>
 
@@ -411,6 +427,10 @@ async function handleDelete(id: string): Promise<void> {
             :key="item.id"
             :fields="cardFields(item)"
           >
+            <template #actions>
+              <el-button size="small" :data-testid="`bizday-card-edit-${item.id}`" @click.stop="startEdit(item)">编辑</el-button>
+              <el-button size="small" type="danger" :data-testid="`bizday-card-del-${item.id}`" @click.stop="handleDelete(item.id)">删除</el-button>
+            </template>
           </RecordsCard>
         </div>
 
@@ -486,7 +506,7 @@ async function handleDelete(id: string): Promise<void> {
                 <!-- P0-3：商品进价/售价 + 当前库存 -->
                 <div v-if="row.productId && rowProduct(row.productId)" class="bizday-row-context">
                   <span class="bizday-row-price">
-                    {{ formatYuanOf(rowProduct(row.productId)!.purchasePrice) }}→{{ formatYuanOf(rowProduct(row.productId)!.sellingPrice) }}
+                    成本 {{ purchasePriceLabel(row.productId) }} → 售价 {{ formatYuanOf(rowProduct(row.productId)!.sellingPrice) }}
                   </span>
                   <span
                     v-if="typeof rowProduct(row.productId)!.memberPrice === 'number'"
@@ -580,7 +600,7 @@ async function handleDelete(id: string): Promise<void> {
         <div class="biz-form-actions ewt-dialog-footer">
           <el-button @click="showDialog = false">取消</el-button>
           <el-button type="primary" native-type="submit" :disabled="!isFormValid" data-testid="bizday-save">保存</el-button>
-          <el-button v-if="editingDate" type="danger" native-type="button" data-testid="bizday-record-delete" @click="handleDelete(editingDate)">删除</el-button>
+          <el-button v-if="editingRecordId" type="danger" native-type="button" data-testid="bizday-record-delete" @click="handleDelete(editingRecordId)">删除</el-button>
         </div>
       </form>
     </el-dialog>

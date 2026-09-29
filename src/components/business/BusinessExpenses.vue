@@ -7,13 +7,14 @@ import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
 const vm = useViewMode()
 
-// 卡片视图：一笔支出一张卡（日期/标题/分类/金额/单位/订货电话/订货地址/业务员/备注）
+// 卡片视图：一笔支出一张卡。日期+标题合并到卡片头部（同一行、日期在前、标题单行省略号截断），
+// 这里只放其余字段；max-fields=5 时展示：产品/金额/数量/单价/单位
 function cardFields(e: any) {
   return [
-    { label: '日期', value: e.date },
-    { label: '标题', value: e.title },
-    { label: '分类', value: catNameOf(e.categoryId) },
+    { label: '产品', value: catNameOf(e.categoryId) },
     { label: '金额', value: formatYuanOf(e.amount) },
+    { label: '数量', value: e.quantity ?? '—' },
+    { label: '单价', value: typeof e.unitPrice === 'number' ? formatYuanOf(e.unitPrice) : '—' },
     { label: '单位', value: e.unit || '—' },
     { label: '订货电话', value: e.orderPhone || '—' },
     { label: '订货地址', value: e.orderAddress || '—' },
@@ -25,7 +26,7 @@ function cardFields(e: any) {
 // 支出记录：逐笔一条一行（不按天合并），日期倒序 + 同日按创建时间倒序
 import { computed, reactive, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { EXPENSE_TITLE_MAX, EXPENSE_UNITS, validateExpenseRow, findExpenseCategory, formatYuanOf, localDateKey, sortExpenses } from '@/composables/businessCore'
+import { EXPENSE_TITLE_MAX, EXPENSE_UNITS, calcExpenseAmount, validateExpenseRow, findExpenseCategory, formatYuanOf, localDateKey, sortExpenses } from '@/composables/businessCore'
 import { exportXlsx } from '@/composables/xlsxExport'
 import type { BusinessExpense } from '@/types'
 import Icon from '@/components/Icon.vue'
@@ -44,15 +45,17 @@ const allExpenses = computed<BusinessExpense[]>(() => sortExpenses(store.expense
 /** 导出文件名前缀：账本年份 + 账本名称（缺失时由 xlsxFileName 自动省略该段） */
 const ledgerMeta = computed(() => ({ year: store.currentLedgerYear, ledgerName: store.currentLedgerName }))
 
-// ===== 一键导出 Excel（逐笔：日期/标题/分类/金额/单位/订货电话/订货地址/业务员/备注）=====
+// ===== 一键导出 Excel（逐笔：日期/产品/单位/数量/单价/金额/标题/订货电话/订货地址/业务员/备注）=====
 function exportExpensesExcel(): void {
-  const headers = ['日期', '标题', '分类', '金额', '单位', '订货电话', '订货地址', '业务员', '备注']
+  const headers = ['日期', '产品', '单位', '数量', '单价', '金额', '标题', '订货电话', '订货地址', '业务员', '备注']
   const rows: (string | number)[][] = allExpenses.value.map(e => [
     e.date,
-    e.title,
     catNameOf(e.categoryId),
-    e.amount.toFixed(2),
     e.unit ?? '',
+    e.quantity ?? '',
+    typeof e.unitPrice === 'number' ? e.unitPrice.toFixed(2) : '',
+    e.amount.toFixed(2),
+    e.title,
     e.orderPhone ?? '',
     e.orderAddress ?? '',
     e.salesman ?? '',
@@ -78,7 +81,10 @@ const form = reactive<{
   title: string
   date: string
   categoryId: string
-  amount: string
+  /** 数量（金额 = 数量 × 单价） */
+  quantity: string
+  /** 单价（金额 = 数量 × 单价） */
+  unitPrice: string
   note: string
   unit: string
   orderPhone: string
@@ -88,7 +94,8 @@ const form = reactive<{
   title: '',
   date: localDateKey(),
   categoryId: '',
-  amount: '',
+  quantity: '',
+  unitPrice: '',
   note: '',
   unit: '',
   orderPhone: '',
@@ -96,15 +103,21 @@ const form = reactive<{
   salesman: ''
 })
 
-/** 表单校验：标题必填且 ≤20 字、分类必选、金额 > 0（全部为 error，阻断保存） */
-const formIssues = computed(() => validateExpenseRow(form))
+/** 金额 = 数量 × 单价（只读，自动计算，两位小数） */
+const computedAmount = computed(() => calcExpenseAmount(form.quantity, form.unitPrice))
+
+/** 表单校验：产品必选、数量/单价 > 0、金额 > 0；标题改为可选（留空取产品名兜底） */
+const formIssues = computed(() =>
+  validateExpenseRow({ ...form, amount: computedAmount.value }, { titleRequired: false })
+)
 const isFormValid = computed(() => form.date !== '' && formIssues.value.length === 0)
 
 function resetForm(date?: string): void {
   form.title = ''
   form.date = date ?? localDateKey()
   form.categoryId = store.expenseCategories[0]?.id ?? ''
-  form.amount = ''
+  form.quantity = ''
+  form.unitPrice = ''
   form.note = ''
   form.unit = ''
   form.orderPhone = ''
@@ -123,7 +136,9 @@ function startEdit(e: BusinessExpense): void {
   form.title = e.title ?? ''
   form.date = e.date
   form.categoryId = e.categoryId
-  form.amount = String(e.amount)
+  // 数量/单价：旧数据没有这两个字段 → 按「数量 1 × 单价=金额」回显，保证金额不变
+  form.quantity = typeof e.quantity === 'number' && e.quantity > 0 ? String(e.quantity) : (e.amount > 0 ? '1' : '')
+  form.unitPrice = typeof e.unitPrice === 'number' && e.unitPrice > 0 ? String(e.unitPrice) : (e.amount > 0 ? String(e.amount) : '')
   form.note = e.note ?? ''
   form.unit = e.unit ?? ''
   form.orderPhone = e.orderPhone ?? ''
@@ -144,7 +159,10 @@ async function handleSave(): Promise<void> {
     title: form.title.trim(),
     date: form.date,
     categoryId: form.categoryId,
-    amount: Number(form.amount),
+    // 金额只读：由 数量 × 单价 算出（core calcExpenseAmount，两位小数）
+    amount: computedAmount.value,
+    quantity: Number(form.quantity) || undefined,
+    unitPrice: Number(form.unitPrice) || undefined,
     note: form.note.trim() || undefined,
     unit: form.unit.trim() || undefined,
     orderPhone: form.orderPhone.trim() || undefined,
@@ -206,14 +224,24 @@ async function handleDeleteFromDialog(): Promise<void> {
               <span style="font-weight: 600;">{{ row.date }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="标题" min-width="180" align="left" show-overflow-tooltip>
-            <template #default="{ row }">
-              <span class="bizexp-title-text" :data-testid="`bizexp-title-${row.id}`">{{ row.title }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="分类" width="130" align="left" show-overflow-tooltip>
+          <el-table-column label="产品" width="130" align="left" show-overflow-tooltip>
             <template #default="{ row }">
               <span class="bizexp-cat">{{ catNameOf(row.categoryId) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="单位" width="90" align="left" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span class="bizexp-unit">{{ row.unit || '—' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="数量" width="90" align="right">
+            <template #default="{ row }">
+              <span :data-testid="`bizexp-quantity-${row.id}`">{{ row.quantity ?? '—' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="单价" width="110" align="right">
+            <template #default="{ row }">
+              <span :data-testid="`bizexp-unit-price-${row.id}`">{{ typeof row.unitPrice === 'number' ? formatYuanOf(row.unitPrice) : '—' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="金额" width="120" align="right">
@@ -221,14 +249,14 @@ async function handleDeleteFromDialog(): Promise<void> {
               <span class="bizexp-amt" :data-testid="`bizexp-amount-${row.id}`">{{ formatYuanOf(row.amount) }}</span>
             </template>
           </el-table-column>
+          <el-table-column label="标题" min-width="180" align="left" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span class="bizexp-title-text" :data-testid="`bizexp-title-${row.id}`">{{ row.title }}</span>
+            </template>
+          </el-table-column>
           <el-table-column label="备注" min-width="160" align="left" show-overflow-tooltip>
             <template #default="{ row }">
               <span class="bizexp-note">{{ row.note || '—' }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="单位" width="90" align="left" show-overflow-tooltip>
-            <template #default="{ row }">
-              <span class="bizexp-unit">{{ row.unit || '—' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="订货电话" width="130" align="left" show-overflow-tooltip>
@@ -261,7 +289,19 @@ async function handleDeleteFromDialog(): Promise<void> {
             v-for="item in pageItems"
             :key="item.id"
             :fields="cardFields(item)"
+            :max-fields="5"
           >
+            <!-- 头部：日期 + 标题 同一行（日期在前、标题紧跟其后、垂直居中、标题单行省略号截断） -->
+            <template #header>
+              <div class="bizexp-card-head">
+                <span class="bizexp-card-date">{{ item.date }}</span>
+                <span class="bizexp-card-title" :data-testid="`bizexp-card-title-${item.id}`">{{ item.title || '—' }}</span>
+              </div>
+            </template>
+            <template #actions>
+              <el-button size="small" :data-testid="`bizexp-card-edit-${item.id}`" @click.stop="startEdit(item)">编辑</el-button>
+              <el-button size="small" type="danger" :data-testid="`bizexp-card-del-${item.id}`" @click.stop="handleDelete(item)">删除</el-button>
+            </template>
           </RecordsCard>
         </div>
 
@@ -313,38 +353,13 @@ async function handleDeleteFromDialog(): Promise<void> {
           </div>
         </div>
 
-        <div class="biz-field">
-          <label>标题 *（简短说明这笔支出，≤{{ EXPENSE_TITLE_MAX }} 字）</label>
-          <el-input
-            v-model="form.title"
-            size="small"
-            :maxlength="EXPENSE_TITLE_MAX"
-            placeholder="如：采购原料、摊位费、燃气"
-            data-testid="bizexp-form-title"
-          />
-        </div>
-
-        <!-- 分类 / 金额 / 单位 / 订货电话 / 订货地址 / 业务员：每行两列网格排列，标签与输入框对齐 -->
+        <!-- 主业务字段：产品 → 单位 → 数量 → 单价 → 金额（金额 = 数量 × 单价，只读） -->
         <div class="biz-form-grid">
           <div class="biz-field">
-            <label>分类 *</label>
+            <label>产品 *</label>
             <el-select v-model="form.categoryId" size="small" class="bizexp-form-cat" data-testid="bizexp-form-category">
               <el-option v-for="cat in store.expenseCategories" :key="cat.id" :value="cat.id" :label="cat.name" />
             </el-select>
-          </div>
-
-          <div class="biz-field">
-            <label>金额 *</label>
-            <el-input-number
-              :model-value="form.amount === '' ? undefined : Number(form.amount)"
-              :min="0"
-              :step="0.01"
-              size="small"
-              class="bizexp-form-amt"
-              data-testid="bizexp-form-amount"
-              placeholder="金额"
-              @update:model-value="form.amount = $event == null ? '' : String($event)"
-            />
           </div>
 
           <div class="biz-field">
@@ -364,6 +379,66 @@ async function handleDeleteFromDialog(): Promise<void> {
             </el-select>
           </div>
 
+          <div class="biz-field">
+            <label>数量 *</label>
+            <el-input-number
+              :model-value="form.quantity === '' ? undefined : Number(form.quantity)"
+              :min="0"
+              :step="1"
+              size="small"
+              class="bizexp-form-qty"
+              controls-position="right"
+              data-testid="bizexp-form-quantity"
+              placeholder="数量"
+              @update:model-value="form.quantity = $event == null ? '' : String($event)"
+            />
+          </div>
+
+          <div class="biz-field">
+            <label>单价 *</label>
+            <el-input-number
+              :model-value="form.unitPrice === '' ? undefined : Number(form.unitPrice)"
+              :min="0"
+              :step="0.01"
+              :precision="2"
+              size="small"
+              class="bizexp-form-price"
+              controls-position="right"
+              data-testid="bizexp-form-unit-price"
+              placeholder="单价"
+              @update:model-value="form.unitPrice = $event == null ? '' : String($event)"
+            />
+          </div>
+
+          <div class="biz-field">
+            <label>金额（= 数量 × 单价，自动计算）</label>
+            <el-input-number
+              :model-value="computedAmount"
+              :min="0"
+              :step="0.01"
+              :precision="2"
+              size="small"
+              disabled
+              class="bizexp-form-amt"
+              controls-position="right"
+              data-testid="bizexp-form-amount"
+            />
+          </div>
+        </div>
+
+        <div class="biz-field">
+          <label>标题（可选，≤{{ EXPENSE_TITLE_MAX }} 字；留空自动取产品名）</label>
+          <el-input
+            v-model="form.title"
+            size="small"
+            :maxlength="EXPENSE_TITLE_MAX"
+            placeholder="如：采购原料、摊位费、燃气（留空则用产品名）"
+            data-testid="bizexp-form-title"
+          />
+        </div>
+
+        <!-- 订货电话 / 订货地址 / 业务员：每行两列网格排列 -->
+        <div class="biz-form-grid">
           <div class="biz-field">
             <label>订货电话（可选）</label>
             <el-input
@@ -609,6 +684,38 @@ async function handleDeleteFromDialog(): Promise<void> {
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text, var(--color-text));
+}
+
+/* 卡片头部：日期 + 标题 同一行（日期在前、标题紧跟其后、垂直居中） */
+.bizexp-card-head {
+  display: flex;
+  align-items: center;       /* 垂直居中 */
+  gap: 8px;                  /* 日期与标题间距一致 */
+  min-width: 0;              /* 允许子项收缩以触发省略号 */
+  line-height: 1.4;
+}
+.bizexp-card-date {
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary, #6b7280);
+  white-space: nowrap;       /* 日期不换行 */
+}
+.bizexp-card-title {
+  flex: 1 1 auto;
+  min-width: 0;              /* 关键：允许 flex 子项收缩，长标题/窄屏才出省略号 */
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text, #1f2937);
+  overflow: hidden;
+  text-overflow: ellipsis;   /* 标题过长/屏幕较窄 → 单行截断省略号 */
+  white-space: nowrap;
+}
+:global(html.dark) .bizexp-card-date {
+  color: var(--color-text-secondary, #9ca3af);
+}
+:global(html.dark) .bizexp-card-title {
+  color: var(--color-text, #f9fafb);
 }
 
 /* 弹框通用样式 */

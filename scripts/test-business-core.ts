@@ -98,6 +98,7 @@ import {
   DEFAULT_EXPENSE_TITLE,
   EXPENSE_TITLE_MAX,
   normalizeExpenseTitle,
+  calcExpenseAmount,
   expenseLabel,
   validateExpenseRow,
   validateExpenseRows
@@ -1361,7 +1362,8 @@ test('T58 validateExpenseRow(s)', () => {
   assert.equal(emptyTitle[0].level, 'error')
   assert.match(emptyTitle[0].message, /标题/)
   assert.ok(validateExpenseRow({ title: 'x'.repeat(21), categoryId: 'c', amount: 10 }).some(i => /20 个字/.test(i.message)))
-  assert.ok(validateExpenseRow({ title: '买菜', categoryId: '', amount: 10 }).some(i => /分类/.test(i.message)))
+  // 分类字段已改称「产品」（数据源仍是支出分类）
+  assert.ok(validateExpenseRow({ title: '买菜', categoryId: '', amount: 10 }).some(i => /产品/.test(i.message)))
   assert.ok(validateExpenseRow({ title: '买菜', categoryId: 'c', amount: 0 }).some(i => /金额/.test(i.message)))
   assert.ok(validateExpenseRow({ title: '买菜', categoryId: 'c', amount: 'abc' }).some(i => /金额/.test(i.message)))
   // 多行：错误带「第 N 行」前缀，且全部为 error
@@ -1844,6 +1846,37 @@ test('T72 支出新增字段（单位/订货电话/订货地址/业务员）', (
   assert.equal(e2.orderPhone, undefined)
   assert.equal(e2.orderAddress, undefined)
   assert.equal(e2.salesman, undefined)
+})
+
+// T73 — 支出：数量/单价（金额 = 数量 × 单价）+ 标题可选（留空取产品名兜底）
+test('T73 支出数量×单价与标题可选', () => {
+  // 金额自动计算：3 × 2.5 = 7.5；非法/负数 → 0
+  assert.equal(calcExpenseAmount(3, 2.5), 7.5)
+  assert.equal(calcExpenseAmount('2', '0.35'), 0.7)
+  assert.equal(calcExpenseAmount(0, 5), 0)
+  assert.equal(calcExpenseAmount(-1, 5), 0)
+  assert.equal(calcExpenseAmount('abc', 5), 0)
+  // 数量 / 单价必须 > 0（给了就校验）
+  assert.ok(validateExpenseRow({ title: '原料', categoryId: 'c', amount: 0, quantity: 0, unitPrice: 5 }).some(i => /数量/.test(i.message)))
+  assert.ok(validateExpenseRow({ title: '原料', categoryId: 'c', amount: 0, quantity: 2, unitPrice: 0 }).some(i => /单价/.test(i.message)))
+  assert.equal(validateExpenseRow({ title: '原料', categoryId: 'c', amount: 7.5, quantity: 3, unitPrice: 2.5 }).length, 0)
+  // 标题可选：opts.titleRequired = false 时空标题不再报错，产品仍必选
+  assert.equal(validateExpenseRow({ title: '  ', categoryId: 'c', amount: 10 }, { titleRequired: false }).length, 0)
+  assert.ok(validateExpenseRow({ title: '', categoryId: '', amount: 10 }, { titleRequired: false }).some(i => /产品/.test(i.message)))
+  // 默认仍按标题必填（旧调用方不变）
+  assert.equal(validateExpenseRow({ title: '', categoryId: 'c', amount: 10 }).length, 1)
+  // 数量/单价透明归一：非正数 → undefined（旧数据缺省兼容）
+  const d = normalizeBusinessData({
+    expenseCategories: [{ id: 'c1', name: '采购', builtin: true, visible: true, seq: 0 }],
+    expenses: [
+      { id: 'be_1', date: '2026-09-28', categoryId: 'c1', amount: 7.5, title: '原料', quantity: 3, unitPrice: 2.5 },
+      { id: 'be_2', date: '2026-09-28', categoryId: 'c1', amount: 20, title: '运费' }
+    ]
+  })
+  assert.equal(d.expenses[0].quantity, 3)
+  assert.equal(d.expenses[0].unitPrice, 2.5)
+  assert.equal(d.expenses[1].quantity, undefined)
+  assert.equal(d.expenses[1].unitPrice, undefined)
 })
 
 let passed = 0
