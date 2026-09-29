@@ -40,6 +40,8 @@ import {
   deriveUnitPrice,
   expenseLabel,
   expenseQtyUnit,
+  expenseItemsWithDay,
+  flatExpenseItems,
   filterPurchasesByCategory,
   findProduct,
   findProductCategory,
@@ -194,7 +196,7 @@ const formExpenseIds = ref<string[]>([])
  * 本记录自身已勾选的支出始终保留（可取消勾选）。分页/搜索都基于这份结果，口径一致。
  */
 const expenseOptions = computed(() =>
-  selectableExpenses(store.expenses, store.purchases, editingId.value, formExpenseIds.value)
+  selectableExpenses(store.expenseDailies, store.purchases, editingId.value, formExpenseIds.value)
 )
 
 /** 候选搜索：日期 / 标题 / 备注 / 金额（本地过滤，不改 core 结果） */
@@ -229,7 +231,9 @@ function resetExpensePicker(): void {
 }
 
 /** 已关联支出金额合计 */
-const linkedExpenseTotal = computed(() => sumExpenseAmounts(store.expenses, formExpenseIds.value))
+const linkedExpenseTotal = computed(() => sumExpenseAmounts(flatExpenseItems(store.expenseDailies), formExpenseIds.value))
+/** 全部支出明细条数（用于「共 X 笔支出」提示，与候选计数一致） */
+const expenseItemCount = computed(() => flatExpenseItems(store.expenseDailies).length)
 /** 是否走「支出汇总」口径：关联了支出 → 合计由支出决定；否则 数量 × 进价 */
 const useExpenseTotal = computed(() => formExpenseIds.value.length > 0)
 
@@ -258,16 +262,16 @@ function onExpenseChange(): void {
   else if (Number(formUnitPrice.value) > 0) onUnitPriceInput()
 }
 
-/** 已关联支出标签列表（「日期 标题」，按日期+创建时间升序），用于徽章悬浮与提示 */
+/** 已关联支出标签列表（「日期 产品名 数量单位」，按日期升序），用于徽章悬浮与提示 */
 function linkedExpenseLabels(purchase: { expenseIds?: string[] }): string[] {
   const ids = purchase.expenseIds ?? []
   if (ids.length === 0) return []
-  return store.expenses
-    .filter(e => ids.includes(e.id))
-    .sort((a, b) => (a.date === b.date ? (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0) : a.date < b.date ? -1 : 1))
-    .map(e => {
-      const base = expenseLabel(e)
-      const qu = expenseQtyUnit(e)
+  return expenseItemsWithDay(store.expenseDailies)
+    .filter(x => ids.includes(x.item.id))
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+    .map(x => {
+      const base = expenseLabel(x.item, x.date)
+      const qu = expenseQtyUnit(x.item)
       return qu ? `${base} ${qu}` : base
     })
 }
@@ -666,7 +670,7 @@ async function handleDelete(id: string): Promise<void> {
         <div class="biz-field">
           <label>关联支出 *（新增必选，可多选；已被其它库存记录关联的支出不再列出）</label>
           <!-- 空状态 ①：账本里还没有支出记录 -->
-          <p v-if="store.expenses.length === 0" class="bizpur-expense-empty" data-testid="bizpur-expense-empty">当前账本暂无支出记录：新增库存必须关联支出，请先到「支出」记一笔</p>
+          <p v-if="store.expenseDailies.length === 0" class="bizpur-expense-empty" data-testid="bizpur-expense-empty">当前账本暂无支出记录：新增库存必须关联支出，请先到「支出」记一笔</p>
           <!-- 空状态 ②：有支出，但全部已被其它库存记录关联 -->
           <p v-else-if="expenseOptions.length === 0" class="bizpur-expense-empty" data-testid="bizpur-expense-all-linked">
             暂无可关联的支出：已有支出均已关联到其它库存记录（新增库存必须关联支出，请先在「支出」新增一笔）
@@ -711,7 +715,7 @@ async function handleDelete(id: string): Promise<void> {
             </div>
           </template>
           <p class="bizpur-expense-hint" data-testid="bizpur-expense-hint">
-            可关联 {{ filteredExpenseOptions.length }} 笔（共 {{ store.expenses.length }} 笔支出，已关联的不再列出）；已选 {{ formExpenseIds.length }} 笔，关联金额合计 {{ formatYuanOf(linkedExpenseTotal) }}；勾选后修改数量自动算进价、修改进价自动反算数量。
+            可关联 {{ filteredExpenseOptions.length }} 笔（共 {{ expenseItemCount }} 笔支出，已关联的不再列出）；已选 {{ formExpenseIds.length }} 笔，关联金额合计 {{ formatYuanOf(linkedExpenseTotal) }}；勾选后修改数量自动算进价、修改进价自动反算数量。
           </p>
         </div>
         <!-- 数量 / 进价：放在关联支出之后，随支出合计联动（数量 ↔ 进价 双向反算） -->

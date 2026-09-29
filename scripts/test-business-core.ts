@@ -10,6 +10,7 @@
 import assert from 'node:assert/strict'
 import {
   addExpenseCategory,
+  addExpenseItem,
   addProductCategory,
   updateExpenseCategory,
   avgUnsoldUnitPrice,
@@ -48,11 +49,14 @@ import {
   createLedger,
   currentYear,
   deleteExpenseCategory,
+  deleteExpenseItem,
   deleteLedger,
   deleteProductCategory,
   deriveQuantity,
   deriveUnitPrice,
   emptyBusinessData,
+  expenseItemsWithDay,
+  flatExpenseItems,
   expenseLinkOwners,
   filterPurchasesByCategory,
   findLedgerByYear,
@@ -75,6 +79,7 @@ import {
   normalizeBusinessData,
   normalizeBusinessStore,
   normalizeExpenseCategories,
+  normalizeExpenseDailies,
   normalizeExpenseIds,
   normalizeProductCategories,
   pickDefaultLedger,
@@ -83,9 +88,12 @@ import {
   soldCount,
   calcProductSummary,
   sortedLedgers,
+  sortExpenseDailies,
   sumExpenseAmounts,
   toggleCategoryVisible,
+  updateExpenseItem,
   unsoldPurchaseUnitPrices,
+  upsertExpenseDaily,
   validateDailyRow,
   validateDailyRows,
   validatePurchaseInput,
@@ -106,7 +114,7 @@ import {
   validateExpenseRow,
   validateExpenseRows
 } from '../src/composables/businessCore.ts'
-import type { BusinessData, BusinessDailyRecord, BusinessExpense, BusinessLedger, BusinessProduct, BusinessPurchase } from '../src/types/index.ts'
+import type { BusinessData, BusinessDailyRecord, BusinessExpense, BusinessExpenseDaily, BusinessLedger, BusinessProduct, BusinessPurchase } from '../src/types/index.ts'
 
 const tests: { name: string; fn: () => void }[] = []
 function test(name: string, fn: () => void) {
@@ -255,8 +263,10 @@ function buildData(): BusinessData {
     products,
     purchases,
     dailyRecords: daily,
-    expenses: [
-      { id: 'e1', date: '2026-08-02', categoryId: 'expense-stall', amount: 30, title: '摊位费', createdAt: '2026-08-02T00:00:00.000Z' }
+    expenseDailies: [
+      { id: 'bed_1', date: '2026-08-02', items: [
+        { id: 'e1', categoryId: 'expense-stall', amount: 30, title: '摊位费' }
+      ], createdAt: '2026-08-02T00:00:00.000Z', updatedAt: '2026-08-02T00:00:00.000Z' }
     ]
   }
 }
@@ -678,7 +688,7 @@ test('T29 isLedgerEmpty', () => {
   assert.equal(isLedgerEmpty(emptyBusinessData()), true)
   const d = buildData()
   assert.equal(isLedgerEmpty(d), false)
-  assert.equal(isLedgerEmpty({ ...emptyBusinessData(), expenses: d.expenses }), false)
+  assert.equal(isLedgerEmpty({ ...emptyBusinessData(), expenseDailies: d.expenseDailies }), false)
 })
 
 // T30 — mergeBusinessStore：同年不同 id（两台设备各自创建）合并为一个账本，业务数据并集
@@ -747,9 +757,9 @@ test('T33 ledgerRecordCounts', () => {
   assert.equal(c.products, d.products.length)
   assert.equal(c.purchases, d.purchases.length)
   assert.equal(c.dailyRecords, d.dailyRecords.length)
-  assert.equal(c.expenses, d.expenses.length)
-  assert.deepEqual(ledgerRecordCounts(undefined), { products: 0, purchases: 0, dailyRecords: 0, expenses: 0 })
-  assert.deepEqual(ledgerRecordCounts(emptyBusinessData()), { products: 0, purchases: 0, dailyRecords: 0, expenses: 0 })
+  assert.equal(c.expenseDailies, d.expenseDailies.length)
+  assert.deepEqual(ledgerRecordCounts(undefined), { products: 0, purchases: 0, dailyRecords: 0, expenseDailies: 0 })
+  assert.deepEqual(ledgerRecordCounts(emptyBusinessData()), { products: 0, purchases: 0, dailyRecords: 0, expenseDailies: 0 })
 })
 
 // T34 — ledgerDeleteGuard：不存在 / 最后一个 / 当前正在使用 均禁止删除
@@ -780,7 +790,7 @@ test('T35 clearLedgerRecords', () => {
   assert.ok(ledger)
   assert.equal(ledger?.data.purchases.length, 0)
   assert.equal(ledger?.data.dailyRecords.length, 0)
-  assert.equal(ledger?.data.expenses.length, 0)
+  assert.equal(ledger?.data.expenseDailies.length, 0)
   assert.equal(ledger?.data.products.length, d.products.length, '商品是主数据，应保留')
   assert.equal(ledger?.data.productCategories.length, d.productCategories.length)
   assert.equal(ledger?.data.settings.stallName, d.settings.stallName)
@@ -832,27 +842,27 @@ test('T37 expense link sum & normalize', () => {
 // T38 — selectableExpenses：已被其它进货关联的支出带 linkedPurchaseId；编辑自身时不算冲突
 test('T38 selectableExpenses occupancy', () => {
   const d = buildData()
-  const expenses: BusinessExpense[] = [
-    { id: 'e1', date: '2026-08-02', categoryId: 'expense-stall', amount: 30, title: '摊位费', createdAt: 'c' },
-    { id: 'e2', date: '2026-08-05', categoryId: 'expense-gas', amount: 12, title: '燃气', createdAt: 'c' }
+  const expenseDailies: BusinessExpenseDaily[] = [
+    { id: 'bed_1', date: '2026-08-02', items: [{ id: 'e1', categoryId: 'expense-stall', amount: 30, title: '摊位费' }], createdAt: '', updatedAt: '' },
+    { id: 'bed_2', date: '2026-08-05', items: [{ id: 'e2', categoryId: 'expense-gas', amount: 12, title: '燃气' }], createdAt: '', updatedAt: '' }
   ]
   const purchases: BusinessPurchase[] = [
     { id: 'b1', productId: 'p1', quantity: 10, unitPrice: 2, total: 20, date: '2026-08-01', expenseIds: ['e1'], createdAt: 'c' },
     { id: 'b2', productId: 'p2', quantity: 5, unitPrice: 1, total: 5, date: '2026-08-01', createdAt: 'c' }
   ]
   // 新建态：e1 已被 b1 全额关联 → 直接从候选里排除（不再展示）
-  const opts = selectableExpenses(expenses, purchases, null)
+  const opts = selectableExpenses(expenseDailies, purchases, null)
   assert.equal(opts.length, 1, 'e1 已被关联 → 只剩 e2')
   assert.deepEqual(opts.map(o => o.expense.id), ['e2'])
   assert.equal(opts[0].remaining, 12, '未关联的支出可关联余额 = 全额')
   assert.equal(opts[0].selfLinked, false)
   // 编辑 b1 自身：e1 的占用者是 b1 → 保留并按日期倒序
-  const editOpts = selectableExpenses(expenses, purchases, 'b1', ['e1'])
+  const editOpts = selectableExpenses(expenseDailies, purchases, 'b1', ['e1'])
   assert.equal(editOpts.length, 2)
   assert.deepEqual(editOpts.map(o => o.expense.id), ['e2', 'e1'], '按日期倒序')
   assert.equal(editOpts.find(o => o.expense.id === 'e1')?.selfLinked, true, '自身已勾选 → 保留并标记 selfLinked')
   // 编辑 b2：e1 仍被 b1 占用 → 排除
-  const editB2 = selectableExpenses(expenses, purchases, 'b2')
+  const editB2 = selectableExpenses(expenseDailies, purchases, 'b2')
   assert.deepEqual(editB2.map(o => o.expense.id), ['e2'])
   // 归属表
   assert.equal(expenseLinkOwners(purchases).get('e1'), 'b1')
@@ -897,9 +907,9 @@ test('T41 calcMonthlyStats', () => {
       { id: 'd3', date: '2025-12-31', totalRevenue: 999, items: [], createdAt: 'c', updatedAt: 'c' },
       { id: 'd4', date: '2027-01-01', totalRevenue: 888, items: [], createdAt: 'c', updatedAt: 'c' }
     ],
-    expenses: [
-      { id: 'e1', date: '2026-03-05', categoryId: 'expense-stall', amount: 30, title: '摊位费', createdAt: 'c' },
-      { id: 'e2', date: '2025-12-31', categoryId: 'expense-stall', amount: 77, title: '摊位费', createdAt: 'c' }
+    expenseDailies: [
+      { id: 'bed_1', date: '2026-03-05', items: [{ id: 'e1', categoryId: 'expense-stall', amount: 30, title: '摊位费' }], createdAt: 'c', updatedAt: 'c' },
+      { id: 'bed_2', date: '2025-12-31', items: [{ id: 'e2', categoryId: 'expense-stall', amount: 77, title: '摊位费' }], createdAt: 'c', updatedAt: 'c' }
     ]
   }
   const stats = calcMonthlyStats(data, 2026)
@@ -1169,9 +1179,9 @@ test('T52 进货支出对账', () => {
       { id: 'b1', productId: 'p1', quantity: 10, unitPrice: 2, total: 40, date: '2026-01-01', expenseIds: ['e1'], createdAt: 'a' },
       { id: 'b2', productId: 'p1', quantity: 5, unitPrice: 2, total: 10, date: '2026-02-01', createdAt: 'b' }
     ],
-    expenses: [
-      { id: 'e1', date: '2026-01-01', categoryId: 'expense-stall', amount: 40, title: '进货货款', createdAt: 'c' },
-      { id: 'e2', date: '2026-03-01', categoryId: 'expense-transport', amount: 15, title: '车费', note: '车费', createdAt: 'c' }
+    expenseDailies: [
+      { id: 'bed_1', date: '2026-01-01', items: [{ id: 'e1', categoryId: 'expense-stall', amount: 40, title: '进货货款' }], createdAt: 'c', updatedAt: 'c' },
+      { id: 'bed_2', date: '2026-03-01', items: [{ id: 'e2', categoryId: 'expense-transport', amount: 15, title: '车费', note: '车费' }], createdAt: 'c', updatedAt: 'c' }
     ]
   }
   const r = calcExpenseReconciliation(data)
@@ -1327,34 +1337,37 @@ test('T56 normalizeExpenseTitle + 历史数据补标题', () => {
     products: [],
     purchases: [],
     dailyRecords: [],
-    expenses: [
-      { id: 'e1', date: '2026-04-01', categoryId: 'expense-gas', amount: 50 },
-      { id: 'e2', date: '2026-04-01', categoryId: 'expense-not-exist', amount: 30 }
+    expenseDailies: [
+      { id: 'bed_1', date: '2026-04-01', items: [
+        { id: 'e1', categoryId: 'expense-gas', amount: 50 },
+        { id: 'e2', categoryId: 'expense-not-exist', amount: 30 }
+      ], createdAt: 'c', updatedAt: 'c' }
     ]
   })
-  assert.equal(d.expenses.length, 2)
-  assert.equal(d.expenses[0].title, '燃气费', '无 title 的历史支出按分类名补齐')
-  assert.equal(d.expenses[1].title, DEFAULT_EXPENSE_TITLE, '分类缺失 → 默认标题')
+  assert.equal(d.expenseDailies.length, 1, '同日两笔 → 合并为一个日容器')
+  assert.equal(d.expenseDailies[0].items.length, 2)
+  assert.equal(d.expenseDailies[0].items[0].title, '燃气费', '无 title 的历史支出按分类名补齐')
+  assert.equal(d.expenseDailies[0].items[1].title, DEFAULT_EXPENSE_TITLE, '分类缺失 → 默认标题')
   // 已有 title 的历史数据保持原值（不被分类名覆盖）
   const keep = normalizeBusinessData({
-    expenses: [{ id: 'e3', date: '2026-04-02', categoryId: 'expense-gas', amount: 20, title: '自家灌气' }]
+    expenseDailies: [{ id: 'bed_3', date: '2026-04-02', items: [{ id: 'e3', categoryId: 'expense-gas', amount: 20, title: '自家灌气' }], createdAt: 'c', updatedAt: 'c' }]
   })
-  assert.equal(keep.expenses[0].title, '自家灌气')
-  // 同一天两笔均可保留（不再有「一天一条」限制）
+  assert.equal(keep.expenseDailies[0].items[0].title, '自家灌气')
+  // 同一天仍可记多笔产品明细（合并到同一天的日容器内）
   const sameDay = normalizeBusinessData({
-    expenses: [
-      { id: 'e4', date: '2026-04-03', categoryId: 'expense-gas', amount: 10, title: '上午进货' },
-      { id: 'e5', date: '2026-04-03', categoryId: 'expense-gas', amount: 15, title: '下午补货' }
-    ]
+    expenseDailies: [{ id: 'bed_4', date: '2026-04-03', items: [
+      { id: 'e4', categoryId: 'expense-gas', amount: 10, title: '上午进货' },
+      { id: 'e5', categoryId: 'expense-gas', amount: 15, title: '下午补货' }
+    ], createdAt: 'c', updatedAt: 'c' }]
   })
-  assert.equal(sameDay.expenses.length, 2)
+  assert.equal(sameDay.expenseDailies[0].items.length, 2)
 })
 
-// T57 — expenseLabel：`YYYY-MM-DD 标题`；标题缺失 → 默认标题
+// T57 — expenseLabel：`YYYY-MM-DD 标题`（日期由调用方按所属日容器传入）；标题缺失 → 默认标题
 test('T57 expenseLabel', () => {
-  assert.equal(expenseLabel({ id: 'e', date: '2024-05-06', categoryId: 'c', amount: 10, title: '采购原料', createdAt: 'a' }), '2024-05-06 采购原料')
-  assert.equal(expenseLabel({ id: 'e', date: '2024-05-06', categoryId: 'c', amount: 10, title: '', createdAt: 'a' }), '2024-05-06 未命名支出')
-  assert.equal(expenseLabel({ id: 'e', date: '2024-05-07', categoryId: 'c', amount: 10, createdAt: 'a' } as BusinessExpense), '2024-05-07 未命名支出')
+  assert.equal(expenseLabel({ id: 'e', categoryId: 'c', amount: 10, title: '采购原料' }, '2024-05-06'), '2024-05-06 采购原料')
+  assert.equal(expenseLabel({ id: 'e', categoryId: 'c', amount: 10, title: '' }, '2024-05-06'), '2024-05-06 未命名支出')
+  assert.equal(expenseLabel({ id: 'e', categoryId: 'c', amount: 10 }, '2024-05-07'), '2024-05-07 未命名支出')
 })
 
 // T58 — 支出行校验：标题必填/≤20 字、分类必选、金额 > 0
@@ -1382,25 +1395,25 @@ test('T58 validateExpenseRow(s)', () => {
   assert.equal(res.warns.length, 0)
 })
 
-// T59 — selectableExpenses：同日多笔按创建时间倒序、label 含日期+标题、已被占用带 linkedPurchaseId
+// T59 — selectableExpenses：同日多笔、label 含日期+标题、已被占用带 linkedPurchaseId
 test('T59 selectableExpenses 同日多笔', () => {
-  const expenses: BusinessExpense[] = [
-    { id: 'e1', date: '2024-05-06', categoryId: 'c', amount: 10, title: '上午采购', createdAt: '2024-05-06T08:00:00.000Z' },
-    { id: 'e2', date: '2024-05-06', categoryId: 'c', amount: 20, title: '下午补货', createdAt: '2024-05-06T15:00:00.000Z' },
-    { id: 'e3', date: '2024-05-07', categoryId: 'c', amount: 30, title: '次日摊位费', createdAt: '2024-05-07T08:00:00.000Z' }
+  const expenseDailies: BusinessExpenseDaily[] = [
+    { id: 'bed_1', date: '2024-05-06', items: [{ id: 'e1', categoryId: 'c', amount: 10, title: '上午采购' }], createdAt: '', updatedAt: '' },
+    { id: 'bed_2', date: '2024-05-06', items: [{ id: 'e2', categoryId: 'c', amount: 20, title: '下午补货' }], createdAt: '', updatedAt: '' },
+    { id: 'bed_3', date: '2024-05-07', items: [{ id: 'e3', categoryId: 'c', amount: 30, title: '次日摊位费' }], createdAt: '', updatedAt: '' }
   ]
-  const opts = selectableExpenses(expenses, [])
+  const opts = selectableExpenses(expenseDailies, [])
   assert.equal(opts.length, 3)
-  // 日期倒序：05-07 在前；同日按 createdAt 倒序：下午在前
+  // 日期倒序：05-07 在前；同日按 id 倒序：e2 在前
   assert.deepEqual(opts.map(o => o.expense.id), ['e3', 'e2', 'e1'])
   assert.equal(opts[1].label, '2024-05-06 下午补货')
   assert.equal(opts[2].label, '2024-05-06 上午采购')
   // 被其它进货占用 → 直接排除（不再只是打标记）
   const purchases = [{ id: 'p1', productId: 'x', quantity: 1, unitPrice: 1, total: 1, date: '2024-05-06', expenseIds: ['e2'], createdAt: 'z' }] as BusinessPurchase[]
-  const taken = selectableExpenses(expenses, purchases)
+  const taken = selectableExpenses(expenseDailies, purchases)
   assert.deepEqual(taken.map(o => o.expense.id), ['e3', 'e1'], 'e2 已被 p1 关联 → 不出现在候选')
   // 编辑 p1 自身：e2 保留（自身占用不算冲突），且已勾选时 selfLinked = true
-  const self = selectableExpenses(expenses, purchases, 'p1', ['e2'])
+  const self = selectableExpenses(expenseDailies, purchases, 'p1', ['e2'])
   assert.deepEqual(self.map(o => o.expense.id), ['e3', 'e2', 'e1'])
   assert.equal(self.find(o => o.expense.id === 'e2')!.selfLinked, true)
   assert.equal(self.find(o => o.expense.id === 'e2')!.remaining, 20, '自身占用不计入余额扣减')
@@ -1413,10 +1426,12 @@ test('T60 calcExpenseReconciliation expenseLabels', () => {
     ...base,
     products: [{ id: 'p1', name: '烤肠', unit: '根', purchasePrice: 2, sellingPrice: 5, active: true, createdAt: 'a' }],
     purchases: [{ id: 'b1', productId: 'p1', quantity: 10, unitPrice: 4, total: 40, date: '2024-05-06', expenseIds: ['e2', 'e1'], createdAt: 'z' }],
-    expenses: [
-      { id: 'e1', date: '2024-05-06', categoryId: 'expense-gas', amount: 10, title: '上午采购', createdAt: '2024-05-06T08:00:00.000Z' },
-      { id: 'e2', date: '2024-05-06', categoryId: 'expense-gas', amount: 30, title: '下午补货', createdAt: '2024-05-06T15:00:00.000Z' },
-      { id: 'e3', date: '2024-05-08', categoryId: 'expense-stall', amount: 50, title: '摊位费', createdAt: '2024-05-08T08:00:00.000Z' }
+    expenseDailies: [
+      { id: 'bed_1', date: '2024-05-06', items: [
+        { id: 'e1', categoryId: 'expense-gas', amount: 10, title: '上午采购' },
+        { id: 'e2', categoryId: 'expense-gas', amount: 30, title: '下午补货' }
+      ], createdAt: '', updatedAt: '' },
+      { id: 'bed_3', date: '2024-05-08', items: [{ id: 'e3', categoryId: 'expense-stall', amount: 50, title: '摊位费' }], createdAt: '', updatedAt: '' }
     ]
   }
   const rec = calcExpenseReconciliation(data)
@@ -1477,7 +1492,7 @@ test('T62 毛利率与成本价边界', () => {
     dailyRecords: [
       { id: 'd1', date: '2026-05-02', items: [{ productId: 'p1', broughtOut: 10, remaining: 0, loss: 0 }], totalRevenue: 50, createdAt: 'c' }
     ],
-    expenses: [{ id: 'e1', date: '2026-05-01', categoryId: 'expense-stall', amount: 10, title: '摊位费', createdAt: 'c' }]
+    expenseDailies: [{ id: 'bed_1', date: '2026-05-01', items: [{ id: 'e1', categoryId: 'expense-stall', amount: 10, title: '摊位费' }], createdAt: 'c', updatedAt: 'c' }]
   } as BusinessData
   const stats = calcBusinessStats(data)
   assert.equal(stats.revenue, 50, '营业收入 = 销售营业额')
@@ -1646,65 +1661,65 @@ test('T65 损耗出库口径', () => {
 
 // T66 — 可关联支出候选：已关联的排除、自身已勾选的保留、0 金额与余额边界
 test('T66 关联支出候选过滤', () => {
-  const expenses: BusinessExpense[] = [
-    { id: 'e1', date: '2026-09-01', categoryId: 'c', amount: 100, title: '批发', createdAt: 'a' },
-    { id: 'e2', date: '2026-09-02', categoryId: 'c', amount: 50, title: '补货', createdAt: 'b' },
-    { id: 'e3', date: '2026-09-03', categoryId: 'c', amount: 0, title: '零金额', createdAt: 'c' }
+  const expenseDailies: BusinessExpenseDaily[] = [
+    { id: 'bed_1', date: '2026-09-01', items: [{ id: 'e1', categoryId: 'c', amount: 100, title: '批发' }], createdAt: 'a', updatedAt: '' },
+    { id: 'bed_2', date: '2026-09-02', items: [{ id: 'e2', categoryId: 'c', amount: 50, title: '补货' }], createdAt: 'b', updatedAt: '' },
+    { id: 'bed_3', date: '2026-09-03', items: [{ id: 'e3', categoryId: 'c', amount: 0, title: '零金额' }], createdAt: 'c', updatedAt: '' }
   ]
   const purchases: BusinessPurchase[] = [
     { id: 'p1', productId: 'x', quantity: 10, unitPrice: 10, total: 100, date: '2026-09-01', expenseIds: ['e1'], createdAt: 'a' }
   ]
   // e1 已被 p1 关联 → 排除；e3 金额 0 → 无可关联余额，排除；只剩 e2
-  const opts = selectableExpenses(expenses, purchases, null)
+  const opts = selectableExpenses(expenseDailies, purchases, null)
   assert.deepEqual(opts.map(o => o.expense.id), ['e2'])
   // 新建态传 selectedIds：即便该笔已被占用（异常数据），也要保留以便取消勾选
-  const withSel = selectableExpenses(expenses, purchases, null, ['e1'])
+  const withSel = selectableExpenses(expenseDailies, purchases, null, ['e1'])
   assert.deepEqual(withSel.map(o => o.expense.id), ['e2', 'e1'], '自身已勾选的保留在最前排序之外仍按日期倒序')
   assert.equal(withSel.find(o => o.expense.id === 'e1')!.selfLinked, true)
   assert.equal(withSel.find(o => o.expense.id === 'e1')!.remaining, 0, '已被占用 → 余额 0')
   // 无支出 / 无进货
   assert.deepEqual(selectableExpenses([], purchases, null), [])
-  assert.equal(selectableExpenses(expenses, [], null).length, 2, '无进货占用时 e1/e2 可关联，e3 因金额 0 排除')
+  assert.equal(selectableExpenses(expenseDailies, [], null).length, 2, '无进货占用时 e1/e2 可关联，e3 因金额 0 排除')
   // 全部被关联 → 空候选（UI 展示空状态）
   const allLinked = [
     { id: 'p1', productId: 'x', quantity: 1, unitPrice: 100, total: 100, date: '2026-09-01', expenseIds: ['e1'], createdAt: 'a' },
     { id: 'p2', productId: 'x', quantity: 1, unitPrice: 50, total: 50, date: '2026-09-02', expenseIds: ['e2'], createdAt: 'b' }
   ] as BusinessPurchase[]
-  assert.equal(selectableExpenses(expenses, allLinked, null).length, 0)
+  assert.equal(selectableExpenses(expenseDailies, allLinked, null).length, 0)
   // 空入参健壮性
-  assert.deepEqual(selectableExpenses(undefined as unknown as BusinessExpense[], undefined as unknown as BusinessPurchase[], null), [])
+  assert.deepEqual(selectableExpenses(undefined as unknown as BusinessExpenseDaily[], undefined as unknown as BusinessPurchase[], null), [])
 })
 
 // T67 — 支出关联统计：已关联库存 / 未关联库存 的金额与笔数（首页支出拆分口径）
 test('T67 支出关联统计', () => {
-  const expenses = [
-    { id: 'e1', date: '2026-09-01', title: '进货A', categoryId: 'c', amount: 100, createdAt: 'a' },
-    { id: 'e2', date: '2026-09-02', title: '进货B', categoryId: 'c', amount: 50.5, createdAt: 'b' },
-    { id: 'e3', date: '2026-09-03', title: '摊位费', categoryId: 'c', amount: 30, createdAt: 'c' },
-    { id: 'e4', date: '2026-09-04', title: '水电', categoryId: 'c', amount: 20.25, createdAt: 'd' }
-  ] as BusinessExpense[]
+  const expenseDailies: BusinessExpenseDaily[] = [
+    { id: 'bed_1', date: '2026-09-01', items: [{ id: 'e1', title: '进货A', categoryId: 'c', amount: 100 }], createdAt: 'a', updatedAt: '' },
+    { id: 'bed_2', date: '2026-09-02', items: [{ id: 'e2', title: '进货B', categoryId: 'c', amount: 50.5 }], createdAt: 'b', updatedAt: '' },
+    { id: 'bed_3', date: '2026-09-03', items: [{ id: 'e3', title: '摊位费', categoryId: 'c', amount: 30 }], createdAt: 'c', updatedAt: '' },
+    { id: 'bed_4', date: '2026-09-04', items: [{ id: 'e4', title: '水电', categoryId: 'c', amount: 20.25 }], createdAt: 'd', updatedAt: '' }
+  ]
   const purchases = [
     { id: 'p1', productId: 'x', quantity: 10, unitPrice: 10, total: 100, date: '2026-09-01', expenseIds: ['e1', 'e2'], createdAt: 'a' }
   ] as BusinessPurchase[]
-  const st = calcExpenseLinkStats({ expenses, purchases } as unknown as BusinessData)
+  const st = calcExpenseLinkStats({ expenseDailies, purchases })
   assert.equal(st.linkedAmount, 150.5, 'e1+e2 已关联')
   assert.equal(st.linkedCount, 2)
   assert.equal(st.unlinkedAmount, 50.25, 'e3+e4 未关联')
   assert.equal(st.unlinkedCount, 2)
   assert.equal(st.total, 200.75, '两组之和 = 支出总额')
   // 全部未关联（无进货记录）
-  const noLink = calcExpenseLinkStats({ expenses, purchases: [] } as unknown as BusinessData)
+  const noLink = calcExpenseLinkStats({ expenseDailies, purchases: [] })
   assert.equal(noLink.linkedAmount, 0)
   assert.equal(noLink.linkedCount, 0)
   assert.equal(noLink.unlinkedAmount, 200.75)
   assert.equal(noLink.unlinkedCount, 4)
   // 全部已关联
   const allLink = calcExpenseLinkStats({
-    expenses,
+    expenseDailies,
     purchases: [
       { id: 'p1', productId: 'x', quantity: 1, unitPrice: 1, total: 1, date: '2026-09-01', expenseIds: ['e1', 'e2', 'e3', 'e4'], createdAt: 'a' }
     ] as BusinessPurchase[]
-  } as unknown as BusinessData)
+  })
   assert.equal(allLink.unlinkedAmount, 0)
   assert.equal(allLink.unlinkedCount, 0)
   assert.equal(allLink.linkedCount, 4)
@@ -1715,9 +1730,9 @@ test('T67 支出关联统计', () => {
   assert.equal(empty.unlinkedCount, 0)
   // 非有限金额按 0 计（不污染合计）
   const dirty = calcExpenseLinkStats({
-    expenses: [{ id: 'e9', date: '2026-09-05', title: 'x', categoryId: 'c', amount: NaN as unknown as number, createdAt: 'e' }] as BusinessExpense[],
+    expenseDailies: [{ id: 'bed_9', date: '2026-09-05', items: [{ id: 'e9', categoryId: 'c', amount: NaN as unknown as number, title: 'x' }], createdAt: 'e', updatedAt: '' }],
     purchases: []
-  } as unknown as BusinessData)
+  })
   assert.equal(dirty.unlinkedAmount, 0)
   assert.equal(dirty.unlinkedCount, 1, '笔数仍计入')
 })
@@ -1822,8 +1837,8 @@ test('T71 重命名账本（renameLedger）', () => {
   assert.equal(renameLedger(seed, 'nope', 'x').ok, false)
 })
 
-// T72 — 支出新增字段（单位/订货电话/订货地址/业务员）透明归一至 BusinessExpense
-test('T72 支出新增字段（单位/订货电话/订货地址/业务员）', () => {
+// T72 — 支出新增字段（单位/订货电话/订货地址/业务员）透明归一；旧扁平 expenses 自动迁移为日容器
+test('T72 支出新增字段 + 旧扁平迁移为日容器', () => {
   const d = normalizeBusinessData({
     expenseCategories: [{ id: 'c1', name: '采购', builtin: true, visible: true, seq: 0 }],
     expenses: [{
@@ -1831,7 +1846,11 @@ test('T72 支出新增字段（单位/订货电话/订货地址/业务员）', (
       unit: '包', orderPhone: '13800000000', orderAddress: '幸福路1号', salesman: '张三'
     }]
   })
-  const e = d.expenses[0]
+  // 旧扁平 expenses 已迁移为 expenseDailies（按 date 分组）
+  assert.equal(d.expenseDailies.length, 1)
+  assert.equal(d.expenseDailies[0].date, '2026-09-28')
+  const e = d.expenseDailies[0].items[0]
+  assert.equal(e.id, 'be_1')
   assert.equal(e.unit, '包')
   assert.equal(e.orderPhone, '13800000000')
   assert.equal(e.orderAddress, '幸福路1号')
@@ -1844,7 +1863,7 @@ test('T72 支出新增字段（单位/订货电话/订货地址/业务员）', (
       unit: '   ', orderPhone: '', orderAddress: '', salesman: ''
     }]
   })
-  const e2 = d2.expenses[0]
+  const e2 = d2.expenseDailies[0].items[0]
   assert.equal(e2.unit, undefined)
   assert.equal(e2.orderPhone, undefined)
   assert.equal(e2.orderAddress, undefined)
@@ -1876,10 +1895,10 @@ test('T73 支出数量×单价与标题可选', () => {
       { id: 'be_2', date: '2026-09-28', categoryId: 'c1', amount: 20, title: '运费' }
     ]
   })
-  assert.equal(d.expenses[0].quantity, 3)
-  assert.equal(d.expenses[0].unitPrice, 2.5)
-  assert.equal(d.expenses[1].quantity, undefined)
-  assert.equal(d.expenses[1].unitPrice, undefined)
+  assert.equal(d.expenseDailies[0].items[0].quantity, 3)
+  assert.equal(d.expenseDailies[0].items[0].unitPrice, 2.5)
+  assert.equal(d.expenseDailies[0].items[1].quantity, undefined)
+  assert.equal(d.expenseDailies[0].items[1].unitPrice, undefined)
 })
 
 // T74 — 支出产品（原「支出分类」）支持默认单位/单价：新增带配置、归一保留、更新
@@ -1920,7 +1939,7 @@ test('T74 支出产品默认单位/单价（新增/归一/更新）', () => {
 // T75 — expenseQtyUnit：数量+单位展示文本（如「3件」「1.5斤」），数量非正数/缺失返回空串
 test('T75 expenseQtyUnit（数量+单位展示文本）', () => {
   const mk = (over: Partial<BusinessExpense>): BusinessExpense => ({
-    id: 'e', date: '2024-05-06', categoryId: 'c', amount: 10, title: '采购', createdAt: 'a', ...over
+    id: 'e', categoryId: 'c', amount: 10, title: '采购', ...over
   })
   assert.equal(expenseQtyUnit(mk({ quantity: 3, unit: '件' })), '3件')
   assert.equal(expenseQtyUnit(mk({ quantity: 1.5, unit: '斤' })), '1.5斤', '小数数量保留')
@@ -1970,6 +1989,165 @@ test('T76 支出产品商品数量与商品单价派生', () => {
   assert.equal(cleared.list[0].productQuantity, undefined)
   assert.equal(productUnitPriceOf(cleared.list[0]), undefined)
   assert.equal(updateExpenseCategory(upd.list, 'nope', { productQuantity: 3 }).ok, false)
+})
+
+// T77 — normalizeExpenseDailies：旧扁平 expenses 按 date 分组迁移为日容器（同日多笔→一天一笔）；新格式透传
+test('T77 旧扁平 expenses 迁移为日容器', () => {
+  const cats = normalizeExpenseCategories([{ id: 'c1', name: '采购', sortOrder: 1, visible: true, isBuiltIn: true }])
+  // 旧格式：同一天两笔 + 另一天一笔 → 2 个日容器，数量/单价保留
+  const migrated = normalizeExpenseDailies(
+    {
+      expenses: [
+        { id: 'be_1', date: '2026-09-28', categoryId: 'c1', amount: 5, title: '原料', quantity: 2, unitPrice: 2.5 },
+        { id: 'be_2', date: '2026-09-28', categoryId: 'c1', amount: 6, title: '辅料' },
+        { id: 'be_3', date: '2026-09-29', categoryId: 'c1', amount: 7, title: '运费' }
+      ]
+    },
+    cats
+  )
+  assert.equal(migrated.length, 2, '两个不同日期 → 两个日容器')
+  // 日期倒序：2026-09-29 在前
+  assert.equal(migrated[0].date, '2026-09-29')
+  assert.equal(migrated[0].items.length, 1)
+  assert.equal(migrated[1].date, '2026-09-28')
+  assert.equal(migrated[1].items.length, 2, '同日两笔 → 同一天的两个明细')
+  assert.equal(migrated[1].items[0].quantity, 2)
+  assert.equal(migrated[1].items[0].unitPrice, 2.5)
+
+  // 新格式：data.expenseDailies 直接透传（items 归一、缺 id 补 id）
+  const viaNew = normalizeExpenseDailies(
+    {
+      expenseDailies: [{ date: '2026-10-01', items: [{ id: 'be_x', categoryId: 'c1', amount: 9, title: '新格式' }] }]
+    },
+    cats
+  )
+  assert.equal(viaNew.length, 1)
+  assert.equal(viaNew[0].date, '2026-10-01')
+  assert.equal(viaNew[0].items[0].title, '新格式')
+  assert.ok(viaNew[0].id.startsWith('bed_'), '新格式缺 id 自动补 bed_ 前缀')
+})
+
+// T78 — flatExpenseItems / expenseItemsWithDay：扁平化 + 带日期上下文
+test('T78 flatExpenseItems 与 expenseItemsWithDay', () => {
+  const dailies: BusinessExpenseDaily[] = [
+    { id: 'bed_1', date: '2026-09-28', items: [
+      { id: 'be_1', categoryId: 'c1', amount: 5, title: 'a' },
+      { id: 'be_2', categoryId: 'c1', amount: 6, title: 'b' }
+    ], createdAt: '', updatedAt: '' },
+    { id: 'bed_2', date: '2026-09-29', items: [{ id: 'be_3', categoryId: 'c1', amount: 7, title: 'c' }], createdAt: '', updatedAt: '' }
+  ]
+  assert.equal(flatExpenseItems(dailies).length, 3)
+  assert.equal(flatExpenseItems(undefined).length, 0, 'undefined 安全')
+  const withDay = expenseItemsWithDay(dailies)
+  assert.equal(withDay.length, 3)
+  assert.equal(withDay[0].date, '2026-09-28')
+  assert.equal(withDay[0].item.id, 'be_1')
+  assert.equal(withDay[2].dailyId, 'bed_2')
+})
+
+// T79 — addExpenseItem：同日自动合并、新建日容器、不改入参
+test('T79 addExpenseItem 同日合并与新日容器', () => {
+  const input = { categoryId: 'c1', amount: 10, title: '原料' }
+  const r1 = addExpenseItem([], '2026-09-28', input)
+  assert.equal(r1.length, 1)
+  assert.equal(r1[0].date, '2026-09-28')
+  assert.equal(r1[0].items.length, 1)
+  assert.ok(r1[0].id.startsWith('bed_'))
+  assert.ok(r1[0].items[0].id.startsWith('be_'))
+
+  // 同日再追加 → 合并到同一天、明细 +1、id 不变
+  const r2 = addExpenseItem(r1, '2026-09-28', { categoryId: 'c1', amount: 12, title: '辅料' })
+  assert.equal(r2.length, 1, '仍只有一天')
+  assert.equal(r2[0].items.length, 2, '同日多笔 → 同一天多个明细')
+  assert.equal(r2[0].id, r1[0].id, '日容器 id 不变')
+  assert.equal(r1[0].items.length, 1, '不改入参（原始数组未变）')
+
+  // 不同日期 → 新日容器
+  const r3 = addExpenseItem(r2, '2026-09-29', { categoryId: 'c1', amount: 8, title: '运费' })
+  assert.equal(r3.length, 2)
+})
+
+// T80 — updateExpenseItem：按 id 更新；找不到返回原数组
+test('T80 updateExpenseItem', () => {
+  const dailies = addExpenseItem([], '2026-09-28', { categoryId: 'c1', amount: 10, title: '原料' })
+  const id = dailies[0].items[0].id
+  const updated = updateExpenseItem(dailies, id, { amount: 20, title: '新标题' })
+  assert.equal(updated[0].items[0].amount, 20)
+  assert.equal(updated[0].items[0].title, '新标题')
+  const unchanged = updateExpenseItem(dailies, 'be_not_exist', { amount: 99 })
+  assert.equal(unchanged, dailies, '找不到 → 返回原数组（同一引用）')
+})
+
+// T81 — deleteExpenseItem：删除明细；清空当天 → 删除日容器；找不到返回原数组
+test('T81 deleteExpenseItem 删除明细与空日容器', () => {
+  let dailies = addExpenseItem([], '2026-09-28', { categoryId: 'c1', amount: 10, title: '原料' })
+  dailies = addExpenseItem(dailies, '2026-09-28', { categoryId: 'c1', amount: 12, title: '辅料' })
+  const id0 = dailies[0].items[0].id
+  const id1 = dailies[0].items[1].id
+  // 删一条 → 日容器仍在
+  const afterOne = deleteExpenseItem(dailies, id0)
+  assert.equal(afterOne.length, 1)
+  assert.equal(afterOne[0].items.length, 1)
+  // 删最后一条 → 日容器被移除
+  const afterAll = deleteExpenseItem(afterOne, id1)
+  assert.equal(afterAll.length, 0, '当日无明细 → 删除日容器')
+  const unchanged = deleteExpenseItem(dailies, 'be_not_exist')
+  assert.equal(unchanged, dailies, '找不到 → 返回原数组')
+})
+
+// T82 — sortExpenseDailies：日期倒序
+test('T82 sortExpenseDailies', () => {
+  const dailies: BusinessExpenseDaily[] = [
+    { id: 'bed_1', date: '2026-01-01', items: [], createdAt: '', updatedAt: '' },
+    { id: 'bed_2', date: '2026-03-01', items: [], createdAt: '', updatedAt: '' },
+    { id: 'bed_3', date: '2026-02-01', items: [], createdAt: '', updatedAt: '' }
+  ]
+  const sorted = sortExpenseDailies(dailies)
+  assert.equal(sorted[0].date, '2026-03-01')
+  assert.equal(sorted[1].date, '2026-02-01')
+  assert.equal(sorted[2].date, '2026-01-01')
+})
+
+// T83 — upsertExpenseDaily：新增 / 同日期替换（保留 id）/ 改日期迁移 / 空明细删除日容器
+test('T83 upsertExpenseDaily', () => {
+  // 新增（originalDailyId 为 null）：生成日容器
+  const a = upsertExpenseDaily([], null, '2026-09-28', [
+    { categoryId: 'c1', amount: 5, title: 'a' },
+    { categoryId: 'c1', amount: 6, title: 'b' }
+  ])
+  assert.equal(a.length, 1)
+  assert.equal(a[0].date, '2026-09-28')
+  assert.equal(a[0].items.length, 2)
+
+  // 新增更多同日期 → 合并到同一天
+  const b = upsertExpenseDaily(a, null, '2026-09-28', [{ categoryId: 'c1', amount: 7, title: 'c' }])
+  assert.equal(b.length, 1)
+  assert.equal(b[0].items.length, 3)
+
+  // 编辑同日期：整体替换，保留传入 id、新行生成 id、删除的行消失
+  const editId = a[0].items[0].id
+  const edited = upsertExpenseDaily(b, b[0].id, '2026-09-28', [
+    { id: editId, categoryId: 'c1', amount: 50, title: '改后' },
+    { categoryId: 'c1', amount: 60, title: '新增行' }
+  ])
+  assert.equal(edited.length, 1, '仍是同一天')
+  assert.equal(edited[0].items.length, 2, '原 3 条被替换为 2 条')
+  assert.equal(edited[0].items[0].id, editId, '原有 id 保留（库存关联不破坏）')
+  assert.ok(edited[0].items[1].id.startsWith('be_'), '新行生成 id')
+
+  // 改日期迁移：原日容器移除、明细并入新日期（目标日已存在则追加）
+  const moved = upsertExpenseDaily(edited, edited[0].id, '2026-09-29', edited[0].items)
+  assert.equal(moved.length, 1, '原 09-28 已移除，仅剩 09-29')
+  assert.equal(moved[0].date, '2026-09-29')
+  assert.equal(moved[0].items.length, 2)
+
+  // 空明细 → 删除原日容器
+  const empty = upsertExpenseDaily(moved, moved[0].id, '2026-09-29', [])
+  assert.equal(empty.length, 0, '空明细 → 日容器被删除')
+
+  // 新增时给空明细 → 不创建任何日容器
+  const noop = upsertExpenseDaily([], null, '2026-09-30', [])
+  assert.equal(noop.length, 0)
 })
 
 let passed = 0
