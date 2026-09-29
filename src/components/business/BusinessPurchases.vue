@@ -40,7 +40,6 @@ import {
   deriveInventoryQuantity,
   deriveQuantity,
   deriveUnitPrice,
-  expenseLabel,
   expenseQtyUnit,
   expenseItemsWithDay,
   flatExpenseItems,
@@ -55,7 +54,7 @@ import {
   visibleProductCategories
 } from '@/composables/businessCore'
 import { exportXlsx } from '@/composables/xlsxExport'
-import type { BusinessPurchase } from '@/types'
+import type { BusinessPurchase, BusinessExpense } from '@/types'
 import { usePageSize } from '@/composables/usePageSize'
 import { useToast } from '@/composables/useToast'
 
@@ -220,7 +219,7 @@ const filteredExpenseOptions = computed(() => {
   const q = expenseQuery.value.trim().toLowerCase()
   if (!q) return expenseOptions.value
   return expenseOptions.value.filter(o =>
-    o.label.toLowerCase().includes(q) ||
+    expenseProductLabel(o.expense, o.date).toLowerCase().includes(q) ||
     (o.expense.note ?? '').toLowerCase().includes(q) ||
     String(o.expense.amount).includes(q)
   )
@@ -312,6 +311,17 @@ function syncQuantityFromDerived(): void {
 /** 商品切换（新增 / 复制态）自动重新关联同名未关联支出 */
 watch(formProductId, () => autoLinkForCurrentProduct())
 
+/** 关联支出展示用：取「支出产品名」（支出产品配置 name），缺省回落到支出标题/兜底 */
+function expenseProductOf(e: BusinessExpense): string {
+  const cat = store.expenseCategories.find(c => c.id === e.categoryId)
+  if (cat && cat.name) return cat.name
+  return (typeof e.title === 'string' && e.title.trim()) ? e.title.trim() : '未命名支出'
+}
+/** 关联支出标签（库存管理：标题改为显示产品）：`日期 产品名` */
+function expenseProductLabel(e: BusinessExpense, date?: string): string {
+  return `${date ?? ''} ${expenseProductOf(e)}`
+}
+
 /** 已关联支出标签列表（「日期 产品名 数量单位」，按日期升序），用于徽章悬浮与提示 */
 function linkedExpenseLabels(purchase: { expenseIds?: string[] }): string[] {
   const ids = purchase.expenseIds ?? []
@@ -320,7 +330,7 @@ function linkedExpenseLabels(purchase: { expenseIds?: string[] }): string[] {
     .filter(x => ids.includes(x.item.id))
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
     .map(x => {
-      const base = expenseLabel(x.item, x.date)
+      const base = expenseProductLabel(x.item, x.date)
       const qu = expenseQtyUnit(x.item)
       return qu ? `${base} ${qu}` : base
     })
@@ -757,7 +767,7 @@ async function handleDelete(id: string): Promise<void> {
                   @change="toggleExpense(opt.expense.id)"
                 />
                 <!-- 日期 + 标题：同一天可能有多笔支出，靠标题区分 -->
-                <span class="bizpur-expense-date">{{ opt.label }}</span>
+                <span class="bizpur-expense-date">{{ expenseProductLabel(opt.expense, opt.date) }}</span>
                 <!-- 数量 + 单位：直观呈现该笔支出买了多少（如「3件」），无数量时不显 -->
                 <span v-if="expenseQtyUnit(opt.expense)" class="bizpur-expense-qty" :data-testid="`bizpur-expense-qty-${opt.expense.id}`">{{ expenseQtyUnit(opt.expense) }}</span>
                 <span class="bizpur-expense-amount">{{ formatYuanOf(opt.expense.amount) }}</span>
