@@ -126,7 +126,10 @@ export function normalizeExpenseCategories(raw: unknown): BusinessExpenseCategor
       name: c.name.trim().slice(0, 20),
       sortOrder: typeof c.sortOrder === 'number' && Number.isFinite(c.sortOrder) ? c.sortOrder : out.length + 1,
       visible: c.visible !== false,
-      isBuiltIn: c.isBuiltIn === true || BUSINESS_EXPENSE_BUILTIN_IDS.includes(c.id)
+      isBuiltIn: c.isBuiltIn === true || BUSINESS_EXPENSE_BUILTIN_IDS.includes(c.id),
+      // 产品默认单位/单价（可选）：与 normExpense 同口径归一，非法/非正数 → undefined
+      unit: typeof c.unit === 'string' && c.unit.trim() ? c.unit.trim().slice(0, EXPENSE_UNIT_MAX) : undefined,
+      unitPrice: typeof c.unitPrice === 'number' && Number.isFinite(c.unitPrice) && c.unitPrice > 0 ? c.unitPrice : undefined
     })
   }
   // 内置缺失补回（按默认序插到已有项之后，sortOrder 递增）
@@ -523,8 +526,12 @@ export function addProductCategory(list: BusinessProductCategory[], name: string
   return { ok: true, reason: 'ok', list: [...list, next] }
 }
 
-/** 新增支出分类（自定义 bec_ 前缀） */
-export function addExpenseCategory(list: BusinessExpenseCategory[], name: string): CategoryOpResult<BusinessExpenseCategory> {
+/** 新增支出产品（自定义 bec_ 前缀）；opts.unit/unitPrice 为产品默认单位与单价，新增支出选该产品时自动回填 */
+export function addExpenseCategory(
+  list: BusinessExpenseCategory[],
+  name: string,
+  opts?: { unit?: string; unitPrice?: number }
+): CategoryOpResult<BusinessExpenseCategory> {
   const trimmed = name.trim()
   if (!trimmed) return { ok: false, reason: 'empty' }
   if (isCategoryNameTaken(trimmed, '', list)) return { ok: false, reason: 'duplicate' }
@@ -533,9 +540,37 @@ export function addExpenseCategory(list: BusinessExpenseCategory[], name: string
     name: trimmed.slice(0, 20),
     sortOrder: list.reduce((m, c) => Math.max(m, c.sortOrder), 0) + 1,
     visible: true,
-    isBuiltIn: false
+    isBuiltIn: false,
+    unit: opts?.unit ? opts.unit.trim().slice(0, EXPENSE_UNIT_MAX) || undefined : undefined,
+    unitPrice: typeof opts?.unitPrice === 'number' && Number.isFinite(opts.unitPrice) && opts.unitPrice > 0 ? opts.unitPrice : undefined
   }
   return { ok: true, reason: 'ok', list: [...list, next] }
+}
+
+/** 更新支出产品的默认单位/单价（不校验名称；与 normExpense 同口径归一，空值/非法 → 清除） */
+export function updateExpenseCategory(
+  list: BusinessExpenseCategory[],
+  id: string,
+  patch: { unit?: string | null; unitPrice?: number | null }
+): CategoryOpResult<BusinessExpenseCategory> {
+  const target = list.find(c => c.id === id)
+  if (!target) return { ok: false, reason: 'not-found' }
+  return {
+    ok: true,
+    reason: 'ok',
+    list: list.map(c => {
+      if (c.id !== id) return c
+      const next: BusinessExpenseCategory = { ...c }
+      if (patch.unit !== undefined) {
+        next.unit = typeof patch.unit === 'string' && patch.unit.trim() ? patch.unit.trim().slice(0, EXPENSE_UNIT_MAX) : undefined
+      }
+      if (patch.unitPrice !== undefined) {
+        next.unitPrice =
+          typeof patch.unitPrice === 'number' && Number.isFinite(patch.unitPrice) && patch.unitPrice > 0 ? patch.unitPrice : undefined
+      }
+      return next
+    })
+  }
 }
 
 /** 通用改名：商品/支出分类均允许（含支出内置）；名称唯一（除自身外） */
