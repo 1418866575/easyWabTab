@@ -8,6 +8,7 @@
  */
 
 import type { ToolboxToolMeta } from '../types'
+import { sortByClicks, type ClickMap } from './rank.ts'
 
 /** 归一化：小写 + 去首尾空格 */
 export const norm = (s: string): string => (s || '').toLowerCase().trim()
@@ -35,15 +36,20 @@ export function countByCategory(list: ToolboxToolMeta[], category: string): numb
   return list.filter(t => t.category === category).length
 }
 
-/** 分类 + 关键字叠加筛选，并按 order 排序 */
+/**
+ * 分类 + 关键字叠加筛选，然后排序：
+ * - 传入 clicks 时按点击次数降序（次数相同保持 order 顺序）
+ * - 未传 clicks 时按 order 升序（保持原有行为）
+ */
 export function filterTools(
   list: ToolboxToolMeta[],
-  opts: { q?: string; category?: string } = {}
+  opts: { q?: string; category?: string; clicks?: ClickMap } = {}
 ): ToolboxToolMeta[] {
   const q = opts.q || ''
   const cat = opts.category || ''
-  return list
+  const hit = list
     .filter(t => !cat || t.category === cat)
     .filter(t => matchTool(t, q))
     .sort((a, b) => (a.order ?? 999) - (b.order ?? 999))
+  return opts.clicks ? sortByClicks(hit, opts.clicks) : hit
 }

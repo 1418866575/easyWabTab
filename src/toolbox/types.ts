@@ -84,6 +84,8 @@ export interface ToolboxToolEntry {
 export interface ToolboxPrefs {
   favorites: string[]
   recent: ToolboxRecentItem[]
+  /** 点击次数：工具 id → 次数（越大越靠前） */
+  clicks: Record<string, number>
 }
 
 /** 最近使用记录 */

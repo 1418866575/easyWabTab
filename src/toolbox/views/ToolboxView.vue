@@ -16,6 +16,7 @@ import ToolboxEmpty from '../components/ToolboxEmpty.vue'
 import ToolboxToolPanel from '../components/ToolboxToolPanel.vue'
 import { TOOLBOX_TOOLS, getToolEntry, getToolMeta } from '../registry'
 import { filterTools } from '../core/search'
+import { sortByClicks } from '../core/rank'
 import { MODULE_CATEGORY_ID } from '../core/category'
 import { relativeTime } from '../core/recent'
 import { categoryName } from '../config/categories'
@@ -24,17 +25,35 @@ import type { ToolboxToolEntry, ToolboxToolMeta } from '../types'
 
 const router = useRouter()
 const toast = useToast()
-const { favorites, recent, isFavorite, toggleFavorite, pushRecent, clearRecent } = useToolboxPrefs()
+const {
+  favorites,
+  recent,
+  clicks,
+  isFavorite,
+  toggleFavorite,
+  pushRecent,
+  clearRecent,
+  clickCount,
+  hitClick,
+  clearClicks
+} = useToolboxPrefs()
 
 const keyword = ref('')
 const category = ref('')
 const activeEntry = ref<ToolboxToolEntry | null>(null)
 const panelVisible = ref(false)
 
-/** 全部（分类 + 关键字叠加筛选） */
-const visibleTools = computed(() => filterTools(TOOLBOX_TOOLS, { q: keyword.value, category: category.value }))
-/** 常用工具（收藏 ∩ 当前筛选） */
-const favoriteTools = computed(() => visibleTools.value.filter(t => favorites.value.includes(t.id)))
+/** 全部（分类 + 关键字叠加筛选），按点击次数降序（次数相同保持 order 顺序） */
+const visibleTools = computed(() =>
+  filterTools(TOOLBOX_TOOLS, { q: keyword.value, category: category.value, clicks: clicks.value })
+)
+/** 常用工具（收藏 ∩ 当前筛选），同样按点击次数降序 */
+const favoriteTools = computed(() =>
+  sortByClicks(
+    visibleTools.value.filter(t => favorites.value.includes(t.id)),
+    clicks.value
+  )
+)
 /** 最近使用（时间倒序，已由 core 去重截断） */
 const recentTools = computed(() =>
   recent.value
@@ -44,12 +63,18 @@ const recentTools = computed(() =>
 
 const hasFavorite = computed(() => favorites.value.length > 0)
 
-/** 站内模块分类给出更明确的副标题（点击直达站内页面） */
-const allSectionSub = computed(() =>
-  category.value === MODULE_CATEGORY_ID
-    ? `· ${visibleTools.value.length} 个模块，点击直达站内对应页面`
-    : `· ${visibleTools.value.length} 个工具`
+/** 累计点击次数（用于展示「按使用次数排序」与重置入口） */
+const totalClicks = computed(() =>
+  Object.values(clicks.value).reduce((sum, n) => sum + (Number(n) > 0 ? Number(n) : 0), 0)
 )
+
+/** 站内模块分类给出更明确的副标题（点击直达站内页面） */
+const allSectionSub = computed(() => {
+  const tail = totalClicks.value > 0 ? ' · 按使用次数排序' : ''
+  return category.value === MODULE_CATEGORY_ID
+    ? `· ${visibleTools.value.length} 个模块，点击直达站内对应页面${tail}`
+    : `· ${visibleTools.value.length} 个工具${tail}`
+})
 
 const STATUS_LABEL: Record<string, string> = {
   active: '可用',
@@ -64,6 +89,7 @@ function openTool(meta: ToolboxToolMeta) {
     return
   }
   pushRecent(meta.id)
+  hitClick(meta.id) // 点击次数 +1，列表按此降序
 
   if (meta.kind === 'module') {
     router.push(meta.url || '/')
@@ -92,6 +118,11 @@ function onToggleFav(meta: ToolboxToolMeta) {
 function onClearRecent() {
   clearRecent()
   toast.info('已清空最近使用')
+}
+
+function onClearClicks() {
+  clearClicks()
+  toast.info('已重置使用次数，列表恢复默认排序')
 }
 
 function resetFilters() {
@@ -146,6 +177,7 @@ function goBack() {
             :meta="t"
             :favorite="isFavorite(t.id)"
             :keyword="keyword"
+            :clicks="clickCount(t.id)"
             @open="openTool(t)"
             @toggle-fav="onToggleFav(t)"
           />
@@ -164,6 +196,10 @@ function goBack() {
         :sub="allSectionSub"
         data-testid="tb-section-all"
       >
+        <template v-if="totalClicks > 0" #extra>
+          <span class="tb-hits-total">累计使用 {{ totalClicks }} 次</span>
+          <button type="button" class="tb-mini-btn" @click="onClearClicks">重置统计</button>
+        </template>
         <div class="tb-grid">
           <ToolboxCard
             v-for="t in visibleTools"
@@ -171,6 +207,7 @@ function goBack() {
             :meta="t"
             :favorite="isFavorite(t.id)"
             :keyword="keyword"
+            :clicks="clickCount(t.id)"
             @open="openTool(t)"
             @toggle-fav="onToggleFav(t)"
           />
@@ -199,6 +236,7 @@ function goBack() {
             <span aria-hidden="true">{{ item.tool.icon }}</span>
             <span>{{ item.tool.name }}</span>
             <span class="tb-recent-time">{{ relativeTime(item.ts) }}</span>
+            <span v-if="clickCount(item.tool.id)" class="tb-recent-hits">{{ clickCount(item.tool.id) }} 次</span>
           </button>
         </div>
       </ToolboxSection>
@@ -281,6 +319,14 @@ function goBack() {
 }
 .tb-recent-item:hover { color: var(--color-primary); border-color: var(--color-primary); }
 .tb-recent-time { font-size: 11px; color: var(--color-text-muted); }
+.tb-recent-hits {
+  font-size: 11px;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+.tb-hits-total { font-size: 12px; color: var(--color-text-muted); }
 
 .tb-mini-btn {
   min-height: 26px;

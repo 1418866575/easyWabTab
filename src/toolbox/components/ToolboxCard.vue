@@ -13,8 +13,10 @@ const props = withDefaults(
     meta: ToolboxToolMeta
     favorite: boolean
     keyword?: string
+    /** 点击次数（0 表示未使用过，不展示） */
+    clicks?: number
   }>(),
-  { keyword: '' }
+  { keyword: '', clicks: 0 }
 )
 
 const emit = defineEmits<{
@@ -28,8 +30,16 @@ const statusLabel = computed(
 )
 const nameParts = computed(() => splitHighlight(props.meta.name, props.keyword))
 const descParts = computed(() => splitHighlight(props.meta.description, props.keyword))
+const hits = computed(() => {
+  const n = Math.floor(Number(props.clicks))
+  return Number.isFinite(n) && n > 0 ? n : 0
+})
 const ariaLabel = computed(
-  () => '打开 ' + props.meta.name + (disabled.value ? '（' + statusLabel.value + '，暂不可用）' : '')
+  () =>
+    '打开 ' +
+    props.meta.name +
+    (hits.value ? `（已使用 ${hits.value} 次）` : '') +
+    (disabled.value ? '（' + statusLabel.value + '，暂不可用）' : '')
 )
 </script>
 
@@ -67,6 +77,7 @@ const ariaLabel = computed(
 
     <span class="tb-card-meta">
       <span v-for="t in meta.tags.slice(0, 3)" :key="t" class="tb-tag">{{ t }}</span>
+      <span v-if="hits" class="tb-hits" :title="`已使用 ${hits} 次`">🔥 {{ hits }}</span>
       <span v-if="disabled" class="tb-badge" :class="meta.status">{{ statusLabel }}</span>
       <span v-else class="tb-badge internal">{{ meta.kind === 'module' ? '站内模块' : '站内自建' }}</span>
     </span>
@@ -172,6 +183,15 @@ const ariaLabel = computed(
   background: var(--color-bg-hover);
   color: var(--color-text-secondary);
   border: 1px solid var(--color-border);
+}
+.tb-hits {
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  border: 1px solid transparent;
 }
 .tb-badge {
   font-size: 11px;

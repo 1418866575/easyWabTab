@@ -18,6 +18,15 @@ import {
 } from '../src/toolbox/core/category.ts'
 import { splitHighlight } from '../src/toolbox/core/highlight.ts'
 import { RECENT_LIMIT, recordRecent, relativeTime } from '../src/toolbox/core/recent.ts'
+import {
+  CLICK_MAX,
+  clickCount,
+  normalizeClicks,
+  recordClick,
+  removeClick,
+  sortByClicks,
+  type ClickMap
+} from '../src/toolbox/core/rank.ts'
 import { hexToHsl, hexToRgb, hslToHex, rgbToHsl } from '../src/toolbox/core/color.ts'
 import { csvToJson, jsonToCsv, parseCsvLine } from '../src/toolbox/core/csv.ts'
 import { diffLines, diffChars, diffTexts } from '../src/toolbox/core/diff.ts'
@@ -153,6 +162,37 @@ assert.equal(big.length, RECENT_LIMIT, '截断到上限')
 assert.equal(relativeTime(Date.now() - 1000), '刚刚', '相对时间：刚刚')
 assert.equal(relativeTime(Date.now() - 5 * 60000), '5 分钟前', '相对时间：分钟')
 assert.equal(relativeTime(Date.now() - 3 * 3600000), '3 小时前', '相对时间：小时')
+
+/* ===== 点击次数（使用热度）与排序 ===== */
+assert.deepEqual(normalizeClicks(null), {}, '点击次数归一化：空值')
+assert.deepEqual(normalizeClicks({ a: 3, b: 0, c: -1, d: 'x', e: 2.9 }), { a: 3, e: 2 }, '点击次数归一化：过滤非法项并取整')
+assert.deepEqual(normalizeClicks([1, 2]), {}, '点击次数归一化：数组视为脏数据')
+assert.equal(clickCount({}, 'a'), 0, '未点击过为 0')
+assert.equal(clickCount(undefined, 'a'), 0, '缺省次数表为 0')
+assert.equal(clickCount({ a: 'x' }, 'a'), 0, '非法次数按 0 处理')
+
+let hits = recordClick({}, 'a')
+assert.equal(clickCount(hits, 'a'), 1, '首次点击记为 1')
+hits = recordClick(hits, 'a')
+hits = recordClick(hits, 'b')
+assert.deepEqual(hits, { a: 2, b: 1 }, '多次点击累加')
+assert.equal(recordClick({}, '').a, undefined, '空 id 不记录')
+let capped: ClickMap = { a: CLICK_MAX }
+capped = recordClick(capped, 'a')
+assert.equal(clickCount(capped, 'a'), CLICK_MAX, '达到上限后不再增长')
+assert.equal(clickCount(removeClick(hits, 'a'), 'a'), 0, '清空单个工具的次数')
+
+assert.deepEqual(sortByClicks(tools, { b: 5, a: 1 }).map(t => t.id), ['b', 'a', 'c'], '按点击次数降序')
+assert.deepEqual(sortByClicks(tools, { a: 2, b: 2 }).map(t => t.id), ['a', 'b', 'c'], '次数相同保持 order 顺序')
+assert.deepEqual(sortByClicks(tools, {}).map(t => t.id), ['a', 'b', 'c'], '空次数表保持原顺序')
+assert.deepEqual(sortByClicks(tools).map(t => t.id), ['a', 'b', 'c'], '未传次数表保持原顺序')
+assert.deepEqual(filterTools(tools, { clicks: { c: 9 } }).map(t => t.id), ['c', 'a', 'b'], 'filterTools 带 clicks 时按次数降序')
+assert.deepEqual(
+  filterTools(tools, { category: 'dev', clicks: { b: 3 } }).map(t => t.id),
+  ['b', 'a'],
+  '分类筛选 + 次数排序叠加'
+)
+assert.equal(filterTools(tools, { clicks: { c: 1 } }).length, 3, '排序不改变筛选结果集')
 
 /* ===== 颜色转换 ===== */
 const rgb = hexToRgb('#3b82f6')
