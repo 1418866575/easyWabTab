@@ -152,7 +152,7 @@ function normProduct(raw: unknown): BusinessProduct | null {
     id: p.id,
     name: p.name.trim().slice(0, 40),
     categoryId: typeof p.categoryId === 'string' && p.categoryId ? p.categoryId : undefined,
-    unit: typeof p.unit === 'string' ? p.unit.trim().slice(0, 8) || '件' : '件',
+    unit: typeof p.unit === 'string' ? p.unit.trim().slice(0, BIZ_UNIT_MAX) || '件' : '件',
     purchasePrice: Math.max(0, numOf(p.purchasePrice)),
     sellingPrice: Math.max(0, numOf(p.sellingPrice)),
     // 会员价：可选字段，仅记录展示；非法值（负数/NaN/非数字）一律按「未设置」处理
@@ -337,10 +337,13 @@ export const DEFAULT_EXPENSE_TITLE = '未命名支出'
 /** 支出标题最大长度（汉字/字符同计） */
 export const EXPENSE_TITLE_MAX = 20
 
-/** 支出单位预设（下拉可选项；支持自定义输入） */
-export const EXPENSE_UNITS = ['件', '包', '根', '箱', '袋', '个', '斤', '盒', '瓶', '条', '只', '套', '台', '米', '卷']
-/** 支出新增可选字段最大长度 */
-export const EXPENSE_UNIT_MAX = 10
+/** 单位预设（下拉可选项；支持自定义输入）——商品单位与支出单位共用同一份预设，保证两处口径一致 */
+export const BIZ_UNITS = ['件', '包', '根', '箱', '袋', '个', '斤', '盒', '瓶', '条', '只', '套', '台', '米', '卷']
+/** 支出单位预设（= 通用 BIZ_UNITS，保留原名兼容既有引用） */
+export const EXPENSE_UNITS = BIZ_UNITS
+/** 支出新增可选字段最大长度（单位上限 BIZ_UNIT_MAX 与商品共用） */
+export const BIZ_UNIT_MAX = 10
+export const EXPENSE_UNIT_MAX = BIZ_UNIT_MAX
 export const EXPENSE_ORDER_PHONE_MAX = 30
 export const EXPENSE_ORDER_ADDRESS_MAX = 100
 export const EXPENSE_SALESMAN_MAX = 30
@@ -364,24 +367,49 @@ export function expenseLabel(e: BusinessExpense): string {
 }
 
 /** 单笔支出录入校验（标题必填且不超长 / 金额 > 0 / 分类必选） */
-export function validateExpenseRow(row: {
-  title?: string
-  categoryId?: string
-  amount?: number | string
-  unit?: string
-  orderPhone?: string
-  orderAddress?: string
-  salesman?: string
-}): ValidationIssue[] {
+/** 支出金额：数量 × 单价（两位小数；非法值按 0 处理） */
+export function calcExpenseAmount(quantity: number | string, unitPrice: number | string): number {
+  const q = Number(quantity)
+  const p = Number(unitPrice)
+  if (!Number.isFinite(q) || !Number.isFinite(p)) return 0
+  return Math.round(Math.max(0, q) * Math.max(0, p) * 100) / 100
+}
+
+export function validateExpenseRow(
+  row: {
+    title?: string
+    categoryId?: string
+    amount?: number | string
+    quantity?: number | string
+    unitPrice?: number | string
+    unit?: string
+    orderPhone?: string
+    orderAddress?: string
+    salesman?: string
+  },
+  /** 标题是否必填：支出弹框里标题已改为可选（留空取产品名兜底），故传 false */
+  opts?: { titleRequired?: boolean }
+): ValidationIssue[] {
   const issues: ValidationIssue[] = []
   const title = typeof row.title === 'string' ? row.title.trim() : ''
   const amount = Number(row.amount)
-  if (!title) issues.push({ level: 'error', message: '请填写支出标题' })
-  else if (title.length > EXPENSE_TITLE_MAX) {
+  const titleRequired = opts?.titleRequired !== false
+  if (!title) {
+    if (titleRequired) issues.push({ level: 'error', message: '请填写支出标题' })
+  } else if (title.length > EXPENSE_TITLE_MAX) {
     issues.push({ level: 'error', message: `标题不能超过 ${EXPENSE_TITLE_MAX} 个字` })
   }
-  if (!row.categoryId) issues.push({ level: 'error', message: '请选择支出分类' })
-  if (!Number.isFinite(amount) || amount <= 0) issues.push({ level: 'error', message: '支出金额必须 > 0' })
+  if (!row.categoryId) issues.push({ level: 'error', message: '请选择产品' })
+  // 数量 / 单价（金额 = 数量 × 单价 自动算出时）：给了就一并校验，避免填了 0 却看不出原因
+  if (row.quantity !== undefined) {
+    const q = Number(row.quantity)
+    if (!Number.isFinite(q) || q <= 0) issues.push({ level: 'error', message: '数量必须 > 0' })
+  }
+  if (row.unitPrice !== undefined) {
+    const p = Number(row.unitPrice)
+    if (!Number.isFinite(p) || p <= 0) issues.push({ level: 'error', message: '单价必须 > 0' })
+  }
+  if (!Number.isFinite(amount) || amount <= 0) issues.push({ level: 'error', message: '支出金额必须 > 0（金额 = 数量 × 单价）' })
   return issues
 }
 
@@ -414,6 +442,9 @@ function normExpense(raw: unknown, categories?: BusinessExpenseCategory[]): Busi
     amount: Math.max(0, numOf(e.amount)),
     note: typeof e.note === 'string' && e.note.trim() ? e.note.trim().slice(0, 100) : undefined,
     // 新增可选字段：空串/缺失 → 不写入；否则截断（保持旧数据缺省为 undefined）
+    // 数量/单价：金额 = 数量 × 单价；旧数据没有这两个字段，缺省 undefined（展示时按数量 1 / 单价=金额 回显）
+    quantity: Number.isFinite(numOf(e.quantity)) && numOf(e.quantity) > 0 ? numOf(e.quantity) : undefined,
+    unitPrice: Number.isFinite(numOf(e.unitPrice)) && numOf(e.unitPrice) > 0 ? numOf(e.unitPrice) : undefined,
     unit: typeof e.unit === 'string' && e.unit.trim() ? e.unit.trim().slice(0, EXPENSE_UNIT_MAX) : undefined,
     orderPhone: typeof e.orderPhone === 'string' && e.orderPhone.trim() ? e.orderPhone.trim().slice(0, EXPENSE_ORDER_PHONE_MAX) : undefined,
     orderAddress: typeof e.orderAddress === 'string' && e.orderAddress.trim() ? e.orderAddress.trim().slice(0, EXPENSE_ORDER_ADDRESS_MAX) : undefined,

@@ -28,6 +28,7 @@ import {
   emptyBusinessData,
   hasLedgerForYear,
   isLedgerEmpty,
+  BIZ_UNIT_MAX,
   EXPENSE_UNIT_MAX,
   EXPENSE_ORDER_PHONE_MAX,
   EXPENSE_ORDER_ADDRESS_MAX,
@@ -354,7 +355,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
       id: newId('bp_'),
       name: input.name.trim().slice(0, 40),
       categoryId: input.categoryId ?? undefined,
-      unit: input.unit.trim().slice(0, 8) || '件',
+      unit: input.unit.trim().slice(0, BIZ_UNIT_MAX) || '件',
       purchasePrice: Math.max(0, input.purchasePrice),
       sellingPrice: Math.max(0, input.sellingPrice),
       ...(typeof input.memberPrice === 'number' && Number.isFinite(input.memberPrice) && input.memberPrice >= 0
@@ -374,6 +375,10 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     const index = products.value.findIndex(p => p.id === id)
     if (index === -1) return
     const merged = { ...toRaw(products.value[index]), ...patch, id }
+    // 单位：与支出同口径（trim + BIZ_UNIT_MAX 截断），空值回退「件」
+    if (typeof patch.unit === 'string') {
+      merged.unit = patch.unit.trim().slice(0, BIZ_UNIT_MAX) || '件'
+    }
     // 会员价：传值则校验（有限且 ≥0）后保留两位小数，清空/undefined 则移除字段
     if (patch.memberPrice !== undefined && patch.memberPrice !== null) {
       if (Number.isFinite(patch.memberPrice) && patch.memberPrice >= 0) {
@@ -521,6 +526,10 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     categoryId: string
     amount: number
     note?: string
+    /** 数量（金额 = 数量 × 单价；可选，旧数据缺省） */
+    quantity?: number
+    /** 单价（金额 = 数量 × 单价；可选，旧数据缺省） */
+    unitPrice?: number
     unit?: string
     orderPhone?: string
     orderAddress?: string
@@ -531,11 +540,14 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     const categoryName = expenseCategories.value.find(c => c.id === input.categoryId)?.name
     expenses.value.push({
       id: newId('be_'),
+      // 标题可选：留空时用产品（分类）名兜底，再退回「未命名支出」
       title: normalizeExpenseTitle(input.title, categoryName),
       date: input.date,
       categoryId: input.categoryId,
       amount: Math.max(0, input.amount),
       note: input.note?.trim() || undefined,
+      quantity: Number.isFinite(input.quantity) && (input.quantity as number) > 0 ? input.quantity : undefined,
+      unitPrice: Number.isFinite(input.unitPrice) && (input.unitPrice as number) > 0 ? input.unitPrice : undefined,
       unit: input.unit?.trim() || undefined,
       orderPhone: input.orderPhone?.trim() || undefined,
       orderAddress: input.orderAddress?.trim() || undefined,
@@ -563,6 +575,9 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
       merged.title = normalizeExpenseTitle(merged.title, categoryName)
     }
     merged.amount = Math.max(0, merged.amount)
+    // 数量 / 单价：与 normExpense 同口径（非法/非正数 → undefined）
+    merged.quantity = Number.isFinite(merged.quantity) && (merged.quantity as number) > 0 ? merged.quantity : undefined
+    merged.unitPrice = Number.isFinite(merged.unitPrice) && (merged.unitPrice as number) > 0 ? merged.unitPrice : undefined
     // 新增可选字段：空串/缺省 → undefined（与 normExpense 保持一致）
     merged.unit = merged.unit?.trim() ? merged.unit.trim().slice(0, EXPENSE_UNIT_MAX) : undefined
     merged.orderPhone = merged.orderPhone?.trim() ? merged.orderPhone.trim().slice(0, EXPENSE_ORDER_PHONE_MAX) : undefined

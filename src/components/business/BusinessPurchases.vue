@@ -31,6 +31,8 @@ import Icon from '../Icon.vue'
 import { computed, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import {
+  avgUnsoldUnitPrice,
+  avgUnsoldUnitPriceMap,
   calcMarkupRate,
   calcPurchaseStockStatus,
   calcPurchaseTotal,
@@ -281,15 +283,65 @@ function toggleExpense(id: string): void {
   onExpenseChange()
 }
 
-// ===== 录入校验（数量为 0 / 进价为 0 / 合计与关联支出汇总不符）=====
-const purchaseIssues = computed(() =>
-  validatePurchaseInput({
+// ===== 销售成本价：进价（进货批次）决定商品成本价，保存后自动回写 =====
+/** 弹框草稿在均价计算里的占位 id（不落库，只参与预览计算） */
+const DRAFT_PURCHASE_ID = '__purchase_form__'
+
+/** 草稿批次：数量/进价都填了才参与成本价预览 */
+const draftPurchase = computed<BusinessPurchase | null>(() => {
+  if (!showDialog.value || !formProductId.value) return null
+  const qty = Number(formQuantity.value) || 0
+  const price = Number(formUnitPrice.value) || 0
+  if (qty <= 0 || price <= 0) return null
+  return {
+    id: DRAFT_PURCHASE_ID,
+    productId: formProductId.value,
+    quantity: qty,
+    unitPrice: price,
+    total: formTotal.value,
+    date: formDate.value,
+    expenseIds: [...formExpenseIds.value],
+    createdAt: ''
+  }
+})
+
+/** 当前商品销售成本价（与商品页同口径：未售完批次均价，无批次时取商品自身值） */
+const currentCostPrice = computed<number>(() => {
+  const p = findProduct(store.products, formProductId.value)
+  if (!p) return 0
+  return avgUnsoldUnitPrice(store.purchases, store.dailyRecords, p.id) ?? p.purchasePrice
+})
+
+/** 保存后的销售成本价：把草稿批次并入后再算未售完批次均价（编辑时剔除旧记录本身） */
+const projectedCostPrice = computed<number | null>(() => {
+  const draft = draftPurchase.value
+  if (!draft) return null
+  const others = store.purchases.filter(p => p.id !== editingId.value)
+  return avgUnsoldUnitPriceMap([...others, draft], store.dailyRecords)[draft.productId] ?? null
+})
+
+function costPriceText(v: number | null): string {
+  return v === null ? '—' : formatYuanOf(v)
+}
+
+// ===== 录入校验（数量为 0 / 进价为 0 / 合计与关联支出汇总不符 + 必须关联支出）=====
+const purchaseIssues = computed(() => {
+  const issues = validatePurchaseInput({
     quantity: Number(formQuantity.value) || 0,
     unitPrice: Number(formUnitPrice.value) || 0,
     total: formTotal.value,
     expenseTotal: useExpenseTotal.value ? linkedExpenseTotal.value : null
   })
-)
+  // 新增库存必须关联支出（对账口径：每笔进货都要有支出凭证）；编辑旧数据时仅提示，避免历史记录改不动
+  if (formExpenseIds.value.length === 0) {
+    issues.push(
+      editingId.value
+        ? { level: 'warn', message: '未关联支出：建议补关联，否则对账时会被计入「未关联进货」' }
+        : { level: 'error', message: '必须关联至少一笔支出：新增库存记录需有支出凭证（先在「支出」里记一笔）' }
+    )
+  }
+  return issues
+})
 /** error 级问题阻断保存，warn 级仅提示 */
 const purchaseErrors = computed(() => purchaseIssues.value.filter(i => i.level === 'error'))
 
@@ -348,6 +400,18 @@ function disabledDate(d: Date): boolean {
 /** 连续录入：新增保存后不关闭弹框，自动带出上次商品与日期，便于连开多单 */
 const continuous = ref(true)
 
+/**
+ * 进价 → 商品销售成本价：进货保存后按「未售完批次均价」回写商品成本价（口径同商品页展示）。
+ * 成本结转本身走 FIFO 逐批单价，这里回写的是商品成本价（兜底口径 + 商品页展示值）。
+ */
+async function syncProductCostPrice(productId: string): Promise<void> {
+  const avg = avgUnsoldUnitPrice(store.purchases, store.dailyRecords, productId)
+  if (avg === null) return
+  const p = findProduct(store.products, productId)
+  if (!p || Math.abs(p.purchasePrice - avg) < 0.005) return
+  await store.updateProduct(productId, { purchasePrice: avg })
+}
+
 async function handleSave(): Promise<void> {
   if (!isFormValid.value) return
   const payload = {
@@ -359,13 +423,18 @@ async function handleSave(): Promise<void> {
     note: formNote.value.trim() || undefined
   }
   if (editingId.value) {
+    // 换了商品：新旧两个商品的成本价都要重算
+    const prevProductId = store.purchases.find(p => p.id === editingId.value)?.productId
     const r = await store.updatePurchase(editingId.value, payload)
     if (!r.ok) { toast.error(r.message); return }
+    await syncProductCostPrice(payload.productId)
+    if (prevProductId && prevProductId !== payload.productId) await syncProductCostPrice(prevProductId)
     showDialog.value = false
     return
   }
   const added = await store.addPurchase(payload)
   if (!added.ok) { toast.error(added.message); return }
+  await syncProductCostPrice(payload.productId)
   // 连续录入：保留商品与日期，清空数量/进价/备注/关联支出，弹框继续开
   if (continuous.value) {
     const keepProduct = formProductId.value
@@ -518,6 +587,11 @@ async function handleDelete(id: string): Promise<void> {
             :key="item.id"
             :fields="cardFields(item)"
           >
+            <template #actions>
+              <el-button size="small" :data-testid="`bizpur-card-edit-${item.id}`" @click.stop="startEdit(item)">编辑</el-button>
+              <el-button size="small" :data-testid="`bizpur-card-copy-${item.id}`" @click.stop="startCopy(item)">复制</el-button>
+              <el-button size="small" type="danger" :data-testid="`bizpur-card-del-${item.id}`" @click.stop="handleDelete(item.id)">删除</el-button>
+            </template>
           </RecordsCard>
         </div>
 
@@ -570,53 +644,26 @@ async function handleDelete(id: string): Promise<void> {
             当前售价参考：{{ formatYuanOf(findProduct(store.products, formProductId)!.sellingPrice) }}/{{ productUnitOf(formProductId) }}
           </span>
         </div>
-        <div class="biz-form-row">
-          <div class="biz-field">
-            <label>日期 *</label>
-            <div data-testid="bizpur-form-date">
-              <el-date-picker
-                v-model="formDate"
-                type="date"
-                value-format="YYYY-MM-DD"
-                size="small"
-                :disabled-date="disabledDate"
-              />
-            </div>
-          </div>
-          <div class="biz-field">
-            <label>数量 *</label>
-            <el-input-number
-              :min="1"
-              :step="1"
+        <div class="biz-field">
+          <label>日期 *</label>
+          <div data-testid="bizpur-form-date">
+            <el-date-picker
+              v-model="formDate"
+              type="date"
+              value-format="YYYY-MM-DD"
               size="small"
-              controls-position="right"
-              :model-value="formQuantity === '' ? undefined : Number(formQuantity)"
-              @update:model-value="formQuantity = String($event ?? ''); onQuantityInput()"
-              data-testid="bizpur-form-qty"
-            />
-          </div>
-          <div class="biz-field">
-            <label>进价 *</label>
-            <el-input-number
-              :min="0"
-              :step="0.01"
-              :precision="2"
-              size="small"
-              controls-position="right"
-              :model-value="formUnitPrice === '' ? undefined : Number(formUnitPrice)"
-              @update:model-value="formUnitPrice = String($event ?? ''); onUnitPriceInput()"
-              data-testid="bizpur-form-price"
+              :disabled-date="disabledDate"
             />
           </div>
         </div>
         <!-- 进货优化：关联支出（可多条）；合计金额 = 已关联支出金额之和，数量与进价随合计双向联动 -->
         <div class="biz-field">
-          <label>关联支出（可选，可多选；已被其它库存记录关联的支出不再列出）</label>
+          <label>关联支出 *（新增必选，可多选；已被其它库存记录关联的支出不再列出）</label>
           <!-- 空状态 ①：账本里还没有支出记录 -->
-          <p v-if="store.expenses.length === 0" class="bizpur-expense-empty" data-testid="bizpur-expense-empty">当前账本暂无支出记录</p>
+          <p v-if="store.expenses.length === 0" class="bizpur-expense-empty" data-testid="bizpur-expense-empty">当前账本暂无支出记录：新增库存必须关联支出，请先到「支出」记一笔</p>
           <!-- 空状态 ②：有支出，但全部已被其它库存记录关联 -->
           <p v-else-if="expenseOptions.length === 0" class="bizpur-expense-empty" data-testid="bizpur-expense-all-linked">
-            暂无可关联的支出：已有支出均已关联到其它库存记录
+            暂无可关联的支出：已有支出均已关联到其它库存记录（新增库存必须关联支出，请先在「支出」新增一笔）
           </p>
           <template v-else>
             <el-input
@@ -658,6 +705,44 @@ async function handleDelete(id: string): Promise<void> {
           <p class="bizpur-expense-hint" data-testid="bizpur-expense-hint">
             可关联 {{ filteredExpenseOptions.length }} 笔（共 {{ store.expenses.length }} 笔支出，已关联的不再列出）；已选 {{ formExpenseIds.length }} 笔，关联金额合计 {{ formatYuanOf(linkedExpenseTotal) }}；勾选后修改数量自动算进价、修改进价自动反算数量。
           </p>
+        </div>
+        <!-- 数量 / 进价：放在关联支出之后，随支出合计联动（数量 ↔ 进价 双向反算） -->
+        <div class="biz-form-row">
+          <div class="biz-field">
+            <label>数量 *</label>
+            <el-input-number
+              :min="1"
+              :step="1"
+              size="small"
+              controls-position="right"
+              :model-value="formQuantity === '' ? undefined : Number(formQuantity)"
+              @update:model-value="formQuantity = String($event ?? ''); onQuantityInput()"
+              data-testid="bizpur-form-qty"
+            />
+          </div>
+          <div class="biz-field">
+            <label>进价 *</label>
+            <el-input-number
+              :min="0"
+              :step="0.01"
+              :precision="2"
+              size="small"
+              controls-position="right"
+              :model-value="formUnitPrice === '' ? undefined : Number(formUnitPrice)"
+              @update:model-value="formUnitPrice = String($event ?? ''); onUnitPriceInput()"
+              data-testid="bizpur-form-price"
+            />
+          </div>
+        </div>
+        <!-- 进价 → 销售成本价：保存后按未售完批次均价回写商品成本价 -->
+        <div class="biz-field">
+          <label>销售成本价（保存后自动写入商品）</label>
+          <div class="bizpur-cost-preview" data-testid="bizpur-form-cost">
+            <span class="bizpur-cost-current">{{ costPriceText(currentCostPrice) }}</span>
+            <span class="bizpur-cost-arrow">→</span>
+            <span class="bizpur-cost-next" :class="{ changed: projectedCostPrice !== null && Math.abs(projectedCostPrice - currentCostPrice) >= 0.005 }">{{ costPriceText(projectedCostPrice) }}</span>
+            <span class="bizpur-cost-tip">按未售完进货批次均价</span>
+          </div>
         </div>
         <div class="biz-field">
           <label>{{ useExpenseTotal ? '合计（= 关联支出汇总）' : '合计（自动计算）' }}</label>
@@ -983,6 +1068,37 @@ async function handleDelete(id: string): Promise<void> {
   display: flex;
   gap: 6px;
   justify-content: center;
+}
+
+/* 销售成本价预览：当前 → 保存后（未售完批次均价） */
+.bizpur-cost-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.bizpur-cost-current {
+  color: var(--color-text-muted, #6b7280);
+  text-decoration: line-through;
+}
+.bizpur-cost-arrow {
+  color: var(--color-text-muted, #9ca3af);
+}
+.bizpur-cost-next {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text, #1f2937);
+}
+.bizpur-cost-next.changed {
+  color: var(--color-primary, #3b82f6);
+}
+.bizpur-cost-tip {
+  font-size: 12px;
+  color: var(--color-text-muted, #9ca3af);
+}
+:global(html.dark) .bizpur-cost-next {
+  color: var(--color-text, #e5e7eb);
 }
 
 /* P0-2：编辑弹框售价参考 */

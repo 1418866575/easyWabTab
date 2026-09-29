@@ -6,6 +6,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { showConfirm } from '@/utils/dialog'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import {
+  BIZ_UNITS,
   avgUnsoldUnitPriceMap,
   calcMarkupRate,
   calcProductSummary,
@@ -58,13 +59,13 @@ function catNameOf(categoryId?: string): string {
   return findProductCategory(store.productCategories, categoryId)?.name ?? '未分类'
 }
 
-/** 进货价自动反显：按「未售完」进货批次的单价求简单平均；无未售完批次 → 沿用商品自身进货价 */
+/** 成本价自动反显：按「未售完」进货批次的单价求简单平均；无未售完批次 → 沿用商品自身成本价 */
 const avgPriceMap = computed<Record<string, number>>(() =>
   avgUnsoldUnitPriceMap(store.purchases, store.dailyRecords)
 )
 
-/** 卡片/详情展示的进货价：优先自动均价，无均价时回退商品进货价 */
-function displayedPurchasePrice(p: BusinessProduct): number {
+/** 卡片/详情展示的成本价：优先自动均价，无均价时回退商品自身成本价（purchasePrice） */
+function displayedCostPrice(p: BusinessProduct): number {
   return avgPriceMap.value[p.id] ?? p.purchasePrice
 }
 
@@ -74,6 +75,24 @@ const editingAvgPrice = computed<number | null>(() => {
   return avgPriceMap.value[editingId.value] ?? null
 })
 
+/**
+ * 成本价（= 商品销售成本价）：一律只读（新增/编辑都不可输入）。
+ * 成本由进货记录的批次单价决定（FIFO 逐批结转），手改会篡改销售成本口径，
+ * 因此这里只做展示：编辑时取未售完批次均价（无批次时沿用商品自身值），新增时固定 0；
+ * 保存时写入商品 `purchasePrice`（即商品成本价），与进货保存后的回写同口径。
+ */
+const formCostPrice = computed<string>(() => {
+  if (!editingId.value) return '0'
+  const p = store.products.find(x => x.id === editingId.value)
+  return p ? String(displayedCostPrice(p)) : '0'
+})
+
+/** 成本价展示文案：没有进货批次（0）时显示「—」，避免 ¥0.00 被当成真实成本 */
+function costPriceText(p: BusinessProduct): string {
+  const v = displayedCostPrice(p)
+  return v > 0 ? formatYuanOf(v) : '—'
+}
+
 /** 当前展示值是否为自动均价（用于「均价」标记与提示文案） */
 function isAutoAvg(p: BusinessProduct): boolean {
   return avgPriceMap.value[p.id] !== undefined
@@ -81,8 +100,8 @@ function isAutoAvg(p: BusinessProduct): boolean {
 
 function avgTip(p: BusinessProduct): string {
   return isAutoAvg(p)
-    ? `按未售完进货批次单价自动平均（${formatYuanOf(avgPriceMap.value[p.id])}）；商品原始进货价 ${formatYuanOf(p.purchasePrice)}`
-    : '暂无未售完进货批次，显示商品自身进货价'
+    ? `按未售完进货批次单价自动平均（${formatYuanOf(avgPriceMap.value[p.id])}），不可手动修改`
+    : '暂无未售完进货批次；成本价由进货记录自动计算，不可手动修改'
 }
 
 // ===== 新增/编辑弹框 =====
@@ -91,7 +110,6 @@ const editingId = ref<string | null>(null)
 const formName = ref('')
 const formCategoryId = ref('')
 const formUnit = ref('件')
-const formPurchasePrice = ref('')
 const formSellingPrice = ref('')
 const formMemberPrice = ref('')
 const formActive = ref(true)
@@ -110,7 +128,6 @@ function startAdd(): void {
   formName.value = ''
   formCategoryId.value = ''
   formUnit.value = '件'
-  formPurchasePrice.value = ''
   formSellingPrice.value = ''
   formMemberPrice.value = ''
   formActive.value = true
@@ -122,8 +139,7 @@ function startEdit(p: BusinessProduct): void {
   formName.value = p.name
   formCategoryId.value = p.categoryId ?? ''
   formUnit.value = p.unit
-  // 进货价自动反显：存在未售完进货批次时填其均价（可手动改），否则填商品自身进货价
-  formPurchasePrice.value = String(displayedPurchasePrice(p))
+  // 成本价只读展示（formCostPrice 为 computed，自动取未售完批次均价 / 商品自身值）
   formSellingPrice.value = String(p.sellingPrice)
   formMemberPrice.value = typeof p.memberPrice === 'number' ? String(p.memberPrice) : ''
   formActive.value = p.active
@@ -136,7 +152,7 @@ async function handleSave(): Promise<void> {
     name: formName.value.trim(),
     categoryId: formCategoryId.value || undefined,
     unit: formUnit.value.trim() || '件',
-    purchasePrice: numOf(formPurchasePrice.value),
+    purchasePrice: numOf(formCostPrice.value),
     sellingPrice: numOf(formSellingPrice.value),
     // 会员价留空 → null（store 侧移除该字段，表示未设置）
     memberPrice: formMemberPrice.value.trim() === '' ? null : numOf(formMemberPrice.value),
@@ -258,7 +274,7 @@ function drawerMarkupRate(): number | null {
             :data-testid="`bizprod-price-buy-${p.id}`"
             :title="avgTip(p)"
           >
-            进价 {{ formatYuanOf(displayedPurchasePrice(p)) }}/{{ p.unit }}
+            成本 {{ costPriceText(p) }}/{{ p.unit }}
             <span v-if="isAutoAvg(p)" class="bizprod-price-auto" :data-testid="`bizprod-price-auto-${p.id}`">均价</span>
           </span>
           <span class="bizprod-price sell">售价 {{ formatYuanOf(p.sellingPrice) }}/{{ p.unit }}</span>
@@ -316,16 +332,29 @@ function drawerMarkupRate(): number | null {
         <div class="biz-form-row">
           <div class="biz-field">
             <label>单位</label>
-            <el-input v-model="formUnit" maxlength="8" data-testid="bizprod-form-unit" />
+            <!-- 与「新增支出」的单位一致：预设下拉 + 支持自定义输入 -->
+            <el-select
+              v-model="formUnit"
+              size="small"
+              class="bizprod-form-unit"
+              data-testid="bizprod-form-unit"
+              placeholder="选择或输入单位"
+              filterable
+              allow-create
+              default-first-option
+            >
+              <el-option v-for="u in BIZ_UNITS" :key="u" :value="u" :label="u" />
+            </el-select>
           </div>
           <div class="biz-field">
-            <label>进货单价</label>
+            <label>成本价（自动·由进货记录计算）</label>
             <el-input-number
               size="small"
               :min="0"
               :step="0.01"
-              :model-value="formPurchasePrice === '' ? undefined : Number(formPurchasePrice)"
-              @update:model-value="formPurchasePrice = String($event ?? '')"
+              :precision="2"
+              disabled
+              :model-value="Number(formCostPrice)"
               data-testid="bizprod-form-purchase"
             />
           </div>
@@ -354,9 +383,15 @@ function drawerMarkupRate(): number | null {
           </div>
         </div>
         <p class="bizprod-form-hint" data-testid="bizprod-form-member-hint">会员价可选，留空表示未设置（仅作记录与展示，不参与营业额自动合计）。</p>
-        <!-- 进货价自动反显：未售完批次单价的简单平均，可手动修改 -->
-        <div v-if="editingId && editingAvgPrice !== null" class="bizprod-form-avg" data-testid="bizprod-form-avg">
-          已按未售完进货批次均价自动填充：{{ formatYuanOf(editingAvgPrice) }}（可手动修改）
+        <!-- 成本价只读：由进货记录（未售完批次）自动计算，禁止手输以免篡改销售成本 -->
+        <p class="bizprod-form-hint" data-testid="bizprod-form-purchase-hint">
+          成本价 = 商品销售成本价，由进货记录自动计算（未售完批次均价），不可手动输入；要改成本请改「库存」里的进货进价。
+        </p>
+        <div v-if="!editingId" class="bizprod-form-avg" data-testid="bizprod-form-avg-new">
+          新增商品暂无进货记录，成本价先按 0 记录；录入进货后自动取批次均价。
+        </div>
+        <div v-else-if="editingAvgPrice !== null" class="bizprod-form-avg" data-testid="bizprod-form-avg">
+          已按未售完进货批次均价自动计算：{{ formatYuanOf(editingAvgPrice) }}
         </div>
         <div class="biz-field">
           <el-checkbox v-model="formActive" data-testid="bizprod-form-active">上架在售</el-checkbox>
@@ -401,9 +436,9 @@ function drawerMarkupRate(): number | null {
             </span>
           </div>
           <div class="bizprod-drawer-info-row">
-            <span class="bizprod-drawer-label">进价/售价</span>
+            <span class="bizprod-drawer-label">成本/售价</span>
             <span class="bizprod-drawer-value">
-              {{ formatYuanOf(displayedPurchasePrice(drawerSummary.product)) }} → {{ formatYuanOf(drawerSummary.product.sellingPrice) }}
+              {{ costPriceText(drawerSummary.product) }} → {{ formatYuanOf(drawerSummary.product.sellingPrice) }}
               <span class="bizprod-drawer-markup" :class="{ 'rate-high': (drawerMarkupRate() ?? 0) > 0, 'rate-low': (drawerMarkupRate() ?? 0) <= 0 }">
                 加价率 {{ drawerMarkupRate() ?? '—' }}%
               </span>
@@ -416,9 +451,9 @@ function drawerMarkupRate(): number | null {
             </span>
           </div>
           <div class="bizprod-drawer-info-row">
-            <span class="bizprod-drawer-label">进货价来源</span>
+            <span class="bizprod-drawer-label">成本价来源</span>
             <span class="bizprod-drawer-value" data-testid="bizprod-drawer-avg">
-              {{ isAutoAvg(drawerSummary.product) ? '未售完批次均价 ' + formatYuanOf(avgPriceMap[drawerSummary.product.id]) : '商品设定值（无未售完批次）' }}
+              {{ isAutoAvg(drawerSummary.product) ? '未售完批次均价 ' + formatYuanOf(avgPriceMap[drawerSummary.product.id]) : '暂无未售完批次（录入进货后自动计算）' }}
             </span>
           </div>
         </div>
@@ -762,6 +797,9 @@ function drawerMarkupRate(): number | null {
 
 /* el-* 表单控件撑满字段 */
 .bizprod :deep(.el-input-number) {
+  width: 100%;
+}
+.bizprod-form-unit {
   width: 100%;
 }
 
