@@ -58,7 +58,7 @@ const ledgerMeta = computed(() => ({ year: store.currentLedgerYear, ledgerName: 
 
 // ===== 一键导出 Excel（按「日期 × 产品」展开）=====
 function exportExpensesExcel(): void {
-  const headers = ['日期', '产品', '单位', '数量', '单价', '金额', '支付方式', '标题', '订货电话', '订货地址', '业务员', '备注']
+  const headers = ['日期', '产品', '单位', '数量', '单价', '金额', '支付方式', '标题', '订货电话', '订货地址', '业务员备注']
   const rows: (string | number)[][] = []
   for (const d of sorted.value) {
     for (const e of d.items) {
@@ -73,7 +73,6 @@ function exportExpensesExcel(): void {
         e.title ?? '',
         e.orderPhone ?? '',
         e.orderAddress ?? '',
-        e.salesman ?? '',
         e.note ?? ''
       ])
     }
@@ -108,6 +107,11 @@ const showDialog = ref(false)
 const editingDailyId = ref<string | null>(null)
 const editingDate = ref(localDateKey())
 const formNote = ref('')
+// 公用表单（一份模板，所有产品行共用同一配置）：标题 / 订货电话 / 订货地址 / 业务员备注
+const formTitle = ref('')
+const formOrderPhone = ref('')
+const formOrderAddress = ref('')
+const formSalesmanNote = ref('')
 
 /** 弹框内单条产品支出草稿行（id 仅编辑态存在，新增行为空） */
 interface ExpenseRow {
@@ -120,7 +124,6 @@ interface ExpenseRow {
   note: string
   orderPhone: string
   orderAddress: string
-  salesman: string
   paymentMethod: string
 }
 const rows = reactive<ExpenseRow[]>([])
@@ -149,8 +152,17 @@ function emptyRow(): ExpenseRow {
     note: '',
     orderPhone: '',
     orderAddress: '',
-    salesman: '',
     paymentMethod: ''
+  }
+}
+
+/** 公用表单（标题/订货电话/订货地址/业务员备注）一键同步到所有产品行：所有记录共用同一配置 */
+function applySharedToRows(): void {
+  for (const r of rows) {
+    r.title = formTitle.value
+    r.orderPhone = formOrderPhone.value
+    r.orderAddress = formOrderAddress.value
+    r.note = formSalesmanNote.value
   }
 }
 
@@ -158,6 +170,10 @@ function startAdd(): void {
   editingDailyId.value = null
   editingDate.value = localDateKey()
   formNote.value = ''
+  formTitle.value = ''
+  formOrderPhone.value = ''
+  formOrderAddress.value = ''
+  formSalesmanNote.value = ''
   rows.splice(0, rows.length, emptyRow())
   showDialog.value = true
 }
@@ -180,15 +196,22 @@ function startEdit(d: BusinessExpenseDaily): void {
       note: e.note ?? '',
       orderPhone: e.orderPhone ?? '',
       orderAddress: e.orderAddress ?? '',
-      salesman: e.salesman ?? '',
       paymentMethod: e.paymentMethod ?? ''
     }))
   )
+  // 公用表单以首行为准，并同步到所有行（所有产品行共用同一份标题/电话/地址/业务员备注）
+  const first = d.items[0]
+  formTitle.value = first?.title ?? ''
+  formOrderPhone.value = first?.orderPhone ?? ''
+  formOrderAddress.value = first?.orderAddress ?? ''
+  formSalesmanNote.value = first?.note ?? ''
+  applySharedToRows()
   showDialog.value = true
 }
 
 function addRow(): void {
   rows.push(emptyRow())
+  applySharedToRows()
 }
 
 function removeRow(index: number): void {
@@ -232,7 +255,6 @@ async function handleSave(): Promise<void> {
       unit: r.unit.trim() || undefined,
       orderPhone: r.orderPhone.trim() || undefined,
       orderAddress: r.orderAddress.trim() || undefined,
-      salesman: r.salesman.trim() || undefined,
       paymentMethod: r.paymentMethod.trim() || undefined
     }))
   const r = await store.upsertExpenseDaily({ originalDailyId: editingDailyId.value, date: editingDate.value, items })
@@ -508,32 +530,24 @@ async function handleDeleteFromDialog(): Promise<void> {
           </table>
         </div>
 
-        <!-- 产品明细补充信息（标题/订货电话/订货地址/业务员/备注），每笔产品一行，置于表格下方 -->
-        <div class="bizexp-row-details">
-          <div v-for="(row, i) in rows" :key="i" class="bizexp-row-detail">
-            <div class="bizexp-row-detail-title">产品 {{ i + 1 }}</div>
-            <div class="bizexp-row-detail-grid">
-              <div class="bizexp-detail-field">
-                <label>标题</label>
-                <el-input v-model="row.title" size="small" :maxlength="EXPENSE_TITLE_MAX" data-testid="bizexp-row-title" />
-              </div>
-              <div class="bizexp-detail-field">
-                <label>订货电话</label>
-                <el-input v-model="row.orderPhone" size="small" maxlength="30" data-testid="bizexp-row-order-phone" />
-              </div>
-              <div class="bizexp-detail-field">
-                <label>订货地址</label>
-                <el-input v-model="row.orderAddress" size="small" maxlength="100" data-testid="bizexp-row-order-address" />
-              </div>
-              <div class="bizexp-detail-field">
-                <label>业务员</label>
-                <el-input v-model="row.salesman" size="small" maxlength="30" data-testid="bizexp-row-salesman" />
-              </div>
-              <div class="bizexp-detail-field bizexp-detail-field-wide">
-                <label>备注</label>
-                <el-input v-model="row.note" size="small" maxlength="100" data-testid="bizexp-row-note" />
-              </div>
-            </div>
+        <!-- 公用表单：标题 / 订货电话 / 订货地址 / 业务员备注（一份模板，所有产品行共用同一配置，见 applySharedToRows） -->
+        <div class="bizexp-shared-fields">
+          <div class="bizexp-shared-title">公用信息（所有产品共用）</div>
+          <div class="biz-field">
+            <label>标题</label>
+            <el-input v-model="formTitle" size="small" :maxlength="EXPENSE_TITLE_MAX" data-testid="bizexp-shared-title" @update:model-value="applySharedToRows" />
+          </div>
+          <div class="biz-field">
+            <label>订货电话</label>
+            <el-input v-model="formOrderPhone" size="small" maxlength="30" data-testid="bizexp-shared-order-phone" @update:model-value="applySharedToRows" />
+          </div>
+          <div class="biz-field">
+            <label>订货地址</label>
+            <el-input v-model="formOrderAddress" size="small" maxlength="100" data-testid="bizexp-shared-order-address" @update:model-value="applySharedToRows" />
+          </div>
+          <div class="biz-field">
+            <label>业务员备注</label>
+            <el-input v-model="formSalesmanNote" size="small" maxlength="100" data-testid="bizexp-shared-salesman-note" @update:model-value="applySharedToRows" />
           </div>
         </div>
 
@@ -745,41 +759,21 @@ async function handleDeleteFromDialog(): Promise<void> {
   justify-content: flex-end;
   margin: 2px 0 8px;
 }
-.bizexp-row-details {
-  margin-top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.bizexp-row-detail {
+.bizexp-shared-fields {
+  margin-top: 4px;
+  padding: 12px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 8px);
-  padding: 10px 12px;
   background: var(--color-bg-card, var(--color-bg-hover));
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
-.bizexp-row-detail-title {
+.bizexp-shared-title {
+  grid-column: 1 / -1;
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text-secondary, #6b7280);
-  margin-bottom: 8px;
-}
-.bizexp-row-detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-.bizexp-detail-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-.bizexp-detail-field label {
-  font-size: 12px;
-  color: var(--color-text-secondary, #6b7280);
-}
-.bizexp-detail-field-wide {
-  grid-column: 1 / -1;
 }
 .bizexp-table {
   width: 100%;
@@ -972,11 +966,11 @@ async function handleDeleteFromDialog(): Promise<void> {
 :global(html.dark) .bizexp-row-issue-row .bizexp-row-issue {
   background-color: var(--color-bg-hover, #2a1414);
 }
-:global(html.dark) .bizexp-row-detail {
+:global(html.dark) .bizexp-shared-fields {
   background-color: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
 }
-:global(html.dark) .bizexp-row-detail-title {
+:global(html.dark) .bizexp-shared-title {
   color: var(--color-text-secondary, #d1d5db);
 }
 :global(html.dark) .biz-kv-row {
@@ -1014,7 +1008,7 @@ async function handleDeleteFromDialog(): Promise<void> {
     max-width: 100%;
     width: 100%;
   }
-  .bizexp-row-detail-grid {
+  .bizexp-shared-fields {
     grid-template-columns: 1fr;
   }
 }
