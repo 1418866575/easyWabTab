@@ -2,7 +2,8 @@
 // 销售记账首页：问候头（含出摊总天数，右上角）+ 营业额/利润等主指标卡 + 低库存概览 + 销售排行（树状）
 import { computed, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { calcBusinessStats, calcCategoryProductRanking, calcExpenseLinkStats, calcMonthlyStats, formatYuanOf, lowStockProducts } from '@/composables/businessCore'
+import { calcBusinessStats, calcCategoryProductRanking, calcExpenseLinkStats, calcInventory, calcMonthlyStats, formatYuanOf } from '@/composables/businessCore'
+import type { BusinessProduct } from '@/types'
 import Icon from '@/components/Icon.vue'
 
 const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
@@ -26,7 +27,27 @@ const data = computed(() => ({
   settings: store.settings
 }))
 
-const lowStock = computed(() => lowStockProducts(data.value))
+// 商品当前库存（按商品汇总进货与销售出库，实时随库存/销售数据变化）
+const inventory = computed(() => calcInventory(data.value.products, data.value.purchases, data.value.dailyRecords))
+const threshold = computed(() => data.value.settings.lowStockThreshold)
+
+interface StockRow {
+  product: BusinessProduct
+  stock: number
+  /** 是否处于预警范围：库存 ≤ 预警阈值 */
+  warn: boolean
+}
+// 全部商品：预警项（库存 ≤ 阈值，红）置顶并按库存升序，正常项（绿）在后按库存升序，保证状态一目了然
+const stockRows = computed<StockRow[]>(() => {
+  const t = threshold.value
+  return data.value.products
+    .map(p => {
+      const stock = inventory.value[p.id] ?? 0
+      return { product: p, stock, warn: stock <= t }
+    })
+    .sort((a, b) => (a.warn === b.warn ? a.stock - b.stock : a.warn ? -1 : 1))
+})
+const warnCount = computed(() => stockRows.value.filter(r => r.warn).length)
 
 const treeRank = computed(() => calcCategoryProductRanking(data.value, 5))
 
@@ -216,7 +237,7 @@ const dateText = computed(() =>
 
       <!-- 低库存 + 销售排行：一行两列（40% / 60%） -->
       <div class="bizhome-row bizhome-split-row">
-        <!-- 低库存概览（左 40%） -->
+        <!-- 商品库存预警（左 40%）：列出全部商品及其当前库存数量，库存 ≤ 阈值显示红色，> 阈值显示绿色 -->
         <div
           class="bizhome-card bizhome-col bizhome-col-40 clickable"
           role="button"
@@ -225,12 +246,21 @@ const dateText = computed(() =>
           @click="go('inventory')"
           @keydown.enter="go('inventory')"
         >
-          <div class="bizhome-card-title"><Icon name="alert" :size="15" />低库存预警（阈值 {{ store.settings.lowStockThreshold }}）</div>
-          <p v-if="lowStock.length === 0" class="bizhome-empty" data-testid="bizhome-lowstock-empty">暂无低库存商品</p>
+          <div class="bizhome-card-title"><Icon name="alert" :size="15" />商品库存预警（阈值 {{ threshold }}）</div>
+          <p class="bizhome-stock-summary" data-testid="bizhome-stock-summary">{{ warnCount }} 项低于阈值 · 共 {{ stockRows.length }} 项</p>
+          <p v-if="stockRows.length === 0" class="bizhome-empty" data-testid="bizhome-lowstock-empty">暂无商品</p>
           <div v-else class="bizhome-low-list">
-            <div v-for="item in lowStock.slice(0, 5)" :key="item.product.id" class="bizhome-low-item">
-              <span>{{ item.product.name }}</span>
-              <span class="bizhome-low-stock">{{ item.stock }} {{ item.product.unit }}</span>
+            <div
+              v-for="row in stockRows"
+              :key="row.product.id"
+              class="bizhome-low-item"
+              :class="row.warn ? 'warn' : 'ok'"
+              :data-testid="'bizhome-stock-' + row.product.id"
+            >
+              <span class="bizhome-low-name">
+                {{ row.product.name }}<span v-if="!row.product.active" class="bizhome-low-stopped">（停售）</span>
+              </span>
+              <span class="bizhome-low-stock" :class="row.warn ? 'low' : 'ok'">{{ row.stock }} {{ row.product.unit }}</span>
             </div>
           </div>
         </div>
@@ -586,7 +616,11 @@ html.dark .sk-block::after {
 .bizhome-low-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  /* 全部商品完整呈现：限高内滚动，避免长列表撑破卡片布局 */
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .bizhome-low-item {
@@ -598,12 +632,52 @@ html.dark .sk-block::after {
   font-size: 13px;
   background: var(--color-bg-card, var(--color-bg-hover));
   border-radius: var(--radius-sm, 8px);
+  border-left: 3px solid transparent;
+}
+
+.bizhome-low-item.warn {
+  background: color-mix(in srgb, var(--color-error, #dc2626) 10%, var(--color-bg-card, var(--color-bg-hover)));
+  border-left-color: var(--color-error, #dc2626);
+}
+
+.bizhome-low-item.ok {
+  background: color-mix(in srgb, var(--color-success, #16a34a) 8%, var(--color-bg-card, var(--color-bg-hover)));
+  border-left-color: var(--color-success, #16a34a);
+}
+
+.bizhome-low-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text, var(--color-text));
+}
+
+.bizhome-low-stopped {
+  margin-left: 4px;
+  font-size: 11px;
+  color: var(--color-text-muted, #9ca3af);
+}
+
+.bizhome-stock-summary {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-muted, #6b7280);
 }
 
 .bizhome-low-stock {
+  flex-shrink: 0;
   font-weight: 700;
-  color: var(--color-error, var(--color-error));
   font-variant-numeric: tabular-nums;
+  color: var(--color-text, var(--color-text));
+}
+
+.bizhome-low-stock.low {
+  color: var(--color-error, #dc2626);
+}
+
+.bizhome-low-stock.ok {
+  color: var(--color-success, #16a34a);
 }
 
 /* P1-1：树状排行 */
@@ -970,6 +1044,24 @@ html.dark .bizhome-hero-card:hover {
 html.dark .bizhome-low-item {
   background-color: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
+}
+
+html.dark .bizhome-low-item.warn {
+  background: rgba(220, 38, 38, 0.18);
+  border-left-color: #f87171;
+}
+
+html.dark .bizhome-low-item.ok {
+  background: rgba(22, 163, 74, 0.16);
+  border-left-color: #34d399;
+}
+
+html.dark .bizhome-low-stock.low {
+  color: #f87171;
+}
+
+html.dark .bizhome-low-stock.ok {
+  color: #34d399;
 }
 
 html.dark .stat-value {
