@@ -14,6 +14,7 @@ import type {
 import {
   addExpenseCategory as addExpenseCategoryCore,
   addProductCategory as addProductCategoryCore,
+  updateExpenseCategory as updateExpenseCategoryCore,
   BUSINESS_STORE_SCHEMA_VER,
   calcDailyRevenue,
   checkLedgerYearWrite,
@@ -293,9 +294,24 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     return r
   }
 
-  // ===== 支出分类 CRUD =====
-  function addExpenseCategory(name: string): CategoryOpResult<BusinessExpenseCategory> {
-    const r = addExpenseCategoryCore(expenseCategories.value, name)
+  // ===== 支出产品 CRUD（原「支出分类」，改名支出产品管理） =====
+  function addExpenseCategory(
+    name: string,
+    opts?: { unit?: string; unitPrice?: number }
+  ): CategoryOpResult<BusinessExpenseCategory> {
+    const r = addExpenseCategoryCore(expenseCategories.value, name, opts)
+    if (r.ok) {
+      expenseCategories.value = r.list
+      void saveBusiness()
+    }
+    return r
+  }
+
+  function updateExpenseCategory(
+    id: string,
+    patch: { unit?: string | null; unitPrice?: number | null }
+  ): CategoryOpResult<BusinessExpenseCategory> {
+    const r = updateExpenseCategoryCore(expenseCategories.value, id, patch)
     if (r.ok) {
       expenseCategories.value = r.list
       void saveBusiness()
@@ -677,6 +693,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     moveProductCategory,
     deleteProductCategory,
     addExpenseCategory,
+    updateExpenseCategory,
     renameExpenseCategory,
     toggleExpenseCategoryVisible,
     moveExpenseCategory,

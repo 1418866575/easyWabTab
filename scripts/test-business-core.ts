@@ -11,6 +11,7 @@ import assert from 'node:assert/strict'
 import {
   addExpenseCategory,
   addProductCategory,
+  updateExpenseCategory,
   avgUnsoldUnitPrice,
   avgUnsoldUnitPriceMap,
   calcBroughtOutTotals,
@@ -1877,6 +1878,41 @@ test('T73 支出数量×单价与标题可选', () => {
   assert.equal(d.expenses[0].unitPrice, 2.5)
   assert.equal(d.expenses[1].quantity, undefined)
   assert.equal(d.expenses[1].unitPrice, undefined)
+})
+
+// T74 — 支出产品（原「支出分类」）支持默认单位/单价：新增带配置、归一保留、更新
+test('T74 支出产品默认单位/单价（新增/归一/更新）', () => {
+  // 新增带 unit/unitPrice
+  const base = normalizeExpenseCategories([{ id: 'expense-stall', name: '摊位费', sortOrder: 1, visible: true, isBuiltIn: true }])
+  const added = addExpenseCategory(base, '蔬菜', { unit: '斤', unitPrice: 3.5 })
+  assert.ok(added.ok)
+  const veg = added.list[added.list.length - 1]
+  assert.equal(veg.name, '蔬菜')
+  assert.equal(veg.unit, '斤')
+  assert.equal(veg.unitPrice, 3.5)
+  // 空白单位 / 0 单价 → 不写入
+  const added2 = addExpenseCategory(base, '杂费', { unit: '  ', unitPrice: 0 })
+  const fee = added2.list[added2.list.length - 1]
+  assert.equal(fee.unit, undefined, '空白单位不写入')
+  assert.equal(fee.unitPrice, undefined, '0 单价不写入')
+
+  // 归一保留 unit/unitPrice
+  const d = normalizeBusinessData({
+    expenseCategories: [{ id: 'c1', name: '采购', unit: '箱', unitPrice: 9.9, visible: true }],
+    expenses: []
+  })
+  assert.equal(d.expenseCategories[0].unit, '箱')
+  assert.equal(d.expenseCategories[0].unitPrice, 9.9)
+
+  // 更新：改单位/单价、清空、不存在
+  const upd = updateExpenseCategory(d.expenseCategories, d.expenseCategories[0].id, { unit: '件', unitPrice: 12 })
+  assert.ok(upd.ok)
+  assert.equal(upd.list[0].unit, '件')
+  assert.equal(upd.list[0].unitPrice, 12)
+  const cleared = updateExpenseCategory(upd.list, upd.list[0].id, { unit: '', unitPrice: 0 })
+  assert.equal(cleared.list[0].unit, undefined)
+  assert.equal(cleared.list[0].unitPrice, undefined)
+  assert.equal(updateExpenseCategory(upd.list, 'nope', { unit: 'x' }).ok, false)
 })
 
 let passed = 0

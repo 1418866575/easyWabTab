@@ -200,7 +200,7 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student' | 'teacher', SubTab
     { key: 'biz-ledger',  label: '账本管理' },
     { key: 'biz-backup',  label: '备份导入导出' },
     { key: 'biz-product-cat', label: '商品分类管理' },
-    { key: 'biz-expense-cat', label: '支出分类管理' }
+    { key: 'biz-expense-cat', label: '支出产品管理' }
   ],
   student: [
     { key: 'stu-stage',   label: '学段' },
@@ -410,7 +410,7 @@ const NAV_GROUPS: NavGroup[] = [
       { key: 'biz-ledger', label: '账本管理', icon: 'ledger', tab: 'business', sub: 'biz-ledger' },
       { key: 'biz-backup', label: '备份导入导出', icon: 'archive', tab: 'business', sub: 'biz-backup' },
       { key: 'biz-product-cat', label: '商品分类管理', icon: 'tag', tab: 'business', sub: 'biz-product-cat' },
-      { key: 'biz-expense-cat', label: '支出分类管理', icon: 'tag', tab: 'business', sub: 'biz-expense-cat' }
+      { key: 'biz-expense-cat', label: '支出产品管理', icon: 'tag', tab: 'business', sub: 'biz-expense-cat' }
     ]
   },
   {
@@ -2997,7 +2997,7 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- 销售记账（销售记账 tab - 基础设置）：摊位名称 + 低库存阈值 + 商品/支出分类管理（复用页面内共享弹框） -->
+        <!-- 销售记账（销售记账 tab - 基础设置）：摊位名称 + 低库存阈值 + 商品/支出产品管理（复用页面内共享弹框） -->
         <div v-if="activeTab === 'business' && activeSubTab === 'biz-base'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">销售记账设置</h3>
@@ -3193,10 +3193,10 @@ onUnmounted(() => {
           <BusinessCategoryManager kind="product" embedded />
         </div>
 
-        <!-- 支出分类管理（销售记账 tab - 支出分类管理）：内联 BusinessCategoryManager(embedded) -->
+        <!-- 支出产品管理（销售记账 tab - 支出产品管理）：内联 BusinessCategoryManager(embedded) -->
         <div v-if="activeTab === 'business' && activeSubTab === 'biz-expense-cat'" class="wb-menu-config">
           <div class="wb-menu-head">
-            <h3 class="wb-menu-title">支出分类管理</h3>
+            <h3 class="wb-menu-title">支出产品管理</h3>
           </div>
           <BusinessCategoryManager kind="expense" embedded />
         </div>

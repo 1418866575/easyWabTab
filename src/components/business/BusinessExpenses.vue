@@ -112,6 +112,16 @@ const formIssues = computed(() =>
 )
 const isFormValid = computed(() => form.date !== '' && formIssues.value.length === 0)
 
+/** 选产品时自动回填默认单位/单价（仅新增模式；编辑时保留已存值不被覆盖） */
+function applyProductDefaults(): void {
+  if (editingId.value !== null) return
+  const cat = store.expenseCategories.find(c => c.id === form.categoryId)
+  if (!cat) return
+  if (cat.unit) form.unit = cat.unit
+  if (typeof cat.unitPrice === 'number' && cat.unitPrice > 0) form.unitPrice = String(cat.unitPrice)
+}
+watch(() => form.categoryId, () => applyProductDefaults())
+
 function resetForm(date?: string): void {
   form.title = ''
   form.date = date ?? localDateKey()
@@ -128,6 +138,7 @@ function resetForm(date?: string): void {
 function startAdd(): void {
   editingId.value = null
   resetForm()
+  applyProductDefaults()
   showDialog.value = true
 }
 
@@ -353,6 +364,18 @@ async function handleDeleteFromDialog(): Promise<void> {
           </div>
         </div>
 
+        <!-- 标题：置于产品上方（用户要求），可选，留空取产品名兜底 -->
+        <div class="biz-field">
+          <label>标题（可选，≤{{ EXPENSE_TITLE_MAX }} 字；留空自动取产品名）</label>
+          <el-input
+            v-model="form.title"
+            size="small"
+            :maxlength="EXPENSE_TITLE_MAX"
+            placeholder="如：采购原料、摊位费、燃气（留空则用产品名）"
+            data-testid="bizexp-form-title"
+          />
+        </div>
+
         <!-- 主业务字段：产品 → 单位 → 数量 → 单价 → 金额（金额 = 数量 × 单价，只读） -->
         <div class="biz-form-grid">
           <div class="biz-field">
@@ -424,17 +447,6 @@ async function handleDeleteFromDialog(): Promise<void> {
               data-testid="bizexp-form-amount"
             />
           </div>
-        </div>
-
-        <div class="biz-field">
-          <label>标题（可选，≤{{ EXPENSE_TITLE_MAX }} 字；留空自动取产品名）</label>
-          <el-input
-            v-model="form.title"
-            size="small"
-            :maxlength="EXPENSE_TITLE_MAX"
-            placeholder="如：采购原料、摊位费、燃气（留空则用产品名）"
-            data-testid="bizexp-form-title"
-          />
         </div>
 
         <!-- 订货电话 / 订货地址 / 业务员：每行两列网格排列 -->

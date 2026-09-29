@@ -502,13 +502,17 @@ export interface LedgerData {
 
 // ==================== 摆摊进销存（销售记账，备份 v7 新增） ====================
 
-/** 支出分类：内置 5（isBuiltIn 不可删）+ 自定义；visible 控制支出 Tab 栏显示 */
+/** 支出产品（原「支出分类」改名）：内置 5（isBuiltIn 不可删）+ 自定义；visible 控制支出 Tab 栏显示；unit/unitPrice 为产品默认单位与单价，新增支出选该产品时自动回填 */
 export interface BusinessExpenseCategory {
   id: string // bec_ 前缀；内置 id 固定 expense-stall/gas/seasoning/transport/other
   name: string
   sortOrder: number
   visible: boolean
   isBuiltIn: boolean
+  /** 单位（如「件」「包」「根」）；可选，新增支出选该产品时自动回填到支出单位 */
+  unit?: string
+  /** 单价（元）；可选，新增支出选该产品时自动回填到支出单价（金额 = 数量 × 单价） */
+  unitPrice?: number
 }
 
 /** 商品分类：内置 5 种子可删（删除后商品归未分类）；visible 控制商品页标签页显示 */
