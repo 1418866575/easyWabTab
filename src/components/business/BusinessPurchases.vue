@@ -667,7 +667,7 @@ async function handleDelete(id: string): Promise<void> {
               <tr v-for="(row, idx) in formRows" :key="row.id ?? ('new-' + idx)">
                 <td class="col-idx">{{ idx + 1 }}</td>
                 <td class="col-prod">
-                  <el-select v-model="row.productId" size="small" :data-testid="`bizpur-row-product-${idx}`" @change="onRowProductChange(idx)">
+                  <el-select v-model="row.productId" size="small" filterable :fit-input-width="false" :data-testid="`bizpur-row-product-${idx}`" @change="onRowProductChange(idx)">
                     <el-option
                       v-for="p in store.products"
                       :key="p.id"
@@ -1320,6 +1320,15 @@ html.dark .biz-input {
   width: 72px;
   text-align: center;
   white-space: nowrap;
+}
+
+/* 商品列：给足宽度避免长商品名被挤压截断；下拉框撑满列宽 */
+.bizpur-line-table .col-prod {
+  min-width: 200px;
+}
+
+.bizpur-line-table :deep(.el-select) {
+  width: 100%;
 }
 
 .bizpur-td-num {
