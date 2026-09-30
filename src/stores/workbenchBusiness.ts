@@ -59,6 +59,27 @@ import { markDirty } from '@/composables/useCloudSync'
 // 每本账本只记录其所属年份的数据：写入（进货/销售/支出）时按日期做跨年守卫，跨年数据不混入同一账本。
 // 对外仍暴露与旧版同名的 products / purchases / dailyRecords / expenseDailies / settings / 两类分类，
 // 但它们现在是「指向当前账本」的可写 computed —— 业务面板无需感知账本即可继续工作。
+/**
+ * 递归解包 Vue reactive Proxy：structured clone（IndexedDB put 使用）无法正确序列化
+ * 嵌套的 reactive 代理元素，在严格引擎（如 iOS Safari / 移动端）上会抛 DataCloneError，
+ * 导致写入静默失败——内存里有数据、IndexedDB 没落盘，刷新后记录全部消失。
+ * 单层 toRaw 只解一层，必须逐层递归解包为纯对象（见 saveBusiness）。
+ */
+function deepToRaw<T>(value: T): T {
+  const v = toRaw(value as unknown as object) as unknown
+  if (Array.isArray(v)) {
+    return v.map((item) => deepToRaw(item)) as unknown as T
+  }
+  if (v !== null && typeof v === 'object') {
+    const out: Record<string, unknown> = {}
+    for (const key of Object.keys(v as Record<string, unknown>)) {
+      out[key] = deepToRaw((v as Record<string, unknown>)[key])
+    }
+    return out as unknown as T
+  }
+  return value
+}
+
 export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => {
   const ledgers = ref<BusinessLedger[]>([])
   const currentLedgerId = ref('')
@@ -135,21 +156,12 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
 
   async function saveBusiness(): Promise<void> {
     try {
-      // 嵌套 reactive 数组必须逐层 toRaw（整体 toRaw 解不掉内层 Proxy，DataCloneError 实证）
+      // 必须递归解包所有嵌套 reactive 代理：整体/单层 toRaw 解不掉内层 Proxy，
+      // 严格引擎（iOS Safari / 移动端）的 IndexedDB put 会抛 DataCloneError，写入静默失败，
+      // 表现为「内存里有、刷新后没了」。deepToRaw 逐层还原为纯对象，彻底规避该问题。
       const raw: BusinessStoreData = {
         schemaVer: BUSINESS_STORE_SCHEMA_VER,
-        ledgers: toRaw(ledgers.value).map(l => ({
-          ...toRaw(l),
-          data: {
-            productCategories: toRaw(toRaw(l).data.productCategories).map(c => ({ ...toRaw(c) })),
-            expenseCategories: toRaw(toRaw(l).data.expenseCategories).map(c => ({ ...toRaw(c) })),
-            products: toRaw(toRaw(l).data.products),
-            purchases: toRaw(toRaw(l).data.purchases),
-            dailyRecords: toRaw(toRaw(l).data.dailyRecords),
-            expenseDailies: toRaw(toRaw(l).data.expenseDailies),
-            settings: toRaw(toRaw(l).data.settings)
-          }
-        })),
+        ledgers: deepToRaw(ledgers.value),
         currentLedgerId: currentLedgerId.value
       }
       await idbPut('business', raw)
