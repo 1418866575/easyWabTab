@@ -161,37 +161,20 @@ function resetRevenueToAuto(): void {
 }
 
 /**
- * 成本口径：严格先进先出（FIFO）——销售按日期升序逐条结转，售出/损耗从最旧进货批次开始消耗，
- * 各段用该批次自己的进货单价，因此同一商品多次进货时成本会随批次自动变化。
+ * 成本口径：
+ * - 弹框（录入预览）：行成本 = 售出数量 × 商品成本价（purchasePrice），见 rowCost / formCost；
+ * - 列表展示（已保存记录）：仍走严格 FIFO 结转（calcFifoAllocation/calcDailyCostFifo）保持报表口径不变。
  */
 /** 已保存记录的结转表（列表展示用） */
 const fifoAlloc = computed(() => calcFifoAllocation(store.purchases, store.dailyRecords, store.products))
 
-/** 弹框草稿在结转表中的占位 id（销售按日期 upsert，草稿替换同一天的旧记录参与结转） */
-const FORM_RECORD_ID = '__daily_form__'
-/** 弹框未保存时的结转表：把草稿按当前日期并入，保证预览成本 = 保存后的成本 */
-const fifoAllocWithForm = computed(() => {
-  if (!showDialog.value) return fifoAlloc.value
-  const draft: BusinessDailyRecord = {
-    id: FORM_RECORD_ID,
-    date: editingDate.value,
-    items: rows.map(r => ({ productId: r.productId, broughtOut: r.broughtOut, remaining: r.remaining, loss: r.loss })),
-    totalRevenue: 0,
-    createdAt: '',
-    updatedAt: ''
-  }
-  const others = store.dailyRecords.filter(r => r.date !== editingDate.value)
-  return calcFifoAllocation(store.purchases, [...others, draft], store.products)
-})
-
+/** 总成本 = Σ 各行成本（售出 × 商品成本价），与表格「成本」列完全一致 */
 const formCost = computed(() =>
-  calcDailyCostFifo(FORM_RECORD_ID, rows.map(r => ({ ...r })), store.products, fifoAllocWithForm.value)
+  Math.round(rows.reduce((s, r) => s + rowCost(r.productId, r.broughtOut, r.remaining, r.loss), 0) * 100) / 100
 )
 
-/** 行成本（严格 FIFO，与 formCost 同口径）：取结转表中该商品明细成本，无结转结果时按售出 × 成本单价兜底 */
+/** 行成本 = 售出数量 × 商品成本价（purchasePrice）；与用户口径一致：售出 = 带出−剩余−损耗 */
 function rowCost(productId: string, broughtOut: number, remaining: number, loss: number): number {
-  const hit = fifoAllocWithForm.value.byRecord?.[FORM_RECORD_ID]?.[productId]
-  if (hit && typeof hit.cost === 'number' && Number.isFinite(hit.cost)) return hit.cost
   return calcDailyCost([{ productId, broughtOut, remaining, loss }], store.products)
 }
 
@@ -211,7 +194,6 @@ function rowProfit(productId: string, broughtOut: number, remaining: number, los
 const formTotalProfit = computed(() =>
   Math.round((effectiveRevenue.value - formCost.value) * 100) / 100
 )
-
 function recordProfit(record: BusinessDailyRecord): number {
   return Math.round((record.totalRevenue - recordCost(record)) * 100) / 100
 }
