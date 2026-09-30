@@ -284,7 +284,7 @@ async function handleDeleteFromDialog(): Promise<void> {
     <!-- 单行工具条：左=新增/导出，右=视图切换 -->
     <div class="ewt-table-toolbar is-split">
       <div class="bizexp-toolbar-left">
-        <el-button type="primary" data-testid="bizexp-add" @click="startAdd">＋ 新增支出</el-button>
+        <el-button type="primary" data-testid="bizexp-add" @click="startAdd">＋ 新增进货</el-button>
         <el-button class="btn-export-xlsx" data-testid="bizexp-export" :disabled="sorted.length === 0" @click="exportExpensesExcel">导出 Excel</el-button>
       </div>
       <div class="bizexp-toolbar-right">
@@ -293,7 +293,7 @@ async function handleDeleteFromDialog(): Promise<void> {
     </div>
 
     <!-- 一天一行的日容器视图：同一天可记多笔产品支出，自动合并到同一天 -->
-    <div v-if="sorted.length === 0" class="bizexp-empty" data-testid="bizexp-empty">暂无支出记录，点击「＋ 新增支出」记下第一天</div>
+    <div v-if="sorted.length === 0" class="bizexp-empty" data-testid="bizexp-empty">暂无进货记录，点击「＋ 新增进货」记下第一天</div>
     <template v-else>
       <div class="bizexp-table-wrap">
         <el-table v-if="vm.mode === 'list'" class="ewt-table"
@@ -411,7 +411,7 @@ async function handleDeleteFromDialog(): Promise<void> {
     >
       <template #header>
         <div class="biz-dialog-header">
-          <h3>{{ editingDailyId ? '编辑支出' : '新增支出' }}</h3>
+          <h3>{{ editingDailyId ? '编辑进货' : '新增进货' }}</h3>
           <button class="biz-dialog-close" @click="showDialog = false"><Icon name="close" /></button>
         </div>
       </template>
