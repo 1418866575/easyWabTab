@@ -8,6 +8,7 @@ import { useCategoriesStore } from '../stores/categories'
 import { useSitesStore } from '../stores/sites'
 import { findPresetIconByUrl, getIconPath } from '../composables/presetIcons'
 import { getIconUrl } from '../composables/useIconCache'
+import { isImageIcon } from '../composables/categoryIcon'
 import type { MergedIcon } from '@/stores/icons'
 
 const categoriesStore = useCategoriesStore()
@@ -389,7 +390,9 @@ const handleSubmit = () => {
           <label>分类 *</label>
           <select v-model="form.category" class="category-select">
             <option v-for="cat in categoriesStore.allCategories" :key="cat.id" :value="cat.id">
-              {{ cat.icon }} {{ cat.name }}
+              <!-- 原生 select 的 option 内无法渲染 <img>：图片类图标（图标管理选择）不显示 URI 文本，仅展示分组名；
+                   旧版 emoji 图标（🎬/📁 等）仍原样显示。 -->
+              <template v-if="!isImageIcon(cat.icon)">{{ cat.icon }} </template>{{ cat.name }}
             </option>
           </select>
         </div>
