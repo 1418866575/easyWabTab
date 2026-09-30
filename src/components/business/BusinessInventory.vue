@@ -1,12 +1,10 @@
 <script setup lang="ts">
 // 库存管理：库存总览卡片网格（商品/单位/进货合计/带出合计）+ 低库存预警清单 + 阈值可配置
 // P1-2：库存卡片增加展开溯源功能（进货明细 + 销售带出记录）
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { agingBatches, calcBroughtOutTotals, calcBatchStock, calcInventory, calcInventorySources, calcPurchaseTotals, findProductCategory, formatYuanOf, localDateKey, lowStockProducts, slowMovingProducts, sortProducts } from '@/composables/businessCore'
 import { exportXlsx } from '@/composables/xlsxExport'
-import { usePanelPaging } from '@/composables/usePanelPaging'
-import PanelPager from '@/components/workbench/PanelPager.vue'
 import Icon from '@/components/Icon.vue'
 import { useAppSettingsDialog } from '@/composables/useAppSettingsDialog'
 
@@ -33,20 +31,6 @@ function categoryNameOf(productId: string): string {
   const catId = p?.categoryId
   return catId ? (findProductCategory(store.productCategories, catId)?.name ?? '未分类') : '未分类'
 }
-
-// ===== 自适应分页（2 列宽卡，rowHeight 实测 ~124，maxRows 4 = 每页最多 8 卡）=====
-const listEl = ref<HTMLElement | null>(null)
-const gridEl = ref<HTMLElement | null>(null)
-const paging = usePanelPaging({
-  items: () => rows.value,
-  rowHeight: 124,
-  gap: 12,
-  maxRows: 4,
-  containerRef: listEl,
-  gridRef: gridEl
-})
-const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto } = paging
-watch(rows, () => nextTick(() => goto(1)))
 
 const lowStock = computed(() => lowStockProducts({
   productCategories: store.productCategories,
@@ -219,11 +203,11 @@ function exportInventoryExcel(): void {
       </div>
     </div>
 
-    <!-- 库存总览卡片网格 -->
-    <div ref="listEl" class="bizinv-list" :class="{ 'bizinv-list-scroll': !fitsOnePage }">
-      <div ref="gridEl" class="bizinv-grid" data-testid="bizinv-grid">
+    <!-- 库存总览卡片网格（不分页，超出滚动查看） -->
+    <div class="bizinv-list">
+      <div class="bizinv-grid" data-testid="bizinv-grid">
       <div
-        v-for="row in pageItems"
+        v-for="row in rows"
         :key="row.product.id"
         class="bizinv-card"
         :data-testid="'bizinv-card-' + row.product.id"
@@ -261,14 +245,6 @@ function exportInventoryExcel(): void {
         </div>
       </div>
       </div>
-      <PanelPager
-        v-if="totalPages > 1"
-        :page="currentPage"
-        :total="totalPages"
-        data-testid="panel-pager"
-        @prev="prev()"
-        @next="next()"
-      />
     </div>
 
     <!-- 批次明细弹框（FIFO 剩余量 / 库龄 / 占用资金） -->
@@ -499,6 +475,8 @@ function exportInventoryExcel(): void {
   gap: 12px;
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 @media (max-width: 768px) {
   .bizinv { min-height: 0; }

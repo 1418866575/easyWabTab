@@ -11,6 +11,8 @@ const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: fa
 
 const emit = defineEmits<{
   close: []
+  /** 新增分类成功时回传新分类 id（供调用方自动选中，可选监听） */
+  added: [id: string]
 }>()
 
 const categoriesStore = useCategoriesStore()
@@ -100,10 +102,11 @@ function getSiteCount(categoryId: string): number {
 // 添加分类
 function handleAdd() {
   if (!newCategoryName.value.trim()) return
-  
-  categoriesStore.addCategory(newCategoryName.value.trim(), newCategoryIcon.value)
+
+  const id = categoriesStore.addCategory(newCategoryName.value.trim(), newCategoryIcon.value)
   newCategoryName.value = ''
   newCategoryIcon.value = ''
+  emit('added', id)
 }
 
 // 开始编辑

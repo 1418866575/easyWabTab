@@ -2248,20 +2248,30 @@ test('T86 autoLinkExpensesForProduct（同名筛选 + 已关联排除 + 空串�
 test('T87 deriveInventoryQuantity（数量×商品数量 + 多笔求和 + 兜底）', () => {
   const categories = [
     { id: 'bec_a', name: '采购A', sortOrder: 1, visible: true, isBuiltIn: false, productQuantity: 12 }, // 1 件=12 个
-    { id: 'bec_b', name: '采购B', sortOrder: 2, visible: true, isBuiltIn: false } // 未配置 productQuantity → 按 1
+    { id: 'bec_b', name: '采购B', sortOrder: 2, visible: true, isBuiltIn: false, productQuantity: 2 },  // 1 件=2 个
+    { id: 'bec_c', name: '采购C', sortOrder: 3, visible: true, isBuiltIn: false },                       // 未配置 productQuantity → 按 0
+    { id: 'bec_d', name: '采购D', sortOrder: 4, visible: true, isBuiltIn: false, productQuantity: 0 }     // 商品数量=0 → 按 0
   ]
   const dailies = [{
     id: 'bed_1', date: '2026-09-28',
     items: [
       { id: 'be_1', categoryId: 'bec_a', amount: 36, quantity: 3 }, // 3 × 12 = 36
-      { id: 'be_2', categoryId: 'bec_b', amount: 5, quantity: 5 }   // 5 × 1 = 5
+      { id: 'be_2', categoryId: 'bec_b', amount: 10, quantity: 5 }, // 5 × 2 = 10
+      { id: 'be_3', categoryId: 'bec_c', amount: 5, quantity: 5 },  // 5 × 0 = 0（未配置商品数量）
+      { id: 'be_4', categoryId: 'bec_d', amount: 0, quantity: 5 }   // 5 × 0 = 0（商品数量=0）
     ],
     createdAt: '', updatedAt: ''
   }]
-  // 两笔关联：36 + 5 = 41
-  assert.equal(deriveInventoryQuantity(['be_1', 'be_2'], dailies as any, categories as any), 41, '多笔求和 3×12 + 5×1')
   // 单笔 bec_a：3 × 12 = 36
   assert.equal(deriveInventoryQuantity(['be_1'], dailies as any, categories as any), 36, '单笔 3×12')
+  // 多笔且都配置了商品数量：36 + 10 = 46
+  assert.equal(deriveInventoryQuantity(['be_1', 'be_2'], dailies as any, categories as any), 46, '多笔求和 3×12 + 5×2')
+  // 商品数量未配置（bec_c）→ 派生 0
+  assert.equal(deriveInventoryQuantity(['be_3'], dailies as any, categories as any), 0, '未配置商品数量 → 派生 0')
+  // 商品数量=0（bec_d）→ 派生 0
+  assert.equal(deriveInventoryQuantity(['be_4'], dailies as any, categories as any), 0, '商品数量=0 → 派生 0')
+  // 混合：配置了 + 未配置 → 仅配置的贡献（36 + 0）
+  assert.equal(deriveInventoryQuantity(['be_1', 'be_3'], dailies as any, categories as any), 36, '混合：未配置商品数量的不贡献')
   // 空关联 → 0
   assert.equal(deriveInventoryQuantity([], dailies as any, categories as any), 0, '空关联返回 0')
   // 未知 id 忽略

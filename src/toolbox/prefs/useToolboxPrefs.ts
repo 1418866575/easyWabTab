@@ -1,5 +1,5 @@
 /**
- * 工具箱偏好（收藏 / 最近使用）的响应式持久化封装
+ * 工具箱偏好（收藏 / 最近使用 / 点击次数）的响应式持久化封装
  *
  * - 单例：模块级 ref 持有状态（沿用项目 useToast / useHelpModal 的单例写法，不新建 Pinia store）
  * - 存储：localStorage，key = easy-web-tab:toolbox
@@ -9,24 +9,26 @@
 import { ref } from 'vue'
 import type { ToolboxPrefs, ToolboxRecentItem } from '../types'
 import { recordRecent } from '../core/recent'
+import { normalizeClicks, recordClick, clickCount as countOf, type ClickMap } from '../core/rank'
 
 const LS_KEY = 'easy-web-tab:toolbox'
 
-const DEFAULT_PREFS: ToolboxPrefs = { favorites: [], recent: [] }
+const DEFAULT_PREFS: ToolboxPrefs = { favorites: [], recent: [], clicks: {} }
 
 function loadPrefs(): ToolboxPrefs {
   try {
     const raw = localStorage.getItem(LS_KEY)
-    if (!raw) return { ...DEFAULT_PREFS }
+    if (!raw) return { ...DEFAULT_PREFS, clicks: {} }
     const p = JSON.parse(raw) as Partial<ToolboxPrefs>
     return {
       favorites: Array.isArray(p.favorites) ? p.favorites.filter(x => typeof x === 'string') : [],
       recent: Array.isArray(p.recent)
         ? p.recent.filter((r): r is ToolboxRecentItem => !!r && typeof r.id === 'string' && typeof r.ts === 'number')
-        : []
+        : [],
+      clicks: normalizeClicks(p.clicks)
     }
   } catch {
-    return { ...DEFAULT_PREFS } // 脏数据 / 不可读 → 回落默认值
+    return { ...DEFAULT_PREFS, clicks: {} } // 脏数据 / 不可读 → 回落默认值
   }
 }
 
@@ -39,11 +41,13 @@ function savePrefs(p: ToolboxPrefs): void {
 }
 
 // 模块级单例状态
-const favorites = ref<string[]>(loadPrefs().favorites)
-const recent = ref<ToolboxRecentItem[]>(loadPrefs().recent)
+const prefs = loadPrefs()
+const favorites = ref<string[]>(prefs.favorites)
+const recent = ref<ToolboxRecentItem[]>(prefs.recent)
+const clicks = ref<ClickMap>(prefs.clicks)
 
 function persist(): void {
-  savePrefs({ favorites: favorites.value, recent: recent.value })
+  savePrefs({ favorites: favorites.value, recent: recent.value, clicks: clicks.value })
 }
 
 export function useToolboxPrefs() {
@@ -71,5 +75,32 @@ export function useToolboxPrefs() {
     persist()
   }
 
-  return { favorites, recent, isFavorite, toggleFavorite, pushRecent, clearRecent }
+  /** 取某工具的点击次数（未点击过为 0） */
+  const clickCount = (id: string): number => countOf(clicks.value, id)
+
+  /** 记录一次点击，返回点击后的次数 */
+  const hitClick = (id: string): number => {
+    clicks.value = recordClick(clicks.value, id)
+    persist()
+    return countOf(clicks.value, id)
+  }
+
+  /** 清空全部点击次数（列表回到默认 order 排序） */
+  const clearClicks = (): void => {
+    clicks.value = {}
+    persist()
+  }
+
+  return {
+    favorites,
+    recent,
+    clicks,
+    isFavorite,
+    toggleFavorite,
+    pushRecent,
+    clearRecent,
+    clickCount,
+    hitClick,
+    clearClicks
+  }
 }

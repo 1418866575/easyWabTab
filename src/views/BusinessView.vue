@@ -31,7 +31,7 @@ const settingsStore = useAppSettingsStore()
 const SECTIONS = [
   { key: 'home', icon: 'home', label: '首页' },
   { key: 'products', icon: 'products', label: '商品' },
-  { key: 'expenses', icon: 'expenses', label: '支出' },
+  { key: 'expenses', icon: 'expenses', label: '进货' },
   { key: 'purchases', icon: 'purchases', label: '库存' },
   { key: 'daily', icon: 'daily', label: '销售' },
   { key: 'inventory', icon: 'inventory', label: '库存预警' },

@@ -28,6 +28,12 @@ export interface ToolboxCategory {
   order?: number
 }
 
+/** 弹框宽度档位：S 480 / M 720 / L 960 / XL 1120（移动端一律全屏） */
+export type ToolboxModalSize = 'S' | 'M' | 'L' | 'XL'
+
+/** 工作区布局模板：T1 单栏 / T2 左右双栏 / T3 上下双栏 / T4 表单+结果卡 / T5 画布工作台 / T6 列表表格工作台 */
+export type ToolboxLayout = 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'T6'
+
 /** 工具元数据：新增工具只需追加一条（或新增一个目录并导出） */
 export interface ToolboxToolMeta {
   /** 唯一 id（kebab-case），收藏/最近使用以此为键 */
@@ -40,7 +46,7 @@ export interface ToolboxToolMeta {
   description: string
   /** 主分类 id */
   category: string
-  /** 标签（参与搜索） */
+  /** 标签（参与搜索，同时用于列表页标签筛选） */
   tags: string[]
   status: ToolboxToolStatus
   kind: ToolboxToolKind
@@ -51,6 +57,12 @@ export interface ToolboxToolMeta {
   url?: string
   /** 排序，缺省 999（按配置顺序） */
   order?: number
+  /** 弹框宽度档位，缺省 M */
+  modalSize?: ToolboxModalSize
+  /** 工作区布局模板，缺省 T1 */
+  layout?: ToolboxLayout
+  /** 上线日期 YYYY-MM-DD，30 天内显示「新」角标 */
+  addedAt?: string
 }
 
 /**
@@ -72,6 +84,8 @@ export interface ToolboxToolEntry {
 export interface ToolboxPrefs {
   favorites: string[]
   recent: ToolboxRecentItem[]
+  /** 点击次数：工具 id → 次数（越大越靠前） */
+  clicks: Record<string, number>
 }
 
 /** 最近使用记录 */

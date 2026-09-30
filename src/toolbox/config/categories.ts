@@ -12,10 +12,16 @@ import { MODULE_CATEGORY_ID } from '../core/category.ts'
  */
 export const TOOLBOX_CATEGORIES: ToolboxCategory[] = [
   { id: 'dev', name: '开发工具', icon: '🛠', order: 1 },
-  { id: 'data', name: '数据工具', icon: '📊', order: 2 },
-  { id: 'media', name: '媒体工具', icon: '🎬', order: 3 },
-  { id: 'effi', name: '效率工具', icon: '⚡', order: 4 },
-  { id: MODULE_CATEGORY_ID, name: '站内模块', icon: '🧭', order: 5 },
+  { id: 'encode', name: '编码解码', icon: '🔐', order: 2 },
+  { id: 'data', name: '数据转换', icon: '🔄', order: 3 },
+  { id: 'text', name: '文本处理', icon: '📝', order: 4 },
+  { id: 'image', name: '图片处理', icon: '🖼️', order: 5 },
+  { id: 'color', name: '颜色设计', icon: '🎨', order: 6 },
+  { id: 'time', name: '时间计算', icon: '🕒', order: 7 },
+  { id: 'calc', name: '计算换算', icon: '🧮', order: 8 },
+  { id: 'gen', name: '生成与随机', icon: '🎲', order: 9 },
+  { id: 'effi', name: '效率工具', icon: '⚡', order: 10 },
+  { id: MODULE_CATEGORY_ID, name: '站内模块', icon: '🧭', order: 90 },
   { id: 'other', name: '其他', icon: '📁', order: 999 }
 ]
 
