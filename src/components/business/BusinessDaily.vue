@@ -24,7 +24,7 @@ import Icon from '../Icon.vue'
 // P0-3：编辑弹框增加库存上下文（当前库存、预计库存、小计实时计算）
 import { computed, reactive, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { calcDailyCostFifo, calcDailyItemDetails, calcDailyLossAmount, calcDailyRevenue, calcFifoAllocation, calcInventory, checkRevenueOverride, dailyTemplateFromLast, findProduct, formatYuanOf, lastDailyBefore, localDateKey, sortDailyRecords, validateDailyRows } from '@/composables/businessCore'
+import { calcDailyCost, calcDailyCostFifo, calcDailyItemDetails, calcDailyLossAmount, calcDailyRevenue, calcFifoAllocation, calcInventory, checkRevenueOverride, findProduct, formatYuanOf, localDateKey, sortDailyRecords, validateDailyRows } from '@/composables/businessCore'
 import { useToast } from '@/composables/useToast'
 import { exportXlsx } from '@/composables/xlsxExport'
 import type { BusinessDailyRecord, DailyRecordItem } from '@/types'
@@ -35,21 +35,6 @@ const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
 
 const store = useWorkbenchBusinessStore()
 const toast = useToast()
-
-// ===== 录入提效：复制上日（上一条销售记录的商品 + 带出数量） =====
-/** 早于当前编辑日期的最近一条销售记录（编辑当天时不会复制自己） */
-const lastRecord = computed(() => lastDailyBefore(store.dailyRecords, editingDate.value))
-
-/** 复制上日：用上一条记录的商品 + 带出数量替换当前行，剩余/损耗归零 */
-function copyFromLast(): void {
-  const tpl = dailyTemplateFromLast(store.dailyRecords, editingDate.value)
-  if (tpl.length === 0) {
-    toast.info('上一条销售记录没有带出商品')
-    return
-  }
-  rows.splice(0, rows.length, ...tpl.map(r => ({ ...r })))
-  formRevenueManual.value = null
-}
 
 const sorted = computed(() => sortDailyRecords(store.dailyRecords))
 
@@ -82,7 +67,7 @@ const ledgerMeta = computed(() => ({ year: store.currentLedgerYear, ledgerName: 
 
 // ===== 一键导出 Excel（销售记录：按「日期 × 商品」展开，便于透视）=====
 function exportDailyExcel(): void {
-  const headers = ['日期', '商品', '带出', '售出', '损耗', '单价', '小计', '当日营业额', '交易笔数']
+  const headers = ['日期', '商品', '带出', '售出', '损耗', '单价', '营业额', '当日营业额', '交易笔数']
   const rows: (string | number)[][] = []
   for (const rec of sorted.value) {
     const details = dailyItemDetails(rec)
@@ -203,12 +188,28 @@ const formCost = computed(() =>
   calcDailyCostFifo(FORM_RECORD_ID, rows.map(r => ({ ...r })), store.products, fifoAllocWithForm.value)
 )
 
-const formLossAmount = computed(() =>
-  calcDailyLossAmount(rows.map(r => ({ ...r })), store.products)
-)
+/** 行成本（严格 FIFO，与 formCost 同口径）：取结转表中该商品明细成本，无结转结果时按售出 × 成本单价兜底 */
+function rowCost(productId: string, broughtOut: number, remaining: number, loss: number): number {
+  const hit = fifoAllocWithForm.value.byRecord?.[FORM_RECORD_ID]?.[productId]
+  if (hit && typeof hit.cost === 'number' && Number.isFinite(hit.cost)) return hit.cost
+  return calcDailyCost([{ productId, broughtOut, remaining, loss }], store.products)
+}
 
-const formProfit = computed(() =>
-  Math.round((formRevenue.value - formCost.value) * 100) / 100
+/** 行损耗金额 = 损耗数量 × 售价（与 calcDailyLossAmount 同口径） */
+function rowLossAmount(productId: string, loss: number): number {
+  const p = rowProduct(productId)
+  const qty = Number.isFinite(loss) ? Math.max(0, loss) : 0
+  return Math.round(qty * (p?.sellingPrice ?? 0) * 100) / 100
+}
+
+/** 行利润 = 营业额 − 成本 */
+function rowProfit(productId: string, broughtOut: number, remaining: number, loss: number): number {
+  return Math.round((rowSubtotal(productId, broughtOut, remaining, loss) - rowCost(productId, broughtOut, remaining, loss)) * 100) / 100
+}
+
+/** 总利润（按实际营业额计）：总实际营业额 − 总成本 */
+const formTotalProfit = computed(() =>
+  Math.round((effectiveRevenue.value - formCost.value) * 100) / 100
 )
 
 function recordProfit(record: BusinessDailyRecord): number {
@@ -481,22 +482,9 @@ async function handleDelete(id: string | null): Promise<void> {
           </div>
         </div>
 
-        <!-- 表格上方工具条：复制上日（左） + 总营业额与添加销售按钮（右） -->
-        <div class="bizday-table-bar">
-          <div class="bizday-table-bar-left">
-            <el-button
-              size="small"
-              data-testid="bizday-copy-last"
-              :disabled="!lastRecord"
-              @click="copyFromLast"
-            >复制上日{{ lastRecord ? '（' + lastRecord.date + '）' : '（无）' }}</el-button>
-          </div>
-          <div class="bizday-table-bar-right">
-            <span class="bizday-total-revenue">
-              总营业额：<strong data-testid="bizday-form-total-revenue">{{ formatYuanOf(formRevenue) }}</strong>
-            </span>
-            <el-button data-testid="bizday-row-add" @click="addRow">＋ 添加销售</el-button>
-          </div>
+        <!-- 添加销售按钮条（参考支出新增弹框：日期后、表格上方，右对齐） -->
+        <div class="bizday-add-bar">
+          <el-button data-testid="bizday-row-add" @click="addRow">＋ 添加销售</el-button>
         </div>
 
         <!-- 商品及关联字段（带出/剩余/损耗/小计）以表格形式展示 -->
@@ -509,7 +497,10 @@ async function handleDelete(id: string | null): Promise<void> {
                 <th>带出</th>
                 <th>剩余</th>
                 <th>损耗</th>
-                <th>小计</th>
+                <th>营业额</th>
+                <th>成本</th>
+                <th>利润</th>
+                <th>损耗金额</th>
                 <th class="bizday-th-op">操作</th>
               </tr>
             </thead>
@@ -547,66 +538,71 @@ async function handleDelete(id: string | null): Promise<void> {
                   <td class="bizday-td-num">
                     <el-input-number v-model="row.loss" :min="0" :step="1" size="small" controls-position="right" class="bizday-num-input" :data-testid="`bizday-row-loss-${i}`" />
                   </td>
-                  <td class="bizday-td-subtotal">
+                  <td class="bizday-td-money">
                     <span class="bizday-row-subtotal">¥{{ rowSubtotal(row.productId, row.broughtOut, row.remaining, row.loss).toFixed(2) }}</span>
                   </td>
+                  <td class="bizday-td-money">{{ formatYuanOf(rowCost(row.productId, row.broughtOut, row.remaining, row.loss)) }}</td>
+                  <td class="bizday-td-money bizday-profit-text">{{ formatYuanOf(rowProfit(row.productId, row.broughtOut, row.remaining, row.loss)) }}</td>
+                  <td class="bizday-td-money bizday-loss-text">{{ formatYuanOf(rowLossAmount(row.productId, row.loss)) }}</td>
                   <td class="bizday-td-op">
                     <el-button type="danger" size="small" :data-testid="`bizday-row-del-${i}`" @click="removeRow(i)">移除</el-button>
                   </td>
                 </tr>
                 <tr v-if="rowError(i)" class="bizday-row-issue-row">
-                  <td class="bizday-row-issue" :colspan="7" :data-testid="`bizday-row-issue-${i}`">{{ rowError(i) }}</td>
+                  <td class="bizday-row-issue" :colspan="10" :data-testid="`bizday-row-issue-${i}`">{{ rowError(i) }}</td>
                 </tr>
               </template>
             </tbody>
           </table>
         </div>
 
-        <div class="bizday-revenue-preview">
-          实际营业额：<strong data-testid="bizday-form-revenue">{{ formatYuanOf(effectiveRevenue) }}</strong>
-          <span v-if="formRevenueManual !== null" class="bizday-revenue-manual-tag" data-testid="bizday-form-revenue-manual">手动</span>
-          <span class="bizday-preview-sep">成本 <strong data-testid="bizday-form-cost">{{ formatYuanOf(formCost) }}</strong></span>
-          <span class="bizday-preview-sep">利润 <strong data-testid="bizday-form-profit">{{ formatYuanOf(formProfit) }}</strong></span>
-          <span class="bizday-preview-sep">损耗 <strong data-testid="bizday-form-loss">{{ formatYuanOf(formLossAmount) }}</strong></span>
-        </div>
-
-        <div class="biz-field">
-          <label>交易笔数（可选，当天顾客买单次数）</label>
-          <el-input-number v-model="formTransactionCount" :min="0" :step="1" size="small" controls-position="right" data-testid="bizday-form-transaction-count" />
-        </div>
-        <!-- 销售优化：笔数后新增营业额字段，可手动修改（保留两位小数），未手动时自动跟随商品明细合计 -->
-        <div class="biz-field">
-          <label>实际营业额（默认按商品明细自动合计，可手动修改）</label>
-          <div class="bizday-revenue-field">
-            <el-input-number
-              v-model="revenueInput"
-              :min="0"
-              :step="0.01"
-              :precision="2"
-              size="small"
-              controls-position="right"
-              data-testid="bizday-form-revenue-input"
-            />
-            <el-button
-              v-if="formRevenueManual !== null"
-              size="small"
-              data-testid="bizday-form-revenue-auto"
-              @click="resetRevenueToAuto"
-            >恢复自动</el-button>
+        <!-- 汇总（一行2列）：总营业额 / 总实际营业额 / 总成本 / 总利润 / 交易笔数 -->
+        <div class="bizday-summary-grid">
+          <div class="bizday-summary-cell">
+            <span class="bizday-summary-label">总营业额</span>
+            <span class="bizday-summary-value" data-testid="bizday-form-total-revenue">{{ formatYuanOf(formRevenue) }}</span>
           </div>
-          <span class="bizday-revenue-hint" data-testid="bizday-form-revenue-tip">
-            {{ formRevenueManual !== null ? '已手动设置，保存后以该金额为准' : `自动合计：${formatYuanOf(formRevenue)}` }}
-          </span>
-          <!-- 手填营业额合理性提示：与自动合计偏离超 20% 时提醒 -->
-          <span
-            v-if="revenueCheck.level === 'warn'"
-            class="bizday-revenue-warn"
-            data-testid="bizday-revenue-warn"
-          >{{ revenueCheck.message }}</span>
-        </div>
-        <div class="biz-field">
-          <label>备注（可选）</label>
-          <el-input v-model="formNote" size="small" maxlength="200" data-testid="bizday-form-note" />
+          <div class="bizday-summary-cell">
+            <span class="bizday-summary-label">总实际营业额</span>
+            <div class="bizday-summary-value bizday-revenue-field">
+              <el-input-number
+                v-model="revenueInput"
+                :min="0"
+                :step="0.01"
+                :precision="2"
+                size="small"
+                controls-position="right"
+                data-testid="bizday-form-revenue-input"
+              />
+              <el-button
+                v-if="formRevenueManual !== null"
+                size="small"
+                data-testid="bizday-form-revenue-auto"
+                @click="resetRevenueToAuto"
+              >恢复自动</el-button>
+            </div>
+            <span v-if="formRevenueManual !== null" class="bizday-revenue-manual-tag" data-testid="bizday-form-revenue-manual">手动</span>
+            <span class="bizday-summary-hint" data-testid="bizday-form-revenue-tip">
+              {{ formRevenueManual !== null ? '已手动设置，保存后以该金额为准' : `自动合计：${formatYuanOf(formRevenue)}` }}
+            </span>
+            <span
+              v-if="revenueCheck.level === 'warn'"
+              class="bizday-revenue-warn"
+              data-testid="bizday-revenue-warn"
+            >{{ revenueCheck.message }}</span>
+          </div>
+          <div class="bizday-summary-cell">
+            <span class="bizday-summary-label">总成本</span>
+            <span class="bizday-summary-value bizday-summary-cost" data-testid="bizday-form-cost">{{ formatYuanOf(formCost) }}</span>
+          </div>
+          <div class="bizday-summary-cell">
+            <span class="bizday-summary-label">总利润</span>
+            <span class="bizday-summary-value bizday-profit-text" data-testid="bizday-form-profit">{{ formatYuanOf(formTotalProfit) }}</span>
+          </div>
+          <div class="bizday-summary-cell">
+            <span class="bizday-summary-label">交易笔数</span>
+            <el-input-number v-model="formTransactionCount" :min="0" :step="1" size="small" controls-position="right" data-testid="bizday-form-transaction-count" />
+          </div>
         </div>
 
         <div class="biz-form-actions ewt-dialog-footer">
@@ -784,29 +780,11 @@ async function handleDelete(id: string | null): Promise<void> {
   color: var(--color-success, var(--color-success));
 }
 
-/* 表格上方工具条：复制上日（左） + 总营业额与添加销售（右） */
-.bizday-table-bar {
+/* 添加销售按钮条（日期后、表格上方，右对齐，参考支出新增弹框） */
+.bizday-add-bar {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
+  justify-content: flex-end;
   margin-bottom: 8px;
-}
-.bizday-table-bar-right {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-}
-.bizday-total-revenue {
-  font-size: 13px;
-  color: var(--color-text-secondary, #6b7280);
-}
-.bizday-total-revenue strong {
-  font-size: 18px;
-  color: var(--color-success, var(--color-success));
-  font-variant-numeric: tabular-nums;
-  margin-left: 4px;
 }
 
 /* 商品明细表格（带出/剩余/损耗/小计） */
@@ -816,7 +794,7 @@ async function handleDelete(id: string | null): Promise<void> {
 }
 .bizday-table {
   width: 100%;
-  min-width: 720px;
+  min-width: 1080px;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -844,7 +822,7 @@ async function handleDelete(id: string | null): Promise<void> {
 .bizday-th-op { width: 76px; }
 .bizday-td-index { text-align: center; color: var(--color-text-muted, #9ca3af); }
 .bizday-td-num { text-align: center; white-space: nowrap; }
-.bizday-td-subtotal { text-align: right; white-space: nowrap; }
+.bizday-td-money { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .bizday-td-op { text-align: center; white-space: nowrap; }
 .bizday-td-product { min-width: 200px; }
 .bizday-product {
@@ -905,9 +883,14 @@ async function handleDelete(id: string | null): Promise<void> {
 :global(html.dark) .bizday-table tbody tr:hover {
   background: var(--color-bg-hover, #111827);
 }
-:global(html.dark) .bizday-total-revenue strong {
-  color: #4ade80;
+:global(html.dark) .bizday-summary-cell {
+  background: #111827;
+  border-color: #374151;
 }
+:global(html.dark) .bizday-summary-value { color: #4ade80; }
+:global(html.dark) .bizday-summary-cost { color: #fbbf24; }
+:global(html.dark) .bizday-summary-label { color: #d1d5db; }
+:global(html.dark) .bizday-summary-hint { color: #9ca3af; }
 
 /* ===== 销售优化：手动营业额（笔数之后） ===== */
 .bizday-revenue-manual-tag {
@@ -930,33 +913,41 @@ async function handleDelete(id: string | null): Promise<void> {
   color: var(--color-text-muted, #6b7280);
 }
 
-.bizday-revenue-preview {
+/* 汇总网格（一行2列）：总营业额 / 总实际营业额 / 总成本 / 总利润 / 交易笔数 */
+.bizday-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 4px;
+}
+.bizday-summary-cell {
   display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 6px 14px;
-  padding: 10px 12px;
-  background: var(--color-bg-card, var(--color-bg-hover));
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  background: var(--color-bg-card, #f9fafb);
+  border: 1px solid var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
 }
-
-.bizday-revenue-preview strong {
-  color: var(--color-success, var(--color-success));
-  font-size: 18px;
-}
-
-.bizday-preview-sep {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 4px;
+.bizday-summary-label {
   font-size: 13px;
+  color: var(--color-text-secondary, #6b7280);
 }
-
-.bizday-preview-sep strong {
-  font-size: 16px;
-  color: var(--color-text, var(--color-text));
+.bizday-summary-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-success, #16a34a);
+  font-variant-numeric: tabular-nums;
+}
+.bizday-summary-cost {
+  color: var(--color-warning, #d97706);
+}
+.bizday-summary-count {
+  color: var(--color-text, #111827);
+}
+.bizday-summary-hint {
+  font-size: 12px;
+  color: var(--color-text-muted, #6b7280);
 }
 
 /* 弹框 */
