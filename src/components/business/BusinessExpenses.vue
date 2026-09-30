@@ -2,6 +2,7 @@
 import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
 import { useToast } from '@/composables/useToast'
+import { useBizSaving } from '@/composables/useBizSaving'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -103,6 +104,8 @@ watch(sorted, () => { listPage.value = 1 })
 
 // ===== 新增/编辑弹框：一天可记多个产品支出（动态产品行，类似销售记录的「商品行」）=====
 const showDialog = ref(false)
+// 保存中状态：用于按钮禁用 + loading，防止 await 期间连点重复写入
+const { saving, run } = useBizSaving()
 /** 编辑中的原日容器 id（新增为 null）：删除按 id，不能拿日期当 id（日期 ≠ id 会导致删不掉） */
 const editingDailyId = ref<string | null>(null)
 const editingDate = ref(localDateKey())
@@ -257,8 +260,14 @@ async function handleSave(): Promise<void> {
       orderAddress: r.orderAddress.trim() || undefined,
       paymentMethod: r.paymentMethod.trim() || undefined
     }))
-  const r = await store.upsertExpenseDaily({ originalDailyId: editingDailyId.value, date: editingDate.value, items })
-  if (!r.ok) { toast.error(r.message); return }
+  const isEditing = editingDailyId.value !== null
+  // 业务性失败（跨年 / 无账本）抛出具体文案，由 run 统一提示；非预期异常 run 兜底。
+  const ok = await run(async () => {
+    const r = await store.upsertExpenseDaily({ originalDailyId: editingDailyId.value, date: editingDate.value, items })
+    if (!r.ok) throw new Error(r.message)
+  })
+  if (!ok) return
+  toast.success(isEditing ? '进货记录已保存' : `进货记录已添加（${items.length} 笔）`)
   showDialog.value = false
 }
 
@@ -554,7 +563,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 
         <div class="biz-form-actions ewt-dialog-footer">
           <el-button size="small" @click="showDialog = false">取消</el-button>
-          <el-button type="primary" size="small" native-type="submit" :disabled="!isFormValid" data-testid="bizexp-save">
+          <el-button type="primary" size="small" native-type="submit" :disabled="!isFormValid || saving" :loading="saving" data-testid="bizexp-save">
             {{ editingDailyId ? '保存' : '添加' }}
           </el-button>
           <el-button

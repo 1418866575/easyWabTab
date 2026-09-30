@@ -16,6 +16,7 @@ import {
   visibleProductCategories
 } from '@/composables/businessCore'
 import { useToast } from '@/composables/useToast'
+import { useBizSaving } from '@/composables/useBizSaving'
 import type { BusinessProduct } from '@/types'
 import Icon from '@/components/Icon.vue'
 import { usePanelPaging } from '@/composables/usePanelPaging'
@@ -106,6 +107,8 @@ function avgTip(p: BusinessProduct): string {
 
 // ===== 新增/编辑弹框 =====
 const showDialog = ref(false)
+// 保存中状态：用于按钮禁用 + loading，防止 await 期间连点重复写入
+const { saving, run } = useBizSaving()
 const editingId = ref<string | null>(null)
 const formName = ref('')
 const formCategoryId = ref('')
@@ -148,6 +151,13 @@ function startEdit(p: BusinessProduct): void {
 
 async function handleSave(): Promise<void> {
   if (!isFormValid.value) return
+  // 编辑态边界：商品可能已被删除（云同步/其它入口删除），而 store.updateProduct 找不到记录时会静默返回，
+  // 这里提前拦截并提示，避免「点了保存没反应、以为已成功」。
+  if (editingId.value && !store.products.some(p => p.id === editingId.value)) {
+    toast.error('商品不存在或已被删除，请刷新后重试')
+    return
+  }
+  const isEditing = editingId.value !== null
   const payload = {
     name: formName.value.trim(),
     categoryId: formCategoryId.value || undefined,
@@ -158,11 +168,17 @@ async function handleSave(): Promise<void> {
     memberPrice: formMemberPrice.value.trim() === '' ? null : numOf(formMemberPrice.value),
     active: formActive.value
   }
-  if (editingId.value) {
-    await store.updateProduct(editingId.value, payload)
-  } else {
-    await store.addProduct(payload)
-  }
+  // store.addProduct/updateProduct 返回 void，失败靠抛异常传播（如 IndexedDB 写入失败），
+  // 由 run 统一兜底提示；成功才提示并关闭弹框。
+  const ok = await run(async () => {
+    if (editingId.value) {
+      await store.updateProduct(editingId.value, payload)
+    } else {
+      await store.addProduct(payload)
+    }
+  })
+  if (!ok) return
+  toast.success(isEditing ? '商品已保存' : '商品已添加')
   showDialog.value = false
 }
 
@@ -398,7 +414,7 @@ function drawerMarkupRate(): number | null {
         </div>
         <div class="biz-form-actions">
           <el-button @click="showDialog = false">取消</el-button>
-          <el-button type="primary" native-type="submit" :disabled="!isFormValid" data-testid="bizprod-save">
+          <el-button type="primary" native-type="submit" :disabled="!isFormValid || saving" :loading="saving" data-testid="bizprod-save">
             {{ editingId ? '保存' : '添加' }}
           </el-button>
           <el-button v-if="editingId" type="danger" data-testid="bizprod-dialog-del" @click="handleDeleteCurrent">删除</el-button>

@@ -26,6 +26,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { calcDailyCost, calcDailyCostFifo, calcDailyItemDetails, calcDailyLossAmount, calcDailyRevenue, calcFifoAllocation, calcInventory, checkRevenueOverride, findProduct, formatYuanOf, localDateKey, sortDailyRecords, validateDailyRows } from '@/composables/businessCore'
 import { useToast } from '@/composables/useToast'
+import { useBizSaving } from '@/composables/useBizSaving'
 import { exportXlsx } from '@/composables/xlsxExport'
 import type { BusinessDailyRecord, DailyRecordItem } from '@/types'
 import { usePageSize } from '@/composables/usePageSize'
@@ -93,6 +94,8 @@ function exportDailyExcel(): void {
 
 // ===== 编辑弹框（动态商品行） =====
 const showDialog = ref(false)
+// 保存中状态：用于按钮禁用 + loading，防止 await 期间连点重复写入
+const { saving, run } = useBizSaving()
 /** 编辑中的原记录 id（新增为 null）：删除必须按 id，不能拿日期当 id（日期 ≠ id 会导致删不掉） */
 const editingRecordId = ref<string | null>(null)
 const editingDate = ref(localDateKey())
@@ -284,15 +287,21 @@ async function handleSave(): Promise<void> {
       remaining: Math.max(0, Math.floor(r.remaining)),
       loss: Math.max(0, Math.floor(r.loss))
     }))
-  const r = await store.upsertDailyRecord({
-    date: editingDate.value,
-    items,
-    note: formNote.value.trim() || undefined,
-    transactionCount: Number.isFinite(formTransactionCount.value) ? Math.max(0, Math.floor(formTransactionCount.value)) : undefined,
-    // 手动填写过营业额才覆盖自动合计；未手动（null）时由 store 按明细计算
-    revenueOverride: formRevenueManual.value
+  const isEditing = editingRecordId.value !== null
+  // 业务性失败（跨年 / 无账本）抛出具体文案，由 run 统一提示；非预期异常 run 兜底。
+  const ok = await run(async () => {
+    const r = await store.upsertDailyRecord({
+      date: editingDate.value,
+      items,
+      note: formNote.value.trim() || undefined,
+      transactionCount: Number.isFinite(formTransactionCount.value) ? Math.max(0, Math.floor(formTransactionCount.value)) : undefined,
+      // 手动填写过营业额才覆盖自动合计；未手动（null）时由 store 按明细计算
+      revenueOverride: formRevenueManual.value
+    })
+    if (!r.ok) throw new Error(r.message)
   })
-  if (!r.ok) { toast.error(r.message); return }
+  if (!ok) return
+  toast.success(isEditing ? '销售记录已保存' : `销售记录已添加（${items.length} 项商品）`)
   showDialog.value = false
 }
 
@@ -596,7 +605,7 @@ async function handleDelete(id: string | null): Promise<void> {
 
         <div class="biz-form-actions ewt-dialog-footer">
           <el-button @click="showDialog = false">取消</el-button>
-          <el-button type="primary" native-type="submit" :disabled="!isFormValid" data-testid="bizday-save">保存</el-button>
+          <el-button type="primary" native-type="submit" :disabled="!isFormValid || saving" :loading="saving" data-testid="bizday-save">保存</el-button>
           <el-button v-if="editingRecordId" type="danger" native-type="button" data-testid="bizday-record-delete" @click="handleDelete(editingRecordId)">删除</el-button>
         </div>
       </form>
