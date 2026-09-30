@@ -26,6 +26,7 @@ import TeacherGrowth from '@/components/teacher/TeacherGrowth.vue'
 import TeacherLeave from '@/components/teacher/TeacherLeave.vue'
 import TeacherHomework from '@/components/teacher/TeacherHomework.vue'
 import TeacherTalks from '@/components/teacher/TeacherTalks.vue'
+import TeacherGroups from '@/components/teacher/TeacherGroups.vue'
 import TeacherHelp from '@/components/teacher/TeacherHelp.vue'
 import SubjectSelect from '@/components/teacher/SubjectSelect.vue'
 import { STAGE_OPTIONS, TERM_OPTIONS, type TeacherPageKey, type TeacherRole, type TeacherStage } from '@/types/teacher'
@@ -92,6 +93,7 @@ const COMPONENTS: Record<TeacherPageKey, unknown> = {
   leave: TeacherLeave,
   homework: TeacherHomework,
   talks: TeacherTalks,
+  groups: TeacherGroups,
   help: TeacherHelp
 }
 

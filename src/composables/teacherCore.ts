@@ -19,6 +19,12 @@ import {
   type HomeSchoolTalkRecord,
   type HomeworkMissStatus,
   type TeacherData,
+  type GroupMode,
+  type RemainderMode,
+  type GroupingStrategy,
+  type StudentGroup,
+  type GroupingSnapshot,
+  type GroupingResult,
   type TeacherPageKey,
   type TeacherPageMeta,
   type TeacherRole,
@@ -106,7 +112,9 @@ export function emptyBucket(): ClassBucket {
     random: { history: [], mode: 'all' },
     leaves: [],
     homeworks: [],
-    talks: []
+    talks: [],
+    groups: [],
+    snapshots: []
   }
 }
 
@@ -446,6 +454,250 @@ export function resolveDefaultSelection(
   return { sem: d.sem, cls: d.cls }
 }
 
+// ---------- 班级小组：核心分组算法（纯函数） ----------
+
+/** 聚合每生平均分：从 exams 计算，缺失成绩不参与平均；返回 studentId -> 平均分 */
+export function avgScoreByStudent(exams: Exam[]): Record<string, number> {
+  const sum: Record<string, number> = {}
+  const cnt: Record<string, number> = {}
+  for (const e of exams ?? []) {
+    for (const [sid, v] of Object.entries(e.scores ?? {})) {
+      if (!Number.isFinite(v)) continue
+      sum[sid] = (sum[sid] ?? 0) + v
+      cnt[sid] = (cnt[sid] ?? 0) + 1
+    }
+  }
+  const out: Record<string, number> = {}
+  for (const sid of Object.keys(sum)) out[sid] = Math.round((sum[sid] / cnt[sid]) * 10) / 10
+  return out
+}
+
+/** Fisher–Yates 洗牌（返回新数组，不改原数组） */
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+/**
+ * 给定学生列表与策略，返回分组结果（纯函数，不读 store、不改原数组）。
+ * 分组前后用「种子组」表达 lockTogether，把每组合的学生当成一个不可拆单元整体入组；
+ * separate 标记互斥对，分配阶段禁止同组（与锁组冲突时锁组优先并告警）。
+ */
+export function generateGroups(
+  students: Student[],
+  strategy: GroupingStrategy,
+  scores: Record<string, number> = {}
+): { results: GroupingResult[]; warns: string[] } {
+  const warns: string[] = []
+  const list = [...students]
+  const total = list.length
+  if (total === 0) return { results: [], warns: ['当前班级没有学生，请先在「学生信息」中添加学生。'] }
+
+  // 1. 组数 N
+  let groupCount = strategy.groupCount ?? 0
+  if (groupCount <= 0 && strategy.perGroup && strategy.perGroup > 0) {
+    groupCount = Math.max(1, Math.ceil(total / strategy.perGroup))
+  }
+  if (groupCount <= 0) groupCount = Math.min(total, 2) // 兜底：至少 2 组（不足 2 人时退化为每人一组）
+  if (groupCount > total) {
+    groupCount = total
+    warns.push('组数大于人数，已调整为「每人一组」。')
+  }
+
+  // 2. 成绩依赖模式：无成绩数据降级随机
+  let mode = strategy.mode
+  const needScore = mode === 'score_homo' || mode === 'score_hetero' || mode === 'hetero'
+  if (needScore && Object.keys(scores).length === 0) {
+    warns.push('本班暂无成绩数据，已按学号随机替代分组。')
+    mode = 'random'
+  }
+
+  // 3. 约束整理
+  const locks = (strategy.lockTogether ?? []).filter((g) => g.length > 0)
+  const separates = (strategy.separate ?? []).filter((g) => g.length > 0)
+
+  // 4. 分桶 / 排序得到候选桶（各桶内已排好序）
+  const buckets: Student[][] = buildBuckets(list, mode, scores, strategy.genderSplit ?? false)
+  const ordered = interleaveBuckets(buckets)
+
+  // 5. 组装小组
+  const groups: Student[][] = Array.from({ length: groupCount }, () => [])
+  const separateMap = buildSeparateMap(separates)
+  const seedsSet = new Set(locks.flat())
+
+  // 5.1 锁组作为整体优先放入「最空且不与隔离冲突」的组
+  for (const seed of locks) {
+    const seedStudents = list.filter((s) => seed.includes(s.id))
+    if (seedStudents.length === 0) continue
+    const target = pickGroupForSeed(groups, seedStudents, separateMap, warns)
+    if (target >= 0) groups[target].push(...seedStudents)
+  }
+
+  // 5.2 其余学生：同质模式切片（水平相当同组），其余轮流（index%N，均衡且尊重隔离）
+  if (mode === 'score_homo') {
+    let gi = 0
+    for (const s of ordered) {
+      if (seedsSet.has(s.id)) continue
+      groups[gi % groupCount].push(s)
+      gi++
+    }
+  } else {
+    for (const s of ordered) {
+      if (seedsSet.has(s.id)) continue
+      groups[pickGroupForStudent(groups, s.id, separateMap)].push(s)
+    }
+  }
+
+  // 6. 余数组内均衡（理论已较均，仅处理极端不均）
+  balanceGroups(groups, strategy.remainder ?? 'rotate')
+
+  const results: GroupingResult[] = groups.map((g, i) => ({
+    groupName: `第${i + 1}组`,
+    memberIds: g.map((s) => s.id)
+  }))
+  return { results, warns }
+}
+
+/** 构建分桶（按 mode 排序/分桶），每桶内已排好序；genderSplit 仅对 gender/boarding 生效 */
+function buildBuckets(list: Student[], mode: GroupMode, scores: Record<string, number>, genderSplit: boolean): Student[][] {
+  const sorted = (arr: Student[]) => [...arr].sort((a, b) => cmpNo(a.no, b.no))
+  switch (mode) {
+    case 'random':
+      return [shuffle(list)]
+    case 'gender': {
+      if (genderSplit) {
+        const boys = sorted(list.filter((s) => s.gender === '男'))
+        const girls = sorted(list.filter((s) => s.gender === '女'))
+        return [shuffle(boys), shuffle(girls)]
+      }
+      // 整体按男女交替入序（奇偶轮替）以实现均衡
+      const boys = list.filter((s) => s.gender === '男')
+      const girls = list.filter((s) => s.gender === '女')
+      const alt: Student[] = []
+      let bi = 0
+      let gi = 0
+      while (bi < boys.length || gi < girls.length) {
+        if (bi < boys.length) alt.push(boys[bi++])
+        if (gi < girls.length) alt.push(girls[gi++])
+      }
+      return [alt]
+    }
+    case 'order':
+      return [sorted(list)]
+    case 'score_homo': {
+      // 升序，后续切块（水平相当同组）
+      return [[...list].sort((a, b) => (scores[a.id] ?? 0) - (scores[b.id] ?? 0))]
+    }
+    case 'score_hetero': {
+      // 降序，后续轮流（高低均衡）
+      return [[...list].sort((a, b) => (scores[b.id] ?? 0) - (scores[a.id] ?? 0))]
+    }
+    case 'hetero': {
+      const boys = [...list.filter((s) => s.gender === '男')].sort((a, b) => (scores[b.id] ?? 0) - (scores[a.id] ?? 0))
+      const girls = [...list.filter((s) => s.gender === '女')].sort((a, b) => (scores[b.id] ?? 0) - (scores[a.id] ?? 0))
+      return [boys, girls]
+    }
+    case 'boarding': {
+      const boarding = sorted(list.filter((s) => s.boarding))
+      const day = sorted(list.filter((s) => !s.boarding))
+      return genderSplit ? [shuffle(boarding), shuffle(day)] : [shuffle([...boarding, ...day])]
+    }
+    default:
+      return [shuffle(list)]
+  }
+}
+
+/** 多桶交错拼成一条序列（桶之间交替取，保证各组性别/成绩均衡） */
+function interleaveBuckets(buckets: Student[][]): Student[] {
+  const out: Student[] = []
+  const idx = buckets.map(() => 0)
+  let remaining = buckets.reduce((a, b) => a + b.length, 0)
+  while (remaining > 0) {
+    for (let i = 0; i < buckets.length; i++) {
+      if (idx[i] < buckets[i].length) {
+        out.push(buckets[i][idx[i]++])
+        remaining--
+      }
+    }
+  }
+  return out
+}
+
+/** 构建隔离映射：studentId -> 与其互斥的 studentId 集合 */
+function buildSeparateMap(separates: string[][]): Map<string, Set<string>> {
+  const m = new Map<string, Set<string>>()
+  const add = (a: string, b: string) => {
+    if (!m.has(a)) m.set(a, new Set())
+    m.get(a)!.add(b)
+  }
+  for (const g of separates) {
+    for (const a of g) for (const b of g) if (a !== b) add(a, b)
+  }
+  return m
+}
+
+/** 为单个学生挑选最合适（人数最少且不与隔离冲突）的组；全冲突则退而求其次选最空组 */
+function pickGroupForStudent(groups: Student[][], studentId: string, separateMap: Map<string, Set<string>>): number {
+  const forbidden = separateMap.get(studentId)
+  const counts = groups.map((g) => g.length)
+  // 优先：人数最少且不与已有成员排斥
+  const candidates = groups
+    .map((_, i) => i)
+    .filter((i) => !forbidden || !g_hasConflict(groups[i], forbidden))
+  if (candidates.length === 0) {
+    // 全部冲突：仍按最空组放入（保证人人有组），由调用方视为约束未完全满足
+    return counts.indexOf(Math.min(...counts))
+  }
+  const minCount = Math.min(...candidates.map((i) => counts[i]))
+  return candidates.find((i) => counts[i] === minCount) ?? 0
+}
+
+function g_hasConflict(group: Student[], forbidden: Set<string>): boolean {
+  return group.some((m) => forbidden.has(m.id))
+}
+
+/** 为锁组（种子组）挑选放入的组：最空且不与组内成员隔离冲突 */
+function pickGroupForSeed(groups: Student[][], seed: Student[], separateMap: Map<string, Set<string>>, warns: string[]): number {
+  const counts = groups.map((g) => g.length)
+  const minCount = Math.min(...counts)
+  const candidates = groups.map((_, i) => i).filter((i) => {
+    // 组内任意成员若与种子组某成员互斥 → 该组不可用
+    return !seed.some((s) => {
+      const forbidden = separateMap.get(s.id)
+      return forbidden && g_hasConflict(groups[i], forbidden)
+    })
+  })
+  if (candidates.length === 0) {
+    warns.push('存在「锁定同组」与「隔离」直接冲突的约束，已优先保证锁定同组，隔离约束未完全满足。')
+    return counts.indexOf(minCount)
+  }
+  return candidates.find((i) => counts[i] === minCount) ?? 0
+}
+
+/** 余数均衡：轮流分配本身已较均（最大-最小 ≤ 1），这里仅处理极端不均的搬运兜底 */
+function balanceGroups(groups: Student[][], remainder: RemainderMode): void {
+  if (remainder === 'random') return // 随机策略：不强制均衡
+  const diff = () => {
+    const c = groups.map((g) => g.length)
+    return Math.max(...c) - Math.min(...c)
+  }
+  let guard = 0
+  while (diff() > 1 && guard < 500) {
+    guard++
+    const counts = groups.map((g) => g.length)
+    const from = counts.indexOf(Math.max(...counts))
+    const to = counts.indexOf(Math.min(...counts))
+    if (from === to) break
+    const member = groups[from].pop()
+    if (!member) break
+    groups[to].push(member)
+  }
+}
+
 export function normalizeBucket(raw: unknown): ClassBucket {
   const base = emptyBucket()
   if (!raw || typeof raw !== 'object') return base
@@ -604,13 +856,38 @@ export function normalizeBucket(raw: unknown): ClassBucket {
   // 家校谈话记录（talks 桶）：班级维度流水，逐字段兜底；缺失视为空数组
   const talks: HomeSchoolTalkRecord[] = asRecords(b.talks).map((t) => normalizeTalk(t))
 
+  // 班级小组（groups 桶）：班级维度集合，逐字段兜底；成员缺 role 时补 undefined
+  const groups: StudentGroup[] = asRecords(b.groups).map((g) => ({
+    id: str(g.id) || uid('grp'),
+    name: str(g.name),
+    type: g.type === 'fixed' ? 'fixed' : 'temp',
+    description: str(g.description) || undefined,
+    members: asRecords(g.members)
+      .map((m) => ({ studentId: str(m.studentId), role: m.role == null ? undefined : str(m.role) }))
+      .filter((m) => !!m.studentId),
+    createdAt: str(g.createdAt) || todayStr(),
+    updatedAt: str(g.updatedAt) || todayStr(),
+    fromSnapshot: str(g.fromSnapshot) || undefined
+  }))
+
+  // 分组快照（snapshots 桶）：保存某次分组结果，逐字段兜底
+  const snapshots: GroupingSnapshot[] = asRecords(b.snapshots).map((s) => ({
+    id: str(s.id) || uid('snap'),
+    name: str(s.name),
+    createdAt: str(s.createdAt) || todayStr(),
+    results: asRecords(s.results).map((r) => ({
+      groupName: str(r.groupName),
+      memberIds: Array.isArray(r.memberIds) ? r.memberIds.map((id) => str(id)).filter(Boolean) : []
+    }))
+  }))
+
   const randomRaw = (b.random ?? {}) as Record<string, unknown>
   const random = {
     history: Array.isArray(randomRaw.history) ? randomRaw.history.map((h) => str(h)).filter(Boolean) : [],
     mode: randomRaw.mode === 'once' ? 'once' : 'all'
   } as const
 
-  return { students, parents, exams, papers, seats: { rows, cols, grid }, duty: { days }, committee, timetable, growth, random: { ...random }, leaves, homeworks, talks }
+  return { students, parents, exams, papers, seats: { rows, cols, grid }, duty: { days }, committee, timetable, growth, random: { ...random }, leaves, homeworks, talks, groups, snapshots }
 }
 
 // ---------- 当前分组解析 ----------
@@ -895,7 +1172,15 @@ export function removeStudentCascade(bucket: ClassBucket, studentId: string): Cl
     },
     committee: bucket.committee.filter((c) => c.studentId !== studentId),
     random: { ...bucket.random, history: bucket.random.history.filter((h) => h !== studentId) },
-    leaves: bucket.leaves.filter((l) => l.studentId !== studentId)
+    leaves: bucket.leaves.filter((l) => l.studentId !== studentId),
+    groups: bucket.groups.map((g) => ({
+      ...g,
+      members: g.members.filter((m) => m.studentId !== studentId)
+    })),
+    snapshots: bucket.snapshots.map((s) => ({
+      ...s,
+      results: s.results.map((r) => ({ ...r, memberIds: r.memberIds.filter((id) => id !== studentId) }))
+    }))
   }
 }
 

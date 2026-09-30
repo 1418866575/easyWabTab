@@ -194,6 +194,70 @@ export interface RandomState {
   mode: 'all' | 'once'
 }
 
+// ---------- 班级小组（页面「班级小组」；随学期×班级隔离；groups[] 数组而非 Record） ----------
+export type GroupMode =
+  | 'random' // 纯随机
+  | 'gender' // 按性别（配合 genderSplit 各自独立）
+  | 'score_homo' // 按成绩同质（水平相当同组）
+  | 'score_hetero' // 按成绩异质（蛇形，高低均衡）
+  | 'order' // 按学号顺序（切块 / 蛇形）
+  | 'hetero' // 异质均衡（性别 + 成绩综合）
+  | 'boarding' // 按住校/走读分桶
+
+export type RemainderMode = 'rotate' | 'min' | 'random'
+// rotate=轮转补位（每组轮流+1）；min=多余的人进人数最少组；random=随机补位
+
+/** 小组内角色（组长/记录员/汇报人为预设，其余可自定义） */
+export type GroupRole = string
+export const GROUP_ROLES: string[] = ['组长', '记录员', '汇报人']
+
+export interface GroupingStrategy {
+  mode: GroupMode
+  /** 二选一：指定组数 */
+  groupCount?: number
+  /** 二选一：每组人数（优先级低于 groupCount，UI 二选一） */
+  perGroup?: number
+  /** 男女各自独立分组（gender/hetero 时生效） */
+  genderSplit?: boolean
+  /** 人数不能整除时的余数处理，默认 'rotate' */
+  remainder?: RemainderMode
+  /** 必须同组的 studentId 组合 */
+  lockTogether?: string[][]
+  /** 不能同组的 studentId 组合 */
+  separate?: string[][]
+}
+
+export interface GroupMember {
+  studentId: string
+  role?: GroupRole
+}
+
+export interface StudentGroup {
+  id: string
+  name: string
+  type: 'fixed' | 'temp' // 固定 / 临时
+  description?: string
+  members: GroupMember[] // 成员（只存 studentId）
+  createdAt: string
+  updatedAt: string
+  fromSnapshot?: string // 若由快照应用而来，记快照 id
+}
+
+/** 一次分组结果（用于预览/保存） */
+export interface GroupingResult {
+  groupName: string
+  memberIds: string[]
+}
+
+/** 分组快照（保存某次分组结果，日后复用） */
+export interface GroupingSnapshot {
+  id: string
+  name: string
+  createdAt: string
+  strategy?: GroupingStrategy // 生成该快照所用的策略（可空，手改后保存）
+  results: GroupingResult[]
+}
+
 /** 班级级 + 课程级数据桶，挂在 (semesterId, classId) 下 */
 export interface ClassBucket {
   students: Student[]
@@ -213,6 +277,10 @@ export interface ClassBucket {
   homeworks: TeacherHomework[]
   /** 家校谈话记录（班主任专属；页面「家校谈话」；随学期×班级隔离） */
   talks: HomeSchoolTalkRecord[]
+  /** 班级小组（页面「班级小组」；含固定组与临时组；随学期×班级隔离） */
+  groups: StudentGroup[]
+  /** 分组快照（保存某次随机/手动分组结果，可日后「应用为临时组」复用；随学期×班级隔离） */
+  snapshots: GroupingSnapshot[]
 }
 
 // ---------- 作业记录（页面「作业记录」；作业与提交名单） ----------
@@ -342,6 +410,7 @@ export type TeacherPageKey =
   | 'leave'
   | 'homework'
   | 'talks'
+  | 'groups'
   | 'help'
 
 export interface TeacherPageMeta {
@@ -374,6 +443,7 @@ export const TEACHER_PAGES: TeacherPageMeta[] = [
   { key: 'leave', label: '请假信息', icon: 'clipboard', group: '基础功能' },
   { key: 'homework', label: '作业记录', icon: 'document', group: '基础功能' },
   { key: 'talks', label: '家校谈话', icon: 'email', group: '特色功能' },
+  { key: 'groups', label: '班级小组', icon: 'account-multiple', group: '基础功能' },
   { key: 'special', label: '隐私信息', icon: 'heart', group: '特色功能' },
   { key: 'data', label: '数据管理', icon: 'database', group: '工作台' },
   { key: 'help', label: '使用说明', icon: 'help', group: '工作台' }
