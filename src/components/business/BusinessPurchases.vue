@@ -314,16 +314,24 @@ async function removeRow(index: number): Promise<void> {
   formRows.value = formRows.value.filter((_, i) => i !== index)
 }
 
-/** 切换行内商品：新增行按「同名且未关联」自动选入支出；编辑行不自动改已有关联 */
+/**
+ * 切换行内商品：重置该行关联支出与数量/进价，按新商品重新自动关联「同名且未关联」支出。
+ * 这样下拉选择商品后即刷新后面的数据（关联支出列表 + 派生数量/进价），不会残留上一商品的支出。
+ * 仅在选择变化时触发（@change）；打开编辑/复制预填时不调用，保留原有关联。
+ */
 function onRowProductChange(index: number): void {
   const row = formRows.value[index]
-  if (!row || !row.productId) {
-    if (row) row.expenseIds = []
+  if (!row) return
+  if (!row.productId) {
+    row.expenseIds = []
+    row.quantity = ''
+    row.unitPrice = ''
     return
   }
-  if (row.id) return // 编辑已存在记录：保留其原有支出关联，交由用户手动调整
   const auto = autoLinkExpensesForProduct(row.productId, store.expenseDailies, store.purchases, store.expenseCategories)
-  row.expenseIds = [...new Set([...row.expenseIds, ...auto])]
+  row.expenseIds = [...auto]
+  row.quantity = ''
+  row.unitPrice = ''
 }
 
 // ===== 录入校验（每行独立；error 阻断保存，warn 仅提示） =====
