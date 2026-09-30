@@ -280,10 +280,14 @@ export function autoLinkExpensesForProduct(
  * 多笔关联时累加求和（需求 D：一笔库存关联多笔支出 → 各笔计算结果求和汇总）。
  *
  * 兜底：
- * - productQuantity 缺省（旧数据 / 未配置）按 1 处理 → 即只计支出数量本身、不放大；
+ * - productQuantity 缺省（旧数据 / 未配置）或 ≤ 0 时按 0 处理 → 不派生数量（结果为 0），
+ *   交由用户在库存记录中手动填写入库数量；
  * - item.quantity 缺省或非有限值按 0 处理（缺数量则该笔不贡献，避免凭空放大）。
  *
- * @returns 派生出的库存数量（两位小数四舍五入）
+ * 交互规则（库存新增/修改记录）：支出产品的「商品数量」为空或 0 → 数量计算结果为 0 且可修改；
+ * 「商品数量」不为 0 → 派生出数量且不可修改。
+ *
+ * @returns 派生出的库存数量（两位小数四舍五入）；无任何可派生来源时返回 0
  */
 export function deriveInventoryQuantity(
   linkedExpenseIds: string[],
@@ -303,7 +307,7 @@ export function deriveInventoryQuantity(
       const pq =
         cat && typeof cat.productQuantity === 'number' && Number.isFinite(cat.productQuantity) && cat.productQuantity > 0
           ? cat.productQuantity
-          : 1
+          : 0
       sum += qty * pq
     }
   }

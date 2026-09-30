@@ -13,7 +13,7 @@ function cardFields(row: any) {
     { label: '日期', value: row.date },
     { label: '商品', value: productNameOf(row.productId) },
     { label: '分类', value: catNameOf(row.productId) },
-    { label: '数量', value: '×' + displayQuantity(row) },
+    { label: '入库数量', value: '×' + displayQuantity(row) },
     { label: '进价', value: '@' + formatYuanOf(row.unitPrice) },
     { label: '合计', value: formatYuanOf(row.total) },
     { label: '售价', value: p ? formatYuanOf(productSellingPrice(row.productId)!) + '/' + productUnitOf(row.productId) : '—' },
@@ -91,7 +91,7 @@ const ledgerMeta = computed(() => ({ year: store.currentLedgerYear, ledgerName: 
 
 // ===== 一键导出 Excel（库存记录：按当前分类/商品筛选导出）=====
 function exportPurchasesExcel(): void {
-  const headers = ['日期', '商品', '分类', '数量', '进价', '金额', '剩余状态', '备注']
+  const headers = ['日期', '商品', '分类', '入库数量', '进价', '金额', '剩余状态', '备注']
   const rows: (string | number)[][] = filteredWithProductFilter.value.map(p => [
     p.date,
     productNameOf(p.productId),
@@ -517,7 +517,7 @@ async function handleDelete(id: string): Promise<void> {
               <span class="bizpur-cat-badge" :data-testid="`bizpur-cat-badge-${row.id}`">{{ catNameOf(row.productId) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="数量" width="80" align="right">
+          <el-table-column label="入库数量" width="80" align="right">
             <template #default="{ row }">×{{ displayQuantity(row) }}</template>
           </el-table-column>
           <el-table-column label="进价" width="100" align="right">
@@ -649,7 +649,7 @@ async function handleDelete(id: string): Promise<void> {
         <div class="bizpur-add-bar">
           <el-button type="primary" size="small" data-testid="bizpur-add-row" @click="addRow">＋ 添加库存</el-button>
         </div>
-        <!-- 表格类列表：商品 / 总支出 / 数量 / 进价 / 关联支出（多选） / 操作 -->
+        <!-- 表格类列表：商品 / 总支出 / 入库数量 / 进价 / 关联支出（多选） / 操作 -->
         <div class="bizpur-row-table" data-testid="bizpur-row-table">
           <table class="bizpur-line-table">
             <thead>
@@ -657,7 +657,7 @@ async function handleDelete(id: string): Promise<void> {
                 <th class="col-idx">#</th>
                 <th class="col-prod">商品 *</th>
                 <th>总支出</th>
-                <th>数量</th>
+                <th>入库数量</th>
                 <th>进价</th>
                 <th class="col-exp">关联支出（多选）</th>
                 <th class="col-op">操作</th>
