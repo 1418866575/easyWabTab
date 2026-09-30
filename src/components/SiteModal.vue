@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
 import IconPickerDialog from './IconPickerDialog.vue'
+import CategoryManager from './CategoryManager.vue'
 import { ref, watch, computed } from 'vue'
 import type { Site } from '../types'
 import { useUrlMetadata } from '../composables/useUrlMetadata'
@@ -49,8 +50,6 @@ const isLoading = ref(false)
 // 取消 / 点遮罩 / ESC 关闭都不修改原值。图标库（预置 + 自定义）的搜索、分类筛选以及
 // 「导入图标 / 上传图标」都在弹框内完成，表单侧只负责回填结果。
 const iconPickerOpen = ref(false)
-/** 手动填写图标 URL：弹框未覆盖的补漏入口（例如直接粘贴外链 favicon） */
-const iconManualInput = ref('')
 
 function openIconPicker(): void {
   iconPickerOpen.value = true
@@ -60,10 +59,23 @@ function closeIconPicker(): void {
   iconPickerOpen.value = false
 }
 
+// ===== 分类管理（新增/编辑分类，复用独立的分类管理弹框）=====
+const categoryManagerOpen = ref(false)
+function openCategoryManager(): void {
+  categoryManagerOpen.value = true
+}
+function closeCategoryManager(): void {
+  categoryManagerOpen.value = false
+}
+/** 在分类管理弹框里新增了分类：自动选中该分类并关闭弹框 */
+function onCategoryAdded(id: string): void {
+  form.value.category = id
+  closeCategoryManager()
+}
+
 /** 弹框选中图标：立即回填并关闭弹框；回传空串 = 恢复默认（清空图标字段） */
 function onPickIcon(src: string): void {
   form.value.icon = src
-  iconManualInput.value = ''
   errors.value.icon = ''
   closeIconPicker()
 }
@@ -90,22 +102,12 @@ function selectPresetIcon(icon: MergedIcon) {
   } else {
     form.value.icon = `/icons/${icon.name}.${icon.ext}`
   }
-  iconManualInput.value = ''
   errors.value.icon = ''
-}
-
-// 手动输入图标 URL
-function applyManualIcon() {
-  if (iconManualInput.value.trim()) {
-    form.value.icon = iconManualInput.value.trim()
-    errors.value.icon = ''
-  }
 }
 
 // 清除图标
 function clearIcon() {
   form.value.icon = ''
-  iconManualInput.value = ''
   errors.value.icon = ''
 }
 
@@ -395,6 +397,9 @@ const handleSubmit = () => {
               <template v-if="!isImageIcon(cat.icon)">{{ cat.icon }} </template>{{ cat.name }}
             </option>
           </select>
+          <button type="button" class="btn-add-category" @click="openCategoryManager">
+            <Icon name="plus" /> 新增分类
+          </button>
         </div>
 
         <div class="form-group tag-group">
@@ -475,22 +480,9 @@ const handleSubmit = () => {
             </div>
           </div>
 
-          <!-- 手动输入图标 URL：保留原内联面板里的补漏入口（弹框只覆盖图标库内的图标） -->
-          <div class="icon-manual-input">
-            <input
-              v-model="iconManualInput"
-              type="text"
-              placeholder="或输入图标 URL..."
-              class="icon-url-input"
-              data-testid="site-icon-url-input"
-              @keyup.enter="applyManualIcon"
-            />
-            <button type="button" class="btn-apply-icon" @click="applyManualIcon" :disabled="!iconManualInput.trim()">应用</button>
-          </div>
-
           <span v-if="errors.icon" class="error-msg">{{ errors.icon }}</span>
 
-          <span v-if="!form.icon" class="form-hint">可选，点击「选择图标」从图标库挑选，或直接粘贴图标链接</span>
+          <span v-if="!form.icon" class="form-hint">可选，点击「选择图标」从图标库挑选</span>
         </div>
 
         <!-- 排序权重 - 已改为点击频率自动排序，此处隐藏 -->
@@ -522,6 +514,13 @@ const handleSubmit = () => {
         :current="form.icon"
         @select="onPickIcon"
         @close="closeIconPicker"
+      />
+
+      <!-- 分类管理弹框：新增/编辑分类，复用独立分类管理页面（自带遮罩与关闭） -->
+      <CategoryManager
+        v-if="categoryManagerOpen"
+        @close="closeCategoryManager"
+        @added="onCategoryAdded"
       />
     </div>
     </div>
@@ -680,11 +679,6 @@ const handleSubmit = () => {
 .form-group > .error-msg {
   flex-basis: 100%;
   margin-left: 96px; /* 84px 标签宽 + 12px 间距 */
-}
-
-/* 手动输入图标 URL 整行显示在控件下方 */
-.form-group > .icon-manual-input {
-  flex-basis: 100%;
 }
 
 .form-group input:focus,
@@ -987,47 +981,26 @@ const handleSubmit = () => {
   color: var(--color-primary, #3b82f6);
 }
 
-/* 手动输入 */
-.icon-manual-input {
-  display: flex;
-  gap: 8px;
+/* 分类下拉后的「新增分类」按钮：与下拉同行右置，紧凑不抢视觉 */
+.btn-add-category {
+  flex: none;
+  display: inline-flex;
   align-items: center;
-}
-
-.icon-url-input {
-  flex: 1;
-  padding: 7px 10px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 6px;
-  font-size: 13px;
-  outline: none;
-  transition: border-color 0.15s;
-  background: white;
-}
-
-.icon-url-input:focus {
-  border-color: var(--color-primary, #3b82f6);
-}
-
-.btn-apply-icon {
-  padding: 7px 14px;
-  border: none;
-  border-radius: 6px;
-  background: var(--color-primary, #3b82f6);
-  color: white;
+  gap: 4px;
+  padding: 9px 12px;
+  border: 1px dashed var(--color-primary, #3b82f6);
+  border-radius: 8px;
+  background: var(--color-primary-light, #eff6ff);
+  color: var(--color-primary, #3b82f6);
   font-size: 13px;
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: all 0.15s;
   white-space: nowrap;
 }
 
-.btn-apply-icon:hover:not(:disabled) {
-  background: var(--color-primary-hover, #2563eb);
-}
-
-.btn-apply-icon:disabled {
-  background: var(--color-text-muted, #94a3b8);
-  cursor: not-allowed;
+.btn-add-category:hover {
+  background: var(--color-primary, #3b82f6);
+  color: white;
 }
 
 @keyframes dropdownIn {
