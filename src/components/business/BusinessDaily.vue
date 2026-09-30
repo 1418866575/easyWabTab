@@ -131,10 +131,15 @@ function rowExpectedStock(productId: string, broughtOut: number): number {
   return rowStock(productId) - broughtOut
 }
 
+/** 行售出 = 带出 − 剩余 − 损耗（与 core soldCount 同口径） */
+function rowSold(broughtOut: number, remaining: number, loss: number): number {
+  return Math.max(0, broughtOut - remaining - loss)
+}
+
 /** 行小计：售出 × 售价 */
 function rowSubtotal(productId: string, broughtOut: number, remaining: number, loss: number): number {
   const product = rowProduct(productId)
-  const sold = Math.max(0, broughtOut - remaining - loss)
+  const sold = rowSold(broughtOut, remaining, loss)
   return Math.round(sold * (product?.sellingPrice ?? 0) * 100) / 100
 }
 
@@ -479,6 +484,7 @@ async function handleDelete(id: string | null): Promise<void> {
                 <th>带出</th>
                 <th>剩余</th>
                 <th>损耗</th>
+                <th>售出</th>
                 <th>营业额</th>
                 <th>成本</th>
                 <th>利润</th>
@@ -520,6 +526,7 @@ async function handleDelete(id: string | null): Promise<void> {
                   <td class="bizday-td-num">
                     <el-input-number v-model="row.loss" :min="0" :step="1" size="small" controls-position="right" class="bizday-num-input" :data-testid="`bizday-row-loss-${i}`" />
                   </td>
+                  <td class="bizday-td-num bizday-row-sold" :data-testid="`bizday-row-sold-${i}`">{{ rowSold(row.broughtOut, row.remaining, row.loss) }}</td>
                   <td class="bizday-td-money">
                     <span class="bizday-row-subtotal">¥{{ rowSubtotal(row.productId, row.broughtOut, row.remaining, row.loss).toFixed(2) }}</span>
                   </td>
@@ -531,7 +538,7 @@ async function handleDelete(id: string | null): Promise<void> {
                   </td>
                 </tr>
                 <tr v-if="rowError(i)" class="bizday-row-issue-row">
-                  <td class="bizday-row-issue" :colspan="10" :data-testid="`bizday-row-issue-${i}`">{{ rowError(i) }}</td>
+                  <td class="bizday-row-issue" :colspan="11" :data-testid="`bizday-row-issue-${i}`">{{ rowError(i) }}</td>
                 </tr>
               </template>
             </tbody>
@@ -776,7 +783,7 @@ async function handleDelete(id: string | null): Promise<void> {
 }
 .bizday-table {
   width: 100%;
-  min-width: 1080px;
+  min-width: 1180px;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -804,6 +811,11 @@ async function handleDelete(id: string | null): Promise<void> {
 .bizday-th-op { width: 76px; }
 .bizday-td-index { text-align: center; color: var(--color-text-muted, #9ca3af); }
 .bizday-td-num { text-align: center; white-space: nowrap; }
+.bizday-row-sold {
+  font-weight: 600;
+  color: var(--color-primary, #3b82f6);
+  font-variant-numeric: tabular-nums;
+}
 .bizday-td-money { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .bizday-td-op { text-align: center; white-space: nowrap; }
 .bizday-td-product { min-width: 200px; }
