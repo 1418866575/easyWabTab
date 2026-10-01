@@ -411,6 +411,22 @@ watch(showForm, (v) => {
     </div>
 
     <div class="grp-main">
+      <!-- 操作工具栏（随机分组 / 分组快照 / 导出 / 复制）置于表格上方，确保长列表时始终可见可操作 -->
+      <div class="grp-actions tw-no-print">
+        <button type="button" class="tw-btn" data-testid="grp-random-btn" @click="openRandomDialog">
+          <Icon name="dice" :size="14" /> 随机分组
+        </button>
+        <button type="button" class="tw-btn" data-testid="grp-snap-btn" @click="openSnapDialog">
+          <Icon name="bookmark" :size="14" /> 分组快照（{{ snapshots.length }}）
+        </button>
+        <button type="button" class="tw-btn" data-testid="grp-export-btn" @click="exportMarkdown">
+          <Icon name="download" :size="14" /> 导出 Markdown
+        </button>
+        <button type="button" class="tw-btn tw-btn-sm" data-testid="grp-copy-btn" @click="copyMarkdown">
+          <Icon name="copy" :size="14" /> 复制
+        </button>
+      </div>
+
       <div class="ewt-table-toolbar is-split">
         <div class="grp-toolbar-left">
           <input v-model="keyword" class="tw-input tw-input-sm grp-search" placeholder="搜索组名 / 成员" />
@@ -524,22 +540,6 @@ watch(showForm, (v) => {
           />
         </div>
       </template>
-    </div>
-
-    <!-- 工具栏（随机分组 / 快照 / 导出）置于主体下方，避免与筛选栏重叠 -->
-    <div class="grp-actions tw-no-print">
-      <button type="button" class="tw-btn" data-testid="grp-random-btn" @click="openRandomDialog">
-        <Icon name="dice" :size="14" /> 随机分组
-      </button>
-      <button type="button" class="tw-btn" data-testid="grp-snap-btn" @click="openSnapDialog">
-        <Icon name="bookmark" :size="14" /> 分组快照（{{ snapshots.length }}）
-      </button>
-      <button type="button" class="tw-btn" data-testid="grp-export-btn" @click="exportMarkdown">
-        <Icon name="download" :size="14" /> 导出 Markdown
-      </button>
-      <button type="button" class="tw-btn tw-btn-sm" data-testid="grp-copy-btn" @click="copyMarkdown">
-        <Icon name="copy" :size="14" /> 复制
-      </button>
     </div>
 
     <!-- 新建 / 编辑小组弹框 -->

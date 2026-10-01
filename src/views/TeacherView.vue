@@ -339,6 +339,7 @@ onMounted(() => {
 .tv-shell {
   display: flex;
   flex-direction: column;
+  height: 100dvh;
   min-height: 100vh;
   background-color: var(--color-bg, #f8fafc);
   color: var(--color-text, #0f172a);
@@ -426,10 +427,11 @@ onMounted(() => {
 /* ---------- 主体 ---------- */
 .tv-body {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 0;
   flex: 1 1 auto;
   min-height: 0;
+  overflow: hidden;
 }
 
 .tv-sidebar {
@@ -519,7 +521,10 @@ onMounted(() => {
 .tv-content {
   flex: 1 1 auto;
   min-width: 0;
+  min-height: 0;
   padding: 16px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .tv-content-head {
