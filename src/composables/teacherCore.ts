@@ -715,6 +715,7 @@ export function normalizeBucket(raw: unknown): ClassBucket {
         post: str(s.post),
         address: str(s.address),
         boarding: bool(s.boarding),
+        avatar: str(s.avatar),
         health: {
           allergy: str(healthRaw.allergy),
           disease: str(healthRaw.disease),

@@ -519,22 +519,31 @@ export const useTeacherStore = defineStore('teacher', () => {
 
   // ---------- 学生 ----------
 
-  async function addStudent(input: { no: string; name: string; gender: '男' | '女'; boarding?: boolean }): Promise<void> {
+  async function addStudent(input: { no: string; name: string; gender: '男' | '女'; boarding?: boolean; avatar?: string; address?: string; phone?: string }): Promise<void> {
     const { sem, cls: cid } = data.value.current
     if (!sem || !cid || !input.name.trim()) return
     const no = input.no.trim() || String((bucket.value?.students.length ?? 0) + 1)
+    const id = makeStudentId(sem, cid, no, input.name.trim())
     const s: Student = {
-      id: makeStudentId(sem, cid, no, input.name.trim()),
+      id,
       no,
       name: input.name.trim(),
       gender: input.gender,
       special: false,
       post: '',
-      address: '',
+      address: input.address?.trim() || '',
       boarding: input.boarding ?? false,
+      avatar: input.avatar ?? '',
       health: { allergy: '', disease: '', notes: '', emergencyPhone: '' }
     }
-    mutateBucket((b) => ({ ...b, students: [...b.students.filter((x) => x.id !== s.id), s] }))
+    mutateBucket((b) => {
+      const next: ClassBucket = { ...b, students: [...b.students.filter((x) => x.id !== id), s] }
+      // 联系电话落入家长记录（与明细表「联系电话」列一致），不新增独立字段
+      if (input.phone && input.phone.trim()) {
+        next.parents = { ...next.parents, [id]: { parentName: '', relation: '', phone: input.phone.trim() } }
+      }
+      return next
+    })
     await saveTeacher()
   }
 

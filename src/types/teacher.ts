@@ -79,6 +79,8 @@ export interface Student {
   address: string
   /** 是否住校（下拉选项：是 / 否；随导入 / 导出 Excel 流转） */
   boarding: boolean
+  /** 头像（base64 dataURL 或图片地址；仅新增/编辑时维护，列表不展示） */
+  avatar?: string
 }
 
 export interface ParentInfo {
