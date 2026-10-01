@@ -1,7 +1,7 @@
 // 工作台记账本纯逻辑模块：normalizeLedgerData 归一化 → calcMonthlyStats 月度统计。
 // 运行时依赖仅 DEFAULT_LEDGER_CATEGORIES（node --experimental-strip-types 可运行）；其余类型全部 type-only。
 import { DEFAULT_LEDGER_CATEGORIES } from '../types/index.ts'
-import type { LedgerCategory, LedgerData, LedgerEntry } from '../types'
+import type { LedgerCategory, LedgerData, LedgerEntry, LedgerStoreData, PersonalLedger } from '../types'
 
 /** 本地日期 YYYY-MM-DD（独立实现，与 todoCore 无依赖；不能用 toISOString——那是 UTC 会偏一天）。 */
 export function localDateStr(d?: Date): string {
@@ -523,4 +523,310 @@ export function dailyExpenseChartScale(
     dateKey: d.dateKey
   }))
   return { bars, maxY, height, gridlines, dayLabels }
+}
+
+// ==================== 多账本（按自然年，同一年可多本） ====================
+// 与销售记账 businessCore 的账本模型同构（{id, year, seq, name, data}），两个记账模块心智保持一致；
+// 但为避免个人记账反向耦合销售记账的业务类型，此处独立实现一份：入参出参均为 PersonalLedger / LedgerData。
+// 全部为纯函数（不依赖 Vue / IndexedDB），便于单测与 store 薄委托。
+
+export const LEDGER_STORE_SCHEMA_VER = 1
+export const PERSONAL_LEDGER_ID_PREFIX = 'pl_'
+export const LEDGER_YEAR_MIN = 1970
+export const LEDGER_YEAR_MAX = 9999
+export const LEDGER_NAME_MAX = 30
+
+/** 账本唯一 id（pl_ 前缀 + 时间戳 + 随机串，防同毫秒碰撞） */
+export function newPersonalLedgerId(): string {
+  return `${PERSONAL_LEDGER_ID_PREFIX}${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+}
+
+/** 当前自然年（新建账本的默认归属年、默认选中年） */
+export function currentYear(): number {
+  return new Date().getFullYear()
+}
+
+function padSeq2(n: number): string {
+  return String(n).padStart(2, '0')
+}
+
+/** 账本默认名称：同年第 1 本「YYYY年账本」，第 2 本起「YYYY年账本（02）」 */
+export function ledgerDefaultName(year: number, seq: number = 1): string {
+  const s = Math.max(1, Math.floor(seq))
+  return s <= 1 ? `${year}年账本` : `${year}年账本（${padSeq2(s)}）`
+}
+
+/** 账本编号「YYYY-NN」（年份 + 两位年内序号），唯一且可读；seq 缺失/非法时按 1 处理 */
+export function ledgerCodeOf(ledger: Pick<PersonalLedger, 'year' | 'seq'>): string {
+  if (!ledger || typeof ledger.year !== 'number') return ''
+  const seq = typeof ledger.seq === 'number' && Number.isFinite(ledger.seq) && ledger.seq >= 1 ? Math.floor(ledger.seq) : 1
+  return `${ledger.year}-${padSeq2(seq)}`
+}
+
+/** 某年份下一个可用序号（已有最大序号 + 1；该年无账本时为 1） */
+export function nextLedgerSeq(list: PersonalLedger[], year: number): number {
+  let max = 0
+  for (const l of list ?? []) {
+    if (l.year !== year) continue
+    const s = typeof l.seq === 'number' && Number.isFinite(l.seq) ? Math.floor(l.seq) : 0
+    if (s > max) max = s
+  }
+  return max + 1
+}
+
+/** 账本排序：年份倒序（新年份在前），同年按序号升序（先建的在前） */
+export function sortedLedgers(list: PersonalLedger[]): PersonalLedger[] {
+  return [...(list ?? [])].sort((a, b) => (b.year - a.year) || (a.seq - b.seq))
+}
+
+/** 查找某年账本（同年多本时取序号最小的一本） */
+export function findLedgerByYear(list: PersonalLedger[], year: number): PersonalLedger | undefined {
+  return sortedLedgers(list).find(l => l.year === year)
+}
+
+export function hasLedgerForYear(list: PersonalLedger[], year: number): boolean {
+  return !!findLedgerByYear(list, year)
+}
+
+/** 默认选中：优先当前年账本，其次年份最大的账本 */
+export function pickDefaultLedger(list: PersonalLedger[], year: number = currentYear()): PersonalLedger | undefined {
+  return findLedgerByYear(list, year) ?? sortedLedgers(list)[0]
+}
+
+/** 账本无流水即为「空」（清除账本数据后即此状态） */
+export function isPersonalLedgerEmpty(data: LedgerData | undefined): boolean {
+  return (data?.entries?.length ?? 0) === 0
+}
+
+// ===== 操作结果类型 =====
+
+export type LedgerOpReason =
+  | 'ok'
+  | 'invalid-year'
+  | 'empty-name'
+  | 'not-found'
+  | 'last-one'
+  | 'is-current'
+  | 'no-ledger'
+
+export interface LedgerOpResult {
+  ok: boolean
+  reason: LedgerOpReason
+  ledgers: PersonalLedger[]
+  ledger?: PersonalLedger
+}
+export type LedgerMutateResult = LedgerOpResult
+export type LedgerRenameResult = LedgerOpResult
+
+export interface LedgerDeleteGuard {
+  ok: boolean
+  reason: LedgerOpReason
+  message?: string
+}
+
+export interface LedgerWriteResult {
+  ok: boolean
+  reason: LedgerOpReason
+  message?: string
+}
+
+// ===== 归一化（幂等） =====
+
+/** 归一化单个账本：年份非法视为脏数据丢弃，其余字段逐项兜底 */
+export function normalizePersonalLedger(raw: unknown): PersonalLedger | null {
+  if (raw === null || typeof raw !== 'object') return null
+  const l = raw as Record<string, unknown>
+  const rawYear = typeof l.year === 'number' ? l.year : Number(l.year)
+  if (!Number.isFinite(rawYear)) return null
+  const year = Math.floor(rawYear)
+  if (year < LEDGER_YEAR_MIN || year > LEDGER_YEAR_MAX) return null
+  const createdAt = typeof l.createdAt === 'string' && l.createdAt ? l.createdAt : new Date().toISOString()
+  const rawSeq = typeof l.seq === 'number' ? l.seq : Number(l.seq)
+  const seq = Number.isFinite(rawSeq) && Math.floor(rawSeq) >= 1 ? Math.floor(rawSeq) : 1
+  return {
+    id: typeof l.id === 'string' && l.id ? l.id : newPersonalLedgerId(),
+    year,
+    seq,
+    name: (typeof l.name === 'string' && l.name.trim() ? l.name.trim() : ledgerDefaultName(year, seq)).slice(0, LEDGER_NAME_MAX),
+    createdAt,
+    updatedAt: typeof l.updatedAt === 'string' && l.updatedAt ? l.updatedAt : createdAt,
+    data: normalizeLedgerData(l.data as Partial<LedgerData>)
+  }
+}
+
+/**
+ * 归一化存储结构（幂等）：
+ * - 新结构（含 ledgers 数组）→ 逐项归一，**按「年份 + 年内序号」唯一**；缺失/冲突/非法的 seq 自动补发，
+ *   currentLedgerId 失效时回落默认账本；
+ * - 旧结构（v1 扁平 LedgerData，无 ledgers）→ 整体迁入一个「当前年账本」（seq=1），历史数据不丢。
+ */
+export function normalizeLedgerStore(raw: unknown): LedgerStoreData {
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { schemaVer: LEDGER_STORE_SCHEMA_VER, ledgers: [], currentLedgerId: '' }
+  }
+  const r = raw as Record<string, unknown>
+  if (!Array.isArray(r.ledgers)) {
+    // 旧数据迁移：把整个扁平 { categories, entries } 作为当前年账本的 data
+    const year = currentYear()
+    const now = new Date().toISOString()
+    const ledger: PersonalLedger = {
+      id: newPersonalLedgerId(),
+      year,
+      seq: 1,
+      name: ledgerDefaultName(year),
+      createdAt: now,
+      updatedAt: now,
+      data: normalizeLedgerData(r as Partial<LedgerData>)
+    }
+    return { schemaVer: LEDGER_STORE_SCHEMA_VER, ledgers: [ledger], currentLedgerId: ledger.id }
+  }
+  const taken = new Set<string>()
+  const yearMaxSeq = new Map<number, number>()
+  const ledgers: PersonalLedger[] = []
+  for (const item of r.ledgers) {
+    const l = normalizePersonalLedger(item)
+    if (!l) continue
+    let seq = l.seq
+    const keyOf = (s: number) => `${l.year}#${s}`
+    if (taken.has(keyOf(seq))) seq = (yearMaxSeq.get(l.year) ?? 0) + 1
+    taken.add(keyOf(seq))
+    yearMaxSeq.set(l.year, Math.max(yearMaxSeq.get(l.year) ?? 0, seq))
+    ledgers.push(seq === l.seq ? l : { ...l, seq })
+  }
+  const sorted = sortedLedgers(ledgers)
+  const wanted = typeof r.currentLedgerId === 'string' ? r.currentLedgerId : ''
+  const currentLedgerId = sorted.some(l => l.id === wanted) ? wanted : (pickDefaultLedger(sorted)?.id ?? '')
+  return { schemaVer: LEDGER_STORE_SCHEMA_VER, ledgers: sorted, currentLedgerId }
+}
+
+// ===== 账本 CRUD（纯函数，返回新数组，不 mutate 入参） =====
+
+/** 创建账本（同年可多本，序号自动分配，编号 = 年份-序号）；不负责切换当前账本（由 store 处理） */
+export function createPersonalLedger(list: PersonalLedger[], year: number, name?: string): LedgerOpResult {
+  const arr = list ?? []
+  const rawYear = typeof year === 'number' ? year : Number(year)
+  if (!Number.isFinite(rawYear)) return { ok: false, reason: 'invalid-year', ledgers: arr }
+  const y = Math.floor(rawYear)
+  if (y < LEDGER_YEAR_MIN || y > LEDGER_YEAR_MAX) return { ok: false, reason: 'invalid-year', ledgers: arr }
+  const seq = nextLedgerSeq(arr, y)
+  const now = new Date().toISOString()
+  const ledger: PersonalLedger = {
+    id: newPersonalLedgerId(),
+    year: y,
+    seq,
+    name: (typeof name === 'string' && name.trim() ? name.trim() : ledgerDefaultName(y, seq)).slice(0, LEDGER_NAME_MAX),
+    createdAt: now,
+    updatedAt: now,
+    data: emptyLedgerData()
+  }
+  return { ok: true, reason: 'ok', ledgers: sortedLedgers([...arr, ledger]), ledger }
+}
+
+/** 重命名账本：仅改名称（编号/年份不变） */
+export function renamePersonalLedger(list: PersonalLedger[], id: string, name: string): LedgerRenameResult {
+  const arr = list ?? []
+  const index = arr.findIndex(l => l.id === id)
+  if (index === -1) return { ok: false, reason: 'not-found', ledgers: arr }
+  const trimmed = (name ?? '').trim()
+  if (!trimmed) return { ok: false, reason: 'empty-name', ledgers: arr }
+  const updated: PersonalLedger = { ...arr[index], name: trimmed.slice(0, LEDGER_NAME_MAX), updatedAt: new Date().toISOString() }
+  const ledgers = [...arr]
+  ledgers[index] = updated
+  return { ok: true, reason: 'ok', ledgers: sortedLedgers(ledgers), ledger: updated }
+}
+
+/** 清除账本数据：只清空流水 entries，账本本体与分类 categories 保留 */
+export function clearPersonalLedgerRecords(list: PersonalLedger[], id: string): LedgerMutateResult {
+  const arr = list ?? []
+  const index = arr.findIndex(l => l.id === id)
+  if (index === -1) return { ok: false, reason: 'not-found', ledgers: arr }
+  const target = arr[index]
+  const updated: PersonalLedger = {
+    ...target,
+    updatedAt: new Date().toISOString(),
+    data: normalizeLedgerData({ ...target.data, entries: [] })
+  }
+  const ledgers = [...arr]
+  ledgers[index] = updated
+  return { ok: true, reason: 'ok', ledgers: sortedLedgers(ledgers), ledger: updated }
+}
+
+/** 删前守卫：not-found / last-one（至少保留一个）/ is-current（当前使用中，需先切换） */
+export function personalLedgerDeleteGuard(list: PersonalLedger[], id: string, currentId: string = ''): LedgerDeleteGuard {
+  const arr = list ?? []
+  if (!arr.some(l => l.id === id)) return { ok: false, reason: 'not-found', message: '账本不存在' }
+  if (arr.length <= 1) return { ok: false, reason: 'last-one', message: '至少需要保留一个账本' }
+  if (currentId && id === currentId) return { ok: false, reason: 'is-current', message: '请先切换到其它账本，再删除当前账本' }
+  return { ok: true, reason: 'ok' }
+}
+
+/** 删除账本整体（受守卫保护）：连同本体、分类、流水一起移除 */
+export function deletePersonalLedger(list: PersonalLedger[], id: string, currentId: string = ''): LedgerMutateResult {
+  const arr = list ?? []
+  const guard = personalLedgerDeleteGuard(arr, id, currentId)
+  if (!guard.ok) return { ok: false, reason: guard.reason, ledgers: arr }
+  return { ok: true, reason: 'ok', ledgers: sortedLedgers(arr.filter(l => l.id !== id)) }
+}
+
+/** 单本账本内数据合并：分类按 id 并集（同 id 本地优先）；流水按 id 并集、updatedAt 较新者胜 */
+export function mergeLedgerData(l: LedgerData | undefined, r: LedgerData | undefined): LedgerData {
+  const catMap = new Map<string, LedgerCategory>()
+  for (const c of r?.categories ?? []) catMap.set(c.id, c)
+  // 本地后写 → 同 id 时本地优先；内置分类的名称/类型恒由下方 normalizeLedgerData 对齐回内置值
+  for (const c of l?.categories ?? []) catMap.set(c.id, c)
+  const entryMap = new Map<string, LedgerEntry>()
+  const take = (e: LedgerEntry): void => {
+    const prev = entryMap.get(e.id)
+    if (!prev || String(e.updatedAt ?? '') > String(prev.updatedAt ?? '')) entryMap.set(e.id, e)
+  }
+  for (const e of r?.entries ?? []) take(e)
+  for (const e of l?.entries ?? []) take(e)
+  return normalizeLedgerData({ categories: [...catMap.values()], entries: [...entryMap.values()] })
+}
+
+/**
+ * 多账本容器合并（云同步双向合并用，与 businessCore.mergeBusinessStore 同构）：
+ * 账本按「年份 + 年内序号」并集（同键本地优先，保留本地 id/名称），账本内数据再逐字段并集；
+ * 两端都可能还是旧扁平结构 → 先 normalizeLedgerStore 迁入账本容器再合并。
+ */
+export function mergeLedgerStore(
+  l: LedgerStoreData | LedgerData | undefined,
+  r: LedgerStoreData | LedgerData | undefined
+): LedgerStoreData {
+  const ll = normalizeLedgerStore(l)
+  const rr = normalizeLedgerStore(r)
+  const byKey = new Map<string, PersonalLedger>()
+  // 本地先入 map → 同年同序号冲突时 existing 恒为本地账本（本地优先）
+  for (const ledger of [...ll.ledgers, ...rr.ledgers]) {
+    const key = `${ledger.year}#${ledger.seq}`
+    const existing = byKey.get(key)
+    if (!existing) {
+      byKey.set(key, ledger)
+      continue
+    }
+    byKey.set(key, {
+      id: existing.id,
+      year: ledger.year,
+      seq: ledger.seq,
+      name: existing.name,
+      createdAt: existing.createdAt < ledger.createdAt ? existing.createdAt : ledger.createdAt,
+      updatedAt: existing.updatedAt > ledger.updatedAt ? existing.updatedAt : ledger.updatedAt,
+      data: mergeLedgerData(existing.data, ledger.data)
+    })
+  }
+  const ledgers = sortedLedgers([...byKey.values()])
+  const wanted = ll.currentLedgerId || rr.currentLedgerId || ''
+  const currentLedgerId = ledgers.some(x => x.id === wanted) ? wanted : (pickDefaultLedger(ledgers)?.id ?? '')
+  return { schemaVer: LEDGER_STORE_SCHEMA_VER, ledgers, currentLedgerId }
+}
+
+/** 年度归属守卫：写入前校验日期年份是否属于账本年份；跨年 / 无账本时拒绝写入 */
+export function checkPersonalLedgerYearWrite(date: string, year: number | null): LedgerWriteResult {
+  if (year === null || year === undefined) return { ok: false, reason: 'no-ledger', message: '请先创建一个账本' }
+  const y = Number(String(date ?? '').slice(0, 4))
+  if (!Number.isFinite(y) || y < LEDGER_YEAR_MIN) return { ok: false, reason: 'invalid-year', message: '日期不合法' }
+  if (y !== year) {
+    return { ok: false, reason: 'invalid-year', message: `该账本仅记录 ${year} 年的数据，请切换到 ${y} 年的账本后再记` }
+  }
+  return { ok: true, reason: 'ok' }
 }

@@ -49,6 +49,7 @@ import { useToast } from './useToast'
 import { getStoredSaltHex, getStoredVerification } from './useCrypto'
 import { mergeFamily } from './genealogyCore'
 import { mergeBusinessStore } from './businessCore'
+import { mergeLedgerStore } from './ledgerCore'
 import type {
   BusinessSyncData,
   Countdown,
@@ -56,6 +57,7 @@ import type {
   HealthData,
   IconsSyncData,
   LedgerData,
+  LedgerStoreData,
   NavSyncData,
   NoteData,
   StudentSyncData,
@@ -691,10 +693,16 @@ function mergeHealth(l: HealthData | undefined, r: HealthData | undefined): Heal
   return { height, plans, records }
 }
 
-function mergeLedger(l: LedgerData | undefined, r: LedgerData | undefined): LedgerData {
-  const categories = mergeById(l?.categories ?? [], r?.categories ?? [], 'id') // 同 id 取本地
-  const entries = mergeById(l?.entries ?? [], r?.entries ?? [], 'id', 'updatedAt')
-  return { categories, entries }
+/**
+ * 记账多账本：合并下沉到 ledgerCore.mergeLedgerStore（账本按「年份+序号」并集 + 账本内逐字段并集），此处只转发。
+ * 注意：不能直接按扁平 {categories, entries} 合并——那是多账本之前的旧结构，
+ * 对新信封（带 ledgers）会取到 undefined 而把两端数据合并成空，造成静默清空。
+ */
+function mergeLedger(
+  l: LedgerStoreData | LedgerData | undefined,
+  r: LedgerStoreData | LedgerData | undefined
+): LedgerStoreData {
+  return mergeLedgerStore(l, r)
 }
 
 function mergeHabits(l: HabitsData | undefined, r: HabitsData | undefined): HabitsData {
