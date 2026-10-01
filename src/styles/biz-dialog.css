@@ -1,0 +1,77 @@
+/* ============================================================
+ * 销售记账 · 弹框通用骨架
+ * ------------------------------------------------------------
+ * 商品 / 进货 / 库存 / 销售 四个弹框原本各自在 SFC 的 scoped 样式里
+ * 复制了一份相同的 header / body / field / actions 定义，改动一处要改四处。
+ * 这里统一抽出为全局样式（这四个类名仅业务弹框使用，不与他处冲突）。
+ *
+ * 若某个弹框需要差异化（如商品弹框用 el-dialog 自带标题栏，body 无需内边距），
+ * 在其 SFC scoped 样式里写覆盖即可 —— scoped 属性选择器优先级高于这里的全局类选择器。
+ * ============================================================ */
+
+/* 自定义标题栏（el-dialog :show-close="false" + #header 插槽时使用） */
+.biz-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border, var(--color-border));
+}
+
+.biz-dialog-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text, var(--color-text));
+}
+
+.biz-dialog-close {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: var(--color-text-muted, var(--color-text-muted));
+  cursor: pointer;
+}
+
+/* 表单主体 */
+.biz-dialog-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.biz-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.biz-field > label {
+  font-size: 13px;
+  color: var(--color-text-secondary, var(--color-text-secondary));
+}
+
+/* 必填标识：四个弹框统一为红色星号（原先「裸 * 」与红色星号混用） */
+.req {
+  color: var(--color-error, #dc2626);
+}
+
+/* 同一行并排多个字段 */
+.biz-form-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.biz-form-row .biz-field {
+  flex: 1;
+  min-width: 110px;
+}
+
+/* 底部操作按钮区 */
+.biz-form-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}

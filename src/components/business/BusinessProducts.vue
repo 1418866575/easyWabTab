@@ -16,6 +16,7 @@ import {
   visibleProductCategories
 } from '@/composables/businessCore'
 import { useToast } from '@/composables/useToast'
+import { useBizSaving } from '@/composables/useBizSaving'
 import type { BusinessProduct } from '@/types'
 import Icon from '@/components/Icon.vue'
 import { usePanelPaging } from '@/composables/usePanelPaging'
@@ -106,6 +107,8 @@ function avgTip(p: BusinessProduct): string {
 
 // ===== 新增/编辑弹框 =====
 const showDialog = ref(false)
+// 保存中状态：用于按钮禁用 + loading，防止 await 期间连点重复写入
+const { saving, run } = useBizSaving()
 const editingId = ref<string | null>(null)
 const formName = ref('')
 const formCategoryId = ref('')
@@ -119,9 +122,31 @@ function numOf(raw: string): number {
   return Number.isFinite(n) && n >= 0 ? n : 0
 }
 
-const isFormValid = computed(
-  () => formName.value.trim() !== '' && numOf(formSellingPrice.value) > 0
+// ===== 录入校验 =====
+/**
+ * 是否已在提交后校验过：刚打开表单不飘红，提交时才暴露错误。
+ * 原先「校验失败直接置灰保存按钮」没有任何原因说明，用户（尤其新手）
+ * 只知道点不动。现改为：按钮不因校验失败禁用，提交时统一拦截 + 提示首个错误，
+ * 并在对应字段下方给出行内错误，与「进货/库存/销售」的行内错误口径一致。
+ */
+const submitAttempted = ref(false)
+
+/** 全部错误（顺序即提示顺序） */
+const formErrors = computed(() => {
+  const list: string[] = []
+  if (formName.value.trim() === '') list.push('请输入商品名称')
+  if (!(numOf(formSellingPrice.value) > 0)) list.push('售价须大于 0')
+  return list
+})
+/** 字段级错误：仅在提交尝试后展示，避免空表单刚打开就飘红 */
+const nameError = computed(() =>
+  submitAttempted.value && formName.value.trim() === '' ? '请输入商品名称' : ''
 )
+const priceError = computed(() =>
+  submitAttempted.value && !(numOf(formSellingPrice.value) > 0) ? '售价须大于 0' : ''
+)
+
+const isFormValid = computed(() => formErrors.value.length === 0)
 
 function startAdd(): void {
   editingId.value = null
@@ -131,6 +156,7 @@ function startAdd(): void {
   formSellingPrice.value = ''
   formMemberPrice.value = ''
   formActive.value = true
+  submitAttempted.value = false
   showDialog.value = true
 }
 
@@ -143,11 +169,24 @@ function startEdit(p: BusinessProduct): void {
   formSellingPrice.value = String(p.sellingPrice)
   formMemberPrice.value = typeof p.memberPrice === 'number' ? String(p.memberPrice) : ''
   formActive.value = p.active
+  submitAttempted.value = false
   showDialog.value = true
 }
 
 async function handleSave(): Promise<void> {
-  if (!isFormValid.value) return
+  // 校验失败：暴露行内错误 + 提示首个原因（按钮不再置灰，否则用户无从得知为何不能保存）
+  if (!isFormValid.value) {
+    submitAttempted.value = true
+    toast.error(formErrors.value[0] ?? '请检查表单填写')
+    return
+  }
+  // 编辑态边界：商品可能已被删除（云同步/其它入口删除），而 store.updateProduct 找不到记录时会静默返回，
+  // 这里提前拦截并提示，避免「点了保存没反应、以为已成功」。
+  if (editingId.value && !store.products.some(p => p.id === editingId.value)) {
+    toast.error('商品不存在或已被删除，请刷新后重试')
+    return
+  }
+  const isEditing = editingId.value !== null
   const payload = {
     name: formName.value.trim(),
     categoryId: formCategoryId.value || undefined,
@@ -158,11 +197,17 @@ async function handleSave(): Promise<void> {
     memberPrice: formMemberPrice.value.trim() === '' ? null : numOf(formMemberPrice.value),
     active: formActive.value
   }
-  if (editingId.value) {
-    await store.updateProduct(editingId.value, payload)
-  } else {
-    await store.addProduct(payload)
-  }
+  // store.addProduct/updateProduct 返回 void，失败靠抛异常传播（如 IndexedDB 写入失败），
+  // 由 run 统一兜底提示；成功才提示并关闭弹框。
+  const ok = await run(async () => {
+    if (editingId.value) {
+      await store.updateProduct(editingId.value, payload)
+    } else {
+      await store.addProduct(payload)
+    }
+  })
+  if (!ok) return
+  toast.success(isEditing ? '商品已保存' : '商品已添加')
   showDialog.value = false
 }
 
@@ -319,8 +364,9 @@ function drawerMarkupRate(): number | null {
     >
       <form class="biz-dialog-body" @submit.prevent="handleSave">
         <div class="biz-field">
-          <label>名称 *</label>
+          <label>名称<span class="req">*</span></label>
           <el-input v-model="formName" maxlength="40" data-testid="bizprod-form-name" />
+          <span v-if="nameError" class="bizprod-field-error" data-testid="bizprod-error-name">{{ nameError }}</span>
         </div>
         <div class="biz-field">
           <label>分类</label>
@@ -359,7 +405,7 @@ function drawerMarkupRate(): number | null {
             />
           </div>
           <div class="biz-field">
-            <label>售价 *</label>
+            <label>售价<span class="req">*</span></label>
             <el-input-number
               size="small"
               :min="0"
@@ -368,6 +414,7 @@ function drawerMarkupRate(): number | null {
               @update:model-value="formSellingPrice = String($event ?? '')"
               data-testid="bizprod-form-selling"
             />
+            <span v-if="priceError" class="bizprod-field-error" data-testid="bizprod-error-price">{{ priceError }}</span>
           </div>
           <div class="biz-field">
             <label>会员价</label>
@@ -398,7 +445,7 @@ function drawerMarkupRate(): number | null {
         </div>
         <div class="biz-form-actions">
           <el-button @click="showDialog = false">取消</el-button>
-          <el-button type="primary" native-type="submit" :disabled="!isFormValid" data-testid="bizprod-save">
+          <el-button type="primary" native-type="submit" :disabled="saving" :loading="saving" data-testid="bizprod-save">
             {{ editingId ? '保存' : '添加' }}
           </el-button>
           <el-button v-if="editingId" type="danger" data-testid="bizprod-dialog-del" @click="handleDeleteCurrent">删除</el-button>
@@ -718,6 +765,15 @@ function drawerMarkupRate(): number | null {
   color: var(--color-text-muted, var(--color-text-muted));
 }
 
+/* 字段级校验错误（提交尝试后展示）：红色说明「为什么不能保存」 */
+.bizprod-field-error {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--color-error, #ef4444);
+  line-height: 1.4;
+}
+
 .bizprod-form-avg {
   padding: 8px 10px;
   border-radius: var(--radius-sm, 6px);
@@ -755,40 +811,10 @@ function drawerMarkupRate(): number | null {
   gap: 6px;
 }
 
-/* 弹框（复用体系） */
+/* 弹框：骨架样式（body/field/form-row/actions/.req）见全局 src/styles/biz-dialog.css
+   本弹框沿用 el-dialog 自带标题栏与内边距，故 body 不再重复加 padding */
 .biz-dialog-body {
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.biz-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.biz-field > label {
-  font-size: 13px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-}
-
-.biz-form-row {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.biz-form-row .biz-field {
-  flex: 1;
-  min-width: 110px;
-}
-
-.biz-form-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
 }
 
 /* el-* 表单控件撑满字段 */

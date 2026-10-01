@@ -26,6 +26,8 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { calcDailyCost, calcDailyCostFifo, calcDailyItemDetails, calcDailyLossAmount, calcDailyRevenue, calcFifoAllocation, calcInventory, checkRevenueOverride, findProduct, formatYuanOf, localDateKey, sortDailyRecords, validateDailyRows } from '@/composables/businessCore'
 import { useToast } from '@/composables/useToast'
+import { useBizSaving } from '@/composables/useBizSaving'
+import { useLedgerDate } from '@/composables/useLedgerDate'
 import { exportXlsx } from '@/composables/xlsxExport'
 import type { BusinessDailyRecord, DailyRecordItem } from '@/types'
 import { usePageSize } from '@/composables/usePageSize'
@@ -93,6 +95,8 @@ function exportDailyExcel(): void {
 
 // ===== 编辑弹框（动态商品行） =====
 const showDialog = ref(false)
+// 保存中状态：用于按钮禁用 + loading，防止 await 期间连点重复写入
+const { saving, run } = useBizSaving()
 /** 编辑中的原记录 id（新增为 null）：删除必须按 id，不能拿日期当 id（日期 ≠ id 会导致删不掉） */
 const editingRecordId = ref<string | null>(null)
 const editingDate = ref(localDateKey())
@@ -214,9 +218,20 @@ function recordLossAmount(record: BusinessDailyRecord): number {
 // ===== 录入校验（剩余/损耗不得大于带出；手填营业额偏离提示） =====
 /** 全部行的校验结果：errors 阻断保存，warns 仅提示 */
 const rowChecks = computed(() => validateDailyRows(rows))
-/** 单行 error 文案（行内红字） */
+/**
+ * 单行 error 文案（行内红字）。
+ * 复用全量校验结果 rowChecks，按「第 N 行：」前缀取本行错误：
+ * 原实现是 validateDailyRows([rows[index]])，两个问题——
+ * ① 每行渲染都对单行重跑一次校验（N 行 = N 次），而 rowChecks 已算过全量；
+ * ② 单元素数组的行号恒为 1，导致所有行都显示「第 1 行：…」，行号错位。
+ * 这里按前缀过滤并去掉前缀（行内已有行号上下文），多行错误用「；」连接不再只取第一条。
+ */
 function rowError(index: number): string {
-  return validateDailyRows([rows[index]]).errors[0] ?? ''
+  const prefix = `第 ${index + 1} 行：`
+  return rowChecks.value.errors
+    .filter(e => e.startsWith(prefix))
+    .map(e => e.slice(prefix.length))
+    .join('；')
 }
 /** 手填营业额偏离检查 */
 const revenueCheck = computed(() => checkRevenueOverride(formRevenue.value, formRevenueManual.value))
@@ -269,10 +284,8 @@ function removeRow(index: number): void {
 }
 
 /** 账本只记录其所属年份的数据：日期选择器禁用其它年份 */
-const ledgerYear = computed(() => store.currentLedgerYear)
-function disabledDate(d: Date): boolean {
-  return d.getFullYear() !== ledgerYear.value
-}
+// 账本只记录其所属年份的数据：日期选择器禁用其它年份（公共逻辑，与进货/库存弹框同源）
+const { disabledDate } = useLedgerDate()
 
 async function handleSave(): Promise<void> {
   if (!isFormValid.value) return
@@ -284,15 +297,21 @@ async function handleSave(): Promise<void> {
       remaining: Math.max(0, Math.floor(r.remaining)),
       loss: Math.max(0, Math.floor(r.loss))
     }))
-  const r = await store.upsertDailyRecord({
-    date: editingDate.value,
-    items,
-    note: formNote.value.trim() || undefined,
-    transactionCount: Number.isFinite(formTransactionCount.value) ? Math.max(0, Math.floor(formTransactionCount.value)) : undefined,
-    // 手动填写过营业额才覆盖自动合计；未手动（null）时由 store 按明细计算
-    revenueOverride: formRevenueManual.value
+  const isEditing = editingRecordId.value !== null
+  // 业务性失败（跨年 / 无账本）抛出具体文案，由 run 统一提示；非预期异常 run 兜底。
+  const ok = await run(async () => {
+    const r = await store.upsertDailyRecord({
+      date: editingDate.value,
+      items,
+      note: formNote.value.trim() || undefined,
+      transactionCount: Number.isFinite(formTransactionCount.value) ? Math.max(0, Math.floor(formTransactionCount.value)) : undefined,
+      // 手动填写过营业额才覆盖自动合计；未手动（null）时由 store 按明细计算
+      revenueOverride: formRevenueManual.value
+    })
+    if (!r.ok) throw new Error(r.message)
   })
-  if (!r.ok) { toast.error(r.message); return }
+  if (!ok) return
+  toast.success(isEditing ? '销售记录已保存' : `销售记录已添加（${items.length} 项商品）`)
   showDialog.value = false
 }
 
@@ -457,7 +476,7 @@ async function handleDelete(id: string | null): Promise<void> {
       </template>
       <form class="biz-dialog-body" @submit.prevent="handleSave">
         <div class="biz-field">
-          <label>日期 *（同一天重复保存将覆盖）</label>
+          <label>日期<span class="req">*</span>（同一天重复保存将覆盖）</label>
           <div data-testid="bizday-form-date">
             <el-date-picker
               v-model="editingDate"
@@ -480,7 +499,7 @@ async function handleDelete(id: string | null): Promise<void> {
             <thead>
               <tr>
                 <th class="bizday-th-index">#</th>
-                <th>商品 *</th>
+                <th>商品<span class="req">*</span></th>
                 <th>带出</th>
                 <th>剩余</th>
                 <th>损耗</th>
@@ -596,7 +615,7 @@ async function handleDelete(id: string | null): Promise<void> {
 
         <div class="biz-form-actions ewt-dialog-footer">
           <el-button @click="showDialog = false">取消</el-button>
-          <el-button type="primary" native-type="submit" :disabled="!isFormValid" data-testid="bizday-save">保存</el-button>
+          <el-button type="primary" native-type="submit" :disabled="!isFormValid || saving" :loading="saving" data-testid="bizday-save">保存</el-button>
           <el-button v-if="editingRecordId" type="danger" native-type="button" data-testid="bizday-record-delete" @click="handleDelete(editingRecordId)">删除</el-button>
         </div>
       </form>
@@ -944,53 +963,7 @@ async function handleDelete(id: string | null): Promise<void> {
   color: var(--color-text-muted, #6b7280);
 }
 
-/* 弹框 */
-.biz-dialog-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border, var(--color-border));
-}
-
-.biz-dialog-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text, var(--color-text));
-}
-
-.biz-dialog-close {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: var(--color-text-muted, var(--color-text-muted));
-  cursor: pointer;
-}
-
-.biz-dialog-body {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.biz-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.biz-field > label {
-  font-size: 13px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-}
-
-.biz-form-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
+/* 弹框：骨架样式（header/body/field/actions/.req）已抽到 src/styles/biz-dialog.css，此处只留本页专属 */
 
 .biz-input {
   box-sizing: border-box;

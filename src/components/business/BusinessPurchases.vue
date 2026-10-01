@@ -34,6 +34,7 @@ import {
   avgUnsoldUnitPrice,
   autoLinkExpensesForProduct,
   calcMarkupRate,
+  checkLedgerYearWrite,
   calcPurchaseStockStatus,
   calcPurchaseTotal,
   deriveInventoryQuantity,
@@ -56,6 +57,8 @@ import { exportXlsx } from '@/composables/xlsxExport'
 import type { BusinessPurchase, BusinessExpense } from '@/types'
 import { usePageSize } from '@/composables/usePageSize'
 import { useToast } from '@/composables/useToast'
+import { useBizSaving } from '@/composables/useBizSaving'
+import { useLedgerDate } from '@/composables/useLedgerDate'
 
 const toast = useToast()
 
@@ -191,6 +194,8 @@ watch(filteredWithProductFilter, () => { listPage.value = 1 })
 
 // ===== 新增/编辑弹框（原型 v2：多行批量录入） =====
 const showDialog = ref(false)
+// 保存中状态：用于按钮禁用 + loading，防止 await 期间连点重复写入（本弹框为多行循环 + 多次 await，风险最高）
+const { saving, run } = useBizSaving()
 const editingId = ref<string | null>(null)
 const formDate = ref(localDateKey())
 
@@ -406,10 +411,8 @@ function startCopy(p: BusinessPurchase): void {
 }
 
 /** 账本只记录其所属年份的数据：日期选择器禁用其它年份（与 store 写入守卫同口径） */
-const ledgerYear = computed(() => store.currentLedgerYear)
-function disabledDate(d: Date): boolean {
-  return d.getFullYear() !== ledgerYear.value
-}
+// 账本只记录其所属年份的数据：日期选择器禁用其它年份（公共逻辑，与进货/销售弹框同源）
+const { ledgerYear, disabledDate } = useLedgerDate()
 
 /**
  * 进价 → 商品销售成本价：进货保存后按「未售完批次均价」回写商品成本价（口径同商品页展示）。
@@ -426,30 +429,50 @@ async function syncProductCostPrice(productId: string): Promise<void> {
 async function handleSave(): Promise<void> {
   if (!isFormValid.value) return
   const date = formDate.value
-  for (const row of formRows.value) {
-    const qty = rowQuantity(row)
-    const price = rowUnitPrice(row)
-    const payload = {
-      productId: row.productId,
-      date,
-      quantity: qty,
-      unitPrice: price,
-      expenseIds: [...row.expenseIds],
-      note: undefined
+  // 预检日期：跨年 / 无账本会在写入时被统一拦截。提前校验可避免
+  // 「前几行已入库、到第 N 行才报错」的半成品状态（所有行共用同一个日期）。
+  const guard = checkLedgerYearWrite(date, ledgerYear.value)
+  if (!guard.ok) { toast.error(guard.message); return }
+
+  let saved = 0
+  // 用快照遍历：行号取原始序号，保存成功的行会从 formRows 移出（见下）
+  const snapshot = [...formRows.value]
+  const ok = await run(async () => {
+    for (let i = 0; i < snapshot.length; i++) {
+      const row = snapshot[i]
+      const rowNo = i + 1
+      const qty = rowQuantity(row)
+      const price = rowUnitPrice(row)
+      const payload = {
+        productId: row.productId,
+        date,
+        quantity: qty,
+        unitPrice: price,
+        expenseIds: [...row.expenseIds],
+        note: undefined
+      }
+      const tail = saved > 0 ? `（前 ${saved} 条已保存，剩余行请修正后重试）` : ''
+      if (row.id) {
+        // 换了商品：新旧两个商品的成本价都要重算
+        const prevProductId = store.purchases.find(p => p.id === row.id)?.productId
+        const r = await store.updatePurchase(row.id, payload)
+        if (!r.ok) throw new Error(`第 ${rowNo} 行：${r.message}${tail}`)
+        await syncProductCostPrice(row.productId)
+        if (prevProductId && prevProductId !== row.productId) await syncProductCostPrice(prevProductId)
+      } else {
+        const added = await store.addPurchase(payload)
+        if (!added.ok) throw new Error(`第 ${rowNo} 行：${added.message}${tail}`)
+        await syncProductCostPrice(row.productId)
+      }
+      // 已入库的行移出待保存列表：store.addPurchase 不回传新 id，
+      // 若仍留在 formRows 中，失败后重试会把已成功的行再写一遍（重复建单）
+      formRows.value = formRows.value.filter(r => r !== row)
+      saved++
     }
-    if (row.id) {
-      // 换了商品：新旧两个商品的成本价都要重算
-      const prevProductId = store.purchases.find(p => p.id === row.id)?.productId
-      const r = await store.updatePurchase(row.id, payload)
-      if (!r.ok) { toast.error(r.message); return }
-      await syncProductCostPrice(row.productId)
-      if (prevProductId && prevProductId !== row.productId) await syncProductCostPrice(prevProductId)
-    } else {
-      const added = await store.addPurchase(payload)
-      if (!added.ok) { toast.error(added.message); return }
-      await syncProductCostPrice(row.productId)
-    }
-  }
+  })
+  // 失败时 run 已提示具体行号与原因，弹框保留未保存的行供修正后重试
+  if (!ok) return
+  toast.success(`已保存 ${saved} 条库存记录`)
   showDialog.value = false
 }
 
@@ -634,7 +657,7 @@ async function handleDelete(id: string): Promise<void> {
       <form class="biz-dialog-body" @submit.prevent="handleSave">
         <!-- 第一行：日期 -->
         <div class="biz-field">
-          <label>日期 *</label>
+          <label>日期<span class="req">*</span></label>
           <div data-testid="bizpur-form-date">
             <el-date-picker
               v-model="formDate"
@@ -655,10 +678,11 @@ async function handleDelete(id: string): Promise<void> {
             <thead>
               <tr>
                 <th class="col-idx">#</th>
-                <th class="col-prod">商品 *</th>
+                <th class="col-prod">商品<span class="req">*</span></th>
                 <th>总支出</th>
-                <th>入库数量</th>
-                <th>进价</th>
+                <th>入库数量<span class="req">*</span></th>
+                <!-- 进价仅在「未关联支出」时必填（关联后合计取支出汇总，进价可为 0，仅 warn） -->
+                <th title="未关联支出时必填；已关联支出时合计取支出汇总，进价可留 0">进价<span class="req">*</span></th>
                 <th class="col-exp">关联支出（多选）</th>
                 <th class="col-op">操作</th>
               </tr>
@@ -749,7 +773,7 @@ async function handleDelete(id: string): Promise<void> {
         </ul>
         <div class="biz-form-actions ewt-dialog-footer">
           <el-button @click="showDialog = false">取消</el-button>
-          <el-button type="primary" native-type="submit" :disabled="!isFormValid" data-testid="bizpur-save">
+          <el-button type="primary" native-type="submit" :disabled="!isFormValid || saving" :loading="saving" data-testid="bizpur-save">
             {{ editingId ? '保存' : '添加' }}
           </el-button>
         </div>
@@ -1128,64 +1152,7 @@ async function handleDelete(id: string): Promise<void> {
   font-variant-numeric: tabular-nums;
 }
 
-/* 弹框 */
-.biz-dialog-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border, var(--color-border));
-}
-
-.biz-dialog-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text, var(--color-text));
-}
-
-.biz-dialog-close {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: var(--color-text-muted, var(--color-text-muted));
-  cursor: pointer;
-}
-
-.biz-dialog-body {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.biz-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.biz-field > label {
-  font-size: 13px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-}
-
-.biz-form-row {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.biz-form-row .biz-field {
-  flex: 1;
-  min-width: 110px;
-}
-
-.biz-form-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
+/* 弹框：骨架样式（header/body/field/form-row/actions/.req）已抽到 src/styles/biz-dialog.css，此处只留本页专属 */
 
 .biz-input {
   box-sizing: border-box;
@@ -1299,6 +1266,8 @@ html.dark .biz-input {
 .bizpur-line-table thead th.col-exp {
   text-align: left;
 }
+
+/* 必填标识（.req）见全局 src/styles/biz-dialog.css，与进货/销售/商品弹框同一套 */
 
 .bizpur-line-table tbody td {
   padding: 8px 10px;
