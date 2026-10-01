@@ -657,7 +657,7 @@ async function handleDelete(id: string): Promise<void> {
       <form class="biz-dialog-body" @submit.prevent="handleSave">
         <!-- 第一行：日期 -->
         <div class="biz-field">
-          <label>日期 *</label>
+          <label>日期<span class="req">*</span></label>
           <div data-testid="bizpur-form-date">
             <el-date-picker
               v-model="formDate"
@@ -678,10 +678,11 @@ async function handleDelete(id: string): Promise<void> {
             <thead>
               <tr>
                 <th class="col-idx">#</th>
-                <th class="col-prod">商品 *</th>
+                <th class="col-prod">商品<span class="req">*</span></th>
                 <th>总支出</th>
-                <th>入库数量</th>
-                <th>进价</th>
+                <th>入库数量<span class="req">*</span></th>
+                <!-- 进价仅在「未关联支出」时必填（关联后合计取支出汇总，进价可为 0，仅 warn） -->
+                <th title="未关联支出时必填；已关联支出时合计取支出汇总，进价可留 0">进价<span class="req">*</span></th>
                 <th class="col-exp">关联支出（多选）</th>
                 <th class="col-op">操作</th>
               </tr>
@@ -1151,64 +1152,7 @@ async function handleDelete(id: string): Promise<void> {
   font-variant-numeric: tabular-nums;
 }
 
-/* 弹框 */
-.biz-dialog-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border, var(--color-border));
-}
-
-.biz-dialog-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text, var(--color-text));
-}
-
-.biz-dialog-close {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: var(--color-text-muted, var(--color-text-muted));
-  cursor: pointer;
-}
-
-.biz-dialog-body {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.biz-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.biz-field > label {
-  font-size: 13px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-}
-
-.biz-form-row {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.biz-form-row .biz-field {
-  flex: 1;
-  min-width: 110px;
-}
-
-.biz-form-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
+/* 弹框：骨架样式（header/body/field/form-row/actions/.req）已抽到 src/styles/biz-dialog.css，此处只留本页专属 */
 
 .biz-input {
   box-sizing: border-box;
@@ -1322,6 +1266,8 @@ html.dark .biz-input {
 .bizpur-line-table thead th.col-exp {
   text-align: left;
 }
+
+/* 必填标识（.req）见全局 src/styles/biz-dialog.css，与进货/销售/商品弹框同一套 */
 
 .bizpur-line-table tbody td {
   padding: 8px 10px;

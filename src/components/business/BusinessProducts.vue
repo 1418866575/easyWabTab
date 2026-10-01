@@ -364,7 +364,7 @@ function drawerMarkupRate(): number | null {
     >
       <form class="biz-dialog-body" @submit.prevent="handleSave">
         <div class="biz-field">
-          <label>名称 *</label>
+          <label>名称<span class="req">*</span></label>
           <el-input v-model="formName" maxlength="40" data-testid="bizprod-form-name" />
           <span v-if="nameError" class="bizprod-field-error" data-testid="bizprod-error-name">{{ nameError }}</span>
         </div>
@@ -405,7 +405,7 @@ function drawerMarkupRate(): number | null {
             />
           </div>
           <div class="biz-field">
-            <label>售价 *</label>
+            <label>售价<span class="req">*</span></label>
             <el-input-number
               size="small"
               :min="0"
@@ -811,40 +811,10 @@ function drawerMarkupRate(): number | null {
   gap: 6px;
 }
 
-/* 弹框（复用体系） */
+/* 弹框：骨架样式（body/field/form-row/actions/.req）见全局 src/styles/biz-dialog.css
+   本弹框沿用 el-dialog 自带标题栏与内边距，故 body 不再重复加 padding */
 .biz-dialog-body {
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.biz-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.biz-field > label {
-  font-size: 13px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-}
-
-.biz-form-row {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.biz-form-row .biz-field {
-  flex: 1;
-  min-width: 110px;
-}
-
-.biz-form-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
 }
 
 /* el-* 表单控件撑满字段 */

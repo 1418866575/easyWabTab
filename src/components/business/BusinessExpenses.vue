@@ -4,6 +4,7 @@ import { showConfirm } from '@/utils/dialog'
 import { useToast } from '@/composables/useToast'
 import { useBizSaving } from '@/composables/useBizSaving'
 import { useLedgerDate } from '@/composables/useLedgerDate'
+import { useBizSharedDefaults } from '@/composables/useBizSharedDefaults'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -116,6 +117,11 @@ const formTitle = ref('')
 const formOrderPhone = ref('')
 const formOrderAddress = ref('')
 const formSalesmanNote = ref('')
+/**
+ * 公用信息记忆：订货电话 / 订货地址 / 业务员备注属低频变动的稳定信息，
+ * 新增时自动带入上次填写值（按账本隔离），省去每次重打。标题不记忆（随每笔进货变化）。
+ */
+const sharedDefaults = useBizSharedDefaults(() => store.currentLedgerId)
 
 /** 弹框内单条产品支出草稿行（id 仅编辑态存在，新增行为空） */
 interface ExpenseRow {
@@ -174,11 +180,15 @@ function startAdd(): void {
   editingDailyId.value = null
   editingDate.value = localDateKey()
   formNote.value = ''
+  // 标题每次进货都不同，不记忆；其余公用信息带入上次填写值（按账本隔离）
+  const remembered = sharedDefaults.load()
   formTitle.value = ''
-  formOrderPhone.value = ''
-  formOrderAddress.value = ''
-  formSalesmanNote.value = ''
+  formOrderPhone.value = remembered.orderPhone
+  formOrderAddress.value = remembered.orderAddress
+  formSalesmanNote.value = remembered.salesmanNote
   rows.splice(0, rows.length, emptyRow())
+  // 必须同步到首行：保存读的是行上的值，用户未改动公用信息时也要能把带入值写进去
+  applySharedToRows()
   showDialog.value = true
 }
 
@@ -267,6 +277,14 @@ async function handleSave(): Promise<void> {
   })
   if (!ok) return
   toast.success(isEditing ? '进货记录已保存' : `进货记录已添加（${items.length} 笔）`)
+  // 仅新增成功后记忆公用信息：取消或编辑不写入，避免误操作污染下次默认值
+  if (!isEditing) {
+    sharedDefaults.remember({
+      orderPhone: formOrderPhone.value.trim(),
+      orderAddress: formOrderAddress.value.trim(),
+      salesmanNote: formSalesmanNote.value.trim()
+    })
+  }
   showDialog.value = false
 }
 
@@ -540,7 +558,10 @@ async function handleDeleteFromDialog(): Promise<void> {
 
         <!-- 公用表单：标题 / 订货电话 / 订货地址 / 业务员备注（一份模板，所有产品行共用同一配置，见 applySharedToRows） -->
         <div class="bizexp-shared-fields">
-          <div class="bizexp-shared-title">公用信息（所有产品共用）</div>
+          <div class="bizexp-shared-title">
+            公用信息（所有产品共用）
+            <span class="bizexp-shared-hint">订货电话 / 地址 / 备注在下次新增时自动带入</span>
+          </div>
           <div class="biz-field">
             <label>标题</label>
             <el-input v-model="formTitle" size="small" :maxlength="EXPENSE_TITLE_MAX" data-testid="bizexp-shared-title" @update:model-value="applySharedToRows" />
@@ -782,6 +803,15 @@ async function handleDeleteFromDialog(): Promise<void> {
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text-secondary, #6b7280);
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.bizexp-shared-hint {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-muted, #9ca3af);
 }
 .bizexp-table {
   width: 100%;
@@ -839,9 +869,6 @@ async function handleDeleteFromDialog(): Promise<void> {
 .bizexp-table .bizexp-row-pay {
   min-width: 110px;
 }
-.bizexp-table .req {
-  color: var(--color-error, #dc2626);
-}
 .bizexp-row-issue-row .bizexp-row-issue {
   font-size: 12px;
   color: var(--color-error, #dc2626);
@@ -865,9 +892,6 @@ async function handleDeleteFromDialog(): Promise<void> {
   color: var(--color-text-secondary, #6b7280);
   text-align: right;
   line-height: 1.4;
-}
-.biz-kv-label .req {
-  color: var(--color-error, #dc2626);
 }
 .biz-kv-ctrl {
   flex: 1 1 auto;
@@ -894,48 +918,7 @@ async function handleDeleteFromDialog(): Promise<void> {
   color: var(--color-error, #dc2626);
 }
 
-/* ===== 弹框通用样式 ===== */
-.biz-dialog-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border, var(--color-border));
-}
-.biz-dialog-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text, var(--color-text));
-}
-.biz-dialog-close {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: var(--color-text-muted, var(--color-text-muted));
-  cursor: pointer;
-}
-.biz-dialog-body {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.biz-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.biz-field > label {
-  font-size: 13px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-}
-.biz-form-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
+/* ===== 弹框：骨架样式（header/body/field/actions/.req）已抽到 src/styles/biz-dialog.css ===== */
 
 .bizexp-dialog :deep(.el-dialog) {
   border-radius: var(--radius-lg, 12px);

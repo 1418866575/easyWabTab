@@ -218,9 +218,20 @@ function recordLossAmount(record: BusinessDailyRecord): number {
 // ===== 录入校验（剩余/损耗不得大于带出；手填营业额偏离提示） =====
 /** 全部行的校验结果：errors 阻断保存，warns 仅提示 */
 const rowChecks = computed(() => validateDailyRows(rows))
-/** 单行 error 文案（行内红字） */
+/**
+ * 单行 error 文案（行内红字）。
+ * 复用全量校验结果 rowChecks，按「第 N 行：」前缀取本行错误：
+ * 原实现是 validateDailyRows([rows[index]])，两个问题——
+ * ① 每行渲染都对单行重跑一次校验（N 行 = N 次），而 rowChecks 已算过全量；
+ * ② 单元素数组的行号恒为 1，导致所有行都显示「第 1 行：…」，行号错位。
+ * 这里按前缀过滤并去掉前缀（行内已有行号上下文），多行错误用「；」连接不再只取第一条。
+ */
 function rowError(index: number): string {
-  return validateDailyRows([rows[index]]).errors[0] ?? ''
+  const prefix = `第 ${index + 1} 行：`
+  return rowChecks.value.errors
+    .filter(e => e.startsWith(prefix))
+    .map(e => e.slice(prefix.length))
+    .join('；')
 }
 /** 手填营业额偏离检查 */
 const revenueCheck = computed(() => checkRevenueOverride(formRevenue.value, formRevenueManual.value))
@@ -465,7 +476,7 @@ async function handleDelete(id: string | null): Promise<void> {
       </template>
       <form class="biz-dialog-body" @submit.prevent="handleSave">
         <div class="biz-field">
-          <label>日期 *（同一天重复保存将覆盖）</label>
+          <label>日期<span class="req">*</span>（同一天重复保存将覆盖）</label>
           <div data-testid="bizday-form-date">
             <el-date-picker
               v-model="editingDate"
@@ -488,7 +499,7 @@ async function handleDelete(id: string | null): Promise<void> {
             <thead>
               <tr>
                 <th class="bizday-th-index">#</th>
-                <th>商品 *</th>
+                <th>商品<span class="req">*</span></th>
                 <th>带出</th>
                 <th>剩余</th>
                 <th>损耗</th>
@@ -952,53 +963,7 @@ async function handleDelete(id: string | null): Promise<void> {
   color: var(--color-text-muted, #6b7280);
 }
 
-/* 弹框 */
-.biz-dialog-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border, var(--color-border));
-}
-
-.biz-dialog-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text, var(--color-text));
-}
-
-.biz-dialog-close {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: var(--color-text-muted, var(--color-text-muted));
-  cursor: pointer;
-}
-
-.biz-dialog-body {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.biz-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.biz-field > label {
-  font-size: 13px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-}
-
-.biz-form-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
+/* 弹框：骨架样式（header/body/field/actions/.req）已抽到 src/styles/biz-dialog.css，此处只留本页专属 */
 
 .biz-input {
   box-sizing: border-box;

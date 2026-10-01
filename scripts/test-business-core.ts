@@ -116,7 +116,26 @@ import {
   validateExpenseRow,
   validateExpenseRows
 } from '../src/composables/businessCore.ts'
+import {
+  bizSharedDefaultsKeyOf,
+  emptyBizSharedDefaults,
+  loadBizSharedDefaults,
+  normalizeBizSharedDefaults,
+  saveBizSharedDefaults,
+  useBizSharedDefaults
+} from '../src/composables/useBizSharedDefaults.ts'
 import type { BusinessData, BusinessDailyRecord, BusinessExpense, BusinessExpenseDaily, BusinessLedger, BusinessProduct, BusinessPurchase } from '../src/types/index.ts'
+
+// ---- localStorage 内存桩：node 默认无 Web Storage，测试前挂上（模块内为调用时才读全局）----
+const memStore = new Map<string, string>()
+;(globalThis as unknown as { localStorage: Storage }).localStorage = {
+  getItem: (k: string) => (memStore.has(k) ? (memStore.get(k) as string) : null),
+  setItem: (k: string, v: string) => { memStore.set(k, String(v)) },
+  removeItem: (k: string) => { memStore.delete(k) },
+  clear: () => { memStore.clear() },
+  key: (i: number) => [...memStore.keys()][i] ?? null,
+  get length() { return memStore.size }
+} as Storage
 
 const tests: { name: string; fn: () => void }[] = []
 function test(name: string, fn: () => void) {
@@ -2276,6 +2295,60 @@ test('T87 deriveInventoryQuantity（数量×商品数量 + 多笔求和 + 兜底
   assert.equal(deriveInventoryQuantity([], dailies as any, categories as any), 0, '空关联返回 0')
   // 未知 id 忽略
   assert.equal(deriveInventoryQuantity(['nope'], dailies as any, categories as any), 0, '未知 id 返回 0')
+})
+
+// T88 — 公用信息记忆：键名按账本隔离 + 空值兜底
+test('T88 bizSharedDefaults 键名按账本隔离 / 无记录返回空值', () => {
+  memStore.clear()
+  assert.equal(bizSharedDefaultsKeyOf('lg_1'), 'ewt:biz-shared-defaults:lg_1')
+  // 空 ledgerId 兜底为 default，避免写出无意义键
+  assert.equal(bizSharedDefaultsKeyOf(''), 'ewt:biz-shared-defaults:default')
+  assert.deepEqual(loadBizSharedDefaults('lg_1'), emptyBizSharedDefaults(), '无记录 → 全空')
+  assert.deepEqual(loadBizSharedDefaults('lg_1'), { orderPhone: '', orderAddress: '', salesmanNote: '' }, '空值字段完整')
+})
+
+// T89 — 存入后可读回，且按账本互不污染
+test('T89 bizSharedDefaults 写入/读回 + 账本间隔离', () => {
+  memStore.clear()
+  const a = { orderPhone: '13800000000', orderAddress: '城东批发市场 A 区 12 号', salesmanNote: '王业务员' }
+  saveBizSharedDefaults('lg_1', a)
+  assert.deepEqual(loadBizSharedDefaults('lg_1'), a, '同账本读回一致')
+  // 另一账本读不到 lg_1 的值
+  assert.deepEqual(loadBizSharedDefaults('lg_2'), emptyBizSharedDefaults(), '不同账本不互相污染')
+  // 覆盖写入
+  saveBizSharedDefaults('lg_1', { orderPhone: '13900000000', orderAddress: '', salesmanNote: '' })
+  assert.equal(loadBizSharedDefaults('lg_1').orderPhone, '13900000000', '覆盖生效')
+  assert.equal(loadBizSharedDefaults('lg_1').orderAddress, '', '清空也生效')
+})
+
+// T90 — 异常数据不污染表单：坏 JSON / 非对象 / 字段类型不对
+test('T90 bizSharedDefaults 异常数据归一化（坏 JSON / 类型错误 / 缺字段）', () => {
+  memStore.clear()
+  memStore.set(bizSharedDefaultsKeyOf('lg_bad'), '{非 JSON')
+  assert.deepEqual(loadBizSharedDefaults('lg_bad'), emptyBizSharedDefaults(), '坏 JSON → 空值')
+  memStore.set(bizSharedDefaultsKeyOf('lg_arr'), JSON.stringify([1, 2, 3]))
+  assert.deepEqual(loadBizSharedDefaults('lg_arr'), emptyBizSharedDefaults(), '数组 → 空值')
+  assert.deepEqual(normalizeBizSharedDefaults(null), emptyBizSharedDefaults(), 'null → 空值')
+  // 非字符串字段丢弃，字符串字段保留；未知字段忽略
+  const mixed = normalizeBizSharedDefaults({ orderPhone: 138, orderAddress: '地址', salesmanNote: null, extra: 'x' })
+  assert.deepEqual(mixed, { orderPhone: '', orderAddress: '地址', salesmanNote: '' }, '非字符串字段丢弃')
+  // 缺字段补空
+  assert.deepEqual(normalizeBizSharedDefaults({ orderPhone: '1' }), { orderPhone: '1', orderAddress: '', salesmanNote: '' }, '缺字段补空')
+})
+
+// T91 — useBizSharedDefaults 门面：绑定账本读取，写入落盘到当前账本
+test('T91 useBizSharedDefaults 门面（load/remember 绑定当前账本）', () => {
+  memStore.clear()
+  let current = 'lg_a'
+  const api = useBizSharedDefaults(() => current)
+  assert.deepEqual(api.load(), emptyBizSharedDefaults(), '初始为空')
+  api.remember({ orderPhone: '13711112222', orderAddress: '仓库路 8 号', salesmanNote: '李业务员' })
+  assert.deepEqual(api.load(), { orderPhone: '13711112222', orderAddress: '仓库路 8 号', salesmanNote: '李业务员' }, 'remember 后 load 可读回')
+  // 切换账本 → 读到的是新账本的空值，且不影响原账本
+  current = 'lg_b'
+  assert.deepEqual(api.load(), emptyBizSharedDefaults(), '切账本读到空')
+  current = 'lg_a'
+  assert.equal(api.load().orderPhone, '13711112222', '切回原账本数据仍在')
 })
 
 let passed = 0

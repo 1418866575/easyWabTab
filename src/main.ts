@@ -14,6 +14,8 @@ import './styles/mobile.css'
 import './styles/records.css'
 import './styles/pager.css'
 import './styles/scrollbar.css'
+// 销售记账弹框通用骨架（商品/进货/库存/销售 四个弹框共用）
+import './styles/biz-dialog.css'
 import { useThemeStore } from './stores/theme'
 import { useAppSettingsStore } from './stores/settings'
 import { useNavPrefs } from './composables/useNavPrefs'
