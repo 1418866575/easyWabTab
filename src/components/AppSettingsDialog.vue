@@ -3029,9 +3029,9 @@ onUnmounted(() => {
                   </thead>
                   <tbody>
                     <tr v-for="(l, i) in plList" :key="l.id" :data-testid="`pl-ledger-row-${plCode(l)}`">
-                      <td class="bl-col-index">{{ i + 1 }}</td>
-                      <td class="bl-col-year">{{ l.year }}</td>
-                      <td class="bl-col-name">
+                      <td class="bl-col-index" data-label="序号">{{ i + 1 }}</td>
+                      <td class="bl-col-year" data-label="年份">{{ l.year }}</td>
+                      <td class="bl-col-name" data-label="名称">
                         <span class="bl-code-badge">{{ plCode(l) }}</span>
                         <template v-if="plEditId !== l.id">{{ l.name }}</template>
                         <template v-else>
@@ -3039,8 +3039,8 @@ onUnmounted(() => {
                           <span v-if="plEditError" class="wb-menu-hint bl-error">{{ plEditError }}</span>
                         </template>
                       </td>
-                      <td class="bl-col-count">{{ l.data.entries.length }}</td>
-                      <td class="bl-col-ops">
+                      <td class="bl-col-count" data-label="记录数">{{ l.data.entries.length }}</td>
+                      <td class="bl-col-ops" data-label="操作">
                         <template v-if="plEditId !== l.id">
                           <el-button
                             size="small"
@@ -3347,9 +3347,9 @@ onUnmounted(() => {
                         :key="l.id"
                         :data-testid="`biz-ledger-row-${ledgerCodeOf(l)}`"
                       >
-                        <td class="bl-col-index">{{ i + 1 }}</td>
-                        <td class="bl-col-year">{{ l.year }}</td>
-                        <td class="bl-col-name">
+                        <td class="bl-col-index" data-label="序号">{{ i + 1 }}</td>
+                        <td class="bl-col-year" data-label="年份">{{ l.year }}</td>
+                        <td class="bl-col-name" data-label="名称">
                           <span class="bl-code-badge">{{ ledgerCodeOf(l) }}</span>
                           <template v-if="editingId !== l.id">{{ l.name }}</template>
                           <template v-else>
@@ -3363,7 +3363,7 @@ onUnmounted(() => {
                             <span v-if="editingError" class="wb-menu-hint bl-error">{{ editingError }}</span>
                           </template>
                         </td>
-                        <td class="bl-col-ops">
+                        <td class="bl-col-ops" data-label="操作">
                           <template v-if="editingId !== l.id">
                             <el-button size="small" data-testid="biz-ledger-edit" @click="startEditLedger(l)">修改</el-button>
                             <el-button
@@ -4324,6 +4324,9 @@ html.dark .tab-btn.active {
 .bl-entry-body {
   padding: 4px 16px 16px;
   display: grid;
+  /* minmax(0, 1fr)：grid item 默认 min-width:auto 会被表格的 min-content 撑开，
+     整列超出卡片后被 .bl-manage-card 的 overflow:hidden 裁掉 → 移动端既看不见也滑不动 */
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
 }
 
@@ -4373,11 +4376,13 @@ html.dark .tab-btn.active {
   border-color: var(--color-primary, #3b82f6);
 }
 
+/* 分区而非卡片：外层 .bl-manage-card 已是唯一卡片层级，内层只做轻量分隔，避免卡片套卡片 */
 .bl-block {
-  padding: 12px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 10px;
-  background-color: var(--color-bg, #f8fafc);
+  padding: 0;
+}
+.bl-block + .bl-block {
+  padding-top: 14px;
+  border-top: 1px dashed var(--color-border, #e2e8f0);
 }
 
 .bl-subtitle {
@@ -4417,6 +4422,9 @@ html.dark .tab-btn.active {
 
 .bl-table-wrap {
   overflow-x: auto;
+  /* 不设 max-width 时表格会把 grid 轨道撑开，反而被外层卡片裁掉 */
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
 }
@@ -4458,8 +4466,7 @@ html.dark .tab-btn.active {
 }
 .bl-edit-input { width: 200px; }
 
-html.dark .bl-block {
-  background-color: var(--color-bg-hover, #374151);
+html.dark .bl-block + .bl-block {
   border-color: var(--color-border, #374151);
 }
 html.dark .bl-table thead th { background-color: var(--color-bg-hover, #374151); }
@@ -5610,6 +5617,78 @@ html.dark .status-pill { color: #4ade80; background-color: rgba(74, 222, 128, 0.
     white-space: normal;
     word-break: break-all;
   }
+}
+
+/* ===== 账本管理（bl-*）移动端：表格转卡片流，操作按钮完整可见 ===== */
+@media (max-width: 768px) {
+  .bl-manage-card { border-radius: 10px; }
+  .bl-entry { padding: 12px 14px; }
+  .bl-entry-body { padding: 4px 14px 14px; gap: 12px; }
+  .bl-block + .bl-block { padding-top: 12px; }
+
+  /* 表头隐藏、每行一张卡：字段名由 ::before 取 data-label 前置，不再依赖横向滚动 */
+  .bl-table-wrap {
+    border: none;
+    border-radius: 0;
+    overflow-x: visible;
+  }
+  .bl-table thead { display: none; }
+  .bl-table tbody tr {
+    display: block;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 12px;
+  }
+  .bl-table tbody td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 5px 0;
+    border-bottom: none;
+    text-align: right;
+  }
+  .bl-table tbody td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    font-size: 12px;
+    color: var(--color-text-secondary, #64748b);
+  }
+
+  /* 名称列：编号徽标 + 名称较长，改为整行堆叠 */
+  .bl-table tbody td.bl-col-name {
+    display: block;
+    text-align: left;
+  }
+  .bl-table tbody td.bl-col-name::before {
+    display: block;
+    margin-bottom: 4px;
+    text-align: left;
+  }
+  .bl-edit-input { width: 100%; }
+
+  /* 操作列独占一行，按钮自动换行且触控高度 ≥44px */
+  .bl-table tbody td.bl-col-ops {
+    display: block;
+    margin-top: 4px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--color-border, #e2e8f0);
+  }
+  .bl-table tbody td.bl-col-ops::before {
+    display: block;
+    margin-bottom: 6px;
+    text-align: left;
+  }
+  .bl-col-ops .el-button {
+    height: auto;
+    min-height: 44px;
+    padding: 0 14px;
+    margin: 0 6px 6px 0;
+  }
+
+  /* 新建账本：标签收窄，给输入框留出更多横向空间 */
+  .bl-block .remind-label { width: 72px; }
 }
 
 </style>
