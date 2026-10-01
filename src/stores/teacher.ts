@@ -62,7 +62,10 @@ import {
   type TeacherPageKey,
   type TeacherRole,
   type TeacherStage,
-  type TeacherTerm
+  type TeacherTerm,
+  type StudentGroup,
+  type GroupingSnapshot,
+  type GroupingResult
 } from '@/types/teacher'
 
 /** 班委 → 学生职务 同步：按 committee 汇总每个学生职务（多职务用「、」连接），返回新 students（仅变更者重建） */
@@ -516,22 +519,31 @@ export const useTeacherStore = defineStore('teacher', () => {
 
   // ---------- 学生 ----------
 
-  async function addStudent(input: { no: string; name: string; gender: '男' | '女'; boarding?: boolean }): Promise<void> {
+  async function addStudent(input: { no: string; name: string; gender: '男' | '女'; boarding?: boolean; avatar?: string; address?: string; phone?: string }): Promise<void> {
     const { sem, cls: cid } = data.value.current
     if (!sem || !cid || !input.name.trim()) return
     const no = input.no.trim() || String((bucket.value?.students.length ?? 0) + 1)
+    const id = makeStudentId(sem, cid, no, input.name.trim())
     const s: Student = {
-      id: makeStudentId(sem, cid, no, input.name.trim()),
+      id,
       no,
       name: input.name.trim(),
       gender: input.gender,
       special: false,
       post: '',
-      address: '',
+      address: input.address?.trim() || '',
       boarding: input.boarding ?? false,
+      avatar: input.avatar ?? '',
       health: { allergy: '', disease: '', notes: '', emergencyPhone: '' }
     }
-    mutateBucket((b) => ({ ...b, students: [...b.students.filter((x) => x.id !== s.id), s] }))
+    mutateBucket((b) => {
+      const next: ClassBucket = { ...b, students: [...b.students.filter((x) => x.id !== id), s] }
+      // 联系电话落入家长记录（与明细表「联系电话」列一致），不新增独立字段
+      if (input.phone && input.phone.trim()) {
+        next.parents = { ...next.parents, [id]: { parentName: '', relation: '', phone: input.phone.trim() } }
+      }
+      return next
+    })
     await saveTeacher()
   }
 
@@ -971,6 +983,76 @@ export const useTeacherStore = defineStore('teacher', () => {
     return { total: talks.length, thisMonth, needFollowUp, categories: cats.size }
   })
 
+  // ---------- 班级小组（groups 桶；包含固定组与临时组，随学期×班级隔离） ----------
+
+  /** 新增小组（固定/临时均可），按 id 去重避免重复写入 */
+  async function addGroup(group: StudentGroup): Promise<void> {
+    mutateBucket((b) => ({
+      ...b,
+      groups: [...b.groups.filter((g) => g.id !== group.id), group]
+    }))
+    await saveTeacher()
+  }
+
+  /** 更新小组（整体替换同 id 项） */
+  async function updateGroup(group: StudentGroup): Promise<void> {
+    mutateBucket((b) => ({
+      ...b,
+      groups: b.groups.map((g) => (g.id === group.id ? group : g))
+    }))
+    await saveTeacher()
+  }
+
+  /** 删除小组 */
+  async function removeGroup(id: string): Promise<void> {
+    mutateBucket((b) => ({ ...b, groups: b.groups.filter((g) => g.id !== id) }))
+    await saveTeacher()
+  }
+
+  /** 保存分组快照（保存某次分组结果，日后可「应用为临时组」复用） */
+  async function saveSnapshot(snapshot: GroupingSnapshot): Promise<void> {
+    mutateBucket((b) => ({
+      ...b,
+      snapshots: [...b.snapshots.filter((s) => s.id !== snapshot.id), snapshot]
+    }))
+    await saveTeacher()
+  }
+
+  /** 删除快照 */
+  async function removeSnapshot(id: string): Promise<void> {
+    mutateBucket((b) => ({ ...b, snapshots: b.snapshots.filter((s) => s.id !== id) }))
+    await saveTeacher()
+  }
+
+  /** 应用快照为临时组：把快照的每组结果落成一条 type=temp 的 StudentGroup，fromSnapshot 记快照 id */
+  async function applySnapshot(snapshotId: string): Promise<number> {
+    const snap = bucket.value?.snapshots.find((s) => s.id === snapshotId)
+    if (!snap) return 0
+    const now = todayStr()
+    const newGroups: StudentGroup[] = snap.results.map((r: GroupingResult, i) => ({
+      id: uid('grp'),
+      name: `${snap.name || '分组'}-${r.groupName || `第${i + 1}组`}`,
+      type: 'temp',
+      members: r.memberIds.map((sid) => ({ studentId: sid })),
+      createdAt: now,
+      updatedAt: now,
+      fromSnapshot: snapshotId
+    }))
+    mutateBucket((b) => ({ ...b, groups: [...b.groups, ...newGroups] }))
+    await saveTeacher()
+    return newGroups.length
+  }
+
+  /** 当前班级小组统计（不持久化的派生）：组数 / 固定组 / 临时组 / 总人数（去重） */
+  const groupSummary = computed(() => {
+    const groups = bucket.value?.groups ?? []
+    const fixed = groups.filter((g) => g.type === 'fixed').length
+    const temp = groups.length - fixed
+    const ids = new Set<string>()
+    for (const g of groups) for (const m of g.members) ids.add(m.studentId)
+    return { total: groups.length, fixed, temp, members: ids.size }
+  })
+
   // ---------- 随机点名 ----------
 
   async function setRandomMode(mode: 'all' | 'once'): Promise<void> {
@@ -1225,6 +1307,13 @@ export const useTeacherStore = defineStore('teacher', () => {
     removeTalk,
     exportTalksExcel,
     talksSummary,
+    addGroup,
+    updateGroup,
+    removeGroup,
+    saveSnapshot,
+    removeSnapshot,
+    applySnapshot,
+    groupSummary,
     setRandomMode,
     pushRandomHistory,
     resetRandomHistory,

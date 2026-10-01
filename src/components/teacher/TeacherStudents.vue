@@ -90,18 +90,87 @@ const pagedRows = computed(() => {
 })
 watch(applied, () => { currentPage.value = 1 }, { deep: true })
 
-// ---------- 新增 ----------
-const newNo = ref('')
-const newName = ref('')
-const newGender = ref<'男' | '女'>('男')
-const newBoarding = ref(false)
+// ---------- 新增（弹框） ----------
+const showAdd = ref(false)
+const form = reactive({
+  name: '',
+  no: '',
+  gender: '男' as '男' | '女',
+  phone: '',
+  address: '',
+  boarding: false,
+  avatar: ''
+})
+const avatarInput = ref<HTMLInputElement | null>(null)
 
-async function onAdd(): Promise<void> {
-  if (!newName.value.trim()) return
-  await store.addStudent({ no: newNo.value, name: newName.value, gender: newGender.value, boarding: newBoarding.value })
-  newNo.value = ''
-  newName.value = ''
-  newBoarding.value = false
+const currentClassName = computed(() => (store.cls ? `${store.cls.grade}${store.cls.name}` : '—'))
+
+const MAX_AVATAR_SIZE = 2 * 1024 * 1024
+const AVATAR_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
+
+function resetAddForm(): void {
+  form.name = ''
+  form.no = ''
+  form.gender = '男'
+  form.phone = ''
+  form.address = ''
+  form.boarding = false
+  form.avatar = ''
+}
+
+function openAddDialog(): void {
+  resetAddForm()
+  showAdd.value = true
+}
+
+function closeAddDialog(): void {
+  showAdd.value = false
+  resetAddForm()
+}
+
+function onAvatarChange(e: Event): void {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  if (!AVATAR_TYPES.includes(file.type)) {
+    toast.error('仅支持 JPG / PNG / GIF / WebP 格式')
+    input.value = ''
+    return
+  }
+  if (file.size > MAX_AVATAR_SIZE) {
+    toast.error('图片大小不能超过 2MB')
+    input.value = ''
+    return
+  }
+  const reader = new FileReader()
+  reader.onload = () => {
+    form.avatar = typeof reader.result === 'string' ? reader.result : ''
+  }
+  reader.onerror = () => toast.error('图片读取失败')
+  reader.readAsDataURL(file)
+  input.value = ''
+}
+
+function clearAvatar(): void {
+  form.avatar = ''
+}
+
+async function saveAdd(): Promise<void> {
+  if (!form.name.trim()) {
+    toast.error('请填写姓名')
+    return
+  }
+  await store.addStudent({
+    no: form.no,
+    name: form.name,
+    gender: form.gender,
+    boarding: form.boarding,
+    address: form.address,
+    avatar: form.avatar,
+    phone: form.phone
+  })
+  toast.success('学生已添加')
+  closeAddDialog()
 }
 
 // ---------- 编辑 ----------
@@ -213,7 +282,10 @@ async function downloadTemplate(): Promise<void> {
     </section>
 
     <section class="tw-card">
-      <h4 class="tw-card-title">学生明细表</h4>
+      <div class="tw-card-head">
+        <h4 class="tw-card-title">学生明细表</h4>
+        <button type="button" class="tw-btn tw-btn-sm tw-btn-primary tw-no-print" @click="openAddDialog">+ 添加学生</button>
+      </div>
       <div class="tw-toolbar tw-no-print stu-search">
         <label class="tw-label">学号<input v-model="searchNo" class="tw-input tw-input-sm" placeholder="精确匹配" /></label>
         <label class="tw-label">名称(精确)<input v-model="searchNameExact" class="tw-input tw-input-sm" placeholder="精确匹配" /></label>
@@ -238,25 +310,6 @@ async function downloadTemplate(): Promise<void> {
         <button type="button" class="tw-btn tw-btn-sm" @click="resetSearch">重置</button>
         <span class="tw-spacer"></span>
         <span class="tw-label">共 {{ detailFiltered.length }} 人</span>
-      </div>
-      <div class="tw-toolbar tw-no-print">
-        <label class="tw-label">学号<input v-model="newNo" class="tw-input tw-input-sm" placeholder="自动" /></label>
-        <label class="tw-label">姓名<input v-model="newName" class="tw-input tw-input-sm" placeholder="必填" /></label>
-        <label class="tw-label">
-          性别
-          <select v-model="newGender" class="tw-select tw-input-sm">
-            <option value="男">男</option>
-            <option value="女">女</option>
-          </select>
-        </label>
-        <label class="tw-label">
-          是否住校
-          <select v-model="newBoarding" class="tw-select tw-input-sm">
-            <option :value="false">否</option>
-            <option :value="true">是</option>
-          </select>
-        </label>
-        <button type="button" class="tw-btn tw-btn-sm tw-btn-primary" :disabled="!newName.trim()" @click="onAdd">添加学生</button>
       </div>
 
       <div v-if="detailFiltered.length" class="tw-table-wrap">
@@ -342,6 +395,64 @@ async function downloadTemplate(): Promise<void> {
       </div>
       <p v-else class="tw-empty">暂无学生记录。</p>
     </section>
+
+    <!-- 添加学生弹框 -->
+    <el-dialog v-model="showAdd" title="添加学生" width="520px" destroy-on-close @close="closeAddDialog">
+      <div class="stu-add-form">
+        <div class="stu-form-row">
+          <label class="stu-form-label">姓名 <span class="stu-req">*</span></label>
+          <el-input v-model="form.name" maxlength="20" placeholder="必填" data-testid="stu-add-name" />
+        </div>
+        <div class="stu-form-row">
+          <label class="stu-form-label">学号</label>
+          <el-input v-model="form.no" maxlength="20" placeholder="留空自动生成" data-testid="stu-add-no" />
+        </div>
+        <div class="stu-form-row">
+          <label class="stu-form-label">性别</label>
+          <el-radio-group v-model="form.gender" data-testid="stu-add-gender">
+            <el-radio value="男">男</el-radio>
+            <el-radio value="女">女</el-radio>
+          </el-radio-group>
+        </div>
+        <div class="stu-form-row">
+          <label class="stu-form-label">班级</label>
+          <div class="stu-form-static">{{ currentClassName }}</div>
+        </div>
+        <div class="stu-form-row">
+          <label class="stu-form-label">联系电话</label>
+          <el-input v-model="form.phone" maxlength="20" placeholder="学生 / 家长联系电话" data-testid="stu-add-phone" />
+        </div>
+        <div class="stu-form-row">
+          <label class="stu-form-label">家庭地址</label>
+          <el-input v-model="form.address" maxlength="80" placeholder="如 某某小区" data-testid="stu-add-address" />
+        </div>
+        <div class="stu-form-row">
+          <label class="stu-form-label">是否住校</label>
+          <el-switch v-model="form.boarding" />
+        </div>
+        <div class="stu-form-row">
+          <label class="stu-form-label">头像</label>
+          <div class="stu-avatar-box">
+            <div v-if="form.avatar" class="stu-avatar-preview">
+              <img :src="form.avatar" alt="头像预览" />
+            </div>
+            <div v-else class="stu-avatar-empty">未选择</div>
+            <div class="stu-avatar-actions">
+              <button type="button" class="tw-btn tw-btn-sm" @click="avatarInput?.click()">选择图片</button>
+              <button type="button" class="tw-btn tw-btn-sm" v-if="form.avatar" @click="clearAvatar">清除</button>
+            </div>
+            <input ref="avatarInput" type="file" accept="image/png,image/jpeg,image/gif,image/webp" class="stu-file" @change="onAvatarChange" />
+            <p class="stu-avatar-tip">支持 JPG / PNG / GIF / WebP，大小不超过 2MB</p>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <div class="ewt-dialog-footer">
+          <el-button @click="closeAddDialog">取消</el-button>
+          <el-button type="primary" :disabled="!form.name.trim()" data-testid="stu-add-save" @click="saveAdd">保存</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -357,6 +468,75 @@ async function downloadTemplate(): Promise<void> {
 
 .stu-address {
   min-width: 180px;
+}
+
+/* 明细表卡片头部：标题 + 添加按钮同行 */
+.tw-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+/* 添加学生弹框表单 */
+.stu-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.stu-form-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.stu-form-label {
+  flex: 0 0 72px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary, #475569);
+}
+.stu-req {
+  color: #ef4444;
+}
+.stu-form-static {
+  font-size: 14px;
+  color: var(--color-text, #334155);
+}
+.stu-avatar-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.stu-avatar-preview,
+.stu-avatar-empty {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  border: 1px dashed var(--color-border, #cbd5e1);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-text-muted, #94a3b8);
+  font-size: 12px;
+}
+.stu-avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.stu-avatar-actions {
+  display: flex;
+  gap: 8px;
+}
+.stu-avatar-tip {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-muted, #94a3b8);
 }
 
 /* 明细表组合搜索区：允许换行，避免控件挤压 */

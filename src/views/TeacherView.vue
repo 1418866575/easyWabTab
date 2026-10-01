@@ -26,6 +26,7 @@ import TeacherGrowth from '@/components/teacher/TeacherGrowth.vue'
 import TeacherLeave from '@/components/teacher/TeacherLeave.vue'
 import TeacherHomework from '@/components/teacher/TeacherHomework.vue'
 import TeacherTalks from '@/components/teacher/TeacherTalks.vue'
+import TeacherGroups from '@/components/teacher/TeacherGroups.vue'
 import TeacherHelp from '@/components/teacher/TeacherHelp.vue'
 import SubjectSelect from '@/components/teacher/SubjectSelect.vue'
 import { STAGE_OPTIONS, TERM_OPTIONS, type TeacherPageKey, type TeacherRole, type TeacherStage } from '@/types/teacher'
@@ -92,6 +93,7 @@ const COMPONENTS: Record<TeacherPageKey, unknown> = {
   leave: TeacherLeave,
   homework: TeacherHomework,
   talks: TeacherTalks,
+  groups: TeacherGroups,
   help: TeacherHelp
 }
 
@@ -337,6 +339,7 @@ onMounted(() => {
 .tv-shell {
   display: flex;
   flex-direction: column;
+  height: 100dvh;
   min-height: 100vh;
   background-color: var(--color-bg, #f8fafc);
   color: var(--color-text, #0f172a);
@@ -424,10 +427,11 @@ onMounted(() => {
 /* ---------- 主体 ---------- */
 .tv-body {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 0;
   flex: 1 1 auto;
   min-height: 0;
+  overflow: hidden;
 }
 
 .tv-sidebar {
@@ -517,7 +521,10 @@ onMounted(() => {
 .tv-content {
   flex: 1 1 auto;
   min-width: 0;
+  min-height: 0;
   padding: 16px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .tv-content-head {
