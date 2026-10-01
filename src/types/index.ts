@@ -775,7 +775,7 @@ export const STUDENT_MENU_ICONS: Record<string, string> = {
 /** 学段-菜单可见性矩阵：true=默认显示 / false=默认隐藏（用户可在设置内单独开启） */
 export const STAGE_MENU_VISIBILITY: Record<StudentStage, Record<string, boolean>> = {
   K: {
-    home: true, habits: true, homework: false, timetable: true, plan: false,
+    home: true, habits: true, homework: true, timetable: true, plan: false,
     review: false, mistakes: false, reading: true, exam: false, education: true,
     health: true, achievements: true, rewards: true, parent: true,
     grades: false, goal: false

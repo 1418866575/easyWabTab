@@ -426,7 +426,7 @@ onMounted(async () => {
     <el-dialog
       v-model="showEditDialog"
       :title="editingId ? '编辑作业' : '新增作业'"
-      width="480px"
+      width="80%"
       class="shw-dialog"
       @close="closeEditDialog"
     >
@@ -460,7 +460,7 @@ onMounted(async () => {
           <el-input
             v-model="dialogContent"
             type="textarea"
-            :rows="3"
+            :rows="6"
             class="shw-content-input"
             placeholder="作业要求、页码范围等"
             data-testid="shw-form-content"
@@ -863,17 +863,17 @@ onMounted(async () => {
     height: auto;
     min-height: 156px;
   }
-  /* 新增/编辑弹框：详细描述输入框高度与屏幕宽度一致（100vw），便于手机上多写内容 */
+  /* 新增/编辑弹框：详细描述输入框高度为屏幕宽度的 2 倍（原 100vw 再翻倍），便于手机上多写内容 */
   .shw-dialog :deep(.shw-content-input .el-textarea__inner) {
-    height: 100vw !important;
-    min-height: 100vw !important;
+    height: 200vw !important;
+    min-height: 200vw !important;
   }
 }
 
 @media (max-width: 480px) {
   .shw-dialog :deep(.el-dialog) {
-    width: 92vw !important;
-    max-width: 92vw;
+    width: 80vw !important;
+    max-width: 80vw;
   }
 }
 
