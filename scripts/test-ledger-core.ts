@@ -22,6 +22,27 @@ import {
 import type { TrendMonth } from '../src/composables/ledgerCore.ts'
 import { DEFAULT_LEDGER_CATEGORIES } from '../src/types/index.ts'
 import type { LedgerCategory, LedgerEntry } from '../src/types'
+// 多账本（按自然年，同一年可多本）
+import {
+  checkPersonalLedgerYearWrite,
+  clearPersonalLedgerRecords,
+  createPersonalLedger,
+  currentYear,
+  deletePersonalLedger,
+  hasLedgerForYear,
+  isPersonalLedgerEmpty,
+  ledgerCodeOf,
+  ledgerDefaultName,
+  mergeLedgerStore,
+  nextLedgerSeq,
+  normalizeLedgerStore,
+  personalLedgerDeleteGuard,
+  pickDefaultLedger,
+  renamePersonalLedger,
+  sortedLedgers
+} from '../src/composables/ledgerCore.ts'
+import type { LedgerOpResult } from '../src/composables/ledgerCore.ts'
+import type { PersonalLedger } from '../src/types/index.ts'
 
 const tests: { name: string; fn: () => void }[] = []
 function test(name: string, fn: () => void) {
@@ -573,6 +594,213 @@ test('T32 LEDGER_CATEGORY_COLORS palette', () => {
   for (const c of LEDGER_CATEGORY_COLORS) {
     assert.match(c, /^#[0-9a-f]{6}$/i, `颜色 ${c} 应为 6 位 hex`)
   }
+})
+
+// ===== 多账本（按自然年，同一年可多本）=====
+
+/** 取操作结果里的账本（失败即抛，便于后续断言链式取值） */
+function mustLedger(r: LedgerOpResult): PersonalLedger {
+  if (!r.ledger) throw new Error('expected ledger')
+  return r.ledger
+}
+
+// T33 — 默认名 / 编号：同年第 1 本「YYYY年账本」，第 2 本起带序号后缀；编号恒为 YYYY-NN
+test('T33 ledgerDefaultName + ledgerCodeOf', () => {
+  assert.equal(ledgerDefaultName(2026), '2026年账本')
+  assert.equal(ledgerDefaultName(2026, 1), '2026年账本')
+  assert.equal(ledgerDefaultName(2026, 2), '2026年账本（02）')
+  assert.equal(ledgerCodeOf({ year: 2026, seq: 1 }), '2026-01')
+  assert.equal(ledgerCodeOf({ year: 2026, seq: 12 }), '2026-12')
+  // seq 缺失/非法 → 一律按 1 处理，保证编号始终可读
+  assert.equal(ledgerCodeOf({ year: 2026, seq: 0 }), '2026-01')
+  assert.equal(ledgerCodeOf({ year: 2026, seq: Number.NaN }), '2026-01')
+})
+
+// T34 — 年内序号分配 / 排序 / 默认选中：同年多本靠 seq 递增区分，列表年份倒序 + 同年序号升序
+test('T34 nextLedgerSeq + sortedLedgers + pickDefaultLedger', () => {
+  const y = currentYear()
+  const a = mustLedger(createPersonalLedger([], y, 'A'))
+  const b = mustLedger(createPersonalLedger([a], y, 'B'))
+  const c = mustLedger(createPersonalLedger([a, b], y - 1, 'C'))
+  assert.equal(a.seq, 1)
+  assert.equal(b.seq, 2)
+  assert.equal(c.seq, 1) // 换年份后序号重新从 1 起
+  assert.equal(nextLedgerSeq([a, b], y), 3)
+  assert.equal(nextLedgerSeq([], y), 1)
+
+  const list = sortedLedgers([c, b, a])
+  assert.deepEqual(list.map(l => l.id), [a.id, b.id, c.id]) // y-01, y-02, (y-1)-01
+  assert.ok(hasLedgerForYear(list, y))
+  assert.ok(!hasLedgerForYear(list, y - 5))
+  // 默认选中：优先当前年（同年多本取序号最小的）
+  assert.equal(pickDefaultLedger(list)?.id, a.id)
+  // 无当前年账本时回落到年份最大的
+  assert.equal(pickDefaultLedger([c])?.id, c.id)
+})
+
+// T35 — 创建账本：新账本播种内置分类 + 空流水；年份非法拒绝
+test('T35 createPersonalLedger', () => {
+  const y = currentYear()
+  const a = mustLedger(createPersonalLedger([], y))
+  assert.equal(a.name, ledgerDefaultName(y, 1)) // 名称留空 → 默认名
+  assert.equal(a.data.entries.length, 0)
+  assert.equal(a.data.categories.length, DEFAULT_LEDGER_CATEGORIES.length)
+  assert.ok(isPersonalLedgerEmpty(a.data))
+  // 不 mutate 入参
+  const before: PersonalLedger[] = []
+  createPersonalLedger(before, y)
+  assert.equal(before.length, 0)
+  // 年份非法 / NaN → 拒绝
+  assert.equal(createPersonalLedger([], 1800).ok, false)
+  assert.equal(createPersonalLedger([], Number.NaN).ok, false)
+  assert.equal(createPersonalLedger([], 1800).reason, 'invalid-year')
+})
+
+// T36 — 旧单账本结构迁移：扁平 { categories, entries } → 整体迁入「当前年账本」（seq=1），历史不丢
+test('T36 normalizeLedgerStore legacy migration', () => {
+  const legacy = {
+    categories: DEFAULT_LEDGER_CATEGORIES.map(c => ({ ...c })),
+    entries: [mkEntry('e1', `${currentYear()}-05-01`, 'lunch', 30)]
+  }
+  const store = normalizeLedgerStore(legacy)
+  assert.equal(store.ledgers.length, 1)
+  assert.equal(store.ledgers[0].year, currentYear())
+  assert.equal(store.ledgers[0].seq, 1)
+  assert.equal(ledgerCodeOf(store.ledgers[0]), `${currentYear()}-01`)
+  assert.equal(store.ledgers[0].data.entries.length, 1)
+  assert.equal(store.currentLedgerId, store.ledgers[0].id)
+  // 空/脏输入 → 空容器，不抛错
+  assert.deepEqual(normalizeLedgerStore(null).ledgers, [])
+  assert.deepEqual(normalizeLedgerStore('bad').ledgers, [])
+})
+
+// T37 — 新结构归一：同年 seq 冲突自动补发、非法年份丢弃、currentLedgerId 失效回落默认
+test('T37 normalizeLedgerStore dedupe + fallback', () => {
+  const y = currentYear()
+  const store = normalizeLedgerStore({
+    ledgers: [
+      { id: 'a', year: y, seq: 1, name: 'A', data: emptyLedgerData() },
+      { id: 'b', year: y, seq: 1, name: 'B', data: emptyLedgerData() }, // 序号冲突 → 补发为 2
+      { id: 'c', year: 1800, seq: 1, name: 'C', data: emptyLedgerData() }, // 年份非法 → 丢弃
+      { id: 'd', year: y - 1, seq: 3, name: 'D', data: emptyLedgerData() }
+    ],
+    currentLedgerId: 'zzz' // 失效 → 回落默认（当前年序号最小）
+  })
+  assert.equal(store.ledgers.length, 3)
+  assert.deepEqual(store.ledgers.map(l => l.id), ['a', 'b', 'd'])
+  assert.equal(store.ledgers[1].seq, 2)
+  assert.equal(store.ledgers[0].name, 'A') // 名称不被序号补发影响
+  assert.equal(store.currentLedgerId, 'a')
+})
+
+// T38 — 清除账本数据：只清流水 entries，账本本体与分类保留
+test('T38 clearPersonalLedgerRecords', () => {
+  const y = currentYear()
+  const a = mustLedger(createPersonalLedger([], y, 'A'))
+  const seeded: PersonalLedger = {
+    ...a,
+    data: { ...a.data, entries: [mkEntry('e1', `${y}-05-01`, 'lunch', 30), mkEntry('e2', `${y}-05-02`, 'dinner', 50)] }
+  }
+  const res = clearPersonalLedgerRecords([seeded], a.id)
+  assert.ok(res.ok)
+  const cleared = mustLedger(res)
+  assert.equal(cleared.data.entries.length, 0)
+  assert.equal(cleared.data.categories.length, DEFAULT_LEDGER_CATEGORIES.length) // 分类保留
+  assert.ok(isPersonalLedgerEmpty(cleared.data))
+  assert.equal(clearPersonalLedgerRecords([seeded], 'nope').ok, false)
+})
+
+// T39 — 删除账本守卫：last-one（至少保留一本）/ is-current（当前需先切换）/ not-found
+test('T39 deletePersonalLedger + guard', () => {
+  const y = currentYear()
+  const a = mustLedger(createPersonalLedger([], y, 'A'))
+  const b = mustLedger(createPersonalLedger([a], y, 'B'))
+  const list = sortedLedgers([a, b])
+  assert.equal(personalLedgerDeleteGuard([a], a.id, a.id).reason, 'last-one')
+  assert.equal(personalLedgerDeleteGuard(list, a.id, a.id).reason, 'is-current')
+  assert.equal(personalLedgerDeleteGuard(list, 'nope', a.id).reason, 'not-found')
+  assert.ok(personalLedgerDeleteGuard(list, b.id, a.id).ok) // 非当前且不止一本 → 可删
+
+  const del = deletePersonalLedger(list, b.id, a.id)
+  assert.ok(del.ok)
+  assert.equal(del.ledgers.length, 1)
+  assert.equal(del.ledgers[0].id, a.id)
+  // 守卫拦下时不改动列表
+  assert.equal(deletePersonalLedger(list, a.id, a.id).ok, false)
+  assert.equal(deletePersonalLedger(list, a.id, a.id).reason, 'is-current')
+})
+
+// T40 — 重命名：仅改名称（编号/年份不变），空名与不存在的账本拒绝
+test('T40 renamePersonalLedger', () => {
+  const y = currentYear()
+  const a = mustLedger(createPersonalLedger([], y, 'A'))
+  const res = renamePersonalLedger([a], a.id, '  装修  ')
+  assert.ok(res.ok)
+  assert.equal(mustLedger(res).name, '装修') // trim
+  assert.equal(mustLedger(res).year, a.year)
+  assert.equal(mustLedger(res).seq, a.seq) // 编号不受影响
+  assert.equal(renamePersonalLedger([a], a.id, '   ').ok, false)
+  assert.equal(renamePersonalLedger([a], 'nope', 'x').ok, false)
+})
+
+// T41 — 年度归属守卫：一本账本只记录其所属年份的数据，跨年 / 无账本 / 非法日期均拒绝
+test('T41 checkPersonalLedgerYearWrite', () => {
+  assert.ok(checkPersonalLedgerYearWrite('2026-05-01', 2026).ok)
+  assert.equal(checkPersonalLedgerYearWrite('2025-05-01', 2026).ok, false) // 跨年
+  assert.equal(checkPersonalLedgerYearWrite('2027-01-01', 2026).ok, false)
+  assert.equal(checkPersonalLedgerYearWrite('2026-05-01', null).reason, 'no-ledger')
+  assert.equal(checkPersonalLedgerYearWrite('bad-date', 2026).ok, false)
+})
+
+// T42 — 多账本容器合并（云同步）：账本按「年份+序号」并集（同键本地优先），账本内流水 updatedAt 较新者胜；
+//      旧的扁平结构（无 ledgers）也能安全并入，不会被合并成空
+test('T42 mergeLedgerStore', () => {
+  const y = currentYear()
+  const entry = (id: string, updatedAt: string, amount: number): LedgerEntry => ({
+    id,
+    date: `${y}-05-01`,
+    categoryId: 'lunch',
+    amount,
+    createdAt: updatedAt,
+    updatedAt
+  })
+  const local = {
+    schemaVer: 1,
+    ledgers: [{
+      id: 'L1', year: y, seq: 1, name: '本地账本', createdAt: '2026-01-01', updatedAt: '2026-01-01',
+      data: { categories: [], entries: [entry('e1', '2026-01-01', 10)] }
+    }],
+    currentLedgerId: 'L1'
+  }
+  const remote = {
+    schemaVer: 1,
+    ledgers: [
+      {
+        id: 'R1', year: y, seq: 1, name: '远端账本', createdAt: '2026-01-01', updatedAt: '2026-02-01',
+        data: { categories: [], entries: [entry('e1', '2026-03-01', 99), entry('e2', '2026-01-01', 20)] }
+      },
+      {
+        id: 'R2', year: y, seq: 2, name: '远端第二本', createdAt: '2026-01-01', updatedAt: '2026-01-01',
+        data: { categories: [], entries: [] }
+      }
+    ],
+    currentLedgerId: 'R1'
+  }
+  const merged = mergeLedgerStore(local, remote)
+  assert.equal(merged.ledgers.length, 2) // y-01（两端合并）+ y-02（远端新增）
+  const head = merged.ledgers[0]
+  assert.equal(head.id, 'L1')            // 本地 id 优先
+  assert.equal(head.name, '本地账本')     // 本地名称优先
+  assert.equal(head.seq, 1)
+  // 流水并集：e1 远端 updatedAt 更新 → 取 99；e2 远端独有 → 保留
+  assert.deepEqual(head.data.entries.map(e => `${e.id}:${e.amount}`).sort(), ['e1:99', 'e2:20'])
+  assert.equal(merged.ledgers[1].seq, 2)
+  // 旧扁平信封（无 ledgers）→ 迁入当前年账本后并入，绝不合并成空
+  const flat = { categories: DEFAULT_LEDGER_CATEGORIES.map(c => ({ ...c })), entries: [entry('e9', '2026-01-01', 7)] }
+  const m2 = mergeLedgerStore(local, flat)
+  assert.ok(m2.ledgers.length >= 1)
+  assert.ok(m2.ledgers[0].data.entries.some(e => e.id === 'e9'))
+  assert.ok(m2.ledgers[0].data.entries.some(e => e.id === 'e1'))
 })
 
 let passed = 0

@@ -3,6 +3,8 @@ import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+import LedgerSwitcher from '@/components/workbench/LedgerSwitcher.vue'
+import { useToast } from '@/composables/useToast'
 
 const vm = useViewMode()
 
@@ -40,6 +42,7 @@ import { usePanelPaging } from '@/composables/usePanelPaging'
 import { usePageSize } from '@/composables/usePageSize'
 
 const store = useWorkbenchLedgerStore()
+const toast = useToast()
 
 // ===== 月份选择（顶部条，驱动全部统计/列表/占比重算）=====
 function currentMonth(): string {
@@ -307,10 +310,13 @@ async function handleSave(): Promise<void> {
   if (!isFormValid.value) return
   const note = formNote.value.trim() || undefined
   const payload = { date: formDate.value, categoryId: formCategoryId.value, amount: Number(formAmount.value) }
-  if (editingId.value) {
-    await store.updateEntry(editingId.value, note ? { ...payload, note } : payload)
-  } else {
-    await store.addEntry(note ? { ...payload, note } : payload)
+  // 年度归属守卫：一本账本只记录其所属年份的数据，跨年被拒时提示并保留弹框（不关闭、不改页码）
+  const res = editingId.value
+    ? await store.updateEntry(editingId.value, note ? { ...payload, note } : payload)
+    : await store.addEntry(note ? { ...payload, note } : payload)
+  if (!res.ok) {
+    toast.warning(res.message || '保存失败')
+    return
   }
   paging.goto(1) // 新增/编辑后列表回第 1 页（新记录在 date 降序列表顶部）
   cancelForm()
@@ -347,6 +353,8 @@ onUnmounted(() => {
   <div class="wb-ledger">
     <!-- 月份选择条（stat 卡上方） -->
     <div class="ld-month-bar">
+      <!-- 账本切换器：按自然年分账、同一年可多本；切换后本页统计/列表/图表随账本整体隔离 -->
+      <LedgerSwitcher />
       <el-button class="month-btn" data-testid="ld-prev" @click="shiftMonth(-1)">‹ 上月</el-button>
       <el-button class="month-btn" data-testid="ld-next" @click="shiftMonth(1)">› 下月</el-button>
       <!-- ld-month 契约：EP el-date-picker 不透传 data-* 属性，testid 放包裹 div（同 business bizday-form-date 约定）；宽度由 wrapper .month-input 控 150px，picker 经 :deep 填满 wrapper（直接给 picker 加 class 不透传 data-v 且被 EP --el-date-editor-width 220px 覆盖） -->

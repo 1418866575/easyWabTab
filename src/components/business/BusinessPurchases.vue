@@ -298,6 +298,13 @@ function toggleRowExpense(index: number, id: string): void {
   if (!row) return
   if (row.expenseIds.includes(id)) {
     row.expenseIds = row.expenseIds.filter(x => x !== id)
+    // 取消到一笔不剩：成本来源消失（支出合计为 0）→ 数量/进价同步清零。
+    // 否则会残留上一次的派生值或手输值——关联支出期间手输框被只读 span 顶掉（值仍在 row 里），
+    // 取消后切回手输模式，旧值会「诈尸」显示，与「无支出 = 零成本」矛盾。
+    if (row.expenseIds.length === 0) {
+      row.quantity = ''
+      row.unitPrice = ''
+    }
   } else {
     row.expenseIds = [...row.expenseIds, id]
   }

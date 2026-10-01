@@ -7,14 +7,14 @@
  * 所有请求失败均 reject，由调用方自行 try/catch 降级（不做 localStorage 回退写）
  */
 import { WORKBENCH_DATA_VERSION, emptyAppSettingsData } from '../types'
-import type { AppSettingsData, AppSettingsDataNoCloudSync, BusinessData, BusinessStoreData, BusinessSyncData, Countdown, DiaryData, GenealogyData, HealthData, IconsSyncData, LedgerData, NavSyncData, NoteData, StudentSyncData, TeacherSyncData, WorkbenchData, WorkbenchSyncData, WorkbenchTodo } from '../types'
+import type { AppSettingsData, AppSettingsDataNoCloudSync, BusinessData, BusinessStoreData, BusinessSyncData, Countdown, DiaryData, GenealogyData, HealthData, IconsSyncData, LedgerData, LedgerStoreData, NavSyncData, NoteData, StudentSyncData, TeacherSyncData, WorkbenchData, WorkbenchSyncData, WorkbenchTodo } from '../types'
 import { adoptPasswordIdentity, getStoredSaltHex, getStoredVerification } from './useCrypto'
 import { normalizeBusinessStore } from './businessCore.ts'
 import { emptyDiaryData } from './diaryCore'
 import { emptyGenealogyData } from './genealogyCore'
 import { emptyHabitsData } from './habitCore'
 import { emptyHealthData } from './healthCore'
-import { emptyLedgerData } from './ledgerCore'
+import { emptyLedgerData, normalizeLedgerStore } from './ledgerCore'
 import { emptyNoteData, normalizeNoteData } from './noteCore'
 import { emptyPomodoroData } from './pomodoroCore'
 import { normalizeTeacherData } from './teacherCore'
@@ -249,7 +249,7 @@ export async function idbExportAll(): Promise<WorkbenchData> {
     idbGet<Countdown[]>('countdowns'),
     idbGet<string>('passwords'),
     idbGet<HealthData>('health'),
-    idbGet<LedgerData>('ledger'),
+    idbGet<LedgerStoreData | LedgerData>('ledger'),
     idbGet<AppSettingsData>('settings'),
     idbGet('pomodoro'),
     idbGet('habits'),
@@ -265,7 +265,9 @@ export async function idbExportAll(): Promise<WorkbenchData> {
     countdowns: countdowns ?? [],
     passwords: passwords ?? '',
     health: health ?? emptyHealthData(),
-    ledger: ledger ?? emptyLedgerData(),
+    // 记账多账本：导出前统一归一为「账本容器」（旧扁平数据迁入当前年账本），
+    // 保证备份/云同步里始终是带 ledgers 的新结构
+    ledger: normalizeLedgerStore(ledger),
     settings: settings ?? emptyAppSettingsData(),
     pomodoro: pomodoro ?? emptyPomodoroData(),
     habits: habits ?? emptyHabitsData(),
@@ -513,11 +515,14 @@ export async function importWorkbenchData(remote: WorkbenchSyncData): Promise<{ 
   // 2) 读本地 business（idbImportAll 会写 business store，workbench.json 不携带 business 时需保留本地数据）
   // localFamily：云端信封尚无 family 字段时（家谱数据还没推上去 / 云端是 v15 之前的旧信封），
   // 用它兜底保留本地家谱，避免每次自动拉取把本地数据静默清空
-  const [localSettings, localBusiness, localFamily, localDiary] = await Promise.all([
+  // localLedger：记账多账本容器。远端信封若无 ledger 字段（旧版/尚未推送）必须回退本地，
+  // 否则后台自动拉取会把本地全部账本静默清空（同 diary.journals / family 陷阱）
+  const [localSettings, localBusiness, localFamily, localDiary, localLedger] = await Promise.all([
     idbGet<AppSettingsData>('settings'),
     idbGet<BusinessStoreData | BusinessData>('business'),
     idbGet<GenealogyData>('family'),
-    idbGet<DiaryData>('diary')
+    idbGet<DiaryData>('diary'),
+    idbGet<LedgerStoreData | LedgerData>('ledger')
   ])
 
   // 合并：remote.settings（含同步偏好 cloudSyncInterval/cloudSyncSilentThreshold）+ 本机 cloudSync 凭证/开关 4 字段
@@ -542,7 +547,9 @@ export async function importWorkbenchData(remote: WorkbenchSyncData): Promise<{ 
     countdowns: remote.countdowns ?? [],
     passwords: remote.passwords ?? '',
     health: remote.health ?? emptyHealthData(),
-    ledger: remote.ledger ?? emptyLedgerData(),
+    // 记账多账本：远端优先、缺则回退本地，且无论新旧结构都归一为「账本容器」再落库，
+    // 保证 store 读到的 LEDGER 一定带 ledgers 数组（旧扁平信封自动迁入当前年账本）
+    ledger: normalizeLedgerStore(remote.ledger ?? localLedger),
     settings: mergedSettings,
     pomodoro: remote.pomodoro ?? emptyPomodoroData(),
     habits: remote.habits ?? emptyHabitsData(),

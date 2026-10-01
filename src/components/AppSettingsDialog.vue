@@ -23,11 +23,18 @@ import {
   nextLedgerSeq,
   sortedLedgers
 } from '@/composables/businessCore'
+// 个人记账「多账本」（ledgerCore）：与上面 businessCore 的同名函数区分，统一加 pl 前缀别名
+import {
+  currentYear as plCurrentYear,
+  ledgerCodeOf as plCode,
+  ledgerDefaultName as plDefaultName,
+  nextLedgerSeq as plNextSeq
+} from '@/composables/ledgerCore'
 import { isEmailConfigured, buildEmailParams } from '@/composables/reminderCore'
 import { sendReminderEmail } from '@/composables/reminderEmail'
 import { requestNotifyPermission } from '@/composables/useDesktopNotify'
 import yaml from 'js-yaml'
-import type { Site } from '@/types'
+import type { PersonalLedger, Site } from '@/types'
 import { ICP_NUMBER, PSB_NUMBER, MIIT_BEIAN_URL } from '@/config/beian'
 import { WECHAT_MP_NAME, WECHAT_MP_QRCODE, WECHAT_MP_HINT, OPEN_SOURCE_LINKS } from '@/config/about'
 import { useSitesStore } from '@/stores/sites'
@@ -107,7 +114,7 @@ type NavSubTab =
   | 'nav-icons'
   | 'nav-size'
   | 'nav-data'
-type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-todo-cat' | 'wb-cd-cat' | 'wb-note-cat' | 'wb-pwd-cat' | 'wb-ledger-cat' | 'wb-diary-cat' | 'wb-diary-journals' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
+type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-todo-cat' | 'wb-cd-cat' | 'wb-note-cat' | 'wb-pwd-cat' | 'wb-ledger-cat' | 'wb-ledger' | 'wb-diary-cat' | 'wb-diary-journals' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
 type BizSubTab = 'biz-base' | 'biz-backup' | 'biz-ledger' | 'biz-product-cat' | 'biz-expense-cat'
 type StuSubTab = 'stu-stage' | 'stu-info' | 'stu-subject' | 'stu-timetable' | 'stu-menu'
 /** 教师工作台子 tab：数据管理拆分出的 5 项 + 使用说明（原左侧菜单「工作台」分组，已迁入设置页）+ 菜单设置 */
@@ -189,6 +196,7 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student' | 'teacher', SubTab
     { key: 'wb-note-cat', label: '便签分类管理' },
     { key: 'wb-pwd-cat', label: '密码分类管理' },
     { key: 'wb-ledger-cat', label: '记账分类管理' },
+    { key: 'wb-ledger', label: '记账管理' },
     { key: 'wb-diary-cat', label: '日记分类管理' },
     { key: 'wb-diary-journals', label: '日记本管理' },
     { key: 'wb-backup',   label: '工作台备份' },
@@ -389,6 +397,8 @@ const NAV_GROUPS: NavGroup[] = [
       { key: 'wb-pwd-cat', label: '密码分类管理', icon: 'lock', tab: 'wb', sub: 'wb-pwd-cat' },
       // 「记账分类管理」管理的是个人工作台「记账」面板的分类（ledger store），已由销售记账 tab 迁到此处
       { key: 'wb-ledger-cat', label: '记账分类管理', icon: 'tag', tab: 'wb', sub: 'wb-ledger-cat' },
+      // 「记账管理」管的是账本本身（按自然年建账、同一年可多本）：创建/切换/重命名/清除数据/删除账本
+      { key: 'wb-ledger', label: '记账管理', icon: 'ledger', tab: 'wb', sub: 'wb-ledger' },
       { key: 'wb-backup', label: '工作台备份', icon: 'save', tab: 'wb', sub: 'wb-backup' },
       { key: 'wb-snapshot', label: '数据时光机', icon: 'refresh', tab: 'wb', sub: 'wb-snapshot' },
       { key: 'wb-size', label: '弹窗尺寸', icon: 'package', tab: 'wb', sub: 'wb-size' }
@@ -1863,6 +1873,97 @@ async function handleDeleteLedgerCat(id: string): Promise<void> {
   delete ledgerCatEditType[id]
 }
 
+// ===== 记账管理（个人工作台 - 记账管理）：账本的创建 / 切换 / 重命名 / 清空数据 / 删除 =====
+// 账本按自然年创建，同一年可有多本（编号 YYYY-NN），一本账本只记录其所属年份的数据；
+// 业务裁决全部由 ledgerCore 纯函数 + workbenchLedger store 负责，这里只做交互、守卫提示与反馈。
+const plNewYear = ref<number>(plCurrentYear())
+const plNewName = ref('')
+const plNewError = ref('')
+const plEditId = ref('')
+const plEditName = ref('')
+const plEditError = ref('')
+
+const plList = computed(() => ledStore.ledgers)
+/** 新建账本将分配到的年内序号（随所选年份与已有账本实时变化） */
+const plNewSeq = computed(() => plNextSeq(plList.value, plNewYear.value))
+const plNewCode = computed(() => plCode({ year: plNewYear.value, seq: plNewSeq.value }))
+const plNewPlaceholder = computed(() => plDefaultName(plNewYear.value, plNewSeq.value))
+
+/** 删除按钮禁用原因（空串表示可删）：当前账本需先切换、最后一个账本不可删 */
+function plDeleteBlockReason(l: PersonalLedger): string {
+  const guard = ledStore.ledgerDeleteGuard(l.id)
+  return guard.ok ? '' : (guard.message ?? '该账本不可删除')
+}
+
+function handlePlCreate(): void {
+  plNewError.value = ''
+  const res = ledStore.createLedger(plNewYear.value, plNewName.value.trim() || undefined)
+  const created = res.ledger
+  if (!res.ok || !created) {
+    plNewError.value = res.reason === 'invalid-year' ? '年份不合法（1970 - 9999）' : '账本创建失败'
+    return
+  }
+  plNewName.value = ''
+  toast.success(`已创建账本「${created.name}」（${plCode(created)}）并切换为当前账本`)
+}
+
+function handlePlSwitch(l: PersonalLedger): void {
+  if (ledStore.switchLedger(l.id)) toast.success(`已切换到账本「${l.name}」`)
+}
+
+function plStartEdit(l: PersonalLedger): void {
+  plEditId.value = l.id
+  plEditName.value = l.name
+  plEditError.value = ''
+}
+
+function plCancelEdit(): void {
+  plEditId.value = ''
+  plEditName.value = ''
+  plEditError.value = ''
+}
+
+function plSaveEdit(l: PersonalLedger): void {
+  const name = plEditName.value.trim()
+  if (!name) {
+    plEditError.value = '名称不能为空'
+    return
+  }
+  if (!ledStore.renameLedger(l.id, name).ok) {
+    plEditError.value = '重命名失败'
+    return
+  }
+  plCancelEdit()
+  toast.success('账本名称已更新')
+}
+
+async function handlePlClear(l: PersonalLedger): Promise<void> {
+  const count = l.data.entries.length
+  if (!await showConfirm(`确定要清空账本「${l.name}」的全部记账记录吗？\n\n将删除 ${count} 条记录，账本本体与分类保留，此操作不可恢复。`)) return
+  if (!ledStore.clearLedgerRecords(l.id).ok) {
+    toast.error('清空失败')
+    return
+  }
+  toast.success(`已清空 ${count} 条记录（分类保留）`)
+}
+
+async function handlePlDelete(l: PersonalLedger): Promise<void> {
+  const reason = plDeleteBlockReason(l)
+  if (reason) {
+    toast.warning(reason)
+    return
+  }
+  if (!await showConfirm(`确定要删除账本「${l.name}」吗？\n\n将连同该账本的分类与全部记账记录一起移除，此操作不可恢复。`)) return
+  const res = ledStore.deleteLedger(l.id)
+  if (!res.ok) {
+    if (res.reason === 'last-one') toast.error('至少需要保留一个账本')
+    else if (res.reason === 'is-current') toast.error('请先切换到其它账本再删除')
+    else toast.error('删除失败')
+    return
+  }
+  toast.success(`账本「${l.name}」已删除`)
+}
+
 // 订阅「去设置」打开事件（useAppSettingsDialog 单例）：打开时切到工作台设置 tab 并聚焦城市输入框；
 // 一次性消费打开标志（closeAppSettings），避免后续挂载重复触发
 let stopWatchSettings: (() => void) | undefined
@@ -2860,6 +2961,114 @@ onUnmounted(() => {
               <el-option value="expense" label="支出" />
             </el-select>
             <el-button size="small" :disabled="newLedgerCatName.trim() === ''" data-testid="ldcfg-ledgercat-add" @click="handleAddLedgerCat">添加</el-button>
+          </div>
+        </div>
+
+        <!-- 记账管理（个人工作台 tab - 记账管理）：账本的创建/切换/重命名/清空数据/删除。
+             账本按自然年创建、同一年可有多本，每本自动分配编号（YYYY-NN）且只记录该年份的数据；
+             样式复用销售记账「账本管理」的 bl-* 类，两处交互保持一致 -->
+        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-ledger'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">记账管理</h3>
+          </div>
+          <p class="wb-menu-hint">账本按自然年创建，同一年份可以有多本；每本自动分配编号（如 {{ plNewCode }}），且只记录该年份的数据。切换账本后，记账面板的统计、图表与列表只反映当前账本。</p>
+
+          <div class="bl-manage-card" data-testid="pl-ledger-manage">
+            <!-- 账本总览：编号徽标（当前账本高亮） -->
+            <div class="bl-categories" data-testid="pl-ledger-categories">
+              <span class="bl-cat-label">账本类别</span>
+              <div class="bl-cat-list">
+                <span
+                  v-for="l in plList"
+                  :key="l.id"
+                  class="bl-cat-badge"
+                  :class="{ current: l.id === ledStore.currentLedgerId }"
+                  :data-testid="`pl-ledger-cat-${plCode(l)}`"
+                >
+                  <b>{{ plCode(l) }}</b> {{ l.name }}
+                  <em v-if="l.id === ledStore.currentLedgerId">当前</em>
+                </span>
+              </div>
+            </div>
+
+            <!-- 新建账本 -->
+            <div class="bl-block">
+              <h4 class="bl-subtitle">新建账本</h4>
+              <p class="wb-menu-hint">留空名称将使用默认名「{{ plNewPlaceholder }}」；创建成功后自动切换为当前账本。</p>
+              <div class="remind-fields">
+                <label class="remind-field">
+                  <span class="remind-label">年份</span>
+                  <el-input-number :min="1970" :max="9999" :step="1" data-testid="pl-ledger-new-year" v-model="plNewYear" />
+                </label>
+                <label class="remind-field">
+                  <span class="remind-label">名称</span>
+                  <el-input maxlength="30" :placeholder="plNewPlaceholder" data-testid="pl-ledger-new-name" v-model="plNewName" />
+                </label>
+              </div>
+              <div class="remind-actions">
+                <el-button size="small" type="primary" data-testid="pl-ledger-create" @click="handlePlCreate">
+                  <Icon name="plus" /> 新建并切换
+                </el-button>
+              </div>
+              <p v-if="plNewError" class="wb-menu-hint bl-error" data-testid="pl-ledger-new-error">{{ plNewError }}</p>
+            </div>
+
+            <!-- 账本列表：年份 / 编号+名称 / 记录数 / 操作（切换 / 修改 / 清空 / 删除） -->
+            <div class="bl-block">
+              <h4 class="bl-subtitle">账本列表</h4>
+              <div class="bl-table-wrap" data-testid="pl-ledger-list">
+                <table class="bl-table">
+                  <thead>
+                    <tr>
+                      <th class="bl-col-index">序号</th>
+                      <th class="bl-col-year">年份</th>
+                      <th class="bl-col-name">名称</th>
+                      <th class="bl-col-count">记录数</th>
+                      <th class="bl-col-ops">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(l, i) in plList" :key="l.id" :data-testid="`pl-ledger-row-${plCode(l)}`">
+                      <td class="bl-col-index">{{ i + 1 }}</td>
+                      <td class="bl-col-year">{{ l.year }}</td>
+                      <td class="bl-col-name">
+                        <span class="bl-code-badge">{{ plCode(l) }}</span>
+                        <template v-if="plEditId !== l.id">{{ l.name }}</template>
+                        <template v-else>
+                          <el-input size="small" maxlength="30" class="bl-edit-input" data-testid="pl-ledger-edit-name" v-model="plEditName" />
+                          <span v-if="plEditError" class="wb-menu-hint bl-error">{{ plEditError }}</span>
+                        </template>
+                      </td>
+                      <td class="bl-col-count">{{ l.data.entries.length }}</td>
+                      <td class="bl-col-ops">
+                        <template v-if="plEditId !== l.id">
+                          <el-button
+                            size="small"
+                            :disabled="l.id === ledStore.currentLedgerId"
+                            data-testid="pl-ledger-switch"
+                            @click="handlePlSwitch(l)"
+                          >{{ l.id === ledStore.currentLedgerId ? '当前' : '切换' }}</el-button>
+                          <el-button size="small" data-testid="pl-ledger-edit" @click="plStartEdit(l)">修改</el-button>
+                          <el-button size="small" data-testid="pl-ledger-clear" @click="handlePlClear(l)">清空</el-button>
+                          <el-button
+                            size="small"
+                            type="danger"
+                            :disabled="!!plDeleteBlockReason(l)"
+                            :title="plDeleteBlockReason(l) || '删除该账本及其全部数据'"
+                            data-testid="pl-ledger-delete"
+                            @click="handlePlDelete(l)"
+                          >删除</el-button>
+                        </template>
+                        <template v-else>
+                          <el-button size="small" type="primary" data-testid="pl-ledger-edit-save" @click="plSaveEdit(l)">保存</el-button>
+                          <el-button size="small" data-testid="pl-ledger-edit-cancel" @click="plCancelEdit">取消</el-button>
+                        </template>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -4234,6 +4443,8 @@ html.dark .tab-btn.active {
 .bl-col-year { width: 84px; }
 .bl-col-ops { width: 220px; white-space: nowrap; }
 .bl-col-name { min-width: 200px; }
+/* 个人记账「账本列表」专用：记录数列（销售记账账本表无此列） */
+.bl-col-count { width: 84px; text-align: center; color: var(--color-text-secondary, #6b7280); }
 .bl-code-badge {
   display: inline-block;
   margin-right: 8px;

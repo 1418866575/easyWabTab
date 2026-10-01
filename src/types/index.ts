@@ -299,7 +299,9 @@ export interface WorkbenchData {
   countdowns: Countdown[]
   passwords: string // 整库加密 blob 字符串（useCrypto 现有格式）
   health: HealthData
-  ledger: LedgerData
+  // 记账多账本：与 business 同款升级——旧备份为扁平 LedgerData，新结构为账本容器 LedgerStoreData，
+  // 由 normalizeLedgerStore() 在导入/加载时统一迁移（旧数据迁入「当前年账本」），二者在信封层兼容共存
+  ledger: LedgerData | LedgerStoreData
   settings: AppSettingsData
   pomodoro?: unknown // v5 新增：番茄钟数据（后续 Todo 定义具体类型后收紧）
   habits?: unknown // v5 新增：习惯打卡数据（后续 Todo 定义具体类型后收紧）
@@ -498,6 +500,35 @@ export interface LedgerEntry {
 export interface LedgerData {
   categories: LedgerCategory[]
   entries: LedgerEntry[]
+}
+
+// ==================== 记账多账本（按自然年，同一年可多本） ====================
+
+/**
+ * 单个记账账本（最外层数据容器）：
+ * - 归属一个**自然年**（year），一本账本只记录该年份的数据；
+ * - 同一年允许存在多本，靠**年内序号 seq**（从 1 起，唯一）区分，编号读作 `YYYY-NN`；
+ * - 数据（分类 + 流水）挂在 data 下，账本之间**完全隔离**，切换账本即整体切换数据集。
+ */
+export interface PersonalLedger {
+  id: string
+  /** 账本归属的自然年 */
+  year: number
+  /** 同一年内的序号（从 1 起，唯一）；与 year 一起构成可读编号 `YYYY-NN` */
+  seq: number
+  /** 用户可见名称（可改；留空时用默认名 `YYYY年账本` / `YYYY年账本（NN）`） */
+  name: string
+  /** 该账本的全部数据：分类 + 流水 */
+  data: LedgerData
+  createdAt: string
+  updatedAt: string
+}
+
+/** 记账多账本容器（IndexedDB store 'ledger' 的存储结构）；旧版单账本扁平结构会自动迁入「当前年账本」 */
+export interface LedgerStoreData {
+  schemaVer: number
+  ledgers: PersonalLedger[]
+  currentLedgerId: string
 }
 
 // ==================== 摆摊进销存（销售记账，备份 v7 新增） ====================
@@ -1336,7 +1367,9 @@ export interface WorkbenchSyncData {
   countdowns: Countdown[]
   passwords: string
   health: HealthData
-  ledger: LedgerData
+  // 记账多账本：与 business 同款升级——旧信封为扁平 LedgerData，新结构为账本容器 LedgerStoreData，
+  // 由 normalizeLedgerStore() 在导入/加载时统一迁移（旧数据迁入「当前年账本」），二者在信封层兼容共存
+  ledger: LedgerData | LedgerStoreData
   settings: AppSettingsDataNoCloudSync
   pomodoro?: unknown
   habits?: unknown
