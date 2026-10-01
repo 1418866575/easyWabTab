@@ -103,8 +103,3 @@ export function buildStudentTemplateSheet(): ExcelSheet {
     rows: [['张三', '男', '1', '示例：XX市XX区XX路XX号', '否']]
   }
 }
-
-/** 下载学生名单导入模板（学生信息页与设置页「导入数据」共用） */
-export async function exportStudentTemplateExcel(classTitle: string): Promise<void> {
-  await exportExcel(excelFileName('学生名单模板', classTitle), [buildStudentTemplateSheet()])
-}

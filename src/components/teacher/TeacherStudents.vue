@@ -2,14 +2,15 @@
 // 学生信息：统计卡 + 班级花名册（男蓝/女粉、特异体质红色「!」角标）+ 可编辑明细表（含家庭地址）。
 // 明细表改动即存（onchange → store → IndexedDB），与项目其它面板「修改后自动保存」一致。
 // 「导入学生信息 / 下载模板」复用设置页「导入数据」的既有能力（teacherImportCore + store.importStudents），
-// 模板表头与学生名单解析（mapHeaders）共用 teacherExcelCore 的 exportStudentTemplateExcel，避免两处不一致。
+// 模板下载统一走 teacherTemplateCore.downloadTemplate（与数据管理页同一份学生名单模板），避免两处不一致。
 
 import { computed, ref, reactive, watch } from 'vue'
 import { usePageSize } from '@/composables/usePageSize'
 import { useTeacherStore } from '@/stores/teacher'
 import TeacherStatCard from './TeacherStatCard.vue'
 import { sortedStudents } from '@/composables/teacherCore'
-import { exportExcel, excelFileName, exportStudentTemplateExcel } from '@/composables/teacherExcelCore'
+import { exportExcel, excelFileName } from '@/composables/teacherExcelCore'
+import { downloadTemplate as downloadTpl } from '@/composables/teacherTemplateCore'
 import { fileToRows, rowsToStudents } from '@/composables/teacherImportCore'
 import { useToast } from '@/composables/useToast'
 import type { Student } from '@/types/teacher'
@@ -228,8 +229,12 @@ async function onStudentFile(e: Event): Promise<void> {
 }
 
 async function downloadTemplate(): Promise<void> {
-  await exportStudentTemplateExcel(store.cls ? `${store.cls.grade}${store.cls.name}` : '班级')
-  toast.success('学生名单 Excel 模板已下载')
+  await downloadTpl('student', {
+    classTitle: store.cls ? `${store.cls.grade}${store.cls.name}` : '',
+    onRequireClass: () => toast.warning('请先在右上角选择班级，再下载学生名单模板'),
+    onSuccess: () => toast.success('学生名单 Excel 模板已下载'),
+    onError: (m) => toast.error(m)
+  })
 }
 </script>
 

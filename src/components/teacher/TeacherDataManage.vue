@@ -18,11 +18,7 @@ import {
   rowsToStudents,
   rowsToTimetable
 } from '@/composables/teacherImportCore'
-import {
-  exportExcel,
-  excelFileName,
-  exportStudentTemplateExcel
-} from '@/composables/teacherExcelCore'
+import { downloadTemplate } from '@/composables/teacherTemplateCore'
 import {
   CLASS_LEVELS_BY_STAGE,
   STAGE_OPTIONS,
@@ -191,48 +187,45 @@ async function onTimetableFile(e: Event): Promise<void> {
 // ---------- 下载 Excel 模板 ----------
 // 模板表头与导入解析（teacherImportCore.mapHeaders）严格对齐，便于用户照填。
 // 各模板含一行示例数据，导入时按「姓名」为空自动跳过，不会误写库。
+// 统一走 teacherTemplateCore.downloadTemplate，未选班级时统一拦截提示。
 function classTitleForTemplate(): string {
-  return `${store.cls?.grade ?? ''}${store.cls?.name ?? ''}`
+  return store.cls ? `${store.cls.grade}${store.cls.name}` : ''
 }
 
 async function downloadStudentTemplate(): Promise<void> {
-  // 与学生信息页「下载模板」共用同一份模板（含家庭地址），避免两处表头不一致
-  await exportStudentTemplateExcel(classTitleForTemplate())
-  notify('学生名单 Excel 模板已下载')
+  await downloadTemplate('student', {
+    classTitle: classTitleForTemplate(),
+    onRequireClass: () => notify('请先在右上角选择班级，再下载学生名单模板', 'warn'),
+    onSuccess: () => notify('学生名单 Excel 模板已下载'),
+    onError: (m) => notify(m, 'warn')
+  })
 }
 
 async function downloadExamTemplate(): Promise<void> {
-  await exportExcel(
-    excelFileName('成绩模板', classTitleForTemplate()),
-    [{ name: '成绩', headers: ['姓名', '期中成绩', '期末成绩'], rows: [['张三', 90, 85]] }]
-  )
-  notify('成绩 Excel 模板已下载')
+  await downloadTemplate('exam', {
+    classTitle: classTitleForTemplate(),
+    onRequireClass: () => notify('请先在右上角选择班级，再下载成绩模板', 'warn'),
+    onSuccess: () => notify('成绩 Excel 模板已下载'),
+    onError: (m) => notify(m, 'warn')
+  })
 }
 
 async function downloadParentTemplate(): Promise<void> {
-  await exportExcel(
-    excelFileName('家长信息模板', classTitleForTemplate()),
-    [{ name: '家长信息', headers: ['姓名', '家长', '电话', '关系'], rows: [['张三', '张父', '13800000000', '父亲']] }]
-  )
-  notify('家长信息 Excel 模板已下载')
+  await downloadTemplate('parent', {
+    classTitle: classTitleForTemplate(),
+    onRequireClass: () => notify('请先在右上角选择班级，再下载家长信息模板', 'warn'),
+    onSuccess: () => notify('家长信息 Excel 模板已下载'),
+    onError: (m) => notify(m, 'warn')
+  })
 }
 
 async function downloadTimetableTemplate(): Promise<void> {
-  await exportExcel(
-    excelFileName('课程表模板', classTitleForTemplate()),
-    [
-      {
-        name: '课程表',
-        headers: ['节次', '周一', '周二', '周三', '周四', '周五', '周六', '周日'],
-        rows: [
-          ['第1节', '语文', '数学', '英语', '语文', '数学', '自习', '兴趣'],
-          ['第2节', '数学', '英语', '语文', '体育', '美术', '音乐', '兴趣'],
-          ['第3节', '英语', '语文', '数学', '科学', '书法', '班会', '兴趣']
-        ]
-      }
-    ]
-  )
-  notify('课程表 Excel 模板已下载')
+  await downloadTemplate('teacherTimetable', {
+    classTitle: classTitleForTemplate(),
+    onRequireClass: () => notify('请先在右上角选择班级，再下载课程表模板', 'warn'),
+    onSuccess: () => notify('课程表 Excel 模板已下载'),
+    onError: (m) => notify(m, 'warn')
+  })
 }
 
 // ---------- 备份 / 恢复 ----------

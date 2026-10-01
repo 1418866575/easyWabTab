@@ -54,6 +54,7 @@ export function normalizeHomework(raw: unknown): StudentHomework | null {
     subject,
     title,
     content: typeof h.content === 'string' ? h.content : undefined,
+    images: Array.isArray(h.images) ? h.images.filter((x: unknown): x is string => typeof x === 'string') : [],
     dueDate,
     status: normalizeStatus(h.status),
     priority: normalizePriority(h.priority),

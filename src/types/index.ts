@@ -970,6 +970,7 @@ export interface StudentHomework {
   subject: string          // 学科，来自 student_settings.subjects
   title: string            // 1-50 字符，必填
   content?: string         // 详细描述
+  images?: string[]        // 作业附件图片（base64 dataURL，最多 6 张）
   dueDate: string          // 'YYYY-MM-DD' 本地日期，必填
   status: StudentHomeworkStatus
   priority: StudentHomeworkPriority

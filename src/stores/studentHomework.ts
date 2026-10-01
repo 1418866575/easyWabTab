@@ -33,6 +33,7 @@ export interface NewHomeworkInput {
   subject: string
   title: string
   content?: string
+  images?: string[]
   dueDate: string
   priority: StudentHomeworkPriority
   source?: 'self' | 'parent'
@@ -43,6 +44,7 @@ export interface HomeworkUpdatePatch {
   subject?: string
   title?: string
   content?: string
+  images?: string[]
   dueDate?: string
   priority?: StudentHomeworkPriority
 }
@@ -111,6 +113,7 @@ export const useStudentHomeworkStore = defineStore('studentHomework', () => {
       subject,
       title,
       content: input.content?.trim() || undefined,
+      images: Array.isArray(input.images) ? input.images : [],
       dueDate,
       status: 'pending',
       priority: input.priority,
@@ -140,6 +143,9 @@ export const useStudentHomeworkStore = defineStore('studentHomework', () => {
     }
     if (patch.content !== undefined) {
       next.content = patch.content.trim() || undefined
+    }
+    if (patch.images !== undefined) {
+      next.images = Array.isArray(patch.images) ? patch.images : []
     }
     if (patch.dueDate !== undefined) {
       const d = patch.dueDate.trim()

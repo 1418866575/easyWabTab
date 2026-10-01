@@ -10,16 +10,13 @@ import { useStudentTimetableStore } from '@/stores/studentTimetable'
 import { useToast } from '@/composables/useToast'
 import { normalizeTiming, computePeriodTime } from '@/composables/studentTimetableCore'
 import {
-  TEMPLATE_HEADERS,
-  TEMPLATE_INSTRUCTIONS,
-  TEMPLATE_SAMPLE_ROWS,
-  REQUIRED_HEADERS,
   mapHeaders,
   validateImportRows,
   buildImportErrorCsv,
   importSummaryText,
   type ImportResult
 } from '@/composables/studentTimetableImportCore'
+import { downloadTemplate as downloadTpl } from '@/composables/teacherTemplateCore'
 import { downloadCsv, csvFileName } from '@/composables/csvExport'
 
 const props = withDefaults(defineProps<{
@@ -96,39 +93,11 @@ const templateLoading = ref(false)
 async function downloadTemplate(): Promise<void> {
   templateLoading.value = true
   try {
-    const XLSX = await import('xlsx')
-    const wb = XLSX.utils.book_new()
-
-    // 1) 填写说明
-    const instrAoa: (string | number)[][] = [
-      ['课程表导入模板 · 填写说明'],
-      [],
-      ...TEMPLATE_INSTRUCTIONS.map(t => [t])
-    ]
-    const wsInstr = XLSX.utils.aoa_to_sheet(instrAoa)
-    wsInstr['!cols'] = [{ wch: 90 }]
-
-    // 2) 示例数据
-    const sampleAoa: (string | number)[][] = [
-      TEMPLATE_HEADERS.slice(),
-      ...TEMPLATE_SAMPLE_ROWS.map(r => r.slice())
-    ]
-    const wsSample = XLSX.utils.aoa_to_sheet(sampleAoa)
-    wsSample['!cols'] = TEMPLATE_HEADERS.map(() => ({ wch: 14 }))
-
-    // 3) 空白模板（必填列加 * 标记）
-    const marked = TEMPLATE_HEADERS.map(h =>
-      REQUIRED_HEADERS.includes(h) ? h + '*' : h
-    )
-    const wsBlank = XLSX.utils.aoa_to_sheet([marked])
-    wsBlank['!cols'] = TEMPLATE_HEADERS.map(() => ({ wch: 14 }))
-
-    XLSX.utils.book_append_sheet(wb, wsInstr, '填写说明')
-    XLSX.utils.book_append_sheet(wb, wsSample, '示例数据')
-    XLSX.utils.book_append_sheet(wb, wsBlank, '课程表模板')
-
-    XLSX.writeFile(wb, '课程表导入模板.xlsx')
-    toast.success('模板已下载')
+    await downloadTpl('studentTimetable', {
+      classTitle: store.data.classroom || '',
+      onSuccess: () => toast.success('模板已下载'),
+      onError: (m) => toast.error(m)
+    })
   } catch (e) {
     console.error('[StudentTimetableConfig] template failed', e)
     toast.error('模板下载失败，请重试')

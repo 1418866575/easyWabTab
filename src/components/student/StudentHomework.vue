@@ -9,11 +9,9 @@ const vm = useViewMode()
 function cardFields(row: any) {
   return [
     { label: '学科', value: row.subject },
-    { label: '标题', value: row.title },
-    { label: '内容', value: row.content || '—' },
-    { label: '优先级', value: priorityLabel(row.priority) },
     { label: '截止日期', value: row.dueDate },
-    { label: '状态', value: statusLabel(row.status) }
+    { label: '优先级', value: priorityLabel(row.priority) },
+    { label: '图片', value: row.images && row.images.length ? `${row.images.length} 张` : '—' }
   ]
 }
 
@@ -122,6 +120,10 @@ const dialogDueDate = ref(today)
 const dialogPriority = ref<StudentHomeworkPriority>('normal')
 // 学科下拉是否允许输入自定义值（学科不在 settings.subjects 时可手动输入）
 const dialogSubjectCustom = ref(false)
+// 附件图片（base64 dataURL，最多 6 张，每张 ≤ 2MB）
+const dialogImages = ref<string[]>([])
+const IMAGE_MAX_COUNT = 6
+const IMAGE_MAX_SIZE = 2 * 1024 * 1024
 
 function openAddDialog(): void {
   editingId.value = null
@@ -131,6 +133,7 @@ function openAddDialog(): void {
   dialogDueDate.value = today
   dialogPriority.value = 'normal'
   dialogSubjectCustom.value = false
+  dialogImages.value = []
   showEditDialog.value = true
 }
 
@@ -144,7 +147,39 @@ function openEditDialog(id: string): void {
   dialogDueDate.value = h.dueDate
   dialogPriority.value = h.priority
   dialogSubjectCustom.value = !settingsStore.subjects.includes(h.subject)
+  dialogImages.value = Array.isArray(h.images) ? [...h.images] : []
   showEditDialog.value = true
+}
+
+// 选择图片：读为 dataURL 追加；超量/超大/非图片自动跳过并提示
+function onImageSelect(e: Event): void {
+  const input = e.target as HTMLInputElement
+  const files = input.files
+  if (!files || files.length === 0) return
+  for (const file of Array.from(files)) {
+    if (dialogImages.value.length >= IMAGE_MAX_COUNT) {
+      toast.warning(`最多上传 ${IMAGE_MAX_COUNT} 张图片`)
+      break
+    }
+    if (!file.type.startsWith('image/')) {
+      toast.warning(`「${file.name}」不是图片，已跳过`)
+      continue
+    }
+    if (file.size > IMAGE_MAX_SIZE) {
+      toast.warning(`「${file.name}」超过 2MB，已跳过`)
+      continue
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') dialogImages.value.push(reader.result)
+    }
+    reader.readAsDataURL(file)
+  }
+  input.value = '' // 允许再次选择同一文件
+}
+
+function removeImage(idx: number): void {
+  dialogImages.value.splice(idx, 1)
 }
 
 function closeEditDialog(): void {
@@ -164,6 +199,7 @@ async function saveEditDialog(): Promise<void> {
       subject,
       title,
       content: dialogContent.value,
+      images: [...dialogImages.value],
       dueDate: dialogDueDate.value,
       priority: dialogPriority.value
     })
@@ -175,6 +211,7 @@ async function saveEditDialog(): Promise<void> {
     subject,
     title,
     content: dialogContent.value,
+    images: [...dialogImages.value],
     dueDate: dialogDueDate.value,
     priority: dialogPriority.value
   })
@@ -316,6 +353,15 @@ onMounted(async () => {
               </span>
             </template>
           </el-table-column>
+          <el-table-column label="图片" width="90" align="center">
+            <template #default="{ row }">
+              <span v-if="!row.images || row.images.length === 0" style="color: var(--color-text-secondary, #9ca3af);">—</span>
+              <span v-else class="shw-img-cell">
+                <img :src="row.images[0]" class="shw-img-mini" alt="" />
+                <span v-if="row.images.length > 1" class="shw-img-count">+{{ row.images.length - 1 }}</span>
+              </span>
+            </template>
+          </el-table-column>
           <el-table-column label="操作" class-name="ewt-op-col" width="170" align="center" fixed="right">
             <template #default="{ row }">
               <button class="shw-edit-btn" :data-testid="`shw-edit-${row.id}`" @click="openEditDialog(row.id)">
@@ -345,6 +391,16 @@ onMounted(async () => {
             :key="item.id"
             :fields="cardFields(item)"
           >
+            <template #header>
+              <div class="shw-card-head">
+                <span class="shw-card-title">{{ item.title }}</span>
+                <span class="shw-status" :class="statusBadgeClass(item.status)">{{ statusLabel(item.status) }}</span>
+              </div>
+              <div v-if="item.images && item.images.length" class="shw-card-thumbs">
+                <img v-for="(img, i) in item.images.slice(0, 3)" :key="i" :src="img" class="shw-card-thumb" alt="" />
+                <span v-if="item.images.length > 3" class="shw-card-thumb-more">+{{ item.images.length - 3 }}</span>
+              </div>
+            </template>
           </RecordsCard>
         </div>
 
@@ -405,9 +461,24 @@ onMounted(async () => {
             v-model="dialogContent"
             type="textarea"
             :rows="3"
+            class="shw-content-input"
             placeholder="作业要求、页码范围等"
             data-testid="shw-form-content"
           />
+        </div>
+        <div class="form-field">
+          <label>图片（可选，最多 {{ IMAGE_MAX_COUNT }} 张，每张 ≤ 2MB）</label>
+          <div class="shw-imgs">
+            <div v-for="(img, i) in dialogImages" :key="i" class="shw-img-wrap">
+              <img :src="img" class="shw-img" alt="" />
+              <button type="button" class="shw-img-del" :data-testid="`shw-img-del-${i}`" @click="removeImage(i)">×</button>
+            </div>
+            <label v-if="dialogImages.length < IMAGE_MAX_COUNT" class="shw-img-add">
+              <input type="file" accept="image/*" multiple class="shw-img-input" data-testid="shw-form-images" @change="onImageSelect" />
+              <Icon name="image" :size="18" />
+              <span>添加图片</span>
+            </label>
+          </div>
         </div>
         <div class="form-row">
           <div class="form-field">
@@ -584,6 +655,121 @@ onMounted(async () => {
 .shw-status.shw-status-overdue { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
 .shw-status.shw-status-done { background: rgba(16, 185, 129, 0.12); color: #10b981; }
 
+/* ===== 卡片头部：标题 + 状态徽章（移动端核心，确保状态可见） ===== */
+.shw-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.shw-card-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-text, #111827);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:global(html.dark) .shw-card-title { color: var(--color-text, #f9fafb); }
+.shw-card-thumbs {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+.shw-card-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--color-border, #e5e7eb);
+}
+.shw-card-thumb-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  background: var(--color-bg-hover, #f3f4f6);
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 12px;
+}
+:global(html.dark) .shw-card-thumb { border-color: var(--color-border, #374151); }
+:global(html.dark) .shw-card-thumb-more { background: var(--color-bg-hover, #111827); }
+
+/* ===== 表格图片缩略图 ===== */
+.shw-img-cell { position: relative; display: inline-flex; }
+.shw-img-mini {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--color-border, #e5e7eb);
+}
+.shw-img-count {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  background: var(--color-primary, #3b82f6);
+  color: #fff;
+  font-size: 10px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 999px;
+}
+
+/* ===== 弹框图片上传 ===== */
+.shw-imgs { display: flex; flex-wrap: wrap; gap: 10px; }
+.shw-img-wrap { position: relative; width: 72px; height: 72px; }
+.shw-img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  display: block;
+}
+.shw-img-del {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.shw-img-add {
+  width: 72px;
+  height: 72px;
+  border: 1px dashed var(--color-border, #cbd5e1);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.shw-img-add:hover {
+  border-color: var(--color-primary, #3b82f6);
+  color: var(--color-primary, #3b82f6);
+}
+.shw-img-input { display: none; }
+:global(html.dark) .shw-img { border-color: var(--color-border, #374151); }
+:global(html.dark) .shw-img-add { border-color: var(--color-border, #4b5563); }
+:global(html.dark) .shw-img-mini { border-color: var(--color-border, #374151); }
+
 .shw-edit-btn {
   display: inline-flex;
   align-items: center;
@@ -668,6 +854,20 @@ onMounted(async () => {
 
 @media (max-width: 768px) {
   .shw-shell { padding: 12px; }
+  /* 移动端卡片视图：每行一张卡，占满整行（仅作用于本面板，不改全局 2 列规则） */
+  .shw-shell .ewt-card-grid {
+    grid-template-columns: 1fr;
+  }
+  /* 移动端卡片高度自适应，确保状态徽章 + 截止日期 + 缩略图 + 图片数全部可见（不被 156px 固定高裁切） */
+  .shw-shell :deep(.ewt-card) {
+    height: auto;
+    min-height: 156px;
+  }
+  /* 新增/编辑弹框：详细描述输入框高度与屏幕宽度一致（100vw），便于手机上多写内容 */
+  .shw-dialog :deep(.shw-content-input .el-textarea__inner) {
+    height: 100vw !important;
+    min-height: 100vw !important;
+  }
 }
 
 @media (max-width: 480px) {

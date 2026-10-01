@@ -4,14 +4,18 @@
 
 import { computed, ref, watch } from 'vue'
 import { useTeacherStore } from '@/stores/teacher'
+import { useToast } from '@/composables/useToast'
 import TeacherStatCard from './TeacherStatCard.vue'
 import { bandCounts, examStats, rankRows } from '@/composables/teacherCore'
 import { SCORE_BANDS } from '@/types/teacher'
 import { exportExcel, excelFileName } from '@/composables/teacherExcelCore'
+import { fileToRows, rowsToExams } from '@/composables/teacherImportCore'
+import { downloadTemplate as downloadTpl } from '@/composables/teacherTemplateCore'
 import SubjectSelect from '@/components/teacher/SubjectSelect.vue'
 import ExamNameSelect from '@/components/ExamNameSelect.vue'
 
 const store = useTeacherStore()
+const toast = useToast()
 
 const b = computed(() => store.bucket)
 const exams = computed(() => b.value?.exams ?? [])
@@ -93,14 +97,60 @@ async function exportExcelFile(): Promise<void> {
     { name: '成绩排名', headers: ['排名', '学号', '姓名', '性别', '成绩', '评价'], rows: dataRows }
   ])
 }
+
+// ---------- 导入成绩 / 下载模板（与设置页「导入数据」同一套能力，复制到此页便于就近操作） ----------
+const examFile = ref<HTMLInputElement | null>(null)
+
+async function onExamFile(e: Event): Promise<void> {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  try {
+    const rows = await fileToRows(file)
+    const students = b.value?.students ?? []
+    if (!students.length) {
+      toast.warning('请先导入学生名单，再导入成绩（成绩按学生姓名匹配）')
+      return
+    }
+    const res = rowsToExams(rows, students, store.cls?.subject ?? '')
+    if (res.errors.length) {
+      toast.error(`导入失败：${res.errors.join('；')}`)
+      return
+    }
+    await store.importExams(res.exams)
+    toast.success(
+      `生成 ${res.exams.length} 场考试${res.warnings.length ? `（${res.warnings.length} 条提示：${res.warnings.slice(0, 3).join('；')}）` : ''}`
+    )
+  } catch (err) {
+    toast.error(`读取失败：${err instanceof Error ? err.message : String(err)}`)
+  } finally {
+    input.value = ''
+  }
+}
+
+async function downloadTemplate(): Promise<void> {
+  await downloadTpl('exam', {
+    classTitle: store.cls ? `${store.cls.grade}${store.cls.name}` : '',
+    onRequireClass: () => toast.warning('请先在右上角选择班级，再下载成绩模板'),
+    onSuccess: () => toast.success('成绩导入模板已下载'),
+    onError: (m) => toast.error(m)
+  })
+}
 </script>
 
 <template>
   <div class="tw-page">
     <div class="tw-head">
-      <div>
-        <h3 class="tw-title">成绩信息</h3>
-        <p class="tw-subtitle">按考试查看分布与排名；成绩可直接编辑，修改后自动保存。</p>
+      <div class="tw-head-left">
+        <div>
+          <h3 class="tw-title">成绩信息</h3>
+          <p class="tw-subtitle">按考试查看分布与排名；成绩可直接编辑，修改后自动保存。</p>
+        </div>
+        <div class="tw-toolbar tw-no-print ex-head-tools">
+          <button type="button" class="tw-btn tw-btn-primary" @click="examFile?.click()">导入成绩信息</button>
+          <button type="button" class="tw-btn" @click="downloadTemplate">下载导入模板</button>
+          <input ref="examFile" type="file" accept=".xlsx,.xls,.csv" class="ex-file" @change="onExamFile" />
+        </div>
       </div>
       <div class="tw-toolbar tw-no-print">
         <button type="button" class="tw-btn" @click="exportPaper">打印</button>
@@ -126,7 +176,7 @@ async function exportExcelFile(): Promise<void> {
         </label>
         <label class="tw-label">日期<input v-model="newDate" class="tw-input tw-input-sm" placeholder="如 2026-04" /></label>
         <button type="button" class="tw-btn tw-btn-sm tw-btn-primary" :disabled="!newName.trim()" @click="onAddExam">新增考试</button>
-        <span class="tw-label">批量成绩请到设置页「导入数据」</span>
+        <span class="tw-label">批量成绩可从上方「导入成绩信息」导入</span>
       </div>
     </section>
 
@@ -232,6 +282,23 @@ async function exportExcelFile(): Promise<void> {
 <style scoped>
 .ex-add {
   margin-top: 8px;
+}
+
+/* 头部左侧分组：标题 + 导入/下载工具条同处左侧，与右侧打印/导出分隔 */
+.tw-head-left {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3, 12px);
+  flex-wrap: wrap;
+}
+
+.ex-head-tools {
+  flex-wrap: wrap;
+}
+
+/* 隐藏的「导入成绩信息」文件选择框（由按钮代理点击） */
+.ex-file {
+  display: none;
 }
 
 .ex-chart {

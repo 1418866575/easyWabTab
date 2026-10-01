@@ -119,9 +119,12 @@ function display(v?: string | number | null): string {
   grid-template-columns: auto 1fr;
   gap: 4px 12px;
   margin: 0;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
+  /* 关键修复：移动端卡片 height:auto 时，flex-basis:0% + min-height:0 + overflow:hidden
+     会让字段区塌缩为 0 高（min-content 被当成 0），导致卡片不显示内容。
+     改为内容基准 + 允许内容高度 + 不裁剪；卡片根 .ewt-card 仍有 overflow:hidden 兜底裁剪。 */
+  flex: 1 1 auto;
+  min-height: auto;
+  overflow: visible;
 }
 .ewt-card-field {
   display: contents;

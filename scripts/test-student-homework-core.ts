@@ -103,6 +103,15 @@ test("T12 autoFlowStatus 不修改原数组；状态变更时写 updatedAt", () 
   assert.notEqual(out[0].updatedAt, origUpd)
 })
 
+test("T13 normalizeHomework images 数组保留/缺省与非法归一为 []", () => {
+  const withImg = normalizeHomework({ title: "t", subject: "s", dueDate: "2026-02-01", images: ["data:image/png;base64,AAA"] })
+  assert.deepEqual(withImg.images, ["data:image/png;base64,AAA"])
+  const noImg = normalizeHomework({ title: "t", subject: "s", dueDate: "2026-02-01" })
+  assert.deepEqual(noImg.images, [])
+  const badImg = normalizeHomework({ title: "t", subject: "s", dueDate: "2026-02-01", images: "notarray" as any })
+  assert.deepEqual(badImg.images, [])
+})
+
 let p = 0, f = 0
 for (const t of tests) {
   try { t.fn(); p++; console.log("  OK " + t.name) }

@@ -119,6 +119,11 @@ async function exportExcelFile(): Promise<void> {
 
     <section class="tw-card">
       <h4 class="tw-card-title">座位编排</h4>
+      <div v-if="seats.grid.length" class="st-podium-wrap">
+        <span class="st-podium-side">左</span>
+        <div class="st-podium"><span>讲台</span></div>
+        <span class="st-podium-side">右</span>
+      </div>
       <div
         v-if="seats.grid.length"
         class="tw-seat-grid"
@@ -148,11 +153,6 @@ async function exportExcelFile(): Promise<void> {
         </div>
       </div>
       <p v-else class="tw-empty">暂无座位数据。</p>
-      <div v-if="seats.grid.length" class="st-podium-wrap">
-        <span class="st-podium-side">左</span>
-        <div class="st-podium"><span>讲台</span></div>
-        <span class="st-podium-side">右</span>
-      </div>
       <p class="tw-note st-tip">提示：电脑端可直接拖动方块；手机端点一下 A 再点一下 B 即可互换（选中块会高亮）。</p>
     </section>
   </div>
@@ -171,13 +171,13 @@ async function exportExcelFile(): Promise<void> {
   font-size: var(--font-size-xs, 11px);
 }
 
-/* 讲台：座位编排区域正下方，梯形图形 + 左右方位标识 */
+/* 讲台：座位编排区域正上方（教室前端），梯形图形 + 左右方位标识 */
 .st-podium-wrap {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 14px;
-  margin-top: 18px;
+  margin-bottom: 18px;
 }
 
 .st-podium {
