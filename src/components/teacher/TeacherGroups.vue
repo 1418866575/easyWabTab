@@ -606,6 +606,7 @@ watch(showForm, (v) => {
       v-model="showRandom"
       title="随机分组"
       width="92%"
+      class="grp-random-dialog"
       destroy-on-close
       data-testid="grp-random-dialog"
       @close="showRandom = false"
@@ -1021,6 +1022,7 @@ watch(showForm, (v) => {
 .grp-rg-right {
   flex: 1 1 50%;
   min-width: 0;
+  min-height: 0;
   border-left: 1px solid var(--color-border, #e5e7eb);
   padding-left: 16px;
   display: flex;
@@ -1077,8 +1079,9 @@ watch(showForm, (v) => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
-  max-height: 360px;
 }
 .grp-rg-group {
   border: 1px solid var(--color-border, #e5e7eb);
@@ -1154,5 +1157,18 @@ watch(showForm, (v) => {
     width: 92vw !important;
     max-width: 92vw;
   }
+}
+</style>
+
+<!-- 随机分组弹框根元素被 Teleport 到 body，scoped 样式无法命中；此处用唯一 class 做整体高度约束：
+     正常分组数时右侧预览区随列高铺满全部信息，不再出现「4 排就滚动 + 底部留白」；
+     极端大班（多组多生）时整体不超过视口，由弹框 body 统一滚动，避免撑爆视口。 -->
+<style>
+.grp-random-dialog.el-dialog {
+  max-height: 88vh;
+}
+.grp-random-dialog .el-dialog__body {
+  max-height: calc(88vh - 140px);
+  overflow-y: auto;
 }
 </style>
