@@ -27,6 +27,7 @@ import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { calcDailyCost, calcDailyCostFifo, calcDailyItemDetails, calcDailyLossAmount, calcDailyRevenue, calcFifoAllocation, calcInventory, checkRevenueOverride, findProduct, formatYuanOf, localDateKey, sortDailyRecords, validateDailyRows } from '@/composables/businessCore'
 import { useToast } from '@/composables/useToast'
 import { useBizSaving } from '@/composables/useBizSaving'
+import { useLedgerDate } from '@/composables/useLedgerDate'
 import { exportXlsx } from '@/composables/xlsxExport'
 import type { BusinessDailyRecord, DailyRecordItem } from '@/types'
 import { usePageSize } from '@/composables/usePageSize'
@@ -272,10 +273,8 @@ function removeRow(index: number): void {
 }
 
 /** 账本只记录其所属年份的数据：日期选择器禁用其它年份 */
-const ledgerYear = computed(() => store.currentLedgerYear)
-function disabledDate(d: Date): boolean {
-  return d.getFullYear() !== ledgerYear.value
-}
+// 账本只记录其所属年份的数据：日期选择器禁用其它年份（公共逻辑，与进货/库存弹框同源）
+const { disabledDate } = useLedgerDate()
 
 async function handleSave(): Promise<void> {
   if (!isFormValid.value) return

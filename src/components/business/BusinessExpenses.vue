@@ -3,6 +3,7 @@ import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
 import { useToast } from '@/composables/useToast'
 import { useBizSaving } from '@/composables/useBizSaving'
+import { useLedgerDate } from '@/composables/useLedgerDate'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
@@ -238,10 +239,8 @@ const isFormValid = computed(() => {
 })
 
 /** 账本只记录其所属年份的数据：日期选择器禁用其它年份 */
-const ledgerYear = computed(() => store.currentLedgerYear)
-function disabledDate(d: Date): boolean {
-  return d.getFullYear() !== ledgerYear.value
-}
+// 账本只记录其所属年份的数据：日期选择器禁用其它年份（公共逻辑，与库存/销售弹框同源）
+const { disabledDate } = useLedgerDate()
 
 async function handleSave(): Promise<void> {
   if (!isFormValid.value) return

@@ -122,9 +122,31 @@ function numOf(raw: string): number {
   return Number.isFinite(n) && n >= 0 ? n : 0
 }
 
-const isFormValid = computed(
-  () => formName.value.trim() !== '' && numOf(formSellingPrice.value) > 0
+// ===== 录入校验 =====
+/**
+ * 是否已在提交后校验过：刚打开表单不飘红，提交时才暴露错误。
+ * 原先「校验失败直接置灰保存按钮」没有任何原因说明，用户（尤其新手）
+ * 只知道点不动。现改为：按钮不因校验失败禁用，提交时统一拦截 + 提示首个错误，
+ * 并在对应字段下方给出行内错误，与「进货/库存/销售」的行内错误口径一致。
+ */
+const submitAttempted = ref(false)
+
+/** 全部错误（顺序即提示顺序） */
+const formErrors = computed(() => {
+  const list: string[] = []
+  if (formName.value.trim() === '') list.push('请输入商品名称')
+  if (!(numOf(formSellingPrice.value) > 0)) list.push('售价须大于 0')
+  return list
+})
+/** 字段级错误：仅在提交尝试后展示，避免空表单刚打开就飘红 */
+const nameError = computed(() =>
+  submitAttempted.value && formName.value.trim() === '' ? '请输入商品名称' : ''
 )
+const priceError = computed(() =>
+  submitAttempted.value && !(numOf(formSellingPrice.value) > 0) ? '售价须大于 0' : ''
+)
+
+const isFormValid = computed(() => formErrors.value.length === 0)
 
 function startAdd(): void {
   editingId.value = null
@@ -134,6 +156,7 @@ function startAdd(): void {
   formSellingPrice.value = ''
   formMemberPrice.value = ''
   formActive.value = true
+  submitAttempted.value = false
   showDialog.value = true
 }
 
@@ -146,11 +169,17 @@ function startEdit(p: BusinessProduct): void {
   formSellingPrice.value = String(p.sellingPrice)
   formMemberPrice.value = typeof p.memberPrice === 'number' ? String(p.memberPrice) : ''
   formActive.value = p.active
+  submitAttempted.value = false
   showDialog.value = true
 }
 
 async function handleSave(): Promise<void> {
-  if (!isFormValid.value) return
+  // 校验失败：暴露行内错误 + 提示首个原因（按钮不再置灰，否则用户无从得知为何不能保存）
+  if (!isFormValid.value) {
+    submitAttempted.value = true
+    toast.error(formErrors.value[0] ?? '请检查表单填写')
+    return
+  }
   // 编辑态边界：商品可能已被删除（云同步/其它入口删除），而 store.updateProduct 找不到记录时会静默返回，
   // 这里提前拦截并提示，避免「点了保存没反应、以为已成功」。
   if (editingId.value && !store.products.some(p => p.id === editingId.value)) {
@@ -337,6 +366,7 @@ function drawerMarkupRate(): number | null {
         <div class="biz-field">
           <label>名称 *</label>
           <el-input v-model="formName" maxlength="40" data-testid="bizprod-form-name" />
+          <span v-if="nameError" class="bizprod-field-error" data-testid="bizprod-error-name">{{ nameError }}</span>
         </div>
         <div class="biz-field">
           <label>分类</label>
@@ -384,6 +414,7 @@ function drawerMarkupRate(): number | null {
               @update:model-value="formSellingPrice = String($event ?? '')"
               data-testid="bizprod-form-selling"
             />
+            <span v-if="priceError" class="bizprod-field-error" data-testid="bizprod-error-price">{{ priceError }}</span>
           </div>
           <div class="biz-field">
             <label>会员价</label>
@@ -414,7 +445,7 @@ function drawerMarkupRate(): number | null {
         </div>
         <div class="biz-form-actions">
           <el-button @click="showDialog = false">取消</el-button>
-          <el-button type="primary" native-type="submit" :disabled="!isFormValid || saving" :loading="saving" data-testid="bizprod-save">
+          <el-button type="primary" native-type="submit" :disabled="saving" :loading="saving" data-testid="bizprod-save">
             {{ editingId ? '保存' : '添加' }}
           </el-button>
           <el-button v-if="editingId" type="danger" data-testid="bizprod-dialog-del" @click="handleDeleteCurrent">删除</el-button>
@@ -732,6 +763,15 @@ function drawerMarkupRate(): number | null {
   margin: -4px 0 0;
   font-size: 12px;
   color: var(--color-text-muted, var(--color-text-muted));
+}
+
+/* 字段级校验错误（提交尝试后展示）：红色说明「为什么不能保存」 */
+.bizprod-field-error {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--color-error, #ef4444);
+  line-height: 1.4;
 }
 
 .bizprod-form-avg {

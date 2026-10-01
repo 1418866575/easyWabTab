@@ -58,6 +58,7 @@ import type { BusinessPurchase, BusinessExpense } from '@/types'
 import { usePageSize } from '@/composables/usePageSize'
 import { useToast } from '@/composables/useToast'
 import { useBizSaving } from '@/composables/useBizSaving'
+import { useLedgerDate } from '@/composables/useLedgerDate'
 
 const toast = useToast()
 
@@ -410,10 +411,8 @@ function startCopy(p: BusinessPurchase): void {
 }
 
 /** 账本只记录其所属年份的数据：日期选择器禁用其它年份（与 store 写入守卫同口径） */
-const ledgerYear = computed(() => store.currentLedgerYear)
-function disabledDate(d: Date): boolean {
-  return d.getFullYear() !== ledgerYear.value
-}
+// 账本只记录其所属年份的数据：日期选择器禁用其它年份（公共逻辑，与进货/销售弹框同源）
+const { ledgerYear, disabledDate } = useLedgerDate()
 
 /**
  * 进价 → 商品销售成本价：进货保存后按「未售完批次均价」回写商品成本价（口径同商品页展示）。

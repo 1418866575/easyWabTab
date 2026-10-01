@@ -3,7 +3,7 @@
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { showConfirm } from '@/utils/dialog'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { useToast } from '@/composables/useToast'
+import { reportBizResult, type BizResultLike } from '@/composables/bizResult'
 import type { BusinessProductCategory, BusinessExpenseCategory } from '@/types'
 import { EXPENSE_UNITS, productUnitPriceOf } from '@/composables/businessCore'
 import Icon from '@/components/Icon.vue'
@@ -24,7 +24,6 @@ onMounted(() => window.addEventListener('keydown', handleKeydown))
 onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
 
 const store = useWorkbenchBusinessStore()
-const toast = useToast()
 
 const isProduct = computed(() => props.kind === 'product')
 const isExpense = computed(() => props.kind === 'expense')
@@ -77,21 +76,23 @@ function isBuiltInOf(id: string): boolean {
   return (store.expenseCategories.find(c => c.id === id)?.isBuiltIn ?? false)
 }
 
-function handleResult(r: { ok: boolean; reason?: string }, successMsg?: string): void {
-  if (r.ok) {
-    if (successMsg) toast.success(successMsg)
-    return
-  }
+/**
+ * 统一结果处理：成功提示 successMsg，失败按 reason 映射提示。
+ * 通用「结果 → toast」逻辑已抽到 reportBizResult，这里只保留分类域的文案映射。
+ */
+function handleResult(r: BizResultLike, successMsg?: string): void {
   const n = noun()
-  const msg: Record<string, string> = {
-    empty: `${n}名称不能为空`,
-    duplicate: `同名${n}已存在`,
-    'not-found': `${n}不存在`,
-    'in-use': `该${n}已被记录使用，无法删除`,
-    builtin: '内置分类无法删除',
-    boundary: '已在边界'
-  }
-  toast.error(msg[r.reason ?? ''] ?? '操作失败')
+  reportBizResult(r, {
+    successMsg,
+    messages: {
+      empty: `${n}名称不能为空`,
+      duplicate: `同名${n}已存在`,
+      'not-found': `${n}不存在`,
+      'in-use': `该${n}已被记录使用，无法删除`,
+      builtin: '内置分类无法删除',
+      boundary: '已在边界'
+    }
+  })
 }
 
 function commitRename(id: string): void {
