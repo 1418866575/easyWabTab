@@ -1425,3 +1425,67 @@ export interface StudentSyncData {
   goals?: unknown,
 }
 
+
+// ==================== 智能工作台（/smart）====================
+// 技能与提示词两类资产，均落在统一偏好层（IndexedDB nav store），
+// 并纳入备份信封与云同步脏标记。详见 docs/smart-workbench-requirements.md。
+
+/** 提示词模板变量：由正文 {{name}} 自动解析，不手工维护 */
+export interface SmartPromptVariable {
+  name: string
+  desc?: string
+  defaultValue?: string
+}
+
+/** 技能：一段可复用的 AI 工作流说明（Markdown 承载） */
+export interface SmartSkill {
+  id: string
+  name: string
+  category: string
+  icon: string
+  tags: string[]
+  version: string
+  author: string
+  description: string
+  content: string
+  usageCount: number
+  lastUsedAt: number | null
+  isBuiltIn?: boolean
+  createdAt: number
+  updatedAt: number
+}
+
+/** 提示词：可直接投喂模型的文本模板，支持 {{变量}} 占位 */
+export interface SmartPrompt {
+  id: string
+  title: string
+  category: string
+  tags: string[]
+  model: string
+  content: string
+  variables: SmartPromptVariable[]
+  isFavorite: boolean
+  usageCount: number
+  lastUsedAt: number | null
+  isBuiltIn?: boolean
+  createdAt: number
+  updatedAt: number
+}
+
+/** 导入导出信封：单条与集合包同构，kind 区分资产类型 */
+export interface SmartEnvelope<T> {
+  kind: 'smart-skills' | 'smart-prompts'
+  version: number
+  exportedAt: number
+  items: T[]
+}
+
+/** 导入预览统计 */
+export interface SmartImportPreview<T> {
+  /** 库内不存在同名 → 新增 */
+  added: T[]
+  /** id 或名称已存在 → 更新（按 updatedAt 新者胜） */
+  updated: T[]
+  /** 非法条目 → 跳过 */
+  skipped: number
+}

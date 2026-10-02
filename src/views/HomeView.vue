@@ -451,6 +451,14 @@ onUnmounted(() => {
         aria-label="打开工具箱"
         @click="router.push({ name: 'toolbox' })"
       >🧰 工具箱</button>
+      <!-- 智能工作台入口：跳转到 /smart（自定义技能库 + 提示词库） -->
+      <button
+        class="btn-help"
+        data-testid="home-smart-btn"
+        title="智能工作台：技能与提示词管理"
+        aria-label="打开智能工作台"
+        @click="router.push({ name: 'smart' })"
+      >🧠 智能工作台</button>
     </div>
     <div class="app-bar-right">
       <button

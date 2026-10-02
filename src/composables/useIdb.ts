@@ -152,7 +152,10 @@ export const WORKBENCH_PREFS_KEYS = [
   'user-countdown-sort',
   'user-todo-categories',
   'user-todo-tab-categories',
-  'help-ack-count'
+  'help-ack-count',
+  // 智能工作台（/smart）：技能库与提示词库，随备份与云同步一起走，避免资产随重装丢失
+  'smart-skills',
+  'smart-prompts'
 ] as const
 
 /**
