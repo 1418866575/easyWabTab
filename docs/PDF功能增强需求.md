@@ -89,7 +89,7 @@
 | P2 | PDF 加密（加密码） | #18 | pdf-lib 加密支持有限；需确认可写标准加密字典，否则引入 `node-qpdf` 思路的 WASM 方案（仍在浏览器） |
 | P2 | PDF 转 PDF/A | #20 | 需合规重写（字体嵌入、色彩空间、XMP）；重且易错，建议规划为服务端或专用 WASM |
 | P2 | OCR PDF | #24 | 需 OCR 引擎；方向：引入 `tesseract.js`（WASM，体积大、首次慢），作为独立工具 |
-| P2 | 修复 PDF | #21 | 轻度损坏可在 `PDFDocument.load` 后重新 `save` 重建；重度需解析修复，规划为「重建」工具 |
+| P2 | 修复 PDF | #21 | **已于 2026-10-03 实现（`pdf-repair`，pdf 分类 order 19）**：`PDFDocument.load` 后重新 `save` 重建；加载失败时自动截断到最后一个 `%%EOF` 重试；重度损坏如实报错 |
 | P3 | 编辑 PDF / 表单 | #10/#28 | 需可视化编辑层与表单字段写入，工作量大，规划独立编辑器模块 |
 | P3 | 数字签名 | #13 | 需 X.509 证书 + CMS 签名；可引入 WASM 加密库，规划为高级工具（本仓库 x509-parse 已具备证书解析基础） |
 | P3 | HTML 转 PDF / 比较 / 密文 / 裁剪 / AI 摘要 / 翻译 / 转 Markdown | #16/#25/#26/#27/#29/#30/#31 | 各自需渲染引擎、Diff 算法、AI 接口或重排版；其中「PDF 转 Markdown」「HTML 转 PDF」相对可在前端用 pdfjs + markdown-it 试做降质版 |
