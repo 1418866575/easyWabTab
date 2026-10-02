@@ -343,7 +343,7 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   out.reminderEmailServiceId = typeof data.reminderEmailServiceId === 'string' ? data.reminderEmailServiceId : ''
   out.reminderEmailTemplateId = typeof data.reminderEmailTemplateId === 'string' ? data.reminderEmailTemplateId : ''
   out.reminderEmailPublicKey = typeof data.reminderEmailPublicKey === 'string' ? data.reminderEmailPublicKey : ''
-  // 云同步：5 字段解析（布尔仅采纳 true/false，字符串原样透传，数字 clamp >=0 整数，非法/缺失回退默认）
+  // 云同步：6 字段解析（布尔仅采纳 true/false，字符串原样透传，数字 clamp >=0 整数，非法/缺失回退默认）
   out.cloudSyncEnabled = typeof data.cloudSyncEnabled === 'boolean' ? data.cloudSyncEnabled : false
   out.cloudSyncUrl = typeof data.cloudSyncUrl === 'string' ? data.cloudSyncUrl : ''
   out.cloudSyncUsername = typeof data.cloudSyncUsername === 'string' ? data.cloudSyncUsername : ''
@@ -359,6 +359,8 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   } else {
     out.cloudSyncSilentThreshold = 1000
   }
+  // 保存后立即上云：布尔仅采纳 true/false，非法/缺失回退默认 false（保守，需用户显式开启）
+  out.cloudSyncAutoPush = typeof data.cloudSyncAutoPush === 'boolean' ? data.cloudSyncAutoPush : false
   out.homeCardLayout = normalizeHomeCardLayout(data.homeCardLayout)
   return out
 }
@@ -442,6 +444,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const cloudSyncPassword = ref<string>('')
   const cloudSyncInterval = ref<number>(0)
   const cloudSyncSilentThreshold = ref<number>(1000)
+  const cloudSyncAutoPush = ref<boolean>(false)
 
   // ========================================
   // 持久化
@@ -494,6 +497,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       cloudSyncPassword: cloudSyncPassword.value,
       cloudSyncInterval: cloudSyncInterval.value,
       cloudSyncSilentThreshold: cloudSyncSilentThreshold.value,
+      cloudSyncAutoPush: cloudSyncAutoPush.value,
       homeCardLayout: toRaw(homeCardLayout.value)
     })).catch(() => {
       // IDB 写入失败静默忽略（fire-and-forget，不抛错）
@@ -1086,6 +1090,10 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     cloudSyncSilentThreshold.value = Math.max(0, Math.floor(n))
     persist()
   }
+  function setCloudSyncAutoPush(v: boolean) {
+    cloudSyncAutoPush.value = v === true
+    persist()
+  }
 
   // 菜单开关判定（缺失键 = 显示）；home 恒显示（视图/设置弹窗锁定其开关）
   function isWorkbenchMenuEnabled(key: string): boolean {
@@ -1168,6 +1176,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     cloudSyncPassword,
     cloudSyncInterval,
     cloudSyncSilentThreshold,
+    cloudSyncAutoPush,
     homeCardLayout,
     initSettings,
     applySettings,
@@ -1219,6 +1228,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     setCloudSyncPassword,
     setCloudSyncInterval,
     setCloudSyncSilentThreshold,
+    setCloudSyncAutoPush,
     setHomeCardLayout,
     resetHomeCardLayout,
     resetDefaults,
