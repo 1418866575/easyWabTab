@@ -261,12 +261,13 @@ const mpQrFailed = ref(false)
 // ========================================
 // 入口图标选择（工作台 / 销售记账 / 学生 / 教师）：图标来自图标管理库，弹框形式选择
 // ========================================
-type IconTarget = 'workbench' | 'business' | 'student' | 'teacher' | 'manage' | 'favicon'
+type IconTarget = 'workbench' | 'business' | 'student' | 'teacher' | 'smart' | 'manage' | 'favicon'
 const ICON_TARGET_LABEL: Record<IconTarget, string> = {
   workbench: '工作台',
   business: '销售记账',
   student: '学生工作台',
   teacher: '教师工作台',
+  smart: '智能工作台',
   manage: '工作台管理',
   favicon: '站点图标'
 }
@@ -287,6 +288,7 @@ const iconPickerCurrent = computed(() => {
     case 'business': return store.businessPageIcon
     case 'student': return store.studentPageIcon
     case 'teacher': return store.teacherPageIcon
+    case 'smart': return store.smartPageIcon
     case 'manage': return store.workbenchManageIcon
     case 'favicon': return store.siteFavicon
     default: return ''
@@ -299,6 +301,7 @@ function onPickIcon(src: string): void {
     case 'business': store.setBusinessPageIcon(src); break
     case 'student': store.setStudentPageIcon(src); break
     case 'teacher': store.setTeacherPageIcon(src); break
+    case 'smart': store.setSmartPageIcon(src); break
     case 'manage': store.setWorkbenchManageIcon(src); break
     case 'favicon': store.setSiteFavicon(src); break
     default: break
@@ -2511,6 +2514,47 @@ onUnmounted(() => {
           </p>
         </div>
 
+        <!-- 智能工作台（技能库 + 提示词库）：开关 / 名称 / 图标，与教师工作台同款配置行 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-workbench'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <span class="wb-menu-label">智能工作台</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                :value="store.smartPageName"
+                placeholder="智能工作台"
+                maxlength="20"
+                data-testid="smart-page-name-input"
+                @input="store.setSmartPageName(($event.target as HTMLInputElement).value)"
+              />
+              <button
+                type="button"
+                class="wb-menu-icon-btn"
+                :class="{ 'is-set': !!store.smartPageIcon }"
+                :title="store.smartPageIcon ? '已设置图标，点击更换' : '选择图标'"
+                data-testid="smart-icon-btn"
+                @click="openIconPicker('smart')"
+              >
+                <img v-if="store.smartPageIcon" :src="store.smartPageIcon" alt="" class="wb-menu-icon-img" />
+                <Icon v-else name="image" />
+              </button>
+              <button type="button" class="switch-btn"
+                :class="{ on: store.smartPageVisible !== false }"
+                role="switch"
+                :aria-checked="store.smartPageVisible !== false"
+                data-testid="smart-visible-switch"
+                @click="store.setSmartPageVisible(store.smartPageVisible === false)">
+                <span class="switch-thumb"></span>
+              </button>
+            </div>
+          </div>
+          <p class="wb-menu-hint">
+            控制「工作台管理」面板中是否显示智能工作台（自定义技能与提示词库）。关闭后面板中不显示，
+            已保存的技能与提示词不受影响；也可在此改名与更换入口图标。
+          </p>
+        </div>
+
         <!-- 备份恢复（导航设置 tab - 备份恢复）：原「站点管理」的导入 + 导出合并为一页，两个动作都在此执行 -->
         <div v-if="activeTab === 'nav' && activeSubTab === 'nav-backup-restore'" class="wb-menu-config">
           <h3 class="wb-menu-title">备份恢复</h3>
@@ -3748,7 +3792,7 @@ onUnmounted(() => {
             </button>
           </div>
           <p class="wb-menu-hint">
-            启用后将通过 WebDAV 同步导航、自定义图标、工作台、销售记账、学生工作台、教师工作台等全部数据（含自定义图标），按 6 份独立信封（nav.json / icons.json / workbench.json / business.json / student.json / teacher.json）分别上传。推荐使用坚果云（国内访问稳定）或任意支持 WebDAV 的服务。
+            启用后将通过 WebDAV 同步导航、自定义图标、工作台、销售记账、学生工作台、教师工作台、智能工作台等全部数据（含自定义图标），按 7 份独立信封（nav.json / icons.json / workbench.json / business.json / student.json / teacher.json / smart.json）分别上传。推荐使用坚果云（国内访问稳定）或任意支持 WebDAV 的服务。
           </p>
           <p v-if="!store.cloudSyncEnabled" class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; margin-top: 0;">
             首次使用指引：① 注册坚果云账号；② 账户信息 → 安全选项 → 添加应用，获取应用密码（非账户密码）；③ 开启开关，填入下方配置；④ 点「测试连接」确认无误后点「立即同步」。

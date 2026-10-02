@@ -1,34 +1,40 @@
 <script setup lang="ts">
 /**
- * 智能工作台 · 技能管理
- * 列表（搜索 / 分类 / 标签筛选 / 排序）+ 增删改查 + 导入导出（下载 & 上传）+ 一键复制正文。
- * 校验、归一化、信封解析全部委托 smartCore 纯函数，本组件只负责交互与呈现。
+ * 智能工作台 · 技能管理（v2：一个技能 = 一个目录）
+ * ------------------------------------------------------------------
+ * 列表（搜索 / 分类 / 标签筛选 / 排序）+ 增删改查 + 导入导出。
+ * - 导入：选择技能文件夹（或 zip），自动扫描 skill.md 与附属资源
+ * - 导出：单个技能打包 zip（含目录层级），可原样再次导入
+ * 校验、归一化、解析全部委托纯函数（smartCore / skillPackageCore），本组件只负责交互与呈现。
  */
 import { computed, ref } from 'vue'
 import { useSmartStore } from '@/stores/smart'
 import { showConfirm } from '@/utils/dialog'
 import { useToast } from '@/composables/useToast'
-import { copyText, dateStamp, downloadText, pickFileText } from '@/utils/download'
+import { copyText, dateStamp } from '@/utils/download'
+import {
+  downloadSkillZip,
+  downloadSkillsZip,
+  pickSkillFolder,
+  pickSkillZip,
+  readSkillFiles,
+  type SkillSource
+} from '@/utils/skillPackage'
 import {
   filterSmart,
-  markdownToSkill,
   normalizeSkill,
-  parseEnvelope,
-  skillToMarkdown,
-  SMART_SKILL_KIND,
   SMART_CONTENT_MAX,
-  SMART_DESC_MAX,
-  SMART_NAME_MAX,
   sortSmart,
   UNCATEGORIZED,
   validateSkill,
   type SmartSort,
   type SmartFilter
 } from '@/composables/smartCore'
+import { SKILL_FILE, planSkillImports } from '@/composables/skillPackageCore'
 import type { SmartImportPreview, SmartSkill } from '@/types'
-import SmartEditorDialog from './SmartEditorDialog.vue'
+import SkillEditorDialog from './SkillEditorDialog.vue'
+import SkillDetailDialog from './SkillDetailDialog.vue'
 import SmartImportDialog from './SmartImportDialog.vue'
-import SmartDetailDialog from './SmartDetailDialog.vue'
 
 const store = useSmartStore()
 const toast = useToast()
@@ -70,13 +76,26 @@ const form = ref<Partial<SmartSkill>>({})
 
 function openAdd(): void {
   editingId.value = null
-  form.value = { name: '', category: UNCATEGORIZED, icon: '', tags: [], version: '1.0.0', author: '', description: '', content: '' }
+  form.value = {
+    name: '',
+    description: '',
+    category: UNCATEGORIZED,
+    tags: [],
+    version: '1.0.0',
+    author: '',
+    whenToUse: '',
+    tools: [],
+    license: '',
+    extra: {},
+    body: '',
+    resources: []
+  }
   editorOpen.value = true
 }
 
 function openEdit(s: SmartSkill): void {
   editingId.value = s.id
-  form.value = { ...s, tags: [...s.tags] }
+  form.value = { ...s, tags: [...s.tags], tools: [...s.tools], resources: s.resources.map(r => ({ ...r })) }
   editorOpen.value = true
 }
 
@@ -99,7 +118,7 @@ function handleSave(next: Partial<SmartSkill>): void {
 
 // ===== 删除 / 克隆 / 使用 =====
 async function handleDelete(s: SmartSkill): Promise<void> {
-  if (!await showConfirm(`确定删除技能「${s.name}」吗？删除后不可恢复。`)) return
+  if (!(await showConfirm(`确定删除技能「${s.name}」吗？删除后不可恢复。`))) return
   if (store.deleteSkill(s.id)) toast.success('已删除')
 }
 
@@ -109,7 +128,7 @@ function handleClone(s: SmartSkill): void {
 }
 
 async function handleCopy(s: SmartSkill): Promise<void> {
-  const ok = await copyText(s.content, `已复制「${s.name}」正文`)
+  const ok = await copyText(s.body, `已复制「${s.name}」正文`)
   if (ok) store.touchSkill(s.id)
 }
 
@@ -122,60 +141,73 @@ function openDetail(s: SmartSkill): void {
 }
 
 // ===== 导出 =====
-function exportOneJson(s: SmartSkill): void {
-  const env = { kind: SMART_SKILL_KIND, version: 1, exportedAt: Date.now(), items: [s] }
-  downloadText(`${safeName(s.name)}.json`, JSON.stringify(env, null, 2))
+/** 单个技能 → zip（skill.md + 附属资源，保持目录层级，可再次导入） */
+function exportOneZip(s: SmartSkill): void {
+  downloadSkillZip(s)
 }
 
-function exportOneMd(s: SmartSkill): void {
-  downloadText(`${safeName(s.name)}.md`, skillToMarkdown(s), 'text/markdown;charset=utf-8')
-}
-
-function exportAll(): void {
-  const env = store.exportSkills()
-  if (env.items.length === 0) {
-    toast.warning('还没有技能可导出')
+/** 全部技能打包成一个 zip，每个技能一个顶层目录 */
+function exportAllZip(): void {
+  if (!store.skills.length) {
+    toast.warning('还没有技能可打包')
     return
   }
-  downloadText(`smart-skills-${dateStamp()}.json`, JSON.stringify(env, null, 2))
-}
-
-/** 文件名安全化：去掉路径分隔符与控制字符，避免下载名异常 */
-function safeName(name: string): string {
-  return (name || 'skill').replace(/[\\/:*?"<>|]/g, '_').slice(0, 40)
+  downloadSkillsZip(store.skills, `smart-skills-${dateStamp()}`)
 }
 
 // ===== 导入 =====
 const importOpen = ref(false)
 const pendingPlan = ref<SmartImportPreview<SmartSkill> | null>(null)
+const importNotes = ref<string[]>([])
 
-async function handleImport(): Promise<void> {
-  const picked = await pickFileText('.json,.md,application/json,text/markdown')
-  if (!picked) return
+/** 选择文件夹 → 自动扫描 skill.md 与附属资源（可一次导入多个技能） */
+async function importFromFolder(): Promise<void> {
+  const source = await pickSkillFolder()
+  if (!source) return
+  await runPackageImport(source)
+}
 
-  let items: SmartSkill[] = []
-  if (picked.name.toLowerCase().endsWith('.md')) {
-    const one = markdownToSkill(picked.text, picked.name.replace(/\.md$/i, ''))
-    if (!one) {
-      toast.error('Markdown 文件没有可导入的内容')
-      return
-    }
-    items = [one]
-  } else {
-    const res = parseEnvelope(picked.text, SMART_SKILL_KIND, normalizeSkill)
-    if (!res.ok) {
-      toast.error(res.message)
-      return
-    }
-    items = res.items
-  }
+/** 选择 zip → 解压后同上 */
+async function importFromZip(): Promise<void> {
+  const source = await pickSkillZip()
+  if (!source) return
+  await runPackageImport(source)
+}
 
-  const plan = store.previewSkillImport(items)
-  if (plan.added.length === 0 && plan.updated.length === 0) {
-    toast.info(plan.skipped > 0 ? '文件内容与现有技能相同，无需导入' : '没有可导入的条目')
+/**
+ * 扫描技能包并生成导入预览。
+ * 失败项（缺少必填字段等）直接列出具体原因，不静默丢弃。
+ */
+async function runPackageImport(source: SkillSource): Promise<void> {
+  const files = await readSkillFiles(source)
+  const plan = planSkillImports(files)
+  if (plan.error) {
+    toast.error(plan.error)
     return
   }
-  pendingPlan.value = plan
+
+  const notes: string[] = []
+  for (const f of plan.failed) notes.push(`${f.skillFile}：${f.error}`)
+  for (const p of plan.packages) for (const w of p.warnings) notes.push(`${p.skillFile} 的 ${w}`)
+  if (plan.orphans.length) notes.push(`${plan.orphans.length} 个文件不属于任何技能目录，已忽略`)
+
+  const items: SmartSkill[] = []
+  for (const p of plan.packages) {
+    const one = normalizeSkill({ ...p.draft, body: p.body, resources: p.resources })
+    if (one) items.push(one)
+  }
+  if (!items.length) {
+    toast.error(notes[0] ?? '没有解析出可导入的技能')
+    return
+  }
+
+  const preview = store.previewSkillImport(items)
+  if (preview.added.length === 0 && preview.updated.length === 0) {
+    toast.info(preview.skipped > 0 ? '所选内容与现有技能相同，无需导入' : '没有可导入的条目')
+    return
+  }
+  pendingPlan.value = preview
+  importNotes.value = notes
   importOpen.value = true
 }
 
@@ -186,12 +218,19 @@ function confirmImport(): void {
   toast.success(`导入完成：新增 ${r.added} 条，更新 ${r.updated} 条`)
   importOpen.value = false
   pendingPlan.value = null
+  importNotes.value = []
 }
 
 // ===== 恢复内置示例 =====
 function restoreBuiltIns(): void {
   const r = store.restoreBuiltIns()
   toast.success(r.skills > 0 ? `已补回 ${r.skills} 条内置示例` : '内置示例都在，无需补回')
+}
+
+/** 卡片图标：v1 迁移过来的 emoji 存在 extra.icon，否则用默认积木 */
+function iconOf(s: SmartSkill): string {
+  const v = s.extra?.icon
+  return typeof v === 'string' && v.trim() ? v : '\u{1F9E9}'
 }
 
 /** 相对时间：与项目既有文案口径一致（今天 / 昨天 / N 天前 / 日期） */
@@ -213,7 +252,7 @@ function relTime(ts: number): string {
     <!-- 工具栏 -->
     <div class="sm-toolbar">
       <div class="sm-toolbar-left">
-        <el-input v-model="keyword" size="small" class="sm-search" placeholder="搜索名称 / 描述 / 标签 / 正文" clearable />
+        <el-input v-model="keyword" size="small" class="sm-search" placeholder="搜索名称 / 说明 / 标签 / 正文" clearable />
         <select v-model="category" class="sm-select" aria-label="按分类筛选">
           <option value="">全部分类</option>
           <option v-for="c in store.skillCategories" :key="c" :value="c">{{ c }}</option>
@@ -226,8 +265,9 @@ function relTime(ts: number): string {
       </div>
       <div class="sm-toolbar-right">
         <el-button size="small" data-testid="smart-skill-add" @click="openAdd">＋ 新增技能</el-button>
-        <el-button size="small" data-testid="smart-skill-import" @click="handleImport">导入</el-button>
-        <el-button size="small" data-testid="smart-skill-export-all" @click="exportAll">导出全部</el-button>
+        <el-button size="small" data-testid="smart-skill-import-folder" @click="importFromFolder">导入文件夹</el-button>
+        <el-button size="small" data-testid="smart-skill-import-zip" @click="importFromZip">导入 zip</el-button>
+        <el-button size="small" data-testid="smart-skill-export-all" @click="exportAllZip">打包 zip</el-button>
       </div>
     </div>
 
@@ -248,13 +288,15 @@ function relTime(ts: number): string {
     <div v-if="visible.length" class="sm-list">
       <article v-for="s in visible" :key="s.id" class="sm-card" :data-testid="`smart-skill-${s.id}`">
         <header class="sm-card-head">
-          <span class="sm-icon">{{ s.icon }}</span>
+          <span class="sm-icon">{{ iconOf(s) }}</span>
           <div class="sm-card-title">
             <button type="button" class="sm-name" @click="openDetail(s)">{{ s.name }}</button>
             <span class="sm-meta">
               <span class="sm-cat">{{ s.category }}</span>
               <span v-if="s.version" class="sm-dot">·</span>
               <span v-if="s.version" class="sm-version">v{{ s.version }}</span>
+              <span v-if="s.resources.length" class="sm-dot">·</span>
+              <span v-if="s.resources.length">{{ s.resources.length }} 个资源</span>
               <span class="sm-dot">·</span>
               <span>{{ relTime(s.updatedAt) }}</span>
               <span v-if="s.usageCount > 0" class="sm-dot">·</span>
@@ -273,8 +315,7 @@ function relTime(ts: number): string {
           <button type="button" class="sm-btn" @click="openEdit(s)">编辑</button>
           <button type="button" class="sm-btn" @click="handleClone(s)">副本</button>
           <span class="sm-spacer" />
-          <button type="button" class="sm-btn" @click="exportOneMd(s)" title="下载为 Markdown">↓ md</button>
-          <button type="button" class="sm-btn" @click="exportOneJson(s)" title="下载为 JSON">↓ json</button>
+          <button type="button" class="sm-btn" :data-testid="`smart-skill-zip-${s.id}`" @click="exportOneZip(s)" :title="`下载为 zip（${SKILL_FILE} + 资源，保持目录层级）`">↓ zip</button>
           <button type="button" class="sm-btn is-danger" :data-testid="`smart-skill-del-${s.id}`" @click="handleDelete(s)">删除</button>
         </footer>
       </article>
@@ -284,36 +325,34 @@ function relTime(ts: number): string {
     <div v-else class="sm-empty">
       <p class="sm-empty-title">{{ hasFilter ? '没有匹配的技能' : '还没有技能' }}</p>
       <p class="sm-empty-hint">
-        {{ hasFilter ? '换个关键字，或清空筛选条件试试。' : '把反复使用的 AI 工作流沉淀成技能，下次直接复制即可。' }}
+        {{ hasFilter ? '换个关键字，或清空筛选条件试试。' : '一个技能就是一个目录：核心是 ' + SKILL_FILE + '，再配上脚本、模板等附属资源。' }}
       </p>
       <div class="sm-empty-actions">
         <el-button v-if="hasFilter" size="small" @click="resetFilter">清空筛选</el-button>
         <el-button v-else size="small" type="primary" @click="openAdd">＋ 新增技能</el-button>
-        <el-button size="small" @click="handleImport">导入文件</el-button>
+        <el-button size="small" @click="importFromFolder">导入文件夹</el-button>
+        <el-button size="small" @click="importFromZip">导入 zip</el-button>
         <el-button size="small" @click="restoreBuiltIns">恢复内置示例</el-button>
       </div>
     </div>
 
     <!-- 编辑弹框 -->
-    <SmartEditorDialog
+    <SkillEditorDialog
       v-if="editorOpen"
-      kind="skill"
       :model="form"
       :editing-id="editingId"
       :categories="store.skillCategories"
-      :name-max="SMART_NAME_MAX"
-      :desc-max="SMART_DESC_MAX"
       :content-max="SMART_CONTENT_MAX"
       @close="editorOpen = false"
       @save="handleSave"
     />
 
     <!-- 详情弹框 -->
-    <SmartDetailDialog
+    <SkillDetailDialog
       v-if="detailOpen && detailItem"
-      kind="skill"
       :item="detailItem"
       @close="detailOpen = false"
+      @download="exportOneZip(detailItem)"
     />
 
     <!-- 导入预览 -->
@@ -323,7 +362,8 @@ function relTime(ts: number): string {
       :added="pendingPlan.added.map(s => s.name)"
       :updated="pendingPlan.updated.map(s => s.name)"
       :skipped="pendingPlan.skipped"
-      @close="importOpen = false; pendingPlan = null"
+      :notes="importNotes"
+      @close="importOpen = false; pendingPlan = null; importNotes = []"
       @confirm="confirmImport"
     />
   </div>

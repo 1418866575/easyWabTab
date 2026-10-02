@@ -7,7 +7,7 @@
  * 所有请求失败均 reject，由调用方自行 try/catch 降级（不做 localStorage 回退写）
  */
 import { WORKBENCH_DATA_VERSION, emptyAppSettingsData } from '../types'
-import type { AppSettingsData, AppSettingsDataNoCloudSync, BusinessData, BusinessStoreData, BusinessSyncData, Countdown, DiaryData, GenealogyData, HealthData, IconsSyncData, LedgerData, LedgerStoreData, NavSyncData, NoteData, StudentSyncData, TeacherSyncData, WorkbenchData, WorkbenchSyncData, WorkbenchTodo } from '../types'
+import type { AppSettingsData, AppSettingsDataNoCloudSync, BusinessData, BusinessStoreData, BusinessSyncData, Countdown, DiaryData, GenealogyData, HealthData, IconsSyncData, LedgerData, LedgerStoreData, NavSyncData, NoteData, SmartSyncData, StudentSyncData, TeacherSyncData, WorkbenchData, WorkbenchSyncData, WorkbenchTodo } from '../types'
 import { adoptPasswordIdentity, getStoredSaltHex, getStoredVerification } from './useCrypto'
 import { normalizeBusinessStore } from './businessCore.ts'
 import { emptyDiaryData } from './diaryCore'
@@ -152,10 +152,20 @@ export const WORKBENCH_PREFS_KEYS = [
   'user-countdown-sort',
   'user-todo-categories',
   'user-todo-tab-categories',
-  'help-ack-count',
-  // 智能工作台（/smart）：技能库与提示词库，随备份与云同步一起走，避免资产随重装丢失
+  'help-ack-count'
+] as const
+
+/**
+ * 智能工作台（/smart）的偏好键：技能库 / 提示词库 / 左侧菜单配置 / 技能分类。
+ * 这些键**不进** nav.json 与 workbench.json，改由独立的 smart.json 信封同步
+ * （见 exportSmart / importSmartData），避免同一份数据在两份信封里各存一次。
+ * 物理上仍存在 nav IDB store 里（与其它 prefs 同库），只是打包时被排除。
+ */
+export const SMART_PREFS_KEYS = [
   'smart-skills',
-  'smart-prompts'
+  'smart-prompts',
+  'smart-menu',
+  'smart-skill-categories'
 ] as const
 
 /**
@@ -678,6 +688,35 @@ export async function importTeacherData(remote: TeacherSyncData): Promise<void> 
   // 云端尚无 teacher 字段（老信封 / 尚未推送）时不写入，保留本地数据，避免被静默清空
   if (!remote || remote.teacher === undefined || remote.teacher === null) return
   await idbPut('teacher_workbench', normalizeTeacherData(remote.teacher))
+}
+
+// ---------- smart.json（智能工作台独立信封：技能 / 提示词 / 菜单配置 / 技能分类） ----------
+// 数据物理上与其它 prefs 同在 nav IDB store，但打包/回写只认 SMART_PREFS_KEYS，
+// 与 nav.json（10 个导航键）互不干扰，也不会被 workbench.json 重复带走一份。
+
+export async function exportSmart(): Promise<SmartSyncData> {
+  const navRecord = (await idbGet<NavPrefsRecord>('nav')) ?? {}
+  const prefs: Record<string, string> = {}
+  for (const k of SMART_PREFS_KEYS) {
+    const v = navRecord[k]
+    if (v !== undefined) prefs[k] = v
+  }
+  return { version: 1, exportedAt: new Date().toISOString(), prefs }
+}
+
+export async function importSmartData(remote: SmartSyncData): Promise<void> {
+  if (!remote || !remote.prefs) return
+  const navRecord: NavPrefsRecord = (await idbGet<NavPrefsRecord>('nav')) ?? {}
+  let changed = false
+  for (const k of SMART_PREFS_KEYS) {
+    const v = remote.prefs[k]
+    if (v === undefined) continue
+    if (navRecord[k] !== v) {
+      navRecord[k] = v
+      changed = true
+    }
+  }
+  if (changed) await idbPut('nav', navRecord)
 }
 
 export async function importStudentData(remote: StudentSyncData): Promise<void> {

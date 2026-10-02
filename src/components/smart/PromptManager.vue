@@ -322,7 +322,6 @@ function excerpt(p: SmartPrompt): string {
 
     <SmartEditorDialog
       v-if="editorOpen"
-      kind="prompt"
       :model="form"
       :editing-id="editingId"
       :categories="store.promptCategories"
@@ -342,7 +341,6 @@ function excerpt(p: SmartPrompt): string {
 
     <SmartDetailDialog
       v-if="detailOpen && detailItem"
-      kind="prompt"
       :item="detailItem"
       @close="detailOpen = false"
     />

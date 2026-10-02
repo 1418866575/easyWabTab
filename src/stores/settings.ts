@@ -281,6 +281,12 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   if (typeof data.teacherPageVisible === 'boolean') {
     out.teacherPageVisible = data.teacherPageVisible
   }
+  if (typeof data.smartPageName === 'string') {
+    out.smartPageName = data.smartPageName.trim()
+  }
+  if (typeof data.smartPageVisible === 'boolean') {
+    out.smartPageVisible = data.smartPageVisible
+  }
   // 入口自定义图标：仅采纳字符串（原样透传，可能是 /icons/xxx.svg 或 base64 dataUrl）；空串即「回退内置图标」
   if (typeof data.workbenchPageIcon === 'string') {
     out.workbenchPageIcon = data.workbenchPageIcon
@@ -293,6 +299,9 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   }
   if (typeof data.teacherPageIcon === 'string') {
     out.teacherPageIcon = data.teacherPageIcon
+  }
+  if (typeof data.smartPageIcon === 'string') {
+    out.smartPageIcon = data.smartPageIcon
   }
   // 「工作台管理」按钮：名称仅采纳字符串；开关仅采纳布尔（缺失 = 显示）
   if (typeof data.workbenchManageName === 'string') {
@@ -404,11 +413,15 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const studentPageVisible = ref<boolean>(true)
   const teacherPageName = ref<string>('')
   const teacherPageVisible = ref<boolean>(true)
+  // 智能工作台（/smart）：默认显示，便于新模块被发现；可在「工作台设置」中关闭 / 改名 / 换图标
+  const smartPageName = ref<string>('')
+  const smartPageVisible = ref<boolean>(true)
   // 入口自定义图标（空串 = 用内置默认图标）：来源为图标管理 / 预置图标库的路径或 dataUrl
   const workbenchPageIcon = ref<string>('')
   const businessPageIcon = ref<string>('')
   const studentPageIcon = ref<string>('')
   const teacherPageIcon = ref<string>('')
+  const smartPageIcon = ref<string>('')
   // 导航站右上角「工作台管理」按钮：默认显示、默认名称「工作台管理」；
   // workbenchManageIcon 为该按钮的自定义图标（空串 = 用内置默认图标，可在 设置 → 个性化 → 工作台设置 中改）
   const workbenchManageName = ref<string>('')
@@ -474,10 +487,13 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       studentPageVisible: studentPageVisible.value,
       teacherPageName: teacherPageName.value,
       teacherPageVisible: teacherPageVisible.value,
+      smartPageName: smartPageName.value,
+      smartPageVisible: smartPageVisible.value,
       workbenchPageIcon: workbenchPageIcon.value,
       businessPageIcon: businessPageIcon.value,
       studentPageIcon: studentPageIcon.value,
       teacherPageIcon: teacherPageIcon.value,
+      smartPageIcon: smartPageIcon.value,
       workbenchManageName: workbenchManageName.value,
       workbenchManageVisible: workbenchManageVisible.value,
       workbenchManageIcon: workbenchManageIcon.value,
@@ -621,11 +637,14 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       studentPageVisible.value = effective.studentPageVisible !== false
       teacherPageName.value = typeof effective.teacherPageName === 'string' ? effective.teacherPageName.trim() : ''
       teacherPageVisible.value = effective.teacherPageVisible !== false
+      smartPageName.value = typeof effective.smartPageName === 'string' ? effective.smartPageName.trim() : ''
+      smartPageVisible.value = effective.smartPageVisible !== false
       // 入口图标：非字符串一律回退空串（= 用内置默认图标）
       workbenchPageIcon.value = typeof effective.workbenchPageIcon === 'string' ? effective.workbenchPageIcon : ''
       businessPageIcon.value = typeof effective.businessPageIcon === 'string' ? effective.businessPageIcon : ''
       studentPageIcon.value = typeof effective.studentPageIcon === 'string' ? effective.studentPageIcon : ''
       teacherPageIcon.value = typeof effective.teacherPageIcon === 'string' ? effective.teacherPageIcon : ''
+      smartPageIcon.value = typeof effective.smartPageIcon === 'string' ? effective.smartPageIcon : ''
       workbenchManageName.value = typeof effective.workbenchManageName === 'string' ? effective.workbenchManageName.trim() : ''
       workbenchManageVisible.value = effective.workbenchManageVisible !== false
       workbenchManageIcon.value = typeof effective.workbenchManageIcon === 'string' ? effective.workbenchManageIcon : ''
@@ -770,10 +789,13 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     studentPageVisible.value = true
     teacherPageName.value = ''
     teacherPageVisible.value = true
+    smartPageName.value = ''
+    smartPageVisible.value = true
     workbenchPageIcon.value = ''
     businessPageIcon.value = ''
     studentPageIcon.value = ''
     teacherPageIcon.value = ''
+    smartPageIcon.value = ''
     workbenchManageName.value = ''
     workbenchManageVisible.value = true
     workbenchManageIcon.value = ''
@@ -923,6 +945,14 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     teacherPageVisible.value = v
     persist()
   }
+  function setSmartPageName(s: string) {
+    smartPageName.value = s
+    persist()
+  }
+  function setSmartPageVisible(v: boolean) {
+    smartPageVisible.value = v
+    persist()
+  }
   // 入口自定义图标 setters（传空串 = 恢复内置默认图标）
   function setWorkbenchPageIcon(s: string) {
     workbenchPageIcon.value = s
@@ -938,6 +968,10 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   }
   function setTeacherPageIcon(s: string) {
     teacherPageIcon.value = s
+    persist()
+  }
+  function setSmartPageIcon(s: string) {
+    smartPageIcon.value = s
     persist()
   }
   // 「工作台管理」按钮 setters
@@ -980,6 +1014,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const businessPageDisplayName = computed(() => businessPageName.value || '销售记账')
   const studentPageDisplayName = computed(() => studentPageName.value || '学生工作台')
   const teacherPageDisplayName = computed(() => teacherPageName.value || '教师工作台')
+  const smartPageDisplayName = computed(() => smartPageName.value || '智能工作台')
   const workbenchManageDisplayName = computed(() => workbenchManageName.value || '工作台管理')
   const countdownButtonDisplayName = computed(() => countdownButtonName.value || '倒计时')
   const helpButtonDisplayName = computed(() => helpButtonName.value || '帮助')
@@ -1144,10 +1179,13 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     studentPageVisible,
     teacherPageName,
     teacherPageVisible,
+    smartPageName,
+    smartPageVisible,
     workbenchPageIcon,
     businessPageIcon,
     studentPageIcon,
     teacherPageIcon,
+    smartPageIcon,
     workbenchManageName,
     workbenchManageVisible,
     workbenchManageIcon,
@@ -1161,6 +1199,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     businessPageDisplayName,
     studentPageDisplayName,
     teacherPageDisplayName,
+    smartPageDisplayName,
     workbenchManageDisplayName,
     countdownButtonDisplayName,
     helpButtonDisplayName,
@@ -1201,10 +1240,13 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     setStudentPageVisible,
     setTeacherPageName,
     setTeacherPageVisible,
+    setSmartPageName,
+    setSmartPageVisible,
     setWorkbenchPageIcon,
     setBusinessPageIcon,
     setStudentPageIcon,
     setTeacherPageIcon,
+    setSmartPageIcon,
     setWorkbenchManageName,
     setWorkbenchManageVisible,
     setWorkbenchManageIcon,

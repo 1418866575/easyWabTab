@@ -1,6 +1,7 @@
 // smartCore.ts 纯函数测试（node --experimental-strip-types 直跑，npm run test:smart）
 // 覆盖：归一化 / 标签 / 模板变量解析与填充 / 过滤排序 / 校验 / 信封解析 / Markdown 往返 / 导入计划 / 统计
 import assert from 'node:assert/strict'
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 import {
   applyImport,
   buildEnvelope,
@@ -9,7 +10,6 @@ import {
   fillTemplate,
   filterSmart,
   isNameTaken,
-  markdownToSkill,
   mergeVariables,
   normalizePrompt,
   normalizeSkill,
@@ -17,7 +17,6 @@ import {
   parseEnvelope,
   parseVariables,
   planImport,
-  skillToMarkdown,
   sortSmart,
   UNCATEGORIZED,
   UNCATEGORIZED_ALL,
@@ -25,9 +24,19 @@ import {
   validateSkill,
   SMART_CONTENT_MAX,
   SMART_NAME_MAX,
-  SMART_PROMPT_KIND,
-  SMART_SKILL_KIND
+  SMART_PROMPT_KIND
 } from '../src/composables/smartCore.ts'
+import {
+  normalizeRelPath,
+  parseFrontmatter,
+  parseSkillMarkdown,
+  skillToMarkdown as toSkillMd,
+  planResources,
+  planSkillImports,
+  RESOURCE_COUNT_MAX,
+  RESOURCE_FILE_MAX,
+  SKILL_FILE
+} from '../src/composables/skillPackageCore.ts'
 import type { SmartPrompt, SmartSkill } from '../src/types/index.ts'
 
 const tests: { name: string; fn: () => void }[] = []
@@ -35,18 +44,22 @@ function test(name: string, fn: () => void) {
   tests.push({ name, fn })
 }
 
-/** 造一条技能（默认字段齐备，测试只覆盖关心的字段） */
+/** 造一条技能（v2 结构，默认字段齐备，测试只覆盖关心的字段） */
 function skill(over: Partial<SmartSkill> = {}): SmartSkill {
   return {
     id: 'sk_1',
     name: '需求文档生成',
-    category: '写作',
-    icon: '\u{1F4DD}',
-    tags: ['产品'],
+    description: '把想法展开为文档',
     version: '1.0.0',
     author: '',
-    description: '把想法展开为文档',
-    content: '正文',
+    category: '写作',
+    tags: ['产品'],
+    whenToUse: '',
+    tools: [],
+    license: '',
+    extra: { icon: '\u{1F4DD}' },
+    body: '正文',
+    resources: [],
     usageCount: 0,
     lastUsedAt: null,
     createdAt: 1000,
@@ -83,28 +96,40 @@ test('T1 normalizeSkill（默认值 / 类型纠正 / 非法返回 null）', () =
   assert.equal(s!.lastUsedAt, null, '缺最近使用 → null')
   assert.ok(s!.id.startsWith('sk_'), '缺 id 自动补 sk_ 前缀')
   assert.deepEqual(s!.tags, [], '缺 tags → 空数组')
+  assert.deepEqual(s!.resources, [], '缺 resources → 空数组')
+  assert.deepEqual(s!.tools, [], '缺 tools → 空数组')
 
   // 非法
   assert.equal(normalizeSkill(null), null, 'null → null')
   assert.equal(normalizeSkill('字符串'), null, '非对象 → null')
   assert.equal(normalizeSkill({}), null, '名称与正文都空 → null')
 
-  // 类型纠正：数字/布尔标量转字符串（导入的 JSON 里 content: 456 不该被当垃圾丢掉）
-  const weird = normalizeSkill({ name: 123 as unknown as string, content: 456 as unknown as string, usageCount: 'x' })
+  // 类型纠正：数字/布尔标量转字符串（导入的 JSON 里 body: 456 不该被当垃圾丢掉）
+  const weird = normalizeSkill({ name: 123 as unknown as string, body: 456 as unknown as string, usageCount: 'x' })
   assert.ok(weird, '标量类型字段仍归一成功')
   assert.equal(weird!.name, '123', '数字名称 → 字符串')
-  assert.equal(weird!.content, '456', '数字正文 → 字符串')
+  assert.equal(weird!.body, '456', '数字正文 → 字符串')
   assert.equal(weird!.usageCount, 0, 'usageCount 非数字 → 0')
   // 对象/数组等不可转的类型回落空串 → 名称与正文都空 → 判为垃圾
-  assert.equal(normalizeSkill({ name: {}, content: {} }), null, '对象型字段 → 空 → null')
+  assert.equal(normalizeSkill({ name: {}, body: {} }), null, '对象型字段 → 空 → null')
+})
+
+// T1b — v1 扁平结构自动迁移到 v2（content → body，icon → extra.icon）
+test('T1b normalizeSkill 迁移 v1 结构（content → body / icon → extra.icon）', () => {
+  const s = normalizeSkill({ name: '旧技能', content: '旧正文', icon: '\u{1F9E9}', category: '写作' })
+  assert.ok(s, 'v1 结构可迁移')
+  assert.equal(s!.body, '旧正文', 'content 迁移为 body')
+  assert.equal(s!.extra.icon, '\u{1F9E9}', 'icon 保真进 extra')
+  assert.equal((s as unknown as Record<string, unknown>).content, undefined, '不再保留 content 字段')
+  assert.deepEqual(normalizeSkill(s), s, '二次归一结果不变（迁移幂等）')
 })
 
 // T2 — 归一化幂等 + 长度截断
 test('T2 normalizeSkill 幂等与截断', () => {
   const long = 'x'.repeat(SMART_NAME_MAX + 50)
-  const once = normalizeSkill({ name: long, content: 'y'.repeat(SMART_CONTENT_MAX + 100) })
+  const once = normalizeSkill({ name: long, body: 'y'.repeat(SMART_CONTENT_MAX + 100) })
   assert.equal([...once!.name].length, SMART_NAME_MAX, '名称截断到上限')
-  assert.equal([...once!.content].length, SMART_CONTENT_MAX, '正文截断到上限')
+  assert.equal([...once!.body].length, SMART_CONTENT_MAX, '正文截断到上限')
   const twice = normalizeSkill(once)
   assert.deepEqual(twice, once, '二次归一结果不变（幂等）')
 })
@@ -175,8 +200,8 @@ test('T7 normalizePrompt 变量由正文推导（与正文保持一致）', () =
 // T8 — 过滤：关键字 / 分类 / 标签 / 收藏
 test('T8 filterSmart（关键字 / 分类 / 标签 OR / 收藏）', () => {
   const list = [
-    skill({ id: 'a', name: '需求文档', category: '写作', tags: ['产品'], content: '正文A' }),
-    skill({ id: 'b', name: '代码评审', category: '研发', tags: ['代码'], content: '正文B' })
+    skill({ id: 'a', name: '需求文档', category: '写作', tags: ['产品'], body: '正文A' }),
+    skill({ id: 'b', name: '代码评审', category: '研发', tags: ['代码'], body: '正文B' })
   ]
   assert.equal(filterSmart(list, { q: '需求' }).length, 1, '关键字命中名称')
   assert.equal(filterSmart(list, { q: '正文B' }).length, 1, '关键字命中正文')
@@ -207,73 +232,105 @@ test('T10 categoriesOf 去重排序', () => {
 
 // T11 — 校验：必填、重名、超长
 test('T11 validateSkill / validatePrompt（必填 / 重名 / 超长）', () => {
-  assert.deepEqual(validateSkill({ name: '', content: '' }, []).map(i => i.field), ['name', 'content'], '两项必填都报')
-  assert.ok(validateSkill({ name: 'A', content: 'x' }, []).length === 0, '合法通过')
+  assert.deepEqual(
+    validateSkill({ name: '', description: '', body: '' }, []).map(i => i.field),
+    ['name', 'description', 'body'],
+    '三项必填都报'
+  )
+  assert.ok(validateSkill({ name: 'A', description: 'd', body: 'x' }, []).length === 0, '合法通过')
   assert.equal(
-    validateSkill({ name: 'A', content: 'x' }, [skill({ name: 'A' })]).find(i => i.field === 'name')?.message.includes('同名'),
+    validateSkill({ name: 'A', description: 'd', body: 'x' }, [skill({ name: 'A' })])
+      .find(i => i.field === 'name')?.message.includes('同名'),
     true,
     '新增同名 → 重名错误'
   )
   // 编辑自身不算重名
-  assert.equal(validateSkill({ name: 'A', content: 'x' }, [skill({ id: 'sk_1', name: 'A' })], 'sk_1').length, 0, '编辑自身不算重名')
-  assert.equal(validateSkill({ name: 'x'.repeat(SMART_NAME_MAX + 1), content: 'x' }, [])[0].field, 'name', '超长报 name')
+  assert.equal(
+    validateSkill({ name: 'A', description: 'd', body: 'x' }, [skill({ id: 'sk_1', name: 'A' })], 'sk_1').length,
+    0,
+    '编辑自身不算重名'
+  )
+  assert.equal(
+    validateSkill({ name: 'x'.repeat(SMART_NAME_MAX + 1), description: 'd', body: 'x' }, [])[0].field,
+    'name',
+    '超长报 name'
+  )
+  assert.equal(validateSkill({ name: 'A', description: '', body: 'x' }, [])[0].field, 'description', '缺说明报 description')
 
   assert.deepEqual(validatePrompt({ title: '', content: '' }, []).map(i => i.field), ['title', 'content'], '提示词必填')
   assert.equal(isNameTaken([prompt({ title: 'P' })], 'P'), true, 'isNameTaken 命中')
   assert.equal(isNameTaken([prompt({ id: 'pm_1', title: 'P' })], 'P', 'pm_1'), false, 'isNameTaken 排除自身')
 })
 
-// T12 — 信封打包与解析
+// T12 — 信封打包与解析（技能已改为 zip 目录导入，信封只剩提示词在用）
 test('T12 parseEnvelope（正常 / 非 JSON / kind 不符 / 版本过高 / 裸数组）', () => {
-  const env = buildEnvelope(SMART_SKILL_KIND, [skill()])
+  const env = buildEnvelope(SMART_PROMPT_KIND, [prompt()])
   assert.equal(env.version, 1, '信封版本为 1')
-  const okRes = parseEnvelope(JSON.stringify(env), SMART_SKILL_KIND, normalizeSkill)
+  const okRes = parseEnvelope(JSON.stringify(env), SMART_PROMPT_KIND, normalizePrompt)
   assert.equal(okRes.ok, true, '合法信封解析成功')
   assert.equal(okRes.ok && okRes.items.length, 1, '解析出 1 条')
 
-  const notJson = parseEnvelope('{坏 JSON', SMART_SKILL_KIND, normalizeSkill)
+  const notJson = parseEnvelope('{坏 JSON', SMART_PROMPT_KIND, normalizePrompt)
   assert.equal(notJson.ok === false && notJson.reason, 'not-json', '非 JSON → not-json')
 
-  const wrongKind = parseEnvelope(JSON.stringify(env), SMART_PROMPT_KIND, normalizePrompt)
+  // 旧版导出的技能 JSON 已不再支持导入，应被判为 kind 不符
+  const legacySkillJson = JSON.stringify({ kind: 'smart-skills', version: 1, exportedAt: 0, items: [] })
+  const wrongKind = parseEnvelope(legacySkillJson, SMART_PROMPT_KIND, normalizePrompt)
   assert.equal(wrongKind.ok === false && wrongKind.reason, 'kind-mismatch', 'kind 不符 → kind-mismatch')
 
-  const tooNew = parseEnvelope(JSON.stringify({ ...env, version: 99 }), SMART_SKILL_KIND, normalizeSkill)
+  const tooNew = parseEnvelope(JSON.stringify({ ...env, version: 99 }), SMART_PROMPT_KIND, normalizePrompt)
   assert.equal(tooNew.ok === false && tooNew.reason, 'version-too-new', '版本过高拒绝')
 
-  const noItems = parseEnvelope(JSON.stringify({ kind: SMART_SKILL_KIND, version: 1 }), SMART_SKILL_KIND, normalizeSkill)
+  const noItems = parseEnvelope(JSON.stringify({ kind: SMART_PROMPT_KIND, version: 1 }), SMART_PROMPT_KIND, normalizePrompt)
   assert.equal(noItems.ok === false && noItems.reason, 'bad-structure', '缺 items → bad-structure')
 
   // 裸数组与单对象宽容处理
-  const bare = parseEnvelope(JSON.stringify([{ name: 'A', content: 'x' }]), SMART_SKILL_KIND, normalizeSkill)
+  const bare = parseEnvelope(JSON.stringify([{ title: 'A', content: 'x' }]), SMART_PROMPT_KIND, normalizePrompt)
   assert.equal(bare.ok && bare.items.length, 1, '裸数组可导入')
-  const one = parseEnvelope(JSON.stringify({ name: 'A', content: 'x' }), SMART_SKILL_KIND, normalizeSkill)
+  const one = parseEnvelope(JSON.stringify({ title: 'A', content: 'x' }), SMART_PROMPT_KIND, normalizePrompt)
   assert.equal(one.ok && one.items.length, 1, '单对象可导入')
 
   // 全是垃圾条目
-  const junk = parseEnvelope(JSON.stringify({ kind: SMART_SKILL_KIND, version: 1, items: [{}, null] }), SMART_SKILL_KIND, normalizeSkill)
+  const junk = parseEnvelope(JSON.stringify({ kind: SMART_PROMPT_KIND, version: 1, items: [{}, null] }), SMART_PROMPT_KIND, normalizePrompt)
   assert.equal(junk.ok, false, '无有效条目 → 失败')
 })
 
-// T13 — Markdown 往返
-test('T13 skillToMarkdown / markdownToSkill 往返不丢字段', () => {
-  const s = skill({ name: '周报生成', category: '写作', tags: ['汇报', '文档'], version: '2.1.0', author: '我', description: '整理周报', content: '正文内容\n第二行' })
-  const md = skillToMarkdown(s)
+// T13 — skill.md 往返（序列化与解析都在 skillPackageCore）
+test('T13 skillToMarkdown / parseSkillMarkdown 往返不丢字段', () => {
+  const s = skill({
+    name: '周报生成',
+    category: '写作',
+    tags: ['汇报', '文档'],
+    version: '2.1.0',
+    author: '我',
+    description: '整理周报',
+    whenToUse: '周末整理周报时',
+    tools: ['Read'],
+    license: 'MIT',
+    body: '正文内容\n第二行'
+  })
+  const md = toSkillMd(s)
   assert.ok(md.startsWith('---'), '带 YAML 头')
-  const back = markdownToSkill(md)
-  assert.ok(back, '可解析回来')
+  assert.ok(md.includes('when_to_use: 周末整理周报时'), 'frontmatter 用下划线键名')
+  assert.ok(md.includes('tools: [Read]'), 'tools 序列化为数组')
+
+  const parsed = parseSkillMarkdown(md)
+  assert.equal(parsed.ok, true, '可解析回来')
+  const back = normalizeSkill({ ...parsed.draft, body: parsed.body })
+  assert.ok(back, '可归一为技能')
   assert.equal(back!.name, '周报生成', '名称还原')
   assert.equal(back!.category, '写作', '分类还原')
   assert.deepEqual(back!.tags, ['汇报', '文档'], '标签还原')
   assert.equal(back!.version, '2.1.0', '版本还原')
   assert.equal(back!.author, '我', '作者还原')
   assert.equal(back!.description, '整理周报', '说明还原')
-  assert.ok(back!.content.includes('第二行'), '正文还原')
+  assert.equal(back!.whenToUse, '周末整理周报时', 'when_to_use 还原')
+  assert.deepEqual(back!.tools, ['Read'], 'tools 还原')
+  assert.equal(back!.license, 'MIT', 'license 还原')
+  assert.ok(back!.body.includes('第二行'), '正文还原')
 
-  // 无 YAML 头：以 fallback 名称 + 全文为正文
-  const plain = markdownToSkill('纯正文', '文件名')
-  assert.equal(plain!.name, '文件名', '无头时用 fallback 名称')
-  assert.equal(plain!.content, '纯正文', '无头时全文为正文')
-  assert.equal(markdownToSkill(''), null, '空内容 → null')
+  // 空文件 / 缺 frontmatter 的失败分支见 T17（那里逐个断言错误文案）
+  assert.equal(parseSkillMarkdown('').ok, false, '空内容 → 解析失败')
 })
 
 // T14 — 导入计划：新增 / 更新 / 跳过（按 updatedAt 新者胜）
@@ -325,6 +382,212 @@ test('T15 calcSmartStats（计数 / 本月新增 / 累计使用 / 分类 / 最�
   assert.equal(st.recent.length, 2, '最近使用两条（lastUsedAt 非空）')
   assert.equal(st.recent[0].id, 'p1', '最近的是 p1')
   assert.equal(st.recent[0].type, 'prompt', '类型标记正确')
+})
+
+// T16 — frontmatter 解析（YAML 子集：标量 / 引号 / 行内数组 / 块数组 / 注释）
+test('T16 parseFrontmatter（多种 YAML 写法 + 无头时全文为正文）', () => {
+  const md = [
+    '---',
+    '# 这是注释，应被忽略',
+    'name: "需求: 生成"',
+    "description: '一句话说明'",
+    'version: 1.2.0',
+    'draft: false',
+    'tags: [产品, 文档, "a,b"]',
+    'tools:',
+    '  - Read',
+    '  - Grep',
+    '---',
+    '',
+    '正文第一行'
+  ].join('\n')
+  const r = parseFrontmatter(md)
+  assert.equal(r.hasFrontmatter, true, '识别到 frontmatter')
+  assert.equal(r.data.name, '需求: 生成', '双引号内的冒号不被截断')
+  assert.equal(r.data.description, '一句话说明', '单引号去引号')
+  assert.equal(r.data.version, '1.2.0', '三段版本号保持字符串（不会被误当成数字）')
+  assert.equal(r.data.draft, false, '布尔解析为布尔')
+  assert.deepEqual(r.data.tags, ['产品', '文档', 'a,b'], '行内数组支持引号内逗号')
+  assert.deepEqual(r.data.tools, ['Read', 'Grep'], '块数组解析')
+  assert.equal(r.data['# 这是注释，应被忽略'], undefined, '注释行被忽略')
+  assert.ok(r.body.includes('正文第一行'), '正文取 frontmatter 之后的内容')
+
+  const plain = parseFrontmatter('没有元数据的全文')
+  assert.equal(plain.hasFrontmatter, false, '无头文件 hasFrontmatter=false')
+  assert.equal(plain.body, '没有元数据的全文', '无头时全文即正文')
+})
+
+// T17 — skill.md 解析：必填缺失要给出明确字段名
+test('T17 parseSkillMarkdown（必需字段缺失给明确提示）', () => {
+  const good = ['---', 'name: A', 'description: 说明', '---', '', '正文'].join('\n')
+  const ok = parseSkillMarkdown(good)
+  assert.equal(ok.ok, true, '合法 skill.md 解析成功')
+  assert.equal(ok.draft.name, 'A', 'name 映射')
+  assert.equal(ok.draft.description, '说明', 'description 映射')
+  assert.equal(ok.body.trim(), '正文', '正文取出')
+
+  assert.equal(parseSkillMarkdown('').ok, false, '空文件 → 失败')
+  assert.ok(parseSkillMarkdown('').error?.includes('空文件'), '提示空文件')
+
+  const noFm = parseSkillMarkdown('只有正文没有元数据')
+  assert.equal(noFm.ok, false, '缺 frontmatter → 失败')
+  assert.ok(noFm.error?.includes('frontmatter'), '提示缺 frontmatter')
+
+  const noName = parseSkillMarkdown(['---', 'description: 说明', '---', '', '正文'].join('\n'))
+  assert.equal(noName.ok, false, '缺 name → 失败')
+  assert.ok(noName.error?.includes('name'), '错误里点名 name 字段')
+
+  const noDesc = parseSkillMarkdown(['---', 'name: A', '---', '', '正文'].join('\n'))
+  assert.ok(noDesc.error?.includes('description'), '错误里点名 description 字段')
+
+  const noBody = parseSkillMarkdown(['---', 'name: A', 'description: d', '---', '', '   '].join('\n'))
+  assert.equal(noBody.ok, false, '正文为空 → 失败')
+  assert.ok(noBody.error?.includes('正文'), '错误里点名正文')
+
+  // 未识别的键进 extra，保证导入导出不丢信息
+  const withExtra = parseSkillMarkdown(['---', 'name: A', 'description: d', 'icon: 🧩', '---', '', '正文'].join('\n'))
+  assert.deepEqual(withExtra.draft.extra, { icon: '🧩' }, '未识别键进 extra')
+})
+
+// T18 — 资源规划：剥顶层目录名、排除 skill.md、超限留痕
+test('T18 planResources（路径归一化 / 排除 skill.md / 超限跳过并给原因）', () => {
+  const files = [
+    { path: 'my-skill/skill.md', size: 10, text: '正文' },
+    { path: 'my-skill/tpl/prd.md', size: 5, text: '模板' },
+    { path: 'my-skill/scripts/run.py', size: 20, text: 'print(1)' },
+    { path: 'my-skill/big.bin', size: RESOURCE_FILE_MAX + 1, base64: 'AAA' }
+  ]
+  const plan = planResources(files, 'my-skill')
+  assert.deepEqual(plan.resources.map(r => r.path), ['tpl/prd.md', 'scripts/run.py'], '剥掉顶层目录名并排除 skill.md（保持原顺序）')
+  assert.equal(plan.resources.every(r => r.encoding === 'text'), true, '文本扩展名走 text 编码')
+  assert.equal(plan.skipped.length, 1, '超限文件被跳过')
+  assert.ok(plan.skipped[0].reason.includes('1MB'), '跳过原因写明上限')
+  assert.equal(plan.skipped[0].path, 'big.bin', '跳过项路径已归一化')
+
+  // 数量上限
+  const many = Array.from({ length: RESOURCE_COUNT_MAX + 5 }, (_, i) => ({ path: `f${i}.txt`, size: 1, text: 'x' }))
+  const capped = planResources(many, '')
+  assert.equal(capped.resources.length, RESOURCE_COUNT_MAX, '资源数量被限制在上限内')
+  assert.equal(capped.skipped.length, 5, '超出部分进 skipped')
+
+  // 路径清洗
+  assert.equal(normalizeRelPath('./a/b.txt'), 'a/b.txt', '去掉 ./ 前缀')
+  assert.equal(normalizeRelPath('root/a.txt', 'root'), 'a.txt', '剥掉指定顶层目录')
+  assert.equal(normalizeRelPath('dir/'), '', '目录项返回空串（应忽略）')
+})
+
+// T19 — 文件夹 / zip 批量导入规划
+test('T19 planSkillImports（单目录 / 父目录多技能 / 缺 skill.md / 失败项留原因）', () => {
+  const mkSkill = (name: string) => ['---', `name: ${name}`, 'description: 说明', '---', '', '正文'].join('\n')
+
+  // 1. 直接选中技能目录
+  const one = planSkillImports([
+    { path: 'my-skill/skill.md', size: 10, text: mkSkill('A') },
+    { path: 'my-skill/tpl/x.md', size: 3, text: 'x' }
+  ])
+  assert.equal(one.error, undefined, '无整体错误')
+  assert.equal(one.packages.length, 1, '解析出 1 个技能')
+  assert.equal(one.packages[0].draft.name, 'A', '名称来自 frontmatter')
+  assert.deepEqual(one.packages[0].resources.map(r => r.path), ['tpl/x.md'], '资源相对技能根目录')
+  assert.deepEqual(one.orphans, [], '无游离文件')
+
+  // 2. 选中父目录（下面多个技能）
+  const many = planSkillImports([
+    { path: 'skills/skill-a/skill.md', size: 10, text: mkSkill('A') },
+    { path: 'skills/skill-a/tpl/x.md', size: 3, text: 'x' },
+    { path: 'skills/skill-b/skill.md', size: 10, text: mkSkill('B') },
+    { path: 'skills/README.md', size: 3, text: 'readme' }
+  ])
+  assert.equal(many.packages.length, 2, '解析出 2 个技能')
+  assert.deepEqual(many.packages.map(p => p.draft.name), ['A', 'B'], '两个技能各自独立')
+  assert.deepEqual(many.packages[0].resources.map(r => r.path), ['tpl/x.md'], '资源归各自的技能')
+  assert.deepEqual(many.orphans, ['skills/README.md'], '不属于任何技能的文件进 orphans')
+
+  // 3. 完全没有 skill.md
+  const none = planSkillImports([{ path: 'a/b.txt', size: 1, text: 'x' }])
+  assert.equal(none.packages.length, 0, '没有技能')
+  assert.ok(none.error?.includes(SKILL_FILE), '错误提示点名 skill.md')
+
+  // 4. 有 skill.md 但字段缺失 → 进 failed 并写明原因
+  const bad = planSkillImports([
+    { path: 'x/skill.md', size: 10, text: ['---', 'name: A', '---', '', '正文'].join('\n') },
+    { path: 'y/skill.md', size: 10, text: mkSkill('B') }
+  ])
+  assert.equal(bad.packages.length, 1, '合法的那个照常解析')
+  assert.equal(bad.failed.length, 1, '非法的进 failed')
+  assert.ok(bad.failed[0].error.includes('description'), '失败原因点名缺失字段')
+  assert.equal(bad.failed[0].skillFile, 'x/skill.md', '失败项带出文件路径')
+
+  // 5. 嵌套技能：资源归最深的那个 skill.md 所有
+  const nested = planSkillImports([
+    { path: 'outer/skill.md', size: 10, text: mkSkill('外') },
+    { path: 'outer/demo/skill.md', size: 10, text: mkSkill('内') },
+    { path: 'outer/demo/t.txt', size: 1, text: 't' },
+    { path: 'outer/top.txt', size: 1, text: 't' }
+  ])
+  assert.equal(nested.packages.length, 2, '嵌套的两个技能都解析')
+  const inner = nested.packages.find(p => p.draft.name === '内')
+  const outer = nested.packages.find(p => p.draft.name === '外')
+  assert.deepEqual(inner!.resources.map(r => r.path), ['t.txt'], '内层资源归内层技能')
+  assert.deepEqual(outer!.resources.map(r => r.path), ['top.txt'], '外层只拿到自己目录下的文件')
+})
+
+// T20 — 闭环：技能 → skill.md + 资源 → zip → 解包 → 再解析，字段与资源不应丢失
+test('T20 导出 zip 后可直接再次导入（目录层级与字段都不丢）', () => {
+  const s = skill({
+    name: '周报生成',
+    description: '整理周报',
+    version: '1.3.0',
+    author: '我',
+    category: '写作',
+    tags: ['汇报'],
+    whenToUse: '周末',
+    tools: ['Read'],
+    license: 'MIT',
+    body: '# 步骤\n按项目分组',
+    resources: [
+      { path: 'templates/weekly.md', size: 10, encoding: 'text', data: '# 周报模板' },
+      { path: 'scripts/run.py', size: 12, encoding: 'text', data: 'print(1)' }
+    ]
+  })
+
+  // 1. 打包（与 utils/skillPackage.ts 的 skillZipEntries 一致的目录结构）
+  const root = '周报生成'
+  const entries: Record<string, Uint8Array> = {
+    [`${root}/skill.md`]: strToU8(toSkillMd(s))
+  }
+  for (const r of s.resources) entries[`${root}/${r.path}`] = strToU8(r.data)
+
+  // 2. 压缩再解包
+  const unzipped = unzipSync(zipSync(entries, { level: 6 }))
+  const files = Object.entries(unzipped)
+    .filter(([p]) => !p.endsWith('/'))
+    .map(([p, data]) => ({
+      path: p,
+      size: data.length,
+      text: strFromU8(data)
+    }))
+
+  assert.deepEqual(files.map(f => f.path).sort(), [`${root}/scripts/run.py`, `${root}/skill.md`, `${root}/templates/weekly.md`], 'zip 内保持目录层级')
+
+  // 3. 再导入
+  const plan = planSkillImports(files)
+  assert.equal(plan.error, undefined, '再导入无整体错误')
+  assert.equal(plan.packages.length, 1, '解析出 1 个技能')
+  const back = normalizeSkill({ ...plan.packages[0].draft, body: plan.packages[0].body, resources: plan.packages[0].resources })
+  assert.ok(back, '可归一为技能')
+  assert.equal(back!.name, '周报生成', 'name 不丢')
+  assert.equal(back!.description, '整理周报', 'description 不丢')
+  assert.equal(back!.version, '1.3.0', 'version 不丢')
+  assert.equal(back!.author, '我', 'author 不丢')
+  assert.equal(back!.category, '写作', 'category 不丢')
+  assert.deepEqual(back!.tags, ['汇报'], 'tags 不丢')
+  assert.equal(back!.whenToUse, '周末', 'when_to_use 不丢')
+  assert.deepEqual(back!.tools, ['Read'], 'tools 不丢')
+  assert.equal(back!.license, 'MIT', 'license 不丢')
+  assert.ok(back!.body.includes('按项目分组'), '正文不丢')
+  assert.deepEqual(back!.resources.map(r => r.path).sort(), ['scripts/run.py', 'templates/weekly.md'], '资源路径不丢（已剥掉顶层目录名）')
+  assert.equal(back!.resources.find(r => r.path === 'templates/weekly.md')!.data, '# 周报模板', '资源内容不丢')
 })
 
 let passed = 0

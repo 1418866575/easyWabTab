@@ -1,37 +1,30 @@
 <script setup lang="ts">
 /**
- * 智能工作台 · 详情弹框（技能 / 提示词共用，只读预览）
- * 技能正文经 noteMarkdown 渲染（html:false，不会注入脚本）；提示词高亮 {{变量}} 便于检查占位。
+ * 智能工作台 · 提示词详情弹框（只读预览）
+ * 技能详情走 SkillDetailDialog（要展示 frontmatter 与资源树，展示结构完全不同）。
+ * 提示词正文高亮 {{变量}} 便于检查占位；先转义再替换，避免注入。
  */
 import { computed } from 'vue'
-import { renderMarkdown } from '@/composables/noteMarkdown'
 import { parseVariables } from '@/composables/smartCore'
-import type { SmartPrompt, SmartSkill } from '@/types'
+import type { SmartPrompt } from '@/types'
 
-const props = defineProps<{ kind: 'skill' | 'prompt'; item: SmartSkill | SmartPrompt }>()
+const props = defineProps<{ item: SmartPrompt }>()
 const emit = defineEmits<{ close: [] }>()
 
-const isSkill = computed(() => props.kind === 'skill')
-
-/** 技能正文 → HTML（markdown-it 已禁 HTML，安全） */
-const html = computed(() => (isSkill.value ? renderMarkdown(props.item.content) : ''))
-
-/** 提示词：把 {{变量}} 包成高亮 span（先转义再替换，避免注入） */
 const promptHtml = computed(() => {
-  if (isSkill.value) return ''
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   return esc(props.item.content)
     .replace(/\n/g, '<br/>')
     .replace(/\{\{\s*([A-Za-z0-9_\u4e00-\u9fa5]{1,32})\s*\}\}/g, '<code class="sd-var">{{$1}}</code>')
 })
 
-const vars = computed(() => (isSkill.value ? [] : parseVariables(props.item.content)))
+const vars = computed(() => parseVariables(props.item.content))
 
 /** 占位展示文本在脚本里拼：模板中直接写 `{{ ... }}` 字面量会被解析器吃掉（见 SmartEditorDialog 同款说明） */
 function varLabel(name: string): string {
   return '{{' + name + '}}'
 }
-const title = computed(() => ('name' in props.item ? props.item.name : props.item.title))
+const title = computed(() => props.item.title)
 </script>
 
 <template>
@@ -40,13 +33,10 @@ const title = computed(() => ('name' in props.item ? props.item.name : props.ite
       <div class="sd-meta">
         <span class="sd-chip">{{ props.item.category }}</span>
         <span v-for="t in props.item.tags" :key="t" class="sd-chip is-tag">#{{ t }}</span>
-        <span v-if="isSkill && (props.item as SmartSkill).version" class="sd-chip">v{{ (props.item as SmartSkill).version }}</span>
-        <span v-else-if="!isSkill && (props.item as SmartPrompt).model" class="sd-chip">{{ (props.item as SmartPrompt).model }}</span>
-        <span v-if="isSkill && (props.item as SmartSkill).description" class="sd-desc">{{ (props.item as SmartSkill).description }}</span>
+        <span v-if="props.item.model" class="sd-chip">{{ props.item.model }}</span>
       </div>
 
-      <div v-if="isSkill" class="sd-content" v-html="html" />
-      <div v-else class="sd-content is-plain" v-html="promptHtml" />
+      <div class="sd-content is-plain" v-html="promptHtml" />
 
       <p v-if="vars.length" class="sd-vars">
         变量（{{ vars.length }}）：

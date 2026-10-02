@@ -5,10 +5,9 @@
  */
 import { useToast } from '@/composables/useToast'
 
-/** 触发浏览器下载：文本 → Blob → a[download] 点击 */
-export function downloadText(filename: string, text: string, mime = 'application/json;charset=utf-8'): boolean {
+/** 触发浏览器下载：给定 Blob（zip 等二进制导出用） */
+export function downloadBlob(filename: string, blob: Blob): boolean {
   try {
-    const blob = new Blob([text], { type: mime })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -16,6 +15,17 @@ export function downloadText(filename: string, text: string, mime = 'application
     a.click()
     URL.revokeObjectURL(url)
     return true
+  } catch (e) {
+    console.error('[download] 下载失败', e)
+    useToast().error('下载失败，请稍后重试')
+    return false
+  }
+}
+
+/** 触发浏览器下载：文本 → Blob → a[download] 点击 */
+export function downloadText(filename: string, text: string, mime = 'application/json;charset=utf-8'): boolean {
+  try {
+    return downloadBlob(filename, new Blob([text], { type: mime }))
   } catch (e) {
     console.error('[download] 下载失败', e)
     useToast().error('下载失败，请稍后重试')

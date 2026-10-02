@@ -84,6 +84,14 @@ const entries = computed<Entry[]>(() => [
     icon: store.studentPageIcon,
     builtin: 'notes',
     visible: store.studentPageVisible !== false
+  },
+  {
+    key: 'smart',
+    path: '/smart',
+    name: store.smartPageDisplayName,
+    icon: store.smartPageIcon,
+    builtin: 'lightbulb',
+    visible: store.smartPageVisible !== false
   }
 ])
 

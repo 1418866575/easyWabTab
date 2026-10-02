@@ -11,12 +11,15 @@ import type {
   SmartImportPreview,
   SmartPrompt,
   SmartPromptVariable,
-  SmartSkill
+  SmartSkill,
+  SmartSkillResource
 } from '@/types'
+import { migrateLegacySkill } from './skillPackageCore'
 
 // ==================== 常量与上限 ====================
 
-export const SMART_SKILL_KIND = 'smart-skills'
+// 技能不再有 JSON 信封：技能 = 一个目录，导入导出统一走 zip（见 utils/skillPackage）。
+// 这里只保留提示词的信封标识。
 export const SMART_PROMPT_KIND = 'smart-prompts'
 export const SMART_ENVELOPE_VERSION = 1
 
@@ -25,6 +28,8 @@ export const SMART_DESC_MAX = 200
 export const SMART_CONTENT_MAX = 20000
 export const SMART_TAG_MAX = 16
 export const SMART_TAGS_MAX = 8
+/** 单条资源体积上限（与 skillPackageCore 保持一致，供界面提示复用） */
+export const SMART_RESOURCE_FILE_MAX = 1024 * 1024
 export const UNCATEGORIZED = '未分类'
 /** 分类筛选的「全部」哨兵值（分类名不可能等于它） */
 export const UNCATEGORIZED_ALL = '__all__'
@@ -90,29 +95,56 @@ function toText(v: unknown): string {
  */
 export function normalizeSkill(raw: unknown): SmartSkill | null {
   if (!raw || typeof raw !== 'object') return null
-  const o = raw as Record<string, unknown>
+  // v1 扁平结构（name/description/content/icon）先迁移到 v2（body/resources/…），幂等
+  const o = migrateLegacySkill(raw as Record<string, unknown>)
   const name = truncateText(toText(o.name).trim(), SMART_NAME_MAX)
-  const content = toText(o.content)
+  const body = toText(o.body)
   // 名称与正文都为空 → 视为垃圾数据
-  if (!name && !content.trim()) return null
+  if (!name && !body.trim()) return null
   const now = Date.now()
   const createdAt = toInt(o.createdAt, now)
   return {
     id: typeof o.id === 'string' && o.id ? o.id : makeSmartId('sk'),
     name: name || '未命名技能',
-    category: normalizeCategory(o.category),
-    icon: typeof o.icon === 'string' && o.icon.trim() ? o.icon.trim() : '\u{1F9E9}',
-    tags: normalizeTags(o.tags),
+    description: toText(o.description).trim().slice(0, SMART_DESC_MAX),
     version: typeof o.version === 'string' && o.version.trim() ? truncateText(o.version.trim(), 20) : '1.0.0',
-    author: typeof o.author === 'string' ? truncateText(o.author.trim(), SMART_NAME_MAX) : '',
-    description: typeof o.description === 'string' ? truncateText(o.description.trim(), SMART_DESC_MAX) : '',
-    content: truncateText(content, SMART_CONTENT_MAX),
+    author: toText(o.author).trim().slice(0, SMART_NAME_MAX),
+    category: normalizeCategory(o.category),
+    tags: normalizeTags(o.tags),
+    whenToUse: toText(o.whenToUse).trim().slice(0, SMART_DESC_MAX),
+    tools: normalizeTags(o.tools).slice(0, SMART_TAGS_MAX),
+    license: toText(o.license).trim().slice(0, 40),
+    extra: o.extra && typeof o.extra === 'object' && !Array.isArray(o.extra)
+      ? { ...(o.extra as Record<string, unknown>) }
+      : {},
+    body: truncateText(body, SMART_CONTENT_MAX),
+    resources: normalizeResources(o.resources),
     usageCount: Math.max(0, toInt(o.usageCount, 0)),
     lastUsedAt: typeof o.lastUsedAt === 'number' && Number.isFinite(o.lastUsedAt) ? o.lastUsedAt : null,
     isBuiltIn: o.isBuiltIn === true ? true : undefined,
     createdAt,
     updatedAt: toInt(o.updatedAt, createdAt || now)
   }
+}
+
+/** 归一化资源数组：路径清洗、去重（同路径后者覆盖）、非对象剔除 */
+export function normalizeResources(input: unknown): SmartSkillResource[] {
+  if (!Array.isArray(input)) return []
+  const map = new Map<string, SmartSkillResource>()
+  for (const raw of input) {
+    if (!raw || typeof raw !== 'object') continue
+    const o = raw as Record<string, unknown>
+    const path = typeof o.path === 'string' ? o.path.replace(/\\/g, '/').replace(/^\.?\//, '').trim() : ''
+    if (!path) continue
+    const data = typeof o.data === 'string' ? o.data : ''
+    map.set(path, {
+      path,
+      size: Math.max(0, toInt(o.size, data.length)),
+      encoding: o.encoding === 'base64' ? 'base64' : 'text',
+      data
+    })
+  }
+  return [...map.values()]
 }
 
 /** 归一化技能数组（过滤非法项，不改入参） */
@@ -252,7 +284,17 @@ function matchKeyword(item: SmartSkill | SmartPrompt, q: string): boolean {
   const kw = q.trim().toLowerCase()
   if (!kw) return true
   const name = 'name' in item ? item.name : item.title
-  const haystack = [name, item.category, item.tags.join(' '), item.content, ('description' in item ? item.description : '')]
+  // 技能正文在 body，提示词在 content；技能另有 description / whenToUse / tools 可搜
+  const text = 'body' in item ? item.body : item.content
+  const haystack = [
+    name,
+    item.category,
+    item.tags.join(' '),
+    text,
+    ('description' in item ? item.description : ''),
+    ('whenToUse' in item ? item.whenToUse : ''),
+    ('tools' in item ? item.tools.join(' ') : '')
+  ]
     .join('\n')
     .toLowerCase()
   return haystack.includes(kw)
@@ -311,15 +353,54 @@ export interface SmartIssue {
   message: string
 }
 
-/** 校验技能输入（返回全部问题，空数组即通过） */
+/**
+ * 校验技能输入（返回全部问题，空数组即通过）。
+ * 字段与 skill.md 的 frontmatter 一一对应：
+ *   name / description 为必填（frontmatter 必需键），body 为技能正文（必填）。
+ */
 export function validateSkill(input: Partial<SmartSkill>, existing: SmartSkill[], editingId?: string | null): SmartIssue[] {
   const out: SmartIssue[] = []
   const name = (input.name ?? '').trim()
-  if (!name) out.push({ field: 'name', message: '请填写技能名称' })
+  if (!name) out.push({ field: 'name', message: '请填写技能名称（对应 skill.md 的 name）' })
   else if ([...name].length > SMART_NAME_MAX) out.push({ field: 'name', message: `名称不能超过 ${SMART_NAME_MAX} 字` })
   else if (isNameTaken(existing, name, editingId)) out.push({ field: 'name', message: `已存在同名技能「${name}」` })
-  if (!(input.content ?? '').trim()) out.push({ field: 'content', message: '请填写技能正文' })
-  else if ([...input.content!].length > SMART_CONTENT_MAX) out.push({ field: 'content', message: `正文不能超过 ${SMART_CONTENT_MAX} 字` })
+
+  const desc = (input.description ?? '').trim()
+  if (!desc) out.push({ field: 'description', message: '请填写一句话说明（对应 skill.md 的 description）' })
+  else if ([...desc].length > SMART_DESC_MAX) out.push({ field: 'description', message: `说明不能超过 ${SMART_DESC_MAX} 字` })
+
+  const body = (input.body ?? '').trim()
+  if (!body) out.push({ field: 'body', message: '请填写技能正文（skill.md 的正文部分）' })
+  else if ([...(input.body ?? '')].length > SMART_CONTENT_MAX) out.push({ field: 'body', message: `正文不能超过 ${SMART_CONTENT_MAX} 字` })
+
+  const version = (input.version ?? '').trim()
+  if (version && [...version].length > 20) out.push({ field: 'version', message: '版本号不能超过 20 字' })
+  const author = (input.author ?? '').trim()
+  if (author && [...author].length > SMART_NAME_MAX) out.push({ field: 'author', message: `作者不能超过 ${SMART_NAME_MAX} 字` })
+
+  return out
+}
+
+/** 校验资源列表：路径合法性与体积上限（导入前兜底，超限项带明确原因） */
+export function validateResources(resources: SmartSkillResource[]): SmartIssue[] {
+  const out: SmartIssue[] = []
+  const seen = new Set<string>()
+  for (const r of resources) {
+    const p = (r.path ?? '').trim()
+    if (!p) {
+      out.push({ field: 'resources', message: '存在路径为空的资源' })
+      continue
+    }
+    if (p.includes('..') || p.startsWith('/')) {
+      out.push({ field: 'resources', message: `资源路径不合法：${p}` })
+      continue
+    }
+    if (seen.has(p)) out.push({ field: 'resources', message: `资源路径重复：${p}` })
+    seen.add(p)
+    if ((r.size ?? 0) > SMART_RESOURCE_FILE_MAX) {
+      out.push({ field: 'resources', message: `资源「${p}」超过单文件 1MB 上限` })
+    }
+  }
   return out
 }
 
@@ -376,8 +457,10 @@ export function parseEnvelope<T>(
   // 信封形态：校验 kind 与 version
   if (typeof o.kind === 'string') {
     if (o.kind !== expectKind) {
-      const want = expectKind === SMART_SKILL_KIND ? '技能' : '提示词'
-      return { ok: false, reason: 'kind-mismatch', message: `文件是${o.kind === SMART_SKILL_KIND ? '技能' : o.kind === SMART_PROMPT_KIND ? '提示词' : o.kind}数据，与当前「${want}」页面不匹配` }
+      // 目前只有提示词走 JSON 信封（技能改为 zip 目录导入），未知 kind 原样回显便于排查
+      const want = expectKind === SMART_PROMPT_KIND ? '提示词' : expectKind
+      const got = o.kind === SMART_PROMPT_KIND ? '提示词' : o.kind
+      return { ok: false, reason: 'kind-mismatch', message: `文件是「${got}」数据，与当前「${want}」页面不匹配` }
     }
     const v = typeof o.version === 'number' ? o.version : 1
     if (v > SMART_ENVELOPE_VERSION) {
@@ -410,56 +493,8 @@ export function parseEnvelope<T>(
   return { ok: true, items }
 }
 
-/** 导出为 Markdown（技能专用：YAML 元信息头 + 正文），便于阅读与 git 托管 */
-export function skillToMarkdown(s: SmartSkill): string {
-  const esc = (v: string) => v.replace(/"/g, '\\"')
-  const tags = s.tags.length ? `[${s.tags.map(t => `"${esc(t)}"`).join(', ')}]` : '[]'
-  return [
-    '---',
-    `kind: ${SMART_SKILL_KIND}`,
-    `version: ${SMART_ENVELOPE_VERSION}`,
-    `name: "${esc(s.name)}"`,
-    `category: "${esc(s.category)}"`,
-    `tags: ${tags}`,
-    s.version ? `skillVersion: "${esc(s.version)}"` : '',
-    s.author ? `author: "${esc(s.author)}"` : '',
-    s.description ? `description: "${esc(s.description)}"` : '',
-    '---',
-    '',
-    s.content
-  ].filter(line => line !== '').join('\n')
-}
-
-/**
- * 从 Markdown 还原技能：优先解析 YAML 头，无头时以 fallbackName 为名称、全文为正文。
- * 只解析本项目导出的固定字段，不引入 YAML 库。
- */
-export function markdownToSkill(md: string, fallbackName = ''): SmartSkill | null {
-  if (typeof md !== 'string' || !md.trim()) return null
-  const m = /^---\s*\n([\s\S]*?)\n---\s*\n?([\s\S]*)$/.exec(md)
-  if (!m) {
-    return normalizeSkill({ name: fallbackName || '导入的技能', content: md })
-  }
-  const header = m[1]
-  const body = m[2]
-  const field = (key: string): string => {
-    const fm = new RegExp(`^${key}:\\s*"?([^"\\n]*)"?\\s*$`, 'm').exec(header)
-    return fm ? fm[1].trim() : ''
-  }
-  const tagsRaw = /^tags:\s*\[(.*?)\]\s*$/m.exec(header)
-  const tags = tagsRaw
-    ? tagsRaw[1].split(',').map(s => s.trim().replace(/^"|"$/g, '')).filter(Boolean)
-    : []
-  return normalizeSkill({
-    name: field('name') || fallbackName || '导入的技能',
-    category: field('category') || UNCATEGORIZED,
-    tags,
-    version: field('skillVersion') || '1.0.0',
-    author: field('author'),
-    description: field('description'),
-    content: body
-  })
-}
+// 技能的 Markdown 序列化/反序列化统一在 skillPackageCore（skillToMarkdown / parseSkillMarkdown），
+// 那里还负责 frontmatter 字段名映射与缺失字段的明确报错；本模块不再保留 v1 的旧包装函数。
 
 /**
  * 计算导入预览：与现有库对比，得出新增 / 更新 / 跳过。
@@ -567,19 +602,33 @@ export const BUILT_IN_SKILLS: SmartSkill[] = [
   {
     id: 'sk_builtin_prd',
     name: '需求文档生成',
-    category: '写作',
-    icon: '\u{1F4DD}',
-    tags: ['产品', '文档'],
+    description: '把一句话想法展开为结构化的需求说明文档',
     version: '1.0.0',
     author: '内置示例',
-    description: '把一句话想法展开为结构化的需求说明文档',
-    content:
+    category: '写作',
+    tags: ['产品', '文档'],
+    whenToUse: '当你只有一个模糊想法、需要快速产出可评审的需求说明文档时使用',
+    tools: [],
+    license: '',
+    extra: { icon: '\u{1F4DD}' },
+    body:
       '你是一名资深产品经理。请把下面这个想法展开为一份需求说明文档。\n\n' +
       '想法：{{idea}}\n目标用户：{{audience}}\n\n' +
       '请按以下结构输出：\n' +
       '1. 背景与问题\n2. 目标与非目标\n3. 用户故事（不少于 3 条）\n' +
       '4. 功能需求（FR 编号 + 描述 + 优先级）\n5. 非功能需求\n6. 异常与边界\n7. 验收标准\n\n' +
       '要求：语言克制、结论先行；每条需求可独立验收。',
+    resources: [
+      {
+        path: 'templates/prd-template.md',
+        size: 0,
+        encoding: 'text',
+        data:
+          '# {{标题}}\n\n## 1. 背景与问题\n\n## 2. 目标与非目标\n\n' +
+          '## 3. 用户故事\n\n## 4. 功能需求\n\n| 编号 | 描述 | 优先级 |\n| --- | --- | --- |\n\n' +
+          '## 5. 非功能需求\n\n## 6. 异常与边界\n\n## 7. 验收标准\n'
+      }
+    ],
     usageCount: 0,
     lastUsedAt: null,
     isBuiltIn: true,
@@ -589,13 +638,16 @@ export const BUILT_IN_SKILLS: SmartSkill[] = [
   {
     id: 'sk_builtin_review',
     name: '代码评审清单',
-    category: '研发',
-    icon: '\u{1F50D}',
-    tags: ['代码', '质量'],
+    description: '按统一清单评审一段代码，输出可执行的修改建议',
     version: '1.0.0',
     author: '内置示例',
-    description: '按统一清单评审一段代码，输出可执行的修改建议',
-    content:
+    category: '研发',
+    tags: ['代码', '质量'],
+    whenToUse: '提交合并请求前、或需要他人给出结构化代码改进建议时使用',
+    tools: [],
+    license: '',
+    extra: { icon: '\u{1F50D}' },
+    body:
       '你是代码评审专家。请评审下面的代码，语言：{{语言}}\n\n' +
       '代码：\n```\n{{代码}}\n```\n\n' +
       '按以下维度逐项检查并给出结论（通过 / 需修改 + 具体行号 + 修改建议）：\n' +
@@ -603,6 +655,17 @@ export const BUILT_IN_SKILLS: SmartSkill[] = [
       '- 性能：不必要的循环/查询、内存占用\n- 安全：注入、越权、敏感信息泄露\n' +
       '- 可维护性：耦合、魔法值、缺少测试\n\n' +
       '最后给出「必须改 / 建议改」两档清单，不要泛泛而谈。',
+    resources: [
+      {
+        path: 'checklist/review-checklist.md',
+        size: 0,
+        encoding: 'text',
+        data:
+          '- [ ] 正确性：边界 / 空值 / 并发 / 异常路径\n- [ ] 可读性：命名 / 函数长度 / 重复代码\n' +
+          '- [ ] 性能：循环 / 查询次数 / 内存占用\n- [ ] 安全：注入 / 越权 / 敏感信息\n' +
+          '- [ ] 可维护性：耦合 / 魔法值 / 测试覆盖\n'
+      }
+    ],
     usageCount: 0,
     lastUsedAt: null,
     isBuiltIn: true,
@@ -612,18 +675,22 @@ export const BUILT_IN_SKILLS: SmartSkill[] = [
   {
     id: 'sk_builtin_weekly',
     name: '周报生成',
-    category: '写作',
-    icon: '\u{1F4C5}',
-    tags: ['汇报'],
+    description: '把零散的工作记录整理为结构化周报',
     version: '1.0.0',
     author: '内置示例',
-    description: '把零散的工作记录整理为结构化周报',
-    content:
+    category: '写作',
+    tags: ['汇报'],
+    whenToUse: '周末或周初，需要把本周零散记录整理成结构化周报时使用',
+    tools: [],
+    license: '',
+    extra: { icon: '\u{1F4C5}' },
+    body:
       '请把下面的工作记录整理成一份周报。\n\n' +
       '本周记录：{{记录}}\n\n' +
       '输出结构：\n1. 本周进展（按项目分组，每条含「做了什么 + 结果/数据」）\n' +
       '2. 风险与阻塞（需要谁协助）\n3. 下周计划（不超过 3 条，可验证）\n\n' +
       '要求：去掉流水账，突出结果；没有数据的地方写「暂无」而不是编造。',
+    resources: [],
     usageCount: 0,
     lastUsedAt: null,
     isBuiltIn: true,
@@ -632,7 +699,11 @@ export const BUILT_IN_SKILLS: SmartSkill[] = [
   }
 ]
 
-/** 内置示例提示词 */
+/**
+ * 内置示例提示词。
+ * 其中 `category: '角色'` 两条与 `public/prompts/roles/*.md` 一一对应（正文主干一致，
+ * 源文件还多一节「使用示例」）；改文件时请同步这里，改这里也请同步文件。
+ */
 export const BUILT_IN_PROMPTS: SmartPrompt[] = [
   {
     id: 'pm_builtin_explain',
@@ -684,6 +755,89 @@ export const BUILT_IN_PROMPTS: SmartPrompt[] = [
       '收件人：{{收件人身份}}\n目的：{{目的}}\n语气：{{语气}}\n草稿：{{草稿}}\n\n' +
       '要求：主题行不超过 20 字；正文先说结论再说原因；不超过 200 字；' +
       '结尾给出明确的下一步与时间。',
+    variables: [],
+    isFavorite: false,
+    usageCount: 0,
+    lastUsedAt: null,
+    isBuiltIn: true,
+    createdAt: 0,
+    updatedAt: 0
+  },
+  {
+    id: 'pm_builtin_role_reviewer',
+    title: '代码评审官',
+    category: '角色',
+    tags: ['评审', '代码'],
+    model: '通用',
+    content:
+      '# 角色：代码评审官\n\n' +
+      '## 一、角色背景\n\n' +
+      '你是一名有 10 年经验的前端架构师，长期负责 Vue 3 + TypeScript + Vite 项目的代码评审，' +
+      '熟悉组合式 API（`<script setup lang="ts">`）、Pinia 状态管理、IndexedDB 持久化与中大型组件拆分。\n' +
+      '你评审的不是「代码风格好不好」，而是「这段代码上线后会不会出问题、半年后还改得动吗」。\n\n' +
+      '## 二、语气风格\n\n' +
+      '- **结论先行**：每一条先给判断（必须改 / 建议改 / 通过），再给理由，最后给改法\n' +
+      '- **直给不客套**：不写铺垫，直接进正题\n' +
+      '- **必须落到具体位置**：指出问题要给出文件名 + 行号（或函数名 / 变量名）\n' +
+      '- **可复制**：给出能直接照抄的代码片段，而不是「建议优化一下」\n\n' +
+      '## 三、行为边界\n\n' +
+      '**会做**：指出正确性、可读性、性能、安全、可维护性五个维度的问题；给出改写片段并说明理由与代价。\n\n' +
+      '**不会做**：不擅自改写与本次改动无关的代码；不因风格偏好提必须改（一律降级为建议改）；' +
+      '不在没有证据时断言性能问题；不修改业务逻辑语义（任何会改变行为的改写都要显式说明并让我确认）。\n\n' +
+      '**遇到以下情况**：代码不完整 → 停止臆测，列出「还需补充的信息」；需求有歧义 → 先复述理解并提问；' +
+      '涉及鉴权 / 支付 / 数据删除 → 只做风险提示，要求人工复核。\n\n' +
+      '## 四、输出格式\n\n' +
+      '严格按下面结构输出：\n\n' +
+      '## 评审结论\n必须改 N 条 / 建议改 M 条 / 通过\n\n' +
+      '## 必须改\n| # | 位置 | 问题 | 改法 |\n|---|---|---|---|\n\n' +
+      '## 建议改\n| # | 位置 | 问题 | 改法 |\n|---|---|---|---|\n\n' +
+      '## 顺带发现（本次未改）\n\n## 需要你补充的信息\n\n' +
+      '规则：没有内容的章节写「无」；「必须改」只放影响正确性、安全、数据丢失的问题。\n\n' +
+      '## 待评审代码\n\n语言：{{语言}}\n改动范围：{{改动范围}}\n\n{{代码}}',
+    variables: [],
+    isFavorite: false,
+    usageCount: 0,
+    lastUsedAt: null,
+    isBuiltIn: true,
+    createdAt: 0,
+    updatedAt: 0
+  },
+  {
+    id: 'pm_builtin_role_analyst',
+    title: '需求拆解顾问',
+    category: '角色',
+    tags: ['需求', '产品'],
+    model: '通用',
+    content:
+      '# 角色：需求拆解顾问\n\n' +
+      '## 一、角色背景\n\n' +
+      '你是一名带过 20 人以上研发团队的需求分析师，擅长把「老板一句话 / 用户一句吐槽」' +
+      '拆成研发能直接排期、测试能直接写用例的需求说明。\n' +
+      '你的核心能力是把模糊变具体：任何需求到你手里，都要能回答三个问题——给谁用、解决什么、做完怎么算完成。\n\n' +
+      '## 二、语气风格\n\n' +
+      '- **先确认再展开**：先用一到两句复述理解，再展开；理解有偏差时先问，不硬写\n' +
+      '- **克制、不堆形容词**：写「把新增一条记录的操作从 5 步减到 2 步」，不写「极大地提升用户体验」\n' +
+      '- **每条可独立验收**：写需求时自带验收口径\n' +
+      '- **主动暴露成本**：看到隐藏的技术代价直接标出来\n' +
+      '- **敢说不知道**：信息不足时写「待确认」，不替用户做业务决策\n\n' +
+      '## 三、行为边界\n\n' +
+      '**会做**：把一句话想法展开为完整需求；主动补上空数据、网络失败、权限不足、重复提交等异常场景；' +
+      '给每条需求标优先级（P0 / P1 / P2）并说明依据；明确写出「本次不做」以避免范围蔓延。\n\n' +
+      '**不会做**：不替用户拍板业务决策（一律写成「待确认」并列出选项与影响）；' +
+      '不写技术实现方案（那是设计阶段的事）；不编造用户量、转化率等数据（没有就写「暂无」）；' +
+      '不在需求里塞 UI 视觉稿。\n\n' +
+      '**遇到以下情况**：只有解决方案没有要解决什么问题 → 先追问「现在怎么做的、卡在哪」；' +
+      '需求互相矛盾 → 停下列出矛盾点与取舍选项让我选；涉及删除 / 覆盖用户数据 → 单独列一节「数据安全」。\n\n' +
+      '## 四、输出格式\n\n' +
+      '严格按六段输出：\n\n' +
+      '## 0. 一句话理解\n\n## 1. 背景与问题\n- 现状：\n- 痛点：\n\n' +
+      '## 2. 目标与非目标\n**目标**（本次要达成）\n\n**非目标**（本次明确不做）\n\n' +
+      '## 3. 用户故事\n| # | 作为…… | 我希望…… | 以便…… |\n|---|---|---|---|\n\n' +
+      '## 4. 功能需求\n| 编号 | 描述 | 优先级 | 验收口径 |\n|---|---|---|---|\n\n' +
+      '## 5. 非功能需求与异常边界\n- 空数据 / 首次使用：\n- 失败与重试：\n- 权限：\n- 数据量：暂无\n\n' +
+      '## 6. 验收标准\n\n## 待确认\n| # | 问题 | 选项 | 影响 |\n|---|---|---|---|\n\n' +
+      '规则：「非目标」必须有内容；每条 FR 都要有验收口径；「待确认」为空时写「无」。\n\n' +
+      '## 原始想法\n\n{{想法}}\n目标用户：{{目标用户}}\n现状：{{现状}}',
     variables: [],
     isFavorite: false,
     usageCount: 0,
