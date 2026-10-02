@@ -20,6 +20,30 @@ const autoDetect = ref(true)
 
 useDirtyFlag(() => !!input.value.trim())
 const { copy, save } = useToolActions()
+const csvError = ref('')
+
+/** JSON 数组对象 → CSV（首行表头取全部键并集，嵌套值 JSON 化）；非数组对象返回 null */
+function flattenToCsv(value: unknown): string | null {
+  if (!Array.isArray(value)) return null
+  const rows = value.filter(v => v && typeof v === 'object' && !Array.isArray(v)) as Record<string, unknown>[]
+  if (!rows.length) return null
+  const keys = Array.from(new Set(rows.flatMap(r => Object.keys(r))))
+  const esc = (x: unknown) => {
+    const s = x == null ? '' : typeof x === 'object' ? JSON.stringify(x) : String(x)
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s
+  }
+  const header = keys.map(esc).join(',')
+  const body = rows.map(r => keys.map(k => esc(r[k])).join(',')).join('\n')
+  return '﻿' + header + '\n' + body
+}
+
+function exportCsv() {
+  csvError.value = ''
+  if (!parsed.value.ok) { csvError.value = '请先输入合法的配置'; return }
+  const csv = flattenToCsv(parsed.value.value)
+  if (!csv) { csvError.value = '仅支持「JSON 数组对象」导出 CSV（Excel 可直接打开）'; return }
+  save('data.csv', csv, 'text/csv;charset=utf-8')
+}
 
 watch(
   input,
@@ -136,6 +160,11 @@ function swap() {
         <pre v-if="output.ok" class="tu-code">{{ output.text }}</pre>
         <p v-else class="tu-alert">转换失败：{{ output.error }}</p>
       </TuOutput>
+
+      <div class="tu-row" style="margin-top:10px">
+        <button type="button" class="tu-btn ghost" :disabled="!parsed.ok" @click="exportCsv">导出 CSV（Excel 可打开）</button>
+        <span v-if="csvError" class="tu-alert">{{ csvError }}</span>
+      </div>
     </div>
 
     <details class="tu-folding tu-span">

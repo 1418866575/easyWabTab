@@ -22,6 +22,19 @@ const showRaw = ref(false)
 useDirtyFlag(() => !!source.value.trim())
 const { copy, save } = useToolActions()
 
+/** 导出 PDF：新窗口渲染样式化 HTML 后调起打印（保真） */
+function exportPdf() {
+  const w = window.open('', '_blank')
+  if (!w) { alert('请允许弹出窗口以导出 PDF'); return }
+  w.document.write(HTML_SHELL(safeHtml.value, 'Markdown 导出'))
+  w.document.close()
+  setTimeout(() => w.print(), 350)
+}
+/** 导出 Word：以 HTML 内容存为 .doc，Word 可直接打开 */
+function exportWord() {
+  save('document.doc', HTML_SHELL(safeHtml.value, 'Markdown 导出'), 'application/msword;charset=utf-8')
+}
+
 const md = computed(() => new MarkdownIt({ html: true, linkify: linkify.value, breaks: breaks.value, typographer: false }))
 
 const renderedHtml = computed(() => md.value.render(source.value))
@@ -87,6 +100,8 @@ const HTML_SHELL = (body: string, title: string) =>
             class="tu-btn ghost"
             @click="save('document.html', HTML_SHELL(safeHtml, 'Markdown 导出'), 'text/html;charset=utf-8')"
           >导出完整 HTML</button>
+          <button type="button" class="tu-btn ghost" @click="exportPdf">导出 PDF</button>
+          <button type="button" class="tu-btn ghost" @click="exportWord">导出 Word</button>
           <button type="button" class="tu-btn ghost" @click="copy(safeHtml)">复制 HTML</button>
         </template>
         <div v-if="!showRaw" class="tu-md" v-html="safeHtml" />

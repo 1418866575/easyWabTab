@@ -44,6 +44,35 @@ export function base64UrlDecode(input: string): string {
   return new TextDecoder().decode(bytes)
 }
 
+/** UTF-8 字符串 → Base64URL */
+export function base64UrlEncode(input: string): string {
+  const bytes = new TextEncoder().encode(input)
+  let bin = ''
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i])
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+/** 生成（签名）JWT，仅支持 HS256/384/512 */
+export interface SignJwtInput {
+  payload: Record<string, unknown>
+  secret: string
+  alg?: 'HS256' | 'HS384' | 'HS512'
+  header?: Record<string, unknown>
+}
+export function signJwt(input: SignJwtInput): { token?: string; error?: string } {
+  const { payload, secret, alg = 'HS256', header } = input
+  if (!secret) return { error: '请填写签名密钥 secret' }
+  const h = { alg, typ: 'JWT', ...(header || {}) }
+  const data = `${base64UrlEncode(JSON.stringify(h))}.${base64UrlEncode(JSON.stringify(payload))}`
+  let mac: CryptoJS.lib.WordArray
+  if (alg === 'HS256') mac = CryptoJS.HmacSHA256(data, secret)
+  else if (alg === 'HS384') mac = CryptoJS.HmacSHA384(data, secret)
+  else if (alg === 'HS512') mac = CryptoJS.HmacSHA512(data, secret)
+  else return { error: `暂不支持 ${alg}` }
+  const sig = mac.toString(CryptoJS.enc.Base64).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  return { token: `${data}.${sig}` }
+}
+
 function pretty(raw: string): JwtSection {
   try {
     const json = base64UrlDecode(raw)

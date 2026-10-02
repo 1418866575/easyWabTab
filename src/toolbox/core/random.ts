@@ -69,3 +69,15 @@ export function spinWheel(items: string[], weights?: number[]): { index: number;
   const angle = (360 - center) % 360
   return { index, angle, item: items[index] }
 }
+
+/** 随机字节 → 十六进制字符串 */
+export function randomBytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+/** 随机字节 → Base64 字符串 */
+export function randomBytesToBase64(bytes: Uint8Array): string {
+  let bin = ''
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i])
+  return btoa(bin)
+}

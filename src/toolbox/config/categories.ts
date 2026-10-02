@@ -21,6 +21,10 @@ export const TOOLBOX_CATEGORIES: ToolboxCategory[] = [
   { id: 'calc', name: '计算换算', icon: '🧮', order: 8 },
   { id: 'gen', name: '生成与随机', icon: '🎲', order: 9 },
   { id: 'effi', name: '效率工具', icon: '⚡', order: 10 },
+  { id: 'pdf', name: 'PDF 工具', icon: '📄', order: 11 },
+  { id: 'cert', name: '证书与安全', icon: '🔏', order: 12 },
+  { id: 'doc', name: '文档处理', icon: '📑', order: 13 },
+  { id: 'device', name: '设备与测量', icon: '📐', order: 14 },
   { id: MODULE_CATEGORY_ID, name: '站内模块', icon: '🧭', order: 90 },
   { id: 'other', name: '其他', icon: '📁', order: 999 }
 ]

@@ -37,6 +37,28 @@ export function csvBlob(text: string): Blob {
   return new Blob(['\uFEFF' + text], { type: 'text/csv;charset=utf-8' })
 }
 
+/** 拷贝文本到剪贴板（带 execCommand 降级） */
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch {
+    try {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      const ok = document.execCommand('copy')
+      document.body.removeChild(ta)
+      return ok
+    } catch {
+      return false
+    }
+  }
+}
+
 /** 文件大小的人类可读表示 */
 export function humanSize(bytes: number): string {
   if (!bytes) return '0 B'

@@ -4,6 +4,8 @@
  * 支持尺寸、纠错等级、颜色定制与中心 Logo，导出 PNG / SVG。
  */
 import { ref } from 'vue'
+import JSZip from 'jszip'
+import { downloadBlob } from '../../core/download'
 import { useDirtyFlag } from '../../prefs/useToolDirty'
 import { useToolActions, loadImage } from '../../composables/useToolActions'
 import TuField from '../../components/tool/TuField.vue'
@@ -116,6 +118,34 @@ async function downloadPng() {
   markSaved()
 }
 
+const batch = ref(false)
+const batchText = ref('https://example.com\nhttps://easy-web-tab.com')
+
+/** 批量：每行一个内容，分别生成 PNG 并打包为 ZIP */
+async function batchZip() {
+  errorMsg.value = ''
+  const lines = batchText.value.split('\n').map(s => s.trim()).filter(Boolean)
+  if (!lines.length) { errorMsg.value = '请输入至少一行内容'; return }
+  try {
+    const QRCode = await import('qrcode')
+    const opts = {
+      width: Math.max(64, Math.min(1024, Number(size.value) || 320)),
+      margin: Math.max(0, Math.min(10, Number(margin.value) ?? 2)),
+      color: { dark: dark.value, light: light.value },
+      errorCorrectionLevel: level.value
+    }
+    const zip = new JSZip()
+    for (let i = 0; i < lines.length; i++) {
+      const dataUrl = await QRCode.toDataURL(lines[i], opts)
+      zip.file(`qrcode-${i + 1}.png`, dataUrl.split(',')[1], { base64: true })
+    }
+    const blob = await zip.generateAsync({ type: 'blob' })
+    downloadBlob('qrcodes.zip', blob)
+  } catch (e) {
+    errorMsg.value = (e as Error).message || '生成失败'
+  }
+}
+
 render()
 </script>
 
@@ -168,6 +198,14 @@ render()
           <button type="button" class="tu-check" :class="{ 'is-on': logoOn }" @click="logoOn = !logoOn">启用 Logo</button>
         </div>
         <TuDrop v-if="logoOn" accept="image/*" hint="选择 Logo 图片" @files="onLogo" />
+      </TuField>
+
+      <TuField label="批量模式（每行一个内容，打包 ZIP）">
+        <div class="tu-row">
+          <button type="button" class="tu-check" :class="{ 'is-on': batch }" @click="batch = !batch">启用批量</button>
+        </div>
+        <textarea v-if="batch" v-model="batchText" class="tu-textarea" rows="4" spellcheck="false" placeholder="每行一个链接 / 文本" />
+        <button v-if="batch" type="button" class="tu-btn" :disabled="!batchText.trim()" @click="batchZip">生成并打包 ZIP</button>
       </TuField>
 
       <div class="tu-row">
