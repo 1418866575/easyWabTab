@@ -25,6 +25,7 @@ export const TOOLBOX_CATEGORIES: ToolboxCategory[] = [
   { id: 'cert', name: '证书与安全', icon: '🔏', order: 12 },
   { id: 'doc', name: '文档处理', icon: '📑', order: 13 },
   { id: 'device', name: '设备与测量', icon: '📐', order: 14 },
+  { id: 'media', name: '媒体播放', icon: '🎬', order: 15 },
   { id: MODULE_CATEGORY_ID, name: '站内模块', icon: '🧭', order: 90 },
   { id: 'other', name: '其他', icon: '📁', order: 999 }
 ]
