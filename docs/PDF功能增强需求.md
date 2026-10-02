@@ -92,7 +92,8 @@
 | P2 | 修复 PDF | #21 | **已于 2026-10-03 实现（`pdf-repair`，pdf 分类 order 19）**：`PDFDocument.load` 后重新 `save` 重建；加载失败时自动截断到最后一个 `%%EOF` 重试；重度损坏如实报错 |
 | P3 | 编辑 PDF / 表单 | #10/#28 | 需可视化编辑层与表单字段写入，工作量大，规划独立编辑器模块 |
 | P3 | 数字签名 | #13 | 需 X.509 证书 + CMS 签名；可引入 WASM 加密库，规划为高级工具（本仓库 x509-parse 已具备证书解析基础） |
-| P3 | HTML 转 PDF / 比较 / 密文 / 裁剪 / AI 摘要 / 翻译 / 转 Markdown | #16/#25/#26/#27/#29/#30/#31 | 各自需渲染引擎、Diff 算法、AI 接口或重排版；其中「PDF 转 Markdown」「HTML 转 PDF」相对可在前端用 pdfjs + markdown-it 试做降质版 |
+| P2 | 裁剪 PDF | #27 | **已于 2026-10-03 实现（`pdf-crop`，pdf 分类 order 22）**：基于 `setCropBox` 按上/下/左/右边距（mm）裁剪全部页面或仅首页，pdfjs 渲染首页做实时裁切框预览；不改变页面内容坐标，仅在查看时隐藏外侧区域 |
+| P3 | HTML 转 PDF / 比较 / 密文 / AI 摘要 / 翻译 / 转 Markdown | #16/#25/#26/#29/#30/#31 | 各自需渲染引擎、Diff 算法、AI 接口或重排版；其中「PDF 转 Markdown」「HTML 转 PDF」相对可在前端用 pdfjs + markdown-it 试做降质版 |
 
 ## 5. 各新增工具详细范围
 
