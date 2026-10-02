@@ -3828,6 +3828,21 @@ onUnmounted(() => {
             用外部工具改过云端文件后若「立即同步」未生效，点「以云端覆盖本地」强制采纳云端（本地未推送的改动会被覆盖）。
           </p>
           <div v-if="store.cloudSyncEnabled" class="remind-field" style="margin-top: 8px;">
+            <span class="remind-label">保存后立即上云</span>
+            <button
+              type="button"
+              class="switch-btn"
+              :class="{ on: store.cloudSyncAutoPush }"
+              role="switch"
+              :aria-checked="store.cloudSyncAutoPush"
+              data-testid="sync-auto-push"
+              @click="store.setCloudSyncAutoPush(!store.cloudSyncAutoPush)"
+            >
+              <span class="switch-thumb"></span>
+            </button>
+            <span class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px;">任何增删改保存后约 1.5 秒自动以<strong>本地覆盖云端</strong>（只上传内容有变化的信封，连续保存合并成一次）。多设备同时编辑同一份数据时，云端那端的改动会被本地覆盖</span>
+          </div>
+          <div v-if="store.cloudSyncEnabled" class="remind-field" style="margin-top: 8px;">
             <span class="remind-label">自动同步间隔（分钟，0=关闭）</span>
             <input
               type="number"

@@ -117,6 +117,61 @@ function getClientId(): string {
 
 export function markDirty(): void {
   localStorage.setItem(DIRTY_KEY, '1')
+  // 所有 store 的保存口都会走到这里，因此「保存后立即上云」只在此处挂钩即可覆盖全部增删改
+  scheduleAutoPush()
+}
+
+// ===== 保存后立即上云（设置项 cloudSyncAutoPush）：防抖 + 只推变化信封 =====
+
+/** 连续保存（输入、拖拽排序等）合并成一次推送的防抖窗口 */
+const AUTO_PUSH_DEBOUNCE_MS = 1500
+/**
+ * 每份信封「上次成功推送时的内容签名」。
+ * 用于只 PUT 内容真正变化的那几份——改一笔账不该把含 base64 图片的 teacher.json 也重传一遍。
+ * 存的是 hash（sha1Hash）而非签名明文，避免大信封撑爆 localStorage。
+ */
+const PUSHED_SIG_PREFIX = 'ewt.cloudSync.pushedSig.'
+
+let autoPushTimer: ReturnType<typeof setTimeout> | null = null
+let autoPushRunning = false
+
+function readPushedSig(name: string): string {
+  return localStorage.getItem(PUSHED_SIG_PREFIX + name) || ''
+}
+
+function writePushedSig(name: string, sig: string): void {
+  localStorage.setItem(PUSHED_SIG_PREFIX + name, sig)
+}
+
+/** markDirty 后进入防抖队列；开关/凭据不满足时直接返回，零开销 */
+function scheduleAutoPush(): void {
+  try {
+    const settings = useAppSettingsStore()
+    if (!settings.cloudSyncEnabled || settings.cloudSyncAutoPush !== true) return
+  } catch {
+    // settings store 未就绪（极早期保存）→ 跳过，后续保存会再触发
+    return
+  }
+  if (autoPushTimer) clearTimeout(autoPushTimer)
+  autoPushTimer = setTimeout(() => {
+    autoPushTimer = null
+    void runAutoPush()
+  }, AUTO_PUSH_DEBOUNCE_MS)
+}
+
+async function runAutoPush(): Promise<void> {
+  if (autoPushRunning) return
+  // 与定时轮询 / 手动同步 / 冲突处理互斥：等它们结束再说，否则会和 pullNow 互相打断
+  if (status.value === 'pushing' || status.value === 'pulling' || status.value === 'conflict') {
+    scheduleAutoPush()
+    return
+  }
+  autoPushRunning = true
+  try {
+    await forcePushLocal(true)
+  } finally {
+    autoPushRunning = false
+  }
 }
 
 function clearDirty(): void {
@@ -1301,7 +1356,7 @@ async function detectExternalChange(dir: string, username: string, password: str
  * skipRemoteGuard=true 用于「pullNow 合并后的回推」：此时云端内容刚被处理过，
  * 再走一次外部改动探测既多余又有递归风险。
  */
-async function pushNow(silent = false, skipRemoteGuard = false): Promise<boolean> {
+async function pushNow(silent = false, skipRemoteGuard = false, onlyChanged = false): Promise<boolean> {
   const settings = useAppSettingsStore()
   if (!settings.cloudSyncEnabled || !hasSyncCredentials(settings)) {
     return false
@@ -1335,14 +1390,25 @@ async function pushNow(silent = false, skipRemoteGuard = false): Promise<boolean
     const pushedAt = Date.now()
     let hasError = false
     let firstError = ''
+    let pushedCount = 0
     for (const cfg of FILE_CONFIGS) {
       try {
         const local = await cfg.exportLocal()
+        // 只推变化：与上次成功推送的内容签名一致 → 这份没动过，跳过 PUT
+        // prev 为空（从未推过 / 清过缓存）时必须推，否则首次同步会被跳过
+        let sig = ''
+        if (onlyChanged) {
+          sig = await sha1Hash(cfg.signature(local))
+          const prev = readPushedSig(cfg.name)
+          if (prev && sig === prev) continue
+        }
         const envelope = { ...(local as Record<string, unknown>), clientId, pushedAt }
         await webdavPut(`${dir}/${cfg.name}`, username, password, JSON.stringify(envelope))
         // 推送即同步：云端这一版就是本机内容，推进基线（用 pushedAt 近似服务端写入时刻，
         // REMOTE_TS_TOLERANCE_MS 已覆盖两端时钟偏差）
         writeRemoteTs(cfg.name, pushedAt)
+        if (onlyChanged && sig) writePushedSig(cfg.name, sig)
+        pushedCount++
       } catch (e) {
         hasError = true
         if (!firstError) firstError = e instanceof Error ? e.message : `${cfg.name} 推送失败`
@@ -1354,11 +1420,18 @@ async function pushNow(silent = false, skipRemoteGuard = false): Promise<boolean
       if (!silent) useToast().error(`云同步推送部分失败：${firstError}`)
       return false
     }
-    localStorage.setItem(LAST_SYNC_KEY, String(pushedAt))
-    lastSyncAt.value = pushedAt
+    // 一份都没推（内容全部未变）→ 只清脏标记，不推进 lastSyncAt：
+    // 本轮没有真实同步发生，推进基线会让后续 pullNow 误判「远端更旧」而漏拉云端改动
+    if (pushedCount > 0) {
+      localStorage.setItem(LAST_SYNC_KEY, String(pushedAt))
+      lastSyncAt.value = pushedAt
+    }
     clearDirty()
     status.value = 'idle'
-    if (!silent) useToast().success('云同步推送成功')
+    if (!silent) {
+      if (pushedCount > 0) useToast().success('云同步推送成功')
+      else useToast().info('云端已是最新，无需覆盖')
+    }
     return true
   } catch (e) {
     status.value = 'error'
@@ -1366,6 +1439,24 @@ async function pushNow(silent = false, skipRemoteGuard = false): Promise<boolean
     if (!silent) useToast().error(`云同步推送失败：${errorMessage.value}`)
     return false
   }
+}
+
+/**
+ * 强制以本地覆盖云端（「本地永远为准」语义）。
+ *
+ * 与 pushNow 的两点差异：
+ *   1. skipRemoteGuard=true：不探测云端是否被外部改过，直接覆盖。
+ *      （pushNow 默认会先 detectExternalChange，发现外部改动就转为拉+合并；这里按用户设定走覆盖。）
+ *   2. onlyChanged=true：只 PUT 内容有变化的信封，避免每保存一次就全量重传 6 份。
+ *
+ * silent=true 供「保存后立即上云」使用：不弹 toast，失败只体现在 status / errorMessage。
+ * 会丢失的部分：同一份信封内云端被其它设备或外部工具（备份编辑脚本）改写的改动——
+ * 这正是「以本地为准」的语义，使用前请确认当前设备数据是最完整的。
+ */
+export async function forcePushLocal(silent = false): Promise<boolean> {
+  const settings = useAppSettingsStore()
+  if (!settings.cloudSyncEnabled || !hasSyncCredentials(settings)) return false
+  return pushNow(silent, true, true)
 }
 
 /**
@@ -1847,6 +1938,11 @@ export function init(): void {
  *  原先看门狗句柄与两个监听回调都未保存，无法移除，单例永不释放。 */
 export function dispose(): void {
   stopInterval()
+  // 释放「保存后立即上云」的防抖定时器，避免卸载后仍触发一次推送
+  if (autoPushTimer) {
+    clearTimeout(autoPushTimer)
+    autoPushTimer = null
+  }
   if (watchdogTimer) {
     clearInterval(watchdogTimer)
     watchdogTimer = null
@@ -1868,6 +1964,7 @@ export function useCloudSync() {
     pullNow,
     syncNow,
     forcePullRemote,
+    forcePushLocal,
     resolveConflict,
     testConnection,
     markDirty,

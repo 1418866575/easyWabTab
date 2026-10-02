@@ -278,6 +278,7 @@ export interface AppSettingsData {
   cloudSyncPassword?: string           // WebDAV 应用密码（空串 = 未配置，存 IDB 非 localStorage）
   cloudSyncInterval?: number           // 后台定时同步间隔（0 = 仅触发式，>0 = 分钟数）
   cloudSyncSilentThreshold?: number    // 静默合并阈值（本地与云端差异字符数 < 此值时后台静默合并，0=永不静默，默认 1000）
+  cloudSyncAutoPush?: boolean          // 保存后立即上云（本地覆盖云端，防抖 1.5s，只推内容有变化的信封，默认 false）
   homeCardLayout?: Record<string, HomeCardLayout> // 工作台主页卡片布局（卡片 id → 列跨度/最小高度/排序）
   viewMode?: 'classic' | 'sidebar' // 导航站视图模式（经典网格 / 侧边栏导航；默认 'classic'，随 workbench 信封云同步）
   scrollbarMode?: 'auto' | 'ghost' | 'hidden' // 滚动条显示模式（auto = 浏览器默认；ghost = 隐形但保留槽位与拖动、悬停/聚焦显形；hidden = 常隐；默认 'auto'）
