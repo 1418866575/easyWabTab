@@ -10,6 +10,7 @@ import { useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
 import Icon from '@/components/Icon.vue'
 import ToolboxSearchBar from '../components/ToolboxSearchBar.vue'
+import ToolboxRecentBar from '../components/ToolboxRecentBar.vue'
 import ToolboxCategoryTabs from '../components/ToolboxCategoryTabs.vue'
 import ToolboxCard from '../components/ToolboxCard.vue'
 import ToolboxSection from '../components/ToolboxSection.vue'
@@ -19,7 +20,6 @@ import { TOOLBOX_TOOLS, getToolEntry, getToolMeta } from '../registry'
 import { filterTools } from '../core/search'
 import { sortByClicks } from '../core/rank'
 import { MODULE_CATEGORY_ID } from '../core/category'
-import { relativeTime } from '../core/recent'
 import { categoryName } from '../config/categories'
 import { useToolboxPrefs } from '../prefs/useToolboxPrefs'
 import type { ToolboxToolEntry, ToolboxToolMeta } from '../types'
@@ -28,12 +28,10 @@ const router = useRouter()
 const toast = useToast()
 const {
   favorites,
-  recent,
   clicks,
   isFavorite,
   toggleFavorite,
   pushRecent,
-  clearRecent,
   clickCount,
   hitClick,
   clearClicks
@@ -55,13 +53,7 @@ const favoriteTools = computed(() =>
     clicks.value
   )
 )
-/** 最近使用（时间倒序，已由 core 去重截断） */
-const recentTools = computed(() =>
-  recent.value
-    .map(r => ({ ts: r.ts, tool: getToolMeta(r.id) }))
-    .filter((x): x is { ts: number; tool: ToolboxToolMeta } => !!x.tool)
-)
-
+/** 最近使用由顶栏 ToolboxRecentBar 呈现（复用 prefs 单例，本视图不再重复计算） */
 const hasFavorite = computed(() => favorites.value.length > 0)
 
 /** 累计点击次数（用于展示「按使用次数排序」与重置入口） */
@@ -116,11 +108,6 @@ function onToggleFav(meta: ToolboxToolMeta) {
   toast.success(on ? `已收藏「${meta.name}」，可在常用工具快速访问` : `已取消收藏「${meta.name}」`)
 }
 
-function onClearRecent() {
-  clearRecent()
-  toast.info('已清空最近使用')
-}
-
 function onClearClicks() {
   clearClicks()
   toast.info('已重置使用次数，列表恢复默认排序')
@@ -151,6 +138,9 @@ function goBack() {
         <Icon name="grid" :size="16" />
         <span>导航站</span>
       </button>
+
+      <!-- 最近使用常驻快捷条（顶栏吸顶，随时可触发；Alt+R 唤起） -->
+      <ToolboxRecentBar :on-open="openTool" />
     </header>
 
     <main class="tb-main wb-container">
@@ -228,27 +218,6 @@ function goBack() {
         </div>
       </ToolboxSection>
 
-      <!-- 最近使用 -->
-      <ToolboxSection v-if="recentTools.length" title="🕘 最近使用" data-testid="tb-section-recent">
-        <template #extra>
-          <button type="button" class="tb-mini-btn" @click="onClearRecent">清空</button>
-        </template>
-        <div class="tb-recent">
-          <button
-            v-for="item in recentTools"
-            :key="item.tool.id"
-            type="button"
-            class="tb-recent-item"
-            @click="openTool(item.tool)"
-          >
-            <span aria-hidden="true">{{ item.tool.icon }}</span>
-            <span>{{ item.tool.name }}</span>
-            <span class="tb-recent-time">{{ relativeTime(item.ts) }}</span>
-            <span v-if="clickCount(item.tool.id)" class="tb-recent-hits">{{ clickCount(item.tool.id) }} 次</span>
-          </button>
-        </div>
-      </ToolboxSection>
-
       <p class="tb-note">
         工具全部为<strong>站内自建或站内已有模块</strong>，不会跳转任何第三方网站。
         新增工具只需在 <code>src/toolbox/tools/</code> 下新建一个目录（<code>index.ts</code> 声明元数据 + 工具组件），
@@ -309,31 +278,6 @@ function goBack() {
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
 }
 
-.tb-recent { display: flex; flex-wrap: wrap; gap: 8px; }
-.tb-recent-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  padding: 8px 12px;
-  font-size: 13px;
-  font-family: var(--font-family);
-  color: var(--color-text);
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  transition: color var(--motion-duration) var(--motion-ease),
-    border-color var(--motion-duration) var(--motion-ease);
-}
-.tb-recent-item:hover { color: var(--color-primary); border-color: var(--color-primary); }
-.tb-recent-time { font-size: 11px; color: var(--color-text-muted); }
-.tb-recent-hits {
-  font-size: 11px;
-  padding: 0 6px;
-  border-radius: var(--radius-full);
-  color: var(--color-primary);
-  background: var(--color-primary-soft);
-}
 .tb-hits-total { font-size: 12px; color: var(--color-text-muted); }
 
 .tb-mini-btn {
@@ -375,8 +319,7 @@ function goBack() {
   .tb-grid { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .tb-back,
-  .tb-recent-item { transition: none; }
+  .tb-back { transition: none; }
 }
 </style>
 
