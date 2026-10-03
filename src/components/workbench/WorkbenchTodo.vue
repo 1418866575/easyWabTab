@@ -141,6 +141,11 @@ const formDueDate = ref('')
 const formColor = ref(DEFAULT_TODO_COLOR)
 // 分类下拉值：'' = 未分类（v-model 与 select option 全字符串，保存时 || undefined）
 const formCategoryId = ref('')
+// 状态操作（移动端编辑页入口）：待办状态为 completed / archived 两个布尔位，
+// 复用列表同一套 store 方法（toggleTodo / archiveTodo / unarchiveTodo），
+// 保证「未完成→已完成→已归档」的联动规则与列表操作完全一致，不另写一套。
+const formCompleted = ref(false)
+const formArchived = ref(false)
 
 // 标题必填：trim 后非空且 ≤100 字符，否则保存按钮 disabled
 const isFormValid = computed(() => {
@@ -162,6 +167,8 @@ function startAdd(): void {
   formDueDate.value = ''
   formColor.value = DEFAULT_TODO_COLOR
   formCategoryId.value = ''
+  formCompleted.value = false
+  formArchived.value = false
   showDialog.value = true
 }
 
@@ -173,6 +180,8 @@ function startEdit(todo: WorkbenchTodo): void {
   formDueDate.value = todo.dueDate ?? ''
   formColor.value = todo.color ?? DEFAULT_TODO_COLOR
   formCategoryId.value = todo.categoryId ?? ''
+  formCompleted.value = todo.completed === true
+  formArchived.value = todo.archived === true
   showDialog.value = true
 }
 
@@ -187,7 +196,8 @@ async function handleSave(): Promise<void> {
   const description = formDescription.value.trim() || undefined
   const dueDate = formDueDate.value || undefined
   if (editingId.value) {
-    await store.updateTodo(editingId.value, {
+    const id = editingId.value
+    await store.updateTodo(id, {
       title,
       description,
       priority: formPriority.value,
@@ -195,6 +205,16 @@ async function handleSave(): Promise<void> {
       color: formColor.value,
       categoryId: formCategoryId.value || undefined
     })
+    // 状态：先完成/取消完成，再按需归档/取消归档（复用列表同一套 store 方法，联动规则一致）
+    const target = store.todos.find(t => t.id === id)
+    if (target && !!target.completed !== formCompleted.value) {
+      await store.toggleTodo(id)
+    }
+    const after = store.todos.find(t => t.id === id)
+    if (after) {
+      if (!after.archived && formArchived.value) await store.archiveTodo(id)
+      else if (after.archived && !formArchived.value) await store.unarchiveTodo(id)
+    }
   } else {
     await store.addTodo({
       title,
@@ -590,6 +610,7 @@ onUnmounted(() => {
             v-model="formDescription"
             type="textarea"
             :rows="2"
+            class="td-desc-input"
             placeholder="补充说明…"
             data-testid="td-desc-input"
           />
@@ -601,6 +622,37 @@ onUnmounted(() => {
             <el-option value="" label="未分类" />
             <el-option v-for="cat in store.allCategories" :key="cat" :value="cat" :label="cat" />
           </el-select>
+        </div>
+
+        <!-- 状态操作（仅编辑时显示）：移动端此前无法在列表改状态，这里提供入口；
+             PC 端列表操作列不受影响，仍照旧 -->
+        <div v-if="editingId" class="form-group td-status-group" data-testid="td-status-group">
+          <label>状态</label>
+          <div class="td-status-actions">
+            <el-button
+              size="small"
+              :type="formCompleted ? 'success' : 'default'"
+              :plain="!formCompleted"
+              class="td-status-btn"
+              data-testid="td-toggle-completed"
+              @click="formCompleted = !formCompleted"
+            >
+              {{ formCompleted ? '✓ 已完成' : '标记为已完成' }}
+            </el-button>
+            <el-button
+              size="small"
+              :type="formArchived ? 'warning' : 'default'"
+              :plain="!formArchived"
+              :disabled="!formCompleted"
+              class="td-status-btn"
+              :title="formCompleted ? (formArchived ? '点击取消归档' : '点击归档') : '需先标记为已完成'"
+              data-testid="td-toggle-archived"
+              @click="formArchived = !formArchived"
+            >
+              {{ formArchived ? '已归档' : '归档' }}
+            </el-button>
+            <span v-if="!formCompleted" class="td-status-tip">归档需先标记为已完成</span>
+          </div>
         </div>
 
         <div class="form-row-fields">
@@ -921,6 +973,27 @@ onUnmounted(() => {
   background: var(--color-bg-hover, #f1f5f9);
   border: 1px solid var(--color-border, #e2e8f0);
   vertical-align: middle;
+}
+
+/* 编辑页状态操作区：移动端补齐状态入口，按钮 + 轻提示 */
+.td-status-group { margin-bottom: 12px; }
+.td-status-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.td-status-btn { min-width: 104px; }
+.td-status-tip { font-size: 12px; color: var(--color-text-secondary, #9ca3af); }
+
+/* 待办描述输入框：加高到 450px（el-input 的 textarea 需 :deep 穿透内部元素） */
+.td-desc-input :deep(.el-textarea__inner) {
+  height: 450px;
+  min-height: 450px;
+  resize: vertical;
+  line-height: 1.6;
+  overflow-y: auto;
+  font-family: var(--font-family);
 }
 
 .td-desc {
