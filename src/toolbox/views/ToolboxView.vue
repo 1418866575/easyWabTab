@@ -161,8 +161,12 @@ function goBack() {
         </span>
       </div>
 
-      <!-- 搜索框（父容器内居中） -->
-      <ToolboxSearchBar v-model="keyword" />
+      <!-- 搜索框（父容器内居中）：聚焦展开建议/历史下拉 -->
+      <ToolboxSearchBar
+        v-model="keyword"
+        :candidates="TOOLBOX_TOOLS"
+        @pick="openTool"
+      />
 
       <!-- 分类筛选 -->
       <ToolboxCategoryTabs v-model="category" :tools="TOOLBOX_TOOLS" />

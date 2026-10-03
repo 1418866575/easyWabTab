@@ -10,25 +10,27 @@ import { ref } from 'vue'
 import type { ToolboxPrefs, ToolboxRecentItem } from '../types'
 import { recordRecent } from '../core/recent'
 import { normalizeClicks, recordClick, clickCount as countOf, type ClickMap } from '../core/rank'
+import { normalizeSearchHistory, pushSearchHistory, SEARCH_HISTORY_LIMIT } from '../core/searchHistory'
 
 const LS_KEY = 'easy-web-tab:toolbox'
 
-const DEFAULT_PREFS: ToolboxPrefs = { favorites: [], recent: [], clicks: {} }
+const DEFAULT_PREFS: ToolboxPrefs = { favorites: [], recent: [], clicks: {}, searchHistory: [] }
 
 function loadPrefs(): ToolboxPrefs {
   try {
     const raw = localStorage.getItem(LS_KEY)
-    if (!raw) return { ...DEFAULT_PREFS, clicks: {} }
+    if (!raw) return { ...DEFAULT_PREFS, clicks: {}, searchHistory: [] }
     const p = JSON.parse(raw) as Partial<ToolboxPrefs>
     return {
       favorites: Array.isArray(p.favorites) ? p.favorites.filter(x => typeof x === 'string') : [],
       recent: Array.isArray(p.recent)
         ? p.recent.filter((r): r is ToolboxRecentItem => !!r && typeof r.id === 'string' && typeof r.ts === 'number')
         : [],
-      clicks: normalizeClicks(p.clicks)
+      clicks: normalizeClicks(p.clicks),
+      searchHistory: normalizeSearchHistory(p.searchHistory)
     }
   } catch {
-    return { ...DEFAULT_PREFS, clicks: {} } // 脏数据 / 不可读 → 回落默认值
+    return { ...DEFAULT_PREFS, clicks: {}, searchHistory: [] } // 脏数据 / 不可读 → 回落默认值
   }
 }
 
@@ -45,9 +47,15 @@ const prefs = loadPrefs()
 const favorites = ref<string[]>(prefs.favorites)
 const recent = ref<ToolboxRecentItem[]>(prefs.recent)
 const clicks = ref<ClickMap>(prefs.clicks)
+const searchHistory = ref<string[]>(prefs.searchHistory)
 
 function persist(): void {
-  savePrefs({ favorites: favorites.value, recent: recent.value, clicks: clicks.value })
+  savePrefs({
+    favorites: favorites.value,
+    recent: recent.value,
+    clicks: clicks.value,
+    searchHistory: searchHistory.value
+  })
 }
 
 export function useToolboxPrefs() {
@@ -91,16 +99,35 @@ export function useToolboxPrefs() {
     persist()
   }
 
+  /** 记录一次搜索（非空关键字），FIFO 最多保留 5 条 */
+  const pushSearch = (keyword: string): void => {
+    const next = pushSearchHistory(searchHistory.value, keyword, SEARCH_HISTORY_LIMIT)
+    // 无变化（空关键字）不触发写入
+    if (next === searchHistory.value) return
+    searchHistory.value = next
+    persist()
+  }
+
+  /** 清空搜索历史 */
+  const clearSearchHistory = (): void => {
+    if (!searchHistory.value.length) return
+    searchHistory.value = []
+    persist()
+  }
+
   return {
     favorites,
     recent,
     clicks,
+    searchHistory,
     isFavorite,
     toggleFavorite,
     pushRecent,
     clearRecent,
     clickCount,
     hitClick,
-    clearClicks
+    clearClicks,
+    pushSearch,
+    clearSearchHistory
   }
 }

@@ -86,6 +86,8 @@ export interface ToolboxPrefs {
   recent: ToolboxRecentItem[]
   /** 点击次数：工具 id → 次数（越大越靠前） */
   clicks: Record<string, number>
+  /** 搜索历史：最近 5 条关键字（最新在前，FIFO 截断）；旧数据可缺省 */
+  searchHistory?: string[]
 }
 
 /** 最近使用记录 */
