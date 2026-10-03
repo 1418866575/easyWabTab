@@ -84,7 +84,7 @@
 
 | 优先级 | 项 | 覆盖 iLovePDF | 障碍 / 规划方向 |
 |---|---|---|---|
-| P2 | PDF 转 Word/Excel/PPT | #4/#5/#6 | 需版面重建；纯前端难保真。方向：pdfjs 提取文本/表格 + 简单排版生成 docx/xlsx（mammoth 已具备 docx 写出），仅适合文字型 PDF，扫描件不可用 |
+| P2 | PDF 转 Word/Excel/PPT | #4/#5/#6 | **已于 2026-10-03 实现（`pdf-to-office`，pdf 分类 order 26）**：pdfjs 提取文本层，jszip 直接构造最小可用 docx/xlsx/pptx（文本版，无版式/样式/图片），适合文字型 PDF；扫描件无文本层时提示需 OCR |
 | P2 | Word/PPT/Excel 转 PDF | #7/#8/#9 | 浏览器无原生 Office 渲染。方向：引入 `pptxgenjs`/`exceljs` 等按结构重绘（非像素级还原），或依赖打印管线 |
 | P2 | PDF 加密（加密码） | #18 | pdf-lib 加密支持有限；需确认可写标准加密字典，否则引入 `node-qpdf` 思路的 WASM 方案（仍在浏览器） |
 | P2 | PDF 转 PDF/A | #20 | 需合规重写（字体嵌入、色彩空间、XMP）；重且易错，建议规划为服务端或专用 WASM |
@@ -94,7 +94,10 @@
 | P3 | 数字签名 | #13 | 需 X.509 证书 + CMS 签名；可引入 WASM 加密库，规划为高级工具（本仓库 x509-parse 已具备证书解析基础） |
 | P2 | 裁剪 PDF | #27 | **已于 2026-10-03 实现（`pdf-crop`，pdf 分类 order 22）**：基于 `setCropBox` 按上/下/左/右边距（mm）裁剪全部页面或仅首页，pdfjs 渲染首页做实时裁切框预览；不改变页面内容坐标，仅在查看时隐藏外侧区域 |
 | P2 | PDF 转 Markdown | #31 | **已于 2026-10-03 实现（`pdf-to-markdown`，pdf 分类 order 23）**：pdfjs 提取文本层，按字号推断标题层级（#/##/###）、保留列表、识别加粗，输出 Markdown 并 markdown-it 实时预览；扫描件无文本层时提示需 OCR |
-| P3 | HTML 转 PDF / 比较 / 密文 / AI 摘要 / 翻译 | #16/#25/#26/#29/#30 | 各自需渲染引擎、Diff 算法、AI 接口或重排版；其中「HTML 转 PDF」相对可在前端试做降质版 |
+| P2 | 标记密文（PDF 脱敏） | #26 | **已于 2026-10-03 实现（`pdf-redact`，pdf 分类 order 24）**：pdfjs 定位关键词文本块 + 边距黑带，pdf-lib 绘制黑色矩形覆盖；首页预览叠加规划框，输出新文件不改原文件 |
+| P2 | 比较 PDF | #25 | **已于 2026-10-03 实现（`pdf-compare`，pdf 分类 order 25）**：pdfjs 提取两份 PDF 文本层，行级 LCS diff，展示新增/删除/未变并下载 diff 文本；仅比对文本层 |
+| P3 | HTML 转 PDF | #16 | **已于 2026-10-03 实现（`html-to-pdf`，pdf 分类 order 27）**：隐藏 iframe + srcdoc 写入 HTML，调用浏览器原生打印管线另存为 PDF，零依赖；分页与跨域资源以打印视图为准 |
+| P3 | AI 摘要 / 翻译 | #29/#30 | 需 AI 接口/后端，纯前端暂不可行，规划为需联网的高级工具 |
 
 ## 5. 各新增工具详细范围
 
