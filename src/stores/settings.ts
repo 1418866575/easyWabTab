@@ -500,6 +500,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       countdownButtonVisible: countdownButtonVisible.value,
       helpButtonName: helpButtonName.value,
       helpButtonVisible: helpButtonVisible.value,
+      toolboxButtonName: toolboxButtonName.value,
+      toolboxButtonIcon: toolboxButtonIcon.value,
+      toolboxButtonVisible: toolboxButtonVisible.value,
       desktopNotifyEnabled: desktopNotifyEnabled.value,
       reminderEmailEnabled: reminderEmailEnabled.value,
       reminderEmailTo: reminderEmailTo.value,
@@ -648,6 +651,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       countdownButtonVisible.value = effective.countdownButtonVisible !== false
       helpButtonName.value = typeof effective.helpButtonName === 'string' ? effective.helpButtonName.trim() : ''
       helpButtonVisible.value = effective.helpButtonVisible !== false
+      toolboxButtonName.value = typeof effective.toolboxButtonName === 'string' ? effective.toolboxButtonName.trim() : ''
+      toolboxButtonIcon.value = typeof effective.toolboxButtonIcon === 'string' ? effective.toolboxButtonIcon.trim() : ''
+      toolboxButtonVisible.value = effective.toolboxButtonVisible !== false
       for (const id of DIALOG_IDS) {
         const size = effective.dialogSizes[id]
         if (size) {
@@ -796,6 +802,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     countdownButtonVisible.value = true
     helpButtonName.value = ''
     helpButtonVisible.value = true
+    toolboxButtonName.value = ''
+    toolboxButtonIcon.value = ''
+    toolboxButtonVisible.value = true
     desktopNotifyEnabled.value = false
     reminderEmailEnabled.value = false
     reminderEmailTo.value = ''
