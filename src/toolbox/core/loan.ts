@@ -158,9 +158,70 @@ export function compareMethods(input: LoanInput): { equalPayment: LoanResult; eq
   }
 }
 
+export interface YearRow {
+  /** 第几年（1 起） */
+  year: number
+  /** 当年期数区间，如 "第 1–12 期" */
+  periodRange: string
+  /** 当年实际支付的利息（当年各期利息之和，不累计） */
+  yearInterest: number
+  /** 截至该年累计已还利息（第 1 至第 N 年各期利息之和） */
+  cumInterest: number
+  /** 累计已还利息占总利息的百分比（0–100） */
+  cumPercent: number
+  /** 该年是否部分年度未还清（即非最后一年 / 期末仍有余额） */
+  partial: boolean
+}
+
+/** 按年份汇总利息统计（累计已还利息 + 当年实际支付利息） */
+export function yearlyInterest(rows: ScheduleRow[], totalInterest: number, nominalMonths?: number): YearRow[] {
+  const list: YearRow[] = []
+  if (!rows || !rows.length) return list
+  const total = Number(totalInterest) || 0
+  const lastRow = rows[rows.length - 1]
+  // 最后一期所在年是否“未覆盖满 12 期”（提前还款缩短期限时会出现）
+  const lastYearPartial = !!nominalMonths && lastRow.period % 12 !== 0
+  let cum = 0
+  for (const r of rows) {
+    const year = Math.ceil(r.period / 12)
+    let cur = list[list.length - 1]
+    if (!cur || cur.year !== year) {
+      cur = {
+        year,
+        periodRange: `${(year - 1) * 12 + 1}–${r.period}`,
+        yearInterest: 0,
+        cumInterest: 0,
+        cumPercent: 0,
+        partial: false
+      }
+      list.push(cur)
+    }
+    cur.yearInterest = round2(cur.yearInterest + r.interest)
+    cur.periodRange = `${(year - 1) * 12 + 1}–${r.period}`
+    cum = round2(cum + r.interest)
+    cur.cumInterest = cum
+  }
+  // 累计占比按最终累计值统一计算，避免逐年舍入累积误差
+  list.forEach((y) => {
+    y.cumPercent = total > 0 ? Math.round((y.cumInterest / total) * 10000) / 100 : 0
+  })
+  // 标注“部分年度”：非最后一年，或最后一年未还满 12 期（如提前还款缩短期限）
+  list.forEach((y, i) => {
+    y.partial = i < list.length - 1 || lastYearPartial
+  })
+  return list
+}
+
 /** 明细 → CSV（导出用） */
 export function scheduleToCsv(rows: ScheduleRow[]): string {
   const head = '期数,月供,本金,利息,剩余本金,提前还款'
   const body = rows.map(r => [r.period, r.payment, r.principal, r.interest, r.balance, r.prepaid ?? ''].join(','))
+  return [head, ...body].join('\n')
+}
+
+/** 年度统计 → CSV（导出用） */
+export function yearlyToCsv(years: YearRow[]): string {
+  const head = '年份,期数区间,当年已还利息,累计已还利息,累计占比(%)'
+  const body = years.map(y => [y.year, y.periodRange, y.yearInterest, y.cumInterest, y.cumPercent].join(','))
   return [head, ...body].join('\n')
 }

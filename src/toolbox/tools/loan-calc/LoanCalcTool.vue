@@ -3,7 +3,7 @@
  * 贷款 / 房贷计算器（等额本息 / 等额本金 / 提前还款模拟）
  */
 import { computed, ref } from 'vue'
-import { calcLoan, compareMethods, scheduleToCsv, type RepayMethod, type ScheduleRow } from '../../core/loan'
+import { calcLoan, compareMethods, scheduleToCsv, yearlyInterest, yearlyToCsv, type RepayMethod, type ScheduleRow, type YearRow } from '../../core/loan'
 import { useDirtyFlag } from '../../prefs/useToolDirty'
 import { useToolActions } from '../../composables/useToolActions'
 import TuField from '../../components/tool/TuField.vue'
@@ -41,7 +41,15 @@ const compare = computed(() => compareMethods({
 const rows = computed<ScheduleRow[]>(() => result.value.ok ? result.value.rows : [])
 const csv = computed(() => (rows.value.length ? scheduleToCsv(rows.value) : ''))
 
+/** 年度统计：累计已还利息（含占比）+ 当年实际支付利息，数据源与还款明细一致 */
+const yearRows = computed<YearRow[]>(() =>
+  result.value.ok ? yearlyInterest(rows.value, result.value.totalInterest, Number(months.value) || undefined) : []
+)
+const yearlyCsv = computed(() => (yearRows.value.length ? yearlyToCsv(yearRows.value) : ''))
+
 const money = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits: 2 })
+/** 累计占比：保留 2 位小数 */
+const percent = (n: number) => `${n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`
 
 const summaryText = computed(() =>
   result.value.ok
@@ -227,6 +235,51 @@ const summaryText = computed(() =>
         </div>
       </TuOutput>
 
+      <TuOutput
+        title="年度统计"
+        :text="yearlyCsv"
+        filename="loan-yearly.csv"
+        mime="text/csv;charset=utf-8"
+        empty="—"
+      >
+        <template #actions>
+          <button
+            type="button"
+            class="tu-btn ghost"
+            :disabled="!yearlyCsv"
+            @click="save('loan-yearly.csv', yearlyCsv, 'text/csv;charset=utf-8')"
+          >下载 CSV</button>
+        </template>
+        <div class="tu-table-wrap">
+          <table class="tu-table">
+            <thead>
+              <tr>
+                <th>年份</th>
+                <th>期数区间</th>
+                <th>当年已还利息</th>
+                <th>累计已还利息</th>
+                <th>累计占总利息</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="y in yearRows" :key="y.year">
+                <td>
+                  第 {{ y.year }} 年
+                  <span v-if="y.partial" class="ly-partial" title="该年度未还清">部分年度</span>
+                </td>
+                <td>{{ y.periodRange }} 期</td>
+                <td>{{ money(y.yearInterest) }}</td>
+                <td>{{ money(y.cumInterest) }}</td>
+                <td>{{ percent(y.cumPercent) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p v-if="yearRows.some(y => y.partial)" class="tu-hint" style="margin-top: 8px">
+          注：标注为「部分年度」的年份表示该年未还清（含提前还款缩短期限导致的最后一年不满 12 期）。
+        </p>
+      </TuOutput>
+
       <details class="tu-folding">
         <summary>使用说明</summary>
         <div class="tu-folding-body">
@@ -234,9 +287,24 @@ const summaryText = computed(() =>
             <li>填写金额、年利率与期限后自动计算，并同时给出两种方式对比。</li>
             <li>提前还款支持「减少月供」与「缩短期限」两种策略，并计算节省的利息。</li>
             <li>完整还款计划可导出 CSV，便于在表格中继续分析。</li>
+            <li>年度统计中，「当年已还利息」为该年度各期利息之和；「累计已还利息」为第 1 至第 N 年逐年叠加，并显示其占总利息的百分比。</li>
           </ol>
         </div>
       </details>
     </div>
   </div>
 </template>
+
+<style scoped>
+.ly-partial {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+</style>
