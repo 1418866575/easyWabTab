@@ -8,7 +8,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
-import Icon from '@/components/Icon.vue'
+import { useAppSettingsStore } from '../../stores/settings'
 import ToolboxSearchBar from '../components/ToolboxSearchBar.vue'
 import ToolboxRecentBar from '../components/ToolboxRecentBar.vue'
 import ToolboxCategoryTabs from '../components/ToolboxCategoryTabs.vue'
@@ -26,6 +26,8 @@ import type { ToolboxToolEntry, ToolboxToolMeta } from '../types'
 
 const router = useRouter()
 const toast = useToast()
+/** 站点设置：左上角工具箱标识的名称与图标跟随「个性化 → 显示控制」中的工具箱设置 */
+const settingsStore = useAppSettingsStore()
 const {
   favorites,
   clicks,
@@ -125,18 +127,24 @@ function goBack() {
 
 <template>
   <div class="tb-page">
-    <!-- 顶栏：返回导航站入口（图标 + 名称） -->
+    <!-- 顶栏：左上角工具箱标识（图标 + 名称，跟随「设置 → 个性化 → 显示控制」中的工具箱设置变化），点击返回导航站 -->
     <header class="tb-topbar">
       <button
         type="button"
         class="tb-back"
         data-testid="tb-back-btn"
-        title="返回导航站"
-        aria-label="返回导航站"
+        :title="'返回' + settingsStore.toolboxButtonDisplayName"
+        :aria-label="'返回' + settingsStore.toolboxButtonDisplayName"
         @click="goBack"
       >
-        <Icon name="grid" :size="16" />
-        <span>导航站</span>
+        <img
+          v-if="settingsStore.toolboxButtonIcon"
+          :src="settingsStore.toolboxButtonIcon"
+          alt=""
+          class="tb-back-icon-img"
+        />
+        <span v-else class="tb-back-icon-emoji" aria-hidden="true">🧰</span>
+        <span>{{ settingsStore.toolboxButtonDisplayName }}</span>
       </button>
 
       <!-- 最近使用常驻快捷条（顶栏吸顶，随时可触发；Alt+R 唤起） -->
@@ -265,6 +273,15 @@ function goBack() {
   background: var(--color-bg-hover);
   border-color: var(--color-border);
 }
+/* 左上角工具箱标识：自定义图标 / 默认 emoji，与文字基线对齐 */
+.tb-back-icon-img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex: none;
+  border-radius: 3px;
+}
+.tb-back-icon-emoji { font-size: 15px; line-height: 1; flex: none; }
 
 .tb-main { padding-bottom: 96px; }
 
