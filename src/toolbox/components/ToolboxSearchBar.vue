@@ -13,6 +13,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import type { ToolboxToolMeta } from '../types'
 import { suggestTools } from '../core/searchHistory'
 import { useToolboxPrefs } from '../prefs/useToolboxPrefs'
+import { useAppSettingsStore } from '../../stores/settings'
 
 const props = withDefaults(
   defineProps<{
@@ -34,6 +35,8 @@ const emit = defineEmits<{
 }>()
 
 const { searchHistory, pushSearch, clearSearchHistory } = useToolboxPrefs()
+/** 工具箱名称/图标：与 设置 → 个性化 → 显示控制 中的「工具箱」设置保持同步 */
+const settingsStore = useAppSettingsStore()
 
 const rootRef = ref<HTMLElement | null>(null)
 const inputRef = ref<HTMLInputElement | null>(null)
@@ -138,6 +141,18 @@ defineExpose({ focus: () => nextTick(() => inputRef.value?.focus()) })
 <template>
   <div ref="rootRef" class="tb-search-wrap">
     <div class="tb-search" role="search" :class="{ 'is-open': showPanel }">
+      <!-- 工具箱标识（图标 + 名称）：与导航站入口的个性化设置实时同步 -->
+      <span class="tb-search-brand" data-testid="tb-search-brand">
+        <img
+          v-if="settingsStore.toolboxButtonIcon"
+          :src="settingsStore.toolboxButtonIcon"
+          alt=""
+          class="tb-search-brand-img"
+        />
+        <span v-else class="tb-search-brand-emoji" aria-hidden="true">🧰</span>
+        <span class="tb-search-brand-name">{{ settingsStore.toolboxButtonDisplayName }}</span>
+      </span>
+
       <svg
         class="tb-search-icon"
         width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -258,6 +273,33 @@ defineExpose({ focus: () => nextTick(() => inputRef.value?.focus()) })
   box-shadow: 0 0 0 3px var(--color-primary-soft);
 }
 .tb-search-icon { color: var(--color-text-muted); flex: none; }
+
+/* 工具箱标识：图标 + 名称，与设置同步；用分隔线与搜索区隔开 */
+.tb-search-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding-right: 10px;
+  margin-right: 2px;
+  border-right: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  white-space: nowrap;
+  user-select: none;
+}
+.tb-search-brand-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  border-radius: 3px;
+}
+.tb-search-brand-emoji { font-size: 16px; line-height: 1; }
+@media (max-width: 480px) {
+  /* 窄屏隐藏名称，仅留图标，避免挤压输入框 */
+  .tb-search-brand-name { display: none; }
+}
 .tb-search-input {
   flex: 1;
   min-width: 0;

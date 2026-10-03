@@ -319,6 +319,16 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   if (typeof data.helpButtonVisible === 'boolean') {
     out.helpButtonVisible = data.helpButtonVisible
   }
+  // 工具箱入口按钮：名称/图标仅采纳字符串（trim 后可为空 = 用默认），显示隐藏仅采纳布尔
+  if (typeof data.toolboxButtonName === 'string') {
+    out.toolboxButtonName = data.toolboxButtonName.trim()
+  }
+  if (typeof data.toolboxButtonIcon === 'string') {
+    out.toolboxButtonIcon = data.toolboxButtonIcon.trim()
+  }
+  if (typeof data.toolboxButtonVisible === 'boolean') {
+    out.toolboxButtonVisible = data.toolboxButtonVisible
+  }
   // 工作台城市：仅采纳 trim 后非空字符串；空串/undefined/null/非字符串一律视为「未配置」
   // （清除城市后重载不复活旧值，非法值回退默认即未配置）
   if (typeof data.workbenchCity === 'string' && data.workbenchCity.trim() !== '') {
@@ -420,6 +430,11 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   // 导航站右上角「帮助」按钮：默认显示、默认名称「帮助」（固定文本按钮，不支持自定义图标）
   const helpButtonName = ref<string>('')
   const helpButtonVisible = ref<boolean>(true)
+  // 导航站「工具箱」入口按钮：默认显示、默认名称「工具箱」、默认图标 🧰；
+  // toolboxButtonIcon 为自定义图标（空串 = 用内置默认图标，可在 设置 → 个性化 → 显示控制 中改）
+  const toolboxButtonName = ref<string>('')
+  const toolboxButtonVisible = ref<boolean>(true)
+  const toolboxButtonIcon = ref<string>('')
 
   // 站点外观（浏览器标签标题 + favicon）：localStorage 驱动（site-title / site-favicon），
   // 与主题同构——不进 IDB persist，经 nav.json prefs 云同步跨设备生效；空值回退默认
@@ -975,6 +990,24 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     persist()
   }
 
+  // 工具箱入口按钮 setters（名称 / 图标 / 显示隐藏）
+  function setToolboxButtonName(s: string) {
+    toolboxButtonName.value = s
+    persist()
+  }
+  function setToolboxButtonIcon(s: string) {
+    toolboxButtonIcon.value = s
+    persist()
+  }
+  function setToolboxButtonVisible(v: boolean) {
+    toolboxButtonVisible.value = v
+    persist()
+  }
+
+  // 工具箱入口显示名 / 显示隐藏的派生值（空值回退默认，保证 UI 与设置项一致）
+  const toolboxButtonDisplayName = computed(() => toolboxButtonName.value || '工具箱')
+  const toolboxButtonShown = computed(() => toolboxButtonVisible.value !== false)
+
   // 页面显示名 computed
   const workbenchPageDisplayName = computed(() => workbenchPageName.value || '工作台')
   const businessPageDisplayName = computed(() => businessPageName.value || '销售记账')
@@ -1155,6 +1188,11 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     countdownButtonVisible,
     helpButtonName,
     helpButtonVisible,
+    toolboxButtonName,
+    toolboxButtonIcon,
+    toolboxButtonVisible,
+    toolboxButtonDisplayName,
+    toolboxButtonShown,
     siteTitle,
     siteFavicon,
     workbenchPageDisplayName,
@@ -1212,6 +1250,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     setCountdownButtonVisible,
     setHelpButtonName,
     setHelpButtonVisible,
+    setToolboxButtonName,
+    setToolboxButtonIcon,
+    setToolboxButtonVisible,
     initSiteMeta,
     applySiteMeta,
     setSiteTitle,

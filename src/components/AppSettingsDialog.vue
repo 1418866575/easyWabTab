@@ -261,14 +261,15 @@ const mpQrFailed = ref(false)
 // ========================================
 // 入口图标选择（工作台 / 销售记账 / 学生 / 教师）：图标来自图标管理库，弹框形式选择
 // ========================================
-type IconTarget = 'workbench' | 'business' | 'student' | 'teacher' | 'manage' | 'favicon'
+type IconTarget = 'workbench' | 'business' | 'student' | 'teacher' | 'manage' | 'favicon' | 'toolbox'
 const ICON_TARGET_LABEL: Record<IconTarget, string> = {
   workbench: '工作台',
   business: '销售记账',
   student: '学生工作台',
   teacher: '教师工作台',
   manage: '工作台管理',
-  favicon: '站点图标'
+  favicon: '站点图标',
+  toolbox: '工具箱'
 }
 /** 当前正在编辑哪个入口的图标（空串 = 弹框关闭） */
 const iconPickerTarget = ref<IconTarget | ''>('')
@@ -289,6 +290,7 @@ const iconPickerCurrent = computed(() => {
     case 'teacher': return store.teacherPageIcon
     case 'manage': return store.workbenchManageIcon
     case 'favicon': return store.siteFavicon
+    case 'toolbox': return store.toolboxButtonIcon
     default: return ''
   }
 })
@@ -301,6 +303,7 @@ function onPickIcon(src: string): void {
     case 'teacher': store.setTeacherPageIcon(src); break
     case 'manage': store.setWorkbenchManageIcon(src); break
     case 'favicon': store.setSiteFavicon(src); break
+    case 'toolbox': store.setToolboxButtonIcon(src); break
     default: break
   }
   closeIconPicker()
@@ -2310,6 +2313,46 @@ onUnmounted(() => {
           </div>
           <p class="wb-menu-hint">
             控制导航站右上角「帮助」按钮的显示与名称。开启后点击按钮打开使用说明弹框；关闭后该按钮不再出现在右上角（首次访问自动弹出的引导不受影响）。
+          </p>
+        </div>
+
+        <!-- 工具箱入口按钮：名称 + 图标 + 开关（紧随「帮助」设置块之后，交互与工作台管理一致） -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <span class="wb-menu-label">工具箱</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                :value="store.toolboxButtonName"
+                placeholder="工具箱"
+                maxlength="20"
+                data-testid="toolbox-button-name-input"
+                @input="store.setToolboxButtonName(($event.target as HTMLInputElement).value)"
+              />
+              <button
+                type="button"
+                class="wb-menu-icon-btn"
+                :class="{ 'is-set': !!store.toolboxButtonIcon }"
+                :title="store.toolboxButtonIcon ? '已设置图标，点击更换' : '选择图标'"
+                data-testid="toolbox-button-icon-btn"
+                @click="openIconPicker('toolbox')"
+              >
+                <img v-if="store.toolboxButtonIcon" :src="store.toolboxButtonIcon" alt="" class="wb-menu-icon-img" />
+                <Icon v-else name="image" />
+              </button>
+              <button type="button" class="switch-btn"
+                :class="{ on: store.toolboxButtonVisible !== false }"
+                role="switch"
+                :aria-checked="store.toolboxButtonVisible !== false"
+                data-testid="toolbox-button-visible-switch"
+                @click="store.setToolboxButtonVisible(store.toolboxButtonVisible === false)">
+                <span class="switch-thumb"></span>
+              </button>
+            </div>
+          </div>
+          <p class="wb-menu-hint">
+            控制导航站「工具箱」入口按钮的显示、名称与图标。开启后点击按钮进入工具箱；关闭后该入口不再出现在导航站左上角。名称与图标会同步应用到工具箱页面搜索框左侧的标识。
           </p>
         </div>
 

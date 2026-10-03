@@ -443,14 +443,25 @@ onUnmounted(() => {
     <div class="app-bar-left">
       <!-- 工作台管理：按钮 + 正下方弹出面板（卡片列表）；可在 设置 → 个性化 → 工作台设置 中关闭 / 改名 -->
       <WorkbenchManagePanel />
-      <!-- 工具箱入口：跳转到 /toolbox（站内自建工具集合，不跳第三方） -->
+      <!-- 工具箱入口：跳转到 /toolbox（站内自建工具集合，不跳第三方）；
+           显示/名称/图标可在 设置 → 个性化 → 显示控制 中调整（照「工作台管理」范式） -->
       <button
+        v-if="settingsStore.toolboxButtonVisible !== false"
         class="btn-help"
         data-testid="home-toolbox-btn"
-        title="工具箱"
-        aria-label="打开工具箱"
+        :title="settingsStore.toolboxButtonDisplayName"
+        :aria-label="'打开' + settingsStore.toolboxButtonDisplayName"
         @click="router.push({ name: 'toolbox' })"
-      >🧰 工具箱</button>
+      >
+        <img
+          v-if="settingsStore.toolboxButtonIcon"
+          :src="settingsStore.toolboxButtonIcon"
+          alt=""
+          class="home-toolbox-btn-icon"
+        />
+        <span v-else aria-hidden="true">🧰</span>
+        <span>{{ settingsStore.toolboxButtonDisplayName }}</span>
+      </button>
     </div>
     <div class="app-bar-right">
       <button
@@ -717,6 +728,15 @@ onUnmounted(() => {
   background-color: var(--color-bg-hover, #f1f5f9);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-border, #e2e8f0);
+}
+
+/* 工具箱入口的自定义图标（用户从图标库挑选）：与文字基线对齐，尺寸随字号 */
+.home-toolbox-btn-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex: none;
+  border-radius: 3px;
 }
 
 /* 「工作台管理」按钮过渡与云同步按钮（.wb-sync-btn）保持一致 */
