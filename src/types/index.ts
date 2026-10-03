@@ -164,6 +164,18 @@ export type NoteType = 'normal' | 'timeline'
 // 便签类型筛选：'all' = 全部类型（不过滤），普通/时光轴 = 精确匹配
 export type NoteTypeFilter = NoteType | 'all'
 
+// 便签处理状态：pending=处理中，done=已处理；overdue=逾期为**派生状态**
+// （不落库，由 dueDate 与当前日期比较得出，避免「昨天逾期、今天恢复」后状态滞留）
+export const NOTE_STATUSES = ['pending', 'done'] as const
+export type NoteStatus = (typeof NOTE_STATUSES)[number]
+/** 展示用状态（含派生逾期），供 UI 直接渲染 */
+export type NoteStatusView = NoteStatus | 'overdue'
+export const NOTE_STATUS_LABELS: Record<NoteStatusView, string> = {
+  pending: '处理中',
+  done: '已处理',
+  overdue: '逾期'
+}
+
 // 便签分类（工作台便签专属，独立于网址 Category）
 export interface NoteCategory {
   id: string
@@ -191,6 +203,8 @@ export interface WorkbenchNote {
   type?: NoteType           // 便签类型；undefined = normal（普通便签）
   categoryId?: string       // 所属便签分类 id；undefined = 未分类
   entries?: TimelineEntry[] // 时光轴条目（仅 type='timeline' 使用，normal 不写入）
+  dueDate?: string          // 截止日期 'YYYY-MM-DD'；undefined = 未设置（历史数据缺省）
+  status?: NoteStatus       // 处理中 / 已处理；undefined = 缺省按「处理中」显示（历史数据兼容）
 }
 
 // 工作台便签数据（分类 + 便签列表）

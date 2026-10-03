@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { computed, ref, toRaw } from 'vue'
-import type { NoteCategory, NoteColor, NoteData, NoteType, TimelineEntry, WorkbenchNote } from '@/types'
-import { emptyNoteData, normalizeNoteData, sortNotes } from '../composables/noteCore'
+import { NOTE_STATUSES } from '@/types'
+import type { NoteCategory, NoteColor, NoteData, NoteStatus, NoteType, TimelineEntry, WorkbenchNote } from '@/types'
+import { emptyNoteData, normalizeNoteData, normalizeDueDate, sortNotes } from '../composables/noteCore'
 import { idbGet, idbPut } from '../composables/useIdb'
 import { markDirty } from '@/composables/useCloudSync'
 
@@ -36,7 +37,7 @@ export const useWorkbenchNotesStore = defineStore('workbenchNotes', () => {
     }
   }
 
-  async function addNote(input: { title?: string; content: string; color: NoteColor; type?: NoteType; categoryId?: string; entries?: TimelineEntry[] }): Promise<void> {
+  async function addNote(input: { title?: string; content: string; color: NoteColor; type?: NoteType; categoryId?: string; entries?: TimelineEntry[]; dueDate?: string; status?: NoteStatus }): Promise<void> {
     const now = new Date().toISOString()
     notes.value.push({
       id: `nt_${Date.now()}`,
@@ -48,7 +49,12 @@ export const useWorkbenchNotesStore = defineStore('workbenchNotes', () => {
       updatedAt: now,
       type: input.type,
       categoryId: input.categoryId,
-      entries: input.entries
+      entries: input.entries,
+      // 新增便签支持截止日期与状态；经 normalizeDueDate 过滤非法日期
+      dueDate: normalizeDueDate(input.dueDate),
+      status: (NOTE_STATUSES as readonly string[]).includes(input.status as string)
+        ? (input.status as NoteStatus)
+        : 'pending'
     })
     await saveNotes()
   }

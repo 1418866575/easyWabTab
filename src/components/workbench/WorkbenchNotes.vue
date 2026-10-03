@@ -23,6 +23,9 @@ function cardFields(row: any) {
     { label: '标题', value: row.title || '无标题' },
     { label: '内容', value: contentPreview(row.content) },
     { label: '分类', value: catNameOf(row) || '未分类' },
+    // 状态/截止日期：历史便签无 dueDate 时显示「—」，状态由 noteStatusView 派生（逾期自动判定）
+    { label: '状态', value: statusLabel(row) },
+    { label: '截止日期', value: row.dueDate || '—' },
     { label: '颜色', value: COLOR_LABELS[row.color as keyof typeof COLOR_LABELS] ?? row.color },
     { label: '置顶', value: row.pinned ? '📌' : '—' },
     { label: '更新时间', value: formatNoteTime(row.updatedAt) }
@@ -31,12 +34,22 @@ function cardFields(row: any) {
 
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
-import { filterNotes, findNoteCategory, hasActiveNoteFilter, isUncategorized, noteCountText, sortTimelineEntries, tabCategoriesOf } from '@/composables/noteCore'
-import type { NoteCategory, NoteColor, NoteType, NoteTypeFilter, TimelineEntry, WorkbenchNote } from '@/types'
+import { filterNotes, findNoteCategory, hasActiveNoteFilter, isUncategorized, noteCountText, noteStatusView, sortTimelineEntries, tabCategoriesOf, toDateKey } from '@/composables/noteCore'
+import { NOTE_STATUS_LABELS } from '@/types'
+import type { NoteCategory, NoteColor, NoteStatus, NoteType, NoteTypeFilter, TimelineEntry, WorkbenchNote } from '@/types'
 import { renderMarkdown } from '@/composables/noteMarkdown'
 import { usePageSize } from '@/composables/usePageSize'
 
 const store = useWorkbenchNotesStore()
+
+/** 今日日期键（'YYYY-MM-DD'）：逾期判定基准。
+ *  跨天需自动重算，故用定时器在零点后刷新（页面长时间开着也能把逾期的便签标出来）。 */
+const todayKey = ref(toDateKey())
+let todayTimer: ReturnType<typeof setInterval> | undefined
+function refreshTodayKey(): void {
+  const k = toDateKey()
+  if (k !== todayKey.value) todayKey.value = k
+}
 
 // 便签/时光轴条目内容按 Markdown 渲染（renderer 纯函数，template 经 renderedContent 调用）
 // 渲染缓存：列表里每个条目都在 v-for 内调用 renderedContent，且 contentPreview 会对同一份内容
@@ -190,6 +203,9 @@ const formColor = ref<NoteColor>('yellow')
 const formType = ref<NoteType>('normal')
 // 分类下拉值：'' = 未分类（v-model 与 select option 全字符串，避免 undefined 绑定 option 的边缘行为）；保存时 || undefined
 const formCategoryId = ref('')
+// 状态与截止日期：逾期为派生值（不落库），此处只存「处理中/已处理」+ 截止日期
+const formStatus = ref<NoteStatus>('pending')
+const formDueDate = ref('')
 
 // 表单校验按目标类型执行：normal 需 content trim 非空才能保存；timeline 允许 content 为空（entries 即内容）
 const isFormValid = computed(() => formType.value === 'timeline' || formContent.value.trim().length > 0)
@@ -205,6 +221,17 @@ const COLOR_LABELS: Record<NoteColor, string> = {
   pink: '粉'
 }
 
+/** 便签展示状态（含派生「逾期」）：done=已处理；到期日早于今天且未处理=逾期；其余=处理中 */
+function statusView(row: WorkbenchNote) {
+  return noteStatusView(row, todayKey.value)
+}
+function statusLabel(row: WorkbenchNote): string {
+  return NOTE_STATUS_LABELS[statusView(row)]
+}
+function statusClass(row: WorkbenchNote): string {
+  return `is-${statusView(row)}`
+}
+
 function startAdd(): void {
   editingId.value = null
   formTitle.value = ''
@@ -212,6 +239,8 @@ function startAdd(): void {
   formColor.value = 'yellow'
   formType.value = 'normal' // 新增便签默认普通类型
   formCategoryId.value = ''
+  formStatus.value = 'pending' // 新增默认「处理中」
+  formDueDate.value = ''
   formOpen.value = true
 }
 
@@ -222,6 +251,8 @@ function startEdit(note: WorkbenchNote): void {
   formColor.value = note.color
   formType.value = note.type ?? 'normal'
   formCategoryId.value = note.categoryId ?? ''
+  formStatus.value = note.status ?? 'pending' // 历史便签无 status → 兜底「处理中」
+  formDueDate.value = note.dueDate ?? '' // 历史便签无 dueDate → 空
   formOpen.value = true
 }
 
@@ -234,7 +265,17 @@ async function handleSave(): Promise<void> {
   const content = formContent.value.trim()
   const title = formTitle.value.trim() || undefined
   // 类型切换边界规则：切换普通↔时光轴不删除任何数据——content 始终提交，entries 留在数据中仅 timeline 渲染
-  const patch = { title, content, color: formColor.value, type: formType.value, categoryId: formCategoryId.value || undefined }
+  // 状态提交「处理中/已处理」；逾期由读取时按截止日期派生，不写入库
+  // 截止日期空串 → undefined（清除截止日期）
+  const patch = {
+    title,
+    content,
+    color: formColor.value,
+    type: formType.value,
+    categoryId: formCategoryId.value || undefined,
+    status: formStatus.value,
+    dueDate: formDueDate.value || undefined
+  }
   if (editingId.value) {
     await store.updateNote(editingId.value, patch)
   } else {
@@ -389,10 +430,13 @@ function handleKeydown(event: KeyboardEvent): void {
 onMounted(async () => {
   await store.loadNotes()
   window.addEventListener('keydown', handleKeydown)
+  // 逾期判定依赖「今天」：每分钟检查一次日期是否跨天，跨天即刷新基准
+  todayTimer = setInterval(refreshTodayKey, 60_000)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
+  if (todayTimer) clearInterval(todayTimer)
 })
 
 </script>
@@ -548,6 +592,16 @@ onUnmounted(() => {
               <span>{{ COLOR_LABELS[row.color as NoteColor] }}</span>
             </span>
             <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="110" align="center">
+          <template #default="{ row }">
+            <span class="nt-status-badge" :class="statusClass(row)" :data-testid="`nt-status-${row.id}`">
+              {{ statusLabel(row) }}
+            </span>
+            <div v-if="row.dueDate" class="nt-due-cell" :class="{ 'is-overdue': statusView(row) === 'overdue' }">
+              {{ row.dueDate }}
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="置顶" width="70" align="center">
@@ -714,6 +768,38 @@ onUnmounted(() => {
             <el-option value="" label="未分类" />
             <el-option v-for="cat in sortedCategories" :key="cat.id" :value="cat.id" :label="cat.name" />
           </el-select>
+        </div>
+
+        <div class="note-form-row">
+          <label class="note-form-label">状态</label>
+          <el-radio-group v-model="formStatus" data-testid="nt-form-status">
+            <el-radio-button value="pending" data-testid="nt-form-status-pending">处理中</el-radio-button>
+            <el-radio-button value="done" data-testid="nt-form-status-done">已处理</el-radio-button>
+          </el-radio-group>
+          <span
+            v-if="formDueDate && formStatus === 'pending' && formDueDate < todayKey"
+            class="nt-overdue-hint"
+            data-testid="nt-form-overdue-hint"
+          >已逾期</span>
+        </div>
+
+        <div class="note-form-row">
+          <label class="note-form-label" for="nt-form-due">截止日期</label>
+          <el-input
+            v-model="formDueDate"
+            id="nt-form-due"
+            type="date"
+            class="note-due-input"
+            data-testid="nt-form-due"
+            placeholder="选择截止日期（可选）"
+          />
+          <el-button
+            v-if="formDueDate"
+            type="button"
+            class="btn-cancel"
+            data-testid="nt-form-due-clear"
+            @click="formDueDate = ''"
+          >清除</el-button>
         </div>
 
         <el-input
@@ -1055,6 +1141,23 @@ html.dark .timeline-item::before { background: var(--color-border, #374151); }
 .nt-type-badge { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: var(--radius-full, 999px); white-space: nowrap; }
 .nt-type-badge.is-normal { color: var(--color-primary, #3b82f6); background: var(--color-primary-light, #eff6ff); border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent); }
 .nt-type-badge.is-timeline { color: var(--color-success, #22c55e); background: color-mix(in srgb, var(--color-success, #22c55e) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-success, #22c55e) 35%, transparent); }
+
+/* ===== 便签状态（处理中/已处理/逾期）与截止日期 ===== */
+/* 逾期为派生状态：仅「未处理 + 截止日已过」时出现，随日期自动变化 */
+.nt-status-badge { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: var(--radius-full, 999px); white-space: nowrap; }
+.nt-status-badge.is-pending { color: var(--color-warning, #f59e0b); background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-warning, #f59e0b) 35%, transparent); }
+.nt-status-badge.is-done { color: var(--color-success, #22c55e); background: color-mix(in srgb, var(--color-success, #22c55e) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-success, #22c55e) 35%, transparent); }
+.nt-status-badge.is-overdue { color: var(--color-error, #ef4444); background: color-mix(in srgb, var(--color-error, #ef4444) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-error, #ef4444) 35%, transparent); }
+.nt-due-cell { font-size: 11px; color: var(--color-text-secondary, #9ca3af); margin-top: 2px; white-space: nowrap; }
+.nt-due-cell.is-overdue { color: var(--color-error, #ef4444); font-weight: 600; }
+/* 表单内「已逾期」提示（选了过去的截止日期 + 仍为处理中时） */
+.nt-overdue-hint {
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--color-error, #ef4444);
+  white-space: nowrap;
+}
+.note-due-input { width: 180px; }
 /* 普通便签行隐藏展开箭头（仅时光轴有条目管理展开） */
 .nt-table-wrap :deep(.nt-no-expand .el-table__expand-column .el-table__expand-icon) { visibility: hidden; pointer-events: none; }
 

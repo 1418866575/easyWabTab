@@ -1,8 +1,45 @@
 // 工作台便签纯逻辑模块：normalizeNoteData 归一化 → sortNotes/filterNotes 展示层。
 // 纯函数硬约束：禁止 import vue/pinia（node --experimental-strip-types 测试运行器无法执行）；
 // 运行时依赖仅 NOTE_COLORS 常量（与 ledgerCore 引 DEFAULT_LEDGER_CATEGORIES 同模式），其余类型全部 type-only。
-import { NOTE_COLORS } from '../types/index.ts'
-import type { NoteCategory, NoteColor, NoteData, NoteType, NoteTypeFilter, TimelineEntry, WorkbenchNote } from '../types/index.ts'
+import { NOTE_COLORS, NOTE_STATUSES } from '../types/index.ts'
+import type { NoteCategory, NoteColor, NoteData, NoteStatus, NoteStatusView, NoteType, NoteTypeFilter, TimelineEntry, WorkbenchNote } from '../types/index.ts'
+
+/** 本地日期 → 'YYYY-MM-DD'（不用 toISOString，避免时区偏移导致日期错位一天） */
+export function toDateKey(d: Date = new Date()): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/** 截止日期归一化：仅接受严格的 'YYYY-MM-DD'（且必须是真实存在的日期），否则 undefined */
+export function normalizeDueDate(raw: unknown): string | undefined {
+  if (typeof raw !== 'string') return undefined
+  const s = raw.trim().slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return undefined
+  // 排除 2026-02-31 这类「格式对但日期不存在」的值
+  const [y, m, d] = s.split('-').map(Number)
+  const probe = new Date(y, m - 1, d)
+  if (probe.getFullYear() !== y || probe.getMonth() !== m - 1 || probe.getDate() !== d) return undefined
+  return s
+}
+
+/**
+ * 计算便签的展示状态（含派生「逾期」）
+ * - 显式 'done' → 已处理（已处理不再因过期变逾期）
+ * - 有 dueDate 且 < 今天 → 逾期（自动判定，不落库）
+ * - 其余 → 处理中（历史数据无 status 时也归到这里）
+ */
+export function noteStatusView(
+  note: Pick<WorkbenchNote, 'status' | 'dueDate'>,
+  today: string = toDateKey()
+): NoteStatusView {
+  const st = note.status
+  if (st === 'done') return 'done'
+  const due = normalizeDueDate(note.dueDate)
+  if (due && due < today) return 'overdue'
+  return 'pending'
+}
 
 /** 空便签数据：无分类 + 无便签（返回全新结构，不共享任何引用）。 */
 export function emptyNoteData(): NoteData {
@@ -30,6 +67,8 @@ function normalizeTimelineEntry(raw: any | undefined): TimelineEntry {
  * - color 不在 NOTE_COLORS 预设 → 'blue'（与倒计时/待办默认蓝同源色值）
  * - entries 仅 type==='timeline' 时保留并逐条归一（缺失 → []）；normal 类型强制剔除（置 undefined）
  * - id 缺失/非字符串 → 生成 `nt_` 前缀 id（与 store.addNote 同前缀）
+ * - dueDate 仅保留严格 'YYYY-MM-DD'（非法/不存在日期 → undefined）
+ * - status 非法/缺失 → 'pending'（历史便签兜底为「处理中」；「逾期」由 noteStatusView 按日期派生，不落库）
  */
 export function normalizeNote(raw: any | undefined): WorkbenchNote {
   const src = raw ?? {}
@@ -49,6 +88,13 @@ export function normalizeNote(raw: any | undefined): WorkbenchNote {
     type,
     categoryId
   }
+  // 截止日期 / 状态：历史便签缺省 → undefined（显示时按「处理中」兜底，不报错、不改写存量）
+  const dueDate = normalizeDueDate(src.dueDate)
+  if (dueDate) base.dueDate = dueDate
+  const status: NoteStatus = (NOTE_STATUSES as readonly string[]).includes(src.status)
+    ? (src.status as NoteStatus)
+    : 'pending'
+  base.status = status
   if (type === 'timeline') {
     base.entries = Array.isArray(src.entries) ? src.entries.map((e: unknown) => normalizeTimelineEntry(e)) : []
   }
