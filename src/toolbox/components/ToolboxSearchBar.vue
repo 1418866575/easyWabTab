@@ -234,6 +234,8 @@ defineExpose({ focus: () => nextTick(() => inputRef.value?.focus()) })
   max-width: 720px;
   margin-inline: auto;
   margin-top: 14px;
+  /* 与下方分类筛选留一行呼吸间距 */
+  margin-bottom: var(--space-4, 16px);
 }
 
 /* 水平居中：外层 margin-inline auto；窄屏自适铺满，宽屏居中且不过宽 */
