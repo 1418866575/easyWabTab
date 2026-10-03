@@ -58,7 +58,7 @@
 | `pdf-split` | PDF 拆分与提取页 | 按页拆分 / 提取选中页 / 逐页 ZIP | #2 |
 | `pdf-compress` | PDF 压缩 | 缩小体积 | #3 |
 | `pdf-rotate` | 旋转 PDF | 旋转页面 | #15 |
-| `pdf-delete-pages` | 删除页面 | 删除指定页 | #19（部分） |
+| ~~`pdf-delete-pages`~~ | ~~删除页面~~ | 与 `pdf-split` 重复，**2026-10-03 已删除并入 `pdf-split`**（保留=不勾选，语义等价） | ~~#19（部分）~~ |
 | `pdf-stamp` | PDF 水印 | 文字/图片水印 | #14 |
 | `pdf-meta` | PDF 元信息 | 查看/编辑元数据 | — |
 | `pdf-extract` | 提取文字/转图 | 文字提取 + 逐页转 PNG | #4（文字）、#11（图，单页下载） |
