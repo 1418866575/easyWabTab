@@ -8,6 +8,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
+import Icon from '@/components/Icon.vue'
 import ToolboxSearchBar from '../components/ToolboxSearchBar.vue'
 import ToolboxCategoryTabs from '../components/ToolboxCategoryTabs.vue'
 import ToolboxCard from '../components/ToolboxCard.vue'
@@ -137,16 +138,19 @@ function goBack() {
 
 <template>
   <div class="tb-page">
-    <!-- 顶栏：只保留一个返回按钮 -->
+    <!-- 顶栏：返回导航站入口（图标 + 名称） -->
     <header class="tb-topbar">
       <button
         type="button"
         class="tb-back"
         data-testid="tb-back-btn"
-        title="返回"
-        aria-label="返回"
+        title="返回导航站"
+        aria-label="返回导航站"
         @click="goBack"
-      >← 返回</button>
+      >
+        <Icon name="grid" :size="16" />
+        <span>导航站</span>
+      </button>
     </header>
 
     <main class="tb-main wb-container">
