@@ -8,7 +8,11 @@ import {
   getChildren,
   getDescendants,
   getSiblings,
-  wouldCreateCycle
+  wouldCreateCycle,
+  buildGenealogyExport,
+  normalizeGenealogyImport,
+  mergeFamily,
+  type NormalizeGenealogyResult
 } from '@/composables/genealogyCore'
 import type { FamilyMember, GenealogyData } from '@/types'
 
@@ -169,6 +173,45 @@ export const useGenealogyStore = defineStore('genealogy', () => {
     persist()
   }
 
+  // ===== 导入 / 导出（家庭成员间分享）=====
+
+  /** 导出当前家谱为可分享的 JSON 文本（纯函数生成信封，深拷贝避免带出响应式代理） */
+  function exportData(): string {
+    return JSON.stringify(buildGenealogyExport({ members: members.value, rootId: rootId.value }), null, 2)
+  }
+
+  /**
+   * 从 JSON 文本导入。
+   * mode='replace'：清空后导入（分享文件通常选此）
+   * mode='merge'：按 id 合并进现有家谱（同 id 以较新 updatedAt 为准）
+   * 返回清洗统计（导入条数 / 跳过 / 悬空关系 / 提示），由 UI 告知用户。
+   */
+  async function importFromJSON(
+    text: string,
+    mode: 'replace' | 'merge' = 'replace'
+  ): Promise<NormalizeGenealogyResult> {
+    let raw: unknown
+    try {
+      raw = JSON.parse(text)
+    } catch (e) {
+      return { data: emptyGenealogyData(), valid: 0, skipped: 0, danglingRefs: 0, warnings: ['文件不是有效的 JSON 格式'] }
+    }
+    const result = normalizeGenealogyImport(raw)
+    if (!result.valid) return result
+
+    if (mode === 'replace') {
+      members.value = result.data.members
+      rootId.value = result.data.rootId
+    } else {
+      // 合并：复用 mergeFamily 的「本地优先」策略（rootId 取本地 ?? 远端）
+      const merged = mergeFamily({ members: members.value, rootId: rootId.value }, result.data)
+      members.value = merged.members
+      rootId.value = merged.rootId
+    }
+    persist()
+    return result
+  }
+
   // ===== 派生 getter =====
   const childrenOf = (id: string) => getChildren(members.value, id)
   const siblingsOf = (id: string) => getSiblings(members.value, id)
@@ -189,6 +232,8 @@ export const useGenealogyStore = defineStore('genealogy', () => {
     removeSpouse,
     setRoot,
     clearRoot,
+    exportData,
+    importFromJSON,
     childrenOf,
     siblingsOf,
     ancestorsOf,

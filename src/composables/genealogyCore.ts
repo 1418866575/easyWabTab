@@ -140,6 +140,190 @@ export function flattenTree(nodes: FamilyTreeNode[]): FlatTreeNode[] {
   return out
 }
 
+// ============================================================
+// 导入 / 导出（家谱在家庭成员间分享）
+// ============================================================
+
+/** 导出文件格式版本号（后续结构演进据此兼容旧文件） */
+export const GENEALOGY_EXPORT_VERSION = 1
+/** 导出文件名固定前缀 */
+export const GENEALOGY_EXPORT_FILENAME = '家谱数据.json'
+
+/** 导出信封（落盘/分享的 JSON 结构） */
+export interface GenealogyExportFile {
+  /** 文件类型标识，便于导入时识别与将来支持其它格式 */
+  kind: 'easy-web-tab-genealogy'
+  version: number
+  exportedAt: string
+  data: GenealogyData
+}
+
+/** 构造导出信封（纯对象，不含响应式代理） */
+export function buildGenealogyExport(data: GenealogyData, now: Date = new Date()): GenealogyExportFile {
+  return {
+    kind: 'easy-web-tab-genealogy',
+    version: GENEALOGY_EXPORT_VERSION,
+    exportedAt: now.toISOString(),
+    data: {
+      members: JSON.parse(JSON.stringify(data.members ?? [])),
+      rootId: data.rootId ?? null
+    }
+  }
+}
+
+/** 成员清洗结果与统计（导入时告知用户「导入 N 条 / 跳过 M 条」） */
+export interface NormalizeGenealogyResult {
+  data: GenealogyData
+  /** 成功导入的成员数 */
+  valid: number
+  /** 被丢弃的成员数（缺少姓名/id 等） */
+  skipped: number
+  /** 悬空关系数（parents/spouses 指向不存在的 id，已剔除） */
+  danglingRefs: number
+  warnings: string[]
+}
+
+const GENDERS = ['male', 'female', '', null]
+
+/** 'YYYY-MM-DD' 合法校验（复用 calcAge 的严格判法思路，拒绝 2 月 30 日） */
+function isDateKey(v: unknown): v is string {
+  if (typeof v !== 'string') return false
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v.trim())
+  if (!m) return false
+  const y = Number(m[1]); const mo = Number(m[2]); const d = Number(m[3])
+  const dt = new Date(y, mo - 1, d)
+  return dt.getFullYear() === y && dt.getMonth() === mo - 1 && dt.getDate() === d
+}
+
+/**
+ * 导入清洗（幂等、脏数据不抛错）：
+ * - 成员：id 缺失/重名 → 重新生成；姓名缺失/超长 → 丢弃并计入 skipped
+ * - 性别：非 male/female → 归一为 null（UI 显示「不详」）
+ * - 日期：非法 → undefined；头像：非 data URL 字符串 → 丢弃（避免注入外链）
+ * - 关系：指向不存在 id 的 parents/spouses → 剔除并计入 danglingRefs
+ * - rootId：不存在于成员中 → 置 null
+ */
+export function normalizeGenealogyImport(raw: unknown): NormalizeGenealogyResult {
+  const warnings: string[] = []
+  const empty: NormalizeGenealogyResult = { data: emptyGenealogyData(), valid: 0, skipped: 0, danglingRefs: 0, warnings }
+
+  // 兼容两种形态：带信封 {kind,version,data} 或裸 {members,rootId}
+  let src: Record<string, unknown> | null = null
+  if (raw && typeof raw === 'object') {
+    const r = raw as Record<string, unknown>
+    if (r.kind === 'easy-web-tab-genealogy' || r.data && typeof r.data === 'object') {
+      src = (r.data ?? r) as Record<string, unknown>
+      if (r.kind && r.kind !== 'easy-web-tab-genealogy') {
+        warnings.push('文件类型标识不匹配，已按家谱数据尝试解析')
+      }
+    } else {
+      src = r
+    }
+  }
+  if (!src) return empty
+
+  const rawMembers = Array.isArray(src.members) ? src.members : []
+  if (!rawMembers.length) {
+    warnings.push('文件中没有成员数据')
+    return empty
+  }
+
+  const usedIds = new Set<string>()
+  let seq = 0
+  const nextId = (): string => {
+    seq += 1
+    let id = `fm_${Date.now().toString(36)}_${seq.toString(36)}`
+    while (usedIds.has(id)) id = `fm_${Date.now().toString(36)}_${(seq + 1).toString(36)}`
+    usedIds.add(id)
+    return id
+  }
+
+  const nowIso = new Date().toISOString()
+  const members: FamilyMember[] = []
+  let skipped = 0
+  // 第一轮：建成员、收集「原 id → 实际 id」映射（用于第二轮重挂关系）
+  const idMap = new Map<string, string>()
+
+  for (const raw2 of rawMembers) {
+    const m = (raw2 ?? {}) as Record<string, unknown>
+    const name = typeof m.name === 'string' ? m.name.trim() : ''
+    if (!name) { skipped += 1; continue }
+    if (name.length > 50) {
+      warnings.push(`「${name.slice(0, 12)}…」姓名超过 50 字，已截断`)
+    }
+    const oldId = typeof m.id === 'string' && m.id ? m.id : ''
+    // id 冲突时：**首个保留原 id**，后续重复者分配新 id；
+    // 映射只登记「原 id → 实际 id」，且同名的原 id 只认第一个（后续重复者视为不同成员）
+    let id: string
+    if (oldId && !usedIds.has(oldId) && !idMap.has(oldId)) {
+      id = oldId
+      usedIds.add(id)
+      idMap.set(oldId, id)
+    } else {
+      id = nextId()
+      // 原 id 已被前面的成员占用 → 本条视为独立成员，不参与关系重挂映射
+      if (!oldId) idMap.set(id, id)
+    }
+
+    const gender = GENDERS.includes(m.gender as never) ? (m.gender as FamilyMember['gender']) : null
+    const out: FamilyMember = {
+      id,
+      name: name.slice(0, 50),
+      gender,
+      parents: [],
+      spouses: [],
+      createdAt: typeof m.createdAt === 'string' ? m.createdAt : nowIso,
+      updatedAt: typeof m.updatedAt === 'string' ? m.updatedAt : nowIso
+    }
+    if (isDateKey(m.birthDate)) out.birthDate = m.birthDate
+    if (isDateKey(m.deathDate)) out.deathDate = m.deathDate
+    if (typeof m.phone === 'string' && m.phone) out.phone = m.phone
+    if (typeof m.note === 'string' && m.note) out.note = m.note
+    // 头像仅接受 data URL（分享文件体积可控，也避免外链注入）
+    if (typeof m.avatar === 'string' && /^data:image\//i.test(m.avatar)) out.avatar = m.avatar
+    members.push(out)
+  }
+
+  // 第二轮：重挂 parents / spouses（经 idMap 映射到新 id，并剔除悬空）
+  // 注意：id 重复而被重新分配新 id 的成员**不参与**映射（其原 id 属于先出现的那位），
+  // 因此下面只处理「idMap 里有登记」的成员。
+  const existIds = new Set(members.map(m => m.id))
+  let dangling = 0
+  const byId = new Map(members.map(m => [m.id, m]))
+  for (const [oldId, actualId] of idMap) {
+    const target = byId.get(actualId)
+    if (!target) continue
+    // 从原始数据里找出这条成员，读取其关系
+    const src = rawMembers.find((r2: any) => (r2 ?? {}).id === oldId) as Record<string, unknown> | undefined
+    if (!src) continue
+    const remap = (v: unknown): string | null => {
+      if (typeof v !== 'string' || !v) return null
+      const mapped = idMap.get(v) ?? v
+      return existIds.has(mapped) ? mapped : null
+    }
+    for (const key of ['parents', 'spouses'] as const) {
+      const list = Array.isArray(src[key]) ? (src[key] as unknown[]) : []
+      const out: string[] = []
+      for (const v of list) {
+        const id = remap(v)
+        if (id) out.push(id)
+        else dangling += 1
+      }
+      target[key] = [...new Set(out)]
+    }
+  }
+
+  // rootId 必须指向存在的成员，否则置空（避免树视图指向空成员）
+  let rootId: string | null = null
+  if (typeof src.rootId === 'string' && src.rootId) {
+    const mapped = idMap.get(src.rootId) ?? src.rootId
+    if (existIds.has(mapped)) rootId = mapped
+    else warnings.push('主根成员不存在，已清空主根标记')
+  }
+
+  return { data: { members, rootId }, valid: members.length, skipped, danglingRefs: dangling, warnings }
+}
+
 /**
  * 合并家谱（云同步 merge 用）：成员按 id 合并——本地优先（updatedAt 较新者胜，
  * 本地先入 map，远端仅补缺失 id）；rootId 取 本地 ?? 远端。与 mergeStudentValue 的

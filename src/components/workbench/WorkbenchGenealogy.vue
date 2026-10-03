@@ -13,7 +13,8 @@ import {
   getDescendants,
   calcAge,
   genealogyStats,
-  AGE_GROUPS
+  AGE_GROUPS,
+  GENEALOGY_EXPORT_FILENAME
 } from '@/composables/genealogyCore'
 import type { AgeGroupKey } from '@/composables/genealogyCore'
 import type { FamilyMember } from '@/types'
@@ -234,6 +235,62 @@ async function handleSaveMember(): Promise<void> {
   cancelMember()
 }
 
+// ===== 导入 / 导出（家庭成员间分享）=====
+const importInput = ref<HTMLInputElement | null>(null)
+
+/** 导出：生成 JSON 文件并触发下载（纯本地，不上传） */
+function handleExport(): void {
+  if (!store.members.length) {
+    toast.info('家谱暂无成员，无法导出')
+    return
+  }
+  const json = store.exportData()
+  const blob = new Blob([json], { type: 'application/json;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = GENEALOGY_EXPORT_FILENAME
+  a.click()
+  URL.revokeObjectURL(url)
+  toast.success(`已导出 ${store.members.length} 位成员，可发给家人导入`)
+}
+
+/** 导入：选文件 → 询问覆盖/合并 → 清洗写入 → 反馈统计 */
+async function handleImportFile(e: Event): Promise<void> {
+  const inputEl = e.target as HTMLInputElement
+  const f = inputEl.files?.[0]
+  if (!f) return
+  try {
+    const text = await f.text()
+    // 有数据时先问：覆盖 or 合并（分享来的完整家谱通常选覆盖）
+    let mode: 'replace' | 'merge' = 'replace'
+    if (store.members.length > 0) {
+      const hasLocal = store.members.length
+      const ok = await showConfirm(
+        `当前家谱已有 ${hasLocal} 位成员。\n\n` +
+        `点「确定」用文件**覆盖**现有家谱；点「取消」则**合并**进现有家谱（同 id 以较新修改时间为准）。`
+      )
+      mode = ok ? 'replace' : 'merge'
+    }
+    const res = await store.importFromJSON(text, mode)
+    if (res.valid === 0) {
+      toast.error('导入失败：' + (res.warnings[0] ?? '文件内容为空或格式不正确'))
+      return
+    }
+    listPage.value = 1
+    const tips: string[] = [`导入 ${res.valid} 位成员`]
+    if (res.skipped) tips.push(`跳过 ${res.skipped} 条无效记录`)
+    if (res.danglingRefs) tips.push(`清理 ${res.danglingRefs} 个失效关系引用`)
+    toast.success(tips.join('，'))
+    for (const w of res.warnings) toast.info(w)
+  } catch (err) {
+    toast.error('导入失败：' + (err as Error).message)
+  } finally {
+    importInput.value = ''
+    ;(e.target as HTMLInputElement).value = ''
+  }
+}
+
 async function handleDelete(m: FamilyMember): Promise<void> {
   const children = getChildren(store.members, m.id)
   const childTip = children.length > 0 ? `其子/女（${children.map((c) => c.name).join('、')}）将保留为孤儿。` : ''
@@ -408,6 +465,22 @@ onUnmounted(() => {
             data-testid="fg-search"
             @keyup.enter="listPage = 1"
             @clear="listPage = 1"
+          />
+        </div>
+        <div class="td-toolbar-right">
+          <el-button size="small" class="btn-cancel" data-testid="fg-export-button" @click="handleExport">
+            导出
+          </el-button>
+          <el-button size="small" class="btn-cancel" data-testid="fg-import-button" @click="importInput?.click()">
+            导入
+          </el-button>
+          <input
+            ref="importInput"
+            type="file"
+            accept="application/json,.json"
+            hidden
+            data-testid="fg-import-input"
+            @change="handleImportFile"
           />
         </div>
         <ViewModeToggle v-if="filteredMembers.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
@@ -742,6 +815,8 @@ onUnmounted(() => {
 /* ===== 搜索 / 工具栏 ===== */
 .fg-search { width: 200px; }
 .td-toolbar-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* 导入/导出按钮组：与左侧工具区同排（is-split 布局下贴右侧） */
+.td-toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
 /* ===== 表格容器 ===== */
 .fg-table-wrap {
