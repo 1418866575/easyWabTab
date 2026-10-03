@@ -12,6 +12,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useToast } from '@/composables/useToast'
 import { idbGet, idbPut, idbClear } from '@/composables/useIdb'
+import { downloadText } from '../../core/download'
 import {
   parsePeople,
   candidatesOf,
@@ -186,7 +187,19 @@ function startDraw() {
   }, 1600)
 }
 
-/* ---------------- 记录导出 ---------------- */
+/* ---------------- 记录导出 / 模板下载 ---------------- */
+
+/** 下载名单导入模板（含表头与示例行，Excel 可直接打开） */
+function downloadTemplate() {
+  const lines = [
+    '姓名,部门',
+    '张三,研发部',
+    '李四,市场部',
+    '王五,销售部'
+  ]
+  downloadText('抽奖名单模板.csv', '﻿' + lines.join('\n'), 'text/csv;charset=utf-8')
+  toast.success('模板已下载，填写后用「选择文件」导入')
+}
 
 function exportCsv() {
   if (!wins.value.length) {
@@ -197,12 +210,7 @@ function exportCsv() {
   const lines = wins.value.map(w =>
     [w.awardName, w.seq, w.name, w.dept || '', new Date(w.ts).toLocaleString('zh-CN')].join(',')
   )
-  const blob = new Blob(['﻿' + [head, ...lines].join('\n')], { type: 'text/csv;charset=utf-8' })
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(blob)
-  a.download = '抽奖记录.csv'
-  a.click()
-  URL.revokeObjectURL(a.href)
+  downloadText('抽奖记录.csv', '﻿' + [head, ...lines].join('\n'), 'text/csv;charset=utf-8')
 }
 
 function fmtTime(ts: number): string {
@@ -228,6 +236,7 @@ function fmtTime(ts: number): string {
             选择文件
             <input type="file" accept=".txt,.csv,text/plain" hidden @change="onPickFile" />
           </label>
+          <button class="tu-btn ghost" title="下载 CSV 模板，按模板填写后导入" @click="downloadTemplate">下载模板</button>
           <button class="tu-btn ghost" :disabled="!people.length && !wins.length" @click="clearAll">清除全部</button>
         </div>
         <p class="tu-hint" style="margin-top: 6px">
