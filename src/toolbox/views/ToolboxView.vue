@@ -9,6 +9,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
 import Icon from '@/components/Icon.vue'
+import { useAppSettingsStore } from '../../stores/settings'
 import ToolboxSearchBar from '../components/ToolboxSearchBar.vue'
 import ToolboxRecentBar from '../components/ToolboxRecentBar.vue'
 import ToolboxCategoryTabs from '../components/ToolboxCategoryTabs.vue'
@@ -26,6 +27,8 @@ import type { ToolboxToolEntry, ToolboxToolMeta } from '../types'
 
 const router = useRouter()
 const toast = useToast()
+/** 站点设置：页面大标题的工具箱图标与名称跟随「个性化 → 显示控制」中的工具箱设置 */
+const settingsStore = useAppSettingsStore()
 const {
   favorites,
   clicks,
@@ -145,7 +148,17 @@ function goBack() {
 
     <main class="tb-main wb-container">
       <div class="tb-head">
-        <h1>🧰 工具箱</h1>
+        <!-- 页面大标题：工具箱图标 + 名称，跟随「设置 → 个性化 → 显示控制」中的工具箱设置变化 -->
+        <h1 class="tb-head-title">
+          <img
+            v-if="settingsStore.toolboxButtonIcon"
+            :src="settingsStore.toolboxButtonIcon"
+            alt=""
+            class="tb-head-icon-img"
+          />
+          <span v-else class="tb-head-icon-emoji" aria-hidden="true">🧰</span>
+          <span>{{ settingsStore.toolboxButtonDisplayName }}</span>
+        </h1>
         <span class="tb-head-sub">
           共 {{ TOOLBOX_TOOLS.length }} 个工具<template v-if="keyword || category">，当前筛选出 {{ visibleTools.length }} 个</template>
         </span>
@@ -270,6 +283,16 @@ function goBack() {
 
 .tb-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 22px 0 4px; }
 .tb-head h1 { margin: 0; font-size: clamp(20px, 2.2vw, 26px); color: var(--color-text); }
+/* 大标题内的工具箱标识：自定义图标 / 默认 emoji，与标题文字基线对齐 */
+.tb-head-title { display: inline-flex; align-items: center; gap: 8px; }
+.tb-head-icon-img {
+  width: 1.15em;
+  height: 1.15em;
+  object-fit: contain;
+  flex: none;
+  border-radius: 4px;
+}
+.tb-head-icon-emoji { font-size: 1em; line-height: 1; flex: none; }
 .tb-head-sub { color: var(--color-text-secondary); font-size: 13px; }
 
 .tb-grid {
