@@ -41,7 +41,8 @@ interface Entry {
   visible: boolean
 }
 
-// 顺序：导航站（首页）置首，其后与左上角入口按钮保持一致：教师台 → 工作台 → 销售记账 → 学生台
+// 顺序：导航站（首页）置首，其后与左上角入口按钮保持一致：教师台 → 工作台 → 销售记账 → 学生台 → 工具箱
+// 工具箱置于末位（工具性入口，非工作台）；「已在目标页」与「设置里已隐藏」时均不显示该卡片
 const entries = computed<Entry[]>(() => [
   {
     key: 'nav',
@@ -84,6 +85,16 @@ const entries = computed<Entry[]>(() => [
     icon: store.studentPageIcon,
     builtin: 'notes',
     visible: store.studentPageVisible !== false
+  },
+  {
+    // 工具箱入口：名称/图标/可见性与导航站左上角按钮同源（设置 → 个性化 → 显示控制）
+    key: 'toolbox',
+    path: '/toolbox',
+    name: store.toolboxButtonDisplayName,
+    icon: store.toolboxButtonIcon,
+    builtin: 'toolbox',
+    // 已在工具箱页时隐藏自身入口；入口被设置关闭时同样不显示
+    visible: store.toolboxButtonVisible !== false && route.path !== '/toolbox'
   }
 ])
 
