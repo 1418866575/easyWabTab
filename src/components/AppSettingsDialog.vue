@@ -1611,6 +1611,11 @@ async function handlePushLocal(): Promise<void> {
 function handleKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') {
     event.preventDefault()
+    // 全屏态下 ESC 逐层退出：先还原为窗口态，再按一次才关闭弹框
+    if (isFullscreen.value) {
+      isFullscreen.value = false
+      return
+    }
     emit('close')
   }
 }
@@ -2090,15 +2095,35 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
   stopWatchSettings?.()
 })
+
+// ===== 全屏切换 =====
+// 弹框默认 90vw × 90vh（见 .manager）；全屏态铺满视口。仅改尺寸/圆角，不影响内部滚动区。
+// 状态随组件生命周期重置（关闭即退出全屏），避免下次打开仍是全屏而不知情。
+const isFullscreen = ref(false)
+
+function toggleFullscreen(): void {
+  isFullscreen.value = !isFullscreen.value
+}
 </script>
 
 <template>
   <Transition name="dialog">
     <div class="manager-overlay" @click.self="emit('close')">
-    <div class="manager">
+    <div class="manager" :class="{ 'is-fullscreen': isFullscreen }">
       <div class="manager-header">
         <h2><Icon name="cog" /> 设置</h2>
-        <button class="close-btn" @click="emit('close')"><Icon name="close" /></button>
+        <div class="manager-header-actions">
+          <button
+            class="close-btn"
+            :title="isFullscreen ? '退出全屏' : '全屏显示'"
+            :aria-label="isFullscreen ? '退出全屏' : '全屏显示'"
+            data-testid="settings-fullscreen-toggle"
+            @click="toggleFullscreen"
+          >
+            <Icon :name="isFullscreen ? 'fullscreen-exit' : 'fullscreen'" />
+          </button>
+          <button class="close-btn" title="关闭" aria-label="关闭" @click="emit('close')"><Icon name="close" /></button>
+        </div>
       </div>
 
             <div class="manager-body">
@@ -4166,6 +4191,25 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-modal);
+}
+
+/* 全屏态：铺满视口。遮罩层 .manager-overlay 是 flex 居中且有 padding:20px，
+   故用负 margin 抵消该内边距 + 去掉圆角，做到真正"贴边全屏"。
+   仅改外部尺寸，内部（左侧 rail + 右侧滚动区）布局完全不受影响。 */
+.manager.is-fullscreen {
+  width: calc(100vw + 40px);
+  height: calc(100vh + 40px);
+  max-width: none;
+  max-height: none;
+  margin: -20px;
+  border-radius: 0;
+}
+
+/* 头部右侧按钮组：全屏 + 关闭 同一行，视觉一致 */
+.manager-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .manager-header {
