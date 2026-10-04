@@ -3,6 +3,7 @@ import Icon from './Icon.vue'
 import { showConfirm, toastAlert } from '@/utils/dialog'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useIconsStore, type MergedIcon, type CustomIcon, type IconExportData } from '@/stores/icons'
+import { useSitesStore } from '@/stores/sites'
 import { PRESET_ICONS, type PresetIcon } from '@/composables/presetIcons'
 
 /** embedded = true：作为常驻面板内嵌在设置页（无遮罩、无自带标题栏、不响应 ESC 与遮罩点击关闭） */
@@ -13,6 +14,8 @@ const emit = defineEmits<{
 }>()
 
 const store = useIconsStore()
+/** 站点数据：用于判定哪些图标「正在被使用」（site.icon 存图标 src，与 getIconSrc 同口径） */
+const sitesStore = useSitesStore()
 
 /** 遮罩点击关闭：仅弹框模式生效（内嵌面板点击空白不应关闭） */
 function onOverlayClick(): void {
@@ -227,6 +230,31 @@ function isCustom(icon: MergedIcon): icon is CustomIcon & { isCustom: true } {
 function getIconId(icon: MergedIcon): string {
   return isCustom(icon) ? icon.id : (icon as PresetIcon).name
 }
+
+// ===== 「正在使用」标识 =====
+// 站点通过 site.icon 引用图标，其值就是该图标的 src（自定义=dataUrl，预置=`/icons/name.ext`），
+// 与 SiteCard 渲染时的 getFaviconImgSrc(url, site.icon) 同口径，故直接按 src 精确匹配。
+const usedCountByIcon = computed<Map<string, number>>(() => {
+  const map = new Map<string, number>()
+  for (const site of sitesStore.sites) {
+    const src = site.icon
+    if (typeof src !== 'string' || !src) continue
+    map.set(src, (map.get(src) ?? 0) + 1)
+  }
+  return map
+})
+
+/** 该图标被 n 个站点使用中 */
+function usedCountOf(icon: MergedIcon): number {
+  return usedCountByIcon.value.get(getIconSrc(icon)) ?? 0
+}
+
+/** 引用该图标的站点（用于 title 提示「被哪些站点使用」） */
+function usedSiteNames(icon: MergedIcon): string {
+  const src = getIconSrc(icon)
+  const names = sitesStore.sites.filter(s => s.icon === src).map(s => s.name)
+  return names.join('、')
+}
 </script>
 
 <template>
@@ -305,8 +333,15 @@ function getIconId(icon: MergedIcon): string {
             v-for="icon in filteredIcons"
             :key="getIconId(icon)"
             class="icon-manager-item"
-            :class="{ 'built-in': !isCustom(icon), custom: isCustom(icon) }"
+            :class="{ 'built-in': !isCustom(icon), custom: isCustom(icon), 'is-used': usedCountOf(icon) > 0 }"
           >
+            <!-- 使用中角标：该图标正被站点引用 -->
+            <span
+              v-if="usedCountOf(icon) > 0"
+              class="icon-used-badge"
+              :title="`正在被 ${usedCountOf(icon)} 个站点使用：${usedSiteNames(icon)}`"
+              data-testid="icon-used-badge"
+            >{{ usedCountOf(icon) }} 使用中</span>
             <!-- 编辑模式 -->
             <template v-if="isCustom(icon) && editingId === getIconId(icon)">
               <div class="icon-manager-preview">
@@ -336,6 +371,7 @@ function getIconId(icon: MergedIcon): string {
               <span class="icon-manager-label" :title="icon.label">{{ icon.label }}</span>
               <div class="icon-manager-meta">
                 <span class="icon-manager-category">{{ icon.category }}</span>
+                <span v-if="usedCountOf(icon) > 0" class="icon-used-count">使用中 {{ usedCountOf(icon) }}</span>
                 <span v-if="isCustom(icon)" class="icon-manager-size">
                   {{ Math.round(('dataUrl' in icon ? (icon as { dataUrl: string }).dataUrl.length : 0) * 0.75 / 1024) }}KB
                 </span>
@@ -519,6 +555,7 @@ function getIconId(icon: MergedIcon): string {
 }
 
 .icon-manager-item {
+  position: relative; /* 供「使用中」角标绝对定位 */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -527,6 +564,33 @@ function getIconId(icon: MergedIcon): string {
   border: 1px solid #e2e8f0;
   background: #f8fafc;
   transition: all 0.2s;
+}
+
+/* ===== 「正在使用」标识 ===== */
+/* 被站点引用的图标：淡化「内置未用」的灰感，改为正常不透明 + 主色描边，一眼看出在用 */
+.icon-manager-item.is-used {
+  opacity: 1;
+  border-color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-soft, #eff6ff);
+}
+.icon-used-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  line-height: 16px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--color-primary, #3b82f6);
+  white-space: nowrap;
+  pointer-events: none; /* 不影响点击编辑/删除 */
+}
+.icon-used-count {
+  font-size: 11px;
+  color: var(--color-primary, #3b82f6);
+  font-weight: 600;
 }
 
 .icon-manager-item.custom {
