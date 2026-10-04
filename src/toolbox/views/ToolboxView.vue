@@ -236,6 +236,10 @@ function goBack() {
         新增工具只需在 <code>src/toolbox/tools/</code> 下新建一个目录（<code>index.ts</code> 声明元数据 + 工具组件），
         列表、搜索、筛选、收藏与最近使用<strong>全部自动生效</strong>。
       </p>
+
+      <p class="tb-note tb-disclaimer" data-testid="tb-disclaimer">
+        <strong>免责声明：</strong>本站严禁用于非法用途，本站不承担任何因使用本站造成的损失及责任。
+      </p>
     </main>
 
     <!-- 站内自建工具面板 -->
@@ -325,6 +329,12 @@ function goBack() {
   border: 1px solid var(--color-border);
   border-left: 3px solid var(--color-primary);
   border-radius: var(--radius-md);
+}
+
+/* 免责声明：与上方说明同卡片样式，边框用警示色区分 */
+.tb-disclaimer {
+  margin-top: 12px;
+  border-left-color: var(--color-error, #ef4444);
 }
 .tb-note code {
   background: var(--color-bg-hover);

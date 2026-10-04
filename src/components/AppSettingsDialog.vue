@@ -4016,6 +4016,14 @@ onUnmounted(() => {
               >前往</a>
             </div>
           </div>
+
+          <!-- 免责声明 -->
+          <div class="about-card about-disclaimer" data-testid="about-disclaimer">
+            <span class="about-label">免责声明</span>
+            <p class="about-disclaimer-text">
+              本站严禁用于非法用途，本站不承担任何因使用本站造成的损失及责任。
+            </p>
+          </div>
         </div>
 
         <div class="settings-grid" v-if="(activeTab === 'nav' && activeSubTab === 'nav-size') || (activeTab === 'wb' && activeSubTab === 'wb-size')">
@@ -5074,6 +5082,14 @@ html.dark .remind-label {
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text, var(--color-text));
+}
+
+/* 免责声明：与其它 about-card 同结构，文字用次要色 + 稍小字号 */
+.about-disclaimer-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 /* 公众号：二维码 + 名称/引导文案横排（窄屏自动换行） */
