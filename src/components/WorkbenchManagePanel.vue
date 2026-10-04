@@ -88,18 +88,15 @@ const entries = computed<Entry[]>(() => [
 ])
 
 const visibleEntries = computed<Entry[]>(() => entries.value.filter((e) => e.visible))
-// 网格列数随可见卡片数自适应（在导航站首页时隐藏导航站卡片 → 4 列，否则 5 列），避免末尾留空列
-const gridStyle = computed<Record<string, string>>(() => ({
-  gridTemplateColumns: `repeat(${visibleEntries.value.length}, minmax(0, 1fr))`
-}))
+// 栅格列宽交由 CSS 自适应（与网站卡片 .sites-grid 同款 minmax(160px,1fr)），不再用内联固定列数
 
 const open = ref(false)
 const triggerRef = ref<HTMLElement | null>(null)
 const panelRef = ref<HTMLElement | null>(null)
 const panelStyle = ref<Record<string, string>>({})
 
-/** 面板最大宽度（与 CSS 的 min(440px, 100vw-24px) 保持一致，便于边界收拢计算） */
-const PANEL_MAX_WIDTH = 440
+/** 面板最大宽度（与 CSS 的 min(560px, 100vw-24px) 保持一致，便于边界收拢计算） */
+const PANEL_MAX_WIDTH = 560
 /** 面板与视口左右边缘的最小留白 */
 const EDGE_GAP = 12
 
@@ -194,7 +191,7 @@ onBeforeUnmount(() => {
           role="menu"
           :aria-label="store.workbenchManageDisplayName"
         >
-          <div v-if="visibleEntries.length > 0" class="wmp-grid" :style="gridStyle">
+          <div v-if="visibleEntries.length > 0" class="wmp-grid">
             <button
               v-for="entry in visibleEntries"
               :key="entry.key"
@@ -265,7 +262,8 @@ onBeforeUnmount(() => {
 .wmp-panel {
   position: fixed;
   z-index: 250;
-  width: min(440px, calc(100vw - 24px));
+  /* 宽度：与网站卡片栅格观感对齐（自适应列宽 minmax(160px,1fr) 需足够容器宽度才有意义） */
+  width: min(560px, calc(100vw - 24px));
   padding: 12px;
   background: var(--color-bg-card, #ffffff);
   border: 1px solid var(--color-border, #e2e8f0);
@@ -273,10 +271,12 @@ onBeforeUnmount(() => {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
-/* 列数随可见卡片数自适应（见 gridStyle）：导航站首页隐藏导航站卡片时为 4 列、否则 5 列，避免末尾留空列 */
+/* 栅格：与导航站网站卡片（.sites-grid）同款自适应列宽 minmax(160px, 1fr)，
+   不再用「固定列数 × minmax(0,1fr)」——后者会把卡片压成窄条 */
 .wmp-grid {
   display: grid;
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
 }
 
 /* 卡片视觉对齐导航站网站卡片（SiteCard）：白底、圆角 10px、padding 14px、轻阴影、hover 上浮 */
@@ -285,7 +285,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 12px 8px;
+  padding: 14px; /* 与网站卡片 .site-card 的 padding 一致 */
   background: var(--color-bg-card, #ffffff);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 10px;
@@ -353,9 +353,10 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 768px), (pointer: coarse) {
-  /* 窄屏仍保持一行 4 个，只压缩卡片内部间距与图标尺寸 */
+  /* 窄屏同样走自适应列宽（对齐网站卡片的 150px 最小列宽），仅压缩间距与图标尺寸 */
   .wmp-grid {
-    gap: 6px;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
   }
   .wmp-card {
     gap: 6px;
