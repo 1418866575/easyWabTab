@@ -1,9 +1,16 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
+import JSZip from 'jszip'
 import type { Site } from '../types'
 import { CATEGORIES } from '../types'
 import { useMarkdown } from '../composables/useMarkdown'
 import { serializeRepeatYaml } from '../composables/countdownCore'
+import {
+  createIconNameTable,
+  registerIconPath,
+  iconPathEntries,
+  parseDataUrl
+} from '../composables/siteIconPortability'
 import { useCategoriesStore } from './categories'
 import { useSearchEnginesStore } from './searchEngines'
 import { usePasswordsStore } from './passwords'
@@ -508,13 +515,18 @@ export const useSitesStore = defineStore('sites', () => {
       return sortB - sortA
     })
     
-    const sitesList = sortedSites.map(site => {
+    // 站点图标本地化：base64 图标不进 Markdown，改为写入 ZIP 内 icons/ 目录，
+    // Markdown 只留相对路径（icons/xxx.png），导出文件可读、体积小；
+    // 导入时（importFromMarkdown）会把相对路径还原回 base64，站点数据照常入库。
+    const iconTable = createIconNameTable()
+    const sitesList = sortedSites.map((site, i) => {
+      const iconPath = site.icon ? registerIconPath(iconTable, site.icon, site.name, i) : ''
       return `  - name: ${site.name}
     url: ${site.url}
     description: ${site.description || ''}
     category: ${site.category}
     tags: [${site.tags.join(', ')}]
-    icon: ${site.icon || ''}
+    icon: ${iconPath}
     sort: ${site.sort || 0}
     createdAt: ${site.createdAt || ''}`
     }).join('\n\n')
@@ -565,14 +577,67 @@ ${sitesList}
 
 个人常用的网站导航
 `
-    // 下载文件
-    const blob = new Blob([markdown], { type: 'text/markdown' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'sites.md'
-    a.click()
-    URL.revokeObjectURL(url)
+    // 需还原成图片文件的图标（仅自定义图标的 data URL 会进表）
+    const iconEntries = iconPathEntries(iconTable)
+    if (iconEntries.length === 0) {
+      // 无自定义图标：保持原行为，直接导出单个 Markdown
+      downloadFileBlob('sites.md', new Blob([markdown], { type: 'text/markdown' }))
+      return
+    }
+
+    // 有自定义图标：打包成 ZIP（sites.md + icons/*），Markdown 内为相对路径
+    const zip = new JSZip()
+    zip.file('sites.md', markdown)
+    for (const { dataUrl, path } of iconEntries) {
+      const parsed = parseDataUrl(dataUrl)
+      if (!parsed) continue
+      zip.file(path, base64ToBytes(parsed.base64))
+    }
+    const zipBlob = await zip.generateAsync({ type: 'blob' })
+    downloadFileBlob('sites.zip', zipBlob)
+  }
+
+  /**
+   * 从导出的 ZIP 导入（sites.md + icons/*）：
+   * 读出 Markdown，把其中 `icon: icons/xxx.png` 的相对路径**还原为 base64**，
+   * 再走 markdown 导入流程。旧的单 .md 文件（icon 为 data URL）不受影响。
+   */
+  async function importFromZip(file: File): Promise<{ added: number; skipped: number; passwordsImported?: number; error?: string; iconsRestored?: number }> {
+    let mdText: string
+    let iconFiles: Record<string, { mime: string; base64: string }> = {}
+    try {
+      const zip = await JSZip.loadAsync(file)
+      // Markdown 可能在根目录，也可能被包在一层同名目录里
+      let mdEntry: JSZip.JSZipObject | null = null
+      const names = Object.keys(zip.files)
+      for (const n of names) {
+        if (/\.md$/i.test(n) && !zip.files[n].dir) { mdEntry = zip.files[n]; break }
+      }
+      if (!mdEntry) return { added: 0, skipped: 0, error: '压缩包内未找到 .md 备份文件' }
+      mdText = await mdEntry.async('string')
+      for (const n of names) {
+        if (zip.files[n].dir || !/^icons\//i.test(n)) continue
+        const buf = await zip.files[n].async('uint8array')
+        iconFiles[n] = { mime: mimeOfPath(n), base64: bytesToBase64(buf) }
+      }
+    } catch (e) {
+      return { added: 0, skipped: 0, error: '无法读取压缩包：' + (e as Error).message }
+    }
+
+    // 把 Markdown 中的相对路径替换回 data URL（YAML 里按行替换，避免转义问题）
+    let iconsRestored = 0
+    let text = mdText
+    for (const [path, v] of Object.entries(iconFiles)) {
+      // 同时兼容 `icons/x.png` 与 `./icons/x.png` 两种写法
+      for (const candidate of [path, './' + path]) {
+        if (text.includes(candidate)) {
+          text = text.split(candidate).join(`data:${v.mime};base64,${v.base64}`)
+          iconsRestored += 1
+        }
+      }
+    }
+    const res = await importFromMarkdown(text)
+    return { ...res, iconsRestored }
   }
 
   // 从 Markdown 文本导入到 localStorage（按 URL 去重，保留原来的）
@@ -666,6 +731,7 @@ ${sitesList}
     clearFilters,
     exportToMarkdown,
     importFromMarkdown,
+    importFromZip,
     // 断链检测
     isCheckingLinks,
     linkCheckProgress,
@@ -679,3 +745,53 @@ ${sitesList}
     incrementClick
   }
 })
+
+// ============================================================
+// 导出辅助（纯函数，零依赖）
+// ============================================================
+
+/** 触发浏览器下载（导航站无通用下载工具，就地内联保持与既有代码一致） */
+function downloadFileBlob(filename: string, blob: Blob): void {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+/**
+ * base64 字符串 → Uint8Array（导出图标为真实图片文件时用）。
+ * 用 atob 先解成二进制串再逐字符取 charCodeAt；避免对超长串直接 apply 造成爆栈。
+ */
+function base64ToBytes(base64: string): Uint8Array {
+  const bin = atob(base64)
+  const bytes = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+  return bytes
+}
+
+/** 文件路径 → mime（导入 ZIP 时给还原出的图标字节配 data URL 的 mime） */
+function mimeOfPath(path: string): string {
+  const ext = (path.split('.').pop() || '').toLowerCase()
+  switch (ext) {
+    case 'svg': return 'image/svg+xml'
+    case 'jpg':
+    case 'jpeg': return 'image/jpeg'
+    case 'gif': return 'image/gif'
+    case 'webp': return 'image/webp'
+    case 'ico': return 'image/x-icon'
+    case 'bmp': return 'image/bmp'
+    default: return 'image/png'
+  }
+}
+
+/** Uint8Array → base64（分块转换，避免大图标 String.fromCharCode 爆栈） */
+function bytesToBase64(bytes: Uint8Array): string {
+  const CHUNK = 0x8000
+  let bin = ''
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + CHUNK)) as unknown as number[])
+  }
+  return btoa(bin)
+}

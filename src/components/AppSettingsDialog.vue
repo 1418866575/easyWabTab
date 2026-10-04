@@ -629,11 +629,27 @@ function handleSiteImport(event: Event) {
   const file = input.files?.[0]
   if (!file) return
 
+  // ZIP 备份（含 sites.md + icons/* 图标文件）：由 store 解包并把图标相对路径还原为 base64
+  if (/\.zip$/i.test(file.name)) {
+    void (async () => {
+      const result = await sitesStore.importFromZip(file)
+      if (result.error) {
+        toast.error(`导入失败：${result.error}`)
+      } else {
+        let msg = `导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条`
+        if (result.iconsRestored) msg += `；图标还原 ${result.iconsRestored} 个`
+        toast.success(msg)
+      }
+      input.value = ''
+    })()
+    return
+  }
+
   const reader = new FileReader()
   reader.onload = async (e) => {
     const content = e.target?.result as string
 
-    // 导入网站
+    // 导入网站（旧版 .md 备份：icon 为 base64 或普通路径，原样兼容）
     const result = await sitesStore.importFromMarkdown(content)
 
     // 如果有错误，直接显示错误信息
@@ -2558,8 +2574,8 @@ onUnmounted(() => {
         <div v-if="activeTab === 'nav' && activeSubTab === 'nav-backup-restore'" class="wb-menu-config">
           <h3 class="wb-menu-title">备份恢复</h3>
           <p class="wb-menu-hint">
-            导出：把全部网址与搜索引擎保存为 Markdown 文件，便于留存或迁移；
-            导入：从该 Markdown 文件恢复（自动跳过已存在的重复网址），文件中若包含搜索引擎配置也会一并导入。
+            导出：把全部网址与搜索引擎保存为备份文件，便于留存或迁移；若站点使用了自定义图标，会连同图标一起打包为 ZIP（Markdown 内仅记录图标相对路径，不再写入冗长的 base64）。
+            导入：支持该 ZIP 与旧版 Markdown 两种格式，自动跳过已存在的重复网址，文件中若包含搜索引擎配置也会一并导入。
             建议定期导出留存。
           </p>
           <div class="site-actions-grid" data-testid="stg-backup-restore">
@@ -2569,7 +2585,7 @@ onUnmounted(() => {
           <input
             ref="siteImportInput"
             type="file"
-            accept=".md,text/markdown"
+            accept=".md,.zip,text/markdown,application/zip"
             style="display: none"
             @change="handleSiteImport"
           />
