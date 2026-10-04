@@ -535,7 +535,8 @@ export const useSitesStore = defineStore('sites', () => {
     const { markdown, iconTable } = await buildMarkdown(catSites, { onlyCategory: { id: categoryId, name: categoryName } })
     // 文件名净化：分类名可能含 / \ : 等非法字符
     const safe = (categoryName || 'category').replace(/[\\/:*?"<>|]+/g, '_').slice(0, 30)
-    await downloadMarkdown(markdown, `sites-${safe}`, iconTable)
+    // alwaysZip=true：分类导出恒为 .zip（含 icons/ 目录，与「备份恢复 → 导出」形态一致）
+    await downloadMarkdown(markdown, `sites-${safe}`, iconTable, true)
     return catSites.length
   }
 
@@ -635,20 +636,23 @@ ${sub}
   /**
    * 下载 Markdown：无自定义图标时导出单个 .md；有图标则打包 ZIP（<baseName>.md + icons/*）。
    * @param iconTable buildMarkdown 产出的图标注册表（相对路径 → data URL）
+   * @param alwaysZip 强制 ZIP（分类导出用）：即��无图标也打成 ZIP，保持"分类导出恒为 zip"的稳定形态，
+   *                   导入侧 importFromZip 本就同时兼容「有/无 icons 目录」的 ZIP，故行为一致
    */
   async function downloadMarkdown(
     markdown: string,
     baseName: string,
-    iconTable: ReturnType<typeof createIconNameTable>
+    iconTable: ReturnType<typeof createIconNameTable>,
+    alwaysZip = false
   ): Promise<void> {
     const mdName = `${baseName}.md`
     const iconEntries = iconPathEntries(iconTable)
-    if (iconEntries.length === 0) {
-      // 无自定义图标：保持原行为，直接导出单个 Markdown
+    if (iconEntries.length === 0 && !alwaysZip) {
+      // 无自定义图标且未强制 ZIP：保持原行为，直接导出单个 Markdown
       downloadFileBlob(mdName, new Blob([markdown], { type: 'text/markdown' }))
       return
     }
-    // 有自定义图标：打包成 ZIP（md + icons/*），Markdown 内为相对路径
+    // 有自定义图标（或强制 ZIP）：打包成 ZIP（md + icons/*），Markdown 内为相对路径
     const zip = new JSZip()
     zip.file(mdName, markdown)
     for (const { dataUrl, path } of iconEntries) {

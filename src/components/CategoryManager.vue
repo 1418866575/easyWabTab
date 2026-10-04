@@ -250,9 +250,7 @@ const sortedCustomCategories = computed(() =>
                 :title="getSiteCount(cat.id) === 0 ? '该分类下暂无网站' : `导出「${cat.name}」分类的网站`"
                 :data-testid="`cat-export-${cat.id}`"
                 @click="handleExportCategory(cat)"
-              >
-                <Icon name="upload" />
-              </button>
+              >导出</button>
             </div>
           </div>
 
@@ -322,11 +320,9 @@ const sortedCustomCategories = computed(() =>
                   :title="getSiteCount(cat.id) === 0 ? '该分类下暂无网站' : `导出「${cat.name}」分类的网站`"
                   :data-testid="`cat-export-${cat.id}`"
                   @click="handleExportCategory(cat)"
-                >
-                  <Icon name="upload" />
-                </button>
-                <button class="btn-icon" @click="startEdit(cat)"><Icon name="pencil" /></button>
-                <button class="btn-icon delete" @click="handleDelete(cat.id)"><Icon name="trash" /></button>
+                >导出</button>
+                <button class="btn-icon" title="编辑分类" :data-testid="`cat-edit-${cat.id}`" @click="startEdit(cat)">编辑</button>
+                <button class="btn-icon delete" title="删除分类" :data-testid="`cat-delete-${cat.id}`" @click="handleDelete(cat.id)">删除</button>
               </template>
             </div>
           </div>
@@ -601,28 +597,35 @@ const sortedCustomCategories = computed(() =>
   flex: 1;
 }
 
+/* 操作栏文字按钮（导出/编辑/删除）：小号文字 + 轻边框，hover 时边框与文字加深 */
 .btn-icon {
-  padding: 4px 8px;
+  padding: 3px 10px;
   background: none;
-  border: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 14px;
-  opacity: 0.6;
-  transition: opacity 0.2s;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-text-secondary, #475569);
+  opacity: 0.75;
+  transition: opacity 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.btn-icon:hover:not(:disabled) {
+  opacity: 1;
+  border-color: var(--color-border, #cbd5e1);
+  color: var(--color-text, #0f172a);
+}
+
+/* 删除：常态即用警示色，避免误点 */
+.btn-icon.delete {
+  color: var(--color-error, #dc2626);
 }
 
 /* 禁用态（如分类下无网站可导出）：不可点且视觉更淡，避免误以为能导出 */
 .btn-icon:disabled {
   cursor: not-allowed;
   opacity: 0.25;
-}
-
-.btn-icon:hover {
-  opacity: 1;
-}
-
-.btn-icon.delete:hover {
-  color: #ef4444;
 }
 
 .empty-custom {
