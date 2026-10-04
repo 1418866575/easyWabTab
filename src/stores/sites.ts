@@ -503,23 +503,61 @@ export const useSitesStore = defineStore('sites', () => {
   }
 
   // 导出为 Markdown 文件
+  /**
+   * 导出导航站备份（全量）。
+   * 内部复用 buildMarkdown + downloadMarkdown，与「按分类导出」共用同一套生成/打包逻辑。
+   */
   async function exportToMarkdown() {
-    const categoriesStore = useCategoriesStore()
-    const enginesStore = useSearchEnginesStore()
-    const passwordsStore = usePasswordsStore()
-    
-    // sites 降序排序
     const sortedSites = [...sites.value].sort((a, b) => {
       const sortA = a.sort ?? 1
       const sortB = b.sort ?? 1
       return sortB - sortA
     })
-    
+    const { markdown, iconTable } = await buildMarkdown(sortedSites)
+    await downloadMarkdown(markdown, 'sites', iconTable)
+  }
+
+  /**
+   * 按分类导出该分类下的站点（分类管理面板的「导出」按钮）。
+   * 与全量导出**完全同一套生成/打包逻辑**，差别仅在于：
+   * - 只导出传入分类下的站点（空分类导出空文件并提示）
+   * - 只导出该分类自身一条 categories 记录（便于导入时归位），不带搜索引擎/密码/倒计时
+   * - 文件名带分类名，如 `sites-work.md`
+   */
+  async function exportByCategory(categoryId: string, categoryName: string): Promise<number> {
+    const catSites = sites.value
+      .filter(s => s.category === categoryId)
+      .sort((a, b) => {
+        const sortA = a.sort ?? 1
+        const sortB = b.sort ?? 1
+        return sortB - sortA
+      })
+    const { markdown, iconTable } = await buildMarkdown(catSites, { onlyCategory: { id: categoryId, name: categoryName } })
+    // 文件名净化：分类名可能含 / \ : 等非法字符
+    const safe = (categoryName || 'category').replace(/[\\/:*?"<>|]+/g, '_').slice(0, 30)
+    await downloadMarkdown(markdown, `sites-${safe}`, iconTable)
+    return catSites.length
+  }
+
+  /**
+   * 生成 Markdown 文本（导出核心）。
+   * @param targetSites 要写出的站点（调用方已排序）
+   * @param opts.onlyCategory 非空时只写该分类一条 categories 记录、不写搜索引擎/密码/倒计时（按分类导出用）
+   */
+  async function buildMarkdown(
+    targetSites: Site[],
+    opts: { onlyCategory?: { id: string; name: string } } = {}
+  ): Promise<{ markdown: string; iconTable: ReturnType<typeof createIconNameTable> }> {
+    const categoriesStore = useCategoriesStore()
+    const enginesStore = useSearchEnginesStore()
+    const passwordsStore = usePasswordsStore()
+    const countdownsStore = useCountdownsStore()
+
     // 站点图标本地化：base64 图标不进 Markdown，改为写入 ZIP 内 icons/ 目录，
     // Markdown 只留相对路径（icons/xxx.png），导出文件可读、体积小；
     // 导入时（importFromMarkdown）会把相对路径还原回 base64，站点数据照常入库。
     const iconTable = createIconNameTable()
-    const sitesList = sortedSites.map((site, i) => {
+    const sitesList = targetSites.map((site, i) => {
       const iconPath = site.icon ? registerIconPath(iconTable, site.icon, site.name, i) : ''
       return `  - name: ${site.name}
     url: ${site.url}
@@ -531,30 +569,39 @@ export const useSitesStore = defineStore('sites', () => {
     createdAt: ${site.createdAt || ''}`
     }).join('\n\n')
 
-    // 导出自定义分类 - 升序排序
-    const customCats = categoriesStore.exportCustomCategories()
-    const sortedCats = [...customCats].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
-    const categoriesSection = sortedCats.length > 0
-      ? `categories:\n${sortedCats.map((c: { id: string; name: string; icon: string; sort?: number }) => `  - id: ${c.id}\n    name: ${c.name}\n    icon: ${c.icon}\n    sort: ${c.sort || 0}`).join('\n\n')}\n\n`
-      : ''
+    // 按分类导出：只保留该分类自身一条记录；全量导出：写出全部自定义分类（升序）
+    let categoriesSection: string
+    if (opts.onlyCategory) {
+      const c = opts.onlyCategory
+      categoriesSection = `categories:\n  - id: ${c.id}\n    name: ${c.name}\n    icon: ''\n    sort: 0\n\n`
+    } else {
+      const customCats = categoriesStore.exportCustomCategories()
+      const sortedCats = [...customCats].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+      categoriesSection = sortedCats.length > 0
+        ? `categories:\n${sortedCats.map((c: { id: string; name: string; icon: string; sort?: number }) => `  - id: ${c.id}\n    name: ${c.name}\n    icon: ${c.icon}\n    sort: ${c.sort || 0}`).join('\n\n')}\n\n`
+        : ''
+    }
 
-    // 导出搜索引擎 - 升序排序
-    const engines = enginesStore.exportEngines()
-    const sortedEngines = [...engines].sort((a, b) => a.sort - b.sort)
-    const enginesSection = `searchEngines:\n${sortedEngines.map((e: { id: string; name: string; url: string; isDefault: boolean; sort: number }) => `  - id: ${e.id}\n    name: ${e.name}\n    url: ${e.url}\n    isDefault: ${e.isDefault}\n    sort: ${e.sort}`).join('\n\n')}\n\n`
+    // 按分类导出不带搜索引擎/密码/倒计时（这些与分类无关，且密码属敏感信息不应随分类外流）
+    const enginesSection = opts.onlyCategory
+      ? ''
+      : (() => {
+          const engines = enginesStore.exportEngines()
+          const sortedEngines = [...engines].sort((a, b) => a.sort - b.sort)
+          return `searchEngines:\n${sortedEngines.map((e: { id: string; name: string; url: string; isDefault: boolean; sort: number }) => `  - id: ${e.id}\n    name: ${e.name}\n    url: ${e.url}\n    isDefault: ${e.isDefault}\n    sort: ${e.sort}`).join('\n\n')}\n\n`
+        })()
 
-    // 导出密码 - 加密存储
+    // 导出密码 - 加密存储（按分类导出时跳过）
     let passwordsSection = ''
-    if (passwordsStore.isUnlocked) {
+    if (!opts.onlyCategory && passwordsStore.isUnlocked) {
       const encryptedPasswords = await passwordsStore.exportEncryptedPasswords()
       if (encryptedPasswords.length > 0) {
         passwordsSection = `passwords:\n${encryptedPasswords.map(p => `  - id: ${p.id}\n    siteName: ${p.siteName}\n    url: ${p.url}\n    username: ${p.username}\n    password: ${p.password}\n    createdAt: ${p.createdAt}\n    updatedAt: ${p.updatedAt}`).join('\n\n')}\n\n`
       }
     }
 
-    // 导出倒计时
-    const countdownsStore = useCountdownsStore()
-    const countdownsSection = countdownsStore.countdowns.length > 0
+    // 导出倒计时（按分类导出时跳过）
+    const countdownsSection = (!opts.onlyCategory && countdownsStore.countdowns.length > 0)
       ? `countdowns:\n${countdownsStore.countdowns.map(c => {
           const repeatBlock = serializeRepeatYaml(c.repeat)
           const repeatPrefix = repeatBlock ? '\n' : ''
@@ -568,33 +615,49 @@ export const useSitesStore = defineStore('sites', () => {
         }).join('\n\n')}\n\n`
       : ''
 
+    const heading = opts.onlyCategory ? '分类书签' : '我的书签'
+    const sub = opts.onlyCategory
+      ? `「${opts.onlyCategory.name}」分类下的网站`
+      : '个人常用的网站导航'
+
     const markdown = `---
 ${categoriesSection}${enginesSection}${passwordsSection}${countdownsSection}sites:
 ${sitesList}
 ---
 
-# 我的书签
+# ${heading}
 
-个人常用的网站导航
+${sub}
 `
-    // 需还原成图片文件的图标（仅自定义图标的 data URL 会进表）
+    return { markdown, iconTable }
+  }
+
+  /**
+   * 下载 Markdown：无自定义图标时导出单个 .md；有图标则打包 ZIP（<baseName>.md + icons/*）。
+   * @param iconTable buildMarkdown 产出的图标注册表（相对路径 → data URL）
+   */
+  async function downloadMarkdown(
+    markdown: string,
+    baseName: string,
+    iconTable: ReturnType<typeof createIconNameTable>
+  ): Promise<void> {
+    const mdName = `${baseName}.md`
     const iconEntries = iconPathEntries(iconTable)
     if (iconEntries.length === 0) {
       // 无自定义图标：保持原行为，直接导出单个 Markdown
-      downloadFileBlob('sites.md', new Blob([markdown], { type: 'text/markdown' }))
+      downloadFileBlob(mdName, new Blob([markdown], { type: 'text/markdown' }))
       return
     }
-
-    // 有自定义图标：打包成 ZIP（sites.md + icons/*），Markdown 内为相对路径
+    // 有自定义图标：打包成 ZIP（md + icons/*），Markdown 内为相对路径
     const zip = new JSZip()
-    zip.file('sites.md', markdown)
+    zip.file(mdName, markdown)
     for (const { dataUrl, path } of iconEntries) {
       const parsed = parseDataUrl(dataUrl)
       if (!parsed) continue
       zip.file(path, base64ToBytes(parsed.base64))
     }
     const zipBlob = await zip.generateAsync({ type: 'blob' })
-    downloadFileBlob('sites.zip', zipBlob)
+    downloadFileBlob(`${baseName}.zip`, zipBlob)
   }
 
   /**
@@ -730,6 +793,7 @@ ${sitesList}
     setPageSize,
     clearFilters,
     exportToMarkdown,
+    exportByCategory,
     importFromMarkdown,
     importFromZip,
     // 断链检测

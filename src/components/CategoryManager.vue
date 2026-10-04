@@ -5,6 +5,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useCategoriesStore } from '../stores/categories'
 import { useSitesStore } from '../stores/sites'
 import { isImageIcon } from '../composables/categoryIcon'
+import { useToast } from '../composables/useToast'
 
 /** embedded = true：作为常驻面板内嵌在设置页（无遮罩、无自带标题栏、不响应 ESC 与遮罩点击关闭） */
 const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
@@ -17,6 +18,7 @@ const emit = defineEmits<{
 
 const categoriesStore = useCategoriesStore()
 const sitesStore = useSitesStore()
+const toast = useToast()
 
 /** 遮罩点击关闭：仅弹框模式生效（内嵌面板点击空白不应关闭） */
 function onOverlayClick(): void {
@@ -97,6 +99,28 @@ function onPickIcon(src: string): void {
 // 获取使用某分类的网站数量
 function getSiteCount(categoryId: string): number {
   return sitesStore.sites.filter(s => s.category === categoryId).length
+}
+
+// 导出该分类下的网站：复用「备份恢复 → 导出」的同一套生成/打包逻辑（仅站点范围不同）。
+// 分类名做按钮级防抖，避免连点重复触发下载。
+const exportingCatId = ref<string>('')
+async function handleExportCategory(cat: { id: string; name: string }): Promise<void> {
+  if (exportingCatId.value) return
+  const count = getSiteCount(cat.id)
+  if (count === 0) {
+    toast.info(`「${cat.name}」下暂无网站，无可导出内容`)
+    return
+  }
+  exportingCatId.value = cat.id
+  try {
+    const n = await sitesStore.exportByCategory(cat.id, cat.name)
+    toast.success(`已导出「${cat.name}」${n} 个网站`)
+  } catch (e) {
+    console.error('[CategoryManager] 导出分类网站失败:', e)
+    toast.error('导出失败，请稍后重试')
+  } finally {
+    exportingCatId.value = ''
+  }
 }
 
 // 添加分类
@@ -220,6 +244,15 @@ const sortedCustomCategories = computed(() =>
               </span>
               <span class="category-name">{{ cat.name }}</span>
               <span class="site-count">({{ getSiteCount(cat.id) }})</span>
+              <button
+                class="btn-icon"
+                :disabled="getSiteCount(cat.id) === 0 || !!exportingCatId"
+                :title="getSiteCount(cat.id) === 0 ? '该分类下暂无网站' : `导出「${cat.name}」分类的网站`"
+                :data-testid="`cat-export-${cat.id}`"
+                @click="handleExportCategory(cat)"
+              >
+                <Icon name="upload" />
+              </button>
             </div>
           </div>
 
@@ -283,6 +316,15 @@ const sortedCustomCategories = computed(() =>
                 </button>
                 <span class="category-name">{{ cat.name }}</span>
                 <span class="site-count">({{ getSiteCount(cat.id) }})</span>
+                <button
+                  class="btn-icon"
+                  :disabled="getSiteCount(cat.id) === 0 || !!exportingCatId"
+                  :title="getSiteCount(cat.id) === 0 ? '该分类下暂无网站' : `导出「${cat.name}」分类的网站`"
+                  :data-testid="`cat-export-${cat.id}`"
+                  @click="handleExportCategory(cat)"
+                >
+                  <Icon name="upload" />
+                </button>
                 <button class="btn-icon" @click="startEdit(cat)"><Icon name="pencil" /></button>
                 <button class="btn-icon delete" @click="handleDelete(cat.id)"><Icon name="trash" /></button>
               </template>
@@ -472,8 +514,9 @@ const sortedCustomCategories = computed(() =>
   margin-bottom: 8px;
 }
 
+/* 内置分类：不可编辑/删除。仅锁图标淡化表示"只读"，
+   整行不再压低透明度——内置分类现在带可用的「导出」按钮，压暗会影响可用性感知。 */
 .category-item.built-in {
-  opacity: 0.6;
   background: #fef3c7;
 }
 
@@ -485,6 +528,8 @@ const sortedCustomCategories = computed(() =>
 .sort-hint {
   font-size: 12px;
   width: 24px;
+  /* 内置分类的"只读"提示：淡化锁图标 */
+  opacity: 0.5;
 }
 
 .sort-controls {
@@ -564,6 +609,12 @@ const sortedCustomCategories = computed(() =>
   font-size: 14px;
   opacity: 0.6;
   transition: opacity 0.2s;
+}
+
+/* 禁用态（如分类下无网站可导出）：不可点且视觉更淡，避免误以为能导出 */
+.btn-icon:disabled {
+  cursor: not-allowed;
+  opacity: 0.25;
 }
 
 .btn-icon:hover {
