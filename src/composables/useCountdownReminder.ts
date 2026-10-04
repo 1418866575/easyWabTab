@@ -4,7 +4,7 @@
 import { shallowRef, readonly } from 'vue'
 import { useCountdownsStore } from '@/stores/countdowns'
 import { useAppSettingsStore } from '@/stores/settings'
-import { calcRemaining, getReminderDue } from '@/composables/countdownCore'
+import { calcRemaining, getReminderDue, parseRepeat } from '@/composables/countdownCore'
 import { sendDesktopNotification } from '@/composables/useDesktopNotify'
 import { sendReminderEmail } from '@/composables/reminderEmail'
 import { isEmailConfigured, shouldSendReminderEmail, buildEmailParams } from '@/composables/reminderCore'
@@ -42,6 +42,18 @@ function pad(n: number): string {
 function localToday(): string {
   const d = new Date()
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+/**
+ * 是否为「周期重复」倒计时（每日/每周/每月/每年/间隔）。
+ * 此类倒计时的「剩余天数」永远是下一个周期的 0~1 天，不属于"最后 3 天摘要"语义，
+ * 故摘要筛选时需排除（否则日常事项会每天 9:00 反复弹出）。
+ * 注：type='once' 与无 repeat（null）都是**一次性**，应保留在摘要内。
+ */
+function isRecurringRepeat(repeat: unknown): boolean {
+  const rep = parseRepeat(repeat)
+  if (!rep) return false
+  return rep.type !== 'once'
 }
 
 // 合并新 items 到状态：已打开则并入现有（按 id 去重，保留首次出现），否则整体替换。
@@ -104,9 +116,14 @@ async function tick(): Promise<void> {
 
   // 9:00 摘要（当天未提醒且已过 9 点才查）：存在进入最后 3 天（未过期）的倒计时时才写入日期 key；
   // 无匹配则不写 key，当日保持可重查。
+  //
+  // ⚠️ 仅统计**非重复**（一次性 / type='once'）倒计时：重复类（每日/每周/每月/每年/间隔）的「剩余天数」
+  // 恒为 0~1（永远是下一个周期），若一并纳入会导致每天 9:00 把「上班/打扫卫生」等日常事项
+  // 当作"最后 3 天"反复弹出——这不是用户要的提醒。
   const now = new Date()
   if (localStorage.getItem(STORAGE_KEY) !== localToday() && now.getHours() >= REMIND_HOUR) {
     const urgent = store.countdowns
+      .filter((c) => !isRecurringRepeat(c.repeat))
       .map((c) => ({ c, r: calcRemaining(c.endDateTime, c.repeat) }))
       .filter(({ r }) => !r.isExpired && r.days <= 3)
     if (urgent.length > 0) {
