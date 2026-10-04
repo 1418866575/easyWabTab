@@ -45,7 +45,11 @@ function localToday(): string {
 }
 
 // 合并新 items 到状态：已打开则并入现有（按 id 去重，保留首次出现），否则整体替换。
+// 设置中「倒计时弹框」关闭时**不弹页面弹框**（桌面通知/邮件已在各自通道发出，不受影响）；
+// 同时把已到点的 lastRemindedAt 照常落库，避免关掉弹框后每次 tick 都重复判定。
 function pushItems(items: CountdownReminderItem[]): void {
+  const settingsStore = useAppSettingsStore()
+  if (settingsStore.countdownPopupEnabled === false) return
   const merged = state.value.open ? [...state.value.items, ...items] : items
   const seen = new Set<string>()
   const deduped: CountdownReminderItem[] = []

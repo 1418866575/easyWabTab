@@ -208,6 +208,7 @@ function parseSettingsData(raw: unknown): AppSettingsData {
     workbenchMenuLabels: {},
     workbenchMenuVisibility: {},
     desktopNotifyEnabled: false,
+    countdownPopupEnabled: true, // 倒计时弹框默认开启（保持既有行为）
     reminderEmailEnabled: false,
     reminderEmailTo: '',
     reminderEmailServiceId: '',
@@ -348,6 +349,8 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   }
   // 提醒设置：6 字段白名单解析（布尔仅采纳 true/false，字符串仅采纳 string 原样透传不 trim，非法/缺失回退默认）
   out.desktopNotifyEnabled = typeof data.desktopNotifyEnabled === 'boolean' ? data.desktopNotifyEnabled : false
+  // 倒计时弹框开关：缺失（旧数据）→ 默认开启，保持升级后行为不变
+  out.countdownPopupEnabled = typeof data.countdownPopupEnabled === 'boolean' ? data.countdownPopupEnabled : true
   out.reminderEmailEnabled = typeof data.reminderEmailEnabled === 'boolean' ? data.reminderEmailEnabled : false
   out.reminderEmailTo = typeof data.reminderEmailTo === 'string' ? data.reminderEmailTo : ''
   out.reminderEmailServiceId = typeof data.reminderEmailServiceId === 'string' ? data.reminderEmailServiceId : ''
@@ -443,6 +446,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
 
   // 提醒设置：桌面通知开关 + 邮件提醒（EmailJS）开关与四字段配置——默认关闭/空串
   const desktopNotifyEnabled = ref<boolean>(false)
+  // 倒计时到期/9:00 摘要的页面弹框开关（默认开启；关闭后访问主页不再弹提醒框，
+  // 桌面通知与邮件提醒不受影响）
+  const countdownPopupEnabled = ref<boolean>(true)
   const reminderEmailEnabled = ref<boolean>(false)
   const reminderEmailTo = ref<string>('')
   const reminderEmailServiceId = ref<string>('')
@@ -504,6 +510,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       toolboxButtonIcon: toolboxButtonIcon.value,
       toolboxButtonVisible: toolboxButtonVisible.value,
       desktopNotifyEnabled: desktopNotifyEnabled.value,
+      countdownPopupEnabled: countdownPopupEnabled.value,
       reminderEmailEnabled: reminderEmailEnabled.value,
       reminderEmailTo: reminderEmailTo.value,
       reminderEmailServiceId: reminderEmailServiceId.value,
@@ -688,6 +695,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       }
       // 提醒设置：6 字段白名单应用（布尔仅采纳 true/false，字符串仅采纳 string 原样透传不 trim，非法/缺失回退默认）
       desktopNotifyEnabled.value = effective.desktopNotifyEnabled === true
+      countdownPopupEnabled.value = effective.countdownPopupEnabled !== false
       reminderEmailEnabled.value = effective.reminderEmailEnabled === true
       reminderEmailTo.value = typeof effective.reminderEmailTo === 'string' ? effective.reminderEmailTo : ''
       reminderEmailServiceId.value = typeof effective.reminderEmailServiceId === 'string' ? effective.reminderEmailServiceId : ''
@@ -806,6 +814,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     toolboxButtonIcon.value = ''
     toolboxButtonVisible.value = true
     desktopNotifyEnabled.value = false
+    countdownPopupEnabled.value = true
     reminderEmailEnabled.value = false
     reminderEmailTo.value = ''
     reminderEmailServiceId.value = ''
@@ -1082,6 +1091,12 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     persist()
   }
 
+  /** 倒计时弹框开关：关闭后访问主页不再弹出提醒框（桌面通知/邮件不受影响） */
+  function setCountdownPopupEnabled(v: boolean) {
+    countdownPopupEnabled.value = v
+    persist()
+  }
+
   function setReminderEmailEnabled(v: boolean) {
     reminderEmailEnabled.value = v
     persist()
@@ -1212,6 +1227,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     countdownButtonDisplayName,
     helpButtonDisplayName,
     desktopNotifyEnabled,
+    countdownPopupEnabled,
     reminderEmailEnabled,
     reminderEmailTo,
     reminderEmailServiceId,
@@ -1267,6 +1283,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     setSiteTitle,
     setSiteFavicon,
     setDesktopNotifyEnabled,
+    setCountdownPopupEnabled,
     setReminderEmailEnabled,
     setReminderEmailTo,
     setReminderEmailServiceId,

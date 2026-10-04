@@ -92,8 +92,3 @@ export function registerIconPath(table: IconNameTable, dataUrl: string, siteName
 export function iconPathEntries(table: IconNameTable): Array<{ dataUrl: string; path: string }> {
   return [...table.byDataUrl.entries()].map(([dataUrl, path]) => ({ dataUrl, path }))
 }
-
-/** 相对路径 → data URL（导入时用；需配合 ZIP 中读到的文件字节） */
-export function pathToDataUrl(path: string, mime: string, base64: string): string {
-  return `data:${mime};base64,${base64}`
-}

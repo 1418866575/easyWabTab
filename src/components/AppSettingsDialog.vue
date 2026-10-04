@@ -3204,6 +3204,22 @@ onUnmounted(() => {
           </p>
         </div>
 
+        <!-- 页面弹框（仅提醒设置 tab）：倒计时到点 / 每天 9:00 摘要的弹窗开关 -->
+        <div v-if="activeTab === 'remind'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">页面弹框</h3>
+            <el-switch
+              :model-value="store.countdownPopupEnabled !== false"
+              @change="store.setCountdownPopupEnabled($event as boolean)"
+              data-testid="remind-popup-switch"
+            />
+          </div>
+          <p class="wb-menu-hint">
+            控制访问导航站时是否弹出「提醒」弹框（倒计时到点与每天 9:00 最后 3 天摘要）。关闭后访问主页不再弹框，
+            桌面通知与邮件提醒不受影响；此设置随云同步跨设备生效。
+          </p>
+        </div>
+
         <!-- 邮件提醒（仅提醒设置 tab）：EmailJS 配置（开关 + 四字段 + 测试发送） -->
         <div v-if="activeTab === 'remind'" class="wb-menu-config">
           <div class="wb-menu-head">

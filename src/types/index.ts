@@ -261,6 +261,7 @@ export interface AppSettingsData {
   businessSidebarCollapsed?: boolean // 销售记账工作台侧栏折叠态（非法/缺失 = 未配置即展开）
   navFiltersExpanded?: boolean // 导航站分类/标签栏展开态（默认 false = 收起）
   desktopNotifyEnabled?: boolean // 定时提醒桌面通知总开关（默认 false = 关闭）
+  countdownPopupEnabled?: boolean // 倒计时到期/9:00 摘要的**页面弹框**开关（默认 true = 弹框；关闭后仅桌面通知/邮件，不影响它们）
   reminderEmailEnabled?: boolean // 定时提醒邮件总开关（默认 false = 关闭）
   reminderEmailTo?: string // EmailJS 收件邮箱（空串 = 未配置）
   reminderEmailServiceId?: string // EmailJS Service ID
