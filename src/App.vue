@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { useThemeStore } from './stores/theme'
 import Toast from './components/Toast.vue'
 import CountdownReminder from './components/CountdownReminder.vue'
 import CloudSyncConflictModal from './components/CloudSyncConflictModal.vue'
 import BeianFooter from './components/BeianFooter.vue'
+import AppWatermark from './components/AppWatermark.vue'
 import { useToast } from './composables/useToast'
 import { useCountdownReminder } from './composables/useCountdownReminder'
 import { useCloudSync } from './composables/useCloudSync'
@@ -15,6 +17,14 @@ import zhCn from 'element-plus/es/locale/lang/zh-cn'
 const themeStore = useThemeStore()
 const { toasts, removeToast } = useToast()
 const cloudSync = useCloudSync()
+const route = useRoute()
+
+/**
+ * 水印只在**工作台**页面显示，导航站（含首页与工具箱）不显示（需求约定）。
+ * 以「白名单」而非「黑名单」判定：新增工作台路由时不会被意外漏掉水印。
+ */
+const WATERMARK_EXCLUDED_ROUTES = new Set(['home', 'toolbox'])
+const watermarkVisible = computed(() => !WATERMARK_EXCLUDED_ROUTES.has(String(route.name ?? '')))
 
 onMounted(() => {
   themeStore.initTheme()
@@ -58,6 +68,9 @@ async function ensurePersistentStorage() {
     <router-view v-slot="{ Component }">
       <component :is="Component" :key="$route.path" class="route-transition" />
     </router-view>
+    <!-- 工作台水印：全局单例。position:fixed + pointer-events:none，不占位不拦交互；
+         visible=false（导航站）或开关关闭/内容为空时组件不渲染任何节点 → 页面无水印残留。 -->
+    <AppWatermark :visible="watermarkVisible" />
     <Toast :toasts="toasts as any" @remove="removeToast" />
     <CountdownReminder />
     <CloudSyncConflictModal v-if="cloudSync.conflictData.value" />

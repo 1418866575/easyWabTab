@@ -3,6 +3,7 @@ import { ref, computed, toRaw } from 'vue'
 import { idbGet, idbPut, idbClear } from '@/composables/useIdb'
 import { markDirty } from '@/composables/useCloudSync'
 import { getPref, setPref } from '@/composables/useNavPrefs'
+import { WATERMARK_DEFAULTS, WATERMARK_LIMITS } from '@/types'
 import {
   WORKBENCH_MENU_DEFAULT_ORDER,
   WORKBENCH_MENU_KEYS,
@@ -13,7 +14,7 @@ import {
   resolveMenuItems
 } from '@/composables/workbenchMenuCore'
 import type { WorkbenchMenuItem, WorkbenchMenuVisibility } from '@/composables/workbenchMenuCore'
-import type { AppSettingsData, HomeCardLayout } from '@/types'
+import type { AppSettingsData, HomeCardLayout, WatermarkMode, WatermarkType } from '@/types'
 
 // ========================================
 // 类型
@@ -169,6 +170,16 @@ const clampCardW = (n: number) => Math.min(5, Math.max(1, Math.round(n)))
 const clampCardH = (n: number) => Math.min(1200, Math.max(60, Math.round(n)))
 const clampCardO = (n: number) => Math.min(9999, Math.max(-9999, Math.round(n)))
 
+/**
+ * 水印数值参数归一：非有限数（NaN / Infinity / 字符串 / undefined）→ 缺省值；
+ * 合法数字再四舍五入并钳到 [min, max]。用于云同步拉回的脏数据兜底。
+ */
+const clampWatermarkNum = (n: unknown, min: number, max: number, fallback: number): number => {
+  const v = typeof n === 'number' ? n : Number(n)
+  if (!Number.isFinite(v)) return fallback
+  return Math.min(max, Math.max(min, Math.round(v * 100) / 100))
+}
+
 // 深拷贝默认尺寸
 const cloneDefaults = (): Record<DialogId, DialogSizeSetting> => {
   const sizes = {} as Record<DialogId, DialogSizeSetting>
@@ -209,6 +220,17 @@ function parseSettingsData(raw: unknown): AppSettingsData {
     workbenchMenuVisibility: {},
     desktopNotifyEnabled: false,
     countdownPopupEnabled: true, // 倒计时弹框默认开启（保持既有行为）
+    // ===== 工作台水印（默认关闭 + 空文案，由管理员自定义）=====
+    watermarkEnabled: WATERMARK_DEFAULTS.enabled,
+    watermarkType: WATERMARK_DEFAULTS.type,
+    watermarkText: WATERMARK_DEFAULTS.text,
+    watermarkImage: WATERMARK_DEFAULTS.image,
+    watermarkMode: WATERMARK_DEFAULTS.mode,
+    watermarkOpacity: WATERMARK_DEFAULTS.opacity,
+    watermarkFontSize: WATERMARK_DEFAULTS.fontSize,
+    watermarkRotate: WATERMARK_DEFAULTS.rotate,
+    watermarkGapX: WATERMARK_DEFAULTS.gapX,
+    watermarkGapY: WATERMARK_DEFAULTS.gapY,
     reminderEmailEnabled: false,
     reminderEmailTo: '',
     reminderEmailServiceId: '',
@@ -351,6 +373,23 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   out.desktopNotifyEnabled = typeof data.desktopNotifyEnabled === 'boolean' ? data.desktopNotifyEnabled : false
   // 倒计时弹框开关：缺失（旧数据）→ 默认开启，保持升级后行为不变
   out.countdownPopupEnabled = typeof data.countdownPopupEnabled === 'boolean' ? data.countdownPopupEnabled : true
+  // ===== 工作台水印归一化 =====
+  // 全部走「类型判定 + 范围钳制」，脏数据/旧数据（字段缺失）一律回落到 WATERMARK_DEFAULTS，绝不报错。
+  // clampNum 末位参数为缺省值：非有限数（NaN/Infinity/字符串）用缺省，合法数字再钳到 [min,max]。
+  const wm = WATERMARK_LIMITS
+  out.watermarkEnabled = typeof data.watermarkEnabled === 'boolean' ? data.watermarkEnabled : WATERMARK_DEFAULTS.enabled
+  out.watermarkType = data.watermarkType === 'image' ? 'image' : 'text'
+  out.watermarkText = typeof data.watermarkText === 'string' ? data.watermarkText.slice(0, 60) : ''
+  // 图片水印仅接受 data URL（拒绝外链，防注入）
+  out.watermarkImage = typeof data.watermarkImage === 'string' && /^data:image\//i.test(data.watermarkImage)
+    ? data.watermarkImage
+    : ''
+  out.watermarkMode = data.watermarkMode === 'center' ? 'center' : 'tile'
+  out.watermarkOpacity = clampWatermarkNum(data.watermarkOpacity, wm.opacity.min, wm.opacity.max, WATERMARK_DEFAULTS.opacity)
+  out.watermarkFontSize = clampWatermarkNum(data.watermarkFontSize, wm.fontSize.min, wm.fontSize.max, WATERMARK_DEFAULTS.fontSize)
+  out.watermarkRotate = clampWatermarkNum(data.watermarkRotate, wm.rotate.min, wm.rotate.max, WATERMARK_DEFAULTS.rotate)
+  out.watermarkGapX = clampWatermarkNum(data.watermarkGapX, wm.gapX.min, wm.gapX.max, WATERMARK_DEFAULTS.gapX)
+  out.watermarkGapY = clampWatermarkNum(data.watermarkGapY, wm.gapY.min, wm.gapY.max, WATERMARK_DEFAULTS.gapY)
   out.reminderEmailEnabled = typeof data.reminderEmailEnabled === 'boolean' ? data.reminderEmailEnabled : false
   out.reminderEmailTo = typeof data.reminderEmailTo === 'string' ? data.reminderEmailTo : ''
   out.reminderEmailServiceId = typeof data.reminderEmailServiceId === 'string' ? data.reminderEmailServiceId : ''
@@ -449,6 +488,19 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   // 倒计时到期/9:00 摘要的页面弹框开关（默认开启；关闭后访问主页不再弹提醒框，
   // 桌面通知与邮件提醒不受影响）
   const countdownPopupEnabled = ref<boolean>(true)
+
+  // ===== 工作台水印（ref 声明）=====
+  // 渲染约束：position:fixed + pointer-events:none + z-index:1 → 不占位、不拦截点击、不遮挡顶栏(100)/弹窗(300)
+  const watermarkEnabled = ref<boolean>(WATERMARK_DEFAULTS.enabled)
+  const watermarkType = ref<WatermarkType>(WATERMARK_DEFAULTS.type)
+  const watermarkText = ref<string>(WATERMARK_DEFAULTS.text)
+  const watermarkImage = ref<string>(WATERMARK_DEFAULTS.image)
+  const watermarkMode = ref<WatermarkMode>(WATERMARK_DEFAULTS.mode)
+  const watermarkOpacity = ref<number>(WATERMARK_DEFAULTS.opacity)
+  const watermarkFontSize = ref<number>(WATERMARK_DEFAULTS.fontSize)
+  const watermarkRotate = ref<number>(WATERMARK_DEFAULTS.rotate)
+  const watermarkGapX = ref<number>(WATERMARK_DEFAULTS.gapX)
+  const watermarkGapY = ref<number>(WATERMARK_DEFAULTS.gapY)
   const reminderEmailEnabled = ref<boolean>(false)
   const reminderEmailTo = ref<string>('')
   const reminderEmailServiceId = ref<string>('')
@@ -511,6 +563,17 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       toolboxButtonVisible: toolboxButtonVisible.value,
       desktopNotifyEnabled: desktopNotifyEnabled.value,
       countdownPopupEnabled: countdownPopupEnabled.value,
+      // 水印：随 settings 整体进 workbench.json 信封 → 自动跨设备云同步
+      watermarkEnabled: watermarkEnabled.value,
+      watermarkType: watermarkType.value,
+      watermarkText: watermarkText.value,
+      watermarkImage: watermarkImage.value,
+      watermarkMode: watermarkMode.value,
+      watermarkOpacity: watermarkOpacity.value,
+      watermarkFontSize: watermarkFontSize.value,
+      watermarkRotate: watermarkRotate.value,
+      watermarkGapX: watermarkGapX.value,
+      watermarkGapY: watermarkGapY.value,
       reminderEmailEnabled: reminderEmailEnabled.value,
       reminderEmailTo: reminderEmailTo.value,
       reminderEmailServiceId: reminderEmailServiceId.value,
@@ -696,6 +759,17 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       // 提醒设置：6 字段白名单应用（布尔仅采纳 true/false，字符串仅采纳 string 原样透传不 trim，非法/缺失回退默认）
       desktopNotifyEnabled.value = effective.desktopNotifyEnabled === true
       countdownPopupEnabled.value = effective.countdownPopupEnabled !== false
+      // 水印：effective 已由 normalizeAppSettings 做过类型判定 + 范围钳制，此处直接取用
+      watermarkEnabled.value = effective.watermarkEnabled === true
+      watermarkType.value = effective.watermarkType ?? WATERMARK_DEFAULTS.type
+      watermarkText.value = effective.watermarkText ?? ''
+      watermarkImage.value = effective.watermarkImage ?? ''
+      watermarkMode.value = effective.watermarkMode ?? WATERMARK_DEFAULTS.mode
+      watermarkOpacity.value = effective.watermarkOpacity ?? WATERMARK_DEFAULTS.opacity
+      watermarkFontSize.value = effective.watermarkFontSize ?? WATERMARK_DEFAULTS.fontSize
+      watermarkRotate.value = effective.watermarkRotate ?? WATERMARK_DEFAULTS.rotate
+      watermarkGapX.value = effective.watermarkGapX ?? WATERMARK_DEFAULTS.gapX
+      watermarkGapY.value = effective.watermarkGapY ?? WATERMARK_DEFAULTS.gapY
       reminderEmailEnabled.value = effective.reminderEmailEnabled === true
       reminderEmailTo.value = typeof effective.reminderEmailTo === 'string' ? effective.reminderEmailTo : ''
       reminderEmailServiceId.value = typeof effective.reminderEmailServiceId === 'string' ? effective.reminderEmailServiceId : ''
@@ -815,6 +889,17 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     toolboxButtonVisible.value = true
     desktopNotifyEnabled.value = false
     countdownPopupEnabled.value = true
+    // 水印重置：关闭 + 空文案（回到「出厂」状态，页面无水印）
+    watermarkEnabled.value = WATERMARK_DEFAULTS.enabled
+    watermarkType.value = WATERMARK_DEFAULTS.type
+    watermarkText.value = WATERMARK_DEFAULTS.text
+    watermarkImage.value = WATERMARK_DEFAULTS.image
+    watermarkMode.value = WATERMARK_DEFAULTS.mode
+    watermarkOpacity.value = WATERMARK_DEFAULTS.opacity
+    watermarkFontSize.value = WATERMARK_DEFAULTS.fontSize
+    watermarkRotate.value = WATERMARK_DEFAULTS.rotate
+    watermarkGapX.value = WATERMARK_DEFAULTS.gapX
+    watermarkGapY.value = WATERMARK_DEFAULTS.gapY
     reminderEmailEnabled.value = false
     reminderEmailTo.value = ''
     reminderEmailServiceId.value = ''
@@ -1097,6 +1182,68 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     persist()
   }
 
+  // ===== 工作台水印 setter（统一经 clampWatermarkNum 钳制，防止滑块/外部传入越界值）=====
+  function setWatermarkEnabled(v: boolean): void {
+    watermarkEnabled.value = v
+    persist()
+  }
+  function setWatermarkType(v: WatermarkType): void {
+    watermarkType.value = v === 'image' ? 'image' : 'text'
+    persist()
+  }
+  function setWatermarkText(v: string): void {
+    watermarkText.value = v.slice(0, 60)
+    persist()
+  }
+  function setWatermarkImage(v: string): void {
+    // 仅接受 data URL（与归一化口径一致，拒绝外链）
+    watermarkImage.value = typeof v === 'string' && /^data:image\//i.test(v) ? v : ''
+    persist()
+  }
+  function setWatermarkMode(v: WatermarkMode): void {
+    watermarkMode.value = v === 'center' ? 'center' : 'tile'
+    persist()
+  }
+  function setWatermarkOpacity(v: number): void {
+    const wm = WATERMARK_LIMITS.opacity
+    watermarkOpacity.value = clampWatermarkNum(v, wm.min, wm.max, WATERMARK_DEFAULTS.opacity)
+    persist()
+  }
+  function setWatermarkFontSize(v: number): void {
+    const wm = WATERMARK_LIMITS.fontSize
+    watermarkFontSize.value = clampWatermarkNum(v, wm.min, wm.max, WATERMARK_DEFAULTS.fontSize)
+    persist()
+  }
+  function setWatermarkRotate(v: number): void {
+    const wm = WATERMARK_LIMITS.rotate
+    watermarkRotate.value = clampWatermarkNum(v, wm.min, wm.max, WATERMARK_DEFAULTS.rotate)
+    persist()
+  }
+  function setWatermarkGapX(v: number): void {
+    const wm = WATERMARK_LIMITS.gapX
+    watermarkGapX.value = clampWatermarkNum(v, wm.min, wm.max, WATERMARK_DEFAULTS.gapX)
+    persist()
+  }
+  function setWatermarkGapY(v: number): void {
+    const wm = WATERMARK_LIMITS.gapY
+    watermarkGapY.value = clampWatermarkNum(v, wm.min, wm.max, WATERMARK_DEFAULTS.gapY)
+    persist()
+  }
+  /** 一键恢复水印默认（关闭 + 空文案 + 默认样式） */
+  function resetWatermark(): void {
+    watermarkEnabled.value = WATERMARK_DEFAULTS.enabled
+    watermarkType.value = WATERMARK_DEFAULTS.type
+    watermarkText.value = WATERMARK_DEFAULTS.text
+    watermarkImage.value = WATERMARK_DEFAULTS.image
+    watermarkMode.value = WATERMARK_DEFAULTS.mode
+    watermarkOpacity.value = WATERMARK_DEFAULTS.opacity
+    watermarkFontSize.value = WATERMARK_DEFAULTS.fontSize
+    watermarkRotate.value = WATERMARK_DEFAULTS.rotate
+    watermarkGapX.value = WATERMARK_DEFAULTS.gapX
+    watermarkGapY.value = WATERMARK_DEFAULTS.gapY
+    persist()
+  }
+
   function setReminderEmailEnabled(v: boolean) {
     reminderEmailEnabled.value = v
     persist()
@@ -1228,6 +1375,28 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     helpButtonDisplayName,
     desktopNotifyEnabled,
     countdownPopupEnabled,
+    // 水印
+    watermarkEnabled,
+    watermarkType,
+    watermarkText,
+    watermarkImage,
+    watermarkMode,
+    watermarkOpacity,
+    watermarkFontSize,
+    watermarkRotate,
+    watermarkGapX,
+    watermarkGapY,
+    setWatermarkEnabled,
+    setWatermarkType,
+    setWatermarkText,
+    setWatermarkImage,
+    setWatermarkMode,
+    setWatermarkOpacity,
+    setWatermarkFontSize,
+    setWatermarkRotate,
+    setWatermarkGapX,
+    setWatermarkGapY,
+    resetWatermark,
     reminderEmailEnabled,
     reminderEmailTo,
     reminderEmailServiceId,

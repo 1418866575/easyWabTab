@@ -123,6 +123,35 @@ export type CountdownItem = Countdown & { remaining: CountdownRemaining }
 // 工作台待办任务
 export type TodoPriority = 'low' | 'medium' | 'high'
 
+// ===== 工作台水印类型（仅工作台生效，导航站排除）=====
+/** 文字水印 / 图片水印 */
+export type WatermarkType = 'text' | 'image'
+/** 平铺（网格覆盖整页）/ 居中（单条居中） */
+export type WatermarkMode = 'tile' | 'center'
+
+/** 水印默认值（默认值与参数范围集中于此，store 与设置页共用，避免两处漂移） */
+export const WATERMARK_DEFAULTS = {
+  enabled: false,// 默认关闭：升级后页面无任何水印元素
+  type: 'text' as WatermarkType,
+  text: '',            // 文字内容留空，由管理员自定义
+  image: '',           // 图片水印的 data URL（空 = 未选择）
+  mode: 'tile' as WatermarkMode,
+  opacity: 0.12,       // 不透明度（0.05~0.5）
+  fontSize: 14,        // 字号 px（10~40）
+  rotate: -22,         // 倾斜角（-90~0）
+  gapX: 160,           // 平铺横向间距 px（80~320）
+  gapY: 120// 平铺纵向间距 px（60~240）
+} as const
+
+/** 水印参数范围（设置页滑块与 store 归一化共用） */
+export const WATERMARK_LIMITS = {
+  opacity: { min: 0.05, max: 0.5, step: 0.01 },
+  fontSize: { min: 10, max: 40, step: 1 },
+  rotate: { min: -90, max: 0, step: 1 },
+  gapX: { min: 80, max: 320, step: 10 },
+  gapY: { min: 60, max: 240, step: 10 }
+} as const
+
 // 待办卡片自定义颜色：默认蓝 + 8 预设（与倒计时 COUNTDOWN_COLOR_PRESETS / 便签 NOTE_COLORS 同源色值）
 export const DEFAULT_TODO_COLOR = '#3b82f6'
 export const TODO_COLOR_PRESETS = [
@@ -262,6 +291,18 @@ export interface AppSettingsData {
   navFiltersExpanded?: boolean // 导航站分类/标签栏展开态（默认 false = 收起）
   desktopNotifyEnabled?: boolean // 定时提醒桌面通知总开关（默认 false = 关闭）
   countdownPopupEnabled?: boolean // 倒计时到期/9:00 摘要的**页面弹框**开关（默认 true = 弹框；关闭后仅桌面通知/邮件，不影响它们）
+
+  // ===== 工作台水印（仅工作台页面生效，导航站不显示）=====
+  watermarkEnabled?: boolean // 水印总开关（默认 false = 关闭，页面无任何水印元素）
+  watermarkType?: WatermarkType // 文字水印 / 图片水印（默认 'text'）
+  watermarkText?: string // 文字水印内容（默认空串，由管理员自定义）
+  watermarkImage?: string // 图片水印图片（data URL，取自图标库；空串 = 未选）
+  watermarkMode?: WatermarkMode // 平铺 / 居中（默认 'tile'）
+  watermarkOpacity?: number // 不透明度 0.05~0.5（存 0.05~0.5 的小数；默认 0.12）
+  watermarkFontSize?: number // 字号 px 10~40（默认 14）
+  watermarkRotate?: number // 倾斜角 -90~0 度（默认 -22）
+  watermarkGapX?: number // 平铺横向间距 px 80~320（默认 160）
+  watermarkGapY?: number // 平铺纵向间距 px 60~240（默认 120）
   reminderEmailEnabled?: boolean // 定时提醒邮件总开关（默认 false = 关闭）
   reminderEmailTo?: string // EmailJS 收件邮箱（空串 = 未配置）
   reminderEmailServiceId?: string // EmailJS Service ID

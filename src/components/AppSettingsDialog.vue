@@ -83,6 +83,7 @@ import TeacherTimetableConfig from '@/components/teacher/TeacherTimetableConfig.
 const SiteModal = defineAsyncComponent(() => import('@/components/SiteModal.vue'))
 const SearchEngineManager = defineAsyncComponent(() => import('@/components/SearchEngineManager.vue'))
 const BackgroundManager = defineAsyncComponent(() => import('@/components/BackgroundManager.vue'))
+const WatermarkSettings = defineAsyncComponent(() => import('@/components/WatermarkSettings.vue'))
 const CategoryManager = defineAsyncComponent(() => import('@/components/CategoryManager.vue'))
 const BackupManager = defineAsyncComponent(() => import('@/components/BackupManager.vue'))
 const IconManager = defineAsyncComponent(() => import('@/components/IconManager.vue'))
@@ -114,6 +115,7 @@ type NavSubTab =
   | 'nav-icons'
   | 'nav-size'
   | 'nav-data'
+  | 'nav-watermark'
 type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-todo-cat' | 'wb-cd-cat' | 'wb-note-cat' | 'wb-pwd-cat' | 'wb-ledger-cat' | 'wb-ledger' | 'wb-diary-cat' | 'wb-diary-journals' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
 type BizSubTab = 'biz-base' | 'biz-backup' | 'biz-ledger' | 'biz-product-cat' | 'biz-expense-cat'
 type StuSubTab = 'stu-stage' | 'stu-info' | 'stu-subject' | 'stu-timetable' | 'stu-menu'
@@ -181,6 +183,7 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student' | 'teacher', SubTab
     { key: 'nav-check-links',     label: '检测断链' },
     { key: 'nav-engines',         label: '引擎管理' },
     { key: 'nav-background',      label: '背景' },
+    { key: 'nav-watermark',       label: '水印设置' },
     { key: 'nav-category',        label: '分类管理' },
     { key: 'nav-backup',          label: '备份' },
     { key: 'nav-icons',           label: '图标管理' },
@@ -381,6 +384,7 @@ const NAV_GROUPS: NavGroup[] = [
       { key: 'nav-check-links', label: '检测断链', icon: 'link', tab: 'nav', sub: 'nav-check-links' },
       { key: 'nav-engines', label: '引擎管理', icon: 'search', tab: 'nav', sub: 'nav-engines' },
       { key: 'nav-background', label: '背景', icon: 'image', tab: 'nav', sub: 'nav-background' },
+      { key: 'nav-watermark', label: '水印设置', icon: 'palette', tab: 'nav', sub: 'nav-watermark' },
       { key: 'nav-category', label: '分类管理', icon: 'cog', tab: 'nav', sub: 'nav-category' },
       { key: 'nav-data', label: '数据清理', icon: 'trash', tab: 'nav', sub: 'nav-data' }
     ]
@@ -569,6 +573,13 @@ const NAV_EMBED_PAGES: NavEmbedPage[] = [
     comp: BackgroundManager,
     testid: 'navpanel-background',
     hint: '设置导航站页面背景：纯色、渐变或上传图片，并可调整模糊与遮罩强度。'
+  },
+  {
+    sub: 'nav-watermark',
+    title: '水印设置',
+    comp: WatermarkSettings,
+    testid: 'navpanel-watermark',
+    hint: '为工作台页面（个人/销售/学生/教师）添加自定义水印：支持文字或图片、平铺或居中，并可调整不透明度、字号、倾斜角度与间距。'
   },
   {
     sub: 'nav-category',
