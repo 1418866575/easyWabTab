@@ -146,17 +146,46 @@ fi
 # ============================================================
 # 4) 编译（set -e：编译报错立即退出，不会执行后面的部署）
 # ============================================================
-# 低内存服务器上 `vite build` 容易被系统 OOM killer 杀掉（日志里表现为 `Killed`，退出码 137）。
-# 原因：rolldown 渲染 chunks 阶段是内存峰值所在，多线程会同时占用多份内存。
-# 对策（不依赖 vite.config 的自动探测，直接在脚本里显式约束，稳定可预期）：
+# 低内存服务器上 `vite build` 会被系统 OOM killer 杀掉（日志表现为 `Killed`，退出码 137）。
+#
+# 实测案例（2GB 内存 / 无 swap 的云服务器）：
+#   node 被杀时 anon-rss 1353MB + file-rss 67MB ≈ 1420MB，而 MemAvailable 只有 1419MB —— 正好差 1MB。
+#   根因：--max-old-space-size 若大于 MemAvailable，V8 会以为"还有 2GB 可用"，
+#   于是放心把堆涨到物理上限（1.35GB+），必然触发 OOM killer。
+#
+# 对策：
 #   - RAYON_NUM_THREADS=1  → rolldown 串行渲染，峰值内存显著下降（代价：慢几十秒）
-#   - NODE_OPTIONS 堆上限   → 让V8 提前 GC，而不是无限增长直到被系统杀掉
-# 服务器内存充足时可用 BUILD_LOWMEM=0 关闭本保护。
+#   - 堆上限按**实测 MemAvailable 自动测算**（而非固定 2048），并留出安全余量。
+#     关键：固定大值在低配机上是有害的，必须按实际可用内存缩放。
+# 可用 BUILD_LOWMEM=0 / BUILD_HEAP_MB=<MB> 覆盖自动测算。
 if [ "${BUILD_LOWMEM:-1}" = "1" ]; then
   export RAYON_NUM_THREADS=1
-  # 2GB 上限对本项目实测足够（约 1.2GB 峰值）；机器内存更小时可下调（如 1536）
-  export NODE_OPTIONS="--max-old-space-size=${BUILD_HEAP_MB:-2048}"
-  log "低内存模式：RAYON_NUM_THREADS=$RAYON_NUM_THREADS，NODE_OPTIONS=$NODE_OPTIONS"
+
+  # 取当前可用内存（KB）。取不到时按 2048MB 保守处理。
+  # 注意：free 的 available 列已是"不牺牲 buff/cache 前提下还能拿到多少"，正是我们要的。
+  AVAIL_KB=$(awk '/^MemAvailable:/ {print $2; exit}' /proc/meminfo 2>/dev/null || echo "")
+  if [ -n "$AVAIL_KB" ] && [ "$AVAIL_KB" -gt 0 ] 2>/dev/null; then
+    AVAIL_MB=$((AVAIL_KB / 1024))
+  else
+    AVAIL_MB=2048
+    log "无法读取 /proc/meminfo 的 MemAvailable，按${AVAIL_MB}MB 估算"
+  fi
+
+  # 安全余量：给 nginx / sshd / 本脚本自身留 400MB。低于 512MB 视为过小，直接按 512 处理。
+  #实测：可用 1419MB - 400 余量 = 1019MB 堆上限，V8 会在 1GB 附近就触发 GC，不会涨到 1.35GB。
+  SAFE_MB=400
+  HEAP_MB=$((AVAIL_MB - SAFE_MB))
+  [ "$HEAP_MB" -lt 512 ] && HEAP_MB=512
+  # 用户显式指定则优先
+  [ -n "${BUILD_HEAP_MB:-}" ] && HEAP_MB="$BUILD_HEAP_MB"
+
+  export NODE_OPTIONS="--max-old-space-size=${HEAP_MB}"
+  log "低内存模式：可用内存 ${AVAIL_MB}MB，堆上限设为 ${HEAP_MB}MB（余量 ${SAFE_MB}MB），RAYON_NUM_THREADS=1"
+  if [ "$AVAIL_MB" -lt 1200 ]; then
+    log "提示：可用内存不足 1.2GB，构建可能仍吃紧。建议开swap："
+    log "      dd if=/dev/zero of=/swapfile bs=1M count=2048 && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile"
+    log "      （并把 '/swapfile swap defaults 0 0' 追加到 /etc/fstab 以便重启后自动挂载）"
+  fi
 else
   log "低内存模式已关闭（BUILD_LOWMEM=0）"
 fi

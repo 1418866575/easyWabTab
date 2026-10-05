@@ -9,24 +9,40 @@ import os from 'node:os';
 import fs from 'node:fs';
 
 /**
- * 取「本进程实际可用内存上限」，取三者最小值：
- *   1. cgroup v2: /sys/fs/cgroup/memory.max（云服务器 / Docker / K8s 常见）
- *   2. cgroup v1: /sys/fs/cgroup/memory/memory.limit_in_bytes
- *   3. 物理内存: os.totalmem()
+ * 取「本进程实际可用内存上限」，取四者最小值：
+ *   1. MemAvailable（/proc/meminfo，首选）：已扣除其他进程占用的真实可用内存
+ *   2. cgroup v2: /sys/fs/cgroup/memory.max（容器 / K8s）
+ *   3. cgroup v1: /sys/fs/cgroup/memory/memory.limit_in_bytes
+ *   4. 物理内存: os.totalmem()（兜底）
  *
- * 为什么要读 cgroup：**os.totalmem() 在云服务器上返回的是宿主机内存**（几十GB），
- * 而容器/ECS 的 cgroup 可能只给了 1~2GB。直接用 totalmem 判断会导致
- * 「低内存守卫不生效 → rolldown 并行渲染把进程撑爆 → 被系统 OOM killer 杀掉（Killed）」。
+ * 为什么必须用 MemAvailable 而不只是 totalmem：
+ *   实测 2GB 云服务器上 totalmem=1870MB，但 **MemAvailable 仅 1419MB**（其余被 nginx/sshd 占着）。
+ *   按 totalmem 判定会高估约 450MB → 低内存守卫不生效 → V8 堆涨过物理上限
+ *   → rolldown 渲染 chunks 时被系统 OOM killer 杀掉（日志里是 `Killed`，退出码 137）。
  */
 function getMemoryLimitBytes() {
   const phys = os.totalmem();
+  // ① **MemAvailable**（首选）：Linux /proc/memfree 的可用内存，已扣除其他进程占用，
+  //最贴近"本构建还能用多少"。实测 2GB 机器上 totalmem=1870MB 但 MemAvailable 仅 1419MB，
+  //    按 totalmem 判定会高估 450MB，导致 V8 堆涨过物理上限被 OOM killer 杀。
+  let memAvailable = Infinity;
+  try {
+    const raw = fs.readFileSync('/proc/meminfo', 'utf8');
+    const m = raw.match(/^MemAvailable:\s*(\d+)\s*kB/m);
+    if (m) {
+      const kb = Number(m[1]);
+      if (Number.isFinite(kb) && kb > 0) memAvailable = kb * 1024;
+    }
+  } catch {
+    memAvailable = Infinity;
+  }
+  // ② cgroup v2 / v1 限额（容器场景下比物理内存更严）
   const readNumber = (p) => {
     try {
       const raw = fs.readFileSync(p, 'utf8').trim();
-      // cgroup v2 用 "max" 表示不限；v1 可能给一个极大的假上限值
       if (!raw || raw === 'max') return Infinity;
       const n = Number(raw);
-      // 过滤掉 v1 那种"接近无限"的哨兵值（如 9223372036854771712）
+      // 过滤 v1 的"无限"哨兵值（如 9223372036854771712）
       if (!Number.isFinite(n) || n <= 0 || n > phys) return Infinity;
       return n;
     } catch {
@@ -35,7 +51,8 @@ function getMemoryLimitBytes() {
   };
   const cgroupV2 = readNumber('/sys/fs/cgroup/memory.max');
   const cgroupV1 = readNumber('/sys/fs/cgroup/memory/memory.limit_in_bytes');
-  return Math.min(phys, cgroupV2, cgroupV1);
+  // ③ 物理内存兜底
+  return Math.min(phys, memAvailable, cgroupV2, cgroupV1);
 }
 
 const MEMORY_LIMIT_BYTES = getMemoryLimitBytes();
