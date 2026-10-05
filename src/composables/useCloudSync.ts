@@ -1070,7 +1070,9 @@ function mergeTeacher(local: TeacherSyncData, remote: TeacherSyncData): TeacherS
 
 async function reloadWorkbenchStores(): Promise<void> {
   // 惰性导入避免循环依赖（各 store 在 WorkbenchView 里已 import，此处用动态导入走 onMounted init）
-  const [{ useWorkbenchTodosStore }, { useWorkbenchNotesStore }, { useWorkbenchDiaryStore }, { useCountdownsStore }, { useWorkbenchHealthStore }, { useWorkbenchLedgerStore }, { useWorkbenchPomodoroStore }, { useWorkbenchHabitsStore }, { useAppSettingsStore }, { useGenealogyStore }] = await Promise.all([
+  // 例外：settings store 走**静态导入**——它已被 20+ 处组件静态引入，动态 import 不会把它移出主 chunk，
+  // 反而触发 INEFFECTIVE_DYNAMIC_IMPORT 警告（同一模块被静态+动态混合引入时的标准告警）。
+  const [{ useWorkbenchTodosStore }, { useWorkbenchNotesStore }, { useWorkbenchDiaryStore }, { useCountdownsStore }, { useWorkbenchHealthStore }, { useWorkbenchLedgerStore }, { useWorkbenchPomodoroStore }, { useWorkbenchHabitsStore }, { useGenealogyStore }] = await Promise.all([
     import('../stores/workbenchTodos'),
     import('../stores/workbenchNotes'),
     import('../stores/workbenchDiary'),
@@ -1079,7 +1081,6 @@ async function reloadWorkbenchStores(): Promise<void> {
     import('../stores/workbenchLedger'),
     import('../stores/workbenchPomodoro'),
     import('../stores/workbenchHabits'),
-    import('../stores/settings'),
     import('../stores/genealogy')
   ])
   await Promise.all([

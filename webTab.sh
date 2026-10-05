@@ -51,6 +51,19 @@ ts() { date '+%Y-%m-%d %H:%M:%S'; }
 log() { echo "[$(ts)] $*"; }
 fail() { log "失败：$*"; exit 1; }
 
+# 目录非空判定（避免 `ls` 的坑）
+#   ⚠️ 千万不要写 `[ -n "$(ls -A "$dir" 2>/dev/null)" ]`：目录不存在时 ls 返回退出码 2，
+#      而**命令替换会把该退出码传播给 set -e**，导致脚本在此处直接中断（表现为"部署莫名失败"）。
+#      这里改用 shell 内建的 glob 展开做判断：目录不存在直接返回 1，空目录返回 1，非空返回 0。
+is_dir_nonempty() {
+  local d="$1" f
+  [ -d "$d" ] || return 1
+  for f in "$d"/* "$d"/.[!.]*; do
+    if [ -e "$f" ]; then return 0; fi
+  done
+  return 1
+}
+
 # ============================================================
 # 1) 准备代码：首次 clone，之后增量 pull
 # ============================================================
@@ -84,7 +97,7 @@ LOG_SINCE=$(git log -1 --format='%h %ad %s' --date=format:'%Y-%m-%d %H:%M' 2>/de
 # ============================================================
 # 产物是否已存在（存在才允许"无更新直接跳过"，否则首次/被清时仍需编译一次）
 DIST_EXISTS=0
-[ -d "$WORK_DIR/dist" ] && [ -n "$(ls -A "$WORK_DIR/dist" 2>/dev/null)" ] && DIST_EXISTS=1
+is_dir_nonempty "$WORK_DIR/dist" && DIST_EXISTS=1
 
 if [ -n "$REMOTE_SHA" ] && [ "$LOCAL_SHA" = "$REMOTE_SHA" ]; then
   if [ "$DIST_EXISTS" -eq 1 ]; then
@@ -106,7 +119,7 @@ fi
 # ============================================================
 # 3) 依赖：目标目录已有 node_modules 则跳过拷贝
 # ============================================================
-if [ -d "$WORK_DIR/node_modules" ] && [ -n "$(ls -A "$WORK_DIR/node_modules" 2>/dev/null)" ]; then
+if is_dir_nonempty "$WORK_DIR/node_modules"; then
   log "node_modules 已存在，跳过依赖拷贝。"
 else
   if [ -d "$SHARED_NODE_MODULES" ]; then
@@ -127,7 +140,7 @@ npm run build || fail "编译失败。线上版本保持为上一版本，未被
 log "编译成功!"
 
 # 产物校验：dist 必须存在且非空，否则视为构建异常
-[ -d "$WORK_DIR/dist" ] && [ -n "$(ls -A "$WORK_DIR/dist" 2>/dev/null)" ] \
+is_dir_nonempty "$WORK_DIR/dist" \
   || fail "dist 为空或不存在，判定构建异常。线上版本未改动。"
 
 # ============================================================
@@ -135,10 +148,22 @@ log "编译成功!"
 # ============================================================
 log "备份当前线上版本..."
 mkdir -p "$BACKUP_DIR"
-if [ -d "$NGINX_HTML" ] && [ -n "$(ls -A "$NGINX_HTML" 2>/dev/null)" ]; then
+if is_dir_nonempty "$NGINX_HTML"; then
   BACKUP_FILE="$BACKUP_DIR/easy-web-tab-$(date +%Y%m%d-%H%M%S).tar.gz"
   tar -czf "$BACKUP_FILE" -C "$NGINX_HTML" .
   log "已备份: $BACKUP_FILE"
+
+  # 备份轮转：仅保留最近 KEEP_BACKUPS 份，超出的最旧备份删除。
+  # 不用 `ls | head -n -N`（ls 找不到匹配文件时返回非 0，会在 set -e / pipefail 下中断脚本），
+  # 改用 glob + 数组排序后按计数丢弃。
+  backups=("$BACKUP_DIR"/easy-web-tab-*.tar.gz)
+  if [ "${#backups[@]}" -gt "$KEEP_BACKUPS" ]; then
+    # 文件名内嵌时间戳，字典序 == 时间序，无需 date 解析
+    while IFS= read -r old; do
+      [ -n "$old" ] && rm -f "$old" && log "已清理旧备份: $(basename "$old")"
+    done < <(printf '%s\n' "${backups[@]}" | sort | head -n "$(( ${#backups[@]} - KEEP_BACKUPS ))")
+  fi
+  log "备份保留最近 $KEEP_BACKUPS 份。"
 else
   log "线上目录为空或不存在，跳过备份。"
 fi
@@ -150,7 +175,7 @@ fi
 log "发布到 $NGINX_HTML ..."
 rm -rf "${NGINX_HTML:?}"/* "${NGINX_HTML:?}"/.[!.]* 2>/dev/null || true
 cp -rf "$WORK_DIR/dist/." "$NGINX_HTML/"
-[ -n "$(ls -A "$NGINX_HTML" 2>/dev/null)" ] || fail "发布后目录为空，判定拷贝异常。"
+is_dir_nonempty "$NGINX_HTML" || fail "发布后目录为空，判定拷贝异常。"
 
 log "部署完成: $(git rev-parse --short HEAD) $LOG_SINCE"
 

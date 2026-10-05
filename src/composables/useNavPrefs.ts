@@ -8,6 +8,7 @@
  * 本模块负责内存缓存、防抖落盘、一次性迁移与 store 重载，是各导航模块的上层门面。
  */
 import { idbGet, idbPut, idbClear, NAV_STORE_KEYS, WORKBENCH_PREFS_KEYS } from './useIdb'
+import { useAppSettingsStore } from '@/stores/settings'
 import type { NavPrefsRecord } from './useIdb'
 
 let prefs: NavPrefsRecord = {}
@@ -104,10 +105,12 @@ export async function clearAll(): Promise<void> {
 export async function refreshAfterImport(): Promise<void> {
   const data = await idbGet<NavPrefsRecord>('nav')
   prefs = data ?? {}
-  const [{ useSitesStore }, { useThemeStore }, { useAppSettingsStore }] = await Promise.all([
+  // settings store 改为静态导入：它已被 20+ 处组件静态引入（如 AppSettingsDialog / AppWatermark /
+  // WorkbenchManagePanel），动态 import 无法把它移出主 chunk，只会触发
+  // INEFFECTIVE_DYNAMIC_IMPORT 警告并让 chunk 划分变得混乱。
+  const [{ useSitesStore }, { useThemeStore }] = await Promise.all([
     import('@/stores/sites'),
-    import('@/stores/theme'),
-    import('@/stores/settings')
+    import('@/stores/theme')
   ])
   await Promise.all([
     useSitesStore().loadSites(),
