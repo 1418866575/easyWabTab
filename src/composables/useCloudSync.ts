@@ -68,6 +68,16 @@ import type {
 } from '../types'
 import type { PomodoroData } from './pomodoroCore'
 import type { HabitsData } from './habitCore'
+// 工具箱云同步（收藏 / 最近使用 / 点击次数 / 搜索历史）：实现放在 toolbox 模块自有文件，避免工具箱逻辑侵入本文件
+import {
+  exportToolbox,
+  importToolboxData,
+  mergeToolbox,
+  diffSize as toolboxDiffSize,
+  signature as sigToolbox,
+  reloadToolboxStore
+} from '@/toolbox/core/toolboxSync'
+import type { ToolboxSyncData } from '@/toolbox/core/toolboxSyncCore'
 import type { TeacherData } from '../types/teacher'
 
 const CLIENT_ID_KEY = 'easy-web-tab-client-id'
@@ -1237,6 +1247,17 @@ const FILE_CONFIGS: FileConfig[] = [
     merge: (l, r) => mergeTeacher(l as TeacherSyncData, r as TeacherSyncData),
     reload: reloadTeacherStores,
     diffSize: (l, r) => totalDiffSize(l, r)
+  },
+  {
+    // 工具箱：收藏 / 最近使用 / 点击次数 / 搜索历史
+    // 合并策略：并集 + 时间最新（收藏/搜索取并集、最近用 ts 最大者、点击取较大值）—— 见 toolboxSyncCore
+    name: 'toolbox.json',
+    exportLocal: () => exportToolbox(),
+    importRemote: async (data) => { await importToolboxData(data as ToolboxSyncData); return undefined },
+    signature: (data) => sigToolbox(data as ToolboxSyncData),
+    merge: (l, r) => mergeToolbox(l as ToolboxSyncData, r as ToolboxSyncData),
+    reload: reloadToolboxStore,
+    diffSize: (l, r) => toolboxDiffSize(l as ToolboxSyncData, r as ToolboxSyncData)
   }
 ]
 

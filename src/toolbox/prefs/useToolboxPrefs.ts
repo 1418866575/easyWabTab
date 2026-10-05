@@ -1,61 +1,151 @@
 /**
- * 工具箱偏好（收藏 / 最近使用 / 点击次数）的响应式持久化封装
+ * 工具箱偏好（收藏 / 最近使用 / 点击次数 / 搜索历史）的响应式持久化封装
  *
- * - 单例：模块级 ref 持有状态（沿用项目 useToast / useHelpModal 的单例写法，不新建 Pinia store）
- * - 存储：localStorage，key = easy-web-tab:toolbox
+ * -单例：模块级 ref 持有状态（沿用项目 useToast / useHelpModal 的单例写法，不新建 Pinia store）
+ * - 存储：**IndexedDB**（`nav` object store，key = `toolbox-prefs`）→ 纳入云同步信封 toolbox.json 跨设备。
+ *   原为 localStorage（key `easy-web-tab:toolbox`），首次加载时做**一次性迁移**，老用户数据不丢。
  * - 容错：脏数据 / 隐私模式（写入抛错）一律降级为内存态，不影响页面使用
+ * - 落盘：**防抖**（300ms）—— 点击次数等高频操作不宜每次都写 IndexedDB
  */
 
 import { ref } from 'vue'
 import type { ToolboxPrefs, ToolboxRecentItem } from '../types'
+import { idbGet, idbPut } from '@/composables/useIdb'
 import { recordRecent } from '../core/recent'
 import { normalizeClicks, recordClick, clickCount as countOf, type ClickMap } from '../core/rank'
 import { normalizeSearchHistory, pushSearchHistory, SEARCH_HISTORY_LIMIT } from '../core/searchHistory'
 
+/** IndexedDB 中的键名（nav object store 内的一个 key） */
+const IDB_KEY = 'toolbox-prefs'
+/** 旧 localStorage 键（仅迁移时读取，迁移成功后保留以便回退，不主动删） */
 const LS_KEY = 'easy-web-tab:toolbox'
 
-const DEFAULT_PREFS: ToolboxPrefs = { favorites: [], recent: [], clicks: {}, searchHistory: [] }
+function normalizePrefs(p: Partial<ToolboxPrefs> | undefined | null): {
+  favorites: string[]
+  recent: ToolboxRecentItem[]
+  clicks: ClickMap
+  searchHistory: string[]
+} {
+  return {
+    favorites: Array.isArray(p?.favorites) ? p.favorites.filter(x => typeof x === 'string') : [],
+    recent: Array.isArray(p?.recent)
+      ? p.recent.filter((r): r is ToolboxRecentItem => !!r && typeof r.id === 'string' && typeof r.ts === 'number')
+      : [],
+    clicks: normalizeClicks(p?.clicks),
+    // searchHistory 在类型里是可选字段（旧数据可缺省），这里补齐为确定数组
+    searchHistory: normalizeSearchHistory(p?.searchHistory) ?? []
+  }
+}
 
-function loadPrefs(): ToolboxPrefs {
+/** 读旧 localStorage（迁移用；不可读返回 null） */
+function loadLegacyPrefs(): ToolboxPrefs | null {
   try {
     const raw = localStorage.getItem(LS_KEY)
-    if (!raw) return { ...DEFAULT_PREFS, clicks: {}, searchHistory: [] }
-    const p = JSON.parse(raw) as Partial<ToolboxPrefs>
-    return {
-      favorites: Array.isArray(p.favorites) ? p.favorites.filter(x => typeof x === 'string') : [],
-      recent: Array.isArray(p.recent)
-        ? p.recent.filter((r): r is ToolboxRecentItem => !!r && typeof r.id === 'string' && typeof r.ts === 'number')
-        : [],
-      clicks: normalizeClicks(p.clicks),
-      searchHistory: normalizeSearchHistory(p.searchHistory)
-    }
+    if (!raw) return null
+    return normalizePrefs(JSON.parse(raw) as Partial<ToolboxPrefs>)
   } catch {
-    return { ...DEFAULT_PREFS, clicks: {}, searchHistory: [] } // 脏数据 / 不可读 → 回落默认值
+    return null // 脏数据 / 不可读 → 视为无旧数据
   }
 }
 
-function savePrefs(p: ToolboxPrefs): void {
-  try {
-    localStorage.setItem(LS_KEY, JSON.stringify(p))
-  } catch {
-    // 隐私模式等场景写入失败：保持内存态，不抛错
-  }
-}
+// 模块级单例状态。首屏同步读取 localStorage（保证首渲染即有值，不等异步），
+// 随后由 initFromIdb() 用 IndexedDB 内容覆盖（IndexedDB 才是权威数据源）。
+const legacy = loadLegacyPrefs()
+const favorites = ref<string[]>(legacy?.favorites ?? [])
+const recent = ref<ToolboxRecentItem[]>(legacy?.recent ?? [])
+const clicks = ref<ClickMap>(legacy?.clicks ?? {})
+const searchHistory = ref<string[]>(legacy?.searchHistory ?? [])
 
-// 模块级单例状态
-const prefs = loadPrefs()
-const favorites = ref<string[]>(prefs.favorites)
-const recent = ref<ToolboxRecentItem[]>(prefs.recent)
-const clicks = ref<ClickMap>(prefs.clicks)
-const searchHistory = ref<string[]>(prefs.searchHistory)
+/** nav store 中的现有记录（toolbox-prefs 只是一部分，需保留其余键；值为 JSON 字符串） */
+let current: Record<string, string> = {}
 
-function persist(): void {
-  savePrefs({
+/** 防抖落盘句柄 */
+let saveTimer: ReturnType<typeof setTimeout> | null = null
+function persistNow(): void {
+  const payload: ToolboxPrefs = {
     favorites: favorites.value,
     recent: recent.value,
     clicks: clicks.value,
     searchHistory: searchHistory.value
+  }
+  // nav store 的约定：每个键的值都是 JSON 字符串（见 NavPrefsRecord）
+  const record: Record<string, string> = { ...current, [IDB_KEY]: JSON.stringify(payload) }
+  current = record
+  idbPut('nav', record).catch((e) => {
+    // 隐私模式 / 配额超限等：保持内存态，不抛错
+    console.warn('[toolboxPrefs] IndexedDB 写入失败，已降级为内存态:', e)
   })
+}
+
+/** 防抖持久化（300ms）：高频操作（点击计数）合并写入 */
+function persist(): void {
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => {
+    saveTimer = null
+    persistNow()
+  }, 300)
+}
+
+/** 立即落盘（供页面隐藏/卸载时调用，避免防抖窗口内丢改动） */
+export function flushToolboxPrefs(): void {
+  if (saveTimer) {
+    clearTimeout(saveTimer)
+    saveTimer = null
+  }
+  persistNow()
+}
+
+/**
+ * 初始化：从 IndexedDB 载入权威数据；首次（尚无该键）时把localStorage 旧数据迁移进来。
+ * 由工具箱页面在 onMounted 时调用一次。
+ */
+export async function initToolboxPrefs(): Promise<void> {
+  try {
+    const rec = (await idbGet<Record<string, string>>('nav')) || {}
+    current = rec
+    // nav store 的值均为 JSON 字符串，需 parse 后再归一化
+    let stored: Partial<ToolboxPrefs> | undefined
+    if (typeof rec[IDB_KEY] === 'string') {
+      try {
+        stored = JSON.parse(rec[IDB_KEY]) as Partial<ToolboxPrefs>
+      } catch {
+        stored = undefined // 脏数据 → 视为无数据，下方走迁移分支
+      }
+    }
+    if (stored) {
+      // 已有 IndexedDB 数据 → 以它为准（跨设备同步的权威值）
+      const n = normalizePrefs(stored)
+      favorites.value = n.favorites
+      recent.value = n.recent
+      clicks.value = n.clicks
+      searchHistory.value = n.searchHistory
+    } else if (legacy) {
+      // 首次迁移：localStorage 有旧数据 → 写入 IndexedDB 并立即生效
+      persistNow()
+    }
+  } catch (e) {
+    console.warn('[toolboxPrefs] IndexedDB 读取失败，沿用内存/旧数据:', e)
+  }
+}
+
+/** 用合并后的数据整体覆盖本地（供云同步拉取后调用） */
+export function applyToolboxPrefs(next: Partial<ToolboxPrefs>): void {
+  const n = normalizePrefs(next)
+  favorites.value = n.favorites
+  recent.value = n.recent
+  clicks.value = n.clicks
+  searchHistory.value = n.searchHistory
+  persistNow()
+}
+
+/** 导出当前四项（供云同步 exportLocal 用） */
+export function getToolboxPrefsSnapshot(): ToolboxPrefs {
+  return {
+    favorites: favorites.value,
+    recent: recent.value,
+    clicks: clicks.value,
+    searchHistory: searchHistory.value
+  }
 }
 
 export function useToolboxPrefs() {
@@ -128,6 +218,10 @@ export function useToolboxPrefs() {
     hitClick,
     clearClicks,
     pushSearch,
-    clearSearchHistory
+    clearSearchHistory,
+    // 云同步相关（页面 onMounted 时调initToolboxPrefs；云端拉取后调 applyToolboxPrefs）
+    initToolboxPrefs,
+    flushToolboxPrefs,
+    getToolboxPrefsSnapshot
   }
 }

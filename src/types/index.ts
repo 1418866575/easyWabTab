@@ -1484,3 +1484,8 @@ export interface StudentSyncData {
   goals?: unknown,
 }
 
+// ===== 工具箱云同步 =====
+// 信封结构与归一化/合并逻辑的唯一真源在 src/toolbox/core/toolboxSyncCore.ts（纯函数，可直测），
+// 此处仅做类型再导出，避免信封形状在两处漂移。
+export type { ToolboxSyncData } from '@/toolbox/core/toolboxSyncCore'
+
