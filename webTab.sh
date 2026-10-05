@@ -70,9 +70,20 @@ is_dir_nonempty() {
 if [ -d "$WORK_DIR/.git" ]; then
   log "工作目录已存在，增量拉取（不删除）: $WORK_DIR"
   cd "$WORK_DIR"
-  # 有本地改动会让 pull 失败；先明确报出来，避免后面出现莫名的构建错误
-  if [ -n "$(git status --porcelain)" ]; then
-    fail "工作目录存在未提交改动，请先处理后重试：$(git status --porcelain | head -n 5)"
+
+  # 构建会自动改写生成文件（src/composables/presetIcons.ts 由 scripts/generate-preset-icons.cjs 产出），
+  # 上次编译后它必然是「已修改」状态。这不是人的改动，不该阻塞部署 —— 先无条件还原。
+  # 代价仅为重新生成（秒级），换来脚本可重复执行而不受历史产物污染。
+  if ! git diff --quiet -- src/composables/presetIcons.ts 2>/dev/null; then
+    git checkout -- src/composables/presetIcons.ts 2>/dev/null || true
+    log "已还原构建自动生成文件: src/composables/presetIcons.ts"
+  fi
+
+  # 剩余的未提交改动视为「真实改动」（有人在服务器上改了代码），会让 --ff-only 失败，
+  # 故明确报出（最多列 5 条），避免表现为莫名的合并/构建错误。
+  dirty=$(git status --porcelain)
+  if [ -n "$dirty" ]; then
+    fail "工作目录存在未提交改动，请先处理后重试：$(printf '%s' "$dirty" | head -n 5)"
   fi
   # 拉取远端最新（不 merge 到工作区外的分支，只更新 origin/ 引用）
   if ! git fetch origin "$BRANCH"; then
@@ -175,6 +186,8 @@ fi
 log "发布到 $NGINX_HTML ..."
 rm -rf "${NGINX_HTML:?}"/* "${NGINX_HTML:?}"/.[!.]* 2>/dev/null || true
 cp -rf "$WORK_DIR/dist/." "$NGINX_HTML/"
+cd $WORK_DIR
+cp -rf ./dist "$NGINX_HTML/"
 is_dir_nonempty "$NGINX_HTML" || fail "发布后目录为空，判定拷贝异常。"
 
 log "部署完成: $(git rev-parse --short HEAD) $LOG_SINCE"
