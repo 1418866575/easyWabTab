@@ -360,7 +360,8 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: 'theme', label: '主题', icon: 'palette', tab: 'nav', sub: 'nav-display' },
       { key: 'nav-workbench', label: '工作台设置', icon: 'toolbox', tab: 'nav', sub: 'nav-workbench' },
-      { key: 'nav-appearance', label: '站点外观', icon: 'monitor', tab: 'nav', sub: 'nav-appearance' }
+      { key: 'nav-appearance', label: '站点外观', icon: 'monitor', tab: 'nav', sub: 'nav-appearance' },
+      { key: 'nav-watermark', label: '水印设置', icon: 'palette', tab: 'nav', sub: 'nav-watermark' }
     ]
   },
   {
@@ -384,7 +385,6 @@ const NAV_GROUPS: NavGroup[] = [
       { key: 'nav-check-links', label: '检测断链', icon: 'link', tab: 'nav', sub: 'nav-check-links' },
       { key: 'nav-engines', label: '引擎管理', icon: 'search', tab: 'nav', sub: 'nav-engines' },
       { key: 'nav-background', label: '背景', icon: 'image', tab: 'nav', sub: 'nav-background' },
-      { key: 'nav-watermark', label: '水印设置', icon: 'palette', tab: 'nav', sub: 'nav-watermark' },
       { key: 'nav-category', label: '分类管理', icon: 'cog', tab: 'nav', sub: 'nav-category' },
       { key: 'nav-data', label: '数据清理', icon: 'trash', tab: 'nav', sub: 'nav-data' }
     ]
