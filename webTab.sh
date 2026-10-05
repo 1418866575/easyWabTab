@@ -1,14 +1,39 @@
 #!/usr/bin/env bash
-# 部署脚本：拉取最新代码 -> 判断是否有更新 -> 有更新才编译 -> 仅编译成功后部署到 nginx
+# ============================================================================
+# easy-web-tab 一键部署脚本（Linux / nginx）
 #
-# 设计要点：
-#   1. 不再 rm -rf 工作目录：改为 git clone（首次）/ git pull（增量）。
-#      这样拉取失败时旧代码与旧站点都还在，不会把工作目录搞没。
-#   2. 拉取后比对本地 HEAD 与远端分支：**无更新则直接退出，不编译不发布**，
-#      避免每次执行都白跑一遍构建、也避免无谓地覆盖线上（线上此刻仍是旧版本，完好）。
-#   3. node_modules 复用：目标目录已存在依赖时不再拷贝（省一次 GB 级复制）。
-#   4. 备份轮转用「时间戳排序 + 计数」，避免 ls 解析与 head 负数在部分环境的差异。
-# 任意一步失败立即退出（set -e），不会带着失败产物继续部署。
+# 用途：拉取仓库最新代码 → 判断是否有更新 → 有更新才编译 → 仅编译成功后发布到 nginx。
+#       可配合 crontab 每 2 小时自动执行一次（无更新时秒级返回，不做无谓构建）。
+#
+# 典型用法（手动执行）：
+#       chmod +x webTab.sh && ./webTab.sh
+#
+# 定时执行示例（每 2 小时一次，推荐）：
+#       crontab -e
+#       # ── 每 2 小时的第 0 分钟执行（0,2,4,6,...,22 点整）──
+#       0 */2 * * * /root/workspace/easy-web-tab/webTab.sh >> /var/log/easy-web-tab-deploy.log 2>&1
+#       # 或指定时刻错开整点（如 1:17、3:17、5:17…，避开整点高峰）：
+#       17 */2 * * * /root/workspace/easy-web-tab/webTab.sh >> /var/log/easy-web-tab-deploy.log 2>&1
+#
+#       说明：
+#       - 脚本自身幂等：无更新时直接 exit 0，无需担心重复发布。
+#       - 用绝对路径（cron 的 PATH 很短，不能用相对路径或依赖 ~/.bashrc 里的别名）。
+#       - 建议加 flock 防止任务重叠（见文末「并发防护」一节）。
+#
+# 部署流程总览：
+#   1) 准备代码   —— 首次 git clone；之后 git fetch + merge --ff-only（**不删除工作目录**）
+#   2) 更新判定   —— 比对本地 HEAD 与 origin/master：无更新且已有产物则直接退出（不编译不发布）
+#   3) 准备依赖   —— node_modules 已存在则跳过拷贝；否则从共享目录拷或 npm install
+#   4) 编译       —— npm run build，产物为空即判定异常并中止（线上版本不受影响）
+#   5) 备份       —— 发布前把当前线上版本打包进备份目录，保留最近 KEEP_BACKUPS 份
+#   6) 发布       —— 清空 nginx 目录后拷入新产物，并校验结果非空
+#
+# 关键约束：
+#   - set -euo pipefail：任意一步失败立即退出，不会带着失败/旧产物继续部署。
+#   - 任何失败路径都会明确输出「线上版本未改动」，便于判断是否需要人工介入。
+#   - pull 前检测未提交改动：脏工作区会让 --ff-only 失败并表现为莫名的编译错误。
+# ============================================================================
+
 set -euo pipefail
 
 WORK_DIR=/root/workspace/easy-web-tab
@@ -42,12 +67,14 @@ if [ -d "$WORK_DIR/.git" ]; then
   fi
 else
   log "首次部署，克隆仓库: $WORK_DIR"
+  # 仅在确认不是 git 仓库时才清空（首次部署残留目录），正常情况下不会走到这
   rm -rf "$WORK_DIR"
   git clone --branch "$BRANCH" https://gitee.com/sifujiang/easy-web-tab.git "$WORK_DIR" \
     || fail "git clone 失败。线上版本未改动。"
   cd "$WORK_DIR"
 fi
 
+# 记录本地/远端提交号，供下一步比较。REMOTE_SHA 取不到时留空（不误判为"无更新"）
 LOCAL_SHA=$(git rev-parse HEAD)
 REMOTE_SHA=$(git rev-parse "origin/$BRANCH" 2>/dev/null || echo "")
 LOG_SINCE=$(git log -1 --format='%h %ad %s' --date=format:'%Y-%m-%d %H:%M' 2>/dev/null || echo "（无提交记录）")
@@ -55,6 +82,7 @@ LOG_SINCE=$(git log -1 --format='%h %ad %s' --date=format:'%Y-%m-%d %H:%M' 2>/de
 # ============================================================
 # 2) 判断是否有更新：无更新则直接退出，不编译不发布
 # ============================================================
+# 产物是否已存在（存在才允许"无更新直接跳过"，否则首次/被清时仍需编译一次）
 DIST_EXISTS=0
 [ -d "$WORK_DIR/dist" ] && [ -n "$(ls -A "$WORK_DIR/dist" 2>/dev/null)" ] && DIST_EXISTS=1
 
@@ -125,3 +153,25 @@ cp -rf "$WORK_DIR/dist/." "$NGINX_HTML/"
 [ -n "$(ls -A "$NGINX_HTML" 2>/dev/null)" ] || fail "发布后目录为空，判定拷贝异常。"
 
 log "部署完成: $(git rev-parse --short HEAD) $LOG_SINCE"
+
+# ============================================================================
+# 附：并发防护（可选但建议）
+#
+# 编译耗时可能超过 2 小时（极端情况），此时下一轮定时任务会与本轮重叠，
+# 造成两个进程同时写 dist / nginx 目录。两种防护方案，任选其一：
+#
+# 方案 A —— crontab 层加锁（最简单，推荐）：
+#         0 */2 * * * flock -n /var/lock/easy-web-tab-deploy.lock /root/workspace/easy-web-tab/webTab.sh >> /var/log/easy-web-tab-deploy.log 2>&1
+#         含义：-n = 非阻塞抢锁，抢不到就直接放弃本轮（flock 返回 1，不会产生任何副作用）。
+#
+# 方案 B —— 脚本内自锁（在本文件顶部 set -euo pipefail 之后加两行）：
+#         exec 9>/var/lock/easy-web-tab-deploy.lock
+#         flock -n 9 || { echo "[$(ts)] 已有部署任务在运行，本轮跳过"; exit 0; }
+#
+# 附：排错速查
+#   - 日志里出现「无更新」：正常，说明远端没变化，线上仍是上一版本。
+#   - 日志里出现「工作目录存在未提交改动」：服务器上有人改过文件或构建残留，
+#     确认无用后可 `cd /root/workspace/easy-web-tab && git checkout -- . && git clean -fd` 再重试。
+#   - 日志里出现「编译失败」：线上仍为上一版本，可查看构建输出定位问题。
+#   - 想看历史发布记录：`ls -lt /root/workspace/easy-web-tab-backups/`
+# ============================================================================
