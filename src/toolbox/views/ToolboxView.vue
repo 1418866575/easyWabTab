@@ -145,6 +145,9 @@ function goBack() {
 
       <!-- 最近使用常驻快捷条（顶栏吸顶，随时可触发；Alt+R 唤起） -->
       <ToolboxRecentBar :on-open="openTool" />
+
+      <!-- 云同步：同步收藏 / 最近使用 / 点击次数 / 搜索历史（复用「设置 → 云同步」配置） -->
+      <ToolboxSyncButton class="tb-topbar-sync" />
     </header>
 
     <main class="tb-main wb-container">
@@ -163,8 +166,6 @@ function goBack() {
         <span class="tb-head-sub">
           共 {{ TOOLBOX_TOOLS.length }} 个工具<template v-if="keyword || category">，当前筛选出 {{ visibleTools.length }} 个</template>
         </span>
-        <!-- 右上角云同步：同步收藏 / 最近使用 / 点击次数 / 搜索历史（复用「设置 → 云同步」配置） -->
-        <ToolboxSyncButton class="tb-head-sync" />
       </div>
 
       <!-- 搜索框（父容器内居中）：聚焦展开建议/历史下拉 -->
@@ -264,6 +265,14 @@ function goBack() {
   background: var(--color-bg-card);
   border-bottom: 1px solid var(--color-border);
 }
+
+/* 云同步按钮：顶栏内、紧随「最近使用」之后。
+   注意 .tb-recent-bar 自带 margin-left:auto（把自己推到右侧），所以这里只用左间距贴合，
+   不再给 auto——否则按钮会被推到「最近使用」右边的空白处、与其拉开距离。 */
+.tb-topbar-sync {
+  margin-left: 10px;
+  flex: none;
+}
 .tb-back {
   display: inline-flex;
   align-items: center;
@@ -289,8 +298,6 @@ function goBack() {
 .tb-main { padding-bottom: 96px; }
 
 .tb-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 22px 0 4px; }
-/* 右上角云同步按钮：靠 auto 外边距推到行末；align-self 避免被 baseline 对齐拉歪 */
-.tb-head-sync { margin-left: auto; align-self: center; }
 .tb-head h1 { margin: 0; font-size: clamp(20px, 2.2vw, 26px); color: var(--color-text); }
 /* 大标题内的工具箱标识：自定义图标 / 默认 emoji，与标题文字基线对齐 */
 .tb-head-title { display: inline-flex; align-items: center; gap: 8px; }
