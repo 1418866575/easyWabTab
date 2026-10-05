@@ -148,7 +148,6 @@ onBeforeUnmount(() => {
           <h2 id="tbModalTitle">{{ props.entry.meta.name }}</h2>
           <p>{{ props.entry.meta.description }}</p>
         </div>
-        <span class="tb-modal-badge">站内自建</span>
         <div class="tb-modal-acts">
           <button
             type="button"
@@ -204,7 +203,7 @@ onBeforeUnmount(() => {
       </div>
 
       <footer class="tb-modal-foot">
-        <span class="tb-modal-tip">所有计算均在本机浏览器完成，数据不会上传</span>
+        <span class="tb-modal-tip">站内自建，所有计算均在本机浏览器完成，数据不会上传</span>
         <button type="button" class="tb-modal-btn" @click="close">关闭</button>
       </footer>
     </div>
@@ -273,16 +272,6 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.tb-modal-badge {
-  margin-left: auto;
-  flex: none;
-  font-size: 11px;
-  padding: 1px 7px;
-  border-radius: var(--radius-full);
-  font-weight: 600;
-  background: var(--color-success-soft);
-  color: var(--color-success);
 }
 .tb-modal-acts { margin-left: auto; flex: none; display: flex; align-items: center; gap: 6px; }
 .tb-modal-ico {
