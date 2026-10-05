@@ -225,7 +225,14 @@ export default defineConfig({
                 }
             }
         },
-        // 分包后单 chunk 仍可能偏大，放宽阈值避免噪音警告淹没真实问题
-        chunkSizeWarningLimit: 900
+        // 分包后单 chunk 仍可能偏大，放宽阈值避免噪音警告淹没真实问题。
+        //
+        // 阈值 2000 的依据：本项目**唯一**超过 900kB 的是 `elk-*.js`（约 1.46MB / gzip 453KB），
+        // 它是 mermaid（图表渲染工具箱）内部的图布局库，属传递依赖，无法单独从 mermaid 中剥离。
+        // 关键：mermaid 走 `await import('mermaid')` 动态加载，elk 已被切成**独立 chunk**，
+        // 只有真正打开「Mermaid 编辑器」工具时才会下载它 —— 导航站首屏与其它工作台首屏均不加载。
+        // 也就是说该体积是**按需下载**的正常代价，而非首屏负担，调高阈值消除噪音即可，
+        // 不必为它做 code-splitting（那反而会破坏 mermaid 的内部加载逻辑）。
+        chunkSizeWarningLimit: 2000
     }
 });
