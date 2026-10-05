@@ -6,11 +6,49 @@ import { ElementPlusResolver } from 'unplugin-vue-components/resolvers';
 import { URL } from 'node:url';
 import { Buffer } from 'node:buffer';
 import os from 'node:os';
+import fs from 'node:fs';
 
-// 低内存环境（<2GB）限制 Rolldown 并行线程，避免渲染 chunks 时 OOM panic
-// （高内存机器不受影响；本机约 1GB 时必现 out-of-memory，串行渲染可稳定通过）
-if (os.totalmem() < 2 * 1024 * 1024 * 1024) {
+/**
+ * 取「本进程实际可用内存上限」，取三者最小值：
+ *   1. cgroup v2: /sys/fs/cgroup/memory.max（云服务器 / Docker / K8s 常见）
+ *   2. cgroup v1: /sys/fs/cgroup/memory/memory.limit_in_bytes
+ *   3. 物理内存: os.totalmem()
+ *
+ * 为什么要读 cgroup：**os.totalmem() 在云服务器上返回的是宿主机内存**（几十GB），
+ * 而容器/ECS 的 cgroup 可能只给了 1~2GB。直接用 totalmem 判断会导致
+ * 「低内存守卫不生效 → rolldown 并行渲染把进程撑爆 → 被系统 OOM killer 杀掉（Killed）」。
+ */
+function getMemoryLimitBytes() {
+  const phys = os.totalmem();
+  const readNumber = (p) => {
+    try {
+      const raw = fs.readFileSync(p, 'utf8').trim();
+      // cgroup v2 用 "max" 表示不限；v1 可能给一个极大的假上限值
+      if (!raw || raw === 'max') return Infinity;
+      const n = Number(raw);
+      // 过滤掉 v1 那种"接近无限"的哨兵值（如 9223372036854771712）
+      if (!Number.isFinite(n) || n <= 0 || n > phys) return Infinity;
+      return n;
+    } catch {
+      return Infinity;
+    }
+  };
+  const cgroupV2 = readNumber('/sys/fs/cgroup/memory.max');
+  const cgroupV1 = readNumber('/sys/fs/cgroup/memory/memory.limit_in_bytes');
+  return Math.min(phys, cgroupV2, cgroupV1);
+}
+
+const MEMORY_LIMIT_BYTES = getMemoryLimitBytes();
+
+// 低内存环境限制 Rolldown 并行线程，避免渲染 chunks 时 OOM（高内存机器不受影响）。
+// 阈值 2GB：本机约 1GB 时必现 out-of-memory / 被 OOM killer 杀掉，串行渲染可稳定通过。
+// 可用 RAYON_NUM_THREADS 显式覆盖（比如服务器上手动设为 1 强制串行）。
+if (MEMORY_LIMIT_BYTES < 2 * 1024 * 1024 * 1024) {
   process.env.RAYON_NUM_THREADS = process.env.RAYON_NUM_THREADS || '1';
+  console.info(
+    `[build] 检测到低内存环境（可用 ${(MEMORY_LIMIT_BYTES / 1024 ** 3).toFixed(2)} GB），` +
+    `Rolldown 并行线程设为 ${process.env.RAYON_NUM_THREADS}`
+  );
 }
 
 /**

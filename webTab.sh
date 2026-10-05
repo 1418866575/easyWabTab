@@ -146,8 +146,23 @@ fi
 # ============================================================
 # 4) 编译（set -e：编译报错立即退出，不会执行后面的部署）
 # ============================================================
+# 低内存服务器上 `vite build` 容易被系统 OOM killer 杀掉（日志里表现为 `Killed`，退出码 137）。
+# 原因：rolldown 渲染 chunks 阶段是内存峰值所在，多线程会同时占用多份内存。
+# 对策（不依赖 vite.config 的自动探测，直接在脚本里显式约束，稳定可预期）：
+#   - RAYON_NUM_THREADS=1  → rolldown 串行渲染，峰值内存显著下降（代价：慢几十秒）
+#   - NODE_OPTIONS 堆上限   → 让V8 提前 GC，而不是无限增长直到被系统杀掉
+# 服务器内存充足时可用 BUILD_LOWMEM=0 关闭本保护。
+if [ "${BUILD_LOWMEM:-1}" = "1" ]; then
+  export RAYON_NUM_THREADS=1
+  # 2GB 上限对本项目实测足够（约 1.2GB 峰值）；机器内存更小时可下调（如 1536）
+  export NODE_OPTIONS="--max-old-space-size=${BUILD_HEAP_MB:-2048}"
+  log "低内存模式：RAYON_NUM_THREADS=$RAYON_NUM_THREADS，NODE_OPTIONS=$NODE_OPTIONS"
+else
+  log "低内存模式已关闭（BUILD_LOWMEM=0）"
+fi
+
 log "开始编译..."
-npm run build || fail "编译失败。线上版本保持为上一版本，未被覆盖。"
+npm run build || fail "编译失败。线上版本保持为上一版本，未被覆盖。若日志显示 'Killed'，说明内存不足被系统 OOM 杀掉，可下调 BUILD_HEAP_MB 或关闭构建并发后重试。"
 log "编译成功!"
 
 # 产物校验：dist 必须存在且非空，否则视为构建异常
