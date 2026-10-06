@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 销售记账独立页面（摆摊进销存）：布局复刻 WorkbenchView（左树 + 右内容，桌面一屏钉满、移动端横排菜单）
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { useAppSettingsStore } from '@/stores/settings'
@@ -14,6 +14,7 @@ import BusinessInventory from '@/components/business/BusinessInventory.vue'
 import BusinessStats from '@/components/business/BusinessStats.vue'
 import BusinessReconcile from '@/components/business/BusinessReconcile.vue'
 import BusinessLedgerSwitcher from '@/components/business/BusinessLedgerSwitcher.vue'
+import BusinessSpotlightOverlay from '@/components/business/BusinessSpotlightOverlay.vue'
 import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
 import Icon from '@/components/Icon.vue'
 import SkeletonBlock from '@/components/SkeletonBlock.vue'
@@ -21,23 +22,17 @@ import { useCloudSync } from '@/composables/useCloudSync'
 import type { SyncStatus } from '@/composables/useCloudSync'
 import { useWorkbenchShortcuts } from '@/composables/useWorkbenchShortcuts'
 import { currentYear, ledgerDefaultName } from '@/composables/businessCore'
+import { BIZ_QUICK_ACTIONS, BIZ_SECTIONS, MOBILE_TAB_KEYS, mobileMoreSections } from '@/composables/businessSpotlightCore'
+import type { BizSpotlightAction, BizSpotlightData } from '@/composables/businessSpotlightCore'
 
 const router = useRouter()
 const store = useWorkbenchBusinessStore()
 const settingsStore = useAppSettingsStore()
 
-// 左树 8 项（固定顺序，SVG 图标经 Icon 组件渲染，不接工作台菜单开关系统）
-// 菜单文案：purchases = 库存（进货/入库记录）、inventory = 库存预警（低库存/滞销/久存预警）
-const SECTIONS = [
-  { key: 'home', icon: 'home', label: '首页' },
-  { key: 'products', icon: 'products', label: '商品' },
-  { key: 'expenses', icon: 'expenses', label: '进货' },
-  { key: 'purchases', icon: 'purchases', label: '库存' },
-  { key: 'daily', icon: 'daily', label: '销售' },
-  { key: 'inventory', icon: 'inventory', label: '库存预警' },
-  { key: 'stats', icon: 'stats', label: '统计' },
-  { key: 'reconcile', icon: 'ledger', label: '对账' }
-] as const
+// 左树 8 项：定义在 businessSpotlightCore.BIZ_SECTIONS（桌面左树 / 移动端 Tab / Alt+K 搜索浮层共用同一份，避免文案漂移）
+// 文案口径（2026-10-06 对齐）：expenses = 支出（摊位费/燃气费等开销记账）、purchases = 进货（商品入库流水）
+// key 自诞生起未变，改 key 会波及 settingsStore.businessActiveSection 持久化值与历史用户书签
+const SECTIONS = BIZ_SECTIONS
 type SectionKey = (typeof SECTIONS)[number]['key']
 
 // 侧栏折叠态：undefined（未设置）视为展开；持久化经 settingsStore（IDB store 'settings'）
@@ -53,16 +48,20 @@ const activeSection = ref<SectionKey>((settingsStore.businessActiveSection as Se
 const productFilter = ref<string | undefined>(undefined)
 const purchaseFilter = ref<string | undefined>(undefined)
 
+// 手动切菜单时清空联动过滤（navigateTo 带过滤跳转时不���；否则从首页带过滤进入后
+// 手动切走再回来仍被过滤，且无清除入口 → 用户误以为数据丢了，见 docs/optimization 销售记账优化方案 M-11）
 function selectSection(key: SectionKey): void {
   activeSection.value = key
   // P0-2：持久化当前模块，刷新后保持所在页
   settingsStore.setBusinessActiveSection(key)
+  productFilter.value = undefined
+  purchaseFilter.value = undefined
 }
 
 function navigateTo(section: string, filter?: string): void {
   if ((SECTIONS as readonly { key: string }[]).some(s => s.key === section)) {
+    // 复用 selectSection 的清空逻辑后，再按需写入本次跳转的过滤值
     selectSection(section as SectionKey)
-    // 设置过滤状态
     if (section === 'purchases') {
       purchaseFilter.value = filter
     } else if (section === 'products') {
@@ -71,10 +70,116 @@ function navigateTo(section: string, filter?: string): void {
   }
 }
 
+// ===== 快速记一笔（Alt+K 快捷动作 / 悬浮按钮共用）=====
+// 两段式：先切到目标面板并置 autoOpenAdd → 面板挂载时onMounted 调startAdd → 复位标志
+// 标志复位晚于面板挂载，故同一次挂载只会触发一次 startAdd
+const quickAddSection = ref<string | null>(null)
+
+async function quickAdd(section: string): Promise<void> {
+  if (!(SECTIONS as readonly { key: string }[]).some(s => s.key === section)) return
+  quickAddSection.value = section
+  await nextTick()
+  await nextTick()
+  quickAddSection.value = null
+}
+
+// ===== 移动端底部 Tab 收敛为 5 项 + 「更多」（M-06，2026-10-06）=====
+// 原实现 8 项全塞进底栏（.bs-menu overflow-x:auto），需横向滚动且用户难判断「当前在哪一屏」。
+// 现在移动端只渲染 MOBILE_TAB_KEYS（首页/销售/进货/支出/商品，按日频次），
+// 库存预警/统计/对账 3 个低频分析页收进「更多」弹层，两步内可达。
+// 桌面端左树保持完整 8 项（桌面有空间，折叠态 56px 也够）。
+const MOBILE_MEDIA = '(max-width: 768px)'
+const isMobileNav = ref(false)
+const moreOpen = ref(false)
+let mobileMql: MediaQueryList | null = null
+function syncMobileNav(e: { matches: boolean } | MediaQueryList): void {
+  isMobileNav.value = e.matches
+  if (!e.matches) moreOpen.value = false
+}
+
+onMounted(() => {
+  mobileMql = window.matchMedia(MOBILE_MEDIA)
+  isMobileNav.value = mobileMql.matches
+  mobileMql.addEventListener('change', syncMobileNav)
+  // Esc 监听放document 捕获阶段：useWorkbenchShortcuts 在 window 冒泡监听 Esc，
+  // 冒泡会先到 window；捕获阶段 + stopPropagation 可避免「关更多」同时触发其它 Esc 行为
+  document.addEventListener('keydown', handleEsc, true)
+})
+onUnmounted(() => {
+  mobileMql?.removeEventListener('change', syncMobileNav)
+  mobileMql = null
+  document.removeEventListener('keydown', handleEsc, true)
+})
+
+/** 侧栏/底栏实际渲染的菜单项：移动端 5 项，桌面 8 项 */
+const visibleMenuItems = computed(() =>
+  isMobileNav.value
+    ? MOBILE_TAB_KEYS.map(k => SECTIONS.find(s => s.key === k)).filter((s): s is NonNullable<typeof s> => !!s)
+    : [...SECTIONS]
+)
+/** 「更多」弹层里的低频面板 */
+const moreSections = computed(() => mobileMoreSections())
+/** 当前激活项是否在「更多」里（用于「更多」按钮显示激活态） */
+const activeInMore = computed(() => moreSections.value.some(s => s.key === activeSection.value))
+
+function selectFromMore(key: SectionKey): void {
+  moreOpen.value = false
+  selectSection(key)
+}
+
+/** Esc 关闭浮层：优先「更多」，其次「快速记一笔」；两者都没开则让事件继续传给弹框自身 */
+function handleEsc(e: KeyboardEvent): void {
+  if (e.key !== 'Escape') return
+  if (moreOpen.value) {
+    moreOpen.value = false
+    e.stopPropagation()
+  } else if (quickAddOpen.value) {
+    closeQuickAdd()
+    e.stopPropagation()
+  }
+}
+
+// ===== 快速记一笔（M-12，2026-10-06）=====
+// 悬浮按钮 → 展开三项动作 →复用已建好的 quickAdd() 两段式机制（见上）。
+// 结账高峰时单手可达，把「点菜单→找到面板→点新增」3 步压到 1 步。
+const quickAddOpen = ref(false)
+const quickAddActions = BIZ_QUICK_ACTIONS.filter(a => a.action.kind === 'quickAdd')
+
+function closeQuickAdd(): void {
+  quickAddOpen.value = false
+}
+async function runQuickAdd(section: string): Promise<void> {
+  closeQuickAdd()
+  await quickAdd(section)
+}
+
 const showSettingsDialog = ref(false)
 
-// 快捷键：复用工作台通用快捷键（g 切换个人/销售工作台、[ ] 模块间循环；销售台无全局搜索，spotlight 恒 false）
+// ===== 全局搜索（Alt+K / 右上角按钮打开）=====
+// 2026-10-06：此前本视图把 spotlightOpen 传给 useWorkbenchShortcuts 却不渲染浮层，
+// 导致 Alt+K 置true 后界面无任何反应（静默失效，比没有快捷键更糟）。现接入销售台专用浮层
+// BusinessSpotlightOverlay（搜索域：商品 / 支出分类 / 8 个面板 / 5 个快捷动作）。
 const spotlightOpen = ref(false)
+
+// 搜索数据源：仅商品与支出分类两类，面板与快捷动作是 core 内的常量
+const spotlightData = computed<BizSpotlightData>(() => ({
+  products: store.products,
+  productCategories: store.productCategories,
+  expenseCategories: store.expenseCategories
+}))
+
+function handleSpotlightSelect(action: BizSpotlightAction): void {
+  spotlightOpen.value = false
+  if (action.kind === 'quickAdd') {
+    void quickAdd(action.section)
+    return
+  }
+  // 商品命中带 productId：跳商品面板时高亮定位（顺带修复旧实现只描边、不翻页导致高亮不可见的坑）
+  navigateTo(action.section, action.productId)
+}
+
+// 快捷键：复用工作台通用快捷键（Alt+K 全局搜索、g 切换个人/销售工作台、[ ] 模块间循环；
+// Ctrl+Alt+1..8 跳菜单第 1..8 项）
 useWorkbenchShortcuts({
   spotlightOpen,
   getMenuKeys: () => SECTIONS.map((s) => s.key),
@@ -181,6 +286,12 @@ onMounted(async () => {
         <!-- 账本切换（常驻入口）：有账本时才展示，无账本时由引导页承接 -->
         <BusinessLedgerSwitcher v-if="store.hasLedgers" />
         <button
+          class="bs-btn"
+          title="全局搜索 (Alt+K)：搜商品/支出分类，或直接搜「卖」「进货」「开销」快速记账"
+          data-testid="bs-spotlight-open"
+          @click="spotlightOpen = true"
+        ><Icon name="search" :size="14" /> 搜索</button>
+        <button
           v-if="cloudEnabled"
           class="bs-btn wb-sync-btn"
           :class="syncStatusClass"
@@ -209,7 +320,7 @@ onMounted(async () => {
           <span class="bs-menu-label">{{ sidebarCollapsed ? '展开' : '收起' }}</span>
         </button>
         <button
-          v-for="item in SECTIONS"
+          v-for="item in visibleMenuItems"
           :key="item.key"
           class="bs-menu-item"
           :class="{ active: activeSection === item.key }"
@@ -221,7 +332,44 @@ onMounted(async () => {
           <span class="bs-menu-icon"><Icon :name="item.icon" /></span>
           <span class="bs-menu-label">{{ item.label }}</span>
         </button>
+        <!-- 「更多」（仅移动端渲染）：收纳库存预警/统计/对账3 个低频分析页 -->
+        <button
+          v-if="isMobileNav"
+          class="bs-menu-item bs-menu-more"
+          :class="{ active: activeInMore }"
+          title="更多面板"
+          aria-label="更多面板"
+          data-testid="bs-menu-more"
+          @click="moreOpen = !moreOpen"
+        >
+          <span class="bs-menu-icon"><Icon name="grid" /></span>
+          <span class="bs-menu-label">更多</span>
+        </button>
       </nav>
+
+      <!-- 「更多」弹层：移动端专用。用 Teleport+fixed（.bs-header 有 backdrop-filter 会成为
+           absolute 定位包含块；移动端 .bs-menu 是 overflow-x:auto，absolute 会被裁切） -->
+      <Teleport to="body">
+        <div v-if="moreOpen" class="bs-more-mask" data-testid="bs-more-mask" @click="moreOpen = false"></div>
+        <div v-if="moreOpen" class="bs-more-panel" data-testid="bs-more-panel" role="dialog" aria-label="更多面板">
+          <p class="bs-more-title">全部面板</p>
+          <button
+            v-for="s in moreSections"
+            :key="s.key"
+            class="bs-more-item"
+            :class="{ active: activeSection === s.key }"
+            :data-testid="`bs-more-${s.key}`"
+            @click="selectFromMore(s.key as SectionKey)"
+          >
+            <span class="bs-more-icon"><Icon :name="s.icon" :size="18" /></span>
+            <span class="bs-more-body">
+              <span class="bs-more-label">{{ s.label }}</span>
+              <span class="bs-more-hint">{{ s.hint }}</span>
+            </span>
+            <span v-if="activeSection === s.key" class="bs-more-active">当前</span>
+          </button>
+        </div>
+      </Teleport>
 
       <main class="bs-content">
         <SkeletonBlock v-if="initializing" :rows="5" label="正在加载销售记账数据" />
@@ -267,20 +415,76 @@ onMounted(async () => {
               创建 {{ thisYear }} 年账本
             </button>
           </div>
+          <!-- autoOpenAdd：Alt+K 快捷动作命中「记一笔…」时，视图先置标志再挂载本面板，面板 onMounted 打开新增弹框 -->
           <BusinessHome v-if="activeSection === 'home'" @navigate="navigateTo" />
-          <BusinessProducts v-else-if="activeSection === 'products'" :highlight-id="productFilter" @navigate="navigateTo" />
-          <BusinessPurchases v-else-if="activeSection === 'purchases'" :product-filter="purchaseFilter" @navigate="navigateTo" />
-          <BusinessDaily v-else-if="activeSection === 'daily'" @navigate="navigateTo" />
+          <BusinessProducts
+            v-else-if="activeSection === 'products'"
+            :highlight-id="productFilter"
+            :auto-open-add="quickAddSection === 'products'"
+            @navigate="navigateTo"
+          />
+          <BusinessPurchases
+            v-else-if="activeSection === 'purchases'"
+            :product-filter="purchaseFilter"
+            :auto-open-add="quickAddSection === 'purchases'"
+            @navigate="navigateTo"
+            @clear-filter="purchaseFilter = undefined"
+          />
+          <BusinessDaily
+            v-else-if="activeSection === 'daily'"
+            :auto-open-add="quickAddSection === 'daily'"
+            @navigate="navigateTo"
+          />
+          <!-- M-13：补@navigate 绑定（此前 expenses/stats/reconcile 三面板未绑，出度为 0，
+           发现「支出没关联进货」也无法一键直达对账页） -->
           <BusinessExpenses
             v-else-if="activeSection === 'expenses'"
+            :auto-open-add="quickAddSection === 'expenses'"
+            @navigate="navigateTo"
           />
           <BusinessInventory v-else-if="activeSection === 'inventory'" @navigate="navigateTo" />
-          <BusinessStats v-else-if="activeSection === 'stats'" />
-          <BusinessReconcile v-else-if="activeSection === 'reconcile'" />
+          <BusinessStats v-else-if="activeSection === 'stats'" @navigate="navigateTo" />
+          <BusinessReconcile v-else-if="activeSection === 'reconcile'" @navigate="navigateTo" />
         </template>
       </main>
     </div>
 
+    <!-- ===== M-12 全局「快速记一笔」悬浮按钮 =====
+         桌面端放右下角常驻圆钮；移动端为拇指热区，避开底部 Tab Bar。 -->
+    <div v-if="!gateVisible" class="bs-fab-wrap" data-testid="bs-quickadd">
+      <div v-if="quickAddOpen" class="bs-fab-actions">
+        <button
+          v-for="a in quickAddActions"
+          :key="a.id"
+          type="button"
+          class="bs-fab-action"
+          :data-testid="`bs-quickadd-${a.id}`"
+          @click="runQuickAdd((a.action as { section: string }).section)"
+        >
+          <Icon :name="a.icon" :size="16" />
+          <span>{{ a.label }}</span>
+        </button>
+      </div>
+      <button
+        type="button"
+        class="bs-fab"
+        :class="{ open: quickAddOpen }"
+        :title="quickAddOpen ? '收起' : '快速记一笔'"
+        :aria-label="quickAddOpen ? '收起快速记一笔' : '快速记一笔'"
+        data-testid="bs-quickadd-toggle"
+        @click="quickAddOpen = !quickAddOpen"
+      >
+        <Icon :name="quickAddOpen ? 'close' : 'plus'" :size="22" />
+      </button>
+    </div>
+
+    <!-- 全局搜索浮层：Alt+K 或点右上角「搜索」打开 -->
+    <BusinessSpotlightOverlay
+      v-if="spotlightOpen"
+      :data="spotlightData"
+      @select="handleSpotlightSelect"
+      @close="spotlightOpen = false"
+    />
     <AppSettingsDialog v-if="showSettingsDialog" source="business" @close="showSettingsDialog = false" />
   </div>
 </template>
@@ -707,6 +911,21 @@ html.dark .bs-stall-name {
     scroll-snap-align: start;
   }
 
+  /* M-06：5 个高频 Tab 铺满一行（flex:1 均分），「更多」固定贴右不参与横滑
+     —— 6 项各~62px 在 375px 屏刚好放得下，仍保留 overflow-x:auto 作极窄屏兜底 */
+  .bs-menu-item:not(.bs-menu-more) {
+    flex: 1 1 0;
+    min-width: 0;
+    justify-content: center;
+    padding: 10px 6px;
+  }
+
+  .bs-menu-more {
+    flex: 0 0 auto;
+    margin-left: auto;
+    padding: 10px 14px;
+  }
+
   .bs-menu-label {
     overflow: visible;
     text-overflow: clip;
@@ -750,7 +969,196 @@ html.dark .bs-stall-name {
   }
 }
 
-/* ===== 右上角云同步按钮（头部设置按钮左侧）状态视觉 ===== */
+/* ===== M-06「更多」弹层（移动端专用，Teleport 到 body 故用非 scoped 定位策略的元素名） ===== */
+.bs-more-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 240;
+  background: rgba(15, 23, 42, 0.35);
+}
+.bs-more-panel {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  z-index: 241;
+  padding: 12px;
+  background: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(2, 6, 23, 0.28);
+}
+.bs-more-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary, #64748b);
+}
+.bs-more-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s;
+}
+.bs-more-item:hover {
+  background: var(--color-bg-hover, #f1f5f9);
+}
+.bs-more-item.active {
+  background: var(--color-primary-light, #eff6ff);
+}
+.bs-more-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-light, #eff6ff);
+  border-radius: 9px;
+}
+.bs-more-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.bs-more-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text, #1e293b);
+}
+.bs-more-hint {
+  font-size: 11px;
+  color: var(--color-text-secondary, #64748b);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bs-more-active {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: #fff;
+  background: var(--color-primary, #3b82f6);
+  border-radius: 999px;
+}
+
+html.dark .bs-more-mask {
+  background: rgba(2, 6, 23, 0.55);
+}
+html.dark .bs-more-panel {
+  background: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
+}
+html.dark .bs-more-item:hover {
+  background: var(--color-bg-hover, #374151);
+}
+html.dark .bs-more-item.active {
+  background: #1e3a5f;
+}
+html.dark .bs-more-icon {
+  color: #60a5fa;
+  background: #1e3a5f;
+}
+html.dark .bs-more-label {
+  color: var(--color-text, #f9fafb);
+}
+
+/* ===== M-12 快速记一笔悬浮按钮 ===== */
+.bs-fab-wrap {
+  position: fixed;
+  right: 20px;
+  bottom: 24px;
+  z-index: 230;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.bs-fab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  color: #fff;
+  background: var(--color-primary, #3b82f6);
+  border: none;
+  border-radius: 50%;
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+  cursor: pointer;
+  transition: transform 0.15s, background-color 0.15s;
+}
+.bs-fab:hover {
+  background: var(--color-primary-hover, #2563eb);
+}
+.bs-fab.open {
+  transform: rotate(90deg);
+}
+.bs-fab-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.bs-fab-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text, #1e293b);
+  background: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(2, 6, 23, 0.16);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.14s;
+}
+.bs-fab-action:hover {
+  color: #fff;
+  background: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
+}
+html.dark .bs-fab-action {
+  color: var(--color-text, #f9fafb);
+  background: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
+}
+
+/* 移动端：FAB 上移避让底部 Tab Bar；展开动作条改为向上堆叠（column-reverse 更贴近拇指） */
+@media (max-width: 768px) {
+  .bs-fab-wrap {
+    right: 16px;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+  .bs-fab {
+    width: 50px;
+    height: 50px;
+  }
+  .bs-fab-actions {
+    align-items: stretch;
+  }
+  .bs-fab-action {
+    min-height: 44px;
+    justify-content: flex-start;
+  }
+}
+
+/* 右上角云同步按钮（头部设置按钮左侧）状态视觉 */
 .wb-sync-btn {
   transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, opacity 120ms ease;
 }

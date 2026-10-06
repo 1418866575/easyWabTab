@@ -24,11 +24,11 @@ function cardFields(row: any) {
 }
 
 import Icon from '../Icon.vue'
-// 库存记录（菜单「库存」）：分类 tabs（全部+可见分类）+ el-table 行式列表 + 新增/编辑弹框
-// 页面内仍保留「进货」作为数据动作用语（进货价/进价、进货批次、进货明细），仅模块级文案跟随菜单改名
+// 进货记录（菜单「进货」）：分类 tabs（全部+可见分类）+ el-table 行式列表 + 新增/编辑弹框
+// 页面内统一用「进货」作为数据动作用语（进货价/进价、进货批次、进货明细、进货记录）
 // P0-2：进货行展示售价与加价率对照
 // P1-3：跨模块联动跳转
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import {
   avgUnsoldUnitPrice,
@@ -62,8 +62,8 @@ import { useLedgerDate } from '@/composables/useLedgerDate'
 
 const toast = useToast()
 
-// P1-3：跨模块联动跳转 emit
-const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
+// P1-3：跨模块联动跳转 emit；clear-filter：用户点「清除筛选」时通知视图层清空 productFilter
+const emit = defineEmits<{ navigate: [section: string, filter?: string]; clearFilter: [] }>()
 
 const store = useWorkbenchBusinessStore()
 
@@ -92,7 +92,7 @@ function displayQuantity(row: BusinessPurchase): number {
 /** 导出文件名前缀：账本年份 + 账本名称（缺失时由 xlsxFileName 自动省略该段） */
 const ledgerMeta = computed(() => ({ year: store.currentLedgerYear, ledgerName: store.currentLedgerName }))
 
-// ===== 一键导出 Excel（库存记录：按当前分类/商品筛选导出）=====
+// ===== 一键导出 Excel（进货记录：按当前分类/商品筛选导出）=====
 function exportPurchasesExcel(): void {
   const headers = ['日期', '商品', '分类', '入库数量', '进价', '金额', '剩余状态', '备注']
   const rows: (string | number)[][] = filteredWithProductFilter.value.map(p => [
@@ -105,7 +105,7 @@ function exportPurchasesExcel(): void {
     stockLabel(p),
     p.note ?? ''
   ])
-  void exportXlsx('库存记录', headers, rows, ledgerMeta.value)
+  void exportXlsx('进货记录', headers, rows, ledgerMeta.value)
 }
 
 // P0-2：获取商品售价
@@ -126,8 +126,8 @@ function markupRateOf(productId: string, unitPrice: number): number | null {
   return calcMarkupRate(product.sellingPrice, unitPrice)
 }
 
-// P1-3：按商品筛选 prop
-const props = defineProps<{ productFilter?: string }>()
+// P1-3：按商品筛选 prop；autoOpenAdd：Alt+K 快捷动作「记一笔进货」直达新增弹框
+const props = defineProps<{ productFilter?: string; autoOpenAdd?: boolean }>()
 
 /**
  * 进货批次剩余状态（先进先出：最旧批次优先被售出消耗）。
@@ -171,6 +171,11 @@ const filteredWithProductFilter = computed(() => {
   return list
 })
 
+/** 当前生效的商品筛选（无筛选返回 undefined）；用于工具行「仅看 XX ▾清除」提示 */
+const activeFilterName = computed(() =>
+  props.productFilter ? productNameOf(props.productFilter) : ''
+)
+
 // ===== el-pagination 分页（固定 10 条/页） =====
 const LIST_PAGE_SIZE = 10
 /** 移动端（卡片视图）固定每页 6 个 */
@@ -199,7 +204,7 @@ const { saving, run } = useBizSaving()
 const editingId = ref<string | null>(null)
 const formDate = ref(localDateKey())
 
-/** 弹框内一行库存记录（商品 + 关联支出；数量/进价由关联支出派生或手动填写，兼容旧的无支出记录） */
+/** 弹框内一行进货记录（商品 + 关联支出；数量/进价由关联支出派生或手动填写，兼容旧的无支出记录） */
 interface DialogRow {
   id: string | null
   productId: string
@@ -403,6 +408,11 @@ async function startEdit(p: BusinessPurchase): Promise<void> {
   showDialog.value = true
 }
 
+// Alt+K「记一笔进货」直达：面板挂载即打开新增弹框
+onMounted(() => {
+  if (props.autoOpenAdd) startAdd()
+})
+
 // 复制：以当前进货记录预填弹框（editingId 置空 → 生成新记录）；关联支出不复制（同一笔支出不可被两笔记货同时关联）
 function startCopy(p: BusinessPurchase): void {
   editingId.value = null
@@ -479,7 +489,7 @@ async function handleSave(): Promise<void> {
   })
   // 失败时 run 已提示具体行号与原因，弹框保留未保存的行供修正后重试
   if (!ok) return
-  toast.success(`已保存 ${saved} 条库存记录`)
+  toast.success(`已保存 ${saved} 条进货记录`)
   showDialog.value = false
 }
 
@@ -508,13 +518,21 @@ async function handleDelete(id: string): Promise<void> {
 
     <div class="ewt-table-toolbar is-split">
       <div class="bizpur-toolbar-left">
-        <el-button type="primary" data-testid="bizpur-add" @click="startAdd">＋ 新增库存记录</el-button>
+        <el-button type="primary" data-testid="bizpur-add" @click="startAdd">＋ 新增进货记录</el-button>
         <el-button class="btn-export-xlsx" data-testid="bizpur-export" :disabled="filteredWithProductFilter.length === 0" @click="exportPurchasesExcel">导出 Excel</el-button>
+        <!-- 联动筛选生效提示：过滤态必须可见可撤销，否则用户从首页带过滤进入后
+             会误以为「进货记录丢了」（见 docs/optimization 销售记账优化方案 M-11） -->
+        <span v-if="activeFilterName" class="bizpur-filter-chip" data-testid="bizpur-filter-chip">
+          仅看 {{ activeFilterName }}
+          <button type="button" class="bizpur-filter-clear" title="清除筛选" data-testid="bizpur-filter-clear" @click="emit('clearFilter')">
+            <Icon name="close" :size="12" />
+          </button>
+        </span>
       </div>
       <ViewModeToggle v-if="filteredWithProductFilter.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
     </div>
 
-    <div v-if="filteredWithProductFilter.length === 0" class="bizpur-empty" data-testid="bizpur-empty">暂无库存记录</div>
+    <div v-if="filteredWithProductFilter.length === 0" class="bizpur-empty" data-testid="bizpur-empty">暂无进货记录</div>
     <template v-else>
       <div class="bizpur-table-wrap">
         <el-table v-if="vm.mode === 'list'" class="ewt-table"
@@ -525,7 +543,7 @@ async function handleDelete(id: string): Promise<void> {
           size="default"
           style="width: 100%"
           height="100%"
-          empty-text="暂无库存记录"
+          empty-text="暂无进货记录"
         >
           <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (listPage - 1) * activePageSize + i + 1" />
           <el-table-column label="日期" width="120" align="center">
@@ -657,7 +675,7 @@ async function handleDelete(id: string): Promise<void> {
     >
       <template #header>
         <div class="biz-dialog-header">
-          <h3>{{ editingId ? '编辑库存记录' : '新增库存记录' }}</h3>
+          <h3>{{ editingId ? '编辑进货记录' : '新增进货记录' }}</h3>
           <button class="biz-dialog-close" @click="showDialog = false"><Icon name="close" /></button>
         </div>
       </template>
@@ -675,9 +693,9 @@ async function handleDelete(id: string): Promise<void> {
             />
           </div>
         </div>
-        <!-- 第二行：添加库存（最右） -->
+        <!-- 第二行：添加进货（最右） -->
         <div class="bizpur-add-bar">
-          <el-button type="primary" size="small" data-testid="bizpur-add-row" @click="addRow">＋ 添加库存</el-button>
+          <el-button type="primary" size="small" data-testid="bizpur-add-row" @click="addRow">＋ 添加进货</el-button>
         </div>
         <!-- 表格类列表：商品 / 总支出 / 入库数量 / 进价 / 关联支出（多选） / 操作 -->
         <div class="bizpur-row-table" data-testid="bizpur-row-table">
@@ -696,8 +714,8 @@ async function handleDelete(id: string): Promise<void> {
             </thead>
             <tbody>
               <tr v-for="(row, idx) in formRows" :key="row.id ?? ('new-' + idx)">
-                <td class="col-idx">{{ idx + 1 }}</td>
-                <td class="col-prod">
+                <td class="col-idx" data-label="#">{{ idx + 1 }}</td>
+                <td class="col-prod" data-label="商品">
                   <el-select v-model="row.productId" size="small" filterable :fit-input-width="false" :data-testid="`bizpur-row-product-${idx}`" @change="onRowProductChange(idx)">
                     <el-option
                       v-for="p in store.products"
@@ -707,10 +725,10 @@ async function handleDelete(id: string): Promise<void> {
                     />
                   </el-select>
                 </td>
-                <td class="bizpur-td-num">
+                <td data-label="总支出" class="bizpur-td-num">
                   <span class="rd rd-money">{{ formatYuanOf(rowTotalExpense(row)) }}</span>
                 </td>
-                <td class="bizpur-td-num">
+                <td data-label="入库数量" class="bizpur-td-num">
                   <span v-if="rowLocked(row)" class="rd">{{ rowQuantity(row) }}</span>
                   <el-input-number
                     v-else
@@ -723,7 +741,7 @@ async function handleDelete(id: string): Promise<void> {
                     :data-testid="`bizpur-row-qty-${idx}`"
                   />
                 </td>
-                <td class="bizpur-td-num">
+                <td data-label="进价" class="bizpur-td-num">
                   <span v-if="rowHasExpense(row)" class="rd">{{ formatYuanOf(rowUnitPrice(row)) }}</span>
                   <el-input-number
                     v-else
@@ -737,7 +755,7 @@ async function handleDelete(id: string): Promise<void> {
                     :data-testid="`bizpur-row-price-${idx}`"
                   />
                 </td>
-                <td class="col-exp">
+                <td data-label="关联支出" class="col-exp">
                   <div class="exps" :data-testid="`bizpur-row-exps-${idx}`">
                     <label
                       v-for="opt in rowExpenseOptions(idx)"
@@ -758,12 +776,12 @@ async function handleDelete(id: string): Promise<void> {
                     <p v-if="rowExpenseOptions(idx).length === 0" class="exps-empty">暂无可关联的支出</p>
                   </div>
                 </td>
-                <td class="col-op">
+                <td data-label="操作" class="col-op">
                   <el-button size="small" type="danger" :data-testid="`bizpur-row-remove-${idx}`" @click="removeRow(idx)">移除</el-button>
                 </td>
               </tr>
               <tr v-if="formRows.length === 0">
-                <td colspan="7" class="bizpur-empty-row">暂无库存记录行，点击右上角「添加库存」新增一行</td>
+                <td colspan="7" class="bizpur-empty-row">暂无进货记录行，点击右上角「添加进货」新增一行</td>
               </tr>
             </tbody>
           </table>
@@ -817,6 +835,46 @@ async function handleDelete(id: string): Promise<void> {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* 联动筛选提示 chip（仅看某商品 ▾清除） */
+.bizpur-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px 3px 10px;
+  font-size: 12px;
+  color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-light, #eff6ff);
+  border: 1px solid var(--color-primary, #3b82f6);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.bizpur-filter-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.bizpur-filter-clear:hover {
+  color: #fff;
+  background: var(--color-primary, #3b82f6);
+}
+
+:global(html.dark) .bizpur-filter-chip {
+  color: #60a5fa;
+  background: #1e3a5f;
+  border-color: #60a5fa;
 }
 
 .bizpur-empty {
@@ -1425,5 +1483,126 @@ html.dark .exps {
 html.dark .rd {
   background: var(--color-bg-hover, #111827);
   color: #cbd5e1;
+}
+
+/* ===== M-09（2026-10-06）移动端适配（本面板此前零 @media，是 8 个面板里唯一完全没做面板级适配的）=====
+   1) 弹框内920px 明细表 → 窄屏转卡片（display:block + td::before 显示 data-label）
+   2) 列表 13 列 → 窄屏隐藏低频列（分类/进价/加价率/备注），信息保留在编辑弹框与卡片视图里
+   3) 操作列fixed="right" → 窄屏取消固定（200px 固定列在 375px 屏占 53%，遮挡右侧数据）
+   4) 工具行与筛选 chip 换行、触控目标 ≥44px
+=========================================================================================== */
+@media (max-width: 768px) {
+  /* 弹框内明细表 → 卡片：每行一个块，字段名用 td::before 渲染 */
+  .bizpur-line-table {
+    min-width: 0;
+    display: block;
+  }
+  .bizpur-line-table thead {
+    display: none; /* 卡片形态由每个 td 自带字段名，表头不再需要 */
+  }
+  .bizpur-line-table tbody,
+  .bizpur-line-table tr,
+  .bizpur-line-table td {
+    display: block;
+    width: 100%;
+  }
+  .bizpur-line-table tr {
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 10px;
+    background: var(--color-bg-card, #fff);
+  }
+  .bizpur-line-table tbody td {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 0;
+    border-bottom: none;
+    text-align: left;
+  }
+  /* 字段名：取自模板上的 data-label */
+  .bizpur-line-table tbody td::before {
+    content: attr(data-label);
+    flex: 0 0 68px;
+    font-size: 12px;
+    color: var(--color-text-secondary, #6b7280);
+  }
+  /* 序号/操作/关联支出三列在卡片里不需要字段名前缀 */
+  .bizpur-line-table tbody td.col-idx,
+  .bizpur-line-table tbody td.col-op,
+  .bizpur-line-table tbody td.col-exp {
+    justify-content: flex-start;
+  }
+  .bizpur-line-table tbody td.col-idx {
+    display: none; /* 序号在卡片里无意义 */
+  }
+  .bizpur-line-table .col-prod {
+    min-width: 0;
+  }
+  .bizpur-line-table .col-op {
+    width: 100%;
+    text-align: left;
+  }
+  .bizpur-line-table .exps {
+    max-height: 116px;
+  }
+  .bizpur-line-table tbody td.bizpur-empty-row {
+    display: block;
+    text-align: center;
+  }
+  .bizpur-line-table tbody td.bizpur-empty-row::before {
+    content: none;
+  }
+
+  /* 列表：隐藏低频列（信息保留在编辑弹框与卡片视图） */
+  .bizpur-table-wrap :deep(.el-table__body td:nth-child(4)),
+  .bizpur-table-wrap :deep(.el-table__header th:nth-child(4)) {
+    display: none; /* 分类 */
+  }
+  .bizpur-table-wrap :deep(.el-table__body td:nth-child(8)),
+  .bizpur-table-wrap :deep(.el-table__header th:nth-child(8)) {
+    display: none; /* 加价率 */
+  }
+  .bizpur-table-wrap :deep(.el-table__body td:nth-child(11)),
+  .bizpur-table-wrap :deep(.el-table__header th:nth-child(11)) {
+    display: none; /* 备注 */
+  }
+
+  /* 工具行换行 + 按钮触控目标 */
+  .bizpur-toolbar-left {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .bizpur-toolbar-left :deep(.el-button) {
+    min-height: 44px;
+  }
+
+  /* 筛选 chip 独占一行时也给足点击高度 */
+  .bizpur-filter-chip {
+    min-height: 32px;
+  }
+
+  /* 操作列：窄屏 3 个按钮（编辑/复制/删除）换行排布，避免 200px 固定列宽挤占数据区 */
+  .bizpur-table-wrap :deep(.bizpur-actions) {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .bizpur-table-wrap :deep(.bizpur-actions .el-button) {
+    margin-left: 0 !important;
+    min-height: 40px;
+  }
+}
+
+/* 操作列取消固定：el-table 的 fixed 会给单元格加 .el-table-fixed-column，
+   窄屏下该列宽200px 会持续遮挡右侧数据 → 用 position:static 覆盖回文档流 */
+@media (max-width: 768px) {
+  .bizpur-table-wrap :deep(.el-table__body td.el-table-fixed-column),
+  .bizpur-table-wrap :deep(.el-table__header th.el-table-fixed-column),
+  .bizpur-table-wrap :deep(.el-table-fixed-column--right),
+  .bizpur-table-wrap :deep(.el-table-fixed-column--left) {
+    position: static !important;
+    box-shadow: none !important;
+  }
 }
 </style>

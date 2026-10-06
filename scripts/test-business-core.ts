@@ -26,6 +26,9 @@ import {
   calcCategoryRanking,
   calcDailyCost,
   calcDailyLossAmount,
+  calcMonthlyTargetProgress,
+  buildLedgerSummaryBlocks,
+  calcTodayStats,
   calcDailyRevenue,
   calcInventory,
   calcMonthlyStats,
@@ -103,6 +106,9 @@ import {
   dailyTemplateFromLast,
   frequentProductIds,
   lastDailyBefore,
+  matchProductKeyword,
+  pinyinInitials,
+  PINYIN_INITIALS,
   shiftDateKey,
   visibleExpenseCategories,
   visibleProductCategories,
@@ -2349,6 +2355,255 @@ test('T91 useBizSharedDefaults 门面（load/remember 绑定当前账本）', ()
   assert.deepEqual(api.load(), emptyBizSharedDefaults(), '切账本读到空')
   current = 'lg_a'
   assert.equal(api.load().orderPhone, '13711112222', '切回原账本数据仍在')
+})
+
+// ===== M-02/M-03/M-04 新增能力 =====
+
+// T92 — dailyTemplateFromLast：取最近的上日记录，带出数量带入，剩余/损耗归零
+test('T92 dailyTemplateFromLast 复制上日带出数量', () => {
+  const records = [
+    { id: 'd1', date: '2026-10-01', items: [{ productId: 'p1', broughtOut: 10, remaining: 2, loss: 1 }], totalRevenue: 0, createdAt: '', updatedAt: '' },
+    { id: 'd2', date: '2026-10-03', items: [{ productId: 'p2', broughtOut: 5, remaining: 0, loss: 0 }], totalRevenue: 0, createdAt: '', updatedAt: '' },
+    { id: 'd3', date: '2026-10-05', items: [{ productId: 'p1', broughtOut: 8, remaining: 0, loss: 0 }], totalRevenue: 0, createdAt: '', updatedAt: '' }
+  ] as any[]
+  // 取「早于目标日的最近一条」= 10-05
+  const tpl = dailyTemplateFromLast(records, '2026-10-06')
+  assert.equal(tpl.length, 1, '只取最近一条上日记录')
+  assert.equal(tpl[0].productId, 'p1')
+  assert.equal(tpl[0].broughtOut, 8, '带出数量沿用上日')
+  assert.equal(tpl[0].remaining, 0, '剩余归零（当天重填）')
+  assert.equal(tpl[0].loss, 0, '损耗归零（当天重填）')
+  // 目标日无上日 → 空
+  assert.deepEqual(dailyTemplateFromLast(records, '2026-10-01'), [], '目标日之前无记录时返回空')
+  assert.deepEqual(dailyTemplateFromLast([], '2026-10-06'), [], '无任何记录时返回空')
+  // 带出为 0 的行不复制（没带出就没意义）
+  assert.deepEqual(
+    dailyTemplateFromLast([{ id: 'x', date: '2026-10-05', items: [{ productId: 'p9', broughtOut: 0, remaining: 0, loss: 0 }], totalRevenue: 0 }] as any[], '2026-10-06'),
+    [],
+    '带出 0 的行不纳入模板'
+  )
+})
+
+// T93 — frequentProductIds：近 N 天带出次数排序、过滤停售、按次数截断
+test('T93 frequentProductIds 近30 天高频在售商品', () => {
+  const mk = (id: string) => ({ id, name: id, unit: '件', purchasePrice: 1, sellingPrice: 2, active: true, createdAt: '' })
+  const products = [mk('p1'), mk('p2'), mk('p3')] as any[]
+  const rec = (date: string, pid: string) => ({ id: `${date}-${pid}`, date, items: [{ productId: pid, broughtOut: 3, remaining: 0, loss: 0 }], totalRevenue: 0 })
+  const records = [
+    rec('2026-09-30', 'p1'), // 今天 = 2026-10-06，30 天窗口从 2026-09-07 起→ 在窗口内
+    rec('2026-10-01', 'p1'),
+    rec('2026-10-02', 'p1'),
+    rec('2026-10-03', 'p2'),
+    rec('2026-10-04', 'p2'),
+    rec('2026-10-05', 'p3'),
+    rec('2026-08-01', 'p3') // 窗口外，不应计入
+  ] as any[]
+  const ids = frequentProductIds(records, products, 30, '2026-10-06', 6)
+  assert.deepEqual(ids, ['p1', 'p2', 'p3'], '按带出次数降序：p1(3) > p2(2) > p3(1，窗口外那条不计)')
+  // 停售商品被过滤
+  const stopped = [mk('p1'), { ...mk('p2'), active: false }] as any[]
+  assert.deepEqual(frequentProductIds(records, stopped, 30, '2026-10-06', 6), ['p1'], '停售商品不进常卖')
+  // limit 截断
+  assert.equal(frequentProductIds(records, products, 30, '2026-10-06', 2).length, 2, '按 limit 截断')
+  // 无记录 → 空
+  assert.deepEqual(frequentProductIds([], products, 30, '2026-10-06', 6), [], '无销售记录时返回空')
+})
+
+// T94 — pinyinInitials：汉字取首字母，未收录字原样保留
+test('T94 pinyinInitials 汉字取首字母', () => {
+  assert.equal(pinyinInitials('止痛药'), 'zty', '常见字命中映射表')
+  assert.equal(pinyinInitials('可乐'), 'kl')
+  assert.equal(pinyinInitials('薯片'), 'sp')
+  assert.equal(pinyinInitials('ABC'), 'abc', '英文原样并小写')
+  assert.equal(pinyinInitials('可乐330'), 'kl330', '中英数字混排')
+  // 未收录字走 fallback（原样保留），不抛错：这里用「野家」构造（野/家 均未收录）
+  assert.equal(pinyinInitials('野家'), '野家', '未收录字原样返回，不抛错')
+  assert.equal(pinyinInitials('𠮷家'), '𠮷家', '生僻字原样返回')
+  assert.equal(pinyinInitials(''), '', '空串安全')
+  // 映射表自身健康度：key 单字符、value 单个小写字母
+  // （JS 对象字面量对重复 key 静默覆盖，无法运行时检出 → 重复 key 需靠 code review，改动时用 grep 复核）
+  for (const [k, v] of Object.entries(PINYIN_INITIALS)) {
+    assert.equal(/^[a-z]$/.test(v), true, `映射表 key「${k}」的 value 必须是单个小写字母`)
+    assert.equal(k.length, 1, `映射表 key「${k}」必须是单个字符`)
+  }
+})
+
+// T95 — matchProductKeyword：名称子串 OR 拼音首字母前缀
+test('T95 matchProductKeyword 名称 + 拼音首字母检索', () => {
+  assert.equal(matchProductKeyword('止痛药', 'zty'), true, '拼音首字母全串前缀命中')
+  assert.equal(matchProductKeyword('可乐', 'kl'), true)
+  assert.equal(matchProductKeyword('薯片', 'sp'), true)
+  assert.equal(matchProductKeyword('薯片', 's'), true, '首字母单字前缀命中')
+  assert.equal(matchProductKeyword('薯片', '薯'), true, '汉字子串命中')
+  assert.equal(matchProductKeyword('可乐', 'KL'), true, '大写输入不敏感')
+  assert.equal(matchProductKeyword('可乐', '可乐'), true, '全名命中')
+  assert.equal(matchProductKeyword('可乐', '  '), true, '空 keyword 不过滤')
+  assert.equal(matchProductKeyword('可乐', 'xyz'), false, '无匹配返回 false')
+  assert.equal(matchProductKeyword('可乐', '酸'), false, '不误命中其它商品')
+  // 拼音侧是「前缀」而非子串：避免「zs」误命中「止痛药」(zty) 这类无意义结果
+  assert.equal(matchProductKeyword('止痛药', 'zs'), false, '拼音侧只做前缀，不做子串')
+  assert.equal(matchProductKeyword('止痛药', 's'), false, '中间字母不命中（止(z)痛(t)药(y)，无 s 前缀）')
+})
+
+// T96 — calcTodayStats：某日经营快照（FIFO 成本按全量分配后筛当日，保证与账本级口径一致）
+test('T96 calcTodayStats 今日维度统计', () => {
+  const product = { id: 'p1', name: '薯片', unit: '包', purchasePrice: 2, sellingPrice: 3.5, active: true, createdAt: '' } as any
+  // 两笔进货：10-01 进 10 件@2 元、10-05 进 10 件@3 元
+  const purchases = [
+    { id: 'bpr1', productId: 'p1', quantity: 10, unitPrice: 2, total: 20, date: '2026-10-01', createdAt: '' },
+    { id: 'bpr2', productId: 'p1', quantity: 10, unitPrice: 3, total: 30, date: '2026-10-05', createdAt: '' }
+  ] as any[]
+  // 10-06 卖 4 件：FIFO 从最旧批次(10-01@2)结转 → 成本 8 元，营业额 4×3.5=14 元
+  const dailyRecords = [
+    { id: 'd1', date: '2026-10-06', items: [{ productId: 'p1', broughtOut: 4, remaining: 0, loss: 0 }], totalRevenue: 14, transactionCount: 2, createdAt: '', updatedAt: '' },
+    { id: 'd2', date: '2026-10-04', items: [{ productId: 'p1', broughtOut: 2, remaining: 0, loss: 0 }], totalRevenue: 7, transactionCount: 1, createdAt: '', updatedAt: '' }
+  ] as any[]
+  // 10-06 支出 5 元、10-04 支出 8 元
+  const expenseDailies = [
+    { id: 'bed1', date: '2026-10-06', items: [{ id: 'be1', categoryId: 'c1', amount: 5 }], createdAt: '', updatedAt: '' },
+    { id: 'bed2', date: '2026-10-04', items: [{ id: 'be2', categoryId: 'c1', amount: 8 }], createdAt: '', updatedAt: '' }
+  ] as any[]
+  const data = {
+    productCategories: [], expenseCategories: [], products: [product],
+    purchases, dailyRecords, expenseDailies, settings: {}
+  } as any
+
+  const t = calcTodayStats(data, '2026-10-06')
+  assert.equal(t.date, '2026-10-06', '回显统计日期')
+  assert.equal(t.hasDaily, true, '当日有销售记录')
+  assert.equal(t.revenue, 14, '营业额取当日记录落库的 totalRevenue')
+  assert.equal(t.cost, 8, '成本走 FIFO：4 件从最旧批次@2 结转= 8')
+  assert.equal(t.profit, 6, '毛利 = 14 − 8')
+  assert.equal(t.expense, 5, '支出只算当日')
+  assert.equal(t.net, 1, '净利 = 毛利 − 支出 = 6 − 5')
+  assert.equal(t.transactionCount, 2, '交易笔数取当日 transactionCount')
+  assert.equal(t.itemLines, 1, '当日商品行数')
+
+  // 另一天：只统计那天的数据
+  const t2 = calcTodayStats(data, '2026-10-04')
+  assert.equal(t2.revenue, 7, '10-04 营业额')
+  assert.equal(t2.cost, 4, '10-04 卖 2 件从 @2 批次结转 = 4')
+  assert.equal(t2.expense, 8, '10-04 支出 8')
+  assert.equal(t2.net, -5, '净利可为负（7 − 4 − 8 = −5）')
+  assert.equal(t2.margin > 0 && t2.margin < 1, true, '毛利率在 0-1 之间')
+
+  // 无记录的一天：全0，hasDaily=false，margin 不为 NaN
+  const t3 = calcTodayStats(data, '2026-10-10')
+  assert.equal(t3.hasDaily, false, '无销售记录')
+  assert.equal(t3.revenue, 0, '营业额 0')
+  assert.equal(t3.margin, 0, '营业额 0 时毛利率为 0（不是 NaN）')
+  assert.equal(t3.net, 0, '净利 0')
+
+  // 幂等：同一输入多次调用结果一致（computed 依赖变化会重算）
+  assert.deepEqual(calcTodayStats(data, '2026-10-06'), calcTodayStats(data, '2026-10-06'), '重复计算结果一致')
+})
+
+// T97 — calcMonthlyTargetProgress：目标进度 + 时间进度对比
+test('T97 calcMonthlyTargetProgress 月度目标进度', () => {
+  const product = { id: 'p1', name: '薯片', unit: '包', purchasePrice: 2, sellingPrice: 3.5, active: true, createdAt: '' } as any
+  const base = {
+    productCategories: [], expenseCategories: [], products: [product],
+    purchases: [], expenseDailies: [],
+    // 10月目标 1000元，已卖 400元（8笔×3.5=28，用整数好算：4件×3.5=14，两天=28）
+    dailyRecords: [
+      { id: 'd1', date: '2026-10-02', items: [{ productId: 'p1', broughtOut: 4, remaining: 0, loss: 0 }], totalRevenue: 14, createdAt: '', updatedAt: '' },
+      { id: 'd2', date: '2026-10-15', items: [{ productId: 'p1', broughtOut: 4, remaining: 0, loss: 0 }], totalRevenue: 14, createdAt: '', updatedAt: '' }
+    ] as any[],
+    settings: { monthlyRevenueTarget: 100 }
+  } as any
+
+  // 两条记录都在 10 月 → 无论今天是哪天，本月 revenue恒为 28、days 恒为 2
+  // 未到月中（10-10）：已过 10 天 /31 天 ≈ 0.3226；已卖 28/100 = 0.28 → 落后
+  const early = calcMonthlyTargetProgress(base, 2026, 10, '2026-10-10')
+  assert.equal(early.revenue, 28, '本月营业额汇总当月全部记录（2 笔× 14）')
+  assert.equal(early.target, 100, '目标额读取 settings')
+  assert.equal(early.days, 2, '当月有销售记录的天数')
+  assert.equal(early.totalDays, 31, '10 月共 31 天')
+  assert.equal(early.gap, 72, '差额 = 100 − 28')
+  assert.equal(early.behind, true, '完成率 0.28 < 时间进度 0.32 → 落后')
+  assert.equal(Math.round(early.timeRate * 10000) / 100, 32.26, '时间进度 = 10/31 ≈ 32.26%')
+
+  // 月末：已卖 28/100 = 0.28，但时间进度 1.0 → 仍落后
+  const late = calcMonthlyTargetProgress(base, 2026, 10, '2026-10-31')
+  assert.equal(late.revenue, 28, '两笔合计 28')
+  assert.equal(late.behind, true, '28% < 100% → 月末仍落后')
+  assert.equal(late.timeRate, 1, '31 天走完时间进度为 1')
+  assert.equal(late.gap, 72, '差额 72')
+
+  // 超额完成
+  const done = { ...base, dailyRecords: [
+    { id: 'd1', date: '2026-10-01', items: [{ productId: 'p1', broughtOut: 40, remaining: 0, loss: 0 }], totalRevenue: 140, createdAt: '', updatedAt: '' }
+  ] as any[] }
+  const over = calcMonthlyTargetProgress(done, 2026, 10, '2026-10-05')
+  assert.equal(over.behind, false, '140% > 时间进度 → 不落后')
+  assert.equal(over.gap, -40, '超额时 gap 为负（已超 40）')
+
+  // 未设目标（0）→ target null，不渲染进度环
+  const noTarget = calcMonthlyTargetProgress({ ...base, settings: {} }, 2026, 10, '2026-10-10')
+  assert.equal(noTarget.target, null, '未设目标时 target 为 null')
+  assert.equal(noTarget.rate, null, '无目标时 rate 为 null（不是 NaN）')
+  assert.equal(noTarget.behind, false, '无目标不算落后')
+  assert.equal(noTarget.gap, 0, '无目标时 gap 为 0')
+
+  // 月份越界钳制
+  assert.equal(calcMonthlyTargetProgress(base, 2026, 13, '2026-10-10').totalDays, 31, '月份 13 钳制为 12 月（31 天）')
+  assert.equal(calcMonthlyTargetProgress(base, 2026, 0, '2026-10-10').totalDays, 31, '月份 0 钳制为 1 月（31 天）')
+
+  // 跨月：today 不属于该月 → 时间进度按整月算满
+  const other = calcMonthlyTargetProgress(base, 2026, 9, '2026-10-10')
+  assert.equal(other.revenue, 0, '9 月无销售记录')
+  assert.equal(other.timeRate, 1, 'today 不属于该月 → 视为整月走完')
+})
+
+// T98 — buildLedgerSummaryBlocks：汇总导出的 4 段结构与行数
+test('T98 buildLedgerSummaryBlocks 账本汇总导出', () => {
+  const product = { id: 'p1', name: '薯片', unit: '包', purchasePrice: 2, sellingPrice: 3.5, active: true, createdAt: '' } as any
+  const data = {
+    productCategories: [], expenseCategories: [{ id: 'c1', name: '摊位费', sortOrder: 0, visible: true, isBuiltIn: true }],
+    products: [product],
+    purchases: [{ id: 'bpr1', productId: 'p1', quantity: 10, unitPrice: 2, total: 20, date: '2026-10-01', createdAt: '' }] as any[],
+    dailyRecords: [{ id: 'd1', date: '2026-10-06', items: [{ productId: 'p1', broughtOut: 3, remaining: 0, loss: 0 }], totalRevenue: 10.5, transactionCount: 2, note: '晴天', createdAt: '', updatedAt: '' }] as any[],
+    expenseDailies: [{ id: 'bed1', date: '2026-10-06', items: [{ id: 'be1', categoryId: 'c1', amount: 20, title: '摊位费' }], createdAt: '', updatedAt: '' }] as any[],
+    settings: { monthlyRevenueTarget: 500 }
+  } as any
+
+  const blocks = buildLedgerSummaryBlocks(data, '2026-10-06')
+  assert.equal(blocks.length, 4, '4 段：销售/进货/支出/关键指标')
+  assert.deepEqual(blocks.map(b => b.section), ['销售流水', '进货流水', '支出流水', '关键指标'], '段名与顺序固定')
+
+  // 销售段：商品名 × 售出数
+  const sales = blocks[0]
+  assert.deepEqual(sales.headers, ['日期', '商品与售出', '营业额', '交易笔数', '备注'], '销售段表头')
+  assert.equal(sales.rows.length, 1, '1 条销售记录')
+  assert.equal(sales.rows[0][1], '薯片×3', '商品与售出拼为「薯片×3」')
+  assert.equal(sales.rows[0][4], '晴天', '备注透传')
+
+  // 进货段
+  assert.equal(blocks[1].rows.length, 1, '1 条进货')
+  assert.equal(blocks[1].rows[0][1], '薯片', '商品名解析')
+  assert.equal(blocks[1].rows[0][5], '', '未关联支出时留空')
+
+  // 支出段：按明细行展开（一天多笔 = 多行）
+  assert.equal(blocks[2].rows.length, 1, '1 笔支出明细')
+  assert.equal(blocks[2].rows[0][1], '摊位费', '分类名解析')
+  assert.equal(blocks[2].rows[0][5], 20, '金额')
+
+  // 关键指标段：含今日 + 本月 + 账本累计 + 目标
+  const metrics = blocks[3].rows
+  const get = (name: string) => metrics.find(r => r[0] === name)?.[1]
+  assert.equal(get('今日营业额'), 10.5, '今日营业额')
+  assert.equal(get('本月营业额'), 10.5, '本月营业额（与今日同一条记录）')
+  assert.equal(get('本月目标'), 500, '本月目标透传')
+  assert.equal(get('账本营业收入'), 10.5, '账本累计营业收入')
+  assert.equal(typeof get('账本毛利率'), 'string', '毛利率格式化为百分比字符串')
+
+  // 空数据：4 段仍在，行为空数组（不抛错）
+  const empty = buildLedgerSummaryBlocks({
+    productCategories: [], expenseCategories: [], products: [], purchases: [],
+    dailyRecords: [], expenseDailies: [], settings: {}
+  } as any, '2026-10-06')
+  assert.equal(empty.length, 4, '空数据仍返回 4 段')
+  assert.equal(empty[0].rows.length, 0, '空数据销售段 0 行')
 })
 
 let passed = 0

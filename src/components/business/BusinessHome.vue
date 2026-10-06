@@ -2,7 +2,9 @@
 // 销售记账首页：问候头（含出摊总天数，右上角）+ 营业额/利润等主指标卡 + 低库存概览 + 销售排行（树状）
 import { computed, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { calcBusinessStats, calcCategoryProductRanking, calcExpenseLinkStats, calcInventory, calcMonthlyStats, formatYuanOf } from '@/composables/businessCore'
+import { buildLedgerSummaryBlocks, calcBusinessStats, calcCategoryProductRanking, calcExpenseLinkStats, calcInventory, calcMonthlyStats, calcMonthlyTargetProgress, calcTodayStats, formatYuanOf, localDateKey } from '@/composables/businessCore'
+import { exportXlsxMulti } from '@/composables/xlsxExport'
+import type { SummaryBlock } from '@/composables/businessCore'
 import type { BusinessProduct } from '@/types'
 import Icon from '@/components/Icon.vue'
 
@@ -34,16 +36,19 @@ const threshold = computed(() => data.value.settings.lowStockThreshold)
 interface StockRow {
   product: BusinessProduct
   stock: number
-  /** 是否处于预警范围：库存 ≤ 预警阈值 */
+  /** 是否处于预警范围：与 core lowStockProducts 口径一致（仅在售 + 库存 < 阈值） */
   warn: boolean
 }
-// 全部商品：预警项（库存 ≤ 阈值，红）置顶并按库存升序，正常项（绿）在后按库存升序，保证状态一目了然
+// 全部商品：预警项（库存 < 阈值，红）置顶并按库存升序，正常项（绿）在后按库存升序，保证状态一目了然
+// 2026-10-06 口径对齐：此前是 stock <= t且不过滤 active，导致「阈值恰好等于库存时首页标红但库存预警页不列」
+// 且「停售商品首页参与预警、库存预警页不显示」。现与 core lowStockProducts 统一。
 const stockRows = computed<StockRow[]>(() => {
   const t = threshold.value
   return data.value.products
+    .filter(p => p.active)
     .map(p => {
       const stock = inventory.value[p.id] ?? 0
-      return { product: p, stock, warn: stock <= t }
+      return { product: p, stock, warn: stock < t }
     })
     .sort((a, b) => (a.warn === b.warn ? a.stock - b.stock : a.warn ? -1 : 1))
 })
@@ -121,6 +126,111 @@ const greeting = computed(() => {
 const dateText = computed(() =>
   new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })
 )
+
+// ===== M-07（2026-10-06）今日维度 =====
+// 此前首页 13 张指标卡全是账本年度累计，摆摊用户首屏最关心的「今天卖了多少」看不到。
+// 这里加一组「今日」卡片（放在问候头下方），年度累计区保留但可折叠（对账/结算仍需要）。
+const todayStats = computed(() => calcTodayStats(data.value, localDateKey()))
+/** 年度累计区是否展开（默认展开，保持旧习惯；用户可收起只看今日） */
+const cumulativeOpen = ref(true)
+
+/**
+ * M-14（2026-10-06）月度目标进度环：激活 monthlyRevenueTarget。
+ * 该字段在 types/store/normalize 早已就绪（用户能在设置里填），但此前无任何 UI 消费 →
+ * 「填了目标却永不显示」。这里复用 calcMonthlyStats 口径渲染进度环。
+ */
+const monthlyTarget = computed(() => {
+  const now = new Date()
+  return calcMonthlyTargetProgress(data.value, now.getFullYear(), now.getMonth() + 1, localDateKey())
+})
+
+/**
+ * M-16 账本汇总导出：把散在 7 个面板的导出入口合并成一份多 sheet 工作簿
+ * （销售/进货/支出各一页 + 关键指标页）。此前首页/商品页无导出，
+ * 想对账得先想清楚去哪个子面板导、再手工拼。
+ */
+const exporting = ref(false)
+async function exportSummary(): Promise<void> {
+  if (exporting.value) return
+  exporting.value = true
+  try {
+    const blocks: SummaryBlock[] = buildLedgerSummaryBlocks(data.value, localDateKey())
+    await exportXlsxMulti(
+      '账本汇总',
+      blocks.map(b => ({ name: b.section, headers: b.headers, rows: b.rows })),
+      { year: ledgerYear.value, ledgerName: ledgerName.value }
+    )
+  } finally {
+    exporting.value = false
+  }
+}
+
+// ===== M-08（2026-10-06）首次使用引导 =====
+// 此前空态是死文案（「暂无商品」/「暂无数据」，纯灰字无按钮），新账本建完后首页只有 13 个 0
+// 且没有任何下一步指引。现在按数据完备度给出「下一步该做什么」的引导卡。
+/** 下一步该做什么：按「商品 → 进货 → 销售」的业务先后顺序取第一个缺口 */
+const nextStep = computed<{ section: string; title: string; desc: string; action: string } | null>(() => {
+  if (data.value.products.length === 0) {
+    return {
+      section: 'products',
+      title: '第一步：添加你卖的商品',
+      desc: '记销售和进货都要先有商品。填好名称、售价就能开始，售价用于自动算营业额。',
+      action: '去添加商品'
+    }
+  }
+  if (data.value.purchases.length === 0) {
+    return {
+      section: 'purchases',
+      title: '第二步：记一笔进货',
+      desc: '有进货记录后才能算成本和毛利。若进货的钱已记在「支出」里，可在这里勾选关联。',
+      action: '去记进货'
+    }
+  }
+  if (data.value.dailyRecords.length === 0) {
+    return {
+      section: 'daily',
+      title: '第三步：记今天的销售',
+      desc: '出摊后随手记一笔：填「售出」数量即可，营业额和毛利会自动算好。',
+      action: '去记销售'
+    }
+  }
+  return null
+})
+
+/** 今日是否已记销售（复用 todayStats，避免重复过滤 dailyRecords） */
+const todayHasDaily = computed(() => todayStats.value.hasDaily)
+
+/**
+ * M-13 账实异常（需用户处理的问题）汇总。
+ * 原先这些信息只藏在「账本累计」区（要滚动下去才看到），且文案是分类统计视角（「未关联库存支出」），
+ * 用户不会意识到「账漏了」。现在把「需要行动的问题」提到首屏，与引导卡/今日提示同层。
+ * 口径与对账页一致（有未关联支出 / 当日未记账 / 有库存预警项）。
+ */
+const issues = computed(() => {
+  const out: { id: string; text: string; section: string; action: string; level: 'warn' | 'info' }[] = []
+  if (expenseLink.value.unlinkedCount > 0) {
+    out.push({
+      id: 'unlinked-expense',
+      text: `${expenseLink.value.unlinkedCount} 笔支出没有挂到进货记录，可能漏记了本批成本`,
+      section: 'reconcile',
+      action: '去核对',
+      level: 'warn'
+    })
+  }
+  if (!todayHasDaily.value && data.value.products.length > 0) {
+    out.push({ id: 'no-today-daily', text: '今天还没记销售', section: 'daily', action: '去记账', level: 'info' })
+  }
+  if (warnCount.value > 0) {
+    out.push({
+      id: 'low-stock',
+      text: `${warnCount.value} 个商品库存低于阈值（当前阈值 ${threshold.value}），该补货了`,
+      section: 'inventory',
+      action: '看详情',
+      level: 'warn'
+    })
+  }
+  return out
+})
 </script>
 
 <template>
@@ -167,9 +277,133 @@ const dateText = computed(() =>
           <span class="greeting-stat-value">{{ totalStallDays }}<small class="greeting-stat-unit">天</small></span>
           <span class="greeting-stat-label">出摊总天数</span>
         </div>
+        <!-- M-16 账本汇总导出：一份多 sheet 工作簿（销售/进货/支出/关键指标） -->
+        <button
+          type="button"
+          class="bizhome-export"
+          :disabled="exporting"
+          title="导出账本汇总（销售/进货/支出/关键指标，各一页）"
+          data-testid="bizhome-export"
+          @click="exportSummary"
+        >
+          <Icon name="download" :size="14" /> {{ exporting ? '导出中…' : '导出汇总' }}
+        </button>
+      </section>
+
+      <!-- M-07 今日维度：摆摊首屏最关心「今天卖了多少、赚了多少」 -->
+      <section class="bizhome-today" data-testid="bizhome-today">
+        <div class="bizhome-today-head">
+          <span class="bizhome-today-title"><Icon name="daily" :size="14" /> 今日（{{ todayStats.date }}）</span>
+          <span v-if="!todayStats.hasDaily" class="bizhome-today-none" data-testid="bizhome-today-none">还没记账</span>
+        </div>
+        <div class="bizhome-today-grid">
+          <div class="bizhome-today-card clickable" role="button" tabindex="0" data-testid="bizhome-today-revenue" @click="go('daily')" @keydown.enter="go('daily')">
+            <span class="today-label">营业额</span>
+            <span class="today-value">{{ formatYuanOf(todayStats.revenue) }}</span>
+          </div>
+          <div class="bizhome-today-card clickable" role="button" tabindex="0" data-testid="bizhome-today-profit" @click="go('daily')" @keydown.enter="go('daily')">
+            <span class="today-label">毛利</span>
+            <span class="today-value" :class="todayStats.profit < 0 ? 'negative' : ''">{{ formatYuanOf(todayStats.profit) }}</span>
+            <span class="today-sub">毛利率 {{ (todayStats.margin * 100).toFixed(1) }}%</span>
+          </div>
+          <div class="bizhome-today-card clickable" role="button" tabindex="0" data-testid="bizhome-today-expense" @click="go('expenses')" @keydown.enter="go('expenses')">
+            <span class="today-label">支出</span>
+            <span class="today-value">{{ formatYuanOf(todayStats.expense) }}</span>
+          </div>
+          <div class="bizhome-today-card" data-testid="bizhome-today-net">
+            <span class="today-label">净利</span>
+            <span class="today-value" :class="todayStats.net < 0 ? 'negative' : 'accent'">{{ formatYuanOf(todayStats.net) }}</span>
+            <span class="today-sub">毛利 − 支出</span>
+          </div>
+          <div class="bizhome-today-card" data-testid="bizhome-today-count">
+            <span class="today-label">交易笔数</span>
+            <span class="today-value">{{ todayStats.transactionCount }}<small>笔</small></span>
+            <span class="today-sub">{{ todayStats.itemLines }} 行商品</span>
+          </div>
+          <!-- M-14 本月目标进度环：仅在设置过目标（月度营收目标 > 0）时渲染 -->
+          <div
+            v-if="monthlyTarget.target !== null"
+            class="bizhome-today-card bizhome-target"
+            :class="{ behind: monthlyTarget.behind }"
+            data-testid="bizhome-target"
+          >
+            <span class="today-label">本月目标</span>
+            <div class="target-body">
+              <div
+                class="target-ring"
+                :style="{ '--pct': Math.min(100, Math.round((monthlyTarget.rate ?? 0) * 100)) + '%' }"
+                role="img"
+                :aria-label="`本月目标完成 ${Math.round((monthlyTarget.rate ?? 0) * 100)}%`"
+              >
+                <span class="target-ring-inner">{{ Math.round((monthlyTarget.rate ?? 0) * 100) }}%</span>
+              </div>
+              <div class="target-meta">
+                <span class="target-amount">{{ formatYuanOf(monthlyTarget.revenue) }} / {{ formatYuanOf(monthlyTarget.target) }}</span>
+                <span class="target-sub" :class="{ behind: monthlyTarget.behind }">
+                  {{ monthlyTarget.gap >= 0 ? `还差 ${formatYuanOf(monthlyTarget.gap)}` : `已超额 ${formatYuanOf(Math.abs(monthlyTarget.gap))}` }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 年度累计区（保留旧指标，可折叠后只看今日） -->
+      <button
+        type="button"
+        class="bizhome-cumulative-toggle"
+        data-testid="bizhome-cumulative-toggle"
+        @click="cumulativeOpen = !cumulativeOpen"
+      >
+        <span>账本累计（{{ ledgerYear }} 年）</span>
+        <Icon name="chevron-down" :size="14" :class="{ up: cumulativeOpen }" />
+      </button>
+
+      <!-- M-08 首次使用引导：无商品/无进货/无销售时给出明确的下一步，而不是 13 个 0 -->
+      <section
+        v-if="nextStep"
+        class="bizhome-onboard"
+        data-testid="bizhome-onboard"
+      >
+        <div class="bizhome-onboard-body">
+          <div class="bizhome-onboard-title">{{ nextStep.title }}</div>
+          <p class="bizhome-onboard-desc">{{ nextStep.desc }}</p>
+        </div>
+        <button
+          type="button"
+          class="bizhome-onboard-btn"
+          :data-testid="`bizhome-onboard-go-${nextStep.section}`"
+          @click="go(nextStep.section)"
+        >{{ nextStep.action }}</button>
+      </section>
+
+      <!-- M-13 待处理问题（账实异常 / 今日未记账 / 库存预警）：提到首屏，每条带直达动作 -->
+      <section
+        v-if="issues.length > 0"
+        class="bizhome-issues"
+        data-testid="bizhome-issues"
+      >
+        <div
+          v-for="iss in issues"
+          :key="iss.id"
+          class="bizhome-issue"
+          :class="iss.level"
+          :data-testid="`bizhome-issue-${iss.id}`"
+        >
+          <Icon :name="iss.level === 'warn' ? 'alert' : 'info'" :size="15" />
+          <span class="issue-text">{{ iss.text }}</span>
+          <button
+            type="button"
+            class="issue-go"
+            :data-testid="`bizhome-issue-go-${iss.id}`"
+            @click="go(iss.section)"
+          >{{ iss.action }}</button>
+        </div>
       </section>
 
       <!-- 统计范围 + 毛利率计算公式（每本账本只记录所属年份的数据，同一年份可有多本） -->
+      <!-- 账本累计区（M-07 折叠：默认展开保持旧习惯，收起后只看今日） -->
+      <template v-show="cumulativeOpen">
       <div class="bizhome-scope" data-testid="bizhome-scope">
         <div class="scope-head">
           <span class="scope-label" data-testid="bizhome-scope-label">{{ ledgerCode }} · {{ ledgerName }}</span>
@@ -208,10 +442,12 @@ const dateText = computed(() =>
             <span class="hero-value linked">{{ formatYuanOf(expenseLink.linkedAmount) }}</span>
             <span class="hero-sub">{{ expenseLink.linkedCount }} 笔{{ expenseLink.total > 0 ? ` · 占支出 ${((expenseLink.linkedAmount / expenseLink.total) * 100).toFixed(1)}%` : '' }}</span>
           </div>
+          <!-- M-13（2026-10-06）：改为「问题视角」文案。原文案「未关联库存支出」是支出视角的分类统计，
+     用户看到「未关联 500 元」不会意识到「我的账漏了 500 块的进货」；这里点明后果并给明确动作 -->
           <div class="bizhome-hero-card clickable" role="button" tabindex="0" data-testid="bizhome-expense-unlinked" @click="go('reconcile')" @keydown.enter="go('reconcile')">
-            <span class="hero-label">未关联库存支出</span>
+            <span class="hero-label">进货可能漏记</span>
             <span class="hero-value unlinked">{{ formatYuanOf(expenseLink.unlinkedAmount) }}</span>
-            <span class="hero-sub">{{ expenseLink.unlinkedCount }} 笔{{ expenseLink.total > 0 ? ` · 占支出 ${((expenseLink.unlinkedAmount / expenseLink.total) * 100).toFixed(1)}%` : '' }}</span>
+            <span class="hero-sub">{{ expenseLink.unlinkedCount }} 笔支出未挂到进货 · 点此核对</span>
           </div>
         </div>
 
@@ -248,7 +484,9 @@ const dateText = computed(() =>
         >
           <div class="bizhome-card-title"><Icon name="alert" :size="15" />商品库存预警（阈值 {{ threshold }}）</div>
           <p class="bizhome-stock-summary" data-testid="bizhome-stock-summary">{{ warnCount }} 项低于阈值 · 共 {{ stockRows.length }} 项</p>
-          <p v-if="stockRows.length === 0" class="bizhome-empty" data-testid="bizhome-lowstock-empty">暂无商品</p>
+          <p v-if="stockRows.length === 0" class="bizhome-empty" data-testid="bizhome-lowstock-empty">
+            还没有商品。<span class="bizhome-empty-action" data-testid="bizhome-lowstock-add" @click.stop="go('products')">去添加商品 →</span>
+          </p>
           <div v-else class="bizhome-low-list">
             <div
               v-for="row in stockRows"
@@ -268,7 +506,9 @@ const dateText = computed(() =>
         <!-- 销售排行（右 60%，分类→商品树状展开） -->
         <section class="bizhome-card bizhome-col bizhome-col-60" data-testid="bizhome-rank-tree">
           <div class="bizhome-card-title"><Icon name="stats" :size="15" />销售排行（分类→商品）</div>
-          <p v-if="treeRank.length === 0" class="bizhome-empty">暂无数据</p>
+          <p v-if="treeRank.length === 0" class="bizhome-empty">
+            还没有销售数据。<span class="bizhome-empty-action" @click.stop="go('daily')">去记第一笔销售 →</span>
+          </p>
           <div v-else class="bizhome-tree">
             <div v-for="node in treeRank" :key="node.categoryId" class="bizhome-tree-node" :data-testid="'bizhome-tree-cat-' + node.categoryId">
               <!-- 分类行 -->
@@ -320,6 +560,7 @@ const dateText = computed(() =>
           </div>
         </div>
       </section>
+      </template>
     </template>
   </div>
 </template>
@@ -905,6 +1146,301 @@ html.dark .sk-block::after {
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
+/* ===== M-07 今日维度卡片组 ===== */
+.bizhome-today {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 10px);
+}
+.bizhome-today-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bizhome-today-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text, #1e293b);
+}
+.bizhome-today-none {
+  margin-left: auto;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 999px;
+}
+.bizhome-today-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+.bizhome-today-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 9px 10px;
+  background: var(--color-bg, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+}
+.bizhome-today-card.clickable {
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+.bizhome-today-card.clickable:hover {
+  background: var(--color-bg-hover, #f1f5f9);
+  border-color: var(--color-primary, #3b82f6);
+}
+.bizhome-today-card .today-label {
+  font-size: 11px;
+  color: var(--color-text-secondary, #64748b);
+  white-space: nowrap;
+}
+.bizhome-today-card .today-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text, #1e293b);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bizhome-today-card .today-value small {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-text-secondary, #64748b);
+  margin-left: 2px;
+}
+.bizhome-today-card .today-value.negative {
+  color: var(--color-error, #dc2626);
+}
+.bizhome-today-card .today-value.accent {
+  color: var(--color-primary, #3b82f6);
+}
+.bizhome-today-card .today-sub {
+  font-size: 10px;
+  color: var(--color-text-muted, var(--color-text-muted));
+  white-space: nowrap;
+}
+
+/* 累计区折叠开关 */
+.bizhome-cumulative-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  padding: 7px 0;
+  font-size: 12px;
+  color: var(--color-text-secondary, #64748b);
+  background: transparent;
+  border: 1px dashed var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.bizhome-cumulative-toggle:hover {
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
+}
+.bizhome-cumulative-toggle :deep(.icon) {
+  transition: transform 0.15s;
+}
+.bizhome-cumulative-toggle :deep(.icon.up) {
+  transform: rotate(180deg);
+}
+
+/* M-16 汇总导出按钮 */
+.bizhome-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding: 7px 12px;
+  font-size: 12px;
+  color: var(--color-text-secondary, #64748b);
+  background: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.bizhome-export:hover:not(:disabled) {
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
+}
+.bizhome-export:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* ===== M-14 本月目标进度环 ===== */
+.bizhome-target {
+  grid-column: span 2;
+}
+.target-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.target-ring {
+  --pct: 0%;
+  position: relative;
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: conic-gradient(var(--color-primary, #3b82f6) var(--pct), var(--color-border, #e2e8f0) 0);
+}
+.bizhome-target.behind .target-ring {
+  background: conic-gradient(#f59e0b var(--pct), var(--color-border, #e2e8f0) 0);
+}
+.target-ring-inner {
+  position: absolute;
+  inset: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text, #1e293b);
+  background: var(--color-bg, #f8fafc);
+  border-radius: 50%;
+  font-variant-numeric: tabular-nums;
+}
+.target-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.target-amount {
+  font-size: 12px;
+  color: var(--color-text, #1e293b);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.target-sub {
+  font-size: 10px;
+  color: var(--color-success, #16a34a);
+}
+.target-sub.behind {
+  color: #f59e0b;
+}
+
+/* ===== M-08 首次使用引导卡 ===== */
+.bizhome-onboard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--color-primary-light, #eff6ff);
+  border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 35%, transparent);
+  border-radius: var(--radius-md, 10px);
+}
+.bizhome-onboard-body {
+  flex: 1;
+  min-width: 0;
+}
+.bizhome-onboard-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary, #3b82f6);
+  margin-bottom: 3px;
+}
+.bizhome-onboard-desc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-text-secondary, #64748b);
+}
+.bizhome-onboard-btn {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--color-primary, #3b82f6);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.bizhome-onboard-btn:hover {
+  background: var(--color-primary-hover, #2563eb);
+}
+
+/* M-13 待处理问题列表：账实异常 / 今日未记账 / 库存预警 */
+.bizhome-issues {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.bizhome-issue {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  border-radius: var(--radius-md, 10px);
+}
+.bizhome-issue .issue-text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.5;
+}
+/* warn = 需要处理的问题（漏记成本/ 库存预警） */
+.bizhome-issue.warn {
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+}
+/* info = 提醒（今天还没记账） */
+.bizhome-issue.info {
+  color: var(--color-text-secondary, #64748b);
+  background: var(--color-bg-card, #ffffff);
+  border: 1px dashed var(--color-border, #e2e8f0);
+}
+.issue-go {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--color-primary, #3b82f6);
+  background: transparent;
+  border: 1px solid var(--color-primary, #3b82f6);
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.issue-go:hover {
+  color: #fff;
+  background: var(--color-primary, #3b82f6);
+}
+
+/* 空态里的行动链接 */
+.bizhome-empty-action {
+  color: var(--color-primary, #3b82f6);
+  cursor: pointer;
+  font-weight: 600;
+}
+.bizhome-empty-action:hover {
+  text-decoration: underline;
+}
+
 /* ===== 统计范围 + 毛利率公式 ===== */
 .bizhome-scope {
   display: flex;
@@ -1152,5 +1688,105 @@ html.dark .mini-bar-col:hover .mini-bar {
     border-left: none;
     border-top: 1px solid var(--color-border, var(--color-border));
   }
+}
+
+/* M-08 移动端：引导卡竖排（按钮独占一行更好点），今日提示允许换行 */
+@media (max-width: 768px) {
+  /* M-07 今日卡片：5 列在375px 屏会挤成一条数字 → 改 2 列（末卡跨列） */
+  .bizhome-today-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .bizhome-today-card:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .bizhome-onboard {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .bizhome-onboard-btn {
+    width: 100%;
+    min-height: 44px; /* 触控目标 ≥44px */
+  }
+
+  /* M-13 问题条：窄屏允许换行，动作按钮独占可点区域 */
+  .bizhome-issue {
+    flex-wrap: wrap;
+  }
+
+  .issue-go {
+    margin-left: 0;
+    min-height: 36px;
+  }
+}
+
+/* M-08 暗色 */
+html.dark .bizhome-onboard {
+  background: #1e3a5f;
+  border-color: #60a5fa;
+}
+html.dark .bizhome-onboard-title {
+  color: #60a5fa;
+}
+html.dark .bizhome-onboard-desc {
+  color: #d1d5db;
+}
+html.dark .bizhome-issue.info {
+  background: #1f2937;
+  border-color: #374151;
+  color: #d1d5db;
+}
+html.dark .bizhome-issue.warn {
+  color: #fcd34d;
+  background: rgba(252, 211, 77, 0.12);
+  border-color: rgba(252, 211, 77, 0.5);
+}
+html.dark .bizhome-empty-action {
+  color: #60a5fa;
+}
+
+/* M-07 暗色 */
+html.dark .bizhome-today {
+  background: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
+}
+html.dark .bizhome-today-title {
+  color: var(--color-text, #f9fafb);
+}
+html.dark .bizhome-today-none {
+  color: #fcd34d;
+  background: rgba(252, 211, 77, 0.14);
+  border-color: rgba(252, 211, 77, 0.5);
+}
+html.dark .bizhome-today-card {
+  background: #111827;
+  border-color: #374151;
+}
+html.dark .bizhome-today-card.clickable:hover {
+  background: #1f2937;
+}
+html.dark .bizhome-today-card .today-value {
+  color: var(--color-text, #f9fafb);
+}
+html.dark .bizhome-today-card .today-label,
+html.dark .bizhome-today-card .today-sub {
+  color: #9ca3af;
+}
+html.dark .bizhome-cumulative-toggle {
+  border-color: #374151;
+}
+
+/* M-14 暗色：进度环内芯要用卡片底色，否则挖空处露出页面底色 */
+html.dark .target-ring-inner {
+  background: #111827;
+  color: #f9fafb;
+}
+html.dark .target-amount {
+  color: #f9fafb;
+}
+html.dark .target-sub.behind {
+  color: #fbbf24;
 }
 </style>

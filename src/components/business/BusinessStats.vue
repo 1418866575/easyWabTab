@@ -20,6 +20,9 @@ import { exportXlsx } from '@/composables/xlsxExport'
 
 const store = useWorkbenchBusinessStore()
 
+// M-13：跨模块导航 emit（补上后出度不再为 0：报表/差异可直达对应面板修正）
+const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
+
 const data = computed(() => ({
   productCategories: store.productCategories,
   expenseCategories: store.expenseCategories,
@@ -412,6 +415,8 @@ function printReport(): void {
         售出数量取自销售记录（带出 − 剩余 − 损耗），成本按商品进货价计算；共 {{ memberPriceCount }} 个商品设置了会员价。
       </p>
 
+      <!-- 移动端：统计表窄屏降列（分类名可截断），不再需要横向滚动 -->
+      <div class="bizstats-table-wrap">
       <!-- 按商品 -->
       <el-table
         v-if="reportMode === 'product'"
@@ -486,6 +491,7 @@ function printReport(): void {
           </template>
         </el-table-column>
       </el-table>
+      </div>
     </section>
   </div>
 </template>
@@ -897,6 +903,12 @@ html.dark .dot.expense {
   background: #f87171;
 }
 
+/* 毛利报表表格容器：桌面端无横向滚动（列宽自适应），窄屏允许横滑避免列被压扁 */
+.bizstats-table-wrap {
+  width: 100%;
+  min-width: 0;
+}
+
 /* 响应式：窄屏整体纵向排列，环形图内部也纵向 */
 @media (max-width: 768px) {
   .bizstats-main {
@@ -912,6 +924,12 @@ html.dark .dot.expense {
   /* 纵向排列时取消高度强制，避免拉伸过度 */
   .bizstats-pies > .bizstats-card {
     flex: 0 1 auto;
+  }
+
+  /* 毛利报表列多（按商品 9 列 / 按分类 8 列），窄屏横滑而不是把数字压成两行 */
+  .bizstats-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
 

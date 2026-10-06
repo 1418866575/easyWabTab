@@ -136,3 +136,42 @@ export async function exportXlsx(
   const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer
   downloadBlob(xlsxFileName(prefix, meta), new Blob([buf], { type: XLSX_MIME }))
 }
+
+/** 多 sheet 的一段数据（表名 + 表头 + 行） */
+export interface XlsxSheetBlock {
+  /** sheet 名（超 31 字符 / 含非法字符会被清洗；重名自动加序号） */
+  name: string
+  headers: XlsxRow
+  rows: readonly XlsxRow[]
+}
+
+/**
+ * 导出多 sheet Excel：一次落盘多个工作表（销售/进货/支出/指标各一页）。
+ * 用途：把散在各面板的多个单 sheet 导出合并成一份文件，省去「导出一堆再手工拼」。
+ * sheet 名去重：清洗后同名会追加 -2/-3 序号，避免 XLSX 静默覆盖（book_append_sheet 遇重名会抛）。
+ * @param prefix 文件名主体（最终文件名 = [年份_]?[账本名_]?prefix_YYYY-MM-DD.xlsx）
+ * @param sheets 各工作表数据（空数组时只写文件头，不生成任何 sheet）
+ * @param meta 元信息：year / ledgerName（文件名前缀，空则省略）
+ */
+export async function exportXlsxMulti(
+  prefix: string,
+  sheets: readonly XlsxSheetBlock[],
+  meta: XlsxExportMeta = {}
+): Promise<void> {
+  const XLSX = await import('xlsx')
+  const wb = XLSX.utils.book_new()
+  // sheet 名去重：清洗后同名追加序号
+  const used = new Set<string>()
+  for (const s of sheets) {
+    const base = safeSheetName(s.name)
+    let name = base
+    for (let i = 2; used.has(name.toLowerCase()) && i < 100; i++) name = `${base}-${i}`
+    used.add(name.toLowerCase())
+    const aoa: XlsxCell[][] = [[...s.headers], ...s.rows.map(r => [...r])].map(r => r.map(v => v ?? ''))
+    const ws = XLSX.utils.aoa_to_sheet(aoa)
+    ws['!cols'] = colWidths(s.headers, s.rows).map(wch => ({ wch }))
+    XLSX.utils.book_append_sheet(wb, ws, name)
+  }
+  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer
+  downloadBlob(xlsxFileName(prefix, meta), new Blob([buf], { type: XLSX_MIME }))
+}

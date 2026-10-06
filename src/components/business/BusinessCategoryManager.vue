@@ -514,4 +514,38 @@ function handleAdd(): void {
 html.dark .bizcat-hint {
   color: var(--color-text-muted, #9ca3af);
 }
+
+/* 移动端（此前本组件零媒体查询，窄屏下固定 px + nowrap 标签会挤压同行输入框）：
+   配置项改为弹性宽度、行容器允许换行、标签不再强制不换行 */
+@media (max-width: 768px) {
+  .bizcat-row {
+    flex-wrap: wrap;
+  }
+
+  .bizcat-unit,
+  .bizcat-product,
+  .bizcat-price {
+    width: auto;
+    flex: 1 1 92px;
+    min-width: 0;
+  }
+
+  .bizcat-prodprice {
+    min-width: 48px;
+  }
+
+  .bizcat-config-field {
+    flex-wrap: wrap;
+  }
+
+  /* 窄屏标签过长会挤掉输入框，允许换行优先于 nowrap */
+  .bizcat-config-field > label {
+    white-space: normal;
+  }
+
+  .bizcat-config,
+  .bizcat-add-config {
+    padding-left: 0;
+  }
+}
 </style>

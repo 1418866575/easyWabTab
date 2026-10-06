@@ -1508,6 +1508,63 @@ export function dailyTemplateFromLast(records: BusinessDailyRecord[], date: stri
     .map(it => ({ productId: it.productId, broughtOut: it.broughtOut, remaining: 0, loss: 0 }))
 }
 
+// ===== 录入提效：拼音首字母匹配（M-04） =====
+
+/**
+ * 汉字 → 拼音首字母映射（覆盖商品/分类常用字，够用即可，不追求全量）。
+ * 目的：让销售/进货的商品下拉支持「zs」（止痛药）、「kl」（可乐）这类首字母检索。
+ * 原生 String.normalize('NFD') 无法处理汉字，故用显式映射表；未收录字走 fallback
+ * （原样返回 char），保证「薯片」这类仍可按原字符搜到。
+ * 已导出以便测试自检表健康度（防止手写表时混进脏 key 或重复 key）。
+ */
+export const PINYIN_INITIALS: Record<string, string> = {
+  包: 'b', 饼: 'b', 冰: 'b', 棒: 'b', 宝: 'b', 薄: 'b', 百: 'b', 布: 'b', 摆: 'b', 杯: 'b', 标: 'b', 保: 'b', 鲜: 'b', 背: 'b', 白: 'b', 笔: 'b', 边: 'b',
+  菜: 'c', 肠: 'c', 茶: 'c', 醋: 'c', 橙: 'c', 春: 'c', 抽: 'c', 纯: 'c', 聪: 'c', 餐: 'c', 陈: 'c', 成: 'c', 初: 'c', 触: 'c',
+  大: 'd', 蛋: 'd', 豆: 'd', 电: 'd', 底: 'd', 袋: 'd', 单: 'd', 刀: 'd', 当: 'd', 点: 'd', 冻: 'd', 腐: 'd',
+  儿: 'e',
+  粉: 'f', 饭: 'f', 佛: 'f', 风: 'f', 费: 'f', 番: 'f',
+  甘: 'g', 干: 'g', 糕: 'g', 瓜: 'g', 果: 'g', 广: 'g', 罐: 'g', 灌: 'g', 公: 'g', 狗: 'g', 骨: 'g', 桂: 'g',
+  孩: 'h', 海: 'h', 火: 'h', 话: 'h', 混: 'h', 核: 'h', 盒: 'h', 红: 'h', 壶: 'h',
+  鸡: 'j', 记: 'j', 洁: 'j', 卷: 'j', 精: 'j', 橘: 'j', 姜: 'j', 酱: 'j', 价: 'j', 剪: 'j', 胶: 'j',
+  可: 'k', 口: 'k', 咖: 'k',
+  辣: 'l', 冷: 'l', 粮: 'l', 凉: 'l', 乐: 'l', 拉: 'l', 蜡: 'l', 莲: 'l', 梨: 'l', 炼: 'l', 料: 'l', 岭: 'l',
+  梅: 'm', 面: 'm', 奶: 'm', 棉: 'm', 麻: 'm', 麦: 'm', 馒: 'm', 蘑: 'm', 蜜: 'm', 米: 'm',
+  尿: 'n',
+  泡: 'p', 瓶: 'p', 啤: 'p', 苹: 'p', 配: 'p', 片: 'p', 皮: 'p', 偏: 'p', 铺: 'p',
+  汽: 'q', 曲: 'q', 巧: 'q', 签: 'q', 起: 'q', 千: 'q', 轻: 'q',
+  乳: 'r', 肉: 'r',
+  薯: 's', 酸: 's', 塑: 's', 湿: 's', 勺: 's', 扇: 's', 手: 's', 刷: 's', 水: 's',
+  停: 't', 桃: 't', 糖: 't', 铁: 't', 提: 't', 痛: 't', 头: 't', 贴: 't', 桶: 't', 汤: 't',
+  袜: 'w', 玩: 'w', 味: 'w', 蚊: 'w', 卫: 'w', 碗: 'w', 稳: 'w',
+  虾: 'x', 香: 'x', 洗: 'x', 雪: 'x', 吸: 'x', 小: 'x',
+  烟: 'y', 饮: 'y', 油: 'y', 盐: 'y', 药: 'y', 牙: 'y',
+  纸: 'z', 止: 'z', 治: 'z', 爪: 'z', 桌: 'z', 竹: 'z', 指: 'z', 芝: 'z', 汁: 'z',
+}
+
+/** 取字符串的「拼音首字母串」：汉字查表，未收录则原样保留（英文/数字同样原样） */
+export function pinyinInitials(text: string): string {
+  return (text ?? '')
+    .split('')
+    .map(ch => PINYIN_INITIALS[ch] ?? ch)
+    .join('')
+    .toLowerCase()
+}
+
+/**
+ * 商品/分类下拉匹配：名称子串 OR 拼音首字母**前缀**。
+ * 例：query="zs" 命中「止痛药」；query="kl" 命中「可乐」；query="薯" 命中「薯片」。
+ * 拼音侧用前缀而非子串：首字母串的子串匹配会产出「zs 命中 zty」这类无意义结果
+ * （zty 是「止痛药」的首字母，zs 是「正宗…」的），前缀才是用户输入首字母时的预期。
+ * 大小写不敏感；空 query 返回 true（不过滤）。
+ */
+export function matchProductKeyword(name: string, keyword: string): boolean {
+  const q = (keyword ?? '').trim().toLowerCase()
+  if (q === '') return true
+  const n = (name ?? '').toLowerCase()
+  if (n.includes(q)) return true
+  return pinyinInitials(name).startsWith(q)
+}
+
 // ===== 录入校验（进货 / 销售 / 手填营业额） =====
 
 export type IssueLevel = 'error' | 'warn'
@@ -2104,11 +2161,69 @@ export function calcBusinessStats(data: BusinessData): BusinessStats {
   }
 }
 
+// ===== 「今日」维度统计（M-07） =====
+
+/**
+ * 某一天的经营快照。摆摊用户最关心「今天卖了多少、赚了多少」，
+ * 而账本级统计全是年度累计，首屏缺「今天」维度（M-07）。
+ */
+export interface TodayStats {
+  /** 今日日期键（本地 YYYY-MM-DD） */
+  date: string
+  /** 今日是否已有销售记录（false 时引导去记账） */
+  hasDaily: boolean
+  /** 今日营业额= Σ当日商品明细售出 × 售价（优先用记录落库的 totalRevenue，与列表口径一致） */
+  revenue: number
+  /** 今日成本：严格 FIFO 逐批结转（与账本级 cost 同口径，只筛当日销售记录） */
+  cost: number
+  /** 今日毛利 = revenue − cost */
+  profit: number
+  /** 今日毛利率（0-1；revenue 0 → 0） */
+  margin: number
+  /** 今日支出 = Σ当日支出明细金额 */
+  expense: number
+  /** 今日毛利扣减支出后的净额（可为负） */
+  net: number
+  /** 今日交易笔数（顾客买单次数，Σ当日transactionCount） */
+  transactionCount: number
+  /** 今日售出商品行数 */
+  itemLines: number
+}
+
+/**
+ * 指定日期的经营快照（默认今天）。
+ * 成本走 calcDailyCostFifo + calcFifoAllocation 全量分配后按记录过滤——
+ * FIFO 是跨批次结转，单独算某一天必须用全量分配结果，否则会与账本级口径不一致。
+ */
+export function calcTodayStats(data: BusinessData, date: string = localDateKey()): TodayStats {
+  const dayRecords = (data.dailyRecords ?? []).filter(r => r.date === date)
+  const revenue = Math.round(dayRecords.reduce((s, r) => s + (r.totalRevenue || 0), 0) * 100) / 100
+  // FIFO 需全量分配（批次结转跨天），再按日期筛出当日部分
+  const fifo = calcFifoAllocation(data.purchases, data.dailyRecords, data.products)
+  const cost = Math.round(dayRecords.reduce((s, r) => s + calcDailyCostFifo(r.id, r.items, data.products, fifo), 0) * 100) / 100
+  const profit = Math.round((revenue - cost) * 100) / 100
+  const dayExpenses = (data.expenseDailies ?? []).filter(d => d.date === date)
+  const expense = Math.round(flatExpenseItems(dayExpenses).reduce((s, e) => s + e.amount, 0) * 100) / 100
+  return {
+    date,
+    hasDaily: dayRecords.length > 0,
+    revenue,
+    cost,
+    profit,
+    margin: revenue > 0 ? Math.round((profit / revenue) * 10000) / 10000 : 0,
+    expense,
+    net: Math.round((profit - expense) * 100) / 100,
+    transactionCount: dayRecords.reduce((s, r) => s + (r.transactionCount || 0), 0),
+    itemLines: dayRecords.reduce((s, r) => s + (r.items?.length ?? 0), 0)
+  }
+}
+
 /** 低库存预警清单：在售商品（停售商品不参与预警）库存 < 阈值，按库存升序 */
 export interface LowStockItem {
   product: BusinessProduct
   stock: number
 }
+
 
 export function lowStockProducts(data: BusinessData): LowStockItem[] {
   const stock = calcInventory(data.products, data.purchases, data.dailyRecords)
@@ -2279,9 +2394,141 @@ export function calcMonthlyStats(data: BusinessData, year: number): MonthlyStat[
   return out
 }
 
+// ===== 账本汇总导出（M-16） =====
+
+/** 汇总表的一段（section 名 + 表头 + 行）；首页导出与对账页共用同一份口径 */
+export interface SummaryBlock {
+  section: string
+  headers: string[]
+  rows: (string | number)[][]
+}
+
+/**
+ * 账本汇总导出：把散在各面板的 8 个导出入口合并成一份「一页看全」的工作簿。
+ * 各段口径与对应面板完全一致（销售/进货/支出走同一批纯函数），
+ * 末尾附一段关键指标（今日/本月/账本累计），避免用户为了对账要导出一堆文件再手工拼。
+ */
+export function buildLedgerSummaryBlocks(data: BusinessData, today: string = localDateKey()): SummaryBlock[] {
+  const productName = (id: string): string => findProduct(data.products, id)?.name ?? '（已删除商品）'
+  const catName = (id: string): string => findExpenseCategory(data.expenseCategories, id)?.name ?? '未分类'
+
+  // ① 销售流水
+  const sales: (string | number)[][] = sortDailyRecords(data.dailyRecords).map(r => [
+    r.date,
+    (r.items ?? []).map(it => `${productName(it.productId)}×${soldCount(it)}`).join('、'),
+    r.totalRevenue,
+    r.transactionCount ?? 0,
+    r.note || ''
+  ])
+  // ② 进货流水
+  const purchases = sortPurchases(data.purchases).map(p => [
+    p.date,
+    productName(p.productId),
+    p.quantity,
+    p.unitPrice,
+    p.total,
+    p.expenseIds && p.expenseIds.length > 0 ? '已关联' : '',
+    p.note || ''
+  ])
+  // ③ 支出流水
+  const expenses: (string | number)[][] = []
+  for (const d of sortExpenseDailies(data.expenseDailies)) {
+    for (const e of d.items) {
+      expenses.push([d.date, catName(e.categoryId), e.title || expenseLabel(e, d.date), e.quantity ?? '', e.unitPrice ?? '', e.amount, e.paymentMethod || '', e.note || ''])
+    }
+  }
+  // ④ 关键指标
+  const stats = calcBusinessStats(data)
+  const month = calcMonthlyStats(data, Number(today.slice(0, 4)))[Number(today.slice(5, 7)) - 1]
+  const t = calcTodayStats(data, today)
+  const metrics: (string | number)[][] = [
+    ['今日营业额', t.revenue],
+    ['今日成本', t.cost],
+    ['今日毛利', t.profit],
+    ['今日支出', t.expense],
+    ['今日净利', t.net],
+    ['今日交易笔数', t.transactionCount],
+    ['本月营业额', month?.revenue ?? 0],
+    ['本月成本', month?.cost ?? 0],
+    ['本月毛利', month?.profit ?? 0],
+    ['本月目标', data.settings?.monthlyRevenueTarget || 0],
+    ['账本营业收入', stats.revenue],
+    ['账本成本', stats.cost],
+    ['账本毛利', stats.profit],
+    ['账本毛利率', `${(stats.margin * 100).toFixed(2)}%`],
+    ['账本支出', stats.expenseTotal],
+    ['待销售成本', stats.pendingCost],
+    ['待销售营业额', stats.pendingRevenue]
+  ]
+
+  return [
+    { section: '销售流水', headers: ['日期', '商品与售出', '营业额', '交易笔数', '备注'], rows: sales },
+    { section: '进货流水', headers: ['日期', '商品', '数量', '进价', '合计', '关联支出', '备注'], rows: purchases },
+    { section: '支出流水', headers: ['日期', '分类', '标题', '数量', '单价', '金额', '支付方式', '备注'], rows: expenses },
+    { section: '关键指标', headers: ['指标', '数值'], rows: metrics }
+  ]
+}
+
+// ===== 月度目标进度（M-14） =====
+
+/**
+ * 本月营业额目标进度。
+ * 数据源复用 calcMonthlyStats（口径与统计页一致），不重算一遍月统计。
+ * 目标为 0（未设定）时 target = null，UI 不渲染进度环。
+ */
+export interface MonthlyTargetProgress {
+  /** 本月营业额（口径同统计页月度报表） */
+  revenue: number
+  /** 目标额；0 或未设定为 null */
+  target: number | null
+  /** 完成率（0-N，可 >1 超额完成；无目标时 null） */
+  rate: number | null
+  /** 差额（目标 − 已完成，负数表示超额） */
+  gap: number
+  /** 当月天数（进度环的「时间进度」参照） */
+  days: number
+  /** 当月总天数 */
+  totalDays: number
+  /** 时间进度（0-1）：今天占当月已过天数 */
+  timeRate: number
+  /** 是否落后于时间进度（营收占比 < 时间占比 → 需加油） */
+  behind: boolean
+}
+
+export function calcMonthlyTargetProgress(
+  data: BusinessData,
+  year: number,
+  month: number,
+  today: string = localDateKey()
+): MonthlyTargetProgress {
+  const m = Math.min(12, Math.max(1, Math.floor(month)))
+  const stat = calcMonthlyStats(data, Math.floor(year))[m - 1]
+  const revenue = stat?.revenue ?? 0
+  const raw = data?.settings?.monthlyRevenueTarget
+  const target = typeof raw === 'number' && Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : null
+  const days = stat?.days ?? 0
+  const totalDays = new Date(Math.floor(year), m, 0).getDate()
+  // 今天在该月内 → 今天是第几天（跨月/跨年时 today 不属于该月，按月末算满）
+  const todayDate = Number(today.slice(8, 10))
+  const isThisMonth = today.slice(0, 7) === `${Math.floor(year)}-${String(m).padStart(2, '0')}`
+  const passedDays = isThisMonth ? Math.min(totalDays, Math.max(0, todayDate)) : totalDays
+  const timeRate = passedDays / totalDays
+  const rate = target !== null && target > 0 ? revenue / target : null
+  return {
+    revenue,
+    target,
+    rate,
+    gap: target !== null ? Math.round((target - revenue) * 100) / 100 : 0,
+    days,
+    totalDays,
+    timeRate: Math.round(timeRate * 10000) / 10000,
+    behind: rate !== null && rate < timeRate
+  }
+}
+
 /** 每日一柱堆叠分段几何（仅非零值生成；loss=亏损悬挂零下红段） */
 export interface TrendSegment {
-  key: 'revenue' | 'cost' | 'profit' | 'loss' | 'count' | 'count'
+  key: 'revenue' | 'cost' | 'profit' | 'loss' | 'count'
   x: number
   y: number
   w: number

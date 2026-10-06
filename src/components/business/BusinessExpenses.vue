@@ -20,7 +20,7 @@ function cardFields(d: BusinessExpenseDaily) {
 }
 
 // 列表/卡片均为「一天一笔」的日容器视图：日期倒序，同日多产品归入同一天
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import {
   EXPENSE_TITLE_MAX,
@@ -41,6 +41,12 @@ import { usePageSize } from '@/composables/usePageSize'
 
 const store = useWorkbenchBusinessStore()
 const toast = useToast()
+
+// autoOpenAdd：Alt+K 快捷动作「记一笔支出」直达新增弹框
+const props = defineProps<{ autoOpenAdd?: boolean }>()
+
+// M-13：跨模块导航 emit（补上后本面板出度不再为 0：发现支出没关联进货可直达进货/对账页）
+const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
 
 function catNameOf(id: string): string {
   return findExpenseCategory(store.expenseCategories, id)?.name ?? '未知'
@@ -119,7 +125,7 @@ const formOrderAddress = ref('')
 const formSalesmanNote = ref('')
 /**
  * 公用信息记忆：订货电话 / 订货地址 / 业务员备注属低频变动的稳定信息，
- * 新增时自动带入上次填写值（按账本隔离），省去每次重打。标题不记忆（随每笔进货变化）。
+ * 新增时自动带入上次填写值（按账本隔离），省去每次重打。标题不记忆（随每笔开销变化）。
  */
 const sharedDefaults = useBizSharedDefaults(() => store.currentLedgerId)
 
@@ -180,7 +186,7 @@ function startAdd(): void {
   editingDailyId.value = null
   editingDate.value = localDateKey()
   formNote.value = ''
-  // 标题每次进货都不同，不记忆；其余公用信息带入上次填写值（按账本隔离）
+  // 标题每次开销都不同，不记忆；其余公用信息带入上次填写值（按账本隔离）
   const remembered = sharedDefaults.load()
   formTitle.value = ''
   formOrderPhone.value = remembered.orderPhone
@@ -191,6 +197,11 @@ function startAdd(): void {
   applySharedToRows()
   showDialog.value = true
 }
+
+// Alt+K「记一笔支出」直达：面板挂载即打开新增弹框
+onMounted(() => {
+  if (props.autoOpenAdd) startAdd()
+})
 
 function startEdit(d: BusinessExpenseDaily): void {
   editingDailyId.value = d.id
@@ -249,7 +260,7 @@ const isFormValid = computed(() => {
 })
 
 /** 账本只记录其所属年份的数据：日期选择器禁用其它年份 */
-// 账本只记录其所属年份的数据：日期选择器禁用其它年份（公共逻辑，与库存/销售弹框同源）
+// 账本只记录其所属年份的数据：日期选择器禁用其它年份（公共逻辑，与进货/销售弹框同源）
 const { disabledDate } = useLedgerDate()
 
 async function handleSave(): Promise<void> {
@@ -276,7 +287,7 @@ async function handleSave(): Promise<void> {
     if (!r.ok) throw new Error(r.message)
   })
   if (!ok) return
-  toast.success(isEditing ? '进货记录已保存' : `进货记录已添加（${items.length} 笔）`)
+  toast.success(isEditing ? '支出记录已保存' : `支出记录已添加（${items.length} 笔）`)
   // 仅新增成功后记忆公用信息：取消或编辑不写入，避免误操作污染下次默认值
   if (!isEditing) {
     sharedDefaults.remember({
@@ -310,7 +321,7 @@ async function handleDeleteFromDialog(): Promise<void> {
     <!-- 单行工具条：左=新增/导出，右=视图切换 -->
     <div class="ewt-table-toolbar is-split">
       <div class="bizexp-toolbar-left">
-        <el-button type="primary" data-testid="bizexp-add" @click="startAdd">＋ 新增进货</el-button>
+        <el-button type="primary" data-testid="bizexp-add" @click="startAdd">＋ 新增支出</el-button>
         <el-button class="btn-export-xlsx" data-testid="bizexp-export" :disabled="sorted.length === 0" @click="exportExpensesExcel">导出 Excel</el-button>
       </div>
       <div class="bizexp-toolbar-right">
@@ -319,7 +330,7 @@ async function handleDeleteFromDialog(): Promise<void> {
     </div>
 
     <!-- 一天一行的日容器视图：同一天可记多笔产品支出，自动合并到同一天 -->
-    <div v-if="sorted.length === 0" class="bizexp-empty" data-testid="bizexp-empty">暂无进货记录，点击「＋ 新增进货」记下第一天</div>
+    <div v-if="sorted.length === 0" class="bizexp-empty" data-testid="bizexp-empty">暂无支出记录，点击「＋ 新增支出」记下第一笔开销</div>
     <template v-else>
       <div class="bizexp-table-wrap">
         <el-table v-if="vm.mode === 'list'" class="ewt-table"
@@ -437,7 +448,7 @@ async function handleDeleteFromDialog(): Promise<void> {
     >
       <template #header>
         <div class="biz-dialog-header">
-          <h3>{{ editingDailyId ? '编辑进货' : '新增进货' }}</h3>
+          <h3>{{ editingDailyId ? '编辑支出' : '新增支出' }}</h3>
           <button class="biz-dialog-close" @click="showDialog = false"><Icon name="close" /></button>
         </div>
       </template>
@@ -971,7 +982,10 @@ async function handleDeleteFromDialog(): Promise<void> {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-@media (max-width: 767px) {
+/* 移动端：工具行换行 + 表单栅格降列 + 控件撑满
+   断点统一 768px（与全库 91 处及 styles/mobile.css 保持一致；原为 767px，
+   视口恰为 768px 时全局弹框全屏/分页精简已生效但此处换行不生效，工具行被压扁） */
+@media (max-width: 768px) {
   .ewt-table-toolbar.is-split {
     flex-wrap: wrap;
     gap: 8px;

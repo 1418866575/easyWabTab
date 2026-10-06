@@ -22,9 +22,9 @@ import Icon from '../Icon.vue'
 // 销售记录：日记录表格（date 唯一 upsert）+ 编辑弹框（商品行：带出/剩余/损耗，收入自动合计）
 // P0-1：结构化商品明细行（展开行展示）
 // P0-3：编辑弹框增加库存上下文（当前库存、预计库存、小计实时计算）
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { calcDailyCost, calcDailyCostFifo, calcDailyItemDetails, calcDailyLossAmount, calcDailyRevenue, calcFifoAllocation, calcInventory, checkRevenueOverride, findProduct, formatYuanOf, localDateKey, sortDailyRecords, validateDailyRows } from '@/composables/businessCore'
+import { calcDailyCost, calcDailyCostFifo, calcDailyItemDetails, calcDailyLossAmount, calcDailyRevenue, calcFifoAllocation, calcInventory, checkRevenueOverride, dailyTemplateFromLast, findProduct, formatYuanOf, frequentProductIds, localDateKey, matchProductKeyword, sortDailyRecords, validateDailyRows } from '@/composables/businessCore'
 import { useToast } from '@/composables/useToast'
 import { useBizSaving } from '@/composables/useBizSaving'
 import { useLedgerDate } from '@/composables/useLedgerDate'
@@ -34,6 +34,9 @@ import { usePageSize } from '@/composables/usePageSize'
 
 // P1-3：跨模块联动跳转 emit
 const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
+
+// Alt+K 快捷动作「记一笔销售」：视图切到本面板后置 true，挂载即打开新增弹框
+const props = defineProps<{ autoOpenAdd?: boolean }>()
 
 const store = useWorkbenchBusinessStore()
 const toast = useToast()
@@ -99,12 +102,34 @@ const showDialog = ref(false)
 const { saving, run } = useBizSaving()
 /** 编辑中的原记录 id（新增为 null）：删除必须按 id，不能拿日期当 id（日期 ≠ id 会导致删不掉） */
 const editingRecordId = ref<string | null>(null)
+/** 是否为编辑既有记录（复制上日模板需跳过：编辑当天时不能拿上日覆盖正在改的数据） */
+const isEditingRecord = computed(() => editingRecordId.value !== null)
 const editingDate = ref(localDateKey())
 const formNote = ref('')
 const formTransactionCount = ref(0)
 /** 手动营业额：null = 跟随商品明细自动合计；有值则以手动金额为准保存（两位小数） */
 const formRevenueManual = ref<number | null>(null)
 const rows = reactive<{ productId: string; broughtOut: number; remaining: number; loss: number }[]>([])
+
+/**
+ * M-02（2026-10-06）：录入行是否展开「进阶三字段」。
+ * 摆摊 90% 场景是「带出 N、卖完、剩 0」，此前必须逐行敲带出/剩余/损耗三个框。
+ * 现在「售出」是主输入框，带出/剩余/损耗折叠进「更多 ▾」（默认折叠）。
+ * 折叠态仍显示剩余/损耗摘要（非零才显示），避免「填了损耗却看不见」。
+ */
+const expandedRows = reactive(new Set<number>())
+
+function isRowExpanded(index: number): boolean {
+  return expandedRows.has(index)
+}
+function toggleRowExpanded(index: number): void {
+  if (expandedRows.has(index)) expandedRows.delete(index)
+  else expandedRows.add(index)
+}
+/** 该行是否有进阶值（剩余或损耗非零）——用于折叠态的摘要提示 */
+function rowHasAdvanced(row: { remaining: number; loss: number }): boolean {
+  return row.remaining > 0 || row.loss > 0
+}
 
 // P0-3：当前库存 map（编辑弹框用）
 const stockMap = computed(() => calcInventory(store.products, store.purchases, store.dailyRecords))
@@ -138,6 +163,16 @@ function rowExpectedStock(productId: string, broughtOut: number): number {
 /** 行售出 = 带出 − 剩余 − 损耗（与 core soldCount 同口径） */
 function rowSold(broughtOut: number, remaining: number, loss: number): number {
   return Math.max(0, broughtOut - remaining - loss)
+}
+
+/**
+ * M-02：由「售出」反推「带出」= 售出 + 剩余 + 损耗。
+ * 这样用户只填一个数（卖出 N 件）即可保存；带出仍是唯一落库字段，数据结构零变更、老记录零迁移。
+ * 剩余/损耗非零时带出自动加上（例：售出 8、剩 2 → 带出 10）。
+ */
+function setRowSold(row: { broughtOut: number; remaining: number; loss: number }, sold: number | null): void {
+  const s = Math.max(0, Math.floor(Number.isFinite(sold) ? (sold as number) : 0))
+  row.broughtOut = s + Math.max(0, Math.floor(row.remaining || 0)) + Math.max(0, Math.floor(row.loss || 0))
 }
 
 /** 行小计：售出 × 售价 */
@@ -258,6 +293,11 @@ function startAdd(): void {
   showDialog.value = true
 }
 
+// Alt+K「记一笔销售」直达：面板挂载即打开新增弹框，无需用户先点面板内按钮
+onMounted(() => {
+  if (props.autoOpenAdd) startAdd()
+})
+
 function startEdit(record: BusinessDailyRecord): void {
   editingRecordId.value = record.id
   editingDate.value = record.date
@@ -277,6 +317,58 @@ function startEdit(record: BusinessDailyRecord): void {
 
 function addRow(): void {
   rows.push(emptyRow())
+}
+
+// ===== M-03（2026-10-06）录入提效：复制上日模板 + 常卖商品快捷区 =====
+// 此前businessCore 的 dailyTemplateFromLast / frequentProductIds 已完整实现但全库零引用，
+// 每日常规营业都要逐行重填同样的商品。这里把它们接到 UI 上。
+/** 上日模板行（同商品合并数量）；无上日记录或日期无效时为空 */
+const lastTemplate = computed(() => {
+  if (isEditingRecord.value) return[] // 编辑当天不复制（避免覆盖正在改的记录）
+  return dailyTemplateFromLast(store.dailyRecords, editingDate.value)
+})
+
+/**
+ * 带出上日模板：同商品合并带出数量（core 不做合并，合并规则属UI 编排，放这里）。
+ * 目标商品已停售/已删除的行直接丢弃，避免带入无效 productId。
+ */
+function applyLastTemplate(): void {
+  const merged = new Map<string, number>()
+  for (const r of lastTemplate.value) {
+    const p = findProduct(store.products, r.productId)
+    if (!p) continue
+    merged.set(r.productId, (merged.get(r.productId) ?? 0) + r.broughtOut)
+  }
+  if (merged.size === 0) {
+    toast.warning('没有找到上日的销售记录可复制')
+    return
+  }
+  // 已有非空行时追加到其后（保留用户已填的行，不静默覆盖）
+  for (const [productId, broughtOut] of merged) {
+    rows.push({ productId, broughtOut, remaining: 0, loss: 0 })
+  }
+  toast.success(`已带入上日 ${merged.size} 个商品的带出数量，请核对今日售出`)
+}
+
+/** 常卖商品（近 30 天带出次数最多的在售商品），点一下即追加一行并预选该商品 */
+const frequentProducts = computed(() => {
+  const ids = frequentProductIds(store.dailyRecords, store.products, 30, localDateKey(), 8)
+  return ids
+    .map(id => findProduct(store.products, id))
+    .filter((p): p is NonNullable<typeof p> => !!p)
+})
+
+function addFrequentRow(productId: string): void {
+  rows.push({ productId, broughtOut: 0, remaining: 0, loss: 0 })
+}
+
+// ===== M-04（2026-10-06）商品下拉拼音首字母检索 =====
+const activeProducts = computed(() => store.products)
+/** el-select 实际渲染的选项（受filter-method 过滤）；filter-method 逻辑委托 core，组件不内联 */
+const productOptions = ref<typeof store.products>([...store.products])
+function productFilterMethod(query: string): void {
+  const q = (query ?? '').trim()
+  productOptions.value = q === '' ? [...activeProducts.value] : activeProducts.value.filter(p => matchProductKeyword(p.name, q))
 }
 
 function removeRow(index: number): void {
@@ -470,7 +562,8 @@ async function handleDelete(id: string | null): Promise<void> {
     >
       <template #header>
         <div class="biz-dialog-header">
-          <h3>销售记录</h3>
+          <!-- M-15：标题区分新增/编辑（此前两者都是「销售记录」，编辑时不知道自己在改什么） -->
+          <h3>{{ editingRecordId ? '编辑销售记录' : '新增销售记录' }}</h3>
           <button class="biz-dialog-close" @click="showDialog = false"><Icon name="close" /></button>
         </div>
       </template>
@@ -488,26 +581,50 @@ async function handleDelete(id: string | null): Promise<void> {
           </div>
         </div>
 
+        <!-- 录入提效条（M-03）：复制上日模板 + 常卖商品快捷区 -->
+        <div class="bizday-quick-bar">
+          <el-button
+            size="small"
+            :disabled="lastTemplate.length === 0"
+			data-testid="bizday-apply-last"
+            title="带入上日的商品与带出数量，剩余/损耗留 0 供今天重填"
+            @click="applyLastTemplate"
+          ><Icon name="daily" :size="13" /> 复制上日</el-button>
+
+          <div v-if="frequentProducts.length > 0" class="bizday-frequent" data-testid="bizday-frequent">
+            <span class="bizday-frequent-label">常卖：</span>
+            <button
+              v-for="p in frequentProducts"
+              :key="p.id"
+              type="button"
+              class="bizday-frequent-chip"
+              :title="`添加一行：${p.name}`"
+              :data-testid="`bizday-frequent-${p.id}`"
+              @click="addFrequentRow(p.id)"
+            >{{ p.name }}</button>
+          </div>
+        </div>
+
         <!-- 添加销售按钮条（参考支出新增弹框：日期后、表格上方，右对齐） -->
         <div class="bizday-add-bar">
           <el-button data-testid="bizday-row-add" @click="addRow">＋ 添加销售</el-button>
         </div>
 
-        <!-- 商品及关联字段（带出/剩余/损耗/小计）以表格形式展示 -->
+        <!-- 商品及关联字段（售出为主输入；带出/剩余/损耗折叠进「更多 ▾」）以表格形式展示-->
         <div class="bizday-table-scroll">
           <table class="bizday-table" data-testid="bizday-rows-table">
             <thead>
               <tr>
                 <th class="bizday-th-index">#</th>
                 <th>商品<span class="req">*</span></th>
+                <th class="bizday-th-sold">售出</th>
                 <th>带出</th>
                 <th>剩余</th>
                 <th>损耗</th>
-                <th>售出</th>
                 <th>营业额</th>
-                <th>成本</th>
-                <th>利润</th>
-                <th>损耗金额</th>
+                <th class="bizday-col-cost">成本</th>
+                <th class="bizday-col-profit">利润</th>
+                <th class="bizday-col-loss">损耗金额</th>
                 <th class="bizday-th-op">操作</th>
               </tr>
             </thead>
@@ -516,9 +633,18 @@ async function handleDelete(id: string | null): Promise<void> {
                 <tr :data-testid="`bizday-row-${i}`">
                   <td class="bizday-td-index">{{ i + 1 }}</td>
                   <td class="bizday-td-product">
-                    <el-select v-model="row.productId" size="small" class="bizday-product" data-testid="bizday-row-product">
+                    <!-- M-04：filterable + 拼音首字母检索（zs→止痛药） -->
+                    <el-select
+                      v-model="row.productId"
+                      size="small"
+                      class="bizday-product"
+                      data-testid="bizday-row-product"
+                      filterable
+                      :filter-method="productFilterMethod"
+                      placeholder="输入商品名或拼音首字母"
+                    >
                       <el-option
-                        v-for="p in store.products"
+                        v-for="p in productOptions"
                         :key="p.id"
                         :value="p.id"
                         :label="p.name + (p.active ? '' : '（停售）')"
@@ -536,6 +662,19 @@ async function handleDelete(id: string | null): Promise<void> {
                       <span class="bizday-row-stock">库存 {{ rowStock(row.productId) }} {{ rowUnit(row.productId) }}<template v-if="row.broughtOut"> · 预计 {{ rowExpectedStock(row.productId, row.broughtOut) }} {{ rowUnit(row.productId) }}</template></span>
                     </div>
                   </td>
+                  <td class="bizday-td-num bizday-td-sold">
+                    <!-- 售出 = 主输入框：填它即自动反推带出（M-02） -->
+                    <el-input-number
+                      :model-value="rowSold(row.broughtOut, row.remaining, row.loss)"
+                      @update:model-value="setRowSold(row, $event)"
+                      :min="0"
+                      :step="1"
+                      size="small"
+                      controls-position="right"
+                      class="bizday-num-input"
+                      :data-testid="`bizday-row-sold-${i}`"
+                    />
+                  </td>
                   <td class="bizday-td-num">
                     <el-input-number v-model="row.broughtOut" :min="0" :step="1" size="small" controls-position="right" class="bizday-num-input" :data-testid="`bizday-row-broughtout-${i}`" />
                   </td>
@@ -545,19 +684,59 @@ async function handleDelete(id: string | null): Promise<void> {
                   <td class="bizday-td-num">
                     <el-input-number v-model="row.loss" :min="0" :step="1" size="small" controls-position="right" class="bizday-num-input" :data-testid="`bizday-row-loss-${i}`" />
                   </td>
-                  <td class="bizday-td-num bizday-row-sold" :data-testid="`bizday-row-sold-${i}`">{{ rowSold(row.broughtOut, row.remaining, row.loss) }}</td>
                   <td class="bizday-td-money">
                     <span class="bizday-row-subtotal">¥{{ rowSubtotal(row.productId, row.broughtOut, row.remaining, row.loss).toFixed(2) }}</span>
                   </td>
-                  <td class="bizday-td-money">{{ formatYuanOf(rowCost(row.productId, row.broughtOut, row.remaining, row.loss)) }}</td>
-                  <td class="bizday-td-money bizday-profit-text">{{ formatYuanOf(rowProfit(row.productId, row.broughtOut, row.remaining, row.loss)) }}</td>
-                  <td class="bizday-td-money bizday-loss-text">{{ formatYuanOf(rowLossAmount(row.productId, row.loss)) }}</td>
+                  <td class="bizday-td-money bizday-col-cost">{{ formatYuanOf(rowCost(row.productId, row.broughtOut, row.remaining, row.loss)) }}</td>
+                  <td class="bizday-td-money bizday-profit-text bizday-col-profit">{{ formatYuanOf(rowProfit(row.productId, row.broughtOut, row.remaining, row.loss)) }}</td>
+                  <td class="bizday-td-money bizday-loss-text bizday-col-loss">{{ formatYuanOf(rowLossAmount(row.productId, row.loss)) }}</td>
                   <td class="bizday-td-op">
+                    <!-- M-02：带出/剩余/损耗默认折叠，有值时给提示；点击展开编辑 -->
+                    <button
+                      type="button"
+                      class="bizday-more-toggle"
+                      :class="{ active: isRowExpanded(i) || rowHasAdvanced(row) }"
+                      :title="isRowExpanded(i) ? '收起带出/剩余/损耗' : '编辑带出/剩余/损耗（剩余或损耗不为 0 时请展开）'"
+                      :data-testid="`bizday-row-more-${i}`"
+                      @click="toggleRowExpanded(i)"
+                    >
+                      更多
+                      <Icon
+                        name="chevron-down"
+                        :size="12"
+                        class="bizday-more-caret"
+                        :class="{ up: isRowExpanded(i) }"
+                      />
+                    </button>
                     <el-button type="danger" size="small" :data-testid="`bizday-row-del-${i}`" @click="removeRow(i)">移除</el-button>
                   </td>
                 </tr>
+                <!-- M-02 进阶展开行：带出/剩余/损耗三个数字框（默认折叠，售出反推带出后通常无需展开） -->
+                <tr v-if="isRowExpanded(i)" class="bizday-row-more-row" :data-testid="`bizday-row-more-panel-${i}`">
+                  <td colspan="11" class="bizday-row-more-cell">
+                    <div class="bizday-more-grid">
+                      <label class="bizday-more-field">
+                        <span>带出</span>
+                        <el-input-number v-model="row.broughtOut" :min="0" :step="1" size="small" controls-position="right" :data-testid="`bizday-more-broughtout-${i}`" />
+                      </label>
+                      <label class="bizday-more-field">
+                        <span>剩余</span>
+                        <el-input-number v-model="row.remaining" :min="0" :step="1" size="small" controls-position="right" :data-testid="`bizday-more-remaining-${i}`" />
+                      </label>
+                      <label class="bizday-more-field">
+                        <span>损耗</span>
+                        <el-input-number v-model="row.loss" :min="0" :step="1" size="small" controls-position="right" :data-testid="`bizday-more-loss-${i}`" />
+                      </label>
+                      <span class="bizday-more-hint">
+                        售出 {{ rowSold(row.broughtOut, row.remaining, row.loss) }} =带出 {{ row.broughtOut }} − 剩余 {{ row.remaining }} − 损耗 {{ row.loss }}
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+                <!-- 错误提示行：独占一行、colspan 取 11（=完整列数）。窄屏隐藏 3 列后 colspan 仍 ≥ 实际列数，
+     表格布局会自动吸收多余列宽，不会破版；错误文案本身短，无需精确对齐 -->
                 <tr v-if="rowError(i)" class="bizday-row-issue-row">
-                  <td class="bizday-row-issue" :colspan="11" :data-testid="`bizday-row-issue-${i}`">{{ rowError(i) }}</td>
+                  <td class="bizday-row-issue" colspan="11" :data-testid="`bizday-row-issue-${i}`">{{ rowError(i) }}</td>
                 </tr>
               </template>
             </tbody>
@@ -611,6 +790,21 @@ async function handleDelete(id: string | null): Promise<void> {
             <span class="bizday-summary-label">交易笔数</span>
             <el-input-number v-model="formTransactionCount" :min="0" :step="1" size="small" controls-position="right" data-testid="bizday-form-transaction-count" />
           </div>
+        </div>
+
+        <!-- M-15：备注输入框。formNote 状态与保存逻辑早已存在（handleSave 读它、startEdit 回显它），
+             但模板里没有输入框 → 用户想写备注却无处可填。 -->
+        <div class="bizday-note-row">
+          <label class="bizday-note-label" for="bizday-note">备注</label>
+          <el-input
+            id="bizday-note"
+            v-model="formNote"
+            type="textarea"
+            :rows="2"
+            maxlength="100"
+            placeholder="今天的天气、客流、临时情况…（可不填）"
+            data-testid="bizday-form-note"
+          />
         </div>
 
         <div class="biz-form-actions ewt-dialog-footer">
@@ -795,6 +989,48 @@ async function handleDelete(id: string | null): Promise<void> {
   margin-bottom: 8px;
 }
 
+/* ===== M-03 录入提效条：复制上日 + 常卖商品 chip ===== */
+.bizday-quick-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.bizday-frequent {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.bizday-frequent-label {
+  font-size: 12px;
+  color: var(--color-text-muted, var(--color-text-muted));
+  white-space: nowrap;
+}
+.bizday-frequent-chip {
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-light, #eff6ff);
+  border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 40%, transparent);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.bizday-frequent-chip:hover {
+  color: #fff;
+  background: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
+}
+:global(html.dark) .bizday-frequent-chip {
+  color: #60a5fa;
+  background: #1e3a5f;
+  border-color: #60a5fa;
+}
+
 /* 商品明细表格（带出/剩余/损耗/小计） */
 .bizday-table-scroll {
   width: 100%;
@@ -841,6 +1077,79 @@ async function handleDelete(id: string | null): Promise<void> {
 .bizday-product {
   width: 100%;
   min-width: 140px;
+}
+
+/* ===== M-02 售出直填：主表格隐藏「带出/剩余/损耗」三列（内容移入进阶展开行） ===== */
+/* 用 nth-child 隐藏而非删列：保留表头/表体结构与 colspan 语义，改动面最小 */
+.bizday-table thead th:nth-child(4),
+.bizday-table thead th:nth-child(5),
+.bizday-table thead th:nth-child(6),
+.bizday-table tbody tr:not(.bizday-row-more-row) > td:nth-child(4),
+.bizday-table tbody tr:not(.bizday-row-more-row) > td:nth-child(5),
+.bizday-table tbody tr:not(.bizday-row-more-row) > td:nth-child(6) {
+  display: none;
+}
+
+/* 售出列是主输入，视觉加重 */
+.bizday-th-sold,
+.bizday-td-sold {
+  background: color-mix(in srgb, var(--color-primary, #3b82f6) 6%, transparent);
+}
+.bizday-td-sold .bizday-num-input { font-weight: 600; }
+
+/* 「更多 ▾」展开按钮 */
+.bizday-more-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: 4px;
+  padding: 3px 7px;
+  font-size: 12px;
+  color: var(--color-text-secondary, #64748b);
+  background: transparent;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.bizday-more-toggle:hover {
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
+}
+/* 剩余/损耗非零时高亮，提示用户「折叠态下已填了进阶值」 */
+.bizday-more-toggle.active {
+  color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-light, #eff6ff);
+  border-color: var(--color-primary, #3b82f6);
+}
+.bizday-more-caret { transition: transform 0.15s; }
+.bizday-more-caret.up { transform: rotate(180deg); }
+
+/* 进阶展开行：三字段横向排布 + 口径提示 */
+.bizday-row-more-row .bizday-row-more-cell {
+  padding: 8px 10px;
+  background: var(--color-bg-hover, #f8fafc);
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+}
+.bizday-more-grid {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.bizday-more-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-secondary, #64748b);
+}
+.bizday-more-field :deep(.el-input-number) { width: 100px; }
+.bizday-more-hint {
+  font-size: 11px;
+  color: var(--color-text-muted, var(--color-text-muted));
+  font-variant-numeric: tabular-nums;
 }
 
 /* 行级校验错误（跨列表格行） */
@@ -905,6 +1214,22 @@ async function handleDelete(id: string | null): Promise<void> {
 :global(html.dark) .bizday-summary-label { color: #d1d5db; }
 :global(html.dark) .bizday-summary-hint { color: #9ca3af; }
 
+/* M-02 暗色：售出主列底色 + 展开行 + 「更多」按钮 */
+:global(html.dark) .bizday-th-sold,
+:global(html.dark) .bizday-td-sold {
+  background: rgba(59, 130, 246, 0.12);
+}
+:global(html.dark) .bizday-row-more-row .bizday-row-more-cell {
+  background: rgba(17, 24, 39, 0.6);
+  border-bottom-color: #374151;
+}
+:global(html.dark) .bizday-more-field { color: #d1d5db; }
+:global(html.dark) .bizday-more-toggle.active {
+  color: #60a5fa;
+  background: #1e3a5f;
+  border-color: #60a5fa;
+}
+
 /* ===== 销售优化：手动营业额（笔数之后） ===== */
 .bizday-revenue-manual-tag {
   padding: 1px 6px;
@@ -927,6 +1252,24 @@ async function handleDelete(id: string | null): Promise<void> {
 }
 
 /* 汇总网格（一行2列）：总营业额 / 总实际营业额 / 总成本 / 总利润 / 交易笔数 */
+/* M-15 备注行 */
+.bizday-note-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 10px;
+}
+.bizday-note-label {
+  flex-shrink: 0;
+  padding-top: 7px;
+  font-size: 13px;
+  color: var(--color-text-secondary, #64748b);
+}
+.bizday-note-row :deep(.el-textarea) {
+  flex: 1;
+  min-width: 0;
+}
+
 .bizday-summary-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1025,8 +1368,10 @@ html.dark .biz-input {
   width: 90px;
 }
 
-/* 移动端：表格工具行（销售记录 + 导出 + 视图切换）换行，按钮不被压扁变形 */
-@media (max-width: 767px) {
+/* 移动端：表格工具行（销售记录 + 导出 + 视图切换）换行，按钮不被压扁变形
+   断点统一 768px（与全库 91 处及 styles/mobile.css 保持一致；原为 767px，
+   视口恰为 768px 时全局弹框全屏/分页精简已生效但此处换行不生效，工具行被压扁） */
+@media (max-width: 768px) {
   .ewt-table-toolbar.is-split {
     flex-wrap: wrap;
     gap: 8px;
@@ -1034,6 +1379,25 @@ html.dark .biz-input {
   .bizday-toolbar-left {
     flex-wrap: wrap;
     width: 100%;
+  }
+
+  /* 本面板弹框内表单控件撑满（此前是唯一缺这条的面板，Purchases/Products/Expenses 都有） */
+  .bizday :deep(.el-select),
+  .bizday :deep(.el-input),
+  .bizday :deep(.el-input-number) {
+    width: 100%;
+  }
+
+  /* 弹框内销售明细表：1180px 固定min-width 在窄屏改为撑满并隐藏低频列，避免长距离横滑
+     隐藏成本/利润/损耗金额 3 列 → 11 列变 8 列，错误行 colspan 用 max-width 同步收缩 */
+  .bizday-table {
+    min-width: 100%;
+  }
+
+  .bizday-table .bizday-col-cost,
+  .bizday-table .bizday-col-profit,
+  .bizday-table .bizday-col-loss {
+    display: none;
   }
 }
 </style>

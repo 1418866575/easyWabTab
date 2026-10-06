@@ -2,7 +2,7 @@
 // 商品管理：分类 tabs（全部 + 可见分类）+ 商品卡片网格 + 新增/编辑弹框 + ⚙️ 分类管理
 // P1-3：跨模块联动跳转（商品名可点击跳转「库存」页）
 // P2-2：商品详情抽屉
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { showConfirm } from '@/utils/dialog'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import {
@@ -22,8 +22,8 @@ import Icon from '@/components/Icon.vue'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import PanelPager from '@/components/workbench/PanelPager.vue'
 
-// P1-3：高亮商品 prop + 跨模块导航 emit
-const props = defineProps<{ highlightId?: string }>()
+// P1-3：高亮商品 prop + 跨模块导航 emit；autoOpenAdd：Alt+K 快捷动作「新增商品」直达
+const props = defineProps<{ highlightId?: string; autoOpenAdd?: boolean }>()
 const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
 
 const store = useWorkbenchBusinessStore()
@@ -51,7 +51,14 @@ const paging = usePanelPaging({
   // 移动端（≤768px）默认分页惰性，这里开启固定每页 6 个卡片
   mobilePageSize: 6
 })
-const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto } = paging
+const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto, isDesktop, rowsPerPage, colsPerRow } = paging
+
+/** 每页容量：移动端固定 6（mobilePageSize），桌面端 = 实测行数 × 实测列数；未测量时兜底 6。 */
+const pageCapacity = computed(() => {
+  if (!isDesktop.value) return 6
+  const size = rowsPerPage.value * colsPerRow.value
+  return size > 0 ? size : 6
+})
 watch(activeCat, () => goto(1))
 watch(filteredProducts, () => nextTick(() => goto(1)))
 
@@ -160,6 +167,11 @@ function startAdd(): void {
   showDialog.value = true
 }
 
+// Alt+K「新增商品」直达：面板挂载即打开新增弹框
+onMounted(() => {
+  if (props.autoOpenAdd) startAdd()
+})
+
 function startEdit(p: BusinessProduct): void {
   editingId.value = p.id
   formName.value = p.name
@@ -237,6 +249,51 @@ function isHighlighted(id: string): boolean {
   return props.highlightId === id
 }
 
+/**
+ * 高亮目标定位（2026-10-06 补）：原实现只给目标卡片加高亮样式，但目标可能在第 3 页——
+ * 用户从销售流水点商品名跳过来时「完全看不到高亮」（见优化方案 M-11）。
+ * 这里在 highlightId 变化时：先切到目标商品所属分类 tab → 翻到它所在页 → 滚动并居中。
+ */
+function revealHighlighted(): void {
+  const id = props.highlightId
+  if (!id) return
+  const target = store.products.find(p => p.id === id)
+  if (!target) return
+
+  // 目标不在当前分类 tab：先切过去（切 tab 的 watch 会 goto(1) 并再次触发本函数定位）
+  const targetCat = target.categoryId ?? 'all'
+  if (activeCat.value !== targetCat && tabs.value.some(c => c.id === targetCat)) {
+    activeCat.value = targetCat
+    return
+  }
+
+  const idx = filteredProducts.value.findIndex(p => p.id === id)
+  if (idx < 0) return
+
+  // 用 pageCapacity（而非当前页length——末页会偏小）定位目标所在页；已在一屏内则不翻页
+  if (totalPages.value > 1) {
+    const wantPage = Math.floor(idx / pageCapacity.value) + 1
+    if (wantPage !== currentPage.value) {
+      goto(wantPage)
+      return // 翻页后由下面的 watch(pageItems) 继续完成滚动
+    }
+  }
+
+  scrollHighlightIntoView(id)
+}
+
+function scrollHighlightIntoView(id: string): void {
+  nextTick(() => {
+    const el = document.querySelector<HTMLElement>(`[data-bizprod-id="${id}"]`)
+    el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  })
+}
+
+watch(() => props.highlightId, () => nextTick(() => revealHighlighted()))
+// 切分类 / 翻页后若目标已在当前页可见，补一次滚动居中
+watch(activeCat, () => nextTick(() => revealHighlighted()))
+watch(pageItems, () => nextTick(() => revealHighlighted()))
+
 // ===== P2-2：商品详情抽屉 =====
 const showDrawer = ref(false)
 const drawerProductId = ref<string | null>(null)
@@ -303,6 +360,7 @@ function drawerMarkupRate(): number | null {
         class="bizprod-card"
         :class="{ inactive: !p.active, highlighted: isHighlighted(p.id) }"
         :data-testid="`bizprod-card-${p.id}`"
+        :data-bizprod-id="p.id"
         role="button"
         tabindex="0"
         :title="`点击编辑「${p.name}」`"
@@ -445,7 +503,15 @@ function drawerMarkupRate(): number | null {
         </div>
         <div class="biz-form-actions">
           <el-button @click="showDialog = false">取消</el-button>
-          <el-button type="primary" native-type="submit" :disabled="saving" :loading="saving" data-testid="bizprod-save">
+          <!-- M-17：保存按钮按校验结果置灰（此前只绑 :disabled="saving"，提交时才toast 报错，
+             与销售/进货/支出三个面板的交互风格不一致） -->
+          <el-button
+            type="primary"
+            native-type="submit"
+            :disabled="!isFormValid || saving"
+            :loading="saving"
+            data-testid="bizprod-save"
+          >
             {{ editingId ? '保存' : '添加' }}
           </el-button>
           <el-button v-if="editingId" type="danger" data-testid="bizprod-dialog-del" @click="handleDeleteCurrent">删除</el-button>

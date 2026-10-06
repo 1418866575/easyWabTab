@@ -16,6 +16,9 @@ import Icon from '@/components/Icon.vue'
 
 const store = useWorkbenchBusinessStore()
 
+// M-13：跨模块导航 emit（补上后出度不再为 0：报表/差异可直达对应面板修正）
+const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
+
 const data = computed(() => ({
   productCategories: store.productCategories,
   expenseCategories: store.expenseCategories,
@@ -117,8 +120,8 @@ function exportExpenseExcel(): void {
         </div>
       </div>
       <p v-if="receivable.rows.length === 0" class="bizrec-empty" data-testid="bizrec-receivable-empty">暂无销售记录，无法对账</p>
+      <div v-else class="bizrec-table-wrap">
       <el-table
-        v-else
         class="ewt-table"
         :data="receivable.rows"
         data-testid="bizrec-receivable-table"
@@ -150,6 +153,7 @@ function exportExpenseExcel(): void {
           <template #default="{ row }">{{ row.transactionCount || '—' }}</template>
         </el-table-column>
       </el-table>
+      </div>
     </section>
 
     <!-- ② 按月账实差异 -->
@@ -202,8 +206,8 @@ function exportExpenseExcel(): void {
         <span class="bizrec-subtitle">已关联（进货合计 = 关联支出汇总）</span>
       </div>
       <p v-if="expenseRec.linked.length === 0" class="bizrec-empty" data-testid="bizrec-linked-empty">暂无关联记录</p>
+      <div v-else class="bizrec-table-wrap">
       <el-table
-        v-else
         class="ewt-table"
         :data="expenseRec.linked"
         data-testid="bizrec-linked-table"
@@ -233,6 +237,7 @@ function exportExpenseExcel(): void {
           </template>
         </el-table-column>
       </el-table>
+      </div>
 
       <div class="bizrec-sub">
         <span class="bizrec-subtitle">未被进货关联的支出（可能漏记进货，也可能本就与进货无关）</span>
@@ -246,6 +251,16 @@ function exportExpenseExcel(): void {
           <span class="bizrec-list-note">{{ e.note || '—' }}</span>
         </li>
       </ul>
+      <!-- M-13：修复闭环入口（此前本页全是只读表格+导出，看完差异要自己记住去哪个面板改） -->
+      <div v-if="expenseRec.unlinkedExpenses.length > 0" class="bizrec-fix" data-testid="bizrec-fix">
+        <span class="bizrec-fix-text">这些支出需要挂到对应的进货记录上，否则成本会算不进来。</span>
+        <button
+          type="button"
+          class="bizrec-fix-btn"
+          data-testid="bizrec-fix-go"
+          @click="emit('navigate', 'purchases')"
+        >去进货页勾选关联</button>
+      </div>
     </section>
   </div>
 </template>
@@ -418,6 +433,46 @@ function exportExpenseExcel(): void {
   gap: 4px;
 }
 
+/* M-13 修复闭环入口 */
+.bizrec-fix {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: var(--radius-md, 10px);
+}
+.bizrec-fix-text {
+  flex: 1;
+  min-width: 160px;
+  line-height: 1.6;
+}
+.bizrec-fix-btn {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: #d97706;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  min-height: 36px;
+}
+.bizrec-fix-btn:hover {
+  background: #b45309;
+}
+:global(html.dark) .bizrec-fix {
+  color: #fcd34d;
+  background: rgba(252, 211, 77, 0.12);
+  border-color: rgba(252, 211, 77, 0.5);
+}
+
 .bizrec-list-item {
   display: flex;
   align-items: center;
@@ -458,12 +513,22 @@ function exportExpenseExcel(): void {
   font-size: 12px;
 }
 
+/* 对账表容器：应收表 8 列 / 已关联表 7 列，窄屏允许横滑，避免数字列被压扁 */
+.bizrec-table-wrap {
+  width: 100%;
+  min-width: 0;
+}
+
 @media (max-width: 768px) {
   .bizrec-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .bizrec-month-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .bizrec-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
