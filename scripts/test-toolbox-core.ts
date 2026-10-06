@@ -61,7 +61,37 @@ import { convertUnit, getCategory, UNIT_CATEGORIES } from '../src/toolbox/core/u
 import { calcLoan, compareMethods, scheduleToCsv } from '../src/toolbox/core/loan.ts'
 import { bmiLevel, bmr, calcBmi, idealWeight, macros, tdee } from '../src/toolbox/core/bmi.ts'
 import { CITIES, convertZone, countdown, formatInZone, formatOffset, tzSupported } from '../src/toolbox/core/clock.ts'
-import { buildMonth, holidayMap, monthStats } from '../src/toolbox/core/calendar.ts'
+import {
+  COVERED_YEARS,
+  HOLIDAYS_2025,
+  HOLIDAYS_2026,
+  MAKEUP_WORKDAYS,
+  buildMonth,
+  holidayMap,
+  isCoveredYear,
+  monthStats
+} from '../src/toolbox/core/calendar.ts'
+import {
+  MULT_MAX,
+  SMALL_MAX,
+  buildExercises,
+  buildMulTable,
+  cellText,
+  chantText,
+  countAll,
+  countSmall,
+  exerciseSheet,
+  exerciseText,
+  hasChant,
+  isSmallCell,
+  mulChant,
+  mulFormula,
+  mulValue,
+  printDocument,
+  tableHeader,
+  tableTsv,
+  toChinese
+} from '../src/toolbox/core/multiplication.ts'
 import {
   adjustPixels,
   applyPreset,
@@ -442,6 +472,212 @@ const mstats = monthStats(2026, 2)
 assert.ok(mstats.workdays > 0 && mstats.workdays <= 28, '工作日统计合理')
 assert.equal(holidayMap(2026)['2026-01-01'], '元旦', '节假日表')
 assert.equal(holidayMap(2030)['2030-01-01'], undefined, '未覆盖年份返回空')
+
+// 年份覆盖范围（UI 靠它提示「无内置安排」，防静默退化成纯周末表）
+assert.deepEqual([...COVERED_YEARS], [2025, 2026], '已收录年份')
+assert.equal(isCoveredYear(2026), true, '2026 已收录')
+assert.equal(isCoveredYear(2027), false, '2027 未收录')
+
+/**
+ * 2026 安排以国办发明电〔2025〕7号为准，锁定以下要点防止再次录错：
+ * - 国庆 7 天：10/1–10/7，10/8 不得再被标为假期
+ * - 春节 9 天：2/15–2/23（史上最长）
+ * - 调休 6 天且必须全部落在周六/周日
+ * - 同一天不得既放假又上班
+ */
+{
+  const h26 = holidayMap(2026)
+  const sp = Object.keys(MAKEUP_WORKDAYS).filter(d => d.startsWith('2026-'))
+
+  const nat = Object.entries(h26).filter(([, n]) => n === '国庆').map(([d]) => d)
+  assert.equal(nat.length, 7, '2026 国庆 7 天（曾误写 8 天）')
+  assert.equal(nat[0], '2026-10-01', '国庆首日10/1')
+  assert.equal(nat[6], '2026-10-07', '国庆末日 10/7')
+  assert.equal(h26['2026-10-08'], undefined, '10/8 已恢复为普通工作日')
+
+  const cny = Object.entries(h26).filter(([, n]) => n === '春节').map(([d]) => d)
+  assert.equal(cny.length, 9, '2026 春节 9 天（曾漏 2/23）')
+  assert.equal(cny[0], '2026-02-15', '春节首日 2/15')
+  assert.equal(cny[8], '2026-02-23', '春节末日 2/23')
+
+  assert.equal(sp.length, 6, '2026 调休上班 6 天')
+  for (const d of sp) {
+    const wd = new Date(`${d}T00:00:00`).getDay()
+    assert.ok(wd === 0 || wd === 6, `调休日${d} 必须落在周末（实际周${wd}）`)
+    assert.equal(h26[d], undefined, `${d} 不得同时出现在放假表`)
+  }
+  assert.equal(MAKEUP_WORKDAYS['2026-09-20'], '班', '国庆调休为 9/20（周日），非 9/28')
+  assert.equal(MAKEUP_WORKDAYS['2026-09-28'], undefined, '9/28 是普通周一，不应标调休')
+  assert.equal(MAKEUP_WORKDAYS['2026-01-04'], '班', '元旦调休 1/4（周日）')
+  assert.equal(MAKEUP_WORKDAYS['2026-05-09'], '班', '劳动节调休 5/9（周六）')
+
+  // 全表一致性：任何年份的调休日都不得与放假日重叠
+  for (const y of COVERED_YEARS) {
+    const hm = holidayMap(y)
+    for (const d of Object.keys(MAKEUP_WORKDAYS).filter(k => k.startsWith(`${y}-`))) {
+      assert.equal(hm[d], undefined, `${y} ${d} 放假与调休冲突`)
+    }
+  }
+
+  // 2025 年数据经核对无误，作为回归基线锁定天数
+  const h25 = holidayMap(2025)
+  assert.equal(Object.values(h25).filter(n => n === '国庆').length, 8, '2025 国庆 8 天（含中秋）')
+  assert.equal(Object.values(h25).filter(n => n === '春节').length, 7, '2025 春节 7 天')
+  assert.equal(Object.keys(MAKEUP_WORKDAYS).filter(d => d.startsWith('2025-')).length, 5, '2025 调休5 天')
+
+  // 10 月统计：国庆 7 天假期，10/8–10/10 为工作日（含 10/10 周六调休）
+  const oct = monthStats(2026, 10)
+  assert.equal(oct.holidays, 7, '2026 年 10 月法定节假日 7 天')
+  assert.equal(oct.makeup, 1, '2026 年 10 月调休 1 天')
+}
+
+/* ===== 乘法表 ===== */
+{
+  const t = buildMulTable(MULT_MAX)
+  assert.equal(MULT_MAX, 19, '大九九边长为 19')
+  assert.equal(t.length, 19, '大九九 19 行')
+  assert.ok(t.every(r => r.length === 19), '大九九每行 19 列')
+  assert.equal(countAll(MULT_MAX), 361, '大九九共 361 个算式')
+  assert.equal(t[18][18].value, 361, '末格19×19=361')
+  assert.equal(t[0][18].value, 19, '首行 1×19=19')
+
+  // 小九九 = 1–9 的下三角（含主对角线），恒 45 格，与大九九边长无关
+  assert.equal(countSmall(SMALL_MAX), 45, '小九九共 45 个算式')
+  assert.equal(countSmall(MULT_MAX), 45, '小九九格数不随大九九边长变化')
+  assert.equal(isSmallCell(3, 3), true, '主对角线属于小九九')
+  assert.equal(isSmallCell(3, 1), true, '下三角属于小九九')
+  assert.equal(isSmallCell(1, 3), false, '上三角 row<col 不属于小九九')
+  assert.equal(isSmallCell(3, 5), false, '上三角大列不属于小九九')
+  assert.equal(isSmallCell(3, 2), true, '下三角属于小九九')
+  // 关键边界：超出 9 的因子一律不属于小九九（这是 19×19 与 9×9 的核心区别）
+  assert.equal(isSmallCell(10, 5), false, 'row=10 超范围，不属于小九九')
+  assert.equal(isSmallCell(19, 19), false, '19×19 不属于小九九')
+  assert.equal(isSmallCell(9, 9), true, '9×9 属于小九九')
+  // 表内 small 标记数必须与小九九格数一致（UI 底色区分的依据）
+  assert.equal(t.flat().filter(c => c.small).length, 45, '小九九标记数量')
+  // 主对角线 19 格全部标记 diag；其中只有 9 格同时属小九九
+  assert.equal(t.flat().filter(c => c.diag).length, 19, '主对角线 19 格')
+  assert.equal(t.flat().filter(c => c.diag && c.small).length, 9, '对角线∩小九九 = 9 格')
+
+  assert.equal(mulFormula(13, 17), '13×17=221', '算式文本（两位数）')
+  assert.equal(mulValue(13, 17), '221', '积文本')
+  assert.equal(cellText(13, 17, 'value'), '221', '单元格只显示积')
+  assert.equal(cellText(3, 4, 'formula'), '3×4=12', '单元格算式')
+  assert.equal(cellText(3, 4, 'chant'), '三四十二', '单元格口诀')
+  // 口诀只到 9×9，超范围回落为积
+  assert.equal(hasChant(9, 9), true, '9×9 有口诀')
+  assert.equal(hasChant(10, 3), false, '含 10 的无口诀')
+  assert.equal(cellText(13, 17, 'chant'), '221', '无口诀时回落为积')
+
+  // 中文数字：10–19 不读「一十」，整十不读出尾零
+  assert.equal(toChinese(1), '一', '中文数字 1')
+  assert.equal(toChinese(10), '十', '中文数字 10')
+  assert.equal(toChinese(11), '十一', '中文数字 11')
+  assert.equal(toChinese(20), '二十', '中文数字 20（整十不带尾零）')
+  assert.equal(toChinese(81), '八十一', '中文数字 81')
+  assert.equal(toChinese(361), '361', '超出 99 回落为数字串')
+
+  // 口诀读法：一位数积加「得」，两位数直接连读
+  assert.equal(mulChant(2, 3), '二三得六', '口诀一位数加得')
+  assert.equal(mulChant(3, 4), '三四十二', '口诀两位数连读')
+  assert.equal(mulChant(4, 9), '四九三十六', '口诀 4×9')
+  assert.equal(mulChant(9, 9), '九九八十一', '口诀 9×9')
+  assert.equal(mulChant(10, 3), '', '超范围无口诀')
+  // 口诀按小数在前，与参数顺序无关（交换律）
+  assert.equal(mulChant(7, 2), mulChant(2, 7), '口诀交换律一致')
+
+  assert.deepEqual(tableHeader(MULT_MAX), Array.from({ length: 19 }, (_, i) => i + 1), '表头 1–19')
+  // TSV：20 行（表头 + 19 行），练习卷无结果
+  const tsv = tableTsv(MULT_MAX, true)
+  assert.equal(tsv.split('\n').length, 20, 'TSV 行数')
+  assert.equal(tsv.split('\n')[0].split('\t').length, 20, 'TSV 列数（含 × 表头）')
+  assert.ok(tsv.includes('\t361'), 'TSV 含末格乘积 361')
+  assert.ok(!tableTsv(MULT_MAX, false).includes('\t361'), '练习卷不含乘积')
+
+  // 口诀全文恒为 9 行，第 9 行 9 条（与大九九边长无关）
+  const ct = chantText(SMALL_MAX).split('\n')
+  assert.equal(ct.length, 9, '口诀全文 9 行')
+  assert.equal(ct[0].split('　').length, 1, '口诀第 1 行 1 条')
+  assert.equal(ct[8].split('　').length, 9, '口诀第 9 行 9 条')
+
+  // 边长收敛：非法值不得越界
+  assert.equal(buildMulTable(999).length, 19, '超界边长收敛到 19')
+  assert.equal(buildMulTable(0).length, 9, '0 收敛到小九九 9')
+  assert.equal(tableTsv(3, true).split('\n').length, 4, 'TSV 支持小边长')
+}
+
+/* ===== 乘法表：练习卷 / Excel / 打印 ===== */
+{
+  // 练习题：大九九 19×19 = 361 题，小九九下三角 = 45 题
+  assert.equal(buildExercises().length, 361, '大九九练习题 361 道')
+  assert.equal(buildExercises({ onlySmall: true }).length, 45, '小九九练习题 45 道')
+  assert.equal(buildExercises({ max: 9 }).length, 81, '可指定边长')
+
+  const items = buildExercises({ onlySmall: true })
+  assert.equal(items[0].no, 1, '题号从 1 开始')
+  assert.equal(items[0].text, '1×1=1', '首题文本')
+  assert.equal(items[44].text, '9×9=81', '末题文本')
+  assert.equal(items[44].row, 9, '末题行因子')
+
+  // 答案留空：用于打印作答
+  const blank = buildExercises({ onlySmall: true, withResult: false })
+  assert.equal(blank[0].text, '1×1=', '练习卷答案留空')
+  assert.ok(!blank.some(i => /\d$/.test(i.text)), '留空版不得以数字结尾')
+
+  // 打乱：同seed 同序（重印同一份卷顺序稳定），不同 seed 顺序不同
+  const a1 = buildExercises({ onlySmall: true, shuffle: true, seed: 42 }).map(i => `${i.row}x${i.col}`).join(',')
+  const a2 = buildExercises({ onlySmall: true, shuffle: true, seed: 42 }).map(i => `${i.row}x${i.col}`).join(',')
+  const a3 = buildExercises({ onlySmall: true, shuffle: true, seed: 7 }).map(i => `${i.row}x${i.col}`).join(',')
+  assert.equal(a1, a2, '同 seed 洗牌结果一致')
+  assert.notEqual(a1, a3, '不同 seed 顺序不同')
+  assert.equal(buildExercises({ onlySmall: true, shuffle: true, seed: 42 }).length, 45, '洗牌后题数不变')
+
+  // 题号在洗牌后重排，且连续
+  const sh = buildExercises({ onlySmall: true, shuffle: true, seed: 1 })
+  assert.deepEqual(sh.map(i => i.no), Array.from({ length: 45 }, (_, i) => i + 1), '洗牌后题号仍连续')
+
+  // Excel 表数据：表头 + 19×19 数据行；留空版结果列为空串
+  const full = exerciseSheet()
+  assert.equal(full.headers.length, 20, 'Excel 表头 20 列（× + 1–19）')
+  assert.equal(full.rows.length, 19, 'Excel 数据 19 行')
+  assert.equal(full.headers[0], '×', '首列表头为 ×')
+  assert.equal(full.rows[18][0], 19, '行首为被乘数')
+  assert.equal(full.rows[18][19], 361, '末格19×19=361')
+  const blankSheet = exerciseSheet({ withResult: false })
+  assert.equal(blankSheet.rows[0][1], '', '留空版 Excel 结果为空串')
+  assert.equal(exerciseSheet({ onlySmall: true }).rows.length, 9, '小九九 Excel 9 行')
+
+  // 题目文本：行数=题数，含题号与制表符
+  assert.equal(exerciseText({ onlySmall: true }).split('\n').length, 45, '练习卷文本 45 行')
+  assert.ok(exerciseText({ onlySmall: true }).startsWith('1.\t1×1=1'), '练习卷文本首行')
+
+  // 打印文档：完整 HTML、内联样式、A4 方向随范围切换
+  const docFull = printDocument()
+  assert.ok(docFull.startsWith('<!DOCTYPE html>'), '打印文档含 DOCTYPE')
+  assert.ok(docFull.includes('大九九表（1–19）'), '大九九打印含表标题')
+  assert.ok(docFull.includes('landscape'), '大九九横向 A4')
+  assert.ok(docFull.includes('class="diag"'), '含主对角线样式标记')
+  // 1×1 同时是小九九与主对角线，两个 class 都要有
+  assert.ok(docFull.includes('<td class="small diag">1</td>'), '1×1 同时带 small 与 diag 类')
+  assert.ok(docFull.includes('<td class="diag">100</td>'), '10×10 属对角线但非小九九')
+  // 小九九但不在对角线上的（如 9×8=72），只有 small 类
+  assert.ok(docFull.includes('<td class="small">72</td>'), '9×8 属小九九但非对角线')
+  assert.ok(docFull.trim().endsWith('</html>'), '打印文档完整闭合')
+
+  const docSmall = printDocument({ onlySmall: true, title: '小九九卷' })
+  assert.ok(docSmall.includes('小九九表（1–9）'), '小九九打印含表标题')
+  assert.ok(docSmall.includes('portrait'), '小九九纵向 A4')
+  assert.ok(docSmall.includes('<td class="void"></td>'), '小九九打印上三角留空占位')
+  assert.ok(docSmall.includes('小九九卷'), '支持自定义标题')
+  assert.ok(docSmall.includes('姓名：'), '含填写栏')
+
+  // 答案留空的打印文档中，表格格内不得出现积
+  const docBlank = printDocument({ onlySmall: true, withResult: false })
+  assert.ok(!docBlank.includes('<td class="small">36</td>'), '留空打印稿表格不显示积')
+  assert.ok(docBlank.includes('4×3='), '留空打印稿题目仍显示算式')
+  // 小九九模式下只出下三角（c ≤ r），故不存在 3×4，只存在 4×3
+  assert.ok(!docBlank.includes('3×4='), '小九九不出上三角题')
+}
 
 /* ===== 图片像素处理 ===== */
 const mk = (r: number, g: number, b: number, a = 255): PixelData => ({

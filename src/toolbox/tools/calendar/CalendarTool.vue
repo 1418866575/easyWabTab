@@ -3,7 +3,7 @@
  * 日历（年/月切换，标识法定节假日与调休上班日）
  */
 import { computed, ref } from 'vue'
-import { buildMonth, holidayMap, monthStats, type DayCell } from '../../core/calendar'
+import { buildMonth, holidayMap, isCoveredYear, monthStats, type DayCell } from '../../core/calendar'
 import { useDirtyFlag } from '../../prefs/useToolDirty'
 import { useToolActions } from '../../composables/useToolActions'
 import TuOutput from '../../components/tool/TuOutput.vue'
@@ -20,6 +20,8 @@ const { copy } = useToolActions()
 const cells = computed<DayCell[]>(() => buildMonth(year.value, month.value, weekStart.value))
 const stats = computed(() => monthStats(year.value, month.value))
 const holidays = computed(() => holidayMap(year.value))
+/** 该年份是否收录了官方节假日安排；未收录时下面只按「周末」着色，需显式提示 */
+const covered = computed(() => isCoveredYear(year.value))
 
 const weeks = computed(() => {
   const out: DayCell[][] = []
@@ -86,6 +88,10 @@ const monthText = computed(() =>
       </button>
     </div>
 
+    <p v-if="!covered" class="tu-warn">
+      {{ year }} 年暂无内置法定节假日安排，下方仅按「周一至周五＝工作日、周六日＝周末」显示，不代表实际放假安排。
+    </p>
+
     <div class="tu-stat">
       <span>工作日 {{ stats.workdays }} 天</span>
       <span>周末 {{ stats.weekends }} 天</span>
@@ -150,7 +156,8 @@ const monthText = computed(() =>
       <div class="tu-folding-body">
         <ol>
           <li>可切换年月与周起始日，点击日期可高亮选中。</li>
-          <li>节假日与调休数据内置 2025–2026 年，以国务院公布安排为准。</li>
+          <li>节假日与调休数据内置 2025–2026 年，以国务院办公厅公布的安排为准，不联网获取。</li>
+          <li>国务院办公厅一般在上一年 11 月发布次年安排，次年需等新版内置后才能显示。</li>
           <li>本月日期明细可复制为 TSV，便于导入表格。</li>
         </ol>
       </div>
@@ -160,6 +167,16 @@ const monthText = computed(() =>
 
 <style scoped>
 .tu-cal-title { font-size: 14px; font-weight: 600; }
+.tu-warn {
+  margin: 0 0 8px;
+  padding: 7px 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-warning, #b88230);
+  background: var(--color-warning-soft, #fdf6ec);
+  border: 1px solid var(--color-warning, #b88230);
+  border-radius: var(--radius-md);
+}
 .tu-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
 .tu-cal-head {
   text-align: center;
