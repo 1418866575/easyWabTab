@@ -129,10 +129,8 @@ const dateText = computed(() =>
 
 // ===== M-07（2026-10-06）今日维度 =====
 // 此前首页 13 张指标卡全是账本年度累计，摆摊用户首屏最关心的「今天卖了多少」看不到。
-// 这里加一组「今日」卡片（放在问候头下方），年度累计区保留但可折叠（对账/结算仍需要）。
+// 这里加一组「今日」卡片（放在问候头下方）；账本累计区保持常驻不折叠（想看全年往下滚）。
 const todayStats = computed(() => calcTodayStats(data.value, localDateKey()))
-/** 年度累计区是否展开（默认展开，保持旧习惯；用户可收起只看今日） */
-const cumulativeOpen = ref(true)
 
 /**
  * M-14（2026-10-06）月度目标进度环：激活 monthlyRevenueTarget。
@@ -348,16 +346,12 @@ const issues = computed(() => {
         </div>
       </section>
 
-      <!-- 年度累计区（保留旧指标，可折叠后只看今日） -->
-      <button
-        type="button"
-        class="bizhome-cumulative-toggle"
-        data-testid="bizhome-cumulative-toggle"
-        @click="cumulativeOpen = !cumulativeOpen"
-      >
+      <!-- 账本累计区标题（2026-10-06：按用户要求不折叠，想看全年往下滚即可） -->
+      <div class="bizhome-cumulative-head" data-testid="bizhome-cumulative-head">
+        <Icon name="stats" :size="15" />
         <span>账本累计（{{ ledgerYear }} 年）</span>
-        <Icon name="chevron-down" :size="14" :class="{ up: cumulativeOpen }" />
-      </button>
+        <span class="bizhome-cumulative-hint">全年数据 · 往下滚</span>
+      </div>
 
       <!-- M-08 首次使用引导：无商品/无进货/无销售时给出明确的下一步，而不是 13 个 0 -->
       <section
@@ -403,7 +397,6 @@ const issues = computed(() => {
 
       <!-- 统计范围 + 毛利率计算公式（每本账本只记录所属年份的数据，同一年份可有多本） -->
       <!-- 账本累计区（M-07 折叠：默认展开保持旧习惯，收起后只看今日） -->
-      <template v-show="cumulativeOpen">
       <div class="bizhome-scope" data-testid="bizhome-scope">
         <div class="scope-head">
           <span class="scope-label" data-testid="bizhome-scope-label">{{ ledgerCode }} · {{ ledgerName }}</span>
@@ -560,7 +553,6 @@ const issues = computed(() => {
           </div>
         </div>
       </section>
-      </template>
     </template>
   </div>
 </template>
@@ -1233,31 +1225,23 @@ html.dark .sk-block::after {
   white-space: nowrap;
 }
 
-/* 累计区折叠开关 */
-.bizhome-cumulative-toggle {
+/* 账本累计区分隔标题（纯展示，不可点击） */
+.bizhome-cumulative-head {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 5px;
-  width: 100%;
-  padding: 7px 0;
-  font-size: 12px;
-  color: var(--color-text-secondary, #64748b);
-  background: transparent;
-  border: 1px dashed var(--color-border, #e2e8f0);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 10px 2px 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text, #1e293b);
+  border-top: 1px solid var(--color-border, #e2e8f0);
 }
-.bizhome-cumulative-toggle:hover {
-  color: var(--color-primary, #3b82f6);
-  border-color: var(--color-primary, #3b82f6);
-}
-.bizhome-cumulative-toggle :deep(.icon) {
-  transition: transform 0.15s;
-}
-.bizhome-cumulative-toggle :deep(.icon.up) {
-  transform: rotate(180deg);
+.bizhome-cumulative-hint {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 /* M-16 汇总导出按钮 */
@@ -1774,8 +1758,9 @@ html.dark .bizhome-today-card .today-label,
 html.dark .bizhome-today-card .today-sub {
   color: #9ca3af;
 }
-html.dark .bizhome-cumulative-toggle {
-  border-color: #374151;
+html.dark .bizhome-cumulative-head {
+  color: var(--color-text, #f9fafb);
+  border-top-color: #374151;
 }
 
 /* M-14 暗色：进度环内芯要用卡片底色，否则挖空处露出页面底色 */

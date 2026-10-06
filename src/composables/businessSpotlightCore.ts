@@ -50,6 +50,34 @@ export function mobileMoreSections(): BizSection[] {
   return BIZ_SECTIONS.filter(s => !tabs.has(s.key))
 }
 
+/**
+ * 移动端面板的**线性顺序**（M-20，2026-10-07）。
+ *
+ * 底栏 Tab + 「更多」里的 panel 合成一条完整序列，供底部菜单左右滑动切换
+ * （手势）与「当前项前后邻居」计算复用：手势滑动本质就是在这条线上移动一格。
+ * 顺序 = 5 个高频 Tab（拇指区顺序）+ 3 个低频分析页（更多弹层内的顺序）。
+ */
+export function mobileSectionOrder(): string[] {
+  return [...MOBILE_TAB_KEYS, ...mobileMoreSections().map(s => s.key)]
+}
+
+/**
+ * 手势滑动后应切换到的面板 key（纯函数，便于单测）。
+ *
+ * @param current 当前面板 key
+ * @param dir     滑动方向：'prev' 向左滑（看上一页）/ 'next' 向右滑（看下一页）
+ * @returns 目标面板 key；已在序列首/尾且继续同向滑动时返回 current（不环绕，避免误触突然跳到另一头）
+ */
+export function mobileSwipeTarget(current: string, dir: 'prev' | 'next'): string {
+  const order = mobileSectionOrder()
+  const i = order.indexOf(current)
+  // current 不在序列里（理论上不会发生，兜底回落到首项，避免返回空串）
+  if (i < 0) return order[0] ?? current
+  const next = dir === 'prev' ? i - 1 : i + 1
+  if (next < 0 || next >= order.length) return current
+  return order[next]
+}
+
 /** 快捷动作定义（search域之一：让「记一笔销售」这类高频操作从 3 步压到 1 步）。 */
 export interface BizQuickAction {
   id: string

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 销售记账独立页面（摆摊进销存）：布局复刻 WorkbenchView（左树 + 右内容，桌面一屏钉满、移动端横排菜单）
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { useAppSettingsStore } from '@/stores/settings'
@@ -21,8 +21,8 @@ import SkeletonBlock from '@/components/SkeletonBlock.vue'
 import { useCloudSync } from '@/composables/useCloudSync'
 import type { SyncStatus } from '@/composables/useCloudSync'
 import { useWorkbenchShortcuts } from '@/composables/useWorkbenchShortcuts'
-import { currentYear, ledgerDefaultName } from '@/composables/businessCore'
-import { BIZ_QUICK_ACTIONS, BIZ_SECTIONS, MOBILE_TAB_KEYS, mobileMoreSections } from '@/composables/businessSpotlightCore'
+import { calcTodayStats, currentYear, formatYuanOf, ledgerDefaultName, localDateKey } from '@/composables/businessCore'
+import { BIZ_QUICK_ACTIONS, BIZ_SECTIONS, MOBILE_TAB_KEYS, mobileMoreSections, mobileSwipeTarget } from '@/composables/businessSpotlightCore'
 import type { BizSpotlightAction, BizSpotlightData } from '@/composables/businessSpotlightCore'
 
 const router = useRouter()
@@ -110,6 +110,177 @@ onUnmounted(() => {
   mobileMql = null
   document.removeEventListener('keydown', handleEsc, true)
 })
+
+// ===== M-20（2026-10-07）移动端专用布局：固定头部 + 固定底栏 + 中间独立滚动 =====
+// 桌面端沿用原有「左树 + 右内容」布局，此处新增的逻辑全部由 isMobileNav 门控，
+// 桌面渲染结果与改动前完全一致。
+
+/** 移动端头部聚焦的日期（默认今天）。与销售记录面板的录入日期各自独立，互不干扰。 */
+const mobileDate = ref(localDateKey())
+/** 日期切换是否被用户改过（用于头部出现「回到今天」快捷按钮） */
+const mobileDateDirty = computed(() => mobileDate.value !== localDateKey())
+
+/** 当前日期的经营快照：营业额 / 毛利 / 支出 / 净额，用于头部汇总条 */
+const mobileDayStats = computed(() => {
+  const data = {
+    productCategories: store.productCategories,
+    expenseCategories: store.expenseCategories,
+    products: store.products,
+    purchases: store.purchases,
+    dailyRecords: store.dailyRecords,
+    expenseDailies: store.expenseDailies,
+    settings: store.settings
+  }
+  return calcTodayStats(data, mobileDate.value)
+})
+
+/** 日期步进：前后各一天，限制在当前账本年份内（与弹框录入日期同口径，跨年需切账本） */
+function shiftMobileDate(delta: number): void {
+  const [y, m, d] = mobileDate.value.split('-').map(Number)
+  if (!y || !m || !d) return
+  const next = new Date(y, m - 1, d + delta)
+  // 跨年直接钳在账本年首尾，避免出现「上一年」的日期（账本不存该年数据）
+  const year = store.currentLedgerYear
+  if (next.getFullYear() < year) next.setFullYear(year, 0, 1)
+  if (next.getFullYear() > year) next.setFullYear(year, 11, 31)
+  mobileDate.value = localDateKey(next)
+}
+function goToday(): void {
+  mobileDate.value = localDateKey()
+}
+
+/** 头部日期标签：10月06日 周一（当年省略；跨年时补年份，避免跨年记录张冠李戴） */
+const mobileDateLabel = computed(() => {
+  const [y, m, d] = mobileDate.value.split('-').map(Number)
+  if (!y || !m || !d) return mobileDate.value
+  const dt = new Date(y, m - 1, d)
+  const week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][dt.getDay()]
+  const md = `${String(m).padStart(2, '0')}月${String(d).padStart(2, '0')}日`
+  return y === store.currentLedgerYear ? `${md} ${week}` : `${y}年${md} ${week}`
+})
+
+/** 头部日期步进已把范围钳在当前账本年内，无需日期选择器（移动端弹出式日历易溢出屏幕） */
+
+/** 头部汇总条是否显示「有数据」标记（该日没有任何流水 → 引导去记账） */
+const mobileDayEmpty = computed(
+  () => !mobileDayStats.value.hasDaily && mobileDayStats.value.expense === 0
+)
+
+/**
+ * 移动端面板左右滑动手势：在底部菜单顺序上移动一格。
+ *
+ * 判定要点（都是踩过的坑）：
+ * 1. 必须**横向位移显著大于纵向**才判定为切页 —— 中间列表本身要能上下滚，
+ *    纵向位移占比高时若也切页，滚动列表会疯狂横跳。
+ * 2. 阈值 56px：低于此值多为误触/手指微动；高于 56px 是明确意图。
+ * 3. 底部菜单项内部有横向滚动条时不应触发切页，故跳过落在底栏上的手势。
+ */
+const swipeStart = ref<{ x: number; y: number } | null>(null)
+/** 横向手势阈值（px） */
+const SWIPE_THRESHOLD = 56
+/** 纵向位移容忍比：|dx| > |dy| * 1.5 才算横向意图 */
+const SWIPE_AXIS_RATIO = 1.5
+
+function onSwipeStart(e: TouchEvent): void {
+  if (!isMobileNav.value) return
+  const t = e.touches[0]
+  if (!t) return
+  swipeStart.value = { x: t.clientX, y: t.clientY }
+}
+
+function onSwipeEnd(e: TouchEvent): void {
+  const start = swipeStart.value
+  swipeStart.value = null
+  if (!start || !isMobileNav.value) return
+  const t = e.changedTouches[0]
+  if (!t) return
+  const dx = t.clientX - start.x
+  const dy = t.clientY - start.y
+  if (Math.abs(dx) < SWIPE_THRESHOLD) return
+  if (Math.abs(dx) < Math.abs(dy) * SWIPE_AXIS_RATIO) return
+  // 向左滑（dx<0）= 看下一个面板；向右滑 = 看上一个
+  const target = mobileSwipeTarget(activeSection.value, dx < 0 ? 'next' : 'prev')
+  if (target !== activeSection.value) selectSection(target as SectionKey)
+}
+
+// ===== 中间内容区高度：JS 兜底 + CSS 100dvh 双保险 =====
+// 为什么两者都要：
+// - 100dvh 覆盖绝大多数现代浏览器（含 iOS Safari 16+ 的动态工具栏适配）；
+// - 但旧 WebView / 部分国产浏览器内核 dvh 视作非法值会回退到 auto，
+//   此时 flex:1 会失效（内容溢出、底栏被顶出屏幕），故用 JS 实测写入 --bs-content-h 兜底。
+const contentRef = ref<HTMLElement | null>(null)
+/** 实测高度写入 CSS 变量（px）；0 表示交给 CSS 处理 */
+const contentHeight = ref(0)
+
+function measureContent(): void {
+  if (!isMobileNav.value) {
+    contentHeight.value = 0
+    return
+  }
+  const h = contentRef.value?.clientHeight ?? 0
+  // 变化超过 1px 才写，避免无谓的重排抖动
+  if (h > 0 && Math.abs(h - contentHeight.value) > 1) contentHeight.value = h
+}
+
+let contentResizeObserver: ResizeObserver | null = null
+let visualViewportHandler: (() => void) | null = null
+
+onMounted(() => {
+  if (typeof ResizeObserver !== 'undefined' && contentRef.value) {
+    contentResizeObserver = new ResizeObserver(() => measureContent())
+    contentResizeObserver.observe(contentRef.value)
+  }
+  // 移动端地址栏收放会改变可视高度，但不触发 window.resize（只在 visualViewport 上派发）。
+  // 不监听会导致「下拉地址栏后内容区仍按旧高度计算」，底栏与列表之间出现空隙/遮挡。
+  if (window.visualViewport) {
+    visualViewportHandler = () => measureContent()
+    window.visualViewport.addEventListener('resize', visualViewportHandler)
+  }
+  window.addEventListener('orientationchange', measureContent)
+  measureContent()
+})
+
+onUnmounted(() => {
+  contentResizeObserver?.disconnect()
+  contentResizeObserver = null
+  if (window.visualViewport && visualViewportHandler) {
+    window.visualViewport.removeEventListener('resize', visualViewportHandler)
+  }
+  visualViewportHandler = null
+  window.removeEventListener('orientationchange', measureContent)
+})
+
+/** 切面板后把中间内容区滚回顶部（否则从长列表切到短面板会停在中段） */
+watch(activeSection, async () => {
+  await nextTick()
+  if (contentRef.value) contentRef.value.scrollTop = 0
+  measureContent()
+})
+
+/** 切换日期后头部汇总变化，重算内容区高度（汇总条高度会随数字位数变化） */
+watch(mobileDate, () => { void nextTick(measureContent) })
+
+/** 底部菜单当前项的 DOM，用于切页后把该项滚动进可视区（窄屏 5 项可能溢出） */
+const menuEl = ref<HTMLElement | null>(null)
+/** 用 style 绑定高度变量：0 时不输出，让 CSS 的 100dvh 生效 */
+const contentStyle = computed(() =>
+  contentHeight.value > 0 ? { height: `${contentHeight.value}px` } : {}
+)
+
+/** 当前激活项对应的 DOM 节点（data-testid=bs-menu-<key>，含「更多」） */
+function scrollActiveIntoView(): void {
+  const root = menuEl.value
+  if (!root) return
+  const key = activeInMore.value ? 'more' : activeSection.value
+  const el = root.querySelector<HTMLElement>(`[data-testid="bs-menu-${key}"]`)
+  // scrollIntoView 会连带滚动祖先（含中间内容区），故用 scrollLeft 手算，只平移底栏自身
+  if (el && root.scrollWidth > root.clientWidth) {
+    const target = el.offsetLeft - (root.clientWidth - el.offsetWidth) / 2
+    root.scrollTo({ left: Math.max(0, target), behavior: 'smooth' })
+  }
+}
+
+watch(activeSection, () => { void nextTick(scrollActiveIntoView) })
 
 /** 侧栏/底栏实际渲染的菜单项：移动端 5 项，桌面 8 项 */
 const visibleMenuItems = computed(() =>
@@ -271,7 +442,7 @@ onMounted(async () => {
 <template>
   <div class="bs-shell">
     <!-- 头部：左 = 返回 + 标题；右 = 云同步（开关显示）+ 设置 -->
-    <header class="bs-header">
+    <header class="bs-header" :class="{ 'is-mobile': isMobileNav }">
       <div class="bs-header-left">
         <!-- 左上角「工作台管理」同款入口：站点图标 + 点击弹出工作台切换面板（替换原 PageSwitcher 下拉，与导航站行为一致） -->
         <WorkbenchManagePanel
@@ -281,6 +452,10 @@ onMounted(async () => {
           force-show
         />
         <span v-if="store.settings.stallName" class="bs-stall-name">{{ store.settings.stallName }}</span>
+        <!-- M-20 移动端：当前页面标题（桌面端左树已标明所在面板，无需重复） -->
+        <h1 v-if="isMobileNav" class="bs-mobile-title" data-testid="bs-mobile-title">
+          {{ SECTIONS.find(s => s.key === activeSection)?.label ?? '销售记账' }}
+        </h1>
       </div>
       <div class="bs-header-right">
         <!-- 账本切换（常驻入口）：有账本时才展示，无账本时由引导页承接 -->
@@ -302,11 +477,68 @@ onMounted(async () => {
         ><Icon name="cloud" :size="14" /> {{ syncLabel }}</button>
         <button class="bs-btn" title="设置" data-testid="bs-settings" @click="showSettingsDialog = true"><Icon name="cog" :size="15" /> 设置</button>
       </div>
+
+      <!-- ===== M-20 移动端汇总条（固定在头部内，不随中间列表滚动） =====
+           日期切换 + 当日营业额/毛利/支出/净额。摆摊结账时最关心的就是「今天卖了多少、赚了多少」，
+           放在头部常驻，翻任何面板都不用先回首页。 -->
+      <div v-if="isMobileNav && !gateVisible" class="bs-mobile-sum" data-testid="bs-mobile-summary">
+        <div class="bs-mobile-daterow">
+          <button
+            type="button"
+            class="bs-mobile-dbtn"
+            title="前一天"
+            aria-label="前一天"
+            data-testid="bs-mobile-date-prev"
+            @click="shiftMobileDate(-1)"
+          ><Icon name="chevron-left" :size="16" /></button>
+          <span class="bs-mobile-dlabel" data-testid="bs-mobile-date-label">{{ mobileDateLabel }}</span>
+          <button
+            type="button"
+            class="bs-mobile-dbtn"
+            title="后一天"
+            aria-label="后一天"
+            data-testid="bs-mobile-date-next"
+            @click="shiftMobileDate(1)"
+          ><Icon name="chevron-right" :size="16" /></button>
+          <button
+            v-if="mobileDateDirty"
+            type="button"
+            class="bs-mobile-dtoday"
+            data-testid="bs-mobile-date-today"
+            @click="goToday"
+          >今天</button>
+        </div>
+        <div class="bs-mobile-sumgrid">
+          <div class="bs-mobile-sumcell">
+            <span class="bs-mobile-sumlabel">营业额</span>
+            <span class="bs-mobile-sumval is-revenue" data-testid="bs-mobile-sum-revenue">{{ formatYuanOf(mobileDayStats.revenue) }}</span>
+          </div>
+          <div class="bs-mobile-sumcell">
+            <span class="bs-mobile-sumlabel">毛利</span>
+            <span class="bs-mobile-sumval is-profit" data-testid="bs-mobile-sum-profit">{{ formatYuanOf(mobileDayStats.profit) }}</span>
+          </div>
+          <div class="bs-mobile-sumcell">
+            <span class="bs-mobile-sumlabel">支出</span>
+            <span class="bs-mobile-sumval is-expense" data-testid="bs-mobile-sum-expense">{{ formatYuanOf(mobileDayStats.expense) }}</span>
+          </div>
+          <div class="bs-mobile-sumcell">
+            <span class="bs-mobile-sumlabel">净额</span>
+            <span class="bs-mobile-sumval is-net" :class="mobileDayStats.net < 0 ? 'is-negative' : ''" data-testid="bs-mobile-sum-net">{{ formatYuanOf(mobileDayStats.net) }}</span>
+          </div>
+        </div>
+        <p v-if="mobileDayEmpty" class="bs-mobile-sumhint" data-testid="bs-mobile-sum-empty">当日还没有记账</p>
+      </div>
     </header>
 
     <!-- 主体：左树 + 右内容区 -->
     <div class="bs-body">
-      <nav v-if="!gateVisible" class="bs-menu" :class="{ collapsed: sidebarCollapsed }">
+      <nav
+        v-if="!gateVisible"
+        ref="menuEl"
+        class="bs-menu"
+        :class="{ collapsed: sidebarCollapsed }"
+        data-testid="bs-menu"
+      >
         <button
           class="bs-sidebar-toggle"
           data-testid="bs-sidebar-toggle"
@@ -371,7 +603,18 @@ onMounted(async () => {
         </div>
       </Teleport>
 
-      <main class="bs-content">
+      <!-- 中间内容区（M-20）：移动端为唯一滚动容器 —— 独立 overflow-y:auto，
+           overscroll-behavior:contain 阻断滚动到底后的橡皮筋穿透到头部/底栏；
+           touch 手势用于左右滑切换面板（纵向滚动不受影响，见 onSwipeEnd 的轴向判定） -->
+      <main
+        ref="contentRef"
+        class="bs-content"
+        :class="{ 'is-mobile': isMobileNav }"
+        :style="contentStyle"
+        data-testid="bs-content"
+        @touchstart.passive="onSwipeStart"
+        @touchend.passive="onSwipeEnd"
+      >
         <SkeletonBlock v-if="initializing" :rows="5" label="正在加载销售记账数据" />
 
         <!-- 无账本：阻断式引导，必须先创建当年账本才能进入 -->
@@ -844,8 +1087,32 @@ html.dark .bs-stall-name {
 
 /* 移动端：左树横排、页面滚动恢复（复刻 WorkbenchView 断点） */
 @media (max-width: 768px) {
+  /* ===== M-20 移动端三段式布局：固定头部 / 独立滚动内容 / 固定底栏 =====
+     结构上做到「外壳不滚、内容单独滚」：
+       .bs-shell  100dvh + overflow:hidden（外壳本身永不滚动）
+       .bs-header flex:none（内容多高就多高，始终占住顶部，不被内容顶走）
+       .bs-content flex:1 + min-height:0 + overflow-y:auto（唯一滚动容器）
+       .bs-menu   position:fixed（脱离文档流，不占内容高度、不被内容遮挡）
+     min-height:0 是 flex 子项能真正收缩的前提：缺它时内容区按内容高度撑开，
+     底栏会被顶到屏幕外 —— 这是「底栏不见了」最常见的根因。 */
+  .bs-shell {
+    /* dvh 随移动端地址栏收放变化；vh 作为不支持 dvh 的旧内核回退 */
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .bs-header {
+    flex: none;
+    /* 刘海屏/挖孔屏：顶部内边距补安全区，否则标题被状态栏压住 */
+    padding-top: calc(10px + env(safe-area-inset-top, 0px));
+  }
+
   .bs-content {
     overflow-y: auto;
+    /* 滚动到底后不把橡皮筋传递给外层文档（否则头部/底栏会跟着一起晃） */
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .bs-content > * {
@@ -860,6 +1127,9 @@ html.dark .bs-stall-name {
 
   .bs-body {
     flex-direction: column;
+    /* 内容区外的剩余空间全部让给内容区 */
+    flex: 1;
+    min-height: 0;
   }
 
   /* 菜单降级为底部固定 Tab Bar（与「个人工作台」一致）：常驻拇指区，
@@ -909,6 +1179,26 @@ html.dark .bs-stall-name {
     flex: 0 0 auto;
     white-space: nowrap;
     scroll-snap-align: start;
+    /* 激活项顶部指示条（position:relative 已在基础样式外补，见下方 .bs-menu-item 定位） */
+    position: relative;
+  }
+
+  /* 激活项：顶部 2px 主色条 + 主色文字 + 浅底三重视觉，拇指区不看字也能判断当前位置 */
+  .bs-menu-item.active {
+    color: var(--color-primary, #3b82f6);
+    background-color: var(--color-primary-light, #eff6ff);
+  }
+
+  .bs-menu-item.active::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 22px;
+    height: 2px;
+    border-radius: 0 0 2px 2px;
+    background-color: var(--color-primary, #3b82f6);
   }
 
   /* M-06：5 个高频 Tab 铺满一行（flex:1 均分），「更多」固定贴右不参与横滑
@@ -945,6 +1235,194 @@ html.dark .bs-stall-name {
   /* 窄屏间距压缩：内容区内边距收窄、首页卡片间距收紧；底部留白避让固定 Tab Bar（44px 触控 + 内边距 + 安全区） */
   .bs-content {
     padding: 12px 12px calc(64px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* ===== M-20 移动端固定头部：页面标题 =====
+   桌面端左树已标明所在面板，标题冗余；移动端底栏在屏幕最下方，
+   抬头看不到「我在哪个页面」，故移动端补一行标题。 */
+.bs-mobile-title {
+  margin: 0;
+  min-width: 0;
+  font-size: var(--font-size-xl, 18px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text, #1e293b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ===== M-20 移动端头部汇总条（日期切换 + 当日金额） =====
+   固定在头部内，随头部一起固定；内容区滚动不经过它，故永不遮挡。 */
+.bs-mobile-sum {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 0 2px;
+}
+
+.bs-mobile-daterow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bs-mobile-dbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 触控目标 ≥36px：日期步进是高频操作，比 44px 标准略低以省头部高度 */
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  padding: 0;
+  color: var(--color-text-secondary, #64748b);
+  background-color: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.bs-mobile-dbtn:active {
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
+}
+
+.bs-mobile-dlabel {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text, #1e293b);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bs-mobile-dtoday {
+  flex-shrink: 0;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+  color: #fff;
+  background-color: var(--color-primary, #3b82f6);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* 4 格汇总：营业额 / 毛利 / 支出 / 净额。
+   用 auto-fit + minmax(0,1fr) 而非固定 4 列：320px 小屏也不会挤成两行。 */
+.bs-mobile-sumgrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.bs-mobile-sumcell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 7px 8px;
+  background-color: var(--color-bg, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+}
+
+.bs-mobile-sumlabel {
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--color-text-secondary, #64748b);
+  white-space: nowrap;
+}
+
+/* 金额默认 nowrap + 省略：4 位数以上的大额不换行把卡片撑破 */
+.bs-mobile-sumval {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--color-text, #1e293b);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bs-mobile-sumval.is-revenue { color: var(--color-success, #16a34a); }
+.bs-mobile-sumval.is-profit { color: var(--color-text, #1e293b); }
+.bs-mobile-sumval.is-expense { color: var(--color-warning, #d97706); }
+/* 净额为负：标红（摆摊语境下「今天亏了」必须一眼可见） */
+.bs-mobile-sumval.is-net { color: var(--color-primary, #3b82f6); }
+.bs-mobile-sumval.is-negative { color: var(--color-error, #dc2626); }
+
+.bs-mobile-sumhint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-secondary, #64748b);
+}
+
+/* 极窄屏（≤360px，如 iPhone SE / 小屏安卓）：汇总格改 2×2，
+   否则 4 列各约 78px 装不下「¥1234.00」，金额被省略号吃掉 */
+@media (max-width: 360px) {
+  .bs-mobile-sumgrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .bs-mobile-sumval {
+    font-size: 16px;
+  }
+}
+
+/* 小屏高度（横屏手机 / 分屏）：头部过高会把内容区挤没。
+   此时压缩内边距与汇总格高度，优先保证中间列表有可用高度。 */
+@media (max-width: 768px) and (max-height: 560px) {
+  .bs-mobile-sum {
+    gap: 6px;
+    padding: 6px 0 0;
+  }
+  .bs-mobile-sumcell {
+    padding: 5px 8px;
+  }
+  .bs-mobile-dbtn {
+    width: 32px;
+    height: 32px;
+  }
+  .bs-mobile-dlabel {
+    font-size: 14px;
+  }
+}
+
+/* 移动端暗色兜底（Teleport 的「更多」弹层用非 scoped 类名，故组合书写） */
+@media (max-width: 768px) {
+  html.dark .bs-mobile-title,
+  html.dark .bs-mobile-dlabel {
+    color: var(--color-text, #f9fafb);
+  }
+  html.dark .bs-mobile-dbtn {
+    background-color: var(--color-bg-card, #1f2937);
+    color: var(--color-text-secondary, #d1d5db);
+    border-color: var(--color-border, #374151);
+  }
+  html.dark .bs-mobile-sumcell {
+    background-color: rgba(255, 255, 255, 0.04);
+    border-color: var(--color-border, #374151);
+  }
+  html.dark .bs-mobile-sumlabel,
+  html.dark .bs-mobile-sumhint {
+    color: var(--color-text-secondary, #d1d5db);
+  }
+  html.dark .bs-mobile-sumval {
+    color: var(--color-text, #f9fafb);
+  }
+  html.dark .bs-mobile-sumval.is-revenue { color: #4ade80; }
+  html.dark .bs-mobile-sumval.is-expense { color: #fbbf24; }
+  html.dark .bs-mobile-sumval.is-net { color: #60a5fa; }
+  html.dark .bs-mobile-sumval.is-negative { color: #f87171; }
+
+  /* 底部激活项：加一条顶部高亮条 + 图标着色，与未激活项拉开辨识度。
+     移动端底栏是最重要的导航，仅靠浅蓝底色在低亮度阳光下不够醒目。 */
+  html.dark .bs-menu-item.active {
+    background: #1e3a5f;
   }
 }
 

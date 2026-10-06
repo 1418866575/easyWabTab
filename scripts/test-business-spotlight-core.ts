@@ -3,7 +3,11 @@
 import {
   BIZ_QUICK_ACTIONS,
   BIZ_SECTIONS,
+  MOBILE_TAB_KEYS,
   countBizSpotlightHits,
+  mobileMoreSections,
+  mobileSectionOrder,
+  mobileSwipeTarget,
   searchBizSpotlight
 } from '../src/composables/businessSpotlightCore.ts'
 import type { BizSpotlightData } from '../src/composables/businessSpotlightCore.ts'
@@ -110,6 +114,28 @@ check('快捷动作覆盖 4 个可录面板 + 对账',
   ['daily', 'expenses', 'purchases', 'products'].every(s =>
     BIZ_QUICK_ACTIONS.some(a => a.action.kind === 'quickAdd' && a.action.section === s)) &&
   BIZ_QUICK_ACTIONS.some(a => a.action.kind === 'navigate' && a.action.section === 'reconcile'))
+
+// ===== M-20 移动端面板顺序 + 滑动切换目标=====
+const order = mobileSectionOrder()
+check('mobileSectionOrder 覆盖全部 8 个面板', order.length === 8 && new Set(order).size === 8)
+check('mobileSectionOrder = 5 个高频 Tab + 3 个低频页',
+  order.slice(0, 5).join(',') === MOBILE_TAB_KEYS.join(',') &&
+  order.slice(5).join(',') === mobileMoreSections().map(s => s.key).join(','))
+check('mobileSwipeTarget 向左滑 = 下一项',
+  mobileSwipeTarget('home', 'next') === MOBILE_TAB_KEYS[1])
+check('mobileSwipeTarget 向右滑 = 上一项',
+  mobileSwipeTarget('daily', 'prev') === MOBILE_TAB_KEYS[0])
+check('mobileSwipeTarget 跨越 Tab 与「更多」边界连续',
+  mobileSwipeTarget(MOBILE_TAB_KEYS[4], 'next') === order[5] &&
+  mobileSwipeTarget(order[5], 'prev') === MOBILE_TAB_KEYS[4])
+check('序列首项继续向前滑不环绕（防误触跳到另一头）',
+  mobileSwipeTarget(order[0], 'prev') === order[0])
+check('序列末项继续向后滑不环绕',
+  mobileSwipeTarget(order[7], 'next') === order[7])
+check('未知 key 兜底回到首项而非空串',
+  mobileSwipeTarget('not-exist', 'next') === order[0])
+check('逐项向下一格可遍历完整序列',
+  order.slice(0, 7).every((k, i) => mobileSwipeTarget(k, 'next') === order[i + 1]))
 
 // ===== 计数 =====
 const mixed = searchBizSpotlight('可乐', data)
