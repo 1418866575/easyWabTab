@@ -18,6 +18,7 @@ import { emptyLedgerData, normalizeLedgerStore } from './ledgerCore'
 import { emptyNoteData, normalizeNoteData } from './noteCore'
 import { emptyPomodoroData } from './pomodoroCore'
 import { normalizeTeacherData } from './teacherCore'
+import { isSuspectedRemoteWipe, isNavWipeOverrideActive } from './navDataGuard'
 
 export const DB_NAME = 'easy-web-tab'
 /** v18：新增 `nav` object store，承载原 localStorage 的导航偏好（13 键），根治移动端 localStorage 被系统回收导致导航数据丢失 */
@@ -222,7 +223,13 @@ export async function packPrefsFromIdb(): Promise<Record<string, string>> {
 
 /**
  * 从 workbench.json 信封回写：导航键写 `nav` IDB store，其余非导航 prefs 写 localStorage。
- * idbImportAll 事务成功后调用。缺失的导航键会从 nav store 删除（等同旧 removeItem 语义）。
+ * idbImportAll 事务成功后调用。
+ *
+ * 【2026-10-07 事故加固】导航键改为**只补不删**：远端信封缺少某个键时保留本地值。
+ * 事故根因之一正是这条删除语义——任一端数据掉链子导致信封缺键，
+ * 另一端「本地不 dirty → 直接应用远端」时就会把本地真实数据删干净。
+ * 云同步 nav.json 的常规拉取得走 mergeNav（并集）不会进这里；这里是「直接应用远端」的场合，
+ * 保守保留本地更能抗单点数据丢失。需要清空请走「恢复出厂设置 / 导入备份」这类显式路径。
  */
 export async function applyPrefsToIdb(prefs: Record<string, string> | undefined): Promise<void> {
   if (!prefs) return
@@ -230,11 +237,19 @@ export async function applyPrefsToIdb(prefs: Record<string, string> | undefined)
   let navChanged = false
   for (const k of NAV_SYNC_KEYS) {
     const v = prefs[k]
-    if (v !== undefined) {
-      if (navRecord[k] !== v) { navRecord[k] = v; navChanged = true }
-    } else if (k in navRecord) {
-      delete navRecord[k]; navChanged = true
+    if (v === undefined) {
+      if (k in navRecord) {
+        console.warn('[nav] applyPrefsToIdb：远端缺少', k, '→ 保留本地值不删除（防误删兜底）')
+      }
+      continue
     }
+    // 远端整站为空而本地有成规模数据 → 判定远端疑似被清空，拒绝覆盖
+    // （除非用户刚武装过「以远端/备份为准」的显式放行）
+    if (k === 'user-sites' && !isNavWipeOverrideActive() && isSuspectedRemoteWipe(navRecord[k], v)) {
+      console.warn('[nav] applyPrefsToIdb：远端 user-sites 为空而本地有数据 → 拒绝覆盖')
+      continue
+    }
+    if (navRecord[k] !== v) { navRecord[k] = v; navChanged = true }
   }
   if (navChanged) await idbPut('nav', navRecord)
   for (const k of WORKBENCH_PREFS_KEYS) {
@@ -419,14 +434,31 @@ export async function exportNav(): Promise<NavSyncData> {
   }
 }
 
-/** 把远端导航信封写回 nav store（仅写 10 个导航同步键，不影响非导航 localStorage） */
+/**
+ * 把远端导航信封写回 nav store（仅处理 NAV_SYNC_KEYS，不影响非导航 localStorage）。
+ *
+ * 【2026-10-07 事故加固】与 applyPrefsToIdb 一致改为**只补不删**，理由同上：
+ * 这条函数是「本地不 dirty → 直接套用远端」路径的实现，
+ * 一旦远端那份恰好是数据掉线后的空态，删除语义会把本地原有数据连根拔起。
+ */
 export async function importNavData(remote: NavSyncData): Promise<void> {
   if (!remote || !remote.prefs) return
   const navRecord: NavPrefsRecord = (await idbGet<NavPrefsRecord>('nav')) ?? {}
   for (const k of NAV_SYNC_KEYS) {
     const v = remote.prefs[k]
-    if (v !== undefined) navRecord[k] = v
-    else if (k in navRecord) delete navRecord[k]
+    if (v === undefined) {
+      if (k in navRecord) {
+        console.warn('[nav] importNavData：云端缺少', k, '→ 保留本地值不删除（防误删兜底）')
+      }
+      continue
+    }
+    // 云端站点列表为空而本地有成规模数据 → 判定云端这份疑似被清空，拒绝覆盖。
+    // 例外：用户在冲突解决里选了「全部云端覆盖」（见 armNavWipeOverride）→ 尊重用户裁决。
+    if (k === 'user-sites' && !isNavWipeOverrideActive() && isSuspectedRemoteWipe(navRecord[k], v)) {
+      console.warn('[nav] importNavData：云端 user-sites 为空而本地有数据 → 拒绝覆盖；如确需覆盖请在冲突解决里选「全部云端覆盖」')
+      continue
+    }
+    navRecord[k] = v
   }
   await idbPut('nav', navRecord)
 }

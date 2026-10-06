@@ -77,6 +77,11 @@ import {
   signature as sigToolbox,
   reloadToolboxStore
 } from '@/toolbox/core/toolboxSync'
+import {
+  armNavWipeOverride,
+  checkUserSitesAgainstBaseline,
+  isNavExplicitMutationActive
+} from './navDataGuard'
 import type { ToolboxSyncData } from '@/toolbox/core/toolboxSyncCore'
 import type { TeacherData } from '../types/teacher'
 
@@ -104,6 +109,14 @@ interface FileConfig {
   merge: (local: unknown, remote: unknown) => unknown
   reload: () => Promise<void>
   diffSize: (local: unknown, remote: unknown) => number
+  /**
+   * 推送前的**本地退化检查**（2026-10-07 事故后新增）。
+   * 返回空/null = 内容健康允许推送；返回非空 = 疑似降级的原因，这一份会被跳过且不参与上传。
+   *
+   * 背景：原先只有「云端是否被外部改过」的探测（detectExternalChange），
+   * 管不了「**本机**数据先坏掉」的情形——坏掉的空态照样一路推上云，连锁清空其它设备。
+   */
+  guardLocal?: (local: unknown) => string | null
 }
 
 // 单例状态（模块级引用，composable 返回同一引用）
@@ -1191,6 +1204,26 @@ async function reloadAllStores(): Promise<void> {
   ])
 }
 
+// ========== 推送前的本地退化检查 ==========
+
+/**
+ * nav.json 的本地健康检查：user-sites 站点数相比会话基线骤降 → 疑似数据被清空。
+ * 返回 null = 健康；返回字符串 = 拦截原因。
+ *
+ * 基线由 navDataGuard 维护，**只在显式用户改动时推进**，因此：
+ *   - 用户真的删掉一批站点 → 基线跟着降 → 不拦；
+ *   - 存储层掉链子导致站点消失 → 基线没动 → 拦下。
+ */
+function guardNavUserSites(local: unknown): string | null {
+  const prefs = (local as { prefs?: Record<string, string> } | null)?.prefs
+  if (!prefs) return null
+  // 用户在 UI 上手动整理过站点 → 眼前这份就是他认可的数据，不再用历史基线拦他
+  // （与 sites.ts 的写盘守卫共用同一标志，避免「本地写成功但推送被拦」的死锁）
+  if (isNavExplicitMutationActive()) return null
+  const verdict = checkUserSitesAgainstBaseline(prefs['user-sites'])
+  return verdict.tripped ? verdict.reason : null
+}
+
 // ========== 文件配置表 ==========
 
 const FILE_CONFIGS: FileConfig[] = [
@@ -1201,7 +1234,9 @@ const FILE_CONFIGS: FileConfig[] = [
     signature: (data) => sigNav(data as NavSyncData),
     merge: (l, r) => mergeNav(l as NavSyncData, r as NavSyncData),
     reload: reloadNavStores,
-    diffSize: (l, r) => totalDiffSize(l, r)
+    diffSize: (l, r) => totalDiffSize(l, r),
+    // 站点数较基线骤降 → 本机数据疑似被清空，禁止把这份残缺内容推上云
+    guardLocal: (local) => guardNavUserSites(local)
   },
   {
     name: 'icons.json',
@@ -1372,6 +1407,13 @@ async function detectExternalChange(dir: string, username: string, password: str
 }
 
 /**
+ * 退化拦截的上次提示时间：后台自动推送会周期性重试，别让同一件事每分钟弹一次 toast。
+ * 注意节流只作用于提示——**拦截本身始终生效**。
+ */
+let lastGuardToastAt = 0
+const GUARD_TOAST_THROTTLE_MS = 10 * 60 * 1000
+
+/**
  * 推送本地到云端：串行 5 export → 5 PUT，任一失败标记 error 不中断后续。
  * silent=true 用于后台自动同步：不弹任何 toast。
  *
@@ -1413,9 +1455,19 @@ async function pushNow(silent = false, skipRemoteGuard = false, onlyChanged = fa
     let hasError = false
     let firstError = ''
     let pushedCount = 0
+    /** 本地退化检查拦截掉的信封（为云端数据兜底的最后一道闸门） */
+    const guardBlocked: string[] = []
     for (const cfg of FILE_CONFIGS) {
       try {
         const local = await cfg.exportLocal()
+        // ===== 本地退化检查：本机数据疑似被清空时，宁可不推也不能把空态推上云 =====
+        if (cfg.guardLocal) {
+          const reason = cfg.guardLocal(local)
+          if (reason) {
+            guardBlocked.push(`${cfg.name}（${reason}）`)
+            continue
+          }
+        }
         // 只推变化：与上次成功推送的内容签名一致 → 这份没动过，跳过 PUT
         // prev 为空（从未推过 / 清过缓存）时必须推，否则首次同步会被跳过
         let sig = ''
@@ -1435,6 +1487,19 @@ async function pushNow(silent = false, skipRemoteGuard = false, onlyChanged = fa
         hasError = true
         if (!firstError) firstError = e instanceof Error ? e.message : `${cfg.name} 推送失败`
       }
+    }
+    // ===== 拦截优先：本地数据疑似降级 → 整套推送作废，且**不清脏标记**（脏着才有机会被再次校验/拉取）=====
+    if (guardBlocked.length > 0) {
+      const msg = `本地数据疑似降级，已拦截推送以免覆盖云端：${guardBlocked.join('；')}`
+      status.value = 'error'
+      errorMessage.value = msg
+      console.error('[CloudSync] ' + msg)
+      const now = Date.now()
+      if (now - lastGuardToastAt > GUARD_TOAST_THROTTLE_MS) {
+        lastGuardToastAt = now
+        useToast().error(msg + '。请到「设置 → 云同步」点击「拉取」恢复，或从备份导入。')
+      }
+      return false
     }
     if (hasError) {
       status.value = 'error'
@@ -1692,7 +1757,10 @@ export async function resolveConflict(decision: 'remote' | 'local' | 'cancel' | 
   const conflicts = conflictData.value
 
   if (decision === 'remote') {
-    // 全部取云端：逐文件 apply remote
+    // 全部取云端：逐文件 apply remote。
+    // 这是用户**显式判决**，需临时放行「远端疑似空列表」保护，
+    // 否则保护会把用户的主动选择吞掉（点了「云端覆盖」却没生效）。
+    armNavWipeOverride()
     conflictData.value = null
     status.value = 'pulling'
     let workbenchIdentityChanged = false

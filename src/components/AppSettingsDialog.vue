@@ -12,6 +12,7 @@ import type { DialogId } from '@/stores/settings'
 import type { WorkbenchMenuItem } from '@/composables/workbenchMenuCore'
 import { useAppSettingsDialog } from '@/composables/useAppSettingsDialog'
 import type { SettingsTarget } from '@/composables/useAppSettingsDialog'
+import { armNavWipeOverride, clearBaseline } from '@/composables/navDataGuard'
 import { useToast } from '@/composables/useToast'
 import { idbGet, idbPut, idbImportAll, idbExportAll, idbClear, IDB_STUDENT_STORES, IDB_CORE_STORES, IDB_AUX_STORES, IDB_ICONS_STORES } from '@/composables/useIdb'
 import {
@@ -1038,6 +1039,10 @@ async function handleRestoreSnapshot(snapshot: SnapshotRecord): Promise<void> {
     const localHasPassword = localStorage.getItem('password-verification-v2') !== null
     const skipPasswords = !hasVaultIdentity && !localHasPassword
 
+    // 恢复备份 = 用户明确「以备份为准」：临时放行「远端/备份疑似空列表」保护，
+    // 并保证这笔新数据成为新的事实基线（否则之后所有写盘都会被判定成骤降而拦下）
+    armNavWipeOverride()
+    clearBaseline()
     const { adoptedPasswordIdentity: adoptedIdentity } = await idbImportAll(
       skipPasswords ? { ...rawData, passwords: '' } : rawData
     )
@@ -1196,6 +1201,9 @@ async function handleWbImportFile(event: Event): Promise<void> {
     const skipPasswords = !hasVaultIdentity && !localHasPassword
     let adoptedIdentity = false
     try {
+      // 同上：导入文件是用户显式决策 → 放行保护并重建基线
+      armNavWipeOverride()
+      clearBaseline()
       adoptedIdentity = (
         await idbImportAll(skipPasswords ? { ...parsed, passwords: '' } : parsed)
       ).adoptedPasswordIdentity

@@ -23,7 +23,16 @@ import {
 } from '../composables/useDeadLinkChecker'
 import { scheduleAutoBackup } from '../composables/useBackup'
 import { markDirty } from '@/composables/useCloudSync'
-import { getPref, setPrefNow } from '@/composables/useNavPrefs'
+import {
+  armNavExplicitMutation,
+  ensureBaseline,
+  evaluateUserSitesCount,
+  isNavExplicitMutationActive,
+  readBaseline,
+  writeBaseline
+} from '@/composables/navDataGuard'
+import { getPref, setPrefNow, isNavReadonly } from '@/composables/useNavPrefs'
+import { useToast } from '@/composables/useToast'
 
 export const useSitesStore = defineStore('sites', () => {
   const sites = ref<Site[]>([])
@@ -38,6 +47,78 @@ export const useSitesStore = defineStore('sites', () => {
   const isCheckingLinks = ref(false)
   const linkCheckProgress = ref<CheckProgress | null>(null)
   const showOnlyInvalid = ref(false)
+
+  // ===== 数据降级保护（2026-10-07 事故后新增）=====
+  // 事故形态：存储层某环节掉链子 → 站点列表骤降甚至清空 → 这份「残缺态」被当成用户数据写回
+  //   → 再被自动推送到云端 → 其它设备连锁清空。
+  // 保护思路：只给**显式用户改动**推进基线（见 navDataGuard），读取与自动写盘不推进；
+  //   于是「用户真删了站点」不会被拦，「数据莫名没了却被自动回写」会被拦。
+  /** 非用户自有站点的 URL（内置站点 + 游戏清单），用于统计「用户自有站点数」 */
+  const nonUserUrls = new Set<string>()
+  /** 保护触发原因（空串 = 正常），供 UI / 排障读取 */
+  const dataGuardMessage = ref('')
+  let guardToastShown = false
+
+  /** 用户自有站点数：排除内置站点与游戏清单，避免内置数据掩盖「用户数据没了」 */
+  function ownSiteCount(): number {
+    if (nonUserUrls.size === 0) return sites.value.length
+    return sites.value.filter(s => !nonUserUrls.has(s.url)).length
+  }
+
+  /** 用当前列表刷新基线（只在显式用户改动后调用，代表「这是用户想要的规模」） */
+  function syncBaselineFromCurrent(): void {
+    writeBaseline(ownSiteCount())
+  }
+
+  /**
+   * 用户在 UI 上做过一次显式改动（增/删/改站点）后就认为「眼前所见即其所愿」，写盘守卫放行。
+   *
+   * 标志放在 navDataGuard 里共享：推送守卫（useCloudSync）读同一份状态，
+   * 否则会出现「本地写成功、推送却被永久拦下」的死锁。
+   * 保护的靶子是「数据自己没了又被自动写盘/推送」，不是「用户正在手动整理时被卡住」。
+   */
+  function noteExplicitMutation(): void {
+    armNavExplicitMutation()
+    syncBaselineFromCurrent()
+  }
+
+  /**
+   * 判断此刻能否把 sites.value 回写成 user-sites。
+   * 返回空串 = 可写；非空 = 疑似降级的原因（应跳过写回）。
+   *
+   * 刻意做成**每次写盘实时判定**而非一次性上锁：数据一旦恢复（如云同步拉取成功）写入自动恢复，
+   * 不会因为一次误判把整个会话变成只读。
+   */
+  function userSitesWriteBlockReason(): string {
+    if (isNavReadonly()) return '导航存储读取失败（只读模式）'
+    if (isNavExplicitMutationActive()) return ''
+    return evaluateUserSitesCount(ownSiteCount(), readBaseline()).reason
+  }
+
+  function warnOnGuard(reason: string): void {
+    dataGuardMessage.value = reason
+    if (guardToastShown) return
+    guardToastShown = true
+    console.error('[sites] 导航站点降级保护已触发：', reason)
+    try {
+      useToast().error(
+        `检测到导航站点数据疑似丢失（${reason}），已暂停写入本地与云端以免覆盖。` +
+        '请到「设置 → 云同步」点击「拉取」恢复，或导入备份文件。'
+      )
+    } catch {
+      // toast 未就绪（极早期初始化）不影响保护逻辑本身
+    }
+  }
+
+  /** 每次数据装载/变更后重算保护状态：恢复正常即清空提示 */
+  function refreshDataGuard(): void {
+    const reason = userSitesWriteBlockReason()
+    if (reason) {
+      warnOnGuard(reason)
+      return
+    }
+    dataGuardMessage.value = ''
+  }
 
   // 加载保存的检测结果
   function applySavedCheckResults() {
@@ -240,6 +321,9 @@ export const useSitesStore = defineStore('sites', () => {
           createdAt: new Date().toISOString()
         }))
         
+        // 游戏清单不是用户数据：登记到「非用户站点」集合，降级统计时排除
+        for (const g of gameSites) nonUserUrls.add(g.url)
+
         // 合并游戏到sites（避免重复）
         const existingUrls = new Set(sites.value.map(s => s.url))
         const newGames = gameSites.filter(g => !existingUrls.has(g.url))
@@ -257,10 +341,23 @@ export const useSitesStore = defineStore('sites', () => {
       const response = await fetch('/data/sites.md')
       const content = await response.text()
       const { sites: builtInSites } = parseSitesFromMarkdown(content)
+      // 内置站点不是用户数据：登记到「非用户站点」集合，降级统计（ownSiteCount）时排除
+      for (const site of builtInSites) nonUserUrls.add(site.url)
 
       // 从 nav store 读取用户站点
+      // JSON.parse 单独包一层：旧版这里一旦解析失败会直接跳到外层 catch → sites.value=[]，
+      // 随后任何一次写盘都会把这份空态固化，是「数据莫名消失」的帮凶之一。
       const savedData = getPref('user-sites')
-      const savedSites: Site[] = savedData ? JSON.parse(savedData) : []
+      let savedSites: Site[] = []
+      if (savedData) {
+        try {
+          const parsed: unknown = JSON.parse(savedData)
+          savedSites = Array.isArray(parsed) ? (parsed as Site[]) : []
+        } catch (e) {
+          savedSites = []
+          console.error('[sites] user-sites 内容损坏，本次按空列表加载（未写回，原值保留在存储中）', e)
+        }
+      }
 
       // 使用 Map 合并数据，nav store 优先
       const sitesMap = new Map<string, Site>()
@@ -283,9 +380,16 @@ export const useSitesStore = defineStore('sites', () => {
 
       // 应用保存的断链检测结果
       applySavedCheckResults()
+
+      // 首次（无基线时）按「用户自有站点数」确立基线；随后按当前数据重算保护状态。
+      // 顺序必须是先 ensureBaseline 再 refreshDataGuard：否则首次进入会把当前数当成骤降。
+      ensureBaseline(ownSiteCount())
+      refreshDataGuard()
     } catch (error) {
       console.error('Failed to load sites:', error)
       sites.value = []
+      // 装载本身失败（如 fetch 内置清单挂了）也属于降级场景：带上保护再退出
+      refreshDataGuard()
     } finally {
       isLoading.value = false
     }
@@ -305,6 +409,8 @@ export const useSitesStore = defineStore('sites', () => {
       createdAt: new Date().toISOString()
     }
     sites.value.push(newSite)
+    // 显式用户改动 → 准许按当前规模推进基线，避免用户正常增删被守卫误拦
+    noteExplicitMutation()
     saveUserSites()
   }
 
@@ -317,12 +423,16 @@ export const useSitesStore = defineStore('sites', () => {
         description: normalizeText(updatedSite.description),
         updatedAt: new Date().toISOString()
       }
+      // 用户在明确编辑站点 → 不应被降级守卫卡住（否则改了存不下来，用户只会更困惑）
+      noteExplicitMutation()
       saveUserSites()
     }
   }
 
   function deleteSite(url: string) {
     sites.value = sites.value.filter(s => s.url !== url)
+    // 删除会真实降低站点数：必须同步基线，否则后续所有写盘都会被守卫拦住
+    noteExplicitMutation()
     saveUserSites()
   }
 
@@ -420,7 +530,16 @@ export const useSitesStore = defineStore('sites', () => {
       saveTimer = null
     }
     try {
-      setPrefNow('user-sites', JSON.stringify(sites.value))
+      // 降级保护：站点数较基线骤降（或存储处于只读）时，**跳过 user-sites 回写**。
+      // 这条守卫拦住的是「数据没了 → 自动写盘把空/残缺态固化」这最关键的一环；
+      // 点击计数等派生数据仍照常写，不影响体验。
+      const blockReason = userSitesWriteBlockReason()
+      if (blockReason) {
+        warnOnGuard(blockReason)
+        console.error('[sites] 已跳过本次 user-sites 回写，避免覆盖真实数据：', blockReason)
+      } else {
+        setPrefNow('user-sites', JSON.stringify(sites.value))
+      }
     } catch {
       // 配额不足等异常保持原行为（IDB 写入失败由 setPrefNow 内部 catch 静默）
     }
@@ -739,8 +858,23 @@ ${sub}
     }
     
     // 获取现有的 nav store 数据
+    // 这里同样不能依赖外层 catch：user-sites 解析失败时若继续往下走，
+    // 最终会把「只含本次导入站点」的新列表覆盖掉损坏的原数据 → 原数据彻底找不回来。
     const existingData = getPref('user-sites')
-    const existingSites: Site[] = existingData ? JSON.parse(existingData) : []
+    let existingSites: Site[] = []
+    if (existingData) {
+      try {
+        const parsedExisting: unknown = JSON.parse(existingData)
+        existingSites = Array.isArray(parsedExisting) ? (parsedExisting as Site[]) : []
+      } catch (e) {
+        console.error('[sites] user-sites 内容损坏，已中止导入以保留原数据', e)
+        return {
+          added: 0,
+          skipped: 0,
+          error: '本地站点数据疑似损坏，为保障可恢复性已中止本次导入。请先「备份恢复」或导出后再导入。'
+        }
+      }
+    }
 
     // 建立 URL 到站点的映射（只检查 nav store 中的用户数据）
     const existingMap = new Map(existingSites.map(s => [s.url, s]))
@@ -760,6 +894,8 @@ ${sub}
     }
 
     // 保存到 nav store（立即落盘，确保 loadSites 重载前已持久）
+    // 导入是显式操作且只会变多：先推进基线，避免「导入更大数据却被守卫拦下」
+    noteExplicitMutation()
     setPrefNow('user-sites', JSON.stringify(existingSites))
     
     // 重新加载数据以更新显示
@@ -810,7 +946,9 @@ ${sub}
     // 拖拽排序
     swapSort,
     // 点击频率排序
-    incrementClick
+    incrementClick,
+    // 数据降级保护状态（空串 = 正常；非空 = 已暂停回写的原因）
+    dataGuardMessage
   }
 })
 
