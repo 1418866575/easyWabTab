@@ -6,7 +6,6 @@ import { computed, ref } from 'vue'
 import { buildMonth, holidayMap, monthStats, type DayCell } from '../../core/calendar'
 import { useDirtyFlag } from '../../prefs/useToolDirty'
 import { useToolActions } from '../../composables/useToolActions'
-import TuField from '../../components/tool/TuField.vue'
 import TuOutput from '../../components/tool/TuOutput.vue'
 
 const today = new Date()

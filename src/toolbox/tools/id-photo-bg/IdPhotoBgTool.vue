@@ -4,7 +4,7 @@
  * 流程：选图 → 自动四边取样推断原背景色 → 抠图 → 合成新底色 →（可选）按规格裁切 → 下载
  */
 import { ref, computed, watch } from 'vue'
-import type { PixelData } from '../../core/imageFx'
+import { toImageData, type PixelData } from '../../core/imageFx'
 import {
   sampleBackgroundColor,
   cutoutBackground,
@@ -107,7 +107,7 @@ function render() {
     canvas.height = sized.height
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    ctx.putImageData(new ImageData(sized.data, sized.width, sized.height), 0, 0)
+    ctx.putImageData(toImageData(sized), 0, 0)
     const mime = fmt.value === 'png' ? 'image/png' : 'image/jpeg'
     previewUrl.value = canvas.toDataURL(mime, 0.92)
     canvas.toBlob(

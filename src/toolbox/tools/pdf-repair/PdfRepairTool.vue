@@ -8,7 +8,7 @@
  */
 import { ref } from 'vue'
 import { PDFDocument } from 'pdf-lib'
-import { downloadBlob, humanSize } from '../../core/download'
+import { pdfBlob, downloadBlob, humanSize } from '../../core/download'
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const busy = ref(false)
@@ -61,7 +61,7 @@ async function repair() {
       note = '（已尝试截断到文件尾部最后一个 %%EOF 进行修复）'
     }
     const pages = doc.getPageCount()
-    const blob = new Blob([await doc.save()], { type: 'application/pdf' })
+    const blob = pdfBlob(await doc.save())
     downloadBlob(`${baseName.value}-repaired.pdf`, blob)
     infoMsg.value = `修复完成${note}：${pages} 页，原 ${humanSize(originalSize.value)} → 修复后 ${humanSize(blob.size)}。`
   } catch (err) {

@@ -258,7 +258,6 @@ function matchSpecialWeek(special: string, d: Date): boolean {
   if (nl) {
     const want = Number(nl[1]) % 7
     const last = lastDayOfMonth(d)
-    const lastWd = new Date(d.getFullYear(), d.getMonth(), last).getDay()
     return d.getDay() === want && d.getDate() + 7 > last
   }
   const hm = /^(\d)#(\d)$/.exec(special)

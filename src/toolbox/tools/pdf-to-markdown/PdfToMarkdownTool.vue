@@ -29,7 +29,6 @@ const smartHeading = ref(true)
 const pageSeparator = ref(true)
 
 const markdown = ref('')
-let lastFile: File | null = null
 
 function groupLines(items: any[]): Line[] {
   const arr = items
@@ -103,7 +102,6 @@ async function onFile(e: Event) {
   errorMsg.value = ''
   infoMsg.value = ''
   markdown.value = ''
-  lastFile = f
   baseName.value = f.name.replace(/\.pdf$/i, '')
   originalSize.value = f.size
   busy.value = true

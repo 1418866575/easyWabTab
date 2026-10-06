@@ -4,7 +4,7 @@
  * 提取两份 PDF 的纯文本（按页归行），做行级差异比对，展示新增/删除/未变，可下载 diff 文本。
  * 仅比对文本层；图片/版式差异不在范围内。
  */
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import * as pdfjsLib from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { downloadText } from '../../core/download'

@@ -8,7 +8,7 @@
  */
 import { ref } from 'vue'
 import { PDFDocument, PageSizes } from 'pdf-lib'
-import { downloadBlob } from '../../core/download'
+import { pdfBlob, downloadBlob } from '../../core/download'
 
 interface ImgItem {
   id: number
@@ -114,7 +114,7 @@ async function build() {
       const page = pdf.addPage([pageW, pageH])
       page.drawImage(embed, { x, y, width: w, height: h })
     }
-    const blob = new Blob([await pdf.save()], { type: 'application/pdf' })
+    const blob = pdfBlob(await pdf.save())
     downloadBlob(`images-${items.value.length}.pdf`, blob)
   } catch (err) {
     errorMsg.value = '生成失败：' + (err as Error).message

@@ -286,8 +286,10 @@ async function handleImportFile(e: Event): Promise<void> {
   } catch (err) {
     toast.error('导入失败：' + (err as Error).message)
   } finally {
-    importInput.value = ''
-    ;(e.target as HTMLInputElement).value = ''
+    // 复位文件输入：importInput 是模板 ref（存 DOM 元素），不能赋字符串；
+    // 正确做法是通过 ref 拿元素清 value，这样下次能再次选择同一文件。
+    const el = (importInput.value ?? e.target) as HTMLInputElement | null
+    if (el) el.value = ''
   }
 }
 

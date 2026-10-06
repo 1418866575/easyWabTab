@@ -12,7 +12,6 @@ import type { ToolboxToolMeta } from '../types'
 import { relativeTime } from '../core/recent'
 import { useToolboxPrefs } from '../prefs/useToolboxPrefs'
 import { getToolMeta } from '../registry'
-import Icon from '@/components/Icon.vue'
 
 const props = defineProps<{
   /** 打开工具（由父级注入，复用其 openTool 逻辑：状态校验 + 记录点击 + 打开） */
@@ -39,8 +38,6 @@ const items = computed(() =>
 
 const hasItems = computed(() => items.value.length > 0)
 
-/** 桌面端折叠态最多展示 5 个胶囊 */
-const VISIBLE = 5
 
 function onSelect(meta: ToolboxToolMeta) {
   close()

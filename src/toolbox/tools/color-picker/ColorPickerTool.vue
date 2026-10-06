@@ -4,7 +4,6 @@
  */
 import { computed, ref, watch } from 'vue'
 import {
-  bundleFromRgb,
   contrastRatio,
   cmykToRgb,
   expandHex,

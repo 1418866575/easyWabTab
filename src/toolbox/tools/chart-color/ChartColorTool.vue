@@ -46,7 +46,6 @@ const palette = computed<string[]>(() => {
 })
 
 const chartPreview = computed(() => {
-  const n = palette.value.length || 1
   return palette.value.map((c, i) => ({ c, v: 30 + ((i * 37) % 70) }))
 })
 

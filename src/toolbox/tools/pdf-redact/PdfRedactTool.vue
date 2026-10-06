@@ -10,7 +10,7 @@ import { ref, computed } from 'vue'
 import * as pdfjsLib from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { PDFDocument, rgb } from 'pdf-lib'
-import { downloadBlob, humanSize } from '../../core/download'
+import { pdfBlob, downloadBlob, humanSize } from '../../core/download'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl
 const MM2PT = 2.834645669
@@ -162,7 +162,7 @@ async function applyRedact() {
         count++
       }
     }
-    const blob = new Blob([await doc.save()], { type: 'application/pdf' })
+    const blob = pdfBlob(await doc.save())
     downloadBlob(`${baseName.value}-redacted.pdf`, blob)
     infoMsg.value = `已涂黑 ${count} 处（作用于 ${idxList.length} 页），原 ${humanSize(originalSize.value)} → 涂黑后 ${humanSize(blob.size)}。`
   } catch (err) {

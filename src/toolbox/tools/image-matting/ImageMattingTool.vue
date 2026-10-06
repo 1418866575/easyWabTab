@@ -3,7 +3,7 @@
  * 图片去背景（按颜色阈值 + 边缘羽化，可替换背景色）
  */
 import { nextTick, ref, watch } from 'vue'
-import { removeBackground, type PixelData } from '../../core/imageFx'
+import { removeBackground, toImageData, type PixelData } from '../../core/imageFx'
 import { useDirtyFlag } from '../../prefs/useToolDirty'
 import { useToolActions, loadImage } from '../../composables/useToolActions'
 import TuField from '../../components/tool/TuField.vue'
@@ -91,7 +91,7 @@ async function render() {
     ctx.fillStyle = bgColor.value
     ctx.fillRect(0, 0, canvas.width, canvas.height)
   }
-  ctx.putImageData(new ImageData(out.data, out.width, out.height), 0, 0)
+  ctx.putImageData(toImageData(out), 0, 0)
   if (previewUrl.value.startsWith('blob:')) URL.revokeObjectURL(previewUrl.value)
   previewUrl.value = canvas.toDataURL('image/png')
   const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/png'))

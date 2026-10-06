@@ -1,12 +1,15 @@
 <script setup lang="ts">
 /**
- * PDF 解锁（纯前端，pdf-lib）
- * 用用户提供的「打开密码」加载加密 PDF，重新保存为不带密码的 PDF 实现解锁。
- * 明确边界：不做密码爆破；密码错误 / 非加密 / 解析失败均有提示。
+ * PDF 解锁 / 去保护（纯前端，pdf-lib）
+ *
+ * 能力边界（重要）：pdf-lib **不支持解密**——它只识别加密并抛 EncryptedPDFError，
+ * 没有「用密码解密」的 API。因此本工具只能做「去保护」：对未加密 PDF 重新保存，
+ * 顺带清掉文档内的编辑/复制限制等权限标记；对加密文件会明确报错并说明原因，
+ * 而不是让用户填一个根本没被使用的密码框。
  */
 import { ref } from 'vue'
 import { PDFDocument } from 'pdf-lib'
-import { downloadBlob } from '../../core/download'
+import { pdfBlob, downloadBlob } from '../../core/download'
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const busy = ref(false)
@@ -32,20 +35,22 @@ async function unlock() {
     return
   }
   const f = input.files[0]
-  const password = (document.getElementById('pdf-unlock-pw') as HTMLInputElement)?.value || ''
   busy.value = true
   errorMsg.value = ''
   infoMsg.value = ''
   try {
     const bytes = new Uint8Array(await f.arrayBuffer())
-    const doc = await PDFDocument.load(bytes, { password: password || undefined })
-    const blob = new Blob([await doc.save()], { type: 'application/pdf' })
+    // ignoreEncryption: true = 遇到加密不抛错、按原样读入（此时解密仍不可能，见文件头说明）
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true })
+    if (doc.isEncrypted) {
+      errorMsg.value = '该 PDF 设有打开密码，纯前端无法解密（pdf-lib 不支持解密算法）。请用专业工具先解密后再来。'
+      return
+    }
+    const blob = pdfBlob(await doc.save())
     downloadBlob(`${baseName.value}-unlocked.pdf`, blob)
-    infoMsg.value = '已移除密码并下载（若该文件本未加密，则为原样另存）。'
+    infoMsg.value = '已重新保存（未加密文件将原样另存；文档内的编辑/复制限制标记会被清除）。'
   } catch (err) {
-    const msg = (err as Error).message || String(err)
-    if (/password/i.test(msg)) errorMsg.value = '密码错误或文件已损坏：请提供正确的打开密码。'
-    else errorMsg.value = '解锁失败：' + msg
+    errorMsg.value = '处理失败：' + ((err as Error).message || String(err))
   } finally {
     busy.value = false
   }
@@ -55,26 +60,21 @@ async function unlock() {
 <template>
   <div class="tu-t1 pdf-unlock">
     <div class="tu-field">
-      <label class="tu-label">选择加密 PDF</label>
+      <label class="tu-label">选择 PDF</label>
       <input ref="fileInput" type="file" accept="application/pdf" hidden @change="onFile" />
       <button class="tu-btn" :disabled="busy" @click="fileInput?.click()">选择 PDF</button>
       <span v-if="fileName" class="tu-row" style="margin-top:8px">{{ fileName }}</span>
     </div>
 
-    <div class="tu-field">
-      <label class="tu-label" for="pdf-unlock-pw">打开密码（已知密码，留空表示尝试无密码）</label>
-      <input id="pdf-unlock-pw" type="password" class="tu-input" autocomplete="off" placeholder="请输入 PDF 的打开密码" />
-    </div>
-
     <button type="button" class="tu-btn" :disabled="busy || !fileName" @click="unlock">
-      {{ busy ? '处理中…' : '解锁并下载' }}
+      {{ busy ? '处理中…' : '去保护并下载' }}
     </button>
 
     <p v-if="errorMsg" class="tu-alert">{{ errorMsg }}</p>
     <p v-if="infoMsg" class="tu-alert ok">{{ infoMsg }}</p>
 
     <p class="tu-hint">
-      本工具仅在你已知密码的前提下移除打开保护，不会尝试破解未知密码。文件全程在本地浏览器处理，不上传任何服务器。
+      可清除文档内的编辑 / 复制等权限限制标记。<b>设有打开密码的加密文件无法在此解密</b>（纯前端库不具备解密能力），需先用专业工具解密。文件全程在本地浏览器处理，不上传任何服务器。
     </p>
   </div>
 </template>

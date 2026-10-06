@@ -8,7 +8,7 @@ import { ref, computed } from 'vue'
 import * as pdfjsLib from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { PDFDocument } from 'pdf-lib'
-import { downloadBlob, humanSize } from '../../core/download'
+import { pdfBlob, downloadBlob, humanSize } from '../../core/download'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl
 const MM2PT = 2.834645669
@@ -111,7 +111,7 @@ async function applyCrop() {
       page.setCropBox(left, bottom, right - left, top - bottom)
       cropped++
     }
-    const blob = new Blob([await doc.save()], { type: 'application/pdf' })
+    const blob = pdfBlob(await doc.save())
     downloadBlob(`${baseName.value}-cropped.pdf`, blob)
     infoMsg.value = `裁剪完成：已处理 ${cropped} 页，原 ${humanSize(originalSize.value)} → 裁剪后 ${humanSize(blob.size)}。`
   } catch (err) {

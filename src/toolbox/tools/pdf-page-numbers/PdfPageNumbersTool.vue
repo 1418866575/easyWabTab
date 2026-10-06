@@ -6,7 +6,7 @@
  */
 import { ref } from 'vue'
 import { PDFDocument, StandardFonts } from 'pdf-lib'
-import { downloadBlob } from '../../core/download'
+import { pdfBlob, downloadBlob } from '../../core/download'
 
 type Position = 'bottom-center' | 'bottom-right' | 'bottom-left' | 'top-center' | 'top-right' | 'top-left'
 type Format = 'n' | 'page' | 'ratio'
@@ -96,7 +96,7 @@ async function generate() {
       }
       page.drawText(text, { x, y, size, font })
     }
-    const blob = new Blob([await doc.save()], { type: 'application/pdf' })
+    const blob = pdfBlob(await doc.save())
     downloadBlob(`${baseName.value}-numbered.pdf`, blob)
   } catch (err) {
     errorMsg.value = '生成失败：' + (err as Error).message

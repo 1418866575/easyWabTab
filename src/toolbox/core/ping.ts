@@ -70,7 +70,7 @@ export async function probeOnce(
   const t0 = (typeof performance !== 'undefined' ? performance.now() : Date.now())
   try {
     // no-cors 下拿不到状态码，但能判定「网络层是否可达」；同源则走 cors 拿状态码
-    const res = await fetch(url, { mode: 'no-cors', cache: 'no-store', signal: ctrl.signal })
+    await fetch(url, { mode: 'no-cors', cache: 'no-store', signal: ctrl.signal })
     const ms = Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0)
     clearTimeout(timer)
     return { ok: true, ms, message: '网络层可达' }

@@ -16,8 +16,18 @@ export const HASH_ALGS: { id: HashAlg; name: string }[] = [
   { id: 'sha512', name: 'SHA-512' }
 ]
 
+/**
+ * CryptoJS 的 Message 对象（如 MD5/SHA1 的返回值）。
+ * `toString(encoder?)` 接受编码器参数并按其输出（Hex/Base64/Utf8...），
+ * 省略参数时默认 Hex —— 类型里必须保留这个可选参数，否则 hashText 里的
+ * `.toString(CryptoJS.enc.Hex)` 会报 TS2554（Expected 0 arguments, but got 1）。
+ */
+interface CryptoMessage {
+  toString(encoder?: unknown): string
+}
+
 function algFn(alg: HashAlg) {
-  const map: Record<HashAlg, (m: string) => { toString(): string }> = {
+  const map: Record<HashAlg, (m: string) => CryptoMessage> = {
     md5: (m: string) => CryptoJS.MD5(m),
     sha1: (m: string) => CryptoJS.SHA1(m),
     sha224: (m: string) => CryptoJS.SHA224(m),
@@ -29,7 +39,7 @@ function algFn(alg: HashAlg) {
 }
 
 function hmacFn(alg: HashAlg) {
-  const map: Record<HashAlg, (m: string, k: string) => { toString(): string }> = {
+  const map: Record<HashAlg, (m: string, k: string) => CryptoMessage> = {
     md5: (m: string, k: string) => CryptoJS.HmacMD5(m, k),
     sha1: (m: string, k: string) => CryptoJS.HmacSHA1(m, k),
     sha224: (m: string, k: string) => CryptoJS.HmacSHA224(m, k),

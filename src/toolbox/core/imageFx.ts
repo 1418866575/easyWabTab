@@ -9,6 +9,18 @@ export interface PixelData {
   height: number
 }
 
+/**
+ * PixelData → 浏览器 ImageData。
+ *
+ * TS 5.7 起 Uint8ClampedArray 的泛型参数默认为 ArrayBufferLike（含 SharedArrayBuffer），
+ * 而 ImageData 构造函数的第1 参要求 `ImageDataArray`（即 ArrayBuffer 支撑的视图），
+ * 直接 `new ImageData(p.data, w, h)` 会报 TS2769（No overload matches）。
+ * 本项目的像素缓冲都是 `new Uint8ClampedArray(len)` 分配的普通 ArrayBuffer，断言安全。
+ */
+export function toImageData(p: PixelData): ImageData {
+  return new ImageData(p.data as unknown as ImageDataArray, p.width, p.height)
+}
+
 export interface AdjustOptions {
   brightness?: number
   contrast?: number

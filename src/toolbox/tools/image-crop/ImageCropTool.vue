@@ -189,7 +189,8 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="tu-canvas-box crop-box" @mousedown="begin" @mousemove="move" @mouseup="end" @mouseleave="end">
-      <img v-if="imgUrl" :src="imgUrl" alt="原图" :style="{ width: img && img.naturalWidth * scale + 'px' }" @load="onLoad" />
+      <!-- img 可能为 null（未加载完成），用三元兜底避免 style.width 变成 null -->
+      <img v-if="imgUrl" :src="imgUrl" alt="原图" :style="{ width: img ? img.naturalWidth * scale + 'px' : 'auto' }" @load="onLoad" />
       <p v-else class="tu-out-empty">选择图片后，在图上按住拖动即可框选</p>
       <div
         v-for="(r, i) in rects"

@@ -26,7 +26,9 @@ const sheet = computed(() => jsonToSheetData(input.value))
 const headers = computed(() => {
   try {
     const arr = JSON.parse(input.value)
-    return collectHeaders(Array.isArray(arr) ? flattenRows(arr) : [flattenRows(arr)])
+    // flattenRows 本身返回 Record<string,unknown>[]，不要再包一层数组
+    // （原写法 [flattenRows(arr)] 得到 Record[][]，导致 collectHeaders 收到错类型）
+    return collectHeaders(flattenRows(arr))
   } catch {
     return []
   }

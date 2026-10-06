@@ -3,7 +3,7 @@
  * 文本差异对比（行级 + 字符级，纯前端实现）
  */
 import { computed, ref } from 'vue'
-import { diffTexts, type DiffLine, type DiffPart } from '../../core/diff'
+import { diffTexts, type DiffPart } from '../../core/diff'
 import { useDirtyFlag } from '../../prefs/useToolDirty'
 import { useToolActions, readFileAsText } from '../../composables/useToolActions'
 import TuField from '../../components/tool/TuField.vue'

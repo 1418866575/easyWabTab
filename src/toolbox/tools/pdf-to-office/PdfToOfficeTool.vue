@@ -81,7 +81,7 @@ function bodySize(pages: Line[][]): number {
 }
 
 // ---------- DOCX ----------
-function buildDocx(pages: Line[][], smart: boolean): Blob {
+async function buildDocx(pages: Line[][], smart: boolean): Promise<Blob> {
   const body = bodySize(pages)
   const paras: string[] = []
   const pushP = (text: string, style?: string, bold?: boolean) => {
@@ -127,7 +127,7 @@ function buildDocx(pages: Line[][], smart: boolean): Blob {
 }
 
 // ---------- XLSX ----------
-function buildXlsx(pages: Line[][]): Blob {
+async function buildXlsx(pages: Line[][]): Promise<Blob> {
   const rows: string[] = []
   let r = 0
   for (const pg of pages) {
@@ -165,7 +165,7 @@ function buildXlsx(pages: Line[][]): Blob {
 }
 
 // ---------- PPTX ----------
-function buildPptx(pages: Line[][]): Blob {
+async function buildPptx(pages: Line[][]): Promise<Blob> {
   const N = pages.length
   const W = 'http://schemas.openxmlformats.org/presentationml/2006/main'
   const A = 'http://schemas.openxmlformats.org/drawingml/2006/main'
@@ -288,13 +288,13 @@ async function convert() {
     let blob: Blob
     let ext: string
     if (format.value === 'docx') {
-      blob = buildDocx(pages, smartHeading.value)
+      blob = await buildDocx(pages, smartHeading.value)
       ext = 'docx'
     } else if (format.value === 'xlsx') {
-      blob = buildXlsx(pages)
+      blob = await buildXlsx(pages)
       ext = 'xlsx'
     } else {
-      blob = buildPptx(pages)
+      blob = await buildPptx(pages)
       ext = 'pptx'
     }
     downloadBlob(`${baseName.value}.${ext}`, blob)

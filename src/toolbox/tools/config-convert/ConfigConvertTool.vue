@@ -19,7 +19,7 @@ const to = ref<Fmt>('json')
 const autoDetect = ref(true)
 
 useDirtyFlag(() => !!input.value.trim())
-const { copy, save } = useToolActions()
+const { save } = useToolActions()
 const csvError = ref('')
 
 /** JSON 数组对象 → CSV（首行表头取全部键并集，嵌套值 JSON 化）；非数组对象返回 null */

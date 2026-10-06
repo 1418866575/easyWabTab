@@ -3,7 +3,7 @@
  * Hash 生成器与 HMAC（crypto-js，纯前端实现）
  */
 import { computed, ref } from 'vue'
-import { HASH_ALGS, hashMany, hashText, hmacText, type HashAlg } from '../../core/hash'
+import { HASH_ALGS, hashMany, type HashAlg } from '../../core/hash'
 import { useDirtyFlag } from '../../prefs/useToolDirty'
 import { useToolActions } from '../../composables/useToolActions'
 import TuField from '../../components/tool/TuField.vue'

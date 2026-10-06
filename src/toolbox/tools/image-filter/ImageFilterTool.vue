@@ -3,7 +3,7 @@
  * 图片滤镜（亮度/对比度/饱和度/色相 + 预设，实时预览）
  */
 import { nextTick, ref, watch } from 'vue'
-import { adjustPixels, applyPreset, type AdjustOptions, type PixelData, type PresetId } from '../../core/imageFx'
+import { adjustPixels, applyPreset, toImageData, type AdjustOptions, type PixelData, type PresetId } from '../../core/imageFx'
 import { useDirtyFlag } from '../../prefs/useToolDirty'
 import { useToolActions, loadImage } from '../../composables/useToolActions'
 import TuField from '../../components/tool/TuField.vue'
@@ -76,7 +76,7 @@ async function render() {
     busy.value = false
     return
   }
-  ctx.putImageData(new ImageData(out.data, out.width, out.height), 0, 0)
+  ctx.putImageData(toImageData(out), 0, 0)
   if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
   previewUrl.value = canvas.toDataURL('image/png')
   const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/png'))
