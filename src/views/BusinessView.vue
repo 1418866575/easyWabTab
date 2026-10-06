@@ -21,7 +21,7 @@ import SkeletonBlock from '@/components/SkeletonBlock.vue'
 import { useCloudSync } from '@/composables/useCloudSync'
 import type { SyncStatus } from '@/composables/useCloudSync'
 import { useWorkbenchShortcuts } from '@/composables/useWorkbenchShortcuts'
-import { calcTodayStats, currentYear, formatYuanOf, ledgerDefaultName, localDateKey } from '@/composables/businessCore'
+import { currentYear, ledgerDefaultName } from '@/composables/businessCore'
 import { BIZ_QUICK_ACTIONS, BIZ_SECTIONS, MOBILE_TAB_KEYS, mobileMoreSections, mobileSwipeTarget } from '@/composables/businessSpotlightCore'
 import type { BizSpotlightAction, BizSpotlightData } from '@/composables/businessSpotlightCore'
 
@@ -114,57 +114,10 @@ onUnmounted(() => {
 // ===== M-20（2026-10-07）移动端专用布局：固定头部 + 固定底栏 + 中间独立滚动 =====
 // 桌面端沿用原有「左树 + 右内容」布局，此处新增的逻辑全部由 isMobileNav 门控，
 // 桌面渲染结果与改动前完全一致。
-
-/** 移动端头部聚焦的日期（默认今天）。与销售记录面板的录入日期各自独立，互不干扰。 */
-const mobileDate = ref(localDateKey())
-/** 日期切换是否被用户改过（用于头部出现「回到今天」快捷按钮） */
-const mobileDateDirty = computed(() => mobileDate.value !== localDateKey())
-
-/** 当前日期的经营快照：营业额 / 毛利 / 支出 / 净额，用于头部汇总条 */
-const mobileDayStats = computed(() => {
-  const data = {
-    productCategories: store.productCategories,
-    expenseCategories: store.expenseCategories,
-    products: store.products,
-    purchases: store.purchases,
-    dailyRecords: store.dailyRecords,
-    expenseDailies: store.expenseDailies,
-    settings: store.settings
-  }
-  return calcTodayStats(data, mobileDate.value)
-})
-
-/** 日期步进：前后各一天，限制在当前账本年份内（与弹框录入日期同口径，跨年需切账本） */
-function shiftMobileDate(delta: number): void {
-  const [y, m, d] = mobileDate.value.split('-').map(Number)
-  if (!y || !m || !d) return
-  const next = new Date(y, m - 1, d + delta)
-  // 跨年直接钳在账本年首尾，避免出现「上一年」的日期（账本不存该年数据）
-  const year = store.currentLedgerYear
-  if (next.getFullYear() < year) next.setFullYear(year, 0, 1)
-  if (next.getFullYear() > year) next.setFullYear(year, 11, 31)
-  mobileDate.value = localDateKey(next)
-}
-function goToday(): void {
-  mobileDate.value = localDateKey()
-}
-
-/** 头部日期标签：10月06日 周一（当年省略；跨年时补年份，避免跨年记录张冠李戴） */
-const mobileDateLabel = computed(() => {
-  const [y, m, d] = mobileDate.value.split('-').map(Number)
-  if (!y || !m || !d) return mobileDate.value
-  const dt = new Date(y, m - 1, d)
-  const week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][dt.getDay()]
-  const md = `${String(m).padStart(2, '0')}月${String(d).padStart(2, '0')}日`
-  return y === store.currentLedgerYear ? `${md} ${week}` : `${y}年${md} ${week}`
-})
-
-/** 头部日期步进已把范围钳在当前账本年内，无需日期选择器（移动端弹出式日历易溢出屏幕） */
-
-/** 头部汇总条是否显示「有数据」标记（该日没有任何流水 → 引导去记账） */
-const mobileDayEmpty = computed(
-  () => !mobileDayStats.value.hasDaily && mobileDayStats.value.expense === 0
-)
+//
+// 2026-10-07 调整：原固定头部里的「日期切换 + 当日汇总」已移除 ——
+// 汇总数据属于「首页」的职责，放在固定头部每个面板都常驻 4 个数字，
+// 既挤占小屏内容高度，又与首页的今日卡片重复。固定头部只保留标题与操作按钮。
 
 /**
  * 移动端面板左右滑动手势：在底部菜单顺序上移动一格。
@@ -257,9 +210,6 @@ watch(activeSection, async () => {
   measureContent()
 })
 
-/** 切换日期后头部汇总变化，重算内容区高度（汇总条高度会随数字位数变化） */
-watch(mobileDate, () => { void nextTick(measureContent) })
-
 /** 底部菜单当前项的 DOM，用于切页后把该项滚动进可视区（窄屏 5 项可能溢出） */
 const menuEl = ref<HTMLElement | null>(null)
 /** 用 style 绑定高度变量：0 时不输出，让 CSS 的 100dvh 生效 */
@@ -271,13 +221,22 @@ const contentStyle = computed(() =>
 function scrollActiveIntoView(): void {
   const root = menuEl.value
   if (!root) return
-  const key = activeInMore.value ? 'more' : activeSection.value
+  const isMore = activeInMore.value
+  const key = isMore ? 'more' : activeSection.value
   const el = root.querySelector<HTMLElement>(`[data-testid="bs-menu-${key}"]`)
   // scrollIntoView 会连带滚动祖先（含中间内容区），故用 scrollLeft 手算，只平移底栏自身
-  if (el && root.scrollWidth > root.clientWidth) {
-    const target = el.offsetLeft - (root.clientWidth - el.offsetWidth) / 2
-    root.scrollTo({ left: Math.max(0, target), behavior: 'smooth' })
+  if (!el || root.scrollWidth <= root.clientWidth) return
+  if (isMore) {
+    // 「更多」是 position:sticky 钉在右缘的，把它滚到居中会破坏 sticky 定位。
+    // 直接滚到最右，让 sticky 元素自然落位。
+    root.scrollTo({ left: root.scrollWidth, behavior: 'smooth' })
+    return
   }
+  // scroll-snap-align:center 与此居中公式对应：滚动停止时该项落在视口中央
+  const target = el.offsetLeft - (root.clientWidth - el.offsetWidth) / 2
+  // 不越界：sticky 的「更多」占着右缘，居中目标若算出负值会被 snap 拉回
+  const max = root.scrollWidth - root.clientWidth
+  root.scrollTo({ left: Math.min(Math.max(0, target), max), behavior: 'smooth' })
 }
 
 watch(activeSection, () => { void nextTick(scrollActiveIntoView) })
@@ -441,7 +400,10 @@ onMounted(async () => {
 
 <template>
   <div class="bs-shell">
-    <!-- 头部：左 = 返回 + 标题；右 = 云同步（开关显示）+ 设置 -->
+    <!-- 头部：左 = 工作台入口 + 账本信息；右 = 云同步（开关显示）+ 设置。
+         M-22（移动端）：账本信息提到第一行 —— 账本是全局数据上下文（按年隔离、跨账本不可见），
+         需要常驻可见；原先它与搜索/云同步/设置挤在第二行，375px 屏上按钮被压缩得只剩编号、名称几乎读不出来。
+         菜单名（页面标题）已按需求移除：底栏当前项已有主色指示条 + 高亮，标题属重复信息。 -->
     <header class="bs-header" :class="{ 'is-mobile': isMobileNav }">
       <div class="bs-header-left">
         <!-- 左上角「工作台管理」同款入口：站点图标 + 点击弹出工作台切换面板（替换原 PageSwitcher 下拉，与导航站行为一致） -->
@@ -451,15 +413,13 @@ onMounted(async () => {
           :trigger-label="settingsStore.businessPageDisplayName"
           force-show
         />
+        <!-- 账本切换（移动端在第一行，桌面端在右侧按钮区，见下方 bs-header-right） -->
+        <BusinessLedgerSwitcher v-if="isMobileNav && store.hasLedgers" class="bs-mobile-ledger" />
         <span v-if="store.settings.stallName" class="bs-stall-name">{{ store.settings.stallName }}</span>
-        <!-- M-20 移动端：当前页面标题（桌面端左树已标明所在面板，无需重复） -->
-        <h1 v-if="isMobileNav" class="bs-mobile-title" data-testid="bs-mobile-title">
-          {{ SECTIONS.find(s => s.key === activeSection)?.label ?? '销售记账' }}
-        </h1>
       </div>
       <div class="bs-header-right">
-        <!-- 账本切换（常驻入口）：有账本时才展示，无账本时由引导页承接 -->
-        <BusinessLedgerSwitcher v-if="store.hasLedgers" />
+        <!-- 账本切换（桌面端常驻入口）：有账本时才展示，无账本时由引导页承接 -->
+        <BusinessLedgerSwitcher v-if="!isMobileNav && store.hasLedgers" />
         <button
           class="bs-btn"
           title="全局搜索 (Alt+K)：搜商品/支出分类，或直接搜「卖」「进货」「开销」快速记账"
@@ -476,57 +436,6 @@ onMounted(async () => {
           @click="handleSyncNowClick"
         ><Icon name="cloud" :size="14" /> {{ syncLabel }}</button>
         <button class="bs-btn" title="设置" data-testid="bs-settings" @click="showSettingsDialog = true"><Icon name="cog" :size="15" /> 设置</button>
-      </div>
-
-      <!-- ===== M-20 移动端汇总条（固定在头部内，不随中间列表滚动） =====
-           日期切换 + 当日营业额/毛利/支出/净额。摆摊结账时最关心的就是「今天卖了多少、赚了多少」，
-           放在头部常驻，翻任何面板都不用先回首页。 -->
-      <div v-if="isMobileNav && !gateVisible" class="bs-mobile-sum" data-testid="bs-mobile-summary">
-        <div class="bs-mobile-daterow">
-          <button
-            type="button"
-            class="bs-mobile-dbtn"
-            title="前一天"
-            aria-label="前一天"
-            data-testid="bs-mobile-date-prev"
-            @click="shiftMobileDate(-1)"
-          ><Icon name="chevron-left" :size="16" /></button>
-          <span class="bs-mobile-dlabel" data-testid="bs-mobile-date-label">{{ mobileDateLabel }}</span>
-          <button
-            type="button"
-            class="bs-mobile-dbtn"
-            title="后一天"
-            aria-label="后一天"
-            data-testid="bs-mobile-date-next"
-            @click="shiftMobileDate(1)"
-          ><Icon name="chevron-right" :size="16" /></button>
-          <button
-            v-if="mobileDateDirty"
-            type="button"
-            class="bs-mobile-dtoday"
-            data-testid="bs-mobile-date-today"
-            @click="goToday"
-          >今天</button>
-        </div>
-        <div class="bs-mobile-sumgrid">
-          <div class="bs-mobile-sumcell">
-            <span class="bs-mobile-sumlabel">营业额</span>
-            <span class="bs-mobile-sumval is-revenue" data-testid="bs-mobile-sum-revenue">{{ formatYuanOf(mobileDayStats.revenue) }}</span>
-          </div>
-          <div class="bs-mobile-sumcell">
-            <span class="bs-mobile-sumlabel">毛利</span>
-            <span class="bs-mobile-sumval is-profit" data-testid="bs-mobile-sum-profit">{{ formatYuanOf(mobileDayStats.profit) }}</span>
-          </div>
-          <div class="bs-mobile-sumcell">
-            <span class="bs-mobile-sumlabel">支出</span>
-            <span class="bs-mobile-sumval is-expense" data-testid="bs-mobile-sum-expense">{{ formatYuanOf(mobileDayStats.expense) }}</span>
-          </div>
-          <div class="bs-mobile-sumcell">
-            <span class="bs-mobile-sumlabel">净额</span>
-            <span class="bs-mobile-sumval is-net" :class="mobileDayStats.net < 0 ? 'is-negative' : ''" data-testid="bs-mobile-sum-net">{{ formatYuanOf(mobileDayStats.net) }}</span>
-          </div>
-        </div>
-        <p v-if="mobileDayEmpty" class="bs-mobile-sumhint" data-testid="bs-mobile-sum-empty">当日还没有记账</p>
       </div>
     </header>
 
@@ -1119,10 +1028,37 @@ html.dark .bs-stall-name {
     flex: none;
   }
 
+  /* 移动端头部：两行 —— 第1 行 = 工作台图标 + 账本信息，第 2 行 = 搜索/云同步/设置。
+     align-items:stretch + first 行 width:100% 让账本切换器能真正占满第一行宽度；
+     若保持 flex-start，账本按钮会按内容宽度收缩，长名称被 max-width 提前截断。 */
   .bs-header {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 8px;
+  }
+
+  .bs-header-left {
+    width: 100%;
+  }
+
+  /* 工作台图标是固定尺寸的入口，不参与压缩 —— 否则长账本名会把它压扁。
+     子组件根元素能继承父组件 scoped 样式，故直接用合并选择器。 */
+  .bs-header-left :deep(.wmp-root) {
+    flex-shrink: 0;
+  }
+
+  /* 摊位名是次要信息，长名不该把账本挤扁：可压缩 + 截断 */
+  .bs-header-left .bs-stall-name {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* 第 2 行按钮区：搜索/云同步/设置靠右，不占满（避免被误读成第二个导航条） */
+  .bs-header-right {
+    width: 100%;
+    justify-content: flex-end;
   }
 
   .bs-body {
@@ -1132,8 +1068,11 @@ html.dark .bs-stall-name {
     min-height: 0;
   }
 
-  /* 菜单降级为底部固定 Tab Bar（与「个人工作台」一致）：常驻拇指区，
-     图标+名称常显，菜单项过多时整条横向滚动 */
+  /* 菜单降级为底部固定 Tab Bar（与「个人工作台」一致）：常驻拇指区。
+     M-21 起底栏改为「固定项宽 + 横向滚动」：5 个 Tab 各 78px + 「更多」66px
+     = 456px，375px 屏放不下整条，故保留 overflow-x:auto；
+     scroll-snap 让滑动停在整项上（不是停在半个字上）。
+     「更多」sticky right 钉在右缘，横向滑动时始终够得着。 */
   .bs-menu {
     position: fixed;
     left: 0;
@@ -1146,9 +1085,12 @@ html.dark .bs-stall-name {
     gap: 4px;
     padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
     overflow-x: auto;
+    overflow-y: hidden;
     scroll-snap-type: x proximity;
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
+    /* 横向可滚动的容器不应把橡皮筋传给纵向页面 */
+    overscroll-behavior-x: contain;
     border-right: none;
     border-top: 1px solid var(--color-border, #e2e8f0);
     border-bottom: none;
@@ -1178,12 +1120,13 @@ html.dark .bs-stall-name {
   .bs-menu-item {
     flex: 0 0 auto;
     white-space: nowrap;
-    scroll-snap-align: start;
-    /* 激活项顶部指示条（position:relative 已在基础样式外补，见下方 .bs-menu-item 定位） */
+    scroll-snap-align: center;
     position: relative;
   }
 
-  /* 激活项：顶部 2px 主色条 + 主色文字 + 浅底三重视觉，拇指区不看字也能判断当前位置 */
+  /* 激活项：顶部 2px 主色条 + 主色文字 + 浅底三重视觉，拇指区不看字也能判断当前位置。
+     指示条用 top:0（不是负值）：父级 .bs-menu 是 overflow-x:auto，
+     计算上 overflow-y 也变成 auto，负偏移的指示条会被裁掉。 */
   .bs-menu-item.active {
     color: var(--color-primary, #3b82f6);
     background-color: var(--color-primary-light, #eff6ff);
@@ -1192,7 +1135,7 @@ html.dark .bs-stall-name {
   .bs-menu-item.active::before {
     content: '';
     position: absolute;
-    top: -6px;
+    top: 0;
     left: 50%;
     transform: translateX(-50%);
     width: 22px;
@@ -1201,24 +1144,39 @@ html.dark .bs-stall-name {
     background-color: var(--color-primary, #3b82f6);
   }
 
-  /* M-06：5 个高频 Tab 铺满一行（flex:1 均分），「更多」固定贴右不参与横滑
-     —— 6 项各~62px 在 375px 屏刚好放得下，仍保留 overflow-x:auto 作极窄屏兜底 */
+  /* ===== M-21 底栏加宽 + 消除重叠（2026-10-07）=====
+     原先 5 个 Tab 用 flex:1 1 0 均分，375px 屏每项只剩 ~62px；
+     而图标(20px) + gap(8px) + 二字标签(≈28px) + 左右 padding(12px) 实际需要 ~72px，
+     装不下时文字溢出到相邻项上 —— 表现为「底部菜单有部分重叠」。
+     改为固定最小宽度 + 整条横向滚动：每项都完整显示、永不重叠，
+     宽度也由 62px 提到 78px（图标与文字都有呼吸空间）。 */
   .bs-menu-item:not(.bs-menu-more) {
-    flex: 1 1 0;
-    min-width: 0;
+    flex: 0 0 auto;
+    min-width: 78px;
     justify-content: center;
-    padding: 10px 6px;
+    padding: 10px 8px;
   }
 
+  /* 「更多」常驻右缘：sticky 而非 margin-left:auto。
+     auto 在横向滚动容器里只有「尚有剩余空间」时才生效，
+     5 项占满后它就被推到滚动区外、需滑动才够得着 —— sticky 始终钉在右缘。 */
   .bs-menu-more {
     flex: 0 0 auto;
-    margin-left: auto;
-    padding: 10px 14px;
+    position: sticky;
+    right: 0;
+    min-width: 66px;
+    justify-content: center;
+    padding: 10px 8px;
+    /* sticky 元素需要不透明底色，否则下方滚动过来的内容会透出来 */
+    background-color: var(--color-bg-card, #ffffff);
+    box-shadow: -6px 0 8px -6px var(--color-shadow, rgba(0, 0, 0, 0.12));
   }
 
+  /* 标签不溢出：这是「重叠」的第二根因 —— 原为 visible/clip，
+     文字超出按钮宽度后会直接压在下一项上。改为省略号截断兜底。 */
   .bs-menu-label {
-    overflow: visible;
-    text-overflow: clip;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* 移动端触控目标 ≥44px（侧栏菜单项 / 头部按钮）：
@@ -1238,187 +1196,32 @@ html.dark .bs-stall-name {
   }
 }
 
-/* ===== M-20 移动端固定头部：页面标题 =====
-   桌面端左树已标明所在面板，标题冗余；移动端底栏在屏幕最下方，
-   抬头看不到「我在哪个页面」，故移动端补一行标题。 */
-.bs-mobile-title {
-  margin: 0;
-  min-width: 0;
-  font-size: var(--font-size-xl, 18px);
-  font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text, #1e293b);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ===== M-20 移动端头部汇总条（日期切换 + 当日金额） =====
-   固定在头部内，随头部一起固定；内容区滚动不经过它，故永不遮挡。 */
-.bs-mobile-sum {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 0 2px;
-}
-
-.bs-mobile-daterow {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.bs-mobile-dbtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  /* 触控目标 ≥36px：日期步进是高频操作，比 44px 标准略低以省头部高度 */
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
-  padding: 0;
-  color: var(--color-text-secondary, #64748b);
-  background-color: var(--color-bg-card, #ffffff);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 8px;
-  cursor: pointer;
-}
-.bs-mobile-dbtn:active {
-  color: var(--color-primary, #3b82f6);
-  border-color: var(--color-primary, #3b82f6);
-}
-
-.bs-mobile-dlabel {
+/* ===== M-22 移动端头部：账本信息提到第一行 =====
+   原先 .bs-mobile-title（菜单名）已按需求移除 —— 底栏当前项已有主色指示条 + 文字高亮，
+   标题是重复信息，且在小屏上白占一行高度。
+   现在第一行放账本切换器：账本是全局数据上下文（按年隔离），必须常驻可见。
+   宽度策略：flex:1 占满剩余空间 + min-width:0，让 .bls-name 真正参与 ellipsis 截断
+   （原先按内容宽度收缩，名称一长就把「摊位名」和右侧按钮挤出可视区）。 */
+.bs-mobile-ledger {
   flex: 1;
   min-width: 0;
-  text-align: center;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--color-text, #1e293b);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
-.bs-mobile-dtoday {
-  flex-shrink: 0;
-  height: 28px;
-  padding: 0 10px;
-  font-size: 12px;
-  color: #fff;
-  background-color: var(--color-primary, #3b82f6);
-  border: none;
-  border-radius: 999px;
-  cursor: pointer;
-  white-space: nowrap;
+.bs-mobile-ledger :deep(.bls-trigger) {
+  /* 移动端第一行可用宽度 ≈ 375 - 20(padding) - 40(工作台图标) - 8(gap) ≈ 307px，
+     子组件默认 max-width:220px 会让长名称提前截断，这里放开 */
+  max-width: 100%;
+  width: 100%;
+  justify-content: flex-start;
 }
 
-/* 4 格汇总：营业额 / 毛利 / 支出 / 净额。
-   用 auto-fit + minmax(0,1fr) 而非固定 4 列：320px 小屏也不会挤成两行。 */
-.bs-mobile-sumgrid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.bs-mobile-sumcell {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  padding: 7px 8px;
-  background-color: var(--color-bg, #f8fafc);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 8px;
-}
-
-.bs-mobile-sumlabel {
+.bs-mobile-ledger :deep(.bls-code) {
   font-size: 11px;
-  line-height: 1.3;
-  color: var(--color-text-secondary, #64748b);
-  white-space: nowrap;
+  padding: 1px 5px;
 }
 
-/* 金额默认 nowrap + 省略：4 位数以上的大额不换行把卡片撑破 */
-.bs-mobile-sumval {
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.25;
-  color: var(--color-text, #1e293b);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.bs-mobile-sumval.is-revenue { color: var(--color-success, #16a34a); }
-.bs-mobile-sumval.is-profit { color: var(--color-text, #1e293b); }
-.bs-mobile-sumval.is-expense { color: var(--color-warning, #d97706); }
-/* 净额为负：标红（摆摊语境下「今天亏了」必须一眼可见） */
-.bs-mobile-sumval.is-net { color: var(--color-primary, #3b82f6); }
-.bs-mobile-sumval.is-negative { color: var(--color-error, #dc2626); }
-
-.bs-mobile-sumhint {
-  margin: 0;
-  font-size: 12px;
-  color: var(--color-text-secondary, #64748b);
-}
-
-/* 极窄屏（≤360px，如 iPhone SE / 小屏安卓）：汇总格改 2×2，
-   否则 4 列各约 78px 装不下「¥1234.00」，金额被省略号吃掉 */
-@media (max-width: 360px) {
-  .bs-mobile-sumgrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .bs-mobile-sumval {
-    font-size: 16px;
-  }
-}
-
-/* 小屏高度（横屏手机 / 分屏）：头部过高会把内容区挤没。
-   此时压缩内边距与汇总格高度，优先保证中间列表有可用高度。 */
-@media (max-width: 768px) and (max-height: 560px) {
-  .bs-mobile-sum {
-    gap: 6px;
-    padding: 6px 0 0;
-  }
-  .bs-mobile-sumcell {
-    padding: 5px 8px;
-  }
-  .bs-mobile-dbtn {
-    width: 32px;
-    height: 32px;
-  }
-  .bs-mobile-dlabel {
-    font-size: 14px;
-  }
-}
-
-/* 移动端暗色兜底（Teleport 的「更多」弹层用非 scoped 类名，故组合书写） */
+/* 移动端暗色兜底 */
 @media (max-width: 768px) {
-  html.dark .bs-mobile-title,
-  html.dark .bs-mobile-dlabel {
-    color: var(--color-text, #f9fafb);
-  }
-  html.dark .bs-mobile-dbtn {
-    background-color: var(--color-bg-card, #1f2937);
-    color: var(--color-text-secondary, #d1d5db);
-    border-color: var(--color-border, #374151);
-  }
-  html.dark .bs-mobile-sumcell {
-    background-color: rgba(255, 255, 255, 0.04);
-    border-color: var(--color-border, #374151);
-  }
-  html.dark .bs-mobile-sumlabel,
-  html.dark .bs-mobile-sumhint {
-    color: var(--color-text-secondary, #d1d5db);
-  }
-  html.dark .bs-mobile-sumval {
-    color: var(--color-text, #f9fafb);
-  }
-  html.dark .bs-mobile-sumval.is-revenue { color: #4ade80; }
-  html.dark .bs-mobile-sumval.is-expense { color: #fbbf24; }
-  html.dark .bs-mobile-sumval.is-net { color: #60a5fa; }
-  html.dark .bs-mobile-sumval.is-negative { color: #f87171; }
-
   /* 底部激活项：加一条顶部高亮条 + 图标着色，与未激活项拉开辨识度。
      移动端底栏是最重要的导航，仅靠浅蓝底色在低亮度阳光下不够醒目。 */
   html.dark .bs-menu-item.active {
@@ -1431,6 +1234,12 @@ html.dark .bs-stall-name {
   html.dark .bs-menu {
     border-top-color: var(--color-border, #374151);
     box-shadow: 0 -2px 12px var(--color-shadow, rgba(0, 0, 0, 0.4));
+  }
+
+  /* 「更多」是 sticky 元素，底色必须与底栏一致，否则横滑时下方内容会从它下面透出来 */
+  html.dark .bs-menu-more {
+    background-color: var(--color-bg-card, #1f2937);
+    box-shadow: -6px 0 8px -6px rgba(0, 0, 0, 0.5);
   }
 }
 
