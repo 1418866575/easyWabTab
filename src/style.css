@@ -335,7 +335,8 @@ body {
 .ui-btn--primary,
 .btn-add, .btn-submit, .btn-primary, .confirm-btn, .add-btn, .add-gradient-btn,
 .nav-add-site, .btn-add-category, .dm-btn-add, .djm-btn-add, .sth-add-btn,
-.student-subject-add-btn, .ob-btn-primary, .bs-btn-primary {
+.student-subject-add-btn, .ob-btn-primary, .bs-btn-primary,
+.btn-save, .pwd-btn-primary, .tw-btn-primary {
   background-color: var(--color-primary);
   border-color: var(--color-primary);
   color: #fff;
@@ -347,7 +348,8 @@ body {
 .nav-add-site:hover:not(:disabled), .btn-add-category:hover:not(:disabled),
 .dm-btn-add:hover:not(:disabled), .djm-btn-add:hover:not(:disabled),
 .sth-add-btn:hover:not(:disabled), .student-subject-add-btn:hover:not(:disabled),
-.ob-btn-primary:hover:not(:disabled), .bs-btn-primary:hover:not(:disabled) {
+.ob-btn-primary:hover:not(:disabled), .bs-btn-primary:hover:not(:disabled),
+.btn-save:hover:not(:disabled), .pwd-btn-primary:hover:not(:disabled), .tw-btn-primary:hover:not(:disabled) {
   background-color: var(--color-primary-hover);
   border-color: var(--color-primary-hover);
   color: #fff;
