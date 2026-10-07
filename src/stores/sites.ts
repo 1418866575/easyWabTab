@@ -95,11 +95,12 @@ export const useSitesStore = defineStore('sites', () => {
     return evaluateUserSitesCount(ownSiteCount(), readBaseline()).reason
   }
 
+  /** 真正拦下一次写盘时才提示用户（每个会话只弹一次，避免刷屏） */
   function warnOnGuard(reason: string): void {
     dataGuardMessage.value = reason
     if (guardToastShown) return
     guardToastShown = true
-    console.error('[sites] 导航站点降级保护已触发：', reason)
+    console.error('[sites] 导航站点降级保护已触发，本次 user-sites 回写已跳过：', reason)
     try {
       useToast().error(
         `检测到导航站点数据疑似丢失（${reason}），已暂停写入本地与云端以免覆盖。` +
@@ -110,14 +111,14 @@ export const useSitesStore = defineStore('sites', () => {
     }
   }
 
-  /** 每次数据装载/变更后重算保护状态：恢复正常即清空提示 */
+  /**
+   * 每次数据装载/变更后重算保护状态：恢复正常即清空。
+   * 装载阶段**只记状态不弹提示**——那时还没发生写入，弹出来只是虚惊；
+   * 真正被拦到写盘时才由 warnOnGuard 提示用户。
+   */
   function refreshDataGuard(): void {
     const reason = userSitesWriteBlockReason()
-    if (reason) {
-      warnOnGuard(reason)
-      return
-    }
-    dataGuardMessage.value = ''
+    dataGuardMessage.value = reason
   }
 
   // 加载保存的检测结果
