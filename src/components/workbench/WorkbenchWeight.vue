@@ -3,6 +3,15 @@ import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
+
+/** 表单弹框尺寸（沿用原 .dialog 的固定尺寸，非设置项） */
+const PANEL_WIDTH = '480px'
+const PANEL_MAX_HEIGHT = '85vh'
+
+/** 体重记录列表弹框尺寸：宽 85vw / 高 85vh（表格 + 分页需要更大的可用空间） */
+const LIST_PANEL_WIDTH = '1200px'
+const LIST_PANEL_MAX_HEIGHT = '85vh'
 
 const vm = useViewMode()
 
@@ -21,7 +30,7 @@ function cardFields(row: any) {
   ]
 }
 
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { injectHealthStore, type HealthStoreLike } from '@/composables/healthStoreContext'
 import { calcBmi, classifyBmi, dietCalories, weightChartScale, weightTarget } from '@/composables/healthCore'
@@ -217,21 +226,6 @@ async function handleDeleteRecord(id: string): Promise<void> {
   }
 }
 
-// ESC 关闭弹框（先关记录列表弹框，再关记录表单弹框，最后关身高弹框）
-function handleKeydown(event: KeyboardEvent): void {
-  if (event.key !== 'Escape') return
-  if (showRecordsDialog.value) {
-    event.preventDefault()
-    closeRecordsDialog()
-  } else if (showRecordDialog.value) {
-    event.preventDefault()
-    cancelRecordForm()
-  } else if (showHeightDialog.value) {
-    event.preventDefault()
-    closeHeightDialog()
-  }
-}
-
 // 面板自管理数据加载（WorkbenchView 后续集成后会统一加载，这里防御性幂等重载）
 onMounted(async () => {
   const recs = store.records
@@ -241,11 +235,6 @@ onMounted(async () => {
   if (recordsEmpty && notLoaded) {
     await store.loadHealth()
   }
-  window.addEventListener('keydown', handleKeydown)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeydown)
 })
 </script>
 
@@ -398,12 +387,14 @@ onUnmounted(() => {
 
     <!-- 身高设置弹框 -->
     <Transition name="dialog">
-    <div v-if="showHeightDialog" class="dialog-overlay" @click.self="closeHeightDialog">
-      <div class="dialog" data-testid="wt-height-dialog">
-        <div class="dialog-header">
-          <h3>设置身高</h3>
-          <el-button class="close-btn" text @click="closeHeightDialog"><Icon name="close" /></el-button>
-        </div>
+    <BaseDialog
+      v-if="showHeightDialog"
+      title="设置身高"
+      :width="PANEL_WIDTH"
+      :max-height="PANEL_MAX_HEIGHT"
+      data-testid="wt-height-dialog"
+      @close="closeHeightDialog"
+    >
         <form class="dialog-body" @submit.prevent="handleSaveHeight">
           <div class="form-group">
             <label>身高（cm）*</label>
@@ -427,18 +418,20 @@ onUnmounted(() => {
             <el-button native-type="submit" class="btn-save" :disabled="!isHeightValid" data-testid="wt-height-save">保存</el-button>
           </div>
         </form>
-      </div>
-    </div>
+    </BaseDialog>
     </Transition>
 
     <!-- 新增/编辑记录弹框 -->
     <Transition name="dialog">
-    <div v-if="showRecordDialog" class="dialog-overlay record-dialog-overlay" @click.self="cancelRecordForm">
-      <div class="dialog" data-testid="wt-dialog">
-        <div class="dialog-header">
-          <h3>{{ editingId ? '编辑记录' : '新增记录' }}</h3>
-          <el-button class="close-btn" text @click="cancelRecordForm"><Icon name="close" /></el-button>
-        </div>
+    <BaseDialog
+      v-if="showRecordDialog"
+      :title="editingId ? '编辑记录' : '新增记录'"
+      :width="PANEL_WIDTH"
+      :max-height="PANEL_MAX_HEIGHT"
+      class="wt-record-overlay"
+      data-testid="wt-dialog"
+      @close="cancelRecordForm"
+    >
         <form class="dialog-body" @submit.prevent="handleSaveRecord">
           <div class="form-row-fields">
             <div class="field">
@@ -489,19 +482,23 @@ onUnmounted(() => {
             <el-button v-if="editingId" type="danger" native-type="button" data-testid="wt-record-delete" @click="handleDeleteRecord(editingId)">删除</el-button>
           </div>
         </form>
-      </div>
-    </div>
+    </BaseDialog>
     </Transition>
 
     <!-- 体重记录弹框（Element Plus Table：日期/体重/BMI/目标进度/备注/操作，每页 10 条） -->
     <Transition name="dialog">
-    <div v-if="showRecordsDialog" class="dialog-overlay list-dialog-overlay" @click.self="closeRecordsDialog">
-      <div class="dialog list-dialog" data-testid="wt-records-dialog">
-        <div class="dialog-header">
-          <h3>体重记录</h3>
+    <BaseDialog
+      v-if="showRecordsDialog"
+      :width="LIST_PANEL_WIDTH"
+      :max-height="LIST_PANEL_MAX_HEIGHT"
+      class="wt-list-overlay"
+      data-testid="wt-records-dialog"
+      @close="closeRecordsDialog"
+    >
+        <template #title>
+          <span>体重记录</span>
           <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
-          <el-button class="close-btn" data-testid="wt-records-close" text @click="closeRecordsDialog"><Icon name="close" /></el-button>
-        </div>
+        </template>
         <div class="wt-list">
           <el-table v-if="vm.mode === 'list'" class="ewt-table"
             :data="listPageItems"
@@ -581,8 +578,7 @@ onUnmounted(() => {
             next-text="下一页"
           />
         </div>
-      </div>
-    </div>
+    </BaseDialog>
     </Transition>
   </div>
 </template>
@@ -860,68 +856,18 @@ onUnmounted(() => {
   border-color: var(--color-primary, var(--color-primary));
 }
 
-/* ===== 弹框（复用 WorkbenchTodo/Exercise 体系）===== */
-.dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 300;
-  padding: 20px;
-}
-
-/* 编辑/新增记录弹框需压在体重记录弹框（z-index:300，关闭时有过渡重叠）之上，否则从记录中编辑时看不见 */
-.record-dialog-overlay { z-index: 320; }
-.list-dialog-overlay { z-index: 310; }
-
-.dialog {
-  background-color: var(--color-bg-card, var(--color-bg-card));
-  border-radius: var(--radius-lg, 12px);
-  width: 100%;
-  max-width: 480px;
-  max-height: 85vh;
-  overflow-y: auto;
-  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
-}
-
-.dialog-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border, var(--color-border));
-  position: sticky;
-  top: 0;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
-}
-
-.dialog-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text, var(--color-text));
-  margin: 0;
-}
-
-.close-btn {
-  /* 视觉已统一到全局 .close-btn（style.css）：32×32 图标方块，1px 边框 + 8px 圆角 + hover 主色 */
-}
-
-.close-btn:hover {
-  /* 视觉已统一到全局 .close-btn（style.css） */
-}
-
+/* ===== 弹框内容区（原 .dialog-body；外壳主体已由 BaseDialog 的 .bd-body 承担）===== */
 .dialog-body {
-  padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
-/* 放在 .dialog 基础类之后，用 !important 覆盖 max-width: 480px / overflow-y:auto（否则列表只有 480px 宽） */
-.dialog.list-dialog {
+/* 编辑/新增记录弹框需压在体重记录弹框之上（关闭时有过渡重叠），否则从记录中编辑时看不见 */
+.wt-list-overlay { z-index: 310; }
+.wt-record-overlay { z-index: 320; }
+
+.wt-list-overlay :deep(.bd-panel) {
   width: 85vw !important;
   height: 85vh !important;
   max-width: 1200px !important;
@@ -932,7 +878,7 @@ onUnmounted(() => {
   overflow-y: visible !important;
 }
 @media (max-width: 640px) {
-  .dialog.list-dialog { width: 94vw !important; min-width: 0 !important; height: 88vh !important; }
+  .wt-list-overlay :deep(.bd-panel) { width: 94vw !important; min-width: 0 !important; height: 88vh !important; }
 }
 
 /* 旧 wt-records-dialog / wt-records-body / wt-records-grid 废弃：改用 list-dialog 全局样式 + wt-list 容器 */

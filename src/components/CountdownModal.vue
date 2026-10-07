@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
-import { computed, onMounted, onUnmounted } from 'vue'
+import BaseDialog from './common/BaseDialog.vue'
+import { computed, onMounted } from 'vue'
 import { useCountdownsStore } from '@/stores/countdowns'
 import type { CountdownItem } from '@/stores/countdowns'
 import { repeatLabel, categoryLabel } from '@/composables/countdownCore'
@@ -31,21 +32,9 @@ function categoryBadgeClass(category: string | null | undefined): string {
   return (COUNTDOWN_CATEGORIES as readonly string[]).includes(c) ? `cat-${c}` : 'cat-default'
 }
 
-// ESC 键关闭弹框
-function handleKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    emit('close')
-  }
-}
-
+// ESC 关闭与遮罩点击关闭统一由 BaseDialog 处理，此处不重复监听
 onMounted(async () => {
   await store.loadCountdowns()
-  window.addEventListener('keydown', handleKeydown)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeydown)
 })
 
 // 前台展示列表（store 挂载后异步加载，用 computed 保持响应）
@@ -64,101 +53,45 @@ async function toggleEmailReminder(item: CountdownItem) {
 </script>
 
 <template>
-  <div class="manager-overlay" @click.self="emit('close')">
-    <div class="manager">
-      <div class="manager-header">
-        <h2><Icon name="timer-sand" /> 倒计时</h2>
-        <button class="close-btn" @click="emit('close')"><Icon name="close" /></button>
-      </div>
+  <BaseDialog @close="emit('close')">
+    <template #title><Icon name="timer-sand" /> 倒计时</template>
 
-      <div class="manager-body">
-        <div v-if="items.length === 0" class="empty-state">暂无倒计时</div>
+    <div v-if="items.length === 0" class="empty-state">暂无倒计时</div>
 
-        <div v-else class="countdown-list">
-          <div v-for="item in items" :key="item.id" class="countdown-item">
-            <div class="countdown-main-row">
-              <div class="countdown-info">
-                <div class="countdown-title">
-                  <span class="countdown-name">{{ item.name }}</span>
-                  <span v-if="repeatLabel(item.repeat) !== '一次性'" class="repeat-badge">{{ repeatLabel(item.repeat) }}</span>
-                  <span class="cat-badge" :class="categoryBadgeClass(item.category)">{{ categoryLabel(item.category) }}</span>
-                </div>
-                <span class="countdown-time">{{ item.remaining.nextTime }}</span>
-              </div>
-              <span class="countdown-remaining" :class="statusClass(item.remaining.status)">
-                {{ item.remaining.label }}
-              </span>
+    <div v-else class="countdown-list">
+      <div v-for="item in items" :key="item.id" class="countdown-item">
+        <div class="countdown-main-row">
+          <div class="countdown-info">
+            <div class="countdown-title">
+              <span class="countdown-name">{{ item.name }}</span>
+              <span v-if="repeatLabel(item.repeat) !== '一次性'" class="repeat-badge">{{ repeatLabel(item.repeat) }}</span>
+              <span class="cat-badge" :class="categoryBadgeClass(item.category)">{{ categoryLabel(item.category) }}</span>
             </div>
-            <!-- 邮件提醒开关行：单向绑定 checked，点击切换写库（缺省/undefined = 未勾选） -->
-            <label class="countdown-email-toggle" data-testid="cd-email-toggle" :title="EMAIL_HINT">
-              <input
-                type="checkbox"
-                class="email-toggle-input"
-                data-testid="cd-email-switch"
-                :checked="item.emailReminder === true"
-                @change="toggleEmailReminder(item)"
-              />
-              <span><Icon name="email" /> 邮件提醒</span>
-            </label>
+            <span class="countdown-time">{{ item.remaining.nextTime }}</span>
           </div>
+          <span class="countdown-remaining" :class="statusClass(item.remaining.status)">
+            {{ item.remaining.label }}
+          </span>
         </div>
+        <!-- 邮件提醒开关行：单向绑定 checked，点击切换写库（缺省/undefined = 未勾选） -->
+        <label class="countdown-email-toggle" data-testid="cd-email-toggle" :title="EMAIL_HINT">
+          <input
+            type="checkbox"
+            class="email-toggle-input"
+            data-testid="cd-email-switch"
+            :checked="item.emailReminder === true"
+            @change="toggleEmailReminder(item)"
+          />
+          <span><Icon name="email" /> 邮件提醒</span>
+        </label>
       </div>
     </div>
-  </div>
+  </BaseDialog>
 </template>
 
 <style scoped>
-.manager-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 300;
-  padding: 20px;
-}
-
-.manager {
-  background-color: var(--color-bg-card, var(--color-bg-card));
-  border-radius: var(--radius-lg);
-  width: 100%;
-  max-width: 480px;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: var(--shadow-modal);
-}
-
-.manager-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--color-border, var(--color-border));
-  position: sticky;
-  top: 0;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-}
-
-.manager-header h2 {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--color-text, var(--color-text));
-  margin: 0;
-}
-
-.close-btn {
-  /* 视觉已统一到全局 .close-btn（style.css） */
-}
-
-.close-btn:hover {
-  /* 视觉已统一到全局 .close-btn（style.css） */
-}
-
-.manager-body {
-  padding: 24px;
-}
+/* 弹框外壳（遮罩/面板/头部/关闭/主体/底部/移动端适配）已统一到 common/BaseDialog.vue，
+   本组件仅保留倒计时列表等内容样式 */
 
 /* 列表 */
 .countdown-list {
@@ -384,18 +317,6 @@ html.dark .cat-default {
    方案：把 .countdown-info 扁平化（display:contents），让 标题 / 时间 / 剩余 直接参与换行排布，
    标题占满一整行（名称不再被挤压），时间与「还剩 X」并排在第二行。 */
 @media (max-width: 768px) {
-  .manager {
-    max-height: 92vh;
-  }
-
-  .manager-header {
-    padding: 16px;
-  }
-
-  .manager-body {
-    padding: 16px;
-  }
-
   /* 扁平化中间层，使子元素成为 main-row 的直接换行项 */
   .countdown-info {
     display: contents;

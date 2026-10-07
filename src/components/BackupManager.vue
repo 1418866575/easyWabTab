@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
+import BaseDialog from './common/BaseDialog.vue'
 import { showConfirm, toastAlert } from '@/utils/dialog'
 import { ref, onMounted } from 'vue'
 import {
@@ -19,18 +20,17 @@ import { useSearchEnginesStore } from '../stores/searchEngines'
 import { useNavPrefs } from '@/composables/useNavPrefs'
 
 /** embedded = true：作为常驻面板内嵌在设置页（无遮罩、无自带标题栏、不响应遮罩点击关闭） */
-const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
 const emit = defineEmits(['close'])
+
+/** 面板尺寸：沿用「设置 → 弹窗尺寸」写入的 CSS 变量（backup），未配置时回退默认值 */
+const PANEL_WIDTH = 'var(--dlg-w-backup, 600px)'
+const PANEL_MAX_HEIGHT = 'var(--dlg-h-backup, 80vh)'
 
 const sitesStore = useSitesStore()
 const categoriesStore = useCategoriesStore()
 const enginesStore = useSearchEnginesStore()
-
-/** 遮罩点击关闭：仅弹框模式生效（内嵌面板点击空白不应关闭） */
-function onOverlayClick(): void {
-  if (!props.embedded) emit('close')
-}
 
 const backups = ref<BackupData[]>([])
 const metadata = ref<BackupMetadata>(getMetadata())
@@ -123,145 +123,96 @@ const toggleAutoBackup = () => {
 </script>
 
 <template>
-  <div :class="embedded ? 'mgr-embed' : 'modal-overlay'" @click.self="onOverlayClick">
-    <div :class="embedded ? 'mgr-embed-inner' : 'modal-content'">
-      <div v-if="!embedded" class="modal-header">
-        <h2><Icon name="package" /> 数据备份管理</h2>
-        <button class="close-btn" @click="emit('close')"><Icon name="close" /></button>
+  <BaseDialog
+    :width="PANEL_WIDTH"
+    :max-height="PANEL_MAX_HEIGHT"
+    :embedded="embedded"
+    :hide-header="embedded"
+    :close-on-overlay="!embedded"
+    @close="emit('close')"
+  >
+    <template #title><Icon name="package" /> 数据备份管理</template>
+
+    <!-- 备份状态 -->
+    <div class="backup-status">
+      <div class="status-item">
+        <span class="label">自动备份：</span>
+        <button
+          class="toggle-btn"
+          :class="{ active: metadata.autoBackupEnabled }"
+          @click="toggleAutoBackup"
+        >
+          <Icon :name="metadata.autoBackupEnabled ? 'check' : 'close'" /> {{ metadata.autoBackupEnabled ? '已开启' : '已关闭' }}
+        </button>
       </div>
+      <div class="status-item">
+        <span class="label">备份数量：</span>
+        <span class="value">{{ backups.length }} / 10</span>
+      </div>
+      <div class="status-item" v-if="metadata.lastBackup">
+        <span class="label">上次备份：</span>
+        <span class="value">{{ formatTime(metadata.lastBackup) }}</span>
+      </div>
+    </div>
 
-      <div class="modal-body">
-        <!-- 备份状态 -->
-        <div class="backup-status">
-          <div class="status-item">
-            <span class="label">自动备份：</span>
-            <button
-              class="toggle-btn"
-              :class="{ active: metadata.autoBackupEnabled }"
-              @click="toggleAutoBackup"
-            >
-              <Icon :name="metadata.autoBackupEnabled ? 'check' : 'close'" /> {{ metadata.autoBackupEnabled ? '已开启' : '已关闭' }}
-            </button>
-          </div>
-          <div class="status-item">
-            <span class="label">备份数量：</span>
-            <span class="value">{{ backups.length }} / 10</span>
-          </div>
-          <div class="status-item" v-if="metadata.lastBackup">
-            <span class="label">上次备份：</span>
-            <span class="value">{{ formatTime(metadata.lastBackup) }}</span>
-          </div>
+    <!-- 操作按钮 -->
+    <div class="action-buttons">
+      <button class="action-btn primary" @click="handleExport">
+        <Icon name="download" /> 导出备份文件
+      </button>
+      <button class="action-btn" @click="loadBackups">
+        <Icon name="refresh" /> 刷新
+      </button>
+      <button
+        class="action-btn danger"
+        @click="handleClearAll"
+        :disabled="backups.length === 0"
+      >
+        <Icon name="trash" /> 清空备份
+      </button>
+    </div>
+
+    <!-- 备份列表 -->
+    <div class="backup-list">
+      <h3><Icon name="clipboard" /> 备份历史</h3>
+      <div v-if="backups.length === 0" class="empty">
+        暂无备份记录。修改数据后将自动创建备份。
+      </div>
+      <div
+        v-for="backup in backups"
+        :key="backup.timestamp"
+        class="backup-item"
+      >
+        <div class="backup-info">
+          <div class="backup-time">{{ formatTime(backup.timestamp) }}</div>
+          <div class="backup-summary">{{ getBackupSummary(backup) }}</div>
         </div>
-
-        <!-- 操作按钮 -->
-        <div class="action-buttons">
-          <button class="action-btn primary" @click="handleExport">
-            <Icon name="download" /> 导出备份文件
+        <div class="backup-actions">
+          <button class="restore-btn" @click="handleRestore(backup)">
+            恢复
           </button>
-          <button class="action-btn" @click="loadBackups">
-            <Icon name="refresh" /> 刷新
+          <button class="delete-btn" @click="handleDelete(backup.timestamp)">
+            删除
           </button>
-          <button
-            class="action-btn danger"
-            @click="handleClearAll"
-            :disabled="backups.length === 0"
-          >
-            <Icon name="trash" /> 清空备份
-          </button>
-        </div>
-
-        <!-- 备份列表 -->
-        <div class="backup-list">
-          <h3><Icon name="clipboard" /> 备份历史</h3>
-          <div v-if="backups.length === 0" class="empty">
-            暂无备份记录。修改数据后将自动创建备份。
-          </div>
-          <div
-            v-for="backup in backups"
-            :key="backup.timestamp"
-            class="backup-item"
-          >
-            <div class="backup-info">
-              <div class="backup-time">{{ formatTime(backup.timestamp) }}</div>
-              <div class="backup-summary">{{ getBackupSummary(backup) }}</div>
-            </div>
-            <div class="backup-actions">
-              <button class="restore-btn" @click="handleRestore(backup)">
-                恢复
-              </button>
-              <button class="delete-btn" @click="handleDelete(backup.timestamp)">
-                删除
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 说明 -->
-        <div class="help-text">
-          <p><Icon name="lightbulb" /> <strong>说明：</strong></p>
-          <ul>
-            <li>自动备份：在数据变化后 5 秒自动创建备份（最多保留 10 个）</li>
-            <li>手动导出：下载 .md 格式备份文件，可保存到网盘</li>
-            <li>恢复备份：将数据恢复到指定时间点的状态</li>
-          </ul>
         </div>
       </div>
     </div>
-  </div>
+
+    <!-- 说明 -->
+    <div class="help-text">
+      <p><Icon name="lightbulb" /> <strong>说明：</strong></p>
+      <ul>
+        <li>自动备份：在数据变化后 5 秒自动创建备份（最多保留 10 个）</li>
+        <li>手动导出：下载 .md 格式备份文件，可保存到网盘</li>
+        <li>恢复备份：将数据恢复到指定时间点的状态</li>
+      </ul>
+    </div>
+  </BaseDialog>
 </template>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 12px;
-  width: 90%;
-  max-width: var(--dlg-w-backup, 600px);
-  max-height: var(--dlg-h-backup, 80vh);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.modal-header h2 {
-  margin: 0;
-  font-size: 18px;
-  color: #1e293b;
-}
-
-.close-btn {
-  /* 视觉已统一到全局 .close-btn（style.css） */
-}
-
-.close-btn:hover {
-  /* 视觉已统一到全局 .close-btn（style.css） */
-}
-
-.modal-body {
-  padding: 20px;
-  overflow-y: auto;
-  flex: 1;
-}
+/* 弹框外壳（遮罩/面板/头部/关闭/主体/底部/移动端适配）已统一到 common/BaseDialog.vue，
+   本组件仅保留备份状态、操作按钮、备份列表、说明等内容样式 */
 
 .backup-status {
   background: #f8fafc;
@@ -447,32 +398,5 @@ const toggleAutoBackup = () => {
 .help-text li {
   margin-bottom: 4px;
   color: #64748b;
-}
-
-/* ============================================================
-   embedded 模式：常驻面板内嵌在「设置 → 导航站 → 备份」
-   无遮罩 / 无固定定位，宽度撑满父面板，超高由外层面板滚动。
-   ============================================================ */
-.mgr-embed {
-  position: static;
-  inset: auto;
-  z-index: auto;
-  display: block;
-  width: 100%;
-  padding: 0;
-  background-color: transparent;
-  overflow: visible;
-}
-
-.mgr-embed-inner {
-  width: 100%;
-  max-width: none;
-  max-height: none;
-  overflow: visible;
-  border-radius: 12px;
-  background-color: var(--color-bg-card, #fff);
-  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
-  display: flex;
-  flex-direction: column;
 }
 </style>

@@ -19,7 +19,9 @@ const OVERLAY_SELECTOR = [
   '.reminder-overlay',
   '.sp-overlay',
   '.biz-dialog-overlay',
-  '.bizcat-overlay'
+  '.bizcat-overlay',
+  // 统一弹框基类 common/BaseDialog.vue 的遮罩（迁移后的组件走这一类名）
+  '.bd-overlay'
 ].join(',')
 
 let scheduled = false

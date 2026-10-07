@@ -3,6 +3,11 @@ import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
+
+/** 面板尺寸：沿用「设置 → 弹窗尺寸」写入的 CSS 变量（todo），未配置时回退默认值 */
+const PANEL_WIDTH = 'var(--dlg-w-wb-todo, 480px)'
+const PANEL_MAX_HEIGHT = 'var(--dlg-h-wb-todo, 85vh)'
 
 const vm = useViewMode()
 
@@ -17,7 +22,7 @@ function cardFields(row: any) {
   ]
 }
 
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
 import { filterTodos, dueInfo } from '@/composables/todoCore'
 import type { TodoFilterCriteria } from '@/composables/todoCore'
@@ -319,15 +324,6 @@ function priorityMeta(priority: TodoPriority): { label: string; className: strin
   return PRIORITY_META[priority]
 }
 
-// ESC 关闭弹框（先编辑弹框，再分类管理）
-function handleKeydown(event: KeyboardEvent): void {
-  if (event.key !== 'Escape') return
-  if (showDialog.value) {
-    event.preventDefault()
-    cancelForm()
-  }
-}
-
 // 设置弹窗分类管理（改名/删除）外部变更时，重置失效的筛选分类
 watch(
   () => store.customCategories,
@@ -342,11 +338,6 @@ watch(
 // 面板自管理数据加载（WorkbenchView 已加载，这里防御性重载，数据与 IDB 同步）
 onMounted(async () => {
   await store.loadTodos()
-  window.addEventListener('keydown', handleKeydown)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeydown)
 })
 </script>
 
@@ -578,21 +569,15 @@ onUnmounted(() => {
     </template>
 
     <!-- 新增/编辑弹框 -->
-    <el-dialog
-      :model-value="showDialog"
+    <BaseDialog
+      v-if="showDialog"
       :title="editingId ? '编辑待办' : '新增待办'"
-      width="480px"
+      :width="PANEL_WIDTH"
+      :max-height="PANEL_MAX_HEIGHT"
       data-testid="td-dialog"
       @close="cancelForm"
-      @update:model-value="(v: boolean) => { if (!v) cancelForm() }"
     >
-      <!-- 只保留 el-dialog 自带的右上角关闭按钮，此处不再叠加自定义 X（否则出现两个关闭） -->
-      <template #header>
-        <div class="dialog-header">
-          <h3>{{ editingId ? '编辑待办' : '新增待办' }}</h3>
-        </div>
-      </template>
-      <form class="dialog-body" @submit.prevent="handleSave">
+      <form class="td-form" @submit.prevent="handleSave">
         <div class="form-group">
           <label>标题 *</label>
           <el-input
@@ -685,7 +670,7 @@ onUnmounted(() => {
           <el-button v-if="editingId" type="danger" size="small" native-type="button" data-testid="td-record-delete" @click="handleDelete(editingId)">删除</el-button>
         </div>
       </form>
-    </el-dialog>
+    </BaseDialog>
 
   </div>
 </template>
@@ -1087,49 +1072,9 @@ onUnmounted(() => {
   gap: 12px;
 }
 
-/* ===== 表单（新增/编辑弹框）===== */
-.dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 300;
-  padding: 20px;
-}
-
-.dialog {
-  background-color: var(--color-bg-card, var(--color-bg-card));
-  border-radius: var(--radius-lg, 12px);
-  width: 100%;
-  max-width: var(--dlg-w-wb-todo, 480px);
-  max-height: var(--dlg-h-wb-todo, 85vh);
-  overflow-y: auto;
-  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
-}
-
-.dialog-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border, var(--color-border));
-  position: sticky;
-  top: 0;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
-}
-
-.dialog-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text, var(--color-text));
-  margin: 0;
-}
-
-.dialog-body {
-  padding: 20px;
+/* ===== 表单（新增/编辑弹框内容区）=====
+   弹框外壳（遮罩/面板/头部/关闭/主体）已统一到 common/BaseDialog.vue */
+.td-form {
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -1295,14 +1240,6 @@ html.dark .td-search {
 }
 
 html.dark .empty-state {
-  background-color: var(--color-bg-card, #1f2937);
-}
-
-html.dark .dialog {
-  background-color: var(--color-bg-card, #1f2937);
-}
-
-html.dark .dialog-header {
   background-color: var(--color-bg-card, #1f2937);
 }
 

@@ -469,9 +469,10 @@ function clearBackground() {
               + 添加自定义图片
             </button>
             <div v-else class="custom-input">
-              <input 
-                type="text" 
-                v-model="imageUrlInput" 
+              <input
+                class="ui-input"
+                type="text"
+                v-model="imageUrlInput"
                 placeholder="输入图片 URL..."
                 @keyup.enter="addCustomImage"
               />
@@ -721,17 +722,9 @@ function clearBackground() {
   gap: 8px;
 }
 
+/* 布局：撑满剩余宽度；视觉（边框/圆角/聚焦环/暗色）由全局 .ui-input 统一 */
 .custom-input input {
   flex: 1;
-  padding: 10px 14px;
-  border: 2px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 14px;
-}
-
-.custom-input input:focus {
-  outline: none;
-  border-color: #3b82f6;
 }
 
 /* .confirm-btn 视觉已统一到全局 .ui-btn--primary */

@@ -7,7 +7,11 @@ import { useDiaryCategoriesStore } from '@/stores/diaryCategories'
 import { renderMarkdown } from '@/composables/noteMarkdown'
 import { useToast } from '@/composables/useToast'
 import type { WorkbenchDiary } from '@/types'
-import Icon from '@/components/Icon.vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
+
+/** 日记列表弹框尺寸：高85vh、宽上限 1100px（原.list-dialog 固定值，非设置项） */
+const LIST_PANEL_WIDTH = '1100px'
+const LIST_PANEL_MAX_HEIGHT = '85vh'
 
 // Markdown 渲染缓存：列表里每篇日记都在 v-for 内直接调用 renderMarkdown，
 // 任何一次响应式更新都会让「全部日记」重新解析一次全文，日记积累后移动端明显卡顿。
@@ -387,15 +391,20 @@ async function handleInsertImage(e: Event): Promise<void> {
 
     </div>
   </div>
-    <!-- 日记列表弹框（DialogOverlay 范式，与 WorkbenchExercise 一致） -->
+    <!-- 日记列表弹框（与 WorkbenchExercise 一致） -->
     <Transition name="dialog">
-      <div v-if="showListView" class="dialog-overlay list-dialog-overlay" @click.self="showListView = false">
-        <div class="dialog list-dialog" data-testid="dj-list-dialog">
-          <div class="dialog-header">
-            <h3>日记列表<span class="djl-count">（{{ store.sortedEntries.length }}）</span></h3>
-            <el-button class="close-btn" text @click="showListView = false"><Icon name="close" /></el-button>
-          </div>
-          <div class="djl-body">
+      <BaseDialog
+        v-if="showListView"
+        :width="LIST_PANEL_WIDTH"
+        :max-height="LIST_PANEL_MAX_HEIGHT"
+        class="dj-list-overlay"
+        data-testid="dj-list-dialog"
+        @close="showListView = false"
+      >
+        <template #title>
+          <span>日记列表<span class="djl-count">（{{ store.sortedEntries.length }}）</span></span>
+        </template>
+        <div class="djl-body">
             <div class="dj-history">
               <!-- 筛选条：分类 + 仅看置顶 -->
               <div class="dj-filter-bar" data-testid="dj-filter-bar">
@@ -456,9 +465,8 @@ async function handleInsertImage(e: Event): Promise<void> {
                 </div>
               </template>
             </div>
-          </div>
         </div>
-      </div>
+      </BaseDialog>
     </Transition>
 
 </template>
@@ -1119,62 +1127,15 @@ async function handleInsertImage(e: Event): Promise<void> {
 @media (min-width: 769px) {
 
 }
-/* ===== 日记列表弹框（DialogOverlay 范式，与 WorkbenchExercise 一致；base 类本组件 scoped 内定义） ===== */
-.dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 300;
-  padding: 20px;
-}
-
-.dialog {
-  background-color: var(--color-bg-card, #fff);
-  border-radius: var(--radius-lg, 12px);
-  width: 100%;
-  max-width: 480px;
-  max-height: 85vh;
-  overflow-y: auto;
-  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
-}
-
-.dialog-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
-  position: sticky;
-  top: 0;
-  background: var(--color-bg-card, #fff);
-  border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
-}
-
-.dialog-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text, #1e293b);
-  margin: 0;
-}
-
-.close-btn {
-  /* 视觉已统一到全局 .close-btn（style.css）：32×32 图标方块，1px 边框 + 8px 圆角 + hover 主色 */
-}
-
-.close-btn:hover {
-  /* 视觉已统一到全局 .close-btn（style.css） */
-}
-
-.dialog-overlay.list-dialog-overlay {
+/* ===== 日记列表弹框（与 WorkbenchExercise 一致）=====
+   遮罩/面板/头部/关闭/主体已统一到 common/BaseDialog.vue，
+   此处仅保留弹框层级与列表弹框的撑满尺寸 */
+.dj-list-overlay {
   z-index: 310;
 }
 
-.dialog.list-dialog {
+.dj-list-overlay :deep(.bd-panel) {
   height: 85vh;
-  max-width: 1100px;
   min-width: 480px;
   display: flex;
   flex-direction: column;
@@ -1195,10 +1156,7 @@ async function handleInsertImage(e: Event): Promise<void> {
 }
 
 @media (max-width: 768px) {
-  .dialog-overlay.list-dialog-overlay {
-    padding: 8px;
-  }
-  .dialog.list-dialog {
+  .dj-list-overlay :deep(.bd-panel) {
     width: 100% !important;
     min-width: 0 !important;
     max-width: 100% !important;

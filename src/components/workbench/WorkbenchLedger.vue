@@ -3,10 +3,19 @@ import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import LedgerSwitcher from '@/components/workbench/LedgerSwitcher.vue'
 import { useToast } from '@/composables/useToast'
 
 const vm = useViewMode()
+
+/** 表单弹框尺寸：沿用「设置 → 弹窗尺寸」写入的 CSS 变量（ledger），未配置时回退默认值 */
+const PANEL_WIDTH = 'var(--dlg-w-wb-ledger, 480px)'
+const PANEL_MAX_HEIGHT = 'var(--dlg-h-wb-ledger, 85vh)'
+
+/** 查看记录弹框尺寸：宽 85vw / 高 85vh（表格 + 分页需要更高的可用空间，非设置项） */
+const RECORDS_PANEL_WIDTH = '1200px'
+const RECORDS_PANEL_MAX_HEIGHT = '85vh'
 
 function cardFields(row: any) {
   return [
@@ -17,7 +26,7 @@ function cardFields(row: any) {
   ]
 }
 
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import Icon from '@/components/Icon.vue'
 import {
@@ -329,23 +338,9 @@ async function handleDelete(id: string): Promise<void> {
   }
 }
 
-// ESC 关闭弹框
-function handleKeydown(event: KeyboardEvent): void {
-  if (event.key !== 'Escape') return
-  if (showDialog.value) {
-    event.preventDefault()
-    cancelForm()
-  }
-}
-
 // 面板自管理数据加载（WorkbenchView 后续集成统一加载，这里防御性幂等重载）
 onMounted(async () => {
   await store.loadLedger()
-  window.addEventListener('keydown', handleKeydown)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeydown)
 })
 </script>
 
@@ -659,13 +654,16 @@ onUnmounted(() => {
 
     <!-- 新增/编辑记录弹框 -->
     <Transition name="dialog">
-      <div v-if="showDialog" class="dialog-overlay dialog-overlay--top" @click.self="cancelForm">
-      <div class="dialog" data-testid="ld-dialog">
-        <div class="dialog-header">
-          <h3>{{ editingId ? '编辑记录' : '新增记录' }}</h3>
-          <el-button class="close-btn" text @click="cancelForm"><Icon name="close" /></el-button>
-        </div>
-        <form class="dialog-body" @submit.prevent="handleSave">
+      <BaseDialog
+        v-if="showDialog"
+        :title="editingId ? '编辑记录' : '新增记录'"
+        :width="PANEL_WIDTH"
+        :max-height="PANEL_MAX_HEIGHT"
+        class="ld-dialog-top"
+        data-testid="ld-dialog"
+        @close="cancelForm"
+      >
+      <form class="dialog-body" @submit.prevent="handleSave">
           <div class="form-row-fields">
             <div class="field">
               <label class="field-label">日期 *</label>
@@ -725,20 +723,24 @@ onUnmounted(() => {
             <el-button v-if="editingId" type="danger" native-type="button" data-testid="ld-record-delete" @click="handleDelete(editingId)">删除</el-button>
           </div>
         </form>
-      </div>
-      </div>
+      </BaseDialog>
     </Transition>
 
     <!-- 记录弹框（Element Plus Table，列顺序：日期/分类/金额/备注/操作，每页 10 条） -->
     <Transition name="dialog">
-      <div v-if="showRecordsModal" class="dialog-overlay" @click.self="closeRecordsModal">
-        <div class="dialog ld-records-dialog" data-testid="ld-records-dialog">
-          <div class="dialog-header">
-            <h3>本月记录（{{ monthEntries.length }} 条）</h3>
-            <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
-            <el-button class="close-btn" text @click="closeRecordsModal"><Icon name="close" /></el-button>
-          </div>
-          <div class="ld-records-body">
+      <BaseDialog
+        v-if="showRecordsModal"
+        :width="RECORDS_PANEL_WIDTH"
+        :max-height="RECORDS_PANEL_MAX_HEIGHT"
+        class="ld-records-overlay"
+        data-testid="ld-records-dialog"
+        @close="closeRecordsModal"
+      >
+        <template #title>
+          <span class="ld-records-title">本月记录（{{ monthEntries.length }} 条）</span>
+          <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
+        </template>
+        <div class="ld-records-body">
             <el-table v-if="vm.mode === 'list'" class="ewt-table"
               :data="recordsPageItems"
               stripe
@@ -810,8 +812,7 @@ onUnmounted(() => {
               next-text="下一页"
             />
           </div>
-        </div>
-      </div>
+      </BaseDialog>
     </Transition>
   </div>
 </template>
@@ -1356,53 +1357,37 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 /* ===== 按钮（复用 WorkbenchTodo/Exercise 体系）===== */
 /* .btn-edit/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
 
-/* ===== 弹框（复用 WorkbenchTodo 体系）===== */
-.dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 300;
-  padding: 20px;
-}
+/* ===== 弹框（复用 WorkbenchTodo 体系）=====
+   遮罩/面板/头部/关闭/主体已统一到 common/BaseDialog.vue，
+   此处仅保留本组件特有的层级覆盖与「查看记录」弹框尺寸 */
 
-/* 新增/编辑弹框需覆盖在「查看记录」弹框之上：两者同为 .dialog-overlay 且 z-index 相同，
-   DOM 中后者（查看记录）会盖住前者（编辑），故编辑弹框显式提升层级 */
-.dialog-overlay--top {
+/* 新增/编辑弹框需覆盖在「查看记录」弹框之上：BaseDialog 统一 z-index: 300，
+   两者同为 300 时 DOM 中后者（查看记录）会盖住前者（编辑），故此处显式提升层级 */
+.ld-dialog-top {
   z-index: 400;
 }
 
-.dialog {
-  background-color: var(--color-bg-card, var(--color-bg-card));
-  border-radius: var(--radius-lg, 12px);
-  width: 100%;
-  max-width: var(--dlg-w-wb-ledger, 480px);
-  max-height: var(--dlg-h-wb-ledger, 85vh);
-  overflow-y: auto;
-  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
-}
-
-/* 查看记录弹框（合适的宽高：宽 85vw / 高 85vh，flex 纵向布局给 table + pagination） */
-.dialog[data-testid="ld-records-dialog"] {
+/* 查看记录弹框需要撑满可用高度（宽 85vw / 高 85vh），给 table + pagination 足够空间 */
+.ld-records-overlay :deep(.bd-panel) {
   width: 85vw;
   height: 85vh;
-  max-width: 1200px;
   min-width: 560px;
-  display: flex;
-  flex-direction: column;
 }
 
 /* 移动端：取消 560px 最小宽度，避免对话框宽于视口、关闭按钮落到屏幕外无法关闭 */
 @media (max-width: 768px) {
-  .dialog[data-testid="ld-records-dialog"] {
+  .ld-records-overlay :deep(.bd-panel) {
     width: 100% !important;
     min-width: 0 !important;
     max-width: 100% !important;
     height: 90vh !important;
     height: 90dvh !important;
   }
+}
+
+/* 记录弹框头部：标题与视图切换器并排 */
+.ld-records-title {
+  margin-right: 4px;
 }
 
 /* el-table 容器：填满剩余空间，overflow 交给 el-table internal */
@@ -1450,35 +1435,8 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   color: var(--color-success, var(--color-success));
 }
 
-.dialog-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border, var(--color-border));
-  position: sticky;
-  top: 0;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
-}
-
-.dialog-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text, var(--color-text));
-  margin: 0;
-}
-
-.close-btn {
-  /* 视觉已统一到全局 .close-btn（style.css）：32×32 图标方块，1px 边框 + 8px 圆角 + hover 主色 */
-}
-
-.close-btn:hover {
-  /* 视觉已统一到全局 .close-btn（style.css） */
-}
-
+/* 表单内容区（原 .dialog-body：外壳主体已由 BaseDialog 的 .bd-body 承担，此处只留排版） */
 .dialog-body {
-  padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 14px;

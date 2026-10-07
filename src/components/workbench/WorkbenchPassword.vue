@@ -8,6 +8,11 @@ import { useToast } from '@/composables/useToast'
 import { getIconUrl } from '@/composables/useIconCache'
 import type { PasswordEntry } from '@/types'
 import Icon from '@/components/Icon.vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
+
+/** 面板尺寸：沿用「设置 → 弹窗尺寸」写入的 CSS 变量（password），未配置时回退默认值 */
+const PANEL_WIDTH = 'var(--dlg-w-wb-password, 520px)'
+const PANEL_MAX_HEIGHT = 'var(--dlg-h-wb-password, 90dvh)'
 
 const passwordsStore = usePasswordsStore()
 const sitesStore = useSitesStore()
@@ -340,24 +345,14 @@ async function copyToClipboard(text: string, label: string): Promise<void> {
   }
 }
 
-// ===== Esc 关闭弹窗 =====
-function handleKeydown(event: KeyboardEvent): void {
-  if (event.key === 'Escape' && showForm.value) {
-    event.preventDefault()
-    cancelForm()
-  }
-}
-
 onMounted(() => {
   // 为网站名称关联下拉准备书签数据（幂等：已有数据不重复加载）
   if (sitesStore.sites.length === 0) {
     sitesStore.loadSites()
   }
-  window.addEventListener('keydown', handleKeydown)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeydown)
   stopIdleWatch()
 })
 
@@ -570,27 +565,15 @@ watch(
     </div>
 
     <!-- 新增/编辑弹窗 -->
-    <el-dialog
-      v-model="showForm"
-      width="480px"
-      :show-close="false"
+    <BaseDialog
+      v-if="showForm"
+      :title="editingId ? '编辑密码' : '新增密码'"
+      :width="PANEL_WIDTH"
+      :max-height="PANEL_MAX_HEIGHT"
       data-testid="pwd-form-modal"
       @close="cancelForm"
     >
-      <template #header="{ close }">
-        <div class="pwd-dialog-header">
-          <h3 class="pwd-dialog-title">{{ editingId ? '编辑密码' : '新增密码' }}</h3>
-          <el-button
-            type="button"
-            class="pwd-modal-close"
-            title="关闭"
-            data-testid="pwd-modal-close"
-            text
-            @click="close"
-          ><Icon name="close" :size="16" /></el-button>
-        </div>
-      </template>
-      <form class="pwd-modal-body" @submit.prevent="handleSave">
+      <form class="pwd-form-body" @submit.prevent="handleSave">
             <div class="form-group">
               <label>网站名称</label>
               <div class="pwd-site-input-wrap">
@@ -680,7 +663,7 @@ watch(
             </el-button>
           </div>
         </form>
-    </el-dialog>
+    </BaseDialog>
   </div>
 </template>
 
@@ -1028,61 +1011,10 @@ html.dark .pwd-cat-badge {
   border-radius: var(--radius-md, 10px);
 }
 
-/* ===== 新增/编辑弹窗 ===== */
-.pwd-modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-.pwd-modal {
-  width: 100%;
-  max-width: var(--dlg-w-wb-password, 520px);
-  max-height: var(--dlg-h-wb-password, 90vh);
-  max-height: var(--dlg-h-wb-password, 90dvh);
-  overflow-y: auto;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 12px);
-  box-shadow: var(--shadow-card, 0 8px 30px rgba(0, 0, 0, 0.15));
-}
-
-.pwd-dialog-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-}
-
-.pwd-dialog-title {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text, var(--color-text));
-}
-
-.pwd-modal-close {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: var(--color-text-muted, var(--color-text-muted));
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm, 6px);
-}
-
-.pwd-modal-close:hover {
-  color: var(--color-text, var(--color-text));
-  background: var(--color-bg-card, var(--color-bg-hover));
-}
-
-.pwd-modal-body {
-  padding: 20px;
+/* ===== 新增/编辑弹窗内容区 =====
+   弹框外壳（遮罩/面板/头部/关闭/主体）已统一到 common/BaseDialog.vue */
+.pwd-form-body {
+  display: block;
 }
 
 .form-group {
@@ -1218,16 +1150,11 @@ html.dark .pwd-empty {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-html.dark .pwd-modal {
-  background-color: var(--color-bg-card, #1f2937);
-}
-
 html.dark .pwd-item {
   box-shadow: none;
 }
 
-html.dark .pwd-auth-card h3,
-html.dark .pwd-dialog-title {
+html.dark .pwd-auth-card h3 {
   color: var(--color-text, #f9fafb);
 }
 
@@ -1256,8 +1183,7 @@ html.dark .pwd-btn-cancel {
   border-color: var(--color-border, #374151);
 }
 
-html.dark .pwd-icon-btn:hover,
-html.dark .pwd-modal-close:hover {
+html.dark .pwd-icon-btn:hover {
   background-color: var(--color-bg-hover, #374151);
 }
 

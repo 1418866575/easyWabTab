@@ -1,23 +1,23 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
+import BaseDialog from './common/BaseDialog.vue'
 import { showConfirm, toastAlert } from '@/utils/dialog'
 import { ref, computed } from 'vue'
 import { useSearchEnginesStore } from '../stores/searchEngines'
 import type { SearchEngine } from '../stores/searchEngines'
 
 /** embedded = true：作为常驻面板内嵌在设置页（无遮罩、无自带标题栏、不响应遮罩点击关闭） */
-const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+
+/** 面板尺寸：沿用「设置 → 弹窗尺寸」写入的 CSS 变量（engine），未配置时回退默认值 */
+const PANEL_WIDTH = 'var(--dlg-w-engine, 700px)'
+const PANEL_MAX_HEIGHT = 'var(--dlg-h-engine, 80vh)'
 
 const emit = defineEmits<{
   close: []
 }>()
 
 const store = useSearchEnginesStore()
-
-/** 遮罩点击关闭：仅弹框模式生效（内嵌面板点击空白不应关闭） */
-function onOverlayClick(): void {
-  if (!props.embedded) emit('close')
-}
 
 const newEngineName = ref('')
 const newEngineUrl = ref('')
@@ -173,229 +173,180 @@ function truncateUrl(url: string, maxLength = 40) {
 
 <template>
   <Transition name="dialog">
-  <div :class="embedded ? 'mgr-embed' : 'manager-overlay'" @click.self="onOverlayClick">
-    <div :class="embedded ? 'mgr-embed-inner' : 'manager'">
-      <div v-if="!embedded" class="manager-header">
-        <h2>搜索引擎管理</h2>
-        <button class="close-btn" @click="emit('close')"><Icon name="close" /></button>
+    <BaseDialog
+      title="搜索引擎管理"
+      :width="PANEL_WIDTH"
+      :max-height="PANEL_MAX_HEIGHT"
+      :embedded="embedded"
+      :hide-header="embedded"
+      :close-on-overlay="!embedded"
+      @close="emit('close')"
+    >
+      <!-- 添加新引擎 -->
+      <div class="add-form">
+        <h3>添加搜索引擎</h3>
+        <div class="form-row">
+          <input
+            v-model="newEngineName"
+            type="text"
+            placeholder="名称，如：百度"
+            class="input-name"
+          />
+          <input
+            v-model="newEngineUrl"
+            type="text"
+            placeholder="网址，如：https://baidu.com"
+            class="input-url"
+          />
+        </div>
+        <div class="form-row">
+          <input
+            v-model="newEngineQuery"
+            type="text"
+            placeholder="查询参数，如：wd= (会自动拼接到URL后)"
+            class="input-query"
+          />
+          <button
+            class="btn-add"
+            @click="handleAdd"
+            :disabled="!newEngineName.trim() || !newEngineUrl.trim()"
+          >
+            添加
+          </button>
+        </div>
       </div>
 
-      <div class="manager-body">
-        <!-- 添加新引擎 -->
-        <div class="add-form">
-          <h3>添加搜索引擎</h3>
-          <div class="form-row">
-            <input
-              v-model="newEngineName"
-              type="text"
-              placeholder="名称，如：百度"
-              class="input-name"
-            />
-            <input
-              v-model="newEngineUrl"
-              type="text"
-              placeholder="网址，如：https://baidu.com"
-              class="input-url"
-            />
+      <!-- 内置引擎 -->
+      <div class="engine-section">
+        <h3>内置引擎 (不可删除)</h3>
+        <button class="btn-reset" @click="handleReset">恢复默认引擎</button>
+        <div
+          v-for="engine in store.builtInEngines"
+          :key="engine.id"
+          class="engine-item built-in"
+          :class="{ 'is-default': engine.isDefault, 'is-disabled': engine.disabled }"
+        >
+          <div class="sort-controls">
+            <span class="lock-icon"><Icon name="lock" /></span>
           </div>
-          <div class="form-row">
-            <input
-              v-model="newEngineQuery"
-              type="text"
-              placeholder="查询参数，如：wd= (会自动拼接到URL后)"
-              class="input-query"
-            />
-            <button 
-              class="btn-add" 
-              @click="handleAdd" 
-              :disabled="!newEngineName.trim() || !newEngineUrl.trim()"
-            >
-              添加
-            </button>
-          </div>
-        </div>
 
-        <!-- 内置引擎 -->
-        <div class="engine-section">
-          <h3>内置引擎 (不可删除)</h3>
-          <button class="btn-reset" @click="handleReset">恢复默认引擎</button>
-          <div
-            v-for="engine in store.builtInEngines"
-            :key="engine.id"
-            class="engine-item built-in"
-            :class="{ 'is-default': engine.isDefault, 'is-disabled': engine.disabled }"
-          >
+          <!-- 编辑模式 -->
+          <template v-if="builtInEditingId === engine.id">
+            <input
+              v-model="builtInEditingUrl"
+              type="text"
+              class="edit-input url built-in-url"
+              placeholder="URL"
+            />
+            <button class="btn-icon" @click="saveBuiltInUrl"><Icon name="check" /></button>
+            <button class="btn-icon" @click="cancelEditBuiltIn"><Icon name="close" /></button>
+          </template>
+
+          <!-- 显示模式 -->
+          <template v-else>
+            <span class="engine-name">
+              {{ engine.name }}
+              <span v-if="engine.isDefault" class="default-tag">默认</span>
+              <span v-if="engine.disabled" class="disabled-tag">已禁用</span>
+            </span>
+            <span class="engine-url" :title="engine.url">{{ truncateUrl(engine.url) }}</span>
+            <button
+              v-if="engine.id !== 'local'"
+              class="btn-icon"
+              @click="startEditBuiltIn(engine)"
+              title="编辑URL"
+            ><Icon name="pencil" /></button>
+            <button
+              class="btn-icon set-default"
+              :class="{ 'is-active': engine.isDefault }"
+              :disabled="engine.isDefault"
+              :title="engine.isDefault ? '当前默认引擎' : '设为默认引擎'"
+              :data-testid="`builtin-default-${engine.id}`"
+              @click="handleSetDefault(engine)"
+            ><Icon name="star" /></button>
+            <button
+              class="btn-icon toggle"
+              :title="engine.disabled ? '启用引擎' : '禁用引擎'"
+              :data-testid="`builtin-toggle-${engine.id}`"
+              @click="handleToggleEnabled(engine)"
+            ><Icon :name="engine.disabled ? 'eye-off' : 'eye'" /></button>
+          </template>
+        </div>
+      </div>
+
+      <!-- 自定义引擎 -->
+      <div class="engine-section">
+        <h3>自定义引擎 ({{ sortedEngines.length }})</h3>
+
+        <div
+          v-for="engine in sortedEngines"
+          :key="engine.id"
+          class="engine-item custom"
+          :class="{ 'is-default': engine.isDefault, 'is-disabled': engine.disabled }"
+        >
+          <template v-if="editingId === engine.id">
+            <input
+              v-model="editingName"
+              type="text"
+              class="edit-input name"
+              placeholder="名称"
+            />
+            <input
+              v-model="editingUrl"
+              type="text"
+              class="edit-input url"
+              placeholder="URL"
+            />
+            <button class="btn-icon" @click="saveEdit"><Icon name="check" /></button>
+            <button class="btn-icon" @click="cancelEdit"><Icon name="close" /></button>
+          </template>
+          <template v-else>
             <div class="sort-controls">
-              <span class="lock-icon"><Icon name="lock" /></span>
+              <button
+                class="btn-sort"
+                @click="handleMove(engine.id, 'up')"
+                :disabled="!store.canMove(engine.id, 'up')"
+                title="上移"
+              >↑</button>
+              <button
+                class="btn-sort"
+                @click="handleMove(engine.id, 'down')"
+                :disabled="!store.canMove(engine.id, 'down')"
+                title="下移"
+              >↓</button>
             </div>
-            
-            <!-- 编辑模式 -->
-            <template v-if="builtInEditingId === engine.id">
-              <input
-                v-model="builtInEditingUrl"
-                type="text"
-                class="edit-input url built-in-url"
-                placeholder="URL"
-              />
-              <button class="btn-icon" @click="saveBuiltInUrl"><Icon name="check" /></button>
-              <button class="btn-icon" @click="cancelEditBuiltIn"><Icon name="close" /></button>
-            </template>
-            
-            <!-- 显示模式 -->
-            <template v-else>
-              <span class="engine-name">
-                {{ engine.name }}
-                <span v-if="engine.isDefault" class="default-tag">默认</span>
-                <span v-if="engine.disabled" class="disabled-tag">已禁用</span>
-              </span>
-              <span class="engine-url" :title="engine.url">{{ truncateUrl(engine.url) }}</span>
-              <button
-                v-if="engine.id !== 'local'"
-                class="btn-icon"
-                @click="startEditBuiltIn(engine)"
-                title="编辑URL"
-              ><Icon name="pencil" /></button>
-              <button
-                class="btn-icon set-default"
-                :class="{ 'is-active': engine.isDefault }"
-                :disabled="engine.isDefault"
-                :title="engine.isDefault ? '当前默认引擎' : '设为默认引擎'"
-                :data-testid="`builtin-default-${engine.id}`"
-                @click="handleSetDefault(engine)"
-              ><Icon name="star" /></button>
-              <button
-                class="btn-icon toggle"
-                :title="engine.disabled ? '启用引擎' : '禁用引擎'"
-                :data-testid="`builtin-toggle-${engine.id}`"
-                @click="handleToggleEnabled(engine)"
-              ><Icon :name="engine.disabled ? 'eye-off' : 'eye'" /></button>
-            </template>
-          </div>
-        </div>
-
-        <!-- 自定义引擎 -->
-        <div class="engine-section">
-          <h3>自定义引擎 ({{ sortedEngines.length }})</h3>
-
-          <div
-            v-for="engine in sortedEngines"
-            :key="engine.id"
-            class="engine-item custom"
-            :class="{ 'is-default': engine.isDefault, 'is-disabled': engine.disabled }"
-          >
-            <template v-if="editingId === engine.id">
-              <input
-                v-model="editingName"
-                type="text"
-                class="edit-input name"
-                placeholder="名称"
-              />
-              <input
-                v-model="editingUrl"
-                type="text"
-                class="edit-input url"
-                placeholder="URL"
-              />
-              <button class="btn-icon" @click="saveEdit"><Icon name="check" /></button>
-              <button class="btn-icon" @click="cancelEdit"><Icon name="close" /></button>
-            </template>
-            <template v-else>
-              <div class="sort-controls">
-                <button 
-                  class="btn-sort" 
-                  @click="handleMove(engine.id, 'up')"
-                  :disabled="!store.canMove(engine.id, 'up')"
-                  title="上移"
-                >↑</button>
-                <button 
-                  class="btn-sort" 
-                  @click="handleMove(engine.id, 'down')"
-                  :disabled="!store.canMove(engine.id, 'down')"
-                  title="下移"
-                >↓</button>
-              </div>
-              <span class="engine-name">
-                {{ engine.name }}
-                <span v-if="engine.isDefault" class="default-tag">默认</span>
-                <span v-if="engine.disabled" class="disabled-tag">已禁用</span>
-              </span>
-              <span class="engine-url" :title="engine.url">{{ truncateUrl(engine.url) }}</span>
-              <button class="btn-icon" @click="startEdit(engine)"><Icon name="pencil" /></button>
-              <button
-                class="btn-icon set-default"
-                :class="{ 'is-active': engine.isDefault }"
-                :disabled="engine.isDefault"
-                :title="engine.isDefault ? '当前默认引擎' : '设为默认引擎'"
-                :data-testid="`custom-default-${engine.id}`"
-                @click="handleSetDefault(engine)"
-              ><Icon name="star" /></button>
-              <button
-                class="btn-icon toggle"
-                :title="engine.disabled ? '启用引擎' : '禁用引擎'"
-                :data-testid="`custom-toggle-${engine.id}`"
-                @click="handleToggleEnabled(engine)"
-              ><Icon :name="engine.disabled ? 'eye-off' : 'eye'" /></button>
-              <button class="btn-icon delete" @click="handleDelete(engine)"><Icon name="trash" /></button>
-            </template>
-          </div>
+            <span class="engine-name">
+              {{ engine.name }}
+              <span v-if="engine.isDefault" class="default-tag">默认</span>
+              <span v-if="engine.disabled" class="disabled-tag">已禁用</span>
+            </span>
+            <span class="engine-url" :title="engine.url">{{ truncateUrl(engine.url) }}</span>
+            <button class="btn-icon" @click="startEdit(engine)"><Icon name="pencil" /></button>
+            <button
+              class="btn-icon set-default"
+              :class="{ 'is-active': engine.isDefault }"
+              :disabled="engine.isDefault"
+              :title="engine.isDefault ? '当前默认引擎' : '设为默认引擎'"
+              :data-testid="`custom-default-${engine.id}`"
+              @click="handleSetDefault(engine)"
+            ><Icon name="star" /></button>
+            <button
+              class="btn-icon toggle"
+              :title="engine.disabled ? '启用引擎' : '禁用引擎'"
+              :data-testid="`custom-toggle-${engine.id}`"
+              @click="handleToggleEnabled(engine)"
+            ><Icon :name="engine.disabled ? 'eye-off' : 'eye'" /></button>
+            <button class="btn-icon delete" @click="handleDelete(engine)"><Icon name="trash" /></button>
+          </template>
         </div>
       </div>
-    </div>
-  </div>
+    </BaseDialog>
   </Transition>
 </template>
 
 <style scoped>
-.manager-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 300;
-  padding: 20px;
-}
-
-.manager {
-  background-color: white;
-  border-radius: 12px;
-  width: 100%;
-  max-width: var(--dlg-w-engine, 700px);
-  max-height: var(--dlg-h-engine, 80vh);
-  overflow-y: auto;
-}
-
-.manager-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid #f1f5f9;
-  position: sticky;
-  top: 0;
-  background: white;
-  border-radius: 12px 12px 0 0;
-}
-
-.manager-header h2 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1e293b;
-  margin: 0;
-}
-
-.close-btn {
-  /* 视觉已统一到全局 .close-btn（style.css） */
-}
-
-.close-btn:hover {
-  /* 视觉已统一到全局 .close-btn（style.css） */
-}
-
-.manager-body {
-  padding: 24px;
-}
+/* 弹框外壳（遮罩/面板/头部/关闭/主体/底部/移动端适配）已统一到 common/BaseDialog.vue，
+   本组件仅保留引擎列表、添加表单等内容样式 */
 
 .add-form {
   margin-bottom: 24px;
@@ -624,30 +575,5 @@ function truncateUrl(url: string, maxLength = 40) {
 
 .btn-reset:hover {
   /* 视觉已统一到全局 .ui-btn（style.css） */
-}
-
-/* ============================================================
-   embedded 模式：常驻面板内嵌在「设置 → 导航站 → 引擎管理」
-   无遮罩 / 无固定定位，宽度撑满父面板，超高由外层面板滚动。
-   ============================================================ */
-.mgr-embed {
-  position: static;
-  inset: auto;
-  z-index: auto;
-  display: block;
-  width: 100%;
-  padding: 0;
-  background-color: transparent;
-  overflow: visible;
-}
-
-.mgr-embed-inner {
-  width: 100%;
-  max-width: none;
-  max-height: none;
-  overflow: visible;
-  border-radius: 12px;
-  background-color: var(--color-bg-card, #fff);
-  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
 }
 </style>

@@ -3,6 +3,15 @@ import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
+
+/** 表单弹框尺寸（沿用原 .dialog 的固定尺寸，非设置项） */
+const PANEL_WIDTH = '480px'
+const PANEL_MAX_HEIGHT = '85vh'
+
+/** 记录列表弹框尺寸：宽 85vw / 高 85vh（表格 + 分页需要更大的可用空间） */
+const LIST_PANEL_WIDTH = '1200px'
+const LIST_PANEL_MAX_HEIGHT = '85vh'
 
 const vm = useViewMode()
 
@@ -17,7 +26,7 @@ function cardFields(row: any) {
   ]
 }
 
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import Icon from '@/components/Icon.vue'
 import WorkbenchHealthReminders from './WorkbenchHealthReminders.vue'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
@@ -193,21 +202,6 @@ async function handleDeleteRecord(id: string): Promise<void> {
   }
 }
 
-// ESC 关闭弹框（先关记录弹框，再关目标弹框）
-function handleKeydown(event: KeyboardEvent): void {
-  if (event.key !== 'Escape') return
-  if (showRecordDialog.value) {
-    event.preventDefault()
-    cancelRecordForm()
-  } else if (showListDialog.value) {
-    event.preventDefault()
-    closeListDialog()
-  } else if (showTargetDialog.value) {
-    event.preventDefault()
-    closeTargetDialog()
-  }
-}
-
 // 面板自管理数据加载（WorkbenchView 后续集成后会统一加载，这里防御性幂等重载）
 onMounted(async () => {
   const recs = store.records
@@ -217,11 +211,6 @@ onMounted(async () => {
   if (recordsEmpty && notLoaded) {
     await store.loadHealth()
   }
-  window.addEventListener('keydown', handleKeydown)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeydown)
 })
 </script>
 
@@ -280,14 +269,19 @@ onUnmounted(() => {
 
     <!-- 记录列表弹框（Element Plus Table：日期/入睡/起床/时长/质量/备注/操作，每页 10 条） -->
     <Transition name="dialog">
-      <div v-if="showListDialog" class="dialog-overlay list-dialog-overlay" @click.self="closeListDialog">
-        <div class="dialog list-dialog" data-testid="sl-list-dialog">
-          <div class="dialog-header">
-            <h3>睡眠记录</h3>
-            <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
-            <el-button class="close-btn" text @click="closeListDialog"><Icon name="close" /></el-button>
-          </div>
-          <div class="ex-list">
+      <BaseDialog
+        v-if="showListDialog"
+        :width="LIST_PANEL_WIDTH"
+        :max-height="LIST_PANEL_MAX_HEIGHT"
+        class="sl-list-overlay"
+        data-testid="sl-list-dialog"
+        @close="closeListDialog"
+      >
+        <template #title>
+          <span>睡眠记录</span>
+          <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
+        </template>
+        <div class="ex-list">
             <el-table v-if="vm.mode === 'list'" class="ewt-table"
               :data="listPageItems"
               stripe
@@ -359,18 +353,19 @@ onUnmounted(() => {
               next-text="下一页"
             />
           </div>
-        </div>
-      </div>
+      </BaseDialog>
     </Transition>
 
     <!-- 目标弹框 -->
     <Transition name="dialog">
-    <div v-if="showTargetDialog" class="dialog-overlay" @click.self="closeTargetDialog">
-      <div class="dialog" data-testid="sl-dialog">
-        <div class="dialog-header">
-          <h3>{{ targetView ? '调整目标' : '设定目标' }}</h3>
-          <el-button class="close-btn" text @click="closeTargetDialog"><Icon name="close" /></el-button>
-        </div>
+    <BaseDialog
+      v-if="showTargetDialog"
+      :title="targetView ? '调整目标' : '设定目标'"
+      :width="PANEL_WIDTH"
+      :max-height="PANEL_MAX_HEIGHT"
+      data-testid="sl-dialog"
+      @close="closeTargetDialog"
+    >
         <form class="dialog-body" @submit.prevent="handleSaveTarget">
           <div class="form-group">
             <label>每日目标（小时）*</label>
@@ -404,18 +399,20 @@ onUnmounted(() => {
             <el-button native-type="submit" class="btn-save" :disabled="!isTargetValid" data-testid="sl-save-target">保存</el-button>
           </div>
         </form>
-      </div>
-    </div>
+    </BaseDialog>
     </Transition>
 
     <!-- 新增/编辑记录弹框 -->
     <Transition name="dialog">
-    <div v-if="showRecordDialog" class="dialog-overlay record-dialog-overlay" @click.self="cancelRecordForm">
-      <div class="dialog" data-testid="sl-dialog">
-        <div class="dialog-header">
-          <h3>{{ editingId ? '编辑记录' : '新增记录' }}</h3>
-          <el-button class="close-btn" text @click="cancelRecordForm"><Icon name="close" /></el-button>
-        </div>
+    <BaseDialog
+      v-if="showRecordDialog"
+      :title="editingId ? '编辑记录' : '新增记录'"
+      :width="PANEL_WIDTH"
+      :max-height="PANEL_MAX_HEIGHT"
+      class="sl-record-overlay"
+      data-testid="sl-dialog"
+      @close="cancelRecordForm"
+    >
         <form class="dialog-body" @submit.prevent="handleSaveRecord">
           <div class="form-row-fields">
             <div class="field">
@@ -490,8 +487,7 @@ onUnmounted(() => {
             <el-button v-if="editingId" type="danger" native-type="button" data-testid="sl-record-delete" @click="handleDeleteRecord(editingId)">删除</el-button>
           </div>
         </form>
-      </div>
-    </div>
+    </BaseDialog>
     </Transition>
   </div>
 </template>
@@ -757,57 +753,8 @@ onUnmounted(() => {
   border-color: var(--color-primary, var(--color-primary));
 }
 
-/* ===== 弹框（复用 WorkbenchTodo 体系）===== */
-.dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 300;
-  padding: 20px;
-}
-
-.dialog {
-  background-color: var(--color-bg-card, var(--color-bg-card));
-  border-radius: var(--radius-lg, 12px);
-  width: 100%;
-  max-width: 480px;
-  max-height: 85vh;
-  overflow-y: auto;
-  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
-}
-
-.dialog-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border, var(--color-border));
-  position: sticky;
-  top: 0;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
-}
-
-.dialog-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text, var(--color-text));
-  margin: 0;
-}
-
-.close-btn {
-  /* 视觉已统一到全局 .close-btn（style.css）：32×32 图标方块，1px 边框 + 8px 圆角 + hover 主色 */
-}
-
-.close-btn:hover {
-  /* 视觉已统一到全局 .close-btn（style.css） */
-}
-
+/* ===== 弹框内容区（原 .dialog-body；外壳主体已由 BaseDialog 的 .bd-body 承担）===== */
 .dialog-body {
-  padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -1065,11 +1012,14 @@ html.dark .btn-toggle-list {
   }
 }
 
-/* ===== 记录列表弹框：Element Plus Table + 分页（85vw×85vh，与 Exercise 完全一致）—— 必须放在 .dialog 基础类之后覆盖 ===== */
-.list-dialog-overlay { z-index: 310; }
-.record-dialog-overlay { z-index: 320; }
+/* ===== 记录列表弹框：Element Plus Table + 分页（85vw×85vh，与 Exercise 完全一致）=====
+   遮罩/面板/头部/关闭/主体已统一到 common/BaseDialog.vue，
+   此处仅保留弹框层级与列表弹框的撑满尺寸 */
+/* 记录弹框叠在列表弹框之上（BaseDialog 统一 z-index: 300） */
+.sl-list-overlay { z-index: 310; }
+.sl-record-overlay { z-index: 320; }
 
-.dialog.list-dialog {
+.sl-list-overlay :deep(.bd-panel) {
   width: 85vw !important;
   height: 85vh !important;
   max-width: 1200px !important;
@@ -1081,7 +1031,7 @@ html.dark .btn-toggle-list {
 }
 
 @media (max-width: 640px) {
-  .dialog.list-dialog { width: 94vw !important; min-width: 0 !important; height: 88vh !important; }
+  .sl-list-overlay :deep(.bd-panel) { width: 94vw !important; min-width: 0 !important; height: 88vh !important; }
 }
 
 /* ===== 桌面端 ≥769px：面板根钉满 tab 内容区 ===== */

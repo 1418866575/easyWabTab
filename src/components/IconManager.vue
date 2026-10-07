@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
+import BaseDialog from './common/BaseDialog.vue'
 import { showConfirm, toastAlert } from '@/utils/dialog'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useIconsStore, type MergedIcon, type CustomIcon, type IconExportData } from '@/stores/icons'
 import { useSitesStore } from '@/stores/sites'
 import { PRESET_ICONS, type PresetIcon } from '@/composables/presetIcons'
 
-/** embedded = true：作为常驻面板内嵌在设置页（无遮罩、无自带标题栏、不响应 ESC 与遮罩点击关闭） */
-const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+/** embedded = true：作为常驻面板内嵌在设置页（无遮罩、无自带标题栏） */
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+
+/** 面板尺寸：沿用「设置 → 弹窗尺寸」写入的 CSS 变量（icon），未配置时回退默认值 */
+const PANEL_WIDTH = 'var(--dlg-w-icon, 900px)'
+const PANEL_MAX_HEIGHT = 'var(--dlg-h-icon, 80vh)'
 
 const emit = defineEmits<{
   close: []
@@ -16,28 +21,6 @@ const emit = defineEmits<{
 const store = useIconsStore()
 /** 站点数据：用于判定哪些图标「正在被使用」（site.icon 存图标 src，与 getIconSrc 同口径） */
 const sitesStore = useSitesStore()
-
-/** 遮罩点击关闭：仅弹框模式生效（内嵌面板点击空白不应关闭） */
-function onOverlayClick(): void {
-  if (!props.embedded) emit('close')
-}
-
-// ESC 键关闭弹框（内嵌模式下交给外层容器处理，避免把整个设置页一起关掉）
-function handleKeydown(event: KeyboardEvent) {
-  if (props.embedded) return
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    emit('close')
-  }
-}
-
-onMounted(() => {
-  window.addEventListener('keydown', handleKeydown)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeydown)
-})
 
 // 上传
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -259,192 +242,143 @@ function usedSiteNames(icon: MergedIcon): string {
 
 <template>
   <Transition name="dialog">
-  <div :class="embedded ? 'mgr-embed' : 'manager-overlay'" @click.self="onOverlayClick">
-    <div :class="embedded ? 'mgr-embed-inner' : 'manager'">
-      <div v-if="!embedded" class="manager-header">
-        <h2><Icon name="palette" /> 图标管理</h2>
-        <button class="close-btn" @click="emit('close')"><Icon name="close" /></button>
+    <BaseDialog
+      :width="PANEL_WIDTH"
+      :max-height="PANEL_MAX_HEIGHT"
+      :embedded="embedded"
+      :hide-header="embedded"
+      :close-on-overlay="!embedded"
+      @close="emit('close')"
+    >
+      <template #title><Icon name="palette" /> 图标管理</template>
+
+      <!-- 导入/导出 -->
+      <div class="import-export-bar">
+        <input
+          ref="importInput"
+          type="file"
+          accept=".json"
+          class="hidden-file-input"
+          @change="handleImport"
+        />
+        <button class="btn-secondary" @click="importInput?.click()">
+          <Icon name="download" /> 导入
+        </button>
+        <button class="btn-secondary" @click="handleExport">
+          <Icon name="upload" /> 导出
+        </button>
+        <span class="import-export-hint">
+          自定义图标: {{ store.customIcons.length }} 个
+        </span>
       </div>
 
-      <div class="manager-body">
-        <!-- 导入/导出 -->
-        <div class="import-export-bar">
+      <!-- 上传区域 -->
+      <div class="add-form">
+        <h3>上传图标</h3>
+        <div class="add-form-row">
           <input
-            ref="importInput"
+            ref="fileInput"
             type="file"
-            accept=".json"
+            accept="image/*"
             class="hidden-file-input"
-            @change="handleImport"
+            @change="handleUpload"
           />
-          <button class="btn-secondary" @click="importInput?.click()">
-            <Icon name="download" /> 导入
+          <button class="btn-add" @click="fileInput?.click()">
+            <Icon name="folder" /> 选择文件
           </button>
-          <button class="btn-secondary" @click="handleExport">
-            <Icon name="upload" /> 导出
-          </button>
-          <span class="import-export-hint">
-            自定义图标: {{ store.customIcons.length }} 个
-          </span>
-        </div>
-
-        <!-- 上传区域 -->
-        <div class="add-form">
-          <h3>上传图标</h3>
-          <div class="add-form-row">
-            <input
-              ref="fileInput"
-              type="file"
-              accept="image/*"
-              class="hidden-file-input"
-              @change="handleUpload"
-            />
-            <button class="btn-add" @click="fileInput?.click()">
-              <Icon name="folder" /> 选择文件
-            </button>
-            <span class="upload-hint">支持 PNG/SVG/GIF，最大 500KB</span>
-          </div>
-        </div>
-
-        <!-- 搜索 + 分类过滤 -->
-        <div class="filter-bar">
-          <input
-            v-model="searchQuery"
-            type="text"
-            class="search-input"
-            placeholder="搜索图标名称..."
-          />
-        </div>
-
-        <div class="category-tabs">
-          <button
-            v-for="cat in CATEGORIES"
-            :key="cat"
-            class="category-tab"
-            :class="{ active: activeCategory === cat }"
-            @click="activeCategory = cat"
-          >
-            {{ cat }}
-          </button>
-        </div>
-
-        <!-- 图标网格 -->
-        <div class="icon-manager-grid">
-          <div
-            v-for="icon in filteredIcons"
-            :key="getIconId(icon)"
-            class="icon-manager-item"
-            :class="{ 'built-in': !isCustom(icon), custom: isCustom(icon), 'is-used': usedCountOf(icon) > 0 }"
-          >
-            <!-- 使用中角标：该图标正被站点引用 -->
-            <span
-              v-if="usedCountOf(icon) > 0"
-              class="icon-used-badge"
-              :title="`正在被 ${usedCountOf(icon)} 个站点使用：${usedSiteNames(icon)}`"
-              data-testid="icon-used-badge"
-            >{{ usedCountOf(icon) }} 使用中</span>
-            <!-- 编辑模式 -->
-            <template v-if="isCustom(icon) && editingId === getIconId(icon)">
-              <div class="icon-manager-preview">
-                <img :src="getIconSrc(icon)" :alt="icon.label" />
-              </div>
-              <input
-                v-model="editingLabel"
-                type="text"
-                class="edit-input"
-                @keyup.enter="saveEdit"
-                @keyup.escape="cancelEdit"
-              />
-              <div class="icon-manager-meta">
-                <span class="icon-manager-category">{{ icon.category }}</span>
-              </div>
-              <div class="icon-manager-actions">
-                <button class="btn-icon" @click="saveEdit"><Icon name="check" /></button>
-                <button class="btn-icon" @click="cancelEdit"><Icon name="close" /></button>
-              </div>
-            </template>
-
-            <!-- 显示模式 -->
-            <template v-else>
-              <div class="icon-manager-preview">
-                <img :src="getIconSrc(icon)" :alt="icon.label" />
-              </div>
-              <span class="icon-manager-label" :title="icon.label">{{ icon.label }}</span>
-              <div class="icon-manager-meta">
-                <span class="icon-manager-category">{{ icon.category }}</span>
-                <span v-if="usedCountOf(icon) > 0" class="icon-used-count">使用中 {{ usedCountOf(icon) }}</span>
-                <span v-if="isCustom(icon)" class="icon-manager-size">
-                  {{ Math.round(('dataUrl' in icon ? (icon as { dataUrl: string }).dataUrl.length : 0) * 0.75 / 1024) }}KB
-                </span>
-              </div>
-              <div v-if="isCustom(icon)" class="icon-manager-actions">
-                <button class="btn-icon" @click="startEdit(icon)" title="编辑"><Icon name="pencil" /></button>
-                <button class="btn-icon delete" @click="handleDelete(getIconId(icon))" title="删除"><Icon name="trash" /></button>
-              </div>
-            </template>
-          </div>
-        </div>
-
-        <div v-if="filteredIcons.length === 0" class="empty-custom">
-          {{ searchQuery ? '未找到匹配的图标' : '暂无图标' }}
+          <span class="upload-hint">支持 PNG/SVG/GIF，最大 500KB</span>
         </div>
       </div>
-    </div>
-  </div>
+
+      <!-- 搜索 + 分类过滤 -->
+      <div class="filter-bar">
+        <input
+          v-model="searchQuery"
+          type="text"
+          class="search-input"
+          placeholder="搜索图标名称..."
+        />
+      </div>
+
+      <div class="category-tabs">
+        <button
+          v-for="cat in CATEGORIES"
+          :key="cat"
+          class="category-tab"
+          :class="{ active: activeCategory === cat }"
+          @click="activeCategory = cat"
+        >
+          {{ cat }}
+        </button>
+      </div>
+
+      <!-- 图标网格 -->
+      <div class="icon-manager-grid">
+        <div
+          v-for="icon in filteredIcons"
+          :key="getIconId(icon)"
+          class="icon-manager-item"
+          :class="{ 'built-in': !isCustom(icon), custom: isCustom(icon), 'is-used': usedCountOf(icon) > 0 }"
+        >
+          <!-- 使用中角标：该图标正被站点引用 -->
+          <span
+            v-if="usedCountOf(icon) > 0"
+            class="icon-used-badge"
+            :title="`正在被 ${usedCountOf(icon)} 个站点使用：${usedSiteNames(icon)}`"
+            data-testid="icon-used-badge"
+          >{{ usedCountOf(icon) }} 使用中</span>
+          <!-- 编辑模式 -->
+          <template v-if="isCustom(icon) && editingId === getIconId(icon)">
+            <div class="icon-manager-preview">
+              <img :src="getIconSrc(icon)" :alt="icon.label" />
+            </div>
+            <input
+              v-model="editingLabel"
+              type="text"
+              class="edit-input"
+              @keyup.enter="saveEdit"
+              @keyup.escape="cancelEdit"
+            />
+            <div class="icon-manager-meta">
+              <span class="icon-manager-category">{{ icon.category }}</span>
+            </div>
+            <div class="icon-manager-actions">
+              <button class="btn-icon" @click="saveEdit"><Icon name="check" /></button>
+              <button class="btn-icon" @click="cancelEdit"><Icon name="close" /></button>
+            </div>
+          </template>
+
+          <!-- 显示模式 -->
+          <template v-else>
+            <div class="icon-manager-preview">
+              <img :src="getIconSrc(icon)" :alt="icon.label" />
+            </div>
+            <span class="icon-manager-label" :title="icon.label">{{ icon.label }}</span>
+            <div class="icon-manager-meta">
+              <span class="icon-manager-category">{{ icon.category }}</span>
+              <span v-if="usedCountOf(icon) > 0" class="icon-used-count">使用中 {{ usedCountOf(icon) }}</span>
+              <span v-if="isCustom(icon)" class="icon-manager-size">
+                {{ Math.round(('dataUrl' in icon ? (icon as { dataUrl: string }).dataUrl.length : 0) * 0.75 / 1024) }}KB
+              </span>
+            </div>
+            <div v-if="isCustom(icon)" class="icon-manager-actions">
+              <button class="btn-icon" @click="startEdit(icon)" title="编辑"><Icon name="pencil" /></button>
+              <button class="btn-icon delete" @click="handleDelete(getIconId(icon))" title="删除"><Icon name="trash" /></button>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <div v-if="filteredIcons.length === 0" class="empty-custom">
+        {{ searchQuery ? '未找到匹配的图标' : '暂无图标' }}
+      </div>
+    </BaseDialog>
   </Transition>
 </template>
 
 <style scoped>
-.manager-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-  padding: 20px;
-}
-
-.manager {
-  background-color: white;
-  border-radius: 12px;
-  width: 100%;
-  max-width: var(--dlg-w-icon, 900px);
-  max-height: var(--dlg-h-icon, 80vh);
-  overflow-y: auto;
-}
-
-.manager-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid #f1f5f9;
-  position: sticky;
-  top: 0;
-  background: white;
-  border-radius: 12px 12px 0 0;
-  z-index: 1;
-}
-
-.manager-header h2 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1e293b;
-  margin: 0;
-}
-
-.close-btn {
-  /* 视觉已统一到全局 .close-btn（style.css） */
-}
-
-.close-btn:hover {
-  /* 视觉已统一到全局 .close-btn（style.css） */
-}
-
-.manager-body {
-  padding: 24px;
-}
+/* 弹框外壳（遮罩/面板/头部/关闭/主体/底部/移动端适配）已统一到 common/BaseDialog.vue，
+   本组件仅保留上传区、筛选、图标网格、导入导出等内容样式 */
 
 /* 上传区域 */
 .add-form {
@@ -714,30 +648,5 @@ function usedSiteNames(icon: MergedIcon): string {
   color: #94a3b8;
   font-size: 14px;
   padding: 40px 20px;
-}
-
-/* ============================================================
-   embedded 模式：常驻面板内嵌在「设置 → 导航站 → 图标管理」
-   无遮罩 / 无固定定位，宽度撑满父面板，超高由外层面板滚动。
-   ============================================================ */
-.mgr-embed {
-  position: static;
-  inset: auto;
-  z-index: auto;
-  display: block;
-  width: 100%;
-  padding: 0;
-  background-color: transparent;
-  overflow: visible;
-}
-
-.mgr-embed-inner {
-  width: 100%;
-  max-width: none;
-  max-height: none;
-  overflow: visible;
-  border-radius: 12px;
-  background-color: var(--color-bg-card, #fff);
-  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
 }
 </style>

@@ -63,10 +63,8 @@ const emit = defineEmits<{
   pageChange: []
 }>()
 
-const handleSizeChange = (event: Event) => {
-  const target = event.target as HTMLSelectElement
-  const newSize = Number(target.value)
-  store.setPageSize(newSize)
+const handleSizeChange = (value: number | string) => {
+  store.setPageSize(Number(value))
   // 滚动到顶部
   emit('pageChange')
 }
@@ -107,19 +105,18 @@ const handleSizeChange = (event: Event) => {
 
     <!-- 每页条数选择 -->
     <div class="page-size-selector">
-      <select
-        :value="store.pageSize"
+      <el-select
+        :model-value="store.pageSize"
         class="page-size-select"
         @change="handleSizeChange"
       >
-        <option
+        <el-option
           v-for="opt in pageSizeOptions"
           :key="opt.value"
+          :label="opt.label"
           :value="opt.value"
-        >
-          {{ opt.label }}
-        </option>
-      </select>
+        />
+      </el-select>
     </div>
 
     <!-- 全部时显示总数 -->
@@ -149,18 +146,18 @@ const handleSizeChange = (event: Event) => {
 
 .page-btn {
   padding: 8px 14px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
-  background-color: white;
-  color: #64748b;
+  background-color: var(--color-bg-card, #ffffff);
+  color: var(--color-text-secondary, #64748b);
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .page-btn:hover:not(:disabled) {
-  border-color: #3b82f6;
-  color: #3b82f6;
+  border-color: var(--color-primary, #3b82f6);
+  color: var(--color-primary, #3b82f6);
 }
 
 .page-btn:disabled {
@@ -169,13 +166,13 @@ const handleSizeChange = (event: Event) => {
 }
 
 .page-btn.active {
-  background-color: #3b82f6;
-  border-color: #3b82f6;
-  color: white;
+  background-color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
+  color: #fff;
 }
 
 .ellipsis {
-  color: #94a3b8;
+  color: var(--color-text-muted, #94a3b8);
   padding: 0 4px;
 }
 
@@ -184,49 +181,18 @@ const handleSizeChange = (event: Event) => {
   align-items: center;
 }
 
+/* el-select 自带视觉（含暗色），此处仅定宽 */
 .page-size-select {
-  padding: 8px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background-color: white;
-  color: #64748b;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-  outline: none;
-}
-
-.page-size-select:hover {
-  border-color: #3b82f6;
-  color: #3b82f6;
-}
-
-.page-size-select:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+  min-width: 110px;
 }
 
 .page-info {
-  color: #64748b;
+  color: var(--color-text-secondary, #64748b);
   font-size: 14px;
   padding: 8px 12px;
 }
 
-:global(.dark) .page-btn {
-  background-color: var(--color-bg-card, #1f2937);
-  border-color: var(--color-border, #374151);
-  color: var(--color-text-secondary, #d1d5db);
-}
-
-:global(.dark) .page-size-select {
-  background-color: var(--color-bg-card, #1f2937);
-  border-color: var(--color-border, #374151);
-  color: var(--color-text-secondary, #d1d5db);
-}
-
-:global(.dark) .page-info {
-  color: var(--color-text-secondary, #d1d5db);
-}
+/* 暗色由 --color-* token 自动跟随，无需 .dark 覆盖；el-select 亦自带暗色 */
 
 /* ===== 移动端优化（≤768px）=====
    1) 页码区改横向滚动、不换行：页码多时不撑高容器（与工作台底部 Tab Bar 同一手法）
