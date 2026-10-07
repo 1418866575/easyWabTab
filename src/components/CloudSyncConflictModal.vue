@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
+import BaseDialog from './common/BaseDialog.vue'
 import { computed } from 'vue'
 import { useCloudSync } from '@/composables/useCloudSync'
 
@@ -92,8 +93,17 @@ const hasConflict = computed(() => conflictRows.value.length > 0)
 
 <template>
   <Transition name="modal">
-    <div v-if="hasConflict" class="conflict-overlay" role="dialog" aria-modal="true" aria-labelledby="conflict-title">
-      <div class="conflict-dialog">
+    <!-- 冲突必须由用户在「拉取/推送/合并/取消」中显式选择，故不用基类默认外壳（它自带关闭按钮），
+         改用 #panel 插槽：遮罩/面板（层级 9999、圆角、阴影、暗色）仍由 BaseDialog 提供，
+         且关闭遮罩点击（close-on-overlay=false），ESC 与遮罩点击均不产生任何副作用。 -->
+    <BaseDialog
+      v-if="hasConflict"
+      class="conflict-overlay"
+      :close-on-overlay="false"
+      width="640px"
+      max-height="80vh"
+    >
+      <template #panel>
         <header class="conflict-head">
           <h2 id="conflict-title" class="conflict-title"><Icon name="alert" /> 云同步冲突</h2>
         </header>
@@ -149,35 +159,17 @@ const hasConflict = computed(() => conflictRows.value.length > 0)
             @click="cloudSync.resolveConflict('cancel')"
           ><Icon name="close" /> 取消</button>
         </footer>
-      </div>
-    </div>
+      </template>
+    </BaseDialog>
   </Transition>
 </template>
 
 <style scoped>
+/* 弹框外壳（遮罩/面板）已统一到 common/BaseDialog.vue（本组件用 #panel 插槽接管内部结构，
+   以保留「必须显式选择解决方式」的无关闭按钮形态）；
+   层级保留：原遮罩为 9999（高于设置弹框与冲突弹框的 300） */
 .conflict-overlay {
-  position: fixed;
-  inset: 0;
   z-index: 9999;
-  background: rgba(0, 0, 0, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-}
-.conflict-dialog {
-  background: var(--color-bg);
-  border-radius: 12px;
-  width: 100%;
-  max-width: 640px;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
-  color: var(--color-text);
-}
-.conflict-head {
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--color-border);
 }
 .conflict-title {
   margin: 0;
@@ -270,6 +262,7 @@ const hasConflict = computed(() => conflictRows.value.length > 0)
   gap: 8px;
   justify-content: flex-end;
   flex-wrap: wrap;
+  flex-shrink: 0;
 }
 .conflict-btn {
   padding: 8px 14px;
@@ -303,6 +296,23 @@ const hasConflict = computed(() => conflictRows.value.length > 0)
   color: #16a34a;
   border-color: color-mix(in srgb, #22c55e 40%, var(--color-border));
 }
+/* 面板内部改为纵向 flex：头部/底部固定，中间文件列表滚动（原 .conflict-dialog 整体 overflow） */
+.conflict-overlay :deep(.bd-panel) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.conflict-head {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.conflict-body {
+  padding: 20px 24px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
 .modal-enter-active,
 .modal-leave-active {
   transition: opacity 0.2s ease;
@@ -311,12 +321,12 @@ const hasConflict = computed(() => conflictRows.value.length > 0)
 .modal-leave-to {
   opacity: 0;
 }
-.modal-enter-active .conflict-dialog,
-.modal-leave-active .conflict-dialog {
+.modal-enter-active :deep(.bd-panel),
+.modal-leave-active :deep(.bd-panel) {
   transition: transform 0.2s ease;
 }
-.modal-enter-from .conflict-dialog,
-.modal-leave-to .conflict-dialog {
+.modal-enter-from :deep(.bd-panel),
+.modal-leave-to :deep(.bd-panel) {
   transform: scale(0.96) translateY(8px);
 }
 </style>

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
+import BaseDialog from './common/BaseDialog.vue'
 import { toastAlert } from '@/utils/dialog'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { useThemeStore, type BackgroundType, type CustomBackground } from '../stores/theme'
 
 /** embedded = true：作为常驻面板内嵌在设置页（无遮罩、无自带标题栏、不响应 ESC 与遮罩点击关闭） */
@@ -11,28 +12,13 @@ const emit = defineEmits<{
   close: []
 }>()
 
+/** 面板尺寸：沿用「设置 → 弹窗尺寸」写入的 CSS 变量（background），未配置时回退默认值 */
+const PANEL_WIDTH = 'var(--dlg-w-background, 800px)'
+const PANEL_MAX_HEIGHT = 'var(--dlg-h-background, 85vh)'
+
 const themeStore = useThemeStore()
 
-/** 遮罩点击关闭：仅弹框模式生效（内嵌面板点击空白不应关闭） */
-function onOverlayClick(): void {
-  if (!props.embedded) emit('close')
-}
-
-// ESC 键关闭弹框（内嵌模式下交给外层容器处理，避免把整个设置页一起关掉）
-function handleKeydown(event: KeyboardEvent) {
-  if (props.embedded) return
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    emit('close')
-  }
-}
-
-onMounted(() => {
-  window.addEventListener('keydown', handleKeydown)
-})
-
 onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeydown)
   // 断开缩略图观察器，避免弹框关闭后监听常驻
   thumbObserver?.disconnect()
   thumbObserver = null
@@ -279,19 +265,18 @@ function clearBackground() {
 </script>
 
 <template>
-  <div :class="embedded ? 'mgr-embed' : 'modal-overlay'" @click.self="onOverlayClick">
-    <div class="background-manager">
-      <div v-if="!embedded" class="modal-header">
-        <h2><Icon name="palette" /> 背景管理</h2>
-        <button class="close-btn" @click="emit('close')" title="关闭">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
+  <BaseDialog
+    class="bg-manager-overlay"
+    :width="PANEL_WIDTH"
+    :max-height="PANEL_MAX_HEIGHT"
+    :embedded="embedded"
+    :hide-header="embedded"
+    :close-on-overlay="!embedded"
+    @close="emit('close')"
+  >
+    <template #title><Icon name="palette" /> 背景管理</template>
 
-      <div class="modal-body">
+    <div class="bg-body">
         <!-- 预览区域 -->
         <div class="preview-section">
           <div class="background-preview" :class="selectedType" :style="previewStyle">
@@ -483,7 +468,8 @@ function clearBackground() {
         </div>
       </div>
 
-      <div class="modal-footer">
+    <template #footer>
+      <div class="bg-footer">
         <button class="btn-clear" @click="clearBackground" :disabled="selectedType === 'none'">
           清除背景
         </button>
@@ -491,58 +477,22 @@ function clearBackground() {
           应用
         </button>
       </div>
-    </div>
-  </div>
+    </template>
+  </BaseDialog>
 </template>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* 弹框外壳（遮罩/面板/头部/关闭/主体）与 embedded 内嵌模式布局
+   已统一到 common/BaseDialog.vue（embedded + hide-header + close-on-overlay=false），
+   本组件仅保留预览、类型/颜色/渐变/图片选择等内容样式 */
+
+/* 层级保留：原遮罩为 1000（高于设置弹框 300） */
+.bg-manager-overlay {
   z-index: 1000;
-  padding: 20px;
 }
 
-.background-manager {
-  background-color: white;
-  border-radius: 16px;
-  width: 100%;
-  max-width: var(--dlg-w-background, 800px);
-  max-height: var(--dlg-h-background, 85vh);
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-  overflow: hidden;
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.modal-header h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: #1e293b;
-}
-
-/* close-btn 视觉已统一到全局 .close-btn（style.css） */
-
-.modal-body {
-  padding: 24px;
-  overflow-y: auto;
-  flex: 1;
+/* 各区块纵向排布：原 .modal-body 的 flex + gap（滚动与内边距由基类 .bd-body 接管） */
+.bg-body {
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -731,10 +681,10 @@ function clearBackground() {
 
 /* .cancel-btn 视觉已统一到全局 .ui-btn（次按钮） */
 
-/* 底部 */
-.modal-footer {
-  padding: 16px 24px;
-  border-top: 1px solid #f1f5f9;
+/* 底部：原为「清除背景」靠左、「应用」靠右（space-between），
+   基类 .bd-footer 默认右对齐，这里用整宽容器还原两端对齐 */
+.bg-footer {
+  width: 100%;
   display: flex;
   justify-content: space-between;
   gap: 12px;
@@ -877,30 +827,5 @@ function clearBackground() {
     padding: 10px 12px;
     font-size: 13px;
   }
-}
-
-/* ============================================================
-   embedded 模式：常驻面板内嵌在「设置 → 导航站 → 背景」
-   无遮罩 / 无固定定位，宽度撑满父面板，超高由外层面板滚动。
-   ============================================================ */
-.mgr-embed {
-  position: static;
-  inset: auto;
-  z-index: auto;
-  display: block;
-  width: 100%;
-  padding: 0;
-  background-color: transparent;
-  overflow: visible;
-}
-
-/* 内嵌时取消弹框尺寸约束（原 .background-manager 的 max-width / max-height / 阴影） */
-.mgr-embed .background-manager {
-  width: 100%;
-  max-width: none;
-  max-height: none;
-  box-shadow: none;
-  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
-  background-color: var(--color-bg-card, #fff);
 }
 </style>

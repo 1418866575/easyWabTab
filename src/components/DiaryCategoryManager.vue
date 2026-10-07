@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
+import BaseDialog from './common/BaseDialog.vue'
 import { ref, computed } from 'vue'
 import { useDiaryCategoriesStore } from '../stores/diaryCategories'
 import { useWorkbenchDiaryStore } from '../stores/workbenchDiary'
@@ -75,155 +76,131 @@ const sortedCustomCategories = computed(() =>
 </script>
 
 <template>
-  <div class="dm-manager">
-    <div class="dm-header">
-      <h2>日记分类管理</h2>
+  <!-- 常驻内嵌面板（无遮罩、无关闭按钮）：标题降级为正文区标题，外壳走 BaseDialog embedded -->
+  <BaseDialog embedded hide-header>
+    <h2 class="dm-title">日记分类管理</h2>
+
+    <!-- 添加新分类 -->
+    <div class="dm-add-form">
+      <h3>添加分类</h3>
+      <div class="dm-add-row">
+        <input
+          v-model="newCategoryIcon"
+          type="text"
+          class="dm-icon-input"
+          placeholder="图标"
+          maxlength="2"
+        />
+        <input
+          v-model="newCategoryName"
+          type="text"
+          class="dm-name-input"
+          placeholder="分类名称"
+          @keyup.enter="handleAdd"
+        />
+        <button class="dm-btn-add" @click="handleAdd" :disabled="!newCategoryName.trim()">
+          添加
+        </button>
+      </div>
+      <div class="dm-icon-suggestions">
+        <span class="dm-icon-label">快速选择:</span>
+        <button
+          v-for="icon in defaultIcons"
+          :key="icon"
+          class="dm-icon-btn"
+          :class="{ active: newCategoryIcon === icon }"
+          @click="newCategoryIcon = icon"
+        >
+          {{ icon }}
+        </button>
+      </div>
     </div>
 
-    <div class="dm-body">
-      <!-- 添加新分类 -->
-      <div class="dm-add-form">
-        <h3>添加分类</h3>
-        <div class="dm-add-row">
-          <input
-            v-model="newCategoryIcon"
-            type="text"
-            class="dm-icon-input"
-            placeholder="图标"
-            maxlength="2"
-          />
-          <input
-            v-model="newCategoryName"
-            type="text"
-            class="dm-name-input"
-            placeholder="分类名称"
-            @keyup.enter="handleAdd"
-          />
-          <button class="dm-btn-add" @click="handleAdd" :disabled="!newCategoryName.trim()">
-            添加
-          </button>
-        </div>
-        <div class="dm-icon-suggestions">
-          <span class="dm-icon-label">快速选择:</span>
-          <button
-            v-for="icon in defaultIcons"
-            :key="icon"
-            class="dm-icon-btn"
-            :class="{ active: newCategoryIcon === icon }"
-            @click="newCategoryIcon = icon"
-          >
-            {{ icon }}
-          </button>
+    <!-- 分类列表 -->
+    <div class="dm-list">
+      <h3>分类排序</h3>
+
+      <!-- 预定义分类 -->
+      <div class="dm-section">
+        <div class="dm-section-title">固定分类（不可删除）</div>
+        <div
+          v-for="cat in builtInCategories"
+          :key="cat.id"
+          class="dm-item built-in"
+        >
+          <span class="dm-sort-hint"><Icon name="lock" /></span>
+          <span class="dm-cat-icon">{{ cat.icon }}</span>
+          <span class="dm-cat-name">{{ cat.name }}</span>
+          <span class="dm-count">({{ getEntryCount(cat.id) }})</span>
         </div>
       </div>
 
-      <!-- 分类列表 -->
-      <div class="dm-list">
-        <h3>分类排序</h3>
-
-        <!-- 预定义分类 -->
-        <div class="dm-section">
-          <div class="dm-section-title">固定分类（不可删除）</div>
-          <div
-            v-for="cat in builtInCategories"
-            :key="cat.id"
-            class="dm-item built-in"
-          >
-            <span class="dm-sort-hint"><Icon name="lock" /></span>
+      <!-- 自定义分类 -->
+      <div class="dm-section">
+        <div class="dm-section-title">自定义分类（可排序 / 删除）</div>
+        <div
+          v-for="cat in sortedCustomCategories"
+          :key="cat.id"
+          class="dm-item custom"
+        >
+          <template v-if="editingId === cat.id">
+            <input
+              v-model="editingIcon"
+              type="text"
+              class="dm-edit-icon"
+              maxlength="2"
+            />
+            <input
+              v-model="editingName"
+              type="text"
+              class="dm-edit-name"
+              @keyup.enter="saveEdit"
+              @keyup.escape="cancelEdit"
+            />
+            <button class="dm-btn-icon" @click="saveEdit"><Icon name="check" /></button>
+            <button class="dm-btn-icon" @click="cancelEdit"><Icon name="close" /></button>
+          </template>
+          <template v-else>
+            <div class="dm-sort-controls">
+              <button
+                class="dm-btn-sort"
+                @click="handleMove(cat.id, 'up')"
+                :disabled="!diaryCatStore.canMove(cat.id, 'up')"
+                title="上移"
+              >↑</button>
+              <button
+                class="dm-btn-sort"
+                @click="handleMove(cat.id, 'down')"
+                :disabled="!diaryCatStore.canMove(cat.id, 'down')"
+                title="下移"
+              >↓</button>
+            </div>
             <span class="dm-cat-icon">{{ cat.icon }}</span>
             <span class="dm-cat-name">{{ cat.name }}</span>
             <span class="dm-count">({{ getEntryCount(cat.id) }})</span>
-          </div>
-        </div>
-
-        <!-- 自定义分类 -->
-        <div class="dm-section">
-          <div class="dm-section-title">自定义分类（可排序 / 删除）</div>
-          <div
-            v-for="cat in sortedCustomCategories"
-            :key="cat.id"
-            class="dm-item custom"
-          >
-            <template v-if="editingId === cat.id">
-              <input
-                v-model="editingIcon"
-                type="text"
-                class="dm-edit-icon"
-                maxlength="2"
-              />
-              <input
-                v-model="editingName"
-                type="text"
-                class="dm-edit-name"
-                @keyup.enter="saveEdit"
-                @keyup.escape="cancelEdit"
-              />
-              <button class="dm-btn-icon" @click="saveEdit"><Icon name="check" /></button>
-              <button class="dm-btn-icon" @click="cancelEdit"><Icon name="close" /></button>
-            </template>
-            <template v-else>
-              <div class="dm-sort-controls">
-                <button
-                  class="dm-btn-sort"
-                  @click="handleMove(cat.id, 'up')"
-                  :disabled="!diaryCatStore.canMove(cat.id, 'up')"
-                  title="上移"
-                >↑</button>
-                <button
-                  class="dm-btn-sort"
-                  @click="handleMove(cat.id, 'down')"
-                  :disabled="!diaryCatStore.canMove(cat.id, 'down')"
-                  title="下移"
-                >↓</button>
-              </div>
-              <span class="dm-cat-icon">{{ cat.icon }}</span>
-              <span class="dm-cat-name">{{ cat.name }}</span>
-              <span class="dm-count">({{ getEntryCount(cat.id) }})</span>
-              <button class="dm-btn-icon" @click="startEdit(cat)"><Icon name="pencil" /></button>
-              <button class="dm-btn-icon delete" @click="handleDelete(cat.id)"><Icon name="trash" /></button>
-            </template>
-          </div>
-        </div>
-
-        <div v-if="sortedCustomCategories.length === 0" class="dm-empty">
-          暂无自定义分类
+            <button class="dm-btn-icon" @click="startEdit(cat)"><Icon name="pencil" /></button>
+            <button class="dm-btn-icon delete" @click="handleDelete(cat.id)"><Icon name="trash" /></button>
+          </template>
         </div>
       </div>
+
+      <div v-if="sortedCustomCategories.length === 0" class="dm-empty">
+        暂无自定义分类
+      </div>
     </div>
-  </div>
+  </BaseDialog>
 </template>
 
 <style scoped>
-.dm-manager {
-  background-color: var(--color-bg-card, #fff);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 12px);
-  width: 100%;
-  max-width: 720px;
-  box-shadow: var(--shadow-card, 0 8px 24px rgba(0, 0, 0, 0.12));
-}
+/* 弹框外壳（遮罩/面板/头部/关闭/主体/移动端适配）已统一到 common/BaseDialog.vue，
+   本组件仅保留分类列表、添加表单等内容样式 */
 
-.dm-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
-  position: sticky;
-  top: 0;
-  background: var(--color-bg-card, #fff);
-  border-radius: var(--radius-md, 12px) var(--radius-md, 12px) 0 0;
-}
-
-.dm-header h2 {
+/* 内嵌面板无自带头部，标题作为正文区首行 */
+.dm-title {
   font-size: 18px;
   font-weight: 600;
   color: var(--color-text, #1e293b);
-  margin: 0;
-}
-
-.dm-body {
-  padding: 24px;
+  margin: 0 0 20px 0;
 }
 
 .dm-add-form {
@@ -438,21 +415,8 @@ const sortedCustomCategories = computed(() =>
 
 /* ===== 移动端适配 =====
    该组件此前完全没有 @media 规则（全文仅一处固定 max-width:720px），窄屏下：
-   内嵌设置弹框时横向溢出需左右拖动；排序按钮仅 20×16px，是全项目最小触控目标。 */
+   排序按钮仅 20×16px，是全项目最小触控目标。 */
 @media (max-width: 768px) {
-  /* 宽度自适应，内嵌弹框不再横向溢出 */
-  .dm-manager {
-    max-width: 100%;
-  }
-
-  /* 内边距收敛，把可用宽度还给内容 */
-  .dm-header {
-    padding: 14px 12px;
-  }
-  .dm-body {
-    padding: 14px 12px;
-  }
-
   /* 新增行换行：图标 + 名称 + 按钮在 375px 下不再把输入框压到不可用宽度 */
   .dm-add-row {
     flex-wrap: wrap;

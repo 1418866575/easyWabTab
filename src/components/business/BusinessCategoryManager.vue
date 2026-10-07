@@ -1,27 +1,16 @@
 <script setup lang="ts">
 // 销售记账共享分类管理弹框（product 商品分类 / expense 支出产品 双模式，页面 ⚙️ 与设置弹窗 tab 复用）
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { showConfirm } from '@/utils/dialog'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { reportBizResult, type BizResultLike } from '@/composables/bizResult'
 import type { BusinessProductCategory, BusinessExpenseCategory } from '@/types'
 import { EXPENSE_UNITS, productUnitPriceOf } from '@/composables/businessCore'
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '@/components/Icon.vue'
 
 const props = defineProps<{ kind: 'product' | 'expense'; embedded?: boolean }>()
 const emit = defineEmits<{ close: [] }>()
-
-// ESC 关闭弹框
-function handleKeydown(event: KeyboardEvent): void {
-  if (event.key === 'Escape') {
-    // 内联（embedded）模式不自行关闭：ESC 交由外层设置弹窗处理
-    if (props.embedded) return
-    event.preventDefault()
-    emit('close')
-  }
-}
-onMounted(() => window.addEventListener('keydown', handleKeydown))
-onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
 
 const store = useWorkbenchBusinessStore()
 
@@ -177,11 +166,13 @@ function handleAdd(): void {
 </script>
 
 <template>
-  <component
-    :is="embedded ? 'div' : 'el-dialog'"
-    v-bind="embedded
-      ? { 'data-testid': `bizcat-embed-${kind}`, class: 'bizcat-embed' }
-      : { 'model-value': true, width: '460px', title: isProduct ? '商品分类管理' : '支出产品管理', 'data-testid': `bizcat-dialog-${kind}` }"
+  <BaseDialog
+    :title="isProduct ? '商品分类管理' : '支出产品管理'"
+    width="460px"
+    :embedded="embedded"
+    :hide-header="embedded"
+    :close-on-overlay="!embedded"
+    :data-testid="embedded ? `bizcat-embed-${kind}` : `bizcat-dialog-${kind}`"
     @close="emit('close')"
   >
     <div class="bizcat-body">
@@ -367,12 +358,13 @@ function handleAdd(): void {
         </div>
       </div>
     </div>
-  </component>
+  </BaseDialog>
 </template>
 
+/* 弹框外壳（遮罩/面板/头部/关闭/主体/滚动）已统一到 common/BaseDialog.vue，
+   本组件仅保留分类行、配置区、新增表单等内容样式 */
 <style scoped>
 .bizcat-body {
-  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -489,25 +481,6 @@ function handleAdd(): void {
   gap: 8px;
   padding-top: 4px;
   border-top: 1px dashed var(--color-border, var(--color-border));
-}
-
-/* el-dialog 外壳对齐原弹框（组件根即 .el-dialog，自带 data-v 作用域） */
-.el-dialog {
-  border-radius: var(--radius-lg, 12px);
-  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
-}
-
-:deep(.el-dialog__header) {
-  flex-shrink: 0;
-}
-
-:deep(.el-dialog__body) {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
 }
 
 /* 暗色模式 */

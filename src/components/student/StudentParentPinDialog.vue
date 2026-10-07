@@ -11,6 +11,7 @@ import {
   PARENT_PIN_MAX_LENGTH as PIN_MAX
 } from '@/stores/studentSettings'
 import { useToast } from '@/composables/useToast'
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '@/components/Icon.vue'
 
 const props = defineProps<{
@@ -103,11 +104,10 @@ function onKeydown(e: KeyboardEvent) {
     pressKey(e.key); e.preventDefault()
   } else if (e.key === 'Backspace') {
     pressBackspace(); e.preventDefault()
-  } else if (e.key === 'Escape') {
-    onClose(); e.preventDefault()
   } else if (e.key === 'Enter') {
     trySubmit(); e.preventDefault()
   }
+  // ESC → onClose 由 common/BaseDialog.vue 的 window 监听统一处理
 }
 
 async function trySubmit() {
@@ -239,16 +239,15 @@ const KEYPAD_ROWS: string[][] = [
 </script>
 
 <template>
-  <div v-if="visible" class="st-pin-mask" @click.self="onClose" role="dialog" aria-modal="true">
-    <div class="st-pin-dialog" :class="{ locked: isLocked }">
-      <header class="st-pin-header">
-        <h3 class="st-pin-title">{{ dialogTitle }}</h3>
-        <button class="st-pin-close" type="button" @click="onClose" aria-label="关闭">
-          <Icon name="close" />
-        </button>
-      </header>
-
-      <div class="st-pin-body">
+  <BaseDialog
+    v-if="visible"
+    class="st-pin-mask"
+    :class="{ 'is-locked': isLocked }"
+    :title="dialogTitle"
+    width="360px"
+    @close="onClose"
+  >
+    <div class="st-pin-body">
         <div class="st-pin-dots" aria-label="PIN 输入进度">
           <span
             v-for="(d, i) in dots"
@@ -291,67 +290,26 @@ const KEYPAD_ROWS: string[][] = [
         </div>
 
         <button class="st-pin-confirm" type="button" :disabled="!canSubmit" @click="trySubmit()">{{ mode === 'setup' ? (setupStep2 ? '保存' : '下一步') : '确认' }}</button>
-      </div>
     </div>
-  </div>
+  </BaseDialog>
 </template>
 
 <style scoped>
+/* 层级保留：原遮罩为 3000（家长 PIN 锁必须盖过学生工作台内一切面板） */
 .st-pin-mask {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(3px);
   z-index: 3000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
 }
-.st-pin-dialog {
-  width: 100%;
-  max-width: 360px;
-  background: var(--color-surface, #ffffff);
-  color: var(--color-text, #1f2937);
-  border-radius: 16px;
-  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
-  border: 1px solid var(--color-border, #e5e7eb);
-  overflow: hidden;
-  position: relative;
-}
-.st-pin-dialog.locked::after {
+
+/* 锁定态：整片压暗（原 .st-pin-dialog.locked::after，锁定态改由基类面板承载） */
+.st-pin-mask.is-locked :deep(.bd-panel)::after {
   content: '';
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.03);
   pointer-events: none;
 }
-.st-pin-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
-}
-.st-pin-title { margin: 0; font-size: 16px; font-weight: 600; }
-.st-pin-close {
-  border: 0;
-  background: transparent;
-  color: var(--color-text-secondary, #6b7280);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
-}
-.st-pin-close:hover {
-  background: var(--color-surface-2, #f3f4f6);
-  color: var(--color-text, #1f2937);
-}
+/* 内边距由基类 .bd-body 统一提供，此处只保留自身的居中排布 */
 .st-pin-body {
-  padding: 24px 20px 22px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -406,8 +364,7 @@ const KEYPAD_ROWS: string[][] = [
 }
 .st-pin-key-empty { visibility: hidden; }
 @media (max-width: 420px) {
-  .st-pin-dialog { border-radius: 14px; }
-  .st-pin-body { padding: 20px 16px 18px; gap: 16px; }
+  .st-pin-body { gap: 16px; }
   .st-pin-key { height: 48px; font-size: 18px; }
   .st-pin-dot { width: 12px; height: 12px; }
   .st-pin-dots { gap: 12px; }

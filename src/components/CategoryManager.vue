@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
+import BaseDialog from './common/BaseDialog.vue'
 import IconPickerDialog from './IconPickerDialog.vue'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useCategoriesStore } from '../stores/categories'
 import { useSitesStore } from '../stores/sites'
 import { isImageIcon } from '../composables/categoryIcon'
@@ -16,31 +17,13 @@ const emit = defineEmits<{
   added: [id: string]
 }>()
 
+/** 面板尺寸：沿用「设置 → 弹窗尺寸」写入的 CSS 变量（category），未配置时回退默认值 */
+const PANEL_WIDTH = 'var(--dlg-w-category, 900px)'
+const PANEL_MAX_HEIGHT = 'var(--dlg-h-category, 80vh)'
+
 const categoriesStore = useCategoriesStore()
 const sitesStore = useSitesStore()
 const toast = useToast()
-
-/** 遮罩点击关闭：仅弹框模式生效（内嵌面板点击空白不应关闭） */
-function onOverlayClick(): void {
-  if (!props.embedded) emit('close')
-}
-
-// ESC 键关闭弹框（内嵌模式下交给外层容器处理，避免把整个设置页一起关掉）
-function handleKeydown(event: KeyboardEvent) {
-  if (props.embedded) return
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    emit('close')
-  }
-}
-
-onMounted(() => {
-  window.addEventListener('keydown', handleKeydown)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeydown)
-})
 
 const newCategoryName = ref('')
 const newCategoryIcon = ref('')
@@ -187,61 +170,132 @@ const sortedCustomCategories = computed(() =>
 
 <template>
   <Transition name="dialog">
-  <div :class="embedded ? 'mgr-embed' : 'manager-overlay'" @click.self="onOverlayClick">
-    <div :class="embedded ? 'mgr-embed-inner' : 'manager'">
-      <div v-if="!embedded" class="manager-header">
-        <h2>分类管理</h2>
-        <button class="close-btn" @click="emit('close')"><Icon name="close" /></button>
+    <BaseDialog
+      title="分类管理"
+      :width="PANEL_WIDTH"
+      :max-height="PANEL_MAX_HEIGHT"
+      :embedded="embedded"
+      :hide-header="embedded"
+      :close-on-overlay="!embedded"
+      @close="emit('close')"
+    >
+      <!-- 添加新分类 -->
+      <div class="add-form">
+        <h3>添加分类</h3>
+        <div class="add-form-row">
+          <!-- 分类图标：点击从图标管理（图标库）选择，选中后回填；未选时显示占位 -->
+          <button
+            type="button"
+            class="cat-icon-btn"
+            :class="{ 'is-empty': !newCategoryIcon }"
+            title="从图标管理选择分类图标"
+            data-testid="cat-new-icon-btn"
+            @click="openIconPicker('new')"
+          >
+            <img v-if="isImageIcon(newCategoryIcon)" :src="newCategoryIcon" alt="" class="cat-icon-img" />
+            <span v-else-if="newCategoryIcon" class="cat-icon-emoji">{{ newCategoryIcon }}</span>
+            <Icon v-else name="image" />
+          </button>
+          <input
+            v-model="newCategoryName"
+            type="text"
+            class="name-input"
+            placeholder="分类名称"
+            @keyup.enter="handleAdd"
+          />
+          <button class="btn-add" @click="handleAdd" :disabled="!newCategoryName.trim()">
+            添加
+          </button>
+        </div>
       </div>
 
-      <div class="manager-body">
-        <!-- 添加新分类 -->
-        <div class="add-form">
-          <h3>添加分类</h3>
-          <div class="add-form-row">
-            <!-- 分类图标：点击从图标管理（图标库）选择，选中后回填；未选时显示占位 -->
+      <!-- 分类列表 -->
+      <div class="category-list">
+        <h3>分类排序</h3>
+
+        <!-- 预定义分类 -->
+        <div class="list-section">
+          <div class="section-title">固定分类（不可删除）</div>
+          <div
+            v-for="cat in builtInCategories"
+            :key="cat.id"
+            class="category-item built-in"
+          >
+            <span class="sort-hint"><Icon name="lock" /></span>
+            <span class="category-icon">
+              <img v-if="isImageIcon(cat.icon)" :src="cat.icon" alt="" class="cat-icon-img" />
+              <template v-else>{{ cat.icon }}</template>
+            </span>
+            <span class="category-name">{{ cat.name }}</span>
+            <span class="site-count">({{ getSiteCount(cat.id) }})</span>
             <button
-              type="button"
-              class="cat-icon-btn"
-              :class="{ 'is-empty': !newCategoryIcon }"
-              title="从图标管理选择分类图标"
-              data-testid="cat-new-icon-btn"
-              @click="openIconPicker('new')"
-            >
-              <img v-if="isImageIcon(newCategoryIcon)" :src="newCategoryIcon" alt="" class="cat-icon-img" />
-              <span v-else-if="newCategoryIcon" class="cat-icon-emoji">{{ newCategoryIcon }}</span>
-              <Icon v-else name="image" />
-            </button>
-            <input
-              v-model="newCategoryName"
-              type="text"
-              class="name-input"
-              placeholder="分类名称"
-              @keyup.enter="handleAdd"
-            />
-            <button class="btn-add" @click="handleAdd" :disabled="!newCategoryName.trim()">
-              添加
-            </button>
+              class="btn-icon"
+              :disabled="getSiteCount(cat.id) === 0 || !!exportingCatId"
+              :title="getSiteCount(cat.id) === 0 ? '该分类下暂无网站' : `导出「${cat.name}」分类的网站`"
+              :data-testid="`cat-export-${cat.id}`"
+              @click="handleExportCategory(cat)"
+            >导出</button>
           </div>
         </div>
 
-        <!-- 分类列表 -->
-        <div class="category-list">
-          <h3>分类排序</h3>
-          
-          <!-- 预定义分类 -->
-          <div class="list-section">
-            <div class="section-title">固定分类（不可删除）</div>
-            <div
-              v-for="cat in builtInCategories"
-              :key="cat.id"
-              class="category-item built-in"
-            >
-              <span class="sort-hint"><Icon name="lock" /></span>
-              <span class="category-icon">
+        <!-- 自定义分类 -->
+        <div class="list-section">
+          <div class="section-title">自定义分类（可拖拽排序）</div>
+          <div
+            v-for="cat in sortedCustomCategories"
+            :key="cat.id"
+            class="category-item custom"
+          >
+            <template v-if="editingId === cat.id">
+              <button
+                type="button"
+                class="cat-icon-btn"
+                :class="{ 'is-empty': !editingIcon }"
+                title="从图标管理选择分类图标"
+                data-testid="cat-edit-icon-btn"
+                @click="openIconPicker('edit')"
+              >
+                <img v-if="isImageIcon(editingIcon)" :src="editingIcon" alt="" class="cat-icon-img" />
+                <span v-else-if="editingIcon" class="cat-icon-emoji">{{ editingIcon }}</span>
+                <Icon v-else name="image" />
+              </button>
+              <input
+                v-model="editingName"
+                type="text"
+                class="edit-input name-input"
+                @keyup.enter="saveEdit"
+                @keyup.escape="cancelEdit"
+              />
+              <button class="btn-icon" @click="saveEdit"><Icon name="check" /></button>
+              <button class="btn-icon" @click="cancelEdit"><Icon name="close" /></button>
+            </template>
+            <template v-else>
+              <div class="sort-controls">
+                <button
+                  class="btn-sort"
+                  @click="handleMove(cat.id, 'up')"
+                  :disabled="!categoriesStore.canMove(cat.id, 'up')"
+                  title="上移"
+                >↑</button>
+                <button
+                  class="btn-sort"
+                  @click="handleMove(cat.id, 'down')"
+                  :disabled="!categoriesStore.canMove(cat.id, 'down')"
+                  title="下移"
+                >↓</button>
+              </div>
+              <button
+                type="button"
+                class="cat-icon-btn"
+                :class="{ 'is-empty': !cat.icon }"
+                title="点击从图标管理更换图标"
+                :data-testid="`cat-item-icon-${cat.id}`"
+                @click="openIconPicker('item', cat.id)"
+              >
                 <img v-if="isImageIcon(cat.icon)" :src="cat.icon" alt="" class="cat-icon-img" />
-                <template v-else>{{ cat.icon }}</template>
-              </span>
+                <span v-else-if="cat.icon" class="cat-icon-emoji">{{ cat.icon }}</span>
+                <Icon v-else name="image" />
+              </button>
               <span class="category-name">{{ cat.name }}</span>
               <span class="site-count">({{ getSiteCount(cat.id) }})</span>
               <button
@@ -251,89 +305,17 @@ const sortedCustomCategories = computed(() =>
                 :data-testid="`cat-export-${cat.id}`"
                 @click="handleExportCategory(cat)"
               >导出</button>
-            </div>
-          </div>
-
-          <!-- 自定义分类 -->
-          <div class="list-section">
-            <div class="section-title">自定义分类（可拖拽排序）</div>
-            <div
-              v-for="cat in sortedCustomCategories"
-              :key="cat.id"
-              class="category-item custom"
-            >
-              <template v-if="editingId === cat.id">
-                <button
-                  type="button"
-                  class="cat-icon-btn"
-                  :class="{ 'is-empty': !editingIcon }"
-                  title="从图标管理选择分类图标"
-                  data-testid="cat-edit-icon-btn"
-                  @click="openIconPicker('edit')"
-                >
-                  <img v-if="isImageIcon(editingIcon)" :src="editingIcon" alt="" class="cat-icon-img" />
-                  <span v-else-if="editingIcon" class="cat-icon-emoji">{{ editingIcon }}</span>
-                  <Icon v-else name="image" />
-                </button>
-                <input
-                  v-model="editingName"
-                  type="text"
-                  class="edit-input name-input"
-                  @keyup.enter="saveEdit"
-                  @keyup.escape="cancelEdit"
-                />
-                <button class="btn-icon" @click="saveEdit"><Icon name="check" /></button>
-                <button class="btn-icon" @click="cancelEdit"><Icon name="close" /></button>
-              </template>
-              <template v-else>
-                <div class="sort-controls">
-                  <button 
-                    class="btn-sort" 
-                    @click="handleMove(cat.id, 'up')"
-                    :disabled="!categoriesStore.canMove(cat.id, 'up')"
-                    title="上移"
-                  >↑</button>
-                  <button 
-                    class="btn-sort" 
-                    @click="handleMove(cat.id, 'down')"
-                    :disabled="!categoriesStore.canMove(cat.id, 'down')"
-                    title="下移"
-                  >↓</button>
-                </div>
-                <button
-                  type="button"
-                  class="cat-icon-btn"
-                  :class="{ 'is-empty': !cat.icon }"
-                  title="点击从图标管理更换图标"
-                  :data-testid="`cat-item-icon-${cat.id}`"
-                  @click="openIconPicker('item', cat.id)"
-                >
-                  <img v-if="isImageIcon(cat.icon)" :src="cat.icon" alt="" class="cat-icon-img" />
-                  <span v-else-if="cat.icon" class="cat-icon-emoji">{{ cat.icon }}</span>
-                  <Icon v-else name="image" />
-                </button>
-                <span class="category-name">{{ cat.name }}</span>
-                <span class="site-count">({{ getSiteCount(cat.id) }})</span>
-                <button
-                  class="btn-icon"
-                  :disabled="getSiteCount(cat.id) === 0 || !!exportingCatId"
-                  :title="getSiteCount(cat.id) === 0 ? '该分类下暂无网站' : `导出「${cat.name}」分类的网站`"
-                  :data-testid="`cat-export-${cat.id}`"
-                  @click="handleExportCategory(cat)"
-                >导出</button>
-                <button class="btn-icon" title="编辑分类" :data-testid="`cat-edit-${cat.id}`" @click="startEdit(cat)">编辑</button>
-                <button class="btn-icon delete" title="删除分类" :data-testid="`cat-delete-${cat.id}`" @click="handleDelete(cat.id)">删除</button>
-              </template>
-            </div>
-          </div>
-
-          <div v-if="sortedCustomCategories.length === 0" class="empty-custom">
-            暂无自定义分类
+              <button class="btn-icon" title="编辑分类" :data-testid="`cat-edit-${cat.id}`" @click="startEdit(cat)">编辑</button>
+              <button class="btn-icon delete" title="删除分类" :data-testid="`cat-delete-${cat.id}`" @click="handleDelete(cat.id)">删除</button>
+            </template>
           </div>
         </div>
+
+        <div v-if="sortedCustomCategories.length === 0" class="empty-custom">
+          暂无自定义分类
+        </div>
       </div>
-    </div>
-  </div>
+    </BaseDialog>
   </Transition>
 
   <!-- 分类图标选择弹框：从图标管理（图标库）选择，选中即回填；取消/关闭不改原值。
@@ -348,56 +330,9 @@ const sortedCustomCategories = computed(() =>
 </template>
 
 <style scoped>
-.manager-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-  padding: 20px;
-}
-
-  .manager {
-    background-color: white;
-    border-radius: 12px;
-    width: 100%;
-    max-width: var(--dlg-w-category, 900px);
-  max-height: var(--dlg-h-category, 80vh);
-  overflow-y: auto;
-}
-
-.manager-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid #f1f5f9;
-  position: sticky;
-  top: 0;
-  background: white;
-  border-radius: 12px 12px 0 0;
-}
-
-.manager-header h2 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1e293b;
-  margin: 0;
-}
-
-.close-btn {
-  /* 视觉已统一到全局 .close-btn（style.css） */
-}
-
-.close-btn:hover {
-  /* 视觉已统一到全局 .close-btn（style.css） */
-}
-
-.manager-body {
-  padding: 24px;
-}
+/* 弹框外壳（遮罩/面板/头部/关闭/主体）与 embedded 内嵌模式布局
+   已统一到 common/BaseDialog.vue（embedded + hide-header + close-on-overlay=false），
+   本组件仅保留分类列表、添加表单、图标按钮等内容样式 */
 
 .add-form {
   margin-bottom: 24px;
@@ -621,31 +556,5 @@ const sortedCustomCategories = computed(() =>
   color: #94a3b8;
   font-size: 14px;
   padding: 20px;
-}
-
-/* ============================================================
-   embedded 模式：常驻面板内嵌在「设置 → 导航站 → 分类管理」
-   —— 不再铺满视口（无遮罩、无固定定位），宽度撑满父面板；
-   高度超出时由外层面板容器滚动，避免撑高整页。
-   ============================================================ */
-.mgr-embed {
-  position: static;
-  inset: auto;
-  z-index: auto;
-  display: block;
-  width: 100%;
-  padding: 0;
-  background-color: transparent;
-  overflow: visible;
-}
-
-.mgr-embed-inner {
-  width: 100%;
-  max-width: none;
-  max-height: none;
-  overflow: visible;
-  border-radius: 12px;
-  background-color: var(--color-bg-card, #fff);
-  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
 }
 </style>

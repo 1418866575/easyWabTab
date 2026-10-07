@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import BaseDialog from './common/BaseDialog.vue'
 import Icon from './Icon.vue'
 import { toastAlert } from '@/utils/dialog'
 import { useIconsStore, type MergedIcon, type IconExportData } from '@/stores/icons'
@@ -199,6 +200,8 @@ function handleUpload(event: Event): void {
 
 // ESC 只关本弹框：注册在 document 捕获阶段（早于设置弹窗 window 冒泡监听），
 // 命中后阻止继续传播，避免连带关闭外层设置弹窗。
+// 注：BaseDialog 自带的 window 冒泡监听也会被这里的 stopPropagation 一并拦下，
+// 因此本弹框只会 emit 一次 close，不会双触发。
 function handleKeydown(event: KeyboardEvent): void {
   if (event.key === 'Escape') {
     event.preventDefault()
@@ -217,160 +220,104 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="ipd-mask" @click.self="emit('close')">
-    <div class="ipd-dialog" role="dialog" aria-modal="true" :aria-label="props.title">
-      <div class="ipd-head">
-        <h3 class="ipd-title">{{ props.title }}</h3>
-        <button type="button" class="ipd-close" aria-label="关闭" @click="emit('close')">×</button>
-      </div>
-
-      <div class="ipd-body">
-        <!-- 导入 / 上传：导入走 JSON 导出文件，上传走图片文件（≤500KB） -->
-        <div class="ipd-actions">
-          <input
-            ref="importInput"
-            type="file"
-            accept=".json,application/json"
-            class="ipd-file-input"
-            data-testid="ipd-import-input"
-            @change="handleImport"
-          />
-          <button
-            type="button"
-            class="ipd-action-btn"
-            data-testid="ipd-import-btn"
-            title="从图标管理的导出文件（JSON）批量导入图标"
-            @click="importInput?.click()"
-          >
-            <Icon name="download" /> 导入图标
-          </button>
-          <input
-            ref="uploadInput"
-            type="file"
-            accept="image/*"
-            class="ipd-file-input"
-            data-testid="ipd-upload-input"
-            @change="handleUpload"
-          />
-          <button
-            type="button"
-            class="ipd-action-btn"
-            :disabled="uploading"
-            data-testid="ipd-upload-btn"
-            title="上传本地图片（PNG / JPG / SVG / GIF / WebP，最大 500KB）作为自定义图标"
-            @click="uploadInput?.click()"
-          >
-            <Icon name="upload" /> {{ uploading ? '上传中…' : '上传图标' }}
-          </button>
-          <span class="ipd-action-hint">自定义 {{ iconsStore.customIcons.length }} 个 · 图片 ≤500KB</span>
-        </div>
-
-        <input
-          v-model="keyword"
-          type="text"
-          class="ipd-search"
-          placeholder="搜索图标…"
-          aria-label="搜索图标"
-        />
-
-        <div class="ipd-cats">
-          <button
-            v-for="cat in categories"
-            :key="cat"
-            type="button"
-            class="ipd-cat"
-            :class="{ active: category === cat }"
-            @click="category = cat"
-          >
-            {{ categoryLabel(cat) }}
-          </button>
-        </div>
-
-        <div class="ipd-grid">
-          <button
-            v-for="icon in filteredIcons"
-            :key="iconSrc(icon)"
-            type="button"
-            class="ipd-item"
-            :class="{ active: props.current === iconSrc(icon) }"
-            :title="icon.label"
-            @click="handlePick(icon)"
-          >
-            <img :src="iconSrc(icon)" :alt="icon.label" class="ipd-item-img" />
-            <span class="ipd-item-label">{{ icon.label }}</span>
-          </button>
-          <p v-if="filteredIcons.length === 0" class="ipd-empty">没有匹配的图标</p>
-        </div>
-      </div>
-
-      <div class="ipd-foot ewt-dialog-footer">
-        <el-button size="small" :disabled="!props.current" @click="handleReset">恢复默认</el-button>
-        <el-button size="small" type="primary" @click="emit('close')">取消</el-button>
-      </div>
+  <BaseDialog
+    class="ipd-overlay"
+    :title="props.title"
+    width="560px"
+    max-height="min(80vh, 640px)"
+    @close="emit('close')"
+  >
+    <!-- 导入 / 上传：导入走 JSON 导出文件，上传走图片文件（≤500KB） -->
+    <div class="ipd-actions">
+      <input
+        ref="importInput"
+        type="file"
+        accept=".json,application/json"
+        class="ipd-file-input"
+        data-testid="ipd-import-input"
+        @change="handleImport"
+      />
+      <button
+        type="button"
+        class="ipd-action-btn"
+        data-testid="ipd-import-btn"
+        title="从图标管理的导出文件（JSON）批量导入图标"
+        @click="importInput?.click()"
+      >
+        <Icon name="download" /> 导入图标
+      </button>
+      <input
+        ref="uploadInput"
+        type="file"
+        accept="image/*"
+        class="ipd-file-input"
+        data-testid="ipd-upload-input"
+        @change="handleUpload"
+      />
+      <button
+        type="button"
+        class="ipd-action-btn"
+        :disabled="uploading"
+        data-testid="ipd-upload-btn"
+        title="上传本地图片（PNG / JPG / SVG / GIF / WebP，最大 500KB）作为自定义图标"
+        @click="uploadInput?.click()"
+      >
+        <Icon name="upload" /> {{ uploading ? '上传中…' : '上传图标' }}
+      </button>
+      <span class="ipd-action-hint">自定义 {{ iconsStore.customIcons.length }} 个 · 图片 ≤500KB</span>
     </div>
-  </div>
+
+    <input
+      v-model="keyword"
+      type="text"
+      class="ipd-search"
+      placeholder="搜索图标…"
+      aria-label="搜索图标"
+    />
+
+    <div class="ipd-cats">
+      <button
+        v-for="cat in categories"
+        :key="cat"
+        type="button"
+        class="ipd-cat"
+        :class="{ active: category === cat }"
+        @click="category = cat"
+      >
+        {{ categoryLabel(cat) }}
+      </button>
+    </div>
+
+    <div class="ipd-grid">
+      <button
+        v-for="icon in filteredIcons"
+        :key="iconSrc(icon)"
+        type="button"
+        class="ipd-item"
+        :class="{ active: props.current === iconSrc(icon) }"
+        :title="icon.label"
+        @click="handlePick(icon)"
+      >
+        <img :src="iconSrc(icon)" :alt="icon.label" class="ipd-item-img" />
+        <span class="ipd-item-label">{{ icon.label }}</span>
+      </button>
+      <p v-if="filteredIcons.length === 0" class="ipd-empty">没有匹配的图标</p>
+    </div>
+
+    <template #footer>
+      <el-button size="small" :disabled="!props.current" @click="handleReset">恢复默认</el-button>
+      <el-button size="small" type="primary" @click="emit('close')">取消</el-button>
+    </template>
+  </BaseDialog>
 </template>
 
 <style scoped>
-/* 遮罩层级高于设置弹窗（300），保证嵌套在设置弹窗内时显示在最上层 */
-.ipd-mask {
-  position: fixed;
-  inset: 0;
+/* 弹框外壳（遮罩/面板/头部/关闭/主体/底部/移动端适配）已统一到 common/BaseDialog.vue，
+   本组件仅保留导入上传入口、搜索、分类筛选与图标网格等内容样式 */
+
+/* 层级保留：原遮罩为 400（高于设置弹框的 300），保证嵌套在设置弹框内时显示在最上层 */
+.ipd-overlay {
   z-index: 400;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  background: rgba(0, 0, 0, 0.45);
-}
-
-.ipd-dialog {
-  display: flex;
-  flex-direction: column;
-  width: min(560px, 100%);
-  max-height: min(80vh, 640px);
-  background: var(--color-bg-card, #ffffff);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 12px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
-  overflow: hidden;
-}
-
-.ipd-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
-}
-
-.ipd-title {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--color-text, #1e293b);
-}
-
-.ipd-close {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  /* 视觉已统一到全局 .close-btn（style.css） */
-}
-
-.ipd-close:hover {
-  /* 视觉已统一到全局 .close-btn（style.css） */
-}
-
-.ipd-body {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  flex: 1;
-  padding: 12px 16px;
 }
 
 /* 导入 / 上传入口：位于搜索框上方，与弹框内其它按钮同一套尺寸与配色 */
@@ -466,13 +413,12 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
+/* 图标网格：滚动由基类 .bd-body 统一承担，此处不再自带 flex/overflow 滚动容器 */
 .ipd-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
   gap: 8px;
-  flex: 1;
   min-height: 120px;
-  overflow-y: auto;
   padding: 4px;
 }
 
@@ -525,18 +471,7 @@ onUnmounted(() => {
   color: var(--color-text-muted, #94a3b8);
 }
 
-.ipd-foot {
-  padding: 12px 16px;
-  border-top: 1px solid var(--color-border, #e2e8f0);
-}
-
 @media (max-width: 768px) {
-  .ipd-mask {
-    padding: 12px;
-  }
-  .ipd-dialog {
-    max-height: 86vh;
-  }
   .ipd-grid {
     grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
   }
@@ -544,10 +479,5 @@ onUnmounted(() => {
   .ipd-item {
     padding: 10px 4px;
   }
-}
-
-/* 暗色：主要靠主题 token 切换，此处仅兜底少数硬编码场景 */
-html.dark .ipd-dialog {
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
 }
 </style>

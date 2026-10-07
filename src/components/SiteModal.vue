@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
+import BaseDialog from './common/BaseDialog.vue'
 import IconPickerDialog from './IconPickerDialog.vue'
 import CategoryManager from './CategoryManager.vue'
 import { ref, watch, computed } from 'vue'
@@ -26,10 +27,9 @@ const emit = defineEmits<{
   close: []
 }>()
 
-/** 遮罩点击关闭：仅弹框模式生效（内嵌面板点击空白不应关闭） */
-function onOverlayClick(): void {
-  if (!props.embedded) emit('close')
-}
+/** 面板尺寸：沿用「设置 → 弹窗尺寸」写入的 CSS 变量（site），未配置时回退默认值 */
+const PANEL_WIDTH = 'var(--dlg-w-site, 864px)'
+const PANEL_MAX_HEIGHT = 'var(--dlg-h-site, 90vh)'
 
 const form = ref({
   name: '',
@@ -334,14 +334,17 @@ const handleSubmit = () => {
 
 <template>
   <Transition name="modal">
-    <div :class="embedded ? 'mgr-embed' : 'modal-overlay'" @click.self="onOverlayClick">
-      <div :class="embedded ? 'mgr-embed-inner' : 'modal'">
-      <div v-if="!embedded" class="modal-header">
-        <h2>{{ isEditing ? '编辑网站' : '添加网站' }}</h2>
-        <button class="close-btn" @click="emit('close')"><Icon name="close" /></button>
-      </div>
-
-      <form class="modal-body" @submit.prevent="handleSubmit">
+    <BaseDialog
+      class="site-modal-panel"
+      :title="isEditing ? '编辑网站' : '添加网站'"
+      :width="PANEL_WIDTH"
+      :max-height="PANEL_MAX_HEIGHT"
+      :embedded="embedded"
+      :hide-header="embedded"
+      :close-on-overlay="!embedded"
+      @close="emit('close')"
+    >
+      <form class="site-form" @submit.prevent="handleSubmit">
         <div class="form-group">
           <label>网站名称 *</label>
           <div v-if="isLoading && !form.name" class="skeleton skeleton-name"></div>
@@ -498,46 +501,39 @@ const handleSubmit = () => {
         </div>
         -->
 
-        <div class="modal-footer">
-          <button v-if="!embedded" type="button" class="btn-cancel" @click="emit('close')">取消</button>
-          <button type="submit" class="btn-submit">
-            {{ isEditing ? '保存' : '添加' }}
-          </button>
-        </div>
+        <!-- 表单操作区：保持在 <form> 内（提交按钮依赖 form 归属），故不用基类 #footer 插槽 -->
+      <div class="site-form-actions">
+        <button v-if="!embedded" type="button" class="btn-cancel" @click="emit('close')">取消</button>
+        <button type="submit" class="btn-submit">
+          {{ isEditing ? '保存' : '添加' }}
+        </button>
+      </div>
       </form>
-
-      <!-- 图标选择弹框：选中即回填并关闭；取消 / 遮罩点击 / ESC 关闭均不修改原值。
-           必须放在 <form> 之外：弹框内搜索框按回车会触发隐式表单提交，导致误提交新增网址 -->
-      <IconPickerDialog
-        v-if="iconPickerOpen"
-        title="选择网站图标"
-        :current="form.icon"
-        @select="onPickIcon"
-        @close="closeIconPicker"
-      />
-
-      <!-- 分类管理弹框：新增/编辑分类，复用独立分类管理页面（自带遮罩与关闭） -->
-      <CategoryManager
-        v-if="categoryManagerOpen"
-        @close="closeCategoryManager"
-        @added="onCategoryAdded"
-      />
-    </div>
-    </div>
+    </BaseDialog>
   </Transition>
+
+  <!-- 图标选择弹框：选中即回填并关闭；取消 / 遮罩点击 / ESC 关闭均不修改原值。
+       必须放在 <form> 之外：弹框内搜索框按回车会触发隐式表单提交，导致误提交新增网址 -->
+  <IconPickerDialog
+    v-if="iconPickerOpen"
+    title="选择网站图标"
+    :current="form.icon"
+    @select="onPickIcon"
+    @close="closeIconPicker"
+  />
+
+  <!-- 分类管理弹框：新增/编辑分类，复用独立分类管理页面（自带遮罩与关闭） -->
+  <CategoryManager
+    v-if="categoryManagerOpen"
+    @close="closeCategoryManager"
+    @added="onCategoryAdded"
+  />
 </template>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-  padding: 20px;
-}
+/* 弹框外壳（遮罩/面板/头部/关闭/主体）与 embedded 内嵌模式布局
+   已统一到 common/BaseDialog.vue（embedded + hide-header + close-on-overlay=false），
+   本组件仅保留表单、标签建议、图标选择器、动效等内容样式 */
 
 /* 骨架屏动画 */
 @keyframes skeleton-pulse {
@@ -587,34 +583,12 @@ const handleSubmit = () => {
   to { transform: rotate(360deg); }
 }
 
-.modal {
-  background-color: white;
-  border-radius: 12px;
-  width: 100%;
-  max-width: var(--dlg-w-site, 864px); /* 增加 80% (原 480px * 1.8) */
-  max-height: var(--dlg-h-site, 90vh);
-  max-height: var(--dlg-h-site, 90dvh);
-  overflow-y: auto;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.modal-header h2 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1e293b;
-}
-
-/* close-btn 视觉已统一到全局 .close-btn（style.css） */
-
-.modal-body {
-  padding: 24px;
+/* 尺寸契约由基类的 :width / :max-height 承接（--dlg-w-site / --dlg-h-site）；
+   此处仅补一处动态视口单位升级：原 .modal 声明过 90dvh 兜底 */
+@supports (max-height: 90dvh) {
+  .site-modal-panel :deep(.bd-panel) {
+    max-height: var(--dlg-h-site, 90dvh);
+  }
 }
 
 .form-group {
@@ -754,7 +728,8 @@ const handleSubmit = () => {
   margin-top: 4px;
 }
 
-.modal-footer {
+/* 表单操作区（位于 form 内，非弹框底部条） */
+.site-form-actions {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
@@ -776,11 +751,11 @@ const handleSubmit = () => {
   opacity: 0;
 }
 
-.modal-enter-active .modal {
+.modal-enter-active :deep(.bd-panel) {
   animation: modal-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.modal-leave-active .modal {
+.modal-leave-active :deep(.bd-panel) {
   animation: modal-out 0.2s ease forwards;
 }
 
@@ -937,30 +912,5 @@ const handleSubmit = () => {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-/* ============================================================
-   embedded 模式：常驻面板内嵌在「设置 → 导航站 → 添加网址」
-   无遮罩 / 无固定定位，宽度撑满父面板，超高由外层面板滚动。
-   ============================================================ */
-.mgr-embed {
-  position: static;
-  inset: auto;
-  z-index: auto;
-  display: block;
-  width: 100%;
-  padding: 0;
-  background-color: transparent;
-  overflow: visible;
-}
-
-.mgr-embed-inner {
-  width: 100%;
-  max-width: none;
-  max-height: none;
-  overflow: visible;
-  border-radius: 12px;
-  background-color: var(--color-bg-card, #fff);
-  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
 }
 </style>

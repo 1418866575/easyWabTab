@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { toastAlert } from '@/utils/dialog'
 import Icon from './Icon.vue'
+import BaseDialog from './common/BaseDialog.vue'
 import { useAppSettingsStore } from '@/stores/settings'
 import { incrementHelpAckCount } from '../composables/useHelpModal'
 const settingsStore = useAppSettingsStore()
@@ -451,38 +452,31 @@ const skillInstall = [
 </script>
 
 <template>
-  <div class="modal-overlay" @click.self="emit('close')">
-    <div class="help-modal">
-      <div class="modal-header">
-        <h2><Icon name="lightbulb" /> 使用帮助</h2>
-        <button class="close-btn" @click="emit('close')" title="关闭">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
+  <BaseDialog class="help-dialog" width="680px" max-height="85vh" @close="emit('close')">
+    <template #title><Icon name="lightbulb" /> 使用帮助</template>
 
-      <!-- 标签页导航 -->
-      <div class="help-tabs" role="tablist">
-        <button
-          v-for="tab in visibleTabs"
-          :key="tab.key"
-          class="help-tab"
-          :class="{ active: activeTab === tab.key }"
-          :aria-selected="activeTab === tab.key"
-          :data-testid="`help-tab-${tab.key}`"
-          role="tab"
-          @click="activeTab = tab.key"
-        >
-          <span class="help-tab-icon"><Icon :name="tab.icon" :size="16" /></span>
-          <span class="help-tab-label">{{ tab.label }}</span>
-        </button>
-      </div>
+    <!-- 标签页导航 -->
+    <div class="help-tabs" role="tablist">
+      <button
+        v-for="tab in visibleTabs"
+        :key="tab.key"
+        class="help-tab"
+        :class="{ active: activeTab === tab.key }"
+        :aria-selected="activeTab === tab.key"
+        :data-testid="`help-tab-${tab.key}`"
+        role="tab"
+        @click="activeTab = tab.key"
+      >
+        <span class="help-tab-icon"><Icon :name="tab.icon" :size="16" /></span>
+        <span class="help-tab-label">{{ tab.label }}</span>
+      </button>
+    </div>
 
-      <div class="modal-body">
-        <!-- ===== 标签 1：网址导航 ===== -->
-        <template v-if="activeTab === 'nav'">
+    <!-- 各标签页正文：外壳滚动/内边距由 BaseDialog 的 .bd-body 提供，
+         这里只保留正文自身的纵向排布（原 .modal-body 的 flex + gap） -->
+    <div class="help-content">
+    <!-- ===== 标签 1：网址导航 ===== -->
+    <template v-if="activeTab === 'nav'">
         <!-- 云同步体验账号 -->
         <section class="help-section">
           <div class="download-card">
@@ -775,72 +769,20 @@ const skillInstall = [
           </ol>
         </section>
         </template>
-      </div>
-
-      <div class="modal-footer">
-        <button class="btn-primary" @click="acknowledgeHelp">知道了</button>
-      </div>
     </div>
-  </div>
+
+    <template #footer>
+      <button class="btn-primary" @click="acknowledgeHelp">知道了</button>
+    </template>
+  </BaseDialog>
 </template>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-}
+/* 弹框外壳（遮罩/面板/头部/关闭/主体/滚动/移动端适配）已统一到 common/BaseDialog.vue，
+   本组件仅保留标签栏、各标签页正文与底部按钮等内容样式 */
 
-.help-modal {
-  background-color: white;
-  border-radius: 16px;
-  width: 100%;
-  max-width: 680px;
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-  overflow: hidden;
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.modal-header h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: #1e293b;
-}
-
-.close-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* 视觉已统一到全局 .close-btn（style.css） */
-}
-
-.close-btn:hover {
-  /* 视觉已统一到全局 .close-btn（style.css） */
-}
-
-.modal-body {
-  padding: 24px;
-  overflow-y: auto;
-  flex: 1;
+/* 各标签页正文容器：只保留原 .modal-body 的纵向排布（外壳 padding/滚动已由基类接管） */
+.help-content {
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -1002,10 +944,8 @@ const skillInstall = [
 }
 
 /* 底部 */
-.modal-footer {
-  padding: 16px 24px;
-  border-top: 1px solid #f1f5f9;
-  display: flex;
+/* 底部：原为居中单按钮，基类 .bd-footer 默认右对齐，这里局部改回居中 */
+.help-dialog :deep(.bd-footer) {
   justify-content: center;
 }
 
@@ -1139,11 +1079,13 @@ const skillInstall = [
   flex-shrink: 0;
 }
 
-/* 标签页导航 */
+/* 标签页导航：原为头部与正文之间的整宽条，现落在 .bd-body 内，
+   用负外边距抵消基类正文 padding 保持通栏观感 */
 .help-tabs {
   display: flex;
   gap: 4px;
   padding: 0 16px;
+  margin: 0 calc(-1 * var(--space-6, 24px)) 20px;
   border-bottom: 1px solid #f1f5f9;
   overflow-x: auto;
   scrollbar-width: none;
@@ -1369,11 +1311,6 @@ const skillInstall = [
   .help-tab {
     padding: 10px;
     font-size: 12px;
-  }
-
-  .help-modal {
-    max-height: 90vh;
-    max-height: 90dvh;
   }
 
   .download-card {
