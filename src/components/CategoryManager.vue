@@ -388,16 +388,11 @@ const sortedCustomCategories = computed(() =>
 }
 
 .close-btn {
-  background: none;
-  border: none;
-  font-size: 18px;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 4px;
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 .close-btn:hover {
-  color: #64748b;
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 .manager-body {
@@ -467,23 +462,16 @@ const sortedCustomCategories = computed(() =>
 }
 
 .btn-add {
-  padding: 10px 16px;
-  background-color: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
   white-space: nowrap;
+  /* 视觉已统一到全局 .ui-btn--primary（style.css） */
 }
 
 .btn-add:hover:not(:disabled) {
-  background-color: #2563eb;
+  /* 视觉已统一到全局 .ui-btn--primary（style.css） */
 }
 
 .btn-add:disabled {
-  background-color: #94a3b8;
-  cursor: not-allowed;
+  /* 视觉已统一到全局 .ui-btn--primary（style.css） */
 }
 
 .category-list {

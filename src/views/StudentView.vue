@@ -464,22 +464,7 @@ async function onOnboardingComplete() {
   gap: 8px;
 }
 
-.st-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 6px;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font-size: 13px;
-  transition: background 0.15s;
-}
-.st-btn:hover {
-  background: var(--color-hover, #f3f4f6);
-}
+/* .st-btn 视觉已统一到全局 .ui-btn（次按钮） */
 
 /* ============ 家长模式横条 ============ */
 .st-parent-bar {
@@ -809,16 +794,7 @@ html.dark .st-menu-item.active {
     box-shadow: 0 -2px 12px var(--color-shadow, rgba(0, 0, 0, 0.4));
   }
 }
-html.dark .st-btn {
-  background: var(--color-surface);
-  border-color: var(--color-border);
-  color: var(--color-text);
-}
-html.dark .st-btn:hover {
-  background: var(--color-hover);
-  color: var(--color-primary);
-  border-color: var(--color-primary);
-}
+/* .st-btn 暗色态已统一到全局 .ui-btn 次要按钮 token（style.css），删除避免与其他次要按钮不一致 */
 html.dark .st-parent-bar {
   background: var(--color-surface-2);
   border-color: var(--color-border);

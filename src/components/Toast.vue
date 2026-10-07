@@ -99,17 +99,11 @@ onUnmounted(() => {
 }
 
 .toast-close {
-  background: none;
-  border: none;
-  font-size: 18px;
-  color: var(--color-text-muted, #94a3b8);
-  cursor: pointer;
-  padding: 0 4px;
-  line-height: 1;
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 .toast-close:hover {
-  color: var(--color-text, #1e293b);
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 /* Toast transition animations */
@@ -153,10 +147,10 @@ html.dark .toast-message {
 }
 
 html.dark .toast-close {
-  color: var(--color-text-muted, #9ca3af);
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 html.dark .toast-close:hover {
-  color: var(--color-text, #f9fafb);
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 </style>

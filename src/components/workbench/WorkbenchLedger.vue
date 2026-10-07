@@ -1216,26 +1216,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   gap: 8px;
 }
 
-.btn-add {
-  padding: 10px 16px;
-  background-color: var(--color-primary, var(--color-primary));
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color var(--transition-fast, 0.15s ease);
-}
-
-.btn-add:hover:not(:disabled) {
-  background-color: var(--color-primary-hover, var(--color-primary-hover));
-}
-
-.btn-add:disabled {
-  background: var(--color-text-muted, var(--color-text-muted));
-  cursor: not-allowed;
-}
+/* .btn-add 视觉已统一到全局 .ui-btn--primary（style.css） */
 
 .btn-manage {
   padding: 10px 16px;
@@ -1373,27 +1354,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 }
 
 /* ===== 按钮（复用 WorkbenchTodo/Exercise 体系）===== */
-.btn-edit,
-.btn-delete {
-  padding: 4px 10px;
-  font-size: 12px;
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-sm, 6px);
-  cursor: pointer;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.btn-edit:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.btn-delete:hover {
-  color: var(--color-error, var(--color-error));
-  border-color: var(--color-error, var(--color-error));
-}
+/* .btn-edit/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
 
 /* ===== 弹框（复用 WorkbenchTodo 体系）===== */
 .dialog-overlay {
@@ -1509,18 +1470,11 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 }
 
 .close-btn {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: var(--color-text-muted, var(--color-text-muted));
-  cursor: pointer;
-  padding: 4px;
-  border-radius: var(--radius-sm, 6px);
-  transition: color var(--transition-fast, 0.15s ease);
+  /* 视觉已统一到全局 .close-btn（style.css）：32×32 图标方块，1px 边框 + 8px 圆角 + hover 主色 */
 }
 
 .close-btn:hover {
-  color: var(--color-text, var(--color-text));
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 .dialog-body {
@@ -1614,21 +1568,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   cursor: not-allowed;
 }
 
-.btn-cancel {
-  padding: 9px 16px;
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  cursor: pointer;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.btn-cancel:hover {
-  background: var(--color-bg-hover, var(--color-bg-active));
-}
+/* .btn-cancel 视觉已统一到全局 .ui-btn（style.css） */
 
 /* ===== 分组管理 ===== */
 .ld-cat-list {
@@ -1795,9 +1735,6 @@ html.dark .ld-cat-name {
 }
 
 html.dark .btn-manage,
-html.dark .btn-cancel,
-html.dark .btn-edit,
-html.dark .btn-delete,
 html.dark .month-btn,
 html.dark .ld-charts-toggle {
   background-color: var(--color-bg-card, #1f2937);
@@ -1823,10 +1760,7 @@ html.dark .btn-save:disabled {
   color: var(--color-text-muted, #9ca3af);
 }
 
-html.dark .btn-add:disabled {
-  background-color: var(--color-bg-input, #374151);
-  color: var(--color-text-muted, #9ca3af);
-}
+/* html.dark .btn-add:disabled 视觉已统一到全局 .ui-btn--primary（style.css） */
 
 html.dark .form-input,
 html.dark select.form-input,

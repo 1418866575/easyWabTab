@@ -121,18 +121,11 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
 
 .reminder-close {
   align-self: flex-end;
-  padding: 8px 20px;
-  background-color: var(--color-primary, var(--color-primary));
-  color: #ffffff;
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  cursor: pointer;
-  transition: opacity 0.15s ease;
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 .reminder-close:hover {
-  opacity: 0.85;
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 /* 暗色模式覆盖（同工作台浮层模式，见 WorkbenchNotes.vue:645-651） */

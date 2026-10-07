@@ -705,10 +705,7 @@ onUnmounted(() => {
   min-width: 0;
 }
 
-/* 顶栏按钮基础样式。
-   「工作台管理」按钮位于子组件 WorkbenchManagePanel 内部（非根元素），
-   父组件 scoped 选择器默认命中不到 → 用 :deep() 让它共用同一份声明，避免样式两处维护。 */
-.btn-help,
+/* .btn-help 视觉已统一到全局 .ui-btn（次按钮）；子组件触发按钮经 :deep 透传保留 */
 :deep(.wmp-trigger) {
   display: inline-flex;
   align-items: center;
@@ -723,7 +720,6 @@ onUnmounted(() => {
   transition: all 0.2s;
 }
 
-.btn-help:hover,
 :deep(.wmp-trigger):hover {
   background-color: var(--color-bg-hover, #f1f5f9);
   color: var(--color-primary, #3b82f6);
@@ -1059,27 +1055,12 @@ onUnmounted(() => {
   border-color: #ef4444;
 }
 
+/* .nav-add-site 视觉已统一到全局 .ui-btn--primary（8px 圆角）；保留 flex 布局 */
 .nav-add-site {
   flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 7px 14px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #fff;
-  background: var(--color-primary, #3b82f6);
-  border: 1px solid var(--color-primary, #3b82f6);
-  border-radius: 18px;
-  cursor: pointer;
-  transition: background-color 0.2s, box-shadow 0.2s;
 }
 
-.nav-add-site:hover {
-  background: var(--color-primary-hover, #2563eb);
-  border-color: var(--color-primary-hover, #2563eb);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
-}
+/* .nav-add-site:hover 视觉已统一到全局 .ui-btn--primary:hover（style.css）：蓝色主操作 hover + 抬升 + 阴影 */
 
 .nas-plus {
   font-size: 14px;
@@ -1173,11 +1154,7 @@ html.dark .nav-add-site {
   border-color: var(--color-primary, #3b82f6);
 }
 
-html.dark .nav-add-site:hover {
-  background: var(--color-primary-hover, #2563eb);
-  border-color: var(--color-primary-hover, #2563eb);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
-}
+/* .nav-add-site:hover 暗色态已统一到全局 .ui-btn--primary:hover（style.css） */
 
 @media (max-width: 768px) {
   .app-bar {

@@ -1161,18 +1161,11 @@ async function handleInsertImage(e: Event): Promise<void> {
 }
 
 .close-btn {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: var(--color-text-muted, #94a3b8);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: var(--radius-sm, 6px);
-  transition: color var(--transition-fast, 0.15s ease);
+  /* 视觉已统一到全局 .close-btn（style.css）：32×32 图标方块，1px 边框 + 8px 圆角 + hover 主色 */
 }
 
 .close-btn:hover {
-  color: var(--color-text, #1e293b);
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 .dialog-overlay.list-dialog-overlay {

@@ -536,23 +536,7 @@ function clearBackground() {
   color: #1e293b;
 }
 
-.close-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-  color: #94a3b8;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.close-btn:hover {
-  color: #64748b;
-  background-color: #f1f5f9;
-}
+/* close-btn 视觉已统一到全局 .close-btn（style.css） */
 
 .modal-body {
   padding: 24px;
@@ -725,20 +709,11 @@ function clearBackground() {
 
 .add-btn {
   width: 100%;
-  padding: 12px;
-  border: 2px dashed #cbd5e1;
-  border-radius: 10px;
-  background: transparent;
-  color: #64748b;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
+  /* 视觉已统一到全局 .ui-btn--primary（style.css）；仅保留整宽布局 */
 }
 
 .add-btn:hover {
-  border-color: #3b82f6;
-  color: #3b82f6;
-  background: #f8fafc;
+  /* 视觉已统一到全局 .ui-btn--primary（style.css） */
 }
 
 .custom-input {
@@ -759,33 +734,9 @@ function clearBackground() {
   border-color: #3b82f6;
 }
 
-.confirm-btn {
-  padding: 10px 16px;
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-}
+/* .confirm-btn 视觉已统一到全局 .ui-btn--primary */
 
-.confirm-btn:hover {
-  background: #2563eb;
-}
-
-.cancel-btn {
-  padding: 10px 16px;
-  background: #f1f5f9;
-  color: #64748b;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.cancel-btn:hover {
-  background: #e2e8f0;
-}
+/* .cancel-btn 视觉已统一到全局 .ui-btn（次按钮） */
 
 /* 底部 */
 .modal-footer {
@@ -796,41 +747,9 @@ function clearBackground() {
   gap: 12px;
 }
 
-.btn-clear {
-  padding: 10px 20px;
-  background: white;
-  color: #ef4444;
-  border: 2px solid #ef4444;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
+/* .btn-clear 视觉已统一到全局 .ui-btn--danger */
 
-.btn-clear:hover:not(:disabled) {
-  background: #fef2f2;
-}
-
-.btn-clear:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  padding: 10px 32px;
-  background-color: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.btn-primary:hover {
-  background-color: #2563eb;
-}
+/* .btn-primary 视觉已统一到全局 .ui-btn--primary */
 
 /* 上传背景图片 */
 .hidden-file-input {
@@ -844,20 +763,7 @@ function clearBackground() {
   margin-bottom: 16px;
 }
 
-.upload-btn {
-  padding: 10px 16px;
-  background-color: #10b981;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.upload-btn:hover {
-  background-color: #059669;
-}
+/* .upload-btn 视觉已统一到全局 .ui-btn--success */
 
 .upload-hint {
   font-size: 12px;
@@ -909,22 +815,9 @@ function clearBackground() {
   margin-top: 16px;
 }
 
+/* .add-gradient-btn 视觉已统一到全局 .ui-btn--primary；保留整宽布局 */
 .add-gradient-btn {
   width: 100%;
-  padding: 12px;
-  border: 2px dashed #cbd5e1;
-  border-radius: 10px;
-  background: transparent;
-  color: #64748b;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.add-gradient-btn:hover {
-  border-color: #3b82f6;
-  color: #3b82f6;
-  background: #f8fafc;
 }
 
 .gradient-creator {

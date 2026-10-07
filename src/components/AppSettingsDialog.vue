@@ -4236,20 +4236,7 @@ function toggleFullscreen(): void {
   margin: 0;
 }
 
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 18px;
-  color: var(--color-text-muted, var(--color-text-muted));
-  cursor: pointer;
-  padding: 4px;
-  border-radius: var(--radius-sm);
-  transition: color var(--transition-fast, 0.15s ease);
-}
-
-.close-btn:hover {
-  color: var(--color-text, var(--color-text));
-}
+/* .close-btn 视觉已统一到全局 .close-btn（style.css） */
 
 .manager-body {
   padding: 0;
@@ -4398,22 +4385,7 @@ html.dark .tab-btn.active {
 }
 
 /* 重置类按钮共用样式 */
-.row-reset {
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  cursor: pointer;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  transition: all var(--transition-fast, 0.15s ease);
-  padding: 4px 10px;
-  font-size: 12px;
-  border-radius: var(--radius-sm);
-  white-space: nowrap;
-}
-
-.row-reset:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
+/* .row-reset 视觉已统一到全局 .ui-btn（次按钮 sm） */
 
 /* 工作台菜单/城市配置区块（独立于 .settings-grid，不复用其列定义——R6） */
 .wb-menu-config,
@@ -4746,27 +4718,7 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
   gap: 6px;
 }
 
-.wb-menu-btn {
-  padding: 4px 10px;
-  font-size: 12px;
-  white-space: nowrap;
-  cursor: pointer;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-sm);
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.wb-menu-btn:hover:not(:disabled) {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.wb-menu-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
+/* .wb-menu-btn 视觉已统一到全局 .ui-btn（次按钮 sm） */
 
 /* 分段控件（显示控制：经典 / 侧边栏 视图模式二选一） */
 .seg-control {
@@ -5103,27 +5055,7 @@ html.dark .remind-label {
   gap: 8px;
 }
 
-.site-action-btn {
-  padding: 8px 14px;
-  background-color: white;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.site-action-btn:hover:not(:disabled) {
-  background-color: #f1f5f9;
-  color: #3b82f6;
-  border-color: #3b82f6;
-}
-
-.site-action-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
+/* .site-action-btn 视觉已统一到全局 .ui-btn（次按钮） */
 
 /* ===== 「关于」页（设置 → 通知与同步 → 关于）：公众号 + 开源地址 ===== */
 .about-config .wb-menu-hint {
@@ -5295,44 +5227,7 @@ html.dark .remind-label {
   }
 }
 
-/* 站点管理暗色模式（动作按钮沿用至拆分后的各独立页） */
-html.dark .site-action-btn {
-  background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
-  border-color: var(--color-border, #374151);
-}
-
-html.dark .site-action-btn:hover:not(:disabled) {
-  background-color: var(--color-bg-hover, #374151);
-  color: var(--color-primary, #3b82f6);
-  border-color: var(--color-primary, #3b82f6);
-}
-
-/* 停止检测：仅在检测进行中可用（橙色描边区分于普通动作） */
-.site-action-btn.stop:not(:disabled) {
-  color: #d97706;
-  border-color: #fcd34d;
-}
-html.dark .site-action-btn.stop:not(:disabled) {
-  color: #fbbf24;
-  border-color: #92400e;
-}
-
-/* 数据清理：危险按钮（红色描边，警示不可恢复） */
-.site-action-btn.danger {
-  color: #dc2626;
-  border-color: #fca5a5;
-  font-weight: 600;
-}
-.site-action-btn.danger:hover:not(:disabled) {
-  background-color: #fef2f2;
-  color: #b91c1c;
-  border-color: #dc2626;
-}
-html.dark .site-action-btn.danger {
-  color: #f87171;
-  border-color: #7f1d1d;
-}
+/* .site-action-btn 暗色/stop/danger 视觉已统一到全局 .ui-btn（base + .stop/.danger），暗色由 --color-* token 自动跟随 */
 html.dark .site-action-btn.danger:hover:not(:disabled) {
   background-color: #2a1414;
   color: #fca5a5;
@@ -5567,18 +5462,7 @@ html.dark .ld-builtin-tag {
 .student-subject-add .wb-menu-name-input {
   flex: 1;
 }
-.student-subject-add-btn {
-  padding: 6px 16px;
-  border-radius: 6px;
-  font-size: 13px;
-  cursor: pointer;
-  background: var(--color-primary, #3b82f6);
-  color: #ffffff;
-  border: 1px solid var(--color-primary, #3b82f6);
-}
-.student-subject-add-btn:hover {
-  filter: brightness(0.95);
-}
+/* .student-subject-add-btn 视觉已统一到全局 .ui-btn--primary */
 
 .wb-menu-list {
   list-style: none;
@@ -5609,25 +5493,7 @@ html.dark .ld-builtin-tag {
   align-items: center;
   gap: 4px;
 }
-.mini-btn {
-  width: 26px;
-  height: 26px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 4px;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-  padding: 0;
-}
-.mini-btn:hover:not(:disabled) {
-  background: var(--color-hover, #f3f4f6);
-}
-.mini-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
+/* .mini-btn 视觉已统一到全局 .ui-btn（次按钮 sm） */
 .mini-switch {
   width: 32px;
   height: 18px;

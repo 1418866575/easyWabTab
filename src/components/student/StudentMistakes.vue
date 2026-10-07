@@ -758,33 +758,7 @@ onMounted(() => {
 }
 
 /* ===== 表格内编辑/删除按钮（与学习计划一致） ===== */
-.btn-edit, .btn-delete {
-  padding: 5px 12px;
-  font-size: 12px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all var(--transition-fast, 0.15s ease);
-  line-height: 1.5;
-  white-space: nowrap;
-}
-.btn-edit {
-  background: rgba(59, 130, 246, 0.1);
-  border-color: rgba(59, 130, 246, 0.3);
-  color: var(--color-link, #3b82f6);
-}
-.btn-edit:hover {
-  background: rgba(59, 130, 246, 0.18);
-}
-.btn-delete {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.3);
-  color: #ef4444;
-}
-.btn-delete:hover {
-  background: rgba(239, 68, 68, 0.18);
-}
+/* .btn-edit/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
 
 .sm-dialog-body {
   display: flex;

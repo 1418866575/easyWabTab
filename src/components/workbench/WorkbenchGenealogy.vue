@@ -898,7 +898,7 @@ onUnmounted(() => {
   gap: 8px;
   margin-top: auto;
 }
-.btn-delete:hover { color: var(--color-error, #ef4444); border-color: var(--color-error, #ef4444); }
+/* .btn-delete 视觉已统一到全局 .ui-btn--danger（style.css） */
 
 /* ===== 空态 ===== */
 .empty-state {
@@ -920,17 +920,7 @@ onUnmounted(() => {
 }
 .empty-invite:hover { color: var(--color-primary, #3b82f6); border-color: var(--color-primary, #3b82f6); }
 .filter-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.btn-cancel {
-  padding: 6px 12px;
-  background: var(--color-bg-card, #fff);
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 6px;
-  font-size: 13px;
-  color: var(--color-text-secondary, #64748b);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.btn-cancel:hover { color: var(--color-primary, #3b82f6); border-color: var(--color-primary, #3b82f6); }
+/* .btn-cancel 视觉已统一到全局 .ui-btn（style.css） */
 
 /* ===== 家谱树 ===== */
 .fg-tree-bar {
@@ -1070,5 +1060,5 @@ html.dark .fg-rel-section { background-color: var(--color-bg-card, #1f2937); bor
 html.dark .fg-rel-title { color: var(--color-text, #f9fafb); }
 html.dark .fg-rel-item { color: var(--color-text, #f9fafb); }
 html.dark .form-group > label, html.dark .field-label { color: var(--color-text-secondary, #d1d5db); }
-html.dark .btn-cancel { background-color: var(--color-bg-card, #1f2937); color: var(--color-text-secondary, #d1d5db); border-color: var(--color-border, #374151); }
+/* html.dark .btn-cancel 视觉已统一到全局 .ui-btn（style.css） */
 </style>

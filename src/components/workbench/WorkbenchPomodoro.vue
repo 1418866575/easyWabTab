@@ -336,46 +336,29 @@ onUnmounted(() => {
 }
 
 .btn-primary {
-  padding: 10px 20px;
-  background-color: var(--color-primary, var(--color-primary));
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  cursor: pointer;
   white-space: nowrap;
-  transition: background-color var(--transition-fast, 0.15s ease);
+  /* 视觉已统一到全局 .ui-btn--primary（style.css）：蓝色主操作，36px 高 + 8px 圆角 + 1px 边框 */
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: var(--color-primary-hover, var(--color-primary-hover));
+  /* 视觉已统一到全局 .ui-btn--primary（style.css） */
 }
 
 .btn-primary:disabled {
-  background: var(--color-text-muted, var(--color-text-muted));
-  cursor: not-allowed;
+  /* 视觉已统一到全局 .ui-btn--primary（style.css） */
 }
 
 .btn-secondary {
-  padding: 10px 20px;
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  cursor: pointer;
-  color: var(--color-text-secondary, var(--color-text-secondary));
   white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
+  /* 视觉已统一到全局 .ui-btn（style.css）：次要按钮，浅底 + 边框 + 8px 圆角 + hover 主色 */
 }
 
 .btn-secondary:hover:not(:disabled) {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
+  /* 视觉已统一到全局 .ui-btn（style.css） */
 }
 
 .btn-secondary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  /* 视觉已统一到全局 .ui-btn（style.css） */
 }
 
 .pm-today {
@@ -449,16 +432,7 @@ html.dark .pm-time {
   color: var(--color-text, #f9fafb);
 }
 
-html.dark .btn-secondary {
-  background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
-  border-color: var(--color-border, #374151);
-}
-
-html.dark .btn-primary:disabled {
-  background-color: var(--color-bg-input, #374151);
-  color: var(--color-text-muted, #9ca3af);
-}
+/* .btn-secondary / .btn-primary:disabled 暗色态已统一到全局 token（style.css），删除避免重复覆盖 */
 
 html.dark .form-input,
 html.dark select.form-input,

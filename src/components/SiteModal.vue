@@ -611,18 +611,7 @@ const handleSubmit = () => {
   color: #1e293b;
 }
 
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 18px;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 4px;
-}
-
-.close-btn:hover {
-  color: #64748b;
-}
+/* close-btn 视觉已统一到全局 .close-btn（style.css） */
 
 .modal-body {
   padding: 24px;
@@ -701,26 +690,7 @@ const handleSubmit = () => {
   flex: 1;
 }
 
-.btn-fetch {
-  padding: 10px 16px;
-  background-color: #10b981;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  white-space: nowrap;
-}
-
-.btn-fetch:hover:not(:disabled) {
-  background-color: #059669;
-}
-
-.btn-fetch:disabled {
-  background-color: #9ca3af;
-  cursor: not-allowed;
-}
+/* .btn-fetch 视觉已统一到全局 .ui-btn--success */
 
 /* 标签输入组 */
 .tag-group {
@@ -791,35 +761,9 @@ const handleSubmit = () => {
   padding-top: 8px;
 }
 
-.btn-cancel {
-  padding: 10px 20px;
-  background-color: #f1f5f9;
-  color: #64748b;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
+/* .btn-cancel 视觉已统一到全局 .ui-btn（次按钮） */
 
-.btn-cancel:hover {
-  background-color: #e2e8f0;
-}
-
-.btn-submit {
-  padding: 10px 24px;
-  background-color: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.btn-submit:hover {
-  background-color: #2563eb;
-}
+/* .btn-submit 视觉已统一到全局 .ui-btn--primary */
 
 /* === Vue Transition 动画 === */
 .modal-enter-active,
@@ -982,26 +926,7 @@ const handleSubmit = () => {
 }
 
 /* 分类下拉后的「新增分类」按钮：与下拉同行右置，紧凑不抢视觉 */
-.btn-add-category {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 9px 12px;
-  border: 1px dashed var(--color-primary, #3b82f6);
-  border-radius: 8px;
-  background: var(--color-primary-light, #eff6ff);
-  color: var(--color-primary, #3b82f6);
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-
-.btn-add-category:hover {
-  background: var(--color-primary, #3b82f6);
-  color: white;
-}
+/* .btn-add-category 视觉已统一到全局 .ui-btn--primary */
 
 @keyframes dropdownIn {
   from {

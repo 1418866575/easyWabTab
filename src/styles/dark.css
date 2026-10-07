@@ -88,39 +88,6 @@ html.dark .category-wrapper {
   background-color: var(--color-bg);
 }
 
-/* 按钮 */
-html.dark .btn-action {
-  background-color: var(--color-bg-card);
-  color: var(--color-text-secondary);
-  border-color: var(--color-border);
-}
-
-html.dark .btn-action:hover {
-  background-color: var(--color-bg-hover);
-  color: var(--color-primary);
-  border-color: var(--color-primary);
-}
-
-html.dark .btn-add {
-  background-color: var(--color-primary);
-}
-
-html.dark .btn-add:hover:not(:disabled) {
-  background-color: var(--color-primary-hover);
-}
-
-html.dark .btn-submit {
-  background-color: var(--color-primary);
-}
-
-html.dark .btn-fetch {
-  background-color: var(--color-success);
-}
-
-html.dark .btn-cancel {
-  background-color: var(--color-bg-card);
-  color: var(--color-text-secondary);
-}
 
 /* 输入框 - 修复白色问题 */
 html.dark input,
@@ -381,31 +348,6 @@ html.dark .icon-img {
   opacity: 0.9;
 }
 
-/* 管理后台入口按钮 */
-html.dark .btn-admin {
-  background-color: var(--color-bg-card);
-  color: var(--color-text-secondary);
-  border-color: var(--color-border);
-}
-
-html.dark .btn-admin:hover {
-  background-color: var(--color-bg-hover);
-  color: var(--color-primary);
-  border-color: var(--color-primary);
-}
-
-/* 右上角帮助按钮 */
-html.dark .btn-help {
-  background-color: var(--color-bg-card);
-  color: var(--color-text-secondary);
-  border-color: var(--color-border);
-}
-
-html.dark .btn-help:hover {
-  background-color: var(--color-bg-hover);
-  color: var(--color-primary);
-  border-color: var(--color-primary);
-}
 
 /* 分类管理面板 */
 html.dark .category-manager-overlay {
@@ -613,27 +555,6 @@ html.dark .empty-custom {
   color: var(--color-text-muted);
 }
 
-/* 关闭按钮 */
-html.dark .close-btn {
-  color: var(--color-text-muted);
-}
-
-html.dark .close-btn:hover {
-  color: var(--color-text);
-}
-
-/* 添加按钮 */
-html.dark .btn-add {
-  background-color: var(--color-primary);
-}
-
-html.dark .btn-add:hover:not(:disabled) {
-  background-color: var(--color-primary-hover);
-}
-
-html.dark .btn-add:disabled {
-  background-color: var(--color-text-muted);
-}
 
 /* ========================================
    引擎管理弹框 - 全面暗色模式覆盖
@@ -691,17 +612,6 @@ html.dark .tag-suggestion:hover {
   color: white;
 }
 
-/* 排序控件 */
-html.dark .btn-sort {
-  background-color: var(--color-bg);
-  border-color: var(--color-border);
-  color: var(--color-text-muted);
-}
-
-html.dark .btn-sort:hover:not(:disabled) {
-  background-color: var(--color-bg-hover);
-  color: var(--color-primary);
-}
 
 /* ========================================
    全局修复
@@ -852,16 +762,6 @@ html.dark .btn-icon-clear:hover {
   background: #3f1414;
 }
 
-html.dark .btn-suggestion {
-  background: #1e3a5f;
-  border-color: var(--color-primary, #3b82f6);
-  color: #60a5fa;
-}
-
-html.dark .btn-suggestion:hover {
-  background: var(--color-primary, #3b82f6);
-  color: white;
-}
 
 html.dark .icon-picker-panel {
   background: var(--color-bg-card, #1f2937);
@@ -1017,14 +917,6 @@ html.dark .modal-header h2 {
   color: var(--color-text, #f9fafb);
 }
 
-html.dark .close-btn {
-  color: var(--color-text-muted, #9ca3af);
-}
-
-html.dark .close-btn:hover {
-  color: var(--color-text, #f9fafb);
-  background-color: var(--color-bg-hover, #374151);
-}
 
 html.dark .modal-body {
   background-color: var(--color-bg-card, #1f2937);
@@ -1091,13 +983,6 @@ html.dark .modal-footer {
   border-top-color: var(--color-border, #374151);
 }
 
-html.dark .btn-primary {
-  background-color: var(--color-primary, #3b82f6);
-}
-
-html.dark .btn-primary:hover {
-  background-color: var(--color-primary-hover, #2563eb);
-}
 
 /* ===== 帮助弹窗：标签页暗色模式 ===== */
 html.dark .help-tabs {
@@ -1226,16 +1111,6 @@ html.dark .sync-label {
   color: #94a3b8;
 }
 
-html.dark .btn-copy {
-  background: #1e293b;
-  border-color: #334155;
-  color: #cbd5e1;
-}
-
-html.dark .btn-copy:hover {
-  border-color: #60a5fa;
-  color: #60a5fa;
-}
 
 /* ========================================
    SiteCard 悬停描述弹框暗色模式
@@ -1329,16 +1204,6 @@ html.dark .filter-bar {
   background-color: transparent;
 }
 
-html.dark .btn-secondary {
-  background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
-  border-color: var(--color-border, #374151);
-}
-
-html.dark .btn-secondary:hover {
-  background-color: var(--color-bg-hover, #374151);
-  border-color: var(--color-border-hover, #4b5563);
-}
 
 html.dark .import-export-bar {
   border-top-color: var(--color-border, #374151);

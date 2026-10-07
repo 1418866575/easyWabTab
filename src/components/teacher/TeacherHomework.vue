@@ -655,8 +655,6 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
 
 /* ===== 表格内按钮（与 StudentMistakes 一致） ===== */
 .btn-detail,
-.btn-edit,
-.btn-delete,
 .btn-madeup,
 .btn-submit,
 .btn-pending {
@@ -675,18 +673,8 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
   color: var(--color-link, #3b82f6);
 }
 .btn-detail:hover { background: rgba(59, 130, 246, 0.18); }
-.btn-edit {
-  background: rgba(59, 130, 246, 0.1);
-  border-color: rgba(59, 130, 246, 0.3);
-  color: var(--color-link, #3b82f6);
-}
-.btn-edit:hover { background: rgba(59, 130, 246, 0.18); }
-.btn-delete {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.3);
-  color: #ef4444;
-}
-.btn-delete:hover { background: rgba(239, 68, 68, 0.18); }
+/* .btn-edit 视觉已统一到全局 .ui-btn（style.css） */
+/* .btn-delete 视觉已统一到全局 .ui-btn--danger（style.css） */
 .btn-madeup {
   background: rgba(59, 130, 246, 0.1);
   border-color: rgba(59, 130, 246, 0.3);
@@ -694,11 +682,11 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
 }
 .btn-madeup:hover { background: rgba(59, 130, 246, 0.18); }
 .btn-submit {
-  background: rgba(16, 185, 129, 0.1);
-  border-color: rgba(16, 185, 129, 0.3);
-  color: #10b981;
+  /* 视觉已统一到全局 .ui-btn--primary（style.css）：蓝色主操作 */
 }
-.btn-submit:hover { background: rgba(16, 185, 129, 0.18); }
+.btn-submit:hover {
+  /* 视觉已统一到全局 .ui-btn--primary（style.css） */
+}
 .btn-pending {
   background: rgba(239, 68, 68, 0.1);
   border-color: rgba(239, 68, 68, 0.3);

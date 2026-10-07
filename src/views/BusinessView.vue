@@ -696,30 +696,7 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-/* 头部按钮基础样式：经 :deep 透传给子组件（账本切换器按钮与「云同步」共用同一份配色/字号/间距/圆角） */
-.bs-btn,
-.bs-header-right :deep(.bs-btn) {
-  padding: 8px 12px;
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 8px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.bs-btn:hover,
-.bs-header-right :deep(.bs-btn:hover) {
-  background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-primary, #3b82f6);
-  border-color: var(--color-primary, #3b82f6);
-}
+/* .bs-btn 视觉已统一到全局 .ui-btn（次按钮）；全局类跨组件生效，无需 :deep 透传 */
 
 .bs-body {
   flex: 1;
@@ -739,18 +716,7 @@ onMounted(async () => {
   transition: width 0.2s ease;
 }
 
-/* ===== 主色按钮（账本引导 / 跨年提示复用） ===== */
-.bs-btn-primary {
-  background-color: var(--color-primary, #3b82f6);
-  color: #fff;
-  border-color: var(--color-primary, #3b82f6);
-}
-
-.bs-btn-primary:hover {
-  background-color: var(--color-primary-hover, #2563eb);
-  color: #fff;
-  border-color: var(--color-primary-hover, #2563eb);
-}
+/* .bs-btn-primary 视觉已统一到全局 .ui-btn--primary */
 
 /* ===== 无账本引导（阻断式） ===== */
 .bs-gate {

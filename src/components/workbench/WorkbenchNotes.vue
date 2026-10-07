@@ -973,10 +973,10 @@ onUnmounted(() => {
 .nt-timeline-item-time { font-size: 12px; font-weight: 600; color: var(--color-text-secondary, #6b7280); font-variant-numeric: tabular-nums; }
 .nt-timeline-item-content { font-size: 13px; line-height: 1.5; word-break: break-word; }
 .nt-timeline-item-actions { display: flex; gap: 6px; margin-top: 4px; }
-.nt-timeline-item-actions .btn-edit, .nt-timeline-item-actions .btn-delete { padding: 3px 8px; font-size: 12px; }
+/* .btn-edit/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
 .nt-timeline-item-edit { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .nt-timeline-item-edit .form-input { padding: 6px 10px; font-size: 13px; }
-.nt-timeline-item-edit .btn-save, .nt-timeline-item-edit .btn-cancel { padding: 4px 12px; font-size: 12px; }
+.nt-timeline-item-edit .btn-save { padding: 4px 12px; font-size: 12px; }
 .nt-timeline-add-row {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   margin-top: 8px; padding-top: 10px;
@@ -984,7 +984,7 @@ onUnmounted(() => {
 }
 .nt-timeline-dt-input { flex: 0 1 150px; min-width: 130px; }
 .nt-timeline-content-input { flex: 1; min-width: 120px; }
-.nt-timeline-add-row .btn-add { padding: 6px 14px; font-size: 13px; }
+/* .nt-timeline-add-row .btn-add 视觉已统一到全局 .ui-btn--primary（style.css） */
 
 /* ===== 时光轴全量条目浮层（保留原样式）===== */
 .timeline-title { font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1013,10 +1013,10 @@ onUnmounted(() => {
 .timeline-item-content { font-size: 14px; line-height: 1.5; word-break: break-word; }
 .timeline-item-actions { display: flex; gap: 6px; margin-top: 4px; opacity: 0; transition: opacity var(--transition-fast, 0.15s ease); }
 .timeline-item:hover .timeline-item-actions { opacity: 1; }
-.timeline-item-actions .btn-edit, .timeline-item-actions .btn-delete { padding: 3px 8px; font-size: 12px; }
+/* .timeline-item-actions .btn-edit/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
 .timeline-item-edit { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .timeline-item-edit .form-input { padding: 6px 10px; font-size: 13px; }
-.timeline-item-edit .btn-save, .timeline-item-edit .btn-cancel { padding: 4px 12px; font-size: 12px; }
+.timeline-item-edit .btn-save { padding: 4px 12px; font-size: 12px; }
 
 /* ===== 空态 ===== */
 .empty-state {
@@ -1095,20 +1095,7 @@ onUnmounted(() => {
   background: var(--color-primary, var(--color-primary)); border: none; border-radius: var(--radius-md, 8px);
 }
 .btn-save:disabled { background: var(--color-text-muted, var(--color-text-muted)); cursor: not-allowed; }
-.btn-cancel {
-  padding: 9px 16px; font-size: 14px; white-space: nowrap; cursor: pointer;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-}
-.btn-delete {
-  padding: 9px 16px; font-size: 14px; white-space: nowrap; cursor: pointer;
-  color: var(--color-error, var(--color-error));
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-error, var(--color-error));
-  border-radius: var(--radius-md, 8px);
-}
+/* .btn-cancel/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
 
 /* ===== 暗色模式覆盖 ===== */
 html.dark .note-overlay { background: rgba(0, 0, 0, 0.7); }
@@ -1116,7 +1103,7 @@ html.dark .note-form { background-color: var(--color-bg-card, #1f2937); }
 html.dark .timeline-expand-panel { background-color: var(--color-bg-card, #1f2937); }
 html.dark .empty-state { background-color: var(--color-bg-card, #1f2937); }
 html.dark .btn-save:disabled { background-color: var(--color-bg-input, #374151); color: var(--color-text-muted, #9ca3af); }
-html.dark .btn-add:disabled { background-color: var(--color-bg-input, #374151); color: var(--color-text-muted, #9ca3af); }
+/* html.dark .btn-add:disabled 视觉已统一到全局 .ui-btn--primary（style.css） */
 html.dark .nt-search { background-color: var(--color-bg-card, #1f2937); box-shadow: none; }
 html.dark .nt-btn-reset { background-color: var(--color-bg-card, #1f2937); color: var(--color-text-secondary, #d1d5db); border-color: var(--color-border, #374151); }
 html.dark .nt-cat-badge { color: #93c5fd; background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.45); }

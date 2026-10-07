@@ -386,16 +386,11 @@ function truncateUrl(url: string, maxLength = 40) {
 }
 
 .close-btn {
-  background: none;
-  border: none;
-  font-size: 18px;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 4px;
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 .close-btn:hover {
-  color: #64748b;
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 .manager-body {
@@ -446,23 +441,16 @@ function truncateUrl(url: string, maxLength = 40) {
 }
 
 .btn-add {
-  padding: 10px 16px;
-  background-color: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
   white-space: nowrap;
+  /* 视觉已统一到全局 .ui-btn--primary（style.css） */
 }
 
 .btn-add:hover:not(:disabled) {
-  background-color: #2563eb;
+  /* 视觉已统一到全局 .ui-btn--primary（style.css） */
 }
 
 .btn-add:disabled {
-  background-color: #94a3b8;
-  cursor: not-allowed;
+  /* 视觉已统一到全局 .ui-btn--primary（style.css） */
 }
 
 .engine-list h3 {
@@ -631,17 +619,11 @@ function truncateUrl(url: string, maxLength = 40) {
 
 .btn-reset {
   margin-bottom: 12px;
-  padding: 6px 12px;
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 12px;
-  cursor: pointer;
+  /* 视觉已统一到全局 .ui-btn（style.css） */
 }
 
 .btn-reset:hover {
-  background: #2563eb;
+  /* 视觉已统一到全局 .ui-btn（style.css） */
 }
 
 /* ============================================================

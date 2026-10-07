@@ -358,20 +358,11 @@ onUnmounted(() => {
   justify-content: center;
   width: 28px;
   height: 28px;
-  padding: 0;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--color-text-secondary, #64748b);
-  font-size: 18px;
-  line-height: 1;
-  cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 .ipd-close:hover {
-  background: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-text, #1e293b);
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 .ipd-body {

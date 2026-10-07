@@ -379,30 +379,7 @@ async function handleSyncNowClick(): Promise<void> {
   flex-shrink: 0;
 }
 
-.wb-btn {
-  padding: 8px 12px;
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 8px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all var(--motion-duration, 220ms) var(--motion-ease, ease);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  white-space: nowrap;
-}
-
-.wb-btn:hover {
-  /* 统一微交互：hover 抬升（PRD §6.1） */
-  transform: var(--motion-hover-rise, translateY(-1px));
-  background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-primary, #3b82f6);
-  border-color: var(--color-primary, #3b82f6);
-}
-
-.wb-btn:active:not(:disabled) {
-  transform: var(--motion-press, scale(0.97));
-}
+/* .wb-btn 视觉已统一到全局 .ui-btn（次按钮） */
 
 .wb-body {
   flex: 1;

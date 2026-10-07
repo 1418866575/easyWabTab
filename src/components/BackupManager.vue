@@ -250,17 +250,11 @@ const toggleAutoBackup = () => {
 }
 
 .close-btn {
-  background: none;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-  color: #64748b;
-  padding: 4px 8px;
-  border-radius: 4px;
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 .close-btn:hover {
-  background: #f1f5f9;
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 .modal-body {

@@ -81,3 +81,17 @@ html.dark {
   --el-table-current-row-bg-color: var(--color-primary-soft);
   --el-table-expanded-cell-bg-color: var(--color-surface-2);
 }
+
+/* ============================================================
+ * 按钮圆角/高度对齐项目规范（8px / 36px）
+ * 消除 el-button（EP 默认 4px / 32px）与自定义按钮(8px/36px)的割裂。
+ * 仅动默认尺寸，small/large 保留；圆角统一 --radius-md。
+ * ============================================================ */
+.el-button {
+  border-radius: var(--radius-md, 8px);
+}
+.el-button:not(.el-button--small):not(.el-button--large) {
+  height: auto;
+  min-height: 36px;
+  padding: 8px 14px;
+}

@@ -269,7 +269,21 @@ body {
    全局无法覆盖（scoped 特异性更高）。此处提供统一基础类，
    供新代码与后续改造复用；存量组件保持现状，零回归。
    ============================================ */
-.ui-btn {
+/* 基础/次要按钮 + 全部旧 class 别名：一处定义、全站生效。
+   别名类（.wb-btn/.bs-btn/.st-btn/.btn-add/.btn-cancel…）仅靠下方变体规则
+   改色，布局/尺寸/圆角/边框/悬停均继承此处基础，故必须并入基础选择器，
+   否则别名类会回退到浏览器原生按钮外观（scoped 已删重复定义后尤甚）。 */
+.ui-btn,
+.bs-btn, .wb-btn, .st-btn, .btn-edit, .btn-help,
+.btn-cancel, .cancel-btn,
+.btn-reset, .nav-filter-clear, .nsf-clear, .bizpur-filter-clear, .clear-history,
+.wb-menu-btn, .row-reset, .mini-btn, .site-action-btn,
+.btn-add, .btn-submit, .btn-primary, .confirm-btn, .add-btn, .add-gradient-btn,
+.nav-add-site, .btn-add-category, .dm-btn-add, .djm-btn-add, .sth-add-btn,
+.student-subject-add-btn, .ob-btn-primary, .bs-btn-primary,
+.btn-clear, .btn-delete,
+.upload-btn, .btn-fetch,
+.ui-btn--text, .ui-btn--sm, .btn-secondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -304,6 +318,124 @@ body {
 .ui-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* ============================================================
+   按钮语义变体（动作类统一规范，PRD §按钮一致性）
+   目标：功能相同的按钮（提交/取消/删除…）一处定义、全站一致；
+   功能不同的按钮（开关/胶囊分段/纯图标）保留形态区分。
+   旧 class 名通过别名映射复用同一套视觉，存量 SFC 删除 scoped
+   重复定义后即可统一（scoped 特异性更高，必须删才能生效）。
+   配色全部走 --color-* token，暗色自动跟随，dark.css 补丁可清。
+   ============================================================ */
+
+/* —— 主操作（提交·保存·确认·应用·新增） —— */
+/* 基础/次要别名已并入上方 .ui-btn 基础选择器，此处仅叠加主色覆盖；
+   hover/active/disabled 态复用 .ui-btn 基础规则。 */
+.ui-btn--primary,
+.btn-add, .btn-submit, .btn-primary, .confirm-btn, .add-btn, .add-gradient-btn,
+.nav-add-site, .btn-add-category, .dm-btn-add, .djm-btn-add, .sth-add-btn,
+.student-subject-add-btn, .ob-btn-primary, .bs-btn-primary {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+.ui-btn--primary:hover:not(:disabled),
+.btn-add:hover:not(:disabled), .btn-submit:hover:not(:disabled),
+.btn-primary:hover:not(:disabled), .confirm-btn:hover:not(:disabled),
+.add-btn:hover:not(:disabled), .add-gradient-btn:hover:not(:disabled),
+.nav-add-site:hover:not(:disabled), .btn-add-category:hover:not(:disabled),
+.dm-btn-add:hover:not(:disabled), .djm-btn-add:hover:not(:disabled),
+.sth-add-btn:hover:not(:disabled), .student-subject-add-btn:hover:not(:disabled),
+.ob-btn-primary:hover:not(:disabled), .bs-btn-primary:hover:not(:disabled) {
+  background-color: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+  color: #fff;
+  transform: var(--motion-hover-rise);
+  box-shadow: var(--shadow-md);
+}
+
+/* —— 危险（删除·清空·清空数据） —— */
+.ui-btn--danger,
+.btn-clear, .btn-delete, .btn-danger,
+.site-action-btn.danger, .site-action-btn.stop {
+  color: var(--color-error);
+  border-color: var(--color-error);
+  background-color: transparent;
+}
+.ui-btn--danger:hover:not(:disabled),
+.btn-clear:hover:not(:disabled), .btn-delete:hover:not(:disabled), .btn-danger:hover:not(:disabled),
+.site-action-btn.danger:hover:not(:disabled), .site-action-btn.stop:hover:not(:disabled) {
+  background-color: var(--color-error-soft);
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+
+/* —— 成功/上传（绿色主操作） —— */
+.ui-btn--success,
+.upload-btn, .btn-fetch {
+  background-color: var(--color-success);
+  border-color: var(--color-success);
+  color: #fff;
+}
+.ui-btn--success:hover:not(:disabled),
+.upload-btn:hover:not(:disabled), .btn-fetch:hover:not(:disabled) {
+  background-color: var(--color-success-hover);
+  border-color: var(--color-success-hover);
+  color: #fff;
+  transform: var(--motion-hover-rise);
+  box-shadow: var(--shadow-md);
+}
+
+/* —— 文字按钮（次要/链接型） —— */
+.ui-btn--text {
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--color-primary);
+  box-shadow: none;
+}
+.ui-btn--text:hover:not(:disabled) {
+  background-color: var(--color-primary-soft);
+  color: var(--color-primary);
+  border-color: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+/* —— 小尺寸（叠加于基础/次要语义） —— */
+.ui-btn--sm,
+.wb-menu-btn, .row-reset, .mini-btn {
+  min-height: 30px;
+  padding: 5px 10px;
+  font-size: var(--font-size-xs, 12px);
+}
+
+/* —— 图标关闭按钮（全局统一一处，纯图标方块形态保留区分） —— */
+.close-btn, .biz-dialog-close, .sp-close-btn, .ipd-close, .sa-dialog-close,
+.toast-close, .reminder-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition:
+    background-color var(--motion-duration) var(--motion-ease),
+    border-color var(--motion-duration) var(--motion-ease),
+    color var(--motion-duration) var(--motion-ease);
+}
+.close-btn:hover:not(:disabled), .biz-dialog-close:hover:not(:disabled),
+.sp-close-btn:hover:not(:disabled), .ipd-close:hover:not(:disabled),
+.sa-dialog-close:hover:not(:disabled), .toast-close:hover:not(:disabled),
+.reminder-close:hover:not(:disabled) {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  background-color: var(--color-bg-hover);
 }
 
 .ui-card {

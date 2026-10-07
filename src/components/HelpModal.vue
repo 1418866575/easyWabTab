@@ -827,21 +827,14 @@ const skillInstall = [
 }
 
 .close-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-  color: #94a3b8;
-  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 .close-btn:hover {
-  color: #64748b;
-  background-color: #f1f5f9;
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 .modal-body {
@@ -1017,19 +1010,11 @@ const skillInstall = [
 }
 
 .btn-primary {
-  padding: 10px 32px;
-  background-color: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
+  /* 视觉已统一到全局 .ui-btn--primary（style.css） */
 }
 
 .btn-primary:hover {
-  background-color: #2563eb;
+  /* 视觉已统一到全局 .ui-btn--primary（style.css） */
 }
 
 /* 示例数据下载 */

@@ -435,16 +435,11 @@ function usedSiteNames(icon: MergedIcon): string {
 }
 
 .close-btn {
-  background: none;
-  border: none;
-  font-size: 18px;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 4px;
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 .close-btn:hover {
-  color: #64748b;
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 .manager-body {
@@ -476,18 +471,12 @@ function usedSiteNames(icon: MergedIcon): string {
 }
 
 .btn-add {
-  padding: 10px 16px;
-  background-color: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
   white-space: nowrap;
+  /* 视觉已统一到全局 .ui-btn--primary（style.css） */
 }
 
 .btn-add:hover {
-  background-color: #2563eb;
+  /* 视觉已统一到全局 .ui-btn--primary（style.css） */
 }
 
 .upload-hint {
@@ -696,20 +685,12 @@ function usedSiteNames(icon: MergedIcon): string {
 }
 
 .btn-secondary {
-  padding: 8px 16px;
-  background-color: #f1f5f9;
-  color: #475569;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
   white-space: nowrap;
+  /* 视觉已统一到全局 .ui-btn（style.css） */
 }
 
 .btn-secondary:hover {
-  background-color: #e2e8f0;
-  border-color: #cbd5e1;
+  /* 视觉已统一到全局 .ui-btn（style.css） */
 }
 
 /* 导入导出 */

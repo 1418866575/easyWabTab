@@ -305,15 +305,11 @@ onMounted(() => {
 }
 
 .btn-danger {
-  color: var(--color-error, #ef4444);
-  border-color: var(--color-error, #ef4444);
-  background: transparent;
+  /* 视觉已统一到全局 .ui-btn--danger（style.css）：红色危险操作 */
 }
 
 .btn-danger:hover {
-  background: var(--color-error, #ef4444);
-  color: #fff;
-  border-color: var(--color-error, #ef4444);
+  /* 视觉已统一到全局 .ui-btn--danger（style.css） */
 }
 
 /* ===== 空态 ===== */

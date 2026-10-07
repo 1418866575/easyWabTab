@@ -412,18 +412,11 @@ function openSite(url: string) {
 }
 
 .clear-history {
-  background: none;
-  border: none;
-  font-size: 12px;
-  color: #64748b;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
+  /* 视觉已统一到全局 .ui-btn（style.css） */
 }
 
 .clear-history:hover {
-  background: #f1f5f9;
-  color: #ef4444;
+  /* 视觉已统一到全局 .ui-btn（style.css） */
 }
 
 .history-list {
@@ -541,12 +534,11 @@ html.dark .history-title {
 }
 
 html.dark .clear-history {
-  color: var(--color-text-muted, #9ca3af);
+  /* 视觉已统一到全局 .ui-btn（style.css） */
 }
 
 html.dark .clear-history:hover {
-  background: var(--color-bg-hover, #374151);
-  color: #ef4444;
+  /* 视觉已统一到全局 .ui-btn（style.css） */
 }
 
 html.dark .history-item:hover {

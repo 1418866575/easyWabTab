@@ -266,23 +266,16 @@ const sortedCustomCategories = computed(() =>
 }
 
 .dm-btn-add {
-  padding: 10px 16px;
-  background-color: var(--color-primary, #3b82f6);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-sm, 8px);
-  font-size: 14px;
-  cursor: pointer;
   white-space: nowrap;
+  /* 视觉已统一到全局 .ui-btn--primary（style.css） */
 }
 
 .dm-btn-add:hover:not(:disabled) {
-  background-color: var(--color-primary-hover, #2563eb);
+  /* 视觉已统一到全局 .ui-btn--primary（style.css） */
 }
 
 .dm-btn-add:disabled {
-  background-color: var(--color-text-muted, #94a3b8);
-  cursor: not-allowed;
+  /* 视觉已统一到全局 .ui-btn--primary（style.css） */
 }
 
 .dm-icon-suggestions {

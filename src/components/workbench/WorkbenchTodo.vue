@@ -770,21 +770,7 @@ onUnmounted(() => {
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
-.btn-add {
-  padding: 10px 16px;
-  background-color: var(--color-primary, var(--color-primary));
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color var(--transition-fast, 0.15s ease);
-}
-
-.btn-add:hover {
-  background-color: var(--color-primary-hover, var(--color-primary-hover));
-}
+/* .btn-add 视觉已统一到全局 .ui-btn--primary（style.css） */
 
 .td-headbar-actions {
   display: flex;
@@ -1067,27 +1053,7 @@ onUnmounted(() => {
   accent-color: var(--color-primary, var(--color-primary));
 }
 
-.btn-edit,
-.btn-delete {
-  padding: 2px 8px;
-  font-size: 11px;
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-sm, 6px);
-  cursor: pointer;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.btn-edit:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.btn-delete:hover {
-  color: var(--color-error, var(--color-error));
-  border-color: var(--color-error, var(--color-error));
-}
+/* .btn-edit/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
 
 /* ===== 空态 ===== */
 .empty-state {
@@ -1317,27 +1283,10 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
-.btn-cancel {
-  padding: 9px 16px;
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  cursor: pointer;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.btn-cancel:hover {
-  background: var(--color-bg-hover, var(--color-bg-active));
-}
+/* .btn-cancel 视觉已统一到全局 .ui-btn（style.css） */
 
 /* 禁用态（添加按钮）：亮灰底 + 白字在暗色下对比度不足，暗色覆盖见下 */
-.btn-add:disabled {
-  background: var(--color-text-muted, var(--color-text-muted));
-  cursor: not-allowed;
-}
+/* .btn-add:disabled 视觉已统一到全局 .ui-btn--primary（style.css） */
 
 /* ===== 暗色模式覆盖 ===== */
 html.dark .td-search {
@@ -1393,10 +1342,7 @@ html.dark .color-reset {
   border-color: var(--color-border, #374151);
 }
 
-html.dark .search-reset-btn,
-html.dark .btn-cancel,
-html.dark .btn-edit,
-html.dark .btn-delete {
+html.dark .search-reset-btn {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
@@ -1460,10 +1406,7 @@ html.dark .td-cat-badge {
   border-color: rgba(59, 130, 246, 0.45);
 }
 
-html.dark .btn-add:disabled {
-  background-color: var(--color-bg-input, #374151);
-  color: var(--color-text-muted, #9ca3af);
-}
+/* html.dark .btn-add:disabled 视觉已统一到全局 .ui-btn--primary（style.css） */
 
 @media (max-width: 640px) {
   .search-input,

@@ -295,18 +295,11 @@ watch(query, () => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--color-text-secondary, #64748b);
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.15s;
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 .sp-close-btn:hover {
-  background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-text, #1e293b);
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 .sp-hint,
@@ -392,8 +385,7 @@ html.dark .sp-input {
 }
 
 html.dark .sp-close-btn:hover {
-  background-color: var(--color-bg-hover, #374151);
-  color: var(--color-text, #f9fafb);
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 html.dark .sp-hint,

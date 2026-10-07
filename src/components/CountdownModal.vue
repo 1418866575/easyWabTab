@@ -149,18 +149,11 @@ async function toggleEmailReminder(item: CountdownItem) {
 }
 
 .close-btn {
-  background: none;
-  border: none;
-  font-size: 18px;
-  color: var(--color-text-muted, var(--color-text-muted));
-  cursor: pointer;
-  padding: 4px;
-  border-radius: var(--radius-sm);
-  transition: color var(--transition-fast, 0.15s ease);
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 .close-btn:hover {
-  color: var(--color-text, var(--color-text));
+  /* 视觉已统一到全局 .close-btn（style.css） */
 }
 
 .manager-body {

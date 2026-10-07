@@ -754,9 +754,7 @@ function truncate(text: string, n = 30): string {
 .tk-tag.is-ok { background-color: #10b981; }
 
 /* 表格内按钮 */
-.btn-detail,
-.btn-edit,
-.btn-delete {
+.btn-detail {
   padding: 5px 12px;
   font-size: 12px;
   border: 1px solid transparent;
@@ -772,18 +770,8 @@ function truncate(text: string, n = 30): string {
   color: var(--color-link, #3b82f6);
 }
 .btn-detail:hover { background: rgba(59, 130, 246, 0.18); }
-.btn-edit {
-  background: rgba(59, 130, 246, 0.1);
-  border-color: rgba(59, 130, 246, 0.3);
-  color: var(--color-link, #3b82f6);
-}
-.btn-edit:hover { background: rgba(59, 130, 246, 0.18); }
-.btn-delete {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.3);
-  color: #ef4444;
-}
-.btn-delete:hover { background: rgba(239, 68, 68, 0.18); }
+/* .btn-edit 视觉已统一到全局 .ui-btn（style.css） */
+/* .btn-delete 视觉已统一到全局 .ui-btn--danger（style.css） */
 
 /* 弹框表单 */
 .tk-dialog-body {

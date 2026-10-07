@@ -542,16 +542,16 @@ onMounted(() => {
   background: var(--color-bg-hover, #111827);
 }
 
-.btn-edit, .btn-delete, .btn-done, .btn-warn {
+.btn-done, .btn-warn {
   padding: 5px 10px; font-size: 12px;
   border: 1px solid transparent; border-radius: 6px;
   cursor: pointer; font-weight: 500; line-height: 1.5; white-space: nowrap;
   margin: 0 2px;
 }
-.btn-edit { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.3); color: #3b82f6; }
+/* .btn-edit 视觉已统一到全局 .ui-btn（style.css） */
 .btn-done { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.3); color: #10b981; }
 .btn-warn { background: rgba(224,168,0,0.12); border-color: rgba(224,168,0,0.3); color: #d97706; }
-.btn-delete { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #ef4444; }
+/* .btn-delete 视觉已统一到全局 .ui-btn--danger（style.css） */
 
 .dialog-body { display: flex; flex-direction: column; gap: 12px; }
 .sg-field { display: flex; flex-direction: column; gap: 4px; }
