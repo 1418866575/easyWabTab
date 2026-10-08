@@ -350,7 +350,24 @@ src/
 
 ---
 
-## 8. 相关文件索引
+## 8. 已知技术债（整改后剩余项，勿盲目自动化）
+
+以下为 2026-10 整改后仍存在的项。**均需浏览器验证后再动**，构建通过不代表安全。
+
+| 项 | 现状 | 评估 |
+|---|---|---|
+| `AppSettingsDialog` 未迁移到 `BaseDialog` | 5000+ 行，嵌 `el-dialog` + 多个子面板（`SiteModal`/`BackgroundManager`/`CategoryManager` 以 `embedded` 内嵌） | **高风险**，建议单独排期、单独抽检 |
+| `LedgerSwitcher`(workbench) / `BusinessLedgerSwitcher`(business) 两份 | 行数相近但数据源不同（个人账本 vs 销售账本） | 中风险，需先抽象数据契约再合并 |
+| `SpotlightOverlay` / `BusinessSpotlightOverlay` 两份 | **实测 diff 822 行**，`SpotlightData+searchAll` vs `BizSpotlightData+searchBizSpotlight`，逻辑差异大 | **非机械重复**，合并属真实重构，收益有限 |
+| 4 个 select 薄封装 | 仅 `ExamNameSelect.vue` / `TagFilter.vue` 存在（`SubjectSelect`/`CommitteeRoleSelect` 实际不存在） | 可用泛型 `<EntitySelect :options>` 收敛，低风险 |
+| 业务表单裸 `<input>` 未换 `el-input` | 散布各面板 | 换 `el-input` 会改变 DOM（样式选择器需同步调整），**必须逐处目视验证**，不宜批量 |
+| 存量 `.card` / `.wb-*` / `.st-*` 等历史类名 | 视觉已通过全局别名统一 | 仅为命名债，**不强制重命名**（防大范围回归） |
+| 无 ESLint / Prettier | 代码质量仅靠 TS strict（`AGENTS.md` 已将"无 ESLint"列为现状） | 引入需新增依赖，属项目级决策 |
+| toolbox 与 src 双 token 树 | `toolbox/` 自带 `tool-ui.css` | 建议保持独立（工具箱视觉自成体系），仅在文档标明边界 |
+
+---
+
+## 9. 相关文件索引
 
 | 主题 | 文件 |
 |---|---|
