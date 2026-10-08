@@ -74,6 +74,7 @@ import {
 } from '@/composables/useHomeLayout'
 import type { ContainerId } from '@/composables/useHomeLayout'
 import Icon from '@/components/Icon.vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import BusinessCategoryManager from '@/components/business/BusinessCategoryManager.vue'
 import StudentTimetableConfig from '@/components/student/StudentTimetableConfig.vue'
 import TeacherDataManage from '@/components/teacher/TeacherDataManage.vue'
@@ -2116,23 +2117,26 @@ function toggleFullscreen(): void {
 
 <template>
   <Transition name="dialog">
-    <div class="manager-overlay" @click.self="emit('close')">
-    <div class="manager" :class="{ 'is-fullscreen': isFullscreen }">
-      <div class="manager-header">
-        <h2><Icon name="cog" /> 设置</h2>
-        <div class="manager-header-actions">
-          <button
-            class="close-btn"
-            :title="isFullscreen ? '退出全屏' : '全屏显示'"
-            :aria-label="isFullscreen ? '退出全屏' : '全屏显示'"
-            data-testid="settings-fullscreen-toggle"
-            @click="toggleFullscreen"
-          >
-            <Icon :name="isFullscreen ? 'fullscreen-exit' : 'fullscreen'" />
-          </button>
-          <button class="close-btn" title="关闭" aria-label="关闭" @click="emit('close')"><Icon name="close" /></button>
-        </div>
-      </div>
+    <BaseDialog
+      class="settings-dialog"
+      width="90vw"
+      max-height="90vh"
+      :fullscreen="isFullscreen"
+      :close-on-escape="false"
+      @close="emit('close')"
+    >
+      <template #title><Icon name="cog" /> 设置</template>
+      <template #header-actions>
+        <button
+          class="close-btn"
+          :title="isFullscreen ? '退出全屏' : '全屏显示'"
+          :aria-label="isFullscreen ? '退出全屏' : '全屏显示'"
+          data-testid="settings-fullscreen-toggle"
+          @click="toggleFullscreen"
+        >
+          <Icon :name="isFullscreen ? 'fullscreen-exit' : 'fullscreen'" />
+        </button>
+      </template>
 
             <div class="manager-body">
         <aside class="settings-rail">
@@ -4134,21 +4138,23 @@ function toggleFullscreen(): void {
         style="display: none"
         @change="handleBizImportFile"
       />
-    </div>
-
-    <!-- 云同步冲突弹框（z-index 高于设置弹窗） -->
-    <CloudSyncConflictModal v-if="cloudSync.conflictData.value" />
-
-    <!-- 入口图标选择弹框（z-index 高于设置弹窗，ESC 仅关本弹框） -->
-    <IconPickerDialog
-      v-if="iconPickerTarget"
-      :title="iconPickerTitle"
-      :current="iconPickerCurrent"
-      @select="onPickIcon"
-      @close="closeIconPicker"
-    />
-  </div>
+  </BaseDialog>
   </Transition>
+
+  <!-- 以下两个弹框必须放在 BaseDialog 之外：它们是 position:fixed 遮罩，
+       若留在弹框主体（.bd-body 为 overflow-y:auto 的滚动容器）内会成为滚动内容的一部分，
+       层级与裁剪行为都会变。 -->
+  <!-- 云同步冲突弹框（z-index 高于设置弹窗） -->
+  <CloudSyncConflictModal v-if="cloudSync.conflictData.value" />
+
+  <!-- 入口图标选择弹框（z-index 高于设置弹窗，ESC 仅关本弹框） -->
+  <IconPickerDialog
+    v-if="iconPickerTarget"
+    :title="iconPickerTitle"
+    :current="iconPickerCurrent"
+    @select="onPickIcon"
+    @close="closeIconPicker"
+  />
 
     <!-- 数据清理二次确认弹框（危险操作） -->
     <el-dialog
@@ -4171,70 +4177,23 @@ function toggleFullscreen(): void {
 </template>
 
 <style scoped>
-.manager-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 300;
-  padding: 20px;
-  /* 面板尺寸已由自身 vw/vh 决定，遮罩层不再产生任何溢出 → 不会带动整页滚动 */
-  overflow: hidden;
-}
+/* 弹框外壳（遮罩/面板/头部/全屏/关闭）已统一到 common/BaseDialog.vue：
+   面板 90vw×90vh 经 width/max-height props 传入；fullscreen 态由基类 .bd-panel--fullscreen 接管
+   （遮罩内边距归零 + 面板铺满视口）；ESC 分层（全屏态先退出、再按才关闭）由本组件 handleKeydown
+   实现，故基类传 :close-on-escape="false" 避免双重触发。 */
 
-.manager {
-  background-color: var(--color-bg-card, var(--color-bg-card));
-  border-radius: var(--radius-lg);
-  /* 设置面板尺寸：以视口为基准 —— 宽 90vw / 高 90vh（水平垂直居中由 .manager-overlay 的 flex 居中实现）。
-     max-width / max-height 用 100%（相对遮罩层内容盒 = 视口 - 40px padding）：
-     小屏下自动收敛并保留外边距，绝不溢出视口；min-* 一律归零，避免矮屏被最小高度顶出屏幕。 */
-  width: 90vw;
-  height: 90vh;
-  max-width: 100%;
-  max-height: 100%;
-  min-width: 0;
-  min-height: 0;
+/* 基类 .bd-body 默认带 24px padding 与纵向滚动；设置面板是「左侧导航 + 右侧内容」两栏、
+   各自管理滚动，故归零内边距并改为 flex 列容器，使 .manager-body 的 flex:1 生效。 */
+.settings-dialog :deep(.bd-body) {
+  padding: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-modal);
 }
 
-/* 全屏态：铺满视口。遮罩层 .manager-overlay 是 flex 居中且有 padding:20px，
-   故用负 margin 抵消该内边距 + 去掉圆角，做到真正"贴边全屏"。
-   仅改外部尺寸，内部（左侧 rail + 右侧滚动区）布局完全不受影响。 */
-.manager.is-fullscreen {
-  width: calc(100vw + 40px);
-  height: calc(100vh + 40px);
-  max-width: none;
-  max-height: none;
-  margin: -20px;
-  border-radius: 0;
-}
-
-/* 头部右侧按钮组：全屏 + 关闭 同一行，视觉一致 */
-.manager-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.manager-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--color-border, var(--color-border));
-  flex-shrink: 0;
-}
-
-.manager-header h2 {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--color-text, var(--color-text));
-  margin: 0;
-}
+/* 面板尺寸（90vw×90vh）与全屏态（贴边铺满视口）均由基类接管：
+   经 width/max-height props 传入，fullscreen 时基类 .bd-panel--fullscreen 把遮罩内边距归零、
+   面板置为 100%×100%，内部（左侧 rail + 右侧滚动区）布局不受影响。 */
 
 /* .close-btn 视觉已统一到全局 .close-btn（style.css） */
 

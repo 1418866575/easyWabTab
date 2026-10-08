@@ -35,6 +35,10 @@ const props = withDefaults(
     embedded?: boolean
     /** 是否隐藏头部。embedded 子面板通常传 true（父弹框已有头部） */
     hideHeader?: boolean
+    /** 全屏模式：面板铺满视口、无圆角无阴影（遮罩内边距一并归零） */
+    fullscreen?: boolean
+    /** ESC 是否触发关闭，默认 true。需自定义 ESC 分层行为（如全屏先退出）时置 false 并自行处理 */
+    closeOnEscape?: boolean
     /** 点击遮罩是否关闭，默认 true */
     closeOnOverlay?: boolean
   }>(),
@@ -44,6 +48,8 @@ const props = withDefaults(
     maxHeight: '80vh',
     embedded: false,
     hideHeader: false,
+    fullscreen: false,
+    closeOnEscape: true,
     closeOnOverlay: true
   }
 )
@@ -55,7 +61,7 @@ function close() {
 }
 
 function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') {
+  if (e.key === 'Escape' && props.closeOnEscape) {
     e.preventDefault()
     close()
   }
@@ -64,20 +70,23 @@ function onKeydown(e: KeyboardEvent) {
 onMounted(() => window.addEventListener('keydown', onKeydown))
 onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
-// 面板内联尺寸（宽度/高度由 props 驱动；embedded 下由父级决定）
+// 面板内联尺寸（宽度/高度由 props 驱动；embedded / fullscreen 下由 CSS 类接管）
 const panelStyle = computed(() =>
-  props.embedded ? {} : { maxWidth: props.width, maxHeight: props.maxHeight }
+  props.embedded || props.fullscreen ? {} : { maxWidth: props.width, maxHeight: props.maxHeight }
 )
 </script>
 
 <template>
   <div
-    :class="embedded ? 'bd-inline' : 'bd-overlay'"
+    :class="[
+      embedded ? 'bd-inline' : 'bd-overlay',
+      { 'bd-overlay--fullscreen': fullscreen && !embedded }
+    ]"
     @click.self="!embedded && closeOnOverlay && close()"
   >
     <div
       class="bd-panel"
-      :class="{ 'bd-panel--embedded': embedded }"
+      :class="{ 'bd-panel--embedded': embedded, 'bd-panel--fullscreen': fullscreen && !embedded }"
       :style="panelStyle"
       role="dialog"
       :aria-modal="embedded ? undefined : true"
@@ -88,9 +97,13 @@ const panelStyle = computed(() =>
           <h2 class="bd-title">
             <slot name="title">{{ title }}</slot>
           </h2>
-          <button class="close-btn" type="button" aria-label="关闭" @click="close">
-            <Icon name="close" />
-          </button>
+          <div class="bd-header-actions">
+            <!-- 头部附加操作（如全屏切换）；置于关闭按钮左侧 -->
+            <slot name="header-actions" />
+            <button class="close-btn" type="button" aria-label="关闭" @click="close">
+              <Icon name="close" />
+            </button>
+          </div>
         </header>
 
         <div class="bd-body">
@@ -139,6 +152,20 @@ const panelStyle = computed(() =>
   background: transparent;
 }
 
+/* ===== 全屏模式：遮罩内边距归零 + 面板铺满视口 ===== */
+.bd-overlay--fullscreen {
+  padding: 0;
+}
+.bd-panel--fullscreen {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 /* ===== 头部 ===== */
 .bd-header {
   display: flex;
@@ -148,6 +175,12 @@ const panelStyle = computed(() =>
   padding: var(--space-5, 20px) var(--space-6, 24px);
   border-bottom: 1px solid var(--color-border, #e2e8f0);
   background: var(--color-bg-card, #ffffff);
+  flex-shrink: 0;
+}
+.bd-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   flex-shrink: 0;
 }
 .bd-title {

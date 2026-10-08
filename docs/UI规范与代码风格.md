@@ -138,6 +138,8 @@
 | `maxHeight` | `'80vh'` | 面板最大高度 |
 | `embedded` | `false` | 嵌套模式：不渲染遮罩、不固定定位，随父弹框流式排布 |
 | `hideHeader` | `false` | 隐藏头部（`embedded` 子面板通常传 `true`） |
+| `fullscreen` | `false` | 全屏模式：遮罩内边距归零、面板铺满视口、无圆角阴影 |
+| `closeOnEscape` | `true` | ESC 是否触发关闭。需自定义 ESC 分层行为（如"全屏态先退出"）时置 `false` 并自行处理 |
 | `closeOnOverlay` | `true` | 点遮罩是否关闭 |
 
 | Slot | 用途 |
@@ -373,7 +375,7 @@ src/
 
 | 项 | 现状 | 评估 |
 |---|---|---|
-| `AppSettingsDialog` 未迁移到 `BaseDialog` | 5000+ 行，嵌 `el-dialog` + 多个子面板（`SiteModal`/`BackgroundManager`/`CategoryManager` 以 `embedded` 内嵌） | **高风险**，建议单独排期、单独抽检 |
+| ~~`AppSettingsDialog` 未迁移到 `BaseDialog`~~ | **已迁移**（2026-10）：外壳换为 `BaseDialog`，面板 90vw×90vh 经 props 传入，全屏态由基类 `fullscreen` 接管；`IconPickerDialog`/`CloudSyncConflictModal` 移到基类之外（避免被 `.bd-body` 滚动容器裁剪）；ESC 分层（全屏先退出）经 `close-on-escape=false` + 组件自有 `handleKeydown` 保留 | — |
 | `LedgerSwitcher`(workbench) / `BusinessLedgerSwitcher`(business) 两份 | 行数相近但数据源不同（个人账本 vs 销售账本） | 中风险，需先抽象数据契约再合并 |
 | `SpotlightOverlay` / `BusinessSpotlightOverlay` 两份 | **实测 diff 822 行**，`SpotlightData+searchAll` vs `BizSpotlightData+searchBizSpotlight`，逻辑差异大 | **非机械重复**，合并属真实重构，收益有限 |
 | 4 个 select 薄封装 | 仅 `ExamNameSelect.vue` / `TagFilter.vue` 存在（`SubjectSelect`/`CommitteeRoleSelect` 实际不存在） | 可用泛型 `<EntitySelect :options>` 收敛，低风险 |
