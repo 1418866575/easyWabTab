@@ -120,7 +120,7 @@ async function exportExcelFile(): Promise<void> {
 .sp-item {
   padding: 12px;
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 12px);
+  border-radius: var(--radius-md, 8px);
 }
 
 .sp-head {

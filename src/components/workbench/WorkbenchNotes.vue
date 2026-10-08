@@ -847,7 +847,7 @@ onUnmounted(() => {
   padding: 12px 14px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 .nt-search-fields { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
@@ -938,7 +938,7 @@ onUnmounted(() => {
 }
 .nt-cat-badge {
   font-size: 12px; font-weight: 600; padding: 2px 10px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   color: var(--color-primary, var(--color-primary));
   background: var(--color-primary-light, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
@@ -1024,7 +1024,7 @@ onUnmounted(() => {
   font-size: 14px; padding: 40px 20px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px dashed var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
 }
 
 /* ===== 编辑浮层 ===== */
@@ -1075,7 +1075,7 @@ onUnmounted(() => {
 .color-option {
   display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; font-size: 13px;
   cursor: pointer; color: var(--color-text-secondary, var(--color-text-secondary));
-  border: 2px solid transparent; border-radius: var(--radius-full, 999px);
+  border: 2px solid transparent; border-radius: var(--radius-full, 9999px);
   transition: all var(--transition-fast, 0.15s ease);
 }
 .color-option:hover { border-color: var(--color-border-hover, var(--color-border)); }
@@ -1125,13 +1125,13 @@ html.dark .timeline-item::before { background: var(--color-border, #374151); }
 }
 
 /* ===== 合并表格：便签类型徽标 + 普通行隐藏展开箭头 ===== */
-.nt-type-badge { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: var(--radius-full, 999px); white-space: nowrap; }
+.nt-type-badge { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: var(--radius-full, 9999px); white-space: nowrap; }
 .nt-type-badge.is-normal { color: var(--color-primary, #3b82f6); background: var(--color-primary-light, #eff6ff); border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent); }
 .nt-type-badge.is-timeline { color: var(--color-success, #22c55e); background: color-mix(in srgb, var(--color-success, #22c55e) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-success, #22c55e) 35%, transparent); }
 
 /* ===== 便签状态（处理中/已处理/逾期）与截止日期 ===== */
 /* 逾期为派生状态：仅「未处理 + 截止日已过」时出现，随日期自动变化 */
-.nt-status-badge { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: var(--radius-full, 999px); white-space: nowrap; }
+.nt-status-badge { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: var(--radius-full, 9999px); white-space: nowrap; }
 .nt-status-badge.is-pending { color: var(--color-warning, #f59e0b); background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-warning, #f59e0b) 35%, transparent); }
 .nt-status-badge.is-done { color: var(--color-success, #22c55e); background: color-mix(in srgb, var(--color-success, #22c55e) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-success, #22c55e) 35%, transparent); }
 .nt-status-badge.is-overdue { color: var(--color-error, #ef4444); background: color-mix(in srgb, var(--color-error, #ef4444) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-error, #ef4444) 35%, transparent); }
@@ -1166,7 +1166,7 @@ html.dark .timeline-item::before { background: var(--color-border, #374151); }
 .nt-timeline-item-content :deep(a),
 .timeline-item-content :deep(a) { color: var(--color-primary, var(--color-primary)); text-decoration: underline; word-break: break-all; }
 .nt-timeline-item-content :deep(code),
-.timeline-item-content :deep(code) { background: color-mix(in srgb, currentColor 12%, transparent); padding: 1px 4px; border-radius: var(--radius-sm, 6px); font-size: 0.9em; }
+.timeline-item-content :deep(code) { background: color-mix(in srgb, currentColor 12%, transparent); padding: 1px 4px; border-radius: var(--radius-sm, 4px); font-size: 0.9em; }
 .nt-timeline-item-content :deep(pre),
 .timeline-item-content :deep(pre) { background: color-mix(in srgb, currentColor 12%, transparent); margin: 0.4em 0; padding: 8px 10px; border-radius: 6px; overflow-x: auto; max-width: 100%; font-size: 12px; line-height: 1.4; }
 .nt-timeline-item-content :deep(blockquote),

@@ -884,7 +884,7 @@ async function handleDelete(id: string): Promise<void> {
   color: var(--color-text-muted, var(--color-text-muted));
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px dashed var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
 }
 
 /* ===== el-table 表格容器（参考 WorkbenchNotes） ===== */
@@ -960,7 +960,7 @@ async function handleDelete(id: string): Promise<void> {
   color: var(--color-primary, var(--color-primary));
   background: color-mix(in srgb, var(--color-primary, var(--color-primary)) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--color-primary, var(--color-primary)) 30%, transparent);
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   white-space: nowrap;
 }
 .bizpur-total-text {
@@ -1110,7 +1110,7 @@ async function handleDelete(id: string): Promise<void> {
   padding: 2px 10px;
   font-size: 12px;
   line-height: 1.6;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   border: 1px solid transparent;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -1134,7 +1134,7 @@ async function handleDelete(id: string): Promise<void> {
 
 .bizpur-stock-oldest {
   padding: 0 5px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   font-size: 11px;
   background: var(--color-bg-hover, #f1f5f9);
   color: var(--color-text-muted, #6b7280);

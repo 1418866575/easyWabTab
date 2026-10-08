@@ -701,7 +701,7 @@ function drawerMarkupRate(): number | null {
   color: var(--color-text-secondary, var(--color-text-secondary));
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   box-shadow: none;
   transition: all var(--transition-fast, 0.15s ease);
 }
@@ -725,7 +725,7 @@ function drawerMarkupRate(): number | null {
   color: var(--color-text-muted, var(--color-text-muted));
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px dashed var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
 }
 
 .bizprod-grid {
@@ -742,7 +742,7 @@ function drawerMarkupRate(): number | null {
   padding: 14px 16px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   cursor: pointer;
   transition: border-color var(--transition-fast, 0.15s ease), box-shadow var(--transition-fast, 0.15s ease), transform var(--transition-fast, 0.15s ease);
@@ -785,7 +785,7 @@ function drawerMarkupRate(): number | null {
   flex-shrink: 0;
   font-size: 12px;
   padding: 2px 10px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   color: var(--color-primary, var(--color-primary));
   background: var(--color-primary-light, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
@@ -818,7 +818,7 @@ function drawerMarkupRate(): number | null {
 .bizprod-price-auto {
   margin-left: 4px;
   padding: 0 5px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   font-size: 11px;
   font-weight: 400;
   color: var(--color-primary, #3b82f6);
@@ -842,7 +842,7 @@ function drawerMarkupRate(): number | null {
 
 .bizprod-form-avg {
   padding: 8px 10px;
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm, 4px);
   font-size: 12px;
   color: var(--color-primary, #3b82f6);
   background: var(--color-primary-light, #eff6ff);
@@ -1022,7 +1022,7 @@ html.dark .bizprod-form-avg {
   gap: 2px;
   padding: 8px 10px;
   background: var(--color-bg-card, var(--color-bg-hover));
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm, 4px);
 }
 
 .bizprod-drawer-stat-label {
@@ -1061,7 +1061,7 @@ html.dark .bizprod-form-avg {
   font-size: 12px;
   color: var(--color-text-secondary, var(--color-text-secondary));
   background: var(--color-bg-card, var(--color-bg-hover));
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm, 4px);
   cursor: pointer;
   transition: background 0.15s ease;
   font-variant-numeric: tabular-nums;

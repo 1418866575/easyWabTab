@@ -691,7 +691,7 @@ async function onClearSemesterData(): Promise<void> {
   gap: 2px;
   padding: 6px 8px;
   border: 1px dashed var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm, 4px);
   background: var(--color-bg-hover, #f1f5f9);
 }
 

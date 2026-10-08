@@ -184,7 +184,7 @@ async function toggleEmailReminder(item: CountdownItem) {
   flex-shrink: 0;
   font-size: 12px;
   padding: 1px 8px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   opacity: 0.85;
 }
 

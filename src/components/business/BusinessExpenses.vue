@@ -634,7 +634,7 @@ async function handleDeleteFromDialog(): Promise<void> {
   color: var(--color-text-muted, var(--color-text-muted));
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px dashed var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
 }
 
 /* ===== el-table 表格容器（参考 BusinessDaily） ===== */

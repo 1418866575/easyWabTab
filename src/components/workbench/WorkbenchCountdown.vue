@@ -652,7 +652,7 @@ onUnmounted(() => {
   padding: 14px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
@@ -734,7 +734,7 @@ onUnmounted(() => {
   background-image: linear-gradient(135deg, color-mix(in srgb, var(--cd-color) 8%, transparent), transparent 55%);
   border: 1px solid var(--color-border, var(--color-border));
   border-left: 4px solid var(--cd-color);
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   cursor: pointer;
   transition: transform var(--transition-fast, 0.15s ease), box-shadow var(--transition-fast, 0.15s ease),
@@ -775,7 +775,7 @@ onUnmounted(() => {
   flex-shrink: 0;
   font-size: 12px;
   padding: 1px 8px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-hover));
   color: var(--color-primary, var(--color-primary));
   border: 1px solid var(--color-primary, var(--color-primary));
@@ -786,7 +786,7 @@ onUnmounted(() => {
   flex-shrink: 0;
   font-size: 11px;
   padding: 1px 6px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   background: rgba(34, 197, 94, 0.12);
   color: #22c55e;
   border: 1px solid #22c55e;
@@ -803,7 +803,7 @@ html.dark .reminded-badge {
   flex-shrink: 0;
   font-size: 12px;
   padding: 1px 8px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   opacity: 0.85;
 }
 
@@ -947,7 +947,7 @@ html.dark .reminded-badge {
   padding: 40px 20px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px dashed var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
 }
 
 .empty-invite {

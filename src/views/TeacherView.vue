@@ -382,7 +382,7 @@ onMounted(() => {
   height: 28px;
   padding: 0 8px;
   border: 1px dashed var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm, 4px);
   background: var(--color-bg-hover, #f1f5f9);
   font-size: var(--font-size-sm, 12px);
 }
@@ -479,7 +479,7 @@ onMounted(() => {
   min-height: 38px;
   padding: 0 10px;
   border: none;
-  border-radius: var(--radius-sm, 8px);
+  border-radius: var(--radius-sm, 4px);
   background-color: transparent;
   color: var(--color-text, #0f172a);
   font-family: inherit;

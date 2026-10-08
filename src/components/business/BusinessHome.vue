@@ -767,7 +767,7 @@ html.dark .sk-block::after {
   padding: 16px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
@@ -822,7 +822,7 @@ html.dark .sk-block::after {
   padding: 16px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
@@ -864,7 +864,7 @@ html.dark .sk-block::after {
   padding: 8px 12px;
   font-size: 13px;
   background: var(--color-bg-card, var(--color-bg-hover));
-  border-radius: var(--radius-sm, 8px);
+  border-radius: var(--radius-sm, 4px);
   border-left: 3px solid transparent;
 }
 
@@ -985,7 +985,7 @@ html.dark .sk-block::after {
   align-items: center;
   gap: 8px;
   padding: 4px 10px;
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm, 4px);
   cursor: pointer;
   transition: background 0.15s ease;
 }
@@ -1101,7 +1101,7 @@ html.dark .sk-block::after {
   gap: 2px;
   flex-shrink: 0;
   padding: 6px 10px;
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
   transition: background var(--transition-fast, 0.15s ease);
 }
 
@@ -1146,7 +1146,7 @@ html.dark .sk-block::after {
   padding: 12px 14px;
   background: var(--color-bg-card, #ffffff);
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
 }
 .bizhome-today-head {
   display: flex;
@@ -1333,7 +1333,7 @@ html.dark .sk-block::after {
   padding: 14px 16px;
   background: var(--color-primary-light, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 35%, transparent);
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
 }
 .bizhome-onboard-body {
   flex: 1;
@@ -1379,7 +1379,7 @@ html.dark .sk-block::after {
   gap: 8px;
   padding: 8px 12px;
   font-size: 13px;
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
 }
 .bizhome-issue .issue-text {
   flex: 1;
@@ -1433,7 +1433,7 @@ html.dark .sk-block::after {
   padding: 12px 14px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
 }
 
 .scope-head {

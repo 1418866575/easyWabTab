@@ -486,7 +486,7 @@ async function handleInsertImage(e: Event): Promise<void> {
   padding: 16px 18px;
   background: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 12px);
+  border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.06));
 }
 
@@ -508,7 +508,7 @@ async function handleInsertImage(e: Event): Promise<void> {
   font-size: 12px;
   font-weight: 600;
   padding: 2px 10px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   color: #fff;
   background: var(--color-primary, #3b82f6);
 }
@@ -594,13 +594,13 @@ async function handleInsertImage(e: Event): Promise<void> {
   min-height: 260px;
   resize: vertical;
   line-height: 1.7;
-  border-radius: var(--radius-md, 12px);
+  border-radius: var(--radius-md, 8px);
 }
 
 .dj-content-input :deep(.el-textarea__inner) {
   min-height: 260px !important;
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 12px);
+  border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #fff);
   padding: 14px 16px;
   font-size: 15px;
@@ -620,7 +620,7 @@ async function handleInsertImage(e: Event): Promise<void> {
   color: var(--color-text, #1e293b);
   background: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 12px);
+  border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.06));
 }
 
@@ -654,7 +654,7 @@ async function handleInsertImage(e: Event): Promise<void> {
   min-height: 190px;
   background: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 12px);
+  border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.06));
   cursor: pointer;
   transition: box-shadow var(--transition-fast, 0.15s ease), border-color var(--transition-fast, 0.15s ease), transform var(--transition-fast, 0.15s ease);
@@ -694,7 +694,7 @@ async function handleInsertImage(e: Event): Promise<void> {
   font-size: 12px;
   font-weight: 600;
   padding: 1px 8px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   color: #fff;
   background: var(--color-primary, #3b82f6);
 }
@@ -742,7 +742,7 @@ async function handleInsertImage(e: Event): Promise<void> {
   padding: 40px 20px;
   background: var(--color-bg-card, #fff);
   border: 1px dashed var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 12px);
+  border-radius: var(--radius-md, 8px);
 }
 
 /* ===== Markdown 排版（v-html 注入子节点不带 data-v-*，必须 :deep() 匹配；镜像 WorkbenchNotes） ===== */
@@ -796,7 +796,7 @@ async function handleInsertImage(e: Event): Promise<void> {
 .dj-card-preview :deep(code) {
   background: color-mix(in srgb, currentColor 12%, transparent);
   padding: 1px 4px;
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm, 4px);
   font-size: 0.9em;
 }
 
@@ -890,7 +890,7 @@ async function handleInsertImage(e: Event): Promise<void> {
   line-height: 1;
   padding: 0;
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   background: var(--color-bg, #fff);
   cursor: pointer;
   transition: transform var(--transition-fast, 0.15s ease), border-color var(--transition-fast, 0.15s ease), background var(--transition-fast, 0.15s ease), box-shadow var(--transition-fast, 0.15s ease);
@@ -940,7 +940,7 @@ async function handleInsertImage(e: Event): Promise<void> {
   font-size: 12px;
   font-weight: 600;
   padding: 1px 8px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   color: var(--color-primary, #3b82f6);
   background: var(--color-primary-soft, #eff6ff);
   white-space: nowrap;
@@ -1000,7 +1000,7 @@ async function handleInsertImage(e: Event): Promise<void> {
   font-size: 12px;
   font-weight: 600;
   padding: 1px 8px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   color: var(--color-warning, #f59e0b);
   background: color-mix(in srgb, var(--color-warning, #f59e0b) 14%, transparent);
   white-space: nowrap;

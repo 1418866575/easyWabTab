@@ -262,7 +262,7 @@ function exportArchive(): void {
   min-height: 34px;
   padding: 0 8px;
   border: none;
-  border-radius: var(--radius-sm, 8px);
+  border-radius: var(--radius-sm, 4px);
   background-color: transparent;
   color: var(--color-text, #0f172a);
   font-family: inherit;
@@ -353,7 +353,7 @@ function exportArchive(): void {
   width: 72px;
   height: 72px;
   object-fit: cover;
-  border-radius: var(--radius-sm, 8px);
+  border-radius: var(--radius-sm, 4px);
   border: 1px solid var(--color-border, #e2e8f0);
 }
 

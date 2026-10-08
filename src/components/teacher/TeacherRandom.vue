@@ -221,7 +221,7 @@ onBeforeUnmount(stopTimer)
   align-items: center;
   justify-content: center;
   padding: 24px 12px;
-  border-radius: var(--radius-md, 12px);
+  border-radius: var(--radius-md, 8px);
   background-color: var(--color-bg-hover, #f1f5f9);
 }
 

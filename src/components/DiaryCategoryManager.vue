@@ -228,7 +228,7 @@ const sortedCustomCategories = computed(() =>
   font-size: 18px;
   padding: 8px;
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 8px);
+  border-radius: var(--radius-sm, 4px);
   background: var(--color-bg, #fff);
   color: var(--color-text, #1e293b);
 }
@@ -237,7 +237,7 @@ const sortedCustomCategories = computed(() =>
   flex: 1;
   padding: 8px 12px;
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 8px);
+  border-radius: var(--radius-sm, 4px);
   background: var(--color-bg, #fff);
   color: var(--color-text, #1e293b);
 }
@@ -300,7 +300,7 @@ const sortedCustomCategories = computed(() =>
   gap: 8px;
   padding: 10px 12px;
   background: var(--color-bg-hover, #f8fafc);
-  border-radius: var(--radius-sm, 8px);
+  border-radius: var(--radius-sm, 4px);
   margin-bottom: 8px;
 }
 

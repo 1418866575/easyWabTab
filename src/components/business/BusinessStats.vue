@@ -589,7 +589,7 @@ function printReport(): void {
   padding: 16px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
@@ -654,7 +654,7 @@ function printReport(): void {
   color: var(--color-text-secondary, var(--color-text-secondary));
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   transition: all var(--transition-fast, 0.15s ease);
 }
 

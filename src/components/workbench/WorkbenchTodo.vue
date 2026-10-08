@@ -691,7 +691,7 @@ onMounted(async () => {
   padding: 12px 14px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
@@ -775,7 +775,7 @@ onMounted(async () => {
 .td-cat-tab {
   padding: 5px 14px;
   font-size: 13px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   color: var(--color-text-secondary, var(--color-text-secondary));
@@ -878,7 +878,7 @@ onMounted(async () => {
   font-size: 12px;
   font-weight: 600;
   padding: 2px 10px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   border: 1px solid transparent;
 }
 
@@ -939,7 +939,7 @@ onMounted(async () => {
   font-size: 11px;
   font-weight: 600;
   padding: 1px 8px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   color: var(--color-text-secondary, #64748b);
   background: var(--color-bg-hover, #f1f5f9);
   border: 1px solid var(--color-border, #e2e8f0);
@@ -983,7 +983,7 @@ onMounted(async () => {
   font-size: 12px;
   font-weight: 600;
   padding: 2px 10px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   color: var(--color-primary, var(--color-primary));
   background: var(--color-primary-light, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
@@ -1014,7 +1014,7 @@ onMounted(async () => {
   font-size: 12px;
   font-weight: 600;
   padding: 1px 8px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
 }
 
 /* ===== 卡片操作 ===== */
@@ -1048,7 +1048,7 @@ onMounted(async () => {
   padding: 40px 20px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px dashed var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
 }
 
 .empty-invite {
@@ -1174,7 +1174,7 @@ onMounted(async () => {
   height: 28px;
   padding: 0;
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm, 4px);
   background: none;
   cursor: pointer;
 }
@@ -1190,7 +1190,7 @@ onMounted(async () => {
   font-size: 12px;
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   cursor: pointer;
   transition: all var(--transition-fast, 0.15s ease);

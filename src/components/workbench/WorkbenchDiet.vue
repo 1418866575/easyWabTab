@@ -442,7 +442,7 @@ onMounted(async () => {
   padding: 16px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   transition: border-color var(--transition-fast, 0.15s ease);
 }
@@ -478,7 +478,7 @@ onMounted(async () => {
   flex-shrink: 0;
   padding: 4px 10px;
   font-size: 12px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   color: var(--color-primary, var(--color-primary));
@@ -516,14 +516,14 @@ onMounted(async () => {
 
 .dt-progress {
   height: 8px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-hover));
   overflow: hidden;
 }
 
 .dt-progress-fill {
   height: 100%;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   background: var(--color-primary, var(--color-primary));
   transition: width var(--transition-fast, 0.15s ease);
 }
@@ -604,7 +604,7 @@ onMounted(async () => {
   );
   border: 1px solid var(--color-border, var(--color-border));
   border-left: 4px solid var(--color-primary, var(--color-primary));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
@@ -629,7 +629,7 @@ onMounted(async () => {
   font-size: 12px;
   font-weight: 600;
   padding: 2px 10px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   color: var(--color-primary, var(--color-primary));
   background: var(--color-primary-light, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
@@ -699,7 +699,7 @@ onMounted(async () => {
   padding: 40px 20px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px dashed var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
 }
 
 .empty-invite {

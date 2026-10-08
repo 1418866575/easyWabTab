@@ -176,7 +176,7 @@ function onCardClick(): void {
   padding: 14px 16px 12px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   cursor: pointer;
   transition: border-color var(--transition-fast, 0.15s ease), box-shadow var(--transition-fast, 0.15s ease);
@@ -241,7 +241,7 @@ function onCardClick(): void {
   color: var(--color-text-secondary, var(--color-text-secondary));
   font-size: 16px;
   line-height: 1;
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm, 4px);
   cursor: pointer;
   display: inline-flex;
   align-items: center;

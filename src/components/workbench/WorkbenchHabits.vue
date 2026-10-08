@@ -320,7 +320,7 @@ onMounted(() => {
   padding: 40px 20px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px dashed var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
 }
 
 /* ===== 暗色模式覆盖 ===== */

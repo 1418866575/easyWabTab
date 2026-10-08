@@ -698,7 +698,7 @@ onMounted(async () => {
   gap: 10px;
   padding: 6px 10px;
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm, 4px);
   background: var(--color-bg-card, var(--color-bg-card));
   font-size: 13px;
   color: var(--color-text, var(--color-text));

@@ -513,7 +513,7 @@ async function handleQuickNote(): Promise<void> {
   padding: 16px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   transition: border-color var(--transition-fast, 0.15s ease);
 }
@@ -603,7 +603,7 @@ async function handleQuickNote(): Promise<void> {
   padding: 12px 8px;
   background: transparent;
   border: none;
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
   cursor: pointer;
   transition: background var(--transition-fast, 0.15s ease), transform var(--transition-fast, 0.15s ease);
   font-family: inherit;
@@ -712,7 +712,7 @@ async function handleQuickNote(): Promise<void> {
   flex-shrink: 0;
   padding: 3px 8px;
   font-size: 12px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   color: var(--color-primary, var(--color-primary));
@@ -765,7 +765,7 @@ async function handleQuickNote(): Promise<void> {
   padding: 12px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-primary, var(--color-primary));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 6px 18px rgba(0, 0, 0, 0.18));
   opacity: 0;
   visibility: hidden;
@@ -931,7 +931,7 @@ async function handleQuickNote(): Promise<void> {
   padding: 10px 12px;
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-sm, 8px);
+  border-radius: var(--radius-sm, 4px);
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
@@ -963,7 +963,7 @@ async function handleQuickNote(): Promise<void> {
   font-size: 12px;
   font-weight: 600;
   padding: 2px 10px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   border: 1px solid transparent;
 }
 
@@ -1016,7 +1016,7 @@ async function handleQuickNote(): Promise<void> {
   padding: 24px 12px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px dashed var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
 }
 
 /* ===== 暗色模式覆盖 ===== */

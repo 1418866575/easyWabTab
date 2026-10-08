@@ -106,7 +106,7 @@ function setCurrent(j: WorkbenchJournal) {
 .djm {
   background-color: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 12px);
+  border-radius: var(--radius-md, 8px);
   padding: 20px 24px;
 }
 .djm-title {
@@ -140,7 +140,7 @@ function setCurrent(j: WorkbenchJournal) {
   flex: 1;
   padding: 8px 12px;
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 8px);
+  border-radius: var(--radius-sm, 4px);
   background: var(--color-bg, #fff);
   color: var(--color-text, #1e293b);
   font-size: 14px;
@@ -171,7 +171,7 @@ function setCurrent(j: WorkbenchJournal) {
   padding: 10px 12px;
   background: var(--color-bg-hover, #f8fafc);
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 8px);
+  border-radius: var(--radius-sm, 4px);
 }
 .djm-item.is-current {
   border-color: var(--color-primary, #3b82f6);

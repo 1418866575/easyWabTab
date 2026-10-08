@@ -202,8 +202,21 @@ import BaseDialog from '@/components/common/BaseDialog.vue'
 
 ### 2.4 卡片
 
-统一 `.ui-card`（1px 边框 + `--radius-lg` + `--color-bg-card` + 阴影，hover 主色描边）。
-**禁止**新造 `.my-card` / `.xxx-card` 视觉（已有的存量类可保留，但新代码用 `.ui-card`）。
+**先辨明类别，再选类名。** 项目里的 "card" 是**一组结构与语义都不同的组件**，不是同一个东西的统一实现，**不可机械改名/合并**（实测：`.ewt-card-grid` 只是 `align-content` 的布局容器，加边框阴影会破坏布局；`.tw-card` 带 title/hint 子元素与 16px 内边距，与 `.ui-card` 的无内边距纯表面不同）。
+
+| 类别 | 现有类名 | 特征 | 能否互换 |
+|---|---|---|---|
+| **通用卡面** | `.ui-card` | 纯表面：1px 边框 + `--radius-lg` + 卡面底 + `--shadow-card`，hover 主色描边 | — |
+| **面板卡**（带标题/提示子元素） | `.tw-card`（含 `-title`/`-hint`） | 16px 内边距、圆角 16px、含子元素排版 | ❌ 与 `.ui-card` 不同 |
+| **统计卡**（大数字+标签） | `.stat-card`、`.bento-card`、各模块 `*-stat-card` | flex 列 + gap 16px、圆角 8px | ❌ 与面板卡不同 |
+| **网格/列表布局容器** | `.ewt-card-grid` | 只有 `align-content`，**无表面** | ❌ 不是卡片 |
+| **工具箱卡片** | `.tu-card`（含 `-title`/`-value`） | toolbox 独立体系 | ❌ 见 §4.1 边界 |
+
+**规则**：
+- 新增**通用卡面**（无特殊子元素/尺寸）→ 用 `.ui-card`
+- 新增**带标题的卡 / 统计卡 / 网格容器** → 参照对应现有类的结构，**不要硬套 `.ui-card`**
+- **禁止**为同一语义另造第二套（这才是双轨道）；但**不同语义各用自己的类不是双轨道**
+- 卡面视觉走 token：圆角 `--radius-*`、阴影 `--shadow-card`/`--shadow-card-hover`、背景 `--color-bg-card`/`--color-surface`；**禁止**硬编码 `box-shadow: 0 1px 2px rgba(...)` 这类值
 
 ### 2.5 图标 / 关闭按钮
 
@@ -383,7 +396,7 @@ src/
 | ⚠️ 教师模块表单体系（`.tw-input`/`.tw-select`） | **已迁移完毕**（2026-10）：14 个教师组件 + `TeacherView.vue` 共 **64 个控件**全部转为 `el-input`/`el-select`/`el-date-picker`/`el-time-picker`；`teacher.css` 中 `.tw-input`/`.tw-select`/`.tw-input-sm` 及其移动端媒体查询已删除 | 迁移中修正一处**高危隐患**：`el-input` 的 `@change` 抛出的是**值本身**而非 DOM 事件，原有 15 处 `($event.target as HTMLInputElement).value` 若照搬会静默得到 `undefined`（输入即清空），已全部改为 `(val: unknown) => …String(val ?? '')`。⚠️ 控件尺寸变小（30px/12px → 24px/12px），密集表格行高收紧，需目视确认 |
 | ⚠️ iOS 聚焦缩放（迁移副作用，待决策） | 教师模块原有 `@media (max-width:768px)` 规则把 `.tw-input` 提到 44px/16px 以**防 iOS Safari 聚焦时自动放大页面**；迁移到 `el-input size="small"`（内部 input 12px）后该保护在教师模块消失 | 这是 **el-* 全站共有的既存缺口**（学生/工作台的 el-input 一直缺此保护），非迁移独有。**不建议直接在 `teacher.css` 补 `.el-input` 规则**——teacher.css 规则加载后即全局生效，会把全站 el-input 在移动端放大到 16px，撑破学生/工作台密集表格。彻底修复需在 `mobile.css` 统一处理并做移动端回归验证 |
 | ⚠️ 迁移易踩坑 | — | **`el-input type="textarea"` 的根类名是 `.el-textarea`，不是 `.el-input`**；`el-select` 是 `.el-select` 且 EP 下为 `inline-block` 不自带 `width:100%`。只写 `.el-input { width:100% }` 会漏掉这两者，导致**宽度与其它输入框不一致**。布局规则需同时覆盖 `.el-input` / `.el-textarea` / `.el-select` 三种类名 |
-| 存量 `.card` / `.wb-*` / `.st-*` 等历史类名 | 视觉已通过全局别名统一 | 仅为命名债，**不强制重命名**（防大范围回归） |
+| ~~存量 `.card` / `.wb-*` / `.st-*` 等历史类名~~ | **已结案**（2026-10）：核实后发现"card"类名是**一组结构/语义不同的组件**（面板卡 / 统计卡 / 网格容器 / toolbox 卡），**不是同一组件的多套实现**，机械改名会造成破坏（`.ewt-card-grid` 会被加边框、`.tw-card` 会丢内边距）。已在 §2.4 补齐分类表与选用规则。真正值得统一的**圆角 token 兜底值漂移已修复**：152 处 `var(--radius-md, 10px)` 之类的假兜底统一对齐到 `:root` 定义（视觉零变化，因为 token 恒存在，但消除了"同一 token 并存 3–4 个值"的规范分裂）。遗留 3 处 `var(--radius-lg, 14px)` 待你确认是否为有意取值 | `.ui-card` 目前**零组件采用**（仅规范中定义），作为"通用卡面"的预留原语保留；若长期无人使用可考虑从规范中移除，避免"死规范"误导 |
 | ~~开关双轨~~ | **已收敛**（2026-10）：`AppSettingsDialog` 内 12 处自定义 `.switch-btn` 全部改为 `el-switch`，`.switch-btn`/`.switch-thumb`/`.mini-switch` 样式（含 dark 变体）已删除，代码零残留 | — |
 | ~~无 ESLint / Prettier~~ | **ESLint 已接入**（2026-10）：`npm run lint` / `lint:fix`，只管正确性、不做格式 | 存量 96 处 `any`、9 处 computed 副作用为 warning，可随重构逐步收敛；Prettier 仍**刻意不引入** |
 | toolbox 与 src 双 token 树 | `toolbox/` 自带 `tool-ui.css` | 建议保持独立（工具箱视觉自成体系），仅在文档标明边界 |

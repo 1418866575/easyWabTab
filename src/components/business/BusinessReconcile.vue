@@ -282,7 +282,7 @@ function exportExpenseExcel(): void {
   padding: 14px 16px;
   background: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
 }
 
 .bizrec-head {
@@ -315,7 +315,7 @@ function exportExpenseExcel(): void {
   gap: 2px;
   padding: 8px 10px;
   background: var(--color-bg-hover, #f3f4f6);
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm, 4px);
 }
 
 .bizrec-stat-label {
@@ -373,7 +373,7 @@ function exportExpenseExcel(): void {
   gap: 2px;
   padding: 8px 10px;
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm, 4px);
   background: var(--color-bg-hover, #f9fafb);
   font-variant-numeric: tabular-nums;
 }
@@ -445,7 +445,7 @@ function exportExpenseExcel(): void {
   color: #92400e;
   background: #fffbeb;
   border: 1px solid #fcd34d;
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
 }
 .bizrec-fix-text {
   flex: 1;
@@ -480,7 +480,7 @@ function exportExpenseExcel(): void {
   padding: 6px 10px;
   font-size: 13px;
   background: var(--color-bg-hover, #f9fafb);
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm, 4px);
   font-variant-numeric: tabular-nums;
 }
 

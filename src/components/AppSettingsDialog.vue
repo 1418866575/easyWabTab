@@ -4764,7 +4764,7 @@ html.dark .seg-control {
   gap: 6px;
   padding: 4px 10px;
   font-size: 13px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   color: var(--color-text-secondary, var(--color-text-secondary));

@@ -343,7 +343,7 @@ function exportInventoryExcel(): void {
   padding: 12px 14px;
   background: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
 }
 
 .bizinv-warn-head {
@@ -378,7 +378,7 @@ function exportInventoryExcel(): void {
   padding: 6px 8px;
   font-size: 12px;
   background: var(--color-bg-hover, #f9fafb);
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm, 4px);
   font-variant-numeric: tabular-nums;
 }
 
@@ -412,7 +412,7 @@ function exportInventoryExcel(): void {
   padding: 8px 10px;
   font-size: 13px;
   background: var(--color-bg-hover, #f9fafb);
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm, 4px);
   font-variant-numeric: tabular-nums;
 }
 
@@ -490,7 +490,7 @@ function exportInventoryExcel(): void {
   padding: 16px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
@@ -578,7 +578,7 @@ function exportInventoryExcel(): void {
   padding: 14px 18px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   transition: border-color var(--transition-fast, 0.15s ease);
 }
@@ -736,7 +736,7 @@ function exportInventoryExcel(): void {
   flex-direction: column;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md, 8px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
 }
 
@@ -810,7 +810,7 @@ function exportInventoryExcel(): void {
   padding: 1px 6px;
   font-size: 10px;
   font-weight: 600;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, 9999px);
 }
 
 .bizinv-source-type.purchase {
