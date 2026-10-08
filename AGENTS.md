@@ -142,7 +142,7 @@ easy-web-tab/
 
 - **All components**: `<script setup lang="ts">` (Composition API only, no Options API)
 - **State**: Pinia stores for domain state; `useToast` and `useHelpModal` are exceptions (module-level singletons)
-- **Styling**: Scoped CSS + CSS custom properties (`var(--color-primary)` etc.)
+- **Styling**: Scoped CSS + CSS custom properties (`var(--color-primary)` etc.). **完整 UI/组件规范见 `docs/UI规范与代码风格.md`** —— 按钮走 `.ui-btn` 全局体系、弹框走 `BaseDialog`、颜色/间距必须用 token、禁止双轨道（写 UI 前先对照现有实现）
 - **Path alias**: `@` → `/src` (use `@/` imports, not relative `../`)
 - **Package manager**: npm only (no pnpm/yarn/bun)
 - **Port**: 16718 hardcoded in vite.config.js, serve-with-rewrites.cjs, Dockerfile, run.bat, PM2 flow
