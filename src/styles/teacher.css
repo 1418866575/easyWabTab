@@ -435,6 +435,25 @@
     display: none !important;
   }
 
+  /* 教师工作台是「一屏应用外壳」：.tv-shell 钉死 100dvh，.tv-content 内部滚动。
+     打印时若不解除高度与滚动约束，内容会被裁到第一屏——表现为一页空白、
+     只剩表头（学年/班级信息），数据行全部丢失。故打印态改为自然文档流高度。 */
+  .tv-shell,
+  .tv-body,
+  .tv-content {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .tv-body {
+    display: block !important;
+  }
+
+  .tv-content {
+    flex: none !important;
+  }
+
   .tw-card {
     border-color: #cbd5e1;
     box-shadow: none;
