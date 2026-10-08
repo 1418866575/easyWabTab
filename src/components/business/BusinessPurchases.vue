@@ -1492,68 +1492,11 @@ html.dark .rd {
    4) 工具行与筛选 chip 换行、触控目标 ≥44px
 =========================================================================================== */
 @media (max-width: 768px) {
-  /* 弹框内明细表 → 卡片：每行一个块，字段名用 td::before 渲染 */
-  .bizpur-line-table {
-    min-width: 0;
-    display: block;
-  }
-  .bizpur-line-table thead {
-    display: none; /* 卡片形态由每个 td 自带字段名，表头不再需要 */
-  }
-  .bizpur-line-table tbody,
-  .bizpur-line-table tr,
-  .bizpur-line-table td {
-    display: block;
-    width: 100%;
-  }
-  .bizpur-line-table tr {
-    margin-bottom: 10px;
-    padding: 8px 10px;
-    border: 1px solid var(--color-border, #e5e7eb);
-    border-radius: 10px;
-    background: var(--color-bg-card, #fff);
-  }
-  .bizpur-line-table tbody td {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 5px 0;
-    border-bottom: none;
-    text-align: left;
-  }
-  /* 字段名：取自模板上的 data-label */
-  .bizpur-line-table tbody td::before {
-    content: attr(data-label);
-    flex: 0 0 68px;
-    font-size: 12px;
-    color: var(--color-text-secondary, #6b7280);
-  }
-  /* 序号/操作/关联支出三列在卡片里不需要字段名前缀 */
-  .bizpur-line-table tbody td.col-idx,
-  .bizpur-line-table tbody td.col-op,
-  .bizpur-line-table tbody td.col-exp {
-    justify-content: flex-start;
-  }
-  .bizpur-line-table tbody td.col-idx {
-    display: none; /* 序号在卡片里无意义 */
-  }
-  .bizpur-line-table .col-prod {
-    min-width: 0;
-  }
-  .bizpur-line-table .col-op {
-    width: 100%;
-    text-align: left;
-  }
-  .bizpur-line-table .exps {
-    max-height: 116px;
-  }
-  .bizpur-line-table tbody td.bizpur-empty-row {
-    display: block;
-    text-align: center;
-  }
-  .bizpur-line-table tbody td.bizpur-empty-row::before {
-    content: none;
-  }
+  /* 2026-10-08：弹框内明细表在移动端「恢复为表格」形态，与支出页（.bizexp-table）保持一致。
+     原规则把表格转成堆叠卡片（table/thead/tr/td 全部 display:block、隐藏表头、
+     用 td::before 渲染字段名），与支出页观感不统一，且字段名占掉一列宽度。
+     现直接沿用基础样式：.bizpur-line-table{min-width:920px} + 容器 .bizpur-row-table{overflow-x:auto}
+     → 窄屏下表格保持表格形态，各列靠容器横向滚动查看。 */
 
   /* 列表：隐藏低频列（信息保留在编辑弹框与卡片视图） */
   .bizpur-table-wrap :deep(.el-table__body td:nth-child(4)),

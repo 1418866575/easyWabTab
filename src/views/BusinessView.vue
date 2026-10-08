@@ -22,7 +22,7 @@ import { useCloudSync } from '@/composables/useCloudSync'
 import type { SyncStatus } from '@/composables/useCloudSync'
 import { useWorkbenchShortcuts } from '@/composables/useWorkbenchShortcuts'
 import { currentYear, ledgerDefaultName } from '@/composables/businessCore'
-import { BIZ_QUICK_ACTIONS, BIZ_SECTIONS, MOBILE_TAB_KEYS, mobileMoreSections, mobileSwipeTarget } from '@/composables/businessSpotlightCore'
+import { BIZ_QUICK_ACTIONS, BIZ_SECTIONS } from '@/composables/businessSpotlightCore'
 import type { BizSpotlightAction, BizSpotlightData } from '@/composables/businessSpotlightCore'
 
 const router = useRouter()
@@ -83,18 +83,16 @@ async function quickAdd(section: string): Promise<void> {
   quickAddSection.value = null
 }
 
-// ===== 移动端底部 Tab 收敛为 5 项 + 「更多」（M-06，2026-10-06）=====
-// 原实现 8 项全塞进底栏（.bs-menu overflow-x:auto），需横向滚动且用户难判断「当前在哪一屏」。
-// 现在移动端只渲染 MOBILE_TAB_KEYS（首页/销售/进货/支出/商品，按日频次），
-// 库存预警/统计/对账 3 个低频分析页收进「更多」弹层，两步内可达。
-// 桌面端左树保持完整 8 项（桌面有空间，折叠态 56px 也够）。
+// ===== 移动端底部 Tab 展示全部面板（2026-10-08）=====
+// 演进：原 8 项全塞进底栏（.bs-menu overflow-x:auto）→ 2026-10-06 收敛为 5 项
+// +「更多」弹层（MOBILE_TAB_KEYS 收纳库存预警/统计/对账 3 个低频分析页）→
+// 2026-10-08 按需求去掉「更多」，底栏直接展示全部 8 项（横向滚动）。
+// 桌面端左树同样保持完整 8 项。
 const MOBILE_MEDIA = '(max-width: 768px)'
 const isMobileNav = ref(false)
-const moreOpen = ref(false)
 let mobileMql: MediaQueryList | null = null
 function syncMobileNav(e: { matches: boolean } | MediaQueryList): void {
   isMobileNav.value = e.matches
-  if (!e.matches) moreOpen.value = false
 }
 
 onMounted(() => {
@@ -102,7 +100,7 @@ onMounted(() => {
   isMobileNav.value = mobileMql.matches
   mobileMql.addEventListener('change', syncMobileNav)
   // Esc 监听放document 捕获阶段：useWorkbenchShortcuts 在 window 冒泡监听 Esc，
-  // 冒泡会先到 window；捕获阶段 + stopPropagation 可避免「关更多」同时触发其它 Esc 行为
+  // 冒泡会先到 window；捕获阶段 + stopPropagation 可避免「关浮层」同时触发其它 Esc 行为
   document.addEventListener('keydown', handleEsc, true)
 })
 onUnmounted(() => {
@@ -119,42 +117,9 @@ onUnmounted(() => {
 // 汇总数据属于「首页」的职责，放在固定头部每个面板都常驻 4 个数字，
 // 既挤占小屏内容高度，又与首页的今日卡片重复。固定头部只保留标题与操作按钮。
 
-/**
- * 移动端面板左右滑动手势：在底部菜单顺序上移动一格。
- *
- * 判定要点（都是踩过的坑）：
- * 1. 必须**横向位移显著大于纵向**才判定为切页 —— 中间列表本身要能上下滚，
- *    纵向位移占比高时若也切页，滚动列表会疯狂横跳。
- * 2. 阈值 56px：低于此值多为误触/手指微动；高于 56px 是明确意图。
- * 3. 底部菜单项内部有横向滚动条时不应触发切页，故跳过落在底栏上的手势。
- */
-const swipeStart = ref<{ x: number; y: number } | null>(null)
-/** 横向手势阈值（px） */
-const SWIPE_THRESHOLD = 56
-/** 纵向位移容忍比：|dx| > |dy| * 1.5 才算横向意图 */
-const SWIPE_AXIS_RATIO = 1.5
-
-function onSwipeStart(e: TouchEvent): void {
-  if (!isMobileNav.value) return
-  const t = e.touches[0]
-  if (!t) return
-  swipeStart.value = { x: t.clientX, y: t.clientY }
-}
-
-function onSwipeEnd(e: TouchEvent): void {
-  const start = swipeStart.value
-  swipeStart.value = null
-  if (!start || !isMobileNav.value) return
-  const t = e.changedTouches[0]
-  if (!t) return
-  const dx = t.clientX - start.x
-  const dy = t.clientY - start.y
-  if (Math.abs(dx) < SWIPE_THRESHOLD) return
-  if (Math.abs(dx) < Math.abs(dy) * SWIPE_AXIS_RATIO) return
-  // 向左滑（dx<0）= 看下一个面板；向右滑 = 看上一个
-  const target = mobileSwipeTarget(activeSection.value, dx < 0 ? 'next' : 'prev')
-  if (target !== activeSection.value) selectSection(target as SectionKey)
-}
+// 2026-10-08 调整：移除了内容区左右滑动切换面板的手势（原 onSwipeStart/onSwipeEnd）。
+// 原因：滑动切页与列表横向滚动/表格横滑冲突（易误触横跳），且底部菜单已能直接
+// 切换，移动端不需要手势。切换入口统一收敛到底部菜单栏。
 
 // ===== 中间内容区高度：JS 兜底 + CSS 100dvh 双保险 =====
 // 为什么两者都要：
@@ -217,53 +182,28 @@ const contentStyle = computed(() =>
   contentHeight.value > 0 ? { height: `${contentHeight.value}px` } : {}
 )
 
-/** 当前激活项对应的 DOM 节点（data-testid=bs-menu-<key>，含「更多」） */
+/** 当前激活项对应的 DOM 节点（data-testid=bs-menu-<key>） */
 function scrollActiveIntoView(): void {
   const root = menuEl.value
   if (!root) return
-  const isMore = activeInMore.value
-  const key = isMore ? 'more' : activeSection.value
-  const el = root.querySelector<HTMLElement>(`[data-testid="bs-menu-${key}"]`)
+  const el = root.querySelector<HTMLElement>(`[data-testid="bs-menu-${activeSection.value}"]`)
   // scrollIntoView 会连带滚动祖先（含中间内容区），故用 scrollLeft 手算，只平移底栏自身
   if (!el || root.scrollWidth <= root.clientWidth) return
-  if (isMore) {
-    // 「更多」是 position:sticky 钉在右缘的，把它滚到居中会破坏 sticky 定位。
-    // 直接滚到最右，让 sticky 元素自然落位。
-    root.scrollTo({ left: root.scrollWidth, behavior: 'smooth' })
-    return
-  }
   // scroll-snap-align:center 与此居中公式对应：滚动停止时该项落在视口中央
   const target = el.offsetLeft - (root.clientWidth - el.offsetWidth) / 2
-  // 不越界：sticky 的「更多」占着右缘，居中目标若算出负值会被 snap 拉回
   const max = root.scrollWidth - root.clientWidth
   root.scrollTo({ left: Math.min(Math.max(0, target), max), behavior: 'smooth' })
 }
 
 watch(activeSection, () => { void nextTick(scrollActiveIntoView) })
 
-/** 侧栏/底栏实际渲染的菜单项：移动端 5 项，桌面 8 项 */
-const visibleMenuItems = computed(() =>
-  isMobileNav.value
-    ? MOBILE_TAB_KEYS.map(k => SECTIONS.find(s => s.key === k)).filter((s): s is NonNullable<typeof s> => !!s)
-    : [...SECTIONS]
-)
-/** 「更多」弹层里的低频面板 */
-const moreSections = computed(() => mobileMoreSections())
-/** 当前激活项是否在「更多」里（用于「更多」按钮显示激活态） */
-const activeInMore = computed(() => moreSections.value.some(s => s.key === activeSection.value))
+/** 侧栏/底栏实际渲染的菜单项：移动端与桌面均为全部 8 项（2026-10-08 去掉「更多」） */
+const visibleMenuItems = computed(() => [...SECTIONS])
 
-function selectFromMore(key: SectionKey): void {
-  moreOpen.value = false
-  selectSection(key)
-}
-
-/** Esc 关闭浮层：优先「更多」，其次「快速记一笔」；两者都没开则让事件继续传给弹框自身 */
+/** Esc 关闭浮层：仅剩「快速记一笔」；未开则让事件继续传给弹框自身 */
 function handleEsc(e: KeyboardEvent): void {
   if (e.key !== 'Escape') return
-  if (moreOpen.value) {
-    moreOpen.value = false
-    e.stopPropagation()
-  } else if (quickAddOpen.value) {
+  if (quickAddOpen.value) {
     closeQuickAdd()
     e.stopPropagation()
   }
@@ -473,56 +413,17 @@ onMounted(async () => {
           <span class="bs-menu-icon"><Icon :name="item.icon" /></span>
           <span class="bs-menu-label">{{ item.label }}</span>
         </button>
-        <!-- 「更多」（仅移动端渲染）：收纳库存预警/统计/对账3 个低频分析页 -->
-        <button
-          v-if="isMobileNav"
-          class="bs-menu-item bs-menu-more"
-          :class="{ active: activeInMore }"
-          title="更多面板"
-          aria-label="更多面板"
-          data-testid="bs-menu-more"
-          @click="moreOpen = !moreOpen"
-        >
-          <span class="bs-menu-icon"><Icon name="grid" /></span>
-          <span class="bs-menu-label">更多</span>
-        </button>
       </nav>
 
-      <!-- 「更多」弹层：移动端专用。用 Teleport+fixed（.bs-header 有 backdrop-filter 会成为
-           absolute 定位包含块；移动端 .bs-menu 是 overflow-x:auto，absolute 会被裁切） -->
-      <Teleport to="body">
-        <div v-if="moreOpen" class="bs-more-mask" data-testid="bs-more-mask" @click="moreOpen = false"></div>
-        <div v-if="moreOpen" class="bs-more-panel" data-testid="bs-more-panel" role="dialog" aria-label="更多面板">
-          <p class="bs-more-title">全部面板</p>
-          <button
-            v-for="s in moreSections"
-            :key="s.key"
-            class="bs-more-item"
-            :class="{ active: activeSection === s.key }"
-            :data-testid="`bs-more-${s.key}`"
-            @click="selectFromMore(s.key as SectionKey)"
-          >
-            <span class="bs-more-icon"><Icon :name="s.icon" :size="18" /></span>
-            <span class="bs-more-body">
-              <span class="bs-more-label">{{ s.label }}</span>
-              <span class="bs-more-hint">{{ s.hint }}</span>
-            </span>
-            <span v-if="activeSection === s.key" class="bs-more-active">当前</span>
-          </button>
-        </div>
-      </Teleport>
-
       <!-- 中间内容区（M-20）：移动端为唯一滚动容器 —— 独立 overflow-y:auto，
-           overscroll-behavior:contain 阻断滚动到底后的橡皮筋穿透到头部/底栏；
-           touch 手势用于左右滑切换面板（纵向滚动不受影响，见 onSwipeEnd 的轴向判定） -->
+           overscroll-behavior:contain 阻断滚动到底后的橡皮筋穿透到头部/底栏。
+           2026-10-08：已移除左右滑动切面板手势，面板切换统一由底部菜单栏负责 -->
       <main
         ref="contentRef"
         class="bs-content"
         :class="{ 'is-mobile': isMobileNav }"
         :style="contentStyle"
         data-testid="bs-content"
-        @touchstart.passive="onSwipeStart"
-        @touchend.passive="onSwipeEnd"
       >
         <SkeletonBlock v-if="initializing" :rows="5" label="正在加载销售记账数据" />
 
@@ -1105,32 +1006,18 @@ html.dark .bs-stall-name {
     background-color: var(--color-primary, #3b82f6);
   }
 
-  /* ===== M-21 底栏加宽 + 消除重叠（2026-10-07）=====
+  /* ===== 底栏加宽 + 消除重叠（2026-10-07 建立，2026-10-08 随「更多」移除同步调整）=====
      原先 5 个 Tab 用 flex:1 1 0 均分，375px 屏每项只剩 ~62px；
      而图标(20px) + gap(8px) + 二字标签(≈28px) + 左右 padding(12px) 实际需要 ~72px，
      装不下时文字溢出到相邻项上 —— 表现为「底部菜单有部分重叠」。
-     改为固定最小宽度 + 整条横向滚动：每项都完整显示、永不重叠，
-     宽度也由 62px 提到 78px（图标与文字都有呼吸空间）。 */
-  .bs-menu-item:not(.bs-menu-more) {
+     改为固定最小宽度 + 整条横向滚动：每项都完整显示、永不重叠。
+     2026-10-08：底栏改为展示全部 8 项后，仍沿用该策略（横向滚动 + 不重叠），
+     原 `.bs-menu-item:not(.bs-menu-more)` 的排除选择器已无必要，去掉 `:not()`。 */
+  .bs-menu-item {
     flex: 0 0 auto;
     min-width: 78px;
     justify-content: center;
     padding: 10px 8px;
-  }
-
-  /* 「更多」常驻右缘：sticky 而非 margin-left:auto。
-     auto 在横向滚动容器里只有「尚有剩余空间」时才生效，
-     5 项占满后它就被推到滚动区外、需滑动才够得着 —— sticky 始终钉在右缘。 */
-  .bs-menu-more {
-    flex: 0 0 auto;
-    position: sticky;
-    right: 0;
-    min-width: 66px;
-    justify-content: center;
-    padding: 10px 8px;
-    /* sticky 元素需要不透明底色，否则下方滚动过来的内容会透出来 */
-    background-color: var(--color-bg-card, #ffffff);
-    box-shadow: -6px 0 8px -6px var(--color-shadow, rgba(0, 0, 0, 0.12));
   }
 
   /* 标签不溢出：这是「重叠」的第二根因 —— 原为 visible/clip，
@@ -1196,12 +1083,6 @@ html.dark .bs-stall-name {
     border-top-color: var(--color-border, #374151);
     box-shadow: 0 -2px 12px var(--color-shadow, rgba(0, 0, 0, 0.4));
   }
-
-  /* 「更多」是 sticky 元素，底色必须与底栏一致，否则横滑时下方内容会从它下面透出来 */
-  html.dark .bs-menu-more {
-    background-color: var(--color-bg-card, #1f2937);
-    box-shadow: -6px 0 8px -6px rgba(0, 0, 0, 0.5);
-  }
 }
 
 /* 桌面页面级滚动：内容区为唯一滚动容器，面板随内容自然撑开
@@ -1215,111 +1096,6 @@ html.dark .bs-stall-name {
   .bs-content > * {
     flex: 0 0 auto;
   }
-}
-
-/* ===== M-06「更多」弹层（移动端专用，Teleport 到 body 故用非 scoped 定位策略的元素名） ===== */
-.bs-more-mask {
-  position: fixed;
-  inset: 0;
-  z-index: 240;
-  background: rgba(15, 23, 42, 0.35);
-}
-.bs-more-panel {
-  position: fixed;
-  left: 12px;
-  right: 12px;
-  bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-  z-index: 241;
-  padding: 12px;
-  background: var(--color-bg-card, #ffffff);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 14px;
-  box-shadow: 0 12px 40px rgba(2, 6, 23, 0.28);
-}
-.bs-more-title {
-  margin: 0 0 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-text-secondary, #64748b);
-}
-.bs-more-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  min-height: 48px;
-  padding: 8px 10px;
-  border: none;
-  border-radius: 10px;
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-  transition: background-color 0.12s;
-}
-.bs-more-item:hover {
-  background: var(--color-bg-hover, #f1f5f9);
-}
-.bs-more-item.active {
-  background: var(--color-primary-light, #eff6ff);
-}
-.bs-more-icon {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  color: var(--color-primary, #3b82f6);
-  background: var(--color-primary-light, #eff6ff);
-  border-radius: 9px;
-}
-.bs-more-body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-.bs-more-label {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text, #1e293b);
-}
-.bs-more-hint {
-  font-size: 11px;
-  color: var(--color-text-secondary, #64748b);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.bs-more-active {
-  flex-shrink: 0;
-  padding: 2px 8px;
-  font-size: 11px;
-  color: #fff;
-  background: var(--color-primary, #3b82f6);
-  border-radius: 999px;
-}
-
-html.dark .bs-more-mask {
-  background: rgba(2, 6, 23, 0.55);
-}
-html.dark .bs-more-panel {
-  background: var(--color-bg-card, #1f2937);
-  border-color: var(--color-border, #374151);
-}
-html.dark .bs-more-item:hover {
-  background: var(--color-bg-hover, #374151);
-}
-html.dark .bs-more-item.active {
-  background: #1e3a5f;
-}
-html.dark .bs-more-icon {
-  color: #60a5fa;
-  background: #1e3a5f;
-}
-html.dark .bs-more-label {
-  color: var(--color-text, #f9fafb);
 }
 
 /* ===== M-12 快速记一笔悬浮按钮 ===== */
@@ -1389,20 +1165,12 @@ html.dark .bs-fab-action {
 
 /* 移动端：FAB 上移避让底部 Tab Bar；展开动作条改为向上堆叠（column-reverse 更贴近拇指） */
 @media (max-width: 768px) {
+  /* 2026-10-08：移动端隐藏「快速记一笔」悬浮按钮（FAB）。
+     原因：移动端底部菜单栏已能直接进入各面板（且菜单已改为展开全部功能），
+     FAB 既遮挡内容又与底栏争抢右下角空间。桌面端保持不变。
+     隐藏整个 wrapper 即可（.bs-fab-wrap 为 position:fixed 容器，内含 FAB 与展开项）。 */
   .bs-fab-wrap {
-    right: 16px;
-    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
-  }
-  .bs-fab {
-    width: 50px;
-    height: 50px;
-  }
-  .bs-fab-actions {
-    align-items: stretch;
-  }
-  .bs-fab-action {
-    min-height: 44px;
-    justify-content: flex-start;
+    display: none;
   }
 }
 

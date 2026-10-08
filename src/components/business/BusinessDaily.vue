@@ -1094,8 +1094,15 @@ async function handleDelete(id: string | null): Promise<void> {
 .bizday-th-sold,
 .bizday-td-sold {
   background: color-mix(in srgb, var(--color-primary, #3b82f6) 6%, transparent);
+  /* 2026-10-08：加宽该列 —— 它是本表主输入框，窄列下大数字（如 999）易被截断、
+     点按区域也偏小。窄屏会隐藏「带出/剩余/损耗」三列（见下方 nth-child 规则），
+     售出是移动端保留的主输入，故优先给足宽度。 */
+  min-width: 140px;
 }
-.bizday-td-sold .bizday-num-input { font-weight: 600; }
+.bizday-td-sold .bizday-num-input {
+  font-weight: 600;
+  width: 100%;
+}
 
 /* 「更多 ▾」展开按钮 */
 .bizday-more-toggle {

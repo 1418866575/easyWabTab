@@ -487,7 +487,6 @@ function drawerMarkupRate(): number | null {
             />
           </div>
         </div>
-        <p class="bizprod-form-hint" data-testid="bizprod-form-member-hint">会员价可选，留空表示未设置（仅作记录与展示，不参与营业额自动合计）。</p>
         <!-- 成本价只读：由进货记录（未售完批次）自动计算，禁止手输以免篡改销售成本 -->
         <p class="bizprod-form-hint" data-testid="bizprod-form-purchase-hint">
           成本价 = 商品销售成本价，由进货记录自动计算（未售完批次均价），不可手动输入；要改成本请改「库存」里的进货进价。
@@ -666,7 +665,11 @@ function drawerMarkupRate(): number | null {
   min-height: 0;
 }
 @media (max-width: 768px) {
-  .bizprod { min-height: 0; }
+  /* 移动端改为按内容高度（flex:none = 0 0 auto），不再被压成恰好一屏高。
+     原 .bizprod{flex:1}(flex-basis:0) 会把商品列表钉死为容器高度，超出内容不撑大
+     .bs-content 的 scrollHeight → 列表无法下滑（内容够不着）。与支出页
+     .bizexp-table-wrap{flex:1 1 auto} 的做法一致：滚动交给 .bs-content。 */
+  .bizprod { flex: none; min-height: 0; }
   .bizprod-list { flex: none; overflow: visible; }
 }
 
