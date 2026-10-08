@@ -41,6 +41,13 @@ const props = withDefaults(
     closeOnEscape?: boolean
     /** 点击遮罩是否关闭，默认 true */
     closeOnOverlay?: boolean
+    /**
+     * 自定义遮罩层级；不传则用 CSS 默认 300。
+     * 需要盖在 el-dialog 之上时必须传：el-dialog 用 Element Plus 的动态层级（2000 起，每次弹出递增），
+     * 而本弹框默认固定 300 —— 从 el-dialog 内部弹出时会被压在后面（如进货编辑弹框内点「移除」的确认框）。
+     * 传入值应取 `nextZIndex()`（见 ConfirmHost）。
+     */
+    zIndex?: number
   }>(),
   {
     title: '',
@@ -50,7 +57,8 @@ const props = withDefaults(
     hideHeader: false,
     fullscreen: false,
     closeOnEscape: true,
-    closeOnOverlay: true
+    closeOnOverlay: true,
+    zIndex: undefined
   }
 )
 
@@ -74,6 +82,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 const panelStyle = computed(() =>
   props.embedded || props.fullscreen ? {} : { maxWidth: props.width, maxHeight: props.maxHeight }
 )
+
+// 遮罩层级：仅显式传入时覆盖 CSS 默认 300（embedded 无固定定位，不受影响）
+const overlayStyle = computed(() => (props.zIndex ? { zIndex: props.zIndex } : {}))
 </script>
 
 <template>
@@ -82,6 +93,7 @@ const panelStyle = computed(() =>
       embedded ? 'bd-inline' : 'bd-overlay',
       { 'bd-overlay--fullscreen': fullscreen && !embedded }
     ]"
+    :style="overlayStyle"
     @click.self="!embedded && closeOnOverlay && close()"
   >
     <div
@@ -150,6 +162,20 @@ const panelStyle = computed(() =>
   border-radius: 0;
   box-shadow: none;
   background: transparent;
+  /* 嵌入态是「父弹框里的一块流式内容」：高度必须完全交给内容，滚动由父级容器负责。
+     这里必须显式解除基类 .bd-panel 的 overflow:hidden 与移动端 max-height:92vh ——
+     否则内容会被裁到 92vh，父级滚动容器只能滚「被裁剪后的高度」，
+     表现为「能滑一部分但永远滑不到底」（销售记账设置 → 支出产品管理即此问题：
+     实测内容 1269px，面板被裁到 611px，父容器最大只能滚 286px）。 */
+  overflow: visible;
+  height: auto;
+  max-height: none;
+}
+
+/* 嵌入态的正文同样不参与滚动：随内容增高，完整交给父级滚动容器 */
+.bd-panel--embedded .bd-body {
+  overflow: visible;
+  flex: 0 0 auto;
 }
 
 /* ===== 全屏模式：遮罩内边距归零 + 面板铺满视口 ===== */
@@ -217,6 +243,12 @@ const panelStyle = computed(() =>
   }
   .bd-panel {
     max-height: 92vh;
+  }
+  /* 嵌入态不受「移动端限高 92vh」约束：它只是父弹框里的一段内容，
+     限高会把内容裁掉、父级滚不到底（见上方 .bd-panel--embedded 注释）。
+     媒体查询不提升特异性，故必须在本块内再覆盖一次，否则会被上面的 .bd-panel 规则盖回。 */
+  .bd-panel--embedded {
+    max-height: none;
   }
   .bd-header {
     padding: var(--space-4, 16px);

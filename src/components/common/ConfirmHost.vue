@@ -6,11 +6,26 @@
  * 视觉完全走 `BaseDialog` + `.ui-btn` 体系 → 与 Toast、其它弹框一致，
  * 暗色与 7 套 accent 主题自动跟随。
  */
+import { ref, watch } from 'vue'
+import { useZIndex } from 'element-plus'
 import BaseDialog from './BaseDialog.vue'
 import Icon from '../Icon.vue'
 import { useConfirm } from '@/composables/useConfirm'
 
 const { current, settle } = useConfirm()
+
+/**
+ * 层级：确认框是全局单例，可能从 el-dialog 内部弹出（如进货编辑弹框里点「移除」）。
+ * el-dialog 用 Element Plus 的动态层级（2000 起、每次弹出递增），而 BaseDialog 默认固定 300，
+ * 直接比对必然被压在编辑弹框后面 —— 用户看到的是「确认框没弹在编辑页上，弹到后面去了」。
+ * 故每次弹出时向 Element Plus 申请一个高于当前所有弹层的值（本次实测：编辑弹框 2008 → 确认框 2009+）。
+ * 放在 watch 里而不是 computed：computed 每次重渲染都会调用 nextZIndex()，层级会被无意义地推高。
+ */
+const { nextZIndex } = useZIndex()
+const zIndex = ref<number | undefined>(undefined)
+watch(current, (req) => {
+  zIndex.value = req ? nextZIndex() : undefined
+})
 </script>
 
 <template>
@@ -19,6 +34,7 @@ const { current, settle } = useConfirm()
     :title="current.title"
     width="420px"
     :close-on-overlay="false"
+    :z-index="zIndex"
     @close="settle(false)"
   >
     <div class="confirm-body">
