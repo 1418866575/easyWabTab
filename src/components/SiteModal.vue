@@ -348,12 +348,11 @@ const handleSubmit = () => {
         <div class="form-group">
           <label>网站名称 *</label>
           <div v-if="isLoading && !form.name" class="skeleton skeleton-name"></div>
-          <input
+          <el-input
             v-else
             v-model="form.name"
-            type="text"
             placeholder="例如：GitHub"
-            :class="{ error: errors.name }"
+            :class="{ 'is-error': errors.name }"
           />
           <span v-if="errors.name" class="error-msg">{{ errors.name }}</span>
         </div>
@@ -361,11 +360,10 @@ const handleSubmit = () => {
         <div class="form-group">
           <label>网站地址 *</label>
           <div class="url-input-group">
-            <input
+            <el-input
               v-model="form.url"
-              type="text"
               placeholder="例如：https://github.com 或 /games/tetris.html"
-              :class="{ error: errors.url }"
+              :class="{ 'is-error': errors.url }"
             />
             <button
               type="button"
@@ -383,23 +381,31 @@ const handleSubmit = () => {
         <div class="form-group">
           <label>网站描述</label>
           <div v-if="isLoading && !form.description" class="skeleton skeleton-desc"></div>
-          <textarea
+          <el-input
             v-else
             v-model="form.description"
+            type="textarea"
+            :rows="3"
             placeholder="简要描述这个网站..."
-            rows="3"
-          ></textarea>
+          />
         </div>
 
         <div class="form-group">
           <label>分类 *</label>
-          <select v-model="form.category" class="category-select">
-            <option v-for="cat in categoriesStore.allCategories" :key="cat.id" :value="cat.id">
-              <!-- 原生 select 的 option 内无法渲染 <img>：图片类图标（图标管理选择）不显示 URI 文本，仅展示分组名；
-                   旧版 emoji 图标（🎬/📁 等）仍原样显示。 -->
+          <el-select v-model="form.category" class="category-select" placeholder="选择分类">
+            <el-option
+              v-for="cat in categoriesStore.allCategories"
+              :key="cat.id"
+              :label="cat.name"
+              :value="cat.id"
+            >
+              <!-- 保持既有显示规则：图片类图标（图标管理选择）仅展示分组名，
+                   旧版 emoji 图标（🎬/📁 等）原样显示。
+                   注：el-option 支持自定义插槽，若后续希望图片类图标也显示缩略图，
+                   可在此加 <img>（原生 <option> 受限无法渲染图片，故此前只能用文字兜底）。 -->
               <template v-if="!isImageIcon(cat.icon)">{{ cat.icon }} </template>{{ cat.name }}
-            </option>
-          </select>
+            </el-option>
+          </el-select>
           <button type="button" class="btn-add-category" @click="openCategoryManager">
             <Icon name="plus" /> 新增分类
           </button>
@@ -412,6 +418,7 @@ const handleSubmit = () => {
               ref="tagInputRef"
               :value="form.tags"
               type="text"
+              class="ui-input"
               placeholder="输入标签，已有的标签会提示"
               @input="handleTagInput"
               @blur="hideTagSuggestions"
@@ -617,24 +624,14 @@ const handleSubmit = () => {
 .form-group > input,
 .form-group > textarea,
 .form-group > select,
+.form-group > .el-input,
+.form-group > .el-select,
 .form-group > .url-input-group,
 .form-group > .tag-input-wrapper,
 .form-group > .icon-picker,
 .form-group > .skeleton {
   flex: 1;
   min-width: 0;
-}
-
-.form-group input,
-.form-group textarea,
-.form-group select {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 8px;
-  font-size: 14px;
-  transition: border-color 0.2s;
-  background-color: var(--color-bg-card, #ffffff);
 }
 
 /* 提示与错误信息整行显示在控件下方，与输入框左对齐 */
@@ -644,11 +641,14 @@ const handleSubmit = () => {
   margin-left: 96px; /* 84px 标签宽 + 12px 间距 */
 }
 
-.form-group input:focus,
-.form-group textarea:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: var(--color-primary, #3b82f6);
+/* 输入控件视觉已统一：文本/描述/分类改用 el-input / el-select（自带边框、聚焦环、
+   暗色与校验态），标签输入因需自定义下拉 + ref + @input/@blur/@focus 保留原生 input，
+   并挂全局 .ui-input。故不再按元素名（input/textarea/select）设视觉，
+   否则会与 el-* 内部结构失配。 */
+
+/* el-input 校验错误态：EP 依 .is-error 给红色内嵌框；此处补一层 token 化兜底 */
+.form-group .el-input.is-error :deep(.el-input__wrapper) {
+  box-shadow: 0 0 0 1px var(--color-error, #ef4444) inset;
 }
 
 .category-select {
@@ -660,7 +660,7 @@ const handleSubmit = () => {
   gap: 8px;
 }
 
-.url-input-group input {
+.url-input-group .el-input {
   flex: 1;
 }
 
@@ -709,11 +709,8 @@ const handleSubmit = () => {
   color: white;
 }
 
-.form-group input.error,
-.form-group textarea.error {
-  border-color: var(--color-error, #ef4444);
-}
-
+/* 校验错误态：文本/描述/分类走 el-input.is-error（见上方 :deep 兜底规则），
+   原按 .error 类给 input/textarea 加红框的规则已随之移除。 */
 .error-msg {
   display: block;
   font-size: 12px;
