@@ -2305,17 +2305,11 @@ function toggleFullscreen(): void {
         <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config nav-filter-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">导航筛选栏</h3>
-            <button
-              type="button"
-              class="switch-btn"
-              :class="{ on: store.navFiltersExpanded }"
-              role="switch"
-              :aria-checked="store.navFiltersExpanded"
+            <el-switch
+              :model-value="store.navFiltersExpanded"
               data-testid="navfilter-switch"
-              @click="store.setNavFiltersExpanded(!store.navFiltersExpanded)"
-            >
-              <span class="switch-thumb"></span>
-            </button>
+              @update:model-value="store.setNavFiltersExpanded"
+            />
           </div>
           <p class="wb-menu-hint">
             控制导航站「分类 · 标签」筛选栏的展开与收起：{{ store.navFiltersExpanded ? '当前为展开模式' : '当前为收起模式（默认）' }}
@@ -2336,14 +2330,11 @@ function toggleFullscreen(): void {
                 data-testid="countdown-button-name-input"
                 @input="store.setCountdownButtonName(($event.target as HTMLInputElement).value)"
               />
-              <button type="button" class="switch-btn"
-                :class="{ on: store.countdownButtonVisible !== false }"
-                role="switch"
-                :aria-checked="store.countdownButtonVisible !== false"
+              <el-switch
+                :model-value="store.countdownButtonVisible !== false"
                 data-testid="countdown-button-visible-switch"
-                @click="store.setCountdownButtonVisible(store.countdownButtonVisible === false)">
-                <span class="switch-thumb"></span>
-              </button>
+                @update:model-value="store.setCountdownButtonVisible"
+              />
             </div>
           </div>
           <p class="wb-menu-hint">
@@ -2365,14 +2356,11 @@ function toggleFullscreen(): void {
                 data-testid="help-button-name-input"
                 @input="store.setHelpButtonName(($event.target as HTMLInputElement).value)"
               />
-              <button type="button" class="switch-btn"
-                :class="{ on: store.helpButtonVisible !== false }"
-                role="switch"
-                :aria-checked="store.helpButtonVisible !== false"
+              <el-switch
+                :model-value="store.helpButtonVisible !== false"
                 data-testid="help-button-visible-switch"
-                @click="store.setHelpButtonVisible(store.helpButtonVisible === false)">
-                <span class="switch-thumb"></span>
-              </button>
+                @update:model-value="store.setHelpButtonVisible"
+              />
             </div>
           </div>
           <p class="wb-menu-hint">
@@ -2405,14 +2393,11 @@ function toggleFullscreen(): void {
                 <img v-if="store.toolboxButtonIcon" :src="store.toolboxButtonIcon" alt="" class="wb-menu-icon-img" />
                 <Icon v-else name="image" />
               </button>
-              <button type="button" class="switch-btn"
-                :class="{ on: store.toolboxButtonVisible !== false }"
-                role="switch"
-                :aria-checked="store.toolboxButtonVisible !== false"
+              <el-switch
+                :model-value="store.toolboxButtonVisible !== false"
                 data-testid="toolbox-button-visible-switch"
-                @click="store.setToolboxButtonVisible(store.toolboxButtonVisible === false)">
-                <span class="switch-thumb"></span>
-              </button>
+                @update:model-value="store.setToolboxButtonVisible"
+              />
             </div>
           </div>
           <p class="wb-menu-hint">
@@ -2447,14 +2432,11 @@ function toggleFullscreen(): void {
                 <img v-if="store.workbenchManageIcon" :src="store.workbenchManageIcon" alt="" class="wb-menu-icon-img" />
                 <Icon v-else name="image" />
               </button>
-              <button type="button" class="switch-btn"
-                :class="{ on: store.workbenchManageVisible !== false }"
-                role="switch"
-                :aria-checked="store.workbenchManageVisible !== false"
+              <el-switch
+                :model-value="store.workbenchManageVisible !== false"
                 data-testid="workbench-manage-visible-switch"
-                @click="store.setWorkbenchManageVisible(store.workbenchManageVisible === false)">
-                <span class="switch-thumb"></span>
-              </button>
+                @update:model-value="store.setWorkbenchManageVisible"
+              />
             </div>
           </div>
           <p class="wb-menu-hint">
@@ -2486,14 +2468,11 @@ function toggleFullscreen(): void {
                 <img v-if="store.workbenchPageIcon" :src="store.workbenchPageIcon" alt="" class="wb-menu-icon-img" />
                 <Icon v-else name="image" />
               </button>
-              <button type="button" class="switch-btn"
-                :class="{ on: store.workbenchPageVisible !== false }"
-                role="switch"
-                :aria-checked="store.workbenchPageVisible !== false"
+              <el-switch
+                :model-value="store.workbenchPageVisible !== false"
                 data-testid="workbench-visible-switch"
-                @click="store.setWorkbenchPageVisible(store.workbenchPageVisible === false)">
-                <span class="switch-thumb"></span>
-              </button>
+                @update:model-value="store.setWorkbenchPageVisible"
+              />
             </div>
           </div>
           <p class="wb-menu-hint">
@@ -2525,14 +2504,11 @@ function toggleFullscreen(): void {
                 <img v-if="store.businessPageIcon" :src="store.businessPageIcon" alt="" class="wb-menu-icon-img" />
                 <Icon v-else name="image" />
               </button>
-              <button type="button" class="switch-btn"
-                :class="{ on: store.businessPageVisible !== false }"
-                role="switch"
-                :aria-checked="store.businessPageVisible !== false"
+              <el-switch
+                :model-value="store.businessPageVisible !== false"
                 data-testid="business-visible-switch"
-                @click="store.setBusinessPageVisible(store.businessPageVisible === false)">
-                <span class="switch-thumb"></span>
-              </button>
+                @update:model-value="store.setBusinessPageVisible"
+              />
             </div>
           </div>
           <p class="wb-menu-hint">
@@ -2564,14 +2540,11 @@ function toggleFullscreen(): void {
                 <img v-if="store.studentPageIcon" :src="store.studentPageIcon" alt="" class="wb-menu-icon-img" />
                 <Icon v-else name="image" />
               </button>
-              <button type="button" class="switch-btn"
-                :class="{ on: store.studentPageVisible !== false }"
-                role="switch"
-                :aria-checked="store.studentPageVisible !== false"
+              <el-switch
+                :model-value="store.studentPageVisible !== false"
                 data-testid="student-visible-switch"
-                @click="store.setStudentPageVisible(store.studentPageVisible === false)">
-                <span class="switch-thumb"></span>
-              </button>
+                @update:model-value="store.setStudentPageVisible"
+              />
             </div>
           </div>
           <p class="wb-menu-hint">
@@ -2603,14 +2576,11 @@ function toggleFullscreen(): void {
                 <img v-if="store.teacherPageIcon" :src="store.teacherPageIcon" alt="" class="wb-menu-icon-img" />
                 <Icon v-else name="image" />
               </button>
-              <button type="button" class="switch-btn"
-                :class="{ on: store.teacherPageVisible !== false }"
-                role="switch"
-                :aria-checked="store.teacherPageVisible !== false"
+              <el-switch
+                :model-value="store.teacherPageVisible !== false"
                 data-testid="teacher-visible-switch"
-                @click="store.setTeacherPageVisible(store.teacherPageVisible === false)">
-                <span class="switch-thumb"></span>
-              </button>
+                @update:model-value="store.setTeacherPageVisible"
+              />
             </div>
           </div>
           <p class="wb-menu-hint">
@@ -3761,18 +3731,13 @@ function toggleFullscreen(): void {
                   @click="onStudentRenameMenu(item.key)"
                   title="改名"
                 >✎</button>
-                <button
-                  type="button"
-                  class="switch-btn mini-switch"
-                  :class="{ on: studentStore.isMenuEnabled(item.key) }"
-                  role="switch"
-                  :aria-checked="studentStore.isMenuEnabled(item.key)"
+                <el-switch
+                  size="small"
+                  :model-value="studentStore.isMenuEnabled(item.key)"
                   :data-testid="`stg-menu-toggle-${item.key}`"
                   :disabled="item.key === 'home'"
-                  @click="onStudentToggleMenu(item.key, !studentStore.isMenuEnabled(item.key))"
-                >
-                  <span class="switch-thumb"></span>
-                </button>
+                  @update:model-value="onStudentToggleMenu(item.key, $event as boolean)"
+                />
               </div>
             </li>
           </ul>
@@ -3858,17 +3823,11 @@ function toggleFullscreen(): void {
         <div v-if="activeTab === 'sync'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">云同步总开关</h3>
-            <button
-              type="button"
-              class="switch-btn"
-              :class="{ on: store.cloudSyncEnabled }"
-              role="switch"
-              :aria-checked="store.cloudSyncEnabled"
+            <el-switch
+              :model-value="store.cloudSyncEnabled"
               data-testid="sync-switch"
-              @click="onToggleCloudSync"
-            >
-              <span class="switch-thumb"></span>
-            </button>
+              @change="onToggleCloudSync"
+            />
           </div>
           <p class="wb-menu-hint">
             启用后将通过 WebDAV 同步导航、自定义图标、工作台、销售记账、学生工作台、教师工作台等全部数据（含自定义图标），按 6 份独立信封（nav.json / icons.json / workbench.json / business.json / student.json / teacher.json）分别上传。推荐使用坚果云（国内访问稳定）或任意支持 WebDAV 的服务。
@@ -3952,17 +3911,11 @@ function toggleFullscreen(): void {
           </p>
           <div v-if="store.cloudSyncEnabled" class="remind-field" style="margin-top: 8px;">
             <span class="remind-label">保存后立即上云</span>
-            <button
-              type="button"
-              class="switch-btn"
-              :class="{ on: store.cloudSyncAutoPush }"
-              role="switch"
-              :aria-checked="store.cloudSyncAutoPush"
+            <el-switch
+              :model-value="store.cloudSyncAutoPush"
               data-testid="sync-auto-push"
-              @click="store.setCloudSyncAutoPush(!store.cloudSyncAutoPush)"
-            >
-              <span class="switch-thumb"></span>
-            </button>
+              @update:model-value="store.setCloudSyncAutoPush"
+            />
             <span class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px;">任何增删改保存后约 1.5 秒自动以<strong>本地覆盖云端</strong>（只上传内容有变化的信封，连续保存合并成一次）。多设备同时编辑同一份数据时，云端那端的改动会被本地覆盖</span>
           </div>
           <div v-if="store.cloudSyncEnabled" class="remind-field" style="margin-top: 8px;">
@@ -4718,46 +4671,6 @@ html.dark .seg-control {
   border-color: var(--color-border, #374151);
 }
 
-/* 开关按钮（工作台菜单显示开关 / 导航筛选栏展开控制共用） */
-.switch-btn {
-  flex-shrink: 0;
-  width: 40px;
-  height: 22px;
-  border-radius: 999px;
-  border: 1px solid var(--color-border, var(--color-border));
-  background-color: var(--color-bg-card, var(--color-bg-hover));
-  cursor: pointer;
-  padding: 0;
-  position: relative;
-  transition: background-color var(--transition-fast, 0.15s ease), border-color var(--transition-fast, 0.15s ease);
-}
-
-.switch-btn .switch-thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background-color: var(--color-text-muted, var(--color-text-muted));
-  transition: transform var(--transition-fast, 0.15s ease), background-color var(--transition-fast, 0.15s ease);
-}
-
-.switch-btn.on {
-  background-color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.switch-btn.on .switch-thumb {
-  transform: translateX(18px);
-  background-color: #fff;
-}
-
-.switch-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
 /* 菜单行开关关闭时的弱化态（行内输入/按钮整体降透明度提示） */
 .wb-menu-row.is-disabled-item {
   opacity: 0.55;
@@ -4800,16 +4713,6 @@ html.dark .seg-control {
 
 .wb-cardsize-field .num-input {
   width: 72px;
-}
-
-html.dark .switch-btn {
-  background-color: var(--color-bg-input, #374151);
-  border-color: var(--color-border, #4b5563);
-}
-
-html.dark .switch-btn.on {
-  background-color: var(--color-primary, #3b82f6);
-  border-color: var(--color-primary, #3b82f6);
 }
 
 /* 数据时光机区块（复用 .wb-menu-config 容器，仅补充快照专属样式） */
@@ -5453,16 +5356,6 @@ html.dark .ld-builtin-tag {
   gap: 4px;
 }
 /* .mini-btn 视觉已统一到全局 .ui-btn（次按钮 sm） */
-.mini-switch {
-  width: 32px;
-  height: 18px;
-  border: none;
-  padding: 0;
-}
-.mini-switch .switch-thumb {
-  width: 14px;
-  height: 14px;
-}
 
 /* ===== 设置页：左侧分组导航（rail）+ 内容区 ===== */
 .settings-rail {

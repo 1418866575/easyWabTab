@@ -381,7 +381,7 @@ src/
 | 4 个 select 薄封装 | 仅 `ExamNameSelect.vue` / `TagFilter.vue` 存在（`SubjectSelect`/`CommitteeRoleSelect` 实际不存在） | 可用泛型 `<EntitySelect :options>` 收敛，低风险 |
 | 业务表单裸 `<input>` 未换 `el-input` | 散布各面板 | 换 `el-input` 会改变 DOM（样式选择器需同步调整），**必须逐处目视验证**，不宜批量 |
 | 存量 `.card` / `.wb-*` / `.st-*` 等历史类名 | 视觉已通过全局别名统一 | 仅为命名债，**不强制重命名**（防大范围回归） |
-| 开关双轨：`AppSettingsDialog` 内既有 12+ 个自定义 `.switch-btn`，同文件又用 `el-switch`；另有独立 `ThemeToggle.vue` | 两套开关外观并存 | 收敛需替换 12+ 处，属视觉重构，**需目视验证**；建议同一批次内一并迁移到 `el-switch` |
+| ~~开关双轨~~ | **已收敛**（2026-10）：`AppSettingsDialog` 内 12 处自定义 `.switch-btn` 全部改为 `el-switch`，`.switch-btn`/`.switch-thumb`/`.mini-switch` 样式（含 dark 变体）已删除，代码零残留 | — |
 | ~~无 ESLint / Prettier~~ | **ESLint 已接入**（2026-10）：`npm run lint` / `lint:fix`，只管正确性、不做格式 | 存量 96 处 `any`、9 处 computed 副作用为 warning，可随重构逐步收敛；Prettier 仍**刻意不引入** |
 | toolbox 与 src 双 token 树 | `toolbox/` 自带 `tool-ui.css` | 建议保持独立（工具箱视觉自成体系），仅在文档标明边界 |
 
