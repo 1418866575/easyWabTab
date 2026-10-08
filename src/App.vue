@@ -3,6 +3,7 @@ import { onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useThemeStore } from './stores/theme'
 import Toast from './components/Toast.vue'
+import ConfirmHost from './components/common/ConfirmHost.vue'
 import CountdownReminder from './components/CountdownReminder.vue'
 import CloudSyncConflictModal from './components/CloudSyncConflictModal.vue'
 import BeianFooter from './components/BeianFooter.vue'
@@ -72,6 +73,8 @@ async function ensurePersistentStorage() {
          visible=false（导航站）或开关关闭/内容为空时组件不渲染任何节点 → 页面无水印残留。 -->
     <AppWatermark :visible="watermarkVisible" />
     <Toast :toasts="toasts as any" @remove="removeToast" />
+    <!-- 统一确认弹框宿主（showConfirm 的底层 UI；全局单例，需挂载一次） -->
+    <ConfirmHost />
     <CountdownReminder />
     <CloudSyncConflictModal v-if="cloudSync.conflictData.value" />
     <BeianFooter />

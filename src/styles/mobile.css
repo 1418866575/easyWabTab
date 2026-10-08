@@ -104,8 +104,7 @@
     justify-content: flex-end;
     gap: 8px;
   }
-  .el-dialog__footer .el-button,
-  .el-message-box__btns .el-button {
+  .el-dialog__footer .el-button {
     flex: 1 1 auto !important;
     margin: 0 !important;
     min-height: 40px;
@@ -158,36 +157,5 @@
    原先此处硬编码 9 个容器类名，后加的面板（笔记/家谱/倒计时/待办/销售/运动/记账）
    都没进名单导致移动端没优化；改为按类匹配后全部面板一并生效。 */
 
-/* ============================================
-   移动端确认弹框（替代原生 confirm）适配
-   showConfirm 基于 ElMessageBox.confirm：移动端改为大块居中弹框、按钮 ≥44px、
-   文案保留换行（white-space:pre-line 让 \n 生效，规避 dangerouslyUseHTMLString 的 XSS 风险）。
-   ============================================ */
-@media (max-width: 768px) {
-  .el-message-box {
-    width: 90vw !important;
-    max-width: 90vw !important;
-    --el-messagebox-padding-primary: 16px;
-    border-radius: 12px !important;
-  }
-  .el-message-box__message {
-    white-space: pre-line !important;
-    line-height: 1.6;
-    font-size: 15px !important;
-  }
-  .el-message-box__title {
-    font-size: 17px !important;
-    font-weight: 600 !important;
-  }
-  .el-message-box__btns {
-    display: flex !important;
-    gap: 10px;
-    padding: 4px 16px 16px !important;
-  }
-  .el-message-box__btns .el-button {
-    flex: 1 1 0 !important;
-    margin: 0 !important;
-    min-height: 44px !important;
-    font-size: 16px !important;
-  }
-}
+/* 移动端确认弹框适配已迁移到 components/common/ConfirmHost.vue
+   （showConfirm 底层由 ElMessageBox 换为 BaseDialog；\n 换行与 ≥44px 触控目标在该组件内实现）。 */

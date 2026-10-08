@@ -178,6 +178,9 @@ import BaseDialog from '@/components/common/BaseDialog.vue'
   用 `#panel` 插槽接管内部结构，并设 `:close-on-overlay="false"`。
 - **需要叠层更高**的弹框（图标选择器 400 / 冲突 9999 / PIN 3000），
   用组件自身 class 局部提升 z-index，**不要改 BaseDialog 源码**。
+- **确认框**：不要用 `ElMessageBox` 或原生 `confirm()`；用 `utils/dialog.ts` 的 `showConfirm(message, title?)`
+  （底层 = `useConfirm` 单例 + `ConfirmHost` + `BaseDialog`）。返回 `Promise<boolean>`，取消/关闭均为 `false`。
+  宿主 `ConfirmHost` 已在 `App.vue` 挂载，**勿重复挂载**。
 - 新增弹框时同步登记 `src/utils/scrollLock.ts` 的遮罩白名单（`.bd-overlay` 已在其中）。
 
 ### 2.3 输入框
@@ -309,7 +312,7 @@ src/
 |---|---|---|
 | 按钮 | `.ui-btn` 全局体系 + 别名映射 | 各组件自建 `.my-btn` 视觉 |
 | 弹框 | `BaseDialog` | 自建 `.xxx-overlay` + header + footer |
-| 确认框 | 待统一（当前 `utils/dialog.ts` 的 `showConfirm` 走 ElMessageBox） | 部分用 `confirm()`、部分用 ElMessageBox |
+| 确认框 | `showConfirm()` → `useConfirm` + `ConfirmHost` + `BaseDialog` | 原生 `confirm()`、`ElMessageBox` |
 | 提示 | `useToast`（自研 Toast） | 混用 `ElMessage` / `alert()` |
 | 输入框 | `el-input` / `.ui-input` | 自造 `.custom-input` |
 | 分页 | `usePanelPaging` + `PanelPager` / `el-pagination` | 各面板自写分页公式 |
@@ -356,7 +359,7 @@ src/
 | 暗色 | `src/styles/dark.css` |
 | EP 桥接 + el-button 尺寸对齐 | `src/styles/element-theme.css` |
 | 弹框基类 | `src/components/common/BaseDialog.vue` |
-| 确认框 / 提示 | `src/utils/dialog.ts`、`src/composables/useToast.ts` |
+| 确认框 / 提示 | `src/utils/dialog.ts`、`src/composables/useConfirm.ts`、`src/components/common/ConfirmHost.vue`、`src/composables/useToast.ts` |
 | 弹框滚动锁白名单 | `src/utils/scrollLock.ts` |
 | 数据层 / 业务约定（另一份） | 根目录 `AGENTS.md` |
 
