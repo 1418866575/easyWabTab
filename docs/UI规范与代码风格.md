@@ -379,7 +379,8 @@ src/
 | `LedgerSwitcher`(workbench) / `BusinessLedgerSwitcher`(business) 两份 | 行数相近但数据源不同（个人账本 vs 销售账本） | 中风险，需先抽象数据契约再合并 |
 | `SpotlightOverlay` / `BusinessSpotlightOverlay` 两份 | **实测 diff 822 行**，`SpotlightData+searchAll` vs `BizSpotlightData+searchBizSpotlight`，逻辑差异大 | **非机械重复**，合并属真实重构，收益有限 |
 | 4 个 select 薄封装 | 仅 `ExamNameSelect.vue` / `TagFilter.vue` 存在（`SubjectSelect`/`CommitteeRoleSelect` 实际不存在） | 可用泛型 `<EntitySelect :options>` 收敛，低风险 |
-| 业务表单裸 `<input>` 未换 `el-input` | 散布各面板 | 换 `el-input` 会改变 DOM（样式选择器需同步调整），**必须逐处目视验证**，不宜批量 |
+| 业务表单裸 `<input>` 未换 `el-input` | **已开始收敛**（2026-10）：`SiteModal`（新增/编辑网站，全站最高频表单）已迁移，作为**参考样板** | ⚠️ 换 `el-input` 会改变 DOM，原按元素名的样式选择器会失配——**必须逐文件迁移 + 目视验证**。迁移三步：① 裸控件换 `el-input`/`el-select`（`type="textarea"` 覆盖 textarea）；② 删除按元素名（`input`/`textarea`/`select`）的视觉样式，改由组件自带或 `.ui-input` 承担；③ 布局规则补 `.el-input`/`.el-select`，错误态用 `is-error` + `:deep(.el-input__wrapper)` 兜底。自定义下拉/特殊交互的输入可保留原生 + `.ui-input` |
+| ⚠️ 迁移易踩坑 | — | **`el-input type="textarea"` 的根类名是 `.el-textarea`，不是 `.el-input`**；`el-select` 是 `.el-select` 且 EP 下为 `inline-block` 不自带 `width:100%`。只写 `.el-input { width:100% }` 会漏掉这两者，导致**宽度与其它输入框不一致**。布局规则需同时覆盖 `.el-input` / `.el-textarea` / `.el-select` 三种类名 |
 | 存量 `.card` / `.wb-*` / `.st-*` 等历史类名 | 视觉已通过全局别名统一 | 仅为命名债，**不强制重命名**（防大范围回归） |
 | ~~开关双轨~~ | **已收敛**（2026-10）：`AppSettingsDialog` 内 12 处自定义 `.switch-btn` 全部改为 `el-switch`，`.switch-btn`/`.switch-thumb`/`.mini-switch` 样式（含 dark 变体）已删除，代码零残留 | — |
 | ~~无 ESLint / Prettier~~ | **ESLint 已接入**（2026-10）：`npm run lint` / `lint:fix`，只管正确性、不做格式 | 存量 96 处 `any`、9 处 computed 副作用为 warning，可随重构逐步收敛；Prettier 仍**刻意不引入** |

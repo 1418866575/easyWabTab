@@ -626,12 +626,21 @@ const handleSubmit = () => {
 .form-group > select,
 .form-group > .el-input,
 .form-group > .el-select,
+.form-group > .el-textarea,
 .form-group > .url-input-group,
 .form-group > .tag-input-wrapper,
 .form-group > .icon-picker,
 .form-group > .skeleton {
   flex: 1;
   min-width: 0;
+}
+
+/* `<el-input type="textarea">` 的根类名是 .el-textarea、`<el-select>` 是 .el-select，
+   二者在 EP 里均非 width:100%（el-textarea 不撑满、el-select 是 inline-block），
+   故显式给宽度，保证与单行输入框左右对齐 */
+.form-group .el-textarea,
+.form-group .el-select {
+  width: 100%;
 }
 
 /* 提示与错误信息整行显示在控件下方，与输入框左对齐 */
