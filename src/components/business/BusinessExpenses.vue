@@ -398,7 +398,8 @@ async function handleDeleteFromDialog(): Promise<void> {
             </template>
           </el-table-column>
         </el-table>
-        <div v-else class="ewt-card-grid">
+        <!-- is-square：与「进货」统一的移动端正方形卡片（一行两个、高度随列宽等比） -->
+        <div v-else class="ewt-card-grid is-square">
           <RecordsCard
             @edit="startEdit(item)"
             v-for="item in pageItems"

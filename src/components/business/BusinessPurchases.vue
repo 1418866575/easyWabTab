@@ -2,25 +2,25 @@
 import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+// 卡片视图与「支出」面板共用同一套 RecordsCard（.ewt-card），
+// 移动端再通过 .is-square 变成正方形，两个面板排版完全一致。
+import RecordsCard from '@/components/common/RecordsCard.vue'
+import type { PurchaseDayGroup } from '@/composables/businessCore'
 
 const vm = useViewMode()
 
-/** 卡片视图每条明细的字段（一天一张卡内平铺当天全部明细，保留原字段不裁剪）。
- *  emphasis 显式声明：模板按此字段加粗（当天合计/关联支出等强调项）。 */
-function cardFields(row: BusinessPurchase): { label: string; value: string; emphasis?: boolean }[] {
-  const p = findProduct(store.products, row.productId)
-  const m = markupRateOf(row.productId, row.unitPrice)
+/**
+ * 卡片字段：只放「一天」的汇总口径，不放明细表格字段。
+ * 与支出页 cardFields 的口径一一对应（支出合计 ⇄ 进货合计、产品数 ⇄ 明细笔数、备注 ⇄ 商品数），
+ * 明细表格信息仅在桌面端列表视图里查看 —— 移动端正方形卡片放不下、也不该塞。
+ */
+function dayCardFields(g: PurchaseDayGroup): { label: string; value: string; emphasis?: boolean }[] {
+  const productIds = new Set(g.rows.map(r => r.productId))
+  // 「笔数」已由头部徽标显示，这里不再重复一次；跨商品求和数量无意义（单位不同），
+  // 故卡片只保留两个汇总口径，正方形内排版不拥挤。
   return [
-    { label: '日期', value: row.date },
-    { label: '商品', value: productNameOf(row.productId) },
-    { label: '分类', value: catNameOf(row.productId) },
-    { label: '入库数量', value: '×' + displayQuantity(row) },
-    { label: '进价', value: '@' + formatYuanOf(row.unitPrice) },
-    { label: '合计', value: formatYuanOf(row.total) },
-    { label: '售价', value: p ? formatYuanOf(productSellingPrice(row.productId)!) + '/' + productUnitOf(row.productId) : '—' },
-    { label: '加价率', value: m != null ? m + '%' : '—' },
-    { label: '剩余状态', value: stockLabel(row) },
-    { label: '备注', value: row.note || '—' }
+    { label: '进货合计', value: formatYuanOf(g.totalAmount), emphasis: true },
+    { label: '涉及商品', value: `${productIds.size} 种` }
   ]
 }
 
@@ -373,7 +373,9 @@ function onRowProductChange(index: number): void {
   row.unitPrice = ''
 }
 
-// ===== 录入校验（每行独立；error 阻断保存，warn 仅提示） =====
+// ===== 录入校验（每行独立）=====
+// 校验结果不再在弹框里逐条展示（红色提示已按需求移除，见模板 bizpur-form-hint），
+// 但仍必须保留：error 级问题用于禁用保存按钮，避免把不合法的数据写进库。
 function rowIssues(row: DialogRow): ValidationIssue[] {
   const qty = rowQuantity(row)
   const price = rowUnitPrice(row)
@@ -399,7 +401,7 @@ const formIssues = computed<ValidationIssue[]>(() => {
   })
   return all
 })
-/** error 级问题阻断保存，warn 级仅提示 */
+/** error 级问题阻断保存（warn 级已不再展示，也不阻断） */
 const formErrors = computed(() => formIssues.value.filter(i => i.level === 'error'))
 const isFormValid = computed(() => formRows.value.length > 0 && formErrors.value.length === 0)
 
@@ -518,6 +520,31 @@ async function handleSave(): Promise<void> {
 async function handleDelete(id: string): Promise<void> {
   if (!await showConfirm('确定要删除这笔记货吗？')) return
   await store.deletePurchase(id)
+}
+
+// ===== 卡片视图：一张卡 = 一天，卡片上的操作按「天」批量进行 =====
+// 正方形卡片放不下逐条明细的操作按钮（也不该再塞表格字段），
+// 故与支出页一致：点卡片/「编辑」= 打开当天全部明细的表单，「删除」= 删除当天全部明细。
+function startEditDay(g: PurchaseDayGroup): void {
+  if (g.rows.length === 0) return
+  editingId.value = g.rows[0].id
+  formDate.value = g.date
+  formRows.value = g.rows.map(r => ({
+    id: r.id,
+    productId: r.productId,
+    quantity: String(r.quantity),
+    unitPrice: String(r.unitPrice),
+    expenseIds: [...(r.expenseIds ?? [])]
+  }))
+  showDialog.value = true
+}
+
+async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
+  if (g.rows.length === 0) return
+  if (!await showConfirm(`确定要删除 ${g.date} 的 ${g.rows.length} 笔记货吗？`)) return
+  for (const row of g.rows) {
+    await store.deletePurchase(row.id)
+  }
 }
 </script>
 
@@ -665,39 +692,27 @@ async function handleDelete(id: string): Promise<void> {
             </template>
           </el-table-column>
         </el-table>
-        <div v-else class="ewt-card-grid bizpur-day-cards">
-          <!-- 卡片视图：一天一张卡（同日多条进货合并），头部沿用支出页日容器写法 -->
-          <div
+        <!-- 卡片视图：一天一张卡 + 正方形卡片（与支出页完全同款）。
+             卡片内只显示日期 + 笔数 + 进货合计/商品数，不含逐条明细表格。 -->
+        <div v-else class="ewt-card-grid is-square">
+          <RecordsCard
             v-for="g in pageGroups"
             :key="g.date"
-            class="bizpur-day-card"
-            :data-testid="`bizpur-day-card-${g.date}`"
+            :fields="dayCardFields(g)"
+            :data-testid="`bizpur-card-${g.date}`"
+            @edit="startEditDay(g)"
           >
-            <div class="bizpur-day-head">
-              <span class="bizpur-day-date">{{ g.date }}</span>
-              <span class="bizpur-day-count">{{ g.rows.length }} 笔</span>
-              <span class="bizpur-day-total">{{ formatYuanOf(g.totalAmount) }}</span>
-            </div>
-            <div class="bizpur-day-rows">
-              <div
-                v-for="item in g.rows"
-                :key="item.id"
-                class="bizpur-day-row"
-                :data-testid="`bizpur-day-row-${item.id}`"
-              >
-                <div class="bizpur-day-fields">
-                  <div v-for="f in cardFields(item)" :key="f.label" class="bizpur-day-field">
-                    <span class="bizpur-day-label">{{ f.label }}</span>
-                    <span class="bizpur-day-value" :class="{ 'is-emphasis': f.emphasis }">{{ f.value ?? '—' }}</span>
-                  </div>
-                </div>
-                <div class="bizpur-day-actions">
-                  <el-button size="small" :data-testid="`bizpur-card-edit-${item.id}`" @click.stop="startEdit(item)">编辑</el-button>
-                  <el-button size="small" type="danger" :data-testid="`bizpur-card-del-${item.id}`" @click.stop="handleDelete(item.id)">删除</el-button>
-                </div>
+            <template #header>
+              <div class="bizpur-card-head">
+                <span class="bizpur-card-date" :data-testid="`bizpur-card-date-${g.date}`">{{ g.date }}</span>
+                <span class="bizpur-card-count" :data-testid="`bizpur-card-count-${g.date}`">{{ g.rows.length }} 笔</span>
               </div>
-            </div>
-          </div>
+            </template>
+            <template #actions>
+              <el-button size="small" :data-testid="`bizpur-card-edit-${g.date}`" @click.stop="startEditDay(g)">编辑</el-button>
+              <el-button size="small" type="danger" :data-testid="`bizpur-card-del-${g.date}`" @click.stop="handleDeleteDay(g)">删除</el-button>
+            </template>
+          </RecordsCard>
         </div>
 
       </div>
@@ -845,23 +860,6 @@ async function handleDelete(id: string): Promise<void> {
                   >移除</el-button>
                 </td>
               </tr>
-              <!-- 行内校验提示（对齐支出页 bizexp-row-issue-row）：
-                   错误就地显示在该行下方，多行录入时能直接定位，不必到底部列表对照行号。 -->
-              <tr v-if="rowIssues(row).length > 0" class="bizpur-row-issue-row">
-                <td :colspan="7" class="bizpur-row-issue-cell">
-                  <ul class="bizpur-row-issues" :data-testid="`bizpur-row-issues-${idx}`">
-                    <li
-                      v-for="(issue, i) in rowIssues(row)"
-                      :key="i"
-                      class="bizpur-row-issue"
-                      :class="issue.level"
-                    >
-                      <span class="bizpur-row-issue-icon">{{ issue.level === 'error' ? '✕' : '!' }}</span>
-                      {{ issue.message }}
-                    </li>
-                  </ul>
-                </td>
-              </tr>
               </template>
               <tr v-if="formRows.length === 0">
                 <td colspan="7" class="bizpur-empty-row">暂无进货记录行，点击「＋ 添加进货」新增一行</td>
@@ -869,16 +867,14 @@ async function handleDelete(id: string): Promise<void> {
             </tbody>
           </table>
         </div>
-        <!-- 校验提示（error 阻断保存 / warn 仅提示） -->
-        <ul v-if="formIssues.length > 0" class="bizpur-issues" data-testid="bizpur-form-issues">
-          <li
-            v-for="(issue, idx) in formIssues"
-            :key="idx"
-            class="bizpur-issue"
-            :class="issue.level"
-            :data-testid="`bizpur-issue-${idx}`"
-          >{{ issue.level === 'error' ? '✕ ' : '! ' }}{{ issue.message }}</li>
-        </ul>
+        <!-- 校验结果不再逐条列成红色提示：多行录入时行内 + 底部两份列表会占满弹框、喧宾夺主，
+             而每行缺的字段（商品 / 数量 / 进价）本身就在这一行里，就近可见，无需文字复述。
+             校验逻辑照旧保留，只用于禁用保存按钮。
+             但「按钮灰着却不给原因」同样不可用，故留一行中性灰说明：不指名具体字段、不用红色，
+             仅告知「还差必填项」，填完即消失。 -->
+        <p v-if="!isFormValid" class="bizpur-form-hint" data-testid="bizpur-form-hint">
+          请完整填写各行的商品、数量与进价后再保存
+        </p>
         <div class="biz-form-actions ewt-dialog-footer">
           <el-button @click="showDialog = false">取消</el-button>
           <el-button type="primary" native-type="submit" :disabled="!isFormValid || saving" :loading="saving" data-testid="bizpur-save">
@@ -970,108 +966,34 @@ async function handleDelete(id: string): Promise<void> {
   border-radius: var(--radius-md, 8px);
 }
 
-/* ===== 卡片视图：一天一张卡（同日多条进货合并）=====
-   参照支出页日容器写法：头部「日期 + N 笔 + 当天合计」，下方平铺当天每条明细。
-   明细沿用 cardFields 原字段，不做字段裁剪，保证信息不丢。 */
-.bizpur-day-cards {
-  grid-template-columns: 1fr;
-}
-
-.bizpur-day-card {
-  display: flex;
-  flex-direction: column;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  overflow: hidden;
-}
-
-.bizpur-day-head {
+/* ===== 卡片视图：一天一张卡（与支出页同款 RecordsCard）=====
+   结构/排版/正方形一律复用全局 .ewt-card + .is-square，这里只定义头部两件套
+   （日期 + 笔数）的配色，样式口径与支出页 .bizexp-card-* 保持一致。 */
+.bizpur-card-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  background: color-mix(in srgb, var(--color-primary, #3b82f6) 8%, transparent);
-  border-bottom: 1px solid var(--color-border, var(--color-border));
-}
-
-.bizpur-day-date {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text, var(--color-text));
-}
-
-.bizpur-day-count {
-  font-size: 12px;
-  padding: 1px 8px;
-  border-radius: var(--radius-full, 9999px);
-  color: var(--color-primary, #3b82f6);
-  background: color-mix(in srgb, var(--color-primary, #3b82f6) 12%, transparent);
-}
-
-.bizpur-day-total {
-  margin-left: auto;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-primary, #3b82f6);
-  font-variant-numeric: tabular-nums;
-}
-
-.bizpur-day-rows {
-  display: flex;
-  flex-direction: column;
-}
-
-/* 每条明细一行；多行之间用虚线分隔，视觉上仍属同一天 */
-.bizpur-day-row {
-  display: flex;
-  flex-direction: column;
   gap: 8px;
-  padding: 10px 12px;
-  border-bottom: 1px dashed var(--color-border, var(--color-border));
-}
-
-.bizpur-day-row:last-child {
-  border-bottom: none;
-}
-
-.bizpur-day-fields {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 4px 12px;
   min-width: 0;
+  line-height: 1.4;
 }
 
-.bizpur-day-field {
-  display: contents;
-}
-
-.bizpur-day-label {
-  font-size: 12px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+.bizpur-card-date {
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary, #6b7280);
   white-space: nowrap;
 }
 
-.bizpur-day-value {
-  font-size: 13px;
-  color: var(--color-text, var(--color-text));
-  word-break: break-word;
-  font-variant-numeric: tabular-nums;
+.bizpur-card-count {
+  flex: 1 1 auto;
+  text-align: right;
+  font-size: 12px;
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
-.bizpur-day-value.is-emphasis {
-  font-weight: 600;
-  color: var(--color-primary, #3b82f6);
-}
-
-.bizpur-day-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
-.bizpur-day-actions :deep(.el-button + .el-button) {
-  margin-left: 0;
+:global(html.dark) .bizpur-card-date {
+  color: var(--color-text-secondary, #9ca3af);
 }
 
 /* ===== 表格分组行：日期列内「日期 + N 笔 + 当天合计」===== */
@@ -1263,82 +1185,12 @@ async function handleDelete(id: string): Promise<void> {
   color: var(--color-text-muted, #9ca3af);
 }
 
-/* 录入校验提示 */
-/* ===== 行内校验提示（对齐支出页 bizexp-row-issue-row）=====
-   错误就地落在出错行下方；底部 bizpur-issues 汇总列表保留作为全局总览。 */
-.bizpur-row-issue-row .bizpur-row-issue-cell {
-  padding: 0 8px 8px;
-  background: transparent;
-  border: none;
-}
-
-.bizpur-row-issues {
+/* 录入校验：只保留一行中性灰说明（红色校验提示已移除，见模板 bizpur-form-hint 注释） */
+.bizpur-form-hint {
   margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.bizpur-row-issue {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
   font-size: 12px;
-  line-height: 1.5;
-  padding: 6px 8px;
-  border-radius: 6px;
-  border: 1px solid transparent;
-}
-
-.bizpur-row-issue-icon {
-  flex-shrink: 0;
-  font-weight: 500;
-}
-
-.bizpur-row-issue.error {
-  color: var(--color-error, #dc2626);
-  background: var(--color-bg-hover, #fef2f2);
-  border-color: color-mix(in srgb, var(--color-error, #dc2626) 30%, transparent);
-}
-
-.bizpur-row-issue.warn {
-  color: var(--color-warning, #b45309);
-  background: color-mix(in srgb, var(--color-warning, #b45309) 10%, transparent);
-  border-color: color-mix(in srgb, var(--color-warning, #b45309) 30%, transparent);
-}
-
-:global(html.dark) .bizpur-row-issue.error {
-  background-color: var(--color-bg-hover, #2a1414);
-}
-
-.bizpur-issues {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.bizpur-issue {
-  font-size: 12px;
-  padding: 6px 8px;
-  border-radius: 6px;
-  border: 1px solid transparent;
-}
-
-.bizpur-issue.error {
-  color: var(--color-error, #dc2626);
-  background: color-mix(in srgb, var(--color-error, #dc2626) 10%, transparent);
-  border-color: color-mix(in srgb, var(--color-error, #dc2626) 30%, transparent);
-}
-
-.bizpur-issue.warn {
-  color: var(--color-warning, #b45309);
-  background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, transparent);
-  border-color: color-mix(in srgb, var(--color-warning, #f59e0b) 30%, transparent);
+  line-height: 1.6;
+  color: var(--color-text-muted, #6b7280);
 }
 
 .bizpur-expense-hint {

@@ -119,4 +119,40 @@
     height: auto !important;
     min-height: 120px !important;
   }
+
+  /* ===== 销售记账专用：一行两卡 + 固定正方形（可选开启）=====
+     支出 / 进货两张面板移动端统一采用；给网格追加 .is-square 即生效。
+     为什么做成「可选修饰类」而不是直接改上面的全局 .ewt-card：
+     卡片视图被习惯 / 日记 / 健康 / 错题等十余个模块共用，
+     正方形是销售记账的排版要求，不能让所有模块跟着变。
+     aspect-ratio 让高度由列宽等比推出 —— 任何屏宽下都是正的正方形，
+     且不再随内容多少伸缩（内容多的行不会把同行卡片顶歪）。 */
+  .ewt-card-grid.is-square {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .ewt-card-grid.is-square .ewt-card {
+    aspect-ratio: 1 / 1;
+    /* 同上必须 !important 才压得住 RecordsCard 的 scoped 定高 156px */
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 10px;
+    gap: 6px;
+  }
+
+  .ewt-card-grid.is-square .ewt-card-header {
+    padding-bottom: 6px;
+  }
+
+  /* 正方形内空间有限：字段区收紧行距 */
+  .ewt-card-grid.is-square .ewt-card-fields {
+    gap: 3px 8px;
+  }
+
+  /* 操作区吸底：不同卡片头部/字段高度不等时，按钮行仍对齐卡片底部 */
+  .ewt-card-grid.is-square .ewt-card-actions {
+    margin-top: auto;
+    padding-top: 6px;
+  }
 }

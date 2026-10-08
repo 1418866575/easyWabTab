@@ -70,3 +70,7 @@ __pycache__/
 # 优化记录目录：长期优化记录（审查报告 / 迁移方案 / 原型 / 截图等中间产物）
 # 统一存放于 docs/optimization/，仅本地留存，不入库
 docs/optimization/
+
+# Playwright 探针脚本的实测输出（几何/滚动/截图等一次性产物，仅本地留存，不入库）
+scripts/.probe-*.json
+scripts/.snap-*.png
