@@ -28,6 +28,7 @@ import { useNavPrefs } from './composables/useNavPrefs'
 import { configureNavMetaStorage, persistNavMeta } from './composables/navMeta'
 import { idbGet, idbPut } from './composables/useIdb'
 import type { NavMetaRecord } from './composables/navMeta'
+import { ensureIconCacheLoaded } from './composables/useIconCache'
 // 弹框打开时锁定背景滚动：手写弹框没有 Element Plus 的 lock-scroll，需全局兜底
 import { initScrollLock } from './utils/scrollLock'
 
@@ -57,6 +58,10 @@ async function bootstrap() {
   } catch (e) {
     console.error('[nav-prefs] 载入失败，导航数据回退空值', e)
   }
+
+  // 图标缓存（v21 起独立 store）后台装载：内含从 nav 的迁移。
+  // 不 await —— MB 级读取不该阻塞首屏；未装载完时 getIconUrl 会走网络回退。
+  void ensureIconCacheLoaded()
 
   const themeStore = useThemeStore()
   themeStore.initTheme()

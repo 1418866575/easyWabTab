@@ -16,7 +16,18 @@
  *      并尽力把数据写回 IDB，让应用在用户无感的情况下自愈。
  * 每次正式落盘都会顺带刷新影子，保证两种介质的最新版本同步。
  */
-import { idbGet, idbPut, idbClear, NAV_STORE_KEYS, WORKBENCH_PREFS_KEYS } from './useIdb'
+import {
+  idbGet,
+  idbPut,
+  idbClear,
+  idbGetAllEntries,
+  idbPutKey,
+  idbDeleteKey,
+  NAV_STORE_KEYS,
+  WORKBENCH_PREFS_KEYS,
+  IDB_KEY,
+  TOOLBOX_NAV_KEY
+} from './useIdb'
 import { useAppSettingsStore } from '@/stores/settings'
 import type { NavPrefsRecord } from './useIdb'
 import { readShadow, writeShadow, clearShadow, shadowStamp } from './navShadow'
@@ -43,6 +54,12 @@ const LEGACY_BASELINE_KEY = 'ewt.navGuard.userSitesBaseline'
 let prefs: NavPrefsRecord = {}
 let loadPromise: Promise<void> | null = null
 let saveTimer: ReturnType<typeof setTimeout> | null = null
+/**
+ * 待落盘的键集合（v21）。
+ * 旧实现每次落盘都整包 `{...prefs}` 覆盖写回，一个键变动要重序列化全部 15 个键
+ * （含 MB 级数据）。改为只记录真正变动的键，落盘时逐键写入。
+ */
+let dirtyKeys = new Set<string>()
 
 /**
  * 加载结果：
@@ -57,17 +74,58 @@ const SAVE_DEBOUNCE_MS = 400
 
 // 一次性迁移：IDB 的 nav store 为空且 localStorage 仍有旧键时，整体搬入并删除旧键（与 icons v11 同范式）
 async function migrateNavFromLocalStorageIfNeeded(): Promise<void> {
-  const existing = await idbGet<NavPrefsRecord>('nav')
-  if (existing && Object.keys(existing).length) return
+  const existing = await idbGetAllEntries<string>('nav')
+  if (Object.keys(existing).length) return
   const record: NavPrefsRecord = {}
   for (const k of NAV_STORE_KEYS) {
     const v = localStorage.getItem(k)
     if (v !== null) record[k] = v
   }
   if (Object.keys(record).length === 0) return
-  await idbPut('nav', record)
+  await writeKeys(record)
   for (const k of NAV_STORE_KEYS) {
     try { localStorage.removeItem(k) } catch { /* 忽略 */ }
+  }
+}
+
+/**
+ * v21 迁移：nav 从「一条 `items` 记录装 15 个键」拆成「每个键一条记录」。
+ *
+ * 动机：整包覆盖写意味着改一个键也要把全量重新序列化一遍，
+ * 且内存里一份残缺的 prefs 会把整条记录冲掉 —— 这正是事故链的一环。
+ * 拆分后每次只写变动的那一个键，互不影响。
+ *
+ * 幂等且**失败安全**：只有全部键都写成功后才删除旧记录；
+ * 中途任何一步失败都会保留旧记录，下次启动重新迁移，绝不丢数据。
+ */
+async function migrateNavToPerKeyRecords(): Promise<void> {
+  // 旧格式特征：存在键为 IDB_KEY('items') 的记录，且值是一个对象
+  const legacy = await idbGet<unknown>('nav')
+  if (!legacy || typeof legacy !== 'object' || Array.isArray(legacy)) return
+  const bag = legacy as Record<string, unknown>
+  if (Object.keys(bag).length === 0) return
+
+  for (const [k, v] of Object.entries(bag)) {
+    if (typeof v !== 'string') continue
+    // 工具箱偏好曾借用记录内的 'items' 字段（见 useIdb.TOOLBOX_NAV_KEY）。
+    // 拆分时归位到专属键，否则它会变成一条名叫 'items' 的记录，
+    // 与「store 的键也叫 items」这套旧约定继续混淆下去。
+    const targetKey = k === IDB_KEY ? TOOLBOX_NAV_KEY : k
+    try {
+      await idbPutKey('nav', targetKey, v)
+    } catch (e) {
+      console.error('[nav-prefs] 拆分 nav 记录失败，保留旧整包记录下次重试', k, e)
+      return
+    }
+  }
+  await idbDeleteKey('nav', IDB_KEY)
+  console.warn('[nav-prefs] nav 已拆分为按 key 的多记录（v21）')
+}
+
+/** 逐键写入（内部共用；不做守卫判定，守卫统一在上层入口做） */
+async function writeKeys(record: NavPrefsRecord): Promise<void> {
+  for (const [k, v] of Object.entries(record)) {
+    await idbPutKey('nav', k, v)
   }
 }
 
@@ -122,7 +180,10 @@ export function ensureLoaded(): Promise<void> {
       let idbError: unknown = null
       try {
         await migrateNavFromLocalStorageIfNeeded()
-        fromIdb = await idbGet<NavPrefsRecord>('nav')
+        await migrateNavToPerKeyRecords()
+        // v21 起 nav 是多记录：整体装载用游标遍历，不再读单条 'items'
+        const entries = await idbGetAllEntries<string>('nav')
+        fromIdb = Object.keys(entries).length ? entries : undefined
       } catch (e) {
         idbError = e
       }
@@ -138,7 +199,7 @@ export function ensureLoaded(): Promise<void> {
           loadState = 'shadow'
           // 尽力回填 IDB：成功了就回到健康状态，失败也无妨（内存里已可用，刷新影子也不会丢）
           try {
-            await idbPut('nav', prefs)
+            await writeKeys(prefs)
           } catch (e) {
             console.error('[nav-prefs] 影子回填 IDB 失败，本次会话仅在内存中运行', e)
           }
@@ -243,35 +304,44 @@ function warnGuardThrottled(reason: string): void {
   }
 }
 
-/** 真正落盘：写 IDB 成功后刷新 localStorage 影子。
+/**
+ * 真正落盘：只写**变动过的键**，成功后刷新 localStorage 影子。
+ *
+ * v21 前这里是 `idbPut('nav', {...prefs})` 整包覆盖 —— 改一个键也要把全量重序列化一遍。
+ * 现在按 dirtyKeys 逐键写入，落盘体积与「改了什么」成正比，不再与总数据量成正比。
+ *
  * 注意顺序必须是「先主存后影子」：影子写失败不能影响 IDB 的成功语义，反之亦然。
  */
-function writeThrough(snapshot: NavPrefsRecord): Promise<void> {
-  // 空态绝不落盘：这条是「数据没了又被自动写回」链路上的最后一道闸门
-  const blockReason = emptyWriteBlockReason(snapshot)
+async function writeThrough(keys: string[]): Promise<void> {
+  if (keys.length === 0) return
+  // 空态绝不落盘：这条是「数据没了又被自动写回」链路上的最后一道闸门。
+  // 判定用**整包** prefs（守卫语义是「整体规模是否合理」，不是单个键）
+  const blockReason = emptyWriteBlockReason(prefs)
   if (blockReason) {
     warnGuardThrottled(blockReason)
-    return Promise.resolve()
+    return
   }
-  return idbPut('nav', snapshot).then(
-    () => {
-      try {
-        writeShadow(snapshot)
-      } catch {
-        // 影子纯冗余，失败无需告警打扰用户
-      }
-    },
-    (e) => {
-      console.error('[nav-prefs] 持久化失败', e)
+  for (const k of keys) {
+    try {
+      await idbPutKey('nav', k, prefs[k])
+    } catch (e) {
+      console.error('[nav-prefs] 持久化失败', k, e)
     }
-  )
+  }
+  try {
+    writeShadow(prefs)
+  } catch {
+    // 影子纯冗余，失败无需告警打扰用户
+  }
 }
 
 function scheduleSave(): void {
   if (saveTimer) clearTimeout(saveTimer)
   saveTimer = setTimeout(() => {
     saveTimer = null
-    void writeThrough({ ...prefs })
+    const keys = [...dirtyKeys]
+    dirtyKeys = new Set()
+    void writeThrough(keys)
   }, SAVE_DEBOUNCE_MS)
 }
 
@@ -279,24 +349,28 @@ function scheduleSave(): void {
 export function setPref(key: string, value: string): void {
   if (!allowWrite(`setPref(${key})`)) return
   prefs = { ...prefs, [key]: value }
+  dirtyKeys.add(key)
   scheduleSave()
 }
 
-/** 立即更新内存并同步落盘（无防抖）：用于页面隐藏/卸载前 flush 与需立即持久的关键写入 */
+/** 立即更新内存并落盘（无防抖）：用于页面隐藏/卸载前 flush 与需立即持久的关键写入 */
 export function setPrefNow(key: string, value: string): void {
   if (!allowWrite(`setPrefNow(${key})`)) return
   prefs = { ...prefs, [key]: value }
-  void writeThrough({ ...prefs })
+  dirtyKeys.delete(key) // 即将立即写入，无需再进防抖队列
+  void writeThrough([key])
 }
 
 /** 立即落盘（页面隐藏/卸载、恢复备份后刷新前调用），取消防抖定时器 */
-export function flushNow(): Promise<void> {
+export async function flushNow(): Promise<void> {
   if (saveTimer) {
     clearTimeout(saveTimer)
     saveTimer = null
   }
-  if (!allowWrite('flushNow')) return Promise.resolve()
-  return writeThrough({ ...prefs })
+  const keys = [...dirtyKeys]
+  dirtyKeys = new Set()
+  if (!allowWrite('flushNow')) return
+  await writeThrough(keys)
 }
 
 /**
@@ -325,11 +399,34 @@ export async function clearAll(): Promise<void> {
   } catch {
     // 忽略
   }
+  dirtyKeys = new Set()
   loadState = 'ok'
   await idbClear('nav')
+  // 图标缓存（v21 起独立 store）一并清空：恢复出厂不该留下旧站点的图标
+  try {
+    await idbClear('iconcache')
+  } catch {
+    // 图标缓存可重建，清不掉不影响重置语义
+  }
   // 清仍留在 localStorage 的 prefs 键（含 6 个非导航 prefs + 迁移前残留的导航键），维持出厂重置等同旧行为
   for (const k of WORKBENCH_PREFS_KEYS) {
     try { localStorage.removeItem(k) } catch { /* 忽略 */ }
+  }
+}
+
+/**
+ * 删除单个导航键（含 IDB 记录与影子）。
+ * v21 引入：icon-cache 迁到独立 store 后，用它把 nav 里的旧副本清理掉。
+ */
+export async function deletePref(key: string): Promise<void> {
+  dirtyKeys.delete(key)
+  const next: NavPrefsRecord = { ...prefs }
+  delete next[key]
+  prefs = next
+  try {
+    await idbDeleteKey('nav', key)
+  } catch (e) {
+    console.error('[nav-prefs] 删除导航键失败', key, e)
   }
 }
 
@@ -339,8 +436,10 @@ export async function refreshAfterImport(): Promise<void> {
     clearTimeout(saveTimer)
     saveTimer = null
   }
+  dirtyKeys = new Set()
   try {
-    const data = await idbGet<NavPrefsRecord>('nav')
+    // 云同步可能刚写入过 nav，这里按 v21 多记录格式整体重读
+    const data = await idbGetAllEntries<string>('nav')
     prefs = data ?? {}
     loadState = 'ok' // 能读到 → 解除只读（这是数据恢复的主要通道）
   } catch (e) {
@@ -364,5 +463,16 @@ export async function refreshAfterImport(): Promise<void> {
 
 /** 门面：返回共享方法（闭包模块级状态） */
 export function useNavPrefs() {
-  return { ensureLoaded, getPref, setPref, setPrefNow, flushNow, clearAll, refreshAfterImport, isNavReadonly, navLoadState }
+  return {
+    ensureLoaded,
+    getPref,
+    setPref,
+    setPrefNow,
+    deletePref,
+    flushNow,
+    clearAll,
+    refreshAfterImport,
+    isNavReadonly,
+    navLoadState
+  }
 }

@@ -149,24 +149,42 @@ for (const [n, kb] of [
 }
 
 console.log('\n' + '='.repeat(74))
-console.log('C. 结构隐患：nav 一条记录装 15 个键 + 整包覆盖（本轮未改）')
+console.log('C. 结构隐患：nav 一条记录装 15 个键 + 整包覆盖（v21 已修复）')
 console.log('='.repeat(74))
-console.log('  IDB `nav` store 只有 1 条记录（键 "items"），值 = NavPrefsRecord（15 个键）。')
-console.log('  任何一次 setPref（哪怕是 MB 级 icon-cache 更新）都会整包 {...prefs} 覆盖写回。\n')
+console.log('  旧实现：IDB `nav` 只有 1 条记录（键 "items"），值 = NavPrefsRecord（15 个键），')
+console.log('  任何一次 setPref（哪怕是 MB 级 icon-cache 更新）都会整包 {...prefs} 覆盖写回。')
+console.log('  v21：nav 改为**按 key 多记录**，落盘只写变动的键（dirtyKeys）；')
+console.log('  icon-cache 迁到独立 `iconcache` store，彻底离开用户资产旁边。\n')
 
 const huge = { 'user-sites': makeSites(80, 4 * 1024), 'icon-cache': 'B'.repeat(3 * 1024 * 1024) }
 const totalMb = (Object.values(huge).reduce((a, b) => a + b.length, 0) / 1024 / 1024).toFixed(2)
-console.log(`  示例整包体积 ≈ ${totalMb} MB（user-sites 320KB + icon-cache 3MB）`)
+console.log(`  修复前整包体积 ≈ ${totalMb} MB（user-sites 320KB + icon-cache 3MB）`)
 console.log('  → 每次点击站点都触发一次整包序列化 + IDB 写入')
 console.log('  → 移动端隐藏/卸载时的异步事务易被中止，失败仅 console.error（静默）')
-console.log('  → 建议后续把 nav 拆成按 key 的多记录，并把 icon-cache 独立成 store')
+console.log('  → 修复后单次落盘体积只与「改了哪个键」成正比，不再与总数据量成正比')
 
 console.log('\n' + '='.repeat(74))
-console.log('D. 与工作台的对照（为什么只有导航站丢）')
+console.log('D. 主因（v21 才发现）：工具箱落盘用旧快照整包覆盖 nav')
+console.log('='.repeat(74))
+console.log('  useToolboxPrefs 的旧实现：idbPut(\'nav\', { ...current, [\'toolbox-prefs\']: payload })')
+console.log('  其中 current 是**打开工具箱那一刻**的 nav 全量快照。\n')
+console.log('  复现步骤：')
+console.log('    1. 打开工具箱（快照 A 进内存）')
+console.log('    2. 去导航站新增 5 个站点 → nav 变为 B')
+console.log('    3. 回工具箱点一下（点击计数变化 → 触发 300ms 后落盘）')
+console.log('    4. { ...快照A, toolbox: 新值 } 被整体写回 → **nav 回退到 A，5 个新站点消失**\n')
+console.log('  这条链路完美解释了两件事：')
+console.log('    · 为什么只有导航站丢 —— 工作台各模块是独立 store，工具箱的写入根本碰不到；')
+console.log('    · 为什么「很容易」丢 —— 只要开着工具箱页，任何一次点击都会触发覆盖。')
+console.log('  v21：工具箱改为只写自己那条记录（idbPutKey），跨模块覆盖不再可能发生。')
+console.log('  已由 scripts/test-nav-storage.ts 的 NS-01/NS-03 静态约束锁死，防止改回去。')
+
+console.log('\n' + '='.repeat(74))
+console.log('E. 与工作台的对照（为什么只有导航站丢）')
 console.log('='.repeat(74))
 const rows: [string, string, string][] = [
-  ['持久化粒度', '15 键挤在 nav 一条记录', '每模块一个独立 store'],
-  ['写入方式', '400ms 防抖 → void 整包覆盖', 'await idbPut 直写，无中间层'],
+  ['持久化粒度', 'v21 起每键一条记录', '每模块一个独立 store'],
+  ['写入方式', '只写变动键（dirtyKeys）', 'await idbPut 直写，无中间层'],
   ['内存缓存', '模块级 prefs，读写都过它', '无，store ref 即数据源'],
   ['写失败处理', '静默 console.error', '调用方 await，可感知'],
   ['额外介质依赖', 'v20 起已消除（原 localStorage）', '无'],
@@ -189,8 +207,11 @@ console.log(`
    4. 影子遇超限改为写去图标降级版，放不下则保留旧影子，绝不主动删除。
    5. 影子回填改为 merge，不再用 10 个影子键冲掉整条 nav 记录。
 
-  待办（结构性，建议独立分支）：
-   6. nav 拆成按 key 的多记录，消除写放大与整包覆盖风险。
-   7. MB 级 icon-cache 移出 nav 独立成 store。
+  v21 已修复（结构性）：
+   6. nav 拆成按 key 的多记录，落盘只写变动键 —— 消除写放大，
+      且一份残缺的 prefs 再也冲不掉整条记录。
+   7. MB 级 icon-cache 移到独立 iconcache store，离开用户资产。
+   8. **工具箱落盘不再整包覆盖 nav** —— 这是「只有导航站会莫名回退」的
+      一条主因：开着工具箱时任何一次点击都会把启动快照写回，抹掉期间新增的站点。
 `)
 process.exit(defect > 0 ? 1 : 0)

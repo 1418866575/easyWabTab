@@ -23,7 +23,8 @@ import { isSuspectedRemoteWipe, isNavWipeOverrideActive } from './navDataGuard'
 export const DB_NAME = 'easy-web-tab'
 /** v18：新增 `nav` object store，承载原 localStorage 的导航偏好（13 键），根治移动端 localStorage 被系统回收导致导航数据丢失 */
 /** v20：新增 `navmeta` object store，承载导航降级守卫的基线/高水位（从 localStorage 迁入，详见 IDB_META_STORES） */
-export const DB_VERSION = 20
+/** v21：新增 `iconcache` store（图标缓存移出 nav）；nav 同时改为按 key 多记录存储（见 idbPutKey） */
+export const DB_VERSION = 21
 /** 核心 9 store：随 JSON 备份导出/导入（v6 新增 business；v15 新增 family 家谱） */
 export const IDB_CORE_STORES = ['todos', 'notes', 'diary', 'countdowns', 'passwords', 'health', 'ledger', 'settings', 'business', 'family'] as const
 /** 辅助 store：pomodoro/habits 随 v5 备份导出/导入；snapshots 仅本地使用，不参与备份 */
@@ -62,6 +63,15 @@ export const IDB_TOOLBOX_STORES = ['lottery'] as const
  * 「IDB 数据还在、守卫依据却被回收」这种不对称就不再可能发生。
  */
 export const IDB_META_STORES = ['navmeta'] as const
+/**
+ * 站点图标缓存 store（v21 新增：从 nav 记录中独立出来）
+ *
+ * 原先 icon-cache 与 user-sites 等同住 nav 的**一条记录**里，而它可达 MB 级
+ * （见 useIconCache 注释），导致每次落盘都要整包序列化数 MB ——
+ * 写放大严重，移动端页面隐藏/卸载时的 IDB 事务更易被浏览器中止。
+ * 独立成 store 后，nav 侧只剩 KB 级的用户资产，图标缓存的频繁更新不再牵动用户数据。
+ */
+export const IDB_ICONCACHE_STORES = ['iconcache'] as const
 export const IDB_KEY = 'items'
 
 export type IdbStore =
@@ -73,6 +83,7 @@ export type IdbStore =
   | (typeof IDB_NAV_STORES)[number]
   | (typeof IDB_TOOLBOX_STORES)[number]
   | (typeof IDB_META_STORES)[number]
+  | (typeof IDB_ICONCACHE_STORES)[number]
 
 let dbPromise: Promise<IDBDatabase> | undefined
 
@@ -91,7 +102,8 @@ export function openIdb(): Promise<IDBDatabase> {
           ...IDB_TEACHER_STORES,
           ...IDB_NAV_STORES,
           ...IDB_TOOLBOX_STORES,
-          ...IDB_META_STORES
+          ...IDB_META_STORES,
+          ...IDB_ICONCACHE_STORES
         ]) {
           if (!db.objectStoreNames.contains(name)) {
             db.createObjectStore(name) // 无 keyPath → out-of-line 键 'items'
@@ -153,6 +165,67 @@ export function idbClear(store: IdbStore): Promise<void> {
   })
 }
 
+// ============ 多记录读写（v21：nav 由「一条 items 记录」改为「每键一条记录」）============
+
+/**
+ * 按**自定义键**写入（多记录 store 用）。
+ *
+ * 与 `idbPut` 的区别：idbPut 固定用 IDB_KEY('items')，整条覆盖；
+ * 这里按传入的 key 写单条，互不影响 —— 这是消除写放大的关键：
+ * 更新一个键不再需要把整包（含 MB 级数据）重新序列化一遍。
+ */
+export function idbPutKey(store: IdbStore, key: string, value: unknown): Promise<void> {
+  return openIdb().then((db) => {
+    const tx = db.transaction(store, 'readwrite')
+    const request = tx.objectStore(store).put(value, key)
+    return requestToPromise<void>(request)
+  })
+}
+
+/** 按自定义键读取（多记录 store 用） */
+export function idbGetKey<T>(store: IdbStore, key: string): Promise<T | undefined> {
+  return openIdb().then((db) => {
+    const tx = db.transaction(store, 'readonly')
+    return requestToPromise<T | undefined>(tx.objectStore(store).get(key))
+  })
+}
+
+/** 按自定义键删除（迁移清理、删除单个 pref 用） */
+export function idbDeleteKey(store: IdbStore, key: string): Promise<void> {
+  return openIdb().then((db) => {
+    const tx = db.transaction(store, 'readwrite')
+    const request = tx.objectStore(store).delete(key)
+    return requestToPromise<void>(request)
+  })
+}
+
+/**
+ * 读取一个 store 的**全部**记录（键 → 值）。
+ *
+ * 用于多记录 store 的整体装载（如启动时把 nav 的 15 个键读进内存）。
+ * 用游标遍历而非 getAll()+getAllKeys() 配对，避免两个请求结果顺序错配。
+ */
+export function idbGetAllEntries<T = unknown>(store: IdbStore): Promise<Record<string, T>> {
+  return openIdb().then((db) => {
+    const tx = db.transaction(store, 'readonly')
+    const objectStore = tx.objectStore(store)
+    return new Promise<Record<string, T>>((resolve, reject) => {
+      const out: Record<string, T> = {}
+      const request = objectStore.openCursor()
+      request.onsuccess = () => {
+        const cursor = request.result
+        if (cursor) {
+          out[String(cursor.key)] = cursor.value as T
+          cursor.continue()
+        } else {
+          resolve(out)
+        }
+      }
+      request.onerror = () => reject(request.error)
+    })
+  })
+}
+
 /** 云同步 prefs 白名单（仅这些 localStorage key 打包到 v9 信封，不含图标、不含加密身份键） */
 export const WORKBENCH_PREFS_KEYS = [
   'user-sites',
@@ -174,10 +247,14 @@ export const WORKBENCH_PREFS_KEYS = [
 ] as const
 
 /**
- * 导航偏好键（v18 起由 localStorage 迁移至 IDB `nav` store 的整体集合，共 14 键）。
- * 涵盖：站点/分类/搜索引擎/主题/背景/站点标题与图标/点击计数/图标缓存等所有原 localStorage 导航键。
- * 注意：`site-click-counts` 与 `icon-cache` 不在 WORKBENCH_PREFS_KEYS 中（历史上从未进云同步信封），
+ * 导航偏好键（v18 起由 localStorage 迁移至 IDB `nav` store 的整体集合）。
+ * 涵盖：站点/分类/搜索引擎/主题/背景/站点标题与图标/点击计数等所有原 localStorage 导航键。
+ *
+ * 注意：`site-click-counts` 不在 WORKBENCH_PREFS_KEYS 中（历史上从未进云同步信封），
  * 故仅迁 IDB 做持久化，不参与 nav.json / workbench.json 信封（保持迁移前行为）。
+ *
+ * v21 起 `icon-cache` **不再属于 nav**：它是 MB 级可重建数据，与用户资产同住一条记录
+ * 会造成严重写放大（详见 IDB_ICONCACHE_STORES）。已移至独立 `iconcache` store。
  */
 export const NAV_STORE_KEYS = [
   'user-sites',
@@ -192,9 +269,21 @@ export const NAV_STORE_KEYS = [
   'user-theme',
   'user-background',
   'site-title',
-  'site-favicon',
-  'icon-cache'
+  'site-favicon'
 ] as const
+
+/** 站点图标缓存键（v21 起存独立 `iconcache` store；v20 及更早曾在 nav 内，迁移见 useIconCache） */
+export const ICON_CACHE_KEY = 'icon-cache'
+
+/**
+ * 工具箱偏好在 nav store 内的专属键（v21 引入）。
+ *
+ * v20 及更早它借用 nav 整包记录里的 `IDB_KEY`('items') 字段 —— 于是
+ * 「store 的键叫 items」和「记录内有个字段也叫 items」两套含义撞在一起。
+ * nav 拆成多记录后这个字段会被拆成一条 `nav['items']` 记录，
+ * 与导航数据的键空间混淆。故给它一个语义明确的专属键。
+ */
+export const TOOLBOX_NAV_KEY = 'toolbox-prefs'
 
 /** 导航键中属于云同步信封的子集（WORKBENCH_PREFS_KEYS 的导航部分，共 10 键），用于 nav.json / workbench.json 打包 */
 export const NAV_SYNC_KEYS = [
@@ -216,12 +305,27 @@ export type NavPrefsRecord = Record<string, string>
 /** 导航同步键集合（用于按来源分别读写，避免触碰非导航 prefs） */
 const NAV_SYNC_KEY_SET = new Set<string>(NAV_SYNC_KEYS)
 /**
+ * 读取 nav store 的全量记录。
+ * v21 起 nav 是**按 key 多记录**存储（原为一条 `items` 整包记录），统一走这里装载。
+ */
+async function readNavRecord(): Promise<NavPrefsRecord> {
+  return (await idbGetAllEntries<string>('nav')) ?? {}
+}
+
+/** 逐键写回 nav store（与多记录存储配套，避免整包覆盖） */
+async function writeNavRecord(record: NavPrefsRecord): Promise<void> {
+  for (const [k, v] of Object.entries(record)) {
+    await idbPutKey('nav', k, v)
+  }
+}
+
+/**
  * 打包同步偏好（workbench.json 信封用）：导航键读 `nav` IDB store，其余非导航 prefs 仍读 localStorage，
  * 以保证信封契约与迁移前完全一致（10 导航键 + 6 非导航键）。idbExportAll 直接调用。
  */
 export async function packPrefsFromIdb(): Promise<Record<string, string>> {
   const out: Record<string, string> = {}
-  const navRecord = (await idbGet<NavPrefsRecord>('nav')) ?? {}
+  const navRecord = await readNavRecord()
   for (const k of NAV_SYNC_KEYS) {
     const v = navRecord[k]
     if (v !== undefined) out[k] = v
@@ -246,7 +350,7 @@ export async function packPrefsFromIdb(): Promise<Record<string, string>> {
  */
 export async function applyPrefsToIdb(prefs: Record<string, string> | undefined): Promise<void> {
   if (!prefs) return
-  const navRecord: NavPrefsRecord = (await idbGet<NavPrefsRecord>('nav')) ?? {}
+  const navRecord: NavPrefsRecord = await readNavRecord()
   let navChanged = false
   for (const k of NAV_SYNC_KEYS) {
     const v = prefs[k]
@@ -264,7 +368,7 @@ export async function applyPrefsToIdb(prefs: Record<string, string> | undefined)
     }
     if (navRecord[k] !== v) { navRecord[k] = v; navChanged = true }
   }
-  if (navChanged) await idbPut('nav', navRecord)
+  if (navChanged) await writeNavRecord(navRecord)
   for (const k of WORKBENCH_PREFS_KEYS) {
     if (NAV_SYNC_KEY_SET.has(k)) continue // 导航键已写 nav store
     const v = prefs[k]
@@ -434,7 +538,7 @@ function pickLocalCloudSyncSettings(local: AppSettingsData | undefined): Partial
 
 /** 从 nav store 打包导航同步信封（仅含 10 个导航同步键，site-click-counts/icon-cache 不进信封） */
 export async function exportNav(): Promise<NavSyncData> {
-  const navRecord = (await idbGet<NavPrefsRecord>('nav')) ?? {}
+  const navRecord = await readNavRecord()
   const prefs: Record<string, string> = {}
   for (const k of NAV_SYNC_KEYS) {
     const v = navRecord[k]
@@ -456,7 +560,7 @@ export async function exportNav(): Promise<NavSyncData> {
  */
 export async function importNavData(remote: NavSyncData): Promise<void> {
   if (!remote || !remote.prefs) return
-  const navRecord: NavPrefsRecord = (await idbGet<NavPrefsRecord>('nav')) ?? {}
+  const navRecord: NavPrefsRecord = await readNavRecord()
   for (const k of NAV_SYNC_KEYS) {
     const v = remote.prefs[k]
     if (v === undefined) {
@@ -473,7 +577,7 @@ export async function importNavData(remote: NavSyncData): Promise<void> {
     }
     navRecord[k] = v
   }
-  await idbPut('nav', navRecord)
+  await writeNavRecord(navRecord)
 }
 
 // ---------- icons.json（v11 起存 IDB 'icons' object store，值为 CustomIcon[] 数组；首次从 localStorage 迁移） ----------
