@@ -748,9 +748,9 @@ async function handleDelete(id: string): Promise<void> {
             />
           </div>
         </div>
-        <!-- 第二行：添加进货（最右） -->
+        <!-- 第二行：添加进货（与支出页 bizexp-add-bar 同款：日期行下方、默认按钮样式） -->
         <div class="bizpur-add-bar">
-          <el-button type="primary" size="small" data-testid="bizpur-add-row" @click="addRow">＋ 添加进货</el-button>
+          <el-button size="small" data-testid="bizpur-add-row" @click="addRow">＋ 添加进货</el-button>
         </div>
         <!-- 表格类列表：商品 / 总支出 / 入库数量 / 进价 / 关联支出（多选） / 操作 -->
         <div class="bizpur-row-table" data-testid="bizpur-row-table">
@@ -768,7 +768,10 @@ async function handleDelete(id: string): Promise<void> {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(row, idx) in formRows" :key="row.id ?? ('new-' + idx)">
+              <!-- 用 template v-for：数据行与其错误提示行共享 row/idx 作用域
+                   （错误行必须在同一个循环内，放到行外会拿不到 row） -->
+              <template v-for="(row, idx) in formRows" :key="row.id ?? ('new-' + idx)">
+              <tr>
                 <td class="col-idx" data-label="#">{{ idx + 1 }}</td>
                 <td class="col-prod" data-label="商品">
                   <el-select v-model="row.productId" size="small" filterable :fit-input-width="false" :data-testid="`bizpur-row-product-${idx}`" @change="onRowProductChange(idx)">
@@ -832,11 +835,36 @@ async function handleDelete(id: string): Promise<void> {
                   </div>
                 </td>
                 <td data-label="操作" class="col-op">
-                  <el-button size="small" type="danger" :data-testid="`bizpur-row-remove-${idx}`" @click="removeRow(idx)">移除</el-button>
+                  <!-- plain：与支出页「移除」同款；实心 danger 在多行表格里过于抢眼 -->
+                  <el-button
+                    size="small"
+                    type="danger"
+                    plain
+                    :data-testid="`bizpur-row-remove-${idx}`"
+                    @click="removeRow(idx)"
+                  >移除</el-button>
                 </td>
               </tr>
+              <!-- 行内校验提示（对齐支出页 bizexp-row-issue-row）：
+                   错误就地显示在该行下方，多行录入时能直接定位，不必到底部列表对照行号。 -->
+              <tr v-if="rowIssues(row).length > 0" class="bizpur-row-issue-row">
+                <td :colspan="7" class="bizpur-row-issue-cell">
+                  <ul class="bizpur-row-issues" :data-testid="`bizpur-row-issues-${idx}`">
+                    <li
+                      v-for="(issue, i) in rowIssues(row)"
+                      :key="i"
+                      class="bizpur-row-issue"
+                      :class="issue.level"
+                    >
+                      <span class="bizpur-row-issue-icon">{{ issue.level === 'error' ? '✕' : '!' }}</span>
+                      {{ issue.message }}
+                    </li>
+                  </ul>
+                </td>
+              </tr>
+              </template>
               <tr v-if="formRows.length === 0">
-                <td colspan="7" class="bizpur-empty-row">暂无进货记录行，点击右上角「添加进货」新增一行</td>
+                <td colspan="7" class="bizpur-empty-row">暂无进货记录行，点击「＋ 添加进货」新增一行</td>
               </tr>
             </tbody>
           </table>
@@ -1236,6 +1264,55 @@ async function handleDelete(id: string): Promise<void> {
 }
 
 /* 录入校验提示 */
+/* ===== 行内校验提示（对齐支出页 bizexp-row-issue-row）=====
+   错误就地落在出错行下方；底部 bizpur-issues 汇总列表保留作为全局总览。 */
+.bizpur-row-issue-row .bizpur-row-issue-cell {
+  padding: 0 8px 8px;
+  background: transparent;
+  border: none;
+}
+
+.bizpur-row-issues {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bizpur-row-issue {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+
+.bizpur-row-issue-icon {
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.bizpur-row-issue.error {
+  color: var(--color-error, #dc2626);
+  background: var(--color-bg-hover, #fef2f2);
+  border-color: color-mix(in srgb, var(--color-error, #dc2626) 30%, transparent);
+}
+
+.bizpur-row-issue.warn {
+  color: var(--color-warning, #b45309);
+  background: color-mix(in srgb, var(--color-warning, #b45309) 10%, transparent);
+  border-color: color-mix(in srgb, var(--color-warning, #b45309) 30%, transparent);
+}
+
+:global(html.dark) .bizpur-row-issue.error {
+  background-color: var(--color-bg-hover, #2a1414);
+}
+
 .bizpur-issues {
   margin: 0;
   padding: 0;
