@@ -107,8 +107,8 @@ export function normalizeHealthData(raw: Partial<HealthData> | undefined): Healt
 }
 
 /** 归一化运动记录（脏输入吞掉不抛错，module 强制 exercise，duration/calories 负数钳 0）。 */
-export function normalizeExerciseRecord(raw: any): ExerciseRecord {
-  const r = raw ?? {}
+export function normalizeExerciseRecord(raw: unknown): ExerciseRecord {
+  const r = (raw ?? {}) as Record<string, unknown>
   return {
     id: typeof r.id === 'string' && r.id ? r.id : genId('ex_'),
     module: 'exercise',
@@ -124,8 +124,8 @@ export function normalizeExerciseRecord(raw: any): ExerciseRecord {
 }
 
 /** 归一化饮食记录（mealType 非法回退「早餐」，module 强制 diet，calories 负数钳 0）。 */
-export function normalizeDietRecord(raw: any): DietRecord {
-  const r = raw ?? {}
+export function normalizeDietRecord(raw: unknown): DietRecord {
+  const r = (raw ?? {}) as Record<string, unknown>
   const mealType: MealType =
     typeof r.mealType === 'string' && (MEAL_TYPES as readonly string[]).includes(r.mealType)
       ? (r.mealType as MealType)
@@ -144,8 +144,8 @@ export function normalizeDietRecord(raw: any): DietRecord {
 }
 
 /** 归一化睡眠记录（durationHours 缺失/NaN 时按 sleepTime/wakeTime 补算，quality 钳到 1-5）。 */
-export function normalizeSleepRecord(raw: any): SleepRecord {
-  const r = raw ?? {}
+export function normalizeSleepRecord(raw: unknown): SleepRecord {
+  const r = (raw ?? {}) as Record<string, unknown>
   const rawDur = r.durationHours
   const durNum = Number(rawDur)
   const fallback = sleepDurationHours(
@@ -167,8 +167,8 @@ export function normalizeSleepRecord(raw: any): SleepRecord {
 }
 
 /** 归一化体重记录（module 强制 weight，weightKg 负数钳 0）。 */
-export function normalizeWeightRecord(raw: any): WeightRecord {
-  const r = raw ?? {}
+export function normalizeWeightRecord(raw: unknown): WeightRecord {
+  const r = (raw ?? {}) as Record<string, unknown>
   return {
     id: typeof r.id === 'string' && r.id ? r.id : genId('wt_'),
     module: 'weight',
@@ -181,8 +181,8 @@ export function normalizeWeightRecord(raw: any): WeightRecord {
 }
 
 /** 归一化身高记录（module 强制 height，heightCm 越界剔除为 0；20-250cm 之外视为脏数据）。 */
-export function normalizeHeightRecord(raw: any): HeightRecord {
-  const r = raw ?? {}
+export function normalizeHeightRecord(raw: unknown): HeightRecord {
+  const r = (raw ?? {}) as Record<string, unknown>
   const cm = num(r.heightCm)
   return {
     id: typeof r.id === 'string' && r.id ? r.id : genId('ht_'),

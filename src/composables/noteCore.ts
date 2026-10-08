@@ -47,8 +47,8 @@ export function emptyNoteData(): NoteData {
 }
 
 /** 时光轴单条归一化：id 缺失/非字符串 → 生成 `tle_` 前缀 id；content 兜底 ''；createdAt 非法/缺失 → 当前 ISO。 */
-function normalizeTimelineEntry(raw: any | undefined): TimelineEntry {
-  const src = raw ?? {}
+function normalizeTimelineEntry(raw: unknown | undefined): TimelineEntry {
+  const src = (raw ?? {}) as Record<string, unknown>
   const nowIso = new Date().toISOString()
   return {
     id: typeof src.id === 'string' && src.id ? src.id : `tle_${Date.now()}`,
@@ -70,13 +70,13 @@ function normalizeTimelineEntry(raw: any | undefined): TimelineEntry {
  * - dueDate 仅保留严格 'YYYY-MM-DD'（非法/不存在日期 → undefined）
  * - status 非法/缺失 → 'pending'（历史便签兜底为「处理中」；「逾期」由 noteStatusView 按日期派生，不落库）
  */
-export function normalizeNote(raw: any | undefined): WorkbenchNote {
-  const src = raw ?? {}
+export function normalizeNote(raw: unknown | undefined): WorkbenchNote {
+  const src = (raw ?? {}) as Record<string, unknown>
   const nowIso = new Date().toISOString()
   const type: NoteType = src.type === 'timeline' ? 'timeline' : 'normal'
   const id = typeof src.id === 'string' && src.id ? src.id : `nt_${Date.now()}`
   const categoryId = typeof src.categoryId === 'string' && src.categoryId !== '' ? src.categoryId : undefined
-  const color: NoteColor = (NOTE_COLORS as readonly string[]).includes(src.color) ? (src.color as NoteColor) : 'blue'
+  const color: NoteColor = typeof src.color === 'string' && (NOTE_COLORS as readonly string[]).includes(src.color) ? (src.color as NoteColor) : 'blue'
   const base: WorkbenchNote = {
     id,
     ...(typeof src.title === 'string' ? { title: src.title } : {}),
@@ -91,7 +91,7 @@ export function normalizeNote(raw: any | undefined): WorkbenchNote {
   // 截止日期 / 状态：历史便签缺省 → undefined（显示时按「处理中」兜底，不报错、不改写存量）
   const dueDate = normalizeDueDate(src.dueDate)
   if (dueDate) base.dueDate = dueDate
-  const status: NoteStatus = (NOTE_STATUSES as readonly string[]).includes(src.status)
+  const status: NoteStatus = typeof src.status === 'string' && (NOTE_STATUSES as readonly string[]).includes(src.status)
     ? (src.status as NoteStatus)
     : 'pending'
   base.status = status

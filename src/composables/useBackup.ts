@@ -5,11 +5,14 @@
  * - 自动备份触发
  */
 
+import type { Site, Category } from '@/types'
+import type { SearchEngine } from '@/stores/searchEngines'
+
 export interface BackupData {
   timestamp: string
-  sites: any[]
-  categories: any[]
-  searchEngines: any[]
+  sites: Site[]
+  categories: Category[]
+  searchEngines: SearchEngine[]
 }
 
 export interface BackupMetadata {
@@ -74,9 +77,9 @@ export function getMetadata(): BackupMetadata {
  * 创建新备份（深拷贝，确保数据独立）
  */
 export function createBackup(
-  sites: any[],
-  categories: any[],
-  searchEngines: any[]
+  sites: Site[],
+  categories: Category[],
+  searchEngines: SearchEngine[]
 ): BackupData {
   const backup: BackupData = {
     timestamp: new Date().toISOString(),
@@ -114,9 +117,9 @@ export function createBackup(
  * 5分钟内如有新修改，重新计时
  */
 export function scheduleAutoBackup(
-  sites: any[],
-  categories: any[],
-  searchEngines: any[]
+  sites: Site[],
+  categories: Category[],
+  searchEngines: SearchEngine[]
 ) {
   const metadata = getMetadata()
   if (!metadata.autoBackupEnabled) return
@@ -137,9 +140,9 @@ export function scheduleAutoBackup(
  * 立即执行备份（取消防抖）
  */
 export function triggerImmediateBackup(
-  sites: any[],
-  categories: any[],
-  searchEngines: any[]
+  sites: Site[],
+  categories: Category[],
+  searchEngines: SearchEngine[]
 ) {
   if (backupTimeout) {
     clearTimeout(backupTimeout)
@@ -152,9 +155,9 @@ export function triggerImmediateBackup(
  * 从备份恢复数据
  */
 export function restoreFromBackup(backup: BackupData): {
-  sites: any[]
-  categories: any[]
-  searchEngines: any[]
+  sites: Site[]
+  categories: Category[]
+  searchEngines: SearchEngine[]
 } {
   return {
     sites: [...backup.sites],
@@ -185,9 +188,9 @@ export function clearAllBackups() {
  * 导出为 Markdown 文件
  */
 export function exportToMarkdownFile(
-  sites: any[],
-  categories: any[],
-  searchEngines: any[]
+  sites: Site[],
+  categories: Category[],
+  searchEngines: SearchEngine[]
 ) {
   // 生成 Markdown 格式
   const sitesList = sites.map(site => {
@@ -203,12 +206,12 @@ export function exportToMarkdownFile(
 
   // 分类
   const categoriesSection = categories.length > 0
-    ? `categories:\n${categories.map((c: any) => `  - id: ${c.id}\n    name: ${c.name}\n    icon: ${c.icon}\n    sort: ${c.sort || 0}`).join('\n\n')}\n\n`
+    ? `categories:\n${categories.map((c) => `  - id: ${c.id}\n    name: ${c.name}\n    icon: ${c.icon}\n    sort: ${c.sort || 0}`).join('\n\n')}\n\n`
     : ''
 
   // 搜索引擎
   const enginesSection = searchEngines.length > 0
-    ? `searchEngines:\n${searchEngines.map((e: any) => `  - id: ${e.id}\n    name: ${e.name}\n    url: ${e.url}\n    isDefault: ${e.isDefault}\n    sort: ${e.sort}`).join('\n\n')}\n\n`
+    ? `searchEngines:\n${searchEngines.map((e) => `  - id: ${e.id}\n    name: ${e.name}\n    url: ${e.url}\n    isDefault: ${e.isDefault}\n    sort: ${e.sort}`).join('\n\n')}\n\n`
     : ''
 
   const markdown = `---
@@ -248,9 +251,9 @@ export function setAutoBackup(enabled: boolean) {
  * 导入 Markdown 文件
  */
 export function importFromMarkdownFile(markdownText: string): {
-  sites: any[]
-  categories: any[]
-  searchEngines: any[]
+  sites: Site[]
+  categories: Category[]
+  searchEngines: SearchEngine[]
 } | null {
   try {
     // 简单解析 YAML frontmatter
@@ -261,9 +264,9 @@ export function importFromMarkdownFile(markdownText: string): {
 
     const frontmatter = match[1]
     const result = {
-      sites: [] as any[],
-      categories: [] as any[],
-      searchEngines: [] as any[]
+      sites: [] as Site[],
+      categories: [] as Category[],
+      searchEngines: [] as SearchEngine[]
     }
 
     // 解析 sites
@@ -293,7 +296,10 @@ export function importFromMarkdownFile(markdownText: string): {
         if (catBlocks) {
           for (const block of catBlocks) {
             const id = block.replace('- id: ', '').trim()
-            result.categories.push({ id, name: id, icon: '📁', sort: 0 })
+            // 来自 Markdown 导入的分类一律视为用户自定义（非内置）；
+            // 此前 any[] 掩盖了 isBuiltIn 缺失，导入后该字段为 undefined 会影响
+            // 「内置分类不可删除」等判断，故显式置 false。
+            result.categories.push({ id, name: id, icon: '📁', isBuiltIn: false, sort: 0 })
           }
         }
       }
