@@ -1052,7 +1052,7 @@ html.dark .avatar-preview { background: var(--color-bg-card, #1f2937); }
 
 /* ===== 暗色覆盖 ===== */
 html.dark .fg-tab { color: var(--color-text-secondary, #d1d5db); }
-html.dark .fg-tab:hover, html.dark .fg-tab.active { color: #60a5fa; border-bottom-color: #3b82f6; }
+html.dark .fg-tab:hover, html.dark .fg-tab.active { color: var(--color-primary, #60a5fa); border-bottom-color: var(--color-primary, #3b82f6); }
 html.dark .empty-state { background-color: var(--color-bg-card, #1f2937); }
 html.dark .fg-name { color: var(--color-text, #f9fafb); }
 html.dark .fg-tree-bar { background-color: var(--color-bg-card, #1f2937); }

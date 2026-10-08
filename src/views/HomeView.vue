@@ -926,9 +926,9 @@ onUnmounted(() => {
   gap: 8px;
   margin-top: 16px;
   padding: 8px 16px;
-  background-color: white;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
+  background-color: var(--color-bg-card, #ffffff);
+  color: var(--color-text-secondary, #64748b);
+  border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 20px;
   font-size: 13px;
   cursor: pointer;
@@ -936,8 +936,8 @@ onUnmounted(() => {
 }
 
 .nav-filter-toggle:hover {
-  color: #3b82f6;
-  border-color: #3b82f6;
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
 }
 
 .nav-filter-chevron {
@@ -1035,7 +1035,7 @@ onUnmounted(() => {
 
 .nsf-clear:hover {
   background: var(--color-border, #e2e8f0);
-  color: #ef4444;
+  color: var(--color-error, #ef4444);
 }
 
 .nav-filter-clear {
@@ -1051,8 +1051,8 @@ onUnmounted(() => {
 }
 
 .nav-filter-clear:hover {
-  color: #ef4444;
-  border-color: #ef4444;
+  color: var(--color-error, #ef4444);
+  border-color: var(--color-error, #ef4444);
 }
 
 /* .nav-add-site 视觉已统一到全局 .ui-btn--primary（8px 圆角）；保留 flex 布局 */
@@ -1078,7 +1078,7 @@ onUnmounted(() => {
 .empty-state {
   text-align: center;
   padding: 60px 20px;
-  color: #64748b;
+  color: var(--color-text-secondary, #64748b);
   font-size: 16px;
 }
 
@@ -1289,8 +1289,8 @@ html.dark .nav-add-site {
   border-color: #f59e0b !important;
 }
 .wb-sync-btn.wb-sync-btn-error {
-  background-color: #ef4444 !important;
+  background-color: var(--color-error, #ef4444) !important;
   color: #fff !important;
-  border-color: #ef4444 !important;
+  border-color: var(--color-error, #ef4444) !important;
 }
 </style>

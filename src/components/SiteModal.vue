@@ -630,11 +630,11 @@ const handleSubmit = () => {
 .form-group select {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
   font-size: 14px;
   transition: border-color 0.2s;
-  background-color: white;
+  background-color: var(--color-bg-card, #ffffff);
 }
 
 /* 提示与错误信息整行显示在控件下方，与输入框左对齐 */
@@ -648,7 +648,7 @@ const handleSubmit = () => {
 .form-group textarea:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: var(--color-primary, #3b82f6);
 }
 
 .category-select {
@@ -680,8 +680,8 @@ const handleSubmit = () => {
   top: 100%;
   left: 0;
   right: 0;
-  background: white;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 10;
@@ -696,7 +696,7 @@ const handleSubmit = () => {
 
 .tag-suggestion {
   padding: 4px 10px;
-  background: #f1f5f9;
+  background: var(--color-bg-hover, #f1f5f9);
   border-radius: 4px;
   font-size: 13px;
   color: #475569;
@@ -705,26 +705,26 @@ const handleSubmit = () => {
 }
 
 .tag-suggestion:hover {
-  background: #3b82f6;
+  background: var(--color-primary, #3b82f6);
   color: white;
 }
 
 .form-group input.error,
 .form-group textarea.error {
-  border-color: #ef4444;
+  border-color: var(--color-error, #ef4444);
 }
 
 .error-msg {
   display: block;
   font-size: 12px;
-  color: #ef4444;
+  color: var(--color-error, #ef4444);
   margin-top: 4px;
 }
 
 .form-hint {
   display: block;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--color-text-muted, #94a3b8);
   margin-top: 4px;
 }
 
@@ -833,7 +833,7 @@ const handleSubmit = () => {
   padding: 6px 12px;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 6px;
-  background: white;
+  background: var(--color-bg-card, #ffffff);
   color: var(--color-text-secondary, #64748b);
   font-size: 13px;
   cursor: pointer;

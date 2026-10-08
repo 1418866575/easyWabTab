@@ -783,7 +783,7 @@ onMounted(async () => {
 .bs-gate-error {
   margin: 0 0 10px;
   font-size: 12px;
-  color: #ef4444;
+  color: var(--color-error, #ef4444);
 }
 
 /* ===== 跨年提示条（不阻断） ===== */
@@ -1428,8 +1428,8 @@ html.dark .bs-fab-action {
   border-color: #f59e0b;
 }
 .wb-sync-btn.wb-sync-btn-error {
-  background-color: #ef4444;
+  background-color: var(--color-error, #ef4444);
   color: #fff;
-  border-color: #ef4444;
+  border-color: var(--color-error, #ef4444);
 }
 </style>

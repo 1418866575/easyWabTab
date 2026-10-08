@@ -251,7 +251,7 @@ const handleClick = () => {
 
 <style scoped>
 .site-card {
-  background-color: white;
+  background-color: var(--color-bg-card, #ffffff);
   border-radius: 10px;
   padding: 14px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -266,7 +266,7 @@ const handleClick = () => {
 .site-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-  border-color: #e2e8f0;
+  border-color: var(--color-border, #e2e8f0);
 }
 
 .site-card.is-dragging {
@@ -275,7 +275,7 @@ const handleClick = () => {
 }
 
 .site-card.is-drag-over {
-  border-color: #3b82f6;
+  border-color: var(--color-primary, #3b82f6);
   border-style: dashed;
   transform: scale(1.02);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
@@ -303,7 +303,7 @@ const handleClick = () => {
   height: 48px;
   border-radius: 10px;
   object-fit: cover;
-  background-color: #f8fafc;
+  background-color: var(--color-bg, #f8fafc);
   transition: transform 0.2s ease;
 }
 
@@ -372,8 +372,8 @@ const handleClick = () => {
   right: 0;
   min-width: 148px;
   padding: 6px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   z-index: 1600;
@@ -397,7 +397,7 @@ const handleClick = () => {
 }
 
 .card-menu-item:hover {
-  background-color: #f1f5f9;
+  background-color: var(--color-bg-hover, #f1f5f9);
   color: var(--color-primary, #3b82f6);
 }
 
@@ -407,12 +407,12 @@ const handleClick = () => {
 }
 
 .card-menu-item.is-danger {
-  color: #ef4444;
+  color: var(--color-error, #ef4444);
 }
 
 .card-menu-item.is-danger:hover {
   background-color: #fef2f2;
-  color: #ef4444;
+  color: var(--color-error, #ef4444);
 }
 
 .card-menu-fade-enter-active,
@@ -429,7 +429,7 @@ const handleClick = () => {
 .site-name {
   font-size: 14px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--color-text, #1e293b);
   margin: 0;
   text-align: center;
   white-space: nowrap;
@@ -445,9 +445,9 @@ const handleClick = () => {
   left: 50%;
   bottom: calc(100% + 10px);
   transform: translateX(-50%);
-  background: #ffffff;
-  color: #1e293b;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-card, #ffffff);
+  color: var(--color-text, #1e293b);
+  border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   padding: 12px 14px;
@@ -469,14 +469,14 @@ const handleClick = () => {
   cursor: pointer;
   font-size: 16px;
   line-height: 1;
-  color: #94a3b8;
+  color: var(--color-text-muted, #94a3b8);
   padding: 2px 6px;
   border-radius: 6px;
   transition: color 0.15s, background-color 0.15s;
 }
 .desc-popup-close:hover {
-  color: #1e293b;
-  background-color: #f1f5f9;
+  color: var(--color-text, #1e293b);
+  background-color: var(--color-bg-hover, #f1f5f9);
 }
 
 .desc-popup-text {
@@ -484,7 +484,7 @@ const handleClick = () => {
   padding-right: 18px;
   word-break: break-word;
   white-space: pre-wrap;
-  color: #1e293b;
+  color: var(--color-text, #1e293b);
 }
 
 .desc-popup-arrow {
@@ -496,7 +496,7 @@ const handleClick = () => {
   height: 0;
   border-left: 8px solid transparent;
   border-right: 8px solid transparent;
-  border-top: 8px solid #e2e8f0;
+  border-top: 8px solid var(--color-border, #e2e8f0);
 }
 .desc-popup-arrow::after {
   content: '';
@@ -508,7 +508,7 @@ const handleClick = () => {
   height: 0;
   border-left: 7px solid transparent;
   border-right: 7px solid transparent;
-  border-top: 7px solid #ffffff;
+  border-top: 7px solid var(--color-bg-card, #ffffff);
 }
 
 /* Transition：淡入淡出 + 轻微上下位移，保持 translateX(-50%) 居中 */
@@ -543,14 +543,14 @@ const handleClick = () => {
 /* ================ 暗色主题 ================ */
 :global(.dark) .menu-trigger {
   background: transparent;
-  color: #94a3b8;
+  color: var(--color-text-muted, #94a3b8);
 }
 :global(.dark) .menu-trigger:hover {
   background: var(--color-primary-soft, rgba(96, 165, 250, 0.18));
 }
 
 :global(.dark) .card-menu {
-  background: #1e293b;
+  background: var(--color-bg-card, #1e293b);
   border-color: #334155;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
 }
@@ -574,25 +574,25 @@ const handleClick = () => {
 }
 
 :global(.dark) .desc-popup {
-  background: #1e293b;
-  color: #e2e8f0;
+  background: var(--color-bg-card, #1e293b);
+  color: var(--color-text, #e2e8f0);
   border-color: #334155;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
 }
 :global(.dark) .desc-popup-close {
-  color: #64748b;
+  color: var(--color-text-muted, #64748b);
 }
 :global(.dark) .desc-popup-close:hover {
-  color: #f8fafc;
+  color: var(--color-text, #f8fafc);
   background-color: #334155;
 }
 :global(.dark) .desc-popup-text {
-  color: #e2e8f0;
+  color: var(--color-text, #e2e8f0);
 }
 :global(.dark) .desc-popup-arrow {
   border-top-color: #334155;
 }
 :global(.dark) .desc-popup-arrow::after {
-  border-top-color: #1e293b;
+  border-top-color: var(--color-bg-card, #1e293b);
 }
 </style>
