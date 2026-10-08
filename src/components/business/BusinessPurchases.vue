@@ -640,7 +640,6 @@ async function handleDelete(id: string): Promise<void> {
           >
             <template #actions>
               <el-button size="small" :data-testid="`bizpur-card-edit-${item.id}`" @click.stop="startEdit(item)">编辑</el-button>
-              <el-button size="small" :data-testid="`bizpur-card-copy-${item.id}`" @click.stop="startCopy(item)">复制</el-button>
               <el-button size="small" type="danger" :data-testid="`bizpur-card-del-${item.id}`" @click.stop="handleDelete(item.id)">删除</el-button>
             </template>
           </RecordsCard>

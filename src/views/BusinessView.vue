@@ -880,6 +880,11 @@ html.dark .bs-stall-name {
   }
 
   .bs-content {
+    /* min-height:0 是 flex 子项能收缩的前提，缺它时本元素按内容高度撑开，
+       外层 .bs-shell 又是 overflow:hidden —— 内容超出屏幕且被裁掉，
+       overflow-y:auto 因容器没有被压缩而不产生滚动条（商品页「无法下滑」即此因）。
+       .bs-body 移动端为 flex-direction:column，本元素是其子项，故必须显式归零。 */
+    min-height: 0;
     overflow-y: auto;
     /* 滚动到底后不把橡皮筋传递给外层文档（否则头部/底栏会跟着一起晃） */
     overscroll-behavior-y: contain;
