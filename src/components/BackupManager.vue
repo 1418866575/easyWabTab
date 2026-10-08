@@ -215,7 +215,7 @@ const toggleAutoBackup = () => {
    本组件仅保留备份状态、操作按钮、备份列表、说明等内容样式 */
 
 .backup-status {
-  background: #f8fafc;
+  background: var(--color-bg, #f8fafc);
   border-radius: 8px;
   padding: 12px 16px;
   margin-bottom: 16px;
@@ -233,20 +233,20 @@ const toggleAutoBackup = () => {
 }
 
 .label {
-  color: #64748b;
+  color: var(--color-text-secondary, #64748b);
   font-size: 14px;
 }
 
 .value {
-  color: #1e293b;
+  color: var(--color-text, #1e293b);
   font-size: 14px;
 }
 
 .toggle-btn {
   padding: 4px 12px;
   border-radius: 4px;
-  border: 1px solid #e2e8f0;
-  background: white;
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-bg-card, #ffffff);
   cursor: pointer;
   font-size: 13px;
 }
@@ -267,29 +267,29 @@ const toggleAutoBackup = () => {
 .action-btn {
   padding: 8px 16px;
   border-radius: 6px;
-  border: 1px solid #e2e8f0;
-  background: white;
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-bg-card, #ffffff);
   cursor: pointer;
   font-size: 14px;
   transition: all 0.2s;
 }
 
 .action-btn:hover {
-  background: #f1f5f9;
+  background: var(--color-bg-hover, #f1f5f9);
 }
 
 .action-btn.primary {
-  background: #3b82f6;
+  background: var(--color-primary, #3b82f6);
   color: white;
-  border-color: #3b82f6;
+  border-color: var(--color-primary, #3b82f6);
 }
 
 .action-btn.primary:hover {
-  background: #2563eb;
+  background: var(--color-primary-hover, #2563eb);
 }
 
 .action-btn.danger {
-  color: #ef4444;
+  color: var(--color-error, #ef4444);
 }
 
 .action-btn.danger:hover {
@@ -307,14 +307,14 @@ const toggleAutoBackup = () => {
 
 .backup-list h3 {
   font-size: 14px;
-  color: #64748b;
+  color: var(--color-text-secondary, #64748b);
   margin: 0 0 12px 0;
 }
 
 .empty {
   text-align: center;
   padding: 40px 20px;
-  color: #94a3b8;
+  color: var(--color-text-muted, #94a3b8);
   font-size: 14px;
 }
 
@@ -323,7 +323,7 @@ const toggleAutoBackup = () => {
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
   margin-bottom: 8px;
 }
@@ -334,13 +334,13 @@ const toggleAutoBackup = () => {
 
 .backup-time {
   font-size: 14px;
-  color: #1e293b;
+  color: var(--color-text, #1e293b);
   margin-bottom: 4px;
 }
 
 .backup-summary {
   font-size: 12px;
-  color: #64748b;
+  color: var(--color-text-secondary, #64748b);
 }
 
 .backup-actions {
@@ -352,30 +352,30 @@ const toggleAutoBackup = () => {
   padding: 4px 12px;
   border-radius: 4px;
   border: none;
-  background: #3b82f6;
+  background: var(--color-primary, #3b82f6);
   color: white;
   font-size: 12px;
   cursor: pointer;
 }
 
 .restore-btn:hover {
-  background: #2563eb;
+  background: var(--color-primary-hover, #2563eb);
 }
 
 .delete-btn {
   padding: 4px 12px;
   border-radius: 4px;
-  border: 1px solid #e2e8f0;
-  background: white;
-  color: #64748b;
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-bg-card, #ffffff);
+  color: var(--color-text-secondary, #64748b);
   font-size: 12px;
   cursor: pointer;
 }
 
 .delete-btn:hover {
   background: #fef2f2;
-  color: #ef4444;
-  border-color: #ef4444;
+  color: var(--color-error, #ef4444);
+  border-color: var(--color-error, #ef4444);
 }
 
 .help-text {
@@ -383,7 +383,7 @@ const toggleAutoBackup = () => {
   border-radius: 8px;
   padding: 12px 16px;
   font-size: 13px;
-  color: #1e293b;
+  color: var(--color-text, #1e293b);
 }
 
 .help-text p {
@@ -397,6 +397,6 @@ const toggleAutoBackup = () => {
 
 .help-text li {
   margin-bottom: 4px;
-  color: #64748b;
+  color: var(--color-text-secondary, #64748b);
 }
 </style>

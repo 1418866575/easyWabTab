@@ -605,7 +605,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
 }
 .hw-detail-btn { color: var(--color-link, #3b82f6); }
 .hw-edit-btn { color: var(--color-text-secondary, #64748b); }
-.hw-del-btn { color: #ef4444; }
+.hw-del-btn { color: var(--color-error, #ef4444); }
 
 /* ===== 分页 ===== */
 .hw-list-pager {
@@ -731,7 +731,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
   font-weight: 600;
 }
 .hw-required {
-  color: #ef4444;
+  color: var(--color-error, #ef4444);
 }
 
 /* ===== 详情 ===== */

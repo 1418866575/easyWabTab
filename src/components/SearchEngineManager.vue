@@ -351,13 +351,13 @@ function truncateUrl(url: string, maxLength = 40) {
 .add-form {
   margin-bottom: 24px;
   padding-bottom: 24px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
 }
 
 .add-form h3 {
   font-size: 14px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--color-text-secondary, #64748b);
   margin: 0 0 12px 0;
 }
 
@@ -381,14 +381,14 @@ function truncateUrl(url: string, maxLength = 40) {
 
 .form-row input {
   padding: 10px 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
   font-size: 14px;
   outline: none;
 }
 
 .form-row input:focus {
-  border-color: #3b82f6;
+  border-color: var(--color-primary, #3b82f6);
 }
 
 .btn-add {
@@ -407,16 +407,16 @@ function truncateUrl(url: string, maxLength = 40) {
 .engine-list h3 {
   font-size: 14px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--color-text-secondary, #64748b);
   margin: 0 0 12px 0;
 }
 
 .empty-state {
   text-align: center;
-  color: #94a3b8;
+  color: var(--color-text-muted, #94a3b8);
   font-size: 14px;
   padding: 20px;
-  background: #f8fafc;
+  background: var(--color-bg, #f8fafc);
   border-radius: 8px;
 }
 
@@ -425,8 +425,8 @@ function truncateUrl(url: string, maxLength = 40) {
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
   margin-bottom: 8px;
 }
@@ -438,21 +438,21 @@ function truncateUrl(url: string, maxLength = 40) {
 
 /* 已禁用引擎：弱化显示，与「默认」高亮区分 */
 .engine-item.is-disabled {
-  background: #f8fafc;
-  border-color: #e2e8f0;
+  background: var(--color-bg, #f8fafc);
+  border-color: var(--color-border, #e2e8f0);
   border-style: dashed;
 }
 
 .engine-item.is-disabled .engine-name,
 .engine-item.is-disabled .engine-url {
-  color: #94a3b8;
+  color: var(--color-text-muted, #94a3b8);
 }
 
 .disabled-tag {
   font-size: 10px;
   padding: 2px 6px;
-  background: #e2e8f0;
-  color: #64748b;
+  background: var(--color-bg-active, #e2e8f0);
+  color: var(--color-text-secondary, #64748b);
   border-radius: 4px;
 }
 
@@ -466,20 +466,20 @@ function truncateUrl(url: string, maxLength = 40) {
   width: 20px;
   height: 16px;
   padding: 0;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-hover, #f1f5f9);
+  border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 4px;
   cursor: pointer;
   font-size: 10px;
-  color: #64748b;
+  color: var(--color-text-secondary, #64748b);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .btn-sort:hover:not(:disabled) {
-  background: #e2e8f0;
-  color: #3b82f6;
+  background: var(--color-bg-active, #e2e8f0);
+  color: var(--color-primary, #3b82f6);
 }
 
 .btn-sort:disabled {
@@ -490,7 +490,7 @@ function truncateUrl(url: string, maxLength = 40) {
 .engine-name {
   flex: 1;
   font-size: 14px;
-  color: #1e293b;
+  color: var(--color-text, #1e293b);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -498,7 +498,7 @@ function truncateUrl(url: string, maxLength = 40) {
 
 .engine-url {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--color-text-muted, #94a3b8);
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -515,7 +515,7 @@ function truncateUrl(url: string, maxLength = 40) {
 
 .edit-input {
   padding: 6px 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 4px;
   font-size: 14px;
 }
@@ -547,7 +547,7 @@ function truncateUrl(url: string, maxLength = 40) {
 }
 
 .btn-icon.delete:hover {
-  color: #ef4444;
+  color: var(--color-error, #ef4444);
 }
 
 /* 设为默认：未选中为常规图标按钮，已是默认时高亮为金色且不可点击 */
@@ -565,7 +565,7 @@ function truncateUrl(url: string, maxLength = 40) {
 }
 
 .btn-icon.toggle:hover {
-  color: #3b82f6;
+  color: var(--color-primary, #3b82f6);
 }
 
 .btn-reset {

@@ -854,7 +854,7 @@ watch(showForm, (v) => {
 }
 .grp-edit-btn { color: var(--color-link, #3b82f6); }
 .grp-copy-btn { color: var(--color-text-secondary, #64748b); }
-.grp-del-btn { color: #ef4444; }
+.grp-del-btn { color: var(--color-error, #ef4444); }
 
 /* 成员 chip（男蓝 / 女粉 / 已移除灰） */
 .tw-chip {
@@ -969,7 +969,7 @@ watch(showForm, (v) => {
   font-weight: 600;
 }
 .grp-required {
-  color: #ef4444;
+  color: var(--color-error, #ef4444);
 }
 .grp-role-list {
   display: flex;
@@ -1123,7 +1123,7 @@ watch(showForm, (v) => {
   gap: 6px;
 }
 .grp-snap-del {
-  color: #ef4444;
+  color: var(--color-error, #ef4444);
 }
 
 @media (max-width: 768px) {

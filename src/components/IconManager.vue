@@ -384,13 +384,13 @@ function usedSiteNames(icon: MergedIcon): string {
 .add-form {
   margin-bottom: 24px;
   padding-bottom: 24px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
 }
 
 .add-form h3 {
   font-size: 14px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--color-text-secondary, #64748b);
   margin: 0 0 12px 0;
 }
 
@@ -415,7 +415,7 @@ function usedSiteNames(icon: MergedIcon): string {
 
 .upload-hint {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--color-text-muted, #94a3b8);
 }
 
 /* 搜索 + 过滤 */
@@ -426,7 +426,7 @@ function usedSiteNames(icon: MergedIcon): string {
 .search-input {
   width: 100%;
   padding: 10px 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
   font-size: 14px;
   outline: none;
@@ -434,7 +434,7 @@ function usedSiteNames(icon: MergedIcon): string {
 }
 
 .search-input:focus {
-  border-color: #3b82f6;
+  border-color: var(--color-primary, #3b82f6);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -449,9 +449,9 @@ function usedSiteNames(icon: MergedIcon): string {
 .category-tab {
   padding: 6px 14px;
   border-radius: 20px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-  color: #64748b;
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-bg, #f8fafc);
+  color: var(--color-text-secondary, #64748b);
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s;
@@ -459,13 +459,13 @@ function usedSiteNames(icon: MergedIcon): string {
 }
 
 .category-tab:hover {
-  background: #e2e8f0;
-  color: #1e293b;
+  background: var(--color-bg-active, #e2e8f0);
+  color: var(--color-text, #1e293b);
 }
 
 .category-tab.active {
-  background: #3b82f6;
-  border-color: #3b82f6;
+  background: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
   color: white;
 }
 
@@ -484,8 +484,8 @@ function usedSiteNames(icon: MergedIcon): string {
   align-items: center;
   padding: 12px 8px;
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-bg, #f8fafc);
   transition: all 0.2s;
 }
 
@@ -517,7 +517,7 @@ function usedSiteNames(icon: MergedIcon): string {
 }
 
 .icon-manager-item.custom {
-  background: white;
+  background: var(--color-bg-card, #ffffff);
 }
 
 .icon-manager-item:hover {
@@ -537,7 +537,7 @@ function usedSiteNames(icon: MergedIcon): string {
   margin-bottom: 8px;
   border-radius: 8px;
   overflow: hidden;
-  background: #f1f5f9;
+  background: var(--color-bg-hover, #f1f5f9);
 }
 
 .icon-manager-preview img {
@@ -548,7 +548,7 @@ function usedSiteNames(icon: MergedIcon): string {
 
 .icon-manager-label {
   font-size: 12px;
-  color: #1e293b;
+  color: var(--color-text, #1e293b);
   text-align: center;
   max-width: 100%;
   overflow: hidden;
@@ -566,15 +566,15 @@ function usedSiteNames(icon: MergedIcon): string {
 
 .icon-manager-category {
   font-size: 10px;
-  color: #94a3b8;
-  background: #f1f5f9;
+  color: var(--color-text-muted, #94a3b8);
+  background: var(--color-bg-hover, #f1f5f9);
   padding: 1px 6px;
   border-radius: 10px;
 }
 
 .icon-manager-size {
   font-size: 10px;
-  color: #94a3b8;
+  color: var(--color-text-muted, #94a3b8);
 }
 
 .icon-manager-actions {
@@ -587,7 +587,7 @@ function usedSiteNames(icon: MergedIcon): string {
 .edit-input {
   width: 100%;
   padding: 6px 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 4px;
   font-size: 12px;
   text-align: center;
@@ -595,7 +595,7 @@ function usedSiteNames(icon: MergedIcon): string {
 }
 
 .edit-input:focus {
-  border-color: #3b82f6;
+  border-color: var(--color-primary, #3b82f6);
   outline: none;
 }
 
@@ -615,7 +615,7 @@ function usedSiteNames(icon: MergedIcon): string {
 }
 
 .btn-icon.delete:hover {
-  color: #ef4444;
+  color: var(--color-error, #ef4444);
 }
 
 .btn-secondary {
@@ -633,19 +633,19 @@ function usedSiteNames(icon: MergedIcon): string {
   gap: 8px;
   align-items: center;
   padding-top: 20px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--color-border, #e2e8f0);
 }
 
 .import-export-hint {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--color-text-muted, #94a3b8);
   margin-left: auto;
 }
 
 /* 空状态 */
 .empty-custom {
   text-align: center;
-  color: #94a3b8;
+  color: var(--color-text-muted, #94a3b8);
   font-size: 14px;
   padding: 40px 20px;
 }

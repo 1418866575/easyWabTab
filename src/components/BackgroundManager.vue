@@ -502,14 +502,14 @@ function clearBackground() {
   margin: 0 0 12px 0;
   font-size: 14px;
   font-weight: 600;
-  color: #3b82f6;
+  color: var(--color-primary, #3b82f6);
 }
 
 .subsection-title {
   margin: 16px 0 10px 0;
   font-size: 13px;
   font-weight: 500;
-  color: #64748b;
+  color: var(--color-text-secondary, #64748b);
 }
 
 /* 预览区域 */
@@ -521,12 +521,12 @@ function clearBackground() {
   width: 100%;
   height: 120px;
   border-radius: 12px;
-  border: 2px solid #e2e8f0;
+  border: 2px solid var(--color-border, #e2e8f0);
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
-  background-color: #f8fafc;
+  background-color: var(--color-bg, #f8fafc);
 }
 
 .background-preview.none {
@@ -534,7 +534,7 @@ function clearBackground() {
 }
 
 .preview-text {
-  color: #94a3b8;
+  color: var(--color-text-muted, #94a3b8);
   font-size: 14px;
 }
 
@@ -549,24 +549,24 @@ function clearBackground() {
   flex: 1;
   min-width: 80px;
   padding: 12px 16px;
-  border: 2px solid #e2e8f0;
+  border: 2px solid var(--color-border, #e2e8f0);
   border-radius: 10px;
-  background: white;
+  background: var(--color-bg-card, #ffffff);
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s;
-  color: #64748b;
+  color: var(--color-text-secondary, #64748b);
 }
 
 .type-btn:hover {
-  border-color: #3b82f6;
-  color: #3b82f6;
+  border-color: var(--color-primary, #3b82f6);
+  color: var(--color-primary, #3b82f6);
 }
 
 .type-btn.active {
-  border-color: #3b82f6;
+  border-color: var(--color-primary, #3b82f6);
   background: #eff6ff;
-  color: #3b82f6;
+  color: var(--color-primary, #3b82f6);
 }
 
 /* 颜色选择 */
@@ -587,7 +587,7 @@ function clearBackground() {
 .color-input {
   flex: 1;
   padding: 10px 14px;
-  border: 2px solid #e2e8f0;
+  border: 2px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
   font-size: 14px;
   font-family: monospace;
@@ -595,7 +595,7 @@ function clearBackground() {
 
 .color-input:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: var(--color-primary, #3b82f6);
 }
 
 /* 背景网格 */
@@ -608,7 +608,7 @@ function clearBackground() {
 .background-option {
   aspect-ratio: 4/3;
   border-radius: 8px;
-  border: 2px solid #e2e8f0;
+  border: 2px solid var(--color-border, #e2e8f0);
   cursor: pointer;
   transition: all 0.2s;
   overflow: hidden;
@@ -616,11 +616,11 @@ function clearBackground() {
 
 .background-option:hover {
   transform: scale(1.05);
-  border-color: #3b82f6;
+  border-color: var(--color-primary, #3b82f6);
 }
 
 .background-option.active {
-  border-color: #3b82f6;
+  border-color: var(--color-primary, #3b82f6);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
@@ -636,7 +636,7 @@ function clearBackground() {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #ef4444;
+  background: var(--color-error, #ef4444);
   color: white;
   border: 2px solid white;
   cursor: pointer;
@@ -710,15 +710,15 @@ function clearBackground() {
 
 .upload-hint {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--color-text-muted, #94a3b8);
 }
 
 /* 内容区域透明度 */
 .opacity-section {
   padding: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 12px;
-  background: #f8fafc;
+  background: var(--color-bg, #f8fafc);
   margin-bottom: 16px;
 }
 
@@ -735,7 +735,7 @@ function clearBackground() {
 .opacity-value {
   font-size: 14px;
   font-weight: 600;
-  color: #3b82f6;
+  color: var(--color-primary, #3b82f6);
   min-width: 44px;
   text-align: right;
 }
@@ -743,14 +743,14 @@ function clearBackground() {
 .opacity-slider {
   width: 100%;
   margin-top: 12px;
-  accent-color: #3b82f6;
+  accent-color: var(--color-primary, #3b82f6);
   cursor: pointer;
 }
 
 .opacity-hint {
   margin: 8px 0 0 0;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--color-text-muted, #94a3b8);
 }
 
 /* 自定义渐变 */
@@ -765,9 +765,9 @@ function clearBackground() {
 
 .gradient-creator {
   padding: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 12px;
-  background: #f8fafc;
+  background: var(--color-bg, #f8fafc);
 }
 
 .gradient-creator-row {
@@ -786,7 +786,7 @@ function clearBackground() {
 
 .color-picker-group label, .angle-picker-group label {
   font-size: 12px;
-  color: #64748b;
+  color: var(--color-text-secondary, #64748b);
   font-weight: 500;
 }
 
@@ -808,7 +808,7 @@ function clearBackground() {
   height: 60px;
   border-radius: 8px;
   margin-bottom: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border, #e2e8f0);
 }
 
 .gradient-creator-actions {
