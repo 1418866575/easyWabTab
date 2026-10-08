@@ -460,6 +460,27 @@
     break-inside: avoid;
   }
 
+  /* el-table 自带内部滚动容器（.el-table__body-wrapper / .el-scrollbar__wrap，
+     带 overflow:auto + max-height）。打印时同样会把数据行裁到可视区，
+     表现为「只有表头、没有数据」。此处放开高度与滚动约束，
+     与 BusinessStats.vue 的同类处理保持一致。 */
+  .el-table,
+  .el-table__inner-wrapper,
+  .el-table__header-wrapper,
+  .el-table__body-wrapper,
+  .el-scrollbar__wrap {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  /* 固定列在打印中会与主体列重复，隐藏 */
+  .el-table__fixed,
+  .el-table__fixed-right,
+  .el-table-fixed__column--right {
+    display: none !important;
+  }
+
   .tw-table-wrap {
     overflow: visible;
   }
