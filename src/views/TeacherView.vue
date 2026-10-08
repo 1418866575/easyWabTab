@@ -107,8 +107,8 @@ function selectPage(key: TeacherPageKey): void {
 
 // ---------- 选择器 ----------
 // 学期可切换；班级与「本班身份」为只读展示，随所选学期自动联动（切换入口在设置页）。
-async function onSemesterChange(e: Event): Promise<void> {
-  const v = (e.target as HTMLSelectElement).value
+async function onSemesterChange(val: unknown): Promise<void> {
+  const v = String(val ?? '')
   if (v) await store.selectSemester(v)
 }
 
@@ -186,11 +186,14 @@ onMounted(() => {
         <div class="tv-selectors">
           <label class="tw-label">
             学期
-            <select class="tw-select tw-input-sm" :value="store.data.current.sem" @change="onSemesterChange">
-              <option v-for="s in store.semesters" :key="s.id" :value="s.id">
-                {{ s.year }} {{ s.term }}{{ store.isDefaultSemester(s.id) ? '（默认）' : '' }}
-              </option>
-            </select>
+            <el-select size="small" :model-value="store.data.current.sem" @change="onSemesterChange">
+              <el-option
+                v-for="s in store.semesters"
+                :key="s.id"
+                :value="s.id"
+                :label="`${s.year} ${s.term}${store.isDefaultSemester(s.id) ? '（默认）' : ''}`"
+              />
+            </el-select>
           </label>
           <!-- 只读：随所选学期 / 默认组合自动更新，切换班级请到「设置 → 学期与班级」 -->
           <div class="tv-field" data-testid="teacher-readonly-class">
@@ -242,12 +245,12 @@ onMounted(() => {
         <h2 class="tw-card-title">第 1 步 · 创建学期</h2>
         <p class="tw-card-hint">学期是最高层分组，切换学期即切换全部数据视图。先建一个学期再继续。</p>
         <div class="tv-guide-form">
-          <label class="tw-label">学年<input v-model="guideYear" class="tw-input" placeholder="如 2026" /></label>
+          <label class="tw-label">学年<el-input v-model="guideYear" placeholder="如 2026" /></label>
           <label class="tw-label">
             学期
-            <select v-model="guideTerm" class="tw-select">
-              <option v-for="t in TERM_OPTIONS" :key="t" :value="t">{{ t }}</option>
-            </select>
+            <el-select v-model="guideTerm">
+              <el-option v-for="t in TERM_OPTIONS" :key="t" :value="t" :label="t" />
+            </el-select>
           </label>
           <button type="button" class="tw-btn tw-btn-primary" :disabled="!guideYear.trim() || !guideTerm.trim()" @click="createSemesterFromGuide">
             创建学期
@@ -265,22 +268,22 @@ onMounted(() => {
         <div class="tv-guide-form">
           <label class="tw-label">
             学段
-            <select v-model="guideStage" class="tw-select">
-              <option v-for="s in STAGE_OPTIONS" :key="s" :value="s">{{ s }}</option>
-            </select>
+            <el-select v-model="guideStage">
+              <el-option v-for="s in STAGE_OPTIONS" :key="s" :value="s" :label="s" />
+            </el-select>
           </label>
-          <label class="tw-label">年级<input v-model="guideGrade" class="tw-input" placeholder="如 三年级" /></label>
-          <label class="tw-label">班级<input v-model="guideName" class="tw-input" placeholder="如 1班" /></label>
+          <label class="tw-label">年级<el-input v-model="guideGrade" placeholder="如 三年级" /></label>
+          <label class="tw-label">班级<el-input v-model="guideName" placeholder="如 1班" /></label>
           <label class="tw-label">
             学科
             <SubjectSelect v-model="guideSubject" placeholder="请选择学科" size="small" />
           </label>
           <label class="tw-label">
             本班身份
-            <select v-model="guideRole" class="tw-select">
-              <option value="head">班主任</option>
-              <option value="subject">非班主任 · 科任</option>
-            </select>
+            <el-select v-model="guideRole">
+              <el-option value="head" label="班主任" />
+              <el-option value="subject" label="非班主任 · 科任" />
+            </el-select>
           </label>
           <button type="button" class="tw-btn tw-btn-primary" :disabled="!guideGrade.trim() || !guideName.trim()" @click="createClassFromGuide">
             创建班级

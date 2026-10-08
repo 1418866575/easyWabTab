@@ -159,7 +159,7 @@ function exportArchive(): void {
     <div class="gr-layout">
       <aside class="gr-side tw-card">
         <h4 class="tw-card-title">选择学生</h4>
-        <input v-model="keyword" class="tw-input tw-input-sm gr-search" placeholder="搜索姓名" />
+        <el-input v-model="keyword" size="small" class="gr-search" placeholder="搜索姓名" />
         <div class="gr-students">
           <button
             v-for="s in filtered"
@@ -180,10 +180,10 @@ function exportArchive(): void {
         <div class="tw-card">
           <h4 class="tw-card-title">{{ editingId ? '编辑记录' : '添加记录' }}</h4>
           <div class="gr-form">
-            <label class="tw-label">日期<input v-model="formDate" type="date" class="tw-input tw-input-sm" /></label>
-            <label class="tw-label gr-flex">标题<input v-model="formTitle" class="tw-input tw-input-sm" placeholder="如 期中进步之星" /></label>
+            <label class="tw-label">日期<el-date-picker v-model="formDate" type="date" size="small" format="YYYY-MM-DD" value-format="YYYY-MM-DD" style="width: 100%" /></label>
+            <label class="tw-label gr-flex">标题<el-input v-model="formTitle" size="small" placeholder="如 期中进步之星" /></label>
           </div>
-          <textarea v-model="formContent" class="tw-input gr-textarea" rows="3" placeholder="记录内容…"></textarea>
+          <el-input v-model="formContent" type="textarea" class="gr-textarea" :rows="3" placeholder="记录内容…" />
           <div class="tw-toolbar gr-photo-bar">
             <button type="button" class="tw-btn tw-btn-sm" @click="photoInput?.click()">添加图片</button>
             <input ref="photoInput" type="file" accept="image/*" multiple class="gr-file" @change="onPhotos" />

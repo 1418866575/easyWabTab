@@ -75,10 +75,10 @@ async function exportExcelFile(): Promise<void> {
     <section class="tw-card tw-no-print">
       <h4 class="tw-card-title">添加特异体质学生</h4>
       <div class="tw-toolbar">
-        <select v-model="addId" class="tw-select">
-          <option value="">选择学生…</option>
-          <option v-for="s in candidates" :key="s.id" :value="s.id">{{ s.no }} {{ s.name }}</option>
-        </select>
+<el-select v-model="addId">
+          <el-option value="" label="选择学生…" />
+          <el-option v-for="s in candidates" :key="s.id" :value="s.id" :label="`${s.no} ${s.name}`" />
+        </el-select>
         <button type="button" class="tw-btn tw-btn-primary" :disabled="!addId" @click="onAdd">标记为特异体质</button>
         <span v-if="!candidates.length" class="tw-label">全部学生已标记</span>
       </div>
@@ -95,12 +95,12 @@ async function exportExcelFile(): Promise<void> {
             <button type="button" class="tw-btn tw-btn-sm tw-btn-danger tw-no-print" @click="onUnmark(s.id)">取消标记</button>
           </header>
           <div class="sp-grid">
-            <label class="tw-label">过敏原<input class="tw-input tw-input-sm" :value="s.health.allergy" @change="onField(s.id, 'allergy', ($event.target as HTMLInputElement).value)" /></label>
-            <label class="tw-label">慢性疾病<input class="tw-input tw-input-sm" :value="s.health.disease" @change="onField(s.id, 'disease', ($event.target as HTMLInputElement).value)" /></label>
-            <label class="tw-label">家长紧急电话<input class="tw-input tw-input-sm" :value="s.health.emergencyPhone" @change="onField(s.id, 'emergencyPhone', ($event.target as HTMLInputElement).value)" /></label>
+            <label class="tw-label">过敏原<el-input size="small" :model-value="s.health.allergy" @change="(val: unknown) => onField(s.id, 'allergy', String(val ?? ''))" /></label>
+            <label class="tw-label">慢性疾病<el-input size="small" :model-value="s.health.disease" @change="(val: unknown) => onField(s.id, 'disease', String(val ?? ''))" /></label>
+            <label class="tw-label">家长紧急电话<el-input size="small" :model-value="s.health.emergencyPhone" @change="(val: unknown) => onField(s.id, 'emergencyPhone', String(val ?? ''))" /></label>
           </div>
           <label class="tw-label sp-notes">注意事项
-            <textarea class="tw-input sp-textarea" :value="s.health.notes" rows="2" @change="onField(s.id, 'notes', ($event.target as HTMLTextAreaElement).value)"></textarea>
+            <el-input type="textarea" class="sp-textarea" :model-value="s.health.notes" :rows="2" @change="(val: unknown) => onField(s.id, 'notes', String(val ?? ''))" />
           </label>
         </article>
       </div>

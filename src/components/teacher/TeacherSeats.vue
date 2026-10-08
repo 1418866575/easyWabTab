@@ -110,8 +110,8 @@ async function exportExcelFile(): Promise<void> {
     <section class="tw-card tw-no-print">
       <h4 class="tw-card-title">座位布局设置</h4>
       <div class="tw-toolbar">
-        <label class="tw-label">行数<input v-model.number="rowsInput" type="number" min="1" max="12" class="tw-input tw-input-sm st-num" /></label>
-        <label class="tw-label">列数<input v-model.number="colsInput" type="number" min="1" max="12" class="tw-input tw-input-sm st-num" /></label>
+        <label class="tw-label">行数<el-input v-model.number="rowsInput" type="number" size="small" min="1" max="12" class="st-num" /></label>
+        <label class="tw-label">列数<el-input v-model.number="colsInput" type="number" size="small" min="1" max="12" class="st-num" /></label>
         <button type="button" class="tw-btn tw-btn-sm" @click="onApplyLayout">应用布局</button>
         <span class="tw-label">最多 12 行 × 12 列；变更时已有学生按原顺序重排，多余截断。</span>
       </div>

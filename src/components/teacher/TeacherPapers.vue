@@ -112,21 +112,21 @@ async function exportExcelFile(): Promise<void> {
     <section class="tw-card tw-no-print">
       <h4 class="tw-card-title">试卷选择</h4>
       <div class="tw-toolbar">
-        <select v-model="selectedId" class="tw-select">
-          <option v-for="p in papers" :key="p.id" :value="p.id">{{ p.title }}</option>
-          <option v-if="!papers.length" value="">暂无试卷</option>
-        </select>
+        <el-select v-model="selectedId">
+          <el-option v-for="p in papers" :key="p.id" :value="p.id" :label="p.title" />
+          <el-option v-if="!papers.length" value="" label="暂无试卷" />
+        </el-select>
         <span class="tw-spacer"></span>
         <button type="button" class="tw-btn tw-btn-sm tw-btn-danger" :disabled="!paper" @click="onDeletePaper">删除本卷</button>
       </div>
       <div class="tw-toolbar pp-add">
-        <label class="tw-label">试卷名<input v-model="newTitle" class="tw-input tw-input-sm" placeholder="如 语文期中试卷" /></label>
+        <label class="tw-label">试卷名<el-input v-model="newTitle" size="small" placeholder="如 语文期中试卷" /></label>
         <label class="tw-label">
           关联考试
-          <select v-model="newExamId" class="tw-select tw-input-sm">
-            <option value="">不关联</option>
-            <option v-for="e in exams" :key="e.id" :value="e.id">{{ e.name }}</option>
-          </select>
+          <el-select v-model="newExamId" size="small">
+            <el-option value="" label="不关联" />
+            <el-option v-for="e in exams" :key="e.id" :value="e.id" :label="e.name" />
+          </el-select>
         </label>
         <button type="button" class="tw-btn tw-btn-sm tw-btn-primary" :disabled="!newTitle.trim()" @click="onAddPaper">新增试卷</button>
       </div>
@@ -184,15 +184,16 @@ async function exportExcelFile(): Promise<void> {
             </thead>
             <tbody>
               <tr v-for="(q, i) in questions" :key="i">
-                <td><input class="tw-input tw-input-sm pp-no" type="number" :value="q.no" @change="onField(i, 'no', ($event.target as HTMLInputElement).value)" /></td>
-                <td><input class="tw-input tw-input-sm" :value="q.type" @change="onField(i, 'type', ($event.target as HTMLInputElement).value)" /></td>
-                <td><input class="tw-input tw-input-sm" :value="q.point" @change="onField(i, 'point', ($event.target as HTMLInputElement).value)" /></td>
+                <td><el-input size="small" class="pp-no" type="number" :model-value="q.no" @change="(val: unknown) => onField(i, 'no', String(val ?? ''))" /></td>
+                <td><el-input size="small" :model-value="q.type" @change="(val: unknown) => onField(i, 'type', String(val ?? ''))" /></td>
+                <td><el-input size="small" :model-value="q.point" @change="(val: unknown) => onField(i, 'point', String(val ?? ''))" /></td>
                 <td>
-                  <input
-                    class="tw-input tw-input-sm pp-wrong"
+                  <el-input
+                    size="small"
+                    class="pp-wrong"
                     type="number"
-                    :value="q.wrongCount"
-                    @change="onField(i, 'wrongCount', ($event.target as HTMLInputElement).value)"
+                    :model-value="q.wrongCount"
+                    @change="(val: unknown) => onField(i, 'wrongCount', String(val ?? ''))"
                   />
                 </td>
                 <td class="tw-num">{{ errorRate(q.wrongCount) }}</td>

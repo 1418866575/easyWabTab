@@ -156,10 +156,10 @@ onBeforeUnmount(stopTimer)
         </button>
         <label class="tw-label">
           模式
-          <select class="tw-select tw-input-sm" :value="state.mode" @change="setMode(($event.target as HTMLSelectElement).value as 'all' | 'once')">
-            <option value="all">全部学生</option>
-            <option value="once">只点一遍（排除已点）</option>
-          </select>
+          <el-select size="small" :model-value="state.mode" @change="(val: unknown) => setMode(val as 'all' | 'once')">
+            <el-option value="all" label="全部学生" />
+            <el-option value="once" label="只点一遍（排除已点）" />
+          </el-select>
         </label>
         <button type="button" class="tw-btn tw-btn-sm" @click="reset">重置记录</button>
         <span class="tw-label">候选 {{ pool.length }} 人 / 已点 {{ history.length }} 人</span>

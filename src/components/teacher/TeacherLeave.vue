@@ -230,48 +230,48 @@ function exportCsv(): void {
       <div class="lv-form">
         <label class="tw-label">
           学生
-          <select v-model="formStudentId" class="tw-select tw-input-sm">
-            <option v-for="s in students" :key="s.id" :value="s.id">{{ s.no }} {{ s.name }}</option>
-          </select>
+          <el-select v-model="formStudentId" size="small">
+            <el-option v-for="s in students" :key="s.id" :value="s.id" :label="`${s.no} ${s.name}`" />
+          </el-select>
         </label>
         <label class="tw-label">
           类型
-          <select v-model="formType" class="tw-select tw-input-sm">
-            <option v-for="t in LEAVE_TYPES" :key="t" :value="t">{{ t }}</option>
-          </select>
+          <el-select v-model="formType" size="small">
+            <el-option v-for="t in LEAVE_TYPES" :key="t" :value="t" :label="t" />
+          </el-select>
         </label>
         <label class="tw-label">
           开始日期
-          <input v-model="formStart" type="date" class="tw-input tw-input-sm" />
+          <el-date-picker v-model="formStart" type="date" size="small" format="YYYY-MM-DD" value-format="YYYY-MM-DD" style="width: 100%" :clearable="false" />
         </label>
         <label class="tw-label">
           结束日期
-          <input v-model="formEnd" type="date" class="tw-input tw-input-sm" />
+          <el-date-picker v-model="formEnd" type="date" size="small" format="YYYY-MM-DD" value-format="YYYY-MM-DD" style="width: 100%" :clearable="false" />
         </label>
         <label class="tw-label">
           天数
-          <input v-model.number="formDays" type="number" min="1" class="tw-input tw-input-sm lv-days" />
+          <el-input v-model.number="formDays" type="number" size="small" min="1" class="lv-days" />
         </label>
         <label class="tw-label">
           状态
-          <select v-model="formStatus" class="tw-select tw-input-sm">
-            <option v-for="s in LEAVE_STATUS_META" :key="s.key" :value="s.key">{{ s.label }}</option>
-          </select>
+          <el-select v-model="formStatus" size="small">
+            <el-option v-for="s in LEAVE_STATUS_META" :key="s.key" :value="s.key" :label="s.label" />
+          </el-select>
         </label>
         <label class="tw-label lv-span">
           请假事由
-          <input v-model="formReason" class="tw-input tw-input-sm" placeholder="如：感冒发烧，需在家休息" />
+          <el-input v-model="formReason" size="small" placeholder="如：感冒发烧，需在家休息" />
         </label>
         <label class="tw-label">
           申请人
-          <input v-model="formApplicant" class="tw-input tw-input-sm" placeholder="如：张三妈妈" />
+          <el-input v-model="formApplicant" size="small" placeholder="如：张三妈妈" />
         </label>
         <label class="tw-label">
           审批人
-          <input v-model="formApprover" class="tw-input tw-input-sm" placeholder="班主任" />
+          <el-input v-model="formApprover" size="small" placeholder="班主任" />
         </label>
       </div>
-      <textarea v-model="formRemark" class="tw-input lv-textarea" rows="2" placeholder="备注（销假情况、补充说明）"></textarea>
+      <el-input v-model="formRemark" type="textarea" class="lv-textarea" :rows="2" placeholder="备注（销假情况、补充说明）" />
       <div class="tw-toolbar">
         <span v-if="!dateValid" class="tw-note tw-note-warn">开始日期不能晚于结束日期</span>
         <span v-else-if="!formReason.trim()" class="tw-note">填写「请假事由」后可保存</span>
@@ -287,15 +287,15 @@ function exportCsv(): void {
     <div class="tw-card">
       <h4 class="tw-card-title">请假记录（{{ filtered.length }}）</h4>
       <div class="tw-toolbar tw-no-print lv-filters">
-        <input v-model="keyword" class="tw-input tw-input-sm" placeholder="搜索姓名 / 事由 / 申请人" />
-        <select v-model="statusFilter" class="tw-select tw-input-sm">
-          <option value="all">全部状态</option>
-          <option v-for="s in LEAVE_STATUS_META" :key="s.key" :value="s.key">{{ s.label }}</option>
-        </select>
-        <select v-model="typeFilter" class="tw-select tw-input-sm">
-          <option value="all">全部类型</option>
-          <option v-for="t in LEAVE_TYPES" :key="t" :value="t">{{ t }}</option>
-        </select>
+        <el-input v-model="keyword" size="small" placeholder="搜索姓名 / 事由 / 申请人" />
+        <el-select v-model="statusFilter" size="small">
+          <el-option value="all" label="全部状态" />
+          <el-option v-for="s in LEAVE_STATUS_META" :key="s.key" :value="s.key" :label="s.label" />
+        </el-select>
+        <el-select v-model="typeFilter" size="small">
+          <el-option value="all" label="全部类型" />
+          <el-option v-for="t in LEAVE_TYPES" :key="t" :value="t" :label="t" />
+        </el-select>
       </div>
 
       <div v-if="filtered.length" class="tw-table-wrap">

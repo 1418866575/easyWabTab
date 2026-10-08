@@ -109,11 +109,11 @@ async function exportExcelFile(): Promise<void> {
                 <CommitteeRoleSelect :model-value="c.role" :size="'small'" @update:model-value="(val: unknown) => onRoleChange(i, val)" />
               </td>
               <td>
-                <input
-                  class="tw-input tw-input-sm"
-                  :value="c.duty"
+                <el-input
+                  size="small"
+                  :model-value="c.duty"
                   placeholder="职责说明"
-                  @change="onField(i, 'duty', ($event.target as HTMLInputElement).value)"
+                  @change="(val: unknown) => onField(i, 'duty', String(val ?? ''))"
                 />
               </td>
               <td class="tw-no-print">

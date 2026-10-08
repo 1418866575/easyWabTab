@@ -101,7 +101,7 @@ async function exportExcelFile(): Promise<void> {
     <section class="tw-card">
       <h4 class="tw-card-title">家长联系表</h4>
       <div class="tw-toolbar tw-no-print">
-        <input v-model="keyword" class="tw-input" placeholder="搜索学生 / 家长 / 电话" />
+        <el-input v-model="keyword" placeholder="搜索学生 / 家长 / 电话" />
         <span class="tw-spacer"></span>
         <span class="tw-label">共 {{ filtered.length }} 条</span>
       </div>

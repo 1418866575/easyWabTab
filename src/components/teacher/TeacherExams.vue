@@ -161,10 +161,10 @@ async function downloadTemplate(): Promise<void> {
     <section class="tw-card tw-no-print">
       <h4 class="tw-card-title">考试选择</h4>
       <div class="tw-toolbar">
-        <select v-model="selectedId" class="tw-select">
-          <option v-for="e in exams" :key="e.id" :value="e.id">{{ e.name }}{{ e.date ? `（${e.date}）` : '' }}</option>
-          <option v-if="!exams.length" value="">暂无考试</option>
-        </select>
+        <el-select v-model="selectedId">
+          <el-option v-for="e in exams" :key="e.id" :value="e.id" :label="`${e.name}${e.date ? `（${e.date}）` : ''}`" />
+          <el-option v-if="!exams.length" value="" label="暂无考试" />
+        </el-select>
         <span class="tw-spacer"></span>
         <button type="button" class="tw-btn tw-btn-sm tw-btn-danger" :disabled="!exam" @click="onDeleteExam">删除本场考试</button>
       </div>
@@ -174,7 +174,7 @@ async function downloadTemplate(): Promise<void> {
           学科
           <SubjectSelect v-model="newSubject" placeholder="请选择学科" size="small" />
         </label>
-        <label class="tw-label">日期<input v-model="newDate" class="tw-input tw-input-sm" placeholder="如 2026-04" /></label>
+        <label class="tw-label">日期<el-input v-model="newDate" size="small" placeholder="如 2026-04" /></label>
         <button type="button" class="tw-btn tw-btn-sm tw-btn-primary" :disabled="!newName.trim()" @click="onAddExam">新增考试</button>
         <span class="tw-label">批量成绩可从上方「导入成绩信息」导入</span>
       </div>
@@ -259,11 +259,12 @@ async function downloadTemplate(): Promise<void> {
                 <td>{{ r.name }}</td>
                 <td class="tw-num">{{ r.gender }}</td>
                 <td>
-                  <input
-                    class="tw-input tw-input-sm ex-score"
+                  <el-input
+                    size="small"
+                    class="ex-score"
                     type="number"
-                    :value="r.score"
-                    @change="onScore(r.studentId, ($event.target as HTMLInputElement).value)"
+                    :model-value="r.score"
+                    @change="(val: unknown) => onScore(r.studentId, String(val ?? ''))"
                   />
                 </td>
                 <td class="tw-num">{{ r.comment }}</td>

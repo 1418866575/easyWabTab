@@ -429,12 +429,12 @@ watch(showForm, (v) => {
 
       <div class="ewt-table-toolbar is-split">
         <div class="grp-toolbar-left">
-          <input v-model="keyword" class="tw-input tw-input-sm grp-search" placeholder="搜索组名 / 成员" />
-          <select v-model="typeFilter" class="tw-select tw-input-sm" data-testid="grp-type-filter">
-            <option value="all">全部</option>
-            <option value="fixed">固定组</option>
-            <option value="temp">临时组</option>
-          </select>
+          <el-input v-model="keyword" size="small" class="grp-search" placeholder="搜索组名 / 成员" />
+          <el-select v-model="typeFilter" size="small" data-testid="grp-type-filter">
+            <el-option value="all" label="全部" />
+            <el-option value="fixed" label="固定组" />
+            <el-option value="temp" label="临时组" />
+          </el-select>
           <span class="grp-count">共 {{ filteredGroups.length }} 个小组</span>
         </div>
         <ViewModeToggle v-if="filteredGroups.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
@@ -721,7 +721,7 @@ watch(showForm, (v) => {
         <div v-for="s in snapshots" :key="s.id" class="grp-snap-item">
           <div class="grp-snap-info">
             <template v-if="snapRenameId === s.id">
-              <input v-model="snapRenameName" class="tw-input tw-input-sm" data-testid="snap-rename-input" @keyup.enter="commitRename" />
+              <el-input v-model="snapRenameName" size="small" data-testid="snap-rename-input" @keyup.enter="commitRename" />
               <button type="button" class="tw-btn tw-btn-sm tw-btn-primary" @click="commitRename">确定</button>
               <button type="button" class="tw-btn tw-btn-sm" @click="cancelRename">取消</button>
             </template>

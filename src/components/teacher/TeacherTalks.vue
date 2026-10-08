@@ -311,7 +311,7 @@ function truncate(text: string, n = 30): string {
       </div>
       <div class="tk-filter tk-filter-keyword">
         <label class="tk-filter-label">搜索</label>
-        <input v-model="keyword" type="text" class="tw-input tw-input-sm" placeholder="内容 / 对方姓名" data-testid="tk-filter-keyword" />
+        <el-input v-model="keyword" type="text" size="small" placeholder="内容 / 对方姓名" data-testid="tk-filter-keyword" />
       </div>
       <button v-if="hasFilter" type="button" class="tw-btn tw-btn-sm tk-reset" data-testid="tk-reset" @click="resetFilters">重置</button>
     </div>
@@ -438,11 +438,11 @@ function truncate(text: string, n = 30): string {
         <div class="tk-form-inline">
           <div class="tk-form-col">
             <label class="tk-form-label">谈话日期 <span class="tk-required">*</span></label>
-            <input v-model="formDate" type="date" class="tw-input tw-input-sm" data-testid="tk-form-date" />
+            <el-date-picker v-model="formDate" type="date" size="small" format="YYYY-MM-DD" value-format="YYYY-MM-DD" style="width: 100%" data-testid="tk-form-date" :clearable="false" />
           </div>
           <div class="tk-form-col">
             <label class="tk-form-label">时间（选填）</label>
-            <input v-model="formTime" type="time" class="tw-input tw-input-sm" data-testid="tk-form-time" />
+            <el-time-picker v-model="formTime" size="small" format="HH:mm" value-format="HH:mm" style="width: 100%" data-testid="tk-form-time" />
           </div>
         </div>
         <div class="tk-form-inline">
@@ -609,7 +609,7 @@ function truncate(text: string, n = 30): string {
 .tk-select {
   width: 140px;
 }
-.tk-filter-keyword .tw-input {
+.tk-filter-keyword .el-input {
   width: 160px;
 }
 .tk-reset {
@@ -871,7 +871,7 @@ function truncate(text: string, n = 30): string {
     flex-direction: column;
   }
   .tk-select,
-  .tk-filter-keyword .tw-input {
+  .tk-filter-keyword .el-input {
     width: 100%;
   }
 }

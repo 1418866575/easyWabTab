@@ -372,11 +372,11 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
         <div class="hw-form-row hw-form-inline">
           <div class="hw-form-col">
             <label class="hw-form-label">布置日 <span class="hw-required">*</span></label>
-            <input v-model="formAssign" type="date" class="tw-input tw-input-sm" data-testid="hw-form-assign" />
+            <el-date-picker v-model="formAssign" type="date" size="small" format="YYYY-MM-DD" value-format="YYYY-MM-DD" style="width: 100%" data-testid="hw-form-assign" :clearable="false" />
           </div>
           <div class="hw-form-col">
             <label class="hw-form-label">截止日 <span class="hw-required">*</span></label>
-            <input v-model="formDue" type="date" class="tw-input tw-input-sm" data-testid="hw-form-due" />
+            <el-date-picker v-model="formDue" type="date" size="small" format="YYYY-MM-DD" value-format="YYYY-MM-DD" style="width: 100%" data-testid="hw-form-due" :clearable="false" />
           </div>
         </div>
         <p v-if="formAssign && formDue && formAssign > formDue" class="tw-note tw-note-warn">布置日不能晚于截止日</p>
@@ -489,7 +489,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
       <div class="hw-dialog-body">
         <div class="hw-form-row">
           <label class="hw-form-label">补交时间（可选，留空手填）</label>
-          <input v-model="markMadeUpAt" type="date" class="tw-input tw-input-sm" data-testid="hw-mark-date" />
+          <el-date-picker v-model="markMadeUpAt" type="date" size="small" format="YYYY-MM-DD" value-format="YYYY-MM-DD" style="width: 100%" data-testid="hw-mark-date" />
         </div>
         <div class="hw-form-row">
           <label class="hw-form-label">备注（可选）</label>

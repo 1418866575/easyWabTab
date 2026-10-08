@@ -266,7 +266,7 @@ async function downloadTemplate(): Promise<void> {
     <section class="tw-card">
       <h4 class="tw-card-title">班级花名册</h4>
       <div class="tw-toolbar tw-no-print">
-        <input v-model="keyword" class="tw-input" placeholder="搜索姓名 / 学号" />
+        <el-input v-model="keyword" placeholder="搜索姓名 / 学号" />
         <span class="tw-spacer"></span>
         <span class="tw-label">共 {{ filtered.length }} 人</span>
       </div>
@@ -292,24 +292,24 @@ async function downloadTemplate(): Promise<void> {
         <button type="button" class="tw-btn tw-btn-sm tw-btn-primary tw-no-print" @click="openAddDialog">+ 添加学生</button>
       </div>
       <div class="tw-toolbar tw-no-print stu-search">
-        <label class="tw-label">学号<input v-model="searchNo" class="tw-input tw-input-sm" placeholder="精确匹配" /></label>
-        <label class="tw-label">名称(精确)<input v-model="searchNameExact" class="tw-input tw-input-sm" placeholder="精确匹配" /></label>
-        <label class="tw-label">名称(模糊)<input v-model="searchNameFuzzy" class="tw-input tw-input-sm" placeholder="关键字" /></label>
+        <label class="tw-label">学号<el-input v-model="searchNo" size="small" placeholder="精确匹配" /></label>
+        <label class="tw-label">名称(精确)<el-input v-model="searchNameExact" size="small" placeholder="精确匹配" /></label>
+        <label class="tw-label">名称(模糊)<el-input v-model="searchNameFuzzy" size="small" placeholder="关键字" /></label>
         <label class="tw-label">
           是否班委
-          <select v-model="searchCommittee" class="tw-select tw-input-sm">
-            <option value="all">全部</option>
-            <option value="yes">是</option>
-            <option value="no">否</option>
-          </select>
+          <el-select v-model="searchCommittee" size="small">
+            <el-option value="all" label="全部" />
+            <el-option value="yes" label="是" />
+            <el-option value="no" label="否" />
+          </el-select>
         </label>
         <label class="tw-label">
           是否住校
-          <select v-model="searchBoarding" class="tw-select tw-input-sm">
-            <option value="all">全部</option>
-            <option value="yes">是</option>
-            <option value="no">否</option>
-          </select>
+          <el-select v-model="searchBoarding" size="small">
+            <el-option value="all" label="全部" />
+            <el-option value="yes" label="是" />
+            <el-option value="no" label="否" />
+          </el-select>
         </label>
         <button type="button" class="tw-btn tw-btn-sm tw-btn-primary" @click="runSearch">搜索</button>
         <button type="button" class="tw-btn tw-btn-sm" @click="resetSearch">重置</button>
@@ -338,45 +338,45 @@ async function downloadTemplate(): Promise<void> {
             <tr v-for="(s, i) in pagedRows" :key="s.id">
               <td class="tw-col-index">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
               <td>
-                <input class="tw-input tw-input-sm stu-no" :value="s.no" @change="onStudentField(s, { no: ($event.target as HTMLInputElement).value })" />
+                <el-input size="small" class="stu-no" :model-value="s.no" @change="(val: unknown) => onStudentField(s, { no: String(val ?? '') })" />
               </td>
               <td>
-                <input class="tw-input tw-input-sm" :value="s.name" @change="onStudentField(s, { name: ($event.target as HTMLInputElement).value })" />
+                <el-input size="small" :model-value="s.name" @change="(val: unknown) => onStudentField(s, { name: String(val ?? '') })" />
               </td>
               <td>
-                <select
-                  class="tw-select tw-input-sm"
-                  :value="s.gender"
-                  @change="onStudentField(s, { gender: (($event.target as HTMLSelectElement).value as '男' | '女') })"
+                <el-select
+                  size="small"
+                  :model-value="s.gender"
+                  @change="(val: unknown) => onStudentField(s, { gender: val as '男' | '女' })"
                 >
-                  <option value="男">男</option>
-                  <option value="女">女</option>
-                </select>
+                  <el-option value="男" label="男" />
+                  <el-option value="女" label="女" />
+                </el-select>
               </td>
               <td>
-                <input class="tw-input tw-input-sm" :value="s.post" placeholder="如 班长" @change="onStudentField(s, { post: ($event.target as HTMLInputElement).value })" />
+                <el-input size="small" :model-value="s.post" placeholder="如 班长" @change="(val: unknown) => onStudentField(s, { post: String(val ?? '') })" />
               </td>
               <td>
-                <input class="tw-input tw-input-sm" :value="b?.parents[s.id]?.parentName ?? ''" @change="onParentField(s.id, 'parentName', ($event.target as HTMLInputElement).value)" />
+                <el-input size="small" :model-value="b?.parents[s.id]?.parentName ?? ''" @change="(val: unknown) => onParentField(s.id, 'parentName', String(val ?? ''))" />
               </td>
               <td>
-                <input class="tw-input tw-input-sm" :value="b?.parents[s.id]?.relation ?? ''" @change="onParentField(s.id, 'relation', ($event.target as HTMLInputElement).value)" />
+                <el-input size="small" :model-value="b?.parents[s.id]?.relation ?? ''" @change="(val: unknown) => onParentField(s.id, 'relation', String(val ?? ''))" />
               </td>
               <td>
-                <input class="tw-input tw-input-sm" :value="b?.parents[s.id]?.phone ?? ''" @change="onParentField(s.id, 'phone', ($event.target as HTMLInputElement).value)" />
+                <el-input size="small" :model-value="b?.parents[s.id]?.phone ?? ''" @change="(val: unknown) => onParentField(s.id, 'phone', String(val ?? ''))" />
               </td>
               <td>
-                <input class="tw-input tw-input-sm stu-address" :value="s.address" placeholder="家庭地址" @change="onStudentField(s, { address: ($event.target as HTMLInputElement).value })" />
+                <el-input size="small" class="stu-address" :model-value="s.address" placeholder="家庭地址" @change="(val: unknown) => onStudentField(s, { address: String(val ?? '') })" />
               </td>
               <td>
-                <select
-                  class="tw-select tw-input-sm"
-                  :value="s.boarding ? '是' : '否'"
-                  @change="onStudentField(s, { boarding: (($event.target as HTMLSelectElement).value) === '是' })"
+                <el-select
+                  size="small"
+                  :model-value="s.boarding ? '是' : '否'"
+                  @change="(val: unknown) => onStudentField(s, { boarding: val === '是' })"
                 >
-                  <option value="否">否</option>
-                  <option value="是">是</option>
-                </select>
+                  <el-option value="否" label="否" />
+                  <el-option value="是" label="是" />
+                </el-select>
               </td>
               <td class="tw-no-print">
                 <button type="button" class="tw-btn tw-btn-sm tw-btn-danger" @click="onRemove(s)">删除</button>

@@ -226,30 +226,8 @@
 }
 
 /* ---------- 表单控件 ---------- */
-
-.tw-input,
-.tw-select {
-  min-height: 36px;
-  padding: 0 10px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 8px);
-  background-color: var(--color-bg-input, #ffffff);
-  color: var(--color-text, #0f172a);
-  font-family: inherit;
-  font-size: var(--font-size-sm, 13px);
-}
-
-.tw-input:focus-visible,
-.tw-select:focus-visible {
-  outline: 2px solid var(--color-primary, #3b82f6);
-  outline-offset: -1px;
-}
-
-.tw-input-sm {
-  min-height: 30px;
-  padding: 0 8px;
-  font-size: var(--font-size-xs, 12px);
-}
+/* 表单控件已统一迁移到 Element Plus（el-input / el-select / el-date-picker / el-time-picker），
+   原 .tw-input / .tw-select / .tw-input-sm 体系已移除。 */
 
 .tw-label {
   display: inline-flex;
@@ -440,12 +418,6 @@
   .tw-btn {
     min-height: 44px;
     padding: 0 16px;
-  }
-
-  .tw-input,
-  .tw-select {
-    min-height: 44px;
-    font-size: 16px; /* 防止 iOS 聚焦缩放 */
   }
 
   .tw-roster {

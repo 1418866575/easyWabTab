@@ -78,7 +78,7 @@ async function exportExcelFile(): Promise<void> {
     <section class="tw-card">
       <h4 class="tw-card-title">值日生安排</h4>
       <div class="tw-toolbar tw-no-print">
-        <label class="tw-label">每组人数<input v-model.number="groupSize" type="number" min="1" class="tw-input tw-input-sm dt-num" /></label>
+        <label class="tw-label">每组人数<el-input v-model.number="groupSize" type="number" size="small" min="1" class="dt-num" /></label>
         <button type="button" class="tw-btn tw-btn-sm tw-btn-primary" @click="onAuto">按名单自动安排</button>
         <span class="tw-label">按学号顺序轮流分配，组长为组内学号最靠前者。</span>
       </div>
@@ -98,22 +98,23 @@ async function exportExcelFile(): Promise<void> {
               <td class="tw-col-index">{{ i + 1 }}</td>
               <td class="tw-num">{{ d.day }}</td>
               <td>
-                <input
-                  class="tw-input tw-input-sm dt-members"
-                  :value="membersText(d.members)"
+                <el-input
+                  size="small"
+                  class="dt-members"
+                  :model-value="membersText(d.members)"
                   placeholder="如 闫婉、曹静、夏梓"
-                  @change="onMembersChange(d.day, ($event.target as HTMLInputElement).value, d.leader)"
+                  @change="(val: unknown) => onMembersChange(d.day, String(val ?? ''), d.leader)"
                 />
               </td>
               <td>
-                <select
-                  class="tw-select tw-input-sm"
-                  :value="d.leader"
-                  @change="onLeaderChange(d.day, ($event.target as HTMLSelectElement).value, d.members)"
+                <el-select
+                  size="small"
+                  :model-value="d.leader"
+                  @change="(val: unknown) => onLeaderChange(d.day, String(val ?? ''), d.members)"
                 >
-                  <option value="">未指定</option>
-                  <option v-for="s in students" :key="s.id" :value="s.id">{{ s.name }}</option>
-                </select>
+                  <el-option value="" label="未指定" />
+                  <el-option v-for="s in students" :key="s.id" :value="s.id" :label="s.name" />
+                </el-select>
               </td>
             </tr>
           </tbody>
