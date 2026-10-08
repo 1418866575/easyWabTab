@@ -462,6 +462,7 @@ onUnmounted(() => {
         <span v-else aria-hidden="true">🧰</span>
         <span>{{ settingsStore.toolboxButtonDisplayName }}</span>
       </button>
+      <!-- 智能工作台不在此处单放入口：与其它工作台一致，统一走右上角「工作台管理」面板 -->
     </div>
     <div class="app-bar-right">
       <button

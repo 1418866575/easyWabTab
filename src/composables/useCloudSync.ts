@@ -1,13 +1,14 @@
 ﻿/**
  * 云同步 composable（WebDAV + v10 多文件同步信封）
  *
- * 6 份独立信封：nav.json / icons.json / workbench.json / business.json / student.json / teacher.json
+ * 7 份独立信封：nav.json / icons.json / workbench.json / business.json / student.json / teacher.json / smart.json
  *   - nav.json：导航偏好（存 IDB nav store；user-sites/categories/engines/theme/background 等）
  *   - icons.json：自定义图标（localStorage user-custom-icons）
  *   - workbench.json：工作台核心 9 store（不含 business；settings 不含 cloudSync* 5 字段）
  *   - business.json：销售记账独立信封
  *   - student.json：学生工作台 15 store 独立信封
  *   - teacher.json：教师工作台单对象（teacher_workbench；含 base64 图片，体积偏大）
+ *   - smart.json：智能工作台（技能 / 提示词 / 菜单配置 / 技能分类，SMART_PREFS_KEYS 四个键）
  *
  * 单例设计：模块级 ref 持有全局状态（参考 useCountdownReminder / useToast 的单例模式）
  * 触发器：
@@ -19,8 +20,8 @@
  * 冲突判定：本地 dirty=true 且 远端 pushedAt > lastSyncAt（逐文件独立判定，累积到 conflictData Record）
  * 冲突解决：3 选 1（全部云端覆盖 / 全部本地覆盖 / 全部合并）
  *
- * 首次迁移：6 份都 404 但 backup.json 存在 → 读 backup.json → idbImportAll 落本地 →
- *           export 6 份 → 上传 → DELETE backup.json
+ * 首次迁移：7 份都 404 但 backup.json 存在 → 读 backup.json → idbImportAll 落本地 →
+ *           export 7 份 → 上传 → DELETE backup.json
  *
  * CORS 兼容：WebDAV 原生自定义方法（MKCOL）+ Authorization 会触发浏览器预检（OPTIONS），
  * 坚果云/Nextcloud 默认不回 Access-Control-Allow-Origin。
@@ -41,7 +42,9 @@ import {
   exportIcons,
   importIconsData,
   exportTeacher,
-  importTeacherData
+  importTeacherData,
+  exportSmart,
+  importSmartData
 } from './useIdb'
 import { useNavPrefs } from './useNavPrefs'
 import { useAppSettingsStore } from '../stores/settings'
@@ -60,6 +63,7 @@ import type {
   LedgerStoreData,
   NavSyncData,
   NoteData,
+  SmartSyncData,
   StudentSyncData,
   TeacherSyncData,
   WorkbenchData,
@@ -90,7 +94,7 @@ const LAST_SYNC_KEY = 'easy-web-tab-last-sync'
 const DIRTY_KEY = 'easy-web-tab-dirty'
 const PROXY_PATH = '/api/webdav-proxy'
 const DATA_DIR = 'easy-web-tab'
-/** 6 份多文件信封（顺序：nav → icons → workbench → business → student → teacher），见下方 FILE_CONFIGS */
+/** 7 份多文件信封（顺序：nav → icons → workbench → business → student → teacher → smart），见下方 FILE_CONFIGS */
 /** 仅用于首次迁移检测（v9 单文件 backup.json） */
 const LEGACY_BACKUP_FILE = 'backup.json'
 
@@ -432,6 +436,7 @@ function sigIcons(data: IconsSyncData): string { return envelopeSignature(data a
 function sigBusiness(data: BusinessSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
 function sigStudent(data: StudentSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
 function sigTeacher(data: TeacherSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
+function sigSmart(data: SmartSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
 
 /**
  * 计算本地与远程的总差异量（Σ|local_len - remote_len|）。
@@ -519,7 +524,7 @@ async function webdavGet(url: string, username: string, password: string): Promi
 
 /**
  * 轻量 HEAD：只取云端文件的 Last-Modified，用于推送前探查是否被外部改过。
- * 刻意不用 webdavGet —— 6 份信封合计 3MB+，每次推送前全量下载代价过高。
+ * 刻意不用 webdavGet —— 7 份信封合计 3MB+，每次推送前全量下载代价过高。
  * 不支持 HEAD 或出错时保守返回 0：调用方会跳过该文件的保险检测，不影响主流程。
  */
 async function webdavHead(url: string, username: string, password: string): Promise<number> {
@@ -1089,7 +1094,80 @@ function mergeTeacher(local: TeacherSyncData, remote: TeacherSyncData): TeacherS
   return { ...base, teacher: merged }
 }
 
+/**
+ * smart.json 合并：逐键处理，键集合见 SMART_PREFS_KEYS。
+ * - 技能库 / 提示词库：数组按 id 取 updatedAt 新者（与业务数据同款「新者胜」）
+ * - 菜单配置 / 技能分类：只有一份的小配置，以本地为准（本地 dirty = 用户刚改过）
+ * 结构解析失败时不抛错，直接退回「保留本地」，避免一封坏信封阻断整次同步。
+ */
+function mergeSmart(local: SmartSyncData, remote: SmartSyncData): SmartSyncData {
+  const lp = local.prefs ?? {}
+  const rp = remote.prefs ?? {}
+  const out: Record<string, string> = {}
+  for (const key of new Set([...Object.keys(lp), ...Object.keys(rp)])) {
+    const lv = lp[key]
+    const rv = rp[key]
+    if (lv === undefined) {
+      if (rv !== undefined) out[key] = rv
+      continue
+    }
+    if (rv === undefined) {
+      out[key] = lv
+      continue
+    }
+    out[key] = mergeSmartPref(key, lv, rv)
+  }
+  return { version: 1, exportedAt: new Date().toISOString(), clientId: getClientId(), prefs: out }
+}
+
+function mergeSmartPref(key: string, lv: string, rv: string): string {
+  if (key === 'smart-skills' || key === 'smart-prompts') {
+    const merged = mergeSmartListById(lv, rv)
+    if (merged !== null) return merged
+  }
+  return lv
+}
+
+/** 按 id 合并两个 [{ id, updatedAt }] 数组，同 id 取 updatedAt 新者；解析失败返回 null 由调用方回落 */
+function mergeSmartListById(lv: string, rv: string): string | null {
+  try {
+    const l = JSON.parse(lv) as unknown
+    const r = JSON.parse(rv) as unknown
+    if (!Array.isArray(l) || !Array.isArray(r)) return null
+    const map = new Map<string, Record<string, unknown>>()
+    for (const raw of [...l, ...r]) {
+      if (!raw || typeof raw !== 'object') continue
+      const it = raw as Record<string, unknown>
+      const id = typeof it.id === 'string' ? it.id : ''
+      if (!id) continue
+      const prev = map.get(id)
+      if (!prev) {
+        map.set(id, it)
+        continue
+      }
+      const pv = typeof prev.updatedAt === 'number' ? prev.updatedAt : 0
+      const cv = typeof it.updatedAt === 'number' ? it.updatedAt : 0
+      if (cv >= pv) map.set(id, it)
+    }
+    return JSON.stringify([...map.values()])
+  } catch {
+    return null
+  }
+}
+
 // ========== 导入后各 store reload ==========
+
+async function reloadSmartStores(): Promise<void> {
+  try {
+    const { useSmartStore } = await import('../stores/smart')
+    const s = useSmartStore()
+    // 先刷新内存里的 prefs（smart.json 写的是 IDB nav store，需重新读一遍）
+    await useNavPrefs().refreshAfterImport()
+    await Promise.all([s.reloadSkills(), s.reloadPrompts(), s.reloadMenu(), s.reloadCategories()])
+  } catch {
+    // store 未就绪（首次同步早于智能工作台挂载）→ 静默跳过，下次进入页面会从 IDB 自然读取
+  }
+}
 
 async function reloadWorkbenchStores(): Promise<void> {
   // 惰性导入避免循环依赖（各 store 在 WorkbenchView 里已 import，此处用动态导入走 onMounted init）
@@ -1199,6 +1277,7 @@ async function reloadAllStores(): Promise<void> {
     reloadBusinessStore(),
     reloadStudentStores(),
     reloadTeacherStores(),
+    reloadSmartStores(),
     reloadNavStores(),
     reloadIconsStores()
   ])
@@ -1293,6 +1372,16 @@ const FILE_CONFIGS: FileConfig[] = [
     merge: (l, r) => mergeToolbox(l as ToolboxSyncData, r as ToolboxSyncData),
     reload: reloadToolboxStore,
     diffSize: (l, r) => toolboxDiffSize(l as ToolboxSyncData, r as ToolboxSyncData)
+  },
+  {
+    // 智能工作台：技能 / 提示词 / 设置
+    name: 'smart.json',
+    exportLocal: () => exportSmart(),
+    importRemote: async (data) => { await importSmartData(data as SmartSyncData); return undefined },
+    signature: (data) => sigSmart(data as SmartSyncData),
+    merge: (l, r) => mergeSmart(l as SmartSyncData, r as SmartSyncData),
+    reload: reloadSmartStores,
+    diffSize: (l, r) => totalDiffSize(l, r)
   }
 ]
 
@@ -1302,9 +1391,9 @@ const FILE_CONFIGS: FileConfig[] = [
  * 首次迁移流程：
  * 1. 已读 backup.json（WorkbenchData）传入
  * 2. idbImportAll 落本地 IDB（含密码身份接管）
- * 3. 调用 6 个 export 函数从本地拆出 6 份信封
+ * 3. 调用 7 个 export 函数从本地拆出 7 份信封
  * 4. 为每份信封设置 clientId + pushedAt
- * 5. PUT 6 份到 cloud
+ * 5. PUT 7 份到 cloud
  * 6. DELETE cloud 上的 backup.json
  * 7. 更新 lastSyncAt + clearDirty + reloadAllStores
  */
@@ -1320,16 +1409,17 @@ async function migrateFromLegacyBackup(
   const localVerificationBefore = getStoredVerification()
   // 2) 落本地 IDB（idbImportAll 会接管密码身份）
   const importResult = await idbImportAll(legacyBackup)
-  // 3) 6 个 export 函数从本地拆出 6 份信封
+  // 3) 7 个 export 函数从本地拆出 7 份信封
   const clientId = getClientId()
   const pushedAt = Date.now()
-  const [nav, icons, workbench, business, student, teacher] = await Promise.all([
+  const [nav, icons, workbench, business, student, teacher, smart] = await Promise.all([
     exportNav(),
     exportIcons(),
     exportWorkbench(),
     exportBusiness(),
     exportStudent(),
-    exportTeacher()
+    exportTeacher(),
+    exportSmart()
   ])
   // 4) 设置 clientId + pushedAt
   const envelopes: Array<{ name: string; data: unknown }> = [
@@ -1338,9 +1428,10 @@ async function migrateFromLegacyBackup(
     { name: 'workbench.json', data: { ...(workbench as unknown as Record<string, unknown>), clientId, pushedAt } },
     { name: 'business.json', data: { ...(business as unknown as Record<string, unknown>), clientId, pushedAt } },
     { name: 'student.json', data: { ...(student as unknown as Record<string, unknown>), clientId, pushedAt } },
-    { name: 'teacher.json', data: { ...(teacher as unknown as Record<string, unknown>), clientId, pushedAt } }
+    { name: 'teacher.json', data: { ...(teacher as unknown as Record<string, unknown>), clientId, pushedAt } },
+    { name: 'smart.json', data: { ...(smart as unknown as Record<string, unknown>), clientId, pushedAt } }
   ]
-  // 5) PUT 6 份到 cloud（任一失败标记 error 不中断后续）
+  // 5) PUT 7 份到 cloud（任一失败标记 error 不中断后续）
   let pushError: string | null = null
   for (const env of envelopes) {
     try {
@@ -1349,11 +1440,11 @@ async function migrateFromLegacyBackup(
       if (!pushError) pushError = e instanceof Error ? e.message : '推送失败'
     }
   }
-  // 6) DELETE backup.json（即使 6 份中有失败，仍尝试删除 legacy 文件，避免下次再次走迁移）
+  // 6) DELETE backup.json（即使 7 份中有失败，仍尝试删除 legacy 文件，避免下次再次走迁移）
   try {
     await webdavDelete(`${dir}/${LEGACY_BACKUP_FILE}`, username, password)
   } catch {
-    // 删除失败不阻塞：下次 pullNow 会检测到 6 份已存在，跳过迁移分支
+    // 删除失败不阻塞：下次 pullNow 会检测到 7 份已存在，跳过迁移分支
   }
   // 7) 更新 lastSyncAt + clearDirty + reload
   localStorage.setItem(LAST_SYNC_KEY, String(pushedAt))
@@ -1381,7 +1472,7 @@ async function migrateFromLegacyBackup(
 // ========== 核心同步流程 ==========
 
 /**
- * 推送前保险：探查云端 6 份信封是否在本机上次同步之后被外部改过
+ * 推送前保险：探查云端 7 份信封是否在本机上次同步之后被外部改过
  * （备份编辑技能写入、手工编辑坚果云文件、其他设备推送）。
  *
  * 命中则中止本次盲推：此时本地数据并不包含云端的外部修改，直接 PUT 会用本地内容
@@ -1449,7 +1540,7 @@ async function pushNow(silent = false, skipRemoteGuard = false, onlyChanged = fa
     } catch {
       // 目录已存在或 MKCOL 失败，后续 PUT 直接尝试
     }
-    // 串行 export → PUT 6 份；任一失败累积到 errors 但不中断后续
+    // 串行 export → PUT 7 份；任一失败累积到 errors 但不中断后续
     const clientId = getClientId()
     const pushedAt = Date.now()
     let hasError = false
@@ -1534,7 +1625,7 @@ async function pushNow(silent = false, skipRemoteGuard = false, onlyChanged = fa
  * 与 pushNow 的两点差异：
  *   1. skipRemoteGuard=true：不探测云端是否被外部改过，直接覆盖。
  *      （pushNow 默认会先 detectExternalChange，发现外部改动就转为拉+合并；这里按用户设定走覆盖。）
- *   2. onlyChanged=true：只 PUT 内容有变化的信封，避免每保存一次就全量重传 6 份。
+ *   2. onlyChanged=true：只 PUT 内容有变化的信封，避免每保存一次就全量重传 7 份。
  *
  * silent=true 供「保存后立即上云」使用：不弹 toast，失败只体现在 status / errorMessage。
  * 会丢失的部分：同一份信封内云端被其它设备或外部工具（备份编辑脚本）改写的改动——

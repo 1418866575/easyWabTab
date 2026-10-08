@@ -321,6 +321,9 @@ export interface AppSettingsData {
   businessPageIcon?: string            // 销售记账入口自定义图标（空串或缺失 = 内置默认）
   studentPageIcon?: string             // 学生工作台入口自定义图标（空串或缺失 = 内置默认）
   teacherPageIcon?: string             // 教师工作台入口自定义图标（空串或缺失 = 内置默认）
+  smartPageName?: string               // 智能工作台（/smart 技能库+提示词库）自定义名称（默认 '智能工作台'）
+  smartPageVisible?: boolean           // 智能工作台页面可见性开关（默认 true；缺失 = 显示）
+  smartPageIcon?: string               // 智能工作台入口自定义图标（图标库路径 / dataUrl；空串或缺失 = 内置默认）
   workbenchManageName?: string         // 导航站右上角「工作台管理」按钮自定义名称（默认 '工作台管理'）
   workbenchManageVisible?: boolean     // 「工作台管理」按钮可见性开关（默认 true；缺失 = 显示）
   workbenchManageIcon?: string         // 「工作台管理」按钮自定义图标（图标库路径 / dataUrl；空串或缺失 = 用内置默认图标）
@@ -1450,6 +1453,23 @@ export interface BusinessSyncData {
   business: BusinessStoreData | BusinessData
 }
 
+/**
+ * SmartSyncData：智能工作台独立同步信封（smart.json）。
+ * 内容是「键 → JSON 字符串」的偏好集合，与本机 nav store 里的 smart-* 键一一对应：
+ *   - smart-skills：技能库
+ *   - smart-prompts：提示词库
+ *   - smart-menu：左侧菜单顺序 / 改名 / 隐藏
+ *   - smart-skill-categories：技能分类（含空分类）
+ * 值统一存字符串（与 nav.json 的 prefs 同构），解析失败由各 store 自行降级。
+ */
+export interface SmartSyncData {
+  version: 1
+  exportedAt: string
+  clientId?: string
+  pushedAt?: number
+  prefs?: Record<string, string>
+}
+
 /** TeacherSyncData：教师工作台独立同步信封（v17 新增 teacher_workbench 单对象；含 base64 图片故体积偏大） */
 export interface TeacherSyncData {
   version: 1
@@ -1489,3 +1509,95 @@ export interface StudentSyncData {
 // 此处仅做类型再导出，避免信封形状在两处漂移。
 export type { ToolboxSyncData } from '@/toolbox/core/toolboxSyncCore'
 
+// ==================== 智能工作台（/smart）====================
+// 技能与提示词两类资产，均落在统一偏好层（IndexedDB nav store），
+// 并纳入备份信封与云同步脏标记。详见 docs/smart-workbench-requirements.md。
+
+/** 提示词模板变量：由正文 {{name}} 自动解析，不手工维护 */
+export interface SmartPromptVariable {
+  name: string
+  desc?: string
+  defaultValue?: string
+}
+
+/**
+ * 技能附属资源（skill.md 同级目录下的脚本 / 模板 / 参考文档等）。
+ * 文本类直接存字符串，二进制存 base64 —— 二者都能塞进统一偏好层的 JSON 信封。
+ */
+export interface SmartSkillResource {
+  /** 相对技能根目录的路径，如 `scripts/fetch_data.py` */
+  path: string
+  /** 字节大小 */
+  size: number
+  encoding: 'text' | 'base64'
+  data: string
+}
+
+/**
+ * 技能：一个目录 = 一个技能。
+ * 核心是 skill.md（YAML frontmatter 元数据 + 正文指令），其余文件为附属资源。
+ * 字段与 frontmatter 一一对应，详见 docs/smart-skill-structure.md。
+ * 必需字段：name / description / body（三者缺一即非法）。
+ */
+export interface SmartSkill {
+  id: string
+  // ---- 以下与 skill.md 的 frontmatter 一一对应 ----
+  name: string
+  description: string
+  version: string
+  author: string
+  category: string
+  tags: string[]
+  /** 适用场景 / 触发条件（frontmatter: when_to_use） */
+  whenToUse: string
+  /** 依赖工具（frontmatter: tools） */
+  tools: string[]
+  license: string
+  /** frontmatter 中未被识别的键，原样保留，导入导出不丢 */
+  extra: Record<string, unknown>
+  /** skill.md 正文（frontmatter 之后的全部内容） */
+  body: string
+  // ---- 附属资源 ----
+  resources: SmartSkillResource[]
+  // ---- 平台侧元数据（不写入 skill.md） ----
+  usageCount: number
+  lastUsedAt: number | null
+  isBuiltIn?: boolean
+  createdAt: number
+  updatedAt: number
+}
+
+/** 提示词：可直接投喂模型的文本模板，支持 {{变量}} 占位 */
+export interface SmartPrompt {
+  id: string
+  title: string
+  category: string
+  tags: string[]
+  model: string
+  content: string
+  variables: SmartPromptVariable[]
+  isFavorite: boolean
+  usageCount: number
+  lastUsedAt: number | null
+  isBuiltIn?: boolean
+  createdAt: number
+  updatedAt: number
+}
+
+/** 导入导出信封：单条与集合包同构，kind 区分资产类型 */
+export interface SmartEnvelope<T> {
+  kind: 'smart-prompts'
+  version: number
+  exportedAt: number
+  items: T[]
+}
+
+/** 导入预览统计 */
+export interface SmartImportPreview<T> {
+  /** 库内不存在同名 → 新增 */
+  added: T[]
+  /** id 或名称已存在 → 更新（按 updatedAt 新者胜） */
+  updated: T[]
+  /** 非法条目 → 跳过 */
+  skipped: number
+}

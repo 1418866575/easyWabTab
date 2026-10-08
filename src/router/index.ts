@@ -11,6 +11,8 @@ const StudentView = () => import('../views/StudentView.vue')
 const TeacherView = () => import('../views/TeacherView.vue')
 // 工具箱：新增模块，同样懒加载（站内自建工具的实现组件各自再按需加载）
 const ToolboxView = () => import('../toolbox/views/ToolboxView.vue')
+// 智能工作台（技能库 + 提示词库）：同样懒加载，不拖累导航站首屏
+const SmartView = () => import('../views/SmartView.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -49,6 +51,11 @@ const router = createRouter({
       path: '/toolbox',
       name: 'toolbox',
       component: ToolboxView
+    },
+    {
+      path: '/smart',
+      name: 'smart',
+      component: SmartView
     }
   ]
 })
