@@ -71,7 +71,7 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
   padding: 20px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-lg, 14px);
+  border-radius: var(--radius-lg, 12px);
   box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
 }
 

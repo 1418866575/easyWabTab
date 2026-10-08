@@ -229,7 +229,7 @@ onBeforeUnmount(() => {
   background-color: transparent;
   color: var(--color-text, #0f172a);
   font-family: inherit;
-  font-size: var(--font-size-base, 14px);
+  font-size: var(--font-size-base, 15px);
   font-weight: var(--font-weight-normal, 400);
   text-align: left;
   cursor: pointer;

@@ -696,7 +696,7 @@ async function onClearSemesterData(): Promise<void> {
 }
 
 .dm-ro-label {
-  font-size: var(--font-size-xs, 11px);
+  font-size: var(--font-size-xs, 12px);
   color: var(--color-text-muted, #94a3b8);
 }
 
@@ -711,7 +711,7 @@ async function onClearSemesterData(): Promise<void> {
   align-self: center;
   padding: 2px 8px;
   border-radius: 10px;
-  font-size: var(--font-size-xs, 11px);
+  font-size: var(--font-size-xs, 12px);
   color: var(--color-primary, #6da3d8);
   background: var(--color-primary-soft, #eaf2fb);
 }

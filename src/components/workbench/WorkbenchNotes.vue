@@ -1039,7 +1039,7 @@ onUnmounted(() => {
   display: flex; flex-direction: column; gap: 10px; padding: 18px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-lg, 14px);
+  border-radius: var(--radius-lg, 12px);
   box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
 }
 .timeline-expand-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-shrink: 0; }
@@ -1052,7 +1052,7 @@ onUnmounted(() => {
   display: flex; flex-direction: column; gap: 12px; padding: 20px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-lg, 14px);
+  border-radius: var(--radius-lg, 12px);
   box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
 }
 .note-form-title { margin: 0; font-size: 16px; font-weight: 600; color: var(--color-text, var(--color-text)); }

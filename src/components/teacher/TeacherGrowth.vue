@@ -412,7 +412,7 @@ function exportArchive(): void {
 }
 
 .gr-item-title {
-  font-size: var(--font-size-base, 14px);
+  font-size: var(--font-size-base, 15px);
   color: var(--color-text, #0f172a);
 }
 

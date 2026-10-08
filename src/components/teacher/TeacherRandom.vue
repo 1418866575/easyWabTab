@@ -259,7 +259,7 @@ onBeforeUnmount(stopTimer)
   border-radius: 999px;
   background-color: var(--color-primary-soft, #eff6ff);
   color: var(--color-primary, #3b82f6);
-  font-size: var(--font-size-sm, 12px);
+  font-size: var(--font-size-sm, 13px);
 }
 
 .rd-tag-remove {
@@ -300,7 +300,7 @@ onBeforeUnmount(stopTimer)
   border-radius: 999px;
   background: var(--color-bg-card, #fff);
   color: var(--color-text-secondary, #64748b);
-  font-size: var(--font-size-sm, 12px);
+  font-size: var(--font-size-sm, 13px);
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
@@ -317,7 +317,7 @@ onBeforeUnmount(stopTimer)
 
 .rd-filter-summary {
   margin: 0 0 8px;
-  font-size: var(--font-size-sm, 12px);
+  font-size: var(--font-size-sm, 13px);
   color: var(--color-text-secondary, #64748b);
 }
 
@@ -329,7 +329,7 @@ onBeforeUnmount(stopTimer)
 }
 
 .rd-stat {
-  font-size: var(--font-size-sm, 12px);
+  font-size: var(--font-size-sm, 13px);
   color: var(--color-text, #334155);
 }
 
@@ -353,7 +353,7 @@ onBeforeUnmount(stopTimer)
   border-radius: 999px;
   background: var(--color-bg-hover, #f1f5f9);
   color: var(--color-text, #334155);
-  font-size: var(--font-size-sm, 12px);
+  font-size: var(--font-size-sm, 13px);
 }
 
 .rd-roster-tag.is-committee {

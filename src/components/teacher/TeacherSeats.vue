@@ -168,7 +168,7 @@ async function exportExcelFile(): Promise<void> {
 }
 
 .tw-seat-placeholder {
-  font-size: var(--font-size-xs, 11px);
+  font-size: var(--font-size-xs, 12px);
 }
 
 /* 讲台：座位编排区域正上方（教室前端），梯形图形 + 左右方位标识 */

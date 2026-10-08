@@ -384,7 +384,7 @@ onMounted(() => {
   border: 1px dashed var(--color-border, #e2e8f0);
   border-radius: var(--radius-sm, 4px);
   background: var(--color-bg-hover, #f1f5f9);
-  font-size: var(--font-size-sm, 12px);
+  font-size: var(--font-size-sm, 13px);
 }
 
 .tv-field-label {
@@ -465,7 +465,7 @@ onMounted(() => {
 .tv-nav-group {
   margin: 10px 0 4px;
   padding: 0 8px;
-  font-size: var(--font-size-xs, 11px);
+  font-size: var(--font-size-xs, 12px);
   font-weight: var(--font-weight-semibold, 600);
   color: var(--color-text-muted, #94a3b8);
   letter-spacing: 0.04em;

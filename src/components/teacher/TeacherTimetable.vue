@@ -541,7 +541,7 @@ onBeforeUnmount(() => {
 
 .stt-subtitle {
   margin: 4px 0 0;
-  font-size: var(--font-size-sm, 12px);
+  font-size: var(--font-size-sm, 13px);
   color: var(--color-text-muted, #94a3b8);
 }
 
