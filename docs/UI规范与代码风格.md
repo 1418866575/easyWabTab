@@ -302,6 +302,17 @@ src/
 - 页面级容器 → `views/`
 - 组件内私有样式 → 组件内 `<style scoped>`；**跨组件共享** → 提到 `style.css`
 
+### 4.1 toolbox 边界（重要）
+
+`src/toolbox/` 是**独立子体系**，其工具页面自有一套紧凑视觉（`toolbox/styles/tool-ui.css`）。
+
+- ✅ **允许**：toolbox 内部自行使用 `tool-ui.css` 的类与尺寸（工具箱控件密度与主应用不同，强行统一会破坏工具可用性）
+- ❌ **禁止**：把 toolbox 的类名/样式搬进 `src/style.css`，或让 toolbox 依赖 `BaseDialog`/`useConfirm` 等主应用组件
+- toolbox **新增工具时**：先查 `toolbox/components/` 是否已有同类工具壳（`TuCard`/`TuDialog` 等），复用之
+- toolbox 与主应用**唯一共享**的是 `docs/` 与 `Icon` 等极少数公共资源
+
+> 换言之：`src/style.css` 的 token 与 `.ui-*` 基类**只服务主应用**（导航站 + 三个工作台），不覆盖 toolbox。
+
 ---
 
 ## 5. 禁止双轨道（最重要）
