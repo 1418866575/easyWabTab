@@ -15,6 +15,7 @@ import SmartSettingsDialog from '@/components/smart/SmartSettingsDialog.vue'
 import { useAppSettingsStore } from '@/stores/settings'
 import { useSmartStore } from '@/stores/smart'
 import { useCloudSync, type SyncStatus } from '@/composables/useCloudSync'
+import { useToast } from '@/composables/useToast'
 
 type PageKey = 'overview' | 'skills' | 'prompts'
 
@@ -91,9 +92,11 @@ const syncTip = computed((): string => {
   const p = (n: number) => (n < 10 ? '0' + n : String(n))
   return `上次同步：${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}；点击立即同步`
 })
+const toast = useToast()
 async function handleSyncNowClick(): Promise<void> {
   if (!cloudEnabled.value) {
-    window.alert('云同步未开启。请到「设置 → 云同步」填写 WebDAV 地址与账号后开启。')
+    // 统一走自研 Toast（规范：禁用原生 alert / ElMessage，消除提示双轨道）
+    toast.warning('云同步未开启。请到「设置 → 云同步」填写 WebDAV 地址与账号后开启。')
     return
   }
   await cloudSync.syncNow()
@@ -310,9 +313,10 @@ async function handleSyncNowClick(): Promise<void> {
   cursor: progress;
 }
 
+/* 冲突态用橙色：走 --color-warning 令牌（规范 §1.5：语义色不写死） */
 .sv-sync-btn.sv-sync-btn-conflict {
-  background-color: #f59e0b;
-  border-color: #f59e0b;
+  background-color: var(--color-warning, #f59e0b);
+  border-color: var(--color-warning, #f59e0b);
   color: #fff;
 }
 

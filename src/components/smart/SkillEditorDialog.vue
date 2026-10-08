@@ -11,6 +11,7 @@
  * 校验沿用「提交后才暴露错误」的口径（见 BusinessProducts.vue）。
  */
 import { computed, ref, watch } from 'vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useSmartStore } from '@/stores/smart'
 import { useToast } from '@/composables/useToast'
 import {
@@ -144,7 +145,9 @@ function submit(): void {
 </script>
 
 <template>
-  <el-dialog :model-value="true" width="860px" :title="title" :close-on-click-modal="false" @close="emit('close')">
+  <BaseDialog :title="title" width="860px" :close-on-overlay="false" @close="emit('close')">
+    <!-- form 包住正文（回车提交仍可用）；底部按钮走 #footer（基类统一右对齐）。
+         #footer 在 form 之外，故保存按钮改为 @click="submit"，不再用 native-type="submit"。 -->
     <form class="sk-form" @submit.prevent="submit">
       <section class="sk-sec">
         <h4 class="sk-sec-title">基础信息<span class="sk-sec-hint">（写入 skill.md 的 frontmatter）</span></h4>
@@ -301,12 +304,6 @@ function submit(): void {
         <p v-else class="sk-res-empty">暂无资源。技能可以只有 {{ SKILL_FILE }}，也可以带上脚本、模板、参考文档。</p>
       </section>
 
-      <div class="sk-actions">
-        <el-button size="small" @click="emit('close')">取消</el-button>
-        <el-button type="primary" size="small" native-type="submit" data-testid="skill-editor-save">
-          {{ editingId ? '保存' : '添加' }}
-        </el-button>
-      </div>
     </form>
 
     <!-- 技能图标选择弹框：必须放在 <form> 之外——弹框内搜索框按回车会触发隐式表单提交，误保存技能 -->
@@ -317,7 +314,14 @@ function submit(): void {
       @select="onPickIcon"
       @close="iconPickerOpen = false"
     />
-  </el-dialog>
+
+    <template #footer>
+      <el-button size="small" @click="emit('close')">取消</el-button>
+      <el-button type="primary" size="small" data-testid="skill-editor-save" @click="submit">
+        {{ editingId ? '保存' : '添加' }}
+      </el-button>
+    </template>
+  </BaseDialog>
 </template>
 
 <style scoped>
@@ -416,7 +420,6 @@ function submit(): void {
 .sk-res-del:hover { border-color: var(--color-error, #dc2626); color: var(--color-error, #dc2626); }
 .sk-res-empty { margin: 0; font-size: 12px; color: var(--color-text-muted, #9ca3af); }
 
-.sk-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
 @media (max-width: 768px) {
   .sk-field-sm { flex: 1 1 100%; }

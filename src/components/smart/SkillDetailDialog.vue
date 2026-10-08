@@ -5,6 +5,7 @@
  * 正文经 noteMarkdown 渲染（html:false，不会注入脚本）。
  */
 import { computed, ref } from 'vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import { renderMarkdown } from '@/composables/noteMarkdown'
 import { copyText } from '@/utils/download'
 import { SKILL_FILE } from '@/composables/skillPackageCore'
@@ -74,7 +75,7 @@ const previewText = computed(() => {
 </script>
 
 <template>
-  <el-dialog :model-value="true" width="820px" :title="props.item.name" @close="emit('close')">
+  <BaseDialog :title="props.item.name" width="820px" @close="emit('close')">
     <div class="skd-body">
       <section class="skd-sec">
         <h4 class="skd-title">{{ SKILL_FILE }} · frontmatter</h4>
@@ -109,17 +110,16 @@ const previewText = computed(() => {
     </div>
 
     <template #footer>
-      <div class="skd-actions">
-        <el-button size="small" @click="copyText(props.item.body, '已复制技能正文')">复制正文</el-button>
-        <el-button size="small" type="primary" @click="emit('download')">下载 zip</el-button>
-        <el-button size="small" @click="emit('close')">关闭</el-button>
-      </div>
+      <el-button size="small" @click="copyText(props.item.body, '已复制技能正文')">复制正文</el-button>
+      <el-button size="small" type="primary" @click="emit('download')">下载 zip</el-button>
+      <el-button size="small" @click="emit('close')">关闭</el-button>
     </template>
-  </el-dialog>
+  </BaseDialog>
 </template>
 
 <style scoped>
-.skd-body { display: flex; flex-direction: column; gap: 14px; max-height: 62vh; overflow-y: auto; }
+/* 高度与滚动交给 BaseDialog 的 .bd-body（统一 padding + overflow-y:auto），这里只管内容排布 */
+.skd-body { display: flex; flex-direction: column; gap: 14px; }
 .skd-sec { display: flex; flex-direction: column; gap: 8px; }
 .skd-title {
   margin: 0;
@@ -194,5 +194,4 @@ const previewText = computed(() => {
   overflow-wrap: anywhere;
 }
 .skd-res-empty { margin: 0; font-size: 12px; color: var(--color-text-muted, #9ca3af); }
-.skd-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
 </style>

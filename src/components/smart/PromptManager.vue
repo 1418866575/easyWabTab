@@ -381,7 +381,8 @@ function excerpt(p: SmartPrompt): string {
   font-size: 12px;
   cursor: pointer;
 }
-.pm-fav.is-on { border-color: #f59e0b; color: #f59e0b; }
+/* 收藏态用橙色：走 --color-warning 令牌（规范 §1.5：语义色不写死） */
+.pm-fav.is-on { border-color: var(--color-warning, #f59e0b); color: var(--color-warning, #f59e0b); }
 
 .pm-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .pm-tag, .pm-tag-reset {
@@ -417,7 +418,7 @@ function excerpt(p: SmartPrompt): string {
   line-height: 1.2;
   cursor: pointer;
 }
-.pm-star.is-on { color: #f59e0b; }
+.pm-star.is-on { color: var(--color-warning, #f59e0b); }
 .pm-card-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
 .pm-name {
   padding: 0;

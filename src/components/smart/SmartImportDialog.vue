@@ -3,6 +3,8 @@
  * 智能工作台 · 导入预览弹框（技能 / 提示词共用）
  * 导入前把「新增 N / 更新 M / 跳过 K」和逐条名称摆出来，用户确认才落库 —— 避免盲改数据。
  */
+import BaseDialog from '@/components/common/BaseDialog.vue'
+
 const props = withDefaults(
   defineProps<{
     kindLabel: string
@@ -19,7 +21,7 @@ const emit = defineEmits<{ close: []; confirm: [] }>()
 </script>
 
 <template>
-  <el-dialog :model-value="true" width="560px" :title="`导入${kindLabel}（预览）`" :close-on-click-modal="false" @close="emit('close')">
+  <BaseDialog :title="`导入${kindLabel}（预览）`" width="560px" :close-on-overlay="false" @close="emit('close')">
     <div class="si-body">
       <p class="si-summary">
         新增 <b>{{ props.added.length }}</b> 条，
@@ -52,16 +54,15 @@ const emit = defineEmits<{ close: []; confirm: [] }>()
     </div>
 
     <template #footer>
-      <div class="si-actions">
-        <el-button size="small" @click="emit('close')">取消</el-button>
-        <el-button type="primary" size="small" data-testid="smart-import-confirm" @click="emit('confirm')">确认导入</el-button>
-      </div>
+      <el-button size="small" @click="emit('close')">取消</el-button>
+      <el-button type="primary" size="small" data-testid="smart-import-confirm" @click="emit('confirm')">确认导入</el-button>
     </template>
-  </el-dialog>
+  </BaseDialog>
 </template>
 
 <style scoped>
-.si-body { display: flex; flex-direction: column; gap: 12px; max-height: 50vh; overflow-y: auto; }
+/* 高度与滚动交给 BaseDialog 的 .bd-body（统一 padding + overflow-y:auto），这里只管内容排布 */
+.si-body { display: flex; flex-direction: column; gap: 12px; }
 .si-summary { margin: 0; font-size: 13px; color: var(--color-text, #111827); }
 .si-block { display: flex; flex-direction: column; gap: 4px; }
 .si-title { margin: 0; font-size: 12px; font-weight: 600; }
@@ -70,5 +71,4 @@ const emit = defineEmits<{ close: []; confirm: [] }>()
 .si-title.is-warn { color: var(--color-warning, #d97706); }
 .si-list { margin: 0; padding-left: 18px; font-size: 13px; color: var(--color-text-secondary, #6b7280); }
 .si-tip { margin: 0; font-size: 12px; color: var(--color-text-muted, #9ca3af); }
-.si-actions { display: flex; justify-content: flex-end; gap: 8px; }
 </style>

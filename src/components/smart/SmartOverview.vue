@@ -132,12 +132,13 @@ function relTime(ts: number): string {
 .ov-cat-name { color: var(--color-text-secondary, #6b7280); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ov-cat-bar { display: flex; height: 8px; border-radius: 999px; overflow: hidden; background: var(--color-bg-hover, #f3f4f6); }
 .ov-cat-skills { background: var(--color-primary, #3b82f6); }
-.ov-cat-prompts { background: #f59e0b; }
+/* 提示词段用橙色：走 --color-warning 令牌（规范 §1.5：语义色不写死） */
+.ov-cat-prompts { background: var(--color-warning, #f59e0b); }
 .ov-cat-num { text-align: right; color: var(--color-text-muted, #9ca3af); }
 .ov-legend { margin: 10px 0 0; font-size: 12px; color: var(--color-text-muted, #9ca3af); display: flex; gap: 12px; align-items: center; }
 .ov-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
 .ov-dot.is-skill { background: var(--color-primary, #3b82f6); }
-.ov-dot.is-prompt { background: #f59e0b; }
+.ov-dot.is-prompt { background: var(--color-warning, #f59e0b); }
 
 .ov-recent { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
 .ov-recent-btn {

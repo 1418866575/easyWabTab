@@ -5,6 +5,7 @@
  * 校验与「提交后才暴露错误」沿用业务弹框同一套口径（见 BusinessProducts.vue）。
  */
 import { computed, ref, watch } from 'vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import { isNameTaken, normalizeTags, parseVariables, validatePrompt } from '@/composables/smartCore'
 import { useSmartStore } from '@/stores/smart'
 import { useToast } from '@/composables/useToast'
@@ -86,7 +87,9 @@ const nameTaken = computed(() => {
 </script>
 
 <template>
-  <el-dialog :model-value="true" width="720px" :title="title" :close-on-click-modal="false" @close="emit('close')">
+  <BaseDialog :title="title" width="720px" :close-on-overlay="false" @close="emit('close')">
+    <!-- form 包住正文（回车提交仍可用）；底部按钮走 #footer（基类统一右对齐）。
+         注意：#footer 在 form 之外，故保存按钮不能再用 native-type="submit"，改为 @click="submit"。 -->
     <form class="se-form" @submit.prevent="submit">
       <div class="se-row">
         <label class="se-field">
@@ -152,14 +155,15 @@ const nameTaken = computed(() => {
         <span>收藏这条提示词</span>
       </label>
 
-      <div class="se-actions">
-        <el-button size="small" @click="emit('close')">取消</el-button>
-        <el-button type="primary" size="small" native-type="submit" data-testid="smart-editor-save">
-          {{ editingId ? '保存' : '添加' }}
-        </el-button>
-      </div>
     </form>
-  </el-dialog>
+
+    <template #footer>
+      <el-button size="small" @click="emit('close')">取消</el-button>
+      <el-button type="primary" size="small" data-testid="smart-editor-save" @click="submit">
+        {{ editingId ? '保存' : '添加' }}
+      </el-button>
+    </template>
+  </BaseDialog>
 </template>
 
 <style scoped>
@@ -180,7 +184,6 @@ const nameTaken = computed(() => {
   font-size: 12px;
 }
 .se-check { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--color-text, #111827); }
-.se-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
 @media (max-width: 768px) {
   .se-field-sm { flex: 1 1 100%; }

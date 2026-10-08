@@ -5,10 +5,13 @@
  * 两个模块，改动即时生效并落盘（走 nav prefs → smart.json 云同步信封）：
  *   1. 左侧菜单：改名 / 显示隐藏 / 拖拽排序（顺序规则在 smartSettingsCore，纯函数）
  *   2. 技能分类：新增 / 重命名 / 删除（二次确认），为分类添加或移除技能，空列表给空状态
- * 视觉沿用项目既有规范：CSS 变量配色、radius 圆角、与 AppSettingsDialog 同款的开关与行内列表。
+ * 视觉沿用项目既有规范：CSS 变量配色、radius 圆角、与 AppSettingsDialog 同款的行内列表与分栏布局。
+ * 弹框外壳统一走 common/BaseDialog（规范 §2.2：弹框唯一基类，禁止自建 overlay）；
+ * 开关统一用 el-switch（不再自造 .switch-btn），确认框统一用 utils/dialog 的 showConfirm。
  */
 import { computed, ref } from 'vue'
 import Icon from '@/components/Icon.vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useSmartStore } from '@/stores/smart'
 import { useToast } from '@/composables/useToast'
 import { showConfirm } from '@/utils/dialog'
@@ -192,7 +195,18 @@ function toggleExpand(name: string): void {
 </script>
 
 <template>
-  <el-dialog :model-value="true" width="min(960px, 94vw)" title="智能工作台设置" :close-on-click-modal="false" @close="emit('close')">
+  <!-- 弹框外壳走 BaseDialog（与 AppSettingsDialog 同构）：
+       width/max-height 由 props 传入；内容区是「左 rail + 右内容」两栏、各自管理滚动，
+       故把基类 .bd-body 归零内边距并改成 flex 列容器（见样式 .ss-dialog :deep(.bd-body)），
+       使 .ss-layout 的 flex:1 生效 —— 不再写死 height: min(62vh, 560px)。 -->
+  <BaseDialog
+    class="ss-dialog"
+    title="智能工作台设置"
+    width="min(960px, 94vw)"
+    max-height="86vh"
+    :close-on-overlay="false"
+    @close="emit('close')"
+  >
     <div class="ss-layout">
       <!-- 左侧：设置项导航（选中高亮 + 切换，参考个人工作台设置弹框的 rail） -->
       <aside class="ss-rail" aria-label="设置项导航">
@@ -275,18 +289,15 @@ function toggleExpand(name: string): void {
                 :disabled="index === store.menuItems.length - 1"
                 @click="store.onMoveMenu(item.key, 'down')"
               >下移</el-button>
-              <button
-                type="button"
-                class="switch-btn"
-                :class="{ on: !item.hidden }"
-                role="switch"
-                :aria-checked="!item.hidden"
+              <!-- 开关统一用 el-switch（规范：不自造 switch 组件）。
+                   model-value 用「未隐藏」语义，切换仍走 store 守卫（至少保留一个可见项）。 -->
+              <el-switch
+                size="small"
+                :model-value="!item.hidden"
                 :aria-label="`显示${item.label}`"
                 :data-testid="`smart-menu-toggle-${item.key}`"
-                @click="onToggleMenuHidden(item.key)"
-              >
-                <span class="switch-thumb"></span>
-              </button>
+                @update:model-value="onToggleMenuHidden(item.key)"
+              />
             </div>
           </li>
         </ul>
@@ -387,23 +398,35 @@ function toggleExpand(name: string): void {
       </section>
     </div>
 
+    <!-- 底部按钮直接交给基类 #footer（已统一右对齐 + 间距），不再自造 .ss-footer 包裹 -->
     <template #footer>
-      <div class="ss-footer">
-        <el-button size="small" type="primary" data-testid="smart-settings-close" @click="emit('close')">完成</el-button>
-      </div>
+      <el-button size="small" type="primary" data-testid="smart-settings-close" @click="emit('close')">完成</el-button>
     </template>
-  </el-dialog>
+  </BaseDialog>
 </template>
 
 <style scoped>
+/* 基类 .bd-body 默认带 24px padding 与纵向滚动；本弹框是「左导航 + 右内容」两栏、
+   各自管理滚动，故归零内边距并改为 flex 列容器（写法与 AppSettingsDialog 的
+   .settings-dialog :deep(.bd-body) 完全一致），使下面 .ss-layout 的 flex:1 生效。
+   高度不再写死 min(62vh, 560px)：面板高度由 BaseDialog 的 max-height(86vh) 接管，
+   内容区自适应填满，避免出现「外层弹框 + 内层分栏」双滚动条。 */
+.ss-dialog :deep(.bd-body) {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 /* ---------- 左右分栏骨架（与个人工作台设置弹框 .settings-rail / .settings-content 同构） ---------- */
 .ss-layout {
   display: flex;
   align-items: stretch;
   gap: 0;
-  min-height: 0;
-  /* 视口高度兜底：分栏各自独立滚动，弹框不被内容撑爆 */
-  height: min(62vh, 560px);
+  flex: 1;
+  /* 下限保底：菜单项少时弹框不至于缩成一小条（与个人工作台设置弹框的体量感一致）。
+     上限仍由 BaseDialog 的 max-height(86vh) 接管，50vh + 头/脚 ≈ 36vh 余量，不会被裁。 */
+  min-height: min(50vh, 460px);
 }
 
 /* 左侧设置项导航 rail */
@@ -507,7 +530,8 @@ function toggleExpand(name: string): void {
   border: 1px solid rgba(22, 163, 74, 0.25);
   border-radius: 999px;
   background-color: rgba(22, 163, 74, 0.1);
-  color: #16a34a;
+  /* 绿色走 --color-success 令牌（规范 §1.5：语义色不写死） */
+  color: var(--color-success, #16a34a);
   font-size: 12px;
   white-space: nowrap;
 }
@@ -515,7 +539,7 @@ function toggleExpand(name: string): void {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: #16a34a;
+  background-color: var(--color-success, #16a34a);
 }
 
 .ss-scroll {
@@ -611,46 +635,12 @@ function toggleExpand(name: string): void {
 .ss-empty-title { margin: 0 0 4px; font-size: 14px; font-weight: var(--font-weight-semibold, 600); color: var(--color-text, #0f172a); }
 .ss-empty-hint { margin: 0; font-size: 12px; color: var(--color-text-secondary, #64748b); }
 
-.ss-footer { display: flex; justify-content: flex-end; }
-
-/* ---------- 开关（与 AppSettingsDialog 同款） ---------- */
-.switch-btn {
-  flex: 0 0 auto;
-  position: relative;
-  width: 40px;
-  height: 22px;
-  padding: 0;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 999px;
-  background-color: var(--color-bg-hover, #f1f5f9);
-  cursor: pointer;
-  transition: background-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
-    border-color var(--motion-duration, 0.2s) var(--motion-ease, ease);
-}
-.switch-btn .switch-thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background-color: var(--color-text-muted, #94a3b8);
-  transition: transform var(--motion-duration, 0.2s) var(--motion-ease, ease),
-    background-color var(--motion-duration, 0.2s) var(--motion-ease, ease);
-}
-.switch-btn.on {
-  background-color: var(--color-primary, #3b82f6);
-  border-color: var(--color-primary, #3b82f6);
-}
-.switch-btn.on .switch-thumb {
-  transform: translateX(18px);
-  background-color: #ffffff;
-}
+/* 开关不再自造：统一用 el-switch（原 .switch-btn / .switch-thumb 已删除） */
 
 /* ---------- 移动端：rail 转为顶部横向滚动条，触控目标 ≥44px ---------- */
 @media (max-width: 768px) {
-  /* 窄屏改上下分栏：rail 变顶部横向条，内容在下 */
-  .ss-layout { flex-direction: column; height: min(68vh, 560px); }
+  /* 窄屏改上下分栏：rail 变顶部横向条，内容在下（高度仍由基类面板 86vh 接管） */
+  .ss-layout { flex-direction: column; }
 
   .ss-rail {
     flex: 0 0 auto;

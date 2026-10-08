@@ -5,6 +5,7 @@
  * 提示词正文高亮 {{变量}} 便于检查占位；先转义再替换，避免注入。
  */
 import { computed } from 'vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import { parseVariables } from '@/composables/smartCore'
 import type { SmartPrompt } from '@/types'
 
@@ -28,7 +29,7 @@ const title = computed(() => props.item.title)
 </script>
 
 <template>
-  <el-dialog :model-value="true" width="720px" :title="title" @close="emit('close')">
+  <BaseDialog :title="title" width="720px" @close="emit('close')">
     <div class="sd-body">
       <div class="sd-meta">
         <span class="sd-chip">{{ props.item.category }}</span>
@@ -45,15 +46,14 @@ const title = computed(() => props.item.title)
     </div>
 
     <template #footer>
-      <div class="sd-actions">
-        <el-button size="small" @click="emit('close')">关闭</el-button>
-      </div>
+      <el-button size="small" @click="emit('close')">关闭</el-button>
     </template>
-  </el-dialog>
+  </BaseDialog>
 </template>
 
 <style scoped>
-.sd-body { display: flex; flex-direction: column; gap: 12px; max-height: 60vh; overflow-y: auto; }
+/* 高度与滚动交给 BaseDialog 的 .bd-body（统一 padding + overflow-y:auto），这里只管内容排布 */
+.sd-body { display: flex; flex-direction: column; gap: 12px; }
 .sd-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .sd-chip {
   padding: 1px 8px;
@@ -94,5 +94,4 @@ const title = computed(() => props.item.title)
 
 .sd-vars { margin: 0; font-size: 12px; color: var(--color-text-muted, #9ca3af); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .sd-var-inline { padding: 1px 6px; border-radius: 4px; background: var(--color-bg-hover, #f3f4f6); color: var(--color-primary, #3b82f6); }
-.sd-actions { display: flex; justify-content: flex-end; }
 </style>

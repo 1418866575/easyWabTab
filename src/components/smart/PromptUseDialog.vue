@@ -5,8 +5,10 @@
  * 避免用户拿到一份看起来完整、实际缺内容的提示词。
  */
 import { computed, ref, watch } from 'vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import { fillTemplate, parseVariables } from '@/composables/smartCore'
 import { copyText } from '@/utils/download'
+import { showConfirm } from '@/utils/dialog'
 import type { SmartPrompt } from '@/types'
 
 const props = defineProps<{ prompt: SmartPrompt }>()
@@ -37,8 +39,11 @@ const missingSet = computed(() => new Set(filled.value.missing))
 
 async function copyResult(): Promise<void> {
   if (missingCount.value > 0) {
-    // 不阻断：允许带占位复制，但明确告知，避免"复制了才发现没填全"
-    if (!window.confirm(`还有 ${missingCount.value} 个变量未填写，复制结果会保留 {{占位}}。继续吗？`)) return
+    // 不阻断：允许带占位复制，但明确告知，避免"复制了才发现没填全"。
+    // 走统一确认框 showConfirm（项目规范：禁用原生 confirm / ElMessageBox）——
+    // 且它自带高于当前弹框的动态层级，不会像原生 confirm 那样与本弹框抢层级。
+    const go = await showConfirm(`还有 ${missingCount.value} 个变量未填写，复制结果会保留 {{占位}}。继续吗？`)
+    if (!go) return
   }
   const ok = await copyText(filled.value.text, '已复制填充后的提示词')
   if (ok) emit('used')
@@ -66,7 +71,7 @@ function clearAll(): void {
 </script>
 
 <template>
-  <el-dialog :model-value="true" width="860px" :title="`使用：${prompt.title}`" @close="emit('close')">
+  <BaseDialog :title="`使用：${prompt.title}`" width="860px" @close="emit('close')">
     <div class="pu-body">
       <!-- 无变量：直接给原文，不摆无意义的表单 -->
       <div v-if="vars.length === 0" class="pu-plain">
@@ -108,14 +113,13 @@ function clearAll(): void {
     </div>
 
     <template #footer>
-      <div class="pu-actions">
-        <el-button size="small" @click="copyRaw">复制原文</el-button>
-        <span class="pu-spacer" />
-        <el-button size="small" @click="emit('close')">关闭</el-button>
-        <el-button type="primary" size="small" data-testid="smart-use-copy" @click="copyResult">复制结果</el-button>
-      </div>
+      <el-button size="small" @click="copyRaw">复制原文</el-button>
+      <!-- 基类 .bd-footer 已右对齐；用弹性占位把「复制原文」留在左侧、主操作留在右侧 -->
+      <span class="pu-spacer" />
+      <el-button size="small" @click="emit('close')">关闭</el-button>
+      <el-button type="primary" size="small" data-testid="smart-use-copy" @click="copyResult">复制结果</el-button>
     </template>
-  </el-dialog>
+  </BaseDialog>
 </template>
 
 <style scoped>
@@ -156,7 +160,6 @@ function clearAll(): void {
 .pu-tip { margin: 0; font-size: 12px; color: var(--color-text-secondary, #6b7280); }
 .pu-plain { display: flex; flex-direction: column; gap: 8px; }
 
-.pu-actions { display: flex; align-items: center; gap: 8px; }
 .pu-spacer { flex: 1 1 auto; }
 
 :deep(.is-missing .el-input__wrapper) { box-shadow: 0 0 0 1px var(--color-error, #dc2626) inset; }
