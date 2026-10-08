@@ -22,7 +22,8 @@ import { isSuspectedRemoteWipe, isNavWipeOverrideActive } from './navDataGuard'
 
 export const DB_NAME = 'easy-web-tab'
 /** v18：新增 `nav` object store，承载原 localStorage 的导航偏好（13 键），根治移动端 localStorage 被系统回收导致导航数据丢失 */
-export const DB_VERSION = 19
+/** v20：新增 `navmeta` object store，承载导航降级守卫的基线/高水位（从 localStorage 迁入，详见 IDB_META_STORES） */
+export const DB_VERSION = 20
 /** 核心 9 store：随 JSON 备份导出/导入（v6 新增 business；v15 新增 family 家谱） */
 export const IDB_CORE_STORES = ['todos', 'notes', 'diary', 'countdowns', 'passwords', 'health', 'ledger', 'settings', 'business', 'family'] as const
 /** 辅助 store：pomodoro/habits 随 v5 备份导出/导入；snapshots 仅本地使用，不参与备份 */
@@ -51,6 +52,16 @@ export const IDB_TEACHER_STORES = ['teacher_workbench'] as const
 export const IDB_NAV_STORES = ['nav'] as const
 /** 工具箱 store（v19 新增：lottery 抽奖名单与抽奖记录，单对象） */
 export const IDB_TOOLBOX_STORES = ['lottery'] as const
+/**
+ * 导航「守卫依据」store（v20 新增：navmeta，单对象 `{ baseline, highWater }`）
+ *
+ * 为什么必须与被守卫的数据（nav）同介质：
+ * 旧版把降级守卫的基线存在 localStorage，而 localStorage 正是 v18 迁移要躲开、
+ * 且会被移动端系统**单独回收**的介质。回收后基线归零 → 守卫判据失效 →
+ * 「空态」畅通写回 nav 并推上云。把基线/高水位搬进 IDB 后，
+ * 「IDB 数据还在、守卫依据却被回收」这种不对称就不再可能发生。
+ */
+export const IDB_META_STORES = ['navmeta'] as const
 export const IDB_KEY = 'items'
 
 export type IdbStore =
@@ -61,6 +72,7 @@ export type IdbStore =
   | (typeof IDB_TEACHER_STORES)[number]
   | (typeof IDB_NAV_STORES)[number]
   | (typeof IDB_TOOLBOX_STORES)[number]
+  | (typeof IDB_META_STORES)[number]
 
 let dbPromise: Promise<IDBDatabase> | undefined
 
@@ -78,7 +90,8 @@ export function openIdb(): Promise<IDBDatabase> {
           ...IDB_STUDENT_STORES,
           ...IDB_TEACHER_STORES,
           ...IDB_NAV_STORES,
-          ...IDB_TOOLBOX_STORES
+          ...IDB_TOOLBOX_STORES,
+          ...IDB_META_STORES
         ]) {
           if (!db.objectStoreNames.contains(name)) {
             db.createObjectStore(name) // 无 keyPath → out-of-line 键 'items'

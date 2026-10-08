@@ -16,10 +16,14 @@
  *   - 于是「用户真的删掉一批站点」不会触发防护，而「数据莫名变成空态后被自动回写/推送」会触发。
  *
  * ## 设计边界
- * - 纯函数部分（parseUserSitesCount / shouldGuardDrop / evaluateUserSitesCount 等）零依赖；
- * - 基线读写依赖 localStorage：仅存 1 个小整数，**丢失即退化为「不防护」**，不会反过来丢数据；
- * - 因此本文件被 node 脚本（scripts/test-nav-guard.ts）直接断言时，
- *   只要先给 globalThis 挂一个内存版 localStorage，存储相关导出也能正常跑。
+ * - **本模块只提供判据，不碰任何存储介质**（v20 起）。
+ * - 基线与高水位的持久化已迁至 `navMeta.ts`（IndexedDB `navmeta` store）。
+ *   迁移原因：基线原先存在 localStorage，而 localStorage 会被移动端系统**单独回收**，
+ *   回收后基线归零 → shouldGuardDrop 恒 false → 全部守卫失效，正是本模块要防的事故本身。
+ *   守卫依据必须与被守卫的数据同介质（`nav` 也在 IDB），故统一迁走。
+ *   调用方请自行从 `navMeta` 取基线后传入（见 checkUserSitesAgainstBaseline）。
+ * - 因此本文件全部导出均为**纯函数或会话内标志**，
+ *   node 脚本（scripts/test-nav-guard.ts）可直接断言，无需挂载任何存储。
  */
 
 /** 触发防护的最小基线：站点数低于此值说明数据本来就少，不值得为了防降级而阻断写入 */
@@ -28,9 +32,6 @@ export const GUARD_MIN_BASELINE = 5
 export const GUARD_DROP_RATIO = 0.5
 /** 无法判定数量（内容不是合法 JSON 数组）时的哨兵值：宁可不拦，也不误拦 */
 export const UNKNOWN_COUNT = -1
-
-/** 基线存放键（localStorage，仅一个小整数，与 nav 数据不同介质，避免同时被清） */
-export const BASELINE_STORAGE_KEY = 'ewt.navGuard.userSitesBaseline'
 
 export interface SiteCountVerdict {
   /** true = 疑似降级，调用方应暂停写回/推送 */
@@ -140,59 +141,32 @@ export function resetNavSessionFlags(): void {
   navWipeOverrideUntil = 0
 }
 
-// ========== 基线持久化（localStorage，失败一律降级为「无基线 = 不防护」）==========
+// ========== 组合判据（基线由调用方从 navMeta 取得后显式传入）==========
 
-function safeStorage(): Storage | null {
-  try {
-    return typeof localStorage !== 'undefined' ? localStorage : null
-  } catch {
-    // 某些隐私模式下访问 localStorage 属性本身就抛错
-    return null
-  }
+/**
+ * 用给定基线判定 user-sites 是否疑似降级（供推送/写盘直接调用）。
+ *
+ * 基线参数化而非内部读取，是为了让本模块保持**零存储依赖**：
+ * 存储归属 navMeta（IDB），判据归属这里，两者不再耦合。
+ */
+export function checkUserSitesAgainstBaseline(
+  raw: string | null | undefined,
+  baseline: number
+): SiteCountVerdict {
+  return evaluateUserSitesCount(parseUserSitesCount(raw), baseline)
 }
 
-/** 读取已知基线（无记录 / 记录损坏 → 0） */
-export function readBaseline(): number {
-  const s = safeStorage()
-  if (!s) return 0
-  try {
-    const n = Number.parseInt(s.getItem(BASELINE_STORAGE_KEY) ?? '', 10)
-    return Number.isFinite(n) && n > 0 ? n : 0
-  } catch {
-    return 0
-  }
-}
-
-/** 写入基线（非数字/负数归 0） */
-export function writeBaseline(count: number): void {
-  const s = safeStorage()
-  if (!s) return
-  try {
-    const n = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0
-    s.setItem(BASELINE_STORAGE_KEY, String(n))
-  } catch {
-    // 配额/隐私模式：放弃基线，退化为不防护（不影响数据本身）
-  }
-}
-
-/** 清除基线（恢复出厂、清空数据等显式场景用，避免残留基线让后续合法写入被拦） */
-export function clearBaseline(): void {
-  const s = safeStorage()
-  if (!s) return
-  try {
-    s.removeItem(BASELINE_STORAGE_KEY)
-  } catch {
-    // 同上
-  }
-}
-
-/** 首次确立基线：只在还没有基线时写入，返回确立后的基线值 */
-export function ensureBaseline(count: number): number {
-  if (readBaseline() === 0 && count > 0) writeBaseline(count)
-  return readBaseline()
-}
-
-/** 用 localStorage 基线判定当前 user-sites 是否疑似降级（供推送/写盘直接调用） */
-export function checkUserSitesAgainstBaseline(raw: string | null | undefined): SiteCountVerdict {
-  return evaluateUserSitesCount(parseUserSitesCount(raw), readBaseline())
+/**
+ * 「空态 vs 历史最大规模」兜底判定 —— 基线之外的第二道判据。
+ *
+ * 覆盖场景：nav 记录被残缺 prefs 整包覆盖后，基线可能已随之前几次写入同步变小，
+ * 单看基线未必触发骤降；但「当前 0 条、历史曾达 highWater」几乎只可能是数据丢失。
+ *
+ * @param current 当前用户自有站点数（UNKNOWN_COUNT 表示无法判定）
+ * @param highWater 历史最大站点数（来自 navMeta.readHighWater）
+ */
+export function isSuspectedWipe(current: number, highWater: number): boolean {
+  if (current === UNKNOWN_COUNT) return false
+  if (highWater < GUARD_MIN_BASELINE) return false
+  return current === 0 || current < highWater * GUARD_DROP_RATIO
 }

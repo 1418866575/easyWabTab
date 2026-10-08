@@ -32,6 +32,8 @@
     "test:business": "node --experimental-strip-types scripts/test-business-core.ts",
     "test:toolbox": "node --experimental-strip-types scripts/test-toolbox-core.ts",
     "test:nav-guard": "node --experimental-strip-types scripts/test-nav-guard.ts",
+    "test:nav-meta": "node --experimental-strip-types scripts/test-nav-meta.ts",
+    "test:nav": "npm run test:nav-guard && npm run test:nav-meta && node --experimental-strip-types scripts/diag-nav-loss.ts",
     "test:xlsx": "node --experimental-strip-types scripts/test-xlsx-export.ts",
     "qa:student-ui": "node scripts/qa-student-ui.mjs",
     "test:student-menu": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-menu-core.ts",

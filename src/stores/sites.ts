@@ -25,12 +25,19 @@ import { scheduleAutoBackup } from '../composables/useBackup'
 import { markDirty } from '@/composables/useCloudSync'
 import {
   armNavExplicitMutation,
-  ensureBaseline,
   evaluateUserSitesCount,
   isNavExplicitMutationActive,
-  readBaseline,
-  writeBaseline
+  isSuspectedWipe
 } from '@/composables/navDataGuard'
+// 守卫依据（基线/高水位）自 v20 起存 IndexedDB，与 nav 主数据同介质；
+// 旧版存 localStorage 会被移动端系统单独回收，回收后守卫整体失效 —— 详见 navMeta.ts 文件头
+import {
+  ensureBaseline,
+  noteHighWater,
+  readBaseline,
+  readHighWater,
+  writeBaseline
+} from '@/composables/navMeta'
 import { getPref, setPrefNow, isNavReadonly } from '@/composables/useNavPrefs'
 import { useToast } from '@/composables/useToast'
 
@@ -67,7 +74,10 @@ export const useSitesStore = defineStore('sites', () => {
 
   /** 用当前列表刷新基线（只在显式用户改动后调用，代表「这是用户想要的规模」） */
   function syncBaselineFromCurrent(): void {
-    writeBaseline(ownSiteCount())
+    const n = ownSiteCount()
+    writeBaseline(n)
+    // 高水位只增不减：即便基线后来被用户真实删减拉低，历史最大规模仍留在 navmeta 里兜底
+    noteHighWater(n)
   }
 
   /**
@@ -92,7 +102,16 @@ export const useSitesStore = defineStore('sites', () => {
   function userSitesWriteBlockReason(): string {
     if (isNavReadonly()) return '导航存储读取失败（只读模式）'
     if (isNavExplicitMutationActive()) return ''
-    return evaluateUserSitesCount(ownSiteCount(), readBaseline()).reason
+    const current = ownSiteCount()
+    const verdict = evaluateUserSitesCount(current, readBaseline())
+    if (verdict.tripped) return verdict.reason
+    // 第二道判据：基线可能因先前几次写入已同步变小（单看它未必触发），
+    // 「当前规模 vs 历史最大规模」则几乎只在数据丢失时才成立
+    const high = readHighWater()
+    if (isSuspectedWipe(current, high)) {
+      return `站点数 ${current} 远低于历史最高 ${high}`
+    }
+    return ''
   }
 
   /** 真正拦下一次写盘时才提示用户（每个会话只弹一次，避免刷屏） */
@@ -384,7 +403,11 @@ export const useSitesStore = defineStore('sites', () => {
 
       // 首次（无基线时）按「用户自有站点数」确立基线；随后按当前数据重算保护状态。
       // 顺序必须是先 ensureBaseline 再 refreshDataGuard：否则首次进入会把当前数当成骤降。
-      ensureBaseline(ownSiteCount())
+      const own = ownSiteCount()
+      ensureBaseline(own)
+      // 每次成功装载都记一次高水位：它是「本机曾达到的最大规模」，
+      // 日后 nav 记录被残缺内容覆盖、基线又同步变小时，靠它兜底识别空态
+      noteHighWater(own)
       refreshDataGuard()
     } catch (error) {
       console.error('Failed to load sites:', error)

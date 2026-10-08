@@ -83,6 +83,34 @@ export function shadowStamp(): number {
 }
 
 /**
+ * 把 user-sites 压到影子容量内：剔除 base64 图标（体积大头，且图标可重新抓取），
+ * 保留 http(s) 图标地址与全部站点字段。
+ *
+ * 这样即便站点多、图标大，影子也能保住「有哪些站点」这份最关键的资产，
+ * 恢复时站点不丢，只是图标需要重新加载。
+ *
+ * @returns 降级后的 JSON 串；无法解析或不是数组时返回 null（交由调用方跳过）
+ */
+export function downgradeUserSites(raw: string): string | null {
+  try {
+    const list: unknown = JSON.parse(raw)
+    if (!Array.isArray(list)) return null
+    const slim = list.map((item: unknown) => {
+      if (!item || typeof item !== 'object') return item
+      const rec = item as Record<string, unknown>
+      const icon = rec.icon
+      if (typeof icon === 'string' && icon.startsWith('data:')) {
+        return { ...rec, icon: '' }
+      }
+      return rec
+    })
+    return JSON.stringify(slim)
+  } catch {
+    return null
+  }
+}
+
+/**
  * 按当前 nav 记录刷新影子。
  * @param record 完整的 nav 记录（可以包含影子不关心的键，只挑 NAV_SHADOW_KEYS）
  * @returns 实际影子的键数量（0 = 一个都没影上）
@@ -100,8 +128,19 @@ export function writeShadow(record: Record<string, string>): number {
         continue
       }
       if (v.length > SHADOW_MAX_VALUE_LEN) {
-        // 超大值（多为 dataURL）不进影子：它会挤爆 localStorage 配额
-        s.removeItem(key)
+        // 超限处理（v20 修正）：旧版这里直接 removeItem 把**已有影子删掉**，
+        // 于是 user-sites 一旦因 base64 图标超过 512KB，影子就归零 ——
+        // IDB 出事时恰恰是最需要影子的时刻却没了它，等于备份形同虚设。
+        // 现在改为：先尝试写「去图标降级版」；实在放不下就**保留已有旧影子**。
+        // 一份稍旧的备份永远好过没有备份，绝不主动删除。
+        const slim = k === 'user-sites' ? downgradeUserSites(v) : null
+        if (slim !== null && slim.length <= SHADOW_MAX_VALUE_LEN) {
+          if (s.getItem(key) !== slim) s.setItem(key, slim)
+          written++
+          continue
+        }
+        // 放不下：已有旧影子就原样留着（计入 written 以维持时间戳语义），没有则跳过
+        if (s.getItem(key) !== null) written++
         continue
       }
       // 值没变就跳过写入：localStorage 的 setItem 是同步且会触发磁盘写，

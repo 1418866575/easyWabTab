@@ -82,6 +82,8 @@ import {
   checkUserSitesAgainstBaseline,
   isNavExplicitMutationActive
 } from './navDataGuard'
+// 基线自 v20 起存 IndexedDB（navmeta），不再随 localStorage 被回收而失效
+import { readBaseline } from './navMeta'
 import type { ToolboxSyncData } from '@/toolbox/core/toolboxSyncCore'
 import type { TeacherData } from '../types/teacher'
 
@@ -1220,7 +1222,7 @@ function guardNavUserSites(local: unknown): string | null {
   // 用户在 UI 上手动整理过站点 → 眼前这份就是他认可的数据，不再用历史基线拦他
   // （与 sites.ts 的写盘守卫共用同一标志，避免「本地写成功但推送被拦」的死锁）
   if (isNavExplicitMutationActive()) return null
-  const verdict = checkUserSitesAgainstBaseline(prefs['user-sites'])
+  const verdict = checkUserSitesAgainstBaseline(prefs['user-sites'], readBaseline())
   return verdict.tripped ? verdict.reason : null
 }
 

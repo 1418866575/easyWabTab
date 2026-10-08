@@ -20,7 +20,25 @@ import { idbGet, idbPut, idbClear, NAV_STORE_KEYS, WORKBENCH_PREFS_KEYS } from '
 import { useAppSettingsStore } from '@/stores/settings'
 import type { NavPrefsRecord } from './useIdb'
 import { readShadow, writeShadow, clearShadow, shadowStamp } from './navShadow'
-import { clearBaseline } from './navDataGuard'
+import {
+  isNavExplicitMutationActive,
+  isNavWipeOverrideActive,
+  parseUserSitesCount,
+  shouldGuardDrop,
+  isSuspectedWipe,
+  UNKNOWN_COUNT
+} from './navDataGuard'
+import {
+  loadNavMeta,
+  readBaseline,
+  readHighWater,
+  noteHighWater,
+  resetNavMeta,
+  persistNavMeta
+} from './navMeta'
+
+/** v19 及更早把守卫基线存在 localStorage 的这个键上；v20 起迁入 IDB，仅用于一次性迁移后删除 */
+const LEGACY_BASELINE_KEY = 'ewt.navGuard.userSitesBaseline'
 
 let prefs: NavPrefsRecord = {}
 let loadPromise: Promise<void> | null = null
@@ -53,6 +71,27 @@ async function migrateNavFromLocalStorageIfNeeded(): Promise<void> {
   }
 }
 
+/**
+ * 一次性迁移：把仍留在 localStorage 的旧基线（v19 及更早）转成 IDB 里的高水位并删除旧键。
+ *
+ * 必须在 `loadNavMeta()` 之后调用 —— 只有预载完成，noteHighWater 才允许落盘。
+ *
+ * 旧基线存 localStorage 正是「守卫整体失效」的根因（它比 nav 数据更容易被回收），
+ * 迁完立刻删除，杜绝它继续充当判据。旧值反映的是这台机器真实达到过的规模，
+ * 转成只增不减的高水位正好用来兜底识别空态。
+ */
+function migrateBaselineFromLocalStorage(): void {
+  try {
+    const raw = localStorage.getItem(LEGACY_BASELINE_KEY)
+    if (raw === null) return
+    const n = Number.parseInt(raw, 10)
+    if (Number.isFinite(n) && n > 0) noteHighWater(n)
+    localStorage.removeItem(LEGACY_BASELINE_KEY)
+  } catch {
+    // 隐私模式下访问 localStorage 本身会抛错：跳过迁移即可，不影响主流程
+  }
+}
+
 /** 当前是否处于只读模式（IDB 读失败且无影子可用）→ 所有写入会被拒绝 */
 export function isNavReadonly(): boolean {
   return loadState === 'failed'
@@ -74,6 +113,11 @@ export function navLoadState(): NavLoadState {
 export function ensureLoaded(): Promise<void> {
   if (!loadPromise) {
     loadPromise = (async () => {
+      // 守卫依据（基线/高水位）必须先于任何 nav 读写就位：
+      // 空态判定全程依赖它，晚一步就可能出现「守卫还没醒、空态已经写回」的窗口
+      await loadNavMeta()
+      migrateBaselineFromLocalStorage()
+
       let fromIdb: NavPrefsRecord | undefined
       let idbError: unknown = null
       try {
@@ -87,7 +131,10 @@ export function ensureLoaded(): Promise<void> {
       if (idbError || idbEmpty) {
         const shadow = readShadow()
         if (Object.keys(shadow).length > 0) {
-          prefs = { ...shadow }
+          // 必须是 merge 而非替换：影子只覆盖 10 个键（见 navShadow.NAV_SHADOW_KEYS），
+          // 整包替换会把 site-click-counts / user-background / site-favicon / icon-cache
+          // 这 4 个未影子的键一并冲掉，等于用备份把主数据砍掉一角
+          prefs = { ...(fromIdb ?? {}), ...shadow }
           loadState = 'shadow'
           // 尽力回填 IDB：成功了就回到健康状态，失败也无妨（内存里已可用，刷新影子也不会丢）
           try {
@@ -142,10 +189,70 @@ function allowWrite(op: string): boolean {
 }
 
 /**
- * 真正落盘：写 IDB 成功后刷新 localStorage 影子。
+ * 落盘前的空态拦截：返回空串 = 可写；非空 = 拒绝写入的原因。
+ *
+ * 与 `sites.ts` 的 `userSitesWriteBlockReason` 是**两道不同的门**，缺一不可：
+ *   - 那道守在 sites store，只拦 user-sites 一个键；
+ *   - 这道守在最终落盘口，拦的是**整包 nav 记录** ——
+ *     theme / categories / icon-cache 等任何一次 setPref 都会经过这里，
+ *     内存 prefs 若是空态，一次无关紧要的写入照样会把空态固化。
+ *
+ * 判据（基线、高水位）全部取自 IDB `navmeta`，与 nav 主数据同介质、同生共死，
+ * 不会再出现旧版「localStorage 被回收 → 守卫静默失效」的情况。
+ */
+function emptyWriteBlockReason(snapshot: NavPrefsRecord): string {
+  const raw = snapshot['user-sites']
+  // 从未写过 user-sites（新装机器 / 恢复出厂后的首次保存）→ 放行，不能拦住新用户
+  if (raw === undefined || raw === null) return ''
+  const current = parseUserSitesCount(raw)
+  // 数量未知（内容损坏）→ 宁可放行也不误拦
+  if (current === UNKNOWN_COUNT) return ''
+  // 以下两个开关都是「用户明确选择了以眼前这份为准」的信号，必须放行：
+  //   - explicitMutation：用户在 UI 上增/删/改/导入过站点；
+  //   - wipeOverride：用户在冲突解决里选了「以云端/备份为准」（含从备份恢复）。
+  // 不放行会出现「恢复备份/覆盖云端后数据存不进去」的假死，比误拦更糟。
+  if (isNavExplicitMutationActive()) return ''
+  if (isNavWipeOverrideActive()) return ''
+  const baseline = readBaseline()
+  if (shouldGuardDrop(current, baseline)) {
+    return `站点数 ${current} 较基线 ${baseline} 骤降`
+  }
+  const high = readHighWater()
+  if (isSuspectedWipe(current, high)) {
+    return `站点数 ${current} 远低于历史最高 ${high}`
+  }
+  return ''
+}
+
+/** 守卫日志节流间隔：数据真丢时每次写盘都会触发，不节流会刷爆控制台 */
+const GUARD_LOG_THROTTLE_MS = 30_000
+let lastGuardLogAt = 0
+let guardHintShown = false
+
+function warnGuardThrottled(reason: string): void {
+  const now = Date.now()
+  if (now - lastGuardLogAt < GUARD_LOG_THROTTLE_MS) return
+  lastGuardLogAt = now
+  console.error('[nav-prefs] 已跳过本次 nav 落盘，避免以空态覆盖真实数据：', reason)
+  if (!guardHintShown) {
+    guardHintShown = true
+    console.error(
+      '[nav-prefs] 导航数据疑似丢失，已暂停写入本地与云端。' +
+      '请到「设置 → 云同步」点击「拉取」恢复，或导入备份文件。'
+    )
+  }
+}
+
+/** 真正落盘：写 IDB 成功后刷新 localStorage 影子。
  * 注意顺序必须是「先主存后影子」：影子写失败不能影响 IDB 的成功语义，反之亦然。
  */
 function writeThrough(snapshot: NavPrefsRecord): Promise<void> {
+  // 空态绝不落盘：这条是「数据没了又被自动写回」链路上的最后一道闸门
+  const blockReason = emptyWriteBlockReason(snapshot)
+  if (blockReason) {
+    warnGuardThrottled(blockReason)
+    return Promise.resolve()
+  }
   return idbPut('nav', snapshot).then(
     () => {
       try {
@@ -207,9 +314,17 @@ export async function clearAll(): Promise<void> {
   }
   prefs = {}
   clearShadow()
-  // 「清空」本身会让站点数归零：必须同时清掉降级防护的基线，
-  // 否则接下来任何一次写盘都会被判定成「数据骤降」而拦下，用户会看到不该有的告警。
-  clearBaseline()
+  // 「清空」本身会让站点数归零：必须同时清掉守卫依据（基线 + 高水位），
+  // 否则接下来任何一次写盘都会被判定成「数据骤降/远低于历史最高」而拦下，
+  // 用户会看到不该有的告警，且数据再也存不进去。
+  resetNavMeta()
+  await persistNavMeta()
+  // 清掉 v19 及更早残留在 localStorage 的旧基线，避免它日后又被当成判据
+  try {
+    localStorage.removeItem(LEGACY_BASELINE_KEY)
+  } catch {
+    // 忽略
+  }
   loadState = 'ok'
   await idbClear('nav')
   // 清仍留在 localStorage 的 prefs 键（含 6 个非导航 prefs + 迁移前残留的导航键），维持出厂重置等同旧行为

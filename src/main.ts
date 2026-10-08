@@ -25,11 +25,22 @@ import './styles/biz-dialog.css'
 import { useThemeStore } from './stores/theme'
 import { useAppSettingsStore } from './stores/settings'
 import { useNavPrefs } from './composables/useNavPrefs'
+import { configureNavMetaStorage, persistNavMeta } from './composables/navMeta'
+import { idbGet, idbPut } from './composables/useIdb'
+import type { NavMetaRecord } from './composables/navMeta'
 // 弹框打开时锁定背景滚动：手写弹框没有 Element Plus 的 lock-scroll，需全局兜底
 import { initScrollLock } from './utils/scrollLock'
 
 const app = createApp(App)
 const pinia = createPinia()
+
+// 装配导航守卫依据的存储后端（IndexedDB `navmeta`）。
+// 必须在 ensureLoaded() 之前：那里会 loadNavMeta 读取基线/高水位。
+// 与 nav 主数据同介质，避免旧版「基线存 localStorage 被单独回收 → 守卫整体失效」
+configureNavMetaStorage(
+  () => idbGet<NavMetaRecord>('navmeta'),
+  (record) => idbPut('navmeta', record)
+)
 
 app.use(pinia)
 app.use(router)
@@ -53,8 +64,13 @@ async function bootstrap() {
   useAppSettingsStore().initSettings()
   initScrollLock()
 
-  // 页面隐藏/卸载时立即落盘导航偏好，避免防抖导致的数据丢失
-  const flushNav = () => { void navPrefs.flushNow() }
+  // 页面隐藏/卸载时立即落盘导航偏好，避免防抖导致的数据丢失。
+  // 守卫依据（基线/高水位）也要一并 flush：它防抖 500ms，
+  // 漏掉的话本次会话确立的基线会丢，下次进入就少了空态拦截能力。
+  const flushNav = () => {
+    void navPrefs.flushNow()
+    void persistNavMeta()
+  }
   if (typeof window !== 'undefined') {
     window.addEventListener('pagehide', flushNav)
     document.addEventListener('visibilitychange', () => {

@@ -18,6 +18,7 @@ import { useSitesStore } from '../stores/sites'
 import { useCategoriesStore } from '../stores/categories'
 import { useSearchEnginesStore } from '../stores/searchEngines'
 import { useNavPrefs } from '@/composables/useNavPrefs'
+import { armNavWipeOverride } from '@/composables/navDataGuard'
 
 /** embedded = true：作为常驻面板内嵌在设置页（无遮罩、无自带标题栏、不响应遮罩点击关闭） */
 withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
@@ -72,6 +73,10 @@ const handleRestore = async (backup: BackupData) => {
     const nav = useNavPrefs()
     // 确保内存已有全量 nav 数据，setPref 合并而非覆盖其它键
     await nav.ensureLoaded()
+    // 恢复备份 = 用户已二次确认「以备份为准」，必须显式放行降级守卫：
+    // 备份里的站点数常常小于当前（恢复旧备份是典型操作），
+    // 不放行会被「骤降 / 远低于历史最高」判定拦下，表现为恢复后数据存不进去。
+    armNavWipeOverride()
     nav.setPref('user-sites', JSON.stringify(data.sites))
     nav.setPref('user-categories', JSON.stringify(data.categories))
     nav.setPref('user-search-engines', JSON.stringify(data.searchEngines))

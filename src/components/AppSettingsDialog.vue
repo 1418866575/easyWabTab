@@ -12,7 +12,9 @@ import type { DialogId } from '@/stores/settings'
 import type { WorkbenchMenuItem } from '@/composables/workbenchMenuCore'
 import { useAppSettingsDialog } from '@/composables/useAppSettingsDialog'
 import type { SettingsTarget } from '@/composables/useAppSettingsDialog'
-import { armNavWipeOverride, clearBaseline } from '@/composables/navDataGuard'
+import { armNavWipeOverride } from '@/composables/navDataGuard'
+// 守卫基线自 v20 起存 IndexedDB（navmeta），不再随 localStorage 被回收而失效
+import { clearBaseline } from '@/composables/navMeta'
 import { useToast } from '@/composables/useToast'
 import { idbGet, idbPut, idbImportAll, idbExportAll, idbClear, IDB_STUDENT_STORES, IDB_CORE_STORES, IDB_AUX_STORES, IDB_ICONS_STORES } from '@/composables/useIdb'
 import {
