@@ -4,7 +4,7 @@
 // 拖起本卡落到另一卡上即交换两者顺序，落库持久化（由 useHomeLayout 单例处理）。
 import { useHomeLayout } from '@/composables/useHomeLayout'
 
-const props = defineProps<{ cardId: string; defaultW?: number }>()
+defineProps<{ cardId: string; defaultW?: number }>()
 const {
   cardStyle,
   dragSourceId,

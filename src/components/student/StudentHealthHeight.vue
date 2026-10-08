@@ -273,7 +273,7 @@ const chartOption = computed(() => {
     <div v-if="sorted.length >= 2" class="sth-chart-block">
       <h4 class="sth-block-title">📈 身高成长曲线</h4>
       <div class="sth-chart-wrap">
-        <v-chart class="sth-chart" :option="chartOption" autoresize aria-label="身高成长曲线" />
+        <VChart class="sth-chart" :option="chartOption" autoresize aria-label="身高成长曲线" />
       </div>
     </div>
     <div v-else-if="sorted.length === 1" class="sth-empty sth-empty-small">

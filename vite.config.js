@@ -80,7 +80,6 @@ if (MEMORY_LIMIT_BYTES < 2 * 1024 * 1024 * 1024) {
  *   - 开发环境在 Node 命令行打印安全日志（方法、路径、Authorization
  *     头只打前后 6 位避免泄漏完整凭证）。
  */
-const IS_DEV = !!process.env.VITE_ENV || true; // vite.config.js 本身只在开发/构建运行
 const MAX_ERROR_BYTES = 1024;
 
 function maskAuth(h) {

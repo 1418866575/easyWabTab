@@ -748,7 +748,7 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
           <div class="stp-report-block">
             <h4 class="stp-report-subtitle">近 7 天趋势</h4>
             <div class="stp-chart-wrap">
-              <v-chart
+              <VChart
                 class="stp-week-chart"
                 :option="weekChartOption"
                 autoresize

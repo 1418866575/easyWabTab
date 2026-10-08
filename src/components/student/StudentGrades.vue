@@ -479,7 +479,7 @@ onMounted(async () => {
         </div>
       </div>
       <div class="sg-chart-wrap">
-        <v-chart class="sg-chart" :option="chartOption" autoresize aria-label="成绩趋势折线图" />
+        <VChart class="sg-chart" :option="chartOption" autoresize aria-label="成绩趋势折线图" />
       </div>
     </div>
 

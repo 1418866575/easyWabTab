@@ -81,7 +81,7 @@ async function render() {
     const QRCode = await import('qrcode')
     const opts = {
       width: Math.max(64, Math.min(1024, Number(size.value) || 320)),
-      margin: Math.max(0, Math.min(10, Number(margin.value) ?? 2)),
+      margin: Math.max(0, Math.min(10, Number(margin.value) || 2)),
       color: { dark: dark.value, light: light.value },
       errorCorrectionLevel: level.value
     }
@@ -130,7 +130,7 @@ async function batchZip() {
     const QRCode = await import('qrcode')
     const opts = {
       width: Math.max(64, Math.min(1024, Number(size.value) || 320)),
-      margin: Math.max(0, Math.min(10, Number(margin.value) ?? 2)),
+      margin: Math.max(0, Math.min(10, Number(margin.value) || 2)),
       color: { dark: dark.value, light: light.value },
       errorCorrectionLevel: level.value
     }

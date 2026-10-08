@@ -13,7 +13,7 @@ const TAB_META: Record<HealthModule, { label: string; icon: string }> = {
   weight: { label: '体重', icon: 'weight' },
 }
 
-const props = defineProps<{ activeTab: HealthModule }>()
+defineProps<{ activeTab: HealthModule }>()
 const emit = defineEmits<{ change: [tab: HealthModule] }>()
 </script>
 

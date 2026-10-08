@@ -92,7 +92,7 @@ export function calcLoan(input: LoanInput): LoanResult {
     const principalPart = p / months
     for (let i = 1; i <= months; i++) {
       const interest = balance * rate
-      let pp = Math.min(principalPart, balance)
+      const pp = Math.min(principalPart, balance)
       let prepaid = 0
       if (input.prepay && input.prepay.atMonth === i && input.prepay.amount > 0) {
         prepaid = Math.min(input.prepay.amount, Math.max(balance - pp, 0))

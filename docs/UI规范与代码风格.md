@@ -262,10 +262,16 @@ import BaseDialog from '@/components/common/BaseDialog.vue'
 ### 3.5 提交前强制检查
 
 ```bash
-npm run build   # = generate-preset-icons → vue-tsc -b → vite build
+npm run typecheck   # vue-tsc -b —— 类型检查（注意：npm run build 不含此步）
+npm run lint        # ESLint —— 代码正确性
+npm run build       # generate-preset-icons + vite build —— 生产构建
 ```
 
-**必须 0 类型错误 + 构建通过**才可提交。
+**必须 0 类型错误 + 0 lint error + 构建通过**才可提交。
+
+> ESLint（`eslint.config.js`，flat config）只管**正确性**（重复键、不可达分支、computed 副作用、
+> 模板结构错误等），**刻意不引入 Prettier**、不启用 vue 格式类规则——全库重排会产生与治理无关的
+> 巨大 diff。存量问题（如 `any`）降级为 warning 供持续跟踪，不阻塞构建。
 
 > ⚠️ **构建通过 ≠ 视觉正确**。样式类改动（尤其颜色、层叠、hover）**必须浏览器抽检**：
 > 至少检查 ① 亮/暗色 ② 切换 3 套以上 accent 主题 ③ hover/disabled 态 ④ 弹框开关与嵌套。
@@ -374,7 +380,7 @@ src/
 | 业务表单裸 `<input>` 未换 `el-input` | 散布各面板 | 换 `el-input` 会改变 DOM（样式选择器需同步调整），**必须逐处目视验证**，不宜批量 |
 | 存量 `.card` / `.wb-*` / `.st-*` 等历史类名 | 视觉已通过全局别名统一 | 仅为命名债，**不强制重命名**（防大范围回归） |
 | 开关双轨：`AppSettingsDialog` 内既有 12+ 个自定义 `.switch-btn`，同文件又用 `el-switch`；另有独立 `ThemeToggle.vue` | 两套开关外观并存 | 收敛需替换 12+ 处，属视觉重构，**需目视验证**；建议同一批次内一并迁移到 `el-switch` |
-| 无 ESLint / Prettier | 代码质量仅靠 TS strict（`AGENTS.md` 已将"无 ESLint"列为现状） | 引入需新增依赖，属项目级决策 |
+| ~~无 ESLint / Prettier~~ | **ESLint 已接入**（2026-10）：`npm run lint` / `lint:fix`，只管正确性、不做格式 | 存量 96 处 `any`、9 处 computed 副作用为 warning，可随重构逐步收敛；Prettier 仍**刻意不引入** |
 | toolbox 与 src 双 token 树 | `toolbox/` 自带 `tool-ui.css` | 建议保持独立（工具箱视觉自成体系），仅在文档标明边界 |
 
 ---

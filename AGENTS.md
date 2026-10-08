@@ -170,7 +170,8 @@ easy-web-tab/
 - **Built-in search engines** (local, baidu, bing) cannot be deleted; local engine URL is immutable
 - **Only `video` is a permanently built-in category** — others (office, tech, etc.) are legacy seeds users can delete
 - **No built-in seed data** — `public/data/sites.md` was removed from the repo; `loadSites()` still fetches `/data/sites.md` (404 → caught → empty), so data comes solely from localStorage/imports
-- **No ESLint/Prettier** — code quality relies solely on TypeScript strict mode
+- **ESLint 已接入**（`eslint.config.js` flat config，vue essential + TS recommended）：`npm run lint` / `npm run lint:fix`。**刻意不引入 Prettier**（会全库重排产生无关 diff），格式沿用既有风格；vue 的格式类规则（html-indent 等约 18000 条告警）未启用，ESLint 只管**正确性**。存量问题（96 处 `any`、9 处 computed 副作用）降级为 warning 供跟踪，不阻塞构建
+- **No Prettier** — 格式不自动化，靠沿用既有风格 + 人工评审
 - **No test framework** — no vitest/jest/cypress; `countdownCore.ts`/`todoCore.ts`/`healthCore.ts`/`ledgerCore.ts`/`workbenchMenuCore.ts`/`noteCore.ts`/`diaryCore.ts`/`panelPagingCore.ts`/`reminderCore.ts`/`businessCore.ts`/`spotlightCore.ts`/`snapshotCore.ts`/`pomodoroCore.ts`/`habitCore.ts` pure functions are tested via `node --experimental-strip-types` (`npm run test:countdown` / `test:todo` / `test:health` / `test:ledger` / `test:menu` / `test:notes` / `test:diary` / `test:paging` / `test:reminder` / `test:business` / `test:spotlight` / `test:snapshot` / `test:pomodoro` / `test:habits`); student cores run via `npm run test:student`（14 个 `test:student-*` 子任务，需 `--experimental-loader ./scripts/resolve-extensionless.mjs`）; UI 验证走手动/Playwright QA
 - **User data priority**: localStorage data overrides built-in data (same-URL merge in `loadSites()`)
 - **No Pinia `persist` plugin** — persistence is manual: `localStorage.setItem` for sites/categories/engines/theme/icons; `idbPut` (via `useIdb.ts`) for countdowns/passwords/workbench todos/notes/diary/health/ledger
@@ -190,7 +191,10 @@ easy-web-tab/
 ```bash
 npm install          # Install deps (first time only)
 npm run dev          # Dev server: http://localhost:16718
-npm run build        # generate-preset-icons → vue-tsc -b → vite build (3 sequential steps)
+npm run build        # generate-preset-icons → vite build (注意：**不含** vue-tsc，类型检查需单独跑)
+npm run typecheck    # vue-tsc -b（TS 严格类型检查，与 lint 互补）
+npm run lint         # ESLint 检查（正确性规则；存量 warning 不阻塞）
+npm run lint:fix     # ESLint 自动修复可修项
 npm run preview      # Preview production build
 npm run test:countdown  # Pure-function tests for countdownCore.ts (16 assertions, node --experimental-strip-types)
 npm run test:reminder   # Pure-function tests for reminderCore.ts (10 断言 T1-T10: 邮件配置校验/发送决策/模板参数构造, node --experimental-strip-types)

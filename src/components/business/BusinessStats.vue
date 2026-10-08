@@ -21,7 +21,7 @@ import { exportXlsx } from '@/composables/xlsxExport'
 const store = useWorkbenchBusinessStore()
 
 // M-13：跨模块导航 emit（补上后出度不再为 0：报表/差异可直达对应面板修正）
-const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
+defineEmits<{ navigate: [section: string, filter?: string] }>()
 
 const data = computed(() => ({
   productCategories: store.productCategories,

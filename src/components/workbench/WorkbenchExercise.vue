@@ -317,7 +317,7 @@ onMounted(async () => {
                   <template v-if="DISTANCE_TYPES.has(row.exerciseType) && row.distanceKm !== undefined">
                     {{ Number(row.distanceKm).toFixed(1) }} km
                   </template>
-                  <template v-else style="color: var(--color-text-secondary, #9ca3af);">—</template>
+                  <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
                 </template>
               </el-table-column>
               <el-table-column label="消耗" width="110" align="right">

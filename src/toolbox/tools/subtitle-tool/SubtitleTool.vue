@@ -35,7 +35,7 @@ function parseSrt(text: string): Cue[] {
   let idx = 0
   for (const b of blocks) {
     const lines = b.split('\n')
-    let i = /^\d+$/.test(lines[0]?.trim() || '') ? 1 : 0
+    const i = /^\d+$/.test(lines[0]?.trim() || '') ? 1 : 0
     const tline = lines[i] || ''
     const m = tline.match(/(\d{2}:\d{2}:\d{2}[,.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,.]\d{3})/)
     if (!m) continue
@@ -49,7 +49,7 @@ function parseVtt(text: string): Cue[] {
   let idx = 0
   for (const b of blocks) {
     const lines = b.split('\n')
-    let i = /^\d+$/.test(lines[0]?.trim() || '') ? 1 : 0
+    const i = /^\d+$/.test(lines[0]?.trim() || '') ? 1 : 0
     const tline = lines[i] || ''
     const m = tline.match(/(\d{2}:\d{2}:\d{2}[,.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,.]\d{3})/)
     if (!m) continue

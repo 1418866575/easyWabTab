@@ -46,7 +46,8 @@ function onSelect(meta: ToolboxToolMeta) {
 
 function toggle() {
   if (!hasItems.value) return
-  open.value ? close() : openPanel()
+  if (open.value) close()
+  else openPanel()
 }
 
 function openPanel() {

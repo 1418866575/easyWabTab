@@ -791,7 +791,7 @@ ${sub}
    */
   async function importFromZip(file: File): Promise<{ added: number; skipped: number; passwordsImported?: number; error?: string; iconsRestored?: number }> {
     let mdText: string
-    let iconFiles: Record<string, { mime: string; base64: string }> = {}
+    const iconFiles: Record<string, { mime: string; base64: string }> = {}
     try {
       const zip = await JSZip.loadAsync(file)
       // Markdown 可能在根目录，也可能被包在一层同名目录里

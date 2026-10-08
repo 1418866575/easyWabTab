@@ -46,7 +46,7 @@ const toast = useToast()
 const props = defineProps<{ autoOpenAdd?: boolean }>()
 
 // M-13：跨模块导航 emit（补上后本面板出度不再为 0：发现支出没关联进货可直达进货/对账页）
-const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
+defineEmits<{ navigate: [section: string, filter?: string] }>()
 
 function catNameOf(id: string): string {
   return findExpenseCategory(store.expenseCategories, id)?.name ?? '未知'

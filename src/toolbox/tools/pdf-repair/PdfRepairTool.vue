@@ -49,7 +49,7 @@ async function repair() {
   errorMsg.value = ''
   infoMsg.value = ''
   try {
-    let bytes = new Uint8Array(await f.arrayBuffer())
+    const bytes = new Uint8Array(await f.arrayBuffer())
     let doc: Awaited<ReturnType<typeof PDFDocument.load>>
     let note = ''
     try {

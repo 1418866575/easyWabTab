@@ -3,7 +3,7 @@ import Icon from './Icon.vue'
 import { onUnmounted } from 'vue'
 import type { ToastType } from '../composables/useToast'
 
-const props = defineProps<{
+defineProps<{
   toasts: { id: number; type: ToastType; message: string; duration: number }[]
 }>()
 
