@@ -726,7 +726,7 @@ onMounted(async () => {
   transition: opacity 0.15s, background 0.15s;
 }
 .se-card:hover .se-del-btn { opacity: 1; }
-.se-del-btn:hover { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
+.se-del-btn:hover { background: rgba(239, 68, 68, 0.12); color: var(--color-error, #ef4444); }
 
 .empty-state {
   display: flex;

@@ -887,7 +887,7 @@ html.dark .bizinv-name {
 }
 
 html.dark .bizinv-low-stock {
-  color: #f87171;
+  color: var(--color-error, #f87171);
 }
 
 /* 暗色模式：三色适配 */

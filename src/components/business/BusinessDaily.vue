@@ -1206,13 +1206,13 @@ async function handleDelete(id: string | null): Promise<void> {
   background: var(--color-bg-hover, #111827);
 }
 :global(html.dark) .bizday-summary-cell {
-  background: #111827;
-  border-color: #374151;
+  background: var(--color-bg-card, #111827);
+  border-color: var(--color-border, #374151);
 }
 :global(html.dark) .bizday-summary-value { color: #4ade80; }
 :global(html.dark) .bizday-summary-cost { color: #fbbf24; }
-:global(html.dark) .bizday-summary-label { color: #d1d5db; }
-:global(html.dark) .bizday-summary-hint { color: #9ca3af; }
+:global(html.dark) .bizday-summary-label { color: var(--color-text-secondary, #d1d5db); }
+:global(html.dark) .bizday-summary-hint { color: var(--color-text-muted, #9ca3af); }
 
 /* M-02 暗色：售出主列底色 + 展开行 + 「更多」按钮 */
 :global(html.dark) .bizday-th-sold,
@@ -1221,9 +1221,9 @@ async function handleDelete(id: string | null): Promise<void> {
 }
 :global(html.dark) .bizday-row-more-row .bizday-row-more-cell {
   background: rgba(17, 24, 39, 0.6);
-  border-bottom-color: #374151;
+  border-bottom-color: var(--color-border, #374151);
 }
-:global(html.dark) .bizday-more-field { color: #d1d5db; }
+:global(html.dark) .bizday-more-field { color: var(--color-text-secondary, #d1d5db); }
 :global(html.dark) .bizday-more-toggle.active {
   color: #60a5fa;
   background: #1e3a5f;

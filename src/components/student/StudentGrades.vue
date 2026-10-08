@@ -816,7 +816,7 @@ onMounted(async () => {
   color: var(--color-text-muted, #9ca3af);
   cursor: pointer;
 }
-.sg-subj-remove:hover:not(:disabled) { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.sg-subj-remove:hover:not(:disabled) { background: rgba(239, 68, 68, 0.1); color: var(--color-error, #ef4444); }
 .sg-subj-remove:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .dialog-footer {
