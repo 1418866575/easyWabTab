@@ -538,15 +538,20 @@ onMounted(async () => {
             <div class="bs-gate-form">
               <label class="bs-gate-field">
                 年份
-                <input v-model.number="gateYear" type="number" min="1970" max="9999" class="bs-gate-input" data-testid="bs-gate-year" />
+                <el-input
+                  v-model.number="gateYear"
+                  type="number"
+                  min="1970"
+                  max="9999"
+                  data-testid="bs-gate-year"
+                />
               </label>
               <label class="bs-gate-field">
                 名称
-                <input
+                <el-input
                   v-model="gateName"
                   type="text"
                   maxlength="30"
-                  class="bs-gate-input"
                   :placeholder="ledgerDefaultName(Number(gateYear) || thisYear)"
                   data-testid="bs-gate-name"
                 />
@@ -766,19 +771,9 @@ onMounted(async () => {
   color: var(--color-text-secondary, #64748b);
 }
 
-.bs-gate-input {
-  padding: 8px 10px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 8px;
-  font-size: 13px;
-  color: var(--color-text, #1e293b);
-  background-color: var(--color-bg-card, #ffffff);
-}
-
-.bs-gate-input:focus {
-  outline: none;
-  border-color: var(--color-primary, #3b82f6);
-}
+/* 账本创建门的年份/名称输入已改用 el-input（自带边框、聚焦环、暗色），
+   .bs-gate-field 为 grid 容器，el-input 作为 grid item 会自动撑满列宽，
+   故原先 .bs-gate-input 的视觉样式随之移除。 */
 
 .bs-gate-error {
   margin: 0 0 10px;
