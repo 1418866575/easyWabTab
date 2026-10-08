@@ -91,7 +91,6 @@ const BackupManager = defineAsyncComponent(() => import('@/components/BackupMana
 const IconManager = defineAsyncComponent(() => import('@/components/IconManager.vue'))
 // 教师工作台 .tw-* 全局样式：设置页内嵌 TeacherDataManage / TeacherHelp 时依赖，
 // 非 /teacher 路由（source='all'）打开设置也能正常渲染这些组件
-import '@/styles/teacher.css'
 import CloudSyncConflictModal from './CloudSyncConflictModal.vue'
 
 // 弹窗 id 列表：从导出的契约表派生（与 store 内部 DIALOG_IDS 顺序一致），

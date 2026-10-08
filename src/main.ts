@@ -14,6 +14,12 @@ import './styles/mobile.css'
 import './styles/records.css'
 import './styles/pager.css'
 import './styles/scrollbar.css'
+// 教师工作台共享样式（tw-* 组件类 + 其 @media print 打印规则）。
+// 必须全局引入：此前仅在 TeacherView / AppSettingsDialog 两个组件内 import，
+// 生产构建时 Vite 会把它只打进其中一个异步 chunk，导致未打开设置弹框时
+// teacher.css 根本没加载——页面虽靠 scoped 样式勉强能看，但打印规则全部失效
+// （打印只剩浏览器页眉页脚、正文整块缺失）。
+import './styles/teacher.css'
 // 销售记账弹框通用骨架（商品/进货/库存/销售 四个弹框共用）
 import './styles/biz-dialog.css'
 import { useThemeStore } from './stores/theme'
