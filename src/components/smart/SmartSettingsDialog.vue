@@ -23,6 +23,17 @@ const toast = useToast()
 type TabKey = 'menu' | 'categories'
 const tab = ref<TabKey>('menu')
 
+/**
+ * 设置项清单：左侧 rail 菜单与右侧内容区严格一一对应。
+ * 增删设置项时只改这里即可（菜单高亮、切换、面包屑标题都从它派生）。
+ */
+const SECTIONS: { key: TabKey; label: string; icon: string; desc: string }[] = [
+  { key: 'menu', label: '左侧菜单', icon: 'grid', desc: '重命名、显示隐藏、拖拽排序' },
+  { key: 'categories', label: '技能分类', icon: 'folder', desc: '新增、重命名、删除与技能归属' }
+]
+
+const currentSection = computed(() => SECTIONS.find(s => s.key === tab.value) ?? SECTIONS[0])
+
 // ==================== 模块一：左侧菜单 ====================
 
 /** 改名草稿：key → 输入框当前值（未提交不落库） */
@@ -181,32 +192,40 @@ function toggleExpand(name: string): void {
 </script>
 
 <template>
-  <el-dialog :model-value="true" width="760px" title="智能工作台设置" :close-on-click-modal="false" @close="emit('close')">
-    <div class="ss-wrap">
-      <!-- 模块切换 -->
-      <div class="ss-tabs" role="tablist">
-        <button
-          type="button"
-          class="ss-tab"
-          :class="{ 'is-on': tab === 'menu' }"
-          role="tab"
-          :aria-selected="tab === 'menu'"
-          data-testid="smart-settings-tab-menu"
-          @click="tab = 'menu'"
-        >左侧菜单</button>
-        <button
-          type="button"
-          class="ss-tab"
-          :class="{ 'is-on': tab === 'categories' }"
-          role="tab"
-          :aria-selected="tab === 'categories'"
-          data-testid="smart-settings-tab-categories"
-          @click="tab = 'categories'"
-        >技能分类</button>
-      </div>
+  <el-dialog :model-value="true" width="min(960px, 94vw)" title="智能工作台设置" :close-on-click-modal="false" @close="emit('close')">
+    <div class="ss-layout">
+      <!-- 左侧：设置项导航（选中高亮 + 切换，参考个人工作台设置弹框的 rail） -->
+      <aside class="ss-rail" aria-label="设置项导航">
+        <div class="ss-rail-group-label">设置项</div>
+        <nav class="ss-rail-nav">
+          <button
+            v-for="s in SECTIONS"
+            :key="s.key"
+            type="button"
+            class="ss-rail-item"
+            :class="{ active: tab === s.key }"
+            :aria-current="tab === s.key ? 'page' : undefined"
+            :data-testid="`smart-settings-tab-${s.key}`"
+            @click="tab = s.key"
+          >
+            <Icon :name="s.icon" :size="16" />
+            <span class="ss-rail-label">{{ s.label }}</span>
+          </button>
+        </nav>
+      </aside>
 
+      <!-- 右侧：当前设置项的内容区 -->
+      <section class="ss-content">
+        <header class="ss-content-head">
+          <div class="ss-crumb">
+            <span class="ss-crumb-item">{{ currentSection.label }}</span>
+          </div>
+          <span class="ss-saved-pill"><span class="ss-saved-dot"></span>已自动保存</span>
+        </header>
+
+        <div class="ss-scroll">
       <!-- ============ 左侧菜单 ============ -->
-      <section v-if="tab === 'menu'" class="ss-pane">
+      <section v-show="tab === 'menu'" class="ss-pane">
         <div class="ss-head">
           <h3 class="ss-title">左侧菜单</h3>
           <el-button size="small" data-testid="smart-menu-reset" @click="onResetMenu">恢复默认</el-button>
@@ -274,7 +293,7 @@ function toggleExpand(name: string): void {
       </section>
 
       <!-- ============ 技能分类 ============ -->
-      <section v-else class="ss-pane">
+      <section v-show="tab === 'categories'" class="ss-pane">
         <div class="ss-head">
           <h3 class="ss-title">技能分类</h3>
           <div class="ss-add">
@@ -364,6 +383,8 @@ function toggleExpand(name: string): void {
           </p>
         </div>
       </section>
+        </div>
+      </section>
     </div>
 
     <template #footer>
@@ -375,33 +396,138 @@ function toggleExpand(name: string): void {
 </template>
 
 <style scoped>
-.ss-wrap { display: flex; flex-direction: column; gap: 12px; }
+/* ---------- 左右分栏骨架（与个人工作台设置弹框 .settings-rail / .settings-content 同构） ---------- */
+.ss-layout {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  min-height: 0;
+  /* 视口高度兜底：分栏各自独立滚动，弹框不被内容撑爆 */
+  height: min(62vh, 560px);
+}
 
-/* ---------- 模块切换 ---------- */
-.ss-tabs { display: flex; gap: 6px; padding-bottom: 8px; border-bottom: 1px solid var(--color-border, #e2e8f0); }
-.ss-tab {
-  min-height: 28px;
-  padding: 4px 14px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 999px;
-  background-color: transparent;
+/* 左侧设置项导航 rail */
+.ss-rail {
+  flex: 0 0 200px;
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 10px;
+  border-right: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 10px) 0 0 var(--radius-md, 10px);
+  background-color: var(--color-bg-hover, #f1f5f9);
+  overflow-y: auto;
+}
+
+.ss-rail-group-label {
+  padding: 0 8px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted, #94a3b8);
+}
+
+.ss-rail-nav { display: flex; flex-direction: column; gap: 2px; }
+
+.ss-rail-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: var(--radius-md, 10px);
+  background: transparent;
   color: var(--color-text-secondary, #64748b);
   font-family: inherit;
   font-size: 13px;
+  text-align: left;
   cursor: pointer;
   transition: background-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
     color var(--motion-duration, 0.2s) var(--motion-ease, ease);
 }
-.ss-tab:hover { background-color: var(--color-bg-hover, #f1f5f9); }
-.ss-tab.is-on {
-  border-color: var(--color-primary, #3b82f6);
+
+.ss-rail-item:hover {
+  background-color: var(--color-bg-card, #ffffff);
+  color: var(--color-text, #0f172a);
+}
+
+/* 选中高亮：与个人工作台设置弹框 .rail-item.active 同款 */
+.ss-rail-item.active {
   background-color: var(--color-primary-soft, #eff6ff);
   color: var(--color-primary, #3b82f6);
-  font-weight: var(--font-weight-medium, 500);
+  font-weight: 600;
+}
+
+.ss-rail-item:focus-visible {
+  outline: 2px solid var(--color-primary, #3b82f6);
+  outline-offset: -2px;
+}
+
+.ss-rail-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 右侧内容区 */
+.ss-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bg-card, #ffffff);
+  border-radius: 0 var(--radius-md, 10px) var(--radius-md, 10px) 0;
+  overflow: hidden;
+}
+
+.ss-content-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+}
+
+.ss-crumb { display: flex; align-items: center; gap: 6px; font-size: 13px; min-width: 0; }
+.ss-crumb-item {
+  color: var(--color-text, #0f172a);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 与个人工作台设置弹框同款的「已自动保存」状态胶囊 */
+.ss-saved-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border: 1px solid rgba(22, 163, 74, 0.25);
+  border-radius: 999px;
+  background-color: rgba(22, 163, 74, 0.1);
+  color: #16a34a;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.ss-saved-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #16a34a;
+}
+
+.ss-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ---------- 通用区块 ---------- */
-.ss-pane { display: flex; flex-direction: column; gap: 10px; max-height: 56vh; overflow-y: auto; }
+.ss-pane { display: flex; flex-direction: column; gap: 10px; }
 .ss-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .ss-title { margin: 0; font-size: 14px; font-weight: var(--font-weight-semibold, 600); color: var(--color-text, #0f172a); }
 .ss-hint { margin: 0; font-size: 12px; line-height: 1.6; color: var(--color-text-secondary, #64748b); }
@@ -521,9 +647,43 @@ function toggleExpand(name: string): void {
   background-color: #ffffff;
 }
 
-/* ---------- 移动端：触控目标 ≥44px ---------- */
+/* ---------- 移动端：rail 转为顶部横向滚动条，触控目标 ≥44px ---------- */
 @media (max-width: 768px) {
-  .ss-tab { min-height: 44px; padding: 8px 16px; font-size: 14px; }
+  /* 窄屏改上下分栏：rail 变顶部横向条，内容在下 */
+  .ss-layout { flex-direction: column; height: min(68vh, 560px); }
+
+  .ss-rail {
+    flex: 0 0 auto;
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border, #e2e8f0);
+    border-radius: var(--radius-md, 10px) var(--radius-md, 10px) 0 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .ss-rail-group-label { display: none; }
+
+  .ss-rail-nav { flex-direction: row; flex-wrap: nowrap; gap: 6px; }
+
+  .ss-rail-item {
+    width: auto;
+    min-height: 44px;
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 0 14px;
+  }
+
+  .ss-content { border-radius: 0 0 var(--radius-md, 10px) var(--radius-md, 10px); }
+
+  .ss-content-head { padding: 10px 12px; }
+
+  .ss-scroll { padding: 12px; }
+
   .ss-row { flex-wrap: wrap; }
   .ss-add-input { width: 100%; }
   .ss-pick { flex: 1 1 100%; }

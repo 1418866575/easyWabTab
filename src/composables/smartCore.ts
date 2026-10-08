@@ -34,6 +34,40 @@ export const UNCATEGORIZED = '未分类'
 /** 分类筛选的「全部」哨兵值（分类名不可能等于它） */
 export const UNCATEGORIZED_ALL = '__all__'
 
+// ==================== 技能图标 ====================
+
+/**
+ * 技能未设置图标时使用的内置矢量图标名（对应 Icon.vue / iconPaths 的 ICON_PATHS）。
+ * 走内置矢量图标而不是 emoji：可跟随主题色、与站点图标视觉统一。
+ */
+export const SMART_SKILL_DEFAULT_ICON = 'toolbox'
+
+/**
+ * 技能图标的三个来源，渲染层据此走不同分支：
+ *   - image  ：图标库图片（/icons/xxx.svg、自定义上传的 dataUrl、外链图片）→ <img>
+ *   - text   ：v1 迁移过来的 emoji 等文本 → 原样显示
+ *   - builtin：未设置图标 → 用 SMART_SKILL_DEFAULT_ICON 走 <Icon>
+ */
+export type SkillIconKind = 'builtin' | 'image' | 'text'
+
+export interface SkillIconInfo {
+  kind: SkillIconKind
+  value: string
+}
+
+/** 与 composables/categoryIcon 的 isImageIcon 同规则，此处内联以保持 core 零依赖 */
+function looksLikeImageIcon(v: string): boolean {
+  return /^data:image\//i.test(v) || v.startsWith('/') || /^https?:\/\//i.test(v)
+}
+
+/** 归一化技能图标：空值回落默认内置图标；非字符串同样回落。 */
+export function classifySkillIcon(raw: unknown): SkillIconInfo {
+  const v = typeof raw === 'string' ? raw.trim() : ''
+  if (!v) return { kind: 'builtin', value: SMART_SKILL_DEFAULT_ICON }
+  if (looksLikeImageIcon(v)) return { kind: 'image', value: v }
+  return { kind: 'text', value: v }
+}
+
 /** 模板变量：{{name}}，name 允许中英文/数字/下划线，1-32 字 */
 export const VAR_PATTERN = /\{\{\s*([A-Za-z0-9_\u4e00-\u9fa5]{1,32})\s*\}\}/g
 

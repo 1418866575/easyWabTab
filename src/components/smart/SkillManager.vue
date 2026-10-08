@@ -21,17 +21,21 @@ import {
   type SkillSource
 } from '@/utils/skillPackage'
 import {
+  classifySkillIcon,
   filterSmart,
   normalizeSkill,
   SMART_CONTENT_MAX,
   sortSmart,
   UNCATEGORIZED,
   validateSkill,
+  type SkillIconInfo,
   type SmartSort,
   type SmartFilter
 } from '@/composables/smartCore'
 import { SKILL_FILE, planSkillImports } from '@/composables/skillPackageCore'
 import type { SmartImportPreview, SmartSkill } from '@/types'
+import Icon from '@/components/Icon.vue'
+import IconPickerDialog from '@/components/IconPickerDialog.vue'
 import SkillEditorDialog from './SkillEditorDialog.vue'
 import SkillDetailDialog from './SkillDetailDialog.vue'
 import SmartImportDialog from './SmartImportDialog.vue'
@@ -227,10 +231,44 @@ function restoreBuiltIns(): void {
   toast.success(r.skills > 0 ? `已补回 ${r.skills} 条内置示例` : '内置示例都在，无需补回')
 }
 
-/** 卡片图标：v1 迁移过来的 emoji 存在 extra.icon，否则用默认积木 */
-function iconOf(s: SmartSkill): string {
-  const v = s.extra?.icon
-  return typeof v === 'string' && v.trim() ? v : '\u{1F9E9}'
+/**
+ * 卡片图标：extra.icon 存「图标库图片地址」或 v1 迁过来的 emoji；
+ * 未设置时由 classifySkillIcon 回落为内置矢量图标（不再是 🧩）。
+ */
+function iconOf(s: SmartSkill): SkillIconInfo {
+  return classifySkillIcon(s.extra?.icon)
+}
+
+// ===== 卡片图标：点击弹框从「图标管理」选择 =====
+// 复用 IconPickerDialog（与添加网站、分类管理同源）：图标库（预置 + 自定义）的搜索、
+// 分类筛选、导入/上传都在弹框内完成；这里只负责记录「正在给哪个技能挑图标」与回写。
+// 选中即写回技能并持久化（store.updateSkill → prefs → smart.json），取消/关闭不修改原值。
+const iconPickerId = ref<string | null>(null)
+
+const iconPickerCurrent = computed(() => {
+  const s = store.skills.find(x => x.id === iconPickerId.value)
+  // extra 是 Record<string, unknown>，取 icon 需收窄为 string 才能传给弹框
+  const v = s?.extra?.icon
+  return typeof v === 'string' ? v : ''
+})
+
+function openIconPicker(s: SmartSkill): void {
+  iconPickerId.value = s.id
+}
+
+function closeIconPicker(): void {
+  iconPickerId.value = null
+}
+
+function onPickIcon(src: string): void {
+  const id = iconPickerId.value
+  closeIconPicker()
+  if (!id) return
+  const target = store.skills.find(x => x.id === id)
+  if (!target) return
+  // 「恢复默认」回传空串：清掉 extra.icon，渲染层自动回落到默认内置图标
+  store.updateSkill(id, { ...target, extra: { ...target.extra, icon: src } })
+  toast.success(src ? '技能图标已更新' : '已恢复默认图标')
 }
 
 /** 相对时间：与项目既有文案口径一致（今天 / 昨天 / N 天前 / 日期） */
@@ -288,7 +326,23 @@ function relTime(ts: number): string {
     <div v-if="visible.length" class="sm-list">
       <article v-for="s in visible" :key="s.id" class="sm-card" :data-testid="`smart-skill-${s.id}`">
         <header class="sm-card-head">
-          <span class="sm-icon">{{ iconOf(s) }}</span>
+          <button
+            type="button"
+            class="sm-icon-btn"
+            :title="`更换「${s.name}」的图标（从图标管理中选择）`"
+            :data-testid="`smart-skill-icon-${s.id}`"
+            @click="openIconPicker(s)"
+          >
+            <img
+              v-if="iconOf(s).kind === 'image'"
+              :src="iconOf(s).value"
+              :alt="`${s.name} 图标`"
+              class="sm-icon-img"
+            />
+            <Icon v-else-if="iconOf(s).kind === 'builtin'" :name="iconOf(s).value" :size="18" />
+            <span v-else class="sm-icon-text">{{ iconOf(s).value }}</span>
+            <span class="sm-icon-edit" aria-hidden="true"><Icon name="pencil" :size="11" /></span>
+          </button>
           <div class="sm-card-title">
             <button type="button" class="sm-name" @click="openDetail(s)">{{ s.name }}</button>
             <span class="sm-meta">
@@ -366,6 +420,16 @@ function relTime(ts: number): string {
       @close="importOpen = false; pendingPlan = null; importNotes = []"
       @confirm="confirmImport"
     />
+
+    <!-- 技能图标选择弹框：从「图标管理」的图标库（预置 + 自定义）挑选，选中即写回该技能并持久化；
+         取消 / 点遮罩 / ESC 关闭均不修改原值。放在编辑弹框之外，避免搜索框回车误触表单提交 -->
+    <IconPickerDialog
+      v-if="iconPickerId"
+      title="选择技能图标"
+      :current="iconPickerCurrent"
+      @select="onPickIcon"
+      @close="closeIconPicker"
+    />
   </div>
 </template>
 
@@ -413,7 +477,62 @@ function relTime(ts: number): string {
   background: var(--color-bg-card, #fff);
 }
 .sm-card-head { display: flex; gap: 10px; align-items: flex-start; }
-.sm-icon { font-size: 20px; line-height: 1.2; flex: 0 0 auto; }
+/* 卡片图标：可点击换图标（hover 浮出小铅笔），尺寸与原 emoji 图标一致不撑高卡片 */
+.sm-icon-btn {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm, 8px);
+  background-color: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-text-secondary, #64748b);
+  font-family: inherit;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
+    background-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
+    color var(--motion-duration, 0.2s) var(--motion-ease, ease);
+}
+
+.sm-icon-btn:hover {
+  border-color: var(--color-primary, #3b82f6);
+  background-color: var(--color-primary-soft, #eff6ff);
+  color: var(--color-primary, #3b82f6);
+}
+
+.sm-icon-btn:focus-visible {
+  outline: 2px solid var(--color-primary, #3b82f6);
+  outline-offset: 2px;
+}
+
+.sm-icon-img { width: 100%; height: 100%; object-fit: contain; }
+
+.sm-icon-text { font-size: 16px; line-height: 1; }
+
+/* hover 时右下角浮出小铅笔，提示「可点击更换」 */
+.sm-icon-edit {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background-color: var(--color-primary, #3b82f6);
+  color: #fff;
+  opacity: 0;
+  transition: opacity var(--motion-duration, 0.2s) var(--motion-ease, ease);
+}
+
+.sm-icon-btn:hover .sm-icon-edit { opacity: 1; }
+
 .sm-card-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
 .sm-name {
   padding: 0;
@@ -484,5 +603,9 @@ function relTime(ts: number): string {
   .sm-toolbar-left, .sm-toolbar-right { width: 100%; }
   .sm-btn { min-height: 44px; padding: 8px 12px; font-size: 13px; }
   .sm-select { height: 44px; font-size: 16px; }
+  /* 触屏没有 hover，小铅笔常驻提示可点；放大到 34px 便于点按 */
+  .sm-icon-btn { width: 34px; height: 34px; }
+  .sm-icon-text { font-size: 20px; }
+  .sm-icon-edit { opacity: 1; }
 }
 </style>

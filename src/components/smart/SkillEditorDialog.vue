@@ -14,6 +14,7 @@ import { computed, ref, watch } from 'vue'
 import { useSmartStore } from '@/stores/smart'
 import { useToast } from '@/composables/useToast'
 import {
+  classifySkillIcon,
   isNameTaken,
   normalizeTags,
   SMART_DESC_MAX,
@@ -23,6 +24,8 @@ import {
 } from '@/composables/smartCore'
 import { SKILL_FILE, RESOURCE_COUNT_MAX, RESOURCE_FILE_MAX } from '@/composables/skillPackageCore'
 import { pickResourceFiles } from '@/utils/skillPackage'
+import Icon from '@/components/Icon.vue'
+import IconPickerDialog from '@/components/IconPickerDialog.vue'
 import type { SmartSkill, SmartSkillResource } from '@/types'
 
 const props = defineProps<{
@@ -45,6 +48,20 @@ const tagsInput = ref('')
 const toolsInput = ref('')
 const resources = ref<SmartSkillResource[]>([])
 
+// ===== 技能图标：从「图标管理」选择 =====
+// 与添加网站、分类管理同源：IconPickerDialog 负责图标库（预置 + 自定义）的搜索、分类筛选、
+// 导入/上传；这里只保存选择结果到 extra.icon。空串 = 恢复默认内置图标。
+const iconValue = ref('')
+const iconPickerOpen = ref(false)
+
+/** 渲染分支：image 走 <img>，builtin 走 <Icon>，text 走原样文本（v1 的 emoji） */
+const iconInfo = computed(() => classifySkillIcon(iconValue.value))
+
+function onPickIcon(src: string): void {
+  iconValue.value = src
+  iconPickerOpen.value = false
+}
+
 watch(
   () => props.model,
   m => {
@@ -52,6 +69,9 @@ watch(
     tagsInput.value = (m.tags ?? []).join('、')
     toolsInput.value = (m.tools ?? []).join('、')
     resources.value = (m.resources ?? []).map(r => ({ ...r }))
+    // 图标存在 extra.icon：v1 迁过来的 emoji 与图标库地址都原样带回
+    const raw = m.extra?.icon
+    iconValue.value = typeof raw === 'string' ? raw : ''
   },
   { immediate: true }
 )
@@ -111,7 +131,15 @@ function submit(): void {
   }
   const tags = normalizeTags(tagsInput.value.split(/[、,，\s]+/).map(s => s.trim()).filter(Boolean))
   const tools = normalizeTags(toolsInput.value.split(/[、,，\s]+/).map(s => s.trim()).filter(Boolean))
-  emit('save', { ...draft.value, tags, tools, resources: resources.value.map(r => ({ ...r })) })
+  // 图标写入 extra.icon（随技能一起落盘、进 zip、随 smart.json 同步）；
+  // 选「恢复默认」时为空串，保留键但渲染层会回落到默认内置图标
+  emit('save', {
+    ...draft.value,
+    tags,
+    tools,
+    extra: { ...(draft.value.extra ?? {}), icon: iconValue.value },
+    resources: resources.value.map(r => ({ ...r }))
+  })
 }
 </script>
 
@@ -183,6 +211,30 @@ function submit(): void {
           <span class="sk-label">标签 tags<span class="sk-hint">（用、或逗号分隔，最多 8 个）</span></span>
           <el-input v-model="tagsInput" size="small" placeholder="产品、文档" />
         </label>
+
+        <!-- 图标：点图标弹框从「图标管理」选择（与添加网站、分类管理同源）；
+             存 extra.icon，随技能一起落盘与云同步。不选则用默认内置图标 -->
+        <div class="sk-field">
+          <span class="sk-label">图标 icon<span class="sk-hint">（从图标管理选择，可留空）</span></span>
+          <div class="sk-icon-row">
+            <button
+              type="button"
+              class="sk-icon-btn"
+              :class="{ 'is-empty': !iconValue }"
+              title="从图标管理选择技能图标"
+              data-testid="skill-editor-icon-btn"
+              @click="iconPickerOpen = true"
+            >
+              <img v-if="iconInfo.kind === 'image'" :src="iconInfo.value" alt="" class="sk-icon-img" />
+              <Icon v-else-if="iconInfo.kind === 'builtin'" :name="iconInfo.value" :size="16" />
+              <span v-else class="sk-icon-text">{{ iconInfo.value }}</span>
+            </button>
+            <span class="sk-icon-name">{{ iconValue || '默认图标' }}</span>
+            <el-button v-if="iconValue" size="small" data-testid="skill-editor-icon-clear" @click="iconValue = ''">
+              恢复默认
+            </el-button>
+          </div>
+        </div>
       </section>
 
       <section class="sk-sec">
@@ -256,6 +308,15 @@ function submit(): void {
         </el-button>
       </div>
     </form>
+
+    <!-- 技能图标选择弹框：必须放在 <form> 之外——弹框内搜索框按回车会触发隐式表单提交，误保存技能 -->
+    <IconPickerDialog
+      v-if="iconPickerOpen"
+      title="选择技能图标"
+      :current="iconValue"
+      @select="onPickIcon"
+      @close="iconPickerOpen = false"
+    />
   </el-dialog>
 </template>
 
@@ -278,6 +339,38 @@ function submit(): void {
 .sk-hint { color: var(--color-text-muted, #9ca3af); font-size: 12px; }
 .req { color: var(--color-error, #dc2626); }
 .sk-error { font-size: 12px; color: var(--color-error, #dc2626); }
+
+/* 技能图标选择行：图标按钮 + 当前图标说明 + 恢复默认（与分类管理的 .cat-icon-btn 同款） */
+.sk-icon-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sk-icon-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 3px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  background-color: var(--color-bg-card, #ffffff);
+  color: var(--color-text-secondary, #64748b);
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
+    color var(--motion-duration, 0.2s) var(--motion-ease, ease);
+}
+.sk-icon-btn:hover {
+  border-color: var(--color-primary, #3b82f6);
+  color: var(--color-primary, #3b82f6);
+}
+.sk-icon-btn:focus-visible {
+  outline: 2px solid var(--color-primary, #3b82f6);
+  outline-offset: 2px;
+}
+.sk-icon-btn.is-empty { color: var(--color-text-muted, #94a3b8); }
+.sk-icon-img { width: 100%; height: 100%; object-fit: contain; border-radius: 4px; }
+.sk-icon-text { font-size: 18px; line-height: 1; }
+.sk-icon-name { font-size: 12px; color: var(--color-text-muted, #9ca3af); }
 
 .sk-res-bar { display: flex; align-items: center; gap: 10px; }
 .sk-res-sum { font-size: 12px; color: var(--color-text-muted, #9ca3af); }

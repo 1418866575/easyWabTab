@@ -7,6 +7,7 @@ import {
   buildEnvelope,
   calcSmartStats,
   categoriesOf,
+  classifySkillIcon,
   fillTemplate,
   filterSmart,
   isNameTaken,
@@ -24,7 +25,8 @@ import {
   validateSkill,
   SMART_CONTENT_MAX,
   SMART_NAME_MAX,
-  SMART_PROMPT_KIND
+  SMART_PROMPT_KIND,
+  SMART_SKILL_DEFAULT_ICON
 } from '../src/composables/smartCore.ts'
 import {
   normalizeRelPath,
@@ -588,6 +590,35 @@ test('T20 导出 zip 后可直接再次导入（目录层级与字段都不丢�
   assert.ok(back!.body.includes('按项目分组'), '正文不丢')
   assert.deepEqual(back!.resources.map(r => r.path).sort(), ['scripts/run.py', 'templates/weekly.md'], '资源路径不丢（已剥掉顶层目录名）')
   assert.equal(back!.resources.find(r => r.path === 'templates/weekly.md')!.data, '# 周报模板', '资源内容不丢')
+})
+
+// T21 — 技能图标分类：空值回落默认内置图标；图片地址 / emoji 各自走对应渲染分支
+test('T21 classifySkillIcon 空值回落默认、地址与 emoji 分流', () => {
+  // 未设置图标 → 内置矢量图标（不再是 🧩）
+  for (const empty of [undefined, null, '', '   ', 123, {}]) {
+    const r = classifySkillIcon(empty)
+    assert.equal(r.kind, 'builtin', '空/非法值应回落 builtin：' + JSON.stringify(empty))
+    assert.equal(r.value, SMART_SKILL_DEFAULT_ICON)
+  }
+
+  // 图标库图片（本站路径 / 自定义上传 dataUrl / 外链）→ image
+  assert.deepEqual(classifySkillIcon('/icons/deepseek.svg'), {
+    kind: 'image',
+    value: '/icons/deepseek.svg'
+  })
+  const dataUrl = 'data:image/png;base64,iVBORw0KGgo='
+  assert.deepEqual(classifySkillIcon(dataUrl), { kind: 'image', value: dataUrl })
+  assert.deepEqual(classifySkillIcon('https://example.com/a.png'), {
+    kind: 'image',
+    value: 'https://example.com/a.png'
+  })
+
+  // v1 迁移过来的 emoji → text 原样显示
+  assert.deepEqual(classifySkillIcon('📝'), { kind: 'text', value: '📝' })
+  // 前后空白先裁掉，避免存进脏空格
+  assert.deepEqual(classifySkillIcon('  📝  '), { kind: 'text', value: '📝' })
+  // 非图片协议（如 javascript:）不当图片，按文本处理
+  assert.equal(classifySkillIcon('javascript:alert(1)').kind, 'text')
 })
 
 let passed = 0

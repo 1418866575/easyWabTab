@@ -118,18 +118,7 @@ async function handleSyncNowClick(): Promise<void> {
         </div>
       </div>
       <div class="sv-topbar-actions">
-        <!-- 右上角「设置」：左侧菜单（改名 / 显隐 / 排序）+ 技能分类管理 -->
-        <button
-          type="button"
-          class="sv-btn sv-btn-sm sv-settings-btn"
-          title="左侧菜单 / 技能分类"
-          data-testid="smart-settings-entry"
-          @click="showSettings = true"
-        >
-          <Icon name="cog" :size="14" />
-          <span class="sv-settings-text">设置</span>
-        </button>
-        <!-- 最右上角：云同步（智能工作台数据走独立的 smart.json 信封） -->
+        <!-- 云同步：智能工作台数据走独立的 smart.json 信封 -->
         <button
           type="button"
           class="sv-btn sv-btn-sm sv-sync-btn"
@@ -141,6 +130,17 @@ async function handleSyncNowClick(): Promise<void> {
         >
           <Icon name="cloud" :size="14" />
           <span class="sv-sync-text">{{ syncLabel }}</span>
+        </button>
+        <!-- 最右侧固定「设置」：左侧菜单（改名 / 显隐 / 排序）+ 技能分类 -->
+        <button
+          type="button"
+          class="sv-btn sv-btn-sm sv-settings-btn"
+          title="左侧菜单 / 技能分类"
+          data-testid="smart-settings-entry"
+          @click="showSettings = true"
+        >
+          <Icon name="cog" :size="15" />
+          <span class="sv-settings-text">设置</span>
         </button>
       </div>
     </header>
@@ -208,7 +208,8 @@ async function handleSyncNowClick(): Promise<void> {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  flex-wrap: wrap;
+  /* 不换行：右侧操作区（含最右的「设置」）始终固定在同一行最右端 */
+  flex-wrap: nowrap;
   padding: 12px 16px;
   background-color: var(--color-bg-card, #ffffff);
   border-bottom: 1px solid var(--color-border, #e2e8f0);
@@ -218,8 +219,10 @@ async function handleSyncNowClick(): Promise<void> {
   display: flex;
   align-items: center;
   gap: 16px;
-  flex-wrap: wrap;
   min-width: 0;
+  /* 左侧可压缩（标题过长时省略），保证右侧按钮组不被挤出可视区 */
+  flex: 0 1 auto;
+  overflow: hidden;
 }
 
 .sv-heading { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -230,20 +233,29 @@ async function handleSyncNowClick(): Promise<void> {
   font-weight: var(--font-weight-semibold, 600);
   line-height: var(--line-height-tight, 1.3);
   color: var(--color-text, #0f172a);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sv-sub {
   margin: 0;
   font-size: var(--font-size-sm, 12px);
   color: var(--color-text-secondary, #64748b);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* ---------- 顶栏操作区：设置 + 云同步（尺寸/圆角与教师工作台 .tw-btn 同款） ---------- */
+/* ---------- 顶栏操作区：云同步 + 设置（固定最右，尺寸/圆角与个人工作台 .wb-btn 同款） ---------- */
 .sv-topbar-actions {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-shrink: 0;
+  /* 固定在最右侧：不伸缩、不换行、不被左侧内容挤走 */
+  flex: 0 0 auto;
+  margin-left: auto;
+  white-space: nowrap;
 }
 
 .sv-btn {
