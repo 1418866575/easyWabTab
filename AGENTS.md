@@ -1,10 +1,21 @@
 # PROJECT KNOWLEDGE BASE
 
+> ## ⚠️ UI / 组件 / 样式任务必读（AI 智能体请先看这里）
+>
+> **凡涉及 UI、组件、样式、命名、间距、配色、弹框、按钮、表单控件的改动，动手前必须先读 [`docs/UI_STYLE_GUIDE.md`](docs/UI_STYLE_GUIDE.md)。**
+>
+> 该文件是 UI 层的**唯一规范来源**（Design Token、`.ui-btn` 按钮体系、`BaseDialog` 弹框基类、卡片/表单控件分类、禁止双轨道清单、已知技术债台账）。本 `AGENTS.md` 管数据层与业务约定，UI 层以 `UI_STYLE_GUIDE.md` 为准，两者冲突时以它为准。
+>
+> **核心原则：先对照，后新增。** 写任何 UI 前先查项目里是否已有同类实现——加按钮先查 §2.1 按钮体系、加弹框先查 §2.2 `BaseDialog`、用颜色间距先查 §1 Token。**不要另造第二套实现。**
+>
+> 提交前必须：`npm run typecheck`（0 类型错）+ `npm run lint`（0 error）+ `npm run build`，并**浏览器目视验证**（样式/层叠类改动构建查不出来）。
+
 Personal browser new-tab page / bookmark manager. Vue 3 + Pinia + TypeScript SPA with Markdown-based data, dark mode, multi-engine search, password manager, 个人工作台, 学生工作台（含家长协同）, 销售记账（摆摊进销存）, and standalone mini-games. Chinese-language UI. **Element Plus is globally registered** (full import + `zh-cn` locale in `src/main.ts`) and used for Tables/Pagination in several panels.
 
 ## HIERARCHICAL AGENTS.md
 
 Subdirectory `AGENTS.md` files hold per-file detail not repeated here — read the relevant one before working in that area:
+- **`docs/UI_STYLE_GUIDE.md`** — **UI / 组件 / 样式 / 命名的唯一规范**（按钮体系、弹框基类、Token、卡片与表单控件分类、禁止双轨道、技术债台账）。**任何 UI 相关任务必读，见上方提示。**
 - `src/components/AGENTS.md` — the 24 root SFCs + 20 workbench SFCs + 19 student SFCs + 8 business SFCs, sizes, component-level anti-patterns
 - `src/stores/AGENTS.md` — the 31 Pinia stores (16 workbench/biz + 15 student) and data-layer invariants
 - `src/composables/AGENTS.md` — the 53 composables (incl. auto-generated `presetIcons.ts` + the `student*Core.ts` pure-logic family)
@@ -142,7 +153,7 @@ easy-web-tab/
 
 - **All components**: `<script setup lang="ts">` (Composition API only, no Options API)
 - **State**: Pinia stores for domain state; `useToast` and `useHelpModal` are exceptions (module-level singletons)
-- **Styling**: Scoped CSS + CSS custom properties (`var(--color-primary)` etc.). **完整 UI/组件规范见 `docs/UI规范与代码风格.md`** —— 按钮走 `.ui-btn` 全局体系、弹框走 `BaseDialog`、颜色/间距必须用 token、禁止双轨道（写 UI 前先对照现有实现）
+- **Styling**: Scoped CSS + CSS custom properties (`var(--color-primary)` etc.). **完整 UI/组件规范见 `docs/UI_STYLE_GUIDE.md`（UI 任务必读）** —— 按钮走 `.ui-btn` 全局体系、弹框走 `BaseDialog`、颜色/间距必须用 token、禁止双轨道（写 UI 前先对照现有实现）
 - **Path alias**: `@` → `/src` (use `@/` imports, not relative `../`)
 - **Package manager**: npm only (no pnpm/yarn/bun)
 - **Port**: 16718 hardcoded in vite.config.js, serve-with-rewrites.cjs, Dockerfile, run.bat, PM2 flow
