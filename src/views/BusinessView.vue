@@ -1043,9 +1043,11 @@ html.dark .bs-stall-name {
     min-height: 44px;
   }
 
-  /* 窄屏间距压缩：内容区内边距收窄、首页卡片间距收紧；底部留白避让固定 Tab Bar（44px 触控 + 内边距 + 安全区） */
+  /* 窄屏间距压缩：内容区内边距收窄、首页卡片间距收紧；底部留白避让固定 Tab Bar。
+     实测（iPhone13 390×664）底栏实际高 57px，原 64px 留白扣除后只剩 7px 间距，
+     分页器/末条内容紧贴菜单栏，视觉上像「点不到」→ 提到 76px，留出约 19px 呼吸位。 */
   .bs-content {
-    padding: 12px 12px calc(64px + env(safe-area-inset-bottom, 0px));
+    padding: 12px 12px calc(76px + env(safe-area-inset-bottom, 0px));
   }
 }
 

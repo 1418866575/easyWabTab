@@ -1013,6 +1013,33 @@ export function filterPurchasesByCategory(
   }))
 }
 
+/** 进货记录按天分组：一天 = 一个「日期」为键的分组容器。
+ *  卡片视图与表格分组行共用，故放 core（纯函数，组件内不重算分组逻辑）。 */
+export interface PurchaseDayGroup {
+  /** 日期键，原样用于匹配与排序（YYYY-MM-DD） */
+  date: string
+  /** 该天全部进货明细（保持传入顺序 =筛选+排序后的顺序） */
+  rows: BusinessPurchase[]
+  /** 该天合计金额（元），卡片底部汇总展示 */
+  totalAmount: number
+}
+
+/** 把已排序的进货记录按 date 聚成天分组；不改变天内记录顺序。
+ *  入参须先经 sortPurchases（日期倒序），故分组顺序即视觉顺序。 */
+export function groupPurchasesByDay(purchases: BusinessPurchase[]): PurchaseDayGroup[] {
+  const groups: PurchaseDayGroup[] = []
+  for (const p of purchases) {
+    const last = groups[groups.length - 1]
+    if (last && last.date === p.date) {
+      last.rows.push(p)
+      last.totalAmount += p.total
+    } else {
+      groups.push({ date: p.date, rows: [p], totalAmount: p.total })
+    }
+  }
+  return groups
+}
+
 export function sortDailyRecords(records: BusinessDailyRecord[]): BusinessDailyRecord[] {
   return [...records].sort((a, b) => (a.date === b.date ? (a.updatedAt < b.updatedAt ? 1 : -1) : a.date < b.date ? 1 : -1))
 }

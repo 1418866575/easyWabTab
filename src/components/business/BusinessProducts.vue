@@ -39,7 +39,7 @@ const filteredProducts = computed(() => {
   return all.filter(p => p.categoryId === activeCat.value)
 })
 
-// ===== 自适应分页（5 列，rowHeight 估算 200）=====
+// ===== 自适应分页（桌面端 5 列自适应；移动端不分页，滑动加载全部）=====
 const listEl = ref<HTMLElement | null>(null)
 const gridEl = ref<HTMLElement | null>(null)
 const paging = usePanelPaging({
@@ -48,14 +48,19 @@ const paging = usePanelPaging({
   gap: 12,
   containerRef: listEl,
   gridRef: gridEl,
-  // 移动端（≤768px）默认分页惰性，这里开启固定每页 6 个卡片
-  mobilePageSize: 6
+  // 2026-10-08：移除 mobilePageSize: 6 —— 移动端改为滑动加载全部（方案 A）。
+  // 原先每页硬编码 6 个，商品超过 6 个就必须翻页才能看到剩下的，
+  // 用户实测反馈「内容不能滑动查看」—— 实际是滚动到底只看到 6 张卡片，
+  // 误以为滚动失效。改为不分页后，加多少商品就滑多少。
+  // 不传 mobilePageSize 即走 composable 的移动端惰性分支（pageItems 返回全量、
+  // totalPages 恒为 1 → PanelPager 的 v-if="totalPages > 1" 自动不渲染）。
 })
-const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto, isDesktop, rowsPerPage, colsPerRow } = paging
+// isDesktop 未解构：移动端已不分页，桌面端分页容量直接用 rowsPerPage × colsPerRow
+const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto, rowsPerPage, colsPerRow } = paging
 
-/** 每页容量：移动端固定 6（mobilePageSize），桌面端 = 实测行数 × 实测列数；未测量时兜底 6。 */
+/** 每页容量：仅桌面端分页时生效 = 实测行数 × 实测列数；未测量时兜底 6。
+ *  移动端已改为不分页（滑动加载全部），此值仅用于桌面端跨页定位。 */
 const pageCapacity = computed(() => {
-  if (!isDesktop.value) return 6
   const size = rowsPerPage.value * colsPerRow.value
   return size > 0 ? size : 6
 })

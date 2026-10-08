@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
-import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
 const vm = useViewMode()
 
-function cardFields(row: any) {
+/** 卡片视图每条明细的字段（一天一张卡内平铺当天全部明细，保留原字段不裁剪）。
+ *  emphasis 显式声明：模板按此字段加粗（当天合计/关联支出等强调项）。 */
+function cardFields(row: BusinessPurchase): { label: string; value: string; emphasis?: boolean }[] {
   const p = findProduct(store.products, row.productId)
   const m = markupRateOf(row.productId, row.unitPrice)
   return [
@@ -45,6 +46,7 @@ import {
   findProduct,
   findProductCategory,
   formatYuanOf,
+  groupPurchasesByDay,
   localDateKey,
   selectableExpenses,
   sumExpenseAmounts,
@@ -176,23 +178,43 @@ const activeFilterName = computed(() =>
   props.productFilter ? productNameOf(props.productFilter) : ''
 )
 
-// ===== el-pagination 分页（固定 10 条/页） =====
+// ===== 分页（按「天」为口径；移动端不分页，滑动加载全部）=====
 const LIST_PAGE_SIZE = 10
-/** 移动端（卡片视图）固定每页 6 个 */
-const MOBILE_PAGE_SIZE = 6
 const { pageSize, PAGE_SIZES } = usePageSize('bizpur-list-pager', LIST_PAGE_SIZE)
 const listPage = ref(1)
-/** 移动端固定 6/页，桌面沿用持久化 pageSize；setter 在移动端忽略写入，避免污染用户偏好 */
+/** 仅桌面端分页；移动端滑动加载全部分组（与商品页一致，不再翻页） */
 const activePageSize = computed({
-  get: () => (vm.isMobile ? MOBILE_PAGE_SIZE : pageSize.value),
+  get: () => (vm.isMobile ? 0 : pageSize.value),
   set: (v: number) => {
     if (!vm.isMobile) pageSize.value = v
   }
 })
-const pageItems = computed<BusinessPurchase[]>(() => {
-  const start = (listPage.value - 1) * activePageSize.value
-  return filteredWithProductFilter.value.slice(start, start + activePageSize.value)
+
+/** 筛选结果按天分组：一天一张卡 / 表格一天一个可展开分组行。
+ *  filteredWithProductFilter 已日期倒序，故分组顺序即视觉顺序（新的在上）。 */
+const dayGroups = computed(() => groupPurchasesByDay(filteredWithProductFilter.value))
+
+/** 桌面端按「天」分页：一天算一页单位，日期不跨页断开。
+ *  移动端（vm.isMobile）返回全部分组 —— 与商品页方案 A 一致，加多少天就滑多少。 */
+const pageGroups = computed(() => {
+  if (vm.isMobile) return dayGroups.value
+  const per = Math.max(1, pageSize.value)
+  const start = (listPage.value - 1) * per
+  return dayGroups.value.slice(start, start + per)
 })
+
+/** 表格视图数据：一天 = 一个可展开的父行，同日明细作为 children。
+ *  复用 el-table 原生 tree 行（row-key=id + tree-props.children），不自定义展开箭头。
+ *  父行的业务字段留空，仅日期列/ 序号列显示分组信息（见模板 span 判定）。 */
+const tableTreeRows = computed(() =>
+  pageGroups.value.map(g => ({
+    id: `day-${g.date}`,
+    date: g.date,
+    dayTotal: g.totalAmount,
+    dayCount: g.rows.length,
+    children: g.rows
+  }))
+)
 watch(activeCat, () => { listPage.value = 1 })
 watch(() => props.productFilter, () => { listPage.value = 1 })
 watch(filteredWithProductFilter, () => { listPage.value = 1 })
@@ -536,19 +558,31 @@ async function handleDelete(id: string): Promise<void> {
     <template v-else>
       <div class="bizpur-table-wrap">
         <el-table v-if="vm.mode === 'list'" class="ewt-table"
-          :data="pageItems"
+          :data="tableTreeRows"
           data-testid="bizpur-table"
           stripe
           border
           size="default"
           style="width: 100%"
           height="100%"
+          row-key="id"
+          :tree-props="{ children: 'children' }"
           empty-text="暂无进货记录"
         >
-          <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (listPage - 1) * activePageSize + i + 1" />
-          <el-table-column label="日期" width="120" align="center">
+          <!-- 序号：父行（分组头）留空，明细行沿用全局序号连续编号 -->
+          <el-table-column label="序号" width="70" align="center" class-name="ewt-index-col">
+            <template #default="{ row, $index }">
+              <span v-if="!row.children">{{ (listPage - 1) * activePageSize + $index + 1 }}</span>
+            </template>
+          </el-table-column>
+          <!-- 日期列：父行显示「日期 + N 笔 + 当天合计」作为分组头，明细行不再重复日期 -->
+          <el-table-column label="日期" width="200" align="center">
             <template #default="{ row }">
-              <span style="font-weight: 600;">{{ row.date }}</span>
+              <div v-if="row.children" class="bizpur-day-cell">
+                <span class="bizpur-day-cell-date">{{ row.date }}</span>
+                <span class="bizpur-day-cell-count">{{ row.dayCount }} 笔</span>
+                <span class="bizpur-day-cell-total">{{ formatYuanOf(row.dayTotal) }}</span>
+              </div>
             </template>
           </el-table-column>
           <el-table-column label="商品" min-width="160" align="left" show-overflow-tooltip>
@@ -631,29 +665,51 @@ async function handleDelete(id: string): Promise<void> {
             </template>
           </el-table-column>
         </el-table>
-        <div v-else class="ewt-card-grid">
-          <RecordsCard
-            @edit="startEdit(item)"
-            v-for="item in pageItems"
-            :key="item.id"
-            :fields="cardFields(item)"
+        <div v-else class="ewt-card-grid bizpur-day-cards">
+          <!-- 卡片视图：一天一张卡（同日多条进货合并），头部沿用支出页日容器写法 -->
+          <div
+            v-for="g in pageGroups"
+            :key="g.date"
+            class="bizpur-day-card"
+            :data-testid="`bizpur-day-card-${g.date}`"
           >
-            <template #actions>
-              <el-button size="small" :data-testid="`bizpur-card-edit-${item.id}`" @click.stop="startEdit(item)">编辑</el-button>
-              <el-button size="small" type="danger" :data-testid="`bizpur-card-del-${item.id}`" @click.stop="handleDelete(item.id)">删除</el-button>
-            </template>
-          </RecordsCard>
+            <div class="bizpur-day-head">
+              <span class="bizpur-day-date">{{ g.date }}</span>
+              <span class="bizpur-day-count">{{ g.rows.length }} 笔</span>
+              <span class="bizpur-day-total">{{ formatYuanOf(g.totalAmount) }}</span>
+            </div>
+            <div class="bizpur-day-rows">
+              <div
+                v-for="item in g.rows"
+                :key="item.id"
+                class="bizpur-day-row"
+                :data-testid="`bizpur-day-row-${item.id}`"
+              >
+                <div class="bizpur-day-fields">
+                  <div v-for="f in cardFields(item)" :key="f.label" class="bizpur-day-field">
+                    <span class="bizpur-day-label">{{ f.label }}</span>
+                    <span class="bizpur-day-value" :class="{ 'is-emphasis': f.emphasis }">{{ f.value ?? '—' }}</span>
+                  </div>
+                </div>
+                <div class="bizpur-day-actions">
+                  <el-button size="small" :data-testid="`bizpur-card-edit-${item.id}`" @click.stop="startEdit(item)">编辑</el-button>
+                  <el-button size="small" type="danger" :data-testid="`bizpur-card-del-${item.id}`" @click.stop="handleDelete(item.id)">删除</el-button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>
-      <div class="bizpur-list-pager ewt-pager">
+      <!-- 分页器：桌面端按「天」分页；移动端滑动加载全部，故隐藏 -->
+      <div v-if="!vm.isMobile" class="bizpur-list-pager ewt-pager">
         <el-pagination
           v-model:current-page="listPage"
           @size-change="listPage = 1"
           v-model:page-size="activePageSize"
           :page-sizes="PAGE_SIZES"
           layout="total, prev, pager, next, jumper"
-          :total="filteredWithProductFilter.length"
+          :total="dayGroups.length"
           background
           small
           prev-text="上一页"
@@ -884,6 +940,136 @@ async function handleDelete(id: string): Promise<void> {
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
+}
+
+/* ===== 卡片视图：一天一张卡（同日多条进货合并）=====
+   参照支出页日容器写法：头部「日期 + N 笔 + 当天合计」，下方平铺当天每条明细。
+   明细沿用 cardFields 原字段，不做字段裁剪，保证信息不丢。 */
+.bizpur-day-cards {
+  grid-template-columns: 1fr;
+}
+
+.bizpur-day-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
+  border-radius: var(--radius-md, 8px);
+  overflow: hidden;
+}
+
+.bizpur-day-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--color-primary, #3b82f6) 8%, transparent);
+  border-bottom: 1px solid var(--color-border, var(--color-border));
+}
+
+.bizpur-day-date {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text, var(--color-text));
+}
+
+.bizpur-day-count {
+  font-size: 12px;
+  padding: 1px 8px;
+  border-radius: var(--radius-full, 9999px);
+  color: var(--color-primary, #3b82f6);
+  background: color-mix(in srgb, var(--color-primary, #3b82f6) 12%, transparent);
+}
+
+.bizpur-day-total {
+  margin-left: auto;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary, #3b82f6);
+  font-variant-numeric: tabular-nums;
+}
+
+.bizpur-day-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 每条明细一行；多行之间用虚线分隔，视觉上仍属同一天 */
+.bizpur-day-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px dashed var(--color-border, var(--color-border));
+}
+
+.bizpur-day-row:last-child {
+  border-bottom: none;
+}
+
+.bizpur-day-fields {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  min-width: 0;
+}
+
+.bizpur-day-field {
+  display: contents;
+}
+
+.bizpur-day-label {
+  font-size: 12px;
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  white-space: nowrap;
+}
+
+.bizpur-day-value {
+  font-size: 13px;
+  color: var(--color-text, var(--color-text));
+  word-break: break-word;
+  font-variant-numeric: tabular-nums;
+}
+
+.bizpur-day-value.is-emphasis {
+  font-weight: 600;
+  color: var(--color-primary, #3b82f6);
+}
+
+.bizpur-day-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.bizpur-day-actions :deep(.el-button + .el-button) {
+  margin-left: 0;
+}
+
+/* ===== 表格分组行：日期列内「日期 + N 笔 + 当天合计」===== */
+.bizpur-day-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
+
+.bizpur-day-cell-date {
+  font-weight: 600;
+}
+
+.bizpur-day-cell-count {
+  font-size: 12px;
+  padding: 1px 8px;
+  border-radius: var(--radius-full, 9999px);
+  color: var(--color-primary, #3b82f6);
+  background: color-mix(in srgb, var(--color-primary, #3b82f6) 12%, transparent);
+}
+
+.bizpur-day-cell-total {
+  font-weight: 600;
+  color: var(--color-primary, #3b82f6);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ===== el-table 表格容器（参考 WorkbenchNotes） ===== */
