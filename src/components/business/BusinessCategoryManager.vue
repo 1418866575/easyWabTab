@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 销售记账共享分类管理弹框（product 商品分类 / expense 支出产品 双模式，页面 ⚙️ 与设置弹窗 tab 复用）
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { showConfirm } from '@/utils/dialog'
 import { useViewMode } from '@/composables/useViewMode'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
@@ -31,10 +31,13 @@ const filtered = computed(() => {
 
 /**
  * 高级列（关联商品 / 商品数量 / 商品单价）显隐：
- * 默认收起 —— 设置面板宽度有限，全 8 列会挤出横向滚动；需要配置默认单位/单价时再展开。
- * （窄屏下展开后表格在自身容器内横向滚动，不会撑破页面。）
+ * 桌面默认展开（2026-10-09 用户要求），窄屏自动收起（393px 放不下，跟随 vm.isMobile 联动）。
+ * ⚠️ 桌面全 8 列在设置面板（内容区 ~660px）里会超出，表格自身横向滚动；
+ * 「操作」列已 fixed="right"，横向滚动时始终可见，这是刻意保留的。
+ * 用户手动切换后，再次跨越移动断点时会按断点重置（可再手动改回）。
  */
-const showAdvanced = ref(false)
+const showAdvanced = ref(!vm.isMobile)
+watch(() => vm.isMobile, m => { showAdvanced.value = !m })
 
 // 行内改名：仅暂存输入中文本，blur/Enter 提交、Esc 还原（仿待办分类管理惯例）
 const editing = reactive<Record<string, string>>({})
