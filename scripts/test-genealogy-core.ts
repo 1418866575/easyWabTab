@@ -4,7 +4,11 @@ import {
   ageGroupOf,
   genealogyStats,
   emptyGenealogyStats,
-  AGE_GROUPS
+  AGE_GROUPS,
+  calcZodiac,
+  ZODIAC_ANIMALS,
+  filterParentCandidates,
+  filterSpouseCandidates
 } from '../src/composables/genealogyCore.ts'
 import type { FamilyMember } from '../src/types'
 
@@ -125,6 +129,84 @@ test('T5 genealogyStats 空态与已故成员', () => {
   assert.equal(dead.total, 1)
   assert.equal(dead.groups.youth, 1)
   assert.equal(dead.groups.elder, 0)
+})
+
+// T6 — calcZodiac 生肖推导（下标 = (年份 - 4) % 12）
+test('T6 calcZodiac 生肖推导', () => {
+  assert.equal(calcZodiac(undefined), null)
+  assert.equal(calcZodiac(''), null)
+  assert.equal(calcZodiac('bad-date'), null)
+  // 已知年份校验
+  assert.equal(calcZodiac('2020-01-01'), '鼠')   // 2020 鼠年
+  assert.equal(calcZodiac('2023-09-24'), '兔')   // 2023 兔年
+  assert.equal(calcZodiac('2000-01-01'), '龙')   // 2000 龙年
+  assert.equal(calcZodiac('2024-02-10'), '龙')   // 2024 龙年
+  assert.equal(calcZodiac('1985-06-15'), '牛')   // 1985 牛年
+  assert.equal(calcZodiac('1993-01-01'), '鸡')   // 1993 鸡年
+  // 12 生肖全覆盖、无错位：1900 鼠年起逐年代位
+  for (let y = 1900; y < 1900 + 12; y++) {
+    assert.equal(calcZodiac(`${y}-01-01`), ZODIAC_ANIMALS[y - 1900])
+  }
+})
+
+// T7 — filterParentCandidates 父母候选合理性过滤
+test('T7 filterParentCandidates 父母候选过滤', () => {
+  const members: FamilyMember[] = [
+    member({ id: 'p', gender: 'male', birthDate: '1950-01-01', parents: ['pa'] }),
+    member({ id: 'pa', gender: 'female', birthDate: '1920-01-01' }),   // 现有父母（女）
+    member({ id: 'c', gender: 'female', birthDate: '1980-01-01', parents: ['p'] }), // p 的后代
+    member({ id: 'y', gender: 'male', birthDate: '1990-01-01' }),     // 比 p 年轻
+    member({ id: 'f2', gender: 'female', birthDate: '1922-01-01' }),  // 同性别（女）于现有父母 → 冲突
+    member({ id: 'o', gender: 'male', birthDate: '1928-01-01' }),     // 年长、男（不与女冲突）→ 合理
+    member({ id: 'u', gender: '', birthDate: '1926-01-01' })          // 年长、性别未知 → 合理
+  ]
+  const ids = filterParentCandidates(members, 'p').map((m) => m.id).sort()
+  // 保留：o（年长男）、u（年长未知）；排除：pa(现有父母)/c(后代)/y(年轻)/f2(同性别冲突)/p(自己)
+  assert.deepEqual(ids, ['o', 'u'])
+
+  // 被关联人无出生日期时，年龄过滤不生效（不臆造年龄，更年轻的候选仍保留）
+  const noBirth: FamilyMember[] = [
+    member({ id: 'x', gender: 'male', parents: [] }),
+    member({ id: 'z', gender: 'male', birthDate: '2000-01-01' })
+  ]
+  assert.ok(filterParentCandidates(noBirth, 'x').some((m) => m.id === 'z'))
+})
+
+// T8 — filterSpouseCandidates 配偶候选合理性过滤（含关系互斥）
+test('T8 filterSpouseCandidates 配偶候选过滤', () => {
+  const members: FamilyMember[] = [
+    member({ id: 's', gender: 'male', spouses: ['sp'], parents: ['pa'] }),
+    member({ id: 'sp', gender: 'female' }),   // 现有配偶
+    member({ id: 'f', gender: 'female' }),    // 异性、无亲属关系 → 合理
+    member({ id: 'm', gender: 'male' }),      // 同性 → 排除
+    member({ id: 'u', gender: '' }),          // 性别未知、无亲属关系 → 保留
+    member({ id: 'pa', gender: 'female' }),   // 现有父母 → 关系互斥，排除
+    member({ id: 'ch', gender: 'female', parents: ['s'] }),   // 现有子女 → 关系互斥，排除
+    // 兄弟姐妹：与 s 共享父母 pa
+    member({ id: 'sb', gender: 'female', parents: ['pa'] })
+  ]
+  const ids = filterSpouseCandidates(members, 's').map((m) => m.id).sort()
+  // 保留：f（异性无关）、u（性别未知无关）；排除：sp(配偶)/m(同性)/pa(父母)/ch(子女)/sb(兄弟姐妹)/s(自己)
+  assert.deepEqual(ids, ['f', 'u'])
+
+  // 祖先/后代也互斥（pa 之上再加一代，sb 之下再加一代）
+  const deep: FamilyMember[] = [
+    member({ id: 's2', gender: 'male', parents: ['gp'] }),
+    member({ id: 'gp', gender: 'female', parents: ['ggp'] }), // 祖母（祖先）
+    member({ id: 'ggp', gender: 'female' }),                  // 曾祖母（祖先）
+    member({ id: 'x', gender: 'female' })                    // 无关异性 → 合理
+  ]
+  const idsDeep = filterSpouseCandidates(deep, 's2').map((m) => m.id).sort()
+  assert.deepEqual(idsDeep, ['x'])
+
+  // 被关联人性别未知：仅排除自己、现有配偶、亲属；其余皆保留
+  const unknown: FamilyMember[] = [
+    member({ id: 's3', gender: '', spouses: [] }),
+    member({ id: 'a', gender: 'male' }),
+    member({ id: 'b', gender: 'female' })
+  ]
+  const ids2 = filterSpouseCandidates(unknown, 's3').map((m) => m.id).sort()
+  assert.deepEqual(ids2, ['a', 'b'])
 })
 
 let passed = 0

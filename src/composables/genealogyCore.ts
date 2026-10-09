@@ -77,6 +77,82 @@ export function getDescendants(members: FamilyMember[], id: string): FamilyMembe
   return out
 }
 
+// ============================================================
+// 关系候选过滤（成员关系管理弹框：仅展示合理候选）
+// 所有规则均为「排除不合理者」，不修改任何成员数据。
+// ============================================================
+
+/**
+ * 可作为 person 父母的候选成员（返回过滤后的列表）。
+ *
+ * 排除规则（按优先级）：
+ * 1. 自己（不能做自己的父母）
+ * 2. 已是该成员父母者（避免重复添加）
+ * 3. 该成员的后代（含间接后代）——防止血缘成环（A 是 B 的父，B 又做 A 的父）
+ * 4. 年龄小于该成员者——父母在生物学上应年长于子女；双方都无出生日期时不判定
+ * 5. 性别与已有父母角色冲突者——同一成员至多一位父亲（男）与一位母亲（女），
+ *    若已存在某已知性别的父母，则不再允许添加同性别候选（避免「两位父亲 / 两位母亲」）。
+ *    候选或已有父母性别未知时不据此排除。
+ */
+export function filterParentCandidates(members: FamilyMember[], personId: string): FamilyMember[] {
+  const person = members.find((m) => m.id === personId)
+  if (!person) return []
+  const personAge = calcAge(person.birthDate)
+  const existingParentGenders = new Set<string>()
+  for (const pid of person.parents) {
+    const p = members.find((m) => m.id === pid)
+    if (p && p.gender) existingParentGenders.add(p.gender)
+  }
+  const banned = new Set<string>([
+    person.id,
+    ...person.parents,
+    ...getDescendants(members, personId).map((d) => d.id)
+  ])
+  return members.filter((m) => {
+    if (banned.has(m.id)) return false
+    // 规则 4：年龄小于被关联人 → 不合理（父母应年长）
+    if (personAge !== null) {
+      const a = calcAge(m.birthDate)
+      if (a !== null && a < personAge) return false
+    }
+    // 规则 5：性别与已有父母角色冲突（同性别已存在一位）
+    if (m.gender && existingParentGenders.has(m.gender)) return false
+    return true
+  })
+}
+
+/**
+ * 可作为 person 配偶的候选成员（返回过滤后的列表）。
+ *
+ * 排除规则：
+ * 1. 自己（不能做自己的配偶）
+ * 2. 已是该成员配偶者（UI 为「一对一」，已有配偶时下拉本就禁用）
+ * 3. 关系互斥——与该成员已有血缘/亲属关系者（父母 / 子女 / 兄弟姐妹 / 祖先 / 后代）
+ *    与「配偶」角色互斥，不能作为配偶候选。双方若在亲属链上，可能构成乱伦或血缘环，排除。
+ * 4. 性别不匹配者——采用异性配偶模型：双方性别均已知且相同（男男 / 女女）视为不匹配，排除。
+ *    任一方性别未知时无法确认匹配，不据此排除（保留候选，由用户判断）。
+ */
+export function filterSpouseCandidates(members: FamilyMember[], personId: string): FamilyMember[] {
+  const person = members.find((m) => m.id === personId)
+  if (!person) return []
+  // 互斥集合：自己 + 现有配偶 + 全部血缘/亲属（父母、子女、兄弟姐妹、祖先、后代）
+  const banned = new Set<string>([
+    person.id,
+    ...person.spouses,
+    ...getParents(members, personId).map((m) => m.id),
+    ...getChildren(members, personId).map((m) => m.id),
+    ...getSiblings(members, personId).map((m) => m.id),
+    ...getAncestors(members, personId).map((m) => m.id),
+    ...getDescendants(members, personId).map((m) => m.id)
+  ])
+  return members.filter((m) => {
+    if (banned.has(m.id)) return false
+    // 规则 4：双方性别均已知且相同 → 性别不匹配
+    if (person.gender && m.gender && person.gender === m.gender) return false
+    return true
+  })
+}
+
 /**
  * 把 newParentId 设为 childId 的父是否会成环。
  * 自引用（childId === newParentId）必为环；若 newParentId 已是 childId 的后代亦为环。
@@ -379,6 +455,22 @@ export function calcAge(birthDate?: string, deathDate?: string, today?: Date): n
     (end.getMonth() === b.getMonth() && end.getDate() < b.getDate())
   if (beforeBirthday) age -= 1
   return age < 0 ? 0 : age
+}
+
+/** 十二生肖（顺序固定：鼠→猪，下标 0..11） */
+export const ZODIAC_ANIMALS = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'] as const
+
+/**
+ * 生肖（属相）：由出生年份推导，无需存储（与年龄同源，均派生自 birthDate）。
+ * 公式：下标 = (年份 - 4) % 12（公元 4 年为甲子鼠年起点，2020 鼠年校验通过）。
+ * 注：按公历年份计算；民俗以「春节」为生肖分界，跨春节出生者若需按农历判定需另行换算。
+ * 出生日期缺失/非法 → null。
+ */
+export function calcZodiac(birthDate?: string | null): string | null {
+  const d = parseDateKey(birthDate)
+  if (!d) return null
+  const idx = ((d.getFullYear() - 4) % 12 + 12) % 12
+  return ZODIAC_ANIMALS[idx]
 }
 
 /** 年龄段 key（按国家规定/通行口径划分，互斥且全覆盖） */

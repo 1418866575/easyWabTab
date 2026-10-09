@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useGenealogyStore } from '@/stores/genealogy'
+import { calcZodiac } from '@/composables/genealogyCore'
 import type { FamilyTreeNode } from '@/composables/genealogyCore'
 
 defineOptions({ name: 'GenealogyTreeNode' })
@@ -12,9 +13,16 @@ const collapsed = ref(false)
 const GENDER_LABEL: Record<string, string> = { male: '男', female: '女', '': '未知' }
 const isRoot = computed(() => store.rootId === props.node.member.id)
 const genderLabel = computed(() => GENDER_LABEL[props.node.member.gender ?? ''] ?? '未知')
+const zodiacLabel = computed(() => calcZodiac(props.node.member.birthDate) ?? '')
 const hasChildren = computed(() => props.node.children.length > 0)
-const spouseNames = computed(() =>
-  props.node.member.spouses.map((id) => store.members.find((m) => m.id === id)?.name ?? '(已删除)')
+// 配偶标签：拆为「姓名 + 生肖」分别渲染（配偶多为以「配偶」形式挂在该节点上的成员，
+// 生肖用独立 pill 展示，颜色与姓名区分）
+const spouseInfos = computed(() =>
+  props.node.member.spouses.map((id) => {
+    const m = store.members.find((x) => x.id === id)
+    if (!m) return { name: '(已删除)', zodiac: '' }
+    return { name: m.name, zodiac: calcZodiac(m.birthDate) ?? '' }
+  })
 )
 
 function toggle() {
@@ -33,10 +41,15 @@ function toggle() {
       >{{ collapsed ? '▸' : '▾' }}</button>
       <span v-else class="gtn-caret-placeholder"></span>
       <div class="gtn-card" :class="{ root: isRoot }">
+        <span v-if="isRoot" class="gtn-root-badge">主根</span>
         <span class="gtn-name">{{ node.member.name }}</span>
         <span class="gtn-gender">{{ genderLabel }}</span>
-        <span v-if="isRoot" class="gtn-root-badge">主根</span>
-        <span v-if="spouseNames.length" class="gtn-spouse">♥ {{ spouseNames.join('、') }}</span>
+        <span v-if="zodiacLabel" class="gtn-zodiac">{{ zodiacLabel }}</span>
+        <span v-if="spouseInfos.length" class="gtn-spouse">♥
+          <template v-for="(s, i) in spouseInfos" :key="i">
+            <span>{{ s.name }}</span><span v-if="s.zodiac" class="gtn-zodiac">{{ s.zodiac }}</span><template v-if="i < spouseInfos.length - 1">、</template>
+          </template>
+        </span>
       </div>
     </div>
     <div v-if="hasChildren && !collapsed" class="gtn-children">
@@ -97,6 +110,14 @@ function toggle() {
   font-size: 12px;
   font-weight: 400;
   color: var(--color-text-muted, #9ca3af);
+}
+.gtn-zodiac {
+  font-size: 12px;
+  font-weight: 400;
+  padding: 0 6px;
+  border-radius: 999px;
+  color: #b45309;
+  background: #fef3c7;
 }
 .gtn-avatar {
   width: 28px;
@@ -183,6 +204,10 @@ function toggle() {
 }
 :global(html.dark) .gtn-gender {
   color: var(--color-text-muted, #9ca3af);
+}
+:global(html.dark) .gtn-zodiac {
+  color: #fbbf24;
+  background: color-mix(in srgb, #fbbf24 18%, transparent);
 }
 :global(html.dark) .gtn-children::before,
 :global(html.dark) .gtn-children::after,
