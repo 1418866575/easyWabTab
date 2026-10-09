@@ -18,14 +18,21 @@ export interface BizSection {
 
 /**
  * 8 个面板入口（固定顺序）。
- * 文案口径（2026-10-06 对齐）：expenses=支出（摊位费/燃气费等开销）、purchases=进货（商品入库流水）、
- * inventory=库存预警。key 自诞生起未变，改 key 会波及 settingsStore.businessActiveSection 持久化值。
+ *
+ * ⚠️ 2026-10-09 用户要求改显示名：expenses 显示「进货」、purchases 显示「库存」。
+ * 注意 **label 已与实际功能不一致**：
+ *   - expenses（摊位费/燃气费等开销）→ 显示「进货」
+ *   - purchases（商品入库流水与进价）→ 显示「库存」
+ * 这是刻意的纯文案改名，key 与功能均未变。下方 hint 仍描述真实功能，
+ * 以免菜单上唯一的功能线索也一起丢失。日后若要名实相符，应改回 label 或重新映射 key。
+ *
+ * key 自诞生起未变，改 key 会波及 settingsStore.businessActiveSection 持久化值。
  */
 export const BIZ_SECTIONS: readonly BizSection[] = [
   { key: 'home', icon: 'home', label: '首页', hint: '账本概览与待办' },
   { key: 'products', icon: 'products', label: '商品', hint: '商品档案与售价' },
-  { key: 'expenses', icon: 'expenses', label: '支出', hint: '摊位费/燃气费等开销' },
-  { key: 'purchases', icon: 'purchases', label: '进货', hint: '入库流水与进价' },
+  { key: 'expenses', icon: 'expenses', label: '进货', hint: '摊位费/燃气费等开销' },
+  { key: 'purchases', icon: 'purchases', label: '库存', hint: '入库流水与进价' },
   { key: 'daily', icon: 'daily', label: '销售', hint: '每日销售流水' },
   { key: 'inventory', icon: 'inventory', label: '库存预警', hint: '低库存/滞销/久存' },
   { key: 'stats', icon: 'stats', label: '统计', hint: '趋势与毛利报表' },

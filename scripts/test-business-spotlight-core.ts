@@ -105,9 +105,17 @@ check('BIZ_SECTIONS 为 8 项且 key 唯一',
 check('BIZ_SECTIONS 保留历史 key（持久化兼容）',
   ['home', 'products', 'expenses', 'purchases', 'daily', 'inventory', 'stats', 'reconcile']
     .every(k => BIZ_SECTIONS.some(s => s.key === k)))
-check('文案口径：expenses=支出、purchases=进货',
-  BIZ_SECTIONS.find(s => s.key === 'expenses')?.label === '支出' &&
-  BIZ_SECTIONS.find(s => s.key === 'purchases')?.label === '进货')
+// 2026-10-09 用户要求改显示名：expenses 显示「进货」、purchases 显示「库存」。
+// 这是**纯文案改名**，key 与实际功能均未变（expenses 仍是摊位费/燃气费开销，
+// purchases 仍是入库流水），故 label 与功能此刻是刻意不一致的。
+check('文案口径（2026-10-09 改名后）：expenses=进货、purchases=库存',
+  BIZ_SECTIONS.find(s => s.key === 'expenses')?.label === '进货' &&
+  BIZ_SECTIONS.find(s => s.key === 'purchases')?.label === '库存')
+// 改名不得动 key —— key 变更会波及 settingsStore.businessActiveSection 的持久化值
+check('改名只改 label，key 保持 expenses/purchases 不变',
+  BIZ_SECTIONS.some(s => s.key === 'expenses') &&
+  BIZ_SECTIONS.some(s => s.key === 'purchases') &&
+  BIZ_SECTIONS.length === 8)
 check('快捷动作 id 唯一', new Set(BIZ_QUICK_ACTIONS.map(a => a.id)).size === BIZ_QUICK_ACTIONS.length)
 check('快捷动作覆盖 4 个可录面板 + 对账',
   BIZ_QUICK_ACTIONS.length === 5 &&
