@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>进货商品管理 · 表格化原型（销售记账设置）</title>
+<style>
+  /* ===== 复用项目设计令牌（src/style.css :root 亮色） ===== */
+  :root {
+    --color-primary: #3b82f6;
+    --color-primary-600: #2563eb;
+    --color-primary-light: #eff6ff;
+    --color-bg: #f8fafc;
+    --color-bg-card: #ffffff;
+    --color-bg-hover: #f1f5f9;
+    --color-bg-active: #e2e8f0;
+    --color-bg-input: #f1f5f9;
+    --color-border: #e2e8f0;
+    --color-border-strong: #cbd5e1;
+    --color-text: #1e293b;
+    --color-text-secondary: #64748b;
+    --color-text-muted: #64748b;
+    --color-error: #ef4444;
+    --radius-md: 12px;
+    --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 14px;
+  }
+
+  /* ===== 页面说明条 ===== */
+  .proto-bar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 10px 16px; background: #fffbeb; border-bottom: 1px solid #fde68a;
+    font-size: 12px; color: #92400e;
+  }
+  .proto-bar strong { font-size: 13px; }
+  .proto-bar .spacer { flex: 1; }
+  .btn-toggle {
+    height: 28px; padding: 0 12px; border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm); background: #fff; color: var(--color-text);
+    font-size: 12px; cursor: pointer;
+  }
+  .btn-toggle.active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+
+  /* ===== 设置弹窗外壳（仿 AppSettingsDialog） ===== */
+  .dialog-mask {
+    min-height: calc(100vh - 45px);
+    padding: 24px 16px;
+    display: flex; align-items: flex-start; justify-content: center;
+  }
+  .dialog {
+    width: 900px; max-width: 100%;
+    background: var(--color-bg-card); border: 1px solid var(--color-border);
+    border-radius: var(--radius-md); box-shadow: 0 12px 32px rgba(0,0,0,0.10);
+    overflow: hidden;
+  }
+  .dialog-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; border-bottom: 1px solid var(--color-border);
+  }
+  .dialog-head h3 { margin: 0; font-size: 15px; }
+  .dialog-tabs { display: flex; gap: 4px; padding: 0 16px; border-bottom: 1px solid var(--color-border); }
+  .dialog-tabs span {
+    padding: 9px 12px; font-size: 13px; color: var(--color-text-secondary);
+    border-bottom: 2px solid transparent; cursor: default;
+  }
+  .dialog-tabs span.active { color: var(--color-primary); border-bottom-color: var(--color-primary); font-weight: 600; }
+  .dialog-body { display: flex; min-height: 420px; }
+
+  /* 左栏菜单 */
+  .side { width: 190px; flex: none; padding: 12px 10px; border-right: 1px solid var(--color-border); }
+  .side h4 { margin: 4px 8px 10px; font-size: 12px; color: var(--color-text-muted); }
+  .side ul { list-style: none; margin: 0; padding: 0; }
+  .side li {
+    padding: 9px 12px; border-radius: var(--radius-sm); font-size: 13px;
+    color: var(--color-text-secondary); margin-bottom: 2px;
+  }
+  .side li.active { background: var(--color-primary-light); color: var(--color-primary); font-weight: 600; }
+
+  /* 右栏内容 */
+  .main { flex: 1; min-width: 0; padding: 14px 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .main-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .main-head h3 { margin: 0; font-size: 15px; }
+  .main-head .hint { margin: 0; font-size: 12px; color: var(--color-text-muted); }
+  .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .toolbar .spacer { flex: 1; }
+  .search {
+    height: 30px; width: 180px; padding: 0 10px; font-size: 13px;
+    border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-input);
+  }
+  .btn {
+    height: 30px; padding: 0 12px; font-size: 13px; cursor: pointer;
+    border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: #fff; color: var(--color-text);
+  }
+  .btn:hover { background: var(--color-bg-hover); }
+  .btn-primary { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+  .btn-primary:hover { background: var(--color-primary-600); }
+  .btn-danger { color: var(--color-error); border-color: #fecaca; background: #fff; }
+  .btn-mini { height: 24px; padding: 0 8px; font-size: 12px; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  /* ===== 表格（仿 Element Plus el-table） ===== */
+  .table-wrap { border: 1px solid var(--color-border); border-radius: var(--radius-sm); overflow: auto; }
+  table.grid { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.grid th {
+    background: var(--color-bg-hover); color: var(--color-text-secondary);
+    font-weight: 600; text-align: left; padding: 9px 10px; white-space: nowrap;
+    border-bottom: 1px solid var(--color-border);
+  }
+  table.grid td {
+    padding: 6px 10px; border-bottom: 1px solid var(--color-border);
+    vertical-align: middle; white-space: nowrap;
+  }
+  table.grid tbody tr:hover { background: var(--color-bg-hover); }
+  table.grid tbody tr:last-child td { border-bottom: none; }
+  table.grid tr.is-hidden td { opacity: .5; }
+  .col-show { width: 52px; }
+  .col-name { width: 160px; min-width: 150px; }
+  .col-product { width: 118px; }
+  .col-unit { width: 84px; }
+  .col-price { width: 98px; }
+  .col-qty { width: 84px; }
+  .col-derived { width: 90px; }
+  .col-ops { width: 122px; }
+
+  /* 单元格控件 */
+  .cell-input, .cell-select {
+    width: 100%; height: 28px; padding: 0 8px; font-size: 13px;
+    border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--color-text);
+  }
+  .cell-input:hover, .cell-select:hover { border-color: var(--color-border); }
+  .cell-input:focus, .cell-select:focus { outline: none; border-color: var(--color-primary); background: #fff; }
+  .cell-input.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .derived {
+    display: inline-block; min-width: 56px; padding: 2px 8px; border-radius: 4px;
+    background: var(--color-bg-hover); color: var(--color-text-secondary);
+    font-size: 12px; font-variant-numeric: tabular-nums; text-align: center;
+  }
+  .name-cell { width: 100%; display: flex; align-items: center; gap: 4px; min-width: 0; }
+  .name-cell .cell-input { flex: 1 1 0; min-width: 0; width: 0; }
+  .lock { color: var(--color-text-muted); font-size: 12px; margin-left: 4px; }
+  .tag-builtin {
+    display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 11px;
+    background: var(--color-primary-light); color: var(--color-primary); margin-left: 6px;
+  }
+  .empty {
+    padding: 28px 10px; text-align: center; color: var(--color-text-muted); font-size: 13px;
+  }
+  .ops { display: flex; gap: 6px; }
+
+  /* 新增行：贴在表格底部，与表格同列宽 */
+  .add-row { display: flex; gap: 8px; align-items: center; padding: 10px; border-top: 1px dashed var(--color-border); flex-wrap: wrap; }
+  .add-row .f { display: flex; flex-direction: column; gap: 4px; }
+  .add-row .f > label { font-size: 11px; color: var(--color-text-muted); }
+  .add-row input, .add-row select {
+    height: 28px; padding: 0 8px; font-size: 13px;
+    border: 1px solid var(--color-border); border-radius: 4px; background: #fff; color: var(--color-text);
+  }
+  .add-row .derived-preview { align-self: flex-end; padding-bottom: 4px; }
+
+  /* ===== 移动端降级（≤768px）：表格转「标签 + 值」卡片 ===== */
+  .is-mobile .dialog { width: 393px; }
+  .is-mobile .dialog-body { flex-direction: column; min-height: 0; }
+  .is-mobile .side { width: 100%; border-right: none; border-bottom: 1px solid var(--color-border); }
+  .is-mobile .side ul { display: flex; gap: 6px; overflow-x: auto; }
+  .is-mobile .side li { white-space: nowrap; }
+  .is-mobile .table-wrap { border: none; }
+  .is-mobile table.grid thead { display: none; }
+  .is-mobile table.grid, .is-mobile table.grid tbody, .is-mobile table.grid tr, .is-mobile table.grid td { display: block; width: 100%; }
+  .is-mobile table.grid tr {
+    border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+    margin-bottom: 8px; padding: 6px 8px; background: #fff;
+  }
+  .is-mobile table.grid td { border: none; display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+  .is-mobile table.grid td::before {
+    content: attr(data-label); width: 72px; flex: none;
+    font-size: 12px; color: var(--color-text-muted);
+  }
+  .is-mobile td .ops { justify-content: flex-end; flex: 1; }
+  .is-mobile .cell-input, .is-mobile .cell-select { background: #fff; border-color: var(--color-border); }
+
+  /* ===== 说明区 ===== */
+  .notes { margin: 0 auto; max-width: 900px; padding: 16px; font-size: 13px; color: var(--color-text-secondary); }
+  .notes h4 { margin: 0 0 8px; font-size: 14px; color: var(--color-text); }
+  .notes ul { margin: 0; padding-left: 20px; }
+  .notes li { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<div class="proto-bar">
+  <strong>原型预览</strong>
+  <span>销售记账 → 右上角设置 → 进货商品管理（表格化）。原型可直接交互：改名、改价、勾选显示、上下移动、删除、新增行。</span>
+  <span class="spacer"></span>
+  <button class="btn-toggle" id="btnMobile">切到手机视图（393px）</button>
+</div>
+
+<div class="dialog-mask">
+  <div class="dialog" id="dialog">
+    <div class="dialog-head">
+      <h3>设置</h3>
+      <span style="font-size:12px;color:var(--color-text-muted)">✕</span>
+    </div>
+    <div class="dialog-tabs">
+      <span>通用</span><span>个人工作台</span><span class="active">销售记账</span><span>学生工作台</span>
+    </div>
+    <div class="dialog-body">
+      <!-- 左栏 -->
+      <div class="side">
+        <h4>销售记账</h4>
+        <ul>
+          <li>基础设置</li>
+          <li>账本管理</li>
+          <li>备份导入导出</li>
+          <li>商品分类管理</li>
+          <li class="active">进货商品管理</li>
+        </ul>
+      </div>
+
+      <!-- 右栏：进货商品管理（表格化） -->
+      <div class="main">
+        <div class="main-head">
+          <h3>进货商品管理</h3>
+          <p class="hint">勾选控制标签页显示；内置产品不可删除，可改名、排序与配置默认单位/单价/商品数量</p>
+        </div>
+
+        <div class="toolbar">
+          <input class="search" id="kw" placeholder="搜索产品名称" />
+          <span class="spacer"></span>
+          <button class="btn" id="btnExpand">展开/收起 高级列</button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="grid" id="grid">
+            <thead>
+              <tr>
+                <th class="col-show">显示</th>
+                <th class="col-name">产品名称</th>
+                <th class="col-product">关联商品</th>
+                <th class="col-unit">单位</th>
+                <th class="col-price">单价（元）</th>
+                <th class="col-qty">商品数量</th>
+                <th class="col-derived">商品单价</th>
+                <th class="col-ops">操作</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+          <div class="empty" id="empty" style="display:none">暂无产品，请在下方新增一行</div>
+        </div>
+
+        <!-- 新增行 -->
+        <div class="add-row">
+          <div class="f">
+            <label>产品名称</label>
+            <input id="newName" maxlength="20" placeholder="新产品名称" style="width:130px" />
+          </div>
+          <div class="f">
+            <label>关联商品</label>
+            <select id="newProduct" style="width:120px">
+              <option value="">未绑定</option>
+              <option value="bp_1">鸡蛋</option>
+              <option value="bp_2">矿泉水</option>
+              <option value="bp_3">烤肠</option>
+            </select>
+          </div>
+          <div class="f">
+            <label>单位</label>
+            <select id="newUnit" style="width:84px">
+              <option value="">—</option>
+            </select>
+          </div>
+          <div class="f">
+            <label>单价（元）</label>
+            <input id="newPrice" type="number" min="0" step="0.01" placeholder="0.00" style="width:88px" />
+          </div>
+          <div class="f">
+            <label>商品数量</label>
+            <input id="newQty" type="number" min="0" step="1" placeholder="0" style="width:80px" />
+          </div>
+          <div class="f derived-preview">
+            <label>商品单价</label>
+            <span class="derived" id="newDerived">—</span>
+          </div>
+          <button class="btn btn-primary" id="btnAdd" style="margin-top:16px">添加</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="notes">
+  <h4>相比现状（卡片列表 + 每项一行配置子行）的变化</h4>
+  <ul>
+    <li>一行一个产品，字段横向成列：产品名称 / 关联商品 / 单位 / 单价 / 商品数量 / 商品单价（派生）/ 操作；当前「主行 + 5 个配置项子行」的折叠结构取消。</li>
+    <li>单元格内直接编辑（输入框默认无边框、hover/focus 才显形），失焦或 Enter 即保存 —— 与现在的改名交互一致。</li>
+    <li>商品单价为派生只读列（单价 ÷ 商品数量），灰底标签展示，改单价/数量时实时刷新。</li>
+    <li>新增行贴在表格底部并与列宽对齐，输入即预览商品单价，回车直接添加。</li>
+    <li>内置产品（摊位费）行：删除按钮置灰 + 锁标；其余行可删。</li>
+    <li>窄屏（≤768px）表格转「标签 + 值」卡片，字段名用 <code>td::before</code> 呈现，不再横向滚动。</li>
+  </ul>
+</div>
+
+<script>
+  const UNITS = ['件','包','根','箱','袋','个','斤','盒','瓶','条','只','套','台','米','卷']
+  const PRODUCTS = [['bp_1','鸡蛋'],['bp_2','矿泉水'],['bp_3','烤肠']]
+
+  const rows = [
+    { id: 'expense-stall', name: '摊位费', builtin: true,  visible: true,  productId: '', unit: '天', price: 30,  qty: null },
+    { id: 'bec_1',         name: '燃气费', builtin: false, visible: true,  productId: '', unit: '瓶', price: 15,  qty: 1 },
+    { id: 'bec_2',         name: '鸡蛋',   builtin: false, visible: true,  productId: 'bp_1', unit: '箱', price: 60, qty: 12 },
+    { id: 'bec_3',         name: '一次性餐盒', builtin: false, visible: false, productId: '', unit: '包', price: 8, qty: 50 }
+  ]
+  let seq = 100
+
+  const tbody = document.getElementById('tbody')
+  const emptyEl = document.getElementById('empty')
+
+  function derivedOf(r) {
+    const p = Number(r.price), q = Number(r.qty)
+    if (!(p > 0) || !(q > 0)) return null
+    return Math.round((p / q) * 100) / 100
+  }
+  function fmt(v) { return v == null ? '—' : (Math.round(v * 100) / 100) }
+
+  function unitOptions(selected) {
+    return '<option value="">—</option>' + UNITS.map(u =>
+      '<option value="' + u + '"' + (u === selected ? ' selected' : '') + '>' + u + '</option>').join('')
+  }
+  function productOptions(selected) {
+    return '<option value="">未绑定</option>' + PRODUCTS.map(([id, n]) =>
+      '<option value="' + id + '"' + (id === selected ? ' selected' : '') + '>' + n + '</option>').join('')
+  }
+
+  function render() {
+    const kw = document.getElementById('kw').value.trim()
+    const view = rows.filter(r => !kw || r.name.includes(kw))
+    emptyEl.style.display = view.length ? 'none' : 'block'
+    tbody.innerHTML = view.map((r, i) => {
+      const d = derivedOf(r)
+      return '<tr data-id="' + r.id + '" class="' + (r.visible ? '' : 'is-hidden') + '">' +
+        '<td class="col-show" data-label="显示"><input type="checkbox" data-act="vis" ' + (r.visible ? 'checked' : '') + ' /></td>' +
+        '<td class="col-name" data-label="产品"><div class="name-cell"><input class="cell-input" data-field="name" maxlength="20" value="' + r.name + '" />' +
+          (r.builtin ? '<span class="tag-builtin">内置</span>' : '') +
+          (r.visible ? '' : '<span class="lock">隐藏</span>') + '</div></td>' +
+        '<td class="col-product" data-label="关联商品"><select class="cell-select" data-field="productId">' + productOptions(r.productId) + '</select></td>' +
+        '<td class="col-unit" data-label="单位"><select class="cell-select" data-field="unit">' + unitOptions(r.unit) + '</select></td>' +
+        '<td class="col-price" data-label="单价"><input class="cell-input num" data-field="price" type="number" min="0" step="0.01" value="' + (r.price == null ? '' : r.price) + '" /></td>' +
+        '<td class="col-qty" data-label="数量"><input class="cell-input num" data-field="qty" type="number" min="0" step="1" value="' + (r.qty == null ? '' : r.qty) + '" /></td>' +
+        '<td class="col-derived" data-label="商品单价"><span class="derived" data-role="derived">' + fmt(d) + '</span></td>' +
+        '<td class="col-ops" data-label="操作"><div class="ops">' +
+          '<button class="btn btn-mini" data-act="up"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
+          '<button class="btn btn-mini" data-act="down"' + (i === view.length - 1 ? ' disabled' : '') + '>↓</button>' +
+          '<button class="btn btn-mini btn-danger" data-act="del"' + (r.builtin ? ' disabled title="内置产品不可删除"' : '') + '>删除</button>' +
+        '</div></td>' +
+      '</tr>'
+    }).join('')
+  }
+
+  function rowById(id) { return rows.find(r => r.id === id) }
+
+  // 单元格编辑：只更新数据 + 派生列，不整表重绘（避免输入框失焦）
+  tbody.addEventListener('input', e => {
+    const el = e.target
+    const tr = el.closest('tr')
+    if (!tr) return
+    const r = rowById(tr.dataset.id)
+    const f = el.dataset.field
+    if (!r || !f) return
+    if (f === 'price' || f === 'qty') {
+      const v = el.value === '' ? null : Number(el.value)
+      r[f] = (v == null || Number.isNaN(v)) ? null : v
+      const d = derivedOf(r)
+      tr.querySelector('[data-role="derived"]').textContent = fmt(d)
+    } else {
+      r[f] = el.value
+    }
+  })
+  // 操作列
+  tbody.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-act]')
+    if (!btn) return
+    const tr = btn.closest('tr')
+    const id = tr.dataset.id
+    const idx = rows.findIndex(r => r.id === id)
+    const act = btn.dataset.act
+    if (act === 'vis') return
+    if (act === 'up' && idx > 0) { const t = rows[idx - 1]; rows[idx - 1] = rows[idx]; rows[idx] = t; render() }
+    if (act === 'down' && idx < rows.length - 1) { const t = rows[idx + 1]; rows[idx + 1] = rows[idx]; rows[idx] = t; render() }
+    if (act === 'del' && !rows[idx].builtin) {
+      if (confirm('确定要删除产品「' + rows[idx].name + '」吗？')) { rows.splice(idx, 1); render() }
+    }
+  })
+  // 显示勾选 + 下拉（关联商品 / 单位）
+  tbody.addEventListener('change', e => {
+    const el = e.target
+    if (el.type === 'checkbox' && el.dataset.act === 'vis') {
+      rowById(el.closest('tr').dataset.id).visible = el.checked
+      render()
+      return
+    }
+    if (el.tagName === 'SELECT' && el.dataset.field) {
+      rowById(el.closest('tr').dataset.id)[el.dataset.field] = el.value
+    }
+  })
+
+  document.getElementById('kw').addEventListener('input', render)
+
+  // 高级列（关联商品 / 商品数量 / 商品单价）显隐切换
+  document.getElementById('btnExpand').addEventListener('click', () => {
+    const grid = document.getElementById('grid')
+    const hide = grid.classList.toggle('collapse-adv')
+    const idxs = [2, 5, 6]
+    grid.querySelectorAll('tr').forEach(tr => {
+      [...tr.children].forEach((td, i) => { if (idxs.includes(i)) td.style.display = hide ? 'none' : '' })
+    })
+  })
+
+  // 新增行
+  const unitSel = document.getElementById('newUnit')
+  unitSel.innerHTML = unitOptions('')
+  function refreshNewDerived() {
+    const p = Number(document.getElementById('newPrice').value)
+    const q = Number(document.getElementById('newQty').value)
+    const v = (p > 0 && q > 0) ? Math.round((p / q) * 100) / 100 : null
+    document.getElementById('newDerived').textContent = fmt(v)
+  }
+  ;['newPrice', 'newQty'].forEach(id => document.getElementById(id).addEventListener('input', refreshNewDerived))
+  document.getElementById('btnAdd').addEventListener('click', addRow)
+  document.getElementById('newName').addEventListener('keydown', e => { if (e.key === 'Enter') addRow() })
+
+  function addRow() {
+    const name = document.getElementById('newName').value.trim()
+    if (!name) { alert('产品名称不能为空'); return }
+    rows.push({
+      id: 'bec_' + (++seq), name, builtin: false, visible: true,
+      productId: document.getElementById('newProduct').value,
+      unit: document.getElementById('newUnit').value,
+      price: document.getElementById('newPrice').value === '' ? null : Number(document.getElementById('newPrice').value),
+      qty: document.getElementById('newQty').value === '' ? null : Number(document.getElementById('newQty').value)
+    })
+    document.getElementById('newName').value = ''
+    document.getElementById('newPrice').value = ''
+    document.getElementById('newQty').value = ''
+    document.getElementById('newProduct').value = ''
+    document.getElementById('newUnit').value = ''
+    refreshNewDerived()
+    render()
+  }
+
+  // 手机视图切换
+  document.getElementById('btnMobile').addEventListener('click', e => {
+    const on = document.getElementById('dialog').classList.toggle('is-mobile')
+    document.querySelector('.dialog-mask').classList.toggle('is-mobile', on)
+    e.target.classList.toggle('active', on)
+    e.target.textContent = on ? '切回桌面视图' : '切到手机视图（393px）'
+  })
+
+  render()
+  refreshNewDerived()
+</script>
+</body>
+</html>

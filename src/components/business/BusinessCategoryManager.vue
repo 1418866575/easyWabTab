@@ -2,6 +2,7 @@
 // 销售记账共享分类管理弹框（product 商品分类 / expense 支出产品 双模式，页面 ⚙️ 与设置弹窗 tab 复用）
 import { computed, reactive, ref } from 'vue'
 import { showConfirm } from '@/utils/dialog'
+import { useViewMode } from '@/composables/useViewMode'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { reportBizResult, type BizResultLike } from '@/composables/bizResult'
 import type { BusinessProductCategory, BusinessExpenseCategory } from '@/types'
@@ -14,9 +15,26 @@ const emit = defineEmits<{ close: [] }>()
 
 const store = useWorkbenchBusinessStore()
 
+// ⚠️ useViewMode 返回 reactive 包装对象，不能解构（会丢失响应式），必须用 vm.isMobile
+const vm = useViewMode()
+
 const isProduct = computed(() => props.kind === 'product')
 const isExpense = computed(() => props.kind === 'expense')
 const list = computed(() => (isProduct.value ? store.productCategories : store.expenseCategories))
+
+// 表格搜索（仅 expense 表格模式）：按名称过滤，不影响排序/持久化
+const kw = ref('')
+const filtered = computed(() => {
+  const k = kw.value.trim()
+  return k ? list.value.filter(c => c.name.includes(k)) : list.value
+})
+
+/**
+ * 高级列（关联商品 / 商品数量 / 商品单价）显隐：
+ * 默认收起 —— 设置面板宽度有限，全 8 列会挤出横向滚动；需要配置默认单位/单价时再展开。
+ * （窄屏下展开后表格在自身容器内横向滚动，不会撑破页面。）
+ */
+const showAdvanced = ref(false)
 
 // 行内改名：仅暂存输入中文本，blur/Enter 提交、Esc 还原（仿待办分类管理惯例）
 const editing = reactive<Record<string, string>>({})
@@ -168,7 +186,7 @@ function handleAdd(): void {
 <template>
   <BaseDialog
     :title="isProduct ? '商品分类管理' : '进货商品管理'"
-    width="460px"
+    :width="isProduct ? '460px' : '880px'"
     :embedded="embedded"
     :hide-header="embedded"
     :close-on-overlay="!embedded"
@@ -177,6 +195,236 @@ function handleAdd(): void {
   >
     <div class="bizcat-body">
       <p class="bizcat-hint">勾选控制标签页显示；{{ isProduct ? '内置分类可删除（删除后该分类商品归未分类）' : '内置产品不可删除，可改名、排序与配置默认单位/单价/商品数量' }}</p>
+
+      <!-- ===== 进货商品（expense）：表格化（2026-10-09，原型 docs/进货商品管理-表格原型.html） ===== -->
+      <template v-if="isExpense">
+        <div class="bizcat-toolbar">
+          <el-input
+            v-model="kw"
+            size="small"
+            class="bizcat-search"
+            placeholder="搜索产品名称"
+            clearable
+            data-testid="bizcat-search-expense"
+          />
+          <span class="bizcat-toolbar-spacer" />
+          <el-button size="small" data-testid="bizcat-toggle-adv" @click="showAdvanced = !showAdvanced">
+            {{ showAdvanced ? '收起高级列' : '展开高级列' }}
+          </el-button>
+        </div>
+
+        <el-table
+          class="ewt-table bizcat-table"
+          :data="filtered"
+          size="small"
+          border
+          stripe
+          row-key="id"
+          max-height="420"
+          empty-text="暂无产品，请在下方新增"
+          data-testid="bizcat-table-expense"
+        >
+          <el-table-column label="显示" width="56" align="center">
+            <template #default="{ row }">
+              <el-checkbox
+                :model-value="row.visible"
+                :data-testid="`bizcat-tab-expense-${row.id}`"
+                @change="onToggleVisible(row.id)"
+              />
+            </template>
+          </el-table-column>
+
+          <el-table-column label="产品名称" min-width="150">
+            <template #default="{ row }">
+              <div class="bizcat-name-cell">
+                <el-input
+                  size="small"
+                  maxlength="20"
+                  :data-testid="`bizcat-name-expense-${row.id}`"
+                  :model-value="editing[row.id] ?? row.name"
+                  @input="editing[row.id] = $event"
+                  @change="commitRename(row.id)"
+                  @keydown.esc.stop="revertRename(row.id)"
+                />
+                <span v-if="isBuiltInOf(row.id)" class="bizcat-tag-builtin">内置</span>
+                <span v-else-if="!row.visible" class="bizcat-tag-hidden">隐藏</span>
+              </div>
+            </template>
+          </el-table-column>
+
+          <el-table-column v-if="showAdvanced" label="关联商品" width="132">
+            <template #default="{ row }">
+              <el-select
+                size="small"
+                class="bizcat-cell-select"
+                :model-value="productIdOf(row)"
+                placeholder="未绑定"
+                clearable
+                filterable
+                :data-testid="`bizcat-product-${row.id}`"
+                @change="onCatProduct(row.id, $event)"
+              >
+                <el-option v-for="p in store.products" :key="p.id" :value="p.id" :label="p.name" />
+              </el-select>
+            </template>
+          </el-table-column>
+
+          <!-- 单位/单价：窄屏隐藏（393px 放不下 8 列，只留 显示/名称/操作；高级列仍可展开） -->
+          <el-table-column v-if="!vm.isMobile" label="单位" width="106">
+            <template #default="{ row }">
+              <el-select
+                size="small"
+                class="bizcat-cell-select"
+                :model-value="unitOf(row)"
+                placeholder="—"
+                clearable
+                filterable
+                allow-create
+                default-first-option
+                :data-testid="`bizcat-unit-${row.id}`"
+                @change="onCatUnit(row.id, $event)"
+              >
+                <el-option v-for="u in EXPENSE_UNITS" :key="u" :value="u" :label="u" />
+              </el-select>
+            </template>
+          </el-table-column>
+
+          <el-table-column v-if="!vm.isMobile" label="单价（元）" width="112">
+            <template #default="{ row }">
+              <el-input-number
+                size="small"
+                class="bizcat-cell-number"
+                :model-value="priceOf(row)"
+                :min="0"
+                :step="0.01"
+                :precision="2"
+                :controls="false"
+                placeholder="单价"
+                :data-testid="`bizcat-price-${row.id}`"
+                @change="onCatPrice(row.id, $event)"
+              />
+            </template>
+          </el-table-column>
+
+          <el-table-column v-if="showAdvanced" label="商品数量" width="106">
+            <template #default="{ row }">
+              <el-input-number
+                size="small"
+                class="bizcat-cell-number"
+                :model-value="productQtyOf(row)"
+                :min="0"
+                :step="1"
+                :precision="0"
+                :controls="false"
+                placeholder="数量"
+                :data-testid="`bizcat-prodqty-${row.id}`"
+                @change="onCatProductQty(row.id, $event)"
+              />
+            </template>
+          </el-table-column>
+
+          <!-- 商品单价 = 单价 ÷ 商品数量（派生只读） -->
+          <el-table-column v-if="showAdvanced" label="商品单价" width="98" align="center">
+            <template #default="{ row }">
+              <span class="bizcat-prodprice" :data-testid="`bizcat-prodprice-${row.id}`">{{ productPriceOf(row) != null ? productPriceOf(row) : '—' }}</span>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="操作" width="134" align="center" fixed="right">
+            <template #default="{ row }">
+              <div class="bizcat-ops">
+                <el-button size="small" :data-testid="`bizcat-up-expense-${row.id}`" @click="onMove(row.id, 'up')">↑</el-button>
+                <el-button size="small" :data-testid="`bizcat-down-expense-${row.id}`" @click="onMove(row.id, 'down')">↓</el-button>
+                <el-button
+                  size="small"
+                  type="danger"
+                  :disabled="isBuiltInOf(row.id)"
+                  :title="isBuiltInOf(row.id) ? '内置产品不可删除' : ''"
+                  :data-testid="`bizcat-del-expense-${row.id}`"
+                  @click="onDelete(row.id)"
+                >删除</el-button>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <!-- 新增行：贴表格底部，输入即预览商品单价 -->
+        <div class="bizcat-add-row">
+          <div class="bizcat-add-field">
+            <label>产品名称</label>
+            <el-input
+              v-model="newName"
+              size="small"
+              maxlength="20"
+              placeholder="新产品名称"
+              data-testid="bizcat-new-expense"
+              @keydown.enter="handleAdd"
+            />
+          </div>
+          <div class="bizcat-add-field">
+            <label>关联商品</label>
+            <el-select
+              v-model="newProductId"
+              size="small"
+              placeholder="未绑定"
+              clearable
+              filterable
+              data-testid="bizcat-new-product"
+            >
+              <el-option v-for="p in store.products" :key="p.id" :value="p.id" :label="p.name" />
+            </el-select>
+          </div>
+          <div class="bizcat-add-field">
+            <label>单位</label>
+            <el-select
+              v-model="newUnit"
+              size="small"
+              placeholder="—"
+              clearable
+              filterable
+              allow-create
+              default-first-option
+              data-testid="bizcat-new-unit"
+            >
+              <el-option v-for="u in EXPENSE_UNITS" :key="u" :value="u" :label="u" />
+            </el-select>
+          </div>
+          <div class="bizcat-add-field">
+            <label>单价（元）</label>
+            <el-input-number
+              v-model="newUnitPrice"
+              size="small"
+              :min="0"
+              :step="0.01"
+              :precision="2"
+              :controls="false"
+              placeholder="单价"
+              data-testid="bizcat-new-price"
+            />
+          </div>
+          <div class="bizcat-add-field">
+            <label>商品数量</label>
+            <el-input-number
+              v-model="newProductQty"
+              size="small"
+              :min="0"
+              :step="1"
+              :precision="0"
+              :controls="false"
+              placeholder="数量"
+              data-testid="bizcat-new-prodqty"
+            />
+          </div>
+          <div class="bizcat-add-field">
+            <label>商品单价</label>
+            <span class="bizcat-prodprice" data-testid="bizcat-new-prodprice">{{ newProductPrice != null ? newProductPrice : '—' }}</span>
+          </div>
+          <el-button size="small" type="primary" class="bizcat-add-btn" data-testid="bizcat-add-expense" @click="handleAdd">添加</el-button>
+        </div>
+      </template>
+
+      <!-- ===== 商品分类（product）：沿用卡片列表 ===== -->
+      <template v-else>
       <div class="bizcat-list">
         <div
           v-for="cat in list"
@@ -213,73 +461,6 @@ function handleAdd(): void {
               <el-button size="small" type="danger" :data-testid="`bizcat-del-${kind}-${cat.id}`" @click="onDelete(cat.id)">删除</el-button>
             </div>
           </div>
-          <!-- 支出产品：每行可配置默认单位 / 单价（元）/ 关联商品；新增支出选该产品时自动回填 -->
-          <div v-if="isExpense" class="bizcat-config">
-            <div class="bizcat-config-field">
-              <label>商品</label>
-              <el-select
-                size="small"
-                class="bizcat-product"
-                :model-value="productIdOf(cat)"
-                placeholder="绑定商品"
-                clearable
-                filterable
-                :data-testid="`bizcat-product-${cat.id}`"
-                @change="onCatProduct(cat.id, $event)"
-              >
-                <el-option v-for="p in store.products" :key="p.id" :value="p.id" :label="p.name" />
-              </el-select>
-            </div>
-            <div class="bizcat-config-field">
-              <label>单位</label>
-              <el-select
-                size="small"
-                class="bizcat-unit"
-                :model-value="unitOf(cat)"
-                placeholder="选择或输入单位"
-                clearable
-                filterable
-                allow-create
-                default-first-option
-                :data-testid="`bizcat-unit-${cat.id}`"
-                @change="onCatUnit(cat.id, $event)"
-              >
-                <el-option v-for="u in EXPENSE_UNITS" :key="u" :value="u" :label="u" />
-              </el-select>
-            </div>
-            <div class="bizcat-config-field">
-              <label>单价（元）</label>
-              <el-input-number
-                size="small"
-                class="bizcat-price"
-                :model-value="priceOf(cat)"
-                :min="0"
-                :step="0.01"
-                :precision="2"
-                placeholder="单价"
-                :data-testid="`bizcat-price-${cat.id}`"
-                @change="onCatPrice(cat.id, $event)"
-              />
-            </div>
-            <div class="bizcat-config-field">
-              <label>商品数量</label>
-              <el-input-number
-                size="small"
-                class="bizcat-price"
-                :model-value="productQtyOf(cat)"
-                :min="0"
-                :step="1"
-                :precision="0"
-                placeholder="数量"
-                :data-testid="`bizcat-prodqty-${cat.id}`"
-                @change="onCatProductQty(cat.id, $event)"
-              />
-            </div>
-            <div class="bizcat-config-field">
-              <label>商品单价（元）</label>
-              <span class="bizcat-prodprice" :data-testid="`bizcat-prodprice-${cat.id}`">{{ productPriceOf(cat) != null ? productPriceOf(cat) : '—' }}</span>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -294,69 +475,7 @@ function handleAdd(): void {
         />
         <el-button size="small" type="primary" :data-testid="`bizcat-add-${kind}`" @click="handleAdd">添加</el-button>
       </div>
-      <!-- 支出产品：新增时一并配置默认单位 / 单价（元）/ 关联商品 -->
-      <div v-if="isExpense" class="bizcat-add-config">
-        <div class="bizcat-config-field">
-          <label>商品</label>
-          <el-select
-            v-model="newProductId"
-            size="small"
-            class="bizcat-product"
-            placeholder="绑定商品"
-            clearable
-            filterable
-            :data-testid="`bizcat-new-product`"
-          >
-            <el-option v-for="p in store.products" :key="p.id" :value="p.id" :label="p.name" />
-          </el-select>
-        </div>
-        <div class="bizcat-config-field">
-          <label>单位</label>
-          <el-select
-            v-model="newUnit"
-            size="small"
-            class="bizcat-unit"
-            placeholder="选择或输入单位"
-            clearable
-            filterable
-            allow-create
-            default-first-option
-            :data-testid="`bizcat-new-unit`"
-          >
-            <el-option v-for="u in EXPENSE_UNITS" :key="u" :value="u" :label="u" />
-          </el-select>
-        </div>
-        <div class="bizcat-config-field">
-          <label>单价（元）</label>
-          <el-input-number
-            v-model="newUnitPrice"
-            size="small"
-            class="bizcat-price"
-            :min="0"
-            :step="0.01"
-            :precision="2"
-            placeholder="单价"
-            :data-testid="`bizcat-new-price`"
-          />
-        </div>
-        <div class="bizcat-config-field">
-          <label>商品数量</label>
-          <el-input-number
-            v-model="newProductQty"
-            size="small"
-            class="bizcat-price"
-            :min="0"
-            :step="1"
-            :precision="0"
-            placeholder="数量"
-            :data-testid="`bizcat-new-prodqty`"
-          />
-        </div>
-        <div class="bizcat-config-field">
-          <label>商品单价（元）</label>
-          <span class="bizcat-prodprice" :data-testid="`bizcat-new-prodprice`">{{ newProductPrice != null ? newProductPrice : '—' }}</span>
-        </div>
-      </div>
+      </template>
     </div>
   </BaseDialog>
 </template>
@@ -382,7 +501,7 @@ function handleAdd(): void {
   gap: 8px;
 }
 
-/* 每个产品/分类项：主行 + 支出产品的单位/单价配置子行 */
+/* product 模式：每个分类项（卡片列表） */
 .bizcat-item {
   display: flex;
   flex-direction: column;
@@ -395,34 +514,112 @@ function handleAdd(): void {
   padding-bottom: 0;
 }
 
-/* 支出产品：每行/新增时的默认单位、单价（元）配置区 */
-.bizcat-config,
-.bizcat-add-config {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 14px;
-  padding-left: 22px;
-}
-.bizcat-config-field {
+/* ===== expense 模式：表格化（2026-10-09，原型 docs/进货商品管理-表格原型.html） ===== */
+
+.bizcat-toolbar {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
-.bizcat-config-field > label {
-  font-size: 12px;
-  color: var(--color-text-muted, #6b7280);
+.bizcat-search {
+  width: 180px;
+}
+.bizcat-toolbar-spacer {
+  flex: 1;
+}
+
+.bizcat-table {
+  width: 100%;
+}
+
+/* 名称单元格：输入框 + 内置/隐藏标签同排，标签不参与压缩；
+   输入框默认无边框（hover/focus 才显形），与原型一致 */
+.bizcat-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+}
+.bizcat-name-cell > .el-input {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.bizcat-name-cell :deep(.el-input__wrapper) {
+  box-shadow: none;
+  background: transparent;
+  padding-left: 4px;
+}
+.bizcat-name-cell :deep(.el-input__wrapper.is-focus),
+.bizcat-name-cell :deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px var(--el-input-border-color, var(--el-border-color)) inset;
+  background: var(--color-bg-card, #fff);
+}
+.bizcat-tag-builtin,
+.bizcat-tag-hidden {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
   white-space: nowrap;
 }
-.bizcat-unit {
-  width: 92px;
+.bizcat-tag-builtin {
+  background: var(--color-primary-light, #eff6ff);
+  color: var(--color-primary, #3b82f6);
 }
-.bizcat-product {
-  width: 150px;
+.bizcat-tag-hidden {
+  background: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-text-muted, #64748b);
 }
-.bizcat-price {
-  width: 120px;
+
+/* 单元格控件撑满列宽 */
+:deep(.bizcat-cell-select),
+:deep(.bizcat-cell-number) {
+  width: 100%;
 }
+:deep(.bizcat-cell-number .el-input__inner) {
+  text-align: left;
+}
+
+.bizcat-ops {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+/* 新增行：贴表格底部，与列同一视觉语言 */
+.bizcat-add-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 6px;
+  background: var(--color-bg, #f8fafc);
+}
+.bizcat-add-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.bizcat-add-field > label {
+  font-size: 11px;
+  color: var(--color-text-muted, #64748b);
+  white-space: nowrap;
+}
+.bizcat-add-btn {
+  align-self: flex-end;
+}
+:deep(.bizcat-add-row .el-input),
+:deep(.bizcat-add-row .el-select) {
+  width: 124px;
+}
+:deep(.bizcat-add-row .el-input-number) {
+  width: 96px;
+}
+
+/* 商品单价（派生只读，表格与新增行共用） */
 .bizcat-prodprice {
   min-width: 56px;
   padding: 2px 8px;
@@ -439,8 +636,12 @@ function handleAdd(): void {
   color: var(--color-text, #e5e7eb);
 }
 
-:global(html.dark) .bizcat-config-field > label {
+:global(html.dark) .bizcat-add-field > label {
   color: var(--color-text-muted, #9ca3af);
+}
+:global(html.dark) .bizcat-add-row {
+  background: var(--color-surface-2, #0f172a);
+  border-color: var(--color-border, #334155);
 }
 
 .bizcat-row {
@@ -488,37 +689,42 @@ html.dark .bizcat-hint {
   color: var(--color-text-muted, #9ca3af);
 }
 
-/* 移动端（此前本组件零媒体查询，窄屏下固定 px + nowrap 标签会挤压同行输入框）：
-   配置项改为弹性宽度、行容器允许换行、标签不再强制不换行 */
+/* 移动端（≤768px）：
+   - product 卡片列表：行容器允许换行，避免固定 px 控件挤出同行输入框
+   - expense 表格：高级列默认收起（见 showAdvanced），表格自身在容器内横向滚动；
+     新增行改为两列铺开，搜索框占满一行 */
 @media (max-width: 768px) {
   .bizcat-row {
     flex-wrap: wrap;
-  }
-
-  .bizcat-unit,
-  .bizcat-product,
-  .bizcat-price {
-    width: auto;
-    flex: 1 1 92px;
-    min-width: 0;
   }
 
   .bizcat-prodprice {
     min-width: 48px;
   }
 
-  .bizcat-config-field {
+  .bizcat-toolbar {
     flex-wrap: wrap;
   }
-
-  /* 窄屏标签过长会挤掉输入框，允许换行优先于 nowrap */
-  .bizcat-config-field > label {
-    white-space: normal;
+  .bizcat-search {
+    width: 100%;
   }
 
-  .bizcat-config,
-  .bizcat-add-config {
-    padding-left: 0;
+  .bizcat-add-row {
+    gap: 8px;
+  }
+  :deep(.bizcat-add-row .el-input),
+  :deep(.bizcat-add-row .el-select),
+  :deep(.bizcat-add-row .el-input-number) {
+    width: auto;
+    flex: 1 1 104px;
+    min-width: 0;
+  }
+  .bizcat-add-field {
+    flex: 1 1 104px;
+    min-width: 0;
+  }
+  .bizcat-add-btn {
+    flex: 1 1 100%;
   }
 }
 </style>
