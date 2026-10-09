@@ -567,7 +567,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 
     <div class="ewt-table-toolbar is-split">
       <div class="bizpur-toolbar-left">
-        <el-button type="primary" data-testid="bizpur-add" @click="startAdd">＋ 新增进货记录</el-button>
+        <el-button type="primary" data-testid="bizpur-add" @click="startAdd">＋ 新增库存</el-button>
         <el-button class="btn-export-xlsx" data-testid="bizpur-export" :disabled="filteredWithProductFilter.length === 0" @click="exportPurchasesExcel">导出 Excel</el-button>
         <!-- 联动筛选生效提示：过滤态必须可见可撤销，否则用户从首页带过滤进入后
              会误以为「进货记录丢了」（见 docs/optimization 销售记账优化方案 M-11） -->
@@ -745,7 +745,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
     >
       <template #header>
         <div class="biz-dialog-header">
-          <h3>{{ editingId ? '编辑进货记录' : '新增进货记录' }}</h3>
+          <h3>{{ editingId ? '编辑库存' : '新增库存' }}</h3>
           <button class="biz-dialog-close" @click="showDialog = false"><Icon name="close" /></button>
         </div>
       </template>
@@ -763,9 +763,9 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
             />
           </div>
         </div>
-        <!-- 第二行：添加进货（与支出页 bizexp-add-bar 同款：日期行下方、默认按钮样式） -->
+        <!-- 第二行：添加库存（与支出页 bizexp-add-bar 同款：日期行下方、默认按钮样式） -->
         <div class="bizpur-add-bar">
-          <el-button size="small" data-testid="bizpur-add-row" @click="addRow">＋ 添加进货</el-button>
+          <el-button size="small" data-testid="bizpur-add-row" @click="addRow">＋ 添加库存</el-button>
         </div>
         <!-- 表格类列表：商品 / 总支出 / 入库数量 / 进价 / 关联支出（多选） / 操作 -->
         <div class="bizpur-row-table" data-testid="bizpur-row-table">
@@ -862,7 +862,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
               </tr>
               </template>
               <tr v-if="formRows.length === 0">
-                <td colspan="7" class="bizpur-empty-row">暂无进货记录行，点击「＋ 添加进货」新增一行</td>
+                <td colspan="7" class="bizpur-empty-row">暂无库存记录行，点击「＋ 添加库存」新增一行</td>
               </tr>
             </tbody>
           </table>
