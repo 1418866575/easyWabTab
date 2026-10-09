@@ -81,15 +81,6 @@ function getCache(): IconCache {
   return memoryCache
 }
 
-/**
- * 保存缓存到独立 store
- */
-function saveCache(cache: IconCache): void {
-  // 同步内存副本，让后续读取直接命中，不再重复解析
-  memoryCache = cache
-  void persist(cache, false)
-}
-
 /** 落盘到独立 store；容量不足时清掉过期项重试一次 */
 async function persist(cache: IconCache, retried: boolean): Promise<void> {
   try {
@@ -114,13 +105,6 @@ function dropExpired(cache: IconCache): IconCache {
     if (now - entry.timestamp < expiryMs) filtered[key] = entry
   }
   return filtered
-}
-
-/**
- * 清理过期缓存项
- */
-function cleanExpiredCache(): void {
-  saveCache(dropExpired(getCache()))
 }
 
 /**

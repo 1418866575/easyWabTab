@@ -7,7 +7,7 @@ const entry: ToolboxToolEntry = {
     name: '贷款 / 房贷计算器',
     icon: '🏠',
     description: '等额本息与等额本金对比、提前还款模拟与还款明细导出',
-    category: 'calc',
+    category: 'loan',
     tags: ["房贷","贷款","月供"],
     status: 'active',
     kind: 'internal',

@@ -18,7 +18,6 @@
  */
 import {
   idbGet,
-  idbPut,
   idbClear,
   idbGetAllEntries,
   idbPutKey,

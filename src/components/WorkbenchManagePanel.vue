@@ -97,6 +97,14 @@ const entries = computed<Entry[]>(() => [
     builtin: 'toolbox',
     // 三重隐藏：设置里已关闭 / 已在工具箱页（避免"点了还在原地"）/ 当前就在导航站（route.path === '/'）
     visible: store.toolboxButtonVisible !== false && route.path !== '/toolbox' && route.path !== '/'
+  },
+  {
+    key: 'smart',
+    path: '/smart',
+    name: store.smartPageDisplayName,
+    icon: store.smartPageIcon,
+    builtin: 'lightbulb',
+    visible: store.smartPageVisible !== false
   }
 ])
 
