@@ -32,6 +32,7 @@
     "test:business": "node --experimental-strip-types scripts/test-business-core.ts",
     "test:smart": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-smart-core.ts",
     "test:smart-settings": "node --experimental-strip-types scripts/test-smart-settings-core.ts",
+    "test:loan-extra": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-loan-extra-core.ts",
     "test:toolbox": "node --experimental-strip-types scripts/test-toolbox-core.ts",
     "test:nav-guard": "node --experimental-strip-types scripts/test-nav-guard.ts",
     "test:xlsx": "node --experimental-strip-types scripts/test-xlsx-export.ts",
