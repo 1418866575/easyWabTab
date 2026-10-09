@@ -23,6 +23,16 @@ import { formatYuan } from './ledgerCore.ts'
 /** 支出内置分类 id（不可删；normalize 时缺失自动补回） */
 export const BUSINESS_EXPENSE_BUILTIN_IDS = DEFAULT_BUSINESS_EXPENSE_CATEGORIES.map(c => c.id)
 
+/**
+ * 已下线的内置支出产品 id（2026-10-09 用户要求：内置只保留「摊位费」）。
+ * 存量数据里的这些 id 由 normalizeExpenseCategories 统一清理：
+ *  - 未被任何支出明细引用 → 直接删除（用户要的效果）
+ *  - 仍被引用 → 保留但**降级为自定义**（isBuiltIn 置 false），用户可在管理里自行删除，
+ *    绝不静默删掉还挂着支出记录的产品（否则那笔支出会从分类视图里消失，看起来像丢数据）。
+ * ⚠️ 别因为「不在 DEFAULT 里」就当普通自定义项留着 isBuiltIn=true —— 那样用户永远删不掉。
+ */
+export const RETIRED_EXPENSE_CATEGORY_IDS: string[] = ['expense-gas', 'expense-seasoning', 'expense-transport', 'expense-other']
+
 /** 商品分类 id 前缀 / 支出自定义分类 id 前缀 / 其余实体 id 前缀 */
 export const ID_PREFIX = { product: 'bp_', productCat: 'bpc_', expense: 'be_', expenseCat: 'bec_', purchase: 'bpr_', daily: 'bd_', expenseDaily: 'bed_' } as const
 
@@ -112,8 +122,13 @@ export function normalizeProductCategories(raw: unknown): BusinessProductCategor
   return out
 }
 
-/** 归一化支出分类列表：非数组 → 默认内置；内置 5 缺失自动补回（不可删契约）；自定义保留 */
-export function normalizeExpenseCategories(raw: unknown): BusinessExpenseCategory[] {
+/**
+ * 归一化支出分类列表：非数组 → 默认内置；内置缺失自动补回（不可删契约）；自定义保留。
+ * @param opts.inUseIds 仍被支出明细引用的分类 id 集合 —— 用于判断已下线内置项能否删除
+ *   （下线项无人引用则删，有人引用则降级为自定义保留）。不传 = 全部视为无人引用。
+ */
+export function normalizeExpenseCategories(raw: unknown, opts?: { inUseIds?: Iterable<string> }): BusinessExpenseCategory[] {
+  const inUse = new Set(opts?.inUseIds ?? [])
   if (!Array.isArray(raw)) return DEFAULT_BUSINESS_EXPENSE_CATEGORIES.map(c => ({ ...c }))
   const out: BusinessExpenseCategory[] = []
   const seen = new Set<string>()
@@ -121,13 +136,16 @@ export function normalizeExpenseCategories(raw: unknown): BusinessExpenseCategor
     if (item === null || typeof item !== 'object') continue
     const c = item as Record<string, unknown>
     if (typeof c.id !== 'string' || !c.id || typeof c.name !== 'string' || !c.name.trim()) continue
+    // 已下线内置项：没人用 → 直接删（用户要的效果）；有人用 → 降级为自定义，留给用户决定
+    const retired = RETIRED_EXPENSE_CATEGORY_IDS.includes(c.id)
+    if (retired && !inUse.has(c.id)) continue
     seen.add(c.id)
     out.push({
       id: c.id,
       name: c.name.trim().slice(0, 20),
       sortOrder: typeof c.sortOrder === 'number' && Number.isFinite(c.sortOrder) ? c.sortOrder : out.length + 1,
       visible: c.visible !== false,
-      isBuiltIn: c.isBuiltIn === true || BUSINESS_EXPENSE_BUILTIN_IDS.includes(c.id),
+      isBuiltIn: retired ? false : c.isBuiltIn === true || BUSINESS_EXPENSE_BUILTIN_IDS.includes(c.id),
       // 产品默认单位/单价（可选）：与 normExpense 同口径归一，非法/非正数 → undefined
       unit: typeof c.unit === 'string' && c.unit.trim() ? c.unit.trim().slice(0, EXPENSE_UNIT_MAX) : undefined,
       unitPrice: typeof c.unitPrice === 'number' && Number.isFinite(c.unitPrice) && c.unitPrice > 0 ? c.unitPrice : undefined,
@@ -628,7 +646,7 @@ export function expenseQtyUnit(e: BusinessExpense): string {
 /**
  * 支出产品的「商品单价」= 单价 ÷ 商品数量（派生，只读）。
  * 单价（unitPrice）与商品数量（productQuantity）均须为正数才有效，否则返回 undefined。
- * 用于「支出产品管理」里单价之后的商品单价展示（如 单价 60 ÷ 商品数量 12 = 商品单价 5）。
+ * 用于「进货商品管理」里单价之后的商品单价展示（如 单价 60 ÷ 商品数量 12 = 商品单价 5）。
  */
 export function productUnitPriceOf(c: BusinessExpenseCategory): number | undefined {
   const up = typeof c?.unitPrice === 'number' && Number.isFinite(c.unitPrice) ? c.unitPrice : NaN
@@ -810,17 +828,42 @@ function normalizeSettings(raw: unknown): BusinessSettings {
   return out
 }
 
+/**
+ * 收集仍被支出明细引用的分类 id（新格式 expenseDailies[].items[] + 旧扁平格式 expenses[]）。
+ * 用于判断「已下线的内置支出产品」能不能安全删除 —— 有引用就不能删，否则那笔支出会从分类视图里消失。
+ */
+function collectExpenseCategoryIdsInUse(data: Record<string, unknown>): Set<string> {
+  const out = new Set<string>()
+  const addFromItems = (items: unknown): void => {
+    if (!Array.isArray(items)) return
+    for (const it of items) {
+      if (it === null || typeof it !== 'object') continue
+      const cid = (it as Record<string, unknown>).categoryId
+      if (typeof cid === 'string' && cid) out.add(cid)
+    }
+  }
+  const dailies = Array.isArray(data.expenseDailies) ? (data.expenseDailies as unknown[]) : []
+  for (const d of dailies) {
+    if (d === null || typeof d !== 'object') continue
+    addFromItems((d as Record<string, unknown>).items)
+  }
+  addFromItems(data.expenses) // 旧扁平格式（迁移路径）
+  return out
+}
+
 /** 归一化（幂等）：非对象 → empty；各字段独立归一、分类种子/内置契约保持 */
 export function normalizeBusinessData(raw: unknown): BusinessData {
   if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return emptyBusinessData()
   const data = raw as Record<string, unknown>
+  // 先算「谁还在被引用」，再归一分类：决定已下线内置项是删除还是降级保留
+  const inUseIds = collectExpenseCategoryIdsInUse(data)
   return {
     productCategories: normalizeProductCategories(data.productCategories),
-    expenseCategories: normalizeExpenseCategories(data.expenseCategories),
+    expenseCategories: normalizeExpenseCategories(data.expenseCategories, { inUseIds }),
     products: Array.isArray(data.products) ? (data.products.map(normProduct).filter(Boolean) as BusinessProduct[]) : [],
     purchases: Array.isArray(data.purchases) ? (data.purchases.map(normPurchase).filter(Boolean) as BusinessPurchase[]) : [],
     dailyRecords: Array.isArray(data.dailyRecords) ? (data.dailyRecords.map(normDailyRecord).filter(Boolean) as BusinessDailyRecord[]) : [],
-    expenseDailies: normalizeExpenseDailies(data, normalizeExpenseCategories(data.expenseCategories)),
+    expenseDailies: normalizeExpenseDailies(data, normalizeExpenseCategories(data.expenseCategories, { inUseIds })),
     settings: normalizeSettings(data.settings)
   }
 }

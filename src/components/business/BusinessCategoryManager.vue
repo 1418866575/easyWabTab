@@ -167,7 +167,7 @@ function handleAdd(): void {
 
 <template>
   <BaseDialog
-    :title="isProduct ? '商品分类管理' : '支出产品管理'"
+    :title="isProduct ? '商品分类管理' : '进货商品管理'"
     width="460px"
     :embedded="embedded"
     :hide-header="embedded"

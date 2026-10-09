@@ -152,8 +152,9 @@ function test(name: string, fn: () => void) {
 test('T1 emptyBusinessData seeds', () => {
   const d = emptyBusinessData()
   assert.equal(d.productCategories.length, 5)
-  assert.equal(d.expenseCategories.length, 5)
-  assert.deepEqual(d.expenseCategories.map(c => c.name), ['摊位费', '燃气费', '调料包装', '交通费', '其他'])
+  // 2026-10-09 起内置支出产品只保留「摊位费」（燃气费/调料包装/交通费/其他 已下线）
+  assert.equal(d.expenseCategories.length, 1)
+  assert.deepEqual(d.expenseCategories.map(c => c.name), ['摊位费'])
   assert.equal(d.products.length, 0)
   assert.equal(d.settings.lowStockThreshold, 20)
   assert.equal(d.settings.stallName, '')
@@ -168,13 +169,22 @@ test('T2 normalizeBusinessData degenerate', () => {
   assert.equal(d.products[0].sellingPrice, 0)
 })
 
-// T3 — normalizeExpenseCategories：内置缺失自动补回（不可删契约）；非法项剔除
+// T3 — normalizeExpenseCategories：内置缺失自动补回（当前仅摊位费）；已下线内置项按引用情况清理
 test('T3 normalizeExpenseCategories builtin restore', () => {
   const out = normalizeExpenseCategories([{ id: 'expense-stall', name: '摊位', sortOrder: 1, visible: true, isBuiltIn: true }])
-  assert.equal(out.length, 5)
-  assert.ok(out.some(c => c.id === 'expense-gas'))
+  assert.deepEqual(out.map(c => c.id), ['expense-stall'], '内置只剩摊位费')
   const empty = normalizeExpenseCategories([])
-  assert.equal(empty.length, 5, '空数组也应补回内置')
+  assert.equal(empty.length, 1, '空数组也应补回内置摊位费')
+  // 已下线内置项：未被引用 → 删除；仍被引用 → 降级为自定义（用户可删），绝不静默丢支出记录
+  const legacy = [
+    { id: 'expense-stall', name: '摊位费', sortOrder: 1, visible: true, isBuiltIn: true },
+    { id: 'expense-gas', name: '燃气费', sortOrder: 2, visible: true, isBuiltIn: true },
+    { id: 'expense-other', name: '其他', sortOrder: 5, visible: true, isBuiltIn: true }
+  ]
+  assert.deepEqual(normalizeExpenseCategories(legacy).map(c => c.id), ['expense-stall'], '无引用的下线项直接删除')
+  const kept = normalizeExpenseCategories(legacy, { inUseIds: ['expense-gas'] })
+  assert.deepEqual(kept.map(c => c.id), ['expense-stall', 'expense-gas'], '被引用的下线项保留')
+  assert.equal(kept.find(c => c.id === 'expense-gas')!.isBuiltIn, false, '被引用的下线项降级为自定义（可删）')
 })
 
 // T4 — normalizeProductCategories：空数组尊重存量（用户删光）；非数组 → 种子
@@ -199,7 +209,7 @@ test('T5 add category', () => {
   }
   const elist = emptyBusinessData().expenseCategories
   const eok = addExpenseCategory(elist, '电费')
-  if (eok.ok) assert.ok(eok.list[5].id.startsWith('bec_'))
+  if (eok.ok) assert.ok(eok.list[1].id.startsWith('bec_'))
 })
 
 // T6 — renameCategory：empty/duplicate/not-found/ok；支出内置可改名
@@ -218,10 +228,10 @@ test('T6 renameCategory', () => {
 // T7 — toggleCategoryVisible + visible 过滤
 test('T7 toggle visible', () => {
   const list = emptyBusinessData().expenseCategories
-  const r = toggleCategoryVisible(list, 'expense-gas')
+  const r = toggleCategoryVisible(list, 'expense-stall')
   if (r.ok) {
-    assert.equal(r.list.find(c => c.id === 'expense-gas')!.visible, false)
-    assert.equal(visibleExpenseCategories(r.list).length, 4)
+    assert.equal(r.list.find(c => c.id === 'expense-stall')!.visible, false)
+    assert.equal(visibleExpenseCategories(r.list).length, 0)
   }
   assert.equal(visibleProductCategories(emptyBusinessData().productCategories).length, 5)
 })
@@ -231,10 +241,14 @@ test('T8 moveCategory', () => {
   const list = emptyBusinessData().expenseCategories
   assert.equal(moveCategory(list, 'nope', 'up').reason, 'not-found')
   assert.equal(moveCategory(list, 'expense-stall', 'up').reason, 'boundary')
-  const ok = moveCategory(list, 'expense-gas', 'up')
-  if (ok.ok) {
-    assert.deepEqual(ok.list.map(c => c.id)[0], 'expense-gas')
-    assert.deepEqual(ok.list.map(c => c.id)[1], 'expense-stall')
+  // 内置只剩 1 个（无法对调），先加一个自定义项再测上移
+  const added = addExpenseCategory(list, '电费')
+  if (added.ok) {
+    const ok = moveCategory(added.list, added.list[1].id, 'up')
+    if (ok.ok) {
+      assert.deepEqual(ok.list.map(c => c.id)[0], added.list[1].id)
+      assert.deepEqual(ok.list.map(c => c.id)[1], 'expense-stall')
+    }
   }
 })
 
@@ -248,9 +262,9 @@ test('T9 delete category', () => {
   assert.equal(deleteExpenseCategory(elist, 'expense-stall', false).reason, 'builtin')
   const custom = addExpenseCategory(elist, '电费')
   if (custom.ok) {
-    assert.equal(deleteExpenseCategory(custom.list, custom.list[5].id, true).reason, 'in-use')
-    const ok2 = deleteExpenseCategory(custom.list, custom.list[5].id, false)
-    if (ok2.ok) assert.equal(ok2.list.length, 5)
+    assert.equal(deleteExpenseCategory(custom.list, custom.list[1].id, true).reason, 'in-use')
+    const ok2 = deleteExpenseCategory(custom.list, custom.list[1].id, false)
+    if (ok2.ok) assert.equal(ok2.list.length, 1)
   }
 })
 
@@ -1366,25 +1380,26 @@ test('T56 normalizeExpenseTitle + 历史数据补标题', () => {
     dailyRecords: [],
     expenseDailies: [
       { id: 'bed_1', date: '2026-04-01', items: [
-        { id: 'e1', categoryId: 'expense-gas', amount: 50 },
+        // 注：已下线内置项（expense-gas 等）不再自动补回，这里用仍在内置的 expense-stall
+        { id: 'e1', categoryId: 'expense-stall', amount: 50 },
         { id: 'e2', categoryId: 'expense-not-exist', amount: 30 }
       ], createdAt: 'c', updatedAt: 'c' }
     ]
   })
   assert.equal(d.expenseDailies.length, 1, '同日两笔 → 合并为一个日容器')
   assert.equal(d.expenseDailies[0].items.length, 2)
-  assert.equal(d.expenseDailies[0].items[0].title, '燃气费', '无 title 的历史支出按分类名补齐')
+  assert.equal(d.expenseDailies[0].items[0].title, '摊位费', '无 title 的历史支出按分类名补齐')
   assert.equal(d.expenseDailies[0].items[1].title, DEFAULT_EXPENSE_TITLE, '分类缺失 → 默认标题')
   // 已有 title 的历史数据保持原值（不被分类名覆盖）
   const keep = normalizeBusinessData({
-    expenseDailies: [{ id: 'bed_3', date: '2026-04-02', items: [{ id: 'e3', categoryId: 'expense-gas', amount: 20, title: '自家灌气' }], createdAt: 'c', updatedAt: 'c' }]
+    expenseDailies: [{ id: 'bed_3', date: '2026-04-02', items: [{ id: 'e3', categoryId: 'expense-stall', amount: 20, title: '自家灌气' }], createdAt: 'c', updatedAt: 'c' }]
   })
   assert.equal(keep.expenseDailies[0].items[0].title, '自家灌气')
   // 同一天仍可记多笔产品明细（合并到同一天的日容器内）
   const sameDay = normalizeBusinessData({
     expenseDailies: [{ id: 'bed_4', date: '2026-04-03', items: [
-      { id: 'e4', categoryId: 'expense-gas', amount: 10, title: '上午进货' },
-      { id: 'e5', categoryId: 'expense-gas', amount: 15, title: '下午补货' }
+      { id: 'e4', categoryId: 'expense-stall', amount: 10, title: '上午进货' },
+      { id: 'e5', categoryId: 'expense-stall', amount: 15, title: '下午补货' }
     ], createdAt: 'c', updatedAt: 'c' }]
   })
   assert.equal(sameDay.expenseDailies[0].items.length, 2)
@@ -2604,6 +2619,44 @@ test('T98 buildLedgerSummaryBlocks 账本汇总导出', () => {
   } as any, '2026-10-06')
   assert.equal(empty.length, 4, '空数据仍返回 4 段')
   assert.equal(empty[0].rows.length, 0, '空数据销售段 0 行')
+})
+
+// T99 — 下线内置支出产品：normalizeBusinessData 按「是否被支出引用」清理存量数据
+test('T99 下线内置支出产品存量清理', () => {
+  const legacyCats = [
+    { id: 'expense-stall', name: '摊位费', sortOrder: 1, visible: true, isBuiltIn: true },
+    { id: 'expense-gas', name: '燃气费', sortOrder: 2, visible: true, isBuiltIn: true },
+    { id: 'expense-seasoning', name: '调料包装', sortOrder: 3, visible: true, isBuiltIn: true },
+    { id: 'expense-transport', name: '交通费', sortOrder: 4, visible: true, isBuiltIn: true },
+    { id: 'expense-other', name: '其他', sortOrder: 5, visible: true, isBuiltIn: true }
+  ]
+  // ① 完全没用过 → 全部下线项删掉，只剩摊位费
+  const unused = normalizeBusinessData({ expenseCategories: legacyCats, expenseDailies: [] } as any)
+  assert.deepEqual(unused.expenseCategories.map(c => c.id), ['expense-stall'], '未被引用的下线项全部删除')
+
+  // ② 燃气费/交通费仍挂着支出 → 保留并降级为自定义（可删），其余删掉
+  const used = normalizeBusinessData({
+    expenseCategories: legacyCats,
+    expenseDailies: [
+      { id: 'bed_1', date: '2026-10-01', items: [{ id: 'e1', categoryId: 'expense-gas', amount: 30, title: '灌气' }], createdAt: '', updatedAt: '' },
+      { id: 'bed_2', date: '2026-10-02', items: [{ id: 'e2', categoryId: 'expense-transport', amount: 15, title: '车费' }], createdAt: '', updatedAt: '' }
+    ]
+  } as any)
+  assert.deepEqual(used.expenseCategories.map(c => c.id), ['expense-stall', 'expense-gas', 'expense-transport'], '被引用的下线项保留')
+  assert.equal(used.expenseCategories.find(c => c.id === 'expense-gas')!.isBuiltIn, false, '降级为自定义 → 用户可删')
+  assert.equal(used.expenseCategories.find(c => c.id === 'expense-transport')!.isBuiltIn, false)
+  assert.equal(used.expenseCategories.find(c => c.id === 'expense-stall')!.isBuiltIn, true, '摊位费仍是内置')
+  // 支出明细本身不受影响（不静默丢记录）
+  assert.equal(used.expenseDailies.length, 2)
+  assert.equal(used.expenseDailies[0].items[0].title, '灌气')
+
+  // ③ 旧扁平 expenses 格式同样算「引用」
+  const flat = normalizeBusinessData({ expenseCategories: legacyCats, expenses: [{ id: 'x1', date: '2026-10-03', categoryId: 'expense-other', amount: 7 }] } as any)
+  assert.ok(flat.expenseCategories.some(c => c.id === 'expense-other'), '旧扁平格式的引用也算数')
+
+  // ④ 幂等：再归一一次结果不变
+  const again = normalizeBusinessData(used as any)
+  assert.deepEqual(again.expenseCategories.map(c => c.id), ['expense-stall', 'expense-gas', 'expense-transport'])
 })
 
 let passed = 0

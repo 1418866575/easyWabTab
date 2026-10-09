@@ -306,7 +306,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     return r
   }
 
-  // ===== 支出产品 CRUD（原「支出分类」，改名支出产品管理） =====
+  // ===== 支出产品 CRUD（原「支出分类」→「支出产品管理」→ 2026-10-09 改名「进货商品管理」） =====
   function addExpenseCategory(
     name: string,
     opts?: { unit?: string; unitPrice?: number; productQuantity?: number; productId?: string }

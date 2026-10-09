@@ -595,7 +595,7 @@ export interface LedgerStoreData {
 
 /** 支出产品（原「支出分类」改名）：内置 5（isBuiltIn 不可删）+ 自定义；visible 控制支出 Tab 栏显示；unit/unitPrice 为产品默认单位与单价，新增支出选该产品时自动回填 */
 export interface BusinessExpenseCategory {
-  id: string // bec_ 前缀；内置 id 固定 expense-stall/gas/seasoning/transport/other
+  id: string // bec_ 前缀；内置 id 目前仅 expense-stall（gas/seasoning/transport/other 已下线，见 businessCore.RETIRED_EXPENSE_CATEGORY_IDS）
   name: string
   sortOrder: number
   visible: boolean
@@ -751,13 +751,15 @@ export interface BusinessStoreData {
   currentLedgerId: string
 }
 
-/** 内置支出分类（不可删，可改名/排序/标签页显隐） */
+/**
+ * 内置支出分类（不可删，可改名/排序/标签页显隐）
+ * ⚠️ 2026-10-09 用户要求：内置只保留「摊位费」，其余（燃气费/调料包装/交通费/其他）已下线。
+ * 下线 id 见 businessCore.RETIRED_EXPENSE_CATEGORY_IDS —— 存量数据由
+ * normalizeExpenseCategories 清理（未被支出引用的直接删，被保留引用的降级为自定义可删），
+ * **不要**再把它们加回来。
+ */
 export const DEFAULT_BUSINESS_EXPENSE_CATEGORIES: BusinessExpenseCategory[] = [
-  { id: 'expense-stall', name: '摊位费', sortOrder: 1, visible: true, isBuiltIn: true },
-  { id: 'expense-gas', name: '燃气费', sortOrder: 2, visible: true, isBuiltIn: true },
-  { id: 'expense-seasoning', name: '调料包装', sortOrder: 3, visible: true, isBuiltIn: true },
-  { id: 'expense-transport', name: '交通费', sortOrder: 4, visible: true, isBuiltIn: true },
-  { id: 'expense-other', name: '其他', sortOrder: 5, visible: true, isBuiltIn: true }
+  { id: 'expense-stall', name: '摊位费', sortOrder: 1, visible: true, isBuiltIn: true }
 ]
 
 /** 内置商品分类（种子可删：删除后该分类商品归未分类） */

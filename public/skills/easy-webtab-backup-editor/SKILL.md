@@ -391,7 +391,12 @@ description: "当用户要\"记录/新增/添加/修改\"数据到 easy-web-tab 
 
 **内置商品分类（business.json，5 种子可删）**：`product-snack`(小吃)、`product-drink`(饮品)、`product-fruit`(水果)、`product-daily`(日用品)、`product-clothing`(服饰)
 
-**内置支出分类（business.json，5 不可删）**：`expense-stall`(摊位费)、`expense-gas`(燃气费)、`expense-seasoning`(调料包装)、`expense-transport`(交通费)、`expense-other`(其他)
+**内置支出分类（business.json，1 不可删）**：`expense-stall`(摊位费)
+
+> 2026-10-09 起内置只保留摊位费；`expense-gas`(燃气费)、`expense-seasoning`(调料包装)、
+> `expense-transport`(交通费)、`expense-other`(其他) 已下线。**存量数据**里这些 id 由
+> `normalizeExpenseCategories` 清理：未被支出明细引用则删除，仍被引用则降级为自定义（可删）。
+> 编辑备份时如果遇到这些 id，按自定义分类处理即可（不要当成内置不可删）。
 
 ---
 
