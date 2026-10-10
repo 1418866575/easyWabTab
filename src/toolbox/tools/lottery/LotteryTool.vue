@@ -12,7 +12,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useToast } from '@/composables/useToast'
 import { idbGet, idbPut, idbClear } from '@/composables/useIdb'
-import { downloadText } from '../../core/download'
+import { exportXlsx } from '@/composables/xlsxExport'
 import {
   parsePeople,
   candidatesOf,
@@ -60,8 +60,23 @@ const winMap = computed(() => groupWinsByAward(wins.value))
 
 /* ---------------- 持久化 ---------------- */
 
+/**
+ * 深拷贝成纯 JSON 数据再入库。
+ *
+ * 不能只 `toRaw()`：那只能脱最外层 Proxy，脱不掉数组**元素**上的 Proxy。
+ * 抽奖写记录用的是 `wins.value = [...wins.value, win]`，展开 reactive 数组时
+ * Vue 会把读到的每个元素包成 reactive Proxy，于是新数组里旧元素全是 Proxy，
+ * 结构化克隆直接抛 DataCloneError。people 那边能存成功只是因为
+ * `people.value = list` 的元素本就来自 parsePeople 的裸对象。
+ *
+ * 与 studentGoals / studentGrades / teacher 等 store 的 JSON 深拷贝写法一致。
+ */
+function toPlain<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T
+}
+
 async function persist(): Promise<void> {
-  const data: LotteryData = { people: people.value, wins: wins.value }
+  const data: LotteryData = toPlain({ people: people.value, wins: wins.value })
   try {
     await idbPut(LS_STORE, data)
   } catch (err) {
@@ -88,8 +103,17 @@ onMounted(load)
 
 /* ---------------- 名单导入 / 清除 ---------------- */
 
+/** 若首行是「姓名/部门」表头（含中英文），导入时跳过，避免带出两个假人 */
+function stripHeaderIfAny(text: string): string {
+  const lines = (text || '').split(/\r?\n/)
+  if (!lines.length) return text
+  const first = lines[0].trim()
+  const isHeader = /^(姓名|name)$/i.test(first) || /^(姓名|name)[,，\t]/i.test(first)
+  return isHeader ? lines.slice(1).join('\n') : text
+}
+
 function onImportText() {
-  const list = parsePeople(rawText.value)
+  const list = parsePeople(stripHeaderIfAny(rawText.value))
   if (!list.length) {
     toast.warning('未解析到有效姓名，请检查名单内容')
     return
@@ -103,14 +127,43 @@ async function onPickFile(e: Event) {
   const f = (e.target as HTMLInputElement).files?.[0]
   if (!f) return
   try {
-    const text = await f.text()
-    rawText.value = text
-    onImportText()
+    const name = f.name.toLowerCase()
+    if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+      await importXlsx(f)
+    } else {
+      const text = await f.text()
+      rawText.value = text
+      onImportText()
+    }
   } catch (err) {
     toast.error('读取文件失败：' + (err as Error).message)
   } finally {
     ;(e.target as HTMLInputElement).value = ''
   }
+}
+
+/** 解析 Excel 名单（xlsx/xls）：取首个工作表，第一列姓名、第二列部门，转文本后复用 parsePeople */
+async function importXlsx(f: File) {
+  const XLSX = await import('xlsx')
+  const buf = await f.arrayBuffer()
+  const wb = XLSX.read(buf, { type: 'array' })
+  const firstSheet = wb.SheetNames[0]
+  if (!firstSheet) {
+    toast.error('Excel 中没有工作表')
+    return
+  }
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[firstSheet], {
+    header: 1,
+    blankrows: false,
+    defval: ''
+  }) as unknown[][]
+  const text = rows
+    .filter(r => Array.isArray(r) && r.some(c => c !== '' && c !== null && c !== undefined))
+    .map(r => (r as unknown[]).map(c => (c === null || c === undefined ? '' : String(c).trim())))
+    .map(r => (r[1] ? `${r[0]},${r[1]}` : `${r[0]}`))
+    .join('\n')
+  rawText.value = text
+  onImportText()
 }
 
 async function clearAll() {
@@ -187,30 +240,57 @@ function startDraw() {
   }, 1600)
 }
 
-/* ---------------- 记录导出 / 模板下载 ---------------- */
+/* ---------------- 中奖记录删除 ---------------- */
 
-/** 下载名单导入模板（含表头与示例行，Excel 可直接打开） */
-function downloadTemplate() {
-  const lines = [
-    '姓名,部门',
-    '张三,研发部',
-    '李四,市场部',
-    '王五,销售部'
-  ]
-  downloadText('抽奖名单模板.csv', '﻿' + lines.join('\n'), 'text/csv;charset=utf-8')
-  toast.success('模板已下载，填写后用「选择文件」导入')
+/**
+ * 删除一条中奖记录：该人自动回到候选池（pool 是 computed，会随 wins 变化），
+ * 同奖项剩余记录按抽取先后顺序重排序号保持 1..n 连续。
+ * 元素统一 `{ ...x }` 展开成普通对象，避免 reactive Proxy 混进数组。
+ */
+function removeWin(w: LotteryWin) {
+  const removed = wins.value.find(x => x.id === w.id)
+  if (!removed) return
+  let seq = 0
+  wins.value = wins.value
+    .filter(x => x.id !== w.id)
+    .map(x => ({ ...x, seq: x.awardId === removed.awardId ? ++seq : x.seq }))
+  persist()
+  toast.success(`已删除：${removed.name}${removed.dept ? '（' + removed.dept + '）' : ''}，已回到候选池`)
 }
 
-function exportCsv() {
+/* ---------------- 记录导出 / 模板下载 ---------------- */
+
+/** 下载名单导入模板（xlsx，含「姓名/部门」表头与示例行） */
+async function downloadTemplate() {
+  await exportXlsx(
+    '抽奖名单模板',
+    ['姓名', '部门'],
+    [
+      ['张三', '研发部'],
+      ['李四', '市场部'],
+      ['王五', '销售部']
+    ],
+    { sheetName: '抽奖名单' }
+  )
+  toast.success('模板已下载（xlsx），填写后用「选择文件」导入')
+}
+
+/** 导出中奖记录为 xlsx */
+async function exportRecords() {
   if (!wins.value.length) {
     toast.info('暂无中奖记录')
     return
   }
-  const head = '奖项,序号,姓名,部门,中奖时间'
-  const lines = wins.value.map(w =>
-    [w.awardName, w.seq, w.name, w.dept || '', new Date(w.ts).toLocaleString('zh-CN')].join(',')
-  )
-  downloadText('抽奖记录.csv', '﻿' + [head, ...lines].join('\n'), 'text/csv;charset=utf-8')
+  const headers = ['奖项', '序号', '姓名', '部门', '中奖时间']
+  const rows = wins.value.map(w => [
+    w.awardName,
+    w.seq,
+    w.name,
+    w.dept || '',
+    new Date(w.ts).toLocaleString('zh-CN')
+  ])
+  await exportXlsx('抽奖记录', headers, rows, { sheetName: '中奖记录' })
+  toast.success('已导出中奖记录（xlsx）')
 }
 
 function fmtTime(ts: number): string {
@@ -234,7 +314,7 @@ function fmtTime(ts: number): string {
           <button class="tu-btn" @click="onImportText">导入名单</button>
           <label class="tu-btn ghost" style="cursor: pointer">
             选择文件
-            <input type="file" accept=".txt,.csv,text/plain" hidden @change="onPickFile" />
+            <input type="file" accept=".txt,.csv,.xlsx,.xls" hidden @change="onPickFile" />
           </label>
           <button class="tu-btn ghost" title="下载 CSV 模板，按模板填写后导入" @click="downloadTemplate">下载模板</button>
           <button class="tu-btn ghost" :disabled="!people.length && !wins.length" @click="clearAll">清除全部</button>
@@ -275,17 +355,26 @@ function fmtTime(ts: number): string {
       <div v-if="wins.length" class="tu-field">
         <label class="tu-label">中奖记录</label>
         <div class="tu-row" style="margin-bottom: 6px">
-          <button class="tu-btn ghost" @click="exportCsv">导出 CSV</button>
+          <button class="tu-btn ghost" @click="exportRecords">导出 Excel</button>
         </div>
         <div v-for="a in awards" :key="a.id" class="lot-wins">
           <template v-if="(winMap.get(a.id) || []).length">
             <div class="lot-wins-title">{{ a.name }}</div>
-            <ol class="tu-list">
-              <li v-for="w in winMap.get(a.id)" :key="w.id" class="tu-mono">
-                {{ w.seq }}. {{ w.name }}<template v-if="w.dept">（{{ w.dept }}）</template>
-                <span class="lot-wins-time">{{ fmtTime(w.ts) }}</span>
+            <ul class="lot-wins-list">
+              <li v-for="w in winMap.get(a.id)" :key="w.id" class="lot-win-item">
+                <span class="lot-win-text">
+                  {{ w.seq }}. {{ w.name }}<template v-if="w.dept">（{{ w.dept }}）</template>
+                  <span class="lot-wins-time">{{ fmtTime(w.ts) }}</span>
+                </span>
+                <button
+                  type="button"
+                  class="lot-del"
+                  :data-testid="`lot-del-${w.id}`"
+                  title="删除该条记录，该人回到候选池可重新抽取"
+                  @click="removeWin(w)"
+                >删除</button>
               </li>
-            </ol>
+            </ul>
           </template>
         </div>
       </div>
@@ -338,6 +427,31 @@ function fmtTime(ts: number): string {
 .lot-wins + .lot-wins { margin-top: 10px; }
 .lot-wins-title { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 2px; }
 .lot-wins-time { color: var(--color-text-muted); font-size: 12px; margin-left: 6px; }
+/* 自己定义列表样式：不用 <ol> 原生编号（会与手写 seq 撞成「1. 1.」双序号） */
+.lot-wins-list { margin: 0; padding: 0; list-style: none; font-size: 12.5px; line-height: 1.9; }
+.lot-win-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.lot-del {
+  flex: 0 0 auto;
+  border: none;
+  background: none;
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity var(--motion-duration) var(--motion-ease);
+}
+.lot-del:hover {
+  opacity: 1;
+  color: var(--color-error);
+  background: var(--color-error-soft);
+}
 
 /* 大屏展示区：字号偏大，投屏时可读 */
 .lot-stage {
