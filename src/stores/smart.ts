@@ -3,8 +3,6 @@ import { computed, ref } from 'vue'
 import { markDirty } from '@/composables/useCloudSync'
 import { getPref, setPref } from '@/composables/useNavPrefs'
 import {
-  BUILT_IN_PROMPTS,
-  BUILT_IN_SKILLS,
   buildEnvelope,
   calcSmartStats,
   makeSmartId,
@@ -64,24 +62,6 @@ function save(key: string, value: unknown): void {
 export const useSmartStore = defineStore('smart', () => {
   const skills = ref<SmartSkill[]>(loadList(SKILLS_KEY, normalizeSkills))
   const prompts = ref<SmartPrompt[]>(loadList(PROMPTS_KEY, normalizePrompts))
-
-  /** 首次进入（两个库都为空）播种内置示例，让用户有东西可看可用 */
-  let seeded = false
-  if (skills.value.length === 0 && prompts.value.length === 0) {
-    const now = Date.now()
-    skills.value = BUILT_IN_SKILLS.map(s => ({ ...s, createdAt: now, updatedAt: now }))
-    prompts.value = BUILT_IN_PROMPTS.map(p => ({
-      ...p,
-      variables: parseVariables(p.content),
-      createdAt: now,
-      updatedAt: now
-    }))
-    seeded = true
-  }
-  if (seeded) {
-    save(SKILLS_KEY, skills.value)
-    save(PROMPTS_KEY, prompts.value)
-  }
 
   // ==================== 左侧菜单配置 ====================
 
@@ -476,28 +456,6 @@ export const useSmartStore = defineStore('smart', () => {
     persistPrompts()
   }
 
-  /** 恢复内置示例：按 id 幂等补回已被删掉的内置条目 */
-  function restoreBuiltIns(): { skills: number; prompts: number } {
-    const now = Date.now()
-    let s = 0
-    for (const b of BUILT_IN_SKILLS) {
-      if (!skills.value.some(x => x.id === b.id)) {
-        skills.value.push({ ...b, createdAt: now, updatedAt: now })
-        s++
-      }
-    }
-    let p = 0
-    for (const b of BUILT_IN_PROMPTS) {
-      if (!prompts.value.some(x => x.id === b.id)) {
-        prompts.value.push({ ...b, variables: parseVariables(b.content), createdAt: now, updatedAt: now })
-        p++
-      }
-    }
-    if (s) persistSkills()
-    if (p) persistPrompts()
-    return { skills: s, prompts: p }
-  }
-
   return {
     skills,
     prompts,
@@ -544,7 +502,6 @@ export const useSmartStore = defineStore('smart', () => {
     commitSkillImport,
     commitPromptImport,
     replaceSkills,
-    replacePrompts,
-    restoreBuiltIns
+    replacePrompts
   }
 })

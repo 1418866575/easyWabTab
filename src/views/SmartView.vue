@@ -39,7 +39,7 @@ interface MenuItem {
 const menuItems = computed<MenuItem[]>(() =>
   store.visibleMenuItems.map(i => ({
     key: i.key as PageKey,
-    label: i.label,
+    label: i.label.replace(/管理/g, ''),
     icon: i.icon,
     ...(i.key === 'skills' ? { count: store.skills.length } : {}),
     ...(i.key === 'prompts' ? { count: store.prompts.length } : {})
@@ -115,10 +115,6 @@ async function handleSyncNowClick(): Promise<void> {
           :trigger-label="settingsStore.smartPageDisplayName"
           force-show
         />
-        <div class="sv-heading">
-          <h1 class="sv-title">{{ settingsStore.smartPageDisplayName }}</h1>
-          <p class="sv-sub">把反复重写的 AI 技能与提示词，沉淀成可检索、可复用、可搬运的资产库</p>
-        </div>
       </div>
       <div class="sv-topbar-actions">
         <!-- 云同步：智能工作台数据走独立的 smart.json 信封 -->

@@ -190,11 +190,6 @@ function confirmImport(): void {
   pendingPlan.value = null
 }
 
-function restoreBuiltIns(): void {
-  const r = store.restoreBuiltIns()
-  toast.success(r.prompts > 0 ? `已补回 ${r.prompts} 条内置示例` : '内置示例都在，无需补回')
-}
-
 /**
  * 空态说明文案。
  * 注意：文案里的 `{{变量}}` 是给用户的语法示例，不能直接写在模板文本里 ——
@@ -316,7 +311,6 @@ function excerpt(p: SmartPrompt): string {
         <el-button v-if="hasFilter" size="small" @click="resetFilter">清空筛选</el-button>
         <el-button v-else size="small" type="primary" @click="openAdd">＋ 新增提示词</el-button>
         <el-button size="small" @click="handleImport">导入文件</el-button>
-        <el-button size="small" @click="restoreBuiltIns">恢复内置示例</el-button>
       </div>
     </div>
 

@@ -225,12 +225,6 @@ function confirmImport(): void {
   importNotes.value = []
 }
 
-// ===== 恢复内置示例 =====
-function restoreBuiltIns(): void {
-  const r = store.restoreBuiltIns()
-  toast.success(r.skills > 0 ? `已补回 ${r.skills} 条内置示例` : '内置示例都在，无需补回')
-}
-
 /**
  * 卡片图标：extra.icon 存「图标库图片地址」或 v1 迁过来的 emoji；
  * 未设置时由 classifySkillIcon 回落为内置矢量图标（不再是 🧩）。
@@ -367,9 +361,9 @@ function relTime(ts: number): string {
           <button type="button" class="sm-btn" :data-testid="`smart-skill-copy-${s.id}`" @click="handleCopy(s)">复制正文</button>
           <button type="button" class="sm-btn" @click="openDetail(s)">详情</button>
           <button type="button" class="sm-btn" @click="openEdit(s)">编辑</button>
-          <button type="button" class="sm-btn" @click="handleClone(s)">副本</button>
+          <button type="button" class="sm-btn" @click="handleClone(s)">复制</button>
           <span class="sm-spacer" />
-          <button type="button" class="sm-btn" :data-testid="`smart-skill-zip-${s.id}`" @click="exportOneZip(s)" :title="`下载为 zip（${SKILL_FILE} + 资源，保持目录层级）`">↓ zip</button>
+          <button type="button" class="sm-btn" :data-testid="`smart-skill-zip-${s.id}`" @click="exportOneZip(s)" :title="`下载为 zip（${SKILL_FILE} + 资源，保持目录层级）`">下载</button>
           <button type="button" class="sm-btn is-danger" :data-testid="`smart-skill-del-${s.id}`" @click="handleDelete(s)">删除</button>
         </footer>
       </article>
@@ -386,7 +380,6 @@ function relTime(ts: number): string {
         <el-button v-else size="small" type="primary" @click="openAdd">＋ 新增技能</el-button>
         <el-button size="small" @click="importFromFolder">导入文件夹</el-button>
         <el-button size="small" @click="importFromZip">导入 zip</el-button>
-        <el-button size="small" @click="restoreBuiltIns">恢复内置示例</el-button>
       </div>
     </div>
 

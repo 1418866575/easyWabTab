@@ -10,7 +10,7 @@
  *   附属资源 → 同级目录下的文件（导出时按原层级还原）
  * 校验沿用「提交后才暴露错误」的口径（见 BusinessProducts.vue）。
  */
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useSmartStore } from '@/stores/smart'
 import { useToast } from '@/composables/useToast'
@@ -42,6 +42,17 @@ const store = useSmartStore()
 const toast = useToast()
 
 const title = computed(() => (props.editingId ? '编辑技能' : '新增技能'))
+
+// 全屏（最大化）：点右上角按钮切换；全屏下 ESC 先退出全屏，否则关闭弹框
+const fullscreen = ref(false)
+function onKeydown(e: KeyboardEvent): void {
+  if (e.key !== 'Escape') return
+  e.preventDefault()
+  if (fullscreen.value) fullscreen.value = false
+  else emit('close')
+}
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 /** 本地草稿：取消/关闭不影响外部数据 */
 const draft = ref<Partial<SmartSkill>>({})
@@ -145,7 +156,7 @@ function submit(): void {
 </script>
 
 <template>
-  <BaseDialog :title="title" width="860px" :close-on-overlay="false" @close="emit('close')">
+  <BaseDialog :title="title" width="860px" :fullscreen="fullscreen" :close-on-overlay="false" :close-on-escape="false" @close="emit('close')">
     <!-- form 包住正文（回车提交仍可用）；底部按钮走 #footer（基类统一右对齐）。
          #footer 在 form 之外，故保存按钮改为 @click="submit"，不再用 native-type="submit"。 -->
     <form class="sk-form" @submit.prevent="submit">
@@ -217,7 +228,7 @@ function submit(): void {
 
         <!-- 图标：点图标弹框从「图标管理」选择（与添加网站、分类管理同源）；
              存 extra.icon，随技能一起落盘与云同步。不选则用默认内置图标 -->
-        <div class="sk-field">
+        <div class="sk-field sk-field--icon-inline">
           <span class="sk-label">图标 icon<span class="sk-hint">（从图标管理选择，可留空）</span></span>
           <div class="sk-icon-row">
             <button
@@ -315,6 +326,19 @@ function submit(): void {
       @close="iconPickerOpen = false"
     />
 
+    <template #header-actions>
+      <button
+        class="close-btn"
+        type="button"
+        :title="fullscreen ? '退出全屏' : '全屏显示'"
+        :aria-label="fullscreen ? '退出全屏' : '全屏显示'"
+        data-testid="skill-editor-fullscreen"
+        @click="fullscreen = !fullscreen"
+      >
+        <Icon :name="fullscreen ? 'fullscreen-exit' : 'fullscreen'" />
+      </button>
+    </template>
+
     <template #footer>
       <el-button size="small" @click="emit('close')">取消</el-button>
       <el-button type="primary" size="small" data-testid="skill-editor-save" @click="submit">
@@ -346,6 +370,10 @@ function submit(): void {
 
 /* 技能图标选择行：图标按钮 + 当前图标说明 + 恢复默认（与分类管理的 .cat-icon-btn 同款） */
 .sk-icon-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* 图标字段：label 与图标选择行并排一行（消除上下大空白），仅在技能编辑弹框使用 */
+.sk-field--icon-inline { flex-direction: row; align-items: center; gap: 10px; }
+.sk-field--icon-inline .sk-label { flex: 0 0 auto; }
+.sk-field--icon-inline .sk-icon-row { flex: 1 1 auto; }
 .sk-icon-btn {
   flex: none;
   display: inline-flex;

@@ -4,7 +4,7 @@
  * 技能编辑走 SkillEditorDialog（字段要对齐 skill.md 的 frontmatter，且要管附属资源）。
  * 校验与「提交后才暴露错误」沿用业务弹框同一套口径（见 BusinessProducts.vue）。
  */
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import { isNameTaken, normalizeTags, parseVariables, validatePrompt } from '@/composables/smartCore'
 import { useSmartStore } from '@/stores/smart'
@@ -26,6 +26,17 @@ const store = useSmartStore()
 const toast = useToast()
 
 const title = computed(() => (props.editingId ? '编辑提示词' : '新增提示词'))
+
+// 全屏（最大化）：点右上角按钮切换；全屏下 ESC 先退出全屏，否则关闭弹框
+const fullscreen = ref(false)
+function onKeydown(e: KeyboardEvent): void {
+  if (e.key !== 'Escape') return
+  e.preventDefault()
+  if (fullscreen.value) fullscreen.value = false
+  else emit('close')
+}
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 // 本地草稿：取消/关闭不影响外部数据
 const draft = ref<Record<string, unknown>>({})
@@ -87,7 +98,7 @@ const nameTaken = computed(() => {
 </script>
 
 <template>
-  <BaseDialog :title="title" width="720px" :close-on-overlay="false" @close="emit('close')">
+  <BaseDialog :title="title" width="720px" :fullscreen="fullscreen" :close-on-overlay="false" :close-on-escape="false" @close="emit('close')">
     <!-- form 包住正文（回车提交仍可用）；底部按钮走 #footer（基类统一右对齐）。
          注意：#footer 在 form 之外，故保存按钮不能再用 native-type="submit"，改为 @click="submit"。 -->
     <form class="se-form" @submit.prevent="submit">
@@ -156,6 +167,19 @@ const nameTaken = computed(() => {
       </label>
 
     </form>
+
+    <template #header-actions>
+      <button
+        class="close-btn"
+        type="button"
+        :title="fullscreen ? '退出全屏' : '全屏显示'"
+        :aria-label="fullscreen ? '退出全屏' : '全屏显示'"
+        data-testid="smart-editor-fullscreen"
+        @click="fullscreen = !fullscreen"
+      >
+        <Icon :name="fullscreen ? 'fullscreen-exit' : 'fullscreen'" />
+      </button>
+    </template>
 
     <template #footer>
       <el-button size="small" @click="emit('close')">取消</el-button>
