@@ -2,11 +2,17 @@
 /**
  * 年龄查看器（纯前端，无持久化）
  *
- * - 左侧第一列：出生年份（范围使年龄在 1–120 岁）
- * - 表头：12 生肖（鼠牛虎兔龙蛇马羊猴鸡狗猪）
- * - 中间内容：每个出生年份所属生肖那一列，显示「今年年龄 = 当前年 − 出生年」并高亮；
- *   其余生肖列显示「—」（该年份没有对应属相的人出生，属相与出生年一一对应）
- * - 每年自动更新：当前年用 new Date().getFullYear() 实时取，跨年重新打开即刷新
+ * 新版布局：
+ * - 顶部醒目显示「最新年份」= new Date().getFullYear()，跨年打开自动更新。
+ * - 下方 12 张卡片，每张对应一个生肖，列出该生肖今年可能的年龄。
+ *
+ * 年龄推算：
+ * 年龄 = 当前年 − 出生年，且出生年所属生肖 = 该生肖。
+ * 距今年最近的该生肖年份偏移 k0 = ((sxIndex(今年) − z) % 12 + 12) % 12（0–11），
+ * 则该生肖今年的年龄为 k0, k0+12, k0+24, …（落在 1–120 岁区间）。
+ * 若 k0 = 0（今年就是该生肖年，对应 0 岁婴儿），则从 12 岁起算，跳过 0 岁。
+ *
+ * 例：2026 为羊年，鼠年 k0=6 → 年龄 6, 18, 30, …, 114。
  *
  * 生肖索引：以 1984（鼠年）为基准，(year - 4) % 12 === 0 为鼠年，
  * 故 sxIndex(year) = ((year - 4) % 12 + 12) % 12（鼠=0 … 猪=11）。
@@ -22,82 +28,128 @@ function sxIndex(year: number): number {
 
 const currentYear = new Date().getFullYear()
 
-interface AgeRow {
-  year: number
-  sx: string
-  /** 12 个生肖列：命中列放年龄，其余为 null */
-  cells: (number | null)[]
+interface ZodiacAges {
+  name: string
+  /** 该生肖今年可能的年龄（1–120，每 12 岁一档） */
+  ages: number[]
 }
 
-const rows = computed<AgeRow[]>(() => {
-  const out: AgeRow[] = []
-  for (let age = 1; age <= 120; age++) {
-    const year = currentYear - age
-    const idx = sxIndex(year)
-    const cells = SX.map((_, i) => (i === idx ? age : null))
-    out.push({ year, sx: SX[idx], cells })
-  }
-  return out
+const zodiacAges = computed<ZodiacAges[]>(() => {
+  const curIdx = sxIndex(currentYear)
+  return SX.map((name, z) => {
+    const k0 = ((curIdx - z) % 12 + 12) % 12 // 距今年最近的该生肖年份偏移
+    const ages: number[] = []
+    for (let a = k0 === 0 ? 12 : k0; a <= 120; a += 12) ages.push(a)
+    return { name, ages }
+  })
 })
 </script>
 
 <template>
   <div class="tu-t1 av">
+    <div class="av-year-banner">
+      <span class="av-year-label">最新年份</span>
+      <span class="av-year-num">{{ currentYear }}</span>
+      <span class="av-year-unit">年</span>
+    </div>
+
     <p class="tu-hint">
-      基于当前年 <b>{{ currentYear }}</b> 自动计算：左侧为出生年份，表头为 12 生肖；
-      每一行仅在该年份<b>所属生肖</b>列显示「今年年龄 = 当前年 − 出生年」并高亮，其余生肖列显示「—」
-      （属相与出生年份一一对应，某一年只对应一个生肖）。年龄范围 1–120 岁，跨年打开自动更新。
+      按当前年份自动推算：每个生肖下列出今年可能的年龄（1–120 岁，每 12 岁一档）。
+      例如 <b>{{ currentYear }} 年</b>属{{ SX[sxIndex(currentYear)] }}，属鼠者今年为 6, 18, 30 … 114 岁。跨年打开自动更新。
     </p>
 
-    <div class="tu-table-wrap av-wrap">
-      <table class="tu-table">
-        <thead>
-          <tr>
-            <th class="av-year-head">出生年份</th>
-            <th v-for="s in SX" :key="s">{{ s }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="r in rows" :key="r.year">
-            <td class="av-year">{{ r.year }}<span class="av-sx">（{{ r.sx }}）</span></td>
-            <td v-for="(c, i) in r.cells" :key="i" :class="{ 'av-hit': c !== null }">
-              {{ c === null ? '—' : c }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="av-grid">
+      <div v-for="z in zodiacAges" :key="z.name" class="av-card">
+        <div class="av-card-head">
+          <span class="av-sx-icon">{{ z.name }}</span>
+          <span class="av-sx-name">属{{ z.name }}</span>
+        </div>
+        <div class="av-ages">
+          <span v-for="a in z.ages" :key="a" class="av-age">{{ a }}</span>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.av-wrap {
-  max-height: 62vh;
+/* 顶部最新年份横幅 */
+.av-year-banner {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 16px;
+  background: var(--color-primary-soft);
+  border-radius: 12px;
+  margin-bottom: 10px;
 }
-/* 出生年份列与生肖列同宽、内容居中 */
-.tu-table td,
-.tu-table th {
-  text-align: center;
-  white-space: nowrap;
-}
-.av-year {
+.av-year-label {
+  color: var(--color-primary);
   font-weight: 600;
-  color: var(--color-text);
-  text-align: left !important;
 }
-.av-sx {
+.av-year-num {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--color-primary);
+}
+.av-year-unit {
   color: var(--color-text-muted);
-  font-weight: 400;
-  font-size: 11px;
-  margin-left: 2px;
+  font-size: 14px;
 }
-.av-year-head {
-  text-align: left !important;
+
+/* 12 生肖卡片网格 */
+.av-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
 }
-/* 命中格：所属生肖列的年龄高亮 */
-.av-hit {
+.av-card {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--color-surface);
+}
+.av-card-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px dashed var(--color-border);
+}
+.av-sx-icon {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+.av-sx-name {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.av-ages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.av-age {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 999px;
   background: var(--color-primary-soft);
   color: var(--color-primary);
-  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* 窄屏：降为 2 列，避免卡片被压扁 */
+@media (max-width: 640px) {
+  .av-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .av-year-num {
+    font-size: 28px;
+  }
 }
 </style>
