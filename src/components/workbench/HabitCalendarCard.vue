@@ -4,8 +4,9 @@
 // streak/week 由父组件 store 计算，打卡动作通过 toggle(date) 事件上抛。
 // 这样成人与学生共用同一份卡片结构与样式，保证两侧展示与交互完全一致。
 import { computed, ref } from 'vue'
+import Icon from '@/components/Icon.vue'
 import { localToday } from '@/composables/todoCore'
-import type { StreakResult, WeeklyAttainment } from '@/composables/habitCore'
+import type { HabitImage, StreakResult, WeeklyAttainment } from '@/composables/habitCore'
 
 /** 卡片所需的最小习惯结构（成人 Habit 与学生 StudentHabit 均满足） */
 interface CalendarHabitLike {
@@ -18,6 +19,7 @@ interface CalendarRecordLike {
   habitId: string
   date: string
   points?: number
+  images?: readonly HabitImage[] // 仅用于区分当日是否附图
 }
 
 const props = defineProps<{
@@ -27,8 +29,19 @@ const props = defineProps<{
   week: WeeklyAttainment
   /** habit.color 缺省时的回退色 */
   defaultColor: string
+  /**
+   * 是否开启「某天打卡详情」模式（由习惯的 imageEnabled 驱动，成人习惯面板专用）。
+   * - true：点某天直接打开详情弹框（打卡/取消、图片都在弹框里完成），并显示右上角图片角标
+   * - false（默认）：保持原有行为——点某天直接打卡 / 取消打卡；学生侧面板即此分支，零变化
+   */
+  detailMode?: boolean
 }>()
-const emit = defineEmits<{ edit: [id: string]; toggle: [date: string] }>()
+const emit = defineEmits<{
+  edit: [id: string]
+  toggle: [date: string]
+  /** 点某天右上角的图片角标 = 打开该天打卡详情（与格子本身的打卡/取消互不干扰） */
+  openDetail: [date: string]
+}>()
 
 // 今天 = 本地日期 YYYY-MM-DD（防 UTC 偏移）
 const today = localToday()
@@ -55,6 +68,17 @@ const viewMonth = ref(now.getMonth()) // 0-based
 const WEEK_LABELS = ['日', '一', '二', '三', '四', '五', '六']
 const pad = (n: number) => String(n).padStart(2, '0')
 
+/** 该习惯 日期 → 附图张数（仅 >0 的日期进表，供日历角标显示张数红点） */
+const imageCountByDate = computed<Record<string, number>>(() => {
+  const m: Record<string, number> = {}
+  for (const r of props.records) {
+    if (r.habitId !== props.habit.id) continue
+    const n = r.images?.length ?? 0
+    if (n > 0) m[r.date] = n
+  }
+  return m
+})
+
 interface CalCell {
   blank?: boolean
   dateStr?: string
@@ -63,6 +87,7 @@ interface CalCell {
   isToday?: boolean
   isFuture?: boolean
   points?: number
+  imageCount?: number
 }
 
 const cells = computed<CalCell[]>(() => {
@@ -73,6 +98,7 @@ const cells = computed<CalCell[]>(() => {
   const total = Math.ceil((startW + days) / 7) * 7
   const out: CalCell[] = []
   const pts = pointsByDate.value
+  const imgs = imageCountByDate.value
   for (let i = 0; i < total; i++) {
     const d = i - startW + 1
     if (d < 1 || d > days) {
@@ -86,6 +112,7 @@ const cells = computed<CalCell[]>(() => {
       isChecked: checkedSet.value.has(ds),
       isToday: ds === today,
       isFuture: ds > today,
+      ...(typeof imgs[ds] === 'number' ? { imageCount: imgs[ds] } : {}),
       ...(typeof pts[ds] === 'number' ? { points: pts[ds] } : {})
     })
   }
@@ -110,10 +137,21 @@ function nextMonth(): void {
   }
 }
 
-// 点日历某天 = 打卡 / 取消（仅今天与过去可点，未来置灰）；具体由父组件执行
+// 点日历某天：详情模式下 = 打开该天打卡详情（打卡/取消在弹框内完成）；
+// 否则 = 打卡 / 取消（仅今天与过去可点，未来置灰）。具体动作均由父组件执行。
 function onDayClick(c: CalCell): void {
   if (!c.dateStr || c.isFuture) return
+  if (props.detailMode) {
+    emit('openDetail', c.dateStr)
+    return
+  }
   emit('toggle', c.dateStr)
+}
+
+// 点某天右上角的图片角标 = 打开该天打卡详情（@click.stop 已在模板处理，不会连带触发打卡）
+function onOpenDetail(c: CalCell): void {
+  if (!c.dateStr || c.isFuture) return
+  emit('openDetail', c.dateStr)
 }
 
 // 点卡片其它区域（名称/信息/留白）= 打开编辑弹框（由父组件处理）
@@ -154,12 +192,40 @@ function onCardClick(): void {
           class="hb-cal-day"
           :class="{ checked: c.isChecked, today: c.isToday, future: c.isFuture }"
           :disabled="!!c.isFuture"
-          :aria-label="c.dateStr ? (c.isChecked ? '取消打卡 ' + c.dateStr : '打卡 ' + c.dateStr) : ''"
-          :title="c.isChecked && typeof c.points === 'number' ? `已打卡 +${c.points} 分` : (c.dateStr ?? '')"
+          :aria-label="
+            c.dateStr
+              ? detailMode
+                ? '打开打卡详情 ' + c.dateStr
+                : c.isChecked
+                  ? '取消打卡 ' + c.dateStr
+                  : '打卡 ' + c.dateStr
+              : ''
+          "
+          :title="
+            detailMode
+              ? '打卡详情 ' + (c.dateStr ?? '')
+              : c.isChecked && typeof c.points === 'number'
+                ? `已打卡 +${c.points} 分`
+                : (c.dateStr ?? '')
+          "
           @click.stop="onDayClick(c)"
         >
           <span class="hb-cal-daynum">{{ c.dayNum }}</span>
           <span v-if="c.isChecked && typeof c.points === 'number'" class="hb-cal-pts">+{{ c.points }}</span>
+          <!-- 图片角标：打开该天打卡详情的独立入口，@click.stop 与格子的打卡 toggle 隔离 -->
+          <span
+            v-if="detailMode && !c.isFuture"
+            class="hb-cal-img"
+            :class="{ has: (c.imageCount ?? 0) > 0 }"
+            role="button"
+            :aria-label="`查看 ${c.dateStr} 打卡详情`"
+            :title="(c.imageCount ?? 0) > 0 ? `查看打卡详情（${c.imageCount} 张图片）` : '查看打卡详情 / 添加图片'"
+            :data-testid="`hb-cal-img-${habit.id}-${c.dateStr}`"
+            @click.stop="onOpenDetail(c)"
+          >
+            <Icon name="image" :size="10" />
+            <span v-if="(c.imageCount ?? 0) > 1" class="hb-cal-imgcnt">{{ c.imageCount }}</span>
+          </span>
         </button>
       </template>
     </div>
@@ -277,6 +343,8 @@ function onCardClick(): void {
 }
 
 .hb-cal-day {
+  /* 角标的定位基准：没有它，图片角标会相对 .hb-cal-card 定位、全部叠到卡片右上角 */
+  position: relative;
   aspect-ratio: 1 / 1;
   border: 1px solid transparent;
   border-radius: 8px;
@@ -329,6 +397,72 @@ function onCardClick(): void {
 .hb-cal-day.blank {
   visibility: hidden;
   cursor: default;
+}
+
+/* ★ 图片角标：某天打卡详情入口。有图=白底实心（彩底格子上依然清晰），无图=淡色描边（hover 才明显） */
+.hb-cal-img {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 15px;
+  height: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full, 999px);
+  cursor: pointer;
+  transition: opacity var(--transition-fast, 0.15s ease), background-color var(--transition-fast, 0.15s ease);
+  z-index: 2;
+}
+
+.hb-cal-img.has {
+  background: rgba(255, 255, 255, 0.92);
+  color: #1f2937;
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.06));
+}
+
+/* 未附图：常态弱存在（半透明），hover 格子时提亮，既不抢日期数字也不至于看不见 */
+.hb-cal-img:not(.has) {
+  background: transparent;
+  color: var(--color-text-secondary, #64748b);
+  opacity: 0.55;
+}
+
+/* 已打卡格子是习惯色实底：角标必须转白，否则深灰图标压在实底上几乎不可见 */
+.hb-cal-day.checked .hb-cal-img:not(.has) {
+  color: rgba(255, 255, 255, 0.9);
+  opacity: 0.8;
+}
+
+.hb-cal-day:hover .hb-cal-img:not(.has) {
+  opacity: 1;
+  background: var(--color-bg-hover, #f1f5f9);
+}
+
+.hb-cal-day.checked:hover .hb-cal-img:not(.has) {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+/* 张数红点：仅 >1 张时出现（1 张时角标本身已足够表达） */
+.hb-cal-imgcnt {
+  position: absolute;
+  top: -3px;
+  right: -4px;
+  min-width: 12px;
+  height: 12px;
+  padding: 0 3px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--color-primary, #3b82f6);
+  color: #fff;
+  font-size: 9px;
+  line-height: 12px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.hb-cal-day.future .hb-cal-img {
+  display: none;
 }
 
 /* ===== 暗色模式 ===== */

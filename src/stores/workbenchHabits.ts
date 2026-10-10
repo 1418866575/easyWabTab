@@ -1,10 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref, toRaw } from 'vue'
-import type { Habit, HabitFrequency, HabitRecord, HabitsData, StreakResult, WeeklyAttainment } from '@/composables/habitCore'
+import type { Habit, HabitFrequency, HabitImage, HabitRecord, HabitsData, StreakResult, WeeklyAttainment } from '@/composables/habitCore'
 import {
   HABIT_ID_PREFIX,
   HABIT_RECORD_ID_PREFIX,
   emptyHabitsData,
+  isDateStr,
+  normalizeHabitImages,
   normalizeHabitsData,
   streakOf as streakOfCore,
   weekCompletions,
@@ -13,8 +15,8 @@ import {
 import { idbGet, idbPut } from '@/composables/useIdb'
 import { markDirty } from '@/composables/useCloudSync'
 
-// 习惯 CRUD 操作错误语义：empty 空名 / duplicate 重名 / not-found 不存在。
-export type HabitOpError = 'empty' | 'duplicate' | 'not-found'
+// 习惯 CRUD 操作错误语义：empty 空名 / duplicate 重名 / not-found 不存在 / invalid 入参非法。
+export type HabitOpError = 'empty' | 'duplicate' | 'not-found' | 'invalid'
 /** 习惯/打卡操作统一返回结构（ok:true 无 reason；ok:false 时 reason 语义精确，仿 todo 分类 CRUD 惯例）。 */
 export type HabitOp = { ok: boolean; reason?: HabitOpError }
 
@@ -49,8 +51,16 @@ export const useWorkbenchHabitsStore = defineStore('workbenchHabits', () => {
     }
   }
 
-  /** 新增习惯：name trim 后非空、与现有习惯（大小写不敏感）唯一 → 才写入；id 前缀 hb_。 */
-  async function addHabit(name: string, frequency: HabitFrequency, color?: string): Promise<HabitOp> {
+  /**
+   * 新增习惯：name trim 后非空、与现有习惯（大小写不敏感）唯一 → 才写入；id 前缀 hb_。
+   * imageEnabled 默认 false（保持原有打卡行为），仅显式传入 true 时开启按天图片详情。
+   */
+  async function addHabit(
+    name: string,
+    frequency: HabitFrequency,
+    color?: string,
+    imageEnabled = false
+  ): Promise<HabitOp> {
     const trimmed = name.trim()
     if (!trimmed) return { ok: false, reason: 'empty' }
     if (habits.value.some(h => h.name.toLowerCase() === trimmed.toLowerCase())) {
@@ -61,14 +71,18 @@ export const useWorkbenchHabitsStore = defineStore('workbenchHabits', () => {
       name: trimmed,
       frequency,
       color,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      ...(imageEnabled ? { imageEnabled: true } : {})
     })
     await saveHabits()
     return { ok: true }
   }
 
-  /** 改名/改频次/改颜色：name 唯一校验排除自身；失败（未找到/空名/重名）返回对应 reason，不写入。 */
-  async function updateHabit(id: string, patch: Partial<Pick<Habit, 'name' | 'frequency' | 'color'>>): Promise<HabitOp> {
+  /** 改名/改频次/改颜色/改图片开关：name 唯一校验排除自身；失败（未找到/空名/重名）返回对应 reason，不写入。 */
+  async function updateHabit(
+    id: string,
+    patch: Partial<Pick<Habit, 'name' | 'frequency' | 'color' | 'imageEnabled'>>
+  ): Promise<HabitOp> {
     const index = habits.value.findIndex(h => h.id === id)
     if (index === -1) return { ok: false, reason: 'not-found' }
     const changes: Partial<Habit> = {}
@@ -82,7 +96,11 @@ export const useWorkbenchHabitsStore = defineStore('workbenchHabits', () => {
     }
     if (patch.frequency !== undefined) changes.frequency = patch.frequency
     if (patch.color !== undefined) changes.color = patch.color
-    habits.value[index] = { ...habits.value[index], ...changes }
+    if (patch.imageEnabled !== undefined) changes.imageEnabled = patch.imageEnabled
+    const next: Habit = { ...habits.value[index], ...changes }
+    // 与 normalizeHabit 口径一致：关闭时不落字段，避免库里出现一堆 imageEnabled:false
+    if (!next.imageEnabled) delete next.imageEnabled
+    habits.value[index] = next
     await saveHabits()
     return { ok: true }
   }
@@ -116,6 +134,48 @@ export const useWorkbenchHabitsStore = defineStore('workbenchHabits', () => {
     return { ok: true }
   }
 
+  /**
+   * 某天详情统一保存入口（加减打卡 + 图片一次写库，避免两次 saveHabits 造成 dirty 抖动）：
+   * - checked=false → 删除该天记录（连同图片）；本就无记录也返回 ok（幂等）
+   * - checked=true  → 已打卡则只替换 images；未打卡则创建记录（「补打卡」语义）并写入图片
+   * images 在此处统一走 normalizeHabitImages（剔除非法 dataURL + 截断到上限），UI 无需自行校验。
+   */
+  async function saveRecordDetail(
+    habitId: string,
+    date: string,
+    images: HabitImage[],
+    checked: boolean
+  ): Promise<HabitOp> {
+    if (!habits.value.some(h => h.id === habitId)) return { ok: false, reason: 'not-found' }
+    if (!isDateStr(date)) return { ok: false, reason: 'invalid' }
+    // toRaw 解开数组层后再对每个元素解一层：直接展开 Proxy 元素会让 IDB 结构化克隆抛 DataCloneError
+    const raw = toRaw(records.value).map<HabitRecord>(r => toRaw(r))
+    const index = raw.findIndex(r => r.habitId === habitId && r.date === date)
+
+    if (!checked) {
+      records.value = index === -1 ? raw : raw.filter(r => !(r.habitId === habitId && r.date === date))
+      await saveHabits()
+      return { ok: true }
+    }
+
+    const clean = normalizeHabitImages(images)
+    const withImages = clean.length > 0 ? { images: clean } : {}
+    if (index === -1) {
+      raw.push({
+        id: `${HABIT_RECORD_ID_PREFIX}${Date.now()}`,
+        habitId,
+        date,
+        createdAt: new Date().toISOString(),
+        ...withImages
+      })
+    } else {
+      raw[index] = { ...raw[index], ...withImages }
+    }
+    records.value = raw
+    await saveHabits()
+    return { ok: true }
+  }
+
   // ---- 周视图/连续天数：只读薄委托 habitCore（公式属 core，store 禁止内联重算）----
 
   /** 本周完成打卡日期列表（周一起点，去重升序）。 */
@@ -142,6 +202,7 @@ export const useWorkbenchHabitsStore = defineStore('workbenchHabits', () => {
     updateHabit,
     deleteHabit,
     toggleCheckIn,
+    saveRecordDetail,
     weekCompletionsOf,
     streakOf,
     weeklyAttainmentOf

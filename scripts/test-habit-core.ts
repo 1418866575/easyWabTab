@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict'
 import {
   DEFAULT_HABIT_COLOR,
+  MAX_IMAGES_PER_RECORD,
   emptyHabitsData,
+  estimateDataUrlBytes,
   normalizeHabit,
+  normalizeHabitImage,
+  normalizeHabitImages,
   normalizeHabitRecord,
   normalizeHabitsData,
   streakDays,
@@ -286,6 +290,80 @@ test('T13 normalizeHabitsData empty object fallback', () => {
     records: [mkRecord({ habitId: 'hb_1', date: '2026-08-05' })]
   })
   a.deepEqual(normalizeHabitsData(data), data) // 幂等
+})
+
+// T16 — normalizeHabitImage：合法保留；非 data:image/* 剔除；id 兜底 hbi_；bytes 非法→估算；name 空省略
+test('T16 normalizeHabitImage validation + id bytes fallback', () => {
+  const url = 'data:image/jpeg;base64,/9j/4AAQSkZJRg=='
+  // 合法：bytes 取自入参，name 保留
+  a.deepEqual(normalizeHabitImage({ id: 'hbi_1', dataUrl: url, bytes: 12345, name: 'a.jpg' }), {
+    id: 'hbi_1',
+    dataUrl: url,
+    bytes: 12345,
+    name: 'a.jpg'
+  })
+  // 非图片 dataURL（含普通 http 链接 / 纯文本）→ null
+  a.equal(normalizeHabitImage({ dataUrl: 'https://x.com/a.png' }), null)
+  a.equal(normalizeHabitImage({ dataUrl: 'not-a-data-url' }), null)
+  a.equal(normalizeHabitImage({ dataUrl: 123 }), null)
+  a.equal(normalizeHabitImage(null), null)
+  // id 缺失/空 → 生成 hbi_ 前缀
+  const gen1 = normalizeHabitImage({ dataUrl: url })
+  a.ok(gen1 !== null && gen1.id.startsWith('hbi_'), `id 应为 hbi_ 前缀，实际 ${gen1?.id}`)
+  // bytes 非法 → 由 dataUrl 估算；name 为空字符串 → 字段省略（不写 undefined，避免入库脏 key）
+  const noName = normalizeHabitImage({ id: 'hbi_2', dataUrl: url, bytes: NaN, name: '' })
+  a.equal(noName?.bytes, estimateDataUrlBytes(url))
+  a.equal('name' in (noName ?? {}), false)
+  // 幂等
+  a.deepEqual(normalizeHabitImage(noName), noName)
+})
+
+// T17 — normalizeHabitImages：非数组→空；非法项剔除；超过上限截断；max 可自定义
+test('T17 normalizeHabitImages filter + truncate', () => {
+  const url = 'data:image/jpeg;base64,/9j/4AAQ=='
+  a.deepEqual(normalizeHabitImages(undefined), [])
+  a.deepEqual(normalizeHabitImages('x'), [])
+  a.deepEqual(normalizeHabitImages([{ dataUrl: 'bad' }]), [])
+  const three = ['hbi_1', 'hbi_2', 'hbi_3'].map(id => ({ id, dataUrl: url, bytes: 10 }))
+  // 默认上限 = MAX_IMAGES_PER_RECORD(3)：第 4 张被截断
+  const four = [...three, { id: 'hbi_4', dataUrl: url, bytes: 10 }]
+  a.equal(normalizeHabitImages(four).length, 3)
+  a.equal(MAX_IMAGES_PER_RECORD, 3)
+  // 中间夹非法项 → 剔除后保序
+  const mixed = [three[0], { dataUrl: 'bad' }, three[1]]
+  a.deepEqual(normalizeHabitImages(mixed).map(i => i.id), ['hbi_1', 'hbi_2'])
+  // 自定义上限
+  a.equal(normalizeHabitImages(four, 2).length, 2)
+})
+
+// T18 — normalizeHabitRecord images 兜底：无图不落字段；非法图 → 字段仍不落；合法图保留
+test('T18 normalizeHabitRecord images passthrough', () => {
+  const url = 'data:image/jpeg;base64,/9j/4AAQ=='
+  // 无 images 字段：保持字段缺省（避免给全部历史记录塞空数组）
+  const plain = normalizeHabitRecord({ id: 'hr_1', habitId: 'hb_1', date: '2026-08-05' })
+  a.equal('images' in (plain ?? {}), false)
+  // images 全是非法项 → 归一化为空 → 字段不落
+  const dirty = normalizeHabitRecord({ habitId: 'hb_1', date: '2026-08-05', images: [{ dataUrl: 'bad' }] })
+  a.equal('images' in (dirty ?? {}), false)
+  // 合法单张 → 保留且幂等
+  const withImg = normalizeHabitRecord({
+    id: 'hr_2',
+    habitId: 'hb_1',
+    date: '2026-08-05',
+    images: [{ id: 'hbi_1', dataUrl: url, bytes: 10 }]
+  })
+  a.equal(withImg?.images?.length, 1)
+  a.deepEqual(normalizeHabitRecord(withImg), withImg)
+  // 坏记录（date 非法）依旧剔除，不受 images 影响
+  a.equal(normalizeHabitRecord({ habitId: 'hb_1', date: '2026/08/05', images: [] }), null)
+})
+
+// T19 — estimateDataUrlBytes：base64 每 4 字符 = 3 字节，末尾 padding 不计；空 body → 0
+test('T19 estimateDataUrlBytes base64 padding math', () => {
+  a.equal(estimateDataUrlBytes('data:image/jpeg;base64,'), 0)
+  a.equal(estimateDataUrlBytes('data:image/jpeg;base64,AAAA'), 3) // 4 chars → 3 bytes
+  a.equal(estimateDataUrlBytes('data:image/jpeg;base64,AAAAAA=='), 4) // 8 chars - 2 padding → 4 bytes
+  a.equal(estimateDataUrlBytes('data:image/jpeg;base64,AAAAA='), 3) // 6 chars - 1 padding → 3 bytes
 })
 
 let passed = 0

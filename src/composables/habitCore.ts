@@ -12,6 +12,12 @@ export const HABIT_MIN_FREQUENCY = 1
 export const HABIT_MAX_FREQUENCY = 7
 /** 习惯默认色：与待办 DEFAULT_TODO_COLOR 同源蓝。 */
 export const DEFAULT_HABIT_COLOR = '#3b82f6'
+/** 打卡图片 id 前缀（store 不直接生成，由 normalizeHabitImage 兜底）。 */
+export const HABIT_IMAGE_ID_PREFIX = 'hbi_'
+/** 单条打卡记录最多携带图片张数（UI 与 core 共用同一上限）。 */
+export const MAX_IMAGES_PER_RECORD = 3
+/** 单张原图字节上限（10MB）——超过的文件在上传前置环节就被拒绝，不进入压缩流程。 */
+export const MAX_IMAGE_BYTES = 10 * 1024 * 1024
 
 /** 习惯频率：每周目标打卡次数（1-7）。 */
 export type HabitFrequency = number
@@ -23,6 +29,22 @@ export interface Habit {
   frequency: HabitFrequency
   color?: string // undefined = 默认蓝
   createdAt: string
+  /**
+   * 是否开启「打卡图片」：true 时该习惯按天维护详情（点日历某天打开详情弹框，可传最多 3 张图）；
+   * false（默认）保持原有行为——点某天直接打卡 / 取消打卡，不出现图片相关入口。
+   */
+  imageEnabled?: boolean
+}
+
+/**
+ * 单张打卡图片：dataUrl 恒为压缩后的 JPEG base64（云端同步的就是它，原图不保留）。
+ * bytes 为压缩后体积，仅用于 UI 占用提示；name 仅用于删除/报错文案，可缺省。
+ */
+export interface HabitImage {
+  id: string
+  dataUrl: string
+  bytes: number
+  name?: string
 }
 
 /** 打卡记录：id 恒 hr_ 前缀；habitId 引用 Habit.id；date 'YYYY-MM-DD' 本地日期。 */
@@ -31,6 +53,7 @@ export interface HabitRecord {
   habitId: string
   date: string
   createdAt: string
+  images?: HabitImage[] // 某天打卡附图，最多 MAX_IMAGES_PER_RECORD 张（可缺省 = 无图）
 }
 
 /** 双数组数据模型（仿 noteCore NoteData：习惯数组 + 打卡记录数组）。 */
@@ -54,9 +77,9 @@ function genId(prefix: string): string {
 /** 习惯自定义颜色：'#RGB' 或 '#RRGGBB'（大小写均可）。 */
 const HEX_COLOR_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 
-/** 'YYYY-MM-DD' 严格格式校验。 */
+/** 'YYYY-MM-DD' 严格格式校验（导出供 store/组件做入参防御）。 */
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
-function isDateStr(v: unknown): v is string {
+export function isDateStr(v: unknown): v is string {
   return typeof v === 'string' && DATE_RE.test(v)
 }
 
@@ -78,6 +101,7 @@ export function emptyHabitsData(): HabitsData {
 /**
  * 单条习惯归一化（幂等）：name trim 后为空 → 剔除（返回 null）；id 缺失/非字符串 → 生成 hb_ 前缀 id；
  * color 非合法 hex → 默认蓝；frequency 非法/越界 → 钳到 [1,7]；createdAt 非法/缺失 → 当前 ISO。脏输入不抛错。
+ * imageEnabled 仅当严格 true 时落字段（默认关闭的习惯保持字段缺省，避免给全库旧习惯补一个 false）。
  */
 export function normalizeHabit(raw: unknown): Habit | null {
   if (!raw || typeof raw !== 'object') return null
@@ -89,13 +113,63 @@ export function normalizeHabit(raw: unknown): Habit | null {
     name,
     frequency: normalizeFrequency(h.frequency),
     color: typeof h.color === 'string' && HEX_COLOR_RE.test(h.color) ? h.color : DEFAULT_HABIT_COLOR,
-    createdAt: typeof h.createdAt === 'string' ? h.createdAt : isoNow()
+    createdAt: typeof h.createdAt === 'string' ? h.createdAt : isoNow(),
+    ...(h.imageEnabled === true ? { imageEnabled: true } : {})
   }
+}
+
+/** data:image/* 前缀校验：拒绝把任意字符串塞进 dataUrl 撑爆 IndexedDB 与云同步信封。 */
+function isImageDataUrl(v: unknown): v is string {
+  return typeof v === 'string' && /^data:image\/[a-zA-Z0-9.+-]+;base64,/.test(v)
+}
+
+/** dataURL 体积估算（字节）：base64 每 4 字符 = 3 字节，末尾 '=' padding 不计。 */
+export function estimateDataUrlBytes(dataUrl: string): number {
+  const comma = dataUrl.indexOf(',')
+  const body = comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl
+  const padding = body.endsWith('==') ? 2 : body.endsWith('=') ? 1 : 0
+  return Math.max(0, Math.floor((body.length * 3) / 4) - padding)
+}
+
+/**
+ * 单张图片归一化（幂等）：dataUrl 非 'data:image/*;base64,' → 剔除（返回 null）；
+ * id 缺失/非字符串 → 生成 hbi_ 前缀 id；bytes 非法 → 由 dataUrl 估算；name 非字符串 → 省略。
+ */
+export function normalizeHabitImage(raw: unknown): HabitImage | null {
+  if (!raw || typeof raw !== 'object') return null
+  const im = raw as Record<string, unknown>
+  const dataUrl = im.dataUrl
+  if (!isImageDataUrl(dataUrl)) return null
+  const bytes = typeof im.bytes === 'number' && Number.isFinite(im.bytes) && im.bytes >= 0
+    ? Math.round(im.bytes)
+    : estimateDataUrlBytes(dataUrl)
+  return {
+    id: typeof im.id === 'string' && im.id !== '' ? im.id : genId(HABIT_IMAGE_ID_PREFIX),
+    dataUrl,
+    bytes,
+    ...(typeof im.name === 'string' && im.name !== '' ? { name: im.name } : {})
+  }
+}
+
+/**
+ * 图片数组归一化（幂等）：非法项剔除；超过 max 张的部分丢弃（防御性：UI 已限 3 张，
+ * 但云端老数据 / 手工备份可能超限，超限时整库体积极易失控）。
+ * 输入非数组或归一化后为空 → 返回空数组。
+ */
+export function normalizeHabitImages(raw: unknown, max: number = MAX_IMAGES_PER_RECORD): HabitImage[] {
+  if (!Array.isArray(raw)) return []
+  const out: HabitImage[] = []
+  for (const item of raw) {
+    const im = normalizeHabitImage(item)
+    if (im !== null) out.push(im)
+  }
+  return out.length > max ? out.slice(0, max) : out
 }
 
 /**
  * 单条打卡记录归一化（幂等）：habitId 缺失/空 或 date 非 'YYYY-MM-DD' → 剔除（返回 null）；
  * id 缺失/非字符串 → 生成 hr_ 前缀 id；createdAt 非法/缺失 → 当前 ISO。脏输入不抛错。
+ * images：仅当存在合法图片时才落该字段（旧记录无图时保持字段缺省，避免全库写入空数组）。
  */
 export function normalizeHabitRecord(raw: unknown): HabitRecord | null {
   if (!raw || typeof raw !== 'object') return null
@@ -103,11 +177,13 @@ export function normalizeHabitRecord(raw: unknown): HabitRecord | null {
   const habitId = typeof r.habitId === 'string' && r.habitId !== '' ? r.habitId : ''
   const date = isDateStr(r.date) ? r.date : ''
   if (habitId === '' || date === '') return null
+  const images = normalizeHabitImages(r.images)
   return {
     id: typeof r.id === 'string' && r.id !== '' ? r.id : genId(HABIT_RECORD_ID_PREFIX),
     habitId,
     date,
-    createdAt: typeof r.createdAt === 'string' ? r.createdAt : isoNow()
+    createdAt: typeof r.createdAt === 'string' ? r.createdAt : isoNow(),
+    ...(images.length > 0 ? { images } : {})
   }
 }
 
