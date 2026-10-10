@@ -1,32 +1,14 @@
 <script setup lang="ts">
-import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
-import RecordsCard from '@/components/common/RecordsCard.vue'
-import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import LedgerSwitcher from '@/components/workbench/LedgerSwitcher.vue'
 import { useToast } from '@/composables/useToast'
-
-const vm = useViewMode()
 
 /** 表单弹框尺寸：沿用「设置 → 弹窗尺寸」写入的 CSS 变量（ledger），未配置时回退默认值 */
 const PANEL_WIDTH = 'var(--dlg-w-wb-ledger, 480px)'
 const PANEL_MAX_HEIGHT = 'var(--dlg-h-wb-ledger, 85vh)'
 
-/** 查看记录弹框尺寸：宽 85vw / 高 85vh（表格 + 分页需要更高的可用空间，非设置项） */
-const RECORDS_PANEL_WIDTH = '1200px'
-const RECORDS_PANEL_MAX_HEIGHT = '85vh'
-
-function cardFields(row: any) {
-  return [
-    { label: '日期', value: row.entry.date },
-    { label: '分类', value: row.cat?.name ?? '未知' },
-    { label: '金额', value: (row.cat?.type === 'income' ? '+' : '-') + formatYuan(row.entry.amount) },
-    { label: '备注', value: row.entry.note || '—' }
-  ]
-}
-
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import Icon from '@/components/Icon.vue'
 import {
@@ -46,9 +28,7 @@ import {
 } from '@/composables/ledgerCore'
 import type { TrendChartScale, TrendMonth } from '@/composables/ledgerCore'
 import type { LedgerCategory, LedgerEntry } from '@/types'
-import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
-import { usePanelPaging } from '@/composables/usePanelPaging'
-import { usePageSize } from '@/composables/usePageSize'
+import { exportXlsx } from '@/composables/xlsxExport'
 
 const store = useWorkbenchLedgerStore()
 const toast = useToast()
@@ -65,12 +45,10 @@ function shiftMonth(delta: number): void {
   const [y, m] = selectedMonth.value.split('-').map(Number)
   const d = new Date(y, m - 1 + delta, 1)
   selectedMonth.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-  paging.goto(1) // 月份切换 → 列表回第 1 页
 }
 
 function goToCurrentMonth(): void {
   selectedMonth.value = currentMonth()
-  paging.goto(1) // 本月 → 列表回第 1 页
 }
 
 // ===== 月度统计（必须走 ledgerCore 纯函数，禁组件内重算公式）=====
@@ -154,7 +132,7 @@ const donutSegments = computed<DonutSegment[]>(() => {
     const dashLen = (item.total / total) * RING_C
     const seg: DonutSegment = {
       categoryId: item.categoryId,
-      name: item.categoryId === 'unknown' ? '未知' : catNameOf(item.categoryId),
+      name: item.categoryId === 'unknown' ? '未知' : (findCategory(store.categories, item.categoryId)?.name ?? '未知'),
       total: item.total,
       percent: item.percent,
       color:
@@ -206,70 +184,33 @@ function onDailyTouchEnd(e: TouchEvent): void {
   else dailyNewer()
 }
 
-// ===== 月内记录列表（date 降序，同日 createdAt 降序）=====
+// ===== 月内记录列表（date 降序，同日 createdAt 降序）—— 页面底部表格直接复用，随数据实时更新 =====
 const monthEntries = computed(() =>
   [...store.entries]
     .filter(e => monthKeyOf(e.date) === selectedMonth.value)
     .sort((a, b) => (a.date === b.date ? (a.createdAt < b.createdAt ? 1 : -1) : a.date < b.date ? 1 : -1))
 )
 
-// ===== 一键导出 CSV（当前选中月记录）=====
-function exportLedgerCsv(): void {
+// ===== 一键导出 Excel（当前选中月记录，真正的 .xlsx，动态 import xlsx）=====
+async function exportLedgerXlsx(): Promise<void> {
   const headers = ['日期', '分类', '类型', '金额', '备注']
   const rows: (string | number)[][] = monthEntries.value.map(e => {
     const cat = findCategory(store.categories, e.categoryId)
     return [e.date, cat?.name ?? '未知', cat?.type === 'income' ? '收入' : '支出', e.amount.toFixed(2), e.note ?? '']
   })
-  downloadCsv(csvFileName(`记账_${selectedMonth.value}`), buildCsv(headers, rows))
+  await exportXlsx(`记账_${selectedMonth.value}`, headers, rows, {
+    year: store.currentLedger?.year,
+    ledgerName: store.currentLedger?.name
+  })
 }
-
-// ===== 记录弹框（点击「查看」弹出弹框，Element Plus Table + ElPagination，每页 10 条）=====
-const showRecordsModal = ref(false)
-const recordsPage = ref(1)
-const RECORDS_PAGE_SIZE = 10
-const { pageSize, PAGE_SIZES } = usePageSize('ld-records-pager', RECORDS_PAGE_SIZE)
-
-// ===== 图表区展开/折叠（默认展开）=====
-const chartsExpanded = ref(true)
-
-function openRecordsModal(): void {
-  recordsPage.value = 1
-  showRecordsModal.value = true
-}
-
-function closeRecordsModal(): void {
-  showRecordsModal.value = false
-}
-
-const recordsPageItems = computed<EntryView[]>(() => {
-  const start = (recordsPage.value - 1) * pageSize.value
-  return viewEntries.value.slice(start, start + pageSize.value)
-})
 
 interface EntryView {
   entry: LedgerEntry
   cat: LedgerCategory | undefined
 }
 
-const viewEntries = computed<EntryView[]>(() =>
-  monthEntries.value.map(entry => ({ entry, cat: findCategory(store.categories, entry.categoryId) }))
-)
-
-// ===== 自适应分页（Wave-2 T11）：≥769px 分页；≤768px 惰性（全量渲染、pager 隐藏，R2）=====
-const listEl = ref<HTMLElement | null>(null)
-// reactive() 解包嵌套 ref：模板中 paging.pageItems/currentPage/totalPages/fitsOnePage 直接取值
-// （Vue 模板只对顶层 ref 自动解包，嵌套 ref 需 reactive 包装，vue-tsc 实证；与 Todo/Diary 面板同构）
-const paging = reactive(usePanelPaging({
-  items: () => viewEntries.value,
-  rowHeight: 49,
-  maxRows: 6,
-  containerRef: listEl,
-  gridRef: listEl
-}))
-
-function catNameOf(categoryId: string): string {
-  return findCategory(store.categories, categoryId)?.name ?? '未知'
-}
+// ===== 图表区展开/折叠（默认展开）=====
+const chartsExpanded = ref(true)
 
 // ===== 记录表单（新增/编辑共用弹框）=====
 const showDialog = ref(false)
@@ -327,14 +268,12 @@ async function handleSave(): Promise<void> {
     toast.warning(res.message || '保存失败')
     return
   }
-  paging.goto(1) // 新增/编辑后列表回第 1 页（新记录在 date 降序列表顶部）
   cancelForm()
 }
 
 async function handleDelete(id: string): Promise<void> {
   if (await showConfirm('确定要删除这笔记账吗？')) {
     await store.deleteEntry(id)
-    paging.goto(1) // 删除后列表回第 1 页
   }
 }
 
@@ -368,10 +307,7 @@ onMounted(async () => {
           {{ store.showAmount ? '隐藏金额' : '显示金额' }}
         </el-button>
         <el-button class="btn-add" data-testid="ld-add" @click="startAdd">＋ 新增</el-button>
-        <el-button class="btn-manage" data-testid="ld-toggle-list" @click="openRecordsModal">
-          查看（{{ monthEntries.length }}）
-        </el-button>
-        <el-button class="btn-export-csv" data-testid="ld-export" :disabled="monthEntries.length === 0" @click="exportLedgerCsv">导出 CSV</el-button>
+        <el-button class="btn-export-xlsx" data-testid="ld-export" :disabled="monthEntries.length === 0" @click="exportLedgerXlsx">导出 Excel</el-button>
       </div>
     </div>
 
@@ -726,94 +662,55 @@ onMounted(async () => {
       </BaseDialog>
     </Transition>
 
-    <!-- 记录弹框（Element Plus Table，列顺序：日期/分类/金额/备注/操作，每页 10 条） -->
-    <Transition name="dialog">
-      <BaseDialog
-        v-if="showRecordsModal"
-        :width="RECORDS_PANEL_WIDTH"
-        :max-height="RECORDS_PANEL_MAX_HEIGHT"
-        class="ld-records-overlay"
-        data-testid="ld-records-dialog"
-        @close="closeRecordsModal"
+    <!-- 本月记录（页面底部直接展示，随数据实时更新；无记录时由上方 empty-state 兜底，此处不渲染） -->
+    <section v-if="monthEntries.length > 0" class="ld-records-section" data-testid="ld-records-section">
+      <div class="ld-records-head">
+        <h3 class="ld-records-title">本月记录（{{ monthEntries.length }} 条）</h3>
+      </div>
+      <el-table
+        class="ewt-table"
+        :data="monthEntries"
+        stripe
+        border
+        size="default"
+        style="width: 100%"
+        empty-text="本月暂无记录"
       >
-        <template #title>
-          <span class="ld-records-title">本月记录（{{ monthEntries.length }} 条）</span>
-          <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
-        </template>
-        <div class="ld-records-body">
-            <el-table v-if="vm.mode === 'list'" class="ewt-table"
-              :data="recordsPageItems"
-              stripe
-              border
-              size="default"
-              style="width: 100%"
-              height="100%"
-              empty-text="本月暂无记录"
+        <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => i + 1" />
+        <el-table-column prop="date" label="日期" width="130" align="center" />
+        <el-table-column label="分类" width="160" align="center">
+          <template #default="{ row }: { row: LedgerEntry }">
+            <span
+              class="ld-cat-type-badge"
+              :class="{ 'is-income': findCategory(store.categories, row.categoryId)?.type === 'income' }"
+              :data-testid="`ld-cat-${row.categoryId}`"
             >
-              <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (recordsPage - 1) * pageSize + i + 1" />
-              <el-table-column prop="entry.date" label="日期" width="130" align="center">
-                <template #default="{ row }: { row: EntryView }">
-                  {{ row.entry.date }}
-                </template>
-              </el-table-column>
-              <el-table-column label="分类" width="160" align="center">
-                <template #default="{ row }: { row: EntryView }">
-                  <span
-                    class="ld-cat-type-badge"
-                    :class="{ 'is-income': row.cat?.type === 'income' }"
-                    :data-testid="`ld-cat-${row.entry.categoryId}`"
-                  >
-                    {{ row.cat?.name ?? '未知' }}
-                  </span>
-                </template>
-              </el-table-column>
-              <el-table-column label="金额" width="150" align="right">
-                <template #default="{ row }: { row: EntryView }">
-                  <span class="ld-record-amount" :class="{ 'is-income': row.cat?.type === 'income' }">
-                    {{ masked((row.cat?.type === 'income' ? '+' : '-') + formatYuan(row.entry.amount)) }}
-                  </span>
-                </template>
-              </el-table-column>
-              <el-table-column label="备注" min-width="200" align="center" show-overflow-tooltip>
-                <template #default="{ row }: { row: EntryView }">
-                  <span v-if="row.entry.note">{{ row.entry.note }}</span>
-                  <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
-                </template>
-              </el-table-column>
-              <el-table-column label="操作" class-name="ewt-op-col" width="150" align="center" fixed="right">
-                <template #default="{ row }: { row: EntryView }">
-                  <el-button class="btn-edit" :data-testid="`ld-edit-${row.entry.id}`" @click="startEdit(row)" style="margin-right: 6px;">编辑</el-button>
-                  <el-button class="btn-delete" :data-testid="`ld-delete-${row.entry.id}`" @click="handleDelete(row.entry.id)">删除</el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-            <div v-else class="ewt-card-grid">
-              <RecordsCard
-                @edit="startEdit(item)"
-                v-for="item in recordsPageItems"
-                :key="item.entry.id"
-                :fields="cardFields(item)"
-              >
-              </RecordsCard>
-            </div>
-
-          </div>
-          <div class="ld-records-pager ewt-pager">
-            <el-pagination
-              v-model:current-page="recordsPage"
-              @size-change="recordsPage = 1"
-              v-model:page-size="pageSize"
-              :page-sizes="PAGE_SIZES"
-              layout="total, prev, pager, next, jumper"
-              :total="viewEntries.length"
-              background
-              small
-              prev-text="上一页"
-              next-text="下一页"
-            />
-          </div>
-      </BaseDialog>
-    </Transition>
+              {{ findCategory(store.categories, row.categoryId)?.name ?? '未知' }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="金额" width="150" align="right">
+          <template #default="{ row }: { row: LedgerEntry }">
+            <span class="ld-record-amount" :class="{ 'is-income': findCategory(store.categories, row.categoryId)?.type === 'income' }">
+              {{ masked((findCategory(store.categories, row.categoryId)?.type === 'income' ? '+' : '-') + formatYuan(row.amount)) }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="备注" min-width="200" align="center" show-overflow-tooltip>
+          <template #default="{ row }: { row: LedgerEntry }">
+            <span v-if="row.note">{{ row.note }}</span>
+            <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
+          </template>
+        </el-table-column>
+        <!-- 列宽 170：两个按钮（编辑/删除）在一行内横排放下，不折行（.ewt-op-col 内部已有 gap:6px） -->
+        <el-table-column label="操作" class-name="ewt-op-col" width="170" align="center" fixed="right">
+          <template #default="{ row }: { row: LedgerEntry }">
+            <el-button class="btn-edit" :data-testid="`ld-edit-${row.id}`" @click="startEdit({ entry: row, cat: findCategory(store.categories, row.categoryId) })">编辑</el-button>
+            <el-button class="btn-delete" :data-testid="`ld-delete-${row.id}`" @click="handleDelete(row.id)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </section>
   </div>
 </template>
 
@@ -1359,69 +1256,32 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 
 /* ===== 弹框（复用 WorkbenchTodo 体系）=====
    遮罩/面板/头部/关闭/主体已统一到 common/BaseDialog.vue，
-   此处仅保留本组件特有的层级覆盖与「查看记录」弹框尺寸 */
+   此处仅保留新增/编辑弹框的层级覆盖（保证浮于页面其它层之上） */
 
-/* 新增/编辑弹框需覆盖在「查看记录」弹框之上：BaseDialog 统一 z-index: 300，
-   两者同为 300 时 DOM 中后者（查看记录）会盖住前者（编辑），故此处显式提升层级 */
+/* 新增/编辑弹框：BaseDialog 统一 z-index: 300，此处显式提升一层避免被面板内容遮挡 */
 .ld-dialog-top {
   z-index: 400;
 }
 
-/* 查看记录弹框需要撑满可用高度（宽 85vw / 高 85vh），给 table + pagination 足够空间 */
-.ld-records-overlay :deep(.bd-panel) {
-  width: 85vw;
-  height: 85vh;
-  min-width: 560px;
-}
-
-/* 移动端：取消 560px 最小宽度，避免对话框宽于视口、关闭按钮落到屏幕外无法关闭 */
-@media (max-width: 768px) {
-  .ld-records-overlay :deep(.bd-panel) {
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
-    height: 90vh !important;
-    height: 90dvh !important;
-  }
-}
-
-/* 记录弹框头部：标题与视图切换器并排 */
-.ld-records-title {
-  margin-right: 4px;
-}
-
-/* el-table 容器：填满剩余空间，overflow 交给 el-table internal */
-.ld-records-body {
-  padding: 16px 20px 16px 20px;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-/* el-pagination 位置：底部分页条 */
-.ld-records-pager {
-  padding: 14px 20px;
+/* 底部本月记录区：内联展示、随页面滚动，与面板整体留白/分隔线风格一致 */
+.ld-records-section {
+  margin-top: 20px;
+  padding-top: 16px;
   border-top: 1px solid var(--color-border, #e5e7eb);
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.06);
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  background: var(--color-surface-2, #fafafa);
-  border-radius: 0 0 var(--radius-lg, 12px) var(--radius-lg, 12px);
-  position: relative;
-  z-index: 1;
 }
 
-/* 移动端：分页条保持右对齐（与 PC 一致），仅 padding 适配窄屏 */
-@media (max-width: 768px) {
-  .ld-records-pager {
-    justify-content: flex-end;
-    padding: 12px 16px;
-  }
-  .ld-records-body {
-    padding: 12px 16px 16px 16px;
-  }
+.ld-records-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.ld-records-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text, #1f2937);
 }
 
 /* 表格内金额样式：沿用旧.ld-record-amount，确保 + 绿 / - 蓝 主题色 */

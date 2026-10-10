@@ -1,34 +1,13 @@
 <script setup lang="ts">
-import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
-import RecordsCard from '@/components/common/RecordsCard.vue'
-import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 
 /** 表单弹框尺寸（沿用原 .dialog 的固定尺寸，非设置项） */
 const PANEL_WIDTH = '480px'
 const PANEL_MAX_HEIGHT = '85vh'
 
-/** 体重记录列表弹框尺寸：宽 85vw / 高 85vh（表格 + 分页需要更大的可用空间） */
-const LIST_PANEL_WIDTH = '1200px'
-const LIST_PANEL_MAX_HEIGHT = '85vh'
 
-const vm = useViewMode()
 
-function cardFields(row: any) {
-  const bmi = store.height !== undefined ? (calcBmi(row.weightKg, store.height)?.toFixed(1) ?? '—') : '未设身高'
-  const prog = adviceTarget.value !== null
-    ? (row.weightKg > adviceTarget.value ? '距目标 -' + (row.weightKg - adviceTarget.value).toFixed(1) + ' kg'
-      : row.weightKg < adviceTarget.value ? '距目标 +' + (adviceTarget.value - row.weightKg).toFixed(1) + ' kg' : '已达标 ✓')
-    : '未设身高'
-  return [
-    { label: '日期', value: row.date },
-    { label: '体重', value: row.weightKg + ' kg' },
-    { label: 'BMI', value: bmi },
-    { label: '目标进度', value: prog },
-    { label: '备注', value: row.note || '—' }
-  ]
-}
 
 import { computed, onMounted, ref } from 'vue'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
@@ -37,7 +16,6 @@ import { calcBmi, classifyBmi, dietCalories, weightChartScale, weightTarget } fr
 import type { WeightChartPoint } from '@/composables/healthCore'
 import { localToday } from '@/composables/todoCore'
 import Icon from '@/components/Icon.vue'
-import { usePageSize } from '@/composables/usePageSize'
 
 // store 来源可注入：默认成人端 store，学生端容器 provide 自己的 store 后自动改为学生数据（见 healthStoreContext）
 const store = (injectHealthStore() ?? useWorkbenchHealthStore()) as HealthStoreLike
@@ -151,29 +129,18 @@ const formWeightKg = ref('')
 const formNote = ref('')
 
 // ===== 体重记录弹框（Element Plus Table，每页 10 条）=====
-const showRecordsDialog = ref(false)
 const listPage = ref(1)
 const LIST_PAGE_SIZE = 10
-const { pageSize, PAGE_SIZES } = usePageSize('wt-list-pager', LIST_PAGE_SIZE)
 
 // 与其他面板统一命名
 const sortedRecords = computed(() => sortedWeightRecords.value)
 
 const listPageItems = computed(() => {
-  // 移动端弹框内卡片全部展示，无需分页
-  if (vm.isMobile) return sortedRecords.value
-  const start = (listPage.value - 1) * pageSize.value
-  return sortedRecords.value.slice(start, start + pageSize.value)
+  const start = (listPage.value - 1) * LIST_PAGE_SIZE
+  return sortedRecords.value.slice(start, start + LIST_PAGE_SIZE)
 })
 
-function toggleList(): void {
-  listPage.value = 1
-  showRecordsDialog.value = true
-}
 
-function closeRecordsDialog(): void {
-  showRecordsDialog.value = false
-}
 
 // date 必填 + weightKg > 0（允许 1 位小数），否则保存按钮 disabled
 const isRecordValid = computed(() => {
@@ -257,21 +224,13 @@ onMounted(async () => {
         <div v-else class="stat-sub" data-testid="wt-height-empty">未设置身高</div>
       </div>
 
-      <!-- 最近体重 + BMI 卡（右上角挂：新增/查看） -->
+      <!-- 最近体重 + BMI 卡（右上角挂：新增） -->
       <div class="stat-card" data-testid="wt-bmi-card">
         <div class="stat-header">
           <Icon name="weight" :size="16" class="stat-icon" />
           <span class="stat-label">最近体重 · BMI</span>
           <div class="stat-panel-actions">
             <el-button class="btn-add" data-testid="wt-add" @click="startAddRecord">＋ 新增</el-button>
-            <el-button
-              v-if="store.records.weight.length > 0"
-              class="btn-manage"
-              data-testid="wt-toggle-list"
-              @click="toggleList"
-            >
-              查看（{{ store.records.weight.length }}）
-            </el-button>
           </div>
         </div>
         <div class="wt-bmi-row">
@@ -485,101 +444,76 @@ onMounted(async () => {
     </BaseDialog>
     </Transition>
 
-    <!-- 体重记录弹框（Element Plus Table：日期/体重/BMI/目标进度/备注/操作，每页 10 条） -->
-    <Transition name="dialog">
-    <BaseDialog
-      v-if="showRecordsDialog"
-      :width="LIST_PANEL_WIDTH"
-      :max-height="LIST_PANEL_MAX_HEIGHT"
-      class="wt-list-overlay"
-      data-testid="wt-records-dialog"
-      @close="closeRecordsDialog"
-    >
-        <template #title>
-          <span>体重记录</span>
-          <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
-        </template>
-        <div class="wt-list">
-          <el-table v-if="vm.mode === 'list'" class="ewt-table"
-            :data="listPageItems"
-            stripe
-            border
-            size="default"
-            style="width: 100%"
-            height="100%"
-            empty-text="暂无体重记录"
-          >
-            <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (listPage - 1) * pageSize + i + 1" />
-            <el-table-column label="日期" width="130" align="center">
-              <template #default="{ row }">{{ row.date }}</template>
-            </el-table-column>
-            <el-table-column label="体重(kg)" width="130" align="right">
-              <template #default="{ row }">
-                <span style="font-weight:700;font-variant-numeric: tabular-nums;">{{ row.weightKg }} kg</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="BMI" width="130" align="right">
-              <template #default="{ row }">
-                <span v-if="store.height !== undefined && bmi !== null" :class="BMI_META[classifyBmi(calcBmi(row.weightKg, store.height) ?? 20)].className">
-                  {{ calcBmi(row.weightKg, store.height)?.toFixed(1) ?? '—' }}
-                </span>
-                <span v-else style="color: var(--color-text-secondary,#9ca3af);">未设身高</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="目标进度" width="160" align="right">
-              <template #default="{ row }">
-                <template v-if="adviceTarget !== null">
-                  <span style="font-variant-numeric: tabular-nums;">
-                    {{ row.weightKg > adviceTarget
-                        ? `距目标 -${(row.weightKg - adviceTarget).toFixed(1)} kg`
-                        : row.weightKg < adviceTarget
-                        ? `距目标 +${(adviceTarget - row.weightKg).toFixed(1)} kg`
-                        : '已达标 ✓' }}
-                  </span>
-                </template>
-                <span v-else style="color: var(--color-text-secondary,#9ca3af);">未设身高</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="备注" min-width="200" align="center" show-overflow-tooltip>
-              <template #default="{ row }">
-                <span v-if="row.note">{{ row.note }}</span>
-                <span v-else style="color: var(--color-text-secondary,#9ca3af);">—</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" class-name="ewt-op-col" width="150" align="center" fixed="right">
-              <template #default="{ row }">
-                <el-button class="btn-edit" :data-testid="`wt-edit-${row.id}`" @click="showRecordsDialog = false; startEditRecord(row.id)" style="margin-right:6px;">编辑</el-button>
-                <el-button class="btn-delete" :data-testid="`wt-delete-${row.id}`" @click="handleDeleteRecord(row.id)">删除</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <div v-else class="ewt-card-grid">
-            <RecordsCard
-              @edit="showRecordsDialog = false; startEditRecord(item.id)"
-              v-for="item in listPageItems"
-              :key="item.id"
-              :fields="cardFields(item)"
-            >
-            </RecordsCard>
-          </div>
-
-        </div>
-        <div v-if="!vm.isMobile" class="wt-list-pager ewt-pager">
-          <el-pagination
-            v-model:current-page="listPage"
-            @size-change="listPage = 1"
-            v-model:page-size="pageSize"
-            :page-sizes="PAGE_SIZES"
-            layout="total, prev, pager, next, jumper"
-            :total="sortedWeightRecords.length"
-            background
-            small
-            prev-text="上一页"
-            next-text="下一页"
-          />
-        </div>
-    </BaseDialog>
-    </Transition>
+    <!-- 体重记录列表（面板底部内联展示，固定每页 10 条） -->
+    <section v-if="sortedRecords.length > 0" class="ewt-inline-section" data-testid="wt-records-section">
+      <div class="ewt-inline-head">
+        <h3 class="ewt-inline-title">体重记录（{{ sortedRecords.length }} 条）</h3>
+      </div>
+      <el-table class="ewt-table"
+        :data="listPageItems"
+        stripe
+        border
+        size="default"
+        style="width: 100%"
+        empty-text="暂无体重记录"
+      >
+        <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (listPage - 1) * LIST_PAGE_SIZE + i + 1" />
+        <el-table-column label="日期" width="130" align="center">
+          <template #default="{ row }">{{ row.date }}</template>
+        </el-table-column>
+        <el-table-column label="体重(kg)" width="130" align="right">
+          <template #default="{ row }">
+            <span style="font-weight:700;font-variant-numeric: tabular-nums;">{{ row.weightKg }} kg</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="BMI" width="130" align="right">
+          <template #default="{ row }">
+            <span v-if="store.height !== undefined && bmi !== null" :class="BMI_META[classifyBmi(calcBmi(row.weightKg, store.height) ?? 20)].className">
+              {{ calcBmi(row.weightKg, store.height)?.toFixed(1) ?? '—' }}
+            </span>
+            <span v-else style="color: var(--color-text-secondary,#9ca3af);">未设身高</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="目标进度" width="160" align="right">
+          <template #default="{ row }">
+            <template v-if="adviceTarget !== null">
+              <span style="font-variant-numeric: tabular-nums;">
+                {{ row.weightKg > adviceTarget
+                    ? `距目标 -${(row.weightKg - adviceTarget).toFixed(1)} kg`
+                    : row.weightKg < adviceTarget
+                    ? `距目标 +${(adviceTarget - row.weightKg).toFixed(1)} kg`
+                    : '已达标 ✓' }}
+              </span>
+            </template>
+            <span v-else style="color: var(--color-text-secondary,#9ca3af);">未设身高</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="备注" min-width="200" align="center" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.note">{{ row.note }}</span>
+            <span v-else style="color: var(--color-text-secondary,#9ca3af);">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" class-name="ewt-op-col" width="170" align="center" fixed="right">
+          <template #default="{ row }">
+            <el-button class="btn-edit" :data-testid="`wt-edit-${row.id}`" @click="startEditRecord(row.id)">编辑</el-button>
+            <el-button class="btn-delete" :data-testid="`wt-delete-${row.id}`" @click="handleDeleteRecord(row.id)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div class="wt-list-pager ewt-pager">
+        <el-pagination
+          v-model:current-page="listPage"
+          :page-size="LIST_PAGE_SIZE"
+          layout="total, prev, pager, next, jumper"
+          :total="sortedRecords.length"
+          background
+          small
+          prev-text="上一页"
+          next-text="下一页"
+        />
+      </div>
+    </section>
   </div>
 </template>
 
@@ -784,30 +718,6 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 /* .btn-add 视觉已统一到全局 .ui-btn--primary（style.css） */
-.stat-panel-actions .btn-manage {
-  padding: 8px 14px;
-  font-size: 13px;
-  background: var(--color-bg-card, #ffffff);
-  border: 1px solid var(--color-border, #e5e7eb);
-  color: var(--color-text-secondary, #6b7280);
-  border-radius: var(--radius-md, 8px);
-  cursor: pointer;
-  transition: all var(--transition-fast, 0.15s ease);
-  white-space: nowrap;
-}
-.stat-panel-actions .btn-manage:hover {
-  color: var(--color-primary, #10b981);
-  border-color: var(--color-primary, #10b981);
-}
-:global(html.dark) .stat-panel-actions .btn-manage {
-  background: var(--color-bg-card, #1f2937);
-  border-color: var(--color-border, #374151);
-  color: var(--color-text-secondary, #d1d5db);
-}
-:global(html.dark) .stat-panel-actions .btn-manage:hover {
-  color: var(--color-primary, #10b981);
-  border-color: var(--color-primary, #10b981);
-}
 
 .btn-toggle-list {
   padding: 10px 16px;
@@ -863,64 +773,10 @@ onMounted(async () => {
   gap: 14px;
 }
 
-/* 编辑/新增记录弹框需压在体重记录弹框之上（关闭时有过渡重叠），否则从记录中编辑时看不见 */
-.wt-list-overlay { z-index: 310; }
+/* 编辑/新增记录弹框层级：确保浮于页面其它层之上（BaseDialog 统一 z-index: 300） */
 .wt-record-overlay { z-index: 320; }
 
-.wt-list-overlay :deep(.bd-panel) {
-  width: 85vw !important;
-  height: 85vh !important;
-  max-width: 1200px !important;
-  min-width: 560px;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-  overflow-y: visible !important;
-}
-@media (max-width: 640px) {
-  .wt-list-overlay :deep(.bd-panel) { width: 94vw !important; min-width: 0 !important; height: 88vh !important; }
-}
 
-/* 旧 wt-records-dialog / wt-records-body / wt-records-grid 废弃：改用 list-dialog 全局样式 + wt-list 容器 */
-.wt-list {
-  padding: 16px 20px 0 20px;
-  flex: 1;
-  min-height: 0;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
-.wt-list > :global(.el-table) {
-  flex: 1 1 auto;
-  min-height: 0;
-  width: 100% !important;
-  font-size: 13px;
-  border-radius: 10px;
-  overflow: hidden;
-}
-.wt-list > :global(.el-table th.el-table__cell) {
-  background-color: var(--color-bg-hover, #f3f4f6) !important;
-  color: var(--color-text-secondary, #6b7280);
-  font-weight: 600;
-  user-select: none;
-}
-.wt-list > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #111827);
-}
-:global(html.dark) .wt-list > :global(.el-table th.el-table__cell) {
-  background-color: var(--color-bg-hover, #111827) !important;
-  color: var(--color-text-secondary, #d1d5db);
-}
-:global(html.dark) .wt-list > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #f9fafb);
-}
-/* 强制：每个非 fixed 列 cell 最小内容宽，防止只剩日期+操作 */
-.wt-list > :global(.el-table .el-table__body-wrapper .cell),
-.wt-list > :global(.el-table .el-table__header-wrapper .cell) {
-  min-width: 60px;
-  white-space: nowrap;
-}
 
 .wt-list-pager {
   flex: 0 0 auto;

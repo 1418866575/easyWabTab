@@ -1,30 +1,13 @@
 <script setup lang="ts">
-import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
-import RecordsCard from '@/components/common/RecordsCard.vue'
-import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 
 /** 表单弹框尺寸（沿用原 .dialog 的固定尺寸，非设置项） */
 const PANEL_WIDTH = '480px'
 const PANEL_MAX_HEIGHT = '85vh'
 
-/** 记录列表弹框尺寸：宽 85vw / 高 85vh（表格 + 分页需要更大的可用空间） */
-const LIST_PANEL_WIDTH = '1200px'
-const LIST_PANEL_MAX_HEIGHT = '85vh'
 
-const vm = useViewMode()
 
-function cardFields(row: any) {
-  return [
-    { label: '日期', value: row.date },
-    { label: '入睡', value: row.sleepTime || '—' },
-    { label: '起床', value: row.wakeTime || '—' },
-    { label: '时长', value: row.durationHours != null ? Number(row.durationHours).toFixed(1) + ' h' : '—' },
-    { label: '质量', value: row.quality >= 4 ? '优' : row.quality === 3 ? '良' : row.quality === 2 ? '中' : '差' },
-    { label: '备注', value: row.note || '—' }
-  ]
-}
 
 import { computed, onMounted, ref } from 'vue'
 import Icon from '@/components/Icon.vue'
@@ -34,7 +17,6 @@ import { injectHealthStore, type HealthStoreLike } from '@/composables/healthSto
 import { calcDailyAttainment, sleepDurationHours } from '@/composables/healthCore'
 import { localToday } from '@/composables/todoCore'
 import type { SleepRecord } from '@/types'
-import { usePageSize } from '@/composables/usePageSize'
 
 // store 来源可注入：默认成人端 store，学生端容器 provide 自己的 store 后自动改为学生数据（见 healthStoreContext）
 const store = (injectHealthStore() ?? useWorkbenchHealthStore()) as HealthStoreLike
@@ -117,20 +99,14 @@ const formWakeTime = ref('')
 const formQuality = ref('3')
 const formNote = ref('')
 
-// ===== 列表弹框 + 分页（每页 10 条）=====
+// ===== 记录列表分页（面板底部内联展示，固定每页 10 条）=====
 const LIST_PAGE_SIZE = 10
-const { pageSize, PAGE_SIZES } = usePageSize('ex-list-pager', LIST_PAGE_SIZE)
-const showListDialog = ref(false)
 const listPage = ref(1)
 const listPageItems = computed<SleepRecord[]>(() => {
-  // 移动端弹框内卡片全部展示，无需分页
-  if (vm.isMobile) return sortedRecords.value
   const arr = sortedRecords.value
-  const start = (listPage.value - 1) * pageSize.value
-  return arr.slice(start, start + pageSize.value)
+  const start = (listPage.value - 1) * LIST_PAGE_SIZE
+  return arr.slice(start, start + LIST_PAGE_SIZE)
 })
-function openListDialog(): void { listPage.value = 1; showListDialog.value = true }
-function closeListDialog(): void { showListDialog.value = false }
 
 // date 必填 + 入睡/起床时间 必填，否则保存按钮 disabled
 const isFormValid = computed(() => {
@@ -223,14 +199,6 @@ onMounted(async () => {
         <span class="stat-label">睡眠目标</span>
         <div class="stat-panel-actions">
           <el-button class="btn-add" data-testid="sl-add" @click="startAddRecord">＋ 新增</el-button>
-          <el-button
-            v-if="store.records.sleep.length > 0"
-            class="btn-manage"
-            data-testid="sl-toggle-list"
-            @click="openListDialog"
-          >
-            查看（{{ store.records.sleep.length }}）
-          </el-button>
         </div>
         <el-button v-if="targetView" class="nav-btn" data-testid="sl-edit-target" @click="openTargetDialog">
           调整目标
@@ -267,94 +235,69 @@ onMounted(async () => {
       ＋ 新增第一条睡眠记录
     </div>
 
-    <!-- 记录列表弹框（Element Plus Table：日期/入睡/起床/时长/质量/备注/操作，每页 10 条） -->
-    <Transition name="dialog">
-      <BaseDialog
-        v-if="showListDialog"
-        :width="LIST_PANEL_WIDTH"
-        :max-height="LIST_PANEL_MAX_HEIGHT"
-        class="sl-list-overlay"
-        data-testid="sl-list-dialog"
-        @close="closeListDialog"
+    <!-- 睡眠记录列表（面板底部内联展示，固定每页 10 条） -->
+    <section v-if="sortedRecords.length > 0" class="ewt-inline-section" data-testid="sl-records-section">
+      <div class="ewt-inline-head">
+        <h3 class="ewt-inline-title">睡眠记录（{{ sortedRecords.length }} 条）</h3>
+      </div>
+      <el-table class="ewt-table"
+        :data="listPageItems"
+        stripe
+        border
+        size="default"
+        style="width: 100%"
+        empty-text="暂无睡眠记录"
       >
-        <template #title>
-          <span>睡眠记录</span>
-          <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
-        </template>
-        <div class="ex-list">
-            <el-table v-if="vm.mode === 'list'" class="ewt-table"
-              :data="listPageItems"
-              stripe
-              border
-              size="default"
-              style="width: 100%"
-              height="100%"
-              empty-text="暂无睡眠记录"
-            >
-              <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (listPage - 1) * pageSize + i + 1" />
-              <el-table-column label="日期" width="130" align="center">
-                <template #default="{ row }">{{ row.date }}</template>
-              </el-table-column>
-              <el-table-column label="入睡 🌙" width="120" align="center">
-                <template #default="{ row }">{{ row.sleepTime || '—' }}</template>
-              </el-table-column>
-              <el-table-column label="起床 ☀️" width="120" align="center">
-                <template #default="{ row }">{{ row.wakeTime || '—' }}</template>
-              </el-table-column>
-              <el-table-column label="时长(h)" width="110" align="right">
-                <template #default="{ row }">
-                  <span style="font-weight:700;color:var(--color-success,#16a34a);font-variant-numeric: tabular-nums;">
-                    {{ fmtHours(row.durationHours) }} h
-                  </span>
-                </template>
-              </el-table-column>
-              <el-table-column label="质量" width="110" align="center">
-                <template #default="{ row }">
-                  <span :title="'★'.repeat(row.quality)" :class="`sl-quality-${row.quality}`">
-                    {{ row.quality >= 4 ? '优' : row.quality === 3 ? '良' : row.quality === 2 ? '中' : '差' }}
-                  </span>
-                </template>
-              </el-table-column>
-              <el-table-column label="备注" min-width="200" align="center" show-overflow-tooltip>
-                <template #default="{ row }">
-                  <span v-if="row.note">{{ row.note }}</span>
-                  <span v-else style="color: var(--color-text-secondary,#9ca3af);">—</span>
-                </template>
-              </el-table-column>
-              <el-table-column label="操作" class-name="ewt-op-col" width="150" align="center" fixed="right">
-                <template #default="{ row }">
-                  <el-button class="btn-edit" :data-testid="`sl-edit-${row.id}`" @click="startEditRecord(row.id)" style="margin-right:6px;">编辑</el-button>
-                  <el-button class="btn-delete" :data-testid="`sl-delete-${row.id}`" @click="handleDeleteRecord(row.id)">删除</el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-            <div v-else class="ewt-card-grid">
-              <RecordsCard
-                @edit="startEditRecord(item.id)"
-                v-for="item in listPageItems"
-                :key="item.id"
-                :fields="cardFields(item)"
-              >
-              </RecordsCard>
-            </div>
-
-          </div>
-          <div v-if="!vm.isMobile" class="ex-list-pager ewt-pager">
-            <el-pagination
-              v-model:current-page="listPage"
-              @size-change="listPage = 1"
-              v-model:page-size="pageSize"
-              :page-sizes="PAGE_SIZES"
-              layout="total, prev, pager, next, jumper"
-              :total="sortedRecords.length"
-              background
-              small
-              prev-text="上一页"
-              next-text="下一页"
-            />
-          </div>
-      </BaseDialog>
-    </Transition>
+        <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (listPage - 1) * LIST_PAGE_SIZE + i + 1" />
+        <el-table-column label="日期" width="130" align="center">
+          <template #default="{ row }">{{ row.date }}</template>
+        </el-table-column>
+        <el-table-column label="入睡 🌙" width="120" align="center">
+          <template #default="{ row }">{{ row.sleepTime || '—' }}</template>
+        </el-table-column>
+        <el-table-column label="起床 ☀️" width="120" align="center">
+          <template #default="{ row }">{{ row.wakeTime || '—' }}</template>
+        </el-table-column>
+        <el-table-column label="时长(h)" width="110" align="right">
+          <template #default="{ row }">
+            <span style="font-weight:700;color:var(--color-success,#16a34a);font-variant-numeric: tabular-nums;">
+              {{ fmtHours(row.durationHours) }} h
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="质量" width="110" align="center">
+          <template #default="{ row }">
+            <span :title="'★'.repeat(row.quality)" :class="`sl-quality-${row.quality}`">
+              {{ row.quality >= 4 ? '优' : row.quality === 3 ? '良' : row.quality === 2 ? '中' : '差' }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="备注" min-width="200" align="center" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.note">{{ row.note }}</span>
+            <span v-else style="color: var(--color-text-secondary,#9ca3af);">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" class-name="ewt-op-col" width="170" align="center" fixed="right">
+          <template #default="{ row }">
+            <el-button class="btn-edit" :data-testid="`sl-edit-${row.id}`" @click="startEditRecord(row.id)">编辑</el-button>
+            <el-button class="btn-delete" :data-testid="`sl-delete-${row.id}`" @click="handleDeleteRecord(row.id)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div class="ex-list-pager ewt-pager">
+        <el-pagination
+          v-model:current-page="listPage"
+          :page-size="LIST_PAGE_SIZE"
+          layout="total, prev, pager, next, jumper"
+          :total="sortedRecords.length"
+          background
+          small
+          prev-text="上一页"
+          next-text="下一页"
+        />
+      </div>
+    </section>
 
     <!-- 目标弹框 -->
     <Transition name="dialog">
@@ -605,30 +548,6 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 /* .btn-add 视觉已统一到全局 .ui-btn--primary（style.css） */
-.stat-panel-actions .btn-manage {
-  padding: 8px 14px;
-  font-size: 13px;
-  background: var(--color-bg-card, #ffffff);
-  border: 1px solid var(--color-border, #e5e7eb);
-  color: var(--color-text-secondary, #6b7280);
-  border-radius: var(--radius-md, 8px);
-  cursor: pointer;
-  transition: all var(--transition-fast, 0.15s ease);
-  white-space: nowrap;
-}
-.stat-panel-actions .btn-manage:hover {
-  color: var(--color-primary, #10b981);
-  border-color: var(--color-primary, #10b981);
-}
-:global(html.dark) .stat-panel-actions .btn-manage {
-  background: var(--color-bg-card, #1f2937);
-  border-color: var(--color-border, #374151);
-  color: var(--color-text-secondary, #d1d5db);
-}
-:global(html.dark) .stat-panel-actions .btn-manage:hover {
-  color: var(--color-primary, #10b981);
-  border-color: var(--color-primary, #10b981);
-}
 
 .btn-toggle-list {
   padding: 10px 16px;
@@ -650,12 +569,6 @@ onMounted(async () => {
 /* .btn-add 视觉已统一到全局 .ui-btn--primary（style.css） */
 
 /* ===== 记录列表（弹框内 5 列卡片网格：5 卡/行 × maxRows 3 = 15 卡/页）===== */
-.ex-list {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
-  align-content: start;
-}
 
 .ex-item {
   display: flex;
@@ -932,46 +845,6 @@ html.dark .btn-toggle-list {
   }
 }
 
-/* 旧的 .ex-list（5 列卡片网格）废弃：现在 Sleep 列表用 ElTable，.ex-list 重定义为 ElTable 容器（与 Weight 一致） */
-.ex-list {
-  padding: 16px 20px 0 20px;
-  flex: 1;
-  min-height: 0;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
-.ex-list > :global(.el-table) {
-  flex: 1 1 auto;
-  min-height: 0;
-  width: 100% !important;
-  font-size: 13px;
-  border-radius: 10px;
-  overflow: hidden;
-}
-.ex-list > :global(.el-table th.el-table__cell) {
-  background-color: var(--color-bg-hover, #f3f4f6) !important;
-  color: var(--color-text-secondary, #6b7280);
-  font-weight: 600;
-  user-select: none;
-}
-.ex-list > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #111827);
-}
-:global(html.dark) .ex-list > :global(.el-table th.el-table__cell) {
-  background-color: var(--color-bg-hover, #111827) !important;
-  color: var(--color-text-secondary, #d1d5db);
-}
-:global(html.dark) .ex-list > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #f9fafb);
-}
-/* 强制：每个非 fixed 列 cell 都有最小内容宽，避免整体缩成只剩日期+操作 */
-.ex-list > :global(.el-table .el-table__body-wrapper .cell),
-.ex-list > :global(.el-table .el-table__header-wrapper .cell) {
-  min-width: 60px;
-  white-space: nowrap;
-}
 
 .ex-list-pager {
   flex: 0 0 auto;
@@ -1006,33 +879,16 @@ html.dark .btn-toggle-list {
     margin-left: 0;
     width: 100%;
   }
-  .stat-panel-actions .btn-add, .stat-panel-actions .btn-manage { flex: 1; text-align: center; }
+  .stat-panel-actions .btn-add { flex: 1; text-align: center; }
   .nav-btn {
     margin-left: auto;
   }
 }
 
-/* ===== 记录列表弹框：Element Plus Table + 分页（85vw×85vh，与 Exercise 完全一致）=====
-   遮罩/面板/头部/关闭/主体已统一到 common/BaseDialog.vue，
-   此处仅保留弹框层级与列表弹框的撑满尺寸 */
-/* 记录弹框叠在列表弹框之上（BaseDialog 统一 z-index: 300） */
-.sl-list-overlay { z-index: 310; }
+/* ===== 弹框层级（BaseDialog 统一 z-index: 300）===== */
 .sl-record-overlay { z-index: 320; }
 
-.sl-list-overlay :deep(.bd-panel) {
-  width: 85vw !important;
-  height: 85vh !important;
-  max-width: 1200px !important;
-  min-width: 560px;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-  overflow-y: visible !important;
-}
 
-@media (max-width: 640px) {
-  .sl-list-overlay :deep(.bd-panel) { width: 94vw !important; min-width: 0 !important; height: 88vh !important; }
-}
 
 /* ===== 桌面端 ≥769px：面板根钉满 tab 内容区 ===== */
 @media (min-width: 769px) {

@@ -10,8 +10,10 @@ import { useGenealogyStore } from '@/stores/genealogy'
 import {
   buildTree,
   getChildren,
-  getDescendants,
   calcAge,
+  calcZodiac,
+  filterParentCandidates,
+  filterSpouseCandidates,
   genealogyStats,
   AGE_GROUPS,
   GENEALOGY_EXPORT_FILENAME
@@ -72,6 +74,10 @@ function ageText(m: FamilyMember): string {
   return m.deathDate ? `享年 ${age}` : `${age}`
 }
 
+function zodiacText(m: FamilyMember): string {
+  return calcZodiac(m.birthDate) ?? '—'
+}
+
 function memberName(id: string): string {
   return store.members.find((m) => m.id === id)?.name ?? '(已删除)'
 }
@@ -81,6 +87,7 @@ function cardFields(m: FamilyMember) {
     { label: '姓名', value: m.name, emphasis: true },
     { label: '性别', value: GENDER_LABEL[m.gender ?? ''] ?? '未知' },
     { label: '出生日期', value: m.birthDate || '—' },
+    { label: '生肖', value: zodiacText(m) },
     { label: '年龄', value: ageText(m) },
     { label: '关系', value: relationSummary(m) }
   ]
@@ -182,6 +189,12 @@ const formAgeText = computed(() => {
   const age = calcAge(formBirth.value || undefined, formDeath.value || undefined)
   if (age === null) return formBirth.value ? '—' : '填写出生日期后自动计算'
   return formDeath.value ? `享年 ${age} 岁` : `${age} 岁`
+})
+
+/** 表单内生肖预览：随出生日期实时推导（无需手填） */
+const formZodiacText = computed(() => {
+  const z = calcZodiac(formBirth.value || undefined)
+  return z ? `属 ${z}` : (formBirth.value ? '—' : '填写出生日期后自动计算')
 })
 
 function startAdd(): void {
@@ -308,21 +321,15 @@ const relMember = ref<FamilyMember | null>(null)
 const parentPick = ref('')
 const spousePick = ref('')
 
-// 可选父母：排除自己、已有的父母、以及自己的后代（防环）
-const parentOptions = computed<FamilyMember[]>(() => {
-  const m = relMember.value
-  if (!m) return []
-  const banned = new Set<string>([m.id, ...m.parents, ...getDescendants(store.members, m.id).map((d) => d.id)])
-  return store.members.filter((x) => !banned.has(x.id))
-})
+// 可选父母：过滤不合理候选（自己/已有父母/后代防环/年龄小于被关联人/性别角色冲突）
+const parentOptions = computed<FamilyMember[]>(() =>
+  relMember.value ? filterParentCandidates(store.members, relMember.value.id) : []
+)
 
-// 可选配偶：排除自己、已有的配偶（一对一：已有配偶时禁止再加）
-const spouseOptions = computed<FamilyMember[]>(() => {
-  const m = relMember.value
-  if (!m) return []
-  const banned = new Set<string>([m.id, ...m.spouses])
-  return store.members.filter((x) => !banned.has(x.id))
-})
+// 可选配偶：过滤不合理候选（自己/已有配偶/关系互斥的血亲/同性不匹配）
+const spouseOptions = computed<FamilyMember[]>(() =>
+  relMember.value ? filterSpouseCandidates(store.members, relMember.value.id) : []
+)
 
 function openRel(m: FamilyMember): void {
   relMember.value = m
@@ -469,6 +476,7 @@ onUnmounted(() => {
             @clear="listPage = 1"
           />
         </div>
+        <!-- 右侧：导入 / 导出 紧贴视图切换（卡片）按钮，小屏自动换行 -->
         <div class="td-toolbar-right">
           <el-button size="small" class="btn-cancel" data-testid="fg-export-button" @click="handleExport">
             导出
@@ -484,8 +492,8 @@ onUnmounted(() => {
             data-testid="fg-import-input"
             @change="handleImportFile"
           />
+          <ViewModeToggle v-if="filteredMembers.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
         </div>
-        <ViewModeToggle v-if="filteredMembers.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
       </div>
 
       <div v-if="store.members.length === 0" class="empty-state empty-invite" data-testid="fg-empty" @click="startAdd">
@@ -529,6 +537,12 @@ onUnmounted(() => {
             <el-table-column label="出生日期" width="140" align="center">
               <template #default="{ row }">
                 <span v-if="row.birthDate">{{ row.birthDate }}</span>
+                <span v-else class="td-col-empty">—</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="生肖" width="90" align="center">
+              <template #default="{ row }">
+                <span v-if="zodiacText(row) !== '—'" :data-testid="`fg-zodiac-${row.id}`">{{ zodiacText(row) }}</span>
                 <span v-else class="td-col-empty">—</span>
               </template>
             </el-table-column>
@@ -648,76 +662,82 @@ onUnmounted(() => {
     <el-dialog
       :model-value="showMemberDialog"
       :title="editingId ? '编辑成员' : '新增成员'"
-      width="480px"
+      width="80%"
       data-testid="fg-member-dialog"
       @close="cancelMember"
       @update:model-value="(v: boolean) => { if (!v) cancelMember() }"
     >
       <form class="dialog-body" @submit.prevent="handleSaveMember">
-        <div class="form-group">
-          <label>姓名 *</label>
-          <el-input
-            v-model="formName"
-            placeholder="例如：张三"
-            maxlength="50"
-            data-testid="fg-name-input"
-            @keyup.enter="handleSaveMember"
-          />
-        </div>
-        <div class="form-group">
-          <label>头像（可选）</label>
-          <div class="avatar-uploader">
-            <div class="avatar-preview" :class="{ empty: !formAvatar }">
-              <img v-if="formAvatar" :src="formAvatar" alt="头像预览" />
-              <span v-else class="avatar-placeholder">无</span>
-            </div>
-            <div class="avatar-actions">
-              <input ref="avatarInput" type="file" accept="image/*" class="avatar-file" data-testid="fg-avatar-input" @change="onAvatarChange" />
-              <el-button size="small" data-testid="fg-avatar-upload" @click="triggerAvatarInput">上传头像</el-button>
-              <el-button v-if="formAvatar" size="small" class="btn-cancel" data-testid="fg-avatar-clear" @click="clearAvatar">移除</el-button>
-            </div>
+        <div class="fg-form-grid">
+          <div class="form-group">
+            <label>姓名 *</label>
+            <el-input
+              v-model="formName"
+              placeholder="例如：张三"
+              maxlength="50"
+              data-testid="fg-name-input"
+              @keyup.enter="handleSaveMember"
+            />
           </div>
-        </div>
-        <div class="form-row-fields">
-          <div class="field">
-            <label class="field-label">性别</label>
-            <el-select v-model="formGender" class="field-gender" data-testid="fg-gender">
+          <div class="form-group">
+            <label>性别</label>
+            <el-select v-model="formGender" data-testid="fg-gender">
               <el-option value="" label="未知" />
               <el-option value="male" label="男" />
               <el-option value="female" label="女" />
             </el-select>
           </div>
-          <div class="field">
-            <label class="field-label">出生日期</label>
+
+          <div class="form-group">
+            <label>出生日期</label>
             <el-date-picker
               v-model="formBirth"
               type="date"
               value-format="YYYY-MM-DD"
-              class="field-date"
               placeholder="选择日期"
               data-testid="fg-birth"
             />
           </div>
+          <div class="form-group">
+            <label>去世日期（可选）</label>
+            <el-date-picker
+              v-model="formDeath"
+              type="date"
+              value-format="YYYY-MM-DD"
+              placeholder="选择日期"
+              data-testid="fg-death"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>年龄（自动计算）</label>
+            <div class="fg-age-preview" data-testid="fg-form-age">{{ formAgeText }}</div>
+          </div>
+          <div class="form-group">
+            <label>生肖（自动计算）</label>
+            <div class="fg-age-preview" data-testid="fg-form-zodiac">{{ formZodiacText }}</div>
+          </div>
+
+          <div class="form-group">
+            <label>联系电话（可选）</label>
+            <el-input v-model="formPhone" placeholder="选填" data-testid="fg-phone" />
+          </div>
+          <div class="form-group">
+            <label>头像（可选）</label>
+            <div class="avatar-uploader">
+              <div class="avatar-preview" :class="{ empty: !formAvatar }">
+                <img v-if="formAvatar" :src="formAvatar" alt="头像预览" />
+                <span v-else class="avatar-placeholder">无</span>
+              </div>
+              <div class="avatar-actions">
+                <input ref="avatarInput" type="file" accept="image/*" class="avatar-file" data-testid="fg-avatar-input" @change="onAvatarChange" />
+                <el-button size="small" data-testid="fg-avatar-upload" @click="triggerAvatarInput">上传头像</el-button>
+                <el-button v-if="formAvatar" size="small" class="btn-cancel" data-testid="fg-avatar-clear" @click="clearAvatar">移除</el-button>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="form-group">
-          <label>年龄（自动计算）</label>
-          <div class="fg-age-preview" data-testid="fg-form-age">{{ formAgeText }}</div>
-        </div>
-        <div class="form-group">
-          <label>去世日期（可选）</label>
-          <el-date-picker
-            v-model="formDeath"
-            type="date"
-            value-format="YYYY-MM-DD"
-            class="field-date"
-            placeholder="选择日期"
-            data-testid="fg-death"
-          />
-        </div>
-        <div class="form-group">
-          <label>联系电话（可选）</label>
-          <el-input v-model="formPhone" placeholder="选填" data-testid="fg-phone" />
-        </div>
+
         <div class="form-group">
           <label>备注（可选）</label>
           <el-input v-model="formNote" type="textarea" :rows="2" placeholder="补充说明…" data-testid="fg-note" />
@@ -758,7 +778,7 @@ onUnmounted(() => {
             </el-select>
             <el-button size="small" type="primary" :disabled="!parentPick" @click="addParent">添加</el-button>
           </div>
-          <div v-if="parentOptions.length === 0" class="fg-rel-hint">已无可选成员（排除自己、现有父母与后代）</div>
+          <div v-if="parentOptions.length === 0" class="fg-rel-hint">已无可添加的父母候选（已排除自己、现有父母、后代、年龄更小或性别冲突者）</div>
         </div>
 
         <div class="fg-rel-section">
@@ -768,11 +788,14 @@ onUnmounted(() => {
             <span>{{ memberName(s) }}</span>
             <el-button size="small" class="btn-delete" @click="removeSpouseOf(s)">解除</el-button>
           </div>
-          <div v-if="relMember.spouses.length === 0" class="fg-rel-add">
-            <el-select v-model="spousePick" placeholder="选择配偶" size="small" class="fg-rel-select" :disabled="spouseOptions.length === 0">
-              <el-option v-for="o in spouseOptions" :key="o.id" :value="o.id" :label="o.name" />
-            </el-select>
-            <el-button size="small" type="primary" :disabled="!spousePick" @click="addSpouse">设置</el-button>
+          <div v-if="relMember.spouses.length === 0">
+            <div class="fg-rel-add">
+              <el-select v-model="spousePick" placeholder="选择配偶" size="small" class="fg-rel-select" :disabled="spouseOptions.length === 0">
+                <el-option v-for="o in spouseOptions" :key="o.id" :value="o.id" :label="o.name" />
+              </el-select>
+              <el-button size="small" type="primary" :disabled="!spousePick" @click="addSpouse">设置</el-button>
+            </div>
+            <div v-if="spouseOptions.length === 0" class="fg-rel-hint">已无可添加的配偶候选（已排除自己、现有配偶、父母/子女/兄弟姐妹等亲属及同性者）</div>
           </div>
           <div v-else class="fg-rel-hint">配偶为一对一，请先解除现有配偶再设置</div>
         </div>
@@ -817,8 +840,8 @@ onUnmounted(() => {
 /* ===== 搜索 / 工具栏 ===== */
 .fg-search { width: 200px; }
 .td-toolbar-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-/* 导入/导出按钮组：与左侧工具区同排（is-split 布局下贴右侧） */
-.td-toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* 工具栏右侧组：导入 / 导出 紧贴视图切换（卡片）按钮，is-split 下贴右侧、小屏自动换行 */
+.td-toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 
 /* ===== 表格容器 ===== */
 .fg-table-wrap {
@@ -996,6 +1019,11 @@ html.dark .fg-age-preview { border-color: var(--color-border, #374151); }
 
 /* ===== 弹框通用 ===== */
 .dialog-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+/* 新增/编辑弹框：两列网格（除备注整行），降低弹框高度 */
+.fg-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+.fg-form-grid :deep(.el-input),
+.fg-form-grid :deep(.el-select),
+.fg-form-grid :deep(.el-date-picker) { width: 100%; }
 .form-group { display: flex; flex-direction: column; gap: 6px; }
 .form-group > label { font-size: 13px; color: var(--color-text-secondary, #64748b); }
 .form-row-fields { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -1014,6 +1042,7 @@ html.dark .fg-age-preview { border-color: var(--color-border, #374151); }
   .form-actions .el-button { flex: 1 1 calc(33.333% - 6px); min-width: 0; }
   .form-actions .el-button + .el-button { margin-left: 0 !important; }
   .mobile-only-action { display: inline-flex !important; }
+  .fg-form-grid { grid-template-columns: 1fr; }
 }
 
 /* ===== 头像上传 ===== */
