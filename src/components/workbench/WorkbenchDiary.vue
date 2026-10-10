@@ -1,31 +1,23 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { showConfirm } from '@/utils/dialog'
 import { useWorkbenchDiaryStore } from '@/stores/workbenchDiary'
 import { dateKeyOf, diaryDateLabel, findDiaryByDate, DIARY_MOODS, diaryMoodOf } from '@/composables/diaryCore'
 import { useDiaryCategoriesStore } from '@/stores/diaryCategories'
+import { usePageSize } from '@/composables/usePageSize'
 import { renderMarkdown } from '@/composables/noteMarkdown'
 import { useToast } from '@/composables/useToast'
 import type { WorkbenchDiary } from '@/types'
-import BaseDialog from '@/components/common/BaseDialog.vue'
 
-/** 日记列表弹框尺寸：高85vh、宽上限 1100px（原.list-dialog 固定值，非设置项） */
-const LIST_PANEL_WIDTH = '1100px'
-const LIST_PANEL_MAX_HEIGHT = '85vh'
+// ===== 底部日记记录表格（每页 10 条分页）=====
+const { pageSize, PAGE_SIZES } = usePageSize('dj-table-pager', 10)
+const currentPage = ref(1)
 
-// Markdown 渲染缓存：列表里每篇日记都在 v-for 内直接调用 renderMarkdown，
-// 任何一次响应式更新都会让「全部日记」重新解析一次全文，日记积累后移动端明显卡顿。
-// 这里按正文内容缓存解析结果，内容未变则直接复用。
-const mdCache = new Map<string, string>()
-function renderMarkdownCached(content: string): string {
-  const hit = mdCache.get(content)
-  if (hit !== undefined) return hit
-  const html = renderMarkdown(content)
-  // 限制缓存规模，避免长期运行无限增长
-  if (mdCache.size > 300) mdCache.clear()
-  mdCache.set(content, html)
-  return html
-}
+// 软删除视图开关（顶部「已删除」筛选；开启后仅展示已软删条目）
+const showDeleted = ref(false)
+
+// 封面图草稿（随当前选中日记；空 → 表格展示时回退正文首图）
+const draftCover = ref('')
 
 const store = useWorkbenchDiaryStore()
 const diaryCatStore = useDiaryCategoriesStore()
@@ -33,6 +25,14 @@ const toast = useToast()
 
 // 今天日期键（dateKeyOf 本地日期，防 UTC 偏移；会话内不变，无需响应式）
 const todayKey = dateKeyOf(new Date())
+
+// 日期快捷选项（便捷浏览历史日期：今天/昨天/一周前/一月前，el-date-picker shortcuts）
+const dateShortcuts = [
+  { text: '今天', value: new Date() },
+  { text: '昨天', value: () => { const d = new Date(); d.setDate(d.getDate() - 1); return d } },
+  { text: '一周前', value: () => { const d = new Date(); d.setDate(d.getDate() - 7); return d } },
+  { text: '一月前', value: () => { const d = new Date(); d.setMonth(d.getMonth() - 1); return d } }
+]
 
 // ===== 编辑器状态 =====
 const selectedDate = ref(todayKey)
@@ -42,26 +42,6 @@ const draftCategory = ref('')
 const draftMood = ref('')
 const draftPinned = ref(false)
 const previewMode = ref(false)
-const showListView = ref(false)
-// 草稿内联的图片（base64 data URL）列表：用于在【编辑态】直接渲染图片预览缩略图。
-// 注意：存储方式不变，正文仍是 markdown（`![图片](data:image/...;base64,...)` 字符串），此处仅作展示解析。
-const draftImageUrls = computed<string[]>(() => {
-  const re = /!\[[^\]]*\]\((data:image\/[^)\s]+)\)/g
-  const out: string[] = []
-  let m: RegExpExecArray | null
-  while ((m = re.exec(draft.value))) out.push(m[1])
-  return out
-})
-// 从草稿中移除第 index 张内联图片（连同其 markdown 标记），并压缩多余空行
-function removeDraftImage(index: number): void {
-  const re = /!\[[^\]]*\]\((data:image\/[^)\s]+)\)/g
-  let i = -1
-  draft.value = draft.value.replace(re, (mm) => {
-    i++
-    return i === index ? '' : mm
-  })
-  draft.value = draft.value.replace(/\n{3,}/g, '\n\n').trim()
-}
 
 // 当前选中日期的条目（限定当前日志本，多日志本隔离视图）
 const selectedEntry = computed<WorkbenchDiary | undefined>(() => findDiaryByDate(store.currentEntries, selectedDate.value))
@@ -72,21 +52,19 @@ const isDirty = computed(() => draft.value !== (selectedEntry.value?.content ?? 
 // 实时字数（textarea 内容长度）
 const charCount = computed(() => draft.value.length)
 
-// ===== 历史筛选（分类 + 仅看置顶；排序仍走 diaryCore 置顶优先）=====
-const filterCategory = ref('') // ''=全部；'uncategorized'=未分类；其余为分类 id
-const filterPinnedOnly = ref(false)
-
-const filteredEntries = computed<WorkbenchDiary[]>(() => {
-  let list = store.sortedEntries
-  if (filterCategory.value === 'uncategorized') list = list.filter(e => !e.category)
-  else if (filterCategory.value) list = list.filter(e => e.category === filterCategory.value)
-  if (filterPinnedOnly.value) list = list.filter(e => e.pinned)
-  return list
+// 表格数据源：正常视图排除软删，『已删除』视图仅展示软删（排序仍走 diaryCore 置顶优先 + 日期降序）
+const tableEntries = computed<WorkbenchDiary[]>(() => {
+  return showDeleted.value ? store.deletedEntries : store.sortedEntries
 })
 
-// ===== 历史区改为可滚动列表（消费 filteredEntries：date 降序 → createdAt 降序，排序公式属 diaryCore）=====
-// 不再分页：直接渲染全部 filteredEntries，由 CSS（桌面 .dj-grid-scroll 启 overflow-y:auto）内部滚动，
-// 高度链 .dj-history{flex:1;min-height:0} → .dj-grid{flex:1;min-height:0} 约束滚动容器，避免内容被分页藏起。
+// 当前页切片（每页 pageSize，默认 10）
+const pageItems = computed<WorkbenchDiary[]>(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return tableEntries.value.slice(start, start + pageSize.value)
+})
+
+// ===== 底部日记记录表格（消费 tableEntries：置顶优先 → date 降序 → createdAt 降序，排序公式属 diaryCore）=====
+// 每页 10 条（usePageSize 默认 10，可切 20/50），由 el-pagination 接管翻页，避免长列表拖累渲染。
 
 // ===== 日期切换（统一脏检查入口：日期输入 / 今日按钮 / 卡片点击）=====
 async function selectDate(dateKey: string): Promise<void> {
@@ -100,6 +78,7 @@ async function selectDate(dateKey: string): Promise<void> {
   draftCategory.value = entry?.category ?? ''
   draftMood.value = entry?.mood ?? ''
   draftPinned.value = entry?.pinned === true
+  draftCover.value = entry?.coverImage ?? ''
   previewMode.value = false
 }
 
@@ -107,20 +86,6 @@ async function selectDate(dateKey: string): Promise<void> {
 function diaryCatName(entry: WorkbenchDiary): string | undefined {
   if (!entry.category) return undefined
   return diaryCatStore.allCategories.find(c => c.id === entry.category)?.name
-}
-
-function handleDateInput(e: Event): void {
-  const target = e.target as HTMLInputElement
-  selectDate(target.value)
-}
-
-function handleToday(): void {
-  selectDate(todayKey)
-}
-
-function onCardPreviewClick(e: MouseEvent): void {
-  const t = e.target as Element | null
-  if (t && t.closest('a')) e.stopPropagation()
 }
 
 // ===== 保存 / 删除 =====
@@ -134,38 +99,39 @@ async function handleSave(): Promise<void> {
     category: draftCategory.value,
     mood: draftMood.value,
     pinned: draftPinned.value,
-    kind: draftKind.value
+    kind: draftKind.value,
+    coverImage: draftCover.value
   })
   // 与持久化内容对齐（store 保存时 trim），避免尾随空格造成永久脏态
   draft.value = trimmed
   toast.success('日记已保存')
 }
 
-async function handleDelete(): Promise<void> {
-  const entry = selectedEntry.value
-  if (!entry) return
-  if (!await showConfirm('确定要删除这篇日记吗？')) return
-  await store.deleteEntry(entry.id)
-  // 选中日期已无条目：清空草稿（与空内容一致，不误判脏态）
-  draft.value = ''
-  previewMode.value = false
+// 表格操作列「删除」：按 id 软删（逻辑删除）
+async function handleDeleteById(id: string): Promise<void> {
+  if (!await showConfirm('确定要删除这篇日记吗？删除后可在「已删除」中恢复。')) return
+  await store.softDeleteEntry(id)
+  if (currentPage.value > 1 && pageItems.value.length === 0) currentPage.value--
 }
 
-function readingMinutes(content: string): number {
-  const n = content.trim().length
-  return n === 0 ? 0 : Math.max(1, Math.ceil(n / 300))
+// 恢复软删条目
+async function handleRestore(id: string): Promise<void> {
+  await store.restoreEntry(id)
+  if (currentPage.value > 1 && pageItems.value.length === 0) currentPage.value--
 }
 
-// 列表弹框内点击某条：关闭弹框并载入该日期（selectDate 已含脏检查确认）
-function selectFromList(entry: WorkbenchDiary): void {
-  showListView.value = false
+// 彻底删除（硬删，不可恢复）
+async function handlePurge(id: string): Promise<void> {
+  if (!await showConfirm('彻底删除后无法恢复，确定吗？')) return
+  await store.deleteEntry(id)
+  if (currentPage.value > 1 && pageItems.value.length === 0) currentPage.value--
+}
+
+// 表格行点击（正常视图）：载入该日期到编辑器（selectDate 含脏检查确认）
+function onRowClick(entry: WorkbenchDiary): void {
+  if (showDeleted.value) return // 已删除视图不载入编辑
   selectDate(entry.date)
 }
-
-// ===== 多日志本：当前日志本名称 =====
-const currentJournalName = computed(
-  () => store.journals.find(j => j.id === store.currentJournalId)?.name ?? ''
-)
 
 // 切换日志本后，重新载入选中日期在本本的条目（无则空草稿）
 watch(
@@ -177,55 +143,14 @@ watch(
     draftCategory.value = entry?.category ?? ''
     draftMood.value = entry?.mood ?? ''
     draftPinned.value = entry?.pinned === true
+    draftCover.value = entry?.coverImage ?? ''
     previewMode.value = false
+    currentPage.value = 1
   }
 )
 
-// ===== 富媒体：图片转 base64 内联进草稿（随日记走云同步）=====
-const contentInputRef = ref<{ $el?: HTMLElement } | null>(null)
-const imageInputRef = ref<HTMLInputElement | null>(null)
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = () => reject(reader.error)
-    reader.readAsDataURL(file)
-  })
-}
-
-function triggerImagePicker(): void {
-  imageInputRef.value?.click()
-}
-
-async function handleInsertImage(e: Event): Promise<void> {
-  const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-  if (!file.type.startsWith('image/')) {
-    toast.warning('请选择图片文件')
-    input.value = ''
-    return
-  }
-  try {
-    const dataUrl = await fileToDataUrl(file)
-    const marker = `\n![图片](${dataUrl})\n`
-    const ta = (contentInputRef.value?.$el as HTMLElement | undefined)?.querySelector('textarea') as HTMLTextAreaElement | null
-    if (ta && !previewMode.value) {
-      const start = ta.selectionStart ?? draft.value.length
-      const end = ta.selectionEnd ?? draft.value.length
-      draft.value = draft.value.slice(0, start) + marker + draft.value.slice(end)
-      await nextTick()
-      ta.focus()
-      ta.setSelectionRange(start + marker.length, start + marker.length)
-    } else {
-      draft.value += marker
-    }
-  } catch {
-    toast.error('图片插入失败')
-  }
-  input.value = ''
-}
+// 视图切换时回到第一页
+watch(showDeleted, () => { currentPage.value = 1 })
 
 </script>
 
@@ -239,97 +164,56 @@ async function handleInsertImage(e: Event): Promise<void> {
         <span v-else class="dj-entry-badge is-empty">未记录</span>
       </div>
 
-      <!-- 多日志本切换器 + 连续记录统计 -->
-      <div class="dj-journal-bar" data-testid="dj-journal-bar">
-        <div class="dj-journal-switch">
-          <el-select
-            :model-value="store.currentJournalId"
-            size="small"
-            class="dj-journal-select"
-            data-testid="dj-journal-select"
-            @change="(v: unknown) => store.setCurrentJournal(String(v ?? ''))"
-          >
-            <el-option
-              v-for="j in store.journals"
-              :key="j.id"
-              :label="j.name"
-              :value="j.id"
-            />
-          </el-select>
-        </div>
+      <!-- 顶部筛选控件：日记本选择 → 分类下拉框 → 日期选择 → 今日选项（+ 已删除筛选） -->
+      <div class="dj-filter-bar" data-testid="dj-filter-bar">
+        <el-select
+          :model-value="store.currentJournalId"
+          size="small"
+          class="dj-journal-select"
+          data-testid="dj-journal-select"
+          @change="(v: unknown) => store.setCurrentJournal(String(v ?? ''))"
+        >
+          <el-option
+            v-for="j in store.journals"
+            :key="j.id"
+            :label="j.name"
+            :value="j.id"
+          />
+        </el-select>
+        <el-select
+          v-model="draftCategory"
+          placeholder="分类"
+          size="small"
+          class="dj-filter-cat"
+          data-testid="dj-filter-cat"
+        >
+          <el-option label="未分类" value="" />
+          <el-option
+            v-for="c in diaryCatStore.allCategories"
+            :key="c.id"
+            :label="c.name"
+            :value="c.id"
+          />
+        </el-select>
+        <el-date-picker
+          :model-value="selectedDate"
+          type="date"
+          value-format="YYYY-MM-DD"
+          class="dj-date-input"
+          data-testid="dj-date-input"
+          size="small"
+          :clearable="false"
+          :shortcuts="dateShortcuts"
+          @change="selectDate"
+        />
+        <el-button type="primary" size="small" data-testid="dj-save-btn" @click="handleSave">保存</el-button>
         <div class="dj-stats" data-testid="dj-stats">
           <span class="dj-stat"><b data-testid="dj-streak">{{ store.stats.streak }}</b> 天连续</span>
           <span class="dj-stat"><b data-testid="dj-total">{{ store.stats.total }}</b> 篇记录</span>
-          <span class="dj-stat dj-stat-journal">本：{{ currentJournalName }}</span>
-        </div>
-      </div>
-
-      <div class="dj-toolbar">
-        <div class="dj-lift-row">
-          <el-button
-            size="small"
-            :type="draftPinned ? 'warning' : 'default'"
-            plain
-            :class="{ 'is-active': draftPinned }"
-            data-testid="dj-pin-btn"
-            @click="draftPinned = !draftPinned"
-          >📌 置顶</el-button>
-          <el-button size="small" data-testid="dj-image-btn" @click="triggerImagePicker">🖼️ 图片</el-button>
-          <el-button size="small" data-testid="dj-view-btn" @click="showListView = true">查看</el-button>
-        </div>
-        <div class="dj-toolbar-left">
-          <!-- 第一行：日历 + 分类下拉（同一行，窄屏自动换行） -->
-          <div class="dj-toolbar-controls">
-            <el-date-picker
-              :model-value="selectedDate"
-              type="date"
-              value-format="YYYY-MM-DD"
-              class="dj-date-input"
-              data-testid="dj-date-input"
-              size="small"
-              @change="(v: unknown) => handleDateInput({ target: { value: String(v ?? '') } } as unknown as Event)"
-            />
-            <el-select
-              v-model="draftCategory"
-              placeholder="分类"
-              size="small"
-              class="dj-cat-select"
-              data-testid="dj-cat-select"
-            >
-              <el-option label="未分类" value="" />
-              <el-option
-                v-for="c in diaryCatStore.allCategories"
-                :key="c.id"
-                :label="c.name"
-                :value="c.id"
-              />
-            </el-select>
-          </div>
-          <!-- 第二行：操作按钮单独成行 -->
-          <div class="dj-toolbar-actions">
-            <el-button size="small" data-testid="dj-today-btn" @click="handleToday">今日</el-button>
-            <el-button type="primary" size="small" data-testid="dj-save-btn" @click="handleSave">保存</el-button>
-            <el-button
-              v-if="selectedEntry"
-              type="danger"
-              plain
-              size="small"
-              data-testid="dj-delete-btn"
-              @click="handleDelete"
-            >删除</el-button>
-          </div>
-        </div>
-        <div class="dj-toolbar-right">
-          <el-button
-            size="small"
-            :type="previewMode ? 'primary' : 'default'"
-            plain
-            data-testid="dj-preview-toggle"
-            @click="previewMode = !previewMode"
-          >{{ previewMode ? '编辑' : '预览' }}</el-button>
           <span class="dj-char-count" data-testid="dj-char-count">{{ charCount }} 字</span>
         </div>
       </div>
+
 
       <!-- 心情选择 -->
       <div class="dj-mood-row" data-testid="dj-mood-row">
@@ -349,10 +233,8 @@ async function handleInsertImage(e: Event): Promise<void> {
     <!-- 主区：编辑器列 + 历史列（响应式由下方媒体查询接管） -->
     <div class="dj-main">
       <div class="dj-editor">
-        <input ref="imageInputRef" type="file" accept="image/*" style="display:none" data-testid="dj-image-input" @change="handleInsertImage" />
         <el-input
           v-if="!previewMode"
-          ref="contentInputRef"
           v-model="draft"
           type="textarea"
           class="dj-content-input"
@@ -360,25 +242,6 @@ async function handleInsertImage(e: Event): Promise<void> {
           placeholder="写下今天的心情…"
           resize="vertical"
         />
-        <div
-          v-if="!previewMode && draftImageUrls.length"
-          class="dj-image-preview"
-          data-testid="dj-image-preview"
-        >
-          <div
-            v-for="(img, idx) in draftImageUrls"
-            :key="idx"
-            class="dj-image-thumb-wrap"
-          >
-            <img :src="img" alt="图片预览" class="dj-image-thumb" data-testid="dj-image-thumb" />
-            <button
-              type="button"
-              class="dj-image-remove"
-              title="移除图片"
-              @click="removeDraftImage(idx)"
-            >×</button>
-          </div>
-        </div>
         <div
           v-if="previewMode"
           class="dj-preview"
@@ -391,83 +254,76 @@ async function handleInsertImage(e: Event): Promise<void> {
 
     </div>
   </div>
-    <!-- 日记列表弹框（与 WorkbenchExercise 一致） -->
-    <Transition name="dialog">
-      <BaseDialog
-        v-if="showListView"
-        :width="LIST_PANEL_WIDTH"
-        :max-height="LIST_PANEL_MAX_HEIGHT"
-        class="dj-list-overlay"
-        data-testid="dj-list-dialog"
-        @close="showListView = false"
+    <!-- 日记记录列表（表格 + 每页 10 条分页） -->
+    <div class="dj-table-section" data-testid="dj-table-section">
+      <div class="dj-table-toolbar">
+        <span class="dj-table-title">{{ showDeleted ? '已删除日记' : '日记记录' }}（{{ tableEntries.length }}）</span>
+      </div>
+      <el-table
+        :data="pageItems"
+        size="small"
+        stripe
+        class="ewt-table dj-table"
+        style="width: 100%"
+        data-testid="dj-table"
+        @row-click="onRowClick"
       >
-        <template #title>
-          <span>日记列表<span class="djl-count">（{{ store.sortedEntries.length }}）</span></span>
-        </template>
-        <div class="djl-body">
-            <div class="dj-history">
-              <!-- 筛选条：分类 + 仅看置顶 -->
-              <div class="dj-filter-bar" data-testid="dj-filter-bar">
-                <el-select
-                  v-model="filterCategory"
-                  placeholder="全部分类"
-                  size="small"
-                  class="dj-filter-cat"
-                  data-testid="dj-filter-cat"
-                >
-                  <el-option label="全部分类" value="" />
-                  <el-option label="未分类" value="uncategorized" />
-                  <el-option
-                    v-for="c in diaryCatStore.allCategories"
-                    :key="c.id"
-                    :label="c.name"
-                    :value="c.id"
-                  />
-                </el-select>
-                <el-checkbox v-model="filterPinnedOnly" size="small" class="dj-filter-pin" data-testid="dj-filter-pin">仅看置顶</el-checkbox>
-                <span v-if="filteredEntries.length !== store.sortedEntries.length" class="dj-filter-count" data-testid="dj-filter-count">共 {{ filteredEntries.length }} 篇</span>
-              </div>
+        <el-table-column label="日期" min-width="130" align="center">
+          <template #default="{ row }">{{ diaryDateLabel(row.date) }}</template>
+        </el-table-column>
+        <el-table-column label="分类" width="120" align="center">
+          <template #default="{ row }">
+            <span v-if="diaryCatName(row)" class="dj-cat-tag">{{ diaryCatName(row) }}</span>
+            <span v-else class="dj-muted">未分类</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="心情" width="70" align="center">
+          <template #default="{ row }">
+            <span v-if="diaryMoodOf(row.mood)">{{ diaryMoodOf(row.mood)?.emoji }}</span>
+            <span v-else class="dj-muted">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="字数" width="80" align="center">
+          <template #default="{ row }">{{ row.content.length }}</template>
+        </el-table-column>
+        <el-table-column label="置顶" width="70" align="center">
+          <template #default="{ row }">
+            <span v-if="row.pinned" class="dj-pin-cell">📌</span>
+            <span v-else class="dj-muted">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" class-name="ewt-op-col" width="170" align="center" fixed="right">
+          <template #default="{ row }">
+            <template v-if="!showDeleted">
+              <button class="btn-edit" :data-testid="`dj-edit-${row.id}`" @click.stop="onRowClick(row)">编辑</button>
+              <button class="btn-delete" :data-testid="`dj-del-${row.id}`" @click.stop="handleDeleteById(row.id)">删除</button>
+            </template>
+            <template v-else>
+              <button class="btn-edit" :data-testid="`dj-restore-${row.id}`" @click.stop="handleRestore(row.id)">恢复</button>
+              <button class="btn-delete" :data-testid="`dj-purge-${row.id}`" @click.stop="handlePurge(row.id)">彻底删除</button>
+            </template>
+          </template>
+        </el-table-column>
+      </el-table>
 
-              <div v-if="store.sortedEntries.length === 0" class="dj-empty" data-testid="dj-empty">
-                还没有日记，写下今天的第一篇吧
-              </div>
-
-              <div v-else-if="filteredEntries.length === 0" class="dj-empty" data-testid="dj-empty-filter">
-                没有符合筛选条件的日记
-              </div>
-
-              <template v-else>
-                <div class="dj-grid dj-grid-scroll">
-                  <TransitionGroup name="grid">
-                  <div
-                    v-for="entry in filteredEntries"
-                    :key="entry.id"
-                    class="dj-card"
-                    :class="{ 'is-selected': entry.date === selectedDate }"
-                    :data-testid="`dj-card-${entry.id}`"
-                    @click="selectFromList(entry)"
-                  >
-                    <div class="dj-card-head">
-                      <span class="dj-card-date" :data-testid="`dj-card-date-${entry.id}`">{{ diaryDateLabel(entry.date) }}</span>
-                      <span v-if="entry.kind === 'idea'" class="dj-card-idea" :data-testid="`dj-card-idea-${entry.id}`">💡 灵感</span>
-                      <span v-if="entry.date === todayKey" class="dj-card-today" :data-testid="`dj-card-today-${entry.id}`">今天</span>
-                      <span v-if="diaryMoodOf(entry.mood)" class="dj-card-mood" :title="diaryMoodOf(entry.mood)?.label" :data-testid="`dj-card-mood-${entry.id}`">{{ diaryMoodOf(entry.mood)?.emoji }}</span>
-                      <span v-if="entry.pinned" class="dj-card-pin" :data-testid="`dj-card-pin-${entry.id}`">📌</span>
-                      <span v-if="diaryCatName(entry)" class="dj-card-cat" :data-testid="`dj-card-cat-${entry.id}`">{{ diaryCatName(entry) }}</span>
-                    </div>
-                    <div class="dj-card-preview" :data-testid="`dj-card-preview-${entry.id}`" v-html="renderMarkdownCached(entry.content)" @click="onCardPreviewClick"></div>
-                    <div class="dj-card-foot">
-                      <span class="dj-card-words">{{ entry.content.length }} 字</span>
-                      <span class="dj-card-read" v-if="readingMinutes(entry.content) > 0">{{ readingMinutes(entry.content) }} 分钟阅读</span>
-                    </div>
-                  </div>
-                  </TransitionGroup>
-                </div>
-              </template>
-            </div>
-        </div>
-      </BaseDialog>
-    </Transition>
+      <div v-if="tableEntries.length > 0" class="dj-table-pager ewt-pager">
+        <el-pagination
+          v-model:current-page="currentPage"
+          @size-change="currentPage = 1"
+          v-model:page-size="pageSize"
+          :page-sizes="PAGE_SIZES"
+          layout="total, prev, pager, next, jumper"
+          :total="tableEntries.length"
+          background
+          small
+          prev-text="上一页"
+          next-text="下一页"
+        />
+      </div>
+      <div v-else class="dj-table-empty">
+        {{ showDeleted ? '没有已删除的日记' : '还没有日记，写下今天的第一篇吧' }}
+      </div>
+    </div>
 
 </template>
 <style scoped>
@@ -516,52 +372,6 @@ async function handleInsertImage(e: Event): Promise<void> {
 .dj-entry-badge.is-empty {
   color: var(--color-text-muted, #94a3b8);
   background: var(--color-bg-hover, #f1f5f9);
-}
-
-/* 工具栏（去卡片化，置于头部之内） */
-.dj-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px 12px;
-  flex-wrap: wrap;
-}
-
-.dj-toolbar-left,
-.dj-toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-/* 左侧改为纵向两段：上段「日历 + 分类下拉」同一行，下段操作按钮单独一行；
-   每段内部 flex-wrap，窄屏自动换行，不挤压、不错位 */
-.dj-toolbar-left {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.dj-toolbar-controls,
-.dj-toolbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.dj-toolbar :deep(.el-button + .el-button) {
-  margin-left: 0;
-}
-
-/* 置顶/图片/查看 三个按钮单独成行，位于工具栏最上方（其余按钮位置不变） */
-.dj-lift-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-basis: 100%;
-  flex-wrap: wrap;
 }
 
 .dj-date-input {
@@ -854,18 +664,6 @@ async function handleInsertImage(e: Event): Promise<void> {
   border-radius: 6px;
 }
 
-/* ===== 分类选择 / 置顶 / 分类管理 按钮 ===== */
-.dj-cat-select {
-  width: 120px;
-  flex-shrink: 0;
-}
-
-.dj-toolbar .el-button.is-active {
-  background: color-mix(in srgb, var(--color-warning, #f59e0b) 14%, transparent);
-  border-color: var(--color-warning, #f59e0b);
-  color: var(--color-warning, #f59e0b);
-}
-
 /* ===== 心情选择行 ===== */
 .dj-mood-row {
   display: flex;
@@ -1006,40 +804,6 @@ async function handleInsertImage(e: Event): Promise<void> {
   white-space: nowrap;
 }
 
-/* 编辑态图片预览条：把草稿里内联的 base64 图片渲染成缩略图，避免用户只能看到一长串 base64 字符串 */
-.dj-image-preview {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.dj-image-thumb-wrap {
-  position: relative;
-  width: 96px;
-  height: 96px;
-}
-.dj-image-thumb {
-  width: 96px;
-  height: 96px;
-  object-fit: cover;
-  border-radius: var(--radius-md, 8px);
-  border: 1px solid var(--color-border, #e2e8f0);
-}
-.dj-image-remove {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 18px;
-  height: 18px;
-  line-height: 16px;
-  text-align: center;
-  border: none;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
-  cursor: pointer;
-  font-size: 12px;
-}
 /* ===== 桌面 769-1099px：单列堆叠、写作区 80% / 历史 20%、历史网格高度受限（自适应分页测量基准） ===== */
 @media (min-width: 769px) and (max-width: 1099.98px) {
   .dj-main {
@@ -1127,45 +891,76 @@ async function handleInsertImage(e: Event): Promise<void> {
 @media (min-width: 769px) {
 
 }
-/* ===== 日记列表弹框（与 WorkbenchExercise 一致）=====
-   遮罩/面板/头部/关闭/主体已统一到 common/BaseDialog.vue，
-   此处仅保留弹框层级与列表弹框的撑满尺寸 */
-.dj-list-overlay {
-  z-index: 310;
-}
-
-.dj-list-overlay :deep(.bd-panel) {
-  height: 85vh;
-  min-width: 480px;
+/* ===== 日记记录表格（底部列表，每页 10 条）===== */
+.dj-table-section {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  gap: 10px;
+  padding: 16px 18px;
+  background: var(--color-bg-card, #fff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.06));
 }
 
-.djl-count {
+.dj-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dj-table-title {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
+  color: var(--color-text, #1e293b);
+}
+
+/* 顶部筛选条：日记本选择 → 分类 → 日期 → 今日 → 已删除 */
+.dj-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.dj-filter-cat {
+  width: 140px;
+  flex-shrink: 0;
+}
+.dj-filter-bar .dj-stats {
+  margin-left: auto;
+}
+
+.dj-muted {
   color: var(--color-text-muted, #94a3b8);
 }
+.dj-cat-tag {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: var(--radius-full, 9999px);
+  color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-soft, #eff6ff);
+  white-space: nowrap;
+}
+.dj-pin-cell {
+  font-size: 13px;
+}
+.dj-table-empty {
+  text-align: center;
+  color: var(--color-text-muted, #94a3b8);
+  font-size: 14px;
+  padding: 32px 20px;
+}
 
-.djl-body {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 16px 20px 20px;
+/* 表格行手型（正常视图可点击载入编辑） */
+.dj-table :deep(.el-table__row) {
+  cursor: pointer;
 }
 
 @media (max-width: 768px) {
-  .dj-list-overlay :deep(.bd-panel) {
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
-    height: 90vh !important;
-    height: 90dvh !important;
-  }
-  /* 窄屏卡片改 2 列，避免 4 列过窄不可用 */
-  .dj-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .dj-filter-bar .dj-stats {
+    margin-left: 0;
+    width: 100%;
   }
 }
 </style>

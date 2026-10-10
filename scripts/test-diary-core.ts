@@ -7,6 +7,7 @@ import {
   defaultJournal,
   diaryDateLabel,
   emptyDiaryData,
+  extractFirstImage,
   findDiaryByDate,
   isValidDateKey,
   normalizeDiaryData,
@@ -248,6 +249,31 @@ test('T18 defaultJournal contract', () => {
   a.ok(isValidDateKey(j.createdAt.slice(0, 10)))
   const j2 = defaultJournal()
   a.notEqual(j, j2) // 不共享引用
+})
+
+// T21 — normalizeDiaryEntry：deleted / coverImage 安全默认（缺字段 → false / ''；非法 coverImage → 兜底 ''）
+test('T21 normalizeDiaryEntry deleted + coverImage defaults', () => {
+  const data = normalizeDiaryData({
+    entries: [
+      { id: 'dy_1', date: '2026-08-13', content: 'x' }, // 缺 deleted/coverImage → false / ''
+      { id: 'dy_2', date: '2026-08-12', content: 'y', deleted: true, coverImage: 'data:image/png;base64,AAA' },
+      { id: 'dy_3', date: '2026-08-11', content: 'z', deleted: false, coverImage: 123 as unknown as string } // 非法 coverImage → ''
+    ]
+  })
+  a.equal(data.entries[0].deleted, false)
+  a.equal(data.entries[0].coverImage, '')
+  a.equal(data.entries[1].deleted, true)
+  a.equal(data.entries[1].coverImage, 'data:image/png;base64,AAA')
+  a.equal(data.entries[2].deleted, false)
+  a.equal(data.entries[2].coverImage, '') // 非字符串 → 兜底 ''
+})
+
+// T22 — extractFirstImage：取正文首张 data:image；非 data: 链接 / 纯文本 / 空 → ''
+test('T22 extractFirstImage first inline image', () => {
+  a.equal(extractFirstImage('![a](data:image/png;base64,AAA) 文本'), 'data:image/png;base64,AAA')
+  a.equal(extractFirstImage('没有图片的纯文本'), '')
+  a.equal(extractFirstImage('![x](https://e.com/a.png)'), '') // 非 data: 不取
+  a.equal(extractFirstImage(''), '')
 })
 
 // T19 — computeStreak：空 → {streak:0,total:0}；total = 条目数；连续天数从今天往回数

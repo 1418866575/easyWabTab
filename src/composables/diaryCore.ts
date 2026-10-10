@@ -77,6 +77,14 @@ export function diaryDateLabel(dateKey: string): string {
   return `${dateKey} ${WEEKDAY_CN[new Date(y, m - 1, d).getDay()]}`
 }
 
+/** 从 markdown 正文提取第一张内联图片（data:image/... base64）的 URL；无图 → ''。 */
+const FIRST_IMAGE_RE = /!\[[^\]]*\]\((data:image\/[^)\s]+)\)/
+export function extractFirstImage(content: string): string {
+  if (typeof content !== 'string') return ''
+  const m = FIRST_IMAGE_RE.exec(content)
+  return m ? m[1] : ''
+}
+
 /**
  * 单条日记归一化（幂等，脏数据吞掉不抛错）：
  * - 非对象 → null（剔除，不生成兜底条目）
@@ -102,7 +110,10 @@ function normalizeDiaryEntry(raw: unknown): WorkbenchDiary | null {
     // 结构字段：带安全默认值（旧数据缺字段 → 补 ''/''/false，不丢条目）
     category: typeof src.category === 'string' ? src.category : '',
     mood: typeof src.mood === 'string' ? src.mood : '',
-    pinned: src.pinned === true
+    pinned: src.pinned === true,
+    deleted: src.deleted === true,
+    // 封面图：显式 dataURL 优先；缺省 ''（展示时回退正文首图，见 extractFirstImage）
+    coverImage: typeof src.coverImage === 'string' ? src.coverImage : ''
   }
 }
 
@@ -168,6 +179,8 @@ export function computeStreak(entries: WorkbenchDiary[]): { streak: number; tota
  */
 export function sortDiaryEntries(entries: WorkbenchDiary[]): WorkbenchDiary[] {
   return [...entries].sort((a, b) => {
+    // 置顶优先（pinned 排前）
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
     if (a.date !== b.date) return a.date < b.date ? 1 : -1
     if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? 1 : -1
     return 0

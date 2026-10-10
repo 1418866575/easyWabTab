@@ -139,11 +139,26 @@ export function normalizeNoteData(raw: unknown): NoteData {
   return emptyNoteData()
 }
 
-/** 便签排序：置顶优先（pinned 在前）→ updatedAt 降序（新的在前）。返回新数组，不 mutate 入参。 */
+/**
+ * 便签列表排序，按以下优先级逐级生效（相等项保持原相对顺序，依赖稳定排序）：
+ * 1. 状态：处理中(pending) 在最前，其余状态(done 等) 在后；
+ * 2. 置顶：已置顶(pinned) 在未置顶之前；
+ * 3. 创建时间：越新创建越靠前（createdAt 降序；创建越早越靠后）。
+ * 返回新数组，不 mutate 入参。
+ * 注：逾期(overdue) 是派生展示状态（未处理 + 截止日已过），其存储 status 仍为 pending，
+ * 故与「处理中」同组排在最前——如需把逾期单独看待可改用 noteStatusView 判定。
+ */
 export function sortNotes(notes: WorkbenchNote[]): WorkbenchNote[] {
   return [...notes].sort((a, b) => {
+    // 1. 状态：处理中优先（历史便签缺 status 按 pending 兜底）
+    const aPending = (a.status ?? 'pending') === 'pending' ? 0 : 1
+    const bPending = (b.status ?? 'pending') === 'pending' ? 0 : 1
+    if (aPending !== bPending) return aPending - bPending
+    // 2. 置顶优先
     if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
-    return a.updatedAt < b.updatedAt ? 1 : -1
+    // 3. 创建时间：越新越靠前
+    if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? 1 : -1
+    return 0
   })
 }
 

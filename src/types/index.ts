@@ -262,6 +262,8 @@ export interface WorkbenchDiary {
   category?: string // 日记专属分类 id（''=未分类），引用 useDiaryCategoriesStore
   mood?: string // 心情 key（DIARY_MOODS），如 'happy'
   pinned?: boolean // 是否置顶（默认 false）
+  deleted?: boolean // 逻辑删除（软删除）标记；true 时默认列表隐藏，可从『已删除』筛选恢复
+  coverImage?: string // 置顶图片/封面图 data URL（为空则用正文首图），随日记云同步
 }
 
 // 工作台日记本数据（日志本列表 + 条目列表）
