@@ -295,7 +295,8 @@ onMounted(async () => {
             <el-table-column label="考试日期" min-width="150" align="center">
               <template #default="{ row }">{{ row.remaining.nextTime }}</template>
             </el-table-column>
-            <el-table-column label="重复" width="100" align="center">
+            <!-- 与工作台「提醒」列表保持一致的重复列宽（130px）+ 超长 tooltip，避免多选周几时折行撑高行高 -->
+            <el-table-column label="重复" width="130" align="center" show-overflow-tooltip>
               <template #default="{ row }">
                 <span>{{ repeatLabel(row.repeat) }}</span>
               </template>

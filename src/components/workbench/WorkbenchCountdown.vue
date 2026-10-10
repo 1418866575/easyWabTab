@@ -457,7 +457,10 @@ onUnmounted(() => {
               <span class="cat-badge" :class="categoryBadgeClass(row.category)">{{ categoryLabel(row.category) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="重复" width="104" align="center">
+          <!-- 重复规则最长可达「每周 周一/周三/周五/周日」（实测自然宽 160px，原 104px 列会折 3 行）。
+               统一策略：列宽放到可单行显示常见文案（工作日 74px / 周六·周日 93px），
+               超长（多选周几）由 show-overflow-tooltip 单行省略 + 悬浮显示全文，避免行高被撑高。 -->
+          <el-table-column label="重复" width="130" align="center" show-overflow-tooltip>
             <template #default="{ row }">{{ repeatLabel(row.repeat) }}</template>
           </el-table-column>
           <el-table-column label="提醒" width="92" align="center">
@@ -481,6 +484,7 @@ onUnmounted(() => {
                   <el-button size="small" :disabled="!canMoveUp(row.id)" title="上移" @click.stop="store.moveCountdown(row.id, 'up')">▲</el-button>
                   <el-button size="small" :disabled="!canMoveDown(row.id)" title="下移" @click.stop="store.moveCountdown(row.id, 'down')">▼</el-button>
                 </template>
+                <el-button size="small" class="btn-edit" :data-testid="`cd-edit-${row.id}`" @click.stop="startEdit(row)">编辑</el-button>
                 <el-button
                   size="small"
                   :class="row.showOnDisplay !== false ? 'btn-show-on' : 'btn-show-off'"
