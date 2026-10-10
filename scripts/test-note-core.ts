@@ -53,6 +53,7 @@ function mkNote(partial: Partial<WorkbenchNote> & { id: string }): WorkbenchNote
   if (partial.type !== undefined) note.type = partial.type
   if (partial.categoryId !== undefined) note.categoryId = partial.categoryId
   if (partial.entries !== undefined) note.entries = partial.entries
+  if (partial.status !== undefined) note.status = partial.status
   return note
 }
 
@@ -167,18 +168,30 @@ test('T9 normalizeNoteData invalid input', () => {
   a.deepEqual(normalizeNoteData({ foo: 1 }), { categories: [], notes: [] }) // 无 categories/notes 字段的对象 → 空
 })
 
-// T10 — sortNotes：置顶在前 → updatedAt 降序；不改入参
-test('T10 sortNotes pinned first + updatedAt desc + no mutation', () => {
+// T10 — sortNotes 优先级：①状态(处理中在前) ②置顶 ③创建时间(越新越靠前)；不改入参、返回新数组
+test('T10 sortNotes priority: status > pinned > createdAt desc', () => {
   const notes = [
-    mkNote({ id: 'a', updatedAt: '2026-01-01T00:00:00.000Z' }),
-    mkNote({ id: 'b', pinned: true, updatedAt: '2026-06-01T00:00:00.000Z' }),
-    mkNote({ id: 'c', pinned: true, updatedAt: '2026-03-01T00:00:00.000Z' }),
-    mkNote({ id: 'd', updatedAt: '2026-05-01T00:00:00.000Z' })
+    mkNote({ id: 'n1', status: 'done', pinned: true, createdAt: '2026-03-01T00:00:00.000Z' }),
+    mkNote({ id: 'n2', status: 'pending', pinned: false, createdAt: '2026-01-01T00:00:00.000Z' }),
+    mkNote({ id: 'n3', status: 'pending', pinned: true, createdAt: '2026-02-01T00:00:00.000Z' }),
+    mkNote({ id: 'n4', status: 'done', pinned: false, createdAt: '2026-04-01T00:00:00.000Z' }),
+    mkNote({ id: 'n5', status: 'pending', pinned: false, createdAt: '2026-05-01T00:00:00.000Z' }),
+    mkNote({ id: 'n6', status: 'pending', pinned: true, createdAt: '2026-06-01T00:00:00.000Z' })
   ]
   const sorted = sortNotes(notes)
-  a.deepEqual(sorted.map(n => n.id), ['b', 'c', 'd', 'a'])
-  a.deepEqual(notes.map(n => n.id), ['a', 'b', 'c', 'd']) // 入参未被修改
+  // 处理中 n2/n3/n5/n6 先；组内：置顶 n6/n3 先于未置顶 n5/n2，各按 createdAt 降序
+  // 已处理 n1/n4 后；组内：置顶 n1 先于未置顶 n4，按 createdAt 降序
+  a.deepEqual(sorted.map(n => n.id), ['n6', 'n3', 'n5', 'n2', 'n1', 'n4'])
+  a.deepEqual(notes.map(n => n.id), ['n1', 'n2', 'n3', 'n4', 'n5', 'n6']) // 入参未被修改
   a.notEqual(sorted, notes) // 返回新数组
+
+  // 三级 tie-break 单点验证：同为处理中 + 同置顶时，创建时间越新越靠前
+  const tie = [
+    mkNote({ id: 'x', status: 'pending', pinned: false, createdAt: '2026-01-10T00:00:00.000Z' }),
+    mkNote({ id: 'y', status: 'pending', pinned: false, createdAt: '2026-01-20T00:00:00.000Z' }),
+    mkNote({ id: 'z', status: 'pending', pinned: false, createdAt: '2026-01-05T00:00:00.000Z' })
+  ]
+  a.deepEqual(sortNotes(tie).map(n => n.id), ['y', 'x', 'z'])
 })
 
 // T11 — sortTimelineEntries：datetime 升序，同 datetime 按 createdAt 升序
