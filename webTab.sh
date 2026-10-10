@@ -71,13 +71,18 @@ if [ -d "$WORK_DIR/.git" ]; then
   log "工作目录已存在，增量拉取（不删除）: $WORK_DIR"
   cd "$WORK_DIR"
 
-  # 构建会自动改写生成文件（src/composables/presetIcons.ts 由 scripts/generate-preset-icons.cjs 产出），
-  # 上次编译后它必然是「已修改」状态。这不是人的改动，不该阻塞部署 —— 先无条件还原。
-  # 代价仅为重新生成（秒级），换来脚本可重复执行而不受历史产物污染。
-  if ! git diff --quiet -- src/composables/presetIcons.ts 2>/dev/null; then
-    git checkout -- src/composables/presetIcons.ts 2>/dev/null || true
-    log "已还原构建自动生成文件: src/composables/presetIcons.ts"
-  fi
+  # 构建/安装会自动改写以下生成文件，上次编译或 npm install 后它们必然是「已修改」状态。
+  # 这不是人为改动，不该阻塞部署 —— 先无条件还原。代价仅为重新生成/重新安装（秒级~分钟级），
+  # 换来脚本可重复执行而不受历史产物污染。
+  #   - src/composables/presetIcons.ts：由 scripts/generate-preset-icons.cjs 产出
+  #   - package-lock.json：npm install 在 lockfile 与 package.json 不一致（或 npm 版本差异）时会重写，
+  #     属安装产物而非人为改动，部署应以仓库提交的 lockfile 为准。
+  for _gen in src/composables/presetIcons.ts package-lock.json; do
+    if ! git diff --quiet -- "$_gen" 2>/dev/null; then
+      git checkout -- "$_gen" 2>/dev/null || true
+      log "已还原构建/安装自动生成文件: $_gen"
+    fi
+  done
 
   # 剩余的未提交改动视为「真实改动」（有人在服务器上改了代码），会让 --ff-only 失败，
   # 故明确报出（最多列 5 条），避免表现为莫名的合并/构建错误。
