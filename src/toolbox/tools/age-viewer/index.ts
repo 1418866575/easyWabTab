@@ -6,7 +6,7 @@ const entry: ToolboxToolEntry = {
     id: 'age-viewer',
     name: '年龄查看器',
     icon: '🎂',
-    description: '生肖年龄对照表：按出生年份与 12 生肖查看今年年龄，范围 1–120 岁，每年自动更新',
+    description: '生肖年龄查看器：按当前年份自动列出 12 生肖今年可能的年龄（每 12 岁一档，1–120 岁），跨年自动更新',
     category: 'calc',
     tags: ['年龄', '生肖', '属相', '年份', '计算'],
     status: 'active',
