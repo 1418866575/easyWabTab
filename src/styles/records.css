@@ -52,6 +52,30 @@
   justify-content: space-between;
 }
 
+/* ===== 面板底部内联记录列表容器 =====
+   背景：运动/饮食/睡眠/体重四个健康面板原先把记录表格塞在「查看」弹框里，
+   现已改为在面板底部直接内联展示（表格 + 固定每页 10 条分页）。
+   容器/标题/操作区三件套在这里集中定义，四个面板共用，避免各写一份。
+   用法：<section class="ewt-inline-section"> + <div class="ewt-inline-head"> + <h3 class="ewt-inline-title"> */
+.ewt-inline-section {
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+}
+
+.ewt-inline-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.ewt-inline-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text, #1f2937);
+}
+
 /* 3 个工作台记录编辑弹框底部按钮统一：集中在右下角，顺序 取消 / 保存 / 删除 */
 .ewt-dialog-footer {
   display: flex;
@@ -103,13 +127,6 @@
    修复：移动端给弹框 body 容器加 overflow-y:auto，内容在其内部滚动，
    分页器始终贴在弹框底部。 */
 @media (max-width: 768px) {
-  .dialog .ex-list,
-  .dialog .dt-list,
-  .dialog .wt-list,
-  .dialog .ld-records-body {
-    overflow-y: auto;
-    min-height: 0;
-  }
 
   /* 双列卡片下，避免固定高度 156px 在窄屏被压塌，改为自动高度。
      ⚠ 必须 !important：RecordsCard.vue 的 scoped 规则带 [data-v-xxx]（特异性 0,2,0），
