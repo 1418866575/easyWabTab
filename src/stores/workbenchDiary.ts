@@ -48,9 +48,14 @@ export const useWorkbenchDiaryStore = defineStore('workbench-diary', () => {
     }
   }
 
-  /** 当前日志本下的条目（多日志本隔离视图）。 */
+  /** 当前日志本下的有效条目（排除软删，多日志本隔离视图）。 */
   const currentEntries = computed<WorkbenchDiary[]>(() =>
-    entries.value.filter(e => e.journalId === currentJournalId.value)
+    entries.value.filter(e => e.journalId === currentJournalId.value && !e.deleted)
+  )
+
+  /** 当前日志本下的已软删条目（「已删除」视图用）。 */
+  const deletedEntries = computed<WorkbenchDiary[]>(() =>
+    entries.value.filter(e => e.journalId === currentJournalId.value && e.deleted === true)
   )
 
   /**
@@ -62,7 +67,7 @@ export const useWorkbenchDiaryStore = defineStore('workbench-diary', () => {
   async function upsertEntry(
     date: string,
     content: string,
-    patch?: { category?: string; mood?: string; pinned?: boolean; kind?: 'diary' | 'idea' }
+    patch?: { category?: string; mood?: string; pinned?: boolean; kind?: 'diary' | 'idea'; coverImage?: string }
   ): Promise<void> {
     const trimmed = content.trim()
     if (!trimmed) return
@@ -76,6 +81,7 @@ export const useWorkbenchDiaryStore = defineStore('workbench-diary', () => {
         if (patch.mood !== undefined) existing.mood = patch.mood
         if (patch.pinned !== undefined) existing.pinned = patch.pinned
         if (patch.kind !== undefined) existing.kind = patch.kind
+        if (patch.coverImage !== undefined) existing.coverImage = patch.coverImage
       }
     } else {
       entries.value.push({
@@ -88,7 +94,8 @@ export const useWorkbenchDiaryStore = defineStore('workbench-diary', () => {
         kind: patch?.kind ?? 'diary',
         category: patch?.category ?? '',
         mood: patch?.mood ?? '',
-        pinned: patch?.pinned ?? false
+        pinned: patch?.pinned ?? false,
+        coverImage: patch?.coverImage ?? ''
       })
     }
     await saveDiary()
@@ -111,6 +118,24 @@ export const useWorkbenchDiaryStore = defineStore('workbench-diary', () => {
     // toRaw 只解开一层数组，残留的 Proxy 元素会让 IDB 结构化克隆抛 DataCloneError
     entries.value = toRaw(entries.value).filter(e => e.id !== id)
     await saveDiary()
+  }
+
+  /** 逻辑删除（软删）：置 deleted=true，默认列表隐藏，可从「已删除」筛选恢复。 */
+  async function softDeleteEntry(id: string): Promise<void> {
+    const e = entries.value.find(x => x.id === id)
+    if (e) {
+      e.deleted = true
+      await saveDiary()
+    }
+  }
+
+  /** 恢复软删条目：清 deleted 标记，重新进入默认列表。 */
+  async function restoreEntry(id: string): Promise<void> {
+    const e = entries.value.find(x => x.id === id)
+    if (e) {
+      e.deleted = false
+      await saveDiary()
+    }
   }
 
   // ===== 多日志本 CRUD =====
@@ -166,11 +191,14 @@ export const useWorkbenchDiaryStore = defineStore('workbench-diary', () => {
     journals,
     currentJournalId,
     currentEntries,
+    deletedEntries,
     stats,
     loadDiary,
     saveDiary,
     upsertEntry,
     deleteEntry,
+    softDeleteEntry,
+    restoreEntry,
     clearCategory,
     addJournal,
     renameJournal,
