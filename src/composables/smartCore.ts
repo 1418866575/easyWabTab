@@ -150,6 +150,7 @@ export function normalizeSkill(raw: unknown): SmartSkill | null {
     whenToUse: toText(o.whenToUse).trim().slice(0, SMART_DESC_MAX),
     tools: normalizeTags(o.tools).slice(0, SMART_TAGS_MAX),
     license: toText(o.license).trim().slice(0, 40),
+    github: typeof o.github === 'string' ? toText(o.github).trim().slice(0, 255) : '',
     extra: o.extra && typeof o.extra === 'object' && !Array.isArray(o.extra)
       ? { ...(o.extra as Record<string, unknown>) }
       : {},

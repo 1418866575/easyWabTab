@@ -32,7 +32,8 @@ export const SKILL_FIELD_MAP = {
   tags: 'tags',
   when_to_use: 'whenToUse',
   tools: 'tools',
-  license: 'license'
+  license: 'license',
+  github: 'github'
 } as const
 
 export type SkillFrontmatterKey = keyof typeof SKILL_FIELD_MAP
@@ -291,7 +292,8 @@ export function skillToMarkdown(skill: Partial<SmartSkill>): string {
     tags: skill.tags ?? [],
     whenToUse: skill.whenToUse ?? '',
     tools: skill.tools ?? [],
-    license: skill.license ?? ''
+    license: skill.license ?? '',
+    github: skill.github ?? ''
   }
   const extra = (skill.extra ?? {}) as Record<string, unknown>
   for (const [k, v] of Object.entries(extra)) {

@@ -26,7 +26,8 @@ const frontmatter = computed<{ key: string; value: string }[]>(() => {
     { key: 'tags', value: s.tags.join('、') },
     { key: 'when_to_use', value: s.whenToUse },
     { key: 'tools', value: s.tools.join('、') },
-    { key: 'license', value: s.license }
+    { key: 'license', value: s.license },
+    { key: 'github', value: s.github ?? '' }
   ]
   return rows.filter(r => !!String(r.value ?? '').trim())
 })

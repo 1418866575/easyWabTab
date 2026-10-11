@@ -25,7 +25,9 @@ import {
   renameCategory,
   removeCategory,
   collectCategories,
-  countByCategory
+  countByCategory,
+  SMART_SKILL_DEFAULT_CATEGORIES,
+  mergeDefaultCategories
 } from "../src/composables/smartSettingsCore.ts"
 
 const tests: { name: string; fn: () => void }[] = []
@@ -258,6 +260,28 @@ test("T20 菜单设置往返：改名 + 拖拽 + 隐藏后仍可解析", () => {
   assert.deepEqual(visibleMenu(d).map(i => i.key), ["prompts", "overview", "workflows"])
   // 持久化后再读取（JSON 往返）保持一致
   assert.deepEqual(normalizeMenuData(JSON.parse(JSON.stringify(d))), normalizeMenuData(d))
+})
+
+// T21 mergeDefaultCategories：默认分类补在最前（推荐顺序），用户自建分类排其后；幂等且不改入参
+test("T21 mergeDefaultCategories 补默认分类且幂等", () => {
+  const list = ["画画", "自定义"]
+  const out = mergeDefaultCategories(list)
+  // 已在默认列表里的「画画」不重复出现
+  assert.deepEqual(out, [...SMART_SKILL_DEFAULT_CATEGORIES, "自定义"])
+  assert.equal(out.filter(c => c === "画画").length, 1)
+  // 默认分类排在前，自建的排在后
+  assert.ok(out.indexOf("自定义") > out.indexOf("办公"))
+  // 空列表 → 得到全部默认分类
+  assert.deepEqual(mergeDefaultCategories([]), [...SMART_SKILL_DEFAULT_CATEGORIES])
+  // 幂等：结果再喂一次不变
+  assert.deepEqual(mergeDefaultCategories(out), out)
+  // 脏数据（空白 / 重名 / 非字符串）先归一化再合并
+  assert.deepEqual(
+    mergeDefaultCategories(["  ", "自定义", "自定义", null as unknown as string]),
+    [...SMART_SKILL_DEFAULT_CATEGORIES, "自定义"]
+  )
+  // 不改入参
+  assert.deepEqual(list, ["画画", "自定义"])
 })
 
 let passed = 0, failed = 0
