@@ -16,14 +16,14 @@ import { useSmartStore } from '@/stores/smart'
 import { useToast } from '@/composables/useToast'
 import { showConfirm } from '@/utils/dialog'
 import { SMART_MENU_LABEL_MAX } from '@/composables/smartSettingsCore'
-import type { SmartSkill } from '@/types'
+import type { SmartSkill, SmartWorkflow } from '@/types'
 
 const emit = defineEmits<{ close: [] }>()
 
 const store = useSmartStore()
 const toast = useToast()
 
-type TabKey = 'menu' | 'categories'
+type TabKey = 'menu' | 'categories' | 'workflow-categories'
 const tab = ref<TabKey>('menu')
 
 /**
@@ -32,7 +32,8 @@ const tab = ref<TabKey>('menu')
  */
 const SECTIONS: { key: TabKey; label: string; icon: string; desc: string }[] = [
   { key: 'menu', label: '左侧菜单', icon: 'grid', desc: '重命名、显示隐藏、拖拽排序' },
-  { key: 'categories', label: '技能分类', icon: 'folder', desc: '新增、重命名、删除与技能归属' }
+  { key: 'categories', label: '技能分类', icon: 'folder', desc: '新增、重命名、删除与技能归属' },
+  { key: 'workflow-categories', label: '工作流分类', icon: 'merge', desc: '新增、重命名、删除与工作流归类' }
 ]
 
 const currentSection = computed(() => SECTIONS.find(s => s.key === tab.value) ?? SECTIONS[0])
@@ -191,6 +192,94 @@ function onRemoveSkill(skillId: string): void {
 
 function toggleExpand(name: string): void {
   expanded.value = expanded.value === name ? null : name
+}
+
+// ==================== 模块三：工作流分类 ====================
+// 与「技能分类」同构：新增 / 重命名 / 删除，并把工作流归入 / 移出分类。
+// 归类操作也支持在「工作流管理」编辑弹框的分类下拉里直接完成。
+
+const newWfCategoryName = ref('')
+const wfCategoryEditing = ref<Record<string, string>>({})
+const wfExpanded = ref<string | null>(null)
+const wfPickOf = ref<Record<string, string>>({})
+
+const wfCategories = computed(() => store.allWorkflowCategories)
+
+function wfWorkflowsOf(name: string): SmartWorkflow[] {
+  return store.workflows.filter(w => w.category === name)
+}
+
+/** 可加入该分类的工作流（即当前不在该分类里的） */
+function wfAssignable(name: string): SmartWorkflow[] {
+  return store.workflows.filter(w => w.category !== name)
+}
+
+async function onAddWfCategory(): Promise<void> {
+  const r = store.onAddWorkflowCategory(newWfCategoryName.value)
+  if (!r.ok) {
+    toast.error(r.error ?? '新增分类失败')
+    return
+  }
+  newWfCategoryName.value = ''
+  toast.success('分类已新增')
+}
+
+function onWfCategoryInput(name: string, v: string): void {
+  wfCategoryEditing.value = { ...wfCategoryEditing.value, [name]: v }
+}
+
+function commitWfCategoryName(oldName: string): void {
+  const v = wfCategoryEditing.value[oldName]
+  if (v === undefined) return
+  const r = store.onRenameWorkflowCategory(oldName, v)
+  const next = { ...wfCategoryEditing.value }
+  delete next[oldName]
+  wfCategoryEditing.value = next
+  if (!r.ok) {
+    toast.error(r.error ?? '重命名失败')
+    return
+  }
+  if (wfExpanded.value === oldName) wfExpanded.value = v.trim()
+  toast.success('分类已重命名')
+}
+
+function revertWfCategoryName(name: string): void {
+  const next = { ...wfCategoryEditing.value }
+  delete next[name]
+  wfCategoryEditing.value = next
+}
+
+async function onDeleteWfCategory(name: string): Promise<void> {
+  const count = store.workflowCountByCategory[name] ?? 0
+  const msg = count > 0
+    ? `确定删除分类「${name}」吗？该分类下的 ${count} 个工作流会移到「未分类」，工作流本身不会被删除。`
+    : `确定删除分类「${name}」吗？`
+  if (!(await showConfirm(msg))) return
+  const moved = store.onDeleteWorkflowCategory(name)
+  if (wfExpanded.value === name) wfExpanded.value = null
+  toast.success(moved > 0 ? `已删除分类，${moved} 个工作流移到「未分类」` : '分类已删除')
+}
+
+function onAddWfTo(category: string): void {
+  const id = wfPickOf.value[category]
+  if (!id) {
+    toast.warning('请先选择一个工作流')
+    return
+  }
+  store.onAssignWorkflowToCategory(id, category)
+  const next = { ...wfPickOf.value }
+  delete next[category]
+  wfPickOf.value = next
+  toast.success('已归入该分类')
+}
+
+function onRemoveWf(workflowId: string): void {
+  store.onRemoveWorkflowFromCategory(workflowId)
+  toast.success('已移出该分类')
+}
+
+function toggleWfExpand(name: string): void {
+  wfExpanded.value = wfExpanded.value === name ? null : name
 }
 </script>
 
@@ -391,6 +480,98 @@ function toggleExpand(name: string): void {
           <p class="ss-empty-title">还没有分类</p>
           <p class="ss-empty-hint">
             {{ store.skills.length ? '你的技能都还没归类；新增一个分类（如「写作」「研发」），再把技能加进去。' : '先新增几个技能，再用分类把它们分组管理。' }}
+          </p>
+        </div>
+      </section>
+
+      <!-- ============ 工作流分类 ============ -->
+      <section v-show="tab === 'workflow-categories'" class="ss-pane">
+        <div class="ss-head">
+          <h3 class="ss-title">工作流分类</h3>
+          <div class="ss-add">
+            <el-input
+              v-model="newWfCategoryName"
+              size="small"
+              class="ss-add-input"
+              maxlength="20"
+              placeholder="新分类名称"
+              data-testid="smart-wf-cat-new"
+              @keydown.enter="onAddWfCategory"
+            />
+            <el-button size="small" type="primary" data-testid="smart-wf-cat-add" @click="onAddWfCategory">＋ 新增分类</el-button>
+          </div>
+        </div>
+        <p class="ss-hint">
+          分类用于工作流分组筛选。重命名会同步更新该分类下的工作流；删除分类只会把工作流移到「未分类」，不会删除工作流本身。也可在「工作流管理」编辑弹框的分类下拉里直接归类。
+        </p>
+
+        <ul v-if="wfCategories.length" class="ss-list">
+          <li v-for="c in wfCategories" :key="c" class="ss-row is-cat" :data-testid="`smart-wf-cat-row-${c}`">
+            <div class="ss-cat-main">
+              <span class="ss-icon"><Icon name="merge" :size="16" /></span>
+              <el-input
+                class="ss-name"
+                size="small"
+                maxlength="20"
+                :model-value="wfCategoryEditing[c] ?? c"
+                :aria-label="`${c}名称`"
+                :data-testid="`smart-wf-cat-name-${c}`"
+                @update:model-value="onWfCategoryInput(c, $event)"
+                @blur="commitWfCategoryName(c)"
+                @keydown.enter="commitWfCategoryName(c)"
+                @keydown.esc.stop="revertWfCategoryName(c)"
+              />
+              <span class="ss-count">{{ store.workflowCountByCategory[c] ?? 0 }} 个工作流</span>
+              <div class="ss-actions">
+                <el-button
+                  size="small"
+                  :data-testid="`smart-wf-cat-expand-${c}`"
+                  @click="toggleWfExpand(c)"
+                >{{ wfExpanded === c ? '收起' : '管理工作流' }}</el-button>
+                <el-button
+                  size="small"
+                  class="is-danger"
+                  :data-testid="`smart-wf-cat-del-${c}`"
+                  @click="onDeleteWfCategory(c)"
+                >删除</el-button>
+              </div>
+            </div>
+
+            <div v-if="wfExpanded === c" class="ss-cat-detail">
+              <div class="ss-add">
+                <el-select
+                  size="small"
+                  class="ss-pick"
+                  :model-value="wfPickOf[c] ?? ''"
+                  placeholder="选择要归入的工作流"
+                  :data-testid="`smart-wf-cat-pick-${c}`"
+                  @update:model-value="wfPickOf = { ...wfPickOf, [c]: $event }"
+                >
+                  <el-option v-for="w in wfAssignable(c)" :key="w.id" :value="w.id" :label="w.name" />
+                </el-select>
+                <el-button size="small" :data-testid="`smart-wf-cat-assign-${c}`" @click="onAddWfTo(c)">归入该分类</el-button>
+              </div>
+
+              <ul v-if="wfWorkflowsOf(c).length" class="ss-skill-list">
+                <li v-for="w in wfWorkflowsOf(c)" :key="w.id" class="ss-skill-row">
+                  <span class="ss-skill-name">{{ w.name }}</span>
+                  <el-button
+                    size="small"
+                    :data-testid="`smart-wf-cat-remove-${w.id}`"
+                    @click="onRemoveWf(w.id)"
+                  >移出</el-button>
+                </li>
+              </ul>
+              <p v-else class="ss-empty-inline">该分类下还没有工作流，从上方选择归入。</p>
+            </div>
+          </li>
+        </ul>
+
+        <!-- 空状态 -->
+        <div v-else class="ss-empty">
+          <p class="ss-empty-title">还没有分类</p>
+          <p class="ss-empty-hint">
+            {{ store.workflows.length ? '你的工作流都还没归类；新增一个分类（如「研发」「运营」），再把工作流加进去。' : '先新增几个工作流，再用分类把它们分组管理。' }}
           </p>
         </div>
       </section>

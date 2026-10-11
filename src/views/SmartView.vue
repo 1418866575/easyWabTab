@@ -11,13 +11,14 @@ import WorkbenchManagePanel from '@/components/WorkbenchManagePanel.vue'
 import SmartOverview from '@/components/smart/SmartOverview.vue'
 import SkillManager from '@/components/smart/SkillManager.vue'
 import PromptManager from '@/components/smart/PromptManager.vue'
+import WorkflowManager from '@/components/smart/WorkflowManager.vue'
 import SmartSettingsDialog from '@/components/smart/SmartSettingsDialog.vue'
 import { useAppSettingsStore } from '@/stores/settings'
 import { useSmartStore } from '@/stores/smart'
 import { useCloudSync, type SyncStatus } from '@/composables/useCloudSync'
 import { useToast } from '@/composables/useToast'
 
-type PageKey = 'overview' | 'skills' | 'prompts'
+type PageKey = 'overview' | 'skills' | 'prompts' | 'workflows'
 
 const settingsStore = useAppSettingsStore()
 const store = useSmartStore()
@@ -42,7 +43,8 @@ const menuItems = computed<MenuItem[]>(() =>
     label: i.label.replace(/管理/g, ''),
     icon: i.icon,
     ...(i.key === 'skills' ? { count: store.skills.length } : {}),
-    ...(i.key === 'prompts' ? { count: store.prompts.length } : {})
+    ...(i.key === 'prompts' ? { count: store.prompts.length } : {}),
+    ...(i.key === 'workflows' ? { count: store.workflows.length } : {})
   }))
 )
 
@@ -182,7 +184,8 @@ async function handleSyncNowClick(): Promise<void> {
         <!-- 概览的统计卡 / 最近使用会 emit goto 跳到对应菜单；另两页无该事件 -->
         <SmartOverview v-if="activePage === 'overview'" @goto="selectPage" />
         <SkillManager v-else-if="activePage === 'skills'" />
-        <PromptManager v-else />
+        <PromptManager v-else-if="activePage === 'prompts'" />
+        <WorkflowManager v-else />
       </main>
     </div>
 

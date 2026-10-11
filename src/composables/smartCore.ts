@@ -12,15 +12,17 @@ import type {
   SmartPrompt,
   SmartPromptVariable,
   SmartSkill,
-  SmartSkillResource
+  SmartSkillResource,
+  SmartWorkflow
 } from '@/types'
 import { migrateLegacySkill } from './skillPackageCore'
 
 // ==================== 常量与上限 ====================
 
 // 技能不再有 JSON 信封：技能 = 一个目录，导入导出统一走 zip（见 utils/skillPackage）。
-// 这里只保留提示词的信封标识。
+// 提示词与工作流走 JSON 信封（kind 区分）。
 export const SMART_PROMPT_KIND = 'smart-prompts'
+export const SMART_WORKFLOW_KIND = 'smart-workflows'
 export const SMART_ENVELOPE_VERSION = 1
 
 export const SMART_NAME_MAX = 60
@@ -73,8 +75,8 @@ export const VAR_PATTERN = /\{\{\s*([A-Za-z0-9_\u4e00-\u9fa5]{1,32})\s*\}\}/g
 
 // ==================== 通用小工具 ====================
 
-/** 生成 id：`sk_`/`pm_` + 时间戳 + 随机后缀，避免同毫秒批量创建撞号 */
-export function makeSmartId(prefix: 'sk' | 'pm'): string {
+/** 生成 id：`sk_`/`pm_`/`wf_` + 时间戳 + 随机后缀，避免同毫秒批量创建撞号 */
+export function makeSmartId(prefix: 'sk' | 'pm' | 'wf'): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }
 
@@ -148,6 +150,7 @@ export function normalizeSkill(raw: unknown): SmartSkill | null {
     whenToUse: toText(o.whenToUse).trim().slice(0, SMART_DESC_MAX),
     tools: normalizeTags(o.tools).slice(0, SMART_TAGS_MAX),
     license: toText(o.license).trim().slice(0, 40),
+    github: typeof o.github === 'string' ? toText(o.github).trim().slice(0, 255) : '',
     extra: o.extra && typeof o.extra === 'object' && !Array.isArray(o.extra)
       ? { ...(o.extra as Record<string, unknown>) }
       : {},
@@ -227,6 +230,46 @@ export function normalizePrompts(input: unknown): SmartPrompt[] {
   for (const raw of input) {
     const p = normalizePrompt(raw)
     if (p) out.push(p)
+  }
+  return out
+}
+
+// ==================== 工作流归一化 ====================
+
+/** 归一化单条工作流；非法（非对象 / 无名称）返回 null */
+export function normalizeWorkflow(raw: unknown): SmartWorkflow | null {
+  if (!raw || typeof raw !== 'object') return null
+  const o = raw as Record<string, unknown>
+  const name = truncateText(toText(o.name).trim(), SMART_NAME_MAX)
+  const definition = toText(o.definition)
+  // 名称与定义都为空 → 视为垃圾数据
+  if (!name && !definition.trim()) return null
+  const now = Date.now()
+  const createdAt = toInt(o.createdAt, now)
+  return {
+    id: typeof o.id === 'string' && o.id ? o.id : makeSmartId('wf'),
+    name: name || '未命名工作流',
+    description: toText(o.description).trim().slice(0, SMART_DESC_MAX),
+    category: normalizeCategory(o.category),
+    tags: normalizeTags(o.tags),
+    author: toText(o.author).trim().slice(0, SMART_NAME_MAX),
+    version: typeof o.version === 'string' && o.version.trim() ? truncateText(o.version.trim(), 20) : '1.0.0',
+    definition: truncateText(definition, SMART_CONTENT_MAX),
+    isFavorite: o.isFavorite === true,
+    usageCount: Math.max(0, toInt(o.usageCount, 0)),
+    lastUsedAt: typeof o.lastUsedAt === 'number' && Number.isFinite(o.lastUsedAt) ? o.lastUsedAt : null,
+    isBuiltIn: o.isBuiltIn === true ? true : undefined,
+    createdAt,
+    updatedAt: toInt(o.updatedAt, createdAt || now)
+  }
+}
+
+export function normalizeWorkflows(input: unknown): SmartWorkflow[] {
+  if (!Array.isArray(input)) return []
+  const out: SmartWorkflow[] = []
+  for (const raw of input) {
+    const w = normalizeWorkflow(raw)
+    if (w) out.push(w)
   }
   return out
 }
@@ -314,12 +357,13 @@ export interface SmartFilter {
 export type SmartSort = 'updated' | 'name' | 'usage'
 
 /** 关键字匹配（大小写不敏感） */
-function matchKeyword(item: SmartSkill | SmartPrompt, q: string): boolean {
+function matchKeyword(item: SmartSkill | SmartPrompt | SmartWorkflow, q: string): boolean {
   const kw = q.trim().toLowerCase()
   if (!kw) return true
   const name = 'name' in item ? item.name : item.title
-  // 技能正文在 body，提示词在 content；技能另有 description / whenToUse / tools 可搜
-  const text = 'body' in item ? item.body : item.content
+  // 技能正文在 body，提示词在 content，工作流在 definition；技能另有 description / whenToUse / tools 可搜
+  const text =
+    'body' in item ? item.body : 'content' in item ? item.content : 'definition' in item ? item.definition : ''
   const haystack = [
     name,
     item.category,
@@ -334,8 +378,8 @@ function matchKeyword(item: SmartSkill | SmartPrompt, q: string): boolean {
   return haystack.includes(kw)
 }
 
-/** 通用过滤（技能与提示词共用） */
-export function filterSmart<T extends SmartSkill | SmartPrompt>(items: T[], f: SmartFilter): T[] {
+/** 通用过滤（技能 / 提示词 / 工作流 共用） */
+export function filterSmart<T extends SmartSkill | SmartPrompt | SmartWorkflow>(items: T[], f: SmartFilter): T[] {
   const tags = Array.isArray(f.tags) ? f.tags.filter(Boolean) : []
   return items.filter(item => {
     if (!matchKeyword(item, f.q ?? '')) return false
@@ -347,7 +391,7 @@ export function filterSmart<T extends SmartSkill | SmartPrompt>(items: T[], f: S
 }
 
 /** 排序（不改入参） */
-export function sortSmart<T extends SmartSkill | SmartPrompt>(items: T[], sort: SmartSort): T[] {
+export function sortSmart<T extends SmartSkill | SmartPrompt | SmartWorkflow>(items: T[], sort: SmartSort): T[] {
   const out = [...items]
   if (sort === 'name') {
     return out.sort((a, b) => nameOf(a).localeCompare(nameOf(b), 'zh-Hans-CN'))
@@ -450,8 +494,31 @@ export function validatePrompt(input: Partial<SmartPrompt>, existing: SmartPromp
   return out
 }
 
+/** 校验工作流输入（返回全部问题，空数组即通过） */
+export function validateWorkflow(input: Partial<SmartWorkflow>, existing: SmartWorkflow[], editingId?: string | null): SmartIssue[] {
+  const out: SmartIssue[] = []
+  const name = (input.name ?? '').trim()
+  if (!name) out.push({ field: 'name', message: '请填写工作流名称' })
+  else if ([...name].length > SMART_NAME_MAX) out.push({ field: 'name', message: `名称不能超过 ${SMART_NAME_MAX} 字` })
+  else if (isNameTaken(existing, name, editingId)) out.push({ field: 'name', message: `已存在同名工作流「${name}」` })
+
+  const desc = (input.description ?? '').trim()
+  if (desc && [...desc].length > SMART_DESC_MAX) out.push({ field: 'description', message: `说明不能超过 ${SMART_DESC_MAX} 字` })
+
+  const definition = (input.definition ?? '').trim()
+  if (!definition) out.push({ field: 'definition', message: '请填写工作流定义 / 步骤' })
+  else if ([...definition].length > SMART_CONTENT_MAX) out.push({ field: 'definition', message: `定义不能超过 ${SMART_CONTENT_MAX} 字` })
+
+  const version = (input.version ?? '').trim()
+  if (version && [...version].length > 20) out.push({ field: 'version', message: '版本号不能超过 20 字' })
+  const author = (input.author ?? '').trim()
+  if (author && [...author].length > SMART_NAME_MAX) out.push({ field: 'author', message: `作者不能超过 ${SMART_NAME_MAX} 字` })
+
+  return out
+}
+
 /** 同名判定（编辑自身不算重复） */
-export function isNameTaken<T extends SmartSkill | SmartPrompt>(existing: T[], name: string, editingId?: string | null): boolean {
+export function isNameTaken<T extends SmartSkill | SmartPrompt | SmartWorkflow>(existing: T[], name: string, editingId?: string | null): boolean {
   const target = name.trim()
   if (!target) return false
   return existing.some(it => nameOf(it) === target && (!editingId || it.id !== editingId))
@@ -491,9 +558,11 @@ export function parseEnvelope<T>(
   // 信封形态：校验 kind 与 version
   if (typeof o.kind === 'string') {
     if (o.kind !== expectKind) {
-      // 目前只有提示词走 JSON 信封（技能改为 zip 目录导入），未知 kind 原样回显便于排查
-      const want = expectKind === SMART_PROMPT_KIND ? '提示词' : expectKind
-      const got = o.kind === SMART_PROMPT_KIND ? '提示词' : o.kind
+      // 把已知 kind 映射为中文便于提示；未知 kind 原样回显便于排查
+      const kindLabel = (k: string): string =>
+        k === SMART_PROMPT_KIND ? '提示词' : k === SMART_WORKFLOW_KIND ? '工作流' : k
+      const want = kindLabel(expectKind)
+      const got = kindLabel(o.kind)
       return { ok: false, reason: 'kind-mismatch', message: `文件是「${got}」数据，与当前「${want}」页面不匹配` }
     }
     const v = typeof o.version === 'number' ? o.version : 1
@@ -537,7 +606,7 @@ export function parseEnvelope<T>(
  * - 其余 → 新增
  * 更新以 updatedAt 新者胜：导入条目更旧则不计入更新。
  */
-export function planImport<T extends SmartSkill | SmartPrompt>(
+export function planImport<T extends SmartSkill | SmartPrompt | SmartWorkflow>(
   incoming: T[],
   existing: T[]
 ): SmartImportPreview<T> {
@@ -565,7 +634,7 @@ export function planImport<T extends SmartSkill | SmartPrompt>(
 }
 
 /** 应用导入：返回合并后的新数组（不改入参），新增追加、更新就地替换 */
-export function applyImport<T extends SmartSkill | SmartPrompt>(
+export function applyImport<T extends SmartSkill | SmartPrompt | SmartWorkflow>(
   existing: T[],
   plan: SmartImportPreview<T>
 ): T[] {
@@ -582,38 +651,51 @@ export function applyImport<T extends SmartSkill | SmartPrompt>(
 export interface SmartStats {
   skillCount: number
   promptCount: number
-  /** 本月新增（技能 + 提示词） */
+  workflowCount: number
+  /** 本月新增（技能 + 提示词 + 工作流） */
   monthAdded: number
   /** 累计使用次数 */
   totalUsage: number
   /** 分类分布：{ 分类名: 数量 } */
-  byCategory: { category: string; skills: number; prompts: number }[]
-  /** 最近使用 Top N（跨技能与提示词，按 lastUsedAt 倒序） */
-  recent: { id: string; type: 'skill' | 'prompt'; name: string; lastUsedAt: number }[]
+  byCategory: { category: string; skills: number; prompts: number; workflows: number }[]
+  /** 最近使用 Top N（跨技能 / 提示词 / 工作流，按 lastUsedAt 倒序） */
+  recent: { id: string; type: 'skill' | 'prompt' | 'workflow'; name: string; lastUsedAt: number }[]
 }
 
 /** 汇总统计（纯函数，供概览卡片消费） */
-export function calcSmartStats(skills: SmartSkill[], prompts: SmartPrompt[], now = Date.now(), topN = 5): SmartStats {
+export function calcSmartStats(
+  skills: SmartSkill[],
+  prompts: SmartPrompt[],
+  workflows: SmartWorkflow[] = [],
+  now = Date.now(),
+  topN = 5
+): SmartStats {
   const d = new Date(now)
   const monthStart = new Date(d.getFullYear(), d.getMonth(), 1).getTime()
   const monthAdded =
-    skills.filter(s => s.createdAt >= monthStart).length + prompts.filter(p => p.createdAt >= monthStart).length
+    skills.filter(s => s.createdAt >= monthStart).length +
+    prompts.filter(p => p.createdAt >= monthStart).length +
+    workflows.filter(w => w.createdAt >= monthStart).length
 
-  const catMap = new Map<string, { category: string; skills: number; prompts: number }>()
-  const bump = (c: string, kind: 'skills' | 'prompts') => {
-    const cur = catMap.get(c) ?? { category: c, skills: 0, prompts: 0 }
+  const catMap = new Map<string, { category: string; skills: number; prompts: number; workflows: number }>()
+  const bump = (c: string, kind: 'skills' | 'prompts' | 'workflows') => {
+    const cur = catMap.get(c) ?? { category: c, skills: 0, prompts: 0, workflows: 0 }
     cur[kind] += 1
     catMap.set(c, cur)
   }
   for (const s of skills) bump(s.category, 'skills')
   for (const p of prompts) bump(p.category, 'prompts')
+  for (const w of workflows) bump(w.category, 'workflows')
   const byCategory = [...catMap.values()].sort(
-    (a, b) => b.skills + b.prompts - (a.skills + a.prompts) || a.category.localeCompare(b.category, 'zh-Hans-CN')
+    (a, b) =>
+      b.skills + b.prompts + b.workflows - (a.skills + a.prompts + a.workflows) ||
+      a.category.localeCompare(b.category, 'zh-Hans-CN')
   )
 
   const recent = [
     ...skills.filter(s => s.lastUsedAt !== null).map(s => ({ id: s.id, type: 'skill' as const, name: s.name, lastUsedAt: s.lastUsedAt as number })),
-    ...prompts.filter(p => p.lastUsedAt !== null).map(p => ({ id: p.id, type: 'prompt' as const, name: p.title, lastUsedAt: p.lastUsedAt as number }))
+    ...prompts.filter(p => p.lastUsedAt !== null).map(p => ({ id: p.id, type: 'prompt' as const, name: p.title, lastUsedAt: p.lastUsedAt as number })),
+    ...workflows.filter(w => w.lastUsedAt !== null).map(w => ({ id: w.id, type: 'workflow' as const, name: w.name, lastUsedAt: w.lastUsedAt as number }))
   ]
     .sort((a, b) => b.lastUsedAt - a.lastUsedAt)
     .slice(0, topN)
@@ -621,9 +703,12 @@ export function calcSmartStats(skills: SmartSkill[], prompts: SmartPrompt[], now
   return {
     skillCount: skills.length,
     promptCount: prompts.length,
+    workflowCount: workflows.length,
     monthAdded,
     totalUsage:
-      skills.reduce((sum, s) => sum + s.usageCount, 0) + prompts.reduce((sum, p) => sum + p.usageCount, 0),
+      skills.reduce((sum, s) => sum + s.usageCount, 0) +
+      prompts.reduce((sum, p) => sum + p.usageCount, 0) +
+      workflows.reduce((sum, w) => sum + w.usageCount, 0),
     byCategory,
     recent
   }

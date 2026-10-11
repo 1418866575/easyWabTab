@@ -11,7 +11,7 @@ import { computed, ref } from 'vue'
 import { useSmartStore } from '@/stores/smart'
 import { showConfirm } from '@/utils/dialog'
 import { useToast } from '@/composables/useToast'
-import { copyText, dateStamp } from '@/utils/download'
+import { dateStamp } from '@/utils/download'
 import {
   downloadSkillZip,
   downloadSkillsZip,
@@ -129,11 +129,6 @@ async function handleDelete(s: SmartSkill): Promise<void> {
 function handleClone(s: SmartSkill): void {
   const id = store.cloneSkill(s.id)
   if (id) toast.success(`已复制为「${store.skills.find(x => x.id === id)?.name}」`)
-}
-
-async function handleCopy(s: SmartSkill): Promise<void> {
-  const ok = await copyText(s.body, `已复制「${s.name}」正文`)
-  if (ok) store.touchSkill(s.id)
 }
 
 // ===== 详情 =====
@@ -358,7 +353,6 @@ function relTime(ts: number): string {
           <span v-for="t in s.tags" :key="t" class="sm-chip">#{{ t }}</span>
         </div>
         <footer class="sm-actions">
-          <button type="button" class="sm-btn" :data-testid="`smart-skill-copy-${s.id}`" @click="handleCopy(s)">复制正文</button>
           <button type="button" class="sm-btn" @click="openDetail(s)">详情</button>
           <button type="button" class="sm-btn" @click="openEdit(s)">编辑</button>
           <button type="button" class="sm-btn" @click="handleClone(s)">复制</button>

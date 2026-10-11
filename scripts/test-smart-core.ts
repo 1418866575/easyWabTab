@@ -39,7 +39,7 @@ import {
   RESOURCE_FILE_MAX,
   SKILL_FILE
 } from '../src/composables/skillPackageCore.ts'
-import type { SmartPrompt, SmartSkill } from '../src/types/index.ts'
+import type { SmartPrompt, SmartSkill, SmartWorkflow } from '../src/types/index.ts'
 
 const tests: { name: string; fn: () => void }[] = []
 function test(name: string, fn: () => void) {
@@ -79,6 +79,25 @@ function prompt(over: Partial<SmartPrompt> = {}): SmartPrompt {
     model: '通用',
     content: '请讲解 {{概念}}',
     variables: [{ name: '概念' }],
+    isFavorite: false,
+    usageCount: 0,
+    lastUsedAt: null,
+    createdAt: 1000,
+    updatedAt: 1000,
+    ...over
+  }
+}
+
+function workflow(over: Partial<SmartWorkflow> = {}): SmartWorkflow {
+  return {
+    id: 'wf_1',
+    name: '周报自动生成',
+    description: '',
+    category: '写作',
+    tags: [],
+    author: '',
+    version: '1.0.0',
+    definition: '1. 收集会议记录\n2. 生成周报',
     isFavorite: false,
     usageCount: 0,
     lastUsedAt: null,
@@ -362,7 +381,7 @@ test('T14 planImport / applyImport（新增 / 更新 / 跳过 + 合并落库）'
 })
 
 // T15 — 统计
-test('T15 calcSmartStats（计数 / 本月新增 / 累计使用 / 分类 / 最近使用）', () => {
+test('T15 calcSmartStats（计数 / 本月新增 / 累计使用 / 分类 / 最近使用 / 工作流）', () => {
   const now = new Date(2026, 9, 2).getTime() // 2026-10-02
   const monthStart = new Date(2026, 9, 1).getTime()
   const skills = [
@@ -373,17 +392,26 @@ test('T15 calcSmartStats（计数 / 本月新增 / 累计使用 / 分类 / 最�
     prompt({ id: 'p1', category: '写作', usageCount: 2, createdAt: monthStart + 20, lastUsedAt: now }),
     prompt({ id: 'p2', category: '学习', usageCount: 0, createdAt: 1, lastUsedAt: null })
   ]
-  const st = calcSmartStats(skills, prompts, now)
+  const workflows = [
+    workflow({ id: 'w1', category: '写作', usageCount: 1, createdAt: monthStart + 30, lastUsedAt: now - 500 }),
+    workflow({ id: 'w2', category: '研发', usageCount: 0, createdAt: 1, lastUsedAt: null })
+  ]
+  // 注意：第三参是 workflows，now 是第四参（新增工作流后签名顺延）
+  const st = calcSmartStats(skills, prompts, workflows, now)
   assert.equal(st.skillCount, 2, '技能数')
   assert.equal(st.promptCount, 2, '提示词数')
-  assert.equal(st.monthAdded, 2, '本月新增 2（a 与 p1）')
-  assert.equal(st.totalUsage, 6, '累计使用 3+1+2')
+  assert.equal(st.workflowCount, 2, '工作流数')
+  assert.equal(st.monthAdded, 3, '本月新增 3（a、p1、w1）')
+  assert.equal(st.totalUsage, 7, '累计使用 3+1+2+1')
   assert.equal(st.byCategory[0].category, '写作', '写作最多排第一')
   assert.equal(st.byCategory[0].skills, 1, '分类内技能数')
   assert.equal(st.byCategory[0].prompts, 1, '分类内提示词数')
-  assert.equal(st.recent.length, 2, '最近使用两条（lastUsedAt 非空）')
+  assert.equal(st.byCategory[0].workflows, 1, '分类内工作流数')
+  // 工作流计入最近使用（w1 比 p1 早 500ms，排在其后）
+  assert.equal(st.recent.length, 3, '最近使用三条（a/p1/w1 的 lastUsedAt 非空）')
   assert.equal(st.recent[0].id, 'p1', '最近的是 p1')
   assert.equal(st.recent[0].type, 'prompt', '类型标记正确')
+  assert.equal(st.recent.find(r => r.id === 'w1')!.type, 'workflow', '工作流出现在最近使用且类型正确')
 })
 
 // T16 — frontmatter 解析（YAML 子集：标量 / 引号 / 行内数组 / 块数组 / 注释）

@@ -8,10 +8,13 @@ import {
   makeSmartId,
   normalizePrompts,
   normalizeSkills,
+  normalizeWorkflows,
   parseVariables,
   planImport,
   applyImport,
   SMART_PROMPT_KIND,
+  SMART_WORKFLOW_KIND,
+  UNCATEGORIZED,
   UNCATEGORIZED as UNCATEGORIZED_SKILL
 } from '@/composables/smartCore'
 import {
@@ -19,6 +22,7 @@ import {
   collectCategories,
   countByCategory,
   defaultMenuData,
+  mergeDefaultCategories,
   moveMenu,
   canHideMenu,
   normalizeCategories,
@@ -33,14 +37,19 @@ import {
   type CategoryResult,
   type SmartMenuData
 } from '@/composables/smartSettingsCore'
-import type { SmartEnvelope, SmartImportPreview, SmartPrompt, SmartSkill } from '@/types'
+import type { SmartEnvelope, SmartImportPreview, SmartPrompt, SmartSkill, SmartWorkflow } from '@/types'
 
 const SKILLS_KEY = 'smart-skills'
 const PROMPTS_KEY = 'smart-prompts'
+const WORKFLOWS_KEY = 'smart-workflows'
 /** 左侧菜单配置（顺序 / 改名 / 隐藏） */
 const MENU_KEY = 'smart-menu'
 /** 自定义技能分类（允许存在还没有技能挂上去的空分类） */
 const CATEGORIES_KEY = 'smart-skill-categories'
+/** 默认分类是否已播种（'1' = 已播种）。播种后默认分类归用户自己管，删掉不会再被塞回来 */
+const CATEGORIES_SEEDED_KEY = 'smart-skill-categories-seeded'
+/** 自定义工作流分类（允许存在还没有工作流挂上去的空分类） */
+const WORKFLOW_CATEGORIES_KEY = 'smart-workflow-categories'
 
 /** 读取并归一化（解析失败降级为空数组，绝不抛错阻断页面） */
 function loadList<T>(key: string, normalize: (raw: unknown) => T[]): T[] {
@@ -62,6 +71,7 @@ function save(key: string, value: unknown): void {
 export const useSmartStore = defineStore('smart', () => {
   const skills = ref<SmartSkill[]>(loadList(SKILLS_KEY, normalizeSkills))
   const prompts = ref<SmartPrompt[]>(loadList(PROMPTS_KEY, normalizePrompts))
+  const workflows = ref<SmartWorkflow[]>(loadList(WORKFLOWS_KEY, normalizeWorkflows))
 
   // ==================== 左侧菜单配置 ====================
 
@@ -126,7 +136,7 @@ export const useSmartStore = defineStore('smart', () => {
 
   // ==================== 技能分类 ====================
 
-  const customCategories = ref<string[]>(loadCategories())
+  const customCategories = ref<string[]>(loadCategoriesWithDefaults())
 
   function loadCategories(): string[] {
     const raw = getPref(CATEGORIES_KEY)
@@ -137,6 +147,20 @@ export const useSmartStore = defineStore('smart', () => {
       console.warn('[smart] 分类配置解析失败，回落空列表')
       return []
     }
+  }
+
+  /**
+   * 默认分类播种（只做一次）：首次使用或本次升级时把 SMART_SKILL_DEFAULT_CATEGORIES 补进列表，
+   * 随后打上标记。播种完成后，默认分类就和用户自建分类一样可删可改名，不会在下次打开时复活。
+   */
+  function loadCategoriesWithDefaults(): string[] {
+    const cur = loadCategories()
+    if (getPref(CATEGORIES_SEEDED_KEY) === '1') return cur
+    const merged = mergeDefaultCategories(cur)
+    if (merged.length !== cur.length) save(CATEGORIES_KEY, merged)
+    setPref(CATEGORIES_SEEDED_KEY, '1')
+    markDirty()
+    return merged
   }
 
   function persistCategories(): void {
@@ -212,6 +236,94 @@ export const useSmartStore = defineStore('smart', () => {
     onAssignSkillToCategory(skillId, UNCATEGORIZED_SKILL)
   }
 
+  // ==================== 工作流分类 ====================
+
+  const workflowCustomCategories = ref<string[]>(loadWorkflowCategories())
+
+  function loadWorkflowCategories(): string[] {
+    const raw = getPref(WORKFLOW_CATEGORIES_KEY)
+    if (!raw) return []
+    try {
+      return normalizeCategories(JSON.parse(raw))
+    } catch {
+      console.warn('[smart] 工作流分类配置解析失败，回落空列表')
+      return []
+    }
+  }
+
+  function persistWorkflowCategories(): void {
+    save(WORKFLOW_CATEGORIES_KEY, workflowCustomCategories.value)
+  }
+
+  async function reloadWorkflowCategories(): Promise<void> {
+    workflowCustomCategories.value = loadWorkflowCategories()
+  }
+
+  /** 设置页展示的分类：自定义分类 ∪ 工作流上实际用到的分类 */
+  const allWorkflowCategories = computed(() =>
+    collectCategories(workflowCustomCategories.value, workflows.value.map(w => w.category))
+  )
+
+  /** 每个分类下的工作流数量 */
+  const workflowCountByCategory = computed(() => countByCategory(workflows.value.map(w => w.category)))
+
+  function onAddWorkflowCategory(name: string): CategoryResult {
+    const r = addCategory(workflowCustomCategories.value, name)
+    if (r.ok) {
+      workflowCustomCategories.value = r.list
+      persistWorkflowCategories()
+    }
+    return r
+  }
+
+  function onRenameWorkflowCategory(oldName: string, newName: string): CategoryResult {
+    const r = renameCategory(allWorkflowCategories.value, oldName, newName)
+    if (!r.ok) return r
+    // 改名要落到两处：自定义分类列表 + 已有工作流的 category 字段
+    workflowCustomCategories.value = r.list
+    persistWorkflowCategories()
+    const changed = workflows.value.some(w => w.category === oldName)
+    if (changed) {
+      const now = Date.now()
+      workflows.value = workflows.value.map(w => (w.category === oldName ? { ...w, category: newName, updatedAt: now } : w))
+      persistWorkflows()
+    }
+    return r
+  }
+
+  /** 删除分类：该分类下的工作流回落「未分类」，同时从自定义列表移除 */
+  function onDeleteWorkflowCategory(name: string): number {
+    const now = Date.now()
+    let moved = 0
+    workflows.value = workflows.value.map(w => {
+      if (w.category !== name) return w
+      moved++
+      return { ...w, category: UNCATEGORIZED, updatedAt: now }
+    })
+    if (moved) persistWorkflows()
+    workflowCustomCategories.value = removeCategory(workflowCustomCategories.value, name)
+    persistWorkflowCategories()
+    return moved
+  }
+
+  /** 把工作流归入某个分类（设置页的「添加工作流」） */
+  function onAssignWorkflowToCategory(workflowId: string, category: string): void {
+    const target = String(category ?? '').trim() || UNCATEGORIZED
+    const now = Date.now()
+    let changed = false
+    workflows.value = workflows.value.map(w => {
+      if (w.id !== workflowId || w.category === target) return w
+      changed = true
+      return { ...w, category: target, updatedAt: now }
+    })
+    if (changed) persistWorkflows()
+  }
+
+  /** 把工作流移出某个分类（设置页的「移除」）：回落「未分类」 */
+  function onRemoveWorkflowFromCategory(workflowId: string): void {
+    onAssignWorkflowToCategory(workflowId, UNCATEGORIZED)
+  }
+
   // ==================== 派生视图 ====================
 
   /** 分类清单（技能） */
@@ -223,7 +335,7 @@ export const useSmartStore = defineStore('smart', () => {
     return out.sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'))
   })
 
-  const stats = computed(() => calcSmartStats(skills.value, prompts.value))
+  const stats = computed(() => calcSmartStats(skills.value, prompts.value, workflows.value))
 
   // ==================== 技能 CRUD ====================
 
@@ -254,6 +366,7 @@ export const useSmartStore = defineStore('smart', () => {
       whenToUse: (input.whenToUse ?? '').trim(),
       tools: Array.isArray(input.tools) ? [...input.tools] : [],
       license: (input.license ?? '').trim(),
+      github: (input.github ?? '').trim(),
       extra: input.extra && typeof input.extra === 'object' ? { ...input.extra } : {},
       body: input.body ?? '',
       resources: Array.isArray(input.resources) ? input.resources.map(r => ({ ...r })) : [],
@@ -283,6 +396,7 @@ export const useSmartStore = defineStore('smart', () => {
       ...(input.whenToUse !== undefined ? { whenToUse: input.whenToUse.trim() } : {}),
       ...(input.tools !== undefined ? { tools: [...input.tools] } : {}),
       ...(input.license !== undefined ? { license: input.license.trim() } : {}),
+      ...(input.github !== undefined ? { github: input.github.trim() } : {}),
       ...(input.extra !== undefined ? { extra: { ...input.extra } } : {}),
       ...(input.body !== undefined ? { body: input.body } : {}),
       ...(input.resources !== undefined ? { resources: input.resources.map(r => ({ ...r })) } : {}),
@@ -414,6 +528,96 @@ export const useSmartStore = defineStore('smart', () => {
     persistPrompts()
   }
 
+  // ==================== 工作流 CRUD ====================
+
+  function persistWorkflows(): void {
+    save(WORKFLOWS_KEY, workflows.value)
+  }
+
+  /** 云同步拉取后调用：用 IDB 最新值覆盖内存（smart.json 信封会带 smart-workflows） */
+  async function reloadWorkflows(): Promise<void> {
+    workflows.value = loadList(WORKFLOWS_KEY, normalizeWorkflows)
+  }
+
+  function addWorkflow(input: Partial<SmartWorkflow>): string | null {
+    const id = input.id && typeof input.id === 'string' ? input.id : makeSmartId('wf')
+    const now = Date.now()
+    const wf: SmartWorkflow = {
+      id,
+      name: (input.name ?? '').trim(),
+      description: (input.description ?? '').trim(),
+      category: (input.category ?? '').trim() || UNCATEGORIZED,
+      tags: Array.isArray(input.tags) ? [...input.tags] : [],
+      author: (input.author ?? '').trim(),
+      version: (input.version ?? '').trim() || '1.0.0',
+      definition: input.definition ?? '',
+      isFavorite: input.isFavorite === true,
+      usageCount: 0,
+      lastUsedAt: null,
+      createdAt: now,
+      updatedAt: now
+    }
+    workflows.value.push(wf)
+    persistWorkflows()
+    return id
+  }
+
+  function updateWorkflow(id: string, input: Partial<SmartWorkflow>): boolean {
+    const i = workflows.value.findIndex(w => w.id === id)
+    if (i === -1) return false
+    const prev = workflows.value[i]
+    const next: SmartWorkflow = {
+      ...prev,
+      ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+      ...(input.description !== undefined ? { description: input.description.trim() } : {}),
+      ...(input.category !== undefined ? { category: input.category.trim() || UNCATEGORIZED } : {}),
+      ...(input.tags !== undefined ? { tags: [...input.tags] } : {}),
+      ...(input.author !== undefined ? { author: input.author.trim() } : {}),
+      ...(input.version !== undefined ? { version: input.version.trim() || '1.0.0' } : {}),
+      ...(input.definition !== undefined ? { definition: input.definition } : {}),
+      ...(input.isFavorite !== undefined ? { isFavorite: input.isFavorite } : {}),
+      updatedAt: Date.now()
+    }
+    workflows.value[i] = next
+    persistWorkflows()
+    return true
+  }
+
+  function deleteWorkflow(id: string): boolean {
+    const before = workflows.value.length
+    workflows.value = workflows.value.filter(w => w.id !== id)
+    if (workflows.value.length === before) return false
+    persistWorkflows()
+    return true
+  }
+
+  function cloneWorkflow(id: string): string | null {
+    const src = workflows.value.find(w => w.id === id)
+    if (!src) return null
+    let name = `${src.name}（副本）`
+    let n = 2
+    while (workflows.value.some(w => w.name === name)) {
+      name = `${src.name}（副本${n}）`
+      n++
+    }
+    return addWorkflow({ ...src, id: undefined, name, usageCount: 0, lastUsedAt: null })
+  }
+
+  function toggleWorkflowFavorite(id: string): void {
+    const w = workflows.value.find(x => x.id === id)
+    if (!w) return
+    w.isFavorite = !w.isFavorite
+    persistWorkflows()
+  }
+
+  function touchWorkflow(id: string): void {
+    const w = workflows.value.find(x => x.id === id)
+    if (!w) return
+    w.usageCount += 1
+    w.lastUsedAt = Date.now()
+    persistWorkflows()
+  }
+
   // ==================== 导入导出 ====================
 
   // 技能不再提供 JSON 信封导出：技能 = 一个目录，统一走 zip（见 utils/skillPackage）。
@@ -456,9 +660,31 @@ export const useSmartStore = defineStore('smart', () => {
     persistPrompts()
   }
 
+  // ==================== 工作流导入导出 ====================
+
+  function exportWorkflows(): SmartEnvelope<SmartWorkflow> {
+    return buildEnvelope(SMART_WORKFLOW_KIND, workflows.value)
+  }
+
+  function previewWorkflowImport(items: SmartWorkflow[]): SmartImportPreview<SmartWorkflow> {
+    return planImport(items, workflows.value)
+  }
+
+  function commitWorkflowImport(plan: SmartImportPreview<SmartWorkflow>): { added: number; updated: number } {
+    workflows.value = applyImport(workflows.value, plan)
+    persistWorkflows()
+    return { added: plan.added.length, updated: plan.updated.length }
+  }
+
+  function replaceWorkflows(list: SmartWorkflow[]): void {
+    workflows.value = normalizeWorkflows(list)
+    persistWorkflows()
+  }
+
   return {
     skills,
     prompts,
+    workflows,
     skillCategories,
     promptCategories,
     stats,
@@ -482,9 +708,20 @@ export const useSmartStore = defineStore('smart', () => {
     onDeleteCategory,
     onAssignSkillToCategory,
     onRemoveSkillFromCategory,
+    // 工作流分类
+    workflowCustomCategories,
+    allWorkflowCategories,
+    workflowCountByCategory,
+    reloadWorkflowCategories,
+    onAddWorkflowCategory,
+    onRenameWorkflowCategory,
+    onDeleteWorkflowCategory,
+    onAssignWorkflowToCategory,
+    onRemoveWorkflowFromCategory,
     // 云同步回写
     reloadSkills,
     reloadPrompts,
+    reloadWorkflows,
     addSkill,
     updateSkill,
     deleteSkill,
@@ -496,12 +733,22 @@ export const useSmartStore = defineStore('smart', () => {
     clonePrompt,
     toggleFavorite,
     touchPrompt,
+    addWorkflow,
+    updateWorkflow,
+    deleteWorkflow,
+    cloneWorkflow,
+    toggleWorkflowFavorite,
+    touchWorkflow,
     exportPrompts,
+    exportWorkflows,
     previewSkillImport,
     previewPromptImport,
+    previewWorkflowImport,
     commitSkillImport,
     commitPromptImport,
+    commitWorkflowImport,
     replaceSkills,
-    replacePrompts
+    replacePrompts,
+    replaceWorkflows
   }
 })

@@ -25,7 +25,9 @@ import {
   renameCategory,
   removeCategory,
   collectCategories,
-  countByCategory
+  countByCategory,
+  SMART_SKILL_DEFAULT_CATEGORIES,
+  mergeDefaultCategories
 } from "../src/composables/smartSettingsCore.ts"
 
 const tests: { name: string; fn: () => void }[] = []
@@ -33,10 +35,10 @@ function test(name: string, fn: () => void) { tests.push({ name, fn }) }
 
 // T1 常量完整性：3 键、字典对齐
 test("T1 SMART_MENU 常量 3 项齐、字典大小匹配", () => {
-  assert.equal(SMART_MENU_KEYS.length, 3)
-  assert.deepEqual([...SMART_MENU_KEYS], ["overview", "skills", "prompts"])
-  assert.equal(Object.keys(SMART_MENU_DEFAULT_LABELS).length, 3)
-  assert.equal(Object.keys(SMART_MENU_ICONS).length, 3)
+  assert.equal(SMART_MENU_KEYS.length, 4)
+  assert.deepEqual([...SMART_MENU_KEYS], ["overview", "skills", "prompts", "workflows"])
+  assert.equal(Object.keys(SMART_MENU_DEFAULT_LABELS).length, 4)
+  assert.equal(Object.keys(SMART_MENU_ICONS).length, 4)
   for (const k of SMART_MENU_KEYS) {
     assert.equal(typeof SMART_MENU_DEFAULT_LABELS[k], "string")
     assert.equal(typeof SMART_MENU_ICONS[k], "string")
@@ -47,7 +49,7 @@ test("T1 SMART_MENU 常量 3 项齐、字典大小匹配", () => {
 test("T2 defaultMenuData 默认三项、引用安全", () => {
   const a = defaultMenuData()
   const b = defaultMenuData()
-  assert.deepEqual(a.order, ["overview", "skills", "prompts"])
+  assert.deepEqual(a.order, ["overview", "skills", "prompts", "workflows"])
   assert.deepEqual(a.labels, {})
   assert.deepEqual(a.hidden, [])
   assert.notEqual(a, b)
@@ -69,7 +71,7 @@ test("T4 normalizeMenuData 补全 / 去重 / 剔除未知", () => {
     labels: { ghost: "幽灵" },
     hidden: ["ghost"]
   })
-  assert.deepEqual(out.order, ["skills", "overview", "prompts"])
+  assert.deepEqual(out.order, ["skills", "overview", "prompts", "workflows"])
   assert.deepEqual(out.labels, {})
   assert.deepEqual(out.hidden, []) // ghost 不是已知 key
 })
@@ -98,7 +100,7 @@ test("T6 normalizeMenuData 幂等", () => {
 // T7 resolveMenu：顺序 / 改名 / 图标 / hidden
 test("T7 resolveMenu 按顺序解析并应用改名", () => {
   const items = resolveMenu({ order: ["prompts", "skills"], labels: { prompts: "提示库" }, hidden: ["skills"] })
-  assert.deepEqual(items.map(i => i.key), ["prompts", "skills", "overview"])
+  assert.deepEqual(items.map(i => i.key), ["prompts", "skills", "overview", "workflows"])
   assert.equal(items[0].label, "提示库")
   assert.equal(items[1].label, SMART_MENU_DEFAULT_LABELS.skills)
   assert.equal(items[1].hidden, true)
@@ -109,17 +111,17 @@ test("T7 resolveMenu 按顺序解析并应用改名", () => {
 // T8 visibleMenu 过滤隐藏项
 test("T8 visibleMenu 只留可见项", () => {
   const v = visibleMenu({ order: ["overview", "skills", "prompts"], labels: {}, hidden: ["skills"] })
-  assert.deepEqual(v.map(i => i.key), ["overview", "prompts"])
+  assert.deepEqual(v.map(i => i.key), ["overview", "prompts", "workflows"])
 })
 
 // T9 moveMenu 上移 / 下移 / 越界
 test("T9 moveMenu 交换与越界保护", () => {
   const d = defaultMenuData()
-  assert.deepEqual(moveMenu(d, "skills", "up").order, ["skills", "overview", "prompts"])
-  assert.deepEqual(moveMenu(d, "skills", "down").order, ["overview", "prompts", "skills"])
+  assert.deepEqual(moveMenu(d, "skills", "up").order, ["skills", "overview", "prompts", "workflows"])
+  assert.deepEqual(moveMenu(d, "skills", "down").order, ["overview", "prompts", "skills", "workflows"])
   // 越界：首项上移、末项下移都原样返回
   assert.deepEqual(moveMenu(d, "overview", "up").order, d.order)
-  assert.deepEqual(moveMenu(d, "prompts", "down").order, d.order)
+  assert.deepEqual(moveMenu(d, "workflows", "down").order, d.order)
   // 未知 key
   assert.deepEqual(moveMenu(d, "ghost", "up").order, d.order)
 })
@@ -127,8 +129,8 @@ test("T9 moveMenu 交换与越界保护", () => {
 // T10 reorderMenu 拖拽换位
 test("T10 reorderMenu 拖拽换位与非法下标保护", () => {
   const d = defaultMenuData()
-  assert.deepEqual(reorderMenu(d, 0, 2).order, ["skills", "prompts", "overview"])
-  assert.deepEqual(reorderMenu(d, 2, 0).order, ["prompts", "overview", "skills"])
+  assert.deepEqual(reorderMenu(d, 0, 2).order, ["skills", "prompts", "overview", "workflows"])
+  assert.deepEqual(reorderMenu(d, 2, 0).order, ["prompts", "overview", "skills", "workflows"])
   assert.deepEqual(reorderMenu(d, 1, 1).order, d.order) // 同位置
   assert.deepEqual(reorderMenu(d, -1, 1).order, d.order)
   assert.deepEqual(reorderMenu(d, 0, 9).order, d.order)
@@ -161,10 +163,14 @@ test("T12 toggleMenuHidden / canHideMenu 至少留一项可见", () => {
   assert.deepEqual(h1.hidden, ["overview"])
   assert.equal(canHideMenu(h1, "skills"), true)
   const h2 = toggleMenuHidden(h1, "skills")
+  // 新增工作流后菜单共 4 项，此处可见：prompts、workflows
+  assert.equal(canHideMenu(h2, "workflows"), true)
+  const h3 = toggleMenuHidden(h2, "workflows")
+  assert.deepEqual(h3.hidden, ["overview", "skills", "workflows"])
   // 只剩 prompts 可见 → 不允许再隐藏
-  assert.equal(canHideMenu(h2, "prompts"), false)
+  assert.equal(canHideMenu(h3, "prompts"), false)
   // 已隐藏的项允许再显示
-  assert.equal(canHideMenu(h2, "overview"), true)
+  assert.equal(canHideMenu(h3, "overview"), true)
   // 再切一次回到显示
   const back = toggleMenuHidden(h1, "overview")
   assert.deepEqual(back.hidden, [])
@@ -249,11 +255,33 @@ test("T20 菜单设置往返：改名 + 拖拽 + 隐藏后仍可解析", () => {
   d = reorderMenu(d, 2, 0)
   d = toggleMenuHidden(d, "skills")
   const items = resolveMenu(d)
-  assert.deepEqual(items.map(i => i.key), ["prompts", "overview", "skills"])
+  assert.deepEqual(items.map(i => i.key), ["prompts", "overview", "skills", "workflows"])
   assert.equal(items[0].label, "提示库")
-  assert.deepEqual(visibleMenu(d).map(i => i.key), ["prompts", "overview"])
+  assert.deepEqual(visibleMenu(d).map(i => i.key), ["prompts", "overview", "workflows"])
   // 持久化后再读取（JSON 往返）保持一致
   assert.deepEqual(normalizeMenuData(JSON.parse(JSON.stringify(d))), normalizeMenuData(d))
+})
+
+// T21 mergeDefaultCategories：默认分类补在最前（推荐顺序），用户自建分类排其后；幂等且不改入参
+test("T21 mergeDefaultCategories 补默认分类且幂等", () => {
+  const list = ["画画", "自定义"]
+  const out = mergeDefaultCategories(list)
+  // 已在默认列表里的「画画」不重复出现
+  assert.deepEqual(out, [...SMART_SKILL_DEFAULT_CATEGORIES, "自定义"])
+  assert.equal(out.filter(c => c === "画画").length, 1)
+  // 默认分类排在前，自建的排在后
+  assert.ok(out.indexOf("自定义") > out.indexOf("办公"))
+  // 空列表 → 得到全部默认分类
+  assert.deepEqual(mergeDefaultCategories([]), [...SMART_SKILL_DEFAULT_CATEGORIES])
+  // 幂等：结果再喂一次不变
+  assert.deepEqual(mergeDefaultCategories(out), out)
+  // 脏数据（空白 / 重名 / 非字符串）先归一化再合并
+  assert.deepEqual(
+    mergeDefaultCategories(["  ", "自定义", "自定义", null as unknown as string]),
+    [...SMART_SKILL_DEFAULT_CATEGORIES, "自定义"]
+  )
+  // 不改入参
+  assert.deepEqual(list, ["画画", "自定义"])
 })
 
 let passed = 0, failed = 0
