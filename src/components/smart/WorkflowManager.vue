@@ -20,7 +20,6 @@ import {
   SMART_NAME_MAX,
   SMART_WORKFLOW_KIND,
   sortSmart,
-  UNCATEGORIZED,
   validateWorkflow,
   type SmartFilter,
   type SmartSort
@@ -93,12 +92,6 @@ function clearSelection(): void {
 const editorOpen = ref(false)
 const editingId = ref<string | null>(null)
 const form = ref<Partial<SmartWorkflow>>({})
-
-function openAdd(): void {
-  editingId.value = null
-  form.value = { name: '', description: '', category: UNCATEGORIZED, tags: [], author: '', version: '1.0.0', definition: '', isFavorite: false }
-  editorOpen.value = true
-}
 
 function openEdit(w: SmartWorkflow): void {
   editingId.value = w.id
@@ -278,7 +271,6 @@ function excerpt(w: SmartWorkflow): string {
         >★ 只看收藏</button>
       </div>
       <div class="wm-toolbar-right">
-        <el-button size="small" data-testid="smart-workflow-add" @click="openAdd">＋ 新增工作流</el-button>
         <el-button size="small" data-testid="smart-workflow-import" @click="handleImport">导入</el-button>
         <el-button size="small" data-testid="smart-workflow-export-selected" :disabled="selectedCount === 0" @click="exportSelected">导出所选</el-button>
         <el-button size="small" data-testid="smart-workflow-export-all" @click="exportAll">导出全部</el-button>
@@ -371,8 +363,7 @@ function excerpt(w: SmartWorkflow): string {
       </p>
       <div class="wm-empty-actions">
         <el-button v-if="hasFilter" size="small" @click="resetFilter">清空筛选</el-button>
-        <el-button v-else size="small" type="primary" @click="openAdd">＋ 新增工作流</el-button>
-        <el-button size="small" @click="handleImport">导入文件</el-button>
+        <el-button v-else size="small" type="primary" @click="handleImport">导入文件</el-button>
       </div>
     </div>
 
