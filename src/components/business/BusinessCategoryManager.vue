@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 销售记账共享分类管理弹框（product 商品分类 / expense 支出产品 双模式，页面 ⚙️ 与设置弹窗 tab 复用）
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { showConfirm } from '@/utils/dialog'
 import { useViewMode } from '@/composables/useViewMode'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
@@ -31,13 +31,12 @@ const filtered = computed(() => {
 
 /**
  * 高级列（关联商品 / 商品数量 / 商品单价）显隐：
- * 桌面默认展开（2026-10-09 用户要求），窄屏自动收起（393px 放不下，跟随 vm.isMobile 联动）。
+ * 默认展开（2026-10-09 桌面默认展开；2026-10-11 改为移动端也默认展开，去掉窄屏自动收起）。
  * ⚠️ 桌面全 8 列在设置面板（内容区 ~660px）里会超出，表格自身横向滚动；
- * 「操作」列已 fixed="right"，横向滚动时始终可见，这是刻意保留的。
- * 用户手动切换后，再次跨越移动断点时会按断点重置（可再手动改回）。
+ * 「操作」列在桌面 fixed="right"（横向滚动时始终可见），移动端取消固定（见下方 :fixed 绑定）。
+ * 用户仍可手动点「收起/展开高级列」切换。
  */
-const showAdvanced = ref(!vm.isMobile)
-watch(() => vm.isMobile, m => { showAdvanced.value = !m })
+const showAdvanced = ref(true)
 
 // 行内改名：仅暂存输入中文本，blur/Enter 提交、Esc 还原（仿待办分类管理惯例）
 const editing = reactive<Record<string, string>>({})
@@ -272,8 +271,8 @@ function handleAdd(): void {
             </template>
           </el-table-column>
 
-          <!-- 单位/单价：窄屏隐藏（393px 放不下 8 列，只留 显示/名称/操作；高级列仍可展开） -->
-          <el-table-column v-if="!vm.isMobile" label="单位" width="106">
+          <!-- 单位/单价：移动端与 PC 一致始终展示（2026-10-11 起不再窄屏隐藏；表格在容器内横向滚动） -->
+          <el-table-column label="单位" width="106">
             <template #default="{ row }">
               <el-select
                 size="small"
@@ -292,7 +291,7 @@ function handleAdd(): void {
             </template>
           </el-table-column>
 
-          <el-table-column v-if="!vm.isMobile" label="单价（元）" width="112">
+          <el-table-column label="单价（元）" width="112">
             <template #default="{ row }">
               <el-input-number
                 size="small"
@@ -333,11 +332,18 @@ function handleAdd(): void {
             </template>
           </el-table-column>
 
-          <el-table-column label="操作" width="134" align="center" fixed="right">
+          <!-- 操作列：桌面 fixed="right"（横向滚动始终可见），移动端取消固定（2026-10-11）；
+               移动端只保留「删除」，不显示 ↑/↓ 排序（窄屏排序意义不大且挤占空间） -->
+          <el-table-column
+            label="操作"
+            :width="vm.isMobile ? 72 : 134"
+            align="center"
+            :fixed="vm.isMobile ? false : 'right'"
+          >
             <template #default="{ row }">
               <div class="bizcat-ops">
-                <el-button size="small" :data-testid="`bizcat-up-expense-${row.id}`" @click="onMove(row.id, 'up')">↑</el-button>
-                <el-button size="small" :data-testid="`bizcat-down-expense-${row.id}`" @click="onMove(row.id, 'down')">↓</el-button>
+                <el-button v-if="!vm.isMobile" size="small" :data-testid="`bizcat-up-expense-${row.id}`" @click="onMove(row.id, 'up')">↑</el-button>
+                <el-button v-if="!vm.isMobile" size="small" :data-testid="`bizcat-down-expense-${row.id}`" @click="onMove(row.id, 'down')">↓</el-button>
                 <el-button
                   size="small"
                   type="danger"
@@ -694,8 +700,8 @@ html.dark .bizcat-hint {
 
 /* 移动端（≤768px）：
    - product 卡片列表：行容器允许换行，避免固定 px 控件挤出同行输入框
-   - expense 表格：高级列默认收起（见 showAdvanced），表格自身在容器内横向滚动；
-     新增行改为两列铺开，搜索框占满一行 */
+   - expense 表格：高级列与「单位/单价」列均默认展示（2026-10-11 起移动端与 PC 一致），表格在容器内横向滚动；
+     操作列取消固定且只显示「删除」（排序按钮已 v-if 隐藏）；新增行改单列堆叠（一行一列），搜索框占满一行 */
 @media (max-width: 768px) {
   .bizcat-row {
     flex-wrap: wrap;
@@ -712,22 +718,29 @@ html.dark .bizcat-hint {
     width: 100%;
   }
 
+  /* 新增行：移动端一行一列（每个字段独占一行、控件占满整行）。
+     ⚠️ 必须 flex: none —— 否则 .bizcat-add-field 是纵向 flex，
+     el-input 上的 flex-basis 会变成「高度」把输入框撑成高块（旧 bug）。 */
   .bizcat-add-row {
-    gap: 8px;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .bizcat-add-field {
+    flex: none;
+    width: 100%;
   }
   :deep(.bizcat-add-row .el-input),
   :deep(.bizcat-add-row .el-select),
   :deep(.bizcat-add-row .el-input-number) {
-    width: auto;
-    flex: 1 1 104px;
-    min-width: 0;
-  }
-  .bizcat-add-field {
-    flex: 1 1 104px;
+    width: 100%;
+    flex: none;
     min-width: 0;
   }
   .bizcat-add-btn {
-    flex: 1 1 100%;
+    flex: none;
+    width: 100%;
   }
 }
 </style>
