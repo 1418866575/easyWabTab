@@ -9,19 +9,21 @@
 
 // ==================== 左侧菜单 ====================
 
-export const SMART_MENU_KEYS = ['overview', 'skills', 'prompts'] as const
+export const SMART_MENU_KEYS = ['overview', 'skills', 'prompts', 'workflows'] as const
 export type SmartMenuKey = (typeof SMART_MENU_KEYS)[number]
 
 export const SMART_MENU_DEFAULT_LABELS: Record<string, string> = {
   overview: '概览',
   skills: '技能管理',
-  prompts: '提示词管理'
+  prompts: '提示词管理',
+  workflows: '工作流管理'
 }
 
 export const SMART_MENU_ICONS: Record<string, string> = {
   overview: 'chart',
   skills: 'toolbox',
-  prompts: 'notes'
+  prompts: 'notes',
+  workflows: 'merge'
 }
 
 /** 改名上限（按 code point，emoji 代理对算 1 个，绝不拆对） */

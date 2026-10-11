@@ -1588,9 +1588,39 @@ export interface SmartPrompt {
   updatedAt: number
 }
 
+/**
+ * 工作流：可复用的一套操作步骤 / 流程说明。
+ * 与提示词的区别在于它面向「流程」而非「单段可投喂文本」——
+ * 核心是 definition（自由文本，可写步骤清单 / Markdown / YAML），其余为元数据。
+ * 必需字段：name / definition（缺一即非法）。
+ */
+export interface SmartWorkflow {
+  id: string
+  /** 工作流名称 */
+  name: string
+  /** 一句话说明（可选） */
+  description: string
+  /** 分类（用于设置页归类与筛选） */
+  category: string
+  /** 标签 */
+  tags: string[]
+  /** 作者（可选） */
+  author: string
+  /** 版本号（可选，默认 1.0.0） */
+  version: string
+  /** 工作流定义 / 步骤（自由文本，可写编号步骤 / Markdown / YAML） */
+  definition: string
+  isFavorite: boolean
+  usageCount: number
+  lastUsedAt: number | null
+  isBuiltIn?: boolean
+  createdAt: number
+  updatedAt: number
+}
+
 /** 导入导出信封：单条与集合包同构，kind 区分资产类型 */
 export interface SmartEnvelope<T> {
-  kind: 'smart-prompts'
+  kind: 'smart-prompts' | 'smart-workflows'
   version: number
   exportedAt: number
   items: T[]

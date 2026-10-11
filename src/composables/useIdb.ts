@@ -255,8 +255,10 @@ export const WORKBENCH_PREFS_KEYS = [
 export const SMART_PREFS_KEYS = [
   'smart-skills',
   'smart-prompts',
+  'smart-workflows',
   'smart-menu',
-  'smart-skill-categories'
+  'smart-skill-categories',
+  'smart-workflow-categories'
 ] as const
 
 /**
