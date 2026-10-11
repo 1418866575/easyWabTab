@@ -9,7 +9,7 @@
  * 「发布」不是写库那么简单：会跑 collectPublishErrors 全量校验，任一不通过都不改状态，
  * 且错误要求直接展示在底部，避免用户对着「发布失败」干瞪眼。
  */
-import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useBlogStore } from '@/stores/blog'
 import {
   ARTICLE_STATUS_LABELS,
@@ -19,6 +19,8 @@ import {
   isReservedSlug,
   slugify
 } from '@/composables/blogCore'
+import { applyMarkdown, isAllowedDataImage } from '@/composables/blogEditorMd'
+import type { MdBlockKind } from '@/composables/blogEditorMd'
 import { renderMarkdown } from '@/composables/noteMarkdown'
 import Icon from '@/components/Icon.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
@@ -78,6 +80,135 @@ const mdHelpItems: MdHelpItem[] = [
   { name: '表格', syntax: '| 名称 | 说明 |\n| --- | --- |\n| 博客 | 个人站点 |\n| 工具 | 效率套件 |', sample: '| 名称 | 说明 |\n| --- | --- |\n| 博客 | 个人站点 |\n| 工具 | 效率套件 |' },
   { name: '图片', syntax: '![图片描述](图片地址)', note: '图片地址请使用 base64 数据 URL（在正文插入图片会自动生成；公开网络地址需在设置中开启）。' }
 ]
+
+// ---------- Markdown 工具栏 ----------
+/** 正文 textarea 引用，用于读取选区并恢复光标 */
+const contentEl = ref<HTMLTextAreaElement | null>(null)
+/** 隐藏的图片文件选择框 */
+const fileInput = ref<HTMLInputElement | null>(null)
+
+interface MdToolbarButton {
+  kind: MdBlockKind | 'image'
+  label: string
+  title: string
+  group: number
+}
+/** 工具栏按钮（含分组，group 用于渲染分隔线）；图片按钮单独走文件选择 */
+const MD_TOOLBAR: MdToolbarButton[] = [
+  { kind: 'heading-1', label: 'H1', title: '一级标题', group: 0 },
+  { kind: 'heading-2', label: 'H2', title: '二级标题', group: 0 },
+  { kind: 'heading-3', label: 'H3', title: '三级标题', group: 0 },
+  { kind: 'bold', label: '加粗', title: '加粗（Ctrl/Cmd+B）', group: 1 },
+  { kind: 'italic', label: '斜体', title: '斜体（Ctrl/Cmd+I）', group: 1 },
+  { kind: 'strike', label: '删除线', title: '删除线', group: 1 },
+  { kind: 'inline-code', label: '行内代码', title: '行内代码', group: 1 },
+  { kind: 'blockquote', label: '引用', title: '引用块', group: 2 },
+  { kind: 'code-block', label: '代码块', title: '代码块', group: 2 },
+  { kind: 'ul', label: '无序列表', title: '无序列表', group: 2 },
+  { kind: 'ol', label: '有序列表', title: '有序列表', group: 2 },
+  { kind: 'link', label: '链接', title: '插入链接（Ctrl/Cmd+K）', group: 3 },
+  { kind: 'image', label: '图片', title: '插入图片（选择本地图片，自动转为 base64）', group: 3 },
+  { kind: 'table', label: '表格', title: '插入表格', group: 3 },
+  { kind: 'hr', label: '分割线', title: '插入分割线', group: 3 }
+]
+
+const toolbarGroups = computed(() => {
+  const map = new Map<number, MdToolbarButton[]>()
+  for (const b of MD_TOOLBAR) {
+    if (!map.has(b.group)) map.set(b.group, [])
+    map.get(b.group)!.push(b)
+  }
+  return [...map.entries()].sort((a, b) => a[0] - b[0]).map(([group, items]) => ({ group, items }))
+})
+
+/** 在光标/选区处应用某种 Markdown 变换，并恢复光标（图片走文件选择，不在此处理） */
+async function applyMd(kind: MdBlockKind): Promise<void> {
+  const ta = contentEl.value
+  if (!ta) return
+  const start = ta.selectionStart
+  const end = ta.selectionEnd
+  const res = applyMarkdown(kind, form.contentMarkdown, start, end)
+  form.contentMarkdown = res.value
+  await nextTick()
+  ta.focus()
+  ta.setSelectionRange(res.selStart, res.selEnd)
+}
+
+function onToolbarClick(b: MdToolbarButton): void {
+  if (b.kind === 'image') {
+    fileInput.value?.click()
+    return
+  }
+  void applyMd(b.kind)
+}
+
+/** 正文快捷键：Ctrl/Cmd+B 加粗、+I 斜体、+K 链接 */
+function onContentKeydown(e: KeyboardEvent): void {
+  if (!(e.ctrlKey || e.metaKey)) return
+  const key = e.key.toLowerCase()
+  if (key === 'b') {
+    e.preventDefault()
+    void applyMd('bold')
+  } else if (key === 'i') {
+    e.preventDefault()
+    void applyMd('italic')
+  } else if (key === 'k') {
+    e.preventDefault()
+    void applyMd('link')
+  }
+}
+
+/** FileReader → base64 data URL（Promise 化，便于多文件串行插入） */
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(file)
+  })
+}
+
+/** 选中图片文件后：逐个读为 base64 → 白名单校验 → 光标处插入；跳过不支持的格式 */
+async function onPickImages(e: Event): Promise<void> {
+  const input = e.target as HTMLInputElement
+  const files = Array.from(input.files ?? [])
+  input.value = '' // 复位，便于重复选择同一文件
+  if (files.length === 0) return
+  const ta = contentEl.value
+  let pos = ta ? ta.selectionStart : form.contentMarkdown.length
+  let value = form.contentMarkdown
+  let rejected = 0
+  for (const file of files) {
+    let dataUrl: string
+    try {
+      dataUrl = await readFileAsDataUrl(file)
+    } catch {
+      rejected += 1
+      continue
+    }
+    if (!isAllowedDataImage(dataUrl)) {
+      rejected += 1
+      continue
+    }
+    const alt = file.name.replace(/\.[^.]+$/, '')
+    const res = applyMarkdown('image', value, pos, pos, { alt, url: dataUrl })
+    value = res.value
+    pos = res.selEnd
+  }
+  if (value === form.contentMarkdown) {
+    if (rejected) toastAlert(`已跳过 ${rejected} 个不支持的图片（仅支持位图 base64，svg 被禁止）`, 'warning')
+    return
+  }
+  form.contentMarkdown = value
+  await nextTick()
+  if (ta) {
+    ta.focus()
+    ta.setSelectionRange(pos, pos)
+  }
+  if (rejected) {
+    toastAlert(`已插入图片，${rejected} 个不支持的格式被跳过（仅支持位图 base64）`, 'warning')
+  }
+}
 
 const article = computed(() => store.findArticle(props.articleId))
 const canRead = computed(() => article.value !== undefined)
@@ -278,19 +409,51 @@ async function regenerateSlug(): Promise<void> {
           aria-label="标题"
           data-testid="blog-editor-title"
         />
+        <!-- Markdown 工具栏：仅在非预览视图显示；图片按钮另走文件选择 -->
+        <div v-if="viewMode !== 'preview'" class="be-md-toolbar" role="toolbar" aria-label="Markdown 编辑工具栏">
+          <template v-for="grp in toolbarGroups" :key="grp.group">
+            <span class="be-md-sep" aria-hidden="true"></span>
+            <div class="be-md-group">
+              <button
+                v-for="b in grp.items"
+                :key="b.kind"
+                type="button"
+                class="be-md-btn"
+                :title="b.title"
+                :aria-label="b.title"
+                :data-testid="`blog-editor-md-${b.kind}`"
+                @click="onToolbarClick(b)"
+              >
+                {{ b.label }}
+              </button>
+            </div>
+          </template>
+        </div>
         <div class="be-editor-wrap" :class="`is-${viewMode}`">
           <textarea
             v-if="viewMode !== 'preview'"
+            ref="contentEl"
             v-model="form.contentMarkdown"
             class="be-md"
             placeholder="用 Markdown 书写正文…"
             aria-label="正文 Markdown"
             spellcheck="false"
             data-testid="blog-editor-content"
+            @keydown="onContentKeydown"
           ></textarea>
           <!-- v-html 的内容来自 markdown-it（html:false，仅白名单图片 data URL），不含可执行脚本 -->
           <div v-if="viewMode !== 'edit'" class="be-preview md-body" data-testid="blog-editor-preview" v-html="publishedHtml"></div>
         </div>
+        <!-- 隐藏的图片选择框：由工具栏「图片」按钮触发，选择后转 base64 内联插入 -->
+        <input
+          ref="fileInput"
+          type="file"
+          accept="image/*"
+          multiple
+          class="be-file-hidden"
+          data-testid="blog-editor-image-input"
+          @change="onPickImages"
+        />
       </div>
 
       </div>
@@ -516,6 +679,66 @@ async function regenerateSlug(): Promise<void> {
   display: flex;
   gap: 8px;
   min-height: 420px;
+}
+
+/* ===== Markdown 工具栏 ===== */
+.be-md-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  background-color: var(--color-bg-card, #ffffff);
+}
+
+.be-md-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.be-md-sep {
+  align-self: stretch;
+  width: 1px;
+  margin: 2px 2px;
+  background-color: var(--color-border, #e2e8f0);
+}
+
+.be-md-btn {
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm, 6px);
+  background-color: transparent;
+  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-xs, 12px);
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.be-md-btn:hover {
+  background-color: var(--color-bg-2, #f1f5f9);
+  color: var(--color-text, #0f172a);
+}
+
+.be-md-btn:active {
+  background-color: var(--color-primary-soft, #eff6ff);
+  color: var(--color-primary, #3b82f6);
+}
+
+/* 隐藏的图片文件选择框：不应占据任何布局空间 */
+.be-file-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
 }
 
 .be-md,

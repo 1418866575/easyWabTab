@@ -30,6 +30,7 @@ import {
 } from '../src/composables/blogCore.ts'
 import { mergeBlogEnvelope } from '../src/composables/blogSyncCore.ts'
 import { buildBlogPublic } from '../src/composables/blogStaticExport.ts'
+import { applyMarkdown, isAllowedDataImage } from '../src/composables/blogEditorMd.ts'
 import type { ArticleStatus, BlogArticle, BlogData, BlogSyncData } from '../src/types/index.ts'
 
 const tests: { name: string; fn: () => void }[] = []
@@ -439,6 +440,72 @@ test('mergeBlogEnvelope：分类与标签同样按 id 合并去重', () => {
   const merged = mergeBlogEnvelope(local, remote)
   a.equal(merged.blog?.categories.length, 1)
   a.equal(merged.blog?.tags.length, 1)
+})
+
+// ==================== 博客编辑器 Markdown 变换 ====================
+test('applyMarkdown bold wraps selection and toggles off', () => {
+  const r1 = applyMarkdown('bold', 'hello', 0, 5)
+  a.equal(r1.value, '**hello**')
+  a.equal(r1.selStart, 2)
+  a.equal(r1.selEnd, 7)
+  const r2 = applyMarkdown('bold', r1.value, 2, 7)
+  a.equal(r2.value, 'hello')
+  a.equal(r2.selStart, 0)
+  a.equal(r2.selEnd, 5)
+})
+
+test('applyMarkdown bold uses placeholder when nothing selected', () => {
+  const r = applyMarkdown('bold', 'abc', 3, 3)
+  a.equal(r.value, 'abc**加粗文字**')
+  a.equal(r.selStart, 5)
+  a.equal(r.selEnd, 9)
+})
+
+test('applyMarkdown italic / strike / inline-code wrap', () => {
+  a.equal(applyMarkdown('italic', 'x', 0, 1).value, '*x*')
+  a.equal(applyMarkdown('strike', 'x', 0, 1).value, '~~x~~')
+  a.equal(applyMarkdown('inline-code', 'x', 0, 1).value, '`x`')
+})
+
+test('applyMarkdown heading-2 prefixes line and toggles off', () => {
+  const r1 = applyMarkdown('heading-2', 'title', 0, 5)
+  a.equal(r1.value, '## title')
+  const r2 = applyMarkdown('heading-2', r1.value, 0, r1.value.length)
+  a.equal(r2.value, 'title')
+})
+
+test('applyMarkdown blockquote / ul / ol prefix lines', () => {
+  a.equal(applyMarkdown('blockquote', 'quoted', 0, 6).value, '> quoted')
+  a.equal(applyMarkdown('ul', 'item', 0, 4).value, '- item')
+  a.equal(applyMarkdown('ol', 'a\nb\nc', 0, 5).value, '1. a\n2. b\n3. c')
+})
+
+test('applyMarkdown link inserts markdown and selects url', () => {
+  const r = applyMarkdown('link', 'easy', 0, 4)
+  a.equal(r.value, '[easy](https://)')
+  a.equal(r.value.slice(r.selStart, r.selEnd), 'https://')
+})
+
+test('applyMarkdown image inserts alt+url with caret at end', () => {
+  const r = applyMarkdown('image', '', 0, 0, { alt: 'pic', url: 'data:image/png;base64,AAA' })
+  a.equal(r.value, '![pic](data:image/png;base64,AAA)')
+  a.equal(r.selStart, r.value.length)
+  a.equal(r.selEnd, r.value.length)
+})
+
+test('applyMarkdown table / hr insert with blank-line separation', () => {
+  const t = applyMarkdown('table', '', 0, 0)
+  a.ok(t.value.startsWith('| 列1 | 列2 |'))
+  a.ok(t.value.includes('| --- | --- |'))
+  a.equal(applyMarkdown('hr', 'ab', 1, 1).value, 'a\n---\nb')
+})
+
+test('isAllowedDataImage accepts bitmap base64 and rejects svg/non-data', () => {
+  a.equal(isAllowedDataImage('data:image/png;base64,iVBOR'), true)
+  a.equal(isAllowedDataImage('data:image/jpeg;base64,/9j/'), true)
+  a.equal(isAllowedDataImage('data:image/svg+xml;base64,PHN2'), false)
+  a.equal(isAllowedDataImage('https://example.com/a.png'), false)
+  a.equal(isAllowedDataImage('data:image/png;utf8,xxx'), false)
 })
 
 let passed = 0
