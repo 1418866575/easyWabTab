@@ -25,6 +25,7 @@ import {
 } from '@/composables/smartCore'
 import { SKILL_FILE, RESOURCE_COUNT_MAX, RESOURCE_FILE_MAX } from '@/composables/skillPackageCore'
 import { pickResourceFiles } from '@/utils/skillPackage'
+import { copyText } from '@/utils/download'
 import Icon from '@/components/Icon.vue'
 import IconPickerDialog from '@/components/IconPickerDialog.vue'
 import type { SmartSkill, SmartSkillResource } from '@/types'
@@ -153,6 +154,17 @@ function submit(): void {
     resources: resources.value.map(r => ({ ...r }))
   })
 }
+
+/** 复制技能正文：与卡片列表的「复制正文」一致，复制后记为一次使用（编辑态才计数） */
+async function copyBody(): Promise<void> {
+  const body = String(draft.value.body ?? '').trim()
+  if (!body) {
+    toast.warning('正文为空，暂无可复制内容')
+    return
+  }
+  const ok = await copyText(draft.value.body ?? '', '已复制技能正文')
+  if (ok && props.editingId) store.touchSkill(props.editingId)
+}
 </script>
 
 <template>
@@ -222,6 +234,11 @@ function submit(): void {
         </div>
 
         <label class="sk-field">
+          <span class="sk-label">GitHub 地址 github<span class="sk-hint">（可选，仓库或主页链接）</span></span>
+          <el-input v-model="draft.github" size="small" maxlength="255" placeholder="https://github.com/owner/repo" data-testid="skill-editor-github" />
+        </label>
+
+        <label class="sk-field">
           <span class="sk-label">标签 tags<span class="sk-hint">（用、或逗号分隔，最多 8 个）</span></span>
           <el-input v-model="tagsInput" size="small" placeholder="产品、文档" />
         </label>
@@ -272,6 +289,9 @@ function submit(): void {
 
       <section class="sk-sec">
         <h4 class="sk-sec-title">技能正文<span class="sk-sec-hint">（{{ SKILL_FILE }} 中 frontmatter 之后的内容）</span></h4>
+        <div class="sk-body-bar">
+          <el-button size="small" data-testid="skill-editor-copy-body" @click="copyBody">复制正文</el-button>
+        </div>
         <label class="sk-field">
           <span class="sk-label">正文 body<span class="req">*</span><span class="sk-hint">（支持 Markdown）</span></span>
           <el-input
@@ -361,8 +381,12 @@ function submit(): void {
 }
 .sk-sec-hint { font-weight: 400; font-size: 12px; color: var(--color-text-muted, #9ca3af); }
 .sk-row { display: flex; gap: 10px; flex-wrap: wrap; }
-.sk-field { display: flex; flex-direction: column; gap: 6px; flex: 1 1 240px; min-width: 0; }
-.sk-field-sm { flex: 0 1 180px; }
+.sk-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+/* 仅「基础信息」行内字段按 240px 弹性分配宽度；独立成行的字段（标签 / 图标 / 触发条件 / 工具 / 正文）
+   不再被 flex-basis:240px 撑成 240px 高的大块空白，改按内容自然高度 */
+.sk-row .sk-field { flex: 1 1 240px; }
+.sk-row .sk-field-sm { flex: 0 1 180px; }
+.sk-body-bar { display: flex; justify-content: flex-end; }
 .sk-label { font-size: 13px; color: var(--color-text-secondary, #6b7280); }
 .sk-hint { color: var(--color-text-muted, #9ca3af); font-size: 12px; }
 .req { color: var(--color-error, #dc2626); }
@@ -450,6 +474,6 @@ function submit(): void {
 
 
 @media (max-width: 768px) {
-  .sk-field-sm { flex: 1 1 100%; }
+  .sk-row .sk-field-sm { flex: 1 1 100%; }
 }
 </style>

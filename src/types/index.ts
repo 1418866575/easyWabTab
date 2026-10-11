@@ -1557,6 +1557,8 @@ export interface SmartSkill {
   /** 依赖工具（frontmatter: tools） */
   tools: string[]
   license: string
+  /** GitHub 地址（仓库或主页链接，可选，对应 frontmatter: github） */
+  github?: string
   /** frontmatter 中未被识别的键，原样保留，导入导出不丢 */
   extra: Record<string, unknown>
   /** skill.md 正文（frontmatter 之后的全部内容） */

@@ -161,6 +161,38 @@ export function canHideMenu(data: SmartMenuData, key: string): boolean {
 export const SMART_CATEGORY_NAME_MAX = 20
 export const UNCATEGORIZED = '未分类'
 
+/**
+ * 默认技能分类：覆盖日常使用 AI 技能的高频场景，新建 / 编辑技能时可直接选用。
+ * 顺序即推荐顺序（越靠前越常用）；用户可在「智能工作台设置 → 技能分类」里自由增删改名。
+ * 未分类（UNCATEGORIZED）不在此列——它是「没有指定分类」时的兜底值，不需要用户挑选。
+ */
+export const SMART_SKILL_DEFAULT_CATEGORIES: string[] = [
+  '办公',
+  '写作',
+  '编程',
+  '数据分析',
+  '画画',
+  '设计',
+  '学习教育',
+  '翻译',
+  '营销',
+  '效率工具',
+  '音视频',
+  '生活实用',
+  '职场求职',
+  '学术研究'
+]
+
+/**
+ * 把默认分类合并进已有列表：默认分类按推荐顺序排在前，用户自建的分类排在其后。
+ * 幂等（重复调用结果不变）；已存在的同名分类不会重复出现。
+ */
+export function mergeDefaultCategories(list: string[]): string[] {
+  const cur = normalizeCategories(list)
+  const extras = cur.filter(c => !SMART_SKILL_DEFAULT_CATEGORIES.includes(c))
+  return [...SMART_SKILL_DEFAULT_CATEGORIES, ...extras]
+}
+
 /** 归一化分类名列表：去空白、去空、去重、截断；非法输入回落空数组 */
 export function normalizeCategories(raw: unknown): string[] {
   if (!Array.isArray(raw)) return []

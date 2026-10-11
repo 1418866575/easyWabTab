@@ -22,6 +22,7 @@ import {
   collectCategories,
   countByCategory,
   defaultMenuData,
+  mergeDefaultCategories,
   moveMenu,
   canHideMenu,
   normalizeCategories,
@@ -45,6 +46,8 @@ const WORKFLOWS_KEY = 'smart-workflows'
 const MENU_KEY = 'smart-menu'
 /** 自定义技能分类（允许存在还没有技能挂上去的空分类） */
 const CATEGORIES_KEY = 'smart-skill-categories'
+/** 默认分类是否已播种（'1' = 已播种）。播种后默认分类归用户自己管，删掉不会再被塞回来 */
+const CATEGORIES_SEEDED_KEY = 'smart-skill-categories-seeded'
 /** 自定义工作流分类（允许存在还没有工作流挂上去的空分类） */
 const WORKFLOW_CATEGORIES_KEY = 'smart-workflow-categories'
 
@@ -133,7 +136,7 @@ export const useSmartStore = defineStore('smart', () => {
 
   // ==================== 技能分类 ====================
 
-  const customCategories = ref<string[]>(loadCategories())
+  const customCategories = ref<string[]>(loadCategoriesWithDefaults())
 
   function loadCategories(): string[] {
     const raw = getPref(CATEGORIES_KEY)
@@ -144,6 +147,20 @@ export const useSmartStore = defineStore('smart', () => {
       console.warn('[smart] 分类配置解析失败，回落空列表')
       return []
     }
+  }
+
+  /**
+   * 默认分类播种（只做一次）：首次使用或本次升级时把 SMART_SKILL_DEFAULT_CATEGORIES 补进列表，
+   * 随后打上标记。播种完成后，默认分类就和用户自建分类一样可删可改名，不会在下次打开时复活。
+   */
+  function loadCategoriesWithDefaults(): string[] {
+    const cur = loadCategories()
+    if (getPref(CATEGORIES_SEEDED_KEY) === '1') return cur
+    const merged = mergeDefaultCategories(cur)
+    if (merged.length !== cur.length) save(CATEGORIES_KEY, merged)
+    setPref(CATEGORIES_SEEDED_KEY, '1')
+    markDirty()
+    return merged
   }
 
   function persistCategories(): void {
@@ -349,6 +366,7 @@ export const useSmartStore = defineStore('smart', () => {
       whenToUse: (input.whenToUse ?? '').trim(),
       tools: Array.isArray(input.tools) ? [...input.tools] : [],
       license: (input.license ?? '').trim(),
+      github: (input.github ?? '').trim(),
       extra: input.extra && typeof input.extra === 'object' ? { ...input.extra } : {},
       body: input.body ?? '',
       resources: Array.isArray(input.resources) ? input.resources.map(r => ({ ...r })) : [],
@@ -378,6 +396,7 @@ export const useSmartStore = defineStore('smart', () => {
       ...(input.whenToUse !== undefined ? { whenToUse: input.whenToUse.trim() } : {}),
       ...(input.tools !== undefined ? { tools: [...input.tools] } : {}),
       ...(input.license !== undefined ? { license: input.license.trim() } : {}),
+      ...(input.github !== undefined ? { github: input.github.trim() } : {}),
       ...(input.extra !== undefined ? { extra: { ...input.extra } } : {}),
       ...(input.body !== undefined ? { body: input.body } : {}),
       ...(input.resources !== undefined ? { resources: input.resources.map(r => ({ ...r })) } : {}),
