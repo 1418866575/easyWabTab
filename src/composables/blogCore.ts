@@ -97,6 +97,20 @@ export function makeUniqueSlug(base: string, taken: Iterable<string>): string {
   return `${candidate}-${n}`
 }
 
+/**
+ * 默认文章地址（slug）：年月日时分秒（YYYYMMDDHHmmss）+ 4 位随机小写字母。
+ * 用于新建文章时自动填充，避免默认沿用中文标题 slug；随机后缀足够长，几乎不会与已有 slug 冲突。
+ */
+export function defaultSlug(): string {
+  const d = new Date()
+  const p = (n: number) => String(n).padStart(2, '0')
+  const stamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`
+  const letters = 'abcdefghijklmnopqrstuvwxyz'
+  let rand = ''
+  for (let i = 0; i < 4; i++) rand += letters[Math.floor(Math.random() * letters.length)]
+  return `${stamp}${rand}`
+}
+
 // ==================== 派生内容 ====================
 
 /** Markdown → 纯文本（去代码块 / 标题符 / 链接与强调语法 / 列表符），用于摘要与字数估算 */
@@ -176,7 +190,7 @@ export function normalizeArticle(raw: unknown, when = nowIso()): BlogArticle {
   const tagIds = Array.isArray(src.tagIds) ? Array.from(new Set(src.tagIds.filter((t): t is string => typeof t === 'string'))) : []
   return {
     id: str(src.id) || newId('ba'),
-    slug: slugify(str(src.slug) || title) || newId('post'),
+    slug: str(src.slug).trim() ? slugify(str(src.slug)) : defaultSlug(),
     title,
     subtitle: typeof src.subtitle === 'string' ? src.subtitle : undefined,
     excerpt,

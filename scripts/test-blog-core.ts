@@ -16,6 +16,7 @@ import {
   formatDateTime,
   isReservedSlug,
   makeUniqueSlug,
+  defaultSlug,
   nextStatus,
   normalizeBlogData,
   paginate,
@@ -94,6 +95,13 @@ test('slugify：保留中文与字母数字，其余符号折叠为连字符', (
   a.equal(slugify('中文 标题！'), '中文-标题')
   a.equal(slugify('  --多  个---连字符-- '), '多-个-连字符')
   a.equal(slugify('!!!'), '')
+})
+
+test('defaultSlug：年月日时分秒(14位) + 4 位随机小写字母', () => {
+  const s = defaultSlug()
+  a.match(s, /^\d{14}[a-z]{4}$/)
+  // 带随机后缀，两次调用应不同
+  a.notEqual(defaultSlug(), defaultSlug())
 })
 
 test('isReservedSlug：系统保留字大小写不敏感', () => {

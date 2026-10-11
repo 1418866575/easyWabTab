@@ -22,6 +22,7 @@ import {
   nowIso,
   slugify,
   makeUniqueSlug,
+  defaultSlug,
   type ArticleAction
 } from '../composables/blogCore'
 import { idbGet, idbPut } from '../composables/useIdb'
@@ -128,7 +129,7 @@ export const useBlogStore = defineStore('blog', () => {
     const markdown = input?.contentMarkdown ?? ''
     const article: BlogArticle = {
       id: newId('ba'),
-      slug: makeUniqueSlug(title || '未命名文章', takenSlugs()),
+      slug: makeUniqueSlug(defaultSlug(), takenSlugs()),
       title,
       subtitle: input?.subtitle,
       excerpt: '',

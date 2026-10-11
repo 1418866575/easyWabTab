@@ -21,6 +21,7 @@ import {
 } from '@/composables/blogCore'
 import { renderMarkdown } from '@/composables/noteMarkdown'
 import Icon from '@/components/Icon.vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import { showConfirm, toastAlert } from '@/utils/dialog'
 
 const props = defineProps<{ articleId: string }>()
@@ -55,6 +56,28 @@ function toggleSide(): void {
 function closeSide(): void {
   sideOpen.value = false
 }
+
+/** Markdown 语法帮助弹框开合 */
+const helpOpen = ref(false)
+
+/** 常用 Markdown 语法示例：syntax 为原始写法，sample 用于渲染「效果」（图片项用 note 说明） */
+interface MdHelpItem {
+  name: string
+  syntax: string
+  sample?: string
+  note?: string
+}
+const mdHelpItems: MdHelpItem[] = [
+  { name: '标题', syntax: '# 一级标题\n## 二级标题\n### 三级标题', sample: '# 一级标题\n## 二级标题\n### 三级标题' },
+  { name: '强调', syntax: '**加粗文字**\n*斜体文字*\n~~删除线~~', sample: '**加粗文字**\n*斜体文字*\n~~删除线~~' },
+  { name: '列表', syntax: '- 无序项一\n- 无序项二\n\n1. 有序一\n2. 有序二', sample: '- 无序项一\n- 无序项二\n\n1. 有序一\n2. 有序二' },
+  { name: '链接', syntax: '[easy-web-tab](https://gitee.com/sifujiang/easy-web-tab)', sample: '[easy-web-tab](https://gitee.com/sifujiang/easy-web-tab)' },
+  { name: '引用', syntax: '> 这是一段引用文字', sample: '> 这是一段引用文字' },
+  { name: '代码', syntax: '行内代码：`const a = 1`\n\n```\n代码块内容\n```', sample: '行内代码：`const a = 1`\n\n```\n代码块内容\n```' },
+  { name: '分割线', syntax: '---', sample: '---' },
+  { name: '表格', syntax: '| 名称 | 说明 |\n| --- | --- |\n| 博客 | 个人站点 |\n| 工具 | 效率套件 |', sample: '| 名称 | 说明 |\n| --- | --- |\n| 博客 | 个人站点 |\n| 工具 | 效率套件 |' },
+  { name: '图片', syntax: '![图片描述](图片地址)', note: '图片地址请使用 base64 数据 URL（在正文插入图片会自动生成；公开网络地址需在设置中开启）。' }
+]
 
 const article = computed(() => store.findArticle(props.articleId))
 const canRead = computed(() => article.value !== undefined)
@@ -233,6 +256,16 @@ async function regenerateSlug(): Promise<void> {
       >
         <span>文章设置</span>
       </button>
+      <button
+        type="button"
+        class="be-side-toggle"
+        data-testid="blog-editor-help"
+        aria-haspopup="dialog"
+        @click="helpOpen = true"
+      >
+        <Icon name="info" :size="14" />
+        <span>帮助</span>
+      </button>
     </header>
 
     <div class="be-body">
@@ -375,6 +408,19 @@ async function regenerateSlug(): Promise<void> {
         </button>
       </div>
     </footer>
+
+    <!-- Markdown 语法帮助弹框 -->
+    <BaseDialog v-if="helpOpen" title="Markdown 语法帮助" width="760px" max-height="86vh" @close="helpOpen = false">
+      <div class="md-help">
+        <p class="md-help-intro">以下为常用 Markdown 语法，右侧为渲染效果（与编辑器「预览」一致）。</p>
+        <div v-for="item in mdHelpItems" :key="item.name" class="md-help-row">
+          <div class="md-help-head">{{ item.name }}</div>
+          <pre class="md-help-code">{{ item.syntax }}</pre>
+          <div v-if="item.sample" class="md-help-preview md-body" v-html="renderMarkdown(item.sample)"></div>
+          <p v-else class="md-help-note">{{ item.note }}</p>
+        </div>
+      </div>
+    </BaseDialog>
 
   </section>
 
@@ -714,6 +760,62 @@ async function regenerateSlug(): Promise<void> {
   padding: 40px 16px;
   color: var(--color-text-secondary, #64748b);
   text-align: center;
+}
+
+/* ===== Markdown 语法帮助弹框 ===== */
+.md-help-intro {
+  margin: 0 0 14px;
+  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-sm, 13px);
+}
+
+.md-help-row {
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px dashed var(--color-border, #e2e8f0);
+}
+
+.md-help-row:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.md-help-head {
+  margin: 0 0 6px;
+  font-size: var(--font-size-sm, 13px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text, #0f172a);
+}
+
+.md-help-code {
+  margin: 0 0 6px;
+  padding: 8px 10px;
+  background-color: var(--color-bg-2, #f1f5f9);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm, 6px);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: var(--font-size-xs, 12px);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--color-text, #0f172a);
+  overflow-x: auto;
+}
+
+.md-help-preview {
+  margin: 0;
+  padding: 8px 10px;
+  background-color: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm, 6px);
+  font-size: var(--font-size-sm, 14px);
+}
+
+.md-help-note {
+  margin: 0;
+  color: var(--color-text-muted, #94a3b8);
+  font-size: var(--font-size-xs, 12px);
 }
 
 @media (max-width: 768px) {
