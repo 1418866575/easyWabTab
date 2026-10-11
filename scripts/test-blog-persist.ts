@@ -71,7 +71,8 @@ function saveBlogSerialize(): unknown {
     settings: {},
     categories: [],
     tags: [],
-    articles: JSON.parse(JSON.stringify(articles.value))
+    articles: JSON.parse(JSON.stringify(articles.value)),
+    images: []
   }
 }
 

@@ -15,6 +15,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import { useBlogStore } from '@/stores/blog'
 import { coverBackground } from '@/composables/blogFront'
 import { listPublishedArticles, formatDateTime, relativeTime } from '@/composables/blogCore'
+import { resolveImageRefs } from '@/composables/blogImages'
 import { renderMarkdown } from '@/composables/noteMarkdown'
 import type { BlogArticle } from '@/types'
 import '@/styles/blog-front.css'
@@ -30,7 +31,12 @@ const visible = computed(
   () => !!article.value && article.value.status === 'published' && !article.value.deletedAt
 )
 
-const html = computed(() => (visible.value && article.value ? renderMarkdown(article.value.contentMarkdown) : ''))
+const html = computed(() => {
+  if (!visible.value || !article.value) return ''
+  // 正文用 img:<id> 短引用指向图片库，渲染前还原为 data URL（与编辑器预览同源）
+  const md = resolveImageRefs(article.value.contentMarkdown, id => store.imageUrlById.get(id))
+  return renderMarkdown(md)
+})
 const cover = computed(() => (visible.value && article.value ? coverBackground(article.value) : null))
 const categoryLabel = computed(() => (article.value ? store.categoryName(article.value.categoryId) : ''))
 const tagLabels = computed(() => (article.value ? store.tagNames(article.value.tagIds) : []))

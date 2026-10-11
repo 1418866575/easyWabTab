@@ -216,12 +216,5 @@ export function applyMarkdown(
   }
 }
 
-/**
- * 图片 data URL 白名单：必须是位图 base64（png/jpeg/gif/webp/bmp/avif…），
- * 禁止 svg（markdown-it 渲染侧亦禁 svg+xml，避免脚本注入）。与渲染侧口径一致。
- */
-export function isAllowedDataImage(url: string): boolean {
-  const m = /^data:(image\/[a-zA-Z0-9.+-]+);base64,/.exec(url)
-  if (!m) return false
-  return !m[1].toLowerCase().includes('svg')
-}
+// 图片白名单校验已移至 blogImages.ts（与图片库同域）；此处 re-export 保持既有引用路径可用。
+export { isAllowedDataImage } from './blogImages'

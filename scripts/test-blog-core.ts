@@ -26,8 +26,12 @@ import {
   sortArticles,
   listPublishedArticles,
   listActiveArticles,
-  emptyBlogSettings
+  emptyBlogSettings,
+  normalizeImage,
+  pruneUnusedImages,
+  collectReferencedImageIds
 } from '../src/composables/blogCore.ts'
+import { imageRef, parseImageRefs, resolveImageRefs, removeImageRefs } from '../src/composables/blogImages.ts'
 import { mergeBlogEnvelope } from '../src/composables/blogSyncCore.ts'
 import { buildBlogPublic } from '../src/composables/blogStaticExport.ts'
 import { applyMarkdown, isAllowedDataImage } from '../src/composables/blogEditorMd.ts'
@@ -84,7 +88,8 @@ function mkEnvelope(blog: Partial<BlogData>, updatedAt = '2026-01-01T00:00:00.00
       settings: blog.settings ?? emptyBlogSettings(),
       categories: blog.categories ?? [],
       tags: blog.tags ?? [],
-      articles: blog.articles ?? []
+      articles: blog.articles ?? [],
+      images: blog.images ?? []
     }
   }
 }
@@ -506,6 +511,70 @@ test('isAllowedDataImage accepts bitmap base64 and rejects svg/non-data', () => 
   a.equal(isAllowedDataImage('data:image/svg+xml;base64,PHN2'), false)
   a.equal(isAllowedDataImage('https://example.com/a.png'), false)
   a.equal(isAllowedDataImage('data:image/png;utf8,xxx'), false)
+})
+
+// ==================== 博客图片库（短引用 / 归一化 / 同步合并） ====================
+const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+
+test('imageRef / parseImageRefs 提取短引用 id（去重保序）', () => {
+  a.equal(imageRef('bi_x1'), 'img:bi_x1')
+  const md = `a\n![p](${imageRef('bi_1')})\n![q](${imageRef('bi_2')})\n![p2](${imageRef('bi_1')})`
+  a.deepEqual(parseImageRefs(md), ['bi_1', 'bi_2'])
+  a.deepEqual(parseImageRefs('没有图片'), [])
+})
+
+test('resolveImageRefs 还原 data URL；缺失时保留引用', () => {
+  const md = `![a](${imageRef('bi_1')}) 与 ![b](${imageRef('bi_9')})`
+  const out = resolveImageRefs(md, id => (id === 'bi_1' ? PNG : undefined))
+  a.ok(out.includes(`![a](${PNG})`))
+  a.ok(out.includes(`![b](${imageRef('bi_9')})`))
+})
+
+test('removeImageRefs 移除指定图片引用及其尾随换行', () => {
+  a.equal(removeImageRefs(`前\n![a](${imageRef('bi_1')})\n后`, 'bi_1'), '前\n后')
+  a.equal(
+    removeImageRefs(`![a](${imageRef('bi_1')})\n![b](${imageRef('bi_2')})`, 'bi_1'),
+    `![b](${imageRef('bi_2')})`
+  )
+})
+
+test('normalizeImage 仅接受位图 base64，非法返回 null', () => {
+  a.equal(normalizeImage({ id: 'bi_1', name: 'a', dataUrl: PNG })?.id, 'bi_1')
+  a.equal(normalizeImage({ dataUrl: 'data:image/svg+xml;base64,PHN2' }), null)
+  a.equal(normalizeImage({ dataUrl: 'https://x/a.png' }), null)
+  a.equal(normalizeImage({ name: '无图' }), null)
+})
+
+test('normalizeBlogData 兜底 images（丢弃非法、去重）', () => {
+  const data = normalizeBlogData({
+    images: [{ id: 'bi_1', dataUrl: PNG }, { id: 'bi_1', dataUrl: PNG }, { id: 'bi_2', dataUrl: 'bad' }]
+  })
+  a.equal(data.images.length, 1)
+  a.equal(data.images[0].id, 'bi_1')
+})
+
+test('pruneUnusedImages / collectReferencedImageIds 只保留被引用的图片', () => {
+  const article = mkArticle({ id: 'ba_1', contentMarkdown: `![a](${imageRef('bi_1')})` })
+  const refs = collectReferencedImageIds([article])
+  a.equal(refs.has('bi_1'), true)
+  a.equal(refs.has('bi_2'), false)
+  const kept = pruneUnusedImages(
+    [
+      { id: 'bi_1', name: 'a', dataUrl: PNG, createdAt: 'x' },
+      { id: 'bi_2', name: 'b', dataUrl: PNG, createdAt: 'x' }
+    ],
+    [article]
+  )
+  a.equal(kept.length, 1)
+  a.equal(kept[0].id, 'bi_1')
+})
+
+test('mergeBlogEnvelope 合并两侧图片（按 id 并集）', () => {
+  const local = mkEnvelope({ images: [{ id: 'bi_1', name: 'a', dataUrl: PNG, createdAt: '2026-01-01T00:00:00.000Z' }] })
+  const remote = mkEnvelope({ images: [{ id: 'bi_2', name: 'b', dataUrl: PNG, createdAt: '2026-01-02T00:00:00.000Z' }] })
+  const merged = mergeBlogEnvelope(local, remote)
+  a.equal(merged.blog?.images.length, 2)
+  a.deepEqual(merged.blog?.images.map(i => i.id).sort(), ['bi_1', 'bi_2'])
 })
 
 let passed = 0

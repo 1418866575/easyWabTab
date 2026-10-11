@@ -8,7 +8,8 @@
  * 评论实体按需求文档标注「延后」未实现，故 `commentCount` 恒为 0。
  */
 import { ARTICLE_STATUSES, BLOG_SORTS } from '../types'
-import type { ArticleStatus, BlogArticle, BlogCategory, BlogCoverKind, BlogData, BlogSettings, BlogSort, BlogTag } from '../types'
+import type { ArticleStatus, BlogArticle, BlogCategory, BlogCoverKind, BlogData, BlogImage, BlogSettings, BlogSort, BlogTag } from '../types'
+import { isAllowedDataImage, parseImageRefs } from './blogImages'
 
 /** 博客数据结构版本：normalizeBlogData 据此判定是否需要迁移 */
 export const BLOG_DATA_VERSION = 1
@@ -63,7 +64,8 @@ export function emptyBlogData(): BlogData {
     settings: emptyBlogSettings(),
     categories: [],
     tags: [],
-    articles: []
+    articles: [],
+    images: []
   }
 }
 
@@ -245,6 +247,19 @@ export function normalizeTag(raw: unknown, index = 0, when = nowIso()): BlogTag 
   }
 }
 
+/** 图片库条目兜底：dataUrl 非白名单位图（空串 / svg / 非 base64）→ 返回 null 由调用方丢弃 */
+export function normalizeImage(raw: unknown, when = nowIso()): BlogImage | null {
+  const src = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>
+  const dataUrl = str(src.dataUrl)
+  if (!isAllowedDataImage(dataUrl)) return null
+  return {
+    id: str(src.id) || newId('bi'),
+    name: str(src.name),
+    dataUrl,
+    createdAt: str(src.createdAt, when)
+  }
+}
+
 /**
  * 全量兜底：非法状态回落 draft、重复 id 去重、缺失时间戳补齐，
  * 任何畸形输入都不抛错（与 normalizeNoteData / normalizeGenealogyData 同原则）。
@@ -282,14 +297,41 @@ export function normalizeBlogData(raw: unknown): BlogData {
     tags.push(t)
   }
 
+  const seenImage = new Set<string>()
+  const images: BlogImage[] = []
+  for (const item of Array.isArray(src.images) ? src.images : []) {
+    const img = normalizeImage(item, when)
+    if (!img || seenImage.has(img.id)) continue
+    seenImage.add(img.id)
+    images.push(img)
+  }
+
   return {
     version: BLOG_DATA_VERSION,
     updatedAt: str(src.updatedAt, when),
     settings: normalizeSettings(src.settings ?? empty.settings),
     categories,
     tags,
-    articles
+    articles,
+    images
   }
+}
+
+// ==================== 图片库维护 ====================
+
+/** 汇总所有文章（含回收站，避免误删仍被引用的图片）正文引用的图片 id */
+export function collectReferencedImageIds(articles: BlogArticle[]): Set<string> {
+  const ids = new Set<string>()
+  for (const a of articles) {
+    for (const id of parseImageRefs(a.contentMarkdown)) ids.add(id)
+  }
+  return ids
+}
+
+/** 清理图片库中已无任何文章引用的图片（删除正文图片后调用） */
+export function pruneUnusedImages(images: BlogImage[], articles: BlogArticle[]): BlogImage[] {
+  const used = collectReferencedImageIds(articles)
+  return images.filter(img => used.has(img.id))
 }
 
 // ==================== 查询与排序 ====================

@@ -1669,6 +1669,18 @@ export interface BlogTag {
   createdAt: string
 }
 
+/**
+ * 博客图片库条目（正文内联图片）：
+ * base64 数据存在此条目里，正文 Markdown 只保留短引用 `![alt](img:<id>)`，
+ * 渲染前由 resolveImageRefs 还原为 data URL —— 这样编辑区看不到超长 base64 串。
+ */
+export interface BlogImage {
+  id: string                // 'bi_' 前缀
+  name: string              // 原始文件名（作 Markdown alt 缺省）
+  dataUrl: string           // data:image/...;base64,...
+  createdAt: string
+}
+
 export interface BlogSettings {
   blogName: string
   blogDescription: string
@@ -1692,6 +1704,7 @@ export interface BlogData {
   categories: BlogCategory[]
   tags: BlogTag[]
   articles: BlogArticle[]
+  images: BlogImage[]       // 正文内联图片库（正文用 img:<id> 引用；随 blog.json 同步）
 }
 
 /** 博客独立同步信封（blog.json），形态对齐 TeacherSyncData */

@@ -12,6 +12,7 @@
  * - downloadBlogPublic 才是浏览器侧入口：懒加载 store 与 markdown-it，组装并触发下载。
  */
 import { listPublishedArticles } from '@/composables/blogCore'
+import { resolveImageRefs } from '@/composables/blogImages'
 import type { BlogArticle, BlogData } from '@/types'
 
 export interface BlogPublicPost {
@@ -61,28 +62,33 @@ export function buildBlogPublic(
 ): BlogPublic {
   const categoryMap = new Map(blog.categories.map((c) => [c.id, c]))
   const tagMap = new Map(blog.tags.map((t) => [t.id, t]))
+  const imageMap = new Map((blog.images ?? []).map((i) => [i.id, i.dataUrl]))
   const published = listPublishedArticles(blog.articles)
 
-  const posts: BlogPublicPost[] = published.map((a) => ({
-    slug: a.slug,
-    title: a.title,
-    subtitle: a.subtitle,
-    excerpt: a.excerpt,
-    categoryId: a.categoryId,
-    categoryName: a.categoryId ? (categoryMap.get(a.categoryId)?.name ?? '未分类') : '未分类',
-    tagIds: a.tagIds,
-    tagNames: a.tagIds.map((id) => tagMap.get(id)?.name ?? '').filter(Boolean),
-    coverKind: a.coverKind,
-    coverToken: a.coverToken,
-    pinned: a.pinned,
-    readingMinutes: a.readingMinutes,
-    viewCount: a.viewCount,
-    createdAt: a.createdAt,
-    updatedAt: a.updatedAt,
-    publishedAt: a.publishedAt,
-    contentMarkdown: a.contentMarkdown,
-    contentHtml: renderHtml(a.contentMarkdown)
-  }))
+  const posts: BlogPublicPost[] = published.map((a) => {
+    // 导出前把 `img:<id>` 短引用还原为 data URL，产出自包含的 Markdown/HTML（静态站点无需图片库）
+    const contentMarkdown = resolveImageRefs(a.contentMarkdown, (id) => imageMap.get(id))
+    return {
+      slug: a.slug,
+      title: a.title,
+      subtitle: a.subtitle,
+      excerpt: a.excerpt,
+      categoryId: a.categoryId,
+      categoryName: a.categoryId ? (categoryMap.get(a.categoryId)?.name ?? '未分类') : '未分类',
+      tagIds: a.tagIds,
+      tagNames: a.tagIds.map((id) => tagMap.get(id)?.name ?? '').filter(Boolean),
+      coverKind: a.coverKind,
+      coverToken: a.coverToken,
+      pinned: a.pinned,
+      readingMinutes: a.readingMinutes,
+      viewCount: a.viewCount,
+      createdAt: a.createdAt,
+      updatedAt: a.updatedAt,
+      publishedAt: a.publishedAt,
+      contentMarkdown,
+      contentHtml: renderHtml(contentMarkdown)
+    }
+  })
 
   return {
     site: {
@@ -127,7 +133,8 @@ export async function downloadBlogPublic(): Promise<void> {
       settings: store.settings,
       categories: store.categories,
       tags: store.tags,
-      articles: store.articles
+      articles: store.articles,
+      images: store.images
     },
     renderMarkdown
   )

@@ -7,9 +7,10 @@
  */
 import { defineStore } from 'pinia'
 import { computed, ref, toRaw } from 'vue'
-import type { ArticleStatus, BlogArticle, BlogCategory, BlogData, BlogSettings, BlogSort, BlogTag } from '@/types'
+import type { ArticleStatus, BlogArticle, BlogCategory, BlogData, BlogImage, BlogSettings, BlogSort, BlogTag } from '@/types'
 import {
   collectPublishErrors,
+  collectReferencedImageIds,
   collectSettingsErrors,
   emptyBlogData,
   estimateReadingMinutes,
@@ -33,6 +34,8 @@ export const useBlogStore = defineStore('blog', () => {
   const categories = ref<BlogCategory[]>([])
   const tags = ref<BlogTag[]>([])
   const articles = ref<BlogArticle[]>([])
+  /** 正文内联图片库：base64 存此，正文只留 `img:<id>` 短引用 */
+  const images = ref<BlogImage[]>([])
   const loaded = ref(false)
 
   // ==================== 持久化 ====================
@@ -44,6 +47,7 @@ export const useBlogStore = defineStore('blog', () => {
       categories.value = norm.categories
       tags.value = norm.tags
       articles.value = norm.articles
+      images.value = norm.images
     } catch (e) {
       console.error('[Blog] load failed', e)
       const empty = emptyBlogData()
@@ -51,6 +55,7 @@ export const useBlogStore = defineStore('blog', () => {
       categories.value = empty.categories
       tags.value = empty.tags
       articles.value = empty.articles
+      images.value = empty.images
     } finally {
       loaded.value = true
     }
@@ -68,7 +73,8 @@ export const useBlogStore = defineStore('blog', () => {
         settings: JSON.parse(JSON.stringify(settings.value)),
         categories: JSON.parse(JSON.stringify(categories.value)),
         tags: JSON.parse(JSON.stringify(tags.value)),
-        articles: JSON.parse(JSON.stringify(articles.value))
+        articles: JSON.parse(JSON.stringify(articles.value)),
+        images: JSON.parse(JSON.stringify(images.value))
       })
       markDirty()
     } catch (e) {
@@ -119,6 +125,9 @@ export const useBlogStore = defineStore('blog', () => {
   function takenSlugs(exceptId?: string): string[] {
     return articles.value.filter(a => a.id !== exceptId).map(a => a.slug)
   }
+
+  /** 图片 id → data URL 映射（渲染前把正文 `img:<id>` 短引用还原为真实图片） */
+  const imageUrlById = computed(() => new Map(images.value.map(i => [i.id, i.dataUrl] as const)))
 
   // ==================== 文章 CRUD ====================
 
@@ -461,17 +470,46 @@ export const useBlogStore = defineStore('blog', () => {
     await saveBlog()
   }
 
+  // ==================== 图片库 ====================
+
+  /** 新增正文图片（dataUrl 已由调用方按白名单校验），返回带 id 的条目 */
+  async function addImage(name: string, dataUrl: string): Promise<BlogImage> {
+    const img: BlogImage = { id: newId('bi'), name, dataUrl, createdAt: nowIso() }
+    images.value.push(img)
+    await saveBlog()
+    return img
+  }
+
+  /** 该图片是否仍被任一文章正文引用（含回收站文章，避免误删） */
+  function isImageReferenced(id: string): boolean {
+    return collectReferencedImageIds(articles.value).has(id)
+  }
+
+  /**
+   * 删除图片：仅当已无任何文章引用时才真正移除。
+   * 由编辑器「移除引用并保存」后调用；被其它文章共享时保留不动。
+   */
+  async function removeImage(id: string): Promise<void> {
+    if (isImageReferenced(id)) return
+    const next = toRaw(images.value).filter(i => i.id !== id)
+    if (next.length === images.value.length) return
+    images.value = next
+    await saveBlog()
+  }
+
   return {
     // 状态
     settings,
     categories,
     tags,
     articles,
+    images,
     loaded,
     // 派生
     activeArticles,
     trashedArticles,
     counts,
+    imageUrlById,
     findArticle,
     findBySlug,
     categoryName,
@@ -506,7 +544,11 @@ export const useBlogStore = defineStore('blog', () => {
     removeTag,
     // 设置
     updateSettings,
-    resetSettings
+    resetSettings,
+    // 图片库
+    addImage,
+    removeImage,
+    isImageReferenced
   }
 })
 

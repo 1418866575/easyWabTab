@@ -21,6 +21,7 @@ import {
 } from '@/composables/blogCore'
 import { applyMarkdown, isAllowedDataImage } from '@/composables/blogEditorMd'
 import type { MdBlockKind } from '@/composables/blogEditorMd'
+import { imageRef, parseImageRefs, removeImageRefs, resolveImageRefs } from '@/composables/blogImages'
 import { renderMarkdown } from '@/composables/noteMarkdown'
 import Icon from '@/components/Icon.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
@@ -78,7 +79,7 @@ const mdHelpItems: MdHelpItem[] = [
   { name: '代码', syntax: '行内代码：`const a = 1`\n\n```\n代码块内容\n```', sample: '行内代码：`const a = 1`\n\n```\n代码块内容\n```' },
   { name: '分割线', syntax: '---', sample: '---' },
   { name: '表格', syntax: '| 名称 | 说明 |\n| --- | --- |\n| 博客 | 个人站点 |\n| 工具 | 效率套件 |', sample: '| 名称 | 说明 |\n| --- | --- |\n| 博客 | 个人站点 |\n| 工具 | 效率套件 |' },
-  { name: '图片', syntax: '![图片描述](图片地址)', note: '图片地址请使用 base64 数据 URL（在正文插入图片会自动生成；公开网络地址需在设置中开启）。' }
+  { name: '图片', syntax: '![图片描述](图片地址)', note: '推荐点工具栏「图片」按钮选择本地图片：图片会存入图片库，正文只写短引用（可在编辑器「文中图片」里查看缩略图）。' }
 ]
 
 // ---------- Markdown 工具栏 ----------
@@ -107,7 +108,7 @@ const MD_TOOLBAR: MdToolbarButton[] = [
   { kind: 'ul', label: '无序列表', title: '无序列表', group: 2 },
   { kind: 'ol', label: '有序列表', title: '有序列表', group: 2 },
   { kind: 'link', label: '链接', title: '插入链接（Ctrl/Cmd+K）', group: 3 },
-  { kind: 'image', label: '图片', title: '插入图片（选择本地图片，自动转为 base64）', group: 3 },
+  { kind: 'image', label: '图片', title: '插入图片（选择本地图片，存入图片库）', group: 3 },
   { kind: 'table', label: '表格', title: '插入表格', group: 3 },
   { kind: 'hr', label: '分割线', title: '插入分割线', group: 3 }
 ]
@@ -168,7 +169,10 @@ function readFileAsDataUrl(file: File): Promise<string> {
   })
 }
 
-/** 选中图片文件后：逐个读为 base64 → 白名单校验 → 光标处插入；跳过不支持的格式 */
+/**
+ * 选中图片文件后：逐个读为 base64 → 白名单校验 → 存入图片库 → 光标处插入**短引用** `![名称](img:<id>)`。
+ * 这样正文里不会出现超长 base64 串，图片在预览/前台由 resolveImageRefs 还原显示。
+ */
 async function onPickImages(e: Event): Promise<void> {
   const input = e.target as HTMLInputElement
   const files = Array.from(input.files ?? [])
@@ -190,8 +194,9 @@ async function onPickImages(e: Event): Promise<void> {
       rejected += 1
       continue
     }
-    const alt = file.name.replace(/\.[^.]+$/, '')
-    const res = applyMarkdown('image', value, pos, pos, { alt, url: dataUrl })
+    const name = file.name.replace(/\.[^.]+$/, '') || '图片'
+    const saved = await store.addImage(name, dataUrl)
+    const res = applyMarkdown('image', value, pos, pos, { alt: name, url: imageRef(saved.id) })
     value = res.value
     pos = res.selEnd
   }
@@ -208,6 +213,37 @@ async function onPickImages(e: Event): Promise<void> {
   if (rejected) {
     toastAlert(`已插入图片，${rejected} 个不支持的格式被跳过（仅支持位图 base64）`, 'warning')
   }
+}
+
+// ---------- 文中图片（缩略图条） ----------
+/** 正文引用的图片（按出现顺序）；库中已无该图时标记 missing */
+const articleImages = computed(() =>
+  parseImageRefs(form.contentMarkdown).map(id => {
+    const img = store.images.find(i => i.id === id)
+    return { id, name: img?.name || '图片', dataUrl: img?.dataUrl || '', missing: !img }
+  })
+)
+
+/** 点击缩略图：把正文里对应的短引用选中（便于定位） */
+function locateImageRef(id: string): void {
+  const ta = contentEl.value
+  if (!ta) return
+  const needle = imageRef(id)
+  const idx = form.contentMarkdown.indexOf(needle)
+  if (idx < 0) return
+  ta.focus()
+  ta.setSelectionRange(idx, idx + needle.length)
+}
+
+/** 移除图片：先清正文引用并保存，再由 store 决定是否回收图片库条目（被其它文章引用则保留） */
+async function removeImageRef(id: string): Promise<void> {
+  const name = articleImages.value.find(i => i.id === id)?.name ?? '这张图片'
+  if (!await showConfirm(`从正文移除「${name}」？`, '移除')) return
+  form.contentMarkdown = removeImageRefs(form.contentMarkdown, id)
+  // 等 dirty watcher 落定再保存，否则 saveDraft 会因「尚未标记为脏」而跳过，导致图片库条目残留
+  await nextTick()
+  await saveDraft(true)
+  await store.removeImage(id)
 }
 
 const article = computed(() => store.findArticle(props.articleId))
@@ -245,9 +281,13 @@ watch(form, () => {
 
 // ---------- 预览 ----------
 function refreshPreview(): void {
-  publishedHtml.value = renderMarkdown(form.contentMarkdown)
+  // 正文里图片是 img:<id> 短引用，渲染前用图片库还原为 data URL，预览才会显示成图片
+  const md = resolveImageRefs(form.contentMarkdown, id => store.imageUrlById.get(id))
+  publishedHtml.value = renderMarkdown(md)
 }
 watch(() => form.contentMarkdown, refreshPreview)
+// 图片库变化（插入/移除图片）也要重渲染预览
+watch(() => store.imageUrlById, refreshPreview)
 
 // ---------- 自动保存 ----------
 let timer: number | undefined
@@ -428,6 +468,28 @@ async function regenerateSlug(): Promise<void> {
               </button>
             </div>
           </template>
+        </div>
+        <!-- 文中图片缩略图条：正文用 img:<id> 短引用，这里把图片以缩略图显示出来 -->
+        <div v-if="viewMode !== 'preview' && articleImages.length" class="be-img-bar" data-testid="blog-editor-image-bar">
+          <span class="be-img-bar-title">文中图片</span>
+          <ul class="be-img-list">
+            <li v-for="img in articleImages" :key="img.id" class="be-img-item">
+              <button
+                type="button"
+                class="be-img-thumb"
+                :title="img.missing ? '图片缺失（可能未同步到本机）' : `定位：${img.name}`"
+                :data-testid="`blog-editor-image-${img.id}`"
+                @click="locateImageRef(img.id)"
+              >
+                <img v-if="!img.missing" :src="img.dataUrl" :alt="img.name" />
+                <span v-else class="be-img-missing">缺失</span>
+              </button>
+              <div class="be-img-meta">
+                <span class="be-img-name" :title="img.name">{{ img.name }}</span>
+                <button type="button" class="be-img-remove" title="从正文移除该图片" @click="removeImageRef(img.id)">移除</button>
+              </div>
+            </li>
+          </ul>
         </div>
         <div class="be-editor-wrap" :class="`is-${viewMode}`">
           <textarea
@@ -739,6 +801,101 @@ async function regenerateSlug(): Promise<void> {
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   border: 0;
+}
+
+/* ===== 文中图片缩略图条 ===== */
+.be-img-bar {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  background-color: var(--color-bg-card, #ffffff);
+}
+
+.be-img-bar-title {
+  flex: 0 0 auto;
+  padding-top: 4px;
+  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-xs, 12px);
+}
+
+.be-img-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.be-img-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 96px;
+}
+
+.be-img-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 64px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm, 6px);
+  background-color: var(--color-bg-2, #f1f5f9);
+  cursor: pointer;
+}
+
+.be-img-thumb:hover {
+  border-color: var(--color-primary, #3b82f6);
+}
+
+.be-img-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.be-img-missing {
+  color: var(--color-text-muted, #94a3b8);
+  font-size: var(--font-size-xs, 12px);
+}
+
+.be-img-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.be-img-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-xs, 11px);
+}
+
+.be-img-remove {
+  flex: 0 0 auto;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: var(--color-text-muted, #94a3b8);
+  font-size: var(--font-size-xs, 11px);
+  cursor: pointer;
+}
+
+.be-img-remove:hover {
+  color: var(--color-error, #ef4444);
 }
 
 .be-md,
