@@ -47,6 +47,14 @@ let snapshot = ''
 const dirty = ref(false)
 const viewMode = ref<'edit' | 'split' | 'preview'>('edit')
 const publishedHtml = ref('')
+/** 右侧元数据抽屉开合状态：true 时向左滑出，false 时滑回右侧隐藏 */
+const sideOpen = ref(false)
+function toggleSide(): void {
+  sideOpen.value = !sideOpen.value
+}
+function closeSide(): void {
+  sideOpen.value = false
+}
 
 const article = computed(() => store.findArticle(props.articleId))
 const canRead = computed(() => article.value !== undefined)
@@ -149,6 +157,12 @@ const liveErrors = computed(() => {
     knownTagIds: store.tags.map(t => t.id)
   })
 })
+/**
+ * 底部实时提示：标题/正文为空属于显而易见的情况，不再在底部列表里反复提示，
+ * 改为点击「发布」时由 publishArticle 统一校验并以 toast 告知。发布闸门本身不受影响。
+ */
+const SUPPRESSED_HINTS = new Set(['标题不可为空', '正文不可为空'])
+const visibleErrors = computed(() => liveErrors.value.filter(e => !SUPPRESSED_HINTS.has(e)))
 
 const slugReserved = computed(() => isReservedSlug(form.slug))
 const excerptPreview = computed(
@@ -193,16 +207,8 @@ async function regenerateSlug(): Promise<void> {
 
 <template>
   <section v-if="canRead" class="be">
-    <!-- 顶部：状态 + 视图切换 -->
+    <!-- 顶部：视图切换 + 文章设置 -->
     <header class="be-head">
-      <button type="button" class="be-back" data-testid="blog-editor-back" @click="handleClose">
-        <Icon name="arrow-left" :size="14" />
-        <span>返回列表</span>
-      </button>
-      <span class="be-status" :class="`be-status-${article!.status}`">
-        {{ ARTICLE_STATUS_LABELS[article!.status] }}
-      </span>
-      <span class="be-saved">{{ dirty ? '未保存' : '已保存' }}</span>
       <div class="be-view-switch" role="group" aria-label="编辑器视图">
         <button
           v-for="m in (['edit', 'split', 'preview'] as const)"
@@ -216,6 +222,17 @@ async function regenerateSlug(): Promise<void> {
           {{ m === 'edit' ? '编辑' : m === 'split' ? '分屏' : '预览' }}
         </button>
       </div>
+      <button
+        type="button"
+        class="be-side-toggle"
+        :class="{ active: sideOpen }"
+        :aria-expanded="sideOpen"
+        aria-controls="blog-editor-side"
+        data-testid="blog-editor-side-toggle"
+        @click="toggleSide"
+      >
+        <span>文章设置</span>
+      </button>
     </header>
 
     <div class="be-body">
@@ -224,8 +241,8 @@ async function regenerateSlug(): Promise<void> {
         <input
           v-model="form.title"
           class="be-title-input"
-          placeholder="文章标题"
-          aria-label="文章标题"
+          placeholder="标题"
+          aria-label="标题"
           data-testid="blog-editor-title"
         />
         <div class="be-editor-wrap" :class="`is-${viewMode}`">
@@ -243,9 +260,20 @@ async function regenerateSlug(): Promise<void> {
         </div>
       </div>
 
-      <!-- 右：元数据 -->
-      <aside class="be-side">
-        <div class="be-block">
+      </div>
+
+    <!-- 遮罩：点击收起右侧抽屉 -->
+    <div class="be-side-overlay" :class="{ 'is-open': sideOpen }" @click="closeSide" aria-hidden="true"></div>
+
+    <!-- 右：元数据抽屉（点击顶栏「设置」向左滑出，再次点击或点遮罩滑回） -->
+    <aside id="blog-editor-side" class="be-side" :class="{ 'is-open': sideOpen }" :aria-hidden="!sideOpen">
+      <div class="be-side-head">
+        <h2 class="be-side-title">文章设置</h2>
+        <button type="button" class="be-side-close" aria-label="收起设置" data-testid="blog-editor-side-close" @click="closeSide">
+          <Icon name="close" :size="14" />
+        </button>
+      </div>
+      <div class="be-block">
           <h3 class="be-block-title">发布</h3>
           <label class="be-field">
             <span class="be-label">状态</span>
@@ -325,13 +353,12 @@ async function regenerateSlug(): Promise<void> {
           <h3 class="be-block-title">统计</h3>
           <p class="be-stat">正文字数 {{ wordCount }} · 约 {{ readingMinutes }} 分钟读完</p>
         </div>
-      </aside>
-    </div>
+    </aside>
 
     <!-- 底部操作条 -->
     <footer class="be-foot">
-      <ul v-if="liveErrors.length" class="be-errors" data-testid="blog-editor-errors">
-        <li v-for="e in liveErrors" :key="e">{{ e }}</li>
+      <ul v-if="visibleErrors.length" class="be-errors" data-testid="blog-editor-errors">
+        <li v-for="e in visibleErrors" :key="e">{{ e }}</li>
       </ul>
       <div class="be-foot-ops">
         <button type="button" class="ui-btn ui-btn--sm" @click="handleClose">关闭</button>
@@ -340,7 +367,7 @@ async function regenerateSlug(): Promise<void> {
         <button
           type="button"
           class="ui-btn ui-btn--sm ui-btn--primary"
-          :disabled="liveErrors.length > 0"
+          :disabled="visibleErrors.length > 0"
           data-testid="blog-editor-publish"
           @click="handlePublish(false)"
         >
@@ -370,37 +397,6 @@ async function regenerateSlug(): Promise<void> {
   flex-wrap: wrap;
 }
 
-.be-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 999px;
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
-  font-size: var(--font-size-xs, 12px);
-  cursor: pointer;
-}
-
-.be-status {
-  padding: 0 8px;
-  border-radius: 999px;
-  background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-text-secondary, #64748b);
-  font-size: var(--font-size-xs, 11px);
-  line-height: 20px;
-}
-
-.be-status-published { background-color: var(--color-success-soft, #dcfce7); color: var(--color-success, #16a34a); }
-.be-status-reviewing { background-color: var(--color-warning-soft, #fef3c7); color: var(--color-warning, #b45309); }
-.be-status-rejected { background-color: var(--color-error-soft, #fee2e2); color: var(--color-error, #ef4444); }
-
-.be-saved {
-  color: var(--color-text-muted, #94a3b8);
-  font-size: var(--font-size-xs, 11px);
-}
-
 .be-view-switch {
   display: flex;
   margin-left: auto;
@@ -421,6 +417,25 @@ async function regenerateSlug(): Promise<void> {
 .be-view-btn.active {
   background-color: var(--color-primary-soft, #eff6ff);
   color: var(--color-primary, #3b82f6);
+}
+
+.be-side-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 999px;
+  background-color: var(--color-bg-card, #ffffff);
+  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-xs, 12px);
+  cursor: pointer;
+}
+
+.be-side-toggle.active {
+  background-color: var(--color-primary-soft, #eff6ff);
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
 }
 
 .be-body {
@@ -483,11 +498,76 @@ async function regenerateSlug(): Promise<void> {
 }
 
 .be-side {
-  flex: 0 1 290px;
-  min-width: 260px;
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 200;
+  width: 320px;
+  max-width: 86vw;
+  height: 100vh;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+  background-color: var(--color-bg-card, #ffffff);
+  border-left: 1px solid var(--color-border, #e2e8f0);
+  box-shadow: -8px 0 24px rgba(15, 23, 42, 0.10);
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+  overflow-y: auto;
+}
+
+.be-side.is-open {
+  transform: translateX(0);
+}
+
+.be-side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.be-side-title {
+  margin: 0;
+  font-size: var(--font-size-base, 14px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text, #0f172a);
+}
+
+.be-side-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm, 6px);
+  background-color: var(--color-bg-card, #ffffff);
+  color: var(--color-text-secondary, #64748b);
+  cursor: pointer;
+}
+
+.be-side-close:hover {
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
+}
+
+.be-side-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background-color: rgba(15, 23, 42, 0.35);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.be-side-overlay.is-open {
+  opacity: 1;
+  visibility: visible;
 }
 
 .be-block {
@@ -638,7 +718,6 @@ async function regenerateSlug(): Promise<void> {
 
 @media (max-width: 768px) {
   .be-body { flex-direction: column; }
-  .be-side { flex: 1 1 auto; min-width: 0; }
   .be-editor-wrap { flex-direction: column; min-height: 320px; }
   .be-foot-ops { width: 100%; }
   .be-foot-ops .ui-btn { flex: 1 1 auto; min-height: 44px; }
