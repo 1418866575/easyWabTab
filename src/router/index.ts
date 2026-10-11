@@ -13,6 +13,8 @@ const TeacherView = () => import('../views/TeacherView.vue')
 const ToolboxView = () => import('../toolbox/views/ToolboxView.vue')
 // 智能工作台（技能库 + 提示词库）：同样懒加载，不拖累导航站首屏
 const SmartView = () => import('../views/SmartView.vue')
+// 博客管理后台：同样懒加载。数据走独立的 blog.json 云同步信封
+const BlogAdminView = () => import('../views/BlogAdminView.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -56,6 +58,11 @@ const router = createRouter({
       path: '/smart',
       name: 'smart',
       component: SmartView
+    },
+    {
+      path: '/blog/admin',
+      name: 'blog-admin',
+      component: BlogAdminView
     }
   ]
 })

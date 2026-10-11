@@ -14,6 +14,8 @@ import './styles/mobile.css'
 import './styles/records.css'
 import './styles/pager.css'
 import './styles/scrollbar.css'
+// 全局 Markdown 正文排版（renderMarkdown + v-html 预览区统一试用 .md-body，取代各组件 :deep() 重复块）
+import './styles/markdown.css'
 // 教师工作台共享样式（tw-* 组件类 + 其 @media print 打印规则）。
 // 必须全局引入：此前仅在 TeacherView / AppSettingsDialog 两个组件内 import，
 // 生产构建时 Vite 会把它只打进其中一个异步 chunk，导致未打开设置弹框时

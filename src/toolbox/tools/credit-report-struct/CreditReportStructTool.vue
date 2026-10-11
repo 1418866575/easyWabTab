@@ -289,10 +289,10 @@ function parts(text: string): { t: string; hit: boolean }[] {
           <template v-if="detailContainers.length">
             <template v-for="seg in detailContainers" :key="seg.tag">
               <div class="cr-sub-title">
-                {{ LEVEL_LABEL[seg.level] }} {{ seg.tag }} · {{ seg.name }}（含 {{ seg.children.length }} 个数据项，点击卡片可聚焦该数据项）
+                {{ LEVEL_LABEL[seg.level] }} {{ seg.tag }} · {{ seg.name }}（含 {{ seg.children?.length ?? 0 }} 个数据项，点击卡片可聚焦该数据项）
               </div>
               <div
-                v-for="c in seg.children"
+                v-for="c in seg.children ?? []"
                 :key="c.tag"
                 class="cr-item-card"
                 :class="{ on: c.tag === selectedTag }"

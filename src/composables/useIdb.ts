@@ -7,7 +7,7 @@
  * 所有请求失败均 reject，由调用方自行 try/catch 降级（不做 localStorage 回退写）
  */
 import { WORKBENCH_DATA_VERSION, emptyAppSettingsData } from '../types'
-import type { AppSettingsData, AppSettingsDataNoCloudSync, BusinessData, BusinessStoreData, BusinessSyncData, Countdown, DiaryData, GenealogyData, HealthData, IconsSyncData, LedgerData, LedgerStoreData, NavSyncData, NoteData, SmartSyncData, StudentSyncData, TeacherSyncData, WorkbenchData, WorkbenchSyncData, WorkbenchTodo } from '../types'
+import type { AppSettingsData, AppSettingsDataNoCloudSync, BlogData, BlogSyncData, BusinessData, BusinessStoreData, BusinessSyncData, Countdown, DiaryData, GenealogyData, HealthData, IconsSyncData, LedgerData, LedgerStoreData, NavSyncData, NoteData, SmartSyncData, StudentSyncData, TeacherSyncData, WorkbenchData, WorkbenchSyncData, WorkbenchTodo } from '../types'
 import { adoptPasswordIdentity, getStoredSaltHex, getStoredVerification } from './useCrypto'
 import { normalizeBusinessStore } from './businessCore.ts'
 import { emptyDiaryData } from './diaryCore'
@@ -18,13 +18,15 @@ import { emptyLedgerData, normalizeLedgerStore } from './ledgerCore'
 import { emptyNoteData, normalizeNoteData } from './noteCore'
 import { emptyPomodoroData } from './pomodoroCore'
 import { normalizeTeacherData } from './teacherCore'
+import { normalizeBlogData } from './blogCore'
 import { isSuspectedRemoteWipe, isNavWipeOverrideActive } from './navDataGuard'
 
 export const DB_NAME = 'easy-web-tab'
 /** v18：新增 `nav` object store，承载原 localStorage 的导航偏好（13 键），根治移动端 localStorage 被系统回收导致导航数据丢失 */
 /** v20：新增 `navmeta` object store，承载导航降级守卫的基线/高水位（从 localStorage 迁入，详见 IDB_META_STORES） */
 /** v21：新增 `iconcache` store（图标缓存移出 nav）；nav 同时改为按 key 多记录存储（见 idbPutKey） */
-export const DB_VERSION = 21
+/** v22：新增 `blog` store（博客后台单对象：settings + categories + tags + articles），随 blog.json 信封同步 */
+export const DB_VERSION = 22
 /** 核心 9 store：随 JSON 备份导出/导入（v6 新增 business；v15 新增 family 家谱） */
 export const IDB_CORE_STORES = ['todos', 'notes', 'diary', 'countdowns', 'passwords', 'health', 'ledger', 'settings', 'business', 'family'] as const
 /** 辅助 store：pomodoro/habits 随 v5 备份导出/导入；snapshots 仅本地使用，不参与备份 */
@@ -72,6 +74,9 @@ export const IDB_META_STORES = ['navmeta'] as const
  * 独立成 store 后，nav 侧只剩 KB 级的用户资产，图标缓存的频繁更新不再牵动用户数据。
  */
 export const IDB_ICONCACHE_STORES = ['iconcache'] as const
+/** 博客 store（v22 新增：单对象 BlogData —— settings + categories + tags + articles；独立信封 blog.json） */
+export const IDB_BLOG_STORES = ['blog'] as const
+
 export const IDB_KEY = 'items'
 
 export type IdbStore =
@@ -84,6 +89,7 @@ export type IdbStore =
   | (typeof IDB_TOOLBOX_STORES)[number]
   | (typeof IDB_META_STORES)[number]
   | (typeof IDB_ICONCACHE_STORES)[number]
+  | (typeof IDB_BLOG_STORES)[number]
 
 let dbPromise: Promise<IDBDatabase> | undefined
 
@@ -103,7 +109,8 @@ export function openIdb(): Promise<IDBDatabase> {
           ...IDB_NAV_STORES,
           ...IDB_TOOLBOX_STORES,
           ...IDB_META_STORES,
-          ...IDB_ICONCACHE_STORES
+          ...IDB_ICONCACHE_STORES,
+          ...IDB_BLOG_STORES
         ]) {
           if (!db.objectStoreNames.contains(name)) {
             db.createObjectStore(name) // 无 keyPath → out-of-line 键 'items'
@@ -890,4 +897,28 @@ export async function importStudentData(remote: StudentSyncData): Promise<void> 
     tx.onerror = () => reject(tx.error)
     tx.onabort = () => reject(tx.error)
   })
+}
+
+// ---------- blog.json（v22 新增：博客后台独立信封，形态对齐 teacher.json） ----------
+
+export async function exportBlog(): Promise<BlogSyncData> {
+  const raw = await idbGet<BlogData>('blog')
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    blog: normalizeBlogData(raw)
+  }
+}
+
+/**
+ * 把远端 blog 信封写回本地 store。
+ *
+ * 兜底策略与 family / ledger **不同**：后者之所以要「远端 ?? 本地」，是因为它们挂在
+ * workbench.json 里、极易被旧版信封缺字段掏空；而博客是**单一作者在一处写作**的内容资产，
+ * 云端为空常见于「首次同步」而非误删，直接覆盖更符合预期（换设备的新机应拿到完整内容）。
+ * 真正的数据丢失风险由上层同步里的 `dirty` 判定 + 冲突解决 UI 兜住（详见 useCloudSync 的 merge）。
+ */
+export async function importBlogData(remote: BlogSyncData): Promise<void> {
+  if (!remote || !remote.blog) return
+  await idbPut('blog', normalizeBlogData(remote.blog))
 }

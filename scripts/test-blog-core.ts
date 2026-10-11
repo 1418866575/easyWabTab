@@ -1,0 +1,384 @@
+/**
+ * 博客模块纯函数测试（blogCore + blogSyncCore）
+ *
+ * 与项目其它 test-*.ts 同构：无测试框架，自写 mini-runner + node:assert/strict。
+ * 运行：npm run test:blog
+ */
+import assert from 'node:assert/strict'
+import {
+  ARTICLE_STATUS_LABELS,
+  autoExcerpt,
+  canTransitionArticle,
+  collectPublishErrors,
+  collectSettingsErrors,
+  estimateReadingMinutes,
+  filterArticles,
+  formatDateTime,
+  isReservedSlug,
+  makeUniqueSlug,
+  nextStatus,
+  normalizeBlogData,
+  paginate,
+  plainTextOfMarkdown,
+  relativeTime,
+  slugify,
+  sortArticles,
+  emptyBlogSettings
+} from '../src/composables/blogCore.ts'
+import { mergeBlogEnvelope } from '../src/composables/blogSyncCore.ts'
+import type { ArticleStatus, BlogArticle, BlogData, BlogSyncData } from '../src/types/index.ts'
+
+const tests: { name: string; fn: () => void }[] = []
+function test(name: string, fn: () => void) {
+  tests.push({ name, fn })
+}
+
+// 断言计数器：Proxy 包装 node:assert/strict，每次断言调用 +1（输出 assertion 总数）
+let assertCount = 0
+const a: typeof assert = new Proxy(assert, {
+  get(t, prop) {
+    const v = Reflect.get(t, prop)
+    if (typeof v === 'function') {
+      return (...args: unknown[]) => {
+        assertCount++
+        return (v as (...x: unknown[]) => unknown).apply(t, args)
+      }
+    }
+    return v
+  }
+}) as typeof assert
+
+/** 构造文章（只覆盖关心的字段，其余给稳定默认值） */
+function mkArticle(partial: Partial<BlogArticle> & { id: string }): BlogArticle {
+  return {
+    slug: partial.slug ?? `slug-${partial.id}`,
+    title: partial.title ?? '默认标题',
+    excerpt: partial.excerpt ?? '',
+    coverKind: 'none',
+    contentMarkdown: partial.contentMarkdown ?? '正文',
+    status: partial.status ?? 'draft',
+    tagIds: partial.tagIds ?? [],
+    pinned: partial.pinned ?? false,
+    viewCount: partial.viewCount ?? 0,
+    commentCount: 0,
+    readingMinutes: partial.readingMinutes ?? 1,
+    createdAt: partial.createdAt ?? '2026-01-01T00:00:00.000Z',
+    updatedAt: partial.updatedAt ?? '2026-01-01T00:00:00.000Z',
+    ...partial
+  }
+}
+
+/** 构造信封 */
+function mkEnvelope(blog: Partial<BlogData>, updatedAt = '2026-01-01T00:00:00.000Z'): BlogSyncData {
+  return {
+    version: 1,
+    exportedAt: updatedAt,
+    blog: {
+      version: 1,
+      updatedAt,
+      settings: blog.settings ?? emptyBlogSettings(),
+      categories: blog.categories ?? [],
+      tags: blog.tags ?? [],
+      articles: blog.articles ?? []
+    }
+  }
+}
+
+// ==================== Slug ====================
+
+test('slugify：保留中文与字母数字，其余符号折叠为连字符', () => {
+  a.equal(slugify('Hello World'), 'hello-world')
+  a.equal(slugify('中文 标题！'), '中文-标题')
+  a.equal(slugify('  --多  个---连字符-- '), '多-个-连字符')
+  a.equal(slugify('!!!'), '')
+})
+
+test('isReservedSlug：系统保留字大小写不敏感', () => {
+  a.equal(isReservedSlug('admin'), true)
+  a.equal(isReservedSlug('Admin'), true)
+  a.equal(isReservedSlug('my-post'), false)
+})
+
+test('makeUniqueSlug：冲突追加序号，纯符号标题回落时间戳', () => {
+  a.equal(makeUniqueSlug('Hello World', []), 'hello-world')
+  a.equal(makeUniqueSlug('Hello World', ['hello-world']), 'hello-world-2')
+  a.equal(makeUniqueSlug('Hello World', ['hello-world', 'hello-world-2']), 'hello-world-3')
+  a.match(makeUniqueSlug('！！！', []), /^post-\d+$/)
+})
+
+// ==================== 派生内容 ====================
+
+test('plainTextOfMarkdown：剥离代码块 / 行内代码 / 图片 / 链接 / 强调语法', () => {
+  // 代码块与行内代码都会被替换成空格再折叠，因此原文里的「代码」字样不会留在结果中
+  a.equal(plainTextOfMarkdown('# 标题\n\n**粗体** 与 `代码`'), '标题 粗体 与')
+  // 图片的 alt 文案同样不算正文（图片整段被替换为空格）
+  a.equal(plainTextOfMarkdown('![图](x.png)\n见 [链接](https://a.b)'), '见 链接')
+  a.equal(plainTextOfMarkdown('```\n不该被计入\n```'), '')
+  a.equal(plainTextOfMarkdown('> 引用\n- 列表项'), '引用 列表项')
+})
+
+test('estimateReadingMinutes：按 400 字/分钟向上取整，最少 1 分钟', () => {
+  a.equal(estimateReadingMinutes(''), 1)
+  a.equal(estimateReadingMinutes('字'.repeat(1)), 1)
+  a.equal(estimateReadingMinutes('字'.repeat(401)), 2)
+  a.equal(estimateReadingMinutes('字'.repeat(800)), 2)
+})
+
+test('autoExcerpt：超长截断加省略号，未超长原样返回', () => {
+  const text = '字'.repeat(200)
+  const excerpt = autoExcerpt(text, 120)
+  a.equal(excerpt.length, 121)
+  a.equal(excerpt.endsWith('…'), true)
+  a.equal(autoExcerpt('短', 120), '短')
+})
+
+// ==================== 归一化 ====================
+
+test('normalizeBlogData：非法输入不抛错，产出结构完整', () => {
+  const norm = normalizeBlogData(undefined)
+  a.equal(norm.version, 1)
+  a.deepEqual(norm.articles, [])
+  a.deepEqual(norm.categories, [])
+  a.deepEqual(norm.tags, [])
+  a.equal(typeof norm.settings.blogName, 'string')
+})
+
+test('normalizeBlogData：非法状态回落草稿、重复 id 去重、缺失时间戳补齐', () => {
+  const norm = normalizeBlogData({
+    articles: [
+      { id: 'a1', title: 'A', status: 'unknown-status' },
+      { id: 'a1', title: 'A 重复', status: 'published' },
+      { id: 'a2', status: 'published', title: 'B' }
+    ]
+  } as unknown as BlogData)
+  a.equal(norm.articles.length, 2)
+  const first = norm.articles.find(x => x.id === 'a1')
+  a.equal(first?.status, 'draft')
+  a.ok(first?.createdAt)
+  a.ok(first?.updatedAt)
+  a.equal(norm.articles.find(x => x.id === 'a2')?.status, 'published')
+})
+
+// ==================== 查询 / 排序 / 分页 ====================
+
+test('filterArticles：按关键词 / 状态 / 分类 / 标签组合过滤', () => {
+  const list = [
+    mkArticle({ id: '1', title: 'Vue 笔记', status: 'draft', categoryId: 'c1', tagIds: ['t1'], contentMarkdown: '正文含关键字 alpha' }),
+    mkArticle({ id: '2', title: '其它', status: 'published', categoryId: 'c2', tagIds: ['t2'] })
+  ]
+  a.equal(filterArticles(list, {}).length, 2)
+  a.equal(filterArticles(list, { keyword: 'alpha' }).length, 1)
+  a.equal(filterArticles(list, { status: 'draft' }).length, 1)
+  // 'active' = 尚未上线：除 published 之外的所有状态（草稿 / 待审 / 定时 / 下架 / 未通过）
+  a.equal(filterArticles(list, { status: 'active' }).length, 1)
+  a.equal(filterArticles(list, { categoryId: 'c2' })[0].id, '2')
+  a.equal(filterArticles(list, { tagId: 't1' })[0].id, '1')
+  a.equal(filterArticles(list, { keyword: 'vue', status: 'draft' }).length, 1)
+})
+
+test('sortArticles：置顶恒在最前，其余按指定规则', () => {
+  const list = [
+    mkArticle({ id: 'a', title: 'A', updatedAt: '2026-02-01T00:00:00.000Z' }),
+    mkArticle({ id: 'b', title: 'B', updatedAt: '2026-03-01T00:00:00.000Z', pinned: true }),
+    mkArticle({ id: 'c', title: 'C', updatedAt: '2026-01-01T00:00:00.000Z' })
+  ]
+  a.deepEqual(sortArticles(list, 'updated-desc').map(x => x.id), ['b', 'a', 'c'])
+  a.deepEqual(sortArticles(list, 'updated-asc').map(x => x.id), ['b', 'c', 'a'])
+  a.deepEqual(sortArticles(list, 'title-asc').map(x => x.id), ['b', 'a', 'c'])
+})
+
+test('paginate：越界页码与页大小被兜底，不返回空数组', () => {
+  const items = Array.from({ length: 25 }, (_, i) => i)
+  a.deepEqual(paginate(items, 1, 10), items.slice(0, 10))
+  a.deepEqual(paginate(items, 3, 10), items.slice(20, 25))
+  a.deepEqual(paginate(items, 0, 10), items.slice(0, 10))
+  a.deepEqual(paginate(items, 1, 0).length, 1) // pageSize 最小为 1
+  a.deepEqual(paginate(items, 99, 10), [])
+})
+
+// ==================== 状态机 ====================
+
+test('nextStatus：合法转移返回目标状态，非法转移返回 null', () => {
+  a.equal(nextStatus('draft', 'publish'), 'published')
+  a.equal(nextStatus('draft', 'submit'), 'reviewing')
+  a.equal(nextStatus('draft', 'schedule'), 'scheduled')
+  a.equal(nextStatus('reviewing', 'approve'), 'published')
+  a.equal(nextStatus('reviewing', 'reject'), 'rejected')
+  a.equal(nextStatus('reviewing', 'withdraw'), 'draft')
+  a.equal(nextStatus('rejected', 'submit'), 'reviewing')
+  a.equal(nextStatus('scheduled', 'publish'), 'published')
+  a.equal(nextStatus('published', 'offline'), 'offline')
+  a.equal(nextStatus('offline', 'publish'), 'published')
+  // 非法：草稿不能直接通过/驳回，已发布不能撤回
+  a.equal(nextStatus('draft', 'approve'), null)
+  a.equal(nextStatus('draft', 'reject'), null)
+  a.equal(nextStatus('published', 'withdraw'), null)
+  a.equal(nextStatus('published', 'publish'), null)
+})
+
+test('canTransitionArticle：与 nextStatus 判定一致', () => {
+  a.equal(canTransitionArticle('draft', 'publish'), true)
+  a.equal(canTransitionArticle('published', 'offline'), true)
+  a.equal(canTransitionArticle('offline', 'submit'), false)
+})
+
+test('ARTICLE_STATUS_LABELS 覆盖全部状态', () => {
+  const statuses: ArticleStatus[] = ['draft', 'reviewing', 'scheduled', 'published', 'offline', 'rejected']
+  for (const s of statuses) {
+    a.equal(typeof ARTICLE_STATUS_LABELS[s], 'string')
+    a.ok(ARTICLE_STATUS_LABELS[s].length > 0)
+  }
+})
+
+// ==================== 校验 ====================
+
+test('collectPublishErrors：必填项与占用冲突全部报出', () => {
+  const base = mkArticle({ id: 'x', title: '标题', slug: 'ok-slug', contentMarkdown: '正文' })
+  const clean = collectPublishErrors(base, { takenSlugs: [], knownCategoryIds: [], knownTagIds: [] })
+  a.deepEqual(clean, [])
+
+  const empty = collectPublishErrors(
+    { ...base, title: '', contentMarkdown: '', slug: '' },
+    { takenSlugs: [], knownCategoryIds: [], knownTagIds: [] }
+  )
+  a.ok(empty.includes('标题不可为空'))
+  a.ok(empty.includes('正文不可为空'))
+  a.ok(empty.includes('slug 不可为空'))
+
+  const reserved = collectPublishErrors({ ...base, slug: 'admin' }, { takenSlugs: [], knownCategoryIds: [], knownTagIds: [] })
+  a.ok(reserved.some(e => e.includes('系统保留字')))
+
+  const dup = collectPublishErrors({ ...base, slug: 'taken' }, { takenSlugs: ['taken'], knownCategoryIds: [], knownTagIds: [] })
+  a.ok(dup.some(e => e.includes('已被占用')))
+
+  const longTitle = collectPublishErrors({ ...base, title: '标'.repeat(101) }, { takenSlugs: [], knownCategoryIds: [], knownTagIds: [] })
+  a.ok(longTitle.some(e => e.includes('100 个字符')))
+
+  const badCat = collectPublishErrors(
+    { ...base, categoryId: 'gone' },
+    { takenSlugs: [], knownCategoryIds: ['c1'], knownTagIds: [] }
+  )
+  a.ok(badCat.some(e => e.includes('分类已不存在')))
+})
+
+test('collectPublishErrors：定时发布要求未来时间', () => {
+  const base = mkArticle({ id: 'x', title: '标题', slug: 'ok', contentMarkdown: '正文' })
+  const ctx = { takenSlugs: [], knownCategoryIds: [], knownTagIds: [], requireScheduledAt: true }
+  a.ok(collectPublishErrors(base, ctx).some(e => e.includes('定时发布必须指定未来时间')))
+  a.ok(collectPublishErrors({ ...base, scheduledAt: '2000-01-01T00:00:00.000Z' }, ctx).some(e => e.includes('必须晚于当前时间')))
+  const future = collectPublishErrors({ ...base, scheduledAt: '2999-01-01T00:00:00.000Z' }, ctx)
+  a.equal(future.length, 0)
+})
+
+test('collectSettingsErrors：名称必填与数值区间', () => {
+  const s = emptyBlogSettings()
+  a.deepEqual(collectSettingsErrors(s), [])
+
+  a.ok(collectSettingsErrors({ ...s, blogName: '' }).some(e => e.includes('博客名称不可为空')))
+  a.ok(collectSettingsErrors({ ...s, blogName: '名'.repeat(51) }).some(e => e.includes('50 个字符')))
+  a.ok(collectSettingsErrors({ ...s, blogDescription: '简'.repeat(201) }).some(e => e.includes('200 个字符')))
+  a.ok(collectSettingsErrors({ ...s, pageSize: 0 }).some(e => e.includes('每页文章数')))
+  a.ok(collectSettingsErrors({ ...s, pageSize: 101 }).some(e => e.includes('每页文章数')))
+  a.ok(collectSettingsErrors({ ...s, pinLimit: 21 }).some(e => e.includes('置顶上限')))
+  a.ok(collectSettingsErrors({ ...s, excerptLength: 19 }).some(e => e.includes('自动摘要长度')))
+  a.ok(collectSettingsErrors({ ...s, autoSaveSeconds: 0 }).some(e => e.includes('自动保存间隔')))
+  a.ok(collectSettingsErrors({ ...s, sessionTimeoutMin: 4 }).some(e => e.includes('本地会话超时')))
+})
+
+// ==================== 展示格式化 ====================
+
+test('formatDateTime：非法输入回落横杠，可关闭时间部分', () => {
+  a.equal(formatDateTime(undefined), '-')
+  a.equal(formatDateTime('not-a-date'), '-')
+  const v = formatDateTime('2026-03-05T14:09:00.000Z')
+  a.match(v, /^2026-03-05 \d{2}:\d{2}$/)
+  a.match(formatDateTime('2026-03-05T14:09:00.000Z', false), /^2026-03-05$/)
+})
+
+test('relativeTime：分钟 / 小时 / 天 / 未来时间', () => {
+  const now = new Date('2026-06-01T12:00:00.000Z').getTime()
+  a.equal(relativeTime('2026-06-01T11:59:30.000Z', now), '刚刚')
+  a.equal(relativeTime('2026-06-01T11:50:00.000Z', now), '10 分钟前')
+  a.equal(relativeTime('2026-06-01T10:00:00.000Z', now), '2 小时前')
+  a.equal(relativeTime('2026-05-30T12:00:00.000Z', now), '2 天前')
+  a.equal(relativeTime('2026-06-01T13:00:00.000Z', now), '1 小时后')
+  a.equal(relativeTime('bad', now), '-')
+})
+
+// ==================== 云同步信封合并 ====================
+
+test('mergeBlogEnvelope：同一 id 取 updatedAt 较新的一侧', () => {
+  const local = mkEnvelope({
+    articles: [mkArticle({ id: 'a', title: '本地新', updatedAt: '2026-05-02T00:00:00.000Z' })]
+  }, '2026-05-02T00:00:00.000Z')
+  const remote = mkEnvelope({
+    articles: [mkArticle({ id: 'a', title: '云端旧', updatedAt: '2026-05-01T00:00:00.000Z' })]
+  }, '2026-05-01T00:00:00.000Z')
+  const merged = mergeBlogEnvelope(local, remote)
+  a.equal(merged.blog?.articles.length, 1)
+  a.equal(merged.blog?.articles[0].title, '本地新')
+})
+
+test('mergeBlogEnvelope：云端较新时以云端为准（不丢任一侧独有条目）', () => {
+  const local = mkEnvelope({
+    articles: [mkArticle({ id: 'a', title: 'A', updatedAt: '2026-05-01T00:00:00.000Z' })]
+  }, '2026-05-01T00:00:00.000Z')
+  const remote = mkEnvelope({
+    articles: [
+      mkArticle({ id: 'a', title: 'A 云端更新', updatedAt: '2026-05-03T00:00:00.000Z' }),
+      mkArticle({ id: 'b', title: 'B 仅云端', updatedAt: '2026-05-03T00:00:00.000Z' })
+    ]
+  }, '2026-05-03T00:00:00.000Z')
+  const merged = mergeBlogEnvelope(local, remote)
+  a.equal(merged.blog?.articles.length, 2)
+  a.equal(merged.blog?.articles.find(x => x.id === 'a')?.title, 'A 云端更新')
+  a.ok(merged.blog?.articles.some(x => x.id === 'b'))
+})
+
+test('mergeBlogEnvelope：软删除作 tombstone，编辑较新的一侧保留删除态', () => {
+  const deleted = mkArticle({ id: 'a', updatedAt: '2026-05-05T00:00:00.000Z', deletedAt: '2026-05-05T00:00:00.000Z' })
+  const local = mkEnvelope({ articles: [deleted] }, '2026-05-05T00:00:00.000Z')
+  // 远端仍是更早的编辑版本（无 deletedAt）→ 合并后必须保持已删除，不能复活
+  const remote = mkEnvelope({
+    articles: [mkArticle({ id: 'a', title: '旧版本', updatedAt: '2026-05-01T00:00:00.000Z' })]
+  }, '2026-05-01T00:00:00.000Z')
+  const merged = mergeBlogEnvelope(local, remote)
+  a.equal(merged.blog?.articles.length, 1)
+  a.equal(merged.blog?.articles[0].deletedAt, '2026-05-05T00:00:00.000Z')
+})
+
+test('mergeBlogEnvelope：设置取整包较新的一侧', () => {
+  const local = mkEnvelope({ settings: { ...emptyBlogSettings(), blogName: '本地站' } }, '2026-05-01T00:00:00.000Z')
+  const remote = mkEnvelope({ settings: { ...emptyBlogSettings(), blogName: '云端站' } }, '2026-05-09T00:00:00.000Z')
+  a.equal(mergeBlogEnvelope(local, remote).blog?.settings.blogName, '云端站')
+  a.equal(mergeBlogEnvelope(remote, local).blog?.settings.blogName, '云端站')
+})
+
+test('mergeBlogEnvelope：分类与标签同样按 id 合并去重', () => {
+  const cat = { id: 'c1', name: '分类一', slug: 'c1', order: 1, createdAt: '', updatedAt: '2026-05-01T00:00:00.000Z' }
+  const tag = { id: 't1', name: '标签一', slug: 't1', createdAt: '' }
+  const local = mkEnvelope({ categories: [cat], tags: [tag] }, '2026-05-01T00:00:00.000Z')
+  const remote = mkEnvelope({ categories: [cat], tags: [tag] }, '2026-05-01T00:00:00.000Z')
+  const merged = mergeBlogEnvelope(local, remote)
+  a.equal(merged.blog?.categories.length, 1)
+  a.equal(merged.blog?.tags.length, 1)
+})
+
+let passed = 0
+let failed = 0
+for (const t of tests) {
+  try {
+    t.fn()
+    passed++
+    console.log(`  ✓ ${t.name}`)
+  } catch (e) {
+    failed++
+    console.error(`  ✗ ${t.name}`)
+    console.error(e)
+  }
+}
+if (failed > 0) {
+  console.error(`\n${passed}/${tests.length} passed, ${assertCount} assertions, exit 1`)
+  process.exit(1)
+}
+console.log(`\n${passed}/${tests.length} passed, ${assertCount} assertions, exit 0`)

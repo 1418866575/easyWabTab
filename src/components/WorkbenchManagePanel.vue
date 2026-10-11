@@ -105,6 +105,18 @@ const entries = computed<Entry[]>(() => [
     icon: store.smartPageIcon,
     builtin: 'lightbulb',
     visible: store.smartPageVisible !== false
+  },
+  {
+    // 博客后台：数据走独立的 blog.json 云同步信封。
+    // 与其它工作台不同——暂未纳入「导航设置 → 显示控制」的开关组（那需要新增 settings 字段并改动
+    // workbench.json 信封结构，影响面较大），因此这里写死名称与图标，仅做「已在目标页时不显示」的隐藏。
+    // TODO: 若后续要开放「是否显示 / 改名 / 换图标」，需按新增 setting 字段的完整步骤同步改动 settings.ts。
+    key: 'blog',
+    path: '/blog/admin',
+    name: '博客后台',
+    icon: '',
+    builtin: 'notes',
+    visible: route.path !== '/blog/admin'
   }
 ])
 

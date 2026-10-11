@@ -1605,3 +1605,101 @@ export interface SmartImportPreview<T> {
   /** 非法条目 → 跳过 */
   skipped: number
 }
+
+// ==================== 博客（前台 + 管理后台） ====================
+// 本期（2026-10-11）只落地「管理后台」，前台与评论未实现；
+// 评论相关实体与 settings 按需求文档标注「延后」，故本期类型不包含 BlogComment。
+
+/** 文章状态；非法值一律由 normalizeBlogData 兜底为 draft */
+export const ARTICLE_STATUSES = ['draft', 'reviewing', 'scheduled', 'published', 'offline', 'rejected'] as const
+export type ArticleStatus = (typeof ARTICLE_STATUSES)[number]
+
+/** 后台列表默认排序 */
+export const BLOG_SORTS = ['updated-desc', 'updated-asc', 'created-desc', 'published-desc', 'views-desc', 'title-asc'] as const
+export type BlogSort = (typeof BLOG_SORTS)[number]
+
+/** 封面占位类型：none 无封面 / image 图片 / gradient 渐变 / solid 纯色 */
+export type BlogCoverKind = 'none' | 'image' | 'gradient' | 'solid'
+
+export interface BlogArticle {
+  id: string                // 'ba_' 前缀
+  slug: string              // URL 友好标识，全站唯一
+  title: string
+  subtitle?: string
+  excerpt: string           // 摘要；空串时由正文截断生成（见 autoExcerpt）
+  coverImageId?: string     // 封面图 id（指向 blog_images store）
+  coverKind: BlogCoverKind
+  coverToken?: string       // 纯色/渐变占位所用的主题 Token 名
+  contentMarkdown: string
+  status: ArticleStatus
+  authorId?: string
+  categoryId?: string
+  tagIds: string[]
+  pinned: boolean
+  viewCount: number
+  commentCount: number      // 恒为 0（评论延后）；保留字段避免后续启用时改结构
+  readingMinutes: number    // 派生：由正文字数估算
+  createdAt: string
+  updatedAt: string
+  publishedAt?: string
+  scheduledAt?: string
+  offlineAt?: string
+  deletedAt?: string        // 软删除时间戳；非空即进入回收站
+  seoTitle?: string
+  seoDescription?: string
+  auditRemark?: string      // 最近一次审核意见
+  revision: number          // 保存即自增，用于草稿冲突判定
+}
+
+export interface BlogCategory {
+  id: string                // 'bc_' 前缀
+  name: string
+  slug: string
+  parentId?: string         // 最多两级
+  description?: string
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface BlogTag {
+  id: string                // 'bt_' 前缀
+  name: string
+  slug: string
+  colorToken?: string
+  createdAt: string
+}
+
+export interface BlogSettings {
+  blogName: string
+  blogDescription: string
+  pageSize: number
+  defaultSort: BlogSort
+  /** 同时置顶上限，默认 3 */
+  pinLimit: number
+  /** 自动保存防抖秒数，默认 3 */
+  autoSaveSeconds: number
+  /** 摘要自动截断字数，默认 120 */
+  excerptLength: number
+  /** 本地作者身份过期分钟数，默认 120 */
+  sessionTimeoutMin: number
+  footer: string
+}
+
+export interface BlogData {
+  version: number
+  updatedAt: string         // 信封合并比较基准
+  settings: BlogSettings
+  categories: BlogCategory[]
+  tags: BlogTag[]
+  articles: BlogArticle[]
+}
+
+/** 博客独立同步信封（blog.json），形态对齐 TeacherSyncData */
+export interface BlogSyncData {
+  version: 1
+  exportedAt: string
+  clientId?: string
+  pushedAt?: number
+  blog?: BlogData
+}

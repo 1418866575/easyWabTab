@@ -1,14 +1,17 @@
 ﻿/**
  * 云同步 composable（WebDAV + v10 多文件同步信封）
  *
- * 7 份独立信封：nav.json / icons.json / workbench.json / business.json / student.json / teacher.json / smart.json
+ * 多份独立信封：nav.json / icons.json / workbench.json / business.json / student.json / teacher.json / toolbox.json / smart.json / blog.json
  *   - nav.json：导航偏好（存 IDB nav store；user-sites/categories/engines/theme/background 等）
  *   - icons.json：自定义图标（localStorage user-custom-icons）
  *   - workbench.json：工作台核心 9 store（不含 business；settings 不含 cloudSync* 5 字段）
  *   - business.json：销售记账独立信封
  *   - student.json：学生工作台 15 store 独立信封
  *   - teacher.json：教师工作台单对象（teacher_workbench；含 base64 图片，体积偏大）
+ *   - toolbox.json：工具箱偏好（收藏 / 最近使用 / 点击次数 / 搜索历史）
  *   - smart.json：智能工作台（技能 / 提示词 / 菜单配置 / 技能分类，SMART_PREFS_KEYS 四个键）
+ *   - blog.json：博客独立信封（BlogData 单对象：settings / categories / tags / articles）
+ *     存 IDB blog store（DB v22）；文章含 Markdown 正文，草稿一并同步（按 updatedAt 较新者胜）
  *
  * 单例设计：模块级 ref 持有全局状态（参考 useCountdownReminder / useToast 的单例模式）
  * 触发器：
@@ -44,7 +47,9 @@ import {
   exportTeacher,
   importTeacherData,
   exportSmart,
-  importSmartData
+  importSmartData,
+  exportBlog,
+  importBlogData
 } from './useIdb'
 import { useNavPrefs } from './useNavPrefs'
 import { useAppSettingsStore } from '../stores/settings'
@@ -53,8 +58,10 @@ import { getStoredSaltHex, getStoredVerification } from './useCrypto'
 import { mergeFamily } from './genealogyCore'
 import { mergeBusinessStore } from './businessCore'
 import { mergeLedgerStore } from './ledgerCore'
+import { mergeBlogEnvelope } from './blogSyncCore'
 import type {
   BusinessSyncData,
+  BlogSyncData,
   Countdown,
   DiaryData,
   HealthData,
@@ -96,7 +103,7 @@ const LAST_SYNC_KEY = 'easy-web-tab-last-sync'
 const DIRTY_KEY = 'easy-web-tab-dirty'
 const PROXY_PATH = '/api/webdav-proxy'
 const DATA_DIR = 'easy-web-tab'
-/** 7 份多文件信封（顺序：nav → icons → workbench → business → student → teacher → smart），见下方 FILE_CONFIGS */
+/** 多文件信封（顺序：nav → icons → workbench → business → student → teacher → toolbox → smart → blog），见下方 FILE_CONFIGS */
 /** 仅用于首次迁移检测（v9 单文件 backup.json） */
 const LEGACY_BACKUP_FILE = 'backup.json'
 
@@ -439,6 +446,7 @@ function sigBusiness(data: BusinessSyncData): string { return envelopeSignature(
 function sigStudent(data: StudentSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
 function sigTeacher(data: TeacherSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
 function sigSmart(data: SmartSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
+function sigBlog(data: BlogSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
 
 /**
  * 计算本地与远程的总差异量（Σ|local_len - remote_len|）。
@@ -1273,6 +1281,15 @@ async function reloadTeacherStores(): Promise<void> {
   }
 }
 
+async function reloadBlogStores(): Promise<void> {
+  try {
+    const { useBlogStore } = await import('../stores/blog')
+    await useBlogStore().loadBlog()
+  } catch {
+    // 同上：store 未就绪（首次同步早于博客后台挂载）→ 静默跳过，进入后台时自然从 IDB 读取
+  }
+}
+
 async function reloadAllStores(): Promise<void> {
   await Promise.all([
     reloadWorkbenchStores(),
@@ -1281,7 +1298,8 @@ async function reloadAllStores(): Promise<void> {
     reloadTeacherStores(),
     reloadSmartStores(),
     reloadNavStores(),
-    reloadIconsStores()
+    reloadIconsStores(),
+    reloadBlogStores()
   ])
 }
 
@@ -1383,6 +1401,18 @@ const FILE_CONFIGS: FileConfig[] = [
     signature: (data) => sigSmart(data as SmartSyncData),
     merge: (l, r) => mergeSmart(l as SmartSyncData, r as SmartSyncData),
     reload: reloadSmartStores,
+    diffSize: (l, r) => totalDiffSize(l, r)
+  },
+  {
+    // 博客：BlogData 单对象（settings / categories / tags / articles）
+    // 合并策略：文章 / 分类 / 标签按 id 逐项取 updatedAt 较新者；软删除 deletedAt 作 tombstone
+    // 参与比较，避免「A 删了、B 还在编辑」把文章复活；settings 整体随 BlogData.updatedAt 较新的一侧
+    name: 'blog.json',
+    exportLocal: () => exportBlog(),
+    importRemote: async (data) => { await importBlogData(data as BlogSyncData); return undefined },
+    signature: (data) => sigBlog(data as BlogSyncData),
+    merge: (l, r) => mergeBlogEnvelope(l as BlogSyncData, r as BlogSyncData),
+    reload: reloadBlogStores,
     diffSize: (l, r) => totalDiffSize(l, r)
   }
 ]
