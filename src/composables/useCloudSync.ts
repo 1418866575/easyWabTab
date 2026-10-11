@@ -1123,7 +1123,7 @@ function mergeSmart(local: SmartSyncData, remote: SmartSyncData): SmartSyncData 
 }
 
 function mergeSmartPref(key: string, lv: string, rv: string): string {
-  if (key === 'smart-skills' || key === 'smart-prompts') {
+  if (key === 'smart-skills' || key === 'smart-prompts' || key === 'smart-workflows') {
     const merged = mergeSmartListById(lv, rv)
     if (merged !== null) return merged
   }
@@ -1165,7 +1165,7 @@ async function reloadSmartStores(): Promise<void> {
     const s = useSmartStore()
     // 先刷新内存里的 prefs（smart.json 写的是 IDB nav store，需重新读一遍）
     await useNavPrefs().refreshAfterImport()
-    await Promise.all([s.reloadSkills(), s.reloadPrompts(), s.reloadMenu(), s.reloadCategories()])
+    await Promise.all([s.reloadSkills(), s.reloadPrompts(), s.reloadWorkflows(), s.reloadMenu(), s.reloadCategories(), s.reloadWorkflowCategories()])
   } catch {
     // store 未就绪（首次同步早于智能工作台挂载）→ 静默跳过，下次进入页面会从 IDB 自然读取
   }
