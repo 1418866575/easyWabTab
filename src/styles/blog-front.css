@@ -1,0 +1,225 @@
+/**
+ * 博客前台（阅读器）共享样式
+ *
+ * 作用域：BlogHomeView / BlogPostView 及前台组件。
+ * 全局类沿用项目 Design Token（见 docs/UI_STYLE_GUIDE.md）；不引入新色彩/间距体系。
+ * 与后台 .ba-* 样式互不耦合，前台是独立阅读界面。
+ */
+
+.bf-shell {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: var(--space-6, 24px) var(--space-4, 16px) var(--space-8, 32px);
+}
+
+/* ---------- 站点头部 ---------- */
+.bf-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.bf-site-title {
+  margin: 0;
+  font-size: var(--font-size-2xl, 24px);
+  font-weight: var(--font-weight-bold, 700);
+  color: var(--color-text, #0f172a);
+}
+.bf-site-desc {
+  margin: 6px 0 0;
+  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-sm, 13px);
+  line-height: var(--line-height-relaxed, 1.6);
+}
+.bf-admin-link {
+  flex: 0 0 auto;
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-muted, #94a3b8);
+  text-decoration: none;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  padding: 6px 10px;
+  transition: color var(--motion-duration, 220ms), border-color var(--motion-duration, 220ms);
+}
+.bf-admin-link:hover {
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
+}
+
+.bf-count {
+  margin: 0 0 12px;
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-muted, #94a3b8);
+}
+
+/* ---------- 列表网格 ---------- */
+.bf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.bf-empty {
+  padding: 40px 16px;
+  border: 1px dashed var(--color-border, #e2e8f0);
+  border-radius: var(--radius-lg, 12px);
+  background-color: var(--color-bg-card, #ffffff);
+  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-sm, 13px);
+  text-align: center;
+}
+
+.bf-pager {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.bf-footer {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border, #e2e8f0);
+  text-align: center;
+  color: var(--color-text-muted, #94a3b8);
+  font-size: var(--font-size-xs, 12px);
+}
+
+/* ---------- 文章详情 ---------- */
+.bf-post {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.bf-back {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-sm, 13px);
+  text-decoration: none;
+  cursor: pointer;
+}
+.bf-back:hover { color: var(--color-primary, #3b82f6); }
+
+.bf-post-hero {
+  height: 200px;
+  border-radius: var(--radius-lg, 12px);
+  background-size: cover;
+  background-position: center;
+}
+.bf-post-title {
+  margin: 0;
+  font-size: var(--font-size-3xl, 28px);
+  font-weight: var(--font-weight-bold, 700);
+  line-height: var(--line-height-tight, 1.25);
+  color: var(--color-text, #0f172a);
+}
+.bf-post-sub {
+  margin: 4px 0 0;
+  font-size: var(--font-size-lg, 18px);
+  color: var(--color-text-secondary, #64748b);
+}
+.bf-post-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-muted, #94a3b8);
+  font-size: var(--font-size-xs, 12px);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+}
+.bf-post-meta .bf-dot { color: var(--color-text-muted, #94a3b8); }
+.bf-post-cat { color: var(--color-primary, #3b82f6); }
+
+.bf-post-body {
+  font-size: var(--font-size-base, 15px);
+}
+
+.bf-post-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.bf-post-tag {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background-color: var(--color-primary-soft, #eff6ff);
+  color: var(--color-primary, #3b82f6);
+  font-size: var(--font-size-xs, 12px);
+}
+
+/* ---------- 相关文章 ---------- */
+.bf-related {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border, #e2e8f0);
+}
+.bf-related-title {
+  margin: 0 0 12px;
+  font-size: var(--font-size-base, 15px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text, #0f172a);
+}
+.bf-related-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.bf-related-item {
+  display: block;
+  padding: 12px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  background-color: var(--color-bg-card, #ffffff);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color var(--motion-duration, 220ms), transform var(--motion-duration, 220ms);
+}
+.bf-related-item:hover {
+  border-color: var(--color-primary, #3b82f6);
+  transform: translateY(-2px);
+}
+.bf-related-item-title {
+  font-size: var(--font-size-sm, 13px);
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--color-text, #0f172a);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.bf-related-item-meta {
+  margin-top: 4px;
+  font-size: var(--font-size-xs, 11px);
+  color: var(--color-text-muted, #94a3b8);
+}
+
+/* ---------- 404 / 未找到 ---------- */
+.bf-404 {
+  padding: 60px 16px;
+  text-align: center;
+}
+.bf-404-title {
+  margin: 0 0 8px;
+  font-size: var(--font-size-xl, 20px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text, #0f172a);
+}
+.bf-404-text {
+  margin: 0 0 16px;
+  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-sm, 13px);
+}
+
+@media (max-width: 768px) {
+  .bf-grid { grid-template-columns: 1fr; }
+  .bf-related-grid { grid-template-columns: 1fr; }
+  .bf-post-hero { height: 150px; }
+  .bf-post-title { font-size: var(--font-size-2xl, 22px); }
+}
+
+html.dark .bf-empty,
+html.dark .bf-related-item { box-shadow: none; }

@@ -117,6 +117,16 @@ const entries = computed<Entry[]>(() => [
     icon: '',
     builtin: 'notes',
     visible: route.path !== '/blog/admin'
+  },
+  {
+    // 博客前台（阅读器）：与后台同源数据（IndexedDB blog store），独立路由 /blog。
+    // 同样写死名称与图标，仅做「已在任意博客前台页（列表/详情）时不显示」的隐藏。
+    key: 'blog-front',
+    path: '/blog',
+    name: '博客前台',
+    icon: '',
+    builtin: 'document',
+    visible: !route.path.startsWith('/blog')
   }
 ])
 

@@ -291,6 +291,15 @@ export function listRecycledArticles(articles: BlogArticle[]): BlogArticle[] {
   return articles.filter(a => !!a.deletedAt)
 }
 
+/**
+ * 前台列表：仅「已发布」且未进入回收站（deletedAt 为空）的文章。
+ * 与 listActiveArticles 不同——后者含草稿 / 待审 / 下架等一切未删除条目，
+ * 前台必须严格只展示 published（且不能让下架/审核中的文章漏出来）。
+ */
+export function listPublishedArticles(articles: BlogArticle[]): BlogArticle[] {
+  return articles.filter(a => a.status === 'published' && !a.deletedAt)
+}
+
 export interface ArticleQuery {
   keyword?: string
   status?: ArticleStatus | 'all' | 'active'

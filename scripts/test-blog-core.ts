@@ -23,9 +23,12 @@ import {
   relativeTime,
   slugify,
   sortArticles,
+  listPublishedArticles,
+  listActiveArticles,
   emptyBlogSettings
 } from '../src/composables/blogCore.ts'
 import { mergeBlogEnvelope } from '../src/composables/blogSyncCore.ts'
+import { buildBlogPublic } from '../src/composables/blogStaticExport.ts'
 import type { ArticleStatus, BlogArticle, BlogData, BlogSyncData } from '../src/types/index.ts'
 
 const tests: { name: string; fn: () => void }[] = []
@@ -196,6 +199,26 @@ test('paginate：越界页码与页大小被兜底，不返回空数组', () => 
   a.deepEqual(paginate(items, 99, 10), [])
 })
 
+test('listPublishedArticles：仅保留已发布且未进回收站的条目', () => {
+  const list = [
+    mkArticle({ id: 'p1', status: 'published' }),
+    mkArticle({ id: 'd1', status: 'draft' }),
+    mkArticle({ id: 'r1', status: 'reviewing' }),
+    mkArticle({ id: 'o1', status: 'offline' }),
+    mkArticle({ id: 's1', status: 'scheduled' }),
+    mkArticle({ id: 'p2', status: 'published', deletedAt: '2026-05-05T00:00:00.000Z' })
+  ]
+  const published = listPublishedArticles(list)
+  a.deepEqual(published.map(x => x.id), ['p1'])
+  // 与 listActiveArticles 区分：后者把草稿/离线/待审都算「未删除」而放行
+  a.equal(listActiveArticles(list).length, 5)
+})
+
+test('listPublishedArticles：空数组与全非发布态返回空', () => {
+  a.deepEqual(listPublishedArticles([]), [])
+  a.deepEqual(listPublishedArticles([mkArticle({ id: 'x', status: 'draft' })]), [])
+})
+
 // ==================== 状态机 ====================
 
 test('nextStatus：合法转移返回目标状态，非法转移返回 null', () => {
@@ -303,6 +326,48 @@ test('relativeTime：分钟 / 小时 / 天 / 未来时间', () => {
   a.equal(relativeTime('2026-05-30T12:00:00.000Z', now), '2 天前')
   a.equal(relativeTime('2026-06-01T13:00:00.000Z', now), '1 小时后')
   a.equal(relativeTime('bad', now), '-')
+})
+
+// ==================== 静态发布数据导出 ====================
+
+test('buildBlogPublic：仅导出已发布且未进回收站的文章，并按类别/标签解析名称', () => {
+  const stub = (md: string) => `<p>${md}</p>`
+  const blog: BlogData = {
+    version: 1,
+    updatedAt: '2026-05-01T00:00:00.000Z',
+    settings: { ...emptyBlogSettings(), blogName: '测试站' },
+    categories: [{ id: 'c1', name: '技术', slug: 'tech', order: 1, createdAt: '', updatedAt: '' }],
+    tags: [{ id: 't1', name: 'Vue', slug: 'vue', createdAt: '' }],
+    articles: [
+      mkArticle({ id: 'p1', title: '已发布', status: 'published', categoryId: 'c1', tagIds: ['t1'], contentMarkdown: '正文X' }),
+      mkArticle({ id: 'd1', title: '草稿', status: 'draft' }),
+      mkArticle({ id: 'p2', title: '已删除', status: 'published', deletedAt: '2026-05-05T00:00:00.000Z' })
+    ]
+  }
+  const out = buildBlogPublic(blog, stub)
+  a.equal(out.site.name, '测试站')
+  a.equal(out.posts.length, 1)
+  a.equal(out.posts[0].slug, 'slug-p1')
+  a.equal(out.posts[0].categoryName, '技术')
+  a.deepEqual(out.posts[0].tagNames, ['Vue'])
+  a.equal(out.posts[0].contentHtml, '<p>正文X</p>')
+  // 草稿与已删除均不应外泄
+  a.equal(out.posts.some((p) => p.slug === 'slug-d1'), false)
+  a.equal(out.posts.some((p) => p.slug === 'slug-p2'), false)
+})
+
+test('buildBlogPublic：无分类/标签时回落默认名称，缺失标签名被过滤', () => {
+  const blog: BlogData = {
+    version: 1,
+    updatedAt: '',
+    settings: emptyBlogSettings(),
+    categories: [],
+    tags: [],
+    articles: [mkArticle({ id: 'p', status: 'published', tagIds: ['ghost'] })]
+  }
+  const out = buildBlogPublic(blog, (md) => md)
+  a.equal(out.posts[0].categoryName, '未分类')
+  a.deepEqual(out.posts[0].tagNames, [])
 })
 
 // ==================== 云同步信封合并 ====================

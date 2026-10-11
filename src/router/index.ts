@@ -15,6 +15,10 @@ const ToolboxView = () => import('../toolbox/views/ToolboxView.vue')
 const SmartView = () => import('../views/SmartView.vue')
 // 博客管理后台：同样懒加载。数据走独立的 blog.json 云同步信封
 const BlogAdminView = () => import('../views/BlogAdminView.vue')
+// 博客前台（阅读器）：独立路由，数据同样来自 IndexedDB（blog store）；
+// /blog 为列表首页，/blog/article/:slug 为文章详情。两者懒加载，不拖累导航站首屏。
+const BlogHomeView = () => import('../views/BlogHomeView.vue')
+const BlogPostView = () => import('../views/BlogPostView.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -63,6 +67,16 @@ const router = createRouter({
       path: '/blog/admin',
       name: 'blog-admin',
       component: BlogAdminView
+    },
+    {
+      path: '/blog/article/:slug',
+      name: 'blog-post',
+      component: BlogPostView
+    },
+    {
+      path: '/blog',
+      name: 'blog',
+      component: BlogHomeView
     }
   ]
 })

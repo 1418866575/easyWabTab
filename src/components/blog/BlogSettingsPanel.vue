@@ -8,6 +8,7 @@
 import { computed, ref, watch } from 'vue'
 import { useBlogStore } from '@/stores/blog'
 import { collectSettingsErrors } from '@/composables/blogCore'
+import { downloadBlogPublic } from '@/composables/blogStaticExport'
 import type { BlogSort } from '@/types'
 import { showConfirm, toastAlert } from '@/utils/dialog'
 
@@ -52,6 +53,17 @@ async function handleRestoreDefaults(): Promise<void> {
   await store.resetSettings()
   form.value = { ...store.settings }
   toastAlert('已恢复默认设置', 'success')
+}
+
+/** 导出静态站点数据：仅含已发布文章，供外部静态生成器消费 */
+async function handleExportStatic(): Promise<void> {
+  try {
+    await downloadBlogPublic()
+    toastAlert('已导出静态站点数据（blog-public-*.json）', 'success')
+  } catch (e) {
+    console.error('[Blog] export static failed', e)
+    toastAlert('导出失败，请稍后重试', 'error')
+  }
 }
 </script>
 
@@ -115,6 +127,22 @@ async function handleRestoreDefaults(): Promise<void> {
     <ul v-if="errors.length" class="bs-errors" data-testid="blog-settings-errors">
       <li v-for="e in errors" :key="e">{{ e }}</li>
     </ul>
+
+    <div class="bs-block">
+      <h3 class="bs-title">静态发布（预留）</h3>
+      <p class="bs-hint">
+        导出一份自包含 JSON（站点信息 + 分类/标签 + 已发布文章的 Markdown 与渲染后 HTML），
+        供未来的静态站点生成器消费。仅包含已发布文章，草稿/下架不外泄。
+      </p>
+      <button
+        type="button"
+        class="ui-btn ui-btn--sm"
+        data-testid="blog-settings-export-static"
+        @click="handleExportStatic"
+      >
+        导出静态站点数据
+      </button>
+    </div>
 
     <footer class="bs-foot">
       <button type="button" class="ui-btn ui-btn--sm ui-btn--danger" @click="handleRestoreDefaults">恢复默认</button>
