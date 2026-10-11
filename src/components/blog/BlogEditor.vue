@@ -4,7 +4,7 @@
  *
  * 左：正文（Markdown 编辑 / 预览双栏切换，预览复用 @/composables/noteMarkdown 的安全渲染）
  * 右：元数据（分类 / 标签 / slug / 摘要 / 封面 / SEO）
- * 底部：保存草稿、发布、定时发布、查看当次改动能否通过发布校验。
+ * 底部：保存草稿、发布、查看当次改动能否通过发布校验。
  *
  * 「发布」不是写库那么简单：会跑 collectPublishErrors 全量校验，任一不通过都不改状态，
  * 且错误要求直接展示在底部，避免用户对着「发布失败」干瞪眼。
@@ -20,7 +20,6 @@ import {
   slugify
 } from '@/composables/blogCore'
 import { renderMarkdown } from '@/composables/noteMarkdown'
-import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '@/components/Icon.vue'
 import { showConfirm, toastAlert } from '@/utils/dialog'
 
@@ -165,7 +164,7 @@ function toggleTag(id: string): void {
   else form.tagIds.push(id)
 }
 
-// ---------- 发布 / 定时 ----------
+// ---------- 发布 ----------
 async function handlePublish(audit = false): Promise<void> {
   await saveDraft(true)
   const res = audit ? await store.submitForReview(props.articleId) : await store.publishArticle(props.articleId)
@@ -175,32 +174,6 @@ async function handlePublish(audit = false): Promise<void> {
     return
   }
   toastAlert(audit ? '已提交，等待审核' : '文章已发布', 'success')
-}
-
-const showSchedule = ref(false)
-const scheduleAt = ref('')
-
-function openSchedule(): void {
-  const t = new Date(Date.now() + 60 * 60 * 1000)
-  const p = (n: number) => (n < 10 ? '0' + n : String(n))
-  scheduleAt.value = `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}T${p(t.getHours())}:${p(t.getMinutes())}`
-  showSchedule.value = true
-}
-
-async function submitSchedule(): Promise<void> {
-  const local = new Date(scheduleAt.value)
-  if (Number.isNaN(local.getTime())) {
-    toastAlert('发布时间格式不正确', 'error')
-    return
-  }
-  await saveDraft(true)
-  const res = await store.scheduleArticle(props.articleId, local.toISOString())
-  if (!res.ok) {
-    toastAlert(res.errors?.join('；') ?? '定时失败', 'error')
-    return
-  }
-  toastAlert('已设为定时发布', 'success')
-  showSchedule.value = false
 }
 
 // ---------- 关闭（有未保存改动时先问） ----------
@@ -363,7 +336,6 @@ async function regenerateSlug(): Promise<void> {
       <div class="be-foot-ops">
         <button type="button" class="ui-btn ui-btn--sm" @click="handleClose">关闭</button>
         <button type="button" class="ui-btn ui-btn--sm" data-testid="blog-editor-save" @click="saveDraft()">保存草稿</button>
-        <button type="button" class="ui-btn ui-btn--sm" @click="openSchedule">定时发布</button>
         <button type="button" class="ui-btn ui-btn--sm" @click="handlePublish(true)">提交审核</button>
         <button
           type="button"
@@ -377,16 +349,6 @@ async function regenerateSlug(): Promise<void> {
       </div>
     </footer>
 
-    <BaseDialog v-if="showSchedule" title="定时发布" @close="showSchedule = false">
-      <label class="be-field">
-        <span class="be-label">发布时间</span>
-        <input v-model="scheduleAt" type="datetime-local" class="be-input" />
-      </label>
-      <template #footer>
-        <button type="button" class="btn-cancel" @click="showSchedule = false">取消</button>
-        <button type="button" class="btn-submit" data-testid="blog-editor-schedule-submit" @click="submitSchedule">确定</button>
-      </template>
-    </BaseDialog>
   </section>
 
   <div v-else class="be-missing">
@@ -433,7 +395,6 @@ async function regenerateSlug(): Promise<void> {
 .be-status-published { background-color: var(--color-success-soft, #dcfce7); color: var(--color-success, #16a34a); }
 .be-status-reviewing { background-color: var(--color-warning-soft, #fef3c7); color: var(--color-warning, #b45309); }
 .be-status-rejected { background-color: var(--color-error-soft, #fee2e2); color: var(--color-error, #ef4444); }
-.be-status-scheduled { background-color: var(--color-primary-soft, #eff6ff); color: var(--color-primary, #3b82f6); }
 
 .be-saved {
   color: var(--color-text-muted, #94a3b8);

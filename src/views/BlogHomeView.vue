@@ -4,7 +4,7 @@
  *
  * 结构：站点头部 → 筛选条（搜索 / 分类 / 标签 / 排序）→ 结果计数 → 文章卡片网格 → 分页 → 页脚。
  * 数据：复用 useBlogStore 只读数据 + useBlogListing（筛选态落在 URL query）。
- * 进入时确保 store 已装载（loadBlog），并补跑到点定时发布（runDueSchedules），
+ * 进入时确保 store 已装载（loadBlog），
  * 与后台 BlogAdminView 的装载时机保持一致。
  */
 import { ref, watch, onMounted } from 'vue'
@@ -42,7 +42,6 @@ function onKeyword(value: string): void {
 
 onMounted(async () => {
   if (!store.loaded) await store.loadBlog()
-  await store.runDueSchedules()
 })
 </script>
 

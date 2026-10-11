@@ -5,7 +5,7 @@
  * - 通过 slug 在 store.articles 中查找；找不到 / 非已发布 / 已软删除 → 404 回落（不泄露草稿内容）。
  * - 正文经 renderMarkdown（markdown-it，html:false + 链接安全校验）渲染后注入 .md-body。
  * - 相关文章：同分类优先，不足再用其它已发布文章补齐到 4 篇。
- * - 数据装载与后台一致：onMounted 确保 loadBlog + runDueSchedules。
+ * - 数据装载与后台一致：onMounted 确保 loadBlog。
  *
  * 关于阅读量：本视图只读展示 store.viewCount，不做自增写盘（避免每次打开都重写整包 blog 数据，
  * 写放大；如需真实统计应走分片计数，属后续优化）。
@@ -52,7 +52,6 @@ const related = computed<BlogArticle[]>(() => {
 
 onMounted(async () => {
   if (!store.loaded) await store.loadBlog()
-  await store.runDueSchedules()
 })
 </script>
 

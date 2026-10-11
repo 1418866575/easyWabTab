@@ -15,7 +15,6 @@ import {
   paginate,
   relativeTime,
   sortArticles,
-  slugify,
   canTransitionArticle
 } from '@/composables/blogCore'
 import { useViewMode } from '@/composables/useViewMode'
@@ -32,6 +31,13 @@ const store = useBlogStore()
 const vm = useViewMode()
 
 // ---------- 筛选与排序 ----------
+// draft：绑定查询区输入控件；生效值：点击「查询」后才写入，用于实际过滤（与其它工作台一致）
+const draftKeyword = ref('')
+const draftStatus = ref<ArticleStatus | 'all' | 'active'>('all')
+const draftCategoryId = ref('')
+const draftTagId = ref('')
+const draftSort = ref<BlogSort>('updated-desc')
+
 const keyword = ref('')
 const status = ref<ArticleStatus | 'all' | 'active'>('all')
 const categoryId = ref('')
@@ -42,7 +48,6 @@ const STATUS_FILTERS: Array<{ value: ArticleStatus | 'all' | 'active'; label: st
   { value: 'all', label: '全部状态' },
   { value: 'draft', label: '草稿' },
   { value: 'reviewing', label: '待审核' },
-  { value: 'scheduled', label: '待定时发布' },
   { value: 'published', label: '已发布' },
   { value: 'offline', label: '已下架' },
   { value: 'rejected', label: '未通过' }
@@ -85,12 +90,24 @@ const hasFilter = computed(
   () => !!keyword.value.trim() || status.value !== 'all' || !!categoryId.value || !!tagId.value
 )
 
-function resetFilter(): void {
-  keyword.value = ''
-  status.value = 'all'
-  categoryId.value = ''
-  tagId.value = ''
+/** 把草稿条件写入生效条件并回到第 1 页（点「查询」时调用） */
+function applyFilter(): void {
+  keyword.value = draftKeyword.value.trim()
+  status.value = draftStatus.value
+  categoryId.value = draftCategoryId.value
+  tagId.value = draftTagId.value
+  sort.value = draftSort.value
   page.value = 1
+}
+
+/** 重置：清空草稿并立即生效（等价于查询全部） */
+function resetFilter(): void {
+  draftKeyword.value = ''
+  draftStatus.value = 'all'
+  draftCategoryId.value = ''
+  draftTagId.value = ''
+  draftSort.value = 'updated-desc'
+  applyFilter()
 }
 
 // ---------- 状态流转 ----------
@@ -99,12 +116,10 @@ function actionsOf(row: BlogArticle): Array<{ key: string; label: string; kind?:
   const list: Array<{ key: string; label: string; kind?: 'primary' | 'danger' }> = []
   const can = (action: Parameters<typeof canTransitionArticle>[1]) => canTransitionArticle(row.status, action)
   if (can('publish')) list.push({ key: 'publish', label: row.status === 'offline' ? '重新发布' : '发布', kind: 'primary' })
-  if (can('submit')) list.push({ key: 'submit', label: '提交审核' })
   if (can('approve')) list.push({ key: 'approve', label: '通过', kind: 'primary' })
   if (can('reject')) list.push({ key: 'reject', label: '驳回' })
-  if (can('withdraw')) list.push({ key: 'withdraw', label: row.status === 'scheduled' ? '取消定时' : '撤回' })
+  if (can('withdraw')) list.push({ key: 'withdraw', label: '撤回' })
   if (can('offline')) list.push({ key: 'offline', label: '下架' })
-  if (can('schedule') && row.status !== 'scheduled') list.push({ key: 'schedule', label: '定时发布' })
   list.push({ key: 'delete', label: '删除', kind: 'danger' })
   return list
 }
@@ -123,15 +138,6 @@ async function runAction(row: BlogArticle, key: string): Promise<void> {
       toastAlert('已发布', 'success')
       return
     }
-    case 'submit': {
-      const res = await store.submitForReview(row.id)
-      if (!res.ok) {
-        toastAlert(res.errors?.join('；') ?? '提交失败', 'error')
-        return
-      }
-      toastAlert('已提交，等待审核', 'success')
-      return
-    }
     case 'approve': {
       const res = await store.approveArticle(row.id)
       if (!res.ok) toastAlert(res.reason ?? '操作失败', 'error')
@@ -142,11 +148,6 @@ async function runAction(row: BlogArticle, key: string): Promise<void> {
       openReject(row)
       return
     case 'withdraw': {
-      if (row.status === 'scheduled') {
-        await store.cancelSchedule(row.id)
-        toastAlert('已取消定时，回到草稿', 'success')
-        return
-      }
       const res = await store.withdrawArticle(row.id)
       if (!res.ok) toastAlert(res.reason ?? '操作失败', 'error')
       else toastAlert('已撤回为草稿', 'success')
@@ -159,9 +160,6 @@ async function runAction(row: BlogArticle, key: string): Promise<void> {
       else toastAlert('已下架', 'success')
       return
     }
-    case 'schedule':
-      openSchedule(row)
-      return
     case 'delete': {
       if (!await showConfirm(`《${row.title}》将被移入回收站，可在回收站恢复。确定删除吗？`)) return
       await store.softDeleteArticle(row.id)
@@ -204,41 +202,10 @@ async function submitReject(): Promise<void> {
   rejectRow.value = null
 }
 
-// ---------- 定时发布弹框 ----------
-const scheduleRow = ref<BlogArticle | null>(null)
-const scheduleAt = ref('')
-
-function openSchedule(row: BlogArticle): void {
-  // datetime-local 需要本地时间的 YYYY-MM-DDTHH:mm串，不能直接用 ISO（含时区后缀）
-  const t = new Date(Date.now() + 60 * 60 * 1000)
-  const p = (n: number) => (n < 10 ? '0' + n : String(n))
-  scheduleAt.value = `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}T${p(t.getHours())}:${p(t.getMinutes())}`
-  scheduleRow.value = row
-}
-
-async function submitSchedule(): Promise<void> {
-  if (!scheduleRow.value) return
-  const local = new Date(scheduleAt.value)
-  if (Number.isNaN(local.getTime())) {
-    toastAlert('发布时间格式不正确', 'error')
-    return
-  }
-  const res = await store.scheduleArticle(scheduleRow.value.id, local.toISOString())
-  if (!res.ok) {
-    toastAlert(res.errors?.join('；') ?? '定时失败', 'error')
-    return
-  }
-  toastAlert('已设为定时发布', 'success')
-  scheduleRow.value = null
-}
-
 // ---------- 展示辅助 ----------
 const statusClass = (s: ArticleStatus): string => `ba-status ba-status-${s}`
 
 function displayTime(row: BlogArticle): string {
-  if (row.status === 'scheduled' && row.scheduledAt) {
-    return `将于 ${formatDateTime(row.scheduledAt)} 发布`
-  }
   if (row.status === 'published' && row.publishedAt) {
     return `发布于 ${relativeTime(row.publishedAt)}`
   }
@@ -248,7 +215,55 @@ function displayTime(row: BlogArticle): string {
 
 <template>
   <section class="ba-posts">
-    <!-- 工具栏：左筛选 / 右操作 -->
+    <!-- 查询区（卡片：字段 + 查询/重置，与其它工作台一致） -->
+    <div class="ba-query">
+      <div class="ba-query-fields">
+        <label class="ba-query-field">
+          <span class="ba-query-label">关键词</span>
+          <el-input
+            v-model="draftKeyword"
+            class="ba-query-input"
+            placeholder="标题 / 正文 / slug"
+            size="small"
+            clearable
+            data-testid="blog-posts-search-keyword"
+            @keyup.enter="applyFilter"
+          />
+        </label>
+        <label class="ba-query-field">
+          <span class="ba-query-label">状态</span>
+          <el-select v-model="draftStatus" class="ba-query-select" size="small" data-testid="blog-posts-search-status">
+            <el-option v-for="s in STATUS_FILTERS" :key="s.value" :value="s.value" :label="s.label" />
+          </el-select>
+        </label>
+        <label class="ba-query-field">
+          <span class="ba-query-label">分类</span>
+          <el-select v-model="draftCategoryId" class="ba-query-select" size="small" data-testid="blog-posts-search-category">
+            <el-option value="" label="全部分类" />
+            <el-option v-for="c in store.categories" :key="c.id" :value="c.id" :label="c.name" />
+          </el-select>
+        </label>
+        <label class="ba-query-field">
+          <span class="ba-query-label">标签</span>
+          <el-select v-model="draftTagId" class="ba-query-select" size="small" data-testid="blog-posts-search-tag">
+            <el-option value="" label="全部标签" />
+            <el-option v-for="t in store.tags" :key="t.id" :value="t.id" :label="t.name" />
+          </el-select>
+        </label>
+        <label class="ba-query-field">
+          <span class="ba-query-label">排序</span>
+          <el-select v-model="draftSort" class="ba-query-select" size="small" data-testid="blog-posts-search-sort">
+            <el-option v-for="o in SORT_OPTIONS" :key="o.value" :value="o.value" :label="o.label" />
+          </el-select>
+        </label>
+      </div>
+      <div class="ba-query-actions">
+        <el-button type="primary" size="small" data-testid="blog-posts-search" @click="applyFilter">查询</el-button>
+        <el-button size="small" data-testid="blog-posts-reset" @click="resetFilter">重置</el-button>
+      </div>
+    </div>
+
+    <!-- 工具栏：左写文章 / 右视图切换（紧贴表格上方） -->
     <div class="ewt-table-toolbar is-split">
       <div class="ba-posts-actions">
         <el-button type="primary" data-testid="blog-posts-create" @click="emit('create')">
@@ -259,37 +274,8 @@ function displayTime(row: BlogArticle): string {
       <ViewModeToggle v-if="total > 0" :mode="vm.mode" @toggle="vm.toggle" />
     </div>
 
-    <div class="ba-filters">
-      <el-input
-        v-model="keyword"
-        size="small"
-        class="ba-search"
-        placeholder="搜索标题 / 正文 / slug"
-        clearable
-      />
-      <select v-model="status" class="ba-select" aria-label="按状态筛选">
-        <option v-for="s in STATUS_FILTERS" :key="s.value" :value="s.value">{{ s.label }}</option>
-      </select>
-      <select v-model="categoryId" class="ba-select" aria-label="按分类筛选">
-        <option value="">全部分类</option>
-        <option v-for="c in store.categories" :key="c.id" :value="c.id">{{ c.name }}</option>
-      </select>
-      <select v-model="tagId" class="ba-select" aria-label="按标签筛选">
-        <option value="">全部标签</option>
-        <option v-for="t in store.tags" :key="t.id" :value="t.id">{{ t.name }}</option>
-      </select>
-      <select v-model="sort" class="ba-select" aria-label="排序方式">
-        <option v-for="o in SORT_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-      </select>
-      <button v-if="hasFilter" type="button" class="ba-reset" @click="resetFilter">清空筛选</button>
-    </div>
-
-    <p class="ba-count" data-testid="blog-posts-count">
-      共 {{ total }} 篇<template v-if="total !== store.counts.all">（筛选自 {{ store.counts.all }} 篇）</template>
-    </p>
-
     <div v-if="total === 0" class="ba-empty" data-testid="blog-posts-empty">
-      {{ hasFilter ? '没有符合条件的文章，试试清空筛选条件' : '还没有文章，点击上方「写文章」开始第一篇' }}
+      {{ hasFilter ? '没有符合条件的文章，试试重置查询条件' : '还没有文章，点击上方「写文章」开始第一篇' }}
     </div>
 
     <!-- 列表视图 -->
@@ -313,15 +299,14 @@ function displayTime(row: BlogArticle): string {
               <button type="button" class="ba-link" @click="emit('edit', row.id)">
                 {{ row.title || '（无标题）' }}
               </button>
-              <span class="ba-status-tag" :class="statusClass(row.status)">
-                {{ ARTICLE_STATUS_LABELS[row.status as ArticleStatus] }}
-              </span>
             </div>
-            <div class="ba-cell-sub">
-              <code>/{{ row.slug }}</code>
-              <span class="ba-dot">·</span>
-              <span>{{ row.readingMinutes }} 分钟</span>
-            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="100" align="center">
+          <template #default="{ row }">
+            <span class="ba-status-tag" :class="statusClass(row.status)">
+              {{ ARTICLE_STATUS_LABELS[row.status as ArticleStatus] }}
+            </span>
           </template>
         </el-table-column>
         <el-table-column label="分类" width="120" align="center">
@@ -333,6 +318,11 @@ function displayTime(row: BlogArticle): string {
           <template #default="{ row }">
             <span v-if="store.tagNames(row.tagIds).length === 0" class="ba-cell-muted">—</span>
             <span v-for="name in store.tagNames(row.tagIds)" :key="name" class="ba-chip">#{{ name }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="创建时间" width="160" align="center">
+          <template #default="{ row }">
+            <span class="ba-cell-muted">{{ formatDateTime(row.createdAt) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="更新时间" width="180" align="center">
@@ -440,21 +430,6 @@ function displayTime(row: BlogArticle): string {
       </template>
     </BaseDialog>
 
-    <!-- 定时发布 -->
-    <BaseDialog v-if="scheduleRow" title="定时发布" @close="scheduleRow = null">
-      <p class="ba-dialog-text">
-        为《{{ scheduleRow.title || '无标题' }}》设定发布时间，到点后会自动转为「已发布」。
-      </p>
-      <label class="ba-field">
-        <span class="ba-field-label">发布时间</span>
-        <input v-model="scheduleAt" type="datetime-local" class="ba-input" />
-      </label>
-      <p class="ba-dialog-hint">slug 建议：<code>{{ slugify(scheduleRow.title) || '需手填' }}</code></p>
-      <template #footer>
-        <button type="button" class="btn-cancel" @click="scheduleRow = null">取消</button>
-        <button type="button" class="btn-submit" data-testid="blog-schedule-submit" @click="submitSchedule">确定</button>
-      </template>
-    </BaseDialog>
   </section>
 </template>
 
@@ -462,7 +437,7 @@ function displayTime(row: BlogArticle): string {
 .ba-posts {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
 .ba-posts-actions {
@@ -471,42 +446,52 @@ function displayTime(row: BlogArticle): string {
   gap: 8px;
 }
 
-.ba-filters {
+/* ---------- 查询区（卡片：字段 + 查询/重置，与其它工作台一致） ---------- */
+.ba-query {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
+  gap: 12px 16px;
+  padding: 12px 14px;
+  background-color: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
-.ba-search {
-  width: 240px;
+.ba-query-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+}
+
+.ba-query-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.ba-query-label {
+  font-size: 13px;
+  color: var(--color-text-secondary, #64748b);
+}
+
+.ba-query-input {
+  width: 220px;
   max-width: 100%;
 }
 
-.ba-select {
-  min-height: 24px;
-  padding: 0 8px;
-  height: 24px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 6px);
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text, #0f172a);
-  font-size: var(--font-size-xs, 12px);
+.ba-query-select {
+  width: 130px;
 }
 
-.ba-reset {
-  border: none;
-  background: transparent;
-  color: var(--color-primary, #3b82f6);
-  font-size: var(--font-size-xs, 12px);
-  cursor: pointer;
-}
-
-.ba-count {
-  margin: 0 0 8px;
-  font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-muted, #94a3b8);
+.ba-query-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .ba-empty {
@@ -517,6 +502,10 @@ function displayTime(row: BlogArticle): string {
   color: var(--color-text-secondary, #64748b);
   font-size: var(--font-size-sm, 13px);
   text-align: center;
+}
+
+html.dark .ba-query {
+  box-shadow: none;
 }
 
 .ba-cell-title {
@@ -545,16 +534,6 @@ function displayTime(row: BlogArticle): string {
   cursor: pointer;
 }
 
-.ba-cell-sub code {
-  color: var(--color-text-muted, #94a3b8);
-  font-size: var(--font-size-xs, 11px);
-}
-
-.ba-dot {
-  margin: 0 6px;
-  color: var(--color-text-muted, #94a3b8);
-}
-
 .ba-cell-muted {
   color: var(--color-text-secondary, #64748b);
   font-size: var(--font-size-xs, 12px);
@@ -571,7 +550,6 @@ function displayTime(row: BlogArticle): string {
 
 .ba-status-draft { background-color: var(--color-bg-hover, #f1f5f9); color: var(--color-text-secondary, #64748b); }
 .ba-status-reviewing { background-color: var(--color-warning-soft, #fef3c7); color: var(--color-warning, #b45309); }
-.ba-status-scheduled { background-color: var(--color-primary-soft, #eff6ff); color: var(--color-primary, #3b82f6); }
 .ba-status-published { background-color: var(--color-success-soft, #dcfce7); color: var(--color-success, #16a34a); }
 .ba-status-offline { background-color: var(--color-bg-hover, #f1f5f9); color: var(--color-text-muted, #94a3b8); }
 .ba-status-rejected { background-color: var(--color-error-soft, #fee2e2); color: var(--color-error, #ef4444); }
@@ -706,12 +684,6 @@ function displayTime(row: BlogArticle): string {
   font-size: var(--font-size-sm, 13px);
 }
 
-.ba-dialog-hint {
-  margin: 8px 0 0;
-  color: var(--color-text-muted, #94a3b8);
-  font-size: var(--font-size-xs, 12px);
-}
-
 .ba-field {
   display: flex;
   flex-direction: column;
@@ -735,19 +707,10 @@ function displayTime(row: BlogArticle): string {
   resize: vertical;
 }
 
-.ba-input {
-  height: 32px;
-  padding: 0 10px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  background-color: var(--color-bg-input, #ffffff);
-  color: var(--color-text, #0f172a);
-  font-family: inherit;
-  font-size: var(--font-size-sm, 13px);
-}
-
 @media (max-width: 768px) {
-  .ba-search { width: 100%; }
+  .ba-query-field { width: 100%; }
+  .ba-query-input,
+  .ba-query-select { flex: 1 1 auto; width: auto; }
   .ba-pager :deep(.el-pagination__sizes),
   .ba-pager :deep(.el-pagination__jump) { display: none; }
 }

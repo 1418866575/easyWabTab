@@ -57,16 +57,17 @@ export const useBlogStore = defineStore('blog', () => {
 
   async function saveBlog(): Promise<void> {
     try {
-      // toRaw：IDB 结构化克隆无法处理 Vue reactive Proxy（DataCloneError）。
-      // toRaw 只解开最外层代理，故对每个 reactive 数组分别 toRaw 后再放进普通字面量。
+      // 关键：IDB 的结构化克隆无法处理 Vue reactive Proxy，会抛 DataCloneError 导致写入失败
+      // （内存已是最新、IDB 却没落盘 → 表现为「点发布显示已发布，刷新后变回未发布」）。
+      // 仅 toRaw 外层不够：嵌套字段（如 articles[].tagIds 数组）仍是 reactive proxy，克隆时仍会崩。
+      // 用 JSON 往返彻底剥离所有响应式代理，得到纯数据树（与 IDB 实际存储形态一致，且 BlogData 字段均 JSON 安全）。
       await idbPut('blog', {
         version: 1,
         updatedAt: nowIso(),
-        settings: toRaw(settings.value),
-        categories: toRaw(categories.value),
-        tags: toRaw(tags.value),
-        // filter 必须在 toRaw 之后的原始数组上做，否则残留 Proxy 元素会触发 DataCloneError
-        articles: toRaw(articles.value)
+        settings: JSON.parse(JSON.stringify(settings.value)),
+        categories: JSON.parse(JSON.stringify(categories.value)),
+        tags: JSON.parse(JSON.stringify(tags.value)),
+        articles: JSON.parse(JSON.stringify(articles.value))
       })
       markDirty()
     } catch (e) {
@@ -87,7 +88,6 @@ export const useBlogStore = defineStore('blog', () => {
       all: list.length,
       draft: pick('draft'),
       reviewing: pick('reviewing'),
-      scheduled: pick('scheduled'),
       published: pick('published'),
       offline: pick('offline'),
       rejected: pick('rejected'),
@@ -279,43 +279,6 @@ export const useBlogStore = defineStore('blog', () => {
 
   async function offlineArticle(id: string): Promise<{ ok: boolean; reason?: string }> {
     return await transit(id, 'offline')
-  }
-
-  async function scheduleArticle(id: string, at: string): Promise<{ ok: boolean; errors?: string[] }> {
-    const article = findArticle(id)
-    if (!article) return { ok: false, errors: ['文章不存在'] }
-    const provisional: BlogArticle = { ...article, scheduledAt: at }
-    const errors = collectPublishErrors(provisional, {
-      takenSlugs: takenSlugs(id),
-      knownCategoryIds: categories.value.map(c => c.id),
-      knownTagIds: tags.value.map(t => t.id),
-      requireScheduledAt: true
-    })
-    if (errors.length > 0) return { ok: false, errors }
-    return await transit(id, 'schedule', { scheduledAt: at }).then(r => ({ ok: r.ok, errors: r.reason ? [r.reason] : undefined }))
-  }
-
-  /** 取消定时：回到草稿（并清掉 scheduledAt） */
-  async function cancelSchedule(id: string): Promise<{ ok: boolean; reason?: string }> {
-    await updateArticle(id, { scheduledAt: undefined })
-    return await transit(id, 'withdraw')
-  }
-
-  /**
-   * 到点的定时任务 → 正式发布。通常是进入博客模块时执行一次扫描（补发布）。
-   * 校验失败不静默丢弃：转 rejected 并记录原因，作者能在列表里看到。
-   */
-  async function runDueSchedules(): Promise<number> {
-    const now = nowIso()
-    const due = activeArticles.value.filter(a => a.status === 'scheduled' && !!a.scheduledAt && a.scheduledAt <= now)
-    for (const article of due) {
-      const res = await publishArticle(article.id)
-      if (!res.ok) {
-        await transit(article.id, 'publish').catch(() => undefined)
-        await updateArticle(article.id, { status: 'rejected', auditRemark: `定时发布失败：${res.errors?.join('；') ?? '未知原因'}` })
-      }
-    }
-    return due.length
   }
 
   // ==================== 分类 ====================
@@ -529,9 +492,6 @@ export const useBlogStore = defineStore('blog', () => {
     rejectArticle,
     withdrawArticle,
     offlineArticle,
-    scheduleArticle,
-    cancelSchedule,
-    runDueSchedules,
     // 分类
     addCategory,
     renameCategory,

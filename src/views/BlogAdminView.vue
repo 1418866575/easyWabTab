@@ -3,7 +3,7 @@
  * 博客管理后台主视图（路由 /blog/admin）
  *
  * 布局与其它工作台一致：顶部工作台切换入口 + 云同步，左菜单 + 右内容。
- * 菜单项：文章 / 分类 / 标签 / 回收站 / 设置。
+ * 菜单项：文章 / 回收站。「分类」「标签」「博客设置」统一收进右上角「设置」弹框（rail + 内容，对齐导航站设置模块）。
  * 「新建 / 编辑文章」不占路由：选中 editingId 时右侧内容区整块换成编辑器，
  * 关闭编辑器回到原菜单页（原型阶段不引入二级路由，避免与列表页状态互相打断）。
  *
@@ -18,12 +18,10 @@ import { useCloudSync, type SyncStatus } from '@/composables/useCloudSync'
 import { useToast } from '@/composables/useToast'
 import BlogPosts from '@/components/blog/BlogPosts.vue'
 import BlogEditor from '@/components/blog/BlogEditor.vue'
-import BlogCategories from '@/components/blog/BlogCategories.vue'
-import BlogTags from '@/components/blog/BlogTags.vue'
 import BlogTrash from '@/components/blog/BlogTrash.vue'
-import BlogSettingsPanel from '@/components/blog/BlogSettingsPanel.vue'
+import BlogSettingsDialog from '@/components/blog/BlogSettingsDialog.vue'
 
-type PageKey = 'posts' | 'categories' | 'tags' | 'trash' | 'settings'
+type PageKey = 'posts' | 'trash'
 
 interface MenuItem {
   key: PageKey
@@ -40,13 +38,12 @@ const activePage = ref<PageKey>('posts')
 const sidebarCollapsed = ref(false)
 /** 正在编辑的文章 id；非空时右侧显示编辑器而非菜单对应面板 */
 const editingId = ref<string | null>(null)
+/** 设置弹框是否打开（设置入口已从左侧菜单移到顶栏右侧） */
+const settingsOpen = ref(false)
 
 const menuItems = computed<MenuItem[]>(() => [
   { key: 'posts', label: '文章', icon: 'notes', count: store.counts.all },
-  { key: 'categories', label: '分类', icon: 'folder', count: store.categories.length },
-  { key: 'tags', label: '标签', icon: 'tag', count: store.tags.length },
-  { key: 'trash', label: '回收站', icon: 'trash', count: store.counts.trash },
-  { key: 'settings', label: '设置', icon: 'cog' }
+  { key: 'trash', label: '回收站', icon: 'trash', count: store.counts.trash }
 ])
 
 function selectPage(key: PageKey): void {
@@ -109,8 +106,6 @@ async function handleSyncNowClick(): Promise<void> {
 
 onMounted(async () => {
   if (!store.loaded) await store.loadBlog()
-  // 到点的定时任务补发布：长期未进后台也能在进入时把「该上线而未上线」的文章发出去
-  await store.runDueSchedules()
 })
 </script>
 
@@ -141,12 +136,12 @@ onMounted(async () => {
         </button>
         <button
           type="button"
-          class="ba-btn ba-btn-sm ba-btn-primary"
-          data-testid="blog-new-article"
-          @click="startNewArticle"
+          class="ba-btn ba-btn-sm"
+          data-testid="blog-open-settings"
+          @click="settingsOpen = true"
         >
-          <Icon name="plus" :size="14" />
-          <span class="ba-new-text">写文章</span>
+          <Icon name="cog" :size="14" />
+          <span class="ba-settings-text">设置</span>
         </button>
       </div>
     </header>
@@ -190,11 +185,10 @@ onMounted(async () => {
           @edit="editArticle"
           @create="startNewArticle"
         />
-        <BlogCategories v-else-if="activePage === 'categories'" />
-        <BlogTags v-else-if="activePage === 'tags'" />
         <BlogTrash v-else-if="activePage === 'trash'" @restore="selectPage('posts')" />
-        <BlogSettingsPanel v-else />
       </main>
+
+      <BlogSettingsDialog v-if="settingsOpen" @close="settingsOpen = false" />
     </div>
   </div>
 </template>

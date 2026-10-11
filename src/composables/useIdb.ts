@@ -19,6 +19,7 @@ import { emptyNoteData, normalizeNoteData } from './noteCore'
 import { emptyPomodoroData } from './pomodoroCore'
 import { normalizeTeacherData } from './teacherCore'
 import { normalizeBlogData } from './blogCore'
+import { mergeBlogEnvelope } from './blogSyncCore'
 import { isSuspectedRemoteWipe, isNavWipeOverrideActive } from './navDataGuard'
 
 export const DB_NAME = 'easy-web-tab'
@@ -913,12 +914,18 @@ export async function exportBlog(): Promise<BlogSyncData> {
 /**
  * 把远端 blog 信封写回本地 store。
  *
- * 兜底策略与 family / ledger **不同**：后者之所以要「远端 ?? 本地」，是因为它们挂在
- * workbench.json 里、极易被旧版信封缺字段掏空；而博客是**单一作者在一处写作**的内容资产，
- * 云端为空常见于「首次同步」而非误删，直接覆盖更符合预期（换设备的新机应拿到完整内容）。
- * 真正的数据丢失风险由上层同步里的 `dirty` 判定 + 冲突解决 UI 兜住（详见 useCloudSync 的 merge）。
+ * ⚠️ 关键修复：不再整体覆盖本地，而是与「当前本地 IDB 内容」做合并（mergeBlogEnvelope
+ * 按文章 id + updatedAt 取较新一侧）。否则在「本地已发布、但云端仍是发布前的旧快照」时，
+ * 云拉取的 !dirty 分支会直接 idbPut 旧快照，把刚发布的文章状态冲掉（表现为「点发布显示已发布，
+ * 刷新后变回未发布」）。
+ *
+ * 与 family / ledger 等其它信封一致走合并语义；首次同步（本地为空）时合并结果仍是远端完整内容，
+ * 不会丢数据。真正的冲突由上层 useCloudSync 的 merge + 冲突 UI 兜住。
  */
 export async function importBlogData(remote: BlogSyncData): Promise<void> {
   if (!remote || !remote.blog) return
-  await idbPut('blog', normalizeBlogData(remote.blog))
+  const local = await idbGet<BlogData>('blog')
+  const localEnv: BlogSyncData = { version: 1, exportedAt: new Date().toISOString(), blog: normalizeBlogData(local) }
+  const merged = mergeBlogEnvelope(localEnv, remote)
+  await idbPut('blog', merged.blog)
 }

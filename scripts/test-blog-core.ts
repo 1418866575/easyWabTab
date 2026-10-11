@@ -205,7 +205,7 @@ test('listPublishedArticles：仅保留已发布且未进回收站的条目', ()
     mkArticle({ id: 'd1', status: 'draft' }),
     mkArticle({ id: 'r1', status: 'reviewing' }),
     mkArticle({ id: 'o1', status: 'offline' }),
-    mkArticle({ id: 's1', status: 'scheduled' }),
+    mkArticle({ id: 's1', status: 'offline' }),
     mkArticle({ id: 'p2', status: 'published', deletedAt: '2026-05-05T00:00:00.000Z' })
   ]
   const published = listPublishedArticles(list)
@@ -224,12 +224,10 @@ test('listPublishedArticles：空数组与全非发布态返回空', () => {
 test('nextStatus：合法转移返回目标状态，非法转移返回 null', () => {
   a.equal(nextStatus('draft', 'publish'), 'published')
   a.equal(nextStatus('draft', 'submit'), 'reviewing')
-  a.equal(nextStatus('draft', 'schedule'), 'scheduled')
   a.equal(nextStatus('reviewing', 'approve'), 'published')
   a.equal(nextStatus('reviewing', 'reject'), 'rejected')
   a.equal(nextStatus('reviewing', 'withdraw'), 'draft')
   a.equal(nextStatus('rejected', 'submit'), 'reviewing')
-  a.equal(nextStatus('scheduled', 'publish'), 'published')
   a.equal(nextStatus('published', 'offline'), 'offline')
   a.equal(nextStatus('offline', 'publish'), 'published')
   // 非法：草稿不能直接通过/驳回，已发布不能撤回
@@ -246,7 +244,7 @@ test('canTransitionArticle：与 nextStatus 判定一致', () => {
 })
 
 test('ARTICLE_STATUS_LABELS 覆盖全部状态', () => {
-  const statuses: ArticleStatus[] = ['draft', 'reviewing', 'scheduled', 'published', 'offline', 'rejected']
+  const statuses: ArticleStatus[] = ['draft', 'reviewing', 'published', 'offline', 'rejected']
   for (const s of statuses) {
     a.equal(typeof ARTICLE_STATUS_LABELS[s], 'string')
     a.ok(ARTICLE_STATUS_LABELS[s].length > 0)
@@ -282,15 +280,6 @@ test('collectPublishErrors：必填项与占用冲突全部报出', () => {
     { takenSlugs: [], knownCategoryIds: ['c1'], knownTagIds: [] }
   )
   a.ok(badCat.some(e => e.includes('分类已不存在')))
-})
-
-test('collectPublishErrors：定时发布要求未来时间', () => {
-  const base = mkArticle({ id: 'x', title: '标题', slug: 'ok', contentMarkdown: '正文' })
-  const ctx = { takenSlugs: [], knownCategoryIds: [], knownTagIds: [], requireScheduledAt: true }
-  a.ok(collectPublishErrors(base, ctx).some(e => e.includes('定时发布必须指定未来时间')))
-  a.ok(collectPublishErrors({ ...base, scheduledAt: '2000-01-01T00:00:00.000Z' }, ctx).some(e => e.includes('必须晚于当前时间')))
-  const future = collectPublishErrors({ ...base, scheduledAt: '2999-01-01T00:00:00.000Z' }, ctx)
-  a.equal(future.length, 0)
 })
 
 test('collectSettingsErrors：名称必填与数值区间', () => {
@@ -410,6 +399,21 @@ test('mergeBlogEnvelope：软删除作 tombstone，编辑较新的一侧保留�
   const merged = mergeBlogEnvelope(local, remote)
   a.equal(merged.blog?.articles.length, 1)
   a.equal(merged.blog?.articles[0].deletedAt, '2026-05-05T00:00:00.000Z')
+})
+
+test('mergeBlogEnvelope：本地已发布且 updatedAt 更新，云端为旧草稿时保留发布状态', () => {
+  // 复现用户 bug：点「发布」后本地为 published 且 updatedAt 更新；云端仍是发布前的 draft 旧快照。
+  // 合并后必须保留本地已发布状态，否则云拉取的 !dirty 分支会把刚发布的文章冲回草稿。
+  const local = mkEnvelope({
+    articles: [mkArticle({ id: 'a', title: '我的文章', status: 'published', publishedAt: '2026-05-10T12:00:00.000Z', updatedAt: '2026-05-10T12:00:00.000Z' })]
+  }, '2026-05-10T12:00:00.000Z')
+  const remote = mkEnvelope({
+    articles: [mkArticle({ id: 'a', title: '我的文章', status: 'draft', updatedAt: '2026-05-01T00:00:00.000Z' })]
+  }, '2026-05-01T00:00:00.000Z')
+  const merged = mergeBlogEnvelope(local, remote)
+  const art = merged.blog?.articles.find(x => x.id === 'a')
+  a.equal(art?.status, 'published')
+  a.equal(art?.publishedAt, '2026-05-10T12:00:00.000Z')
 })
 
 test('mergeBlogEnvelope：设置取整包较新的一侧', () => {

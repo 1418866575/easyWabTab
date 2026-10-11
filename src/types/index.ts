@@ -1611,7 +1611,7 @@ export interface SmartImportPreview<T> {
 // 评论相关实体与 settings 按需求文档标注「延后」，故本期类型不包含 BlogComment。
 
 /** 文章状态；非法值一律由 normalizeBlogData 兜底为 draft */
-export const ARTICLE_STATUSES = ['draft', 'reviewing', 'scheduled', 'published', 'offline', 'rejected'] as const
+export const ARTICLE_STATUSES = ['draft', 'reviewing', 'published', 'offline', 'rejected'] as const
 export type ArticleStatus = (typeof ARTICLE_STATUSES)[number]
 
 /** 后台列表默认排序 */
@@ -1642,7 +1642,6 @@ export interface BlogArticle {
   createdAt: string
   updatedAt: string
   publishedAt?: string
-  scheduledAt?: string
   offlineAt?: string
   deletedAt?: string        // 软删除时间戳；非空即进入回收站
   seoTitle?: string

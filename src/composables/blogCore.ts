@@ -26,7 +26,6 @@ export const RESERVED_SLUGS = [
 export const ARTICLE_STATUS_LABELS: Record<ArticleStatus, string> = {
   draft: '草稿',
   reviewing: '待审核',
-  scheduled: '定时',
   published: '已发布',
   offline: '已下架',
   rejected: '未通过'
@@ -46,7 +45,7 @@ export function newId(prefix: string): string {
 export function emptyBlogSettings(): BlogSettings {
   return {
     blogName: '我的博客',
-    blogDescription: '由 easy-web-tab 驱动的个人博客',
+    blogDescription: '',
     pageSize: DEFAULT_PAGE_SIZE,
     defaultSort: 'updated-desc',
     pinLimit: DEFAULT_PIN_LIMIT,
@@ -196,7 +195,6 @@ export function normalizeArticle(raw: unknown, when = nowIso()): BlogArticle {
     createdAt,
     updatedAt: str(src.updatedAt, createdAt),
     publishedAt: typeof src.publishedAt === 'string' ? src.publishedAt : undefined,
-    scheduledAt: typeof src.scheduledAt === 'string' ? src.scheduledAt : undefined,
     offlineAt: typeof src.offlineAt === 'string' ? src.offlineAt : undefined,
     deletedAt: typeof src.deletedAt === 'string' ? src.deletedAt : undefined,
     seoTitle: typeof src.seoTitle === 'string' ? src.seoTitle : undefined,
@@ -367,8 +365,7 @@ export function paginate<T>(items: T[], page: number, pageSize: number): T[] {
 
 export type ArticleAction =
   | 'submit'      // 提交发布（是否需审核由上层规则决定）
-  | 'publish'     // 直接上线（再发布 / 定时立即发布）
-  | 'schedule'    // 定时发布
+  | 'publish'     // 直接上线
   | 'approve'     // 管理员通过
   | 'reject'      // 管理员驳回
   | 'withdraw'    // 撤回审核
@@ -377,10 +374,9 @@ export type ArticleAction =
 // 删除与恢复不在此表中：删除是软删除（写 deletedAt）、恢复是清 deletedAt，
 // 二者都不改变 status 本身，故不参与状态机（避免出现 delete → draft 这类伪转移）。
 const TRANSITIONS: Record<ArticleStatus, Partial<Record<ArticleAction, ArticleStatus>>> = {
-  draft: { submit: 'reviewing', publish: 'published', schedule: 'scheduled' },
+  draft: { submit: 'reviewing', publish: 'published' },
   reviewing: { approve: 'published', reject: 'rejected', withdraw: 'draft' },
   rejected: { submit: 'reviewing', publish: 'published' },
-  scheduled: { publish: 'published', withdraw: 'draft' },
   published: { offline: 'offline', submit: 'reviewing' },
   offline: { publish: 'published' }
 }
@@ -402,7 +398,6 @@ export interface PublishCheckContext {
   knownCategoryIds: Iterable<string>
   /** 是否存在且未被删除的 tagId：这里仅用于过滤非法 tagId */
   knownTagIds: Iterable<string>
-  requireScheduledAt?: boolean
 }
 
 export function collectPublishErrors(article: BlogArticle, ctx: PublishCheckContext): string[] {
@@ -417,13 +412,6 @@ export function collectPublishErrors(article: BlogArticle, ctx: PublishCheckCont
   if (Array.from(ctx.takenSlugs).includes(slug)) errors.push(`slug「${slug}」已被占用，请更换`)
   if (article.categoryId && !Array.from(ctx.knownCategoryIds).includes(article.categoryId)) {
     errors.push('所选分类已不存在，请重新选择')
-  }
-  if (ctx.requireScheduledAt === true) {
-    if (!article.scheduledAt) {
-      errors.push('定时发布必须指定未来时间')
-    } else if (article.scheduledAt <= nowIso()) {
-      errors.push('定时发布时间必须晚于当前时间')
-    }
   }
   return errors
 }
@@ -468,7 +456,7 @@ export function formatDateTime(iso?: string, withTime = true): string {
 
 /**
  * 相对时间：一小时以内按分钟、当天按小时、本年按月日、跨年按完整日期。
- * 未来时间（如定时发布）同样走此函数，得到「x 分钟后 / x 小时后」。
+ * 未来时间同样走此函数，得到「x 分钟后 / x 小时后」。
  */
 export function relativeTime(iso?: string, now = Date.now()): string {
   if (!iso) return '-'
