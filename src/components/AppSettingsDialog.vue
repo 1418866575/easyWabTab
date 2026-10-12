@@ -270,7 +270,7 @@ const mpQrFailed = ref(false)
 // ========================================
 type IconTarget = 'workbench' | 'business' | 'student' | 'teacher' | 'smart' | 'manage' | 'favicon' | 'toolbox'
 const ICON_TARGET_LABEL: Record<IconTarget, string> = {
-  workbench: '工作台',
+  workbench: '个人工作台',
   business: '销售记账',
   student: '学生工作台',
   teacher: '教师工作台',
@@ -2406,12 +2406,12 @@ function toggleFullscreen(): void {
             </div>
           </div>
           <p class="wb-menu-hint">
-            控制导航站「工具箱」入口按钮的显示、名称与图标。开启后点击按钮进入工具箱；关闭后该入口不再出现在导航站左上角。名称与图标会同步应用到工具箱页面搜索框左侧的标识。
+            控制「工具箱」入口的显示、名称与图标。该入口出现在左上角工作台切换面板（Alt+W 唤起）中；关闭后不再出现在面板里。名称与图标会同步应用到工具箱页面标题。
           </p>
         </div>
 
-        <!-- 工作台设置（个性化 → 工作台设置）：5 项各自独立成一个配置块，不再有「页面导航」分组标题；
-             块内顺序 = 工作台管理 → 工作台 → 销售记账 → 学生工作台 → 教师工作台 -->
+        <!-- 工作台设置（个性化 → 工作台设置）：6 项各自独立成一个配置块，不再有「页面导航」分组标题；
+             块内顺序 = 工作台管理 → 个人工作台 → 销售记账 → 学生工作台 → 教师工作台 → 智能工作台 -->
 
         <!-- 工作台管理（导航站右上角按钮）：名称 + 图标 + 开关，排在工作台设置首位 -->
         <div v-if="activeTab === 'nav' && activeSubTab === 'nav-workbench'" class="wb-menu-config">
@@ -2445,21 +2445,22 @@ function toggleFullscreen(): void {
             </div>
           </div>
           <p class="wb-menu-hint">
-            控制导航站左上角「工作台管理」按钮的显示、名称与图标。开启后点击按钮，在按钮正下方弹出面板，以卡片形式列出已启用的工作台（被关闭的工作台不出现在面板中）；点「选择图标」可从图标库（预置图标 + 已上传的自定义图标）为按钮挑选图标，未设置时使用内置默认图标。
+            控制左上角「工作台管理」按钮的显示、名称与图标。开启后点击按钮（或按 Alt+W）弹出工作台切换面板，可搜索并跳转到已启用的工作台（被关闭的工作台不出现在面板中）；点「选择图标」可从图标库（预置图标 + 已上传的自定义图标）为按钮挑选图标，未设置时使用内置默认图标。
           </p>
         </div>
 
-        <!-- 工作台 -->
+        <!-- 个人工作台（原「工作台」，2026-10-12 改名与设置左侧分组名统一） -->
         <div v-if="activeTab === 'nav' && activeSubTab === 'nav-workbench'" class="wb-menu-config">
           <div class="wb-menu-head">
-            <span class="wb-menu-label">工作台</span>
+            <span class="wb-menu-label">个人工作台</span>
             <div style="display: flex; align-items: center; gap: 8px;">
               <input
                 type="text"
                 class="wb-menu-name-input"
                 :value="store.workbenchPageName"
-                placeholder="工作台"
+                placeholder="个人工作台"
                 maxlength="20"
+                data-testid="workbench-page-name-input"
                 @input="store.setWorkbenchPageName(($event.target as HTMLInputElement).value)"
               />
               <button
@@ -2481,7 +2482,7 @@ function toggleFullscreen(): void {
             </div>
           </div>
           <p class="wb-menu-hint">
-            控制「工作台管理」面板中是否显示工作台，默认关闭：打开后面板出现工作台卡片，设置里也会出现工作台与提醒设置；关闭则一并隐藏。
+            控制左上角工作台切换面板中是否显示「个人工作台」。开启后面板出现该卡片，设置里也会出现工作台与提醒设置；关闭则一并隐藏，已保存的待办、笔记、记账等数据不受影响。
           </p>
         </div>
 
@@ -2517,7 +2518,7 @@ function toggleFullscreen(): void {
             </div>
           </div>
           <p class="wb-menu-hint">
-            控制「工作台管理」面板中是否显示销售记账。关闭后面板中不显示，销售记账设置页一并隐藏。
+            控制左上角工作台切换面板中是否显示销售记账。关闭后面板中不显示，销售记账设置页一并隐藏。
           </p>
         </div>
 
@@ -2553,7 +2554,7 @@ function toggleFullscreen(): void {
             </div>
           </div>
           <p class="wb-menu-hint">
-            控制「工作台管理」面板中是否显示学生工作台。关闭后面板中不显示，学生工作台设置页一并隐藏。
+            控制左上角工作台切换面板中是否显示学生工作台。关闭后面板中不显示，学生工作台设置页一并隐藏。
           </p>
         </div>
 
@@ -2589,7 +2590,7 @@ function toggleFullscreen(): void {
             </div>
           </div>
           <p class="wb-menu-hint">
-            控制「工作台管理」面板中是否显示教师工作台。关闭后面板中不显示（不影响已保存的数据）。
+            控制左上角工作台切换面板中是否显示教师工作台。关闭后面板中不显示（不影响已保存的数据）。
           </p>
         </div>
 
@@ -2618,19 +2619,15 @@ function toggleFullscreen(): void {
                 <img v-if="store.smartPageIcon" :src="store.smartPageIcon" alt="" class="wb-menu-icon-img" />
                 <Icon v-else name="image" />
               </button>
-              <button type="button" class="switch-btn"
-                :class="{ on: store.smartPageVisible !== false }"
-                role="switch"
-                :aria-checked="store.smartPageVisible !== false"
+              <el-switch
+                :model-value="store.smartPageVisible !== false"
                 data-testid="smart-visible-switch"
-                @click="store.setSmartPageVisible(store.smartPageVisible === false)">
-                <span class="switch-thumb"></span>
-              </button>
+                @update:model-value="store.setSmartPageVisible"
+              />
             </div>
           </div>
           <p class="wb-menu-hint">
-            控制「工作台管理」面板中是否显示智能工作台（自定义技能与提示词库）。关闭后面板中不显示，
-            已保存的技能与提示词不受影响；也可在此改名与更换入口图标。
+            控制左上角工作台切换面板中是否显示智能工作台（自定义技能与提示词库）。关闭后面板中不显示，已保存的技能与提示词不受影响；也可在此改名与更换入口图标。
           </p>
         </div>
 
