@@ -65,6 +65,27 @@
   gap: 16px;
 }
 
+/* ---------- 收藏 / 最近阅读 分区（列表上方，沿用工具箱 section 风格，空时自动隐藏） ---------- */
+.bf-section {
+  margin-bottom: 24px;
+}
+.bf-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.bf-section-title {
+  margin: 0;
+  font-size: var(--font-size-base, 15px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text, #0f172a);
+}
+.bf-section-sub {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-muted, #94a3b8);
+}
+
 .bf-empty {
   padding: 40px 16px;
   border: 1px dashed var(--color-border, #e2e8f0);

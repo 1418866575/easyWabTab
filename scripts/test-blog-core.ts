@@ -36,10 +36,11 @@ import {
   formatBytes
 } from '../src/composables/blogCore.ts'
 import { imageRef, parseImageRefs, resolveImageRefs, removeImageRefs } from '../src/composables/blogImages.ts'
-import { mergeBlogEnvelope } from '../src/composables/blogSyncCore.ts'
+import { mergeBlogEnvelope, mergeBlogPrefsEnvelope, normalizeBlogFrontPrefs } from '../src/composables/blogSyncCore.ts'
 import { buildBlogPublic } from '../src/composables/blogStaticExport.ts'
 import { applyMarkdown, isAllowedDataImage } from '../src/composables/blogEditorMd.ts'
-import type { ArticleStatus, BlogArticle, BlogData, BlogImage, BlogSyncData } from '../src/types/index.ts'
+import type { ArticleStatus, BlogArticle, BlogData, BlogFrontPrefs, BlogFrontSyncData, BlogImage, BlogRecentItem, BlogSyncData } from '../src/types/index.ts'
+import { BLOG_RECENT_LIMIT } from '../src/types/index.ts'
 
 const tests: { name: string; fn: () => void }[] = []
 function test(name: string, fn: () => void) {
@@ -449,6 +450,55 @@ test('mergeBlogEnvelope：分类与标签同样按 id 合并去重', () => {
   const merged = mergeBlogEnvelope(local, remote)
   a.equal(merged.blog?.categories.length, 1)
   a.equal(merged.blog?.tags.length, 1)
+})
+
+// ==================== 博客前台偏好（收藏 / 最近阅读） ====================
+function mkPrefsEnvelope(prefs?: Partial<BlogFrontPrefs>, exportedAt = '2026-01-01T00:00:00.000Z'): BlogFrontSyncData {
+  return { version: 1, exportedAt, prefs: prefs as BlogFrontPrefs | undefined }
+}
+
+test('normalizeBlogFrontPrefs：过滤非字符串收藏与非法 recent，按 ts 倒序', () => {
+  const prefs = normalizeBlogFrontPrefs({
+    favorites: ['ba_1', 123 as unknown as string, '', 'ba_2', 'ba_1'],
+    recent: [
+      { id: 'ba_2', ts: 100 },
+      { id: 'ba_1', ts: 300 },
+      { id: 'bad', ts: 'x' as unknown as number },
+      { id: 'ba_3', ts: 200 }
+    ]
+  })
+  a.deepEqual(prefs.favorites, ['ba_1', 'ba_2']) // 去重，保留顺序
+  a.deepEqual(prefs.recent.map((r: BlogRecentItem) => r.id), ['ba_1', 'ba_3', 'ba_2']) // 按 ts 倒序
+})
+
+test('normalizeBlogFrontPrefs：超过 BLOG_RECENT_LIMIT 截断', () => {
+  const recent = Array.from({ length: BLOG_RECENT_LIMIT + 5 }, (_, i) => ({ id: `ba_${i}`, ts: i }))
+  const prefs = normalizeBlogFrontPrefs({ favorites: [], recent })
+  a.equal(prefs.recent.length, BLOG_RECENT_LIMIT)
+})
+
+test('mergeBlogPrefsEnvelope：favorites 取并集，保留本地顺序 + 远端独有', () => {
+  const local = mkPrefsEnvelope({ favorites: ['ba_1', 'ba_2'], recent: [{ id: 'ba_1', ts: 100 }] })
+  const remote = mkPrefsEnvelope({ favorites: ['ba_2', 'ba_3'], recent: [{ id: 'ba_2', ts: 200 }] })
+  const merged = mergeBlogPrefsEnvelope(local, remote)
+  a.deepEqual(merged.prefs?.favorites, ['ba_1', 'ba_2', 'ba_3'])
+})
+
+test('mergeBlogPrefsEnvelope：recent 按 id 取较新 ts 并倒序', () => {
+  const local = mkPrefsEnvelope({ favorites: [], recent: [{ id: 'ba_1', ts: 100 }, { id: 'ba_2', ts: 300 }] })
+  const remote = mkPrefsEnvelope({ favorites: [], recent: [{ id: 'ba_1', ts: 400 }, { id: 'ba_3', ts: 500 }] })
+  const merged = mergeBlogPrefsEnvelope(local, remote)
+  const ids = (merged.prefs?.recent ?? []).map((r: BlogRecentItem) => r.id)
+  a.deepEqual(ids, ['ba_3', 'ba_1', 'ba_2']) // ba_1 取较新 ts=400；整体按 ts 倒序
+  a.equal((merged.prefs?.recent ?? []).find((r: BlogRecentItem) => r.id === 'ba_1')?.ts, 400)
+})
+
+test('mergeBlogPrefsEnvelope：本地为空时合并结果即远端完整内容（不丢数据）', () => {
+  const local = mkPrefsEnvelope(undefined)
+  const remote = mkPrefsEnvelope({ favorites: ['ba_9'], recent: [{ id: 'ba_9', ts: 999 }] })
+  const merged = mergeBlogPrefsEnvelope(local, remote)
+  a.deepEqual(merged.prefs?.favorites, ['ba_9'])
+  a.equal((merged.prefs?.recent ?? []).length, 1)
 })
 
 // ==================== 博客编辑器 Markdown 变换 ====================

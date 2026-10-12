@@ -12,11 +12,17 @@ import { RouterLink } from 'vue-router'
 import { useBlogStore } from '@/stores/blog'
 import { coverBackground } from '@/composables/blogFront'
 import { autoExcerpt, relativeTime } from '@/composables/blogCore'
+import { useBlogFrontPrefs } from '@/composables/blogFrontPrefs'
 import type { BlogArticle } from '@/types'
 
 const props = defineProps<{ article: BlogArticle }>()
 
 const store = useBlogStore()
+const { favorites, toggleFavorite } = useBlogFrontPrefs()
+const isFav = computed(() => favorites.value.includes(props.article.id))
+function onToggleFav(): void {
+  toggleFavorite(props.article.id)
+}
 
 const cover = computed(() => coverBackground(props.article, id => store.imageUrlById.get(id)))
 const excerpt = computed(() =>
@@ -31,28 +37,42 @@ const to = computed(() => `/blog/article/${props.article.slug}`)
 </script>
 
 <template>
-  <RouterLink :to="to" class="bf-card" :data-testid="`blog-card-${article.id}`">
-    <div v-if="cover" class="bf-card-cover" :style="{ background: cover }">
-      <span v-if="article.pinned" class="bf-card-pin">置顶</span>
-    </div>
-    <div class="bf-card-body">
-      <h3 class="bf-card-title">{{ article.title || '（无标题）' }}</h3>
-      <p class="bf-card-excerpt">{{ excerpt }}</p>
-      <div class="bf-card-meta">
-        <span class="bf-card-cat">{{ categoryLabel }}</span>
-        <span class="bf-card-dot">·</span>
-        <span>{{ dateLabel }}</span>
-        <span class="bf-card-dot">·</span>
-        <span>{{ article.readingMinutes }} 分钟阅读</span>
+  <div class="bf-card-wrap" :data-testid="`blog-card-wrap-${article.id}`">
+    <RouterLink :to="to" class="bf-card" :data-testid="`blog-card-${article.id}`">
+      <div v-if="cover" class="bf-card-cover" :style="{ background: cover }">
+        <span v-if="article.pinned" class="bf-card-pin">置顶</span>
       </div>
-      <div v-if="tagLabels.length" class="bf-card-tags">
-        <span v-for="t in tagLabels" :key="t" class="bf-card-tag">#{{ t }}</span>
+      <div class="bf-card-body">
+        <h3 class="bf-card-title">{{ article.title || '（无标题）' }}</h3>
+        <p class="bf-card-excerpt">{{ excerpt }}</p>
+        <div class="bf-card-meta">
+          <span class="bf-card-cat">{{ categoryLabel }}</span>
+          <span class="bf-card-dot">·</span>
+          <span>{{ dateLabel }}</span>
+          <span class="bf-card-dot">·</span>
+          <span>{{ article.readingMinutes }} 分钟阅读</span>
+        </div>
+        <div v-if="tagLabels.length" class="bf-card-tags">
+          <span v-for="t in tagLabels" :key="t" class="bf-card-tag">#{{ t }}</span>
+        </div>
       </div>
-    </div>
-  </RouterLink>
+    </RouterLink>
+    <button
+      type="button"
+      class="bf-card-star"
+      :class="{ 'is-fav': isFav }"
+      :title="isFav ? '取消收藏' : '收藏'"
+      :aria-label="isFav ? '取消收藏' : '收藏'"
+      :data-testid="`blog-card-star-${article.id}`"
+      @click="onToggleFav"
+    >{{ isFav ? '★' : '☆' }}</button>
+  </div>
 </template>
 
 <style scoped>
+.bf-card-wrap {
+  position: relative;
+}
 .bf-card {
   display: flex;
   flex-direction: column;
@@ -67,10 +87,42 @@ const to = computed(() => `/blog/article/${props.article.slug}`)
     box-shadow var(--motion-duration, 220ms) var(--motion-ease, ease),
     border-color var(--motion-duration, 220ms) var(--motion-ease, ease);
 }
-.bf-card:hover {
+.bf-card-wrap:hover .bf-card {
   transform: translateY(-4px);
   box-shadow: var(--shadow-card-hover, 0 8px 20px rgba(0, 0, 0, 0.1));
   border-color: var(--color-primary, #3b82f6);
+}
+
+/* 收藏星标：绝对定位于卡片右上角，作为 RouterLink 的兄弟节点（避免 a 内嵌 button 的非法嵌套） */
+.bf-card-star {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--color-text-muted, #94a3b8);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    transform var(--motion-duration, 220ms) var(--motion-ease, ease),
+    background-color var(--motion-duration, 220ms) var(--motion-ease, ease);
+}
+.bf-card-star:hover {
+  transform: scale(1.12);
+  color: var(--color-warning, #f59e0b);
+}
+.bf-card-star.is-fav {
+  color: var(--color-warning, #f59e0b);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .bf-card-cover {

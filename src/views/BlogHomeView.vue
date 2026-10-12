@@ -12,13 +12,15 @@ import { RouterLink } from 'vue-router'
 import { useBlogStore } from '@/stores/blog'
 import { listPublishedArticles } from '@/composables/blogCore'
 import { useBlogListing } from '@/composables/blogFront'
+import { useBlogFrontPrefs } from '@/composables/blogFrontPrefs'
 import BlogFilterBar from '@/components/blog/front/BlogFilterBar.vue'
 import BlogCard from '@/components/blog/front/BlogCard.vue'
-import type { BlogSort } from '@/types'
+import type { BlogArticle, BlogSort } from '@/types'
 import '@/styles/blog-front.css'
 
 const store = useBlogStore()
 const listing = useBlogListing()
+const { favorites, recent, initBlogFrontPrefs } = useBlogFrontPrefs()
 
 // 各分类 / 标签下的已发布文章数（pill 数量徽标；空分类自动隐藏）。统计基准用已发布全集，
 // 不随当前关键词/分类选择变化，与工具箱「全部 + 各分类数量」同为固定值。
@@ -35,6 +37,19 @@ const tagCounts = computed<Record<string, number>>(() => {
   const m: Record<string, number> = {}
   for (const a of publishedArticles.value) for (const t of a.tagIds) m[t] = (m[t] ?? 0) + 1
   return m
+})
+
+// 收藏 / 最近阅读：仅取已发布文章，保持各自顺序（收藏按收藏顺序，最近阅读按时间倒序）
+const favArticles = computed<BlogArticle[]>(() => {
+  const byId = new Map(publishedArticles.value.map((a) => [a.id, a]))
+  return favorites.value.map((id) => byId.get(id)).filter((a): a is BlogArticle => !!a)
+})
+const recentArticles = computed<BlogArticle[]>(() => {
+  const byId = new Map(publishedArticles.value.map((a) => [a.id, a]))
+  return [...recent.value]
+    .sort((a, b) => b.ts - a.ts)
+    .map((r) => byId.get(r.id))
+    .filter((a): a is BlogArticle => !!a)
 })
 
 // 搜索框用本地 ref 受控：保留输入中的空格，仅在 URL 层做 trim，避免输入时光标跳动
@@ -60,6 +75,7 @@ function onKeyword(value: string): void {
 
 onMounted(async () => {
   if (!store.loaded) await store.loadBlog()
+  await initBlogFrontPrefs()
 })
 </script>
 
@@ -99,6 +115,27 @@ onMounted(async () => {
     <p class="bf-count" data-testid="blog-front-count">
       {{ listing.total }} 篇文章<template v-if="listing.hasFilter">（已筛选）</template>
     </p>
+
+    <!-- 收藏 / 最近阅读：列表上方分区，空时自动隐藏（沿用工具箱 section 风格） -->
+    <section v-if="favArticles.length" class="bf-section" data-testid="blog-front-favorites">
+      <header class="bf-section-head">
+        <h2 class="bf-section-title">★ 我的收藏</h2>
+        <span class="bf-section-sub">{{ favArticles.length }} 篇</span>
+      </header>
+      <div class="bf-grid">
+        <BlogCard v-for="a in favArticles" :key="a.id" :article="a" />
+      </div>
+    </section>
+
+    <section v-if="recentArticles.length" class="bf-section" data-testid="blog-front-recent">
+      <header class="bf-section-head">
+        <h2 class="bf-section-title">🕘 最近阅读</h2>
+        <span class="bf-section-sub">{{ recentArticles.length }} 篇</span>
+      </header>
+      <div class="bf-grid">
+        <BlogCard v-for="a in recentArticles" :key="a.id" :article="a" />
+      </div>
+    </section>
 
     <div v-if="listing.total === 0" class="bf-empty" data-testid="blog-front-empty">
       {{ listing.hasFilter ? '没有符合条件的文章，试试调整筛选条件或清空筛选。' : '这里还没有已发布的文章。' }}

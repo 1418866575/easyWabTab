@@ -17,6 +17,7 @@ const addingChildOf = ref<string | null>(null)
 const editingId = ref<string | null>(null)
 const editingName = ref('')
 const editingDesc = ref('')
+const editingIcon = ref('')
 
 const roots = computed(() =>
   store.categories
@@ -51,6 +52,7 @@ function startEdit(id: string): void {
   editingId.value = id
   editingName.value = target.name
   editingDesc.value = target.description ?? ''
+  editingIcon.value = target.icon ?? ''
 }
 
 async function submitEdit(): Promise<void> {
@@ -61,6 +63,7 @@ async function submitEdit(): Promise<void> {
     return
   }
   await store.updateCategoryDescription(editingId.value, editingDesc.value.trim())
+  await store.updateCategoryIcon(editingId.value, editingIcon.value.trim())
   editingId.value = null
   toastAlert('分类已更新', 'success')
 }
@@ -116,6 +119,7 @@ async function handleMove(id: string, delta: number): Promise<void> {
     <ul v-else class="bc-list">
       <li v-for="root in roots" :key="root.id" class="bc-item">
         <div class="bc-row">
+          <span v-if="root.icon" class="bc-icon" aria-hidden="true">{{ root.icon }}</span>
           <span class="bc-name">{{ root.name }}</span>
           <code class="bc-slug">/{{ root.slug }}</code>
           <span class="bc-count" :title="`${countOf(root.id)} 篇文章`">{{ countOf(root.id) }} 篇</span>
@@ -131,6 +135,7 @@ async function handleMove(id: string, delta: number): Promise<void> {
         <p v-if="root.description && editingId !== root.id" class="bc-desc">{{ root.description }}</p>
 
         <div v-if="editingId === root.id" class="bc-edit">
+          <el-input v-model="editingIcon" size="small" maxlength="4" class="bc-icon-input" placeholder="图标" />
           <el-input v-model="editingName" size="small" maxlength="30" placeholder="分类名称" />
           <el-input v-model="editingDesc" size="small" placeholder="描述（可选）" />
           <div class="bc-edit-ops">
@@ -153,6 +158,7 @@ async function handleMove(id: string, delta: number): Promise<void> {
 
         <ul v-if="childrenOf(root.id).length" class="bc-children">
           <li v-for="child in childrenOf(root.id)" :key="child.id" class="bc-row is-child">
+            <span v-if="child.icon" class="bc-icon" aria-hidden="true">{{ child.icon }}</span>
             <span class="bc-name">{{ child.name }}</span>
             <code class="bc-slug">/{{ child.slug }}</code>
             <span class="bc-count">{{ countOf(child.id) }} 篇</span>
@@ -213,6 +219,10 @@ async function handleMove(id: string, delta: number): Promise<void> {
 }
 
 .bc-name { color: var(--color-text, #0f172a); font-size: var(--font-size-sm, 14px); font-weight: var(--font-weight-medium, 500); }
+
+/* 分类图标（emoji）：列表内联展示 + 编辑框窄宽度 */
+.bc-icon { font-size: var(--font-size-sm, 14px); line-height: 1; }
+.bc-edit :deep(.el-input.bc-icon-input) { max-width: 90px; }
 
 .bc-slug { color: var(--color-text-muted, #94a3b8); font-size: var(--font-size-xs, 11px); }
 

@@ -1,7 +1,7 @@
 ﻿/**
  * 云同步 composable（WebDAV + v10 多文件同步信封）
  *
- * 多份独立信封：nav.json / icons.json / workbench.json / business.json / student.json / teacher.json / toolbox.json / smart.json / blog.json
+ * 多份独立信封：nav.json / icons.json / workbench.json / business.json / student.json / teacher.json / toolbox.json / smart.json / blog.json / blog-prefs.json
  *   - nav.json：导航偏好（存 IDB nav store；user-sites/categories/engines/theme/background 等）
  *   - icons.json：自定义图标（localStorage user-custom-icons）
  *   - workbench.json：工作台核心 9 store（不含 business；settings 不含 cloudSync* 5 字段）
@@ -12,6 +12,8 @@
  *   - smart.json：智能工作台（技能 / 提示词 / 菜单配置 / 技能分类，SMART_PREFS_KEYS 四个键）
  *   - blog.json：博客独立信封（BlogData 单对象：settings / categories / tags / articles）
  *     存 IDB blog store（DB v22）；文章含 Markdown 正文，草稿一并同步（按 updatedAt 较新者胜）
+ *   - blog-prefs.json：博客前台偏好（收藏 / 最近阅读，本机浏览轨迹），存 IDB nav store（BLOG_PREFS_NAV_KEY）
+ *     随博客信封之外独立同步，避免被后台数据合并整体覆盖
  *
  * 单例设计：模块级 ref 持有全局状态（参考 useCountdownReminder / useToast 的单例模式）
  * 触发器：
@@ -49,7 +51,11 @@ import {
   exportSmart,
   importSmartData,
   exportBlog,
-  importBlogData
+  importBlogData,
+  exportBlogPrefs,
+  importBlogPrefsData,
+  idbGetKey,
+  BLOG_PREFS_NAV_KEY
 } from './useIdb'
 import { useNavPrefs } from './useNavPrefs'
 import { useAppSettingsStore } from '../stores/settings'
@@ -58,10 +64,11 @@ import { getStoredSaltHex, getStoredVerification } from './useCrypto'
 import { mergeFamily } from './genealogyCore'
 import { mergeBusinessStore } from './businessCore'
 import { mergeLedgerStore } from './ledgerCore'
-import { mergeBlogEnvelope } from './blogSyncCore'
+import { mergeBlogEnvelope, mergeBlogPrefsEnvelope } from './blogSyncCore'
 import type {
   BusinessSyncData,
   BlogSyncData,
+  BlogFrontSyncData,
   Countdown,
   DiaryData,
   HealthData,
@@ -447,6 +454,7 @@ function sigStudent(data: StudentSyncData): string { return envelopeSignature(da
 function sigTeacher(data: TeacherSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
 function sigSmart(data: SmartSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
 function sigBlog(data: BlogSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
+function sigBlogPrefs(data: BlogFrontSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
 
 /**
  * 计算本地与远程的总差异量（Σ|local_len - remote_len|）。
@@ -1290,6 +1298,22 @@ async function reloadBlogStores(): Promise<void> {
   }
 }
 
+/**
+ * 博客前台偏好（收藏 / 最近阅读）拉取后，把 nav store 内的最新值灌进单例 ref。
+ * 偏好是「本机浏览轨迹」，走 blogFrontPrefs 单例而非 Pinia store，故此处直接读 IDB 后 apply。
+ */
+async function reloadBlogPrefsStores(): Promise<void> {
+  try {
+    const raw = await idbGetKey<string>('nav', BLOG_PREFS_NAV_KEY)
+    if (typeof raw !== 'string') return
+    const parsed = JSON.parse(raw) as Partial<BlogFrontSyncData>
+    const { applyBlogFrontPrefs } = await import('./blogFrontPrefs')
+    applyBlogFrontPrefs(parsed.prefs ?? {})
+  } catch {
+    // store / 解析失败 → 静默跳过，下次进入博客前台时由 initBlogFrontPrefs 自然从 IDB 读取
+  }
+}
+
 async function reloadAllStores(): Promise<void> {
   await Promise.all([
     reloadWorkbenchStores(),
@@ -1299,7 +1323,8 @@ async function reloadAllStores(): Promise<void> {
     reloadSmartStores(),
     reloadNavStores(),
     reloadIconsStores(),
-    reloadBlogStores()
+    reloadBlogStores(),
+    reloadBlogPrefsStores()
   ])
 }
 
@@ -1413,6 +1438,17 @@ const FILE_CONFIGS: FileConfig[] = [
     signature: (data) => sigBlog(data as BlogSyncData),
     merge: (l, r) => mergeBlogEnvelope(l as BlogSyncData, r as BlogSyncData),
     reload: reloadBlogStores,
+    diffSize: (l, r) => totalDiffSize(l, r)
+  },
+  {
+    // 博客前台偏好：收藏 / 最近阅读（阅读者本机浏览轨迹），独立信封 blog-prefs.json
+    // 合并策略：favorites 取两边并集（保留本地顺序 + 远端独有）；recent 按 id 取较新 ts、倒序截断
+    name: 'blog-prefs.json',
+    exportLocal: () => exportBlogPrefs(),
+    importRemote: async (data) => { await importBlogPrefsData(data as BlogFrontSyncData); return undefined },
+    signature: (data) => sigBlogPrefs(data as BlogFrontSyncData),
+    merge: (l, r) => mergeBlogPrefsEnvelope(l as BlogFrontSyncData, r as BlogFrontSyncData),
+    reload: reloadBlogPrefsStores,
     diffSize: (l, r) => totalDiffSize(l, r)
   }
 ]

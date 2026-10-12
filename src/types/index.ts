@@ -1688,6 +1688,7 @@ export interface BlogCategory {
   slug: string
   parentId?: string         // 最多两级
   description?: string
+  icon?: string             // 可选 emoji 图标（前台分类 pill 展示；缺省回落默认图标）
   order: number
   createdAt: string
   updatedAt: string
@@ -1752,3 +1753,27 @@ export interface BlogSyncData {
   pushedAt?: number
   blog?: BlogData
 }
+
+/** 博客前台「最近阅读」条目（阅读者本机浏览轨迹） */
+export interface BlogRecentItem {
+  id: string   // 文章 id（'ba_' 前缀）
+  ts: number   // 最近一次阅读时间戳（ms）
+}
+
+/** 博客前台本机偏好：收藏 + 最近阅读（走独立信封 blog-prefs.json 云同步） */
+export interface BlogFrontPrefs {
+  favorites: string[]        // 已收藏文章 id（去重，顺序即收藏顺序）
+  recent: BlogRecentItem[]   // 最近阅读（按时间倒序，上限见 BLOG_RECENT_LIMIT）
+}
+
+/** 博客前台偏好同步信封（blog-prefs.json），形态对齐 BlogSyncData */
+export interface BlogFrontSyncData {
+  version: 1
+  exportedAt: string
+  clientId?: string
+  pushedAt?: number
+  prefs?: BlogFrontPrefs
+}
+
+/** 博客前台「最近阅读」保留上限（超出截断，仅保留最近 N 篇） */
+export const BLOG_RECENT_LIMIT = 20

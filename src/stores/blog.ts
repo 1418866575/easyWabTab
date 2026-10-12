@@ -344,6 +344,14 @@ export const useBlogStore = defineStore('blog', () => {
     await saveBlog()
   }
 
+  /** 更新分类图标（emoji；空串即清除，前台回落默认图标） */
+  async function updateCategoryIcon(id: string, icon: string): Promise<void> {
+    const index = categories.value.findIndex(c => c.id === id)
+    if (index === -1) return
+    categories.value[index] = { ...categories.value[index], icon: icon || undefined, updatedAt: nowIso() }
+    await saveBlog()
+  }
+
   /**
    * 删除分类：文章**绝不级联删除**，一律转为未分类；
    * 子分类自动提升为顶级（符合需求文档 UC-M-06 E2）。
@@ -596,6 +604,7 @@ export const useBlogStore = defineStore('blog', () => {
     addCategory,
     renameCategory,
     updateCategoryDescription,
+    updateCategoryIcon,
     removeCategory,
     moveCategory,
     // 标签

@@ -17,12 +17,14 @@ import { coverBackground } from '@/composables/blogFront'
 import { listPublishedArticles, formatDateTime, relativeTime } from '@/composables/blogCore'
 import { resolveImageRefs } from '@/composables/blogImages'
 import { renderMarkdown } from '@/composables/noteMarkdown'
+import { useBlogFrontPrefs } from '@/composables/blogFrontPrefs'
 import type { BlogArticle } from '@/types'
 import '@/styles/blog-front.css'
 import '@/styles/markdown.css'
 
 const route = useRoute()
 const store = useBlogStore()
+const { pushRecent, initBlogFrontPrefs } = useBlogFrontPrefs()
 
 const slug = computed(() => String(route.params.slug ?? ''))
 const article = computed<BlogArticle | undefined>(() => (slug.value ? store.findBySlug(slug.value) : undefined))
@@ -60,6 +62,9 @@ const related = computed<BlogArticle[]>(() => {
 
 onMounted(async () => {
   if (!store.loaded) await store.loadBlog()
+  await initBlogFrontPrefs()
+  // 进入已发布文章详情即记为一次「最近阅读」（失焦/卸载时由 flushBlogFrontPrefs 兜底落盘）
+  if (visible.value && article.value) pushRecent(article.value.id)
 })
 </script>
 

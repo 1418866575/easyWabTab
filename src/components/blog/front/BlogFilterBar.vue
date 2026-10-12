@@ -48,8 +48,8 @@ const visibleTags = computed(() =>
 <template>
   <div class="bf-filter">
     <div class="bf-filter-top">
-      <div class="bf-search">
-        <Icon name="search" :size="14" class="bf-search-icon" />
+      <div class="bf-search" role="search">
+        <Icon name="search" :size="16" class="bf-search-icon" />
         <input
           class="bf-search-input"
           type="search"
@@ -58,6 +58,15 @@ const visibleTags = computed(() =>
           data-testid="blog-front-search"
           @input="emit('update:keyword', ($event.target as HTMLInputElement).value)"
         />
+        <button
+          v-if="keyword"
+          type="button"
+          class="bf-search-clear"
+          data-testid="blog-front-search-clear"
+          title="清空搜索"
+          aria-label="清空搜索"
+          @click="emit('update:keyword', '')"
+        >✕</button>
       </div>
       <select
         class="bf-select"
@@ -98,7 +107,7 @@ const visibleTags = computed(() =>
         :data-testid="`blog-front-cat-${c.id}`"
         @click="emit('select-category', c.id)"
       >
-        {{ c.name }}<span class="bf-chip-cnt">{{ categoryCounts[c.id] }}</span>
+        <span class="bf-chip-ico" aria-hidden="true">{{ c.icon || '📁' }}</span>{{ c.name }}<span class="bf-chip-cnt">{{ categoryCounts[c.id] }}</span>
       </button>
     </div>
 
@@ -145,32 +154,58 @@ const visibleTags = computed(() =>
   flex-wrap: wrap;
 }
 
+/* 搜索框：对齐工具箱 .tb-search —— 圆角卡片 + 聚焦主色描边 + 外发光，输入框无边框 */
 .bf-search {
-  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   flex: 1 1 240px;
   min-width: 180px;
+  padding: 8px 12px;
+  background-color: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.06));
+  transition: border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    box-shadow var(--motion-duration, 220ms) var(--motion-ease, ease);
+}
+.bf-search:focus-within {
+  border-color: var(--color-primary, #3b82f6);
+  box-shadow: 0 0 0 3px var(--color-primary-soft, rgba(59, 130, 246, 0.16));
 }
 .bf-search-icon {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
+  flex: none;
   color: var(--color-text-muted, #94a3b8);
   pointer-events: none;
 }
 .bf-search-input {
-  width: 100%;
-  height: 34px;
-  padding: 0 10px 0 32px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  background-color: var(--color-bg-input, #ffffff);
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
   color: var(--color-text, #0f172a);
   font-size: var(--font-size-sm, 13px);
+  height: 22px;
+  font-family: inherit;
 }
-.bf-search-input:focus {
-  outline: none;
-  border-color: var(--color-primary, #3b82f6);
+.bf-search-input::placeholder { color: var(--color-text-muted, #94a3b8); }
+.bf-search-clear {
+  flex: none;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted, #94a3b8);
+  font-size: 15px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 6px;
+  min-height: 26px;
+  cursor: pointer;
+  transition: color var(--motion-duration, 220ms), background-color var(--motion-duration, 220ms);
+}
+.bf-search-clear:hover {
+  color: var(--color-primary, #3b82f6);
+  background: var(--color-bg-hover, rgba(0, 0, 0, 0.04));
 }
 
 .bf-select {
@@ -227,6 +262,12 @@ const visibleTags = computed(() =>
 .bf-chip.is-active:hover {
   border-color: var(--color-primary, #3b82f6);
   color: #fff;
+}
+/* 分类 emoji 图标（缺省回落 📁） */
+.bf-chip-ico {
+  margin-right: 4px;
+  font-size: var(--font-size-xs, 12px);
+  line-height: 1;
 }
 /* 数量徽标：对齐工具箱 .tb-cat-cnt */
 .bf-chip-cnt {

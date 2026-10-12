@@ -7,7 +7,7 @@
  * 所有请求失败均 reject，由调用方自行 try/catch 降级（不做 localStorage 回退写）
  */
 import { WORKBENCH_DATA_VERSION, emptyAppSettingsData } from '../types'
-import type { AppSettingsData, AppSettingsDataNoCloudSync, BlogData, BlogSyncData, BusinessData, BusinessStoreData, BusinessSyncData, Countdown, DiaryData, GenealogyData, HealthData, IconsSyncData, LedgerData, LedgerStoreData, NavSyncData, NoteData, SmartSyncData, StudentSyncData, TeacherSyncData, WorkbenchData, WorkbenchSyncData, WorkbenchTodo } from '../types'
+import type { AppSettingsData, AppSettingsDataNoCloudSync, BlogData, BlogSyncData, BlogFrontPrefs, BlogFrontSyncData, BusinessData, BusinessStoreData, BusinessSyncData, Countdown, DiaryData, GenealogyData, HealthData, IconsSyncData, LedgerData, LedgerStoreData, NavSyncData, NoteData, SmartSyncData, StudentSyncData, TeacherSyncData, WorkbenchData, WorkbenchSyncData, WorkbenchTodo } from '../types'
 import { adoptPasswordIdentity, getStoredSaltHex, getStoredVerification } from './useCrypto'
 import { normalizeBusinessStore } from './businessCore.ts'
 import { emptyDiaryData } from './diaryCore'
@@ -19,7 +19,7 @@ import { emptyNoteData, normalizeNoteData } from './noteCore'
 import { emptyPomodoroData } from './pomodoroCore'
 import { normalizeTeacherData } from './teacherCore'
 import { normalizeBlogData } from './blogCore'
-import { mergeBlogEnvelope } from './blogSyncCore'
+import { mergeBlogEnvelope, mergeBlogPrefsEnvelope, normalizeBlogFrontPrefs } from './blogSyncCore'
 import { isSuspectedRemoteWipe, isNavWipeOverrideActive } from './navDataGuard'
 
 export const DB_NAME = 'easy-web-tab'
@@ -306,6 +306,9 @@ export const ICON_CACHE_KEY = 'icon-cache'
  * 与导航数据的键空间混淆。故给它一个语义明确的专属键。
  */
 export const TOOLBOX_NAV_KEY = 'toolbox-prefs'
+
+/** 博客前台偏好（收藏 / 最近阅读）在 nav store 内的专属键（v22 引入，独立信封 blog-prefs.json 云同步） */
+export const BLOG_PREFS_NAV_KEY = 'blog-prefs'
 
 /** 导航键中属于云同步信封的子集（WORKBENCH_PREFS_KEYS 的导航部分，共 10 键），用于 nav.json / workbench.json 打包 */
 export const NAV_SYNC_KEYS = [
@@ -930,4 +933,42 @@ export async function importBlogData(remote: BlogSyncData): Promise<void> {
   const localEnv: BlogSyncData = { version: 1, exportedAt: new Date().toISOString(), blog: normalizeBlogData(local) }
   const merged = mergeBlogEnvelope(localEnv, remote)
   await idbPut('blog', merged.blog)
+}
+
+// ---------- blog-prefs.json（v22 新增：博客前台本机偏好，独立信封，形态对齐 blog.json） ----------
+
+export async function exportBlogPrefs(): Promise<BlogFrontSyncData> {
+  let prefs: BlogFrontPrefs | undefined
+  try {
+    const raw = await idbGetKey<string>('nav', BLOG_PREFS_NAV_KEY)
+    if (typeof raw === 'string') {
+      const parsed = JSON.parse(raw) as Partial<BlogFrontSyncData>
+      prefs = normalizeBlogFrontPrefs(parsed.prefs)
+    }
+  } catch {
+    // 脏数据 / 不可读 → 视为无偏好，下方导出 prefs 缺省
+  }
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    prefs
+  }
+}
+
+/**
+ * 把远端 blog-prefs 信封写回本地（nav store 内 BLOG_PREFS_NAV_KEY）。
+ * 与 blog.json 一致走合并语义：favorites 取并集、recent 按 id 取较新 ts，避免单设备清空另一侧数据。
+ * 首次同步（本地为空）时合并结果仍是远端完整内容，不会丢数据。
+ */
+export async function importBlogPrefsData(remote: BlogFrontSyncData): Promise<void> {
+  if (!remote) return
+  let local: BlogFrontSyncData = { version: 1, exportedAt: new Date().toISOString() }
+  try {
+    const raw = await idbGetKey<string>('nav', BLOG_PREFS_NAV_KEY)
+    if (typeof raw === 'string') local = JSON.parse(raw) as BlogFrontSyncData
+  } catch {
+    // 同上：脏数据 → 以空为底
+  }
+  const merged = mergeBlogPrefsEnvelope(local, remote)
+  await idbPutKey('nav', BLOG_PREFS_NAV_KEY, JSON.stringify(merged.prefs ?? { favorites: [], recent: [] }))
 }

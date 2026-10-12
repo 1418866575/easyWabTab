@@ -229,6 +229,7 @@ export function normalizeCategory(raw: unknown, index = 0, when = nowIso()): Blo
     slug: slugify(str(src.slug) || name) || `category-${index + 1}`,
     parentId: typeof src.parentId === 'string' ? src.parentId : undefined,
     description: typeof src.description === 'string' ? src.description : undefined,
+    icon: typeof src.icon === 'string' && src.icon ? src.icon : undefined,
     order: clampNumber(src.order, 0, Number.MAX_SAFE_INTEGER, index),
     createdAt: str(src.createdAt, when),
     updatedAt: str(src.updatedAt, str(src.createdAt, when))
