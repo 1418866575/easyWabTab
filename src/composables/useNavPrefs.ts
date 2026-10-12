@@ -446,7 +446,7 @@ export async function refreshAfterImport(): Promise<void> {
     return
   }
   // settings store 改为静态导入：它已被 20+ 处组件静态引入（如 AppSettingsDialog / AppWatermark /
-  // WorkbenchManagePanel），动态 import 无法把它移出主 chunk，只会触发
+  // WorkbenchSwitcher），动态 import 无法把它移出主 chunk，只会触发
   // INEFFECTIVE_DYNAMIC_IMPORT 警告并让 chunk 划分变得混乱。
   const [{ useSitesStore }, { useThemeStore }] = await Promise.all([
     import('@/stores/sites'),

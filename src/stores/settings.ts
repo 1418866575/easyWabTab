@@ -114,6 +114,9 @@ const CLOUD_SYNC_LS_KEY = 'ewt-cloud-sync'
 const SITE_TITLE_KEY = 'site-title'
 const SITE_FAVICON_KEY = 'site-favicon'
 
+// 「工作台」→「个人工作台」一次性改名标记：首次加载时清空旧名称，让新默认名生效（只跑一次）
+const WORKBENCH_PAGE_RENAMED_KEY = 'settings-workbench-page-renamed-v1'
+
 // 全部弹窗 id（全量契约遍历来源）
 const DIALOG_IDS: DialogId[] = [
   'site',
@@ -717,6 +720,16 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       scrollbarMode.value =
         effective.scrollbarMode === 'ghost' || effective.scrollbarMode === 'hidden' ? effective.scrollbarMode : 'auto'
       workbenchPageName.value = typeof effective.workbenchPageName === 'string' ? effective.workbenchPageName.trim() : ''
+      // 一次性迁移：「工作台」更名为「个人工作台」（与设置左侧分组名统一）。
+      // 首次加载清空旧名称（旧默认名 / 用户旧自定义名），让新默认名生效；只跑一次，
+      // 之后用户新输入的名称永久保留（不会再次被清空）。
+      if (getPref(WORKBENCH_PAGE_RENAMED_KEY) !== '1') {
+        if (workbenchPageName.value !== '') {
+          workbenchPageName.value = ''
+          persist()
+        }
+        setPref(WORKBENCH_PAGE_RENAMED_KEY, '1')
+      }
       // 工作台默认关闭：只有明确存过 true 才显示（undefined / false 一律视为关闭）
       workbenchPageVisible.value = effective.workbenchPageVisible === true
       businessPageName.value = typeof effective.businessPageName === 'string' ? effective.businessPageName.trim() : ''
@@ -1146,7 +1159,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const toolboxButtonShown = computed(() => toolboxButtonVisible.value !== false)
 
   // 页面显示名 computed
-  const workbenchPageDisplayName = computed(() => workbenchPageName.value || '工作台')
+  const workbenchPageDisplayName = computed(() => workbenchPageName.value || '个人工作台')
   const businessPageDisplayName = computed(() => businessPageName.value || '销售记账')
   const studentPageDisplayName = computed(() => studentPageName.value || '学生工作台')
   const teacherPageDisplayName = computed(() => teacherPageName.value || '教师工作台')

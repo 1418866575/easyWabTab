@@ -4,7 +4,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { useAppSettingsStore } from '@/stores/settings'
-import WorkbenchManagePanel from '@/components/WorkbenchManagePanel.vue'
+import WorkbenchSwitcher from '@/components/WorkbenchSwitcher.vue'
 import BusinessHome from '@/components/business/BusinessHome.vue'
 import BusinessProducts from '@/components/business/BusinessProducts.vue'
 import BusinessPurchases from '@/components/business/BusinessPurchases.vue'
@@ -346,8 +346,8 @@ onMounted(async () => {
          菜单名（页面标题）已按需求移除：底栏当前项已有主色指示条 + 高亮，标题属重复信息。 -->
     <header class="bs-header" :class="{ 'is-mobile': isMobileNav }">
       <div class="bs-header-left">
-        <!-- 左上角「工作台管理」同款入口：站点图标 + 点击弹出工作台切换面板（替换原 PageSwitcher 下拉，与导航站行为一致） -->
-        <WorkbenchManagePanel
+        <!-- 左上角「工作台切换」命令面板入口：站点图标 + 点击弹出切换面板（Alt+W 唤起，与导航站一致） -->
+        <WorkbenchSwitcher
           :trigger-icon="settingsStore.businessPageIcon"
           trigger-builtin="store"
           :trigger-label="settingsStore.businessPageDisplayName"
@@ -924,7 +924,7 @@ html.dark .bs-stall-name {
 
   /* 工作台图标是固定尺寸的入口，不参与压缩 —— 否则长账本名会把它压扁。
      子组件根元素能继承父组件 scoped 样式，故直接用合并选择器。 */
-  .bs-header-left :deep(.wmp-root) {
+  .bs-header-left :deep(.ws-root) {
     flex-shrink: 0;
   }
 

@@ -8,7 +8,6 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
-import Icon from '@/components/Icon.vue'
 import { useAppSettingsStore } from '../../stores/settings'
 import ToolboxSearchBar from '../components/ToolboxSearchBar.vue'
 import ToolboxRecentBar from '../components/ToolboxRecentBar.vue'
@@ -18,6 +17,7 @@ import ToolboxSection from '../components/ToolboxSection.vue'
 import ToolboxEmpty from '../components/ToolboxEmpty.vue'
 import ToolboxSyncButton from '../components/ToolboxSyncButton.vue'
 import ToolboxToolPanel from '../components/ToolboxToolPanel.vue'
+import WorkbenchSwitcher from '@/components/WorkbenchSwitcher.vue'
 import { TOOLBOX_TOOLS, getToolEntry } from '../registry'
 import { filterTools } from '../core/search'
 import { sortByClicks } from '../core/rank'
@@ -121,27 +121,19 @@ function resetFilters() {
   keyword.value = ''
   category.value = ''
 }
-
-function goBack() {
-  router.push('/')
-}
 </script>
 
 <template>
   <div class="tb-page">
-    <!-- 顶栏：返回导航站入口（图标 + 名称） -->
+    <!-- 顶栏：工作台切换命令面板入口。原「返回导航站」按钮已并入面板（面板内含导航站及全部工作台），
+         全站 6 个视图共用同一入口；Alt+W 唤起，触发器显示工具箱自身图标与名称 -->
     <header class="tb-topbar">
-      <button
-        type="button"
-        class="tb-back"
-        data-testid="tb-back-btn"
-        title="返回导航站"
-        aria-label="返回导航站"
-        @click="goBack"
-      >
-        <Icon name="grid" :size="16" />
-        <span>导航站</span>
-      </button>
+      <WorkbenchSwitcher
+        :trigger-icon="settingsStore.toolboxButtonIcon"
+        trigger-builtin="toolbox"
+        :trigger-label="settingsStore.toolboxButtonDisplayName"
+        force-show
+      />
 
       <!-- 最近使用常驻快捷条（顶栏吸顶，随时可触发；Alt+R 唤起） -->
       <ToolboxRecentBar :on-open="openTool" />
@@ -273,27 +265,6 @@ function goBack() {
   margin-left: 10px;
   flex: none;
 }
-.tb-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 36px;
-  padding: 8px 12px;
-  font-size: 13px;
-  font-family: var(--font-family);
-  color: var(--color-text-secondary);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  transition: color var(--motion-duration) var(--motion-ease),
-    background-color var(--motion-duration) var(--motion-ease),
-    border-color var(--motion-duration) var(--motion-ease);
-}
-.tb-back:hover {
-  color: var(--color-primary);
-  background: var(--color-bg-hover);
-  border-color: var(--color-border);
-}
 
 .tb-main { padding-bottom: 96px; }
 
@@ -364,7 +335,7 @@ function goBack() {
   .tb-grid { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .tb-back { transition: none; }
+  .tb-topbar button { transition: none; }
 }
 </style>
 
