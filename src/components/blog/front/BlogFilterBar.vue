@@ -4,7 +4,9 @@
  *
  * 受控组件：所有状态由父级（BlogHomeView via useBlogListing）持有，本组件只渲染 + 回传事件。
  * 提供：搜索框、分类 chips、标签 chips、排序下拉、清空筛选。
- * 分类/标签可能较多 → chips 容器横向滚动，不挤压布局。
+ *
+ * 视觉对齐工具箱（ToolboxView）：搜索框单行居中（最大 720px）+ 分类 pill 自动换行 +
+ * 选中实心主色；排序/清空作为右对齐的次级操作行，不打断「搜索 → 分类」的竖排节奏。
  */
 import { computed } from 'vue'
 import Icon from '@/components/Icon.vue'
@@ -47,9 +49,10 @@ const visibleTags = computed(() =>
 
 <template>
   <div class="bf-filter">
-    <div class="bf-filter-top">
+    <!-- 搜索框：单行居中，最大 720px（对齐工具箱 .tb-search-wrap） -->
+    <div class="bf-search-wrap">
       <div class="bf-search" role="search">
-        <Icon name="search" :size="16" class="bf-search-icon" />
+        <Icon name="search" :size="18" class="bf-search-icon" />
         <input
           class="bf-search-input"
           type="search"
@@ -68,6 +71,67 @@ const visibleTags = computed(() =>
           @click="emit('update:keyword', '')"
         >✕</button>
       </div>
+    </div>
+
+    <!-- 分类 chips：自动换行（对齐工具箱 .tb-cats，不再横向滚动） -->
+    <div v-if="visibleCategories.length" class="bf-chips" role="group" aria-label="按分类筛选">
+      <button
+        type="button"
+        class="bf-chip"
+        :class="{ 'is-active': activeCategory === '' }"
+        data-testid="blog-front-cat-all"
+        @click="emit('select-category', '')"
+      >
+        <span class="bf-chip-ico" aria-hidden="true">🗂️</span>
+        <span class="bf-chip-name">全部分类</span>
+        <span class="bf-chip-cnt">{{ totalCount }}</span>
+      </button>
+      <button
+        v-for="c in visibleCategories"
+        :key="c.id"
+        type="button"
+        class="bf-chip"
+        :class="{ 'is-active': activeCategory === c.id }"
+        :data-testid="`blog-front-cat-${c.id}`"
+        @click="emit('select-category', c.id)"
+      >
+        <span class="bf-chip-ico" aria-hidden="true">{{ c.icon || '📁' }}</span>
+        <span class="bf-chip-name">{{ c.name }}</span>
+        <span class="bf-chip-cnt">{{ categoryCounts[c.id] }}</span>
+      </button>
+    </div>
+
+    <!-- 标签 chips -->
+    <div v-if="visibleTags.length" class="bf-chips" role="group" aria-label="按标签筛选">
+      <button
+        type="button"
+        class="bf-chip bf-chip--tag"
+        :class="{ 'is-active': activeTag === '' }"
+        data-testid="blog-front-tag-all"
+        @click="emit('select-tag', '')"
+      >
+        <span class="bf-chip-ico" aria-hidden="true">🏷️</span>
+        <span class="bf-chip-name">全部标签</span>
+        <span class="bf-chip-cnt">{{ visibleTags.length }}</span>
+      </button>
+      <button
+        v-for="t in visibleTags"
+        :key="t.id"
+        type="button"
+        class="bf-chip bf-chip--tag"
+        :class="{ 'is-active': activeTag === t.id }"
+        :data-testid="`blog-front-tag-${t.id}`"
+        @click="emit('select-tag', t.id)"
+      >
+        <span class="bf-chip-ico" aria-hidden="true">#</span>
+        <span class="bf-chip-name">{{ t.name }}</span>
+        <span class="bf-chip-cnt">{{ tagCounts[t.id] }}</span>
+      </button>
+    </div>
+
+    <!-- 排序 / 清空筛选：右对齐的次级操作行 -->
+    <div class="bf-filter-meta">
+      <span class="bf-meta-label">排序</span>
       <select
         class="bf-select"
         :value="sort"
@@ -87,71 +151,22 @@ const visibleTags = computed(() =>
         清空筛选
       </button>
     </div>
-
-    <div v-if="visibleCategories.length" class="bf-chips" role="group" aria-label="按分类筛选">
-      <button
-        type="button"
-        class="bf-chip"
-        :class="{ 'is-active': activeCategory === '' }"
-        data-testid="blog-front-cat-all"
-        @click="emit('select-category', '')"
-      >
-        全部分类<span class="bf-chip-cnt">{{ totalCount }}</span>
-      </button>
-      <button
-        v-for="c in visibleCategories"
-        :key="c.id"
-        type="button"
-        class="bf-chip"
-        :class="{ 'is-active': activeCategory === c.id }"
-        :data-testid="`blog-front-cat-${c.id}`"
-        @click="emit('select-category', c.id)"
-      >
-        <span class="bf-chip-ico" aria-hidden="true">{{ c.icon || '📁' }}</span>{{ c.name }}<span class="bf-chip-cnt">{{ categoryCounts[c.id] }}</span>
-      </button>
-    </div>
-
-    <div v-if="visibleTags.length" class="bf-chips" role="group" aria-label="按标签筛选">
-      <button
-        type="button"
-        class="bf-chip bf-chip--tag"
-        :class="{ 'is-active': activeTag === '' }"
-        data-testid="blog-front-tag-all"
-        @click="emit('select-tag', '')"
-      >
-        全部标签<span class="bf-chip-cnt">{{ visibleTags.length }}</span>
-      </button>
-      <button
-        v-for="t in visibleTags"
-        :key="t.id"
-        type="button"
-        class="bf-chip bf-chip--tag"
-        :class="{ 'is-active': activeTag === t.id }"
-        :data-testid="`blog-front-tag-${t.id}`"
-        @click="emit('select-tag', t.id)"
-      >
-        #{{ t.name }}<span class="bf-chip-cnt">{{ tagCounts[t.id] }}</span>
-      </button>
-    </div>
   </div>
 </template>
 
 <style scoped>
+/* 外层不再自绘卡片：搜索框 / 分类 pill 直接落在页面底色上（对齐工具箱首页观感） */
 .bf-filter {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-lg, 12px);
-  background-color: var(--color-bg-card, #ffffff);
+  gap: 12px;
 }
 
-.bf-filter-top {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+/* 搜索行：水平居中 + 上限宽，宽屏不铺满、窄屏自适应 */
+.bf-search-wrap {
+  width: 100%;
+  max-width: 720px;
+  margin-inline: auto;
 }
 
 /* 搜索框：对齐工具箱 .tb-search —— 圆角卡片 + 聚焦主色描边 + 外发光，输入框无边框 */
@@ -159,9 +174,8 @@ const visibleTags = computed(() =>
   display: flex;
   align-items: center;
   gap: 10px;
-  flex: 1 1 240px;
-  min-width: 180px;
-  padding: 8px 12px;
+  width: 100%;
+  padding: 10px 14px;
   background-color: var(--color-bg-card, #ffffff);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-lg, 12px);
@@ -185,8 +199,7 @@ const visibleTags = computed(() =>
   outline: none;
   background: transparent;
   color: var(--color-text, #0f172a);
-  font-size: var(--font-size-sm, 13px);
-  height: 22px;
+  font-size: var(--font-size-base, 15px);
   font-family: inherit;
 }
 .bf-search-input::placeholder { color: var(--color-text-muted, #94a3b8); }
@@ -195,11 +208,11 @@ const visibleTags = computed(() =>
   border: none;
   background: transparent;
   color: var(--color-text-muted, #94a3b8);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1;
   padding: 2px 6px;
   border-radius: 6px;
-  min-height: 26px;
+  min-height: 28px;
   cursor: pointer;
   transition: color var(--motion-duration, 220ms), background-color var(--motion-duration, 220ms);
 }
@@ -208,6 +221,60 @@ const visibleTags = computed(() =>
   background: var(--color-bg-hover, rgba(0, 0, 0, 0.04));
 }
 
+/* 分类 / 标签 chips：自动换行（对齐工具箱 .tb-cats） */
+.bf-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* pill：对齐工具箱 .tb-cat —— 图标 + 名称 + 数量徽标，选中为实心主色填充 */
+.bf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 7px 14px;
+  border-radius: var(--radius-full, 999px);
+  border: 1px solid var(--color-border, #e2e8f0);
+  background-color: var(--color-bg-card, #ffffff);
+  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-sm, 13px);
+  font-weight: var(--font-weight-medium, 500);
+  font-family: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--motion-duration, 220ms), border-color var(--motion-duration, 220ms),
+    background-color var(--motion-duration, 220ms);
+}
+.bf-chip:hover {
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
+}
+/* 选中态：对齐工具箱分类 pill —— 实心主色填充 + 白字 */
+.bf-chip.is-active {
+  background-color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
+  color: #fff;
+}
+.bf-chip.is-active:hover { color: #fff; }
+/* 分类 emoji / 标签 # 前缀：间距交给父级 gap，不再单独加 margin */
+.bf-chip-ico { line-height: 1; }
+/* 数量徽标：对齐工具箱 .tb-cat-cnt */
+.bf-chip-cnt { font-size: var(--font-size-xs, 12px); opacity: 0.78; }
+
+/* 排序 / 清空筛选：右对齐次级操作行 */
+.bf-filter-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.bf-meta-label {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-muted, #94a3b8);
+}
 .bf-select {
   height: 34px;
   padding: 0 8px;
@@ -216,8 +283,8 @@ const visibleTags = computed(() =>
   background-color: var(--color-bg-input, #ffffff);
   color: var(--color-text, #0f172a);
   font-size: var(--font-size-sm, 13px);
+  font-family: inherit;
 }
-
 .bf-clear {
   height: 34px;
   padding: 0 12px;
@@ -226,58 +293,13 @@ const visibleTags = computed(() =>
   background-color: transparent;
   color: var(--color-text-secondary, #64748b);
   font-size: var(--font-size-sm, 13px);
+  font-family: inherit;
   cursor: pointer;
 }
 .bf-clear:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
 
-.bf-chips {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 2px;
-  scrollbar-width: thin;
-}
-.bf-chip {
-  flex: 0 0 auto;
-  padding: 4px 12px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 999px;
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
-  font-size: var(--font-size-xs, 12px);
-  white-space: nowrap;
-  cursor: pointer;
-  transition: border-color var(--motion-duration, 220ms), color var(--motion-duration, 220ms),
-    background-color var(--motion-duration, 220ms);
-}
-.bf-chip:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
-/* 选中态：对齐工具箱分类 pill——实心主色填充 + 白字（原为浅色 soft 填充） */
-.bf-chip.is-active {
-  border-color: var(--color-primary, #3b82f6);
-  background-color: var(--color-primary, #3b82f6);
-  color: #fff;
-  font-weight: var(--font-weight-medium, 500);
-}
-.bf-chip.is-active:hover {
-  border-color: var(--color-primary, #3b82f6);
-  color: #fff;
-}
-/* 分类 emoji 图标（缺省回落 📁） */
-.bf-chip-ico {
-  margin-right: 4px;
-  font-size: var(--font-size-xs, 12px);
-  line-height: 1;
-}
-/* 数量徽标：对齐工具箱 .tb-cat-cnt */
-.bf-chip-cnt {
-  font-size: var(--font-size-xs, 11px);
-  opacity: 0.78;
-  margin-left: 2px;
-}
-
 @media (max-width: 768px) {
-  .bf-search { flex: 1 1 100%; }
-  .bf-select, .bf-clear { flex: 1 1 auto; }
+  .bf-filter-meta { justify-content: flex-start; }
+  .bf-chip { min-height: 32px; padding: 6px 12px; }
 }
 </style>
