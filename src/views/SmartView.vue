@@ -1,13 +1,13 @@
 <script setup lang="ts">
 /**
  * 智能工作台主视图（路由 /smart）
- * 布局与 TeacherView 一致：顶部工作台切换入口（WorkbenchManagePanel）+ 左菜单 + 右内容。
+ * 布局与 TeacherView 一致：顶部工作台切换入口（WorkbenchSwitcher 命令面板，Alt+W）+ 左菜单 + 右内容。
  * 三个菜单项：概览 / 技能管理 / 提示词管理；不再单独放「返回导航站」按钮，
  * 导航站入口统一收进左上角的工作台切换面板（与其它工作台页面同款）。
  */
 import { computed, ref, watch } from 'vue'
 import Icon from '@/components/Icon.vue'
-import WorkbenchManagePanel from '@/components/WorkbenchManagePanel.vue'
+import WorkbenchSwitcher from '@/components/WorkbenchSwitcher.vue'
 import SmartOverview from '@/components/smart/SmartOverview.vue'
 import SkillManager from '@/components/smart/SkillManager.vue'
 import PromptManager from '@/components/smart/PromptManager.vue'
@@ -110,8 +110,8 @@ async function handleSyncNowClick(): Promise<void> {
     <!-- 顶部：工作台切换入口 + 标题 -->
     <header class="sv-topbar">
       <div class="sv-topbar-left">
-        <!-- 左上角「工作台管理」同款入口：点击弹出工作台切换面板（与教师/销售/学生工作台一致） -->
-        <WorkbenchManagePanel
+        <!-- 左上角「工作台切换」命令面板入口：点击弹出切换面板（Alt+W 唤起，与教师/销售/学生工作台一致） -->
+        <WorkbenchSwitcher
           :trigger-icon="settingsStore.smartPageIcon"
           trigger-builtin="lightbulb"
           :trigger-label="settingsStore.smartPageDisplayName"

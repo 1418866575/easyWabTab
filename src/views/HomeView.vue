@@ -9,8 +9,10 @@ import CategoryTabs from '../components/CategoryTabs.vue'
 import TagFilter from '../components/TagFilter.vue'
 import Pagination from '../components/Pagination.vue'
 import Icon from '../components/Icon.vue'
-// 工作台管理面板常驻渲染在顶栏（不在 v-if 内），保持静态导入：体量很小，异步反而让按钮延迟出现
-import WorkbenchManagePanel from '../components/WorkbenchManagePanel.vue'
+// 工作台切换命令面板常驻渲染在顶栏（不在 v-if 内），保持静态导入：体量很小，异步反而让按钮延迟出现。
+// 原「工作台管理」下拉面板（WorkbenchManagePanel）已升级为命令面板（WorkbenchSwitcher）：
+// 独立「工具箱」按钮已合并进面板，左上角只保留这一个入口。
+import WorkbenchSwitcher from '../components/WorkbenchSwitcher.vue'
 // 弹框 / 管理器改为按需异步加载：这些组件体量大（AppSettingsDialog 近 4000 行、
 // HelpModal 1400+ 行），但都位于 v-if 中、只有用户点开才渲染。原先静态 import 会让它们
 // 全部进入首屏依赖图 —— 首屏必须把这些代码下载并解析完才能渲染，移动端 TTI 被明显拖长。
@@ -441,28 +443,10 @@ onUnmounted(() => {
   <!-- 顶部统一 App Bar：左=教师台/工作台/销售台/学生台入口（教师台居首），右=同步/设置/帮助/倒计时；主题与经典侧边栏已迁入 设置→导航设置→显示控制 -->
   <div ref="appBarRef" class="app-bar">
     <div class="app-bar-left">
-      <!-- 工作台管理：按钮 + 正下方弹出面板（卡片列表）；可在 设置 → 个性化 → 工作台设置 中关闭 / 改名 -->
-      <WorkbenchManagePanel />
-      <!-- 工具箱入口：跳转到 /toolbox（站内自建工具集合，不跳第三方）；
-           显示/名称/图标可在 设置 → 个性化 → 显示控制 中调整（照「工作台管理」范式） -->
-      <button
-        v-if="settingsStore.toolboxButtonVisible !== false"
-        class="btn-help"
-        data-testid="home-toolbox-btn"
-        :title="settingsStore.toolboxButtonDisplayName"
-        :aria-label="'打开' + settingsStore.toolboxButtonDisplayName"
-        @click="router.push({ name: 'toolbox' })"
-      >
-        <img
-          v-if="settingsStore.toolboxButtonIcon"
-          :src="settingsStore.toolboxButtonIcon"
-          alt=""
-          class="home-toolbox-btn-icon"
-        />
-        <span v-else aria-hidden="true">🧰</span>
-        <span>{{ settingsStore.toolboxButtonDisplayName }}</span>
-      </button>
-      <!-- 智能工作台不在此处单放入口：与其它工作台一致，统一走右上角「工作台管理」面板 -->
+      <!-- 工作台切换（命令面板）：触发器 + 居中浮层，Alt+W 唤起；可在 设置 → 个性化 → 工作台设置 中关闭 / 改名。
+           工具箱入口已合并进该面板（不再单独占一个按钮），名称/图标/开关仍在 设置 → 个性化 → 显示控制 -->
+      <WorkbenchSwitcher />
+      <!-- 智能工作台不在此处单放入口：与其它工作台一致，统一走工作台切换面板 -->
     </div>
     <div class="app-bar-right">
       <button
@@ -706,40 +690,9 @@ onUnmounted(() => {
   min-width: 0;
 }
 
-/* .btn-help 视觉已统一到全局 .ui-btn（次按钮）；子组件触发按钮经 :deep 透传保留 */
-:deep(.wmp-trigger) {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  background-color: transparent;
-  color: var(--color-text-secondary, #64748b);
-  border: 1px solid transparent;
-  border-radius: 8px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-:deep(.wmp-trigger):hover {
-  background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-primary, #3b82f6);
-  border-color: var(--color-border, #e2e8f0);
-}
-
-/* 工具箱入口的自定义图标（用户从图标库挑选）：与文字基线对齐，尺寸随字号 */
-.home-toolbox-btn-icon {
-  width: 16px;
-  height: 16px;
-  object-fit: contain;
-  flex: none;
-  border-radius: 3px;
-}
-
-/* 「工作台管理」按钮过渡与云同步按钮（.wb-sync-btn）保持一致 */
-:deep(.wmp-trigger) {
-  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, opacity 120ms ease;
-}
+/* 工作台切换触发器（WorkbenchSwitcher）的样式自包含在子组件内（.ws-trigger），
+   导航站与各工作台页面外观一致；此处不再 :deep 透传覆盖。
+   原「工具箱」独立按钮已合并进切换面板，.home-toolbox-btn-icon 样式一并移除。 */
 
 /* ===== 侧边栏导航布局 ===== */
 .home-shell {
@@ -1089,14 +1042,12 @@ html.dark .app-bar {
   border-bottom-color: var(--color-border, #374151);
 }
 
-/* 顶栏按钮暗色（含「工作台管理」按钮，后者需 :deep 穿透到子组件内部） */
-html.dark .app-bar .btn-help,
-html.dark .app-bar :deep(.wmp-trigger) {
+/* 顶栏按钮暗色（工作台切换触发器 .ws-trigger 的暗色样式自包含在子组件内） */
+html.dark .app-bar .btn-help {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-html.dark .app-bar .btn-help:hover,
-html.dark .app-bar :deep(.wmp-trigger):hover {
+html.dark .app-bar .btn-help:hover {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-border, #374151);
@@ -1193,7 +1144,7 @@ html.dark .nav-add-site {
   }
 
   .btn-help,
-  :deep(.wmp-trigger) {
+  :deep(.ws-trigger) {
     padding: 8px 10px;
   }
 
