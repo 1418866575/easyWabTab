@@ -1710,8 +1710,13 @@ export interface BlogImage {
   id: string                // 'bi_' 前缀
   name: string              // 原始文件名（作 Markdown alt 缺省）
   dataUrl: string           // data:image/...;base64,...
+  size?: number             // 原始文件字节数（上传时记录，仅供图库展示）
   createdAt: string
 }
+
+/** 图库列表排序方式 */
+export const BLOG_IMAGE_SORTS = ['created-desc', 'created-asc', 'name-asc'] as const
+export type BlogImageSort = (typeof BLOG_IMAGE_SORTS)[number]
 
 export interface BlogSettings {
   blogName: string

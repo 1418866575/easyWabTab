@@ -3,7 +3,8 @@
  * 博客管理后台主视图（路由 /blog/admin）
  *
  * 布局与其它工作台一致：顶部工作台切换入口 + 云同步，左菜单 + 右内容。
- * 菜单项：文章 / 回收站。「分类」「标签」「博客设置」统一收进右上角「设置」弹框（rail + 内容，对齐导航站设置模块）。
+ * 菜单项：文章 / 图库 / 回收站（图库紧随「文章」，管理正文内联图片与封面图）。
+ * 「分类」「标签」「博客设置」统一收进右上角「设置」弹框（rail + 内容，对齐导航站设置模块）。
  * 「新建 / 编辑文章」不占路由：选中 editingId 时右侧内容区整块换成编辑器，
  * 关闭编辑器回到原菜单页（原型阶段不引入二级路由，避免与列表页状态互相打断）。
  *
@@ -19,9 +20,10 @@ import { useToast } from '@/composables/useToast'
 import BlogPosts from '@/components/blog/BlogPosts.vue'
 import BlogEditor from '@/components/blog/BlogEditor.vue'
 import BlogTrash from '@/components/blog/BlogTrash.vue'
+import BlogGallery from '@/components/blog/BlogGallery.vue'
 import BlogSettingsDialog from '@/components/blog/BlogSettingsDialog.vue'
 
-type PageKey = 'posts' | 'trash'
+type PageKey = 'posts' | 'gallery' | 'trash'
 
 interface MenuItem {
   key: PageKey
@@ -43,6 +45,7 @@ const settingsOpen = ref(false)
 
 const menuItems = computed<MenuItem[]>(() => [
   { key: 'posts', label: '文章', icon: 'notes', count: store.counts.all },
+  { key: 'gallery', label: '图库', icon: 'image', count: store.images.length },
   { key: 'trash', label: '回收站', icon: 'trash', count: store.counts.trash }
 ])
 
@@ -185,6 +188,7 @@ onMounted(async () => {
           @edit="editArticle"
           @create="startNewArticle"
         />
+        <BlogGallery v-else-if="activePage === 'gallery'" />
         <BlogTrash v-else-if="activePage === 'trash'" @restore="selectPage('posts')" />
       </main>
 

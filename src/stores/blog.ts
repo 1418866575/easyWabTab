@@ -9,6 +9,7 @@ import { defineStore } from 'pinia'
 import { computed, ref, toRaw } from 'vue'
 import type { ArticleStatus, BlogArticle, BlogCategory, BlogData, BlogImage, BlogSettings, BlogSort, BlogTag } from '@/types'
 import {
+  collectImageUsage,
   collectPublishErrors,
   collectReferencedImageIds,
   collectSettingsErrors,
@@ -27,6 +28,7 @@ import {
   type ArticleAction
 } from '../composables/blogCore'
 import { idbGet, idbPut } from '../composables/useIdb'
+import { removeImageRefs } from '../composables/blogImages'
 import { markDirty } from '@/composables/useCloudSync'
 
 export const useBlogStore = defineStore('blog', () => {
@@ -128,6 +130,9 @@ export const useBlogStore = defineStore('blog', () => {
 
   /** 图片 id → data URL 映射（渲染前把正文 `img:<id>` 短引用还原为真实图片） */
   const imageUrlById = computed(() => new Map(images.value.map(i => [i.id, i.dataUrl] as const)))
+
+  /** 图片 id → 引用它的文章数（图库展示「被 N 篇引用」、删除前确认） */
+  const imageUsage = computed(() => collectImageUsage(images.value, articles.value))
 
   // ==================== 文章 CRUD ====================
 
@@ -473,11 +478,27 @@ export const useBlogStore = defineStore('blog', () => {
   // ==================== 图片库 ====================
 
   /** 新增正文图片（dataUrl 已由调用方按白名单校验），返回带 id 的条目 */
-  async function addImage(name: string, dataUrl: string): Promise<BlogImage> {
-    const img: BlogImage = { id: newId('bi'), name, dataUrl, createdAt: nowIso() }
+  async function addImage(name: string, dataUrl: string, size?: number): Promise<BlogImage> {
+    const img: BlogImage = { id: newId('bi'), name, dataUrl, size, createdAt: nowIso() }
     images.value.push(img)
     await saveBlog()
     return img
+  }
+
+  /** 批量新增（图库多选上传）：只落盘一次，避免 N 次全量序列化 */
+  async function addImages(list: Array<{ name: string; dataUrl: string; size?: number }>): Promise<BlogImage[]> {
+    if (list.length === 0) return []
+    const now = nowIso()
+    const created: BlogImage[] = list.map(item => ({
+      id: newId('bi'),
+      name: item.name,
+      dataUrl: item.dataUrl,
+      size: item.size,
+      createdAt: now
+    }))
+    images.value.push(...created)
+    await saveBlog()
+    return created
   }
 
   /** 该图片是否仍被任一文章正文引用（含回收站文章，避免误删） */
@@ -497,6 +518,29 @@ export const useBlogStore = defineStore('blog', () => {
     await saveBlog()
   }
 
+  /**
+   * 批量删除图片（图库用）：**强制删除**，并同步把所有文章正文里对应的引用一并移除，
+   * 否则会留下指向已删图片的悬空引用（正文会退化显示成 `img:<id>` 文本）。
+   */
+  async function removeImages(ids: string[]): Promise<{ removed: number; affectedArticles: number }> {
+    const idSet = new Set(ids)
+    if (idSet.size === 0) return { removed: 0, affectedArticles: 0 }
+    let affectedArticles = 0
+    const nextArticles = toRaw(articles.value).map(a => {
+      let md = a.contentMarkdown
+      for (const id of idSet) md = removeImageRefs(md, id)
+      if (md === a.contentMarkdown) return a
+      affectedArticles += 1
+      return { ...a, contentMarkdown: md, updatedAt: nowIso(), revision: a.revision + 1 }
+    })
+    articles.value = nextArticles
+    const nextImages = toRaw(images.value).filter(i => !idSet.has(i.id))
+    const removed = images.value.length - nextImages.length
+    images.value = nextImages
+    await saveBlog()
+    return { removed, affectedArticles }
+  }
+
   return {
     // 状态
     settings,
@@ -510,6 +554,7 @@ export const useBlogStore = defineStore('blog', () => {
     trashedArticles,
     counts,
     imageUrlById,
+    imageUsage,
     findArticle,
     findBySlug,
     categoryName,
@@ -547,7 +592,9 @@ export const useBlogStore = defineStore('blog', () => {
     resetSettings,
     // 图片库
     addImage,
+    addImages,
     removeImage,
+    removeImages,
     isImageReferenced
   }
 })

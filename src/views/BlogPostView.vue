@@ -37,7 +37,9 @@ const html = computed(() => {
   const md = resolveImageRefs(article.value.contentMarkdown, id => store.imageUrlById.get(id))
   return renderMarkdown(md)
 })
-const cover = computed(() => (visible.value && article.value ? coverBackground(article.value) : null))
+const cover = computed(() =>
+  visible.value && article.value ? coverBackground(article.value, id => store.imageUrlById.get(id)) : null
+)
 const categoryLabel = computed(() => (article.value ? store.categoryName(article.value.categoryId) : ''))
 const tagLabels = computed(() => (article.value ? store.tagNames(article.value.tagIds) : []))
 const dateLabel = computed(() => {

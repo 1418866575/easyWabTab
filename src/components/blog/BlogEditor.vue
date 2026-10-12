@@ -23,8 +23,10 @@ import { applyMarkdown, isAllowedDataImage } from '@/composables/blogEditorMd'
 import type { MdBlockKind } from '@/composables/blogEditorMd'
 import { imageRef, parseImageRefs, removeImageRefs, resolveImageRefs } from '@/composables/blogImages'
 import { renderMarkdown } from '@/composables/noteMarkdown'
+import type { BlogImage } from '@/types'
 import Icon from '@/components/Icon.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
+import BlogImagePicker from '@/components/blog/BlogImagePicker.vue'
 import { showConfirm, toastAlert } from '@/utils/dialog'
 
 const props = defineProps<{ articleId: string }>()
@@ -42,6 +44,7 @@ const form = reactive({
   tagIds: [] as string[],
   coverKind: 'none' as 'none' | 'image' | 'gradient' | 'solid',
   coverToken: '',
+  coverImageId: '',
   seoTitle: '',
   seoDescription: ''
 })
@@ -89,7 +92,8 @@ const contentEl = ref<HTMLTextAreaElement | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 
 interface MdToolbarButton {
-  kind: MdBlockKind | 'image'
+  /** image = 选本地文件上传；library = 从图库选取（可多选） */
+  kind: MdBlockKind | 'image' | 'library'
   label: string
   title: string
   group: number
@@ -109,6 +113,7 @@ const MD_TOOLBAR: MdToolbarButton[] = [
   { kind: 'ol', label: '有序列表', title: '有序列表', group: 2 },
   { kind: 'link', label: '链接', title: '插入链接（Ctrl/Cmd+K）', group: 3 },
   { kind: 'image', label: '图片', title: '插入图片（选择本地图片，存入图片库）', group: 3 },
+  { kind: 'library', label: '图库', title: '从图库插入已有图片（可多选）', group: 3 },
   { kind: 'table', label: '表格', title: '插入表格', group: 3 },
   { kind: 'hr', label: '分割线', title: '插入分割线', group: 3 }
 ]
@@ -138,6 +143,10 @@ async function applyMd(kind: MdBlockKind): Promise<void> {
 function onToolbarClick(b: MdToolbarButton): void {
   if (b.kind === 'image') {
     fileInput.value?.click()
+    return
+  }
+  if (b.kind === 'library') {
+    libraryOpen.value = true
     return
   }
   void applyMd(b.kind)
@@ -246,6 +255,44 @@ async function removeImageRef(id: string): Promise<void> {
   await store.removeImage(id)
 }
 
+// ---------- 图库选择器 ----------
+/** 正文插入用（多选） */
+const libraryOpen = ref(false)
+/** 封面选择用（单选） */
+const coverPickerOpen = ref(false)
+
+/** 当前已选的封面图（取自图库） */
+const coverImage = computed<BlogImage | undefined>(() =>
+  store.images.find(i => i.id === form.coverImageId)
+)
+
+/** 从图库插入：在光标处依次插入短引用（图片本体仍只在图库存一份） */
+async function insertFromLibrary(images: BlogImage[]): Promise<void> {
+  if (images.length === 0) return
+  const ta = contentEl.value
+  let pos = ta ? ta.selectionStart : form.contentMarkdown.length
+  let value = form.contentMarkdown
+  for (const img of images) {
+    const res = applyMarkdown('image', value, pos, pos, { alt: img.name || '图片', url: imageRef(img.id) })
+    value = res.value
+    pos = res.selEnd
+  }
+  form.contentMarkdown = value
+  await nextTick()
+  if (ta) {
+    ta.focus()
+    ta.setSelectionRange(pos, pos)
+  }
+}
+
+/** 封面选图（单选）：写入 coverImageId 并把封面类型切到「图片」 */
+function pickCover(images: BlogImage[]): void {
+  const img = images[0]
+  if (!img) return
+  form.coverImageId = img.id
+  form.coverKind = 'image'
+}
+
 const article = computed(() => store.findArticle(props.articleId))
 const canRead = computed(() => article.value !== undefined)
 
@@ -261,6 +308,7 @@ function fillFromArticle(): void {
   form.tagIds = [...a.tagIds]
   form.coverKind = a.coverKind
   form.coverToken = a.coverToken ?? ''
+  form.coverImageId = a.coverImageId ?? ''
   form.seoTitle = a.seoTitle ?? ''
   form.seoDescription = a.seoDescription ?? ''
   snapshot = JSON.stringify(form)
@@ -317,6 +365,7 @@ async function saveDraft(silent = false): Promise<void> {
     tagIds: [...form.tagIds],
     coverKind: form.coverKind,
     coverToken: form.coverToken.trim() || undefined,
+    coverImageId: form.coverImageId.trim() || undefined,
     seoTitle: form.seoTitle.trim() || undefined,
     seoDescription: form.seoDescription.trim() || undefined
   })
@@ -583,12 +632,35 @@ async function regenerateSlug(): Promise<void> {
           <p class="be-hint">列表将展示：{{ excerptPreview || '（暂无正文）' }}</p>
           <label class="be-field">
             <span class="be-label">封面</span>
-            <select v-model="form.coverKind" class="be-select">
+            <select v-model="form.coverKind" class="be-select" data-testid="blog-editor-cover-kind">
               <option value="none">无</option>
+              <option value="image">图片</option>
               <option value="gradient">渐变</option>
               <option value="solid">纯色</option>
             </select>
           </label>
+          <div v-if="form.coverKind === 'image'" class="be-field">
+            <span class="be-label">封面图片（来自图库）</span>
+            <div class="be-cover-pick">
+              <span class="be-cover-thumb">
+                <img v-if="coverImage" :src="coverImage.dataUrl" :alt="coverImage.name" />
+                <span v-else class="be-hint">未选择</span>
+              </span>
+              <button type="button" class="be-mini" data-testid="blog-editor-cover-pick" @click="coverPickerOpen = true">
+                选择
+              </button>
+              <button
+                v-if="form.coverImageId"
+                type="button"
+                class="be-mini"
+                data-testid="blog-editor-cover-clear"
+                @click="form.coverImageId = ''"
+              >
+                清除
+              </button>
+            </div>
+            <p v-if="form.coverImageId && !coverImage" class="be-warn">所选封面图已不在图库中，请重新选择</p>
+          </div>
           <label v-if="form.coverKind !== 'none' && form.coverKind !== 'image'" class="be-field">
             <span class="be-label">封面色值 / 渐变</span>
             <el-input v-model="form.coverToken" size="small" placeholder="如 linear-gradient(135deg,#60a5fa,#a78bfa)" />
@@ -646,6 +718,21 @@ async function regenerateSlug(): Promise<void> {
         </div>
       </div>
     </BaseDialog>
+
+    <!-- 图库选择器：正文插入（多选）/ 封面选择（单选） -->
+    <BlogImagePicker
+      v-if="libraryOpen"
+      multiple
+      title="从图库插入图片"
+      @select="insertFromLibrary"
+      @close="libraryOpen = false"
+    />
+    <BlogImagePicker
+      v-if="coverPickerOpen"
+      title="选择封面图片"
+      @select="pickCover"
+      @close="coverPickerOpen = false"
+    />
 
   </section>
 
@@ -1106,6 +1193,32 @@ async function regenerateSlug(): Promise<void> {
   margin: -6px 0 10px;
   color: var(--color-error, #ef4444);
   font-size: var(--font-size-xs, 12px);
+}
+
+/* 封面图选择（取自图库） */
+.be-cover-pick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.be-cover-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 56px;
+  overflow: hidden;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm, 6px);
+  background-color: var(--color-bg-2, #f1f5f9);
+}
+
+.be-cover-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .be-foot {

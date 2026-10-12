@@ -29,13 +29,17 @@ import {
   emptyBlogSettings,
   normalizeImage,
   pruneUnusedImages,
-  collectReferencedImageIds
+  collectReferencedImageIds,
+  collectImageUsage,
+  filterImages,
+  sortImages,
+  formatBytes
 } from '../src/composables/blogCore.ts'
 import { imageRef, parseImageRefs, resolveImageRefs, removeImageRefs } from '../src/composables/blogImages.ts'
 import { mergeBlogEnvelope } from '../src/composables/blogSyncCore.ts'
 import { buildBlogPublic } from '../src/composables/blogStaticExport.ts'
 import { applyMarkdown, isAllowedDataImage } from '../src/composables/blogEditorMd.ts'
-import type { ArticleStatus, BlogArticle, BlogData, BlogSyncData } from '../src/types/index.ts'
+import type { ArticleStatus, BlogArticle, BlogData, BlogImage, BlogSyncData } from '../src/types/index.ts'
 
 const tests: { name: string; fn: () => void }[] = []
 function test(name: string, fn: () => void) {
@@ -575,6 +579,48 @@ test('mergeBlogEnvelope 合并两侧图片（按 id 并集）', () => {
   const merged = mergeBlogEnvelope(local, remote)
   a.equal(merged.blog?.images.length, 2)
   a.deepEqual(merged.blog?.images.map(i => i.id).sort(), ['bi_1', 'bi_2'])
+})
+
+// ==================== 图库（筛选 / 排序 / 引用统计 / 体积格式化） ====================
+function mkImage(id: string, name: string, createdAt: string, size?: number): BlogImage {
+  return { id, name, dataUrl: PNG, size, createdAt }
+}
+
+test('filterImages 按名称模糊匹配（大小写不敏感）', () => {
+  const list = [mkImage('bi_1', '封面图', '2026-01-02T00:00:00.000Z'), mkImage('bi_2', 'Screenshot', '2026-01-01T00:00:00.000Z')]
+  a.equal(filterImages(list, '截图').length, 0)
+  a.equal(filterImages(list, '封面').length, 1)
+  a.equal(filterImages(list, 'screen').length, 1)
+  a.equal(filterImages(list, '   ').length, 2)
+})
+
+test('sortImages 三种排序', () => {
+  const list = [mkImage('bi_1', 'b', '2026-01-02T00:00:00.000Z'), mkImage('bi_2', 'a', '2026-01-03T00:00:00.000Z')]
+  a.deepEqual(sortImages(list, 'created-desc').map(i => i.id), ['bi_2', 'bi_1'])
+  a.deepEqual(sortImages(list, 'created-asc').map(i => i.id), ['bi_1', 'bi_2'])
+  a.deepEqual(sortImages(list, 'name-asc').map(i => i.id), ['bi_2', 'bi_1'])
+})
+
+test('collectImageUsage 统计每张图被多少文章引用', () => {
+  const imgs = [mkImage('bi_1', 'a', '2026-01-01T00:00:00.000Z'), mkImage('bi_2', 'b', '2026-01-01T00:00:00.000Z')]
+  const articles = [
+    mkArticle({ id: 'ba_1', contentMarkdown: `![x](${imageRef('bi_1')})` }),
+    mkArticle({ id: 'ba_2', contentMarkdown: `![x](${imageRef('bi_1')}) ![y](${imageRef('bi_2')})` })
+  ]
+  const usage = collectImageUsage(imgs, articles)
+  a.equal(usage.get('bi_1'), 2)
+  a.equal(usage.get('bi_2'), 1)
+  // 同一篇文章内重复引用同一张图只算一次
+  const dup = collectImageUsage(imgs, [mkArticle({ id: 'ba_3', contentMarkdown: `![x](${imageRef('bi_1')})![y](${imageRef('bi_1')})` })])
+  a.equal(dup.get('bi_1'), 1)
+})
+
+test('formatBytes 易读体积', () => {
+  a.equal(formatBytes(undefined), '-')
+  a.equal(formatBytes(0), '-')
+  a.equal(formatBytes(512), '512 B')
+  a.equal(formatBytes(1024), '1.0 KB')
+  a.equal(formatBytes(1024 * 1024 * 3), '3.0 MB')
 })
 
 let passed = 0

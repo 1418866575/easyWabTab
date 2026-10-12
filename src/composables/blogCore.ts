@@ -8,7 +8,7 @@
  * 评论实体按需求文档标注「延后」未实现，故 `commentCount` 恒为 0。
  */
 import { ARTICLE_STATUSES, BLOG_SORTS } from '../types'
-import type { ArticleStatus, BlogArticle, BlogCategory, BlogCoverKind, BlogData, BlogImage, BlogSettings, BlogSort, BlogTag } from '../types'
+import type { ArticleStatus, BlogArticle, BlogCategory, BlogCoverKind, BlogData, BlogImage, BlogImageSort, BlogSettings, BlogSort, BlogTag } from '../types'
 import { isAllowedDataImage, parseImageRefs } from './blogImages'
 
 /** 博客数据结构版本：normalizeBlogData 据此判定是否需要迁移 */
@@ -252,10 +252,12 @@ export function normalizeImage(raw: unknown, when = nowIso()): BlogImage | null 
   const src = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>
   const dataUrl = str(src.dataUrl)
   if (!isAllowedDataImage(dataUrl)) return null
+  const size = typeof src.size === 'number' && Number.isFinite(src.size) ? src.size : undefined
   return {
     id: str(src.id) || newId('bi'),
     name: str(src.name),
     dataUrl,
+    size,
     createdAt: str(src.createdAt, when)
   }
 }
@@ -332,6 +334,53 @@ export function collectReferencedImageIds(articles: BlogArticle[]): Set<string> 
 export function pruneUnusedImages(images: BlogImage[], articles: BlogArticle[]): BlogImage[] {
   const used = collectReferencedImageIds(articles)
   return images.filter(img => used.has(img.id))
+}
+
+/** 图片 id → 引用它的文章数（图库卡片展示「被 N 篇引用」、删除前提示的依据） */
+export function collectImageUsage(images: BlogImage[], articles: BlogArticle[]): Map<string, number> {
+  const usage = new Map<string, number>()
+  for (const img of images) usage.set(img.id, 0)
+  for (const a of articles) {
+    for (const id of new Set(parseImageRefs(a.contentMarkdown))) {
+      if (!usage.has(id)) continue
+      usage.set(id, (usage.get(id) ?? 0) + 1)
+    }
+  }
+  return usage
+}
+
+/** 图库关键词筛选：按名称（大小写不敏感）模糊匹配 */
+export function filterImages(images: BlogImage[], keyword: string): BlogImage[] {
+  const kw = keyword.trim().toLowerCase()
+  if (!kw) return images
+  return images.filter(img => img.name.toLowerCase().includes(kw))
+}
+
+/** 图库排序：最新优先 / 最早优先 / 名称升序 */
+export function sortImages(images: BlogImage[], sort: BlogImageSort = 'created-desc'): BlogImage[] {
+  const list = [...images]
+  switch (sort) {
+    case 'created-asc':
+      return list.sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    case 'name-asc':
+      return list.sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN'))
+    case 'created-desc':
+    default:
+      return list.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  }
+}
+
+/** 字节数 → 易读文本（图库卡片展示用） */
+export function formatBytes(bytes?: number): string {
+  if (typeof bytes !== 'number' || !Number.isFinite(bytes) || bytes <= 0) return '-'
+  const units = ['B', 'KB', 'MB', 'GB']
+  let n = bytes
+  let i = 0
+  while (n >= 1024 && i < units.length - 1) {
+    n /= 1024
+    i += 1
+  }
+  return `${n < 10 && i > 0 ? n.toFixed(1) : Math.round(n)} ${units[i]}`
 }
 
 // ==================== 查询与排序 ====================

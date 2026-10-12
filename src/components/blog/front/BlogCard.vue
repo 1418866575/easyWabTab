@@ -3,8 +3,8 @@
  * 博客前台文章卡片（首页列表项）
  *
  * 纯展示：标题 / 摘要 / 分类 / 发布时间 / 阅读时长 / 标签 / 置顶标记。
- * 封面按 coverKind 渲染：none 不渲染封面区；gradient/solid/image 走 coverBackground
- * （image 暂无 blog_images 存储可解析，回落到渐变占位，见 blogFront.ts）。
+ * 封面按 coverKind 渲染：none 不渲染封面区；gradient/solid 走 token 或稳定色相渐变；
+ * image 由图库（BlogData.images）按 coverImageId 解析成 data URL，缺失时回落渐变占位。
  * 整卡点击跳转到 /blog/article/:slug，使用 RouterLink 利于 SEO/前进后退。
  */
 import { computed } from 'vue'
@@ -18,7 +18,7 @@ const props = defineProps<{ article: BlogArticle }>()
 
 const store = useBlogStore()
 
-const cover = computed(() => coverBackground(props.article))
+const cover = computed(() => coverBackground(props.article, id => store.imageUrlById.get(id)))
 const excerpt = computed(() =>
   props.article.excerpt || autoExcerpt(props.article.contentMarkdown, store.settings.excerptLength)
 )

@@ -206,8 +206,16 @@ function hashHue(seed: string): number {
   return h
 }
 
-export function coverBackground(article: BlogArticle): string | null {
+export function coverBackground(
+  article: BlogArticle,
+  resolveImage?: (id: string) => string | undefined
+): string | null {
   if (article.coverKind === 'none') return null
+  // 图片封面：由图库解析出 data URL；图片缺失（未同步/已删）时回落到渐变占位，避免破图
+  if (article.coverKind === 'image') {
+    const url = article.coverImageId && resolveImage ? resolveImage(article.coverImageId) : undefined
+    if (url) return `url("${url}") center/cover no-repeat`
+  }
   const token = article.coverToken ?? ''
   const pal = COVER_TOKEN_VARS[token]
   const hue = hashHue(article.id + token)
