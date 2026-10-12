@@ -12,7 +12,7 @@
  */
 import { computed, onMounted, ref } from 'vue'
 import Icon from '@/components/Icon.vue'
-import WorkbenchManagePanel from '@/components/WorkbenchManagePanel.vue'
+import WorkbenchSwitcher from '@/components/WorkbenchSwitcher.vue'
 import { useAppSettingsStore } from '@/stores/settings'
 import { useBlogStore } from '@/stores/blog'
 import { useCloudSync, type SyncStatus } from '@/composables/useCloudSync'
@@ -116,7 +116,7 @@ onMounted(async () => {
   <div class="ba-shell" :class="{ 'is-collapsed': sidebarCollapsed }">
     <header class="ba-topbar">
       <div class="ba-topbar-left">
-        <WorkbenchManagePanel trigger-builtin="notes" trigger-label="博客后台" force-show />
+        <WorkbenchSwitcher trigger-builtin="notes" trigger-label="博客后台" force-show />
         <div class="ba-heading">
           <h1 class="ba-title">{{ store.settings.blogName }}</h1>
           <p class="ba-sub">
