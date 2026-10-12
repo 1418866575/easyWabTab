@@ -8,7 +8,6 @@
  * 与后台 BlogAdminView 的装载时机保持一致。
  */
 import { ref, watch, onMounted, computed } from 'vue'
-import { RouterLink } from 'vue-router'
 import { useBlogStore } from '@/stores/blog'
 import { listPublishedArticles } from '@/composables/blogCore'
 import { useBlogListing } from '@/composables/blogFront'
@@ -81,17 +80,6 @@ onMounted(async () => {
 
 <template>
   <main class="bf-shell">
-    <header class="bf-header">
-      <div>
-        <h1 class="bf-site-title">{{ store.settings.blogName }}</h1>
-        <p v-if="store.settings.blogDescription" class="bf-site-desc">{{ store.settings.blogDescription }}</p>
-        <p class="bf-site-sub">共 {{ publishedArticles.length }} 篇文章</p>
-      </div>
-      <RouterLink to="/blog/admin" class="bf-admin-link" data-testid="blog-front-admin">
-        管理后台
-      </RouterLink>
-    </header>
-
     <BlogFilterBar
       :keyword="kw"
       :active-category="listing.categoryId"

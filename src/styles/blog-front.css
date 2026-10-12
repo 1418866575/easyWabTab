@@ -12,46 +12,6 @@
   padding: var(--space-6, 24px) var(--space-4, 16px) var(--space-8, 32px);
 }
 
-/* ---------- 站点头部 ---------- */
-.bf-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-.bf-site-title {
-  margin: 0;
-  font-size: var(--font-size-2xl, 24px);
-  font-weight: var(--font-weight-bold, 700);
-  color: var(--color-text, #0f172a);
-}
-.bf-site-desc {
-  margin: 6px 0 0;
-  color: var(--color-text-secondary, #64748b);
-  font-size: var(--font-size-sm, 13px);
-  line-height: var(--line-height-relaxed, 1.6);
-}
-.bf-site-sub {
-  margin: 4px 0 0;
-  color: var(--color-text-muted, #94a3b8);
-  font-size: var(--font-size-xs, 12px);
-}
-.bf-admin-link {
-  flex: 0 0 auto;
-  font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-muted, #94a3b8);
-  text-decoration: none;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  padding: 6px 10px;
-  transition: color var(--motion-duration, 220ms), border-color var(--motion-duration, 220ms);
-}
-.bf-admin-link:hover {
-  color: var(--color-primary, #3b82f6);
-  border-color: var(--color-primary, #3b82f6);
-}
-
 .bf-count {
   margin: 0 0 12px;
   font-size: var(--font-size-xs, 12px);
