@@ -13,7 +13,7 @@ import { useStudentReadingStore } from '@/stores/studentReading'
 import { useStudentHealthStore } from '@/stores/studentHealth'
 import { useStudentGradesStore } from '@/stores/studentGrades'
 import { useAppSettingsStore } from '@/stores/settings'
-import WorkbenchManagePanel from '@/components/WorkbenchManagePanel.vue'
+import WorkbenchSwitcher from '@/components/WorkbenchSwitcher.vue'
 import StudentHealth from '@/components/student/StudentHealth.vue'
 import StudentGrades from '@/components/student/StudentGrades.vue'
 import StudentHome from '@/components/student/StudentHome.vue'
@@ -275,8 +275,8 @@ async function onOnboardingComplete() {
   <div class="st-shell">
     <header class="st-header">
       <div class="st-header-left">
-        <!-- 左上角「工作台管理」同款入口：站点图标 + 点击弹出工作台切换面板（替换原 PageSwitcher 下拉，与导航站行为一致） -->
-        <WorkbenchManagePanel
+        <!-- 左上角「工作台切换」命令面板入口：站点图标 + 点击弹出切换面板（Alt+W 唤起，与导航站一致） -->
+        <WorkbenchSwitcher
           :trigger-icon="settingsStore.studentPageIcon"
           trigger-builtin="notes"
           :trigger-label="settingsStore.studentPageDisplayName"
