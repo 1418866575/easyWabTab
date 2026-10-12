@@ -100,6 +100,8 @@ interface MdToolbarButton {
 }
 /** 工具栏按钮（含分组，group 用于渲染分隔线）；图片按钮单独走文件选择 */
 const MD_TOOLBAR: MdToolbarButton[] = [
+  // 图库入口置顶：写文章时最常用的就是插图，独立分组与标题组分隔
+  { kind: 'library', label: '图库', title: '从图库插入已有图片（可多选）', group: -1 },
   { kind: 'heading-1', label: 'H1', title: '一级标题', group: 0 },
   { kind: 'heading-2', label: 'H2', title: '二级标题', group: 0 },
   { kind: 'heading-3', label: 'H3', title: '三级标题', group: 0 },
@@ -113,7 +115,6 @@ const MD_TOOLBAR: MdToolbarButton[] = [
   { kind: 'ol', label: '有序列表', title: '有序列表', group: 2 },
   { kind: 'link', label: '链接', title: '插入链接（Ctrl/Cmd+K）', group: 3 },
   { kind: 'image', label: '图片', title: '插入图片（选择本地图片，存入图片库）', group: 3 },
-  { kind: 'library', label: '图库', title: '从图库插入已有图片（可多选）', group: 3 },
   { kind: 'table', label: '表格', title: '插入表格', group: 3 },
   { kind: 'hr', label: '分割线', title: '插入分割线', group: 3 }
 ]
