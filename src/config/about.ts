@@ -30,9 +30,15 @@ export interface OpenSourceLink {
 /** 开源地址列表：新增仓库直接追加，无需改页面 */
 export const OPEN_SOURCE_LINKS: OpenSourceLink[] = [
   {
-    label: 'easy-web-tab',
+    label: 'easy-web-tab（Gitee）',
     description: '本项目源码：网页导航 + 个人工作台（Vue 3 + Pinia + IndexedDB，纯前端部署）',
     homeUrl: 'https://gitee.com/sifujiang/easy-web-tab',
     cloneUrl: 'https://gitee.com/sifujiang/easy-web-tab.git'
+  },
+  {
+    label: 'easyWabTab（GitHub 镜像）',
+    description: '同一源码的 GitHub 镜像仓库，与 Gitee 同步更新，境外访问推荐',
+    homeUrl: 'https://github.com/1418866575/easyWabTab',
+    cloneUrl: 'https://github.com/1418866575/easyWabTab.git'
   }
 ]
