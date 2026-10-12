@@ -48,10 +48,16 @@ interface Entry {
   /** 搜索关键词（含中英文别名，用户改过名称后仍可搜到） */
   kw: string
   visible: boolean
+  /**
+   * 「当前所在页」判定（缺省用 path 精确匹配 + 子路径前缀匹配）。
+   * 博客前台需要排除 /blog/admin（那属博客后台），故显式给出。
+   */
+  isCurrentPath?: (p: string) => boolean
 }
 
-// 顺序与旧面板一致：导航站 → 教师台 → 个人工作台 → 销售记账 → 学生台 → 工具箱 → 智能工作台。
+// 顺序与旧面板一致：导航站 → 教师台 → 个人工作台 → 销售记账 → 学生台 → 工具箱 → 智能工作台 → 博客后台 → 博客前台。
 // 工具箱不再有"导航站页隐藏"的特殊规则——它现在是面板里的一项，独立按钮已移除。
+// 博客两项由博客功能提交追加：写死名称与图标、暂无设置开关（见下方条目注释）。
 const allEntries = computed<Entry[]>(() => [
   {
     key: 'nav',
@@ -115,6 +121,32 @@ const allEntries = computed<Entry[]>(() => [
     builtin: 'lightbulb',
     kw: '智能工作台 smart 技能 提示词 工作流',
     visible: store.smartPageVisible !== false
+  },
+  {
+    // 博客后台：数据走独立的 blog.json 云同步信封。
+    // 与其它工作台不同——暂未纳入「导航设置 → 显示控制」的开关组（那需要新增 settings 字段并改动
+    // workbench.json 信封结构，影响面较大），因此这里写死名称与图标，不做开关。
+    // TODO: 若后续要开放「是否显示 / 改名 / 换图标」，需按新增 setting 字段的完整步骤同步改动 settings.ts。
+    key: 'blog',
+    path: '/blog/admin',
+    name: '博客后台',
+    icon: '',
+    builtin: 'notes',
+    kw: '博客后台 blog 管理 写作',
+    visible: true
+  },
+  {
+    // 博客前台（阅读器）：与后台同源数据（IndexedDB blog store），路由 /blog（列表）与
+    // /blog/article/:slug（详情）。同样写死名称与图标，不做开关。
+    key: 'blog-front',
+    path: '/blog',
+    name: '博客前台',
+    icon: '',
+    builtin: 'document',
+    kw: '博客前台 blog 阅读 文章',
+    visible: true,
+    // /blog 与 /blog/article/* 算前台；/blog/admin 归后台条目，不能重复标「当前」
+    isCurrentPath: (p) => p === '/blog' || (p.startsWith('/blog/') && !p.startsWith('/blog/admin'))
   }
 ])
 
@@ -123,7 +155,11 @@ const visibleEntries = computed<Entry[]>(() => allEntries.value.filter((e) => e.
 /** 当前所在工作台（用于"当前"徽章；不再隐藏，避免列表数量跳变） */
 const currentKey = computed<string>(() => {
   const p = route.path
-  const hit = visibleEntries.value.find((e) => e.path === p || (e.path !== '/' && p.startsWith(`${e.path}/`)))
+  const hit = visibleEntries.value.find((e) =>
+    e.isCurrentPath
+      ? e.isCurrentPath(p)
+      : e.path === p || (e.path !== '/' && p.startsWith(`${e.path}/`))
+  )
   return hit ? hit.key : ''
 })
 
