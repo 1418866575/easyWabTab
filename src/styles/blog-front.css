@@ -24,6 +24,11 @@
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
 }
+/* 桌面端多列：所有行等高 → 卡片高度统一（有/无封面卡片对齐）。
+   移动端单列时不加，保持卡片自然高度，避免短卡片被拉到与长卡片同高、留出大块空白。 */
+@media (min-width: 769px) {
+  .bf-grid { grid-auto-rows: 1fr; }
+}
 
 /* ---------- 收藏 / 最近阅读 分区（列表上方，沿用工具箱 section 风格，空时自动隐藏） ---------- */
 .bf-section {

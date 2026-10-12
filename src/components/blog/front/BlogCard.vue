@@ -72,10 +72,13 @@ const to = computed(() => `/blog/article/${props.article.slug}`)
 <style scoped>
 .bf-card-wrap {
   position: relative;
+  /* 卡片高度固定：网格项在行高上被拉伸，内层卡片需撑满，避免无封面卡片比有封面卡片矮 */
+  height: 100%;
 }
 .bf-card {
   display: flex;
   flex-direction: column;
+  height: 100%;
   overflow: hidden;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-lg, 12px);
