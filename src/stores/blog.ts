@@ -519,6 +519,22 @@ export const useBlogStore = defineStore('blog', () => {
   }
 
   /**
+   * 重命名图片：仅未被文章引用的图片可改。
+   * 已引用的名称会出现在正文 alt / 编辑器缩略图条中，保持稳定避免歧义。
+   */
+  async function renameImage(id: string, name: string): Promise<{ ok: boolean; reason?: string }> {
+    const index = images.value.findIndex(i => i.id === id)
+    if (index === -1) return { ok: false, reason: '图片不存在' }
+    if (isImageReferenced(id)) return { ok: false, reason: '图片已被文章引用，不可修改名称' }
+    const trimmed = name.trim()
+    if (!trimmed) return { ok: false, reason: '图片名称不可为空' }
+    if (trimmed.length > 60) return { ok: false, reason: '图片名称不能超过 60 个字符' }
+    images.value[index] = { ...images.value[index], name: trimmed }
+    await saveBlog()
+    return { ok: true }
+  }
+
+  /**
    * 批量删除图片（图库用）：**强制删除**，并同步把所有文章正文里对应的引用一并移除，
    * 否则会留下指向已删图片的悬空引用（正文会退化显示成 `img:<id>` 文本）。
    */
@@ -595,6 +611,7 @@ export const useBlogStore = defineStore('blog', () => {
     addImages,
     removeImage,
     removeImages,
+    renameImage,
     isImageReferenced
   }
 })

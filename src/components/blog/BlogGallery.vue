@@ -15,6 +15,7 @@ import { filterImages, formatBytes, formatDateTime, paginate, sortImages } from 
 import { isAllowedDataImage } from '@/composables/blogImages'
 import { PAGE_SIZES, usePageSize } from '@/composables/usePageSize'
 import { showConfirm, toastAlert } from '@/utils/dialog'
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import type { BlogImage, BlogImageSort } from '@/types'
 
 const store = useBlogStore()
@@ -27,6 +28,10 @@ const page = ref(1)
 const selected = ref<string[]>([])
 const fileInput = ref<HTMLInputElement | null>(null)
 const uploading = ref(false)
+/** 重命名弹框：正在改名的图片 + 输入框值 */
+const renaming = ref<BlogImage | null>(null)
+const renameText = ref('')
+const renameSaving = ref(false)
 
 const filtered = computed(() => sortImages(filterImages(store.images, keyword.value), sort.value))
 const total = computed(() => filtered.value.length)
@@ -69,6 +74,26 @@ function toggleAllOnPage(): void {
 function usageLabel(img: BlogImage): string {
   const n = store.imageUsage.get(img.id) ?? 0
   return n > 0 ? `被 ${n} 篇文章引用` : '未使用'
+}
+
+/** 打开重命名弹框（仅未引用的图片可点，见模板 disabled 分支） */
+function openRename(img: BlogImage): void {
+  renaming.value = img
+  renameText.value = img.name
+}
+
+async function submitRename(): Promise<void> {
+  const img = renaming.value
+  if (!img || renameSaving.value) return
+  renameSaving.value = true
+  const r = await store.renameImage(img.id, renameText.value)
+  renameSaving.value = false
+  if (!r.ok) {
+    toastAlert(r.reason ?? '重命名失败', 'warning')
+    return
+  }
+  renaming.value = null
+  toastAlert('图片名称已修改', 'success')
 }
 
 /** FileReader → base64 data URL（Promise 化，便于多文件串行读取） */
@@ -217,18 +242,61 @@ async function doRemove(ids: string[]): Promise<void> {
             <span class="bg-sub">{{ formatBytes(img.size) }} · {{ formatDateTime(img.createdAt) }}</span>
             <span class="bg-usage">{{ usageLabel(img) }}</span>
           </div>
-          <button
-            type="button"
-            class="bg-del"
-            title="删除这张图片"
-            :data-testid="`blog-gallery-delete-${img.id}`"
-            @click="doRemove([img.id])"
-          >
-            删除
-          </button>
+          <div class="bg-ops">
+            <button
+              type="button"
+              class="bg-del bg-rename"
+              :disabled="(store.imageUsage.get(img.id) ?? 0) > 0"
+              :title="(store.imageUsage.get(img.id) ?? 0) > 0 ? '图片已被文章引用，不可修改名称' : '修改图片名称'"
+              :data-testid="`blog-gallery-rename-${img.id}`"
+              @click="openRename(img)"
+            >
+              重命名
+            </button>
+            <button
+              type="button"
+              class="bg-del"
+              title="删除这张图片"
+              :data-testid="`blog-gallery-delete-${img.id}`"
+              @click="doRemove([img.id])"
+            >
+              删除
+            </button>
+          </div>
         </div>
       </li>
     </ul>
+
+    <BaseDialog v-if="renaming" title="重命名图片" width="480px" data-testid="blog-gallery-rename-dialog" @close="renaming = null">
+      <div class="bg-rename-body">
+        <div class="bg-rename-thumb">
+          <img :src="renaming.dataUrl" :alt="renaming.name" />
+        </div>
+        <label class="bg-rename-field">
+          <span class="bg-rename-label">图片名称</span>
+          <el-input
+            v-model="renameText"
+            size="small"
+            maxlength="60"
+            placeholder="用于列表展示与插入正文时的默认别名"
+            data-testid="blog-gallery-rename-input"
+            @keyup.enter="submitRename"
+          />
+        </label>
+      </div>
+      <template #footer>
+        <button type="button" class="ui-btn ui-btn--sm" data-testid="blog-gallery-rename-cancel" @click="renaming = null">取消</button>
+        <button
+          type="button"
+          class="ui-btn ui-btn--sm ui-btn--primary"
+          :disabled="renameSaving || !renameText.trim()"
+          data-testid="blog-gallery-rename-confirm"
+          @click="submitRename"
+        >
+          保存
+        </button>
+      </template>
+    </BaseDialog>
 
     <div v-if="total > 0" class="bg-pager ewt-pager">
       <el-pagination
@@ -430,6 +498,64 @@ async function doRemove(ids: string[]): Promise<void> {
 .bg-del:hover {
   border-color: var(--color-error, #ef4444);
   color: var(--color-error, #ef4444);
+}
+
+.bg-ops {
+  display: flex;
+  align-self: flex-start;
+  gap: 6px;
+}
+
+.bg-rename:hover {
+  border-color: var(--color-primary, #3b82f6);
+  color: var(--color-primary, #3b82f6);
+}
+
+.bg-del:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.bg-del:disabled:hover {
+  border-color: var(--color-border, #e2e8f0);
+  color: var(--color-text-secondary, #64748b);
+}
+
+/* 重命名弹框：缩略图 + 名称输入 */
+.bg-rename-body {
+  display: flex;
+  gap: 14px;
+}
+
+.bg-rename-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 120px;
+  height: 120px;
+  overflow: hidden;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm, 6px);
+  background-color: var(--color-bg-2, #f1f5f9);
+}
+
+.bg-rename-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.bg-rename-field {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.bg-rename-label {
+  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-xs, 12px);
 }
 
 @media (max-width: 768px) {
