@@ -6,16 +6,23 @@
  * 提供：搜索框、分类 chips、标签 chips、排序下拉、清空筛选。
  * 分类/标签可能较多 → chips 容器横向滚动，不挤压布局。
  */
+import { computed } from 'vue'
 import Icon from '@/components/Icon.vue'
 import type { BlogCategory, BlogSort, BlogTag } from '@/types'
 
-defineProps<{
+const props = defineProps<{
   keyword: string
   activeCategory: string
   activeTag: string
   sort: BlogSort
   categories: BlogCategory[]
   tags: BlogTag[]
+  /** 各分类下的已发布文章数（用于 pill 上的数量徽标；空分类自动隐藏） */
+  categoryCounts: Record<string, number>
+  /** 各标签下的已发布文章数 */
+  tagCounts: Record<string, number>
+  /** 「全部分类」徽标：已发布文章总数 */
+  totalCount: number
   hasFilter: boolean
   /** 排序可选项（与 BlogSettingsPanel 的 SORT_OPTIONS 保持一致） */
   sortOptions: Array<{ value: BlogSort; label: string }>
@@ -28,6 +35,14 @@ const emit = defineEmits<{
   'update:sort': [value: BlogSort]
   clear: []
 }>()
+
+// 仅展示有文章的分类 / 标签（对齐工具箱：空项自动隐藏，避免空页签干扰）
+const visibleCategories = computed(() =>
+  (props.categories as BlogCategory[]).filter(c => (props.categoryCounts[c.id] ?? 0) > 0)
+)
+const visibleTags = computed(() =>
+  (props.tags as BlogTag[]).filter(t => (props.tagCounts[t.id] ?? 0) > 0)
+)
 </script>
 
 <template>
@@ -64,7 +79,7 @@ const emit = defineEmits<{
       </button>
     </div>
 
-    <div v-if="categories.length" class="bf-chips" role="group" aria-label="按分类筛选">
+    <div v-if="visibleCategories.length" class="bf-chips" role="group" aria-label="按分类筛选">
       <button
         type="button"
         class="bf-chip"
@@ -72,10 +87,10 @@ const emit = defineEmits<{
         data-testid="blog-front-cat-all"
         @click="emit('select-category', '')"
       >
-        全部分类
+        全部分类<span class="bf-chip-cnt">{{ totalCount }}</span>
       </button>
       <button
-        v-for="c in categories"
+        v-for="c in visibleCategories"
         :key="c.id"
         type="button"
         class="bf-chip"
@@ -83,11 +98,11 @@ const emit = defineEmits<{
         :data-testid="`blog-front-cat-${c.id}`"
         @click="emit('select-category', c.id)"
       >
-        {{ c.name }}
+        {{ c.name }}<span class="bf-chip-cnt">{{ categoryCounts[c.id] }}</span>
       </button>
     </div>
 
-    <div v-if="tags.length" class="bf-chips" role="group" aria-label="按标签筛选">
+    <div v-if="visibleTags.length" class="bf-chips" role="group" aria-label="按标签筛选">
       <button
         type="button"
         class="bf-chip bf-chip--tag"
@@ -95,10 +110,10 @@ const emit = defineEmits<{
         data-testid="blog-front-tag-all"
         @click="emit('select-tag', '')"
       >
-        全部标签
+        全部标签<span class="bf-chip-cnt">{{ visibleTags.length }}</span>
       </button>
       <button
-        v-for="t in tags"
+        v-for="t in visibleTags"
         :key="t.id"
         type="button"
         class="bf-chip bf-chip--tag"
@@ -106,7 +121,7 @@ const emit = defineEmits<{
         :data-testid="`blog-front-tag-${t.id}`"
         @click="emit('select-tag', t.id)"
       >
-        #{{ t.name }}
+        #{{ t.name }}<span class="bf-chip-cnt">{{ tagCounts[t.id] }}</span>
       </button>
     </div>
   </div>
@@ -202,14 +217,22 @@ const emit = defineEmits<{
     background-color var(--motion-duration, 220ms);
 }
 .bf-chip:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
+/* 选中态：对齐工具箱分类 pill——实心主色填充 + 白字（原为浅色 soft 填充） */
 .bf-chip.is-active {
   border-color: var(--color-primary, #3b82f6);
-  background-color: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  background-color: var(--color-primary, #3b82f6);
+  color: #fff;
   font-weight: var(--font-weight-medium, 500);
 }
-.bf-chip--tag.is-active {
-  background-color: var(--color-primary-soft, #eff6ff);
+.bf-chip.is-active:hover {
+  border-color: var(--color-primary, #3b82f6);
+  color: #fff;
+}
+/* 数量徽标：对齐工具箱 .tb-cat-cnt */
+.bf-chip-cnt {
+  font-size: var(--font-size-xs, 11px);
+  opacity: 0.78;
+  margin-left: 2px;
 }
 
 @media (max-width: 768px) {

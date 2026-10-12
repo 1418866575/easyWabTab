@@ -32,6 +32,11 @@
   font-size: var(--font-size-sm, 13px);
   line-height: var(--line-height-relaxed, 1.6);
 }
+.bf-site-sub {
+  margin: 4px 0 0;
+  color: var(--color-text-muted, #94a3b8);
+  font-size: var(--font-size-xs, 12px);
+}
 .bf-admin-link {
   flex: 0 0 auto;
   font-size: var(--font-size-xs, 12px);
