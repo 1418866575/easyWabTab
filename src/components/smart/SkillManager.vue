@@ -63,6 +63,19 @@ const allTags = computed(() => {
 })
 const hasFilter = computed(() => !!keyword.value.trim() || !!category.value || activeTags.value.length > 0)
 
+/**
+ * 分类筛选药丸（工具箱同款）：全部 + 各分类，带技能数量。
+ * 与工具箱不同的是——这里保留数量为 0 的分类，方便看到刚播种的默认分类及其归属。
+ */
+const categoryTabs = computed(() => {
+  const counts = new Map<string, number>()
+  for (const s of store.skills) counts.set(s.category, (counts.get(s.category) ?? 0) + 1)
+  return [
+    { id: '', name: '全部', count: store.skills.length },
+    ...store.skillCategories.map(c => ({ id: c, name: c, count: counts.get(c) ?? 0 }))
+  ]
+})
+
 function resetFilter(): void {
   keyword.value = ''
   category.value = ''
@@ -276,25 +289,58 @@ function relTime(ts: number): string {
 
 <template>
   <div class="sm-wrap">
-    <!-- 工具栏 -->
+    <!-- 搜索区（工具箱同款：父容器内居中，聚焦高亮） -->
+    <div class="sm-search-wrap">
+      <div class="sm-search" role="search">
+        <svg class="sm-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" />
+          <path d="M21 21l-4.3-4.3" />
+        </svg>
+        <input
+          v-model="keyword"
+          class="sm-search-input"
+          data-testid="smart-skill-search"
+          type="text"
+          placeholder="搜索技能名称、分类、标签或正文…"
+          aria-label="搜索技能"
+          autocomplete="off"
+        />
+        <button v-if="keyword" type="button" class="sm-search-clear" title="清空搜索" aria-label="清空搜索" @click="keyword = ''">✕</button>
+      </div>
+    </div>
+
+    <!-- 分类筛选（工具箱同款药丸；保留 0 个技能的分类，便于看到默认分类及其数量） -->
+    <div class="sm-cats" role="group" aria-label="技能分类筛选">
+      <button
+        v-for="t in categoryTabs"
+        :key="t.id || '__all__'"
+        type="button"
+        class="sm-cat-pill"
+        :class="{ 'is-on': category === t.id }"
+        :aria-pressed="category === t.id"
+        :data-testid="`smart-skill-cat-${t.id || 'all'}`"
+        @click="category = t.id"
+      >
+        <span>{{ t.name }}</span>
+        <span class="sm-cat-pill-cnt">{{ t.count }}</span>
+      </button>
+    </div>
+
+    <!-- 排序 + 操作 -->
     <div class="sm-toolbar">
       <div class="sm-toolbar-left">
-        <el-input v-model="keyword" size="small" class="sm-search" placeholder="搜索名称 / 说明 / 标签 / 正文" clearable />
-        <select v-model="category" class="sm-select" aria-label="按分类筛选">
-          <option value="">全部分类</option>
-          <option v-for="c in store.skillCategories" :key="c" :value="c">{{ c }}</option>
-        </select>
         <select v-model="sort" class="sm-select" aria-label="排序方式">
           <option value="updated">最近更新</option>
           <option value="name">名称</option>
           <option value="usage">使用次数</option>
         </select>
+        <span v-if="hasFilter" class="sm-result">筛选出 {{ visible.length }} 个</span>
       </div>
       <div class="sm-toolbar-right">
         <el-button size="small" data-testid="smart-skill-add" @click="openAdd">＋ 新增技能</el-button>
-        <el-button size="small" data-testid="smart-skill-import-folder" @click="importFromFolder">导入文件夹</el-button>
-        <el-button size="small" data-testid="smart-skill-import-zip" @click="importFromZip">导入 zip</el-button>
-        <el-button size="small" data-testid="smart-skill-export-all" @click="exportAllZip">打包 zip</el-button>
+        <el-button size="small" data-testid="smart-skill-import-folder" @click="importFromFolder">导入技能（目录）</el-button>
+        <el-button size="small" data-testid="smart-skill-import-zip" @click="importFromZip">导入技能（zip）</el-button>
+        <el-button size="small" data-testid="smart-skill-export-all" @click="exportAllZip">导出技能</el-button>
       </div>
     </div>
 
@@ -372,8 +418,8 @@ function relTime(ts: number): string {
       <div class="sm-empty-actions">
         <el-button v-if="hasFilter" size="small" @click="resetFilter">清空筛选</el-button>
         <el-button v-else size="small" type="primary" @click="openAdd">＋ 新增技能</el-button>
-        <el-button size="small" @click="importFromFolder">导入文件夹</el-button>
-        <el-button size="small" @click="importFromZip">导入 zip</el-button>
+        <el-button size="small" @click="importFromFolder">导入技能（目录）</el-button>
+        <el-button size="small" @click="importFromZip">导入技能（zip）</el-button>
       </div>
     </div>
 
@@ -423,9 +469,80 @@ function relTime(ts: number): string {
 <style scoped>
 .sm-wrap { display: flex; flex-direction: column; gap: 12px; }
 
+/* 搜索框：工具箱同款（父容器内居中、卡片式、聚焦高亮） */
+.sm-search-wrap { display: flex; justify-content: center; }
+.sm-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 720px;
+  padding: 10px 14px;
+  background: var(--color-bg-card, #fff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+  transition: border-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
+    box-shadow var(--motion-duration, 0.2s) var(--motion-ease, ease);
+}
+.sm-search:focus-within {
+  border-color: var(--color-primary, #3b82f6);
+  box-shadow: 0 0 0 3px var(--color-primary-soft, #eff6ff);
+}
+.sm-search-icon { color: var(--color-text-muted, #9ca3af); flex: none; }
+.sm-search-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-text, #111827);
+  font-size: 14px;
+  font-family: inherit;
+}
+.sm-search-input::placeholder { color: var(--color-text-muted, #9ca3af); }
+.sm-search-clear {
+  flex: none;
+  min-height: 24px;
+  padding: 2px 6px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-muted, #9ca3af);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.sm-search-clear:hover { color: var(--color-primary, #3b82f6); background: var(--color-bg-hover, #f1f5f9); }
+
+/* 分类药丸：工具箱同款 */
+.sm-cats { display: flex; flex-wrap: wrap; gap: 8px; }
+.sm-cat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-bg-card, #fff);
+  color: var(--color-text-secondary, #6b7280);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color var(--motion-duration, 0.2s) var(--motion-ease, ease),
+    border-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
+    background-color var(--motion-duration, 0.2s) var(--motion-ease, ease);
+}
+.sm-cat-pill:hover { color: var(--color-primary, #3b82f6); border-color: var(--color-primary, #3b82f6); }
+.sm-cat-pill.is-on { background: var(--color-primary, #3b82f6); color: #fff; border-color: var(--color-primary, #3b82f6); }
+.sm-cat-pill-cnt { font-size: 12px; opacity: 0.78; }
+
+/* 排序 + 操作行 */
 .sm-toolbar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
 .sm-toolbar-left, .sm-toolbar-right { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.sm-search { width: 260px; }
+.sm-result { font-size: 12px; color: var(--color-text-muted, #9ca3af); }
 .sm-select {
   height: 24px;
   padding: 0 6px;
@@ -586,7 +703,7 @@ function relTime(ts: number): string {
 /* 移动端：单列 + 触控目标 ≥44px */
 @media (max-width: 768px) {
   .sm-list { grid-template-columns: 1fr; }
-  .sm-search { width: 100%; }
+  .sm-cat-pill { min-height: 40px; }
   .sm-toolbar-left, .sm-toolbar-right { width: 100%; }
   .sm-btn { min-height: 44px; padding: 8px 12px; font-size: 13px; }
   .sm-select { height: 44px; font-size: 16px; }
