@@ -329,6 +329,25 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   if (typeof data.smartPageIcon === 'string') {
     out.smartPageIcon = data.smartPageIcon
   }
+  // 博客后台 / 博客前台：名称仅采纳字符串；开关仅采纳布尔（缺失 = 显示）；图标原样透传
+  if (typeof data.blogAdminPageName === 'string') {
+    out.blogAdminPageName = data.blogAdminPageName.trim()
+  }
+  if (typeof data.blogAdminPageVisible === 'boolean') {
+    out.blogAdminPageVisible = data.blogAdminPageVisible
+  }
+  if (typeof data.blogAdminPageIcon === 'string') {
+    out.blogAdminPageIcon = data.blogAdminPageIcon
+  }
+  if (typeof data.blogFrontPageName === 'string') {
+    out.blogFrontPageName = data.blogFrontPageName.trim()
+  }
+  if (typeof data.blogFrontPageVisible === 'boolean') {
+    out.blogFrontPageVisible = data.blogFrontPageVisible
+  }
+  if (typeof data.blogFrontPageIcon === 'string') {
+    out.blogFrontPageIcon = data.blogFrontPageIcon
+  }
   // 「工作台管理」按钮：名称仅采纳字符串；开关仅采纳布尔（缺失 = 显示）
   if (typeof data.workbenchManageName === 'string') {
     out.workbenchManageName = data.workbenchManageName.trim()
@@ -493,6 +512,15 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const toolboxButtonName = ref<string>('')
   const toolboxButtonVisible = ref<boolean>(true)
   const toolboxButtonIcon = ref<string>('')
+  // 博客后台 / 博客前台（/blog/admin、/blog）：名称 + 可见性 + 入口图标，默认显示。
+  // 命名沿用页面三件套惯例，与其它工作台字段同构，一并进 workbench.json 信封跨设备云同步；
+  // 可在 设置 → 个性化 → 主题（工具箱下方） 关闭 / 改名 / 换图标
+  const blogAdminPageName = ref<string>('')
+  const blogAdminPageVisible = ref<boolean>(true)
+  const blogAdminPageIcon = ref<string>('')
+  const blogFrontPageName = ref<string>('')
+  const blogFrontPageVisible = ref<boolean>(true)
+  const blogFrontPageIcon = ref<string>('')
 
   // 站点外观（浏览器标签标题 + favicon）：localStorage 驱动（site-title / site-favicon），
   // 与主题同构——不进 IDB persist，经 nav.json prefs 云同步跨设备生效；空值回退默认
@@ -580,6 +608,12 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       toolboxButtonName: toolboxButtonName.value,
       toolboxButtonIcon: toolboxButtonIcon.value,
       toolboxButtonVisible: toolboxButtonVisible.value,
+      blogAdminPageName: blogAdminPageName.value,
+      blogAdminPageVisible: blogAdminPageVisible.value,
+      blogAdminPageIcon: blogAdminPageIcon.value,
+      blogFrontPageName: blogFrontPageName.value,
+      blogFrontPageVisible: blogFrontPageVisible.value,
+      blogFrontPageIcon: blogFrontPageIcon.value,
       desktopNotifyEnabled: desktopNotifyEnabled.value,
       countdownPopupEnabled: countdownPopupEnabled.value,
       // 水印：随 settings 整体进 workbench.json 信封 → 自动跨设备云同步
@@ -746,6 +780,12 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       studentPageIcon.value = typeof effective.studentPageIcon === 'string' ? effective.studentPageIcon : ''
       teacherPageIcon.value = typeof effective.teacherPageIcon === 'string' ? effective.teacherPageIcon : ''
       smartPageIcon.value = typeof effective.smartPageIcon === 'string' ? effective.smartPageIcon : ''
+      blogAdminPageName.value = typeof effective.blogAdminPageName === 'string' ? effective.blogAdminPageName.trim() : ''
+      blogAdminPageVisible.value = effective.blogAdminPageVisible !== false
+      blogAdminPageIcon.value = typeof effective.blogAdminPageIcon === 'string' ? effective.blogAdminPageIcon : ''
+      blogFrontPageName.value = typeof effective.blogFrontPageName === 'string' ? effective.blogFrontPageName.trim() : ''
+      blogFrontPageVisible.value = effective.blogFrontPageVisible !== false
+      blogFrontPageIcon.value = typeof effective.blogFrontPageIcon === 'string' ? effective.blogFrontPageIcon : ''
       workbenchManageName.value = typeof effective.workbenchManageName === 'string' ? effective.workbenchManageName.trim() : ''
       workbenchManageVisible.value = effective.workbenchManageVisible !== false
       workbenchManageIcon.value = typeof effective.workbenchManageIcon === 'string' ? effective.workbenchManageIcon : ''
@@ -922,6 +962,12 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     toolboxButtonName.value = ''
     toolboxButtonIcon.value = ''
     toolboxButtonVisible.value = true
+    blogAdminPageName.value = ''
+    blogAdminPageVisible.value = true
+    blogAdminPageIcon.value = ''
+    blogFrontPageName.value = ''
+    blogFrontPageVisible.value = true
+    blogFrontPageIcon.value = ''
     desktopNotifyEnabled.value = false
     countdownPopupEnabled.value = true
     // 水印重置：关闭 + 空文案（回到「出厂」状态，页面无水印）
@@ -1105,6 +1151,31 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     smartPageIcon.value = s
     persist()
   }
+  // 博客后台 / 博客前台 setters（与其它页面三件套同构）
+  function setBlogAdminPageName(s: string) {
+    blogAdminPageName.value = s
+    persist()
+  }
+  function setBlogAdminPageVisible(v: boolean) {
+    blogAdminPageVisible.value = v
+    persist()
+  }
+  function setBlogAdminPageIcon(s: string) {
+    blogAdminPageIcon.value = s
+    persist()
+  }
+  function setBlogFrontPageName(s: string) {
+    blogFrontPageName.value = s
+    persist()
+  }
+  function setBlogFrontPageVisible(v: boolean) {
+    blogFrontPageVisible.value = v
+    persist()
+  }
+  function setBlogFrontPageIcon(s: string) {
+    blogFrontPageIcon.value = s
+    persist()
+  }
   // 「工作台管理」按钮 setters
   function setWorkbenchManageName(s: string) {
     workbenchManageName.value = s
@@ -1164,6 +1235,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const studentPageDisplayName = computed(() => studentPageName.value || '学生工作台')
   const teacherPageDisplayName = computed(() => teacherPageName.value || '教师工作台')
   const smartPageDisplayName = computed(() => smartPageName.value || '智能工作台')
+  const blogAdminPageDisplayName = computed(() => blogAdminPageName.value || '博客后台')
+  const blogFrontPageDisplayName = computed(() => blogFrontPageName.value || '博客前台')
   const workbenchManageDisplayName = computed(() => workbenchManageName.value || '工作台管理')
   const countdownButtonDisplayName = computed(() => countdownButtonName.value || '倒计时')
   const helpButtonDisplayName = computed(() => helpButtonName.value || '帮助')
@@ -1415,6 +1488,14 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     toolboxButtonVisible,
     toolboxButtonDisplayName,
     toolboxButtonShown,
+    blogAdminPageName,
+    blogAdminPageVisible,
+    blogAdminPageIcon,
+    blogAdminPageDisplayName,
+    blogFrontPageName,
+    blogFrontPageVisible,
+    blogFrontPageIcon,
+    blogFrontPageDisplayName,
     siteTitle,
     siteFavicon,
     workbenchPageDisplayName,
@@ -1502,6 +1583,12 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     setToolboxButtonName,
     setToolboxButtonIcon,
     setToolboxButtonVisible,
+    setBlogAdminPageName,
+    setBlogAdminPageVisible,
+    setBlogAdminPageIcon,
+    setBlogFrontPageName,
+    setBlogFrontPageVisible,
+    setBlogFrontPageIcon,
     initSiteMeta,
     applySiteMeta,
     setSiteTitle,

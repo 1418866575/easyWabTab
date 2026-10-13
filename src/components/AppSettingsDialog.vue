@@ -268,7 +268,7 @@ const mpQrFailed = ref(false)
 // ========================================
 // 入口图标选择（工作台 / 销售记账 / 学生 / 教师）：图标来自图标管理库，弹框形式选择
 // ========================================
-type IconTarget = 'workbench' | 'business' | 'student' | 'teacher' | 'smart' | 'manage' | 'favicon' | 'toolbox'
+type IconTarget = 'workbench' | 'business' | 'student' | 'teacher' | 'smart' | 'manage' | 'favicon' | 'toolbox' | 'blog-admin' | 'blog-front'
 const ICON_TARGET_LABEL: Record<IconTarget, string> = {
   workbench: '个人工作台',
   business: '销售记账',
@@ -277,7 +277,9 @@ const ICON_TARGET_LABEL: Record<IconTarget, string> = {
   smart: '智能工作台',
   manage: '工作台管理',
   favicon: '站点图标',
-  toolbox: '工具箱'
+  toolbox: '工具箱',
+  'blog-admin': '博客后台',
+  'blog-front': '博客前台'
 }
 /** 当前正在编辑哪个入口的图标（空串 = 弹框关闭） */
 const iconPickerTarget = ref<IconTarget | ''>('')
@@ -300,6 +302,8 @@ const iconPickerCurrent = computed(() => {
     case 'manage': return store.workbenchManageIcon
     case 'favicon': return store.siteFavicon
     case 'toolbox': return store.toolboxButtonIcon
+    case 'blog-admin': return store.blogAdminPageIcon
+    case 'blog-front': return store.blogFrontPageIcon
     default: return ''
   }
 })
@@ -314,6 +318,8 @@ function onPickIcon(src: string): void {
     case 'manage': store.setWorkbenchManageIcon(src); break
     case 'favicon': store.setSiteFavicon(src); break
     case 'toolbox': store.setToolboxButtonIcon(src); break
+    case 'blog-admin': store.setBlogAdminPageIcon(src); break
+    case 'blog-front': store.setBlogFrontPageIcon(src); break
     default: break
   }
   closeIconPicker()
@@ -2407,6 +2413,80 @@ function toggleFullscreen(): void {
           </div>
           <p class="wb-menu-hint">
             控制「工具箱」入口的显示、名称与图标。该入口出现在左上角工作台切换面板（Alt+W 唤起）中；关闭后不再出现在面板里。名称与图标会同步应用到工具箱页面标题。
+          </p>
+        </div>
+
+        <!-- 博客后台（/blog/admin）：名称 + 图标 + 开关（紧随「工具箱」之后，交互同款） -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <span class="wb-menu-label">博客后台</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                :value="store.blogAdminPageName"
+                placeholder="博客后台"
+                maxlength="20"
+                data-testid="blog-admin-page-name-input"
+                @input="store.setBlogAdminPageName(($event.target as HTMLInputElement).value)"
+              />
+              <button
+                type="button"
+                class="wb-menu-icon-btn"
+                :class="{ 'is-set': !!store.blogAdminPageIcon }"
+                :title="store.blogAdminPageIcon ? '已设置图标，点击更换' : '选择图标'"
+                data-testid="blog-admin-icon-btn"
+                @click="openIconPicker('blog-admin')"
+              >
+                <img v-if="store.blogAdminPageIcon" :src="store.blogAdminPageIcon" alt="" class="wb-menu-icon-img" />
+                <Icon v-else name="image" />
+              </button>
+              <el-switch
+                :model-value="store.blogAdminPageVisible !== false"
+                data-testid="blog-admin-visible-switch"
+                @update:model-value="store.setBlogAdminPageVisible"
+              />
+            </div>
+          </div>
+          <p class="wb-menu-hint">
+            控制「博客后台」入口的显示、名称与图标。该入口出现在左上角工作台切换面板（Alt+W 唤起）中；关闭后不再出现在面板里，已发布的文章与图库图片不受影响。
+          </p>
+        </div>
+
+        <!-- 博客前台（/blog）：名称 + 图标 + 开关 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <span class="wb-menu-label">博客前台</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                :value="store.blogFrontPageName"
+                placeholder="博客前台"
+                maxlength="20"
+                data-testid="blog-front-page-name-input"
+                @input="store.setBlogFrontPageName(($event.target as HTMLInputElement).value)"
+              />
+              <button
+                type="button"
+                class="wb-menu-icon-btn"
+                :class="{ 'is-set': !!store.blogFrontPageIcon }"
+                :title="store.blogFrontPageIcon ? '已设置图标，点击更换' : '选择图标'"
+                data-testid="blog-front-icon-btn"
+                @click="openIconPicker('blog-front')"
+              >
+                <img v-if="store.blogFrontPageIcon" :src="store.blogFrontPageIcon" alt="" class="wb-menu-icon-img" />
+                <Icon v-else name="image" />
+              </button>
+              <el-switch
+                :model-value="store.blogFrontPageVisible !== false"
+                data-testid="blog-front-visible-switch"
+                @update:model-value="store.setBlogFrontPageVisible"
+              />
+            </div>
+          </div>
+          <p class="wb-menu-hint">
+            控制「博客前台」入口的显示、名称与图标。该入口出现在左上角工作台切换面板（Alt+W 唤起）中；关闭后不再出现在面板里，已发布的文章不受影响。
           </p>
         </div>
 

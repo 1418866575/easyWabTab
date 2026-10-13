@@ -336,6 +336,12 @@ export interface AppSettingsData {
   toolboxButtonName?: string           // 「工具箱」入口自定义名称（默认 '工具箱'）
   toolboxButtonIcon?: string           // 「工具箱」入口自定义图标（图标库路径 / dataUrl；空串或缺失 = 用内置 🧰）
   toolboxButtonVisible?: boolean       // 「工具箱」入口可见性开关（默认 true；缺失 = 显示）
+  blogAdminPageName?: string           // 博客后台（/blog/admin）自定义名称（默认 '博客后台'）
+  blogAdminPageVisible?: boolean       // 博客后台可见性开关（默认 true；缺失 = 显示）
+  blogAdminPageIcon?: string           // 博客后台入口自定义图标（图标库路径 / dataUrl；空串或缺失 = 内置默认）
+  blogFrontPageName?: string           // 博客前台（/blog）自定义名称（默认 '博客前台'）
+  blogFrontPageVisible?: boolean       // 博客前台可见性开关（默认 true；缺失 = 显示）
+  blogFrontPageIcon?: string           // 博客前台入口自定义图标（图标库路径 / dataUrl；空串或缺失 = 内置默认）
   cloudSyncEnabled?: boolean           // 云同步总开关（默认 false）
   cloudSyncUrl?: string                // WebDAV URL（空串 = 未配置）
   cloudSyncUsername?: string           // WebDAV 用户名（空串 = 未配置）
