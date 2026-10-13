@@ -2,7 +2,7 @@
 /**
  * 图书馆「上传」弹框（浏览器端本机上传）
  *
- * 存的是 IndexedDB，只在这台设备的这个浏览器里可见 —— 与 public/books 的静态书
+ * 存的是 IndexedDB，只在这台设备的这个浏览器里可见 —— 与 public/bookdata 的静态书
  * 是两套数据。弹框里把这一点说明白，避免用户以为传完别人也能看到。
  *
  * 沿用项目的 BaseDialog 体系（见 docs/UI_STYLE_GUIDE.md §2.2），不自造弹框。
@@ -163,7 +163,7 @@ async function onDelete(book: UploadedBook): Promise<void> {
       <p>
         把 <strong>.html</strong> 文件拖进来即可。文件存在<strong>这台设备的浏览器里</strong>，
         不上传服务器、别的设备看不到 —— 想让所有人都能看到的书，还是得放进
-        <code>public/books/</code> 目录。
+        <code>public/bookdata/</code> 目录。
       </p>
       <p class="bk-upload-limit">单个文件上限 {{ formatSize(BOOKS_UPLOAD_MAX_BYTES) }}，当前已存 {{ uploads.length }} 本 / {{ uploadTotal }}</p>
     </div>

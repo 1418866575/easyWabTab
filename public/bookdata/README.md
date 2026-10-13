@@ -11,13 +11,13 @@
 1. 新建一个目录，目录名就是书 id（小写字母 + 连字符）：
 
    ```
-   public/books/my-book/
+   public/bookdata/my-book/
    ```
 
 2. 把做好的 HTML 放进这个目录，**文件名必须是 `index.html`**：
 
    ```
-   public/books/my-book/index.html
+   public/bookdata/my-book/index.html
    ```
 
 3. 跑一下生成命令（或直接 `npm run build`）：
@@ -68,7 +68,7 @@
 
 | 规则 | 说明 |
 |---|---|
-| 一本书 = 一个目录 | 目录名即 `id`，出现在 URL `/books/<id>/index.html` |
+| 一本书 = 一个目录 | 目录名即 `id`，出现在 URL `/bookdata/<id>/index.html` |
 | `_` 开头的目录会被跳过 | `_template/` 是模板目录，不会出现在书架上 |
 | 缺 `index.html` 的目录会被跳过 | 生成时会控制台告警，不会静默吞掉 |
 
@@ -76,7 +76,7 @@
 
 ## manifest.json 是自动生成的
 
-`public/books/manifest.json` 由 `scripts/gen-books-manifest.cjs` 生成，**不要手改**（改了会在下次生成时被覆盖）。
+`public/bookdata/manifest.json` 由 `scripts/gen-books-manifest.cjs` 生成，**不要手改**（改了会在下次生成时被覆盖）。
 
 需要手写元信息就改各本书目录下的 `meta.json`，那个是安全的手写入口。
 

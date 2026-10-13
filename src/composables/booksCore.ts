@@ -11,7 +11,7 @@
 
 // ==================== 类型 ====================
 
-/** 书籍来源：静态资源（public/books，脚本扫描得来）/ 本机上传（IndexedDB） */
+/** 书籍来源：静态资源（public/bookdata，脚本扫描得来）/ 本机上传（IndexedDB） */
 export type BookSource = 'static' | 'upload'
 
 export interface BookItem {
@@ -23,7 +23,7 @@ export interface BookItem {
   tags: string[]
   /** 排序权重（meta.json 的 order；未设时为大值，排最后） */
   order: number
-  /** 静态书为 `/books/<id>/index.html`；上传书由前端运行时生成 blob URL，故允许非站内路径 */
+  /** 静态书为 `/bookdata/<id>/index.html`；上传书由前端运行时生成 blob URL，故允许非站内路径 */
   entry: string
   /** 字节数，0 表示未知 */
   size: number
@@ -351,7 +351,7 @@ export function normalizeBookmark(raw: unknown): BookBookmark | null {
  * 在文档里找出**真正承载正文滚动**的元素。
  *
  * 为什么必须有这一步：不少「书」不是让 document 滚动，而是用了一个内部滚动容器
- * —— 例如 `public/books/daodejing`（道德经）是侧边目录布局，正文装在
+ * —— 例如 `public/bookdata/daodejing`（道德经）是侧边目录布局，正文装在
  * `nav.toc-sidebar`（overflow-y:auto，高 4518px / 视口 809px）里，
  * 此时 `document.documentElement.scrollHeight === clientHeight`，**window.scrollTo 完全无效**。
  *

@@ -89,7 +89,7 @@ const progressLabel = computed(() =>
       <p v-if="book.description" class="bk-desc">{{ book.description }}</p>
       <!-- 静态书缺简介时给出「怎么补」的操作指引；上传书缺简介没什么可指点的（它没有 meta.json 概念） -->
       <p v-else-if="book.source === 'static'" class="bk-desc bk-desc--muted">
-        （这本书没有简介，可在 public/books 里加个 meta.json）
+        （这本书没有简介，可在 public/bookdata 里加个 meta.json）
       </p>
 
       <div class="bk-meta">

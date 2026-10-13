@@ -20,7 +20,7 @@ const BlogAdminView = () => import('../views/BlogAdminView.vue')
 const BlogHomeView = () => import('../views/BlogHomeView.vue')
 const BlogPostView = () => import('../views/BlogPostView.vue')
 // 个人图书馆：/books 书架首页 + /books/read 站内阅读页（iframe 承载原书 HTML）。
-// 书籍数据来自 public/books/manifest.json（构建期扫描生成）与本机 IndexedDB 上传项，两者合并展示。
+// 书籍数据来自 public/bookdata/manifest.json（构建期扫描生成）与本机 IndexedDB 上传项，两者合并展示。
 const BooksView = () => import('../views/BooksView.vue')
 const BookReaderView = () => import('../views/BookReaderView.vue')
 

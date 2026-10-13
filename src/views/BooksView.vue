@@ -3,7 +3,7 @@
  * 个人图书馆书架首页（路由 /books）
  *
  * 数据来源两处合并：
- *   1. 静态书：`fetch('/books/manifest.json')`（由 scripts/gen-books-manifest.cjs 构建期生成）
+ *   1. 静态书：`fetch('/bookdata/manifest.json')`（由 scripts/gen-books-manifest.cjs 构建期生成）
  *   2. 本机上传：IndexedDB `books` store（booksUpload.ts）
  * 偏好（收藏/最近/次数/书签）：IndexedDB `nav` 的 books-prefs 键。
  *   其中**收藏 + 用户自建书签**经 books.json 信封进云同步；阅读位置/最近/次数/上传书为设备级。
@@ -182,7 +182,7 @@ const bookmarkCount = computed(() => prefs.userBookmarks.value.length)
 /** ---------- 数据装载 ---------- */
 async function loadStaticBooks(): Promise<void> {
   try {
-    const res = await fetch(`${import.meta.env.BASE_URL}books/manifest.json`, { cache: 'no-cache' })
+    const res = await fetch(`${import.meta.env.BASE_URL}bookdata/manifest.json`, { cache: 'no-cache' })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const raw = await res.json()
     staticBooks.value = normalizeBooks(raw)
@@ -502,7 +502,7 @@ onUnmounted(() => {
     <div v-else-if="!loading && !loadError && filtered.length === 0" class="bk-empty" data-testid="bk-empty">
       <template v-if="hasFilter">没有符合条件的书，试试调整筛选条件或清空筛选。</template>
       <template v-else>
-        书架还是空的。把 HTML 放进 <code>public/books/&lt;书名&gt;/index.html</code>
+        书架还是空的。把 HTML 放进 <code>public/bookdata/&lt;书名&gt;/index.html</code>
         后执行 <code>npm run gen:books</code>，或直接点右上角「上传书籍」放到本机。
       </template>
     </div>

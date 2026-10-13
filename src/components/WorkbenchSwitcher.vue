@@ -150,7 +150,7 @@ const allEntries = computed<Entry[]>(() => [
   },
   {
     // 个人图书馆：路由 /books（书架）与 /books/read（站内 iframe 阅读页）。
-    // 书籍内容本体是 public/books 下的静态 HTML，本页只做检索与展示。
+    // 书籍内容本体是 public/bookdata 下的静态 HTML，本页只做检索与展示。
     // 名称/图标/可见性同样走 booksPage* 三件套（设置 → 个性化 → 主题内配置）。
     key: 'books',
     path: '/books',

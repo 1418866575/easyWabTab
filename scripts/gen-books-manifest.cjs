@@ -1,13 +1,19 @@
 /**
- * 扫描 public/books/ 生成 public/books/manifest.json（个人图书馆清单）
+ * 扫描 public/bookdata/ 生成 public/bookdata/manifest.json（个人图书馆清单）
  *
  * 运行：node scripts/gen-books-manifest.cjs
  *      或 npm run gen:books（build 前置会自动跑一次）
  *
  * 设计目标：**放入文件即出卡片，零维护**。
- * - 必需：public/books/<id>/index.html（自包含单文件）
- * - 可选：public/books/<id>/meta.json（title / description / cover / category / tags / order）
+ * - 必需：public/bookdata/<id>/index.html（自包含单文件）
+ * - 可选：public/bookdata/<id>/meta.json（title / description / cover / category / tags / order）
  *   缺 meta.json 时回落到目录名与 HTML 的 <title>，卡片照常显示。
+ *
+ * ⚠️ 目录名**不能**叫 `books`：SPA 书架路由就是 `/books`，
+ * 若静态目录也叫 `dist/books/` 且无 index.html，nginx 的
+ * `try_files $uri $uri/ /index.html` 命中该目录后会交给 index 模块 →
+ * autoindex 关闭 → 直接 403 Forbidden，SPA 回退永远走不到（实测复现）。
+ * 故书籍数据一律放 `bookdata/`，与路由命名空间彻底分开。
  *
  * 铁律（与博客模块的 P4/P5 兜底一致）：
  * - 绝不删除已有条目，只增补与刷新
@@ -18,7 +24,7 @@
 const fs = require('fs')
 const path = require('path')
 
-const ROOT = path.join(__dirname, '..', 'public', 'books')
+const ROOT = path.join(__dirname, '..', 'public', 'bookdata')
 const MANIFEST = path.join(ROOT, 'manifest.json')
 
 /** 分类兜底值：meta.json 未写 category 时使用 */
@@ -128,7 +134,7 @@ function order(value) {
 
 function scan() {
   if (!fs.existsSync(ROOT)) {
-    console.warn('[books] public/books/ 不存在，跳过生成')
+    console.warn('[books] public/bookdata/ 不存在，跳过生成')
     return []
   }
 
@@ -165,7 +171,7 @@ function scan() {
     let cover = ''
     if (meta && typeof meta.cover === 'string' && meta.cover.trim()) {
       const raw = meta.cover.trim()
-      cover = raw.startsWith('/') ? raw : `/books/${id}/${raw.replace(/^\.\//, '')}`
+      cover = raw.startsWith('/') ? raw : `/bookdata/${id}/${raw.replace(/^\.\//, '')}`
       // 文件不存在只告警不失败：卡片会回落到色块占位，不该因此丢掉整本书
       if (!raw.startsWith('/') && !fs.existsSync(path.join(dir, raw))) {
         warnings.push(`meta.json 的 cover 文件不存在，将用色块占位：${id}/${raw}`)
@@ -184,7 +190,7 @@ function scan() {
       category: str(meta?.category, DEFAULT_CATEGORY),
       tags: tags(meta?.tags),
       order: order(meta?.order),
-      entry: `/books/${id}/index.html`,
+      entry: `/bookdata/${id}/index.html`,
       size: stat.size,
       updatedAt: stat.mtime.toISOString(),
       hasMeta: !!meta,

@@ -27,7 +27,7 @@ export const DB_NAME = 'easy-web-tab'
 /** v20：新增 `navmeta` object store，承载导航降级守卫的基线/高水位（从 localStorage 迁入，详见 IDB_META_STORES） */
 /** v21：新增 `iconcache` store（图标缓存移出 nav）；nav 同时改为按 key 多记录存储（见 idbPutKey） */
 /** v22：新增 `blog` store（博客后台单对象：settings + categories + tags + articles），随 blog.json 信封同步 */
-/** v23：新增 `books` store（浏览器端上传的 HTML 书架；与 public/books 静态书是两套数据，互不影响） */
+/** v23：新增 `books` store（浏览器端上传的 HTML 书架；与 public/bookdata 静态书是两套数据，互不影响） */
 export const DB_VERSION = 23
 /** 核心 9 store：随 JSON 备份导出/导入（v6 新增 business；v15 新增 family 家谱） */
 export const IDB_CORE_STORES = ['todos', 'notes', 'diary', 'countdowns', 'passwords', 'health', 'ledger', 'settings', 'business', 'family'] as const
@@ -81,7 +81,7 @@ export const IDB_BLOG_STORES = ['blog'] as const
 /**
  * 本机上传的书籍 store（v23 新增）
  *
- * 与 public/books 的静态书**刻意分开存**：静态书跟着 git 与部署走，全体用户可见；
+ * 与 public/bookdata 的静态书**刻意分开存**：静态书跟着 git 与部署走，全体用户可见；
  * 上传的书只跟着这台设备走。合成一个 store 会让「哪些书该进备份信封」变成一道
  * 每次都要重新想的判断题，分开则天然各自为政。
  * 该 store 按 id 多记录存储（每本书一条），不参与任何云同步信封 —— 与 uploads
@@ -331,7 +331,7 @@ export const BLOG_PREFS_NAV_KEY = 'blog-prefs'
  * **刻意不进任何云同步信封**（既不在 NAV_SYNC_KEYS，也不在 SMART_PREFS_KEYS，更不在
  * WORKBENCH_PREFS_KEYS）—— 阅读位置书签是设备相关的（ratio 在不同屏幕上指向不同章节，
  * 见 useBooksPrefs 注释），跨设备同步反而错位。收藏与最近打开虽是"值得同步"的东西，
- * 但它们依附于**本机的书单**：对方设备可能根本没有 public/books 里的同一批书，
+ * 但它们依附于**本机的书单**：对方设备可能根本没有 public/bookdata 里的同一批书，
  * 同步过去只会得到一堆点不开的收藏项。故本期整体按本机数据对待。
  */
 export const BOOKS_PREFS_NAV_KEY = 'books-prefs'

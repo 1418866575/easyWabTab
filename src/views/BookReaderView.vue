@@ -7,7 +7,7 @@
  * ## 为什么这里必须处理「内部滚动容器」
  *
  * 不少书不是让 document 滚动，而是把正文装进一个 `overflow-y:auto` 的内部容器。
- * 典型例子：`public/books/daodejing`（道德经）是侧边目录布局，正文在
+ * 典型例子：`public/bookdata/daodejing`（道德经）是侧边目录布局，正文在
  * `nav.toc-sidebar` 里（高 4518px / 视口 809px），而它自己的
  * `document.documentElement.scrollHeight === clientHeight`（都 849px）。
  * 此时 `window.scrollTo(0, n)` **完全无效**，只盯 window 的实现会得到「书签永远是空」。
@@ -74,7 +74,7 @@ async function loadBook(id: string): Promise<void> {
   let found: BookItem | null = null
   // 先查静态书（manifest），再查本机上传项
   try {
-    const res = await fetch(`${import.meta.env.BASE_URL}books/manifest.json`, { cache: 'no-cache' })
+    const res = await fetch(`${import.meta.env.BASE_URL}bookdata/manifest.json`, { cache: 'no-cache' })
     if (res.ok) found = normalizeBooks(await res.json()).find((b) => b.id === id) ?? null
   } catch (e) {
     console.warn('[books:reader] manifest 读取失败:', e)

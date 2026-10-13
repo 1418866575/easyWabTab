@@ -11,9 +11,9 @@
       "春秋"
     ],
     "order": 10,
-    "entry": "/books/daodejing/index.html",
+    "entry": "/bookdata/daodejing/index.html",
     "size": 347386,
-    "updatedAt": "2026-09-27T00:25:02.076Z",
+    "updatedAt": "2026-10-13T12:06:57.081Z",
     "hasMeta": true,
     "source": "static"
   },
@@ -29,9 +29,9 @@
       "谋略"
     ],
     "order": 20,
-    "entry": "/books/sunzibingfa/index.html",
+    "entry": "/bookdata/sunzibingfa/index.html",
     "size": 228453,
-    "updatedAt": "2026-09-22T11:41:26.698Z",
+    "updatedAt": "2026-10-13T12:06:57.103Z",
     "hasMeta": true,
     "source": "static"
   },
@@ -47,9 +47,9 @@
       "背诵"
     ],
     "order": 30,
-    "entry": "/books/gushi/index.html",
+    "entry": "/bookdata/gushi/index.html",
     "size": 601745,
-    "updatedAt": "2026-09-22T11:41:26.674Z",
+    "updatedAt": "2026-10-13T12:06:57.089Z",
     "hasMeta": true,
     "source": "static"
   },
@@ -66,9 +66,9 @@
       "工具"
     ],
     "order": 40,
-    "entry": "/books/opencode-study/index.html",
+    "entry": "/bookdata/opencode-study/index.html",
     "size": 331142,
-    "updatedAt": "2026-09-22T11:41:26.693Z",
+    "updatedAt": "2026-10-13T12:06:57.096Z",
     "hasMeta": true,
     "source": "static"
   }

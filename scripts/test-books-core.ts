@@ -70,7 +70,7 @@ function mkBook(partial: Partial<BookItem> & { id: string }): BookItem {
     category: BOOK_DEFAULT_CATEGORY,
     tags: [],
     order: partial.order ?? BOOK_LARGE_ORDER,
-    entry: partial.entry ?? `/books/${partial.id}/index.html`,
+    entry: partial.entry ?? `/bookdata/${partial.id}/index.html`,
     size: partial.size ?? 1000,
     updatedAt: partial.updatedAt ?? '2026-01-01T00:00:00.000Z',
     hasMeta: partial.hasMeta ?? false,
