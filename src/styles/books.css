@@ -1,0 +1,309 @@
+/**
+ * 个人图书馆共享样式（/books 书架 + /books/read/:id 阅读页）
+ *
+ * 作用域：BooksView / BookReaderView 及 books 组件。
+ * 全局类沿用项目 Design Token（见 docs/UI_STYLE_GUIDE.md），不引入新色彩/间距体系。
+ * 前缀 `bk-` 以免与博客前台的 `bf-` 混淆。
+ */
+
+.bk-shell {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: var(--space-6, 24px) var(--space-4, 16px) var(--space-8, 32px);
+}
+
+/* ---------- 顶部栏（工作台切换 + 上传） ----------
+   与工具箱 .tb-topbar / 博客后台 .ba-topbar 同构：sticky、卡片底、下边框。
+   触发器（图标 + 名称）的外观自包含在 WorkbenchSwitcher 内，这里只管布局。 */
+.bk-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--color-bg-card);
+  border-bottom: 1px solid var(--color-border);
+}
+.bk-topbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 顶栏「书签」按钮的数量徽标（仅在有书签时显示） */
+.bk-top-btn-icon {
+  font-size: var(--font-size-base, 15px);
+  line-height: 1;
+}
+.bk-top-btn-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  background: var(--color-primary, #c8102e);
+  color: #fff;
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold, 600);
+  line-height: 1;
+}
+
+/* ---------- 页头 ---------- */
+.bk-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.bk-head-title {
+  margin: 0;
+  font-size: var(--font-size-2xl, 22px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text);
+  line-height: var(--line-height-tight, 1.25);
+}
+.bk-head-sub {
+  font-size: var(--font-size-sm, 13px);
+  color: var(--color-text-muted);
+}
+
+/* ---------- 筛选区 ----------
+   布局与工具箱一致：搜索框居中 → 分类页签 → 统计行。
+   原先包在一个带边框的 .bk-filter 卡片里的方案已移除（那是博客前台的写法），
+   工具箱是「无容器、元素直接铺在页面上」，这里跟着改，避免两个模块看着不像同一个产品。 */
+
+/* ---------- 次级控制条（排序 / 仅收藏） ----------
+   工具箱把这些放进分区头的 extra 槽位；书库的次级项更多，
+   单独给一行更清爽，但同样不做成带边框的卡片，保持与工具箱一致的"裸排版"观感。
+   「仅书签」筛选已移除（用户 2026-10-13 要求）。 */
+.bk-subbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: var(--space-4, 16px) 0 var(--space-2, 8px);
+}
+.bk-subbar-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs, 12px);
+}
+.bk-sort {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-input);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  cursor: pointer;
+}
+.bk-sort:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+.bk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  padding: 4px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  transition: color var(--motion-duration) var(--motion-ease),
+    border-color var(--motion-duration) var(--motion-ease),
+    background-color var(--motion-duration) var(--motion-ease);
+}
+.bk-chip:hover { color: var(--color-primary); border-color: var(--color-primary); }
+.bk-chip.is-on {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+/* ---------- 分区（收藏 / 最近阅读 / 全部） ---------- */
+.bk-section {
+  margin-bottom: 24px;
+}
+.bk-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.bk-section-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.bk-section-sub {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-muted);
+}
+/* 分区头右侧插槽（统计数字 + 重置按钮等），靠右对齐 */
+.bk-section-extra {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 统计行里的次要按钮（如「重置统计」） */
+.bk-mini-btn {
+  padding: 3px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-family);
+  min-height: 30px;
+  transition: color var(--motion-duration) var(--motion-ease),
+    border-color var(--motion-duration) var(--motion-ease);
+}
+.bk-mini-btn:hover {
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+.bk-hits-total {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* ---------- 网格（书架固定卡片视图，只有这一种） ---------- */
+.bk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+/* 桌面端多列时所有行等高 → 卡片高度统一；移动端单列不加，保持自然高度 */
+@media (min-width: 769px) {
+  .bk-grid { grid-auto-rows: 1fr; }
+}
+
+/* ---------- 空态 ---------- */
+.bk-empty {
+  padding: 40px 16px;
+  border: 1px dashed var(--color-border, #e2e8f0);
+  border-radius: var(--radius-lg, 12px);
+  background-color: var(--color-bg-card, #ffffff);
+  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-sm, 13px);
+  text-align: center;
+}
+.bk-empty-hint {
+  margin: 8px 0 16px;
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-muted, #94a3b8);
+}
+
+.bk-pager {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+/* ---------- 阅读页 ---------- */
+.bk-reader {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+.bk-reader-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  padding: 10px var(--space-4, 16px);
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  background-color: var(--color-bg-card, #ffffff);
+}
+.bk-reader-title {
+  margin: 0;
+  font-size: var(--font-size-base, 15px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text, #0f172a);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bk-reader-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.bk-reader-frame {
+  flex: 1 1 auto;
+  width: 100%;
+  border: none;
+  background: var(--color-bg, #f8fafc);
+}
+.bk-reader-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex: 1 1 auto;
+  padding: 24px;
+  text-align: center;
+}
+.bk-reader-fallback-text {
+  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-sm, 13px);
+}
+
+/* ---------- 移动端 ---------- */
+/* 注意：窄端媒体查询必须写在基础规则之后 —— 同特异性下后声明胜出，
+   写在前面会被后面的基础规则覆盖（项目已踩过这个坑，见 AGENTS.md CSS 覆盖顺序约定） */
+@media (max-width: 768px) {
+  .bk-shell { padding: var(--space-4, 16px) var(--space-3, 12px) var(--space-6, 24px); }
+  .bk-grid { grid-template-columns: 1fr; }
+  .bk-head { flex-wrap: wrap; }
+  .bk-topbar { padding: 8px 12px; }
+  /* 次级控制项抬到 40px 触控下限 */
+  .bk-subbar .bk-chip,
+  .bk-subbar .bk-mini-btn,
+  .bk-subbar .bk-sort {
+    min-height: 40px;
+    padding: 8px 14px;
+  }
+  .bk-reader-bar { padding: 8px 12px; gap: 8px; }
+  .bk-reader-title { font-size: var(--font-size-sm, 13px); }
+  .bk-reader-actions .bk-reader-btn-text { display: none; }
+  /* 移动端触控下限 32px：.ui-btn--sm 是 30px，读页工具栏与顶栏按钮都抬到 40px */
+  .bk-reader-actions .ui-btn,
+  .bk-topbar-right .ui-btn,
+  .bk-topbar-right .bk-mini-btn,
+  .bk-topbar-right .bk-sync-btn {
+    min-height: 40px;
+    padding: 8px 14px;
+  }
+}
+
+/* 卡片内按钮（打开 / 站内阅读）：桌面 30px 够用，移动端同样抬到 40px。
+   注意这条**必须**是独立媒体查询块里的独立选择器：卡片按钮在 scoped 样式里，
+   从父级样式表用后代选择器无法命中 scoped 组件内部（Vue 会加 data-v 属性）。 */
+@media (max-width: 768px) {
+  .bk-item .ui-btn {
+    min-height: 40px;
+    padding: 8px 12px;
+  }
+}
+
+html.dark .bk-empty { box-shadow: none; }

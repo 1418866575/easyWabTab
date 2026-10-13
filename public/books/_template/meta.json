@@ -1,0 +1,8 @@
+{
+  "title": "书名",
+  "description": "一句话简介",
+  "cover": "cover.png",
+  "category": "分类",
+  "tags": ["标签1"],
+  "order": 99
+}

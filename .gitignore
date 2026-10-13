@@ -77,3 +77,6 @@ scripts/.snap-*.png
 
 # 移动端 QA 巡检截图（scripts/qa-biz-mobile.mjs 逐面板截图，仅本地留存，不入库）
 qa-biz-mobile/
+
+# 图书馆目视验证截图（scripts/qa-books-ui.mjs，仅本地留存，不入库）
+qa-books/
