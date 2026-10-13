@@ -27,7 +27,8 @@ export const DB_NAME = 'easy-web-tab'
 /** v20：新增 `navmeta` object store，承载导航降级守卫的基线/高水位（从 localStorage 迁入，详见 IDB_META_STORES） */
 /** v21：新增 `iconcache` store（图标缓存移出 nav）；nav 同时改为按 key 多记录存储（见 idbPutKey） */
 /** v22：新增 `blog` store（博客后台单对象：settings + categories + tags + articles），随 blog.json 信封同步 */
-export const DB_VERSION = 22
+/** v23：新增 `books` store（浏览器端上传的 HTML 书架；与 public/books 静态书是两套数据，互不影响） */
+export const DB_VERSION = 23
 /** 核心 9 store：随 JSON 备份导出/导入（v6 新增 business；v15 新增 family 家谱） */
 export const IDB_CORE_STORES = ['todos', 'notes', 'diary', 'countdowns', 'passwords', 'health', 'ledger', 'settings', 'business', 'family'] as const
 /** 辅助 store：pomodoro/habits 随 v5 备份导出/导入；snapshots 仅本地使用，不参与备份 */
@@ -77,6 +78,16 @@ export const IDB_META_STORES = ['navmeta'] as const
 export const IDB_ICONCACHE_STORES = ['iconcache'] as const
 /** 博客 store（v22 新增：单对象 BlogData —— settings + categories + tags + articles；独立信封 blog.json） */
 export const IDB_BLOG_STORES = ['blog'] as const
+/**
+ * 本机上传的书籍 store（v23 新增）
+ *
+ * 与 public/books 的静态书**刻意分开存**：静态书跟着 git 与部署走，全体用户可见；
+ * 上传的书只跟着这台设备走。合成一个 store 会让「哪些书该进备份信封」变成一道
+ * 每次都要重新想的判断题，分开则天然各自为政。
+ * 该 store 按 id 多记录存储（每本书一条），不参与任何云同步信封 —— 与 uploads
+ * 同理，上传的 HTML 可达 MB 级，且本就不该外传。
+ */
+export const IDB_BOOKS_STORES = ['books'] as const
 
 export const IDB_KEY = 'items'
 
@@ -91,6 +102,7 @@ export type IdbStore =
   | (typeof IDB_META_STORES)[number]
   | (typeof IDB_ICONCACHE_STORES)[number]
   | (typeof IDB_BLOG_STORES)[number]
+  | (typeof IDB_BOOKS_STORES)[number]
 
 let dbPromise: Promise<IDBDatabase> | undefined
 
@@ -111,7 +123,8 @@ export function openIdb(): Promise<IDBDatabase> {
           ...IDB_TOOLBOX_STORES,
           ...IDB_META_STORES,
           ...IDB_ICONCACHE_STORES,
-          ...IDB_BLOG_STORES
+          ...IDB_BLOG_STORES,
+          ...IDB_BOOKS_STORES
         ]) {
           if (!db.objectStoreNames.contains(name)) {
             db.createObjectStore(name) // 无 keyPath → out-of-line 键 'items'
@@ -309,6 +322,17 @@ export const TOOLBOX_NAV_KEY = 'toolbox-prefs'
 
 /** 博客前台偏好（收藏 / 最近阅读）在 nav store 内的专属键（v22 引入，独立信封 blog-prefs.json 云同步） */
 export const BLOG_PREFS_NAV_KEY = 'blog-prefs'
+
+/**
+ * 图书馆偏好（收藏 / 最近打开 / 打开次数 / 阅读书签）在 nav store 内的专属键（v23 引入）。
+ *
+ * **刻意不进任何云同步信封**（既不在 NAV_SYNC_KEYS，也不在 SMART_PREFS_KEYS，更不在
+ * WORKBENCH_PREFS_KEYS）—— 阅读位置书签是设备相关的（ratio 在不同屏幕上指向不同章节，
+ * 见 useBooksPrefs 注释），跨设备同步反而错位。收藏与最近打开虽是"值得同步"的东西，
+ * 但它们依附于**本机的书单**：对方设备可能根本没有 public/books 里的同一批书，
+ * 同步过去只会得到一堆点不开的收藏项。故本期整体按本机数据对待。
+ */
+export const BOOKS_PREFS_NAV_KEY = 'books-prefs'
 
 /** 导航键中属于云同步信封的子集（WORKBENCH_PREFS_KEYS 的导航部分，共 10 键），用于 nav.json / workbench.json 打包 */
 export const NAV_SYNC_KEYS = [

@@ -1,12 +1,4 @@
 [
-{
-    "id": "szbf",
-    "name": "孙子兵法",
-    "path": "/games/sunzibingfa/index.html",
-    "description": "孙子兵法",
-    "icon": "/icons/szbf.svg",
-    "category": "books"
-  },
   {
     "id": "tetris",
     "name": "俄罗斯方块",
@@ -14,14 +6,6 @@
     "description": "经典俄罗斯方块游戏",
     "icon": "/icons/elsfk.svg",
     "category": "other"
-  },
-  {
-    "id": "gushi",
-    "name": "小中高古诗",
-    "path": "/games/gushi/index.html",
-    "description": "小中高必备古诗词",
-    "icon": "/icons/gushi.svg",
-    "category": "books"
   },
   {
     "id": "cron-generator",
@@ -38,14 +22,6 @@
     "description": "身份证、手机号等号码生成工具",
     "icon": "/icons/haoma.svg",
     "category": "office"
-  },
-  {
-    "id": "opencode",
-    "name": "OpenCode指南",
-    "path": "/games/openCodeStudy/index.html",
-    "description": "OpenCode AI 编程助手中文学习手册",
-    "icon": "/icons/opencode.svg",
-    "category": "books"
   },
   {
     "id": "postman",

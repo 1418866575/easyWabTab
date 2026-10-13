@@ -268,7 +268,7 @@ const mpQrFailed = ref(false)
 // ========================================
 // 入口图标选择（工作台 / 销售记账 / 学生 / 教师）：图标来自图标管理库，弹框形式选择
 // ========================================
-type IconTarget = 'workbench' | 'business' | 'student' | 'teacher' | 'smart' | 'manage' | 'favicon' | 'toolbox' | 'blog-admin' | 'blog-front'
+type IconTarget = 'workbench' | 'business' | 'student' | 'teacher' | 'smart' | 'manage' | 'favicon' | 'toolbox' | 'blog-admin' | 'blog-front' | 'books'
 const ICON_TARGET_LABEL: Record<IconTarget, string> = {
   workbench: '个人工作台',
   business: '销售记账',
@@ -279,7 +279,8 @@ const ICON_TARGET_LABEL: Record<IconTarget, string> = {
   favicon: '站点图标',
   toolbox: '工具箱',
   'blog-admin': '博客后台',
-  'blog-front': '博客前台'
+  'blog-front': '博客前台',
+  books: '图书馆'
 }
 /** 当前正在编辑哪个入口的图标（空串 = 弹框关闭） */
 const iconPickerTarget = ref<IconTarget | ''>('')
@@ -304,6 +305,7 @@ const iconPickerCurrent = computed(() => {
     case 'toolbox': return store.toolboxButtonIcon
     case 'blog-admin': return store.blogAdminPageIcon
     case 'blog-front': return store.blogFrontPageIcon
+    case 'books': return store.booksPageIcon
     default: return ''
   }
 })
@@ -320,6 +322,7 @@ function onPickIcon(src: string): void {
     case 'toolbox': store.setToolboxButtonIcon(src); break
     case 'blog-admin': store.setBlogAdminPageIcon(src); break
     case 'blog-front': store.setBlogFrontPageIcon(src); break
+    case 'books': store.setBooksPageIcon(src); break
     default: break
   }
   closeIconPicker()
@@ -2487,6 +2490,43 @@ function toggleFullscreen(): void {
           </div>
           <p class="wb-menu-hint">
             控制「博客前台」入口的显示、名称与图标。该入口出现在左上角工作台切换面板（Alt+W 唤起）中；关闭后不再出现在面板里，已发布的文章不受影响。
+          </p>
+        </div>
+
+        <!-- 个人图书馆（/books）：名称 + 图标 + 开关 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <span class="wb-menu-label">图书馆</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                :value="store.booksPageName"
+                placeholder="图书馆"
+                maxlength="20"
+                data-testid="books-page-name-input"
+                @input="store.setBooksPageName(($event.target as HTMLInputElement).value)"
+              />
+              <button
+                type="button"
+                class="wb-menu-icon-btn"
+                :class="{ 'is-set': !!store.booksPageIcon }"
+                :title="store.booksPageIcon ? '已设置图标，点击更换' : '选择图标'"
+                data-testid="books-icon-btn"
+                @click="openIconPicker('books')"
+              >
+                <img v-if="store.booksPageIcon" :src="store.booksPageIcon" alt="" class="wb-menu-icon-img" />
+                <Icon v-else name="image" />
+              </button>
+              <el-switch
+                :model-value="store.booksPageVisible !== false"
+                data-testid="books-visible-switch"
+                @update:model-value="store.setBooksPageVisible"
+              />
+            </div>
+          </div>
+          <p class="wb-menu-hint">
+            控制「图书馆」入口的显示、名称与图标。该入口出现在左上角工作台切换面板（Alt+W 唤起）中，指向 /books 书架页；关闭后不影响书籍文件本身。
           </p>
         </div>
 

@@ -348,6 +348,16 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   if (typeof data.blogFrontPageIcon === 'string') {
     out.blogFrontPageIcon = data.blogFrontPageIcon
   }
+  // 个人图书馆（/books）：与其它页面三件套同构
+  if (typeof data.booksPageName === 'string') {
+    out.booksPageName = data.booksPageName.trim()
+  }
+  if (typeof data.booksPageVisible === 'boolean') {
+    out.booksPageVisible = data.booksPageVisible
+  }
+  if (typeof data.booksPageIcon === 'string') {
+    out.booksPageIcon = data.booksPageIcon
+  }
   // 「工作台管理」按钮：名称仅采纳字符串；开关仅采纳布尔（缺失 = 显示）
   if (typeof data.workbenchManageName === 'string') {
     out.workbenchManageName = data.workbenchManageName.trim()
@@ -521,6 +531,10 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const blogFrontPageName = ref<string>('')
   const blogFrontPageVisible = ref<boolean>(true)
   const blogFrontPageIcon = ref<string>('')
+  // 个人图书馆（/books 书架 + /books/read 阅读页）
+  const booksPageName = ref<string>('')
+  const booksPageVisible = ref<boolean>(true)
+  const booksPageIcon = ref<string>('')
 
   // 站点外观（浏览器标签标题 + favicon）：localStorage 驱动（site-title / site-favicon），
   // 与主题同构——不进 IDB persist，经 nav.json prefs 云同步跨设备生效；空值回退默认
@@ -614,6 +628,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       blogFrontPageName: blogFrontPageName.value,
       blogFrontPageVisible: blogFrontPageVisible.value,
       blogFrontPageIcon: blogFrontPageIcon.value,
+      booksPageName: booksPageName.value,
+      booksPageVisible: booksPageVisible.value,
+      booksPageIcon: booksPageIcon.value,
       desktopNotifyEnabled: desktopNotifyEnabled.value,
       countdownPopupEnabled: countdownPopupEnabled.value,
       // 水印：随 settings 整体进 workbench.json 信封 → 自动跨设备云同步
@@ -786,6 +803,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       blogFrontPageName.value = typeof effective.blogFrontPageName === 'string' ? effective.blogFrontPageName.trim() : ''
       blogFrontPageVisible.value = effective.blogFrontPageVisible !== false
       blogFrontPageIcon.value = typeof effective.blogFrontPageIcon === 'string' ? effective.blogFrontPageIcon : ''
+      booksPageName.value = typeof effective.booksPageName === 'string' ? effective.booksPageName.trim() : ''
+      booksPageVisible.value = effective.booksPageVisible !== false
+      booksPageIcon.value = typeof effective.booksPageIcon === 'string' ? effective.booksPageIcon : ''
       workbenchManageName.value = typeof effective.workbenchManageName === 'string' ? effective.workbenchManageName.trim() : ''
       workbenchManageVisible.value = effective.workbenchManageVisible !== false
       workbenchManageIcon.value = typeof effective.workbenchManageIcon === 'string' ? effective.workbenchManageIcon : ''
@@ -968,6 +988,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     blogFrontPageName.value = ''
     blogFrontPageVisible.value = true
     blogFrontPageIcon.value = ''
+    booksPageName.value = ''
+    booksPageVisible.value = true
+    booksPageIcon.value = ''
     desktopNotifyEnabled.value = false
     countdownPopupEnabled.value = true
     // 水印重置：关闭 + 空文案（回到「出厂」状态，页面无水印）
@@ -1176,6 +1199,20 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     blogFrontPageIcon.value = s
     persist()
   }
+  // 个人图书馆 setters
+  function setBooksPageName(s: string) {
+    booksPageName.value = s
+    persist()
+  }
+  function setBooksPageVisible(v: boolean) {
+    booksPageVisible.value = v
+    persist()
+  }
+  /** 自定义图标；传空串 = 恢复内置默认图标 */
+  function setBooksPageIcon(s: string) {
+    booksPageIcon.value = s
+    persist()
+  }
   // 「工作台管理」按钮 setters
   function setWorkbenchManageName(s: string) {
     workbenchManageName.value = s
@@ -1237,6 +1274,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const smartPageDisplayName = computed(() => smartPageName.value || '智能工作台')
   const blogAdminPageDisplayName = computed(() => blogAdminPageName.value || '博客后台')
   const blogFrontPageDisplayName = computed(() => blogFrontPageName.value || '博客前台')
+  const booksPageDisplayName = computed(() => booksPageName.value || '图书馆')
   const workbenchManageDisplayName = computed(() => workbenchManageName.value || '工作台管理')
   const countdownButtonDisplayName = computed(() => countdownButtonName.value || '倒计时')
   const helpButtonDisplayName = computed(() => helpButtonName.value || '帮助')
@@ -1496,6 +1534,13 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     blogFrontPageVisible,
     blogFrontPageIcon,
     blogFrontPageDisplayName,
+    booksPageName,
+    booksPageVisible,
+    booksPageIcon,
+    booksPageDisplayName,
+    setBooksPageName,
+    setBooksPageVisible,
+    setBooksPageIcon,
     siteTitle,
     siteFavicon,
     workbenchPageDisplayName,

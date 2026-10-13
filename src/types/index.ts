@@ -342,6 +342,9 @@ export interface AppSettingsData {
   blogFrontPageName?: string           // 博客前台（/blog）自定义名称（默认 '博客前台'）
   blogFrontPageVisible?: boolean       // 博客前台可见性开关（默认 true；缺失 = 显示）
   blogFrontPageIcon?: string           // 博客前台入口自定义图标（图标库路径 / dataUrl；空串或缺失 = 内置默认）
+  booksPageName?: string              // 个人图书馆（/books）自定义名称（默认 '图书馆'）
+  booksPageVisible?: boolean          // 个人图书馆可见性开关（默认 true；缺失 = 显示）
+  booksPageIcon?: string              // 个人图书馆入口自定义图标（图标库路径 / dataUrl；空串或缺失 = 内置默认）
   cloudSyncEnabled?: boolean           // 云同步总开关（默认 false）
   cloudSyncUrl?: string                // WebDAV URL（空串 = 未配置）
   cloudSyncUsername?: string           // WebDAV 用户名（空串 = 未配置）

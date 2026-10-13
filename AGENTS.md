@@ -194,7 +194,7 @@ easy-web-tab/
 - Data stored as YAML frontmatter Markdown (`myself-sites.md`), parsed by `useMarkdown.ts`
 - Icon resolution chain: custom icon → localStorage cache → Google Favicon API → async background cache from page HTML
 - Dual server strategy: `server.cjs` (PM2, uses `serve` package, NO game rewrites) vs `scripts/serve-with-rewrites.cjs` (custom, has game rewrites) — **divergent serving**
-- Games are standalone HTML files in `public/games/`, registered via `manifest.json`, loaded by `src/stores/sites.ts`
+- Games are standalone HTML files in `public/games/`, registered via `manifest.json`, loaded by `src/stores/sites.ts`. **2026-10-13 起 games 只剩真游戏（tetris / cron-generator / id-generator / postman）；原先 category 为 `books` 的 4 本书已迁到 `public/books/` 走独立图书馆页面**
 - Password storage uses crypto-js (AES-CBC + PBKDF2, pure JS — works without HTTPS), not Web Crypto API or plaintext localStorage
 - Categories have a legacy migration system: old hardcoded categories (office, tech, etc.) are seeded once then become user-deletable custom categories
 - 推荐用 `npm run serve`（`scripts/serve-with-rewrites.cjs`）启动，它内置游戏路由重写；直接用 `serve -s dist` 会因缺少重写导致部分小游戏资源 404
@@ -235,7 +235,7 @@ pm2 start pm2.config.cjs  # PM2 production (uses server.cjs, NO game rewrites, u
 ## KEY GOTCHAS
 
 - `pm2.config.cjs` → `server.cjs` → `npx serve -s dist -l 16718` (no game rewrites); `server.cjs` auto-runs `npm run build` if `dist/` is missing. Dockerfile is the same (`serve -s`, serve.json never copied).
-- `npm run serve` → `scripts/serve-with-rewrites.cjs` — rewrites `/games/{tetris,id-generator,cron-generator}` to `/{game}/index.html` (302 → trailing slash). **`gushi` / `szbf` 在 manifest.json 中但没有 rewrite** — 其相对资源在此服务器下可能加载失败。
+- `npm run serve` → `scripts/serve-with-rewrites.cjs` — rewrites `/games/{tetris,id-generator,cron-generator}` to `/{game}/index.html` (302 → trailing slash). **2026-10-13 起 `gushi`/`szbf`/`opencode`/`daodejing` 已迁出 games 到 `public/books/`（图书馆），故此处不再需要它们的 rewrite**；`postman` 无 rewrite，同为自包含单文件不依赖相对资源，实测可正常打开。
 - Real Vite config is `vite.config.js` (not `.ts`); `tsconfig.node.json` still includes a non-existent `vite.config.ts` — harmless, don't "fix" by renaming the config.
 - `public/data/sites.md` was **removed from the repo** (exists only in git history); `.gitignore` now ignores `sites.md` + `public/data/sites.md` — do not re-add a seed file there.
 - `run.bat` / `start-pm2.ps1` no longer hardcode machine-specific paths (Node path line is commented out; pm2 script uses `$PSScriptRoot`) — keep them path-agnostic.
@@ -243,6 +243,7 @@ pm2 start pm2.config.cjs  # PM2 production (uses server.cjs, NO game rewrites, u
 - `searchEngines.ts` stores engine state across 3 separate localStorage keys.
 - `sites.ts` is the largest store (628 lines) — avoid adding more responsibilities.
 - 小游戏需同时登记 `public/games/manifest.json`；`scripts/serve-with-rewrites.cjs` 里的 rewrite 需与之一致，否则相对资源会 404。
+- **图书馆（`public/books/`）绝不可加 `X-Frame-Options` / CSP `frame-ancestors`**：`/books/read` 阅读页靠 iframe 内嵌原书 HTML 并读取其滚动位置记录阅读书签，加了这两个头会直接白屏。书都是**自包含单文件**（内联 CSS/JS），所以也不需要 serve 侧的 rewrite。
 - 用户数据现主要存 IndexedDB（DB `easy-web-tab` v12），localStorage 仅剩迁移备份与偏好/密钥等（如 `user-sites`、`password-verification-v2`、`user-countdown-sort`）。
 - 倒计时/密码 store 已切换 IndexedDB（store 'countdowns' / 'passwords'），`user-countdowns` / `user-passwords` 旧 localStorage key 仅作一次性非破坏迁移来源，勿再直接读写。
 - 备份版本号：IdxDB `DB_VERSION=12`；工作台备份 `WORKBENCH_DATA_VERSION=9`（`idbImportAll` 范围守卫 `<1 || >9`）；学生备份独立 `STUDENT_DATA_VERSION=1`（`student-backup` 信封，随云端 `student.json`，**不随工作台备份**）——改版本号需同步 `useIdb.ts` 导入守卫与迁移分支。

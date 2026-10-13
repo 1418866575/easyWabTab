@@ -147,6 +147,20 @@ const allEntries = computed<Entry[]>(() => [
     visible: store.blogFrontPageVisible !== false,
     // /blog 与 /blog/article/* 算前台；/blog/admin 归后台条目，不能重复标「当前」
     isCurrentPath: (p) => p === '/blog' || (p.startsWith('/blog/') && !p.startsWith('/blog/admin'))
+  },
+  {
+    // 个人图书馆：路由 /books（书架）与 /books/read（站内 iframe 阅读页）。
+    // 书籍内容本体是 public/books 下的静态 HTML，本页只做检索与展示。
+    // 名称/图标/可见性同样走 booksPage* 三件套（设置 → 个性化 → 主题内配置）。
+    key: 'books',
+    path: '/books',
+    name: store.booksPageDisplayName,
+    icon: store.booksPageIcon,
+    builtin: 'document',
+    kw: '图书馆 books 阅读 书籍 书架',
+    visible: store.booksPageVisible !== false,
+    // 阅读页属于图书馆的一部分，要标「当前」，否则在 /books/read 上切换器认不出自己在哪
+    isCurrentPath: (p) => p === '/books' || p.startsWith('/books/')
   }
 ])
 
