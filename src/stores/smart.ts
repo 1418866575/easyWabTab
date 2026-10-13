@@ -431,11 +431,14 @@ export const useSmartStore = defineStore('smart', () => {
   /** 分类清单（技能） */
   const skillCategories = computed(() => allSkillCategories.value)
 
-  const promptCategories = computed(() => {
-    const out: string[] = []
-    for (const p of prompts.value) if (!out.includes(p.category)) out.push(p.category)
-    return out.sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'))
-  })
+  /**
+   * 分类清单（提示词）—— 与技能侧同构：自定义分类 ∪ 提示词上实际用到的分类。
+   *
+   * ⚠️ 不能退回「只从 prompts 派生」：那样设置里新建、但还没有提示词挂上去的分类
+   * 会从筛选药丸和编辑弹框的分类下拉里消失，用户看不到自己刚建的分类（实测复现）。
+   * 自定义分类在前（保持设置里的排序），提示词上额外出现的分类追加在后。
+   */
+  const promptCategories = computed(() => allPromptCategories.value)
 
   const stats = computed(() => calcSmartStats(skills.value, prompts.value, workflows.value))
 
