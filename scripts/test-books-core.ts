@@ -569,7 +569,7 @@ test('BOOKS_RECENT_LIMIT 为正整数', () => {
 // ============ 云同步合并：mergeBooksPrefsEnvelope（books.json 信封）============
 
 function mkSync(partial: Partial<BooksPrefsSyncData> = {}): BooksPrefsSyncData {
-  return { version: 1, exportedAt: '', favorites: [], userBookmarks: [], ...partial }
+  return { version: 1, exportedAt: '', favorites: [], userBookmarks: [], recent: {}, ...partial }
 }
 function mkMark(partial: Partial<UserBookmark> & { id: string }): UserBookmark {
   return { title: partial.id, content: '', ts: 0, ...partial }
@@ -650,6 +650,35 @@ test('mergeBooksPrefsEnvelope：不修改入参（纯函数）', () => {
   a.deepEqual(r.favorites, ['b'])
   a.equal(l.userBookmarks[0].ts, 1)
   a.equal(r.userBookmarks[0].ts, 9)
+})
+
+test('mergeBooksPrefsEnvelope：最近阅读取并集，同 bookId 取较新（较大）时间戳', () => {
+  const m = mergeBooksPrefsEnvelope(
+    mkSync({ recent: { a: 100, b: 200 } }),
+    mkSync({ recent: { b: 300, c: 400 } })
+  )
+  a.deepEqual(m.recent, { a: 100, b: 300, c: 400 }, 'b 取较新的 300')
+})
+
+test('mergeBooksPrefsEnvelope：最近阅读本地较新则盖过远端旧值', () => {
+  const m = mergeBooksPrefsEnvelope(
+    mkSync({ recent: { x: 500 } }),
+    mkSync({ recent: { x: 200, y: 50 } })
+  )
+  a.deepEqual(m.recent, { x: 500, y: 50 })
+})
+
+test('mergeBooksPrefsEnvelope：最近阅读的脏数据（非数字/非对象）被忽略', () => {
+  const m = mergeBooksPrefsEnvelope(
+    mkSync({ recent: { a: 100, bad: 'x' as unknown as number } as Record<string, number> }),
+    mkSync({ recent: { a: 50, b: 999, nested: { k: 1 } as unknown as number } as Record<string, number> })
+  )
+  a.deepEqual(m.recent, { a: 100, b: 999 }, '仅保留合法有限数字时间戳')
+})
+
+test('mergeBooksPrefsEnvelope：双方皆空 recent 也为空对象', () => {
+  const m = mergeBooksPrefsEnvelope(mkSync(), mkSync())
+  a.deepEqual(m.recent, {})
 })
 
 // ============ normalizeUserBookmark ============

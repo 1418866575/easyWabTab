@@ -3,21 +3,23 @@
  *
  * - 单例：模块级 ref 持有状态（沿用 blogFrontPrefs / useToolboxPrefs 的写法，不新建 Pinia store）
  * - 存储：**IndexedDB `nav` store 的独立键**（`BOOKS_PREFS_NAV_KEY`），不是 localStorage
- * - **云同步范围（2026-10-14 起）**：仅 `favorites`（收藏）与 `userBookmarks`（用户自建书签）两项
- *   通过 `books.json` 信封跨设备同步；`recent` / `clicks` / `bookmarks`（阅读位置）/ 上传书为设备级，不进云。
+ * - **云同步范围（2026-10-14 起）**：`favorites`（收藏）、`userBookmarks`（用户自建书签）、`recent`（最近阅读）三项
+ *   通过 `books.json` 信封跨设备同步；`clicks`（打开次数）/ `bookmarks`（阅读位置）/ 上传书为设备级，不进云。
  * - 容错：写入抛错（隐私模式 / 配额超限）降级为内存态，不影响页面使用
  * - 落盘：防抖 300ms —— 高频写点击次数不应每次都落盘
  *
- * ## 为什么阅读位置书签、最近打开、打开次数不进云同步
+ * ## 为什么阅读位置书签、打开次数不进云同步
  *
  * 阅读位置书签存的是 ratio（滚动比例 0..1）而不是像素位置，本想让「换设备也能大致对上」。
  * 但**换设备后文档高度、视口高度、主题字号全都不同**，同一个 42% 指向的章节并不相同；
  * 改存像素，跨设备 100% 又指错位置。两种存法都不是好体验，故阅读位置**只存本机**。
  *
- * 最近打开 / 打开次数同理属于"这台设备的使用轨迹"，同步过去反而干扰另一台设备的排序。
+ * 打开次数同理属于"这台设备的使用轨迹"，同步过去反而干扰另一台设备的排序，故不进云。
  *
- * 而**收藏（我想看什么）**与**用户自建书签（书名 + 自定义内容）**是用户主动沉淀的信息，
- * 跨设备一致才合理，因此这两项单独走 `books.json` 信封合并同步（见 export/import/merge 三件套）。
+ * 而**收藏（我想看什么）**与**用户自建书签（书名 + 自定义内容）**与**最近阅读列表**是用户主动沉淀 /
+ * 跨设备一致才有意义的信息，因此这三项单独走 `books.json` 信封合并同步（见 export/import/merge 三件套）。
+ * 其中「最近阅读」按用户要求（2026-10-13）纳入同步：book id 跨设备一致（同源静态书 / 同名上传书），
+ * 看到同一份最近阅读列表才有意义；合并时同一 bookId 取较新（较大）打开时间戳。
  */
 
 import { ref } from 'vue'
@@ -188,13 +190,14 @@ async function readLocalBooksPrefs(): Promise<BooksPrefs> {
   return raw ? normalizeBooksPrefs(JSON.parse(raw)) : { favorites: [], recent: {}, clicks: {}, bookmarks: {}, userBookmarks: [] }
 }
 
-/** 导出本地要上云的两项（收藏 + 用户自建书签） */
+/** 导出本地要上云的三项（收藏 + 用户自建书签 + 最近阅读） */
 export function exportBooksSyncData(): BooksPrefsSyncData {
   return {
     version: 1,
     exportedAt: new Date().toISOString(),
     favorites: str(favorites.value),
-    userBookmarks: userMarks(userBookmarks.value)
+    userBookmarks: userMarks(userBookmarks.value),
+    recent: { ...recent.value }
   }
 }
 
@@ -202,19 +205,21 @@ export function exportBooksSyncData(): BooksPrefsSyncData {
  * 把远端 books.json 信封合并写回本地：
  * - favorites 取并集（本地顺序优先 + 远端独有）
  * - userBookmarks 按 id 取较新 ts（同 id 内容随较新一侧），整体截断到上限
- * recent/clicks/bookmarks 等不进云字段原样保留，不被远端覆盖。
+ * - recent 取并集，同一 bookId 取较新（较大）时间戳
+ * clicks/bookmarks（阅读位置）等不进云字段原样保留，不被远端覆盖。
  */
 export async function importBooksSyncData(remote: BooksPrefsSyncData): Promise<void> {
   if (!remote) return
   const local = await readLocalBooksPrefs()
   const merged = mergeBooksPrefsEnvelope(
-    { version: 1, exportedAt: '', favorites: local.favorites, userBookmarks: local.userBookmarks },
+    { version: 1, exportedAt: '', favorites: local.favorites, userBookmarks: local.userBookmarks, recent: local.recent },
     remote
   )
   const next: BooksPrefs = {
     ...local,
     favorites: merged.favorites,
-    userBookmarks: merged.userBookmarks
+    userBookmarks: merged.userBookmarks,
+    recent: merged.recent
   }
   try {
     await idbPutKey('nav', BOOKS_PREFS_NAV_KEY, JSON.stringify(next))
@@ -224,9 +229,10 @@ export async function importBooksSyncData(remote: BooksPrefsSyncData): Promise<v
   // 同步更新单例，让书架页（同步按钮所在页）无需刷新即反映新数据
   favorites.value = merged.favorites
   userBookmarks.value = merged.userBookmarks
+  recent.value = merged.recent
 }
 
-/** 云同步拉取后，从 IndexedDB 重载两项到单例（与 importBooksSyncData 的写入一致，做双保险） */
+/** 云同步拉取后，从 IndexedDB 重载三项到单例（与 importBooksSyncData 的写入一致，做双保险） */
 export async function reloadBooksPrefs(): Promise<void> {
   try {
     const raw = await idbGetKey<string>('nav', BOOKS_PREFS_NAV_KEY)
@@ -234,6 +240,7 @@ export async function reloadBooksPrefs(): Promise<void> {
     const parsed = JSON.parse(raw) as Partial<BooksPrefs>
     favorites.value = str(parsed.favorites)
     userBookmarks.value = userMarks(parsed.userBookmarks)
+    recent.value = numMap(parsed.recent)
   } catch {
     // 解析失败 → 静默跳过，下次进入书架时由 initBooksPrefs 自然从 IDB 读取
   }
