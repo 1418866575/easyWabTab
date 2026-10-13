@@ -9,7 +9,7 @@
  *   - student.json：学生工作台 15 store 独立信封
  *   - teacher.json：教师工作台单对象（teacher_workbench；含 base64 图片，体积偏大）
  *   - toolbox.json：工具箱偏好（收藏 / 最近使用 / 点击次数 / 搜索历史）
- *   - smart.json：智能工作台（技能 / 提示词 / 菜单配置 / 技能分类，SMART_PREFS_KEYS 四个键）
+ *   - smart.json：智能工作台（技能 / 提示词 / 工作流 / 菜单配置 / 技能分类 / 工作流分类 / 提示词分类，SMART_PREFS_KEYS 七个键）
  *   - blog.json：博客独立信封（BlogData 单对象：settings / categories / tags / articles）
  *     存 IDB blog store（DB v22）；文章含 Markdown 正文，草稿一并同步（按 updatedAt 较新者胜）
  *   - blog-prefs.json：博客前台偏好（收藏 / 最近阅读，本机浏览轨迹），存 IDB nav store（BLOG_PREFS_NAV_KEY）

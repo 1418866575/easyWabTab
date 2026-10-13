@@ -885,8 +885,16 @@ export async function importTeacherData(remote: TeacherSyncData): Promise<void> 
 // 数据物理上与其它 prefs 同在 nav IDB store，但打包/回写只认 SMART_PREFS_KEYS，
 // 与 nav.json（10 个导航键）互不干扰，也不会被 workbench.json 重复带走一份。
 
+/**
+ * 打包智能工作台信封。
+ *
+ * ⚠️ 必须走**多记录**读取：nav store 在 v21 已拆分为「每键一条记录」
+ * （`idbPutKey('nav', k, v)`，见 useNavPrefs 与 migrateNavToPerKeyRecords），
+ * 旧的「整包 items 记录」路径读到的永远是空对象，会导致 smart.json 永远推空、技能/提示词/分类无法上云。
+ * 这里与 exportNav 保持一致，用 idbGetAllEntries 游标遍历，只挑 SMART_PREFS_KEYS 内的键。
+ */
 export async function exportSmart(): Promise<SmartSyncData> {
-  const navRecord = (await idbGet<NavPrefsRecord>('nav')) ?? {}
+  const navRecord = await idbGetAllEntries<string>('nav')
   const prefs: Record<string, string> = {}
   for (const k of SMART_PREFS_KEYS) {
     const v = navRecord[k]
@@ -895,19 +903,27 @@ export async function exportSmart(): Promise<SmartSyncData> {
   return { version: 1, exportedAt: new Date().toISOString(), prefs }
 }
 
+/**
+ * 把远端 smart 信封写回本地。
+ *
+ * ⚠️ 同样必须走**多记录**写入：逐键 `idbPutKey('nav', k, v)`，与 setPref 的落盘方式一致。
+ * 旧实现 `idbPut('nav', navRecord)` 会把所有 smart 键塞进单条 `items` 记录，
+ * 而应用读取一律走「每键一条记录」（getPref → idbGetAllEntries），于是导入的数据永远进不了内存，
+ * 表现为「云上有了、本地刷新还是老样子」。
+ * 只写与本地不同的键，避免对未变动键做无谓覆盖；reloadSmartStores 随后会 refreshAfterImport 重新读盘。
+ */
 export async function importSmartData(remote: SmartSyncData): Promise<void> {
   if (!remote || !remote.prefs) return
-  const navRecord: NavPrefsRecord = (await idbGet<NavPrefsRecord>('nav')) ?? {}
-  let changed = false
+  const navRecord = await idbGetAllEntries<string>('nav')
+  const toWrite: Record<string, string> = {}
   for (const k of SMART_PREFS_KEYS) {
     const v = remote.prefs[k]
     if (v === undefined) continue
-    if (navRecord[k] !== v) {
-      navRecord[k] = v
-      changed = true
-    }
+    if (navRecord[k] !== v) toWrite[k] = v
   }
-  if (changed) await idbPut('nav', navRecord)
+  for (const [k, v] of Object.entries(toWrite)) {
+    await idbPutKey('nav', k, v)
+  }
 }
 
 export async function importStudentData(remote: StudentSyncData): Promise<void> {
