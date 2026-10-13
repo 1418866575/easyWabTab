@@ -8,7 +8,7 @@ import { computed, ref } from 'vue'
 import { useSmartStore } from '@/stores/smart'
 import { showConfirm } from '@/utils/dialog'
 import { useToast } from '@/composables/useToast'
-import { copyText, dateStamp, downloadText, pickFileText } from '@/utils/download'
+import { dateStamp, downloadText, pickFileText } from '@/utils/download'
 import {
   filterSmart,
   normalizePrompt,
@@ -119,16 +119,6 @@ async function handleDelete(p: SmartPrompt): Promise<void> {
   if (store.deletePrompt(p.id)) toast.success('已删除')
 }
 
-function handleClone(p: SmartPrompt): void {
-  const id = store.clonePrompt(p.id)
-  if (id) toast.success(`已复制为「${store.prompts.find(x => x.id === id)?.title}」`)
-}
-
-async function handleCopy(p: SmartPrompt): Promise<void> {
-  const ok = await copyText(p.content, `已复制「${p.title}」`)
-  if (ok) store.touchPrompt(p.id)
-}
-
 function toggleFav(p: SmartPrompt): void {
   store.toggleFavorite(p.id)
 }
@@ -156,15 +146,6 @@ function openDetail(p: SmartPrompt): void {
 }
 
 // ===== 导出 / 导入 =====
-function safeName(name: string): string {
-  return (name || 'prompt').replace(/[\\/:*?"<>|]/g, '_').slice(0, 40)
-}
-
-function exportOne(p: SmartPrompt): void {
-  const env = { kind: SMART_PROMPT_KIND, version: 1, exportedAt: Date.now(), items: [p] }
-  downloadText(`${safeName(p.title)}.json`, JSON.stringify(env, null, 2))
-}
-
 function exportAll(): void {
   const env = store.exportPrompts()
   if (env.items.length === 0) {
@@ -340,10 +321,7 @@ function excerpt(p: SmartPrompt): string {
           <button type="button" class="pm-btn is-primary" :data-testid="`smart-prompt-use-${p.id}`" @click="openUse(p)">使用</button>
           <button type="button" class="pm-btn" @click="openDetail(p)">详情</button>
           <button type="button" class="pm-btn" @click="openEdit(p)">编辑</button>
-          <button type="button" class="pm-btn" @click="handleClone(p)">副本</button>
           <span class="pm-spacer" />
-          <button type="button" class="pm-btn" :data-testid="`smart-prompt-copy-${p.id}`" @click="handleCopy(p)">复制原文</button>
-          <button type="button" class="pm-btn" @click="exportOne(p)" title="下载为 JSON">↓ json</button>
           <button type="button" class="pm-btn is-danger" :data-testid="`smart-prompt-del-${p.id}`" @click="handleDelete(p)">删除</button>
         </footer>
       </article>
