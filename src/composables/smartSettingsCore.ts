@@ -184,13 +184,31 @@ export const SMART_SKILL_DEFAULT_CATEGORIES: string[] = [
 ]
 
 /**
+ * 默认提示词分类：覆盖提示词的常见用途；用户在「智能工作台设置 → 分类设置」里自由增删改名。
+ * 与技能默认分类刻意分开（提示词场景不同），顺序即推荐顺序。
+ */
+export const SMART_PROMPT_DEFAULT_CATEGORIES: string[] = [
+  '通用',
+  '写作',
+  '编程',
+  '翻译',
+  '营销',
+  '职场',
+  '学习教育',
+  '生活实用',
+  '客服话术',
+  '创意灵感'
+]
+
+/**
  * 把默认分类合并进已有列表：默认分类按推荐顺序排在前，用户自建的分类排在其后。
  * 幂等（重复调用结果不变）；已存在的同名分类不会重复出现。
+ * @param defaults 默认分类清单，缺省用技能默认分类（向后兼容既有调用）。
  */
-export function mergeDefaultCategories(list: string[]): string[] {
+export function mergeDefaultCategories(list: string[], defaults: string[] = SMART_SKILL_DEFAULT_CATEGORIES): string[] {
   const cur = normalizeCategories(list)
-  const extras = cur.filter(c => !SMART_SKILL_DEFAULT_CATEGORIES.includes(c))
-  return [...SMART_SKILL_DEFAULT_CATEGORIES, ...extras]
+  const extras = cur.filter(c => !defaults.includes(c))
+  return [...defaults, ...extras]
 }
 
 /** 归一化分类名列表：去空白、去空、去重、截断；非法输入回落空数组 */
@@ -266,4 +284,29 @@ export function countByCategory(skillCats: string[]): Record<string, number> {
     out[name] = (out[name] ?? 0) + 1
   }
   return out
+}
+
+/**
+ * 分类列表排序（按下标换位）：把 fromIndex 处的分类插到 toIndex 处。
+ * 越界 / 同位置返回原（归一化后的）列表；不改入参，返回新数组。
+ */
+export function reorderCategories(list: string[], fromIndex: number, toIndex: number): string[] {
+  const cur = normalizeCategories(list)
+  if (fromIndex === toIndex) return cur
+  if (fromIndex < 0 || fromIndex >= cur.length) return cur
+  if (toIndex < 0 || toIndex >= cur.length) return cur
+  const out = [...cur]
+  const [moved] = out.splice(fromIndex, 1)
+  out.splice(toIndex, 0, moved)
+  return out
+}
+
+/** 分类列表按名称上移 / 下移（边界处原样返回）；不改入参，返回新数组 */
+export function moveCategory(list: string[], name: string, dir: 'up' | 'down'): string[] {
+  const cur = normalizeCategories(list)
+  const i = cur.indexOf(name)
+  if (i === -1) return cur
+  const j = dir === 'up' ? i - 1 : i + 1
+  if (j < 0 || j >= cur.length) return cur
+  return reorderCategories(cur, i, j)
 }

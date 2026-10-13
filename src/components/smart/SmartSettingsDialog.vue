@@ -23,7 +23,7 @@ const emit = defineEmits<{ close: [] }>()
 const store = useSmartStore()
 const toast = useToast()
 
-type TabKey = 'menu' | 'categories' | 'workflow-categories'
+type TabKey = 'menu' | 'categories' | 'workflow-categories' | 'prompt-categories'
 const tab = ref<TabKey>('menu')
 
 /**
@@ -31,9 +31,10 @@ const tab = ref<TabKey>('menu')
  * 增删设置项时只改这里即可（菜单高亮、切换、面包屑标题都从它派生）。
  */
 const SECTIONS: { key: TabKey; label: string; icon: string; desc: string }[] = [
-  { key: 'menu', label: '左侧菜单', icon: 'grid', desc: '重命名、显示隐藏、拖拽排序' },
+  { key: 'menu', label: '菜单设置', icon: 'grid', desc: '重命名、显示隐藏、拖拽排序' },
   { key: 'categories', label: '技能分类', icon: 'folder', desc: '新增、重命名、删除与技能归属' },
-  { key: 'workflow-categories', label: '工作流分类', icon: 'merge', desc: '新增、重命名、删除与工作流归类' }
+  { key: 'workflow-categories', label: '工作流分类', icon: 'merge', desc: '新增、重命名、删除与工作流归类' },
+  { key: 'prompt-categories', label: '提示词分类', icon: 'bookmark', desc: '新增、重命名、删除与排序' }
 ]
 
 const currentSection = computed(() => SECTIONS.find(s => s.key === tab.value) ?? SECTIONS[0])
@@ -281,6 +282,67 @@ function onRemoveWf(workflowId: string): void {
 function toggleWfExpand(name: string): void {
   wfExpanded.value = wfExpanded.value === name ? null : name
 }
+
+// ==================== 模块四：提示词分类（独立「分类设置」入口） ====================
+// 与「技能分类」同构：新增 / 重命名 / 删除 + 排序（上移 / 下移）。
+// 提示词归类在「提示词管理」编辑弹框的分类下拉里完成，设置页只管分类本身（不提供「分配」UI）。
+
+const newPromptCategoryName = ref('')
+const promptCategoryEditing = ref<Record<string, string>>({})
+
+const promptCategories = computed(() => store.allPromptCategories)
+
+function promptCountOf(name: string): number {
+  return store.promptCountByCategory[name] ?? 0
+}
+
+async function onAddPromptCategory(): Promise<void> {
+  const r = store.onAddPromptCategory(newPromptCategoryName.value)
+  if (!r.ok) {
+    toast.error(r.error ?? '新增分类失败')
+    return
+  }
+  newPromptCategoryName.value = ''
+  toast.success('分类已新增')
+}
+
+function onPromptCategoryInput(name: string, v: string): void {
+  promptCategoryEditing.value = { ...promptCategoryEditing.value, [name]: v }
+}
+
+function commitPromptCategoryName(oldName: string): void {
+  const v = promptCategoryEditing.value[oldName]
+  if (v === undefined) return
+  const r = store.onRenamePromptCategory(oldName, v)
+  const next = { ...promptCategoryEditing.value }
+  delete next[oldName]
+  promptCategoryEditing.value = next
+  if (!r.ok) {
+    toast.error(r.error ?? '重命名失败')
+    return
+  }
+  toast.success('分类已重命名')
+}
+
+function revertPromptCategoryName(name: string): void {
+  const next = { ...promptCategoryEditing.value }
+  delete next[name]
+  promptCategoryEditing.value = next
+}
+
+async function onDeletePromptCategory(name: string): Promise<void> {
+  const count = promptCountOf(name)
+  const msg = count > 0
+    ? `确定删除分类「${name}」吗？该分类下的 ${count} 个提示词会移到「未分类」，提示词本身不会被删除。`
+    : `确定删除分类「${name}」吗？`
+  if (!(await showConfirm(msg))) return
+  const moved = store.onDeletePromptCategory(name)
+  toast.success(moved > 0 ? `已删除分类，${moved} 个提示词移到「未分类」` : '分类已删除')
+}
+
+function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
+  store.onMovePromptCategory(name, dir)
+}
 </script>
 
 <template>
@@ -330,7 +392,7 @@ function toggleWfExpand(name: string): void {
       <!-- ============ 左侧菜单 ============ -->
       <section v-show="tab === 'menu'" class="ss-pane">
         <div class="ss-head">
-          <h3 class="ss-title">左侧菜单</h3>
+          <h3 class="ss-title">菜单设置</h3>
           <el-button size="small" data-testid="smart-menu-reset" @click="onResetMenu">恢复默认</el-button>
         </div>
         <p class="ss-hint">
@@ -572,6 +634,82 @@ function toggleWfExpand(name: string): void {
           <p class="ss-empty-title">还没有分类</p>
           <p class="ss-empty-hint">
             {{ store.workflows.length ? '你的工作流都还没归类；新增一个分类（如「研发」「运营」），再把工作流加进去。' : '先新增几个工作流，再用分类把它们分组管理。' }}
+          </p>
+        </div>
+      </section>
+
+      <!-- ============ 提示词分类（分类设置） ============ -->
+      <section v-show="tab === 'prompt-categories'" class="ss-pane">
+        <div class="ss-head">
+          <h3 class="ss-title">提示词分类</h3>
+          <div class="ss-add">
+            <el-input
+              v-model="newPromptCategoryName"
+              size="small"
+              class="ss-add-input"
+              maxlength="20"
+              placeholder="新分类名称"
+              data-testid="smart-prompt-cat-new"
+              @keydown.enter="onAddPromptCategory"
+            />
+            <el-button size="small" type="primary" data-testid="smart-prompt-cat-add" @click="onAddPromptCategory">＋ 新增分类</el-button>
+          </div>
+        </div>
+        <p class="ss-hint">
+          管理提示词的分类：新增、重命名、删除与排序。重命名会同步更新该分类下的提示词；删除分类只会把提示词移到「未分类」，不会删除提示词本身。提示词的归类在「提示词管理」编辑弹框的分类下拉里完成。
+        </p>
+
+        <ul v-if="promptCategories.length" class="ss-list">
+          <li
+            v-for="(c, index) in promptCategories"
+            :key="c"
+            class="ss-row is-cat"
+            :data-testid="`smart-prompt-cat-row-${c}`"
+          >
+            <div class="ss-cat-main">
+              <span class="ss-icon"><Icon name="bookmark" :size="16" /></span>
+              <el-input
+                class="ss-name"
+                size="small"
+                maxlength="20"
+                :model-value="promptCategoryEditing[c] ?? c"
+                :aria-label="`${c}名称`"
+                :data-testid="`smart-prompt-cat-name-${c}`"
+                @update:model-value="onPromptCategoryInput(c, $event)"
+                @blur="commitPromptCategoryName(c)"
+                @keydown.enter="commitPromptCategoryName(c)"
+                @keydown.esc.stop="revertPromptCategoryName(c)"
+              />
+              <span class="ss-count">{{ promptCountOf(c) }} 个提示词</span>
+              <div class="ss-actions">
+                <el-button
+                  size="small"
+                  :data-testid="`smart-prompt-cat-up-${c}`"
+                  :disabled="index === 0"
+                  @click="onMovePromptCategory(c, 'up')"
+                >上移</el-button>
+                <el-button
+                  size="small"
+                  :data-testid="`smart-prompt-cat-down-${c}`"
+                  :disabled="index === promptCategories.length - 1"
+                  @click="onMovePromptCategory(c, 'down')"
+                >下移</el-button>
+                <el-button
+                  size="small"
+                  class="is-danger"
+                  :data-testid="`smart-prompt-cat-del-${c}`"
+                  @click="onDeletePromptCategory(c)"
+                >删除</el-button>
+              </div>
+            </div>
+          </li>
+        </ul>
+
+        <!-- 空状态 -->
+        <div v-else class="ss-empty">
+          <p class="ss-empty-title">还没有分类</p>
+          <p class="ss-empty-hint">
+            {{ store.prompts.length ? '你的提示词都还没归类；新增一个分类（如「写作」「营销」），再在提示词编辑里选用。' : '先新增几条提示词，再用分类把它们分组管理。' }}
           </p>
         </div>
       </section>

@@ -27,7 +27,10 @@ import {
   collectCategories,
   countByCategory,
   SMART_SKILL_DEFAULT_CATEGORIES,
-  mergeDefaultCategories
+  SMART_PROMPT_DEFAULT_CATEGORIES,
+  mergeDefaultCategories,
+  reorderCategories,
+  moveCategory
 } from "../src/composables/smartSettingsCore.ts"
 
 const tests: { name: string; fn: () => void }[] = []
@@ -282,6 +285,41 @@ test("T21 mergeDefaultCategories 补默认分类且幂等", () => {
   )
   // 不改入参
   assert.deepEqual(list, ["画画", "自定义"])
+})
+
+// T21b mergeDefaultCategories 可传入自定义 defaults（提示词分类），不回退到技能默认
+test("T21b mergeDefaultCategories 支持自定义 defaults 且不改入参", () => {
+  const list = ["营销", "我的分类"]
+  const out = mergeDefaultCategories(list, SMART_PROMPT_DEFAULT_CATEGORIES)
+  // 已在提示词默认列表里的「营销」不重复出现
+  assert.equal(out.filter(c => c === "营销").length, 1)
+  // 默认提示词分类在前，「我的分类」在后
+  assert.ok(out.indexOf("我的分类") > out.indexOf(SMART_PROMPT_DEFAULT_CATEGORIES[0]))
+  // 不混入技能默认分类
+  assert.ok(!out.includes("办公"))
+  assert.deepEqual(list, ["营销", "我的分类"])
+})
+
+// T22 reorderCategories：按下标换位，越界/同位置原样返回，不改入参
+test("T22 reorderCategories 换位与边界保护", () => {
+  const list = ["A", "B", "C", "D"]
+  assert.deepEqual(reorderCategories(list, 0, 2), ["B", "C", "A", "D"])
+  assert.deepEqual(reorderCategories(list, 3, 0), ["D", "A", "B", "C"])
+  assert.deepEqual(reorderCategories(list, 1, 1), list) // 同位置
+  assert.deepEqual(reorderCategories(list, -1, 1), list) // 负下标
+  assert.deepEqual(reorderCategories(list, 0, 9), list) // 越界
+  assert.deepEqual(list, ["A", "B", "C", "D"]) // 不改入参
+})
+
+// T23 moveCategory：按名称上移/下移，边界原样返回，不改入参
+test("T23 moveCategory 按名称上移下移且边界保护", () => {
+  const list = ["A", "B", "C"]
+  assert.deepEqual(moveCategory(list, "A", "up"), list) // 首项上移越界
+  assert.deepEqual(moveCategory(list, "C", "down"), list) // 末项下移越界
+  assert.deepEqual(moveCategory(list, "B", "up"), ["B", "A", "C"])
+  assert.deepEqual(moveCategory(list, "B", "down"), ["A", "C", "B"])
+  assert.deepEqual(moveCategory(list, "幽灵", "up"), list) // 未知名称
+  assert.deepEqual(list, ["A", "B", "C"]) // 不改入参
 })
 
 let passed = 0, failed = 0

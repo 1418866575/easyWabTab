@@ -29,9 +29,11 @@ import {
   normalizeMenuData,
   removeCategory,
   renameCategory,
+  reorderCategories,
   reorderMenu,
   resolveMenu,
   setMenuLabel,
+  SMART_PROMPT_DEFAULT_CATEGORIES,
   toggleMenuHidden,
   visibleMenu,
   type CategoryResult,
@@ -322,6 +324,106 @@ export const useSmartStore = defineStore('smart', () => {
   /** 把工作流移出某个分类（设置页的「移除」）：回落「未分类」 */
   function onRemoveWorkflowFromCategory(workflowId: string): void {
     onAssignWorkflowToCategory(workflowId, UNCATEGORIZED)
+  }
+
+  // ==================== 提示词分类 ====================
+  // 与「技能分类」同构：自定义分类列表 ∪ 提示词上实际用到的分类（collectCategories），
+  // 新增 / 重命名 / 删除；重命名同步更新该分类下的提示词，删除把提示词回落「未分类」。
+  // 排序（上移/下移）通过 reorderCategories 维护自定义列表顺序，promptCategories 仅作展示派生。
+
+  const PROMPT_CATEGORIES_KEY = 'smart-prompt-categories'
+  const PROMPT_CATEGORIES_SEEDED_KEY = 'smart-prompt-categories-seeded'
+
+  const promptCustomCategories = ref<string[]>(loadPromptCategoriesWithDefaults())
+
+  function loadPromptCategories(): string[] {
+    const raw = getPref(PROMPT_CATEGORIES_KEY)
+    if (!raw) return []
+    try {
+      return normalizeCategories(JSON.parse(raw))
+    } catch {
+      console.warn('[smart] 提示词分类配置解析失败，回落空列表')
+      return []
+    }
+  }
+
+  /**
+   * 默认分类播种（只做一次）：首次使用或本次升级时把 SMART_PROMPT_DEFAULT_CATEGORIES 补进列表，
+   * 随后打上标记。播种完成后，默认分类就和用户自建分类一样可删可改名，不会在下次打开时复活。
+   */
+  function loadPromptCategoriesWithDefaults(): string[] {
+    const cur = loadPromptCategories()
+    if (getPref(PROMPT_CATEGORIES_SEEDED_KEY) === '1') return cur
+    const merged = mergeDefaultCategories(cur, SMART_PROMPT_DEFAULT_CATEGORIES)
+    if (merged.length !== cur.length) save(PROMPT_CATEGORIES_KEY, merged)
+    setPref(PROMPT_CATEGORIES_SEEDED_KEY, '1')
+    markDirty()
+    return merged
+  }
+
+  function persistPromptCategories(): void {
+    save(PROMPT_CATEGORIES_KEY, promptCustomCategories.value)
+  }
+
+  async function reloadPromptCategories(): Promise<void> {
+    promptCustomCategories.value = loadPromptCategories()
+  }
+
+  /** 设置页展示的分类：自定义分类 ∪ 提示词上实际用到的分类 */
+  const allPromptCategories = computed(() =>
+    collectCategories(promptCustomCategories.value, prompts.value.map(p => p.category))
+  )
+
+  /** 每个分类下的提示词数量 */
+  const promptCountByCategory = computed(() => countByCategory(prompts.value.map(p => p.category)))
+
+  function onAddPromptCategory(name: string): CategoryResult {
+    const r = addCategory(promptCustomCategories.value, name)
+    if (r.ok) {
+      promptCustomCategories.value = r.list
+      persistPromptCategories()
+    }
+    return r
+  }
+
+  function onRenamePromptCategory(oldName: string, newName: string): CategoryResult {
+    const r = renameCategory(allPromptCategories.value, oldName, newName)
+    if (!r.ok) return r
+    // 改名要落到两处：自定义分类列表 + 已有提示词的 category 字段
+    promptCustomCategories.value = r.list
+    persistPromptCategories()
+    const changed = prompts.value.some(p => p.category === oldName)
+    if (changed) {
+      const now = Date.now()
+      prompts.value = prompts.value.map(p => (p.category === oldName ? { ...p, category: newName, updatedAt: now } : p))
+      persistPrompts()
+    }
+    return r
+  }
+
+  /** 删除分类：该分类下的提示词回落「未分类」，同时从自定义列表移除 */
+  function onDeletePromptCategory(name: string): number {
+    const now = Date.now()
+    let moved = 0
+    prompts.value = prompts.value.map(p => {
+      if (p.category !== name) return p
+      moved++
+      return { ...p, category: UNCATEGORIZED, updatedAt: now }
+    })
+    if (moved) persistPrompts()
+    promptCustomCategories.value = removeCategory(promptCustomCategories.value, name)
+    persistPromptCategories()
+    return moved
+  }
+
+  /** 排序（上移/下移）：维护自定义分类列表顺序；边界处不动 */
+  function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
+    const i = promptCustomCategories.value.indexOf(name)
+    if (i === -1) return
+    const j = dir === 'up' ? i - 1 : i + 1
+    if (j < 0 || j >= promptCustomCategories.value.length) return
+    promptCustomCategories.value = reorderCategories(promptCustomCategories.value, i, j)
+    persistPromptCategories()
   }
 
   // ==================== 派生视图 ====================
@@ -718,6 +820,15 @@ export const useSmartStore = defineStore('smart', () => {
     onDeleteWorkflowCategory,
     onAssignWorkflowToCategory,
     onRemoveWorkflowFromCategory,
+    // 提示词分类
+    promptCustomCategories,
+    allPromptCategories,
+    promptCountByCategory,
+    reloadPromptCategories,
+    onAddPromptCategory,
+    onRenamePromptCategory,
+    onDeletePromptCategory,
+    onMovePromptCategory,
     // 云同步回写
     reloadSkills,
     reloadPrompts,
