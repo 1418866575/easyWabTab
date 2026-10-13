@@ -6,7 +6,7 @@
  * 「我想记住某本书 + 一段自定义内容」，仅存本机浏览器（和收藏/最近打开同套 prefs 存储）。
  *
  * 沿用项目 BaseDialog 体系（见 docs/UI_STYLE_GUIDE.md §2.2），不自造弹框。
- * 弹框内同时承载「已添加列表 + 删除」，让添加结果即时可见、操作直观。
+ * 布局：顶部「书名（可搜索图书馆书名）+ 添加书签按钮（右上角）」→ 用户输入框 → 下方表格。
  */
 import { ref, computed } from 'vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
@@ -16,6 +16,8 @@ import type { UserBookmark } from '@/composables/useBooksPrefs'
 
 const props = defineProps<{
   modelValue: boolean
+  /** 图书馆全部书名（静态书 + 本机上传），用于「书名」输入框的自动补全/搜索 */
+  bookTitles?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -46,14 +48,6 @@ const bookmarks = computed<UserBookmark[]>(() => prefs.userBookmarks.value)
 const TITLE_MAX = 80
 const CONTENT_MAX = 2000
 
-function formatTime(ts: number): string {
-  const d = new Date(ts)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(
-    d.getMinutes()
-  )}`
-}
-
 function onSubmit(): void {
   const res = prefs.addUserBookmark(title.value, content.value)
   if (!res.ok) {
@@ -62,7 +56,7 @@ function onSubmit(): void {
     return
   }
   toast.success(res.message)
-  // 保留弹框打开，让刚添加的书签出现在下方列表里；清空表单便于连续添加
+  // 保留弹框打开，让刚添加的书签出现在下方表格里；清空表单便于连续添加
   title.value = ''
   content.value = ''
   error.value = ''
@@ -77,97 +71,117 @@ function onDelete(b: UserBookmark): void {
 <template>
   <BaseDialog
     title="添加书签"
-    width="480px"
+    width="60%"
     max-height="82vh"
     data-testid="bk-bookmark-dialog"
     @close="onClose"
   >
-    <p class="bk-bm-hint">
-      记录你想记住的书与自定义内容，仅保存在<strong>本机浏览器</strong>，不上传服务器、别的设备看不到。
-    </p>
+    <div class="bk-bm-add">
+      <div class="bk-bm-add-row">
+        <label class="bk-bm-field bk-bm-field--title">
+          <span class="bk-bm-label">书名</span>
+          <input
+            v-model="title"
+            type="text"
+            class="bk-bm-input"
+            list="bk-book-titles"
+            placeholder="输入或搜索图书馆里的书名"
+            :maxlength="TITLE_MAX"
+            data-testid="bk-bm-title"
+            @input="error = ''"
+          />
+        </label>
+        <button
+          type="button"
+          class="ui-btn ui-btn--primary bk-bm-add-btn"
+          data-testid="bk-bm-add"
+          @click="onSubmit"
+        >
+          添加书签
+        </button>
+      </div>
 
-    <form class="bk-bm-form" data-testid="bk-bm-form" @submit.prevent="onSubmit">
       <label class="bk-bm-field">
-        <span class="bk-bm-label">书名</span>
-        <input
-          v-model="title"
-          type="text"
-          class="bk-bm-input"
-          placeholder="例如：道德经"
-          :maxlength="TITLE_MAX"
-          data-testid="bk-bm-title"
-          @input="error = ''"
-        />
-        <span class="bk-bm-count">{{ title.length }}/{{ TITLE_MAX }}</span>
-      </label>
-
-      <label class="bk-bm-field">
-        <span class="bk-bm-label">用户输入内容</span>
+        <span class="bk-bm-label">用户输入</span>
         <textarea
           v-model="content"
           class="bk-bm-textarea"
           placeholder="想记录的内容、摘录、感想……"
           :maxlength="CONTENT_MAX"
-          rows="4"
+          rows="3"
           data-testid="bk-bm-content"
         ></textarea>
         <span class="bk-bm-count">{{ content.length }}/{{ CONTENT_MAX }}</span>
       </label>
 
       <p v-if="error" class="bk-bm-error" data-testid="bk-bm-error">{{ error }}</p>
-    </form>
+    </div>
 
-    <div v-if="bookmarks.length" class="bk-bm-list-wrap" data-testid="bk-bm-list">
-      <p class="bk-bm-list-title">已添加 {{ bookmarks.length }} 条</p>
-      <ul class="bk-bm-list">
-        <li v-for="b in bookmarks" :key="b.id" class="bk-bm-item">
-          <div class="bk-bm-item-main">
-            <span class="bk-bm-item-title">{{ b.title }}</span>
-            <span v-if="b.content" class="bk-bm-item-content">{{ b.content }}</span>
-            <span class="bk-bm-item-time">{{ formatTime(b.ts) }}</span>
-          </div>
-          <button
-            type="button"
-            class="ui-btn ui-btn--sm ui-btn--danger"
-            :data-testid="`bk-bm-del-${b.id}`"
-            @click="onDelete(b)"
-          >
-            删除
-          </button>
-        </li>
-      </ul>
+    <datalist id="bk-book-titles">
+      <option v-for="t in (bookTitles ?? [])" :key="t" :value="t" />
+    </datalist>
+
+    <div class="bk-bm-table-wrap">
+      <table class="bk-bm-table" data-testid="bk-bm-table">
+        <thead>
+          <tr>
+            <th class="bk-bm-th-title">书名</th>
+            <th class="bk-bm-th-content">用户输入</th>
+            <th class="bk-bm-th-op">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="b in bookmarks" :key="b.id" class="bk-bm-row">
+            <td class="bk-bm-td-title">{{ b.title }}</td>
+            <td class="bk-bm-td-content">{{ b.content || '—' }}</td>
+            <td class="bk-bm-td-op">
+              <button
+                type="button"
+                class="ui-btn ui-btn--sm ui-btn--danger"
+                :data-testid="`bk-bm-del-${b.id}`"
+                @click="onDelete(b)"
+              >
+                删除
+              </button>
+            </td>
+          </tr>
+          <tr v-if="!bookmarks.length" class="bk-bm-empty-row">
+            <td colspan="3" class="bk-bm-empty">还没有书签，在上方添加一条吧</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <template #footer>
       <button type="button" class="ui-btn" data-testid="bk-bm-close" @click="onClose">关闭</button>
-      <button type="button" class="ui-btn ui-btn--primary" data-testid="bk-bm-add" @click="onSubmit">
-        添加书签
-      </button>
     </template>
   </BaseDialog>
 </template>
 
 <style scoped>
-.bk-bm-hint {
-  margin: 0 0 14px;
-  color: var(--color-text-secondary, #64748b);
-  font-size: var(--font-size-sm, 13px);
-  line-height: var(--line-height-relaxed, 1.6);
-}
-.bk-bm-hint strong {
-  color: var(--color-text, #0f172a);
-}
-
-.bk-bm-form {
+.bk-bm-add {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+.bk-bm-add-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
 }
 .bk-bm-field {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
+.bk-bm-field--title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.bk-bm-add-btn {
+  flex: 0 0 auto;
+}
+
 .bk-bm-label {
   font-size: var(--font-size-sm, 13px);
   font-weight: var(--font-weight-medium, 500);
@@ -201,60 +215,85 @@ function onDelete(b: UserBookmark): void {
   color: var(--color-error, #ef4444);
 }
 
-.bk-bm-list-wrap {
-  margin-top: 18px;
-  padding-top: 14px;
-  border-top: 1px solid var(--color-border, #e2e8f0);
-}
-.bk-bm-list-title {
-  margin: 0 0 8px;
-  font-size: var(--font-size-sm, 13px);
-  font-weight: var(--font-weight-medium, 500);
-  color: var(--color-text, #0f172a);
-}
-.bk-bm-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: 200px;
-  overflow-y: auto;
-}
-.bk-bm-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 8px 10px;
+/* ---------- 记录表格 ---------- */
+.bk-bm-table-wrap {
+  margin-top: 16px;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
-  background-color: var(--color-bg-card, #ffffff);
+  overflow: hidden;
 }
-.bk-bm-item-main {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.bk-bm-item-title {
-  color: var(--color-text, #0f172a);
+.bk-bm-table {
+  width: 100%;
+  border-collapse: collapse;
   font-size: var(--font-size-sm, 13px);
+  table-layout: fixed;
+}
+.bk-bm-table th,
+.bk-bm-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  vertical-align: top;
+}
+.bk-bm-table thead th {
+  background: var(--color-bg-subtle, #f8fafc);
+  color: var(--color-text-secondary, #64748b);
   font-weight: var(--font-weight-medium, 500);
+  white-space: nowrap;
+}
+.bk-bm-th-title {
+  width: 28%;
+}
+.bk-bm-th-op {
+  width: 72px;
+  text-align: right;
+}
+.bk-bm-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.bk-bm-table tbody tr:hover {
+  background: var(--color-primary-soft, #eff6ff);
+}
+.bk-bm-td-title {
+  color: var(--color-text, #0f172a);
+  font-weight: var(--font-weight-medium, 500);
+  /* 超长书名单行截断，避免撑破固定布局 */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.bk-bm-item-content {
+.bk-bm-td-content {
   color: var(--color-text-secondary, #64748b);
-  font-size: var(--font-size-xs, 12px);
-  line-height: var(--line-height-relaxed, 1.6);
   word-break: break-word;
   white-space: pre-wrap;
 }
-.bk-bm-item-time {
+.bk-bm-td-op {
+  text-align: right;
+  white-space: nowrap;
+}
+.bk-bm-empty {
+  text-align: center;
   color: var(--color-text-muted, #94a3b8);
-  font-size: var(--font-size-xs, 12px);
+  padding: 24px 12px;
+}
+
+/* 移动端：弹框宽度回归满屏（60% 在窄屏过窄） */
+@media (max-width: 768px) {
+  :deep(.bd-panel) {
+    max-width: 100% !important;
+  }
+  .bk-bm-add-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .bk-bm-add-btn {
+    width: 100%;
+  }
+  .bk-bm-th-title {
+    width: 36%;
+  }
+  .bk-bm-th-op {
+    width: 60px;
+  }
 }
 </style>

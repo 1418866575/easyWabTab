@@ -30,7 +30,6 @@ import {
   BOOK_SORTS,
   categoryList,
   filterBooks,
-  formatTotalSize,
   matchKeyword,
   normalizeBooks,
   paginate,
@@ -72,6 +71,11 @@ const allBooks = computed<BookItem[]>(() => [
   ...staticBooks.value,
   ...uploads.value.map((u) => uploadedToBookItem(u))
 ])
+
+/** 全部书名（静态书 + 本机上传），供「添加书签」弹框的书名输入框自动补全 */
+const allBookTitles = computed<string[]>(() =>
+  allBooks.value.map((b) => b.title).filter((t): t is string => !!t)
+)
 
 const categories = computed(() => categoryList(allBooks.value))
 const hasFilter = computed(
@@ -171,8 +175,6 @@ const mainBooksSub = computed(
 
 /** 当前页数据；筛选变化导致总数减少时页码收敛（watch 里处理） */
 const paged = computed(() => paginate(mainBooks.value, page.value, pageSize))
-
-const uploadTotalLabel = computed(() => `（其中 ${uploads.value.length} 本为本机上传）`)
 
 /** 用户自建书签数量（右上角书签按钮的徽标用） */
 const bookmarkCount = computed(() => prefs.userBookmarks.value.length)
@@ -349,15 +351,6 @@ onUnmounted(() => {
   </header>
 
   <main class="bk-shell">
-    <header class="bk-head">
-      <div>
-        <h1 class="bk-head-title">我的图书馆</h1>
-        <p class="bk-head-sub">
-          共 {{ allBooks.length }} 本 / {{ formatTotalSize(allBooks) }}{{ uploadTotalLabel }}
-        </p>
-      </div>
-    </header>
-
     <!-- 搜索框（父容器内居中）+ 分类页签：布局与工具箱一致 -->
     <BookSearchBar
       :model-value="keyword"
@@ -524,6 +517,6 @@ onUnmounted(() => {
       @changed="onUploadChanged"
     />
 
-    <BookBookmarkDialog v-if="bookmarkOpen" v-model="bookmarkOpen" />
+    <BookBookmarkDialog v-if="bookmarkOpen" v-model="bookmarkOpen" :book-titles="allBookTitles" />
   </main>
 </template>
