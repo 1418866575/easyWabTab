@@ -19,6 +19,10 @@ const BlogAdminView = () => import('../views/BlogAdminView.vue')
 // /blog 为列表首页，/blog/article/:slug 为文章详情。两者懒加载，不拖累导航站首屏。
 const BlogHomeView = () => import('../views/BlogHomeView.vue')
 const BlogPostView = () => import('../views/BlogPostView.vue')
+// 个人图书馆：/books 书架首页 + /books/read 站内阅读页（iframe 承载原书 HTML）。
+// 书籍数据来自 public/books/manifest.json（构建期扫描生成）与本机 IndexedDB 上传项，两者合并展示。
+const BooksView = () => import('../views/BooksView.vue')
+const BookReaderView = () => import('../views/BookReaderView.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -77,6 +81,18 @@ const router = createRouter({
       path: '/blog',
       name: 'blog',
       component: BlogHomeView
+    },
+    {
+      // 阅读页用 query 传 id 而非 path 参数：id 可能含中文（上传的文件名），
+      // 放进 path 需要额外 encode/decode 往返，中文路径段在部分国产浏览器上还易出问题。
+      path: '/books/read',
+      name: 'book-reader',
+      component: BookReaderView
+    },
+    {
+      path: '/books',
+      name: 'books',
+      component: BooksView
     }
   ]
 })

@@ -116,7 +116,12 @@ onMounted(async () => {
   <div class="ba-shell" :class="{ 'is-collapsed': sidebarCollapsed }">
     <header class="ba-topbar">
       <div class="ba-topbar-left">
-        <WorkbenchSwitcher trigger-builtin="notes" trigger-label="博客后台" force-show />
+        <WorkbenchSwitcher
+          :trigger-icon="settingsStore.blogAdminPageIcon"
+          trigger-builtin="notes"
+          :trigger-label="settingsStore.blogAdminPageDisplayName"
+          force-show
+        />
         <div class="ba-heading">
           <h1 class="ba-title">{{ store.settings.blogName }}</h1>
           <p class="ba-sub">

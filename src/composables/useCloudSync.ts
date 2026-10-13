@@ -1,7 +1,7 @@
 ﻿/**
  * 云同步 composable（WebDAV + v10 多文件同步信封）
  *
- * 多份独立信封：nav.json / icons.json / workbench.json / business.json / student.json / teacher.json / toolbox.json / smart.json / blog.json / blog-prefs.json
+ * 多份独立信封：nav.json / icons.json / workbench.json / business.json / student.json / teacher.json / toolbox.json / smart.json / blog.json / blog-prefs.json / books.json
  *   - nav.json：导航偏好（存 IDB nav store；user-sites/categories/engines/theme/background 等）
  *   - icons.json：自定义图标（localStorage user-custom-icons）
  *   - workbench.json：工作台核心 9 store（不含 business；settings 不含 cloudSync* 5 字段）
@@ -14,6 +14,8 @@
  *     存 IDB blog store（DB v22）；文章含 Markdown 正文，草稿一并同步（按 updatedAt 较新者胜）
  *   - blog-prefs.json：博客前台偏好（收藏 / 最近阅读，本机浏览轨迹），存 IDB nav store（BLOG_PREFS_NAV_KEY）
  *     随博客信封之外独立同步，避免被后台数据合并整体覆盖
+ *   - books.json：个人图书馆偏好（仅收藏 favorites + 用户自建书签 userBookmarks），存 IDB nav store（BOOKS_PREFS_NAV_KEY）
+ *     阅读位置 / 最近打开 / 打开次数 / 上传书为设备级数据，不在此信封内
  *
  * 单例设计：模块级 ref 持有全局状态（参考 useCountdownReminder / useToast 的单例模式）
  * 触发器：
@@ -65,6 +67,14 @@ import { mergeFamily } from './genealogyCore'
 import { mergeBusinessStore } from './businessCore'
 import { mergeLedgerStore } from './ledgerCore'
 import { mergeBlogEnvelope, mergeBlogPrefsEnvelope } from './blogSyncCore'
+// 个人图书馆云同步信封（books.json）：仅收藏 + 用户自建书签
+// export/import/reload 在本机偏好单例里（useBooksPrefs），合并纯函数放零依赖的 booksSyncCore
+import {
+  exportBooksSyncData,
+  importBooksSyncData,
+  reloadBooksPrefs
+} from './useBooksPrefs'
+import { mergeBooksPrefsEnvelope, type BooksPrefsSyncData } from './booksSyncCore'
 import type {
   BusinessSyncData,
   BlogSyncData,
@@ -455,6 +465,7 @@ function sigTeacher(data: TeacherSyncData): string { return envelopeSignature(da
 function sigSmart(data: SmartSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
 function sigBlog(data: BlogSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
 function sigBlogPrefs(data: BlogFrontSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
+function sigBooksPrefs(data: BooksPrefsSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
 
 /**
  * 计算本地与远程的总差异量（Σ|local_len - remote_len|）。
@@ -1324,7 +1335,8 @@ async function reloadAllStores(): Promise<void> {
     reloadNavStores(),
     reloadIconsStores(),
     reloadBlogStores(),
-    reloadBlogPrefsStores()
+    reloadBlogPrefsStores(),
+    reloadBooksPrefs()
   ])
 }
 
@@ -1449,6 +1461,18 @@ const FILE_CONFIGS: FileConfig[] = [
     signature: (data) => sigBlogPrefs(data as BlogFrontSyncData),
     merge: (l, r) => mergeBlogPrefsEnvelope(l as BlogFrontSyncData, r as BlogFrontSyncData),
     reload: reloadBlogPrefsStores,
+    diffSize: (l, r) => totalDiffSize(l, r)
+  },
+  {
+    // 个人图书馆：仅收藏（favorites）+ 用户自建书签（userBookmarks）跨设备同步
+    // 阅读位置 / 最近打开 / 打开次数 / 上传书为设备级数据，不进此信封
+    // 合并策略：favorites 取两边并集（本地顺序优先 + 远端独有）；userBookmarks 按 id 取较新 ts
+    name: 'books.json',
+    exportLocal: () => exportBooksSyncData(),
+    importRemote: async (data) => { await importBooksSyncData(data as BooksPrefsSyncData); return undefined },
+    signature: (data) => sigBooksPrefs(data as BooksPrefsSyncData),
+    merge: (l, r) => mergeBooksPrefsEnvelope(l as BooksPrefsSyncData, r as BooksPrefsSyncData),
+    reload: reloadBooksPrefs,
     diffSize: (l, r) => totalDiffSize(l, r)
   }
 ]
