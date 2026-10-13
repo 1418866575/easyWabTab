@@ -268,7 +268,8 @@ export const WORKBENCH_PREFS_KEYS = [
 ] as const
 
 /**
- * 智能工作台（/smart）的偏好键：技能库 / 提示词库 / 左侧菜单配置 / 技能分类。
+ * 智能工作台（/smart）的偏好键：技能库 / 提示词库 / 工作流库 / 左侧菜单配置 /
+ * 技能分类 / 工作流分类 / 提示词分类。
  * 这些键**不进** nav.json 与 workbench.json，改由独立的 smart.json 信封同步
  * （见 exportSmart / importSmartData），避免同一份数据在两份信封里各存一次。
  * 物理上仍存在 nav IDB store 里（与其它 prefs 同库），只是打包时被排除。
@@ -279,7 +280,8 @@ export const SMART_PREFS_KEYS = [
   'smart-workflows',
   'smart-menu',
   'smart-skill-categories',
-  'smart-workflow-categories'
+  'smart-workflow-categories',
+  'smart-prompt-categories'
 ] as const
 
 /**
