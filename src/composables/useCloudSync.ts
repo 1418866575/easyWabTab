@@ -259,6 +259,50 @@ function writeRemoteTs(name: string, ts: number): void {
   localStorage.setItem(REMOTE_TS_PREFIX + name, String(ts))
 }
 
+// ===== 「同步型 settings 内容」基线签名 =====
+//
+// 背景（水印等设置"改了不同步"的根因）：workbench.json 静默合并旧策略是
+// `settings: local.settings` 整体取本地，而 dirty 是**全局**标记——任何 store
+// 的保存（存一笔待办/笔记/日记）都会置位。于是「本机有过任何保存 + 别的设备
+// 改了水印/页面名/透明度」就会走静默合并分支，远端 settings 被整体丢弃，
+// 随后回推再把云端覆盖回旧值，设置变更永远落不到另一台设备。
+//
+// 新策略以「本机 settings 自上次同步后是否被改过」为判据：
+//   签名与基线一致（没改过）→ 采纳云端 settings；
+//   签名不一致（刚改过）→ 保留本地，保护新鲜修改不被云端旧值回退
+//     （避免反向的"改了没同步"，与 mergeStudent 对 studentSettings 的保护同思路）；
+//   无基线（新设备 / 老版本升级后首轮）→ 采纳云端，让设置先流起来。
+//
+// 写入时机 = 本地 settings 与云端达成一致的时刻：推送成功、拉取落地、合并落地。
+const SETTINGS_SIG_KEY = 'ewt.cloudSync.settingsSig'
+
+function readSettingsSig(): string {
+  return localStorage.getItem(SETTINGS_SIG_KEY) || ''
+}
+
+function writeSettingsSig(sig: string): void {
+  if (sig) localStorage.setItem(SETTINGS_SIG_KEY, sig)
+}
+
+/** settings 信封内容签名：stableStringify 后 FNV-1a 32bit（同步函数，合并回调是同步的） */
+function settingsEnvelopeSig(settings: unknown): string {
+  try {
+    return 'fnv1a:' + fnv1a32(stableStringify(settings ?? {}))
+  } catch {
+    return ''
+  }
+}
+
+/** FNV-1a 32bit（sha1Hash 内回退实现的同步版；设置级变更检测足够） */
+function fnv1a32(text: string): string {
+  let h = 0x811c9dc5
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i)
+    h += (h << 4) + (h << 7) + (h << 8) + (h << 24)
+  }
+  return (h >>> 0).toString(16).padStart(8, '0')
+}
+
 function btoaSafe(s: string): string {
   // RFC 7617 Basic 推荐服务端支持 UTF-8 字符的 base64（btoa 只认 Latin-1）
   // 统一走 TextEncoder → Uint8Array → btoa(String.fromCharCode(...))，
@@ -955,9 +999,21 @@ function mergeIcons(local: IconsSyncData, remote: IconsSyncData): IconsSyncData 
 }
 
 /**
+ * 静默合并时是否采纳云端 settings（详见 SETTINGS_SIG_KEY 处的策略说明）：
+ * 本机 settings 与上次同步基线一致（没改过）或无基线 → true（采纳云端）；
+ * 刚改过（签名不一致）→ false（保留本地）。
+ */
+function shouldTakeRemoteSettings(local: WorkbenchSyncData): boolean {
+  const baseline = readSettingsSig()
+  if (!baseline) return true
+  return settingsEnvelopeSig(local.settings) === baseline
+}
+
+/**
  * workbench.json 合并入口：调用各模块合并函数组装结果，修正元数据字段。
  * 纯函数——不触碰 IDB / localStorage。
- * 例外（不并集、单向覆盖）：密码 + 密码身份整体取云端；settings 整体取本地。
+ * 例外（不并集、单向覆盖）：密码 + 密码身份整体取云端；settings 按本机是否改过取舍
+ * （shouldTakeRemoteSettings：没改过取云端、改过取本地）。
  * 注意：与旧 mergeData 区别——不含 business（独立走 business.json），settings 为 AppSettingsDataNoCloudSync。
  */
 function mergeWorkbench(local: WorkbenchSyncData, remote: WorkbenchSyncData): WorkbenchSyncData {
@@ -975,8 +1031,11 @@ function mergeWorkbench(local: WorkbenchSyncData, remote: WorkbenchSyncData): Wo
     passwordVerification: remote.passwordVerification ?? local.passwordVerification,
     health: mergeHealth(local.health, remote.health),
     ledger: mergeLedger(local.ledger, remote.ledger),
-    // settings 整体保留本地（本地 settings 不含 cloudSync* 5 字段，由 importWorkbenchData 合并本机凭证）
-    settings: local.settings,
+    // settings：按「本机 settings 自上次同步后是否被改过」取舍（详见 SETTINGS_SIG_KEY 注释）：
+    // 没改过 → 采纳云端（修复水印/页面名/透明度等设置从其他设备推不上来）；
+    // 刚改过 → 保留本地（保护新鲜修改不被云端旧值回退）。
+    // cloudSync 凭证 4 字段不随信封同步，由 importWorkbenchData 从本机 IDB 合并回填。
+    settings: shouldTakeRemoteSettings(local) ? (remote.settings ?? local.settings) : local.settings,
     pomodoro: mergePomodoro(local.pomodoro as PomodoroData | undefined, remote.pomodoro as PomodoroData | undefined),
     habits: mergeHabits(local.habits as HabitsData | undefined, remote.habits as HabitsData | undefined),
     prefs: mergePrefs(local.prefs, remote.prefs),
@@ -1532,6 +1591,8 @@ async function migrateFromLegacyBackup(
       if (!pushError) pushError = e instanceof Error ? e.message : '推送失败'
     }
   }
+  // 迁移内容已推上天 → 建立 settings 基线（否则升级后首轮合并没有判据）
+  if (!pushError) writeSettingsSig(settingsEnvelopeSig((workbench as WorkbenchSyncData).settings))
   // 6) DELETE backup.json（即使 7 份中有失败，仍尝试删除 legacy 文件，避免下次再次走迁移）
   try {
     await webdavDelete(`${dir}/${LEGACY_BACKUP_FILE}`, username, password)
@@ -1664,6 +1725,11 @@ async function pushNow(silent = false, skipRemoteGuard = false, onlyChanged = fa
         // 推送即同步：云端这一版就是本机内容，推进基线（用 pushedAt 近似服务端写入时刻，
         // REMOTE_TS_TOLERANCE_MS 已覆盖两端时钟偏差）
         writeRemoteTs(cfg.name, pushedAt)
+        // 推送成功 → 本机 settings 已与云端一致，记录基线（合并时据此判定本机是否改过设置）
+        if (cfg.name === 'workbench.json') {
+          const pushedSettings = (local as WorkbenchSyncData).settings
+          if (pushedSettings) writeSettingsSig(settingsEnvelopeSig(pushedSettings))
+        }
         if (onlyChanged && sig) writePushedSig(cfg.name, sig)
         pushedCount++
       } catch (e) {
@@ -1742,6 +1808,8 @@ async function applyFileRemote(cfg: FileConfig, remote: unknown): Promise<{ iden
     const remoteData = remote as WorkbenchSyncData
     identityChanged = !!result?.adoptedPasswordIdentity
       && (remoteData.passwordsSalt !== localSaltBefore || remoteData.passwordVerification !== localVerificationBefore)
+    // 云端 settings 已落本地 → 以它为基线（旧信封无 settings 字段时不写，避免把基线打成空值）
+    if (remoteData.settings) writeSettingsSig(settingsEnvelopeSig(remoteData.settings))
   } else {
     await cfg.importRemote(remote)
   }
@@ -1860,6 +1928,11 @@ async function pullNow(silent = false): Promise<void> {
           await cfg.importRemote(merged)
           appliedAny = true
           mergedAny = true
+          // 合并结果的 settings 已落本地 → 以它为基线（无论取了云端还是保留了本地）
+          if (cfg.name === 'workbench.json') {
+            const mergedSettings = (merged as WorkbenchSyncData).settings
+            if (mergedSettings) writeSettingsSig(settingsEnvelopeSig(mergedSettings))
+          }
           // 已处理这一版云端内容 → 推进基线，避免下次重复判定为外部修改
           writeRemoteTs(cfg.name, remoteTs)
         } else {
@@ -1992,6 +2065,11 @@ export async function resolveConflict(decision: 'remote' | 'local' | 'cancel' | 
         if (!entry) continue
         const merged = cfg.merge(entry.local, entry.remote)
         await cfg.importRemote(merged)
+        // 合并结果的 settings 已落本地 → 以它为基线（同 pullNow 静默合并分支）
+        if (cfg.name === 'workbench.json') {
+          const mergedSettings = (merged as WorkbenchSyncData).settings
+          if (mergedSettings) writeSettingsSig(settingsEnvelopeSig(mergedSettings))
+        }
       }
       // 2) reload stores（让 Vue 刷新到 merged 数据）
       await reloadAllStores()
