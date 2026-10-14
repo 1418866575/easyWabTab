@@ -122,12 +122,6 @@ onMounted(async () => {
           :trigger-label="settingsStore.blogAdminPageDisplayName"
           force-show
         />
-        <div class="ba-heading">
-          <h1 class="ba-title">{{ store.settings.blogName }}</h1>
-          <p class="ba-sub">
-            共 {{ store.counts.all }} 篇 · 已发布 {{ store.counts.published }} · 草稿 {{ store.counts.draft }}
-          </p>
-        </div>
       </div>
       <div class="ba-topbar-actions">
         <button
@@ -231,32 +225,6 @@ onMounted(async () => {
   min-width: 0;
   flex: 0 1 auto;
   overflow: hidden;
-}
-
-.ba-heading {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.ba-title {
-  margin: 0;
-  font-size: var(--font-size-xl, 18px);
-  font-weight: var(--font-weight-semibold, 600);
-  line-height: var(--line-height-tight, 1.3);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ba-sub {
-  margin: 0;
-  font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-secondary, #64748b);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .ba-topbar-actions {
@@ -510,7 +478,6 @@ onMounted(async () => {
   .ba-shell.is-collapsed .ba-nav-item { padding: 0 14px; }
   .ba-shell.is-collapsed .ba-nav-label { display: block; }
   .ba-shell.is-collapsed .ba-nav-count { display: inline; }
-  .ba-sub { display: none; }
 
   .ba-sync-text { display: none; }
   .ba-btn { min-height: 44px; padding: 0 16px; }
