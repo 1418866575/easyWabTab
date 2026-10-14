@@ -146,9 +146,10 @@ const formDueDate = ref('')
 const formColor = ref(DEFAULT_TODO_COLOR)
 // 分类下拉值：'' = 未分类（v-model 与 select option 全字符串，保存时 || undefined）
 const formCategoryId = ref('')
-// 状态操作（移动端编辑页入口）：待办状态为 completed / archived 两个布尔位，
-// 复用列表同一套 store 方法（toggleTodo / archiveTodo / unarchiveTodo），
-// 保证「未完成→已完成→已归档」的联动规则与列表操作完全一致，不另写一套。
+// 状态操作（新增/编辑弹框入口）：待办状态为 completed / archived 两个布尔位。
+// 完成态入口已从列表操作列迁入本弹框（新增、编辑均可设置），保存时统一经
+// toggleTodo / archiveTodo / unarchiveTodo 落库，保证「未完成→已完成→已归档」
+// 的联动规则与列表操作完全一致，不另写一套。
 const formCompleted = ref(false)
 const formArchived = ref(false)
 
@@ -229,13 +230,14 @@ async function handleSave(): Promise<void> {
       color: formColor.value,
       categoryId: formCategoryId.value || undefined
     })
+    // 新增即可选状态：addTodo 固定 push 到数组末尾，取末条按弹框选择补完成/归档
+    // （复用 toggleTodo / archiveTodo，completedAt 等联动规则与列表操作一致）
+    const created = store.todos[store.todos.length - 1]
+    if (created && formCompleted.value) await store.toggleTodo(created.id)
+    if (created && formArchived.value) await store.archiveTodo(created.id)
     listPage.value = 1 // 新增条目回第 1 页（复用日记分页惯例）
   }
   cancelForm()
-}
-
-async function handleToggle(todo: WorkbenchTodo): Promise<void> {
-  await store.toggleTodo(todo.id)
 }
 
 /**
@@ -266,11 +268,6 @@ async function handleUnarchive(todo: WorkbenchTodo): Promise<void> {
 }
 
 // 打卡入口按需求从列表操作区移除（store.checkInTodo / applyCheckIn 保留：存量数据的 checkedIn 字段仍需兼容）
-
-// 手工排序：表格视图上移/下移一格
-async function handleMove(id: string, dir: 'up' | 'down'): Promise<void> {
-  await store.moveTodo(id, dir)
-}
 
 // ===== 卡片视图拖拽手工排序（复用 HomeLayoutCard 的原生 HTML5 拖拽交换模式）=====
 const dragSourceId = ref<string | null>(null)
@@ -496,16 +493,9 @@ onMounted(async () => {
               <span v-else class="td-col-empty">未分类</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" class-name="ewt-op-col" width="360" align="center" fixed="right">
+          <el-table-column label="操作" class-name="ewt-op-col" width="240" align="center" fixed="right">
             <template #default="{ row: v }">
               <div class="td-actions" @click.stop>
-                <el-button
-                  size="small"
-                  :type="v.todo.completed ? 'success' : 'default'"
-                  :data-testid="`td-toggle-${v.todo.id}`"
-                  :title="v.todo.completed ? '点击标记为未完成' : '点击标记为已完成'"
-                  @click="handleToggle(v.todo)"
-                >{{ v.todo.completed ? '已完成' : '未完成' }}</el-button>
                 <el-button
                   v-if="v.todo.completed && v.todo.archived !== true"
                   size="small"
@@ -520,8 +510,6 @@ onMounted(async () => {
                   title="取消归档，放回已完成"
                   @click="handleUnarchive(v.todo)"
                 >取消归档</el-button>
-                <el-button size="small" :data-testid="`td-up-${v.todo.id}`" title="上移（手工排序）" @click="handleMove(v.todo.id, 'up')">↑</el-button>
-                <el-button size="small" :data-testid="`td-down-${v.todo.id}`" title="下移（手工排序）" @click="handleMove(v.todo.id, 'down')">↓</el-button>
                 <el-button size="small" :data-testid="`td-edit-${v.todo.id}`" @click="startEdit(v.todo)">编辑</el-button>
                 <el-button size="small" class="btn-delete" :data-testid="`td-delete-${v.todo.id}`" @click="handleDelete(v.todo.id)">删除</el-button>
               </div>
@@ -609,9 +597,8 @@ onMounted(async () => {
           </el-select>
         </div>
 
-        <!-- 状态操作（仅编辑时显示）：移动端此前无法在列表改状态，这里提供入口；
-             PC 端列表操作列不受影响，仍照旧 -->
-        <div v-if="editingId" class="form-group td-status-group" data-testid="td-status-group">
+        <!-- 状态操作（新增/编辑均可用）：完成态入口已从列表操作列迁入弹框，保存时统一落库 -->
+        <div class="form-group td-status-group" data-testid="td-status-group">
           <label>状态</label>
           <div class="td-status-actions">
             <el-button
@@ -957,10 +944,10 @@ onMounted(async () => {
 .td-status-btn { min-width: 104px; }
 .td-status-tip { font-size: 12px; color: var(--color-text-secondary, #9ca3af); }
 
-/* 待办描述输入框：加高到 450px（el-input 的 textarea 需 :deep 穿透内部元素） */
+/* 待办描述输入框：高度 300px（el-input 的 textarea 需 :deep 穿透内部元素） */
 .td-desc-input :deep(.el-textarea__inner) {
-  height: 450px;
-  min-height: 450px;
+  height: 300px;
+  min-height: 300px;
   resize: vertical;
   line-height: 1.6;
   overflow-y: auto;
