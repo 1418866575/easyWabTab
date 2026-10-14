@@ -223,8 +223,10 @@ onUnmounted(() => {
   <BaseDialog
     class="ipd-overlay"
     :title="props.title"
-    width="560px"
+    width="80%"
     max-height="min(80vh, 640px)"
+    :z-index="400"
+    teleport
     @close="emit('close')"
   >
     <!-- 导入 / 上传：导入走 JSON 导出文件，上传走图片文件（≤500KB） -->
@@ -315,11 +317,8 @@ onUnmounted(() => {
 /* 弹框外壳（遮罩/面板/头部/关闭/主体/底部/移动端适配）已统一到 common/BaseDialog.vue，
    本组件仅保留导入上传入口、搜索、分类筛选与图标网格等内容样式 */
 
-/* 层级保留：原遮罩为 400（高于设置弹框的 300），保证嵌套在设置弹框内时显示在最上层 */
-.ipd-overlay {
-  z-index: 400;
-}
-
+/* 遮罩层级 400（高于设置弹框的 300）经 :z-index prop 传入——teleport 到 body 后
+   组件作用域属性不再落在 overlay 元素上，scoped 的 z-index 规则会失效，故弃用 CSS 方案 */
 /* 导入 / 上传入口：位于搜索框上方，与弹框内其它按钮同一套尺寸与配色 */
 .ipd-actions {
   display: flex;

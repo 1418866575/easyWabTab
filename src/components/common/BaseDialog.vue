@@ -23,6 +23,9 @@
 import { computed, onMounted, onUnmounted } from 'vue'
 import Icon from '../Icon.vue'
 
+// 根节点可能是 Teleport（teleport 态），透传 attrs（class/style 等）需手动落到 overlay 元素
+defineOptions({ inheritAttrs: false })
+
 const props = withDefaults(
   defineProps<{
     /** 头部标题（默认外壳中显示，位于 close 按钮左侧） */
@@ -48,6 +51,14 @@ const props = withDefaults(
      * 传入值应取 `nextZIndex()`（见 ConfirmHost）。
      */
     zIndex?: number
+    /**
+     * Teleport 到 body（仅非 embedded 态生效）。
+     * 适用场景：从另一个弹框（如设置弹窗）内部弹出的独立遮罩弹框——若留在父弹框 DOM 里，
+     * 父弹框作用域内的 `:deep(.bd-body)` 等后代选择器会泄漏命中嵌套弹框的内部结构
+     * （曾致设置 → 分类管理的图标弹框 body 被强设 overflow:hidden 而无法滚动）。
+     * Teleport 后脱离父弹框 DOM 子树，作用域规则与层叠上下文都不再相互影响。
+     */
+    teleport?: boolean
   }>(),
   {
     title: '',
@@ -58,7 +69,8 @@ const props = withDefaults(
     fullscreen: false,
     closeOnEscape: true,
     closeOnOverlay: true,
-    zIndex: undefined
+    zIndex: undefined,
+    teleport: false
   }
 )
 
@@ -88,46 +100,50 @@ const overlayStyle = computed(() => (props.zIndex ? { zIndex: props.zIndex } : {
 </script>
 
 <template>
-  <div
-    :class="[
-      embedded ? 'bd-inline' : 'bd-overlay',
-      { 'bd-overlay--fullscreen': fullscreen && !embedded }
-    ]"
-    :style="overlayStyle"
-    @click.self="!embedded && closeOnOverlay && close()"
-  >
+  <!-- teleport：独立遮罩弹框挂到 body（embedded/未开启时 disabled 原地渲染，行为不变） -->
+  <Teleport to="body" :disabled="embedded || !teleport">
     <div
-      class="bd-panel"
-      :class="{ 'bd-panel--embedded': embedded, 'bd-panel--fullscreen': fullscreen && !embedded }"
-      :style="panelStyle"
-      role="dialog"
-      :aria-modal="embedded ? undefined : true"
+      v-bind="$attrs"
+      :class="[
+        embedded ? 'bd-inline' : 'bd-overlay',
+        { 'bd-overlay--fullscreen': fullscreen && !embedded }
+      ]"
+      :style="overlayStyle"
+      @click.self="!embedded && closeOnOverlay && close()"
     >
-      <!-- 默认外壳；提供 #panel 插槽则整体覆盖 -->
-      <slot name="panel" :close="close">
-        <header v-if="!hideHeader" class="bd-header">
-          <h2 class="bd-title">
-            <slot name="title">{{ title }}</slot>
-          </h2>
-          <div class="bd-header-actions">
-            <!-- 头部附加操作（如全屏切换）；置于关闭按钮左侧 -->
-            <slot name="header-actions" />
-            <button class="close-btn" type="button" aria-label="关闭" @click="close">
-              <Icon name="close" />
-            </button>
+      <div
+        class="bd-panel"
+        :class="{ 'bd-panel--embedded': embedded, 'bd-panel--fullscreen': fullscreen && !embedded }"
+        :style="panelStyle"
+        role="dialog"
+        :aria-modal="embedded ? undefined : true"
+      >
+        <!-- 默认外壳；提供 #panel 插槽则整体覆盖 -->
+        <slot name="panel" :close="close">
+          <header v-if="!hideHeader" class="bd-header">
+            <h2 class="bd-title">
+              <slot name="title">{{ title }}</slot>
+            </h2>
+            <div class="bd-header-actions">
+              <!-- 头部附加操作（如全屏切换）；置于关闭按钮左侧 -->
+              <slot name="header-actions" />
+              <button class="close-btn" type="button" aria-label="关闭" @click="close">
+                <Icon name="close" />
+              </button>
+            </div>
+          </header>
+
+          <div class="bd-body">
+            <slot />
           </div>
-        </header>
 
-        <div class="bd-body">
-          <slot />
-        </div>
-
-        <footer v-if="$slots.footer" class="bd-footer">
-          <slot name="footer" />
-        </footer>
-      </slot>
+          <footer v-if="$slots.footer" class="bd-footer">
+            <slot name="footer" />
+          </footer>
+        </slot>
+      </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <style scoped>
