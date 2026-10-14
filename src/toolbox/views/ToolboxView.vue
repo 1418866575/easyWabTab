@@ -143,23 +143,6 @@ function resetFilters() {
     </header>
 
     <main class="tb-main wb-container">
-      <div class="tb-head">
-        <!-- 页面大标题：工具箱图标 + 名称，跟随「设置 → 个性化 → 显示控制」中的工具箱设置变化 -->
-        <h1 class="tb-head-title">
-          <img
-            v-if="settingsStore.toolboxButtonIcon"
-            :src="settingsStore.toolboxButtonIcon"
-            alt=""
-            class="tb-head-icon-img"
-          />
-          <span v-else class="tb-head-icon-emoji" aria-hidden="true">🧰</span>
-          <span>{{ settingsStore.toolboxButtonDisplayName }}</span>
-        </h1>
-        <span class="tb-head-sub">
-          共 {{ TOOLBOX_TOOLS.length }} 个工具<template v-if="keyword || category">，当前筛选出 {{ visibleTools.length }} 个</template>
-        </span>
-      </div>
-
       <!-- 搜索框（父容器内居中）：聚焦展开建议/历史下拉 -->
       <ToolboxSearchBar
         v-model="keyword"
@@ -268,20 +251,6 @@ function resetFilters() {
 
 .tb-main { padding-bottom: 96px; }
 
-.tb-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 22px 0 4px; }
-.tb-head h1 { margin: 0; font-size: clamp(20px, 2.2vw, 26px); color: var(--color-text); }
-/* 大标题内的工具箱标识：自定义图标 / 默认 emoji，与标题文字基线对齐 */
-.tb-head-title { display: inline-flex; align-items: center; gap: 8px; }
-.tb-head-icon-img {
-  width: 1.15em;
-  height: 1.15em;
-  object-fit: contain;
-  flex: none;
-  border-radius: 4px;
-}
-.tb-head-icon-emoji { font-size: 1em; line-height: 1; flex: none; }
-.tb-head-sub { color: var(--color-text-secondary); font-size: 13px; }
-
 .tb-grid {
   display: grid;
   gap: var(--space-3);
@@ -329,7 +298,6 @@ function resetFilters() {
 @media (max-width: 768px) {
   .tb-main { padding-bottom: 72px; }
   .tb-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
-  .tb-head { margin-top: 16px; }
 }
 @media (max-width: 359px) {
   .tb-grid { grid-template-columns: 1fr; }
