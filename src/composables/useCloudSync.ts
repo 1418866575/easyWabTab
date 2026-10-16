@@ -75,6 +75,8 @@ import {
   reloadBooksPrefs
 } from './useBooksPrefs'
 import { mergeBooksPrefsEnvelope, type BooksPrefsSyncData } from './booksSyncCore'
+// 飞书多维表格云同步传输层（方案 A：统一镜像表）；仅当渠道=feishu 时由入口分流调用
+import { feishuPush, feishuPull } from './feishuSync'
 import type {
   BusinessSyncData,
   BlogSyncData,
@@ -378,10 +380,17 @@ function shouldUseDirect(syncUrl: string | undefined): boolean {
  * - 密码   = 服务端 auth_basic 的口令
  */
 function hasSyncCredentials(s: {
+  cloudSyncChannel?: string
   cloudSyncUrl?: string
   cloudSyncUsername?: string
   cloudSyncPassword?: string
+  cloudSyncFeishuAppId?: string
+  cloudSyncFeishuAppSecret?: string
+  cloudSyncFeishuDatasourceUrl?: string
 }): boolean {
+  if (s.cloudSyncChannel === 'feishu') {
+    return !!s.cloudSyncFeishuAppId && !!s.cloudSyncFeishuAppSecret && !!s.cloudSyncFeishuDatasourceUrl
+  }
   return !!s.cloudSyncUrl && !!s.cloudSyncUsername && !!s.cloudSyncPassword
 }
 
@@ -1791,6 +1800,10 @@ async function pushNow(silent = false, skipRemoteGuard = false, onlyChanged = fa
  */
 export async function forcePushLocal(silent = false): Promise<boolean> {
   const settings = useAppSettingsStore()
+  if (settings.cloudSyncChannel === 'feishu') {
+    await feishuForcePush(silent)
+    return true
+  }
   if (!settings.cloudSyncEnabled || !hasSyncCredentials(settings)) return false
   return pushNow(silent, true, true)
 }
@@ -2113,8 +2126,85 @@ export async function resolveConflict(decision: 'remote' | 'local' | 'cancel' | 
  * 用户点击「立即同步」的三个入口（HomeView / WorkbenchView / BusinessView）走默认 false，
  * 保留成功/失败反馈——主动操作需要明确结果。
  */
+// ========== 飞书渠道分流（方案 A：统一镜像表） ==========
+// 飞书是行级镜像，无 WebDAV 信封的 dirty/冲突判定；syncNow = 先拉（收敛他端）后推（上传本地），
+// 顺序保证他端新增行不会被本端推送误删；forcePush/forcePull 则各自单向覆盖。
+
+async function feishuSyncNow(silent: boolean): Promise<void> {
+  const settings = useAppSettingsStore()
+  if (!hasSyncCredentials(settings)) {
+    if (!silent) useToast().error('请先在设置中配置飞书同步（App ID / App Secret / 数据源地址）')
+    return
+  }
+  status.value = 'pulling'
+  errorMessage.value = ''
+  try {
+    const pull = await feishuPull(settings) // 先拉取，把其他设备数据并入本地
+    status.value = 'pushing'
+    await feishuPush(settings) // 再推送，上传本地（含刚拉到的他端数据），幂等 upsert
+    await reloadAllStores()
+    if (pull.settingsChanged) useAppSettingsStore().initSettings()
+    clearDirty()
+    status.value = 'idle'
+    lastSyncAt.value = Date.now()
+    if (!silent) useToast().success('飞书同步完成')
+  } catch (e) {
+    status.value = 'error'
+    errorMessage.value = e instanceof Error ? e.message : '飞书同步失败'
+    if (!silent) useToast().error(`飞书同步失败：${errorMessage.value}`)
+  }
+}
+
+async function feishuForcePush(silent: boolean): Promise<void> {
+  const settings = useAppSettingsStore()
+  if (!hasSyncCredentials(settings)) {
+    if (!silent) useToast().error('请先在设置中配置飞书同步（App ID / App Secret / 数据源地址）')
+    return
+  }
+  status.value = 'pushing'
+  errorMessage.value = ''
+  try {
+    await feishuPush(settings)
+    clearDirty()
+    status.value = 'idle'
+    lastSyncAt.value = Date.now()
+    if (!silent) useToast().success('已推送到飞书')
+  } catch (e) {
+    status.value = 'error'
+    errorMessage.value = e instanceof Error ? e.message : '飞书推送失败'
+    if (!silent) useToast().error(`推送到飞书失败：${errorMessage.value}`)
+  }
+}
+
+async function feishuForcePull(silent: boolean): Promise<void> {
+  const settings = useAppSettingsStore()
+  if (!hasSyncCredentials(settings)) {
+    if (!silent) useToast().error('请先在设置中配置飞书同步（App ID / App Secret / 数据源地址）')
+    return
+  }
+  status.value = 'pulling'
+  errorMessage.value = ''
+  try {
+    const pull = await feishuPull(settings)
+    await reloadAllStores()
+    if (pull.settingsChanged) useAppSettingsStore().initSettings()
+    clearDirty()
+    status.value = 'idle'
+    lastSyncAt.value = Date.now()
+    if (!silent) useToast().success('已用飞书覆盖本地')
+  } catch (e) {
+    status.value = 'error'
+    errorMessage.value = e instanceof Error ? e.message : '飞书拉取失败'
+    if (!silent) useToast().error(`以飞书覆盖本地失败：${errorMessage.value}`)
+  }
+}
+
 export async function syncNow(silent = false): Promise<void> {
   const settings = useAppSettingsStore()
+  if (settings.cloudSyncChannel === 'feishu') {
+    await feishuSyncNow(silent)
+    return
+  }
   if (!settings.cloudSyncEnabled || !settings.cloudSyncUrl) {
     if (!silent) useToast().error('请先在设置中启用并配置云同步')
     return
@@ -2144,6 +2234,10 @@ export async function syncNow(silent = false): Promise<void> {
  */
 export async function forcePullRemote(silent = false): Promise<void> {
   const settings = useAppSettingsStore()
+  if (settings.cloudSyncChannel === 'feishu') {
+    await feishuForcePull(silent)
+    return
+  }
   if (!settings.cloudSyncEnabled || !hasSyncCredentials(settings)) {
     if (!silent) useToast().error('请先在设置中启用并配置云同步')
     return

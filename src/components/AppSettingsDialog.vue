@@ -67,6 +67,7 @@ import type { WorkbenchData, BusinessLedger } from '@/types'
 import { COUNTDOWN_CATEGORIES } from '@/types'
 import { categoryLabel } from '@/composables/countdownCore'
 import { useCloudSync } from '@/composables/useCloudSync'
+import { testFeishuConnection } from '@/composables/feishuSync'
 import { useNavPrefs } from '@/composables/useNavPrefs'
 import {
   useHomeLayout,
@@ -1571,6 +1572,16 @@ const syncNowBusy = ref(false)
 const forcePullBusy = ref(false)
 const pushLocalBusy = ref(false)
 
+// 当前同步渠道是否为飞书（影响凭据字段与测试连接逻辑）
+const feishuChannel = computed(() => store.cloudSyncChannel === 'feishu')
+
+// 当前渠道凭据是否齐全：WebDAV 需 url/username/password；飞书需 appId/secret/数据源地址
+const syncCredsReady = computed(() =>
+  feishuChannel.value
+    ? !!(store.cloudSyncFeishuAppId && store.cloudSyncFeishuAppSecret && store.cloudSyncFeishuDatasourceUrl)
+    : !!(store.cloudSyncUrl && store.cloudSyncUsername && store.cloudSyncPassword)
+)
+
 const lastSyncText = computed(() => {
   const t = cloudSync.lastSyncAt.value
   if (!t) return '未同步'
@@ -1583,14 +1594,23 @@ async function onToggleCloudSync(): Promise<void> {
   const next = !store.cloudSyncEnabled
   store.setCloudSyncEnabled(next)
   if (next) {
-    toast.info('云同步已启用，请填入 WebDAV 配置后点「测试连接」')
+    toast.info(feishuChannel.value ? '云同步已启用，请填入飞书配置后点「测试连接」' : '云同步已启用，请填入 WebDAV 配置后点「测试连接」')
   }
 }
 
 async function handleSyncTest(): Promise<void> {
   if (syncTestBusy.value) return
   syncTestBusy.value = true
-  const result = await cloudSync.testConnection(store.cloudSyncUrl, store.cloudSyncUsername, store.cloudSyncPassword)
+  let result: { ok: boolean; error?: string }
+  if (feishuChannel.value) {
+    result = await testFeishuConnection({
+      cloudSyncFeishuAppId: store.cloudSyncFeishuAppId,
+      cloudSyncFeishuAppSecret: store.cloudSyncFeishuAppSecret,
+      cloudSyncFeishuDatasourceUrl: store.cloudSyncFeishuDatasourceUrl
+    } as any)
+  } else {
+    result = await cloudSync.testConnection(store.cloudSyncUrl, store.cloudSyncUsername, store.cloudSyncPassword)
+  }
   syncTestBusy.value = false
   if (result.ok) {
     toast.success('连接成功')
@@ -3993,14 +4013,36 @@ function toggleFullscreen(): void {
               @change="onToggleCloudSync"
             />
           </div>
-          <p class="wb-menu-hint">
-            启用后将通过 WebDAV 同步导航、自定义图标、工作台、销售记账、学生工作台、教师工作台、智能工作台等全部数据（含自定义图标），按 7 份独立信封（nav.json / icons.json / workbench.json / business.json / student.json / teacher.json / smart.json）分别上传。推荐使用坚果云（国内访问稳定）或任意支持 WebDAV 的服务。
+          <p v-if="!feishuChannel" class="wb-menu-hint">
+            启用后将通过 WebDAV 同步导航、自定义图标、工作台、销售记账、学生工作台、教师工作台、智能工作台等全部数据（含自定义图标），按独立信封（nav.json / icons.json / workbench.json / business.json / student.json / teacher.json / smart.json / blog.json / toolbox.json / blog-prefs.json / books.json）分别上传。推荐使用坚果云（国内访问稳定）或任意支持 WebDAV 的服务。
           </p>
-          <p v-if="!store.cloudSyncEnabled" class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; margin-top: 0;">
+          <p v-else class="wb-menu-hint">
+            飞书表格渠道用一张多维表格做统一镜像，逐行对应浏览器 IndexedDB 的各张表（object store），每个 store 一条或多条记录，与本地表名、结构完全一致；凭据仅存本机、绝不写入云端。
+          </p>
+          <p v-if="!store.cloudSyncEnabled && !feishuChannel" class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; margin-top: 0;">
             首次使用指引：① 注册坚果云账号；② 账户信息 → 安全选项 → 添加应用，获取应用密码（非账户密码）；③ 开启开关，填入下方配置；④ 点「测试连接」确认无误后点「立即同步」。
           </p>
+          <p v-else-if="!store.cloudSyncEnabled && feishuChannel" class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; margin-top: 0;">
+            首次使用指引：① 在飞书开放平台创建自建应用，记下 App ID / App Secret；② 给应用开通多维表格与知识库权限，并把应用加为知识库/多维表格协作者；③ 开启开关，粘贴数据源 wiki 链接；④ 点「测试连接」确认无误后点「立即同步」。
+          </p>
 
-          <div v-if="store.cloudSyncEnabled" class="remind-fields">
+          <div v-if="store.cloudSyncEnabled" class="remind-field" style="margin-top: 8px;">
+            <span class="remind-label">同步渠道</span>
+            <el-select
+              :model-value="store.cloudSyncChannel"
+              data-testid="sync-channel"
+              @update:model-value="store.setCloudSyncChannel"
+              style="width: 220px;"
+            >
+              <el-option label="第三方云平台（WebDAV）" value="thirdPartyCloud" />
+              <el-option label="自建服务（WebDAV）" value="selfHosted" />
+              <el-option label="飞书表格" value="feishu" />
+            </el-select>
+            <span class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px;">飞书表格用一张多维表格做统一镜像（与浏览器 IndexedDB 表名/结构一致），凭据仅存本机</span>
+          </div>
+
+          <!-- WebDAV 渠道配置（第三方云平台 / 自建服务） -->
+          <div v-if="store.cloudSyncEnabled && !feishuChannel" class="remind-fields">
             <label class="remind-field">
               <span class="remind-label">WebDAV URL</span>
               <input
@@ -4036,12 +4078,52 @@ function toggleFullscreen(): void {
             </label>
           </div>
 
+          <!-- 飞书渠道配置 -->
+          <div v-if="store.cloudSyncEnabled && feishuChannel" class="remind-fields">
+            <label class="remind-field">
+              <span class="remind-label">App ID</span>
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                placeholder="cli_xxxxxxxxxxxxxxxx"
+                data-testid="sync-feishu-appid"
+                :value="store.cloudSyncFeishuAppId"
+                @input="store.setCloudSyncFeishuAppId(($event.target as HTMLInputElement).value)"
+              />
+            </label>
+            <label class="remind-field">
+              <span class="remind-label">App Secret</span>
+              <input
+                type="password"
+                class="wb-menu-name-input"
+                placeholder="飞书自建应用 App Secret"
+                data-testid="sync-feishu-secret"
+                :value="store.cloudSyncFeishuAppSecret"
+                @input="store.setCloudSyncFeishuAppSecret(($event.target as HTMLInputElement).value)"
+              />
+            </label>
+            <label class="remind-field">
+              <span class="remind-label">数据源地址</span>
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                placeholder="https://xxx.feishu.cn/wiki/xxx?table=tblXXXX&view=vewXXXX"
+                data-testid="sync-feishu-url"
+                :value="store.cloudSyncFeishuDatasourceUrl"
+                @input="store.setCloudSyncFeishuDatasourceUrl(($event.target as HTMLInputElement).value)"
+              />
+            </label>
+            <p class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px; margin-top: 4px;">
+              在飞书开放平台给该自建应用开通「查看、评论、编辑和管理多维表格」「查看、编辑和管理知识库」权限，并把应用加为对应知识库/多维表格的协作者；粘贴完整 wiki 链接（含 ?table=）。
+            </p>
+          </div>
+
           <div v-if="store.cloudSyncEnabled" class="remind-actions sync-actions" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
             <button
               type="button"
               class="wb-menu-btn"
               data-testid="sync-test"
-              :disabled="syncTestBusy || !store.cloudSyncUrl || !store.cloudSyncUsername || !store.cloudSyncPassword"
+              :disabled="syncTestBusy || !syncCredsReady"
               @click="handleSyncTest"
             >测试连接</button>
             <button
@@ -4049,7 +4131,7 @@ function toggleFullscreen(): void {
               class="wb-menu-btn"
               style="background: var(--color-primary); color: #fff; border-color: var(--color-primary);"
               data-testid="sync-now"
-              :disabled="syncNowBusy || !store.cloudSyncUrl || !store.cloudSyncUsername || !store.cloudSyncPassword"
+              :disabled="syncNowBusy || !syncCredsReady"
               @click="handleSyncNow"
             >立即同步</button>
             <button
@@ -4057,7 +4139,7 @@ function toggleFullscreen(): void {
               class="wb-menu-btn"
               data-testid="sync-force-pull"
               title="忽略本地未推送的改动，无条件用云端数据覆盖本地。用于外部工具（备份编辑技能）改过云端 JSON 后同步不生效的情况"
-              :disabled="forcePullBusy || !store.cloudSyncUrl || !store.cloudSyncUsername || !store.cloudSyncPassword"
+              :disabled="forcePullBusy || !syncCredsReady"
               @click="handleForcePull"
             >以云端覆盖本地</button>
             <button
@@ -4065,7 +4147,7 @@ function toggleFullscreen(): void {
               class="wb-menu-btn"
               data-testid="sync-push-local"
               title="用本地数据覆盖云端（跳过远端变更检测，强制以本地为准）"
-              :disabled="pushLocalBusy || !store.cloudSyncUrl || !store.cloudSyncUsername || !store.cloudSyncPassword"
+              :disabled="pushLocalBusy || !syncCredsReady"
               @click="handlePushLocal"
             >本地推送云端</button>
             <span data-testid="sync-last" class="wb-menu-hint sync-last-hint">上次同步：{{ lastSyncText }}</span>

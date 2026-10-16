@@ -14,7 +14,7 @@ import {
   resolveMenuItems
 } from '@/composables/workbenchMenuCore'
 import type { WorkbenchMenuItem, WorkbenchMenuVisibility } from '@/composables/workbenchMenuCore'
-import type { AppSettingsData, HomeCardLayout, WatermarkMode, WatermarkType } from '@/types'
+import type { AppSettingsData, HomeCardLayout, WatermarkMode, WatermarkType, SyncChannel } from '@/types'
 
 // ========================================
 // 类型
@@ -454,6 +454,16 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   }
   // 保存后立即上云：布尔仅采纳 true/false，非法/缺失回退默认 false（保守，需用户显式开启）
   out.cloudSyncAutoPush = typeof data.cloudSyncAutoPush === 'boolean' ? data.cloudSyncAutoPush : false
+  // 同步渠道：仅采纳合法枚举；非法/缺失回退默认 'selfHosted'（保持旧数据原 WebDAV 行为）
+  if (data.cloudSyncChannel === 'thirdPartyCloud' || data.cloudSyncChannel === 'selfHosted' || data.cloudSyncChannel === 'feishu') {
+    out.cloudSyncChannel = data.cloudSyncChannel
+  } else {
+    out.cloudSyncChannel = 'selfHosted'
+  }
+  // 飞书凭据：仅采纳字符串原样透传（空串 = 未配置）；与 WebDAV 凭据同策略，仅本机存储
+  out.cloudSyncFeishuAppId = typeof data.cloudSyncFeishuAppId === 'string' ? data.cloudSyncFeishuAppId : ''
+  out.cloudSyncFeishuAppSecret = typeof data.cloudSyncFeishuAppSecret === 'string' ? data.cloudSyncFeishuAppSecret : ''
+  out.cloudSyncFeishuDatasourceUrl = typeof data.cloudSyncFeishuDatasourceUrl === 'string' ? data.cloudSyncFeishuDatasourceUrl : ''
   out.homeCardLayout = normalizeHomeCardLayout(data.homeCardLayout)
   return out
 }
@@ -576,6 +586,11 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const cloudSyncInterval = ref<number>(0)
   const cloudSyncSilentThreshold = ref<number>(1000)
   const cloudSyncAutoPush = ref<boolean>(false)
+  // 同步渠道类型 + 飞书凭据（仅本机）：默认 'selfHosted' 保持旧数据 WebDAV 行为
+  const cloudSyncChannel = ref<SyncChannel>('selfHosted')
+  const cloudSyncFeishuAppId = ref<string>('')
+  const cloudSyncFeishuAppSecret = ref<string>('')
+  const cloudSyncFeishuDatasourceUrl = ref<string>('')
 
   // ========================================
   // 持久化
@@ -656,6 +671,10 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       cloudSyncInterval: cloudSyncInterval.value,
       cloudSyncSilentThreshold: cloudSyncSilentThreshold.value,
       cloudSyncAutoPush: cloudSyncAutoPush.value,
+      cloudSyncChannel: cloudSyncChannel.value,
+      cloudSyncFeishuAppId: cloudSyncFeishuAppId.value,
+      cloudSyncFeishuAppSecret: cloudSyncFeishuAppSecret.value,
+      cloudSyncFeishuDatasourceUrl: cloudSyncFeishuDatasourceUrl.value,
       homeCardLayout: toRaw(homeCardLayout.value)
     })).catch(() => {
       // IDB 写入失败静默忽略（fire-and-forget，不抛错）
@@ -884,6 +903,14 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       }
       // 主页卡片布局：整包归一（IDB 直读路径不经过 parseSettingsData，此处必须自行 clamp）
       homeCardLayout.value = normalizeHomeCardLayout(effective.homeCardLayout)
+      // 同步渠道 + 飞书凭据（IDB 直读路径不经过 parseSettingsData，此处直接取用）
+      cloudSyncChannel.value =
+        effective.cloudSyncChannel === 'thirdPartyCloud' || effective.cloudSyncChannel === 'selfHosted' || effective.cloudSyncChannel === 'feishu'
+          ? effective.cloudSyncChannel
+          : 'selfHosted'
+      cloudSyncFeishuAppId.value = typeof effective.cloudSyncFeishuAppId === 'string' ? effective.cloudSyncFeishuAppId : ''
+      cloudSyncFeishuAppSecret.value = typeof effective.cloudSyncFeishuAppSecret === 'string' ? effective.cloudSyncFeishuAppSecret : ''
+      cloudSyncFeishuDatasourceUrl.value = typeof effective.cloudSyncFeishuDatasourceUrl === 'string' ? effective.cloudSyncFeishuDatasourceUrl : ''
       // 归一化结果写回 IDB（fire-and-forget）：保证导出/导入往返幂等，镜像迁移分支的 idbPut
       persist()
     }
@@ -1457,6 +1484,23 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     cloudSyncAutoPush.value = v === true
     persist()
   }
+  // 同步渠道类型 + 飞书凭据 setters（仅本机存储；凭据不进同步数据流）
+  function setCloudSyncChannel(v: SyncChannel) {
+    cloudSyncChannel.value = v
+    persist()
+  }
+  function setCloudSyncFeishuAppId(s: string) {
+    cloudSyncFeishuAppId.value = s
+    persist()
+  }
+  function setCloudSyncFeishuAppSecret(s: string) {
+    cloudSyncFeishuAppSecret.value = s
+    persist()
+  }
+  function setCloudSyncFeishuDatasourceUrl(s: string) {
+    cloudSyncFeishuDatasourceUrl.value = s
+    persist()
+  }
 
   // 菜单开关判定（缺失键 = 显示）；home 恒显示（视图/设置弹窗锁定其开关）
   function isWorkbenchMenuEnabled(key: string): boolean {
@@ -1587,6 +1631,10 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     cloudSyncInterval,
     cloudSyncSilentThreshold,
     cloudSyncAutoPush,
+    cloudSyncChannel,
+    cloudSyncFeishuAppId,
+    cloudSyncFeishuAppSecret,
+    cloudSyncFeishuDatasourceUrl,
     homeCardLayout,
     initSettings,
     applySettings,
@@ -1652,6 +1700,10 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     setCloudSyncInterval,
     setCloudSyncSilentThreshold,
     setCloudSyncAutoPush,
+    setCloudSyncChannel,
+    setCloudSyncFeishuAppId,
+    setCloudSyncFeishuAppSecret,
+    setCloudSyncFeishuDatasourceUrl,
     setHomeCardLayout,
     resetHomeCardLayout,
     resetDefaults,
