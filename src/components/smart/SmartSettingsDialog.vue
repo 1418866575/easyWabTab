@@ -355,6 +355,7 @@ function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
     title="智能工作台设置"
     width="min(960px, 94vw)"
     max-height="86vh"
+    body-layout="flex-column"
     :close-on-overlay="false"
     @close="emit('close')"
   >
@@ -725,17 +726,10 @@ function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
 </template>
 
 <style scoped>
-/* 基类 .bd-body 默认带 24px padding 与纵向滚动；本弹框是「左导航 + 右内容」两栏、
-   各自管理滚动，故归零内边距并改为 flex 列容器（写法与 AppSettingsDialog 的
-   .settings-dialog :deep(.bd-body) 完全一致），使下面 .ss-layout 的 flex:1 生效。
+/* 基类 .bd-body 的「归零内边距 + 纵向 flex」由 BaseDialog 的 body-layout="flex-column" 提供
+   （见模板）；不能写成 `.ss-dialog :deep(.bd-body)` —— 根节点是 Teleport 时父 scope id 打不到，规则匹配不到。
    高度不再写死 min(62vh, 560px)：面板高度由 BaseDialog 的 max-height(86vh) 接管，
    内容区自适应填满，避免出现「外层弹框 + 内层分栏」双滚动条。 */
-.ss-dialog :deep(.bd-body) {
-  padding: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
 
 /* ---------- 左右分栏骨架（与个人工作台设置弹框 .settings-rail / .settings-content 同构） ---------- */
 .ss-layout {

@@ -59,6 +59,17 @@ const props = withDefaults(
      * Teleport 后脱离父弹框 DOM 子树，作用域规则与层叠上下文都不再相互影响。
      */
     teleport?: boolean
+    /**
+     * body 布局：
+     * - default：基类默认（24px 内边距 + 自身纵向滚动），适合普通表单弹框。
+     * - flex-column：归零内边距、改为纵向 flex 且禁止自身滚动，供「左侧导航 + 右侧内容」
+     *   两栏各自管理滚动的弹窗使用（设置页 / 智能工作台设置 / 博客设置）。
+     *
+     * ⚠ 不能由调用方用 `.xxx-dialog :deep(.bd-body)` 覆盖实现：BaseDialog 根节点是 Teleport，
+     *   Vue 不会把父组件 scope id 打到子组件根节点，`[data-v-父]` 那一半选择器永远匹配不到
+     *   （曾致上述三个设置弹窗的左右栏退化为「整个 body 一起滚」）。
+     */
+    bodyLayout?: 'default' | 'flex-column'
   }>(),
   {
     title: '',
@@ -70,7 +81,8 @@ const props = withDefaults(
     closeOnEscape: true,
     closeOnOverlay: true,
     zIndex: undefined,
-    teleport: false
+    teleport: false,
+    bodyLayout: 'default'
   }
 )
 
@@ -133,7 +145,7 @@ const overlayStyle = computed(() => (props.zIndex ? { zIndex: props.zIndex } : {
             </div>
           </header>
 
-          <div class="bd-body">
+          <div class="bd-body" :class="{ 'bd-body--flex-column': bodyLayout === 'flex-column' }">
             <slot />
           </div>
 
@@ -242,6 +254,16 @@ const overlayStyle = computed(() => (props.zIndex ? { zIndex: props.zIndex } : {
   flex: 1;
 }
 
+/* 两栏各自滚动的弹窗（bodyLayout="flex-column"）：归零内边距、改纵向 flex、禁止自身滚动，
+   由调用方内部的 .manager-body / .ss-layout / .bsd-body 撑满并各自管理滚动。
+   由基类自己声明而非调用方 :deep 覆盖，原因见 props.bodyLayout 注释。 */
+.bd-body--flex-column {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 /* ===== 底部 ===== */
 .bd-footer {
   display: flex;
@@ -271,6 +293,10 @@ const overlayStyle = computed(() => (props.zIndex ? { zIndex: props.zIndex } : {
   }
   .bd-body {
     padding: var(--space-4, 16px);
+  }
+  /* 媒体查询不提升特异性：flex-column 的内边距归零必须在此再覆盖一次，否则会被上面的 .bd-body 盖回 */
+  .bd-body--flex-column {
+    padding: 0;
   }
   .bd-footer {
     padding: var(--space-3, 12px) var(--space-4, 16px);

@@ -39,7 +39,7 @@ function labelOf(key: SectionKey): string {
 </script>
 
 <template>
-  <BaseDialog class="bsd-dialog" title="博客设置" width="920px" max-height="86vh" @close="emit('close')">
+  <BaseDialog class="bsd-dialog" title="博客设置" width="920px" max-height="86vh" body-layout="flex-column" @close="emit('close')">
     <template #title><Icon name="cog" /> 博客设置</template>
 
     <div class="bsd-body">
@@ -81,14 +81,8 @@ function labelOf(key: SectionKey): string {
 </template>
 
 <style scoped>
-/* 基类 .bd-body 默认 24px padding + 纵向滚动；本弹框是「左导航 + 右内容」两栏、各自管理滚动，
-   故归零内边距并改为 flex 列容器，使 .bsd-body 的 flex:1 生效（与导航站设置弹框同款处理）。 */
-.bsd-dialog :deep(.bd-body) {
-  padding: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
+/* 基类 .bd-body 的「归零内边距 + 纵向 flex」由 BaseDialog 的 body-layout="flex-column" 提供
+   （见模板）；不能写成 `.bsd-dialog :deep(.bd-body)` —— 根节点是 Teleport 时父 scope id 打不到，规则匹配不到。 */
 
 .bsd-body {
   flex: 1;

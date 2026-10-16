@@ -2135,6 +2135,7 @@ function toggleFullscreen(): void {
       class="settings-dialog"
       width="90vw"
       max-height="90vh"
+      body-layout="flex-column"
       :fullscreen="isFullscreen"
       :close-on-escape="false"
       @close="emit('close')"
@@ -4298,14 +4299,9 @@ function toggleFullscreen(): void {
    （遮罩内边距归零 + 面板铺满视口）；ESC 分层（全屏态先退出、再按才关闭）由本组件 handleKeydown
    实现，故基类传 :close-on-escape="false" 避免双重触发。 */
 
-/* 基类 .bd-body 默认带 24px padding 与纵向滚动；设置面板是「左侧导航 + 右侧内容」两栏、
-   各自管理滚动，故归零内边距并改为 flex 列容器，使 .manager-body 的 flex:1 生效。 */
-.settings-dialog :deep(.bd-body) {
-  padding: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
+/* 基类 .bd-body 的「归零内边距 + 纵向 flex」由 BaseDialog 的 body-layout="flex-column" 提供
+   （见模板）；不能写成 `.settings-dialog :deep(.bd-body)` —— BaseDialog 根节点是 Teleport，
+   父组件 scope id 打不到子组件根节点，那条规则匹配不到。 */
 
 /* 面板尺寸（90vw×90vh）与全屏态（贴边铺满视口）均由基类接管：
    经 width/max-height props 传入，fullscreen 时基类 .bd-panel--fullscreen 把遮罩内边距归零、
