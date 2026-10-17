@@ -28,6 +28,8 @@ import Icon from '@/components/Icon.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import BlogImagePicker from '@/components/blog/BlogImagePicker.vue'
 import { showConfirm, toastAlert } from '@/utils/dialog'
+// 模块级云同步：切走「博客后台」时先把未保存草稿落盘再上传
+import { registerModuleFlush } from '@/composables/useModuleSync'
 
 const props = defineProps<{ articleId: string }>()
 const emit = defineEmits<{ close: [] }>()
@@ -347,8 +349,12 @@ function scheduleAutoSave(): void {
     void saveDraft(true)
   }, Math.max(1, store.settings.autoSaveSeconds) * 1000)
 }
+// 模块级同步：注册为「博客后台」模块的 flush。切换模块时编排器会在组件仍挂载时
+// 同步调用它，把未保存的草稿写进 store/IDB，避免切走丢稿。
+const unregisterModuleFlush = registerModuleFlush('blogAdmin', () => saveDraft(true))
 onBeforeUnmount(() => {
   if (timer !== undefined) window.clearTimeout(timer)
+  unregisterModuleFlush()
 })
 
 async function saveDraft(silent = false): Promise<void> {

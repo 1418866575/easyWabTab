@@ -22,6 +22,7 @@ import {
   IDB_NAV_STORES,
   IDB_TOOLBOX_STORES
 } from './useIdb'
+import { inScope, type ModuleScope } from './moduleSyncCore'
 
 // 飞书同步只需这三个字段（凭据仅本机，绝不进同步数据流）；用窄接口避免传入整个 settings store
 interface FeishuSyncParams {
@@ -229,11 +230,15 @@ interface LocalRow {
   rowKey: string
 }
 
-/** 读取本地 IndexedDB，组装全部待同步行（含 settings 剥离 cloudSync* 与分片） */
-async function buildLocalRows(): Promise<LocalRow[]> {
+/**
+ * 读取本地 IndexedDB，组装全部待同步行（含 settings 剥离 cloudSync* 与分片）。
+ * 传入 scope 时只组装该模块作用域内的行（模块级同步用）。
+ */
+async function buildLocalRows(scope?: ModuleScope): Promise<LocalRow[]> {
   const rows: LocalRow[] = []
   const addValue = (store: string, key: string, raw: unknown) => {
     if (raw === undefined || raw === null) return
+    if (!inScope(scope, store, key)) return
     const value = typeof raw === 'string' ? raw : JSON.stringify(raw)
     const parts = chunkString(value, MAX_VALUE_LEN)
     parts.forEach((p, idx) => {
@@ -286,7 +291,7 @@ function reassemble(records: FeishuRecord[]): Map<string, { store: string; key: 
  * 推送本地 → 飞书（全量 upsert + 增量删除）。
  * 返回写入的逻辑条目数（用于 UI 提示）。
  */
-export async function feishuPush(settings: FeishuSyncParams): Promise<number> {
+export async function feishuPush(settings: FeishuSyncParams, scope?: ModuleScope): Promise<number> {
   const url = settings.cloudSyncFeishuDatasourceUrl
   if (!url) throw new Error('飞书数据源地址为空')
   const { domain, nodeToken, tableId } = parseDatasourceUrl(url)
@@ -297,8 +302,12 @@ export async function feishuPush(settings: FeishuSyncParams): Promise<number> {
 
   const clientId = getClientId()
   const now = Date.now()
-  const localRows = await buildLocalRows()
-  const existing = await fetchAllRecords(domain, token, appToken, tableId)
+  const localRows = await buildLocalRows(scope)
+  const allExisting = await fetchAllRecords(domain, token, appToken, tableId)
+  // 作用域内才参与 upsert 比对；全量时全部参与
+  const existing = scope
+    ? allExisting.filter((r) => inScope(scope, String(r.fields.store ?? ''), String(r.fields.key ?? '')))
+    : allExisting
   const existingByRowKey = new Map<string, FeishuRecord>(existing.map((r) => [String(r.fields.rowKey ?? ''), r]))
 
   const toCreate: any[] = []
@@ -321,8 +330,11 @@ export async function feishuPush(settings: FeishuSyncParams): Promise<number> {
     if (ex) toUpdate.push({ record_id: ex.record_id, fields })
     else toCreate.push({ fields })
   }
-  // 增量删除：飞书存在但本地已不存在的条目
-  const toDelete = existing.filter((r) => r.fields.rowKey && !writtenRowKeys.has(String(r.fields.rowKey))).map((r) => r.record_id)
+  // 增量删除只在**全量**推送时执行：模块级推送若删"本地不存在的行"，
+  // 会把本次作用域外（其他模块）的行误删，故作用域推送只 upsert 不删除。
+  const toDelete = scope
+    ? []
+    : existing.filter((r) => r.fields.rowKey && !writtenRowKeys.has(String(r.fields.rowKey))).map((r) => r.record_id)
 
   if (toCreate.length) await batchCreate(domain, token, appToken, tableId, toCreate)
   if (toUpdate.length) await batchUpdate(domain, token, appToken, tableId, toUpdate)
@@ -334,7 +346,7 @@ export async function feishuPush(settings: FeishuSyncParams): Promise<number> {
  * 拉取飞书 → 本地（全量覆盖）。
  * 返回是否需要刷新 settings 响应式 store（settings 条目被更新时）。
  */
-export async function feishuPull(settings: FeishuSyncParams): Promise<{ settingsChanged: boolean }> {
+export async function feishuPull(settings: FeishuSyncParams, scope?: ModuleScope): Promise<{ settingsChanged: boolean }> {
   const url = settings.cloudSyncFeishuDatasourceUrl
   if (!url) throw new Error('飞书数据源地址为空')
   const { domain, nodeToken, tableId } = parseDatasourceUrl(url)
@@ -347,6 +359,8 @@ export async function feishuPull(settings: FeishuSyncParams): Promise<{ settings
 
   let settingsChanged = false
   for (const { store, key, value } of grouped.values()) {
+    // 模块级拉取：只落地本模块作用域内的条目，其他模块数据完全不碰
+    if (!inScope(scope, store, key)) continue
     if (store === 'nav') {
       // nav 多记录：本地存的是对象，飞书里是 JSON 字符串，还原回对象
       const parsed = safeParse(value)

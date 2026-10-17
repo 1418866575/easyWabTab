@@ -33,6 +33,8 @@ import type { NavMetaRecord } from './composables/navMeta'
 import { ensureIconCacheLoaded } from './composables/useIconCache'
 // 弹框打开时锁定背景滚动：手写弹框没有 Element Plus 的 lock-scroll，需全局兜底
 import { initScrollLock } from './utils/scrollLock'
+// 模块级异步云同步：切换模块（左上角切换器 / Alt+N / 前进后退）时按模块作用域后台推拉
+import { initModuleSync } from './composables/useModuleSync'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -70,6 +72,8 @@ async function bootstrap() {
   themeStore.initBackground()
   useAppSettingsStore().initSettings()
   initScrollLock()
+  // 必须在 app.mount 之前注册：这样首屏进入的模块也会被计入（首次进入即拉取该模块）
+  initModuleSync(router)
 
   // 页面隐藏/卸载时立即落盘导航偏好，避免防抖导致的数据丢失。
   // 守卫依据（基线/高水位）也要一并 flush：它防抖 500ms，

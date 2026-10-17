@@ -1393,7 +1393,7 @@ async function reloadBlogPrefsStores(): Promise<void> {
   }
 }
 
-async function reloadAllStores(): Promise<void> {
+export async function reloadAllStores(): Promise<void> {
   await Promise.all([
     reloadWorkbenchStores(),
     reloadBusinessStore(),
@@ -2126,6 +2126,103 @@ export async function resolveConflict(decision: 'remote' | 'local' | 'cancel' | 
  * 用户点击「立即同步」的三个入口（HomeView / WorkbenchView / BusinessView）走默认 false，
  * 保留成功/失败反馈——主动操作需要明确结果。
  */
+// ========== 模块级同步：按信封作用域的推 / 拉 ==========
+// 与 pushNow / pullNow **相互独立**：不改全局 dirty 标记、不进冲突状态机、不改 status，
+// 只做「本模块那几份信封」的最小同步。这样即便模块同步出问题也不会污染既有全量同步。
+
+function configsByNames(names: string[]): FileConfig[] {
+  const set = new Set(names)
+  return FILE_CONFIGS.filter((c) => set.has(c.name))
+}
+
+/**
+ * 按信封名推送（模块级，WebDAV）。
+ * 流程：exportLocal → guardLocal（本地退化拦截）→ 内容签名比对（未变则跳过 PUT）→ PUT。
+ * 任一信封失败只记日志，不影响其他信封；返回是否全部成功。
+ */
+export async function pushEnvelopes(names: string[]): Promise<boolean> {
+  const settings = useAppSettingsStore()
+  if (!settings.cloudSyncEnabled || !hasSyncCredentials(settings)) return false
+  const list = configsByNames(names)
+  if (!list.length) return false
+  const username = settings.cloudSyncUsername ?? ''
+  const password = settings.cloudSyncPassword ?? ''
+  const dir = dirUrl(settings.cloudSyncUrl!, username)
+  const clientId = getClientId()
+  const pushedAt = Date.now()
+  let ok = true
+  for (const cfg of list) {
+    try {
+      const local = await cfg.exportLocal()
+      // 本地退化守卫：本机数据疑似被清空时宁可不推，也不能把空态推上云
+      if (cfg.guardLocal) {
+        const reason = cfg.guardLocal(local)
+        if (reason) {
+          console.error(`[moduleSync] 已拦截推送 ${cfg.name}：${reason}`)
+          ok = false
+          continue
+        }
+      }
+      // 只推变化：与上次成功推送的签名一致 → 这份没动过，跳过 PUT
+      const sig = await sha1Hash(cfg.signature(local))
+      const prev = readPushedSig(cfg.name)
+      if (prev && sig === prev) continue
+      const envelope = { ...(local as Record<string, unknown>), clientId, pushedAt }
+      await webdavPut(`${dir}/${cfg.name}`, username, password, JSON.stringify(envelope))
+      writePushedSig(cfg.name, sig)
+      writeRemoteTs(cfg.name, pushedAt)
+    } catch (e) {
+      ok = false
+      console.error(`[moduleSync] 推送失败 ${cfg.name}`, e)
+    }
+  }
+  return ok
+}
+
+/**
+ * 按信封名拉取（模块级，WebDAV）。
+ * 流程：GET → 云端无此信封则保留本地 → 内容一致则 noop → 否则 merge(local, remote) 后 import，
+ * **绝不盲覆盖本地**；最后只 reload 本模块涉及的 store。
+ */
+export async function pullEnvelopes(names: string[]): Promise<void> {
+  const settings = useAppSettingsStore()
+  if (!settings.cloudSyncEnabled || !hasSyncCredentials(settings)) return
+  const list = configsByNames(names)
+  if (!list.length) return
+  const username = settings.cloudSyncUsername ?? ''
+  const password = settings.cloudSyncPassword ?? ''
+  const dir = dirUrl(settings.cloudSyncUrl!, username)
+  let applied = false
+  for (const cfg of list) {
+    try {
+      const result = await webdavGet(`${dir}/${cfg.name}`, username, password)
+      if (!result.data) continue // 云端尚无此信封 → 保留本地
+      const remote = result.data
+      const local = await cfg.exportLocal()
+      if (cfg.signature(remote) === cfg.signature(local)) {
+        // 内容一致 → noop，但仍记账云端 mtime，避免后续误判
+        if (result.lastModifiedMs > 0) writeRemoteTs(cfg.name, result.lastModifiedMs)
+        continue
+      }
+      const merged = cfg.merge(local, remote)
+      await cfg.importRemote(merged)
+      applied = true
+      writeRemoteTs(cfg.name, result.lastModifiedMs > 0 ? result.lastModifiedMs : Date.now())
+    } catch (e) {
+      console.error(`[moduleSync] 拉取失败 ${cfg.name}`, e)
+    }
+  }
+  if (applied) {
+    for (const cfg of list) {
+      try {
+        await cfg.reload()
+      } catch (e) {
+        console.error(`[moduleSync] 重载失败 ${cfg.name}`, e)
+      }
+    }
+  }
+}
+
 // ========== 飞书渠道分流（方案 A：统一镜像表） ==========
 // 飞书是行级镜像，无 WebDAV 信封的 dirty/冲突判定；syncNow = 先拉（收敛他端）后推（上传本地），
 // 顺序保证他端新增行不会被本端推送误删；forcePush/forcePull 则各自单向覆盖。
