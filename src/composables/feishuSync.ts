@@ -491,8 +491,11 @@ function reassembleTable(records: FeishuRecord[], allowedKeys?: string[]): Map<s
 /**
  * 推送本地 → 飞书（方案 B：按 store 分表 upsert + 按表删陈旧行）。
  * 返回写入的行数（用于 UI 提示）。
+ *
+ * @param force 强制以本地为准：跳过「本地内容签名未变则跳过该 store」的优化，
+ *              保证「本地推送云端」这类强制入口一定把本地现状写上去。
  */
-export async function feishuPush(settings: FeishuSyncParams, scope?: ModuleScope): Promise<number> {
+export async function feishuPush(settings: FeishuSyncParams, scope?: ModuleScope, force = false): Promise<number> {
   const url = settings.cloudSyncFeishuDatasourceUrl
   if (!url) throw new Error('飞书数据源地址为空')
   const { domain, nodeToken, appToken: urlAppToken } = parseDatasourceUrl(url)
@@ -520,7 +523,7 @@ export async function feishuPush(settings: FeishuSyncParams, scope?: ModuleScope
   const pending: Array<{ store: string; rows: LocalRow[]; sig: string }> = []
   for (const [store, rows] of byStore) {
     const sig = rowsSignature(store, rows)
-    if (sig === readLocalSig(store)) continue
+    if (!force && sig === readLocalSig(store)) continue
     pending.push({ store, rows, sig })
   }
   if (!pending.length) return 0
@@ -572,8 +575,11 @@ export async function feishuPush(settings: FeishuSyncParams, scope?: ModuleScope
 /**
  * 拉取飞书 → 本地（方案 B：按表读 → 按基础 key 还原 → 写 IDB）。
  * 返回是否需要刷新 settings 响应式 store，以及实际落地的条目数。
+ *
+ * @param force 强制以云端为准：跳过「远端 revision 未变则跳过该表」的优化，
+ *              且 settings 改为云端优先合并（凭据类字段仍保留本机值）。
  */
-export async function feishuPull(settings: FeishuSyncParams, scope?: ModuleScope): Promise<{ settingsChanged: boolean; applied: number }> {
+export async function feishuPull(settings: FeishuSyncParams, scope?: ModuleScope, force = false): Promise<{ settingsChanged: boolean; applied: number }> {
   const url = settings.cloudSyncFeishuDatasourceUrl
   if (!url) throw new Error('飞书数据源地址为空')
   const { domain, nodeToken, appToken: urlAppToken } = parseDatasourceUrl(url)
@@ -600,7 +606,7 @@ export async function feishuPull(settings: FeishuSyncParams, scope?: ModuleScope
       writeRemoteRev(store, '') // 表不存在 → 云端无该 store 数据，保留本地
       continue
     }
-    if (readRemoteRev(store) === rev) continue
+    if (!force && readRemoteRev(store) === rev) continue
     todo.push(store)
   }
 
@@ -620,8 +626,11 @@ export async function feishuPull(settings: FeishuSyncParams, scope?: ModuleScope
       } else if (store === 'settings') {
         const remote = safeParse(value) as Record<string, unknown> | null
         const local = (await idbGet<Record<string, unknown>>('settings')) ?? {}
-        const merged: Record<string, unknown> = { ...(remote ?? {}), ...local }
-        // 保留本机云同步字段（凭据/渠道不跨设备覆盖）
+        // 常规同步本地优先（避免云端旧版冲掉本地新设置）；force 时按「以云端为准」改为云端优先
+        const merged: Record<string, unknown> = force
+          ? { ...local, ...(remote ?? {}) }
+          : { ...(remote ?? {}), ...local }
+        // 保留本机云同步字段（凭据/渠道不跨设备覆盖，否则会把自己的云配置冲掉）
         for (const k of CLOUD_SYNC_KEYS) merged[k] = local[k]
         await idbPut('settings', merged)
         settingsChanged = true
@@ -678,4 +687,38 @@ export async function testFeishuConnection(settings: FeishuSyncParams): Promise<
               : msg
     return { ok: false, error: hint }
   }
+}
+
+/**
+ * 手动预建全部飞书表（设置页「创建表」按钮）。
+ * 按 FEISHU_SYNC_STORES 逐个 ensureTable：已存在的按表名复用，只补缺失的表。
+ * 返回总数 / 新建数 / 已存在数，供 UI 提示。
+ */
+export async function createFeishuTables(
+  settings: FeishuSyncParams
+): Promise<{ total: number; created: number; existing: number }> {
+  if (!settings.cloudSyncFeishuAppId || !settings.cloudSyncFeishuAppSecret || !settings.cloudSyncFeishuDatasourceUrl) {
+    throw new Error('App ID / App Secret / 数据源地址不能为空')
+  }
+  const { domain, nodeToken, appToken: urlAppToken } = parseDatasourceUrl(settings.cloudSyncFeishuDatasourceUrl)
+  if (!nodeToken && !urlAppToken) {
+    throw new Error('数据源地址无法解析出 app_token（请粘贴完整 wiki / base 链接）')
+  }
+  const token = await getTenantAccessToken(domain, settings.cloudSyncFeishuAppId, settings.cloudSyncFeishuAppSecret)
+  const appToken = await resolveAppToken(domain, token, nodeToken, urlAppToken)
+
+  const tables = await listTables(domain, token, appToken)
+  const known = new Map<string, string>(tables.map((t) => [t.name, t.table_id]))
+
+  let created = 0
+  let existing = 0
+  await mapLimit(FEISHU_SYNC_STORES, STORE_CONCURRENCY, async (store) => {
+    if (known.has(store)) {
+      existing++
+      return
+    }
+    await ensureTable(domain, token, appToken, store, known)
+    created++
+  })
+  return { total: FEISHU_SYNC_STORES.length, created, existing }
 }

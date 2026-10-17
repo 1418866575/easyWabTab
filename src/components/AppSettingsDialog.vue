@@ -67,7 +67,7 @@ import type { WorkbenchData, BusinessLedger } from '@/types'
 import { COUNTDOWN_CATEGORIES } from '@/types'
 import { categoryLabel } from '@/composables/countdownCore'
 import { useCloudSync } from '@/composables/useCloudSync'
-import { testFeishuConnection } from '@/composables/feishuSync'
+import { testFeishuConnection, createFeishuTables } from '@/composables/feishuSync'
 import { useNavPrefs } from '@/composables/useNavPrefs'
 import {
   useHomeLayout,
@@ -1570,6 +1570,7 @@ const cloudSync = useCloudSync()
 const syncTestBusy = ref(false)
 const syncNowBusy = ref(false)
 const forcePullBusy = ref(false)
+const createTablesBusy = ref(false)
 const pushLocalBusy = ref(false)
 
 // 当前同步渠道是否为飞书（影响凭据字段与测试连接逻辑）
@@ -1619,6 +1620,28 @@ async function handleSyncTest(): Promise<void> {
   }
 }
 
+/** 飞书「创建表」：按 IDB store 逐个建同名表，已存在的按表名复用 */
+async function handleCreateFeishuTables(): Promise<void> {
+  if (createTablesBusy.value) return
+  createTablesBusy.value = true
+  try {
+    const r = await createFeishuTables({
+      cloudSyncFeishuAppId: store.cloudSyncFeishuAppId,
+      cloudSyncFeishuAppSecret: store.cloudSyncFeishuAppSecret,
+      cloudSyncFeishuDatasourceUrl: store.cloudSyncFeishuDatasourceUrl
+    } as any)
+    toast.success(
+      r.created > 0
+        ? `建表完成：新建 ${r.created} 张，已存在 ${r.existing} 张（共 ${r.total} 张）`
+        : `表已齐全：${r.total} 张均已存在，无需新建`
+    )
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : '建表失败')
+  } finally {
+    createTablesBusy.value = false
+  }
+}
+
 async function handleSyncNow(): Promise<void> {
   if (syncNowBusy.value) return
   syncNowBusy.value = true
@@ -1634,8 +1657,12 @@ async function handleForcePull(): Promise<void> {
   )
   if (!confirmed) return
   forcePullBusy.value = true
-  await cloudSync.forcePullRemote()
-  forcePullBusy.value = false
+  try {
+    // 飞书渠道由 forcePullRemote 内部分流到 feishuForcePull（表对表全量读取）
+    await cloudSync.forcePullRemote()
+  } finally {
+    forcePullBusy.value = false
+  }
 }
 
 /** 本地推送云端：跳过远端变更检测守卫，强制以本地数据覆盖云端 */
@@ -1646,8 +1673,13 @@ async function handlePushLocal(): Promise<void> {
   )
   if (!confirmed) return
   pushLocalBusy.value = true
-  await cloudSync.pushNow(false, true)
-  pushLocalBusy.value = false
+  try {
+    // 必须走 forcePushLocal：pushNow 在飞书渠道入口直接 return，用它等于空操作。
+    // forcePushLocal 内部分流到 feishuForcePush（表对表写入）／WebDAV 信封覆盖
+    await cloudSync.forcePushLocal()
+  } finally {
+    pushLocalBusy.value = false
+  }
 }
 
 // ESC 键关闭弹框
@@ -4116,6 +4148,19 @@ function toggleFullscreen(): void {
             <p class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px; margin-top: 4px;">
               在飞书开放平台给该自建应用开通「查看、评论、编辑和管理多维表格」「查看、编辑和管理知识库」权限，并把应用加为对应知识库/多维表格的协作者；粘贴 wiki 或 base 链接即可（`?table=` 可省略）。同步采用「每个 IndexedDB 表一张同名飞书表」，目标表会在首次推送时自动创建。
             </p>
+            <div class="feishu-table-actions">
+              <button
+                type="button"
+                class="wb-menu-btn"
+                data-testid="sync-feishu-create-tables"
+                title="按 IndexedDB 表逐个创建同名飞书表；已存在的会复用，不会重复创建"
+                :disabled="createTablesBusy || !syncCredsReady"
+                @click="handleCreateFeishuTables"
+              >
+                <span v-if="createTablesBusy" class="btn-spinner" aria-hidden="true"></span>
+                {{ createTablesBusy ? '创建中' : '创建表' }}
+              </button>
+            </div>
           </div>
 
           <div v-if="store.cloudSyncEnabled" class="remind-actions sync-actions" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
@@ -4141,7 +4186,10 @@ function toggleFullscreen(): void {
               title="忽略本地未推送的改动，无条件用云端数据覆盖本地。用于外部工具（备份编辑技能）改过云端 JSON 后同步不生效的情况"
               :disabled="forcePullBusy || !syncCredsReady"
               @click="handleForcePull"
-            >以云端覆盖本地</button>
+            >
+              <span v-if="forcePullBusy" class="btn-spinner" aria-hidden="true"></span>
+              {{ forcePullBusy ? '拉取中' : '以云端覆盖本地' }}
+            </button>
             <button
               type="button"
               class="wb-menu-btn"
@@ -4149,7 +4197,10 @@ function toggleFullscreen(): void {
               title="用本地数据覆盖云端（跳过远端变更检测，强制以本地为准）"
               :disabled="pushLocalBusy || !syncCredsReady"
               @click="handlePushLocal"
-            >本地推送云端</button>
+            >
+              <span v-if="pushLocalBusy" class="btn-spinner" aria-hidden="true"></span>
+              {{ pushLocalBusy ? '推送中' : '本地推送云端' }}
+            </button>
             <span data-testid="sync-last" class="wb-menu-hint sync-last-hint">上次同步：{{ lastSyncText }}</span>
           </div>
           <p v-if="store.cloudSyncEnabled" class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px; margin-top: 6px;">
@@ -5819,4 +5870,27 @@ html.dark .status-pill { color: #4ade80; background-color: rgba(74, 222, 128, 0.
   .bl-block .remind-label { width: 72px; }
 }
 
+/* 飞书「创建表」按钮：wb-menu-btn 无内置 loading，用内联旋转指示器表示进行中 */
+.feishu-table-actions {
+  margin-top: 8px;
+}
+
+.btn-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 6px;
+  vertical-align: -1px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  opacity: 0.75;
+  animation: btn-spin 0.7s linear infinite;
+}
+
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 </style>

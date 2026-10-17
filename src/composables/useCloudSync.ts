@@ -2258,6 +2258,7 @@ async function feishuSyncNow(silent: boolean): Promise<void> {
   }
 }
 
+/** 飞书渠道「本地推送云端」：force=true 跳过本地签名比对，无条件按表把本地现状写上去 */
 async function feishuForcePush(silent: boolean): Promise<void> {
   const settings = useAppSettingsStore()
   if (!hasSyncCredentials(settings)) {
@@ -2267,7 +2268,7 @@ async function feishuForcePush(silent: boolean): Promise<void> {
   status.value = 'pushing'
   errorMessage.value = ''
   try {
-    await feishuPush(settings)
+    await feishuPush(settings, undefined, true)
     clearDirty()
     status.value = 'idle'
     lastSyncAt.value = Date.now()
@@ -2279,6 +2280,7 @@ async function feishuForcePush(silent: boolean): Promise<void> {
   }
 }
 
+/** 飞书渠道「以云端覆盖本地」：force=true 跳过远端 revision 基线，全表读取并落地 */
 async function feishuForcePull(silent: boolean): Promise<void> {
   const settings = useAppSettingsStore()
   if (!hasSyncCredentials(settings)) {
@@ -2288,7 +2290,7 @@ async function feishuForcePull(silent: boolean): Promise<void> {
   status.value = 'pulling'
   errorMessage.value = ''
   try {
-    const pull = await feishuPull(settings)
+    const pull = await feishuPull(settings, undefined, true)
     await reloadAllStores()
     if (pull.settingsChanged) useAppSettingsStore().initSettings()
     clearDirty()
