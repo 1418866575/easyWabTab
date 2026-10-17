@@ -92,6 +92,17 @@ export function moduleKeyOf(routeName: unknown): ModuleKey | '' {
   return ROUTE_TO_MODULE[routeName] ?? ''
 }
 
+/**
+ * 方案 B：参与飞书同步的 IDB store 清单（= 飞书表名，与 IDB object store 名逐字一致）。
+ * 从 MODULE_SCOPES 派生，避免两处清单漂移；nav 作为多记录 store 单独入列。
+ */
+export const FEISHU_SYNC_STORES: string[] = Array.from(
+  new Set([...Object.values(MODULE_SCOPES).flatMap((s) => s.stores), 'nav'])
+)
+
+/** nav store 内参与同步的 key（= 飞书 `nav` 表的行键） */
+export const FEISHU_NAV_KEYS: string[] = [...NAV_SYNC_KEYS]
+
 /** 防抖窗口：快速连切时同一 (type, module) 只跑最后一次 */
 export const MODULE_DEBOUNCE_MS = 600
 /** 单个同步任务的超时上限，防悬挂 */

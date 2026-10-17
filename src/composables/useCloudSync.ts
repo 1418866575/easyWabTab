@@ -1675,6 +1675,9 @@ const GUARD_TOAST_THROTTLE_MS = 10 * 60 * 1000
  */
 async function pushNow(silent = false, skipRemoteGuard = false, onlyChanged = false): Promise<boolean> {
   const settings = useAppSettingsStore()
+  // 飞书渠道不走 WebDAV（否则会拿空的 cloudSyncUrl 拼出非法 URL；本函数会被
+  // visibilitychange / 冲突裁决等未做渠道判断的路径间接调到，必须自己挡一道）
+  if (settings.cloudSyncChannel === 'feishu') return false
   if (!settings.cloudSyncEnabled || !hasSyncCredentials(settings)) {
     return false
   }
@@ -1838,6 +1841,9 @@ async function applyFileRemote(cfg: FileConfig, remote: unknown): Promise<{ iden
  */
 async function pullNow(silent = false): Promise<void> {
   const settings = useAppSettingsStore()
+  // 飞书渠道不走 WebDAV：visibilitychange 等触发器会直接调本函数而不做渠道判断，
+  // 若不加这道守卫，飞书配置下会拿空的 cloudSyncUrl 拼出非法 URL 报 "Invalid URL"
+  if (settings.cloudSyncChannel === 'feishu') return
   if (!settings.cloudSyncEnabled || !hasSyncCredentials(settings)) {
     return
   }

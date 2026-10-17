@@ -1,14 +1,17 @@
 /**
- * 飞书多维表格（Bitable）云同步传输层（方案 A：统一镜像表）
+ * 飞书多维表格（Bitable）云同步传输层（方案 B：每个 IDB store 一张同名表）
  *
- * 设计要点（详见 docs/feishu-cloud-sync/技术文档.md）：
- *   - 复用现有 IndexedDB 读取（idbGet / idbGetAllEntries）与写入（idbPut / idbPutKey），
- *     不触碰 WebDAV 同步引擎的业务逻辑。
- *   - 每个 IDB object store = 飞书表的一行（`store` 列取值逐字等于 IDB object store 名，
- *     `key` 列 = 记录键：单记录 store 为 'items'，nav 为真实键），`value` 列放 JSON 文本。
+ * 设计要点（详见 docs/feishu-cloud-sync/技术文档.md §2.4）：
+ *   - 每个参与同步的 IDB object store ↔ 一张**同名**飞书表；单记录 store 在表里占一行
+ *     `key='items'`，多记录 store（nav）按真实键占多行。表名/行键与浏览器 IndexedDB 逐字一致。
+ *   - 每张表统一 7 列：`key / value / part / clientId / updatedAt / syncedAt / channel`
+ *     （无 `store` 列——表名已表达）。upsert 主键 = `key`，靠「读全表→内存比对」实现，
+ *     不依赖飞书唯一索引；超大值分片时 `key` 变为 `key#pN`，`part` 记序号。
+ *   - **删除按表隔离**：推某个 store 只删该表里本地已不存在的行，不可能误删其他模块。
+ *   - 数据源地址只需给出 app_token：`/wiki/<nodeToken>` 或 `/base/<appToken>`；
+ *     `?table=` 可省略（方案 B 下表名由 store 决定）。
  *   - 渠道由 useCloudSync 在入口处按 settings.cloudSyncChannel 分流，本模块只负责飞书传输。
  *   - 凭据（App ID/Secret/数据源 URL）仅来自本机 settings，绝不回写云端、绝不进入提交。
- *   - 超大值（icons / blog / teacher 含 base64）按 9 万字符分片，多行 rowKey 后缀 #pN 还原。
  */
 import {
   idbGet,
@@ -22,7 +25,7 @@ import {
   IDB_NAV_STORES,
   IDB_TOOLBOX_STORES
 } from './useIdb'
-import { inScope, type ModuleScope } from './moduleSyncCore'
+import { inScope, FEISHU_SYNC_STORES, type ModuleScope } from './moduleSyncCore'
 
 // 飞书同步只需这三个字段（凭据仅本机，绝不进同步数据流）；用窄接口避免传入整个 settings store
 interface FeishuSyncParams {
@@ -35,9 +38,9 @@ interface FeishuSyncParams {
 const CLIENT_ID_KEY = 'easy-web-tab-client-id'
 
 // 不参与云同步的 IDB object store（Blob / 纯本地 / 设备级）
-const EXCLUDED_STORES = new Set<string>(['student_images', 'snapshots', 'iconcache', 'books', 'pomodoro', 'habits'])
+const EXCLUDED_STORES = new Set<string>(['student_images', 'snapshots', 'iconcache', 'books', 'navmeta'])
 
-// 单记录 store（每个 store 一条 'items' 记录）；排除 settings（特殊处理，剥离 cloudSync*）
+// 单记录 store（在对应飞书表里占一行 key='items'）；settings 特殊处理（剥离 cloudSync*）
 const SINGLE_STORES: string[] = [
   ...IDB_CORE_STORES,
   ...IDB_STUDENT_STORES.filter((s) => !EXCLUDED_STORES.has(s)),
@@ -47,7 +50,7 @@ const SINGLE_STORES: string[] = [
   'blog'
 ]
 
-// 多记录 store（按真实键展开）：仅 nav
+// 多记录 store（按真实键占多行）：仅 nav
 const MULTI_STORES: string[] = [...IDB_NAV_STORES]
 
 // settings 同步时需保留本机的云同步字段（凭据/渠道不该跨设备覆盖）
@@ -72,22 +75,27 @@ interface FeishuField {
   field_name: string
   type: number
 }
-// 统一镜像表目标列（与 IDB "key→value 容器"语义一致）
-const REQUIRED_FIELDS: FeishuField[] = [
-  { field_name: 'rowKey', type: 1 }, // 文本：store#key#part（幂等 upsert 主键）
-  { field_name: 'store', type: 1 }, // 文本：IDB object store 名（= 浏览器表名）
-  { field_name: 'key', type: 1 }, // 文本：记录键（单记录 store='items'，nav=真实键）
+// 方案 B 每张表的列（key 放第一位，建表时会成为主列）
+const TABLE_FIELDS: FeishuField[] = [
+  { field_name: 'key', type: 1 }, // 文本：IDB 记录键；分片时为 key#pN（upsert 主键）
   { field_name: 'value', type: 1 }, // 多行文本：JSON / 原始字符串
+  { field_name: 'part', type: 2 }, // 数字：分片序号（0 = 未分片）
   { field_name: 'clientId', type: 1 }, // 文本：写入设备 ID
   { field_name: 'updatedAt', type: 5 }, // 日期（13 位毫秒）
   { field_name: 'syncedAt', type: 5 }, // 日期
-  { field_name: 'channel', type: 1 }, // 文本：写入渠道
-  { field_name: 'part', type: 2 } // 数字：分片序号（0 = 未分片）
+  { field_name: 'channel', type: 1 } // 文本：写入渠道
 ]
 
 interface FeishuRecord {
   record_id: string
   fields: Record<string, unknown>
+}
+
+interface FeishuTable {
+  table_id: string
+  name: string
+  /** 表 revision：记录每次插/改/删都会 +1，用于判定「远端是否变过」 */
+  revision?: number
 }
 
 function getClientId(): string {
@@ -102,37 +110,108 @@ function getClientId(): string {
   return id
 }
 
+/**
+ * 由「数据源链接里的域名」映射开放平台 API 主机。
+ * ⚠️ 关键：`xxx.feishu.cn` 这类自定义域名只是前端展示域，直连其 `/open-apis` 会被
+ * 302 重定向（返回 HTML 而非 JSON）导致鉴权失败——必须走 `open.feishu.cn`；
+ * 国际版租户（larksuite.com）同理走 `open.larksuite.com`。
+ */
 function apiBase(domain: string): string {
-  return `https://${domain}/open-apis`
+  const host = (domain || '').toLowerCase()
+  if (host === 'larksuite.com' || host.endsWith('.larksuite.com')) {
+    return 'https://open.larksuite.com/open-apis'
+  }
+  return 'https://open.feishu.cn/open-apis'
 }
 
-/** 解析「数据源地址」wiki 链接 → 域名 + nodeToken + tableId（用户只需粘贴整条 URL） */
-export function parseDatasourceUrl(url: string): { domain: string; nodeToken: string; tableId: string } {
+/**
+ * 解析「数据源地址」→ API 域名，app_token 有两种来源：
+ *   A. `/wiki/<nodeToken>`——知识库节点，需再调 get_node 解析出 app_token
+ *   B. `/base/<appToken>` 或 `/app/<appToken>`——链接本身就是多维表格地址，app_token 直接给出
+ * 方案 B 下 `?table=` **可省略**（表名由 IDB store 决定），仅用于兼容旧粘贴。
+ */
+export function parseDatasourceUrl(url: string): {
+  domain: string
+  nodeToken: string
+  appToken: string
+  tableId: string
+} {
   const u = new URL(url)
   const seg = u.pathname.split('/').filter(Boolean)
-  const wikiIdx = seg.indexOf('wiki')
-  const nodeToken = wikiIdx >= 0 && seg[wikiIdx + 1] ? seg[wikiIdx + 1] : ''
   const tableId = u.searchParams.get('table') ?? ''
-  return { domain: u.host, nodeToken, tableId }
+  const wikiIdx = seg.indexOf('wiki')
+  if (wikiIdx >= 0 && seg[wikiIdx + 1]) {
+    return { domain: u.host, nodeToken: seg[wikiIdx + 1], appToken: '', tableId }
+  }
+  const baseIdx = seg.findIndex((s) => s === 'base' || s === 'app')
+  if (baseIdx >= 0 && seg[baseIdx + 1]) {
+    return { domain: u.host, nodeToken: '', appToken: seg[baseIdx + 1], tableId }
+  }
+  return { domain: u.host, nodeToken: '', appToken: '', tableId }
 }
 
+/**
+ * 飞书 API 一律走同源代理 /api/webdav-proxy（与 WebDAV 共用同一套 Node 代发，无需新增服务端代码）。
+ *
+ * ⚠️ `open.feishu.cn` 不返回任何 CORS 头，浏览器直连必被拦截——表现为 fetch 抛
+ * `TypeError: Failed to fetch`，必须由服务端代发。该代理是通用 HTTP 转发：body
+ * `{ target, method, body? }`，请求头 `X-Webdav-Auth` 原样透传为上游 `Authorization`，
+ * 且不限制目标 host。
+ */
+const PROXY_PATH = '/api/webdav-proxy'
+
 async function feishuFetch(domain: string, path: string, token: string, init: RequestInit = {}): Promise<any> {
-  const res = await fetch(`${apiBase(domain)}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(init.headers || {})
-    }
+  const payload = JSON.stringify({
+    target: apiBase(domain) + path,
+    method: init.method ?? 'GET',
+    ...(init.body !== undefined ? { body: String(init.body) } : {})
   })
-  const json = await res.json().catch(() => ({}))
-  if (json.code !== 0) {
-    throw new Error(`飞书接口错误 code=${json.code}：${json.msg || res.status}`)
+  let res: Response
+  try {
+    res = await fetch(location.origin + PROXY_PATH, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'X-Webdav-Auth': `Bearer ${token}` } : {})
+      },
+      body: payload
+    })
+  } catch {
+    throw new Error(
+      '无法连接同源代理 /api/webdav-proxy：飞书 API 不允许浏览器跨域直连，必须经服务端代发。' +
+        '请确认页面是通过 npm run dev 或内置服务打开的，而不是直接打开 dist/index.html'
+    )
   }
+  const json = await res.json().catch(() => ({}))
+  throwFeishuError(res, json)
   return json
 }
 
-/** tenant_access_token（自建应用身份；无需把机器人加入知识库成员） */
+/**
+ * 把飞书错误归一成可读 Error。
+ * 注意：同源代理对上游**非 2xx** 只把 body 前 1KB 塞进 `X-Upstream-Body-Snippet` 头、不写 body，
+ * 因此错误码要从该头里还原，否则所有失败都退化成「未返回 JSON」而看不到真实原因。
+ */
+function throwFeishuError(res: Response, json: any): void {
+  if (typeof json.code === 'number') {
+    if (json.code === 0) return // 成功
+    throw new Error(`飞书接口错误 code=${json.code}：${json.msg || res.status}`)
+  }
+  const snippet = res.headers.get('X-Upstream-Body-Snippet')
+  if (snippet) {
+    try {
+      const decoded = JSON.parse(decodeURIComponent(snippet))
+      if (typeof decoded.code === 'number') {
+        throw new Error(`飞书接口错误 code=${decoded.code}：${decoded.msg || res.status}`)
+      }
+    } catch (e) {
+      if (e instanceof Error && e.message.startsWith('飞书接口错误')) throw e
+    }
+  }
+  throw new Error(`飞书接口未返回 JSON（HTTP ${res.status}），请检查网络或数据源地址`)
+}
+
+/** tenant_access_token（自建应用身份） */
 async function getTenantAccessToken(domain: string, appId: string, appSecret: string): Promise<string> {
   const json = await feishuFetch(domain, '/auth/v3/tenant_access_token/internal', '', {
     method: 'POST',
@@ -142,8 +221,12 @@ async function getTenantAccessToken(domain: string, appId: string, appSecret: st
   return json.tenant_access_token as string
 }
 
-/** 由 wiki nodeToken 取得多维表格 app_token（obj_type 必须 = bitable） */
-async function resolveAppToken(domain: string, token: string, nodeToken: string): Promise<string> {
+/**
+ * 取多维表格 app_token：`/base/…` 链接已在 URL 里直接给出（传 appToken 即可，无需再调接口）；
+ * `/wiki/…` 链接则用 nodeToken 调 get_node 解析（obj_type 必须 = bitable）。
+ */
+async function resolveAppToken(domain: string, token: string, nodeToken: string, appToken = ''): Promise<string> {
+  if (appToken) return appToken
   const json = await feishuFetch(domain, `/wiki/v2/spaces/get_node?token=${encodeURIComponent(nodeToken)}`, token)
   const node = json.data?.node
   if (!node || node.obj_type !== 'bitable') {
@@ -152,24 +235,48 @@ async function resolveAppToken(domain: string, token: string, nodeToken: string)
   return node.obj_token as string
 }
 
-/** 确保统一镜像表具备所需列（缺则创建），兼容用户现成表格已有的列 */
-async function ensureSchema(domain: string, token: string, appToken: string, tableId: string): Promise<void> {
-  const json = await feishuFetch(domain, `/bitable/v1/apps/${appToken}/tables/${tableId}/fields`, token)
-  const existing = new Set<string>((json.data?.items ?? []).map((f: any) => f.field_name))
-  for (const f of REQUIRED_FIELDS) {
-    if (existing.has(f.field_name)) continue
-    await feishuFetch(domain, `/bitable/v1/apps/${appToken}/tables/${tableId}/fields`, token, {
-      method: 'POST',
-      body: JSON.stringify({ field_name: f.field_name, type: f.type })
-    })
-  }
+/** 列出多维表格下全部表（分页） */
+async function listTables(domain: string, token: string, appToken: string): Promise<FeishuTable[]> {
+  const out: FeishuTable[] = []
+  let pageToken = ''
+  do {
+    const path =
+      `/bitable/v1/apps/${appToken}/tables?page_size=100` +
+      (pageToken ? `&page_token=${encodeURIComponent(pageToken)}` : '')
+    const json = await feishuFetch(domain, path, token)
+    out.push(...(json.data?.items ?? []))
+    pageToken = json.data?.page_token ?? ''
+    if (!json.data?.has_more) break
+  } while (pageToken)
+  return out
+}
+
+/** 取（必要时创建）某 store 对应的飞书表；表名与 IDB store 名逐字相同 */
+async function ensureTable(
+  domain: string,
+  token: string,
+  appToken: string,
+  store: string,
+  known: Map<string, string>
+): Promise<string> {
+  const hit = known.get(store)
+  if (hit) return hit
+  const created = await feishuFetch(domain, `/bitable/v1/apps/${appToken}/tables`, token, {
+    method: 'POST',
+    body: JSON.stringify({ table: { name: store, fields: TABLE_FIELDS } })
+  })
+  const tableId = created?.data?.table_id as string
+  known.set(store, tableId)
+  return tableId
 }
 
 async function fetchAllRecords(domain: string, token: string, appToken: string, tableId: string): Promise<FeishuRecord[]> {
   const out: FeishuRecord[] = []
   let pageToken = ''
   do {
-    const path = `/bitable/v1/apps/${appToken}/tables/${tableId}/records${pageToken ? `?page_token=${encodeURIComponent(pageToken)}` : ''}`
+    const path =
+      `/bitable/v1/apps/${appToken}/tables/${tableId}/records?page_size=500` +
+      (pageToken ? `&page_token=${encodeURIComponent(pageToken)}` : '')
     const json = await feishuFetch(domain, path, token)
     out.push(...(json.data?.items ?? []))
     pageToken = json.data?.page_token ?? ''
@@ -187,6 +294,94 @@ function chunkString(s: string, size: number): string[] {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms))
+}
+
+/** 每张表相互独立，可并行处理；限制并发避免触发飞书频控 */
+const STORE_CONCURRENCY = 5
+
+/** 有限并发执行：保序消费；首个错误记录后停止领取新任务，等在场任务收尾后统一抛出 */
+async function mapLimit<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {
+  let idx = 0
+  let failed = false
+  let firstError: unknown
+  const size = Math.max(1, Math.min(limit, items.length))
+  const workers = Array.from({ length: size }, async () => {
+    while (idx < items.length && !failed) {
+      const cur = items[idx++]
+      try {
+        await fn(cur)
+      } catch (e) {
+        if (!failed) {
+          failed = true
+          firstError = e
+        }
+      }
+    }
+  })
+  await Promise.all(workers)
+  if (failed) throw firstError
+}
+
+// ========== 按 store 的「本地内容签名」：内容没变就跳过推送 ==========
+// 方案 B 下全量同步要遍历 34 张表（每张读+写 ≈ 1s+），若无脑全跑，
+// 每次「立即同步」/切模块都要几十秒。用签名把「本地没动过的 store」直接跳过，
+// 稳态下全量推送的网络请求降为 0。
+const LS_SIG_PREFIX = 'ewt.feishu.localSig.'
+
+function readLocalSig(store: string): string {
+  try {
+    return localStorage.getItem(LS_SIG_PREFIX + store) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+function writeLocalSig(store: string, sig: string): void {
+  try {
+    if (sig) localStorage.setItem(LS_SIG_PREFIX + store, sig)
+    else localStorage.removeItem(LS_SIG_PREFIX + store)
+  } catch {
+    /* 隐私模式下 localStorage 不可用：退化为每次全量推送 */
+  }
+}
+
+// ========== 按表的「远端 revision」基线：远端没变过就跳过读取 ==========
+// 飞书每个表都有 revision，记录每次插/改/删都会 +1（实测可靠）。listTables 一次就能拿到
+// 全部表的 revision，因此「远端未变」可用 1 次请求判定，省掉 34 次读表。
+const LS_REV_PREFIX = 'ewt.feishu.remoteRev.'
+
+function readRemoteRev(store: string): string {
+  try {
+    return localStorage.getItem(LS_REV_PREFIX + store) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+function writeRemoteRev(store: string, rev: string): void {
+  try {
+    if (rev) localStorage.setItem(LS_REV_PREFIX + store, rev)
+    else localStorage.removeItem(LS_REV_PREFIX + store)
+  } catch {
+    /* 同 writeLocalSig */
+  }
+}
+
+/** FNV-1a：同步、零依赖，只用于「内容是否变化」判断，不承担安全职责 */
+function fnv1a(s: string): string {
+  let h = 0x811c9dc5
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i)
+    h = Math.imul(h, 0x01000193)
+  }
+  return (h >>> 0).toString(36)
+}
+
+/** 一个 store 全部行的内容签名 */
+function rowsSignature(store: string, rows: LocalRow[]): string {
+  const parts: string[] = []
+  for (const r of rows) parts.push(`${r.rowKey}\u0001${r.part}\u0001${r.value}`)
+  return fnv1a(`${store}\u0002${parts.join('\u0003')}`)
 }
 
 async function batchCreate(domain: string, token: string, appToken: string, tableId: string, records: any[]): Promise<void> {
@@ -224,14 +419,14 @@ async function batchDelete(domain: string, token: string, appToken: string, tabl
 
 interface LocalRow {
   store: string
-  key: string
-  value: string // 原始字符串（nav 为原值，其它为 JSON）
+  key: string // 基础记录键（不含分片后缀）
+  rowKey: string // 飞书 key 列的值：key 或 key#pN
+  value: string
   part: number
-  rowKey: string
 }
 
 /**
- * 读取本地 IndexedDB，组装全部待同步行（含 settings 剥离 cloudSync* 与分片）。
+ * 读取本地 IndexedDB，组装待同步行（含 settings 剥离 cloudSync* 与超大值分片）。
  * 传入 scope 时只组装该模块作用域内的行（模块级同步用）。
  */
 async function buildLocalRows(scope?: ModuleScope): Promise<LocalRow[]> {
@@ -240,9 +435,8 @@ async function buildLocalRows(scope?: ModuleScope): Promise<LocalRow[]> {
     if (raw === undefined || raw === null) return
     if (!inScope(scope, store, key)) return
     const value = typeof raw === 'string' ? raw : JSON.stringify(raw)
-    const parts = chunkString(value, MAX_VALUE_LEN)
-    parts.forEach((p, idx) => {
-      rows.push({ store, key, value: p, part: idx, rowKey: `${store}#${key}#p${idx}` })
+    chunkString(value, MAX_VALUE_LEN).forEach((p, idx) => {
+      rows.push({ store, key, rowKey: idx === 0 ? key : `${key}#p${idx}`, value: p, part: idx })
     })
   }
 
@@ -267,118 +461,178 @@ async function buildLocalRows(scope?: ModuleScope): Promise<LocalRow[]> {
   return rows
 }
 
-/** 把飞书行按 store#key 分组并按分片还原为值字符串 */
-function reassemble(records: FeishuRecord[]): Map<string, { store: string; key: string; value: string }> {
+/** 剥掉分片后缀，取基础记录键 */
+function baseKeyOf(k: string): string {
+  return k.replace(/#p\d+$/, '')
+}
+
+/**
+ * 把一张飞书表的记录按基础 key 分组、按 part 排序拼接还原成值字符串。
+ * allowedKeys 非空时只保留其中的 key（模块级拉取按 nav key 收窄）。
+ */
+function reassembleTable(records: FeishuRecord[], allowedKeys?: string[]): Map<string, string> {
   const groups = new Map<string, FeishuRecord[]>()
   for (const r of records) {
     const f = r.fields || {}
-    if (typeof f.store !== 'string' || typeof f.key !== 'string') continue
-    const gkey = `${f.store}#${f.key}`
-    if (!groups.has(gkey)) groups.set(gkey, [])
-    groups.get(gkey)!.push(r)
+    if (typeof f.key !== 'string') continue
+    const base = baseKeyOf(f.key)
+    if (allowedKeys && allowedKeys.length && !allowedKeys.includes(base)) continue
+    if (!groups.has(base)) groups.set(base, [])
+    groups.get(base)!.push(r)
   }
-  const out = new Map<string, { store: string; key: string; value: string }>()
-  for (const [gkey, recs] of groups) {
+  const out = new Map<string, string>()
+  for (const [base, recs] of groups) {
     recs.sort((a, b) => Number(a.fields.part ?? 0) - Number(b.fields.part ?? 0))
-    const value = recs.map((r) => String(r.fields.value ?? '')).join('')
-    const [store, key] = gkey.split('#')
-    out.set(gkey, { store, key, value })
+    out.set(base, recs.map((r) => String(r.fields.value ?? '')).join(''))
   }
   return out
 }
 
 /**
- * 推送本地 → 飞书（全量 upsert + 增量删除）。
- * 返回写入的逻辑条目数（用于 UI 提示）。
+ * 推送本地 → 飞书（方案 B：按 store 分表 upsert + 按表删陈旧行）。
+ * 返回写入的行数（用于 UI 提示）。
  */
 export async function feishuPush(settings: FeishuSyncParams, scope?: ModuleScope): Promise<number> {
   const url = settings.cloudSyncFeishuDatasourceUrl
   if (!url) throw new Error('飞书数据源地址为空')
-  const { domain, nodeToken, tableId } = parseDatasourceUrl(url)
-  if (!nodeToken || !tableId) throw new Error('飞书数据源地址无法解析出 nodeToken / tableId（请使用完整 wiki 链接）')
+  const { domain, nodeToken, appToken: urlAppToken } = parseDatasourceUrl(url)
+  if (!nodeToken && !urlAppToken) {
+    throw new Error('飞书数据源地址无法解析出 app_token（请粘贴完整 wiki / base 链接）')
+  }
   const token = await getTenantAccessToken(domain, settings.cloudSyncFeishuAppId || '', settings.cloudSyncFeishuAppSecret || '')
-  const appToken = await resolveAppToken(domain, token, nodeToken)
-  await ensureSchema(domain, token, appToken, tableId)
+  const appToken = await resolveAppToken(domain, token, nodeToken, urlAppToken)
 
   const clientId = getClientId()
   const now = Date.now()
   const localRows = await buildLocalRows(scope)
-  const allExisting = await fetchAllRecords(domain, token, appToken, tableId)
-  // 作用域内才参与 upsert 比对；全量时全部参与
-  const existing = scope
-    ? allExisting.filter((r) => inScope(scope, String(r.fields.store ?? ''), String(r.fields.key ?? '')))
-    : allExisting
-  const existingByRowKey = new Map<string, FeishuRecord>(existing.map((r) => [String(r.fields.rowKey ?? ''), r]))
 
-  const toCreate: any[] = []
-  const toUpdate: any[] = []
-  const writtenRowKeys = new Set<string>()
-  for (const row of localRows) {
-    const fields = {
-      rowKey: row.rowKey,
-      store: row.store,
-      key: row.key,
-      value: row.value,
-      clientId,
-      updatedAt: now,
-      syncedAt: now,
-      channel: 'feishu',
-      part: row.part
-    }
-    writtenRowKeys.add(row.rowKey)
-    const ex = existingByRowKey.get(row.rowKey)
-    if (ex) toUpdate.push({ record_id: ex.record_id, fields })
-    else toCreate.push({ fields })
+  // 按 store 分组 → 每组对应一张同名飞书表
+  const byStore = new Map<string, LocalRow[]>()
+  for (const r of localRows) {
+    if (!byStore.has(r.store)) byStore.set(r.store, [])
+    byStore.get(r.store)!.push(r)
   }
-  // 增量删除只在**全量**推送时执行：模块级推送若删"本地不存在的行"，
-  // 会把本次作用域外（其他模块）的行误删，故作用域推送只 upsert 不删除。
-  const toDelete = scope
-    ? []
-    : existing.filter((r) => r.fields.rowKey && !writtenRowKeys.has(String(r.fields.rowKey))).map((r) => r.record_id)
 
-  if (toCreate.length) await batchCreate(domain, token, appToken, tableId, toCreate)
-  if (toUpdate.length) await batchUpdate(domain, token, appToken, tableId, toUpdate)
-  if (toDelete.length) await batchDelete(domain, token, appToken, tableId, toDelete)
-  return writtenRowKeys.size
+  const tables = await listTables(domain, token, appToken)
+  const known = new Map<string, string>(tables.map((t) => [t.name, t.table_id]))
+
+  // 本地内容与上次成功推送一致的 store 直接跳过：远端必然已是这份内容
+  const pending: Array<{ store: string; rows: LocalRow[]; sig: string }> = []
+  for (const [store, rows] of byStore) {
+    const sig = rowsSignature(store, rows)
+    if (sig === readLocalSig(store)) continue
+    pending.push({ store, rows, sig })
+  }
+  if (!pending.length) return 0
+
+  let written = 0
+  await mapLimit(pending, STORE_CONCURRENCY, async ({ store, rows, sig }) => {
+    const tableId = await ensureTable(domain, token, appToken, store, known)
+    const existing = await fetchAllRecords(domain, token, appToken, tableId)
+    const byKey = new Map<string, FeishuRecord>(existing.map((r) => [String(r.fields.key ?? ''), r]))
+
+    const toCreate: any[] = []
+    const toUpdate: any[] = []
+    const keys = new Set<string>()
+    for (const row of rows) {
+      const fields = {
+        key: row.rowKey,
+        value: row.value,
+        part: row.part,
+        clientId,
+        updatedAt: now,
+        syncedAt: now,
+        channel: 'feishu'
+      }
+      keys.add(row.rowKey)
+      const ex = byKey.get(row.rowKey)
+      if (ex) toUpdate.push({ record_id: ex.record_id, fields })
+      else toCreate.push({ fields })
+    }
+    // 只删**本表**内本地已不存在的行：按表隔离，不会波及其他模块的数据
+    const toDelete = existing
+      .filter((r) => r.fields.key && !keys.has(String(r.fields.key)))
+      .map((r) => r.record_id)
+
+    if (toCreate.length) await batchCreate(domain, token, appToken, tableId, toCreate)
+    if (toUpdate.length) await batchUpdate(domain, token, appToken, tableId, toUpdate)
+    if (toDelete.length) await batchDelete(domain, token, appToken, tableId, toDelete)
+    writeLocalSig(store, sig)
+    written += rows.length
+  })
+  // 本轮推送改动了这些表 → revision 必然已变。再拉一次表清单刷新基线，
+  // 否则下一次 pull 会把这些表当成"远端变过"而重读一遍（每次推送都白读一次）。
+  if (pending.length > 0) {
+    const fresh = await listTables(domain, token, appToken)
+    for (const t of fresh) writeRemoteRev(t.name, String(t.revision ?? ''))
+  }
+  return written
 }
 
 /**
- * 拉取飞书 → 本地（全量覆盖）。
- * 返回是否需要刷新 settings 响应式 store（settings 条目被更新时）。
+ * 拉取飞书 → 本地（方案 B：按表读 → 按基础 key 还原 → 写 IDB）。
+ * 返回是否需要刷新 settings 响应式 store，以及实际落地的条目数。
  */
-export async function feishuPull(settings: FeishuSyncParams, scope?: ModuleScope): Promise<{ settingsChanged: boolean }> {
+export async function feishuPull(settings: FeishuSyncParams, scope?: ModuleScope): Promise<{ settingsChanged: boolean; applied: number }> {
   const url = settings.cloudSyncFeishuDatasourceUrl
   if (!url) throw new Error('飞书数据源地址为空')
-  const { domain, nodeToken, tableId } = parseDatasourceUrl(url)
-  if (!nodeToken || !tableId) throw new Error('飞书数据源地址无法解析出 nodeToken / tableId（请使用完整 wiki 链接）')
+  const { domain, nodeToken, appToken: urlAppToken } = parseDatasourceUrl(url)
+  if (!nodeToken && !urlAppToken) {
+    throw new Error('飞书数据源地址无法解析出 app_token（请粘贴完整 wiki / base 链接）')
+  }
   const token = await getTenantAccessToken(domain, settings.cloudSyncFeishuAppId || '', settings.cloudSyncFeishuAppSecret || '')
-  const appToken = await resolveAppToken(domain, token, nodeToken)
+  const appToken = await resolveAppToken(domain, token, nodeToken, urlAppToken)
 
-  const records = await fetchAllRecords(domain, token, appToken, tableId)
-  const grouped = reassemble(records)
+  const tables = await listTables(domain, token, appToken)
+  const byName = new Map<string, string>(tables.map((t) => [t.name, t.table_id]))
+  const revByName = new Map<string, string>(tables.map((t) => [t.name, String(t.revision ?? '')]))
+
+  // 本次要拉的 store：作用域给定的 stores（+ nav）；全量时取全部
+  const allStores = scope ? scope.stores.filter((s) => s !== 'nav') : FEISHU_SYNC_STORES.filter((s) => s !== 'nav')
+  const navKeys = scope ? scope.navKeys : undefined
+  if (!scope || (navKeys && navKeys.length) || scope.stores.includes('nav')) allStores.push('nav')
+
+  // 远端 revision 与基线一致 → 该表自我们上次同步后没被改过，连读都省掉
+  const todo: string[] = []
+  for (const store of allStores) {
+    const rev = revByName.get(store)
+    if (rev === undefined) {
+      writeRemoteRev(store, '') // 表不存在 → 云端无该 store 数据，保留本地
+      continue
+    }
+    if (readRemoteRev(store) === rev) continue
+    todo.push(store)
+  }
 
   let settingsChanged = false
-  for (const { store, key, value } of grouped.values()) {
-    // 模块级拉取：只落地本模块作用域内的条目，其他模块数据完全不碰
-    if (!inScope(scope, store, key)) continue
-    if (store === 'nav') {
-      // nav 多记录：本地存的是对象，飞书里是 JSON 字符串，还原回对象
-      const parsed = safeParse(value)
-      await idbPutKey('nav', key, parsed !== undefined ? parsed : value)
-    } else if (store === 'settings') {
-      const remote = safeParse(value) as Record<string, unknown> | null
-      const local = (await idbGet<Record<string, unknown>>('settings')) ?? {}
-      const merged: Record<string, unknown> = { ...(remote ?? {}), ...local }
-      // 保留本机云同步字段（凭据/渠道不跨设备覆盖）
-      for (const k of CLOUD_SYNC_KEYS) merged[k] = local[k]
-      await idbPut('settings', merged)
-      settingsChanged = true
-    } else {
-      const parsed = safeParse(value)
-      if (parsed !== undefined) await idbPut(store as any, parsed)
+  let applied = 0
+  await mapLimit(todo, STORE_CONCURRENCY, async (store) => {
+    const tableId = byName.get(store)!
+    const records = await fetchAllRecords(domain, token, appToken, tableId)
+    const grouped = reassembleTable(records, store === 'nav' ? navKeys : undefined)
+    for (const [key, value] of grouped) {
+      applied++
+      if (store === 'nav') {
+        // nav store 里存的是 **JSON 字符串**（getPref 取出后由调用方 JSON.parse），
+        // 必须原样写回字符串。若写解析后的对象，JSON.parse(对象) 会得到 "[object Object]"，
+        // 该键会被当作损坏数据丢弃（表现为站点/分类等整块变空、首页空白）
+        await idbPutKey('nav', key, value)
+      } else if (store === 'settings') {
+        const remote = safeParse(value) as Record<string, unknown> | null
+        const local = (await idbGet<Record<string, unknown>>('settings')) ?? {}
+        const merged: Record<string, unknown> = { ...(remote ?? {}), ...local }
+        // 保留本机云同步字段（凭据/渠道不跨设备覆盖）
+        for (const k of CLOUD_SYNC_KEYS) merged[k] = local[k]
+        await idbPut('settings', merged)
+        settingsChanged = true
+      } else {
+        const parsed = safeParse(value)
+        if (parsed !== undefined) await idbPut(store as any, parsed)
+      }
     }
-  }
-  return { settingsChanged }
+    writeRemoteRev(store, revByName.get(store)!)
+  })
+  return { settingsChanged, applied }
 }
 
 function safeParse(s: string): unknown {
@@ -389,25 +643,39 @@ function safeParse(s: string): unknown {
   }
 }
 
-/** 飞书连接与表结构自检（设置页「测试连接」调用）：鉴权 + 节点解析 + 列完整性 */
+/**
+ * 飞书连接与表结构自检（设置页「测试连接」调用）：
+ * 鉴权 + 节点解析 + 列出全部表（读权限）+ 确保至少一张目标表存在（写权限）。
+ */
 export async function testFeishuConnection(settings: FeishuSyncParams): Promise<{ ok: boolean; error?: string }> {
   if (!settings.cloudSyncFeishuAppId || !settings.cloudSyncFeishuAppSecret || !settings.cloudSyncFeishuDatasourceUrl) {
     return { ok: false, error: 'App ID / App Secret / 数据源地址不能为空' }
   }
   try {
-    const { domain, nodeToken, tableId } = parseDatasourceUrl(settings.cloudSyncFeishuDatasourceUrl)
-    if (!nodeToken || !tableId) return { ok: false, error: '数据源地址无法解析出 nodeToken / tableId' }
+    const { domain, nodeToken, appToken: urlAppToken } = parseDatasourceUrl(settings.cloudSyncFeishuDatasourceUrl)
+    if (!nodeToken && !urlAppToken) {
+      return { ok: false, error: '数据源地址无法解析出 app_token（请粘贴完整 wiki / base 链接）' }
+    }
     const token = await getTenantAccessToken(domain, settings.cloudSyncFeishuAppId, settings.cloudSyncFeishuAppSecret)
-    const appToken = await resolveAppToken(domain, token, nodeToken)
-    await ensureSchema(domain, token, appToken, tableId)
+    const appToken = await resolveAppToken(domain, token, nodeToken, urlAppToken)
+    const tables = await listTables(domain, token, appToken)
+    const known = new Map<string, string>(tables.map((t) => [t.name, t.table_id]))
+    // 确保一张目标表存在（同时验证写权限）；其余表在首次推送时按需创建
+    await ensureTable(domain, token, appToken, FEISHU_SYNC_STORES[0], known)
     return { ok: true }
   } catch (e) {
     const msg = e instanceof Error ? e.message : '连接失败'
-    const hint = msg.includes('code=99991679')
-      ? '权限不足：请在飞书开放平台给该应用开通「查看、评论、编辑和管理多维表格」「查看、编辑和管理知识库」「查看知识空间节点信息」，并把应用加为对应知识库/多维表格的协作者。'
-      : msg.includes('code=99991672')
-        ? '无该资源权限：请把自建应用加为对应知识库节点或多维表格的协作者（或知识库管理员）。'
-        : msg
+    const hint = msg.includes('code=91403')
+      ? '无编辑权限：请打开该多维表格 → 右上角「…」→ 添加文档应用 / 协作者，把该自建应用加为**可编辑**成员（只读会导致建表、写记录被拒）。'
+      : msg.includes('code=99991679')
+        ? '权限不足：请在飞书开放平台给该应用开通「查看、评论、编辑和管理多维表格」「查看、编辑和管理知识库」「查看知识空间节点信息」，并把应用加为对应知识库/多维表格的协作者。'
+        : msg.includes('code=99991672')
+          ? '无该资源权限：请把自建应用加为对应知识库节点或多维表格的协作者（或知识库管理员）。'
+          : msg.includes('code=1254041')
+            ? '表不存在：该链接的 ?table= 表 ID 在当前多维表格里找不到（表可能被删/重建）。请重新打开目标多维表格，复制浏览器地址栏的完整链接。'
+            : msg.includes('code=1254004')
+              ? '表 ID 不合法：?table= 后的值不是表 ID（以 blk 开头的是「区块 ID」不是表 ID）。方案 B 下 ?table= 可省略，只保留 /wiki/xxx 或 /base/xxx 部分即可。'
+              : msg
     return { ok: false, error: hint }
   }
 }

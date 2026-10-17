@@ -174,9 +174,12 @@ async function doSync(type: TaskType, key: ModuleKey): Promise<void> {
       await feishuPush(params, scope)
     } else {
       const r = await feishuPull(params, scope)
-      // 飞书镜像直接写 IDB，需重载才能反映到界面
-      await reloadAllStores()
-      if (r.settingsChanged) useAppSettingsStore().initSettings()
+      // 只在真正拉到数据时才全量 reload：无变化也 reload 会让每次进页面都重载全部 store，
+      // 既浪费又会在本地数据异常时立刻把问题暴露成白屏
+      if (r.applied > 0) {
+        await reloadAllStores()
+        if (r.settingsChanged) useAppSettingsStore().initSettings()
+      }
     }
     return
   }

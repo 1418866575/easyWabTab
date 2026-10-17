@@ -4107,14 +4107,14 @@ function toggleFullscreen(): void {
               <input
                 type="text"
                 class="wb-menu-name-input"
-                placeholder="https://xxx.feishu.cn/wiki/xxx?table=tblXXXX&view=vewXXXX"
+                placeholder="https://xxx.feishu.cn/wiki/xxx 或 /base/xxx（?table= 可省略）"
                 data-testid="sync-feishu-url"
                 :value="store.cloudSyncFeishuDatasourceUrl"
                 @input="store.setCloudSyncFeishuDatasourceUrl(($event.target as HTMLInputElement).value)"
               />
             </label>
             <p class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px; margin-top: 4px;">
-              在飞书开放平台给该自建应用开通「查看、评论、编辑和管理多维表格」「查看、编辑和管理知识库」权限，并把应用加为对应知识库/多维表格的协作者；粘贴完整 wiki 链接（含 ?table=）。
+              在飞书开放平台给该自建应用开通「查看、评论、编辑和管理多维表格」「查看、编辑和管理知识库」权限，并把应用加为对应知识库/多维表格的协作者；粘贴 wiki 或 base 链接即可（`?table=` 可省略）。同步采用「每个 IndexedDB 表一张同名飞书表」，目标表会在首次推送时自动创建。
             </p>
           </div>
 
