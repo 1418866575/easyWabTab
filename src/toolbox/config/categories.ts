@@ -27,6 +27,7 @@ export const TOOLBOX_CATEGORIES: ToolboxCategory[] = [
   { id: 'device', name: '设备与测量', icon: '📐', order: 14 },
   { id: 'media', name: '媒体播放', icon: '🎬', order: 15 },
   { id: 'loan', name: '贷款计算', icon: '🏦', order: 16 },
+  { id: 'science', name: '科学', icon: '🔬', order: 17 },
   { id: MODULE_CATEGORY_ID, name: '站内模块', icon: '🧭', order: 90 },
   { id: 'other', name: '其他', icon: '📁', order: 999 }
 ]
