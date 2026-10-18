@@ -68,8 +68,10 @@ const CLOUD_SYNC_KEYS = [
   'cloudSyncFeishuDatasourceUrl'
 ]
 
-// Bitable 文本字段单格上限约 10 万字符，留 1 万头程分片
-const MAX_VALUE_LEN = 90_000
+// Bitable 文本字段单格上限约 10 万字符，但飞书按 UTF-8 字节校验：
+// 中文 1 字 = 3 字节，9 万字符的中文块 ≈ 27 万字节，会触发 TooLargeCell(1254130)。
+// 故按字节切分，阈值取 5 万字节（留出一倍余量，任何编码下都稳低于 10 万上限）。
+const MAX_CELL_BYTES = 50_000
 
 interface FeishuField {
   field_name: string
@@ -285,10 +287,26 @@ async function fetchAllRecords(domain: string, token: string, appToken: string, 
   return out
 }
 
-function chunkString(s: string, size: number): string[] {
-  if (s.length <= size) return [s]
+/**
+ * 按 UTF-8 字节长度切分字符串，且只在「字符边界」断开，避免把多字节字符从中间切断。
+ * 用于把超大的信封 JSON 拆成多个飞书单元格（每格 ≤ MAX_CELL_BYTES 字节）。
+ */
+function chunkByBytes(s: string, maxBytes: number): string[] {
+  const enc = new TextEncoder()
+  const bytes = enc.encode(s)
+  if (bytes.length <= maxBytes) return [s]
   const parts: string[] = []
-  for (let i = 0; i < s.length; i += size) parts.push(s.slice(i, i + size))
+  const decoder = new TextDecoder()
+  let start = 0
+  while (start < bytes.length) {
+    let end = Math.min(start + maxBytes, bytes.length)
+    // 回退到 UTF-8 字符起始字节：<0x80 是 ASCII，≥0xC0 是多字节首字节；
+    // 0x80–0xBF 是续字节，必须跳过以确保不在字符中间断开。
+    while (end < bytes.length && bytes[end] >= 0x80 && bytes[end] < 0xC0) end--
+    if (end === start) end = start + 1
+    parts.push(decoder.decode(bytes.subarray(start, end)))
+    start = end
+  }
   return parts
 }
 
@@ -435,7 +453,7 @@ async function buildLocalRows(scope?: ModuleScope): Promise<LocalRow[]> {
     if (raw === undefined || raw === null) return
     if (!inScope(scope, store, key)) return
     const value = typeof raw === 'string' ? raw : JSON.stringify(raw)
-    chunkString(value, MAX_VALUE_LEN).forEach((p, idx) => {
+    chunkByBytes(value, MAX_CELL_BYTES).forEach((p, idx) => {
       rows.push({ store, key, rowKey: idx === 0 ? key : `${key}#p${idx}`, value: p, part: idx })
     })
   }
