@@ -9,8 +9,11 @@
 //       Header Content-Type: application/json
 //       Header X-Webdav-Auth: Basic <b64(username:password)>
 //       Body   { target: "https://dav.jianguoyun.com/dav/easy-web-tab",
-//               method: "GET" | "PUT" | "MKCOL",
+//               method: "GET" | "PUT" | "MKCOL" | "POST" | "DELETE" | ...（见 ALLOWED_UPSTREAM_METHODS）,
 //               body?: string }
+//
+//   通用 HTTP 转发，不限目标 host：除 WebDAV 外，飞书 OpenAPI（/open-apis/...）
+//   也走这条通道，因此 POST / DELETE 必须放行。
 //
 //     Response 与 serve-with-rewrites.cjs 代理一致：
 //       - 2xx 直接管道响应
@@ -33,6 +36,17 @@ const { URL } = require('url')
 const HOST = process.env.WEBDAV_PROXY_HOST || '127.0.0.1'
 const PORT = Number(process.env.WEBDAV_PROXY_PORT) || 16719
 const MAX_ERROR_BYTES = 1024
+
+/**
+ * 允许代发的上游方法。
+ * 除 WebDAV 的 GET / PUT / MKCOL 外，还要放行 POST / DELETE / PATCH 等——
+ * 飞书 OpenAPI 走的就是同一条通道（鉴权 tenant_access_token 为 POST，建表/写记录为 POST，
+ * 批量删记录为 DELETE），此前只放行 WebDAV 三件套会把飞书请求全部挡成 405。
+ * 本服务默认只监听 127.0.0.1、由 nginx 反代，不对公网暴露。
+ */
+const ALLOWED_UPSTREAM_METHODS = new Set([
+  'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS', 'MKCOL', 'PROPFIND', 'MOVE', 'COPY'
+])
 
 function maskAuth(h) {
   if (!h) return '(none)'
@@ -100,9 +114,9 @@ async function handle(req, res) {
     const useHttps = parsed.protocol === 'https:'
     const client = useHttps ? https : http
     const davMethod = String(method).toUpperCase()
-    if (davMethod !== 'GET' && davMethod !== 'PUT' && davMethod !== 'MKCOL') {
+    if (!ALLOWED_UPSTREAM_METHODS.has(davMethod)) {
       res.writeHead(405, { 'Content-Type': 'text/plain; charset=utf-8' })
-      res.end('Method Not Allowed (only GET / PUT / MKCOL supported)')
+      res.end('Method Not Allowed (supported: ' + Array.from(ALLOWED_UPSTREAM_METHODS).join(' ') + ')')
       return
     }
     const opts = {
