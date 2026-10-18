@@ -190,6 +190,32 @@ async function feishuFetch(domain: string, path: string, token: string, init: Re
 }
 
 /**
+ * 飞书常见错误码的中文排查提示（与下方 throwFeishuError 共用）。
+ * 重点：1254302 RolePermNotAllow 常因表格开启了「高级权限」——
+ * 仅把自建应用加为普通协作者不够，必须在多维表格页「…」→「…更多」→「添加文档应用」把应用加为「可管理」。
+ */
+function feishuErrorHint(code: number): string {
+  switch (code) {
+    case 91403:
+      return '无编辑权限：请把该自建应用加为多维表格的「可编辑/可管理」协作者'
+    case 99991679:
+      return '权限不足：请在开放平台给应用开通「查看、评论、编辑和管理多维表格」等权限，并加为协作者'
+    case 99991672:
+      return '无该资源权限：请把自建应用加为对应多维表格/知识库的协作者（或管理员）'
+    case 1254041:
+      return '表不存在：?table= 的表 ID 在当前多维表格里找不到（可能被删/重建）'
+    case 1254004:
+      return '表 ID 不合法：?table= 后不是表 ID（blk 开头是区块 ID）。方案 B 下 ?table= 可省略'
+    case 1254301:
+      return '多维表格未开启/不支持高级权限：请确认表格权限设置'
+    case 1254302:
+      return '无访问权限（常因该表格开启了「高级权限」）：请在多维表格页右上角「…」→「…更多」→「添加文档应用」把该自建应用加为「可管理」；或在高级权限设置里把含应用的群设为读写。先在开放平台给应用开通至少一个多维表格 API 权限，否则搜不到该应用'
+    default:
+      return ''
+  }
+}
+
+/**
  * 把飞书错误归一成可读 Error。
  * 注意：同源代理对上游**非 2xx** 只把 body 前 1KB 塞进 `X-Upstream-Body-Snippet` 头、不写 body，
  * 因此错误码要从该头里还原，否则所有失败都退化成「未返回 JSON」而看不到真实原因。
@@ -197,14 +223,16 @@ async function feishuFetch(domain: string, path: string, token: string, init: Re
 function throwFeishuError(res: Response, json: any): void {
   if (typeof json.code === 'number') {
     if (json.code === 0) return // 成功
-    throw new Error(`飞书接口错误 code=${json.code}：${json.msg || res.status}`)
+    const hint = feishuErrorHint(json.code)
+    throw new Error(`飞书接口错误 code=${json.code}：${json.msg || res.status}` + (hint ? `（${hint}）` : ''))
   }
   const snippet = res.headers.get('X-Upstream-Body-Snippet')
   if (snippet) {
     try {
       const decoded = JSON.parse(decodeURIComponent(snippet))
       if (typeof decoded.code === 'number') {
-        throw new Error(`飞书接口错误 code=${decoded.code}：${decoded.msg || res.status}`)
+        const hint = feishuErrorHint(decoded.code)
+        throw new Error(`飞书接口错误 code=${decoded.code}：${decoded.msg || res.status}` + (hint ? `（${hint}）` : ''))
       }
     } catch (e) {
       if (e instanceof Error && e.message.startsWith('飞书接口错误')) throw e
