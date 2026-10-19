@@ -71,5 +71,25 @@
     "updatedAt": "2026-10-13T12:06:57.096Z",
     "hasMeta": true,
     "source": "static"
+  },
+  {
+    "id": "how-to-live-better",
+    "title": "高性价比人生指南",
+    "description": "基于循证（带证据等级）的人生建议合集：从健康、饮食、安全到理财、习惯，可按「花不花钱、花多少时间、要不要毅力」筛选，用最小代价过更好的人生。",
+    "cover": "",
+    "category": "人生指南",
+    "tags": [
+      "人生规划",
+      "生活方式",
+      "健康",
+      "理财",
+      "自我提升"
+    ],
+    "order": 50,
+    "entry": "/bookdata/how-to-live-better/index.html",
+    "size": 2834101,
+    "updatedAt": "2026-10-19T15:05:08.048Z",
+    "hasMeta": true,
+    "source": "static"
   }
 ]
