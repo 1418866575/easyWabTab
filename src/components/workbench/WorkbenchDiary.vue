@@ -1,13 +1,19 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { showConfirm } from '@/utils/dialog'
 import { useWorkbenchDiaryStore } from '@/stores/workbenchDiary'
 import { dateKeyOf, diaryDateLabel, findDiaryByDate, DIARY_MOODS, diaryMoodOf } from '@/composables/diaryCore'
 import { useDiaryCategoriesStore } from '@/stores/diaryCategories'
 import { usePageSize } from '@/composables/usePageSize'
 import { renderMarkdown } from '@/composables/noteMarkdown'
+// Markdown 编辑能力与博客后台同源：语法变换纯函数 + 图片短引用（共享博客图库）
+import { applyMarkdown } from '@/composables/blogEditorMd'
+import type { MdBlockKind } from '@/composables/blogEditorMd'
+import { imageRef, isAllowedDataImage, parseImageRefs, removeImageRefs, resolveImageRefs } from '@/composables/blogImages'
+import { useBlogStore } from '@/stores/blog'
+import BlogImagePicker from '@/components/blog/BlogImagePicker.vue'
 import { useToast } from '@/composables/useToast'
-import type { WorkbenchDiary } from '@/types'
+import type { BlogImage, WorkbenchDiary } from '@/types'
 
 // ===== 底部日记记录表格（每页 10 条分页）=====
 const { pageSize, PAGE_SIZES } = usePageSize('dj-table-pager', 10)
@@ -41,7 +47,15 @@ const draftKind = ref<'diary' | 'idea'>('diary')
 const draftCategory = ref('')
 const draftMood = ref('')
 const draftPinned = ref(false)
-const previewMode = ref(false)
+// 视图：编辑 / 分屏 / 预览（与博客后台编辑器一致的三模式）
+const viewMode = ref<'edit' | 'split' | 'preview'>('edit')
+// 正文 textarea 引用（applyMarkdown 需读取选区 / 恢复光标）
+const contentEl = ref<HTMLTextAreaElement | null>(null)
+// 隐藏的图片文件选择框（点工具栏「图片」触发）
+const fileInput = ref<HTMLInputElement | null>(null)
+// 共享博客图库选择器（日记正文插图复用博客图片库）
+const libraryOpen = ref(false)
+const blogStore = useBlogStore()
 
 // 当前选中日期的条目（限定当前日志本，多日志本隔离视图）
 const selectedEntry = computed<WorkbenchDiary | undefined>(() => findDiaryByDate(store.currentEntries, selectedDate.value))
@@ -79,7 +93,7 @@ async function selectDate(dateKey: string): Promise<void> {
   draftMood.value = entry?.mood ?? ''
   draftPinned.value = entry?.pinned === true
   draftCover.value = entry?.coverImage ?? ''
-  previewMode.value = false
+  viewMode.value = 'edit'
 }
 
 // 卡片分类名（引用日记专属分类；无分类或找不到 → undefined）
@@ -144,13 +158,203 @@ watch(
     draftMood.value = entry?.mood ?? ''
     draftPinned.value = entry?.pinned === true
     draftCover.value = entry?.coverImage ?? ''
-    previewMode.value = false
+    viewMode.value = 'edit'
     currentPage.value = 1
   }
 )
 
 // 视图切换时回到第一页
 watch(showDeleted, () => { currentPage.value = 1 })
+
+// ===== Markdown 工具栏（与博客后台同源：纯函数 + 共享博客图库短引用）=====
+
+interface MdToolbarButton {
+  /** image = 选本地文件上传；library = 从共享图库选取（可多选） */
+  kind: MdBlockKind | 'image' | 'library'
+  label: string
+  title: string
+  group: number
+}
+
+/** 工具栏按钮（含分组，group 用于渲染分隔线）；图库入口置顶（插图最常用） */
+const MD_TOOLBAR: MdToolbarButton[] = [
+  { kind: 'library', label: '图库', title: '从共享图库插入已有图片（可多选）', group: -1 },
+  { kind: 'heading-1', label: 'H1', title: '一级标题', group: 0 },
+  { kind: 'heading-2', label: 'H2', title: '二级标题', group: 0 },
+  { kind: 'heading-3', label: 'H3', title: '三级标题', group: 0 },
+  { kind: 'bold', label: '加粗', title: '加粗（Ctrl/Cmd+B）', group: 1 },
+  { kind: 'italic', label: '斜体', title: '斜体（Ctrl/Cmd+I）', group: 1 },
+  { kind: 'strike', label: '删除线', title: '删除线', group: 1 },
+  { kind: 'inline-code', label: '行内代码', title: '行内代码', group: 1 },
+  { kind: 'blockquote', label: '引用', title: '引用块', group: 2 },
+  { kind: 'code-block', label: '代码块', title: '代码块', group: 2 },
+  { kind: 'ul', label: '无序列表', title: '无序列表', group: 2 },
+  { kind: 'ol', label: '有序列表', title: '有序列表', group: 2 },
+  { kind: 'link', label: '链接', title: '插入链接（Ctrl/Cmd+K）', group: 3 },
+  { kind: 'image', label: '图片', title: '插入图片（选择本地图片，存入共享博客图库）', group: 3 },
+  { kind: 'table', label: '表格', title: '插入表格', group: 3 },
+  { kind: 'hr', label: '分割线', title: '插入分割线', group: 3 }
+]
+
+const toolbarGroups = computed(() => {
+  const map = new Map<number, MdToolbarButton[]>()
+  for (const b of MD_TOOLBAR) {
+    if (!map.has(b.group)) map.set(b.group, [])
+    map.get(b.group)!.push(b)
+  }
+  return [...map.entries()].sort((a, b) => a[0] - b[0]).map(([group, items]) => ({ group, items }))
+})
+
+/** 在光标/选区处应用某种 Markdown 变换，并恢复光标（图片走文件选择，不在此处理） */
+async function applyMd(kind: MdBlockKind): Promise<void> {
+  const ta = contentEl.value
+  if (!ta) return
+  const start = ta.selectionStart
+  const end = ta.selectionEnd
+  const res = applyMarkdown(kind, draft.value, start, end)
+  draft.value = res.value
+  await nextTick()
+  ta.focus()
+  ta.setSelectionRange(res.selStart, res.selEnd)
+}
+
+function onToolbarClick(b: MdToolbarButton): void {
+  if (b.kind === 'image') {
+    fileInput.value?.click()
+    return
+  }
+  if (b.kind === 'library') {
+    libraryOpen.value = true
+    return
+  }
+  void applyMd(b.kind)
+}
+
+/** 正文快捷键：Ctrl/Cmd+B 加粗、+I 斜体、+K 链接 */
+function onContentKeydown(e: KeyboardEvent): void {
+  if (!(e.ctrlKey || e.metaKey)) return
+  const key = e.key.toLowerCase()
+  if (key === 'b') {
+    e.preventDefault()
+    void applyMd('bold')
+  } else if (key === 'i') {
+    e.preventDefault()
+    void applyMd('italic')
+  } else if (key === 'k') {
+    e.preventDefault()
+    void applyMd('link')
+  }
+}
+
+/** FileReader → base64 data URL（Promise 化，便于多文件串行插入） */
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(file)
+  })
+}
+
+/**
+ * 选中本地图片后：逐个读为 base64 → 白名单校验 → 存入共享博客图库 → 光标处插入短引用 `![名称](img:<id>)`。
+ * 日记正文复用博客图片库，避免重复存储、且多设备同步只走一份图库。
+ */
+async function onPickImages(e: Event): Promise<void> {
+  const input = e.target as HTMLInputElement
+  const files = Array.from(input.files ?? [])
+  input.value = '' // 复位，便于重复选择同一文件
+  if (files.length === 0) return
+  const ta = contentEl.value
+  let pos = ta ? ta.selectionStart : draft.value.length
+  let value = draft.value
+  let rejected = 0
+  for (const file of files) {
+    let dataUrl: string
+    try {
+      dataUrl = await readFileAsDataUrl(file)
+    } catch {
+      rejected += 1
+      continue
+    }
+    if (!isAllowedDataImage(dataUrl)) {
+      rejected += 1
+      continue
+    }
+    const name = file.name.replace(/\.[^.]+$/, '') || '图片'
+    const saved = await blogStore.addImage(name, dataUrl)
+    const res = applyMarkdown('image', value, pos, pos, { alt: name, url: imageRef(saved.id) })
+    value = res.value
+    pos = res.selEnd
+  }
+  if (value === draft.value) {
+    if (rejected) toast.warning(`已跳过 ${rejected} 个不支持的图片（仅支持位图，svg 被禁止）`)
+    return
+  }
+  draft.value = value
+  await nextTick()
+  if (ta) {
+    ta.focus()
+    ta.setSelectionRange(pos, pos)
+  }
+  if (rejected) {
+    toast.warning(`已插入图片，${rejected} 个不支持的格式被跳过（仅支持位图）`)
+  }
+}
+
+// ===== 文中图片（缩略图条）=====
+
+/** 正文引用的图片（按出现顺序）；库中已无该图时标记 missing */
+const articleImages = computed(() =>
+  parseImageRefs(draft.value).map(id => {
+    const img = blogStore.images.find(i => i.id === id)
+    return { id, name: img?.name || '图片', dataUrl: img?.dataUrl || '', missing: !img }
+  })
+)
+
+/** 点击缩略图：把正文里对应的短引用选中（便于定位） */
+function locateImageRef(id: string): void {
+  const ta = contentEl.value
+  if (!ta) return
+  const needle = imageRef(id)
+  const idx = draft.value.indexOf(needle)
+  if (idx < 0) return
+  ta.focus()
+  ta.setSelectionRange(idx, idx + needle.length)
+}
+
+/** 移除图片：先清正文引用并保存，再由共享图库决定是否回收（被其它文章引用则保留） */
+async function removeImageRef(id: string): Promise<void> {
+  const name = articleImages.value.find(i => i.id === id)?.name ?? '这张图片'
+  if (!await showConfirm(`从正文移除「${name}」？`, '移除')) return
+  draft.value = removeImageRefs(draft.value, id)
+  await handleSave()
+  await blogStore.removeImage(id)
+}
+
+/** 从共享博客图库插入：在光标处依次插入短引用（图片本体仍只在图库存一份） */
+async function insertFromLibrary(images: BlogImage[]): Promise<void> {
+  if (images.length === 0) return
+  const ta = contentEl.value
+  let pos = ta ? ta.selectionStart : draft.value.length
+  let value = draft.value
+  for (const img of images) {
+    const res = applyMarkdown('image', value, pos, pos, { alt: img.name || '图片', url: imageRef(img.id) })
+    value = res.value
+    pos = res.selEnd
+  }
+  draft.value = value
+  await nextTick()
+  if (ta) {
+    ta.focus()
+    ta.setSelectionRange(pos, pos)
+  }
+}
+
+// ===== 预览（正文图片是 img:<id> 短引用，渲染前用共享图库还原为 data URL）=====
+const renderedPreview = computed(() =>
+  renderMarkdown(resolveImageRefs(draft.value, id => blogStore.imageUrlById.get(id)))
+)
 
 </script>
 
@@ -230,28 +434,92 @@ watch(showDeleted, () => { currentPage.value = 1 })
       </div>
     </div>
 
-    <!-- 主区：编辑器列 + 历史列（响应式由下方媒体查询接管） -->
+    <!-- 主区：编辑器（三模式 + Markdown 工具栏 + 文中图片条） -->
     <div class="dj-main">
       <div class="dj-editor">
-        <el-input
-          v-if="!previewMode"
-          v-model="draft"
-          type="textarea"
-          class="dj-content-input"
-          data-testid="dj-content-input"
-          placeholder="写下今天的心情…"
-          resize="vertical"
+        <!-- 视图切换：编辑 / 分屏 / 预览 -->
+        <div class="dj-view-switch" role="group" aria-label="编辑器视图">
+          <button
+            v-for="m in (['edit', 'split', 'preview'] as const)"
+            :key="m"
+            type="button"
+            class="dj-view-btn"
+            :class="{ active: viewMode === m }"
+            :data-testid="`dj-view-${m}`"
+            @click="viewMode = m"
+          >{{ m === 'edit' ? '编辑' : m === 'split' ? '分屏' : '预览' }}</button>
+        </div>
+
+        <!-- Markdown 工具栏（非预览视图显示；图片按钮另走文件选择） -->
+        <div v-if="viewMode !== 'preview'" class="dj-md-toolbar" role="toolbar" aria-label="Markdown 编辑工具栏">
+          <template v-for="grp in toolbarGroups" :key="grp.group">
+            <span class="dj-md-sep" aria-hidden="true"></span>
+            <div class="dj-md-group">
+              <button
+                v-for="b in grp.items"
+                :key="b.kind"
+                type="button"
+                class="dj-md-btn"
+                :title="b.title"
+                :aria-label="b.title"
+                :data-testid="`dj-md-${b.kind}`"
+                @click="onToolbarClick(b)"
+              >{{ b.label }}</button>
+            </div>
+          </template>
+        </div>
+
+        <!-- 文中图片缩略图条：正文用 img:<id> 短引用，这里把图片以缩略图显示出来 -->
+        <div v-if="viewMode !== 'preview' && articleImages.length" class="dj-img-bar" data-testid="dj-image-bar">
+          <span class="dj-img-bar-title">文中图片</span>
+          <ul class="dj-img-list">
+            <li v-for="img in articleImages" :key="img.id" class="dj-img-item">
+              <button
+                type="button"
+                class="dj-img-thumb"
+                :title="img.missing ? '图片缺失（可能未同步到本机）' : `定位：${img.name}`"
+                :data-testid="`dj-image-${img.id}`"
+                @click="locateImageRef(img.id)"
+              >
+                <img v-if="!img.missing" :src="img.dataUrl" :alt="img.name" />
+                <span v-else class="dj-img-missing">缺失</span>
+              </button>
+              <div class="dj-img-meta">
+                <span class="dj-img-name" :title="img.name">{{ img.name }}</span>
+                <button type="button" class="dj-img-remove" title="从正文移除该图片" @click="removeImageRef(img.id)">移除</button>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- 编辑 / 分屏 / 预览 三态 -->
+        <div class="dj-editor-wrap" :class="`is-${viewMode}`">
+          <textarea
+            v-if="viewMode !== 'preview'"
+            ref="contentEl"
+            v-model="draft"
+            class="dj-md"
+            placeholder="写下今天的心情…"
+            aria-label="日记正文"
+            spellcheck="false"
+            data-testid="dj-content-input"
+            @keydown="onContentKeydown"
+          ></textarea>
+          <!-- v-html 内容来自 markdown-it（html:false，仅白名单图片 data URL），不含可执行脚本 -->
+          <div v-if="viewMode !== 'edit'" class="dj-preview md-body" data-testid="dj-preview" v-html="renderedPreview"></div>
+        </div>
+
+        <!-- 隐藏的图片选择框：由工具栏「图片」按钮触发，选择后转 base64 内联插入共享图库 -->
+        <input
+          ref="fileInput"
+          type="file"
+          accept="image/*"
+          multiple
+          class="dj-file-hidden"
+          data-testid="dj-image-input"
+          @change="onPickImages"
         />
-        <div
-          v-if="previewMode"
-          class="dj-preview"
-          data-testid="dj-preview"
-          v-html="renderMarkdown(draft)"
-        ></div>
       </div>
-
-            <!-- 日记分类管理弹框 -->
-
     </div>
   </div>
     <!-- 日记记录列表（表格 + 每页 10 条分页） -->
@@ -325,6 +593,14 @@ watch(showDeleted, () => { currentPage.value = 1 })
       </div>
     </div>
 
+    <!-- 共享博客图库选择器（日记正文插图，复用博客图片库） -->
+    <BlogImagePicker
+      v-if="libraryOpen"
+      multiple
+      title="从图库插入图片"
+      @select="insertFromLibrary"
+      @close="libraryOpen = false"
+    />
 </template>
 <style scoped>
 /* 面板容器（与 WorkbenchNotes .wb-notes 同构） */
@@ -399,29 +675,44 @@ watch(showDeleted, () => { currentPage.value = 1 })
   min-height: 0;
 }
 
-/* 写作「纸面」 */
-.dj-content-input {
-  min-height: 260px;
-  resize: vertical;
-  line-height: 1.7;
-  border-radius: var(--radius-md, 8px);
+/* ===== 编辑器三态容器 ===== */
+.dj-editor-wrap {
+  display: flex;
+  gap: 10px;
+  min-height: 360px;
 }
 
-.dj-content-input :deep(.el-textarea__inner) {
-  min-height: 260px !important;
+.dj-editor-wrap.is-split {
+  flex-direction: row;
+}
+
+.dj-editor-wrap.is-edit,
+.dj-editor-wrap.is-preview {
+  flex-direction: column;
+}
+
+/* 写作「纸面」：原生 textarea，便于读取选区 / 恢复光标 */
+.dj-md {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 360px;
+  padding: 14px 16px;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #fff);
-  padding: 14px 16px;
-  font-size: 15px;
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.06));
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 14px;
   line-height: 1.7;
   color: var(--color-text, #1e293b);
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.06));
+  resize: vertical;
+  box-sizing: border-box;
 }
 
 .dj-preview {
-  min-height: 260px;
-  max-height: 480px;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 360px;
   overflow-y: auto;
   padding: 16px 18px;
   font-size: 15px;
@@ -440,6 +731,184 @@ watch(showDeleted, () => { currentPage.value = 1 })
 
 .dj-preview > :last-child {
   margin-bottom: 0;
+}
+
+/* ===== 视图切换（编辑 / 分屏 / 预览） ===== */
+.dj-view-switch {
+  display: flex;
+  align-self: flex-start;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.dj-view-btn {
+  padding: 4px 14px;
+  border: none;
+  background-color: var(--color-bg-card, #fff);
+  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-xs, 12px);
+  cursor: pointer;
+}
+
+.dj-view-btn.active {
+  background-color: var(--color-primary-soft, #eff6ff);
+  color: var(--color-primary, #3b82f6);
+}
+
+/* ===== Markdown 工具栏 ===== */
+.dj-md-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  background-color: var(--color-bg-card, #fff);
+}
+
+.dj-md-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.dj-md-sep {
+  align-self: stretch;
+  width: 1px;
+  margin: 2px 2px;
+  background-color: var(--color-border, #e2e8f0);
+}
+
+.dj-md-btn {
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm, 6px);
+  background-color: transparent;
+  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-xs, 12px);
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dj-md-btn:hover {
+  background-color: var(--color-bg-2, #f1f5f9);
+  color: var(--color-text, #1e293b);
+}
+
+.dj-md-btn:active {
+  background-color: var(--color-primary-soft, #eff6ff);
+  color: var(--color-primary, #3b82f6);
+}
+
+/* 隐藏的图片文件选择框：不应占据任何布局空间 */
+.dj-file-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+/* ===== 文中图片缩略图条 ===== */
+.dj-img-bar {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  background-color: var(--color-bg-card, #fff);
+}
+
+.dj-img-bar-title {
+  flex: 0 0 auto;
+  padding-top: 4px;
+  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-xs, 12px);
+}
+
+.dj-img-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dj-img-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 96px;
+}
+
+.dj-img-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 64px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm, 6px);
+  background-color: var(--color-bg-2, #f1f5f9);
+  cursor: pointer;
+}
+
+.dj-img-thumb:hover {
+  border-color: var(--color-primary, #3b82f6);
+}
+
+.dj-img-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dj-img-missing {
+  color: var(--color-text-muted, #94a3b8);
+  font-size: var(--font-size-xs, 12px);
+}
+
+.dj-img-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.dj-img-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-xs, 11px);
+}
+
+.dj-img-remove {
+  flex: 0 0 auto;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: var(--color-text-muted, #94a3b8);
+  font-size: var(--font-size-xs, 11px);
+  cursor: pointer;
+}
+
+.dj-img-remove:hover {
+  color: var(--color-error, #ef4444);
 }
 
 /* ===== 历史区 ===== */
@@ -833,18 +1302,13 @@ watch(showDeleted, () => { currentPage.value = 1 })
 
   /* 页面级滚动后面板不再钉满一屏：原 height:100% 依赖父链撑满已失效，
      改为显式最小高度，保证编辑/预览区体感稳定（内容超出随页面滚动） */
-  .dj-main .dj-content-input,
+  .dj-main .dj-md,
   .dj-main .dj-preview {
     min-height: 420px;
   }
 
   .dj-main .dj-preview {
     max-height: none;
-  }
-
-  .dj-main .dj-content-input :deep(.el-textarea__inner) {
-    height: 100%;
-    min-height: 420px !important;
   }
 }
 
@@ -872,18 +1336,13 @@ watch(showDeleted, () => { currentPage.value = 1 })
 
   /* 页面级滚动后面板不再钉满一屏：原 height:100% 依赖父链撑满已失效，
      改为显式最小高度，保证编辑/预览区体感稳定（内容超出随页面滚动） */
-  .dj-main .dj-content-input,
+  .dj-main .dj-md,
   .dj-main .dj-preview {
     min-height: 420px;
   }
 
   .dj-main .dj-preview {
     max-height: none;
-  }
-
-  .dj-main .dj-content-input :deep(.el-textarea__inner) {
-    height: 100%;
-    min-height: 420px !important;
   }
 }
 
