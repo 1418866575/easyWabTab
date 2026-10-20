@@ -53,6 +53,11 @@ interface Entry {
    * 博客前台需要排除 /blog/admin（那属博客后台），故显式给出。
    */
   isCurrentPath?: (p: string) => boolean
+  /**
+   * 是否在新浏览器标签打开（而非站内路由跳转）。
+   * 博客前台（阅读器）为 true：作为独立阅读面，点击直接开新标签，保留原上下文。
+   */
+  openInNewTab?: boolean
 }
 
 // 顺序与旧面板一致：导航站 → 教师台 → 个人工作台 → 销售记账 → 学生台 → 工具箱 → 智能工作台 → 博客后台 → 博客前台。
@@ -145,6 +150,7 @@ const allEntries = computed<Entry[]>(() => [
     builtin: 'document',
     kw: '博客前台 blog 阅读 文章',
     visible: store.blogFrontPageVisible !== false,
+    openInNewTab: true,
     // /blog 与 /blog/article/* 算前台；/blog/admin 归后台条目，不能重复标「当前」
     isCurrentPath: (p) => p === '/blog' || (p.startsWith('/blog/') && !p.startsWith('/blog/admin'))
   },
@@ -231,11 +237,26 @@ function togglePalette(): void {
   else void openPalette()
 }
 
+function openExternal(path: string): void {
+  const url = path.startsWith('/') ? `${window.location.origin}${path}` : path
+  const a = document.createElement('a')
+  a.href = url
+  a.target = '_blank'
+  a.rel = 'noopener noreferrer'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+}
+
 function go(entry: Entry): void {
   open.value = false
   query.value = ''
-  // 已在目标页时不再跳转（旧版直接隐藏该项，这里保留可见 + 徽章，点了也无副作用）
-  if (entry.path !== route.path) void router.push(entry.path)
+  if (entry.openInNewTab) {
+    openExternal(entry.path)
+  } else if (entry.path !== route.path) {
+    // 已在目标页时不再跳转（旧版直接隐藏该项，这里保留可见 + 徽章，点了也无副作用）
+    void router.push(entry.path)
+  }
   triggerRef.value?.focus()
 }
 
@@ -398,6 +419,7 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
                   <Icon v-else :name="entry.builtin" :size="20" class="ws-item-svg" />
                 </span>
                 <span class="ws-item-name">{{ entry.name }}</span>
+                <span v-if="entry.openInNewTab" class="ws-item-newtab" title="在新标签打开">↗</span>
                 <span v-if="isCurrent(entry)" class="ws-item-cur">当前</span>
                 <span class="ws-item-kbd">Alt+{{ altIndexOf(entry) }}</span>
               </button>
@@ -589,6 +611,11 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
 .ws-item-kbd {
   flex: none;
   font-size: 11px;
+  color: var(--color-text-secondary, #94a3b8);
+}
+.ws-item-newtab {
+  flex: none;
+  font-size: 13px;
   color: var(--color-text-secondary, #94a3b8);
 }
 .ws-empty {
