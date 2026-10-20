@@ -315,6 +315,14 @@ function excerpt(p: SmartPrompt): string {
         <div class="pm-card-foot">
           <span v-for="t in p.tags" :key="t" class="pm-chip">#{{ t }}</span>
           <span v-if="p.variables.length" class="pm-vars">{{ p.variables.length }} 个变量</span>
+          <span v-if="p.images && p.images.length" class="pm-vars">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <circle cx="9" cy="9" r="2" />
+              <path d="M21 15l-5-5L5 21" />
+            </svg>
+            {{ p.images.length }} 张图
+          </span>
         </div>
 
         <footer class="pm-actions">
@@ -545,7 +553,8 @@ function excerpt(p: SmartPrompt): string {
 }
 .pm-card-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 12px; }
 .pm-chip { color: var(--color-primary, #3b82f6); }
-.pm-vars { color: var(--color-text-muted, #9ca3af); }
+.pm-vars { color: var(--color-text-muted, #9ca3af); display: inline-flex; align-items: center; gap: 3px; }
+.pm-vars svg { flex: none; }
 
 .pm-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: auto; }
 .pm-spacer { flex: 1 1 auto; }

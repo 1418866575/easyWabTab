@@ -9,7 +9,7 @@ import BaseDialog from '@/components/common/BaseDialog.vue'
 import { fillTemplate, parseVariables } from '@/composables/smartCore'
 import { copyText } from '@/utils/download'
 import { showConfirm } from '@/utils/dialog'
-import type { SmartPrompt } from '@/types'
+import type { SmartPrompt, SmartPromptImage } from '@/types'
 
 const props = defineProps<{ prompt: SmartPrompt }>()
 const emit = defineEmits<{ close: []; used: [] }>()
@@ -17,6 +17,12 @@ const emit = defineEmits<{ close: []; used: [] }>()
 const values = ref<Record<string, string>>({})
 
 const vars = computed(() => parseVariables(props.prompt.content))
+
+const images = computed<SmartPromptImage[]>(() => (Array.isArray(props.prompt.images) ? props.prompt.images : []))
+
+function openImage(u: string): void {
+  window.open(u, '_blank')
+}
 
 watch(
   () => props.prompt.id,
@@ -73,6 +79,21 @@ function clearAll(): void {
 <template>
   <BaseDialog :title="`使用：${prompt.title}`" width="860px" @close="emit('close')">
     <div class="pu-body">
+      <div v-if="images.length" class="pu-images">
+        <h4 class="pu-title">参考图片（{{ images.length }}）</h4>
+        <div class="pu-img-grid">
+          <button
+            v-for="img in images"
+            :key="img.id"
+            type="button"
+            class="pu-img"
+            :aria-label="`查看 ${img.name}`"
+            @click="openImage(img.dataUrl)"
+          >
+            <img :src="img.dataUrl" :alt="img.name" />
+          </button>
+        </div>
+      </div>
       <!-- 无变量：直接给原文，不摆无意义的表单 -->
       <div v-if="vars.length === 0" class="pu-plain">
         <p class="pu-tip">这条提示词没有变量，可直接复制使用。</p>
@@ -159,6 +180,21 @@ function clearAll(): void {
 }
 .pu-tip { margin: 0; font-size: 12px; color: var(--color-text-secondary, #6b7280); }
 .pu-plain { display: flex; flex-direction: column; gap: 8px; }
+
+.pu-images { display: flex; flex-direction: column; gap: 8px; }
+.pu-img-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+.pu-img {
+  width: 110px;
+  height: 110px;
+  padding: 0;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: var(--radius-md, 8px);
+  overflow: hidden;
+  background: var(--color-bg-hover, #f3f4f6);
+  cursor: pointer;
+}
+.pu-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pu-img:hover { border-color: var(--color-primary, #3b82f6); }
 
 .pu-spacer { flex: 1 1 auto; }
 

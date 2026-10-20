@@ -13,6 +13,7 @@ import {
   planImport,
   applyImport,
   SMART_PROMPT_KIND,
+  SMART_PROMPT_IMAGES_MAX,
   SMART_WORKFLOW_KIND,
   UNCATEGORIZED,
   UNCATEGORIZED as UNCATEGORIZED_SKILL
@@ -566,6 +567,10 @@ export const useSmartStore = defineStore('smart', () => {
       content,
       // 变量恒由正文推导，保证与正文一致
       variables: parseVariables(content),
+      // 参考图：透传已压缩的 dataURL 列表（按上限截断）
+      images: Array.isArray(input.images)
+        ? input.images.slice(0, SMART_PROMPT_IMAGES_MAX).map(img => ({ ...img }))
+        : [],
       isFavorite: input.isFavorite === true,
       usageCount: 0,
       lastUsedAt: null,
@@ -588,6 +593,13 @@ export const useSmartStore = defineStore('smart', () => {
       ...(input.category !== undefined ? { category: input.category.trim() || '未分类' } : {}),
       ...(input.tags !== undefined ? { tags: [...input.tags] } : {}),
       ...(input.model !== undefined ? { model: input.model.trim() } : {}),
+      ...(input.images !== undefined
+        ? {
+            images: Array.isArray(input.images)
+              ? input.images.slice(0, SMART_PROMPT_IMAGES_MAX).map(img => ({ ...img }))
+              : []
+          }
+        : {}),
       ...(input.isFavorite !== undefined ? { isFavorite: input.isFavorite } : {}),
       content,
       variables: parseVariables(content),

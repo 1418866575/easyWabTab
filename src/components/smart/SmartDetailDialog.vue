@@ -7,7 +7,7 @@
 import { computed } from 'vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import { parseVariables } from '@/composables/smartCore'
-import type { SmartPrompt } from '@/types'
+import type { SmartPrompt, SmartPromptImage } from '@/types'
 
 const props = defineProps<{ item: SmartPrompt }>()
 const emit = defineEmits<{ close: [] }>()
@@ -20,6 +20,12 @@ const promptHtml = computed(() => {
 })
 
 const vars = computed(() => parseVariables(props.item.content))
+
+const images = computed<SmartPromptImage[]>(() => (Array.isArray(props.item.images) ? props.item.images : []))
+
+function openImage(u: string): void {
+  window.open(u, '_blank')
+}
 
 /** 占位展示文本在脚本里拼：模板中直接写 `{{ ... }}` 字面量会被解析器吃掉（见 SmartEditorDialog 同款说明） */
 function varLabel(name: string): string {
@@ -38,6 +44,22 @@ const title = computed(() => props.item.title)
       </div>
 
       <div class="sd-content is-plain" v-html="promptHtml" />
+
+      <div v-if="images.length" class="sd-images">
+        <p class="sd-subtitle">参考图片（{{ images.length }}）</p>
+        <div class="sd-img-grid">
+          <button
+            v-for="img in images"
+            :key="img.id"
+            type="button"
+            class="sd-img"
+            :aria-label="`查看 ${img.name}`"
+            @click="openImage(img.dataUrl)"
+          >
+            <img :src="img.dataUrl" :alt="img.name" />
+          </button>
+        </div>
+      </div>
 
       <p v-if="vars.length" class="sd-vars">
         变量（{{ vars.length }}）：
@@ -63,6 +85,20 @@ const title = computed(() => props.item.title)
   font-size: 12px;
 }
 .sd-chip.is-tag { color: var(--color-primary, #3b82f6); }
+.sd-subtitle { margin: 0 0 6px; font-size: 13px; font-weight: 600; color: var(--color-text, #111827); }
+.sd-img-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+.sd-img {
+  width: 110px;
+  height: 110px;
+  padding: 0;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: var(--radius-md, 8px);
+  overflow: hidden;
+  background: var(--color-bg-hover, #f3f4f6);
+  cursor: pointer;
+}
+.sd-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sd-img:hover { border-color: var(--color-primary, #3b82f6); }
 .sd-desc { font-size: 13px; color: var(--color-text-secondary, #6b7280); }
 
 .sd-content {

@@ -36,6 +36,12 @@ function getMemoryLimitBytes() {
   } catch {
     memAvailable = Infinity;
   }
+  // 非 Linux（如 Windows）没有 /proc/meminfo：用「当前空闲内存」兜底。
+  // 否则会退回总物理内存（8GB），让低内存守卫误判为「内存充足」而不限制线程，
+  // 在空闲内存偏低时（浏览器 + IDE 同开）仍会触发 rolldown 原生 OOM。
+  if (!Number.isFinite(memAvailable) || memAvailable <= 0) {
+    memAvailable = os.freemem();
+  }
   // ② cgroup v2 / v1 限额（容器场景下比物理内存更严）
   const readNumber = (p) => {
     try {

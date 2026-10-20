@@ -10,6 +10,7 @@ import type {
   SmartEnvelope,
   SmartImportPreview,
   SmartPrompt,
+  SmartPromptImage,
   SmartPromptVariable,
   SmartSkill,
   SmartSkillResource,
@@ -32,6 +33,8 @@ export const SMART_TAG_MAX = 16
 export const SMART_TAGS_MAX = 8
 /** 单条资源体积上限（与 skillPackageCore 保持一致，供界面提示复用） */
 export const SMART_RESOURCE_FILE_MAX = 1024 * 1024
+/** 单条提示词附属参考图上限（每张已压缩到 ~300KB JPEG，9 张约 2.7MB，避免信封过大） */
+export const SMART_PROMPT_IMAGES_MAX = 9
 export const UNCATEGORIZED = '未分类'
 /** 分类筛选的「全部」哨兵值（分类名不可能等于它） */
 export const UNCATEGORIZED_ALL = '__all__'
@@ -75,8 +78,8 @@ export const VAR_PATTERN = /\{\{\s*([A-Za-z0-9_\u4e00-\u9fa5]{1,32})\s*\}\}/g
 
 // ==================== 通用小工具 ====================
 
-/** 生成 id：`sk_`/`pm_`/`wf_` + 时间戳 + 随机后缀，避免同毫秒批量创建撞号 */
-export function makeSmartId(prefix: 'sk' | 'pm' | 'wf'): string {
+/** 生成 id：`sk_`/`pm_`/`wf_`/`img_` + 时间戳 + 随机后缀，避免同毫秒批量创建撞号 */
+export function makeSmartId(prefix: 'sk' | 'pm' | 'wf' | 'img'): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }
 
@@ -197,6 +200,27 @@ export function normalizeSkills(input: unknown): SmartSkill[] {
 
 // ==================== 提示词归一化 ====================
 
+/** 归一化参考图数组：仅保留合法 dataURL，非法/超限项剔除（不改入参） */
+export function normalizePromptImages(input: unknown): SmartPromptImage[] {
+  if (!Array.isArray(input)) return []
+  const out: SmartPromptImage[] = []
+  for (const raw of input) {
+    if (!raw || typeof raw !== 'object') continue
+    const o = raw as Record<string, unknown>
+    const dataUrl = typeof o.dataUrl === 'string' && /^data:image\//i.test(o.dataUrl) ? o.dataUrl : ''
+    if (!dataUrl) continue
+    out.push({
+      id: typeof o.id === 'string' && o.id ? o.id : makeSmartId('img'),
+      name: typeof o.name === 'string' ? o.name.slice(0, 120) : '图片',
+      dataUrl,
+      width: toInt(o.width, 0),
+      height: toInt(o.height, 0)
+    })
+    if (out.length >= SMART_PROMPT_IMAGES_MAX) break
+  }
+  return out
+}
+
 /** 归一化单条提示词；非法返回 null */
 export function normalizePrompt(raw: unknown): SmartPrompt | null {
   if (!raw || typeof raw !== 'object') return null
@@ -215,6 +239,7 @@ export function normalizePrompt(raw: unknown): SmartPrompt | null {
     content: truncateText(content, SMART_CONTENT_MAX),
     // 变量恒由正文推导，避免与正文不一致（存量 variables 仅作元信息合并来源）
     variables: mergeVariables(parseVariables(content), o.variables),
+    images: normalizePromptImages(o.images),
     isFavorite: o.isFavorite === true,
     usageCount: Math.max(0, toInt(o.usageCount, 0)),
     lastUsedAt: typeof o.lastUsedAt === 'number' && Number.isFinite(o.lastUsedAt) ? o.lastUsedAt : null,

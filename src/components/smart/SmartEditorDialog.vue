@@ -6,10 +6,11 @@
  */
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
-import { isNameTaken, normalizeTags, parseVariables, validatePrompt } from '@/composables/smartCore'
+import { isNameTaken, makeSmartId, normalizeTags, parseVariables, SMART_PROMPT_IMAGES_MAX, validatePrompt } from '@/composables/smartCore'
 import { useSmartStore } from '@/stores/smart'
 import { useToast } from '@/composables/useToast'
-import type { SmartPrompt } from '@/types'
+import { compressImageFile } from '@/utils/imageCompress'
+import type { SmartPrompt, SmartPromptImage } from '@/types'
 
 const props = defineProps<{
   model: Partial<SmartPrompt>
@@ -46,10 +47,56 @@ watch(
   () => props.model,
   m => {
     draft.value = { ...m }
+    // 参考图：编辑时带入，新增时回落空数组（避免沿用上一次的草稿）
+    draft.value.images = Array.isArray(m.images) ? (m.images as SmartPromptImage[]).map(i => ({ ...i })) : []
     tagsInput.value = Array.isArray(m.tags) ? m.tags.join('、') : ''
   },
   { immediate: true }
 )
+
+/** 参考图：与草稿双向绑定的计算属性（数组整体替换以触发响应） */
+const images = computed<SmartPromptImage[]>({
+  get: () => (Array.isArray(draft.value.images) ? (draft.value.images as SmartPromptImage[]) : []),
+  set: v => {
+    draft.value = { ...draft.value, images: v }
+  }
+})
+
+const fileInput = ref<HTMLInputElement | null>(null)
+
+function pickImages(): void {
+  fileInput.value?.click()
+}
+
+/** 选图 → 压缩成 JPEG dataURL → 入草稿；非图片/超限忽略并提示 */
+async function onPickImages(e: Event): Promise<void> {
+  const input = e.target as HTMLInputElement
+  const files = input.files ? Array.from(input.files).filter(f => f.type.startsWith('image/')) : []
+  input.value = '' // 允许重复选同一文件
+  if (!files.length) return
+  const room = SMART_PROMPT_IMAGES_MAX - images.value.length
+  if (room <= 0) {
+    toast.warning(`最多 ${SMART_PROMPT_IMAGES_MAX} 张参考图`)
+    return
+  }
+  const toProcess = files.slice(0, room)
+  if (files.length !== toProcess.length) toast.warning(`已忽略非图片文件或超出 ${SMART_PROMPT_IMAGES_MAX} 张上限`)
+  let added = 0
+  for (const f of toProcess) {
+    try {
+      const c = await compressImageFile(f)
+      images.value = [...images.value, { id: makeSmartId('img'), name: f.name || '图片', dataUrl: c.dataUrl, width: c.width, height: c.height }]
+      added++
+    } catch {
+      toast.error(`图片「${f.name}」处理失败`)
+    }
+  }
+  if (added) toast.success(`已添加 ${added} 张参考图`)
+}
+
+function removeImage(id: string): void {
+  images.value = images.value.filter(x => x.id !== id)
+}
 
 /** 提交后才展示行内错误，避免刚打开就飘红 */
 const submitAttempted = ref(false)
@@ -156,6 +203,33 @@ const nameTaken = computed(() => {
         <span v-if="errorOf('content')" class="se-error">{{ errorOf('content') }}</span>
       </label>
 
+      <div class="se-field se-images">
+        <span class="se-label">
+          参考图片
+          <span class="se-hint">（可选，最多 {{ SMART_PROMPT_IMAGES_MAX }} 张，自动压缩）</span>
+        </span>
+        <div class="se-img-grid">
+          <div v-for="img in images" :key="img.id" class="se-img-thumb">
+            <img :src="img.dataUrl" :alt="img.name" />
+            <button
+              type="button"
+              class="se-img-del"
+              :aria-label="`删除 ${img.name}`"
+              data-testid="smart-editor-img-del"
+              @click="removeImage(img.id)"
+            >✕</button>
+          </div>
+          <button
+            v-if="images.length < SMART_PROMPT_IMAGES_MAX"
+            type="button"
+            class="se-img-add"
+            data-testid="smart-editor-img-add"
+            @click="pickImages"
+          >＋ 上传图片</button>
+        </div>
+        <input ref="fileInput" type="file" accept="image/*" multiple hidden data-testid="smart-editor-img-input" @change="onPickImages" />
+      </div>
+
       <div v-if="detectedVars.length" class="se-vars">
         识别到 {{ detectedVars.length }} 个变量：
         <code v-for="v in detectedVars" :key="v.name" class="se-var">{{ varLabel(v.name) }}</code>
@@ -208,6 +282,46 @@ const nameTaken = computed(() => {
   font-size: 12px;
 }
 .se-check { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--color-text, #111827); }
+
+.se-images { gap: 6px; }
+.se-img-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+.se-img-thumb {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: var(--radius-md, 8px);
+  overflow: hidden;
+  background: var(--color-bg-hover, #f3f4f6);
+}
+.se-img-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.se-img-del {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+.se-img-del:hover { background: var(--color-error, #dc2626); }
+.se-img-add {
+  width: 96px;
+  height: 96px;
+  border: 1px dashed var(--color-border, #e5e7eb);
+  border-radius: var(--radius-md, 8px);
+  background: transparent;
+  color: var(--color-text-muted, #9ca3af);
+  font-size: 13px;
+  cursor: pointer;
+}
+.se-img-add:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
 
 @media (max-width: 768px) {
   .se-field-sm { flex: 1 1 100%; }

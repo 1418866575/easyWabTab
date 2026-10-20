@@ -1541,6 +1541,21 @@ export interface SmartPromptVariable {
 }
 
 /**
+ * 提示词附属参考图：用户上传后压缩成的 JPEG dataURL，随提示词 JSON 一起入库与云同步。
+ * 与正文分离（不内联进 {{变量}} 模板），作为使用时供参考的素材。
+ */
+export interface SmartPromptImage {
+  /** 图片 id（img_ 前缀） */
+  id: string
+  /** 原文件名（展示用） */
+  name: string
+  /** data:image/jpeg;base64,... */
+  dataUrl: string
+  width: number
+  height: number
+}
+
+/**
  * 技能附属资源（skill.md 同级目录下的脚本 / 模板 / 参考文档等）。
  * 文本类直接存字符串，二进制存 base64 —— 二者都能塞进统一偏好层的 JSON 信封。
  */
@@ -1598,6 +1613,8 @@ export interface SmartPrompt {
   model: string
   content: string
   variables: SmartPromptVariable[]
+  /** 附属参考图（压缩后的 dataURL），可为空 */
+  images?: SmartPromptImage[]
   isFavorite: boolean
   usageCount: number
   lastUsedAt: number | null
