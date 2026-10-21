@@ -84,6 +84,18 @@ export function useHomeStats() {
     overdue: todosStore.todos.filter(t => isOverdue(t)).length
   }))
 
+  /**
+   * 待办状态分布：今日 / 未完成 / 进行中 / 已完成 / 已归档。
+   * 直接消费 store 的 computed 计数 → 新增、状态变更、归档后自动实时刷新（无需额外事件）。
+   */
+  const todoStatusStats = computed(() => ({
+    today: todosStore.todayCount,
+    pending: todosStore.pendingCount,
+    inProgress: todosStore.inProgressCount,
+    completed: todosStore.completedCount,
+    archived: todosStore.archivedCount
+  }))
+
   const todoCompletionRate = computed(() => {
     const total = todoStats.value.total
     if (total === 0) return 0
@@ -239,6 +251,7 @@ export function useHomeStats() {
   return {
     menuOn,
     todoStats,
+    todoStatusStats,
     todoCompletionRate,
     noteStats,
     countdownStats,

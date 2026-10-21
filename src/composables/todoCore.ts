@@ -1,9 +1,30 @@
 // 工作台待办纯逻辑模块：normalizeTodo 归一化 → filterTodos 查询 → dueInfo 截止倒计时主角。
 // 运行时依赖仅 DEFAULT_TODO_COLOR / TODO_PRIORITIES（node --experimental-strip-types 可运行）；其余类型全部 type-only。
 import { DEFAULT_TODO_COLOR } from '../types/index.ts'
-import type { TodoPriority, WorkbenchTodo } from '../types'
+import type { TodoPriority, TodoStatus, WorkbenchTodo } from '../types'
 
 export const TODO_PRIORITIES: TodoPriority[] = ['high', 'medium', 'low']
+
+/** 待办工作流状态枚举（顺序即筛选下拉与统计口径的顺序）；「已归档」由 archived 布尔承载，不在此列。 */
+export const TODO_STATUSES: TodoStatus[] = ['pending', 'in_progress', 'completed']
+
+/** 状态展示文案（列表状态列 / 筛选下拉 / 首页统计共用，避免多处漂移）。 */
+export const TODO_STATUS_LABELS: Record<TodoStatus, string> = {
+  pending: '未完成',
+  in_progress: '进行中',
+  completed: '已完成'
+}
+
+/**
+ * 取待办的工作流状态：存量数据没有 status 字段时按 completed 推导（未完成 → pending）。
+ * 只读不改入参；涉及状态的判定统一走这里，保证新老数据口径一致。
+ */
+export function todoStatus(todo: Pick<WorkbenchTodo, 'status' | 'completed'>): TodoStatus {
+  if (todo.status === 'pending' || todo.status === 'in_progress' || todo.status === 'completed') {
+    return todo.status
+  }
+  return todo.completed ? 'completed' : 'pending'
+}
 
 /** 旧版内置分类名（存量迁移用）：work/life/study 已废弃，todos 与分类注册表均需清理。 */
 export const LEGACY_BUILTIN_TODO_CATEGORIES: readonly string[] = ['work', 'life', 'study']
@@ -42,13 +63,17 @@ export function normalizeTodo(raw: Partial<WorkbenchTodo>): WorkbenchTodo {
       ? (raw.priority as TodoPriority)
       : 'medium'
   const categoryId = typeof raw.categoryId === 'string' ? raw.categoryId.trim() : ''
+  // 状态为唯一真值源、completed 为镜像：无 status（存量数据）时按 completed 推导，反之由 status 回写
+  const status: TodoStatus = todoStatus({ status: raw.status, completed: raw.completed === true })
+  const completed = status === 'completed'
   return {
     id: typeof raw.id === 'string' && raw.id ? raw.id : genId(),
     title: typeof raw.title === 'string' ? raw.title : '',
     ...(typeof raw.description === 'string' ? { description: raw.description } : {}),
     priority,
     ...(typeof raw.dueDate === 'string' ? { dueDate: raw.dueDate } : {}),
-    completed: raw.completed === true,
+    completed,
+    status,
     createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : new Date().toISOString(),
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : new Date().toISOString(),
     color: typeof raw.color === 'string' && HEX_COLOR_RE.test(raw.color) ? raw.color : DEFAULT_TODO_COLOR,
@@ -57,7 +82,7 @@ export function normalizeTodo(raw: Partial<WorkbenchTodo>): WorkbenchTodo {
     ...(typeof raw.checkedInAt === 'string' ? { checkedInAt: raw.checkedInAt } : {}),
     ...(typeof raw.completedAt === 'string' ? { completedAt: raw.completedAt } : {}),
     // 归档只对已完成的条目有意义：未完成的一律不保留归档标记，避免脏数据把未完成项藏起来
-    ...(raw.archived === true && raw.completed === true ? { archived: true } : {})
+    ...(raw.archived === true && completed ? { archived: true } : {})
   }
 }
 
@@ -104,16 +129,24 @@ export function autoArchiveTodos<T extends WorkbenchTodo>(
  * 稳定排序（Array.prototype.sort 在现代引擎稳定），用于替换原先「数组顺序即展示顺序」。
  */
 export function sortTodosByStatus<T extends WorkbenchTodo>(items: T[]): T[] {
-  const rank = (t: WorkbenchTodo): number => (t.archived === true ? 2 : t.completed ? 1 : 0)
+  const statusRank: Record<TodoStatus, number> = { pending: 0, in_progress: 1, completed: 2 }
+  // 未完成 → 进行中 → 已完成 → 已归档；段内保持手工顺序
+  const rank = (t: WorkbenchTodo): number => (t.archived === true ? 3 : statusRank[todoStatus(t)])
   return [...items].sort((a, b) => rank(a) - rank(b))
 }
 
-/** 查询筛选条件：标题模糊匹配标题 / 描述模糊匹配描述 / 两者同时非空为 AND / priority 精确 / status 完成态；空串或 undefined 表示不限制。 */
+/**
+ * 状态筛选项：'' / 'all' = 不限；'active' = 未完成总览（未完成 + 进行中）；
+ * 'pending' / 'in_progress' / 'completed' = 精确工作流状态；'archived' = 已归档。
+ */
+export type TodoStatusFilter = '' | 'all' | 'active' | TodoStatus | 'archived'
+
+/** 查询筛选条件：标题模糊匹配标题 / 描述模糊匹配描述 / 两者同时非空为 AND / priority 精确 / status 状态；空串或 undefined 表示不限制。 */
 export interface TodoFilterCriteria {
   title?: string
   description?: string
   priority?: '' | TodoPriority
-  status?: '' | 'all' | 'active' | 'completed' | 'archived'
+  status?: TodoStatusFilter
   /** 分类筛选：undefined/'' = 全部不过滤；'uncategorized' 字面量 = 未分类；其他 = 分类名精确匹配。 */
   categoryId?: string
 }
@@ -129,9 +162,12 @@ export function filterTodos<T extends WorkbenchTodo>(items: T[], criteria: TodoF
     if (title && !todo.title.toLowerCase().includes(title)) return false
     if (description && !(todo.description ?? '').toLowerCase().includes(description)) return false
     if (priority !== undefined && todo.priority !== priority) return false
-    // 归档项独立成段：不出现在「未完成」「已完成」里，只在「已归档」筛选下可见
-    if (status === 'active' && (todo.completed || todo.archived === true)) return false
-    if (status === 'completed' && (!todo.completed || todo.archived === true)) return false
+    // 归档项独立成段：不出现在「未完成 / 进行中 / 已完成」里，只在「已归档」筛选下可见
+    if (status === 'active' && (todoStatus(todo) === 'completed' || todo.archived === true)) return false
+    if (status === 'completed' && (todoStatus(todo) !== 'completed' || todo.archived === true)) return false
+    if (status === 'pending' || status === 'in_progress') {
+      if (todo.archived === true || todoStatus(todo) !== status) return false
+    }
     if (status === 'archived' && todo.archived !== true) return false
     if (categoryId !== undefined) {
       if (categoryId === 'uncategorized') {
@@ -171,6 +207,26 @@ export function dueInfo(dueDate: string | undefined, completed: boolean, today?:
   if (days > 0) return { label: `剩余 ${days} 天`, status: 'normal' }
   if (days === 0) return { label: '今天到期', status: 'today' }
   return { label: `已逾期 ${-days} 天`, status: 'overdue' }
+}
+
+/**
+ * 「逾期天数」：未完成且已过截止日期的天数（≥1，UI 以红色展示）。
+ * 未逾期（含今天到期）/ 已完成 / 已归档 / 无截止日期 → null（UI 统一渲染「—」）。
+ * 与 dueInfo 的「已逾期 N 天」同源同算法（天差值取反），两处口径必然一致。
+ * 纯函数：today 可注入，便于测试固定「今天」。
+ */
+export function overdueDays(
+  todo: Pick<WorkbenchTodo, 'dueDate' | 'status' | 'completed' | 'archived'>,
+  today?: Date
+): number | null {
+  if (todo.archived === true) return null
+  if (todoStatus(todo) === 'completed') return null
+  if (!todo.dueDate) return null
+  const t = today ?? new Date()
+  const diffMs = new Date(todo.dueDate + 'T00:00:00').getTime() - new Date(localToday(t) + 'T00:00:00').getTime()
+  if (isNaN(diffMs)) return null
+  const days = Math.floor(diffMs / 86400000)
+  return days < 0 ? -days : null
 }
 
 /**

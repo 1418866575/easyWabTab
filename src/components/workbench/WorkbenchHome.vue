@@ -24,6 +24,7 @@ const toast = useToast()
 const {
   menuOn,
   todoStats,
+  todoStatusStats,
   todoCompletionRate,
   noteStats,
   countdownStats,
@@ -274,6 +275,39 @@ async function handleQuickNote(): Promise<void> {
                     </div>
                   </div>
                   <div class="stat-sub">{{ todoStats.active }} 未完成 · {{ todoStats.overdue }} 已逾期</div>
+                </div>
+              </HomeLayoutCard>
+
+              <!-- 待办统计区域：今日 / 待办 / 进行中 / 已完成 / 归档（消费 store computed，新增·状态变更·归档后实时刷新） -->
+              <HomeLayoutCard v-if="visibleStatCards.includes('todos')" card-id="todo-stats" :default-w="1">
+                <div class="bento-card bento-stat" data-testid="home-stats-todo-status" @click="navTo('todos')">
+                  <div class="stat-header">
+                    <span class="stat-icon"><Icon name="todos" :size="16" /></span>
+                    <span class="stat-label">待办统计</span>
+                    <button class="nav-btn" data-testid="home-nav-todo-stats" @click.stop="navTo('todos')">前往 →</button>
+                  </div>
+                  <div class="todo-stat-grid">
+                    <div class="todo-stat-cell" data-testid="home-todo-stat-today">
+                      <span class="todo-stat-value">{{ todoStatusStats.today }}</span>
+                      <span class="todo-stat-label">今日</span>
+                    </div>
+                    <div class="todo-stat-cell" data-testid="home-todo-stat-pending">
+                      <span class="todo-stat-value">{{ todoStatusStats.pending }}</span>
+                      <span class="todo-stat-label">待办</span>
+                    </div>
+                    <div class="todo-stat-cell" data-testid="home-todo-stat-in-progress">
+                      <span class="todo-stat-value">{{ todoStatusStats.inProgress }}</span>
+                      <span class="todo-stat-label">进行中</span>
+                    </div>
+                    <div class="todo-stat-cell" data-testid="home-todo-stat-completed">
+                      <span class="todo-stat-value">{{ todoStatusStats.completed }}</span>
+                      <span class="todo-stat-label">已完成</span>
+                    </div>
+                    <div class="todo-stat-cell" data-testid="home-todo-stat-archived">
+                      <span class="todo-stat-value">{{ todoStatusStats.archived }}</span>
+                      <span class="todo-stat-label">归档</span>
+                    </div>
+                  </div>
                 </div>
               </HomeLayoutCard>
 
@@ -746,6 +780,41 @@ async function handleQuickNote(): Promise<void> {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ===== 待办统计区域（今日 / 待办 / 进行中 / 已完成 / 归档）===== */
+.todo-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.todo-stat-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 4px;
+  min-width: 0;
+  border: 1px solid var(--color-border, var(--color-border));
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-bg-2, var(--color-bg-2));
+}
+
+.todo-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-text, var(--color-text));
+  font-variant-numeric: tabular-nums;
+}
+
+.todo-stat-label {
+  font-size: 11px;
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  white-space: nowrap;
 }
 
 /* ===== 习惯卡悬停展开（逐条本周进度浮层）===== */

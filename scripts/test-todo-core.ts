@@ -4,6 +4,8 @@ import {
   filterTodos,
   dueInfo,
   localToday,
+  todoStatus,
+  overdueDays,
   isTodoUncategorized,
   moveCustomCategoryInList,
   migrateLegacyBuiltinCategories,
@@ -332,8 +334,9 @@ test('T-D2 autoArchiveTodos 批量归档', () => {
 
 // T-D3 — sortTodosByStatus：未完成 → 已完成（未归档）→ 已归档，段内保持手工顺序
 test('T-D3 sortTodosByStatus 未完成优先', () => {
+  // 先合并 patch 再归一化：保证 status 与 completed 始终同步（避免构造出互相矛盾的对象）
   const mk = (id: string, patch: Partial<WorkbenchTodo>): WorkbenchTodo =>
-    ({ ...normalizeTodo({ id, title: id }), ...patch }) as WorkbenchTodo
+    normalizeTodo({ id, title: id, ...patch })
   const list: WorkbenchTodo[] = [
     mk('d1', { completed: true }),
     mk('a1', {}),
@@ -350,8 +353,9 @@ test('T-D3 sortTodosByStatus 未完成优先', () => {
 
 // T-D4 — filterTodos 增加 archived 状态筛选
 test('T-D4 filterTodos 已归档状态', () => {
+  // 先合并 patch 再归一化：保证 status 与 completed 始终同步（避免构造出互相矛盾的对象）
   const mk = (id: string, patch: Partial<WorkbenchTodo>): WorkbenchTodo =>
-    ({ ...normalizeTodo({ id, title: id }), ...patch }) as WorkbenchTodo
+    normalizeTodo({ id, title: id, ...patch })
   const list: WorkbenchTodo[] = [
     mk('a', {}),
     mk('b', { completed: true }),
@@ -369,6 +373,71 @@ test('T-D5 normalizeTodo archived 字段校验', () => {
   assert.equal(normalizeTodo({ archived: true, completed: true }).archived, true)
   assert.equal(normalizeTodo({ archived: true }).archived, undefined)
   assert.equal(normalizeTodo({}).archived, undefined)
+})
+
+// T-E1 — 状态枚举：存量数据无 status 时按 completed 推导；status 与 completed 互为镜像
+test('T-E1 todoStatus 与 normalizeTodo 状态同步', () => {
+  assert.equal(todoStatus({ completed: false }), 'pending')
+  assert.equal(todoStatus({ completed: true }), 'completed')
+  assert.equal(todoStatus({ status: 'in_progress', completed: false }), 'in_progress')
+  // 归一化后必然带 status；无 status 的存量数据推导为 pending（不影响既有数据展示）
+  assert.equal(normalizeTodo({}).status, 'pending')
+  assert.equal(normalizeTodo({ completed: true }).status, 'completed')
+  // status 为准回写 completed，杜绝两个真值源漂移
+  assert.equal(normalizeTodo({ status: 'completed', completed: false }).completed, true)
+  assert.equal(normalizeTodo({ status: 'pending', completed: true }).completed, false)
+  // 非法 status 回退为按 completed 推导
+  assert.equal(normalizeTodo({ status: 'bogus' as never, completed: true }).status, 'completed')
+})
+
+// T-E2 — 筛选：新增「未完成 / 进行中」精确状态，已归档项不出现在其中
+test('T-E2 filterTodos 未完成/进行中', () => {
+  // 先合并 patch 再归一化：保证 status 与 completed 始终同步（避免构造出互相矛盾的对象）
+  const mk = (id: string, patch: Partial<WorkbenchTodo>): WorkbenchTodo =>
+    normalizeTodo({ id, title: id, ...patch })
+  const list: WorkbenchTodo[] = [
+    mk('a', { status: 'pending' }),
+    mk('b', { status: 'in_progress' }),
+    mk('c', { status: 'completed' }),
+    mk('d', { status: 'completed', archived: true })
+  ]
+  assert.deepEqual(filterTodos(list, { status: 'pending' }).map(t => t.id), ['a'])
+  assert.deepEqual(filterTodos(list, { status: 'in_progress' }).map(t => t.id), ['b'])
+  assert.deepEqual(filterTodos(list, { status: 'completed' }).map(t => t.id), ['c'])
+  assert.deepEqual(filterTodos(list, { status: 'archived' }).map(t => t.id), ['d'])
+  // active = 未完成总览（未完成 + 进行中），不含已完成 / 已归档
+  assert.deepEqual(filterTodos(list, { status: 'active' }).map(t => t.id), ['a', 'b'])
+})
+
+// T-E3 — 排序分段：未完成 → 进行中 → 已完成 → 已归档，段内保持手工顺序
+test('T-E3 sortTodosByStatus 含进行中', () => {
+  // 先合并 patch 再归一化：保证 status 与 completed 始终同步（避免构造出互相矛盾的对象）
+  const mk = (id: string, patch: Partial<WorkbenchTodo>): WorkbenchTodo =>
+    normalizeTodo({ id, title: id, ...patch })
+  const list: WorkbenchTodo[] = [
+    mk('done', { status: 'completed' }),
+    mk('arch', { status: 'completed', archived: true }),
+    mk('prog', { status: 'in_progress' }),
+    mk('pend', { status: 'pending' })
+  ]
+  assert.deepEqual(sortTodosByStatus(list).map(t => t.id), ['pend', 'prog', 'done', 'arch'])
+})
+
+// T-E4 — 逾期天数：未完成且已过期 → 逾期天数（≥1，UI 红色）；
+//        未逾期（含今天到期）/ 已完成 / 已归档 / 无截止日期 → null（UI 渲染「—」）
+test('T-E4 overdueDays 展示规则', () => {
+  const now = new Date('2026-08-05T10:00:00')
+  const mk = (patch: Partial<WorkbenchTodo>): WorkbenchTodo =>
+    normalizeTodo({ title: 'x', ...patch })
+  assert.equal(overdueDays(mk({ dueDate: '2026-08-02', status: 'pending' }), now), 3) // 逾期 3 天
+  assert.equal(overdueDays(mk({ dueDate: '2026-08-02', status: 'in_progress' }), now), 3) // 进行中同样计逾期
+  assert.equal(overdueDays(mk({ dueDate: '2026-08-08', status: 'pending' }), now), null) // 未到期
+  assert.equal(overdueDays(mk({ dueDate: '2026-08-05', status: 'pending' }), now), null) // 今天到期不算逾期
+  assert.equal(overdueDays(mk({ dueDate: '2026-08-02', status: 'completed' }), now), null) // 已完成
+  assert.equal(overdueDays(mk({ dueDate: '2026-08-02', status: 'completed', archived: true }), now), null)
+  assert.equal(overdueDays(mk({ status: 'pending' }), now), null) // 无截止日期
+  // 与 dueInfo 的「已逾期 N 天」同源同算法：两处口径必然一致
+  assert.equal(dueInfo('2026-08-02', false, now)?.label, '已逾期 3 天')
 })
 
 let passed = 0

@@ -123,6 +123,13 @@ export type CountdownItem = Countdown & { remaining: CountdownRemaining }
 // 工作台待办任务
 export type TodoPriority = 'low' | 'medium' | 'high'
 
+/**
+ * 待办工作流状态：未完成 / 进行中 / 已完成。
+ * 「已归档」不是工作流状态，仍由 WorkbenchTodo.archived 布尔独立承载（归档只作用于已完成项）。
+ * 可选字段：存量数据没有 status 时，由 completed 推导（见 todoCore.todoStatus），不影响既有数据展示。
+ */
+export type TodoStatus = 'pending' | 'in_progress' | 'completed'
+
 // ===== 工作台水印类型（仅工作台生效，导航站排除）=====
 /** 文字水印 / 图片水印 */
 export type WatermarkType = 'text' | 'image'
@@ -172,6 +179,8 @@ export interface WorkbenchTodo {
   priority: TodoPriority
   dueDate?: string
   completed: boolean
+  /** 工作流状态（可选）：缺失时按 completed 推导。与 completed 保持同步：completed === (status === 'completed')。 */
+  status?: TodoStatus
   createdAt: string
   updatedAt: string
   color?: string // 卡片自定义颜色（'#RRGGBB' 或 '#RGB' hex）；undefined = 默认蓝

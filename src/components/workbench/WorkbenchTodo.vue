@@ -5,15 +5,16 @@ import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 
-/** 面板尺寸：沿用「设置 → 弹窗尺寸」写入的 CSS 变量（todo），未配置时回退默认值 */
-const PANEL_WIDTH = 'var(--dlg-w-wb-todo, 480px)'
+/** 面板尺寸：宽度固定 80%（BaseDialog 将 width 作为 maxWidth 应用，面板 width:100% → 实际即 80%）；
+ *  高度仍沿用「设置 → 弹窗尺寸」写入的 CSS 变量，未配置时回退默认值。 */
+const PANEL_WIDTH = '80%'
 const PANEL_MAX_HEIGHT = 'var(--dlg-h-wb-todo, 85vh)'
 
 const vm = useViewMode()
 
 function cardFields(row: any) {
   return [
-    { label: '完成', value: row.todo.archived ? '已归档' : (row.todo.completed ? '已完成' : '未完成') },
+    { label: '状态', value: row.todo.archived ? '已归档' : TODO_STATUS_LABELS[todoStatus(row.todo)] },
     { label: '标题', value: row.todo.title },
     { label: '描述', value: row.todo.description || '—' },
     { label: '优先级', value: priorityMeta(row.todo.priority).label },
@@ -24,9 +25,15 @@ function cardFields(row: any) {
 
 import { computed, onMounted, ref, watch } from 'vue'
 import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
-import { filterTodos, dueInfo } from '@/composables/todoCore'
-import type { TodoFilterCriteria } from '@/composables/todoCore'
-import type { TodoPriority, WorkbenchTodo } from '@/types'
+import {
+  filterTodos,
+  todoStatus,
+  overdueDays,
+  TODO_STATUSES,
+  TODO_STATUS_LABELS
+} from '@/composables/todoCore'
+import type { TodoFilterCriteria, TodoStatusFilter } from '@/composables/todoCore'
+import type { TodoPriority, TodoStatus, WorkbenchTodo } from '@/types'
 import { DEFAULT_TODO_COLOR } from '@/types'
 import { usePageSize } from '@/composables/usePageSize'
 import { useToast } from '@/composables/useToast'
@@ -39,7 +46,7 @@ const store = useWorkbenchTodosStore()
 const searchTitle = ref('')
 const searchDescription = ref('')
 const searchPriority = ref<'' | TodoPriority>('')
-const searchStatus = ref<'' | 'all' | 'active' | 'completed' | 'archived'>('')
+const searchStatus = ref<TodoStatusFilter>('')
 const appliedFilters = ref<TodoFilterCriteria>({})
 
 // ===== 分类筛选标签页（点击即时生效，与查询条件叠加；'' = 全部，选中值 = 分类名字符串）=====
@@ -84,22 +91,23 @@ const filteredTodos = computed(() =>
   filterTodos(store.orderedTodos, { ...appliedFilters.value, categoryId: activeCategoryId.value || undefined })
 )
 
-// 预计算卡片主角（含 completed 的「已完成」态），供模板一次取用，避免重复调用
-interface TodoHero {
-  label: string
-  status: 'done' | 'archived' | 'normal' | 'today' | 'overdue'
+// 逾期天数随 viewTodos 一并预计算（依赖当天日期，非响应式时钟；跨天刷新页面即更新）
+const viewTodos = computed(() =>
+  filteredTodos.value.map(todo => ({ todo, overdue: overdueDays(todo) }))
+)
+
+/** 状态标签文案：已归档为独立标记、优先展示；其次取工作流状态文案 */
+function statusLabelOf(todo: WorkbenchTodo): string {
+  if (todo.archived === true) return '已归档'
+  return TODO_STATUS_LABELS[todoStatus(todo)]
 }
 
-function heroOf(todo: WorkbenchTodo): TodoHero | null {
-  // 归档优先于完成：已归档项主角显示「已归档」，避免与未归档的已完成项混淆
-  if (todo.archived === true) return { label: '已归档', status: 'archived' }
-  if (todo.completed) return { label: '已完成', status: 'done' }
-  const info = dueInfo(todo.dueDate, false)
-  if (info === null) return null
-  return info
+/** 状态标签样式类（与标签文案同源，避免两处漂移） */
+function statusClassOf(todo: WorkbenchTodo): string {
+  if (todo.archived === true) return 'st-archived'
+  const s = todoStatus(todo)
+  return s === 'pending' ? 'st-pending' : s === 'in_progress' ? 'st-in-progress' : 'st-completed'
 }
-
-const viewTodos = computed(() => filteredTodos.value.map(todo => ({ todo, hero: heroOf(todo) })))
 
 /**
  * 表格行身份：归档/取消归档会让条目在数组里跨段移动（已归档段 ⇄ 已完成段），
@@ -146,11 +154,11 @@ const formDueDate = ref('')
 const formColor = ref(DEFAULT_TODO_COLOR)
 // 分类下拉值：'' = 未分类（v-model 与 select option 全字符串，保存时 || undefined）
 const formCategoryId = ref('')
-// 状态操作（新增/编辑弹框入口）：待办状态为 completed / archived 两个布尔位。
-// 完成态入口已从列表操作列迁入本弹框（新增、编辑均可设置），保存时统一经
-// toggleTodo / archiveTodo / unarchiveTodo 落库，保证「未完成→已完成→已归档」
+// 状态操作（新增/编辑弹框入口）：工作流状态 status + 归档标记 archived。
+// 状态入口已从列表操作列迁入本弹框（新增、编辑均可设置），保存时统一经
+// setTodoStatus / archiveTodo / unarchiveTodo 落库，保证「未完成/进行中 → 已完成 → 已归档」
 // 的联动规则与列表操作完全一致，不另写一套。
-const formCompleted = ref(false)
+const formStatus = ref<TodoStatus>('pending')
 const formArchived = ref(false)
 
 // 标题必填：trim 后非空且 ≤100 字符，否则保存按钮 disabled
@@ -173,7 +181,7 @@ function startAdd(): void {
   formDueDate.value = ''
   formColor.value = DEFAULT_TODO_COLOR
   formCategoryId.value = ''
-  formCompleted.value = false
+  formStatus.value = 'pending'
   formArchived.value = false
   showDialog.value = true
 }
@@ -186,7 +194,7 @@ function startEdit(todo: WorkbenchTodo): void {
   formDueDate.value = todo.dueDate ?? ''
   formColor.value = todo.color ?? DEFAULT_TODO_COLOR
   formCategoryId.value = todo.categoryId ?? ''
-  formCompleted.value = todo.completed === true
+  formStatus.value = todoStatus(todo)
   formArchived.value = todo.archived === true
   showDialog.value = true
 }
@@ -211,29 +219,27 @@ async function handleSave(): Promise<void> {
       color: formColor.value,
       categoryId: formCategoryId.value || undefined
     })
-    // 状态：先完成/取消完成，再按需归档/取消归档（复用列表同一套 store 方法，联动规则一致）
-    const target = store.todos.find(t => t.id === id)
-    if (target && !!target.completed !== formCompleted.value) {
-      await store.toggleTodo(id)
-    }
+    // 状态：先落工作流状态（内部同步 completed / completedAt，并在非完成时清归档），
+    // 再按需归档/取消归档（复用列表同一套 store 方法，联动规则一致）
+    await store.setTodoStatus(id, formStatus.value)
     const after = store.todos.find(t => t.id === id)
     if (after) {
       if (!after.archived && formArchived.value) await store.archiveTodo(id)
       else if (after.archived && !formArchived.value) await store.unarchiveTodo(id)
     }
   } else {
+    // 新增即可选状态：status 随 addTodo 直接落库
+    // （completed / completedAt 由 normalizeTodo 与 store 同步，联动规则与列表操作一致）
     await store.addTodo({
       title,
       description,
       priority: formPriority.value,
       dueDate,
       color: formColor.value,
-      categoryId: formCategoryId.value || undefined
+      categoryId: formCategoryId.value || undefined,
+      status: formStatus.value
     })
-    // 新增即可选状态：addTodo 固定 push 到数组末尾，取末条按弹框选择补完成/归档
-    // （复用 toggleTodo / archiveTodo，completedAt 等联动规则与列表操作一致）
     const created = store.todos[store.todos.length - 1]
-    if (created && formCompleted.value) await store.toggleTodo(created.id)
     if (created && formArchived.value) await store.archiveTodo(created.id)
     listPage.value = 1 // 新增条目回第 1 页（复用日记分页惯例）
   }
@@ -305,7 +311,7 @@ async function handleDelete(id: string): Promise<void> {
 }
 
 // 行点击 → 编辑（保留旧卡片点击行为）
-function rowClick(todoRow: { todo: WorkbenchTodo; hero: TodoHero | null }): void {
+function rowClick(todoRow: { todo: WorkbenchTodo }): void {
   startEdit(todoRow.todo)
 }
 
@@ -376,8 +382,9 @@ onMounted(async () => {
           <span class="td-field-label">状态</span>
           <el-select v-model="searchStatus" class="search-select" data-testid="td-search-status" size="small">
             <el-option value="" label="全部状态" />
-            <el-option value="active" label="待办" />
-            <el-option value="completed" label="已完成" />
+            <el-option value="pending" label="未完成" data-testid="td-search-status-pending" />
+            <el-option value="in_progress" label="进行中" data-testid="td-search-status-in-progress" />
+            <el-option value="completed" label="已完成" data-testid="td-search-status-completed" />
             <el-option value="archived" label="已归档" data-testid="td-search-status-archived" />
           </el-select>
         </label>
@@ -402,7 +409,7 @@ onMounted(async () => {
       <span class="toolbar-count" data-testid="td-toolbar-count">
         <template v-if="hasActiveFilter">筛选出 {{ filteredTodos.length }} / {{ store.orderedTodos.length }} 个</template>
         <template v-else>
-          待办 {{ store.activeCount }} · 已完成 {{ store.completedCount }}<template v-if="store.archivedCount > 0"> · 已归档 {{ store.archivedCount }}</template>
+          未完成 {{ store.pendingCount }} · 进行中 {{ store.inProgressCount }} · 已完成 {{ store.completedCount }}<template v-if="store.archivedCount > 0"> · 已归档 {{ store.archivedCount }}</template>
         </template>
       </span>
     </div>
@@ -463,28 +470,35 @@ onMounted(async () => {
               >{{ priorityMeta(v.todo.priority).label }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="截止日期" width="150" align="center">
+          <el-table-column label="状态" width="100" align="center">
             <template #default="{ row: v }">
-              <div v-if="v.todo.dueDate" class="td-meta">
-                <span
-                  class="td-date"
-                  :class="{ overdue: !v.todo.completed && v.hero?.status === 'overdue' }"
-                >{{ v.todo.dueDate }}</span>
-                <span
-                  v-if="!v.todo.completed && v.hero?.status === 'overdue'"
-                  class="overdue-tag"
-                >已逾期</span>
-              </div>
+              <span
+                class="td-status-badge"
+                :class="statusClassOf(v.todo)"
+                :data-testid="`td-status-${v.todo.id}`"
+              >{{ statusLabelOf(v.todo) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="截止日期" width="120" align="center">
+            <template #default="{ row: v }">
+              <!-- 本列只显示截止日期本身：倒计时、逾期等附加信息已拆分到「逾期天数」等独立列 -->
+              <span
+                v-if="v.todo.dueDate"
+                class="td-date"
+                :data-testid="`td-due-${v.todo.id}`"
+              >{{ v.todo.dueDate }}</span>
               <span v-else class="td-col-empty">—</span>
-              <!-- 截止日期列只展示与日期相关的提示（今日/逾期/N天）；「已归档」属完成态，
-                   由标题列的 td-archived-badge 与详情字段展示，不混进日期列 -->
-              <div
-                v-if="v.hero && v.hero.status !== 'done' && v.hero.status !== 'archived'"
-                class="td-hero"
-                :class="'td-' + v.hero.status"
-              >
-                <span class="td-hero-value">{{ v.hero.label }}</span>
-              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="逾期天数" width="110" align="center">
+            <template #default="{ row: v }">
+              <span
+                v-if="v.overdue !== null"
+                class="td-overdue-days"
+                :title="`已逾期 ${v.overdue} 天`"
+                :data-testid="`td-overdue-days-${v.todo.id}`"
+              >{{ v.overdue }}</span>
+              <span v-else class="td-col-empty">—</span>
             </template>
           </el-table-column>
           <el-table-column label="分类" width="130" align="center">
@@ -597,33 +611,37 @@ onMounted(async () => {
           </el-select>
         </div>
 
-        <!-- 状态操作（新增/编辑均可用）：完成态入口已从列表操作列迁入弹框，保存时统一落库 -->
+        <!-- 状态操作（新增/编辑均可用）：状态入口已从列表操作列迁入弹框，保存时统一落库 -->
         <div class="form-group td-status-group" data-testid="td-status-group">
           <label>状态</label>
           <div class="td-status-actions">
-            <el-button
+            <el-select
+              v-model="formStatus"
+              class="td-status-select"
               size="small"
-              :type="formCompleted ? 'success' : 'default'"
-              :plain="!formCompleted"
-              class="td-status-btn"
-              data-testid="td-toggle-completed"
-              @click="formCompleted = !formCompleted"
+              data-testid="td-form-status"
             >
-              {{ formCompleted ? '✓ 已完成' : '标记为已完成' }}
-            </el-button>
+              <el-option
+                v-for="s in TODO_STATUSES"
+                :key="s"
+                :value="s"
+                :label="TODO_STATUS_LABELS[s]"
+                :data-testid="`td-form-status-${s}`"
+              />
+            </el-select>
             <el-button
               size="small"
               :type="formArchived ? 'warning' : 'default'"
               :plain="!formArchived"
-              :disabled="!formCompleted"
+              :disabled="formStatus !== 'completed'"
               class="td-status-btn"
-              :title="formCompleted ? (formArchived ? '点击取消归档' : '点击归档') : '需先标记为已完成'"
+              :title="formStatus === 'completed' ? (formArchived ? '点击取消归档' : '点击归档') : '需先标记为已完成'"
               data-testid="td-toggle-archived"
               @click="formArchived = !formArchived"
             >
               {{ formArchived ? '已归档' : '归档' }}
             </el-button>
-            <span v-if="!formCompleted" class="td-status-tip">归档需先标记为已完成</span>
+            <span v-if="formStatus !== 'completed'" class="td-status-tip">归档需先标记为已完成</span>
           </div>
         </div>
 
@@ -887,37 +905,48 @@ onMounted(async () => {
   border-color: #cbd5e1;
 }
 
-/* 截止倒计时主角（状态色） */
-.td-hero {
+/* ===== 状态徽章（未完成 / 进行中 / 已完成 / 已归档）===== */
+.td-status-badge {
   flex-shrink: 0;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: var(--radius-full, 9999px);
+  border: 1px solid transparent;
+  white-space: nowrap;
 }
 
-.td-hero-value {
-  font-size: 14px;
+.st-pending {
+  color: #475569;
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.st-in-progress {
+  color: #1d4ed8;
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.st-completed {
+  color: #15803d;
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+.st-archived {
+  color: #6b7280;
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+/* 逾期天数：红色高亮 + 等宽数字，便于纵向比对（与截止日期列的「已逾期 N 天」同一色系） */
+.td-overdue-days {
+  color: var(--color-error, #ef4444);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.5px;
-  line-height: 1.1;
 }
 
-.td-normal {
-  color: var(--color-success, var(--color-success));
-}
-
-.td-today {
-  color: var(--color-warning, var(--color-warning));
-}
-
-.td-overdue {
-  color: var(--color-error, var(--color-error));
-}
-
-.td-done {
-  color: var(--color-text-muted, var(--color-text-muted));
-  font-size: 14px;
-  font-weight: 600;
-}
 
 /* 标题后的归档徽标（归档态的唯一展示位：日期列不再显示「已归档」） */
 .td-archived-badge {
@@ -942,6 +971,7 @@ onMounted(async () => {
   flex-wrap: wrap;
 }
 .td-status-btn { min-width: 104px; }
+.td-status-select { width: 140px; flex: none; }
 .td-status-tip { font-size: 12px; color: var(--color-text-secondary, #9ca3af); }
 
 /* 待办描述输入框：高度 300px（el-input 的 textarea 需 :deep 穿透内部元素） */
@@ -976,32 +1006,11 @@ onMounted(async () => {
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
 }
 
-/* Meta：截止日期 / 逾期 */
-.td-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
+/* 截止日期：本列只显示日期本身，逾期信息由「逾期天数」列承载 */
 .td-date {
   font-size: 13px;
   color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
-}
-
-.td-date.overdue {
-  color: var(--color-error, var(--color-error));
-  font-weight: 600;
-}
-
-.overdue-tag {
-  color: #fff;
-  background: var(--color-error, #ef4444);
-  font-size: 12px;
-  font-weight: 600;
-  padding: 1px 8px;
-  border-radius: var(--radius-full, 9999px);
 }
 
 /* ===== 卡片操作 ===== */
@@ -1290,20 +1299,32 @@ html.dark .prio-low {
   border-color: #475569;
 }
 
-html.dark .td-normal {
-  color: #4ade80;
+html.dark .st-pending {
+  color: #cbd5e1;
+  background: rgba(71, 85, 105, 0.35);
+  border-color: #475569;
 }
 
-html.dark .td-today {
-  color: #fbbf24;
+html.dark .st-in-progress {
+  color: #93c5fd;
+  background: rgba(29, 78, 216, 0.35);
+  border-color: #1e40af;
 }
 
-html.dark .td-overdue {
-  color: #f87171;
+html.dark .st-completed {
+  color: #86efac;
+  background: rgba(21, 128, 61, 0.35);
+  border-color: #166534;
 }
 
-html.dark .td-done {
+html.dark .st-archived {
   color: #9ca3af;
+  background: rgba(107, 114, 128, 0.35);
+  border-color: #4b5563;
+}
+
+html.dark .td-overdue-days {
+  color: #f87171;
 }
 
 html.dark .td-cat-tab {

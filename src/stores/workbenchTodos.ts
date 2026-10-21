@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref, toRaw } from 'vue'
-import type { TodoPriority, WorkbenchTodo } from '@/types'
+import type { TodoPriority, TodoStatus, WorkbenchTodo } from '@/types'
 import {
   normalizeTodo,
   moveCustomCategoryInList,
@@ -9,6 +9,8 @@ import {
   applyCheckIn,
   autoArchiveTodos,
   sortTodosByStatus,
+  todoStatus,
+  localToday,
   ARCHIVE_AFTER_DAYS
 } from '@/composables/todoCore'
 import { idbGet, idbPut } from '../composables/useIdb'
@@ -182,7 +184,10 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
     dueDate?: string
     color?: string
     categoryId?: string
+    /** 新建时的初始状态（默认 'pending' 未完成）；直接建成「已完成」时会一并写入 completedAt */
+    status?: TodoStatus
   }): Promise<void> {
+    const status: TodoStatus = input.status ?? 'pending'
     const now = new Date().toISOString()
     todos.value.push(
       normalizeTodo({
@@ -191,9 +196,11 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
         description: input.description,
         priority: input.priority,
         dueDate: input.dueDate,
-        completed: false,
+        completed: status === 'completed',
+        status,
         createdAt: now,
         updatedAt: now,
+        ...(status === 'completed' ? { completedAt: now } : {}),
         color: input.color,
         categoryId: input.categoryId
       })
@@ -204,11 +211,14 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
   async function updateTodo(id: string, patch: Partial<WorkbenchTodo>): Promise<void> {
     const index = todos.value.findIndex(t => t.id === id)
     if (index !== -1) {
-      todos.value[index] = {
+      const merged: WorkbenchTodo = {
         ...todos.value[index],
         ...patch,
         updatedAt: new Date().toISOString()
       }
+      // status 与 completed 互为镜像：显式改状态时同步 completed，杜绝两个真值源漂移
+      if (patch.status !== undefined) merged.completed = merged.status === 'completed'
+      todos.value[index] = merged
       await saveTodos()
     }
   }
@@ -220,27 +230,40 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
     await saveTodos()
   }
 
+  /**
+   * 设置工作流状态的唯一入口：同步 completed 镜像，并处理 completedAt / archived 联动。
+   * - 已完成：completed=true，补 completedAt（自动归档以它为准，回退 updatedAt 会误判成"刚完成"）
+   * - 未完成 / 进行中：completed=false，清 completedAt 与 archived（未完成项不该处于归档态）
+   * 目标状态与当前一致时不写库。
+   */
+  async function setTodoStatus(id: string, status: TodoStatus): Promise<void> {
+    const index = todos.value.findIndex(t => t.id === id)
+    if (index === -1) return
+    const prev = todos.value[index]
+    if (todoStatus(prev) === status) return
+    const now = new Date().toISOString()
+    const next: WorkbenchTodo = { ...prev, status, completed: status === 'completed', updatedAt: now }
+    if (status === 'completed') {
+      next.completedAt = prev.completedAt ?? now
+    } else {
+      delete next.completedAt
+      delete next.archived
+    }
+    todos.value[index] = next
+    await saveTodos()
+  }
+
+  /** 完成态开关（沿用旧 toggle 语义）：已完成 ⇄ 未完成；进行中 → 已完成。 */
   async function toggleTodo(id: string): Promise<void> {
     const todo = todos.value.find(t => t.id === id)
-    if (todo) {
-      todo.completed = !todo.completed
-      if (todo.completed) {
-        // 记录完成时间：自动归档以它为准（回退 updatedAt 会把"改过一次"误判成"刚完成"）
-        todo.completedAt = new Date().toISOString()
-      } else {
-        // 重新打开 → 清掉完成时间与归档标记（未完成项不该处于归档态）
-        delete todo.completedAt
-        delete todo.archived
-      }
-      todo.updatedAt = new Date().toISOString()
-      await saveTodos()
-    }
+    if (!todo) return
+    await setTodoStatus(id, todoStatus(todo) === 'completed' ? 'pending' : 'completed')
   }
 
   /** 手动归档单条（只能归档已完成项）；已是归档态返回 false，不写库。 */
   async function archiveTodo(id: string): Promise<boolean> {
     const todo = todos.value.find(t => t.id === id)
-    if (!todo || !todo.completed || todo.archived === true) return false
+    if (!todo || todoStatus(todo) !== 'completed' || todo.archived === true) return false
     todo.archived = true
     todo.updatedAt = new Date().toISOString()
     await saveTodos()
@@ -304,12 +327,22 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
     return true
   }
 
-  // 页签计数
+  // 页签计数（状态判定统一走 todoStatus，兼容无 status 的存量数据）
   const totalCount = computed(() => todos.value.length)
-  const activeCount = computed(() => todos.value.filter(t => !t.completed).length)
+  /** 未完成总览 = 未完成 + 进行中（不含已归档），沿用旧 active 口径 */
+  const activeCount = computed(() => todos.value.filter(t => t.archived !== true && todoStatus(t) !== 'completed').length)
+  /** 未完成（pending，不含已归档、不含进行中） */
+  const pendingCount = computed(() => todos.value.filter(t => t.archived !== true && todoStatus(t) === 'pending').length)
+  /** 进行中（in_progress，不含已归档） */
+  const inProgressCount = computed(() => todos.value.filter(t => t.archived !== true && todoStatus(t) === 'in_progress').length)
   // 已完成（不含已归档）：归档项独立计数，避免"已完成 N"与列表分段不一致
-  const completedCount = computed(() => todos.value.filter(t => t.completed && t.archived !== true).length)
+  const completedCount = computed(() => todos.value.filter(t => t.archived !== true && todoStatus(t) === 'completed').length)
   const archivedCount = computed(() => todos.value.filter(t => t.archived === true).length)
+  /** 今日条数：截止日期为今天且未完成（未完成 + 进行中）；随数据变化实时刷新 */
+  const todayCount = computed(() => {
+    const today = localToday()
+    return todos.value.filter(t => t.archived !== true && todoStatus(t) !== 'completed' && t.dueDate === today).length
+  })
 
   return {
     todos,
@@ -322,6 +355,7 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
     updateTodo,
     deleteTodo,
     toggleTodo,
+    setTodoStatus,
     runAutoArchive,
     archiveTodo,
     unarchiveTodo,
@@ -336,8 +370,11 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
     moveTodo,
     totalCount,
     activeCount,
+    pendingCount,
+    inProgressCount,
     completedCount,
     archivedCount,
+    todayCount,
     ARCHIVE_AFTER_DAYS
   }
 })
