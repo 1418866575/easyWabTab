@@ -425,10 +425,25 @@ export interface FamilyMember {
   updatedAt: string
 }
 
+/** 家谱 · 取名记录（家谱模块第三个标签页，记录为子孙新取的名字及其寓意/出处/性别/日期） */
+export interface FamilyNameRecord {
+  id: string                 // 'nm_' 前缀，uuid
+  name: string               // 名字，必填，≤50
+  gender: 'male' | 'female' | ''  // 适用性别；'' = 通用/不限
+  meaning?: string           // 寓意/出处，≤500（选填）
+  namingDate?: string | null // 取名日期 'YYYY-MM-DD'；null = 未记日期（选填）
+  memberId?: string | null   // 关联成员 FamilyMember.id；null = 未关联（选填）
+  note?: string              // 备注，≤500（选填）
+  createdAt: string          // ISO 时间戳
+  updatedAt: string          // ISO 时间戳
+}
+
 /** 家谱数据集（IDB store 'family' 单对象；随 workbench.json 明文同步） */
 export interface GenealogyData {
   members: FamilyMember[]
   rootId: string | null  // 主根（标记家族起点；可空 → 未标记时树视图显示森林/提示选主根）
+  /** 取名记录（家谱模块「取名记录」标签页数据；与成员同库同步，独立信封导入导出） */
+  names: FamilyNameRecord[]
 }
 
 // ==================== 健康管理 ====================

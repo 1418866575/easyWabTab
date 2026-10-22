@@ -4,10 +4,11 @@
  * 子女/兄弟姐妹/祖孙全部运行时派生，不单独建关系表。
  */
 import type { FamilyMember, GenealogyData } from '../types'
+import { mergeNames } from './namingCore'
 
 /** 空家谱数据集（导入兜底 / 初始化） */
 export function emptyGenealogyData(): GenealogyData {
-  return { members: [], rootId: null }
+  return { members: [], rootId: null, names: [] }
 }
 
 /** 成员名称校验：trim 后非空且 ≤50 字符 */
@@ -242,7 +243,8 @@ export function buildGenealogyExport(data: GenealogyData, now: Date = new Date()
     exportedAt: now.toISOString(),
     data: {
       members: JSON.parse(JSON.stringify(data.members ?? [])),
-      rootId: data.rootId ?? null
+      rootId: data.rootId ?? null,
+      names: []
     }
   }
 }
@@ -397,7 +399,7 @@ export function normalizeGenealogyImport(raw: unknown): NormalizeGenealogyResult
     else warnings.push('主根成员不存在，已清空主根标记')
   }
 
-  return { data: { members, rootId }, valid: members.length, skipped, danglingRefs: dangling, warnings }
+  return { data: { members, rootId, names: [] }, valid: members.length, skipped, danglingRefs: dangling, warnings }
 }
 
 /**
@@ -418,7 +420,8 @@ export function mergeFamily(local?: GenealogyData, remote?: GenealogyData): Gene
   }
   return {
     members: Array.from(map.values()),
-    rootId: l.rootId ?? r.rootId
+    rootId: l.rootId ?? r.rootId,
+    names: mergeNames(l.names, r.names)
   }
 }
 

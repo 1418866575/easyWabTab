@@ -19,7 +19,8 @@ import {
   GENEALOGY_EXPORT_FILENAME
 } from '@/composables/genealogyCore'
 import type { AgeGroupKey } from '@/composables/genealogyCore'
-import type { FamilyMember } from '@/types'
+import { filterNameRecords, validateNameForm } from '@/composables/namingCore'
+import type { FamilyMember, FamilyNameRecord } from '@/types'
 import { usePageSize } from '@/composables/usePageSize'
 
 const store = useGenealogyStore()
@@ -27,9 +28,11 @@ const vm = useViewMode()
 const toast = useToast()
 
 const GENDER_LABEL: Record<string, string> = { male: '男', female: '女', '': '未知' }
+/** 取名记录语境：'' 表示"通用 / 不限"（区别于家谱成员的"未知"） */
+const NAME_GENDER_LABEL: Record<string, string> = { male: '男', female: '女', '': '通用' }
 
-// ===== Tab：成员管理 / 家谱树 =====
-type TabKey = 'members' | 'tree'
+// ===== Tab：成员管理 / 家谱树 / 取名记录 =====
+type TabKey = 'members' | 'tree' | 'names'
 const activeTab = ref<TabKey>('members')
 
 // ===== 搜索（按姓名）=====
@@ -58,6 +61,217 @@ watch(
     if (listPage.value > maxPage) listPage.value = maxPage
   }
 )
+
+// ===== 取名记录：搜索 / 筛选 / 排序 / 分页 =====
+const NAME_PAGE_SIZE = 10
+const { pageSize: namePageSize, PAGE_SIZES: NAME_PAGE_SIZES } = usePageSize('fg-names-pager', NAME_PAGE_SIZE)
+const namePage = ref(1)
+const nameSearch = ref('')
+const nameGenderFilter = ref<'all' | 'male' | 'female' | ''>('all')
+const nameSort = ref<'namingDate' | 'updatedAt' | 'name'>('namingDate')
+
+const filteredNames = computed<FamilyNameRecord[]>(() =>
+  filterNameRecords(store.names, nameSearch.value, nameGenderFilter.value, nameSort.value)
+)
+
+const pageNames = computed<FamilyNameRecord[]>(() => {
+  const start = (namePage.value - 1) * namePageSize.value
+  return filteredNames.value.slice(start, start + namePageSize.value)
+})
+
+watch(
+  () => filteredNames.value.length,
+  (n) => {
+    const maxPage = Math.max(1, Math.ceil(n / namePageSize.value))
+    if (namePage.value > maxPage) namePage.value = maxPage
+  }
+)
+
+/** 列表「更新时间」展示：ISO → YYYY-MM-DD */
+function formatDateOnly(iso?: string): string {
+  if (!iso) return '—'
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso)
+  return m ? m[1] + '-' + m[2] + '-' + m[3] : iso.slice(0, 10)
+}
+
+function nameMemberText(n: FamilyNameRecord): string {
+  if (!n.memberId) return '—'
+  const m = store.members.find((x) => x.id === n.memberId)
+  return m ? m.name : '—'
+}
+
+function nameCardFields(n: FamilyNameRecord) {
+  return [
+    { label: '名字', value: n.name, emphasis: true },
+    { label: '适用性别', value: NAME_GENDER_LABEL[n.gender ?? ''] ?? '通用' },
+    { label: '取名日期', value: n.namingDate || '—' },
+    { label: '寓意/出处', value: n.meaning || '—' },
+    { label: '关联成员', value: nameMemberText(n) }
+  ]
+}
+
+// ===== 取名记录 新增/编辑弹框 =====
+const showNameDialog = ref(false)
+const nameEditingId = ref<string | null>(null)
+const fnName = ref('')
+const fnGender = ref<'male' | 'female' | ''>('')
+const fnMeaning = ref('')
+const fnNamingDate = ref('')
+const fnMemberId = ref('')
+const fnNote = ref('')
+
+const isNameFormValid = computed(() => {
+  const n = fnName.value.trim().length
+  return n > 0 && n <= 50
+})
+
+/** 取名日期选择禁用未来日期（需求 §6：取名是过去/当日动作） */
+function namingDateDisabledDate(time: Date): boolean {
+  return time.getTime() > Date.now()
+}
+
+function startAddName(): void {
+  nameEditingId.value = null
+  fnName.value = ''
+  fnGender.value = ''
+  fnMeaning.value = ''
+  fnNamingDate.value = ''
+  fnMemberId.value = ''
+  fnNote.value = ''
+  showNameDialog.value = true
+}
+
+function startEditName(n: FamilyNameRecord): void {
+  nameEditingId.value = n.id
+  fnName.value = n.name
+  fnGender.value = n.gender ?? ''
+  fnMeaning.value = n.meaning ?? ''
+  fnNamingDate.value = n.namingDate ?? ''
+  fnMemberId.value = n.memberId ?? ''
+  fnNote.value = n.note ?? ''
+  showNameDialog.value = true
+}
+
+function cancelName(): void {
+  showNameDialog.value = false
+  nameEditingId.value = null
+}
+
+async function handleSaveName(): Promise<void> {
+  const name = fnName.value.trim()
+  const v = validateNameForm({ name, namingDate: fnNamingDate.value || null })
+  if (!v.ok) {
+    toast.error(v.error ?? '表单校验未通过')
+    return
+  }
+  const input = {
+    name,
+    gender: fnGender.value,
+    meaning: fnMeaning.value.trim() || undefined,
+    namingDate: fnNamingDate.value || null,
+    memberId: fnMemberId.value || null,
+    note: fnNote.value.trim() || undefined
+  }
+  if (nameEditingId.value) {
+    await store.updateNameRecord(nameEditingId.value, input)
+    toast.success('已保存修改')
+  } else {
+    await store.addNameRecord(input)
+    namePage.value = 1
+    toast.success('已新增取名记录')
+  }
+  cancelName()
+}
+
+async function handleDeleteName(id: string): Promise<void> {
+  const rec = store.names.find((x) => x.id === id)
+  if (!rec) return
+  if (await showConfirm(`确定删除取名记录「${rec.name}」吗？\n（仅删除该记录，不影响关联的家谱成员。）`)) {
+    await store.deleteNameRecord(id)
+    toast.success('已删除')
+    cancelName()
+  }
+}
+
+// ===== 取名记录 导入 / 导出 =====
+const nameImportInput = ref<HTMLInputElement | null>(null)
+
+function handleExportNames(): void {
+  if (!store.names.length) {
+    toast.info('暂无取名记录，无法导出')
+    return
+  }
+  const d = new Date()
+  const dateStr = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`
+  const json = store.exportNames()
+  const blob = new Blob([json], { type: 'application/json;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `family-names-${dateStr}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+  toast.success(`已导出 ${store.names.length} 条取名记录`)
+}
+
+async function handleImportNamesFile(e: Event): Promise<void> {
+  const inputEl = e.target as HTMLInputElement
+  const f = inputEl.files?.[0]
+  if (!f) return
+  try {
+    const text = await f.text()
+    let mode: 'replace' | 'merge' = 'replace'
+    if (store.names.length > 0) {
+      const ok = await showConfirm(
+        `当前已有 ${store.names.length} 条取名记录。\n\n` +
+        `点「确定」用文件**覆盖**现有记录；点「取消」则**合并**进现有记录（同 id 以较新修改时间为准）。`
+      )
+      mode = ok ? 'replace' : 'merge'
+    }
+    const res = await store.importNamesFromJSON(text, mode)
+    if (res.valid === 0 && res.skipped === 0) {
+      const msg = res.warnings[0] ?? '文件中没有可导入的取名记录'
+      toast.error('导入失败：' + msg)
+      return
+    }
+    namePage.value = 1
+    const tips: string[] = [`导入 ${res.valid} 条取名记录`]
+    if (res.skipped) tips.push(`跳过 ${res.skipped} 条无效记录`)
+    toast.success(tips.join('，'))
+    for (const w of res.warnings) toast.info(w)
+  } catch (err) {
+    toast.error('导入失败：' + (err as Error).message)
+  } finally {
+    const el = (nameImportInput.value ?? e.target) as HTMLInputElement | null
+    if (el) el.value = ''
+  }
+}
+
+// ===== 族谱排辈（字辈歌，只读参考）=====
+const PAIBEI_TITLE = '族谱排辈'
+// 每行以 " 分隔左右两支字辈（各 5 字为一代），原文照搬；末行 "羲夏景泰" 含一处疑似乱码字符，由用户自行校正
+const PAIBEI_LINES: string[] = [
+  '文卿儒国朝"为孔正开显',
+  '福泽隆厚兴"登礼慧行仁',
+  '承先尊汉籍"沿晋绍家声',
+  '丕炽修明盛"建华振乾坤',
+  '宏瑞溯远庆"寰宇旭光屏',
+  '智雄科甲第"道义熹群臻',
+  '纲典章毓孝"创业更芳辉',
+  '普教博造化"书墨功贤能',
+  '耕读传其本"绵延安鹤龄',
+  '羲夏景泰"舒仲耀庭经'
+]
+const PAIBEI_ROWS = PAIBEI_LINES.map((line) => {
+  const idx = line.indexOf('"')
+  if (idx < 0) return { left: line, right: '' }
+  return { left: line.slice(0, idx).trim(), right: line.slice(idx + 1).trim() }
+})
+
+const showPaibeiDialog = ref(false)
+function openPaibei(): void {
+  showPaibeiDialog.value = true
+}
 
 function relationSummary(m: FamilyMember): string {
   const children = getChildren(store.members, m.id).length
@@ -419,7 +633,10 @@ function rootName(): string {
 // ===== 键盘：ESC 关闭弹框 =====
 function handleKeydown(e: KeyboardEvent): void {
   if (e.key !== 'Escape') return
-  if (showMemberDialog.value) {
+  if (showNameDialog.value) {
+    e.preventDefault()
+    cancelName()
+  } else if (showMemberDialog.value) {
     e.preventDefault()
     cancelMember()
   } else if (showRelDialog.value) {
@@ -458,6 +675,14 @@ onUnmounted(() => {
         data-testid="fg-tab-tree"
         @click="activeTab = 'tree'"
       >家谱树</button>
+      <button
+        class="fg-tab"
+        :class="{ active: activeTab === 'names' }"
+        role="tab"
+        :aria-selected="activeTab === 'names'"
+        data-testid="fg-tab-names"
+        @click="activeTab = 'names'"
+      >取名记录</button>
     </div>
 
     <!-- ========== 成员管理 ========== -->
@@ -597,6 +822,138 @@ onUnmounted(() => {
             prev-text="上一页"
             next-text="下一页"
             data-testid="fg-pagination"
+          />
+        </div>
+      </template>
+    </template>
+
+    <!-- ========== 取名记录 ========== -->
+    <template v-else-if="activeTab === 'names'">
+      <div class="ewt-table-toolbar is-split">
+        <div class="td-toolbar-left">
+          <el-button type="primary" size="small" class="btn-add" data-testid="fn-add-button" @click="startAddName">＋ 新增取名记录</el-button>
+          <el-input
+            v-model="nameSearch"
+            size="small"
+            class="fg-search"
+            placeholder="搜索名字/寓意/备注…"
+            clearable
+            data-testid="fn-search"
+            @keyup.enter="namePage = 1"
+            @clear="namePage = 1"
+          />
+          <el-select v-model="nameGenderFilter" size="small" class="fn-gender-filter" data-testid="fn-gender-filter" @change="namePage = 1">
+            <el-option value="all" label="全部性别" />
+            <el-option value="" label="通用" />
+            <el-option value="male" label="男" />
+            <el-option value="female" label="女" />
+          </el-select>
+          <el-select v-model="nameSort" size="small" class="fn-sort" data-testid="fn-sort" @change="namePage = 1">
+            <el-option value="namingDate" label="按取名日期" />
+            <el-option value="updatedAt" label="按更新时间" />
+            <el-option value="name" label="按名字" />
+          </el-select>
+        </div>
+        <div class="td-toolbar-right">
+          <el-button size="small" class="btn-cancel" data-testid="fn-export-button" @click="handleExportNames">导出</el-button>
+          <el-button size="small" class="btn-cancel" data-testid="fn-import-button" @click="nameImportInput?.click()">导入</el-button>
+          <el-button size="small" class="btn-cancel" data-testid="fn-paibei-button" @click="openPaibei">族谱排辈</el-button>
+          <input
+            ref="nameImportInput"
+            type="file"
+            accept="application/json,.json"
+            hidden
+            data-testid="fn-import-input"
+            @change="handleImportNamesFile"
+          />
+          <ViewModeToggle v-if="filteredNames.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
+        </div>
+      </div>
+
+      <div v-if="store.names.length === 0" class="empty-state empty-invite" data-testid="fn-empty" @click="startAddName">
+        ＋ 新增第一条取名记录
+      </div>
+
+      <div v-else-if="filteredNames.length === 0" class="empty-state filter-empty" data-testid="fn-filter-empty">
+        <span>没有符合搜索/筛选条件的取名记录</span>
+        <button class="btn-cancel" @click="nameSearch = ''; nameGenderFilter = 'all'; namePage = 1">清除筛选</button>
+      </div>
+
+      <template v-else>
+        <div class="fg-table-wrap">
+          <el-table
+            v-if="vm.mode === 'list'"
+            class="ewt-table"
+            :data="pageNames"
+            data-testid="fn-table"
+            @row-click="(row: FamilyNameRecord) => startEditName(row)"
+            stripe
+            border
+            size="default"
+            style="width: 100%"
+            height="100%"
+            empty-text="没有符合搜索条件的取名记录"
+          >
+            <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (namePage - 1) * namePageSize + i + 1" />
+            <el-table-column label="名字" min-width="140" align="center" show-overflow-tooltip>
+              <template #default="{ row }">
+                <span class="fn-name">{{ row.name }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="适用性别" width="100" align="center">
+              <template #default="{ row }">{{ NAME_GENDER_LABEL[row.gender ?? ''] ?? '通用' }}</template>
+            </el-table-column>
+            <el-table-column label="寓意/出处" min-width="200" align="center" show-overflow-tooltip>
+              <template #default="{ row }">
+                <span v-if="row.meaning">{{ row.meaning }}</span>
+                <span v-else class="td-col-empty">—</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="取名日期" width="130" align="center">
+              <template #default="{ row }">
+                <span v-if="row.namingDate">{{ row.namingDate }}</span>
+                <span v-else class="td-col-empty">—</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="关联成员" min-width="120" align="center">
+              <template #default="{ row }">{{ nameMemberText(row) }}</template>
+            </el-table-column>
+            <el-table-column label="更新时间" width="130" align="center">
+              <template #default="{ row }">{{ formatDateOnly(row.updatedAt) }}</template>
+            </el-table-column>
+            <el-table-column label="操作" class-name="ewt-op-col" width="180" align="center" fixed="right">
+              <template #default="{ row }">
+                <div class="td-actions" @click.stop>
+                  <el-button size="small" :data-testid="`fn-edit-${row.id}`" @click="startEditName(row)">编辑</el-button>
+                  <el-button size="small" class="btn-delete" :data-testid="`fn-delete-${row.id}`" @click="handleDeleteName(row.id)">删除</el-button>
+                </div>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <div v-else class="ewt-card-grid">
+            <RecordsCard
+              v-for="n in pageNames"
+              :key="n.id"
+              :fields="nameCardFields(n)"
+              @edit="startEditName(n)"
+            />
+          </div>
+        </div>
+
+        <div class="fg-names-pager ewt-pager">
+          <el-pagination
+            v-model:current-page="namePage"
+            @size-change="namePage = 1"
+            v-model:page-size="namePageSize"
+            :page-sizes="NAME_PAGE_SIZES"
+            layout="total, prev, pager, next, jumper"
+            :total="filteredNames.length"
+            background
+            small
+            prev-text="上一页"
+            next-text="下一页"
+            data-testid="fn-pagination"
           />
         </div>
       </template>
@@ -804,6 +1161,94 @@ onUnmounted(() => {
         <el-button size="small" @click="closeRel">关闭</el-button>
       </div>
     </el-dialog>
+
+    <!-- 取名记录新增/编辑弹框 -->
+    <el-dialog
+      :model-value="showNameDialog"
+      :title="nameEditingId ? '编辑取名记录' : '新增取名记录'"
+      width="80%"
+      data-testid="fn-name-dialog"
+      @close="cancelName"
+      @update:model-value="(v: boolean) => { if (!v) cancelName() }"
+    >
+      <form class="dialog-body" @submit.prevent="handleSaveName">
+        <div class="fg-form-grid">
+          <div class="form-group">
+            <label>名字 *</label>
+            <el-input
+              v-model="fnName"
+              placeholder="例如：沐宸"
+              maxlength="50"
+              data-testid="fn-name-input"
+              @keyup.enter="handleSaveName"
+            />
+          </div>
+          <div class="form-group">
+            <label>适用性别</label>
+            <el-select v-model="fnGender" data-testid="fn-gender">
+              <el-option value="" label="通用" />
+              <el-option value="male" label="男" />
+              <el-option value="female" label="女" />
+            </el-select>
+          </div>
+
+          <div class="form-group">
+            <label>取名日期</label>
+            <el-date-picker
+              v-model="fnNamingDate"
+              type="date"
+              value-format="YYYY-MM-DD"
+              placeholder="选择日期"
+              :disabled-date="namingDateDisabledDate"
+              data-testid="fn-naming-date"
+            />
+          </div>
+          <div class="form-group">
+            <label>关联成员（选填）</label>
+            <el-select v-model="fnMemberId" clearable filterable placeholder="选择家谱成员" size="small" class="fn-member-select" data-testid="fn-member">
+              <el-option v-for="m in store.members" :key="m.id" :value="m.id" :label="m.name" />
+            </el-select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>寓意 / 出处（选填）</label>
+          <el-input v-model="fnMeaning" type="textarea" :rows="2" maxlength="500" show-word-limit placeholder="一字多义的字解、诗词典故出处、字辈说明等…" data-testid="fn-meaning" />
+        </div>
+        <div class="form-group">
+          <label>备注（选填）</label>
+          <el-input v-model="fnNote" type="textarea" :rows="2" maxlength="500" show-word-limit placeholder="补充说明…" data-testid="fn-note" />
+        </div>
+        <div class="form-actions ewt-dialog-footer">
+          <el-button size="small" data-testid="fn-cancel-button" @click="cancelName">取消</el-button>
+          <el-button type="primary" size="small" :disabled="!isNameFormValid" data-testid="fn-save-button" @click="handleSaveName">
+            {{ nameEditingId ? '保存' : '添加' }}
+          </el-button>
+          <el-button v-if="nameEditingId" type="danger" size="small" native-type="button" data-testid="fn-record-delete" @click="handleDeleteName(nameEditingId)">删除</el-button>
+        </div>
+      </form>
+    </el-dialog>
+
+    <!-- 族谱排辈（字辈歌，只读参考）-->
+    <el-dialog
+      :model-value="showPaibeiDialog"
+      :title="PAIBEI_TITLE"
+      width="560px"
+      data-testid="fn-paibei-dialog"
+      @close="showPaibeiDialog = false"
+      @update:model-value="(v: boolean) => { if (!v) showPaibeiDialog = false }"
+    >
+      <div class="fn-paibei" data-testid="fn-paibei-body">
+        <div v-for="(row, i) in PAIBEI_ROWS" :key="i" class="fn-paibei-row">
+          <span class="fn-paibei-half">{{ row.left }}</span>
+          <span class="fn-paibei-sep">│</span>
+          <span class="fn-paibei-half">{{ row.right }}</span>
+        </div>
+      </div>
+      <div class="form-actions ewt-dialog-footer">
+        <el-button size="small" data-testid="fn-paibei-close" @click="showPaibeiDialog = false">关闭</el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -839,6 +1284,35 @@ onUnmounted(() => {
 
 /* ===== 搜索 / 工具栏 ===== */
 .fg-search { width: 200px; }
+.fn-gender-filter, .fn-sort { width: 120px; }
+.fn-member-select { width: 100%; }
+.fn-name { font-size: 13px; font-weight: 600; color: var(--color-text, #111827); }
+
+/* ===== 族谱排辈 字辈歌 ===== */
+.fn-paibei {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 4px;
+}
+.fn-paibei-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  font-size: 19px;
+  line-height: 1.6;
+  letter-spacing: 8px;
+  color: var(--color-text, #111827);
+}
+.fn-paibei-half { white-space: nowrap; }
+.fn-paibei-sep {
+  letter-spacing: 0;
+  color: var(--color-border, #d1d5db);
+  font-size: 16px;
+}
+html.dark .fn-paibei-row { color: var(--color-text, #f9fafb); }
+html.dark .fn-paibei-sep { color: var(--color-border, #374151); }
 .td-toolbar-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 /* 工具栏右侧组：导入 / 导出 紧贴视图切换（卡片）按钮，is-split 下贴右侧、小屏自动换行 */
 .td-toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
@@ -1084,6 +1558,7 @@ html.dark .fg-tab { color: var(--color-text-secondary, #d1d5db); }
 html.dark .fg-tab:hover, html.dark .fg-tab.active { color: var(--color-primary, #60a5fa); border-bottom-color: var(--color-primary, #3b82f6); }
 html.dark .empty-state { background-color: var(--color-bg-card, #1f2937); }
 html.dark .fg-name { color: var(--color-text, #f9fafb); }
+html.dark .fn-name { color: var(--color-text, #f9fafb); }
 html.dark .fg-tree-bar { background-color: var(--color-bg-card, #1f2937); }
 html.dark .fg-rel-section { background-color: var(--color-bg-card, #1f2937); border-color: var(--color-border, #374151); }
 html.dark .fg-rel-title { color: var(--color-text, #f9fafb); }

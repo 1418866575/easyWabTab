@@ -14,12 +14,24 @@ import {
   mergeFamily,
   type NormalizeGenealogyResult
 } from '@/composables/genealogyCore'
-import type { FamilyMember, GenealogyData } from '@/types'
+import {
+  buildNamesExport,
+  normalizeNamesImport,
+  mergeNames,
+  type NormalizeNamesResult
+} from '@/composables/namingCore'
+import type { FamilyMember, GenealogyData, FamilyNameRecord } from '@/types'
 
 let idSeq = 0
 function newMemberId(): string {
   idSeq += 1
   return `fm_${Date.now().toString(36)}_${idSeq.toString(36)}_${Math.random().toString(36).slice(2, 7)}`
+}
+
+let nameSeq = 0
+function newNameRecordId(): string {
+  nameSeq += 1
+  return `nm_${Date.now().toString(36)}_${nameSeq.toString(36)}_${Math.random().toString(36).slice(2, 7)}`
 }
 
 export interface MemberInput {
@@ -32,9 +44,20 @@ export interface MemberInput {
   avatar?: string
 }
 
+/** 取名记录新增/编辑入参（memberId 关联成员缺省 null = 未关联） */
+export interface NameRecordInput {
+  name: string
+  gender?: 'male' | 'female' | ''
+  meaning?: string
+  namingDate?: string | null
+  memberId?: string | null
+  note?: string
+}
+
 export const useGenealogyStore = defineStore('genealogy', () => {
   const members = ref<FamilyMember[]>([])
   const rootId = ref<string | null>(null)
+  const names = ref<FamilyNameRecord[]>([])
 
   // ===== 持久化 =====
   async function load(): Promise<void> {
@@ -43,16 +66,32 @@ export const useGenealogyStore = defineStore('genealogy', () => {
       const d = data ?? emptyGenealogyData()
       members.value = Array.isArray(d.members) ? d.members : []
       rootId.value = d.rootId ?? null
+      names.value = Array.isArray(d.names) ? d.names : []
+      // 加载时清理指向已删除成员的脏引用（需求 §6：关联成员被删 → memberId 置空，记录保留）
+      const memberIds = new Set(members.value.map((m) => m.id))
+      let changed = false
+      for (const n of names.value) {
+        if (n.memberId && !memberIds.has(n.memberId)) {
+          n.memberId = null
+          changed = true
+        }
+      }
+      if (changed) persist()
     } catch {
       members.value = []
       rootId.value = null
+      names.value = []
     }
   }
 
   function persist(): void {
     // 深拷贝成纯对象再落盘：避免 Vue 响应式代理影响 IndexedDB 结构化克隆。
     // 写入失败必须可见（此前 .catch 静默吞掉，导致"数据存了却没落盘"无法察觉）。
-    const snapshot: GenealogyData = JSON.parse(JSON.stringify({ members: members.value, rootId: rootId.value }))
+    const snapshot: GenealogyData = JSON.parse(JSON.stringify({
+      members: members.value,
+      rootId: rootId.value,
+      names: names.value
+    }))
     void idbPut('family', snapshot).catch((e) => {
       console.error('[genealogy] 家谱数据写入 IndexedDB 失败：', e)
     })
@@ -105,6 +144,10 @@ export const useGenealogyStore = defineStore('genealogy', () => {
       if (m.spouses.includes(id)) m.spouses = m.spouses.filter((s) => s !== id)
     }
     if (rootId.value === id) rootId.value = null
+    // 取名记录：解除对该成员的关联（memberId 置空，记录本身保留）
+    for (const n of names.value) {
+      if (n.memberId === id) n.memberId = null
+    }
     persist()
   }
 
@@ -177,7 +220,91 @@ export const useGenealogyStore = defineStore('genealogy', () => {
 
   /** 导出当前家谱为可分享的 JSON 文本（纯函数生成信封，深拷贝避免带出响应式代理） */
   function exportData(): string {
-    return JSON.stringify(buildGenealogyExport({ members: members.value, rootId: rootId.value }), null, 2)
+    return JSON.stringify(buildGenealogyExport({ members: members.value, rootId: rootId.value, names: [] }), null, 2)
+  }
+
+  // ===== 取名记录 增删改 =====
+  /** 新增取名记录（校验在 UI 层完成，此处做归一与落库） */
+  async function addNameRecord(input: NameRecordInput): Promise<FamilyNameRecord> {
+    const now = new Date().toISOString()
+    const rec: FamilyNameRecord = {
+      id: newNameRecordId(),
+      name: input.name.trim(),
+      gender: input.gender ?? '',
+      namingDate: input.namingDate || null,
+      memberId: input.memberId || null,
+      createdAt: now,
+      updatedAt: now
+    }
+    if (input.meaning && input.meaning.trim()) rec.meaning = input.meaning.trim().slice(0, 500)
+    if (input.note && input.note.trim()) rec.note = input.note.trim().slice(0, 500)
+    names.value.push(rec)
+    persist()
+    return rec
+  }
+
+  /** 编辑取名记录（按字段补丁；memberId 仅当存在才更新，避免误清空关联） */
+  async function updateNameRecord(id: string, patch: Partial<NameRecordInput>): Promise<void> {
+    const rec = names.value.find((x) => x.id === id)
+    if (!rec) return
+    if (patch.name !== undefined) rec.name = patch.name.trim()
+    if (patch.gender !== undefined) rec.gender = patch.gender
+    if (patch.meaning !== undefined) {
+      const t = patch.meaning.trim()
+      rec.meaning = t ? t.slice(0, 500) : undefined
+    }
+    if (patch.namingDate !== undefined) rec.namingDate = patch.namingDate || null
+    if (patch.memberId !== undefined) rec.memberId = patch.memberId || null
+    if (patch.note !== undefined) {
+      const t = patch.note.trim()
+      rec.note = t ? t.slice(0, 500) : undefined
+    }
+    rec.updatedAt = new Date().toISOString()
+    persist()
+  }
+
+  /** 删除取名记录 */
+  async function deleteNameRecord(id: string): Promise<void> {
+    names.value = names.value.filter((x) => x.id !== id)
+    persist()
+  }
+
+  /** 导出取名记录为可分享的 JSON 文本（信封 kind='family-names'） */
+  function exportNames(): string {
+    return JSON.stringify(buildNamesExport(names.value), null, 2)
+  }
+
+  /**
+   * 从 JSON 文本导入取名记录。
+   * mode='replace'：清空后导入；mode='merge'：按 id 合并（同 id 以较新 updatedAt 为准）
+   * 返回清洗统计（导入条数 / 跳过 / 提示），由 UI 告知用户。
+   */
+  async function importNamesFromJSON(
+    text: string,
+    mode: 'replace' | 'merge' = 'replace'
+  ): Promise<NormalizeNamesResult> {
+    let raw: unknown
+    try {
+      raw = JSON.parse(text)
+    } catch {
+      return { records: [], valid: 0, skipped: 0, warnings: ['文件不是有效的 JSON 格式'] }
+    }
+    const result = normalizeNamesImport(raw)
+    if (result.valid === 0 && result.skipped === 0 && result.warnings.length === 0) {
+      // 既无有效也无跳过、且无警告（通常是空数组/结构错）——给出明确反馈
+      if (result.records.length === 0) {
+        return { records: [], valid: 0, skipped: 0, warnings: ['文件中没有可取名记录'] }
+      }
+    }
+
+    if (mode === 'replace') {
+      names.value = result.records
+    } else {
+      const merged = mergeNames(names.value, result.records)
+      names.value = merged
+    }
+    persist()
+    return result
   }
 
   /**
@@ -203,10 +330,11 @@ export const useGenealogyStore = defineStore('genealogy', () => {
       members.value = result.data.members
       rootId.value = result.data.rootId
     } else {
-      // 合并：复用 mergeFamily 的「本地优先」策略（rootId 取本地 ?? 远端）
-      const merged = mergeFamily({ members: members.value, rootId: rootId.value }, result.data)
+      // 合并：复用 mergeFamily 的「本地优先」策略（rootId 取本地 ?? 远端；names 随本地保留）
+      const merged = mergeFamily({ members: members.value, rootId: rootId.value, names: names.value }, result.data)
       members.value = merged.members
       rootId.value = merged.rootId
+      names.value = merged.names
     }
     persist()
     return result
@@ -221,6 +349,7 @@ export const useGenealogyStore = defineStore('genealogy', () => {
   return {
     members,
     rootId,
+    names,
     load,
     persist,
     addMember,
@@ -234,6 +363,11 @@ export const useGenealogyStore = defineStore('genealogy', () => {
     clearRoot,
     exportData,
     importFromJSON,
+    addNameRecord,
+    updateNameRecord,
+    deleteNameRecord,
+    exportNames,
+    importNamesFromJSON,
     childrenOf,
     siblingsOf,
     ancestorsOf,

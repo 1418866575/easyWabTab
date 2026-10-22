@@ -21,6 +21,7 @@
     "test:todo": "node --experimental-strip-types scripts/test-todo-core.ts",
     "test:health": "node --experimental-strip-types scripts/test-health-core.ts",
     "test:genealogy": "node --experimental-strip-types scripts/test-genealogy-core.ts",
+    "test:naming": "node --experimental-strip-types scripts/test-naming-core.ts",
     "test:ledger": "node --experimental-strip-types scripts/test-ledger-core.ts",
     "test:notes": "node --experimental-strip-types scripts/test-note-core.ts",
     "test:diary": "node --experimental-strip-types scripts/test-diary-core.ts",
