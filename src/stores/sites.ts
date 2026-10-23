@@ -736,8 +736,10 @@ export const useSitesStore = defineStore('sites', () => {
     } else {
       const customCats = categoriesStore.exportCustomCategories()
       const sortedCats = [...customCats].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+      // 分类图标与站点图标共用 iconTable：data URL 本地化为 icons/ 相对路径并随 ZIP 导出；
+      // emoji / 预置路径 / http 地址非 data URL，registerIconPath 会原样保留。
       categoriesSection = sortedCats.length > 0
-        ? `categories:\n${sortedCats.map((c: { id: string; name: string; icon: string; sort?: number }) => `  - id: ${yamlStr(c.id)}\n    name: ${yamlStr(c.name)}\n    icon: ${yamlStr(c.icon)}\n    sort: ${c.sort || 0}`).join('\n\n')}\n\n`
+        ? `categories:\n${sortedCats.map((c: { id: string; name: string; icon: string; sort?: number }, idx: number) => `  - id: ${yamlStr(c.id)}\n    name: ${yamlStr(c.name)}\n    icon: ${yamlStr(c.icon ? registerIconPath(iconTable, c.icon, c.name, idx) : '')}\n    sort: ${c.sort || 0}`).join('\n\n')}\n\n`
         : ''
     }
 
