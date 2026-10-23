@@ -378,7 +378,7 @@ const renderedPreview = computed(() =>
           @change="(v: unknown) => store.setCurrentJournal(String(v ?? ''))"
         >
           <el-option
-            v-for="j in store.journals"
+            v-for="j in store.activeJournals"
             :key="j.id"
             :label="j.name"
             :value="j.id"

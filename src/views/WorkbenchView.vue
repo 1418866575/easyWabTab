@@ -140,8 +140,9 @@ const showSettingsDialog = ref(false)
 
 // 6 类数据源：密码不解密内容，仅 siteName/url 由 spotlightCore 匹配（core 契约）
 const spotlightData = computed<SpotlightData>(() => ({
-  todos: todosStore.todos,
-  notes: notesStore.notes,
+  // 墓碑不入全局搜索：已删条目被搜到并点开会是空壳
+  todos: todosStore.activeTodos,
+  notes: notesStore.activeNotes,
   countdowns: countdownsStore.countdowns,
   ledgerEntries: ledgerStore.entries,
   ledgerCategories: ledgerStore.categories,

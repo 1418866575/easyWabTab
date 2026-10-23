@@ -45,8 +45,8 @@ const listPage = ref(1)
 
 const filteredMembers = computed<FamilyMember[]>(() => {
   const q = searchName.value.trim().toLowerCase()
-  if (!q) return store.members
-  return store.members.filter((m) => m.name.toLowerCase().includes(q))
+  if (!q) return store.activeMembers
+  return store.activeMembers.filter((m) => m.name.toLowerCase().includes(q))
 })
 
 const pageMembers = computed<FamilyMember[]>(() => {
@@ -71,7 +71,7 @@ const nameGenderFilter = ref<'all' | 'male' | 'female' | ''>('all')
 const nameSort = ref<'namingDate' | 'updatedAt' | 'name'>('namingDate')
 
 const filteredNames = computed<FamilyNameRecord[]>(() =>
-  filterNameRecords(store.names, nameSearch.value, nameGenderFilter.value, nameSort.value)
+  filterNameRecords(store.activeNames, nameSearch.value, nameGenderFilter.value, nameSort.value)
 )
 
 const pageNames = computed<FamilyNameRecord[]>(() => {
@@ -96,7 +96,7 @@ function formatDateOnly(iso?: string): string {
 
 function nameMemberText(n: FamilyNameRecord): string {
   if (!n.memberId) return '—'
-  const m = store.members.find((x) => x.id === n.memberId)
+  const m = store.activeMembers.find((x) => x.id === n.memberId)
   return m ? m.name : '—'
 }
 
@@ -184,7 +184,7 @@ async function handleSaveName(): Promise<void> {
 }
 
 async function handleDeleteName(id: string): Promise<void> {
-  const rec = store.names.find((x) => x.id === id)
+  const rec = store.activeNames.find((x) => x.id === id)
   if (!rec) return
   if (await showConfirm(`确定删除取名记录「${rec.name}」吗？\n（仅删除该记录，不影响关联的家谱成员。）`)) {
     await store.deleteNameRecord(id)
@@ -197,7 +197,7 @@ async function handleDeleteName(id: string): Promise<void> {
 const nameImportInput = ref<HTMLInputElement | null>(null)
 
 function handleExportNames(): void {
-  if (!store.names.length) {
+  if (!store.activeNames.length) {
     toast.info('暂无取名记录，无法导出')
     return
   }
@@ -211,7 +211,7 @@ function handleExportNames(): void {
   a.download = `family-names-${dateStr}.json`
   a.click()
   URL.revokeObjectURL(url)
-  toast.success(`已导出 ${store.names.length} 条取名记录`)
+  toast.success(`已导出 ${store.activeNames.length} 条取名记录`)
 }
 
 async function handleImportNamesFile(e: Event): Promise<void> {
@@ -221,9 +221,9 @@ async function handleImportNamesFile(e: Event): Promise<void> {
   try {
     const text = await f.text()
     let mode: 'replace' | 'merge' = 'replace'
-    if (store.names.length > 0) {
+    if (store.activeNames.length > 0) {
       const ok = await showConfirm(
-        `当前已有 ${store.names.length} 条取名记录。\n\n` +
+        `当前已有 ${store.activeNames.length} 条取名记录。\n\n` +
         `点「确定」用文件**覆盖**现有记录；点「取消」则**合并**进现有记录（同 id 以较新修改时间为准）。`
       )
       mode = ok ? 'replace' : 'merge'
@@ -274,7 +274,7 @@ function openPaibei(): void {
 }
 
 function relationSummary(m: FamilyMember): string {
-  const children = getChildren(store.members, m.id).length
+  const children = getChildren(store.activeMembers, m.id).length
   return `父${m.parents.length} · 子${children} · 偶${m.spouses.length}`
 }
 
@@ -293,7 +293,7 @@ function zodiacText(m: FamilyMember): string {
 }
 
 function memberName(id: string): string {
-  return store.members.find((m) => m.id === id)?.name ?? '(已删除)'
+  return store.activeMembers.find((m) => m.id === id)?.name ?? '(已删除)'
 }
 
 function cardFields(m: FamilyMember) {
@@ -308,8 +308,8 @@ function cardFields(m: FamilyMember) {
 }
 
 // ===== 人口统计（总数 / 男女 / 年龄段）=====
-// 依赖 store.members，成员或出生日期变化自动重算；纯函数 genealogyStats 出结果，组件不做计算。
-const stats = computed(() => genealogyStats(store.members))
+// 依赖 store.activeMembers，成员或出生日期变化自动重算；纯函数 genealogyStats 出结果，组件不做计算。
+const stats = computed(() => genealogyStats(store.activeMembers))
 const ageStatRows = computed(() =>
   AGE_GROUPS.map((g) => ({
     key: g.key as AgeGroupKey,
@@ -467,7 +467,7 @@ const importInput = ref<HTMLInputElement | null>(null)
 
 /** 导出：生成 JSON 文件并触发下载（纯本地，不上传） */
 function handleExport(): void {
-  if (!store.members.length) {
+  if (!store.activeMembers.length) {
     toast.info('家谱暂无成员，无法导出')
     return
   }
@@ -479,7 +479,7 @@ function handleExport(): void {
   a.download = GENEALOGY_EXPORT_FILENAME
   a.click()
   URL.revokeObjectURL(url)
-  toast.success(`已导出 ${store.members.length} 位成员，可发给家人导入`)
+  toast.success(`已导出 ${store.activeMembers.length} 位成员，可发给家人导入`)
 }
 
 /** 导入：选文件 → 询问覆盖/合并 → 清洗写入 → 反馈统计 */
@@ -491,8 +491,8 @@ async function handleImportFile(e: Event): Promise<void> {
     const text = await f.text()
     // 有数据时先问：覆盖 or 合并（分享来的完整家谱通常选覆盖）
     let mode: 'replace' | 'merge' = 'replace'
-    if (store.members.length > 0) {
-      const hasLocal = store.members.length
+    if (store.activeMembers.length > 0) {
+      const hasLocal = store.activeMembers.length
       const ok = await showConfirm(
         `当前家谱已有 ${hasLocal} 位成员。\n\n` +
         `点「确定」用文件**覆盖**现有家谱；点「取消」则**合并**进现有家谱（同 id 以较新修改时间为准）。`
@@ -521,7 +521,7 @@ async function handleImportFile(e: Event): Promise<void> {
 }
 
 async function handleDelete(m: FamilyMember): Promise<void> {
-  const children = getChildren(store.members, m.id)
+  const children = getChildren(store.activeMembers, m.id)
   const childTip = children.length > 0 ? `其子/女（${children.map((c) => c.name).join('、')}）将保留为孤儿。` : ''
   if (await showConfirm(`确定删除「${m.name}」吗？\n${childTip}\n（仅删除该成员，并清理他人对其的父母/配偶引用，不做级联删除。）`)) {
     await store.deleteMember(m.id)
@@ -537,12 +537,12 @@ const spousePick = ref('')
 
 // 可选父母：过滤不合理候选（自己/已有父母/后代防环/年龄小于被关联人/性别角色冲突）
 const parentOptions = computed<FamilyMember[]>(() =>
-  relMember.value ? filterParentCandidates(store.members, relMember.value.id) : []
+  relMember.value ? filterParentCandidates(store.activeMembers, relMember.value.id) : []
 )
 
 // 可选配偶：过滤不合理候选（自己/已有配偶/关系互斥的血亲/同性不匹配）
 const spouseOptions = computed<FamilyMember[]>(() =>
-  relMember.value ? filterSpouseCandidates(store.members, relMember.value.id) : []
+  relMember.value ? filterSpouseCandidates(store.activeMembers, relMember.value.id) : []
 )
 
 function openRel(m: FamilyMember): void {
@@ -607,7 +607,7 @@ async function clearRoot(): Promise<void> {
 // 移动端编辑弹框内快捷入口：打开关系管理 / 设为主根
 function openRelFromEdit(): void {
   if (!editingId.value) return
-  const m = store.members.find((x) => x.id === editingId.value)
+  const m = store.activeMembers.find((x) => x.id === editingId.value)
   if (!m) return
   cancelMember()
   openRel(m)
@@ -615,18 +615,18 @@ function openRelFromEdit(): void {
 
 async function setRootFromEdit(): Promise<void> {
   if (!editingId.value) return
-  const m = store.members.find((x) => x.id === editingId.value)
+  const m = store.activeMembers.find((x) => x.id === editingId.value)
   if (!m) return
   await setRoot(m)
   cancelMember()
 }
 
 // ===== 家谱树（递归思维导图组件，折叠态由各节点内部维护）=====
-const treeRoots = computed(() => buildTree(store.members, store.rootId))
-const hasRoot = computed(() => store.rootId !== null && store.members.some((m) => m.id === store.rootId))
+const treeRoots = computed(() => buildTree(store.activeMembers, store.rootId))
+const hasRoot = computed(() => store.rootId !== null && store.activeMembers.some((m) => m.id === store.rootId))
 
 function rootName(): string {
-  const r = store.members.find((m) => m.id === store.rootId)
+  const r = store.activeMembers.find((m) => m.id === store.rootId)
   return r ? r.name : ''
 }
 
@@ -721,7 +721,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div v-if="store.members.length === 0" class="empty-state empty-invite" data-testid="fg-empty" @click="startAdd">
+      <div v-if="store.activeMembers.length === 0" class="empty-state empty-invite" data-testid="fg-empty" @click="startAdd">
         ＋ 新增第一个家庭成员
       </div>
 
@@ -870,7 +870,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div v-if="store.names.length === 0" class="empty-state empty-invite" data-testid="fn-empty" @click="startAddName">
+      <div v-if="store.activeNames.length === 0" class="empty-state empty-invite" data-testid="fn-empty" @click="startAddName">
         ＋ 新增第一条取名记录
       </div>
 
@@ -1206,7 +1206,7 @@ onUnmounted(() => {
           <div class="form-group">
             <label>关联成员（选填）</label>
             <el-select v-model="fnMemberId" clearable filterable placeholder="选择家谱成员" size="small" class="fn-member-select" data-testid="fn-member">
-              <el-option v-for="m in store.members" :key="m.id" :value="m.id" :label="m.name" />
+              <el-option v-for="m in store.activeMembers" :key="m.id" :value="m.id" :label="m.name" />
             </el-select>
           </div>
         </div>

@@ -1250,7 +1250,7 @@ async function handleWbImportFile(event: Event): Promise<void> {
       hlthStore.records.diet.length +
       hlthStore.records.sleep.length +
       hlthStore.records.weight.length
-    const countMsg = `导入成功：待办 ${wbTodosStore.todos.length} 条，便签 ${wbNotesStore.notes.length} 条，日记 ${wbDiaryStore.entries.length} 篇，倒计时 ${cdStore.countdowns.length} 条，健康 运动/饮食/睡眠/体重 记录 ${healthCount} 条，记账 ${ledStore.entries.length} 笔`
+    const countMsg = `导入成功：待办 ${wbTodosStore.activeTodos.length} 条，便签 ${wbNotesStore.activeNotes.length} 条，日记 ${wbDiaryStore.activeEntries.length} 篇，倒计时 ${cdStore.countdowns.length} 条，健康 运动/饮食/睡眠/体重 记录 ${healthCount} 条，记账 ${ledStore.activeEntries.length} 笔`
     toast.success(skipPasswords ? `${countMsg}（密码已跳过）` : `${countMsg}；密码库已导入`)
   }
   reader.readAsText(file)
@@ -2017,6 +2017,11 @@ function handlePlCreate(): void {
   toast.success(`已创建账本「${created.name}」（${plCode(created)}）并切换为当前账本`)
 }
 
+/** 账本记录数：剔除墓碑（已删流水），与记账列表口径一致 */
+function plEntryCount(l: PersonalLedger): number {
+  return l.data.entries.filter(e => !e.deletedAt).length
+}
+
 function handlePlSwitch(l: PersonalLedger): void {
   if (ledStore.switchLedger(l.id)) toast.success(`已切换到账本「${l.name}」`)
 }
@@ -2048,7 +2053,7 @@ function plSaveEdit(l: PersonalLedger): void {
 }
 
 async function handlePlClear(l: PersonalLedger): Promise<void> {
-  const count = l.data.entries.length
+  const count = plEntryCount(l)
   if (!await showConfirm(`确定要清空账本「${l.name}」的全部记账记录吗？\n\n将删除 ${count} 条记录，账本本体与分类保留，此操作不可恢复。`)) return
   if (!ledStore.clearLedgerRecords(l.id).ok) {
     toast.error('清空失败')
@@ -3332,7 +3337,7 @@ function toggleFullscreen(): void {
                           <span v-if="plEditError" class="wb-menu-hint bl-error">{{ plEditError }}</span>
                         </template>
                       </td>
-                      <td class="bl-col-count" data-label="记录数">{{ l.data.entries.length }}</td>
+                      <td class="bl-col-count" data-label="记录数">{{ plEntryCount(l) }}</td>
                       <td class="bl-col-ops" data-label="操作">
                         <template v-if="plEditId !== l.id">
                           <el-button

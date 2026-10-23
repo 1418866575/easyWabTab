@@ -172,7 +172,7 @@ export const TODO_COLOR_PRESETS = [
   '#ec4899'  // 粉
 ] as const
 
-export interface WorkbenchTodo {
+export interface WorkbenchTodo extends SyncStamp {
   id: string
   title: string
   description?: string
@@ -230,7 +230,7 @@ export interface TimelineEntry {
   createdAt: string
 }
 
-export interface WorkbenchNote {
+export interface WorkbenchNote extends SyncStamp {
   id: string
   title?: string
   content: string
@@ -252,7 +252,7 @@ export interface NoteData {
 }
 
 // 工作台日记本：多日志本（journalId 归属某个日志本）；每天每条目唯一（date 本地 'YYYY-MM-DD' 唯一，upsert 语义）
-export interface WorkbenchJournal {
+export interface WorkbenchJournal extends SyncStamp {
   id: string // 'jb_' 前缀
   name: string
   icon?: string // 可选 emoji 图标
@@ -260,7 +260,7 @@ export interface WorkbenchJournal {
   order: number // 排序（越小越靠前）
 }
 
-export interface WorkbenchDiary {
+export interface WorkbenchDiary extends SyncStamp {
   id: string // 'dy_' 前缀
   journalId: string // 所属日志本 id（'jb_default' 为默认）
   date: string // 'YYYY-MM-DD' 本地日期，唯一（每天一条）
@@ -410,7 +410,7 @@ export interface WorkbenchData {
 // ==================== 家庭家谱（并入 workbench 阶层，不加密、明文同步） ====================
 
 /** 家庭成员：成员为中心 + 最小边模型（仅挂 parents/spouses 两条边，子女/兄弟姐妹/祖孙全部运行时派生，不单独建关系表） */
-export interface FamilyMember {
+export interface FamilyMember extends SyncStamp {
   id: string            // 'fm_' 前缀，uuid
   name: string          // 必填，≤50
   gender?: 'male' | 'female' | '' | null   // 可选，UI 提供「男/女/不详」
@@ -426,8 +426,8 @@ export interface FamilyMember {
 }
 
 /** 家谱 · 取名记录（家谱模块第三个标签页，记录为子孙新取的名字及其寓意/出处/性别/日期） */
-export interface FamilyNameRecord {
-  id: string                 // 'nm_' 前缀，uuid
+export interface FamilyNameRecord extends SyncStamp {
+  /** id（'nm_' 前缀）由继承的 SyncStamp 提供 */
   name: string               // 名字，必填，≤50
   gender: 'male' | 'female' | ''  // 适用性别；'' = 通用/不限
   meaning?: string           // 寓意/出处，≤500（选填）
@@ -436,6 +436,25 @@ export interface FamilyNameRecord {
   note?: string              // 备注，≤500（选填）
   createdAt: string          // ISO 时间戳
   updatedAt: string          // ISO 时间戳
+}
+
+/**
+ * 参与云同步的条目统一具备的「墓碑 + Lamport 逻辑时钟」字段（全部可选，便于渐进接入）。
+ * 见 docs/云同步-删除失效-问题分析与方案.md 与 composables/tombstoneCore.ts：
+ *   - 删除 = 写 deletedAt 墓碑（保留记录），而非物理移除，否则会被并集合并当成"远端新增"复活；
+ *   - ver 为 Lamport 逻辑时钟，任何变更（含删除）+1，用于多端取新；
+ *   - 全部可选：老数据无这些字段时降级为「未删除 + ver=0」，比较回落到 updatedAt。
+ */
+export interface SyncStamp {
+  id: string
+  updatedAt?: string
+  createdAt?: string
+  /** Lamport 逻辑时钟：任何变更（含删除）递增；缺省 0 */
+  ver?: number
+  /** 产生该版本的客户端 id（版本完全相同时的稳定 tie-break） */
+  clientId?: string
+  /** 墓碑：非空 = 已删除；undefined/null = 未删除 */
+  deletedAt?: string | null
 }
 
 /** 家谱数据集（IDB store 'family' 单对象；随 workbench.json 明文同步） */
@@ -592,7 +611,7 @@ export const DEFAULT_LEDGER_CATEGORIES: LedgerCategory[] = [
   { id: 'daily', name: '日常', type: 'expense', isBuiltIn: true }
 ]
 
-export interface LedgerEntry {
+export interface LedgerEntry extends SyncStamp {
   id: string
   date: string
   categoryId: string

@@ -222,7 +222,7 @@ async function handleSave(): Promise<void> {
     // 状态：先落工作流状态（内部同步 completed / completedAt，并在非完成时清归档），
     // 再按需归档/取消归档（复用列表同一套 store 方法，联动规则一致）
     await store.setTodoStatus(id, formStatus.value)
-    const after = store.todos.find(t => t.id === id)
+    const after = store.activeTodos.find(t => t.id === id)
     if (after) {
       if (!after.archived && formArchived.value) await store.archiveTodo(id)
       else if (after.archived && !formArchived.value) await store.unarchiveTodo(id)
@@ -239,7 +239,7 @@ async function handleSave(): Promise<void> {
       categoryId: formCategoryId.value || undefined,
       status: formStatus.value
     })
-    const created = store.todos[store.todos.length - 1]
+    const created = store.activeTodos[store.activeTodos.length - 1]
     if (created && formArchived.value) await store.archiveTodo(created.id)
     listPage.value = 1 // 新增条目回第 1 页（复用日记分页惯例）
   }

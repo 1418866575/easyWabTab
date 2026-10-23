@@ -8,9 +8,11 @@ import {
   calcZodiac,
   ZODIAC_ANIMALS,
   filterParentCandidates,
-  filterSpouseCandidates
+  filterSpouseCandidates,
+  mergeFamily
 } from '../src/composables/genealogyCore.ts'
-import type { FamilyMember } from '../src/types'
+import { activeOnly } from '../src/composables/tombstoneCore.ts'
+import type { FamilyMember, GenealogyData } from '../src/types'
 
 const tests: { name: string; fn: () => void }[] = []
 function test(name: string, fn: () => void) {
@@ -207,6 +209,36 @@ test('T8 filterSpouseCandidates 配偶候选过滤', () => {
   ]
   const ids2 = filterSpouseCandidates(unknown, 's3').map((m) => m.id).sort()
   assert.deepEqual(ids2, ['a', 'b'])
+})
+
+// T9~T11 — 墓碑感知合并：删除状态必须跨越合并存活（云同步「删除失效」的根因）
+function data(members: FamilyMember[]): GenealogyData {
+  return { members, rootId: null, names: [] }
+}
+
+test('T9 mergeFamily 墓碑：本地删除不被云端复活', () => {
+  // 本端墓碑 ver=5 vs 云端活记录 ver=3 → 墓碑胜，保持删除
+  const local = data([member({ id: 'm1', name: '张三', updatedAt: '2026-06-01T00:00:00.000Z', ver: 5, deletedAt: '2026-06-01T00:00:00.000Z' })])
+  const remote = data([member({ id: 'm1', name: '张三', updatedAt: '2026-05-01T00:00:00.000Z', ver: 3 })])
+  const merged = mergeFamily(local, remote)
+  assert.equal(merged.members.length, 1)
+  assert.equal(merged.members[0].deletedAt, '2026-06-01T00:00:00.000Z')
+  // 展示层过滤后应为空 —— 删除真的生效了
+  assert.equal(activeOnly(merged.members).length, 0)
+})
+
+test('T10 mergeFamily 墓碑：云端删除能同步到本地', () => {
+  const local = data([member({ id: 'm1', name: '张三', updatedAt: '2026-05-01T00:00:00.000Z', ver: 2 })])
+  const remote = data([member({ id: 'm1', name: '张三', updatedAt: '2026-06-01T00:00:00.000Z', ver: 6, deletedAt: '2026-06-01T00:00:00.000Z' })])
+  const merged = mergeFamily(local, remote)
+  assert.equal(activeOnly(merged.members).length, 0)
+})
+
+test('T11 mergeFamily 墓碑：远端新增仍然补入（不误伤）', () => {
+  const local = data([member({ id: 'm1', name: '张三', updatedAt: '2026-05-01T00:00:00.000Z', ver: 2 })])
+  const remote = data([member({ id: 'm2', name: '李四', updatedAt: '2026-05-01T00:00:00.000Z', ver: 1 })])
+  const merged = mergeFamily(local, remote)
+  assert.equal(activeOnly(merged.members).length, 2)
 })
 
 let passed = 0

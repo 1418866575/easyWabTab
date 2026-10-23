@@ -52,10 +52,10 @@ function goToCurrentMonth(): void {
 }
 
 // ===== 月度统计（必须走 ledgerCore 纯函数，禁组件内重算公式）=====
-const monthStats = computed(() => calcMonthlyStats(store.entries, selectedMonth.value, store.categories))
+const monthStats = computed(() => calcMonthlyStats(store.activeEntries, selectedMonth.value, store.categories))
 
 // 存款 = 从最早记账月到当前选中月的每月结余累计（纯函数，禁组件内重算）
-const depositTotal = computed(() => calcDepositTotal(store.entries, selectedMonth.value, store.categories))
+const depositTotal = computed(() => calcDepositTotal(store.activeEntries, selectedMonth.value, store.categories))
 /** 存款统计累计结余，0 也有意义（无记账也显示 0.00，不像结余卡空月显示 '—'） */
 const depositText = computed(() => (depositTotal.value === 0 ? formatYuan(0) : formatYuan(depositTotal.value)))
 
@@ -86,7 +86,7 @@ const TREND_H = 300
 const TREND_W = 600
 const TREND_MONTHS = 12
 
-const trendSeries = computed<TrendMonth[]>(() => calcTrendSeries(store.entries, currentMonth(), store.categories, TREND_MONTHS))
+const trendSeries = computed<TrendMonth[]>(() => calcTrendSeries(store.activeEntries, currentMonth(), store.categories, TREND_MONTHS))
 const trendTotalIncome = computed(() => trendSeries.value.reduce((s, m) => s + m.income, 0))
 const trendTotalExpense = computed(() => trendSeries.value.reduce((s, m) => s + m.expense, 0))
 const trendScale = computed<TrendChartScale | null>(() => trendChartScale(trendSeries.value, TREND_W, TREND_H))
@@ -152,7 +152,7 @@ const DAILY_DAYS = 7
 const dailyOffset = ref(0)
 const dailyEndKey = computed(() => shiftDay(localDateStr(), -DAILY_DAYS * dailyOffset.value))
 const dailySeries = computed(() =>
-  calcDailyExpenseSeries(store.entries, store.categories, dailyEndKey.value, DAILY_DAYS)
+  calcDailyExpenseSeries(store.activeEntries, store.categories, dailyEndKey.value, DAILY_DAYS)
 )
 const dailyScale = computed(() => dailyExpenseChartScale(dailySeries.value))
 const dailyTotal = computed(() => dailySeries.value.reduce((s, d) => s + d.total, 0))
@@ -186,7 +186,7 @@ function onDailyTouchEnd(e: TouchEvent): void {
 
 // ===== 月内记录列表（date 降序，同日 createdAt 降序）—— 页面底部表格直接复用，随数据实时更新 =====
 const monthEntries = computed(() =>
-  [...store.entries]
+  [...store.activeEntries]
     .filter(e => monthKeyOf(e.date) === selectedMonth.value)
     .sort((a, b) => (a.date === b.date ? (a.createdAt < b.createdAt ? 1 : -1) : a.date < b.date ? 1 : -1))
 )

@@ -4,7 +4,6 @@ import type { LedgerCategory, LedgerData, LedgerEntry, LedgerStoreData, Personal
 import {
   LEDGER_STORE_SCHEMA_VER,
   checkPersonalLedgerYearWrite,
-  clearPersonalLedgerRecords,
   createPersonalLedger,
   currentYear,
   deletePersonalLedger,
@@ -30,8 +29,9 @@ import type {
   LedgerRenameResult,
   LedgerWriteResult
 } from '@/composables/ledgerCore'
+import { activeOnly, clearDeleted, markDeleted, trashedItems } from '../composables/tombstoneCore'
 import { idbGet, idbPut } from '../composables/useIdb'
-import { markDirty } from '@/composables/useCloudSync'
+import { getClientId, markDirty } from '@/composables/useCloudSync'
 
 /**
  * 递归解包 Vue reactive Proxy：structured clone（IndexedDB put 使用）无法正确序列化
@@ -97,6 +97,11 @@ export const useWorkbenchLedgerStore = defineStore('workbenchLedger', () => {
 
   const categories = ledgerField('categories')
   const entries = ledgerField('entries')
+
+  /** 活流水（剔除墓碑）：列表 / 统计 / 图表一律读它，不能直接读 entries */
+  const activeEntries = computed<LedgerEntry[]>(() => activeOnly(entries.value))
+  /** 回收站：墓碑按删除时间倒序 */
+  const trashedEntries = computed<LedgerEntry[]>(() => trashedItems(entries.value))
 
   async function loadLedger(): Promise<void> {
     try {
@@ -216,9 +221,30 @@ export const useWorkbenchLedgerStore = defineStore('workbenchLedger', () => {
     return { ok: false, reason: 'not-found', message: '记录不存在或已被删除' }
   }
 
+  /**
+   * 删除流水 = **写墓碑**，不是移除记录。
+   * 物理移除后，下次拉取时「本地缺席」会被并集合并解释为「远端新增」 → 流水复活。
+   */
   async function deleteEntry(id: string): Promise<void> {
-    // 从 toRaw 的原始数组 filter：在 reactive 代理上直接 filter 会得到 Proxy 元素，
-    // toRaw 只解开一层数组，残留的 Proxy 元素会让 IDB 结构化克隆抛 DataCloneError
+    const now = new Date().toISOString()
+    // 在 toRaw 的原始数组上 map：reactive 代理元素会让 IDB 结构化克隆抛 DataCloneError
+    entries.value = toRaw(entries.value).map(e =>
+      e.id === id ? markDeleted(e, { now, clientId: getClientId() }) : e
+    )
+    await saveLedger()
+  }
+
+  /** 恢复墓碑（回收站「还原」）：清 deletedAt 并推进版本，否则对端可能仍认为它是墓碑 */
+  async function restoreEntry(id: string): Promise<void> {
+    const now = new Date().toISOString()
+    entries.value = toRaw(entries.value).map(e =>
+      e.id === id ? clearDeleted(e, { now, clientId: getClientId() }) : e
+    )
+    await saveLedger()
+  }
+
+  /** 彻底删除 = 物理清除（回收站「彻底删除」/ GC 到期）。调用前须确保墓碑已推送上云 */
+  async function purgeEntry(id: string): Promise<void> {
     entries.value = toRaw(entries.value).filter(e => e.id !== id)
     await saveLedger()
   }
@@ -266,8 +292,8 @@ export const useWorkbenchLedgerStore = defineStore('workbenchLedger', () => {
   async function deleteCategory(id: string): Promise<{ ok: boolean; reason?: 'builtin' | 'in-use' }> {
     const target = categories.value.find(c => c.id === id)
     if (target?.isBuiltIn) return { ok: false, reason: 'builtin' }
-    // 全部月份：任一流水引用即视为在用
-    if (entries.value.some(e => e.categoryId === id)) return { ok: false, reason: 'in-use' }
+    // 全部月份：任一活流水引用即视为在用（墓碑不算，否则删过的流水会永久锁住分类）
+    if (activeEntries.value.some(e => e.categoryId === id)) return { ok: false, reason: 'in-use' }
     categories.value = toRaw(categories.value).filter(c => c.id !== id)
     await saveLedger()
     return { ok: true }
@@ -317,14 +343,30 @@ export const useWorkbenchLedgerStore = defineStore('workbenchLedger', () => {
     return personalLedgerDeleteGuard(ledgers.value, id, currentLedgerId.value)
   }
 
-  /** 仅清空某账本的流水（entries），账本本体与分类保留 */
+  /**
+   * 仅清空某账本的流水（entries），账本本体与分类保留。
+   * 逐条**写墓碑**而非清空数组：整体物理移除后，下次拉取会被并集合并当成「远端新增」整体补回。
+   * 墓碑由 GC 在 7 天保留期后物理清除。
+   */
   function clearLedgerRecords(id: string): LedgerMutateResult {
-    const r = clearPersonalLedgerRecords(ledgers.value, id)
-    if (r.ok) {
-      ledgers.value = r.ledgers
-      void saveLedger()
+    const arr = ledgers.value
+    const index = arr.findIndex(l => l.id === id)
+    if (index === -1) return { ok: false, reason: 'not-found', ledgers: arr }
+    const now = new Date().toISOString()
+    const target = toRaw(arr[index])
+    const updated: PersonalLedger = {
+      ...target,
+      updatedAt: now,
+      data: {
+        ...toRaw(target.data),
+        entries: toRaw(target.data).entries.map(e => markDeleted(e, { now, clientId: getClientId() }))
+      }
     }
-    return r
+    const list = [...arr]
+    list[index] = updated
+    ledgers.value = sortedLedgers(list)
+    void saveLedger()
+    return { ok: true, reason: 'ok', ledgers: ledgers.value, ledger: updated }
   }
 
   /** 删除账本整体（受守卫保护）；成功后重置当前选中（被删账本失效时回落默认账本） */
@@ -392,6 +434,8 @@ export const useWorkbenchLedgerStore = defineStore('workbenchLedger', () => {
     // 当前账本内的数据（可写 computed，记账面板无需感知账本）
     categories,
     entries,
+    activeEntries,
+    trashedEntries,
     showAmount,
     toggleAmountVisibility,
     loadLedger,
@@ -399,6 +443,8 @@ export const useWorkbenchLedgerStore = defineStore('workbenchLedger', () => {
     addEntry,
     updateEntry,
     deleteEntry,
+    restoreEntry,
+    purgeEntry,
     addCategory,
     updateCategory,
     deleteCategory,

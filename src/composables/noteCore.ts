@@ -3,6 +3,7 @@
 // 运行时依赖仅 NOTE_COLORS 常量（与 ledgerCore 引 DEFAULT_LEDGER_CATEGORIES 同模式），其余类型全部 type-only。
 import { NOTE_COLORS, NOTE_STATUSES } from '../types/index.ts'
 import type { NoteCategory, NoteColor, NoteData, NoteStatus, NoteStatusView, NoteType, NoteTypeFilter, TimelineEntry, WorkbenchNote } from '../types/index.ts'
+import { keepStamp } from './tombstoneCore.ts'
 
 /** 本地日期 → 'YYYY-MM-DD'（不用 toISOString，避免时区偏移导致日期错位一天） */
 export function toDateKey(d: Date = new Date()): string {
@@ -98,7 +99,8 @@ export function normalizeNote(raw: unknown | undefined): WorkbenchNote {
   if (type === 'timeline') {
     base.entries = Array.isArray(src.entries) ? src.entries.map((e: unknown) => normalizeTimelineEntry(e)) : []
   }
-  return base
+  // 墓碑与版本戳原样保留（详见 tombstoneCore.keepStamp）
+  return keepStamp(base, src)
 }
 
 /** 便签数组归一化：逐条 normalizeNote；非数组 → []。 */

@@ -125,6 +125,28 @@ ok('远端有本地缺失 id → 补入', () => {
   const merged = mergeNames(local, remote)
   assert.equal(merged.length, 2)
 })
+// 墓碑：删除状态必须能跨越合并存活，否则「本地删了又被云端拉回来」
+ok('本端墓碑压过云端活记录 → 删除不复活', () => {
+  const local = [rec({ id: 'nm_1', name: '本地', updatedAt: '2026-05-01T00:00:00.000Z', ver: 5, deletedAt: '2026-05-01T00:00:00.000Z' })]
+  const remote = [rec({ id: 'nm_1', name: '远端', updatedAt: '2026-06-01T00:00:00.000Z', ver: 3 })]
+  const merged = mergeNames(local, remote)
+  assert.equal(merged.length, 1)
+  assert.equal(merged[0].deletedAt, '2026-05-01T00:00:00.000Z')
+})
+ok('云端墓碑删掉本端活记录 → 删除能同步过来', () => {
+  const local = [rec({ id: 'nm_1', name: '本地', updatedAt: '2026-05-01T00:00:00.000Z', ver: 2 })]
+  const remote = [rec({ id: 'nm_1', name: '远端', updatedAt: '2026-06-01T00:00:00.000Z', ver: 6, deletedAt: '2026-06-01T00:00:00.000Z' })]
+  const merged = mergeNames(local, remote)
+  assert.equal(merged.length, 1)
+  assert.ok(merged[0].deletedAt)
+})
+ok('两端都是墓碑 → 保留删除时间较晚的那条', () => {
+  const local = [rec({ id: 'nm_1', name: '本地', updatedAt: '2026-05-01T00:00:00.000Z', ver: 4, deletedAt: '2026-05-01T00:00:00.000Z' })]
+  const remote = [rec({ id: 'nm_1', name: '远端', updatedAt: '2026-06-01T00:00:00.000Z', ver: 4, deletedAt: '2026-06-01T00:00:00.000Z' })]
+  const merged = mergeNames(local, remote)
+  assert.equal(merged.length, 1)
+  assert.equal(merged[0].deletedAt, '2026-06-01T00:00:00.000Z')
+})
 
 // ---------- 过滤 / 排序 ----------
 console.log('[过滤排序]')

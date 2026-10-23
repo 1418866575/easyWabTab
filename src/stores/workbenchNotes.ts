@@ -3,8 +3,9 @@ import { computed, ref, toRaw } from 'vue'
 import { NOTE_STATUSES } from '@/types'
 import type { NoteCategory, NoteColor, NoteData, NoteStatus, NoteType, TimelineEntry, WorkbenchNote } from '@/types'
 import { emptyNoteData, normalizeNoteData, normalizeDueDate, sortNotes } from '../composables/noteCore'
+import { activeOnly, clearDeleted, markDeleted, trashedItems } from '../composables/tombstoneCore'
 import { idbGet, idbPut } from '../composables/useIdb'
-import { markDirty } from '@/composables/useCloudSync'
+import { getClientId, markDirty } from '@/composables/useCloudSync'
 
 // 工作台便签 store（数据存 IndexedDB store 'notes'：便签分类 + 时光轴条目 混合模型，经 noteCore 归一化后读写）
 export const useWorkbenchNotesStore = defineStore('workbenchNotes', () => {
@@ -71,9 +72,31 @@ export const useWorkbenchNotesStore = defineStore('workbenchNotes', () => {
     }
   }
 
+  /**
+   * 删除便签 = **写墓碑**，不是移除记录。
+   * 墓碑必须留在数组里随 workbench 信封上云，云端与其它端才知道这条已删；
+   * 若这里直接 filter 掉，下次拉取时"本地缺席"会被合并逻辑解释为"远端新增" → 便签复活。
+   */
   async function deleteNote(id: string): Promise<void> {
-    // 从 toRaw 的原始数组 filter：在 reactive 代理上直接 filter 会得到 Proxy 元素，
-    // toRaw 只解开一层数组，残留的 Proxy 元素会让 IDB 结构化克隆抛 DataCloneError
+    const now = new Date().toISOString()
+    // 在 toRaw 的原始数组上 map：reactive 代理元素会让 IDB 结构化克隆抛 DataCloneError
+    notes.value = toRaw(notes.value).map(n =>
+      n.id === id ? markDeleted(n, { now, clientId: getClientId() }) : n
+    )
+    await saveNotes()
+  }
+
+  /** 恢复墓碑（回收站「还原」）：清 deletedAt 并推进版本，否则对端可能仍认为它是墓碑 */
+  async function restoreNote(id: string): Promise<void> {
+    const now = new Date().toISOString()
+    notes.value = toRaw(notes.value).map(n =>
+      n.id === id ? clearDeleted(n, { now, clientId: getClientId() }) : n
+    )
+    await saveNotes()
+  }
+
+  /** 彻底删除 = 物理清除（回收站「彻底删除」/ GC 到期）。调用前须确保墓碑已推送上云 */
+  async function purgeNote(id: string): Promise<void> {
     notes.value = toRaw(notes.value).filter(n => n.id !== id)
     await saveNotes()
   }
@@ -188,17 +211,27 @@ export const useWorkbenchNotesStore = defineStore('workbenchNotes', () => {
     await saveNotes()
   }
 
+  /** 活记录（剔除墓碑）：所有展示/筛选/统计都必须走它，不能直接读 notes */
+  const activeNotes = computed<WorkbenchNote[]>(() => activeOnly(notes.value))
+  /** 回收站：墓碑按删除时间倒序 */
+  const trashedNotes = computed<WorkbenchNote[]>(() => trashedItems(notes.value))
+
   // 排序：置顶优先 → updatedAt 降序（公式属 noteCore，store 只做薄委托）
-  const sortedNotes = computed<WorkbenchNote[]>(() => sortNotes(notes.value))
+  // 墓碑已在 activeNotes 过滤掉，排序只负责次序
+  const sortedNotes = computed<WorkbenchNote[]>(() => sortNotes(activeNotes.value))
 
   return {
     categories,
     notes,
+    activeNotes,
+    trashedNotes,
     loadNotes,
     saveNotes,
     addNote,
     updateNote,
     deleteNote,
+    restoreNote,
+    purgeNote,
     togglePin,
     addCategory,
     updateCategory,

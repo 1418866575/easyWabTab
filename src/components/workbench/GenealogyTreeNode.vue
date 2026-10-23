@@ -19,7 +19,7 @@ const hasChildren = computed(() => props.node.children.length > 0)
 // 生肖用独立 pill 展示，颜色与姓名区分）
 const spouseInfos = computed(() =>
   props.node.member.spouses.map((id) => {
-    const m = store.members.find((x) => x.id === id)
+    const m = store.activeMembers.find((x) => x.id === id)
     if (!m) return { name: '(已删除)', zodiac: '' }
     return { name: m.name, zodiac: calcZodiac(m.birthDate) ?? '' }
   })

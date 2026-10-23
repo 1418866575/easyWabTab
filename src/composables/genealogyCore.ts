@@ -4,7 +4,8 @@
  * 子女/兄弟姐妹/祖孙全部运行时派生，不单独建关系表。
  */
 import type { FamilyMember, GenealogyData } from '../types'
-import { mergeNames } from './namingCore'
+import { mergeNames } from './namingCore.ts'
+import { mergeTombstonedById } from './tombstoneCore.ts'
 
 /** 空家谱数据集（导入兜底 / 初始化） */
 export function emptyGenealogyData(): GenealogyData {
@@ -410,16 +411,10 @@ export function normalizeGenealogyImport(raw: unknown): NormalizeGenealogyResult
 export function mergeFamily(local?: GenealogyData, remote?: GenealogyData): GenealogyData {
   const l = local ?? emptyGenealogyData()
   const r = remote ?? emptyGenealogyData()
-  const map = new Map<string, FamilyMember>()
-  const newer = (a: FamilyMember, b: FamilyMember): FamilyMember =>
-    (a.updatedAt || '') >= (b.updatedAt || '') ? a : b
-  for (const m of l.members) map.set(m.id, m)
-  for (const m of r.members) {
-    const existing = map.get(m.id)
-    map.set(m.id, existing ? newer(existing, m) : m)
-  }
+  // 墓碑感知合并：删除写的是墓碑（deletedAt + ver+1），版本更新即胜出 → 删除不会被并集合并复活；
+  // 版本完全相同时保留本地（local 先入 map），沿用既有「本地优先」策略。
   return {
-    members: Array.from(map.values()),
+    members: mergeTombstonedById(l.members, r.members, 'updatedAt'),
     rootId: l.rootId ?? r.rootId,
     names: mergeNames(l.names, r.names)
   }

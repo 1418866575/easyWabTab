@@ -79,9 +79,9 @@ export function useHomeStats() {
 
   // ===== 待办统计 =====
   const todoStats = computed(() => ({
-    total: todosStore.todos.length,
+    total: todosStore.activeTodos.length,
     active: todosStore.activeCount,
-    overdue: todosStore.todos.filter(t => isOverdue(t)).length
+    overdue: todosStore.activeTodos.filter(t => isOverdue(t)).length
   }))
 
   /**
@@ -103,9 +103,10 @@ export function useHomeStats() {
   })
 
   // ===== 便签统计 =====
+  // 墓碑不计入统计：读 activeNotes，与列表口径保持一致（否则删了总数不降）
   const noteStats = computed(() => ({
-    total: notesStore.notes.length,
-    pinned: notesStore.notes.filter(n => n.pinned).length
+    total: notesStore.activeNotes.length,
+    pinned: notesStore.activeNotes.filter(n => n.pinned).length
   }))
 
   // ===== 倒计时统计 =====
@@ -212,15 +213,15 @@ export function useHomeStats() {
     const keys: string[] = []
     const on = menuOn.value
     const height = healthStore.height
-    if (on.todos && todosStore.todos.length > 0) keys.push('todos')
-    if (on.notes && notesStore.notes.length > 0) keys.push('notes')
+    if (on.todos && todosStore.activeTodos.length > 0) keys.push('todos')
+    if (on.notes && notesStore.activeNotes.length > 0) keys.push('notes')
     if (on.countdowns && countdownsStore.countdowns.length > 0) keys.push('countdowns')
     if (on.passwords && passwordsStore.isUnlocked && passwordsStore.passwords.length > 0) keys.push('passwords')
     if (on.health && healthStore.plans.exercise) keys.push('exercise')
     if (on.health && healthStore.plans.diet) keys.push('diet')
     if (on.health && healthStore.plans.sleep) keys.push('sleep')
     if (on.health && height !== undefined && height > 0 && healthStore.records.weight.length > 0) keys.push('weight')
-    if (on.ledger && ledgerStore.entries.length > 0) keys.push('ledger')
+    if (on.ledger && ledgerStore.activeEntries.length > 0) keys.push('ledger')
     if (on.habits && habitsStore.habits.length > 0) keys.push('habits')
     return keys
   })
@@ -232,7 +233,7 @@ export function useHomeStats() {
 
   // ===== 未完成待办前 5（优先级高→低 → 截止日期升序 → 创建时间降序）=====
   const pendingTodos = computed<WorkbenchTodo[]>(() =>
-    todosStore.todos
+    todosStore.activeTodos
       .filter(t => !t.completed)
       .sort((a, b) => {
         const pa = PRIORITY_ORDER[a.priority]

@@ -14,7 +14,7 @@ import {
   ARCHIVE_AFTER_DAYS
 } from '@/composables/todoCore'
 import { idbGet, idbPut } from '../composables/useIdb'
-import { markDirty } from '@/composables/useCloudSync'
+import { markDirty, getClientId } from '@/composables/useCloudSync'
 
 // 分类注册表偏好（localStorage，不随 JSON 备份导出——与倒计时分类偏好同策略）：
 // customCategories = 用户自定义分类名数组；tabCategories = 标签页可见分类（默认全部内置）
@@ -40,6 +40,20 @@ function readStringArray(key: string): string[] {
 // 工作台待办任务 store（数据存 IndexedDB，T8 填充完整增删改查）
 export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
   const todos = ref<WorkbenchTodo[]>([])
+
+  /**
+   * 展示/统计用：剔除软删除墓碑。
+   * 墓碑必须保留在 todos 里（它是"删除"这个状态能上云的载体），但列表与统计一律用
+   * activeTodos，否则已删项会当幽灵数据显示出来。
+   * 见 docs/云同步-删除失效-问题分析与方案.md
+   */
+  const activeTodos = computed<WorkbenchTodo[]>(() => todos.value.filter(t => !t.deletedAt))
+  /** 回收站：墓碑按删除时间倒序（7 天内可恢复，到期由 GC 物理清除） */
+  const trashedTodos = computed<WorkbenchTodo[]>(() =>
+    todos.value
+      .filter(t => !!t.deletedAt)
+      .sort((a, b) => String(b.deletedAt ?? '').localeCompare(String(a.deletedAt ?? '')))
+  )
 
   // ===== 分类管理（自定义分类注册表 + 标签页可见分类，仿倒计时 store）=====
   const customCategories = ref<string[]>([])
@@ -98,7 +112,8 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
   function deleteCategory(name: string): TodoCategoryOp {
     if (!customCategories.value.includes(name)) return { ok: false, reason: 'not-found' }
     // 被任一 todo（全量，非筛选视图）引用禁删（同倒计时/记账策略）
-    if (todos.value.some(t => t.categoryId === name)) return { ok: false, reason: 'in-use' }
+    // 按活跃待办判定（墓碑不算"在用"，否则已删项会锁住分类删除）
+    if (activeTodos.value.some(t => t.categoryId === name)) return { ok: false, reason: 'in-use' }
     customCategories.value = customCategories.value.filter(c => c !== name)
     tabCategories.value = tabCategories.value.filter(c => c !== name)
     persistCategoryPreferences()
@@ -223,9 +238,40 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
     }
   }
 
+  /**
+   * 删除待办：**软删除**（写墓碑），不再物理移除。
+   *
+   * 原因：云同步合并是"并集"语义，物理移除后"缺席"会被当成"远端新增"补回 → 删除失效。
+   * 现在记录保留、写 deletedAt 墓碑并推进 ver/updatedAt，墓碑随信封上云、并在合并时
+   * 压过云端的活记录（见 docs/云同步-删除失效-问题分析与方案.md）。
+   * 从 toRaw 取原始数组：在 reactive 代理上直接 map 会得到 Proxy 元素，
+   * 残留的 Proxy 会让 IDB 结构化克隆抛 DataCloneError。
+   */
   async function deleteTodo(id: string): Promise<void> {
-    // 从 toRaw 的原始数组 filter：在 reactive 代理上直接 filter 会得到 Proxy 元素，
-    // toRaw 只解开一层数组，残留的 Proxy 元素会让 IDB 结构化克隆抛 DataCloneError（L1 变体）
+    const now = new Date().toISOString()
+    todos.value = toRaw(todos.value).map(t =>
+      t.id === id ? { ...t, deletedAt: now, updatedAt: now, ver: (t.ver ?? 0) + 1, clientId: getClientId() } : t
+    )
+    await saveTodos()
+  }
+
+  /** 回收站恢复：清墓碑 + 推进版本（不推进的话对端可能仍视其为墓碑） */
+  async function restoreTodo(id: string): Promise<void> {
+    const now = new Date().toISOString()
+    todos.value = toRaw(todos.value).map(t => {
+      if (t.id !== id || !t.deletedAt) return t
+      const next: WorkbenchTodo = { ...t, updatedAt: now, ver: (t.ver ?? 0) + 1, clientId: getClientId() }
+      delete next.deletedAt
+      return next
+    })
+    await saveTodos()
+  }
+
+  /**
+   * 彻底删除（物理清除，用户决策）：直接移除记录。
+   * ⚠️ 多端场景下，若对端尚未同步到该删除，对端推送时会把它当"新增"补回 —— 这是物理清除的固有代价。
+   */
+  async function purgeTodo(id: string): Promise<void> {
     todos.value = toRaw(todos.value).filter(t => t.id !== id)
     await saveTodos()
   }
@@ -284,7 +330,8 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
 
   // 顺序：未完成优先 → 已完成（未归档）→ 已归档；段内严格保持手工顺序，
   // 原「数组顺序即展示顺序」改为按状态分段（需求：优先显示未完成的）。
-  const orderedTodos = computed<WorkbenchTodo[]>(() => sortTodosByStatus(todos.value))
+  // 墓碑不参与分段排序：删掉的待办不该再占「未完成」段
+  const orderedTodos = computed<WorkbenchTodo[]>(() => sortTodosByStatus(activeTodos.value))
 
   /** 打卡（一次性）：写 checkedIn=true + checkedInAt；已打卡则幂等忽略。
    *  关键：只改字段，绝不改动数组顺序——打卡前后条目索引完全一致。 */
@@ -328,24 +375,27 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
   }
 
   // 页签计数（状态判定统一走 todoStatus，兼容无 status 的存量数据）
-  const totalCount = computed(() => todos.value.length)
+  // 全部基于 activeTodos：墓碑（已删）不进任何计数，否则删除后计数不下降
+  const totalCount = computed(() => activeTodos.value.length)
   /** 未完成总览 = 未完成 + 进行中（不含已归档），沿用旧 active 口径 */
-  const activeCount = computed(() => todos.value.filter(t => t.archived !== true && todoStatus(t) !== 'completed').length)
+  const activeCount = computed(() => activeTodos.value.filter(t => t.archived !== true && todoStatus(t) !== 'completed').length)
   /** 未完成（pending，不含已归档、不含进行中） */
-  const pendingCount = computed(() => todos.value.filter(t => t.archived !== true && todoStatus(t) === 'pending').length)
+  const pendingCount = computed(() => activeTodos.value.filter(t => t.archived !== true && todoStatus(t) === 'pending').length)
   /** 进行中（in_progress，不含已归档） */
-  const inProgressCount = computed(() => todos.value.filter(t => t.archived !== true && todoStatus(t) === 'in_progress').length)
+  const inProgressCount = computed(() => activeTodos.value.filter(t => t.archived !== true && todoStatus(t) === 'in_progress').length)
   // 已完成（不含已归档）：归档项独立计数，避免"已完成 N"与列表分段不一致
-  const completedCount = computed(() => todos.value.filter(t => t.archived !== true && todoStatus(t) === 'completed').length)
-  const archivedCount = computed(() => todos.value.filter(t => t.archived === true).length)
+  const completedCount = computed(() => activeTodos.value.filter(t => t.archived !== true && todoStatus(t) === 'completed').length)
+  const archivedCount = computed(() => activeTodos.value.filter(t => t.archived === true).length)
   /** 今日条数：截止日期为今天且未完成（未完成 + 进行中）；随数据变化实时刷新 */
   const todayCount = computed(() => {
     const today = localToday()
-    return todos.value.filter(t => t.archived !== true && todoStatus(t) !== 'completed' && t.dueDate === today).length
+    return activeTodos.value.filter(t => t.archived !== true && todoStatus(t) !== 'completed' && t.dueDate === today).length
   })
 
   return {
     todos,
+    activeTodos,
+    trashedTodos,
     customCategories,
     tabCategories,
     allCategories,
@@ -354,6 +404,8 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
     addTodo,
     updateTodo,
     deleteTodo,
+    restoreTodo,
+    purgeTodo,
     toggleTodo,
     setTodoStatus,
     runAutoArchive,

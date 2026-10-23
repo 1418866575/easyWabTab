@@ -183,9 +183,9 @@ const countText = computed(() =>
 // 空态文案：普通 tab 区分「完全没有便签」vs「当前分类/搜索下无便签」；时光轴 tab 区分「还没有时光轴便签」vs「当前筛选无结果」
 const emptyText = computed(() => {
   if (activeType.value === 'timeline') {
-    return store.notes.some(n => (n.type ?? 'normal') === 'timeline') ? '当前分类/搜索下无时光轴便签' : '还没有时光轴便签'
+    return store.activeNotes.some(n => (n.type ?? 'normal') === 'timeline') ? '当前分类/搜索下无时光轴便签' : '还没有时光轴便签'
   }
-  if (store.notes.length === 0) return '完全没有便签'
+  if (store.activeNotes.length === 0) return '完全没有便签'
   return '当前分类/搜索下无便签'
 })
 
@@ -341,7 +341,8 @@ function hiddenEntryCount(note: WorkbenchNote): number {
 const expandedTimelineNote = computed<WorkbenchNote | null>(() => {
   const id = timelineExpandNoteId.value
   if (!id) return null
-  return store.notes.find(n => n.id === id) ?? null
+  // 读 activeNotes：已删（墓碑）的便签不应再被浮层命中
+  return store.activeNotes.find(n => n.id === id) ?? null
 })
 
 function openTimelineExpand(noteId: string): void {

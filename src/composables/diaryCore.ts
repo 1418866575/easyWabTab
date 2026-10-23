@@ -2,6 +2,7 @@
 // 纯函数硬约束：禁止 import vue/pinia（node --experimental-strip-types 测试运行器无法执行）；
 // 类型全部 type-only（与 noteCore 同模式）。
 import type { DiaryData, WorkbenchDiary, WorkbenchJournal } from '../types/index.ts'
+import { keepStamp } from './tombstoneCore.ts'
 
 /** 默认日志本（旧数据/外部导入无 journalId 时归入此本）。 */
 export const DEFAULT_JOURNAL_ID = 'jb_default'
@@ -99,7 +100,7 @@ function normalizeDiaryEntry(raw: unknown): WorkbenchDiary | null {
   const date = typeof src.date === 'string' ? src.date : ''
   if (!isValidDateKey(date)) return null
   const nowIso = new Date().toISOString()
-  return {
+  const entry: WorkbenchDiary = {
     id: typeof src.id === 'string' && src.id ? src.id : `dy_${date}`,
     journalId: typeof src.journalId === 'string' && src.journalId ? src.journalId : DEFAULT_JOURNAL_ID,
     date,
@@ -115,6 +116,8 @@ function normalizeDiaryEntry(raw: unknown): WorkbenchDiary | null {
     // 封面图：显式 dataURL 优先；缺省 ''（展示时回退正文首图，见 extractFirstImage）
     coverImage: typeof src.coverImage === 'string' ? src.coverImage : ''
   }
+  // 墓碑与版本戳原样保留（详见 tombstoneCore.keepStamp）
+  return keepStamp(entry, src)
 }
 
 /** 单条日志本归一化（安全默认值，缺字段不抛错）。 */
@@ -122,13 +125,15 @@ function normalizeJournal(raw: unknown): WorkbenchJournal | null {
   if (!raw || typeof raw !== 'object') return null
   const src = raw as Record<string, unknown>
   if (typeof src.id !== 'string' || !src.id) return null
-  return {
+  const journal: WorkbenchJournal = {
     id: src.id,
     name: typeof src.name === 'string' && src.name ? src.name : DEFAULT_JOURNAL_NAME,
     icon: typeof src.icon === 'string' ? src.icon : undefined,
     createdAt: typeof src.createdAt === 'string' ? src.createdAt : new Date().toISOString(),
     order: typeof src.order === 'number' ? src.order : 0
   }
+  // 墓碑与版本戳原样保留（日志本删除也要能同步出去）
+  return keepStamp(journal, src)
 }
 
 /**

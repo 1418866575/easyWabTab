@@ -64,6 +64,7 @@ import { useAppSettingsStore } from '../stores/settings'
 import { useToast } from './useToast'
 import { getStoredSaltHex, getStoredVerification } from './useCrypto'
 import { mergeFamily } from './genealogyCore'
+import { compareStamp } from './tombstoneCore'
 import { mergeBusinessStore } from './businessCore'
 import { mergeLedgerStore } from './ledgerCore'
 import { mergeBlogEnvelope, mergeBlogPrefsEnvelope } from './blogSyncCore'
@@ -78,6 +79,7 @@ import { mergeBooksPrefsEnvelope, type BooksPrefsSyncData } from './booksSyncCor
 // 飞书多维表格云同步传输层（方案 A：统一镜像表）；仅当渠道=feishu 时由入口分流调用
 import { feishuPush, feishuPull } from './feishuSync'
 import type {
+  SyncStamp,
   BusinessSyncData,
   BlogSyncData,
   BlogFrontSyncData,
@@ -159,7 +161,8 @@ const conflictData = shallowRef<Record<string, ConflictEntry> | null>(null)
 
 // ========== 基础工具 ==========
 
-function getClientId(): string {
+/** 本机客户端 id（ localStorage 持久化 ）：作为 Lamport 版本完全相同时的稳定 tie-break，也用于墓碑打标 */
+export function getClientId(): string {
   let id = localStorage.getItem(CLIENT_ID_KEY)
   if (!id) {
     id = typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -730,8 +733,16 @@ export async function testConnection(
 // ========== 字段级合并辅助函数 ==========
 
 /**
- * 按 idKey 做并集（union）；同 id 时若 tsKey 存在则取该字段较大者，
- * ISO 字符串用字符串比较、number 用数值比较；tsKey 不存在则取本地。
+ * 按 idKey 做并集（union）；同 id 时取版本较新者。
+ *
+ * 墓碑感知（docs/云同步-删除失效-问题分析与方案.md）：
+ * 旧实现在本地缺失该 id 时无条件采用远端、且同 id 仅按 tsKey 单向覆盖，
+ * 导致「本地删除 = 缺席」被当成"远端新增"补回 —— 删除失效。
+ * 现在同 id 一律走 compareStamp（Lamport ver → tsKey/updatedAt → clientId）：
+ * 删除写入的是墓碑记录（deletedAt + ver+1），版本更新即胜出，因此删除不会被复活；
+ * 而「本地缺席 + 远端有」仍补入，保留接收他端新增的语义。
+ *
+ * tsKey 缺省时用 updatedAt 比较（老数据无 ver 的兼容路径）。
  * 对 undefined/null 入参用空数组兜底。
  */
 function mergeById<T>(local: T[] | undefined | null, remote: T[] | undefined | null, idKey: keyof T, tsKey?: keyof T): T[] {
@@ -743,17 +754,16 @@ function mergeById<T>(local: T[] | undefined | null, remote: T[] | undefined | n
     const id = String(item[idKey])
     const existing = map.get(id)
     if (!existing) {
+      // 本地没有 → 他端新增（或他端墓碑），补入
       map.set(id, item)
-    } else if (tsKey) {
-      const lTs = existing[tsKey]
-      const rTs = item[tsKey]
-      let rNewer = false
-      if (typeof lTs === 'number' && typeof rTs === 'number') {
-        rNewer = rTs > lTs
-      } else if (typeof lTs === 'string' && typeof rTs === 'string') {
-        rNewer = rTs > lTs
-      }
-      if (rNewer) map.set(id, item)
+    } else if (
+      compareStamp(
+        item as unknown as SyncStamp,
+        existing as unknown as SyncStamp,
+        tsKey as string | undefined
+      ) > 0
+    ) {
+      map.set(id, item)
     }
   }
   return [...map.values()]
@@ -777,18 +787,17 @@ function mergeByDateWithMax<T extends { date: string; workSessions: number }>(lo
 }
 
 /** 多日志本下：同 (journalId, date) 才视为同一天，保留 updatedAt（或 createdAt）最新的一条（避免不同日志本同日条目互相覆盖）。 */
-function dedupeByJournalDateKeepNewest<T extends { journalId?: string; date: string; updatedAt?: string; createdAt?: string; id: string }>(arr: T[]): T[] {
+/**
+ * 同「日志本 + 日期」去重（日记每天一条的不变式）。
+ * 改用 compareStamp：软删会把 ver 前进，墓碑必须压过同日期的活记录，
+ * 否则「本端删了、对端还有同日期记录」时会挑中活的那条 → 日记复活。
+ */
+function dedupeByJournalDateKeepNewest<T extends SyncStamp & { journalId?: string; date: string }>(arr: T[]): T[] {
   const map = new Map<string, T>()
   for (const item of arr) {
     const key = `${item.journalId ?? ''}::${item.date}`
     const existing = map.get(key)
-    if (!existing) {
-      map.set(key, item)
-    } else {
-      const exTs = existing.updatedAt ?? existing.createdAt ?? ''
-      const itemTs = item.updatedAt ?? item.createdAt ?? ''
-      if (itemTs > exTs) map.set(key, item)
-    }
+    if (!existing || compareStamp(item, existing, 'updatedAt') > 0) map.set(key, item)
   }
   return [...map.values()]
 }

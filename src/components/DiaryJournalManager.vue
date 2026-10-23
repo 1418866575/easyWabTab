@@ -33,8 +33,8 @@ function cancelRename() {
   editingId.value = null
 }
 async function handleDelete(j: WorkbenchJournal) {
-  if (store.journals.length <= 1) return
-  const target = store.journals.find(x => x.id !== j.id)
+  if (store.activeJournals.length <= 1) return
+  const target = store.activeJournals.find(x => x.id !== j.id)
   const msg = target
     ? `删除「${j.name}」后，其下日记将迁移到「${target.name}」，确定删除？`
     : `删除「${j.name}」后，其下日记将迁移到默认日志本，确定删除？`
@@ -53,7 +53,7 @@ function setCurrent(j: WorkbenchJournal) {
     <p class="djm-hint">切换当前日志本、新建、重命名或删除。删除时其下日记会迁移到其它日志本，避免数据丢失。</p>
     <div class="djm-list">
       <div
-        v-for="j in store.journals"
+        v-for="j in store.activeJournals"
         :key="j.id"
         class="djm-item"
         :class="{ 'is-current': j.id === store.currentJournalId }"
@@ -78,7 +78,7 @@ function setCurrent(j: WorkbenchJournal) {
             <button class="djm-btn-icon" @click="startRename(j)">重命名</button>
             <button
               class="djm-btn-icon danger"
-              :disabled="store.journals.length <= 1"
+              :disabled="store.activeJournals.length <= 1"
               @click="handleDelete(j)"
             >删除</button>
           </div>

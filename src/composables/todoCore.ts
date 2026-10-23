@@ -2,6 +2,7 @@
 // 运行时依赖仅 DEFAULT_TODO_COLOR / TODO_PRIORITIES（node --experimental-strip-types 可运行）；其余类型全部 type-only。
 import { DEFAULT_TODO_COLOR } from '../types/index.ts'
 import type { TodoPriority, TodoStatus, WorkbenchTodo } from '../types'
+import { keepStamp } from './tombstoneCore.ts'
 
 export const TODO_PRIORITIES: TodoPriority[] = ['high', 'medium', 'low']
 
@@ -66,7 +67,7 @@ export function normalizeTodo(raw: Partial<WorkbenchTodo>): WorkbenchTodo {
   // 状态为唯一真值源、completed 为镜像：无 status（存量数据）时按 completed 推导，反之由 status 回写
   const status: TodoStatus = todoStatus({ status: raw.status, completed: raw.completed === true })
   const completed = status === 'completed'
-  return {
+  const todo: WorkbenchTodo = {
     id: typeof raw.id === 'string' && raw.id ? raw.id : genId(),
     title: typeof raw.title === 'string' ? raw.title : '',
     ...(typeof raw.description === 'string' ? { description: raw.description } : {}),
@@ -84,6 +85,8 @@ export function normalizeTodo(raw: Partial<WorkbenchTodo>): WorkbenchTodo {
     // 归档只对已完成的条目有意义：未完成的一律不保留归档标记，避免脏数据把未完成项藏起来
     ...(raw.archived === true && completed ? { archived: true } : {})
   }
+  // 墓碑与版本戳原样保留（详见 tombstoneCore.keepStamp）
+  return keepStamp(todo, raw)
 }
 
 /** 已完成距今超过 N 天（默认 30）自动归档。 */

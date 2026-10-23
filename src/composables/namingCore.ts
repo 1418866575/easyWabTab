@@ -5,6 +5,7 @@
  *   - 导入导出信封 kind='family-names'，与家谱成员信封 easy-web-tab-genealogy 相互独立
  */
 import type { FamilyNameRecord } from '../types'
+import { mergeTombstonedById } from './tombstoneCore.ts'
 
 /** 取名记录字段长度上限（与需求 §6 一致） */
 export const NAME_NAME_MAX = 50
@@ -184,15 +185,8 @@ export function normalizeNamesImport(raw: unknown): NormalizeNamesResult {
  * 与 mergeFamily / mergeStudentValue 的「本地优先」策略对齐。
  */
 export function mergeNames(local?: FamilyNameRecord[], remote?: FamilyNameRecord[]): FamilyNameRecord[] {
-  const map = new Map<string, FamilyNameRecord>()
-  const newer = (a: FamilyNameRecord, b: FamilyNameRecord): FamilyNameRecord =>
-    (a.updatedAt || '') >= (b.updatedAt || '') ? a : b
-  for (const r of local ?? []) map.set(r.id, r)
-  for (const r of remote ?? []) {
-    const existing = map.get(r.id)
-    map.set(r.id, existing ? newer(existing, r) : r)
-  }
-  return Array.from(map.values())
+  // 墓碑感知合并（与 mergeFamily 同策略）：本地先入 → 版本相同时保留本地；墓碑版本更新则保留删除
+  return mergeTombstonedById(local ?? [], remote ?? [], 'updatedAt')
 }
 
 /** 表单校验（UI 提交前调用，返回首个错误文案；ok=true 表示可提交） */

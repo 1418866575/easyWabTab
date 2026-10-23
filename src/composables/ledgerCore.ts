@@ -1,6 +1,7 @@
 // 工作台记账本纯逻辑模块：normalizeLedgerData 归一化 → calcMonthlyStats 月度统计。
 // 运行时依赖仅 DEFAULT_LEDGER_CATEGORIES（node --experimental-strip-types 可运行）；其余类型全部 type-only。
 import { DEFAULT_LEDGER_CATEGORIES } from '../types/index.ts'
+import { keepStamp, mergeTombstonedById } from './tombstoneCore.ts'
 import type { LedgerCategory, LedgerData, LedgerEntry, LedgerStoreData, PersonalLedger } from '../types'
 
 /** 本地日期 YYYY-MM-DD（独立实现，与 todoCore 无依赖；不能用 toISOString——那是 UTC 会偏一天）。 */
@@ -25,7 +26,7 @@ export function normalizeLedgerEntry(raw: any | undefined): LedgerEntry {
   const amountNum = Number(src.amount)
   const nowIso = new Date().toISOString()
   const note = typeof src.note === 'string' ? src.note : undefined
-  return {
+  const entry: LedgerEntry = {
     id: typeof src.id === 'string' && src.id ? src.id : `ld_${Date.now()}`,
     date: typeof src.date === 'string' && DATE_RE.test(src.date) ? src.date : localDateStr(),
     categoryId: typeof src.categoryId === 'string' ? src.categoryId : '',
@@ -34,6 +35,9 @@ export function normalizeLedgerEntry(raw: any | undefined): LedgerEntry {
     createdAt: typeof src.createdAt === 'string' ? src.createdAt : nowIso,
     updatedAt: typeof src.updatedAt === 'string' ? src.updatedAt : nowIso
   }
+  // 墓碑与版本戳必须原样保留：归一化一旦把它们丢掉，删除状态就退化成「记录不存在」，
+  // 合并时会被当成远端新增补回来 —— 正是「删除失效」的根因。
+  return keepStamp(entry, src)
 }
 
 /** 分类归一化：内置 8 组按 id 对齐（名称/类型/isBuiltIn 恒取内置常量值防脏改，缺则补回）；自定义组清洗。 */
@@ -774,14 +778,10 @@ export function mergeLedgerData(l: LedgerData | undefined, r: LedgerData | undef
   for (const c of r?.categories ?? []) catMap.set(c.id, c)
   // 本地后写 → 同 id 时本地优先；内置分类的名称/类型恒由下方 normalizeLedgerData 对齐回内置值
   for (const c of l?.categories ?? []) catMap.set(c.id, c)
-  const entryMap = new Map<string, LedgerEntry>()
-  const take = (e: LedgerEntry): void => {
-    const prev = entryMap.get(e.id)
-    if (!prev || String(e.updatedAt ?? '') > String(prev.updatedAt ?? '')) entryMap.set(e.id, e)
-  }
-  for (const e of r?.entries ?? []) take(e)
-  for (const e of l?.entries ?? []) take(e)
-  return normalizeLedgerData({ categories: [...catMap.values()], entries: [...entryMap.values()] })
+  // 墓碑感知合并：本地墓碑（ver 更晚）压过云端活记录，云端墓碑也能删掉本地活记录。
+  // 旧逻辑是「取 updatedAt 较新者」的并集，本地一旦物理移除，缺席就被当成远端新增 → 流水复活。
+  const entries = mergeTombstonedById(r?.entries, l?.entries, 'updatedAt')
+  return normalizeLedgerData({ categories: [...catMap.values()], entries })
 }
 
 /**

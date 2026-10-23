@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { idbGet, idbPut } from '@/composables/useIdb'
-import { markDirty } from '@/composables/useCloudSync'
+import { getClientId, markDirty } from '@/composables/useCloudSync'
+import { activeOnly, clearDeleted, markDeleted, trashedItems } from '@/composables/tombstoneCore'
 import {
   emptyGenealogyData,
   getAncestors,
@@ -59,6 +60,13 @@ export const useGenealogyStore = defineStore('genealogy', () => {
   const rootId = ref<string | null>(null)
   const names = ref<FamilyNameRecord[]>([])
 
+  // 墓碑（已删记录）一律留在数组里参与合并与推送，展示时再剔除 —— 顺序不可颠倒：
+  // 先过滤再存，删除状态就丢失了，下次拉取会被当「远端新增」补回来。
+  const activeMembers = computed<FamilyMember[]>(() => activeOnly(members.value))
+  const trashedMembers = computed<FamilyMember[]>(() => trashedItems(members.value))
+  const activeNames = computed<FamilyNameRecord[]>(() => activeOnly(names.value))
+  const trashedNames = computed<FamilyNameRecord[]>(() => trashedItems(names.value))
+
   // ===== 持久化 =====
   async function load(): Promise<void> {
     try {
@@ -68,7 +76,8 @@ export const useGenealogyStore = defineStore('genealogy', () => {
       rootId.value = d.rootId ?? null
       names.value = Array.isArray(d.names) ? d.names : []
       // 加载时清理指向已删除成员的脏引用（需求 §6：关联成员被删 → memberId 置空，记录保留）
-      const memberIds = new Set(members.value.map((m) => m.id))
+      // 墓碑不算有效成员：指向已删成员的关联要清掉，否则取名记录会挂在幽灵成员上
+      const memberIds = new Set(activeMembers.value.map((m) => m.id))
       let changed = false
       for (const n of names.value) {
         if (n.memberId && !memberIds.has(n.memberId)) {
@@ -133,12 +142,17 @@ export const useGenealogyStore = defineStore('genealogy', () => {
   }
 
   /**
-   * 删除成员：仅删该成员，并清理其它成员 parents/spouses 中对它的悬空引用
+   * 删除成员 = **写墓碑**（记录留在数组里，删除状态才能随信封上云）：
+   * 物理移除后，"本地缺席"会被并集合并解释成"远端新增" → 成员复活。
+   * 同时清理其它成员 parents/spouses 中对它的悬空引用
    * （子女保留为孤儿，符合需求决策④：不做级联删后代）。
    * 若被删者是主根，则清空 rootId。
    */
   async function deleteMember(id: string): Promise<void> {
-    members.value = members.value.filter((x) => x.id !== id)
+    const now = new Date().toISOString()
+    members.value = members.value.map((x) =>
+      x.id === id ? markDeleted(x, { now, clientId: getClientId() }) : x
+    )
     for (const m of members.value) {
       if (m.parents.includes(id)) m.parents = m.parents.filter((p) => p !== id)
       if (m.spouses.includes(id)) m.spouses = m.spouses.filter((s) => s !== id)
@@ -148,6 +162,26 @@ export const useGenealogyStore = defineStore('genealogy', () => {
     for (const n of names.value) {
       if (n.memberId === id) n.memberId = null
     }
+    persist()
+  }
+
+  /** 恢复墓碑（回收站「还原」）：清 deletedAt 并推进版本，否则对端可能仍认为它是墓碑 */
+  async function restoreMember(id: string): Promise<void> {
+    const now = new Date().toISOString()
+    members.value = members.value.map((x) =>
+      x.id === id ? clearDeleted(x, { now, clientId: getClientId() }) : x
+    )
+    persist()
+  }
+
+  /** 彻底删除 = 物理清除（含其它成员对它的引用）。须在墓碑已推送上云之后调用 */
+  async function purgeMember(id: string): Promise<void> {
+    members.value = members.value.filter((x) => x.id !== id)
+    for (const m of members.value) {
+      if (m.parents.includes(id)) m.parents = m.parents.filter((p) => p !== id)
+      if (m.spouses.includes(id)) m.spouses = m.spouses.filter((s) => s !== id)
+    }
+    if (rootId.value === id) rootId.value = null
     persist()
   }
 
@@ -220,7 +254,8 @@ export const useGenealogyStore = defineStore('genealogy', () => {
 
   /** 导出当前家谱为可分享的 JSON 文本（纯函数生成信封，深拷贝避免带出响应式代理） */
   function exportData(): string {
-    return JSON.stringify(buildGenealogyExport({ members: members.value, rootId: rootId.value, names: [] }), null, 2)
+    // 墓碑不导出：分享文件里不该带已删成员
+    return JSON.stringify(buildGenealogyExport({ members: activeMembers.value, rootId: rootId.value, names: [] }), null, 2)
   }
 
   // ===== 取名记录 增删改 =====
@@ -263,15 +298,33 @@ export const useGenealogyStore = defineStore('genealogy', () => {
     persist()
   }
 
-  /** 删除取名记录 */
+  /** 删除取名记录 = **写墓碑**（物理移除会被云同步当「远端新增」补回来） */
   async function deleteNameRecord(id: string): Promise<void> {
+    const now = new Date().toISOString()
+    names.value = names.value.map((x) =>
+      x.id === id ? markDeleted(x, { now, clientId: getClientId() }) : x
+    )
+    persist()
+  }
+
+  /** 恢复取名记录墓碑：清 deletedAt 并推进版本 */
+  async function restoreNameRecord(id: string): Promise<void> {
+    const now = new Date().toISOString()
+    names.value = names.value.map((x) =>
+      x.id === id ? clearDeleted(x, { now, clientId: getClientId() }) : x
+    )
+    persist()
+  }
+
+  /** 彻底删除取名记录 = 物理清除。须在墓碑已推送上云之后调用 */
+  async function purgeNameRecord(id: string): Promise<void> {
     names.value = names.value.filter((x) => x.id !== id)
     persist()
   }
 
-  /** 导出取名记录为可分享的 JSON 文本（信封 kind='family-names'） */
+  /** 导出取名记录为可分享的 JSON 文本（信封 kind='family-names'）：墓碑不导出 */
   function exportNames(): string {
-    return JSON.stringify(buildNamesExport(names.value), null, 2)
+    return JSON.stringify(buildNamesExport(activeNames.value), null, 2)
   }
 
   /**
@@ -341,20 +394,27 @@ export const useGenealogyStore = defineStore('genealogy', () => {
   }
 
   // ===== 派生 getter =====
-  const childrenOf = (id: string) => getChildren(members.value, id)
-  const siblingsOf = (id: string) => getSiblings(members.value, id)
-  const ancestorsOf = (id: string) => getAncestors(members.value, id)
-  const descendantsOf = (id: string) => getDescendants(members.value, id)
+  // 一律基于 activeMembers：墓碑不应出现在亲属关系里（删掉的父亲还会被算成父亲）
+  const childrenOf = (id: string) => getChildren(activeMembers.value, id)
+  const siblingsOf = (id: string) => getSiblings(activeMembers.value, id)
+  const ancestorsOf = (id: string) => getAncestors(activeMembers.value, id)
+  const descendantsOf = (id: string) => getDescendants(activeMembers.value, id)
 
   return {
     members,
+    activeMembers,
+    trashedMembers,
     rootId,
     names,
+    activeNames,
+    trashedNames,
     load,
     persist,
     addMember,
     updateMember,
     deleteMember,
+    restoreMember,
+    purgeMember,
     setParent,
     setSpouse,
     removeParent,
@@ -366,6 +426,8 @@ export const useGenealogyStore = defineStore('genealogy', () => {
     addNameRecord,
     updateNameRecord,
     deleteNameRecord,
+    restoreNameRecord,
+    purgeNameRecord,
     exportNames,
     importNamesFromJSON,
     childrenOf,

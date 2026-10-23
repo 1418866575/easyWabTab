@@ -18,7 +18,7 @@ const defaultIcons = ['📝', '💼', '🏠', '✈️', '📚', '🏥', '📁', 
 
 // 获取使用某分类的日记篇数
 function getEntryCount(categoryId: string): number {
-  return diaryStore.entries.filter(e => e.category === categoryId).length
+  return diaryStore.activeEntries.filter(e => e.category === categoryId).length
 }
 
 // 添加分类
