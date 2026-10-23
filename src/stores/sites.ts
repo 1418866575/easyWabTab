@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import JSZip from 'jszip'
+import yaml from 'js-yaml'
 import type { Site } from '../types'
 import { CATEGORIES } from '../types'
 import { useMarkdown } from '../composables/useMarkdown'
@@ -684,6 +685,20 @@ export const useSitesStore = defineStore('sites', () => {
   }
 
   /**
+   * 把任意字符串转成 YAML 安全的标量（js-yaml 自动决定是否需要引号并正确转义）。
+   * 导出站点/分类/密码等到 Markdown 时，字段值里可能含 `: `、`#`、开头 `*`/`-`/等
+   * YAML 特殊字符，或形如 `2026-10-23T16:00` 会被 js-yaml 误解析成 Date 的串，
+   * 不引号化就会写出非法 YAML → 导入时整段解析失败（报「未能解析到站点数据」）。
+   * 统一走本函数即可保证导出文件可被原样解析回来。
+   */
+  function yamlStr(v: unknown): string {
+    if (v === null || v === undefined) return "''"
+    // forceQuotes: 即便值里含 `,` `: ` 等字符也强制加引号，保证在 flow 数组（tags）
+    // 与块映射（description/name 等）里都不会被 YAML 误拆/误判。
+    return yaml.dump(String(v), { forceQuotes: true }).trim()
+  }
+
+  /**
    * 生成 Markdown 文本（导出核心）。
    * @param targetSites 要写出的站点（调用方已排序）
    * @param opts.onlyCategory 非空时只写该分类一条 categories 记录、不写搜索引擎/密码/倒计时（按分类导出用）
@@ -703,26 +718,26 @@ export const useSitesStore = defineStore('sites', () => {
     const iconTable = createIconNameTable()
     const sitesList = targetSites.map((site, i) => {
       const iconPath = site.icon ? registerIconPath(iconTable, site.icon, site.name, i) : ''
-      return `  - name: ${site.name}
-    url: ${site.url}
-    description: ${site.description || ''}
-    category: ${site.category}
-    tags: [${site.tags.join(', ')}]
-    icon: ${iconPath}
+      return `  - name: ${yamlStr(site.name)}
+    url: ${yamlStr(site.url)}
+    description: ${yamlStr(site.description || '')}
+    category: ${yamlStr(site.category)}
+    tags: [${site.tags.map(t => yamlStr(t)).join(', ')}]
+    icon: ${yamlStr(iconPath)}
     sort: ${site.sort || 0}
-    createdAt: ${site.createdAt || ''}`
+    createdAt: ${yamlStr(site.createdAt || '')}`
     }).join('\n\n')
 
     // 按分类导出：只保留该分类自身一条记录；全量导出：写出全部自定义分类（升序）
     let categoriesSection: string
     if (opts.onlyCategory) {
       const c = opts.onlyCategory
-      categoriesSection = `categories:\n  - id: ${c.id}\n    name: ${c.name}\n    icon: ''\n    sort: 0\n\n`
+      categoriesSection = `categories:\n  - id: ${yamlStr(c.id)}\n    name: ${yamlStr(c.name)}\n    icon: ''\n    sort: 0\n\n`
     } else {
       const customCats = categoriesStore.exportCustomCategories()
       const sortedCats = [...customCats].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
       categoriesSection = sortedCats.length > 0
-        ? `categories:\n${sortedCats.map((c: { id: string; name: string; icon: string; sort?: number }) => `  - id: ${c.id}\n    name: ${c.name}\n    icon: ${c.icon}\n    sort: ${c.sort || 0}`).join('\n\n')}\n\n`
+        ? `categories:\n${sortedCats.map((c: { id: string; name: string; icon: string; sort?: number }) => `  - id: ${yamlStr(c.id)}\n    name: ${yamlStr(c.name)}\n    icon: ${yamlStr(c.icon)}\n    sort: ${c.sort || 0}`).join('\n\n')}\n\n`
         : ''
     }
 
@@ -732,7 +747,7 @@ export const useSitesStore = defineStore('sites', () => {
       : (() => {
           const engines = enginesStore.exportEngines()
           const sortedEngines = [...engines].sort((a, b) => a.sort - b.sort)
-          return `searchEngines:\n${sortedEngines.map((e: { id: string; name: string; url: string; isDefault: boolean; sort: number }) => `  - id: ${e.id}\n    name: ${e.name}\n    url: ${e.url}\n    isDefault: ${e.isDefault}\n    sort: ${e.sort}`).join('\n\n')}\n\n`
+          return `searchEngines:\n${sortedEngines.map((e: { id: string; name: string; url: string; isDefault: boolean; sort: number }) => `  - id: ${yamlStr(e.id)}\n    name: ${yamlStr(e.name)}\n    url: ${yamlStr(e.url)}\n    isDefault: ${e.isDefault}\n    sort: ${e.sort}`).join('\n\n')}\n\n`
         })()
 
     // 导出密码 - 加密存储（按分类导出时跳过）
@@ -740,7 +755,7 @@ export const useSitesStore = defineStore('sites', () => {
     if (!opts.onlyCategory && passwordsStore.isUnlocked) {
       const encryptedPasswords = await passwordsStore.exportEncryptedPasswords()
       if (encryptedPasswords.length > 0) {
-        passwordsSection = `passwords:\n${encryptedPasswords.map(p => `  - id: ${p.id}\n    siteName: ${p.siteName}\n    url: ${p.url}\n    username: ${p.username}\n    password: ${p.password}\n    createdAt: ${p.createdAt}\n    updatedAt: ${p.updatedAt}`).join('\n\n')}\n\n`
+        passwordsSection = `passwords:\n${encryptedPasswords.map(p => `  - id: ${yamlStr(p.id)}\n    siteName: ${yamlStr(p.siteName)}\n    url: ${yamlStr(p.url)}\n    username: ${yamlStr(p.username)}\n    password: ${yamlStr(p.password)}\n    createdAt: ${yamlStr(p.createdAt)}\n    updatedAt: ${yamlStr(p.updatedAt)}`).join('\n\n')}\n\n`
       }
     }
 
@@ -749,13 +764,13 @@ export const useSitesStore = defineStore('sites', () => {
       ? `countdowns:\n${countdownsStore.countdowns.map(c => {
           const repeatBlock = serializeRepeatYaml(c.repeat)
           const repeatPrefix = repeatBlock ? '\n' : ''
-          const categoryLine = `\n    category: ${c.category ?? 'work'}`
-          const colorLine = c.color ? `\n    color: ${c.color}` : ''
-          const lastRemindedLine = c.lastRemindedAt ? `\n    lastRemindedAt: '${c.lastRemindedAt}'` : ''
+          const categoryLine = `\n    category: ${yamlStr(c.category ?? 'work')}`
+          const colorLine = c.color ? `\n    color: ${yamlStr(c.color)}` : ''
+          const lastRemindedLine = c.lastRemindedAt ? `\n    lastRemindedAt: ${yamlStr(c.lastRemindedAt)}` : ''
           const sortOrderLine = typeof c.sortOrder === 'number' ? `\n    sortOrder: ${c.sortOrder}` : ''
           const showOnDisplayLine = c.showOnDisplay === false ? '\n    showOnDisplay: false' : ''
           const emailReminderLine = c.emailReminder === true ? '\n    emailReminder: true' : ''
-          return `  - id: ${c.id}\n    name: ${c.name}\n    endDateTime: ${c.endDateTime}${repeatPrefix}${repeatBlock}${categoryLine}${colorLine}${lastRemindedLine}${sortOrderLine}${showOnDisplayLine}${emailReminderLine}\n    createdAt: ${c.createdAt}\n    updatedAt: ${c.updatedAt}`
+          return `  - id: ${yamlStr(c.id)}\n    name: ${yamlStr(c.name)}\n    endDateTime: ${yamlStr(c.endDateTime)}${repeatPrefix}${repeatBlock}${categoryLine}${colorLine}${lastRemindedLine}${sortOrderLine}${showOnDisplayLine}${emailReminderLine}\n    createdAt: ${yamlStr(c.createdAt)}\n    updatedAt: ${yamlStr(c.updatedAt)}`
         }).join('\n\n')}\n\n`
       : ''
 
