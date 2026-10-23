@@ -30,6 +30,9 @@ import BlogImagePicker from '@/components/blog/BlogImagePicker.vue'
 import { showConfirm, toastAlert } from '@/utils/dialog'
 // 模块级云同步：切走「博客后台」时先把未保存草稿落盘再上传
 import { registerModuleFlush } from '@/composables/useModuleSync'
+// 微信公众号发布（草稿箱）
+import { useWechatPublish } from '@/composables/useWechatPublish'
+import { useAppSettingsDialog } from '@/composables/useAppSettingsDialog'
 
 const props = defineProps<{ articleId: string }>()
 const emit = defineEmits<{ close: [] }>()
@@ -429,15 +432,40 @@ function toggleTag(id: string): void {
 }
 
 // ---------- 发布 ----------
-async function handlePublish(audit = false): Promise<void> {
+async function handlePublish(): Promise<void> {
   await saveDraft(true)
-  const res = audit ? await store.submitForReview(props.articleId) : await store.publishArticle(props.articleId)
+  const res = await store.publishArticle(props.articleId)
   if (!res.ok) {
     const detail = res.errors && res.errors.length > 0 ? res.errors.join('；') : ''
     toastAlert(detail || '发布失败', 'error')
     return
   }
-  toastAlert(audit ? '已提交，等待审核' : '文章已发布', 'success')
+  toastAlert('文章已发布', 'success')
+}
+
+// ---------- 发布到微信公众号草稿箱 ----------
+const wechat = useWechatPublish()
+const appSettings = useAppSettingsDialog()
+
+async function handlePublishWechat(): Promise<void> {
+  // 先把未保存改动落库，保证发出去的是最新正文（图片库本身即时入库，无需等保存）
+  await saveDraft(true)
+  const ok = await wechat.publish({
+    title: form.title.trim(),
+    digest: form.excerpt.trim(),
+    contentMarkdown: form.contentMarkdown,
+    coverImageId: form.coverImageId.trim() || undefined,
+    // 图片库 id → dataUrl（与预览同一来源）
+    resolveImage: (id) => store.imageUrlById.get(id)
+  })
+  if (ok) {
+    toastAlert('已发布到公众号草稿箱', 'success')
+  } else if (wechat.notConfigured.value) {
+    // 未配置凭证：引导去设置页「微信公众号」
+    appSettings.openAppSettings({ tab: 'wechat' })
+  } else {
+    toastAlert(wechat.error.value || '发布失败', 'error')
+  }
 }
 
 // ---------- 关闭（有未保存改动时先问） ----------
@@ -700,17 +728,32 @@ async function regenerateSlug(): Promise<void> {
       <div class="be-foot-ops">
         <button type="button" class="ui-btn ui-btn--sm" @click="handleClose">关闭</button>
         <button type="button" class="ui-btn ui-btn--sm" data-testid="blog-editor-save" @click="saveDraft()">保存草稿</button>
-        <button type="button" class="ui-btn ui-btn--sm" @click="handlePublish(true)">提交审核</button>
         <button
           type="button"
           class="ui-btn ui-btn--sm ui-btn--primary"
           :disabled="visibleErrors.length > 0"
           data-testid="blog-editor-publish"
-          @click="handlePublish(false)"
+          @click="handlePublish()"
         >
           发布
         </button>
+        <button
+          type="button"
+          class="ui-btn ui-btn--sm"
+          :class="{ 'ui-btn--primary': !wechat.publishing.value }"
+          :disabled="wechat.publishing.value || visibleErrors.length > 0"
+          data-testid="blog-editor-publish-wechat"
+          @click="handlePublishWechat()"
+        >
+          <span v-if="wechat.publishing.value" class="btn-spinner" aria-hidden="true"></span>
+          {{ wechat.publishing.value ? '发布中' : '发布到公众号' }}
+        </button>
       </div>
+      <p v-if="wechat.publishing.value" class="be-hint" data-testid="blog-editor-wechat-status">
+        {{ wechat.progressMsg.value }}<span v-if="wechat.progressTotal.value">（{{ wechat.progressStep.value }}/{{ wechat.progressTotal.value }}）</span>
+      </p>
+      <p v-else-if="wechat.error.value" class="be-warn" data-testid="blog-editor-wechat-error">{{ wechat.error.value }}</p>
+      <p v-else-if="wechat.result.value" class="be-hint" data-testid="blog-editor-wechat-ok">✓ 已发布到公众号草稿箱</p>
     </footer>
 
     <!-- Markdown 语法帮助弹框 -->

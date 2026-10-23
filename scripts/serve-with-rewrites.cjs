@@ -536,6 +536,35 @@ function serveStatic(filePath, res) {
   })
 }
 
+// ====== 微信公众号代理：/api/wechat/* 整体转发到独立 Node 服务（scripts/wechat-proxy.cjs，16720）======
+// 通用 HTTP 转发（保留原方法/路径/请求体），与 nginx location /api/wechat 行为一致。
+// wechat-proxy 未启动时返回明确 JSON 错误，避免请求落回 SPA index.html 导致前端解析 <!DOCTYPE 失败。
+const WECHAT_PROXY_PATH = '/api/wechat'
+const WECHAT_PROXY_PORT = Number(process.env.WECHAT_PROXY_PORT) || 16720
+
+function handleWechatProxy(req, res) {
+  const opts = {
+    hostname: '127.0.0.1',
+    port: WECHAT_PROXY_PORT,
+    path: req.url,
+    method: req.method,
+    headers: Object.assign({}, req.headers, { host: `127.0.0.1:${WECHAT_PROXY_PORT}` })
+  }
+  const upstream = http.request(opts, (upRes) => {
+    res.writeHead(upRes.statusCode || 502, upRes.headers)
+    upRes.pipe(res)
+  })
+  upstream.on('error', () => {
+    res.writeHead(502, { 'Content-Type': 'application/json; charset=utf-8' })
+    res.end(JSON.stringify({
+      ok: false,
+      code: 'WECHAT_PROXY_DOWN',
+      error: '微信公众号代理服务未启动（端口 16720）。请运行：npm run wechat-proxy 或 pm2 start scripts/wechat-proxy.cjs --name easy-wechat-proxy'
+    }))
+  })
+  req.pipe(upstream)
+}
+
 const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url)
   let filePath = parsedUrl.pathname
@@ -548,6 +577,11 @@ const server = http.createServer((req, res) => {
   // ====== 站点元数据同源代理（替代前端直连海外服务）======
   if (filePath === PROXY_META_PATH || filePath.startsWith(PROXY_META_PATH + '?')) {
     return handleFetchMeta(req, res)
+  }
+
+  // ====== 微信公众号代理 ======
+  if (filePath === WECHAT_PROXY_PATH || filePath.startsWith(WECHAT_PROXY_PATH + '/') || filePath.startsWith(WECHAT_PROXY_PATH + '?')) {
+    return handleWechatProxy(req, res)
   }
 
 // Game rewrites - with trailing slash for proper relative path resolution
@@ -627,7 +661,7 @@ function removePidFile() {
 server.listen(PORT, () => {
   writePidFile()
   console.log('')
-  console.log(`Server running on http://localhost:${PORT} (with WebDAV proxy /api/webdav-proxy)`)
+  console.log(`Server running on http://localhost:${PORT} (proxies: /api/webdav-proxy, /api/fetch-meta, /api/wechat -> 127.0.0.1:${WECHAT_PROXY_PORT})`)
   if (!fs.existsSync(path.join(DIST_DIR, 'index.html'))) {
     console.warn(`[WARN] 未检测到构建产物：${path.join(DIST_DIR, 'index.html')}`)
     console.warn('       访问页面会返回 503 提示页。请先执行： npm run build')
