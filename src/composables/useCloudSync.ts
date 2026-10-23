@@ -61,6 +61,7 @@ import {
 } from './useIdb'
 import { useNavPrefs } from './useNavPrefs'
 import { useAppSettingsStore } from '../stores/settings'
+import { toastAlert } from '@/utils/dialog'
 import { useToast } from './useToast'
 import { getStoredSaltHex, getStoredVerification } from './useCrypto'
 import { mergeFamily } from './genealogyCore'
@@ -1812,12 +1813,54 @@ async function pushNow(silent = false, skipRemoteGuard = false, onlyChanged = fa
  */
 export async function forcePushLocal(silent = false): Promise<boolean> {
   const settings = useAppSettingsStore()
+  let ok = false
   if (settings.cloudSyncChannel === 'feishu') {
     await feishuForcePush(silent)
-    return true
+    ok = true
+  } else {
+    if (!settings.cloudSyncEnabled || !hasSyncCredentials(settings)) return false
+    ok = await pushNow(silent, true, true)
   }
-  if (!settings.cloudSyncEnabled || !hasSyncCredentials(settings)) return false
-  return pushNow(silent, true, true)
+  // 推送成功 = 墓碑已随 workbench.json 信封上云，此刻物理清除过期墓碑才安全
+  // （否则对端尚未同步到删除，会把它当"新增"补回来 → 复活）。
+  if (ok) await runTombstoneGc(silent)
+  return ok
+}
+
+/**
+ * 墓碑 GC（仅本地数组物理清除，不碰活动数据，不影响合并语义）。
+ * 在所有含墓碑的工作台模块成功推送上云后调用一次：清除 deletedAt 超保留期（7 天）的墓碑。
+ * 各模块若无可清除项则返回 0，不写库。
+ * 用动态 import 复用 reloadWorkbenchStores 的惰性加载模式，避免与既有动态引入冲突触发分块警告。
+ * @returns 各模块合计清除的条数
+ */
+async function runTombstoneGc(silent = false): Promise<number> {
+  const [{ useWorkbenchTodosStore }, { useWorkbenchNotesStore }, { useWorkbenchLedgerStore }, { useWorkbenchDiaryStore }, { useGenealogyStore }] = await Promise.all([
+    import('../stores/workbenchTodos'),
+    import('../stores/workbenchNotes'),
+    import('../stores/workbenchLedger'),
+    import('../stores/workbenchDiary'),
+    import('../stores/genealogy')
+  ])
+  const stores = [
+    useWorkbenchTodosStore(),
+    useWorkbenchNotesStore(),
+    useWorkbenchLedgerStore(),
+    useWorkbenchDiaryStore(),
+    useGenealogyStore()
+  ]
+  let total = 0
+  for (const s of stores) {
+    try {
+      total += await s.gcTombstones()
+    } catch (e) {
+      console.warn('[cloudSync] 墓碑 GC 失败（跳过该模块）：', e)
+    }
+  }
+  if (!silent && total > 0) {
+    toastAlert(`已自动清理 ${total} 条过期删除记录`, 'success')
+  }
+  return total
 }
 
 /**

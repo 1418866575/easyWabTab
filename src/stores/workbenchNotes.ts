@@ -3,7 +3,7 @@ import { computed, ref, toRaw } from 'vue'
 import { NOTE_STATUSES } from '@/types'
 import type { NoteCategory, NoteColor, NoteData, NoteStatus, NoteType, TimelineEntry, WorkbenchNote } from '@/types'
 import { emptyNoteData, normalizeNoteData, normalizeDueDate, sortNotes } from '../composables/noteCore'
-import { activeOnly, clearDeleted, markDeleted, trashedItems } from '../composables/tombstoneCore'
+import { activeOnly, clearDeleted, gcTombstones as gcTombstonesCore, markDeleted, trashedItems } from '../composables/tombstoneCore'
 import { idbGet, idbPut } from '../composables/useIdb'
 import { getClientId, markDirty } from '@/composables/useCloudSync'
 
@@ -99,6 +99,19 @@ export const useWorkbenchNotesStore = defineStore('workbenchNotes', () => {
   async function purgeNote(id: string): Promise<void> {
     notes.value = toRaw(notes.value).filter(n => n.id !== id)
     await saveNotes()
+  }
+
+  /**
+   * 墓碑 GC：物理清除 deletedAt 超保留期（7 天）的便签。
+   * 须在墓碑已成功推送上云之后调用（forcePushLocal 成功回调里调），否则对端会补回。
+   * @returns 实际清除的条数
+   */
+  async function gcTombstones(): Promise<number> {
+    const { kept, purged } = gcTombstonesCore(toRaw(notes.value), new Date())
+    if (purged === 0) return 0
+    notes.value = kept
+    await saveNotes()
+    return purged
   }
 
   async function togglePin(id: string): Promise<void> {
@@ -232,6 +245,7 @@ export const useWorkbenchNotesStore = defineStore('workbenchNotes', () => {
     deleteNote,
     restoreNote,
     purgeNote,
+    gcTombstones,
     togglePin,
     addCategory,
     updateCategory,

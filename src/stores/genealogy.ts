@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, ref, toRaw } from 'vue'
 import { idbGet, idbPut } from '@/composables/useIdb'
 import { getClientId, markDirty } from '@/composables/useCloudSync'
-import { activeOnly, clearDeleted, markDeleted, trashedItems } from '@/composables/tombstoneCore'
+import { activeOnly, clearDeleted, gcTombstones as gcTombstonesCore, markDeleted, trashedItems } from '@/composables/tombstoneCore'
 import {
   emptyGenealogyData,
   getAncestors,
@@ -322,6 +322,27 @@ export const useGenealogyStore = defineStore('genealogy', () => {
     persist()
   }
 
+  /**
+   * 墓碑 GC：物理清除 members + names 中 deletedAt 超保留期（7 天）的记录。
+   * 须在墓碑已成功推送上云之后调用（forcePushLocal 成功回调里调），否则对端会补回。
+   * @returns 实际清除的条数
+   */
+  async function gcTombstones(): Promise<number> {
+    let total = 0
+    const m = gcTombstonesCore(toRaw(members.value), new Date())
+    if (m.purged > 0) {
+      members.value = m.kept
+      total += m.purged
+    }
+    const n = gcTombstonesCore(toRaw(names.value), new Date())
+    if (n.purged > 0) {
+      names.value = n.kept
+      total += n.purged
+    }
+    if (total > 0) persist()
+    return total
+  }
+
   /** 导出取名记录为可分享的 JSON 文本（信封 kind='family-names'）：墓碑不导出 */
   function exportNames(): string {
     return JSON.stringify(buildNamesExport(activeNames.value), null, 2)
@@ -428,6 +449,7 @@ export const useGenealogyStore = defineStore('genealogy', () => {
     deleteNameRecord,
     restoreNameRecord,
     purgeNameRecord,
+    gcTombstones,
     exportNames,
     importNamesFromJSON,
     childrenOf,

@@ -29,7 +29,7 @@ import type {
   LedgerRenameResult,
   LedgerWriteResult
 } from '@/composables/ledgerCore'
-import { activeOnly, clearDeleted, markDeleted, trashedItems } from '../composables/tombstoneCore'
+import { activeOnly, clearDeleted, gcTombstones as gcTombstonesCore, markDeleted, trashedItems } from '../composables/tombstoneCore'
 import { idbGet, idbPut } from '../composables/useIdb'
 import { getClientId, markDirty } from '@/composables/useCloudSync'
 
@@ -249,6 +249,26 @@ export const useWorkbenchLedgerStore = defineStore('workbenchLedger', () => {
     await saveLedger()
   }
 
+  /**
+   * 墓碑 GC：物理清除所有账本中 deletedAt 超保留期（7 天）的流水。
+   * 须在墓碑已成功推送上云之后调用（forcePushLocal 成功回调里调），否则对端会补回。
+   * @returns 实际清除的条数
+   */
+  async function gcTombstones(): Promise<number> {
+    let total = 0
+    let changed = false
+    for (const l of ledgers.value) {
+      const { kept, purged } = gcTombstonesCore(toRaw(l.data.entries), new Date())
+      if (purged > 0) {
+        l.data.entries = kept
+        total += purged
+        changed = true
+      }
+    }
+    if (changed) await saveLedger()
+    return total
+  }
+
   async function addCategory(input: { name: string; type: 'income' | 'expense' }): Promise<boolean> {
     const name = input.name.trim()
     if (!name) return false
@@ -445,6 +465,7 @@ export const useWorkbenchLedgerStore = defineStore('workbenchLedger', () => {
     deleteEntry,
     restoreEntry,
     purgeEntry,
+    gcTombstones,
     addCategory,
     updateCategory,
     deleteCategory,

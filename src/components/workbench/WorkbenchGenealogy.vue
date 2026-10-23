@@ -5,6 +5,7 @@ import { useViewMode } from '@/composables/useViewMode'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import GenealogyTreeNode from '@/components/workbench/GenealogyTreeNode.vue'
+import RecordTrash from '@/components/common/RecordTrash.vue'
 import { useToast } from '@/composables/useToast'
 import { useGenealogyStore } from '@/stores/genealogy'
 import {
@@ -26,6 +27,35 @@ import { usePageSize } from '@/composables/usePageSize'
 const store = useGenealogyStore()
 const vm = useViewMode()
 const toast = useToast()
+
+// ===== 回收站（墓碑）：成员 / 取名记录 两个标签页各一个入口 =====
+const membersTrashVisible = ref(false)
+const namesTrashVisible = ref(false)
+
+async function onRestoreMember(id: string): Promise<void> {
+  await store.restoreMember(id)
+  toast.success('已恢复')
+}
+async function onPurgeMember(id: string): Promise<void> {
+  await store.purgeMember(id)
+  toast.success('已彻底删除')
+}
+async function onClearMembers(): Promise<void> {
+  for (const m of store.trashedMembers) await store.purgeMember(m.id)
+  toast.success('回收站已清空')
+}
+async function onRestoreNameRecord(id: string): Promise<void> {
+  await store.restoreNameRecord(id)
+  toast.success('已恢复')
+}
+async function onPurgeNameRecord(id: string): Promise<void> {
+  await store.purgeNameRecord(id)
+  toast.success('已彻底删除')
+}
+async function onClearNames(): Promise<void> {
+  for (const n of store.trashedNames) await store.purgeNameRecord(n.id)
+  toast.success('回收站已清空')
+}
 
 const GENDER_LABEL: Record<string, string> = { male: '男', female: '女', '': '未知' }
 /** 取名记录语境：'' 表示"通用 / 不限"（区别于家谱成员的"未知"） */
@@ -718,6 +748,9 @@ onUnmounted(() => {
             @change="handleImportFile"
           />
           <ViewModeToggle v-if="filteredMembers.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
+          <el-button size="small" class="btn-cancel" data-testid="fg-trash-button" @click="membersTrashVisible = true">
+            回收站 ({{ store.trashedMembers.length }})
+          </el-button>
         </div>
       </div>
 
@@ -867,6 +900,9 @@ onUnmounted(() => {
             @change="handleImportNamesFile"
           />
           <ViewModeToggle v-if="filteredNames.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
+          <el-button size="small" class="btn-cancel" data-testid="fn-trash-button" @click="namesTrashVisible = true">
+            回收站 ({{ store.trashedNames.length }})
+          </el-button>
         </div>
       </div>
 
@@ -1248,6 +1284,32 @@ onUnmounted(() => {
       <div class="form-actions ewt-dialog-footer">
         <el-button size="small" data-testid="fn-paibei-close" @click="showPaibeiDialog = false">关闭</el-button>
       </div>
+    </el-dialog>
+
+    <!-- 回收站（成员墓碑）：还原 / 彻底删除 -->
+    <el-dialog v-model="membersTrashVisible" title="回收站 · 家庭成员" width="560px" data-testid="fg-trash-dialog">
+      <RecordTrash
+        :items="store.trashedMembers"
+        :get-label="(item: FamilyMember) => item.name"
+        empty-text="回收站是空的"
+        hint="这里是被删除的家庭成员。"
+        @restore="onRestoreMember"
+        @purge="onPurgeMember"
+        @clear="onClearMembers"
+      />
+    </el-dialog>
+
+    <!-- 回收站（取名记录墓碑）：还原 / 彻底删除 -->
+    <el-dialog v-model="namesTrashVisible" title="回收站 · 取名记录" width="560px" data-testid="fn-trash-dialog">
+      <RecordTrash
+        :items="store.trashedNames"
+        :get-label="(item: FamilyNameRecord) => item.name"
+        empty-text="回收站是空的"
+        hint="这里是被删除的取名记录。"
+        @restore="onRestoreNameRecord"
+        @purge="onPurgeNameRecord"
+        @clear="onClearNames"
+      />
     </el-dialog>
   </div>
 </template>

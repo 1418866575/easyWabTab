@@ -10,7 +10,7 @@ import {
   normalizeDiaryData,
   sortDiaryEntries
 } from '../composables/diaryCore'
-import { activeOnly, clearDeleted, isDeleted, markDeleted, trashedItems } from '../composables/tombstoneCore'
+import { activeOnly, clearDeleted, gcTombstones as gcTombstonesCore, isDeleted, markDeleted, trashedItems } from '../composables/tombstoneCore'
 import { idbGet, idbPut } from '../composables/useIdb'
 import { getClientId, markDirty } from '@/composables/useCloudSync'
 
@@ -215,6 +215,28 @@ export const useWorkbenchDiaryStore = defineStore('workbench-diary', () => {
     if (journals.value.some(j => j.id === id)) currentJournalId.value = id
   }
 
+  /**
+   * 墓碑 GC：物理清除 deletedAt 超保留期（7 天）的日记条目与日志本。
+   * 日志本墓碑：deleteJournal 已把其下条目迁移到目标本，移除墓碑不会留下悬空引用，安全。
+   * 须在墓碑已成功推送上云之后调用（forcePushLocal 成功回调里调），否则对端会补回。
+   * @returns 实际清除的条数
+   */
+  async function gcTombstones(): Promise<number> {
+    let total = 0
+    const e = gcTombstonesCore(toRaw(entries.value), new Date())
+    if (e.purged > 0) {
+      entries.value = e.kept
+      total += e.purged
+    }
+    const j = gcTombstonesCore(toRaw(journals.value), new Date())
+    if (j.purged > 0) {
+      journals.value = j.kept
+      total += j.purged
+    }
+    if (total > 0) await saveDiary()
+    return total
+  }
+
   // 排序：date 降序 → createdAt 降序（公式属 diaryCore，仅对当前日志本条目排序）
   const sortedEntries = computed<WorkbenchDiary[]>(() => sortDiaryEntries(currentEntries.value))
 
@@ -237,6 +259,7 @@ export const useWorkbenchDiaryStore = defineStore('workbench-diary', () => {
     deleteEntry,
     softDeleteEntry,
     restoreEntry,
+    gcTombstones,
     clearCategory,
     addJournal,
     renameJournal,

@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
-import { showConfirm } from '@/utils/dialog'
+import { showConfirm, toastAlert } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
+import RecordTrash from '@/components/common/RecordTrash.vue'
 
 const vm = useViewMode()
 
@@ -41,6 +43,22 @@ import { renderMarkdown } from '@/composables/noteMarkdown'
 import { usePageSize } from '@/composables/usePageSize'
 
 const store = useWorkbenchNotesStore()
+
+// ===== 回收站（墓碑）=====
+const trashVisible = ref(false)
+
+async function onRestoreNote(id: string): Promise<void> {
+  await store.restoreNote(id)
+  toastAlert('已恢复到便签列表', 'success')
+}
+async function onPurgeNote(id: string): Promise<void> {
+  await store.purgeNote(id)
+  toastAlert('已彻底删除', 'success')
+}
+async function onClearNotes(): Promise<void> {
+  for (const n of store.trashedNotes) await store.purgeNote(n.id)
+  toastAlert('回收站已清空', 'success')
+}
 
 /** 今日日期键（'YYYY-MM-DD'）：逾期判定基准。
  *  跨天需自动重算，故用定时器在零点后刷新（页面长时间开着也能把逾期的便签标出来）。 */
@@ -503,7 +521,12 @@ onUnmounted(() => {
       <div class="nt-toolbar-left">
         <el-button class="nt-btn-add" data-testid="note-add-button" @click="startAdd">＋ 新增便签</el-button>
       </div>
-      <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
+      <div class="nt-toolbar-right">
+        <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
+        <el-button size="small" class="btn-cancel" data-testid="nt-trash-button" @click="trashVisible = true">
+          回收站 ({{ store.trashedNotes.length }})
+        </el-button>
+      </div>
     </div>
 
     <div v-if="filteredNotes.length > 0" class="nt-table-wrap">
@@ -830,6 +853,25 @@ onUnmounted(() => {
       </div>
     </div>
   </div>
+
+  <!-- 回收站（墓碑）：还原 / 彻底删除 -->
+  <BaseDialog
+    v-if="trashVisible"
+    title="回收站"
+    width="560px"
+    data-testid="nt-trash-dialog"
+    @close="trashVisible = false"
+  >
+    <RecordTrash
+      :items="store.trashedNotes"
+      :get-label="(item: WorkbenchNote) => item.title || (item.content ? item.content.slice(0, 24) : '（无标题）')"
+      empty-text="回收站是空的"
+      hint="这里是被删除的便签。"
+      @restore="onRestoreNote"
+      @purge="onPurgeNote"
+      @clear="onClearNotes"
+    />
+  </BaseDialog>
 </template>
 
 <style scoped>
@@ -1190,5 +1232,12 @@ html.dark .timeline-item::before { background: var(--color-border, #374151); }
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+.nt-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 </style>

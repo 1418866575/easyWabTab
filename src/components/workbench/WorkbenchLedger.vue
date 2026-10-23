@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { showConfirm } from '@/utils/dialog'
 import BaseDialog from '@/components/common/BaseDialog.vue'
+import RecordTrash from '@/components/common/RecordTrash.vue'
 import LedgerSwitcher from '@/components/workbench/LedgerSwitcher.vue'
 import { useToast } from '@/composables/useToast'
 
@@ -32,6 +33,22 @@ import { exportXlsx } from '@/composables/xlsxExport'
 
 const store = useWorkbenchLedgerStore()
 const toast = useToast()
+
+// ===== 回收站（墓碑）=====
+const trashVisible = ref(false)
+
+async function onRestoreEntry(id: string): Promise<void> {
+  await store.restoreEntry(id)
+  toast.success('已恢复')
+}
+async function onPurgeEntry(id: string): Promise<void> {
+  await store.purgeEntry(id)
+  toast.success('已彻底删除')
+}
+async function onClearEntries(): Promise<void> {
+  for (const e of store.trashedEntries) await store.purgeEntry(e.id)
+  toast.success('回收站已清空')
+}
 
 // ===== 月份选择（顶部条，驱动全部统计/列表/占比重算）=====
 function currentMonth(): string {
@@ -308,6 +325,9 @@ onMounted(async () => {
         </el-button>
         <el-button class="btn-add" data-testid="ld-add" @click="startAdd">＋ 新增</el-button>
         <el-button class="btn-export-xlsx" data-testid="ld-export" :disabled="monthEntries.length === 0" @click="exportLedgerXlsx">导出 Excel</el-button>
+        <el-button size="small" class="btn-cancel" data-testid="ld-trash-button" @click="trashVisible = true">
+          回收站 ({{ store.trashedEntries.length }})
+        </el-button>
       </div>
     </div>
 
@@ -661,6 +681,25 @@ onMounted(async () => {
         </form>
       </BaseDialog>
     </Transition>
+
+    <!-- 回收站（墓碑）：还原 / 彻底删除 -->
+    <BaseDialog
+      v-if="trashVisible"
+      title="回收站"
+      width="560px"
+      data-testid="ld-trash-dialog"
+      @close="trashVisible = false"
+    >
+      <RecordTrash
+        :items="store.trashedEntries"
+        :get-label="(item: LedgerEntry) => item.note ? `${item.date} ${item.note}` : `${item.date} 记账流水`"
+        empty-text="回收站是空的"
+        hint="这里是被删除的记账流水。"
+        @restore="onRestoreEntry"
+        @purge="onPurgeEntry"
+        @clear="onClearEntries"
+      />
+    </BaseDialog>
 
     <!-- 本月记录（页面底部直接展示，随数据实时更新；无记录时由上方 empty-state 兜底，此处不渲染） -->
     <section v-if="monthEntries.length > 0" class="ld-records-section" data-testid="ld-records-section">

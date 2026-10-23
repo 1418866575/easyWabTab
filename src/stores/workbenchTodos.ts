@@ -15,6 +15,7 @@ import {
 } from '@/composables/todoCore'
 import { idbGet, idbPut } from '../composables/useIdb'
 import { markDirty, getClientId } from '@/composables/useCloudSync'
+import { gcTombstones as gcTombstonesCore } from '@/composables/tombstoneCore'
 
 // 分类注册表偏好（localStorage，不随 JSON 备份导出——与倒计时分类偏好同策略）：
 // customCategories = 用户自定义分类名数组；tabCategories = 标签页可见分类（默认全部内置）
@@ -277,6 +278,19 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
   }
 
   /**
+   * 墓碑 GC：物理清除 deletedAt 超保留期（7 天）的待办。
+   * 调用时机须在**墓碑已成功推送上云之后**（forcePushLocal 成功回调里调），否则对端会把它当新增补回来。
+   * @returns 实际清除的条数
+   */
+  async function gcTombstones(): Promise<number> {
+    const { kept, purged } = gcTombstonesCore(toRaw(todos.value), new Date())
+    if (purged === 0) return 0
+    todos.value = kept
+    await saveTodos()
+    return purged
+  }
+
+  /**
    * 设置工作流状态的唯一入口：同步 completed 镜像，并处理 completedAt / archived 联动。
    * - 已完成：completed=true，补 completedAt（自动归档以它为准，回退 updatedAt 会误判成"刚完成"）
    * - 未完成 / 进行中：completed=false，清 completedAt 与 archived（未完成项不该处于归档态）
@@ -406,6 +420,7 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
     deleteTodo,
     restoreTodo,
     purgeTodo,
+    gcTombstones,
     toggleTodo,
     setTodoStatus,
     runAutoArchive,
