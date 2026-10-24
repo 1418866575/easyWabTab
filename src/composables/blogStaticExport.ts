@@ -134,7 +134,8 @@ export async function downloadBlogPublic(): Promise<void> {
       categories: store.categories,
       tags: store.tags,
       articles: store.articles,
-      images: store.images
+      images: store.images,
+      imageCategories: store.imageCategories
     },
     renderMarkdown
   )

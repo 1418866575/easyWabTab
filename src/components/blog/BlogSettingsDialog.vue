@@ -14,12 +14,13 @@ import Icon from '@/components/Icon.vue'
 import BlogSettingsPanel from './BlogSettingsPanel.vue'
 import BlogCategories from './BlogCategories.vue'
 import BlogTags from './BlogTags.vue'
+import BlogImageCategories from './BlogImageCategories.vue'
 import WechatConfigPanel from './WechatConfigPanel.vue'
 import { useBlogSettingsDialog } from '@/composables/useBlogSettingsDialog'
 
 const emit = defineEmits<{ close: [] }>()
 
-type SectionKey = 'settings' | 'categories' | 'tags' | 'wechat'
+type SectionKey = 'settings' | 'categories' | 'tags' | 'gallery' | 'wechat'
 
 interface NavItem {
   key: SectionKey
@@ -31,6 +32,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'settings', label: '博客设置', icon: 'cog' },
   { key: 'categories', label: '分类管理', icon: 'folder' },
   { key: 'tags', label: '标签管理', icon: 'tag' },
+  { key: 'gallery', label: '图库设置', icon: 'image' },
   { key: 'wechat', label: '微信公众号', icon: 'email' }
 ]
 
@@ -84,6 +86,7 @@ function labelOf(key: SectionKey): string {
           <BlogSettingsPanel v-if="active === 'settings'" />
           <BlogCategories v-else-if="active === 'categories'" />
           <BlogTags v-else-if="active === 'tags'" />
+          <BlogImageCategories v-else-if="active === 'gallery'" />
           <WechatConfigPanel v-else-if="active === 'wechat'" />
         </div>
       </section>
