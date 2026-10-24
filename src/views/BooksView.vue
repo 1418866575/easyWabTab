@@ -41,6 +41,7 @@ import {
 import { useBooksPrefs, flushBooksPrefs } from '@/composables/useBooksPrefs'
 import { listUploadedBooks, makeUploadObjectUrl, uploadedToBookItem } from '@/composables/booksUpload'
 import type { UploadedBook } from '@/composables/booksUpload'
+import { downloadBook } from '@/composables/booksDownload'
 import '@/styles/books.css'
 
 const router = useRouter()
@@ -60,6 +61,8 @@ const page = ref(1)
 const pageSize = 12
 const uploadOpen = ref(false)
 const bookmarkOpen = ref(false)
+/** 正在下载的书的 id；同一时刻只允许一本在跑，避免并发把内存与带宽一起吃掉 */
+const downloadingId = ref('')
 
 const keyword = ref('')
 const activeCategory = ref('')
@@ -246,6 +249,34 @@ function onToggleFav(book: BookItem): void {
   toast.info(now ? `已收藏《${book.title}》` : `已取消收藏《${book.title}》`)
 }
 
+/**
+ * 下载整本书（入口页 + 二级页面）到本地。
+ *
+ * 上传书没有服务器目录，正文就在 IndexedDB 里 —— 直接把 html 传给下载器，
+ * 走的是「导出文件」那条路，不发起任何网络请求。
+ */
+async function onDownload(book: BookItem): Promise<void> {
+  if (downloadingId.value) return
+  downloadingId.value = book.id
+  try {
+    const upload = book.source === 'upload' ? uploads.value.find((u) => u.id === book.id) : undefined
+    const res = await downloadBook({
+      id: book.id,
+      title: book.title,
+      source: book.source,
+      entry: book.entry,
+      html: upload?.html
+    })
+    if (!res.ok) toast.error(res.message)
+    else if (res.failed.length || res.truncated) toast.warning(res.message)
+    else toast.success(res.message)
+  } catch (e) {
+    toast.error(`下载失败：${(e as Error)?.message ?? e}`)
+  } finally {
+    downloadingId.value = ''
+  }
+}
+
 /** ---------- 筛选重置 ---------- */
 function resetFilterState(): void {
   keyword.value = ''
@@ -429,9 +460,11 @@ onUnmounted(() => {
           :recent-ts="prefs.recent.value[b.id] ?? 0"
           :click-count="prefs.clicks.value[b.id] ?? 0"
           :bookmark="prefs.getBookmark(b.id)"
+          :downloading="downloadingId === b.id"
           @open="onOpen"
           @read="onRead"
           @toggle-fav="onToggleFav"
+          @download="onDownload"
         />
       </div>
     </section>
@@ -450,9 +483,11 @@ onUnmounted(() => {
           :recent-ts="prefs.recent.value[b.id] ?? 0"
           :click-count="prefs.clicks.value[b.id] ?? 0"
           :bookmark="prefs.getBookmark(b.id)"
+          :downloading="downloadingId === b.id"
           @open="onOpen"
           @read="onRead"
           @toggle-fav="onToggleFav"
+          @download="onDownload"
         />
       </div>
     </section>
@@ -477,9 +512,11 @@ onUnmounted(() => {
           :recent-ts="prefs.recent.value[b.id] ?? 0"
           :click-count="prefs.clicks.value[b.id] ?? 0"
           :bookmark="prefs.getBookmark(b.id)"
+          :downloading="downloadingId === b.id"
           @open="onOpen"
           @read="onRead"
           @toggle-fav="onToggleFav"
+          @download="onDownload"
         />
       </div>
 
