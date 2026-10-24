@@ -8,7 +8,7 @@
  * 评论实体按需求文档标注「延后」未实现，故 `commentCount` 恒为 0。
  */
 import { ARTICLE_STATUSES, BLOG_SORTS } from '../types'
-import type { ArticleStatus, BlogArticle, BlogCategory, BlogCoverKind, BlogData, BlogImage, BlogImageSort, BlogSettings, BlogSort, BlogTag } from '../types'
+import type { ArticleStatus, BlogArticle, BlogCategory, BlogCoverKind, BlogData, BlogImage, BlogImageSort, BlogSettings, BlogSort, BlogTag, BlogWechatConfig } from '../types'
 import { isAllowedDataImage, parseImageRefs } from './blogImages'
 
 /** 博客数据结构版本：normalizeBlogData 据此判定是否需要迁移 */
@@ -309,6 +309,14 @@ export function normalizeBlogData(raw: unknown): BlogData {
     images.push(img)
   }
 
+  const wechat: BlogWechatConfig | undefined =
+    src.wechat && typeof src.wechat === 'object'
+      ? {
+          appId: str((src.wechat as Record<string, unknown>).appId, ''),
+          appSecret: str((src.wechat as Record<string, unknown>).appSecret, '')
+        }
+      : undefined
+
   return {
     version: BLOG_DATA_VERSION,
     updatedAt: str(src.updatedAt, when),
@@ -316,7 +324,8 @@ export function normalizeBlogData(raw: unknown): BlogData {
     categories,
     tags,
     articles,
-    images
+    images,
+    wechat
   }
 }
 

@@ -57,7 +57,9 @@ export function mergeBlogEnvelope(local: BlogSyncData, remote: BlogSyncData): Bl
       categories,
       tags,
       articles,
-      images
+      images,
+      // 微信公众号凭证随设置一起按整包更新时间较新侧整体取（与 settings 同规则）
+      wechat: remoteNewer ? r.wechat : l.wechat
     }
   }
 }

@@ -1,14 +1,19 @@
 // 微信公众号代理服务（常驻 Node，端口 16721）
 //
-// 职责（仅服务端，绝不经手前端 secret 明文回传）：
-//   1. 凭证管理：保存/读取 AppID / AppSecret（落盘 config/wechat.env，gitignore，仅后端可读）
-//   2. access_token 中控缓存（提前 5 分钟刷新，避免覆盖失效）
-//   3. 图片上传：media/uploadimg（正文插图，返回微信图床 URL）
-//   4. 封面上传：material/add_material?type=image（返回 media_id 作 thumb_media_id）
-//   5. 草稿创建：draft/add
+// ⚠️ 无状态多租户：本服务**不再**持有任何凭证，也不落盘 config/wechat.env。
+// 每次业务请求（upload-img / upload-cover / draft / config 校验）都从请求体携带
+// appId + appSecret，按 AppID 维度缓存 access_token，互不影响、互不串号。
+// 凭证的"持久化"由前端负责（浏览器本地 + 随 blog.json 云同步信封同步），本服务只做微信调用中转。
+//
+// 职责：
+//   1. access_token 中控缓存（按 appId 维度，提前 5 分钟刷新，避免覆盖失效）
+//   2. 图片上传：media/uploadimg（正文插图，返回微信图床 URL）
+//   3. 封面上传：material/add_material?type=image（返回 media_id 作 thumb_media_id）
+//   4. 草稿创建：draft/add
+//   5. /config 仅做格式 + liveness 校验（尝试取 token），不落盘
 //
 // 设计原则：
-//   - 零额外依赖（Node 标准库）：multipart 手工构造、env 文件手工解析。
+//   - 零额外依赖（Node 标准库）：multipart 手工构造、token 缓存用 crypto 哈希做 key。
 //   - 所有微信调用集中在后端，前端只提交已准备好的 data URL / 组装好的 HTML。
 //   - /api/wechat/* 由 nginx 反代到本机 127.0.0.1:16721；dev 由 vite proxy 转发。
 //
@@ -23,14 +28,11 @@
 
 const http = require('http')
 const https = require('https')
-const fs = require('fs')
-const path = require('path')
+const crypto = require('crypto')
 
 const HOST = process.env.WEBCHAT_HOST || '127.0.0.1'
 const PORT = Number(process.env.WEBCHAT_PORT) || 16721
 const WX_HOST = 'api.weixin.qq.com'
-const CONFIG_DIR = path.join(__dirname, '..', 'config')
-const CONFIG_FILE = path.join(CONFIG_DIR, 'wechat.env')
 const MAX_BODY = 12 * 1024 * 1024 // 单请求上限 12MB（封面/正文图可能几 MB）
 
 // ---------------------------------------------------------------------------
@@ -44,76 +46,43 @@ class WechatError extends Error {
 }
 
 // ---------------------------------------------------------------------------
-// 凭证读取：优先级 process.env > config/wechat.env > 运行时覆盖
-// process.env 命名：WECHAT_APPID / WECHAT_APPSECRET
+// access_token 中控缓存（按 appId 维度，避免多用户互相覆盖）
+// key = appId + ':' + sha256(secret) 前 16 位（仅用于区分缓存槽，不暴露明文）
 // ---------------------------------------------------------------------------
-let runtimeOverride = { appId: '', appSecret: '' }
+const tokenCache = new Map() // key -> { token, expiresAt }
 
-function readConfigFile() {
-  const out = { appId: '', appSecret: '' }
-  try {
-    const text = fs.readFileSync(CONFIG_FILE, 'utf8')
-    for (const line of text.split('\n')) {
-      const trimmed = line.trim()
-      if (!trimmed || trimmed.startsWith('#')) continue
-      const eq = trimmed.indexOf('=')
-      if (eq === -1) continue
-      const key = trimmed.slice(0, eq).trim()
-      const val = trimmed.slice(eq + 1).trim()
-      if (key === 'WECHAT_APPID') out.appId = val
-      if (key === 'WECHAT_APPSECRET') out.appSecret = val
-    }
-  } catch {
-    // 文件不存在或不可读：返回空
-  }
-  return out
+function secretHash(appSecret) {
+  return crypto.createHash('sha256').update(appSecret).digest('hex').slice(0, 16)
 }
 
-function writeConfigFile(appId, appSecret) {
-  try {
-    if (!fs.existsSync(CONFIG_DIR)) fs.mkdirSync(CONFIG_DIR, { recursive: true })
-    const content = `# easy-web-tab 微信公众号凭证（自动生成，请勿提交到 git）\nWECHAT_APPID=${appId}\nWECHAT_APPSECRET=${appSecret}\n`
-    fs.writeFileSync(CONFIG_FILE, content, { mode: 0o600 })
-    try { fs.chmodSync(CONFIG_FILE, 0o600) } catch { /* Windows 忽略 */ }
-  } catch (e) {
-    throw new WechatError('CONFIG_WRITE_FAIL', '凭证文件写入失败：' + e.message)
-  }
+function cacheKey(appId, appSecret) {
+  return `${appId}:${secretHash(appSecret)}`
 }
 
-function loadCredentials() {
-  const file = readConfigFile()
-  return {
-    appId: process.env.WECHAT_APPID || runtimeOverride.appId || file.appId,
-    appSecret: process.env.WECHAT_APPSECRET || runtimeOverride.appSecret || file.appSecret
+async function getAccessToken(appId, appSecret) {
+  if (!appId || !appSecret) {
+    throw new WechatError('CREDENTIAL_MISSING', '缺少 AppID / AppSecret')
   }
+  const key = cacheKey(appId, appSecret)
+  const now = Date.now()
+  const hit = tokenCache.get(key)
+  if (hit && hit.token && hit.expiresAt > now) return hit.token
+
+  const res = await wxRequest('GET',
+    `/cgi-bin/token?grant_type=client_credential&appid=${encodeURIComponent(appId)}&secret=${encodeURIComponent(appSecret)}`)
+  if (res.body && res.body.access_token) {
+    const ttl = (Number(res.body.expires_in) || 7200) * 1000
+    const entry = { token: res.body.access_token, expiresAt: now + ttl - 300000 } // 提前 5 分钟
+    tokenCache.set(key, entry)
+    return entry.token
+  }
+  throw new WechatError(String(res.body?.errcode || 'WX_TOKEN_FAIL'), res.body?.errmsg || '获取 access_token 失败')
 }
 
 function maskAppId(appId) {
   if (!appId) return ''
   if (appId.length <= 8) return appId[0] + '****'
   return appId.slice(0, 4) + '****' + appId.slice(-4)
-}
-
-// ---------------------------------------------------------------------------
-// access_token 中控缓存
-// ---------------------------------------------------------------------------
-let tokenCache = { token: null, expiresAt: 0 }
-
-async function getAccessToken() {
-  const now = Date.now()
-  if (tokenCache.token && tokenCache.expiresAt > now) return tokenCache.token
-  const { appId, appSecret } = loadCredentials()
-  if (!appId || !appSecret) {
-    throw new WechatError('CREDENTIAL_MISSING', '尚未配置 AppID / AppSecret')
-  }
-  const res = await wxRequest('GET',
-    `/cgi-bin/token?grant_type=client_credential&appid=${encodeURIComponent(appId)}&secret=${encodeURIComponent(appSecret)}`)
-  if (res.body && res.body.access_token) {
-    const ttl = (Number(res.body.expires_in) || 7200) * 1000
-    tokenCache = { token: res.body.access_token, expiresAt: now + ttl - 300000 } // 提前 5 分钟
-    return tokenCache.token
-  }
-  throw new WechatError(String(res.body?.errcode || 'WX_TOKEN_FAIL'), res.body?.errmsg || '获取 access_token 失败')
 }
 
 // ---------------------------------------------------------------------------
@@ -179,11 +148,11 @@ function extOf(mime) {
 }
 
 // ---------------------------------------------------------------------------
-// 业务：图片 / 封面 / 草稿
+// 业务：图片 / 封面 / 草稿（均带 appId + appSecret，由调用方从请求体透传）
 // ---------------------------------------------------------------------------
-async function uploadImage(dataUrl) {
+async function uploadImage(dataUrl, appId, appSecret) {
   const { buf, mime } = dataUrlToBuffer(dataUrl)
-  const token = await getAccessToken()
+  const token = await getAccessToken(appId, appSecret)
   const mp = buildMultipart('media', 'img.' + extOf(mime), mime, buf)
   const res = await wxRequest('POST', `/cgi-bin/media/uploadimg?access_token=${token}`,
     { bodyBuffer: mp.body, contentType: mp.contentType })
@@ -191,9 +160,9 @@ async function uploadImage(dataUrl) {
   throw new WechatError(String(res.body?.errcode || 'UPLOAD_IMG_FAIL'), res.body?.errmsg || '正文图片上传失败')
 }
 
-async function uploadCover(dataUrl) {
+async function uploadCover(dataUrl, appId, appSecret) {
   const { buf, mime } = dataUrlToBuffer(dataUrl)
-  const token = await getAccessToken()
+  const token = await getAccessToken(appId, appSecret)
   const mp = buildMultipart('media', 'cover.' + extOf(mime), mime, buf)
   const res = await wxRequest('POST', `/cgi-bin/material/add_material?access_token=${token}&type=image`,
     { bodyBuffer: mp.body, contentType: mp.contentType })
@@ -201,8 +170,8 @@ async function uploadCover(dataUrl) {
   throw new WechatError(String(res.body?.errcode || 'UPLOAD_COVER_FAIL'), res.body?.errmsg || '封面上传失败')
 }
 
-async function createDraft(article) {
-  const token = await getAccessToken()
+async function createDraft(article, appId, appSecret) {
+  const token = await getAccessToken(appId, appSecret)
   const res = await wxRequest('POST', `/cgi-bin/draft/add?access_token=${token}`,
     { json: { articles: [article] } })
   if (res.body && res.body.media_id) return res.body.media_id
@@ -246,10 +215,6 @@ function sendJson(res, status, obj) {
   res.end(text)
 }
 
-function maskSecret(configured) {
-  return configured
-}
-
 async function handle(req, res) {
   const u = new URL(req.url, 'http://localhost')
   let p = u.pathname
@@ -262,81 +227,67 @@ async function handle(req, res) {
   }
 
   try {
+    // /config：客户端自管理凭证，本服务只做校验，不落盘
     if (p === '/config') {
       if (req.method === 'GET') {
-        const { appId, appSecret } = loadCredentials()
-        sendJson(res, 200, {
-          ok: true,
-          configured: !!(appId && appSecret),
-          appIdMasked: maskAppId(appId),
-          appSecretConfigured: !!appSecret
-        })
+        // 告知前端：凭证由客户端管理（浏览器本地 + 云同步），服务端无状态
+        sendJson(res, 200, { ok: true, clientManaged: true })
         return
       }
       if (req.method === 'POST') {
         const raw = await readBody(req)
         const { appId, appSecret } = raw ? JSON.parse(raw) : {}
-        const cur = loadCredentials()
-        const nextAppId = (appId != null && appId !== '') ? String(appId) : cur.appId
-        const nextSecret = (appSecret != null && appSecret !== '') ? String(appSecret) : cur.appSecret
 
-        if (!validateAppId(nextAppId)) {
+        if (!validateAppId(String(appId || ''))) {
           sendJson(res, 400, { ok: false, error: 'AppID 格式不正确（应为 16-32 位字母数字）' })
           return
         }
-        if (nextSecret && !validateAppSecret(nextSecret)) {
+        if (!validateAppSecret(String(appSecret || ''))) {
           sendJson(res, 400, { ok: false, error: 'AppSecret 格式不正确（应为 32-64 位字母数字）' })
           return
         }
 
-        // 落盘（仅在两者都齐全时写 secret；若用户只填了 appId，secret 沿用旧值）
-        if (nextAppId && nextSecret) {
-          writeConfigFile(nextAppId, nextSecret)
-          runtimeOverride = { appId: nextAppId, appSecret: nextSecret }
-        } else {
-          // 只更新 appId 覆盖（secret 仍来自文件/env）
-          runtimeOverride = { appId: nextAppId, appSecret: '' }
-        }
-
-        // 真实校验：尝试获取 token
+        // liveness 校验：尝试用该凭证取 token（不发往微信的字段不做持久化）
         let tokenOk = false
         let wxError = null
         try {
-          await getAccessToken()
+          await getAccessToken(String(appId), String(appSecret))
           tokenOk = true
         } catch (e) {
           wxError = { code: e.code, message: e.message }
         }
 
-        sendJson(res, tokenOk ? 200 : 200, {
+        sendJson(res, 200, {
           ok: tokenOk,
-          configured: !!(nextAppId && nextSecret),
-          appIdMasked: maskAppId(nextAppId),
-          appSecretConfigured: !!nextSecret,
+          clientManaged: true,
+          configured: true,
+          appIdMasked: maskAppId(String(appId)),
+          appSecretConfigured: true,
           ...(tokenOk
-            ? { message: '凭证已保存并验证通过' }
-            : { error: '凭证已保存，但微信校验未通过', wx: wxError })
+            ? { message: '凭证有效（已通过微信校验）' }
+            : { error: '凭证格式正确，但微信校验未通过（请检查 AppSecret 与 IP 白名单）', wx: wxError })
         })
         return
       }
     }
 
     if (p === '/upload-img' && req.method === 'POST') {
-      const { dataUrl } = JSON.parse(await readBody(req))
-      const url = await uploadImage(dataUrl)
+      const { dataUrl, appId, appSecret } = JSON.parse(await readBody(req))
+      const url = await uploadImage(dataUrl, appId, appSecret)
       sendJson(res, 200, { ok: true, url })
       return
     }
 
     if (p === '/upload-cover' && req.method === 'POST') {
-      const { dataUrl } = JSON.parse(await readBody(req))
-      const mediaId = await uploadCover(dataUrl)
+      const { dataUrl, appId, appSecret } = JSON.parse(await readBody(req))
+      const mediaId = await uploadCover(dataUrl, appId, appSecret)
       sendJson(res, 200, { ok: true, mediaId })
       return
     }
 
     if (p === '/draft' && req.method === 'POST') {
       const article = JSON.parse(await readBody(req))
+      const { appId, appSecret } = article
       // 兼容前端 camelCase 与微信 snake_case 两种命名
       const thumbMediaId = article?.thumbMediaId || article?.thumb_media_id
       // 基础字段校验（微信侧还会再校验）
@@ -356,7 +307,7 @@ async function handle(req, res) {
         need_open_comment: 0,
         only_fans_can_comment: 0
       }
-      const mediaId = await createDraft(wxArticle)
+      const mediaId = await createDraft(wxArticle, appId, appSecret)
       sendJson(res, 200, { ok: true, mediaId })
       return
     }

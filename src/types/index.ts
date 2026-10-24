@@ -1811,6 +1811,11 @@ export interface BlogSettings {
   footer: string
 }
 
+export interface BlogWechatConfig {
+  appId: string
+  appSecret: string
+}
+
 export interface BlogData {
   version: number
   updatedAt: string         // 信封合并比较基准
@@ -1819,6 +1824,8 @@ export interface BlogData {
   tags: BlogTag[]
   articles: BlogArticle[]
   images: BlogImage[]       // 正文内联图片库（正文用 img:<id> 引用；随 blog.json 同步）
+  /** 微信公众号凭证（明文随 blog.json 同步，存于用户自己的 WebDAV/飞书；多租户隔离靠前端按 AppID 调用） */
+  wechat?: BlogWechatConfig
 }
 
 /** 博客独立同步信封（blog.json），形态对齐 TeacherSyncData */

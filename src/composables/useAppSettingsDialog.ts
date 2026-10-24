@@ -8,7 +8,7 @@ export type SettingsAction = 'product-cats' | 'expense-cats' | 'low-stock-thresh
 
 /** 打开设置时要定位的目标区块（主 tab + 可选子 tab）；null = 默认行为（工作台设置 tab） */
 export interface SettingsTarget {
-  tab: 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'sync' | 'wechat'
+  tab: 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'sync'
   sub?: string
   action?: SettingsAction
 }

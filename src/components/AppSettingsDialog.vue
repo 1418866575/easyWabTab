@@ -68,7 +68,6 @@ import { COUNTDOWN_CATEGORIES } from '@/types'
 import { categoryLabel } from '@/composables/countdownCore'
 import { useCloudSync } from '@/composables/useCloudSync'
 import { testFeishuConnection, createFeishuTables } from '@/composables/feishuSync'
-import { useWechatConfig } from '@/composables/useWechatConfig'
 import { useNavPrefs } from '@/composables/useNavPrefs'
 import {
   useHomeLayout,
@@ -102,7 +101,7 @@ import CloudSyncConflictModal from './CloudSyncConflictModal.vue'
 const DIALOG_IDS = Object.keys(DIALOG_DEFAULTS) as DialogId[]
 
 // 当前激活的设置分组 tab（导航设置 / 工作台设置 / 提醒设置 / 销售记账 / 学生工作台 / 教师工作台 / 云同步 / 关于）
-type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'teacher' | 'sync' | 'about' | 'wechat'
+type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'teacher' | 'sync' | 'about'
 // 子 tab keys：每个主 tab 下的子分组（仅内容多的主 tab 定义）
 // 导航站子 tab：原「站点管理」九动作已整体拆为独立页——导入/导出合并为「备份恢复」，
 // 其余各动作一页一项（菜单名沿用原按钮名：添加网址 / 检测断链 / 引擎管理 / 背景 / 分类管理 / 备份 / 图标管理）
@@ -150,14 +149,14 @@ const SOURCE_TABS: Record<SettingsSource, SettingsTabKey[]> = {
   // 提醒设置只保留在「个人工作台」页的设置弹框里（天气城市之后）：
   //   - nav 来源移除 remind，避免导航站设置里出现只有一个「提醒设置」的「个人工作台」分组
   //   - all 为兜底默认值（当前无页面使用），同样移除，保证「只在个人工作台出现」
-  nav:        ['nav',      'sync', 'about', 'wechat'],
+  nav:        ['nav',      'sync', 'about'],
   // workbench 来源放行 remind：「提醒设置」已归入「个人工作台」分组（天气城市之后），
   // 且它与 wb 同样受 workbenchPageVisible 控制，工作台关闭时两者一起隐藏
   workbench:  ['wb', 'remind'],
   business:   ['business'],
   student:    ['student'],
   teacher:    ['teacher'],
-  all:        ['nav', 'wb', 'business', 'student', 'teacher', 'sync', 'about', 'wechat']
+  all:        ['nav', 'wb', 'business', 'student', 'teacher', 'sync', 'about']
 }
 
 /** 来源页默认激活的 tab（第一个=自己页面的设置tab），若不在可见集合里会被 visibleTabs watcher 回退到第一个可见 */
@@ -263,16 +262,6 @@ const store = useAppSettingsStore()
 const businessStore = useWorkbenchBusinessStore()
 const studentStore = useStudentSettingsStore()
 const teacherStore = useTeacherStore()
-
-// 微信公众号凭证配置（仅与后端代理交互，AppSecret 不进前端 store）
-const wechatConfig = useWechatConfig()
-let wechatLoaded = false
-watch(activeTab, (tab) => {
-  if (tab === 'wechat' && !wechatLoaded) {
-    wechatLoaded = true
-    wechatConfig.loadConfig()
-  }
-})
 
 // 「关于」页：公众号 + 开源地址（配置集中在 src/config/about.ts，追加仓库无需改组件）
 const mpQrFailed = ref(false)
@@ -398,8 +387,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       // 「提醒设置」已移到「个人工作台 → 天气城市」之后（与工作台同开关：workbenchPageVisible）
       { key: 'sync', label: '云同步', icon: 'cloud', tab: 'sync' },
-      { key: 'about', label: '关于', icon: 'info', tab: 'about' },
-      { key: 'wechat', label: '微信公众号', icon: 'email', tab: 'wechat' }
+      { key: 'about', label: '关于', icon: 'info', tab: 'about' }
     ]
   },
   {
@@ -4339,70 +4327,6 @@ function toggleFullscreen(): void {
               本站严禁用于非法用途，本站不承担任何因使用本站造成的损失及责任。
             </p>
           </div>
-        </div>
-
-        <!-- 微信公众号凭证配置（AppSecret 仅落盘后端，前端不接收明文） -->
-        <div v-if="activeTab === 'wechat'" class="wb-menu-config">
-          <div class="wb-menu-head">
-            <h3 class="wb-menu-title">微信公众号</h3>
-            <span v-if="wechatConfig.configured.value" class="status-pill"><span class="status-dot"></span>已配置</span>
-            <span v-else class="status-pill" style="color: var(--color-text-muted); background-color: var(--color-bg-input); border-color: var(--color-border);"><span class="status-dot" style="background-color: var(--color-text-muted);"></span>未配置</span>
-          </div>
-          <p class="wb-menu-hint">
-            配置已认证的公众号 AppID / AppSecret，用于在文章编辑页一键发布到「微信公众号草稿箱」。
-            AppSecret 仅保存在服务端（<code>config/wechat.env</code>），前端不会接收或显示明文，也不参与云同步。
-          </p>
-
-          <div v-if="wechatConfig.configured" class="remind-field" style="margin-top: 8px;">
-            <span class="remind-label">当前 AppID</span>
-            <span class="wb-menu-name-input" style="display: inline-flex; align-items: center; color: var(--color-text-secondary);">{{ wechatConfig.appIdMasked.value || '—' }}</span>
-          </div>
-
-          <div class="remind-fields" style="margin-top: 12px;">
-            <label class="remind-field">
-              <span class="remind-label">AppID</span>
-              <input
-                type="text"
-                class="wb-menu-name-input"
-                placeholder="wx 开头的 16-32 位字母数字"
-                data-testid="wechat-appid"
-                :value="wechatConfig.appId.value"
-                @input="wechatConfig.appId.value = ($event.target as HTMLInputElement).value"
-              />
-            </label>
-            <label class="remind-field">
-              <span class="remind-label">AppSecret</span>
-              <input
-                type="password"
-                class="wb-menu-name-input"
-                placeholder="留空则不修改已保存的密钥"
-                data-testid="wechat-appsecret"
-                autocomplete="new-password"
-                :value="wechatConfig.appSecret.value"
-                @input="wechatConfig.appSecret.value = ($event.target as HTMLInputElement).value"
-              />
-            </label>
-          </div>
-
-          <p class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px; margin-top: 4px;">
-            提示：提交后服务端会调用微信接口校验凭证有效性。若提示校验未通过，请确认 AppSecret 正确，并在公众号后台「基本配置 → IP 白名单」加入本服务器出口公网 IP（否则会报 40164 / 61004）。
-          </p>
-
-          <div class="remind-actions" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <button
-              type="button"
-              class="wb-menu-btn"
-              data-testid="wechat-save"
-              :disabled="wechatConfig.saving.value"
-              @click="wechatConfig.saveConfig()"
-            >
-              <span v-if="wechatConfig.saving.value" class="btn-spinner" aria-hidden="true"></span>
-              {{ wechatConfig.saving.value ? '保存中' : '保存凭证' }}
-            </button>
-            <span v-if="wechatConfig.successMsg.value" class="status-pill" style="color: #16a34a; background-color: rgba(22,163,74,0.1); border-color: rgba(22,163,74,0.25);"><span class="status-dot"></span>{{ wechatConfig.successMsg.value }}</span>
-          </div>
-
-          <p v-if="wechatConfig.error.value" class="wb-menu-hint" style="color: var(--color-danger, #dc2626); margin-top: 8px;" data-testid="wechat-error">{{ wechatConfig.error.value }}</p>
         </div>
 
         <div class="settings-grid" v-if="(activeTab === 'nav' && activeSubTab === 'nav-size') || (activeTab === 'wb' && activeSubTab === 'wb-size')">

@@ -1,7 +1,7 @@
 // 微信公众号发布（草稿箱）composable（仅浏览器侧，依赖 DOMParser / canvas / fetch）
 //
 // 流程：
-//   1. 校验后端是否已配置凭证（GET /api/wechat/config）
+//   1. 读取本地 store 凭证（AppID / AppSecret 随 blog.json 云同步；不再依赖服务端全局配置）
 //   2. 正文 Markdown → 还原图片短引用为 data URL → markdown-it 渲染为 HTML
 //   3. 用 DOMParser 给每个标签注入内联 style（微信公众号只认内联 style，禁外部 CSS/JS/class/id）
 //   4. webp/avif/bmp 走 canvas 转码为 jpeg（微信图床仅稳收 jpg/png）
@@ -9,11 +9,13 @@
 //   6. 正文图逐张 upload-img 拿到微信图床 URL，替换 <img src>
 //   7. 组装微信文章 → POST /api/wechat/draft 创建草稿，返回 media_id
 //
-// 安全：图片以 data URL 形式从前端提交给同源后端代理，由后端上传微信；AppSecret 永不进前端。
+// 安全：凭证由前端随每次请求发给无状态代理（代理不落盘、按 AppID 缓存 token、互不串号）；
+//      图片以 data URL 形式从前端提交给同源后端代理，由后端上传微信。
 
 import { ref } from 'vue'
 import { resolveImageRefs } from '@/composables/blogImages'
 import { renderMarkdown } from '@/composables/noteMarkdown'
+import { useBlogStore } from '@/stores/blog'
 
 const API_BASE = '/api/wechat'
 
@@ -61,11 +63,11 @@ function transcodeImage(dataUrl: string): Promise<string> {
   })
 }
 
-async function uploadContentImage(dataUrl: string): Promise<string> {
+async function uploadContentImage(dataUrl: string, appId: string, appSecret: string): Promise<string> {
   const res = await fetch(`${API_BASE}/upload-img`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ dataUrl })
+    body: JSON.stringify({ dataUrl, appId, appSecret })
   })
   const data = await res.json()
   if (!data.ok || !data.url) {
@@ -74,11 +76,11 @@ async function uploadContentImage(dataUrl: string): Promise<string> {
   return data.url
 }
 
-async function uploadCoverImage(dataUrl: string): Promise<string> {
+async function uploadCoverImage(dataUrl: string, appId: string, appSecret: string): Promise<string> {
   const res = await fetch(`${API_BASE}/upload-cover`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ dataUrl })
+    body: JSON.stringify({ dataUrl, appId, appSecret })
   })
   const data = await res.json()
   if (!data.ok || !data.mediaId) {
@@ -175,14 +177,16 @@ export function useWechatPublish() {
     result.value = null
     publishing.value = true
     try {
-      // 1. 配置检查
-      const cfgRes = await fetch(`${API_BASE}/config`, { headers: { Accept: 'application/json' } })
-      const cfg = await cfgRes.json()
-      if (!cfg.configured) {
+      // 1. 配置检查（读取本地 store 凭证；AppID / AppSecret 随 blog.json 云同步，不再依赖服务端全局配置）
+      const store = useBlogStore()
+      const creds = store.wechat
+      if (!creds?.appId || !creds?.appSecret) {
         notConfigured.value = true
-        error.value = '尚未配置微信公众号凭证，请先到「设置 → 微信公众号」填写 AppID / AppSecret'
+        error.value = '尚未配置微信公众号凭证，请先到「博客设置 → 微信公众号」填写 AppID / AppSecret'
         return false
       }
+      const appId = creds.appId
+      const appSecret = creds.appSecret
 
       // 2. 渲染 + 内联样式
       progressMsg.value = '正在转换正文…'
@@ -203,12 +207,12 @@ export function useWechatPublish() {
       if (coverUrl) {
         progressMsg.value = '上传封面…'
         progressStep.value = 0
-        thumbMediaId = await uploadCoverImage(await transcodeImage(coverUrl))
+        thumbMediaId = await uploadCoverImage(await transcodeImage(coverUrl), appId, appSecret)
       }
       if (!thumbMediaId && imgs.length > 0) {
         const firstSrc = imgs[0].getAttribute('src') || ''
         if (firstSrc.startsWith('data:')) {
-          thumbMediaId = await uploadCoverImage(await transcodeImage(firstSrc))
+          thumbMediaId = await uploadCoverImage(await transcodeImage(firstSrc), appId, appSecret)
         }
       }
       if (!thumbMediaId) {
@@ -222,7 +226,7 @@ export function useWechatPublish() {
         if (!src.startsWith('data:')) continue // 已是微信图床 URL（理论不会走到）
         progressStep.value = i + 2
         progressMsg.value = `上传图片 ${i + 1}/${imgs.length}…`
-        const url = await uploadContentImage(await transcodeImage(src))
+        const url = await uploadContentImage(await transcodeImage(src), appId, appSecret)
         imgs[i].setAttribute('src', url)
       }
 
@@ -237,7 +241,9 @@ export function useWechatPublish() {
           author: opts.author || '',
           digest: opts.digest || '',
           content,
-          thumbMediaId
+          thumbMediaId,
+          appId,
+          appSecret
         })
       })
       const draft = await draftRes.json()

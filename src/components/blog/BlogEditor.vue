@@ -32,7 +32,7 @@ import { showConfirm, toastAlert } from '@/utils/dialog'
 import { registerModuleFlush } from '@/composables/useModuleSync'
 // 微信公众号发布（草稿箱）
 import { useWechatPublish } from '@/composables/useWechatPublish'
-import { useAppSettingsDialog } from '@/composables/useAppSettingsDialog'
+import { useBlogSettingsDialog } from '@/composables/useBlogSettingsDialog'
 
 const props = defineProps<{ articleId: string }>()
 const emit = defineEmits<{ close: [] }>()
@@ -459,7 +459,7 @@ async function handlePublish(): Promise<void> {
 
 // ---------- 发布到微信公众号草稿箱 ----------
 const wechat = useWechatPublish()
-const appSettings = useAppSettingsDialog()
+const blogSettings = useBlogSettingsDialog()
 
 async function handlePublishWechat(): Promise<void> {
   // 先把未保存改动落库，保证发出去的是最新正文（图片库本身即时入库，无需等保存）
@@ -475,8 +475,8 @@ async function handlePublishWechat(): Promise<void> {
   if (ok) {
     toastAlert('已发布到公众号草稿箱', 'success')
   } else if (wechat.notConfigured.value) {
-    // 未配置凭证：引导去设置页「微信公众号」
-    appSettings.openAppSettings({ tab: 'wechat' })
+    // 未配置凭证：引导去博客设置页「微信公众号」
+    blogSettings.openBlogSettings('wechat')
   } else {
     toastAlert(wechat.error.value || '发布失败', 'error')
   }

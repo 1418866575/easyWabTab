@@ -7,7 +7,7 @@
  */
 import { defineStore } from 'pinia'
 import { computed, ref, toRaw } from 'vue'
-import type { ArticleStatus, BlogArticle, BlogCategory, BlogData, BlogImage, BlogSettings, BlogSort, BlogTag } from '@/types'
+import type { ArticleStatus, BlogArticle, BlogCategory, BlogData, BlogImage, BlogSettings, BlogSort, BlogTag, BlogWechatConfig } from '@/types'
 import {
   collectImageUsage,
   collectPublishErrors,
@@ -38,6 +38,8 @@ export const useBlogStore = defineStore('blog', () => {
   const articles = ref<BlogArticle[]>([])
   /** 正文内联图片库：base64 存此，正文只留 `img:<id>` 短引用 */
   const images = ref<BlogImage[]>([])
+  /** 微信公众号凭证（明文随 blog.json 同步；多租户隔离靠前端按 AppID 调用） */
+  const wechat = ref<BlogWechatConfig | undefined>(undefined)
   const loaded = ref(false)
 
   // ==================== 持久化 ====================
@@ -50,6 +52,7 @@ export const useBlogStore = defineStore('blog', () => {
       tags.value = norm.tags
       articles.value = norm.articles
       images.value = norm.images
+      wechat.value = norm.wechat
     } catch (e) {
       console.error('[Blog] load failed', e)
       const empty = emptyBlogData()
@@ -76,7 +79,8 @@ export const useBlogStore = defineStore('blog', () => {
         categories: JSON.parse(JSON.stringify(categories.value)),
         tags: JSON.parse(JSON.stringify(tags.value)),
         articles: JSON.parse(JSON.stringify(articles.value)),
-        images: JSON.parse(JSON.stringify(images.value))
+        images: JSON.parse(JSON.stringify(images.value)),
+        wechat: wechat.value ? JSON.parse(JSON.stringify(wechat.value)) : undefined
       })
       markDirty()
     } catch (e) {
@@ -483,6 +487,26 @@ export const useBlogStore = defineStore('blog', () => {
     await saveBlog()
   }
 
+  // ==================== 微信公众号凭证 ====================
+
+  /** 是否已配置（AppID 与 AppSecret 均非空） */
+  const wechatConfigured = computed((): boolean => !!(wechat.value?.appId && wechat.value?.appSecret))
+
+  /**
+   * 保存微信公众号凭证（明文写入 blog 数据；随 blog.json 云同步信封在多设备间同步）。
+   * 调用方负责先做格式校验。
+   */
+  async function saveWechat(appId: string, appSecret: string): Promise<void> {
+    wechat.value = { appId: appId.trim(), appSecret }
+    await saveBlog()
+  }
+
+  /** 清除微信公众号凭证 */
+  async function clearWechat(): Promise<void> {
+    wechat.value = undefined
+    await saveBlog()
+  }
+
   // ==================== 图片库 ====================
 
   /** 新增正文图片（dataUrl 已由调用方按白名单校验），返回带 id 的条目 */
@@ -572,6 +596,7 @@ export const useBlogStore = defineStore('blog', () => {
     tags,
     articles,
     images,
+    wechat,
     loaded,
     // 派生
     activeArticles,
@@ -615,6 +640,10 @@ export const useBlogStore = defineStore('blog', () => {
     // 设置
     updateSettings,
     resetSettings,
+    // 微信凭证
+    saveWechat,
+    clearWechat,
+    wechatConfigured,
     // 图片库
     addImage,
     addImages,
