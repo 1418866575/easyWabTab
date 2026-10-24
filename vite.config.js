@@ -253,10 +253,10 @@ export default defineConfig({
     },
     server: {
         port: 16718,
-        // 微信公众号代理（scripts/wechat-proxy.cjs，端口 16720）dev 转发
+        // 微信公众号代理（scripts/wechat-proxy.cjs，端口 16721）dev 转发
         proxy: {
             '/api/wechat': {
-                target: 'http://127.0.0.1:16720',
+                target: 'http://127.0.0.1:16721',
                 changeOrigin: true
             }
         }

@@ -1,4 +1,4 @@
-// 微信公众号代理服务（常驻 Node，端口 16720）
+// 微信公众号代理服务（常驻 Node，端口 16721）
 //
 // 职责（仅服务端，绝不经手前端 secret 明文回传）：
 //   1. 凭证管理：保存/读取 AppID / AppSecret（落盘 config/wechat.env，gitignore，仅后端可读）
@@ -10,11 +10,11 @@
 // 设计原则：
 //   - 零额外依赖（Node 标准库）：multipart 手工构造、env 文件手工解析。
 //   - 所有微信调用集中在后端，前端只提交已准备好的 data URL / 组装好的 HTML。
-//   - /api/wechat/* 由 nginx 反代到本机 127.0.0.1:16720；dev 由 vite proxy 转发。
+//   - /api/wechat/* 由 nginx 反代到本机 127.0.0.1:16721；dev 由 vite proxy 转发。
 //
 // 启动：
 //   node scripts/wechat-proxy.cjs
-//   WEBCHAT_HOST=127.0.0.1 WEBCHAT_PORT=16720 node scripts/wechat-proxy.cjs
+//   WEBCHAT_HOST=127.0.0.1 WEBCHAT_PORT=16721 node scripts/wechat-proxy.cjs
 //   pm2 start scripts/wechat-proxy.cjs --name easy-wechat-proxy
 //
 // 前置（用户侧）：
@@ -27,7 +27,7 @@ const fs = require('fs')
 const path = require('path')
 
 const HOST = process.env.WEBCHAT_HOST || '127.0.0.1'
-const PORT = Number(process.env.WEBCHAT_PORT) || 16720
+const PORT = Number(process.env.WEBCHAT_PORT) || 16721
 const WX_HOST = 'api.weixin.qq.com'
 const CONFIG_DIR = path.join(__dirname, '..', 'config')
 const CONFIG_FILE = path.join(CONFIG_DIR, 'wechat.env')
@@ -385,5 +385,5 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, HOST, () => {
   // eslint-disable-next-line no-console
   console.log(`\n✓ wechat-proxy listening on http://${HOST}:${PORT}`)
-  console.log('  Configure Nginx:  location /api/wechat { proxy_pass http://127.0.0.1:16720; }\n')
+  console.log('  Configure Nginx:  location /api/wechat { proxy_pass http://127.0.0.1:16721; }\n')
 })

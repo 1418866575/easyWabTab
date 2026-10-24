@@ -116,8 +116,8 @@ if exist "%PIDFILE%" del "%PIDFILE%" >nul 2>&1
 
 start "EasyWebTab Server" /min "%NODE_EXE%" scripts\serve-with-rewrites.cjs
 
-:: [5b] WeChat MP proxy (scripts\wechat-proxy.cjs, port 16720) - launch only if not already listening
-netstat -ano | findstr ":16720 " | findstr "LISTENING" >nul
+:: [5b] WeChat MP proxy (scripts\wechat-proxy.cjs, port 16721) - launch only if not already listening
+netstat -ano | findstr ":16721 " | findstr "LISTENING" >nul
 if %errorlevel% neq 0 (
     start "EasyWebTab WeChat Proxy" /min "%NODE_EXE%" scripts\wechat-proxy.cjs
 )

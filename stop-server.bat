@@ -31,8 +31,8 @@ for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":%PORT% " ^| findstr "LISTEN
     if !errorlevel! equ 0 set "KILLED=1"
 )
 
-:: 2b) Also stop WeChat MP proxy on port 16720 (launched by start-server.bat)
-set "WECHAT_PORT=16720"
+:: 2b) Also stop WeChat MP proxy on port 16721 (launched by start-server.bat)
+set "WECHAT_PORT=16721"
 for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":%WECHAT_PORT% " ^| findstr "LISTENING"') do (
     echo Stopping PID on port %WECHAT_PORT%: %%p
     taskkill /PID %%p /F >nul 2>&1

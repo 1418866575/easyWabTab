@@ -536,11 +536,11 @@ function serveStatic(filePath, res) {
   })
 }
 
-// ====== 微信公众号代理：/api/wechat/* 整体转发到独立 Node 服务（scripts/wechat-proxy.cjs，16720）======
+// ====== 微信公众号代理：/api/wechat/* 整体转发到独立 Node 服务（scripts/wechat-proxy.cjs，16721）======
 // 通用 HTTP 转发（保留原方法/路径/请求体），与 nginx location /api/wechat 行为一致。
 // wechat-proxy 未启动时返回明确 JSON 错误，避免请求落回 SPA index.html 导致前端解析 <!DOCTYPE 失败。
 const WECHAT_PROXY_PATH = '/api/wechat'
-const WECHAT_PROXY_PORT = Number(process.env.WECHAT_PROXY_PORT) || 16720
+const WECHAT_PROXY_PORT = Number(process.env.WECHAT_PROXY_PORT) || 16721
 
 function handleWechatProxy(req, res) {
   const opts = {
@@ -559,7 +559,7 @@ function handleWechatProxy(req, res) {
     res.end(JSON.stringify({
       ok: false,
       code: 'WECHAT_PROXY_DOWN',
-      error: '微信公众号代理服务未启动（端口 16720）。请运行：npm run wechat-proxy 或 pm2 start scripts/wechat-proxy.cjs --name easy-wechat-proxy'
+      error: '微信公众号代理服务未启动（端口 16721）。请运行：npm run wechat-proxy 或 pm2 start scripts/wechat-proxy.cjs --name easy-wechat-proxy'
     }))
   })
   req.pipe(upstream)
