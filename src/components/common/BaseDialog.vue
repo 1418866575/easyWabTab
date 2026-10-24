@@ -34,6 +34,8 @@ const props = withDefaults(
     width?: string
     /** 面板最大高度，默认 80vh（embedded 下忽略） */
     maxHeight?: string
+    /** 面板固定高度（如 '60vh'）；不传则高度随内容（受 maxHeight 限制）。embedded / fullscreen 下忽略 */
+    height?: string
     /** 嵌套模式：不渲染遮罩、不固定定位，随父弹框流式排布 */
     embedded?: boolean
     /** 是否隐藏头部。embedded 子面板通常传 true（父弹框已有头部） */
@@ -104,7 +106,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 // 面板内联尺寸（宽度/高度由 props 驱动；embedded / fullscreen 下由 CSS 类接管）
 const panelStyle = computed(() =>
-  props.embedded || props.fullscreen ? {} : { maxWidth: props.width, maxHeight: props.maxHeight }
+  props.embedded || props.fullscreen
+    ? {}
+    : { maxWidth: props.width, maxHeight: props.maxHeight, height: props.height }
 )
 
 // 遮罩层级：仅显式传入时覆盖 CSS 默认 300（embedded 无固定定位，不受影响）

@@ -57,7 +57,7 @@ const form = reactive({
 /** 快照：用于判断「有未保存改动」并据此提示 */
 let snapshot = ''
 const dirty = ref(false)
-const viewMode = ref<'edit' | 'split' | 'preview'>('edit')
+const viewMode = ref<'edit' | 'split' | 'preview'>('split')
 const publishedHtml = ref('')
 /** 右侧元数据抽屉开合状态：true 时向左滑出，false 时滑回右侧隐藏 */
 const sideOpen = ref(false)
@@ -858,11 +858,17 @@ async function regenerateSlug(): Promise<void> {
   gap: 10px;
 }
 
+/* 顶行卡片：视图切换 + 文章设置 + 帮助 收进一张卡片，与下方 Markdown 工具栏卡片同款视觉 */
 .be-head {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  background-color: var(--color-bg-card, #ffffff);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.06));
 }
 
 .be-view-switch {

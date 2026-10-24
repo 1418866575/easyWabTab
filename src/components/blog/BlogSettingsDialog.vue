@@ -39,7 +39,7 @@ function labelOf(key: SectionKey): string {
 </script>
 
 <template>
-  <BaseDialog class="bsd-dialog" title="博客设置" width="920px" max-height="86vh" body-layout="flex-column" @close="emit('close')">
+  <BaseDialog class="bsd-dialog" title="博客设置" width="920px" height="60vh" max-height="86vh" body-layout="flex-column" @close="emit('close')">
     <template #title><Icon name="cog" /> 博客设置</template>
 
     <div class="bsd-body">
