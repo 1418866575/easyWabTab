@@ -217,6 +217,8 @@ export function normalizeArticle(raw: unknown, when = nowIso()): BlogArticle {
     seoTitle: typeof src.seoTitle === 'string' ? src.seoTitle : undefined,
     seoDescription: typeof src.seoDescription === 'string' ? src.seoDescription : undefined,
     auditRemark: typeof src.auditRemark === 'string' ? src.auditRemark : undefined,
+    authorName: typeof src.authorName === 'string' ? src.authorName : undefined,
+    sharedAt: typeof src.sharedAt === 'string' ? src.sharedAt : undefined,
     revision: clampNumber(src.revision, 1, Number.MAX_SAFE_INTEGER, 1)
   }
 }

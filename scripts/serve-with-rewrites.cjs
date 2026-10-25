@@ -565,6 +565,147 @@ function handleWechatProxy(req, res) {
   req.pipe(upstream)
 }
 
+// ====== 博客共享发布：单篇同步到「部署机本地目录」（Node 进程直接写，无远程凭证）======
+// 复用 wechat.env 范式：目录路径 / 写令牌都来自服务端环境变量，绝不进前端 bundle。
+// 生产：nginx 用 alias 直出 /blog-share/ 静态；本处理器作为开发/兜底静态源 + 唯一写入口。
+const BLOG_SHARE_DIR = process.env.BLOG_SHARE_DIR || path.join(__dirname, '..', 'blog-share')
+const BLOG_SHARE_TOKEN = process.env.BLOG_SHARE_TOKEN || '' // 公网写保护；留空=不校验（开发）
+const BLOG_SHARE_ID_RE = /^[a-zA-Z0-9_-]{1,64}$/
+
+function blogShareWithinDir(name) {
+  // 仅做目录越界防护：把名称 resolve 到 BLOG_SHARE_DIR 下，确认不逃出目录（防 ../ 穿越）。
+  // 注意：调用方传入的是文件名（如 "ba_test1.json"）或子路径（如 "posts/ba_test1.json"），
+  // 带 . 与 /，不能用 BLOG_SHARE_ID_RE 校验；ID 合法性由各调用点单独用正则把关。
+  const dir = path.resolve(BLOG_SHARE_DIR)
+  const p = path.resolve(dir, name)
+  if (p === dir || p.startsWith(dir + path.sep)) return p
+  return null
+}
+
+async function readBlogShareManifest() {
+  try {
+    const raw = await fs.promises.readFile(path.join(BLOG_SHARE_DIR, 'manifest.json'), 'utf8')
+    const m = JSON.parse(raw)
+    return Array.isArray(m && m.posts) ? m : { generatedAt: '', count: 0, posts: [] }
+  } catch {
+    return { generatedAt: '', count: 0, posts: [] }
+  }
+}
+
+async function writeBlogShareManifest(posts) {
+  const data = JSON.stringify({ generatedAt: new Date().toISOString(), count: posts.length, posts }, null, 2)
+  await fs.promises.mkdir(BLOG_SHARE_DIR, { recursive: true })
+  const file = path.join(BLOG_SHARE_DIR, 'manifest.json')
+  const tmp = file + '.tmp'
+  await fs.promises.writeFile(tmp, data, 'utf8')
+  await fs.promises.rename(tmp, file) // 原子替换，避免读到半截清单
+}
+
+async function handleBlogShareApi(req, res) {
+  if (req.method !== 'POST' && req.method !== 'DELETE') {
+    res.writeHead(405, { 'Allow': 'POST, DELETE' })
+    res.end('Method Not Allowed')
+    return
+  }
+  if (BLOG_SHARE_TOKEN) {
+    const clientToken = req.headers['x-blog-share-token']
+    if (String(clientToken || '') !== BLOG_SHARE_TOKEN) {
+      res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' })
+      res.end(JSON.stringify({ ok: false, error: 'unauthorized' }))
+      return
+    }
+  }
+  try {
+    if (req.method === 'POST') {
+      const raw = await readBody(req)
+      const post = raw ? JSON.parse(raw) : null
+      if (!post || !BLOG_SHARE_ID_RE.test(String(post.id || ''))) {
+        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' })
+        res.end(JSON.stringify({ ok: false, error: 'missing id' }))
+        return
+      }
+      // 文章文件落到 posts/ 子目录，与前端读取路径 /blog-share/posts/<id>.json 及 nginx alias 结构一致
+      const file = blogShareWithinDir('posts/' + String(post.id) + '.json')
+      if (!file) {
+        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' })
+        res.end(JSON.stringify({ ok: false, error: 'bad id' }))
+        return
+      }
+      await fs.promises.mkdir(path.dirname(file), { recursive: true })
+      const tmp = file + '.tmp'
+      await fs.promises.writeFile(tmp, JSON.stringify(post, null, 2), 'utf8')
+      await fs.promises.rename(tmp, file) // 原子替换，避免读到半截文件
+      const m = await readBlogShareManifest()
+      const entry = {
+        id: String(post.id),
+        slug: String(post.slug || ''),
+        title: String(post.title || ''),
+        excerpt: String(post.excerpt || ''),
+        authorName: String(post.authorName || ''),
+        categoryId: String(post.categoryId || ''),
+        categoryName: String(post.categoryName || ''),
+        tagIds: Array.isArray(post.tagIds) ? post.tagIds : [],
+        tagNames: Array.isArray(post.tagNames) ? post.tagNames : [],
+        updatedAt: String(post.updatedAt || new Date().toISOString()),
+        size: Buffer.byteLength(JSON.stringify(post))
+      }
+      const idx = m.posts.findIndex((p) => p.id === entry.id)
+      if (idx >= 0) m.posts[idx] = entry
+      else m.posts.push(entry)
+      await writeBlogShareManifest(m.posts)
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+      res.end(JSON.stringify({ ok: true }))
+      return
+    }
+    // DELETE：取消共享（id 在路径末段）
+    const id = decodeURIComponent(String(req.url.split('?')[0].split('/').pop() || ''))
+    if (!BLOG_SHARE_ID_RE.test(id)) {
+      res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' })
+      res.end(JSON.stringify({ ok: false, error: 'bad id' }))
+      return
+    }
+    const file = blogShareWithinDir('posts/' + id + '.json')
+    if (file) { try { await fs.promises.unlink(file) } catch { /* 不存在即视为已删 */ } }
+    const m = await readBlogShareManifest()
+    m.posts = m.posts.filter((p) => p.id !== id)
+    await writeBlogShareManifest(m.posts)
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+    res.end(JSON.stringify({ ok: true }))
+    return
+  } catch (e) {
+    res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' })
+    res.end(JSON.stringify({ ok: false, error: String((e && e.message) || e) }))
+  }
+}
+
+// GET /blog-share/* 静态（开发无 nginx 时由 Node 直出；生产由 nginx alias 托管，此处作兜底）
+function handleBlogShareStatic(filePath, req, res) {
+  const rel = filePath.slice('/blog-share/'.length)
+  if (!rel || rel.includes('..') || rel.startsWith('/')) {
+    res.writeHead(400)
+    res.end('Bad Request')
+    return
+  }
+  const full = blogShareWithinDir(rel)
+  if (!full) {
+    res.writeHead(400)
+    res.end('Bad Request')
+    return
+  }
+  fs.stat(full, (err, stats) => {
+    if (err || !stats.isFile()) {
+      res.writeHead(404)
+      res.end('Not Found')
+      return
+    }
+    const ext = path.extname(full).toLowerCase()
+    res.writeHead(200, { 'Content-Type': mimeTypes[ext] || 'application/octet-stream' })
+    const s = fs.createReadStream(full)
+    s.on('error', () => { try { res.end() } catch { /* noop */ } })
+    s.pipe(res)
+  })
+}
+
 const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url)
   let filePath = parsedUrl.pathname
@@ -582,6 +723,14 @@ const server = http.createServer((req, res) => {
   // ====== 微信公众号代理 ======
   if (filePath === WECHAT_PROXY_PATH || filePath.startsWith(WECHAT_PROXY_PATH + '/') || filePath.startsWith(WECHAT_PROXY_PATH + '?')) {
     return handleWechatProxy(req, res)
+  }
+
+  // ====== 博客共享发布：写接口 + 静态兜底读 ======
+  if (filePath === '/api/blog-share' || filePath.startsWith('/api/blog-share/')) {
+    return handleBlogShareApi(req, res)
+  }
+  if (filePath.startsWith('/blog-share/')) {
+    return handleBlogShareStatic(filePath, req, res)
   }
 
 // Game rewrites - with trailing slash for proper relative path resolution

@@ -33,6 +33,8 @@ import { registerModuleFlush } from '@/composables/useModuleSync'
 // 微信公众号发布（草稿箱）
 import { useWechatPublish } from '@/composables/useWechatPublish'
 import { useBlogSettingsDialog } from '@/composables/useBlogSettingsDialog'
+// 博客共享发布（单篇同步到服务器目录）：编辑器复用与列表页一致的 onShare 逻辑
+import { useBlogShare } from '@/composables/blogShare'
 
 const props = defineProps<{ articleId: string }>()
 const emit = defineEmits<{ close: [] }>()
@@ -316,6 +318,28 @@ function pickCover(images: BlogImage[]): void {
 const article = computed(() => store.findArticle(props.articleId))
 const canRead = computed(() => article.value !== undefined)
 
+// ---------- 共享发布（单篇同步到服务器目录）----------
+const { share: doShare, unshare: doUnshare, sharingId } = useBlogShare()
+const isSharing = (): boolean => !!article.value && sharingId.value === article.value.id
+const shareLabel = (): string => (article.value?.sharedAt ? '取消共享' : '共享')
+
+async function onShare(): Promise<void> {
+  const a = article.value
+  if (!a) return
+  if (a.status !== 'published') {
+    toastAlert('仅已发布文章可共享到服务器', 'warning')
+    return
+  }
+  if (isSharing()) return
+  if (a.sharedAt) {
+    const r = await doUnshare(a)
+    toastAlert(r.ok ? '已取消共享' : r.error || '操作失败', r.ok ? 'success' : 'error')
+  } else {
+    const r = await doShare(a)
+    toastAlert(r.ok ? '已共享到服务器' : r.error || '操作失败', r.ok ? 'success' : 'error')
+  }
+}
+
 function fillFromArticle(): void {
   const a = article.value
   if (!a) return
@@ -596,6 +620,17 @@ async function regenerateSlug(): Promise<void> {
               <span v-if="wechat.publishing.value" class="btn-spinner" aria-hidden="true"></span>
               {{ wechat.publishing.value ? '发布中' : '发布到公众号' }}
             </button>
+            <button
+              type="button"
+              class="ui-btn ui-btn--sm"
+              :class="{ 'ui-btn--primary': !isSharing() }"
+              :disabled="article?.status !== 'published' || isSharing()"
+              :title="article?.status !== 'published' ? '仅已发布可共享' : (article?.sharedAt ? '取消共享' : '共享到服务器')"
+              data-testid="blog-editor-share-top"
+              @click="onShare()"
+            >
+              {{ isSharing() ? '共享中…' : shareLabel() }}
+            </button>
           </div>
         </div>
         <input
@@ -777,6 +812,17 @@ async function regenerateSlug(): Promise<void> {
         >
           <span v-if="wechat.publishing.value" class="btn-spinner" aria-hidden="true"></span>
           {{ wechat.publishing.value ? '发布中' : '发布到公众号' }}
+        </button>
+        <button
+          type="button"
+          class="ui-btn ui-btn--sm"
+          :class="{ 'ui-btn--primary': !isSharing() }"
+          :disabled="article?.status !== 'published' || isSharing()"
+          :title="article?.status !== 'published' ? '仅已发布可共享' : (article?.sharedAt ? '取消共享' : '共享到服务器')"
+          data-testid="blog-editor-share"
+          @click="onShare()"
+        >
+          {{ isSharing() ? '共享中…' : shareLabel() }}
         </button>
       </div>
       <p v-if="wechat.publishing.value" class="be-hint" data-testid="blog-editor-wechat-status">

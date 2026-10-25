@@ -1756,6 +1756,53 @@ export interface BlogArticle {
   seoDescription?: string
   auditRemark?: string      // 最近一次审核意见
   revision: number          // 保存即自增，用于草稿冲突判定
+  authorName?: string       // 共享发布时写入的展示作者名（多作者预留；缺省回落站点名）
+  sharedAt?: string         // 最近一次成功「共享」到服务器的本地时间戳（仅前端展示用）
+}
+
+/** 单篇共享文章文件（posts/<id>.json）—— 只含公开子集，绝不携带草稿/回收站/信封凭证 */
+export interface BlogSharePost {
+  id: string                // 与 BlogArticle.id 同键 → 前台去重依据
+  slug: string
+  title: string
+  subtitle?: string
+  excerpt: string
+  categoryId?: string
+  categoryName: string      // 已解析，访客库无分类表也能显示
+  tagIds: string[]
+  tagNames: string[]        // 已解析
+  coverKind: BlogCoverKind
+  coverToken?: string
+  pinned: boolean
+  readingMinutes: number
+  viewCount: number
+  createdAt: string
+  updatedAt: string
+  publishedAt?: string
+  contentMarkdown: string   // 图片已内联 dataURL，自包含
+  contentHtml: string       // 详情页直接 v-html
+  authorName: string
+}
+
+/** 共享清单条目（manifest.json）—— 列表展示所需的最小字段，避免逐篇拉取 */
+export interface BlogShareManifestEntry {
+  id: string
+  slug: string
+  title: string
+  excerpt: string
+  authorName: string
+  categoryId: string
+  categoryName: string
+  tagIds: string[]
+  tagNames: string[]
+  updatedAt: string
+  size: number
+}
+
+export interface BlogShareManifest {
+  generatedAt: string
+  count: number
+  posts: BlogShareManifestEntry[]
 }
 
 export interface BlogCategory {

@@ -10,13 +10,14 @@
  * 关于阅读量：本视图只读展示 store.viewCount，不做自增写盘（避免每次打开都重写整包 blog 数据，
  * 写放大；如需真实统计应走分片计数，属后续优化）。
  */
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useBlogStore } from '@/stores/blog'
 import { coverBackground } from '@/composables/blogFront'
 import { listPublishedArticles, formatDateTime, relativeTime } from '@/composables/blogCore'
 import { resolveImageRefs } from '@/composables/blogImages'
 import { renderMarkdown } from '@/composables/noteMarkdown'
+import { useBlogShared, sharedPostToArticle } from '@/composables/blogShared'
 import { useBlogFrontPrefs } from '@/composables/blogFrontPrefs'
 import type { BlogArticle } from '@/types'
 import '@/styles/blog-front.css'
@@ -24,35 +25,48 @@ import '@/styles/markdown.css'
 
 const route = useRoute()
 const store = useBlogStore()
+const shared = useBlogShared()
 const { pushRecent, initBlogFrontPrefs } = useBlogFrontPrefs()
 
 const slug = computed(() => String(route.params.slug ?? ''))
 const article = computed<BlogArticle | undefined>(() => (slug.value ? store.findBySlug(slug.value) : undefined))
-/** 仅已发布且未进入回收站才对外可见 */
-const visible = computed(
+/** 本地已发布且未进回收站才直接可见 */
+const localVisible = computed(
   () => !!article.value && article.value.status === 'published' && !article.value.deletedAt
+)
+/** 共享文章（访客本机无此文时，由 /blog-share 兜底加载） */
+const sharedArticle = ref<BlogArticle | undefined>(undefined)
+/** 真正用于展示的文章：本地可见优先，否则取共享副本 */
+const displayArticle = computed<BlogArticle | undefined>(() =>
+  localVisible.value ? article.value : sharedArticle.value
+)
+const visible = computed(
+  () => !!displayArticle.value && displayArticle.value.status === 'published' && !displayArticle.value.deletedAt
 )
 
 const html = computed(() => {
-  if (!visible.value || !article.value) return ''
-  // 正文用 img:<id> 短引用指向图片库，渲染前还原为 data URL（与编辑器预览同源）
-  const md = resolveImageRefs(article.value.contentMarkdown, id => store.imageUrlById.get(id))
+  if (!visible.value || !displayArticle.value) return ''
+  // 正文用 img:<id> 短引用指向图片库，渲染前还原为 data URL（与编辑器预览同源）；
+  // 共享文章的正文在同步时已内联 dataURL，此处 resolveImageRefs 为无操作透传。
+  const md = resolveImageRefs(displayArticle.value.contentMarkdown, (id) => store.imageUrlById.get(id))
   return renderMarkdown(md)
 })
 const cover = computed(() =>
-  visible.value && article.value ? coverBackground(article.value, id => store.imageUrlById.get(id)) : null
+  visible.value && displayArticle.value
+    ? coverBackground(displayArticle.value, (id) => store.imageUrlById.get(id))
+    : null
 )
-const categoryLabel = computed(() => (article.value ? store.categoryName(article.value.categoryId) : ''))
-const tagLabels = computed(() => (article.value ? store.tagNames(article.value.tagIds) : []))
+const categoryLabel = computed(() => (displayArticle.value ? store.categoryName(displayArticle.value.categoryId) : ''))
+const tagLabels = computed(() => (displayArticle.value ? store.tagNames(displayArticle.value.tagIds) : []))
 const dateLabel = computed(() => {
-  const a = article.value
+  const a = displayArticle.value
   if (!a) return ''
   const iso = a.publishedAt ?? a.updatedAt
   return `${relativeTime(iso)}（${formatDateTime(iso)}）`
 })
 
 const related = computed<BlogArticle[]>(() => {
-  const cur = article.value
+  const cur = displayArticle.value
   if (!cur) return []
   const published = listPublishedArticles(store.articles)
   const sameCat = published.filter((a) => a.id !== cur.id && a.categoryId === cur.categoryId)
@@ -63,14 +77,20 @@ const related = computed<BlogArticle[]>(() => {
 onMounted(async () => {
   if (!store.loaded) await store.loadBlog()
   await initBlogFrontPrefs()
+  await shared.load()
+  // 本地不可见（访客本机无此文 / 非已发布）→ 尝试从共享目录按 slug 取回
+  if (!localVisible.value && slug.value) {
+    const post = await shared.getPostBySlug(slug.value)
+    sharedArticle.value = post ? sharedPostToArticle(post) : undefined
+  }
   // 进入已发布文章详情即记为一次「最近阅读」（失焦/卸载时由 flushBlogFrontPrefs 兜底落盘）
-  if (visible.value && article.value) pushRecent(article.value.id)
+  if (visible.value && displayArticle.value) pushRecent(displayArticle.value.id)
 })
 </script>
 
 <template>
   <main class="bf-shell">
-    <template v-if="visible && article">
+    <template v-if="visible && displayArticle">
       <RouterLink to="/blog" class="bf-back" data-testid="blog-post-back">
         <span aria-hidden="true">←</span> 返回文章列表
       </RouterLink>
@@ -79,18 +99,18 @@ onMounted(async () => {
         <div v-if="cover" class="bf-post-hero" :style="{ background: cover }" />
 
         <header>
-          <h1 class="bf-post-title">{{ article.title || '（无标题）' }}</h1>
-          <p v-if="article.subtitle" class="bf-post-sub">{{ article.subtitle }}</p>
+          <h1 class="bf-post-title">{{ displayArticle.title || '（无标题）' }}</h1>
+          <p v-if="displayArticle.subtitle" class="bf-post-sub">{{ displayArticle.subtitle }}</p>
           <div class="bf-post-meta">
             <span class="bf-post-cat">{{ categoryLabel }}</span>
             <span class="bf-dot">·</span>
             <span>{{ dateLabel }}</span>
             <span class="bf-dot">·</span>
-            <span>{{ article.readingMinutes }} 分钟阅读</span>
+            <span>{{ displayArticle.readingMinutes }} 分钟阅读</span>
             <span class="bf-dot">·</span>
-            <span>{{ article.viewCount }} 次阅读</span>
-            <span v-if="article.pinned" class="bf-dot">·</span>
-            <span v-if="article.pinned">置顶</span>
+            <span>{{ displayArticle.viewCount }} 次阅读</span>
+            <span v-if="displayArticle.pinned" class="bf-dot">·</span>
+            <span v-if="displayArticle.pinned">置顶</span>
           </div>
         </header>
 

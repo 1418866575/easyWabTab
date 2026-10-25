@@ -11,6 +11,7 @@ import { ref, watch, onMounted, computed } from 'vue'
 import { useBlogStore } from '@/stores/blog'
 import { listPublishedArticles } from '@/composables/blogCore'
 import { useBlogListing } from '@/composables/blogFront'
+import { useBlogShared, mergeArticlesForListing } from '@/composables/blogShared'
 import { useBlogFrontPrefs } from '@/composables/blogFrontPrefs'
 import BlogFilterBar from '@/components/blog/front/BlogFilterBar.vue'
 import BlogCard from '@/components/blog/front/BlogCard.vue'
@@ -18,12 +19,15 @@ import type { BlogArticle, BlogSort } from '@/types'
 import '@/styles/blog-front.css'
 
 const store = useBlogStore()
-const listing = useBlogListing()
+const shared = useBlogShared()
+// 本地 + 共享合并源（按 id 去重）：作者本机不重复，访客自然只剩共享文
+const merged = computed(() => mergeArticlesForListing(store.articles, shared.manifest.value?.posts ?? []))
+const listing = useBlogListing(merged)
 const { favorites, recent, initBlogFrontPrefs } = useBlogFrontPrefs()
 
 // 各分类 / 标签下的已发布文章数（pill 数量徽标；空分类自动隐藏）。统计基准用已发布全集，
 // 不随当前关键词/分类选择变化，与工具箱「全部 + 各分类数量」同为固定值。
-const publishedArticles = computed(() => listPublishedArticles(store.articles))
+const publishedArticles = computed(() => listPublishedArticles(merged.value))
 const categoryCounts = computed<Record<string, number>>(() => {
   const m: Record<string, number> = {}
   for (const a of publishedArticles.value) {
@@ -75,6 +79,8 @@ function onKeyword(value: string): void {
 onMounted(async () => {
   if (!store.loaded) await store.loadBlog()
   await initBlogFrontPrefs()
+  // 拉取共享清单（失败不阻断本地文章展示）；合并源会在 manifest 就绪后自动更新
+  void shared.load()
 })
 </script>
 
