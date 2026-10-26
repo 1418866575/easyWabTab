@@ -588,9 +588,10 @@ onMounted(async () => {
       <div class="ld-empty-sub">＋ 新增第一笔记录</div>
     </div>
 
-    <!-- 新增/编辑记录弹框 -->
-    <Transition name="dialog">
-      <BaseDialog
+    <!-- 新增/编辑记录弹框
+         注意：不要用 <Transition> 包裹 —— BaseDialog 根节点是 <Teleport>，
+         Transition 无法对非元素根做过渡，离场钩子不会完成 → 弹框永不卸载（保存后看似"没反应"）。 -->
+    <BaseDialog
         v-if="showDialog"
         :title="editingId ? '编辑记录' : '新增记录'"
         :width="PANEL_WIDTH"
@@ -652,15 +653,16 @@ onMounted(async () => {
           </div>
 
           <div class="form-actions ewt-dialog-footer">
-            <el-button type="button" class="btn-cancel" data-testid="ld-cancel" @click="cancelForm">取消</el-button>
-            <el-button type="submit" class="btn-save" :disabled="!isFormValid" data-testid="ld-save">
+            <el-button class="btn-cancel" data-testid="ld-cancel" @click="cancelForm">取消</el-button>
+            <!-- 原生提交类型必须用 native-type：el-button 的 type 只作用于样式（按钮外观），
+                 写成 type="submit" 会渲染成 type="button" → 点它不会提交表单，handleSave 永不触发。 -->
+            <el-button native-type="submit" class="btn-save" :disabled="!isFormValid" data-testid="ld-save">
               {{ editingId ? '保存' : '添加' }}
             </el-button>
             <el-button v-if="editingId" type="danger" native-type="button" data-testid="ld-record-delete" @click="handleDelete(editingId)">删除</el-button>
           </div>
         </form>
-      </BaseDialog>
-    </Transition>
+    </BaseDialog>
 
     <!-- 本月记录（页面底部直接展示，随数据实时更新；无记录时由上方 empty-state 兜底，此处不渲染） -->
     <section v-if="monthEntries.length > 0" class="ld-records-section" data-testid="ld-records-section">

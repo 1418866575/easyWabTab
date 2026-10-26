@@ -252,8 +252,7 @@ onMounted(async () => {
       </div>
     </section>
     <!-- 目标弹框 -->
-    <Transition name="dialog">
-      <BaseDialog
+<BaseDialog
         v-if="showTargetDialog"
         :title="targetView ? '调整目标' : '设定目标'"
         :width="PANEL_WIDTH"
@@ -292,11 +291,9 @@ onMounted(async () => {
             </div>
           </form>
       </BaseDialog>
-    </Transition>
 
     <!-- 新增/编辑记录弹框 -->
-    <Transition name="dialog">
-      <BaseDialog
+<BaseDialog
         v-if="showRecordDialog"
         :title="editingId ? '编辑记录' : '新增记录'"
         :width="PANEL_WIDTH"
@@ -375,7 +372,6 @@ onMounted(async () => {
           </div>
         </form>
       </BaseDialog>
-    </Transition>
   </div>
 </template>
 

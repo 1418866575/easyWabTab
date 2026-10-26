@@ -345,8 +345,7 @@ onMounted(async () => {
     </div>
 
     <!-- 身高设置弹框 -->
-    <Transition name="dialog">
-    <BaseDialog
+<BaseDialog
       v-if="showHeightDialog"
       title="设置身高"
       :width="PANEL_WIDTH"
@@ -378,11 +377,9 @@ onMounted(async () => {
           </div>
         </form>
     </BaseDialog>
-    </Transition>
 
     <!-- 新增/编辑记录弹框 -->
-    <Transition name="dialog">
-    <BaseDialog
+<BaseDialog
       v-if="showRecordDialog"
       :title="editingId ? '编辑记录' : '新增记录'"
       :width="PANEL_WIDTH"
@@ -442,7 +439,6 @@ onMounted(async () => {
           </div>
         </form>
     </BaseDialog>
-    </Transition>
 
     <!-- 体重记录列表（面板底部内联展示，固定每页 10 条） -->
     <section v-if="sortedRecords.length > 0" class="ewt-inline-section" data-testid="wt-records-section">
