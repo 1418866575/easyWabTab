@@ -1855,12 +1855,15 @@ export async function forcePushLocal(silent = false): Promise<boolean> {
  * @returns 各模块合计清除的条数
  */
 async function runTombstoneGc(silent = false): Promise<number> {
-  const [{ useWorkbenchTodosStore }, { useWorkbenchNotesStore }, { useWorkbenchLedgerStore }, { useWorkbenchDiaryStore }, { useGenealogyStore }] = await Promise.all([
+  const [{ useWorkbenchTodosStore }, { useWorkbenchNotesStore }, { useWorkbenchLedgerStore }, { useWorkbenchDiaryStore }, { useGenealogyStore }, { useBlogStore }] = await Promise.all([
     import('../stores/workbenchTodos'),
     import('../stores/workbenchNotes'),
     import('../stores/workbenchLedger'),
     import('../stores/workbenchDiary'),
-    import('../stores/genealogy')
+    import('../stores/genealogy'),
+    // 博客的「彻底删除」同样以墓碑形式随 blog.json 上云（见 blogStore.purgeArticle），
+    // 到期由 gcPurgedArticles 清理
+    import('../stores/blog')
   ])
   const stores = [
     useWorkbenchTodosStore(),
@@ -1876,6 +1879,11 @@ async function runTombstoneGc(silent = false): Promise<number> {
     } catch (e) {
       console.warn('[cloudSync] 墓碑 GC 失败（跳过该模块）：', e)
     }
+  }
+  try {
+    total += await useBlogStore().gcPurgedArticles()
+  } catch (e) {
+    console.warn('[cloudSync] 博客彻底删除墓碑 GC 失败（跳过）：', e)
   }
   if (!silent && total > 0) {
     toastAlert(`已自动清理 ${total} 条过期删除记录`, 'success')

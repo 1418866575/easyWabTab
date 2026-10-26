@@ -242,7 +242,11 @@ export const useBlogStore = defineStore('blog', () => {
   async function softDeleteArticle(id: string): Promise<boolean> {
     const article = findArticle(id)
     if (!article) return false
-    articles.value = toRaw(articles.value).map(a => (a.id === id ? { ...a, deletedAt: nowIso() } : a))
+    // 墓碑写入必须推进 updatedAt：blog.json 合并按 updatedAt 取新，不推进的话
+    // 「本端刚删的墓碑」会在与对端旧记录打平时输给对方 → 删除状态丢失
+    articles.value = toRaw(articles.value).map(a =>
+      a.id === id ? { ...a, deletedAt: nowIso(), updatedAt: nowIso() } : a
+    )
     await saveBlog()
     return true
   }
@@ -253,17 +257,52 @@ export const useBlogStore = defineStore('blog', () => {
     if (!article || !article.deletedAt) return false
     const next = { ...toRaw(article) }
     delete next.deletedAt
+    delete next.purgedAt
     articles.value = toRaw(articles.value).map(a => (a.id === id ? next : a))
     await saveBlog()
     return true
   }
 
-  /** 彻底删除：物理移除（含封面图引用一并丢弃，图片文件本身保留在 images store 供其它文章复用） */
+  /**
+   * 彻底删除：**不物理移除**，改写 `purgedAt` 墓碑（回收站不再展示）。
+   * blog.json 的合并是**并集**：若这里把记录从本地数组里 filter 掉，云端还留着的那份
+   * deletedAt 记录会在下次拉取时被当成「远端新增」补回来 —— 表现为
+   * 「清空回收站 / 彻底删除后，一同步又恢复了」。
+   * 墓碑保留在数组里随信封上云，两端一致后，到期由 gcPurgedArticles 统一物理清除
+   * （与 todos / notes / diary 的 gcTombstones 同一节奏）。
+   */
   async function purgeArticle(id: string): Promise<boolean> {
     if (!findArticle(id)) return false
-    articles.value = toRaw(articles.value).filter(a => a.id !== id)
+    const now = nowIso()
+    articles.value = toRaw(articles.value).map(a =>
+      a.id === id ? { ...a, deletedAt: a.deletedAt ?? now, purgedAt: now, updatedAt: now } : a
+    )
     await saveBlog()
     return true
+  }
+
+  /**
+   * 彻底删除墓碑 GC：purgedAt 超过保留期（7 天）的记录物理清除。
+   * 与其它模块 gcTombstones 相同的调用节奏：在成功推送上云后执行
+   * （见 useCloudSync.runTombstoneGc），保证墓碑已送达两端后才清理。
+   */
+  async function gcPurgedArticles(): Promise<number> {
+    const deadline = Date.now() - 7 * 24 * 60 * 60 * 1000
+    const keep: BlogArticle[] = []
+    let purged = 0
+    for (const a of toRaw(articles.value)) {
+      const t = a.purgedAt ? Date.parse(a.purgedAt) : NaN
+      if (Number.isFinite(t) && t < deadline) {
+        purged += 1
+        continue
+      }
+      keep.push(a)
+    }
+    if (purged > 0) {
+      articles.value = keep
+      await saveBlog()
+    }
+    return purged
   }
 
   async function togglePin(id: string): Promise<{ ok: boolean; reason?: string }> {
@@ -759,6 +798,7 @@ export const useBlogStore = defineStore('blog', () => {
     softDeleteArticle,
     restoreArticle,
     purgeArticle,
+    gcPurgedArticles,
     togglePin,
     publishArticle,
     submitForReview,

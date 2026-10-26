@@ -1756,6 +1756,7 @@ export interface BlogArticle {
   publishedAt?: string
   offlineAt?: string
   deletedAt?: string        // 软删除时间戳；非空即进入回收站
+  purgedAt?: string         // 彻底删除时间戳：回收站不再展示，墓碑保留随信封上云，7 天后 GC 物理清除
   seoTitle?: string
   seoDescription?: string
   auditRemark?: string      // 最近一次审核意见

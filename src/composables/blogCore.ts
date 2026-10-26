@@ -214,6 +214,8 @@ export function normalizeArticle(raw: unknown, when = nowIso()): BlogArticle {
     publishedAt: typeof src.publishedAt === 'string' ? src.publishedAt : undefined,
     offlineAt: typeof src.offlineAt === 'string' ? src.offlineAt : undefined,
     deletedAt: typeof src.deletedAt === 'string' ? src.deletedAt : undefined,
+    // 彻底删除墓碑：必须透传，否则归一化这步把它抹掉，墓碑随信封同步就失效了
+    purgedAt: typeof src.purgedAt === 'string' ? src.purgedAt : undefined,
     seoTitle: typeof src.seoTitle === 'string' ? src.seoTitle : undefined,
     seoDescription: typeof src.seoDescription === 'string' ? src.seoDescription : undefined,
     auditRemark: typeof src.auditRemark === 'string' ? src.auditRemark : undefined,
@@ -467,7 +469,9 @@ export function listActiveArticles(articles: BlogArticle[]): BlogArticle[] {
 }
 
 export function listRecycledArticles(articles: BlogArticle[]): BlogArticle[] {
-  return articles.filter(a => !!a.deletedAt)
+  // 已彻底删除（purgedAt 非空）的墓碑不进回收站展示：它留在数组里只是为了随信封上云，
+  // 到期由 gcPurgedArticles 物理清除
+  return articles.filter(a => !!a.deletedAt && !a.purgedAt)
 }
 
 /**
