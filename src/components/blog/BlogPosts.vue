@@ -355,7 +355,6 @@ function displayTime(row: BlogArticle): string {
         <el-table-column label="操作" width="300" align="center" class-name="ewt-op-col">
           <template #default="{ row }">
             <el-button size="small" @click="emit('edit', row.id)">编辑</el-button>
-            <el-button size="small" @click="togglePin(row)">{{ row.pinned ? '取消置顶' : '置顶' }}</el-button>
             <el-button
               size="small"
               :disabled="row.status !== 'published' || isSharing(row)"
