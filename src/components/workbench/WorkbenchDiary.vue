@@ -123,7 +123,7 @@ async function handleSave(): Promise<void> {
 
 // 表格操作列「删除」：按 id 软删（逻辑删除）
 async function handleDeleteById(id: string): Promise<void> {
-  if (!await showConfirm('确定要删除这篇日记吗？删除后可在「已删除」中恢复。')) return
+  if (!await showConfirm('确定要删除这篇日记吗？删除后可在「回收站」中恢复。')) return
   await store.softDeleteEntry(id)
   if (currentPage.value > 1 && pageItems.value.length === 0) currentPage.value--
 }

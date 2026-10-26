@@ -1,4 +1,4 @@
-// 工作台菜单纯逻辑模块：11 项菜单（home 恒居首位）的顺序归一化 / 上移下移 / 改名 / 解析渲染。
+// 工作台菜单纯逻辑模块：12 项菜单（home 恒居首位）的顺序归一化 / 上移下移 / 改名 / 解析渲染。
 // 零 vue/pinia 运行时依赖（node --experimental-strip-types 可运行），无 DOM，纯函数。
 // 默认名称即菜单显示文案（逐字由 scripts/test-workbench-menu-core.ts 断言，改默认值须同步更新该测试）。
 
@@ -14,7 +14,8 @@ export const WORKBENCH_MENU_KEYS: readonly string[] = [
   'passwords',
   'health',
   'ledger',
-  'genealogy'
+  'genealogy',
+  'trash'
 ]
 
 /** 默认菜单顺序（home 首位，与键集合一致）。 */
@@ -32,7 +33,8 @@ export const MENU_DEFAULT_LABELS: Record<string, string> = {
   passwords: '密码',
   health: '健康',
   ledger: '记账',
-  genealogy: '家谱'
+  genealogy: '家谱',
+  trash: '回收站'
 }
 
 /** 菜单图标映射（内联 SVG path 标识，由 Icon.vue 查表渲染；值 = Icon 表键名，非 emoji）。 */
@@ -47,7 +49,8 @@ export const MENU_ICONS: Record<string, string> = {
   passwords: 'passwords',
   health: 'health',
   ledger: 'ledger',
-  genealogy: 'genealogy'
+  genealogy: 'genealogy',
+  trash: 'trash'
 }
 
 const KNOWN_MENU_KEYS: ReadonlySet<string> = new Set<string>(WORKBENCH_MENU_KEYS)

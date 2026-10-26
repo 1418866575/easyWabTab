@@ -11,7 +11,9 @@
 import { computed } from 'vue'
 import { showConfirm } from '@/utils/dialog'
 
-const props = defineProps<{
+// 注意：clearable 必须给显式默认值 true。布尔型 prop 缺省时 Vue 会按 false 处理，
+// 而模板里判的是 `clearable !== false`，不写默认值会导致「清空回收站」按钮永远不渲染。
+const props = withDefaults(defineProps<{
   /** 墓碑数组（已删除记录），由父组件用 trashedXxx 提供 */
   items: T[]
   /** 取展示名（标题/名字），同名模块字段不同，故由父组件提供 */
@@ -22,7 +24,7 @@ const props = defineProps<{
   hint?: string
   /** 是否显示「清空回收站」（默认 true） */
   clearable?: boolean
-}>()
+}>(), { clearable: true })
 
 const emit = defineEmits<{
   restore: [id: string]

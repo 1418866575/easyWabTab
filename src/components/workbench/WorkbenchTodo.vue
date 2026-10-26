@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { useViewMode } from '@/composables/useViewMode'
-import { showConfirm, toastAlert } from '@/utils/dialog'
+import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
-import RecordTrash from '@/components/common/RecordTrash.vue'
 
 /** 面板尺寸：宽度固定 80%（BaseDialog 将 width 作为 maxWidth 应用，面板 width:100% → 实际即 80%）；
  *  高度仍沿用「设置 → 弹窗尺寸」写入的 CSS 变量，未配置时回退默认值。 */
@@ -42,22 +41,6 @@ import { useToast } from '@/composables/useToast'
 const toast = useToast()
 
 const store = useWorkbenchTodosStore()
-
-// ===== 回收站（墓碑）=====
-const trashVisible = ref(false)
-
-async function onRestoreTodo(id: string): Promise<void> {
-  await store.restoreTodo(id)
-  toastAlert('已恢复到待办列表', 'success')
-}
-async function onPurgeTodo(id: string): Promise<void> {
-  await store.purgeTodo(id)
-  toastAlert('已彻底删除', 'success')
-}
-async function onClearTodos(): Promise<void> {
-  for (const t of store.trashedTodos) await store.purgeTodo(t.id)
-  toastAlert('回收站已清空', 'success')
-}
 
 // ===== 查询/筛选（查询按钮生效，重置恢复全量）=====
 const searchTitle = ref('')
@@ -438,9 +421,6 @@ onMounted(async () => {
       </div>
       <div class="td-toolbar-right">
         <ViewModeToggle v-if="filteredTodos.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
-        <el-button size="small" class="btn-cancel" data-testid="td-trash-button" @click="trashVisible = true">
-          回收站 ({{ store.trashedTodos.length }})
-        </el-button>
       </div>
     </div>
 
@@ -697,26 +677,6 @@ onMounted(async () => {
           <el-button v-if="editingId" type="danger" size="small" native-type="button" data-testid="td-record-delete" @click="handleDelete(editingId)">删除</el-button>
         </div>
       </form>
-    </BaseDialog>
-
-    <!-- 回收站（墓碑）：还原 / 彻底删除 -->
-    <BaseDialog
-      v-if="trashVisible"
-      title="回收站"
-      width="560px"
-      :max-height="PANEL_MAX_HEIGHT"
-      data-testid="td-trash-dialog"
-      @close="trashVisible = false"
-    >
-      <RecordTrash
-        :items="store.trashedTodos"
-        :get-label="(item: WorkbenchTodo) => item.title || '（无标题）'"
-        empty-text="回收站是空的"
-        hint="这里是被删除的待办。"
-        @restore="onRestoreTodo"
-        @purge="onPurgeTodo"
-        @clear="onClearTodos"
-      />
     </BaseDialog>
 
   </div>

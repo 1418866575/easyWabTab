@@ -27,6 +27,7 @@ import WorkbenchHealth from '@/components/workbench/WorkbenchHealth.vue'
 import WorkbenchLedger from '@/components/workbench/WorkbenchLedger.vue'
 import WorkbenchDiary from '@/components/workbench/WorkbenchDiary.vue'
 import WorkbenchGenealogy from '@/components/workbench/WorkbenchGenealogy.vue'
+import WorkbenchTrash from '@/components/workbench/WorkbenchTrash.vue'
 import Icon from '@/components/Icon.vue'
 import SkeletonBlock from '@/components/SkeletonBlock.vue'
 import SpotlightOverlay from '@/components/SpotlightOverlay.vue'
@@ -56,7 +57,8 @@ const sitesStore = useSitesStore()
 // 移动端菜单导航 ref（用于自动滚动到激活项）
 const menuNavRef = ref<HTMLElement | null>(null)
 
-// 左侧菜单导航白名单（11 项；菜单项顺序/名称/图标由 workbenchMenuCore 经设置 store 驱动）
+// 左侧菜单导航白名单（12 项；菜单项顺序/名称/图标由 workbenchMenuCore 经设置 store 驱动）
+// ⚠️ 新增菜单键时必须同步这里：navigateTo 用本白名单收窄，漏了会导致菜单点击无反应。
 const SECTION_KEYS = [
   'home',
   'todos',
@@ -68,7 +70,8 @@ const SECTION_KEYS = [
   'passwords',
   'health',
   'ledger',
-  'genealogy'
+  'genealogy',
+  'trash'
 ] as const
 type SectionKey = (typeof SECTION_KEYS)[number]
 
@@ -317,6 +320,7 @@ async function handleSyncNowClick(): Promise<void> {
           <WorkbenchHealth v-else-if="activeSection === 'health'" :active-tab="activeHealthTab" @change="activeHealthTab = $event" />
           <WorkbenchLedger v-else-if="activeSection === 'ledger'" />
           <WorkbenchGenealogy v-else-if="activeSection === 'genealogy'" />
+          <WorkbenchTrash v-else-if="activeSection === 'trash'" />
         </template>
       </main>
     </div>
