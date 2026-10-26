@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { showConfirm } from '@/utils/dialog'
 import { useWorkbenchDiaryStore } from '@/stores/workbenchDiary'
 import { dateKeyOf, diaryDateLabel, findDiaryByDate, DIARY_MOODS, diaryMoodOf } from '@/composables/diaryCore'
@@ -43,6 +43,8 @@ const dateShortcuts = [
 // ===== 编辑器状态 =====
 const selectedDate = ref(todayKey)
 const draft = ref('')
+// 标题草稿（可选字段；与列表首列「标题」对应同一字段 title）
+const draftTitle = ref('')
 const draftKind = ref<'diary' | 'idea'>('diary')
 const draftCategory = ref('')
 const draftMood = ref('')
@@ -61,7 +63,10 @@ const blogStore = useBlogStore()
 const selectedEntry = computed<WorkbenchDiary | undefined>(() => findDiaryByDate(store.currentEntries, selectedDate.value))
 
 // 脏检查：草稿 ≠ 该日期已存内容（未保存修改视为脏）
-const isDirty = computed(() => draft.value !== (selectedEntry.value?.content ?? ''))
+const isDirty = computed(() =>
+  draft.value !== (selectedEntry.value?.content ?? '') ||
+  draftTitle.value.trim() !== (selectedEntry.value?.title ?? '')
+)
 
 // 实时字数（textarea 内容长度）
 const charCount = computed(() => draft.value.length)
@@ -80,19 +85,32 @@ const pageItems = computed<WorkbenchDiary[]>(() => {
 // ===== 底部日记记录表格（消费 tableEntries：置顶优先 → date 降序 → createdAt 降序，排序公式属 diaryCore）=====
 // 每页 10 条（usePageSize 默认 10，可切 20/50），由 el-pagination 接管翻页，避免长列表拖累渲染。
 
+// 首次挂载：默认选中「今天」，若今天已有日记则直接载入草稿
+// （此前不载入 → 编辑器空白，用户以为没写过，保存会把原内容覆盖掉）
+onMounted(() => {
+  loadDraftFromEntry(findDiaryByDate(store.currentEntries, selectedDate.value))
+})
+
 // ===== 日期切换（统一脏检查入口：日期输入 / 今日按钮 / 卡片点击）=====
-async function selectDate(dateKey: string): Promise<void> {
-  if (dateKey === selectedDate.value) return
-  if (isDirty.value && !await showConfirm('当前内容未保存，确定切换日期？')) return
-  selectedDate.value = dateKey
-  // 该日期已有条目（当前日志本内）→ 载入其内容为草稿 + 结构字段；无条目 → 空草稿（查找走 diaryCore.findDiaryByDate）
-  const entry = findDiaryByDate(store.currentEntries, dateKey)
+/**
+ * 把某条日记载入草稿（无条目 = 空草稿）。
+ * 日期切换 / 日志本切换 / 行点击 / 首次挂载 四处共用，避免字段漏加（曾漏过 title）。
+ */
+function loadDraftFromEntry(entry?: WorkbenchDiary): void {
   draft.value = entry?.content ?? ''
+  draftTitle.value = entry?.title ?? ''
   draftKind.value = entry?.kind ?? 'diary'
   draftCategory.value = entry?.category ?? ''
   draftMood.value = entry?.mood ?? ''
   draftPinned.value = entry?.pinned === true
   draftCover.value = entry?.coverImage ?? ''
+}
+
+async function selectDate(dateKey: string): Promise<void> {
+  if (dateKey === selectedDate.value) return
+  if (isDirty.value && !await showConfirm('当前内容未保存，确定切换日期？')) return
+  selectedDate.value = dateKey
+  loadDraftFromEntry(findDiaryByDate(store.currentEntries, dateKey))
   viewMode.value = 'edit'
 }
 
@@ -105,11 +123,13 @@ function diaryCatName(entry: WorkbenchDiary): string | undefined {
 // ===== 保存 / 删除 =====
 async function handleSave(): Promise<void> {
   const trimmed = draft.value.trim()
+  const title = draftTitle.value.trim()
   if (!trimmed) {
     toast.warning('内容为空，未保存')
     return
   }
   await store.upsertEntry(selectedDate.value, draft.value, {
+    title,
     category: draftCategory.value,
     mood: draftMood.value,
     pinned: draftPinned.value,
@@ -118,6 +138,7 @@ async function handleSave(): Promise<void> {
   })
   // 与持久化内容对齐（store 保存时 trim），避免尾随空格造成永久脏态
   draft.value = trimmed
+  draftTitle.value = title
   toast.success('日记已保存')
 }
 
@@ -141,23 +162,31 @@ async function handlePurge(id: string): Promise<void> {
   if (currentPage.value > 1 && pageItems.value.length === 0) currentPage.value--
 }
 
-// 表格行点击（正常视图）：载入该日期到编辑器（selectDate 含脏检查确认）
-function onRowClick(entry: WorkbenchDiary): void {
+/** 列表「内容」列摘要：压成单行并截断，空内容由调用方兜底 */
+function contentSnippet(content: string): string {
+  const one = (content || '').replace(/\s+/g, ' ').trim()
+  return one.length > 60 ? `${one.slice(0, 60)}…` : one
+}
+
+/** 表格行点击（正常视图）：载入该条目到编辑器（含脏检查确认） */
+async function onRowClick(entry: WorkbenchDiary): Promise<void> {
   if (showDeleted.value) return // 已删除视图不载入编辑
-  selectDate(entry.date)
+  if (entry.date === selectedDate.value) {
+    // 同一天：selectedDate 不变 → selectDate 会早退，这里直接载入。
+    // 否则"打开今天这篇"永远点不动，编辑器一直空白、保存还会覆盖原内容。
+    if (isDirty.value && !await showConfirm('当前内容未保存，确定重新载入该条目？')) return
+    loadDraftFromEntry(entry)
+    viewMode.value = 'edit'
+    return
+  }
+  await selectDate(entry.date)
 }
 
 // 切换日志本后，重新载入选中日期在本本的条目（无则空草稿）
 watch(
   () => store.currentJournalId,
   () => {
-    const entry = findDiaryByDate(store.currentEntries, selectedDate.value)
-    draft.value = entry?.content ?? ''
-    draftKind.value = entry?.kind ?? 'diary'
-    draftCategory.value = entry?.category ?? ''
-    draftMood.value = entry?.mood ?? ''
-    draftPinned.value = entry?.pinned === true
-    draftCover.value = entry?.coverImage ?? ''
+    loadDraftFromEntry(findDiaryByDate(store.currentEntries, selectedDate.value))
     viewMode.value = 'edit'
     currentPage.value = 1
   }
@@ -437,6 +466,19 @@ const renderedPreview = computed(() =>
     <!-- 主区：编辑器（三模式 + Markdown 工具栏 + 文中图片条） -->
     <div class="dj-main">
       <div class="dj-editor">
+        <!-- 标题（可选）：放在编辑列顶部（不能直接放 .dj-main 下——桌面端 .dj-main > * 会把它当第二栏挤压） -->
+        <div class="dj-title-bar">
+          <input
+            v-model="draftTitle"
+            type="text"
+            class="dj-title-input"
+            placeholder="日记标题（可选）"
+            maxlength="100"
+            aria-label="日记标题"
+            data-testid="dj-title-input"
+          />
+          <span class="dj-title-count">{{ draftTitle.length }}/100</span>
+        </div>
         <!-- 视图切换：编辑 / 分屏 / 预览 -->
         <div class="dj-view-switch" role="group" aria-label="编辑器视图">
           <button
@@ -536,6 +578,18 @@ const renderedPreview = computed(() =>
         data-testid="dj-table"
         @row-click="onRowClick"
       >
+        <el-table-column label="标题" min-width="160" align="left" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.title" class="dj-title-cell">{{ row.title }}</span>
+            <span v-else class="dj-muted">（无标题）</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="内容" min-width="220" align="left" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.content" class="dj-content-cell">{{ contentSnippet(row.content) }}</span>
+            <span v-else class="dj-muted">—</span>
+          </template>
+        </el-table-column>
         <el-table-column label="日期" min-width="130" align="center">
           <template #default="{ row }">{{ diaryDateLabel(row.date) }}</template>
         </el-table-column>
@@ -673,6 +727,56 @@ const renderedPreview = computed(() =>
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+/* ===== 标题输入（内容编辑区上方，对应列表首列「标题」） ===== */
+.dj-title-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  margin-bottom: 10px;
+}
+
+.dj-title-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: var(--radius-md, 8px);
+  background-color: var(--color-bg-card, #fff);
+  color: var(--color-text-primary, #0f172a);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dj-title-input::placeholder {
+  color: var(--color-text-secondary, #94a3b8);
+  font-weight: 400;
+}
+
+.dj-title-input:focus {
+  border-color: var(--color-primary, #3b82f6);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.dj-title-count {
+  flex: none;
+  font-size: 12px;
+  color: var(--color-text-secondary, #94a3b8);
+}
+
+/* 列表：标题 / 内容摘要单元格 */
+.dj-title-cell {
+  font-weight: 600;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.dj-content-cell {
+  color: var(--color-text-secondary, #64748b);
 }
 
 /* ===== 编辑器三态容器 ===== */

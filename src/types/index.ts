@@ -264,6 +264,7 @@ export interface WorkbenchDiary extends SyncStamp {
   id: string // 'dy_' 前缀
   journalId: string // 所属日志本 id（'jb_default' 为默认）
   date: string // 'YYYY-MM-DD' 本地日期，唯一（每天一条）
+  title?: string // 标题（可选，≤100；列表首列展示，空则显示「（无标题）」）
   content: string // Markdown 正文
   createdAt: string
   updatedAt: string

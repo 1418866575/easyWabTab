@@ -92,6 +92,7 @@ export function extractFirstImage(content: string): string {
  * - date 缺失/非法（isValidDateKey 拒绝）→ null（剔除）
  * - id 缺失/非字符串 → 回退 `dy_<date>`（与 store.upsertEntry 的 dy_ 前缀一致）
  * - content 非字符串 → ''（字符串原样保留，不 trim——正文空格属用户内容）
+ * - title 非字符串 → ''（trim + 截断 100，可选字段）
  * - createdAt/updatedAt 非法/缺失 → 当前 ISO 字符串
  */
 function normalizeDiaryEntry(raw: unknown): WorkbenchDiary | null {
@@ -104,6 +105,8 @@ function normalizeDiaryEntry(raw: unknown): WorkbenchDiary | null {
     id: typeof src.id === 'string' && src.id ? src.id : `dy_${date}`,
     journalId: typeof src.journalId === 'string' && src.journalId ? src.journalId : DEFAULT_JOURNAL_ID,
     date,
+    // 标题：可选字段，trim + 截断 100（旧数据没有该字段 → ''）
+    title: typeof src.title === 'string' ? src.title.trim().slice(0, 100) : '',
     content: typeof src.content === 'string' ? src.content : '',
     createdAt: typeof src.createdAt === 'string' ? src.createdAt : nowIso,
     updatedAt: typeof src.updatedAt === 'string' ? src.updatedAt : nowIso,

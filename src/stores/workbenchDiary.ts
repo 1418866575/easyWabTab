@@ -86,16 +86,19 @@ export const useWorkbenchDiaryStore = defineStore('workbench-diary', () => {
   async function upsertEntry(
     date: string,
     content: string,
-    patch?: { category?: string; mood?: string; pinned?: boolean; kind?: 'diary' | 'idea'; coverImage?: string }
+    patch?: { title?: string; category?: string; mood?: string; pinned?: boolean; kind?: 'diary' | 'idea'; coverImage?: string }
   ): Promise<void> {
     const trimmed = content.trim()
     if (!trimmed) return
+    // 标题可选：仅在显式传入时更新，避免只改正文时把既有标题抹掉
+    const titlePatch = patch && patch.title !== undefined ? String(patch.title).trim().slice(0, 100) : undefined
     const now = new Date().toISOString()
     const existing = findDiaryByDate(currentEntries.value, date)
     if (existing) {
       existing.content = trimmed
       existing.updatedAt = now
       if (patch) {
+        if (titlePatch !== undefined) existing.title = titlePatch
         if (patch.category !== undefined) existing.category = patch.category
         if (patch.mood !== undefined) existing.mood = patch.mood
         if (patch.pinned !== undefined) existing.pinned = patch.pinned
@@ -107,6 +110,7 @@ export const useWorkbenchDiaryStore = defineStore('workbench-diary', () => {
         id: `dy_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         journalId: currentJournalId.value,
         date,
+        title: titlePatch ?? '',
         content: trimmed,
         createdAt: now,
         updatedAt: now,
