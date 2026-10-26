@@ -113,8 +113,8 @@ const contentEl = ref<HTMLTextAreaElement | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 
 interface MdToolbarButton {
-  /** image = 选本地文件上传；library = 从图库选取（可多选） */
-  kind: MdBlockKind | 'image' | 'library'
+  /** image = 选本地文件上传；library = 从图库选取（可多选）；scroll-* = 滚动到编辑器顶/底 */
+  kind: MdBlockKind | 'image' | 'library' | 'scroll-top' | 'scroll-bottom'
   label: string
   title: string
   group: number
@@ -137,7 +137,9 @@ const MD_TOOLBAR: MdToolbarButton[] = [
   { kind: 'link', label: '链接', title: '插入链接（Ctrl/Cmd+K）', group: 3 },
   { kind: 'image', label: '图片', title: '插入图片（选择本地图片，存入图片库）', group: 3 },
   { kind: 'table', label: '表格', title: '插入表格', group: 3 },
-  { kind: 'hr', label: '分割线', title: '插入分割线', group: 3 }
+  { kind: 'hr', label: '分割线', title: '插入分割线', group: 3 },
+  { kind: 'scroll-top', label: '返回顶部', title: '滚动到编辑器顶部', group: 4 },
+  { kind: 'scroll-bottom', label: '返回底部', title: '滚动到编辑器底部', group: 4 }
 ]
 
 const toolbarGroups = computed(() => {
@@ -171,7 +173,20 @@ function onToolbarClick(b: MdToolbarButton): void {
     libraryOpen.value = true
     return
   }
+  if (b.kind === 'scroll-top' || b.kind === 'scroll-bottom') {
+    scrollEditor(b.kind === 'scroll-top' ? 'start' : 'end')
+    return
+  }
   void applyMd(b.kind)
+}
+
+/**
+ * 滚动到编辑器顶端/底端。页面级滚动容器是 .ba-content（见 BlogAdminView），
+ * scrollIntoView 会作用于最近的滚动祖先，无需在此硬编码容器类名。
+ */
+const rootEl = ref<HTMLElement | null>(null)
+function scrollEditor(block: 'start' | 'end'): void {
+  rootEl.value?.scrollIntoView({ behavior: 'smooth', block })
 }
 
 /** 正文快捷键：Ctrl/Cmd+B 加粗、+I 斜体、+K 链接 */
@@ -522,7 +537,7 @@ async function regenerateSlug(): Promise<void> {
 </script>
 
 <template>
-  <section v-if="canRead" class="be">
+  <section v-if="canRead" ref="rootEl" class="be">
     <!-- 顶部：视图切换 + 文章设置 -->
     <header class="be-head">
       <div class="be-view-switch" role="group" aria-label="编辑器视图">
