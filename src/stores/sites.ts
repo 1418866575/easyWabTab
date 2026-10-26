@@ -977,8 +977,14 @@ ${sub}
     // 保存到 nav store（立即落盘，确保 loadSites 重载前已持久）
     // 导入是显式操作且只会变多：先推进基线，避免「导入更大数据却被守卫拦下」
     noteExplicitMutation()
-    setPrefNow('user-sites', JSON.stringify(existingSites))
-    
+    // 必须 await：setPrefNow 的 IDB 写入本身是异步的，而导入携带大量 base64 图标，
+    // 若写入还没完成用户就刷新页面，这次大体积写入可能被中断 → 表现为「刷新后图标消失」。
+    await setPrefNow('user-sites', JSON.stringify(existingSites))
+    // 必须标脏：其它所有改动都走 saveUserSites()（内部 markDirty），只有导入这条漏了。
+    // 不标脏的话，刷新页面触发 visibilitychange → pullNow 会认为本地「不脏」，
+    // 直接用远端旧数据覆盖回来，刚补齐的图标又变回 icons/xxx 相对路径。
+    if (added > 0 || iconsFilled > 0) markDirty()
+
     // 重新加载数据以更新显示
     loadSites()
     

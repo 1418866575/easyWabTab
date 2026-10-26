@@ -353,11 +353,13 @@ export function setPref(key: string, value: string): void {
 }
 
 /** 立即更新内存并落盘（无防抖）：用于页面隐藏/卸载前 flush 与需立即持久的关键写入 */
-export function setPrefNow(key: string, value: string): void {
-  if (!allowWrite(`setPrefNow(${key})`)) return
+export function setPrefNow(key: string, value: string): Promise<void> {
+  if (!allowWrite(`setPrefNow(${key})`)) return Promise.resolve()
   prefs = { ...prefs, [key]: value }
   dirtyKeys.delete(key) // 即将立即写入，无需再进防抖队列
-  void writeThrough([key])
+  // 返回写入 Promise，供「写完后必须确认落盘」的调用方（如导入后立刻可能刷新页面）await。
+  // 绝大多数调用方可以忽略返回值（保持原有的 fire-and-forget 行为）。
+  return writeThrough([key])
 }
 
 /** 立即落盘（页面隐藏/卸载、恢复备份后刷新前调用），取消防抖定时器 */
