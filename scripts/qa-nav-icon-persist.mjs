@@ -101,6 +101,23 @@ async function idbStats(page) {
   })()`)
 }
 
+/** 图标库（IDB icons store，单条记录 key='items'）里的自定义图标数量 */
+async function iconLibCount(page) {
+  return page.evaluate(`(async () => {
+    const db = await new Promise((res, rej) => {
+      const r = indexedDB.open('easy-web-tab')
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error)
+    })
+    const rec = await new Promise((res, rej) => {
+      const tx = db.transaction('icons', 'readonly')
+      const rq = tx.objectStore('icons').get('items')
+      rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error)
+    })
+    db.close()
+    return Array.isArray(rec) ? rec.length : 0
+  })()`)
+}
+
 const browser = await chromium.launch({ executablePath: findChromium() })
 try {
   const base = await ensureDevServer()
@@ -146,8 +163,12 @@ try {
   check('新增站点 > 0', (r1.added || 0) > 0, `added=${r1.added}`)
   check('store 内图标已是 data URL', (r1.dataUrl || 0) > 0, `dataUrl=${r1.dataUrl}`)
   check('store 内无 icons/ 残留路径', (r1.rel || 0) === 0, `rel=${r1.rel}`)
+  check('图标库登记了图标', (r1.iconLibraryAdded || 0) > 0, `iconLibraryAdded=${r1.iconLibraryAdded}`)
 
   // ---------- 2) IDB 原始记录（刷新前的持久化真相）----------
+  const lib1 = await iconLibCount(page)
+  check('IDB 图标库已持久化', lib1 > 0, `icons=${lib1}`)
+
   const s1 = await idbStats(page)
   console.log('[qa] IDB 统计:', JSON.stringify(s1))
   check('IDB 已有 user-sites 记录', s1.n > 0, `n=${s1.n} len=${s1.len}`)
@@ -177,6 +198,16 @@ try {
   console.log('[qa] 刷新后 store:', JSON.stringify(after))
   check('刷新后 store 图标仍为 data URL', after.dataUrl > 0, `dataUrl=${after.dataUrl}`)
   check('刷新后 store 无 icons/ 残留', after.rel === 0, `rel=${after.rel}`)
+
+  const lib2 = await iconLibCount(page)
+  check('刷新后图标库仍在', lib2 === lib1, `icons=${lib2} 期望=${lib1}`)
+  const storeLib = await page.evaluate(async () => {
+    const mod = await import('/src/stores/icons.ts')
+    const s = mod.useIconsStore()
+    await s.ensureLoaded()
+    return s.customIcons.length
+  })
+  check('刷新后 store.customIcons 与 IDB 一致', storeLib === lib2, `store=${storeLib} idb=${lib2}`)
 
   // 页面上真实渲染的图标
   const rendered = await page.evaluate(() => {
@@ -233,6 +264,7 @@ try {
   check('第二次导入：新增 0', r2.added === 0, `added=${r2.added}`)
   check('第二次导入：跳过 = 90', r2.skipped === 90, `skipped=${r2.skipped}`)
   check('第二次导入：补齐图标（全部坏图标站点）', r2.iconsFilled === before2.rel, `iconsFilled=${r2.iconsFilled} 期望=${before2.rel}`)
+  check('第二次导入：图标库不重复新增', (r2.iconLibraryAdded || 0) === 0, `iconLibraryAdded=${r2.iconLibraryAdded}`)
 
   const s3 = await idbStats(page)
   console.log('[qa] 补齐后 IDB:', JSON.stringify(s3))
@@ -246,6 +278,8 @@ try {
   console.log('[qa] 再次刷新后 IDB:', JSON.stringify(s4))
   check('补齐后刷新，图标仍在（data URL）', s4.dataUrl === 79, `dataUrl=${s4.dataUrl}`)
   check('补齐后刷新，无坏路径复活', s4.rel === 0, `rel=${s4.rel}`)
+  const lib3 = await iconLibCount(page)
+  check('第二次导入后图标库数量不变（按内容去重）', lib3 === lib1, `icons=${lib3} 期望=${lib1}`)
 
   const rendered2 = await page.evaluate(() => {
     const imgs = [...document.querySelectorAll('.site-card img')]

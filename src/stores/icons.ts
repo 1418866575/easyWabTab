@@ -158,6 +158,50 @@ export const useIconsStore = defineStore('icons', () => {
     return { added: toAdd.length }
   }
 
+  /**
+   * 批量登记图标到「图标库」（供导航站 ZIP 导入等场景复用）。
+   *
+   * 与 `importIcons` 的区别：那边按 id 去重（云同步/图标库自身备份用），
+   * 这里的入参根本没有 id —— 来自 ZIP 里的 `icons/*.png` 文件，只能**按 dataUrl 内容去重**，
+   * 避免重复导入同一份备份时图标库被灌成几百份重复项。
+   *
+   * 顺序同样是「先持久化成功，再替换内存」，避免 UI 假成功、刷新即消失。
+   */
+  async function importIconEntries(
+    entries: Array<{ name: string; label?: string; dataUrl: string; category?: string }>
+  ): Promise<{ added: number; skipped: number }> {
+    // 必须等初始化完成：否则 customIcons 还是空数组，写回会把已有图标库整份覆盖掉
+    await ensureLoaded()
+    const seen = new Set(customIcons.value.map(i => i.dataUrl))
+    const toAdd: CustomIcon[] = []
+    const now = new Date().toISOString()
+    let skipped = 0
+    let seq = 0
+    for (const e of entries) {
+      const dataUrl = (e.dataUrl || '').trim()
+      if (!dataUrl || seen.has(dataUrl)) { skipped += 1; continue }
+      seen.add(dataUrl)
+      const base = (e.name || '').trim() || '自定义图标'
+      seq += 1
+      toAdd.push({
+        id: `custom_icon_${Date.now()}_${seq}_${Math.random().toString(16).slice(2, 6)}`,
+        name: base,
+        label: (e.label || base).trim() || base,
+        dataUrl,
+        category: (e.category || '').trim() || '其他',
+        createdAt: now
+      })
+    }
+    if (toAdd.length === 0) return { added: 0, skipped }
+    const next = [...customIcons.value, ...toAdd]
+    // JSON.parse(JSON.stringify()) 深拷贝剥离 Vue reactive Proxy，否则 IDB 结构化克隆报 DataCloneError
+    await idbPut('icons', JSON.parse(JSON.stringify(next)))
+    markDirty()
+    try { localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(next)) } catch { /* ignore */ }
+    customIcons.value = next
+    return { added: toAdd.length, skipped }
+  }
+
   // Export custom icons
   function exportIcons(): IconExportData {
     return {
@@ -206,6 +250,7 @@ export const useIconsStore = defineStore('icons', () => {
     updateIcon,
     deleteIcon,
     importIcons,
+    importIconEntries,
     exportIcons,
     searchIcons,
     getIconsByCategory,

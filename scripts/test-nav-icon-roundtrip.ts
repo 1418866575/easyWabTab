@@ -23,6 +23,7 @@ import {
   normalizeIconKey,
   isRelativeIconPath,
   shouldFillIcon,
+  iconDisplayName,
 } from '../src/composables/siteIconPortability.ts'
 import { useMarkdown } from '../src/composables/useMarkdown.ts'
 
@@ -104,6 +105,9 @@ async function main(): Promise<void> {
   eq('normalizeIconKey 支持反斜杠', normalizeIconKey('icons\\a.svg'), 'a.svg')
   eq('normalizeIconKey 支持嵌套目录', normalizeIconKey('sites/icons/a.svg'), 'a.svg')
   eq('normalizeIconKey 大小写不敏感', normalizeIconKey('icons/A.SVG'), 'a.svg')
+  eq('iconDisplayName 去目录去扩展名', iconDisplayName('icons/哔哩哔哩.svg'), '哔哩哔哩')
+  eq('iconDisplayName 支持嵌套目录', iconDisplayName('sites/icons/a.png'), 'a')
+  eq('iconDisplayName 空输入兜底', iconDisplayName(''), '自定义图标')
 
   // ---------- 3) 导出 → ZIP → 导入 完整往返 ----------
   console.log('\n[3] 导出 → ZIP → 导入 往返')

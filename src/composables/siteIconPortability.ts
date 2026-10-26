@@ -189,6 +189,15 @@ export function resolveIconFilesInParsed(
 }
 
 /**
+ * 从 ZIP 条目路径取图标显示名：去目录、去扩展名。
+ * `icons/哔哩哔哩.svg` → `哔哩哔哩`；`sites/icons/a.png` → `a`。
+ */
+export function iconDisplayName(p: string): string {
+  const base = (p || '').split(/[\\/]/).pop() || ''
+  return base.replace(/\.[^.]+$/, '').trim() || '自定义图标'
+}
+
+/**
  * 判断「已存在记录」的图标是否应该被本次导入的图标补齐/修复。
  *
  * 背景：导入按 URL / id 去重，已存在的一律「跳过」。但用户很常见的场景是

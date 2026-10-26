@@ -14,12 +14,14 @@ import {
   resolveIconFilesInParsed,
   isRelativeIconPath,
   shouldFillIcon,
+  iconDisplayName,
   type IconFileEntry
 } from '../composables/siteIconPortability'
 import { useCategoriesStore } from './categories'
 import { useSearchEnginesStore } from './searchEngines'
 import { usePasswordsStore } from './passwords'
 import { useCountdownsStore } from '@/stores/countdowns'
+import { useIconsStore } from '@/stores/icons'
 import {
   checkDeadLinks,
   saveCheckResults,
@@ -845,6 +847,7 @@ ${sub}
     iconsRestored?: number
     iconsMissing?: string[]
     iconsFilled?: number
+    iconLibraryAdded?: number
   }> {
     let mdText = ''
     const iconFiles: Record<string, IconFileEntry> = {}
@@ -877,7 +880,26 @@ ${sub}
       )
     }
     const res = await applyParsedData(parsed)
-    return { ...res, iconsRestored: restored, iconsMissing: missing }
+
+    // 把 ZIP 里的图标同时登记进「图标库」（自定义图标）。
+    // 否则导入后站点上有图，但「设置 → 图标管理」仍显示「自定义 0 个」，
+    // 用户想给其它站点复用这些图标时无从选择。
+    // 放在站点落库之后：即便图标库写入失败（配额等），站点导入本身不受影响。
+    let iconLibraryAdded = 0
+    try {
+      const iconsStore = useIconsStore()
+      const entries = Object.entries(iconFiles).map(([p, v]) => ({
+        name: iconDisplayName(p),
+        dataUrl: `data:${v.mime};base64,${v.base64}`,
+        category: '其他'
+      }))
+      const lib = await iconsStore.importIconEntries(entries)
+      iconLibraryAdded = lib.added
+    } catch (e) {
+      console.warn('[Import] 图标库登记失败（站点导入已成功，不受影响）：', e)
+    }
+
+    return { ...res, iconsRestored: restored, iconsMissing: missing, iconLibraryAdded }
   }
 
   // 从 Markdown 文本导入（旧版单 .md 备份 / 用户直接拖入 .md）：无法还原图标文件，仅做提示
