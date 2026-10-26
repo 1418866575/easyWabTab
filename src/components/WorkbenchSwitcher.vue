@@ -50,20 +50,20 @@ interface Entry {
   visible: boolean
   /**
    * 「当前所在页」判定（缺省用 path 精确匹配 + 子路径前缀匹配）。
-   * 博客前台需要排除 /blog/admin（那属博客后台），故显式给出。
+   * 某工作台下有多个子路由且需要排除某些子路径时，由该项显式提供。
    */
   isCurrentPath?: (p: string) => boolean
   /**
    * 是否在新浏览器标签打开（而非站内路由跳转）。
-   * 博客前台（阅读器）为 true：作为独立阅读面，点击直接开新标签，保留原上下文。
+   * 作为独立阅读面存在的工作台（如博客前台）需要开新标签时使用。
    */
   openInNewTab?: boolean
 }
 
-// 顺序与旧面板一致：导航站 → 教师台 → 个人工作台 → 销售记账 → 学生台 → 工具箱 → 智能工作台 → 博客后台 → 博客前台。
+// 顺序：导航站 → 教师台 → 个人工作台 → 销售记账 → 学生台 → 工具箱 → 智能工作台 → 博客后台。
 // 工具箱不再有"导航站页隐藏"的特殊规则——它现在是面板里的一项，独立按钮已移除。
-// 博客两项由博客功能提交追加，名称/图标/可见性走 blogAdminPage* / blogFrontPage* 三件套
-// （设置入口在「个性化 → 主题」工具箱下方），与其它工作台字段同构。
+// 博客后台名称/图标/可见性走 blogAdminPage* 三件套（设置入口在「个性化 → 主题」工具箱下方）。
+// 「博客前台 / 个人图书馆」已迁到导航站列表，不再出现在本面板。
 const allEntries = computed<Entry[]>(() => [
   {
     key: 'nav',
@@ -139,35 +139,10 @@ const allEntries = computed<Entry[]>(() => [
     builtin: 'notes',
     kw: '博客后台 blog 管理 写作',
     visible: store.blogAdminPageVisible !== false
-  },
-  {
-    // 博客前台（阅读器）：与后台同源数据（IndexedDB blog store），路由 /blog（列表）与
-    // /blog/article/:slug（详情）。名称/图标/可见性同样走 blogFrontPage* 三件套。
-    key: 'blog-front',
-    path: '/blog',
-    name: store.blogFrontPageDisplayName,
-    icon: store.blogFrontPageIcon,
-    builtin: 'document',
-    kw: '博客前台 blog 阅读 文章',
-    visible: store.blogFrontPageVisible !== false,
-    openInNewTab: true,
-    // /blog 与 /blog/article/* 算前台；/blog/admin 归后台条目，不能重复标「当前」
-    isCurrentPath: (p) => p === '/blog' || (p.startsWith('/blog/') && !p.startsWith('/blog/admin'))
-  },
-  {
-    // 个人图书馆：路由 /books（书架）与 /books/read（站内 iframe 阅读页）。
-    // 书籍内容本体是 public/bookdata 下的静态 HTML，本页只做检索与展示。
-    // 名称/图标/可见性同样走 booksPage* 三件套（设置 → 个性化 → 主题内配置）。
-    key: 'books',
-    path: '/books',
-    name: store.booksPageDisplayName,
-    icon: store.booksPageIcon,
-    builtin: 'document',
-    kw: '图书馆 books 阅读 书籍 书架',
-    visible: store.booksPageVisible !== false,
-    // 阅读页属于图书馆的一部分，要标「当前」，否则在 /books/read 上切换器认不出自己在哪
-    isCurrentPath: (p) => p === '/books' || p.startsWith('/books/')
   }
+  // 注意：「博客前台（/blog）」与「个人图书馆（/books）」已迁出本面板，
+  // 改为导航站列表里的站内入口卡片（见 stores/sites.ts 的 refreshModuleEntries）。
+  // 名称/图标/可见性仍由设置里的 blogFrontPage* / booksPage* 控制，迁移后表现一致。
 ])
 
 const visibleEntries = computed<Entry[]>(() => allEntries.value.filter((e) => e.visible))

@@ -22,6 +22,7 @@ import { useSearchEnginesStore } from './searchEngines'
 import { usePasswordsStore } from './passwords'
 import { useCountdownsStore } from '@/stores/countdowns'
 import { useIconsStore } from '@/stores/icons'
+import { useAppSettingsStore } from '@/stores/settings'
 import {
   checkDeadLinks,
   saveCheckResults,
@@ -361,6 +362,88 @@ export const useSitesStore = defineStore('sites', () => {
     }
   }
 
+  /* ===== 站内模块入口（原「左上角工作台面板」里的 博客前台 / 个人图书馆） =====
+   * 迁移背景：这两个入口本质是站内页面，放进「导航列表」更符合"访问入口"的心智模型。
+   * 实现要点：
+   * - 名称 / 图标 / 可见性继续读设置里的 blogFrontPage* / booksPage* 三件套，
+   *   保证迁移前后完全一致；关掉开关即从列表移除。
+   * - 与内置站点、游戏清单一样登记进 nonUserUrls：不计入自有站点数、不参与降级守卫基线。
+   * - 用「url + tag=站内模块」双条件识别自己注入的项：刷新时先摘后加不会重复，
+   *   也不会误删用户自己手工添加的 /blog、/books 站点。
+   */
+  const MODULE_URLS = ['/blog', '/books']
+  const MODULE_TAG = '站内模块'
+  /** 固定 createdAt，避免每次注入产生不同时间戳（不参与排序） */
+  const MODULE_SINCE = '2026-10-26T00:00:00.000Z'
+  /**
+   * 站内模块入口的默认图标：与迁移前工作台面板使用的内置 `document` 图标同一条 SVG path，
+   * 保证图标样式一致。用 data URL 内联而非放进 public/icons，避免被图标库扫描成预置图标。
+   */
+  const MODULE_DOC_ICON =
+    'data:image/svg+xml;utf8,' +
+    encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#8a8f98">' +
+        '<path d="M6,2A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2H6M6,4H13V9H18V20H6V4M8,12V14H16V12H8M8,16V18H13V16H8Z"/>' +
+        '</svg>'
+    )
+
+  /** 依据当前设置生成应当出现在导航列表里的站内模块入口 */
+  function buildModuleSites(): Site[] {
+    let settings: ReturnType<typeof useAppSettingsStore>
+    try {
+      settings = useAppSettingsStore()
+    } catch (e) {
+      // 理论上不会发生（store 一定在 pinia 激活后使用）；保底不影响主流程
+      console.warn('[sites] 读取设置失败，跳过站内模块入口：', e)
+      return []
+    }
+    const out: Site[] = []
+    if (settings.blogFrontPageVisible !== false) {
+      out.push({
+        name: settings.blogFrontPageDisplayName || '博客前台',
+        url: '/blog',
+        description: '站内博客阅读页：浏览已发布的文章',
+        category: 'other',
+        tags: [MODULE_TAG],
+        icon: settings.blogFrontPageIcon || MODULE_DOC_ICON,
+        sort: 0,
+        createdAt: MODULE_SINCE
+      })
+    }
+    if (settings.booksPageVisible !== false) {
+      out.push({
+        name: settings.booksPageDisplayName || '图书馆',
+        url: '/books',
+        description: '站内个人图书馆：书架检索与站内阅读',
+        category: 'other',
+        tags: [MODULE_TAG],
+        icon: settings.booksPageIcon || MODULE_DOC_ICON,
+        sort: 0,
+        createdAt: MODULE_SINCE
+      })
+    }
+    return out
+  }
+
+  /** 摘掉自己注入过的站内模块入口（用户自建的同 url 站点没有该 tag，不会被误删） */
+  function stripModuleEntries(): void {
+    sites.value = sites.value.filter(
+      (s) => !(MODULE_URLS.includes(s.url) && (s.tags || []).includes(MODULE_TAG))
+    )
+  }
+
+  /** 重新对齐站内模块入口：先摘后加，天然幂等（设置变更 / 重复加载都不会产生重复入口） */
+  function refreshModuleEntries(): void {
+    stripModuleEntries()
+    for (const m of buildModuleSites()) {
+      // 已有同 url 的站点（用户手工加过，或内置清单里已有）→ 不重复注入
+      if (sites.value.some((s) => s.url === m.url)) continue
+      sites.value.push(m)
+      // 站内模块不是用户数据：不计入自有站点数，也不参与降级守卫基线
+      nonUserUrls.add(m.url)
+    }
+  }
+
   async function loadSites() {
     isLoading.value = true
     try {
@@ -404,6 +487,9 @@ export const useSitesStore = defineStore('sites', () => {
 
       // 加载游戏清单
       await loadGames()
+
+      // 站内模块入口（博客前台 / 图书馆）：原在左上角工作台面板，现作为导航列表里的入口卡片
+      refreshModuleEntries()
 
       // 应用保存的断链检测结果
       applySavedCheckResults()
@@ -596,6 +682,28 @@ export const useSitesStore = defineStore('sites', () => {
   if (typeof window !== 'undefined') {
     window.addEventListener('pagehide', onPageHide)
     document.addEventListener('visibilitychange', onVisibilityChange)
+  }
+
+  // 设置里改了「博客前台 / 图书馆」的名称、图标或可见性 → 立刻反映到导航列表，无需刷新页面。
+  // 放在这里而不是 loadSites 内：设置是异步初始化的，加载完成后 watch 会自动补一次对齐。
+  try {
+    const settingsStore = useAppSettingsStore()
+    watch(
+      () => [
+        settingsStore.blogFrontPageDisplayName,
+        settingsStore.blogFrontPageIcon,
+        settingsStore.blogFrontPageVisible,
+        settingsStore.booksPageDisplayName,
+        settingsStore.booksPageIcon,
+        settingsStore.booksPageVisible
+      ],
+      () => {
+        // 只在已有站点数据时对齐，避免首屏 loadSites 之前就往空列表里塞入口
+        if (sites.value.length > 0) refreshModuleEntries()
+      }
+    )
+  } catch (e) {
+    console.warn('[sites] 站内模块入口监听注册失败（不影响主流程）：', e)
   }
 
   // 点击网站时增加 sort 值（使用频率排序）
