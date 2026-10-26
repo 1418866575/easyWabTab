@@ -317,7 +317,6 @@ function displayTime(row: BlogArticle): string {
           <template #default="{ row }">
             <div class="ba-cell-title">
               <span v-if="row.pinned" class="ba-pin" title="已置顶">置顶</span>
-              <span v-if="row.sharedAt" class="ba-shared" title="已共享到服务器">共享</span>
               <button type="button" class="ba-link" @click="emit('edit', row.id)">
                 {{ row.title || '（无标题）' }}
               </button>
@@ -352,9 +351,8 @@ function displayTime(row: BlogArticle): string {
             <span class="ba-cell-muted">{{ displayTime(row) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="300" align="center" class-name="ewt-op-col">
+        <el-table-column label="操作" width="240" align="center" class-name="ewt-op-col">
           <template #default="{ row }">
-            <el-button size="small" @click="emit('edit', row.id)">编辑</el-button>
             <el-button
               size="small"
               :disabled="row.status !== 'published' || isSharing(row)"
@@ -558,15 +556,6 @@ html.dark .ba-query {
   border-radius: 999px;
   background-color: var(--color-warning-soft, #fef3c7);
   color: var(--color-warning, #b45309);
-  font-size: var(--font-size-xs, 11px);
-  line-height: 18px;
-}
-
-.ba-shared {
-  padding: 0 6px;
-  border-radius: 999px;
-  background-color: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
   font-size: var(--font-size-xs, 11px);
   line-height: 18px;
 }

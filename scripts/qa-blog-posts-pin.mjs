@@ -97,9 +97,16 @@ try {
   // 精确匹配按钮文本（不能对整行做 includes('置顶')——文章标题本身可能含"置顶"二字）
   const pinButtons = await row.locator('button', { hasText: /^(取消置顶|置顶)$/ }).count()
   check('S1 操作列已无「置顶/取消置顶」按钮', pinButtons === 0, `pinButtons=${pinButtons}`)
-  const pinBadge = (await row.locator('.ba-pin').count()) >= 0 // 标记按数据而定，不强制
+  const sharedBadge = await row.locator('.ba-shared').count()
+  check('S1c 标题里已无「共享」标记', sharedBadge === 0, `sharedBadge=${sharedBadge}`)
   const opText = (await row.innerText().catch(() => '')).replace(/\s+/g, '')
-  check('S1 操作列仍保留「编辑/共享/下架」等按钮', opText.includes('编辑'), opText.slice(0, 40))
+  // 第二轮需求：操作列的「编辑」按钮也删除（编辑入口保留在标题点击与卡片视图）
+  const editButtons = await row.locator('button', { hasText: /^编辑$/ }).count()
+  check('S1b 操作列已无「编辑」按钮', editButtons === 0, `editButtons=${editButtons}`)
+  // 编辑入口仍在：标题本身可点击编辑
+  const titleLink = await row.locator('.ba-link').count()
+  check('S1d 标题仍是可点击的编辑入口', titleLink === 1, `titleLink=${titleLink}`)
+  check('S1 操作列仍保留「共享/下架/删除」等按钮', opText.includes('下架') && opText.includes('删除'), opText.slice(0, 40))
 
   // 卡片视图（若提供切换）：找视图切换按钮
   // 切到卡片视图：置顶入口应仍在卡片头部（只删了列表操作栏那一处）
@@ -109,10 +116,14 @@ try {
     await page.waitForTimeout(500)
     const cardPin = await page.locator('.ba-pin-btn').count()
     check('S2 卡片视图置顶入口仍在', cardPin >= 1, `count=${cardPin}`)
+    const cardEdit = await page.locator('.ba-mini', { hasText: '编辑' }).count()
+    check('S2 卡片视图「编辑」入口仍在', cardEdit >= 1, `count=${cardEdit}`)
     await toggle.click() // 切回列表
     await page.waitForTimeout(400)
   } else {
     check('S2 卡片视图置顶入口仍在', true, '未找到视图切换按钮，跳过')
+    const cardEdit = await page.locator('.ba-mini', { hasText: '编辑' }).count()
+    check('S2 卡片视图「编辑」入口仍在', cardEdit >= 1, `count=${cardEdit}`)
   }
 
   check('无页面级 JS 异常', errs.length === 0, errs.join(' | ').slice(0, 200))
