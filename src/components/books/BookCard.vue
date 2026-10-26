@@ -30,12 +30,15 @@ const props = defineProps<{
   recentTs?: number
   clickCount?: number
   bookmark?: BookBookmark | null
+  /** 是否正在下载；同一时刻只允许一本在跑，其余按钮置灰 */
+  downloading?: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'open', book: BookItem): void
   (e: 'read', book: BookItem): void
   (e: 'toggle-fav', book: BookItem): void
+  (e: 'download', book: BookItem): void
 }>()
 
 /** 按 id 派生的稳定色相：字符串 hash → 0..359，保证同一本书每次颜色一致 */
@@ -55,6 +58,16 @@ const clickLabel = computed(() => formatClicks(props.clickCount ?? 0))
 const sizeLabel = computed(() => formatSize(props.book.size))
 const progressLabel = computed(() =>
   props.bookmark ? formatProgress(props.bookmark.ratio) : ''
+)
+
+/**
+ * 下载按钮的说明文案按来源区分：
+ * 静态书是「从服务器拉二级页面」，上传书本来就在本机，只是导成文件。
+ */
+const downloadTitle = computed(() =>
+  props.book.source === 'upload'
+    ? '导出为 HTML 文件'
+    : '把这本书的页面下载到本地（含二级页面，多页打包为 zip）'
 )
 </script>
 
@@ -132,6 +145,18 @@ const progressLabel = computed(() =>
           @click="emit('read', book)"
         >
           站内阅读
+        </button>
+        <!-- 下载：静态书拉服务器的二级页面，上传书只是导出本机那份 HTML -->
+        <button
+          type="button"
+          class="ui-btn ui-btn--sm"
+          :disabled="downloading"
+          :title="downloadTitle"
+          :aria-label="downloadTitle"
+          :data-testid="`bk-download-${book.id}`"
+          @click="emit('download', book)"
+        >
+          {{ downloading ? '下载中…' : '下载' }}
         </button>
         <span class="bk-recent">{{ recentLabel }}</span>
       </div>
@@ -315,6 +340,8 @@ const progressLabel = computed(() =>
 .bk-actions {
   display: flex;
   align-items: center;
+  /* 加了「下载」后三个按钮 + 右侧时间在窄卡片里可能放不下，允许换行兜底 */
+  flex-wrap: wrap;
   gap: 6px;
   margin-top: auto;
 }

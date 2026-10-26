@@ -13,7 +13,7 @@
     "order": 10,
     "entry": "/bookdata/daodejing/index.html",
     "size": 347386,
-    "updatedAt": "2026-10-13T12:06:57.081Z",
+    "updatedAt": "2026-10-22T00:57:29.295Z",
     "hasMeta": true,
     "source": "static"
   },
@@ -31,7 +31,7 @@
     "order": 20,
     "entry": "/bookdata/sunzibingfa/index.html",
     "size": 228453,
-    "updatedAt": "2026-10-13T12:06:57.103Z",
+    "updatedAt": "2026-10-22T00:57:29.348Z",
     "hasMeta": true,
     "source": "static"
   },
@@ -49,7 +49,7 @@
     "order": 30,
     "entry": "/bookdata/gushi/index.html",
     "size": 601745,
-    "updatedAt": "2026-10-13T12:06:57.089Z",
+    "updatedAt": "2026-10-22T00:57:29.304Z",
     "hasMeta": true,
     "source": "static"
   },
@@ -68,7 +68,7 @@
     "order": 40,
     "entry": "/bookdata/opencode-study/index.html",
     "size": 331142,
-    "updatedAt": "2026-10-13T12:06:57.096Z",
+    "updatedAt": "2026-10-22T00:57:29.342Z",
     "hasMeta": true,
     "source": "static"
   },
@@ -88,7 +88,7 @@
     "order": 50,
     "entry": "/bookdata/how-to-live-better/index.html",
     "size": 2834101,
-    "updatedAt": "2026-10-19T15:05:08.048Z",
+    "updatedAt": "2026-10-22T00:57:29.334Z",
     "hasMeta": true,
     "source": "static"
   }

@@ -13,7 +13,7 @@
  */
 import { listPublishedArticles } from '@/composables/blogCore'
 import { resolveImageRefs } from '@/composables/blogImages'
-import type { BlogArticle, BlogData } from '@/types'
+import type { BlogArticle, BlogData, BlogSharePost } from '@/types'
 
 export interface BlogPublicPost {
   slug: string
@@ -105,6 +105,46 @@ export function buildBlogPublic(
   }
 }
 
+/**
+ * 由单篇文章生成「共享发布」载荷（纯函数，复用 buildBlogPublic 的同款渲染 + 图片内联）。
+ * 与 BlogPublic 不同：额外带 `id`（去重/文件名依据）与 `authorName`（多作者预留）。
+ * 只含公开子集——绝不携带草稿/回收站/信封凭证（wechat.appSecret 等）。
+ */
+export function buildSharedPost(
+  blog: BlogData,
+  article: BlogArticle,
+  renderHtml: (md: string) => string,
+  authorName: string
+): BlogSharePost {
+  const categoryMap = new Map(blog.categories.map((c) => [c.id, c]))
+  const tagMap = new Map(blog.tags.map((t) => [t.id, t]))
+  const imageMap = new Map((blog.images ?? []).map((i) => [i.id, i.dataUrl]))
+  // 导出前把 `img:<id>` 短引用还原为 data URL，产出与详情页同源、自包含的正文
+  const contentMarkdown = resolveImageRefs(article.contentMarkdown, (id) => imageMap.get(id))
+  return {
+    id: article.id,
+    slug: article.slug,
+    title: article.title,
+    subtitle: article.subtitle,
+    excerpt: article.excerpt,
+    categoryId: article.categoryId,
+    categoryName: article.categoryId ? (categoryMap.get(article.categoryId)?.name ?? '未分类') : '未分类',
+    tagIds: article.tagIds,
+    tagNames: article.tagIds.map((id) => tagMap.get(id)?.name ?? '').filter(Boolean),
+    coverKind: article.coverKind,
+    coverToken: article.coverToken,
+    pinned: article.pinned,
+    readingMinutes: article.readingMinutes,
+    viewCount: article.viewCount,
+    createdAt: article.createdAt,
+    updatedAt: article.updatedAt,
+    publishedAt: article.publishedAt,
+    contentMarkdown,
+    contentHtml: renderHtml(contentMarkdown),
+    authorName
+  }
+}
+
 /** 浏览器端：把已构建的 BlogPublic 触发为文件下载（JSON） */
 function triggerDownload(filename: string, content: string, mime: string): void {
   const blob = new Blob([content], { type: mime })
@@ -134,7 +174,8 @@ export async function downloadBlogPublic(): Promise<void> {
       categories: store.categories,
       tags: store.tags,
       articles: store.articles,
-      images: store.images
+      images: store.images,
+      imageCategories: store.imageCategories
     },
     renderMarkdown
   )

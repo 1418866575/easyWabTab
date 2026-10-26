@@ -30,6 +30,11 @@ import BlogImagePicker from '@/components/blog/BlogImagePicker.vue'
 import { showConfirm, toastAlert } from '@/utils/dialog'
 // 模块级云同步：切走「博客后台」时先把未保存草稿落盘再上传
 import { registerModuleFlush } from '@/composables/useModuleSync'
+// 微信公众号发布（草稿箱）
+import { useWechatPublish } from '@/composables/useWechatPublish'
+import { useBlogSettingsDialog } from '@/composables/useBlogSettingsDialog'
+// 博客共享发布（单篇同步到服务器目录）：编辑器复用与列表页一致的 onShare 逻辑
+import { useBlogShare } from '@/composables/blogShare'
 
 const props = defineProps<{ articleId: string }>()
 const emit = defineEmits<{ close: [] }>()
@@ -54,7 +59,7 @@ const form = reactive({
 /** 快照：用于判断「有未保存改动」并据此提示 */
 let snapshot = ''
 const dirty = ref(false)
-const viewMode = ref<'edit' | 'split' | 'preview'>('edit')
+const viewMode = ref<'edit' | 'split' | 'preview'>('split')
 const publishedHtml = ref('')
 /** 右侧元数据抽屉开合状态：true 时向左滑出，false 时滑回右侧隐藏 */
 const sideOpen = ref(false)
@@ -67,6 +72,20 @@ function closeSide(): void {
 
 /** Markdown 语法帮助弹框开合 */
 const helpOpen = ref(false)
+
+/** 文中图片清单弹框开合 */
+const imageDialogOpen = ref(false)
+
+/**
+ * 从文中图弹框定位某张图：切到编辑视图让 textarea 挂载，关闭弹框后在正文选中其短引用，
+ * 用户即可在编辑区看到上下文（预览/分屏时弹框会遮住选区，故先切编辑）。
+ */
+async function openImageInText(id: string): Promise<void> {
+  if (viewMode.value === 'preview') viewMode.value = 'edit'
+  imageDialogOpen.value = false
+  await nextTick()
+  locateImageRef(id)
+}
 
 /** 常用 Markdown 语法示例：syntax 为原始写法，sample 用于渲染「效果」（图片项用 note 说明） */
 interface MdHelpItem {
@@ -94,8 +113,8 @@ const contentEl = ref<HTMLTextAreaElement | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 
 interface MdToolbarButton {
-  /** image = 选本地文件上传；library = 从图库选取（可多选） */
-  kind: MdBlockKind | 'image' | 'library'
+  /** image = 选本地文件上传；library = 从图库选取（可多选）；scroll-* = 滚动到编辑器顶/底 */
+  kind: MdBlockKind | 'image' | 'library' | 'scroll-top' | 'scroll-bottom'
   label: string
   title: string
   group: number
@@ -118,7 +137,9 @@ const MD_TOOLBAR: MdToolbarButton[] = [
   { kind: 'link', label: '链接', title: '插入链接（Ctrl/Cmd+K）', group: 3 },
   { kind: 'image', label: '图片', title: '插入图片（选择本地图片，存入图片库）', group: 3 },
   { kind: 'table', label: '表格', title: '插入表格', group: 3 },
-  { kind: 'hr', label: '分割线', title: '插入分割线', group: 3 }
+  { kind: 'hr', label: '分割线', title: '插入分割线', group: 3 },
+  { kind: 'scroll-top', label: '返回顶部', title: '滚动到编辑器顶部', group: 4 },
+  { kind: 'scroll-bottom', label: '返回底部', title: '滚动到编辑器底部', group: 4 }
 ]
 
 const toolbarGroups = computed(() => {
@@ -152,7 +173,20 @@ function onToolbarClick(b: MdToolbarButton): void {
     libraryOpen.value = true
     return
   }
+  if (b.kind === 'scroll-top' || b.kind === 'scroll-bottom') {
+    scrollEditor(b.kind === 'scroll-top' ? 'start' : 'end')
+    return
+  }
   void applyMd(b.kind)
+}
+
+/**
+ * 滚动到编辑器顶端/底端。页面级滚动容器是 .ba-content（见 BlogAdminView），
+ * scrollIntoView 会作用于最近的滚动祖先，无需在此硬编码容器类名。
+ */
+const rootEl = ref<HTMLElement | null>(null)
+function scrollEditor(block: 'start' | 'end'): void {
+  rootEl.value?.scrollIntoView({ behavior: 'smooth', block })
 }
 
 /** 正文快捷键：Ctrl/Cmd+B 加粗、+I 斜体、+K 链接 */
@@ -299,6 +333,28 @@ function pickCover(images: BlogImage[]): void {
 const article = computed(() => store.findArticle(props.articleId))
 const canRead = computed(() => article.value !== undefined)
 
+// ---------- 共享发布（单篇同步到服务器目录）----------
+const { share: doShare, unshare: doUnshare, sharingId } = useBlogShare()
+const isSharing = (): boolean => !!article.value && sharingId.value === article.value.id
+const shareLabel = (): string => (article.value?.sharedAt ? '取消共享' : '共享')
+
+async function onShare(): Promise<void> {
+  const a = article.value
+  if (!a) return
+  if (a.status !== 'published') {
+    toastAlert('仅已发布文章可共享到服务器', 'warning')
+    return
+  }
+  if (isSharing()) return
+  if (a.sharedAt) {
+    const r = await doUnshare(a)
+    toastAlert(r.ok ? '已取消共享' : r.error || '操作失败', r.ok ? 'success' : 'error')
+  } else {
+    const r = await doShare(a)
+    toastAlert(r.ok ? '已共享到服务器' : r.error || '操作失败', r.ok ? 'success' : 'error')
+  }
+}
+
 function fillFromArticle(): void {
   const a = article.value
   if (!a) return
@@ -429,15 +485,40 @@ function toggleTag(id: string): void {
 }
 
 // ---------- 发布 ----------
-async function handlePublish(audit = false): Promise<void> {
+async function handlePublish(): Promise<void> {
   await saveDraft(true)
-  const res = audit ? await store.submitForReview(props.articleId) : await store.publishArticle(props.articleId)
+  const res = await store.publishArticle(props.articleId)
   if (!res.ok) {
     const detail = res.errors && res.errors.length > 0 ? res.errors.join('；') : ''
     toastAlert(detail || '发布失败', 'error')
     return
   }
-  toastAlert(audit ? '已提交，等待审核' : '文章已发布', 'success')
+  toastAlert('文章已发布', 'success')
+}
+
+// ---------- 发布到微信公众号草稿箱 ----------
+const wechat = useWechatPublish()
+const blogSettings = useBlogSettingsDialog()
+
+async function handlePublishWechat(): Promise<void> {
+  // 先把未保存改动落库，保证发出去的是最新正文（图片库本身即时入库，无需等保存）
+  await saveDraft(true)
+  const ok = await wechat.publish({
+    title: form.title.trim(),
+    digest: form.excerpt.trim(),
+    contentMarkdown: form.contentMarkdown,
+    coverImageId: form.coverImageId.trim() || undefined,
+    // 图片库 id → dataUrl（与预览同一来源）
+    resolveImage: (id) => store.imageUrlById.get(id)
+  })
+  if (ok) {
+    toastAlert('已发布到公众号草稿箱', 'success')
+  } else if (wechat.notConfigured.value) {
+    // 未配置凭证：引导去博客设置页「微信公众号」
+    blogSettings.openBlogSettings('wechat')
+  } else {
+    toastAlert(wechat.error.value || '发布失败', 'error')
+  }
 }
 
 // ---------- 关闭（有未保存改动时先问） ----------
@@ -456,7 +537,7 @@ async function regenerateSlug(): Promise<void> {
 </script>
 
 <template>
-  <section v-if="canRead" class="be">
+  <section v-if="canRead" ref="rootEl" class="be">
     <!-- 顶部：视图切换 + 文章设置 -->
     <header class="be-head">
       <div class="be-view-switch" role="group" aria-label="编辑器视图">
@@ -498,6 +579,75 @@ async function regenerateSlug(): Promise<void> {
     <div class="be-body">
       <!-- 左：正文 -->
       <div class="be-main">
+        <!-- Markdown 工具栏：置于标题上方；向下滚动时相对 .ba-content 吸顶（sticky）。
+             右上角为底部操作条同款快捷按钮（保存草稿 / 发布 / 发布到公众号，同一 handler 与状态）。 -->
+        <div v-if="viewMode !== 'preview'" class="be-md-toolbar" role="toolbar" aria-label="Markdown 编辑工具栏">
+          <div class="be-md-groups">
+            <template v-for="grp in toolbarGroups" :key="grp.group">
+              <span class="be-md-sep" aria-hidden="true"></span>
+              <div class="be-md-group">
+                <button
+                  v-for="b in grp.items"
+                  :key="b.kind"
+                  type="button"
+                  class="be-md-btn"
+                  :title="b.title"
+                  :aria-label="b.title"
+                  :data-testid="`blog-editor-md-${b.kind}`"
+                  @click="onToolbarClick(b)"
+                >
+                  {{ b.label }}
+                </button>
+              </div>
+            </template>
+          </div>
+          <!-- 快捷操作：与底部操作条同文案/同状态/同点击行为；底部按钮保留不变 -->
+          <div class="be-md-actions">
+            <button type="button" class="ui-btn ui-btn--sm" data-testid="blog-editor-save-top" @click="saveDraft()">保存草稿</button>
+            <!-- 文中图：列出正文已插入的所有图片，便于快速查看（预览/分屏均可用） -->
+            <button
+              type="button"
+              class="ui-btn ui-btn--sm"
+              :disabled="articleImages.length === 0"
+              :title="articleImages.length === 0 ? '正文还没有插入图片' : `查看文中图片（${articleImages.length}）`"
+              data-testid="blog-editor-images-top"
+              @click="imageDialogOpen = true"
+            >
+              文中图{{ articleImages.length ? `（${articleImages.length}）` : '' }}
+            </button>
+            <button
+              type="button"
+              class="ui-btn ui-btn--sm ui-btn--primary"
+              :disabled="visibleErrors.length > 0"
+              data-testid="blog-editor-publish-top"
+              @click="handlePublish()"
+            >
+              发布
+            </button>
+            <button
+              type="button"
+              class="ui-btn ui-btn--sm"
+              :class="{ 'ui-btn--primary': !wechat.publishing.value }"
+              :disabled="wechat.publishing.value || visibleErrors.length > 0"
+              data-testid="blog-editor-publish-wechat-top"
+              @click="handlePublishWechat()"
+            >
+              <span v-if="wechat.publishing.value" class="btn-spinner" aria-hidden="true"></span>
+              {{ wechat.publishing.value ? '发布中' : '发布到公众号' }}
+            </button>
+            <button
+              type="button"
+              class="ui-btn ui-btn--sm"
+              :class="{ 'ui-btn--primary': !isSharing() }"
+              :disabled="article?.status !== 'published' || isSharing()"
+              :title="article?.status !== 'published' ? '仅已发布可共享' : (article?.sharedAt ? '取消共享' : '共享到服务器')"
+              data-testid="blog-editor-share-top"
+              @click="onShare()"
+            >
+              {{ isSharing() ? '共享中…' : shareLabel() }}
+            </button>
+          </div>
+        </div>
         <input
           v-model="form.title"
           class="be-title-input"
@@ -505,48 +655,6 @@ async function regenerateSlug(): Promise<void> {
           aria-label="标题"
           data-testid="blog-editor-title"
         />
-        <!-- Markdown 工具栏：仅在非预览视图显示；图片按钮另走文件选择 -->
-        <div v-if="viewMode !== 'preview'" class="be-md-toolbar" role="toolbar" aria-label="Markdown 编辑工具栏">
-          <template v-for="grp in toolbarGroups" :key="grp.group">
-            <span class="be-md-sep" aria-hidden="true"></span>
-            <div class="be-md-group">
-              <button
-                v-for="b in grp.items"
-                :key="b.kind"
-                type="button"
-                class="be-md-btn"
-                :title="b.title"
-                :aria-label="b.title"
-                :data-testid="`blog-editor-md-${b.kind}`"
-                @click="onToolbarClick(b)"
-              >
-                {{ b.label }}
-              </button>
-            </div>
-          </template>
-        </div>
-        <!-- 文中图片缩略图条：正文用 img:<id> 短引用，这里把图片以缩略图显示出来 -->
-        <div v-if="viewMode !== 'preview' && articleImages.length" class="be-img-bar" data-testid="blog-editor-image-bar">
-          <span class="be-img-bar-title">文中图片</span>
-          <ul class="be-img-list">
-            <li v-for="img in articleImages" :key="img.id" class="be-img-item">
-              <button
-                type="button"
-                class="be-img-thumb"
-                :title="img.missing ? '图片缺失（可能未同步到本机）' : `定位：${img.name}`"
-                :data-testid="`blog-editor-image-${img.id}`"
-                @click="locateImageRef(img.id)"
-              >
-                <img v-if="!img.missing" :src="img.dataUrl" :alt="img.name" />
-                <span v-else class="be-img-missing">缺失</span>
-              </button>
-              <div class="be-img-meta">
-                <span class="be-img-name" :title="img.name">{{ img.name }}</span>
-                <button type="button" class="be-img-remove" title="从正文移除该图片" @click="removeImageRef(img.id)">移除</button>
-              </div>
-            </li>
-          </ul>
-        </div>
         <div class="be-editor-wrap" :class="`is-${viewMode}`">
           <textarea
             v-if="viewMode !== 'preview'"
@@ -700,17 +808,43 @@ async function regenerateSlug(): Promise<void> {
       <div class="be-foot-ops">
         <button type="button" class="ui-btn ui-btn--sm" @click="handleClose">关闭</button>
         <button type="button" class="ui-btn ui-btn--sm" data-testid="blog-editor-save" @click="saveDraft()">保存草稿</button>
-        <button type="button" class="ui-btn ui-btn--sm" @click="handlePublish(true)">提交审核</button>
         <button
           type="button"
           class="ui-btn ui-btn--sm ui-btn--primary"
           :disabled="visibleErrors.length > 0"
           data-testid="blog-editor-publish"
-          @click="handlePublish(false)"
+          @click="handlePublish()"
         >
           发布
         </button>
+        <button
+          type="button"
+          class="ui-btn ui-btn--sm"
+          :class="{ 'ui-btn--primary': !wechat.publishing.value }"
+          :disabled="wechat.publishing.value || visibleErrors.length > 0"
+          data-testid="blog-editor-publish-wechat"
+          @click="handlePublishWechat()"
+        >
+          <span v-if="wechat.publishing.value" class="btn-spinner" aria-hidden="true"></span>
+          {{ wechat.publishing.value ? '发布中' : '发布到公众号' }}
+        </button>
+        <button
+          type="button"
+          class="ui-btn ui-btn--sm"
+          :class="{ 'ui-btn--primary': !isSharing() }"
+          :disabled="article?.status !== 'published' || isSharing()"
+          :title="article?.status !== 'published' ? '仅已发布可共享' : (article?.sharedAt ? '取消共享' : '共享到服务器')"
+          data-testid="blog-editor-share"
+          @click="onShare()"
+        >
+          {{ isSharing() ? '共享中…' : shareLabel() }}
+        </button>
       </div>
+      <p v-if="wechat.publishing.value" class="be-hint" data-testid="blog-editor-wechat-status">
+        {{ wechat.progressMsg.value }}<span v-if="wechat.progressTotal.value">（{{ wechat.progressStep.value }}/{{ wechat.progressTotal.value }}）</span>
+      </p>
+      <p v-else-if="wechat.error.value" class="be-warn" data-testid="blog-editor-wechat-error">{{ wechat.error.value }}</p>
+      <p v-else-if="wechat.result.value" class="be-hint" data-testid="blog-editor-wechat-ok">✓ 已发布到公众号草稿箱</p>
     </footer>
 
     <!-- Markdown 语法帮助弹框 -->
@@ -723,6 +857,36 @@ async function regenerateSlug(): Promise<void> {
           <div v-if="item.sample" class="md-help-preview md-body" v-html="renderMarkdown(item.sample)"></div>
           <p v-else class="md-help-note">{{ item.note }}</p>
         </div>
+      </div>
+    </BaseDialog>
+
+    <!-- 文中图片清单弹框：列出正文所有已插入图片，便于快速查看/定位/移除 -->
+    <BaseDialog v-if="imageDialogOpen" :title="`文中图片（${articleImages.length}）`" width="720px" max-height="84vh" @close="imageDialogOpen = false">
+      <div class="img-dialog">
+        <p v-if="articleImages.length === 0" class="img-dialog-empty">正文还没有插入图片。点工具栏「图库」或「图片」即可插入。</p>
+        <ul v-else class="img-dialog-grid">
+          <li v-for="(img, idx) in articleImages" :key="img.id" class="img-dialog-card">
+            <button
+              type="button"
+              class="img-dialog-thumb"
+              :class="{ 'is-missing': img.missing }"
+              :title="img.missing ? '图片缺失（可能未同步到本机）' : `在正文定位：${img.name}`"
+              :data-testid="`blog-editor-dialog-image-${img.id}`"
+              @click="openImageInText(img.id)"
+            >
+              <img v-if="!img.missing" :src="img.dataUrl" :alt="img.name" />
+              <span v-else class="img-dialog-missing">缺失</span>
+            </button>
+            <div class="img-dialog-meta">
+              <span class="img-dialog-idx">第 {{ idx + 1 }} 张</span>
+              <span class="img-dialog-name" :title="img.name">{{ img.name }}</span>
+            </div>
+            <div class="img-dialog-ops">
+              <button type="button" class="img-dialog-op" title="在正文定位该图" @click="openImageInText(img.id)">定位</button>
+              <button type="button" class="img-dialog-op img-dialog-op--danger" title="从正文移除该图" @click="removeImageRef(img.id)">移除</button>
+            </div>
+          </li>
+        </ul>
       </div>
     </BaseDialog>
 
@@ -755,11 +919,17 @@ async function regenerateSlug(): Promise<void> {
   gap: 10px;
 }
 
+/* 顶行卡片：视图切换 + 文章设置 + 帮助 收进一张卡片，与下方 Markdown 工具栏卡片同款视觉 */
 .be-head {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  background-color: var(--color-bg-card, #ffffff);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.06));
 }
 
 .be-view-switch {
@@ -838,7 +1008,12 @@ async function regenerateSlug(): Promise<void> {
 }
 
 /* ===== Markdown 工具栏 ===== */
+/* 吸顶：相对滚动容器 .ba-content（BlogAdminView）；sticky 保留原占位，无布局跳动。
+   z-index 20：高于普通流内容，低于右侧设置抽屉(200)与弹框(300)。 */
 .be-md-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -847,6 +1022,25 @@ async function regenerateSlug(): Promise<void> {
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   background-color: var(--color-bg-card, #ffffff);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.06));
+}
+
+/* 工具栏左侧：原有 Markdown 按钮分组（包一层便于与右侧快捷操作分列两端） */
+.be-md-groups {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* 工具栏右侧快捷操作：与底部操作条同款按钮，窄屏独占一行右对齐 */
+.be-md-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
 }
 
 .be-md-group {
@@ -895,101 +1089,6 @@ async function regenerateSlug(): Promise<void> {
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   border: 0;
-}
-
-/* ===== 文中图片缩略图条 ===== */
-.be-img-bar {
-  display: flex;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px 10px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  background-color: var(--color-bg-card, #ffffff);
-}
-
-.be-img-bar-title {
-  flex: 0 0 auto;
-  padding-top: 4px;
-  color: var(--color-text-secondary, #64748b);
-  font-size: var(--font-size-xs, 12px);
-}
-
-.be-img-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.be-img-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  width: 96px;
-}
-
-.be-img-thumb {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 96px;
-  height: 64px;
-  padding: 0;
-  overflow: hidden;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 6px);
-  background-color: var(--color-bg-2, #f1f5f9);
-  cursor: pointer;
-}
-
-.be-img-thumb:hover {
-  border-color: var(--color-primary, #3b82f6);
-}
-
-.be-img-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.be-img-missing {
-  color: var(--color-text-muted, #94a3b8);
-  font-size: var(--font-size-xs, 12px);
-}
-
-.be-img-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4px;
-}
-
-.be-img-name {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: var(--color-text-secondary, #64748b);
-  font-size: var(--font-size-xs, 11px);
-}
-
-.be-img-remove {
-  flex: 0 0 auto;
-  padding: 0 4px;
-  border: none;
-  background: none;
-  color: var(--color-text-muted, #94a3b8);
-  font-size: var(--font-size-xs, 11px);
-  cursor: pointer;
-}
-
-.be-img-remove:hover {
-  color: var(--color-error, #ef4444);
 }
 
 .be-md,
@@ -1318,9 +1417,120 @@ async function regenerateSlug(): Promise<void> {
   font-size: var(--font-size-xs, 12px);
 }
 
+/* ===== 文中图片清单弹框 ===== */
+.img-dialog-empty {
+  margin: 0;
+  padding: 24px 8px;
+  text-align: center;
+  color: var(--color-text-muted, #94a3b8);
+  font-size: var(--font-size-sm, 13px);
+}
+
+.img-dialog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.img-dialog-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  background-color: var(--color-bg-card, #ffffff);
+}
+
+.img-dialog-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 96px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm, 6px);
+  background-color: var(--color-bg-2, #f1f5f9);
+  cursor: pointer;
+}
+
+.img-dialog-thumb:hover {
+  border-color: var(--color-primary, #3b82f6);
+}
+
+.img-dialog-thumb.is-missing {
+  cursor: default;
+}
+
+.img-dialog-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background-color: var(--color-bg-2, #f1f5f9);
+}
+
+.img-dialog-missing {
+  color: var(--color-text-muted, #94a3b8);
+  font-size: var(--font-size-sm, 13px);
+}
+
+.img-dialog-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.img-dialog-idx {
+  color: var(--color-text-muted, #94a3b8);
+  font-size: var(--font-size-xs, 11px);
+}
+
+.img-dialog-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--color-text, #0f172a);
+  font-size: var(--font-size-xs, 12px);
+}
+
+.img-dialog-ops {
+  display: flex;
+  gap: 6px;
+}
+
+.img-dialog-op {
+  flex: 1 1 auto;
+  padding: 4px 0;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm, 6px);
+  background-color: var(--color-bg-card, #ffffff);
+  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-xs, 12px);
+  cursor: pointer;
+}
+
+.img-dialog-op:hover {
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
+}
+
+.img-dialog-op--danger:hover {
+  color: var(--color-error, #ef4444);
+  border-color: var(--color-error, #ef4444);
+}
+
 @media (max-width: 768px) {
   .be-body { flex-direction: column; }
   .be-editor-wrap { flex-direction: column; min-height: 320px; }
+  /* 工具栏快捷操作窄屏独占一行，与底部操作条同款拉伸，避免溢出/重叠 */
+  .be-md-actions { width: 100%; margin-left: 0; justify-content: flex-end; }
+  .be-md-actions .ui-btn { flex: 1 1 auto; min-height: 44px; }
   .be-foot-ops { width: 100%; }
   .be-foot-ops .ui-btn { flex: 1 1 auto; min-height: 44px; }
 }

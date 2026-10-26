@@ -19,6 +19,7 @@ import {
 } from '@/composables/blogCore'
 import { useViewMode } from '@/composables/useViewMode'
 import { usePageSize } from '@/composables/usePageSize'
+import { useBlogShare } from '@/composables/blogShare'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '@/components/Icon.vue'
@@ -29,6 +30,7 @@ const emit = defineEmits<{ edit: [id: string]; create: [] }>()
 
 const store = useBlogStore()
 const vm = useViewMode()
+const { share: doShare, unshare: doUnshare, sharingId } = useBlogShare()
 
 // ---------- 筛选与排序 ----------
 // draft：绑定查询区输入控件；生效值：点击「查询」后才写入，用于实际过滤（与其它工作台一致）
@@ -177,6 +179,25 @@ async function togglePin(row: BlogArticle): Promise<void> {
   else toastAlert(row.pinned ? '已取消置顶' : '已置顶', 'success')
 }
 
+// ---------- 共享发布（单篇同步到服务器目录）----------
+const isSharing = (row: BlogArticle): boolean => sharingId.value === row.id
+const shareLabel = (row: BlogArticle): string => (row.sharedAt ? '取消共享' : '共享')
+
+async function onShare(row: BlogArticle): Promise<void> {
+  if (row.status !== 'published') {
+    toastAlert('仅已发布文章可共享到服务器', 'warning')
+    return
+  }
+  if (isSharing(row)) return
+  if (row.sharedAt) {
+    const r = await doUnshare(row)
+    toastAlert(r.ok ? '已取消共享' : r.error || '操作失败', r.ok ? 'success' : 'error')
+  } else {
+    const r = await doShare(row)
+    toastAlert(r.ok ? '已共享到服务器' : r.error || '操作失败', r.ok ? 'success' : 'error')
+  }
+}
+
 // ---------- 驳回弹框（不写原因不允许驳回，退回后作者在列表可直接看到原因） ----------
 const rejectRow = ref<BlogArticle | null>(null)
 const rejectReason = ref('')
@@ -296,6 +317,7 @@ function displayTime(row: BlogArticle): string {
           <template #default="{ row }">
             <div class="ba-cell-title">
               <span v-if="row.pinned" class="ba-pin" title="已置顶">置顶</span>
+              <span v-if="row.sharedAt" class="ba-shared" title="已共享到服务器">共享</span>
               <button type="button" class="ba-link" @click="emit('edit', row.id)">
                 {{ row.title || '（无标题）' }}
               </button>
@@ -334,6 +356,14 @@ function displayTime(row: BlogArticle): string {
           <template #default="{ row }">
             <el-button size="small" @click="emit('edit', row.id)">编辑</el-button>
             <el-button size="small" @click="togglePin(row)">{{ row.pinned ? '取消置顶' : '置顶' }}</el-button>
+            <el-button
+              size="small"
+              :disabled="row.status !== 'published' || isSharing(row)"
+              :title="row.status !== 'published' ? '仅已发布可共享' : (row.sharedAt ? '取消共享' : '共享到服务器')"
+              @click="onShare(row)"
+            >
+              {{ isSharing(row) ? '共享中…' : shareLabel(row) }}
+            </el-button>
             <el-button
               v-for="act in actionsOf(row)"
               :key="act.key"
@@ -378,6 +408,15 @@ function displayTime(row: BlogArticle): string {
             <span class="ba-cell-muted">{{ displayTime(row) }}</span>
             <div class="ba-card-ops">
               <button type="button" class="ba-mini" @click="emit('edit', row.id)">编辑</button>
+              <button
+                type="button"
+                class="ba-mini"
+                :disabled="row.status !== 'published'"
+                :title="row.status !== 'published' ? '仅已发布可共享' : (row.sharedAt ? '取消共享' : '共享到服务器')"
+                @click="onShare(row)"
+              >
+                {{ isSharing(row) ? '共享中…' : shareLabel(row) }}
+              </button>
               <button
                 v-for="act in actionsOf(row)"
                 :key="act.key"
@@ -520,6 +559,15 @@ html.dark .ba-query {
   border-radius: 999px;
   background-color: var(--color-warning-soft, #fef3c7);
   color: var(--color-warning, #b45309);
+  font-size: var(--font-size-xs, 11px);
+  line-height: 18px;
+}
+
+.ba-shared {
+  padding: 0 6px;
+  border-radius: 999px;
+  background-color: var(--color-primary-soft, #eff6ff);
+  color: var(--color-primary, #3b82f6);
   font-size: var(--font-size-xs, 11px);
   line-height: 18px;
 }

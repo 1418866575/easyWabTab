@@ -28,6 +28,14 @@ npm-debug.log*
 .env.local
 .env.*.local
 
+# 微信公众号凭证（AppSecret 落盘文件，绝不可入库）
+config/wechat.env
+# 博客共享发布凭证（目录路径 + 写令牌，绝不可入库）
+config/blog-share.env
+
+# 博客共享发布运行时目录（Node 直写，非源码）
+/blog-share/
+
 # Test files
 coverage
 *.test.js

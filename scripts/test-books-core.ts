@@ -8,13 +8,17 @@ import assert from 'node:assert/strict'
 import {
   BOOK_DEFAULT_CATEGORY,
   BOOK_LARGE_ORDER,
+  BOOK_SUBPAGE_LIMIT,
   BOOKS_RECENT_LIMIT,
   BOOKS_UPLOAD_MAX_BYTES,
   type BookItem,
   type BookSort,
+  bookDirOf,
+  bookEntryName,
   categoryCounts,
   categoryList,
   checkUploadFile,
+  extractBookSubPages,
   filterBooks,
   formatClicks,
   formatProgress,
@@ -22,6 +26,7 @@ import {
   formatSize,
   formatTotalSize,
   matchKeyword,
+  normalizeSubPageRef,
   normalizeBook,
   normalizeBookmark,
   normalizeBooks,
@@ -700,6 +705,103 @@ test('normalizeUserBookmark：缺 id / ts 自动补', () => {
   const b = normalizeUserBookmark({ title: 'x' })
   a.ok(!!b && typeof b.id === 'string' && b.id.length > 0)
   a.ok(!!b && Number.isFinite(b.ts))
+})
+
+// ============ 下载：二级页面解析 ============
+
+test('bookDirOf / bookEntryName：拆出入口目录与文件名', () => {
+  a.equal(bookDirOf('/bookdata/gushi/index.html'), '/bookdata/gushi/')
+  a.equal(bookEntryName('/bookdata/gushi/index.html'), 'index.html')
+  a.equal(bookDirOf('index.html'), '')
+  // 地址为空时退回 index.html，避免后面拼出空文件名
+  a.equal(bookEntryName(''), 'index.html')
+})
+
+test('normalizeSubPageRef：相对 html 链接收下（含 ./ 与子目录）', () => {
+  a.equal(normalizeSubPageRef('chapter-01.html'), 'chapter-01.html')
+  a.equal(normalizeSubPageRef('./chapter-01.html'), 'chapter-01.html')
+  a.equal(normalizeSubPageRef('part/02.html'), 'part/02.html')
+  a.equal(normalizeSubPageRef('  chapter-01.HTM  '), 'chapter-01.HTM')
+})
+
+test('normalizeSubPageRef：削掉锚点与查询串再判定', () => {
+  a.equal(normalizeSubPageRef('chapter-01.html#top'), 'chapter-01.html')
+  a.equal(normalizeSubPageRef('chapter-01.html?from=idx'), 'chapter-01.html')
+})
+
+test('normalizeSubPageRef：外链 / 锚点 / 伪协议一律不算子页', () => {
+  a.equal(normalizeSubPageRef('#chapter-1'), null)
+  a.equal(normalizeSubPageRef('mailto:a@b.com'), null)
+  a.equal(normalizeSubPageRef('javascript:void(0)'), null)
+  a.equal(normalizeSubPageRef('https://example.com/x.html'), null)
+  a.equal(normalizeSubPageRef('//cdn.example.com/x.html'), null)
+  a.equal(normalizeSubPageRef('data:text/html,x'), null)
+  a.equal(normalizeSubPageRef(''), null)
+})
+
+test('normalizeSubPageRef：站点绝对路径只有落在本书目录下才算', () => {
+  const opts = { dirPrefix: '/bookdata/gushi/' }
+  a.equal(normalizeSubPageRef('/bookdata/gushi/chapter-01.html', opts), 'chapter-01.html')
+  // 别人的书 / 站里其它页面，不能因为同源就一起拖下来
+  a.equal(normalizeSubPageRef('/bookdata/sunzi/x.html', opts), null)
+  a.equal(normalizeSubPageRef('/index.html', opts), null)
+  // 没给目录前缀时绝对路径一律不收
+  a.equal(normalizeSubPageRef('/bookdata/gushi/chapter-01.html'), null)
+})
+
+test('normalizeSubPageRef：跳出本书目录的 ../ 一律丢弃', () => {
+  a.equal(normalizeSubPageRef('../other/x.html'), null)
+  a.equal(normalizeSubPageRef('a/../../x.html'), null)
+})
+
+test('normalizeSubPageRef：入口页自身与 index 页不重复打包', () => {
+  a.equal(normalizeSubPageRef('index.html'), null)
+  a.equal(normalizeSubPageRef('index.htm'), null)
+  // 入口不是 index 时，入口页本身也要排除
+  a.equal(normalizeSubPageRef('main.html', { entryName: 'main.html' }), null)
+})
+
+test('normalizeSubPageRef：非 html 扩展名不收', () => {
+  a.equal(normalizeSubPageRef('style.css'), null)
+  a.equal(normalizeSubPageRef('cover.png'), null)
+  a.equal(normalizeSubPageRef('app.js'), null)
+})
+
+test('extractBookSubPages：按出现顺序去重，三种引号写法都认', () => {
+  const html = [
+    '<a href="chapter-01.html">1</a>',
+    "<a href='chapter-02.html'>2</a>",
+    '<a href=chapter-03.html>3</a>',
+    '<a href="chapter-01.html">重复</a>',
+    '<a href="chapter-04.html#top">4</a>',
+    '<a href="style.css">不是页面</a>'
+  ].join('')
+  a.deepEqual(extractBookSubPages(html), [
+    'chapter-01.html',
+    'chapter-02.html',
+    'chapter-03.html',
+    'chapter-04.html'
+  ])
+})
+
+test('extractBookSubPages：站点绝对路径按本书目录折算', () => {
+  const html = '<a href="/bookdata/gushi/c1.html">1</a><a href="/other/c2.html">2</a>'
+  a.deepEqual(
+    extractBookSubPages(html, { dirPrefix: '/bookdata/gushi/' }),
+    ['c1.html']
+  )
+})
+
+test('extractBookSubPages：空内容 / 无链接返回空数组', () => {
+  a.deepEqual(extractBookSubPages(''), [])
+  a.deepEqual(extractBookSubPages('<html><body>正文</body></html>'), [])
+})
+
+test('extractBookSubPages：limit 生效（挡住超大目录页）', () => {
+  const html = '<a href="p1.html">1</a><a href="p2.html">2</a><a href="p3.html">3</a>'
+  a.equal(extractBookSubPages(html, { limit: 2 }).length, 2)
+  // 不给 limit 时用默认上限，且不会超过它
+  a.ok(BOOK_SUBPAGE_LIMIT > 0)
 })
 
 // ============ runner ============

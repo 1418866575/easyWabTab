@@ -33,14 +33,18 @@ import {
   collectImageUsage,
   filterImages,
   sortImages,
-  formatBytes
+  formatBytes,
+  normalizeImageCategory,
+  sortImageCategories,
+  nextImageCategoryOrder,
+  filterImagesByCategory
 } from '../src/composables/blogCore.ts'
 import { imageRef, parseImageRefs, resolveImageRefs, removeImageRefs } from '../src/composables/blogImages.ts'
 import { mergeBlogEnvelope, mergeBlogPrefsEnvelope, normalizeBlogFrontPrefs } from '../src/composables/blogSyncCore.ts'
 import { buildBlogPublic } from '../src/composables/blogStaticExport.ts'
 import { applyMarkdown, isAllowedDataImage } from '../src/composables/blogEditorMd.ts'
 import type { ArticleStatus, BlogArticle, BlogData, BlogFrontPrefs, BlogFrontSyncData, BlogImage, BlogRecentItem, BlogSyncData } from '../src/types/index.ts'
-import { BLOG_RECENT_LIMIT } from '../src/types/index.ts'
+import { BLOG_RECENT_LIMIT, BLOG_IMAGE_CATEGORY_ALL, BLOG_IMAGE_CATEGORY_NONE } from '../src/types/index.ts'
 
 const tests: { name: string; fn: () => void }[] = []
 function test(name: string, fn: () => void) {
@@ -94,7 +98,8 @@ function mkEnvelope(blog: Partial<BlogData>, updatedAt = '2026-01-01T00:00:00.00
       categories: blog.categories ?? [],
       tags: blog.tags ?? [],
       articles: blog.articles ?? [],
-      images: blog.images ?? []
+      images: blog.images ?? [],
+      imageCategories: blog.imageCategories ?? []
     }
   }
 }
@@ -651,18 +656,128 @@ test('sortImages 三种排序', () => {
   a.deepEqual(sortImages(list, 'name-asc').map(i => i.id), ['bi_2', 'bi_1'])
 })
 
-test('collectImageUsage 统计每张图被多少文章引用', () => {
+test('collectImageUsage 统计每张图被多少文章引用（正文）', () => {
   const imgs = [mkImage('bi_1', 'a', '2026-01-01T00:00:00.000Z'), mkImage('bi_2', 'b', '2026-01-01T00:00:00.000Z')]
   const articles = [
     mkArticle({ id: 'ba_1', contentMarkdown: `![x](${imageRef('bi_1')})` }),
     mkArticle({ id: 'ba_2', contentMarkdown: `![x](${imageRef('bi_1')}) ![y](${imageRef('bi_2')})` })
   ]
   const usage = collectImageUsage(imgs, articles)
-  a.equal(usage.get('bi_1'), 2)
-  a.equal(usage.get('bi_2'), 1)
+  a.equal(usage.get('bi_1')?.count, 2)
+  a.deepEqual(usage.get('bi_1')?.articleIds, ['ba_1', 'ba_2'])
+  a.equal(usage.get('bi_2')?.count, 1)
+  a.deepEqual(usage.get('bi_2')?.articleIds, ['ba_2'])
   // 同一篇文章内重复引用同一张图只算一次
   const dup = collectImageUsage(imgs, [mkArticle({ id: 'ba_3', contentMarkdown: `![x](${imageRef('bi_1')})![y](${imageRef('bi_1')})` })])
-  a.equal(dup.get('bi_1'), 1)
+  a.equal(dup.get('bi_1')?.count, 1)
+  a.deepEqual(dup.get('bi_1')?.articleIds, ['ba_3'])
+  // 未被任何文章引用：count 为 0、articleIds 为空（图库里这张的删除按钮可点）
+  const unused = collectImageUsage([mkImage('bi_7', 'unused', '2026-01-01T00:00:00.000Z')], articles)
+  a.equal(unused.get('bi_7')?.count, 0)
+  a.deepEqual(unused.get('bi_7')?.articleIds, [])
+})
+
+test('collectImageUsage 把「仅作封面」的图片也计为已引用（早期版本只扫正文会漏判）', () => {
+  const imgs = [mkImage('bi_1', 'cover', '2026-01-01T00:00:00.000Z')]
+  const usage = collectImageUsage(imgs, [
+    mkArticle({ id: 'ba_1', contentMarkdown: '正文里没有图', coverImageId: 'bi_1' })
+  ])
+  a.equal(usage.get('bi_1')?.count, 1)
+  a.deepEqual(usage.get('bi_1')?.articleIds, ['ba_1'])
+  a.equal(usage.get('bi_1')?.coverCount, 1)
+  // 同一篇既作封面又出现在正文：仍只算 1 篇文章，coverCount 记 1
+  const both = collectImageUsage(imgs, [
+    mkArticle({ id: 'ba_2', contentMarkdown: `![x](${imageRef('bi_1')})`, coverImageId: 'bi_1' })
+  ])
+  a.equal(both.get('bi_1')?.count, 1)
+  a.equal(both.get('bi_1')?.coverCount, 1)
+})
+
+test('normalizeImage 解析并保留 categoryId（空串视为未分类）', () => {
+  a.equal(normalizeImage({ id: 'bi_1', dataUrl: PNG, categoryId: 'bic_1' })?.categoryId, 'bic_1')
+  a.equal(normalizeImage({ id: 'bi_2', dataUrl: PNG, categoryId: '   ' })?.categoryId, undefined)
+  a.equal(normalizeImage({ id: 'bi_3', dataUrl: PNG })?.categoryId, undefined)
+})
+
+test('normalizeImageCategory 兜底：名称截断 30 字、缺失 order 用下标、空名回落', () => {
+  const c = normalizeImageCategory({ id: 'bic_1', name: '封面图' }, 0)
+  a.equal(c.id, 'bic_1')
+  a.equal(c.name, '封面图')
+  a.equal(c.order, 0)
+  const long = normalizeImageCategory({ name: 'x'.repeat(40) }, 2)
+  a.equal(long.name.length, 30)
+  a.equal(long.order, 2)
+  a.equal(normalizeImageCategory({}, 5).name, '未命名分类')
+  a.ok(normalizeImageCategory({}, 0).id.startsWith('bic_'))
+})
+
+test('sortImageCategories 按 order 升序，同 order 用创建时间兜底', () => {
+  const list = [
+    { id: 'bic_b', name: 'b', order: 1, createdAt: '2026-01-02T00:00:00.000Z', updatedAt: 'x' },
+    { id: 'bic_a', name: 'a', order: 0, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: 'x' },
+    { id: 'bic_c', name: 'c', order: 1, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: 'x' }
+  ]
+  a.deepEqual(sortImageCategories(list).map(c => c.id), ['bic_a', 'bic_c', 'bic_b'])
+  a.deepEqual(sortImageCategories([]), [])
+})
+
+test('nextImageCategoryOrder 取最大 order + 1（空列表为 0）', () => {
+  a.equal(nextImageCategoryOrder([]), 0)
+  a.equal(
+    nextImageCategoryOrder([
+      { id: 'a', name: 'a', order: 3, createdAt: 'x', updatedAt: 'x' },
+      { id: 'b', name: 'b', order: 7, createdAt: 'x', updatedAt: 'x' }
+    ]),
+    8
+  )
+})
+
+test('filterImagesByCategory 全部 / 未分类 / 指定分类', () => {
+  const list = [
+    { id: 'bi_1', name: 'a', dataUrl: PNG, categoryId: 'bic_1', createdAt: 'x' },
+    { id: 'bi_2', name: 'b', dataUrl: PNG, createdAt: 'x' }
+  ]
+  a.equal(filterImagesByCategory(list, BLOG_IMAGE_CATEGORY_ALL).length, 2)
+  a.deepEqual(filterImagesByCategory(list, BLOG_IMAGE_CATEGORY_NONE).map(i => i.id), ['bi_2'])
+  a.deepEqual(filterImagesByCategory(list, 'bic_1').map(i => i.id), ['bi_1'])
+  // 指向「已被删除的分类」的图片：既不属于该分类，也不应该被算作未分类
+  a.equal(filterImagesByCategory(list, 'bic_deleted').length, 0)
+})
+
+test('normalizeBlogData 兜底 imageCategories（缺失为 []、按 id 去重）', () => {
+  a.deepEqual(normalizeBlogData({}).imageCategories, [])
+  a.deepEqual(normalizeBlogData(null).imageCategories, [])
+  const data = normalizeBlogData({
+    imageCategories: [
+      { id: 'bic_1', name: '封面图', order: 0 },
+      { id: 'bic_1', name: '重复项', order: 1 },
+      { name: '无 id', order: 2 }
+    ]
+  })
+  a.equal(data.imageCategories.length, 2)
+  a.equal(data.imageCategories[0].id, 'bic_1')
+  a.equal(data.imageCategories[0].name, '封面图')
+})
+
+test('mergeBlogEnvelope 合并图库分类（按 id 并集；远端为旧版信封时保留本地）', () => {
+  const cat = (id: string, name: string, order: number) => ({
+    id,
+    name,
+    order,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z'
+  })
+  const merged = mergeBlogEnvelope(
+    mkEnvelope({ imageCategories: [cat('bic_1', '本地分类', 0)] }),
+    mkEnvelope({ imageCategories: [cat('bic_2', '远端分类', 1)] })
+  )
+  a.deepEqual(merged.blog.imageCategories.map(c => c.id).sort(), ['bic_1', 'bic_2'])
+  // 云端是旧版信封（没有 imageCategories 字段）→ 本地分类必须保留，不能被清空
+  const kept = mergeBlogEnvelope(
+    mkEnvelope({ imageCategories: [cat('bic_1', '本地分类', 0)] }),
+    mkEnvelope({})
+  )
+  a.deepEqual(kept.blog.imageCategories.map(c => c.id), ['bic_1'])
 })
 
 test('formatBytes 易读体积', () => {

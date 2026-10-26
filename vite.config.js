@@ -7,6 +7,7 @@ import { URL } from 'node:url';
 import { Buffer } from 'node:buffer';
 import os from 'node:os';
 import fs from 'node:fs';
+import http from 'node:http';
 
 /**
  * 取「本进程实际可用内存上限」，取四者最小值：
@@ -209,6 +210,29 @@ async function handleWebdavProxy(req, res) {
   });
 }
 
+/**
+ * 博客共享发布转发（dev/preview）：把 /api/blog-share 与 /blog-share/* 转发到同机 Node（16718）。
+ * 该 Node 服务既处理写入（POST/DELETE）也兜底静态读取；生产由 nginx 接管，无需此转发。
+ */
+function forwardBlogShare(req, res) {
+  const opts = {
+    hostname: '127.0.0.1',
+    port: 16718,
+    path: req.url,
+    method: req.method,
+    headers: req.headers
+  };
+  const up = http.request(opts, (upRes) => {
+    res.writeHead(upRes.statusCode || 502, upRes.headers);
+    upRes.pipe(res);
+  });
+  up.on('error', () => {
+    res.writeHead(502, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify({ ok: false, error: 'blog-share service down (start scripts/serve-with-rewrites.cjs)' }));
+  });
+  req.pipe(up);
+}
+
 export default defineConfig({
     plugins: [
       vue(),
@@ -244,6 +268,28 @@ export default defineConfig({
             next();
           });
         }
+      },
+      // 博客共享发布：dev/preview 阶段把 /api/blog-share 写入 与 /blog-share/* 静态读取
+      // 转发到同机 Node 服务（scripts/serve-with-rewrites.cjs，端口 16718）。
+      // 生产环境这些路径由 nginx 直接处理，不依赖此转发。
+      {
+        name: 'blog-share-forward',
+        configureServer(server) {
+          server.middlewares.use((req, res, next) => {
+            if (req.url && (req.url.startsWith('/api/blog-share') || req.url.startsWith('/blog-share/'))) {
+              return forwardBlogShare(req, res);
+            }
+            next();
+          });
+        },
+        configurePreviewServer(server) {
+          server.middlewares.use((req, res, next) => {
+            if (req.url && (req.url.startsWith('/api/blog-share') || req.url.startsWith('/blog-share/'))) {
+              return forwardBlogShare(req, res);
+            }
+            next();
+          });
+        }
       }
     ],
     resolve: {
@@ -252,7 +298,14 @@ export default defineConfig({
         }
     },
     server: {
-        port: 16718
+        port: 16718,
+        // 微信公众号代理（scripts/wechat-proxy.cjs，端口 16721）dev 转发
+        proxy: {
+            '/api/wechat': {
+                target: 'http://127.0.0.1:16721',
+                changeOrigin: true
+            }
+        }
     },
     build: {
         // 手动分包：原先 vendor 与业务代码混成单个 ~1.85MB chunk，

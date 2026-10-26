@@ -8,16 +8,19 @@
  *
  * 分区切换用本地 active 状态；弹框由父级 v-if 控制，关闭即卸载，下次打开回到默认分区。
  */
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '@/components/Icon.vue'
 import BlogSettingsPanel from './BlogSettingsPanel.vue'
 import BlogCategories from './BlogCategories.vue'
 import BlogTags from './BlogTags.vue'
+import BlogImageCategories from './BlogImageCategories.vue'
+import WechatConfigPanel from './WechatConfigPanel.vue'
+import { useBlogSettingsDialog } from '@/composables/useBlogSettingsDialog'
 
 const emit = defineEmits<{ close: [] }>()
 
-type SectionKey = 'settings' | 'categories' | 'tags'
+type SectionKey = 'settings' | 'categories' | 'tags' | 'gallery' | 'wechat'
 
 interface NavItem {
   key: SectionKey
@@ -28,10 +31,19 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { key: 'settings', label: '博客设置', icon: 'cog' },
   { key: 'categories', label: '分类管理', icon: 'folder' },
-  { key: 'tags', label: '标签管理', icon: 'tag' }
+  { key: 'tags', label: '标签管理', icon: 'tag' },
+  { key: 'gallery', label: '图库设置', icon: 'image' },
+  { key: 'wechat', label: '微信公众号', icon: 'email' }
 ]
 
+const { consumeBlogSettingsTarget } = useBlogSettingsDialog()
 const active = ref<SectionKey>('settings')
+
+// 若由「发布」等入口定位打开（如未配置时跳转到微信公众号），挂载后定位到目标分区
+onMounted(() => {
+  const target = consumeBlogSettingsTarget()
+  if (target) active.value = target
+})
 
 function labelOf(key: SectionKey): string {
   return NAV_ITEMS.find(i => i.key === key)?.label ?? ''
@@ -39,7 +51,7 @@ function labelOf(key: SectionKey): string {
 </script>
 
 <template>
-  <BaseDialog class="bsd-dialog" title="博客设置" width="920px" max-height="86vh" body-layout="flex-column" @close="emit('close')">
+  <BaseDialog class="bsd-dialog" title="博客设置" width="920px" height="60vh" max-height="86vh" body-layout="flex-column" @close="emit('close')">
     <template #title><Icon name="cog" /> 博客设置</template>
 
     <div class="bsd-body">
@@ -74,6 +86,8 @@ function labelOf(key: SectionKey): string {
           <BlogSettingsPanel v-if="active === 'settings'" />
           <BlogCategories v-else-if="active === 'categories'" />
           <BlogTags v-else-if="active === 'tags'" />
+          <BlogImageCategories v-else-if="active === 'gallery'" />
+          <WechatConfigPanel v-else-if="active === 'wechat'" />
         </div>
       </section>
     </div>

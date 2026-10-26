@@ -7,7 +7,8 @@
  */
 import { defineStore } from 'pinia'
 import { computed, ref, toRaw } from 'vue'
-import type { ArticleStatus, BlogArticle, BlogCategory, BlogData, BlogImage, BlogSettings, BlogSort, BlogTag } from '@/types'
+import type { ArticleStatus, BlogArticle, BlogCategory, BlogData, BlogImage, BlogImageCategory, BlogSettings, BlogSort, BlogTag, BlogWechatConfig } from '@/types'
+import { BLOG_IMAGE_CATEGORY_NONE } from '@/types'
 import {
   collectImageUsage,
   collectPublishErrors,
@@ -21,14 +22,15 @@ import {
   normalizeBlogData,
   newId,
   nextStatus,
+  nextImageCategoryOrder,
   nowIso,
   slugify,
+  sortImageCategories,
   makeUniqueSlug,
   defaultSlug,
   type ArticleAction
 } from '../composables/blogCore'
 import { idbGet, idbPut } from '../composables/useIdb'
-import { removeImageRefs } from '../composables/blogImages'
 import { markDirty } from '@/composables/useCloudSync'
 
 export const useBlogStore = defineStore('blog', () => {
@@ -38,6 +40,10 @@ export const useBlogStore = defineStore('blog', () => {
   const articles = ref<BlogArticle[]>([])
   /** 正文内联图片库：base64 存此，正文只留 `img:<id>` 短引用 */
   const images = ref<BlogImage[]>([])
+  /** 图库分类（扁平一级，仅供后台筛选/归类，不参与前台展示） */
+  const imageCategories = ref<BlogImageCategory[]>([])
+  /** 微信公众号凭证（明文随 blog.json 同步；多租户隔离靠前端按 AppID 调用） */
+  const wechat = ref<BlogWechatConfig | undefined>(undefined)
   const loaded = ref(false)
 
   // ==================== 持久化 ====================
@@ -50,6 +56,8 @@ export const useBlogStore = defineStore('blog', () => {
       tags.value = norm.tags
       articles.value = norm.articles
       images.value = norm.images
+      imageCategories.value = norm.imageCategories
+      wechat.value = norm.wechat
     } catch (e) {
       console.error('[Blog] load failed', e)
       const empty = emptyBlogData()
@@ -58,6 +66,7 @@ export const useBlogStore = defineStore('blog', () => {
       tags.value = empty.tags
       articles.value = empty.articles
       images.value = empty.images
+      imageCategories.value = empty.imageCategories
     } finally {
       loaded.value = true
     }
@@ -76,7 +85,9 @@ export const useBlogStore = defineStore('blog', () => {
         categories: JSON.parse(JSON.stringify(categories.value)),
         tags: JSON.parse(JSON.stringify(tags.value)),
         articles: JSON.parse(JSON.stringify(articles.value)),
-        images: JSON.parse(JSON.stringify(images.value))
+        images: JSON.parse(JSON.stringify(images.value)),
+        imageCategories: JSON.parse(JSON.stringify(imageCategories.value)),
+        wechat: wechat.value ? JSON.parse(JSON.stringify(wechat.value)) : undefined
       })
       markDirty()
     } catch (e) {
@@ -131,8 +142,35 @@ export const useBlogStore = defineStore('blog', () => {
   /** 图片 id → data URL 映射（渲染前把正文 `img:<id>` 短引用还原为真实图片） */
   const imageUrlById = computed(() => new Map(images.value.map(i => [i.id, i.dataUrl] as const)))
 
-  /** 图片 id → 引用它的文章数（图库展示「被 N 篇引用」、删除前确认） */
+  /** 图片 id → 被引用详情（图库卡片文案 + 删除限制的依据） */
   const imageUsage = computed(() => collectImageUsage(images.value, articles.value))
+
+  /** 图库分类（按 order 排好序，供设置面板与筛选入口使用） */
+  const sortedImageCategories = computed(() => sortImageCategories(imageCategories.value))
+
+  /**
+   * 分类 id → 该分类下的图片数；键 'uncategorized' 专门表示「未分类」，
+   * 与真实分类 id（'bic_' 前缀）天然不冲突，筛选入口可统一用一张表取值。
+   */
+  const imageCategoryCounts = computed(() => {
+    const m = new Map<string, number>()
+    let none = 0
+    for (const img of images.value) {
+      if (!img.categoryId) {
+        none += 1
+        continue
+      }
+      m.set(img.categoryId, (m.get(img.categoryId) ?? 0) + 1)
+    }
+    m.set(BLOG_IMAGE_CATEGORY_NONE, none)
+    return m
+  })
+
+  /** 图库分类名（无 id、或分类已被删除 → 「未分类」） */
+  function imageCategoryName(id?: string): string {
+    if (!id) return '未分类'
+    return imageCategories.value.find(c => c.id === id)?.name ?? '未分类'
+  }
 
   // ==================== 文章 CRUD ====================
 
@@ -483,6 +521,26 @@ export const useBlogStore = defineStore('blog', () => {
     await saveBlog()
   }
 
+  // ==================== 微信公众号凭证 ====================
+
+  /** 是否已配置（AppID 与 AppSecret 均非空） */
+  const wechatConfigured = computed((): boolean => !!(wechat.value?.appId && wechat.value?.appSecret))
+
+  /**
+   * 保存微信公众号凭证（明文写入 blog 数据；随 blog.json 云同步信封在多设备间同步）。
+   * 调用方负责先做格式校验。
+   */
+  async function saveWechat(appId: string, appSecret: string): Promise<void> {
+    wechat.value = { appId: appId.trim(), appSecret }
+    await saveBlog()
+  }
+
+  /** 清除微信公众号凭证 */
+  async function clearWechat(): Promise<void> {
+    wechat.value = undefined
+    await saveBlog()
+  }
+
   // ==================== 图片库 ====================
 
   /** 新增正文图片（dataUrl 已由调用方按白名单校验），返回带 id 的条目 */
@@ -507,6 +565,108 @@ export const useBlogStore = defineStore('blog', () => {
     images.value.push(...created)
     await saveBlog()
     return created
+  }
+
+  // ==================== 图库分类 ====================
+
+  /** 新增图库分类（扁平一级、同级不重名）；order 取当前最大值 +1，新分类排在末尾 */
+  async function addImageCategory(name: string): Promise<{ ok: boolean; reason?: string }> {
+    const trimmed = name.trim()
+    if (!trimmed) return { ok: false, reason: '分类名称不可为空' }
+    if (trimmed.length > 30) return { ok: false, reason: '分类名称不能超过 30 个字符' }
+    const lower = trimmed.toLowerCase()
+    if (imageCategories.value.some(c => c.name.trim().toLowerCase() === lower)) {
+      return { ok: false, reason: '已存在同名分类' }
+    }
+    const now = nowIso()
+    imageCategories.value.push({
+      id: newId('bic'),
+      name: trimmed,
+      order: nextImageCategoryOrder(imageCategories.value),
+      createdAt: now,
+      updatedAt: now
+    })
+    await saveBlog()
+    return { ok: true }
+  }
+
+  /** 重命名图库分类（重名校验排除自身） */
+  async function renameImageCategory(id: string, name: string): Promise<{ ok: boolean; reason?: string }> {
+    const index = imageCategories.value.findIndex(c => c.id === id)
+    if (index === -1) return { ok: false, reason: '分类不存在' }
+    const trimmed = name.trim()
+    if (!trimmed) return { ok: false, reason: '分类名称不可为空' }
+    if (trimmed.length > 30) return { ok: false, reason: '分类名称不能超过 30 个字符' }
+    const lower = trimmed.toLowerCase()
+    if (imageCategories.value.some(c => c.id !== id && c.name.trim().toLowerCase() === lower)) {
+      return { ok: false, reason: '已存在同名分类' }
+    }
+    imageCategories.value[index] = { ...imageCategories.value[index], name: trimmed, updatedAt: nowIso() }
+    await saveBlog()
+    return { ok: true }
+  }
+
+  /**
+   * 删除图库分类：**该分类下的图片不会被删除**，只把 categoryId 置空回落到「未分类」
+   * （与文章分类「删除分类 → 文章转未分类」同一语义）。
+   */
+  async function removeImageCategory(id: string): Promise<{ ok: boolean; reason?: string; detachedImages: number }> {
+    if (!imageCategories.value.some(c => c.id === id)) {
+      return { ok: false, reason: '分类不存在', detachedImages: 0 }
+    }
+    const detached = images.value.filter(i => i.categoryId === id).length
+    imageCategories.value = toRaw(imageCategories.value).filter(c => c.id !== id)
+    if (detached > 0) {
+      images.value = toRaw(images.value).map(i => (i.categoryId === id ? { ...i, categoryId: undefined } : i))
+    }
+    await saveBlog()
+    return { ok: true, detachedImages: detached }
+  }
+
+  /** 排序：与相邻分类交换 order（扁平一级，直接全表交换） */
+  async function moveImageCategory(id: string, delta: number): Promise<void> {
+    const siblings = sortImageCategories(imageCategories.value)
+    const index = siblings.findIndex(c => c.id === id)
+    const swap = index + delta
+    if (index === -1 || swap < 0 || swap >= siblings.length) return
+    const a = siblings[index]
+    const b = siblings[swap]
+    const orderA = a.order
+    const orderB = b.order
+    const now = nowIso()
+    imageCategories.value = toRaw(imageCategories.value).map(c => {
+      if (c.id === a.id) return { ...c, order: orderB, updatedAt: now }
+      if (c.id === b.id) return { ...c, order: orderA, updatedAt: now }
+      return c
+    })
+    await saveBlog()
+  }
+
+  /**
+   * 批量把图片移动到指定分类（targetId 传 null 表示移到「未分类」）。
+   * 目标分类不存在时拒绝，避免产生指向已删分类的悬空 categoryId；
+   * 已经在目标分类里的图片不计入 moved（幂等）。
+   */
+  async function moveImagesToCategory(
+    ids: string[],
+    targetId: string | null
+  ): Promise<{ ok: boolean; reason?: string; moved: number }> {
+    const idSet = new Set(ids)
+    if (idSet.size === 0) return { ok: false, reason: '请先选择图片', moved: 0 }
+    if (targetId && !imageCategories.value.some(c => c.id === targetId)) {
+      return { ok: false, reason: '目标分类不存在', moved: 0 }
+    }
+    const next = targetId ?? undefined
+    let moved = 0
+    images.value = toRaw(images.value).map(i => {
+      if (!idSet.has(i.id)) return i
+      if (i.categoryId === next) return i
+      moved += 1
+      return { ...i, categoryId: next }
+    })
+    if (moved === 0) return { ok: true, moved: 0 }
+    await saveBlog()
+    return { ok: true, moved }
   }
 
   /** 该图片是否仍被任一文章正文引用（含回收站文章，避免误删） */
@@ -543,26 +703,27 @@ export const useBlogStore = defineStore('blog', () => {
   }
 
   /**
-   * 批量删除图片（图库用）：**强制删除**，并同步把所有文章正文里对应的引用一并移除，
-   * 否则会留下指向已删图片的悬空引用（正文会退化显示成 `img:<id>` 文本）。
+   * 批量删除图片（图库用）：**只删除未被任何文章引用的图片**，被引用的一律拦下。
+   *
+   * 语义变更（2026-10-25）：早期版本是「强制删除 + 自动清理文章正文引用」；
+   * 现改为被引用即拒绝删除（引用检测已覆盖正文 `img:<id>` 与封面 `coverImageId`，
+   * 见 collectImageUsage），因此不会留下指向已删图片的悬空引用。
+   * 被拦下的张数通过 blocked 返回，供 UI 给出结果反馈。
    */
-  async function removeImages(ids: string[]): Promise<{ removed: number; affectedArticles: number }> {
+  async function removeImages(ids: string[]): Promise<{ removed: number; blocked: number }> {
     const idSet = new Set(ids)
-    if (idSet.size === 0) return { removed: 0, affectedArticles: 0 }
-    let affectedArticles = 0
-    const nextArticles = toRaw(articles.value).map(a => {
-      let md = a.contentMarkdown
-      for (const id of idSet) md = removeImageRefs(md, id)
-      if (md === a.contentMarkdown) return a
-      affectedArticles += 1
-      return { ...a, contentMarkdown: md, updatedAt: nowIso(), revision: a.revision + 1 }
-    })
-    articles.value = nextArticles
-    const nextImages = toRaw(images.value).filter(i => !idSet.has(i.id))
+    if (idSet.size === 0) return { removed: 0, blocked: 0 }
+    const usage = imageUsage.value
+    const removable = new Set<string>()
+    for (const id of idSet) {
+      if ((usage.get(id)?.count ?? 0) === 0) removable.add(id)
+    }
+    if (removable.size === 0) return { removed: 0, blocked: idSet.size }
+    const nextImages = toRaw(images.value).filter(i => !removable.has(i.id))
     const removed = images.value.length - nextImages.length
     images.value = nextImages
     await saveBlog()
-    return { removed, affectedArticles }
+    return { removed, blocked: idSet.size - removable.size }
   }
 
   return {
@@ -572,6 +733,8 @@ export const useBlogStore = defineStore('blog', () => {
     tags,
     articles,
     images,
+    imageCategories,
+    wechat,
     loaded,
     // 派生
     activeArticles,
@@ -579,6 +742,9 @@ export const useBlogStore = defineStore('blog', () => {
     counts,
     imageUrlById,
     imageUsage,
+    sortedImageCategories,
+    imageCategoryCounts,
+    imageCategoryName,
     findArticle,
     findBySlug,
     categoryName,
@@ -615,13 +781,23 @@ export const useBlogStore = defineStore('blog', () => {
     // 设置
     updateSettings,
     resetSettings,
+    // 微信凭证
+    saveWechat,
+    clearWechat,
+    wechatConfigured,
     // 图片库
     addImage,
     addImages,
     removeImage,
     removeImages,
     renameImage,
-    isImageReferenced
+    isImageReferenced,
+    // 图库分类
+    addImageCategory,
+    renameImageCategory,
+    removeImageCategory,
+    moveImageCategory,
+    moveImagesToCategory
   }
 })
 

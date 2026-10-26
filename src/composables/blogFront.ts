@@ -13,7 +13,7 @@
  * 数据层（store.articles / categories / tags / settings）不属于本 composable 职责，
  * 由调用方（View）在 onMounted 时确保 loadBlog() 已装载。
  */
-import { computed, reactive } from 'vue'
+import { computed, reactive, type Ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useBlogStore } from '@/stores/blog'
 import {
@@ -80,7 +80,11 @@ export interface BlogListing {
   clearFilters: () => void
 }
 
-export function useBlogListing(): BlogListing {
+/**
+ * @param source 可选：自定义文章源（已是 BlogArticle[] 的 ref）。用于把「本地 + 共享」合并后的
+ *   文章集注入前台列表。缺省则用 store.articles（纯本地）。
+ */
+export function useBlogListing(source?: Ref<BlogArticle[]>): BlogListing {
   const store = useBlogStore()
   const route = useRoute()
   const router = useRouter()
@@ -97,8 +101,9 @@ export function useBlogListing(): BlogListing {
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : 1
   })
 
-  /** 已发布子集（前台唯一可见范围） */
-  const published = computed(() => listPublishedArticles(store.articles))
+  /** 已发布子集（前台唯一可见范围）；若注入合并源则用合并源，否则用本地 store */
+  const sourceArticles = computed<BlogArticle[]>(() => (source && source.value ? source.value : store.articles))
+  const published = computed(() => listPublishedArticles(sourceArticles.value))
 
   /** 筛选 + 排序（置顶恒最前，由 sortArticles 内部保证） */
   const filtered = computed(() =>

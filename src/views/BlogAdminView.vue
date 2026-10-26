@@ -22,6 +22,7 @@ import BlogEditor from '@/components/blog/BlogEditor.vue'
 import BlogTrash from '@/components/blog/BlogTrash.vue'
 import BlogGallery from '@/components/blog/BlogGallery.vue'
 import BlogSettingsDialog from '@/components/blog/BlogSettingsDialog.vue'
+import { useBlogSettingsDialog } from '@/composables/useBlogSettingsDialog'
 
 type PageKey = 'posts' | 'gallery' | 'trash'
 
@@ -41,7 +42,7 @@ const sidebarCollapsed = ref(false)
 /** 正在编辑的文章 id；非空时右侧显示编辑器而非菜单对应面板 */
 const editingId = ref<string | null>(null)
 /** 设置弹框是否打开（设置入口已从左侧菜单移到顶栏右侧） */
-const settingsOpen = ref(false)
+const { showBlogSettings, openBlogSettings, closeBlogSettings } = useBlogSettingsDialog()
 
 const menuItems = computed<MenuItem[]>(() => [
   { key: 'posts', label: '文章', icon: 'notes', count: store.counts.all },
@@ -140,7 +141,7 @@ onMounted(async () => {
           type="button"
           class="ba-btn ba-btn-sm"
           data-testid="blog-open-settings"
-          @click="settingsOpen = true"
+          @click="openBlogSettings()"
         >
           <Icon name="cog" :size="14" />
           <span class="ba-settings-text">设置</span>
@@ -191,7 +192,7 @@ onMounted(async () => {
         <BlogTrash v-else-if="activePage === 'trash'" @restore="selectPage('posts')" />
       </main>
 
-      <BlogSettingsDialog v-if="settingsOpen" @close="settingsOpen = false" />
+      <BlogSettingsDialog v-if="showBlogSettings" @close="closeBlogSettings" />
     </div>
   </div>
 </template>

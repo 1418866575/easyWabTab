@@ -470,3 +470,118 @@ export function checkUploadFile(
   }
   return { ok: true, id, title: file.name.replace(/\.html?$/i, '') }
 }
+
+// ==================== 下载（Q4）====================
+
+/**
+ * 二级页面：入口页（index.html）之外、同在本书目录里的其它 .html 页面。
+ *
+ * 判定口径刻意收窄 —— 只认「本书目录下的相对 html 链接」：
+ * 外链、锚点、协议相对、跳出本书目录的 ../ 一律不算。宁可少下一页，
+ * 也不要把整站或别人的书一起拖下来。
+ */
+
+/** 单次下载最多打包的二级页面数：挡住目录页里成百上千条链接把内存撑爆 */
+export const BOOK_SUBPAGE_LIMIT = 200
+
+/** 单本书下载的总字节上限：60MB，超过则截断并按已取到的部分打包 */
+export const BOOK_DOWNLOAD_MAX_BYTES = 60 * 1024 * 1024
+
+/** 抓二级页面时的并发上限：太高容易被浏览器连接池或网关限流 */
+export const BOOK_DOWNLOAD_CONCURRENCY = 6
+
+export interface SubPageOptions {
+  /** 书籍目录前缀（含尾斜杠），如 `/bookdata/gushi/`；站点绝对 href 只有落在它下面才算本书的子页 */
+  dirPrefix?: string
+  /** 入口页文件名（默认 index.html）—— 它本身不算二级页 */
+  entryName?: string
+  /** 最多返回条数 */
+  limit?: number
+}
+
+/** 入口地址所在目录（含尾斜杠）；地址里没有斜杠时返回 '' */
+export function bookDirOf(entry: string): string {
+  const i = entry.lastIndexOf('/')
+  return i >= 0 ? entry.slice(0, i + 1) : ''
+}
+
+/** 入口地址的文件名部分（入口页本身，如 index.html） */
+export function bookEntryName(entry: string): string {
+  const i = entry.lastIndexOf('/')
+  return (i >= 0 ? entry.slice(i + 1) : entry) || 'index.html'
+}
+
+/**
+ * 单条 href → 二级页面相对路径；不是则返回 null。
+ *
+ * 返回的是**相对本书目录**的路径（如 `chapter-01.html`、`part/02.html`），
+ * 拼上 `bookDirOf(entry)` 就是可抓取的完整地址。
+ */
+export function normalizeSubPageRef(href: string, opts: SubPageOptions = {}): string | null {
+  let raw = (typeof href === 'string' ? href : '').trim()
+  if (!raw) return null
+  const lower = raw.toLowerCase()
+  // 锚点与各类伪协议：不是页面
+  if (
+    lower.startsWith('#') ||
+    lower.startsWith('mailto:') ||
+    lower.startsWith('tel:') ||
+    lower.startsWith('javascript:') ||
+    lower.startsWith('data:') ||
+    lower.startsWith('blob:')
+  ) {
+    return null
+  }
+  // 外链 / 协议相对地址：明确不是本书的页面
+  if (raw.includes('://') || raw.startsWith('//')) return null
+  // 先削掉锚点与查询串再判定扩展名
+  const hashIdx = raw.indexOf('#')
+  if (hashIdx >= 0) raw = raw.slice(0, hashIdx)
+  const qIdx = raw.indexOf('?')
+  if (qIdx >= 0) raw = raw.slice(0, qIdx)
+  if (!raw) return null
+  // 站点绝对路径：只有落在本书目录下才算本书的二级页
+  if (raw.startsWith('/')) {
+    const prefix = opts.dirPrefix ?? ''
+    if (!prefix || !raw.toLowerCase().startsWith(prefix.toLowerCase())) return null
+    raw = raw.slice(prefix.length)
+  }
+  // 跳出本书目录的相对路径一律丢弃
+  if (raw.split('/').includes('..')) return null
+  if (!/\.html?$/i.test(raw)) return null
+  const file = raw.replace(/^\.\//, '')
+  if (!file || file.startsWith('/')) return null
+  const fl = file.toLowerCase()
+  const entryName = (opts.entryName ?? 'index.html').toLowerCase()
+  // 入口页自身已在下载之列；index.html / index.htm 恒视为入口，不重复打包
+  if (fl === entryName || fl === 'index.html' || fl === 'index.htm') return null
+  return file
+}
+
+/**
+ * 从入口页 HTML 里抽出二级页面相对路径：按**出现顺序**去重。
+ *
+ * 用正则而非 DOMParser —— 本函数要能跑在 node 里做单测（`npm run test:books`），
+ * 而入口页动辄几十万字符，建 DOM 树既慢又不是这里需要的信息量。
+ */
+export function extractBookSubPages(html: string, opts: SubPageOptions = {}): string[] {
+  if (typeof html !== 'string' || !html) return []
+  const limit = Math.max(1, Math.floor(opts.limit ?? BOOK_SUBPAGE_LIMIT))
+  const out: string[] = []
+  const seen = new Set<string>()
+  // 三种写法都要认全：href="x" / href='x' / href=x
+  const re = /\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi
+  let m: RegExpExecArray | null
+  while ((m = re.exec(html)) !== null) {
+    const raw = (m[1] ?? m[2] ?? m[3] ?? '').trim()
+    if (!raw) continue
+    const file = normalizeSubPageRef(raw, opts)
+    if (!file) continue
+    const key = file.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(file)
+    if (out.length >= limit) break
+  }
+  return out
+}

@@ -8,7 +8,7 @@
  * 评论实体按需求文档标注「延后」未实现，故 `commentCount` 恒为 0。
  */
 import { ARTICLE_STATUSES, BLOG_SORTS } from '../types'
-import type { ArticleStatus, BlogArticle, BlogCategory, BlogCoverKind, BlogData, BlogImage, BlogImageSort, BlogSettings, BlogSort, BlogTag } from '../types'
+import type { ArticleStatus, BlogArticle, BlogCategory, BlogCoverKind, BlogData, BlogImage, BlogImageCategory, BlogImageSort, BlogImageUsage, BlogSettings, BlogSort, BlogTag, BlogWechatConfig } from '../types'
 import { isAllowedDataImage, parseImageRefs } from './blogImages'
 
 /** 博客数据结构版本：normalizeBlogData 据此判定是否需要迁移 */
@@ -65,7 +65,8 @@ export function emptyBlogData(): BlogData {
     categories: [],
     tags: [],
     articles: [],
-    images: []
+    images: [],
+    imageCategories: []
   }
 }
 
@@ -216,6 +217,8 @@ export function normalizeArticle(raw: unknown, when = nowIso()): BlogArticle {
     seoTitle: typeof src.seoTitle === 'string' ? src.seoTitle : undefined,
     seoDescription: typeof src.seoDescription === 'string' ? src.seoDescription : undefined,
     auditRemark: typeof src.auditRemark === 'string' ? src.auditRemark : undefined,
+    authorName: typeof src.authorName === 'string' ? src.authorName : undefined,
+    sharedAt: typeof src.sharedAt === 'string' ? src.sharedAt : undefined,
     revision: clampNumber(src.revision, 1, Number.MAX_SAFE_INTEGER, 1)
   }
 }
@@ -254,13 +257,16 @@ export function normalizeImage(raw: unknown, when = nowIso()): BlogImage | null 
   const dataUrl = str(src.dataUrl)
   if (!isAllowedDataImage(dataUrl)) return null
   const size = typeof src.size === 'number' && Number.isFinite(src.size) ? src.size : undefined
-  return {
+  const categoryId = str(src.categoryId).trim()
+  const img: BlogImage = {
     id: str(src.id) || newId('bi'),
     name: str(src.name),
     dataUrl,
     size,
     createdAt: str(src.createdAt, when)
   }
+  if (categoryId) img.categoryId = categoryId
+  return img
 }
 
 /**
@@ -309,6 +315,23 @@ export function normalizeBlogData(raw: unknown): BlogData {
     images.push(img)
   }
 
+  const seenImageCat = new Set<string>()
+  const imageCategories: BlogImageCategory[] = []
+  for (const [i, item] of (Array.isArray(src.imageCategories) ? src.imageCategories : []).entries()) {
+    const c = normalizeImageCategory(item, i, when)
+    if (seenImageCat.has(c.id)) continue
+    seenImageCat.add(c.id)
+    imageCategories.push(c)
+  }
+
+  const wechat: BlogWechatConfig | undefined =
+    src.wechat && typeof src.wechat === 'object'
+      ? {
+          appId: str((src.wechat as Record<string, unknown>).appId, ''),
+          appSecret: str((src.wechat as Record<string, unknown>).appSecret, '')
+        }
+      : undefined
+
   return {
     version: BLOG_DATA_VERSION,
     updatedAt: str(src.updatedAt, when),
@@ -316,7 +339,9 @@ export function normalizeBlogData(raw: unknown): BlogData {
     categories,
     tags,
     articles,
-    images
+    images,
+    imageCategories,
+    wechat
   }
 }
 
@@ -337,17 +362,67 @@ export function pruneUnusedImages(images: BlogImage[], articles: BlogArticle[]):
   return images.filter(img => used.has(img.id))
 }
 
-/** 图片 id → 引用它的文章数（图库卡片展示「被 N 篇引用」、删除前提示的依据） */
-export function collectImageUsage(images: BlogImage[], articles: BlogArticle[]): Map<string, number> {
-  const usage = new Map<string, number>()
-  for (const img of images) usage.set(img.id, 0)
+/**
+ * 图片 id → 被引用详情（图库卡片文案、删除限制与提示的依据）。
+ *
+ * 引用口径：**正文** `img:<id>` 短引用 **或** 文章**封面** `coverImageId` 任一命中即计入
+ * （早期版本只扫正文，会把仅作封面的图片误判为「未使用」，此处一并修正）。
+ * 同一篇文章多次引用只计 1（去重）；含回收站文章，避免误删仍被引用的图片。
+ */
+export function collectImageUsage(
+  images: BlogImage[],
+  articles: BlogArticle[]
+): Map<string, BlogImageUsage> {
+  const usage = new Map<string, BlogImageUsage>()
+  for (const img of images) usage.set(img.id, { count: 0, articleIds: [], coverCount: 0 })
   for (const a of articles) {
-    for (const id of new Set(parseImageRefs(a.contentMarkdown))) {
-      if (!usage.has(id)) continue
-      usage.set(id, (usage.get(id) ?? 0) + 1)
+    const hit = new Set(parseImageRefs(a.contentMarkdown))
+    if (a.coverImageId) hit.add(a.coverImageId)
+    for (const id of hit) {
+      const cur = usage.get(id)
+      if (!cur) continue
+      cur.count += 1
+      cur.articleIds.push(a.id)
+      if (a.coverImageId === id) cur.coverCount += 1
     }
   }
   return usage
+}
+
+/** 图库分类兜底：缺失 id 补生成、名称截断 30 字、缺失 order 用下标兜底 */
+export function normalizeImageCategory(raw: unknown, index: number, when = nowIso()): BlogImageCategory {
+  const src = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>
+  const order = typeof src.order === 'number' && Number.isFinite(src.order) ? src.order : index
+  return {
+    id: str(src.id) || newId('bic'),
+    name: str(src.name).slice(0, 30) || '未命名分类',
+    order,
+    createdAt: str(src.createdAt, when),
+    updatedAt: str(src.updatedAt, when)
+  }
+}
+
+/** 图库分类排序：order 升序，同 order 用创建时间兜底保证顺序稳定 */
+export function sortImageCategories(list: BlogImageCategory[]): BlogImageCategory[] {
+  return [...list].sort((a, b) => a.order - b.order || a.createdAt.localeCompare(b.createdAt))
+}
+
+/** 新分类应取的 order：当前最大值 + 1（空列表时为 0） */
+export function nextImageCategoryOrder(list: BlogImageCategory[]): number {
+  if (list.length === 0) return 0
+  return Math.max(...list.map(c => c.order)) + 1
+}
+
+/**
+ * 图库按分类筛选。
+ * key 为 'all' 时返回全部；'uncategorized' 时只返回未分类（无 categoryId）；
+ * 其余按分类 id 精确匹配。**注意**：分类被删除后其图片会置空 categoryId，
+ * 因此这里对已不存在的分类 id 会自然返回空列表（不会误判成未分类）。
+ */
+export function filterImagesByCategory(images: BlogImage[], key: string): BlogImage[] {
+  if (key === 'all') return images
+  if (key === 'uncategorized') return images.filter(i => !i.categoryId)
+  return images.filter(i => i.categoryId === key)
 }
 
 /** 图库关键词筛选：按名称（大小写不敏感）模糊匹配 */

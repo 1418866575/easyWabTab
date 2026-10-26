@@ -1756,6 +1756,53 @@ export interface BlogArticle {
   seoDescription?: string
   auditRemark?: string      // 最近一次审核意见
   revision: number          // 保存即自增，用于草稿冲突判定
+  authorName?: string       // 共享发布时写入的展示作者名（多作者预留；缺省回落站点名）
+  sharedAt?: string         // 最近一次成功「共享」到服务器的本地时间戳（仅前端展示用）
+}
+
+/** 单篇共享文章文件（posts/<id>.json）—— 只含公开子集，绝不携带草稿/回收站/信封凭证 */
+export interface BlogSharePost {
+  id: string                // 与 BlogArticle.id 同键 → 前台去重依据
+  slug: string
+  title: string
+  subtitle?: string
+  excerpt: string
+  categoryId?: string
+  categoryName: string      // 已解析，访客库无分类表也能显示
+  tagIds: string[]
+  tagNames: string[]        // 已解析
+  coverKind: BlogCoverKind
+  coverToken?: string
+  pinned: boolean
+  readingMinutes: number
+  viewCount: number
+  createdAt: string
+  updatedAt: string
+  publishedAt?: string
+  contentMarkdown: string   // 图片已内联 dataURL，自包含
+  contentHtml: string       // 详情页直接 v-html
+  authorName: string
+}
+
+/** 共享清单条目（manifest.json）—— 列表展示所需的最小字段，避免逐篇拉取 */
+export interface BlogShareManifestEntry {
+  id: string
+  slug: string
+  title: string
+  excerpt: string
+  authorName: string
+  categoryId: string
+  categoryName: string
+  tagIds: string[]
+  tagNames: string[]
+  updatedAt: string
+  size: number
+}
+
+export interface BlogShareManifest {
+  generatedAt: string
+  count: number
+  posts: BlogShareManifestEntry[]
 }
 
 export interface BlogCategory {
@@ -1788,12 +1835,40 @@ export interface BlogImage {
   name: string              // 原始文件名（作 Markdown alt 缺省）
   dataUrl: string           // data:image/...;base64,...
   size?: number             // 原始文件字节数（上传时记录，仅供图库展示）
+  categoryId?: string       // 图库分类 id（BlogImageCategory）；缺省 = 未分类
   createdAt: string
+}
+
+/**
+ * 图库分类（后台「博客设置 → 图库设置」维护，**扁平一级**）：
+ * 只用于图库内的筛选与批量归类，**不参与前台展示**（前台文章分类是 BlogCategory）。
+ * order 控制列表顺序；删除分类时其下图片的 categoryId 会被置空，回落到「未分类」。
+ */
+export interface BlogImageCategory {
+  id: string                // 'bic_' 前缀
+  name: string
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
+/** 单张图片的被引用情况（图库删除限制与提示文案的数据源） */
+export interface BlogImageUsage {
+  /** 引用它的文章数（去重；正文或封面任一命中即计 1） */
+  count: number
+  /** 引用它的文章 id 列表（按文章标题升序前的原始顺序，供 UI 取标题） */
+  articleIds: string[]
+  /** 其中「作为封面」被引用的文章数 */
+  coverCount: number
 }
 
 /** 图库列表排序方式 */
 export const BLOG_IMAGE_SORTS = ['created-desc', 'created-asc', 'name-asc'] as const
 export type BlogImageSort = (typeof BLOG_IMAGE_SORTS)[number]
+
+/** 图库「分类筛选」的保留 key（与真实分类 id 'bic_' 前缀天然不冲突） */
+export const BLOG_IMAGE_CATEGORY_ALL = 'all'
+export const BLOG_IMAGE_CATEGORY_NONE = 'uncategorized'
 
 export interface BlogSettings {
   blogName: string
@@ -1811,6 +1886,11 @@ export interface BlogSettings {
   footer: string
 }
 
+export interface BlogWechatConfig {
+  appId: string
+  appSecret: string
+}
+
 export interface BlogData {
   version: number
   updatedAt: string         // 信封合并比较基准
@@ -1819,6 +1899,9 @@ export interface BlogData {
   tags: BlogTag[]
   articles: BlogArticle[]
   images: BlogImage[]       // 正文内联图片库（正文用 img:<id> 引用；随 blog.json 同步）
+  imageCategories: BlogImageCategory[] // 图库分类（扁平一级；随 blog.json 同步）
+  /** 微信公众号凭证（明文随 blog.json 同步，存于用户自己的 WebDAV/飞书；多租户隔离靠前端按 AppID 调用） */
+  wechat?: BlogWechatConfig
 }
 
 /** 博客独立同步信封（blog.json），形态对齐 TeacherSyncData */

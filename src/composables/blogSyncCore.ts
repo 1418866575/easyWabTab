@@ -6,7 +6,7 @@
  * 软删除（ deletedAt ）作为 tombstone 参与比较 —— 哪一侧的更新时间更晚就以哪一侧为准，
  * 因此「在 A 设备删了、B 设备还在编辑」不会把已删的文章复活。
  */
-import type { BlogArticle, BlogCategory, BlogData, BlogFrontPrefs, BlogFrontSyncData, BlogImage, BlogRecentItem, BlogSyncData, BlogTag } from '../types'
+import type { BlogArticle, BlogCategory, BlogData, BlogFrontPrefs, BlogFrontSyncData, BlogImage, BlogImageCategory, BlogRecentItem, BlogSyncData, BlogTag } from '../types'
 import { BLOG_RECENT_LIMIT } from '../types'
 import { normalizeBlogData, normalizeCategory, normalizeTag, normalizeArticle, nowIso } from './blogCore'
 
@@ -46,6 +46,8 @@ export function mergeBlogEnvelope(local: BlogSyncData, remote: BlogSyncData): Bl
   const tags = mergeById<BlogTag>(localTags, remoteTags)
   // 图片按 id 取较新（图片不可变，createdAt 即时间戳）；两侧都有的保留一侧，各有各的则并集
   const images = mergeById<BlogImage>(l.images, r.images)
+  // 图库分类按 id 取较新（与 categories 同规则：扁平一级、物理删除，不走墓碑）
+  const imageCategories = mergeById<BlogImageCategory>(l.imageCategories, r.imageCategories)
 
   return {
     version: 1,
@@ -57,7 +59,10 @@ export function mergeBlogEnvelope(local: BlogSyncData, remote: BlogSyncData): Bl
       categories,
       tags,
       articles,
-      images
+      images,
+      imageCategories,
+      // 微信公众号凭证随设置一起按整包更新时间较新侧整体取（与 settings 同规则）
+      wechat: remoteNewer ? r.wechat : l.wechat
     }
   }
 }

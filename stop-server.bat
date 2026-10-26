@@ -14,7 +14,7 @@ echo.
 
 set "KILLED=0"
 
-:: 1) ÓÅÏÈÓÃ start-server.bat ¼ÇÂ¼µÄ PID
+:: 1) ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ start-server.bat ï¿½ï¿½Â¼ï¿½ï¿½ PID
 if exist "%PIDFILE%" (
     set /p SRV_PID=<"%PIDFILE%"
     if defined SRV_PID (
@@ -24,9 +24,17 @@ if exist "%PIDFILE%" (
     )
 )
 
-:: 2) ¶µµ×£º°´¶Ë¿Ú·´²éÕ¼ÓÃ½ø³Ì£¨IPv4 / IPv6 ¶¼»áÃüÖÐ£©
+:: 2) ï¿½ï¿½ï¿½×£ï¿½ï¿½ï¿½ï¿½Ë¿Ú·ï¿½ï¿½ï¿½Õ¼ï¿½Ã½ï¿½ï¿½Ì£ï¿½IPv4 / IPv6 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð£ï¿½
 for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":%PORT% " ^| findstr "LISTENING"') do (
     echo Stopping PID on port %PORT%: %%p
+    taskkill /PID %%p /F >nul 2>&1
+    if !errorlevel! equ 0 set "KILLED=1"
+)
+
+:: 2b) Also stop WeChat MP proxy on port 16721 (launched by start-server.bat)
+set "WECHAT_PORT=16721"
+for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":%WECHAT_PORT% " ^| findstr "LISTENING"') do (
+    echo Stopping PID on port %WECHAT_PORT%: %%p
     taskkill /PID %%p /F >nul 2>&1
     if !errorlevel! equ 0 set "KILLED=1"
 )
