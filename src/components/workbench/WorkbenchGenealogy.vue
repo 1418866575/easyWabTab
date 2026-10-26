@@ -13,6 +13,8 @@ import {
   getChildren,
   calcAge,
   calcZodiac,
+  parseIdCardInfo,
+  maskIdCard,
   filterParentCandidates,
   filterSpouseCandidates,
   genealogyStats,
@@ -326,8 +328,8 @@ function memberName(id: string): string {
   return store.activeMembers.find((m) => m.id === id)?.name ?? '(已删除)'
 }
 
-function cardFields(m: FamilyMember) {
-  return [
+function cardFields(m: FamilyMember): Array<{ label: string; value: string; emphasis?: boolean }> {
+  const rows: Array<{ label: string; value: string; emphasis?: boolean }> = [
     { label: '姓名', value: m.name, emphasis: true },
     { label: '性别', value: GENDER_LABEL[m.gender ?? ''] ?? '未知' },
     { label: '出生日期', value: m.birthDate || '—' },
@@ -335,6 +337,9 @@ function cardFields(m: FamilyMember) {
     { label: '年龄', value: ageText(m) },
     { label: '关系', value: relationSummary(m) }
   ]
+  // 身份证号只做脱敏展示（保留地区码前 6 位与后 4 位），不把完整号码铺在卡片上
+  if (m.idCard) rows.push({ label: '身份证号', value: maskIdCard(m.idCard) })
+  return rows
 }
 
 // ===== 人口统计（总数 / 男女 / 年龄段）=====
@@ -359,6 +364,7 @@ const formDeath = ref('')
 const formPhone = ref('')
 const formNote = ref('')
 const formAvatar = ref('')
+const formIdCard = ref('')
 const avatarInput = ref<HTMLInputElement | null>(null)
 
 /** 读取图片文件 → 压缩为 ≤256px 的 JPEG base64 data URL（头像存储用，避免原图体积过大撑爆云同步信封） */
@@ -441,6 +447,53 @@ const formZodiacText = computed(() => {
   return z ? `属 ${z}` : (formBirth.value ? '—' : '填写出生日期后自动计算')
 })
 
+/** 当前输入解析结果（null = 尚未成形 / 非法）；hint 与告警色共用，避免重复解析 */
+const formIdCardInfo = computed(() => parseIdCardInfo(formIdCard.value))
+
+/**
+ * 身份证号输入提示：已推导（性别 · 出生日期）/ 校验位不通过 / 格式不正确。
+ *
+ * 输入过程中不早早报错：只有去掉空格后已满 15 位（15/18 位号码的最小长度）才提示格式问题，
+ * 否则刚敲两三位就飘红会很烦。
+ */
+const formIdCardHint = computed(() => {
+  const raw = formIdCard.value.trim()
+  if (!raw) return ''
+  const info = formIdCardInfo.value
+  if (!info) {
+    return raw.replace(/\s+/g, '').length >= 15 ? '身份证号格式不正确，请检查号码' : '继续输入完整号码后自动推算'
+  }
+  const genderLabel = info.gender === 'male' ? '男' : '女'
+  const base = `已按身份证推算：${genderLabel} · ${info.birthDate}`
+  return info.checksumOk === false ? `${base}（校验位不通过，号码可能有误）` : base
+})
+
+/** 提示是否需要黄色告警（格式错 / 校验位错）；正常推导成功不告警 */
+const formIdCardWarn = computed(() => {
+  const raw = formIdCard.value.trim()
+  if (!raw) return false
+  const info = formIdCardInfo.value
+  if (!info) return raw.replace(/\s+/g, '').length >= 15
+  return info.checksumOk === false
+})
+
+/**
+ * 身份证号变化 → 自动回填性别与出生日期。
+ * 用事件回调而不是 watch：编辑既有成员时回填表单不应触发覆盖（否则用户手改过的性别会被号码重置）。
+ */
+function applyIdCard(raw: string): void {
+  const info = parseIdCardInfo(raw)
+  if (!info) return
+  formGender.value = info.gender
+  formBirth.value = info.birthDate
+}
+
+/** 保存时只接受形状正确的号码（避免把半截输入写进成员档案） */
+function normalizedIdCard(): string | undefined {
+  const s = formIdCard.value.replace(/\s+/g, '').toUpperCase()
+  return /^\d{15}$|^\d{17}[\dX]$/.test(s) ? s : undefined
+}
+
 function startAdd(): void {
   editingId.value = null
   formName.value = ''
@@ -450,6 +503,7 @@ function startAdd(): void {
   formPhone.value = ''
   formNote.value = ''
   formAvatar.value = ''
+  formIdCard.value = ''
   showMemberDialog.value = true
 }
 
@@ -461,6 +515,7 @@ function startEdit(m: FamilyMember): void {
   formDeath.value = m.deathDate ?? ''
   formPhone.value = m.phone ?? ''
   formNote.value = m.note ?? ''
+  formIdCard.value = m.idCard ?? ''
   showMemberDialog.value = true
 }
 
@@ -477,6 +532,7 @@ async function handleSaveMember(): Promise<void> {
     gender: formGender.value,
     birthDate: formBirth.value || undefined,
     deathDate: formDeath.value || undefined,
+    idCard: normalizedIdCard(),
     phone: formPhone.value.trim() || undefined,
     note: formNote.value.trim() || undefined,
     avatar: formAvatar.value || undefined
@@ -1072,6 +1128,25 @@ onUnmounted(() => {
               @keyup.enter="handleSaveMember"
             />
           </div>
+          <div class="form-group form-group--full">
+            <label>身份证号（可选 · 自动推算性别与出生日期）</label>
+            <el-input
+              v-model="formIdCard"
+              placeholder="18 位（或 15 位老号码），输入后自动填入下方性别与出生日期"
+              maxlength="18"
+              clearable
+              data-testid="fg-idcard"
+              @input="applyIdCard"
+            />
+            <div
+              v-if="formIdCardHint"
+              class="fg-idcard-hint"
+              :class="{ 'is-warn': formIdCardWarn }"
+              data-testid="fg-idcard-hint"
+            >
+              {{ formIdCardHint }}
+            </div>
+          </div>
           <div class="form-group">
             <label>性别</label>
             <el-select v-model="formGender" data-testid="fg-gender">
@@ -1561,6 +1636,10 @@ html.dark .fg-age-preview { border-color: var(--color-border, #374151); }
 .fg-form-grid :deep(.el-select),
 .fg-form-grid :deep(.el-date-picker) { width: 100%; }
 .form-group { display: flex; flex-direction: column; gap: 6px; }
+/* 占满整行（身份证号这类长字段用） */
+.fg-form-grid .form-group--full { grid-column: 1 / -1; }
+.fg-idcard-hint { font-size: 12px; line-height: 1.5; color: var(--color-text-secondary, #64748b); }
+.fg-idcard-hint.is-warn { color: var(--color-warning, #d97706); }
 .form-group > label { font-size: 13px; color: var(--color-text-secondary, #64748b); }
 .form-row-fields { display: flex; gap: 10px; flex-wrap: wrap; }
 .field { display: flex; flex-direction: column; gap: 6px; }

@@ -9,7 +9,9 @@ import {
   ZODIAC_ANIMALS,
   filterParentCandidates,
   filterSpouseCandidates,
-  mergeFamily
+  mergeFamily,
+  parseIdCardInfo,
+  maskIdCard
 } from '../src/composables/genealogyCore.ts'
 import { activeOnly } from '../src/composables/tombstoneCore.ts'
 import type { FamilyMember, GenealogyData } from '../src/types'
@@ -239,6 +241,61 @@ test('T11 mergeFamily 墓碑：远端新增仍然补入（不误伤）', () => {
   const remote = data([member({ id: 'm2', name: '李四', updatedAt: '2026-05-01T00:00:00.000Z', ver: 1 })])
   const merged = mergeFamily(local, remote)
   assert.equal(activeOnly(merged.members).length, 2)
+})
+
+test('T12 身份证：18 位男（校验位正确）→ 男 / 生日', () => {
+  const info = parseIdCardInfo('110101199001011237')
+  assert.ok(info)
+  assert.equal(info!.gender, 'male')
+  assert.equal(info!.birthDate, '1990-01-01')
+  assert.equal(info!.checksumOk, true)
+})
+
+test('T13 身份证：18 位女（校验位正确）→ 女 / 生日', () => {
+  const info = parseIdCardInfo('110101199001011245')
+  assert.ok(info)
+  assert.equal(info!.gender, 'female')
+  assert.equal(info!.birthDate, '1990-01-01')
+  assert.equal(info!.checksumOk, true)
+})
+
+test('T14 身份证：小写 x 校验位可识别（仅校验位告警，不判无效）', () => {
+  const info = parseIdCardInfo('11010119900101123x')
+  assert.ok(info)
+  assert.equal(info!.gender, 'male')
+  assert.equal(info!.birthDate, '1990-01-01')
+  assert.equal(info!.checksumOk, false)
+})
+
+test('T15 身份证：15 位老号码按 19xx 推导', () => {
+  const info = parseIdCardInfo('110101900101123')
+  assert.ok(info)
+  assert.equal(info!.gender, 'male')
+  assert.equal(info!.birthDate, '1990-01-01')
+  assert.equal(info!.checksumOk, null)
+})
+
+test('T16 身份证：前导空格 / 夹杂空格容错', () => {
+  const info = parseIdCardInfo('  110101 19900101 1237 ')
+  assert.ok(info)
+  assert.equal(info!.birthDate, '1990-01-01')
+})
+
+test('T17 身份证：非法输入一律 null（空 / 太短 / 2 月 30 日 / 将来 / 位数不对）', () => {
+  assert.equal(parseIdCardInfo(''), null)
+  assert.equal(parseIdCardInfo('123'), null)
+  assert.equal(parseIdCardInfo('110101199002301234'), null) // 2 月 30 日
+  assert.equal(parseIdCardInfo('110101209901011231'), null) // 出生日期在将来
+  assert.equal(parseIdCardInfo('11010119900101123'), null) // 17 位
+  assert.equal(parseIdCardInfo('11010119900101123Y'), null) // 校验位非 X
+})
+
+test('T18 maskIdCard 脱敏：保留前 6 后 4', () => {
+  assert.equal(maskIdCard('110101199001011237'), '110101********1237')
+  assert.equal(maskIdCard('110101900101123'), '110101*****1123')
+  assert.equal(maskIdCard(''), '')
+  assert.equal(maskIdCard(undefined), '')
+  assert.equal(maskIdCard('12345'), '*****')
 })
 
 let passed = 0

@@ -357,6 +357,11 @@ export function normalizeGenealogyImport(raw: unknown): NormalizeGenealogyResult
     if (isDateKey(m.birthDate)) out.birthDate = m.birthDate
     if (isDateKey(m.deathDate)) out.deathDate = m.deathDate
     if (typeof m.phone === 'string' && m.phone) out.phone = m.phone
+    // 身份证号：只接受 15 / 18 位形状，避免把任意文本灌进成员档案
+    if (typeof m.idCard === 'string') {
+      const idc = m.idCard.trim().toUpperCase()
+      if (/^\d{15}$|^\d{17}[\dX]$/.test(idc)) out.idCard = idc
+    }
     if (typeof m.note === 'string' && m.note) out.note = m.note
     // 头像仅接受 data URL（分享文件体积可控，也避免外链注入）
     if (typeof m.avatar === 'string' && /^data:image\//i.test(m.avatar)) out.avatar = m.avatar
@@ -469,6 +474,83 @@ export function calcZodiac(birthDate?: string | null): string | null {
   if (!d) return null
   const idx = ((d.getFullYear() - 4) % 12 + 12) % 12
   return ZODIAC_ANIMALS[idx]
+}
+
+/* ================= 身份证号 → 性别 / 出生日期 ================= */
+
+/** 身份证号解析结果（只取家谱需要的性别与出生日期） */
+export interface IdCardInfo {
+  gender: 'male' | 'female'
+  /** 'YYYY-MM-DD' */
+  birthDate: string
+  /** 18 位校验位是否通过；15 位老号码没有校验位 → null */
+  checksumOk: boolean | null
+}
+
+/** GB 11643 校验位权重与校验码表（仅用于提示用户号码是否输错，不阻断推导） */
+const IDCARD_WEIGHTS = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2]
+const IDCARD_CHECK_CODES = '10X98765432'
+
+/** 把 8 位 YYYYMMDD 转成 'YYYY-MM-DD'；非法日期 / 超出合理年份 → null */
+function ymdToDateKey(ymd: string): string | null {
+  if (!/^\d{8}$/.test(ymd)) return null
+  const key = `${ymd.slice(0, 4)}-${ymd.slice(4, 6)}-${ymd.slice(6, 8)}`
+  const dt = parseDateKey(key)
+  if (!dt) return null
+  const y = dt.getFullYear()
+  // 身份证自 1984 年起签发，出生年份下限取 1900（家谱里更早的先人不会有身份证号）
+  if (y < 1900 || y > 2100) return null
+  // 出生日期不可能在将来：明显打错的号码直接判无效，避免把错误日期写进成员档案
+  const now = new Date()
+  const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  if (key > todayKey) return null
+  return key
+}
+
+/**
+ * 从身份证号推导性别与出生日期。
+ *
+ * 支持 18 位（含 X 校验位）与 15 位老号码：
+ * - 18 位：第 7–14 位为出生日期，第 17 位奇数为男 / 偶数为女；
+ * - 15 位：第 7–12 位为出生日期（补 19 前缀），第 15 位奇偶同上。
+ *
+ * 号码形状不对、嵌入日期非法或出生日期在将来 → 返回 null（不臆造）。
+ * 校验位不通过**不**判无效（仍能给出日期与性别），只在结果里标记 `checksumOk=false`，
+ * 由 UI 提示「号码可能有误」。
+ */
+export function parseIdCardInfo(raw: string): IdCardInfo | null {
+  const s = (raw || '').trim().replace(/\s+/g, '').toUpperCase()
+  let ymd: string
+  let genderDigit: number
+  let checksumOk: boolean | null = null
+
+  if (/^\d{17}[\dX]$/.test(s)) {
+    ymd = s.slice(6, 14)
+    genderDigit = Number(s[16])
+    const sum = IDCARD_WEIGHTS.reduce((acc, w, i) => acc + w * Number(s[i]), 0)
+    checksumOk = IDCARD_CHECK_CODES[sum % 11] === s[17]
+  } else if (/^\d{15}$/.test(s)) {
+    // 15 位老号码出生年份只有两位，统一按 19xx 处理
+    ymd = `19${s.slice(6, 12)}`
+    genderDigit = Number(s[14])
+  } else {
+    return null
+  }
+
+  const birthDate = ymdToDateKey(ymd)
+  if (!birthDate) return null
+  return { gender: genderDigit % 2 === 1 ? 'male' : 'female', birthDate, checksumOk }
+}
+
+/**
+ * 身份证号脱敏展示：保留前 6 位（地区码）与后 4 位，中间打码。
+ * 空值返回 ''，过短（<10 位）全打码，避免把未成形的输入原样显示出来。
+ */
+export function maskIdCard(raw?: string | null): string {
+  const s = (raw || '').trim()
+  if (!s) return ''
+  if (s.length < 10) return '*'.repeat(s.length)
+  return `${s.slice(0, 6)}${'*'.repeat(s.length - 10)}${s.slice(-4)}`
 }
 
 /** 年龄段 key（按国家规定/通行口径划分，互斥且全覆盖） */

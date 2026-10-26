@@ -416,6 +416,7 @@ export interface FamilyMember extends SyncStamp {
   gender?: 'male' | 'female' | '' | null   // 可选，UI 提供「男/女/不详」
   birthDate?: string    // 'YYYY-MM-DD' 可选
   deathDate?: string    // 可选（在世可空）
+  idCard?: string       // 身份证号（可选；18 位或 15 位，仅本地/自有云同步保存，用于推导性别与出生日期）
   phone?: string        // 可选
   note?: string         // 可选备注
   avatar?: string       // 头像 base64 data URL（上传后压缩存储，可选）

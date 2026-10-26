@@ -40,6 +40,8 @@ export interface MemberInput {
   gender?: 'male' | 'female' | '' | null
   birthDate?: string
   deathDate?: string
+  /** 身份证号（可选）：仅用于推导/校对性别与出生日期，18 位或 15 位 */
+  idCard?: string
   phone?: string
   note?: string
   avatar?: string
@@ -116,6 +118,7 @@ export const useGenealogyStore = defineStore('genealogy', () => {
       gender: input.gender ?? '',
       birthDate: input.birthDate || undefined,
       deathDate: input.deathDate || undefined,
+      idCard: input.idCard || undefined,
       phone: input.phone || undefined,
       note: input.note || undefined,
       parents: [],
@@ -135,6 +138,7 @@ export const useGenealogyStore = defineStore('genealogy', () => {
     if (patch.gender !== undefined) m.gender = patch.gender
     if (patch.birthDate !== undefined) m.birthDate = patch.birthDate || undefined
     if (patch.deathDate !== undefined) m.deathDate = patch.deathDate || undefined
+    if (patch.idCard !== undefined) m.idCard = patch.idCard || undefined
     if (patch.phone !== undefined) m.phone = patch.phone || undefined
     if (patch.note !== undefined) m.note = patch.note || undefined
     m.updatedAt = new Date().toISOString()
