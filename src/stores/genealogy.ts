@@ -29,6 +29,15 @@ function newMemberId(): string {
   return `fm_${Date.now().toString(36)}_${idSeq.toString(36)}_${Math.random().toString(36).slice(2, 7)}`
 }
 
+/**
+ * 头像清洗：只接受 data URL（表单上传时已压成 JPEG data URL），
+ * 其它内容（外链、普通文本、空串）一律视为「无头像」，避免把任意字符串灌进成员档案。
+ */
+function cleanAvatar(v?: string | null): string | undefined {
+  const s = (v ?? '').trim()
+  return /^data:image\//i.test(s) ? s : undefined
+}
+
 let nameSeq = 0
 function newNameRecordId(): string {
   nameSeq += 1
@@ -121,6 +130,7 @@ export const useGenealogyStore = defineStore('genealogy', () => {
       idCard: input.idCard || undefined,
       phone: input.phone || undefined,
       note: input.note || undefined,
+      avatar: cleanAvatar(input.avatar),
       parents: [],
       spouses: [],
       createdAt: now,
@@ -141,6 +151,8 @@ export const useGenealogyStore = defineStore('genealogy', () => {
     if (patch.idCard !== undefined) m.idCard = patch.idCard || undefined
     if (patch.phone !== undefined) m.phone = patch.phone || undefined
     if (patch.note !== undefined) m.note = patch.note || undefined
+    // 头像：undefined = 本次不改（其它调用方不传即可）；'' = 明确移除
+    if (patch.avatar !== undefined) m.avatar = cleanAvatar(patch.avatar)
     m.updatedAt = new Date().toISOString()
     persist()
   }

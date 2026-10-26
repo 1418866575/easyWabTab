@@ -1,14 +1,19 @@
 /**
- * QA：族谱「新增成员」身份证号自动推算性别与出生日期
+ * QA：族谱「新增/编辑成员」表单 —— 身份证号自动推算 + 头像上传持久化
  *
- * 断言：
+ * 身份证：
  *  S1 新增成员弹框里有身份证号输入框
- *  S2 输入合法 18 位号码 → 提示"已按身份证推算：男 · 1990-01-01"，出生日期输入框被填成 1990-01-01，性别显示「男」
+ *  S2 输入合法 18 位号码 → 提示"已按身份证推算：男 · 1990-01-01"，出生日期被填成 1990-01-01，性别「男」
  *  S3 换成女号 → 性别改「女」
  *  S4 输入非法号码 → 提示格式不正确（且不覆盖已推导的值）
- *  S5 保存后落库：成员 gender= male、birthDate=1990-01-01、idCard 为录入号码
+ *  S5 保存后落库：gender/birthDate/idCard 正确
  *
- * 用法：node scripts/qa-genealogy-idcard.mjs
+ * 头像：
+ *  S6 上传图片并保存 → 成员 avatar 是 data URL，列表出现头像缩略图
+ *  S7 编辑时不动头像直接保存 → 头像不丢（回归：此前保存会把头像清空）
+ *  S8 点「移除」再保存 → 头像被清空
+ *
+ * 用法：node scripts/qa-genealogy-member-form.mjs
  */
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
@@ -152,6 +157,56 @@ try {
   check('S5 落库性别=男', saved?.gender === 'male', String(saved?.gender))
   check('S5 落库出生日期=1990-01-01', saved?.birthDate === '1990-01-01', String(saved?.birthDate))
   check('S5 落库身份证号已保存', saved?.idCard === MALE_ID, String(saved?.idCard))
+
+  // ===== 头像 =====
+  const memberId = await page.evaluate(async () => {
+    const m = await import('/src/stores/genealogy.ts')
+    return m.useGenealogyStore().activeMembers.find((x) => x.name === '测试成员-身份证')?.id || ''
+  })
+  const readAvatar = () =>
+    page.evaluate(async (id) => {
+      const m = await import('/src/stores/genealogy.ts')
+      const hit = m.useGenealogyStore().activeMembers.find((x) => x.id === id)
+      return hit?.avatar || ''
+    }, memberId)
+
+  // ---- S6 上传头像并保存 ----
+  const PNG_1PX = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+    'base64'
+  )
+  await page.click(`[data-testid="fg-edit-${memberId}"]`)
+  // 文件输入是 display:none 的隐藏控件，只能等「挂载」而不是「可见」
+  await page.waitForSelector('[data-testid="fg-avatar-input"]', { state: 'attached', timeout: 30000 })
+  await page.setInputFiles('[data-testid="fg-avatar-input"]', {
+    name: 'avatar.png',
+    mimeType: 'image/png',
+    buffer: PNG_1PX
+  })
+  await page.waitForTimeout(900) // 等 FileReader + canvas 压缩转 data URL
+  await page.click('[data-testid="fg-save-button"]')
+  await page.waitForTimeout(900)
+  const avatar1 = await readAvatar()
+  check('S6 头像已保存为 data URL', avatar1.startsWith('data:image/'), avatar1.slice(0, 40))
+  const avatarImgs = await page.locator('.fg-name-avatar').count()
+  check('S6 列表展示头像缩略图', avatarImgs >= 1, `count=${avatarImgs}`)
+
+  // ---- S7 编辑时不动头像 → 保存后仍在 ----
+  await page.click(`[data-testid="fg-edit-${memberId}"]`)
+  await page.waitForSelector('[data-testid="fg-idcard"]', { timeout: 30000 })
+  await page.click('[data-testid="fg-save-button"]')
+  await page.waitForTimeout(900)
+  const avatar2 = await readAvatar()
+  check('S7 编辑保存后头像不丢', avatar2.startsWith('data:image/'), avatar2.slice(0, 40))
+
+  // ---- S8 移除头像 → 保存后清空 ----
+  await page.click(`[data-testid="fg-edit-${memberId}"]`)
+  await page.waitForSelector('[data-testid="fg-avatar-clear"]', { timeout: 30000 })
+  await page.click('[data-testid="fg-avatar-clear"]')
+  await page.click('[data-testid="fg-save-button"]')
+  await page.waitForTimeout(900)
+  const avatar3 = await readAvatar()
+  check('S8 移除后保存，头像被清空', avatar3 === '', avatar3.slice(0, 40))
 
   check('无页面级 JS 异常', errs.length === 0, errs.join(' | ').slice(0, 200))
 

@@ -516,6 +516,8 @@ function startEdit(m: FamilyMember): void {
   formPhone.value = m.phone ?? ''
   formNote.value = m.note ?? ''
   formIdCard.value = m.idCard ?? ''
+  // 回填已有头像：否则保存时会把 avatar 传成空串，等于「静默删除头像」
+  formAvatar.value = m.avatar ?? ''
   showMemberDialog.value = true
 }
 
@@ -535,7 +537,9 @@ async function handleSaveMember(): Promise<void> {
     idCard: normalizedIdCard(),
     phone: formPhone.value.trim() || undefined,
     note: formNote.value.trim() || undefined,
-    avatar: formAvatar.value || undefined
+    // 传原值而不是 `|| undefined`：空串代表「用户点了移除」，store 里按「明确移除」处理；
+    // 若折叠成 undefined，就会被当成「本次不改」，头像删不掉。
+    avatar: formAvatar.value
   }
   if (editingId.value) {
     await store.updateMember(editingId.value, input)
