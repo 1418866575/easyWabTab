@@ -106,51 +106,91 @@ export type IdbStore =
 
 let dbPromise: Promise<IDBDatabase> | undefined
 
+/** 本构建需要的全部 store —— 建库与「高版本库兼容性校验」共用同一份清单，避免两处漂移 */
+const ALL_STORES: readonly string[] = [
+  ...IDB_CORE_STORES,
+  ...IDB_AUX_STORES,
+  ...IDB_ICONS_STORES,
+  ...IDB_STUDENT_STORES,
+  ...IDB_TEACHER_STORES,
+  ...IDB_NAV_STORES,
+  ...IDB_TOOLBOX_STORES,
+  ...IDB_META_STORES,
+  ...IDB_ICONCACHE_STORES,
+  ...IDB_BLOG_STORES,
+  ...IDB_BOOKS_STORES
+]
+
+/**
+ * 打开一次数据库。
+ * @param version 传 undefined 表示「按现有版本打开」（不带版本号的 open 不会触发升级，
+ *                也不会在现有版本更高时抛 VersionError）。
+ */
+function openOnce(version?: number): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = version === undefined ? indexedDB.open(DB_NAME) : indexedDB.open(DB_NAME, version)
+    request.onupgradeneeded = () => {
+      const db = request.result
+      // 幂等 contains 守卫：旧库升级到新版本时自动补建缺失 store（v5 新增 diary / v11 新增 icons），不清空旧数据
+      for (const name of ALL_STORES) {
+        if (!db.objectStoreNames.contains(name)) {
+          db.createObjectStore(name) // 无 keyPath → out-of-line 键 'items'
+        }
+      }
+    }
+    request.onsuccess = () => {
+      const db = request.result
+      // 另一标签页触发 versionchange（新代码升级 DB）时：关掉旧连接并清缓存，
+      // 下次 open 重建连接，避免旧连接阻塞升级
+      db.onversionchange = () => {
+        db.close()
+        dbPromise = undefined
+      }
+      resolve(db)
+    }
+    request.onerror = () => reject(request.error)
+    request.onblocked = () => {
+      // 被其它标签页的旧连接阻塞时：清除缓存并拒绝，用户关闭冲突标签页后可重试
+      reject(new Error('IDB 升级被阻塞，请关闭其它标签页后重试'))
+    }
+  })
+}
+
 export function openIdb(): Promise<IDBDatabase> {
   if (!dbPromise) {
-    dbPromise = new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION)
-      request.onupgradeneeded = () => {
-        const db = request.result
-        // 幂等 contains 守卫：旧库升级到新版本时自动补建缺失 store（v5 新增 diary / v11 新增 icons），不清空旧数据
-        for (const name of [
-          ...IDB_CORE_STORES,
-          ...IDB_AUX_STORES,
-          ...IDB_ICONS_STORES,
-          ...IDB_STUDENT_STORES,
-          ...IDB_TEACHER_STORES,
-          ...IDB_NAV_STORES,
-          ...IDB_TOOLBOX_STORES,
-          ...IDB_META_STORES,
-          ...IDB_ICONCACHE_STORES,
-          ...IDB_BLOG_STORES,
-          ...IDB_BOOKS_STORES
-        ]) {
-          if (!db.objectStoreNames.contains(name)) {
-            db.createObjectStore(name) // 无 keyPath → out-of-line 键 'items'
-          }
+    const attempt = openOnce(DB_VERSION).catch((err: unknown) => {
+      const errName = (err as { name?: string } | null)?.name
+      // ===== 兼容「浏览器里的库版本比本构建新」=====
+      // 典型成因：同一域名此前跑过 DB_VERSION 更高的构建（如某个未合入的功能分支），
+      // 之后又用较低版本的构建打开 → indexedDB.open(name, 低版本) 抛 VersionError，
+      // 导致**所有** IDB 读写失败（表现为导入不落盘、刷新后数据回退）。
+      // 处理原则：绝不删库、绝不降级覆盖 —— 改用「不带版本号」打开，沿用它更高的版本
+      // （更高版本是我们自己 schema 的超集，本构建需要的 store 一般都在）。
+      if (errName !== 'VersionError') throw err
+      return openOnce(undefined).then((db) => {
+        const missing = ALL_STORES.filter((s) => !db.objectStoreNames.contains(s))
+        if (missing.length === 0) {
+          console.warn('[idb] 现有数据库版本高于本构建，已按现有版本打开（数据完整保留，不影响使用）')
+          return db
         }
-      }
-      request.onsuccess = () => {
-        const db = request.result
-        // 另一标签页触发 versionchange（新代码升级 DB）时：关掉旧连接并清缓存，
-        // 下次 open 重建连接，避免旧连接阻塞升级
-        db.onversionchange = () => {
-          db.close()
-          dbPromise = undefined
-        }
-        resolve(db)
-      }
-      request.onerror = () => {
-        // 清除缓存的 rejected promise，下次调用可重试（否则永远返回同一个拒绝态）
-        dbPromise = undefined
-        reject(request.error)
-      }
-      request.onblocked = () => {
-        // 被其它标签页的旧连接阻塞时：清除缓存并拒绝，用户关闭冲突标签页后可重试
-        dbPromise = undefined
-        reject(new Error('IDB 升级被阻塞，请关闭其它标签页后重试'))
-      }
+        // 现有高版本库里缺少本构建需要的 store（例如库是别的分支建的、store 集合不同）。
+        // 此时不能只"沿用"——事务会直接 NotFoundError，功能全废。
+        // 升到「现有版本 + 1」补齐缺失 store：只新增、不删除，数据完整保留。
+        const nextVersion = db.version + 1
+        const curVersion = db.version
+        db.close() // 必须先关掉当前连接，否则升级会被自己阻塞
+        console.warn(
+          `[idb] 现有数据库版本(v${curVersion})高于本构建且缺少 store：`,
+          missing,
+          `→ 已升级到 v${nextVersion} 补齐（数据保留）`
+        )
+        return openOnce(nextVersion)
+      })
+    })
+    // 最终失败才清缓存（否则下次调用会永远复用同一个 rejected promise）
+    dbPromise = attempt.catch((e: unknown) => {
+      dbPromise = undefined
+      throw e
     })
   }
   return dbPromise

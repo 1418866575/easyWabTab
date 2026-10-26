@@ -122,6 +122,75 @@ const browser = await chromium.launch({ executablePath: findChromium() })
 try {
   const base = await ensureDevServer()
   console.log('[qa] dev =', base, '\n[qa] zip =', ZIP)
+  const zipB64 = fs.readFileSync(ZIP).toString('base64')
+
+  // ---------- 0) 复现「浏览器里的库版本(v24) 高于本构建(v23)」----------
+  // 用户真实事故：同一域名跑过 DB_VERSION=24 的旧分支构建，之后 master(v23) 打开时
+  // indexedDB.open 抛 VersionError → 所有 IDB 写入失败 → 导入不落盘、刷新即回退。
+  console.log('\n[qa] === 场景0：已有数据库版本(v24)高于本构建 → 仍应可正常读写 ===')
+  {
+    const ctx0 = await browser.newContext({ viewport: { width: 1280, height: 800 } })
+    const p0 = await ctx0.newPage()
+    // 借同源静态文件落一个「不加载 SPA」的页面，先把库升到 v24 并建一个本构建没有的 store
+    await p0.goto(base + '/icons/icons.json', { waitUntil: 'commit', timeout: 120000 })
+    const ver = await p0.evaluate(async () => {
+      const db = await new Promise((res, rej) => {
+        const r = indexedDB.open('easy-web-tab', 24)
+        r.onupgradeneeded = () => {
+          const d = r.result
+          if (!d.objectStoreNames.contains('feishu_admin')) d.createObjectStore('feishu_admin')
+        }
+        r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error)
+      })
+      const v = db.version
+      db.close()
+      return v
+    })
+    check('已预置 v24 数据库（模拟旧的高版本构建）', ver === 24, `version=${ver}`)
+
+    const p1 = await ctx0.newPage()
+    const logs0 = []
+    p1.on('console', (m) => {
+      const t = m.text()
+      if (/\[idb\]|\[Import\]|\[nav-prefs\]/.test(t)) logs0.push(t.slice(0, 200))
+    })
+    await p1.goto(base + '/', { waitUntil: 'commit', timeout: 120000 })
+    await p1.waitForSelector('.site-card', { timeout: 120000 })
+    await p1.waitForTimeout(500)
+
+    const r0 = await p1.evaluate(async (b64) => {
+      const bin = atob(b64)
+      const bytes = new Uint8Array(bin.length)
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+      const file = new File([bytes], 'sites.zip', { type: 'application/zip' })
+      const mod = await import('/src/stores/sites.ts')
+      return await mod.useSitesStore().importFromZip(file)
+    }, zipB64)
+    console.log('[qa] 场景0 导入:', JSON.stringify(r0))
+    check('场景0：导入成功（新增 90）', r0.added === 90, `added=${r0.added}`)
+    check(
+      '场景0：图标库登记成功（不再 VersionError）',
+      r0.iconLibraryAdded === 69 && !r0.iconLibraryError,
+      `lib=${r0.iconLibraryAdded} err=${r0.iconLibraryError}`
+    )
+
+    const s0 = await idbStats(p1)
+    check('场景0：能写入 v24 库的 user-sites', s0.n === 90 && s0.dataUrl === 79, `n=${s0.n} dataUrl=${s0.dataUrl}`)
+
+    await p1.reload({ waitUntil: 'commit', timeout: 120000 })
+    await p1.waitForSelector('.site-card', { timeout: 120000 })
+    await p1.waitForTimeout(600)
+    const s0b = await idbStats(p1)
+    check('场景0：刷新后图标仍在', s0b.dataUrl === 79, `dataUrl=${s0b.dataUrl}`)
+    const lib0 = await iconLibCount(p1)
+    check('场景0：刷新后图标库仍 69', lib0 === 69, `icons=${lib0}`)
+
+    if (logs0.length) {
+      console.log('[qa] 场景0 日志:')
+      logs0.slice(0, 8).forEach((l) => console.log('   ' + l))
+    }
+    await ctx0.close()
+  }
 
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
   const page = await ctx.newPage()
@@ -135,8 +204,6 @@ try {
   await page.goto(base + '/', { waitUntil: 'commit', timeout: 120000 })
   await page.waitForSelector('.site-card', { timeout: 120000 })
   check('应用加载完成（站点卡片已渲染）', true)
-
-  const zipB64 = fs.readFileSync(ZIP).toString('base64')
 
   // ---------- 1) 第一次导入 ----------
   const r1 = await page.evaluate(async (b64) => {
