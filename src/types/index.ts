@@ -243,6 +243,8 @@ export interface WorkbenchNote extends SyncStamp {
   entries?: TimelineEntry[] // 时光轴条目（仅 type='timeline' 使用，normal 不写入）
   dueDate?: string          // 截止日期 'YYYY-MM-DD'；undefined = 未设置（历史数据缺省）
   status?: NoteStatus       // 处理中 / 已处理；undefined = 缺省按「处理中」显示（历史数据兼容）
+  /** 状态最后一次变更时间（ISO）：合并时按此做**字段级**取舍，避免整条记录被对端旧状态覆盖 */
+  statusUpdatedAt?: string
 }
 
 // 工作台便签数据（分类 + 便签列表）

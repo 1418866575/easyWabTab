@@ -96,6 +96,8 @@ export function normalizeNote(raw: unknown | undefined): WorkbenchNote {
     ? (src.status as NoteStatus)
     : 'pending'
   base.status = status
+  // 状态变更时间（字段级合并依据）：仅保留合法 ISO 字符串
+  if (typeof src.statusUpdatedAt === 'string' && src.statusUpdatedAt) base.statusUpdatedAt = src.statusUpdatedAt
   if (type === 'timeline') {
     base.entries = Array.isArray(src.entries) ? src.entries.map((e: unknown) => normalizeTimelineEntry(e)) : []
   }

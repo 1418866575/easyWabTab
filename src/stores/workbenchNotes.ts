@@ -63,10 +63,16 @@ export const useWorkbenchNotesStore = defineStore('workbenchNotes', () => {
   async function updateNote(id: string, patch: Partial<WorkbenchNote>): Promise<void> {
     const index = notes.value.findIndex(n => n.id === id)
     if (index !== -1) {
+      const prev = notes.value[index]
+      const now = new Date().toISOString()
+      // 状态单独记一枚时间戳：合并时按字段取舍，避免「只改了标题/置顶的对端记录」
+      // 因为整条 updatedAt 更新，把本端刚改的状态一起覆盖回去。
+      const statusChanged = patch.status !== undefined && patch.status !== prev.status
       notes.value[index] = {
-        ...notes.value[index],
+        ...prev,
         ...patch,
-        updatedAt: new Date().toISOString()
+        updatedAt: now,
+        ...(statusChanged ? { statusUpdatedAt: now } : {})
       }
       await saveNotes()
     }

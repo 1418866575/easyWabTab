@@ -817,13 +817,33 @@ function mergeNotes(l: NoteData | undefined, r: NoteData | undefined): NoteData 
   const ln = l?.notes ?? []
   const rn = r?.notes ?? []
   const notes = mergeById(ln, rn, 'id', 'updatedAt').map(note => {
-    if (note.type !== 'timeline') return note
     const localNote = ln.find(n => n.id === note.id)
     const remoteNote = rn.find(n => n.id === note.id)
-    if (localNote?.entries && remoteNote?.entries) {
-      return { ...note, entries: mergeById(localNote.entries, remoteNote.entries, 'id', 'createdAt') }
+
+    // ===== 状态字段级合并（核心修复）=====
+    // mergeById 是**记录级** LWW：整条记录一起换。于是「对端只改了标题/置顶/截止日期」
+    // （或对端时钟偏快、updatedAt 更新）就会带着它的旧 status 赢下整条记录，
+    // 把本端刚改的「已处理」覆盖回「处理中」，表现为「改完状态一同步又变回去」。
+    // 这里把 status 单独按 statusUpdatedAt 取新；旧数据缺该字段时维持记录级结果（不臆造）。
+    let merged = note
+    if (localNote && remoteNote && localNote.status !== remoteNote.status) {
+      const lt = localNote.statusUpdatedAt ?? ''
+      const rt = remoteNote.statusUpdatedAt ?? ''
+      if (lt && rt && lt !== rt) {
+        const takeLocal = lt > rt
+        merged = {
+          ...note,
+          status: takeLocal ? localNote.status : remoteNote.status,
+          statusUpdatedAt: takeLocal ? lt : rt
+        }
+      }
     }
-    return note
+
+    if (merged.type !== 'timeline') return merged
+    if (localNote?.entries && remoteNote?.entries) {
+      return { ...merged, entries: mergeById(localNote.entries, remoteNote.entries, 'id', 'createdAt') }
+    }
+    return merged
   })
   return { categories, notes }
 }
