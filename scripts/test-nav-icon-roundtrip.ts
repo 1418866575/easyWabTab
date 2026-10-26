@@ -22,6 +22,7 @@ import {
   resolveIconFilesInParsed,
   normalizeIconKey,
   isRelativeIconPath,
+  shouldFillIcon,
 } from '../src/composables/siteIconPortability.ts'
 import { useMarkdown } from '../src/composables/useMarkdown.ts'
 
@@ -195,6 +196,42 @@ async function main(): Promise<void> {
   const mdOnly: any = parseSitesFromMarkdown('---\nsites:\n  - name: Z\n    url: https://z.com\n    icon: icons/z.svg\n---\n')
   const leftover = [...(mdOnly.sites || []), ...(mdOnly.categories || [])].filter((x: any) => isRelativeIconPath(x.icon))
   eq('识别到 1 个残留相对路径', leftover.length, 1)
+
+  // ---------- 7) 已存在站点：跳过时补齐/修复图标（本次 bug 的核心） ----------
+  console.log('\n[7] 已存在记录补齐图标（URL 命中跳过）')
+  ok('原来没有图标 → 补', shouldFillIcon('', PNG))
+  ok('原来是坏相对路径 → 修', shouldFillIcon('icons/哔哩哔哩.svg', PNG))
+  ok('原是坏相对路径 + ./ 前缀 → 修', shouldFillIcon('./icons/x.png', SVG))
+  ok('原已是 data URL → 不覆盖', !shouldFillIcon(PNG, SVG))
+  ok('原已是 emoji → 不覆盖', !shouldFillIcon('💼', PNG))
+  ok('原已是站内预置路径 → 不覆盖', !shouldFillIcon('/icons/deepseek.svg', PNG))
+  ok('原已是 http 外链 → 不覆盖', !shouldFillIcon('https://x.com/i.png', PNG))
+  ok('传入也是相对路径（没还原成功）→ 不补', !shouldFillIcon('', 'icons/nope.png'))
+  ok('传入为空 → 不补', !shouldFillIcon('icons/x.svg', ''))
+  ok('undefined 传入 → 不补', !shouldFillIcon('', undefined))
+
+  // 模拟 applyParsedData 的合并：90 个 URL 已存在且图标全是坏的 → 应全部补齐，且不计 added
+  const existingSites = sites.map((s) => ({ ...s, icon: `icons/${s.name}.svg` }))
+  // 站点C 原本就是有效 emoji，用来验证「有效图标不被覆盖」
+  existingSites.find((s) => s.url === 'https://c.com')!.icon = '🎯'
+  const incoming = sites.map((s) => ({ ...s })) // icon 已是还原后的 data URL / emoji / 预置 / http
+  let added = 0
+  let skipped = 0
+  let filled = 0
+  const map = new Map(existingSites.map((s) => [s.url, s]))
+  for (const s of incoming) {
+    const exist = map.get(s.url)
+    if (!exist) { existingSites.push(s); added++ }
+    else {
+      skipped++
+      if (shouldFillIcon(exist.icon, s.icon)) { exist.icon = s.icon; filled++ }
+    }
+  }
+  eq('全部命中 → 新增 0', added, 0)
+  eq('全部命中 → 跳过 = 站点数', skipped, sites.length)
+  eq('补齐图标数量 = 6（C 是有效 emoji 不覆盖）', filled, 6)
+  eq('已存在站点 icon 已被补成 data URL（站点A）', map.get('https://a.com')!.icon, PNG)
+  eq('已存在站点有效 emoji 未被覆盖（站点C）', map.get('https://c.com')!.icon, '🎯')
 
   console.log(`\n===== 结果：${pass} pass / ${fail} fail =====`)
   process.exit(fail === 0 ? 0 : 1)

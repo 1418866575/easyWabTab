@@ -188,3 +188,24 @@ export function resolveIconFilesInParsed(
   return { restored, missing }
 }
 
+/**
+ * 判断「已存在记录」的图标是否应该被本次导入的图标补齐/修复。
+ *
+ * 背景：导入按 URL / id 去重，已存在的一律「跳过」。但用户很常见的场景是
+ * **之前导入过同一份数据、当时图标没还原成功**（icon 为空，或残留 `icons/xxx` 相对路径），
+ * 现在带着图标的 ZIP 再导一次 —— 若「跳过」时不补齐图标，还原结果就被整包丢掉了。
+ *
+ * 规则（只补不覆盖）：
+ * - incoming 必须是**可用图标**：非空、且不是相对路径（相对路径说明文件也没还原成功）；
+ * - existing 为空 → 补；
+ * - existing 是相对路径（坏图）→ 修；
+ * - existing 已是 data URL / emoji / 站内预置路径 / http 外链 → 保留不动。
+ */
+export function shouldFillIcon(existingIcon: unknown, incomingIcon: unknown): boolean {
+  const inc = typeof incomingIcon === 'string' ? incomingIcon.trim() : ''
+  if (!inc || isRelativeIconPath(inc)) return false
+  const cur = typeof existingIcon === 'string' ? existingIcon.trim() : ''
+  if (!cur) return true
+  return isRelativeIconPath(cur)
+}
+

@@ -13,6 +13,7 @@ import {
   parseDataUrl,
   resolveIconFilesInParsed,
   isRelativeIconPath,
+  shouldFillIcon,
   type IconFileEntry
 } from '../composables/siteIconPortability'
 import { useCategoriesStore } from './categories'
@@ -843,6 +844,7 @@ ${sub}
     error?: string
     iconsRestored?: number
     iconsMissing?: string[]
+    iconsFilled?: number
   }> {
     let mdText = ''
     const iconFiles: Record<string, IconFileEntry> = {}
@@ -879,7 +881,7 @@ ${sub}
   }
 
   // 从 Markdown 文本导入（旧版单 .md 备份 / 用户直接拖入 .md）：无法还原图标文件，仅做提示
-  async function importFromMarkdown(markdownText: string): Promise<{ added: number; skipped: number; passwordsImported?: number; error?: string }> {
+  async function importFromMarkdown(markdownText: string): Promise<{ added: number; skipped: number; passwordsImported?: number; error?: string; iconsFilled?: number }> {
     const { parseSitesFromMarkdown } = useMarkdown()
     const parsed = parseSitesFromMarkdown(markdownText)
     // 若 .md 里引用了 `icons/xxx` 相对路径，说明它本来是 ZIP 的一部分；
@@ -899,7 +901,7 @@ ${sub}
   /** 把已解析的数据落库（Markdown 文本导入与 ZIP 导入共用同一套逻辑）。 */
   async function applyParsedData(
     parsed: ReturnType<ReturnType<typeof useMarkdown>['parseSitesFromMarkdown']>
-  ): Promise<{ added: number; skipped: number; passwordsImported?: number; error?: string }> {
+  ): Promise<{ added: number; skipped: number; passwordsImported?: number; error?: string; iconsFilled?: number }> {
     const importedSites = parsed.sites
     
     // 检查是否解析到站点数据
@@ -951,15 +953,24 @@ ${sub}
 
     let added = 0
     let skipped = 0
+    let iconsFilled = 0
 
     // 合并数据：新数据中 URL 不存在的才添加
     for (const site of validSites) {
-      if (!existingMap.has(site.url)) {
+      const exist = existingMap.get(site.url)
+      if (!exist) {
         existingSites.push(site)
         existingMap.set(site.url, site)
         added++
       } else {
         skipped++
+        // 已存在：不覆盖原有字段，但**补齐/修复图标**。
+        // 典型场景：此前导入过同一份数据，当时图标未还原（icon 为空或残留 icons/xxx 相对路径），
+        // 现在重新导入带图标的 ZIP —— 若「跳过」时什么都不做，刚还原好的图标就被整包丢掉了。
+        if (shouldFillIcon(exist.icon, site.icon)) {
+          exist.icon = site.icon
+          iconsFilled++
+        }
       }
     }
 
@@ -971,7 +982,7 @@ ${sub}
     // 重新加载数据以更新显示
     loadSites()
     
-    return { added, skipped }
+    return { added, skipped, iconsFilled }
   }
 
   return {

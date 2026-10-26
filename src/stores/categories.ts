@@ -4,6 +4,7 @@ import type { Category } from '../types'
 import { DEFAULT_CATEGORIES } from '../types'
 import { markDirty } from '@/composables/useCloudSync'
 import { getPref, setPref } from '@/composables/useNavPrefs'
+import { shouldFillIcon } from '@/composables/siteIconPortability'
 
 const STORAGE_KEY = 'user-categories'
 const DELETED_LEGACY_KEY = 'user-deleted-legacy-ids'
@@ -157,8 +158,15 @@ export const useCategoriesStore = defineStore('categories', () => {
   // Import custom categories (for import/export)
   function importCategories(categories: Category[]) {
     for (const cat of categories) {
-      // 跳过内置分类、已存在的分类、以及用户已删除的遗留分类
-      if (!cat.isBuiltIn && !customCategories.value.find(c => c.id === cat.id) && !deletedLegacyIds.has(cat.id)) {
+      // 已存在的自定义分类：不覆盖其它字段，但补齐/修复图标。
+      // 场景：此前导入过但图标未还原（空 或 残留 icons/xxx 相对路径），重新导入带图标的 ZIP 时补回。
+      const exist = customCategories.value.find(c => c.id === cat.id)
+      if (exist) {
+        if (shouldFillIcon(exist.icon, cat.icon)) exist.icon = cat.icon
+        continue
+      }
+      // 跳过内置分类与用户已删除的遗留分类
+      if (!cat.isBuiltIn && !deletedLegacyIds.has(cat.id)) {
         customCategories.value.push(cat)
       }
     }
