@@ -848,6 +848,7 @@ ${sub}
     iconsMissing?: string[]
     iconsFilled?: number
     iconLibraryAdded?: number
+    iconLibraryError?: string
   }> {
     let mdText = ''
     const iconFiles: Record<string, IconFileEntry> = {}
@@ -886,6 +887,7 @@ ${sub}
     // 用户想给其它站点复用这些图标时无从选择。
     // 放在站点落库之后：即便图标库写入失败（配额等），站点导入本身不受影响。
     let iconLibraryAdded = 0
+    let iconLibraryError = ''
     try {
       const iconsStore = useIconsStore()
       const entries = Object.entries(iconFiles).map(([p, v]) => ({
@@ -896,10 +898,11 @@ ${sub}
       const lib = await iconsStore.importIconEntries(entries)
       iconLibraryAdded = lib.added
     } catch (e) {
+      iconLibraryError = e instanceof Error ? e.message : String(e ?? '')
       console.warn('[Import] 图标库登记失败（站点导入已成功，不受影响）：', e)
     }
 
-    return { ...res, iconsRestored: restored, iconsMissing: missing, iconLibraryAdded }
+    return { ...res, iconsRestored: restored, iconsMissing: missing, iconLibraryAdded, iconLibraryError }
   }
 
   // 从 Markdown 文本导入（旧版单 .md 备份 / 用户直接拖入 .md）：无法还原图标文件，仅做提示

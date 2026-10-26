@@ -490,7 +490,15 @@ function sendFile(fullPath, res, contentType, isSpaFallback) {
       }
       return
     }
-    res.writeHead(200, { 'Content-Type': contentType })
+    // 缓存策略（部署后「改了没生效」的常见根因就是 index.html 被缓存住，
+    // 于是浏览器继续引用旧 hash 资源，等于一直跑旧代码）：
+    //  - 构建产物 /assets/*-<hash>.js|css：文件名含 hash，内容变则文件名变 → 可长缓存 immutable
+    //  - 其它（index.html / 图片 / 图标 / SPA 兜底）：no-cache，每次都回源校验
+    const hashedAsset = /[\\/]assets[\\/][^\\/]+-[A-Za-z0-9_-]{8,}\.(js|css)$/i.test(fullPath)
+    const cacheControl = hashedAsset
+      ? 'public, max-age=31536000, immutable'
+      : 'no-cache, must-revalidate'
+    res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': cacheControl })
     const stream = fs.createReadStream(fullPath)
     stream.on('error', (e) => {
       console.error(`[static] read failed: ${fullPath} -> ${e.message}`)

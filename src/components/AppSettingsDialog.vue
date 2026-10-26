@@ -669,12 +669,17 @@ function handleSiteImport(event: Event) {
         if (result.iconsFilled) msg += `；已有站点补齐图标 ${result.iconsFilled} 个`
         if (result.iconLibraryAdded) msg += `；图标库新增 ${result.iconLibraryAdded} 个`
         const missing = result.iconsMissing || []
-        if (missing.length > 0) {
-          // 图标文件在压缩包里缺失：明确告知，避免用户误以为「全都还原好了」
-          toast.warning(
-            `${msg}；⚠️ ${missing.length} 个图标在压缩包中缺失（如 ${missing.slice(0, 3).join('、')}），已保留原路径`,
-            5000
-          )
+        const libErr = result.iconLibraryError || ''
+        if (missing.length > 0 || libErr) {
+          // 任何"没完全成功"的部分都必须说出来，避免用户对着「自定义 0 个」猜
+          let warn = msg
+          if (missing.length > 0) {
+            warn += `；⚠️ ${missing.length} 个图标在压缩包中缺失（如 ${missing.slice(0, 3).join('、')}），已保留原路径`
+          }
+          if (libErr) {
+            warn += `；⚠️ 图标库写入失败：${libErr}（站点图标不受影响，常见原因是存储空间不足）`
+          }
+          toast.warning(warn, 8000)
         } else {
           toast.success(msg)
         }

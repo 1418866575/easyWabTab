@@ -291,6 +291,63 @@ try {
   console.log('[qa] 渲染:', JSON.stringify(rendered2))
   check('页面渲染无坏图标', rendered2.broken === 0, `broken=${rendered2.broken}`)
 
+  // ---------- 5) 精确复现用户现场：图标库为空 + 站点已存在（URL 全部命中）→ 重新导入 ----------
+  console.log('\n[qa] === 场景3：图标库清空 + 站点已存在 → 重新导入应填充图标库 ===')
+  await page.evaluate(`(async () => {
+    const db = await new Promise((res, rej) => {
+      const r = indexedDB.open('easy-web-tab'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error)
+    })
+    await new Promise((res, rej) => {
+      const tx = db.transaction('icons', 'readwrite')
+      tx.objectStore('icons').clear()
+      tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error)
+    })
+    db.close()
+    // 必须同时清 localStorage 旧键，否则 ensureLoaded 会把它迁移回 IDB
+    try { localStorage.removeItem('user-custom-icons') } catch {}
+  })()`)
+  await page.reload({ waitUntil: 'commit', timeout: 120000 })
+  await page.waitForSelector('.site-card', { timeout: 120000 })
+  await page.waitForTimeout(600)
+
+  const libCleared = await iconLibCount(page)
+  check('图标库已清空（自定义 0）', libCleared === 0, `icons=${libCleared}`)
+
+  const r3 = await page.evaluate(async (b64) => {
+    const bin = atob(b64)
+    const bytes = new Uint8Array(bin.length)
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+    const file = new File([bytes], 'sites.zip', { type: 'application/zip' })
+    const mod = await import('/src/stores/sites.ts')
+    const r = await mod.useSitesStore().importFromZip(file)
+    await new Promise((rs) => setTimeout(rs, 800))
+    return r
+  }, zipB64)
+  console.log('[qa] 场景3 导入:', JSON.stringify(r3))
+  check('场景3：站点全部命中（added=0）', r3.added === 0, `added=${r3.added}`)
+  check('场景3：图标库新增 69', r3.iconLibraryAdded === 69, `iconLibraryAdded=${r3.iconLibraryAdded}`)
+
+  const libAfter = await iconLibCount(page)
+  check('场景3：IDB 图标库 69 条', libAfter === 69, `icons=${libAfter}`)
+
+  await page.reload({ waitUntil: 'commit', timeout: 120000 })
+  await page.waitForSelector('.site-card', { timeout: 120000 })
+  await page.waitForTimeout(800)
+  const libAfterReload = await iconLibCount(page)
+  check('场景3：刷新后图标库仍 69 条', libAfterReload === 69, `icons=${libAfterReload}`)
+
+  // 图标管理页里应能列出这些自定义图标
+  await page.goto(base + '/', { waitUntil: 'commit', timeout: 120000 })
+  await page.waitForSelector('.site-card', { timeout: 120000 })
+  const managerCount = await page.evaluate(async () => {
+    const mod = await import('/src/stores/icons.ts')
+    const s = mod.useIconsStore()
+    await s.ensureLoaded()
+    return { custom: s.customIcons.length, all: s.allIcons.length }
+  })
+  console.log('[qa] 图标库 store:', JSON.stringify(managerCount))
+  check('图标库 store 有 69 个自定义图标', managerCount.custom === 69, `custom=${managerCount.custom}`)
+
   const failed = results.filter((r) => !r.ok)
   console.log(`\n[qa] 结果：${results.length - failed.length} pass / ${failed.length} fail`)
   process.exitCode = failed.length ? 1 : 0
