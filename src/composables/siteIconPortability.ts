@@ -74,7 +74,12 @@ export function registerIconPath(table: IconNameTable, dataUrl: string, siteName
   const hit = table.byDataUrl.get(dataUrl)
   if (hit) return hit
   const parsed = parseDataUrl(dataUrl)
-  const ext = parsed ? extOfMime(parsed.mime) : 'png'
+  // 非标准 base64 data URL（如 `data:image/svg+xml;utf8,<svg…>`、百分号编码的 data URL）
+  // 解不出可写入文件的字节。若仍登记为相对路径，downloadMarkdown 会因 parseDataUrl 为 null
+  // 跳过写文件 → ZIP 里没有对应图标 → 导入时路径无法还原，图标永久丢失。
+  // 因此这类图标保持内联原样（Markdown 里直接写 data URL），确保至少不丢。
+  if (!parsed) return dataUrl
+  const ext = extOfMime(parsed.mime)
   const base = safeSlug(siteName, `icon_${index + 1}`)
   let name = `${base}.${ext}`
   let n = 1
@@ -92,3 +97,94 @@ export function registerIconPath(table: IconNameTable, dataUrl: string, siteName
 export function iconPathEntries(table: IconNameTable): Array<{ dataUrl: string; path: string }> {
   return [...table.byDataUrl.entries()].map(([dataUrl, path]) => ({ dataUrl, path }))
 }
+
+/* ------------------------------------------------------------------ */
+/* 导入侧：把 ZIP 里的图标文件还原回 data URL（结构化还原，不靠文本替换）   */
+/* ------------------------------------------------------------------ */
+
+/** ZIP 内读出的图标文件：mime + 纯 base64（不含 data: 前缀） */
+export interface IconFileEntry {
+  mime: string
+  base64: string
+}
+
+/**
+ * 归一化图标路径为匹配键：统一分隔符、去掉 `./` 前缀、丢弃 `icons/` 之前的任意层级目录。
+ *
+ * 兼容场景：
+ * - `icons/a.svg` 与 `./icons/a.svg`
+ * - 被第三方工具重新打包成 `sites/icons/a.svg`（多一层目录）
+ * - Windows 风格反斜杠 `icons\a.svg`
+ * - 大小写差异
+ *
+ * 只保留 `icons/` 之后的文件名（小写），因此「Markdown 中的引用」与「ZIP 条目名」能对上。
+ */
+export function normalizeIconKey(p: string): string {
+  let s = (p || '').trim().replace(/\\/g, '/')
+  s = s.replace(/^\.\//, '')
+  const i = s.toLowerCase().lastIndexOf('icons/')
+  if (i >= 0) s = s.slice(i + 'icons/'.length)
+  return s.toLowerCase()
+}
+
+/**
+ * 判断某个 icon 值是否为「需要从 ZIP 还原的相对文件路径」。
+ *
+ * 只有这类值才尝试还原；以下一律原样保留：
+ * - 空串 / 超长（base64 通常很长）
+ * - `data:` 内联
+ * - `http(s)://` 等带 scheme 的外链、协议相对 `//`
+ * - 站内绝对路径 `/icons/xxx`（预置图标本身就是这种，属于 public 资源，不该被还原）
+ * - emoji 等非路径文本（没有 `icons/` 也不带图片扩展名）
+ */
+export function isRelativeIconPath(v: unknown): v is string {
+  if (typeof v !== 'string') return false
+  const s = v.trim()
+  if (!s || s.length > 512) return false
+  if (/^data:/i.test(s)) return false
+  if (/^\/\//.test(s)) return false
+  if (/^[a-z][a-z0-9+.-]*:/i.test(s)) return false
+  if (s.startsWith('/')) return false
+  if (/icons\//i.test(s)) return true
+  return /\.(svg|png|jpe?g|gif|webp|ico|bmp)$/i.test(s)
+}
+
+/**
+ * 把已解析数据里的「相对图标路径」就地还原为 data URL。
+ *
+ * 相比「在 Markdown 文本上做字符串替换」，结构化还原不受引号风格（`'x'` / `"x"` / 裸值）、
+ * 换行符、目录层级、替换顺序影响，只要 ZIP 里存在对应文件就一定能换上。
+ *
+ * @returns restored：成功还原的图标数；missing：找不到对应文件的相对路径清单（去重）
+ */
+export function resolveIconFilesInParsed(
+  parsed: { sites?: Array<{ icon?: string }>; categories?: Array<{ icon?: string }> },
+  iconFiles: Record<string, IconFileEntry>
+): { restored: number; missing: string[] } {
+  const keyMap = new Map<string, IconFileEntry>()
+  for (const [path, entry] of Object.entries(iconFiles)) keyMap.set(normalizeIconKey(path), entry)
+
+  const missing: string[] = []
+  const missingSet = new Set<string>()
+  let restored = 0
+
+  const convert = (target: { icon?: string }) => {
+    const v = target.icon
+    if (!isRelativeIconPath(v)) return
+    const hit = keyMap.get(normalizeIconKey(v))
+    if (hit) {
+      target.icon = `data:${hit.mime};base64,${hit.base64}`
+      restored += 1
+      return
+    }
+    if (!missingSet.has(v)) {
+      missingSet.add(v)
+      missing.push(v)
+    }
+  }
+
+  for (const s of parsed.sites || []) convert(s)
+  for (const c of parsed.categories || []) convert(c)
+  return { restored, missing }
+}
+

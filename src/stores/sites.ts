@@ -10,7 +10,10 @@ import {
   createIconNameTable,
   registerIconPath,
   iconPathEntries,
-  parseDataUrl
+  parseDataUrl,
+  resolveIconFilesInParsed,
+  isRelativeIconPath,
+  type IconFileEntry
 } from '../composables/siteIconPortability'
 import { useCategoriesStore } from './categories'
 import { useSearchEnginesStore } from './searchEngines'
@@ -826,24 +829,34 @@ ${sub}
 
   /**
    * 从导出的 ZIP 导入（sites.md + icons/*）：
-   * 读出 Markdown，把其中 `icon: icons/xxx.png` 的相对路径**还原为 base64**，
-   * 再走 markdown 导入流程。旧的单 .md 文件（icon 为 data URL）不受影响。
+   * 先解析出结构化数据，再把 icon 里的**相对路径按图标文件结构化还原**为 data URL。
+   *
+   * 为什么不再对 Markdown 文本做字符串替换：
+   * 文本替换依赖「Markdown 里写成什么样」，对引号风格（`'x'` / `"x"` / 裸值）、
+   * 路径层级（`icons/x` vs `xxx/icons/x`）、Windows 反斜杠、替换先后顺序都很脆弱，
+   * 任意一处对不上就整批图标丢失。改成解析后按 `icon` 值匹配图标文件，稳定性高得多。
    */
-  async function importFromZip(file: File): Promise<{ added: number; skipped: number; passwordsImported?: number; error?: string; iconsRestored?: number }> {
-    let mdText: string
-    const iconFiles: Record<string, { mime: string; base64: string }> = {}
+  async function importFromZip(file: File): Promise<{
+    added: number
+    skipped: number
+    passwordsImported?: number
+    error?: string
+    iconsRestored?: number
+    iconsMissing?: string[]
+  }> {
+    let mdText = ''
+    const iconFiles: Record<string, IconFileEntry> = {}
     try {
       const zip = await JSZip.loadAsync(file)
-      // Markdown 可能在根目录，也可能被包在一层同名目录里
-      let mdEntry: JSZip.JSZipObject | null = null
       const names = Object.keys(zip.files)
+      // Markdown 可能在根目录，也可能被包在一层同名目录里（`xxx/sites.md`）
+      const mdName = names.find((n) => /\.md$/i.test(n) && !zip.files[n].dir)
+      if (!mdName) return { added: 0, skipped: 0, error: '压缩包内未找到 .md 备份文件' }
+      mdText = await zip.files[mdName].async('string')
+      // 图标文件：兼容根目录 `icons/x.png`、带前缀 `xxx/icons/x.png`、反斜杠分隔符
       for (const n of names) {
-        if (/\.md$/i.test(n) && !zip.files[n].dir) { mdEntry = zip.files[n]; break }
-      }
-      if (!mdEntry) return { added: 0, skipped: 0, error: '压缩包内未找到 .md 备份文件' }
-      mdText = await mdEntry.async('string')
-      for (const n of names) {
-        if (zip.files[n].dir || !/^icons\//i.test(n)) continue
+        if (zip.files[n].dir) continue
+        if (!/icons[\\/][^\\/]+$/i.test(n)) continue
         const buf = await zip.files[n].async('uint8array')
         iconFiles[n] = { mime: mimeOfPath(n), base64: bytesToBase64(buf) }
       }
@@ -851,26 +864,42 @@ ${sub}
       return { added: 0, skipped: 0, error: '无法读取压缩包：' + (e as Error).message }
     }
 
-    // 把 Markdown 中的相对路径替换回 data URL（YAML 里按行替换，避免转义问题）
-    let iconsRestored = 0
-    let text = mdText
-    for (const [path, v] of Object.entries(iconFiles)) {
-      // 同时兼容 `icons/x.png` 与 `./icons/x.png` 两种写法
-      for (const candidate of [path, './' + path]) {
-        if (text.includes(candidate)) {
-          text = text.split(candidate).join(`data:${v.mime};base64,${v.base64}`)
-          iconsRestored += 1
-        }
-      }
+    const { parseSitesFromMarkdown } = useMarkdown()
+    const parsed = parseSitesFromMarkdown(mdText)
+    const { restored, missing } = resolveIconFilesInParsed(parsed, iconFiles)
+    if (missing.length > 0) {
+      // 说明 ZIP 里确实缺这些图标文件：保留原相对路径（至少不崩），并把清单打到控制台便于排查
+      console.warn(
+        `[Import] ${missing.length} 个图标在压缩包中找不到对应文件，已保留原路径：`,
+        missing.slice(0, 20)
+      )
     }
-    const res = await importFromMarkdown(text)
-    return { ...res, iconsRestored }
+    const res = await applyParsedData(parsed)
+    return { ...res, iconsRestored: restored, iconsMissing: missing }
   }
 
-  // 从 Markdown 文本导入到 localStorage（按 URL 去重，保留原来的）
+  // 从 Markdown 文本导入（旧版单 .md 备份 / 用户直接拖入 .md）：无法还原图标文件，仅做提示
   async function importFromMarkdown(markdownText: string): Promise<{ added: number; skipped: number; passwordsImported?: number; error?: string }> {
     const { parseSitesFromMarkdown } = useMarkdown()
     const parsed = parseSitesFromMarkdown(markdownText)
+    // 若 .md 里引用了 `icons/xxx` 相对路径，说明它本来是 ZIP 的一部分；
+    // 单文件导入拿不到图标字节 → 明确提示改用 .zip，避免用户以为「图标莫名丢了」。
+    const leftover = [...(parsed.sites || []), ...(parsed.categories || [])].filter((x) =>
+      isRelativeIconPath((x as { icon?: string }).icon)
+    )
+    if (leftover.length > 0) {
+      console.warn(
+        `[Import] 检测到 ${leftover.length} 个相对图标路径，但当前导入的是 .md 单文件（不含图标文件）。` +
+          '请改为导入完整的 .zip 备份以还原这些图标。'
+      )
+    }
+    return applyParsedData(parsed)
+  }
+
+  /** 把已解析的数据落库（Markdown 文本导入与 ZIP 导入共用同一套逻辑）。 */
+  async function applyParsedData(
+    parsed: ReturnType<ReturnType<typeof useMarkdown>['parseSitesFromMarkdown']>
+  ): Promise<{ added: number; skipped: number; passwordsImported?: number; error?: string }> {
     const importedSites = parsed.sites
     
     // 检查是否解析到站点数据

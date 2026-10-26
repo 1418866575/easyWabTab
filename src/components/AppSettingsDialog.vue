@@ -666,7 +666,16 @@ function handleSiteImport(event: Event) {
       } else {
         let msg = `导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条`
         if (result.iconsRestored) msg += `；图标还原 ${result.iconsRestored} 个`
-        toast.success(msg)
+        const missing = result.iconsMissing || []
+        if (missing.length > 0) {
+          // 图标文件在压缩包里缺失：明确告知，避免用户误以为「全都还原好了」
+          toast.warning(
+            `${msg}；⚠️ ${missing.length} 个图标在压缩包中缺失（如 ${missing.slice(0, 3).join('、')}），已保留原路径`,
+            5000
+          )
+        } else {
+          toast.success(msg)
+        }
       }
       input.value = ''
     })()

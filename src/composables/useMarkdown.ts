@@ -18,7 +18,9 @@ function tolerantParseSites(content: string): RawStore | null {
   if (!m) return null
   const lines = m[1].split('\n')
   const result: RawStore = { sites: [], categories: [], searchEngines: [], passwords: [], countdowns: [] }
-  let section: keyof RawStore | null = null
+  // 只允许指向「数组型 section」：RawStore 里还有 lastUpdated?: string 这类非数组字段，
+  // 若用 keyof RawStore 会把 push 的接收者推断成 string | 数组，编译不过。
+  let section: RawArraySection | null = null
   let current: Record<string, unknown> | null = null
   let repeatBuf: Record<string, unknown> | null = null
 
@@ -56,7 +58,7 @@ function tolerantParseSites(content: string): RawStore | null {
 
     // 顶层 section 头：`categories:` 等（0 缩进、无同行值）
     if (indent === 0 && SECTION_RE.test(text)) {
-      section = text.slice(0, -1) as keyof RawStore
+      section = text.slice(0, -1) as RawArraySection
       current = null
       repeatBuf = null
       continue
@@ -113,14 +115,20 @@ interface RawStore {
   searchEngines: Record<string, unknown>[]
   passwords: Record<string, unknown>[]
   countdowns: Record<string, unknown>[]
+  lastUpdated?: string
 }
+
+/** RawStore 中「值为数组」的 section 键（容错解析只会推进到这些 section） */
+type RawArraySection = 'sites' | 'categories' | 'searchEngines' | 'passwords' | 'countdowns'
 
 /** 把原始解析结果（标准 YAML 或容错解析产出）归一化为导入所需的形状。 */
 function normalizeParsed(data: RawStore): SitesData & { categories?: Category[]; searchEngines?: SearchEngine[]; passwords?: PasswordEntry[]; countdowns?: Countdown[] } {
-  const sitesData = data.sites as Site[] | undefined
-  const categoriesData = data.categories as Category[] | undefined
-  const searchEnginesData = data.searchEngines as SearchEngine[] | undefined
-  const passwordsData = data.passwords as PasswordEntry[] | undefined
+  // RawStore 的元素是「逐行解析得到的松散对象」，与严格的领域类型不重叠，
+  // 这里显式经 unknown 转换（本项目既有做法），由下游各 store 的 normalize 兜底校验。
+  const sitesData = data.sites as unknown as Site[] | undefined
+  const categoriesData = data.categories as unknown as Category[] | undefined
+  const searchEnginesData = data.searchEngines as unknown as SearchEngine[] | undefined
+  const passwordsData = data.passwords as unknown as PasswordEntry[] | undefined
 
   // 解析倒计时数据（防御性解析：缺失字段使用生成的默认值兜底）
   const countdownsData: Countdown[] | undefined = Array.isArray(data.countdowns)
