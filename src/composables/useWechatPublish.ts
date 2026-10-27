@@ -162,6 +162,9 @@ function styleFor(tag: string, el: HTMLElement): string {
 function flattenLists(root: HTMLElement): void {
   const doc = root.ownerDocument
 
+  const isPunctStart = (t: string): boolean => /^[：:，,。.、；;！!？?）)】」』]/.test(t)
+
+  /** 折叠空白 + 去掉首尾换行 */
   const collapse = (html: string): string =>
     html
       .replace(/\s*\n\s*/g, ' ')
@@ -169,6 +172,22 @@ function flattenLists(root: HTMLElement): void {
       .replace(/^(\s|<br\s*\/?>)+/i, '')
       .replace(/(\s|<br\s*\/?>)+$/i, '')
       .trim()
+
+  /**
+   * 行内软换行归一：
+   * markdown-it 的 breaks:true 会把「列表项内单换行」渲染成 <br>（如 `- **框架**\n  ：Vue 3`），
+   * 这在公众号里就是一条被劈成两行的列表项。列表内容本该是一段，
+   * 故把 <br> 折叠为「空格」；下一段以中文标点开头时直接连写（框架：Vue 3）。
+   */
+  const normalizeInline = (html: string): string => {
+    const segs = collapse(html)
+      .split(/<br\s*\/?>/i)
+      .map((x) => x.trim())
+      .filter(Boolean)
+    let out = ''
+    for (const seg of segs) out = out ? (isPunctStart(seg) ? out + seg : `${out} ${seg}`) : seg
+    return out
+  }
 
   /** 把一层列表展开成若干 section，追加到 out；嵌套列表递归加深缩进 */
   const walk = (list: HTMLElement, level: number, out: HTMLElement[]): void => {
@@ -184,10 +203,11 @@ function flattenLists(root: HTMLElement): void {
       })
       nested.forEach((n) => n.remove())
 
-      // 逐个子节点拼装：连续的文字/段落块合并成「一行」（段落之间不换行），
-      // 只有 pre/blockquote/table 这类真·块级结构才另起一行，避免把「：内容」顶到下一行
+      // 逐个子节点拼装：连续的文字/段落块/行内标签合并成「一行」，只有 pre/blockquote/table
+      // 这类真·块级结构才另起一行。注意 <strong>/<em>/<a>/<code> 是**行内**元素，
+      // 若当成块处理会被 <br> 隔开（紧凑列表里 markdown 的 **加粗** 就是这么被劈成两行的）。
       const isTextBlock = (t: string): boolean => t === 'p' || t === 'div' || t === 'section'
-      const isPunctStart = (t: string): boolean => /^[：:，,。.、；;！!？?）)】」』]/.test(t)
+      const INLINE_TAGS = new Set(['strong', 'b', 'em', 'i', 'u', 's', 'del', 'code', 'a', 'span', 'mark', 'sub', 'sup', 'img'])
       const parts: string[] = []
       let run = ''
       const flush = () => {
@@ -196,9 +216,11 @@ function flattenLists(root: HTMLElement): void {
           run = ''
         }
       }
+      /** run 收尾：去掉中文标点前的多余空格（"框架 ：Vue" → "框架：Vue"） */
+      const tidyRun = (t: string): string => t.replace(/\s+([：:，,。.、；;！!？?）)】」』])/g, '$1')
       for (const child of Array.from(li.childNodes)) {
         if (child.nodeType === 3) {
-          const t = collapse(child.textContent || '')
+          const t = normalizeInline(child.textContent || '')
           if (!t) continue
           run = run ? (isPunctStart(t) ? run + t : `${run} ${t}`) : t
           continue
@@ -206,8 +228,13 @@ function flattenLists(root: HTMLElement): void {
         if (child.nodeType !== 1) continue
         const el = child as HTMLElement
         const tag = el.tagName.toLowerCase()
-        if (isTextBlock(tag)) {
-          const t = collapse(el.innerHTML)
+        if (tag === 'br') {
+          // 项内软换行（breaks:true 的产物）→ 折叠为空格
+          run += ' '
+        } else if (INLINE_TAGS.has(tag)) {
+          run += el.outerHTML
+        } else if (isTextBlock(tag)) {
+          const t = normalizeInline(el.innerHTML)
           if (!t) continue
           run = run ? (isPunctStart(t) ? run + t : `${run} ${t}`) : t
         } else {
@@ -216,7 +243,7 @@ function flattenLists(root: HTMLElement): void {
         }
       }
       flush()
-      const inner = collapse(parts.join('<br>'))
+      const inner = collapse(parts.map(tidyRun).join('<br>'))
 
       if (!inner) {
         // 空项目符号（原文写了空列表项 / 只剩嵌套列表）→ 不生成符号，只处理嵌套

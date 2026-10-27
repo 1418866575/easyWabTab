@@ -9,7 +9,7 @@
  * 「发布」不是写库那么简单：会跑 collectPublishErrors 全量校验，任一不通过都不改状态，
  * 且错误要求直接展示在底部，避免用户对着「发布失败」干瞪眼。
  */
-import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useBlogStore } from '@/stores/blog'
 import {
   ARTICLE_STATUS_LABELS,
@@ -23,6 +23,8 @@ import { applyMarkdown, isAllowedDataImage } from '@/composables/blogEditorMd'
 import type { MdBlockKind } from '@/composables/blogEditorMd'
 import { imageRef, parseImageRefs, removeImageRefs, resolveImageRefs } from '@/composables/blogImages'
 import { renderMarkdown } from '@/composables/noteMarkdown'
+import { buildWechatContentHtml } from '@/composables/useWechatPublish'
+import { compressImageDataUrl, dataUrlBytes, formatBytes } from '@/composables/blogImageCompress'
 import type { BlogImage } from '@/types'
 import Icon from '@/components/Icon.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
@@ -56,9 +58,18 @@ const form = reactive({
   seoDescription: ''
 })
 
+/** 单图体积告警阈值（公众号正文图片建议不超过 2MB） */
+const IMAGE_WARN_BYTES = 2 * 1024 * 1024
+
 /** 快照：用于判断「有未保存改动」并据此提示 */
 let snapshot = ''
 const dirty = ref(false)
+/** 保存状态指示：saved 已保存 / saving 保存中 / unsaved 有未保存改动 */
+const saveState = ref<'saved' | 'saving' | 'unsaved'>('saved')
+const savedAt = ref('')
+/** 公众号效果预览（按草稿箱规则转换后的正文，避免发出去才发现变样） */
+const wechatPreviewOpen = ref(false)
+const wechatPreviewHtml = ref('')
 const viewMode = ref<'edit' | 'split' | 'preview'>('split')
 const publishedHtml = ref('')
 /** 右侧元数据抽屉开合状态：true 时向左滑出，false 时滑回右侧隐藏 */
@@ -228,6 +239,9 @@ async function onPickImages(e: Event): Promise<void> {
   let pos = ta ? ta.selectionStart : form.contentMarkdown.length
   let value = form.contentMarkdown
   let rejected = 0
+  let compressedCount = 0
+  let savedBytes = 0
+  let oversizedCount = 0
   for (const file of files) {
     let dataUrl: string
     try {
@@ -241,7 +255,22 @@ async function onPickImages(e: Event): Promise<void> {
       continue
     }
     const name = file.name.replace(/\.[^.]+$/, '') || '图片'
-    const saved = await store.addImage(name, dataUrl)
+    // 上传前压缩：最长边 1600 / JPEG 0.85，避免原图 base64 撑大 IDB 与云同步信封
+    const bytesIn = dataUrlBytes(dataUrl)
+    let bytesOut = bytesIn
+    try {
+      const compressed = await compressImageDataUrl(dataUrl)
+      dataUrl = compressed.dataUrl
+      bytesOut = compressed.bytes
+      if (compressed.compressed) {
+        compressedCount += 1
+        savedBytes += Math.max(0, bytesIn - bytesOut)
+      }
+    } catch {
+      // 压缩失败（解码异常等）→ 按原图继续，不阻断插入
+    }
+    if (bytesOut > IMAGE_WARN_BYTES) oversizedCount += 1
+    const saved = await store.addImage(name, dataUrl, bytesOut)
     const res = applyMarkdown('image', value, pos, pos, { alt: name, url: imageRef(saved.id) })
     value = res.value
     pos = res.selEnd
@@ -258,6 +287,11 @@ async function onPickImages(e: Event): Promise<void> {
   }
   if (rejected) {
     toastAlert(`已插入图片，${rejected} 个不支持的格式被跳过（仅支持位图 base64）`, 'warning')
+  } else if (compressedCount > 0) {
+    const tip = `已压缩 ${compressedCount} 张图片，节省约 ${formatBytes(savedBytes)}`
+    toastAlert(oversizedCount > 0 ? `${tip}；仍有 ${oversizedCount} 张超过 2MB` : tip, oversizedCount > 0 ? 'warning' : 'success')
+  } else if (oversizedCount > 0) {
+    toastAlert(`已插入图片，其中 ${oversizedCount} 张超过 2MB，建议压缩后再用于公众号`, 'warning')
   }
 }
 
@@ -383,6 +417,7 @@ watch(
 
 watch(form, () => {
   dirty.value = JSON.stringify(form) !== snapshot
+  if (dirty.value) saveState.value = 'unsaved'
   scheduleAutoSave()
 })
 
@@ -392,9 +427,20 @@ function refreshPreview(): void {
   const md = resolveImageRefs(form.contentMarkdown, id => store.imageUrlById.get(id))
   publishedHtml.value = renderMarkdown(md)
 }
-watch(() => form.contentMarkdown, refreshPreview)
+// 预览重渲染开销大（全量 markdown-it + 替换 DOM），连续输入时防抖 150ms
+let previewTimer: number | undefined
+function schedulePreview(): void {
+  if (previewTimer !== undefined) window.clearTimeout(previewTimer)
+  previewTimer = window.setTimeout(() => {
+    previewTimer = undefined
+    refreshPreview()
+  }, 150)
+}
+watch(() => form.contentMarkdown, schedulePreview)
 // 图片库变化（插入/移除图片）也要重渲染预览
-watch(() => store.imageUrlById, refreshPreview)
+watch(() => store.imageUrlById, schedulePreview)
+
+let beforeunloadRegistered = false
 
 // ---------- 自动保存 ----------
 let timer: number | undefined
@@ -410,6 +456,9 @@ function scheduleAutoSave(): void {
 const unregisterModuleFlush = registerModuleFlush('blogAdmin', () => saveDraft(true))
 onBeforeUnmount(() => {
   if (timer !== undefined) window.clearTimeout(timer)
+  if (previewTimer !== undefined) window.clearTimeout(previewTimer)
+  window.removeEventListener('keydown', onWindowKeydown)
+  if (beforeunloadRegistered) window.removeEventListener('beforeunload', onBeforeUnloadGuard)
   unregisterModuleFlush()
 })
 
@@ -418,6 +467,7 @@ async function saveDraft(silent = false): Promise<void> {
     if (!silent) toastAlert('没有需要保存的改动', 'info')
     return
   }
+  saveState.value = 'saving'
   const updated = await store.updateArticle(props.articleId, {
     title: form.title.trim(),
     subtitle: form.subtitle.trim() || undefined,
@@ -433,6 +483,7 @@ async function saveDraft(silent = false): Promise<void> {
     seoDescription: form.seoDescription.trim() || undefined
   })
   if (!updated) {
+    saveState.value = 'unsaved'
     toastAlert('保存失败：文章不存在', 'error')
     return
   }
@@ -441,6 +492,8 @@ async function saveDraft(silent = false): Promise<void> {
   form.excerpt = updated.excerpt
   snapshot = JSON.stringify(form)
   dirty.value = false
+  saveState.value = 'saved'
+  savedAt.value = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
   if (!silent) toastAlert('草稿已保存', 'success')
 }
 
@@ -529,6 +582,37 @@ async function handleClose(): Promise<void> {
   emit('close')
 }
 
+// ---------- 公众号效果预览（发之前先看，避免发到草稿箱才发现变样） ----------
+function openWechatPreview(): void {
+  if (!form.contentMarkdown.trim()) {
+    toastAlert('正文内容为空，无需预览', 'info')
+    return
+  }
+  // 与「发布到公众号」走完全相同的转换（列表摊平 / 表格卡片化 / 代码块折行 / 内联样式）
+  wechatPreviewHtml.value = buildWechatContentHtml(form.contentMarkdown, (id) => store.imageUrlById.get(id))
+  wechatPreviewOpen.value = true
+}
+
+// ---------- Ctrl/Cmd+S 保存 + 关页/刷新守卫 ----------
+function onWindowKeydown(e: KeyboardEvent): void {
+  if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 's') return
+  e.preventDefault()
+  void saveDraft()
+}
+
+function onBeforeUnloadGuard(e: BeforeUnloadEvent): void {
+  if (!dirty.value) return
+  // 现代浏览器忽略自定义文案，但必须 preventDefault + 赋值才会弹确认
+  e.preventDefault()
+  e.returnValue = ''
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', onWindowKeydown)
+  beforeunloadRegistered = true
+  window.addEventListener('beforeunload', onBeforeUnloadGuard)
+})
+
 // ---------- slug 辅助 ----------
 async function regenerateSlug(): Promise<void> {
   form.slug = slugify(form.title) || form.slug
@@ -564,6 +648,18 @@ async function regenerateSlug(): Promise<void> {
       >
         <span>文章设置</span>
       </button>
+      <!-- 保存状态：比 toast 更让人安心（未保存 / 保存中 / 已保存 hh:mm） -->
+      <span
+        class="be-save-state"
+        :class="`is-${saveState}`"
+        data-testid="blog-editor-save-state"
+        :title="dirty ? '有改动尚未保存（Ctrl/Cmd+S 保存）' : '内容已保存'"
+      >
+        <span class="be-save-dot" aria-hidden="true"></span>
+        <template v-if="saveState === 'saving'">保存中…</template>
+        <template v-else-if="saveState === 'unsaved'">未保存</template>
+        <template v-else>已保存{{ savedAt ? ` ${savedAt}` : '' }}</template>
+      </span>
       <button
         type="button"
         class="be-side-toggle"
@@ -623,6 +719,15 @@ async function regenerateSlug(): Promise<void> {
               @click="handlePublish()"
             >
               发布
+            </button>
+            <button
+              type="button"
+              class="ui-btn ui-btn--sm"
+              title="按公众号草稿箱的排版规则预览正文（列表/表格/代码块已转换）"
+              data-testid="blog-editor-wechat-preview-top"
+              @click="openWechatPreview()"
+            >
+              公众号预览
             </button>
             <button
               type="button"
@@ -820,6 +925,15 @@ async function regenerateSlug(): Promise<void> {
         <button
           type="button"
           class="ui-btn ui-btn--sm"
+          title="按公众号草稿箱的排版规则预览正文"
+          data-testid="blog-editor-wechat-preview"
+          @click="openWechatPreview()"
+        >
+          公众号预览
+        </button>
+        <button
+          type="button"
+          class="ui-btn ui-btn--sm"
           :class="{ 'ui-btn--primary': !wechat.publishing.value }"
           :disabled="wechat.publishing.value || visibleErrors.length > 0"
           data-testid="blog-editor-publish-wechat"
@@ -887,6 +1001,23 @@ async function regenerateSlug(): Promise<void> {
             </div>
           </li>
         </ul>
+      </div>
+    </BaseDialog>
+
+    <!-- 公众号效果预览：与「发布到公众号」同一套转换，375px 宽模拟手机正文 -->
+    <BaseDialog
+      v-if="wechatPreviewOpen"
+      title="公众号效果预览"
+      width="430px"
+      max-height="88vh"
+      data-testid="blog-editor-wechat-preview-dialog"
+      @close="wechatPreviewOpen = false"
+    >
+      <div class="be-wx-preview">
+        <p class="be-wx-tip">按草稿箱规则转换后的正文（375px 宽）。列表、表格、代码块均已处理，实际效果以公众号为准。</p>
+        <div class="be-wx-phone">
+          <div class="be-wx-body" data-testid="blog-editor-wechat-preview-body" v-html="wechatPreviewHtml"></div>
+        </div>
       </div>
     </BaseDialog>
 
@@ -1523,6 +1654,77 @@ async function regenerateSlug(): Promise<void> {
 .img-dialog-op--danger:hover {
   color: var(--color-error, #ef4444);
   border-color: var(--color-error, #ef4444);
+}
+
+/* ===== 顶栏保存状态 ===== */
+.be-save-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-full, 9999px);
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-secondary, #64748b);
+  background: var(--color-bg-hover, #f1f5f9);
+  white-space: nowrap;
+}
+
+.be-save-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.75;
+}
+
+.be-save-state.is-unsaved {
+  color: var(--color-warning-hover, #b45309);
+  background: var(--color-warning-soft, #fef3c7);
+}
+
+.be-save-state.is-saving {
+  color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-soft, rgba(59, 130, 246, 0.1));
+}
+
+.be-save-state.is-saved {
+  color: var(--color-success-hover, #059669);
+  background: var(--color-success-soft, #d1fae5);
+}
+
+/* ===== 公众号效果预览（白底固定 375px，模拟手机正文，不随暗色反转） ===== */
+.be-wx-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.be-wx-tip {
+  margin: 0;
+  font-size: var(--font-size-xs, 12px);
+  line-height: 1.6;
+  color: var(--color-text-secondary, #64748b);
+}
+
+.be-wx-phone {
+  max-height: 62vh;
+  overflow-y: auto;
+  padding: 16px 14px;
+  background: #ffffff;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+}
+
+.be-wx-body {
+  width: 375px;
+  max-width: 100%;
+  margin: 0 auto;
+  font-size: 16px;
+  line-height: 1.75;
+  color: #3f3f3f;
+  word-wrap: break-word;
+  word-break: break-word;
 }
 
 @media (max-width: 768px) {

@@ -143,6 +143,11 @@ try {
   check('S1 无 class 属性、行内 code 样式保留', !looseStats.hasClass && looseStats.codeStyled, `class=${looseStats.hasClass} code=${looseStats.codeStyled}`)
 
   check('S2 紧凑列表仍为 2 条', out.tightBullets === 2, `bullets=${out.tightBullets}`)
+  // 紧凑列表（项内单换行 → breaks:true 生成 <br>）同样必须折叠成一行
+  const tightHasBr = /<br\s*\/?>/i.test(out.tight)
+  const tightPlain = out.tight.replace(/<[^>]+>/g, '')
+  check('S2 紧凑列表项内无 <br>（软换行已折叠）', !tightHasBr, tightHasBr ? 'has-br' : 'ok')
+  check('S2 紧凑列表文本连续（框架：Vue 3）', /框架：Vue 3/.test(tightPlain), tightPlain.replace(/\s+/g, ' ').slice(0, 60))
 
   const indents = out.nestedIndents.map((s) => Number(s.replace(/[^\d.]/g, '')))
   check('S3 嵌套子项缩进大于父项', indents.includes(1.4) && indents.includes(2.6), JSON.stringify(indents))
