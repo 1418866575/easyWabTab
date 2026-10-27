@@ -31,6 +31,33 @@ function getMd(): MarkdownIt {
     state.pos = close + 2
     return true
   })
+  // 任务列表：`- [ ] 待办` / `- [x] 已完成` → ☐ / ☑（带色 span）。
+  // 不引 markdown-it-task-lists 依赖：公众号不认 <input type="checkbox">，
+  // 用文字符号反而跨平台最稳（微信、博客前台、日记都一致）。
+  md.core.ruler.after('inline', 'task_list_symbol', (state) => {
+    for (const token of state.tokens) {
+      if (token.type !== 'inline' || !token.children?.length) continue
+      const first = token.children[0]
+      if (!first || first.type !== 'text') continue
+      const m = /^\[( |x|X)\][ \u00a0]?/.exec(first.content)
+      if (!m) continue
+      const checked = m[1].toLowerCase() === 'x'
+      first.content = first.content.slice(m[0].length)
+      const symbol = checked ? '☑' : '☐'
+      const color = checked ? '#10b981' : '#94a3b8'
+      const sym = new state.Token('html_inline', '', 0)
+      sym.content = checked
+        ? `<span style="color:${color};font-weight:600;">${symbol}</span>&nbsp;<span style="color:#94a3b8;">`
+        : `<span style="color:${color};font-weight:600;">${symbol}</span>&nbsp;`
+      token.children.unshift(sym)
+      if (checked) {
+        const closeTag = new state.Token('html_inline', '', 0)
+        closeTag.content = '</span>'
+        token.children.push(closeTag)
+      }
+    }
+  })
+
   const defaultValidateLink = md.validateLink.bind(md)
   // 富媒体前提：base64 图片 data URL 默认被 markdown-it 拦截，此处放行白名单。
   md.validateLink = (url: string): boolean => isSafeImageDataUrl(url) || defaultValidateLink(url)

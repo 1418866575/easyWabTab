@@ -13,7 +13,7 @@
 export type MdBlockKind =
   | 'heading-1' | 'heading-2' | 'heading-3'
   | 'bold' | 'italic' | 'strike' | 'highlight' | 'inline-code'
-  | 'blockquote' | 'code-block' | 'ul' | 'ol'
+  | 'blockquote' | 'code-block' | 'ul' | 'ol' | 'task-list'
   | 'link' | 'image' | 'table' | 'hr'
 
 export interface MdTransformOptions {
@@ -84,6 +84,27 @@ function applyUnorderedList(value: string, start: number, end: number): MdTransf
   const newLines = seg.split('\n').map(line => {
     const m = /^[-*+]\s+/.exec(line)
     return m ? line.slice(m[0].length) : `- ${line}`
+  })
+  const newSeg = newLines.join('\n')
+  const newValue = value.slice(0, ls) + newSeg + value.slice(le)
+  return { value: newValue, selStart: ls, selEnd: ls + newSeg.length }
+}
+
+/**
+ * 任务列表：给选中行加/去 `- [ ] ` 前缀。
+ * - 已是任务项 → 去前缀（二次点击取消）
+ * - 已是普通列表项 → 在项目符号后插入 `[ ] `
+ * - 普通段落 → 整体加 `- [ ] `
+ */
+function applyTaskList(value: string, start: number, end: number): MdTransformResult {
+  const { start: ls, end: le } = selectedLines(value, start, end)
+  const seg = value.slice(ls, le)
+  const newLines = seg.split('\n').map(line => {
+    const task = /^\s*[-*+]\s\[( |x|X)\]\s?/.exec(line)
+    if (task) return line.slice(task[0].length)
+    const bullet = /^\s*[-*+]\s+/.exec(line)
+    if (bullet) return bullet[0] + '[ ] ' + line.slice(bullet[0].length)
+    return '- [ ] ' + line.replace(/^\s+/, '')
   })
   const newSeg = newLines.join('\n')
   const newValue = value.slice(0, ls) + newSeg + value.slice(le)
@@ -226,6 +247,7 @@ export function applyMarkdown(
     case 'code-block': return applyCodeBlock(value, start, end)
     case 'ul': return applyUnorderedList(value, start, end)
     case 'ol': return applyOrderedList(value, start, end)
+    case 'task-list': return applyTaskList(value, start, end)
     case 'link': return applyLink(value, start, end)
     case 'image': return applyImage(value, start, end, opts)
     case 'table': return applyTable(value, start, end, opts)

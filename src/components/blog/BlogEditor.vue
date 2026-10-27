@@ -156,6 +156,7 @@ const MD_TOOLBAR: MdToolbarButton[] = [
   { kind: 'code-block', label: '代码块', title: '代码块', group: 2 },
   { kind: 'ul', label: '无序列表', title: '无序列表', group: 2 },
   { kind: 'ol', label: '有序列表', title: '有序列表', group: 2 },
+  { kind: 'task-list', label: '待办', title: '任务列表（- [ ] 可勾选）', group: 2 },
   { kind: 'link', label: '链接', title: '插入链接（Ctrl/Cmd+K）', group: 3 },
   { kind: 'image', label: '图片', title: '插入图片（选择本地图片，存入图片库）', group: 3 },
   { kind: 'table', label: '表格', title: '插入表格', group: 3 },

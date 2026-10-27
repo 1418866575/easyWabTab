@@ -175,6 +175,28 @@ try {
   const bodyRows = tableBlock.split('\n').filter((l) => l.startsWith('| ') && !l.includes('---')).length
   check('S7 表格按 3 行 4 列插入', headCols === 4 && bodyRows === 3, `cols=${headCols} rows=${bodyRows}`)
 
+  // ---- S10 待办按钮：插入任务列表并渲染为 ☐ ----
+  await page.keyboard.press('Escape') // 关掉可能残留的表格弹层
+  await page.evaluate(() => {
+    const ta = document.querySelector('[data-testid="blog-editor-content"]')
+    ta.focus()
+    ta.setSelectionRange(ta.value.length, ta.value.length)
+  })
+  await page.click('[data-testid="blog-editor-md-task-list"]')
+  await page.waitForTimeout(500)
+  const mdTask = await page.locator('[data-testid="blog-editor-content"]').inputValue()
+  check('S10 待办按钮插入 - [ ] 前缀', mdTask.includes('- [ ]'), mdTask.slice(-24))
+  // 追加一条已完成项，验证 ☐ / ☑ 两种符号都能渲染
+  await page.evaluate(() => {
+    const ta = document.querySelector('[data-testid="blog-editor-content"]')
+    ta.focus()
+    ta.setSelectionRange(ta.value.length, ta.value.length)
+  })
+  await page.keyboard.type('待办事项A\n- [x] 已完成事项B')
+  await page.waitForTimeout(600)
+  const previewHtml3 = await page.locator('[data-testid="blog-editor-preview"]').innerHTML()
+  check('S10 预览渲染为 ☐ / ☑ 符号', previewHtml3.includes('☐') && previewHtml3.includes('☑'), previewHtml3.slice(0, 40))
+
   // ---- S8 大纲：侧栏列出 ## / ### 并可跳转 ----
   await page.click('[data-testid="blog-editor-side-toggle"]')
   await page.waitForTimeout(400)
