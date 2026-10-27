@@ -10,19 +10,16 @@ import { showConfirm } from '@/utils/dialog'
 import { useToast } from '@/composables/useToast'
 import { dateStamp, downloadText, pickFileText } from '@/utils/download'
 import {
-  filterSmart,
   normalizePrompt,
   parseEnvelope,
   SMART_CONTENT_MAX,
   SMART_DESC_MAX,
   SMART_NAME_MAX,
   SMART_PROMPT_KIND,
-  sortSmart,
   UNCATEGORIZED,
-  validatePrompt,
-  type SmartSort,
-  type SmartFilter
+  validatePrompt
 } from '@/composables/smartCore'
+import { useSmartList } from '@/composables/useSmartList'
 import type { SmartImportPreview, SmartPrompt } from '@/types'
 import SmartEditorDialog from './SmartEditorDialog.vue'
 import SmartImportDialog from './SmartImportDialog.vue'
@@ -32,53 +29,29 @@ import PromptUseDialog from './PromptUseDialog.vue'
 const store = useSmartStore()
 const toast = useToast()
 
-// ===== 筛选与排序 =====
-const keyword = ref('')
-const category = ref('')
-const activeTags = ref<string[]>([])
-const sort = ref<SmartSort>('updated')
-const favoriteOnly = ref(false)
-
-const filter = computed<SmartFilter>(() => ({
-  q: keyword.value,
-  category: category.value,
-  tags: activeTags.value,
-  favoriteOnly: favoriteOnly.value
-}))
-
-const visible = computed(() => sortSmart(filterSmart(store.prompts, filter.value), sort.value))
-const allTags = computed(() => {
-  const out: string[] = []
-  for (const p of store.prompts) for (const t of p.tags) if (!out.includes(t)) out.push(t)
-  return out
+// ===== 筛选 / 排序 / 分页（与技能、工作流共用 useSmartList） =====
+const {
+  keyword,
+  category,
+  activeTags,
+  sort,
+  favoriteOnly,
+  filtered,
+  visible,
+  allTags,
+  hasFilter,
+  categoryTabs,
+  page,
+  pageSize,
+  PAGE_SIZES,
+  resetFilter,
+  toggleTag
+} = useSmartList({
+  items: computed(() => store.prompts),
+  categories: computed(() => store.promptCategories),
+  pagerKey: 'smart-prompts-pager',
+  favoriteFilter: true
 })
-const hasFilter = computed(
-  () => !!keyword.value.trim() || !!category.value || activeTags.value.length > 0 || favoriteOnly.value
-)
-
-/**
- * 分类筛选药丸（工具箱同款）：全部 + 各分类，带提示词数量。
- * 保留数量为 0 的分类，便于看到已建但还没有提示词挂上去的分类。
- */
-const categoryTabs = computed(() => {
-  const counts = new Map<string, number>()
-  for (const p of store.prompts) counts.set(p.category, (counts.get(p.category) ?? 0) + 1)
-  return [
-    { id: '', name: '全部', count: store.prompts.length },
-    ...store.promptCategories.map(c => ({ id: c, name: c, count: counts.get(c) ?? 0 }))
-  ]
-})
-
-function resetFilter(): void {
-  keyword.value = ''
-  category.value = ''
-  activeTags.value = []
-  favoriteOnly.value = false
-}
-
-function toggleTag(t: string): void {
-  activeTags.value = activeTags.value.includes(t) ? activeTags.value.filter(x => x !== t) : [...activeTags.value, t]
-}
 
 // ===== 编辑 =====
 const editorOpen = ref(false)
@@ -263,7 +236,7 @@ function excerpt(p: SmartPrompt): string {
           :aria-pressed="favoriteOnly"
           @click="favoriteOnly = !favoriteOnly"
         >★ 只看收藏</button>
-        <span v-if="hasFilter" class="pm-result">筛选出 {{ visible.length }} 个</span>
+        <span v-if="hasFilter" class="pm-result">筛选出 {{ filtered.length }} 个</span>
       </div>
       <div class="pm-toolbar-right">
         <el-button size="small" data-testid="smart-prompt-add" @click="openAdd">＋ 新增提示词</el-button>
@@ -284,7 +257,7 @@ function excerpt(p: SmartPrompt): string {
       <button v-if="hasFilter" type="button" class="pm-tag-reset" @click="resetFilter">清空筛选</button>
     </div>
 
-    <div v-if="visible.length" class="pm-list">
+    <div v-if="filtered.length" class="pm-list">
       <article v-for="p in visible" :key="p.id" class="pm-card" :data-testid="`smart-prompt-${p.id}`">
         <header class="pm-card-head">
           <button
@@ -345,6 +318,22 @@ function excerpt(p: SmartPrompt): string {
         <el-button v-else size="small" type="primary" @click="openAdd">＋ 新增提示词</el-button>
         <el-button size="small" @click="handleImport">导入文件</el-button>
       </div>
+    </div>
+
+    <!-- 分页（与项目其它列表同款：.ewt-pager + el-pagination，移动端自动精简） -->
+    <div v-if="filtered.length" class="pm-pager ewt-pager">
+      <el-pagination
+        v-model:current-page="page"
+        v-model:page-size="pageSize"
+        :page-sizes="PAGE_SIZES"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="filtered.length"
+        background
+        small
+        prev-text="上一页"
+        next-text="下一页"
+        data-testid="smart-prompt-pagination"
+      />
     </div>
 
     <SmartEditorDialog
@@ -496,6 +485,8 @@ function excerpt(p: SmartPrompt): string {
 .pm-tag-reset { color: var(--color-text-muted, #9ca3af); }
 
 .pm-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+/* 分页容器：只负责间距与右对齐，控件观感由 styles/pager.css 的 .ewt-pager 统一接管 */
+.pm-pager { display: flex; justify-content: flex-end; margin-top: 12px; }
 .pm-card {
   display: flex;
   flex-direction: column;
@@ -586,6 +577,9 @@ function excerpt(p: SmartPrompt): string {
   .pm-list { grid-template-columns: 1fr; }
   .pm-cat-pill, .pm-fav { min-height: 40px; }
   .pm-toolbar-left, .pm-toolbar-right { width: 100%; }
+  .pm-pager { justify-content: center; }
+  .pm-pager :deep(.el-pagination__sizes),
+  .pm-pager :deep(.el-pagination__jump) { display: none; }
   .pm-btn { min-height: 44px; padding: 8px 12px; font-size: 13px; }
   .pm-select { height: 44px; font-size: 16px; }
 }

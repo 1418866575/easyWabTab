@@ -22,16 +22,13 @@ import {
 } from '@/utils/skillPackage'
 import {
   classifySkillIcon,
-  filterSmart,
   normalizeSkill,
   SMART_CONTENT_MAX,
-  sortSmart,
   UNCATEGORIZED,
   validateSkill,
-  type SkillIconInfo,
-  type SmartSort,
-  type SmartFilter
+  type SkillIconInfo
 } from '@/composables/smartCore'
+import { useSmartList } from '@/composables/useSmartList'
 import { SKILL_FILE, planSkillImports } from '@/composables/skillPackageCore'
 import type { SmartImportPreview, SmartSkill } from '@/types'
 import Icon from '@/components/Icon.vue'
@@ -43,48 +40,29 @@ import SmartImportDialog from './SmartImportDialog.vue'
 const store = useSmartStore()
 const toast = useToast()
 
-// ===== 筛选与排序 =====
-const keyword = ref('')
-const category = ref('')
-const activeTags = ref<string[]>([])
-const sort = ref<SmartSort>('updated')
-
-const filter = computed<SmartFilter>(() => ({
-  q: keyword.value,
-  category: category.value,
-  tags: activeTags.value
-}))
-
-const visible = computed(() => sortSmart(filterSmart(store.skills, filter.value), sort.value))
-const allTags = computed(() => {
-  const out: string[] = []
-  for (const s of store.skills) for (const t of s.tags) if (!out.includes(t)) out.push(t)
-  return out
+// ===== 筛选 / 排序 / 分页（与提示词、工作流共用 useSmartList） =====
+const {
+  keyword,
+  category,
+  activeTags,
+  sort,
+  favoriteOnly,
+  filtered,
+  visible,
+  allTags,
+  hasFilter,
+  categoryTabs,
+  page,
+  pageSize,
+  PAGE_SIZES,
+  resetFilter,
+  toggleTag
+} = useSmartList({
+  items: computed(() => store.skills),
+  categories: computed(() => store.skillCategories),
+  pagerKey: 'smart-skills-pager',
+  favoriteFilter: true
 })
-const hasFilter = computed(() => !!keyword.value.trim() || !!category.value || activeTags.value.length > 0)
-
-/**
- * 分类筛选药丸（工具箱同款）：全部 + 各分类，带技能数量。
- * 与工具箱不同的是——这里保留数量为 0 的分类，方便看到刚播种的默认分类及其归属。
- */
-const categoryTabs = computed(() => {
-  const counts = new Map<string, number>()
-  for (const s of store.skills) counts.set(s.category, (counts.get(s.category) ?? 0) + 1)
-  return [
-    { id: '', name: '全部', count: store.skills.length },
-    ...store.skillCategories.map(c => ({ id: c, name: c, count: counts.get(c) ?? 0 }))
-  ]
-})
-
-function resetFilter(): void {
-  keyword.value = ''
-  category.value = ''
-  activeTags.value = []
-}
-
-function toggleTag(t: string): void {
-  activeTags.value = activeTags.value.includes(t) ? activeTags.value.filter(x => x !== t) : [...activeTags.value, t]
-}
 
 // ===== 编辑弹框 =====
 const editorOpen = ref(false)
@@ -133,15 +111,10 @@ function handleSave(next: Partial<SmartSkill>): void {
   editorOpen.value = false
 }
 
-// ===== 删除 / 克隆 / 使用 =====
+// ===== 删除 =====
 async function handleDelete(s: SmartSkill): Promise<void> {
   if (!(await showConfirm(`确定删除技能「${s.name}」吗？删除后不可恢复。`))) return
   if (store.deleteSkill(s.id)) toast.success('已删除')
-}
-
-function handleClone(s: SmartSkill): void {
-  const id = store.cloneSkill(s.id)
-  if (id) toast.success(`已复制为「${store.skills.find(x => x.id === id)?.name}」`)
 }
 
 // ===== 详情 =====
@@ -326,7 +299,7 @@ function relTime(ts: number): string {
       </button>
     </div>
 
-    <!-- 排序 + 操作 -->
+    <!-- 排序 + 收藏筛选 + 操作 -->
     <div class="sm-toolbar">
       <div class="sm-toolbar-left">
         <select v-model="sort" class="sm-select" aria-label="排序方式">
@@ -334,7 +307,15 @@ function relTime(ts: number): string {
           <option value="name">名称</option>
           <option value="usage">使用次数</option>
         </select>
-        <span v-if="hasFilter" class="sm-result">筛选出 {{ visible.length }} 个</span>
+        <button
+          type="button"
+          class="sm-fav"
+          :class="{ 'is-on': favoriteOnly }"
+          :aria-pressed="favoriteOnly"
+          data-testid="smart-skill-fav-only"
+          @click="favoriteOnly = !favoriteOnly"
+        >★ 只看收藏</button>
+        <span v-if="hasFilter" class="sm-result">筛选出 {{ filtered.length }} 个</span>
       </div>
       <div class="sm-toolbar-right">
         <el-button size="small" data-testid="smart-skill-add" @click="openAdd">＋ 新增技能</el-button>
@@ -358,7 +339,7 @@ function relTime(ts: number): string {
     </div>
 
     <!-- 列表 -->
-    <div v-if="visible.length" class="sm-list">
+    <div v-if="filtered.length" class="sm-list">
       <article v-for="s in visible" :key="s.id" class="sm-card" :data-testid="`smart-skill-${s.id}`">
         <header class="sm-card-head">
           <button
@@ -392,6 +373,16 @@ function relTime(ts: number): string {
               <span v-if="s.usageCount > 0">用过 {{ s.usageCount }} 次</span>
             </span>
           </div>
+          <button
+            type="button"
+            class="sm-star"
+            :class="{ 'is-on': s.isFavorite }"
+            :title="s.isFavorite ? '取消收藏' : '收藏'"
+            :aria-label="s.isFavorite ? '取消收藏' : '收藏'"
+            :aria-pressed="!!s.isFavorite"
+            :data-testid="`smart-skill-star-${s.id}`"
+            @click="store.toggleSkillFavorite(s.id)"
+          >{{ s.isFavorite ? '★' : '☆' }}</button>
           <span v-if="s.isBuiltIn" class="sm-builtin" title="内置示例">内置</span>
         </header>
         <p v-if="s.description" class="sm-desc">{{ s.description }}</p>
@@ -399,9 +390,8 @@ function relTime(ts: number): string {
           <span v-for="t in s.tags" :key="t" class="sm-chip">#{{ t }}</span>
         </div>
         <footer class="sm-actions">
-          <button type="button" class="sm-btn" @click="openDetail(s)">详情</button>
+          <button type="button" class="sm-btn is-primary" @click="openDetail(s)">详情</button>
           <button type="button" class="sm-btn" @click="openEdit(s)">编辑</button>
-          <button type="button" class="sm-btn" @click="handleClone(s)">复制</button>
           <span class="sm-spacer" />
           <button type="button" class="sm-btn" :data-testid="`smart-skill-zip-${s.id}`" @click="exportOneZip(s)" :title="`下载为 zip（${SKILL_FILE} + 资源，保持目录层级）`">下载</button>
           <button type="button" class="sm-btn is-danger" :data-testid="`smart-skill-del-${s.id}`" @click="handleDelete(s)">删除</button>
@@ -421,6 +411,22 @@ function relTime(ts: number): string {
         <el-button size="small" @click="importFromFolder">导入技能（目录）</el-button>
         <el-button size="small" @click="importFromZip">导入技能（zip）</el-button>
       </div>
+    </div>
+
+    <!-- 分页（与项目其它列表同款：.ewt-pager + el-pagination，移动端自动精简） -->
+    <div v-if="filtered.length" class="sm-pager ewt-pager">
+      <el-pagination
+        v-model:current-page="page"
+        v-model:page-size="pageSize"
+        :page-sizes="PAGE_SIZES"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="filtered.length"
+        background
+        small
+        prev-text="上一页"
+        next-text="下一页"
+        data-testid="smart-skill-pagination"
+      />
     </div>
 
     <!-- 编辑弹框 -->
@@ -689,6 +695,51 @@ function relTime(ts: number): string {
 }
 .sm-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
 .sm-btn.is-danger:hover { border-color: var(--color-error, #dc2626); color: var(--color-error, #dc2626); }
+/* 主 CTA：与提示词 / 工作流卡片一致——第一颗按钮是该资产的主动作（技能 = 详情） */
+.sm-btn.is-primary {
+  border-color: var(--color-primary, #3b82f6);
+  background-color: var(--color-primary-soft, rgba(59, 130, 246, 0.08));
+  color: var(--color-primary, #3b82f6);
+}
+.sm-btn.is-primary:hover {
+  border-color: var(--color-primary, #3b82f6);
+  background-color: var(--color-primary, #3b82f6);
+  color: #fff;
+}
+
+/* 收藏筛选 + 卡片星标：与提示词 / 工作流同款 */
+.sm-fav {
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-bg-card, #fff);
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 12px;
+  cursor: pointer;
+}
+.sm-fav.is-on {
+  border-color: var(--color-warning, #f59e0b);
+  color: var(--color-warning, #f59e0b);
+}
+.sm-star {
+  flex: 0 0 auto;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text-muted, #9ca3af);
+  font-size: 16px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.sm-star.is-on { color: var(--color-warning, #f59e0b); }
+
+/* 分页容器：只负责间距与右对齐，控件观感由 styles/pager.css 的 .ewt-pager 统一接管 */
+.sm-pager {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
 
 .sm-empty {
   padding: 40px 16px;
@@ -711,5 +762,9 @@ function relTime(ts: number): string {
   .sm-icon-btn { width: 34px; height: 34px; }
   .sm-icon-text { font-size: 20px; }
   .sm-icon-edit { opacity: 1; }
+  /* 窄屏隐藏「每页条数」与「跳转」，只留 总数 + 上一页/下一页（pager.css 已处理居中与触控尺寸） */
+  .sm-pager { justify-content: center; }
+  .sm-pager :deep(.el-pagination__sizes),
+  .sm-pager :deep(.el-pagination__jump) { display: none; }
 }
 </style>

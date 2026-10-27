@@ -1669,6 +1669,14 @@ export interface SmartSkill {
   // ---- 平台侧元数据（不写入 skill.md） ----
   usageCount: number
   lastUsedAt: number | null
+  /** 收藏（仅本机/云同步的记录字段，不写入 skill.md）；与提示词、工作流的 ★ 同一语义 */
+  isFavorite?: boolean
+  /** 墓碑（ISO 时间串）：非空 = 已删除。记录仍留在数组里参与合并与推送，展示层用 activeOnly 过滤 */
+  deletedAt?: string | null
+  /** Lamport 逻辑时钟：变更 / 删除时 +1，用于多端取新 */
+  ver?: number
+  /** 产生该版本的客户端 id（版本完全相同时的稳定 tie-break） */
+  clientId?: string
   isBuiltIn?: boolean
   createdAt: number
   updatedAt: number
@@ -1688,6 +1696,12 @@ export interface SmartPrompt {
   isFavorite: boolean
   usageCount: number
   lastUsedAt: number | null
+  /** 墓碑（ISO 时间串）：非空 = 已删除；记录保留在数组里参与合并与推送 */
+  deletedAt?: string | null
+  /** Lamport 逻辑时钟：变更 / 删除时 +1 */
+  ver?: number
+  /** 产生该版本的客户端 id（版本相同时的稳定 tie-break） */
+  clientId?: string
   isBuiltIn?: boolean
   createdAt: number
   updatedAt: number
@@ -1718,6 +1732,12 @@ export interface SmartWorkflow {
   isFavorite: boolean
   usageCount: number
   lastUsedAt: number | null
+  /** 墓碑（ISO 时间串）：非空 = 已删除；记录保留在数组里参与合并与推送 */
+  deletedAt?: string | null
+  /** Lamport 逻辑时钟：变更 / 删除时 +1 */
+  ver?: number
+  /** 产生该版本的客户端 id（版本相同时的稳定 tie-break） */
+  clientId?: string
   isBuiltIn?: boolean
   createdAt: number
   updatedAt: number

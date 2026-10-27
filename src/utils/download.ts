@@ -33,8 +33,15 @@ export function downloadText(filename: string, text: string, mime = 'application
   }
 }
 
-/** 读取用户选择的文件为文本；未选择文件返回 null（用户取消不算错误） */
-export function pickFileText(accept: string): Promise<{ name: string; text: string } | null> {
+/** 文本导入的默认体积上限：提示词可能内嵌 dataURL 参考图，10MB 足够且不会读爆内存 */
+export const PICK_TEXT_MAX_BYTES = 10 * 1024 * 1024
+
+/**
+ * 读取用户选择的文件为文本；未选择文件返回 null（用户取消不算错误）。
+ * @param accept   input 的 accept 值
+ * @param maxBytes 体积上限，超出直接拒绝并提示（避免 readAsText 把大文件整读进内存）
+ */
+export function pickFileText(accept: string, maxBytes = PICK_TEXT_MAX_BYTES): Promise<{ name: string; text: string } | null> {
   return new Promise(resolve => {
     const input = document.createElement('input')
     input.type = 'file'
@@ -44,6 +51,12 @@ export function pickFileText(accept: string): Promise<{ name: string; text: stri
     input.addEventListener('change', () => {
       const file = input.files?.[0]
       if (!file) {
+        resolve(null)
+        return
+      }
+      if (file.size > maxBytes) {
+        const mb = (n: number) => (n / 1024 / 1024).toFixed(1)
+        useToast().error(`文件过大（${mb(file.size)}MB），上限 ${mb(maxBytes)}MB`)
         resolve(null)
         return
       }

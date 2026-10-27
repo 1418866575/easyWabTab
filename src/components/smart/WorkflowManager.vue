@@ -12,18 +12,15 @@ import { showConfirm } from '@/utils/dialog'
 import { useToast } from '@/composables/useToast'
 import { copyText, dateStamp, downloadText, pickFileText } from '@/utils/download'
 import {
-  filterSmart,
   normalizeWorkflow,
   parseEnvelope,
   SMART_CONTENT_MAX,
   SMART_DESC_MAX,
   SMART_NAME_MAX,
   SMART_WORKFLOW_KIND,
-  sortSmart,
-  validateWorkflow,
-  type SmartFilter,
-  type SmartSort
+  validateWorkflow
 } from '@/composables/smartCore'
+import { useSmartList } from '@/composables/useSmartList'
 import type { SmartImportPreview, SmartWorkflow } from '@/types'
 import WorkflowEditorDialog from './WorkflowEditorDialog.vue'
 import WorkflowDetailDialog from './WorkflowDetailDialog.vue'
@@ -32,53 +29,29 @@ import SmartImportDialog from './SmartImportDialog.vue'
 const store = useSmartStore()
 const toast = useToast()
 
-// ===== 筛选与排序 =====
-const keyword = ref('')
-const category = ref('')
-const activeTags = ref<string[]>([])
-const sort = ref<SmartSort>('updated')
-const favoriteOnly = ref(false)
-
-const filter = computed<SmartFilter>(() => ({
-  q: keyword.value,
-  category: category.value,
-  tags: activeTags.value,
-  favoriteOnly: favoriteOnly.value
-}))
-
-const visible = computed(() => sortSmart(filterSmart(store.workflows, filter.value), sort.value))
-const allTags = computed(() => {
-  const out: string[] = []
-  for (const w of store.workflows) for (const t of w.tags) if (!out.includes(t)) out.push(t)
-  return out
+// ===== 筛选 / 排序 / 分页（与技能、提示词共用 useSmartList） =====
+const {
+  keyword,
+  category,
+  activeTags,
+  sort,
+  favoriteOnly,
+  filtered,
+  visible,
+  allTags,
+  hasFilter,
+  categoryTabs,
+  page,
+  pageSize,
+  PAGE_SIZES,
+  resetFilter,
+  toggleTag
+} = useSmartList({
+  items: computed(() => store.workflows),
+  categories: computed(() => store.allWorkflowCategories),
+  pagerKey: 'smart-workflows-pager',
+  favoriteFilter: true
 })
-const hasFilter = computed(
-  () => !!keyword.value.trim() || !!category.value || activeTags.value.length > 0 || favoriteOnly.value
-)
-
-/**
- * 分类筛选药丸（工具箱同款）：全部 + 各分类，带工作流数量。
- * 保留数量为 0 的分类，便于看到已建但还没有工作流挂上去的分类。
- */
-const categoryTabs = computed(() => {
-  const counts = new Map<string, number>()
-  for (const w of store.workflows) counts.set(w.category, (counts.get(w.category) ?? 0) + 1)
-  return [
-    { id: '', name: '全部', count: store.workflows.length },
-    ...store.allWorkflowCategories.map(c => ({ id: c, name: c, count: counts.get(c) ?? 0 }))
-  ]
-})
-
-function resetFilter(): void {
-  keyword.value = ''
-  category.value = ''
-  activeTags.value = []
-  favoriteOnly.value = false
-}
-
-function toggleTag(t: string): void {
-  activeTags.value = activeTags.value.includes(t) ? activeTags.value.filter(x => x !== t) : [...activeTags.value, t]
-}
 
 // ===== 多选（批量导出 / 删除）=====
 const selectedIds = ref<string[]>([])
@@ -315,7 +288,7 @@ function excerpt(w: SmartWorkflow): string {
           :aria-pressed="favoriteOnly"
           @click="favoriteOnly = !favoriteOnly"
         >★ 只看收藏</button>
-        <span v-if="hasFilter" class="wm-result">筛选出 {{ visible.length }} 个</span>
+        <span v-if="hasFilter" class="wm-result">筛选出 {{ filtered.length }} 个</span>
       </div>
       <div class="wm-toolbar-right">
         <el-button size="small" data-testid="smart-workflow-import" @click="handleImport">导入</el-button>
@@ -341,7 +314,7 @@ function excerpt(w: SmartWorkflow): string {
     <div v-if="selectedCount > 0" class="wm-batchbar">
       <label class="wm-selall">
         <input type="checkbox" :checked="allVisibleSelected" @change="toggleSelectAll" />
-        全选当前
+        全选本页
       </label>
       <span class="wm-batch-count">已选 {{ selectedCount }} 个</span>
       <span class="wm-spacer" />
@@ -350,7 +323,7 @@ function excerpt(w: SmartWorkflow): string {
       <button type="button" class="wm-batch-btn" @click="clearSelection">取消选择</button>
     </div>
 
-    <div v-if="visible.length" class="wm-list">
+    <div v-if="filtered.length" class="wm-list">
       <article v-for="w in visible" :key="w.id" class="wm-card" :class="{ 'is-selected': isSelected(w.id) }" :data-testid="`smart-workflow-${w.id}`">
         <label class="wm-check">
           <input
@@ -412,6 +385,22 @@ function excerpt(w: SmartWorkflow): string {
         <el-button v-if="hasFilter" size="small" @click="resetFilter">清空筛选</el-button>
         <el-button v-else size="small" type="primary" @click="handleImport">导入文件</el-button>
       </div>
+    </div>
+
+    <!-- 分页（与项目其它列表同款：.ewt-pager + el-pagination，移动端自动精简） -->
+    <div v-if="filtered.length" class="wm-pager ewt-pager">
+      <el-pagination
+        v-model:current-page="page"
+        v-model:page-size="pageSize"
+        :page-sizes="PAGE_SIZES"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="filtered.length"
+        background
+        small
+        prev-text="上一页"
+        next-text="下一页"
+        data-testid="smart-workflow-pagination"
+      />
     </div>
 
     <WorkflowEditorDialog
@@ -582,6 +571,8 @@ function excerpt(w: SmartWorkflow): string {
 .wm-batch-btn.is-danger:hover { border-color: var(--color-error, #dc2626); color: var(--color-error, #dc2626); }
 
 .wm-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+/* 分页容器：只负责间距与右对齐，控件观感由 styles/pager.css 的 .ewt-pager 统一接管 */
+.wm-pager { display: flex; justify-content: flex-end; margin-top: 12px; }
 .wm-card {
   position: relative;
   display: flex;
@@ -676,6 +667,9 @@ function excerpt(w: SmartWorkflow): string {
   .wm-list { grid-template-columns: 1fr; }
   .wm-cat-pill, .wm-fav { min-height: 40px; }
   .wm-toolbar-left, .wm-toolbar-right { width: 100%; }
+  .wm-pager { justify-content: center; }
+  .wm-pager :deep(.el-pagination__sizes),
+  .wm-pager :deep(.el-pagination__jump) { display: none; }
   .wm-btn { min-height: 44px; padding: 8px 12px; font-size: 13px; }
   .wm-select { height: 44px; font-size: 16px; }
 }

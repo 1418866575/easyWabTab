@@ -2,12 +2,12 @@
 /**
  * 智能工作台 · 技能编辑弹框（v2：字段与 skill.md 一一对应）
  * ------------------------------------------------------------------
- * 界面分组 = skill.md 的三段结构：
- *   基础信息 → frontmatter 的 name / description / version / author / category / tags / license
- *   触发条件 → frontmatter 的 when_to_use
- *   可用工具 → frontmatter 的 tools
- *   技能正文 → skill.md 的正文（frontmatter 之后全部内容）
- *   附属资源 → 同级目录下的文件（导出时按原层级还原）
+ * 界面分组 = skill.md 的结构：
+ *   基础信息 → frontmatter 的 name / description / version / author / category / tags / license / github
+ *   附属资源 → 同级目录下的文件（导出时按原层级还原）；其中 skill.md 是固定条目，
+ *              点开可查看 frontmatter 并编辑正文
+ * when_to_use / tools 不提供输入框（原「使用时机与工具」区块已移除）：
+ *   导入的 skill.md 若带这两项，保存时原样保留（不覆盖、不清空）。
  * 校验沿用「提交后才暴露错误」的口径（见 BusinessProducts.vue）。
  */
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
@@ -23,7 +23,7 @@ import {
   validateSkill,
   type SmartIssue
 } from '@/composables/smartCore'
-import { SKILL_FILE, RESOURCE_COUNT_MAX, RESOURCE_FILE_MAX } from '@/composables/skillPackageCore'
+import { SKILL_FILE, RESOURCE_COUNT_MAX, RESOURCE_FILE_MAX, skillToMarkdown } from '@/composables/skillPackageCore'
 import { pickResourceFiles } from '@/utils/skillPackage'
 import { copyText } from '@/utils/download'
 import Icon from '@/components/Icon.vue'
@@ -58,7 +58,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 /** 本地草稿：取消/关闭不影响外部数据 */
 const draft = ref<Partial<SmartSkill>>({})
 const tagsInput = ref('')
-const toolsInput = ref('')
 const resources = ref<SmartSkillResource[]>([])
 
 // ===== 技能图标：从「图标管理」选择 =====
@@ -80,7 +79,6 @@ watch(
   m => {
     draft.value = { ...m, tags: Array.isArray(m.tags) ? [...m.tags] : [] }
     tagsInput.value = (m.tags ?? []).join('、')
-    toolsInput.value = (m.tools ?? []).join('、')
     resources.value = (m.resources ?? []).map(r => ({ ...r }))
     // 图标存在 extra.icon：v1 迁过来的 emoji 与图标库地址都原样带回
     const raw = m.extra?.icon
@@ -140,29 +138,71 @@ function submit(): void {
   submitAttempted.value = true
   if (issues.value.length) {
     toast.error(issues.value[0].message)
+    // 正文的输入框在 skill.md 子弹框里，校验失败时直接打开，避免「看不到哪里要改」
+    if (issues.value.some(i => i.field === 'body')) skillFileOpen.value = true
     return
   }
-  const tags = normalizeTags(tagsInput.value.split(/[、,，\s]+/).map(s => s.trim()).filter(Boolean))
-  const tools = normalizeTags(toolsInput.value.split(/[、,，\s]+/).map(s => s.trim()).filter(Boolean))
+  const tags = splitList(tagsInput.value)
   // 图标写入 extra.icon（随技能一起落盘、进 zip、随 smart.json 同步）；
-  // 选「恢复默认」时为空串，保留键但渲染层会回落到默认内置图标
+  // 选「恢复默认」时为空串，保留键但渲染层会回落到默认内置图标。
+  // tools 无输入框：不覆盖 draft.tools，导入来的 skill.md 若带 tools 原样保留。
   emit('save', {
     ...draft.value,
     tags,
-    tools,
     extra: { ...(draft.value.extra ?? {}), icon: iconValue.value },
     resources: resources.value.map(r => ({ ...r }))
   })
 }
 
-/** 复制技能正文：与卡片列表的「复制正文」一致，复制后记为一次使用（编辑态才计数） */
-async function copyBody(): Promise<void> {
-  const body = String(draft.value.body ?? '').trim()
-  if (!body) {
+// ==================== skill.md 查看 / 编辑 ====================
+// 正文不再单独成段：「技能正文」就是 skill.md，在附属资源里作为固定条目展示，
+// 点开子弹框可查看 frontmatter（由基础信息实时生成）并编辑正文。
+
+const skillFileOpen = ref(false)
+
+/** 把「标签 / 工具」输入框的文本切成数组（与提交同口径） */
+function splitList(raw: string): string[] {
+  return normalizeTags(raw.split(/[、,，\s]+/).map(s => s.trim()).filter(Boolean))
+}
+
+const bodyText = computed(() => String(draft.value.body ?? ''))
+const bodyLength = computed(() => bodyText.value.length)
+
+/** skill.md 全文（frontmatter 由上方字段实时生成），用于预览与复制 */
+const skillMdText = computed(() =>
+  skillToMarkdown({
+    ...draft.value,
+    tags: splitList(tagsInput.value),
+    tools: Array.isArray(draft.value.tools) ? draft.value.tools : []
+  })
+)
+/** 只截 frontmatter 段（--- ... ---），正文在下方单独编辑 */
+const frontmatterText = computed(() => {
+  const matched = /^---\r?\n[\s\S]*?\r?\n---/.exec(skillMdText.value)
+  return matched ? matched[0] : '---\n---'
+})
+
+/** ESC 只关 skill.md 子弹框：注册在 document 捕获阶段并阻止继续传播，
+    避免连带关闭技能编辑弹框（后者在 window 冒泡阶段监听 ESC）。 */
+function onSkillFileKeydown(e: KeyboardEvent): void {
+  if (e.key !== 'Escape') return
+  e.preventDefault()
+  e.stopPropagation()
+  skillFileOpen.value = false
+}
+watch(skillFileOpen, open => {
+  if (open) document.addEventListener('keydown', onSkillFileKeydown, true)
+  else document.removeEventListener('keydown', onSkillFileKeydown, true)
+})
+onUnmounted(() => document.removeEventListener('keydown', onSkillFileKeydown, true))
+
+/** 复制整份 skill.md（含 frontmatter）；复制后记为一次使用（编辑态才计数） */
+async function copySkillMd(): Promise<void> {
+  if (!bodyText.value.trim()) {
     toast.warning('正文为空，暂无可复制内容')
     return
   }
-  const ok = await copyText(draft.value.body ?? '', '已复制技能正文')
+  const ok = await copyText(skillMdText.value, `已复制 ${SKILL_FILE}`)
   if (ok && props.editingId) store.touchSkill(props.editingId)
 }
 </script>
@@ -189,19 +229,23 @@ async function copyBody(): Promise<void> {
               {{ errorOf('name') || '已存在同名技能' }}
             </span>
           </label>
-
-          <label class="sk-field">
-            <span class="sk-label">一句话说明 description<span class="req">*</span></span>
-            <el-input
-              v-model="draft.description"
-              :maxlength="SMART_DESC_MAX"
-              size="small"
-              placeholder="说明这个技能做什么、什么时候该用它"
-              data-testid="skill-editor-desc"
-            />
-            <span v-if="errorOf('description')" class="sk-error">{{ errorOf('description') }}</span>
-          </label>
         </div>
+
+        <!-- 一句话说明：改多行输入（description 通常是完整短句，单行看不全） -->
+        <label class="sk-field">
+          <span class="sk-label">一句话说明 description<span class="req">*</span></span>
+          <el-input
+            v-model="draft.description"
+            type="textarea"
+            :rows="2"
+            :maxlength="SMART_DESC_MAX"
+            show-word-limit
+            resize="vertical"
+            placeholder="说明这个技能做什么、什么时候该用它"
+            data-testid="skill-editor-desc"
+          />
+          <span v-if="errorOf('description')" class="sk-error">{{ errorOf('description') }}</span>
+        </label>
 
         <div class="sk-row">
           <label class="sk-field sk-field-sm">
@@ -246,7 +290,7 @@ async function copyBody(): Promise<void> {
         <!-- 图标：点图标弹框从「图标管理」选择（与添加网站、分类管理同源）；
              存 extra.icon，随技能一起落盘与云同步。不选则用默认内置图标 -->
         <div class="sk-field sk-field--icon-inline">
-          <span class="sk-label">图标 icon<span class="sk-hint">（从图标管理选择，可留空）</span></span>
+          <span class="sk-label">图标 icon</span>
           <div class="sk-icon-row">
             <button
               type="button"
@@ -268,47 +312,7 @@ async function copyBody(): Promise<void> {
         </div>
       </section>
 
-      <section class="sk-sec">
-        <h4 class="sk-sec-title">使用时机与工具<span class="sk-sec-hint">（可选，决定技能何时被调用）</span></h4>
-        <label class="sk-field">
-          <span class="sk-label">触发条件 when_to_use</span>
-          <el-input
-            v-model="draft.whenToUse"
-            type="textarea"
-            :rows="2"
-            :maxlength="SMART_DESC_MAX"
-            resize="vertical"
-            placeholder="例如：当用户需要把模糊想法整理成需求文档时使用"
-          />
-        </label>
-        <label class="sk-field">
-          <span class="sk-label">可用工具 tools<span class="sk-hint">（用、或逗号分隔）</span></span>
-          <el-input v-model="toolsInput" size="small" placeholder="Read、Grep、Bash" />
-        </label>
-      </section>
-
-      <section class="sk-sec">
-        <h4 class="sk-sec-title">技能正文<span class="sk-sec-hint">（{{ SKILL_FILE }} 中 frontmatter 之后的内容）</span></h4>
-        <div class="sk-body-bar">
-          <el-button size="small" data-testid="skill-editor-copy-body" @click="copyBody">复制正文</el-button>
-        </div>
-        <label class="sk-field">
-          <span class="sk-label">正文 body<span class="req">*</span><span class="sk-hint">（支持 Markdown）</span></span>
-          <el-input
-            v-model="draft.body"
-            type="textarea"
-            :rows="14"
-            :maxlength="contentMax"
-            show-word-limit
-            resize="vertical"
-            placeholder="写给 AI 的操作指令：步骤、约束、输出格式……"
-            data-testid="skill-editor-body"
-          />
-          <span v-if="errorOf('body')" class="sk-error">{{ errorOf('body') }}</span>
-        </label>
-      </section>
-
-      <section class="sk-sec">
+      <section class="sk-sec sk-sec--res">
         <h4 class="sk-sec-title">
           附属资源
           <span class="sk-sec-hint">
@@ -324,7 +328,22 @@ async function copyBody(): Promise<void> {
           </span>
         </div>
 
-        <ul v-if="resources.length" class="sk-res-list">
+        <ul class="sk-res-list">
+          <!-- skill.md 是技能主文件：固定存在、不可移除；点开可查看 frontmatter 并编辑正文 -->
+          <li class="sk-res-item sk-res-item--main">
+            <span class="sk-res-path" :title="SKILL_FILE">{{ SKILL_FILE }}</span>
+            <span class="sk-res-size">{{ bodyLength }} 字</span>
+            <span class="sk-res-enc">文本</span>
+            <span v-if="!bodyText.trim()" class="sk-res-tag">正文待填写</span>
+            <button
+              type="button"
+              class="sk-res-open"
+              data-testid="skill-editor-open-skillmd"
+              @click="skillFileOpen = true"
+            >
+              查看 / 编辑
+            </button>
+          </li>
           <li v-for="(r, i) in resources" :key="r.path" class="sk-res-item">
             <span class="sk-res-path" :title="r.path">{{ r.path }}</span>
             <span class="sk-res-size">{{ formatSize(r.size) }}</span>
@@ -332,7 +351,9 @@ async function copyBody(): Promise<void> {
             <button type="button" class="sk-res-del" @click="removeResource(i)">移除</button>
           </li>
         </ul>
-        <p v-else class="sk-res-empty">暂无资源。技能可以只有 {{ SKILL_FILE }}，也可以带上脚本、模板、参考文档。</p>
+        <p v-if="!resources.length" class="sk-res-empty">
+          暂无其它资源。技能可以只有 {{ SKILL_FILE }}，也可以带上脚本、模板、参考文档。
+        </p>
       </section>
 
     </form>
@@ -345,6 +366,48 @@ async function copyBody(): Promise<void> {
       @select="onPickIcon"
       @close="iconPickerOpen = false"
     />
+
+    <!-- skill.md 查看 / 编辑子弹框：正文直接写回 draft.body（实时生效，无需额外保存） -->
+    <BaseDialog
+      v-if="skillFileOpen"
+      :title="`查看 / 编辑 ${SKILL_FILE}`"
+      width="760px"
+      max-height="86vh"
+      :z-index="400"
+      :close-on-escape="false"
+      teleport
+      @close="skillFileOpen = false"
+    >
+      <div class="sk-md">
+        <p class="sk-md-tip">
+          frontmatter 由「基础信息」自动生成，这里只需维护正文（frontmatter 之后的 Markdown 内容）。
+        </p>
+        <div class="sk-md-block">
+          <span class="sk-md-label">frontmatter<span class="sk-hint">（只读，随上方字段实时更新）</span></span>
+          <pre class="sk-md-fm">{{ frontmatterText }}</pre>
+        </div>
+        <label class="sk-field">
+          <span class="sk-label">正文 body<span class="req">*</span><span class="sk-hint">（支持 Markdown）</span></span>
+          <el-input
+            v-model="draft.body"
+            type="textarea"
+            :rows="16"
+            :maxlength="contentMax"
+            show-word-limit
+            resize="vertical"
+            placeholder="写给 AI 的操作指令：步骤、约束、输出格式……"
+            data-testid="skill-editor-body"
+          />
+          <span v-if="errorOf('body')" class="sk-error">{{ errorOf('body') }}</span>
+        </label>
+      </div>
+      <template #footer>
+        <el-button size="small" data-testid="skill-editor-copy-skillmd" @click="copySkillMd">复制全文</el-button>
+        <el-button type="primary" size="small" data-testid="skill-editor-skillmd-done" @click="skillFileOpen = false">
+          完成
+        </el-button>
+      </template>
+    </BaseDialog>
 
     <template #header-actions>
       <button
@@ -369,8 +432,10 @@ async function copyBody(): Promise<void> {
 </template>
 
 <style scoped>
-.sk-form { display: flex; flex-direction: column; gap: 14px; }
+.sk-form { display: flex; flex-direction: column; gap: 14px; min-height: 100%; }
 .sk-sec { display: flex; flex-direction: column; gap: 10px; }
+/* 「附属资源」吃掉弹框剩余高度（内容少时列表铺到底，内容多时整页由 .bd-body 滚动） */
+.sk-sec--res { flex: 1 1 auto; }
 .sk-sec-title {
   margin: 0;
   font-size: 13px;
@@ -382,11 +447,29 @@ async function copyBody(): Promise<void> {
 .sk-sec-hint { font-weight: 400; font-size: 12px; color: var(--color-text-muted, #9ca3af); }
 .sk-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .sk-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-/* 仅「基础信息」行内字段按 240px 弹性分配宽度；独立成行的字段（标签 / 图标 / 触发条件 / 工具 / 正文）
+/* 仅「基础信息」行内字段按 240px 弹性分配宽度；独立成行的字段（说明 / 标签 / 图标 / 触发条件 / 工具）
    不再被 flex-basis:240px 撑成 240px 高的大块空白，改按内容自然高度 */
 .sk-row .sk-field { flex: 1 1 240px; }
 .sk-row .sk-field-sm { flex: 0 1 180px; }
-.sk-body-bar { display: flex; justify-content: flex-end; }
+.sk-md { display: flex; flex-direction: column; gap: 12px; }
+.sk-md-tip { margin: 0; font-size: 12px; color: var(--color-text-muted, #9ca3af); }
+.sk-md-block { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.sk-md-label { font-size: 13px; color: var(--color-text-secondary, #6b7280); }
+.sk-md-fm {
+  margin: 0;
+  padding: 8px 10px;
+  max-height: 150px;
+  overflow: auto;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 6px;
+  background-color: var(--color-bg-subtle, rgba(148, 163, 184, 0.08));
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--color-text-secondary, #6b7280);
+}
 .sk-label { font-size: 13px; color: var(--color-text-secondary, #6b7280); }
 .sk-hint { color: var(--color-text-muted, #9ca3af); font-size: 12px; }
 .req { color: var(--color-error, #dc2626); }
@@ -430,6 +513,8 @@ async function copyBody(): Promise<void> {
 
 .sk-res-bar { display: flex; align-items: center; gap: 10px; }
 .sk-res-sum { font-size: 12px; color: var(--color-text-muted, #9ca3af); }
+/* 列表不设内部滚动（原 max-height:180px + overflow-y:auto 会让资源多时出现嵌套滚动条）：
+   高度随内容自然撑满，超出部分由弹框 body 整体滚动 */
 .sk-res-list {
   margin: 0;
   padding: 0;
@@ -437,8 +522,9 @@ async function copyBody(): Promise<void> {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 180px;
-  overflow-y: auto;
+  flex: 1 1 auto;
+  max-height: none;
+  overflow: visible;
 }
 .sk-res-item {
   display: flex;
@@ -470,6 +556,27 @@ async function copyBody(): Promise<void> {
   cursor: pointer;
 }
 .sk-res-del:hover { border-color: var(--color-error, #dc2626); color: var(--color-error, #dc2626); }
+/* skill.md 固定条目：淡主色底 + 可点开的「查看 / 编辑」按钮 */
+.sk-res-item--main { background-color: var(--color-primary-soft, rgba(59, 130, 246, 0.07)); }
+.sk-res-tag {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  color: var(--color-warning, #d97706);
+  background-color: var(--color-warning-soft, rgba(217, 119, 6, 0.12));
+}
+.sk-res-open {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-primary, #3b82f6);
+  font-size: 12px;
+  cursor: pointer;
+}
+.sk-res-open:hover { border-color: var(--color-primary, #3b82f6); }
 .sk-res-empty { margin: 0; font-size: 12px; color: var(--color-text-muted, #9ca3af); }
 
 

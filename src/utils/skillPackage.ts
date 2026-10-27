@@ -20,6 +20,17 @@ import {
 import { downloadBlob } from './download'
 import { useToast } from '@/composables/useToast'
 
+// ==================== 导入上限（防 zip bomb / 大包 OOM）====================
+/** zip 包体上限（磁盘字节）：超过直接拒绝，不去解压 */
+export const ZIP_MAX_BYTES = 20 * 1024 * 1024
+/** zip 解压后总字节上限：解压前后都拦，避免「小包炸开成几个 G」 */
+export const ZIP_MAX_UNPACKED_BYTES = 60 * 1024 * 1024
+/** zip 条目数上限 */
+export const ZIP_MAX_ENTRIES = 300
+
+/** 超限标记：fflate 的 filter 里抛出，外层据此给出明确提示 */
+const ZIP_LIMIT_FLAG = '__skill_zip_limit__'
+
 // ==================== 类型 ====================
 
 export interface SkillFileEntry {
@@ -83,8 +94,27 @@ export function pickSkillZip(): Promise<SkillSource | null> {
         .arrayBuffer()
         .then(buf => {
           const entries: SkillFileEntry[] = []
+          // 包体先拦一道：压缩炸弹通常包体不小，先省掉解压开销
+          if (buf.byteLength > ZIP_MAX_BYTES) {
+            useToast().error(`压缩包过大（${(buf.byteLength / 1024 / 1024).toFixed(1)}MB），上限 ${ZIP_MAX_BYTES / 1024 / 1024}MB`)
+            resolve(null)
+            return
+          }
           try {
-            const unzipped = unzipSync(new Uint8Array(buf))
+            // fflate 的 filter 能在**解压前**读到每个条目的原始大小：
+            // 累计条目数 / 解压后总字节超限时立刻抛错中止，避免炸开占满内存
+            let entryCount = 0
+            let unpackedBytes = 0
+            const unzipped = unzipSync(new Uint8Array(buf), {
+              filter: f => {
+                entryCount += 1
+                unpackedBytes += f.originalSize ?? 0
+                if (entryCount > ZIP_MAX_ENTRIES || unpackedBytes > ZIP_MAX_UNPACKED_BYTES) {
+                  throw new Error(ZIP_LIMIT_FLAG)
+                }
+                return !f.name.endsWith('/')
+              }
+            })
             for (const [rawPath, data] of Object.entries(unzipped)) {
               const p = rawPath.replace(/\\/g, '/').replace(/^\.?\//, '')
               // 目录项以 / 结尾；macOS 压缩包里的 __MACOSX / 隐藏文件一律忽略
@@ -95,7 +125,13 @@ export function pickSkillZip(): Promise<SkillSource | null> {
             }
           } catch (e) {
             console.error('[skillPackage] zip 解压失败', e)
-            useToast().error('压缩包解析失败，请确认是标准的 zip 文件')
+            if (e instanceof Error && e.message === ZIP_LIMIT_FLAG) {
+              useToast().error(
+                `压缩包内容过大：最多 ${ZIP_MAX_ENTRIES} 个文件、解压后 ${ZIP_MAX_UNPACKED_BYTES / 1024 / 1024}MB`
+              )
+            } else {
+              useToast().error('压缩包解析失败，请确认是标准的 zip 文件')
+            }
             resolve(null)
             return
           }

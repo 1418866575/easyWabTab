@@ -8,11 +8,31 @@ import { computed, ref } from 'vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import { renderMarkdown } from '@/composables/noteMarkdown'
 import { copyText } from '@/utils/download'
+import { useToast } from '@/composables/useToast'
+import { useSmartStore } from '@/stores/smart'
 import { SKILL_FILE } from '@/composables/skillPackageCore'
 import type { SmartSkill, SmartSkillResource } from '@/types'
 
 const props = defineProps<{ item: SmartSkill }>()
 const emit = defineEmits<{ close: []; download: [] }>()
+
+const store = useSmartStore()
+const toast = useToast()
+
+/**
+ * 复制正文。
+ * 成功即记一次使用（touchSkill）：与编辑器里「复制全文」同一口径，
+ * 否则技能页的「按使用排序」永远是 0，该排序项形同虚设。
+ */
+async function copyBody(): Promise<void> {
+  const body = props.item.body ?? ''
+  if (!body.trim()) {
+    toast.warning('正文为空，暂无可复制内容')
+    return
+  }
+  const ok = await copyText(body, '已复制技能正文')
+  if (ok) store.touchSkill(props.item.id)
+}
 
 /** frontmatter 行：只展示有值的，顺序与 skill.md 一致 */
 const frontmatter = computed<{ key: string; value: string }[]>(() => {
@@ -111,7 +131,7 @@ const previewText = computed(() => {
     </div>
 
     <template #footer>
-      <el-button size="small" @click="copyText(props.item.body, '已复制技能正文')">复制正文</el-button>
+      <el-button size="small" data-testid="skill-detail-copy-body" @click="copyBody">复制正文</el-button>
       <el-button size="small" type="primary" @click="emit('download')">下载 zip</el-button>
       <el-button size="small" @click="emit('close')">关闭</el-button>
     </template>

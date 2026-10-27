@@ -26,6 +26,7 @@ import './styles/teacher.css'
 import './styles/biz-dialog.css'
 import { useThemeStore } from './stores/theme'
 import { useAppSettingsStore } from './stores/settings'
+import { flushSmartUsageIfCreated } from './stores/smart'
 import { useNavPrefs } from './composables/useNavPrefs'
 import { configureNavMetaStorage, persistNavMeta } from './composables/navMeta'
 import { idbGet, idbPut } from './composables/useIdb'
@@ -81,6 +82,8 @@ async function bootstrap() {
   const flushNav = () => {
     void navPrefs.flushNow()
     void persistNavMeta()
+    // 智能工作台的使用计数是本地防抖落盘（不触发云推送），页面隐藏时补一次
+    flushSmartUsageIfCreated()
   }
   if (typeof window !== 'undefined') {
     window.addEventListener('pagehide', flushNav)

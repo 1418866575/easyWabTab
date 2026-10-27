@@ -16,7 +16,128 @@ import type {
   SmartSkillResource,
   SmartWorkflow
 } from '@/types'
-import { migrateLegacySkill } from './skillPackageCore'
+import { migrateLegacySkill } from './skillPackageCore.ts'
+
+// ==================== 墓碑（软删除）====================
+/**
+ * 为什么这里不复用 composables/tombstoneCore.ts：
+ * 那里的 SyncStamp 规定 `updatedAt?: string`，而智能工作台三条资产的时间戳是**数字**
+ * （Date.now()，概览/卡片都用 relTime(number)）。硬套会发生类型冲突，改了又会牵连
+ * blog / teacher / todos / notes / ledger / diary / genealogy 七个模块。
+ * 因此这里保留同一套语义（deletedAt 墓碑 + ver 逻辑时钟 + clientId tie-break），
+ * 只把时间戳换回数字；比较规则与 compareStamp 一致：ver → updatedAt → clientId。
+ */
+
+/** 智能资产最小戳结构（技能 / 提示词 / 工作流共用） */
+export interface SmartStamp {
+  id: string
+  updatedAt: number
+  ver?: number
+  clientId?: string
+  deletedAt?: string | null
+}
+
+/** 是否墓碑（已删除） */
+export function isSmartDeleted(item: { deletedAt?: string | null } | null | undefined): boolean {
+  return !!item && !!item.deletedAt
+}
+
+/**
+ * 展示/统计用：剔除墓碑。
+ * ⚠ 顺序不可颠倒：合并（含墓碑）→ 落库 → **再**用本函数过滤展示。
+ */
+export function activeSmart<T extends { deletedAt?: string | null }>(items: T[] | undefined | null): T[] {
+  return (items ?? []).filter(i => !isSmartDeleted(i))
+}
+
+/**
+ * 归一化函数内保留墓碑与版本戳（对应 tombstoneCore.keepStamp）。
+ * 三个 normalize* 都是"重建对象、只拷已知字段"，漏了这三步删除状态会被抹掉 → 合并时复活。
+ */
+export function keepSmartStamp<T extends { ver?: number; clientId?: string; deletedAt?: string | null }>(
+  target: T,
+  src: unknown
+): T {
+  const s = (src ?? {}) as Partial<SmartStamp>
+  if (typeof s.deletedAt === 'string' && s.deletedAt) target.deletedAt = s.deletedAt
+  if (typeof s.ver === 'number') target.ver = s.ver
+  if (typeof s.clientId === 'string' && s.clientId) target.clientId = s.clientId
+  return target
+}
+
+/** 软删除：写墓碑 + updatedAt 前进 + ver+1（记录保留在数组里，随信封上云） */
+export function markSmartDeleted<T extends SmartStamp>(item: T, now = Date.now(), clientId?: string): T {
+  return {
+    ...item,
+    deletedAt: new Date(now).toISOString(),
+    updatedAt: now,
+    ver: (item.ver ?? 0) + 1,
+    ...(clientId ? { clientId } : {})
+  }
+}
+
+/** 普通变更：推进 ver 与 updatedAt（不写墓碑） */
+export function bumpSmartStamp<T extends SmartStamp>(item: T, now = Date.now(), clientId?: string): T {
+  return {
+    ...item,
+    updatedAt: now,
+    ver: (item.ver ?? 0) + 1,
+    ...(clientId ? { clientId } : {})
+  }
+}
+
+/**
+ * 墓碑感知合并（对应 tombstoneCore.mergeTombstonedById）：
+ * 按 id 并集 + 逐条取新，墓碑同样参与比较 —— 于是「本端墓碑 vs 云端活记录」保持删除。
+ */
+export function mergeSmartById<T extends SmartStamp>(local: T[] | undefined | null, remote: T[] | undefined | null): T[] {
+  const map = new Map<string, T>()
+  for (const item of [...(local ?? []), ...(remote ?? [])]) {
+    const prev = map.get(item.id)
+    if (!prev || compareSmartStamp(item, prev) > 0) map.set(item.id, item)
+  }
+  return Array.from(map.values())
+}
+
+/** 版本比较：ver → updatedAt（数字）→ clientId；>0 表示 a 更新 */
+export function compareSmartStamp(a: SmartStamp, b: SmartStamp): number {
+  const va = a.ver ?? 0
+  const vb = b.ver ?? 0
+  if (va !== vb) return va > vb ? 1 : -1
+  const ua = Number(a.updatedAt) || 0
+  const ub = Number(b.updatedAt) || 0
+  if (ua !== ub) return ua > ub ? 1 : -1
+  const ca = a.clientId ?? ''
+  const cb = b.clientId ?? ''
+  if (ca !== cb) return ca > cb ? 1 : -1
+  return 0
+}
+
+/** 墓碑保留期（天）：与 tombstoneCore 的 TOMBSTONE_TTL_DAYS 保持一致 */
+export const SMART_TOMBSTONE_TTL_DAYS = 7
+
+/**
+ * 墓碑 GC：物理清除超过保留期的墓碑。
+ * 调用时机必须在**墓碑已成功推送上云之后**，否则对端会把它当新增补回来。
+ */
+export function gcSmartTombstones<T extends SmartStamp>(items: T[], now = Date.now(), ttlDays = SMART_TOMBSTONE_TTL_DAYS): { kept: T[]; purged: number } {
+  const ttl = ttlDays * 24 * 60 * 60 * 1000
+  const kept: T[] = []
+  let purged = 0
+  for (const item of items) {
+    if (!item.deletedAt) {
+      kept.push(item) // 活记录
+      continue
+    }
+    const t = Date.parse(item.deletedAt)
+    if (Number.isFinite(t) && now - t >= ttl) {
+      purged += 1 // 过期墓碑 → 物理清除
+      continue
+    }
+    kept.push(item) // 未过期，或 deletedAt 非法（保守保留）
+  }
+  return { kept, purged }
+}
 
 // ==================== 常量与上限 ====================
 
@@ -142,7 +263,8 @@ export function normalizeSkill(raw: unknown): SmartSkill | null {
   if (!name && !body.trim()) return null
   const now = Date.now()
   const createdAt = toInt(o.createdAt, now)
-  return {
+  // 末尾 keepSmartStamp：把 deletedAt / ver / clientId 原样带回（漏了墓碑就在这里被抹掉 → 合并时复活）
+  return keepSmartStamp<SmartSkill>({
     id: typeof o.id === 'string' && o.id ? o.id : makeSmartId('sk'),
     name: name || '未命名技能',
     description: toText(o.description).trim().slice(0, SMART_DESC_MAX),
@@ -161,10 +283,12 @@ export function normalizeSkill(raw: unknown): SmartSkill | null {
     resources: normalizeResources(o.resources),
     usageCount: Math.max(0, toInt(o.usageCount, 0)),
     lastUsedAt: typeof o.lastUsedAt === 'number' && Number.isFinite(o.lastUsedAt) ? o.lastUsedAt : null,
+    // 收藏：与提示词/工作流同字段；老数据没有该键时按未收藏处理
+    isFavorite: o.isFavorite === true,
     isBuiltIn: o.isBuiltIn === true ? true : undefined,
     createdAt,
     updatedAt: toInt(o.updatedAt, createdAt || now)
-  }
+  }, o)
 }
 
 /** 归一化资源数组：路径清洗、去重（同路径后者覆盖）、非对象剔除 */
@@ -230,7 +354,7 @@ export function normalizePrompt(raw: unknown): SmartPrompt | null {
   if (!title && !content.trim()) return null
   const now = Date.now()
   const createdAt = toInt(o.createdAt, now)
-  return {
+  return keepSmartStamp<SmartPrompt>({
     id: typeof o.id === 'string' && o.id ? o.id : makeSmartId('pm'),
     title: title || '未命名提示词',
     category: normalizeCategory(o.category),
@@ -246,7 +370,7 @@ export function normalizePrompt(raw: unknown): SmartPrompt | null {
     isBuiltIn: o.isBuiltIn === true ? true : undefined,
     createdAt,
     updatedAt: toInt(o.updatedAt, createdAt || now)
-  }
+  }, o)
 }
 
 export function normalizePrompts(input: unknown): SmartPrompt[] {
@@ -271,7 +395,7 @@ export function normalizeWorkflow(raw: unknown): SmartWorkflow | null {
   if (!name && !definition.trim()) return null
   const now = Date.now()
   const createdAt = toInt(o.createdAt, now)
-  return {
+  return keepSmartStamp<SmartWorkflow>({
     id: typeof o.id === 'string' && o.id ? o.id : makeSmartId('wf'),
     name: name || '未命名工作流',
     description: toText(o.description).trim().slice(0, SMART_DESC_MAX),
@@ -286,7 +410,7 @@ export function normalizeWorkflow(raw: unknown): SmartWorkflow | null {
     isBuiltIn: o.isBuiltIn === true ? true : undefined,
     createdAt,
     updatedAt: toInt(o.updatedAt, createdAt || now)
-  }
+  }, o)
 }
 
 export function normalizeWorkflows(input: unknown): SmartWorkflow[] {
@@ -427,7 +551,12 @@ export function sortSmart<T extends SmartSkill | SmartPrompt | SmartWorkflow>(it
   return out.sort((a, b) => b.updatedAt - a.updatedAt)
 }
 
-function nameOf(item: SmartSkill | SmartPrompt): string {
+/**
+ * 取显示名：技能 / 工作流用 name，提示词用 title。
+ * 三类资产都要走这里（filterSmart / sortSmart / isNameTaken / planImport / applyImport 都是三合一泛型），
+ * 入参类型必须覆盖 SmartWorkflow，否则上面几处会把 union 传进来报 TS2345。
+ */
+function nameOf(item: SmartSkill | SmartPrompt | SmartWorkflow): string {
   return 'name' in item ? item.name : item.title
 }
 

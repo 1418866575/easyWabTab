@@ -3,9 +3,12 @@ import { computed, ref } from 'vue'
 import { markDirty } from '@/composables/useCloudSync'
 import { getPref, setPref } from '@/composables/useNavPrefs'
 import {
+  activeSmart,
   buildEnvelope,
   calcSmartStats,
+  gcSmartTombstones,
   makeSmartId,
+  markSmartDeleted,
   normalizePrompts,
   normalizeSkills,
   normalizeWorkflows,
@@ -40,6 +43,7 @@ import {
   type CategoryResult,
   type SmartMenuData
 } from '@/composables/smartSettingsCore'
+import { markSmartExplicitDelete } from '@/composables/smartSyncGuard'
 import type { SmartEnvelope, SmartImportPreview, SmartPrompt, SmartSkill, SmartWorkflow } from '@/types'
 
 const SKILLS_KEY = 'smart-skills'
@@ -71,10 +75,103 @@ function save(key: string, value: unknown): void {
   markDirty()
 }
 
+/**
+ * 已创建 store 的计数补写入口（main.ts 在 pagehide 时调用）。
+ * 不直接 `useSmartStore()` 是为了避免「从没进过智能工作台」的会话在 pagehide
+ * 时仅因为补写就实例化 store（那会连带触发默认分类播种等副作用）。
+ */
+let usageFlusher: (() => void) | null = null
+
+/** 若 smart store 已创建，立即把挂起的使用计数落盘；未创建则无操作 */
+export function flushSmartUsageIfCreated(): void {
+  usageFlusher?.()
+}
+
 export const useSmartStore = defineStore('smart', () => {
   const skills = ref<SmartSkill[]>(loadList(SKILLS_KEY, normalizeSkills))
   const prompts = ref<SmartPrompt[]>(loadList(PROMPTS_KEY, normalizePrompts))
   const workflows = ref<SmartWorkflow[]>(loadList(WORKFLOWS_KEY, normalizeWorkflows))
+
+  /**
+   * 墓碑语义：`skills/prompts/workflows` 三个 ref 是**全量数组**（含墓碑），
+   * 它们负责落库与随信封上云；对外暴露的 store 字段是下面的 activeXxx（已剔除墓碑）。
+   *
+   * ⚠ 顺序不可颠倒：合并 / 落库用全量，展示用 active —— 先过滤再合并等于把删除状态丢掉。
+   */
+  const activeSkills = computed(() => activeSmart(skills.value))
+  const activePrompts = computed(() => activeSmart(prompts.value))
+  const activeWorkflows = computed(() => activeSmart(workflows.value))
+
+  /**
+   * 本次会话内是否发生过**用户显式删除** —— 状态放在 smartSyncGuard 里共享
+   * （云同步的退化拦截要读它，但 useCloudSync 不能反向静态 import store，否则循环依赖）。
+   */
+
+  // ==================== 使用计数落盘（防写放大）====================
+  /**
+   * touchX 只写本地 IDB，**不 markDirty、不触发云推送**：
+   *   1) 计数不推进 updatedAt，云端按记录取新时本来就会被对端整条覆盖，同步意义有限；
+   *   2) 每次复制都 markDirty 会让 1.5s 后整包 smart.json（含 base64 资源，可达数 MB）重传一次。
+   * 连续点击用 2s 防抖合并成一次写入。
+   */
+  let usageTimer: ReturnType<typeof setTimeout> | null = null
+  const usageDirty = { skills: false, prompts: false, workflows: false }
+
+  function persistUsageSoon(kind: 'skills' | 'prompts' | 'workflows'): void {
+    usageDirty[kind] = true
+    if (usageTimer) return
+    usageTimer = setTimeout(() => {
+      usageTimer = null
+      if (usageDirty.skills) setPref(SKILLS_KEY, JSON.stringify(skills.value))
+      if (usageDirty.prompts) setPref(PROMPTS_KEY, JSON.stringify(prompts.value))
+      if (usageDirty.workflows) setPref(WORKFLOWS_KEY, JSON.stringify(workflows.value))
+      usageDirty.skills = false
+      usageDirty.prompts = false
+      usageDirty.workflows = false
+    }, 2000)
+  }
+
+  /** 立即落盘挂起的计数（页面隐藏 / 卸载时可调用，避免丢最后几次计数） */
+  function flushUsageCounters(): void {
+    if (!usageTimer) return
+    clearTimeout(usageTimer)
+    usageTimer = null
+    if (usageDirty.skills) setPref(SKILLS_KEY, JSON.stringify(skills.value))
+    if (usageDirty.prompts) setPref(PROMPTS_KEY, JSON.stringify(prompts.value))
+    if (usageDirty.workflows) setPref(WORKFLOWS_KEY, JSON.stringify(workflows.value))
+    usageDirty.skills = false
+    usageDirty.prompts = false
+    usageDirty.workflows = false
+  }
+  usageFlusher = flushUsageCounters
+
+  /**
+   * 墓碑 GC：物理清除超过保留期（7 天）的墓碑；必须在墓碑已推送上云之后调用。
+   * 返回 Promise 与其他 store 的 gcTombstones 契约一致（useCloudSync.runTombstoneGc 统一 await）。
+   */
+  async function gcTombstones(): Promise<number> {
+    const now = Date.now()
+    let purged = 0
+    const s = gcSmartTombstones(skills.value, now)
+    if (s.purged) {
+      purged += s.purged
+      skills.value = s.kept
+      persistSkills()
+    }
+    const p = gcSmartTombstones(prompts.value, now)
+    if (p.purged) {
+      purged += p.purged
+      prompts.value = p.kept
+      persistPrompts()
+    }
+    const w = gcSmartTombstones(workflows.value, now)
+    if (w.purged) {
+      purged += w.purged
+      workflows.value = w.kept
+      persistWorkflows()
+    }
+    return purged
+  }
 
   // ==================== 左侧菜单配置 ====================
 
@@ -176,11 +273,11 @@ export const useSmartStore = defineStore('smart', () => {
 
   /** 设置页展示的分类：自定义分类 ∪ 技能上实际用到的分类 */
   const allSkillCategories = computed(() =>
-    collectCategories(customCategories.value, skills.value.map(s => s.category))
+    collectCategories(customCategories.value, activeSkills.value.map(s => s.category))
   )
 
   /** 每个分类下的技能数量 */
-  const skillCountByCategory = computed(() => countByCategory(skills.value.map(s => s.category)))
+  const skillCountByCategory = computed(() => countByCategory(activeSkills.value.map(s => s.category)))
 
   function onAddCategory(name: string): CategoryResult {
     const r = addCategory(customCategories.value, name)
@@ -264,11 +361,11 @@ export const useSmartStore = defineStore('smart', () => {
 
   /** 设置页展示的分类：自定义分类 ∪ 工作流上实际用到的分类 */
   const allWorkflowCategories = computed(() =>
-    collectCategories(workflowCustomCategories.value, workflows.value.map(w => w.category))
+    collectCategories(workflowCustomCategories.value, activeWorkflows.value.map(w => w.category))
   )
 
   /** 每个分类下的工作流数量 */
-  const workflowCountByCategory = computed(() => countByCategory(workflows.value.map(w => w.category)))
+  const workflowCountByCategory = computed(() => countByCategory(activeWorkflows.value.map(w => w.category)))
 
   function onAddWorkflowCategory(name: string): CategoryResult {
     const r = addCategory(workflowCustomCategories.value, name)
@@ -372,11 +469,11 @@ export const useSmartStore = defineStore('smart', () => {
 
   /** 设置页展示的分类：自定义分类 ∪ 提示词上实际用到的分类 */
   const allPromptCategories = computed(() =>
-    collectCategories(promptCustomCategories.value, prompts.value.map(p => p.category))
+    collectCategories(promptCustomCategories.value, activePrompts.value.map(p => p.category))
   )
 
   /** 每个分类下的提示词数量 */
-  const promptCountByCategory = computed(() => countByCategory(prompts.value.map(p => p.category)))
+  const promptCountByCategory = computed(() => countByCategory(activePrompts.value.map(p => p.category)))
 
   function onAddPromptCategory(name: string): CategoryResult {
     const r = addCategory(promptCustomCategories.value, name)
@@ -441,7 +538,8 @@ export const useSmartStore = defineStore('smart', () => {
    */
   const promptCategories = computed(() => allPromptCategories.value)
 
-  const stats = computed(() => calcSmartStats(skills.value, prompts.value, workflows.value))
+  // 统计只算活记录：墓碑不该出现在「技能 N 个」「本月新增」里
+  const stats = computed(() => calcSmartStats(activeSkills.value, activePrompts.value, activeWorkflows.value))
 
   // ==================== 技能 CRUD ====================
 
@@ -506,6 +604,8 @@ export const useSmartStore = defineStore('smart', () => {
       ...(input.extra !== undefined ? { extra: { ...input.extra } } : {}),
       ...(input.body !== undefined ? { body: input.body } : {}),
       ...(input.resources !== undefined ? { resources: input.resources.map(r => ({ ...r })) } : {}),
+      // 变更要推进 Lamport 版本：否则对端已写墓碑(ver>=1)时，本地这次编辑(ver 0)会被判旧而丢失
+      ver: (prev.ver ?? 0) + 1,
       updatedAt: Date.now()
     }
     skills.value[i] = next
@@ -513,10 +613,16 @@ export const useSmartStore = defineStore('smart', () => {
     return true
   }
 
+  /**
+   * 删除技能 = 写墓碑（保留记录 + ver 前进），**不是**物理移除。
+   * 物理移除会让对端的并集合并把这条当成"远端新增"补回来（删除复活）。
+   * 墓碑 7 天后由 gcTombstones 物理清除。
+   */
   function deleteSkill(id: string): boolean {
-    const before = skills.value.length
-    skills.value = skills.value.filter(s => s.id !== id)
-    if (skills.value.length === before) return false
+    const i = skills.value.findIndex(s => s.id === id)
+    if (i === -1 || skills.value[i].deletedAt) return false
+    skills.value[i] = markSmartDeleted(skills.value[i])
+    markSmartExplicitDelete()
     persistSkills()
     return true
   }
@@ -534,12 +640,20 @@ export const useSmartStore = defineStore('smart', () => {
     return addSkill({ ...src, id: undefined, name, usageCount: 0, lastUsedAt: null })
   }
 
-  /** 记录一次使用（复制/填充后调用） */
+  /** 记录一次使用（复制/填充后调用）；只本地落盘，不触发云推送（见 persistUsageSoon 说明） */
   function touchSkill(id: string): void {
     const s = skills.value.find(x => x.id === id)
     if (!s) return
     s.usageCount += 1
     s.lastUsedAt = Date.now()
+    persistUsageSoon('skills')
+  }
+
+  /** 收藏 / 取消收藏（与 toggleFavorite(提示词) 同口径；字段只进记录不写 skill.md） */
+  function toggleSkillFavorite(id: string): void {
+    const s = skills.value.find(x => x.id === id)
+    if (!s) return
+    s.isFavorite = !s.isFavorite
     persistSkills()
   }
 
@@ -603,6 +717,8 @@ export const useSmartStore = defineStore('smart', () => {
       ...(input.isFavorite !== undefined ? { isFavorite: input.isFavorite } : {}),
       content,
       variables: parseVariables(content),
+      // 变更要推进 Lamport 版本：否则对端已写墓碑(ver>=1)时，本地这次编辑(ver 0)会被判旧而丢失
+      ver: (prev.ver ?? 0) + 1,
       updatedAt: Date.now()
     }
     prompts.value[i] = next
@@ -610,10 +726,12 @@ export const useSmartStore = defineStore('smart', () => {
     return true
   }
 
+  /** 删除提示词 = 写墓碑（同 deleteSkill，理由见上） */
   function deletePrompt(id: string): boolean {
-    const before = prompts.value.length
-    prompts.value = prompts.value.filter(p => p.id !== id)
-    if (prompts.value.length === before) return false
+    const i = prompts.value.findIndex(p => p.id === id)
+    if (i === -1 || prompts.value[i].deletedAt) return false
+    prompts.value[i] = markSmartDeleted(prompts.value[i])
+    markSmartExplicitDelete()
     persistPrompts()
     return true
   }
@@ -642,7 +760,7 @@ export const useSmartStore = defineStore('smart', () => {
     if (!p) return
     p.usageCount += 1
     p.lastUsedAt = Date.now()
-    persistPrompts()
+    persistUsageSoon('prompts')
   }
 
   // ==================== 工作流 CRUD ====================
@@ -693,6 +811,8 @@ export const useSmartStore = defineStore('smart', () => {
       ...(input.version !== undefined ? { version: input.version.trim() || '1.0.0' } : {}),
       ...(input.definition !== undefined ? { definition: input.definition } : {}),
       ...(input.isFavorite !== undefined ? { isFavorite: input.isFavorite } : {}),
+      // 变更要推进 Lamport 版本：否则对端已写墓碑(ver>=1)时，本地这次编辑(ver 0)会被判旧而丢失
+      ver: (prev.ver ?? 0) + 1,
       updatedAt: Date.now()
     }
     workflows.value[i] = next
@@ -700,10 +820,12 @@ export const useSmartStore = defineStore('smart', () => {
     return true
   }
 
+  /** 删除工作流 = 写墓碑（批量删除也逐条走这里，语义与单条一致） */
   function deleteWorkflow(id: string): boolean {
-    const before = workflows.value.length
-    workflows.value = workflows.value.filter(w => w.id !== id)
-    if (workflows.value.length === before) return false
+    const i = workflows.value.findIndex(w => w.id === id)
+    if (i === -1 || workflows.value[i].deletedAt) return false
+    workflows.value[i] = markSmartDeleted(workflows.value[i])
+    markSmartExplicitDelete()
     persistWorkflows()
     return true
   }
@@ -732,7 +854,7 @@ export const useSmartStore = defineStore('smart', () => {
     if (!w) return
     w.usageCount += 1
     w.lastUsedAt = Date.now()
-    persistWorkflows()
+    persistUsageSoon('workflows')
   }
 
   // ==================== 导入导出 ====================
@@ -799,9 +921,10 @@ export const useSmartStore = defineStore('smart', () => {
   }
 
   return {
-    skills,
-    prompts,
-    workflows,
+    // 对外只暴露活记录：墓碑留在内部全量数组里参与合并与推送，不进任何 UI / 统计
+    skills: activeSkills,
+    prompts: activePrompts,
+    workflows: activeWorkflows,
     skillCategories,
     promptCategories,
     stats,
@@ -853,6 +976,9 @@ export const useSmartStore = defineStore('smart', () => {
     deleteSkill,
     cloneSkill,
     touchSkill,
+    toggleSkillFavorite,
+    gcTombstones,
+    flushUsageCounters,
     addPrompt,
     updatePrompt,
     deletePrompt,

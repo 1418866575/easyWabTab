@@ -181,11 +181,15 @@ async function handleSyncNowClick(): Promise<void> {
       </aside>
 
       <main class="sv-content">
-        <!-- 概览的统计卡 / 最近使用会 emit goto 跳到对应菜单；另两页无该事件 -->
-        <SmartOverview v-if="activePage === 'overview'" @goto="selectPage" />
-        <SkillManager v-else-if="activePage === 'skills'" />
-        <PromptManager v-else-if="activePage === 'prompts'" />
-        <WorkflowManager v-else />
+        <!-- KeepAlive：切页不销毁列表组件，保住搜索词 / 分类 / 标签 / 排序 / 页码
+             （此前是裸 v-if，切走再切回筛选条件全丢）。缓存的组件按类型区分，互不干扰。 -->
+        <KeepAlive>
+          <!-- 概览的统计卡会 emit goto 跳到对应菜单；另三页无该事件 -->
+          <SmartOverview v-if="activePage === 'overview'" @goto="selectPage" />
+          <SkillManager v-else-if="activePage === 'skills'" />
+          <PromptManager v-else-if="activePage === 'prompts'" />
+          <WorkflowManager v-else />
+        </KeepAlive>
       </main>
     </div>
 

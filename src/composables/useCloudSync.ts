@@ -66,6 +66,8 @@ import { useToast } from './useToast'
 import { getStoredSaltHex, getStoredVerification } from './useCrypto'
 import { mergeFamily } from './genealogyCore'
 import { compareStamp } from './tombstoneCore'
+import { compareSmartStamp, type SmartStamp } from './smartCore'
+import { hasSmartExplicitDelete, readSmartCountBaseline, writeSmartCountBaseline } from './smartSyncGuard'
 import { mergeBusinessStore } from './businessCore'
 import { mergeLedgerStore } from './ledgerCore'
 import { mergeBlogEnvelope, mergeBlogPrefsEnvelope } from './blogSyncCore'
@@ -1265,26 +1267,28 @@ function mergeSmartPref(key: string, lv: string, rv: string): string {
   return lv
 }
 
-/** 按 id 合并两个 [{ id, updatedAt }] 数组，同 id 取 updatedAt 新者；解析失败返回 null 由调用方回落 */
+/**
+ * 按 id 合并两个智能资产数组（技能 / 提示词 / 工作流）。
+ *
+ * 从「同 id 取 updatedAt 新者」升级为**墓碑感知**：逐条按 ver → updatedAt → clientId 取新
+ * （见 smartCore.compareSmartStamp）。删除是写墓碑（deletedAt + ver+1），因此
+ * 「本端墓碑(ver 5) vs 云端活记录(ver 3)」会保持删除，不再被并集补回来复活。
+ * 解析失败返回 null 由调用方回落（保留本地）。
+ */
 function mergeSmartListById(lv: string, rv: string): string | null {
   try {
     const l = JSON.parse(lv) as unknown
     const r = JSON.parse(rv) as unknown
     if (!Array.isArray(l) || !Array.isArray(r)) return null
-    const map = new Map<string, Record<string, unknown>>()
+    const map = new Map<string, SmartStamp & Record<string, unknown>>()
     for (const raw of [...l, ...r]) {
       if (!raw || typeof raw !== 'object') continue
       const it = raw as Record<string, unknown>
       const id = typeof it.id === 'string' ? it.id : ''
       if (!id) continue
       const prev = map.get(id)
-      if (!prev) {
-        map.set(id, it)
-        continue
-      }
-      const pv = typeof prev.updatedAt === 'number' ? prev.updatedAt : 0
-      const cv = typeof it.updatedAt === 'number' ? it.updatedAt : 0
-      if (cv >= pv) map.set(id, it)
+      const cur = it as SmartStamp & Record<string, unknown>
+      if (!prev || compareSmartStamp(cur, prev) > 0) map.set(id, cur)
     }
     return JSON.stringify([...map.values()])
   } catch {
@@ -1468,6 +1472,50 @@ function guardNavUserSites(local: unknown): string | null {
   return verdict.tripped ? verdict.reason : null
 }
 
+/** 从 smart.json 的 prefs 里数「活记录」（墓碑不计），用于退化拦截 */
+function countSmartActive(prefs: Record<string, string>): { skills: number; prompts: number; workflows: number } {
+  const count = (key: string): number => {
+    const raw = prefs[key]
+    if (!raw) return 0
+    try {
+      const arr = JSON.parse(raw) as unknown
+      if (!Array.isArray(arr)) return 0
+      return arr.filter((i) => !!i && typeof i === 'object' && !(i as { deletedAt?: string | null }).deletedAt).length
+    } catch {
+      return 0
+    }
+  }
+  return {
+    skills: count('smart-skills'),
+    prompts: count('smart-prompts'),
+    workflows: count('smart-workflows')
+  }
+}
+
+/**
+ * 智能工作台本地退化拦截（对齐 nav 的站点数守卫）。
+ *
+ * 场景：IDB 被回收 / 解析失败 → 三个列表读成空 → 若直接推送，会把云端技能库清空；
+ * 其它设备再拉取就成了"全线清空"，而技能包（含 base64 资源）重建成本极高。
+ * 判定：上次成功推送的活记录总数 ≥ 3，而本机现在是 0 → 拦下，等用户确认后再推。
+ * 放行：本次会话里用户显式删过（markSmartExplicitDelete）—— 那是他认可的状态。
+ */
+function guardSmartLocal(local: unknown): string | null {
+  const prefs = (local as { prefs?: Record<string, string> } | null)?.prefs
+  if (!prefs) return null
+  if (hasSmartExplicitDelete()) return null
+  const base = readSmartCountBaseline()
+  if (!base) return null
+  const baseTotal = base.skills + base.prompts + base.workflows
+  if (baseTotal < 3) return null
+  const cur = countSmartActive(prefs)
+  const curTotal = cur.skills + cur.prompts + cur.workflows
+  if (curTotal === 0) {
+    return `本机智能工作台三库全空，上次同步有 ${baseTotal} 条，疑似本地库读取失败`
+  }
+  return null
+}
+
 // ========== 文件配置表 ==========
 
 const FILE_CONFIGS: FileConfig[] = [
@@ -1546,7 +1594,9 @@ const FILE_CONFIGS: FileConfig[] = [
     signature: (data) => sigSmart(data as SmartSyncData),
     merge: (l, r) => mergeSmart(l as SmartSyncData, r as SmartSyncData),
     reload: reloadSmartStores,
-    diffSize: (l, r) => totalDiffSize(l, r)
+    diffSize: (l, r) => totalDiffSize(l, r),
+    // 三库被读成空 → 禁止把空态推上云（技能包含 base64 资源，重建成本极高）
+    guardLocal: (local) => guardSmartLocal(local)
   },
   {
     // 博客：BlogData 单对象（settings / categories / tags / articles）
@@ -1723,6 +1773,13 @@ async function pushNow(silent = false, skipRemoteGuard = false, onlyChanged = fa
   }
   status.value = 'pushing'
   errorMessage.value = ''
+  // 推送前先落盘：setPref 有 400ms 防抖，若不 flush，exportLocal 会读到 IDB 里的旧值，
+  // 推上去后 clearDirty —— 新改动要等下一次保存才有机会上云（表现为「改了但没同步」）。
+  try {
+    await useNavPrefs().flushNow()
+  } catch (e) {
+    console.warn('[CloudSync] 推送前 flush 失败（继续推送）：', e)
+  }
   const username = settings.cloudSyncUsername ?? ''
   const password = settings.cloudSyncPassword ?? ''
   const dir = dirUrl(settings.cloudSyncUrl!, username)
@@ -1781,6 +1838,10 @@ async function pushNow(silent = false, skipRemoteGuard = false, onlyChanged = fa
         if (cfg.name === 'workbench.json') {
           const pushedSettings = (local as WorkbenchSyncData).settings
           if (pushedSettings) writeSettingsSig(settingsEnvelopeSig(pushedSettings))
+        }
+        // 智能工作台：记录本次上云的活记录数，作为下次「本地被清空」的比对基线
+        if (cfg.name === 'smart.json') {
+          writeSmartCountBaseline(countSmartActive((local as SmartSyncData).prefs ?? {}))
         }
         if (onlyChanged && sig) writePushedSig(cfg.name, sig)
         pushedCount++
@@ -1865,7 +1926,7 @@ export async function forcePushLocal(silent = false): Promise<boolean> {
  * @returns 各模块合计清除的条数
  */
 async function runTombstoneGc(silent = false): Promise<number> {
-  const [{ useWorkbenchTodosStore }, { useWorkbenchNotesStore }, { useWorkbenchLedgerStore }, { useWorkbenchDiaryStore }, { useGenealogyStore }, { useBlogStore }] = await Promise.all([
+  const [{ useWorkbenchTodosStore }, { useWorkbenchNotesStore }, { useWorkbenchLedgerStore }, { useWorkbenchDiaryStore }, { useGenealogyStore }, { useBlogStore }, { useSmartStore }] = await Promise.all([
     import('../stores/workbenchTodos'),
     import('../stores/workbenchNotes'),
     import('../stores/workbenchLedger'),
@@ -1873,7 +1934,9 @@ async function runTombstoneGc(silent = false): Promise<number> {
     import('../stores/genealogy'),
     // 博客的「彻底删除」同样以墓碑形式随 blog.json 上云（见 blogStore.purgeArticle），
     // 到期由 gcPurgedArticles 清理
-    import('../stores/blog')
+    import('../stores/blog'),
+    // 智能工作台：技能 / 提示词 / 工作流的删除同样以墓碑随 smart.json 上云
+    import('../stores/smart')
   ])
   const stores = [
     useWorkbenchTodosStore(),
@@ -1894,6 +1957,11 @@ async function runTombstoneGc(silent = false): Promise<number> {
     total += await useBlogStore().gcPurgedArticles()
   } catch (e) {
     console.warn('[cloudSync] 博客彻底删除墓碑 GC 失败（跳过）：', e)
+  }
+  try {
+    total += await useSmartStore().gcTombstones()
+  } catch (e) {
+    console.warn('[cloudSync] 智能工作台墓碑 GC 失败（跳过）：', e)
   }
   if (!silent && total > 0) {
     toastAlert(`已自动清理 ${total} 条过期删除记录`, 'success')
@@ -2267,6 +2335,9 @@ export async function pushEnvelopes(names: string[]): Promise<boolean> {
       await webdavPut(`${dir}/${cfg.name}`, username, password, JSON.stringify(envelope))
       writePushedSig(cfg.name, sig)
       writeRemoteTs(cfg.name, pushedAt)
+      if (cfg.name === 'smart.json') {
+        writeSmartCountBaseline(countSmartActive((local as SmartSyncData).prefs ?? {}))
+      }
     } catch (e) {
       ok = false
       console.error(`[moduleSync] 推送失败 ${cfg.name}`, e)
