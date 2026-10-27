@@ -6,7 +6,7 @@
  * - 尺寸档：S 480 / M 720 / L 960 / XL 1120，移动端一律全屏
  * - 结构：头部（图标/名称/描述/全屏切换/关闭）+ 内容区（工具组件自渲染五段式）+ 底部提示
  * - 关闭：✕ / Esc / 点击遮罩 / 底部「关闭」，一律一步关闭（不再二次确认）
- * - 全屏：头部 ⛶ 按钮在「铺满视口」与「恢复原尺寸档」之间切换，图标与提示随状态变化
+ * - 全屏：默认铺满视口；头部 ⛶ 按钮在「铺满视口」与「恢复原尺寸档」之间切换
  * - 焦点：打开时移入弹框并循环（Tab 不逸出），关闭后归还触发元素
  */
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onErrorCaptured, ref, watch } from 'vue'
@@ -98,7 +98,7 @@ watch(
     loadError.value = ''
     if (v) {
       lastFocused.value = document.activeElement as HTMLElement | null
-      fullscreen.value = false // 每次打开都从工具自带尺寸档开始
+      fullscreen.value = true // 每次打开默认全屏（⛶ 可退回工具自带尺寸档）
       document.addEventListener('keydown', onKeydown)
       lockScroll(true)
       await nextTick()
@@ -118,7 +118,7 @@ watch(
 watch(
   () => props.entry?.meta?.id,
   () => {
-    fullscreen.value = false
+    fullscreen.value = true
     resetDirty()
   }
 )
