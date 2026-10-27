@@ -20,7 +20,7 @@ import {
   slugify
 } from '@/composables/blogCore'
 import { applyMarkdown, isAllowedDataImage } from '@/composables/blogEditorMd'
-import type { MdBlockKind } from '@/composables/blogEditorMd'
+import type { MdBlockKind, MdTransformOptions } from '@/composables/blogEditorMd'
 import { imageRef, parseImageRefs, removeImageRefs, resolveImageRefs } from '@/composables/blogImages'
 import { renderMarkdown } from '@/composables/noteMarkdown'
 import { buildWechatContentHtml } from '@/composables/useWechatPublish'
@@ -67,6 +67,16 @@ const dirty = ref(false)
 /** 保存状态指示：saved 已保存 / saving 保存中 / unsaved 有未保存改动 */
 const saveState = ref<'saved' | 'saving' | 'unsaved'>('saved')
 const savedAt = ref('')
+/** 打开文章时的 revision 基线：保存时做乐观锁校验，防另一标签页/设备被静默覆盖 */
+const baseRevision = ref(0)
+/** 表格行列选择器 */
+const tablePickerOpen = ref(false)
+const tablePick = ref<{ r: number; c: number }>({ r: 3, c: 2 })
+const TABLE_CELLS = Array.from({ length: 30 }, (_, i) => ({
+  key: `${Math.floor(i / 5) + 1}-${(i % 5) + 1}`,
+  r: Math.floor(i / 5) + 1,
+  c: (i % 5) + 1
+}))
 /** 公众号效果预览（按草稿箱规则转换后的正文，避免发出去才发现变样） */
 const wechatPreviewOpen = ref(false)
 const wechatPreviewHtml = ref('')
@@ -140,6 +150,7 @@ const MD_TOOLBAR: MdToolbarButton[] = [
   { kind: 'bold', label: '加粗', title: '加粗（Ctrl/Cmd+B）', group: 1 },
   { kind: 'italic', label: '斜体', title: '斜体（Ctrl/Cmd+I）', group: 1 },
   { kind: 'strike', label: '删除线', title: '删除线', group: 1 },
+  { kind: 'highlight', label: '高亮', title: '高亮（==文字==）', group: 1 },
   { kind: 'inline-code', label: '行内代码', title: '行内代码', group: 1 },
   { kind: 'blockquote', label: '引用', title: '引用块', group: 2 },
   { kind: 'code-block', label: '代码块', title: '代码块', group: 2 },
@@ -163,16 +174,56 @@ const toolbarGroups = computed(() => {
 })
 
 /** 在光标/选区处应用某种 Markdown 变换，并恢复光标（图片走文件选择，不在此处理） */
-async function applyMd(kind: MdBlockKind): Promise<void> {
+async function applyMd(kind: MdBlockKind, opts: MdTransformOptions = {}): Promise<void> {
   const ta = contentEl.value
   if (!ta) return
   const start = ta.selectionStart
   const end = ta.selectionEnd
-  const res = applyMarkdown(kind, form.contentMarkdown, start, end)
-  form.contentMarkdown = res.value
+  const res = applyMarkdown(kind, form.contentMarkdown, start, end, opts)
+  insertWithUndo(ta, res.value)
   await nextTick()
   ta.focus()
   ta.setSelectionRange(res.selStart, res.selEnd)
+}
+
+/**
+ * 把变换结果写回 textarea，但**尽量保留浏览器原生撤销栈**：
+ * 直接 `form.contentMarkdown = next` 会让 Ctrl+Z 断链（撤销变成整段替换）。
+ * 做法：算出公共前缀/后缀，只对差异区间执行 execCommand('insertText')——
+ * 它走浏览器编辑管线，可被 Ctrl+Z 撤销；失败时（非 Chromium 内核）回退为直接赋值。
+ */
+function insertWithUndo(ta: HTMLTextAreaElement, next: string): void {
+  const prev = ta.value
+  if (prev === next) return
+  let prefix = 0
+  const minLen = Math.min(prev.length, next.length)
+  while (prefix < minLen && prev.charCodeAt(prefix) === next.charCodeAt(prefix)) prefix += 1
+  let suffix = 0
+  while (
+    suffix < minLen - prefix &&
+    prev.charCodeAt(prev.length - 1 - suffix) === next.charCodeAt(next.length - 1 - suffix)
+  ) {
+    suffix += 1
+  }
+  const oldEnd = prev.length - suffix
+  const middle = next.slice(prefix, next.length - suffix)
+  ta.focus()
+  ta.setSelectionRange(prefix, oldEnd)
+  let ok = false
+  try {
+    ok = middle === ''
+      ? document.execCommand('delete', false)
+      : document.execCommand('insertText', false, middle)
+  } catch {
+    ok = false
+  }
+  if (!ok) form.contentMarkdown = next
+}
+
+/** 表格选择器：按行列插入（含表头行） */
+function insertTable(rows: number, cols: number): void {
+  tablePickerOpen.value = false
+  void applyMd('table', { tableRows: rows, tableCols: cols })
 }
 
 function onToolbarClick(b: MdToolbarButton): void {
@@ -404,6 +455,7 @@ function fillFromArticle(): void {
   form.coverImageId = a.coverImageId ?? ''
   form.seoTitle = a.seoTitle ?? ''
   form.seoDescription = a.seoDescription ?? ''
+  baseRevision.value = a.revision
   snapshot = JSON.stringify(form)
   dirty.value = false
   refreshPreview()
@@ -468,7 +520,7 @@ async function saveDraft(silent = false): Promise<void> {
     return
   }
   saveState.value = 'saving'
-  const updated = await store.updateArticle(props.articleId, {
+  const patch = {
     title: form.title.trim(),
     subtitle: form.subtitle.trim() || undefined,
     slug: form.slug.trim(),
@@ -481,7 +533,23 @@ async function saveDraft(silent = false): Promise<void> {
     coverImageId: form.coverImageId.trim() || undefined,
     seoTitle: form.seoTitle.trim() || undefined,
     seoDescription: form.seoDescription.trim() || undefined
-  })
+  }
+  // 乐观锁：库中 revision 与打开时的基线不一致 → 说明另一标签页/设备已改过
+  const res = await store.updateArticleWithRevision(props.articleId, patch, baseRevision.value)
+  let updated = res.article ?? null
+  if (res.status === 'conflict') {
+    saveState.value = 'unsaved'
+    const current = article.value?.revision ?? 0
+    const ok = await showConfirm(
+      `这篇文章已在其它标签页或设备被修改（版本 ${baseRevision.value} → ${res.currentRevision ?? current}）。仍用当前内容覆盖吗？`,
+      '覆盖'
+    )
+    if (!ok) {
+      toastAlert('已保留本地改动，请先合并对方的修改再保存', 'warning')
+      return
+    }
+    updated = await store.updateArticle(props.articleId, patch)
+  }
   if (!updated) {
     saveState.value = 'unsaved'
     toastAlert('保存失败：文章不存在', 'error')
@@ -490,6 +558,7 @@ async function saveDraft(silent = false): Promise<void> {
   // store 会按标题/正文重算 slug 与摘要，回填保证界面与库一致
   form.slug = updated.slug
   form.excerpt = updated.excerpt
+  baseRevision.value = updated.revision
   snapshot = JSON.stringify(form)
   dirty.value = false
   saveState.value = 'saved'
@@ -580,6 +649,32 @@ async function handleClose(): Promise<void> {
     if (!await showConfirm('有改动尚未保存，确定离开吗？', '放弃改动')) return
   }
   emit('close')
+}
+
+// ---------- 大纲（## / ###）与跳转 ----------
+const outline = computed(() => {
+  const items: Array<{ level: number; text: string; offset: number }> = []
+  let offset = 0
+  for (const line of form.contentMarkdown.split('\n')) {
+    const m = /^(#{2,3})\s+(.+?)\s*$/.exec(line)
+    if (m) {
+      items.push({ level: m[1].length, text: m[2].replace(/[*`~]/g, '').trim(), offset })
+    }
+    offset += line.length + 1
+  }
+  return items
+})
+
+/** 点大纲项：切到编辑视图并把光标放到该标题所在行（浏览器会把光标滚入可视区） */
+function jumpToHeading(offset: number): void {
+  if (viewMode.value === 'preview') viewMode.value = 'edit'
+  void nextTick(() => {
+    const ta = contentEl.value
+    if (!ta) return
+    ta.focus()
+    ta.setSelectionRange(offset, offset)
+    closeSide()
+  })
 }
 
 // ---------- 公众号效果预览（发之前先看，避免发到草稿箱才发现变样） ----------
@@ -682,18 +777,49 @@ async function regenerateSlug(): Promise<void> {
             <template v-for="grp in toolbarGroups" :key="grp.group">
               <span class="be-md-sep" aria-hidden="true"></span>
               <div class="be-md-group">
-                <button
-                  v-for="b in grp.items"
-                  :key="b.kind"
-                  type="button"
-                  class="be-md-btn"
-                  :title="b.title"
-                  :aria-label="b.title"
-                  :data-testid="`blog-editor-md-${b.kind}`"
-                  @click="onToolbarClick(b)"
-                >
-                  {{ b.label }}
-                </button>
+                <template v-for="b in grp.items" :key="b.kind">
+                  <!-- 表格：先选行列再插入（1~6 行 × 1~5 列） -->
+                  <el-popover
+                    v-if="b.kind === 'table'"
+                    v-model:visible="tablePickerOpen"
+                    placement="bottom-start"
+                    :width="168"
+                    trigger="click"
+                    popper-class="be-tp-popper"
+                  >
+                    <template #reference>
+                      <button type="button" class="be-md-btn" :title="b.title" :aria-label="b.title" data-testid="blog-editor-md-table">
+                        {{ b.label }}
+                      </button>
+                    </template>
+                    <div class="be-tp">
+                      <div class="be-tp-tip" data-testid="blog-editor-table-tip">{{ tablePick.r }} 行 × {{ tablePick.c }} 列</div>
+                      <div class="be-tp-grid">
+                        <button
+                          v-for="cell in TABLE_CELLS"
+                          :key="cell.key"
+                          type="button"
+                          class="be-tp-cell"
+                          :class="{ 'is-on': cell.r <= tablePick.r && cell.c <= tablePick.c }"
+                          :data-testid="`blog-editor-table-${cell.r}-${cell.c}`"
+                          @mouseenter="tablePick = { r: cell.r, c: cell.c }"
+                          @click="insertTable(cell.r, cell.c)"
+                        ></button>
+                      </div>
+                    </div>
+                  </el-popover>
+                  <button
+                    v-else
+                    type="button"
+                    class="be-md-btn"
+                    :title="b.title"
+                    :aria-label="b.title"
+                    :data-testid="`blog-editor-md-${b.kind}`"
+                    @click="onToolbarClick(b)"
+                  >
+                    {{ b.label }}
+                  </button>
+                </template>
               </div>
             </template>
           </div>
@@ -800,6 +926,25 @@ async function regenerateSlug(): Promise<void> {
           <Icon name="close" :size="14" />
         </button>
       </div>
+        <div class="be-block">
+          <h3 class="be-block-title">大纲</h3>
+          <p v-if="outline.length === 0" class="be-stat">正文里还没有 ## / ### 标题</p>
+          <ul v-else class="be-outline" data-testid="blog-editor-outline">
+            <li v-for="(h, i) in outline" :key="`${h.offset}-${i}`">
+              <button
+                type="button"
+                class="be-outline-item"
+                :class="`is-h${h.level}`"
+                :data-testid="`blog-editor-outline-${i}`"
+                :title="h.text"
+                @click="jumpToHeading(h.offset)"
+              >
+                {{ h.text }}
+              </button>
+            </li>
+          </ul>
+        </div>
+
       <div class="be-block">
           <h3 class="be-block-title">发布</h3>
           <label class="be-field">
@@ -1654,6 +1799,72 @@ async function regenerateSlug(): Promise<void> {
 .img-dialog-op--danger:hover {
   color: var(--color-error, #ef4444);
   border-color: var(--color-error, #ef4444);
+}
+
+/* ===== 表格行列选择器 ===== */
+.be-tp-tip {
+  margin-bottom: 6px;
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-secondary, #64748b);
+  text-align: center;
+}
+
+.be-tp-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+
+.be-tp-cell {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 3px;
+  background: var(--color-bg-card, #fff);
+  cursor: pointer;
+}
+
+.be-tp-cell.is-on {
+  border-color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-soft, rgba(59, 130, 246, 0.15));
+}
+
+/* ===== 侧栏大纲 ===== */
+.be-outline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.be-outline-item {
+  display: block;
+  width: 100%;
+  padding: 4px 6px;
+  border: none;
+  border-left: 2px solid transparent;
+  background: none;
+  color: var(--color-text, #1e293b);
+  font-size: var(--font-size-xs, 12px);
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.be-outline-item.is-h3 {
+  padding-left: 18px;
+  color: var(--color-text-secondary, #64748b);
+}
+
+.be-outline-item:hover {
+  color: var(--color-primary, #3b82f6);
+  border-left-color: var(--color-primary, #3b82f6);
+  background: var(--color-bg-hover, #f1f5f9);
 }
 
 /* ===== 顶栏保存状态 ===== */

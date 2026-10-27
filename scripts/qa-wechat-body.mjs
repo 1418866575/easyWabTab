@@ -103,6 +103,7 @@ try {
     const plain = build('第一段。\n\n第二段。\n')
     const table = build('| 方案 | 优点 | 缺点 |\n| --- | --- | --- |\n| Vue 3 | 组合式 API 清晰 | 生态待完善 |\n| React | 生态成熟 | 心智负担高 |\n')
     const tableWithCode = build('| 库 | 说明 |\n| --- | --- |\n| `pinia` | 状态管理 |\n')
+    const mark = build('这里有==重点结论==要强调。\n')
     const code = build('```js\nconst veryLongVariableName = someFunction(argumentOne, argumentTwo, argumentThree)\n```\n')
 
     const count = (html, re) => (html.match(re) || []).length
@@ -126,6 +127,7 @@ try {
         firstColTitle: /font-weight:bold[^>]*>Vue 3</.test(table) || /font-weight:bold;[^"]*"[^>]*>Vue 3</.test(table)
       },
       tableCodeInline: /background-color:#f6f8fa/.test(tableWithCode),
+      markStats: { hasMark: /<mark/i.test(mark), hasBg: mark.includes('#fff3bf'), text: mark.includes('重点结论') },
       codeStats: {
         preWrap: /white-space:pre-wrap/.test(code),
         overflow: /overflow-x/.test(code)
@@ -163,6 +165,9 @@ try {
   check('S7 卡片含「表头：值」标注', out.tableStats.labels, String(out.tableStats.labels))
   check('S7 卡片首列作为加粗标题', out.tableStats.firstColTitle, String(out.tableStats.firstColTitle))
   check('S7 单元格内行内 code 样式保留', out.tableCodeInline, String(out.tableCodeInline))
+
+  check('S9 高亮 ==文字== 已转为 span 底色（无 mark 标签）',
+    out.markStats.text && out.markStats.hasBg && !out.markStats.hasMark, JSON.stringify(out.markStats))
 
   check('S8 代码块用 pre-wrap 自动折行', out.codeStats.preWrap, `pre-wrap=${out.codeStats.preWrap}`)
   check('S8 代码块不再依赖 overflow 滚动', !out.codeStats.overflow, `overflow-x=${out.codeStats.overflow}`)

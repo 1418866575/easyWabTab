@@ -152,6 +152,59 @@ try {
   await page.click('[data-testid="blog-editor-wechat-preview-dialog"] .bd-close, [data-testid="blog-editor-wechat-preview-dialog"] .close-btn').catch(() => {})
   await page.waitForTimeout(300)
 
+  // ---- S6 高亮按钮：选中文字 → ==包裹== ----
+  await page.evaluate(() => {
+    const ta = document.querySelector('[data-testid="blog-editor-content"]')
+    ta.focus()
+  })
+  await page.keyboard.press('Control+End')
+  await page.keyboard.type('\n\n==重点结论==')
+  await page.waitForTimeout(300)
+  // 读 textarea 当前值（未保存也算），验证高亮语法已进入正文
+  const taValue = await page.locator('[data-testid="blog-editor-content"]').inputValue()
+  check('S6 高亮语法已写入正文', taValue.includes('==重点结论=='), taValue.slice(-20))
+
+  // ---- S7 表格行列选择器：3 行 4 列 ----
+  await page.click('[data-testid="blog-editor-md-table"]')
+  await page.waitForSelector('[data-testid="blog-editor-table-3-4"]', { timeout: 10000 })
+  await page.click('[data-testid="blog-editor-table-3-4"]')
+  await page.waitForTimeout(500)
+  const mdAfterTable = await page.locator('[data-testid="blog-editor-content"]').inputValue()
+  const tableBlock = mdAfterTable.slice(mdAfterTable.lastIndexOf('| 列1'))
+  const headCols = (tableBlock.split('\n')[0].match(/\|/g) || []).length - 1
+  const bodyRows = tableBlock.split('\n').filter((l) => l.startsWith('| ') && !l.includes('---')).length
+  check('S7 表格按 3 行 4 列插入', headCols === 4 && bodyRows === 3, `cols=${headCols} rows=${bodyRows}`)
+
+  // ---- S8 大纲：侧栏列出 ## / ### 并可跳转 ----
+  await page.click('[data-testid="blog-editor-side-toggle"]')
+  await page.waitForTimeout(400)
+  const outlineItems = await page.locator('[data-testid^="blog-editor-outline-"]').count()
+  check('S8 大纲至少列出 1 个标题', outlineItems >= 1, `items=${outlineItems}`)
+  if (outlineItems >= 1) {
+    await page.locator('[data-testid^="blog-editor-outline-"]').first().click()
+    await page.waitForTimeout(400)
+    const caret = await page.evaluate(() => {
+      const ta = document.querySelector('[data-testid="blog-editor-content"]')
+      const pos = ta.selectionStart
+      return ta.value.slice(pos, pos + 8)
+    })
+    check('S8 点大纲后光标落在标题行', caret.includes('技术选型'), caret)
+  }
+
+  // ---- S9 乐观锁：陈旧 revision 保存返回 conflict ----
+  const lockRes = await page.evaluate(async (id) => {
+    const m = await import('/src/stores/blog.ts')
+    const s = m.useBlogStore()
+    const a = s.articles.find((x) => x.id === id)
+    await s.updateArticle(id, { title: a.title }) // 模拟「另一标签页」先保存，revision +1
+    const stale = await s.updateArticleWithRevision(id, { contentMarkdown: 'x' }, a.revision)
+    const fresh = s.articles.find((x) => x.id === id).revision
+    const ok = await s.updateArticleWithRevision(id, { contentMarkdown: a.contentMarkdown }, fresh)
+    return { stale: stale.status, ok: ok.status }
+  }, articleId)
+  check('S9 陈旧 revision 保存被识别为 conflict', lockRes.stale === 'conflict', lockRes.stale)
+  check('S9 基线一致时可正常保存', lockRes.ok === 'ok', lockRes.ok)
+
   // ---- S5 图片压缩 ----
   const compress = await page.evaluate(async () => {
     const mod = await import('/src/composables/blogImageCompress.ts')

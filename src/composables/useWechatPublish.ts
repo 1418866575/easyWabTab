@@ -340,11 +340,23 @@ function flattenTables(root: HTMLElement): void {
   }
 }
 
+/** 公众号不认 <mark>：转成带浅黄底的 <span>，保住高亮效果 */
+function convertMarks(root: HTMLElement): void {
+  const doc = root.ownerDocument
+  root.querySelectorAll('mark').forEach((m) => {
+    const span = doc.createElement('span')
+    span.setAttribute('style', 'background-color:#fff3bf;color:#1f1f1f;padding:0 2px;border-radius:2px;')
+    span.innerHTML = m.innerHTML
+    m.replaceWith(span)
+  })
+}
+
 /** 微信正文统一处理入口：列表摊平 + 表格卡片化 + 全标签内联样式（导出便于回归测试） */
 export function normalizeWechatBody(root: HTMLElement): void {
   // 顺序有讲究：先摊平列表（表格若在列表项里会被提到顶层），再卡片化表格，最后统一内联样式
   flattenLists(root)
   flattenTables(root)
+  convertMarks(root)
   applyInlineStyles(root)
 }
 
