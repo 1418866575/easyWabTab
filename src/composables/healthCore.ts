@@ -1,7 +1,7 @@
 // 健康管理纯逻辑模块：健康数据归一化 → 周/日达标率 → BMI/睡眠时长/体重图表坐标。
 // 运行时依赖仅 MEAL_TYPES 与 todoCore 的 localToday（node --experimental-strip-types 可运行）；其余类型全部 type-only。
 import { MEAL_TYPES } from '../types/index.ts'
-import type { HealthWeeklyPlanItem, HealthWeeklyPlans } from '../types'
+import type { HealthWeeklyPlanItem, HealthWeeklyPlanWeek, HealthWeeklyPlans } from '../types'
 import type {
   DietRecord,
   ExerciseRecord,
@@ -97,6 +97,32 @@ export function weekDayKeys(weekStart: string): string[] {
     out.push(`${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`)
   }
   return out
+}
+
+/** 日期键平移 n 天（负数 = 往前）。 */
+export function shiftDateKey(dateKey: string, days: number): string {
+  const [y, m, d] = dateKey.split('-').map(Number)
+  if (!y || !m || !d) return dateKey
+  const dt = new Date(y, m - 1, d + days)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`
+}
+
+/**
+ * 周计划自动复制：把上一周的整周计划复制为 weekStart 那一周的初始内容。
+ * - 运动 done 一律重置为 false（新的一周不该是「已完成」态）
+ * - 条目 id 全部换新（周与周之间条目互相独立，避免同 id 跨周混淆）
+ * - 纯函数：id 由调用方注入生成器，便于单测
+ */
+export function copyWeeklyPlanWeek(
+  prev: HealthWeeklyPlanWeek,
+  genId: () => string
+): { exercise: HealthWeeklyPlanItem[]; diet: HealthWeeklyPlanItem[]; updatedAt: string } {
+  return {
+    exercise: prev.exercise.map(i => ({ ...i, id: genId(), done: false })),
+    diet: prev.diet.map(i => ({ ...i, id: genId() })),
+    updatedAt: new Date().toISOString()
+  }
 }
 
 /** 周计划归一化（幂等）：键须形如 'YYYY-MM-DD'，条目逐项安全兜底，脏数据剔除不抛错。 */

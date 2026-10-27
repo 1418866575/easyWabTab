@@ -1,7 +1,7 @@
 // 健康周计划纯逻辑单测：mondayOfDate / weekDayKeys / normalizeWeeklyPlans
 // 运行：env -u NODE_OPTIONS node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-health-week-plan.ts
 import assert from 'node:assert/strict'
-import { mondayOfDate, weekDayKeys, normalizeWeeklyPlans, normalizeHealthData } from '../src/composables/healthCore.ts'
+import { mondayOfDate, weekDayKeys, normalizeWeeklyPlans, normalizeHealthData, shiftDateKey, copyWeeklyPlanWeek } from '../src/composables/healthCore.ts'
 
 const tests: { name: string; fn: () => void }[] = []
 function test(name: string, fn: () => void) {
@@ -66,6 +66,34 @@ test('T4 normalizeHealthData passthrough', () => {
   const legacy = normalizeHealthData({ plans: {}, records: { exercise: [], diet: [], sleep: [], weight: [] } } as never)
   assert.equal(legacy.weeklyPlans, undefined)
   assert.equal(legacy.plansUpdatedAt, undefined)
+})
+
+// T5 — shiftDateKey：负数平移 / 跨月
+test('T5 shiftDateKey', () => {
+  assert.equal(shiftDateKey('2026-10-26', -7), '2026-10-19')
+  assert.equal(shiftDateKey('2026-10-26', 7), '2026-11-02')
+  assert.equal(shiftDateKey('2026-11-02', -7), '2026-10-26')
+})
+
+// T6 — copyWeeklyPlanWeek：done 重置、id 全新、diet 不带 done
+test('T6 copyWeeklyPlanWeek', () => {
+  let seq = 0
+  const prev = {
+    exercise: [
+      { id: 'a', day: 2, rowKey: 'morning', name: '晨跑', value: '3 km', done: true },
+      { id: 'b', day: 1, rowKey: 'evening', name: '力量训练', value: '45 min', done: true }
+    ],
+    diet: [{ id: 'c', day: 1, rowKey: 'breakfast', name: '燕麦', kcal: 380 }],
+    updatedAt: '2026-10-26T08:00:00.000Z'
+  }
+  const copied = copyWeeklyPlanWeek(prev, () => `new_${++seq}`)
+  assert.equal(copied.exercise.length, 2)
+  assert.ok(copied.exercise.every(i => i.done === false), 'done 必须重置')
+  assert.ok(copied.exercise.every(i => !i.id.startsWith('a') && !i.id.startsWith('b')), 'id 必须换新')
+  assert.equal(copied.exercise[0].name, '晨跑')
+  assert.equal(copied.diet.length, 1)
+  assert.equal(copied.diet[0].kcal, 380)
+  assert.ok(copied.updatedAt.length > 0)
 })
 
 let passed = 0

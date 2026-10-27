@@ -1,7 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, toRaw } from 'vue'
 import type { HealthData, HealthModule, HealthPlan, HealthPlans, HealthRecord, HealthWeeklyPlanItem, HealthWeeklyPlans } from '@/types'
+import { shiftDateKey } from '@/composables/healthCore'
 import {
+  copyWeeklyPlanWeek,
   normalizeDietRecord,
   normalizeExerciseRecord,
   normalizeHealthData,
@@ -88,6 +90,25 @@ export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
     await saveHealth()
   }
 
+  /**
+   * 确保某周计划已初始化（自动复制上周）：
+   * - 该周**从未编辑过**（weeklyPlans 里无记录）且上周有内容 → 复制上周整周计划（done 重置未完成）
+   * - 该周已有记录（哪怕被用户清空）→ 不再复制（幂等；「清空」也是一次明确编辑）
+   * - 上周无内容 → 不动作
+   * 在面板切换/进入某周时调用（watch planWeekStart），与记账「每月自动复制」同一模式。
+   */
+  async function ensureWeeklyPlanCopied(weekStart: string): Promise<void> {
+    if (weeklyPlans.value[weekStart]) return
+    const prev = weeklyPlans.value[shiftDateKey(weekStart, -7)]
+    if (!prev || (prev.exercise.length === 0 && prev.diet.length === 0)) return
+    const copied = copyWeeklyPlanWeek(prev, () => `wp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`)
+    weeklyPlans.value = {
+      ...JSON.parse(JSON.stringify(weeklyPlans.value)),
+      [weekStart]: { ...copied, updatedAt: new Date().toISOString() }
+    }
+    await saveHealth()
+  }
+
   async function setHeight(cm: number): Promise<void> {
     if (!(Number.isInteger(cm) && cm >= 100 && cm <= 250)) {
       console.warn('[workbenchHealth] setHeight 非法值已忽略（需 100-250 整数）', cm)
@@ -163,6 +184,7 @@ export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
     setHeight,
     setPlan,
     setWeeklyPlanItems,
+    ensureWeeklyPlanCopied,
     addRecord,
     updateRecord,
     deleteRecord

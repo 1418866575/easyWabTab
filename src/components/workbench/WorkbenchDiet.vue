@@ -7,11 +7,11 @@ const PANEL_WIDTH = '480px'
 const PANEL_MAX_HEIGHT = '85vh'
 
 
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { injectHealthStore, type HealthStoreLike } from '@/composables/healthStoreContext'
 import WeeklyPlanBoard, { type WeeklyPlanCell, type WeeklyPlanRow } from './WeeklyPlanBoard.vue'
-import { calcDailyAttainment, mondayOfDate, weekDayKeys } from '@/composables/healthCore'
+import { calcDailyAttainment, mondayOfDate, shiftDateKey, weekDayKeys } from '@/composables/healthCore'
 import type { HealthWeeklyPlanItem } from '@/types'
 import { localToday } from '@/composables/todoCore'
 import { MEAL_TYPES, type MealType } from '@/types'
@@ -28,6 +28,8 @@ const PLAN_ROWS: WeeklyPlanRow[] = [
   { key: 'total', label: '合计', icon: 'sum' }
 ]
 const planWeekStart = ref(mondayOfDate(localToday()))
+// 进入/切换某周时：该周从未编辑过且上周有内容 → 自动复制上周计划（幂等）
+watch(planWeekStart, (wk) => { void store.ensureWeeklyPlanCopied?.(wk) }, { immediate: true })
 const canPlan = computed(() => !!store.weeklyPlans && !!store.setWeeklyPlanItems)
 const planItems = computed<HealthWeeklyPlanItem[]>(() => store.weeklyPlans?.[planWeekStart.value]?.diet ?? [])
 const dailyKcalTarget = computed(() => store.plans.diet?.target)
@@ -83,10 +85,8 @@ function onPlanNav(dir: number): void {
   }
   const keys = weekDayKeys(planWeekStart.value)
   const base = dir < 0 ? keys[0] : keys[6]
-  const [y, m, d] = base.split('-').map(Number)
-  const dt = new Date(y, m - 1, d + dir * 7)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  planWeekStart.value = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`
+  // 平移后必须归位到周一：从周日 +7 会落到下周二，导致「上周」查错周而复制失败
+  planWeekStart.value = mondayOfDate(shiftDateKey(base, dir * 7))
 }
 const planDialogOpen = ref(false)
 const planEditCell = ref<{ rowKey: string; day: number } | null>(null)

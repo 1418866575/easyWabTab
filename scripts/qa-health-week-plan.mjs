@@ -166,6 +166,38 @@ try {
   check('S5 刷新后运动计划仍在（含已完成态）', persisted?.exName === '晨跑' && persisted?.exDone === true, JSON.stringify(persisted))
   check('S5 刷新后饮食计划仍在', persisted?.dtName === '燕麦+鸡蛋' && persisted?.dtKcal === 380, JSON.stringify(persisted?.dtName))
 
+  // ---- S7 自动复制上周：切到下周（未编辑过）→ 自动填入上周内容且 done 重置；幂等不重复 ----
+  await page.click('[data-testid="wp-next"]')
+  await page.waitForTimeout(900)
+  const nextCell = (await page.locator('[data-testid="wp-cell-morning-2"]').innerText()).replace(/\s+/g, '')
+  check('S7 切到下周自动复制上周内容（晨跑、无 ✓）', nextCell.includes('晨跑') && !nextCell.includes('✓'), nextCell)
+  const copiedState = await page.evaluate(async () => {
+    const m = await import('/src/stores/workbenchHealth.ts')
+    const s = m.useWorkbenchHealthStore()
+    const weeks = s.weeklyPlans ?? {}
+    const wk = weeks['2026-11-02']
+    return {
+      exists: !!wk,
+      exCount: wk?.exercise.length ?? 0,
+      allUndone: (wk?.exercise ?? []).every(x => !x.done),
+      dietCount: wk?.diet.length ?? 0
+    }
+  })
+  check('S7 复制落库：exercise/diet 均复制、done 全部重置',
+    copiedState.exists && copiedState.exCount >= 1 && copiedState.allUndone && copiedState.dietCount >= 1, JSON.stringify(copiedState))
+  // 幂等：切走再切回，条目不重复
+  await page.click('[data-testid="wp-next"]')
+  await page.waitForTimeout(600)
+  await page.click('[data-testid="wp-prev"]')
+  await page.waitForTimeout(900)
+  const idem = await page.evaluate(async () => {
+    const m = await import('/src/stores/workbenchHealth.ts')
+    const s = m.useWorkbenchHealthStore()
+    const wk = s.weeklyPlans?.['2026-11-02']
+    return wk?.exercise.filter(x => x.rowKey === 'morning' && x.day === 2).length ?? -1
+  })
+  check('S7 幂等：切走再切回不重复复制', idem === 1, `morning-2 count=${idem}`)
+
   check('无页面级 JS 异常', errs.length === 0, errs.join(' | ').slice(0, 200))
 
   const failed = results.filter((r) => !r.ok)
