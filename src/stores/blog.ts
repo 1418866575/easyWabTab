@@ -238,6 +238,24 @@ export const useBlogStore = defineStore('blog', () => {
     return merged
   }
 
+  /**
+   * 带乐观锁的更新：仅当库中 revision 与调用方基线一致才写入。
+   * 用途：编辑器保存时带上自己打开文章时的 revision —— 若另一标签页/设备已改过，
+   * 这里返回 conflict，由调用方决定「覆盖」还是「放弃」，避免静默覆盖。
+   */
+  async function updateArticleWithRevision(
+    id: string,
+    patch: Partial<BlogArticle>,
+    baseRevision: number
+  ): Promise<{ status: 'ok' | 'conflict' | 'notfound'; article?: BlogArticle; currentRevision?: number }> {
+    const prev = articles.value.find(a => a.id === id)
+    if (!prev) return { status: 'notfound' }
+    if (prev.revision !== baseRevision) return { status: 'conflict', currentRevision: prev.revision }
+    const article = await updateArticle(id, patch)
+    if (!article) return { status: 'notfound' }
+    return { status: 'ok', article }
+  }
+
   /** 软删除：写 deletedAt，从常规列表消失并进入回收站（status 不变） */
   async function softDeleteArticle(id: string): Promise<boolean> {
     const article = findArticle(id)
@@ -795,6 +813,7 @@ export const useBlogStore = defineStore('blog', () => {
     // 文章
     createArticle,
     updateArticle,
+    updateArticleWithRevision,
     softDeleteArticle,
     restoreArticle,
     purgeArticle,

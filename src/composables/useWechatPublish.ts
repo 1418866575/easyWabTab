@@ -121,7 +121,8 @@ function styleFor(tag: string, el: HTMLElement): string {
       if (isCodeInPre) return 'background:none;padding:0;color:#333;font-family:Consolas,Menlo,monospace;font-size:14px;'
       return 'background-color:#f6f8fa;color:#c7254e;padding:2px 6px;border-radius:3px;font-family:Consolas,Menlo,monospace;font-size:14px;word-break:break-all;'
     case 'pre':
-      return 'background-color:#f6f8fa;padding:12px 16px;border-radius:6px;overflow-x:auto;margin:1em 0;font-size:14px;line-height:1.6;'
+      // 公众号会丢掉 overflow-x，长代码行会被直接裁掉 → 用 pre-wrap 自动折行（缩进仍保留）
+      return 'background-color:#f6f8fa;padding:12px 16px;border-radius:6px;margin:1em 0;font-size:13px;line-height:1.65;white-space:pre-wrap;word-wrap:break-word;word-break:break-all;tab-size:2;'
     case 'blockquote':
       return 'margin:1em 0;padding:8px 12px;border-left:4px solid #d9d9d9;background-color:#f8f8f8;color:#888;'
     case 'ul':
@@ -140,6 +141,235 @@ function styleFor(tag: string, el: HTMLElement): string {
     default:
       return ''
   }
+}
+
+/**
+ * 列表安全化：把 <ul>/<ol>/<li> 摊平成带手写符号的 <section>。
+ *
+ * 为什么必须做（真实线上现象）：公众号草稿箱**不认列表标签**，`<li>` 里只要出现块级子节点
+ * （markdown-it 遇到列表项内空行会生成 `<li><p>…</p></li>` 的松散列表），就会被拆成
+ * 「空的项目符号 + 独立一行内容」；再叠加 markdown-it 的 breaks:true（项内单换行 → <br>），
+ * 一条 `- **框架**
+  ：Vue 3 …` 就变成「空圆点 / 圆点+框架 / 缩进的：Vue 3」三段。
+ *
+ * 处理规则：
+ * - 一个 li → 一个 section（`padding-left` + 负 `text-indent` 做悬挂缩进，换行自动对齐）
+ * - 项内块级子节点（p/div/section）合并为同一行，块间保留 <br>
+ * - 项内换行/首尾空白折叠，避免「：内容」被顶到下一行
+ * - 空项剔除；嵌套列表按层级追加在父项之后、缩进加深
+ * - 有序列表保留 1. 2. 3. 编号
+ */
+function flattenLists(root: HTMLElement): void {
+  const doc = root.ownerDocument
+
+  const isPunctStart = (t: string): boolean => /^[：:，,。.、；;！!？?）)】」』]/.test(t)
+
+  /** 折叠空白 + 去掉首尾换行 */
+  const collapse = (html: string): string =>
+    html
+      .replace(/\s*\n\s*/g, ' ')
+      .replace(/(<br\s*\/?>\s*){2,}/gi, '<br>')
+      .replace(/^(\s|<br\s*\/?>)+/i, '')
+      .replace(/(\s|<br\s*\/?>)+$/i, '')
+      .trim()
+
+  /**
+   * 行内软换行归一：
+   * markdown-it 的 breaks:true 会把「列表项内单换行」渲染成 <br>（如 `- **框架**\n  ：Vue 3`），
+   * 这在公众号里就是一条被劈成两行的列表项。列表内容本该是一段，
+   * 故把 <br> 折叠为「空格」；下一段以中文标点开头时直接连写（框架：Vue 3）。
+   */
+  const normalizeInline = (html: string): string => {
+    const segs = collapse(html)
+      .split(/<br\s*\/?>/i)
+      .map((x) => x.trim())
+      .filter(Boolean)
+    let out = ''
+    for (const seg of segs) out = out ? (isPunctStart(seg) ? out + seg : `${out} ${seg}`) : seg
+    return out
+  }
+
+  /** 把一层列表展开成若干 section，追加到 out；嵌套列表递归加深缩进 */
+  const walk = (list: HTMLElement, level: number, out: HTMLElement[]): void => {
+    const ordered = list.tagName.toLowerCase() === 'ol'
+    const items = Array.from(list.children).filter((c): c is HTMLElement => c.tagName?.toLowerCase() === 'li')
+    let index = 0
+    for (const li of items) {
+      index += 1
+      // 先把嵌套列表摘出来（它们的内容不能混进父项文本）
+      const nested = Array.from(li.children).filter((c): c is HTMLElement => {
+        const t = c.tagName?.toLowerCase()
+        return t === 'ul' || t === 'ol'
+      })
+      nested.forEach((n) => n.remove())
+
+      // 逐个子节点拼装：连续的文字/段落块/行内标签合并成「一行」，只有 pre/blockquote/table
+      // 这类真·块级结构才另起一行。注意 <strong>/<em>/<a>/<code> 是**行内**元素，
+      // 若当成块处理会被 <br> 隔开（紧凑列表里 markdown 的 **加粗** 就是这么被劈成两行的）。
+      const isTextBlock = (t: string): boolean => t === 'p' || t === 'div' || t === 'section'
+      const INLINE_TAGS = new Set(['strong', 'b', 'em', 'i', 'u', 's', 'del', 'code', 'a', 'span', 'mark', 'sub', 'sup', 'img'])
+      const parts: string[] = []
+      let run = ''
+      const flush = () => {
+        if (run) {
+          parts.push(run)
+          run = ''
+        }
+      }
+      /** run 收尾：去掉中文标点前的多余空格（"框架 ：Vue" → "框架：Vue"） */
+      const tidyRun = (t: string): string => t.replace(/\s+([：:，,。.、；;！!？?）)】」』])/g, '$1')
+      for (const child of Array.from(li.childNodes)) {
+        if (child.nodeType === 3) {
+          const t = normalizeInline(child.textContent || '')
+          if (!t) continue
+          run = run ? (isPunctStart(t) ? run + t : `${run} ${t}`) : t
+          continue
+        }
+        if (child.nodeType !== 1) continue
+        const el = child as HTMLElement
+        const tag = el.tagName.toLowerCase()
+        if (tag === 'br') {
+          // 项内软换行（breaks:true 的产物）→ 折叠为空格
+          run += ' '
+        } else if (INLINE_TAGS.has(tag)) {
+          run += el.outerHTML
+        } else if (isTextBlock(tag)) {
+          const t = normalizeInline(el.innerHTML)
+          if (!t) continue
+          run = run ? (isPunctStart(t) ? run + t : `${run} ${t}`) : t
+        } else {
+          flush()
+          parts.push(el.outerHTML)
+        }
+      }
+      flush()
+      const inner = collapse(parts.map(tidyRun).join('<br>'))
+
+      if (!inner) {
+        // 空项目符号（原文写了空列表项 / 只剩嵌套列表）→ 不生成符号，只处理嵌套
+        nested.forEach((n) => walk(n, level + 1, out))
+        continue
+      }
+
+      const marker = ordered ? `${index}.` : '•'
+      const indent = (1.4 + level * 1.2).toFixed(1) // 避免 2.5999999 这类浮点尾巴进 CSS
+      const section = doc.createElement('section')
+      section.setAttribute(
+        'style',
+        `margin:0.45em 0;padding-left:${indent}em;text-indent:-1.4em;line-height:1.75;`
+      )
+      section.innerHTML = `${marker}&nbsp;${inner}`
+      out.push(section)
+
+      nested.forEach((n) => walk(n, level + 1, out))
+    }
+  }
+
+  // 只从最外层列表开始（嵌套的由 walk 递归处理）
+  const outerLists = Array.from(root.querySelectorAll('ul, ol')).filter(
+    (l) => !l.parentElement?.closest('ul, ol')
+  ) as HTMLElement[]
+
+  for (const list of outerLists) {
+    const out: HTMLElement[] = []
+    walk(list, 0, out)
+    const container = doc.createElement('section')
+    container.setAttribute('style', 'margin:1em 0;')
+    out.forEach((el) => container.appendChild(el))
+    list.replaceWith(container)
+  }
+}
+
+/**
+ * 表格安全化：把 <table> 摊平成「一行一张卡片」。
+ *
+ * 公众号对 table 的支持同样不可靠（列宽被压、合并单元格塌、宽表在手机上溢出裁切），
+ * 与其赌它渲染正确，不如转成移动端天然可读的卡片：
+ * - 每张卡片 = 一行；首列作为卡片标题（加粗）
+ * - 其余列按表头标注「表头：值」逐行展示，窄屏也不会挤
+ * - 保留单元格内部 HTML（行内 code / strong 等样式不丢）
+ * Markdown 表格必有表头行，故默认第一行为表头；无 thead 时用第一行当表头。
+ */
+function flattenTables(root: HTMLElement): void {
+  const doc = root.ownerDocument
+  const tables = Array.from(root.querySelectorAll('table'))
+
+  for (const table of tables) {
+    const rows = Array.from(table.querySelectorAll('tr')) as HTMLElement[]
+    if (rows.length === 0) {
+      table.remove()
+      continue
+    }
+    const headRow = (table.querySelector('thead tr') as HTMLElement | null) ?? rows[0]
+    const headCells = Array.from(headRow.children) as HTMLElement[]
+    const labels = headCells.map((c) => (c.textContent || '').trim())
+    const bodyRows = rows.filter((r) => r !== headRow)
+
+    const container = doc.createElement('section')
+    container.setAttribute('style', 'margin:1em 0;')
+
+    for (const row of bodyRows) {
+      const cells = Array.from(row.children) as HTMLElement[]
+      if (cells.length === 0) continue
+      const card = doc.createElement('section')
+      card.setAttribute(
+        'style',
+        'border:1px solid #eceff3;border-radius:6px;padding:10px 12px;margin:0.6em 0;background-color:#fafbfc;'
+      )
+      // 首列 = 卡片标题
+      const title = doc.createElement('section')
+      title.setAttribute('style', 'font-size:15px;font-weight:bold;color:#1f1f1f;line-height:1.5;margin-bottom:4px;')
+      title.innerHTML = (cells[0].innerHTML || '').trim() || '&nbsp;'
+      card.appendChild(title)
+      // 其余列 = 「表头：值」
+      for (let i = 1; i < cells.length; i++) {
+        const val = (cells[i].innerHTML || '').trim()
+        if (!val) continue
+        const label = labels[i] ?? ''
+        const line = doc.createElement('section')
+        line.setAttribute('style', 'font-size:14px;color:#3f3f3f;line-height:1.75;')
+        line.innerHTML = label
+          ? `<span style="color:#8a8f99;">${label}：</span>${val}`
+          : val
+        card.appendChild(line)
+      }
+      container.appendChild(card)
+    }
+
+    table.replaceWith(container)
+  }
+}
+
+/** 公众号不认 <mark>：转成带浅黄底的 <span>，保住高亮效果 */
+function convertMarks(root: HTMLElement): void {
+  const doc = root.ownerDocument
+  root.querySelectorAll('mark').forEach((m) => {
+    const span = doc.createElement('span')
+    span.setAttribute('style', 'background-color:#fff3bf;color:#1f1f1f;padding:0 2px;border-radius:2px;')
+    span.innerHTML = m.innerHTML
+    m.replaceWith(span)
+  })
+}
+
+/** 微信正文统一处理入口：列表摊平 + 表格卡片化 + 全标签内联样式（导出便于回归测试） */
+export function normalizeWechatBody(root: HTMLElement): void {
+  // 顺序有讲究：先摊平列表（表格若在列表项里会被提到顶层），再卡片化表格，最后统一内联样式
+  flattenLists(root)
+  flattenTables(root)
+  convertMarks(root)
+  applyInlineStyles(root)
+}
+
+/** Markdown → 可直接提交给草稿箱的正文 HTML（导出便于回归测试） */
+export function buildWechatContentHtml(
+  contentMarkdown: string,
+  resolveImage: (id: string) => string | undefined
+): string {
+  const html = renderMarkdown(resolveImageRefs(contentMarkdown, resolveImage))
+  const doc = new DOMParser().parseFromString(`<section>${html}</section>`, 'text/html')
+  const root = (doc.body.firstElementChild as HTMLElement) ?? doc.body
+  normalizeWechatBody(root)
+  return root.outerHTML
 }
 
 function applyInlineStyles(root: HTMLElement): void {
@@ -197,7 +427,8 @@ export function useWechatPublish() {
       }
       const doc = new DOMParser().parseFromString(`<section>${html}</section>`, 'text/html')
       const root = (doc.body.firstElementChild as HTMLElement) ?? doc.body
-      applyInlineStyles(root)
+      // 列表必须先摊平（公众号不认 ul/li），再整体内联样式
+      normalizeWechatBody(root)
       const imgs = Array.from(root.querySelectorAll('img'))
 
       // 3. 封面（coverImageId → 兜底第一张正文图）

@@ -43,6 +43,7 @@ import { imageRef, parseImageRefs, resolveImageRefs, removeImageRefs } from '../
 import { mergeBlogEnvelope, mergeBlogPrefsEnvelope, normalizeBlogFrontPrefs } from '../src/composables/blogSyncCore.ts'
 import { buildBlogPublic } from '../src/composables/blogStaticExport.ts'
 import { applyMarkdown, isAllowedDataImage } from '../src/composables/blogEditorMd.ts'
+import { renderMarkdown } from '../src/composables/noteMarkdown.ts'
 import type { ArticleStatus, BlogArticle, BlogData, BlogFrontPrefs, BlogFrontSyncData, BlogImage, BlogRecentItem, BlogSyncData } from '../src/types/index.ts'
 import { BLOG_RECENT_LIMIT, BLOG_IMAGE_CATEGORY_ALL, BLOG_IMAGE_CATEGORY_NONE } from '../src/types/index.ts'
 
@@ -516,6 +517,25 @@ test('applyMarkdown bold wraps selection and toggles off', () => {
   a.equal(r2.value, 'hello')
   a.equal(r2.selStart, 0)
   a.equal(r2.selEnd, 5)
+})
+
+test('applyMarkdown task-list：普通段落加前缀、二次点击取消、已有列表项插复选框', () => {
+  const r1 = applyMarkdown('task-list', '写周报', 0, 3)
+  a.equal(r1.value, '- [ ] 写周报')
+  const r2 = applyMarkdown('task-list', r1.value, 0, r1.value.length)
+  a.equal(r2.value, '写周报')
+  const r3 = applyMarkdown('task-list', '- 已有列表项', 0, 0)
+  a.equal(r3.value, '- [ ] 已有列表项')
+  const r4 = applyMarkdown('task-list', '- [x] 已完成项', 0, 0)
+  a.equal(r4.value, '已完成项')
+})
+
+test('renderMarkdown 任务列表渲染为 ☐ / ☑（不产出 input 标签）', () => {
+  const html = renderMarkdown('- [ ] 未完成\n- [x] 已完成\n')
+  a.ok(html.includes('☐'), '未勾选符号缺失')
+  a.ok(html.includes('☑'), '勾选符号缺失')
+  a.ok(!/<input/i.test(html), '不应输出 input 标签')
+  a.ok(!/\[ \]|\[x\]/i.test(html), '方括号语法不应残留')
 })
 
 test('applyMarkdown bold uses placeholder when nothing selected', () => {

@@ -9,7 +9,7 @@
  * 「发布」不是写库那么简单：会跑 collectPublishErrors 全量校验，任一不通过都不改状态，
  * 且错误要求直接展示在底部，避免用户对着「发布失败」干瞪眼。
  */
-import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useBlogStore } from '@/stores/blog'
 import {
   ARTICLE_STATUS_LABELS,
@@ -20,9 +20,11 @@ import {
   slugify
 } from '@/composables/blogCore'
 import { applyMarkdown, isAllowedDataImage } from '@/composables/blogEditorMd'
-import type { MdBlockKind } from '@/composables/blogEditorMd'
+import type { MdBlockKind, MdTransformOptions } from '@/composables/blogEditorMd'
 import { imageRef, parseImageRefs, removeImageRefs, resolveImageRefs } from '@/composables/blogImages'
 import { renderMarkdown } from '@/composables/noteMarkdown'
+import { buildWechatContentHtml } from '@/composables/useWechatPublish'
+import { compressImageDataUrl, dataUrlBytes, formatBytes } from '@/composables/blogImageCompress'
 import type { BlogImage } from '@/types'
 import Icon from '@/components/Icon.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
@@ -56,9 +58,28 @@ const form = reactive({
   seoDescription: ''
 })
 
+/** 单图体积告警阈值（公众号正文图片建议不超过 2MB） */
+const IMAGE_WARN_BYTES = 2 * 1024 * 1024
+
 /** 快照：用于判断「有未保存改动」并据此提示 */
 let snapshot = ''
 const dirty = ref(false)
+/** 保存状态指示：saved 已保存 / saving 保存中 / unsaved 有未保存改动 */
+const saveState = ref<'saved' | 'saving' | 'unsaved'>('saved')
+const savedAt = ref('')
+/** 打开文章时的 revision 基线：保存时做乐观锁校验，防另一标签页/设备被静默覆盖 */
+const baseRevision = ref(0)
+/** 表格行列选择器 */
+const tablePickerOpen = ref(false)
+const tablePick = ref<{ r: number; c: number }>({ r: 3, c: 2 })
+const TABLE_CELLS = Array.from({ length: 30 }, (_, i) => ({
+  key: `${Math.floor(i / 5) + 1}-${(i % 5) + 1}`,
+  r: Math.floor(i / 5) + 1,
+  c: (i % 5) + 1
+}))
+/** 公众号效果预览（按草稿箱规则转换后的正文，避免发出去才发现变样） */
+const wechatPreviewOpen = ref(false)
+const wechatPreviewHtml = ref('')
 const viewMode = ref<'edit' | 'split' | 'preview'>('split')
 const publishedHtml = ref('')
 /** 右侧元数据抽屉开合状态：true 时向左滑出，false 时滑回右侧隐藏 */
@@ -129,11 +150,13 @@ const MD_TOOLBAR: MdToolbarButton[] = [
   { kind: 'bold', label: '加粗', title: '加粗（Ctrl/Cmd+B）', group: 1 },
   { kind: 'italic', label: '斜体', title: '斜体（Ctrl/Cmd+I）', group: 1 },
   { kind: 'strike', label: '删除线', title: '删除线', group: 1 },
+  { kind: 'highlight', label: '高亮', title: '高亮（==文字==）', group: 1 },
   { kind: 'inline-code', label: '行内代码', title: '行内代码', group: 1 },
   { kind: 'blockquote', label: '引用', title: '引用块', group: 2 },
   { kind: 'code-block', label: '代码块', title: '代码块', group: 2 },
   { kind: 'ul', label: '无序列表', title: '无序列表', group: 2 },
   { kind: 'ol', label: '有序列表', title: '有序列表', group: 2 },
+  { kind: 'task-list', label: '待办', title: '任务列表（- [ ] 可勾选）', group: 2 },
   { kind: 'link', label: '链接', title: '插入链接（Ctrl/Cmd+K）', group: 3 },
   { kind: 'image', label: '图片', title: '插入图片（选择本地图片，存入图片库）', group: 3 },
   { kind: 'table', label: '表格', title: '插入表格', group: 3 },
@@ -152,16 +175,56 @@ const toolbarGroups = computed(() => {
 })
 
 /** 在光标/选区处应用某种 Markdown 变换，并恢复光标（图片走文件选择，不在此处理） */
-async function applyMd(kind: MdBlockKind): Promise<void> {
+async function applyMd(kind: MdBlockKind, opts: MdTransformOptions = {}): Promise<void> {
   const ta = contentEl.value
   if (!ta) return
   const start = ta.selectionStart
   const end = ta.selectionEnd
-  const res = applyMarkdown(kind, form.contentMarkdown, start, end)
-  form.contentMarkdown = res.value
+  const res = applyMarkdown(kind, form.contentMarkdown, start, end, opts)
+  insertWithUndo(ta, res.value)
   await nextTick()
   ta.focus()
   ta.setSelectionRange(res.selStart, res.selEnd)
+}
+
+/**
+ * 把变换结果写回 textarea，但**尽量保留浏览器原生撤销栈**：
+ * 直接 `form.contentMarkdown = next` 会让 Ctrl+Z 断链（撤销变成整段替换）。
+ * 做法：算出公共前缀/后缀，只对差异区间执行 execCommand('insertText')——
+ * 它走浏览器编辑管线，可被 Ctrl+Z 撤销；失败时（非 Chromium 内核）回退为直接赋值。
+ */
+function insertWithUndo(ta: HTMLTextAreaElement, next: string): void {
+  const prev = ta.value
+  if (prev === next) return
+  let prefix = 0
+  const minLen = Math.min(prev.length, next.length)
+  while (prefix < minLen && prev.charCodeAt(prefix) === next.charCodeAt(prefix)) prefix += 1
+  let suffix = 0
+  while (
+    suffix < minLen - prefix &&
+    prev.charCodeAt(prev.length - 1 - suffix) === next.charCodeAt(next.length - 1 - suffix)
+  ) {
+    suffix += 1
+  }
+  const oldEnd = prev.length - suffix
+  const middle = next.slice(prefix, next.length - suffix)
+  ta.focus()
+  ta.setSelectionRange(prefix, oldEnd)
+  let ok = false
+  try {
+    ok = middle === ''
+      ? document.execCommand('delete', false)
+      : document.execCommand('insertText', false, middle)
+  } catch {
+    ok = false
+  }
+  if (!ok) form.contentMarkdown = next
+}
+
+/** 表格选择器：按行列插入（含表头行） */
+function insertTable(rows: number, cols: number): void {
+  tablePickerOpen.value = false
+  void applyMd('table', { tableRows: rows, tableCols: cols })
 }
 
 function onToolbarClick(b: MdToolbarButton): void {
@@ -228,6 +291,9 @@ async function onPickImages(e: Event): Promise<void> {
   let pos = ta ? ta.selectionStart : form.contentMarkdown.length
   let value = form.contentMarkdown
   let rejected = 0
+  let compressedCount = 0
+  let savedBytes = 0
+  let oversizedCount = 0
   for (const file of files) {
     let dataUrl: string
     try {
@@ -241,7 +307,22 @@ async function onPickImages(e: Event): Promise<void> {
       continue
     }
     const name = file.name.replace(/\.[^.]+$/, '') || '图片'
-    const saved = await store.addImage(name, dataUrl)
+    // 上传前压缩：最长边 1600 / JPEG 0.85，避免原图 base64 撑大 IDB 与云同步信封
+    const bytesIn = dataUrlBytes(dataUrl)
+    let bytesOut = bytesIn
+    try {
+      const compressed = await compressImageDataUrl(dataUrl)
+      dataUrl = compressed.dataUrl
+      bytesOut = compressed.bytes
+      if (compressed.compressed) {
+        compressedCount += 1
+        savedBytes += Math.max(0, bytesIn - bytesOut)
+      }
+    } catch {
+      // 压缩失败（解码异常等）→ 按原图继续，不阻断插入
+    }
+    if (bytesOut > IMAGE_WARN_BYTES) oversizedCount += 1
+    const saved = await store.addImage(name, dataUrl, bytesOut)
     const res = applyMarkdown('image', value, pos, pos, { alt: name, url: imageRef(saved.id) })
     value = res.value
     pos = res.selEnd
@@ -258,6 +339,11 @@ async function onPickImages(e: Event): Promise<void> {
   }
   if (rejected) {
     toastAlert(`已插入图片，${rejected} 个不支持的格式被跳过（仅支持位图 base64）`, 'warning')
+  } else if (compressedCount > 0) {
+    const tip = `已压缩 ${compressedCount} 张图片，节省约 ${formatBytes(savedBytes)}`
+    toastAlert(oversizedCount > 0 ? `${tip}；仍有 ${oversizedCount} 张超过 2MB` : tip, oversizedCount > 0 ? 'warning' : 'success')
+  } else if (oversizedCount > 0) {
+    toastAlert(`已插入图片，其中 ${oversizedCount} 张超过 2MB，建议压缩后再用于公众号`, 'warning')
   }
 }
 
@@ -370,6 +456,7 @@ function fillFromArticle(): void {
   form.coverImageId = a.coverImageId ?? ''
   form.seoTitle = a.seoTitle ?? ''
   form.seoDescription = a.seoDescription ?? ''
+  baseRevision.value = a.revision
   snapshot = JSON.stringify(form)
   dirty.value = false
   refreshPreview()
@@ -383,6 +470,7 @@ watch(
 
 watch(form, () => {
   dirty.value = JSON.stringify(form) !== snapshot
+  if (dirty.value) saveState.value = 'unsaved'
   scheduleAutoSave()
 })
 
@@ -392,9 +480,20 @@ function refreshPreview(): void {
   const md = resolveImageRefs(form.contentMarkdown, id => store.imageUrlById.get(id))
   publishedHtml.value = renderMarkdown(md)
 }
-watch(() => form.contentMarkdown, refreshPreview)
+// 预览重渲染开销大（全量 markdown-it + 替换 DOM），连续输入时防抖 150ms
+let previewTimer: number | undefined
+function schedulePreview(): void {
+  if (previewTimer !== undefined) window.clearTimeout(previewTimer)
+  previewTimer = window.setTimeout(() => {
+    previewTimer = undefined
+    refreshPreview()
+  }, 150)
+}
+watch(() => form.contentMarkdown, schedulePreview)
 // 图片库变化（插入/移除图片）也要重渲染预览
-watch(() => store.imageUrlById, refreshPreview)
+watch(() => store.imageUrlById, schedulePreview)
+
+let beforeunloadRegistered = false
 
 // ---------- 自动保存 ----------
 let timer: number | undefined
@@ -410,6 +509,9 @@ function scheduleAutoSave(): void {
 const unregisterModuleFlush = registerModuleFlush('blogAdmin', () => saveDraft(true))
 onBeforeUnmount(() => {
   if (timer !== undefined) window.clearTimeout(timer)
+  if (previewTimer !== undefined) window.clearTimeout(previewTimer)
+  window.removeEventListener('keydown', onWindowKeydown)
+  if (beforeunloadRegistered) window.removeEventListener('beforeunload', onBeforeUnloadGuard)
   unregisterModuleFlush()
 })
 
@@ -418,7 +520,8 @@ async function saveDraft(silent = false): Promise<void> {
     if (!silent) toastAlert('没有需要保存的改动', 'info')
     return
   }
-  const updated = await store.updateArticle(props.articleId, {
+  saveState.value = 'saving'
+  const patch = {
     title: form.title.trim(),
     subtitle: form.subtitle.trim() || undefined,
     slug: form.slug.trim(),
@@ -431,16 +534,36 @@ async function saveDraft(silent = false): Promise<void> {
     coverImageId: form.coverImageId.trim() || undefined,
     seoTitle: form.seoTitle.trim() || undefined,
     seoDescription: form.seoDescription.trim() || undefined
-  })
+  }
+  // 乐观锁：库中 revision 与打开时的基线不一致 → 说明另一标签页/设备已改过
+  const res = await store.updateArticleWithRevision(props.articleId, patch, baseRevision.value)
+  let updated = res.article ?? null
+  if (res.status === 'conflict') {
+    saveState.value = 'unsaved'
+    const current = article.value?.revision ?? 0
+    const ok = await showConfirm(
+      `这篇文章已在其它标签页或设备被修改（版本 ${baseRevision.value} → ${res.currentRevision ?? current}）。仍用当前内容覆盖吗？`,
+      '覆盖'
+    )
+    if (!ok) {
+      toastAlert('已保留本地改动，请先合并对方的修改再保存', 'warning')
+      return
+    }
+    updated = await store.updateArticle(props.articleId, patch)
+  }
   if (!updated) {
+    saveState.value = 'unsaved'
     toastAlert('保存失败：文章不存在', 'error')
     return
   }
   // store 会按标题/正文重算 slug 与摘要，回填保证界面与库一致
   form.slug = updated.slug
   form.excerpt = updated.excerpt
+  baseRevision.value = updated.revision
   snapshot = JSON.stringify(form)
   dirty.value = false
+  saveState.value = 'saved'
+  savedAt.value = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
   if (!silent) toastAlert('草稿已保存', 'success')
 }
 
@@ -529,6 +652,63 @@ async function handleClose(): Promise<void> {
   emit('close')
 }
 
+// ---------- 大纲（## / ###）与跳转 ----------
+const outline = computed(() => {
+  const items: Array<{ level: number; text: string; offset: number }> = []
+  let offset = 0
+  for (const line of form.contentMarkdown.split('\n')) {
+    const m = /^(#{2,3})\s+(.+?)\s*$/.exec(line)
+    if (m) {
+      items.push({ level: m[1].length, text: m[2].replace(/[*`~]/g, '').trim(), offset })
+    }
+    offset += line.length + 1
+  }
+  return items
+})
+
+/** 点大纲项：切到编辑视图并把光标放到该标题所在行（浏览器会把光标滚入可视区） */
+function jumpToHeading(offset: number): void {
+  if (viewMode.value === 'preview') viewMode.value = 'edit'
+  void nextTick(() => {
+    const ta = contentEl.value
+    if (!ta) return
+    ta.focus()
+    ta.setSelectionRange(offset, offset)
+    closeSide()
+  })
+}
+
+// ---------- 公众号效果预览（发之前先看，避免发到草稿箱才发现变样） ----------
+function openWechatPreview(): void {
+  if (!form.contentMarkdown.trim()) {
+    toastAlert('正文内容为空，无需预览', 'info')
+    return
+  }
+  // 与「发布到公众号」走完全相同的转换（列表摊平 / 表格卡片化 / 代码块折行 / 内联样式）
+  wechatPreviewHtml.value = buildWechatContentHtml(form.contentMarkdown, (id) => store.imageUrlById.get(id))
+  wechatPreviewOpen.value = true
+}
+
+// ---------- Ctrl/Cmd+S 保存 + 关页/刷新守卫 ----------
+function onWindowKeydown(e: KeyboardEvent): void {
+  if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 's') return
+  e.preventDefault()
+  void saveDraft()
+}
+
+function onBeforeUnloadGuard(e: BeforeUnloadEvent): void {
+  if (!dirty.value) return
+  // 现代浏览器忽略自定义文案，但必须 preventDefault + 赋值才会弹确认
+  e.preventDefault()
+  e.returnValue = ''
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', onWindowKeydown)
+  beforeunloadRegistered = true
+  window.addEventListener('beforeunload', onBeforeUnloadGuard)
+})
+
 // ---------- slug 辅助 ----------
 async function regenerateSlug(): Promise<void> {
   form.slug = slugify(form.title) || form.slug
@@ -564,6 +744,18 @@ async function regenerateSlug(): Promise<void> {
       >
         <span>文章设置</span>
       </button>
+      <!-- 保存状态：比 toast 更让人安心（未保存 / 保存中 / 已保存 hh:mm） -->
+      <span
+        class="be-save-state"
+        :class="`is-${saveState}`"
+        data-testid="blog-editor-save-state"
+        :title="dirty ? '有改动尚未保存（Ctrl/Cmd+S 保存）' : '内容已保存'"
+      >
+        <span class="be-save-dot" aria-hidden="true"></span>
+        <template v-if="saveState === 'saving'">保存中…</template>
+        <template v-else-if="saveState === 'unsaved'">未保存</template>
+        <template v-else>已保存{{ savedAt ? ` ${savedAt}` : '' }}</template>
+      </span>
       <button
         type="button"
         class="be-side-toggle"
@@ -586,18 +778,49 @@ async function regenerateSlug(): Promise<void> {
             <template v-for="grp in toolbarGroups" :key="grp.group">
               <span class="be-md-sep" aria-hidden="true"></span>
               <div class="be-md-group">
-                <button
-                  v-for="b in grp.items"
-                  :key="b.kind"
-                  type="button"
-                  class="be-md-btn"
-                  :title="b.title"
-                  :aria-label="b.title"
-                  :data-testid="`blog-editor-md-${b.kind}`"
-                  @click="onToolbarClick(b)"
-                >
-                  {{ b.label }}
-                </button>
+                <template v-for="b in grp.items" :key="b.kind">
+                  <!-- 表格：先选行列再插入（1~6 行 × 1~5 列） -->
+                  <el-popover
+                    v-if="b.kind === 'table'"
+                    v-model:visible="tablePickerOpen"
+                    placement="bottom-start"
+                    :width="168"
+                    trigger="click"
+                    popper-class="be-tp-popper"
+                  >
+                    <template #reference>
+                      <button type="button" class="be-md-btn" :title="b.title" :aria-label="b.title" data-testid="blog-editor-md-table">
+                        {{ b.label }}
+                      </button>
+                    </template>
+                    <div class="be-tp">
+                      <div class="be-tp-tip" data-testid="blog-editor-table-tip">{{ tablePick.r }} 行 × {{ tablePick.c }} 列</div>
+                      <div class="be-tp-grid">
+                        <button
+                          v-for="cell in TABLE_CELLS"
+                          :key="cell.key"
+                          type="button"
+                          class="be-tp-cell"
+                          :class="{ 'is-on': cell.r <= tablePick.r && cell.c <= tablePick.c }"
+                          :data-testid="`blog-editor-table-${cell.r}-${cell.c}`"
+                          @mouseenter="tablePick = { r: cell.r, c: cell.c }"
+                          @click="insertTable(cell.r, cell.c)"
+                        ></button>
+                      </div>
+                    </div>
+                  </el-popover>
+                  <button
+                    v-else
+                    type="button"
+                    class="be-md-btn"
+                    :title="b.title"
+                    :aria-label="b.title"
+                    :data-testid="`blog-editor-md-${b.kind}`"
+                    @click="onToolbarClick(b)"
+                  >
+                    {{ b.label }}
+                  </button>
+                </template>
               </div>
             </template>
           </div>
@@ -623,6 +846,15 @@ async function regenerateSlug(): Promise<void> {
               @click="handlePublish()"
             >
               发布
+            </button>
+            <button
+              type="button"
+              class="ui-btn ui-btn--sm"
+              title="按公众号草稿箱的排版规则预览正文（列表/表格/代码块已转换）"
+              data-testid="blog-editor-wechat-preview-top"
+              @click="openWechatPreview()"
+            >
+              公众号预览
             </button>
             <button
               type="button"
@@ -695,6 +927,25 @@ async function regenerateSlug(): Promise<void> {
           <Icon name="close" :size="14" />
         </button>
       </div>
+        <div class="be-block">
+          <h3 class="be-block-title">大纲</h3>
+          <p v-if="outline.length === 0" class="be-stat">正文里还没有 ## / ### 标题</p>
+          <ul v-else class="be-outline" data-testid="blog-editor-outline">
+            <li v-for="(h, i) in outline" :key="`${h.offset}-${i}`">
+              <button
+                type="button"
+                class="be-outline-item"
+                :class="`is-h${h.level}`"
+                :data-testid="`blog-editor-outline-${i}`"
+                :title="h.text"
+                @click="jumpToHeading(h.offset)"
+              >
+                {{ h.text }}
+              </button>
+            </li>
+          </ul>
+        </div>
+
       <div class="be-block">
           <h3 class="be-block-title">发布</h3>
           <label class="be-field">
@@ -820,6 +1071,15 @@ async function regenerateSlug(): Promise<void> {
         <button
           type="button"
           class="ui-btn ui-btn--sm"
+          title="按公众号草稿箱的排版规则预览正文"
+          data-testid="blog-editor-wechat-preview"
+          @click="openWechatPreview()"
+        >
+          公众号预览
+        </button>
+        <button
+          type="button"
+          class="ui-btn ui-btn--sm"
           :class="{ 'ui-btn--primary': !wechat.publishing.value }"
           :disabled="wechat.publishing.value || visibleErrors.length > 0"
           data-testid="blog-editor-publish-wechat"
@@ -887,6 +1147,23 @@ async function regenerateSlug(): Promise<void> {
             </div>
           </li>
         </ul>
+      </div>
+    </BaseDialog>
+
+    <!-- 公众号效果预览：与「发布到公众号」同一套转换，375px 宽模拟手机正文 -->
+    <BaseDialog
+      v-if="wechatPreviewOpen"
+      title="公众号效果预览"
+      width="430px"
+      max-height="88vh"
+      data-testid="blog-editor-wechat-preview-dialog"
+      @close="wechatPreviewOpen = false"
+    >
+      <div class="be-wx-preview">
+        <p class="be-wx-tip">按草稿箱规则转换后的正文（375px 宽）。列表、表格、代码块均已处理，实际效果以公众号为准。</p>
+        <div class="be-wx-phone">
+          <div class="be-wx-body" data-testid="blog-editor-wechat-preview-body" v-html="wechatPreviewHtml"></div>
+        </div>
       </div>
     </BaseDialog>
 
@@ -1523,6 +1800,143 @@ async function regenerateSlug(): Promise<void> {
 .img-dialog-op--danger:hover {
   color: var(--color-error, #ef4444);
   border-color: var(--color-error, #ef4444);
+}
+
+/* ===== 表格行列选择器 ===== */
+.be-tp-tip {
+  margin-bottom: 6px;
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-secondary, #64748b);
+  text-align: center;
+}
+
+.be-tp-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+
+.be-tp-cell {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 3px;
+  background: var(--color-bg-card, #fff);
+  cursor: pointer;
+}
+
+.be-tp-cell.is-on {
+  border-color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-soft, rgba(59, 130, 246, 0.15));
+}
+
+/* ===== 侧栏大纲 ===== */
+.be-outline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.be-outline-item {
+  display: block;
+  width: 100%;
+  padding: 4px 6px;
+  border: none;
+  border-left: 2px solid transparent;
+  background: none;
+  color: var(--color-text, #1e293b);
+  font-size: var(--font-size-xs, 12px);
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.be-outline-item.is-h3 {
+  padding-left: 18px;
+  color: var(--color-text-secondary, #64748b);
+}
+
+.be-outline-item:hover {
+  color: var(--color-primary, #3b82f6);
+  border-left-color: var(--color-primary, #3b82f6);
+  background: var(--color-bg-hover, #f1f5f9);
+}
+
+/* ===== 顶栏保存状态 ===== */
+.be-save-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-full, 9999px);
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-secondary, #64748b);
+  background: var(--color-bg-hover, #f1f5f9);
+  white-space: nowrap;
+}
+
+.be-save-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.75;
+}
+
+.be-save-state.is-unsaved {
+  color: var(--color-warning-hover, #b45309);
+  background: var(--color-warning-soft, #fef3c7);
+}
+
+.be-save-state.is-saving {
+  color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-soft, rgba(59, 130, 246, 0.1));
+}
+
+.be-save-state.is-saved {
+  color: var(--color-success-hover, #059669);
+  background: var(--color-success-soft, #d1fae5);
+}
+
+/* ===== 公众号效果预览（白底固定 375px，模拟手机正文，不随暗色反转） ===== */
+.be-wx-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.be-wx-tip {
+  margin: 0;
+  font-size: var(--font-size-xs, 12px);
+  line-height: 1.6;
+  color: var(--color-text-secondary, #64748b);
+}
+
+.be-wx-phone {
+  max-height: 62vh;
+  overflow-y: auto;
+  padding: 16px 14px;
+  background: #ffffff;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+}
+
+.be-wx-body {
+  width: 375px;
+  max-width: 100%;
+  margin: 0 auto;
+  font-size: 16px;
+  line-height: 1.75;
+  color: #3f3f3f;
+  word-wrap: break-word;
+  word-break: break-word;
 }
 
 @media (max-width: 768px) {
