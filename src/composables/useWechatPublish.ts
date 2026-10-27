@@ -142,6 +142,134 @@ function styleFor(tag: string, el: HTMLElement): string {
   }
 }
 
+/**
+ * 列表安全化：把 <ul>/<ol>/<li> 摊平成带手写符号的 <section>。
+ *
+ * 为什么必须做（真实线上现象）：公众号草稿箱**不认列表标签**，`<li>` 里只要出现块级子节点
+ * （markdown-it 遇到列表项内空行会生成 `<li><p>…</p></li>` 的松散列表），就会被拆成
+ * 「空的项目符号 + 独立一行内容」；再叠加 markdown-it 的 breaks:true（项内单换行 → <br>），
+ * 一条 `- **框架**
+  ：Vue 3 …` 就变成「空圆点 / 圆点+框架 / 缩进的：Vue 3」三段。
+ *
+ * 处理规则：
+ * - 一个 li → 一个 section（`padding-left` + 负 `text-indent` 做悬挂缩进，换行自动对齐）
+ * - 项内块级子节点（p/div/section）合并为同一行，块间保留 <br>
+ * - 项内换行/首尾空白折叠，避免「：内容」被顶到下一行
+ * - 空项剔除；嵌套列表按层级追加在父项之后、缩进加深
+ * - 有序列表保留 1. 2. 3. 编号
+ */
+function flattenLists(root: HTMLElement): void {
+  const doc = root.ownerDocument
+
+  const collapse = (html: string): string =>
+    html
+      .replace(/\s*\n\s*/g, ' ')
+      .replace(/(<br\s*\/?>\s*){2,}/gi, '<br>')
+      .replace(/^(\s|<br\s*\/?>)+/i, '')
+      .replace(/(\s|<br\s*\/?>)+$/i, '')
+      .trim()
+
+  /** 把一层列表展开成若干 section，追加到 out；嵌套列表递归加深缩进 */
+  const walk = (list: HTMLElement, level: number, out: HTMLElement[]): void => {
+    const ordered = list.tagName.toLowerCase() === 'ol'
+    const items = Array.from(list.children).filter((c): c is HTMLElement => c.tagName?.toLowerCase() === 'li')
+    let index = 0
+    for (const li of items) {
+      index += 1
+      // 先把嵌套列表摘出来（它们的内容不能混进父项文本）
+      const nested = Array.from(li.children).filter((c): c is HTMLElement => {
+        const t = c.tagName?.toLowerCase()
+        return t === 'ul' || t === 'ol'
+      })
+      nested.forEach((n) => n.remove())
+
+      // 逐个子节点拼装：连续的文字/段落块合并成「一行」（段落之间不换行），
+      // 只有 pre/blockquote/table 这类真·块级结构才另起一行，避免把「：内容」顶到下一行
+      const isTextBlock = (t: string): boolean => t === 'p' || t === 'div' || t === 'section'
+      const isPunctStart = (t: string): boolean => /^[：:，,。.、；;！!？?）)】」』]/.test(t)
+      const parts: string[] = []
+      let run = ''
+      const flush = () => {
+        if (run) {
+          parts.push(run)
+          run = ''
+        }
+      }
+      for (const child of Array.from(li.childNodes)) {
+        if (child.nodeType === 3) {
+          const t = collapse(child.textContent || '')
+          if (!t) continue
+          run = run ? (isPunctStart(t) ? run + t : `${run} ${t}`) : t
+          continue
+        }
+        if (child.nodeType !== 1) continue
+        const el = child as HTMLElement
+        const tag = el.tagName.toLowerCase()
+        if (isTextBlock(tag)) {
+          const t = collapse(el.innerHTML)
+          if (!t) continue
+          run = run ? (isPunctStart(t) ? run + t : `${run} ${t}`) : t
+        } else {
+          flush()
+          parts.push(el.outerHTML)
+        }
+      }
+      flush()
+      const inner = collapse(parts.join('<br>'))
+
+      if (!inner) {
+        // 空项目符号（原文写了空列表项 / 只剩嵌套列表）→ 不生成符号，只处理嵌套
+        nested.forEach((n) => walk(n, level + 1, out))
+        continue
+      }
+
+      const marker = ordered ? `${index}.` : '•'
+      const indent = (1.4 + level * 1.2).toFixed(1) // 避免 2.5999999 这类浮点尾巴进 CSS
+      const section = doc.createElement('section')
+      section.setAttribute(
+        'style',
+        `margin:0.45em 0;padding-left:${indent}em;text-indent:-1.4em;line-height:1.75;`
+      )
+      section.innerHTML = `${marker}&nbsp;${inner}`
+      out.push(section)
+
+      nested.forEach((n) => walk(n, level + 1, out))
+    }
+  }
+
+  // 只从最外层列表开始（嵌套的由 walk 递归处理）
+  const outerLists = Array.from(root.querySelectorAll('ul, ol')).filter(
+    (l) => !l.parentElement?.closest('ul, ol')
+  ) as HTMLElement[]
+
+  for (const list of outerLists) {
+    const out: HTMLElement[] = []
+    walk(list, 0, out)
+    const container = doc.createElement('section')
+    container.setAttribute('style', 'margin:1em 0;')
+    out.forEach((el) => container.appendChild(el))
+    list.replaceWith(container)
+  }
+}
+
+/** 微信正文统一处理入口：列表摊平 + 全标签内联样式（导出便于回归测试） */
+export function normalizeWechatBody(root: HTMLElement): void {
+  flattenLists(root)
+  applyInlineStyles(root)
+}
+
+/** Markdown → 可直接提交给草稿箱的正文 HTML（导出便于回归测试） */
+export function buildWechatContentHtml(
+  contentMarkdown: string,
+  resolveImage: (id: string) => string | undefined
+): string {
+  const html = renderMarkdown(resolveImageRefs(contentMarkdown, resolveImage))
+  const doc = new DOMParser().parseFromString(`<section>${html}</section>`, 'text/html')
+  const root = (doc.body.firstElementChild as HTMLElement) ?? doc.body
+  normalizeWechatBody(root)
+  return root.outerHTML
+}
+
 function applyInlineStyles(root: HTMLElement): void {
   const base = 'font-size:16px;color:#3f3f3f;line-height:1.75;word-wrap:break-word;word-break:break-word;padding:0 4px;'
   root.setAttribute('style', base)
@@ -197,7 +325,8 @@ export function useWechatPublish() {
       }
       const doc = new DOMParser().parseFromString(`<section>${html}</section>`, 'text/html')
       const root = (doc.body.firstElementChild as HTMLElement) ?? doc.body
-      applyInlineStyles(root)
+      // 列表必须先摊平（公众号不认 ul/li），再整体内联样式
+      normalizeWechatBody(root)
       const imgs = Array.from(root.querySelectorAll('img'))
 
       // 3. 封面（coverImageId → 兜底第一张正文图）
