@@ -1,6 +1,7 @@
 // 健康管理纯逻辑模块：健康数据归一化 → 周/日达标率 → BMI/睡眠时长/体重图表坐标。
 // 运行时依赖仅 MEAL_TYPES 与 todoCore 的 localToday（node --experimental-strip-types 可运行）；其余类型全部 type-only。
 import { MEAL_TYPES } from '../types/index.ts'
+import type { HealthWeeklyPlanItem, HealthWeeklyPlans } from '../types'
 import type {
   DietRecord,
   ExerciseRecord,
@@ -74,6 +75,63 @@ export function emptyHealthData(): HealthData {
 }
 
 /** 归一化任意来源的健康数据：height 越界剔除、计划逐模块校验、记录逐条走对应 normalize。脏输入不抛错。 */
+/** 取某日期键（'YYYY-MM-DD'）所在周的周一日期键（本地时区，无 UTC 偏移）。 */
+export function mondayOfDate(dateKey: string): string {
+  const [y, m, d] = dateKey.split('-').map(Number)
+  if (!y || !m || !d) return dateKey
+  const dt = new Date(y, m - 1, d)
+  const dow = dt.getDay() === 0 ? 7 : dt.getDay()
+  dt.setDate(dt.getDate() - (dow - 1))
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`
+}
+
+/** 周一起连排 7 天的日期键（index 0 = 周一 … 6 = 周日）。 */
+export function weekDayKeys(weekStart: string): string[] {
+  const [y, m, d] = weekStart.split('-').map(Number)
+  if (!y || !m || !d) return []
+  const out: string[] = []
+  const pad = (n: number) => String(n).padStart(2, '0')
+  for (let i = 0; i < 7; i++) {
+    const dt = new Date(y, m - 1, d + i)
+    out.push(`${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`)
+  }
+  return out
+}
+
+/** 周计划归一化（幂等）：键须形如 'YYYY-MM-DD'，条目逐项安全兜底，脏数据剔除不抛错。 */
+export function normalizeWeeklyPlans(raw: unknown): HealthWeeklyPlans | undefined {
+  if (typeof raw !== 'object' || raw === null) return undefined
+  const out: HealthWeeklyPlans = {}
+  for (const [weekKey, week] of Object.entries(raw as Record<string, unknown>)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(weekKey) || typeof week !== 'object' || week === null) continue
+    const w = week as Record<string, unknown>
+    const pick = (v: unknown): HealthWeeklyPlanItem[] =>
+      Array.isArray(v)
+        ? v
+            .map((it): HealthWeeklyPlanItem | null => {
+              if (typeof it !== 'object' || it === null) return null
+              const o = it as Record<string, unknown>
+              if (typeof o.id !== 'string' || !o.id) return null
+              const day = typeof o.day === 'number' && o.day >= 1 && o.day <= 7 ? o.day : 0
+              if (!day || typeof o.rowKey !== 'string' || !o.rowKey || typeof o.name !== 'string' || !o.name.trim()) return null
+              return {
+                id: o.id,
+                day,
+                rowKey: o.rowKey,
+                name: o.name.trim().slice(0, 30),
+                value: typeof o.value === 'string' ? o.value.slice(0, 20) : undefined,
+                kcal: typeof o.kcal === 'number' && Number.isFinite(o.kcal) ? Math.round(o.kcal) : undefined,
+                done: o.done === true
+              }
+            })
+            .filter((x): x is HealthWeeklyPlanItem => x !== null)
+        : []
+    out[weekKey] = { exercise: pick(w.exercise), diet: pick(w.diet), updatedAt: typeof w.updatedAt === 'string' ? w.updatedAt : '' }
+  }
+  return out
+}
+
 export function normalizeHealthData(raw: Partial<HealthData> | undefined): HealthData {
   const data = raw ?? {}
   const height =
@@ -97,6 +155,8 @@ export function normalizeHealthData(raw: Partial<HealthData> | undefined): Healt
   return {
     height,
     plans,
+    weeklyPlans: normalizeWeeklyPlans(data.weeklyPlans),
+    plansUpdatedAt: typeof data.plansUpdatedAt === 'string' ? data.plansUpdatedAt : undefined,
     records: {
       exercise: toArr(rec.exercise).map(r => normalizeExerciseRecord(r)),
       diet: toArr(rec.diet).map(r => normalizeDietRecord(r)),

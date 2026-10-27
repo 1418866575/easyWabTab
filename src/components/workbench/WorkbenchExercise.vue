@@ -3,7 +3,9 @@ import { computed, onMounted, ref } from 'vue'
 import { showConfirm } from '@/utils/dialog'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { injectHealthStore, type HealthStoreLike } from '@/composables/healthStoreContext'
-import { calcExerciseAttainment, calcYearDistanceTotals } from '@/composables/healthCore'
+import WeeklyPlanBoard, { type WeeklyPlanCell, type WeeklyPlanRow } from './WeeklyPlanBoard.vue'
+import { calcExerciseAttainment, calcYearDistanceTotals, mondayOfDate, weekDayKeys } from '@/composables/healthCore'
+import type { HealthWeeklyPlanItem } from '@/types'
 import { localToday } from '@/composables/todoCore'
 import { EXERCISE_TYPES, type HealthPlanMetric } from '@/types'
 import WorkbenchHealthReminders from './WorkbenchHealthReminders.vue'
@@ -18,6 +20,80 @@ const PANEL_MAX_HEIGHT = '85vh'
 // store 来源可注入：默认成人端 store，学生端容器 provide 自己的 store 后自动改为学生数据（见 healthStoreContext）
 const store = (injectHealthStore() ?? useWorkbenchHealthStore()) as HealthStoreLike
 
+
+// ===== 本周计划（早晨 / 傍晚，仅成人端 store 提供周计划能力时显示）=====
+const PLAN_ROWS: WeeklyPlanRow[] = [
+  { key: 'morning', label: '早晨', icon: 'sun' },
+  { key: 'evening', label: '傍晚', icon: 'moon' }
+]
+const planWeekStart = ref(mondayOfDate(localToday()))
+const canPlan = computed(() => !!store.weeklyPlans && !!store.setWeeklyPlanItems)
+const planItems = computed<HealthWeeklyPlanItem[]>(() => store.weeklyPlans?.[planWeekStart.value]?.exercise ?? [])
+const planWeekLabel = computed(() => {
+  const keys = weekDayKeys(planWeekStart.value)
+  if (keys.length !== 7) return ''
+  const fmt = (k: string) => `${Number(k.slice(5, 7))}.${Number(k.slice(8, 10))}`
+  return `${keys[0].slice(0, 4)} 年 · ${fmt(keys[0])} – ${fmt(keys[6])}`
+})
+const planStat = computed(() => `已完成 ${planItems.value.filter(i => i.done).length}/${planItems.value.length} 项`)
+const planCells = computed<Record<string, WeeklyPlanCell>>(() => {
+  const cells: Record<string, WeeklyPlanCell> = {}
+  for (const row of PLAN_ROWS) {
+    for (let day = 1; day <= 7; day++) {
+      const it = planItems.value.find(x => x.rowKey === row.key && x.day === day)
+      cells[`${row.key}:${day}`] = !it
+        ? { state: 'empty' }
+        : it.name === '休息'
+          ? { state: 'rest' }
+          : it.done
+            ? { name: it.name, sub: it.value, subTone: 'success', state: 'done' }
+            : { name: it.name, sub: it.value, subTone: 'primary', state: 'planned' }
+    }
+  }
+  return cells
+})
+function onPlanNav(dir: number): void {
+  if (dir === 0) {
+    planWeekStart.value = mondayOfDate(todayStr)
+    return
+  }
+  const keys = weekDayKeys(planWeekStart.value)
+  const base = dir < 0 ? keys[0] : keys[6]
+  const [y, m, d] = base.split('-').map(Number)
+  const dt = new Date(y, m - 1, d + dir * 7)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  planWeekStart.value = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`
+}
+const planDialogOpen = ref(false)
+const planEditCell = ref<{ rowKey: string; day: number } | null>(null)
+const planHasExisting = ref(false)
+const planForm = ref({ name: '', value: '', done: false })
+function onPlanCellClick(rowKey: string, day: number): void {
+  const existing = planItems.value.find(x => x.rowKey === rowKey && x.day === day)
+  planEditCell.value = { rowKey, day }
+  planHasExisting.value = !!existing
+  planForm.value = { name: existing?.name ?? '', value: existing?.value ?? '', done: existing?.done ?? false }
+  planDialogOpen.value = true
+}
+/** 保存：名称填「休息」= 休息日；留空 = 删除该格；否则按 (rowKey, day) 覆盖 */
+async function savePlanItem(): Promise<void> {
+  const cell = planEditCell.value
+  if (!cell || !store.setWeeklyPlanItems) return
+  const name = planForm.value.name.trim()
+  const value = planForm.value.value.trim()
+  const others = planItems.value.filter(x => !(x.rowKey === cell.rowKey && x.day === cell.day))
+  const items: HealthWeeklyPlanItem[] = name
+    ? [...others, { id: `wp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, day: cell.day, rowKey: cell.rowKey, name, value: value || undefined, done: planForm.value.done }]
+    : others
+  await store.setWeeklyPlanItems(planWeekStart.value, 'exercise', items)
+  planDialogOpen.value = false
+}
+async function deletePlanItem(): Promise<void> {
+  const cell = planEditCell.value
+  if (!cell || !store.setWeeklyPlanItems) return
+  await store.setWeeklyPlanItems(planWeekStart.value, 'exercise', planItems.value.filter(x => !(x.rowKey === cell.rowKey && x.day === cell.day)))
+  planDialogOpen.value = false
+}
 
 // ===== 顶部目标卡 =====
 const todayStr = localToday()
@@ -226,6 +302,24 @@ onMounted(async () => {
       <div v-else class="stat-sub">尚未设定周目标</div>
     </div>
 
+    <!-- 本周计划（早晨/傍晚） -->
+    <WeeklyPlanBoard
+      v-if="canPlan"
+      title="运动周计划"
+      :week-start="planWeekStart"
+      :week-label="planWeekLabel"
+      :stat-text="planStat"
+      stat-tone="success"
+      icon-bg="var(--color-primary-light, #eff6ff)"
+      icon-color="var(--color-primary, #3b82f6)"
+      :rows="PLAN_ROWS"
+      :cells="planCells"
+      hint="点任意单元格即可编辑该项目"
+      data-testid="ex-plan-board"
+      @nav="onPlanNav"
+      @cell-click="onPlanCellClick"
+    />
+
     <!-- 定时提醒（只读小模块） -->
     <WorkbenchHealthReminders module="exercise" />
 
@@ -353,6 +447,35 @@ onMounted(async () => {
             </div>
           </form>
       </BaseDialog>
+
+    <!-- 周计划单元格编辑弹框 -->
+    <BaseDialog
+      v-if="planDialogOpen"
+      title="编辑运动计划"
+      width="420px"
+      data-testid="ex-plan-dialog"
+      @close="planDialogOpen = false"
+    >
+      <form class="dialog-body" @submit.prevent="savePlanItem">
+        <div class="form-group">
+          <label>项目名称 *</label>
+          <el-input v-model="planForm.name" maxlength="30" placeholder="如：晨跑 / 力量训练；填「休息」标记休息日" data-testid="ex-plan-name" />
+        </div>
+        <div class="form-group">
+          <label>强度（可选）</label>
+          <el-input v-model="planForm.value" maxlength="20" placeholder="如：45 min / 5 km" data-testid="ex-plan-value" />
+        </div>
+        <el-checkbox v-model="planForm.done" data-testid="ex-plan-done">已完成</el-checkbox>
+        <div class="form-actions">
+          <el-button v-if="planHasExisting" native-type="button" size="small" class="btn-clear" data-testid="ex-plan-delete" @click="deletePlanItem">
+            删除
+          </el-button>
+          <span class="form-actions-spacer"></span>
+          <el-button size="small" data-testid="ex-plan-cancel" @click="planDialogOpen = false">取消</el-button>
+          <el-button type="primary" native-type="submit" size="small" data-testid="ex-plan-save">保存</el-button>
+        </div>
+      </form>
+    </BaseDialog>
 
     <!-- 新增/编辑记录弹框 -->
 <BaseDialog

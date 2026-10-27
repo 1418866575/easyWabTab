@@ -23,7 +23,10 @@ export type HealthStoreLike = Pick<
   | 'addRecord'
   | 'updateRecord'
   | 'deleteRecord'
->
+> &
+  // 周计划（运动/饮食）为可选能力：成人 store 已实现，学生端 store 暂未实现——
+  // 面板侧用 hasWeeklyPlan 守卫，学生端隐藏周计划看板（后续学生端需要时再补齐）
+  Partial<Pick<ReturnType<typeof useWorkbenchHealthStore>, 'weeklyPlans' | 'setWeeklyPlanItems'>>
 
 const HEALTH_STORE_KEY = Symbol('healthStore') as InjectionKey<HealthStoreLike>
 

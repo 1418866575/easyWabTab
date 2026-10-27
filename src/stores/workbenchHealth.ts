@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, toRaw } from 'vue'
-import type { HealthData, HealthModule, HealthPlan, HealthPlans, HealthRecord } from '@/types'
+import type { HealthData, HealthModule, HealthPlan, HealthPlans, HealthRecord, HealthWeeklyPlanItem, HealthWeeklyPlans } from '@/types'
 import {
   normalizeDietRecord,
   normalizeExerciseRecord,
@@ -33,6 +33,8 @@ export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
   const height = ref<number | undefined>(undefined)
   const plans = ref<HealthPlans>({})
   const records = ref<HealthData['records']>({ exercise: [], diet: [], sleep: [], weight: [] })
+  // 周计划（运动/饮食）：键 = 周一日期键；整体 LWW 同步（plansUpdatedAt）
+  const weeklyPlans = ref<HealthWeeklyPlans>({})
 
   async function loadHealth(): Promise<void> {
     try {
@@ -40,6 +42,7 @@ export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
       const data = normalizeHealthData(await idbGet<HealthData>('health'))
       height.value = data.height
       plans.value = data.plans
+      weeklyPlans.value = data.weeklyPlans ?? {}
       records.value = data.records
     } catch (e) {
       // 加载失败降级为空态（保持默认值），不向上抛
@@ -55,12 +58,34 @@ export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
       await idbPut('health', {
         height: height.value,
         plans: toRaw(plans.value),
+        // weeklyPlans 的嵌套数组/条目在「读取 → 展开 → 回写」链路里会残留 reactive Proxy
+        // （toRaw 只解最外层，内层 Proxy 会让 structuredClone 抛 DataCloneError → 保存静默失败）。
+        // 条目全是原始值，直接 JSON 深拷贝成纯对象再落库。
+        weeklyPlans: JSON.parse(JSON.stringify(weeklyPlans.value ?? {})),
         records: toRaw(records.value)
       })
       markDirty()
     } catch (e) {
       console.error('[workbenchHealth] saveHealth', e)
     }
+  }
+
+  /**
+   * 覆盖某周的运动/饮食周计划条目（整组替换，items 由面板侧组装）。
+   * 每次写入推进 plansUpdatedAt：同步时 weeklyPlans 整体取较新一侧（LWW），
+   * 避免条目级并集把「删掉的计划项」复活。
+   */
+  async function setWeeklyPlanItems(
+    weekKey: string,
+    kind: 'exercise' | 'diet',
+    items: HealthWeeklyPlanItem[]
+  ): Promise<void> {
+    const prev = weeklyPlans.value[weekKey] ?? { exercise: [], diet: [], updatedAt: '' }
+    weeklyPlans.value = {
+      ...weeklyPlans.value,
+      [weekKey]: { ...prev, [kind]: items, updatedAt: new Date().toISOString() }
+    }
+    await saveHealth()
   }
 
   async function setHeight(cm: number): Promise<void> {
@@ -131,11 +156,13 @@ export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
   return {
     height,
     plans,
+    weeklyPlans,
     records,
     loadHealth,
     saveHealth,
     setHeight,
     setPlan,
+    setWeeklyPlanItems,
     addRecord,
     updateRecord,
     deleteRecord

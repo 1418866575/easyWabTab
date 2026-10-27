@@ -885,7 +885,17 @@ function mergeHealth(l: HealthData | undefined, r: HealthData | undefined): Heal
     }
   }
   const height = l?.height ?? r?.height
-  return { height, plans, records }
+  // 周计划（运动/饮食）整体按 plansUpdatedAt LWW：条目级并集会把「删掉的计划项」复活
+  const lPlansAt = l?.plansUpdatedAt ?? ''
+  const rPlansAt = r?.plansUpdatedAt ?? ''
+  const takeLocalPlans = lPlansAt >= rPlansAt
+  return {
+    height,
+    plans,
+    records,
+    weeklyPlans: takeLocalPlans ? l?.weeklyPlans : r?.weeklyPlans,
+    plansUpdatedAt: takeLocalPlans ? lPlansAt : rPlansAt || lPlansAt
+  }
 }
 
 /**

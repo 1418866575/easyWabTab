@@ -592,7 +592,30 @@ export interface HealthData {
     sleep: SleepRecord[]
     weight: WeightRecord[]
   }
+  /** 周计划（运动/饮食）：键 = 该周周一日期 'YYYY-MM-DD'。整体按 plansUpdatedAt LWW 同步。 */
+  weeklyPlans?: HealthWeeklyPlans
+  /** weeklyPlans 最后一次修改时间（合并时整体取较新一侧的依据） */
+  plansUpdatedAt?: string
 }
+
+/** 周计划条目：运动（value=强度、done=已完成）与饮食（value=展示、kcal=求和用）共用同一形态 */
+export interface HealthWeeklyPlanItem {
+  id: string
+  day: number              // 1=周一 … 7=周日
+  rowKey: string           // 运动行：morning/evening；饮食行：breakfast/lunch/dinner
+  name: string
+  value?: string           // 展示文本：'45 min' / '380 kcal'
+  kcal?: number            // 饮食专用：热量数值（全天合计按此求和）
+  done?: boolean           // 运动专用：已完成
+}
+
+export interface HealthWeeklyPlanWeek {
+  exercise: HealthWeeklyPlanItem[]
+  diet: HealthWeeklyPlanItem[]
+  updatedAt: string
+}
+
+export type HealthWeeklyPlans = Record<string, HealthWeeklyPlanWeek>
 
 // ==================== 记账本 ====================
 

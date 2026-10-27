@@ -10,13 +10,116 @@ const PANEL_MAX_HEIGHT = '85vh'
 import { computed, onMounted, ref } from 'vue'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { injectHealthStore, type HealthStoreLike } from '@/composables/healthStoreContext'
-import { calcDailyAttainment } from '@/composables/healthCore'
+import WeeklyPlanBoard, { type WeeklyPlanCell, type WeeklyPlanRow } from './WeeklyPlanBoard.vue'
+import { calcDailyAttainment, mondayOfDate, weekDayKeys } from '@/composables/healthCore'
+import type { HealthWeeklyPlanItem } from '@/types'
 import { localToday } from '@/composables/todoCore'
 import { MEAL_TYPES, type MealType } from '@/types'
 import WorkbenchHealthReminders from './WorkbenchHealthReminders.vue'
 
 // store 来源可注入：默认成人端 store，学生端容器 provide 自己的 store 后自动改为学生数据（见 healthStoreContext）
 const store = (injectHealthStore() ?? useWorkbenchHealthStore()) as HealthStoreLike
+
+// ===== 本周饮食计划（早/午/晚 + 合计行，仅成人端 store 提供周计划能力时显示）=====
+const PLAN_ROWS: WeeklyPlanRow[] = [
+  { key: 'breakfast', label: '早餐', icon: 'sun' },
+  { key: 'lunch', label: '午餐', icon: 'bowl' },
+  { key: 'dinner', label: '晚餐', icon: 'moon' },
+  { key: 'total', label: '合计', icon: 'sum' }
+]
+const planWeekStart = ref(mondayOfDate(localToday()))
+const canPlan = computed(() => !!store.weeklyPlans && !!store.setWeeklyPlanItems)
+const planItems = computed<HealthWeeklyPlanItem[]>(() => store.weeklyPlans?.[planWeekStart.value]?.diet ?? [])
+const dailyKcalTarget = computed(() => store.plans.diet?.target)
+const planWeekLabel = computed(() => {
+  const keys = weekDayKeys(planWeekStart.value)
+  if (keys.length !== 7) return ''
+  const fmt = (k: string) => `${Number(k.slice(5, 7))}.${Number(k.slice(8, 10))}`
+  return `${keys[0].slice(0, 4)} 年 · ${fmt(keys[0])} – ${fmt(keys[6])}`
+})
+function dayKcal(day: number): number {
+  return planItems.value.filter(x => x.day === day).reduce((sum, x) => sum + (x.kcal ?? 0), 0)
+}
+const planStat = computed(() => {
+  const overDays = [1, 2, 3, 4, 5, 6, 7].filter(day => {
+    const t = dailyKcalTarget.value
+    return t !== undefined && dayKcal(day) > t
+  }).length
+  if (dailyKcalTarget.value === undefined) return `已安排 ${planItems.value.length} 餐`
+  return overDays > 0 ? `${overDays} 天超出目标` : '各日均未超目标'
+})
+const planStatTone = computed(() => (planStat.value.includes('超标') ? 'warning' : 'success') as 'warning' | 'success')
+const planCells = computed<Record<string, WeeklyPlanCell>>(() => {
+  const cells: Record<string, WeeklyPlanCell> = {}
+  const mealRows = PLAN_ROWS.filter(r => r.key !== 'total')
+  for (const row of mealRows) {
+    for (let day = 1; day <= 7; day++) {
+      const it = planItems.value.find(x => x.rowKey === row.key && x.day === day)
+      cells[`${row.key}:${day}`] = !it
+        ? { state: 'empty' }
+        : { name: it.name, sub: it.kcal !== undefined ? `${it.kcal} kcal` : it.value, subTone: 'warning', state: 'planned' }
+    }
+  }
+  const t = dailyKcalTarget.value
+  for (let day = 1; day <= 7; day++) {
+    const sum = dayKcal(day)
+    const hasAny = planItems.value.some(x => x.day === day)
+    const over = t !== undefined && sum > t
+    cells[`total:${day}`] = !hasAny
+      ? { state: 'empty' }
+      : {
+          name: `${sum} kcal`,
+          sub: over ? `超 ${sum - (t ?? 0)}` : '未超目标',
+          subTone: over ? 'warning' : 'success',
+          state: 'planned'
+        }
+  }
+  return cells
+})
+function onPlanNav(dir: number): void {
+  if (dir === 0) {
+    planWeekStart.value = mondayOfDate(todayStr)
+    return
+  }
+  const keys = weekDayKeys(planWeekStart.value)
+  const base = dir < 0 ? keys[0] : keys[6]
+  const [y, m, d] = base.split('-').map(Number)
+  const dt = new Date(y, m - 1, d + dir * 7)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  planWeekStart.value = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`
+}
+const planDialogOpen = ref(false)
+const planEditCell = ref<{ rowKey: string; day: number } | null>(null)
+const planHasExisting = ref(false)
+const planForm = ref({ name: '', kcal: '' })
+function onPlanCellClick(rowKey: string, day: number): void {
+  if (rowKey === 'total') return // 合计行只读
+  const existing = planItems.value.find(x => x.rowKey === rowKey && x.day === day)
+  planEditCell.value = { rowKey, day }
+  planHasExisting.value = !!existing
+  planForm.value = { name: existing?.name ?? '', kcal: existing?.kcal !== undefined ? String(existing.kcal) : '' }
+  planDialogOpen.value = true
+}
+/** 保存：名称留空 = 删除该格；热量可空 */
+async function savePlanItem(): Promise<void> {
+  const cell = planEditCell.value
+  if (!cell || !store.setWeeklyPlanItems) return
+  const name = planForm.value.name.trim()
+  const kcalNum = Number(planForm.value.kcal)
+  const kcal = planForm.value.kcal !== '' && Number.isFinite(kcalNum) ? Math.round(kcalNum) : undefined
+  const others = planItems.value.filter(x => !(x.rowKey === cell.rowKey && x.day === cell.day))
+  const items: HealthWeeklyPlanItem[] = name
+    ? [...others, { id: `wp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, day: cell.day, rowKey: cell.rowKey, name, kcal, value: kcal !== undefined ? `${kcal} kcal` : undefined }]
+    : others
+  await store.setWeeklyPlanItems(planWeekStart.value, 'diet', items)
+  planDialogOpen.value = false
+}
+async function deletePlanItem(): Promise<void> {
+  const cell = planEditCell.value
+  if (!cell || !store.setWeeklyPlanItems) return
+  await store.setWeeklyPlanItems(planWeekStart.value, 'diet', planItems.value.filter(x => !(x.rowKey === cell.rowKey && x.day === cell.day)))
+  planDialogOpen.value = false
+}
 
 // ===== 顶部目标卡 =====
 const todayStr = localToday()
@@ -200,6 +303,24 @@ onMounted(async () => {
       <div v-else class="stat-sub">尚未设定每日热量目标</div>
     </div>
 
+    <!-- 本周饮食计划（早/午/晚 + 合计） -->
+    <WeeklyPlanBoard
+      v-if="canPlan"
+      title="饮食周计划"
+      :week-start="planWeekStart"
+      :week-label="planWeekLabel"
+      :stat-text="planStat"
+      :stat-tone="planStatTone"
+      icon-bg="var(--color-warning-soft, #fef3c7)"
+      icon-color="var(--color-warning-hover, #b45309)"
+      :rows="PLAN_ROWS"
+      :cells="planCells"
+      hint="合计行自动按热量求和；点餐次单元格即可编辑"
+      data-testid="dt-plan-board"
+      @nav="onPlanNav"
+      @cell-click="onPlanCellClick"
+    />
+
     <!-- 定时提醒（只读小模块） -->
     <WorkbenchHealthReminders module="diet" />
     <!-- 空态 -->
@@ -291,6 +412,34 @@ onMounted(async () => {
             </div>
           </form>
       </BaseDialog>
+
+    <!-- 周计划单元格编辑弹框（合计行只读，不触发） -->
+    <BaseDialog
+      v-if="planDialogOpen"
+      title="编辑餐单"
+      width="420px"
+      data-testid="dt-plan-dialog"
+      @close="planDialogOpen = false"
+    >
+      <form class="dialog-body" @submit.prevent="savePlanItem">
+        <div class="form-group">
+          <label>餐品名称 *</label>
+          <el-input v-model="planForm.name" maxlength="30" placeholder="如：燕麦+鸡蛋" data-testid="dt-plan-name" />
+        </div>
+        <div class="form-group">
+          <label>热量（kcal，可选）</label>
+          <el-input v-model="planForm.kcal" maxlength="6" placeholder="如：380" data-testid="dt-plan-kcal" />
+        </div>
+        <div class="form-actions">
+          <el-button v-if="planHasExisting" native-type="button" size="small" class="btn-clear" data-testid="dt-plan-delete" @click="deletePlanItem">
+            删除
+          </el-button>
+          <span class="form-actions-spacer"></span>
+          <el-button size="small" data-testid="dt-plan-cancel" @click="planDialogOpen = false">取消</el-button>
+          <el-button type="primary" native-type="submit" size="small" data-testid="dt-plan-save">保存</el-button>
+        </div>
+      </form>
+    </BaseDialog>
 
     <!-- 新增/编辑记录弹框 -->
 <BaseDialog
