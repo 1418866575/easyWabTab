@@ -121,7 +121,8 @@ function styleFor(tag: string, el: HTMLElement): string {
       if (isCodeInPre) return 'background:none;padding:0;color:#333;font-family:Consolas,Menlo,monospace;font-size:14px;'
       return 'background-color:#f6f8fa;color:#c7254e;padding:2px 6px;border-radius:3px;font-family:Consolas,Menlo,monospace;font-size:14px;word-break:break-all;'
     case 'pre':
-      return 'background-color:#f6f8fa;padding:12px 16px;border-radius:6px;overflow-x:auto;margin:1em 0;font-size:14px;line-height:1.6;'
+      // 公众号会丢掉 overflow-x，长代码行会被直接裁掉 → 用 pre-wrap 自动折行（缩进仍保留）
+      return 'background-color:#f6f8fa;padding:12px 16px;border-radius:6px;margin:1em 0;font-size:13px;line-height:1.65;white-space:pre-wrap;word-wrap:break-word;word-break:break-all;tab-size:2;'
     case 'blockquote':
       return 'margin:1em 0;padding:8px 12px;border-left:4px solid #d9d9d9;background-color:#f8f8f8;color:#888;'
     case 'ul':
@@ -252,9 +253,71 @@ function flattenLists(root: HTMLElement): void {
   }
 }
 
-/** 微信正文统一处理入口：列表摊平 + 全标签内联样式（导出便于回归测试） */
+/**
+ * 表格安全化：把 <table> 摊平成「一行一张卡片」。
+ *
+ * 公众号对 table 的支持同样不可靠（列宽被压、合并单元格塌、宽表在手机上溢出裁切），
+ * 与其赌它渲染正确，不如转成移动端天然可读的卡片：
+ * - 每张卡片 = 一行；首列作为卡片标题（加粗）
+ * - 其余列按表头标注「表头：值」逐行展示，窄屏也不会挤
+ * - 保留单元格内部 HTML（行内 code / strong 等样式不丢）
+ * Markdown 表格必有表头行，故默认第一行为表头；无 thead 时用第一行当表头。
+ */
+function flattenTables(root: HTMLElement): void {
+  const doc = root.ownerDocument
+  const tables = Array.from(root.querySelectorAll('table'))
+
+  for (const table of tables) {
+    const rows = Array.from(table.querySelectorAll('tr')) as HTMLElement[]
+    if (rows.length === 0) {
+      table.remove()
+      continue
+    }
+    const headRow = (table.querySelector('thead tr') as HTMLElement | null) ?? rows[0]
+    const headCells = Array.from(headRow.children) as HTMLElement[]
+    const labels = headCells.map((c) => (c.textContent || '').trim())
+    const bodyRows = rows.filter((r) => r !== headRow)
+
+    const container = doc.createElement('section')
+    container.setAttribute('style', 'margin:1em 0;')
+
+    for (const row of bodyRows) {
+      const cells = Array.from(row.children) as HTMLElement[]
+      if (cells.length === 0) continue
+      const card = doc.createElement('section')
+      card.setAttribute(
+        'style',
+        'border:1px solid #eceff3;border-radius:6px;padding:10px 12px;margin:0.6em 0;background-color:#fafbfc;'
+      )
+      // 首列 = 卡片标题
+      const title = doc.createElement('section')
+      title.setAttribute('style', 'font-size:15px;font-weight:bold;color:#1f1f1f;line-height:1.5;margin-bottom:4px;')
+      title.innerHTML = (cells[0].innerHTML || '').trim() || '&nbsp;'
+      card.appendChild(title)
+      // 其余列 = 「表头：值」
+      for (let i = 1; i < cells.length; i++) {
+        const val = (cells[i].innerHTML || '').trim()
+        if (!val) continue
+        const label = labels[i] ?? ''
+        const line = doc.createElement('section')
+        line.setAttribute('style', 'font-size:14px;color:#3f3f3f;line-height:1.75;')
+        line.innerHTML = label
+          ? `<span style="color:#8a8f99;">${label}：</span>${val}`
+          : val
+        card.appendChild(line)
+      }
+      container.appendChild(card)
+    }
+
+    table.replaceWith(container)
+  }
+}
+
+/** 微信正文统一处理入口：列表摊平 + 表格卡片化 + 全标签内联样式（导出便于回归测试） */
 export function normalizeWechatBody(root: HTMLElement): void {
+  // 顺序有讲究：先摊平列表（表格若在列表项里会被提到顶层），再卡片化表格，最后统一内联样式
   flattenLists(root)
+  flattenTables(root)
   applyInlineStyles(root)
 }
 
