@@ -49,6 +49,29 @@ import {
 import { getPref, setPrefNow, isNavReadonly } from '@/composables/useNavPrefs'
 import { useToast } from '@/composables/useToast'
 
+/**
+ * 工具箱在导航列表里的地址。
+ * 这张卡片由 store 注入（不是用户数据），并在 filteredSites 里被钉在列表第一位，
+ * 因此也不允许作为拖拽的落点（否则交换 sort 会把它的 0 换给别的站点）。
+ */
+export const TOOLBOX_URL = '/toolbox'
+/** 站内入口卡的识别标记（由 store 注入，不是用户数据） */
+export const MODULE_SITE_TAG = '站内模块'
+/** 站内入口卡的列表顺序：工具箱 → 博客前台 → 图书馆（永远排在任何普通站点之前） */
+export const MODULE_SITE_ORDER = [TOOLBOX_URL, '/blog', '/books']
+
+/** 是否为站内入口卡（工具箱 / 博客前台 / 图书馆） */
+export function isModuleSite(site: { tags?: string[] }): boolean {
+  return (site.tags || []).includes(MODULE_SITE_TAG)
+}
+
+/** 排序权重：入口卡按 MODULE_SITE_ORDER 归位，非入口卡统一排在所有入口卡之后 */
+function moduleRank(site: { url: string; tags?: string[] }): number {
+  if (!isModuleSite(site)) return MODULE_SITE_ORDER.length
+  const i = MODULE_SITE_ORDER.indexOf(site.url)
+  return i === -1 ? MODULE_SITE_ORDER.length : i
+}
+
 export const useSitesStore = defineStore('sites', () => {
   const sites = ref<Site[]>([])
   const searchQuery = ref('')
@@ -311,12 +334,12 @@ export const useSitesStore = defineStore('sites', () => {
         })
     }
 
-    // 按 sort 字段降序排序（点击频率高的在前）
-    return filtered.sort((a, b) => {
-      const sortA = a.sort ?? 1
-      const sortB = b.sort ?? 1
-      return sortB - sortA
-    })
+    // 排序：站内入口卡（工具箱 → 博客前台 → 图书馆）永远在最前，其余按 sort 降序（点击频率高的在前）。
+    // 入口卡不能靠 sort 值抬高：拖拽 swapSort、点击 incrementClick 都会改 sort，早晚被换走。
+    filtered.sort(
+      (a, b) => moduleRank(a) - moduleRank(b) || (b.sort ?? 1) - (a.sort ?? 1)
+    )
+    return filtered
   })
 
   // 按分类分组的网站
@@ -371,21 +394,51 @@ export const useSitesStore = defineStore('sites', () => {
    * - 用「url + tag=站内模块」双条件识别自己注入的项：刷新时先摘后加不会重复，
    *   也不会误删用户自己手工添加的 /blog、/books 站点。
    */
-  const MODULE_URLS = ['/blog', '/books']
-  const MODULE_TAG = '站内模块'
+  const MODULE_URLS = MODULE_SITE_ORDER
+  const MODULE_TAG = MODULE_SITE_TAG
   /** 固定 createdAt，避免每次注入产生不同时间戳（不参与排序） */
   const MODULE_SINCE = '2026-10-26T00:00:00.000Z'
   /**
-   * 站内模块入口的默认图标：与迁移前工作台面板使用的内置 `document` 图标同一条 SVG path，
-   * 保证图标样式一致。用 data URL 内联而非放进 public/icons，避免被图标库扫描成预置图标。
+   * 站内入口卡的默认图标：彩色渐变圆角块 + 白色线条图形（lucide 风格）。
+   * 三张卡共用这个工厂，保证风格一致、与列表里各家彩色 favicon 视觉重量相当。
+   * 必须用 data URL 内联（不能塞 emoji：SiteCard 渲染的是 <img :src>）。
    */
-  const MODULE_DOC_ICON =
+  const moduleIcon = (from: string, to: string, body: string): string =>
     'data:image/svg+xml;utf8,' +
     encodeURIComponent(
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#8a8f98">' +
-        '<path d="M6,2A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2H6M6,4H13V9H18V20H6V4M8,12V14H16V12H8M8,16V18H13V16H8Z"/>' +
-        '</svg>'
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#fff" ' +
+        'stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' +
+        '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
+        `<stop offset="0" stop-color="${from}"/><stop offset="1" stop-color="${to}"/>` +
+        '</linearGradient></defs>' +
+        '<rect width="24" height="24" rx="6" fill="url(#g)" stroke="none"/>' +
+        '<g transform="translate(2.65 2.65) scale(0.78)">' +
+        body +
+        '</g></svg>'
     )
+
+  /** 工具箱：橙色 + 工具箱 */
+  const MODULE_TOOLBOX_ICON = moduleIcon(
+    '#FFB27A',
+    '#F0653A',
+    '<path d="M16 12v4"/><path d="M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>' +
+      '<path d="M18 6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"/>' +
+      '<path d="M8 12v4"/>'
+  )
+  /** 博客前台：蓝色 + 文章/报纸 */
+  const MODULE_BLOG_ICON = moduleIcon(
+    '#8AA6FF',
+    '#4C6EF5',
+    '<path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/>' +
+      '<path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/>'
+  )
+  /** 图书馆：绿色 + 摊开的书 */
+  const MODULE_BOOKS_ICON = moduleIcon(
+    '#6EE7B7',
+    '#10B981',
+    '<path d="M12 7v14"/>' +
+      '<path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>'
+  )
 
   /** 依据当前设置生成应当出现在导航列表里的站内模块入口 */
   function buildModuleSites(): Site[] {
@@ -398,6 +451,18 @@ export const useSitesStore = defineStore('sites', () => {
       return []
     }
     const out: Site[] = []
+    if (settings.toolboxButtonVisible !== false) {
+      out.push({
+        name: settings.toolboxButtonDisplayName || '工具箱',
+        url: TOOLBOX_URL,
+        description: '站内工具箱：各类在线小工具集合',
+        category: 'other',
+        tags: [MODULE_TAG],
+        icon: settings.toolboxButtonIcon || MODULE_TOOLBOX_ICON,
+        sort: 0,
+        createdAt: MODULE_SINCE
+      })
+    }
     if (settings.blogFrontPageVisible !== false) {
       out.push({
         name: settings.blogFrontPageDisplayName || '博客前台',
@@ -405,7 +470,7 @@ export const useSitesStore = defineStore('sites', () => {
         description: '站内博客阅读页：浏览已发布的文章',
         category: 'other',
         tags: [MODULE_TAG],
-        icon: settings.blogFrontPageIcon || MODULE_DOC_ICON,
+        icon: settings.blogFrontPageIcon || MODULE_BLOG_ICON,
         sort: 0,
         createdAt: MODULE_SINCE
       })
@@ -417,7 +482,7 @@ export const useSitesStore = defineStore('sites', () => {
         description: '站内个人图书馆：书架检索与站内阅读',
         category: 'other',
         tags: [MODULE_TAG],
-        icon: settings.booksPageIcon || MODULE_DOC_ICON,
+        icon: settings.booksPageIcon || MODULE_BOOKS_ICON,
         sort: 0,
         createdAt: MODULE_SINCE
       })
@@ -485,11 +550,13 @@ export const useSitesStore = defineStore('sites', () => {
       // 转换为数组
       sites.value = Array.from(sitesMap.values())
 
+      // 站内模块入口（工具箱 / 博客前台 / 图书馆）：原在左上角工作台面板，现作为导航列表里的入口卡片。
+      // 必须放在 await loadGames() 之前——否则列表会先渲染出内置站点、再插入卡片，
+      // 首屏能看到列表跳动（工具箱卡「永远第一」的位置也会短暂不成立）。
+      refreshModuleEntries()
+
       // 加载游戏清单
       await loadGames()
-
-      // 站内模块入口（博客前台 / 图书馆）：原在左上角工作台面板，现作为导航列表里的入口卡片
-      refreshModuleEntries()
 
       // 应用保存的断链检测结果
       applySavedCheckResults()
@@ -684,12 +751,15 @@ export const useSitesStore = defineStore('sites', () => {
     document.addEventListener('visibilitychange', onVisibilityChange)
   }
 
-  // 设置里改了「博客前台 / 图书馆」的名称、图标或可见性 → 立刻反映到导航列表，无需刷新页面。
+  // 设置里改了「工具箱 / 博客前台 / 图书馆」的名称、图标或可见性 → 立刻反映到导航列表，无需刷新页面。
   // 放在这里而不是 loadSites 内：设置是异步初始化的，加载完成后 watch 会自动补一次对齐。
   try {
     const settingsStore = useAppSettingsStore()
     watch(
       () => [
+        settingsStore.toolboxButtonDisplayName,
+        settingsStore.toolboxButtonIcon,
+        settingsStore.toolboxButtonVisible,
         settingsStore.blogFrontPageDisplayName,
         settingsStore.blogFrontPageIcon,
         settingsStore.blogFrontPageVisible,

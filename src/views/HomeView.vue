@@ -27,7 +27,7 @@ const SearchEngineManager = defineAsyncComponent(() => import('../components/Sea
 const HelpModal = defineAsyncComponent(() => import('../components/HelpModal.vue'))
 const CountdownModal = defineAsyncComponent(() => import('@/components/CountdownModal.vue'))
 const AppSettingsDialog = defineAsyncComponent(() => import('../components/AppSettingsDialog.vue'))
-import { useSitesStore } from '../stores/sites'
+import { useSitesStore, isModuleSite } from '../stores/sites'
 import { useCategoriesStore } from '../stores/categories'
 import { useThemeStore } from '../stores/theme'
 import { useAppSettingsStore } from '../stores/settings'
@@ -125,12 +125,17 @@ async function handleSyncNowClick(): Promise<void> {
 const dragSourceUrl = ref<string | null>(null)
 const dragOverUrl = ref<string | null>(null)
 
+/** 站内入口卡（工具箱 / 博客前台 / 图书馆）固定在列表最前：既不发起拖拽，也不作为落点 */
+const isPinnedSite = (site: Site) => isModuleSite(site)
+
 const handleDragStart = (site: Site) => {
+  if (isPinnedSite(site)) return
   dragSourceUrl.value = site.url
 }
 
 const handleDragOver = (site: Site, event: DragEvent) => {
   event.preventDefault()
+  if (isPinnedSite(site)) return
   if (dragSourceUrl.value && dragSourceUrl.value !== site.url) {
     dragOverUrl.value = site.url
   }
@@ -141,7 +146,7 @@ const handleDragLeave = () => {
 }
 
 const handleDrop = (site: Site) => {
-  if (dragSourceUrl.value && dragSourceUrl.value !== site.url) {
+  if (!isPinnedSite(site) && dragSourceUrl.value && dragSourceUrl.value !== site.url) {
     store.swapSort(dragSourceUrl.value, site.url)
   }
   dragSourceUrl.value = null
@@ -604,7 +609,7 @@ onUnmounted(() => {
           :readonly="false"
           :is-drag-over="dragOverUrl === site.url"
           :is-dragging="dragSourceUrl === site.url"
-          draggable="true"
+          :draggable="!isPinnedSite(site)"
           @edit="handleEdit"
           @delete="handleDelete"
           @unmark="handleUnmark"

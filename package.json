@@ -39,6 +39,7 @@
     "test:smart": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-smart-core.ts",
     "test:smart-settings": "node --experimental-strip-types scripts/test-smart-settings-core.ts",
     "test:loan-extra": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-loan-extra-core.ts",
+    "test:deposit": "node --experimental-strip-types scripts/test-deposit-core.ts",
     "test:toolbox": "node --experimental-strip-types scripts/test-toolbox-core.ts",
     "test:nav-guard": "node --experimental-strip-types scripts/test-nav-guard.ts",
     "test:nav-meta": "node --experimental-strip-types scripts/test-nav-meta.ts",

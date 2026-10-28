@@ -60,10 +60,10 @@ interface Entry {
   openInNewTab?: boolean
 }
 
-// 顺序：导航站 → 教师台 → 个人工作台 → 销售记账 → 学生台 → 工具箱 → 智能工作台 → 博客后台。
-// 工具箱不再有"导航站页隐藏"的特殊规则——它现在是面板里的一项，独立按钮已移除。
-// 博客后台名称/图标/可见性走 blogAdminPage* 三件套（设置入口在「个性化 → 主题」工具箱下方）。
-// 「博客前台 / 个人图书馆」已迁到导航站列表，不再出现在本面板。
+// 顺序：导航站 → 教师台 → 个人工作台 → 销售记账 → 学生台 → 智能工作台 → 博客后台。
+// 博客后台名称/图标/可见性走 blogAdminPage* 三件套（设置入口在「个性化 → 主题」）。
+// 「工具箱 / 博客前台 / 个人图书馆」均已迁到导航站列表的站内入口卡片，不再出现在本面板
+// （工具箱固定在列表第一位，见 stores/sites.ts 的 TOOLBOX_URL）。
 const allEntries = computed<Entry[]>(() => [
   {
     key: 'nav',
@@ -109,15 +109,6 @@ const allEntries = computed<Entry[]>(() => [
     builtin: 'notes',
     kw: '学生 student',
     visible: store.studentPageVisible !== false
-  },
-  {
-    key: 'toolbox',
-    path: '/toolbox',
-    name: store.toolboxButtonDisplayName,
-    icon: store.toolboxButtonIcon,
-    builtin: 'toolbox',
-    kw: '工具箱 toolbox 工具',
-    visible: store.toolboxButtonVisible !== false
   },
   {
     key: 'smart',

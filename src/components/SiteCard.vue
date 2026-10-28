@@ -153,6 +153,8 @@ const handleIconError = (event: Event) => {
 const handleClick = () => {
   // 记录点击次数（使用频率排序）
   sitesStore.incrementClick(props.site.url)
+  // 一律新标签打开：站内入口卡（/toolbox /blog /books）同样开新标签，
+  // 保留当前导航站页面的筛选与滚动位置，不需要用户回退。
   window.open(props.site.url, '_blank')
 }
 </script>
