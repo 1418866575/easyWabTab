@@ -334,6 +334,70 @@ async function ensureCloudConfigured(page) {
   await page.waitForTimeout(500)
 }
 
+/**
+ * 凭证保护：本地缺公众号凭证时，从云端 blog.json 补回来。
+ *
+ * 为什么需要：mergeBlogEnvelope 里 `wechat: remoteNewer ? r.wechat : l.wechat`，
+ * 按整包 updatedAt 取较新一侧。我们导入文章后本地 updatedAt 变成"现在"，
+ * 若此时本地 wechat 为空、随后又整包推送，就会把云端的 AppID/AppSecret 反向抹掉。
+ * 这里只在「本地为空、云端有」时补齐，绝不覆盖已有值。
+ */
+async function ensureWechatCreds(page) {
+  const local = await readBlog(page)
+  if (local?.wechat?.appId) return true
+  log('本地无公众号凭证')
+  const remote = await readRemoteBlog()
+  if (!remote.ok || !remote.wechat?.appId) {
+    log('  云端也没有公众号凭证 —— 发送草稿箱将跳过（需先在博客设置里配一次）')
+    return false
+  }
+  const patched = await page.evaluate(
+    (wx) =>
+      new Promise((resolve) => {
+        const rq = indexedDB.open('easy-web-tab')
+        rq.onerror = () => resolve({ ok: false })
+        rq.onsuccess = () => {
+          const db = rq.result
+          const tx = db.transaction('blog', 'readwrite')
+          const os2 = tx.objectStore('blog')
+          const g = os2.getAll()
+          g.onsuccess = () => {
+            const cur = g.result && g.result[0]
+            if (!cur) {
+              db.close()
+              resolve({ ok: false })
+              return
+            }
+            const next = { ...cur, wechat: wx }
+            const p = os2.put(next, 'items')
+            p.onsuccess = () => {
+              db.close()
+              resolve({ ok: true })
+            }
+            p.onerror = () => {
+              db.close()
+              resolve({ ok: false })
+            }
+          }
+          g.onerror = () => {
+            db.close()
+            resolve({ ok: false })
+          }
+        }
+      }),
+    remote.wechat
+  )
+  if (!patched.ok) {
+    log('  补齐凭证失败（写入被拒）')
+    return false
+  }
+  log(`  已从云端补回凭证（appId ${String(remote.wechat.appId).slice(0, 6)}****），刷新页面`)
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForSelector('text=选文件导入', { timeout: 40000 })
+  await page.waitForTimeout(1500)
+  return true
+}
+
 /** 直接读云端 blog.json（HTTP Basic，走 DAV 的用户名子目录：<base>/<user>/easy-web-tab/blog.json） */
 async function readRemoteBlog() {
   try {
@@ -353,6 +417,7 @@ async function readRemoteBlog() {
       active: articles.filter((a) => !a.deletedAt && !a.purgedAt).length,
       images: (blog.images || []).length,
       pushedAt: env.pushedAt || 0,
+      wechat: blog.wechat || null,
       articles
     }
   } catch (e) {
@@ -409,6 +474,101 @@ async function pushLocalViaSettings(page) {
   if (/失败|错误/i.test(t)) throw new Error(`推送本地失败：${t}`)
 }
 
+/**
+ * 第四步：把这篇发到微信公众号草稿箱
+ *
+ * 入口在**文章编辑器**里，不在列表：编辑器工具条 `blog-editor-publish-wechat-top`。
+ * 结果三态：
+ *   - 成功       → `blog-editor-wechat-ok`（✓ 已发布到公众号草稿箱）
+ *   - 未配置凭证 → wechat.notConfigured 分支会**自动打开博客设置的「微信公众号」页**（AppID/AppSecret 缺失）
+ *   - 其它失败   → `blog-editor-wechat-error`
+ *
+ * 防重复：发草稿会在公众号后台生成一条草稿，重跑同一天会重复生成。
+ * 故用 D:\信贷晨读\.wechat-sent.json 记录"这天已经发过"，有记录直接跳过。
+ */
+async function sendToWechatDraft(page, title) {
+  const ledgerPath = path.join(DIR, '.wechat-sent.json')
+  let ledger = {}
+  try {
+    ledger = JSON.parse(fs.readFileSync(ledgerPath, 'utf8'))
+  } catch {
+    ledger = {}
+  }
+  if (ledger[DATE]) {
+    log(`公众号草稿：${DATE} 已发过（${ledger[DATE].at}），跳过以免重复建草稿`)
+    return { ok: true, skipped: true }
+  }
+
+  // 凭证自检：没配就直接说清楚，别让脚本去点一个必然失败的按钮
+  const blog = await readBlog(page)
+  const wx = blog?.wechat
+  if (!wx || !wx.appId || !wx.appSecret) {
+    log('公众号草稿：未配置 AppID / AppSecret（博客设置 → 微信公众号），跳过发送')
+    return { ok: false, reason: '未配置公众号凭证' }
+  }
+  log(`公众号草稿：凭证已配置（appId ${String(wx.appId).slice(0, 6)}****），开始发送…`)
+
+  await page.goto(SITE, { waitUntil: 'domcontentloaded', timeout: 60000 })
+  await page.waitForSelector('text=选文件导入', { timeout: 40000 })
+  await page.waitForTimeout(1500)
+
+  // 打开该文章（列表里点标题进编辑器）
+  const link = page.getByText(title, { exact: true }).first()
+  await link.waitFor({ state: 'visible', timeout: 20000 })
+  await link.click()
+  const pubBtn = page.locator('[data-testid="blog-editor-publish-wechat-top"]').first()
+  await pubBtn.waitFor({ state: 'visible', timeout: 30000 })
+  log('  已进入编辑器，点击「发送公众号草稿箱」…')
+  await clearToasts(page)
+  await pubBtn.click()
+
+  // 三态收敛：成功 / 报错 / 弹出了凭证设置（未配置）
+  const deadline = Date.now() + 180000
+  let outcome = ''
+  while (Date.now() < deadline) {
+    if (await page.locator('[data-testid="blog-editor-wechat-ok"]').first().isVisible().catch(() => false)) {
+      outcome = 'ok'
+      break
+    }
+    const errEl = page.locator('[data-testid="blog-editor-wechat-error"]').first()
+    if (await errEl.isVisible().catch(() => false)) {
+      outcome = 'error:' + ((await errEl.textContent()) || '').trim()
+      break
+    }
+    // 未配置凭证时会打开博客设置里的「微信公众号」面板
+    const wxPanel = page.locator('text=微信公众号').first()
+    if (await wxPanel.isVisible().catch(() => false)) {
+      const active = await page.locator('text=AppSecret').first().isVisible().catch(() => false)
+      if (active) {
+        outcome = 'nocred'
+        break
+      }
+    }
+    await page.waitForTimeout(500)
+  }
+
+  const toastTxt = await readToast(page, 5000)
+  if (outcome === 'ok') {
+    log(`  发送成功${toastTxt ? `：${toastTxt}` : ''}`)
+    ledger[DATE] = { at: new Date().toISOString(), title }
+    try {
+      fs.writeFileSync(ledgerPath, JSON.stringify(ledger, null, 2), 'utf8')
+    } catch { /* 记账失败不影响主流程 */ }
+    return { ok: true }
+  }
+  if (outcome === 'nocred') {
+    log('  发送中止：未配置公众号凭证（已自动打开博客设置 → 微信公众号）')
+    return { ok: false, reason: '未配置公众号凭证' }
+  }
+  if (outcome.startsWith('error:')) {
+    const msg = outcome.slice(6)
+    log('  发送失败：', msg)
+    return { ok: false, reason: msg }
+  }
+  log('  发送结果未知（超时未出现成功/失败标记）', toastTxt ? `toast=${toastTxt}` : '')
+  return { ok: false, reason: '发送结果未知（超时）' }
+}
+
 // ---------------------------------------------------------------------------
 const files = pickTodayFiles()
 log(`目标日期 = ${DATE}`)
@@ -446,6 +606,9 @@ try {
     await syncOnce(page, '① 先云同步（拉远端）', 'pullUnlessBlog')
     const afterPull = await readBlog(page)
     log(`拉取后本地：文章 ${afterPull?.articles?.length ?? 0}，图 ${afterPull?.images?.length ?? 0}`)
+
+    // 凭证保护：避免整包推送时把云端 AppID/AppSecret 抹掉
+    await ensureWechatCreds(page)
 
     // ---- 步骤 2：只导入当天文件 ----
     const beforeImport = new Set((afterPull?.articles ?? []).map((a) => a.id))
@@ -485,6 +648,19 @@ try {
       }
     }
 
+
+    // ---- 步骤 4：发到公众号草稿箱 ----
+    // 标题以 md 的一级标题为准（重跑时列表里可能没有"新增"，不能用 added[0] 判标题）
+    const mdTitle = (() => {
+      const raw = fs.readFileSync(files.mdPath, 'utf8')
+      const m = /^#\s+(.+)$/m.exec(raw)
+      return (m ? m[1] : '').trim()
+    })()
+    log(`公众号草稿目标标题：${mdTitle || '(未在 md 中找到一级标题)'}`)
+    if (mdTitle) {
+      const sent = await sendToWechatDraft(page, mdTitle)
+      if (!sent.ok) log(`公众号草稿未完成：${sent.reason}`)
+    }
 
     const shot = path.join(os.tmpdir(), 'import-today-result.png')
     await page.screenshot({ path: shot })
