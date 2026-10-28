@@ -29,6 +29,8 @@ const getArg = (k, d) => {
 }
 const DIR = getArg('--dir', 'D:\\信贷晨读')
 const SETUP_ONLY = argv.includes('--setup-only')
+/** 只导入博客、不发公众号草稿箱（供"写文章"类技能使用，发布动作留给人工） */
+const NO_WECHAT = argv.includes('--no-wechat')
 const HEADLESS = !argv.includes('--head')
 const SITE = 'https://www.codehelp.com.cn/blog/admin'
 const SITE_ORIGIN = 'https://www.codehelp.com.cn'
@@ -40,6 +42,13 @@ const DAV_PASS = 'sifujiang'
 // 可选：一次性写入公众号凭证（写进 blog store，随后随流水线推送云端）
 const WX_APPID = getArg('--wechat-appid', '')
 const WX_SECRET = getArg('--wechat-secret', '')
+
+/**
+ * 可选：指定文章栏目（如 "随笔"）。
+ * 不给则沿用博客导入的默认栏目「信贷晨读」——定时任务走的就是这条路。
+ * 通用写作场景必须显式传，否则科技/行业类文章会被塞进信贷专栏。
+ */
+const CATEGORY_ARG = getArg('--category', '').trim()
 
 // 持久化配置目录：装的是「有云同步配置的浏览器」，不是设计成果，放 LocalAppData
 const PROFILE = path.join(os.homedir(), 'AppData', 'Local', 'ewt-blog-agent-profile')
@@ -59,14 +68,46 @@ function todayStr() {
   const d = new Date()
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
-const DATE = getArg('--date', todayStr())
+const FILE_ARG = getArg('--file', '')
+const COVER_ARG = getArg('--cover', '')
+let DATE = getArg('--date', todayStr())
+// 显式给了 --file 时，日期优先取文件名前缀（同一天可能有多篇，日期不能只靠"今天"）
+if (FILE_ARG && !argv.includes('--date')) {
+  const m = /^(\d{4}-\d{2}-\d{2})/.exec(path.basename(FILE_ARG))
+  if (m) DATE = m[1]
+}
 
-/** 定位当天要导入的两个文件：<date>-*.md 与 images/<date>-cover.png */
+/**
+ * 定位要导入的两个文件。
+ *
+ * 两种模式：
+ *   1) 默认（专栏用）：取 <dir>/<DATE>-*.md + <dir>/images/<DATE>-cover.png，同日多篇直接报错
+ *      —— 专栏一天一篇，多篇说明命名撞了，应当人工确认。
+ *   2) 显式 --file / --cover（写文章类技能用）：允许同一天有多篇不同 slug 的文章。
+ *      封面依次尝试：--cover → images/<DATE>-cover.png → images/<md 同名>-cover.png
+ */
 function pickTodayFiles() {
+  if (FILE_ARG) {
+    const mdPath = path.resolve(FILE_ARG)
+    if (!fs.existsSync(mdPath)) throw new Error(`--file 指定的文件不存在：${mdPath}`)
+    const base = path.basename(mdPath).replace(/\.md$/i, '')
+    const imgDir = path.join(path.dirname(mdPath), 'images')
+    const candidates = [
+      COVER_ARG ? path.resolve(COVER_ARG) : '',
+      path.join(imgDir, `${DATE}-cover.png`),
+      path.join(imgDir, `${base}-cover.png`)
+    ].filter(Boolean)
+    const coverPath = candidates.find((p) => fs.existsSync(p))
+    if (!coverPath) {
+      throw new Error(`找不到封面。已尝试：\n  ${candidates.join('\n  ')}\n（封面必须与 md 一起导入，否则文章无封面）`)
+    }
+    return { mdPath, coverPath, title: base }
+  }
+
   if (!fs.existsSync(DIR)) throw new Error(`目录不存在：${DIR}`)
   const mds = fs.readdirSync(DIR).filter((f) => f.startsWith(DATE) && f.toLowerCase().endsWith('.md'))
   if (mds.length === 0) throw new Error(`${DIR} 下没有 ${DATE} 开头的 .md`)
-  if (mds.length > 1) throw new Error(`${DATE} 匹配到多篇：${mds.join(', ')}`)
+  if (mds.length > 1) throw new Error(`${DATE} 匹配到多篇：${mds.join(', ')}（请用 --file 指定具体一篇）`)
   const mdPath = path.join(DIR, mds[0])
 
   const imgDir = path.join(DIR, 'images')
@@ -76,6 +117,17 @@ function pickTodayFiles() {
     throw new Error(`缺少封面：${coverPath}（封面必须与 md 一起导入，否则文章无封面）`)
   }
   return { mdPath, coverPath, title: mds[0] }
+}
+
+/** 取 md 的一级标题——博客用它作为文章标题，也是云端复核的依据 */
+function readMdTitle(mdPath) {
+  try {
+    const raw = fs.readFileSync(mdPath, 'utf8')
+    const m = /^#\s+(.+)$/m.exec(raw)
+    return (m ? m[1] : '').trim()
+  } catch {
+    return ''
+  }
 }
 
 const log = (...a) => console.log('[import]', ...a)
@@ -150,6 +202,21 @@ async function clearToasts(page) {
   await page.evaluate(() => {
     document.querySelectorAll('.toast-container .toast').forEach((n) => n.remove())
   })
+}
+
+/**
+ * 关掉首页可能自动弹出的「使用帮助」引导层。
+ * 它有 .bd-overlay 遮罩，不关掉会拦掉所有点击（表现为"点了没反应"或超时）。
+ */
+async function dismissHelpOverlay(page) {
+  for (const sel of ['button:has-text("知道了")', '.help-dialog .close-btn']) {
+    const el = page.locator(sel).first()
+    if (await el.isVisible().catch(() => false)) {
+      await el.click().catch(() => {})
+      await page.waitForTimeout(400)
+    }
+  }
+  await page.waitForTimeout(300)
 }
 
 /**
@@ -432,6 +499,7 @@ async function readRemoteBlog() {
       images: (blog.images || []).length,
       pushedAt: env.pushedAt || 0,
       wechat: blog.wechat || null,
+      categories: blog.categories || [],
       articles
     }
   } catch (e) {
@@ -486,6 +554,84 @@ async function pushLocalViaSettings(page) {
   await page.keyboard.press('Escape')
   await page.waitForTimeout(600)
   if (/失败|错误/i.test(t)) throw new Error(`推送本地失败：${t}`)
+}
+
+/**
+ * 栏目前置校验：确认博客里已经存在这个分类。
+ *
+ * 为什么先校验而不自动新建：新建栏目是可感知的内容变更，不该由脚本默默做掉。
+ * 缺失时把现有栏目列出来，由人决定是改名还是新建。
+ * 必须在**导入之前**调用，避免"文章进去了但栏目不对"的半成品状态。
+ */
+async function ensureCategoryExists(page, name) {
+  const blog = await readBlog(page)
+  const cats = (blog?.categories ?? []).map((c) => ({ id: c.id, name: String(c.name ?? '').trim() }))
+  const hit = cats.find((c) => c.name === name)
+  if (hit) {
+    log(`目标栏目：「${name}」(${hit.id})`)
+    return hit
+  }
+  const names = cats.map((c) => `「${c.name}」`).join('、') || '(无任何分类)'
+  throw new Error(`博客里没有栏目「${name}」。现有栏目：${names}。请先在「博客 → 分类」里新建，或换一个名字再跑`)
+}
+
+/**
+ * 把已导入的文章挂到指定栏目。
+ *
+ * 走真实编辑器 UI（进文章 → 设置面板里选分类 → 保存草稿），不直接改 IndexedDB：
+ * 分类是 store 里的引用关系，写坏了列表页会渲染异常。
+ * 导入入口把栏目写死成「信贷晨读」（BlogPosts.vue 里 `categoryName: '信贷晨读'`），
+ * 所以非信贷题材必须靠这一步纠正。
+ */
+async function setArticleCategory(page, title, categoryName) {
+  await page.goto(SITE, { waitUntil: 'domcontentloaded', timeout: 60000 })
+  await page.waitForSelector('text=选文件导入', { timeout: 40000 })
+  await page.waitForTimeout(1500)
+  await dismissHelpOverlay(page)
+
+  const before = await readBlog(page)
+  const beforeArt = (before?.articles ?? []).find((a) => String(a.title) === title)
+  if (!beforeArt) throw new Error(`列表里找不到文章「${title}」`)
+  // 保存会把编辑器表单整体写回文章，所以进编辑器前先记住正文长度，保存后核对没被写空
+  const beforeLen = String(beforeArt.contentMarkdown ?? '').length
+  if (beforeLen < 50) throw new Error(`文章正文异常（仅 ${beforeLen} 字），不敢继续改栏目`)
+
+  const link = page.getByText(title, { exact: true }).first()
+  await link.waitFor({ state: 'visible', timeout: 20000 })
+  await link.click()
+
+  // 编辑器必须先把这篇文章加载进表单，否则保存会把空表单写回去
+  const titleInput = page.locator('[data-testid="blog-editor-title"]').first()
+  await titleInput.waitFor({ state: 'visible', timeout: 30000 })
+  const loadedTitle = ((await titleInput.inputValue().catch(() => '')) || '').trim()
+  if (loadedTitle !== title) throw new Error(`编辑器标题不符（期望「${title}」，实得「${loadedTitle}」），中止以免写坏文章`)
+
+  const sel = page.locator('[data-testid="blog-editor-category"]').first()
+  if (!(await sel.isVisible().catch(() => false))) {
+    // 设置面板默认可能是收起的
+    const toggle = page.locator('[data-testid="blog-editor-side-toggle"]').first()
+    if (await toggle.isVisible().catch(() => false)) await toggle.click()
+    await sel.waitFor({ state: 'visible', timeout: 20000 })
+  }
+  await sel.selectOption({ label: categoryName })
+  log(`  栏目已选为「${categoryName}」，保存…`)
+
+  await clearToasts(page)
+  const saveBtn = page.locator('[data-testid="blog-editor-save-top"]').first()
+  await saveBtn.waitFor({ state: 'visible', timeout: 20000 })
+  await saveBtn.click()
+  const t = await readToast(page, 30000)
+  log(`  保存提示：${t || '(无提示)'}`)
+  if (/失败|错误/i.test(t)) throw new Error(`设置栏目后保存失败：${t}`)
+
+  // 保存后自检：正文没被写空、标题没变
+  const after = await readBlog(page)
+  const afterArt = (after?.articles ?? []).find((a) => String(a.title) === title)
+  if (!afterArt) throw new Error(`保存后文章「${title}」消失了`)
+  const afterLen = String(afterArt.contentMarkdown ?? '').length
+  if (afterLen < beforeLen * 0.8) {
+    throw new Error(`保存后正文疑似被截断（${beforeLen} → ${afterLen} 字），请到编辑器人工确认`)
+  }
 }
 
 /**
@@ -631,6 +777,10 @@ try {
     }
     await ensureWechatCreds(page)
 
+    // ---- 栏目前置校验（缺了就当场失败，别等文章进去了才发现栏目不对）----
+    const mdTitle = readMdTitle(files.mdPath)
+    if (CATEGORY_ARG) await ensureCategoryExists(page, CATEGORY_ARG)
+
     // ---- 步骤 2：只导入当天文件 ----
     const beforeImport = new Set((afterPull?.articles ?? []).map((a) => a.id))
     await clearToasts(page)
@@ -650,37 +800,56 @@ try {
       log('没有新增（可能该篇已在库中，按标题去重跳过）')
     }
 
+    // ---- 步骤 2.5：纠正栏目（导入入口默认写死「信贷晨读」）----
+    if (CATEGORY_ARG) {
+      if (!mdTitle) throw new Error('md 里没有一级标题，无法定位文章来设置栏目')
+      await setArticleCategory(page, mdTitle, CATEGORY_ARG)
+      const check = await readBlog(page)
+      const art = (check?.articles ?? []).find((a) => String(a.title) === mdTitle)
+      const cat = (check?.categories ?? []).find((c) => c.id === art?.categoryId)
+      if (!art) throw new Error(`设置栏目后找不到文章「${mdTitle}」`)
+      if (String(cat?.name ?? '').trim() !== CATEGORY_ARG) {
+        throw new Error(`栏目未生效：期望「${CATEGORY_ARG}」，实际「${cat?.name ?? '(未分类)'}」`)
+      }
+      log(`  栏目已生效：「${cat.name}」`)
+    }
+
     // ---- 步骤 3：以本地为准推云端 ----
     await pushLocalViaSettings(page)
 
     // ---- 复核：直接读云端 blog.json，确认文章真的上去了 ----
-    const verifyTitle = added[0]?.title || ''
+    // 标题以 md 的一级标题为准：重跑同一篇时 added 为空，仍要能复核
+    const verifyTitle = mdTitle || added[0]?.title || ''
     if (verifyTitle) {
       const remote = await readRemoteBlog()
       if (!remote.ok) {
         log(`云端复核：读取失败（${remote.err}）`)
       } else {
         const hit = remote.articles.find((a) => String(a.title) === verifyTitle)
-        log(
-          `云端复核：未删除 ${remote.active} 篇 / 共 ${remote.total} 篇，推送时间 ${new Date(remote.pushedAt).toLocaleString('zh-CN')}`
-        )
+        const pushed = remote.pushedAt ? new Date(remote.pushedAt).toLocaleString('zh-CN') : '(未知)'
+        log(`云端复核：未删除 ${remote.active} 篇 / 共 ${remote.total} 篇，推送时间 ${pushed}`)
         log(`  云端包含「${verifyTitle}」：${hit ? 'YES ✔' : 'NO ✗'}`)
         if (!hit) throw new Error('推送后云端仍没有这篇文章（合并逻辑可能又覆盖了），请人工检查')
+        if (CATEGORY_ARG) {
+          const rCat = (remote.categories ?? []).find((c) => c.id === hit.categoryId)
+          log(`  云端栏目：${rCat?.name ?? '(未分类)'}${String(rCat?.name ?? '').trim() === CATEGORY_ARG ? ' ✔' : ' ✗'}`)
+          if (String(rCat?.name ?? '').trim() !== CATEGORY_ARG) {
+            throw new Error(`云端栏目不对：期望「${CATEGORY_ARG}」，实际「${rCat?.name ?? '(未分类)'}」`)
+          }
+        }
       }
     }
 
 
-    // ---- 步骤 4：发到公众号草稿箱 ----
-    // 标题以 md 的一级标题为准（重跑时列表里可能没有"新增"，不能用 added[0] 判标题）
-    const mdTitle = (() => {
-      const raw = fs.readFileSync(files.mdPath, 'utf8')
-      const m = /^#\s+(.+)$/m.exec(raw)
-      return (m ? m[1] : '').trim()
-    })()
-    log(`公众号草稿目标标题：${mdTitle || '(未在 md 中找到一级标题)'}`)
-    if (mdTitle) {
-      const sent = await sendToWechatDraft(page, mdTitle)
-      if (!sent.ok) log(`公众号草稿未完成：${sent.reason}`)
+    // ---- 步骤 4：发到公众号草稿箱（--no-wechat 时跳过）----
+    if (NO_WECHAT) {
+      log('公众号草稿：按 --no-wechat 跳过（只导入博客，发布交人工）')
+    } else {
+      log(`公众号草稿目标标题：${mdTitle || '(未在 md 中找到一级标题)'}`)
+      if (mdTitle) {
+        const sent = await sendToWechatDraft(page, mdTitle)
+        if (!sent.ok) log(`公众号草稿未完成：${sent.reason}`)
+      }
     }
 
     const shot = path.join(os.tmpdir(), 'import-today-result.png')
