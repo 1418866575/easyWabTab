@@ -349,10 +349,18 @@ export function normalizeBlogData(raw: unknown): BlogData {
 
 // ==================== 图片库维护 ====================
 
-/** 汇总所有文章（含回收站，避免误删仍被引用的图片）正文引用的图片 id */
+/** 已删除（回收站）或彻底删除的文章不再占用图片引用。
+ *  否则会出现死锁：文章已删 → 图片仍显示“被引用” → 删图被拦，
+ *  而用户又无法进入已删的文章去“移除图片”。 */
+function isArticleGone(a: BlogArticle): boolean {
+  return !!a.deletedAt || !!a.purgedAt
+}
+
+/** 汇总所有**未删除**文章正文引用的图片 id（回收站/彻底删除的不算，释放引用） */
 export function collectReferencedImageIds(articles: BlogArticle[]): Set<string> {
   const ids = new Set<string>()
   for (const a of articles) {
+    if (isArticleGone(a)) continue
     for (const id of parseImageRefs(a.contentMarkdown)) ids.add(id)
   }
   return ids
@@ -369,7 +377,8 @@ export function pruneUnusedImages(images: BlogImage[], articles: BlogArticle[]):
  *
  * 引用口径：**正文** `img:<id>` 短引用 **或** 文章**封面** `coverImageId` 任一命中即计入
  * （早期版本只扫正文，会把仅作封面的图片误判为「未使用」，此处一并修正）。
- * 同一篇文章多次引用只计 1（去重）；含回收站文章，避免误删仍被引用的图片。
+ * 同一篇文章多次引用只计 1（去重）；**已删除（回收站/彻底删除）的文章不计入**，
+ * 删除文章即释放图片引用，避免“文章已删、图片却删不掉”的死锁。
  */
 export function collectImageUsage(
   images: BlogImage[],
@@ -378,6 +387,7 @@ export function collectImageUsage(
   const usage = new Map<string, BlogImageUsage>()
   for (const img of images) usage.set(img.id, { count: 0, articleIds: [], coverCount: 0 })
   for (const a of articles) {
+    if (isArticleGone(a)) continue
     const hit = new Set(parseImageRefs(a.contentMarkdown))
     if (a.coverImageId) hit.add(a.coverImageId)
     for (const id of hit) {

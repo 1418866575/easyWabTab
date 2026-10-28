@@ -676,6 +676,28 @@ test('sortImages 三种排序', () => {
   a.deepEqual(sortImages(list, 'name-asc').map(i => i.id), ['bi_2', 'bi_1'])
 })
 
+test('回收站/彻底删除的文章不再占用图片引用（删除文章即释放图片）', () => {
+  const alive = mkArticle({ id: 'ba_alive', contentMarkdown: `![a](${imageRef('bi_alive')})` })
+  const trashed = mkArticle({
+    id: 'ba_trash',
+    contentMarkdown: `![b](${imageRef('bi_trash')})`,
+    deletedAt: '2026-10-27T00:00:00.000Z'
+  })
+  const purged = mkArticle({
+    id: 'ba_purged',
+    contentMarkdown: `![c](${imageRef('bi_purged')})`,
+    deletedAt: '2026-10-27T00:00:00.000Z',
+    purgedAt: '2026-10-27T01:00:00.000Z'
+  })
+  const refs = collectReferencedImageIds([alive, trashed, purged])
+  a.ok(refs.has('bi_alive'), '正常文章引用的图应保留')
+  a.ok(!refs.has('bi_trash'), '回收站文章的图不应再算引用（否则删图死锁）')
+  a.ok(!refs.has('bi_purged'), '彻底删除文章的图不应再算引用')
+  const imgs = [{ id: 'bi_trash', name: 't', dataUrl: 'data:image/png;base64,AA', createdAt: '2026-10-01T00:00:00.000Z' }] as never
+  const usage = collectImageUsage(imgs, [trashed])
+  a.equal(usage.get('bi_trash')?.count ?? 0, 0, '回收站文章不应计入使用次数')
+})
+
 test('collectImageUsage 统计每张图被多少文章引用（正文）', () => {
   const imgs = [mkImage('bi_1', 'a', '2026-01-01T00:00:00.000Z'), mkImage('bi_2', 'b', '2026-01-01T00:00:00.000Z')]
   const articles = [
