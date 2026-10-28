@@ -6,7 +6,7 @@
  * 右侧操作列统一由 records.css 的 .ewt-op-col 承载。
  * 状态流转按钮由 blogCore 的状态机决定可选项，不合法的动作不出现在界面上（而非点了才报错）。
  */
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useBlogStore } from '@/stores/blog'
 import {
   ARTICLE_STATUS_LABELS,
@@ -20,6 +20,7 @@ import {
 import { useViewMode } from '@/composables/useViewMode'
 import { usePageSize } from '@/composables/usePageSize'
 import { useBlogShare } from '@/composables/blogShare'
+import { importMarkdownFolder } from '@/composables/blogImport'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '@/components/Icon.vue'
@@ -31,6 +32,40 @@ const emit = defineEmits<{ edit: [id: string]; create: [] }>()
 const store = useBlogStore()
 const vm = useViewMode()
 const { share: doShare, unshare: doUnshare, sharingId } = useBlogShare()
+
+// ---------- 导入 Markdown（选择整个文章目录，自动配封面、归入「信贷晨读」分类） ----------
+const importInputEl = ref<HTMLInputElement | null>(null)
+const fileInputEl = ref<HTMLInputElement | null>(null)
+
+onMounted(() => {
+  // 通过属性设置目录选择，避免模板上的非标准属性触发类型检查告警
+  importInputEl.value?.setAttribute('webkitdirectory', '')
+})
+
+function triggerImport(): void {
+  importInputEl.value?.click()
+}
+
+function triggerImportFiles(): void {
+  fileInputEl.value?.click()
+}
+
+async function onImportChange(e: Event): Promise<void> {
+  const input = e.target as HTMLInputElement
+  const files = Array.from(input.files ?? [])
+  if (files.length === 0) return
+  const res = await importMarkdownFolder(files, { categoryName: '信贷晨读' })
+  input.value = ''
+  if (res.imported > 0) {
+    const skip = res.skipped > 0 ? `，跳过 ${res.skipped} 篇` : ''
+    toastAlert(`已导入 ${res.imported} 篇${skip}`, 'success')
+  } else if (res.skipped > 0) {
+    toastAlert(`没有新增文章（${res.skipped} 篇已存在或为空）`, 'warning')
+  }
+  if (res.errors.length > 0) {
+    toastAlert(res.errors.slice(0, 3).join('；'), 'error')
+  }
+}
 
 // ---------- 筛选与排序 ----------
 // draft：绑定查询区输入控件；生效值：点击「查询」后才写入，用于实际过滤（与其它工作台一致）
@@ -291,6 +326,16 @@ function displayTime(row: BlogArticle): string {
           <Icon name="plus" :size="14" />
           <span>写文章</span>
         </el-button>
+        <el-button data-testid="blog-posts-import" @click="triggerImport">
+          <Icon name="plus" :size="14" />
+          <span>导入文件夹</span>
+        </el-button>
+        <el-button data-testid="blog-posts-import-files" @click="triggerImportFiles">
+          <Icon name="plus" :size="14" />
+          <span>选文件导入</span>
+        </el-button>
+        <input ref="importInputEl" class="ba-import-input" type="file" multiple @change="onImportChange" />
+        <input ref="fileInputEl" class="ba-import-input" type="file" multiple accept=".md,image/*" @change="onImportChange" />
       </div>
       <ViewModeToggle v-if="total > 0" :mode="vm.mode" @toggle="vm.toggle" />
     </div>
@@ -480,6 +525,10 @@ function displayTime(row: BlogArticle): string {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.ba-import-input {
+  display: none;
 }
 
 /* ---------- 查询区（卡片：字段 + 查询/重置，与其它工作台一致） ---------- */

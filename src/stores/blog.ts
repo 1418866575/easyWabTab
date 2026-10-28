@@ -726,7 +726,13 @@ export const useBlogStore = defineStore('blog', () => {
     return { ok: true, moved }
   }
 
-  /** 该图片是否仍被任一文章正文引用（含回收站文章，避免误删） */
+  /**
+   * 该图片是否仍被任一**未删除**文章的正文引用。
+   *
+   * 语义变更（2026-10-28）：回收站 / 彻底删除的文章不再占用图片。
+   * 旧逻辑把已删文章也算作引用方，导致「文章删了、图却删不掉」的死锁
+   * ——用户无法进入已删文章去移除引用。
+   */
   function isImageReferenced(id: string): boolean {
     return collectReferencedImageIds(articles.value).has(id)
   }
@@ -765,6 +771,7 @@ export const useBlogStore = defineStore('blog', () => {
    * 语义变更（2026-10-25）：早期版本是「强制删除 + 自动清理文章正文引用」；
    * 现改为被引用即拒绝删除（引用检测已覆盖正文 `img:<id>` 与封面 `coverImageId`，
    * 见 collectImageUsage），因此不会留下指向已删图片的悬空引用。
+   * 已删除（回收站 / 彻底删除）的文章**不计入**引用，见 isArticleGone。
    * 被拦下的张数通过 blocked 返回，供 UI 给出结果反馈。
    */
   async function removeImages(ids: string[]): Promise<{ removed: number; blocked: number }> {
