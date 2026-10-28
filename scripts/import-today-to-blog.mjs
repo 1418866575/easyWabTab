@@ -37,6 +37,10 @@ const DAV_URL = 'https://www.codehelp.com.cn/dav/'
 const DAV_USER = 'sifujiang'
 const DAV_PASS = 'sifujiang'
 
+// 可选：一次性写入公众号凭证（写进 blog store，随后随流水线推送云端）
+const WX_APPID = getArg('--wechat-appid', '')
+const WX_SECRET = getArg('--wechat-secret', '')
+
 // 持久化配置目录：装的是「有云同步配置的浏览器」，不是设计成果，放 LocalAppData
 const PROFILE = path.join(os.homedir(), 'AppData', 'Local', 'ewt-blog-agent-profile')
 
@@ -334,25 +338,10 @@ async function ensureCloudConfigured(page) {
   await page.waitForTimeout(500)
 }
 
-/**
- * 凭证保护：本地缺公众号凭证时，从云端 blog.json 补回来。
- *
- * 为什么需要：mergeBlogEnvelope 里 `wechat: remoteNewer ? r.wechat : l.wechat`，
- * 按整包 updatedAt 取较新一侧。我们导入文章后本地 updatedAt 变成"现在"，
- * 若此时本地 wechat 为空、随后又整包推送，就会把云端的 AppID/AppSecret 反向抹掉。
- * 这里只在「本地为空、云端有」时补齐，绝不覆盖已有值。
- */
-async function ensureWechatCreds(page) {
-  const local = await readBlog(page)
-  if (local?.wechat?.appId) return true
-  log('本地无公众号凭证')
-  const remote = await readRemoteBlog()
-  if (!remote.ok || !remote.wechat?.appId) {
-    log('  云端也没有公众号凭证 —— 发送草稿箱将跳过（需先在博客设置里配一次）')
-    return false
-  }
+/** 把公众号凭证写进本地 blog store（IDB 单对象，只加 wechat 字段，不动其它数据） */
+async function patchLocalWechat(page, wx) {
   const patched = await page.evaluate(
-    (wx) =>
+    (payload) =>
       new Promise((resolve) => {
         const rq = indexedDB.open('easy-web-tab')
         rq.onerror = () => resolve({ ok: false })
@@ -368,8 +357,7 @@ async function ensureWechatCreds(page) {
               resolve({ ok: false })
               return
             }
-            const next = { ...cur, wechat: wx }
-            const p = os2.put(next, 'items')
+            const p = os2.put({ ...cur, wechat: payload }, 'items')
             p.onsuccess = () => {
               db.close()
               resolve({ ok: true })
@@ -385,16 +373,42 @@ async function ensureWechatCreds(page) {
           }
         }
       }),
-    remote.wechat
+    wx
   )
-  if (!patched.ok) {
+  if (patched.ok) {
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.waitForSelector('text=选文件导入', { timeout: 40000 })
+    await page.waitForTimeout(1500)
+  }
+  return patched.ok
+}
+
+/**
+ * 凭证保护：本地缺公众号凭证时，从云端 blog.json 补回来。
+ *
+ * 为什么需要：mergeBlogEnvelope 里 `wechat: remoteNewer ? r.wechat : l.wechat`，
+ * 按整包 updatedAt 取较新一侧。我们导入文章后本地 updatedAt 变成"现在"，
+ * 若此时本地 wechat 为空、随后又整包推送，就会把云端的 AppID/AppSecret 反向抹掉。
+ * 这里只在「本地为空、云端有」时补齐，绝不覆盖已有值。
+ */
+async function ensureWechatCreds(page) {
+  const local = await readBlog(page)
+  if (local?.wechat?.appId) {
+    log(`公众号凭证：本地已配置（appId ${String(local.wechat.appId).slice(0, 6)}****）`)
+    return true
+  }
+  log('本地无公众号凭证')
+  const remote = await readRemoteBlog()
+  if (!remote.ok || !remote.wechat?.appId) {
+    log('  云端也没有公众号凭证 —— 发送草稿箱将跳过（需先在博客设置里配一次）')
+    return false
+  }
+  const ok = await patchLocalWechat(page, remote.wechat)
+  if (!ok) {
     log('  补齐凭证失败（写入被拒）')
     return false
   }
-  log(`  已从云端补回凭证（appId ${String(remote.wechat.appId).slice(0, 6)}****），刷新页面`)
-  await page.reload({ waitUntil: 'domcontentloaded' })
-  await page.waitForSelector('text=选文件导入', { timeout: 40000 })
-  await page.waitForTimeout(1500)
+  log(`  已从云端补回凭证（appId ${String(remote.wechat.appId).slice(0, 6)}****）`)
   return true
 }
 
@@ -608,6 +622,13 @@ try {
     log(`拉取后本地：文章 ${afterPull?.articles?.length ?? 0}，图 ${afterPull?.images?.length ?? 0}`)
 
     // 凭证保护：避免整包推送时把云端 AppID/AppSecret 抹掉
+    // 顺序很关键：必须在「拉取之后」写凭证。拉取走 mergeBlogEnvelope，
+    // 远端较新时会整体取远端 wechat（可能为空），早写会被这步覆盖掉。
+    if (WX_APPID && WX_SECRET) {
+      log('按参数写入公众号凭证…')
+      const ok = await patchLocalWechat(page, { appId: WX_APPID, appSecret: WX_SECRET })
+      log(ok ? '  写入成功（会随本次推送上云）' : '  写入失败')
+    }
     await ensureWechatCreds(page)
 
     // ---- 步骤 2：只导入当天文件 ----
