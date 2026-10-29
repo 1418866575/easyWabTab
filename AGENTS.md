@@ -38,7 +38,7 @@ easy-web-tab/
 │   ├── types/index.ts            # Site, Category, WorkbenchDiary/DiaryData interfaces + Business 摆摊进销存接口/种子常量 + DEFAULT_CATEGORIES + WORKBENCH_DATA_VERSION=9 + STUDENT_DATA_VERSION=1（v8 起备份内嵌 passwordsSalt/passwordVerification 密码加密身份）
 │   └── styles/                   # dark.css, background.css
 ├── public/
-│   ├── data/myself-sites.md      # Only data file — sample sites downloaded via HelpModal.vue
+│   ├── data/sites.zip            # 示例数据包（sites.md + icons/），HelpModal「下载示例数据」源
 │   ├── icons/                    # 14 .svg brand icons (scanned at build) + icons.json export artifact
 │   ├── backgrounds/              # 30 wallpaper images
 │   ├── beian/ghs.png             # 公安备案徽标（BeianFooter @error 兜底隐藏）
@@ -61,7 +61,7 @@ easy-web-tab/
 | Add new route | `src/router/index.ts` | Eager-loaded (no lazy loading); 4 routes: `/`, `/workbench`, `/business`, `/student` |
 | Add new type | `src/types/index.ts` | Single file, all interfaces（`AppSettingsData` 含 6 个提醒设置可选字段 + `Countdown.emailReminder` opt-in + Business 摆摊进销存全部接口与种子常量 `DEFAULT_BUSINESS_EXPENSE_CATEGORIES`/`DEFAULT_BUSINESS_PRODUCT_CATEGORIES` + 学生工作台 STUDENT_MENU_KEYS/StudentParentTask/StudentStage；`WORKBENCH_DATA_VERSION=9` + `STUDENT_DATA_VERSION=1`（v8 起备份内嵌 passwordsSalt/passwordVerification 密码加密身份）） |
 | Dark mode styles | `src/styles/dark.css` | CSS variables, class toggle |
-| Sample data | `public/data/myself-sites.md` | Fetched by `HelpModal.vue` (「下载示例数据」source) |
+| Sample data | `public/data/sites.zip` | Fetched by `HelpModal.vue` (「下载示例数据」source；zip 可直传管理后台「导入」) |
 | Keyboard shortcuts | `src/composables/useKeyboardShortcuts.ts` | Ctrl+N/B/D, Esc |
 | Icon caching | `src/composables/useIconCache.ts` | localStorage, 30-day expiry |
 | Toast notifications | `src/composables/useToast.ts` | Singleton (module-level shallowRef, not Pinia) |
@@ -191,7 +191,7 @@ easy-web-tab/
 
 ## UNIQUE STYLES
 
-- Data stored as YAML frontmatter Markdown (`myself-sites.md`), parsed by `useMarkdown.ts`
+- Data stored as YAML frontmatter Markdown (`sites.md` inside `sites.zip`), parsed by `useMarkdown.ts`
 - Icon resolution chain: custom icon → localStorage cache → Google Favicon API → async background cache from page HTML
 - Dual server strategy: `server.cjs` (PM2, uses `serve` package, NO game rewrites) vs `scripts/serve-with-rewrites.cjs` (custom, has game rewrites) — **divergent serving**
 - Games are standalone HTML files in `public/games/`, registered via `manifest.json`, loaded by `src/stores/sites.ts`. **2026-10-13 起 games 只剩真游戏（tetris / cron-generator / id-generator / postman）；原先 category 为 `books` 的 4 本书已迁到 `public/bookdata/` 走独立图书馆页面**

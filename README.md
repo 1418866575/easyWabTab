@@ -386,7 +386,7 @@ server {
 
 ## 💾 数据存储
 
-- **内置数据**：`public/data/sites.md`（默认初始网址，构建时复制进 `dist/`）；`public/data/myself-sites.md`（「下载示例数据」源，脱敏示例）；`public/backgrounds/`（壁纸）、`public/icons/`（预设图标）、`public/bookdata/`（静态书）、`public/games/`（小游戏）。
+- **内置数据**：`public/data/sites.md`（默认初始网址，构建时复制进 `dist/`）；`public/data/sites.zip`（「下载示例数据」源：`sites.md` + `icons/` 图标目录，可在管理后台「导入」处直接上传）；`public/backgrounds/`（壁纸）、`public/icons/`（预设图标）、`public/bookdata/`（静态书）、`public/games/`（小游戏）。
 - **导航数据（IndexedDB `nav` store）**：`user-sites` / `user-categories` / `user-search-engines` / 主题 / 各类排序与分类偏好（如 `user-todo-categories`、`user-countdown-categories`）。v18 起从 localStorage 迁入，根治移动端被系统回收导致的导航丢失；图标缓存独立存 `iconcache` store。
 - **localStorage 仍有**：断链检测结果、`password-verification-v2`、少量设备级标记。
 - **个人 / 业务 / 学生 / 教师 / 工具箱 / 智能台 / 博客数据（IndexedDB）**：数据库名 `easy-web-tab`，当前 **`DB_VERSION=23`**，object store 分族：
@@ -509,7 +509,7 @@ easy-web-tab/
 │   └── styles/                   # dark.css / background.css / records.css / markdown.css
 ├── public/
 │   ├── data/sites.md             # 默认初始网址
-│   ├── data/myself-sites.md      # 示例数据下载源
+│   ├── data/sites.zip            # 示例数据下载源（sites.md + icons/）
 │   ├── icons/                    # 预置品牌 svg（构建时扫描）→ presetIcons.ts
 │   ├── backgrounds/              # 壁纸（30 张）
 │   ├── bookdata/                 # 静态书（每本一个目录 + manifest.json）

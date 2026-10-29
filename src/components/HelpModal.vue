@@ -19,18 +19,17 @@ function acknowledgeHelp(): void {
 
 async function downloadExample() {
   try {
-    const resp = await fetch('/data/myself-sites.md')
+    const resp = await fetch('/data/sites.zip')
     if (!resp.ok) throw new Error('下载失败')
-    const text = await resp.text()
-    const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' })
+    const blob = await resp.blob()
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'site.md'
+    a.download = 'sites.zip'
     a.click()
     URL.revokeObjectURL(url)
   } catch (e) {
-    toastAlert('示例文件下载失败，请稍后重试')
+    toastAlert('示例数据包下载失败，请稍后重试')
   }
 }
 
@@ -786,7 +785,7 @@ const skillInstall = [
               <span class="download-icon"><Icon name="package" /></span>
               <div>
                 <h4>下载示例数据</h4>
-                <p>下载预置的网址导航示例文件 <code>site.md</code> 与图标数据 <code>icons.json</code>，包含常用网站分类、链接和预设图标。网址文件下载后在管理后台点击「导入」上传，即可快速初始化导航页。</p>
+                <p>下载示例数据包 <code>sites.zip</code>：内含 <code>sites.md</code>（分类与网址）与 <code>icons/</code> 图标目录。在管理后台「导入」处直接上传该 zip，网址、分类与图标会一并恢复，图标同时登记进「图标管理」；也可解压后单独上传 <code>sites.md</code>。下方 <code>icons.json</code> 是预设图标库，可在图标管理中导入。</p>
               </div>
             </div>
             <div class="download-actions">
@@ -796,7 +795,7 @@ const skillInstall = [
                   <polyline points="7 10 12 15 17 10"/>
                   <line x1="12" y1="15" x2="12" y2="3"/>
                 </svg>
-                下载网址
+                下载示例包
               </button>
               <button class="btn-download" @click="downloadIcons">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
