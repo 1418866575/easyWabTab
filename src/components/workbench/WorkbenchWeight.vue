@@ -97,6 +97,11 @@ function fmtAxis(v: number): string {
   return Number.isInteger(v) ? String(v) : v.toFixed(1)
 }
 
+// polyline 的 points 串：此前在模板里写 `chartPoints.map(p => p.x + ',' + p.y).join(' ')`，
+// 每次重渲染（新增记录、切暗色、hover 等任意父级更新）都会重新遍历拼接一遍。
+// 坐标只由 chartPoints 决定，提到 computed 后同一份点位只拼一次。
+const chartPolyline = computed(() => chartPoints.value.map(p => p.x + ',' + p.y).join(' '))
+
 // ===== 身高弹框 =====
 const showHeightDialog = ref(false)
 const formHeight = ref('')
@@ -320,7 +325,7 @@ onMounted(async () => {
         <polyline
           v-if="chartPoints.length >= 2"
           class="wt-chart-line"
-          :points="chartPoints.map(p => p.x + ',' + p.y).join(' ')"
+          :points="chartPolyline"
           fill="none"
           stroke-width="2"
           stroke-linecap="round"

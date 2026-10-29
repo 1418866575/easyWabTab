@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onMounted, ref, watch, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
 import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
@@ -14,23 +14,9 @@ import { useWorkbenchDiaryStore } from '@/stores/workbenchDiary'
 import { useGenealogyStore } from '@/stores/genealogy'
 import { useAppSettingsStore } from '@/stores/settings'
 import WorkbenchSwitcher from '@/components/WorkbenchSwitcher.vue'
-import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
 import { HEALTH_TABS, type HealthModule } from '@/types'
-import WorkbenchHome from '@/components/workbench/WorkbenchHome.vue'
-import WorkbenchTodo from '@/components/workbench/WorkbenchTodo.vue'
-import WorkbenchNotes from '@/components/workbench/WorkbenchNotes.vue'
-import WorkbenchCountdown from '@/components/workbench/WorkbenchCountdown.vue'
-import WorkbenchPomodoro from '@/components/workbench/WorkbenchPomodoro.vue'
-import WorkbenchHabits from '@/components/workbench/WorkbenchHabits.vue'
-import WorkbenchPassword from '@/components/workbench/WorkbenchPassword.vue'
-import WorkbenchHealth from '@/components/workbench/WorkbenchHealth.vue'
-import WorkbenchLedger from '@/components/workbench/WorkbenchLedger.vue'
-import WorkbenchDiary from '@/components/workbench/WorkbenchDiary.vue'
-import WorkbenchGenealogy from '@/components/workbench/WorkbenchGenealogy.vue'
-import WorkbenchTrash from '@/components/workbench/WorkbenchTrash.vue'
 import Icon from '@/components/Icon.vue'
 import SkeletonBlock from '@/components/SkeletonBlock.vue'
-import SpotlightOverlay from '@/components/SpotlightOverlay.vue'
 import type { SpotlightAction } from '@/components/SpotlightOverlay.vue'
 import type { SpotlightData } from '@/composables/spotlightCore'
 import { useWorkbenchShortcuts } from '@/composables/useWorkbenchShortcuts'
@@ -38,6 +24,55 @@ import { captureSnapshot } from '@/composables/useSnapshots'
 import { useSitesStore } from '@/stores/sites'
 import { useCloudSync } from '@/composables/useCloudSync'
 import type { SyncStatus } from '@/composables/useCloudSync'
+
+// ===== 面板懒加载 =====
+// 改造前：12 个面板 + 全局搜索浮层 + 设置弹窗全部静态 import，任一时刻只显示其中一个（v-else-if），
+// 却要一次性下载全部代码（WorkbenchView chunk 曾达 200kB+，设置弹窗另占 320kB）。
+// 改造后：内容区面板走 defineAsyncComponent 按需拉取，切到哪个面板才下哪个 chunk。
+//   - delay 用 Vue 默认 200ms：加载快于 200ms 不显示骨架，避免快速切换时闪一下；
+//   - loadingComponent 复用首屏同一个 SkeletonBlock，视觉上与初始化骨架连续，不跳版；
+//   - timeout 20s 与 ToolboxToolPanel 的既有约定一致。
+// ⚠️ 必须配合 prefetchPanel()：模板里 initializing 期间面板分支为 false（不渲染），
+//    若不预先 import，chunk 下载会串行排在骨架屏之后，首屏反而变慢。
+//    预取只是触发 import，重复调用命中模块缓存，不会重复下载。
+// 数据加载不受影响：所有 store 的 load* 都仍在下方 onMounted 的 Promise.all 里，
+// 与面板 chunk 的下载并行进行，面板挂载时数据已就绪（不会出现「先空后填」）。
+const panelLoaders: Record<string, () => Promise<unknown>> = {}
+
+function lazyPanel(key: string, loader: () => Promise<unknown>) {
+  panelLoaders[key] = loader
+  return defineAsyncComponent({
+    loader: loader as () => Promise<Component>,
+    delay: 200,
+    timeout: 20000,
+    loadingComponent: SkeletonBlock,
+    // 本视图未使用 <Suspense>，显式关闭以免异步组件行为随上层变化
+    suspensible: false
+  })
+}
+
+/** 触发某个面板的 chunk 下载（幂等：动态 import 自带模块缓存）。 */
+function prefetchPanel(key: string): void {
+  void panelLoaders[key]?.()
+}
+
+const WorkbenchHome = lazyPanel('home', () => import('@/components/workbench/WorkbenchHome.vue'))
+const WorkbenchTodo = lazyPanel('todos', () => import('@/components/workbench/WorkbenchTodo.vue'))
+const WorkbenchNotes = lazyPanel('notes', () => import('@/components/workbench/WorkbenchNotes.vue'))
+const WorkbenchCountdown = lazyPanel('countdowns', () => import('@/components/workbench/WorkbenchCountdown.vue'))
+const WorkbenchPomodoro = lazyPanel('pomodoro', () => import('@/components/workbench/WorkbenchPomodoro.vue'))
+const WorkbenchHabits = lazyPanel('habits', () => import('@/components/workbench/WorkbenchHabits.vue'))
+const WorkbenchPassword = lazyPanel('passwords', () => import('@/components/workbench/WorkbenchPassword.vue'))
+const WorkbenchHealth = lazyPanel('health', () => import('@/components/workbench/WorkbenchHealth.vue'))
+const WorkbenchLedger = lazyPanel('ledger', () => import('@/components/workbench/WorkbenchLedger.vue'))
+const WorkbenchDiary = lazyPanel('diary', () => import('@/components/workbench/WorkbenchDiary.vue'))
+const WorkbenchGenealogy = lazyPanel('genealogy', () => import('@/components/workbench/WorkbenchGenealogy.vue'))
+const WorkbenchTrash = lazyPanel('trash', () => import('@/components/workbench/WorkbenchTrash.vue'))
+
+// 两个浮层/弹窗都是 v-if 挂载（点开才渲染），也一并按需加载。
+// 它们自带遮罩外壳，加载期不塞骨架（骨架会出现在错误位置），直接短暂空等即可。
+const SpotlightOverlay = defineAsyncComponent(() => import('@/components/SpotlightOverlay.vue'))
+const AppSettingsDialog = defineAsyncComponent(() => import('@/components/AppSettingsDialog.vue'))
 
 const router = useRouter()
 const toast = useToast()
@@ -197,6 +232,9 @@ function formatDate(d: Date): string {
 const initializing = ref(true)
 
 onMounted(async () => {
+  // 首屏面板的 chunk 立刻开始下载，与下方 store 加载并行（面板要等 initializing=false 才渲染，
+  // 不在这里预取就会串行排队，首屏反而比静态 import 更慢）
+  prefetchPanel(activeSection.value)
   try {
     await Promise.all([
       todosStore.loadTodos(),
@@ -304,6 +342,7 @@ async function handleSyncNowClick(): Promise<void> {
           :title="item.label"
           :aria-label="item.label"
           :data-testid="`wb-menu-${item.key}`"
+          @mouseenter="prefetchPanel(item.key)"
           @click="navigateTo(item.key)"
         >
           <span class="wb-menu-icon"><Icon :name="item.icon" /></span>
@@ -666,9 +705,14 @@ html.dark .wb-content {
     min-height: 44px;
   }
 
-  /* 窄屏间距压缩：内容区内边距收窄；底部留白避让固定 Tab Bar（44px 触控 + 内边距 + 安全区） */
+  /* 窄屏间距压缩：内容区内边距收窄；底部留白需同时避让两样固定元素：
+   *   ① 底部 Tab Bar（.wb-menu，移动端降级为 fixed bottom:0，约 56px + 安全区）
+   *   ② 悬浮新增 FAB（移动端 bottom:64px、高 48px → 顶端距视口底 112px）
+   * 原值只算了 ①（64px），实测习惯面板的日历日期格会被 FAB 压住、点不动
+   * （qa-workbench-mobile-overlap.mjs S2）。按 ② 的 112px + 8px 间隔取 120px。
+   * 无 FAB 的面板（首页/日记/番茄钟/回收站）只是滚到底多一段空白，不影响操作。 */
   .wb-content {
-    padding: 12px 12px calc(64px + env(safe-area-inset-bottom, 0px));
+    padding: 12px 12px calc(120px + env(safe-area-inset-bottom, 0px));
   }
 }
 
