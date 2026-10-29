@@ -223,45 +223,6 @@ onUnmounted(() => {
   max-width: 520px;
 }
 
-.stat-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
-  transition: border-color var(--transition-fast, 0.15s ease);
-}
-
-.stat-card:hover {
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.stat-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.stat-icon {
-  font-size: 18px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.stat-label {
-  flex: 1;
-  min-width: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* ===== 计时器卡 ===== */
 .pm-timer-card {
   align-items: center;
@@ -407,11 +368,6 @@ onUnmounted(() => {
 }
 
 /* ===== 暗色模式覆盖 ===== */
-html.dark .stat-card {
-  background-color: var(--color-bg-card, #1f2937);
-  box-shadow: none;
-}
-
 html.dark .pm-ring-track {
   stroke: var(--color-bg-input, #374151);
 }

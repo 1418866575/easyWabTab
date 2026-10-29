@@ -795,48 +795,12 @@ onMounted(async () => {
   gap: 12px;
 }
 
-.stat-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
-  transition: border-color var(--transition-fast, 0.15s ease);
-}
-
-.stat-card:hover {
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.stat-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.stat-icon {
-  font-size: 18px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.stat-label {
-  flex: 1;
-  min-width: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .stat-value {
   font-size: 24px;
   font-weight: 700;
+  /* 全局 .wb-content .stat-value 会把数字染成主色（对齐教师工作台的彩色统计数字），
+     但记账这一屏的数字本身带语义色（收入绿 / 支出红），中性指标再染主色会与
+     「红 = 支出」直接冲突，故此处显式回到正文色，只让 .is-income/.is-expense/.is-negative 上色。 */
   color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
@@ -1447,7 +1411,6 @@ html.dark .ld-month-bar {
   box-shadow: none;
 }
 
-html.dark .stat-card,
 html.dark .ld-ratio-block,
 html.dark .ld-card {
   background-color: var(--color-bg-card, #1f2937);

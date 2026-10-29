@@ -463,16 +463,15 @@ body {
  *    （学生=flex 居中 min-height 无边框、首页=60px 大间距 16px 无边框）。
  *    若写成全局 `.empty-state`，本块的 padding/border/background 会「逐属性泄漏」
  *    进那些模块的 scoped 定义，造成视觉回归。限定 .wb-content 后只作用于工作台面板。
- * 视觉沿用各副本既有值（40px/20px/14px + --radius-md），零视觉变化；
- * 背景用 --color-bg-card，暗色自动跟随，无需再写 html.dark 覆盖。 */
+ * 视觉对齐教师工作台 `.tw-empty`（32px 上下 / 13px / 纯文字无边框）——
+ * 教师侧空态就是一句居中灰字，工作台此前多一层虚线框，两边切换时观感不一致。
+ * 唯一的例外是「可点击邀请态」（.empty-invite）仍保留虚线框：它整块可点，
+ * 需要「可放置区域」的视觉提示，教师侧空态不可点所以没有这一层。 */
 .wb-content .empty-state {
   text-align: center;
   color: var(--color-text-muted, var(--color-text-muted));
-  font-size: 14px;
-  padding: 40px 20px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px dashed var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
+  font-size: var(--font-size-sm, 13px);
+  padding: 32px 16px;
 }
 
 /* 可点击邀请态（空 → 「＋ 新增第一个」）。column+gap 同时兼容单行文案与
@@ -485,6 +484,9 @@ body {
   justify-content: center;
   gap: 6px;
   color: var(--color-text-secondary, var(--color-text-secondary));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px dashed var(--color-border, var(--color-border));
+  border-radius: var(--radius-md, 8px);
   transition: color var(--transition-fast, 0.15s ease), border-color var(--transition-fast, 0.15s ease);
 }
 

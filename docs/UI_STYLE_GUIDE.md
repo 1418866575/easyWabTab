@@ -209,10 +209,15 @@ import BaseDialog from '@/components/common/BaseDialog.vue'
 | 类别                 | 现有类名                                         | 特征                                                            | 能否互换              |
 | ------------------ | -------------------------------------------- | ------------------------------------------------------------- | ----------------- |
 | **通用卡面**           | `.ui-card`                                   | 纯表面：1px 边框 + `--radius-lg` + 卡面底 + `--shadow-card`，hover 主色描边 | —                 |
-| **面板卡**（带标题/提示子元素） | `.tw-card`（含 `-title`/`-hint`）               | 16px 内边距、圆角 16px、含子元素排版                                       | ❌ 与 `.ui-card` 不同 |
-| **统计卡**（大数字+标签）    | `.stat-card`、`.bento-card`、各模块 `*-stat-card` | flex 列 + gap 16px、圆角 8px                                      | ❌ 与面板卡不同          |
+| **面板卡**（带标题/提示子元素） | `.tw-card`（教师）、`.wb-content .stat-card`（个人工作台，取值与 `.tw-card` 相同） | 16px 内边距、圆角 12px、标题带 4px 主色竖条（`::before`）、极轻阴影 | ❌ 与 `.ui-card` 不同 |
+| **统计卡**（大数字+标签）    | `.bento-card`、销售/学生台各自的 `*-stat-card` | flex 列 + gap 16px、圆角 8px                                      | ❌ 与面板卡不同          |
 | **网格/列表布局容器**      | `.ewt-card-grid`                             | 只有 `align-content`，**无表面**                                    | ❌ 不是卡片            |
 | **工具箱卡片**          | `.tu-card`（含 `-title`/`-value`）              | toolbox 独立体系                                                  | ❌ 见 §4.1 边界       |
+
+> **个人工作台已收口**：12 个面板原先各抄一份 `.stat-card`（同一段 CSS 逐字节复制 6 份），
+> 现统一到 `src/styles/workbench.css`（全部选择器限定 `.wb-content`，避免污染销售台同名类）。
+> 面板内**不要**再新增 `.stat-card` / `.stat-header` / `.stat-label` / `.stat-value` 的 scoped 副本
+> ——scoped 规则在构建时后注入，会盖掉全局值，等于又开一条轨道（详见该文件头注释）。
 
 **规则**：
 
@@ -220,6 +225,8 @@ import BaseDialog from '@/components/common/BaseDialog.vue'
 - 新增**带标题的卡 / 统计卡 / 网格容器** → 参照对应现有类的结构，**不要硬套 `.ui-card`**
 - **禁止**为同一语义另造第二套（这才是双轨道）；但**不同语义各用自己的类不是双轨道**
 - 卡面视觉走 token：圆角 `--radius-*`、阴影 `--shadow-card`/`--shadow-card-hover`、背景 `--color-bg-card`/`--color-surface`；**禁止**硬编码 `box-shadow: 0 1px 2px rgba(...)` 这类值
+  - **唯一例外**：`.tw-card` 与 `.wb-content .stat-card` 的 `box-shadow: 0 1px 2px rgba(15,23,42,0.04)`
+    （两个工作台共用的「极轻卡面」值，比 `--shadow-card` 明显更淡，直接写死以便两处逐像素一致；改一处必须同步另一处）
 
 ### 2.5 图标 / 关闭按钮
 
@@ -405,6 +412,7 @@ src/
 | ~~开关双轨~~                                                            | **已收敛**（2026-10）：`AppSettingsDialog` 内 12 处自定义 `.switch-btn` 全部改为 `el-switch`，`.switch-btn`/`.switch-thumb`/`.mini-switch` 样式（含 dark 变体）已删除，代码零残留                                                                                                                                                                                                    | —                                                                                                                                                                                                                                                                                               |
 | ~~无 ESLint / Prettier~~                                             | **ESLint 已接入**（2026-10）：`npm run lint` / `lint:fix`，只管正确性、不做格式                                                                                                                                                                                                                                                                                       | 存量 96 处 `any`、9 处 computed 副作用为 warning，可随重构逐步收敛；Prettier 仍**刻意不引入**                                                                                                                                                                                                                            |
 | toolbox 与 src 双 token 树                                             | `toolbox/` 自带 `tool-ui.css`                                                                                                                                                                                                                                                                                                                          | 建议保持独立（工具箱视觉自成体系），仅在文档标明边界                                                                                                                                                                                                                                                                      |
+| ~~个人工作台面板视觉与教师台不一致~~                                              | **已收敛**（2026-10-29）：新增 `src/styles/workbench.css`（全部选择器限定 `.wb-content`），把教师台的卡片/标题竖条/统计数字/胶囊按钮/表格取值落成一套原语；删除 6 个面板里逐字节重复的 `.stat-card/.stat-header/.stat-icon/.stat-label`（共 260 行）；面板补「标题 + 一行说明」页头；内容区 padding 20→16px 对齐 `.tv-content` | 两处**有意的局部差异**（已被面板 scoped 规则显式覆盖并写明原因）：① 记账 7 列统计卡保留正文色数字（红=支出，染主色会误读）；② 首页 6 列密集小卡不挂标题竖条（会把标题挤成省略号）。另修掉一处存量 bug：`.btn-primary` 等别名直接写 `background-color`，对 el-button 无效（被 EP 的 `--el-button-bg-color` 压掉），表现为主操作按钮全成白底描边——已在 workbench.css 用 EP 变量覆盖 |
 
 ---
 
@@ -416,6 +424,8 @@ src/
 | 主题（7 套 accent）          | `src/styles/themes.css`                                                                                                     |
 | 暗色                      | `src/styles/dark.css`                                                                                                       |
 | EP 桥接 + el-button 尺寸对齐  | `src/styles/element-theme.css`                                                                                              |
+| 教师工作台面板原语（tw-*）        | `src/styles/teacher.css`                                                                                                    |
+| 个人工作台面板原语（wb-content 作用域，取值同 tw-*） | `src/styles/workbench.css`                                                                                     |
 | 弹框基类                    | `src/components/common/BaseDialog.vue`                                                                                      |
 | 确认框 / 提示                | `src/utils/dialog.ts`、`src/composables/useConfirm.ts`、`src/components/common/ConfirmHost.vue`、`src/composables/useToast.ts` |
 | 弹框滚动锁白名单                | `src/utils/scrollLock.ts`                                                                                                   |
@@ -423,4 +433,4 @@ src/
 
 ---
 
-*最后更新：2026-10-08 · 对应整改批次：按钮统一 → BaseDialog 基类 → 21 个弹框迁移 → 196 处配色 token 化*
+*最后更新：2026-10-29 · 对应整改批次：按钮统一 → BaseDialog 基类 → 21 个弹框迁移 → 196 处配色 token 化 → 个人工作台对齐教师工作台视觉*

@@ -589,46 +589,8 @@ onMounted(async () => {
   gap: 16px;
 }
 
-/* ===== 目标卡（复用 WorkbenchHome stat-card 结构）===== */
-.stat-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
-  transition: border-color var(--transition-fast, 0.15s ease);
-}
-
-.stat-card:hover {
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.stat-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.stat-icon {
-  font-size: 18px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.stat-label {
-  flex: 1;
-  min-width: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
+/* 卡片外框 / 卡片标题 / 统计数字的统一取值在全局 styles/workbench.css（.wb-content .stat-*），
+   面板内不再各抄一份 —— 这是此前 6 份重复定义漂移的根因。 */
 .nav-btn {
   flex-shrink: 0;
   padding: 4px 10px;
@@ -887,11 +849,6 @@ onMounted(async () => {
 /* .btn-cancel 视觉已统一到全局 .ui-btn（style.css） */
 
 /* ===== 暗色模式覆盖 ===== */
-html.dark .stat-card {
-  background-color: var(--color-bg-card, #1f2937);
-  box-shadow: none;
-}
-
 html.dark .ex-item {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;

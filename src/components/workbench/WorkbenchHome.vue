@@ -474,7 +474,10 @@ async function handleQuickNote(): Promise<void> {
   align-items: start;
 }
 
-/* ===== 卡片基础（统一 .bento-card）===== */
+/* ===== 卡片基础（统一 .bento-card）=====
+ * 取值与 styles/workbench.css 的 .wb-content .stat-card 保持一致（= 教师 .tw-card）：
+ * 圆角 12px、极轻阴影、hover 不变边框色只微微浮起。首页卡片是工作台的一部分，
+ * 若沿用旧的 8px + 重阴影，进出首页时会明显感到「换了一套卡片」。 */
 .bento-card {
   display: flex;
   flex-direction: column;
@@ -482,13 +485,20 @@ async function handleQuickNote(): Promise<void> {
   padding: 16px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
-  transition: border-color var(--transition-fast, 0.15s ease);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: box-shadow var(--transition-fast, 0.15s ease);
 }
 
 .bento-card:hover {
-  border-color: var(--color-primary, var(--color-primary));
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+}
+
+/* 首页是 6 列密集小卡（每张约 150px 宽），教师式 4px 标题竖条会挤掉标题文字
+   （实测「即将到期的提醒」被截成「即将到…」），故首页不挂竖条；
+   竖条保留给整宽卡片（其余面板）。见 styles/workbench.css 的 .stat-header::before。 */
+.home-overview-grid .stat-header::before {
+  display: none;
 }
 
 /* 统计卡瘦身：padding 覆盖（12px 14px），不改共享 .bento-card 的 16px */
@@ -496,17 +506,15 @@ async function handleQuickNote(): Promise<void> {
   padding: 12px 14px;
   cursor: pointer;
   user-select: none;
-  /* 可点击卡：hover 抬升 + 阴影微交互（覆盖共享 .bento-card 仅变边框的过渡） */
+  /* 可点击卡：hover 抬升 + 阴影微交互（边框色不再变化，与 .stat-card:hover 一致） */
   transition:
-    border-color var(--transition-fast, 0.15s ease),
     transform var(--transition-fast, 0.15s ease),
     box-shadow var(--transition-fast, 0.15s ease);
 }
 
 .bento-stat:hover {
-  border-color: var(--color-primary, var(--color-primary));
   transform: var(--motion-hover-rise, translateY(-1px));
-  box-shadow: var(--shadow-card-hover, 0 4px 14px rgba(0, 0, 0, 0.12));
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
 }
 
 .bento-stat:active {
@@ -653,29 +661,14 @@ async function handleQuickNote(): Promise<void> {
   flex-shrink: 0;
 }
 
-/* ===== 统计卡头部 ===== */
-.stat-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.stat-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.stat-label {
-  flex: 1;
-  min-width: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* ===== 统计卡头部 =====
+ * .stat-header / .stat-icon / .stat-label 的基础取值统一在 styles/workbench.css
+ * （= 教师 .tw-card-title 的 15px/600 + 主色竖条）。
+ * 首页卡片是 6 列密集小卡（约 150px 宽），15px 标题在「即将到期的提醒」这类 7 字标题上
+ * 会贴边，故首页把标题降到 13px 并关掉竖条（见上方 .home-overview-grid 规则）。
+ * 只覆盖字号与竖条这两项，其余（颜色/省略号/flex）沿用全局。 */
+.home-overview-grid .stat-label {
+  font-size: var(--font-size-sm, 13px);
 }
 
 .nav-btn {
@@ -701,7 +694,6 @@ async function handleQuickNote(): Promise<void> {
   min-width: 0;
   font-size: 20px;
   font-weight: 700;
-  color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
   white-space: nowrap;

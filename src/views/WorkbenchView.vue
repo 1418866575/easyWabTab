@@ -20,6 +20,7 @@ import SkeletonBlock from '@/components/SkeletonBlock.vue'
 import type { SpotlightAction } from '@/components/SpotlightOverlay.vue'
 import type { SpotlightData } from '@/composables/spotlightCore'
 import { useWorkbenchShortcuts } from '@/composables/useWorkbenchShortcuts'
+import { MENU_DEFAULT_LABELS, MENU_DESCRIPTIONS } from '@/composables/workbenchMenuCore'
 import { captureSnapshot } from '@/composables/useSnapshots'
 import { useSitesStore } from '@/stores/sites'
 import { useCloudSync } from '@/composables/useCloudSync'
@@ -140,6 +141,17 @@ function navigateTo(section: string, tab?: string) {
 // 菜单渲染项：顺序/名称/图标一律来自设置 store（workbenchMenuItems 由 core 解析，home 恒居首）
 // 视图禁止内联重算排序/标签（顺序与改名经设置弹窗调整后在此直接生效）
 const menuItems = computed(() => settingsStore.workbenchMenuItems)
+
+// 面板页头：教师工作台每个面板都是「18px 标题 + 13px 一行说明」，
+// 个人工作台此前没有标题层，进入面板后只剩一排搜索框，层级断掉。
+// 标题取菜单名（用户可在设置里改名，改了就跟着变），说明取固定文案（见 MENU_DESCRIPTIONS）。
+// 首页不渲染：首页自带问候卡，再加标题会重复。
+const activePageTitle = computed(() => {
+  const hit = menuItems.value.find((item) => item.key === activeSection.value)
+  return hit?.label ?? MENU_DEFAULT_LABELS[activeSection.value] ?? ''
+})
+const activePageDesc = computed(() => MENU_DESCRIPTIONS[activeSection.value] ?? '')
+const showPageHead = computed(() => activeSection.value !== 'home' && activePageDesc.value !== '')
 
 // 菜单开关变化（设置弹窗切换）→ 当前激活区被关闭时回退到首个可见菜单项（home 恒可见）
 watch(
@@ -353,6 +365,11 @@ async function handleSyncNowClick(): Promise<void> {
       <main class="wb-content">
         <SkeletonBlock v-if="initializing" :rows="5" label="正在加载工作台数据" />
         <template v-else>
+          <!-- 面板页头（对齐教师工作台 .tw-head）：标题 + 一行说明，样式在 styles/workbench.css -->
+          <div v-if="showPageHead" class="wb-page-head" data-testid="wb-page-head">
+            <h2 class="wb-page-title" data-testid="wb-page-title">{{ activePageTitle }}</h2>
+            <p class="wb-page-sub" data-testid="wb-page-sub">{{ activePageDesc }}</p>
+          </div>
           <WorkbenchHome v-if="activeSection === 'home'" @navigate="navigateTo" />
           <WorkbenchTodo v-else-if="activeSection === 'todos'" />
           <WorkbenchNotes v-else-if="activeSection === 'notes'" />
@@ -402,7 +419,8 @@ async function handleSyncNowClick(): Promise<void> {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 12px 20px;
+  /* 左右留白对齐教师顶栏 .tv-topbar（12px 16px），避免顶部与内容区的对齐线错开 */
+  padding: 12px 16px;
   background-color: var(--color-bg-card, #ffffff);
   border-bottom: 1px solid var(--color-border, #e2e8f0);
 }
@@ -488,19 +506,22 @@ async function handleSyncNowClick(): Promise<void> {
   padding: 10px 0;
 }
 
+/* 侧栏项取值对齐教师工作台 .tv-nav-item（13px / --radius-sm / 主色软底选中 / hover 只变底色）：
+   此前是 14px + 8px 圆角 + hover 变主色文字，两个工作台并排看像两套导航。 */
 .wb-menu-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 9px 10px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--radius-sm, 4px);
   background-color: transparent;
   color: var(--color-text-secondary, #64748b);
-  font-size: 14px;
+  font-size: var(--font-size-sm, 13px);
   text-align: left;
   cursor: pointer;
-  transition: all var(--motion-duration, 220ms) var(--motion-ease, ease);
+  transition: background-color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    color var(--motion-duration, 220ms) var(--motion-ease, ease);
 }
 
 /* 统一微交互：按压缩放（菜单项不做抬升，避免侧栏/底部 Tab 割裂） */
@@ -524,20 +545,22 @@ async function handleSyncNowClick(): Promise<void> {
   white-space: nowrap;
 }
 
+/* hover 只变底色（教师 .tv-nav-item:hover 不变文字色），选中态才上主色 */
 .wb-menu-item:hover {
   background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-primary, #3b82f6);
 }
 
 .wb-menu-item.active {
-  background-color: var(--color-primary-light, #eff6ff);
+  background-color: var(--color-primary-soft, #eff6ff);
   color: var(--color-primary, #3b82f6);
-  font-weight: 600;
+  font-weight: var(--font-weight-medium, 500);
 }
 
 .wb-content {
   flex: 1;
-  padding: 20px;
+  /* 与教师工作台内容区（.tv-content，16px）一致；此前 20px 使得同样的卡片在两处
+     留白不同，切换工作台时疏密感不一致。 */
+  padding: 16px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
