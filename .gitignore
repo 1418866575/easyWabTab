@@ -94,3 +94,6 @@ qa-deposit/
 
 # 导航站工具箱钉顶卡目视验证截图（scripts/qa-nav-toolbox-pin.mjs，仅本地留存，不入库）
 qa-nav-pin/
+
+# 公众号稿件草稿（AI 产出，不入库）
+_drafts/

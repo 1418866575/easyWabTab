@@ -26,6 +26,11 @@ function statusClass(status: RemainingStatus): string {
   return 'status-' + status
 }
 
+// 卡片状态修饰类：仅用于左侧状态色标（--status-color），不复用 .status-* 以免文字色泄漏到整卡
+function cardStatusClass(status: RemainingStatus): string {
+  return 'card-status-' + status
+}
+
 // 徽标 class：内置分类用既有配色，自定义分类统一默认灰
 function categoryBadgeClass(category: string | null | undefined): string {
   const c = category?.trim() || 'work'
@@ -53,13 +58,18 @@ async function toggleEmailReminder(item: CountdownItem) {
 </script>
 
 <template>
-  <BaseDialog @close="emit('close')">
+  <BaseDialog width="864px" max-height="85vh" @close="emit('close')">
     <template #title><Icon name="timer-sand" /> 倒计时</template>
 
     <div v-if="items.length === 0" class="empty-state">暂无倒计时</div>
 
     <div v-else class="countdown-list">
-      <div v-for="item in items" :key="item.id" class="countdown-item">
+      <div
+        v-for="item in items"
+        :key="item.id"
+        class="countdown-item"
+        :class="cardStatusClass(item.remaining.status)"
+      >
         <div class="countdown-main-row">
           <div class="countdown-info">
             <div class="countdown-title">
@@ -93,27 +103,60 @@ async function toggleEmailReminder(item: CountdownItem) {
 /* 弹框外壳（遮罩/面板/头部/关闭/主体/底部/移动端适配）已统一到 common/BaseDialog.vue，
    本组件仅保留倒计时列表等内容样式 */
 
-/* 列表 */
+/* 列表：桌面一行 2 张卡片（弹框 864px，卡片约 400px） */
 .countdown-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
 }
 
 .countdown-item {
+  --status-color: var(--color-success);
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 8px;
-  padding: 14px 16px;
+  padding: 14px 16px 14px 18px;
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md);
-  transition: border-color var(--transition-fast, 0.15s ease);
+  overflow: hidden;
+  transition: border-color var(--transition-fast, 0.15s ease),
+    box-shadow var(--transition-fast, 0.15s ease);
+}
+
+/* 左侧状态色标：一眼分辨正常 / 临近 / 紧急 / 已过期 */
+.countdown-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--status-color);
+}
+
+.card-status-normal {
+  --status-color: var(--color-success, #22c55e);
+}
+
+.card-status-urgent {
+  --status-color: var(--color-warning, #f59e0b);
+}
+
+.card-status-critical {
+  --status-color: var(--color-error, #ef4444);
+}
+
+.card-status-expired {
+  --status-color: var(--color-text-muted, #94a3b8);
 }
 
 .countdown-item:hover {
   border-color: var(--color-primary, var(--color-primary));
+  box-shadow: var(--shadow-sm, 0 2px 10px rgba(0, 0, 0, 0.06));
 }
 
 /* 卡片顶部行式头部：名称/徽标/时间/剩余（保持原有横向布局） */
@@ -312,11 +355,23 @@ html.dark .cat-default {
   border-radius: var(--radius-md);
 }
 
+/* 面板内宽不足两列时回落单列（864px 弹框在 ≤900px 视口下会自适应收窄） */
+@media (max-width: 900px) {
+  .countdown-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* ===== 移动端：卡片改为「标题独占一行」+「时间 / 还剩」一行 =====
    原问题：右侧「还剩 X」为 flex-shrink:0，把标题行挤到只剩一个字的宽度（如「下…」「高…」）。
    方案：把 .countdown-info 扁平化（display:contents），让 标题 / 时间 / 剩余 直接参与换行排布，
    标题占满一整行（名称不再被挤压），时间与「还剩 X」并排在第二行。 */
 @media (max-width: 768px) {
+  /* 触屏窄屏一律单列，避免两列卡片被压到无法阅读 */
+  .countdown-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   /* 扁平化中间层，使子元素成为 main-row 的直接换行项 */
   .countdown-info {
     display: contents;
