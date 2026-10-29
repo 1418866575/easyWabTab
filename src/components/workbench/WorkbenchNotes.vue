@@ -589,15 +589,6 @@ onUnmounted(() => {
             <span v-else style="color: var(--color-text-secondary, #9ca3af);">未分类</span>
           </template>
         </el-table-column>
-        <el-table-column label="颜色" width="80" align="center">
-          <template #default="{ row }">
-            <span v-if="!isTimeline(row)" class="nt-color-tag">
-              <span class="color-dot" :class="`dot-${row.color}`"></span>
-              <span>{{ COLOR_LABELS[row.color as NoteColor] }}</span>
-            </span>
-            <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
-          </template>
-        </el-table-column>
         <el-table-column label="状态" width="110" align="center">
           <template #default="{ row }">
             <span class="nt-status-badge" :class="statusClass(row)" :data-testid="`nt-status-${row.id}`">
@@ -606,15 +597,6 @@ onUnmounted(() => {
             <div v-if="row.dueDate" class="nt-due-cell" :class="{ 'is-overdue': statusView(row) === 'overdue' }">
               {{ row.dueDate }}
             </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="置顶" width="70" align="center">
-          <template #default="{ row }">
-            <span v-if="!isTimeline(row)">
-              <span v-if="row.pinned" class="nt-pin-badge">📌</span>
-              <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
-            </span>
-            <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
           </template>
         </el-table-column>
         <el-table-column label="更新时间" width="140" align="center">
@@ -950,22 +932,15 @@ onUnmounted(() => {
   background: var(--color-primary-light, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
 }
-.nt-color-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; opacity: 0.75; }
-.nt-pin-badge { font-size: 14px; }
+/* 表格「颜色」「置顶」两列已移除，随列一起删掉只被它们使用的样式：
+ * .nt-color-tag / .nt-pin-badge / .color-dot / .dot-* 全部成为死代码。
+ * 数据层未动：cardFields 里仍保留 '颜色'/'置顶' 两条（便于将来卡片放宽字段数时直接生效），
+ * 但 RecordsCard 的 maxFields 默认 4 只渲染前四项（标题/内容/分类/状态），
+ * 所以移动端卡片视图本来就不展示这两项——与本次删列无关，勿误以为是回归。 */
 .nt-edit-btn { color: var(--color-link, #3b82f6); }
 .nt-delete-btn { color: #ef4444; }
 .nt-pin-btn { opacity: 1; }
 .nt-pin-btn.active { color: var(--el-color-warning, #e6a23c); border-color: var(--el-color-warning, #e6a23c); }
-
-.color-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-.dot-yellow { background: #eab308; }
-.dot-blue { background: #3b82f6; }
-.dot-green { background: #22c55e; }
-.dot-pink { background: #ec4899; }
-.dot-red { background: #ef4444; }
-.dot-orange { background: #f97316; }
-.dot-cyan { background: #06b6d4; }
-.dot-purple { background: #a855f7; }
 
 /* ===== 时光轴 expand 行（表格内展开）===== */
 .nt-timeline-expand { padding: 12px 24px 12px 48px; }
