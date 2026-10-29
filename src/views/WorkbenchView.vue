@@ -362,13 +362,14 @@ async function handleSyncNowClick(): Promise<void> {
         </button>
       </nav>
 
-      <main class="wb-content">
+      <main class="wb-content panel-scope">
         <SkeletonBlock v-if="initializing" :rows="5" label="正在加载工作台数据" />
         <template v-else>
-          <!-- 面板页头（对齐教师工作台 .tw-head）：标题 + 一行说明，样式在 styles/workbench.css -->
-          <div v-if="showPageHead" class="wb-page-head" data-testid="wb-page-head">
-            <h2 class="wb-page-title" data-testid="wb-page-title">{{ activePageTitle }}</h2>
-            <p class="wb-page-sub" data-testid="wb-page-sub">{{ activePageDesc }}</p>
+          <!-- 面板页头（对齐教师工作台 .tw-head）：标题 + 一行说明，样式在 styles/workbench.css。
+               panel-scope 是共享视觉层的挂载标记，销售台的内容容器也挂了同一个类。 -->
+          <div v-if="showPageHead" class="panel-page-head" data-testid="wb-page-head">
+            <h2 class="panel-page-title" data-testid="wb-page-title">{{ activePageTitle }}</h2>
+            <p class="panel-page-sub" data-testid="wb-page-sub">{{ activePageDesc }}</p>
           </div>
           <WorkbenchHome v-if="activeSection === 'home'" @navigate="navigateTo" />
           <WorkbenchTodo v-else-if="activeSection === 'todos'" />

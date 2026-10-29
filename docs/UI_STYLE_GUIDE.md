@@ -209,15 +209,19 @@ import BaseDialog from '@/components/common/BaseDialog.vue'
 | 类别                 | 现有类名                                         | 特征                                                            | 能否互换              |
 | ------------------ | -------------------------------------------- | ------------------------------------------------------------- | ----------------- |
 | **通用卡面**           | `.ui-card`                                   | 纯表面：1px 边框 + `--radius-lg` + 卡面底 + `--shadow-card`，hover 主色描边 | —                 |
-| **面板卡**（带标题/提示子元素） | `.tw-card`（教师）、`.wb-content .stat-card`（个人工作台，取值与 `.tw-card` 相同） | 16px 内边距、圆角 12px、标题带 4px 主色竖条（`::before`）、极轻阴影 | ❌ 与 `.ui-card` 不同 |
+| **面板卡**（带标题/提示子元素） | `.tw-card`（教师）、`.panel-scope .stat-card`（个人工作台，取值与 `.tw-card` 相同） | 16px 内边距、圆角 12px、标题带 4px 主色竖条（`::before`）、极轻阴影 | ❌ 与 `.ui-card` 不同 |
 | **统计卡**（大数字+标签）    | `.bento-card`、销售/学生台各自的 `*-stat-card` | flex 列 + gap 16px、圆角 8px                                      | ❌ 与面板卡不同          |
+| **销售台分区卡**        | `.bizhome-card` / `.bizhome-today` / `.bizprod-card` / `.bizstats-card` / `.bizrec-card` / `.bizinv-card` 等 | 16px 内边距、圆角 12px、极轻阴影（圆角/阴影由 `workbench.css` 统一压制，组件里仍是 8px） | ❌ 与 `.ui-card` 不同 |
 | **网格/列表布局容器**      | `.ewt-card-grid`                             | 只有 `align-content`，**无表面**                                    | ❌ 不是卡片            |
 | **工具箱卡片**          | `.tu-card`（含 `-title`/`-value`）              | toolbox 独立体系                                                  | ❌ 见 §4.1 边界       |
 
-> **个人工作台已收口**：12 个面板原先各抄一份 `.stat-card`（同一段 CSS 逐字节复制 6 份），
-> 现统一到 `src/styles/workbench.css`（全部选择器限定 `.wb-content`，避免污染销售台同名类）。
+> **个人工作台已收口；销售台同源**：12 个（个人）/ 8 个（销售）面板原先各抄一份 `.stat-card` 与各自的**
+> **`*-card`，同一段 CSS 逐字节复制多份。现统一到 `src/styles/workbench.css`，作用域标记为 `.panel-scope`
+> （`<main class="wb-content panel-scope">` / `<main class="bs-content panel-scope">`）。
 > 面板内**不要**再新增 `.stat-card` / `.stat-header` / `.stat-label` / `.stat-value` 的 scoped 副本
 > ——scoped 规则在构建时后注入，会盖掉全局值，等于又开一条轨道（详见该文件头注释）。
+> 例外：销售台分区卡的圆角/阴影是 `.bs-content.panel-scope .bizxxx-card` 叠三段选择器压制的
+> （组件里仍是 8px 且无阴影），改组件那行时记得同步删掉这里的压制，否则会「改了没反应」。
 
 **规则**：
 
@@ -225,8 +229,9 @@ import BaseDialog from '@/components/common/BaseDialog.vue'
 - 新增**带标题的卡 / 统计卡 / 网格容器** → 参照对应现有类的结构，**不要硬套 `.ui-card`**
 - **禁止**为同一语义另造第二套（这才是双轨道）；但**不同语义各用自己的类不是双轨道**
 - 卡面视觉走 token：圆角 `--radius-*`、阴影 `--shadow-card`/`--shadow-card-hover`、背景 `--color-bg-card`/`--color-surface`；**禁止**硬编码 `box-shadow: 0 1px 2px rgba(...)` 这类值
-  - **唯一例外**：`.tw-card` 与 `.wb-content .stat-card` 的 `box-shadow: 0 1px 2px rgba(15,23,42,0.04)`
-    （两个工作台共用的「极轻卡面」值，比 `--shadow-card` 明显更淡，直接写死以便两处逐像素一致；改一处必须同步另一处）
+  - **唯一例外**：`.tw-card` / `.panel-scope .stat-card` / `.bs-content.panel-scope .biz*-card` 的
+    `box-shadow: 0 1px 2px rgba(15,23,42,0.04)`
+    （工作台与销售台共用的「极轻卡面」值，比 `--shadow-card` 明显更淡，直接写死以便多处逐像素一致；改一处必须同步其它处）
 
 ### 2.5 图标 / 关闭按钮
 
@@ -412,6 +417,7 @@ src/
 | ~~开关双轨~~                                                            | **已收敛**（2026-10）：`AppSettingsDialog` 内 12 处自定义 `.switch-btn` 全部改为 `el-switch`，`.switch-btn`/`.switch-thumb`/`.mini-switch` 样式（含 dark 变体）已删除，代码零残留                                                                                                                                                                                                    | —                                                                                                                                                                                                                                                                                               |
 | ~~无 ESLint / Prettier~~                                             | **ESLint 已接入**（2026-10）：`npm run lint` / `lint:fix`，只管正确性、不做格式                                                                                                                                                                                                                                                                                       | 存量 96 处 `any`、9 处 computed 副作用为 warning，可随重构逐步收敛；Prettier 仍**刻意不引入**                                                                                                                                                                                                                            |
 | toolbox 与 src 双 token 树                                             | `toolbox/` 自带 `tool-ui.css`                                                                                                                                                                                                                                                                                                                          | 建议保持独立（工具箱视觉自成体系），仅在文档标明边界                                                                                                                                                                                                                                                                      |
+| ~~销售台面板视觉与教师台不一致~~ | **已收敛**（2026-10-29）：`workbench.css` 作用域由 `.wb-content` 泛化为标记类 `.panel-scope`，销售台 `<main class="bs-content panel-scope">` 直接复用同一套卡片/竖条/胶囊按钮/表格原语；内容区 padding 20→16px、`.bs-header` 12px 16px、`.bs-menu-item` 对齐 `.tv-nav-item`（9px 10px / 4px 圆角 / hover 只换底不换字色）；8 个面板补「标题 + 一行说明」页头（文案来自 `SECTIONS.hint`，与左树/搜索浮层同源）；`BusinessHome` 删掉从未挂载的 `.stat-*` 死代码，`.bizhome-card` 圆角 8→12px + 极轻阴影、卡片标题补 4px 主色竖条；6 类分区卡（商品/统计/对账/库存预警/今日/引导）圆角阴影统一到 12px | 顺带修掉一个**存量崩溃**：库存表「一天一父行 + 明细子行」的父行没有 `productId/unitPrice/total`，明细列却照样渲染 → `formatYuanOf(undefined).toFixed` 抛 TypeError，打断整页 patch（现象是**后续面板出现上一个面板的残留 DOM**，报错栈还指向下一次渲染，极难定位）。已按行类型 `isDayRow()` 判定，父行只留日期/笔数/当天合计，操作列也不出现在父行（父行 id 是 `day-xxx`，误点会用假 id 写库）；连带补 `default-expand-all`（否则默认折叠，桌面端每天只剩一行空壳）与页内连续序号。新增 `scripts/qa-biz-purchases-tree.mjs`（15 断言）守住这条链路 |
 | ~~个人工作台面板视觉与教师台不一致~~                                              | **已收敛**（2026-10-29）：新增 `src/styles/workbench.css`（全部选择器限定 `.wb-content`），把教师台的卡片/标题竖条/统计数字/胶囊按钮/表格取值落成一套原语；删除 6 个面板里逐字节重复的 `.stat-card/.stat-header/.stat-icon/.stat-label`（共 260 行）；面板补「标题 + 一行说明」页头；内容区 padding 20→16px 对齐 `.tv-content` | 两处**有意的局部差异**（已被面板 scoped 规则显式覆盖并写明原因）：① 记账 7 列统计卡保留正文色数字（红=支出，染主色会误读）；② 首页 6 列密集小卡不挂标题竖条（会把标题挤成省略号）。另修掉一处存量 bug：`.btn-primary` 等别名直接写 `background-color`，对 el-button 无效（被 EP 的 `--el-button-bg-color` 压掉），表现为主操作按钮全成白底描边——已在 workbench.css 用 EP 变量覆盖 |
 
 ---
@@ -425,7 +431,7 @@ src/
 | 暗色                      | `src/styles/dark.css`                                                                                                       |
 | EP 桥接 + el-button 尺寸对齐  | `src/styles/element-theme.css`                                                                                              |
 | 教师工作台面板原语（tw-*）        | `src/styles/teacher.css`                                                                                                    |
-| 个人工作台面板原语（wb-content 作用域，取值同 tw-*） | `src/styles/workbench.css`                                                                                     |
+| 工作台面板原语（个人 + 销售共用，`.panel-scope` 作用域，取值同 tw-*） | `src/styles/workbench.css`                                                                                      |
 | 弹框基类                    | `src/components/common/BaseDialog.vue`                                                                                      |
 | 确认框 / 提示                | `src/utils/dialog.ts`、`src/composables/useConfirm.ts`、`src/components/common/ConfirmHost.vue`、`src/composables/useToast.ts` |
 | 弹框滚动锁白名单                | `src/utils/scrollLock.ts`                                                                                                   |

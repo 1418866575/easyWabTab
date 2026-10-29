@@ -1,19 +1,27 @@
 /* ============================================================
- * 个人工作台共享视觉层（与教师工作台同一套视觉语言）
+ * 面板工作台共享视觉层（与教师工作台同一套视觉语言）
  *
  * 目的：教师工作台（styles/teacher.css）的卡片、卡片标题、统计数字、按钮、
- *      表格已经是项目里最成熟的一套面板视觉。个人工作台的 12 个面板此前
- *      各自抄了一份 .stat-card 等（同一段 CSS 被逐字节复制 6 份），既漂移
- *      又无法统一。这里把那一套取值收成一份，供所有面板共用。
+ *      表格已经是项目里最成熟的一套面板视觉。个人工作台（12 面板）与销售台（8 面板）
+ *      此前各自抄了一份 .stat-card 等（同一段 CSS 被逐字节复制多份），既漂移又无法统一。
+ *      这里把那一套取值收成一份，供两个工作台的所有面板共用。
  *
  * 为什么是全局样式而不是各面板 scoped：
- *   ① 12 个面板是独立组件，scoped 样式无法跨组件复用，只能继续复制；
+ *   ① 面板是独立组件，scoped 样式无法跨组件复用，只能继续复制；
  *   ② 面板内 scoped 规则若与这里同名同特异性，组件样式在构建时后注入 → 面板侧胜出，
- *      所以重复定义必须删除（已删 6 份），不能靠「全局覆盖」。
+ *      所以重复定义必须删除，不能靠「全局覆盖」。
  *
- * 作用域红线：所有选择器一律以 .wb-content 开头。
- *   原因：.stat-card 在销售台（BusinessHome）也用了，但那边是另一套视觉；
- *        不限定祖先会污染学生/教师/销售三个工作台。
+ * 作用域标记：所有选择器一律以 .panel-scope 开头。
+ *   - 个人工作台内容容器 <main class="wb-content panel-scope">
+ *   - 销售台内容容器   <main class="bs-content panel-scope">
+ *   用同一个标记类而不是把 .wb-content/.bs-content 写两遍：
+ *     · 一条规则一份取值，不会出现「改了一边忘了另一边」；
+ *     · 也不会污染学生/教师工作台（它们不使用该标记）。
+ *   ⚠️ 新增面板容器若要复用本文件的取值，必须显式加上 panel-scope，否则不生效。
+ *
+ * 不用 :is(.wb-content, .bs-content) 的原因：部分国产内核版本较旧，
+ *   :is()/:has() 这类选择器函数有静默失效风险（:has() 已在项目里踩过坑），
+ *   普通类选择器全平台稳定。
  *
  * 取值来源：styles/teacher.css 的 .tw-card / .tw-card-title / .tw-stat-value /
  *          .tw-btn / .tw-table / .tw-empty（改这里时请同步对照，别各改一头）。
@@ -21,7 +29,7 @@
 
 /* ---------- 1. 面板页头（教师 .tw-head / .tw-title / .tw-subtitle） ---------- */
 
-.wb-content .wb-page-head {
+.panel-scope .panel-page-head {
   /* 标题与说明上下堆叠（对照教师 .tw-head 里 title/subtitle 同处一个 div 的关系）。
      面板自己的工具栏留在面板内，页头不放右侧操作，故用列布局而不是 space-between。 */
   display: flex;
@@ -32,7 +40,7 @@
   margin: 0 0 var(--space-4, 16px);
 }
 
-.wb-content .wb-page-title {
+.panel-scope .panel-page-title {
   margin: 0;
   font-size: var(--font-size-xl, 18px);
   font-weight: var(--font-weight-semibold, 600);
@@ -40,7 +48,7 @@
   line-height: var(--line-height-tight, 1.3);
 }
 
-.wb-content .wb-page-sub {
+.panel-scope .panel-page-sub {
   margin: 4px 0 0;
   font-size: var(--font-size-sm, 13px);
   color: var(--color-text-muted, #94a3b8);
@@ -48,7 +56,7 @@
 
 /* ---------- 2. 卡片（教师 .tw-card） ---------- */
 
-.wb-content .stat-card {
+.panel-scope .stat-card {
   display: flex;
   flex-direction: column;
   gap: var(--space-3, 12px);
@@ -63,22 +71,55 @@
 
 /* 教师卡片 hover 不变边框色（只在按下/聚集时给焦点环），
    这里保留一点极轻的浮起反馈，但不改色，避免与教师侧观感分叉。 */
-.wb-content .stat-card:hover {
+.panel-scope .stat-card:hover {
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
 }
 
-html.dark .wb-content .stat-card {
+html.dark .panel-scope .stat-card {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-html.dark .wb-content .stat-card:hover {
+html.dark .panel-scope .stat-card:hover {
+  box-shadow: none;
+}
+
+/* ---------- 2b. 销售台分区卡片（圆角/阴影向卡片口径看齐） ---------- */
+
+/* 销售台 8 个面板各自带一套分区卡片类（.bizprod-card / .bizstats-card / .bizrec-card …），
+   圆角写的是 --radius-md(8px)，与工作台/教师卡片 12px 不是一套，且多数没有阴影。
+   这里统一到 12px + 极轻阴影，与 .stat-card 同一观感。
+   为什么用两段作用域而不是改 7 个组件各一行：组件里这些规则在 scoped 下与本节同特异性，
+   后注入的 scoped 会胜出；写成 .bs-content.panel-scope 叠到 3 个类选择器，特异性更高才压得住。
+   不用 !important —— 以后面板要个别覆盖时还能就地改。
+   ⚠️ 若把组件里的圆角改成 12px，请同时删掉对应的这一行，别留两份取值。 */
+.bs-content.panel-scope .bizhome-today,
+.bs-content.panel-scope .bizhome-onboard,
+.bs-content.panel-scope .bizhome-scope,
+.bs-content.panel-scope .bizprod-card,
+.bs-content.panel-scope .bizstats-card,
+.bs-content.panel-scope .bizrec-card,
+.bs-content.panel-scope .bizinv-card,
+.bs-content.panel-scope .bizinv-low-card {
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+/* 暗色下取消阴影（与 .stat-card 一致）：深底上看不出层次，只会显脏 */
+html.dark .bs-content.panel-scope .bizhome-today,
+html.dark .bs-content.panel-scope .bizhome-onboard,
+html.dark .bs-content.panel-scope .bizhome-scope,
+html.dark .bs-content.panel-scope .bizprod-card,
+html.dark .bs-content.panel-scope .bizstats-card,
+html.dark .bs-content.panel-scope .bizrec-card,
+html.dark .bs-content.panel-scope .bizinv-card,
+html.dark .bs-content.panel-scope .bizinv-low-card {
   box-shadow: none;
 }
 
 /* ---------- 3. 卡片标题（教师 .tw-card-title：4px 竖条 + 加粗） ---------- */
 
-.wb-content .stat-header {
+.panel-scope .stat-header {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -87,7 +128,7 @@ html.dark .wb-content .stat-card:hover {
 
 /* 4px 主色竖条是教师卡片标题的标志性元素；工作台卡片标题保留图标，
    竖条插在图标之前，作为同一套「标题条」语言。 */
-.wb-content .stat-header::before {
+.panel-scope .stat-header::before {
   content: '';
   flex-shrink: 0;
   width: 4px;
@@ -96,13 +137,13 @@ html.dark .wb-content .stat-card:hover {
   background-color: var(--color-primary, #3b82f6);
 }
 
-.wb-content .stat-icon {
+.panel-scope .stat-icon {
   flex-shrink: 0;
   font-size: 16px;
   line-height: 1;
 }
 
-.wb-content .stat-label {
+.panel-scope .stat-label {
   flex: 1;
   min-width: 0;
   font-size: var(--font-size-base, 15px);
@@ -117,13 +158,13 @@ html.dark .wb-content .stat-card:hover {
 
 /* 只补颜色与数字对齐：字号由各面板自己定（记账 7 列并排需要更小号，
    教师 6 列统计卡可用 26-30px），面板 scoped 规则会按需覆盖字号。 */
-.wb-content .stat-value {
+.panel-scope .stat-value {
   color: var(--color-primary, #3b82f6);
   font-variant-numeric: tabular-nums;
   line-height: 1.15;
 }
 
-.wb-content .stat-sub {
+.panel-scope .stat-sub {
   font-size: var(--font-size-sm, 13px);
   color: var(--color-text-secondary, #64748b);
 }
@@ -134,22 +175,22 @@ html.dark .wb-content .stat-card:hover {
    这里统一到胶囊：只动圆角与字号，高度沿用 element-theme.css 的 36px。
    排除链接/文字按钮（表格操作列用 .is-link），否则会把「编辑/删除」文字按钮
    变成带内边距的胶囊，挤坏表格行高。 */
-.wb-content .el-button:not(.is-link):not(.is-text):not(.is-circle) {
+.panel-scope .el-button:not(.is-link):not(.is-text):not(.is-circle) {
   border-radius: var(--radius-full, 999px);
   font-size: var(--font-size-sm, 13px);
 }
 
 /* 面板里的原生按钮走的是语义类名（.btn-add / .btn-save 等），el-button 覆盖不到。
    只列这些「动作型」按钮——切换标签、日历格、展开箭头等不在其列，保持原状。 */
-.wb-content button.btn-add,
-.wb-content button.btn-save,
-.wb-content button.btn-cancel,
-.wb-content button.btn-delete,
-.wb-content button.btn-edit,
-.wb-content button.btn-clear,
-.wb-content button.btn-submit,
-.wb-content button.btn-primary,
-.wb-content button.btn-secondary {
+.panel-scope button.btn-add,
+.panel-scope button.btn-save,
+.panel-scope button.btn-cancel,
+.panel-scope button.btn-delete,
+.panel-scope button.btn-edit,
+.panel-scope button.btn-clear,
+.panel-scope button.btn-submit,
+.panel-scope button.btn-primary,
+.panel-scope button.btn-secondary {
   border-radius: var(--radius-full, 999px);
   font-size: var(--font-size-sm, 13px);
 }
@@ -159,11 +200,11 @@ html.dark .wb-content .stat-card:hover {
    对原生 button 有效，但 el-button 的背景由它自己的 CSS 变量 --el-button-bg-color 决定，
    同特异性下被 EP 的 .el-button 规则压掉 —— 表现为「开始」「＋ 新增」全是白底描边，
    而教师工作台的主操作是实心主色。这里改它们的 CSS 变量（不用 !important）。 */
-.wb-content .el-button:not(.is-link):not(.is-text).btn-primary,
-.wb-content .el-button:not(.is-link):not(.is-text).btn-add,
-.wb-content .el-button:not(.is-link):not(.is-text).btn-save,
-.wb-content .el-button:not(.is-link):not(.is-text).btn-submit,
-.wb-content .el-button:not(.is-link):not(.is-text).pwd-btn-primary {
+.panel-scope .el-button:not(.is-link):not(.is-text).btn-primary,
+.panel-scope .el-button:not(.is-link):not(.is-text).btn-add,
+.panel-scope .el-button:not(.is-link):not(.is-text).btn-save,
+.panel-scope .el-button:not(.is-link):not(.is-text).btn-submit,
+.panel-scope .el-button:not(.is-link):not(.is-text).pwd-btn-primary {
   --el-button-bg-color: var(--color-primary, #3b82f6);
   --el-button-border-color: var(--color-primary, #3b82f6);
   --el-button-text-color: #ffffff;
@@ -182,12 +223,12 @@ html.dark .wb-content .stat-card:hover {
 /* 工作台表格统一用 el-table.ewt-table（22 处共用），不换回原生 table——
    排序/展开行/分页都依赖 el-table。这里只把它的字体与表头观感对齐教师表格。
    表头居中已由 styles/records.css 处理，此处只管字号与字色。 */
-.wb-content .ewt-table {
+.panel-scope .ewt-table {
   font-size: var(--font-size-sm, 13px);
   color: var(--color-text, #0f172a);
 }
 
-.wb-content .ewt-table .el-table__header th {
+.panel-scope .ewt-table .el-table__header th {
   font-weight: var(--font-weight-semibold, 600);
   color: var(--color-text-secondary, #64748b);
   background-color: var(--color-bg-hover, #f1f5f9);
@@ -197,15 +238,15 @@ html.dark .wb-content .stat-card:hover {
    + 内层 .cell 的左右 padding，直接给 td 写 10px 会和 .cell 的 12px 叠加成 22px，
    反而比原来更挤（实测便签「类型/状态」标签被挤到省略号）。
    故：td 只留纵向 8px，横向交给 .cell 的 10px，合计正好等于教师表格的 8px 10px。 */
-.wb-content .ewt-table .el-table__cell {
+.panel-scope .ewt-table .el-table__cell {
   padding: 8px 0;
 }
 
-.wb-content .ewt-table .el-table__cell > .cell {
+.panel-scope .ewt-table .el-table__cell > .cell {
   padding: 0 10px;
 }
 
-.wb-content .ewt-table tbody tr:hover > .el-table__cell {
+.panel-scope .ewt-table tbody tr:hover > .el-table__cell {
   background-color: var(--color-primary-soft, #eff6ff);
 }
 
@@ -215,7 +256,7 @@ html.dark .wb-content .stat-card:hover {
    统一放大到 44px 会把工具栏撑成两行，故只收敛标题字号，按钮高度沿用全局 36px
    ——36px 已满足本项目移动端触控下限（见 scripts/qa-workbench-mobile-overlap.mjs 的 32px 断言）。 */
 @media (max-width: 768px) {
-  .wb-content .wb-page-title {
+  .panel-scope .panel-page-title {
     font-size: var(--font-size-lg, 16px);
   }
 }

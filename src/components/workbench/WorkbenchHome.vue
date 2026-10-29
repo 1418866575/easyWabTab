@@ -211,10 +211,10 @@ async function handleQuickNote(): Promise<void> {
               </HomeLayoutCard>
 
               <HomeLayoutCard v-if="menuOn.countdowns" card-id="upcoming" :default-w="1">
-                <section class="bento-card bento-panel">
+                <!-- 入口由「前往」按钮改为整卡点击：6 列密集网格里按钮会把标题挤成省略号 -->
+                <section class="bento-card bento-panel is-clickable" @click="navTo('countdowns')">
                   <div class="panel-header">
                     <h3><span class="panel-icon"><Icon name="countdowns" /></span>即将到期提醒</h3>
-                    <button class="nav-btn" data-testid="home-nav-countdowns" @click="navTo('countdowns')">前往 →</button>
                   </div>
                   <ul v-if="upcomingCountdowns.length > 0" class="home-list" data-testid="home-upcoming-list">
                     <li v-for="item in upcomingCountdowns" :key="item.id" class="home-list-item">
@@ -236,7 +236,6 @@ async function handleQuickNote(): Promise<void> {
                   <div class="stat-header">
                     <span class="stat-icon"><Icon name="todos" :size="16" /></span>
                     <span class="stat-label">待办任务</span>
-                    <button class="nav-btn" data-testid="home-nav-todos" @click.stop="navTo('todos')">前往 →</button>
                   </div>
                   <div class="stat-body">
                     <div class="stat-value" data-testid="home-stats-value-todos">{{ todoStats.total }}</div>
@@ -265,7 +264,6 @@ async function handleQuickNote(): Promise<void> {
                   <div class="stat-header">
                     <span class="stat-icon"><Icon name="todos" :size="16" /></span>
                     <span class="stat-label">待办统计</span>
-                    <button class="nav-btn" data-testid="home-nav-todo-stats" @click.stop="navTo('todos')">前往 →</button>
                   </div>
                   <div class="todo-stat-grid">
                     <div class="todo-stat-cell" data-testid="home-todo-stat-today">
@@ -297,7 +295,6 @@ async function handleQuickNote(): Promise<void> {
                   <div class="stat-header">
                     <span class="stat-icon"><Icon name="notes" :size="16" /></span>
                     <span class="stat-label">便签</span>
-                    <button class="nav-btn" data-testid="home-nav-notes" @click.stop="navTo('notes')">前往 →</button>
                   </div>
                   <div class="stat-value" data-testid="home-stats-value-notes">{{ noteStats.total }}</div>
                   <div class="stat-sub">{{ noteStats.pinned }} 置顶</div>
@@ -309,7 +306,6 @@ async function handleQuickNote(): Promise<void> {
                   <div class="stat-header">
                     <span class="stat-icon"><Icon name="countdowns" :size="16" /></span>
                     <span class="stat-label">提醒</span>
-                    <button class="nav-btn" data-testid="home-nav-countdowns" @click.stop="navTo('countdowns')">前往 →</button>
                   </div>
                   <div class="stat-value" data-testid="home-stats-value-countdowns">{{ countdownStats.total }}</div>
                   <div class="stat-sub">{{ countdownStats.near30 }} 项 30 天内到期</div>
@@ -321,7 +317,6 @@ async function handleQuickNote(): Promise<void> {
                   <div class="stat-header">
                     <span class="stat-icon"><Icon name="passwords" :size="16" /></span>
                     <span class="stat-label">密码</span>
-                    <button class="nav-btn" data-testid="home-nav-passwords" @click.stop="navTo('passwords')">前往 →</button>
                   </div>
                   <div class="stat-value" data-testid="home-stats-value-passwords">
                     <template v-if="isUnlocked">{{ passwordCount }} 条</template>
@@ -336,7 +331,6 @@ async function handleQuickNote(): Promise<void> {
                   <div class="stat-header">
                     <span class="stat-icon"><Icon name="exercise" :size="16" /></span>
                     <span class="stat-label">运动</span>
-                    <button class="nav-btn" data-testid="home-nav-exercise" @click.stop="navTo('health', 'exercise')">前往 →</button>
                   </div>
                   <div class="stat-value" data-testid="home-stats-value-exercise">{{ exerciseStats.value }}</div>
                   <div class="stat-sub" data-testid="home-stats-sub-exercise">{{ exerciseStats.sub }}</div>
@@ -348,7 +342,6 @@ async function handleQuickNote(): Promise<void> {
                   <div class="stat-header">
                     <span class="stat-icon"><Icon name="diet" :size="16" /></span>
                     <span class="stat-label">饮食</span>
-                    <button class="nav-btn" data-testid="home-nav-diet" @click.stop="navTo('health', 'diet')">前往 →</button>
                   </div>
                   <div class="stat-value" data-testid="home-stats-value-diet">{{ dietStats.value }}</div>
                   <div class="stat-sub" data-testid="home-stats-sub-diet">{{ dietStats.sub }}</div>
@@ -360,7 +353,6 @@ async function handleQuickNote(): Promise<void> {
                   <div class="stat-header">
                     <span class="stat-icon"><Icon name="sleep" :size="16" /></span>
                     <span class="stat-label">睡眠</span>
-                    <button class="nav-btn" data-testid="home-nav-sleep" @click.stop="navTo('health', 'sleep')">前往 →</button>
                   </div>
                   <div class="stat-value" data-testid="home-stats-value-sleep">{{ sleepStats.value }}</div>
                   <div class="stat-sub" data-testid="home-stats-sub-sleep">{{ sleepStats.sub }}</div>
@@ -372,7 +364,6 @@ async function handleQuickNote(): Promise<void> {
                   <div class="stat-header">
                     <span class="stat-icon"><Icon name="weight" :size="16" /></span>
                     <span class="stat-label">体重</span>
-                    <button class="nav-btn" data-testid="home-nav-weight" @click.stop="navTo('health', 'weight')">前往 →</button>
                   </div>
                   <div class="stat-value" data-testid="home-stats-value-weight">{{ weightStats.value }}</div>
                   <div class="stat-sub" data-testid="home-stats-sub-weight">{{ weightStats.sub }}</div>
@@ -384,7 +375,6 @@ async function handleQuickNote(): Promise<void> {
                   <div class="stat-header">
                     <span class="stat-icon"><Icon name="ledger" :size="16" /></span>
                     <span class="stat-label">记账</span>
-                    <button class="nav-btn" data-testid="home-nav-ledger" @click.stop="navTo('ledger')">前往 →</button>
                   </div>
                   <div class="stat-value" data-testid="home-stats-value-ledger">{{ ledgerStats.value }}</div>
                   <div class="stat-sub" data-testid="home-stats-sub-ledger">{{ ledgerStats.sub }}</div>
@@ -396,7 +386,6 @@ async function handleQuickNote(): Promise<void> {
                   <div class="stat-header">
                     <span class="stat-icon"><Icon name="habits" :size="16" /></span>
                     <span class="stat-label">打卡</span>
-                    <button class="nav-btn" data-testid="home-nav-habits" @click.stop="navTo('habits')">前往 →</button>
                   </div>
                   <div class="stat-value" data-testid="home-stats-value-habits">{{ habitStats.metCount }}/{{ habitStats.total }}</div>
                   <div class="stat-sub" data-testid="home-stats-sub-habits">本周打卡 {{ habitStats.weekCheckins }} 次</div>
@@ -430,10 +419,9 @@ async function handleQuickNote(): Promise<void> {
           <!-- 工具：未完成待办 + 日历锚点 -->
               <!-- 未完成待办 -->
               <HomeLayoutCard v-if="menuOn.todos" card-id="pending-todos" :default-w="1">
-                <section class="bento-card bento-panel">
+                <section class="bento-card bento-panel is-clickable" @click="navTo('todos')">
                   <div class="panel-header">
                     <h3><span class="panel-icon"><Icon name="todos" /></span>未完成待办</h3>
-                    <button class="nav-btn" data-testid="home-nav-todos" @click.stop="navTo('todos')">前往 →</button>
                   </div>
                   <ul v-if="pendingTodos.length > 0" class="home-list" data-testid="home-todo-list">
                     <li v-for="todo in pendingTodos" :key="todo.id" class="home-list-item">
@@ -494,9 +482,8 @@ async function handleQuickNote(): Promise<void> {
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
 }
 
-/* 首页是 6 列密集小卡（每张约 150px 宽），教师式 4px 标题竖条会挤掉标题文字
-   （实测「即将到期的提醒」被截成「即将到…」），故首页不挂竖条；
-   竖条保留给整宽卡片（其余面板）。见 styles/workbench.css 的 .stat-header::before。 */
+/* 首页是 6 列密集小卡，教师式 4px 标题竖条在这么小的卡里显得碎（11 张卡就是 11 根竖条），
+   故首页不挂竖条；竖条保留给整宽卡片（其余面板）。见 styles/workbench.css 的 .stat-header::before。 */
 .home-overview-grid .stat-header::before {
   display: none;
 }
@@ -662,33 +649,10 @@ async function handleQuickNote(): Promise<void> {
 }
 
 /* ===== 统计卡头部 =====
- * .stat-header / .stat-icon / .stat-label 的基础取值统一在 styles/workbench.css
- * （= 教师 .tw-card-title 的 15px/600 + 主色竖条）。
- * 首页卡片是 6 列密集小卡（约 150px 宽），15px 标题在「即将到期的提醒」这类 7 字标题上
- * 会贴边，故首页把标题降到 13px 并关掉竖条（见上方 .home-overview-grid 规则）。
- * 只覆盖字号与竖条这两项，其余（颜色/省略号/flex）沿用全局。 */
-.home-overview-grid .stat-label {
-  font-size: var(--font-size-sm, 13px);
-}
-
-.nav-btn {
-  flex-shrink: 0;
-  padding: 3px 8px;
-  font-size: 12px;
-  border-radius: var(--radius-full, 9999px);
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  color: var(--color-primary, var(--color-primary));
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.nav-btn:hover {
-  background: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-  color: #fff;
-}
+ * .stat-header / .stat-icon / .stat-label 的取值统一在 styles/workbench.css
+ * （= 教师 .tw-card-title 的 15px/600 + 主色竖条），首页不再单独降字号：
+ * 原先降到 13px 是为了给卡内「前往 →」按钮让位，按钮已删（改整卡点击），
+ * 6 列卡实测每张 ~167px 内容宽，15px 标题 + 图标足够放下全部现有标题。 */
 
 .stat-value {
   min-width: 0;
@@ -888,10 +852,18 @@ async function handleQuickNote(): Promise<void> {
   gap: 12px;
 }
 
+.bento-panel.is-clickable {
+  cursor: pointer;
+}
+
+/* 悬浮反馈与 .bento-stat 同款（整卡可点，点哪儿都进面板） */
+.bento-panel.is-clickable:hover {
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+}
+
 .panel-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
 }
 
@@ -1068,17 +1040,6 @@ html.dark .ring-text {
 html.dark .home-list-item {
   background-color: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
-}
-
-html.dark .nav-btn {
-  background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
-  border-color: var(--color-border, #374151);
-}
-
-html.dark .nav-btn:hover {
-  background-color: var(--color-primary, #3b82f6);
-  color: #fff;
 }
 
 html.dark .home-empty {

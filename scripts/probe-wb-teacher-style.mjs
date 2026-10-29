@@ -214,8 +214,8 @@ try {
           th: s(th),
           td: s(td),
           head: (() => {
-            const t = document.querySelector('.wb-page-title')
-            const p = document.querySelector('.wb-page-sub')
+            const t = document.querySelector('.panel-page-title')
+            const p = document.querySelector('.panel-page-sub')
             return t && p ? { title: t.textContent.trim(), sub: p.textContent.trim() } : null
           })()
         }
@@ -244,7 +244,7 @@ try {
   await page.waitForTimeout(900)
   await page.screenshot({ path: join(OUT, '23-wb-notes-mobile.png') })
   const mobile = await page.evaluate(() => {
-    const head = document.querySelector('.wb-page-head')
+    const head = document.querySelector('.panel-page-head')
     const content = document.querySelector('.wb-content')
     return {
       headH: head?.getBoundingClientRect().height ?? 0,
@@ -278,9 +278,9 @@ try {
     return {
       wb: [
         pick('.wb-content'),
-        pick('.wb-page-head'),
-        pick('.wb-page-title'),
-        pick('.wb-page-sub'),
+        pick('.panel-page-head'),
+        pick('.panel-page-title'),
+        pick('.panel-page-sub'),
         pick('.wb-content .stat-card'),
         pick('.wb-content .stat-label'),
         pick('.wb-content .stat-value'),
