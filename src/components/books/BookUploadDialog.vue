@@ -14,6 +14,8 @@ import { formatSize } from '@/composables/booksCore'
 import type { UploadRejectReason } from '@/composables/booksCore'
 import { deleteUploadedBook, updateUploadedBookMeta, uploadBookFile } from '@/composables/booksUpload'
 import type { UploadedBook } from '@/composables/booksUpload'
+import { useBooksPrefs, flushBooksPrefs } from '@/composables/useBooksPrefs'
+import { showConfirm } from '@/utils/dialog'
 import { useToast } from '@/composables/useToast'
 
 const props = defineProps<{
@@ -140,9 +142,18 @@ async function saveEdit(): Promise<void> {
 }
 
 async function onDelete(book: UploadedBook): Promise<void> {
-  if (!window.confirm(`删除「${book.title}」？该书只存在这台设备上，删了就没了。`)) return
+  // 走项目统一的 showConfirm，不用原生 window.confirm（见 UI_STYLE_GUIDE §184）
+  const ok = await showConfirm(
+    `删除「${book.title}」？该书只存在这台设备上，删了就没了。`,
+    '删除书籍'
+  )
+  if (!ok) return
   try {
     await deleteUploadedBook(book.id)
+    // 与书架卡片上的删除保持一致：收藏 / 最近 / 打开次数 / 阅读位置一并清掉，
+    // 否则偏好里会留下指向已删书的孤儿 id
+    useBooksPrefs().forgetBook(book.id)
+    flushBooksPrefs()
     toast.success(`已删除「${book.title}」`)
     emit('changed')
   } catch (e) {
@@ -211,7 +222,7 @@ async function onDelete(book: UploadedBook): Promise<void> {
               <input v-model="editDesc" type="text" class="bk-edit-input" placeholder="简介" maxlength="120" />
               <input v-model="editTags" type="text" class="bk-edit-input" placeholder="标签，空格分隔" maxlength="120" />
               <div class="bk-edit-actions">
-                <button type="button" class="ui-btn ui-btn--sm ui-btn--primary" data-testid="bk-edit-save" @click="saveEdit">
+                <button type="button" class="ui-btn ui-btn--sm ui-btn--primary" data-testid="bk-upload-edit-save" @click="saveEdit">
                   保存
                 </button>
                 <button type="button" class="ui-btn ui-btn--sm" @click="cancelEdit">取消</button>

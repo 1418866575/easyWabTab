@@ -21,6 +21,7 @@ import BookCard from '@/components/books/BookCard.vue'
 import BookSearchBar from '@/components/books/BookSearchBar.vue'
 import BookCategoryTabs from '@/components/books/BookCategoryTabs.vue'
 import BookUploadDialog from '@/components/books/BookUploadDialog.vue'
+import BookEditDialog from '@/components/books/BookEditDialog.vue'
 import BookBookmarkDialog from '@/components/books/BookBookmarkDialog.vue'
 import BookSyncButton from '@/components/books/BookSyncButton.vue'
 import WorkbenchSwitcher from '@/components/WorkbenchSwitcher.vue'
@@ -39,9 +40,15 @@ import {
   type BookSort
 } from '@/composables/booksCore'
 import { useBooksPrefs, flushBooksPrefs } from '@/composables/useBooksPrefs'
-import { listUploadedBooks, makeUploadObjectUrl, uploadedToBookItem } from '@/composables/booksUpload'
+import {
+  deleteUploadedBook,
+  listUploadedBooks,
+  makeUploadObjectUrl,
+  uploadedToBookItem
+} from '@/composables/booksUpload'
 import type { UploadedBook } from '@/composables/booksUpload'
 import { downloadBook } from '@/composables/booksDownload'
+import { showConfirm } from '@/utils/dialog'
 import '@/styles/books.css'
 
 const router = useRouter()
@@ -61,6 +68,9 @@ const page = ref(1)
 const pageSize = 12
 const uploadOpen = ref(false)
 const bookmarkOpen = ref(false)
+/** 编辑书名等元信息的弹框；只对本机上传书开放 */
+const editOpen = ref(false)
+const editingBook = ref<UploadedBook | null>(null)
 /** 正在下载的书的 id；同一时刻只允许一本在跑，避免并发把内存与带宽一起吃掉 */
 const downloadingId = ref('')
 
@@ -277,6 +287,53 @@ async function onDownload(book: BookItem): Promise<void> {
   }
 }
 
+/** ---------- 上传书的编辑 / 删除 ---------- */
+/**
+ * 打开编辑弹框。
+ *
+ * 卡片里拿到的是合并后的 BookItem（静态书 + 上传书同型），编辑弹框要的是原始
+ * UploadedBook（只有它带 html / createdAt）—— 所以按 id 回查 uploads，
+ * 查不到说明刚被别的标签页删了，如实报错而不是弹一个空表单。
+ */
+function onEdit(book: BookItem): void {
+  const u = uploads.value.find((x) => x.id === book.id)
+  if (!u) {
+    toast.error(`找不到《${book.title}》的本机内容，可能已被删除`)
+    return
+  }
+  editingBook.value = u
+  editOpen.value = true
+}
+
+/**
+ * 删除本机上传书。
+ *
+ * 除了删 IndexedDB 里那条记录，还必须清掉偏好里的痕迹（收藏 / 最近 / 打开次数 /
+ * 书签）—— 否则「最近阅读」「我的收藏」会留下指向已删书的孤儿 id，
+ * 书签列表里也会挂着一条打开就 404 的条目。
+ */
+async function onRemove(book: BookItem): Promise<void> {
+  const ok = await showConfirm(
+    `确定删除《${book.title}》？这本书只存在当前设备的浏览器里，删除后无法恢复。`,
+    '删除书籍'
+  )
+  if (!ok) return
+  try {
+    await deleteUploadedBook(book.id)
+    prefs.forgetBook(book.id)
+    flushBooksPrefs()
+    // 正在编辑的就是这本 → 一并收掉弹框，避免保存时写回一条已删除的记录
+    if (editingBook.value?.id === book.id) {
+      editOpen.value = false
+      editingBook.value = null
+    }
+    await loadUploads()
+    toast.success(`已删除《${book.title}》`)
+  } catch (e) {
+    toast.error(`删除失败：${(e as Error)?.message ?? e}`)
+  }
+}
+
 /** ---------- 筛选重置 ---------- */
 function resetFilterState(): void {
   keyword.value = ''
@@ -309,8 +366,10 @@ function onSortChange(e: Event): void {
 }
 
 /** 清空全部打开次数（连同最近阅读时间一起抹掉，"按最近打开"排序才有意义） */
-function resetClicks(): void {
-  if (!window.confirm('清空全部打开次数与最近阅读记录？此操作不可撤销。')) return
+async function resetClicks(): Promise<void> {
+  // 走项目统一的 showConfirm，不用原生 window.confirm（见 UI_STYLE_GUIDE §184）
+  const ok = await showConfirm('清空全部打开次数与最近阅读记录？此操作不可撤销。', '重置统计')
+  if (!ok) return
   for (const b of allBooks.value) prefs.forgetBook(b.id)
   prefs.flushBooksPrefs()
   toast.success('已重置统计')
@@ -465,6 +524,8 @@ onUnmounted(() => {
           @read="onRead"
           @toggle-fav="onToggleFav"
           @download="onDownload"
+          @edit="onEdit"
+          @remove="onRemove"
         />
       </div>
     </section>
@@ -488,6 +549,8 @@ onUnmounted(() => {
           @read="onRead"
           @toggle-fav="onToggleFav"
           @download="onDownload"
+          @edit="onEdit"
+          @remove="onRemove"
         />
       </div>
     </section>
@@ -517,6 +580,8 @@ onUnmounted(() => {
           @read="onRead"
           @toggle-fav="onToggleFav"
           @download="onDownload"
+          @edit="onEdit"
+          @remove="onRemove"
         />
       </div>
 
@@ -552,6 +617,13 @@ onUnmounted(() => {
       :uploads="uploads"
       :existing-ids="allBooks.map((b) => b.id)"
       @changed="onUploadChanged"
+    />
+
+    <BookEditDialog
+      v-if="editOpen"
+      v-model="editOpen"
+      :book="editingBook"
+      @saved="onUploadChanged"
     />
 
     <BookBookmarkDialog v-if="bookmarkOpen" v-model="bookmarkOpen" :book-titles="allBookTitles" />

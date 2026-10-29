@@ -5,10 +5,11 @@
  * 只做卡片形态一种（用户 2026-10-13 明确要求：书架固定卡片视图，不要列表视图）。
  * 曾有的 mode prop 与列表分支已整体移除 —— 留着没人用的第二形态，就是等着被误改。
  *
- * 三个动作刻意分开放，避免「点卡片」与「点小按钮」抢事件：
+ * 动作刻意分开放，避免「点卡片」与「点小按钮」抢事件：
  *   - 点书名 → 新标签打开（主路径）
  *   - 「站内阅读」→ 进 /books/read（iframe，**只有它能记录阅读位置**）
  *   - ★ → 收藏
+ *   - 「编辑」「删除」**仅本机上传书**显示：静态书跟着仓库走，页面上改不了也删不掉
  *
  * 封面缺失时用**按 id 派生的稳定色相**占位：同一本书每次刷新颜色一致，
  * 不会因为随机色导致网格每次都在跳。
@@ -39,6 +40,10 @@ const emit = defineEmits<{
   (e: 'read', book: BookItem): void
   (e: 'toggle-fav', book: BookItem): void
   (e: 'download', book: BookItem): void
+  /** 编辑元信息（书名/分类/简介/标签），仅上传书会触发 */
+  (e: 'edit', book: BookItem): void
+  /** 删除本机上传书，仅上传书会触发 */
+  (e: 'remove', book: BookItem): void
 }>()
 
 /** 按 id 派生的稳定色相：字符串 hash → 0..359，保证同一本书每次颜色一致 */
@@ -159,6 +164,31 @@ const downloadTitle = computed(() =>
           {{ downloading ? '下载中…' : '下载' }}
         </button>
         <span class="bk-recent">{{ recentLabel }}</span>
+      </div>
+
+      <!-- 编辑 / 删除只对本机上传书开放（静态书由仓库维护，页面不该提供这两条路径）。
+           刻意单起一行而不是塞进上面那行：5 个按钮在 260px 的最窄卡片里必然换行，
+           换行后「删除」会孤零零掉到第二行左侧，看着像没排好；单独一行反而读得出
+           「这些是管理操作」这层含义。 -->
+      <div v-if="book.source === 'upload'" class="bk-admin">
+        <button
+          type="button"
+          class="ui-btn ui-btn--sm"
+          title="编辑书名 / 分类 / 简介 / 标签"
+          :data-testid="`bk-edit-${book.id}`"
+          @click="emit('edit', book)"
+        >
+          编辑
+        </button>
+        <button
+          type="button"
+          class="ui-btn ui-btn--sm ui-btn--danger"
+          title="从本机书架删除这本书"
+          :data-testid="`bk-remove-${book.id}`"
+          @click="emit('remove', book)"
+        >
+          删除
+        </button>
       </div>
     </div>
 
@@ -340,10 +370,19 @@ const downloadTitle = computed(() =>
 .bk-actions {
   display: flex;
   align-items: center;
-  /* 加了「下载」后三个按钮 + 右侧时间在窄卡片里可能放不下，允许换行兜底 */
+  /* 三个按钮 + 右侧时间在窄卡片里放不下时允许换行兜底（编辑/删除不在这行，见 .bk-admin） */
   flex-wrap: wrap;
   gap: 6px;
   margin-top: auto;
+}
+/* 上传书的管理操作区：与主操作行之间用一条虚线分开，读起来是「另一类动作」 */
+.bk-admin {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--color-border, #e2e8f0);
 }
 .bk-recent {
   margin-left: auto;
@@ -394,7 +433,8 @@ const downloadTitle = computed(() =>
   }
   .bk-recent { display: none; }
   /* 抬到 40px：.ui-btn--sm 是 30px，低于移动端 32px 的舒适触控下限 */
-  .bk-actions :deep(.ui-btn) {
+  .bk-actions :deep(.ui-btn),
+  .bk-admin :deep(.ui-btn) {
     min-height: 40px;
     padding: 8px 14px;
   }
