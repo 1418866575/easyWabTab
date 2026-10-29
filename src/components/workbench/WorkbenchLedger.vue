@@ -11,6 +11,7 @@ const PANEL_MAX_HEIGHT = 'var(--dlg-h-wb-ledger, 85vh)'
 import { computed, onMounted, ref } from 'vue'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import Icon from '@/components/Icon.vue'
+import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
 import {
   calcDailyExpenseSeries,
   calcDepositTotal,
@@ -714,6 +715,7 @@ onMounted(async () => {
       </el-table>
     </section>
   </div>
+<WorkbenchFab @click="startAdd" />
 </template>
 
 <style scoped>
@@ -1136,31 +1138,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 }
 
 /* ===== 空月态 ===== */
-.empty-state {
-  text-align: center;
-  color: var(--color-text-muted, var(--color-text-muted));
-  font-size: 14px;
-  padding: 40px 20px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px dashed var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-}
-
-.empty-invite {
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  transition: color var(--transition-fast, 0.15s ease), border-color var(--transition-fast, 0.15s ease);
-}
-
-.empty-invite:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
+/* ===== 空态：.empty-state / .empty-invite 已收敛到全局基类（src/style.css） ===== */
 
 .ld-empty-title {
   font-size: 14px;
@@ -1485,9 +1463,7 @@ html.dark .ld-item:hover {
   background-color: var(--color-bg-hover, #374151);
 }
 
-html.dark .empty-state {
-  background-color: var(--color-bg-card, #1f2937);
-}
+/* html.dark .empty-state 背景已由全局 .empty-state 的 --color-bg-card token 自动跟随 */
 
 html.dark .dialog {
   background-color: var(--color-bg-card, #1f2937);

@@ -250,7 +250,8 @@ function onCardClick(): void {
 
 .hb-cal-card:hover {
   border-color: var(--hb-color, var(--color-primary, var(--color-primary)));
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  /* 卡片 hover 抬升走阴影 token（原字面值作为 fallback 保留，视觉几乎一致） */
+  box-shadow: var(--shadow-md, 0 4px 14px rgba(0, 0, 0, 0.1));
 }
 
 /* 头部 */

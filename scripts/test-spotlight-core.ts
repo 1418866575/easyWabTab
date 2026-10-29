@@ -1,7 +1,18 @@
 import assert from 'node:assert/strict'
 import { MAX_RESULTS, searchAll, rankResults } from '../src/composables/spotlightCore.ts'
 import type { SpotlightData, SpotlightGroups } from '../src/composables/spotlightCore.ts'
-import type { Countdown, LedgerCategory, PasswordEntry, Site, WorkbenchNote, WorkbenchTodo } from '../src/types'
+import type { Habit } from '../src/composables/habitCore.ts'
+import type {
+  Countdown,
+  FamilyMember,
+  FamilyNameRecord,
+  LedgerCategory,
+  PasswordEntry,
+  Site,
+  WorkbenchDiary,
+  WorkbenchNote,
+  WorkbenchTodo
+} from '../src/types'
 
 const tests: { name: string; fn: () => void }[] = []
 function test(name: string, fn: () => void) {
@@ -33,8 +44,46 @@ function mkSite(name: string, url: string, updatedAt = '2026-01-01T00:00:00.000Z
 const SALARY_CAT: LedgerCategory = { id: 'salary', name: '工资', type: 'income', isBuiltIn: true }
 const COMMUTE_CAT: LedgerCategory = { id: 'commute', name: '通勤', type: 'expense', isBuiltIn: true }
 
+// ---- 「跨面板搜索增强」新增 3 类夹具 ----
+
+function mkDiary(id: string, content: string, title?: string, updatedAt = '2026-01-01T00:00:00.000Z'): WorkbenchDiary {
+  return {
+    id,
+    journalId: 'jb_default',
+    date: '2026-01-01',
+    content,
+    title,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt
+  }
+}
+
+function mkHabit(id: string, name: string, frequency = 3, createdAt = '2026-01-01T00:00:00.000Z'): Habit {
+  return { id, name, frequency, createdAt }
+}
+
+function mkMember(id: string, name: string, note?: string, updatedAt = '2026-01-01T00:00:00.000Z'): FamilyMember {
+  return { id, name, note, parents: [], spouses: [], createdAt: '2026-01-01T00:00:00.000Z', updatedAt }
+}
+
+function mkNameRecord(id: string, name: string, meaning?: string, updatedAt = '2026-01-01T00:00:00.000Z'): FamilyNameRecord {
+  return { id, name, gender: '', meaning, createdAt: '2026-01-01T00:00:00.000Z', updatedAt }
+}
+
 function emptyData(): SpotlightData {
-  return { todos: [], notes: [], countdowns: [], ledgerEntries: [], ledgerCategories: [], passwords: [], sites: [] }
+  return {
+    todos: [],
+    notes: [],
+    countdowns: [],
+    ledgerEntries: [],
+    ledgerCategories: [],
+    passwords: [],
+    sites: [],
+    diary: [],
+    habits: [],
+    familyMembers: [],
+    familyNames: []
+  }
 }
 
 // ==================== 各组匹配 ====================
@@ -161,7 +210,17 @@ test('T15 QA-failure：空串 query 返回全空分组且不抛错', () => {
     notes: [mkNote('n1', '任意便签')],
     sites: [mkSite('GitHub', 'https://github.com')]
   })
-  assert.deepEqual(g, { todos: [], notes: [], countdowns: [], ledger: [], passwords: [], sites: [] })
+  assert.deepEqual(g, {
+    todos: [],
+    notes: [],
+    countdowns: [],
+    ledger: [],
+    passwords: [],
+    sites: [],
+    diary: [],
+    habits: [],
+    genealogy: []
+  })
 })
 
 test('T16 QA-failure：undefined 与纯空白 query 均返回全空分组且不抛错', () => {
@@ -173,12 +232,18 @@ test('T16 QA-failure：undefined 与纯空白 query 均返回全空分组且不�
     assert.equal(g.ledger.length, 0)
     assert.equal(g.passwords.length, 0)
     assert.equal(g.sites.length, 0)
+    assert.equal(g.diary.length, 0)
+    assert.equal(g.habits.length, 0)
+    assert.equal(g.genealogy.length, 0)
   }
 })
 
-test('T17 结果形状：全空数据 + 命中 query 仍返回全部 6 个分组键', () => {
+test('T17 结果形状：全空数据 + 命中 query 仍返回全部 9 个分组键', () => {
   const g = searchAll('随便', emptyData())
-  assert.deepEqual(Object.keys(g).sort(), ['countdowns', 'ledger', 'notes', 'passwords', 'sites', 'todos'])
+  assert.deepEqual(
+    Object.keys(g).sort(),
+    ['countdowns', 'diary', 'genealogy', 'habits', 'ledger', 'notes', 'passwords', 'sites', 'todos']
+  )
   assert.equal(g.todos.length, 0)
 })
 
@@ -198,6 +263,7 @@ test('T19 rankResults：标题命中优先于次要字段命中', () => {
   // a：name 命中（score 2）；b：仅 url 命中（score 1）
   const groups: SpotlightGroups = {
     todos: [], notes: [], countdowns: [], ledger: [], passwords: [],
+    diary: [], habits: [], genealogy: [],
     sites: [mkSite('GitHub', 'https://github.com', '2026-01-02T00:00:00.000Z'), mkSite('码云', 'https://github.com/mirror', '2026-01-03T00:00:00.000Z')]
   }
   const ranked = rankResults(groups, 'github')
@@ -207,6 +273,7 @@ test('T19 rankResults：标题命中优先于次要字段命中', () => {
 test('T20 rankResults：同分按 updatedAt 降序（新的在前）', () => {
   const groups: SpotlightGroups = {
     todos: [], notes: [], countdowns: [], ledger: [], passwords: [],
+    diary: [], habits: [], genealogy: [],
     sites: [
       mkSite('GitHub', 'https://github.com', '2026-01-01T00:00:00.000Z'),
       mkSite('GitHub Enterprise', 'https://enterprise.github.com', '2026-01-03T00:00:00.000Z'),
@@ -223,11 +290,93 @@ test('T20 rankResults：同分按 updatedAt 降序（新的在前）', () => {
 
 test('T21 rankResults：不改入参（返回新分组对象与新数组）', () => {
   const sites = [mkSite('码云', 'https://github.com/mirror', '2026-01-03T00:00:00.000Z'), mkSite('GitHub', 'https://github.com', '2026-01-01T00:00:00.000Z')]
-  const groups: SpotlightGroups = { todos: [], notes: [], countdowns: [], ledger: [], passwords: [], sites }
+  const groups: SpotlightGroups = {
+    todos: [], notes: [], countdowns: [], ledger: [], passwords: [],
+    diary: [], habits: [], genealogy: [],
+    sites
+  }
   const ranked = rankResults(groups, 'github')
   assert.deepEqual(groups.sites.map(s => s.name), ['码云', 'GitHub'], '入参顺序不被修改')
   assert.notEqual(ranked, groups, '应返回新分组对象')
   assert.notEqual(ranked.sites, groups.sites, '应返回新数组')
+})
+
+// ==================== 新增分组：日记 / 习惯 / 家谱 ====================
+
+test('T22 日记：标题命中优先于正文命中（无标题日记只看正文）', () => {
+  const g = searchAll('旅行', {
+    ...emptyData(),
+    diary: [
+      mkDiary('d1', '今天去了公园', '旅行计划'),
+      mkDiary('d2', '旅行第一天，天气很好'),
+      mkDiary('d3', '加班到深夜')
+    ]
+  })
+  assert.deepEqual(g.diary.map(d => d.id), ['d1', 'd2'], '标题命中（2 分）排在正文命中（1 分）前')
+})
+
+test('T23 习惯：按 name 命中；同分按 createdAt 降序（习惯无 updatedAt）', () => {
+  const g = searchAll('读书', {
+    ...emptyData(),
+    habits: [
+      mkHabit('h1', '每天读书 30 分钟', 7, '2026-01-01T00:00:00.000Z'),
+      mkHabit('h2', '读书笔记', 3, '2026-01-05T00:00:00.000Z'),
+      mkHabit('h3', '晨跑', 5)
+    ]
+  })
+  assert.deepEqual(g.habits.map(h => h.id), ['h2', 'h1'], 'createdAt 新的在前')
+})
+
+test('T24 家谱成员：按 name 或 note 命中，kind=member', () => {
+  const g = searchAll('祖父', {
+    ...emptyData(),
+    familyMembers: [mkMember('m1', '司祖父', '家族长辈'), mkMember('m2', '司父', '祖父之子'), mkMember('m3', '司母')]
+  })
+  assert.equal(g.genealogy.length, 2)
+  assert.ok(g.genealogy.every(h => h.kind === 'member'))
+  // name 命中（2 分）排在仅 note 命中（1 分）前
+  assert.deepEqual(
+    g.genealogy.map(h => (h.kind === 'member' ? h.member.id : '')),
+    ['m1', 'm2']
+  )
+})
+
+test('T25 家谱取名记录：按 name 或 meaning 命中，kind=name 且载荷为 record', () => {
+  const g = searchAll('砚', {
+    ...emptyData(),
+    familyNames: [
+      mkNameRecord('nm1', '司泽砚', '文房重器，寓意沉静笃学'),
+      mkNameRecord('nm2', '司泽润'),
+      mkNameRecord('nm3', '司泽安', '砚台之砚，取文气')
+    ]
+  })
+  assert.equal(g.genealogy.length, 2, 'nm1 名字命中 / nm3 寓意命中 / nm2 不命中')
+  const hit = g.genealogy[0]
+  assert.equal(hit.kind, 'name')
+  if (hit.kind === 'name') {
+    assert.equal(hit.record.id, 'nm1')
+    assert.equal(hit.record.name, '司泽砚', '载荷命名为 record（不是 name），避免 hit.name.name')
+  }
+  // name 命中（2 分）优先于 meaning 命中（1 分）
+  assert.deepEqual(
+    g.genealogy.map(h => (h.kind === 'name' ? h.record.id : '')),
+    ['nm1', 'nm3']
+  )
+})
+
+test('T26 跨面板：单个 query 同时命中日记 / 习惯 / 家谱三组', () => {
+  const g = searchAll('晨', {
+    ...emptyData(),
+    diary: [mkDiary('d1', '晨跑五公里，状态不错')],
+    habits: [mkHabit('h1', '晨跑')],
+    familyMembers: [mkMember('m1', '司晨')]
+  })
+  assert.deepEqual(g.diary.map(d => d.id), ['d1'])
+  assert.deepEqual(g.habits.map(h => h.id), ['h1'])
+  assert.deepEqual(g.genealogy.map(h => (h.kind === 'member' ? h.member.id : '')), ['m1'])
+  // 与既有分组互不干扰
+  assert.equal(g.todos.length, 0)
+  assert.equal(g.notes.length, 0)
 })
 
 let passed = 0

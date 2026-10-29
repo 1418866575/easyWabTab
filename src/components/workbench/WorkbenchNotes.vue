@@ -3,6 +3,7 @@ import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
 
 const vm = useViewMode()
 
@@ -833,6 +834,8 @@ onUnmounted(() => {
     </div>
   </div>
 
+<WorkbenchFab @click="startAdd" />
+
 </template>
 
 <style scoped>
@@ -1022,14 +1025,7 @@ onUnmounted(() => {
 .timeline-item-edit .form-input { padding: 6px 10px; font-size: 13px; }
 .timeline-item-edit .btn-save { padding: 4px 12px; font-size: 12px; }
 
-/* ===== 空态 ===== */
-.empty-state {
-  text-align: center; color: var(--color-text-muted, var(--color-text-muted));
-  font-size: 14px; padding: 40px 20px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px dashed var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-}
+/* ===== 空态：.empty-state 已收敛到全局基类（src/style.css） ===== */
 
 /* ===== 编辑浮层 ===== */
 .note-overlay {
@@ -1105,7 +1101,7 @@ onUnmounted(() => {
 html.dark .note-overlay { background: rgba(0, 0, 0, 0.7); }
 html.dark .note-form { background-color: var(--color-bg-card, #1f2937); }
 html.dark .timeline-expand-panel { background-color: var(--color-bg-card, #1f2937); }
-html.dark .empty-state { background-color: var(--color-bg-card, #1f2937); }
+/* html.dark .empty-state 背景已由全局 .empty-state 的 --color-bg-card token 自动跟随 */
 html.dark .btn-save:disabled { background-color: var(--color-bg-input, #374151); color: var(--color-text-muted, #9ca3af); }
 /* html.dark .btn-add:disabled 视觉已统一到全局 .ui-btn--primary（style.css） */
 html.dark .nt-search { background-color: var(--color-bg-card, #1f2937); box-shadow: none; }

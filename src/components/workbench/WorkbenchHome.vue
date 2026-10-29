@@ -166,21 +166,14 @@ async function handleQuickNote(): Promise<void> {
       </button>
     </section>
 
-    <!-- 平铺区：行动台 / 数据概览 / 工具 纵向依次展开（原三屏轮播已取消，内容一次性展示） -->
+    <!-- 概览网格（单网格：行动/数据/工具三类卡统一密度，可整体拖拽排序；关键数字在前，输入/列表在后） -->
     <section
-      class="home-carousel home-flat"
-      data-testid="home-carousel"
-      aria-label="主页内容"
+      class="home-overview-grid"
+      data-testid="home-overview-grid"
+      aria-label="主页概览"
+      @dragover="layout.handleContainerDragOver('overview', $event)"
+      @drop="layout.handleContainerDrop('overview')"
     >
-      <div class="home-flat-inner">
-          <!-- 第 1 屏：行动台（快捷添加待办/便签 + 即将到期提醒 + 天气 + 日历锚点） -->
-          <div class="home-slide" data-testid="home-slide-action">
-            <div
-              v-if="menuOn.todos || menuOn.notes || menuOn.countdowns"
-              class="home-slide-grid"
-              @dragover="layout.handleContainerDragOver('action', $event)"
-              @drop="layout.handleContainerDrop('action')"
-            >
               <HomeLayoutCard v-if="menuOn.todos" card-id="quick-add-todo" :default-w="1">
                 <section class="bento-card bento-quick-add">
                   <div class="quick-add-label"><Icon name="todos" :size="16" />快速添加待办</div>
@@ -237,19 +230,7 @@ async function handleQuickNote(): Promise<void> {
                 <WeatherCard class="bento-weather" />
               </HomeLayoutCard>
 
-            </div>
-            <div v-else class="home-empty" data-testid="home-action-empty">快捷添加与提醒功能已关闭，可在工作台菜单设置中开启</div>
-          </div>
-
-          <!-- 第 2 屏：数据概览（统计卡；卡按 visibleStatCards 隐藏纯占位，全空时显示空态） -->
-          <div class="home-slide" data-testid="home-slide-overview">
-            <div
-              v-if="visibleStatCards.length > 0"
-              class="home-slide-grid home-slide-grid-stats"
-              data-testid="home-overview"
-              @dragover="layout.handleContainerDragOver('overview', $event)"
-              @drop="layout.handleContainerDrop('overview')"
-            >
+          <!-- 数据概览：关键数字卡（卡按 visibleStatCards / 菜单开关 各自显隐） -->
               <HomeLayoutCard v-if="visibleStatCards.includes('todos')" card-id="todos" :default-w="1">
                 <div class="bento-card bento-stat" data-testid="home-stats-todos" @click="navTo('todos')">
                   <div class="stat-header">
@@ -445,18 +426,8 @@ async function handleQuickNote(): Promise<void> {
                   </div>
                 </div>
               </HomeLayoutCard>
-            </div>
-            <div v-else class="home-empty" data-testid="home-overview-empty">暂无统计数据，去各功能面板添加数据吧</div>
-          </div>
 
-          <!-- 第 3 屏：工具（未完成待办 + 日历锚点） -->
-          <div class="home-slide" data-testid="home-slide-tools">
-            <div
-              class="home-slide-tools-grid"
-              data-testid="home-tools-grid"
-              @dragover="layout.handleContainerDragOver('tools', $event)"
-              @drop="layout.handleContainerDrop('tools')"
-            >
+          <!-- 工具：未完成待办 + 日历锚点 -->
               <!-- 未完成待办 -->
               <HomeLayoutCard v-if="menuOn.todos" card-id="pending-todos" :default-w="1">
                 <section class="bento-card bento-panel">
@@ -483,15 +454,6 @@ async function handleQuickNote(): Promise<void> {
               <HomeLayoutCard card-id="calendar-anchor" :default-w="1">
                 <CalendarAnchorCard class="bento-anchor" />
               </HomeLayoutCard>
-            </div>
-            <!-- 所有工具卡片均隐藏时的兜底空态 -->
-            <div
-              v-if="!menuOn.todos"
-              class="home-empty"
-              data-testid="home-tools-empty"
-            >功能已关闭，可在设置中开启</div>
-          </div>
-      </div>
     </section>
   </div>
 </template>
@@ -501,42 +463,15 @@ async function handleQuickNote(): Promise<void> {
 .wb-home {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
-/* ===== 平铺区（原轮播容器改为纵向平铺）：三块内容依次展开，间距 16px 不拥挤 ===== */
-.home-carousel.home-flat,
-.home-flat-inner {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.home-slide {
-  box-sizing: border-box;
-}
-
-.home-slide-grid {
+/* ===== 概览网格（单网格：所有卡统一密度；桌面 6 列 / 平板 3 列 / 手机 1 列） ===== */
+.home-overview-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
   align-items: start;
-}
-
-.home-slide-grid-stats {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-}
-
-/* 工具页单卡居中容器 */
-.home-slide-tools-single {
-  display: flex;
-  justify-content: center;
-  padding: 16px;
-}
-
-.home-slide-tools-single .bento-quick-add {
-  width: 100%;
-  max-width: 400px;
 }
 
 /* ===== 卡片基础（统一 .bento-card）===== */
@@ -561,6 +496,17 @@ async function handleQuickNote(): Promise<void> {
   padding: 12px 14px;
   cursor: pointer;
   user-select: none;
+  /* 可点击卡：hover 抬升 + 阴影微交互（覆盖共享 .bento-card 仅变边框的过渡） */
+  transition:
+    border-color var(--transition-fast, 0.15s ease),
+    transform var(--transition-fast, 0.15s ease),
+    box-shadow var(--transition-fast, 0.15s ease);
+}
+
+.bento-stat:hover {
+  border-color: var(--color-primary, var(--color-primary));
+  transform: var(--motion-hover-rise, translateY(-1px));
+  box-shadow: var(--shadow-card-hover, 0 4px 14px rgba(0, 0, 0, 0.12));
 }
 
 .bento-stat:active {
@@ -705,16 +651,6 @@ async function handleQuickNote(): Promise<void> {
 
 .quick-add-btn {
   flex-shrink: 0;
-}
-
-/* ===== 工具页网格布局 ===== */
-.home-slide-tools-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  padding: 12px;
-  height: 100%;
-  box-sizing: border-box;
 }
 
 /* ===== 统计卡头部 ===== */
@@ -991,6 +927,9 @@ async function handleQuickNote(): Promise<void> {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* 列表卡限高 + 内部滚动，避免长列表把整行撑高、破坏单屏一瞥 */
+  max-height: 224px;
+  overflow-y: auto;
 }
 
 .home-list-item {
@@ -1156,6 +1095,7 @@ html.dark .home-empty {
 
 html.dark .habit-detail {
   background-color: var(--color-bg-card, #1f2937);
+  /* 暗色浮层刻意加深阴影（alpha 0.5）以保证与深色背景的分离度 —— 规范 §1.5 允许的暗色手调例外，勿换浅色 token */
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
 }
 
@@ -1199,18 +1139,13 @@ html.dark .cd-critical {
 
 /* ===== 响应式：平板双列 / 手机单列 ===== */
 @media (max-width: 1100px) {
-  .home-slide-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .home-slide-grid-stats {
+  .home-overview-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 640px) {
-  .home-slide-grid,
-  .home-slide-grid-stats {
+  .home-overview-grid {
     grid-template-columns: 1fr;
   }
 

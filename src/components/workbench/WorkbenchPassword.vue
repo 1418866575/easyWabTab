@@ -8,6 +8,7 @@ import { useToast } from '@/composables/useToast'
 import { getIconUrl } from '@/composables/useIconCache'
 import type { PasswordEntry } from '@/types'
 import Icon from '@/components/Icon.vue'
+import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 
 /** 面板尺寸：沿用「设置 → 弹窗尺寸」写入的 CSS 变量（password），未配置时回退默认值 */
@@ -482,7 +483,7 @@ watch(
       </div>
 
       <!-- 空态 -->
-      <div v-if="filteredPasswords.length === 0" class="pwd-empty" data-testid="pwd-empty">
+      <div v-if="filteredPasswords.length === 0" class="empty-state" data-testid="pwd-empty">
         {{ searchQuery ? '没有找到匹配的密码' : '暂无保存的密码' }}
       </div>
 
@@ -665,6 +666,8 @@ watch(
         </form>
     </BaseDialog>
   </div>
+<WorkbenchFab @click="startAdd" />
+
 </template>
 
 <style scoped>
@@ -1000,16 +1003,7 @@ html.dark .pwd-cat-badge {
   color: var(--color-error, var(--color-error));
 }
 
-/* ===== 空态 ===== */
-.pwd-empty {
-  text-align: center;
-  color: var(--color-text-muted, var(--color-text-muted));
-  font-size: 14px;
-  padding: 40px 20px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px dashed var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-}
+/* ===== 空态：复用全局 .empty-state（src/style.css，.wb-content 作用域） ===== */
 
 /* ===== 新增/编辑弹窗内容区 =====
    弹框外壳（遮罩/面板/头部/关闭/主体）已统一到 common/BaseDialog.vue */
@@ -1045,7 +1039,8 @@ html.dark .pwd-cat-badge {
   max-height: 200px;
   overflow-y: auto;
   z-index: 10;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  /* 下拉浮层统一走 --shadow-dropdown（原字面值作为 fallback 保留） */
+  box-shadow: var(--shadow-dropdown, 0 4px 12px rgba(0, 0, 0, 0.12));
 }
 
 .pwd-site-option {
@@ -1145,8 +1140,7 @@ html.dark .pwd-cat-badge {
 
 /* ===== 暗色模式覆盖 ===== */
 html.dark .pwd-auth-card,
-html.dark .pwd-item,
-html.dark .pwd-empty {
+html.dark .pwd-item {
   background-color: var(--color-bg-card, #1f2937);
 }
 

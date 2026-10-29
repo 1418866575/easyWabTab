@@ -141,7 +141,7 @@ function toggleSidebar() {
 const spotlightOpen = ref(false)
 const showSettingsDialog = ref(false)
 
-// 6 类数据源：密码不解密内容，仅 siteName/url 由 spotlightCore 匹配（core 契约）
+// 9 类数据源：密码不解密内容，仅 siteName/url 由 spotlightCore 匹配（core 契约）
 const spotlightData = computed<SpotlightData>(() => ({
   // 墓碑不入全局搜索：已删条目被搜到并点开会是空壳
   todos: todosStore.activeTodos,
@@ -150,7 +150,12 @@ const spotlightData = computed<SpotlightData>(() => ({
   ledgerEntries: ledgerStore.entries,
   ledgerCategories: ledgerStore.categories,
   passwords: passwordsStore.passwords,
-  sites: sitesStore.sites
+  sites: sitesStore.sites,
+  // 新增 3 类同样只喂活跃数据（日记走 activeEntries、家谱走 activeMembers/activeNames，均按墓碑过滤）
+  diary: diaryStore.activeEntries,
+  habits: habitsStore.habits,
+  familyMembers: genealogyStore.activeMembers,
+  familyNames: genealogyStore.activeNames
 }))
 
 function handleSpotlightSelect(action: SpotlightAction) {
@@ -679,13 +684,13 @@ html.dark .wb-content {
   cursor: progress !important;
 }
 .wb-sync-btn.wb-sync-btn-conflict {
-  background-color: #f59e0b;
+  background-color: var(--color-warning, #f59e0b);
   color: #fff;
-  border-color: #f59e0b;
+  border-color: var(--color-warning, #f59e0b);
 }
 .wb-sync-btn.wb-sync-btn-error {
-  background-color: #ef4444;
+  background-color: var(--color-error, #ef4444);
   color: #fff;
-  border-color: #ef4444;
+  border-color: var(--color-error, #ef4444);
 }
 </style>

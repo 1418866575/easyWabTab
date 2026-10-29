@@ -10,6 +10,7 @@ import { localToday } from '@/composables/todoCore'
 import { EXERCISE_TYPES, type HealthPlanMetric } from '@/types'
 import WorkbenchHealthReminders from './WorkbenchHealthReminders.vue'
 import Icon from '@/components/Icon.vue'
+import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 
 /** 表单弹框尺寸（沿用原 .dialog 的固定尺寸，非设置项） */
@@ -577,6 +578,7 @@ onMounted(async () => {
           </form>
       </BaseDialog>
   </div>
+<WorkbenchFab @click="startAddRecord" />
 </template>
 
 <style scoped>
@@ -773,30 +775,7 @@ onMounted(async () => {
 /* .btn-edit/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
 /* .btn-clear 视觉已统一到全局 .ui-btn--danger（style.css） */
 
-/* ===== 空态 ===== */
-.empty-state {
-  text-align: center;
-  color: var(--color-text-muted, var(--color-text-muted));
-  font-size: 14px;
-  padding: 40px 20px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px dashed var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-}
-
-.empty-invite {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  transition: color var(--transition-fast, 0.15s ease), border-color var(--transition-fast, 0.15s ease);
-}
-
-.empty-invite:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
+/* ===== 空态：.empty-state / .empty-invite 已收敛到全局基类（src/style.css） ===== */
 
 /* ===== 弹框内容区（原 .dialog-body；外壳主体已由 BaseDialog 的 .bd-body 承担）===== */
 .dialog-body {
@@ -918,9 +897,7 @@ html.dark .ex-item {
   box-shadow: none;
 }
 
-html.dark .empty-state {
-  background-color: var(--color-bg-card, #1f2937);
-}
+/* html.dark .empty-state 背景已由全局 .empty-state 的 --color-bg-card token 自动跟随 */
 
 html.dark .ex-date {
   color: var(--color-text, #f9fafb);
