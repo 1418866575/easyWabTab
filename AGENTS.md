@@ -240,6 +240,7 @@ pm2 start pm2.config.cjs  # PM2 production (uses server.cjs, NO game rewrites, u
 - Real Vite config is `vite.config.js` (not `.ts`); `tsconfig.node.json` still includes a non-existent `vite.config.ts` — harmless, don't "fix" by renaming the config.
 - `public/data/sites.md` was **removed from the repo** (exists only in git history); `.gitignore` now ignores `sites.md` + `public/data/sites.md` — do not re-add a seed file there.
 - `start-server.bat` / `stop-server.bat` / `start-pm2.ps1` no longer hardcode machine-specific paths (Node path line is commented out; pm2 script uses `$PSScriptRoot`) — keep them path-agnostic. **`run.bat` 已于 2026-10-30 删除**（前台版，与 `start-server.bat` 重复），双击启动改走 `start-server.bat`。
+- **Credentials never go in source** — the Gitee repo is **public**. WebDAV 口令硬编码过（`import-today-to-blog.mjs` / `resume-publish.mjs` 的 `DAV_PASS`），已改为 `scripts/dav-creds.mjs` 统一读取 `EWT_DAV_URL` / `EWT_DAV_USER` / `EWT_DAV_PASS` 或 gitignored 的 `config/webdav.env`（模板 `config/webdav.env.example` 入库）。后端类凭证同款范式见 `config/blog-share.env` / `config/wechat.env`。
 - `presetIcons.ts` is code-generated — edit `scripts/generate-preset-icons.cjs` or add files to `public/icons/` instead.
 - `searchEngines.ts` stores engine state across 3 separate localStorage keys.
 - `sites.ts` is the largest store (628 lines) — avoid adding more responsibilities.

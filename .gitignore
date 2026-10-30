@@ -32,6 +32,8 @@ npm-debug.log*
 config/wechat.env
 # 博客共享发布凭证（目录路径 + 写令牌，绝不可入库）
 config/blog-share.env
+# WebDAV 云同步口令（scripts/dav-creds.mjs 读取，绝不可入库；只提交 config/webdav.env.example）
+config/webdav.env
 
 # 博客共享发布运行时目录（Node 直写，非源码）
 /blog-share/

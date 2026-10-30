@@ -21,6 +21,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { chromium } from 'playwright'
+import { DAV_URL, DAV_USER, DAV_PASS, DAV_BLOG_JSON_URL, davAuthHeader, assertDavCredentials } from './dav-creds.mjs'
 
 const argv = process.argv.slice(2)
 const getArg = (k, d) => {
@@ -41,9 +42,8 @@ const ALLOW_PULL = argv.includes('--allow-pull')
 const SITE = 'https://www.codehelp.com.cn/blog/admin'
 const SITE_ORIGIN = 'https://www.codehelp.com.cn'
 
-const DAV_URL = 'https://www.codehelp.com.cn/dav/'
-const DAV_USER = 'sifujiang'
-const DAV_PASS = 'sifujiang'
+/** WebDAV 凭证不再硬编码（Gitee 仓库公开）：来源是 EWT_DAV_* 环境变量或 config/webdav.env */
+assertDavCredentials()
 
 // 可选：一次性写入公众号凭证（写进 blog store，随后随流水线推送云端）
 const WX_APPID = getArg('--wechat-appid', '')
@@ -488,11 +488,8 @@ async function ensureWechatCreds(page) {
 /** 直接读云端 blog.json（HTTP Basic，走 DAV 的用户名子目录：<base>/<user>/easy-web-tab/blog.json） */
 async function readRemoteBlog() {
   try {
-    const u = new URL(DAV_URL)
-    const target = `${u.origin}${u.pathname.replace(/\/+$/, '')}/${DAV_USER}/easy-web-tab/blog.json`
-    const res = await fetch(target, {
-      headers: { Authorization: 'Basic ' + Buffer.from(`${DAV_USER}:${DAV_PASS}`).toString('base64') }
-    })
+    const target = DAV_BLOG_JSON_URL
+    const res = await fetch(target, { headers: { Authorization: davAuthHeader() } })
     if (!res.ok) return { ok: false, err: `${res.status} ${target}` }
     const env = await res.json()
     const blog = env.blog || env.data || {}

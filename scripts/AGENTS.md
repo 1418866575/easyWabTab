@@ -77,6 +77,7 @@ scripts/
 - **NEVER append `.html`** to game paths — rewrites map extensionless URLs to `/{game}/index.html`
 - **gushi has no rewrite** — manifest.json registers it, but `serve-with-rewrites.cjs` lacks a `/games/gushi` entry (relative assets may break)
 - **不要在 scripts/ 里加一次性 Playwright 脚本** — 历史上有 36 个 `qa-*.mjs`（约 577 KB），全部依赖 16718 dev server 且证据写进已删除的 `.omo/evidence/`，维护成本远大于收益，已整体移除。要做 UI 回归请写进 `tests/` 并接真正的 test runner
+- **NEVER hardcode credentials in scripts** — Gitee 仓库是**公开**的，写死等于把口令挂到公网（事故：`import-today-to-blog.mjs` / `resume-publish.mjs` 曾写死 `DAV_PASS`）。WebDAV 一律经 `scripts/dav-creds.mjs` 读取：`EWT_DAV_URL` / `EWT_DAV_USER` / `EWT_DAV_PASS` 环境变量，或 gitignored 的 `config/webdav.env`（模板 `config/webdav.env.example` 入库）。其它后端凭证照 `config/blog-share.env` 的同款范式办，口令缺失时就报错退出，**不要**设内置默认值
 
 ## KEY GOTCHAS
 
