@@ -46,7 +46,8 @@ easy-web-tab/
 ├── scripts/                      # Build helpers + 纯逻辑 test runners + Playwright QA (see scripts/AGENTS.md)
 ├── server.cjs / pm2.config.cjs   # PM2 path: npx serve -s dist, port 16718 (NO game rewrites)
 ├── Dockerfile                    # serve -s, port 16718 (no serve.json copied → no game rewrites)
-├── run.bat / start-pm2.ps1       # Windows launch scripts (hardcoded paths — see KEY GOTCHAS)
+├── start-server.bat / stop-server.bat  # Windows launch scripts (path-agnostic — see KEY GOTCHAS)
+├── start-pm2.ps1                 # PM2 autostart script
 ├── vite.config.js                # NOT .ts — alias @ → /src + /api/webdav-proxy dev proxy, dev port 16718
 ├── serve.json                    # Rewrites for `serve -s` (stale tetris mapping — see KEY GOTCHAS)
 └── [config files]
@@ -158,7 +159,7 @@ easy-web-tab/
 - **Styling**: Scoped CSS + CSS custom properties (`var(--color-primary)` etc.). **完整 UI/组件规范见 `docs/UI_STYLE_GUIDE.md`（UI 任务必读）** —— 按钮走 `.ui-btn` 全局体系、弹框走 `BaseDialog`、颜色/间距必须用 token、禁止双轨道（写 UI 前先对照现有实现）
 - **Path alias**: `@` → `/src` (use `@/` imports, not relative `../`)
 - **Package manager**: npm only (no pnpm/yarn/bun)
-- **Port**: 16718 hardcoded in vite.config.js, serve-with-rewrites.cjs, Dockerfile, run.bat, PM2 flow
+- **Port**: 16718 hardcoded in vite.config.js, serve-with-rewrites.cjs, Dockerfile, start-server.bat, PM2 flow
 - **Module type**: ESM (`"type": "module"`, `.cjs` for CommonJS scripts including PM2 configs)
 - **TypeScript**: Strict + noUnusedLocals + noUnusedParameters
 - **Commits**: Chinese messages prefixed `fix-` / `feat-` (e.g. `fix-导出不导出默认引擎`)
@@ -238,7 +239,7 @@ pm2 start pm2.config.cjs  # PM2 production (uses server.cjs, NO game rewrites, u
 - `npm run serve` → `scripts/serve-with-rewrites.cjs` — rewrites `/games/{tetris,id-generator,cron-generator}` to `/{game}/index.html` (302 → trailing slash). **2026-10-13 起 `gushi`/`szbf`/`opencode`/`daodejing` 已迁出 games 到 `public/bookdata/`（图书馆），故此处不再需要它们的 rewrite**；`postman` 无 rewrite，同为自包含单文件不依赖相对资源，实测可正常打开。
 - Real Vite config is `vite.config.js` (not `.ts`); `tsconfig.node.json` still includes a non-existent `vite.config.ts` — harmless, don't "fix" by renaming the config.
 - `public/data/sites.md` was **removed from the repo** (exists only in git history); `.gitignore` now ignores `sites.md` + `public/data/sites.md` — do not re-add a seed file there.
-- `run.bat` / `start-pm2.ps1` no longer hardcode machine-specific paths (Node path line is commented out; pm2 script uses `$PSScriptRoot`) — keep them path-agnostic.
+- `start-server.bat` / `stop-server.bat` / `start-pm2.ps1` no longer hardcode machine-specific paths (Node path line is commented out; pm2 script uses `$PSScriptRoot`) — keep them path-agnostic. **`run.bat` 已于 2026-10-30 删除**（前台版，与 `start-server.bat` 重复），双击启动改走 `start-server.bat`。
 - `presetIcons.ts` is code-generated — edit `scripts/generate-preset-icons.cjs` or add files to `public/icons/` instead.
 - `searchEngines.ts` stores engine state across 3 separate localStorage keys.
 - `sites.ts` is the largest store (628 lines) — avoid adding more responsibilities.

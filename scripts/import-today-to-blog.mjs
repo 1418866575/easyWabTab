@@ -32,6 +32,12 @@ const SETUP_ONLY = argv.includes('--setup-only')
 /** 只导入博客、不发公众号草稿箱（供"写文章"类技能使用，发布动作留给人工） */
 const NO_WECHAT = argv.includes('--no-wechat')
 const HEADLESS = !argv.includes('--head')
+/**
+ * 冲突时允许「全部拉取」（以云端为准）。
+ * 仅在第 ① 步（导入之前）安全：此时本地没有本篇内容，拉取不会丢稿。
+ * 默认关闭，保持「冲突含 blog.json 就中止」的保护。
+ */
+const ALLOW_PULL = argv.includes('--allow-pull')
 const SITE = 'https://www.codehelp.com.cn/blog/admin'
 const SITE_ORIGIN = 'https://www.codehelp.com.cn'
 
@@ -763,7 +769,7 @@ try {
     // ---- 步骤 1：先拉远端 ----
     const before = await readBlog(page)
     log(`同步前本地：文章 ${before?.articles?.length ?? 0}，图 ${before?.images?.length ?? 0}`)
-    await syncOnce(page, '① 先云同步（拉远端）', 'pullUnlessBlog')
+    await syncOnce(page, '① 先云同步（拉远端）', ALLOW_PULL ? 'pull' : 'pullUnlessBlog')
     const afterPull = await readBlog(page)
     log(`拉取后本地：文章 ${afterPull?.articles?.length ?? 0}，图 ${afterPull?.images?.length ?? 0}`)
 

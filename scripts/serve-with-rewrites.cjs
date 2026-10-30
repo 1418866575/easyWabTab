@@ -469,7 +469,7 @@ color:#7ee787;font-family:Consolas,Monaco,monospace;font-size:13px}
 <p>服务已启动，但找不到 <code style="display:inline;padding:2px 6px;margin:0">dist/index.html</code>，无法返回页面。</p>
 <p>请在项目根目录执行构建后刷新：</p>
 <code>npm run build</code>
-<p>或重新运行 <code style="display:inline;padding:2px 6px;margin:0">run.bat</code>（会自动构建）。</p>
+<p>或双击根目录的 <code style="display:inline;padding:2px 6px;margin:0">start-server.bat</code>（会自动构建）。</p>
 </div></body></html>`
   res.writeHead(503, { 'Content-Type': 'text/html; charset=utf-8', 'Retry-After': '10' })
   res.end(html)
@@ -802,7 +802,7 @@ process.on('exit', removePidFile)
 process.on('SIGINT', () => { removePidFile(); process.exit(0) })
 process.on('SIGTERM', () => { removePidFile(); process.exit(0) })
 
-// 记录 PID：无论以哪种方式启动（run.bat 前台 / start-server.bat 后台 / npm run serve），
+// 记录 PID：无论以哪种方式启动（start-server.bat 后台 / npm run serve 前台），
 // stop-server.bat 都能据此精确停止；端口反查只作兜底。
 function writePidFile() {
   try {

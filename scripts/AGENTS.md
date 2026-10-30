@@ -68,7 +68,7 @@ scripts/
 
 - `.cjs` = CommonJS — required because `package.json` has `"type": "module"`
 - `serve-with-rewrites.cjs` / `webdav-proxy-only.cjs` 只用 Node stdlib — zero dependencies
-- PORT 16718（页面）+ 16719（WebDAV 代理）hardcoded — keep in sync with vite.config.js, Dockerfile, run.bat, pm2.config.cjs
+- PORT 16718（页面）+ 16719（WebDAV 代理）hardcoded — keep in sync with vite.config.js, Dockerfile, start-server.bat, pm2.config.cjs
 - **学生 core 测试 loader**: 全部 `test:student-*` 必须带 `--experimental-loader ./scripts/resolve-extensionless.mjs`（学生 cores 用无扩展名相对导入 `./countdownCore`/`./diaryCore`/`./habitCore`/`./studentMenuCore` + `@/` 别名；纯 `node --experimental-strip-types` 报 `ERR_MODULE_NOT_FOUND`/`ERR_UNSUPPORTED_DIR_IMPORT`）— `resolve-extensionless.mjs` 自解析 `.ts`/`/index.ts` + `@/` → `src/` 映射；勿改成带扩展名导入（那会被 Vite/真实运行时拒绝）
 
 ## ANTI-PATTERNS

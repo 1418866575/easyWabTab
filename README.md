@@ -80,8 +80,11 @@ npm run serve      # 仅启动静态服务（读取已构建的 dist/，含游�
 
 ### 方式一：双击运行（推荐个人使用）
 
-直接双击根目录的 `run.bat` 即可启动（首次会自动安装依赖）。
+直接双击根目录的 `start-server.bat` 即可**后台**启动（首次自动安装依赖并构建），
+停止用 `stop-server.bat`（按 `.server.pid` 精确停）。
 > 前提：本机 `node` 已在系统 PATH 中（脚本不再写死 Node 路径）。
+
+也可以走命令行：`npm install` 后 `npm run start`（= 构建 + `serve` 托管 `dist/`，端口 16718）。
 
 ### 方式二：PM2 进程管理（推荐长期运行）
 
@@ -526,7 +529,8 @@ easy-web-tab/
 │   └── resolve-extensionless.mjs # 学生测试 loader
 ├── server.cjs / pm2.config.cjs   # PM2 路径（serve -s dist，端口 16718）
 ├── Dockerfile                    # serve -s，端口 16718
-├── run.bat / start-pm2.ps1       # Windows 启动脚本（不再写死机器路径）
+├── start-server.bat / stop-server.bat  # Windows 后台启动 / 停止（不再写死机器路径）
+├── start-pm2.ps1                 # PM2 开机自启脚本
 ├── vite.config.js                # 真实 Vite 配置（@ → /src + WebDAV dev proxy，端口 16718）
 ├── index.html
 ├── package.json
