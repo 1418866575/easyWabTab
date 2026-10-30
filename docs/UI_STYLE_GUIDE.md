@@ -211,13 +211,31 @@ import BaseDialog from '@/components/common/BaseDialog.vue'
 - 外观：浅灰底 `--input-bg`（=`--color-bg-input`）+ 1px 描边；hover 描边加深；focus 主色描边 + 3px `--color-primary-ring` 外环；`:disabled` 降透明度；`[aria-invalid='true']` 错误描边。
 - **字号必须是固定值**，不要用 `--font-size-base`（它是 clamp，会随视口漂）。
 
-优先级：
+#### 选型标准：什么时候用 Element Plus，什么时候用原生
+
+**外观由 token 统一，实现按场景选型** —— 两者渲染结果一致（同高、同圆角、同底色、同焦点环），
+不需要为了「看起来统一」而把原生全换成 EP。
+
+| 场景 | 用哪个 | 理由 |
+|------|--------|------|
+| 表单录入（`el-form` + 校验 / 联动 / 必填提示） | **Element Plus** | 只有 EP 有 `el-form-item` 的校验态与 `prop` 联动 |
+| 日期 / 时间 / 下拉 / 数字约束 | **Element Plus** | 原生 `type=date` 在 Safari、移动端体验差；`el-input-number` 自带 clamp |
+| 密码 / 密钥（需要查看按钮） | **Element Plus**（`show-password`） | 一行拿到 👁 切换，原生要自己写 |
+| 纯文本录入、自定义面板行内输入 | **原生 + `.ui-input`** | 视觉等价，零组件开销（settings 行、内嵌面板大量如此） |
+| 搜索框（外壳 + 图标 + 清除） | **原生 + `.ui-search`** | 外壳承载描边与焦点环，内层透明 |
+| `file` / `range` / `color` / `checkbox` | **原生** | EP 只有 `el-upload` / `el-slider` / `el-color-picker` 等**不同语义的控件**，改造等于改交互 |
+| 工具箱（`src/toolbox`） | **原生 `.tu-input`** | 68 个纯计算工具，无表单校验需求，EP 组件运行时是净负担 |
+
+> 反面参考：当前 `src/` 有原生控件 513 处、EP 表单类 451 处，其中 **71%（363 处）原生在工具箱**。
+> 「全量换 EP」收益为零（外观已一致）、成本翻倍（upload/slider/color 要重构交互）。
+
+#### 落地优先级
 
 1. **业务表单** → `el-input` / `el-select` / `el-form-item`（EP **按需自动导入**，无需手动 import）。
    其尺寸/圆角/底色/焦点环由 `styles/element-theme.css` 的 `html:root { --el-component-size… }`
    与 `html .el-input { --el-input-* }` 桥接，**不要再用 `.form-input` 之类视觉类挂到 `el-input` 根节点**（会双层框）。
-2. **EP 不支持的类型**（`file` / `color` / `range` / 日期等）→ 原生控件 + **`.ui-input`** 类。
-3. **多行** → `.ui-textarea`；**搜索框**（外壳 + 图标 + 清除按钮）→ `.ui-search` 外壳 + `.ui-search-input` 内层，
+2. **EP 无对应语义的类型**（`file` / `range` / `color` / `checkbox`）→ 原生控件 + **`.ui-input`** 类。
+3. **多行** → `.ui-textarea`；**搜索框** → `.ui-search` 外壳 + `.ui-search-input` 内层，
    内层必须透明（边框/底色/焦点环都在外壳上，靠 `:focus-within` 触发）。
 4. **禁止**自造私有输入样式；历史类名（`.form-input` / `.wb-menu-name-input` / `.edit-input` / `.tu-input` 等）
    已在 `.ui-input` 别名列表中，组件内只保留布局（flex/width/margin）。

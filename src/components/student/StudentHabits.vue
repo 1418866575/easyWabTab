@@ -397,10 +397,11 @@ onMounted(async () => {
         </div>
         <div class="field">
           <label class="field-label">日期 *</label>
-          <input
-            type="date"
-            class="wb-menu-name-input"
+          <el-date-picker
             v-model="recordFormDate"
+            type="date"
+            value-format="YYYY-MM-DD"
+            placeholder="选择日期"
             data-testid="sh-record-date"
           />
         </div>

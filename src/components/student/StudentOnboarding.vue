@@ -86,11 +86,12 @@ function stageNameOf(s: StudentStage): string {
         </div>
         <div class="ob-birthday-field">
           <label class="ob-birthday-label" for="stg-onboarding-birthday">出生日期（选填）</label>
-          <input
+          <el-date-picker
             id="stg-onboarding-birthday"
-            type="date"
-            class="ob-birthday-input"
             v-model="birthday"
+            type="date"
+            value-format="YYYY-MM-DD"
+            placeholder="选择出生日期"
             data-testid="stg-onboarding-birthday"
           />
           <span class="ob-birthday-hint">用于在主页显示年龄</span>
@@ -243,6 +244,10 @@ function stageNameOf(s: StudentStage): string {
   gap: 8px;
   flex-wrap: wrap;
 }
+.ob-birthday-field :deep(.el-date-editor) {
+  width: 220px;
+}
+
 .ob-birthday-label {
   font-size: 13px;
   font-weight: 500;

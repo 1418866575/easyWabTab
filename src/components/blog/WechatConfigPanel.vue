@@ -50,14 +50,14 @@ onMounted(() => cfg.loadConfig())
       </label>
       <label class="remind-field">
         <span class="remind-label">AppSecret</span>
-        <input
+        <el-input
           type="password"
-          class="wb-menu-name-input"
+          show-password
           placeholder="留空则不修改已保存的密钥"
           data-testid="wechat-appsecret"
           autocomplete="new-password"
-          :value="cfg.appSecret.value"
-          @input="cfg.appSecret.value = ($event.target as HTMLInputElement).value"
+          :model-value="cfg.appSecret.value"
+          @update:model-value="cfg.appSecret.value = $event"
         />
       </label>
     </div>
@@ -137,6 +137,11 @@ onMounted(() => cfg.loadConfig())
   display: flex;
   align-items: center;
   gap: 10px;
+}
+/* 密钥输入用 el-input（show-password），在行内需要撑满剩余宽度 */
+.remind-field :deep(.el-input) {
+  flex: 1;
+  min-width: 0;
 }
 .remind-label {
   flex-shrink: 0;

@@ -3859,12 +3859,14 @@ function toggleFullscreen(): void {
           </div>
           <div class="wb-menu-field">
             <label class="wb-menu-label">出生日期</label>
-            <input
+            <!-- 原生 type=date 在 Safari / 移动端体验差，且无法指定可选范围 -->
+            <el-date-picker
               type="date"
-              class="wb-menu-name-input"
-              :value="studentStore.settings.birthday"
+              value-format="YYYY-MM-DD"
+              placeholder="选择出生日期"
               data-testid="stg-birthday-input"
-              @input="studentStore.setBirthday(($event.target as HTMLInputElement).value)"
+              :model-value="studentStore.settings.birthday || null"
+              @update:model-value="studentStore.setBirthday(($event as string) || '')"
             />
           </div>
         </div>
@@ -4120,13 +4122,14 @@ function toggleFullscreen(): void {
             </label>
             <label class="remind-field">
               <span class="remind-label">应用密码</span>
-              <input
+              <!-- 密钥类输入用 el-input 的 show-password：一行拿到 👁 切换，便于核对粘贴内容 -->
+              <el-input
                 type="password"
-                class="wb-menu-name-input"
+                show-password
                 placeholder="云盘应用密码（非账户密码）"
                 data-testid="sync-password"
-                :value="store.cloudSyncPassword"
-                @input="store.setCloudSyncPassword(($event.target as HTMLInputElement).value)"
+                :model-value="store.cloudSyncPassword"
+                @update:model-value="store.setCloudSyncPassword($event)"
               />
             </label>
           </div>
@@ -4146,13 +4149,13 @@ function toggleFullscreen(): void {
             </label>
             <label class="remind-field">
               <span class="remind-label">App Secret</span>
-              <input
+              <el-input
                 type="password"
-                class="wb-menu-name-input"
+                show-password
                 placeholder="飞书自建应用 App Secret"
                 data-testid="sync-feishu-secret"
-                :value="store.cloudSyncFeishuAppSecret"
-                @input="store.setCloudSyncFeishuAppSecret(($event.target as HTMLInputElement).value)"
+                :model-value="store.cloudSyncFeishuAppSecret"
+                @update:model-value="store.setCloudSyncFeishuAppSecret($event)"
               />
             </label>
             <label class="remind-field">
@@ -4840,6 +4843,18 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
 .wb-menu-name-input {
   flex: 1;
   min-width: 0;
+}
+
+/* 出生日期行：日期选择器与其它行内输入同高同宽（EP 默认 220px，这里撑满可用宽度并封顶） */
+.wb-menu-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+}
+.wb-menu-field :deep(.el-date-editor) {
+  flex: 1;
+  min-width: 0;
+  max-width: 260px;
 }
 
 /* 入口图标按钮：显示当前图标缩略图（未设置时为占位图标），点击从图标管理库选择 */
