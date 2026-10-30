@@ -1,0 +1,7 @@
+{
+  "title": "OpenCode 2.0 入门到精通",
+  "description": "OpenCode 2.0 中文学习手册：目录导航 + 全文搜索，涵盖安装、TUI/CLI、配置、Agent、权限、MCP、Skills、插件、Server API 与实战。",
+  "category": "技术手册",
+  "tags": ["OpenCode", "AI", "编程", "工具", "教程"],
+  "order": 45
+}
