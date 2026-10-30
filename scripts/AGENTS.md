@@ -16,6 +16,8 @@ scripts/
 ├── generate-preset-icons.cjs # Build-time: scans public/icons/ → generates src/composables/presetIcons.ts
 ├── serve-with-rewrites.cjs   # Custom HTTP server: serves dist/ + game rewrites + SPA fallback + WebDAV 代理（内置，端口 16718）
 ├── webdav-proxy-only.cjs     # 独立 WebDAV 同源代理（Nginx 静态托管时用，端口 16719；npm run webdav-proxy）
+├── statsService.cjs          # 全网访问统计的采集/聚合逻辑（纯 CJS；JSON 落盘 data/stats/，不存明文 IP）
+├── stats-only.cjs            # 独立统计服务（端口 16723；npm run stats）
 ├── resolve-extensionless.mjs # Node 自定义 loader：解析无扩展名相对导入（`./countdownCore`）+ `@/` 别名 → 学生 core 测试运行必需
 ├── qa-student-ui.mjs         # Playwright UI QA：学生工作台 UI（npm run qa:student-ui）
 ├── test-countdown-core.ts    # countdownCore.ts（16 断言；npm run test:countdown）
@@ -60,6 +62,8 @@ scripts/
 | Serve production build | `serve-with-rewrites.cjs` | `npm run serve`; PORT 16718 hardcoded |
 | Add a game URL rewrite | `serve-with-rewrites.cjs` | if/else chain on `filePath`; redirects to trailing-slash for relative asset resolution |
 | Nginx 静态托管下的云同步 | `webdav-proxy-only.cjs` | `npm run webdav-proxy`；端口 16719（可 `WEBDAV_PROXY_HOST`/`WEBDAV_PROXY_PORT` 覆盖）；Nginx 把 `/api/webdav-proxy` 反代到它，见 README「方式五」 |
+| 全网访问统计（采集/聚合逻辑） | `statsService.cjs` | 纯 CJS，导出 `{ handle(req,res,pathname), flushNow, DATA_DIR, KEEP_DAYS }`；`POST /api/stats/collect` → 204、`GET /api/stats/summary?days=N` → 聚合 JSON。落盘 `data/stats/<YYYY-MM-DD>.json`（gitignore），UV = `sha256(盐+日期+IP+UA)` 前 16 位（**不存明文 IP**）。被 `serve-with-rewrites.cjs`、`stats-only.cjs`、`vite.config.js` 三处复用 |
+| 全网访问统计（独立进程） | `stats-only.cjs` | `npm run stats`；端口 16723（可 `STATS_HOST`/`STATS_PORT` 覆盖）；只做 HTTP 壳 + `/healthz`，逻辑全在 `statsService.cjs`；SIGTERM 时补一次 `flushNow()` |
 | 核心纯函数测试 | `test-*-core.ts` | `node --experimental-strip-types` 直跑，自研 assert 断言；被测核心禁止 import vue/pinia |
 | 学生 core 纯函数测试 | `test-student-*-core.ts` + `resolve-extensionless.mjs` | 14 个 `test:student-*`，每个都带 `--experimental-loader ./scripts/resolve-extensionless.mjs`；`npm run test:student` 聚合全部 |
 | 学生工作台 UI QA | `qa-student-ui.mjs` | `npm run qa:student-ui`；48 断言 / S1–S13：骨架与 16 项菜单、首页三块平铺（回归「轮播残留」）、习惯日历打卡、作业/复习/错题的状态推进、课程表周切换、阅读统计、勋章与积分、家长锁态 + PIN 弹框、16 面板逐个渲染、移动端 390px。**UI 操作驱动、pinia store 校验结果**（分页/筛选不断言 DOM 数量）。用 `findChromium()` 取本机 chromium，不做 playwright install |
@@ -67,8 +71,10 @@ scripts/
 ## CONVENTIONS
 
 - `.cjs` = CommonJS — required because `package.json` has `"type": "module"`
-- `serve-with-rewrites.cjs` / `webdav-proxy-only.cjs` 只用 Node stdlib — zero dependencies
-- PORT 16718（页面）+ 16719（WebDAV 代理）hardcoded — keep in sync with vite.config.js, Dockerfile, start-server.bat, pm2.config.cjs
+- `serve-with-rewrites.cjs` / `webdav-proxy-only.cjs` / `statsService.cjs` / `stats-only.cjs` 只用 Node stdlib — zero dependencies
+- PORT 16718（页面）+ 16719（WebDAV 代理）+ 16720（fetch-meta）+ 16721（wechat）+ 16723（stats）hardcoded — keep in sync with vite.config.js, Dockerfile, start-server.bat, pm2.config.cjs, nginx.conf
+- **statsService 的盐与数据目录都不入库**：`data/stats/` 已 gitignore；`.salt` 泄露等于让别人能反查访客哈希，任何情况下都不要提交、不要打进备份包
+- **statsService 改动后要重启两处**：`npm run serve`（16718 内置）与 `easy-web-stats`（16723 独立进程，`pm2 restart easy-web-stats`）。只重启 pm2 里的 nginx 或静态发布都不生效
 - **学生 core 测试 loader**: 全部 `test:student-*` 必须带 `--experimental-loader ./scripts/resolve-extensionless.mjs`（学生 cores 用无扩展名相对导入 `./countdownCore`/`./diaryCore`/`./habitCore`/`./studentMenuCore` + `@/` 别名；纯 `node --experimental-strip-types` 报 `ERR_MODULE_NOT_FOUND`/`ERR_UNSUPPORTED_DIR_IMPORT`）— `resolve-extensionless.mjs` 自解析 `.ts`/`/index.ts` + `@/` → `src/` 映射；勿改成带扩展名导入（那会被 Vite/真实运行时拒绝）
 
 ## ANTI-PATTERNS

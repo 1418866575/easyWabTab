@@ -4,6 +4,7 @@ import AutoImport from 'unplugin-auto-import/vite';
 import Components from 'unplugin-vue-components/vite';
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers';
 import { URL } from 'node:url';
+import { createRequire } from 'node:module';
 import { Buffer } from 'node:buffer';
 import os from 'node:os';
 import fs from 'node:fs';
@@ -233,6 +234,39 @@ function forwardBlogShare(req, res) {
   req.pipe(up);
 }
 
+/**
+ * 全网访问统计（dev / preview）：把 /api/stats/* 直接交给 scripts/statsService.cjs 处理。
+ *
+ * 为什么不像微信/WebDAV 那样再转发到独立端口：统计只是「读一个本地 JSON + 追加计数」，
+ * 不需要独立进程的隔离性；直接挂中间件可以让 `npm run dev` 零额外启动步骤就有数据。
+ * 线上不经过这里 —— 由 nginx 反代到 scripts/stats-only.cjs（16723）。
+ *
+ * 懒加载：statsService 被 require 时会创建 data/stats 目录并起清理定时器，
+ * 放在模块顶层会让每次 `vite build` 都顺手建目录，故推迟到第一次真正请求。
+ */
+let statsServiceRef = null
+function getStatsService() {
+  if (!statsServiceRef) {
+    statsServiceRef = createRequire(import.meta.url)('./scripts/statsService.cjs')
+  }
+  return statsServiceRef
+}
+
+function handleStatsApi(req, res) {
+  const pathname = String(req.url || '').split('?')[0]
+  try {
+    getStatsService().handle(req, res, pathname)
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error('[stats] dev middleware error:', e?.message || e)
+    if (!res.headersSent) {
+      res.statusCode = 500
+      res.setHeader('Content-Type', 'application/json; charset=utf-8')
+    }
+    res.end(JSON.stringify({ ok: false, error: 'internal' }))
+  }
+}
+
 export default defineConfig({
     plugins: [
       vue(),
@@ -264,6 +298,26 @@ export default defineConfig({
           server.middlewares.use((req, res, next) => {
             if (req.url && req.url.startsWith('/api/webdav-proxy')) {
               return handleWebdavProxy(req, res);
+            }
+            next();
+          });
+        }
+      },
+      // 全网访问统计：dev/preview 直接把 /api/stats/* 交给 statsService 处理
+      {
+        name: 'stats-api',
+        configureServer(server) {
+          server.middlewares.use((req, res, next) => {
+            if (req.url && req.url.startsWith('/api/stats/')) {
+              return handleStatsApi(req, res);
+            }
+            next();
+          });
+        },
+        configurePreviewServer(server) {
+          server.middlewares.use((req, res, next) => {
+            if (req.url && req.url.startsWith('/api/stats/')) {
+              return handleStatsApi(req, res);
             }
             next();
           });

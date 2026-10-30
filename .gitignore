@@ -38,6 +38,10 @@ config/webdav.env
 # 博客共享发布运行时目录（Node 直写，非源码）
 /blog-share/
 
+# 全网访问统计的运行时数据（scripts/statsService.cjs 直写，一天一个 JSON，非源码）
+# 里面的 .salt 是 UV 哈希的盐，泄露等于让别人能反查访客哈希，绝不可入库
+/data/stats/
+
 # Test files
 coverage
 *.test.js

@@ -11,6 +11,10 @@ const PID_FILE = process.env.EWT_PID_FILE || path.join(__dirname, '..', '.server
 const PROXY_PATH = '/api/webdav-proxy'
 const MAX_ERROR_BYTES = 1024
 
+// 全网访问统计：POST /api/stats/collect + GET /api/stats/summary
+// 落盘在 data/stats/（gitignore），不存明文 IP；nginx 已把 /api/ 反代到本服务，无需改 nginx
+const statsService = require('./statsService.cjs')
+
 // 站点元数据同源代理（替代前端直连海外 jina.ai / allorigins.win，解决国内网络不可达 + CORS）
 const PROXY_META_PATH = '/api/fetch-meta'
 const MAX_META_BYTES = 512 * 1024
@@ -741,6 +745,11 @@ const server = http.createServer((req, res) => {
     return handleBlogShareStatic(filePath, req, res)
   }
 
+  // ====== 全网访问统计（采集 + 聚合查询）======
+  if (filePath === '/api/stats/collect' || filePath === '/api/stats/summary') {
+    return statsService.handle(req, res, filePath)
+  }
+
 // Game rewrites - with trailing slash for proper relative path resolution
 if (filePath === '/games/tetris') {
   // Redirect to index.html with trailing slash for proper relative path resolution
@@ -818,7 +827,8 @@ function removePidFile() {
 server.listen(PORT, () => {
   writePidFile()
   console.log('')
-  console.log(`Server running on http://localhost:${PORT} (proxies: /api/webdav-proxy, /api/fetch-meta, /api/wechat -> 127.0.0.1:${WECHAT_PROXY_PORT})`)
+  console.log(`Server running on http://localhost:${PORT} (proxies: /api/webdav-proxy, /api/fetch-meta, /api/wechat -> 127.0.0.1:${WECHAT_PROXY_PORT}, /api/stats/*)`)
+  console.log(`[stats] 全网访问统计落盘目录：${statsService.DATA_DIR}（保留 ${statsService.KEEP_DAYS} 天）`)
   if (!fs.existsSync(path.join(DIST_DIR, 'index.html'))) {
     console.warn(`[WARN] 未检测到构建产物：${path.join(DIST_DIR, 'index.html')}`)
     console.warn('       访问页面会返回 503 提示页。请先执行： npm run build')

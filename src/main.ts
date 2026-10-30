@@ -40,6 +40,10 @@ import { ensureIconCacheLoaded } from './composables/useIconCache'
 import { initScrollLock } from './utils/scrollLock'
 // 模块级异步云同步：切换模块（左上角切换器 / Alt+N / 前进后退）时按模块作用域后台推拉
 import { initModuleSync } from './composables/useModuleSync'
+// 本机访问统计（一天一条记录，只存本机，不进云同步）
+import { flushVisitStats, initVisitStats } from './composables/useVisitStats'
+// 全网访问统计（匿名上报到自家 /api/stats，服务端见 scripts/statsService.cjs）
+import { initSiteStats } from './composables/useSiteStats'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -56,6 +60,13 @@ app.use(pinia)
 app.use(router)
 // Element Plus 中文语言包改为在 App.vue 顶层用 <el-config-provider :locale="zhCn"> 承接
 // （按需引入后不再 app.use(ElementPlus, { locale })）
+
+// 访问统计的路由钩子必须**同步**紧跟 app.use(router) 注册：
+// app.use(router) 会立刻发起首次导航，而下面的 ensureLoaded() 是异步的 ——
+// 放到 bootstrap 里注册，首屏那一次导航很可能已经跑完 afterEach，漏记一次。
+initVisitStats(router)
+// 全网统计的上报钩子同理，必须同步注册，否则首屏那次导航不会上报
+initSiteStats(router)
 
 // 启动门控：必须先把导航偏好从 localStorage 迁移并载入 nav store（IndexedDB），
 // 否则主题/背景/站点外观等 store 初始化时 getPref 会读到空值
@@ -88,6 +99,8 @@ async function bootstrap() {
     void persistNavMeta()
     // 智能工作台的使用计数是本地防抖落盘（不触发云推送），页面隐藏时补一次
     flushSmartUsageIfCreated()
+    // 访问统计同样 1s 防抖，页面隐藏时补一次，避免最后几次跳转丢掉
+    flushVisitStats()
   }
   if (typeof window !== 'undefined') {
     window.addEventListener('pagehide', flushNav)

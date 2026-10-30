@@ -48,7 +48,7 @@ easy-web-tab/
 ├── Dockerfile                    # serve -s, port 16718 (no serve.json copied → no game rewrites)
 ├── start-server.bat / stop-server.bat  # Windows launch scripts (path-agnostic — see KEY GOTCHAS)
 ├── start-pm2.ps1                 # PM2 autostart script
-├── vite.config.js                # NOT .ts — alias @ → /src + /api/webdav-proxy dev proxy, dev port 16718
+├── vite.config.js                # NOT .ts — alias @ → /src + dev 中间件（/api/webdav-proxy、/api/blog-share、/api/stats/*），dev port 16718
 ├── serve.json                    # Rewrites for `serve -s` (stale tetris mapping — see KEY GOTCHAS)
 └── [config files]
 ```
@@ -94,6 +94,7 @@ easy-web-tab/
 | 本地版本历史备份 | `src/composables/useBackup.ts` + `src/components/BackupManager.vue` | 仅导航数据（sites/categories/searchEngines）localStorage `easywebtab-backups`，最多 10 版环形，5 分钟防抖自动备份；导出/导入 .md 用自带正则解析器（比 useMarkdown/gray-matter 保真度低，可能丢字段）；restoreFromBackup 写回 localStorage 后强制 reload — 与云端/工作台备份相互独立 |
 | 工作台快照（时光机） | `src/composables/useSnapshots.ts` + `src/composables/snapshotCore.ts` | 捕获 IDB 全量状态到 store 'snapshots'（SnapshotRecord{id,date,data,createdAt}），环形最多 10 份，同日去重（force 手动绕过），'auto'/'manual' 来源标签；captureSnapshot 调 idbExportAll + 补 pomodoro/habits 直读 idbGet；snapshotCore=纯逻辑 makeSnapshotId/normalizeSnapshotList/pushSnapshot/findSnapshot（snapshots 永不进备份） |
 | 天气/日历锚点卡 | `src/composables/useWeather.ts` + `src/components/workbench/WeatherCard.vue` + `src/components/workbench/CalendarAnchorCard.vue` | useWeather=Open-Meteo（免 key）两段串行获取（geocoding→weather，4s/8s 超时，任何失败静默 null）+ weatherEmoji/weatherDesc(formatTime 纯函数)；WeatherCard 读 settingsStore.workbenchCity，空→「未设置城市」；CalendarAnchorCard=最多 3 锚点（发薪日 ledgerCore.nextPayday + category='life' 倒计时按剩余天数排序非过期），跨天 midnight + visibilitychange 刷新 |
+| 访问统计（本机 + 全网） | `src/components/NavStatsPanel.vue` + `src/composables/useVisitStats.ts` / `useSiteStats.ts` / `statsCore.ts` + `scripts/statsService.cjs` | 设置 → 导航设置 → 访问统计。**上半全网**：自家服务端 `/api/stats/*`（`statsService.cjs`，落盘 `data/stats/<日期>.json`，UV=加盐哈希、不存明文 IP），今日/7·30·90 天 PV·UV、按天趋势、页面排行、来源构成，底部附 Vercount 第三方累计做交叉校验；接口未就绪时显示「未接入」原因与部署命令，不影响其它功能。**下半我的使用**：本机 IndexedDB `nav` store 的 `stats:day:<日期>`（90 天裁剪、不进云同步），趋势/活跃时段/模块分布/站点 Top5/工具 Top5。两个路由钩子（`initVisitStats` / `initSiteStats`）都必须在 `app.use(router)` 之后**同步**注册 |
 | 断链检测 | `src/composables/useDeadLinkChecker.ts` | 批量检查书签 URL：HEAD→GET 兜底、no-cors 不透明=可达、8s 超时、500ms 节流；结果存 localStorage 'link-check-results'；触发自 AppSettingsDialog 导航设置 tab「断链检测」按钮 |
 | 备案页脚 | `src/config/beian.ts` | ICP/公安备案号常量写死（ICP_NUMBER/PSB_NUMBER），空串=该段不渲染、两段都空=整个页脚不渲染；公安徽标 public/beian/ghs.png（@error 兜底隐藏）；改后需 `npm run build` 重编译；BeianFooter 挂 App.vue 覆盖全部视图 |
 | Element Plus 表格/分页 | `src/main.ts`（全局注册）+ 各面板 | Element Plus **全量导入**（非按需）+ zh-cn locale；学生工作台 14 面板已全统一（表单/弹框/表格/radio/checkbox/color-picker/slider/分页全 el-*，testid 全保）、健康四面板记录弹框、记账查看弹框、教育经历（StudentEducation）与业务多处 el-table + el-pagination（10 条/页）；无需逐组件 import |
@@ -228,6 +229,8 @@ npm run test:snapshot   # Pure-function tests for snapshotCore.ts (node --experi
 npm run test:student    # 聚合 14 个 test:student-*（menu/habits/homework/reward/plan/reading/review/mistakes/timetable/exam/stage/pomodoro/achievement/parenttask）— 每个都需 `--experimental-loader ./scripts/resolve-extensionless.mjs`（学生 cores 用无扩展名 `./countdownCore` 等相对导入 + `@/` 别名，纯 node --experimental-strip-types 会 ERR_MODULE_NOT_FOUND）
 npm run qa:student-ui  # Playwright UI QA: 学生工作台 UI（后台/复用 vite dev 16718-16726）
 npm run webdav-proxy   # 独立 WebDAV 同源代理（Nginx 静态托管时配合 /api/webdav-proxy 反代，端口 16719）
+npm run stats          # 独立全网访问统计服务（Nginx 静态托管时配合 /api/stats/ 反代，端口 16723）
+npm run test:stats     # statsCore 纯函数测试（按天分桶 / 趋势补零 / Top N / 90 天裁剪）
 npm run serve        # Production server WITH game rewrites (custom Node.js server)
 npm start            # Build + serve
 pm2 start pm2.config.cjs  # PM2 production (uses server.cjs, NO game rewrites, uses `serve` package)

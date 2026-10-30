@@ -125,18 +125,21 @@ docker logs easywebtab
 1. **云同步（WebDAV）**：`POST /api/webdav-proxy`
 2. **添加网站自动抓取元数据**：`POST /api/fetch-meta`（纯静态下 POST 落到静态 location 会返回 405，导致添加网站查询失败）
 3. **公众号草稿箱**：`/api/wechat/*`（`open.feishu.cn` / 微信接口无 CORS，必须同源转发；仅用博客发文时需要）
+4. **全网访问统计**：`POST /api/stats/collect` + `GET /api/stats/summary`（可选；不接也能用，设置里的「全网访问」会显示未接入提示）
 
-推荐用三个轻量单职责代理（各占一个端口，pm2 常驻）：
+推荐用四个轻量单职责代理（各占一个端口，pm2 常驻）：
 
 ```bash
 npm run build                          # 产出 dist/
 npm run webdav-proxy                   # WebDAV 同源代理，默认 127.0.0.1:16719
 npm run fetch-meta-proxy               # fetch-meta 同源代理，默认 127.0.0.1:16720
 npm run wechat-proxy                   # 公众号代理，默认 127.0.0.1:16721（无状态，凭证随请求发）
+npm run stats                          # 全网访问统计，默认 127.0.0.1:16723
 # 常驻：
 # pm2 start scripts/webdav-proxy-only.cjs --name easy-webdav-proxy
 # pm2 start scripts/fetch-meta-only.cjs --name easy-fetch-meta
 # pm2 start scripts/wechat-proxy.cjs --name easy-wechat-proxy
+# pm2 start scripts/stats-only.cjs --name easy-web-stats
 ```
 
 Nginx 侧把两个 `/api/` 接口**精确反代**到对应进程：
@@ -184,6 +187,17 @@ server {
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_read_timeout 60s;
   }
+
+  # 全网访问统计（可选）
+  location /api/stats/ {
+    proxy_pass http://127.0.0.1:16723;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 30s;
+  }
 }
 ```
 
@@ -193,10 +207,12 @@ server {
 - WebDAV：`POST /api/webdav-proxy`，请求头 `X-Webdav-Auth: Basic <base64(用户名:密码)>`，body 为 `{ target, method, body? }`。监听地址 / 端口可用 `WEBDAV_PROXY_HOST` / `WEBDAV_PROXY_PORT` 覆盖；`GET /healthz` 可作健康检查。
 - fetch-meta：`POST /api/fetch-meta`，body 为 `{ url }`，返回 `{ title, description, icon }`。监听地址 / 端口可用 `FETCH_META_HOST` / `FETCH_META_PORT` 覆盖；`GET /healthz` 可作健康检查。
 - wechat：`/api/wechat/*` 通用转发到微信开放接口，**无状态多租户** —— 代理本身不落盘任何 AppID / Secret，凭证随每次请求发送。监听地址 / 端口可用 `WEBCHAT_HOST` / `WEBCHAT_PORT` 覆盖。
+- stats：`POST /api/stats/collect`（body `{ n: 路由名, r: 来源 URL }` → `204`）+ `GET /api/stats/summary?days=30`（→ 今日 / 区间 PV·UV、按天序列、页面排行、来源构成）。监听地址 / 端口可用 `STATS_HOST` / `STATS_PORT` 覆盖；`GET /healthz` 可作健康检查。数据落在 `data/stats/<YYYY-MM-DD>.json`（**已 gitignore**），不存明文 IP。
 
-> 两个代理**零运行时依赖**（仅 Node 内置模块），`metascraper` / `playwright` 未安装时自动回退正则解析，无需 `npm install`。
-> 开发环境不需要这两个进程 —— `vite.config.js` 已内置同协议 dev proxy；`npm run serve` 启动的
-> `scripts/serve-with-rewrites.cjs` 也已内置（单进程即可，端口 16718）。
+> 前两个代理**零运行时依赖**（仅 Node 内置模块），`metascraper` / `playwright` 未安装时自动回退正则解析，无需 `npm install`。
+> 开发环境不需要这些进程 —— `vite.config.js` 已内置同协议 dev proxy（统计接口是直接在 dev 中间件里挂载
+> `statsService.cjs`，故 `npm run dev` 起来就有数据）；`npm run serve` 启动的
+> `scripts/serve-with-rewrites.cjs` 也已内置全部接口（单进程即可，端口 16718）。
 
 ---
 
@@ -375,6 +391,21 @@ server {
 - **学生独立备份**（`student-backup` 信封，`STUDENT_DATA_VERSION=1`）。
 - **快照（时光机）**：环形保留最近 10 份 IndexedDB 全量快照，可回滚。
 
+### 访问统计
+
+设置 → 导航设置 → **访问统计**，两块数据来源不同、分开展示：
+
+| 区块 | 数据来源 | 内容 |
+|------|----------|------|
+| 全网访问 | 自家服务端 `/api/stats/*`（`scripts/statsService.cjs`） | 今日 / 区间（7·30·90 天）的 **PV 与 UV**、按天趋势柱状图、访问最多的页面排行、访客来源构成（直接访问 / 站内 / 搜索引擎 / 社交分享 / 具体域名）；底部附 Vercount 第三方累计数做交叉校验 |
+| 我的使用 | 本机 IndexedDB（`nav` store 的 `stats:day:<日期>` 记录） | 今日 / 近 7 天 / 近 30 天 / 累计访问，近 30 天趋势柱状图、24 小时活跃时段、近 30 天模块分布、最常访问的站点 Top5、最常用的工具 Top5 |
+
+- **全网 = 所有访客**：需要服务端（见上文「需要同源后端」第 4 条）。没接入时该区块会显示明确的「未接入」原因与部署命令，**不影响**其它功能与「我的使用」。
+- **匿名口径**：只上报路由名与来源 URL，服务端**不存明文 IP**（UV = `sha256(盐 + 日期 + IP + UA)` 前 16 位，按天去重）、不设 cookie、不带凭据；盐首次运行随机生成并落在 `data/stats/.salt`，换盐即切断历史与将来的关联。数据保留 180 天（`EWT_STATS_KEEP_DAYS` 可调），一天一个 JSON，删旧数据就是删文件。
+- **我的使用只记录本机**：一天一条记录，保留 90 天自动裁剪；不上传、不进云同步信封，换设备或清缓存即归零。可随时「清空本机访问记录」。
+- **零新增埋点口径**：站点点击复用 `sites.ts` 早已在写的 `site-click-counts`（此前全项目无展示入口），工具点击复用工具箱的 `clicks`，书籍打开复用图书馆偏好；本次仅新增「页面访问」一处本地记录（`useVisitStats` 的 `router.afterEach`）与一处匿名上报（`useSiteStats` 的 `router.afterEach`）。
+- **不升 DB 版本**：复用 `nav` 的多记录键，`DB_VERSION` 仍为 23；纯逻辑在 `composables/statsCore.ts`，单测 `npm run test:stats`。
+
 ### 备案信息
 
 全站所有页面（App.vue 全局挂载）底部居中自动显示备案页脚：ICP 备案号点击跳转工信部备案系统；公安联网备案号带徽标跳转公安备案查询平台。
@@ -438,13 +469,14 @@ npm run build        # build-safe.cjs：preset icons → vue-tsc -b → vite bui
 npm run typecheck    # 仅类型检查（vue-tsc -b）
 npm run lint         # ESLint（含 vue / ts 规则）
 npm run preview      # 预览生产构建
-npm run serve        # 生产静态服务（游戏重写 + 三个内置代理，16718）
+npm run serve        # 生产静态服务（游戏重写 + 四个内置接口，16718）
 npm run gen:books    # 重新生成 public/bookdata/manifest.json
 
 # 独立同源代理（Nginx 部署时用）
 npm run webdav-proxy     # WebDAV（16719）
 npm run fetch-meta-proxy # 元数据抓取（16720，解决添加网站查询 405）
 npm run wechat-proxy     # 公众号草稿箱（16721，无状态）
+npm run stats            # 全网访问统计（16723）
 
 # 纯函数单测（node --experimental-strip-types，无 vitest / jest）
 npm run test:countdown   # countdownCore（重复规则 / 下次发生 / 提醒判定）
@@ -465,6 +497,7 @@ npm run test:snapshot
 npm run test:tombstone   # 墓碑合并 / GC
 npm run test:blog        # blogCore（含图库引用保护）
 npm run test:books       # 图书馆纯逻辑
+npm run test:stats       # statsCore（访问统计：按天分桶 / 趋势补零 / Top N / 活跃时段 / 90 天裁剪）
 npm run test:smart       # 智能工作台
 npm run test:smart-settings
 npm run test:toolbox     # 工具箱分类归一化 / 收藏排序
@@ -526,6 +559,8 @@ easy-web-tab/
 │   ├── webdav-proxy-only.cjs     # 独立 WebDAV 同源代理（16719）
 │   ├── wechat-proxy.cjs          # 公众号草稿箱代理（无状态，凭证随请求）
 │   ├── fetch-meta-only.cjs       # 独立 fetch-meta 同源代理（16720，解决添加网站查询 405）
+│   ├── statsService.cjs          # 全网访问统计的采集/聚合逻辑（Pure CJS，可被多处 require）
+│   ├── stats-only.cjs            # 独立统计服务（16723，只做 HTTP 壳）
 │   └── resolve-extensionless.mjs # 学生测试 loader
 ├── server.cjs / pm2.config.cjs   # PM2 路径（serve -s dist，端口 16718）
 ├── Dockerfile                    # serve -s，端口 16718

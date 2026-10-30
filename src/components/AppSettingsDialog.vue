@@ -92,6 +92,9 @@ const WatermarkSettings = defineAsyncComponent(() => import('@/components/Waterm
 const CategoryManager = defineAsyncComponent(() => import('@/components/CategoryManager.vue'))
 const BackupManager = defineAsyncComponent(() => import('@/components/BackupManager.vue'))
 const IconManager = defineAsyncComponent(() => import('@/components/IconManager.vue'))
+// 访问统计面板（公开计数 + 本机使用统计）：只在切到该子页时才渲染，
+// 内含工具箱元数据的动态导入，做成异步组件避免撑大设置页 chunk
+const NavStatsPanel = defineAsyncComponent(() => import('@/components/NavStatsPanel.vue'))
 // 教师工作台 .tw-* 全局样式：设置页内嵌 TeacherDataManage / TeacherHelp 时依赖，
 // 非 /teacher 路由（source='all'）打开设置也能正常渲染这些组件
 import CloudSyncConflictModal from './CloudSyncConflictModal.vue'
@@ -107,6 +110,7 @@ type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'teache
 // 其余各动作一页一项（菜单名沿用原按钮名：添加网址 / 检测断链 / 引擎管理 / 背景 / 分类管理 / 备份 / 图标管理）
 type NavSubTab =
   | 'nav-appearance'
+  | 'nav-stats'
   | 'nav-display'
   | 'nav-workbench'
   | 'nav-backup-restore'
@@ -180,6 +184,7 @@ interface SubTabDef { key: SubTabKey; label: string }
 const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student' | 'teacher', SubTabDef[]> = {
   nav: [
     { key: 'nav-appearance',      label: '站点外观' },
+    { key: 'nav-stats',           label: '访问统计' },
     { key: 'nav-display',         label: '显示控制' },
     { key: 'nav-workbench',       label: '工作台设置' },
     { key: 'nav-backup-restore',  label: '备份恢复' },
@@ -378,6 +383,7 @@ const NAV_GROUPS: NavGroup[] = [
       { key: 'theme', label: '主题', icon: 'palette', tab: 'nav', sub: 'nav-display' },
       { key: 'nav-workbench', label: '工作台设置', icon: 'toolbox', tab: 'nav', sub: 'nav-workbench' },
       { key: 'nav-appearance', label: '站点外观', icon: 'monitor', tab: 'nav', sub: 'nav-appearance' },
+      { key: 'nav-stats', label: '访问统计', icon: 'chart', tab: 'nav', sub: 'nav-stats' },
       { key: 'nav-watermark', label: '水印设置', icon: 'palette', tab: 'nav', sub: 'nav-watermark' }
     ]
   },
@@ -518,32 +524,8 @@ const currentItemLabel = computed(() => currentNavMeta.value?.item ?? '')
 const appSettings = useAppSettingsDialog()
 const cityInput = ref<HTMLInputElement | null>(null)
 
-// Vercount 访问统计展示：计数锚点（vercount_value_site_uv / site_pv）常驻于 BeianFooter 页脚（视觉隐藏），
-// vercount 脚本加载后会向锚点写入数字；此处读取展示，避免重复 ID 与重复计数。
-// 脚本为异步填充，故读取采用「锚点优先 + 只读 API 兜底」：锚点仍是占位符时回退查询只读接口（GET 不计数）。
-const vercountUv = ref<string>('—')
-const vercountPv = ref<string>('—')
-function readVercountAnchor(id: string): string | null {
-  const text = document.getElementById(id)?.textContent?.trim()
-  // 初始占位符 '-' 或空串视为脚本尚未填充
-  return text && text !== '-' ? text : null
-}
-async function syncVercount() {
-  const uv = readVercountAnchor('vercount_value_site_uv')
-  const pv = readVercountAnchor('vercount_value_site_pv')
-  if (uv) vercountUv.value = uv
-  if (pv) vercountPv.value = pv
-  if (uv && pv) return
-  // 兜底：直接查询 vercount 只读接口（与脚本同一数据源，只读不计数）
-  try {
-    const res = await fetch(`https://events.vercount.one/api/v1/log?url=${encodeURIComponent(window.location.href)}`)
-    const data = await res.json()
-    if (data && data.site_uv != null) vercountUv.value = String(data.site_uv)
-    if (data && data.site_pv != null) vercountPv.value = String(data.site_pv)
-  } catch {
-    /* 网络异常时保留现有展示，不打断设置页 */
-  }
-}
+// Vercount 公开计数的读取与展示已随「访问统计」子页迁到 NavStatsPanel.vue
+// （原先挤在「站点外观」页底部，只有两个数字，没有时间维度）
 
 // ========================================
 // 导航站动作页（原「站点管理」九动作拆分后的独立页）
@@ -2174,20 +2156,6 @@ watch(
   }
 )
 
-// 「站点外观」子 tab 显示时读取 Vercount 统计展示（脚本异步填充，稍后重试以确保读到最新值）。
-// immediate: 设置弹窗打开时默认即位于该子 tab（nav 的首个子 tab），若只在变化时触发会永不执行 → 一直显示占位符。
-watch(
-  () => [activeTab.value, activeSubTab.value],
-  ([tab, sub]) => {
-    if (tab === 'nav' && sub === 'nav-appearance') {
-      syncVercount()
-      setTimeout(syncVercount, 1000)
-      setTimeout(syncVercount, 2500)
-    }
-  },
-  { immediate: true }
-)
-
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
   stopWatchSettings?.()
@@ -2300,16 +2268,7 @@ function toggleFullscreen(): void {
             浏览器标签页的图标。点击「选择图标」从图标库（预置图标 + 已上传的自定义图标）中挑选，选中的图标即为当前站点图标；「恢复默认」还原为内置图标。
           </p>
 
-          <!-- 访问统计（Vercount）：锚点在页脚常驻，此处读取展示 -->
-          <div class="wb-menu-head vercount-box">
-            <span class="wb-menu-label">访问统计</span>
-            <span class="vercount-values">
-              使用人数 <b>{{ vercountUv }}</b> · 总访问 <b>{{ vercountPv }}</b>
-            </span>
-          </div>
-          <p class="wb-menu-hint">
-            由 Vercount 统计，需通过公网域名访问才生效；数据按浏览器与设备去重。
-          </p>
+          <!-- 访问统计（Vercount + 本机使用）已独立成子页，不再挤在站点外观底部 -->
 
           <!-- 备案信息（来源 src/config/beian.ts，仅展示；修改需改源码重新构建部署） -->
           <div class="wb-menu-head beian-box">
@@ -2324,6 +2283,11 @@ function toggleFullscreen(): void {
           <p class="wb-menu-hint">
             备案号在 <code>src/config/beian.ts</code> 中配置，修改后需重新构建部署生效。
           </p>
+        </div>
+
+        <!-- 访问统计（导航设置 tab）：公开访问（Vercount，累计只有总数）+ 本机使用统计（按天趋势 / 模块分布 / 站点与工具 Top） -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-stats'" class="wb-menu-config">
+          <NavStatsPanel />
         </div>
 
         <!-- 主题与视图模式（导航设置 tab - 显示控制）：主题切换 + 经典/侧边栏视图，置于导航筛选栏之上 -->
@@ -5434,20 +5398,6 @@ html.dark .danger-hint {
   background: var(--color-bg-input, #f1f5f9);
   object-fit: contain;
   flex-shrink: 0;
-}
-
-/* ===== 站点外观（导航设置 tab）：Vercount 访问统计展示 ===== */
-.vercount-box {
-  margin-top: 14px;
-}
-.vercount-values {
-  font-size: 13px;
-  color: var(--color-text-secondary, #475569);
-}
-.vercount-values b {
-  color: var(--color-text-primary, #1e293b);
-  font-weight: 600;
-  margin: 0 2px;
 }
 
 /* ===== 站点外观（导航设置 tab）：备案信息展示 ===== */
