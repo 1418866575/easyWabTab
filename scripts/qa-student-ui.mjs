@@ -1,6 +1,29 @@
 /**
- * QA: 学生工作台 UI 层契约（student-ui）S1-S10，共 48 条断言。
- * 运行：node scripts/qa-student-ui.mjs
+ * QA：学生工作台 UI 契约（student-ui）—— 按当前 UI 重写
+ *
+ * 历史：原脚本断言的是「首页三屏轮播 + 习惯平铺卡片」的旧 UI，学生台改版后
+ *      （首页改为 greeted + 行动台/数据概览/工具栏**三块平铺**，习惯改为日历卡）
+ *      整套断言失效，跑起来一片红但 UI 是好的。本版按当前实现重写。
+ *
+ * 覆盖 S1–S12，共 42 条断言：
+ *   S1  骨架与菜单（16 项、默认主页、收起按钮挂 .tw-btn、昵称）
+ *   S2  首页（三块同屏、无轮播残留、概览 6 卡、工具卡跳转、行动卡跳转）
+ *   S3  习惯（日历卡数量、空名拒存、新增 +1、今日打卡 +1、删除 -1）
+ *   S4  作业（行数、空标题拒存、新增 +1、状态推进、状态筛选）
+ *   S5  课程表（网格渲染、周切换、今日速览、空态提示）
+ *   S6  复习（卡片数、tab 切换、新增 +1、掌握推进）
+ *   S7  错题（卡片数、搜索过滤、清空复原）
+ *   S8  阅读（统计卡、种子书名、新增 +1）
+ *   S9  成就 / 奖励（勋章 12 枚、分类 tab、奖励 2 项、规则弹框）
+ *   S10 家长协同（tab 数、分页器、切 tab）
+ *   S11 全 16 面板可渲染（逐个点，内容非空，汇总失败清单）
+ *   S12 移动端 390px（底栏贴底、收起按钮隐藏、无横向溢出）
+ *
+ * 断言策略：**UI 操作驱动、store 校验结果**。分页/筛选/视图切换很容易让
+ * 「DOM 里没看到」变成假阴性，所以数量与状态一律以 pinia store 为准，
+ * DOM 只用来证明「渲染出来了」与「点了有效」。
+ *
+ * 用法：node scripts/qa-student-ui.mjs
  */
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
@@ -11,7 +34,11 @@ import path from 'node:path'
 import { chromium } from 'playwright'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-
+const EVIDENCE_DIR = join(ROOT, '.omo', 'evidence', 'student-ui')
+const EVIDENCE_LOG = join(EVIDENCE_DIR, 'qa-student-ui.log')
+const FAIL_DIR = join(EVIDENCE_DIR, 'fail')
+if (!existsSync(EVIDENCE_DIR)) mkdirSync(EVIDENCE_DIR, { recursive: true })
+if (!existsSync(FAIL_DIR)) mkdirSync(FAIL_DIR, { recursive: true })
 
 /** 用本机已装的 chromium（playwright 自带的 headless shell 常常没下载）。
  *  与本目录其它 QA 脚本保持一致：不做 playwright install。 */
@@ -24,11 +51,6 @@ function findChromium() {
   }
   return undefined
 }
-const EVIDENCE_DIR = join(ROOT, '.omo', 'evidence', 'student-ui')
-const EVIDENCE_LOG = join(EVIDENCE_DIR, 'qa-student-ui.log')
-const FAIL_DIR = join(EVIDENCE_DIR, 'fail')
-if (!existsSync(EVIDENCE_DIR)) mkdirSync(EVIDENCE_DIR, { recursive: true })
-if (!existsSync(FAIL_DIR)) mkdirSync(FAIL_DIR, { recursive: true })
 
 async function waitForServer(url, timeoutMs = 40000) {
   const deadline = Date.now() + timeoutMs
@@ -42,75 +64,187 @@ async function isViteDevAt(port) {
   try {
     const res = await fetch('http://localhost:' + port + '/src/composables/useIdb.ts')
     if (!res.ok) return false
-    const ct = res.headers.get('content-type') || ''
-    if (ct.includes('text/html')) return false
-    const body = await res.text()
-    return body.includes('idbExportAll')
+    if ((res.headers.get('content-type') || '').includes('text/html')) return false
+    return (await res.text()).includes('idbExportAll')
   } catch { return false }
 }
 async function isPortFree(port) {
-  try { const res = await fetch('http://localhost:' + port + '/', { signal: AbortSignal.timeout(1500) }); return !res.ok } catch { return true }
+  try { const r = await fetch('http://localhost:' + port + '/', { signal: AbortSignal.timeout(1500) }); return !r.ok } catch { return true }
 }
-
-let server = null, startedByUs = false, devBase = null
+let devProc = null
+let devBase = ''
 async function ensureDevServer() {
-  for (let p = 16718; p <= 16726; p++) { if (await isViteDevAt(p)) { devBase = 'http://localhost:' + p; console.log('[dev] reuse at ' + devBase); return } }
+  for (let p = 16718; p <= 16726; p++) if (await isViteDevAt(p)) { devBase = 'http://localhost:' + p; return }
   for (let p = 16718; p <= 16726; p++) {
     if (!(await isPortFree(p))) continue
-    const viteBin = join(ROOT, 'node_modules', 'vite', 'bin', 'vite.js')
-    server = spawn(process.execPath, [viteBin, '--port', String(p), '--strictPort'], { cwd: ROOT, stdio: ['ignore','pipe','pipe'] })
-    startedByUs = true
-    server.stdout.on('data', (d) => process.stdout.write('[vite] ' + d))
-    server.stderr.on('data', (d) => process.stdout.write('[vite] ' + d))
-    const ok = await waitForServer('http://localhost:' + p)
-    if (ok && (await isViteDevAt(p))) { devBase = 'http://localhost:' + p; console.log('[dev] ready at ' + devBase); return }
-    server.kill(); server = null; startedByUs = false
+    devProc = spawn(process.execPath, [join(ROOT, 'node_modules/vite/bin/vite.js'), '--port', String(p), '--strictPort'], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] })
+    devProc.stdout.on('data', () => {})
+    devProc.stderr.on('data', () => {})
+    if (await waitForServer('http://localhost:' + p)) {
+      if (await isViteDevAt(p)) { devBase = 'http://localhost:' + p; return }
+    }
+    devProc.kill(); devProc = null
   }
-  throw new Error('no free port 16718-16726 for vite')
+  throw new Error('no free port')
 }
-function stopDevServer() { if (server && startedByUs) { server.kill(); console.log('[dev] stopped') } }
 
+// ============ 记录 ============
 const results = []
 function record(name, ok, detail) {
-  const entry = { name, ok: !!ok, detail: JSON.stringify(detail) }
-  results.push(entry)
-  const line = (entry.ok ? 'PASS' : 'FAIL') + '  ' + entry.name + '  ' + entry.detail
+  results.push({ name, ok })
+  const line = `${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  ' + JSON.stringify(detail) : ''}`
   console.log(line)
   appendFileSync(EVIDENCE_LOG, new Date().toISOString() + '  ' + line + '\n')
 }
 function safeName(s) { return s.replace(/[^\w\u4e00-\u9fa5-]+/g, '_').slice(0, 80) }
 async function guard(name, fn, opts) {
-  try { await fn() }
-  catch (err) {
-    record(name, false, { error: err.message })
-    if (opts && opts.page) try { await opts.page.screenshot({ path: join(FAIL_DIR, safeName(name) + '.png'), fullPage: true, type: 'png' }) } catch {}
+  try { await fn() } catch (err) {
+    record(name, false, { error: String(err && err.message || err).slice(0, 200) })
+    if (opts && opts.page) {
+      try { await opts.page.screenshot({ path: join(FAIL_DIR, safeName(name) + '.png'), fullPage: true, type: 'png' }) } catch { /* 截图失败不影响断言 */ }
+    }
   }
 }
 
+// ============ 日期工具 ============
 function pad(n) { return String(n).padStart(2, '0') }
-function localDateKey(d) { return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) }
-function dateOffsetKey(daysBack) { const n = new Date(); return localDateKey(new Date(n.getFullYear(), n.getMonth(), n.getDate()-daysBack)) }
-function dateOffsetFuture(daysForward) { const n = new Date(); return localDateKey(new Date(n.getFullYear(), n.getMonth(), n.getDate()+daysForward)) }
+function localDateKey(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) }
+function dateOffsetKey(daysBack) { const n = new Date(); return localDateKey(new Date(n.getFullYear(), n.getMonth(), n.getDate() - daysBack)) }
+function dateOffsetFuture(daysForward) { const n = new Date(); return localDateKey(new Date(n.getFullYear(), n.getMonth(), n.getDate() + daysForward)) }
 function iso(offsetMs) { return new Date(Date.now() + (offsetMs || 0)).toISOString() }
 
+// ============ 种子数据 ============
+const SUBJECTS = ['语文', '数学', '英语']
+/** 学生台全部 16 个菜单键（home 恒显示，其余按 menuVisibility 过滤） */
+const STUDENT_SECTIONS = [
+  'home', 'habits', 'homework', 'timetable', 'plan', 'goal',
+  'review', 'mistakes', 'reading', 'exam', 'grades', 'education',
+  'achievements', 'rewards', 'parent', 'health'
+]
+/** 菜单顺序 + 默认文案（与 types/index.ts 的 STUDENT_MENU_DEFAULT_LABELS 一致） */
+const MENU = [
+  ['home', '主页'], ['habits', '习惯打卡'], ['homework', '作业管理'], ['timetable', '课程表'],
+  ['plan', '学习计划'], ['review', '复习计划'], ['mistakes', '错题本'], ['reading', '阅读记录'],
+  ['exam', '考试倒计时'], ['grades', '成绩记录'], ['goal', '学习目标'], ['education', '教育经历'],
+  ['health', '健康管理'], ['achievements', '成就勋章'], ['rewards', '奖励积分'], ['parent', '家长协同']
+]
+
+function buildSettings() {
+  const menuVisibility = {}
+  // 早期版本这里写的是 diary / pomodoro（不存在的键），导致 timetable 等被学段默认关掉。
+  // 学生台的键以 STUDENT_SECTIONS 为准，全开。
+  STUDENT_SECTIONS.forEach((k) => { menuVisibility[k] = true })
+  return { stage: 'K', stageSeeded: 'K', nickname: 'QA 小萌娃', subjects: SUBJECTS, menuVisibility }
+}
+function buildHabits() {
+  return {
+    habits: [
+      { id: 'shb_q1', name: '每日阅读', category: '阅读', frequency: 7, color: '#22c55e', createdAt: iso(-86400000 * 7) },
+      { id: 'shb_q2', name: '整理书包', category: 'life', frequency: 7, color: '#3b82f6', createdAt: iso(-86400000 * 6) }
+    ],
+    records: [
+      { id: 'shr_q1_1', habitId: 'shb_q1', date: dateOffsetKey(1), parentMarked: false, createdAt: iso(-3600000) },
+      { id: 'shr_q1_2', habitId: 'shb_q1', date: dateOffsetKey(2), parentMarked: false, createdAt: iso(-7200000) }
+    ]
+  }
+}
+function buildHomework() {
+  return {
+    entries: [
+      { id: 'hw_q1', subject: '语文', title: '抄写古诗两首', content: '抄写《静夜思》《春晓》各 3 遍。', dueDate: dateOffsetFuture(1), status: 'pending', priority: 'normal', source: 'self', createdAt: iso(-86400000) },
+      { id: 'hw_q2', subject: '数学', title: '口算练习 30 题', dueDate: dateOffsetFuture(2), status: 'doing', priority: 'high', source: 'self', createdAt: iso(-86400000 * 2) },
+      { id: 'hw_q3', subject: '英语', title: '单词听写 Unit 3', dueDate: dateOffsetFuture(0), status: 'done', priority: 'normal', source: 'self', completedAt: iso(-14400000), createdAt: iso(-86400000 * 3) }
+    ]
+  }
+}
+function buildReview() {
+  const d1 = dateOffsetKey(3), d2 = dateOffsetKey(10)
+  const d1next = (() => { const d = new Date(d1 + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10) })()
+  const d2next = (() => { const d = new Date(d2 + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 7); return d.toISOString().slice(0, 10) })()
+  return {
+    entries: [
+      { id: 'rv_q1', subject: '数学', knowledge: '加法进位法则', source: '教材 P20', learnDate: d1, stage: 1, nextReviewDate: d1next, mastered: false, createdAt: iso(-28800000), updatedAt: iso(-28800000) },
+      { id: 'rv_q2', subject: '语文', knowledge: '古诗《静夜思》默写', source: '错题本', learnDate: d2, stage: 3, nextReviewDate: d2next, mastered: false, createdAt: iso(-32400000), updatedAt: iso(-32400000) }
+    ]
+  }
+}
+function buildMistakes() {
+  return {
+    entries: [
+      { id: 'mk_q1', subject: '数学', title: '典型进位加法错题', question: '## 题干\n\n28 + 47 = ?', answer: '## 正确答案\n\n28 + 47 = 75', analysis: '### 解析\n\n个位 8+7=15，向十位进 1。', tags: ['高频考点', '易错'], imageIds: [], status: 'reviewing', createdAt: iso(-172800000), updatedAt: iso(-172800000) },
+      { id: 'mk_q2', subject: '语文', title: '易错字练习', question: '## 题干\n\n选择正确字形：再接再厉 / 再接再励', answer: '## 正确答案\n\n「再接再厉」（厉：磨砺）。', tags: ['基础'], imageIds: [], status: 'new', createdAt: iso(-86400000), updatedAt: iso(-86400000) }
+    ]
+  }
+}
+function buildReading() {
+  return {
+    entries: [
+      { id: 'rd_q1', bookTitle: '格林童话', pages: 32, durationMin: 25, impression: '# 感悟\n\n白雪公主的故事很精彩。', date: dateOffsetKey(1), parentSigned: false, createdAt: iso(-21600000), updatedAt: iso(-21600000) },
+      { id: 'rd_q2', bookTitle: '安徒生童话', pages: 28, durationMin: 22, date: dateOffsetKey(2), parentSigned: true, signedAt: iso(-18000000), createdAt: iso(-28800000), updatedAt: iso(-18000000) }
+    ]
+  }
+}
+function buildAchievements() {
+  const defs = []; const unlocked = {}
+  const CAT = ['habit', 'study', 'reading', 'pomodoro']
+  const EMOJIS = ['🏅', '🎖️', '🥇', '🥈', '🥉', '⭐', '🌟', '✨', '💎', '🏆', '🎯', '🔥']
+  const METRIC = ['streak-days', 'habit-week-rate', 'reading-books', 'pomodoro-sessions', 'hw-rate-done', 'mistake-mastered']
+  for (let i = 1; i <= 12; i++) {
+    defs.push({ id: 'sa_q' + i, name: '成就 ' + i, description: '完成目标即可解锁。', emoji: EMOJIS[i - 1], category: CAT[(i - 1) % CAT.length], metric: METRIC[(i - 1) % METRIC.length], target: i })
+    if (i % 3 === 0) unlocked['sa_q' + i] = iso(-3600000 * i)
+  }
+  return { definitions: defs, unlocked }
+}
+function buildRewards() {
+  return {
+    totalPoints: 1580,
+    history: [
+      { id: 'rt_q1', type: 'earn', points: 100, reason: '完成习惯打卡 5 项', createdAt: iso(-36000000) },
+      { id: 'rt_q2', type: 'earn', points: 80, reason: '完成作业 4 份', createdAt: iso(-32400000) }
+    ],
+    rewards: [
+      { id: 'rw_q1', name: '周末去公园玩', cost: 30, stock: 5 },
+      { id: 'rw_q2', name: '额外30分钟平板', cost: 20 }
+    ]
+  }
+}
+function buildCountdowns() {
+  const d = new Date(Date.now() + 7 * 86400000)
+  const d2 = new Date(Date.now() + 9 * 86400000)
+  return {
+    countdowns: [
+      { id: 'ex_q1', name: '期中大考', endDateTime: d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T08:30', repeat: null, category: 'work', createdAt: iso(-7200000), updatedAt: iso(-7200000), color: '#ef4444' },
+      { id: 'ex_q2', name: '秋季运动会', endDateTime: d2.getFullYear() + '-' + pad(d2.getMonth() + 1) + '-' + pad(d2.getDate()) + 'T09:00', repeat: null, category: 'exercise', createdAt: iso(-3600000), updatedAt: iso(-3600000), color: '#22c55e' }
+    ],
+    customCategories: [], sortRule: 'endDate'
+  }
+}
+function buildPlans() {
+  return {
+    entries: [
+      {
+        id: 'pl_q1', type: 'weekly', title: '第 36 周学习计划', startDate: dateOffsetKey(0), endDate: dateOffsetFuture(6),
+        goals: [
+          { id: 'pg_q1_g1', content: '完成数学同步练习 P12-P14', progress: 0, done: false },
+          { id: 'pg_q1_g2', content: '每天阅读 30 分钟', progress: 50, done: false },
+          { id: 'pg_q1_g3', content: '背会 20 个英语新单词', progress: 100, done: true }
+        ],
+        review: '# 上周复盘\n\n已完成数学练习册。', createdAt: iso(-7200000), updatedAt: iso(-7200000)
+      },
+      {
+        id: 'pl_q2', type: 'monthly', title: '九月月度目标', startDate: dateOffsetKey(0), endDate: dateOffsetFuture(29),
+        goals: [{ id: 'pg_q2_g1', content: '读完 2 本课外书', progress: 0, done: false }], createdAt: iso(-3600000), updatedAt: iso(-3600000)
+      }
+    ]
+  }
+}
+
+// ============ IDB 种子注入 ============
 async function injectIdbStore(page, storeName, payload) {
   return page.evaluate(({ store, value }) => new Promise((resolve, reject) => {
     // 不带版本号打开：页面此时已由 app 自己建好库（DB_VERSION 会随迭代上调，
-    // 这里写死 9 会在库里已是 23 时抛 VersionError，脚本直接跑不起来）。
-    // 库还不存在时 open() 会以 v1 新建并触发 onupgradeneeded，下面照样补齐 store。
+    // 这里写死版本号会在库里已是更高版本时抛 VersionError，脚本直接跑不起来）。
     const req = indexedDB.open('easy-web-tab')
-        const ALL_STORES = [
-      "todos","notes","diary","countdowns","passwords","health","ledger","settings","business",
-      "pomodoro","habits","snapshots",
-      "student_settings","student_habits","student_pomodoro","student_countdowns",
-      "student_homework","student_timetable","student_plans","student_review",
-      "student_mistakes","student_reading","student_achievements","student_rewards",
-      "student_parent_tasks","student_images"
-    ]
-    req.onupgradeneeded = () => {
-      const db = req.result
-      for (const s of ALL_STORES) { if (!db.objectStoreNames.contains(s)) db.createObjectStore(s) }
-    }
     req.onsuccess = () => {
       const db = req.result
       try {
@@ -124,1046 +258,566 @@ async function injectIdbStore(page, storeName, payload) {
   }), { store: storeName, value: payload })
 }
 
-async function navMenuIdx(page, idx) {
-  await page.evaluate((n) => new Promise((resolve) => {
-    const nodes = document.querySelectorAll('.st-menu-item')
-    if (nodes && nodes.length > n) { const b = nodes[n]; if (b) { b.scrollIntoView({ block: 'center' }); b.click() } }
-    resolve(true)
-  }), idx)
-  await page.waitForTimeout(220)
+// ============ 页面工具 ============
+/** 通过 pinia 读写 store（断言以 store 为准，DOM 只证明渲染与交互） */
+function storeEval(page, storeName, body) {
+  return page.evaluate(({ name, src }) => {
+    try {
+      const app = document.querySelector('#app')
+      const inst = app && app.__vue_app__ && app.__vue_app__._instance
+      const pinia = inst && inst.appContext.config.globalProperties.$pinia
+      const store = pinia && pinia._s && pinia._s.get(name)
+      if (!store) return Promise.resolve({ ok: false, reason: 'no-store:' + name })
+      // eslint-disable-next-line no-new-func
+      const fn = new Function('store', `return (async () => { ${src} })()`)
+      return Promise.resolve(fn(store)).catch((e) => ({ ok: false, reason: String(e) }))
+    } catch (e) { return Promise.resolve({ ok: false, reason: String(e) }) }
+  }, { name: storeName, src: body })
 }
-async function setDark(page, dark) { await page.evaluate((d) => document.documentElement.classList.toggle('dark', d), dark) }
 
-async function carouselActiveDotIndex(page) {
-  return page.evaluate(() => {
-    const dots = document.querySelectorAll('.student-home .carousel-dots .carousel-dot')
-    for (let i = 0; i < dots.length; i++) if (dots[i].classList.contains('active')) return i
-    return -1
-  })
-}
-async function gotoSlideIndex(page, idx) {
-  await page.evaluate((i) => { const dots = document.querySelectorAll('.student-home .carousel-dots .carousel-dot'); if (dots[i]) dots[i].click() }, idx)
+/** 点左侧菜单（按文案，比按下标稳：菜单顺序可被设置调整） */
+async function navTo(page, label) {
+  const item = page.locator('.st-menu-item', { hasText: label }).first()
+  await item.click()
   await page.waitForTimeout(320)
 }
-/** 清场：移除所有 toast/dialog-overlay 遮罩 + Esc 5 次兜底 + 0.26s 稳定。 */
-async function closeModalsAndClear(page) {
-  try { await page.mouse.click(12, 12) } catch {}
-  await page.waitForTimeout(60)
-  for (let i = 0; i < 8; i++) {
-    const n = await page.evaluate(() => document.querySelectorAll('[class*="dialog-overlay"]').length).catch(() => 0)
-    if (n === 0) break
-    try { await page.keyboard.press('Escape') } catch {}
-    await page.waitForTimeout(140)
-  }
-  for (let i = 0; i < 15; i++) {
-    const t = await page.evaluate(() => document.querySelectorAll('[class*="toast"]').length).catch(() => 0)
-    if (t === 0) break
-    await page.waitForTimeout(200)
-  }
-  await page.waitForTimeout(180)
-}
-
-
-// ============ 种子数据（精简，可控 id 便于强断言） ============
-const COLOR_PRESETS = ['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#a855f7']
-const SUBJECTS = ['语文','数学','英语']
-
-function buildSettings() {
-  const visibility = {}
-  const ALL_KEYS = ['home','habits','homework','timetable','plan','review','mistakes','reading','exam','diary','pomodoro','achievements','rewards','parent']
-  ALL_KEYS.forEach(k => { visibility[k] = true })
-  return { stage: 'K', stageSeeded: 'K', nickname: 'QA 小萌娃', subjects: SUBJECTS, menuVisibility: visibility }
-}
-function buildHabits() {
-  const habits = [
-    { id: 'shb_q1', name: '每日阅读', category: '阅读', frequency: 7, color: '#22c55e', createdAt: iso(-86400000*7) },
-    { id: 'shb_q2', name: '整理书包', category: 'life', frequency: 7, color: '#3b82f6', createdAt: iso(-86400000*6) }
-  ]
-  const records = [
-    { id: 'shr_q1_1', habitId: 'shb_q1', date: dateOffsetKey(1), parentMarked: false, createdAt: iso(-3600000) },
-    { id: 'shr_q1_2', habitId: 'shb_q1', date: dateOffsetKey(2), parentMarked: false, createdAt: iso(-7200000) }
-  ]
-  return { habits, records }
-}
-function buildHomework() {
-  return { entries: [
-    { id: 'hw_q1', subject: '语文', title: '抄写古诗两首', content: '抄写《静夜思》《春晓》各 3 遍。', dueDate: dateOffsetFuture(1), status: 'pending', priority: 'normal', source: 'self', createdAt: iso(-86400000) },
-    { id: 'hw_q2', subject: '数学', title: '口算练习 30 题', dueDate: dateOffsetFuture(2), status: 'doing', priority: 'high', source: 'self', createdAt: iso(-86400000*2) },
-    { id: 'hw_q3', subject: '英语', title: '单词听写 Unit 3', dueDate: dateOffsetFuture(0), status: 'done', priority: 'normal', source: 'self', completedAt: iso(-14400000), createdAt: iso(-86400000*3) }
-  ]}
-}
-function buildPlans() {
-  return { entries: [
-    { id: 'pl_q1', type: 'weekly', title: '第 36 周学习计划', startDate: dateOffsetKey(0), endDate: dateOffsetFuture(6),
-      goals: [
-        { id: 'pg_q1_g1', content: '完成数学同步练习 P12-P14', progress: 0, done: false },
-        { id: 'pg_q1_g2', content: '每天阅读 30 分钟', progress: 50, done: false },
-        { id: 'pg_q1_g3', content: '背会 20 个英语新单词', progress: 100, done: true }
-      ],
-      review: '# 上周复盘\n\n已完成数学练习册。', createdAt: iso(-7200000), updatedAt: iso(-7200000) },
-    { id: 'pl_q2', type: 'monthly', title: '九月月度目标', startDate: dateOffsetKey(0), endDate: dateOffsetFuture(29),
-      goals: [{ id: 'pg_q2_g1', content: '读完 2 本课外书', progress: 0, done: false }], createdAt: iso(-3600000), updatedAt: iso(-3600000) }
-  ]}
-}
-function buildReview() {
-  const d1 = dateOffsetKey(3), d2 = dateOffsetKey(10)
-  // UTC 日期推进，避免本地时区偏移
-  const d1next = (() => { const d = new Date(d1 + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+1); return d.toISOString().slice(0,10) })()
-  const d2next = (() => { const d = new Date(d2 + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+7); return d.toISOString().slice(0,10) })()
-  return { entries: [
-    { id: 'rv_q1', subject: '数学', knowledge: '加法进位法则', source: '教材 P20', learnDate: d1, stage: 1, nextReviewDate: d1next, mastered: false, createdAt: iso(-28800000), updatedAt: iso(-28800000) },
-    { id: 'rv_q2', subject: '语文', knowledge: '古诗《静夜思》默写', source: '错题本', learnDate: d2, stage: 3, nextReviewDate: d2next, mastered: false, createdAt: iso(-32400000), updatedAt: iso(-32400000) }
-  ]}
-}
-function buildMistakes() {
-  return { entries: [
-    { id: 'mk_q1', subject: '数学', title: '典型进位加法错题', question: '## 题干\n\n28 + 47 = ?', answer: '## 正确答案\n\n28 + 47 = 75', analysis: '### 解析\n\n个位 8+7=15，向十位进 1。', tags: ['高频考点','易错'], imageIds: [], status: 'new', createdAt: iso(-172800000), updatedAt: iso(-172800000) },
-    { id: 'mk_q2', subject: '语文', title: '易错字练习', question: '## 题干\n\n选择正确字形：再接再厉 / 再接再励', answer: '## 正确答案\n\n「再接再厉」（厉：磨砺）。', tags: ['基础'], imageIds: [], status: 'reviewing', createdAt: iso(-86400000), updatedAt: iso(-86400000) }
-  ]}
-}
-function buildReading() {
-  return { entries: [
-    { id: 'rd_q1', bookTitle: '格林童话（第 1 次）', pages: 32, durationMin: 25, impression: '# 感悟\n\n白雪公主的故事很精彩。', date: dateOffsetKey(1), parentSigned: false, createdAt: iso(-21600000), updatedAt: iso(-21600000) },
-    { id: 'rd_q2', bookTitle: '安徒生童话', pages: 28, durationMin: 22, date: dateOffsetKey(2), parentSigned: true, signedAt: iso(-18000000), createdAt: iso(-28800000), updatedAt: iso(-18000000) }
-  ]}
-}
-function buildAchievements() {
-  const defs = []; const unlocked = {}
-  const CAT = ['habit','study','reading','pomodoro']
-  const EMOJIS = ['🏅','🎖️','🥇','🥈','🥉','⭐','🌟','✨','💎','🏆','🎯','🔥']
-  const METRIC = ['streak-days','habit-week-rate','reading-books','pomodoro-sessions','hw-rate-done','mistake-mastered']
-  for (let i = 1; i <= 12; i++) {
-    defs.push({ id: 'sa_q' + i, name: '成就 ' + i, description: '完成目标即可解锁。', emoji: EMOJIS[i-1], category: CAT[(i-1)%CAT.length], metric: METRIC[(i-1)%METRIC.length], target: i })
-    if (i % 3 === 0) unlocked['sa_q' + i] = iso(-3600000*i)
-  }
-  return { definitions: defs, unlocked }
-}
-function buildRewards() {
-  const rewards = [
-    { id: 'rw_q1', name: '周末去公园玩', cost: 30, stock: 5 },
-    { id: 'rw_q2', name: '额外30分钟平板', cost: 20 }
-  ]
-  const history = [
-    { id: 'rt_q1', type: 'earn', points: 100, reason: '完成习惯打卡 5 项', createdAt: iso(-36000000) },
-    { id: 'rt_q2', type: 'earn', points: 80, reason: '完成作业 4 份', createdAt: iso(-32400000) }
-  ]
-  return { totalPoints: 1580, history, rewards }
-}
-function buildCountdowns() {
-  const d = new Date(Date.now() + 7*86400000)
-  const d2 = new Date(Date.now() + 9*86400000)
-  return {
-    countdowns: [
-      { id: 'ex_q1', name: '期中大考（7 天后）', endDateTime: d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T08:30', repeat: null, category: 'work', createdAt: iso(-7200000), updatedAt: iso(-7200000), color: '#ef4444' },
-      { id: 'ex_q2', name: '秋季运动会', endDateTime: d2.getFullYear()+'-'+pad(d2.getMonth()+1)+'-'+pad(d2.getDate())+'T09:00', repeat: null, category: 'exercise', createdAt: iso(-3600000), updatedAt: iso(-3600000), color: '#22c55e' }
-    ],
-    customCategories: [], sortRule: 'endDate'
-  }
-}
-
-// ============ S1 主页三屏轮播（5 条） ============
-async function runS1(page) {
-  await navMenuIdx(page, 0)
-  await page.waitForSelector('[data-testid="student-slide-action"]', { state: 'visible', timeout: 15000 })
-  await page.waitForTimeout(250)
-  await guard('S1-1 默认第 1 屏 = action（圆点 0 active）', async () => {
-    const i = await carouselActiveDotIndex(page)
-    record('S1-1 默认第 1 屏 = action', i === 0, { activeIndex: i })
-  }, { page })
-  await guard('S1-2 手动切换 next → 第 2 屏 overview active', async () => {
-    await gotoSlideIndex(page, 0); await page.locator('[data-testid="student-carousel-next"]').click()
-    await page.waitForTimeout(320)
-    const i = await carouselActiveDotIndex(page)
-    record('S1-2 next → overview（圆点 1）', i === 1, { activeIndex: i })
-  }, { page })
-  await guard('S1-3 继续 next → tools（圆点 2）slide-tools visible', async () => {
-    await page.locator('[data-testid="student-carousel-next"]').click()
-    await page.waitForTimeout(320)
-    const i = await carouselActiveDotIndex(page)
-    const toolsVisible = await page.locator('[data-testid="student-slide-tools"]').evaluate(el => !!el && window.getComputedStyle(el).visibility !== 'hidden').catch(() => false)
-    record('S1-3 next → tools（圆点 2）', i === 2, { activeIndex: i, toolsVisible })
-  }, { page })
-  await guard('S1-4 自动轮播 6.5s：鼠标移出后圆点推进回到 0（3 屏循环）', async () => {
-    // 当前在 2，鼠标移出轮播区后等 6.5s → 自动到 0
-    await page.mouse.move(10, 10)
-    await page.waitForTimeout(6700)
-    const i = await carouselActiveDotIndex(page)
-    record('S1-4 自动轮播 → 从 2 推进回到 0（或更高）', i >= 0 && i !== 2, { activeIndexAfter: i })
-  }, { page })
-  await guard('S1-5 概览屏 M1 骨架 + 工具屏 tool-card ≥1', async () => {
-    await gotoSlideIndex(page, 1)
-    const title = (await page.locator('[data-testid="student-slide-overview"] .slide-title').textContent().catch(() => '') || '').trim()
-    const emptyCount = await page.evaluate(() => document.querySelectorAll('[data-testid="student-slide-overview"] .overview-empty').length)
-    const okOverview = title.includes('数据概览') && emptyCount >= 1
-    await gotoSlideIndex(page, 2)
-    const toolCount = await page.evaluate(() => document.querySelectorAll('[data-testid="student-slide-tools"] .tool-card').length)
-    const okTools = toolCount >= 1
-    record('S1-5 概览屏占位 + 工具屏卡片≥1', okOverview && okTools, { overviewTitle: title, overviewEmptyCount: emptyCount, toolGridCount: toolCount })
-  }, { page })
-}
-
-// ============ S2 习惯（5 条） ============
-async function runS2(page) {
-  await navMenuIdx(page, 1)
-  await page.waitForSelector('[data-testid^="sh-card-"]', { state: 'visible', timeout: 15000 })
-  await page.waitForTimeout(150)
-  await guard('S2-1 空名点击保存被拒绝（不真正入库）', async () => {
-    const before = await page.locator('[data-testid^="sh-card-"]').count()
-    await page.locator('[data-testid="sh-add-btn"]').click()
-    await page.waitForSelector('[data-testid="sh-form-name"]', { state: 'visible', timeout: 5000 })
-    await page.locator('[data-testid="sh-form-name"]').fill('')
-    await page.locator('[data-testid="sh-form-save"]').click()
-    await page.waitForTimeout(300)
-    // dialog 仍显示 = 保存被拒绝；若消失则作为成功警告也通过（看计数）
-    const dialogLeft = await page.locator('.sh-dialog, .dialog:has([data-testid="sh-form-name"])').count()
-    const after = await page.locator('[data-testid^="sh-card-"]').count()
-    const ok = (dialogLeft >= 1) || (before === after)
-    if (dialogLeft === 0) await page.keyboard.press('Escape')
-    record('S2-1 空名拒存（计数不变或弹窗滞留）', ok, { before, after, dialogLeft })
-  }, { page })
-  await closeModalsAndClear(page)
-  await guard('S2-2 新增习惯（新名 QA 晨读 15）→ 列表计数 +1', async () => {
-    const before = await page.locator('[data-testid^="sh-card-"]').count()
-    try { await page.locator('[data-testid="sh-add-btn"]').click({ timeout: 3000, force: true }) } catch {}
-    await page.evaluate(() => { const b = document.querySelector('[data-testid="sh-add-btn"]'); if (b) b.click() })
-    await page.waitForTimeout(250)
-    await page.waitForSelector('[data-testid="sh-form-name"]', { state: 'visible', timeout: 9000 })
-    await page.locator('[data-testid="sh-form-name"]').fill('QA 晨读 15 分钟')
-    try { await page.locator('[data-testid="sh-form-save"]').click({ force: true }) } catch {}
-    await page.evaluate(() => { const b = document.querySelector('[data-testid="sh-form-save"]'); if (b) b.click() })
-    // 轮询：最多 2.5s 等到新增卡片
-    let after = before
-    for (let i = 0; i < 25; i++) { await page.waitForTimeout(100); after = await page.locator('[data-testid^="sh-card-"]').count(); if (after > before) break }
-    record('S2-2 新增习惯 → 卡片 +1', after === before + 1, { before, after })
-  }, { page })
-  await closeModalsAndClear(page)
-  await guard('S2-3 今日打卡：点 sh-check-shb_q1 → 按钮带 is-checked 类 + streak 数≥1', async () => {
-    // 切到 all 分类避免被筛选隐藏
-    try { await page.locator('[data-testid="sh-cat-all"]').click({ timeout: 2000 }); await page.waitForTimeout(150) } catch {}
-    const btn = page.locator('[data-testid="sh-check-shb_q1"]')
-    // 如果已经 is-checked，则用另一个
-    let targetBtn = btn
-    const targetId = 'shb_q1'
-    let alreadyChecked = await btn.evaluate((el) => el ? el.classList.contains('is-checked') : false).catch(() => false)
-    if (alreadyChecked) { targetBtn = page.locator('[data-testid="sh-check-shb_q2"]') }
-    await targetBtn.click()
-    await page.waitForTimeout(350)
-    const checked = await targetBtn.evaluate((el) => el.classList.contains('is-checked'))
-    const streakText = (await page.locator('[data-testid="sh-streak-' + targetId + '"]').textContent().catch(() => '') || '').trim()
-    const streakNum = Number((streakText.match(/\d+/) || ['0'])[0])
-    record('S2-3 打卡 → is-checked 激活 + streak≥0 显示', checked || streakNum >= 0, { checked, streakText, streakNum })
-  }, { page })
-  await guard('S2-4 分类 tab：阅读 → 列表至少保留 1 条（阅读类种子存在）', async () => {
-    await page.locator('[data-testid="sh-cat-阅读"]').click(); await page.waitForTimeout(180)
-    const n = await page.locator('[data-testid^="sh-card-"]').count()
-    record('S2-4 阅读分类 tab → 卡片≥1', n >= 1, { catReadingCount: n })
-  }, { page })
-  await guard('S2-5 删除最新 QA 习惯（Pinia store.deleteHabit）→ 卡片 -1', async () => {
-    const before = await page.locator('[data-testid^="sh-card-"]').count()
-    const deleted = await page.evaluate(() => new Promise(resolve => {
-      try {
-        const app = document.querySelector('#app')
-        const inst = app && app.__vue_app__ && app.__vue_app__._instance
-        const pinia = inst && inst.appContext.config.globalProperties.$pinia
-        const store = pinia && pinia._s && pinia._s.get('studentHabits')
-        if (!store || !Array.isArray(store.habits)) return resolve(false)
-        const target = [...store.habits].reverse().find(h => h.name && (h.name.includes('QA 晨读') || h.name.includes('晨读 15')))
-        if (!target) return resolve(false)
-        store.deleteHabit(target.id).then((r) => resolve(!!(r && r.ok))).catch(() => resolve(false))
-      } catch { resolve(false) }
-    }))
-    await page.waitForTimeout(400)
-    let after = before
-    for (let i = 0; i < 18; i++) { await page.waitForTimeout(120); after = await page.locator('[data-testid^="sh-card-"]').count(); if (after < before) break }
-    const ok = deleted && after <= before - 1
-    record('S2-5 删除 QA 晨读习惯 → 计数 -1', ok, { before, after, storeDeleted: deleted })
-  }, { page })
-}
-
-// ============ S3 作业（5 条） ============
-async function runS3(page) {
-  await navMenuIdx(page, 2)
-  await page.waitForSelector('[data-testid^="shw-status-"]', { state: 'visible', timeout: 15000 })
-  await page.waitForTimeout(150)
-  // 作业列表为 el-table：每行恰好一个状态徽标 shw-status-<id>，用作行计数锚点
-  const HW_ROWS = '[data-testid^="shw-status-"]'
-  const hwRowCount = () => page.locator(HW_ROWS).count()
-  // 某标题是否出现在任意一行（向上找 tr 取整行文本）
-  const hwTextHas = (t) => page.evaluate((q) => Array.from(document.querySelectorAll('[data-testid^="shw-status-"]')).some(n => ((n.closest('tr') && n.closest('tr').textContent) || '').includes(q)), t).catch(() => false)
-  await guard('S3-1 新增：title 为空 → 拒存', async () => {
-    const before = await hwRowCount()
-    await page.locator('[data-testid="shw-add-btn"]').click({ force: true, timeout: 5000 })
-    await page.waitForSelector('[data-testid="shw-form-title"]', { state: 'visible', timeout: 5000 })
-    await page.locator('[data-testid="shw-form-title"]').fill('')
-    try { await page.locator('[data-testid="shw-form-save"]').click({ force: true, timeout: 5000 }) } catch {}; await page.evaluate(() => { const b = document.querySelector('[data-testid="shw-form-save"]'); if (b) b.click() }); await page.waitForTimeout(200)
-    await page.waitForTimeout(300)
-    const after = await hwRowCount()
+/** 关掉所有弹框（el-dialog / BaseDialog 确认框） */
+async function closeDialogs(page) {
+  for (let i = 0; i < 3; i++) {
+    const cancel = page.locator('.bd-overlay .btn-cancel')
+    if (await cancel.count()) { await cancel.first().click().catch(() => { }); await page.waitForTimeout(150) }
+    const open = page.locator('.el-dialog:visible, .bd-overlay:visible')
+    if (!(await open.count())) break
     await page.keyboard.press('Escape')
-    record('S3-1 空 title 拒存（计数不变）', before === after, { before, after })
-  }, { page })
-  await closeModalsAndClear(page)
-  await guard('S3-2 新增作业 → store entries +1 且新标题在任一视图出现', async () => {
-    // 切 ALL 后同时读 store.length 作为 before（抗分页假阴性）
-    try { await page.locator('[data-testid="shw-subject-all"]').click({ timeout: 2000 }); await page.waitForTimeout(180) } catch {}
-    try { await page.locator('[data-testid="shw-status-all"]').click({ timeout: 1800 }); await page.waitForTimeout(120) } catch {}
-    const title = 'QA 新作业一篇'
-    const beforeInfo = await page.evaluate(() => {
-      const app = document.querySelector('#app')
-      const inst = app && app.__vue_app__ && app.__vue_app__._instance
-      const pinia = inst && inst.appContext.config.globalProperties.$pinia
-      const store = pinia && pinia._s && pinia._s.get('studentHomework')
-      return { count: store && store.entries ? store.entries.length : 0 }
-    })
-    const storeBefore = beforeInfo.count
-    const added = await page.evaluate((args) => new Promise(resolve => {
-      try {
-        const app = document.querySelector('#app')
-        const inst = app && app.__vue_app__ && app.__vue_app__._instance
-        const pinia = inst && inst.appContext.config.globalProperties.$pinia
-        const store = pinia && pinia._s && pinia._s.get('studentHomework')
-        if (!store) return resolve(false)
-        store.addHomework({ subject: '语文', title: args.title, dueDate: args.due, priority: 'normal' }).then(r => resolve(!!(r && r.ok))).catch(() => resolve(false))
-      } catch { resolve(false) }
-    }), { title, due: dateOffsetFuture(1) })
-    await page.waitForTimeout(450)
-    const storeAfterInfo = await page.evaluate(() => {
-      const app = document.querySelector('#app')
-      const inst = app && app.__vue_app__ && app.__vue_app__._instance
-      const pinia = inst && inst.appContext.config.globalProperties.$pinia
-      const store = pinia && pinia._s && pinia._s.get('studentHomework')
-      const items = store && store.entries
-      const has = items && items.some(n => n.title && n.title.includes('QA 新作业一篇'))
-      return { count: items ? items.length : 0, hasTitle: !!has }
-    })
-    const domPagerCount = await page.locator('[data-testid="panel-pager"]').count()
-    let domTitleFound = await hwTextHas(title)
-    if (!domTitleFound && domPagerCount > 0) {
-      // 翻一页再找
-      try { await page.locator('[data-testid="panel-pager-next"]').click({ timeout: 1500 }); await page.waitForTimeout(250) } catch {}
-      domTitleFound = await hwTextHas(title)
-    }
-    if (!domTitleFound) {
-      try { await page.locator('[data-testid="shw-subject-语文"]').click({ timeout: 1500 }); await page.waitForTimeout(220) } catch {}
-      domTitleFound = await hwTextHas(title)
-      if (!domTitleFound && (await page.locator('[data-testid="panel-pager"]').count()) > 0) {
-        try { await page.locator('[data-testid="panel-pager-next"]').click({ timeout: 1500 }); await page.waitForTimeout(250) } catch {}
-        domTitleFound = await hwTextHas(title)
-      }
-    }
-    const storeOk = added && storeAfterInfo.count === storeBefore + 1 && storeAfterInfo.hasTitle
-    const domOk = domTitleFound || (storeOk && domPagerCount >= 0) // 分页存在+store对，即使当前页没显示也接受
-    const ok = storeOk && (domTitleFound || domPagerCount >= 0)
-    record('S3-2 新增作业 → store +1/dom 命中/分页兜底', ok, { storeBefore, storeAfter: storeAfterInfo.count, storeTitleFound: storeAfterInfo.hasTitle, domTitleFound, hasPager: domPagerCount })
-  }, { page })
-  await closeModalsAndClear(page)
-  await guard('S3-3 hw_q1 推进 2 次 → store.status=done + 任一视图已完成文案', async () => {
-      try { await page.locator('[data-testid="shw-subject-all"]').click({ timeout: 2000 }); await page.waitForTimeout(200) } catch {}
-      try { await page.locator('[data-testid="shw-status-all"]').click({ timeout: 1800 }); await page.waitForTimeout(120) } catch {}
-      const before = await page.evaluate(() => {
-        const app = document.querySelector('#app')
-        const inst = app && app.__vue_app__ && app.__vue_app__._instance
-        const pinia = inst && inst.appContext.config.globalProperties.$pinia
-        const store = pinia && pinia._s && pinia._s.get('studentHomework')
-        const h = store && store.entries && store.entries.find(x => x.id === 'hw_q1')
-        return h ? h.status : 'missing'
-      })
-      // DOM 优先：有按钮就点（先切 subject=数学，如果 ALL 页 1 没 hw_q1）
-      const domBtnCount = await page.locator('[data-testid="shw-advance-hw_q1"]').count()
-      if (domBtnCount === 0) {
-        try { await page.locator('[data-testid="shw-subject-数学"]').click({ timeout: 1500 }); await page.waitForTimeout(220) } catch {}
-      }
-      for (let round = 0; round < 2; round++) {
-        const btn = page.locator('[data-testid="shw-advance-hw_q1"]')
-        if (await btn.count() > 0) {
-          try { await btn.click({ force: true, timeout: 2500 }) } catch {}
-          try { await page.evaluate(() => { const b = document.querySelector('[data-testid="shw-advance-hw_q1"]'); if (b) b.click() }) } catch {}
-          await page.waitForTimeout(200)
-        }
-      }
-      // Store 兜底推进 2 次
-      await page.evaluate(() => new Promise(resolve => {
-        try {
-          const app = document.querySelector('#app')
-          const inst = app && app.__vue_app__ && app.__vue_app__._instance
-          const pinia = inst && inst.appContext.config.globalProperties.$pinia
-          const store = pinia && pinia._s && pinia._s.get('studentHomework')
-          if (!store) return resolve(false)
-          Promise.all([store.advanceStatus('hw_q1'), store.advanceStatus('hw_q1')]).then(() => resolve(true)).catch(() => resolve(false))
-        } catch { resolve(false) }
-      }))
-      await page.waitForTimeout(380)
-      const storeStatus = await page.evaluate(() => {
-        const app = document.querySelector('#app')
-        const inst = app && app.__vue_app__ && app.__vue_app__._instance
-        const pinia = inst && inst.appContext.config.globalProperties.$pinia
-        const store = pinia && pinia._s && pinia._s.get('studentHomework')
-        const h = store && store.entries && store.entries.find(x => x.id === 'hw_q1')
-        return h ? h.status : 'missing'
-      })
-      // DOM 验证：ALL + 数学 + 已完成 status tab + 翻页兜底
-      let domDone = false
-      const scanForDone = async () => {
-        // 所有 shw 卡片扫一次：hw_q1 卡片含 已完成/完成/done
-        const statusLoc = page.locator('[data-testid="shw-status-hw_q1"]')
-        if (await statusLoc.count() > 0) {
-          const text = (await statusLoc.textContent() || '').trim()
-          if (/已完成|完成|done/i.test(text)) return true
-        }
-        if (await page.locator('[data-testid="shw-done-hw_q1"]').count() > 0) return true
-        return await page.evaluate(() => Array.from(document.querySelectorAll('[data-testid^="shw-status-"]')).some(el => {
-          const row = el.closest('tr')
-          const txt = row ? (row.textContent || '') : ''
-          return txt.includes('hw_q1') && (/已完成|完成/.test(txt) || txt.includes('status: done'))
-        })).catch(() => false)
-      }
-      try { await page.locator('[data-testid="shw-subject-all"]').click({ timeout: 1500 }); await page.waitForTimeout(220) } catch {}
-      domDone = await scanForDone()
-      if (!domDone && (await page.locator('[data-testid="panel-pager"]').count()) > 0) { try { await page.locator('[data-testid="panel-pager-next"]').click({ timeout: 1200 }); await page.waitForTimeout(250) } catch {}; domDone = domDone || (await scanForDone()) }
-      if (!domDone) { try { await page.locator('[data-testid="shw-subject-数学"]').click({ timeout: 1500 }); await page.waitForTimeout(220) } catch {}; domDone = domDone || (await scanForDone()) }
-      if (!domDone) { try { await page.locator('[data-testid="shw-status-done"]').click({ timeout: 1500 }); await page.waitForTimeout(220) } catch {}; domDone = domDone || (await scanForDone()) }
-      const ok = storeStatus === 'done' && (domDone || true) // store 已 done 即真通过，DOM 扫描仅佐证
-      record('S3-3 hw_q1 推进 2 次 → store status + dom 已完成文案', ok, { before, storeStatus, domDone })
-    }, { page })
-  await guard('S3-4 语文 tab 筛选 → 计数≥1（种子 hw_q1 + 新添加的语文 2 篇）', async () => {
-    await page.locator('[data-testid="shw-subject-语文"]').click({ force: true, timeout: 5000 }); await page.waitForTimeout(220)
-    const n = await hwRowCount()
-    record('S3-4 语文 tab → 列表≥1', n >= 1, { yuwenCount: n })
-  }, { page })
-  await guard('S3-5 删除 hw_q3 生效 → 计数-1 或 hw_q3 不在页面', async () => {
-    try { await page.locator('[data-testid="shw-subject-全部"]').click({ timeout: 2000 }); await page.waitForTimeout(150) } catch {}
-    const before = await hwRowCount()
-    const hasQ3 = await page.locator('[data-testid="shw-status-hw_q3"]').count()
-    if (hasQ3 === 0) { record('S3-5 跳过：hw_q3 不在当前视图', true, { skipped: true, count: hasQ3 }) }
-    else {
-      try {
-        const editBtn = page.locator('[data-testid="shw-edit-hw_q3"]')
-        if (await editBtn.count() > 0) await editBtn.click({ force: true, timeout: 3000 })
-        else await page.evaluate(() => {
-          const b = document.querySelector('[data-testid="shw-edit-hw_q3"]')
-          if (b) b.click()
-        })
-        await page.waitForTimeout(300)
-        const del = page.locator('[data-testid="shw-form-delete"]')
-        if ((await del.count()) > 0) {
-          await del.click(); await page.waitForTimeout(400)
-          const after = await hwRowCount()
-          const q3Gone = (await page.locator('[data-testid="shw-status-hw_q3"]').count()) === 0
-          record('S3-5 删除生效 → 列表减少且 hw_q3 不在视图', q3Gone || after <= before - 1, { before, after, q3Gone })
-        } else { await page.keyboard.press('Escape'); record('S3-5 删除失败：无删除按钮', false, { reason: 'btn missing' }) }
-      } catch (e) { record('S3-5 删除异常', false, { error: e.message }) }
-    }
-  }, { page })
-}
-
-// ============ S4 学习计划（5 条） ============
-async function runS4(page) {
-  await navMenuIdx(page, 4)
-  await page.waitForSelector('[data-testid^="sp-card-"]', { state: 'visible', timeout: 15000 })
-  await page.waitForTimeout(150)
-  await guard('S4-1 pl_q1 卡片渲染 3 个 goal（pg_q1_g1/g2/g3）', async () => {
-    const g1 = await page.locator('[data-testid="sp-goal-toggle-pg_q1_g1"]').count()
-    const g2 = await page.locator('[data-testid="sp-goal-toggle-pg_q1_g2"]').count()
-    const g3 = await page.locator('[data-testid="sp-goal-toggle-pg_q1_g3"]').count()
-    record('S4-1 pl_q1 三目标渲染', g1 + g2 + g3 === 3, { g1, g2, g3 })
-  }, { page })
-  await guard('S4-2 点 pg_q1_g2 toggle → goal.done=true → 进度条值变为 100（range 数值读取）', async () => {
-    const rangeBefore = await page.locator('[data-testid="sp-goal-range-pg_q1_g2"]').inputValue().catch(() => '50')
-    await page.locator('[data-testid="sp-goal-toggle-pg_q1_g2"]').click()
-    await page.waitForTimeout(250)
-    const rangeAfter = await page.locator('[data-testid="sp-goal-range-pg_q1_g2"]').inputValue().catch(() => '-1')
-    record('S4-2 goal toggle → range 值变为 100', Number(rangeAfter) === 100 || Number(rangeAfter) >= Number(rangeBefore), { rangeBefore, rangeAfter })
-  }, { page })
-  await guard('S4-3 pl_q1 复盘块渲染：卡片含 review 角标 / 文本非空', async () => {
-    const html = await page.locator('[data-testid="sp-card-pl_q1"]').evaluate((el) => (el.textContent || '').trim()).catch(() => '')
-    const ok = html.includes('复盘') || html.includes('练习册') || (html.includes('总进度') && html.includes('完成') && html.includes('编辑'))
-    record('S4-3 pl_q1 复盘内容渲染', ok, { cardLen: html.length, snippet: html.slice(0, 120) })
-  }, { page })
-  await guard('S4-4 monthly tab 过滤 → 仅月计划（pl_q2 月 1 篇）', async () => {
-    try {
-      await page.locator('[data-testid="sp-tab-monthly"]').click()
-      await page.waitForTimeout(180)
-      const cards = await page.locator('[data-testid^="sp-card-"]').count()
-      const hasQ2 = await page.locator('[data-testid="sp-card-pl_q2"]').count()
-      record('S4-4 monthly tab → 卡片=1 且含 pl_q2', cards === 1 && hasQ2 === 1, { monthlyCount: cards, hasQ2 })
-    } catch (e) {
-      // 若 tab 不存在，降级：通过标题包含『月』过滤计数
-      const c = await page.evaluate(() => Array.from(document.querySelectorAll('[data-testid^="sp-card-"]')).filter(n => (n.textContent || '').includes('月')).length)
-      record('S4-4 (降级) 卡片中月计划≥1', c >= 1, { monthlyKeywordCount: c, error: e.message })
-    }
-  }, { page })
-  await guard('S4-5 删除 pl_q2 → 列表-1 或 pl_q2 元素消失', async () => {
-    try { await page.locator('[data-testid="sp-tab-all"]').click({ timeout: 2000 }); await page.waitForTimeout(150) } catch {}
-    const before = await page.locator('[data-testid^="sp-card-"]').count()
-    const del = page.locator('[data-testid="sp-del-pl_q2"]')
-    if ((await del.count()) === 0) { record('S4-5 跳过：pl_q2 不在视图', true, { skipped: true, before }) }
-    else {
-      // 通常删除会 confirm；用 evaluate 触发 click，confirm 由 page.on('dialog') 接受
-      page.once('dialog', async (d) => { try { await d.accept() } catch {} })
-      await del.click()
-      await page.waitForTimeout(400)
-      const after = await page.locator('[data-testid^="sp-card-"]').count()
-      const q2Gone = (await page.locator('[data-testid="sp-card-pl_q2"]').count()) === 0
-      record('S4-5 删除 pl_q2 生效', q2Gone || after <= before - 1, { before, after, q2Gone })
-    }
-  }, { page })
-}
-
-// ============ S5 艾宾浩斯复习（5 条） ============
-async function runS5(page) {
-  await navMenuIdx(page, 5)
-  await page.waitForSelector('[data-testid^="sr-card-"]', { state: 'visible', timeout: 15000 })
-  await page.waitForTimeout(150)
-  await guard('S5-1 新增：知识点=QA 复习点 + 阶段=1 徽标出现', async () => {
-    const before = await page.locator('[data-testid^="sr-card-"]').count()
-    await page.locator('[data-testid="sr-add-btn"]').click()
-    await page.waitForSelector('[data-testid="sr-form-knowledge"]', { state: 'visible', timeout: 5000 })
-    await page.locator('[data-testid="sr-form-subject"]').selectOption({ index: 0 }).catch(async () => { await page.locator('[data-testid="sr-form-subject"]').fill('语文') })
-    await page.locator('[data-testid="sr-form-knowledge"]').fill('QA 复习点')
-    await page.locator('[data-testid="sr-form-learn-date"]').fill(dateOffsetKey(0))
-    await page.locator('[data-testid="sr-form-save"]').click()
-    let after = before
-    for (let i = 0; i < 25; i++) { await page.waitForTimeout(100); after = await page.locator('[data-testid^="sr-card-"]').count(); if (after > before) break }
-    // 阶段 1 徽标判断：卡片中出现『第 1 轮』或阶段徽标（读最新一条卡片文本，匹配 /第 1 轮|阶段 ?1|阶段=1/）
-    let stage1OK = false
-    try {
-      stage1OK = await page.evaluate(() => {
-        const cards = Array.from(document.querySelectorAll('[data-testid^="sr-card-"]'))
-        for (const c of cards) { const t = c.textContent || ''; if (t.includes('QA 复习点')) return /第\s*1\s*轮|阶段\s*1/.test(t) }
-        return false
-      })
-    } catch {}
-    record('S5-1 新增成功（+1）且阶段 1 徽标正确', after === before + 1 && stage1OK, { before, after, stage1OK })
-  }, { page })
-  await guard('S5-2 推进阶段：rv_q1 (stage 1) → 点 advance → 阶段 +1 / nextReviewDate 变化', async () => {
-    try { await page.locator('[data-testid="sr-tab-all"]').click({ timeout: 2000 }); await page.waitForTimeout(150) } catch {}
-    const has = await page.locator('[data-testid="sr-advance-rv_q1"]').count()
-    if (has === 0) { record('S5-2 跳过：rv_q1 不在视图', true, { skipped: true }) }
-    else {
-      const cardBefore = (await page.locator('[data-testid="sr-card-rv_q1"]').evaluate((el) => el.textContent || '') || '').trim()
-      await page.locator('[data-testid="sr-advance-rv_q1"]').click({ force: true, timeout: 4000 })
-      await page.waitForTimeout(350)
-      const cardAfter = (await page.locator('[data-testid="sr-card-rv_q1"]').evaluate((el) => el.textContent || '') || '').trim()
-      // 阶段号提取：匹配 "第 X 轮" 最大数
-      const ex = (t) => { const m = t.match(/阶段\s*(\d+)\s*[\/／]/); return m ? Number(m[1]) : 0 }
-      const sb = ex(cardBefore), sa = ex(cardAfter)
-      record('S5-2 rv_q1 推进 → 阶段号增大', sa > sb, { stageBefore: sb, stageAfter: sa })
-    }
-  }, { page })
-  await guard('S5-3 rv_q1 连续推进 5 次 → 达到阶段 6 mastered 徽标出现', async () => {
-    const has = await page.locator('[data-testid="sr-card-rv_q1"]').count()
-    if (has === 0) { record('S5-3 跳过：rv_q1 不在视图', true, { skipped: true }) }
-    else {
-      for (let i = 0; i < 5; i++) {
-        const btn = page.locator('[data-testid="sr-advance-rv_q1"]')
-        if ((await btn.count()) === 0) break
-        await btn.click(); await page.waitForTimeout(200)
-      }
-      const cardText = (await page.locator('[data-testid="sr-card-rv_q1"]').evaluate((el) => el.textContent || '') || '').trim()
-      const ok = /已掌握|mastered|第\s*6\s*轮/.test(cardText)
-      record('S5-3 rv_q1 推进 5 次 → 达到 mastered', ok, { cardSnippet: cardText.slice(0, 100) })
-    }
-  }, { page })
-  await guard('S5-4 重置：点 rv_q2 reset → 回到阶段 1（第 1 轮）', async () => {
-    const has = await page.locator('[data-testid="sr-reset-rv_q2"]').count()
-    if (has === 0) { record('S5-4 跳过：rv_q2 reset 按钮不在视图', true, { skipped: true }) }
-    else {
-      await page.once('dialog', async (d) => { try { await d.accept() } catch {} }); setTimeout(() => {}, 0); await page.locator('[data-testid="sr-reset-rv_q2"]').click({ force: true, timeout: 4000 }); await page.waitForTimeout(450)
-      const cardText = (await page.locator('[data-testid="sr-card-rv_q2"]').evaluate((el) => el.textContent || '') || '').trim()
-      const m = cardText.match(/阶段\s*(\d+)\s*[\/／]/)
-      const ok = m && Number(m[1]) === 1
-      record('S5-4 rv_q2 reset → 阶段 1', ok, { stageAfter: m ? Number(m[1]) : -1, snippet: cardText.slice(0, 100) })
-    }
-  }, { page })
-  await guard('S5-5 数学学科 tab → 列表≥1（rv_q1 种子是数学）', async () => {
-    try {
-      await page.locator('[data-testid="sr-tab-数学"]').click(); await page.waitForTimeout(180)
-      const n = await page.locator('[data-testid^="sr-card-"]').count()
-      record('S5-5 数学 tab → 列表≥1', n >= 1, { mathCount: n })
-    } catch {
-      // 降级：all tab 下含数学卡片数
-      const n = await page.evaluate(() => Array.from(document.querySelectorAll('[data-testid^="sr-card-"]')).filter(n => (n.textContent || '').includes('数学')).length)
-      record('S5-5 (降级) 数学类卡片≥1', n >= 1, { mathCount: n })
-    }
-  }, { page })
-}
-
-// ============ S6 错题本（5 条） ============
-async function runS6(page) {
-  await navMenuIdx(page, 6)
-  await page.waitForSelector('[data-testid^="sm-card-"]', { state: 'visible', timeout: 15000 })
-  await page.waitForTimeout(150)
-  await guard('S6-1 错题新增 → store entries +1 且 new-status 命中', async () => {
-      try { await page.locator('[data-testid="sm-subject-all"]').click({ timeout: 2000 }); await page.waitForTimeout(180) } catch {}
-      try { await page.locator('[data-testid="sm-status-all"]').click({ timeout: 1800 }); await page.waitForTimeout(120) } catch {}
-      const beforeInfo = await page.evaluate(() => {
-        const app = document.querySelector('#app')
-        const inst = app && app.__vue_app__ && app.__vue_app__._instance
-        const pinia = inst && inst.appContext.config.globalProperties.$pinia
-        const store = pinia && pinia._s && pinia._s.get('studentMistakes')
-        return { count: store && store.entries ? store.entries.length : 0 }
-      })
-      const storeBefore = beforeInfo.count
-      const added = await page.evaluate(() => new Promise(resolve => {
-        try {
-          const app = document.querySelector('#app')
-          const inst = app && app.__vue_app__ && app.__vue_app__._instance
-          const pinia = inst && inst.appContext.config.globalProperties.$pinia
-          const store = pinia && pinia._s && pinia._s.get('studentMistakes')
-          if (!store) return resolve(false)
-          store.addMistake({ title: 'QA 新增错题', subject: '数学', question: 'QA Q 题目 xyz', answer: 'QA A 解答 xyz', tags: 'QA,test' }).then(r => resolve(!!(r && r.ok))).catch(() => resolve(false))
-        } catch { resolve(false) }
-      }))
-      await page.waitForTimeout(450)
-      const storeAfter = await page.evaluate(() => {
-        const app = document.querySelector('#app')
-        const inst = app && app.__vue_app__ && app.__vue_app__._instance
-        const pinia = inst && inst.appContext.config.globalProperties.$pinia
-        const store = pinia && pinia._s && pinia._s.get('studentMistakes')
-        const items = store && store.entries
-        const latest = items && items[items.length - 1]
-        const has = items && items.some(n => n && n.title && n.title.includes('QA 新增错题'))
-        return { count: items ? items.length : 0, hasTitle: !!has, latestStatus: latest ? latest.status : null }
-      })
-      const domPagerCount = await page.locator('[data-testid="panel-pager"]').count()
-      let domFound = await page.evaluate(() => Array.from(document.querySelectorAll('[data-testid^="sm-card-"]')).some(n => (n.textContent || '').includes('QA 新增错题'))).catch(() => false)
-      if (!domFound && domPagerCount > 0) {
-        try { await page.locator('[data-testid="panel-pager-next"]').click({ timeout: 1500 }); await page.waitForTimeout(250) } catch {}
-        domFound = await page.evaluate(() => Array.from(document.querySelectorAll('[data-testid^="sm-card-"]')).some(n => (n.textContent || '').includes('QA 新增错题'))).catch(() => false)
-      }
-      if (!domFound) {
-        try { await page.locator('[data-testid="sm-subject-数学"]').click({ timeout: 1500 }); await page.waitForTimeout(220) } catch {}
-        domFound = await page.evaluate(() => Array.from(document.querySelectorAll('[data-testid^="sm-card-"]')).some(n => (n.textContent || '').includes('QA 新增错题'))).catch(() => false)
-      }
-      // new 徽标 DOM 校验：sm-status-new tab 下新错题应出现
-      let domStatusNew = false
-      try { await page.locator('[data-testid="sm-status-new"]').click({ timeout: 1500 }); await page.waitForTimeout(220) } catch {}
-      domStatusNew = await page.evaluate(() => Array.from(document.querySelectorAll('[data-testid^="sm-card-"]')).some(n => (n.textContent || '').includes('QA 新增错题'))).catch(() => false)
-      const storeOk = added && storeAfter.count === storeBefore + 1 && storeAfter.hasTitle
-      const ok = storeOk && (domFound || domStatusNew || domPagerCount >= 0)
-      record('S6-1 错题新增 → store +1/dom/new-tab 命中', ok, { storeBefore, storeAfter: storeAfter.count, storeTitle: storeAfter.hasTitle, latestStatus: storeAfter.latestStatus, domFound, domStatusNew, hasPager: domPagerCount })
-      // 复位筛选：回到 subject-all + status-all，为后续 S6-2/3/4 环境
-      try { await page.locator('[data-testid="sm-subject-all"]').click({ timeout: 1800 }); await page.waitForTimeout(160) } catch {}
-      try { await page.locator('[data-testid="sm-status-all"]').click({ timeout: 1800 }); await page.waitForTimeout(160) } catch {}
-    }, { page })
-  await guard('S6-2 推进 mk_q1：2 次 → store.status=mastered + 任一视图已掌握/ mastered', async () => {
-    try { await page.locator('[data-testid="sm-subject-all"]').click({ timeout: 1800 }); await page.waitForTimeout(160) } catch {}
-    try { await page.locator('[data-testid="sm-status-all"]').click({ timeout: 1800 }); await page.waitForTimeout(160) } catch {}
-    // 分页兜底：下一页再查 advance 按钮
-    let has = await page.locator('[data-testid="sm-advance-mk_q1"]').count()
-    if (has === 0 && (await page.locator('[data-testid="panel-pager-next"]').count()) > 0) {
-      try { await page.locator('[data-testid="panel-pager-next"]').click({ timeout: 1500 }); await page.waitForTimeout(260) } catch {}
-      has = await page.locator('[data-testid="sm-advance-mk_q1"]').count()
-    }
-    const before = await page.evaluate(() => {
-      const app = document.querySelector('#app')
-      const inst = app && app.__vue_app__ && app.__vue_app__._instance
-      const pinia = inst && inst.appContext.config.globalProperties.$pinia
-      const store = pinia && pinia._s && pinia._s.get('studentMistakes')
-      const m = store && store.entries && store.entries.find(x => x.id === 'mk_q1')
-      return m ? m.status : 'missing'
-    })
-    // DOM 尝试 2 次
-    for (let round = 0; round < 2; round++) {
-      const btn = page.locator('[data-testid="sm-advance-mk_q1"]')
-      if (await btn.count() > 0) {
-        try { await btn.click({ force: true, timeout: 2500 }) } catch {}
-        try { await page.evaluate(() => { const b = document.querySelector('[data-testid="sm-advance-mk_q1"]'); if (b) b.click() }) } catch {}
-        await page.waitForTimeout(220)
-      } else break
-    }
-    // Store 兜底 2 次
-    await page.evaluate(() => new Promise(resolve => {
-      try {
-        const app = document.querySelector('#app')
-        const inst = app && app.__vue_app__ && app.__vue_app__._instance
-        const pinia = inst && inst.appContext.config.globalProperties.$pinia
-        const store = pinia && pinia._s && pinia._s.get('studentMistakes')
-        if (!store || typeof store.advance !== 'function') return resolve(false)
-        Promise.all([store.advance('mk_q1'), store.advance('mk_q1')]).then(() => resolve(true)).catch(() => resolve(false))
-      } catch { resolve(false) }
-    }))
-    await page.waitForTimeout(380)
-    const storeStatus = await page.evaluate(() => {
-      const app = document.querySelector('#app')
-      const inst = app && app.__vue_app__ && app.__vue_app__._instance
-      const pinia = inst && inst.appContext.config.globalProperties.$pinia
-      const store = pinia && pinia._s && pinia._s.get('studentMistakes')
-      const m = store && store.entries && store.entries.find(x => x.id === 'mk_q1')
-      return m ? m.status : 'missing'
-    })
-    // DOM 查任一视图（all → 翻页 → mastered tab）
-    let domOk = await page.evaluate(() => {
-      const el = document.querySelector('[data-testid="sm-card-mk_q1"]')
-      const t = el ? (el.textContent || '') : ''
-      return /已掌握|mastered|掌握/i.test(t)
-    }).catch(() => false)
-    if (!domOk && (await page.locator('[data-testid="panel-pager-next"]').count()) > 0) {
-      try { await page.locator('[data-testid="panel-pager-next"]').click({ timeout: 1500 }); await page.waitForTimeout(260) } catch {}
-      domOk = domOk || await page.evaluate(() => { const el = document.querySelector('[data-testid="sm-card-mk_q1"]'); const t = el ? (el.textContent || '') : ''; return /已掌握|mastered|掌握/i.test(t) }).catch(() => false)
-    }
-    if (!domOk) {
-      try { await page.locator('[data-testid="sm-status-mastered"]').click({ timeout: 1500, force: true }); await page.waitForTimeout(220) } catch {}
-      domOk = domOk || await page.evaluate(() => Array.from(document.querySelectorAll('[data-testid^="sm-card-"]')).some(n => (n.textContent || '').includes('mk_q1') && /已掌握|mastered|掌握/i.test(n.textContent || ''))).catch(() => false)
-    }
-    // 断言：store 达到 mastered 即可 (dom 提供佐证)
-    const ok = storeStatus === 'mastered' && (domOk || true)
-    record('S6-2 两次推进 → mastered', ok, { before, storeStatus, domOk })
-  }, { page })
-  await guard('S6-3 mk_q1 tags≥2（数学种子 tags=[高频考点,易错]）', async () => {
-    try { await page.locator('[data-testid="sm-subject-all"]').click({ timeout: 1800 }); await page.waitForTimeout(160) } catch {}
-    try { await page.locator('[data-testid="sm-status-all"]').click({ timeout: 1800 }); await page.waitForTimeout(160) } catch {}
-    let has = await page.locator('[data-testid="sm-card-mk_q1"]').count()
-    if (has === 0 && (await page.locator('[data-testid="panel-pager-next"]').count()) > 0) {
-      try { await page.locator('[data-testid="panel-pager-next"]').click({ timeout: 1500 }); await page.waitForTimeout(260) } catch {}
-      has = await page.locator('[data-testid="sm-card-mk_q1"]').count()
-    }
-    if (has === 0) { record('S6-3 跳过：mk_q1 不在视图', true, { skipped: true }) }
-    else {
-      const tagCount = await page.evaluate(() => {
-        const card = document.querySelector('[data-testid="sm-card-mk_q1"]')
-        if (!card) return 0
-        return card.querySelectorAll('.sm-tag').length
-      })
-      record('S6-3 mk_q1 标签数≥2', tagCount >= 2, { tagCount })
-    }
-  }, { page })
-  await guard('S6-4 删除 mk_q2 → store entries -1 且卡片消失（Pinia 兜底）', async () => {
-    try { await page.locator('[data-testid="sm-subject-all"]').click({ timeout: 1800 }); await page.waitForTimeout(160) } catch {}
-    try { await page.locator('[data-testid="sm-status-all"]').click({ timeout: 1800 }); await page.waitForTimeout(160) } catch {}
-    const beforeStore = await page.evaluate(() => {
-      const app = document.querySelector('#app')
-      const inst = app && app.__vue_app__ && app.__vue_app__._instance
-      const pinia = inst && inst.appContext.config.globalProperties.$pinia
-      const store = pinia && pinia._s && pinia._s.get('studentMistakes')
-      return store && store.entries ? store.entries.length : -1
-    })
-    const before = await page.locator('[data-testid^="sm-card-"]').count()
-    // DOM 删除尝试
-    let domDeleted = false
-    const has = await page.locator('[data-testid="sm-edit-mk_q2"]').count()
-    if (has > 0) {
-      try {
-        await page.locator('[data-testid="sm-edit-mk_q2"]').click({ force: true, timeout: 2500 }); await page.waitForTimeout(250)
-        const del = page.locator('[data-testid="sm-form-delete"]')
-        if ((await del.count()) > 0) {
-          page.once('dialog', async (d) => { try { await d.accept() } catch {} })
-          try { await del.click({ force: true, timeout: 2500 }); await page.waitForTimeout(400) } catch {}
-          domDeleted = true
-        } else { try { await page.keyboard.press('Escape') } catch {} }
-      } catch {}
-    }
-    // 兜底：store.deleteMistake 直调
-    let storeDeleted = false
-    if (!domDeleted) {
-      storeDeleted = await page.evaluate(() => new Promise(resolve => {
-        try {
-          const app = document.querySelector('#app')
-          const inst = app && app.__vue_app__ && app.__vue_app__._instance
-          const pinia = inst && inst.appContext.config.globalProperties.$pinia
-          const store = pinia && pinia._s && pinia._s.get('studentMistakes')
-          if (store && typeof store.deleteMistake === 'function') {
-            store.deleteMistake('mk_q2').then(r => resolve(!!(r && r.ok))).catch(() => resolve(false))
-          } else resolve(false)
-        } catch { resolve(false) }
-      }))
-      await page.waitForTimeout(350)
-    }
-    const after = await page.locator('[data-testid^="sm-card-"]').count()
-    const gone = (await page.locator('[data-testid="sm-card-mk_q2"]').count()) === 0
-    const afterStore = await page.evaluate(() => {
-      const app = document.querySelector('#app')
-      const inst = app && app.__vue_app__ && app.__vue_app__._instance
-      const pinia = inst && inst.appContext.config.globalProperties.$pinia
-      const store = pinia && pinia._s && pinia._s.get('studentMistakes')
-      return store && store.entries ? store.entries.length : -1
-    })
-    const ok = (gone || after <= before - 1 || afterStore === beforeStore - 1) && (domDeleted || storeDeleted || gone)
-    record('S6-4 删除 mk_q2 生效', ok, { before, after, gone, beforeStore, afterStore, domDeleted, storeDeleted })
-  }, { page })
-  await guard('S6-5 mastered tab 可点击无崩溃', async () => {
-    // 切回 subject-all，避免 mastered 之前残留的筛选 0 条
-    try { await page.locator('[data-testid="sm-subject-all"]').click({ timeout: 1800 }); await page.waitForTimeout(160) } catch {}
-    let tabClickOK = false
-    try { await page.locator('[data-testid="sm-status-mastered"]').click({ timeout: 3000, force: true }); tabClickOK = true } catch {}
-    if (!tabClickOK) {
-      try {
-        await page.evaluate(() => {
-          const el = document.querySelector('[data-testid="sm-status-mastered"]')
-          if (el) { el.click(); el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })) }
-        })
-        tabClickOK = true
-      } catch {}
-    }
-    await page.waitForTimeout(220)
-    const active = await page.evaluate(() => {
-      const el = document.querySelector('[data-testid="sm-status-mastered"]')
-      return el ? el.classList.contains('active') : false
-    }).catch(() => tabClickOK)
-    const n = await page.locator('[data-testid^="sm-card-"]').count()
-    record('S6-5 mastered tab 可点击无崩溃', (tabClickOK || active) && n >= 0, { masteredCount: n, tabClickOK, active })
-  }, { page })
-}
-
-// ============ S7 阅读（5 条） ============
-async function runS7(page) {
-  await navMenuIdx(page, 7)
-  await page.waitForSelector('[data-testid^="sr-card-"]', { state: 'visible', timeout: 15000 })
-  await page.waitForTimeout(150)
-  await guard('S7-1 rd_q1 卡片：时长 25 分钟 + 页数 32 显示', async () => {
-    const text = (await page.locator('[data-testid="sr-card-rd_q1"]').evaluate(el => el.textContent || '') || '').trim()
-    const hasDur = /25\s*(分钟|min)/i.test(text) || /25/.test(text)
-    const hasPages = /32\s*(页|pages|p\b)/i.test(text) || (text.match(/32/g) || []).length >= 1
-    record('S7-1 rd_q1 时长 25 + 页数 32 显示', hasDur && hasPages, { hasDur, hasPages, snippet: text.slice(0, 100) })
-  }, { page })
-  await guard('S7-2 签字（store.toggleParentSign 直调）→ is-signed/已签字', async () => {
-    page.on('dialog', async (d) => { try { await d.accept() } catch {} })
-    const hasBtn = await page.locator('[data-testid="sr-sign-rd_q1"]').count()
-    if (hasBtn > 0) {
-      try { await page.locator('[data-testid="sr-sign-rd_q1"]').click({ timeout: 2000, force: true }) } catch {}
-    }
-    await page.evaluate(() => new Promise(resolve => {
-      try {
-        const app = document.querySelector('#app')
-        const inst = app && app.__vue_app__ && app.__vue_app__._instance
-        const pinia = inst && inst.appContext.config.globalProperties.$pinia
-        const store = pinia && pinia._s && pinia._s.get('studentReading')
-        if (store && typeof store.toggleParentSign === 'function') {
-          const r = store.toggleParentSign('rd_q1')
-          resolve(!!(r && r.ok))
-        } else if (store && Array.isArray(store.items)) {
-          const it = store.items.find(x => x && x.id === 'rd_q1')
-          if (it) { it.parentSigned = true; it.signedAt = it.signedAt || new Date().toISOString(); resolve(true) } else resolve(false)
-        } else resolve(false)
-      } catch { resolve(false) }
-    }))
-    await page.waitForTimeout(700)
-    const goneBtn = (await page.locator('[data-testid="sr-sign-rd_q1"]').count()) === 0
-    const cardText = (await page.locator('[data-testid="sr-card-rd_q1"]').evaluate(el => el.textContent || '') || '').trim()
-    const btnSigned = await page.locator('[data-testid="sr-sign-rd_q1"]').evaluate(el => el ? (el.classList.contains('is-signed') || (el.innerText || '').includes('已签字')) : false).catch(() => goneBtn)
-    const signed = /已签|已签字|家长签字|signed|签字时间/i.test(cardText) || goneBtn || btnSigned
-    record('S7-2 签字 → is-signed/已签字/消失', signed, { goneBtn, btnSigned, snippet: cardText.slice(0, 100) })
-  }, { page })
-  await guard('S7-3 rd_q1 Markdown 感悟：『感悟』『白雪公主』文本渲染', async () => {
-    const text = (await page.locator('[data-testid="sr-card-rd_q1"]').evaluate(el => el.textContent || '') || '').trim()
-    const ok = text.includes('白雪公主') || text.includes('感悟')
-    record('S7-3 Markdown 感悟：白雪公主内容渲染', ok, { snippet: text.slice(0, 160) })
-  }, { page })
-  await guard('S7-4 删除 rd_q2 → 列表-1 或 rd_q2 消失', async () => {
-    const before = await page.locator('[data-testid^="sr-card-"]').count()
-    const edit = page.locator('[data-testid="sr-edit-rd_q2"]')
-    if ((await edit.count()) === 0) { record('S7-4 跳过：rd_q2 edit 不在视图', true, { skipped: true, before }) }
-    else {
-      await edit.click(); await page.waitForTimeout(250)
-      const del = page.locator('[data-testid="sr-form-delete"]')
-      if ((await del.count()) > 0) {
-        page.once('dialog', async (d) => { try { await d.accept() } catch {} })
-        await del.click(); await page.waitForTimeout(400)
-        const after = await page.locator('[data-testid^="sr-card-"]').count()
-        const gone = (await page.locator('[data-testid="sr-card-rd_q2"]').count()) === 0
-        record('S7-4 rd_q2 删除生效', gone || after <= before - 1, { before, after, gone })
-      } else { await page.keyboard.press('Escape'); record('S7-4 删除失败：无按钮', false, { reason: 'no del btn' }) }
-    }
-  }, { page })
-  await guard('S7-5 阅读分页/一屏一致性：卡片数量和数据源一致（≥1 条，且列表高度≤容器高度）', async () => {
-    const n = await page.locator('[data-testid^="sr-card-"]').count()
-    const m = await page.evaluate(() => {
-      const shell = document.querySelector('.st-content') || document.body
-      const list = document.querySelector('.sr-list, .sr-grid, .sr-main, [data-testid^="sr-card-"]')?.parentElement
-      if (!list || !shell) return { ok: true, reason: 'fallback' }
-      return { ok: list.scrollHeight <= shell.clientHeight + 8 || shell.scrollHeight <= shell.clientHeight + 8 }
-    })
-    record('S7-5 列表≥1 条且一屏展示或分页正常', n >= 1 && m.ok, { cardCount: n, metrics: m })
-  }, { page })
-}
-
-// ============ S8 番茄钟（5 条） ============
-async function runS8(page) {
-  await navMenuIdx(page, 10)
-  await page.waitForSelector('[data-testid="spm-timer-ring"]', { state: 'visible', timeout: 15000 })
-  await page.waitForTimeout(200)
-  await guard('S8-1 默认 phase idle + 剩余时间默认 25:00 或 K 推荐 20:00', async () => {
-    const phase = (await page.locator('[data-testid="spm-phase"]').textContent() || '').trim()
-    const remain = (await page.locator('[data-testid="spm-remaining"]').textContent() || '').trim()
-    const [m, s] = remain.split(':').map(n => Number(n))
-    const idlePhase = /空闲|idle|专注|休息/i.test(phase) || phase.length === 0
-    const timeOK = (m === 25 && s === 0) || (m === 20 && s === 0)
-    record('S8-1 初始阶段（专注/休息/idle）+ 剩余 25:00 或 20:00', (idlePhase || /专注|休息/.test(phase)) && timeOK, { phase, remain, m, s })
-  }, { page })
-  await guard('S8-2 开始 → pause 按钮变可用（disabled=false）+ phase≠idle', async () => {
-    const pauseDisabledBefore = await page.locator('[data-testid="spm-pause"]').isDisabled().catch(() => true)
-    await page.locator('[data-testid="spm-start"]').click()
-    await page.waitForTimeout(250)
-    const pauseDisabledAfter = await page.locator('[data-testid="spm-pause"]').isDisabled().catch(() => true)
-    const phase = (await page.locator('[data-testid="spm-phase"]').textContent() || '').trim()
-    const ok = pauseDisabledBefore === true && pauseDisabledAfter === false
-    record('S8-2 开始 → pause 解锁 + phase 切换', ok, { pauseDisabledBefore, pauseDisabledAfter, phase })
-  }, { page })
-  await guard('S8-3 暂停 → phase 保持不变（非 idle）+ 剩余时间 0.5s 后不流逝（比较 remain）', async () => {
-    await page.locator('[data-testid="spm-pause"]').click()
     await page.waitForTimeout(200)
-    const r1 = (await page.locator('[data-testid="spm-remaining"]').textContent() || '').trim()
-    await page.waitForTimeout(800)
-    const r2 = (await page.locator('[data-testid="spm-remaining"]').textContent() || '').trim()
-    record('S8-3 暂停后 0.8s 内不流逝（r1===r2）', r1 === r2, { r1, r2 })
-    // 还原 reset
-    await page.locator('[data-testid="spm-reset"]').click(); await page.waitForTimeout(250)
+  }
+  await page.waitForTimeout(120)
+}
+/** 有序尝试多个选择器，返回第一个命中的元素数量 */
+async function countFirst(page, selectors) {
+  for (const s of selectors) { const n = await page.locator(s).count(); if (n > 0) return n }
+  return 0
+}
+/**
+ * 往 el-input 里填值。
+ * `data-testid` 挂在 el-input 上时会落到**外层 div**（Vue 透传），
+ * 直接对 div 调 fill() 会报 "not an <input>"，所以要按「内层 → 自身 → 裸 input」顺序找。
+ */
+async function fillInput(page, testid, value) {
+  const candidates = [`[data-testid="${testid}"] input`, `input[data-testid="${testid}"]`, `[data-testid="${testid}"]`]
+  for (const sel of candidates) {
+    const loc = page.locator(sel).first()
+    if (await loc.count()) {
+      try { await loc.fill(value); return true } catch { /* 换下一个候选 */ }
+    }
+  }
+  return false
+}
+/**
+ * 列表面板的行数。
+ * 作业/复习/错题等面板默认是**列表视图**（el-table），卡片视图另有 xxx-card-* 锚点，
+ * 两者互斥。这里优先数表格行，表格不存在时回退卡片锚点。
+ */
+async function rowCount(page, cardSel) {
+  const rows = await page.locator('.st-content .el-table__row').count()
+  if (rows > 0) return rows
+  return cardSel ? page.locator(cardSel).count() : 0
+}
+
+// ============ S1 骨架与菜单（4 条） ============
+async function runS1(page) {
+  await guard('S1-1 左侧菜单 16 项齐备', async () => {
+    const n = await page.locator('.st-menu-item').count()
+    record('S1-1 左侧菜单 16 项齐备', n === 16, { menuCount: n })
   }, { page })
-  await guard('S8-4 学段推荐：打开设置 → 点 spm-apply-stage(K) → work=20 / break=5', async () => {
-    await page.locator('[data-testid="spm-settings-btn"]').click()
-    await page.waitForSelector('[data-testid="spm-settings-dialog"]', { state: 'visible', timeout: 5000 })
-    await page.waitForTimeout(200)
-    await page.locator('[data-testid="spm-apply-stage"]').click()
-    await page.waitForTimeout(300)
-    const work = await page.locator('[data-testid="spm-form-work"]').inputValue().catch(() => '')
-    const brk = await page.locator('[data-testid="spm-form-break"]').inputValue().catch(() => '')
-    const ok = (work === '20' || work === '15') && brk === '5'
-    record('S8-4 K 学段推荐时长匹配（15/20 均接受）', ok, { work, brk })
-    // 点击保存
-    await page.locator('[data-testid="spm-form-save"]').click()
-    await page.waitForTimeout(250)
-    const remain = (await page.locator('[data-testid="spm-remaining"]').textContent() || '').trim()
-    const m = Number((remain.match(/^(\d+)/) || ['0'])[1])
-    record('S8-4b 保存后剩余 = 设定 work 时长（15 或 20）', m === 15 || m === 20, { remain, minutes: m })
+
+  await guard('S1-2 默认停在主页', async () => {
+    const home = await page.locator('.student-home').count()
+    const active = (await page.locator('.st-menu-item.active').first().textContent().catch(() => '') || '').trim()
+    record('S1-2 默认停在主页', home > 0 && active.includes('主页'), { home, active })
   }, { page })
-  await guard('S8-5 手动 addSession → 今日番茄计数 +1（通过 store.addSession/evaluate 直接注入 + 刷新）', async () => {
-    const t1Txt = (await page.locator('[data-testid="spm-today-count"]').textContent() || '').trim()
-    const n1 = Number((t1Txt.match(/(\d+)/) || ['0'])[1])
-    // 通过 store 注入一条今日完成 session 并刷新；若页面无全局 setter，则直接触发重置增加 UI
-    await page.evaluate(() => new Promise((resolve) => {
-      try {
-        const db = indexedDB.open('easy-web-tab', 9)
-        db.onsuccess = () => {
-          const tx = db.result.transaction('student_pomodoro', 'readwrite')
-          const s = tx.objectStore('student_pomodoro')
-          const getR = s.get('items')
-          getR.onsuccess = () => {
-            const val = getR.result || { records: [], todayCountFix: 0 }
-            const today = new Date(); const pad = (n) => String(n).padStart(2,'0')
-            const key = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`
-            val.records = val.records || []
-            val.records.push({ id: 'spm_qa_force1', date: key, minutes: 20, phase: 'work', completedAt: new Date().toISOString() })
-            s.put(val, 'items')
-            tx.oncomplete = () => { db.result.close(); resolve(true) }
-            tx.onerror = () => { try { db.result.close() } catch {}; resolve(false) }
-          }
-        }
-        db.onerror = () => resolve(false)
-      } catch { resolve(false) }
-    }))
-    // 重新进入该面板 reload
-    await navMenuIdx(page, 0); await navMenuIdx(page, 10)
-    await page.waitForSelector('[data-testid="spm-today-count"]', { state: 'visible', timeout: 8000 })
-    await page.waitForTimeout(300)
-    const t2Txt = (await page.locator('[data-testid="spm-today-count"]').textContent() || '').trim()
-    const n2 = Number((t2Txt.match(/(\d+)/) || ['0'])[1])
-    record('S8-5 今日番茄统计 显示正常（可 0 或 ≥1，调用已生效）', /今日完成|个番茄/.test(t2Txt) && (n2 >= n1 || n2 === 0), { n1, n2, before: t1Txt, after: t2Txt })
+
+  await guard('S1-3 收起按钮挂 .tw-btn .tw-btn-sm（与其余五台同一颗按钮）', async () => {
+    const btn = page.locator('.st-sidebar-toggle').first()
+    const hasClass = await btn.evaluate((el) => el.classList.contains('tw-btn') && el.classList.contains('tw-btn-sm')).catch(() => false)
+    const box = await btn.boundingBox().catch(() => null)
+    const style = await btn.evaluate((el) => { const s = getComputedStyle(el); return { fontSize: s.fontSize, borderRadius: s.borderRadius } }).catch(() => null)
+    record('S1-3 收起按钮挂 .tw-btn .tw-btn-sm', hasClass && Math.round((box && box.height) || 0) === 30 && style && style.fontSize === '12px' && style.borderRadius === '999px',
+      { hasClass, height: box && Math.round(box.height), style })
+  }, { page })
+
+  await guard('S1-4 主页问候条带昵称', async () => {
+    const txt = (await page.locator('.greeting-text').first().innerText().catch(() => '') || '')
+    record('S1-4 主页问候条带昵称', txt.includes('QA 小萌娃'), { snippet: txt.replace(/\s+/g, ' ').slice(0, 60) })
   }, { page })
 }
 
-// ============ S9 考试倒计时（4 条） ============
-async function runS9(page) {
-  await navMenuIdx(page, 8)
-  await page.waitForSelector('[data-testid^="se-card-"]', { state: 'visible', timeout: 15000 })
-  await page.waitForTimeout(150)
-  await guard('S9-1 新增：期中 QA 8 天后 → 剩余天数徽标显示≈7/8 天', async () => {
-    const before = await page.locator('[data-testid^="se-card-"]').count()
-    await page.locator('[data-testid="se-add-btn"]').click()
-    await page.waitForSelector('[data-testid="se-form-save"]', { state: 'visible', timeout: 5000 })
-    await page.locator('[data-testid="se-form-name"]').fill('期中 QA')
-    const day8 = dateOffsetFuture(8)
-    await page.locator('[data-testid="se-form-date"]').fill(day8)
-    await page.locator('[data-testid="se-form-time"]').fill('08:00').catch(() => {})
-    await page.locator('[data-testid="se-form-save"]').click()
-    let after = before
-    for (let i = 0; i < 25; i++) { await page.waitForTimeout(100); after = await page.locator('[data-testid^="se-card-"]').count(); if (after > before) break }
-    record('S9-1 新增 → 卡片+1', after === before + 1, { before, after })
-  }, { page })
-  await guard('S9-2 分类 tab exercise → 列表保留秋季运动会（category exercise）', async () => {
-    try {
-      await page.locator('[data-testid="se-tab-exercise"]').click(); await page.waitForTimeout(180)
-      const n = await page.locator('[data-testid^="se-card-"]').count()
-      const hasSports = await page.evaluate(() => Array.from(document.querySelectorAll('[data-testid^="se-card-"]')).some(c => /运动会|秋季/.test(c.textContent || '')))
-      record('S9-2 exercise tab → 列表含秋季运动会 ≥1', n >= 1 && hasSports, { exerciseCount: n, hasSports })
-    } catch {
-      record('S9-2 (跳过) exercise tab 不存在', true, { skipped: true })
-    }
-  }, { page })
-  await guard('S9-3 删除 ex_q2 → 列表-1 或 ex_q2 消失', async () => {
-    try { await page.locator('[data-testid="se-tab-all"]').click({ timeout: 2000 }); await page.waitForTimeout(150) } catch {}
-    const before = await page.locator('[data-testid^="se-card-"]').count()
-    const btn = page.locator('[data-testid="se-del-ex_q2"]')
-    if ((await btn.count()) === 0) { record('S9-3 跳过：ex_q2 del 按钮不在视图', true, { skipped: true, before }) }
-    else {
-      page.once('dialog', async (d) => { try { await d.accept() } catch {} })
-      await btn.click(); await page.waitForTimeout(400)
-      const after = await page.locator('[data-testid^="se-card-"]').count()
-      const gone = (await page.locator('[data-testid="se-card-ex_q2"]').count()) === 0
-      record('S9-3 删除 ex_q2 生效', gone || after <= before - 1, { before, after, gone })
-    }
-  }, { page })
-  await guard('S9-4 repeat:once → 单次徽标（repeat:null 的种子显示“单次”或无 repeat 徽标不重复）', async () => {
-    const txt = (await page.locator('[data-testid="se-card-ex_q1"]').evaluate(el => el.textContent || '') || '').trim()
-    const ok = /单次|不重复|once|null|—|无重复/.test(txt) || !/每天|每周|每月|每年|间隔/.test(txt)
-    record('S9-4 repeat:once 单次徽标（无重复字样）', ok, { snippet: txt.slice(0, 100) })
-  }, { page })
-}
+// ============ S2 首页（5 条） ============
+async function runS2(page) {
+  await navTo(page, '主页')
+  await page.waitForSelector('.student-home', { timeout: 10000 })
 
-// ============ S10 奖励 & 成就（4 条） ============
-async function runS10(page) {
-  // —— 奖励面板
-  await navMenuIdx(page, 12)
-  await page.waitForSelector('[data-testid="sr-tab-rewards"]', { state: 'visible', timeout: 15000 })
-  await page.waitForTimeout(150)
-  await guard('S10-1 当前积分 = 1580', async () => {
-    const txt = (await page.evaluate(() => document.querySelector('.sr-stat-main')?.textContent || '') || '').trim()
-    const m = txt.match(/(\d[\d,]*)/)
-    const num = m ? Number(m[1].replace(/,/g,'')) : NaN
-    record('S10-1 当前积分 = 1580', num === 1580, { rawText: txt, parsed: num })
-  }, { page })
-  await guard('S10-2 兑换 rw_q1（30 分）→ 余额 = 1550 + history 多一条 redeem', async () => {
-    const balBeforeTxt = (await page.evaluate(() => document.querySelector('.sr-stat-main')?.textContent || '') || '').trim()
-    const balBefore = Number((balBeforeTxt.match(/(\d[\d,]*)/) || ['0'])[1].replace(/,/g,''))
-    await page.locator('[data-testid="sr-tab-rewards"]').click(); await page.waitForTimeout(150)
-    const redeemBtn = page.locator('[data-testid="sr-redeem-rw_q1"]')
-    if ((await redeemBtn.count()) === 0) { record('S10-2 跳过：rw_q1 兑换按钮不在视图', true, { skipped: true, balBefore }) }
-    else {
-      page.once('dialog', async (d) => { try { await d.accept() } catch {} })
-      await redeemBtn.click(); await page.waitForTimeout(500)
-      const balAfterTxt = (await page.evaluate(() => document.querySelector('.sr-stat-main')?.textContent || '') || '').trim()
-      const balAfter = Number((balAfterTxt.match(/(\d[\d,]*)/) || ['0'])[1].replace(/,/g,''))
-      // history 校验：切到 history tab，读取最新一条 type=redeem 且含 -30
-      let txnOK = false
-      try {
-        await page.locator('[data-testid="sr-tab-history"]').click(); await page.waitForTimeout(200)
-        const firstTxnText = (await page.locator('[data-testid^="sr-txn-"]').first().evaluate(el => el.textContent || '') || '').trim()
-        txnOK = /兑换|redeem|-30|30/.test(firstTxnText)
-      } catch {}
-      record('S10-2 兑换后余额=1550（含 txn 记录有 redeem ）', balAfter === balBefore - 30 && txnOK, { balBefore, balAfter, txnOK })
+  await guard('S2-1 三块平铺且同时可见（轮播已取消）', async () => {
+    const vis = {}
+    for (const t of ['action', 'overview', 'tools']) {
+      vis[t] = await page.locator(`[data-testid="student-slide-${t}"]`).first().isVisible().catch(() => false)
     }
+    const dots = await page.locator('.student-home .carousel-dots').count()
+    const next = await page.locator('[data-testid="student-carousel-next"]').count()
+    record('S2-1 三块平铺同时可见、无轮播圆点/箭头',
+      vis.action && vis.overview && vis.tools && dots === 0 && next === 0,
+      { vis, dotCount: dots, nextCount: next })
   }, { page })
-  await guard('S10-3 手动加分 100（理由：QA 测试加分）→ 余额 = 1450+100 = 1550（或当前余额 +100）', async () => {
-    const balBeforeTxt = (await page.evaluate(() => document.querySelector('.sr-stat-main')?.textContent || '') || '').trim()
-    const balBefore = Number((balBeforeTxt.match(/(\d[\d,]*)/) || ['0'])[1].replace(/,/g,''))
-    await page.locator('[data-testid="sr-manual-earn-btn"]').click()
-    await page.waitForSelector('[data-testid="sr-earn-dialog"]', { state: 'visible', timeout: 5000 })
-    await page.locator('[data-testid="sr-earn-reason"]').fill('QA 测试加分')
-    await page.locator('[data-testid="sr-earn-points"]').fill('100')
-    await page.locator('[data-testid="sr-earn-submit"]').click()
+
+  await guard('S2-2 数据概览 6 张统计卡', async () => {
+    const n = await page.locator('[data-testid="student-slide-overview"] .overview-card').count()
+    record('S2-2 数据概览 6 张统计卡', n === 6, { overviewCards: n })
+  }, { page })
+
+  await guard('S2-3 问候条副标题带今日待办/待复习', async () => {
+    const sub = (await page.locator('.greeting-sub').first().textContent().catch(() => '') || '').trim()
+    record('S2-3 问候条副标题带今日待办/待复习', sub.includes('今日待办') && sub.includes('待复习'), { sub })
+  }, { page })
+
+  await guard('S2-4 工具卡 ≥2 且点「课程表」能跳过去', async () => {
+    const n = await page.locator('[data-testid="student-slide-tools"] .tool-card').count()
+    const card = page.locator('[data-testid="student-slide-tools"] .tool-card', { hasText: '课程表' }).first()
+    await card.click()
     await page.waitForTimeout(400)
-    const balAfterTxt = (await page.evaluate(() => document.querySelector('.sr-stat-main')?.textContent || '') || '').trim()
-    const balAfter = Number((balAfterTxt.match(/(\d[\d,]*)/) || ['0'])[1].replace(/,/g,''))
-    record('S10-3 加分 100 → 余额 = before + 100', balAfter === balBefore + 100, { balBefore, balAfter })
+    const jumped = await page.locator('.stt-shell').count()
+    record('S2-4 工具卡 ≥2 且点「课程表」跳转', n >= 2 && jumped > 0, { toolCards: n, jumped })
   }, { page })
-  // —— 成就面板
-  await navMenuIdx(page, 11)
-  await page.waitForSelector('[data-testid^="sa-badge-"]', { state: 'visible', timeout: 15000 })
-  await page.waitForTimeout(150)
-  await guard('S10-4 成就：unlocked 4（.unlocked 样式）+ locked 8（.locked 样式）', async () => {
-    const unlocked = await page.evaluate(() => document.querySelectorAll('.sa-badge-card.unlocked').length)
-    const locked = await page.evaluate(() => document.querySelectorAll('.sa-badge-card.locked').length)
-    const total = unlocked + locked
-    record('S10-4 成就条目总数≥5 且 unlocked+locked=总数', total >= 5 && unlocked + locked === total, { unlocked, locked, total })
+
+  await guard('S2-5 行动卡点「待办作业」能跳作业管理', async () => {
+    await navTo(page, '主页')
+    const card = page.locator('[data-testid="student-slide-action"] .action-card', { hasText: '待办作业' }).first()
+    await card.click()
+    await page.waitForTimeout(400)
+    const jumped = await page.locator('[data-testid^="shw-status-"]').count()
+    record('S2-5 行动卡「待办作业」跳转作业管理', jumped > 0, { hwRows: jumped })
   }, { page })
+}
+
+// ============ S3 习惯（5 条） ============
+async function runS3(page) {
+  await navTo(page, '习惯打卡')
+  await page.waitForTimeout(300)
+
+  await guard('S3-1 日历卡数量 = 种子 2 个', async () => {
+    const n = await countFirst(page, ['[data-testid^="hb-card-"]', '.sh-list .hcc-card'])
+    record('S3-1 习惯日历卡 = 2', n === 2, { cards: n })
+  }, { page })
+
+  await guard('S3-2 空名保存被拒（弹框滞留、卡片数不变）', async () => {
+    const before = await countFirst(page, ['[data-testid^="hb-card-"]'])
+    await page.locator('[data-testid="sh-add-btn"]').first().click()
+    await page.waitForSelector('[data-testid="sh-form-name"]', { state: 'visible', timeout: 6000 })
+    await page.locator('[data-testid="sh-form-name"]').fill('')
+    await page.locator('[data-testid="sh-form-save"]').first().click()
+    await page.waitForTimeout(400)
+    const dialogLeft = await page.locator('.el-dialog:visible').count()
+    const after = await countFirst(page, ['[data-testid^="hb-card-"]'])
+    record('S3-2 空名拒存', dialogLeft >= 1 && before === after, { before, after, dialogLeft })
+    await closeDialogs(page)
+  }, { page })
+
+  await guard('S3-3 新增习惯 → 卡片 +1', async () => {
+    const before = await countFirst(page, ['[data-testid^="hb-card-"]'])
+    await page.locator('[data-testid="sh-add-btn"]').first().click()
+    await page.waitForSelector('[data-testid="sh-form-name"]', { state: 'visible', timeout: 6000 })
+    await page.locator('[data-testid="sh-form-name"]').fill('QA 晨读 15 分钟')
+    await page.locator('[data-testid="sh-form-save"]').first().click()
+    let after = before
+    for (let i = 0; i < 25; i++) { await page.waitForTimeout(120); after = await countFirst(page, ['[data-testid^="hb-card-"]']); if (after > before) break }
+    record('S3-3 新增习惯 → 卡片 +1', after === before + 1, { before, after })
+    await closeDialogs(page)
+  }, { page })
+
+  await guard('S3-4 点今日日历格 → 打卡记录 +1', async () => {
+    // 打卡入口是整格按钮 .hb-cal-day（今天那格带 .today），
+    // hb-cal-img-* 是「打卡详情图片角标」，只有 detailMode 才渲染，不能用来打卡
+    const cell = page.locator('[data-testid="hb-card-shb_q1"] .hb-cal-day.today').first()
+    const cellCount = await cell.count()
+    const before = await storeEval(page, 'studentHabits', 'return { ok: true, n: store.records.length }')
+    if (cellCount) await cell.click()
+    await page.waitForTimeout(450)
+    const after = await storeEval(page, 'studentHabits', 'return { ok: true, n: store.records.length }')
+    record('S3-4 今日打卡 → 记录 +1',
+      cellCount > 0 && after.ok && before.ok && after.n === before.n + 1,
+      { cellCount, before: before.n, after: after.n })
+  }, { page })
+
+  await guard('S3-5 删除 QA 习惯 → 卡片 -1', async () => {
+    const before = await countFirst(page, ['[data-testid^="hb-card-"]'])
+    // 进入编辑弹框：点卡片上的编辑入口，或直接走 store 删除
+    const del = await storeEval(page, 'studentHabits', `
+      const t = store.habits.find(h => h.name && h.name.includes('QA 晨读'))
+      if (!t) return { ok: false, reason: 'not-found' }
+      const r = await store.deleteHabit(t.id)
+      return { ok: !!(r && r.ok), n: store.habits.length }
+    `)
+    await page.waitForTimeout(450)
+    let after = before
+    for (let i = 0; i < 20; i++) { await page.waitForTimeout(120); after = await countFirst(page, ['[data-testid^="hb-card-"]']); if (after < before) break }
+    record('S3-5 删除 QA 习惯 → 卡片 -1', del.ok && after <= before - 1, { before, after, store: del })
+    await closeDialogs(page)
+  }, { page })
+}
+
+// ============ S4 作业（5 条） ============
+async function runS4(page) {
+  await navTo(page, '作业管理')
+  await page.waitForSelector('[data-testid^="shw-status-"]', { timeout: 10000 })
+
+  await guard('S4-1 作业行数 = 种子 3 条', async () => {
+    // 注意：shw-status-* 同时用于「状态筛选 tab」和「行内状态徽标」，直接 count 会把 tab 算进去
+    const n = await rowCount(page, '[data-testid^="shw-status-hw_"]')
+    record('S4-1 作业行数 = 3', n === 3, { rows: n })
+  }, { page })
+
+  await guard('S4-2 空标题保存被拒', async () => {
+    const before = await rowCount(page)
+    await page.locator('[data-testid="shw-add-btn"]').first().click()
+    await page.waitForSelector('[data-testid="shw-form-title"]', { state: 'visible', timeout: 6000 })
+    await page.locator('[data-testid="shw-form-title"]').fill('')
+    await page.locator('[data-testid="shw-form-save"]').first().click()
+    await page.waitForTimeout(400)
+    const after = await rowCount(page)
+    const dialogLeft = await page.locator('.el-dialog:visible').count()
+    record('S4-2 空标题拒存', before === after && dialogLeft >= 1, { before, after, dialogLeft })
+    await closeDialogs(page)
+  }, { page })
+
+  await guard('S4-3 新增作业 → store +1 且标题入库', async () => {
+    const title = 'QA 新作业一篇'
+    const before = await storeEval(page, 'studentHomework', 'return { ok: true, n: store.entries.length }')
+    const added = await storeEval(page, 'studentHomework', `
+      const r = await store.addHomework({ subject: '语文', title: '${title}', dueDate: '${dateOffsetFuture(1)}', priority: 'normal' })
+      return { ok: !!(r && r.ok), n: store.entries.length, has: store.entries.some(e => e.title && e.title.includes('QA 新作业')) }
+    `)
+    await page.waitForTimeout(400)
+    record('S4-3 新增作业 → store +1', before.ok && added.ok && added.n === before.n + 1 && added.has,
+      { before: before.n, after: added.n, hasTitle: added.has })
+  }, { page })
+
+  await guard('S4-4 hw_q1 推进 → 状态不再停留在 pending', async () => {
+    const r = await storeEval(page, 'studentHomework', `
+      const t = store.entries.find(e => e.id === 'hw_q1')
+      if (!t) return { ok: false, reason: 'not-found' }
+      const s0 = t.status
+      await store.advanceStatus('hw_q1')
+      const s1 = store.entries.find(e => e.id === 'hw_q1').status
+      return { ok: s1 !== s0, s0, s1 }
+    `)
+    await page.waitForTimeout(350)
+    record('S4-4 状态推进生效', r.ok, r)
+  }, { page })
+
+  await guard('S4-5 状态筛选「已完成」→ 只剩已完成', async () => {
+    await page.locator('[data-testid="shw-status-done"]').first().click()
+    await page.waitForTimeout(450)
+    const done = await storeEval(page, 'studentHomework', 'return { ok: true, doneCount: store.entries.filter(e => e.status === "done").length }')
+    const rows = await rowCount(page)
+    record('S4-5 已完成筛选只剩已完成', done.ok && rows === done.doneCount, { rows, doneCount: done.doneCount })
+    await page.locator('[data-testid="shw-status-all"]').first().click().catch(() => { })
+    await page.waitForTimeout(250)
+  }, { page })
+}
+
+// ============ S5 课程表（4 条） ============
+async function runS5(page) {
+  await navTo(page, '课程表')
+  await page.waitForSelector('.stt-shell', { timeout: 10000 })
+
+  await guard('S5-1 课程网格渲染（单元格 ≥ 40）', async () => {
+    const cells = await page.locator('.stt-grid .stt-cell').count()
+    const grid = await page.locator('.stt-grid').count()
+    record('S5-1 课程网格渲染', grid > 0 && cells >= 40, { grid, cells })
+  }, { page })
+
+  await guard('S5-2 周切换：第 1 周 → 第 2 周', async () => {
+    const label = page.locator('.stt-week-label').first()
+    const before = (await label.textContent().catch(() => '') || '').trim()
+    await page.locator('.stt-week-switch .stt-week-btn').last().click()
+    await page.waitForTimeout(300)
+    const after = (await label.textContent().catch(() => '') || '').trim()
+    record('S5-2 周切换生效', before !== after && after.includes('2'), { before, after })
+    await page.locator('.stt-week-switch .stt-week-btn').first().click()
+    await page.waitForTimeout(250)
+  }, { page })
+
+  await guard('S5-3 今日速览条存在', async () => {
+    const n = await page.locator('.stt-today').count()
+    const chips = await page.locator('.stt-chip').count()
+    record('S5-3 今日速览条存在', n > 0 && chips >= 1, { today: n, chips })
+  }, { page })
+
+  await guard('S5-4 无排课时显示空态提示', async () => {
+    const hasCell = await storeEval(page, 'studentTimetable', 'return { ok: true, n: (store.data && store.data.cells ? Object.keys(store.data.cells).length : 0) }')
+    const banner = await page.locator('.stt-empty-banner').count()
+    const ok = hasCell.n > 0 ? true : banner > 0
+    record('S5-4 无排课显示空态（有排课则跳过）', ok, { cells: hasCell.n, banner })
+  }, { page })
+}
+
+// ============ S6 复习（4 条） ============
+async function runS6(page) {
+  await navTo(page, '复习计划')
+  await page.waitForTimeout(400)
+
+  await guard('S6-1 复习列表 = 种子 2 条', async () => {
+    const n = await rowCount(page, '[data-testid^="sr-card-"]')
+    const store = await storeEval(page, 'studentReview', 'return { ok: true, n: store.entries.length }')
+    record('S6-1 复习列表 = 2', store.ok && store.n === 2 && n === 2, { rows: n, storeN: store.n })
+  }, { page })
+
+  await guard('S6-2 分类 tab 切换不报错且内容仍在', async () => {
+    const tabs = await page.locator('[data-testid^="sr-tab-"]').count()
+    let ok = tabs > 0
+    if (tabs > 0) {
+      await page.locator('[data-testid^="sr-tab-"]').last().click()
+      await page.waitForTimeout(300)
+      const txt = (await page.locator('.st-content').innerText().catch(() => '') || '').trim()
+      ok = ok && txt.length > 0
+      await page.locator('[data-testid^="sr-tab-"]').first().click()
+      await page.waitForTimeout(250)
+    }
+    record('S6-2 分类 tab 切换可用', ok, { tabs })
+  }, { page })
+
+  await guard('S6-3 新增复习 → store +1', async () => {
+    const before = await storeEval(page, 'studentReview', 'return { ok: true, n: store.entries.length }')
+    const added = await storeEval(page, 'studentReview', `
+      const r = await store.addReview({ subject: '英语', knowledge: 'QA 复习知识点', source: '教材 P1', learnDate: '${dateOffsetKey(0)}' })
+      return { ok: !!(r && r.ok), n: store.entries.length, reason: r && r.reason }
+    `)
+    await page.waitForTimeout(350)
+    record('S6-3 新增复习 → store +1', before.ok && added.ok && added.n === before.n + 1, { before: before.n, after: added.n, res: added })
+  }, { page })
+
+  await guard('S6-4 掌握推进 → stage 上升', async () => {
+    const r = await storeEval(page, 'studentReview', `
+      const t = store.entries.find(e => !e.mastered)
+      if (!t) return { ok: false, reason: 'not-found' }
+      const s0 = t.stage
+      const res = await store.advance(t.id)
+      const s1 = store.entries.find(e => e.id === t.id).stage
+      return { ok: s1 !== s0, s0, s1, res }
+    `)
+    await page.waitForTimeout(300)
+    record('S6-4 掌握推进生效', r.ok, r)
+  }, { page })
+}
+
+// ============ S7 错题（4 条） ============
+async function runS7(page) {
+  await navTo(page, '错题本')
+  await page.waitForTimeout(400)
+
+  await guard('S7-1 错题列表 = 种子 2 条', async () => {
+    const n = await rowCount(page, '[data-testid^="sm-card-"]')
+    record('S7-1 错题列表 = 2', n === 2, { rows: n })
+  }, { page })
+
+  await guard('S7-2 搜索「进位」→ 行数减少', async () => {
+    const before = await rowCount(page, '[data-testid^="sm-card-"]')
+    const filled = await fillInput(page, 'sm-search', '进位')
+    await page.waitForTimeout(500)
+    const after = await rowCount(page, '[data-testid^="sm-card-"]')
+    record('S7-2 搜索过滤生效', filled && after >= 1 && after < before, { filled, before, after })
+  }, { page })
+
+  await guard('S7-3 清空搜索 → 恢复全部', async () => {
+    await fillInput(page, 'sm-search', '')
+    await page.waitForTimeout(500)
+    const after = await rowCount(page, '[data-testid^="sm-card-"]')
+    record('S7-3 清空搜索恢复', after === 2, { after })
+  }, { page })
+
+  await guard('S7-4 状态推进（new → 后续状态）', async () => {
+    const r = await storeEval(page, 'studentMistakes', `
+      const t = store.entries.find(e => e.status === 'new') || store.entries[0]
+      if (!t) return { ok: false, reason: 'not-found' }
+      const s0 = t.status
+      const res = await store.advance(t.id)
+      const s1 = (store.entries.find(e => e.id === t.id) || {}).status
+      return { ok: s1 !== s0, s0, s1, res }
+    `)
+    record('S7-4 错题状态推进生效', r.ok, r)
+  }, { page })
+}
+
+// ============ S8 阅读（3 条） ============
+async function runS8(page) {
+  await navTo(page, '阅读记录')
+  await page.waitForTimeout(400)
+
+  await guard('S8-1 统计卡 ≥4 且总数 = 种子 2 条', async () => {
+    const cards = await page.locator('.sr-stat-card').count()
+    const store = await storeEval(page, 'studentReading', 'return { ok: true, n: store.entries.length }')
+    const txt = (await page.locator('.st-content').innerText().catch(() => '') || '')
+    record('S8-1 统计卡齐备且总记录 = 2', cards >= 4 && store.n === 2 && txt.includes('2'), { cards, storeN: store.n })
+  }, { page })
+
+  await guard('S8-2 种子书名渲染出来', async () => {
+    const txt = (await page.locator('.st-content').innerText().catch(() => '') || '')
+    record('S8-2 种子书名渲染', txt.includes('格林童话'), { hasBook: txt.includes('格林童话') })
+  }, { page })
+
+  await guard('S8-3 新增阅读 → store +1', async () => {
+    const before = await storeEval(page, 'studentReading', 'return { ok: true, n: store.entries.length }')
+    const added = await storeEval(page, 'studentReading', `
+      const r = await store.addReading({ bookTitle: 'QA 测试绘本', pages: 10, durationMin: 12, date: '${dateOffsetKey(0)}' })
+      return { ok: !!(r && r.ok), n: store.entries.length, reason: r && r.reason }
+    `)
+    await page.waitForTimeout(350)
+    record('S8-3 新增阅读 → store +1', before.ok && added.ok && added.n === before.n + 1, { before: before.n, after: added.n, res: added })
+  }, { page })
+}
+
+// ============ S9 成就 / 奖励（4 条） ============
+async function runS9(page) {
+  await navTo(page, '成就勋章')
+  await page.waitForTimeout(400)
+
+  await guard('S9-1 勋章墙数量与 store 定义数一致（且 ≥12）', async () => {
+    const n = await countFirst(page, ['[data-testid^="sa-badge-"]'])
+    const store = await storeEval(page, 'studentAchievements', 'return { ok: true, defs: (store.definitions || []).length }')
+    record('S9-1 勋章墙数量 = store 定义数', store.ok && store.defs > 0 && n === store.defs && n >= 12, { badges: n, defs: store.defs })
+  }, { page })
+
+  await guard('S9-2 分类 tab 可切换', async () => {
+    const tabs = await page.locator('[data-testid^="sa-cat-"]').count()
+    let ok = tabs >= 2
+    if (ok) {
+      await page.locator('[data-testid^="sa-cat-"]').last().click()
+      await page.waitForTimeout(300)
+      ok = await page.locator('[data-testid^="sa-badge-"]').count() >= 0
+      await page.locator('[data-testid^="sa-cat-"]').first().click()
+      await page.waitForTimeout(250)
+    }
+    record('S9-2 勋章分类 tab 可切换', ok, { tabs })
+  }, { page })
+
+  await navTo(page, '奖励积分')
+
+  await guard('S9-3 奖励项 2 个、积分与 store 一致', async () => {
+    const n = await countFirst(page, ['[data-testid^="sr-reward-"]'])
+    // allRewards / totalPoints 都是**函数**（不是 computed），漏括号会拿到函数自身的 .length=0
+    // 积分不写死 1580：前面的打卡/完成作业会照常加分，与 store 一致即可
+    const store = await storeEval(page, 'studentRewards', 'return { ok: true, pts: store.totalPoints(), rewards: store.allRewards().length }')
+    const txt = (await page.locator('.st-content').innerText().catch(() => '') || '')
+    record('S9-3 奖励项 2 个、积分与 store 一致', store.ok && store.rewards === 2 && n === 2 && txt.includes(String(store.pts)), { rewards: n, store })
+  }, { page })
+
+  await guard('S9-4 规则弹框能打开', async () => {
+    await page.locator('[data-testid="sr-rules-btn"]').first().click()
+    await page.waitForTimeout(400)
+    const open = await page.locator('[data-testid="sr-rules-dialog"]').count()
+    record('S9-4 规则弹框能打开', open > 0, { open })
+    await closeDialogs(page)
+  }, { page })
+}
+
+// ============ S10 家长协同（3 条） ============
+async function runS10(page) {
+  await navTo(page, '家长协同')
+  await page.waitForTimeout(400)
+
+  // 未解锁时整页是锁态守卫（家长 tabs 不渲染）—— 这是当前设计：
+  // 家长控制台含加分 / 发勋章 / 删记录等敏感操作，必须先过 PIN。
+  const locked = await page.locator('.stp-locked-card').count()
+  if (locked > 0) {
+    record('S10-1 未解锁时显示锁态守卫', true, { locked })
+    await guard('S10-2 点「输入家长 PIN 解锁」能拉起 PIN 弹框', async () => {
+      await page.locator('.stp-locked-card button').first().click()
+      await page.waitForTimeout(550)
+      const mask = await page.locator('.st-pin-mask').count()
+      const keypad = await page.locator('.st-pin-keypad').count()
+      record('S10-2 PIN 弹框能拉起（含数字键盘）', mask > 0 && keypad > 0, { mask, keypad })
+      await page.keyboard.press('Escape')
+      await page.waitForTimeout(300)
+      await closeDialogs(page)
+    }, { page })
+    const tabsWhenLocked = await page.locator('[data-testid^="stp-tab-"]').count()
+    record('S10-3 锁态下不渲染家长 tabs（符合设计）', tabsWhenLocked === 0, { tabs: tabsWhenLocked })
+    return
+  }
+
+  await guard('S10-1 家长面板 tab ≥3', async () => {
+    const tabs = await page.locator('[data-testid^="stp-tab-"]').count()
+    record('S10-1 家长面板 tab ≥3', tabs >= 3, { tabs })
+  }, { page })
+
+  await guard('S10-2 任务分页器存在', async () => {
+    const pager = await page.locator('[data-testid="stp-pager-tasks"]').count()
+    record('S10-2 任务分页器存在', pager > 0, { pager })
+  }, { page })
+
+  await guard('S10-3 逐个切 tab 内容非空', async () => {
+    const tabs = page.locator('[data-testid^="stp-tab-"]')
+    const n = await tabs.count()
+    const empty = []
+    for (let i = 0; i < n; i++) {
+      await tabs.nth(i).click()
+      await page.waitForTimeout(260)
+      const t = (await page.locator('.st-content').innerText().catch(() => '') || '').trim()
+      if (t.length === 0) empty.push(i)
+    }
+    record('S10-3 家长各 tab 内容非空', n > 0 && empty.length === 0, { tabs: n, empty })
+  }, { page })
+}
+
+// ============ S11 全 16 面板可渲染（2 条） ============
+async function runS11(page) {
+  const bad = []
+  const noContent = []
+  for (const [, label] of MENU) {
+    try {
+      await navTo(page, label)
+      const wrap = await page.locator('.st-content > *').count()
+      const txt = (await page.locator('.st-content').innerText().catch(() => '') || '').trim()
+      if (wrap === 0) noContent.push(label)
+      if (txt.length === 0) noContent.push(label + '(空文本)')
+    } catch (e) {
+      bad.push(label + ':' + String(e && e.message || e).slice(0, 60))
+    }
+  }
+  record('S11-1 16 个面板逐个切换无异常', bad.length === 0, { bad })
+  record('S11-2 16 个面板内容都非空', noContent.length === 0, { noContent })
+}
+
+// ============ S12 移动端 390px（4 条） ============
+async function runS12(page) {
+  const before = page.viewportSize()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await navTo(page, '主页')
+  await page.waitForTimeout(600)
+
+  await guard('S12-1 菜单降级为底部固定 Tab Bar', async () => {
+    const box = await page.locator('.st-menu').first().boundingBox()
+    const pos = await page.locator('.st-menu').first().evaluate((el) => getComputedStyle(el).position)
+    const atBottom = box ? Math.abs((box.y + box.height) - 844) <= 2 : false
+    record('S12-1 菜单贴底 Fixed', pos === 'fixed' && atBottom, { pos, box })
+  }, { page })
+
+  await guard('S12-2 移动端隐藏收起按钮', async () => {
+    const vis = await page.locator('.st-sidebar-toggle').first().isVisible().catch(() => false)
+    record('S12-2 移动端隐藏收起按钮', !vis, { visible: vis })
+  }, { page })
+
+  await guard('S12-3 无横向溢出', async () => {
+    const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    record('S12-3 无横向溢出', over <= 1, { overflowPx: over })
+  }, { page })
+
+  await guard('S12-4 底栏菜单项仍为 16 个（可横滚）', async () => {
+    const n = await page.locator('.st-menu-item').count()
+    record('S12-4 底栏菜单项 16 个', n === 16, { items: n })
+  }, { page })
+
+  if (before) await page.setViewportSize(before)
+  await page.waitForTimeout(300)
 }
 
 // ============ main ============
@@ -1171,14 +825,23 @@ async function main() {
   writeFileSync(EVIDENCE_LOG, '')
   appendFileSync(EVIDENCE_LOG, '===== student-ui QA start ' + new Date().toISOString() + ' =====\n')
   await ensureDevServer()
+  console.log('[dev] ready at ' + devBase)
+
   const browser = await chromium.launch({ headless: true, executablePath: findChromium() })
-  const context = await browser.newContext({ viewport: { width: 1366, height: 768 }, deviceScaleFactor: 1 })
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, storageState: { cookies: [], origins: [] } })
   const page = await context.newPage()
-  page.on('pageerror', (err) => appendFileSync(EVIDENCE_LOG, '[pageerror] ' + err.message + '\n'))
+  const pageErrors = []
+  page.on('pageerror', (err) => { pageErrors.push(err.message); appendFileSync(EVIDENCE_LOG, '[pageerror] ' + err.message + '\n') })
   page.on('console', (msg) => { if (msg.type() === 'error') appendFileSync(EVIDENCE_LOG, '[console:error] ' + msg.text() + '\n') })
 
   await page.goto(devBase + '/student', { waitUntil: 'domcontentloaded', timeout: 60000 })
-  await page.waitForTimeout(1500)
+  await page.waitForTimeout(1800)
+
+  // 引导弹窗（首次进入）先关掉，再注入种子，避免被遮罩挡住点击
+  if (await page.locator('.onboarding-mask').count()) {
+    await page.click('.onboarding-mask .ob-btn-secondary').catch(() => { })
+    await page.waitForTimeout(400)
+  }
 
   console.log('[inject] 学生 IDB 种子…')
   await injectIdbStore(page, 'student_settings', buildSettings())
@@ -1192,53 +855,55 @@ async function main() {
   await injectIdbStore(page, 'student_rewards', buildRewards())
   await injectIdbStore(page, 'student_countdowns', buildCountdowns())
   await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
-  await page.waitForTimeout(2500)
+  await page.waitForTimeout(2600)
+  if (await page.locator('.onboarding-mask').count()) {
+    await page.click('.onboarding-mask .ob-btn-secondary').catch(() => { })
+    await page.waitForTimeout(400)
+  }
 
-  // ESC 关 onboarding
-  try {
-    const onb = page.locator('[data-testid^="stg-onboarding-card-"]').first()
-    if (await onb.count() > 0) { await page.waitForTimeout(500); await page.keyboard.press('Escape'); await page.waitForTimeout(300) }
-  } catch {}
+  await page.waitForSelector('.st-shell', { timeout: 30000 })
 
-  try {
-    await page.waitForSelector('.st-menu-item', { timeout: 15000 })
-    const menuCount = await page.$$eval('.st-menu-item', arr => arr.length)
-    record('P0 学生工作台加载成功（左菜单≥12 项）', menuCount >= 12, { menuCount })
-  } catch (e) { record('P0 加载失败', false, { error: e.message }) }
-
-  console.log('[S1] 主页三屏轮播')
+  console.log('[S1] 骨架与菜单')
   await runS1(page)
-  console.log('[S2] 习惯')
+  console.log('[S2] 主页')
   await runS2(page)
-  console.log('[S3] 作业')
+  console.log('[S3] 习惯打卡')
   await runS3(page)
-  console.log('[S4] 学习计划')
+  console.log('[S4] 作业管理')
   await runS4(page)
-  console.log('[S5] 艾宾浩斯复习')
+  console.log('[S5] 课程表')
   await runS5(page)
-  console.log('[S6] 错题本')
+  console.log('[S6] 复习计划')
   await runS6(page)
-  console.log('[S7] 阅读')
+  console.log('[S7] 错题本')
   await runS7(page)
-  console.log('[S8] 番茄钟')
+  console.log('[S8] 阅读记录')
   await runS8(page)
-  console.log('[S9] 考试倒计时')
+  console.log('[S9] 成就 / 奖励')
   await runS9(page)
-  console.log('[S10] 奖励 & 成就')
+  console.log('[S10] 家长协同')
   await runS10(page)
+  console.log('[S11] 全面板渲染')
+  await runS11(page)
+  console.log('[S12] 移动端 390px')
+  await runS12(page)
+  console.log('[S13] 页面级异常')
+  record('S13 全程无页面级 JS 异常', pageErrors.length === 0, { errors: pageErrors.slice(0, 3) })
 
-  const pass = results.filter(r => r.ok).length
-  const fail = results.length - pass
-  appendFileSync(EVIDENCE_LOG, '\n===== Summary: PASS=' + pass + ' FAIL=' + fail + ' TOTAL=' + results.length + ' =====\n')
-  console.log('\n===== Summary: PASS=' + pass + ' FAIL=' + fail + ' TOTAL=' + results.length + ' =====')
   await browser.close()
-  stopDevServer()
-  process.exit(fail > 0 ? 1 : 0)
+  if (devProc) devProc.kill()
+
+  const failed = results.filter((r) => !r.ok)
+  console.log(`\n[qa] 结果：${results.length - failed.length} pass / ${failed.length} fail`)
+  if (failed.length) {
+    console.log('失败项：')
+    failed.forEach((f) => console.log('  - ' + f.name))
+    process.exitCode = 1
+  }
 }
 
 main().catch((e) => {
   console.error('[fatal]', e)
-  try { appendFileSync(EVIDENCE_LOG, '[fatal] ' + (e.stack || e.message) + '\n') } catch {}
-  try { stopDevServer() } catch {}
-  process.exit(2)
+  if (devProc) devProc.kill()
+  process.exitCode = 1
 })

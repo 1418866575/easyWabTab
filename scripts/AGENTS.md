@@ -62,7 +62,7 @@ scripts/
 | Nginx 静态托管下的云同步 | `webdav-proxy-only.cjs` | `npm run webdav-proxy`；端口 16719（可 `WEBDAV_PROXY_HOST`/`WEBDAV_PROXY_PORT` 覆盖）；Nginx 把 `/api/webdav-proxy` 反代到它，见 README「方式五」 |
 | 核心纯函数测试 | `test-*-core.ts` | `node --experimental-strip-types` 直跑，自研 assert 断言；被测核心禁止 import vue/pinia |
 | 学生 core 纯函数测试 | `test-student-*-core.ts` + `resolve-extensionless.mjs` | 14 个 `test:student-*`，每个都带 `--experimental-loader ./scripts/resolve-extensionless.mjs`；`npm run test:student` 聚合全部 |
-| 学生工作台 UI QA | `qa-student-ui.mjs` | `npm run qa:student-ui`；需要 `playwright` 依赖与已安装的 chromium |
+| 学生工作台 UI QA | `qa-student-ui.mjs` | `npm run qa:student-ui`；48 断言 / S1–S13：骨架与 16 项菜单、首页三块平铺（回归「轮播残留」）、习惯日历打卡、作业/复习/错题的状态推进、课程表周切换、阅读统计、勋章与积分、家长锁态 + PIN 弹框、16 面板逐个渲染、移动端 390px。**UI 操作驱动、pinia store 校验结果**（分页/筛选不断言 DOM 数量）。用 `findChromium()` 取本机 chromium，不做 playwright install |
 
 ## CONVENTIONS
 
