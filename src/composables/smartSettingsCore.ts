@@ -9,11 +9,12 @@
 
 // ==================== 左侧菜单 ====================
 
-export const SMART_MENU_KEYS = ['overview', 'skills', 'prompts', 'workflows'] as const
+export const SMART_MENU_KEYS = ['overview', 'platforms', 'skills', 'prompts', 'workflows'] as const
 export type SmartMenuKey = (typeof SMART_MENU_KEYS)[number]
 
 export const SMART_MENU_DEFAULT_LABELS: Record<string, string> = {
   overview: '概览',
+  platforms: '智能网页端',
   skills: '技能管理',
   prompts: '提示词管理',
   workflows: '工作流管理'
@@ -21,6 +22,7 @@ export const SMART_MENU_DEFAULT_LABELS: Record<string, string> = {
 
 export const SMART_MENU_ICONS: Record<string, string> = {
   overview: 'chart',
+  platforms: 'link',
   skills: 'toolbox',
   prompts: 'notes',
   workflows: 'merge'
@@ -72,6 +74,17 @@ export function normalizeMenuData(raw: unknown): SmartMenuData {
   }
   // 未知/缺失的 key 按默认顺序补在后面，保证菜单不会缺项
   for (const k of SMART_MENU_KEYS) push(k)
+
+  // 一次性迁移：v1.1 之前保存的菜单没有 platforms，补在后面会排到末尾。
+  // 这里把它挪到「概览」之后，保持「入口门户」的位置语义；用户之后仍可自行拖动。
+  const rawOrder = Array.isArray(o.order) ? o.order : []
+  if (rawOrder.length > 0 && !rawOrder.includes('platforms')) {
+    const i = order.indexOf('platforms')
+    if (i > 1) {
+      order.splice(i, 1)
+      order.splice(1, 0, 'platforms')
+    }
+  }
 
   const labels: Record<string, string> = {}
   const rawLabels = (o.labels ?? {}) as Record<string, unknown>

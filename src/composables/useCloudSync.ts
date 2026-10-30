@@ -1260,7 +1260,14 @@ function mergeSmart(local: SmartSyncData, remote: SmartSyncData): SmartSyncData 
 }
 
 function mergeSmartPref(key: string, lv: string, rv: string): string {
-  if (key === 'smart-skills' || key === 'smart-prompts' || key === 'smart-workflows') {
+  if (
+    key === 'smart-skills' ||
+    key === 'smart-prompts' ||
+    key === 'smart-workflows' ||
+    // AI 平台是「可增删的记录集合」：必须按 id 合并（含墓碑），
+    // 否则两台设备各加一个平台时会互相覆盖（非白名单键直接保留本地整段）。
+    key === 'smart-ai-platforms'
+  ) {
     const merged = mergeSmartListById(lv, rv)
     if (merged !== null) return merged
   }
@@ -1304,7 +1311,16 @@ async function reloadSmartStores(): Promise<void> {
     const s = useSmartStore()
     // 先刷新内存里的 prefs（smart.json 写的是 IDB nav store，需重新读一遍）
     await useNavPrefs().refreshAfterImport()
-    await Promise.all([s.reloadSkills(), s.reloadPrompts(), s.reloadWorkflows(), s.reloadMenu(), s.reloadCategories(), s.reloadWorkflowCategories(), s.reloadPromptCategories()])
+    await Promise.all([
+      s.reloadSkills(),
+      s.reloadPrompts(),
+      s.reloadWorkflows(),
+      s.reloadMenu(),
+      s.reloadCategories(),
+      s.reloadWorkflowCategories(),
+      s.reloadPromptCategories(),
+      s.reloadPlatforms()
+    ])
   } catch {
     // store 未就绪（首次同步早于智能工作台挂载）→ 静默跳过，下次进入页面会从 IDB 自然读取
   }

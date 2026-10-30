@@ -200,7 +200,7 @@ export const VAR_PATTERN = /\{\{\s*([A-Za-z0-9_\u4e00-\u9fa5]{1,32})\s*\}\}/g
 // ==================== 通用小工具 ====================
 
 /** 生成 id：`sk_`/`pm_`/`wf_`/`img_` + 时间戳 + 随机后缀，避免同毫秒批量创建撞号 */
-export function makeSmartId(prefix: 'sk' | 'pm' | 'wf' | 'img'): string {
+export function makeSmartId(prefix: 'sk' | 'pm' | 'wf' | 'img' | 'ai'): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }
 

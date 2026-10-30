@@ -1551,6 +1551,7 @@ export interface BusinessSyncData {
  *   - smart-prompts：提示词库
  *   - smart-menu：左侧菜单顺序 / 改名 / 隐藏
  *   - smart-skill-categories：技能分类（含空分类）
+ *   - smart-ai-platforms：AI 平台入口列表（含墓碑，按 id 合并）
  * 值统一存字符串（与 nav.json 的 prefs 同构），解析失败由各 store 自行降级。
  */
 export interface SmartSyncData {
@@ -1742,6 +1743,57 @@ export interface SmartWorkflow {
   isBuiltIn?: boolean
   createdAt: number
   updatedAt: number
+}
+
+/**
+ * 智能网页端入口（智能工作台 · 「智能网页端」页签）
+ * ------------------------------------------------------------------
+ * 只记录**链接与标识**：不存密码 / 密钥 / Cookie / 登录态（登录由浏览器各自保持）。
+ * 与技能 / 提示词 / 工作流共用墓碑同步语义（deletedAt + ver + clientId），
+ * 因此可直接被 mergeSmartListById 按 id 合并。
+ *
+ * 云同步字段：name/url/group/icon/accountLabel/plan/note/pinned/isFavorite/order
+ * 本机使用痕迹：usageCount/lastOpenedAt（不推进 ver/updatedAt，不单独触发云推送）
+ */
+export interface AiPlatform {
+  /** 稳定 id：预置为 `ai_builtin_<builtinKey>`（跨设备一致），用户新增为 `ai_<ts>_<rand>` */
+  id: string
+  /** 展示名 */
+  name: string
+  /** 网页版地址，仅 https；非法协议归一化时置空（卡片降级为「链接无效」） */
+  url: string
+  /** 分组名（空值回落「未分组」） */
+  group: string
+  /** 图标：'' = 自动推断；'builtin:<name>' = 内联 SVG；其余按图片 URL 处理 */
+  icon: string
+  /** 账号标识（手机尾号 / 邮箱前缀 / 昵称），仅用于辨认 */
+  accountLabel: string
+  /** 套餐 / 订阅档位 */
+  plan: string
+  /** 备注 */
+  note: string
+  /** 置顶（置顶块恒在最前，内部再按 order） */
+  pinned: boolean
+  /** 收藏（与技能/提示词/工作流 ★ 同语义） */
+  isFavorite?: boolean
+  /** 排序值，单调递增；重排时整体重编号 0..n-1 */
+  order: number
+  /** 本机使用痕迹：累计打开次数 */
+  usageCount: number
+  /** 本机使用痕迹：最近一次打开时间（ms），null = 从未打开 */
+  lastOpenedAt: number | null
+  /** 预置标记（用于「恢复预置网页」与卡片角标） */
+  isBuiltIn?: boolean
+  /** 预置稳定键（qianwen / deepseek / kimi …），补种与去重依据 */
+  builtinKey?: string
+  createdAt: number
+  updatedAt: number
+  /** 墓碑（ISO）：非空 = 已删除；记录保留在数组里参与合并与推送 */
+  deletedAt?: string | null
+  /** Lamport 逻辑时钟 */
+  ver?: number
+  /** 版本相同者的稳定 tie-break */
+  clientId?: string
 }
 
 /** 导入导出信封：单条与集合包同构，kind 区分资产类型 */

@@ -9,6 +9,7 @@ import { computed, ref, watch } from 'vue'
 import Icon from '@/components/Icon.vue'
 import WorkbenchSwitcher from '@/components/WorkbenchSwitcher.vue'
 import SmartOverview from '@/components/smart/SmartOverview.vue'
+import AiPlatformManager from '@/components/smart/AiPlatformManager.vue'
 import SkillManager from '@/components/smart/SkillManager.vue'
 import PromptManager from '@/components/smart/PromptManager.vue'
 import WorkflowManager from '@/components/smart/WorkflowManager.vue'
@@ -18,7 +19,7 @@ import { useSmartStore } from '@/stores/smart'
 import { useCloudSync, type SyncStatus } from '@/composables/useCloudSync'
 import { useToast } from '@/composables/useToast'
 
-type PageKey = 'overview' | 'skills' | 'prompts' | 'workflows'
+type PageKey = 'overview' | 'platforms' | 'skills' | 'prompts' | 'workflows'
 
 const settingsStore = useAppSettingsStore()
 const store = useSmartStore()
@@ -42,6 +43,7 @@ const menuItems = computed<MenuItem[]>(() =>
     key: i.key as PageKey,
     label: i.label.replace(/管理/g, ''),
     icon: i.icon,
+    ...(i.key === 'platforms' ? { count: store.platforms.length } : {}),
     ...(i.key === 'skills' ? { count: store.skills.length } : {}),
     ...(i.key === 'prompts' ? { count: store.prompts.length } : {}),
     ...(i.key === 'workflows' ? { count: store.workflows.length } : {})
@@ -67,6 +69,7 @@ function selectPage(key: PageKey): void {
  *  KeepAlive 只接受一个子节点，不能再并列写 v-if 分支（会编译失败）。 */
 const activePageComponent = computed(() => {
   switch (activePage.value) {
+    case 'platforms': return AiPlatformManager
     case 'skills': return SkillManager
     case 'prompts': return PromptManager
     case 'workflows': return WorkflowManager

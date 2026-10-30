@@ -44,7 +44,19 @@ import {
   type SmartMenuData
 } from '@/composables/smartSettingsCore'
 import { markSmartExplicitDelete } from '@/composables/smartSyncGuard'
-import type { SmartEnvelope, SmartImportPreview, SmartPrompt, SmartSkill, SmartWorkflow } from '@/types'
+import {
+  PLATFORM_ACCOUNT_MAX,
+  PLATFORM_GROUP_MAX,
+  PLATFORM_NAME_MAX,
+  PLATFORM_NOTE_MAX,
+  PLATFORM_PLAN_MAX,
+  PLATFORM_UNGROUPED,
+  defaultAiPlatforms,
+  mergeDefaultPlatforms,
+  nextOrder,
+  normalizeAiPlatforms
+} from '@/composables/aiPlatformsCore'
+import type { AiPlatform, SmartEnvelope, SmartImportPreview, SmartPrompt, SmartSkill, SmartWorkflow } from '@/types'
 
 const SKILLS_KEY = 'smart-skills'
 const PROMPTS_KEY = 'smart-prompts'
@@ -57,6 +69,8 @@ const CATEGORIES_KEY = 'smart-skill-categories'
 const CATEGORIES_SEEDED_KEY = 'smart-skill-categories-seeded'
 /** 自定义工作流分类（允许存在还没有工作流挂上去的空分类） */
 const WORKFLOW_CATEGORIES_KEY = 'smart-workflow-categories'
+/** AI 平台入口（只存链接与标识，不存密码/密钥；按 id 参与云合并） */
+const PLATFORMS_KEY = 'smart-ai-platforms'
 
 /** 读取并归一化（解析失败降级为空数组，绝不抛错阻断页面） */
 function loadList<T>(key: string, normalize: (raw: unknown) => T[]): T[] {
@@ -115,9 +129,9 @@ export const useSmartStore = defineStore('smart', () => {
    * 连续点击用 2s 防抖合并成一次写入。
    */
   let usageTimer: ReturnType<typeof setTimeout> | null = null
-  const usageDirty = { skills: false, prompts: false, workflows: false }
+  const usageDirty = { skills: false, prompts: false, workflows: false, platforms: false }
 
-  function persistUsageSoon(kind: 'skills' | 'prompts' | 'workflows'): void {
+  function persistUsageSoon(kind: 'skills' | 'prompts' | 'workflows' | 'platforms'): void {
     usageDirty[kind] = true
     if (usageTimer) return
     usageTimer = setTimeout(() => {
@@ -125,9 +139,11 @@ export const useSmartStore = defineStore('smart', () => {
       if (usageDirty.skills) setPref(SKILLS_KEY, JSON.stringify(skills.value))
       if (usageDirty.prompts) setPref(PROMPTS_KEY, JSON.stringify(prompts.value))
       if (usageDirty.workflows) setPref(WORKFLOWS_KEY, JSON.stringify(workflows.value))
+      if (usageDirty.platforms) setPref(PLATFORMS_KEY, JSON.stringify(platformsAll.value))
       usageDirty.skills = false
       usageDirty.prompts = false
       usageDirty.workflows = false
+      usageDirty.platforms = false
     }, 2000)
   }
 
@@ -139,9 +155,11 @@ export const useSmartStore = defineStore('smart', () => {
     if (usageDirty.skills) setPref(SKILLS_KEY, JSON.stringify(skills.value))
     if (usageDirty.prompts) setPref(PROMPTS_KEY, JSON.stringify(prompts.value))
     if (usageDirty.workflows) setPref(WORKFLOWS_KEY, JSON.stringify(workflows.value))
+    if (usageDirty.platforms) setPref(PLATFORMS_KEY, JSON.stringify(platformsAll.value))
     usageDirty.skills = false
     usageDirty.prompts = false
     usageDirty.workflows = false
+    usageDirty.platforms = false
   }
   usageFlusher = flushUsageCounters
 
@@ -170,7 +188,175 @@ export const useSmartStore = defineStore('smart', () => {
       workflows.value = w.kept
       persistWorkflows()
     }
+    const pl = gcSmartTombstones(platformsAll.value, now)
+    if (pl.purged) {
+      purged += pl.purged
+      platformsAll.value = pl.kept
+      persistPlatforms()
+    }
     return purged
+  }
+
+
+  // ==================== AI 平台入口 ====================
+
+  /**
+   * 全量数组（含墓碑）：落库与云合并都用它；对外暴露的 platforms 是剔除墓碑后的展示视图。
+   * ⚠ 顺序不可颠倒：合并（含墓碑）→ 落库 → 再 activeSmart() 过滤展示。
+   */
+  const platformsAll = ref<AiPlatform[]>(loadPlatforms())
+
+  /**
+   * 首次读取：键不存在 → 播种预置 10 家并落库（戳固定为 PLATFORM_SEED_AT=1）。
+   * 解析失败 → 只在内存回落默认值、**不落盘**（避免把损坏数据覆盖成默认值，等云拉取或用户编辑）。
+   */
+  function loadPlatforms(): AiPlatform[] {
+    const raw = getPref(PLATFORMS_KEY)
+    if (raw === null) {
+      const seeded = defaultAiPlatforms()
+      save(PLATFORMS_KEY, seeded)
+      return seeded
+    }
+    try {
+      return normalizeAiPlatforms(JSON.parse(raw))
+    } catch {
+      console.warn('[smart] AI 平台列表解析失败，内存回落默认值（不落盘）')
+      return defaultAiPlatforms()
+    }
+  }
+
+  const platforms = computed(() => activeSmart(platformsAll.value))
+
+  function persistPlatforms(): void {
+    save(PLATFORMS_KEY, platformsAll.value)
+  }
+
+  async function reloadPlatforms(): Promise<void> {
+    platformsAll.value = loadPlatforms()
+  }
+
+  /** 按 code point 截断，避免中文/emoji 被切断 */
+  function clampText(text: string, max: number): string {
+    const chars = [...text]
+    return chars.length > max ? chars.slice(0, max).join('') : text
+  }
+
+  function addPlatform(input: Partial<AiPlatform>): string | null {
+    const id = typeof input.id === 'string' && input.id ? input.id : makeSmartId('ai')
+    const now = Date.now()
+    const name = clampText(String(input.name ?? '').trim(), PLATFORM_NAME_MAX)
+    if (!name) return null
+    platformsAll.value.push({
+      id,
+      name,
+      url: String(input.url ?? '').trim(),
+      group: clampText(String(input.group ?? '').trim(), PLATFORM_GROUP_MAX) || PLATFORM_UNGROUPED,
+      icon: String(input.icon ?? '').trim(),
+      accountLabel: clampText(String(input.accountLabel ?? '').trim(), PLATFORM_ACCOUNT_MAX),
+      plan: clampText(String(input.plan ?? '').trim(), PLATFORM_PLAN_MAX),
+      note: clampText(String(input.note ?? '').trim(), PLATFORM_NOTE_MAX),
+      pinned: input.pinned === true,
+      isFavorite: input.isFavorite === true,
+      order: nextOrder(platformsAll.value),
+      usageCount: 0,
+      lastOpenedAt: null,
+      createdAt: now,
+      updatedAt: now
+    })
+    persistPlatforms()
+    return id
+  }
+
+  /** 编辑：推进 ver + updatedAt（与 updateSkill 同理，否则会被对端墓碑判旧而丢失） */
+  function updatePlatform(id: string, input: Partial<AiPlatform>): boolean {
+    const i = platformsAll.value.findIndex(p => p.id === id)
+    if (i === -1) return false
+    const prev = platformsAll.value[i]
+    const next: AiPlatform = {
+      ...prev,
+      ...(input.name !== undefined ? { name: clampText(input.name.trim(), PLATFORM_NAME_MAX) } : {}),
+      ...(input.url !== undefined ? { url: input.url.trim() } : {}),
+      ...(input.group !== undefined
+        ? { group: clampText(input.group.trim(), PLATFORM_GROUP_MAX) || PLATFORM_UNGROUPED }
+        : {}),
+      ...(input.icon !== undefined ? { icon: input.icon.trim() } : {}),
+      ...(input.accountLabel !== undefined
+        ? { accountLabel: clampText(input.accountLabel.trim(), PLATFORM_ACCOUNT_MAX) }
+        : {}),
+      ...(input.plan !== undefined ? { plan: clampText(input.plan.trim(), PLATFORM_PLAN_MAX) } : {}),
+      ...(input.note !== undefined ? { note: clampText(input.note.trim(), PLATFORM_NOTE_MAX) } : {}),
+      ...(input.pinned !== undefined ? { pinned: input.pinned } : {}),
+      ...(input.isFavorite !== undefined ? { isFavorite: input.isFavorite } : {}),
+      ver: (prev.ver ?? 0) + 1,
+      updatedAt: Date.now()
+    }
+    platformsAll.value[i] = next
+    persistPlatforms()
+    return true
+  }
+
+  /**
+   * 删除 = 写墓碑（保留记录 + ver 前进），**不物理移除**，否则对端并集会把这条当新增补回来。
+   * ⚠ 刻意不调用 markSmartExplicitDelete()：那是「三库退化拦截」的放行阀，
+   *   删一个平台不该顺带解除技能库的清空保护。
+   */
+  function deletePlatform(id: string): boolean {
+    const i = platformsAll.value.findIndex(p => p.id === id)
+    if (i === -1 || platformsAll.value[i].deletedAt) return false
+    platformsAll.value[i] = markSmartDeleted(platformsAll.value[i])
+    persistPlatforms()
+    return true
+  }
+
+  function togglePlatformPinned(id: string): void {
+    const p = platformsAll.value.find(x => x.id === id)
+    if (!p) return
+    updatePlatform(id, { pinned: !p.pinned })
+  }
+
+  function togglePlatformFavorite(id: string): void {
+    const p = platformsAll.value.find(x => x.id === id)
+    if (!p) return
+    updatePlatform(id, { isFavorite: !p.isFavorite })
+  }
+
+  /** 重排：按传入 id 顺序整体重编号（0..n-1），未列出的保持相对顺序落在末尾 */
+  function reorderPlatforms(orderedIds: string[]): void {
+    const rank = new Map(orderedIds.map((id, i) => [id, i]))
+    const sorted = [...platformsAll.value].sort((a, b) => {
+      const ra = rank.get(a.id)
+      const rb = rank.get(b.id)
+      if (ra === undefined && rb === undefined) return a.order - b.order
+      if (ra === undefined) return 1
+      if (rb === undefined) return -1
+      return ra - rb
+    })
+    sorted.forEach((p, i) => {
+      p.order = i
+    })
+    platformsAll.value = sorted
+    persistPlatforms()
+  }
+
+  /** 恢复预置：只补缺失的 builtinKey，跳过仍有墓碑的记录（不会立刻复活） */
+  function restoreDefaultPlatforms(): number {
+    const before = platformsAll.value.length
+    platformsAll.value = mergeDefaultPlatforms(platformsAll.value)
+    const added = platformsAll.value.length - before
+    if (added > 0) persistPlatforms()
+    return added
+  }
+
+  /**
+   * 打开即计数：只改本机痕迹，**不推进 ver/updatedAt、不 markDirty**，2s 防抖落盘。
+   * 理由同 touchSkill：每次点击都推 smart.json 会让含 base64 的技能包整包重传。
+   */
+  function reportPlatformOpened(id: string): void {
+    const p = platformsAll.value.find(x => x.id === id)
+    if (!p) return
+    p.usageCount += 1
+    p.lastOpenedAt = Date.now()
+    persistUsageSoon('platforms')
   }
 
   // ==================== 左侧菜单配置 ====================
@@ -1001,6 +1187,17 @@ export const useSmartStore = defineStore('smart', () => {
     commitWorkflowImport,
     replaceSkills,
     replacePrompts,
-    replaceWorkflows
+    replaceWorkflows,
+    // ===== AI 平台入口 =====
+    platforms,
+    reloadPlatforms,
+    addPlatform,
+    updatePlatform,
+    deletePlatform,
+    togglePlatformPinned,
+    togglePlatformFavorite,
+    reorderPlatforms,
+    restoreDefaultPlatforms,
+    reportPlatformOpened
   }
 })
