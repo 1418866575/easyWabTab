@@ -47,9 +47,10 @@
   --color-surface-2: #f8fafc;
   --color-hover: #f1f5f9;
   --color-primary-soft: rgba(59, 130, 246, 0.10);
-  /* 焦点环：输入框/可聚焦控件的 3px 外环（与 .ui-input:focus-visible 同一视觉，
-     供各组件复用，避免散落硬编码 rgba） */
+  /* 焦点环：跟随 accent 主色（红主题出红环、蓝主题出蓝环）。
+     上一行是不支持 color-mix 时的兜底（浏览器会丢弃无法解析的声明，保留这条）。 */
   --color-primary-ring: rgba(59, 130, 246, 0.35);
+  --color-primary-ring: color-mix(in srgb, var(--color-primary) 35%, transparent);
   --color-border-strong: #cbd5e1;
 
   --color-shadow: rgba(0, 0, 0, 0.08);

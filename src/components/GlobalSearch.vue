@@ -301,11 +301,38 @@ function openSite(url: string) {
 .global-search {
   gap: 0;
   width: 100%;
+  /* 外壳不加统一内边距：由引擎选择 / 输入 / 按钮各自控制，右侧按钮才能贴合圆角 */
+  padding: 0;
   overflow: visible;
 }
 
 .engine-select {
-  min-width: 110px;
+  /* 引擎选择按内容自适应、**不参与 flex 分配**：全局内层规则给的是 flex:1，
+     会导致它和输入框各占一半宽度（「下拉框太宽」的根因）。
+     去原生箭头换自绘 chevron，右侧加分隔线，与输入区分开。 */
+  flex: none;
+  width: auto;
+  min-width: 92px;
+  max-width: 132px;
+  padding: 0 24px 0 14px;
+  border: 0;
+  border-right: 1px solid var(--color-border);
+  border-radius: 0;
+  background-color: transparent;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  appearance: none;
+  -webkit-appearance: none;
+  color: var(--color-text-secondary);
+  font-size: var(--input-font-size);
+  cursor: pointer;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.engine-select:hover {
+  color: var(--color-primary);
 }
 
 
@@ -317,17 +344,19 @@ function openSite(url: string) {
 
 .search-input {
   width: 100%;
+  padding: 0 var(--space-3, 12px);
 }
 
 
 
 .search-input::placeholder {
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
-/* 按钮撑满外壳高度（外壳决定 44px），右侧圆角与外壳一致，配色走 token */
+/* 按钮内嵌 4px：外壳 44px、按钮 36px，圆角比外壳小 2px，形成搜索条的「框中框」 */
 .search-btn {
   align-self: stretch;
+  margin: 3px 3px 3px 0;
   padding: 0 var(--space-5, 20px);
   border: none;
   background-color: var(--color-primary);
@@ -335,7 +364,7 @@ function openSite(url: string) {
   font-size: 18px;
   cursor: pointer;
   transition: background-color var(--motion-duration, 220ms) var(--motion-ease, ease);
-  border-radius: 0 var(--input-radius) var(--input-radius) 0;
+  border-radius: calc(var(--input-radius) - 2px);
 }
 
 .search-btn:hover {
@@ -537,10 +566,11 @@ html.dark .site-category {
     max-width: 100%;
   }
 
-  /* 外壳改变高度，内层不再用 padding 撑高（否则会把外壳顶高） */
+  /* 外壳决定高度，内层不再用 padding 撑高（否则会把外壳顶高） */
   .engine-select {
-    min-width: 80px;
-    padding: 0 var(--space-3, 12px);
+    min-width: 76px;
+    max-width: 104px;
+    padding: 0 22px 0 10px;
   }
 
   .search-input {
