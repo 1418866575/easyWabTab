@@ -404,26 +404,10 @@ const sortedCustomCategories = computed(() =>
 
 /* 分类名输入框：对齐全局 .ui-input（36px 高 / 8px 圆角 / 同款焦点环）。
    原来只有 flex:1，没有任何外观样式，落到浏览器原生输入框（直角 + 13.33px 字） */
+/* 输入框视觉统一到全局 .ui-input（别名列表已含 .name-input），这里只保留布局 */
 .name-input {
   flex: 1;
   min-width: 0;
-  box-sizing: border-box;
-  min-height: 36px;
-  padding: 0 var(--space-3, 12px);
-  color: var(--color-text);
-  background-color: var(--color-bg-input, var(--color-bg-card));
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md, 8px);
-  font-size: var(--font-size-sm, 13px);
-  transition:
-    border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
-    box-shadow var(--motion-duration, 220ms) var(--motion-ease, ease);
-}
-
-.name-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-ring, rgba(59, 130, 246, 0.35));
 }
 
 .btn-add {
@@ -535,12 +519,7 @@ const sortedCustomCategories = computed(() =>
   margin-right: 8px;
 }
 
-.edit-input {
-  padding: 6px 8px;
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
-  font-size: 14px;
-}
+/* 输入框视觉统一到全局 .ui-input（别名列表已含 .edit-input） */
 
 .edit-input.icon-input {
   width: 40px;

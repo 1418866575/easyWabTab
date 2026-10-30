@@ -21,31 +21,12 @@
 }
 .tu-row > .tu-label { margin-bottom: 0; }
 
+/* 输入框视觉统一到全局 .ui-input / .ui-textarea（src/style.css 的别名列表已含 .tu-input/.tu-textarea），
+   此处只保留工具箱特有的布局：满宽、行内窄宽。
+   不要在此再写 border/background/radius/font-size/焦点环 —— 会与全局规范打架。 */
 .tu-input,
 .tu-textarea {
   width: 100%;
-  min-height: 36px;
-  padding: 8px 10px;
-  font-size: 13px;
-  font-family: var(--font-family);
-  color: var(--color-text);
-  background: var(--color-bg-input);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  transition: border-color var(--motion-duration) var(--motion-ease),
-    box-shadow var(--motion-duration) var(--motion-ease);
-}
-.tu-input:focus,
-.tu-textarea:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-soft);
-}
-.tu-textarea {
-  min-height: 120px;
-  resize: vertical;
-  line-height: 1.5;
-  font-family: var(--font-family-mono);
 }
 .tu-inline { width: auto; min-width: 90px; }
 

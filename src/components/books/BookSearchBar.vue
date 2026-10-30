@@ -88,32 +88,14 @@ defineExpose({ focus: () => inputRef.value?.focus() })
   margin-bottom: var(--space-4, 16px);
 }
 .bk-search {
-  display: flex;
-  align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 10px 14px;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  transition: border-color var(--motion-duration) var(--motion-ease),
-    box-shadow var(--motion-duration) var(--motion-ease);
 }
-.bk-search:focus-within {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-soft);
-}
+
 .bk-search-icon { color: var(--color-text-muted); flex: none; }
 .bk-search-input {
   flex: 1;
   min-width: 0;
-  border: none;
-  outline: none;
-  background: transparent;
-  color: var(--color-text);
-  font-size: var(--font-size-base);
-  font-family: var(--font-family);
 }
 /* 原生 type=search 的清除叉与自带的 ✕ 重复，且样式各浏览器不一，隐藏掉 */
 .bk-search-input::-webkit-search-cancel-button { display: none; }

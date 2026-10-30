@@ -89,26 +89,27 @@ html.dark .category-wrapper {
 }
 
 
-/* 输入框 - 修复白色问题 */
-html.dark input,
-html.dark textarea,
+/* 输入框暗色兜底 —— 只兜「没有 class 的原生控件」。
+   排除项说明：
+   1) checkbox/radio/range/color/file 不是文本输入，填底色会盖掉自绘外观；
+   2) .el-input__inner / .el-textarea__inner 是 Element Plus 的内部输入，必须保持透明，
+      底色由 .el-input__wrapper 承担（见 element-theme.css 的 EP 桥接块），
+      否则暗色下 el-input 会被填成 #374151、而 el-select 仍是卡面色，同表两种底色；
+   3) 去掉 !important：带 class 的输入框由 .ui-input 基类（后置、同特异性）接管，
+      保留 !important 会压死各组件合法的局部覆盖。
+   4) 不再在这里画焦点环：原生走 .ui-input:focus-visible 的 3px 环，
+      EP 走 .el-input__wrapper.is-focus —— 两处都画就会叠成双环。 */
+html.dark input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not(.el-input__inner),
+html.dark textarea:not(.el-textarea__inner),
 html.dark select {
-  background-color: var(--color-bg-input) !important;
-  border-color: var(--color-border) !important;
-  color: var(--color-text) !important;
-}
-
-html.dark input:focus,
-html.dark textarea:focus,
-html.dark select:focus {
-  border-color: var(--color-primary) !important;
-  background-color: var(--color-bg-input) !important;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  background-color: var(--color-bg-input);
+  border-color: var(--color-border);
+  color: var(--color-text);
 }
 
 html.dark input::placeholder,
 html.dark textarea::placeholder {
-  color: var(--color-text-muted) !important;
+  color: var(--color-text-muted);
 }
 
 /* 网站卡片 - 修复白色问题 */
@@ -208,9 +209,9 @@ html.dark .form-group label {
 html.dark .form-group input,
 html.dark .form-group textarea,
 html.dark .form-group select {
-  background-color: var(--color-bg-input) !important;
-  border-color: var(--color-border) !important;
-  color: var(--color-text) !important;
+  background-color: var(--color-bg-input);
+  border-color: var(--color-border);
+  color: var(--color-text);
 }
 
 /* 搜索引擎选择器 */
@@ -612,33 +613,6 @@ html.dark .tag-suggestion:hover {
   color: white;
 }
 
-
-/* ========================================
-   全局修复
-   ======================================== */
-
-/* 确保所有 scoped 组件中的输入框也是暗色 */
-html.dark input,
-html.dark textarea,
-html.dark select {
-  background-color: var(--color-bg-input) !important;
-  border-color: var(--color-border) !important;
-  color: var(--color-text) !important;
-}
-
-/* 输入框聚焦 */
-html.dark input:focus,
-html.dark textarea:focus,
-html.dark select:focus {
-  border-color: var(--color-primary) !important;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-}
-
-/* 占位符 */
-html.dark input::placeholder,
-html.dark textarea::placeholder {
-  color: var(--color-text-muted) !important;
-}
 
 /* ========================================
    骨架屏暗色模式

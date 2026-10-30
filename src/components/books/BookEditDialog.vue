@@ -175,19 +175,9 @@ async function onSave(): Promise<void> {
   color: var(--color-error, #ef4444);
   font-style: normal;
 }
+/* 输入框视觉统一到全局 .ui-input，这里只保留宽度 */
 .bk-input {
   width: 100%;
-  height: 32px;
-  padding: 0 10px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  background-color: var(--color-bg-input, #ffffff);
-  color: var(--color-text, #0f172a);
-  font-size: var(--font-size-sm, 13px);
-}
-.bk-input:focus-visible {
-  outline: 2px solid var(--color-primary, #3b82f6);
-  outline-offset: 1px;
 }
 .bk-form-note {
   margin: 0;

@@ -295,7 +295,7 @@ function usedSiteNames(icon: MergedIcon): string {
         <input
           v-model="searchQuery"
           type="text"
-          class="search-input"
+          class="ui-input icon-search-input"
           placeholder="搜索图标名称..."
         />
       </div>
@@ -423,25 +423,9 @@ function usedSiteNames(icon: MergedIcon): string {
   margin-bottom: 12px;
 }
 
-.search-input {
+/* 输入框视觉统一到全局 .ui-input，这里只保留宽度 */
+.icon-search-input {
   width: 100%;
-  box-sizing: border-box;
-  min-height: 36px;
-  padding: 0 var(--space-3, 12px);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  background-color: var(--color-bg-input, var(--color-bg-card));
-  color: var(--color-text);
-  font-size: var(--font-size-sm, 13px);
-  outline: none;
-  transition:
-    border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
-    box-shadow var(--motion-duration, 220ms) var(--motion-ease, ease);
-}
-
-.search-input:focus {
-  border-color: var(--color-primary, #3b82f6);
-  box-shadow: 0 0 0 3px var(--color-primary-ring, rgba(59, 130, 246, 0.35));
 }
 
 /* 分类选项卡 */
@@ -597,19 +581,11 @@ function usedSiteNames(icon: MergedIcon): string {
 }
 
 /* 编辑输入 */
+/* 输入框视觉统一到全局 .ui-input，这里只保留布局与居中 */
 .edit-input {
   width: 100%;
-  padding: 6px 8px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 4px;
-  font-size: 12px;
   text-align: center;
   margin-bottom: 4px;
-}
-
-.edit-input:focus {
-  border-color: var(--color-primary, #3b82f6);
-  outline: none;
 }
 
 /* 按钮 */

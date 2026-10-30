@@ -4586,21 +4586,9 @@ html.dark .tab-btn.active {
   gap: 6px;
 }
 
+/* 数字输入：视觉统一到全局 .ui-input（别名已含 .num-input），这里只保留宽度 */
 .num-input {
   width: 90px;
-  padding: 6px 8px;
-  background-color: var(--color-bg-input, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  color: var(--color-text, var(--color-text));
-  box-sizing: border-box;
-  transition: border-color var(--transition-fast, 0.15s ease);
-}
-
-.num-input:focus {
-  outline: none;
-  border-color: var(--color-primary, var(--color-primary));
 }
 
 .unit {
@@ -4848,26 +4836,10 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
 
 /* 行内文本输入：对齐全局 .ui-input 的规格（36px 高 / 8px 圆角 / 同款焦点环），
    原先 29px 高 + 4px 圆角，和右侧按钮同排时矮一截、圆角也不一致 */
+/* 行内文本输入：视觉统一到全局 .ui-input（别名已含 .wb-menu-name-input），这里只保留布局 */
 .wb-menu-name-input {
   flex: 1;
   min-width: 0;
-  box-sizing: border-box;
-  min-height: 36px;
-  padding: 0 var(--space-3, 12px);
-  font-size: var(--font-size-sm, 13px);
-  color: var(--color-text);
-  background-color: var(--color-bg-input, var(--color-bg-card));
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md, 8px);
-  transition:
-    border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
-    box-shadow var(--motion-duration, 220ms) var(--motion-ease, ease);
-}
-
-.wb-menu-name-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-ring, rgba(59, 130, 246, 0.35));
 }
 
 /* 入口图标按钮：显示当前图标缩略图（未设置时为占位图标），点击从图标管理库选择 */
@@ -5672,22 +5644,10 @@ html.dark .ld-builtin-tag {
 html.dark .settings-rail { background-color: rgba(255, 255, 255, 0.03); }
 
 .rail-search {
-  display: flex;
-  align-items: center;
   gap: 6px;
-  padding: 7px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background-color: var(--color-bg-card);
-  color: var(--color-text-muted);
   margin-bottom: 14px;
 }
 .rail-search-input {
-  border: none;
-  outline: none;
-  background: transparent;
-  font-size: 13px;
-  color: var(--color-text);
   width: 100%;
 }
 .rail-search-input::placeholder { color: var(--color-text-muted); }

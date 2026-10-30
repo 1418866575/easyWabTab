@@ -64,6 +64,28 @@
   --color-border-hover: #cbd5e1;
   --color-border-focus: #3b82f6;
 
+  /* ===== 输入控件规格（input / textarea / select 共用，全站唯一来源）=====
+     尺寸两档 + 一个大号特例；字号用**固定值**而不用 --font-size-base
+     （后者是 clamp(15px,…,16px)，会让输入文字随视口漂移）。
+     底色/边框/焦点环一律引用既有 --color-*，accent 主题与暗色自动跟随。 */
+  --input-height: 36px;
+  --input-height-sm: 32px;
+  --input-height-lg: 44px;
+  --input-padding-x: 12px;
+  --input-padding-x-sm: 10px;
+  --input-padding-x-lg: 16px;
+  --input-font-size: 14px;
+  --input-font-size-sm: 13px;
+  --input-font-size-lg: 15px;
+  --input-radius: var(--radius-md);
+  --input-bg: var(--color-bg-input);
+  --input-border-color: var(--color-border);
+  --input-border-color-hover: var(--color-border-hover);
+  --input-border-color-focus: var(--color-primary);
+  --input-ring: 0 0 0 3px var(--color-primary-ring);
+  --input-ring-sm: 0 0 0 2px var(--color-primary-ring);
+  --input-ring-error: 0 0 0 3px var(--color-error-soft);
+
   /* 中性灰阶（Slate 50-900，集中管理文字/边框/背景，亮暗共用变量名） */
   --color-slate-50:  #f8fafc;
   --color-slate-100: #f1f5f9;
@@ -506,28 +528,257 @@ body {
   gap: 12px;
 }
 
-.ui-input {
-  min-height: 36px;
-  padding: 8px 12px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  background-color: var(--color-bg-input, #f1f5f9);
-  color: var(--color-text, #1e293b);
-  font-size: var(--font-size-base, 15px);
+/* ============================================================
+   输入控件统一基类（含全部旧 class 别名，范本同 .ui-btn）
+   ------------------------------------------------------------
+   规格：浅灰底 + 1px 描边；36 / 32 / 44 三档；8px 圆角；3px 焦点环。
+   实现要点：
+   1) 用 height 定高 + padding 只管左右，而不是「padding 撑高」——
+      后者在字体 fallback / 用户缩放时高度会漂（存量 .form-input 的 38px 就是这么来的）。
+   2) 不写 width：不少别名类本身承担 flex/width 布局，全局写 100% 会把工具栏窄输入撑满。
+   3) 视觉属性全部收在这里；各组件 scoped 里只保留布局（flex/min-width/width/margin）。
+   ============================================================ */
+.ui-input,
+.form-input,
+.wb-menu-name-input,
+.edit-input,
+.tu-input,
+.bk-input, .bk-edit-input, .bk-bm-input,
+.ipd-search, .num-input,
+.dm-name-input, .dm-edit-name, .dm-icon-input, .dm-edit-icon,
+.djm-input, .djm-edit,
+.ob-birthday-input, .dj-title-input,
+.name-input, .input-name, .input-url, .input-query, .built-in-url,
+.wm-text-input,
+.bf-select {
+  box-sizing: border-box;
+  height: var(--input-height);
+  min-height: var(--input-height);
+  padding: 0 var(--input-padding-x);
+  font-family: var(--font-family);
+  font-size: var(--input-font-size);
+  line-height: 1.4;
+  color: var(--color-text);
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border-color);
+  border-radius: var(--input-radius);
+  transition:
+    border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    box-shadow var(--motion-duration, 220ms) var(--motion-ease, ease),
+    background-color var(--motion-duration, 220ms) var(--motion-ease, ease);
+}
+
+.ui-input::placeholder,
+.form-input::placeholder,
+.wb-menu-name-input::placeholder,
+.edit-input::placeholder,
+.tu-input::placeholder,
+.name-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* hover：仅在非禁用、非聚焦时提描边（聚焦时已是主色描边 + 环，不必叠加） */
+.ui-input:hover:not(:disabled):not(:focus),
+.form-input:hover:not(:disabled):not(:focus),
+.wb-menu-name-input:hover:not(:disabled):not(:focus),
+.edit-input:hover:not(:disabled):not(:focus),
+.tu-input:hover:not(:disabled):not(:focus),
+.name-input:hover:not(:disabled):not(:focus) {
+  border-color: var(--input-border-color-hover);
+}
+
+/* 焦点：主色描边 + 3px 淡色外环（对白底边框 ≈3.7:1，满足 WCAG 2.2 焦点外观 ≥3:1） */
+.ui-input:focus-visible,
+.form-input:focus-visible,
+.wb-menu-name-input:focus-visible,
+.edit-input:focus-visible,
+.tu-input:focus-visible,
+.name-input:focus-visible,
+.bk-input:focus-visible, .bk-edit-input:focus-visible,
+.ipd-search:focus-visible, .num-input:focus-visible,
+.dm-name-input:focus-visible, .djm-input:focus-visible,
+.ob-birthday-input:focus-visible, .dj-title-input:focus-visible,
+.sp-input:focus-visible, .input-name:focus-visible,
+.input-url:focus-visible, .input-query:focus-visible {
+  outline: none;
+  border-color: var(--input-border-color-focus);
+  box-shadow: var(--input-ring);
+}
+
+.ui-input:disabled,
+.form-input:disabled,
+.wb-menu-name-input:disabled,
+.edit-input:disabled,
+.tu-input:disabled,
+.name-input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background-color: var(--color-bg-hover);
+}
+
+/* 只读：保留浅灰底，去掉可编辑暗示（不动描边，避免与禁用混淆） */
+.ui-input[readonly],
+.form-input[readonly],
+.tu-input[readonly] {
+  cursor: default;
+  color: var(--color-text-secondary);
+}
+
+/* 错误态：aria-invalid 为契约，.is-invalid 兼容手写弹框 */
+.ui-input[aria-invalid='true'],
+.ui-input.is-invalid,
+.form-input[aria-invalid='true'] {
+  border-color: var(--color-error);
+}
+.ui-input[aria-invalid='true']:focus-visible,
+.ui-input.is-invalid:focus-visible {
+  box-shadow: var(--input-ring-error);
+}
+
+/* —— 小号 32px / 13px（密集表格、行内编辑） —— */
+.ui-input--sm {
+  height: var(--input-height-sm);
+  min-height: var(--input-height-sm);
+  padding: 0 var(--input-padding-x-sm);
+  font-size: var(--input-font-size-sm);
+}
+.ui-input--sm:focus-visible {
+  box-shadow: var(--input-ring-sm);
+}
+
+/* —— 大号 44px / 15px（门户级搜索等特例） —— */
+.ui-input--lg {
+  height: var(--input-height-lg);
+  min-height: var(--input-height-lg);
+  padding: 0 var(--input-padding-x-lg);
+  font-size: var(--input-font-size-lg);
+}
+
+/* ============================================================
+   多行输入：与单行共用视觉，但不定高、要有纵向内边距、可竖向拖拽
+   （textarea 类只能出现在这里，不得混进上面的单行别名列表，否则无法增高）
+   ============================================================ */
+.ui-textarea,
+.tu-textarea,
+.be-textarea, .ba-textarea, .bs-textarea, .bk-bm-textarea {
+  box-sizing: border-box;
+  height: auto;
+  min-height: 96px;
+  padding: var(--space-2, 8px) var(--input-padding-x);
+  font-family: var(--font-family);
+  font-size: var(--input-font-size);
+  line-height: 1.6;
+  color: var(--color-text);
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border-color);
+  border-radius: var(--input-radius);
+  resize: vertical;
   transition:
     border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
     box-shadow var(--motion-duration, 220ms) var(--motion-ease, ease);
 }
-
-/* 自定义焦点环：主色边框（对白底 ≈3.7:1，满足 WCAG 2.2 焦点外观 ≥3:1）+ 淡蓝外环 */
-.ui-input:focus-visible {
+.tu-textarea {
+  min-height: 120px;
+  line-height: 1.5;
+  font-family: var(--font-family-mono);
+}
+.ui-textarea:focus-visible,
+.tu-textarea:focus-visible,
+.be-textarea:focus-visible,
+.ba-textarea:focus-visible,
+.bs-textarea:focus-visible,
+.bk-bm-textarea:focus-visible {
   outline: none;
-  border-color: var(--color-primary, #3b82f6);
-  box-shadow: 0 0 0 3px var(--color-primary-ring, rgba(59, 130, 246, 0.35));
+  border-color: var(--input-border-color-focus);
+  box-shadow: var(--input-ring);
+}
+.ui-textarea::placeholder,
+.tu-textarea::placeholder {
+  color: var(--color-text-muted);
 }
 
-.ui-input[aria-invalid='true'] {
-  border-color: var(--color-error, #ef4444);
+/* ============================================================
+   搜索框：外壳 + 透明内层
+   描边/底色/焦点环都在外壳上（:focus-within 触发），内层必须彻底去掉
+   边框与背景 —— 否则就是「壳一层框 + 内层再一层框」的双框。
+   注意：.ui-search-input 绝不能出现在上面的单行别名列表里。
+   ============================================================ */
+.ui-search,
+.global-search, .sp-search, .ws-search, .tb-search, .bk-search, .bf-search,
+.sm-search, .wm-search, .pm-search, .nav-site-filter, .rail-search, .tsp-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  box-sizing: border-box;
+  min-height: var(--input-height);
+  padding: 0 var(--input-padding-x);
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border-color);
+  border-radius: var(--input-radius);
+  transition:
+    border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    box-shadow var(--motion-duration, 220ms) var(--motion-ease, ease);
+}
+.ui-search:hover,
+.global-search:hover, .sp-search:hover, .ws-search:hover, .tb-search:hover, .bk-search:hover, .bf-search:hover,
+.sm-search:hover, .wm-search:hover, .pm-search:hover, .nav-site-filter:hover, .rail-search:hover, .tsp-search:hover {
+  border-color: var(--input-border-color-hover);
+}
+.ui-search:focus-within,
+.global-search:focus-within, .sp-search:focus-within, .ws-search:focus-within, .tb-search:focus-within,
+.bk-search:focus-within, .bf-search:focus-within, .sm-search:focus-within, .wm-search:focus-within,
+.pm-search:focus-within, .nav-site-filter:focus-within, .rail-search:focus-within, .tsp-search:focus-within {
+  border-color: var(--input-border-color-focus);
+  box-shadow: var(--input-ring);
+}
+.ui-search--lg,
+.global-search {
+  min-height: var(--input-height-lg);
+  padding: 0 var(--input-padding-x-lg);
+}
+.ui-search--sm {
+  min-height: var(--input-height-sm);
+  padding: 0 var(--input-padding-x-sm);
+}
+
+/* 外壳内的输入必须彻底透明：边框/底色/焦点环都在外壳上，
+   否则就是「壳一层框 + 内层再一层框」的双框。 */
+.ui-search-input,
+.search-input, .sp-input, .ws-input, .tb-search-input, .bk-search-input, .bf-search-input,
+.sm-search-input, .wm-search-input, .pm-search-input, .nsf-input, .rail-search-input, .tsp-input,
+.engine-select {
+  flex: 1;
+  min-width: 0;
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--input-font-size);
+  /* 焦点环由外层 :focus-within 承担，这里显式清掉以免双重 */
+  box-shadow: none;
+}
+.ui-search-input::placeholder,
+.search-input::placeholder, .sp-input::placeholder, .ws-input::placeholder,
+.tb-search-input::placeholder, .bk-search-input::placeholder, .bf-search-input::placeholder,
+.sm-search-input::placeholder, .wm-search-input::placeholder, .pm-search-input::placeholder,
+.nsf-input::placeholder, .rail-search-input::placeholder, .tsp-input::placeholder {
+  color: var(--color-text-muted);
+}
+.ui-search-input:focus,
+.ui-search-input:focus-visible,
+.search-input:focus, .search-input:focus-visible,
+.sp-input:focus, .sp-input:focus-visible,
+.ws-input:focus, .ws-input:focus-visible,
+.tb-search-input:focus, .bk-search-input:focus, .bf-search-input:focus,
+.sm-search-input:focus, .wm-search-input:focus, .pm-search-input:focus,
+.nsf-input:focus, .rail-search-input:focus, .tsp-input:focus {
+  outline: 0;
+  box-shadow: none;
+  background: transparent;
 }
 
 /* 可叠加微交互工具类（任意元素直接加 class 即生效） */

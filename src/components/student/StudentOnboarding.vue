@@ -248,14 +248,7 @@ function stageNameOf(s: StudentStage): string {
   font-weight: 500;
   white-space: nowrap;
 }
-.ob-birthday-input {
-  padding: 4px 8px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 6px;
-  font-size: 13px;
-  color: inherit;
-  background: var(--color-surface, #fff);
-}
+/* 输入框视觉统一到全局 .ui-input（别名列表已含 .ob-birthday-input） */
 .ob-birthday-hint {
   font-size: 12px;
   color: var(--color-text-muted, #6b7280);

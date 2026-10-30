@@ -1086,21 +1086,8 @@ onMounted(async () => {
   width: 170px;
 }
 
-.form-input {
-  padding: 9px 12px;
-  background-color: var(--color-bg-input, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  color: var(--color-text, var(--color-text));
-  box-sizing: border-box;
-  transition: border-color var(--transition-fast, 0.15s ease);
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: var(--color-primary, var(--color-primary));
-}
+/* 输入框视觉统一到全局 .ui-input（src/style.css 的别名列表已含 .form-input）；
+   这里不再写 border/background/border-radius/font-size/焦点态，避免与全局规范打架。 */
 
 .desc-input {
   resize: vertical;

@@ -171,22 +171,10 @@ const visibleTags = computed(() =>
 
 /* 搜索框：对齐工具箱 .tb-search —— 圆角卡片 + 聚焦主色描边 + 外发光，输入框无边框 */
 .bf-search {
-  display: flex;
-  align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 10px 14px;
-  background-color: var(--color-bg-card, #ffffff);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-lg, 12px);
-  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.06));
-  transition: border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
-    box-shadow var(--motion-duration, 220ms) var(--motion-ease, ease);
 }
-.bf-search:focus-within {
-  border-color: var(--color-primary, #3b82f6);
-  box-shadow: 0 0 0 3px var(--color-primary-soft, rgba(59, 130, 246, 0.16));
-}
+
 .bf-search-icon {
   flex: none;
   color: var(--color-text-muted, #94a3b8);
@@ -195,12 +183,6 @@ const visibleTags = computed(() =>
 .bf-search-input {
   flex: 1;
   min-width: 0;
-  border: none;
-  outline: none;
-  background: transparent;
-  color: var(--color-text, #0f172a);
-  font-size: var(--font-size-base, 15px);
-  font-family: inherit;
 }
 .bf-search-input::placeholder { color: var(--color-text-muted, #94a3b8); }
 .bf-search-clear {
@@ -275,16 +257,7 @@ const visibleTags = computed(() =>
   font-size: var(--font-size-xs, 12px);
   color: var(--color-text-muted, #94a3b8);
 }
-.bf-select {
-  height: 34px;
-  padding: 0 8px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  background-color: var(--color-bg-input, #ffffff);
-  color: var(--color-text, #0f172a);
-  font-size: var(--font-size-sm, 13px);
-  font-family: inherit;
-}
+/* 视觉统一到全局 .ui-input（别名已含 .bf-select） */
 .bf-clear {
   height: 34px;
   padding: 0 12px;

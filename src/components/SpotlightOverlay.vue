@@ -313,11 +313,7 @@ watch(query, () => {
 }
 
 .sp-search {
-  display: flex;
-  align-items: center;
   gap: 10px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
 }
 
 .sp-search-icon {
@@ -328,11 +324,6 @@ watch(query, () => {
 .sp-input {
   flex: 1;
   min-width: 0;
-  border: none;
-  outline: none;
-  background: transparent;
-  font-size: 15px;
-  color: var(--color-text, #1e293b);
 }
 
 .sp-input::placeholder {

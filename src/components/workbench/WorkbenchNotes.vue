@@ -535,8 +535,8 @@ onUnmounted(() => {
                 >
                   <template v-if="editingEntry && editingEntry.noteId === row.id && editingEntry.entryId === entry.id">
                     <div class="nt-timeline-item-edit">
-                      <el-input v-model="entryEditDatetime" type="text" class="form-input" :data-testid="`nt-entry-edit-dt-${entry.id}`" placeholder="YYYY-MM-DD HH:mm" size="small" />
-                      <el-input v-model="entryEditContent" type="text" class="form-input" :data-testid="`nt-entry-edit-content-${entry.id}`" placeholder="记录内容" size="small" />
+                      <el-input v-model="entryEditDatetime" type="text" :data-testid="`nt-entry-edit-dt-${entry.id}`" placeholder="YYYY-MM-DD HH:mm" size="small" />
+                      <el-input v-model="entryEditContent" type="text" :data-testid="`nt-entry-edit-content-${entry.id}`" placeholder="记录内容" size="small" />
                       <div class="nt-timeline-item-actions">
                         <el-button type="button" class="btn-save" :disabled="!canSaveEntry()" :data-testid="`nt-entry-save-${entry.id}`" @click="handleSaveEntry(row.id, entry.id)">保存</el-button>
                         <el-button type="button" class="btn-cancel" :data-testid="`nt-entry-cancel-${entry.id}`" @click="cancelEditEntry">取消</el-button>
@@ -559,8 +559,8 @@ onUnmounted(() => {
                 +{{ hiddenEntryCount(row) }} 条
               </el-button>
               <div class="nt-timeline-add-row">
-                <el-input v-model="entryDraftDatetime[row.id]" type="text" class="form-input nt-timeline-dt-input" :data-testid="`nt-entry-dt-${row.id}`" placeholder="YYYY-MM-DD HH:mm" size="small" />
-                <el-input v-model="entryDraftContent[row.id]" type="text" class="form-input nt-timeline-content-input" :data-testid="`nt-entry-content-${row.id}`" placeholder="添加时光记录…" @keydown.enter="handleAddEntry(row)" size="small" />
+                <el-input v-model="entryDraftDatetime[row.id]" type="text" class="nt-timeline-dt-input" :data-testid="`nt-entry-dt-${row.id}`" placeholder="YYYY-MM-DD HH:mm" size="small" />
+                <el-input v-model="entryDraftContent[row.id]" type="text" class="nt-timeline-content-input" :data-testid="`nt-entry-content-${row.id}`" placeholder="添加时光记录…" @keydown.enter="handleAddEntry(row)" size="small" />
                 <el-button type="button" class="btn-add" :disabled="!canAddEntry(row)" data-testid="nt-entry-add" @click="handleAddEntry(row)">添加</el-button>
               </div>
             </div>
@@ -662,7 +662,6 @@ onUnmounted(() => {
                 <el-input
                   v-model="entryEditDatetime"
                   type="text"
-                  class="form-input"
                   :data-testid="`nt-entry-edit-dt-${entry.id}`"
                   placeholder="YYYY-MM-DD HH:mm"
                   size="small"
@@ -670,7 +669,6 @@ onUnmounted(() => {
                 <el-input
                   v-model="entryEditContent"
                   type="text"
-                  class="form-input"
                   :data-testid="`nt-entry-edit-content-${entry.id}`"
                   placeholder="记录内容"
                   size="small"
@@ -957,7 +955,6 @@ onUnmounted(() => {
 .nt-timeline-item-actions { display: flex; gap: 6px; margin-top: 4px; }
 /* .btn-edit/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
 .nt-timeline-item-edit { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.nt-timeline-item-edit .form-input { padding: 6px 10px; font-size: 13px; }
 .nt-timeline-item-edit .btn-save { padding: 4px 12px; font-size: 12px; }
 .nt-timeline-add-row {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
@@ -997,7 +994,6 @@ onUnmounted(() => {
 .timeline-item:hover .timeline-item-actions { opacity: 1; }
 /* .timeline-item-actions .btn-edit/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
 .timeline-item-edit { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.timeline-item-edit .form-input { padding: 6px 10px; font-size: 13px; }
 .timeline-item-edit .btn-save { padding: 4px 12px; font-size: 12px; }
 
 /* ===== 空态：.empty-state 已收敛到全局基类（src/style.css） ===== */
@@ -1031,15 +1027,8 @@ onUnmounted(() => {
   box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
 }
 .note-form-title { margin: 0; font-size: 16px; font-weight: 600; color: var(--color-text, var(--color-text)); }
-.form-input {
-  padding: 9px 12px; box-sizing: border-box; font-family: inherit; font-size: 14px;
-  color: var(--color-text, var(--color-text));
-  background-color: var(--color-bg-input, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  transition: border-color var(--transition-fast, 0.15s ease);
-}
-.form-input:focus { outline: none; border-color: var(--color-primary, var(--color-primary)); }
+/* 输入框视觉统一到全局 .ui-input（模板里已不再给 el-input 挂 .form-input，
+   避免把边框/圆角/底色套在 EP 外层 div 上形成双层框） */
 .note-content-input { flex: 1 1 auto; min-height: 240px; }
 .note-content-input :deep(.el-textarea__inner) { height: 100%; min-height: 240px; resize: none; }
 .note-form-row { display: flex; align-items: center; gap: 10px; }

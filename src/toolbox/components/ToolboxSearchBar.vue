@@ -240,33 +240,15 @@ defineExpose({ focus: () => nextTick(() => inputRef.value?.focus()) })
 
 /* 水平居中：外层 margin-inline auto；窄屏自适铺满，宽屏居中且不过宽 */
 .tb-search {
-  display: flex;
-  align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 10px 14px;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  transition: border-color var(--motion-duration) var(--motion-ease),
-    box-shadow var(--motion-duration) var(--motion-ease);
 }
 .tb-search:focus-within,
-.tb-search.is-open {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-soft);
-}
+
 .tb-search-icon { color: var(--color-text-muted); flex: none; }
 .tb-search-input {
   flex: 1;
   min-width: 0;
-  border: none;
-  outline: none;
-  background: transparent;
-  color: var(--color-text);
-  font-size: var(--font-size-base);
-  font-family: var(--font-family);
 }
 .tb-search-input::placeholder { color: var(--color-text-muted); }
 .tb-search-clear {

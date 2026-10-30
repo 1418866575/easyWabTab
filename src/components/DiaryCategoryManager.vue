@@ -233,13 +233,9 @@ const sortedCustomCategories = computed(() =>
   color: var(--color-text, #1e293b);
 }
 
+/* 输入框视觉统一到全局 .ui-input，这里只保留布局 */
 .dm-name-input {
   flex: 1;
-  padding: 8px 12px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 4px);
-  background: var(--color-bg, #fff);
-  color: var(--color-text, #1e293b);
 }
 
 .dm-btn-add {

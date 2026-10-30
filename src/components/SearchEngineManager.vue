@@ -381,25 +381,7 @@ function truncateUrl(url: string, maxLength = 40) {
 
 /* 表单输入：对齐全局 .ui-input（36px 高 / 8px 圆角 / 13px 字 / 同款焦点环）。
    原来 10px 上下内边距 + 14px 字号 → 38px 高，比同排按钮高 2px */
-.form-row input {
-  box-sizing: border-box;
-  min-height: 36px;
-  padding: 0 var(--space-3, 12px);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  background-color: var(--color-bg-input, var(--color-bg-card));
-  color: var(--color-text);
-  font-size: var(--font-size-sm, 13px);
-  outline: none;
-  transition:
-    border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
-    box-shadow var(--motion-duration, 220ms) var(--motion-ease, ease);
-}
-
-.form-row input:focus {
-  border-color: var(--color-primary, #3b82f6);
-  box-shadow: 0 0 0 3px var(--color-primary-ring, rgba(59, 130, 246, 0.35));
-}
+/* 输入框视觉统一到全局 .ui-input（.input-name / .input-url / .input-query 已在别名列表） */
 
 .btn-add {
   white-space: nowrap;
@@ -525,12 +507,7 @@ function truncateUrl(url: string, maxLength = 40) {
   border-radius: 4px;
 }
 
-.edit-input {
-  padding: 6px 8px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 4px;
-  font-size: 14px;
-}
+/* 输入框视觉统一到全局 .ui-input，这里只保留宽度布局（见下方 .edit-input.name/.url） */
 
 .edit-input.name {
   width: 100px;

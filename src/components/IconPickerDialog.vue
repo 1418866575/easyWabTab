@@ -364,22 +364,9 @@ onUnmounted(() => {
   color: var(--color-text-muted, #94a3b8);
 }
 
+/* 搜索框视觉统一到全局 .ui-input（别名列表已含 .ipd-search），这里只保留宽度 */
 .ipd-search {
   width: 100%;
-  height: 36px;
-  padding: 0 10px;
-  background: var(--color-bg-input, #ffffff);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 8px;
-  color: var(--color-text, #334155);
-  font-size: 13px;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.ipd-search:focus {
-  border-color: var(--color-primary, #3b82f6);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 .ipd-cats {

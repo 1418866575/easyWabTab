@@ -299,31 +299,16 @@ function openSite(url: string) {
 }
 
 .global-search {
-  display: flex;
   gap: 0;
   width: 100%;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  border-radius: 12px;
   overflow: visible;
-  background: white;
 }
 
 .engine-select {
-  padding: 14px 16px;
-  border: none;
-  border-right: 1px solid #e2e8f0;
-  background-color: white;
-  font-size: 15px;
-  color: #1e293b;
-  cursor: pointer;
-  outline: none;
   min-width: 110px;
-  font-weight: 500;
 }
 
-.engine-select:focus {
-  background-color: #f8fafc;
-}
+
 
 .input-wrapper {
   flex: 1;
@@ -332,34 +317,29 @@ function openSite(url: string) {
 
 .search-input {
   width: 100%;
-  padding: 14px 16px;
-  border: none;
-  font-size: 15px;
-  outline: none;
-  background: transparent;
 }
 
-.search-input:focus {
-  background-color: #f8fafc;
-}
+
 
 .search-input::placeholder {
   color: #94a3b8;
 }
 
+/* 按钮撑满外壳高度（外壳决定 44px），右侧圆角与外壳一致，配色走 token */
 .search-btn {
-  padding: 14px 20px;
+  align-self: stretch;
+  padding: 0 var(--space-5, 20px);
   border: none;
-  background-color: #3b82f6;
-  color: white;
+  background-color: var(--color-primary);
+  color: #fff;
   font-size: 18px;
   cursor: pointer;
-  transition: background-color 0.2s;
-  border-radius: 0 12px 12px 0;
+  transition: background-color var(--motion-duration, 220ms) var(--motion-ease, ease);
+  border-radius: 0 var(--input-radius) var(--input-radius) 0;
 }
 
 .search-btn:hover {
-  background-color: #2563eb;
+  background-color: var(--color-primary-hover);
 }
 
 /* 搜索历史下拉 */
@@ -495,14 +475,11 @@ function openSite(url: string) {
 }
 
 /* 暗色模式 */
-html.dark .global-search {
-  background-color: var(--color-bg-card, #1f2937);
-}
-
+/* 外壳底色/描边由全局 .global-search 规则（--input-bg / --input-border-color）承担，
+   暗色自动跟随，这里不再单独指定背景，否则会与输入底色不一致。 */
 html.dark .engine-select {
-  background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text, #f9fafb);
-  border-right-color: var(--color-border, #374151);
+  color: var(--color-text);
+  border-right-color: var(--color-border);
 }
 
 html.dark .search-input {
@@ -560,19 +537,18 @@ html.dark .site-category {
     max-width: 100%;
   }
 
+  /* 外壳改变高度，内层不再用 padding 撑高（否则会把外壳顶高） */
   .engine-select {
     min-width: 80px;
-    font-size: 14px;
-    padding: 12px;
+    padding: 0 var(--space-3, 12px);
   }
 
   .search-input {
-    font-size: 14px;
-    padding: 12px;
+    padding: 0 var(--space-3, 12px);
   }
 
   .search-btn {
-    padding: 12px 16px;
+    padding: 0 var(--space-4, 16px);
   }
 }
 </style>

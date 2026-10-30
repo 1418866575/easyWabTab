@@ -1379,10 +1379,6 @@ async function regenerateSlug(): Promise<void> {
 }
 
 .be-md {
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: var(--font-size-sm, 13px);
-  line-height: var(--line-height-relaxed, 1.7);
-  color: var(--color-text, #0f172a);
   resize: vertical;
 }
 
@@ -1531,14 +1527,6 @@ async function regenerateSlug(): Promise<void> {
 
 .be-textarea {
   width: 100%;
-  padding: 6px 8px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 6px);
-  background-color: var(--color-bg-input, #ffffff);
-  color: var(--color-text, #0f172a);
-  font-family: inherit;
-  font-size: var(--font-size-sm, 13px);
-  line-height: var(--line-height-relaxed, 1.6);
   resize: vertical;
 }
 

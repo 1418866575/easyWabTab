@@ -318,26 +318,10 @@ function setMode(v: WatermarkMode): void {
   cursor: not-allowed;
 }
 
+/* 输入框视觉统一到全局 .ui-input（别名已含 .wm-text-input），这里只保留宽度约束 */
 .wm-text-input {
   width: 100%;
   max-width: 420px;
-  box-sizing: border-box;
-  min-height: 36px;
-  padding: 0 var(--space-3, 12px);
-  font-size: var(--font-size-sm, 13px);
-  color: var(--color-text);
-  background: var(--color-bg-input, var(--color-bg-card));
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md, 8px);
-  transition:
-    border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
-    box-shadow var(--motion-duration, 220ms) var(--motion-ease, ease);
-}
-
-.wm-text-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-ring, rgba(59, 130, 246, 0.35));
 }
 
 .wm-warn {

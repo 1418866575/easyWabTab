@@ -83,6 +83,146 @@ html.dark {
 }
 
 /* ============================================================
+ * 输入控件尺寸对齐项目规范（36 / 32 / 44，圆角 8px）
+ * ------------------------------------------------------------
+ * 为什么改 --el-component-size 而不是 --el-input-height：
+ *   EP 在 .el-input 元素上声明 `--el-input-height: var(--el-component-size)`，
+ *   元素级声明优先于 :root 继承值 → 在 :root 设 --el-input-height 是空操作。
+ * 为什么可以放心改：实测该变量全 theme-chalk 仅 5 个文件消费
+ *   （el-input / el-input-tag / el-date-picker-panel / el-time-picker / el-time-select），
+ *   switch / checkbox / radio / pagination / button 出现次数均为 0。
+ * 为什么用 html:root：EP base.css 也写在 :root（0,1,0），加一个类型选择器
+ *   提到 (0,1,1) 即可稳定胜出，不必依赖「入口 CSS 最后加载」这一构建巧合。
+ * ============================================================ */
+html:root {
+  --el-component-size: 36px;
+  --el-component-size-large: 44px;
+  /* 注意：**不要**改 --el-component-size-small。
+     实测它同时驱动 el-pagination 的小号（分页按钮 24 → 32 会连带改变已有版式），
+     小号输入框改为在下方按类点名设置 --el-input-height，只影响输入类控件。 */
+  /* select / input / pagination 的圆角都读这个 */
+  --el-border-radius-base: var(--radius-md);
+  /* 不要设 --el-font-size-base：EP 默认就是 14px，设了等于没设，
+     却会连带把 el-pagination 容器从 24px 撑到 32px（它的行高吃这个值）。
+     输入框字号在下方按类点名（html .el-input--small 等）。 */
+}
+
+/* ============================================================
+ * 输入框视觉桥接
+ * ------------------------------------------------------------
+ * 关键：EP 的 --el-input-* 声明在 .el-input / .el-textarea **元素自身**，
+ *       :root 赋值无效 → 必须用 html 前缀打到同一元素上。
+ * 底色取 --color-bg-input（输入框是「下沉表层」），
+ *       不跟着 --el-fill-color-blank / 卡面色，否则浅灰底方案整体失效。
+ * ============================================================ */
+html .el-input,
+html .el-textarea,
+html .el-input-number {
+  --el-input-bg-color: var(--color-bg-input);
+  --el-input-border-color: var(--color-border);
+  --el-input-hover-border-color: var(--color-border-hover);
+  --el-input-focus-border-color: var(--color-primary);
+  --el-input-text-color: var(--color-text);
+  --el-input-placeholder-color: var(--color-text-muted);
+  --el-input-icon-color: var(--color-text-muted);
+  --el-input-border-radius: var(--radius-md);
+}
+
+/* EP 在 small/large 变体上硬写 12px / 14px 字号，变量改不到，需按类覆盖；
+   小号高度用 --el-input-height 点名设置（EP 把它声明在 .el-input 元素上，
+   所以在同一元素上更高特异性覆盖即可，且不会波及分页/开关等非输入控件）。 */
+html .el-input--small,
+html .el-textarea--small {
+  --el-input-height: var(--input-height-sm);
+  font-size: var(--input-font-size-sm);
+}
+html .el-input--small .el-input__inner {
+  font-size: var(--input-font-size-sm);
+}
+html .el-input--large,
+html .el-textarea--large {
+  --el-input-height: var(--input-height-lg);
+  font-size: var(--input-font-size-lg);
+}
+
+/* 焦点：EP 只把 1px inset 阴影换成主色，没有外环 —— 补上与原生一致的 3px 外环。
+   用 html 前缀提特异性（而非 !important），以保留三处合法局部覆盖：
+   表格单元格无框编辑 / 缺失项红框 / 打印归一化（它们用 :deep() 仍能压过这里）。 */
+html .el-input__wrapper.is-focus {
+  box-shadow:
+    0 0 0 1px var(--el-color-primary) inset,
+    0 0 0 3px var(--color-primary-ring);
+}
+html .el-input__wrapper.is-focus.is-error {
+  box-shadow:
+    0 0 0 1px var(--el-color-danger) inset,
+    0 0 0 3px var(--color-error-soft);
+}
+html .el-textarea__inner:focus {
+  box-shadow:
+    0 0 0 1px var(--el-color-primary) inset,
+    0 0 0 3px var(--color-primary-ring);
+}
+
+/* 禁用态：与原生 .ui-input:disabled 对齐 */
+html .el-input.is-disabled .el-input__wrapper,
+html .el-textarea.is-disabled .el-textarea__inner {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ============================================================
+ * el-select：.el-select__wrapper 的 min-height 是 Sass 编译后的**字面量**
+ * （32 / 24 / 40px），不读任何 CSS 变量，只能按类覆盖。
+ * 小号变体特异性为 (0,2,0)，故默认档也统一抬到 html .el-select .el-select__wrapper。
+ * ============================================================ */
+html .el-select .el-select__wrapper {
+  min-height: var(--input-height);
+  padding: 0 var(--input-padding-x);
+  font-size: var(--input-font-size);
+  border-radius: var(--input-radius);
+  background-color: var(--color-bg-input);
+  box-shadow: 0 0 0 1px var(--color-border) inset;
+}
+html .el-select .el-select__wrapper:hover {
+  box-shadow: 0 0 0 1px var(--color-border-hover) inset;
+}
+html .el-select .el-select__wrapper.is-focused {
+  box-shadow:
+    0 0 0 1px var(--el-color-primary) inset,
+    0 0 0 3px var(--color-primary-ring);
+}
+html .el-select.el-select--small .el-select__wrapper {
+  min-height: var(--input-height-sm);
+  padding: 0 var(--input-padding-x-sm);
+  font-size: var(--input-font-size-sm);
+}
+html .el-select.el-select--large .el-select__wrapper {
+  min-height: var(--input-height-lg);
+  padding: 0 var(--input-padding-x-lg);
+  font-size: var(--input-font-size-lg);
+}
+html .el-select .el-select__wrapper.is-disabled {
+  background-color: var(--color-bg-hover);
+  opacity: 0.55;
+}
+
+/* 分页条内的小控件保持紧凑（每页条数选择器 + 「跳至 N 页」输入框）。
+   分页是密集工具条，把它们跟着抬到 32px 会连带把整条分页从 24px 撑到 32px，
+   改变既有列表版式 —— 这一条是对「非输入控件尺寸不变」的兜底。 */
+html .el-pagination .el-input,
+html .el-pagination .el-select {
+  --el-input-height: 24px;
+}
+html .el-pagination .el-input__wrapper,
+html .el-pagination .el-select__wrapper {
+  min-height: 24px;
+  padding: 0 var(--space-2, 8px);
+  font-size: var(--font-size-xs, 12px);
+  border-radius: var(--radius-sm, 4px);
+}
+
+/* ============================================================
  * 按钮圆角/高度对齐项目规范（8px / 36px）
  * 消除 el-button（EP 默认 4px / 32px）与自定义按钮(8px/36px)的割裂。
  * 仅动默认尺寸，small/large 保留；圆角统一 --radius-md。

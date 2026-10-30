@@ -944,23 +944,12 @@ onUnmounted(() => {
 }
 
 .nav-site-filter {
-  display: flex;
-  align-items: center;
   gap: 6px;
   margin-left: auto;
-  height: 36px;
   min-width: 200px;
-  padding: 0 10px;
-  background: var(--color-bg-card, #ffffff);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 18px;
-  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.nav-site-filter:focus-within {
-  border-color: var(--color-primary, #3b82f6);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-}
+
 
 .nsf-icon {
   flex: none;
@@ -975,11 +964,6 @@ onUnmounted(() => {
 .nsf-input {
   flex: 1;
   min-width: 0;
-  border: none;
-  outline: none;
-  background: transparent;
-  font-size: 13px;
-  color: var(--color-text, #334155);
 }
 
 .nsf-input::placeholder {

@@ -200,11 +200,27 @@ import BaseDialog from '@/components/common/BaseDialog.vue'
 
 ### 2.3 输入框
 
+**全站统一规格（唯一来源：`src/style.css` 的 `--input-*` token + `.ui-input` / `.ui-textarea` / `.ui-search`）**
+
+| 档位 | 高度 | 字号 | 内边距 | 圆角 |
+|------|------|------|--------|------|
+| 默认 | 36px | 14px | 0 12px | 8px |
+| 小号 `.ui-input--sm` | 32px | 13px | 0 10px | 8px |
+| 大号 `.ui-input--lg`（仅门户级搜索） | 44px | 15px | 0 16px | 8px |
+
+- 外观：浅灰底 `--input-bg`（=`--color-bg-input`）+ 1px 描边；hover 描边加深；focus 主色描边 + 3px `--color-primary-ring` 外环；`:disabled` 降透明度；`[aria-invalid='true']` 错误描边。
+- **字号必须是固定值**，不要用 `--font-size-base`（它是 clamp，会随视口漂）。
+
 优先级：
 
-1. **业务表单** → `el-input` / `el-select` / `el-form-item`（项目**全量导入** EP，无需手动 import）
-2. **EP 不支持的类型**（`file` / `color` / `range` / 日期等）→ 原生控件 + **`.ui-input`** 类
-3. **禁止**自造 `.custom-input` 之类的私有输入样式
+1. **业务表单** → `el-input` / `el-select` / `el-form-item`（EP **按需自动导入**，无需手动 import）。
+   其尺寸/圆角/底色/焦点环由 `styles/element-theme.css` 的 `html:root { --el-component-size… }`
+   与 `html .el-input { --el-input-* }` 桥接，**不要再用 `.form-input` 之类视觉类挂到 `el-input` 根节点**（会双层框）。
+2. **EP 不支持的类型**（`file` / `color` / `range` / 日期等）→ 原生控件 + **`.ui-input`** 类。
+3. **多行** → `.ui-textarea`；**搜索框**（外壳 + 图标 + 清除按钮）→ `.ui-search` 外壳 + `.ui-search-input` 内层，
+   内层必须透明（边框/底色/焦点环都在外壳上，靠 `:focus-within` 触发）。
+4. **禁止**自造私有输入样式；历史类名（`.form-input` / `.wb-menu-name-input` / `.edit-input` / `.tu-input` 等）
+   已在 `.ui-input` 别名列表中，组件内只保留布局（flex/width/margin）。
 
 ```vue
 
@@ -298,8 +314,13 @@ import BaseDialog from '@/components/common/BaseDialog.vue'
 
 ### 3.4 Element Plus
 
-- **全量导入**（`main.ts` 中 `app.use(ElementPlus, { locale: zhCn })`），**无需**逐组件 import
+- **按需自动导入**（`vite.config.js` 的 `unplugin-vue-components` + `ElementPlusResolver`），**无需**逐组件 import；
+  `main.ts` 只保留 `element-plus/theme-chalk/dark/css-vars.css`
 - el-button 圆角/高度已由 `styles/element-theme.css` 对齐项目规范（8px / 36px，small/large 除外）
+- **输入控件**由同一文件的 `html:root { --el-component-size: 36px… }` 与 `html .el-input { --el-input-* }` 桥接：
+  EP 把 `--el-input-*` 声明在 `.el-input` **元素自身**，写在 `:root` 是空操作；焦点 3px 外环用 `html` 前缀提特异性，
+  **不要用 `!important`**（会压死表格单元格无框编辑、错误态、打印归一化三处合法覆盖）
+- `.el-select__wrapper` 的 min-height 是编译后的字面量，不读变量，需按类覆盖（已处理）；分页条内的小控件固定 24px，避免撑高分页
 
 
 ### 3.5 提交前强制检查

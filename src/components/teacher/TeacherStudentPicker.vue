@@ -116,23 +116,10 @@ function genderClass(g: '男' | '女'): string {
   gap: 8px;
 }
 .tsp-search {
-  display: flex;
-  align-items: center;
   gap: 6px;
-  padding: 0 8px;
-  height: 32px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 6px;
-  background: var(--color-bg-input, #fff);
-  color: var(--color-text-muted, #94a3b8);
 }
 .tsp-input {
   flex: 1;
-  border: none;
-  outline: none;
-  background: transparent;
-  font-size: 13px;
-  color: var(--color-text, #334155);
 }
 .tsp-table :deep(.el-table__header th .cell) {
   text-align: center;

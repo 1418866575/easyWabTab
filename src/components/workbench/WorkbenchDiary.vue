@@ -799,18 +799,7 @@ const renderedPreview = computed(() =>
 .dj-md {
   flex: 1 1 0;
   min-width: 0;
-  min-height: 360px;
-  padding: 14px 16px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  background: var(--color-bg-card, #fff);
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.06));
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 14px;
-  line-height: 1.7;
-  color: var(--color-text, #1e293b);
   resize: vertical;
-  box-sizing: border-box;
 }
 
 .dj-preview {

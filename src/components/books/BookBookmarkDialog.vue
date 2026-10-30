@@ -187,22 +187,10 @@ function onDelete(b: UserBookmark): void {
   font-weight: var(--font-weight-medium, 500);
   color: var(--color-text, #0f172a);
 }
+/* 输入框/多行输入视觉统一到全局（.ui-input / .ui-textarea），这里只保留宽度 */
 .bk-bm-input,
 .bk-bm-textarea {
   width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  background-color: var(--color-bg-input, #ffffff);
-  color: var(--color-text, #0f172a);
-  font-size: var(--font-size-sm, 13px);
-  font-family: var(--font-family);
-  resize: vertical;
-}
-.bk-bm-input:focus-visible,
-.bk-bm-textarea:focus-visible {
-  outline: 2px solid var(--color-primary, #3b82f6);
-  outline-offset: 1px;
 }
 .bk-bm-count {
   align-self: flex-end;

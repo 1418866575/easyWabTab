@@ -439,33 +439,15 @@ function excerpt(w: SmartWorkflow): string {
 /* 搜索框：工具箱同款（父容器内居中、卡片式、聚焦高亮） */
 .wm-search-wrap { display: flex; justify-content: center; }
 .wm-search {
-  display: flex;
-  align-items: center;
   gap: 10px;
   width: 100%;
   max-width: 720px;
-  padding: 10px 14px;
-  background: var(--color-bg-card, #fff);
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: var(--radius-lg, 12px);
-  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
-  transition: border-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
-    box-shadow var(--motion-duration, 0.2s) var(--motion-ease, ease);
 }
-.wm-search:focus-within {
-  border-color: var(--color-primary, #3b82f6);
-  box-shadow: 0 0 0 3px var(--color-primary-soft, #eff6ff);
-}
+
 .wm-search-icon { color: var(--color-text-muted, #9ca3af); flex: none; }
 .wm-search-input {
   flex: 1;
   min-width: 0;
-  border: none;
-  outline: none;
-  background: transparent;
-  color: var(--color-text, #111827);
-  font-size: 14px;
-  font-family: inherit;
 }
 .wm-search-input::placeholder { color: var(--color-text-muted, #9ca3af); }
 .wm-search-clear {

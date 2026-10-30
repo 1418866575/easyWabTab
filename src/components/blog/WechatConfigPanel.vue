@@ -122,21 +122,10 @@ onMounted(() => cfg.loadConfig())
   color: var(--color-text-muted, #94a3b8);
 }
 
+/* 行内文本输入：视觉统一到全局 .ui-input（别名已含 .wb-menu-name-input），这里只保留布局 */
 .wb-menu-name-input {
   flex: 1;
   min-width: 0;
-  box-sizing: border-box;
-  padding: 6px 8px;
-  font-size: 13px;
-  color: var(--color-text, #0f172a);
-  background-color: var(--color-bg-input, #ffffff);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 6px);
-  transition: border-color 0.15s ease;
-}
-.wb-menu-name-input:focus {
-  outline: none;
-  border-color: var(--color-primary, #3b82f6);
 }
 
 .remind-fields {

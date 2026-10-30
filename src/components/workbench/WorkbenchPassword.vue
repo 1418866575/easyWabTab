@@ -770,21 +770,9 @@ watch(
 }
 
 /* ===== 输入框 ===== */
+/* 输入框视觉统一到全局 .ui-input，这里只保留宽度布局 */
 .form-input {
   width: 100%;
-  padding: 9px 12px;
-  background-color: var(--color-bg-input, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  color: var(--color-text, var(--color-text));
-  box-sizing: border-box;
-  transition: border-color var(--transition-fast, 0.15s ease);
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* ===== 主按钮 ===== */

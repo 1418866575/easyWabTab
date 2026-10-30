@@ -159,3 +159,27 @@
 
 /* 移动端确认弹框适配已迁移到 components/common/ConfirmHost.vue
    （showConfirm 底层由 ElMessageBox 换为 BaseDialog；\n 换行与 ≥44px 触控目标在该组件内实现）。 */
+
+/* ============================================================
+   移动端输入字号 ≥16px
+   ------------------------------------------------------------
+   桌面输入字号是 14px（小号 13px），而 iOS Safari 在聚焦字号 <16px 的输入框时
+   会自动放大整个页面，且不随失焦复原 —— 这是既有技术债。
+   这里只覆盖 token（所有引用 --input-font-size 的控件一并生效），
+   并用 html:root 提特异性确保压过 style.css 的 :root 定义。
+   EP 内部输入有自己的字号（small 档还被硬写成 12px），需单独点名。
+   ============================================================ */
+@media (max-width: 768px) {
+  html:root {
+    --input-font-size: 16px;
+    --input-font-size-sm: 16px;
+  }
+  html .el-input__inner,
+  html .el-input--small .el-input__inner,
+  html .el-input--large .el-input__inner,
+  html .el-textarea__inner,
+  html .el-select .el-select__wrapper,
+  html .el-select.el-select--small .el-select__wrapper {
+    font-size: 16px;
+  }
+}
