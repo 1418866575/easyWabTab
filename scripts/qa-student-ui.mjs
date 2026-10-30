@@ -5,10 +5,25 @@
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { existsSync, mkdirSync, writeFileSync, appendFileSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync, appendFileSync, readdirSync } from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import { chromium } from 'playwright'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
+
+
+/** 用本机已装的 chromium（playwright 自带的 headless shell 常常没下载）。
+ *  与本目录其它 QA 脚本保持一致：不做 playwright install。 */
+function findChromium() {
+  const root = path.join(os.homedir(), 'AppData', 'Local', 'ms-playwright')
+  if (!existsSync(root)) return undefined
+  for (const d of readdirSync(root).filter((x) => x.startsWith('chromium-')).sort().reverse()) {
+    const p = path.join(root, d, 'chrome-win64', 'chrome.exe')
+    if (existsSync(p)) return p
+  }
+  return undefined
+}
 const EVIDENCE_DIR = join(ROOT, '.omo', 'evidence', 'student-ui')
 const EVIDENCE_LOG = join(EVIDENCE_DIR, 'qa-student-ui.log')
 const FAIL_DIR = join(EVIDENCE_DIR, 'fail')
@@ -80,7 +95,10 @@ function iso(offsetMs) { return new Date(Date.now() + (offsetMs || 0)).toISOStri
 
 async function injectIdbStore(page, storeName, payload) {
   return page.evaluate(({ store, value }) => new Promise((resolve, reject) => {
-    const req = indexedDB.open('easy-web-tab', 9)
+    // 不带版本号打开：页面此时已由 app 自己建好库（DB_VERSION 会随迭代上调，
+    // 这里写死 9 会在库里已是 23 时抛 VersionError，脚本直接跑不起来）。
+    // 库还不存在时 open() 会以 v1 新建并触发 onupgradeneeded，下面照样补齐 store。
+    const req = indexedDB.open('easy-web-tab')
         const ALL_STORES = [
       "todos","notes","diary","countdowns","passwords","health","ledger","settings","business",
       "pomodoro","habits","snapshots",
@@ -1153,7 +1171,7 @@ async function main() {
   writeFileSync(EVIDENCE_LOG, '')
   appendFileSync(EVIDENCE_LOG, '===== student-ui QA start ' + new Date().toISOString() + ' =====\n')
   await ensureDevServer()
-  const browser = await chromium.launch({ headless: true })
+  const browser = await chromium.launch({ headless: true, executablePath: findChromium() })
   const context = await browser.newContext({ viewport: { width: 1366, height: 768 }, deviceScaleFactor: 1 })
   const page = await context.newPage()
   page.on('pageerror', (err) => appendFileSync(EVIDENCE_LOG, '[pageerror] ' + err.message + '\n'))

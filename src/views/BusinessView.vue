@@ -394,14 +394,14 @@ onMounted(async () => {
         data-testid="bs-menu"
       >
         <button
-          class="bs-sidebar-toggle"
+          class="tw-btn tw-btn-sm bs-sidebar-toggle"
           data-testid="bs-sidebar-toggle"
           :title="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
           :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
           @click="toggleSidebar"
         >
           <span class="bs-menu-icon">
-            <Icon :name="sidebarCollapsed ? 'chevron-right' : 'chevron-left'" />
+            <Icon :name="sidebarCollapsed ? 'chevron-right' : 'chevron-left'" :size="14" />
           </span>
           <span class="bs-menu-label">{{ sidebarCollapsed ? '展开' : '收起' }}</span>
         </button>
@@ -713,32 +713,26 @@ onMounted(async () => {
 /* 侧栏折叠：56px 仅图标（label 隐藏、图标居中），展开宽度 200px 平滑过渡 */
 .bs-menu.collapsed {
   width: 56px;
+  /* 横向内边距收到 6px：56 − 12 = 44px 的收起胶囊宽，与教师台 .tv-shell.is-collapsed 的 .tv-sidebar 同宽 */
+  padding-left: 6px;
+  padding-right: 6px;
 }
 
+/* 收起 / 展开：外观直接复用教师台 `.tw-btn .tw-btn-sm`（白底描边胶囊、30px 高、12px/500、
+   hover 只变底色），本类只补侧栏的布局差异——整行铺满 + 左对齐 + 与菜单项同宽。
+   与个人工作台 .wb-sidebar-toggle 同款，别再本地写一套圆角/字号。 */
 .bs-sidebar-toggle {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
+  width: 100%;
+  flex-shrink: 0;
+  justify-content: flex-start;
   margin-bottom: 4px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background-color: transparent;
-  color: var(--color-text-secondary, #64748b);
-  font-size: 14px;
-  text-align: left;
-  cursor: pointer;
-  transition: all 0.15s ease;
 }
 
-.bs-sidebar-toggle:hover {
-  background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-primary, #3b82f6);
-}
-
+/* 收起态（56px 仅图标）：与教师台 .tv-shell.is-collapsed .tv-nav-collapse 一致——居中且去掉横向内边距 */
 .bs-menu.collapsed .bs-sidebar-toggle {
   justify-content: center;
-  padding: 10px 0;
+  padding: 0;
 }
 
 .bs-menu.collapsed .bs-menu-label {
@@ -839,15 +833,8 @@ html.dark .bs-menu {
   border-right-color: var(--color-border, #374151);
 }
 
-html.dark .bs-sidebar-toggle {
-  color: var(--color-text-secondary, #d1d5db);
-}
-
-html.dark .bs-sidebar-toggle:hover {
-  background-color: var(--color-bg-hover, #374151);
-  color: var(--color-text, #f9fafb);
-}
-
+/* 收起按钮的暗色由 .tw-btn 的 token 自动翻转，这里不再单独覆盖
+   （旧的自写暗色会把文字压成 secondary、hover 改色，与教师台不一致） */
 html.dark .bs-menu-item {
   color: var(--color-text-secondary, #d1d5db);
 }
