@@ -286,15 +286,23 @@ function setMode(v: WatermarkMode): void {
   gap: 6px;
 }
 
+/* 开关式 chip：与全局小按钮同规格（30px 高 / 8px 圆角 / 13px 字） */
 .wm-seg-btn {
-  padding: 5px 14px;
-  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0 var(--space-3, 12px);
+  font-size: var(--font-size-sm, 13px);
   color: var(--color-text-secondary);
   background: var(--color-bg-card, transparent);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--radius-md, 8px);
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    color var(--motion-duration, 160ms) var(--motion-ease, ease),
+    border-color var(--motion-duration, 160ms) var(--motion-ease, ease),
+    background-color var(--motion-duration, 160ms) var(--motion-ease, ease);
 }
 
 .wm-seg-btn.is-on {
@@ -313,12 +321,23 @@ function setMode(v: WatermarkMode): void {
 .wm-text-input {
   width: 100%;
   max-width: 420px;
-  padding: 7px 10px;
-  font-size: 13px;
+  box-sizing: border-box;
+  min-height: 36px;
+  padding: 0 var(--space-3, 12px);
+  font-size: var(--font-size-sm, 13px);
   color: var(--color-text);
-  background: var(--color-bg-card);
+  background: var(--color-bg-input, var(--color-bg-card));
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--radius-md, 8px);
+  transition:
+    border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    box-shadow var(--motion-duration, 220ms) var(--motion-ease, ease);
+}
+
+.wm-text-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-ring, rgba(59, 130, 246, 0.35));
 }
 
 .wm-warn {

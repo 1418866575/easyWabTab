@@ -379,16 +379,26 @@ function truncateUrl(url: string, maxLength = 40) {
   flex: 1;
 }
 
+/* 表单输入：对齐全局 .ui-input（36px 高 / 8px 圆角 / 13px 字 / 同款焦点环）。
+   原来 10px 上下内边距 + 14px 字号 → 38px 高，比同排按钮高 2px */
 .form-row input {
-  padding: 10px 12px;
+  box-sizing: border-box;
+  min-height: 36px;
+  padding: 0 var(--space-3, 12px);
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: var(--radius-md, 8px);
+  background-color: var(--color-bg-input, var(--color-bg-card));
+  color: var(--color-text);
+  font-size: var(--font-size-sm, 13px);
   outline: none;
+  transition:
+    border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    box-shadow var(--motion-duration, 220ms) var(--motion-ease, ease);
 }
 
 .form-row input:focus {
   border-color: var(--color-primary, #3b82f6);
+  box-shadow: 0 0 0 3px var(--color-primary-ring, rgba(59, 130, 246, 0.35));
 }
 
 .btn-add {
@@ -462,15 +472,16 @@ function truncateUrl(url: string, maxLength = 40) {
   gap: 2px;
 }
 
+/* 上/下移排序：原 20×16 + 10px 字，低于 24px 的可点区域下限；放大到 24×24 */
 .btn-sort {
-  width: 20px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   background: var(--color-bg-hover, #f1f5f9);
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 4px;
+  border-radius: var(--radius-sm, 4px);
   cursor: pointer;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--color-text-secondary, #64748b);
   display: flex;
   align-items: center;
@@ -489,11 +500,12 @@ function truncateUrl(url: string, maxLength = 40) {
 
 .engine-name {
   flex: 1;
-  font-size: 14px;
+  font-size: var(--font-size-sm, 13px);
+  font-weight: var(--font-weight-medium, 500);
   color: var(--color-text, #1e293b);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2, 8px);
 }
 
 .engine-url {
@@ -532,18 +544,29 @@ function truncateUrl(url: string, maxLength = 40) {
   min-width: 250px;
 }
 
+/* 行内图标操作按钮（编辑/删除/设为默认/启用开关）：对齐全局 .ui-btn--sm 的尺寸，
+   原先无边框无圆角、14px 字，和左边 13px 的输入框不同字号 */
 .btn-icon {
-  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 0 var(--space-2, 8px);
   background: none;
-  border: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md, 8px);
   cursor: pointer;
-  font-size: 14px;
-  opacity: 0.6;
-  transition: opacity 0.2s;
+  font-size: var(--font-size-xs, 12px);
+  line-height: 1;
+  opacity: 0.65;
+  transition: opacity 0.2s, border-color 0.2s, background-color 0.2s;
 }
 
 .btn-icon:hover {
   opacity: 1;
+  border-color: var(--color-border);
+  background-color: var(--color-bg-hover);
 }
 
 .btn-icon.delete:hover {

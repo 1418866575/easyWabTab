@@ -651,41 +651,56 @@ onMounted(() => {
   font-size: var(--font-size-xs, 11px);
   line-height: 18px;
 }
+/* 小尺寸按钮：与全局 .ui-btn--sm 同规格（30px 高 / 12px 字 / 8px 圆角） */
 .ns-mini-btn {
-  padding: 2px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 var(--space-3, 12px);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   background-color: var(--color-bg-card);
   color: var(--color-text-secondary);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
+  transition:
+    border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    background-color var(--motion-duration, 220ms) var(--motion-ease, ease);
 }
 .ns-mini-btn:hover:not(:disabled) {
   border-color: var(--color-primary);
   color: var(--color-primary);
+  background-color: var(--color-primary-soft);
 }
 .ns-mini-btn:disabled {
   cursor: default;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 /* ---------- 区间切换 ---------- */
 .ns-range {
-  display: flex;
+  display: inline-flex;
+  align-items: center;
   gap: 2px;
   margin-left: auto;
+  height: 30px;
   padding: 2px;
-  border-radius: var(--radius-md, 8px);
+  border-radius: var(--radius-full, 9999px);
   background-color: var(--color-bg-hover);
 }
 .ns-range-btn {
-  padding: 1px 8px;
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 var(--space-2, 8px);
   border: none;
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-full, 9999px);
   background-color: transparent;
   color: var(--color-text-secondary);
   font-size: var(--font-size-xs, 12px);
-  line-height: 18px;
+  line-height: 1;
   cursor: pointer;
 }
 .ns-range-btn:hover {
@@ -791,12 +806,14 @@ onMounted(() => {
 }
 
 /* ---------- 30 天柱状 ---------- */
+/* 基线：数据稀少时（只有今天有柱子）整块区域否则看着像没渲染出来 */
 .ns-bars {
   display: flex;
   align-items: flex-end;
   gap: 3px;
   height: 92px;
   padding: 4px 0;
+  border-bottom: 1px solid var(--color-border);
 }
 .ns-bar-col {
   flex: 1 1 0;
@@ -928,13 +945,20 @@ onMounted(() => {
   font-size: var(--font-size-xs, 12px);
 }
 .ns-danger-btn {
-  padding: 4px 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 var(--space-3, 12px);
   border: 1px solid var(--color-error, #ef4444);
   border-radius: var(--radius-md, 8px);
   background-color: transparent;
   color: var(--color-error, #ef4444);
-  font-size: var(--font-size-sm, 13px);
+  font-size: var(--font-size-xs, 12px);
   cursor: pointer;
+  transition:
+    background-color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    border-color var(--motion-duration, 220ms) var(--motion-ease, ease);
 }
 .ns-danger-btn:hover {
   background-color: var(--color-error-soft, #fef2f2);

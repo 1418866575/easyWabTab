@@ -548,13 +548,16 @@ function clearBackground() {
 .type-btn {
   flex: 1;
   min-width: 80px;
-  padding: 12px 16px;
+  padding: var(--space-3, 12px) var(--space-4, 16px);
   border: 2px solid var(--color-border, #e2e8f0);
-  border-radius: 10px;
+  border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #ffffff);
-  font-size: 14px;
+  font-size: var(--font-size-sm, 13px);
   cursor: pointer;
-  transition: all 0.2s;
+  transition:
+    border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    background-color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    color var(--motion-duration, 220ms) var(--motion-ease, ease);
   color: var(--color-text-secondary, #64748b);
 }
 
@@ -565,7 +568,7 @@ function clearBackground() {
 
 .type-btn.active {
   border-color: var(--color-primary, #3b82f6);
-  background: #eff6ff;
+  background: var(--color-primary-soft, #eff6ff);
   color: var(--color-primary, #3b82f6);
 }
 

@@ -47,6 +47,9 @@
   --color-surface-2: #f8fafc;
   --color-hover: #f1f5f9;
   --color-primary-soft: rgba(59, 130, 246, 0.10);
+  /* 焦点环：输入框/可聚焦控件的 3px 外环（与 .ui-input:focus-visible 同一视觉，
+     供各组件复用，避免散落硬编码 rgba） */
+  --color-primary-ring: rgba(59, 130, 246, 0.35);
   --color-border-strong: #cbd5e1;
 
   --color-shadow: rgba(0, 0, 0, 0.08);
@@ -520,7 +523,7 @@ body {
 .ui-input:focus-visible {
   outline: none;
   border-color: var(--color-primary, #3b82f6);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
+  box-shadow: 0 0 0 3px var(--color-primary-ring, rgba(59, 130, 246, 0.35));
 }
 
 .ui-input[aria-invalid='true'] {
@@ -545,4 +548,43 @@ body {
 .focus-ring:focus-visible {
   outline: 2px solid var(--color-primary, #3b82f6);
   outline-offset: 2px;
+}
+
+/* ============================================================
+   设置面板通用行 / 标题 / 标签 / 提示
+   ------------------------------------------------------------
+   这些类名原先只定义在 AppSettingsDialog.vue 的 **scoped** 样式里，
+   而水印设置、微信公众号等子组件同样在用（合计 18 处），却拿不到 scoped 规则
+   —— 表现为「标签与控件挤在左边、字号与父级不一致」。
+   设置类面板可能出现在任意层级的子组件中，故提到全局定义一次。
+   ============================================================ */
+.wb-menu-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3, 12px);
+  min-height: 36px;
+}
+
+.wb-menu-label {
+  flex: none;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm, 13px);
+  font-weight: var(--font-weight-medium, 500);
+  line-height: var(--line-height-tight, 1.3);
+}
+
+.wb-menu-title {
+  margin: 0;
+  font-size: var(--font-size-base, 15px);
+  font-weight: var(--font-weight-semibold, 600);
+  line-height: var(--line-height-tight, 1.3);
+  color: var(--color-text);
+}
+
+.wb-menu-hint {
+  margin: var(--space-2, 8px) 0 var(--space-3, 12px);
+  font-size: var(--font-size-xs, 12px);
+  line-height: var(--line-height-relaxed, 1.6);
+  color: var(--color-text-muted);
 }

@@ -425,17 +425,23 @@ function usedSiteNames(icon: MergedIcon): string {
 
 .search-input {
   width: 100%;
-  padding: 10px 16px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 8px;
-  font-size: 14px;
-  outline: none;
   box-sizing: border-box;
+  min-height: 36px;
+  padding: 0 var(--space-3, 12px);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  background-color: var(--color-bg-input, var(--color-bg-card));
+  color: var(--color-text);
+  font-size: var(--font-size-sm, 13px);
+  outline: none;
+  transition:
+    border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    box-shadow var(--motion-duration, 220ms) var(--motion-ease, ease);
 }
 
 .search-input:focus {
   border-color: var(--color-primary, #3b82f6);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px var(--color-primary-ring, rgba(59, 130, 246, 0.35));
 }
 
 /* 分类选项卡 */
@@ -446,15 +452,22 @@ function usedSiteNames(icon: MergedIcon): string {
   margin-bottom: 16px;
 }
 
+/* 分类筛选 chip：与其它胶囊控件统一（--radius-full、30px 高、13px 字） */
 .category-tab {
-  padding: 6px 14px;
-  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 var(--space-3, 12px);
+  border-radius: var(--radius-full, 9999px);
   border: 1px solid var(--color-border, #e2e8f0);
   background: var(--color-bg, #f8fafc);
   color: var(--color-text-secondary, #64748b);
-  font-size: 13px;
+  font-size: var(--font-size-sm, 13px);
   cursor: pointer;
-  transition: all 0.2s;
+  transition:
+    background-color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    color var(--motion-duration, 220ms) var(--motion-ease, ease);
   white-space: nowrap;
 }
 

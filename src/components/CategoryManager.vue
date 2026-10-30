@@ -369,25 +369,25 @@ const sortedCustomCategories = computed(() =>
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   padding: 3px;
-  background-color: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  background-color: var(--color-bg-input, var(--color-bg-card));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 8px);
   cursor: pointer;
   overflow: hidden;
   transition: border-color 0.2s, background-color 0.2s;
 }
 
 .cat-icon-btn:hover {
-  border-color: #3b82f6;
-  background-color: #f1f5f9;
+  border-color: var(--color-primary);
+  background-color: var(--color-bg-hover);
 }
 
 /* 未设置图标时以浅色占位提示可点击 */
 .cat-icon-btn.is-empty {
-  color: #94a3b8;
+  color: var(--color-text-muted, #94a3b8);
 }
 
 .cat-icon-img {
@@ -402,8 +402,28 @@ const sortedCustomCategories = computed(() =>
   line-height: 1;
 }
 
+/* 分类名输入框：对齐全局 .ui-input（36px 高 / 8px 圆角 / 同款焦点环）。
+   原来只有 flex:1，没有任何外观样式，落到浏览器原生输入框（直角 + 13.33px 字） */
 .name-input {
   flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 36px;
+  padding: 0 var(--space-3, 12px);
+  color: var(--color-text);
+  background-color: var(--color-bg-input, var(--color-bg-card));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 8px);
+  font-size: var(--font-size-sm, 13px);
+  transition:
+    border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    box-shadow var(--motion-duration, 220ms) var(--motion-ease, ease);
+}
+
+.name-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-ring, rgba(59, 130, 246, 0.35));
 }
 
 .btn-add {
@@ -467,24 +487,25 @@ const sortedCustomCategories = computed(() =>
   gap: 2px;
 }
 
+/* 上/下移排序：原 20×16 + 10px 字，低于 24px 的可点区域下限；放大到 24×24 并走 token */
 .btn-sort {
-  width: 20px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
   padding: 0;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
+  background: var(--color-bg-hover, #f1f5f9);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 4px);
   cursor: pointer;
-  font-size: 10px;
-  color: #64748b;
+  font-size: 11px;
+  color: var(--color-text-secondary, #64748b);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .btn-sort:hover:not(:disabled) {
-  background: #e2e8f0;
-  color: #3b82f6;
+  background: var(--color-bg-active, #e2e8f0);
+  color: var(--color-primary);
 }
 
 .btn-sort:disabled {
@@ -530,18 +551,23 @@ const sortedCustomCategories = computed(() =>
   flex: 1;
 }
 
-/* 操作栏文字按钮（导出/编辑/删除）：小号文字 + 轻边框，hover 时边框与文字加深 */
+/* 操作栏文字按钮（导出/编辑/删除）：小号文字 + 轻边框，hover 时边框与文字加深。
+   尺寸对齐全局 .ui-btn--sm（30px 高 / 8px 圆角 / 12px 字） */
 .btn-icon {
-  padding: 3px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 var(--space-2, 8px);
   background: none;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-md, 8px);
   cursor: pointer;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--font-size-xs, 12px);
+  line-height: 1;
   color: var(--color-text-secondary, #475569);
   opacity: 0.75;
-  transition: opacity 0.2s, border-color 0.2s, color 0.2s;
+  transition: opacity 0.2s, border-color 0.2s, color 0.2s, background-color 0.2s;
 }
 
 .btn-icon:hover:not(:disabled) {

@@ -4622,25 +4622,9 @@ html.dark .tab-btn.active {
   border-radius: var(--radius-md);
 }
 
-.wb-menu-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.wb-menu-title {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text, var(--color-text));
-}
-
-.wb-menu-hint {
-  margin: 6px 0 12px;
-  font-size: 12px;
-  color: var(--color-text-muted, var(--color-text-muted));
-}
+/* .wb-menu-head / .wb-menu-label / .wb-menu-title / .wb-menu-hint
+   已提到全局 style.css 定义（水印设置、微信公众号等子组件也在用，
+   scoped 规则到不了子组件内部，见 style.css 对应注释） */
 
 /* ===== 销售记账 · 账本管理（新建 / 删除）：两块卡片式分区，沿用 wb-menu 排版 ===== */
 .bl-manage-card {
@@ -4862,22 +4846,28 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
   justify-content: center;
 }
 
+/* 行内文本输入：对齐全局 .ui-input 的规格（36px 高 / 8px 圆角 / 同款焦点环），
+   原先 29px 高 + 4px 圆角，和右侧按钮同排时矮一截、圆角也不一致 */
 .wb-menu-name-input {
   flex: 1;
   min-width: 0;
   box-sizing: border-box;
-  padding: 6px 8px;
-  font-size: 13px;
-  color: var(--color-text, var(--color-text));
+  min-height: 36px;
+  padding: 0 var(--space-3, 12px);
+  font-size: var(--font-size-sm, 13px);
+  color: var(--color-text);
   background-color: var(--color-bg-input, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-sm);
-  transition: border-color var(--transition-fast, 0.15s ease);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 8px);
+  transition:
+    border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    box-shadow var(--motion-duration, 220ms) var(--motion-ease, ease);
 }
 
 .wb-menu-name-input:focus {
   outline: none;
-  border-color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-ring, rgba(59, 130, 246, 0.35));
 }
 
 /* 入口图标按钮：显示当前图标缩略图（未设置时为占位图标），点击从图标管理库选择 */
@@ -4887,20 +4877,24 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   padding: 0;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   background-color: var(--color-bg-input, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 8px);
   cursor: pointer;
-  transition: border-color var(--transition-fast, 0.15s ease), color var(--transition-fast, 0.15s ease);
+  transition:
+    border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    background-color var(--motion-duration, 220ms) var(--motion-ease, ease);
 }
 
 .wb-menu-icon-btn:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-soft);
 }
 
 /* 已设置自定义图标：主色描边提示 */
@@ -4945,14 +4939,17 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
 
 /* .wb-menu-btn 视觉已统一到全局 .ui-btn（次按钮 sm） */
 
-/* 分段控件（显示控制：经典 / 侧边栏 视图模式二选一） */
+/* 分段控件（显示控制：经典 / 侧边栏、站点排序 二选一）
+   高度与 36px 的按钮/输入框对齐：容器 36 = 内段 30 + 上下 padding 2×2 + 边框 2 */
 .seg-control {
   display: inline-flex;
+  align-items: center;
   flex: none;
-  padding: 3px;
+  height: 36px;
+  padding: 2px;
   background-color: var(--color-bg-hover, #f1f5f9);
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 999px;
+  border-radius: var(--radius-full, 9999px);
   box-sizing: border-box;
 }
 .seg-opt {
@@ -4961,22 +4958,25 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 18px;
+  height: 30px;
+  padding: 0 var(--space-4, 16px);
   border: none;
   background: transparent;
-  color: var(--color-text-secondary, #64748b);
-  font-size: 13px;
-  border-radius: 999px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm, 13px);
+  line-height: 1;
+  border-radius: var(--radius-full, 9999px);
   cursor: pointer;
-  transition: color 0.2s, background-color 0.2s;
+  transition: color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    background-color var(--motion-duration, 220ms) var(--motion-ease, ease);
   white-space: nowrap;
 }
 .seg-opt.active {
-  background-color: var(--color-primary, #3b82f6);
+  background-color: var(--color-primary);
   color: #fff;
 }
 .seg-opt:focus-visible {
-  outline: 2px solid var(--color-primary, #3b82f6);
+  outline: 2px solid var(--color-primary);
   outline-offset: 1px;
 }
 html.dark .seg-control {
@@ -5227,7 +5227,7 @@ html.dark .remind-label {
 .site-actions-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2, 8px);
 }
 
 /* .site-action-btn 视觉已统一到全局 .ui-btn（次按钮） */
@@ -5393,6 +5393,8 @@ html.dark .remind-label {
   max-height: min(52vh, 520px);
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* 底部内阴影：内容被高度截断时提示「还能往下滚」，避免看起来像被硬切掉 */
+  box-shadow: inset 0 -10px 12px -12px var(--color-shadow, rgba(0, 0, 0, 0.08));
 }
 
 /* 窄屏（手机）：放宽面板可视高度，保证表单与列表可用 */

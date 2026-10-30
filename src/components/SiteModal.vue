@@ -833,18 +833,24 @@ const handleSubmit = () => {
   align-items: center;
 }
 
+/* 图标区的小动作按钮（获取图标/清除）：与全局 .ui-btn--sm 同规格（30px / 8px 圆角 / 12px 字） */
 .btn-icon-action {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 6px 12px;
+  justify-content: center;
+  gap: var(--space-1, 4px);
+  min-height: 30px;
+  padding: 0 var(--space-3, 12px);
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 6px;
+  border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #ffffff);
   color: var(--color-text-secondary, #64748b);
-  font-size: 13px;
+  font-size: var(--font-size-xs, 12px);
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    background-color var(--motion-duration, 220ms) var(--motion-ease, ease);
   white-space: nowrap;
 }
 
