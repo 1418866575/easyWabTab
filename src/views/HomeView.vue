@@ -251,10 +251,21 @@ function maybeLoadMore(): void {
     mobileRenderLimit.value += MOBILE_BATCH
   }
 }
-// 筛选/搜索变化后重新从第一批开始渲染
-watch(filteredSites, () => {
-  mobileRenderLimit.value = MOBILE_BATCH
-})
+// 只在「筛选条件」真的变了才回到第一批。
+// 这里不能监听 filteredSites 本身：点击站点会给 sort +1（点击频率排序）→ 列表重排 → 已加载的批次
+// 被收回 40 条。滚到第 200 条时点开一个卡再回来，列表瞬间坍缩，是手机端最明显的体验断层。
+watch(
+  () => [
+    store.selectedCategory,
+    store.selectedTags.join(','),
+    store.searchQuery,
+    store.showOnlyInvalid,
+    isMobilePaging.value
+  ],
+  () => {
+    mobileRenderLimit.value = MOBILE_BATCH
+  }
+)
 
 // ===== 本站筛选：独立输入框，只过滤下方卡片列表；顶部 GlobalSearch 仍走外部搜索引擎 =====
 const siteFilter = ref(store.searchQuery)

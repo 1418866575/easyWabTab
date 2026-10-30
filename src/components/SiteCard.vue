@@ -155,7 +155,8 @@ const handleClick = () => {
   sitesStore.incrementClick(props.site.url)
   // 一律新标签打开：站内入口卡（/toolbox /blog /books）同样开新标签，
   // 保留当前导航站页面的筛选与滚动位置，不需要用户回退。
-  window.open(props.site.url, '_blank')
+  // noopener：不让新标签通过 window.opener 反向操作本页（tabnabbing）；noreferrer 顺带不泄露来源。
+  window.open(props.site.url, '_blank', 'noopener,noreferrer')
 }
 </script>
 

@@ -284,16 +284,17 @@ watch(() => props.site, (newSite) => {
   }
 }, { immediate: true })
 
-// 检查是否为有效的 URL（支持 http/https 或本地路径）
+// 检查是否为有效的 URL（只放行 http/https 与站内路径）
+// 不能只靠 `new URL()` 判真：它同样接受 javascript: / data: / ftp: 等协议，
+// 保存后由 SiteCard / GlobalSearch 的 window.open 执行 —— 等于给站点列表留了一个脚本执行入口。
 const isValidUrl = (url: string): boolean => {
-  if (!url.trim()) return false
-  // 支持 http://, https:// 或 /games/ 等本地路径
-  if (url.startsWith('/') || url.startsWith('http://') || url.startsWith('https://')) {
-    return true
-  }
+  const v = url.trim()
+  if (!v) return false
+  // 站内路径（/games/…、/toolbox 等）
+  if (v.startsWith('/')) return true
   try {
-    new URL(url)
-    return true
+    const parsed = new URL(v)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
   } catch {
     return false
   }

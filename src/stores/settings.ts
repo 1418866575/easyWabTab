@@ -278,6 +278,10 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   if (data.viewMode === 'classic' || data.viewMode === 'sidebar') {
     out.viewMode = data.viewMode
   }
+  // 导航排序方式：仅采纳合法枚举；非法/缺失回退默认（点击频率）
+  if (data.navSortMode === 'clicks' || data.navSortMode === 'custom') {
+    out.navSortMode = data.navSortMode
+  }
   // 滚动条显示模式：仅采纳合法枚举；非法/缺失回退默认（auto = 浏览器默认样式）
   if (data.scrollbarMode === 'ghost' || data.scrollbarMode === 'hidden') {
     out.scrollbarMode = data.scrollbarMode
@@ -493,6 +497,10 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   // 导航站视图模式：经典网格 / 侧边栏导航（默认 classic）
   const viewMode = ref<'classic' | 'sidebar'>('classic')
 
+  // 导航站排序方式：clicks = 点击频率自动置顶（默认，沿用既有行为）；
+  // custom = 以拖拽/新增顺序为准，点击只计数不改 sort —— 避免点开一个站点后列表被打散。
+  const navSortMode = ref<'clicks' | 'custom'>('clicks')
+
   // 滚动条显示模式（全局外观开关）：auto = 浏览器默认；ghost = 隐形但保留槽位/拖动，悬停或聚焦时显形；
   // hidden = 常隐（槽位一并移除）。由 applySettings 写到 <html data-scrollbar="…"> 驱动 CSS
   const scrollbarMode = ref<'auto' | 'ghost' | 'hidden'>('auto')
@@ -611,6 +619,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       businessActiveSection: toRaw(businessActiveSection.value),
       navFiltersExpanded: navFiltersExpanded.value,
       viewMode: viewMode.value,
+      navSortMode: navSortMode.value,
       scrollbarMode: scrollbarMode.value,
       workbenchPageName: workbenchPageName.value,
       workbenchPageVisible: workbenchPageVisible.value,
@@ -786,6 +795,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       workbenchMenuVisibility.value = normalizeWorkbenchMenuVisibility(effective.workbenchMenuVisibility)
       navFiltersExpanded.value = effective.navFiltersExpanded === true
       viewMode.value = effective.viewMode === 'sidebar' ? 'sidebar' : 'classic'
+      // 排序方式：仅采纳合法枚举；非法/缺失回退默认（点击频率）
+      navSortMode.value = effective.navSortMode === 'custom' ? 'custom' : 'clicks'
       // 滚动条模式：仅采纳合法枚举；非法/缺失回退默认（auto）
       scrollbarMode.value =
         effective.scrollbarMode === 'ghost' || effective.scrollbarMode === 'hidden' ? effective.scrollbarMode : 'auto'
@@ -983,6 +994,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     homeCardLayout.value = {}
     navFiltersExpanded.value = false
     viewMode.value = 'classic'
+    navSortMode.value = 'clicks'
     scrollbarMode.value = 'auto'
     workbenchPageName.value = ''
     workbenchPageVisible.value = false
@@ -1105,6 +1117,12 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
 
   function setViewMode(v: 'classic' | 'sidebar') {
     viewMode.value = v
+    persist()
+  }
+
+  // 导航站排序方式：只影响「点击站点后是否自动置顶」，改完立即持久化（随 workbench 信封云同步）
+  function setNavSortMode(v: 'clicks' | 'custom') {
+    navSortMode.value = v
     persist()
   }
 
@@ -1542,6 +1560,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     businessActiveSection,
     navFiltersExpanded,
     viewMode,
+    navSortMode,
     scrollbarMode,
     workbenchPageName,
     workbenchPageVisible,
@@ -1650,6 +1669,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     isWorkbenchMenuEnabled,
     setNavFiltersExpanded,
     setViewMode,
+    setNavSortMode,
     setScrollbarMode,
     setWorkbenchPageName,
     setWorkbenchPageVisible,

@@ -7,6 +7,7 @@ import { useCategoriesStore } from '../stores/categories'
 import { useSitesStore } from '../stores/sites'
 import { isImageIcon } from '../composables/categoryIcon'
 import { useToast } from '../composables/useToast'
+import { showConfirm } from '@/utils/dialog'
 
 /** embedded = true：作为常驻面板内嵌在设置页（无遮罩、无自带标题栏、不响应 ESC 与遮罩点击关闭） */
 withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
@@ -141,11 +142,20 @@ function saveEdit() {
   cancelEdit()
 }
 
-// 删除分类
-function handleDelete(categoryId: string) {
+// 删除分类：不可撤销（分类下站点会被迁到「未分类」），与删除站点一致先走统一确认框
+async function handleDelete(categoryId: string) {
   const siteCount = getSiteCount(categoryId)
+  const name = categoriesStore.allCategories.find(c => c.id === categoryId)?.name ?? '该分类'
+  const ok = await showConfirm(
+    siteCount > 0
+      ? `删除分类「${name}」？该分类下的 ${siteCount} 个站点会被移到「未分类」，站点本身不会删除。`
+      : `删除分类「${name}」？该分类下还没有站点。`,
+    '删除分类'
+  )
+  if (!ok) return
+
   const target = categoriesStore.deleteCategory(categoryId)
-  
+
   // 迁移网站到 'other' 分类
   if (siteCount > 0) {
     sitesStore.migrateSitesToCategory(categoryId, target)

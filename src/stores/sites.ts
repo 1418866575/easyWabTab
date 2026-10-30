@@ -781,8 +781,13 @@ export const useSitesStore = defineStore('sites', () => {
     const site = sites.value.find(s => s.url === url)
     if (!site) return
 
-    // sort 值加 1
-    site.sort = (site.sort ?? 1) + 1
+    // 排序方式为「自定义」（settings.navSortMode = 'custom'）时只记次数、不动 sort：
+    // 否则用户拖拽排好的顺序会被每次点击持续打散，点开一个站再回来它已跳到最前。
+    // 默认 'clicks' 保持既有「常用置顶」行为。
+    if (useAppSettingsStore().navSortMode !== 'custom') {
+      // sort 值加 1
+      site.sort = (site.sort ?? 1) + 1
+    }
 
     // 点击计数走内存缓存，不再每次 JSON.parse 全量历史
     const counts = loadClickCounts()

@@ -2319,6 +2319,33 @@ function toggleFullscreen(): void {
           </div>
           <p class="wb-menu-hint">导航站布局：经典 = 卡片网格铺满；侧边栏 = 左侧分类导航 + 右侧内容。选择随刷新保留。</p>
 
+          <!-- 站点排序方式：clicks = 点击频率自动置顶；custom = 以拖拽/新增顺序为准，点击只计数 -->
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">站点排序</h3>
+            <div class="seg-control" role="group" aria-label="导航站排序方式">
+              <button
+                type="button"
+                class="seg-opt"
+                :class="{ active: store.navSortMode === 'clicks' }"
+                :aria-pressed="store.navSortMode === 'clicks'"
+                data-testid="nav-sort-clicks"
+                @click="store.setNavSortMode('clicks')"
+              >点击频率</button>
+              <button
+                type="button"
+                class="seg-opt"
+                :class="{ active: store.navSortMode === 'custom' }"
+                :aria-pressed="store.navSortMode === 'custom'"
+                data-testid="nav-sort-custom"
+                @click="store.setNavSortMode('custom')"
+              >自定义顺序</button>
+            </div>
+          </div>
+          <p class="wb-menu-hint">
+            点击频率：点开次数多的站点自动靠前，每次点击都会顺带调整顺序；
+            自定义顺序：顺序只由拖拽与新增决定，点击只记次数、不再打散列表。
+          </p>
+
           <!-- 滚动条显示模式（全局外观开关）：auto / ghost / hidden -->
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">滚动条</h3>

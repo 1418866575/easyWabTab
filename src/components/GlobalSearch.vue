@@ -110,7 +110,7 @@ const handleSearch = () => {
   if (isLocalSearch.value) {
     if (localSearchResults.value.length > 0) {
       // 打开第一个匹配结果
-      window.open(localSearchResults.value[0].url, '_blank')
+      window.open(localSearchResults.value[0].url, '_blank', 'noopener,noreferrer')
     }
     return
   }
@@ -122,13 +122,7 @@ const handleSearch = () => {
     addToHistory(searchQuery.value)
     
     const url = engine.url + encodeURIComponent(searchQuery.value.trim())
-    window.open(url, '_blank')
-  }
-}
-
-const handleKeyup = (event: KeyboardEvent) => {
-  if (event.key === 'Enter') {
-    handleSearch()
+    window.open(url, '_blank', 'noopener,noreferrer')
   }
 }
 
@@ -218,7 +212,7 @@ function getCategoryName(categoryId: string): string {
 function openSite(url: string) {
   // 记录点击次数（使用频率排序）
   sitesStore.incrementClick(url)
-  window.open(url, '_blank')
+  window.open(url, '_blank', 'noopener,noreferrer')
   addToHistory(searchQuery.value)
   showHistory.value = false
 }
@@ -238,7 +232,6 @@ function openSite(url: string) {
           type="text"
           class="search-input"
           placeholder="输入关键词，按回车键搜索..."
-          @keyup="handleKeyup"
           @keydown="handleKeydown"
           @focus="handleFocus"
           @blur="handleBlur"
