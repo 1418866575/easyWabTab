@@ -5,6 +5,7 @@ import { useViewMode } from '@/composables/useViewMode'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import GenealogyTreeNode from '@/components/workbench/GenealogyTreeNode.vue'
+import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
 import { useToast } from '@/composables/useToast'
 import { useGenealogyStore } from '@/stores/genealogy'
 import {
@@ -1330,6 +1331,7 @@ onUnmounted(() => {
     </el-dialog>
 
   </div>
+<WorkbenchFab @click="startAdd" />
 </template>
 
 <style scoped>
@@ -1477,26 +1479,7 @@ html.dark .fn-paibei-sep { color: var(--color-border, #374151); }
 }
 /* .btn-delete 视觉已统一到全局 .ui-btn--danger（style.css） */
 
-/* ===== 空态 ===== */
-.empty-state {
-  text-align: center;
-  color: var(--color-text-muted, #9ca3af);
-  font-size: 14px;
-  padding: 40px 20px;
-  background: var(--color-bg-card, #fff);
-  border: 1px dashed var(--color-border, #e5e7eb);
-  border-radius: 10px;
-}
-.empty-invite {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-secondary, #64748b);
-  transition: color 0.15s ease, border-color 0.15s ease;
-}
-.empty-invite:hover { color: var(--color-primary, #3b82f6); border-color: var(--color-primary, #3b82f6); }
-.filter-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+/* ===== 空态：.empty-state / .empty-invite / .filter-empty 已收敛到全局基类（src/style.css） ===== */
 /* .btn-cancel 视觉已统一到全局 .ui-btn（style.css） */
 
 /* ===== 家谱树 ===== */
@@ -1640,7 +1623,7 @@ html.dark .avatar-preview { background: var(--color-bg-card, #1f2937); }
 /* ===== 暗色覆盖 ===== */
 html.dark .fg-tab { color: var(--color-text-secondary, #d1d5db); }
 html.dark .fg-tab:hover, html.dark .fg-tab.active { color: var(--color-primary, #60a5fa); border-bottom-color: var(--color-primary, #3b82f6); }
-html.dark .empty-state { background-color: var(--color-bg-card, #1f2937); }
+/* html.dark .empty-state 背景已由全局 .empty-state 的 --color-bg-card token 自动跟随 */
 html.dark .fg-name { color: var(--color-text, #f9fafb); }
 html.dark .fn-name { color: var(--color-text, #f9fafb); }
 html.dark .fg-tree-bar { background-color: var(--color-bg-card, #1f2937); }

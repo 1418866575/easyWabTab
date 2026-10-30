@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { showConfirm } from '@/utils/dialog'
 import BaseDialog from '@/components/common/BaseDialog.vue'
+import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
 
 /** 表单弹框尺寸（沿用原 .dialog 的固定尺寸，非设置项） */
 const PANEL_WIDTH = '480px'
@@ -522,6 +523,7 @@ onMounted(async () => {
         </form>
       </BaseDialog>
   </div>
+<WorkbenchFab @click="startAddRecord" />
 </template>
 
 <style scoped>
@@ -532,46 +534,8 @@ onMounted(async () => {
   gap: 16px;
 }
 
-/* ===== 目标卡（复用 WorkbenchHome stat-card 结构）===== */
-.stat-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
-  transition: border-color var(--transition-fast, 0.15s ease);
-}
-
-.stat-card:hover {
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.stat-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.stat-icon {
-  font-size: 18px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.stat-label {
-  flex: 1;
-  min-width: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
+/* 卡片外框 / 卡片标题 / 统计数字的统一取值在全局 styles/workbench.css（.wb-content .stat-*），
+   面板内不再各抄一份 —— 这是此前 6 份重复定义漂移的根因。 */
 .nav-btn {
   flex-shrink: 0;
   padding: 4px 10px;
@@ -594,7 +558,6 @@ onMounted(async () => {
 .stat-value {
   font-size: 26px;
   font-weight: 700;
-  color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
@@ -759,30 +722,7 @@ onMounted(async () => {
 
 /* .btn-clear 视觉已统一到全局 .ui-btn--danger（style.css） */
 
-/* ===== 空态 ===== */
-.empty-state {
-  text-align: center;
-  color: var(--color-text-muted, var(--color-text-muted));
-  font-size: 14px;
-  padding: 40px 20px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px dashed var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-}
-
-.empty-invite {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  transition: color var(--transition-fast, 0.15s ease), border-color var(--transition-fast, 0.15s ease);
-}
-
-.empty-invite:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
+/* ===== 空态：.empty-state / .empty-invite 已收敛到全局基类（src/style.css） ===== */
 
 /* ===== 弹框内容区（原 .dialog-body；外壳主体已由 BaseDialog 的 .bd-body 承担）===== */
 .dialog-body {
@@ -891,19 +831,12 @@ onMounted(async () => {
 /* .btn-cancel 视觉已统一到全局 .ui-btn（style.css） */
 
 /* ===== 暗色模式覆盖 ===== */
-html.dark .stat-card {
-  background-color: var(--color-bg-card, #1f2937);
-  box-shadow: none;
-}
-
 html.dark .dt-item {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-html.dark .empty-state {
-  background-color: var(--color-bg-card, #1f2937);
-}
+/* html.dark .empty-state 背景已由全局 .empty-state 的 --color-bg-card token 自动跟随 */
 
 html.dark .dt-date {
   color: var(--color-text, #f9fafb);

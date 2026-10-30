@@ -37,6 +37,25 @@ export const MENU_DEFAULT_LABELS: Record<string, string> = {
   trash: '回收站'
 }
 
+/**
+ * 面板页头说明（对齐教师工作台：每个面板都有标题 + 一行说明）。
+ * 与 MENU_DEFAULT_LABELS 解耦——菜单名用户可在设置里改，说明文案保持固定语义，
+ * 不会因为改名变成一句不通的话。未登记的键不渲染页头。
+ */
+export const MENU_DESCRIPTIONS: Record<string, string> = {
+  todos: '按优先级与截止时间管理待办，支持状态筛选与批量操作。',
+  notes: '速记便签，支持分类、置顶与 Markdown 正文。',
+  diary: '按天记录的日记，支持心情、天气与全文搜索。',
+  countdowns: '重要日期提醒，临近到期会在首页聚合成「即将到来」。',
+  pomodoro: '番茄工作法计时：专注与休息循环，记录每日完成数。',
+  habits: '每日习惯打卡，日历视图查看连续天数与完成率。',
+  passwords: '账号密码本地加密保存，支持一键复制与显示切换。',
+  health: '运动、饮食、睡眠、体重四项指标与目标进度。',
+  ledger: '收支记账、分类统计与预算提醒。',
+  genealogy: '家族成员档案与家谱树，记录关系与姓名用字。',
+  trash: '已删除的条目保留在这里，可恢复或彻底清除。'
+}
+
 /** 菜单图标映射（内联 SVG path 标识，由 Icon.vue 查表渲染；值 = Icon 表键名，非 emoji）。 */
 export const MENU_ICONS: Record<string, string> = {
   home: 'home',

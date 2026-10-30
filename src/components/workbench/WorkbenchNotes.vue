@@ -3,6 +3,7 @@ import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
 
 const vm = useViewMode()
 
@@ -588,15 +589,6 @@ onUnmounted(() => {
             <span v-else style="color: var(--color-text-secondary, #9ca3af);">未分类</span>
           </template>
         </el-table-column>
-        <el-table-column label="颜色" width="80" align="center">
-          <template #default="{ row }">
-            <span v-if="!isTimeline(row)" class="nt-color-tag">
-              <span class="color-dot" :class="`dot-${row.color}`"></span>
-              <span>{{ COLOR_LABELS[row.color as NoteColor] }}</span>
-            </span>
-            <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
-          </template>
-        </el-table-column>
         <el-table-column label="状态" width="110" align="center">
           <template #default="{ row }">
             <span class="nt-status-badge" :class="statusClass(row)" :data-testid="`nt-status-${row.id}`">
@@ -605,15 +597,6 @@ onUnmounted(() => {
             <div v-if="row.dueDate" class="nt-due-cell" :class="{ 'is-overdue': statusView(row) === 'overdue' }">
               {{ row.dueDate }}
             </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="置顶" width="70" align="center">
-          <template #default="{ row }">
-            <span v-if="!isTimeline(row)">
-              <span v-if="row.pinned" class="nt-pin-badge">📌</span>
-              <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
-            </span>
-            <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
           </template>
         </el-table-column>
         <el-table-column label="更新时间" width="140" align="center">
@@ -833,6 +816,8 @@ onUnmounted(() => {
     </div>
   </div>
 
+<WorkbenchFab @click="startAdd" />
+
 </template>
 
 <style scoped>
@@ -947,22 +932,15 @@ onUnmounted(() => {
   background: var(--color-primary-light, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
 }
-.nt-color-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; opacity: 0.75; }
-.nt-pin-badge { font-size: 14px; }
+/* 表格「颜色」「置顶」两列已移除，随列一起删掉只被它们使用的样式：
+ * .nt-color-tag / .nt-pin-badge / .color-dot / .dot-* 全部成为死代码。
+ * 数据层未动：cardFields 里仍保留 '颜色'/'置顶' 两条（便于将来卡片放宽字段数时直接生效），
+ * 但 RecordsCard 的 maxFields 默认 4 只渲染前四项（标题/内容/分类/状态），
+ * 所以移动端卡片视图本来就不展示这两项——与本次删列无关，勿误以为是回归。 */
 .nt-edit-btn { color: var(--color-link, #3b82f6); }
 .nt-delete-btn { color: #ef4444; }
 .nt-pin-btn { opacity: 1; }
 .nt-pin-btn.active { color: var(--el-color-warning, #e6a23c); border-color: var(--el-color-warning, #e6a23c); }
-
-.color-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-.dot-yellow { background: #eab308; }
-.dot-blue { background: #3b82f6; }
-.dot-green { background: #22c55e; }
-.dot-pink { background: #ec4899; }
-.dot-red { background: #ef4444; }
-.dot-orange { background: #f97316; }
-.dot-cyan { background: #06b6d4; }
-.dot-purple { background: #a855f7; }
 
 /* ===== 时光轴 expand 行（表格内展开）===== */
 .nt-timeline-expand { padding: 12px 24px 12px 48px; }
@@ -1022,14 +1000,7 @@ onUnmounted(() => {
 .timeline-item-edit .form-input { padding: 6px 10px; font-size: 13px; }
 .timeline-item-edit .btn-save { padding: 4px 12px; font-size: 12px; }
 
-/* ===== 空态 ===== */
-.empty-state {
-  text-align: center; color: var(--color-text-muted, var(--color-text-muted));
-  font-size: 14px; padding: 40px 20px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px dashed var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-}
+/* ===== 空态：.empty-state 已收敛到全局基类（src/style.css） ===== */
 
 /* ===== 编辑浮层 ===== */
 .note-overlay {
@@ -1105,7 +1076,7 @@ onUnmounted(() => {
 html.dark .note-overlay { background: rgba(0, 0, 0, 0.7); }
 html.dark .note-form { background-color: var(--color-bg-card, #1f2937); }
 html.dark .timeline-expand-panel { background-color: var(--color-bg-card, #1f2937); }
-html.dark .empty-state { background-color: var(--color-bg-card, #1f2937); }
+/* html.dark .empty-state 背景已由全局 .empty-state 的 --color-bg-card token 自动跟随 */
 html.dark .btn-save:disabled { background-color: var(--color-bg-input, #374151); color: var(--color-text-muted, #9ca3af); }
 /* html.dark .btn-add:disabled 视觉已统一到全局 .ui-btn--primary（style.css） */
 html.dark .nt-search { background-color: var(--color-bg-card, #1f2937); box-shadow: none; }

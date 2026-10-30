@@ -8,24 +8,26 @@ import { ref, watch } from 'vue'
 import { useAppSettingsStore } from '@/stores/settings'
 import type { HomeCardLayout } from '@/types'
 
-export type ContainerId = 'action' | 'overview' | 'tools'
+export type ContainerId = 'overview'
 
-/** 每个网格容器的卡片 id 顺序（默认）与最大列数（resize 宽度上限，避免跨屏越界）。 */
+/**
+ * 主页卡片统一归入单一「概览」网格（2026-10-29 合并原 action/overview/tools 三容器，
+ * 支撑「单屏一瞥总览」：所有卡同网格、密度一致、可整体拖拽排序）。
+ * 默认顺序：关键数字卡在前（待办/统计/提醒/记账/打卡/健康/便签/密码），
+ * 输入与列表卡在后（即将到期/未完成待办/快速添加/日历/天气）；用户可拖拽重排。
+ * maxCols 桌面 6 列、平板 3 列、手机 1 列（由 WorkbenchHome.vue 的媒体查询控制栅格，
+ * 此处仅作卡片宽度上限，避免拖宽后越界）。设置面板「卡片尺寸」按此容器自动分组渲染。
+ * 注：'todo-stats' 此前漏登记在容器内（渲染为卡但不可拖拽、order 回退 0），此处补入。
+ */
 export const LAYOUT_CONTAINERS: Record<ContainerId, { ids: string[]; maxCols: number }> = {
-  action: {
-    ids: ['quick-add-todo', 'quick-add-note', 'upcoming', 'weather'],
-    maxCols: 2
-  },
   overview: {
     ids: [
-      'todos', 'notes', 'countdowns', 'passwords',
-      'exercise', 'diet', 'sleep', 'weight', 'ledger', 'habits'
+      'todos', 'todo-stats', 'countdowns', 'ledger', 'habits',
+      'exercise', 'diet', 'sleep', 'weight', 'notes', 'passwords',
+      'upcoming', 'pending-todos', 'quick-add-todo', 'quick-add-note',
+      'calendar-anchor', 'weather'
     ],
-    maxCols: 5
-  },
-  tools: {
-    ids: ['pending-todos', 'calendar-anchor'],
-    maxCols: 2
+    maxCols: 6
   }
 }
 
@@ -36,9 +38,7 @@ for (const [c, def] of Object.entries(LAYOUT_CONTAINERS)) {
 
 /** 分区中文名（设置面板「主页卡片尺寸」的分组标题） */
 export const CONTAINER_LABELS: Record<ContainerId, string> = {
-  action: '行动台',
-  overview: '数据概览',
-  tools: '工具'
+  overview: '概览'
 }
 
 /**

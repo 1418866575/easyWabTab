@@ -63,6 +63,17 @@ function selectPage(key: PageKey): void {
   activePage.value = key
 }
 
+/** 当前页对应的组件：交给 <KeepAlive> 下的单个 <component :is> 渲染。
+ *  KeepAlive 只接受一个子节点，不能再并列写 v-if 分支（会编译失败）。 */
+const activePageComponent = computed(() => {
+  switch (activePage.value) {
+    case 'skills': return SkillManager
+    case 'prompts': return PromptManager
+    case 'workflows': return WorkflowManager
+    default: return SmartOverview
+  }
+})
+
 // ---------- 右上角云同步（共享 useCloudSync 单例；智能工作台数据走独立的 smart.json 信封） ----------
 const cloudSync = useCloudSync()
 const cloudEnabled = computed((): boolean => settingsStore.cloudSyncEnabled === true)
@@ -153,7 +164,7 @@ async function handleSyncNowClick(): Promise<void> {
           <!-- 收起 / 展开：位于左侧菜单顶部，与菜单项同宽左对齐 -->
           <button
             type="button"
-            class="sv-nav-collapse"
+            class="tw-btn tw-btn-sm sv-nav-collapse"
             :aria-expanded="!sidebarCollapsed"
             :title="sidebarCollapsed ? '展开菜单' : '收起菜单'"
             data-testid="smart-collapse-sidebar"
@@ -183,12 +194,16 @@ async function handleSyncNowClick(): Promise<void> {
       <main class="sv-content">
         <!-- KeepAlive：切页不销毁列表组件，保住搜索词 / 分类 / 标签 / 排序 / 页码
              （此前是裸 v-if，切走再切回筛选条件全丢）。缓存的组件按类型区分，互不干扰。 -->
+        <!-- KeepAlive 只接受「单个」子节点：四页必须收敛成一个动态组件。
+             曾经写成 v-if / v-else-if 四条并列分支，模板编译期直接报
+             "<KeepAlive> expects exactly one child component"，整条 /smart 路由 500 白屏。
+             概览的统计卡会 emit goto 跳到对应菜单；另三页没有该事件，
+             故用条件 v-on 绑定，避免把 onGoto 透传到它们的根元素上。 -->
         <KeepAlive>
-          <!-- 概览的统计卡会 emit goto 跳到对应菜单；另三页无该事件 -->
-          <SmartOverview v-if="activePage === 'overview'" @goto="selectPage" />
-          <SkillManager v-else-if="activePage === 'skills'" />
-          <PromptManager v-else-if="activePage === 'prompts'" />
-          <WorkflowManager v-else />
+          <component
+            :is="activePageComponent"
+            v-on="activePage === 'overview' ? { goto: selectPage } : {}"
+          />
         </KeepAlive>
       </main>
     </div>
@@ -357,26 +372,16 @@ async function handleSyncNowClick(): Promise<void> {
   gap: 2px;
 }
 
+/* 收起 / 展开：外观复用教师台 `.tw-btn .tw-btn-sm`（白底描边胶囊、30px 高、12px/500、
+   hover 只变底色），本类只留布局——整行铺满 + 左对齐 + 与菜单项同宽。
+   与个人/销售工作台的 .wb-sidebar-toggle / .bs-sidebar-toggle 同一套取值。 */
 .sv-nav-collapse {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  justify-content: flex-start;
-  flex-shrink: 0;
   width: 100%;
-  min-height: 34px;
-  padding: 0 10px;
+  flex-shrink: 0;
+  justify-content: flex-start;
   margin-bottom: 4px;
-  border: none;
-  border-radius: var(--radius-sm, 8px);
-  background-color: transparent;
-  color: var(--color-text-muted, #94a3b8);
-  font-family: inherit;
-  font-size: var(--font-size-sm, 13px);
-  cursor: pointer;
 }
-
-.sv-nav-collapse:hover { background-color: var(--color-bg-hover, #f1f5f9); }
 
 .sv-nav-item {
   display: flex;

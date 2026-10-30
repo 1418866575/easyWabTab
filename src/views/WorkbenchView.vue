@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onMounted, ref, watch, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
 import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
@@ -14,30 +14,66 @@ import { useWorkbenchDiaryStore } from '@/stores/workbenchDiary'
 import { useGenealogyStore } from '@/stores/genealogy'
 import { useAppSettingsStore } from '@/stores/settings'
 import WorkbenchSwitcher from '@/components/WorkbenchSwitcher.vue'
-import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
 import { HEALTH_TABS, type HealthModule } from '@/types'
-import WorkbenchHome from '@/components/workbench/WorkbenchHome.vue'
-import WorkbenchTodo from '@/components/workbench/WorkbenchTodo.vue'
-import WorkbenchNotes from '@/components/workbench/WorkbenchNotes.vue'
-import WorkbenchCountdown from '@/components/workbench/WorkbenchCountdown.vue'
-import WorkbenchPomodoro from '@/components/workbench/WorkbenchPomodoro.vue'
-import WorkbenchHabits from '@/components/workbench/WorkbenchHabits.vue'
-import WorkbenchPassword from '@/components/workbench/WorkbenchPassword.vue'
-import WorkbenchHealth from '@/components/workbench/WorkbenchHealth.vue'
-import WorkbenchLedger from '@/components/workbench/WorkbenchLedger.vue'
-import WorkbenchDiary from '@/components/workbench/WorkbenchDiary.vue'
-import WorkbenchGenealogy from '@/components/workbench/WorkbenchGenealogy.vue'
-import WorkbenchTrash from '@/components/workbench/WorkbenchTrash.vue'
 import Icon from '@/components/Icon.vue'
 import SkeletonBlock from '@/components/SkeletonBlock.vue'
-import SpotlightOverlay from '@/components/SpotlightOverlay.vue'
 import type { SpotlightAction } from '@/components/SpotlightOverlay.vue'
 import type { SpotlightData } from '@/composables/spotlightCore'
 import { useWorkbenchShortcuts } from '@/composables/useWorkbenchShortcuts'
+import { MENU_DEFAULT_LABELS, MENU_DESCRIPTIONS } from '@/composables/workbenchMenuCore'
 import { captureSnapshot } from '@/composables/useSnapshots'
 import { useSitesStore } from '@/stores/sites'
 import { useCloudSync } from '@/composables/useCloudSync'
 import type { SyncStatus } from '@/composables/useCloudSync'
+
+// ===== 面板懒加载 =====
+// 改造前：12 个面板 + 全局搜索浮层 + 设置弹窗全部静态 import，任一时刻只显示其中一个（v-else-if），
+// 却要一次性下载全部代码（WorkbenchView chunk 曾达 200kB+，设置弹窗另占 320kB）。
+// 改造后：内容区面板走 defineAsyncComponent 按需拉取，切到哪个面板才下哪个 chunk。
+//   - delay 用 Vue 默认 200ms：加载快于 200ms 不显示骨架，避免快速切换时闪一下；
+//   - loadingComponent 复用首屏同一个 SkeletonBlock，视觉上与初始化骨架连续，不跳版；
+//   - timeout 20s 与 ToolboxToolPanel 的既有约定一致。
+// ⚠️ 必须配合 prefetchPanel()：模板里 initializing 期间面板分支为 false（不渲染），
+//    若不预先 import，chunk 下载会串行排在骨架屏之后，首屏反而变慢。
+//    预取只是触发 import，重复调用命中模块缓存，不会重复下载。
+// 数据加载不受影响：所有 store 的 load* 都仍在下方 onMounted 的 Promise.all 里，
+// 与面板 chunk 的下载并行进行，面板挂载时数据已就绪（不会出现「先空后填」）。
+const panelLoaders: Record<string, () => Promise<unknown>> = {}
+
+function lazyPanel(key: string, loader: () => Promise<unknown>) {
+  panelLoaders[key] = loader
+  return defineAsyncComponent({
+    loader: loader as () => Promise<Component>,
+    delay: 200,
+    timeout: 20000,
+    loadingComponent: SkeletonBlock,
+    // 本视图未使用 <Suspense>，显式关闭以免异步组件行为随上层变化
+    suspensible: false
+  })
+}
+
+/** 触发某个面板的 chunk 下载（幂等：动态 import 自带模块缓存）。 */
+function prefetchPanel(key: string): void {
+  void panelLoaders[key]?.()
+}
+
+const WorkbenchHome = lazyPanel('home', () => import('@/components/workbench/WorkbenchHome.vue'))
+const WorkbenchTodo = lazyPanel('todos', () => import('@/components/workbench/WorkbenchTodo.vue'))
+const WorkbenchNotes = lazyPanel('notes', () => import('@/components/workbench/WorkbenchNotes.vue'))
+const WorkbenchCountdown = lazyPanel('countdowns', () => import('@/components/workbench/WorkbenchCountdown.vue'))
+const WorkbenchPomodoro = lazyPanel('pomodoro', () => import('@/components/workbench/WorkbenchPomodoro.vue'))
+const WorkbenchHabits = lazyPanel('habits', () => import('@/components/workbench/WorkbenchHabits.vue'))
+const WorkbenchPassword = lazyPanel('passwords', () => import('@/components/workbench/WorkbenchPassword.vue'))
+const WorkbenchHealth = lazyPanel('health', () => import('@/components/workbench/WorkbenchHealth.vue'))
+const WorkbenchLedger = lazyPanel('ledger', () => import('@/components/workbench/WorkbenchLedger.vue'))
+const WorkbenchDiary = lazyPanel('diary', () => import('@/components/workbench/WorkbenchDiary.vue'))
+const WorkbenchGenealogy = lazyPanel('genealogy', () => import('@/components/workbench/WorkbenchGenealogy.vue'))
+const WorkbenchTrash = lazyPanel('trash', () => import('@/components/workbench/WorkbenchTrash.vue'))
+
+// 两个浮层/弹窗都是 v-if 挂载（点开才渲染），也一并按需加载。
+// 它们自带遮罩外壳，加载期不塞骨架（骨架会出现在错误位置），直接短暂空等即可。
+const SpotlightOverlay = defineAsyncComponent(() => import('@/components/SpotlightOverlay.vue'))
+const AppSettingsDialog = defineAsyncComponent(() => import('@/components/AppSettingsDialog.vue'))
 
 const router = useRouter()
 const toast = useToast()
@@ -106,6 +142,17 @@ function navigateTo(section: string, tab?: string) {
 // 视图禁止内联重算排序/标签（顺序与改名经设置弹窗调整后在此直接生效）
 const menuItems = computed(() => settingsStore.workbenchMenuItems)
 
+// 面板页头：教师工作台每个面板都是「18px 标题 + 13px 一行说明」，
+// 个人工作台此前没有标题层，进入面板后只剩一排搜索框，层级断掉。
+// 标题取菜单名（用户可在设置里改名，改了就跟着变），说明取固定文案（见 MENU_DESCRIPTIONS）。
+// 首页不渲染：首页自带问候卡，再加标题会重复。
+const activePageTitle = computed(() => {
+  const hit = menuItems.value.find((item) => item.key === activeSection.value)
+  return hit?.label ?? MENU_DEFAULT_LABELS[activeSection.value] ?? ''
+})
+const activePageDesc = computed(() => MENU_DESCRIPTIONS[activeSection.value] ?? '')
+const showPageHead = computed(() => activeSection.value !== 'home' && activePageDesc.value !== '')
+
 // 菜单开关变化（设置弹窗切换）→ 当前激活区被关闭时回退到首个可见菜单项（home 恒可见）
 watch(
   () => menuItems.value.map(item => item.key),
@@ -141,7 +188,7 @@ function toggleSidebar() {
 const spotlightOpen = ref(false)
 const showSettingsDialog = ref(false)
 
-// 6 类数据源：密码不解密内容，仅 siteName/url 由 spotlightCore 匹配（core 契约）
+// 9 类数据源：密码不解密内容，仅 siteName/url 由 spotlightCore 匹配（core 契约）
 const spotlightData = computed<SpotlightData>(() => ({
   // 墓碑不入全局搜索：已删条目被搜到并点开会是空壳
   todos: todosStore.activeTodos,
@@ -150,7 +197,12 @@ const spotlightData = computed<SpotlightData>(() => ({
   ledgerEntries: ledgerStore.entries,
   ledgerCategories: ledgerStore.categories,
   passwords: passwordsStore.passwords,
-  sites: sitesStore.sites
+  sites: sitesStore.sites,
+  // 新增 3 类同样只喂活跃数据（日记走 activeEntries、家谱走 activeMembers/activeNames，均按墓碑过滤）
+  diary: diaryStore.activeEntries,
+  habits: habitsStore.habits,
+  familyMembers: genealogyStore.activeMembers,
+  familyNames: genealogyStore.activeNames
 }))
 
 function handleSpotlightSelect(action: SpotlightAction) {
@@ -192,6 +244,9 @@ function formatDate(d: Date): string {
 const initializing = ref(true)
 
 onMounted(async () => {
+  // 首屏面板的 chunk 立刻开始下载，与下方 store 加载并行（面板要等 initializing=false 才渲染，
+  // 不在这里预取就会串行排队，首屏反而比静态 import 更慢）
+  prefetchPanel(activeSection.value)
   try {
     await Promise.all([
       todosStore.loadTodos(),
@@ -280,14 +335,14 @@ async function handleSyncNowClick(): Promise<void> {
     <div class="wb-body">
       <nav ref="menuNavRef" class="wb-menu" :class="{ collapsed: sidebarCollapsed }">
         <button
-          class="wb-sidebar-toggle"
+          class="tw-btn tw-btn-sm wb-sidebar-toggle"
           data-testid="wb-sidebar-toggle"
           :title="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
           :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
           @click="toggleSidebar"
         >
           <span class="wb-menu-icon">
-            <Icon :name="sidebarCollapsed ? 'chevron-right' : 'chevron-left'" />
+            <Icon :name="sidebarCollapsed ? 'chevron-right' : 'chevron-left'" :size="14" />
           </span>
           <span class="wb-menu-label">{{ sidebarCollapsed ? '展开' : '收起' }}</span>
         </button>
@@ -299,6 +354,7 @@ async function handleSyncNowClick(): Promise<void> {
           :title="item.label"
           :aria-label="item.label"
           :data-testid="`wb-menu-${item.key}`"
+          @mouseenter="prefetchPanel(item.key)"
           @click="navigateTo(item.key)"
         >
           <span class="wb-menu-icon"><Icon :name="item.icon" /></span>
@@ -306,9 +362,15 @@ async function handleSyncNowClick(): Promise<void> {
         </button>
       </nav>
 
-      <main class="wb-content">
+      <main class="wb-content panel-scope">
         <SkeletonBlock v-if="initializing" :rows="5" label="正在加载工作台数据" />
         <template v-else>
+          <!-- 面板页头（对齐教师工作台 .tw-head）：标题 + 一行说明，样式在 styles/workbench.css。
+               panel-scope 是共享视觉层的挂载标记，销售台的内容容器也挂了同一个类。 -->
+          <div v-if="showPageHead" class="panel-page-head" data-testid="wb-page-head">
+            <h2 class="panel-page-title" data-testid="wb-page-title">{{ activePageTitle }}</h2>
+            <p class="panel-page-sub" data-testid="wb-page-sub">{{ activePageDesc }}</p>
+          </div>
           <WorkbenchHome v-if="activeSection === 'home'" @navigate="navigateTo" />
           <WorkbenchTodo v-else-if="activeSection === 'todos'" />
           <WorkbenchNotes v-else-if="activeSection === 'notes'" />
@@ -358,7 +420,8 @@ async function handleSyncNowClick(): Promise<void> {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 12px 20px;
+  /* 左右留白对齐教师顶栏 .tv-topbar（12px 16px），避免顶部与内容区的对齐线错开 */
+  padding: 12px 16px;
   background-color: var(--color-bg-card, #ffffff);
   border-bottom: 1px solid var(--color-border, #e2e8f0);
 }
@@ -407,32 +470,27 @@ async function handleSyncNowClick(): Promise<void> {
 /* 侧栏折叠：56px 仅图标（label 隐藏、图标居中），展开宽度 200px 平滑过渡 */
 .wb-menu.collapsed {
   width: 56px;
+  /* 横向内边距收到 6px：56 − 12 = 44px 的收起胶囊宽，与教师台 .tv-shell.is-collapsed 的 .tv-sidebar 同宽 */
+  padding-left: 6px;
+  padding-right: 6px;
 }
 
+/* 收起 / 展开：外观直接复用教师台 `.tw-btn .tw-btn-sm`（白底描边胶囊、30px 高、12px/500、
+   hover 只变底色），本类只补侧栏的布局差异——整行铺满 + 左对齐 + 与菜单项同宽。
+   这里刻意不再写圆角/字号/边框/悬浮色：三个工作台的这颗按钮从此同一套取值，
+   改教师台那边，个人/销售工作台自动跟着变（模板上也是 tw-btn tw-btn-sm 同款类名）。 */
 .wb-sidebar-toggle {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
+  width: 100%;
+  flex-shrink: 0;
+  justify-content: flex-start;
   margin-bottom: 4px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background-color: transparent;
-  color: var(--color-text-secondary, #64748b);
-  font-size: 14px;
-  text-align: left;
-  cursor: pointer;
-  transition: all 0.15s ease;
 }
 
-.wb-sidebar-toggle:hover {
-  background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-primary, #3b82f6);
-}
-
+/* 收起态（56px 仅图标）：与教师台 .tv-shell.is-collapsed .tv-nav-collapse 一致——居中且去掉横向内边距 */
 .wb-menu.collapsed .wb-sidebar-toggle {
   justify-content: center;
-  padding: 10px 0;
+  padding: 0;
 }
 
 .wb-menu.collapsed .wb-menu-label {
@@ -444,19 +502,22 @@ async function handleSyncNowClick(): Promise<void> {
   padding: 10px 0;
 }
 
+/* 侧栏项取值对齐教师工作台 .tv-nav-item（13px / --radius-sm / 主色软底选中 / hover 只变底色）：
+   此前是 14px + 8px 圆角 + hover 变主色文字，两个工作台并排看像两套导航。 */
 .wb-menu-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 9px 10px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--radius-sm, 4px);
   background-color: transparent;
   color: var(--color-text-secondary, #64748b);
-  font-size: 14px;
+  font-size: var(--font-size-sm, 13px);
   text-align: left;
   cursor: pointer;
-  transition: all var(--motion-duration, 220ms) var(--motion-ease, ease);
+  transition: background-color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    color var(--motion-duration, 220ms) var(--motion-ease, ease);
 }
 
 /* 统一微交互：按压缩放（菜单项不做抬升，避免侧栏/底部 Tab 割裂） */
@@ -480,20 +541,22 @@ async function handleSyncNowClick(): Promise<void> {
   white-space: nowrap;
 }
 
+/* hover 只变底色（教师 .tv-nav-item:hover 不变文字色），选中态才上主色 */
 .wb-menu-item:hover {
   background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-primary, #3b82f6);
 }
 
 .wb-menu-item.active {
-  background-color: var(--color-primary-light, #eff6ff);
+  background-color: var(--color-primary-soft, #eff6ff);
   color: var(--color-primary, #3b82f6);
-  font-weight: 600;
+  font-weight: var(--font-weight-medium, 500);
 }
 
 .wb-content {
   flex: 1;
-  padding: 20px;
+  /* 与教师工作台内容区（.tv-content，16px）一致；此前 20px 使得同样的卡片在两处
+     留白不同，切换工作台时疏密感不一致。 */
+  padding: 16px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -533,15 +596,8 @@ html.dark .wb-menu {
   border-right-color: var(--color-border, #374151);
 }
 
-html.dark .wb-sidebar-toggle {
-  color: var(--color-text-secondary, #d1d5db);
-}
-
-html.dark .wb-sidebar-toggle:hover {
-  background-color: var(--color-bg-hover, #374151);
-  color: var(--color-text, #f9fafb);
-}
-
+/* 收起按钮的暗色由 .tw-btn 的 token 自动翻转，这里不再单独覆盖
+   （旧的自写暗色会把文字压成 secondary、hover 改色，与教师台不一致） */
 html.dark .wb-menu-item {
   color: var(--color-text-secondary, #d1d5db);
 }
@@ -661,9 +717,14 @@ html.dark .wb-content {
     min-height: 44px;
   }
 
-  /* 窄屏间距压缩：内容区内边距收窄；底部留白避让固定 Tab Bar（44px 触控 + 内边距 + 安全区） */
+  /* 窄屏间距压缩：内容区内边距收窄；底部留白需同时避让两样固定元素：
+   *   ① 底部 Tab Bar（.wb-menu，移动端降级为 fixed bottom:0，约 56px + 安全区）
+   *   ② 悬浮新增 FAB（移动端 bottom:64px、高 48px → 顶端距视口底 112px）
+   * 原值只算了 ①（64px），实测习惯面板的日历日期格会被 FAB 压住、点不动
+   * （qa-workbench-mobile-overlap.mjs S2）。按 ② 的 112px + 8px 间隔取 120px。
+   * 无 FAB 的面板（首页/日记/番茄钟/回收站）只是滚到底多一段空白，不影响操作。 */
   .wb-content {
-    padding: 12px 12px calc(64px + env(safe-area-inset-bottom, 0px));
+    padding: 12px 12px calc(120px + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -679,13 +740,13 @@ html.dark .wb-content {
   cursor: progress !important;
 }
 .wb-sync-btn.wb-sync-btn-conflict {
-  background-color: #f59e0b;
+  background-color: var(--color-warning, #f59e0b);
   color: #fff;
-  border-color: #f59e0b;
+  border-color: var(--color-warning, #f59e0b);
 }
 .wb-sync-btn.wb-sync-btn-error {
-  background-color: #ef4444;
+  background-color: var(--color-error, #ef4444);
   color: #fff;
-  border-color: #ef4444;
+  border-color: var(--color-error, #ef4444);
 }
 </style>

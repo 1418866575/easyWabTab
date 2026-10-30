@@ -200,6 +200,11 @@ watch(activeSection, () => { void nextTick(scrollActiveIntoView) })
 /** 侧栏/底栏实际渲染的菜单项：移动端与桌面均为全部 8 项（2026-10-08 去掉「更多」） */
 const visibleMenuItems = computed(() => [...SECTIONS])
 
+/** 当前面板的元数据（label/hint）：面板页头直接用，文案与左树/搜索浮层同源，不另写一份 */
+const activeMeta = computed(() => SECTIONS.find((s) => s.key === activeSection.value))
+/** 首页不显示页头（首页自带账本概览 hero，再加标题会重复） */
+const showPageHead = computed(() => activeSection.value !== 'home' && !!activeMeta.value?.hint)
+
 /** Esc 关闭浮层：仅剩「快速记一笔」；未开则让事件继续传给弹框自身 */
 function handleEsc(e: KeyboardEvent): void {
   if (e.key !== 'Escape') return
@@ -389,14 +394,14 @@ onMounted(async () => {
         data-testid="bs-menu"
       >
         <button
-          class="bs-sidebar-toggle"
+          class="tw-btn tw-btn-sm bs-sidebar-toggle"
           data-testid="bs-sidebar-toggle"
           :title="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
           :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
           @click="toggleSidebar"
         >
           <span class="bs-menu-icon">
-            <Icon :name="sidebarCollapsed ? 'chevron-right' : 'chevron-left'" />
+            <Icon :name="sidebarCollapsed ? 'chevron-right' : 'chevron-left'" :size="14" />
           </span>
           <span class="bs-menu-label">{{ sidebarCollapsed ? '展开' : '收起' }}</span>
         </button>
@@ -420,7 +425,7 @@ onMounted(async () => {
            2026-10-08：已移除左右滑动切面板手势，面板切换统一由底部菜单栏负责 -->
       <main
         ref="contentRef"
-        class="bs-content"
+        class="bs-content panel-scope"
         :class="{ 'is-mobile': isMobileNav }"
         :style="contentStyle"
         data-testid="bs-content"
@@ -466,6 +471,13 @@ onMounted(async () => {
         </div>
 
         <template v-else>
+          <!-- 面板页头（与个人工作台 styles/workbench.css 的 .panel-page-head 同一套取值）：
+               标题/说明直接取 BIZ_SECTIONS 的 label/hint，不另写文案，避免两处漂移。
+               首页不渲染（首页自带账本概览）。 -->
+          <div v-if="showPageHead" class="panel-page-head" data-testid="bs-page-head">
+            <h2 class="panel-page-title" data-testid="bs-page-title">{{ activeMeta?.label }}</h2>
+            <p class="panel-page-sub" data-testid="bs-page-sub">{{ activeMeta?.hint }}</p>
+          </div>
           <!-- 跨年首次进入：当前年还没有账本，提示一键创建（不阻断历史账本查看） -->
           <div v-if="crossYearBannerVisible" class="bs-year-banner" data-testid="bs-cross-year-banner">
             <span>{{ thisYear }} 年还没有账本，创建后才能记录今年的收支。</span>
@@ -566,7 +578,8 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 12px 20px;
+  /* 左右留白对齐教师顶栏（12px 16px）与个人工作台（12px 16px），三处顶栏对齐线一致 */
+  padding: 12px 16px;
   background-color: var(--color-bg-card, #ffffff);
   border-bottom: 1px solid var(--color-border, #e2e8f0);
 }
@@ -700,32 +713,26 @@ onMounted(async () => {
 /* 侧栏折叠：56px 仅图标（label 隐藏、图标居中），展开宽度 200px 平滑过渡 */
 .bs-menu.collapsed {
   width: 56px;
+  /* 横向内边距收到 6px：56 − 12 = 44px 的收起胶囊宽，与教师台 .tv-shell.is-collapsed 的 .tv-sidebar 同宽 */
+  padding-left: 6px;
+  padding-right: 6px;
 }
 
+/* 收起 / 展开：外观直接复用教师台 `.tw-btn .tw-btn-sm`（白底描边胶囊、30px 高、12px/500、
+   hover 只变底色），本类只补侧栏的布局差异——整行铺满 + 左对齐 + 与菜单项同宽。
+   与个人工作台 .wb-sidebar-toggle 同款，别再本地写一套圆角/字号。 */
 .bs-sidebar-toggle {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
+  width: 100%;
+  flex-shrink: 0;
+  justify-content: flex-start;
   margin-bottom: 4px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background-color: transparent;
-  color: var(--color-text-secondary, #64748b);
-  font-size: 14px;
-  text-align: left;
-  cursor: pointer;
-  transition: all 0.15s ease;
 }
 
-.bs-sidebar-toggle:hover {
-  background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-primary, #3b82f6);
-}
-
+/* 收起态（56px 仅图标）：与教师台 .tv-shell.is-collapsed .tv-nav-collapse 一致——居中且去掉横向内边距 */
 .bs-menu.collapsed .bs-sidebar-toggle {
   justify-content: center;
-  padding: 10px 0;
+  padding: 0;
 }
 
 .bs-menu.collapsed .bs-menu-label {
@@ -737,19 +744,21 @@ onMounted(async () => {
   padding: 10px 0;
 }
 
+/* 侧栏项取值对齐教师 .tv-nav-item / 个人工作台 .wb-menu-item（13px / --radius-sm /
+   主色软底选中 / hover 只变底色），三个工作台的导航观感保持一致 */
 .bs-menu-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 9px 10px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--radius-sm, 4px);
   background-color: transparent;
   color: var(--color-text-secondary, #64748b);
-  font-size: 14px;
+  font-size: var(--font-size-sm, 13px);
   text-align: left;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .bs-menu-icon {
@@ -770,18 +779,19 @@ onMounted(async () => {
 
 .bs-menu-item:hover {
   background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-primary, #3b82f6);
 }
 
 .bs-menu-item.active {
-  background-color: var(--color-primary-light, #eff6ff);
+  background-color: var(--color-primary-soft, #eff6ff);
   color: var(--color-primary, #3b82f6);
-  font-weight: 600;
+  font-weight: var(--font-weight-medium, 500);
 }
 
 .bs-content {
   flex: 1;
-  padding: 20px;
+  /* 与教师工作台内容区（.tv-content 16px）、个人工作台（.wb-content 16px）一致；
+     移动端由下方 @media 覆盖为 12px + 底栏留白 */
+  padding: 16px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -823,15 +833,8 @@ html.dark .bs-menu {
   border-right-color: var(--color-border, #374151);
 }
 
-html.dark .bs-sidebar-toggle {
-  color: var(--color-text-secondary, #d1d5db);
-}
-
-html.dark .bs-sidebar-toggle:hover {
-  background-color: var(--color-bg-hover, #374151);
-  color: var(--color-text, #f9fafb);
-}
-
+/* 收起按钮的暗色由 .tw-btn 的 token 自动翻转，这里不再单独覆盖
+   （旧的自写暗色会把文字压成 secondary、hover 改色，与教师台不一致） */
 html.dark .bs-menu-item {
   color: var(--color-text-secondary, #d1d5db);
 }

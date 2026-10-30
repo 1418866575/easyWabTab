@@ -203,18 +203,28 @@ const pageGroups = computed(() => {
   return dayGroups.value.slice(start, start + per)
 })
 
+/** 表格树的行类型判定：父行 = 一天的分组头（只有 id/date/dayTotal/dayCount/children，
+ *  没有 productId/unitPrice/total 等业务字段），子行 = 真实进货明细。
+ *  明细列必须排在父行上渲染，否则 formatYuanOf(undefined) 会抛 TypeError 并打断整页 patch。 */
+function isDayRow(row: { children?: unknown }): boolean {
+  return Array.isArray(row.children)
+}
+
 /** 表格视图数据：一天 = 一个可展开的父行，同日明细作为 children。
  *  复用 el-table 原生 tree 行（row-key=id + tree-props.children），不自定义展开箭头。
  *  父行的业务字段留空，仅日期列/ 序号列显示分组信息（见模板 span 判定）。 */
-const tableTreeRows = computed(() =>
-  pageGroups.value.map(g => ({
+const tableTreeRows = computed(() => {
+  // 明细行浅拷贝一份并写入页内连续序号：父行（天）不占号，
+  // 否则默认展开时 $index 会把父行也算进去，序号跳成 2、4（看着像丢行）。
+  let seq = 0
+  return pageGroups.value.map(g => ({
     id: `day-${g.date}`,
     date: g.date,
     dayTotal: g.totalAmount,
     dayCount: g.rows.length,
-    children: g.rows
+    children: g.rows.map(r => ({ ...r, seq: ++seq }))
   }))
-)
+})
 watch(activeCat, () => { listPage.value = 1 })
 watch(() => props.productFilter, () => { listPage.value = 1 })
 watch(filteredWithProductFilter, () => { listPage.value = 1 })
@@ -594,12 +604,13 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
           height="100%"
           row-key="id"
           :tree-props="{ children: 'children' }"
+          default-expand-all
           empty-text="暂无进货记录"
         >
           <!-- 序号：父行（分组头）留空，明细行沿用全局序号连续编号 -->
           <el-table-column label="序号" width="70" align="center" class-name="ewt-index-col">
-            <template #default="{ row, $index }">
-              <span v-if="!row.children">{{ (listPage - 1) * activePageSize + $index + 1 }}</span>
+            <template #default="{ row }">
+              <span v-if="!isDayRow(row)">{{ row.seq }}</span>
             </template>
           </el-table-column>
           <!-- 日期列：父行显示「日期 + N 笔 + 当天合计」作为分组头，明细行不再重复日期 -->
@@ -615,6 +626,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
           <el-table-column label="商品" min-width="160" align="left" show-overflow-tooltip>
             <template #default="{ row }">
               <span
+                v-if="!isDayRow(row)"
                 class="bizpur-product-link"
                 :data-testid="`bizpur-product-${row.id}`"
                 @click="findProduct(store.products, row.productId) && emit('navigate', 'products', row.productId)"
@@ -623,18 +635,18 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
           </el-table-column>
           <el-table-column label="分类" width="110" align="center">
             <template #default="{ row }">
-              <span class="bizpur-cat-badge" :data-testid="`bizpur-cat-badge-${row.id}`">{{ catNameOf(row.productId) }}</span>
+              <span v-if="!isDayRow(row)" class="bizpur-cat-badge" :data-testid="`bizpur-cat-badge-${row.id}`">{{ catNameOf(row.productId) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="入库数量" width="80" align="right">
-            <template #default="{ row }">×{{ displayQuantity(row) }}</template>
+            <template #default="{ row }"><span v-if="!isDayRow(row)">×{{ displayQuantity(row) }}</span></template>
           </el-table-column>
           <el-table-column label="进价" width="100" align="right">
-            <template #default="{ row }">@{{ formatYuanOf(row.unitPrice) }}</template>
+            <template #default="{ row }"><span v-if="!isDayRow(row)">@{{ formatYuanOf(row.unitPrice) }}</span></template>
           </el-table-column>
           <el-table-column label="合计" width="140" align="right">
             <template #default="{ row }">
-              <span class="bizpur-total-text">{{ formatYuanOf(row.total) }}</span>
+              <span v-if="!isDayRow(row)" class="bizpur-total-text">{{ formatYuanOf(row.total) }}</span>
               <span
                 v-if="row.expenseIds && row.expenseIds.length"
                 class="bizpur-linked-badge"
@@ -645,27 +657,28 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
           </el-table-column>
           <el-table-column label="售价" width="100" align="right">
             <template #default="{ row }">
-              <span v-if="findProduct(store.products, row.productId)">{{ formatYuanOf(productSellingPrice(row.productId)!) }}/{{ productUnitOf(row.productId) }}</span>
-              <span v-else style="color: var(--color-text-muted, #9ca3af);">—</span>
+              <span v-if="!isDayRow(row) && findProduct(store.products, row.productId)">{{ formatYuanOf(productSellingPrice(row.productId)!) }}/{{ productUnitOf(row.productId) }}</span>
+              <span v-else-if="!isDayRow(row)" style="color: var(--color-text-muted, #9ca3af);">—</span>
             </template>
           </el-table-column>
           <el-table-column label="加价率" width="100" align="center">
             <template #default="{ row }">
               <span
-                v-if="markupRateOf(row.productId, row.unitPrice) !== null"
+                v-if="!isDayRow(row) && markupRateOf(row.productId, row.unitPrice) !== null"
                 class="bizpur-markup-rate"
                 :class="{
                   'rate-high': (markupRateOf(row.productId, row.unitPrice) ?? 0) > 0,
                   'rate-low': (markupRateOf(row.productId, row.unitPrice) ?? 0) <= 0
                 }"
               >{{ markupRateOf(row.productId, row.unitPrice) }}%</span>
-              <span v-else style="color: var(--color-text-muted, #9ca3af);">—</span>
+              <span v-else-if="!isDayRow(row)" style="color: var(--color-text-muted, #9ca3af);">—</span>
             </template>
           </el-table-column>
           <!-- 剩余状态：按销售售出数量先进先出消耗，判定该批（最旧批次优先）是否已全部售出 -->
           <el-table-column label="剩余状态" width="140" align="center">
             <template #default="{ row }">
               <span
+                v-if="!isDayRow(row)"
                 class="bizpur-stock"
                 :class="stockClass(row)"
                 :data-testid="`bizpur-stock-${row.id}`"
@@ -678,13 +691,13 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
           </el-table-column>
           <el-table-column label="备注" min-width="140" align="left" show-overflow-tooltip>
             <template #default="{ row }">
-              <span v-if="row.note" class="bizpur-note-text">{{ row.note }}</span>
-              <span v-else style="color: var(--color-text-muted, #9ca3af);">—</span>
+              <span v-if="!isDayRow(row) && row.note" class="bizpur-note-text">{{ row.note }}</span>
+              <span v-else-if="!isDayRow(row)" style="color: var(--color-text-muted, #9ca3af);">—</span>
             </template>
           </el-table-column>
           <el-table-column label="操作" class-name="ewt-op-col" width="200" align="center" fixed="right">
             <template #default="{ row }">
-              <div class="bizpur-actions" @click.stop>
+              <div v-if="!isDayRow(row)" class="bizpur-actions" @click.stop>
                 <el-button size="small" :data-testid="`bizpur-edit-${row.id}`" @click="startEdit(row)">编辑</el-button>
                 <el-button size="small" :data-testid="`bizpur-copy-${row.id}`" @click="startCopy(row)">复制</el-button>
                 <el-button size="small" type="danger" :data-testid="`bizpur-del-${row.id}`" @click="handleDelete(row.id)">删除</el-button>

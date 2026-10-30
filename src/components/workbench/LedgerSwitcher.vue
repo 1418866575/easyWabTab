@@ -134,7 +134,8 @@ function onSelect(id: string): void {
   background-color: var(--color-bg-card, #ffffff);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 10px;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+  /* 浮层面板阴影走 --shadow-lg（原字面值作为 fallback 保留，视觉接近） */
+  box-shadow: var(--shadow-lg, 0 12px 28px rgba(15, 23, 42, 0.14));
 }
 
 .wls-title {

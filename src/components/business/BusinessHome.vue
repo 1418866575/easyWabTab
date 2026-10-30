@@ -726,29 +726,24 @@ html.dark .sk-block::after {
   color: var(--color-text-muted, var(--color-text-muted));
 }
 
-/* ===== 统计卡悬浮反馈 ===== */
-.stat-card,
+/* ===== 卡片悬浮反馈 =====
+ * 卡片本体取值在下方 .bizhome-card（= 教师 .tw-card / 个人工作台 .stat-card 同一套）。
+ * hover 只微微浮起、不改边框色（教师侧卡片不随 hover 变色，改成主色描边会两边不一致）。
+ * ⚠️ 原 .stat-card 系列规则（含 .stat-label/.stat-value）是死代码：
+ *    销售台首页从来没有挂过 .stat-card 类（实际用的是 .bizhome-card），这里已删除。 */
 .bizhome-card {
-  transition: box-shadow var(--transition-fast, 0.15s ease), border-color var(--transition-fast, 0.15s ease);
+  transition: box-shadow var(--transition-fast, 0.15s ease);
 }
 
-.stat-card:hover,
 .bizhome-card:hover {
-  border-color: var(--color-primary, var(--color-primary));
-  box-shadow: var(--shadow-card-hover, 0 8px 24px rgba(0, 0, 0, 0.12));
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
 }
 
-.stat-card:hover {
-  transform: translateY(-2px);
-}
-
-/* P0-1：统计卡/低库存卡可点击下钻 —— 指针 + 键盘焦点态 */
-.stat-card.clickable,
+/* P0-1：低库存卡可点击下钻 —— 指针 + 键盘焦点态 */
 .bizhome-card.clickable {
   cursor: pointer;
 }
 
-.stat-card.clickable:focus-visible,
 .bizhome-card.clickable:focus-visible {
   outline: 2px solid var(--color-primary, var(--color-primary));
   outline-offset: 2px;
@@ -758,46 +753,6 @@ html.dark .sk-block::after {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
-}
-
-.stat-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
-}
-
-.stat-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-}
-
-.stat-label :deep(svg) {
-  flex-shrink: 0;
-  color: var(--color-primary, var(--color-primary));
-}
-
-.stat-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--color-text, var(--color-text));
-  font-variant-numeric: tabular-nums;
-  line-height: 1.2;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.stat-value.negative {
-  color: var(--color-error, var(--color-error));
 }
 
 .bizhome-row {
@@ -815,6 +770,8 @@ html.dark .sk-block::after {
 .bizhome-col-40 { flex-basis: 40%; }
 .bizhome-col-60 { flex-basis: 60%; }
 
+/* 卡片本体：取值与 styles/workbench.css 的 .panel-scope .stat-card（= 教师 .tw-card）一致，
+   12px 圆角 + 16px 内边距 + 极轻阴影，三个工作台进出时卡片质感一致 */
 .bizhome-card {
   display: flex;
   flex-direction: column;
@@ -822,17 +779,28 @@ html.dark .sk-block::after {
   padding: 16px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
+/* 卡片标题：取值对齐教师 .tw-card-title / 个人工作台 .panel-scope .stat-header
+   —— 15px/600 + 正文色 + 前置 4px 主色竖条（教师侧最标志性的卡片元素） */
 .bizhome-card-title {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  gap: 8px;
+  font-size: var(--font-size-base, 15px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text, var(--color-text));
+}
+
+.bizhome-card-title::before {
+  content: '';
+  flex-shrink: 0;
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  background-color: var(--color-primary, var(--color-primary));
 }
 
 .bizhome-card-title :deep(svg) {
@@ -1521,7 +1489,6 @@ html.dark .sk-block::after {
   background: var(--color-success, var(--color-success));
 }
 
-html.dark .stat-card,
 html.dark .bizhome-card,
 html.dark .bizhome-hero-group {
   background-color: var(--color-bg-card, #1f2937);
@@ -1552,7 +1519,6 @@ html.dark .hero-value.unlinked {
   color: #fbbf24;
 }
 
-html.dark .stat-card:hover,
 html.dark .bizhome-card:hover {
   box-shadow: var(--shadow-card-hover, 0 8px 24px rgba(0, 0, 0, 0.4));
 }
@@ -1582,14 +1548,6 @@ html.dark .bizhome-low-stock.low {
 
 html.dark .bizhome-low-stock.ok {
   color: #34d399;
-}
-
-html.dark .stat-value {
-  color: var(--color-text, #f9fafb);
-}
-
-html.dark .stat-value.negative {
-  color: #f87171;
 }
 
 html.dark .bizhome-greeting {

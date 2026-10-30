@@ -15,6 +15,7 @@ import {
 import type { HabitFrequency, HabitImage } from '@/composables/habitCore'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '@/components/Icon.vue'
+import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
 import HabitCalendarCard from './HabitCalendarCard.vue'
 
 const store = useWorkbenchHabitsStore()
@@ -517,6 +518,7 @@ onUnmounted(() => {
       </div>
     </Teleport>
   </div>
+<WorkbenchFab @click="openAddDialog" />
 </template>
 
 <style scoped>
@@ -623,16 +625,7 @@ onUnmounted(() => {
   /* 视觉已统一到全局 .ui-btn--danger（style.css） */
 }
 
-/* ===== 空态 ===== */
-.empty-state {
-  text-align: center;
-  color: var(--color-text-muted, var(--color-text-muted));
-  font-size: 14px;
-  padding: 40px 20px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px dashed var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-}
+/* ===== 空态：.empty-state 已收敛到全局基类（src/style.css） ===== */
 
 /* ===== 某天打卡详情弹框（图片）===== */
 .habit-detail-meta {
@@ -854,9 +847,7 @@ html.dark .dialog-title {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-html.dark .empty-state {
-  background-color: var(--color-bg-card, #1f2937);
-}
+/* html.dark .empty-state 背景已由全局 .empty-state 的 --color-bg-card token 自动跟随 */
 
 /* ===== 桌面自适应分页（一屏布局：网格 flex:1 钉满，分页在网格下方）===== */
 @media (min-width: 769px) {

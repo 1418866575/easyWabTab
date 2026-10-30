@@ -332,13 +332,13 @@ async function onOnboardingComplete() {
     <div class="st-body">
       <nav class="st-menu" :class="{ collapsed: sidebarCollapsed }">
         <button
-          class="st-sidebar-toggle"
+          class="tw-btn tw-btn-sm st-sidebar-toggle"
           @click="sidebarCollapsed = !sidebarCollapsed"
           :title="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
           :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
         >
           <span class="st-menu-icon">
-            <Icon :name="sidebarCollapsed ? 'chevron-right' : 'chevron-left'" />
+            <Icon :name="sidebarCollapsed ? 'chevron-right' : 'chevron-left'" :size="14" />
           </span>
           <span class="st-menu-label">{{ sidebarCollapsed ? '展开' : '收起' }}</span>
         </button>
@@ -582,28 +582,22 @@ async function onOnboardingComplete() {
   border-radius: 3px;
 }
 
+/* 收起 / 展开：外观复用教师台 `.tw-btn .tw-btn-sm`（白底描边胶囊、30px 高、12px/500、
+   hover 只变底色），本类只留布局。
+   注意 .st-menu 没有横向内边距（菜单项是通栏设计），故用左右 margin 把胶囊内缩，
+   与其他四个侧栏「胶囊不贴边」的观感一致；收起态收到 6px，与教师台 56−12=44px 同宽。 */
 .st-sidebar-toggle {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  margin-bottom: 4px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background-color: transparent;
-  color: var(--color-text-secondary, #6b7280);
-  cursor: pointer;
-  width: 100%;
-  font-size: 14px;
-  transition: background-color 0.15s, color 0.15s;
-}
-.st-sidebar-toggle:hover {
-  background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-primary, #3b82f6);
+  width: auto;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  margin: 0 8px 4px;
 }
 .st-menu.collapsed .st-sidebar-toggle {
   justify-content: center;
-  padding: 10px 0;
+  padding: 0;
+  margin-left: 6px;
+  margin-right: 6px;
 }
 
 .st-menu-item {

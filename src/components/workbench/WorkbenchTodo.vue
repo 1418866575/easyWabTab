@@ -4,6 +4,7 @@ import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
+import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
 
 /** 面板尺寸：宽度固定 80%（BaseDialog 将 width 作为 maxWidth 应用，面板 width:100% → 实际即 80%）；
  *  高度仍沿用「设置 → 弹窗尺寸」写入的 CSS 变量，未配置时回退默认值。 */
@@ -680,6 +681,7 @@ onMounted(async () => {
     </BaseDialog>
 
   </div>
+<WorkbenchFab @click="startAdd" />
 </template>
 
 <style scoped>
@@ -1038,37 +1040,7 @@ onMounted(async () => {
 
 /* .btn-edit/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
 
-/* ===== 空态 ===== */
-.empty-state {
-  text-align: center;
-  color: var(--color-text-muted, var(--color-text-muted));
-  font-size: 14px;
-  padding: 40px 20px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px dashed var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-}
-
-.empty-invite {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  transition: color var(--transition-fast, 0.15s ease), border-color var(--transition-fast, 0.15s ease);
-}
-
-.empty-invite:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.filter-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
+/* ===== 空态：.empty-state / .empty-invite / .filter-empty 已收敛到全局基类（src/style.css） ===== */
 
 /* ===== 表单（新增/编辑弹框内容区）=====
    弹框外壳（遮罩/面板/头部/关闭/主体）已统一到 common/BaseDialog.vue */
@@ -1237,9 +1209,7 @@ html.dark .td-search {
   box-shadow: none;
 }
 
-html.dark .empty-state {
-  background-color: var(--color-bg-card, #1f2937);
-}
+/* html.dark .empty-state 背景已由全局 .empty-state 的 --color-bg-card token 自动跟随 */
 
 html.dark .td-title {
   color: var(--color-text, #f9fafb);

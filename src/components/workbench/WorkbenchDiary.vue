@@ -1117,16 +1117,7 @@ const renderedPreview = computed(() =>
   white-space: nowrap;
 }
 
-/* ===== 空态 ===== */
-.dj-empty {
-  text-align: center;
-  color: var(--color-text-muted, #94a3b8);
-  font-size: 14px;
-  padding: 40px 20px;
-  background: var(--color-bg-card, #fff);
-  border: 1px dashed var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-}
+/* ===== 空态：原 .dj-empty 无任何模板引用（死代码），已删除；日记空态走 .dj-table-empty ===== */
 
 /* ===== Markdown 排版（v-html 注入子节点不带 data-v-*，必须 :deep() 匹配；镜像 WorkbenchNotes） ===== */
 .dj-preview :deep(h1),

@@ -11,6 +11,7 @@ const PANEL_MAX_HEIGHT = 'var(--dlg-h-wb-ledger, 85vh)'
 import { computed, onMounted, ref } from 'vue'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import Icon from '@/components/Icon.vue'
+import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
 import {
   calcDailyExpenseSeries,
   calcDepositTotal,
@@ -714,6 +715,7 @@ onMounted(async () => {
       </el-table>
     </section>
   </div>
+<WorkbenchFab @click="startAdd" />
 </template>
 
 <style scoped>
@@ -793,48 +795,12 @@ onMounted(async () => {
   gap: 12px;
 }
 
-.stat-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
-  transition: border-color var(--transition-fast, 0.15s ease);
-}
-
-.stat-card:hover {
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.stat-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.stat-icon {
-  font-size: 18px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.stat-label {
-  flex: 1;
-  min-width: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .stat-value {
   font-size: 24px;
   font-weight: 700;
+  /* 全局 .wb-content .stat-value 会把数字染成主色（对齐教师工作台的彩色统计数字），
+     但记账这一屏的数字本身带语义色（收入绿 / 支出红），中性指标再染主色会与
+     「红 = 支出」直接冲突，故此处显式回到正文色，只让 .is-income/.is-expense/.is-negative 上色。 */
   color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
@@ -1136,31 +1102,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 }
 
 /* ===== 空月态 ===== */
-.empty-state {
-  text-align: center;
-  color: var(--color-text-muted, var(--color-text-muted));
-  font-size: 14px;
-  padding: 40px 20px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px dashed var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-}
-
-.empty-invite {
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  transition: color var(--transition-fast, 0.15s ease), border-color var(--transition-fast, 0.15s ease);
-}
-
-.empty-invite:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
+/* ===== 空态：.empty-state / .empty-invite 已收敛到全局基类（src/style.css） ===== */
 
 .ld-empty-title {
   font-size: 14px;
@@ -1469,7 +1411,6 @@ html.dark .ld-month-bar {
   box-shadow: none;
 }
 
-html.dark .stat-card,
 html.dark .ld-ratio-block,
 html.dark .ld-card {
   background-color: var(--color-bg-card, #1f2937);
@@ -1485,9 +1426,7 @@ html.dark .ld-item:hover {
   background-color: var(--color-bg-hover, #374151);
 }
 
-html.dark .empty-state {
-  background-color: var(--color-bg-card, #1f2937);
-}
+/* html.dark .empty-state 背景已由全局 .empty-state 的 --color-bg-card token 自动跟随 */
 
 html.dark .dialog {
   background-color: var(--color-bg-card, #1f2937);

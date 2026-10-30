@@ -8,6 +8,7 @@ import { useToast } from '@/composables/useToast'
 import { getIconUrl } from '@/composables/useIconCache'
 import type { PasswordEntry } from '@/types'
 import Icon from '@/components/Icon.vue'
+import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 
 /** 面板尺寸：沿用「设置 → 弹窗尺寸」写入的 CSS 变量（password），未配置时回退默认值 */
@@ -303,15 +304,26 @@ async function handleSave(): Promise<void> {
   cancelForm()
 }
 
-async function handleDelete(id: string): Promise<void> {
-  if (await showConfirm('确定要删除这个密码条目吗？')) {
-    const result = await passwordsStore.deletePassword(id)
-    if (!result.saved) {
-      toast.error('删除失败：密码库已锁定，请重新解锁后重试')
-      return
-    }
-    toastSaved('删除', result)
+/**
+ * 删除条目。返回是否真的删掉了（弹框侧据此决定要不要关闭）。
+ * 卡片上已无删除按钮，删除入口统一在编辑弹框里（见 handleDeleteInForm）。
+ */
+async function handleDelete(id: string): Promise<boolean> {
+  if (!(await showConfirm('确定要删除这个密码条目吗？'))) return false
+  const result = await passwordsStore.deletePassword(id)
+  if (!result.saved) {
+    toast.error('删除失败：密码库已锁定，请重新解锁后重试')
+    return false
   }
+  toastSaved('删除', result)
+  return true
+}
+
+/** 弹框内删除：删除成功后一并关闭弹框（否则会留在已删除条目的编辑态上） */
+async function handleDeleteInForm(): Promise<void> {
+  const id = editingId.value
+  if (!id) return
+  if (await handleDelete(id)) cancelForm()
 }
 
 // ===== 列表密码显示/隐藏 =====
@@ -482,14 +494,25 @@ watch(
       </div>
 
       <!-- 空态 -->
-      <div v-if="filteredPasswords.length === 0" class="pwd-empty" data-testid="pwd-empty">
+      <div v-if="filteredPasswords.length === 0" class="empty-state" data-testid="pwd-empty">
         {{ searchQuery ? '没有找到匹配的密码' : '暂无保存的密码' }}
       </div>
 
       <!-- 条目列表（6 列卡片网格，全量渲染不再分页；移动端单列） -->
       <div v-else class="pwd-list">
         <TransitionGroup name="grid">
-        <div v-for="entry in filteredPasswords" :key="entry.id" class="pwd-item" data-testid="pwd-item">
+        <div
+          v-for="entry in filteredPasswords"
+          :key="entry.id"
+          class="pwd-item"
+          data-testid="pwd-item"
+          role="button"
+          tabindex="0"
+          title="点击编辑"
+          @click="startEdit(entry)"
+          @keydown.enter.self.prevent="startEdit(entry)"
+          @keydown.space.self.prevent="startEdit(entry)"
+        >
           <div class="pwd-card-head">
             <img
               v-if="getSiteIcon(entry.url)"
@@ -508,6 +531,8 @@ watch(
               rel="noopener noreferrer"
               title="打开网站"
               :data-testid="`pwd-open-${entry.id}`"
+              @click.stop
+              @keydown.stop
             >↗</a>
           </div>
           <div class="pwd-details">
@@ -516,47 +541,26 @@ watch(
               {{ isPasswordVisible(entry.id) ? entry.password : '••••••••' }}
             </span>
           </div>
-          <div class="pwd-actions">
+          <!-- 卡片内只保留三个查看/复制动作；编辑靠点整张卡片，删除移到编辑弹框里 -->
+          <div class="pwd-actions" @click.stop @keydown.stop>
             <el-button
               text
-              class="pwd-icon-btn"
-              :title="isPasswordVisible(entry.id) ? '隐藏密码' : '显示密码'"
-              :aria-label="isPasswordVisible(entry.id) ? '隐藏密码' : '显示密码'"
+              class="pwd-action-btn"
               :data-testid="`pwd-toggle-${entry.id}`"
               @click="togglePasswordVisibility(entry.id)"
-            >
-              <Icon :name="isPasswordVisible(entry.id) ? 'eye-off' : 'eye'" :size="16" />
-            </el-button>
+            >{{ isPasswordVisible(entry.id) ? '隐藏密码' : '显示密码' }}</el-button>
             <el-button
               text
-              class="pwd-icon-btn"
-              title="复制用户名"
-              aria-label="复制用户名"
+              class="pwd-action-btn"
               :data-testid="`pwd-copy-username-${entry.id}`"
               @click="copyToClipboard(entry.username, '用户名')"
-            ><Icon name="copy" :size="16" /></el-button>
+            >复制用户名</el-button>
             <el-button
               text
-              class="pwd-icon-btn"
-              title="复制密码"
-              aria-label="复制密码"
+              class="pwd-action-btn"
               :data-testid="`pwd-copy-password-${entry.id}`"
               @click="copyToClipboard(entry.password, '密码')"
-            ><Icon name="copy" :size="16" /></el-button>
-            <el-button
-              text
-              class="pwd-icon-btn"
-              title="编辑"
-              :data-testid="`pwd-edit-${entry.id}`"
-              @click="startEdit(entry)"
-            ><Icon name="pencil" /></el-button>
-            <el-button
-              text
-              class="pwd-icon-btn pwd-delete"
-              title="删除"
-              :data-testid="`pwd-delete-${entry.id}`"
-              @click="handleDelete(entry.id)"
-            ><Icon name="trash" /></el-button>
+            >复制密码</el-button>
           </div>
         </div>
         </TransitionGroup>
@@ -655,6 +659,16 @@ watch(
               <p class="pwd-form-hint">分类在「设置 → 密码分类管理」中维护</p>
             </div>
             <div class="pwd-form-actions">
+            <!-- 删除入口只在编辑态存在（新增态没有可删对象）；卡片上已不再提供删除按钮 -->
+            <el-button
+              v-if="editingId"
+              type="danger"
+              plain
+              native-type="button"
+              class="pwd-btn-delete"
+              data-testid="pwd-form-delete"
+              @click="handleDeleteInForm"
+            >删除</el-button>
 <el-button type="button" class="pwd-btn-cancel" data-testid="pwd-cancel-btn" @click="cancelForm">
               取消
             </el-button>
@@ -665,6 +679,8 @@ watch(
         </form>
     </BaseDialog>
   </div>
+<WorkbenchFab @click="startAdd" />
+
 </template>
 
 <style scoped>
@@ -913,10 +929,18 @@ html.dark .pwd-cat-badge {
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   transition: border-color var(--transition-fast, 0.15s ease);
+  /* 整张卡片即编辑入口（编辑按钮已移除） */
+  cursor: pointer;
 }
 
 .pwd-item:hover {
   border-color: var(--color-primary, var(--color-primary));
+}
+
+/* 键盘可达：卡片现在是可聚焦的「编辑」触发器，必须有可见焦点环 */
+.pwd-item:focus-visible {
+  outline: 2px solid var(--color-primary, #3b82f6);
+  outline-offset: 1px;
 }
 
 .pwd-card-head {
@@ -968,10 +992,30 @@ html.dark .pwd-cat-badge {
 
 .pwd-actions {
   display: flex;
-  gap: 2px;
+  flex-wrap: wrap;
+  gap: 2px 4px;
   margin-top: auto;
   padding-top: 4px;
   border-top: 1px solid var(--color-border, var(--color-border));
+}
+
+/* 卡片内的动作按钮：文字版（原来是眼睛/复制图标，看不出功能）。
+ * 5 列网格下单卡宽约 200px，三个中文按钮一行放不下时会自动换行，故允许 flex-wrap。
+ * 选择器写成 .pwd-actions .pwd-action-btn（而非单类）：Element Plus 的 .el-button.is-text
+ * 与本类同特异性，靠后代选择器抬一级才能稳定覆盖其 padding / margin-left。 */
+.pwd-actions .pwd-action-btn {
+  margin-left: 0;
+  padding: 2px 4px;
+  min-height: 0;
+  height: auto;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--color-text-secondary, #64748b);
+}
+
+.pwd-actions .pwd-action-btn:hover {
+  color: var(--color-primary, #3b82f6);
+  background: var(--color-bg-hover, #f1f5f9);
 }
 
 .pwd-icon-btn {
@@ -996,20 +1040,10 @@ html.dark .pwd-cat-badge {
   background: var(--color-bg-card, var(--color-bg-hover));
 }
 
-.pwd-icon-btn.pwd-delete:hover {
-  color: var(--color-error, var(--color-error));
-}
+/* 原 .pwd-icon-btn.pwd-delete:hover 已随卡片删除按钮一并移除：
+ * 删除入口现在只在编辑弹框里（.pwd-btn-delete）。 */
 
-/* ===== 空态 ===== */
-.pwd-empty {
-  text-align: center;
-  color: var(--color-text-muted, var(--color-text-muted));
-  font-size: 14px;
-  padding: 40px 20px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px dashed var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-}
+/* ===== 空态：复用全局 .empty-state（src/style.css，.wb-content 作用域） ===== */
 
 /* ===== 新增/编辑弹窗内容区 =====
    弹框外壳（遮罩/面板/头部/关闭/主体）已统一到 common/BaseDialog.vue */
@@ -1045,7 +1079,8 @@ html.dark .pwd-cat-badge {
   max-height: 200px;
   overflow-y: auto;
   z-index: 10;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  /* 下拉浮层统一走 --shadow-dropdown（原字面值作为 fallback 保留） */
+  box-shadow: var(--shadow-dropdown, 0 4px 12px rgba(0, 0, 0, 0.12));
 }
 
 .pwd-site-option {
@@ -1127,6 +1162,11 @@ html.dark .pwd-cat-badge {
   margin-top: 18px;
 }
 
+/* 删除按钮靠左、与「取消/保存」拉开距离：危险操作不与主按钮相邻，避免误点 */
+.pwd-form-actions .pwd-btn-delete {
+  margin-right: auto;
+}
+
 .pwd-btn-cancel {
   padding: 9px 16px;
   background: var(--color-bg-card, var(--color-bg-hover));
@@ -1145,8 +1185,7 @@ html.dark .pwd-cat-badge {
 
 /* ===== 暗色模式覆盖 ===== */
 html.dark .pwd-auth-card,
-html.dark .pwd-item,
-html.dark .pwd-empty {
+html.dark .pwd-item {
   background-color: var(--color-bg-card, #1f2937);
 }
 

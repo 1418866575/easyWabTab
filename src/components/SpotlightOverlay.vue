@@ -6,8 +6,9 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import Icon from '@/components/Icon.vue'
 import { searchAll } from '@/composables/spotlightCore'
-import type { SpotlightData, SpotlightLedgerHit } from '@/composables/spotlightCore'
-import type { Countdown, PasswordEntry, Site, WorkbenchNote, WorkbenchTodo } from '@/types'
+import type { SpotlightData, SpotlightGenealogyHit, SpotlightLedgerHit } from '@/composables/spotlightCore'
+import type { Habit } from '@/composables/habitCore'
+import type { Countdown, PasswordEntry, Site, WorkbenchDiary, WorkbenchNote, WorkbenchTodo } from '@/types'
 
 // 选中结果后的动作：navigate=跳转工作台面板；password=密码库（解锁后跳转密码面板）；site=新窗口打开网址
 export type SpotlightAction =
@@ -24,15 +25,29 @@ const inputRef = ref<HTMLInputElement | null>(null)
 const resultsRef = ref<HTMLDivElement | null>(null)
 
 // 分组渲染顺序 + 中文标签（与 SpotlightGroups 键一一对应）
-const GROUP_ORDER = ['todos', 'notes', 'countdowns', 'ledger', 'passwords', 'sites'] as const
+// 顺序按「文本型 → 事务型 → 资料型」排布：日记/习惯紧随便签（同为内容记录），家谱归到网址前的资料组。
+const GROUP_ORDER = [
+  'todos',
+  'notes',
+  'diary',
+  'habits',
+  'countdowns',
+  'ledger',
+  'passwords',
+  'genealogy',
+  'sites'
+] as const
 type GroupKey = (typeof GROUP_ORDER)[number]
 
 const GROUP_LABELS: Record<GroupKey, string> = {
   todos: '待办',
   notes: '便签',
+  diary: '日记',
+  habits: '习惯',
   countdowns: '倒计时',
   ledger: '记账',
   passwords: '密码',
+  genealogy: '家谱',
   sites: '网址'
 }
 
@@ -69,6 +84,23 @@ function buildGroupItems(group: GroupKey, list: unknown): SpotlightResultItem[] 
         sub: n.title ? n.content : undefined,
         action: { kind: 'navigate', section: 'notes' }
       }))
+    case 'diary':
+      return (list as WorkbenchDiary[]).map(d => ({
+        testId: `sp-result-diary-${d.id}`,
+        group,
+        // 无标题日记用正文首行兜底（与列表页「（无标题）」语义一致，但这里给出可辨识内容）
+        title: d.title || d.content.split('\n')[0] || '（无标题）',
+        sub: `${d.date}${d.kind === 'idea' ? ' · 灵感' : ''}`,
+        action: { kind: 'navigate', section: 'diary' }
+      }))
+    case 'habits':
+      return (list as Habit[]).map(h => ({
+        testId: `sp-result-habit-${h.id}`,
+        group,
+        title: h.name,
+        sub: `每周 ${h.frequency} 次`,
+        action: { kind: 'navigate', section: 'habits' }
+      }))
     case 'countdowns':
       return (list as Countdown[]).map(c => ({
         testId: `sp-result-countdown-${c.id}`,
@@ -103,6 +135,25 @@ function buildGroupItems(group: GroupKey, list: unknown): SpotlightResultItem[] 
         sub: p.url,
         action: { kind: 'password' }
       }))
+    case 'genealogy':
+      // 家谱面板的「成员 / 取名记录」是同面板内的两个标签页，跳转只能到面板本身（组件未暴露 tab 受控 prop）
+      return (list as SpotlightGenealogyHit[]).map(h =>
+        h.kind === 'member'
+          ? {
+              testId: `sp-result-genealogy-member-${h.member.id}`,
+              group,
+              title: h.member.name,
+              sub: h.member.note || (h.member.birthDate ? `生日 ${h.member.birthDate}` : '家庭成员'),
+              action: { kind: 'navigate', section: 'genealogy' }
+            }
+          : {
+              testId: `sp-result-genealogy-name-${h.record.id}`,
+              group,
+              title: h.record.name,
+              sub: h.record.meaning || '取名记录',
+              action: { kind: 'navigate', section: 'genealogy' }
+            }
+      )
     case 'sites':
       return (list as Site[]).map(s => ({
         testId: `sp-result-site-${s.url}`,
@@ -206,7 +257,7 @@ watch(query, () => {
           class="sp-input"
           data-testid="sp-input"
           type="text"
-          placeholder="搜索待办、便签、倒计时、记账、密码、网址…（↑↓ 选择 / Enter 跳转 / Esc 关闭）"
+          placeholder="搜索待办、便签、日记、习惯、倒计时、记账、密码、家谱、网址…（↑↓ 选择 / Enter 跳转 / Esc 关闭）"
           spellcheck="false"
         />
         <button class="sp-close-btn" data-testid="sp-close" title="关闭 (Esc)" @click="emit('close')"><Icon name="close" /></button>

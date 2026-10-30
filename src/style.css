@@ -455,6 +455,54 @@ body {
   box-shadow: var(--shadow-card-hover, 0 8px 24px rgba(0, 0, 0, 0.12));
 }
 
+/* ===== 空态基类（个人工作台各面板共用） =====
+ * 原 WorkbenchTodo/Notes/Countdown/Ledger/Habits/Exercise/Diet/Sleep/Weight/Genealogy
+ * 各持一份逐字重复的 scoped 副本（规范 §5 双轨道），现统一收敛于此。
+ * ⚠️ 必须限定在 `.wb-content`（WorkbenchView 的内容容器）作用域内：
+ *    `.empty-state` 这个类名在 学生/教师/首页(HomeView) 也被使用，但视觉完全不同
+ *    （学生=flex 居中 min-height 无边框、首页=60px 大间距 16px 无边框）。
+ *    若写成全局 `.empty-state`，本块的 padding/border/background 会「逐属性泄漏」
+ *    进那些模块的 scoped 定义，造成视觉回归。限定 .wb-content 后只作用于工作台面板。
+ * 视觉对齐教师工作台 `.tw-empty`（32px 上下 / 13px / 纯文字无边框）——
+ * 教师侧空态就是一句居中灰字，工作台此前多一层虚线框，两边切换时观感不一致。
+ * 唯一的例外是「可点击邀请态」（.empty-invite）仍保留虚线框：它整块可点，
+ * 需要「可放置区域」的视觉提示，教师侧空态不可点所以没有这一层。 */
+.wb-content .empty-state {
+  text-align: center;
+  color: var(--color-text-muted, var(--color-text-muted));
+  font-size: var(--font-size-sm, 13px);
+  padding: 32px 16px;
+}
+
+/* 可点击邀请态（空 → 「＋ 新增第一个」）。column+gap 同时兼容单行文案与
+ * Ledger 的「标题 + 副标题」双行结构。 */
+.wb-content .empty-invite {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px dashed var(--color-border, var(--color-border));
+  border-radius: var(--radius-md, 8px);
+  transition: color var(--transition-fast, 0.15s ease), border-color var(--transition-fast, 0.15s ease);
+}
+
+.wb-content .empty-invite:hover {
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
+}
+
+/* 筛选无结果态（空 → 「没有符合条件 + 重置按钮」） */
+.wb-content .filter-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
 .ui-input {
   min-height: 36px;
   padding: 8px 12px;

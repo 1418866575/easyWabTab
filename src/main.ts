@@ -22,6 +22,10 @@ import './styles/markdown.css'
 // teacher.css 根本没加载——页面虽靠 scoped 样式勉强能看，但打印规则全部失效
 // （打印只剩浏览器页眉页脚、正文整块缺失）。
 import './styles/teacher.css'
+// 个人工作台共享视觉层（wb-* 面板原语，全部限定 .wb-content 作用域）。
+// 与 teacher.css 同源于「同一套面板视觉」：卡片/标题条/统计数字/按钮/表格。
+// 必须全局引入，且放在 teacher.css 之后（同源取值的收口处，后置便于对照阅读）。
+import './styles/workbench.css'
 // 销售记账弹框通用骨架（商品/进货/库存/销售 四个弹框共用）
 import './styles/biz-dialog.css'
 import { useThemeStore } from './stores/theme'

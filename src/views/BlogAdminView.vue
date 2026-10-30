@@ -154,7 +154,7 @@ onMounted(async () => {
         <nav class="ba-nav">
           <button
             type="button"
-            class="ba-nav-collapse"
+            class="tw-btn tw-btn-sm ba-nav-collapse"
             :aria-expanded="!sidebarCollapsed"
             :title="sidebarCollapsed ? '展开菜单' : '收起菜单'"
             data-testid="blog-collapse-sidebar"
@@ -341,26 +341,17 @@ onMounted(async () => {
   gap: 2px;
 }
 
+/* 收起 / 展开：外观复用教师台 `.tw-btn .tw-btn-sm`（白底描边胶囊、30px 高、12px/500、
+   hover 只变底色），本类只留布局——整行铺满 + 左对齐 + 与菜单项同宽。
+   与个人/销售工作台的 .wb-sidebar-toggle / .bs-sidebar-toggle 同一套取值，
+   本地再写圆角/字号/边框就会在 scoped 里压掉 .tw-btn，等于又开一条轨道。 */
 .ba-nav-collapse {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  justify-content: flex-start;
-  flex-shrink: 0;
   width: 100%;
-  min-height: 34px;
-  padding: 0 10px;
+  flex-shrink: 0;
+  justify-content: flex-start;
   margin-bottom: 4px;
-  border: none;
-  border-radius: var(--radius-sm, 8px);
-  background-color: transparent;
-  color: var(--color-text-muted, #94a3b8);
-  font-family: inherit;
-  font-size: var(--font-size-sm, 13px);
-  cursor: pointer;
 }
-
-.ba-nav-collapse:hover { background-color: var(--color-bg-hover, #f1f5f9); }
 
 .ba-nav-item {
   display: flex;
