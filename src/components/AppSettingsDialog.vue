@@ -2842,7 +2842,15 @@ function toggleFullscreen(): void {
         <div v-if="activeTab === 'nav' && activeSubTab === 'nav-check-links'" class="wb-menu-config">
           <h3 class="wb-menu-title">检测断链</h3>
           <p class="wb-menu-hint">
-            逐个访问已保存的网址，把访问异常的站点标记出来（按钮上显示当前异常数量）。网址较多时耗时较长，检测过程中可随时点「停止检测」中断，已检测的部分结果会保留。
+            并发访问已保存的网址，把<b>明确不可用</b>的站点标记出来（按钮上显示异常数量）。网址较多时仍需一点时间，检测过程中可随时点「停止检测」中断，已检测的部分会保留。
+          </p>
+          <p class="wb-menu-hint">
+            受浏览器跨域限制：跨域站点只能确认「域名可达」，读不到 HTTP 状态码（404/500 之类的看不到），这类结果<b>不作判定</b>，既不会标成失效、也不会谎报为有效。只有同源或对方开放 CORS 的站点才能拿到确切状态。
+          </p>
+          <p v-if="sitesStore.linkCheckSummary" class="wb-menu-hint" data-testid="link-check-summary">
+            上次检测：共 {{ sitesStore.linkCheckSummary.total }} 个 · 明确失效
+            <b>{{ sitesStore.linkCheckSummary.invalid }}</b> 个 · 跨域无法判定
+            <b>{{ sitesStore.linkCheckSummary.unknown }}</b> 个
           </p>
           <div class="site-actions-grid">
             <button

@@ -84,6 +84,8 @@ export const useSitesStore = defineStore('sites', () => {
   // 断链检测
   const isCheckingLinks = ref(false)
   const linkCheckProgress = ref<CheckProgress | null>(null)
+  /** 上一次检测的结论汇总（total / 明确失效 / 无法判定），供 UI 解释结果 */
+  const linkCheckSummary = ref<{ total: number; invalid: number; unknown: number } | null>(null)
   const showOnlyInvalid = ref(false)
 
   // ===== 数据降级保护（2026-10-07 事故后新增）=====
@@ -195,24 +197,38 @@ export const useSitesStore = defineStore('sites', () => {
     isCheckingLinks.value = true
     checkAbortController = new AbortController()
     linkCheckProgress.value = null
+    linkCheckSummary.value = null
 
     const urls = sites.value.map(s => s.url)
 
+    // 进度回调**只更新进度条**：原实现每个结果都 `sites.value[idx] = {...}`，
+    // N 个站点就会触发 N 轮整页重渲染（检测期间滚动/输入明显卡顿）。
     const results = await checkDeadLinks(
       urls,
-      (progress, result) => {
+      (progress) => {
         linkCheckProgress.value = progress
-        // 实时更新 site 的 isValid
-        const idx = sites.value.findIndex(s => s.url === result.url)
-        if (idx !== -1) {
-          sites.value[idx] = { ...sites.value[idx], isValid: result.isValid }
-        }
       },
       checkAbortController.signal
     )
 
+    // 一次性批量提交：只写有明确结论的站点。
+    // reachable（跨域收到响应但读不到状态码）保持原状态不变 —— 既不谎报"有效"，也不误标"无效"。
+    const byUrl = new Map(results.map(r => [r.url, r]))
+    sites.value = sites.value.map(site => {
+      const r = byUrl.get(site.url)
+      if (!r || r.isValid === undefined) return site
+      return { ...site, isValid: r.isValid }
+    })
+
     // 保存结果
     saveCheckResults(results)
+
+    // 结论汇总：项目上要能看出「多少是真失效、多少是浏览器根本判不了」
+    linkCheckSummary.value = {
+      total: results.length,
+      invalid: results.filter(r => r.isValid === false).length,
+      unknown: results.filter(r => r.isValid === undefined).length
+    }
 
     isCheckingLinks.value = false
     linkCheckProgress.value = null
@@ -1234,6 +1250,7 @@ ${sub}
     // 断链检测
     isCheckingLinks,
     linkCheckProgress,
+    linkCheckSummary,
     showOnlyInvalid,
     invalidCount,
     checkDeadLinks: checkDeadLinksAction,

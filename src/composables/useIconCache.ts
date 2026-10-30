@@ -147,60 +147,107 @@ async function fetchIconAsDataUrl(iconUrl: string): Promise<string | null> {
 }
 
 /**
- * 获取图标的最佳 URL
- * 优先：本地缓存 → Google Favicon API
+ * 获取图标的最佳 URL。
+ *
+ * ⚠️ 这里**只读不写**：早期实现会在缓存未命中时顺手发起 cacheIconAsync（跨域代理抓取），
+ * 而本函数是在 SiteCard 的渲染路径上被调用的 —— 结果就是首屏 18~40 张卡各打一个跨域请求，
+ * 而且同一域名在缓存落地前每次重渲染都会重发一遍。
+ * 现在抓取时机由调用方通过 `ensureIconCached()` 控制（SiteCard 用 IntersectionObserver 触发）。
  */
 export function getIconUrl(url: string): string {
   try {
     const domain = new URL(url).hostname
     const cached = getCachedIcon(domain)
     if (cached) return cached
-    // 异步缓存（不阻塞返回）
-    cacheIconAsync(domain, url)
     return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
   } catch {
     return ''
   }
 }
 
+/** 同一域名的抓取任务（并发去重：同一域名同时只跑一个请求） */
+const inflight = new Map<string, Promise<void>>()
+/** 失败退避：域名 → 上次失败时间（10 分钟内不再重试，避免坏站点反复打代理） */
+const failedAt = new Map<string, number>()
+const RETRY_AFTER_MS = 10 * 60 * 1000
+
+/**
+ * 确保该站点图标已进入缓存（未命中且有自定义图标时不做任何事）。
+ * 幂等、可重复调用：缓存命中或最近失败过就直接返回。
+ */
+export function ensureIconCached(siteUrl: string): void {
+  try {
+    const domain = new URL(siteUrl).hostname
+    if (getCachedIcon(domain)) return
+    const lastFail = failedAt.get(domain)
+    if (lastFail && Date.now() - lastFail < RETRY_AFTER_MS) return
+    void cacheIconAsync(domain, siteUrl)
+  } catch {
+    /* 非法 URL：没有可抓的域名 */
+  }
+}
+
 /**
  * 异步缓存图标（background fetch）
- * 从网页 HTML 中提取真实 icon URL，下载并缓存
+ * 从网页 HTML 中提取真实 icon URL，下载并缓存。同一域名并发调用只发一次请求。
  */
-export async function cacheIconAsync(domain: string, pageUrl: string): Promise<void> {
-  try {
-    // 尝试从 allorigins 获取网页，提取 icon
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(pageUrl)}`
-    const response = await fetch(proxyUrl, { signal: AbortSignal.timeout(8000) })
-    if (!response.ok) return
-    const html = await response.text()
+export function cacheIconAsync(domain: string, pageUrl: string): Promise<void> {
+  const running = inflight.get(domain)
+  if (running) return running
 
-    // 提取 <link rel="icon"> 或 <link rel="shortcut icon">
-    const iconMatch =
-      html.match(/<link[^>]+rel=["'](?:icon|shortcut icon)["'][^>]*href=["']([^"']+)["']/i) ||
-      html.match(/<link[^>]+href=["']([^"']+)["'][^>]*rel=["'](?:icon|shortcut icon)["']/i)
+  const task = (async () => {
+    try {
+      // 尝试从 allorigins 获取网页，提取 icon
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(pageUrl)}`
+      const response = await fetch(proxyUrl, { signal: AbortSignal.timeout(8000) })
+      if (!response.ok) {
+        failedAt.set(domain, Date.now())
+        return
+      }
+      const html = await response.text()
 
-    if (!iconMatch) return
+      // 提取 <link rel="icon"> 或 <link rel="shortcut icon">
+      const iconMatch =
+        html.match(/<link[^>]+rel=["'](?:icon|shortcut icon)["'][^>]*href=["']([^"']+)["']/i) ||
+        html.match(/<link[^>]+href=["']([^"']+)["'][^>]*rel=["'](?:icon|shortcut icon)["']/i)
 
-    let iconHref = iconMatch[1]
-    // 相对路径转绝对路径
-    if (!iconHref.startsWith('http')) {
-      const origin = new URL(pageUrl).origin
-      iconHref = iconHref.startsWith('/')
-        ? origin + iconHref
-        : origin + '/' + iconHref
+      if (!iconMatch) {
+        failedAt.set(domain, Date.now())
+        return
+      }
+
+      let iconHref = iconMatch[1]
+      // 相对路径转绝对路径
+      if (!iconHref.startsWith('http')) {
+        const origin = new URL(pageUrl).origin
+        iconHref = iconHref.startsWith('/')
+          ? origin + iconHref
+          : origin + '/' + iconHref
+      }
+
+      // 过滤非图片 URL
+      if (!iconHref.match(/\.(ico|png|jpg|jpeg|svg|gif|webp)(\?|$)/i)) {
+        failedAt.set(domain, Date.now())
+        return
+      }
+
+      const dataUrl = await fetchIconAsDataUrl(iconHref)
+      if (dataUrl) {
+        failedAt.delete(domain)
+        cacheIcon(domain, dataUrl)
+      } else {
+        failedAt.set(domain, Date.now())
+      }
+    } catch {
+      // 完全静默失败，不影响正常流程；记下失败时间做退避
+      failedAt.set(domain, Date.now())
+    } finally {
+      inflight.delete(domain)
     }
+  })()
 
-    // 过滤非图片 URL
-    if (!iconHref.match(/\.(ico|png|jpg|jpeg|svg|gif|webp)(\?|$)/i)) return
-
-    const dataUrl = await fetchIconAsDataUrl(iconHref)
-    if (dataUrl) {
-      cacheIcon(domain, dataUrl)
-    }
-  } catch {
-    // 完全静默失败，不影响正常流程
-  }
+  inflight.set(domain, task)
+  return task
 }
 
 /**

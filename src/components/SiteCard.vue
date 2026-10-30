@@ -1,8 +1,45 @@
+<script lang="ts">
+/**
+ * 模块级共享状态（普通 <script>，整份模块只执行一次）。
+ *
+ * 为什么不能放 <script setup>：后者按**实例**执行，一屏 N 张卡就会各自注册一份
+ * document 监听（滚到底上千个，每次点击都要全页遍历）；这里改为全页共用一份监听，
+ * 并用 openMenuUrl 保证同一时刻只展开一个卡片菜单（与用户对「更多操作」的预期一致）。
+ * 注：`ref` 由下方 <script setup> 的 import 提供（ESM import 会被提升到模块顶部，
+ * 两个块共享同一模块作用域，重复 import 反而会报 Duplicate identifier）。
+ */
+/** 当前展开菜单的卡片 url（null = 全部收起） */
+const openMenuUrl = ref<string | null>(null)
+
+let docListenersBound = false
+
+function onDocClickCapture(event: MouseEvent): void {
+  if (!openMenuUrl.value) return
+  const target = event.target as HTMLElement | null
+  const card = target?.closest ? (target.closest('.site-card') as HTMLElement | null) : null
+  // 点在当前展开的这张卡内（含 ⋯ 按钮与菜单项）→ 交给卡片自己的 handler 处理
+  if (card && card.dataset.siteUrl === openMenuUrl.value) return
+  openMenuUrl.value = null
+}
+
+function onDocKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Escape' && openMenuUrl.value) openMenuUrl.value = null
+}
+
+/** 幂等：第一次挂载时注册，之后各实例都直接返回 */
+function bindCardDocListeners(): void {
+  if (docListenersBound || typeof document === 'undefined') return
+  document.addEventListener('click', onDocClickCapture, true)
+  document.addEventListener('keydown', onDocKeydown)
+  docListenersBound = true
+}
+</script>
+
 <script setup lang="ts">
 import Icon from './Icon.vue'
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import type { Site } from '../types'
-import { getFaviconImgSrc, getIconUrl } from '../composables/useIconCache'
+import { getFaviconImgSrc, getIconUrl, ensureIconCached } from '../composables/useIconCache'
 import { useSitesStore } from '../stores/sites'
 
 const props = defineProps<{
@@ -86,16 +123,18 @@ function handlePopupMouseLeave() {
 
 // ========================================
 // 卡片操作菜单：常驻 ⋯ 触发（触屏无 hover，不能依赖悬停才出现）
+// 展开状态由模块级 openMenuUrl 持有（见文件顶部普通 <script>）
 // ========================================
-const menuOpen = ref(false)
+const menuOpen = computed(() => openMenuUrl.value === props.site.url)
 const cardRef = ref<HTMLElement | null>(null)
 
 function closeMenu(): void {
-  menuOpen.value = false
+  if (openMenuUrl.value === props.site.url) openMenuUrl.value = null
 }
 
 function toggleMenu(): void {
-  menuOpen.value = !menuOpen.value
+  // 点自己已展开的菜单 → 收起；点别的卡 → 展开自己（模块级状态天然做到互斥）
+  openMenuUrl.value = menuOpen.value ? null : props.site.url
 }
 
 function handleEdit(): void {
@@ -113,28 +152,48 @@ function handleRemove(): void {
   emit('delete', props.site.url)
 }
 
-function handleOutsideClick(event: MouseEvent): void {
-  if (!menuOpen.value) return
-  const el = cardRef.value
-  if (el && event.target instanceof Node && !el.contains(event.target)) {
-    closeMenu()
-  }
-}
+// ===== 图标：只在卡片进入视口附近时才去抓真实 icon（见下方 IntersectionObserver）=====
+const iconObserver = ref<IntersectionObserver | null>(null)
 
-function handleEscape(event: KeyboardEvent): void {
-  if (event.key === 'Escape' && menuOpen.value) closeMenu()
+/**
+ * 图标懒抓取：卡片进入视口（含 200px 预取边距）才去 allorigins 提取真实 icon。
+ * 以前是模板里调 getFaviconImgSrc → getIconUrl 顺手发请求（渲染期副作用），
+ * 首屏几十张卡会同时打几十个跨域代理请求，且同域名在缓存落地前每次重渲染都重发。
+ */
+function startIconObserver(): void {
+  // 有自定义图标（base64）就不需要抓；没有元素引用也没法观察
+  if (props.site.icon) return
+  const el = cardRef.value
+  if (!el) return
+  if (typeof IntersectionObserver === 'undefined') {
+    ensureIconCached(props.site.url)
+    return
+  }
+  const io = new IntersectionObserver(
+    (entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return
+      ensureIconCached(props.site.url)
+      // 只抓一次，抓到就断开，不占滚动时的观察开销
+      io.disconnect()
+      iconObserver.value = null
+    },
+    { rootMargin: '200px 0px' }
+  )
+  io.observe(el)
+  iconObserver.value = io
 }
 
 onMounted(() => {
-  document.addEventListener('click', handleOutsideClick, true)
-  document.addEventListener('keydown', handleEscape)
+  // 文档级监听全页只注册一份（幂等），不再是每张卡各注册一个
+  bindCardDocListeners()
+  startIconObserver()
 })
 
 onBeforeUnmount(() => {
   clearHoverTimer()
   clearAutoCloseTimer()
-  document.removeEventListener('click', handleOutsideClick, true)
-  document.removeEventListener('keydown', handleEscape)
+  iconObserver.value?.disconnect()
+  iconObserver.value = null
 })
 
 // 四层降级：自定义 icon → 本地缓存 → Google Favicon → 默认 SVG
@@ -219,7 +278,10 @@ const handleClick = () => {
           :src="getFaviconImgSrc(site.url, site.icon)"
           :alt="site.name"
           class="favicon"
+          width="48"
+          height="48"
           loading="lazy"
+          decoding="async"
           @error="handleIconError"
         />
       </div>
