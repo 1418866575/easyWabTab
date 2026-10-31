@@ -72,6 +72,32 @@ export const useBlogStore = defineStore('blog', () => {
     }
   }
 
+  /**
+   * 图片序列化缓存。
+   * 图库里每张图都是 base64 dataUrl，整份 `JSON.stringify + parse` 动辄数 MB；
+   * 而绝大多数保存（改名、置顶、转分类）与图片完全无关。
+   * 用「id / 名称 / 分类 / 时间戳」拼指纹，未变则复用上次的纯数据副本。
+   * dataUrl 创建后不可变，故不进指纹（换图必然换 id 或推进 updatedAt）。
+   */
+  let imageCache: { fingerprint: string; plain: BlogImage[] } | null = null
+
+  function imageFingerprint(list: BlogImage[]): string {
+    let out = ''
+    for (const img of list) {
+      out += `${img.id}\u0001${img.name}\u0001${img.categoryId ?? ''}\u0001${img.updatedAt ?? ''}\u0002`
+    }
+    return out
+  }
+
+  function plainImages(): BlogImage[] {
+    const raw = toRaw(images.value)
+    const fingerprint = imageFingerprint(raw)
+    if (imageCache && imageCache.fingerprint === fingerprint) return imageCache.plain
+    const plain = JSON.parse(JSON.stringify(raw)) as BlogImage[]
+    imageCache = { fingerprint, plain }
+    return plain
+  }
+
   async function saveBlog(): Promise<void> {
     try {
       // 关键：IDB 的结构化克隆无法处理 Vue reactive Proxy，会抛 DataCloneError 导致写入失败
@@ -85,7 +111,7 @@ export const useBlogStore = defineStore('blog', () => {
         categories: JSON.parse(JSON.stringify(categories.value)),
         tags: JSON.parse(JSON.stringify(tags.value)),
         articles: JSON.parse(JSON.stringify(articles.value)),
-        images: JSON.parse(JSON.stringify(images.value)),
+        images: plainImages(),
         imageCategories: JSON.parse(JSON.stringify(imageCategories.value)),
         wechat: wechat.value ? JSON.parse(JSON.stringify(wechat.value)) : undefined
       })
@@ -467,7 +493,10 @@ export const useBlogStore = defineStore('blog', () => {
     const affected = articles.value.filter(a => a.categoryId === id)
     if (affected.length === 0) return 0
     const ids = new Set(affected.map(a => a.id))
-    articles.value = toRaw(articles.value).map(a => (ids.has(a.id) ? { ...a, categoryId: undefined } : a))
+    // 必须推进 updatedAt：blog.json 按 id 取 updatedAt 较新者且平局远端胜，
+    // 不推进会导致「本地转未分类」在下次拉取时被云端旧记录覆盖
+    const now = nowIso()
+    articles.value = toRaw(articles.value).map(a => (ids.has(a.id) ? { ...a, categoryId: undefined, updatedAt: now } : a))
     return affected.length
   }
 
@@ -538,11 +567,12 @@ export const useBlogStore = defineStore('blog', () => {
     if (!tags.value.some(t => t.id === targetId)) return { ok: false, reason: '目标标签不存在' }
     if (!tags.value.some(t => t.id === sourceId)) return { ok: false, reason: '来源标签不存在' }
     let affected = 0
+    const now = nowIso()
     articles.value = toRaw(articles.value).map(a => {
       if (!a.tagIds.includes(sourceId)) return a
       affected += 1
       const nextIds = Array.from(new Set(a.tagIds.filter(t => t !== sourceId).concat(targetId)))
-      return { ...a, tagIds: nextIds }
+      return { ...a, tagIds: nextIds, updatedAt: now }
     })
     tags.value = toRaw(tags.value).filter(t => t.id !== sourceId)
     await saveBlog()
@@ -553,10 +583,11 @@ export const useBlogStore = defineStore('blog', () => {
   async function removeTag(id: string): Promise<{ ok: boolean; reason?: string; affectedArticles?: number }> {
     if (!tags.value.some(t => t.id === id)) return { ok: false, reason: '标签不存在' }
     let affected = 0
+    const now = nowIso()
     articles.value = toRaw(articles.value).map(a => {
       if (!a.tagIds.includes(id)) return a
       affected += 1
-      return { ...a, tagIds: a.tagIds.filter(t => t !== id) }
+      return { ...a, tagIds: a.tagIds.filter(t => t !== id), updatedAt: now }
     })
     tags.value = toRaw(tags.value).filter(t => t.id !== id)
     await saveBlog()
@@ -602,7 +633,8 @@ export const useBlogStore = defineStore('blog', () => {
 
   /** 新增正文图片（dataUrl 已由调用方按白名单校验），返回带 id 的条目 */
   async function addImage(name: string, dataUrl: string, size?: number): Promise<BlogImage> {
-    const img: BlogImage = { id: newId('bi'), name, dataUrl, size, createdAt: nowIso() }
+    const now = nowIso()
+    const img: BlogImage = { id: newId('bi'), name, dataUrl, size, createdAt: now, updatedAt: now }
     images.value.push(img)
     await saveBlog()
     return img
@@ -617,7 +649,8 @@ export const useBlogStore = defineStore('blog', () => {
       name: item.name,
       dataUrl: item.dataUrl,
       size: item.size,
-      createdAt: now
+      createdAt: now,
+      updatedAt: now
     }))
     images.value.push(...created)
     await saveBlog()
@@ -715,11 +748,13 @@ export const useBlogStore = defineStore('blog', () => {
     }
     const next = targetId ?? undefined
     let moved = 0
+    const now = nowIso()
     images.value = toRaw(images.value).map(i => {
       if (!idSet.has(i.id)) return i
       if (i.categoryId === next) return i
       moved += 1
-      return { ...i, categoryId: next }
+      // BlogImage 无墓碑，靠 updatedAt 参与合并；不推进则换分类在同步后回滚
+      return { ...i, categoryId: next, updatedAt: now }
     })
     if (moved === 0) return { ok: true, moved: 0 }
     await saveBlog()
@@ -760,7 +795,7 @@ export const useBlogStore = defineStore('blog', () => {
     const trimmed = name.trim()
     if (!trimmed) return { ok: false, reason: '图片名称不可为空' }
     if (trimmed.length > 60) return { ok: false, reason: '图片名称不能超过 60 个字符' }
-    images.value[index] = { ...images.value[index], name: trimmed }
+    images.value[index] = { ...images.value[index], name: trimmed, updatedAt: nowIso() }
     await saveBlog()
     return { ok: true }
   }

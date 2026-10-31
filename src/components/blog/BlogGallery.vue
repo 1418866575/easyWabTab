@@ -23,6 +23,7 @@ import {
   sortImages
 } from '@/composables/blogCore'
 import { isAllowedDataImage } from '@/composables/blogImages'
+import { compressImageDataUrl } from '@/composables/blogImageCompress'
 import { PAGE_SIZES, usePageSize } from '@/composables/usePageSize'
 import { showConfirm, toastAlert } from '@/utils/dialog'
 import { BLOG_IMAGE_CATEGORY_ALL, BLOG_IMAGE_CATEGORY_NONE } from '@/types'
@@ -244,7 +245,17 @@ async function onPickFiles(e: Event): Promise<void> {
       rejected += 1
       continue
     }
-    payload.push({ name: file.name.replace(/\.[^.]+$/, '') || '图片', dataUrl, size: file.size })
+    // 原图直存会让一张手机照把 IndexedDB 与 blog.json 同步信封撑到数 MB，入库前统一压缩
+    // （与编辑器插图走同一套规则；已足够小的图原样返回，不会无意义重编码）
+    let size = file.size
+    try {
+      const out = await compressImageDataUrl(dataUrl)
+      dataUrl = out.dataUrl
+      size = out.bytes
+    } catch {
+      // 解码失败（极端格式）保留原图，不让整批上传中断
+    }
+    payload.push({ name: file.name.replace(/\.[^.]+$/, '') || '图片', dataUrl, size })
   }
   if (payload.length > 0) await store.addImages(payload)
   uploading.value = false

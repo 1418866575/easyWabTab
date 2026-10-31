@@ -741,6 +741,12 @@ test('normalizeImage 解析并保留 categoryId（空串视为未分类）', () 
   a.equal(normalizeImage({ id: 'bi_3', dataUrl: PNG })?.categoryId, undefined)
 })
 
+test('normalizeImage 保留 updatedAt（合并靠它，丢了会让改名/换分类在同步后回滚）', () => {
+  const stamp = '2026-10-31T10:00:00.000Z'
+  a.equal(normalizeImage({ id: 'bi_4', dataUrl: PNG, updatedAt: stamp })?.updatedAt, stamp)
+  a.equal(normalizeImage({ id: 'bi_5', dataUrl: PNG })?.updatedAt, undefined)
+})
+
 test('normalizeImageCategory 兜底：名称截断 30 字、缺失 order 用下标、空名回落', () => {
   const c = normalizeImageCategory({ id: 'bic_1', name: '封面图' }, 0)
   a.equal(c.id, 'bic_1')

@@ -260,6 +260,7 @@ export function normalizeImage(raw: unknown, when = nowIso()): BlogImage | null 
   if (!isAllowedDataImage(dataUrl)) return null
   const size = typeof src.size === 'number' && Number.isFinite(src.size) ? src.size : undefined
   const categoryId = str(src.categoryId).trim()
+  const updatedAt = str(src.updatedAt)
   const img: BlogImage = {
     id: str(src.id) || newId('bi'),
     name: str(src.name),
@@ -268,6 +269,8 @@ export function normalizeImage(raw: unknown, when = nowIso()): BlogImage | null 
     createdAt: str(src.createdAt, when)
   }
   if (categoryId) img.categoryId = categoryId
+  // 重建对象时必须显式带回时间戳，否则合并时永远按 createdAt 打平 → 本地改名/换分类丢失
+  if (updatedAt) img.updatedAt = updatedAt
   return img
 }
 

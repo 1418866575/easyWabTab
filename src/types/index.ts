@@ -1938,6 +1938,12 @@ export interface BlogImage {
   size?: number             // 原始文件字节数（上传时记录，仅供图库展示）
   categoryId?: string       // 图库分类 id（BlogImageCategory）；缺省 = 未分类
   createdAt: string
+  /**
+   * 最后修改时间（改名 / 换分类时推进）。
+   * blog.json 合并按 id 取 updatedAt 较新者，且平局时远端胜 —— 不推进会在
+   * 「本地改完还没推送就拉取」时被云端旧记录覆盖（分类调整无声回滚）。
+   */
+  updatedAt?: string
 }
 
 /**
