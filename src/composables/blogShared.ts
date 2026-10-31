@@ -102,6 +102,7 @@ export function sharedPostToArticle(p: BlogSharePost): BlogArticle {
     updatedAt: p.updatedAt,
     publishedAt: p.publishedAt,
     authorName: p.authorName,
+    typo: p.typo ? { ...p.typo } : undefined,
     revision: 0
   }
 }

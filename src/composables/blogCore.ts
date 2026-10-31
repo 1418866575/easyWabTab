@@ -8,7 +8,7 @@
  * 评论实体按需求文档标注「延后」未实现，故 `commentCount` 恒为 0。
  */
 import { ARTICLE_STATUSES, BLOG_SORTS } from '../types'
-import type { ArticleStatus, BlogArticle, BlogCategory, BlogCoverKind, BlogData, BlogImage, BlogImageCategory, BlogImageSort, BlogImageUsage, BlogSettings, BlogSort, BlogTag, BlogWechatConfig } from '../types'
+import type { ArticleStatus, BlogArticle, BlogCategory, BlogCoverKind, BlogData, BlogImage, BlogImageCategory, BlogImageSort, BlogImageUsage, BlogSettings, BlogSort, BlogTag, BlogTypo, BlogWechatConfig } from '../types'
 import { isAllowedDataImage, parseImageRefs } from './blogImages'
 
 /** 博客数据结构版本：normalizeBlogData 据此判定是否需要迁移 */
@@ -221,8 +221,29 @@ export function normalizeArticle(raw: unknown, when = nowIso()): BlogArticle {
     auditRemark: typeof src.auditRemark === 'string' ? src.auditRemark : undefined,
     authorName: typeof src.authorName === 'string' ? src.authorName : undefined,
     sharedAt: typeof src.sharedAt === 'string' ? src.sharedAt : undefined,
+    // 排版主题：逐字段重建对象，漏带会让主题在 IDB / 云同步往返后静默丢失
+    typo: normalizeTypo(src.typo),
     revision: clampNumber(src.revision, 1, Number.MAX_SAFE_INTEGER, 1)
   }
+}
+
+/** 排版主题兜底：非法输入一律返回 undefined（= 跟随系统），字段越界丢弃 */
+function normalizeTypo(raw: unknown): BlogTypo | undefined {
+  if (typeof raw !== 'object' || raw === null) return undefined
+  const src = raw as Record<string, unknown>
+  if (typeof src.themeId !== 'string') return undefined
+  const num = (v: unknown, min: number, max: number): number | undefined => {
+    const n = typeof v === 'number' ? v : Number(v)
+    return Number.isFinite(n) && n >= min && n <= max ? n : undefined
+  }
+  const typo: BlogTypo = { themeId: src.themeId }
+  const fs = num(src.fontSize, 14, 20)
+  if (fs != null) typo.fontSize = fs
+  const lh = num(src.lineHeight, 1.5, 2.2)
+  if (lh != null) typo.lineHeight = lh
+  const pg = num(src.paragraphGap, 0.4, 2)
+  if (pg != null) typo.paragraphGap = pg
+  return typo
 }
 
 export function normalizeCategory(raw: unknown, index = 0, when = nowIso()): BlogCategory {

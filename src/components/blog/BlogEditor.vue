@@ -24,11 +24,16 @@ import type { MdBlockKind, MdTransformOptions } from '@/composables/blogEditorMd
 import { imageRef, parseImageRefs, removeImageRefs, resolveImageRefs } from '@/composables/blogImages'
 import { renderMarkdown } from '@/composables/noteMarkdown'
 import { buildWechatContentHtml } from '@/composables/useWechatPublish'
+import { typoVars, typoHrStyle } from '@/composables/blogTypoCore'
+import type { BlogTypo } from '@/types'
 import { compressImageDataUrl, dataUrlBytes, formatBytes } from '@/composables/blogImageCompress'
 import type { BlogImage } from '@/types'
 import Icon from '@/components/Icon.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import BlogImagePicker from '@/components/blog/BlogImagePicker.vue'
+import BlogTypoPanel from '@/components/blog/BlogTypoPanel.vue'
+import BlogTypoDialog from '@/components/blog/BlogTypoDialog.vue'
+import { resolveTypo } from '@/composables/blogTypoCore'
 import { showConfirm, toastAlert } from '@/utils/dialog'
 // 模块级云同步：切走「博客后台」时先把未保存草稿落盘再上传
 import { registerModuleFlush } from '@/composables/useModuleSync'
@@ -55,11 +60,24 @@ const form = reactive({
   coverToken: '',
   coverImageId: '',
   seoTitle: '',
-  seoDescription: ''
+  seoDescription: '',
+  typo: { themeId: '' } as BlogTypo
 })
 
 /** 单图体积告警阈值（公众号正文图片建议不超过 2MB） */
 const IMAGE_WARN_BYTES = 2 * 1024 * 1024
+
+/** 排版主题：预览容器注入的 --t-* 变量与分割线结构（跟随系统返回空 → CSS 现值） */
+const typoVarStyle = computed(() => typoVars(form.typo, store.settings.defaultTypoId))
+const typoHr = computed(() => typoHrStyle(form.typo, store.settings.defaultTypoId))
+/** 顶栏「主题」按钮 + 右栏「换主题」共用同一个选择弹框 */
+const typoOpen = ref(false)
+const typoTheme = computed(() => resolveTypo(form.typo, store.settings.defaultTypoId))
+
+function onApplyTypo(id: string): void {
+  // 换主题同时清空微调：微调是「覆盖主题值」，换主题后应回到新主题基线
+  form.typo = { themeId: id }
+}
 
 /** 快照：用于判断「有未保存改动」并据此提示 */
 let snapshot = ''
@@ -456,6 +474,7 @@ function fillFromArticle(): void {
   form.coverImageId = a.coverImageId ?? ''
   form.seoTitle = a.seoTitle ?? ''
   form.seoDescription = a.seoDescription ?? ''
+  form.typo = a.typo ? { ...a.typo } : { themeId: '' }
   baseRevision.value = a.revision
   snapshot = JSON.stringify(form)
   dirty.value = false
@@ -533,7 +552,8 @@ async function saveDraft(silent = false): Promise<void> {
     coverToken: form.coverToken.trim() || undefined,
     coverImageId: form.coverImageId.trim() || undefined,
     seoTitle: form.seoTitle.trim() || undefined,
-    seoDescription: form.seoDescription.trim() || undefined
+    seoDescription: form.seoDescription.trim() || undefined,
+    typo: { ...form.typo }
   }
   // 乐观锁：库中 revision 与打开时的基线不一致 → 说明另一标签页/设备已改过
   const res = await store.updateArticleWithRevision(props.articleId, patch, baseRevision.value)
@@ -632,7 +652,8 @@ async function handlePublishWechat(): Promise<void> {
     contentMarkdown: form.contentMarkdown,
     coverImageId: form.coverImageId.trim() || undefined,
     // 图片库 id → dataUrl（与预览同一来源）
-    resolveImage: (id) => store.imageUrlById.get(id)
+    resolveImage: (id) => store.imageUrlById.get(id),
+    typo: { ...form.typo }
   })
   if (ok) {
     toastAlert('已发布到公众号草稿箱', 'success')
@@ -685,7 +706,12 @@ function openWechatPreview(): void {
     return
   }
   // 与「发布到公众号」走完全相同的转换（列表摊平 / 表格卡片化 / 代码块折行 / 内联样式）
-  wechatPreviewHtml.value = buildWechatContentHtml(form.contentMarkdown, (id) => store.imageUrlById.get(id))
+  wechatPreviewHtml.value = buildWechatContentHtml(
+    form.contentMarkdown,
+    (id) => store.imageUrlById.get(id),
+    form.typo,
+    store.settings.defaultTypoId
+  )
   wechatPreviewOpen.value = true
 }
 
@@ -840,6 +866,16 @@ async function regenerateSlug(): Promise<void> {
             </button>
             <button
               type="button"
+              class="ui-btn ui-btn--sm be-typo-btn"
+              title="排版主题"
+              data-testid="blog-editor-typo-top"
+              @click="typoOpen = true"
+            >
+              <span class="be-typo-dot" :style="{ background: typoTheme.swatch }" aria-hidden="true"></span>
+              {{ typoTheme.name }}
+            </button>
+            <button
+              type="button"
               class="ui-btn ui-btn--sm ui-btn--primary"
               :disabled="visibleErrors.length > 0"
               data-testid="blog-editor-publish-top"
@@ -900,7 +936,14 @@ async function regenerateSlug(): Promise<void> {
             @keydown="onContentKeydown"
           ></textarea>
           <!-- v-html 的内容来自 markdown-it（html:false，仅白名单图片 data URL），不含可执行脚本 -->
-          <div v-if="viewMode !== 'edit'" class="be-preview md-body" data-testid="blog-editor-preview" v-html="publishedHtml"></div>
+          <div
+            v-if="viewMode !== 'edit'"
+            class="be-preview md-body"
+            :style="typoVarStyle"
+            :data-hr="typoHr || undefined"
+            data-testid="blog-editor-preview"
+            v-html="publishedHtml"
+          ></div>
         </div>
         <!-- 隐藏的图片选择框：由工具栏「图片」按钮触发，选择后转 base64 内联插入 -->
         <input
@@ -927,6 +970,8 @@ async function regenerateSlug(): Promise<void> {
           <Icon name="close" :size="14" />
         </button>
       </div>
+        <BlogTypoPanel v-model="form.typo" @open="typoOpen = true" />
+
         <div class="be-block">
           <h3 class="be-block-title">大纲</h3>
           <p v-if="outline.length === 0" class="be-stat">正文里还没有 ## / ### 标题</p>
@@ -1061,6 +1106,16 @@ async function regenerateSlug(): Promise<void> {
         <button type="button" class="ui-btn ui-btn--sm" data-testid="blog-editor-save" @click="saveDraft()">保存草稿</button>
         <button
           type="button"
+          class="ui-btn ui-btn--sm be-typo-btn"
+          title="排版主题"
+          data-testid="blog-editor-typo"
+          @click="typoOpen = true"
+        >
+          <span class="be-typo-dot" :style="{ background: typoTheme.swatch }" aria-hidden="true"></span>
+          {{ typoTheme.name }}
+        </button>
+        <button
+          type="button"
           class="ui-btn ui-btn--sm ui-btn--primary"
           :disabled="visibleErrors.length > 0"
           data-testid="blog-editor-publish"
@@ -1166,6 +1221,16 @@ async function regenerateSlug(): Promise<void> {
         </div>
       </div>
     </BaseDialog>
+
+    <!-- 排版主题选择：顶栏 / 底部操作条「主题」按钮与右栏「换主题」共用 -->
+    <BlogTypoDialog
+      v-if="typoOpen"
+      :theme-id="form.typo.themeId"
+      :default-id="store.settings.defaultTypoId ?? ''"
+      @apply="onApplyTypo"
+      @set-default="(id) => void store.updateSettings({ defaultTypoId: id })"
+      @close="typoOpen = false"
+    />
 
     <!-- 图库选择器：正文插入（多选）/ 封面选择（单选） -->
     <BlogImagePicker
@@ -1528,6 +1593,16 @@ async function regenerateSlug(): Promise<void> {
 .be-textarea {
   width: 100%;
   resize: vertical;
+}
+
+/* 顶栏 / 底部操作条的「主题」按钮：主题色点 + 名称 */
+.be-typo-btn { gap: 6px; }
+.be-typo-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+  border: 1px solid rgba(15, 23, 42, 0.12);
 }
 
 .be-tag-picker {

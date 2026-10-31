@@ -1859,6 +1859,23 @@ export interface BlogArticle {
   revision: number          // 保存即自增，用于草稿冲突判定
   authorName?: string       // 共享发布时写入的展示作者名（多作者预留；缺省回落站点名）
   sharedAt?: string         // 最近一次成功「共享」到服务器的本地时间戳（仅前端展示用）
+  /**
+   * 排版主题（单篇覆盖）：blogTypoCore 解析为 `--t-*` Token，
+   * 编辑器预览 / 博客前台 / 公众号三端共用。缺省 = 跟随 settings.defaultTypoId。
+   */
+  typo?: BlogTypo
+}
+
+/** 单篇排版：引用预设主题 + 三个微调项（详见 docs/博客-文章样式编排-技术方案.md） */
+export interface BlogTypo {
+  /** 预设主题 id；空串 = 跟随全局默认（再空 = 跟随系统） */
+  themeId: string
+  /** 正文字号 px，14-20；缺省用主题值 */
+  fontSize?: number
+  /** 行高 1.5-2.2；缺省用主题值 */
+  lineHeight?: number
+  /** 段距 em，0.4-2；缺省用主题值 */
+  paragraphGap?: number
 }
 
 /** 单篇共享文章文件（posts/<id>.json）—— 只含公开子集，绝不携带草稿/回收站/信封凭证 */
@@ -1883,6 +1900,7 @@ export interface BlogSharePost {
   contentMarkdown: string   // 图片已内联 dataURL，自包含
   contentHtml: string       // 详情页直接 v-html
   authorName: string
+  typo?: BlogTypo           // 排版主题（前台按此注入 --t-* 变量）
 }
 
 /** 共享清单条目（manifest.json）—— 列表展示所需的最小字段，避免逐篇拉取 */
@@ -1990,6 +2008,8 @@ export interface BlogSettings {
   excerptLength: number
   /** 本地作者身份过期分钟数，默认 120 */
   sessionTimeoutMin: number
+  /** 全站默认排版主题 id；空串 = 跟随系统（.md-body 现值） */
+  defaultTypoId?: string
   footer: string
 }
 

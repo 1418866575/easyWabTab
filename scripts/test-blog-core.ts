@@ -18,6 +18,7 @@ import {
   makeUniqueSlug,
   defaultSlug,
   nextStatus,
+  normalizeArticle,
   normalizeBlogData,
   paginate,
   plainTextOfMarkdown,
@@ -834,6 +835,26 @@ test('formatBytes 易读体积', () => {
   a.equal(formatBytes(512), '512 B')
   a.equal(formatBytes(1024), '1.0 KB')
   a.equal(formatBytes(1024 * 1024 * 3), '3.0 MB')
+})
+
+test('normalizeArticle 保留 typo（逐字段重建，漏带会让主题在同步后静默丢失）', () => {
+  const base = {
+    id: 'ba_1',
+    slug: 'a',
+    title: 'T',
+    contentMarkdown: '# hi',
+    status: 'draft' as const,
+    tagIds: [],
+    pinned: false,
+    createdAt: '2026-10-31T00:00:00.000Z',
+    updatedAt: '2026-10-31T00:00:00.000Z',
+    revision: 1
+  }
+  const typo = { themeId: 't_teal', fontSize: 18, lineHeight: 2, paragraphGap: 1.5 }
+  a.deepEqual(normalizeArticle({ ...base, typo })?.typo, typo)
+  // 非法字段越界丢弃；无 typo 时为 undefined（JSON 序列化即不出键）
+  a.deepEqual(normalizeArticle({ ...base, typo: { themeId: 't_teal', fontSize: 99 } })?.typo, { themeId: 't_teal' })
+  a.equal(normalizeArticle(base)?.typo, undefined)
 })
 
 let passed = 0

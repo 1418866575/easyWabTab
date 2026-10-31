@@ -31,6 +31,7 @@
     "test:paging": "node --experimental-strip-types scripts/test-panel-paging-core.ts",
     "test:note-markdown": "node --experimental-strip-types scripts/test-note-markdown.ts",
     "test:blog": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-blog-core.ts",
+    "test:blog-typo": "node --experimental-strip-types scripts/test-blog-typo.ts",
     "test:books": "node --experimental-strip-types scripts/test-books-core.ts",
     "test:menu": "node --experimental-strip-types scripts/test-workbench-menu-core.ts",
     "test:spotlight": "node --experimental-strip-types scripts/test-spotlight-core.ts",

@@ -141,7 +141,8 @@ export function buildSharedPost(
     publishedAt: article.publishedAt,
     contentMarkdown,
     contentHtml: renderHtml(contentMarkdown),
-    authorName
+    authorName,
+    typo: article.typo
   }
 }
 

@@ -16,6 +16,8 @@ import { ref } from 'vue'
 import { resolveImageRefs } from '@/composables/blogImages'
 import { renderMarkdown } from '@/composables/noteMarkdown'
 import { useBlogStore } from '@/stores/blog'
+import { hrMarkup, typoInlineStyle, typoVars } from '@/composables/blogTypoCore'
+import type { BlogTypo } from '@/types'
 
 const API_BASE = '/api/wechat'
 
@@ -91,57 +93,9 @@ async function uploadCoverImage(dataUrl: string, appId: string, appSecret: strin
 
 // ---------------------------------------------------------------------------
 // 内联样式：微信公众号正文只认行内 style，外链 CSS / class / id / JS 全部被过滤
+// 样式来源已主题化：typoInlineStyle(tag, opts, tokens)（blogTypoCore），
+// classic 主题的输出与旧版写死的 styleFor() 逐字节一致（见 test-blog-typo.ts 快照）。
 // ---------------------------------------------------------------------------
-function styleFor(tag: string, el: HTMLElement): string {
-  const isCodeInPre = tag === 'code' && el.parentElement?.tagName.toLowerCase() === 'pre'
-  switch (tag) {
-    case 'p':
-      return 'margin:1.2em 0;padding:0;'
-    case 'h1':
-      return 'font-size:22px;font-weight:bold;margin:1.4em 0 0.8em;line-height:1.4;color:#1f1f1f;'
-    case 'h2':
-      return 'font-size:20px;font-weight:bold;margin:1.4em 0 0.8em;line-height:1.4;color:#1f1f1f;'
-    case 'h3':
-      return 'font-size:18px;font-weight:bold;margin:1.2em 0 0.6em;line-height:1.4;color:#1f1f1f;'
-    case 'h4':
-    case 'h5':
-    case 'h6':
-      return 'font-size:16px;font-weight:bold;margin:1.1em 0 0.5em;color:#1f1f1f;'
-    case 'img':
-      return 'max-width:100%;height:auto;display:block;margin:0.8em auto;border-radius:4px;'
-    case 'a':
-      return 'color:#576b95;text-decoration:none;word-break:break-all;'
-    case 'strong':
-    case 'b':
-      return 'font-weight:bold;'
-    case 'em':
-    case 'i':
-      return 'font-style:italic;'
-    case 'code':
-      if (isCodeInPre) return 'background:none;padding:0;color:#333;font-family:Consolas,Menlo,monospace;font-size:14px;'
-      return 'background-color:#f6f8fa;color:#c7254e;padding:2px 6px;border-radius:3px;font-family:Consolas,Menlo,monospace;font-size:14px;word-break:break-all;'
-    case 'pre':
-      // 公众号会丢掉 overflow-x，长代码行会被直接裁掉 → 用 pre-wrap 自动折行（缩进仍保留）
-      return 'background-color:#f6f8fa;padding:12px 16px;border-radius:6px;margin:1em 0;font-size:13px;line-height:1.65;white-space:pre-wrap;word-wrap:break-word;word-break:break-all;tab-size:2;'
-    case 'blockquote':
-      return 'margin:1em 0;padding:8px 12px;border-left:4px solid #d9d9d9;background-color:#f8f8f8;color:#888;'
-    case 'ul':
-    case 'ol':
-      return 'padding-left:1.8em;margin:1em 0;'
-    case 'li':
-      return 'margin:0.4em 0;'
-    case 'hr':
-      return 'border:none;border-top:1px solid #eee;margin:1.5em 0;'
-    case 'table':
-      return 'border-collapse:collapse;width:100%;margin:1em 0;font-size:14px;'
-    case 'th':
-      return 'border:1px solid #e0e0e0;padding:6px 10px;text-align:left;background-color:#f6f8fa;font-weight:bold;'
-    case 'td':
-      return 'border:1px solid #e0e0e0;padding:6px 10px;text-align:left;'
-    default:
-      return ''
-  }
-}
 
 /**
  * 列表安全化：把 <ul>/<ol>/<li> 摊平成带手写符号的 <section>。
@@ -351,36 +305,53 @@ function convertMarks(root: HTMLElement): void {
   })
 }
 
-/** 微信正文统一处理入口：列表摊平 + 表格卡片化 + 全标签内联样式（导出便于回归测试） */
-export function normalizeWechatBody(root: HTMLElement): void {
-  // 顺序有讲究：先摊平列表（表格若在列表项里会被提到顶层），再卡片化表格，最后统一内联样式
+/** 微信正文统一处理入口：列表摊平 + 表格卡片化 + 分割线结构替换 + 全标签内联样式（导出便于回归测试） */
+export function normalizeWechatBody(root: HTMLElement, tokens: Record<string, string> = {}): void {
+  // 顺序有讲究：先摊平列表（表格若在列表项里会被提到顶层），再卡片化表格、转 mark，
+  // 然后替换分割线结构（dots 落成真实节点，必须在样式化之前否则没机会内联），最后统一内联样式
   flattenLists(root)
   flattenTables(root)
   convertMarks(root)
-  applyInlineStyles(root)
+  decorateHr(root, tokens)
+  applyInlineStyles(root, tokens)
+}
+
+/** 公众号不支持伪元素：dots/dashed 的分割线必须落成真实节点（line 保持 <hr> 走内联样式） */
+function decorateHr(root: HTMLElement, tokens: Record<string, string>): void {
+  const markup = hrMarkup(tokens)
+  if (!markup) return
+  const doc = root.ownerDocument
+  root.querySelectorAll('hr').forEach((hr) => {
+    const tpl = doc.createElement('template')
+    tpl.innerHTML = markup
+    hr.replaceWith(tpl.content.firstElementChild ?? doc.createElement('section'))
+  })
 }
 
 /** Markdown → 可直接提交给草稿箱的正文 HTML（导出便于回归测试） */
 export function buildWechatContentHtml(
   contentMarkdown: string,
-  resolveImage: (id: string) => string | undefined
+  resolveImage: (id: string) => string | undefined,
+  typo?: BlogTypo,
+  defaultTypoId?: string
 ): string {
   const html = renderMarkdown(resolveImageRefs(contentMarkdown, resolveImage))
   const doc = new DOMParser().parseFromString(`<section>${html}</section>`, 'text/html')
   const root = (doc.body.firstElementChild as HTMLElement) ?? doc.body
-  normalizeWechatBody(root)
+  normalizeWechatBody(root, typoVars(typo, defaultTypoId))
   return root.outerHTML
 }
 
-function applyInlineStyles(root: HTMLElement): void {
-  const base = 'font-size:16px;color:#3f3f3f;line-height:1.75;word-wrap:break-word;word-break:break-word;padding:0 4px;'
+function applyInlineStyles(root: HTMLElement, tokens: Record<string, string>): void {
+  const base = `font-size:${tokens['--t-font-size'] || '16px'};color:${tokens['--t-text'] || '#3f3f3f'};line-height:${tokens['--t-line-height'] || '1.75'};word-wrap:break-word;word-break:break-word;padding:0 4px;`
   root.setAttribute('style', base)
   root.querySelectorAll('*').forEach((node) => {
     const el = node as HTMLElement
     const tag = el.tagName.toLowerCase()
     el.removeAttribute('class')
     el.removeAttribute('id')
-    const s = styleFor(tag, el)
+    const isCodeInPre = tag === 'code' && el.parentElement?.tagName.toLowerCase() === 'pre'
+    const s = typoInlineStyle(tag, { isCodeInPre }, tokens)
     if (s) el.setAttribute('style', s)
   })
 }
@@ -401,6 +372,8 @@ export function useWechatPublish() {
     contentMarkdown: string
     coverImageId?: string
     resolveImage: (id: string) => string | undefined
+    /** 排版主题（单篇）；缺省跟随全站默认 */
+    typo?: BlogTypo
   }): Promise<boolean> {
     error.value = ''
     notConfigured.value = false
@@ -427,8 +400,8 @@ export function useWechatPublish() {
       }
       const doc = new DOMParser().parseFromString(`<section>${html}</section>`, 'text/html')
       const root = (doc.body.firstElementChild as HTMLElement) ?? doc.body
-      // 列表必须先摊平（公众号不认 ul/li），再整体内联样式
-      normalizeWechatBody(root)
+      // 列表必须先摊平（公众号不认 ul/li），再整体内联样式（取色来自文章排版主题）
+      normalizeWechatBody(root, typoVars(opts.typo, store.settings.defaultTypoId))
       const imgs = Array.from(root.querySelectorAll('img'))
 
       // 3. 封面（coverImageId → 兜底第一张正文图）

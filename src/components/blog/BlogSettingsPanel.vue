@@ -9,6 +9,7 @@ import { computed, ref, watch } from 'vue'
 import { useBlogStore } from '@/stores/blog'
 import { collectSettingsErrors } from '@/composables/blogCore'
 import { downloadBlogPublic } from '@/composables/blogStaticExport'
+import { TYPO_THEMES } from '@/composables/blogTypoCore'
 import type { BlogSort } from '@/types'
 import { showConfirm, toastAlert } from '@/utils/dialog'
 
@@ -105,6 +106,15 @@ async function handleExportStatic(): Promise<void> {
         <label class="bs-field">
           <span class="bs-label">自动摘要长度（20 ~ 500）</span>
           <el-input-number v-model="form.excerptLength" size="small" :min="20" :max="500" :step="10" />
+        </label>
+        <label class="bs-field">
+          <span class="bs-label">默认排版主题（新文章未单独设置时使用）</span>
+          <select v-model="form.defaultTypoId" class="bs-select" data-testid="blog-settings-typo">
+            <option value="">跟随系统（保持现有排版）</option>
+            <option v-for="t in TYPO_THEMES.filter((x) => x.id !== 't_follow')" :key="t.id" :value="t.id">
+              {{ t.name }}
+            </option>
+          </select>
         </label>
       </div>
     </div>

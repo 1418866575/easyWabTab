@@ -2,20 +2,22 @@
  * 全局 Markdown 正文排版（.md-body）
  * ----------------------------------------------------------------------------
  * 用途：所有用 markdown-it 经 renderMarkdown() 产出、再以 v-html 注入的预览区。
- * 目前使用者：博客后台编辑器预览（BlogEditor）、后续博客前台文章页。
- * 既有组件 WorkbenchNotes / WorkbenchDiary 内部各自用 :deep() 实现了同一套
- * 排版规则，这里把它收敛成全局类，避免每处重复；选择器直接命中 v-html
- * 注入的子节点（它们不带 scoped 的 data-v-* 属性，故全局类即可生效，无需 :deep）。
+ * 目前使用者：博客后台编辑器预览（BlogEditor）、博客前台文章页（BlogPostView）、日记预览。
  *
- * 主题：全部走 Design Token（--color-*），不写死色值；
- *      行内代码/代码块/引用/表格边框用 color-mix(in srgb, currentColor …)
- *      随 currentColor（即正文色）自适应明暗，无需要单独 html.dark 覆盖。
+ * 主题（2026-10-31 起）：全部取值改读 `--t-*` 排版 Token（blogTypoCore 定义），
+ * fallback 逐条等于改造前的现值 —— 容器不注入变量（跟随系统）时，渲染结果与
+ * 历史版本一致；日记 / 便签等未接主题的使用方因此完全不受影响。
+ * 选择器直接命中 v-html 注入的子节点（不带 scoped data-v-*，全局类即可生效）。
+ *
+ * 明暗：fallback 链仍走 Design Token（--color-*）与 color-mix(currentColor …)，
+ *      主题要换明暗观感时由 typoVars(..., dark) 注入覆盖值，CSS 不写死色值。
  */
 
 .md-body {
-  color: var(--color-text, #0f172a);
-  font-size: var(--font-size-sm, 14px);
-  line-height: var(--line-height-relaxed, 1.75);
+  color: var(--t-text, var(--color-text, #0f172a));
+  font-family: var(--t-font, inherit);
+  font-size: var(--t-font-size, var(--font-size-sm, 14px));
+  line-height: var(--t-line-height, var(--line-height-relaxed, 1.75));
   word-wrap: break-word;
   overflow-wrap: anywhere;
 }
@@ -34,10 +36,10 @@
 .md-body h4,
 .md-body h5,
 .md-body h6 {
-  margin: 0.8em 0 0.4em;
-  font-weight: 700;
+  margin: var(--t-heading-gap, 0.8em 0 0.4em);
+  font-weight: var(--t-heading-weight, 700);
   line-height: 1.35;
-  color: var(--color-text, #0f172a);
+  color: var(--t-heading, var(--color-text, #0f172a));
 }
 
 .md-body h1 {
@@ -62,12 +64,12 @@
 }
 
 .md-body p {
-  margin: 0.6em 0;
+  margin: var(--t-paragraph-gap, 0.6em) 0;
 }
 
 .md-body ul,
 .md-body ol {
-  margin: 0.6em 0;
+  margin: var(--t-paragraph-gap, 0.6em) 0;
   padding-left: 1.6em;
 }
 
@@ -84,7 +86,7 @@
 }
 
 .md-body a {
-  color: var(--color-primary, #3b82f6);
+  color: var(--t-link, var(--color-primary, #3b82f6));
   text-decoration: underline;
   text-underline-offset: 2px;
   word-break: break-all;
@@ -99,7 +101,8 @@
 }
 
 .md-body code {
-  background: color-mix(in srgb, currentColor 12%, transparent);
+  background: var(--t-code-bg, color-mix(in srgb, currentColor 12%, transparent));
+  color: var(--t-code-color, currentColor);
   padding: 1px 5px;
   border-radius: var(--radius-sm, 4px);
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
@@ -108,7 +111,7 @@
 }
 
 .md-body pre {
-  background: color-mix(in srgb, currentColor 12%, transparent);
+  background: var(--t-pre-bg, color-mix(in srgb, currentColor 12%, transparent));
   margin: 0.7em 0;
   padding: 10px 12px;
   border-radius: var(--radius-md, 8px);
@@ -123,13 +126,15 @@
   padding: 0;
   border-radius: 0;
   font-size: inherit;
+  color: var(--t-pre-color, inherit);
 }
 
 .md-body blockquote {
   margin: 0.7em 0;
   padding: 0.2em 0 0.2em 0.8em;
-  border-left: 3px solid color-mix(in srgb, currentColor 35%, transparent);
-  color: color-mix(in srgb, currentColor 78%, transparent);
+  border-left: 3px solid var(--t-quote-border, color-mix(in srgb, currentColor 35%, transparent));
+  background: var(--t-quote-bg, transparent);
+  color: var(--t-quote-text, color-mix(in srgb, currentColor 78%, transparent));
 }
 
 .md-body blockquote > :first-child {
@@ -152,12 +157,12 @@
 .md-body th,
 .md-body td {
   padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--t-accent, currentColor) 22%, transparent);
 }
 
 .md-body th {
   font-weight: 600;
-  background: color-mix(in srgb, currentColor 6%, transparent);
+  background: color-mix(in srgb, var(--t-accent, currentColor) 6%, transparent);
 }
 
 .md-body hr {
@@ -166,12 +171,31 @@
   margin: 1em 0;
 }
 
+/* 分割线结构样式（跟随系统不打 data-hr，走上面的现值）：
+   dots = 居中圆点（伪元素；公众号端由 decorateHr 落成真实节点） */
+.md-body[data-hr='dots'] hr {
+  border: none;
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: var(--t-accent, var(--color-primary, #3b82f6));
+}
+
+.md-body[data-hr='dots'] hr::before {
+  content: '● ● ●';
+}
+
+.md-body[data-hr='dashed'] hr {
+  border-top-style: dashed;
+  border-top-color: color-mix(in srgb, var(--t-accent, currentColor) 35%, transparent);
+}
+
 .md-body img {
   display: block;
   max-width: 100%;
   height: auto;
   margin: 14px auto;
-  border-radius: var(--radius-md, 8px);
+  border-radius: var(--t-img-radius, var(--radius-md, 8px));
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.10);
   background-color: var(--color-bg-2, #f1f5f9);
 }
@@ -179,5 +203,5 @@
 .md-body iframe {
   max-width: 100%;
   border: 0;
-  border-radius: var(--radius-md, 8px);
+  border-radius: var(--t-img-radius, var(--radius-md, 8px));
 }

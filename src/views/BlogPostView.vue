@@ -19,6 +19,7 @@ import { resolveImageRefs } from '@/composables/blogImages'
 import { renderMarkdown } from '@/composables/noteMarkdown'
 import { useBlogShared, sharedPostToArticle } from '@/composables/blogShared'
 import { useBlogFrontPrefs } from '@/composables/blogFrontPrefs'
+import { typoVars, typoHrStyle } from '@/composables/blogTypoCore'
 import type { BlogArticle } from '@/types'
 import '@/styles/blog-front.css'
 import '@/styles/markdown.css'
@@ -74,6 +75,23 @@ const related = computed<BlogArticle[]>(() => {
   return [...sameCat, ...others].slice(0, 4)
 })
 
+// ---------- 排版主题：跟随当前系统明暗取主题的亮/暗 token ----------
+const isDark = ref(false)
+let darkObserver: MutationObserver | null = null
+
+const typoVarStyle = computed(() =>
+  typoVars(displayArticle.value?.typo, store.settings.defaultTypoId, isDark.value)
+)
+const typoHr = computed(() => typoHrStyle(displayArticle.value?.typo, store.settings.defaultTypoId))
+
+onMounted(() => {
+  isDark.value = document.documentElement.classList.contains('dark')
+  darkObserver = new MutationObserver(() => {
+    isDark.value = document.documentElement.classList.contains('dark')
+  })
+  darkObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+})
+
 onMounted(async () => {
   if (!store.loaded) await store.loadBlog()
   await initBlogFrontPrefs()
@@ -115,7 +133,13 @@ onMounted(async () => {
         </header>
 
         <!-- 正文：markdown-it 渲染（html:false，链接已做安全校验），统一走 .md-body 排版 -->
-        <div class="bf-post-body md-body" data-testid="blog-post-body" v-html="html" />
+        <div
+          class="bf-post-body md-body"
+          :style="typoVarStyle"
+          :data-hr="typoHr || undefined"
+          data-testid="blog-post-body"
+          v-html="html"
+        />
 
         <div v-if="tagLabels.length" class="bf-post-tags">
           <span v-for="t in tagLabels" :key="t" class="bf-post-tag">#{{ t }}</span>
