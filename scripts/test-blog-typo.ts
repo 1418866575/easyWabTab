@@ -158,12 +158,25 @@ test('T9 typoHrStyle / hrMarkup：三种分割线结构', () => {
 test('T10 主题表：id 唯一、必需 token 齐、色值合法、分组合法', () => {
   const ids = new Set(TYPO_THEMES.map((t) => t.id))
   assert.equal(ids.size, TYPO_THEMES.length)
+  assert.equal(TYPO_THEMES.filter((t) => t.group === 'zhaotab').length, 35, '找Tab 移植应恰为 35 套')
   const hex = /^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/
   for (const t of TYPO_THEMES) {
-    assert.ok(['color', 'simple', 'wechat'].includes(t.group), `${t.id} 分组非法`)
+    assert.ok(['color', 'simple', 'wechat', 'zhaotab'].includes(t.group), `${t.id} 分组非法`)
     assert.ok(hex.test(t.swatch), `${t.id} swatch 非法`)
     if (t.id === FOLLOW_THEME_ID) {
       assert.equal(Object.keys(t.tokens).length, 0, '跟随系统不得注入任何变量')
+      continue
+    }
+    if (t.group === 'zhaotab') {
+      // 找Tab 主题：色彩由 tagStyles 承载，token 仅 accent/link；结构样式不得残留未求值插值
+      assert.ok(t.tagStyles && Object.keys(t.tagStyles).length > 0, `${t.id} 缺 tagStyles`)
+      for (const v of Object.values(t.tokens)) {
+        assert.ok(hex.test(v), `${t.id} token 色值非法：${v}`)
+      }
+      for (const [k, v] of Object.entries(t.tagStyles!)) {
+        assert.ok(typeof v === 'string' && v.length > 0, `${t.id}.${k} 空样式`)
+        assert.ok(!v.includes('${'), `${t.id}.${k} 有未求值插值：${v}`)
+      }
       continue
     }
     // 排版尺寸类允许缺省（缺 = 回落基线 / CSS fallback），取色类必须齐
@@ -186,5 +199,33 @@ test('T10 主题表：id 唯一、必需 token 齐、色值合法、分组合法
   }
 })
 
-console.log(`\n${passed}/10 passed`)
-if (passed !== 10) process.exit(1)
+// ---------- T11 找Tab 主题装饰 ----------
+
+test('T11 找Tab 装饰：函数可用、输出含主色、h2 序号参与、hr 装饰为真实节点', () => {
+  const byName = (name: string) => TYPO_THEMES.find((t) => t.name === name)!
+  const orange = byName('橙心')
+  const h2out = orange.decor!.h2!('标题', 2)
+  assert.ok(h2out.includes('#ef7060'), '装饰含主题主色')
+  assert.ok(h2out.includes('标题'), '保留标题内容')
+  const mint = byName('薄荷')
+  assert.ok(mint.decor!.h2!('标题', 3).includes('03'), '编号补零（pad2）')
+  const zhuyin = byName('朱印')
+  assert.ok(zhuyin.decor!.h2!('标题', 1).includes('壹'), '中文数字编号（zhNum）')
+  assert.ok(orange.decor!.hr!.includes('● ● ●'), 'hr 装饰为居中文本节点')
+  const byId = (id: string) => TYPO_THEMES.find((t) => t.id === `t_z_${id}`)!
+  assert.ok(byId('simple').tagStyles!.h2, '简约主题有 tagStyles')
+})
+
+test('T12 typoInlineStyle(theme)：找Tab 主题逐标签 CSS 优先，未覆盖标签回落基线', () => {
+  const byName = (name: string) => TYPO_THEMES.find((t) => t.name === name)!
+  const orange = byName('橙心')
+  assert.equal(typoInlineStyle('h2', { theme: orange }, {}), orange.tagStyles!.h2)
+  assert.equal(typoInlineStyle('p', { theme: orange }, {}), 'margin:1.2em 0;padding:0;', '未覆盖标签回落基线')
+  const lemon = byName('柠檬')
+  assert.equal(typoInlineStyle('code', { theme: lemon }, {}), lemon.tagStyles!.code)
+  // 不带 theme 时行为完全不变（回归锚点）
+  assert.equal(typoInlineStyle('p', {}, CLASSIC), 'margin:1.2em 0;padding:0;')
+})
+
+console.log(`\n${passed}/12 passed`)
+if (passed !== 12) process.exit(1)

@@ -224,6 +224,9 @@ function openUpload(): void {
   fileInput.value?.click()
 }
 
+/** 主操作入口暴露给面板页头（BlogAdminView 的「上传图片」按钮） */
+defineExpose({ openUpload })
+
 /** 上传：逐个读 base64 → 白名单校验 → 批量入库（只落盘一次）。新图一律落在「未分类」 */
 async function onPickFiles(e: Event): Promise<void> {
   const input = e.target as HTMLInputElement
@@ -355,9 +358,7 @@ async function doRemove(ids: string[]): Promise<void> {
         </select>
       </div>
       <div class="bg-query-ops">
-        <button type="button" class="ui-btn ui-btn--sm ui-btn--primary" :disabled="uploading" data-testid="blog-gallery-upload" @click="openUpload">
-          {{ uploading ? '上传中…' : '上传图片' }}
-        </button>
+        <!-- 主操作「上传图片」已提到面板页头（BlogAdminView 通过 defineExpose 触发） -->
         <button
           v-if="!batchMode"
           type="button"
@@ -550,10 +551,10 @@ async function doRemove(ids: string[]): Promise<void> {
   align-items: center;
   gap: 6px;
   padding: 5px 12px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 999px;
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-pill, 999px);
+  background-color: var(--ds-card, #ffffff);
+  color: var(--ds-text-2, #646a73);
   font-family: inherit;
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
@@ -574,9 +575,9 @@ async function doRemove(ids: string[]): Promise<void> {
 
 .bg-chip-count {
   padding: 0 5px;
-  border-radius: 999px;
-  background-color: var(--color-bg-2, #f1f5f9);
-  color: var(--color-text-muted, #94a3b8);
+  border-radius: var(--ds-radius-pill, 999px);
+  background-color: var(--ds-card-2, #f7f8fa);
+  color: var(--ds-text-3, #9aa0a6);
   font-size: 11px;
 }
 
@@ -591,10 +592,10 @@ async function doRemove(ids: string[]): Promise<void> {
   align-items: flex-end;
   flex-wrap: wrap;
   gap: 10px;
-  padding: 12px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  background-color: var(--color-bg-card, #ffffff);
+  padding: var(--ds-gap-card, 16px);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-card, 12px);
+  background-color: var(--ds-card, #ffffff);
   box-shadow: var(--shadow-card, 0 1px 2px rgba(0, 0, 0, 0.06));
 }
 
@@ -606,8 +607,8 @@ async function doRemove(ids: string[]): Promise<void> {
 }
 
 .bg-query-label {
-  color: var(--color-text-secondary, #64748b);
-  font-size: var(--font-size-xs, 12px);
+  color: var(--ds-text-2, #646a73);
+  font-size: var(--ds-fs-label, 12px);
 }
 
 .bg-query-ops {
@@ -620,10 +621,10 @@ async function doRemove(ids: string[]): Promise<void> {
 .bg-select {
   height: 30px;
   padding: 0 8px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--color-bg-input, #ffffff);
-  color: var(--color-text, #0f172a);
+  color: var(--ds-text, #1f2329);
   font-family: inherit;
   font-size: var(--font-size-sm, 13px);
 }
@@ -659,7 +660,7 @@ async function doRemove(ids: string[]): Promise<void> {
   gap: 10px;
   padding: 10px 12px;
   border: 1px solid var(--color-primary, #3b82f6);
-  border-radius: var(--radius-md, 8px);
+  border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--color-primary-soft, #eff6ff);
 }
 
@@ -674,7 +675,7 @@ async function doRemove(ids: string[]): Promise<void> {
 .bg-batch-hint {
   flex: 1 1 100%;
   margin: 0;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-xs, 12px);
 }
 
@@ -682,13 +683,13 @@ async function doRemove(ids: string[]): Promise<void> {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
 }
 
 .bg-total {
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--ds-text-3, #9aa0a6);
   font-size: var(--font-size-xs, 12px);
 }
 
@@ -709,9 +710,9 @@ async function doRemove(ids: string[]): Promise<void> {
 .bg-empty {
   margin: 0;
   padding: 40px 12px;
-  border: 1px dashed var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  color: var(--color-text-secondary, #64748b);
+  border: 1px dashed var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-ctrl, 8px);
+  color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-sm, 13px);
   text-align: center;
 }
@@ -731,9 +732,15 @@ async function doRemove(ids: string[]): Promise<void> {
   flex-direction: column;
   gap: 6px;
   padding: 8px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  background-color: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-ctrl, 8px);
+  background-color: var(--ds-card, #ffffff);
+  transition: border-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
+    box-shadow var(--motion-duration, 0.2s) var(--motion-ease, ease);
+}
+.bg-card:hover {
+  border-color: var(--ds-primary, #2563eb);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
 }
 
 .bg-card.is-on {
@@ -754,8 +761,8 @@ async function doRemove(ids: string[]): Promise<void> {
   justify-content: center;
   height: 120px;
   overflow: hidden;
-  border-radius: var(--radius-sm, 6px);
-  background-color: var(--color-bg-2, #f1f5f9);
+  border-radius: var(--ds-radius-ctrl, 8px);
+  background-color: var(--ds-card-2, #f7f8fa);
 }
 
 .bg-thumb img {
@@ -775,13 +782,13 @@ async function doRemove(ids: string[]): Promise<void> {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  color: var(--color-text, #0f172a);
+  color: var(--ds-text, #1f2329);
   font-size: var(--font-size-sm, 13px);
 }
 
 .bg-sub,
 .bg-usage {
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--ds-text-3, #9aa0a6);
   font-size: var(--font-size-xs, 11px);
 }
 
@@ -790,19 +797,19 @@ async function doRemove(ids: string[]): Promise<void> {
   align-self: flex-start;
   margin-top: 2px;
   padding: 1px 7px;
-  border-radius: 999px;
-  background-color: var(--color-bg-2, #f1f5f9);
-  color: var(--color-text-secondary, #64748b);
+  border-radius: var(--ds-radius-pill, 999px);
+  background-color: var(--ds-card-2, #f7f8fa);
+  color: var(--ds-text-2, #646a73);
   font-size: 11px;
 }
 
 .bg-del {
   align-self: flex-start;
   padding: 2px 8px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 6px);
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-ctrl, 8px);
+  background-color: var(--ds-card, #ffffff);
+  color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
 }
@@ -829,8 +836,8 @@ async function doRemove(ids: string[]): Promise<void> {
 }
 
 .bg-del:disabled:hover {
-  border-color: var(--color-border, #e2e8f0);
-  color: var(--color-text-secondary, #64748b);
+  border-color: var(--ds-line, #ececf0);
+  color: var(--ds-text-2, #646a73);
 }
 
 /* 重命名弹框：缩略图 + 名称输入 */
@@ -846,9 +853,9 @@ async function doRemove(ids: string[]): Promise<void> {
   flex: 0 0 120px;
   height: 120px;
   overflow: hidden;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 6px);
-  background-color: var(--color-bg-2, #f1f5f9);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-ctrl, 8px);
+  background-color: var(--ds-card-2, #f7f8fa);
 }
 
 .bg-rename-thumb img {
@@ -866,7 +873,7 @@ async function doRemove(ids: string[]): Promise<void> {
 }
 
 .bg-rename-label {
-  color: var(--color-text-secondary, #64748b);
+  color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-xs, 12px);
 }
 

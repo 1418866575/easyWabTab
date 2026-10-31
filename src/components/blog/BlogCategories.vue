@@ -93,6 +93,11 @@ async function handleMove(id: string, delta: number): Promise<void> {
 
 <template>
   <section class="bc">
+    <header class="bc-page">
+      <h2 class="bc-page-title">分类管理</h2>
+      <p class="bc-page-sub">分类最多两级。删除分类不会删除文章，文章会回到「未分类」。</p>
+    </header>
+
     <header class="bc-head">
       <div class="bc-add">
         <el-input
@@ -109,7 +114,6 @@ async function handleMove(id: string, delta: number): Promise<void> {
           <span>新增顶级分类</span>
         </el-button>
       </div>
-      <p class="bc-hint">分类最多两级。删除分类不会删除文章，文章会回到「未分类」。</p>
     </header>
 
     <div v-if="roots.length === 0" class="bc-empty" data-testid="blog-category-empty">
@@ -184,25 +188,33 @@ async function handleMove(id: string, delta: number): Promise<void> {
 
 .bc-input { width: 240px; max-width: 100%; }
 
-.bc-hint { margin: 0; color: var(--color-text-muted, #94a3b8); font-size: var(--font-size-xs, 12px); }
+.bc-page { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
+.bc-page-title { margin: 0; font-size: var(--ds-fs-section, 16px); font-weight: var(--font-weight-semibold, 600); color: var(--ds-text, #1f2329); }
+.bc-page-sub { margin: 0; font-size: var(--ds-fs-body-sm, 13px); color: var(--ds-text-3, #9aa0a6); }
 
 .bc-empty {
   padding: 28px 16px;
-  border: 1px dashed var(--color-border, #e2e8f0);
-  border-radius: var(--radius-lg, 12px);
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  border: 1px dashed var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-card, 12px);
+  background-color: var(--ds-card, #ffffff);
+  color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-sm, 13px);
   text-align: center;
 }
 
-.bc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.bc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 
 .bc-item {
-  padding: 10px 12px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-lg, 12px);
-  background-color: var(--color-bg-card, #ffffff);
+  padding: 12px 14px;
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-card, 12px);
+  background-color: var(--ds-card, #ffffff);
+  transition: border-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
+    box-shadow var(--motion-duration, 0.2s) var(--motion-ease, ease);
+}
+.bc-item:hover {
+  border-color: var(--ds-primary, #2563eb);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
 }
 
 .bc-row {
@@ -215,27 +227,27 @@ async function handleMove(id: string, delta: number): Promise<void> {
 
 .bc-row.is-child {
   padding: 6px 0 6px 18px;
-  border-top: 1px dashed var(--color-border, #e2e8f0);
+  border-top: 1px dashed var(--ds-line, #ececf0);
 }
 
-.bc-name { color: var(--color-text, #0f172a); font-size: var(--font-size-sm, 14px); font-weight: var(--font-weight-medium, 500); }
+.bc-name { color: var(--ds-text, #1f2329); font-size: var(--font-size-sm, 14px); font-weight: var(--font-weight-medium, 500); }
 
 /* 分类图标（emoji）：列表内联展示 + 编辑框窄宽度 */
 .bc-icon { font-size: var(--font-size-sm, 14px); line-height: 1; }
 .bc-edit :deep(.el-input.bc-icon-input) { max-width: 90px; }
 
-.bc-slug { color: var(--color-text-muted, #94a3b8); font-size: var(--font-size-xs, 11px); }
+.bc-slug { color: var(--ds-text-3, #9aa0a6); font-size: var(--font-size-xs, 11px); }
 
-.bc-count { color: var(--color-text-secondary, #64748b); font-size: var(--font-size-xs, 12px); }
+.bc-count { color: var(--ds-text-2, #646a73); font-size: var(--font-size-xs, 12px); }
 
 .bc-ops { display: flex; gap: 4px; margin-left: auto; flex-wrap: wrap; }
 
 .bc-mini {
   padding: 2px 8px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 999px;
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-pill, 999px);
+  background-color: var(--ds-card, #ffffff);
+  color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-xs, 11px);
   cursor: pointer;
 }
@@ -243,7 +255,7 @@ async function handleMove(id: string, delta: number): Promise<void> {
 .bc-mini:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
 .bc-mini.is-danger:hover { border-color: var(--color-error, #ef4444); color: var(--color-error, #ef4444); }
 
-.bc-desc { margin: 4px 0 0; color: var(--color-text-muted, #94a3b8); font-size: var(--font-size-xs, 12px); }
+.bc-desc { margin: 4px 0 0; color: var(--ds-text-3, #9aa0a6); font-size: var(--font-size-xs, 12px); }
 
 .bc-edit,
 .bc-add-child {
@@ -253,7 +265,7 @@ async function handleMove(id: string, delta: number): Promise<void> {
   flex-wrap: wrap;
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px dashed var(--color-border, #e2e8f0);
+  border-top: 1px dashed var(--ds-line, #ececf0);
 }
 
 .bc-edit :deep(.el-input) { max-width: 220px; }

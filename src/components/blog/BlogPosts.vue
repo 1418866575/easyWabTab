@@ -27,7 +27,7 @@ import Icon from '@/components/Icon.vue'
 import { showConfirm, toastAlert } from '@/utils/dialog'
 import type { ArticleStatus, BlogArticle, BlogSort } from '@/types'
 
-const emit = defineEmits<{ edit: [id: string]; create: [] }>()
+const emit = defineEmits<{ edit: [id: string] }>()
 
 const store = useBlogStore()
 const vm = useViewMode()
@@ -322,10 +322,7 @@ function displayTime(row: BlogArticle): string {
     <!-- 工具栏：左写文章 / 右视图切换（紧贴表格上方） -->
     <div class="ewt-table-toolbar is-split">
       <div class="ba-posts-actions">
-        <el-button type="primary" data-testid="blog-posts-create" @click="emit('create')">
-          <Icon name="plus" :size="14" />
-          <span>写文章</span>
-        </el-button>
+        <!-- 主操作「写文章」已提到面板页头（BlogAdminView），这里只留导入入口 -->
         <el-button data-testid="blog-posts-import" @click="triggerImport">
           <Icon name="plus" :size="14" />
           <span>导入文件夹</span>
@@ -536,11 +533,11 @@ function displayTime(row: BlogArticle): string {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px 16px;
-  padding: 12px 14px;
-  background-color: var(--color-bg-card, #ffffff);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
+  gap: var(--ds-gap-card, 16px);
+  padding: var(--ds-gap-card, 16px);
+  background-color: var(--ds-card, #ffffff);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-card, 12px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
@@ -559,8 +556,8 @@ function displayTime(row: BlogArticle): string {
 }
 
 .ba-query-label {
-  font-size: 13px;
-  color: var(--color-text-secondary, #64748b);
+  font-size: var(--ds-fs-label, 12px);
+  color: var(--ds-text-2, #646a73);
 }
 
 .ba-query-input {
@@ -581,11 +578,11 @@ function displayTime(row: BlogArticle): string {
 
 .ba-empty {
   padding: 32px 16px;
-  border: 1px dashed var(--color-border, #e2e8f0);
-  border-radius: var(--radius-lg, 12px);
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
-  font-size: var(--font-size-sm, 13px);
+  border: 1px dashed var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-card, 12px);
+  background-color: var(--ds-card, #ffffff);
+  color: var(--ds-text-2, #646a73);
+  font-size: var(--ds-fs-body-sm, 13px);
   text-align: center;
 }
 
@@ -602,7 +599,7 @@ html.dark .ba-query {
 
 .ba-pin {
   padding: 0 6px;
-  border-radius: 999px;
+  border-radius: var(--ds-radius-pill, 999px);
   background-color: var(--color-warning-soft, #fef3c7);
   color: var(--color-warning, #b45309);
   font-size: var(--font-size-xs, 11px);
@@ -620,33 +617,33 @@ html.dark .ba-query {
 }
 
 .ba-cell-muted {
-  color: var(--color-text-secondary, #64748b);
-  font-size: var(--font-size-xs, 12px);
+  color: var(--ds-text-2, #646a73);
+  font-size: var(--ds-fs-label, 12px);
 }
 
 .ba-status-tag {
   padding: 0 8px;
-  border-radius: 999px;
-  font-size: var(--font-size-xs, 11px);
+  border-radius: var(--ds-radius-pill, 999px);
+  font-size: var(--ds-fs-label, 12px);
   line-height: 18px;
-  background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-text-secondary, #64748b);
+  background-color: var(--ds-card-2, #f7f8fa);
+  color: var(--ds-text-2, #646a73);
 }
 
-.ba-status-draft { background-color: var(--color-bg-hover, #f1f5f9); color: var(--color-text-secondary, #64748b); }
+.ba-status-draft { background-color: var(--color-bg-hover, #f1f5f9); color: var(--ds-text-2, #646a73); }
 .ba-status-reviewing { background-color: var(--color-warning-soft, #fef3c7); color: var(--color-warning, #b45309); }
 .ba-status-published { background-color: var(--color-success-soft, #dcfce7); color: var(--color-success, #16a34a); }
-.ba-status-offline { background-color: var(--color-bg-hover, #f1f5f9); color: var(--color-text-muted, #94a3b8); }
+.ba-status-offline { background-color: var(--color-bg-hover, #f1f5f9); color: var(--ds-text-3, #9aa0a6); }
 .ba-status-rejected { background-color: var(--color-error-soft, #fee2e2); color: var(--color-error, #ef4444); }
 
 .ba-chip {
   display: inline-block;
   margin-right: 4px;
   padding: 0 6px;
-  border-radius: var(--radius-sm, 6px);
-  background-color: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
-  font-size: var(--font-size-xs, 11px);
+  border-radius: var(--ds-radius-pill, 999px);
+  background-color: var(--ds-card-2, #f7f8fa);
+  color: var(--ds-text-2, #646a73);
+  font-size: var(--ds-fs-label, 12px);
   line-height: 18px;
 }
 
@@ -659,10 +656,17 @@ html.dark .ba-query {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 12px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-lg, 12px);
-  background-color: var(--color-bg-card, #ffffff);
+  padding: var(--ds-gap-card, 16px);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-card, 12px);
+  background-color: var(--ds-card, #ffffff);
+  cursor: pointer;
+  transition: border-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
+    box-shadow var(--motion-duration, 0.2s) var(--motion-ease, ease);
+}
+.ba-card:hover {
+  border-color: var(--ds-primary, #2563eb);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
 }
 
 .ba-card-head {
@@ -677,8 +681,8 @@ html.dark .ba-query {
   border: none;
   background: transparent;
   padding: 0;
-  color: var(--color-text, #0f172a);
-  font-size: var(--font-size-sm, 14px);
+  color: var(--ds-text, #1f2329);
+  font-size: var(--ds-fs-body, 14px);
   font-weight: var(--font-weight-medium, 500);
   text-align: left;
   cursor: pointer;
@@ -691,10 +695,10 @@ html.dark .ba-query {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 999px;
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-muted, #94a3b8);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-pill, 999px);
+  background-color: var(--ds-card, #ffffff);
+  color: var(--ds-text-3, #9aa0a6);
   cursor: pointer;
 }
 
@@ -711,7 +715,7 @@ html.dark .ba-query {
 
 .ba-card-excerpt {
   margin: 0;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-xs, 12px);
   line-height: var(--line-height-relaxed, 1.6);
   display: -webkit-box;
@@ -733,7 +737,7 @@ html.dark .ba-query {
   gap: 8px;
   margin-top: auto;
   padding-top: 6px;
-  border-top: 1px solid var(--color-border, #e2e8f0);
+  border-top: 1px solid var(--ds-line, #ececf0);
 }
 
 .ba-card-ops {
@@ -745,16 +749,16 @@ html.dark .ba-query {
 
 .ba-mini {
   padding: 2px 8px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 999px;
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
-  font-size: var(--font-size-xs, 11px);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-pill, 999px);
+  background-color: var(--ds-card, #ffffff);
+  color: var(--ds-text-2, #646a73);
+  font-size: var(--ds-fs-label, 12px);
   cursor: pointer;
 }
 
-.ba-mini:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
-.ba-mini.is-danger:hover { border-color: var(--color-error, #ef4444); color: var(--color-error, #ef4444); }
+.ba-mini:hover { border-color: var(--ds-primary, #2563eb); color: var(--ds-primary, #2563eb); }
+.ba-mini.is-danger:hover { border-color: var(--ds-danger, #ef4444); color: var(--ds-danger, #ef4444); }
 
 .ba-pager {
   display: flex;
@@ -765,7 +769,7 @@ html.dark .ba-query {
 /* ---------- 弹框内 ---------- */
 .ba-dialog-text {
   margin: 0 0 12px;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-sm, 13px);
 }
 
@@ -776,7 +780,7 @@ html.dark .ba-query {
 }
 
 .ba-field-label {
-  color: var(--color-text-secondary, #64748b);
+  color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-xs, 12px);
 }
 

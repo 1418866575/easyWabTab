@@ -88,6 +88,24 @@
 
 ---
 
+### 1.6 Design System v2（`--ds-*`，2026-10-31 新增）
+
+「现代 SaaS 扁平」可复用 Token 子系统（规格来源：添加 App 参考稿）。定义在 `src/style.css` 的 `:root`，暗色覆盖在 `dark.css` 的 `html.dark`。**消费方只允许引用 `--ds-*`，禁止在组件里写裸值。**
+
+| 类别 | Token | 值 / 说明 |
+| --- | --- | --- |
+| 表面 | `--ds-bg` / `--ds-card` / `--ds-card-2` / `--ds-line` | `#f7f8fa` 页面底 / `#fff` 卡片 / 卡内浅灰区 / `#ececf0` 分隔线（**固定值不随 accent**，暗色由 dark.css 覆盖） |
+| 文字 | `--ds-text` / `--ds-text-2` / `--ds-text-3` | `#1f2329` / `#646a73` / `#9aa0a6` 三级灰度，层级靠灰度不靠彩色 |
+| 强调 | `--ds-primary` / `-hover` / `-soft` | **alias 到 `--color-primary` 体系**（保持 7 套主题 + 明暗自适应）；要锁死参考稿蓝就改成固定值 |
+| 语义 | `--ds-danger` / `-soft`、`--ds-success` / `-soft` | 必填星号 / 推荐徽章等小面积点缀 |
+| 圆角 | `--ds-radius-card` 12 / `--ds-radius-ctrl` 8 / `--ds-radius-pill` 999 | 卡片 / 控件 / 标签 |
+| 字号 | `--ds-fs-title` 24 / `--ds-fs-section` 16 / `--ds-fs-body` 14 / `--ds-fs-body-sm` 13 / `--ds-fs-label` 12 | 信息优先级靠字号拉开；title 配 700，section 配 600 |
+| 留白 | `--ds-gap-card` 16 / `--ds-gap-block` 24 | 卡片内边距 / 区块间距（其余间距复用 `--space-*`） |
+
+当前消费方：博客后台全部页面（`BlogAdminView` / `BlogPosts` / `BlogGallery` / `BlogTrash` / `BlogSettingsPanel` / `BlogEditor` 侧栏区块标题）。新页面若要采用同一 look，直接引用本表，**不要**再复制一份值。
+
+---
+
 ## 2. 组件规范
 
 ### 2.1 按钮（`.ui-btn` 体系）⭐

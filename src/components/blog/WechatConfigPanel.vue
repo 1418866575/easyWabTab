@@ -23,8 +23,8 @@ onMounted(() => cfg.loadConfig())
       <span
         v-else
         class="status-pill"
-        style="color: var(--color-text-muted); background-color: var(--color-bg-input); border-color: var(--color-border);"
-      ><span class="status-dot" style="background-color: var(--color-text-muted);"></span>未配置</span>
+        style="color: var(--ds-text-3, #9aa0a6); background-color: var(--color-bg-input); border-color: var(--ds-line, #ececf0);"
+      ><span class="status-dot" style="background-color: var(--ds-text-3, #9aa0a6);"></span>未配置</span>
     </div>
     <p class="wb-menu-hint">
       配置已认证的公众号 AppID / AppSecret，用于在文章编辑页一键发布到「微信公众号草稿箱」。
@@ -33,7 +33,7 @@ onMounted(() => cfg.loadConfig())
 
     <div v-if="cfg.configured.value" class="remind-field" style="margin-top: 8px;">
       <span class="remind-label">当前 AppID</span>
-      <span class="wb-menu-name-input" style="display: inline-flex; align-items: center; color: var(--color-text-secondary);">{{ cfg.appIdMasked.value || '—' }}</span>
+      <span class="wb-menu-name-input" style="display: inline-flex; align-items: center; color: var(--ds-text-2, #646a73);">{{ cfg.appIdMasked.value || '—' }}</span>
     </div>
 
     <div class="remind-fields" style="margin-top: 12px;">
@@ -62,7 +62,7 @@ onMounted(() => cfg.loadConfig())
       </label>
     </div>
 
-    <p class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px; margin-top: 4px;">
+    <p class="wb-menu-hint" style="color: var(--ds-text-3, #9aa0a6); opacity: 0.7; font-size: 12px; margin-top: 4px;">
       提示：保存后会尝试调用微信接口校验凭证有效性（需部署代理且可达）。若校验未通过，请确认 AppSecret 正确，并在公众号后台「基本配置 → IP 白名单」加入本服务器出口公网 IP（否则会报 40164 / 61004）。
     </p>
 
@@ -97,9 +97,9 @@ onMounted(() => cfg.loadConfig())
 .wb-menu-config {
   margin-bottom: 20px;
   padding: 14px;
-  background-color: var(--color-bg-card, #ffffff);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
+  background-color: var(--ds-card, #ffffff);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-ctrl, 8px);
 }
 
 .wb-menu-head {
@@ -113,13 +113,13 @@ onMounted(() => cfg.loadConfig())
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--color-text, #0f172a);
+  color: var(--ds-text, #1f2329);
 }
 
 .wb-menu-hint {
   margin: 6px 0 12px;
   font-size: 12px;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--ds-text-3, #9aa0a6);
 }
 
 /* 行内文本输入：视觉统一到全局 .ui-input（别名已含 .wb-menu-name-input），这里只保留布局 */
@@ -147,7 +147,7 @@ onMounted(() => cfg.loadConfig())
   flex-shrink: 0;
   width: 92px;
   font-size: 13px;
-  color: var(--color-text, #0f172a);
+  color: var(--ds-text, #1f2329);
 }
 .remind-actions {
   margin-top: 12px;
@@ -162,7 +162,7 @@ onMounted(() => cfg.loadConfig())
   background-color: rgba(22, 163, 74, 0.1);
   border: 1px solid rgba(22, 163, 74, 0.25);
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: var(--ds-radius-pill, 999px);
   white-space: nowrap;
 }
 .status-dot { width: 6px; height: 6px; border-radius: 50%; background-color: #16a34a; }

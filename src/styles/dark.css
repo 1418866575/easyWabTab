@@ -66,6 +66,19 @@ html.dark {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Design System v2（--ds-*）暗色覆盖：中性色换深色阶，语义软底改半透明 */
+html.dark {
+  --ds-bg: #0f172a;
+  --ds-card: #1e293b;
+  --ds-card-2: #0f172a;
+  --ds-line: #334155;
+  --ds-text: #f1f5f9;
+  --ds-text-2: #94a3b8;
+  --ds-text-3: #64748b;
+  --ds-danger-soft: rgba(239, 68, 68, 0.16);
+  --ds-success-soft: rgba(22, 163, 74, 0.16);
+}
+
 /* 通用组件 */
 html.dark .container {
   background-color: var(--color-bg);

@@ -19,7 +19,8 @@ import { resolveImageRefs } from '@/composables/blogImages'
 import { renderMarkdown } from '@/composables/noteMarkdown'
 import { useBlogShared, sharedPostToArticle } from '@/composables/blogShared'
 import { useBlogFrontPrefs } from '@/composables/blogFrontPrefs'
-import { typoVars, typoHrStyle } from '@/composables/blogTypoCore'
+import { resolveTypo, typoHrStyle, typoVars } from '@/composables/blogTypoCore'
+import { decorateTypoHtml } from '@/composables/blogTypoDecor'
 import type { BlogArticle } from '@/types'
 import '@/styles/blog-front.css'
 import '@/styles/markdown.css'
@@ -50,7 +51,8 @@ const html = computed(() => {
   // 正文用 img:<id> 短引用指向图片库，渲染前还原为 data URL（与编辑器预览同源）；
   // 共享文章的正文在同步时已内联 dataURL，此处 resolveImageRefs 为无操作透传。
   const md = resolveImageRefs(displayArticle.value.contentMarkdown, (id) => store.imageUrlById.get(id))
-  return renderMarkdown(md)
+  // 找Tab 主题装饰（亮色画布设计）只在不暗色时应用；暗色降级为纯 --t-* token
+  return decorateTypoHtml(renderMarkdown(md), isDark.value ? null : typoTheme.value)
 })
 const cover = computed(() =>
   visible.value && displayArticle.value
@@ -83,6 +85,8 @@ const typoVarStyle = computed(() =>
   typoVars(displayArticle.value?.typo, store.settings.defaultTypoId, isDark.value)
 )
 const typoHr = computed(() => typoHrStyle(displayArticle.value?.typo, store.settings.defaultTypoId))
+/** 生效主题对象（供找Tab 主题的结构样式作用域 data-typo 与装饰） */
+const typoTheme = computed(() => resolveTypo(displayArticle.value?.typo, store.settings.defaultTypoId))
 
 onMounted(() => {
   isDark.value = document.documentElement.classList.contains('dark')
@@ -137,6 +141,7 @@ onMounted(async () => {
           class="bf-post-body md-body"
           :style="typoVarStyle"
           :data-hr="typoHr || undefined"
+          :data-typo="isDark ? undefined : typoTheme.id"
           data-testid="blog-post-body"
           v-html="html"
         />

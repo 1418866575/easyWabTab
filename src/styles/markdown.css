@@ -13,6 +13,9 @@
  *      主题要换明暗观感时由 typoVars(..., dark) 注入覆盖值，CSS 不写死色值。
  */
 
+/* 找Tab 移植主题的逐标签结构样式（亮色作用域规则，脚本生成） */
+@import './blogTypoZhaotab.css';
+
 .md-body {
   color: var(--t-text, var(--color-text, #0f172a));
   font-family: var(--t-font, inherit);

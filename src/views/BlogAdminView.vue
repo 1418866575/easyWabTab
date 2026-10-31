@@ -50,6 +50,21 @@ const menuItems = computed<MenuItem[]>(() => [
   { key: 'trash', label: '回收站', icon: 'trash', count: store.counts.trash }
 ])
 
+/** 面板页头：大标题 + 副标题（参考稿「添加 App」页的信息结构） */
+const pageHead = computed(() => {
+  switch (activePage.value) {
+    case 'gallery':
+      return { title: '图库', sub: '管理正文与封面图片，可分类与批量整理' }
+    case 'trash':
+      return { title: '回收站', sub: '已删除文章在此保留 7 天，可恢复或彻底删除' }
+    default:
+      return { title: '文章', sub: '写作、发布与共享，博客的全部内容都在这里' }
+  }
+})
+
+/** 图库主操作（上传图片）在页头触发，由面板暴露方法 */
+const galleryRef = ref<{ openUpload: () => void } | null>(null)
+
 function selectPage(key: PageKey): void {
   activePage.value = key
   editingId.value = null
@@ -182,13 +197,40 @@ onMounted(async () => {
       </aside>
 
       <main class="ba-content">
+        <!-- 面板页头：标题 + 副标题 + 该面板的主操作（编辑器打开时不显示） -->
+        <header v-if="!editingId" class="ba-page-head" data-testid="blog-page-head">
+          <div class="ba-page-head-text">
+            <h1 class="ba-page-title">{{ pageHead.title }}</h1>
+            <p class="ba-page-sub">{{ pageHead.sub }}</p>
+          </div>
+          <div class="ba-page-actions">
+            <button
+              v-if="activePage === 'posts'"
+              type="button"
+              class="ui-btn ui-btn--primary"
+              data-testid="blog-posts-create"
+              @click="startNewArticle"
+            >
+              写文章
+            </button>
+            <button
+              v-else-if="activePage === 'gallery'"
+              type="button"
+              class="ui-btn ui-btn--primary"
+              data-testid="blog-gallery-upload"
+              @click="galleryRef?.openUpload()"
+            >
+              上传图片
+            </button>
+          </div>
+        </header>
+
         <BlogEditor v-if="editingId" :article-id="editingId" @close="closeEditor" />
         <BlogPosts
           v-else-if="activePage === 'posts'"
           @edit="editArticle"
-          @create="startNewArticle"
         />
-        <BlogGallery v-else-if="activePage === 'gallery'" />
+        <BlogGallery v-else-if="activePage === 'gallery'" ref="galleryRef" />
         <BlogTrash v-else-if="activePage === 'trash'" @restore="selectPage('posts')" />
       </main>
 
@@ -203,8 +245,8 @@ onMounted(async () => {
   flex-direction: column;
   height: 100dvh;
   min-height: 100vh;
-  background-color: var(--color-bg, #f8fafc);
-  color: var(--color-text, #0f172a);
+  background-color: var(--ds-bg, #f7f8fa);
+  color: var(--ds-text, #1f2329);
 }
 
 /* ---------- 顶栏 ---------- */
@@ -215,8 +257,8 @@ onMounted(async () => {
   gap: 12px;
   flex-wrap: nowrap;
   padding: 12px 16px;
-  background-color: var(--color-bg-card, #ffffff);
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  background-color: var(--ds-card, #ffffff);
+  border-bottom: 1px solid var(--ds-line, #ececf0);
 }
 
 .ba-topbar-left {
@@ -244,10 +286,10 @@ onMounted(async () => {
   gap: 6px;
   min-height: 36px;
   padding: 0 14px;
-  border: 1px solid var(--color-border, #e2e8f0);
+  border: 1px solid var(--ds-line, #ececf0);
   border-radius: 999px;
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text, #0f172a);
+  background-color: var(--ds-card, #ffffff);
+  color: var(--ds-text, #1f2329);
   font-family: inherit;
   font-size: var(--font-size-sm, 13px);
   font-weight: var(--font-weight-medium, 500);
@@ -327,8 +369,8 @@ onMounted(async () => {
   flex: 0 0 200px;
   width: 200px;
   padding: 12px 10px;
-  background-color: var(--color-bg-card, #ffffff);
-  border-right: 1px solid var(--color-border, #e2e8f0);
+  background-color: var(--ds-card, #ffffff);
+  border-right: 1px solid var(--ds-line, #ececf0);
   position: sticky;
   top: 0;
   max-height: calc(100vh - 64px);
@@ -363,7 +405,7 @@ onMounted(async () => {
   border: none;
   border-radius: var(--radius-sm, 8px);
   background-color: transparent;
-  color: var(--color-text, #0f172a);
+  color: var(--ds-text, #1f2329);
   font-family: inherit;
   font-size: var(--font-size-sm, 13px);
   text-align: left;
@@ -380,8 +422,8 @@ onMounted(async () => {
 }
 
 .ba-nav-item.active {
-  background-color: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  background-color: var(--ds-primary-soft, #eff6ff);
+  color: var(--ds-primary, #2563eb);
   font-weight: var(--font-weight-medium, 500);
 }
 
@@ -404,9 +446,9 @@ onMounted(async () => {
 .ba-nav-count {
   flex: 0 0 auto;
   padding: 0 6px;
-  border-radius: 999px;
-  background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-text-muted, #94a3b8);
+  border-radius: var(--ds-radius-pill, 999px);
+  background-color: var(--ds-card-2, #f7f8fa);
+  color: var(--ds-text-3, #9aa0a6);
   font-size: var(--font-size-xs, 11px);
 }
 
@@ -414,8 +456,39 @@ onMounted(async () => {
 .ba-content {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 16px clamp(12px, 2vw, 24px) 32px;
+  padding: var(--space-4, 16px) clamp(12px, 2vw, 24px) 32px;
   overflow-y: auto;
+}
+
+/* ---------- 面板页头：大标题 + 副标题 + 主操作（参考稿信息结构） ---------- */
+.ba-page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--ds-gap-card, 16px);
+  flex-wrap: wrap;
+  margin-bottom: var(--ds-gap-card, 16px);
+}
+
+.ba-page-title {
+  margin: 0;
+  font-size: var(--ds-fs-title, 24px);
+  font-weight: var(--font-weight-bold, 700);
+  line-height: 1.3;
+  color: var(--ds-text, #1f2329);
+}
+
+.ba-page-sub {
+  margin: 4px 0 0;
+  font-size: var(--ds-fs-body-sm, 13px);
+  color: var(--ds-text-3, #9aa0a6);
+}
+
+.ba-page-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
 }
 
 /* ---------- 收起态 ---------- */

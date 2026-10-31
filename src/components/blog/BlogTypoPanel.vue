@@ -91,11 +91,11 @@ function onPg(e: Event): void {
 .tp { display: flex; flex-direction: column; gap: 6px; }
 .tp-row { display: flex; align-items: center; gap: 7px; }
 .tp-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
-.tp-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--color-text, #0f172a); }
-.tp-slider { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--color-text-secondary, #64748b); }
+.tp-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--ds-text, #1f2329); }
+.tp-slider { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ds-text-2, #646a73); }
 .tp-slider span { flex: 0 0 auto; width: 26px; }
 .tp-slider input { flex: 1 1 auto; min-width: 0; }
-.tp-slider b { flex: 0 0 46px; text-align: right; font-weight: 400; font-variant-numeric: tabular-nums; color: var(--color-text, #0f172a); }
+.tp-slider b { flex: 0 0 46px; text-align: right; font-weight: 400; font-variant-numeric: tabular-nums; color: var(--ds-text, #1f2329); }
 .tp-reset { align-self: flex-start; }
-.tp-hint { margin: 0; font-size: 11px; line-height: 1.6; color: var(--color-text-muted, #94a3b8); }
+.tp-hint { margin: 0; font-size: 11px; line-height: 1.6; color: var(--ds-text-3, #9aa0a6); }
 </style>

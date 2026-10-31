@@ -11,8 +11,24 @@
  *（test-blog-typo.ts 里有快照断言），这是整条公众号链路不回归的保证。
  */
 import type { BlogTypo } from '../types'
+import { ZHAOTAB_THEMES } from './blogTypoZhaotab.ts'
 
-export type TypoGroup = 'color' | 'simple' | 'wechat'
+export type TypoGroup = 'color' | 'simple' | 'wechat' | 'zhaotab'
+
+/**
+ * 主题装饰（找Tab 移植）：标题/分割线/引用的 HTML 装饰。
+ * - h1/h2/h3：`(标题内 HTML, 序号) => HTML`（h2 序号从 1 递增，供 STEP 01 类编号芯片）
+ * - hr：整段替换 <hr> 的 HTML（居中文本圆点等）
+ * - quoteMark：插入 blockquote 首部的装饰 HTML
+ * 仅亮色消费；暗色一律降级为 --t-* 色彩 token（不装饰）。
+ */
+export interface TypoDecor {
+  h1?: (html: string, no: number) => string
+  h2?: (html: string, no: number) => string
+  h3?: (html: string, no: number) => string
+  hr?: string
+  quoteMark?: string
+}
 
 export interface TypoTheme {
   id: string
@@ -25,6 +41,11 @@ export interface TypoTheme {
   tokens: Record<string, string>
   /** 暗色覆盖（仅前台 / 预览消费；公众号固定浅色） */
   dark?: Record<string, string>
+  /** 逐标签结构样式（找Tab 移植，亮色画布设计；前台经 blogTypoZhaotab.css 作用域生效，
+   *  公众号端在 typoInlineStyle 内优先取用；暗色前台不消费） */
+  tagStyles?: Record<string, string>
+  /** 标题/分割线/引用装饰（前台由 blogTypoDecor 的 DOM 管线消费，公众号落真实节点） */
+  decor?: TypoDecor
 }
 
 /** 全部 --t-* 键：应用主题时按此清单写 / 清，避免上一个主题的值残留 */
@@ -107,7 +128,7 @@ function buildTheme(seed: ThemeSeed): TypoTheme {
   return { id: seed.id, name: seed.name, desc: seed.desc, group: seed.group, swatch: seed.swatch, tokens: seed.tokens, dark }
 }
 
-export const TYPO_THEMES: TypoTheme[] = [
+const CORE_THEMES: TypoTheme[] = [
   buildTheme({
     id: FOLLOW_THEME_ID,
     name: '跟随系统',
@@ -303,6 +324,9 @@ export const TYPO_THEMES: TypoTheme[] = [
   })
 ]
 
+/** 全部主题 = 内置 10 套 + 找Tab 移植 35 套 */
+export const TYPO_THEMES: TypoTheme[] = [...CORE_THEMES, ...ZHAOTAB_THEMES]
+
 const THEME_BY_ID = new Map(TYPO_THEMES.map(t => [t.id, t]))
 
 function clampNum(v: unknown, min: number, max: number): number | undefined {
@@ -367,9 +391,18 @@ function headingPx(tokenSize: string | undefined, ratio: number): string {
  */
 export function typoInlineStyle(
   tag: string,
-  opts: { isCodeInPre?: boolean } = {},
+  opts: { isCodeInPre?: boolean; theme?: TypoTheme } = {},
   tokens: Record<string, string> = {}
 ): string {
+  // 找Tab 移植主题：逐标签结构样式优先（该主题自带完整 CSS，亮色画布设计）
+  const tagStyles = opts.theme?.tagStyles
+  if (tagStyles) {
+    if (tag === 'code' && opts.isCodeInPre) {
+      if (tagStyles.preCode) return tagStyles.preCode
+    } else if (tagStyles[tag]) {
+      return tagStyles[tag]
+    }
+  }
   const tk = { ...BASE_TOKENS, ...tokens }
   const heading = tk['--t-heading']
   switch (tag) {

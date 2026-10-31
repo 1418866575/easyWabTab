@@ -131,24 +131,24 @@ function confirmSelect(): void {
   flex: 0 0 auto;
   height: 30px;
   padding: 0 8px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--color-bg-input, #ffffff);
-  color: var(--color-text, #0f172a);
+  color: var(--ds-text, #1f2329);
   font-family: inherit;
   font-size: var(--font-size-sm, 13px);
 }
 
 .bip-count {
   flex: 0 0 auto;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--ds-text-3, #9aa0a6);
   font-size: var(--font-size-xs, 12px);
 }
 
 .bip-empty {
   margin: 0;
   padding: 24px 8px;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-sm, 13px);
   text-align: center;
 }
@@ -171,10 +171,10 @@ function confirmSelect(): void {
   gap: 3px;
   width: 100%;
   padding: 6px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text, #0f172a);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-ctrl, 8px);
+  background-color: var(--ds-card, #ffffff);
+  color: var(--ds-text, #1f2329);
   font-family: inherit;
   text-align: left;
   cursor: pointer;
@@ -195,8 +195,8 @@ function confirmSelect(): void {
   justify-content: center;
   height: 84px;
   overflow: hidden;
-  border-radius: var(--radius-sm, 6px);
-  background-color: var(--color-bg-2, #f1f5f9);
+  border-radius: var(--ds-radius-ctrl, 8px);
+  background-color: var(--ds-card-2, #f7f8fa);
 }
 
 .bip-thumb img {
@@ -213,7 +213,7 @@ function confirmSelect(): void {
 }
 
 .bip-meta {
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--ds-text-3, #9aa0a6);
   font-size: var(--font-size-xs, 11px);
 }
 
@@ -226,7 +226,7 @@ function confirmSelect(): void {
   justify-content: center;
   width: 20px;
   height: 20px;
-  border-radius: 999px;
+  border-radius: var(--ds-radius-pill, 999px);
   background-color: var(--color-primary, #3b82f6);
   color: #ffffff;
   font-size: var(--font-size-xs, 12px);

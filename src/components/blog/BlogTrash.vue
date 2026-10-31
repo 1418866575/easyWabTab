@@ -94,15 +94,15 @@ async function handleEmpty(): Promise<void> {
 
 .br-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 
-.br-hint { margin: 0; color: var(--color-text-secondary, #64748b); font-size: var(--font-size-sm, 13px); }
+.br-hint { margin: 0; color: var(--ds-text-2, #646a73); font-size: var(--ds-fs-body-sm, 13px); }
 
 .br-empty {
   padding: 28px 16px;
-  border: 1px dashed var(--color-border, #e2e8f0);
-  border-radius: var(--radius-lg, 12px);
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
-  font-size: var(--font-size-sm, 13px);
+  border: 1px dashed var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-card, 12px);
+  background-color: var(--ds-card, #ffffff);
+  color: var(--ds-text-2, #646a73);
+  font-size: var(--ds-fs-body-sm, 13px);
   text-align: center;
 }
 
@@ -121,18 +121,18 @@ async function handleEmpty(): Promise<void> {
   gap: 12px;
   flex-wrap: wrap;
   padding: 10px 12px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-lg, 12px);
-  background-color: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-card, 12px);
+  background-color: var(--ds-card, #ffffff);
 }
 
 .br-info { flex: 1 1 240px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 
-.br-title { color: var(--color-text, #0f172a); font-size: var(--font-size-sm, 14px); }
+.br-title { color: var(--ds-text, #1f2329); font-size: var(--ds-fs-body, 14px); }
 
-.br-meta { color: var(--color-text-muted, #94a3b8); font-size: var(--font-size-xs, 12px); }
+.br-meta { color: var(--ds-text-3, #9aa0a6); font-size: var(--ds-fs-label, 12px); }
 
-.br-status { color: var(--color-text-secondary, #64748b); }
+.br-status { color: var(--ds-text-2, #646a73); }
 
 .br-ops { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
 

@@ -16,7 +16,7 @@ import { ref } from 'vue'
 import { resolveImageRefs } from '@/composables/blogImages'
 import { renderMarkdown } from '@/composables/noteMarkdown'
 import { useBlogStore } from '@/stores/blog'
-import { hrMarkup, typoInlineStyle, typoVars } from '@/composables/blogTypoCore'
+import { hrMarkup, resolveTypo, typoInlineStyle, typoVars, type TypoTheme } from '@/composables/blogTypoCore'
 import type { BlogTypo } from '@/types'
 
 const API_BASE = '/api/wechat'
@@ -305,15 +305,70 @@ function convertMarks(root: HTMLElement): void {
   })
 }
 
-/** 微信正文统一处理入口：列表摊平 + 表格卡片化 + 分割线结构替换 + 全标签内联样式（导出便于回归测试） */
-export function normalizeWechatBody(root: HTMLElement, tokens: Record<string, string> = {}): void {
+/** 微信正文统一处理入口：列表摊平 + 表格卡片化 + 分割线结构替换 + 全标签内联样式（导出便于回归测试）。
+ *  theme 非空（找Tab 移植主题）时：标题/引用先落装饰真实节点，逐标签 CSS 取主题 tagStyles。 */
+export function normalizeWechatBody(
+  root: HTMLElement,
+  tokens: Record<string, string> = {},
+  theme?: TypoTheme | null
+): void {
   // 顺序有讲究：先摊平列表（表格若在列表项里会被提到顶层），再卡片化表格、转 mark，
   // 然后替换分割线结构（dots 落成真实节点，必须在样式化之前否则没机会内联），最后统一内联样式
   flattenLists(root)
   flattenTables(root)
   convertMarks(root)
-  decorateHr(root, tokens)
-  applyInlineStyles(root, tokens)
+  decorateHeadings(root, theme)
+  if (theme?.decor?.hr) decorateHrMarkup(root, theme.decor.hr)
+  else decorateHr(root, tokens)
+  applyInlineStyles(root, tokens, theme)
+}
+
+/** 找Tab 主题标题/引用装饰：h1/h2/h3 包装 + blockquote 首部装饰（span 不参与内联样式，样式保留） */
+function decorateHeadings(root: HTMLElement, theme?: TypoTheme | null): void {
+  const decor = theme?.decor
+  if (!decor) return
+  const doc = root.ownerDocument
+  const h1 = decor.h1
+  if (h1) {
+    let n = 0
+    root.querySelectorAll('h1').forEach((el) => {
+      n += 1
+      el.innerHTML = h1(el.innerHTML, n)
+    })
+  }
+  const h2 = decor.h2
+  if (h2) {
+    let n = 0
+    root.querySelectorAll('h2').forEach((el) => {
+      n += 1
+      el.innerHTML = h2(el.innerHTML, n)
+    })
+  }
+  const h3 = decor.h3
+  if (h3) {
+    root.querySelectorAll('h3').forEach((el) => {
+      el.innerHTML = h3(el.innerHTML, 0)
+    })
+  }
+  const quoteMark = decor.quoteMark
+  if (quoteMark) {
+    root.querySelectorAll('blockquote').forEach((el) => {
+      const tpl = doc.createElement('template')
+      tpl.innerHTML = quoteMark
+      const first = tpl.content.firstElementChild
+      if (first) el.insertBefore(first, el.firstChild)
+    })
+  }
+}
+
+/** 主题自带分割线装饰 HTML（居中文本等）替换 <hr> */
+function decorateHrMarkup(root: HTMLElement, markup: string): void {
+  const doc = root.ownerDocument
+  root.querySelectorAll('hr').forEach((hr) => {
+    const tpl = doc.createElement('template')
+    tpl.innerHTML = markup
+    hr.replaceWith(tpl.content.firstElementChild ?? doc.createElement('section'))
+  })
 }
 
 /** 公众号不支持伪元素：dots/dashed 的分割线必须落成真实节点（line 保持 <hr> 走内联样式） */
@@ -338,11 +393,11 @@ export function buildWechatContentHtml(
   const html = renderMarkdown(resolveImageRefs(contentMarkdown, resolveImage))
   const doc = new DOMParser().parseFromString(`<section>${html}</section>`, 'text/html')
   const root = (doc.body.firstElementChild as HTMLElement) ?? doc.body
-  normalizeWechatBody(root, typoVars(typo, defaultTypoId))
+  normalizeWechatBody(root, typoVars(typo, defaultTypoId), resolveTypo(typo, defaultTypoId))
   return root.outerHTML
 }
 
-function applyInlineStyles(root: HTMLElement, tokens: Record<string, string>): void {
+function applyInlineStyles(root: HTMLElement, tokens: Record<string, string>, theme?: TypoTheme | null): void {
   const base = `font-size:${tokens['--t-font-size'] || '16px'};color:${tokens['--t-text'] || '#3f3f3f'};line-height:${tokens['--t-line-height'] || '1.75'};word-wrap:break-word;word-break:break-word;padding:0 4px;`
   root.setAttribute('style', base)
   root.querySelectorAll('*').forEach((node) => {
@@ -351,7 +406,7 @@ function applyInlineStyles(root: HTMLElement, tokens: Record<string, string>): v
     el.removeAttribute('class')
     el.removeAttribute('id')
     const isCodeInPre = tag === 'code' && el.parentElement?.tagName.toLowerCase() === 'pre'
-    const s = typoInlineStyle(tag, { isCodeInPre }, tokens)
+    const s = typoInlineStyle(tag, { isCodeInPre, theme: theme ?? undefined }, tokens)
     if (s) el.setAttribute('style', s)
   })
 }
@@ -401,7 +456,7 @@ export function useWechatPublish() {
       const doc = new DOMParser().parseFromString(`<section>${html}</section>`, 'text/html')
       const root = (doc.body.firstElementChild as HTMLElement) ?? doc.body
       // 列表必须先摊平（公众号不认 ul/li），再整体内联样式（取色来自文章排版主题）
-      normalizeWechatBody(root, typoVars(opts.typo, store.settings.defaultTypoId))
+      normalizeWechatBody(root, typoVars(opts.typo, store.settings.defaultTypoId), resolveTypo(opts.typo, store.settings.defaultTypoId))
       const imgs = Array.from(root.querySelectorAll('img'))
 
       // 3. 封面（coverImageId → 兜底第一张正文图）

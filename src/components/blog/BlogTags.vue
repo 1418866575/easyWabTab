@@ -99,6 +99,11 @@ async function handleRemove(id: string): Promise<void> {
 
 <template>
   <section class="bt">
+    <header class="bt-page">
+      <h2 class="bt-page-title">标签管理</h2>
+      <p class="bt-page-sub">标签扁平、无层级。「合并」用于去重：把被合并标签的引用迁移到目标标签。</p>
+    </header>
+
     <header class="bt-head">
       <div class="bt-add">
         <el-input
@@ -115,7 +120,6 @@ async function handleRemove(id: string): Promise<void> {
           <span>新增标签</span>
         </el-button>
       </div>
-      <p class="bt-hint">标签扁平、无层级。「合并」用于去重：把被合并标签的引用迁移到目标标签。</p>
     </header>
 
     <div v-if="sorted.length === 0" class="bt-empty" data-testid="blog-tag-empty">
@@ -169,43 +173,51 @@ async function handleRemove(id: string): Promise<void> {
 
 .bt-input { width: 240px; max-width: 100%; }
 
-.bt-hint { margin: 0; color: var(--color-text-muted, #94a3b8); font-size: var(--font-size-xs, 12px); }
+.bt-page { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
+.bt-page-title { margin: 0; font-size: var(--ds-fs-section, 16px); font-weight: var(--font-weight-semibold, 600); color: var(--ds-text, #1f2329); }
+.bt-page-sub { margin: 0; font-size: var(--ds-fs-body-sm, 13px); color: var(--ds-text-3, #9aa0a6); }
 
 .bt-empty {
   padding: 28px 16px;
-  border: 1px dashed var(--color-border, #e2e8f0);
-  border-radius: var(--radius-lg, 12px);
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  border: 1px dashed var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-card, 12px);
+  background-color: var(--ds-card, #ffffff);
+  color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-sm, 13px);
   text-align: center;
 }
 
-.bt-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
+.bt-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
 
 .bt-item {
-  padding: 10px 12px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-lg, 12px);
-  background-color: var(--color-bg-card, #ffffff);
+  padding: 12px 14px;
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-card, 12px);
+  background-color: var(--ds-card, #ffffff);
+  transition: border-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
+    box-shadow var(--motion-duration, 0.2s) var(--motion-ease, ease);
+}
+.bt-item:hover {
+  border-color: var(--ds-primary, #2563eb);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
 }
 
 .bt-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 30px; }
 
-.bt-name { color: var(--color-text, #0f172a); font-size: var(--font-size-sm, 14px); font-weight: var(--font-weight-medium, 500); }
+.bt-name { color: var(--ds-text, #1f2329); font-size: var(--font-size-sm, 14px); font-weight: var(--font-weight-medium, 500); }
 
-.bt-slug { color: var(--color-text-muted, #94a3b8); font-size: var(--font-size-xs, 11px); }
+.bt-slug { color: var(--ds-text-3, #9aa0a6); font-size: var(--font-size-xs, 11px); }
 
-.bt-count { color: var(--color-text-secondary, #64748b); font-size: var(--font-size-xs, 12px); }
+.bt-count { color: var(--ds-text-2, #646a73); font-size: var(--font-size-xs, 12px); }
 
 .bt-ops { display: flex; gap: 4px; margin-left: auto; flex-wrap: wrap; }
 
 .bt-mini {
   padding: 2px 8px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 999px;
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-pill, 999px);
+  background-color: var(--ds-card, #ffffff);
+  color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-xs, 11px);
   cursor: pointer;
 }
@@ -220,17 +232,17 @@ async function handleRemove(id: string): Promise<void> {
   flex-wrap: wrap;
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px dashed var(--color-border, #e2e8f0);
+  border-top: 1px dashed var(--ds-line, #ececf0);
 }
 
 .bt-select {
   flex: 1 1 140px;
   height: 28px;
   padding: 0 8px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--color-bg-input, #ffffff);
-  color: var(--color-text, #0f172a);
+  color: var(--ds-text, #1f2329);
   font-size: var(--font-size-xs, 12px);
 }
 

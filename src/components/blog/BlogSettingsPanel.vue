@@ -172,25 +172,27 @@ async function handleExportStatic(): Promise<void> {
 </template>
 
 <style scoped>
-.bs { display: flex; flex-direction: column; gap: 12px; max-width: 720px; }
+.bs { display: flex; flex-direction: column; gap: 16px; max-width: 720px; }
 
 .bs-block {
-  padding: 12px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-lg, 12px);
-  background-color: var(--color-bg-card, #ffffff);
+  padding: 20px;
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-card, 12px);
+  background-color: var(--ds-card, #ffffff);
+  transition: box-shadow var(--motion-duration, 0.2s) var(--motion-ease, ease);
 }
+.bs-block:hover { box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05); }
 
 .bs-title {
   margin: 0 0 10px;
-  font-size: var(--font-size-sm, 13px);
+  font-size: var(--ds-fs-section, 16px);
   font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text, #0f172a);
+  color: var(--ds-text, #1f2329);
 }
 
 .bs-field { display: block; margin-bottom: 10px; }
 
-.bs-label { display: block; margin-bottom: 4px; color: var(--color-text-secondary, #64748b); font-size: var(--font-size-xs, 12px); }
+.bs-label { display: block; margin-bottom: 4px; color: var(--ds-text-2, #646a73); font-size: var(--ds-fs-label, 12px); }
 
 .bs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
 
@@ -198,10 +200,10 @@ async function handleExportStatic(): Promise<void> {
   width: 100%;
   height: 28px;
   padding: 0 8px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--color-bg-input, #ffffff);
-  color: var(--color-text, #0f172a);
+  color: var(--ds-text, #1f2329);
   font-size: var(--font-size-xs, 12px);
 }
 
@@ -210,13 +212,13 @@ async function handleExportStatic(): Promise<void> {
   resize: vertical;
 }
 
-.bs-hint { margin: 0; color: var(--color-text-muted, #94a3b8); font-size: var(--font-size-xs, 12px); }
+.bs-hint { margin: 0; color: var(--ds-text-3, #9aa0a6); font-size: var(--ds-fs-label, 12px); }
 
 .bs-errors {
   margin: 0;
   padding: 8px 12px 8px 28px;
   border: 1px solid var(--color-error, #ef4444);
-  border-radius: var(--radius-md, 8px);
+  border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--color-error-soft, #fee2e2);
   color: var(--color-error, #ef4444);
   font-size: var(--font-size-xs, 12px);

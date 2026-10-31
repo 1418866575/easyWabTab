@@ -24,7 +24,8 @@ import type { MdBlockKind, MdTransformOptions } from '@/composables/blogEditorMd
 import { imageRef, parseImageRefs, removeImageRefs, resolveImageRefs } from '@/composables/blogImages'
 import { renderMarkdown } from '@/composables/noteMarkdown'
 import { buildWechatContentHtml } from '@/composables/useWechatPublish'
-import { typoVars, typoHrStyle } from '@/composables/blogTypoCore'
+import { resolveTypo, typoHrStyle, typoVars } from '@/composables/blogTypoCore'
+import { decorateTypoHtml } from '@/composables/blogTypoDecor'
 import type { BlogTypo } from '@/types'
 import { compressImageDataUrl, dataUrlBytes, formatBytes } from '@/composables/blogImageCompress'
 import type { BlogImage } from '@/types'
@@ -33,7 +34,6 @@ import BaseDialog from '@/components/common/BaseDialog.vue'
 import BlogImagePicker from '@/components/blog/BlogImagePicker.vue'
 import BlogTypoPanel from '@/components/blog/BlogTypoPanel.vue'
 import BlogTypoDialog from '@/components/blog/BlogTypoDialog.vue'
-import { resolveTypo } from '@/composables/blogTypoCore'
 import { showConfirm, toastAlert } from '@/utils/dialog'
 // 模块级云同步：切走「博客后台」时先把未保存草稿落盘再上传
 import { registerModuleFlush } from '@/composables/useModuleSync'
@@ -69,6 +69,16 @@ const IMAGE_WARN_BYTES = 2 * 1024 * 1024
 
 /** 排版主题：预览容器注入的 --t-* 变量与分割线结构（跟随系统返回空 → CSS 现值） */
 const typoVarStyle = computed(() => typoVars(form.typo, store.settings.defaultTypoId))
+
+// ---------- 找Tab 主题装饰（仅亮色；暗色降级为纯 --t-* token） ----------
+const isDark = ref(
+  typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
+)
+let darkObserver: MutationObserver | null = null
+/** 生效主题：暗色时返回 null（不装饰、不挂 data-typo） */
+const typoThemeLive = computed(() =>
+  isDark.value ? null : resolveTypo(form.typo, store.settings.defaultTypoId)
+)
 const typoHr = computed(() => typoHrStyle(form.typo, store.settings.defaultTypoId))
 /** 顶栏「主题」按钮 + 右栏「换主题」共用同一个选择弹框 */
 const typoOpen = ref(false)
@@ -497,7 +507,7 @@ watch(form, () => {
 function refreshPreview(): void {
   // 正文里图片是 img:<id> 短引用，渲染前用图片库还原为 data URL，预览才会显示成图片
   const md = resolveImageRefs(form.contentMarkdown, id => store.imageUrlById.get(id))
-  publishedHtml.value = renderMarkdown(md)
+  publishedHtml.value = decorateTypoHtml(renderMarkdown(md), typoThemeLive.value)
 }
 // 预览重渲染开销大（全量 markdown-it + 替换 DOM），连续输入时防抖 150ms
 let previewTimer: number | undefined
@@ -509,6 +519,9 @@ function schedulePreview(): void {
   }, 150)
 }
 watch(() => form.contentMarkdown, schedulePreview)
+// 主题切换会改变标题装饰（找Tab 主题），预览需重渲染
+watch(() => form.typo, schedulePreview)
+watch(typoThemeLive, schedulePreview)
 // 图片库变化（插入/移除图片）也要重渲染预览
 watch(() => store.imageUrlById, schedulePreview)
 
@@ -532,6 +545,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onWindowKeydown)
   if (beforeunloadRegistered) window.removeEventListener('beforeunload', onBeforeUnloadGuard)
   unregisterModuleFlush()
+  darkObserver?.disconnect()
+  darkObserver = null
 })
 
 async function saveDraft(silent = false): Promise<void> {
@@ -733,6 +748,10 @@ onMounted(() => {
   window.addEventListener('keydown', onWindowKeydown)
   beforeunloadRegistered = true
   window.addEventListener('beforeunload', onBeforeUnloadGuard)
+  darkObserver = new MutationObserver(() => {
+    isDark.value = document.documentElement.classList.contains('dark')
+  })
+  darkObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
 })
 
 // ---------- slug 辅助 ----------
@@ -941,6 +960,7 @@ async function regenerateSlug(): Promise<void> {
             class="be-preview md-body"
             :style="typoVarStyle"
             :data-hr="typoHr || undefined"
+            :data-typo="typoThemeLive?.id || undefined"
             data-testid="blog-editor-preview"
             v-html="publishedHtml"
           ></div>
@@ -1268,25 +1288,25 @@ async function regenerateSlug(): Promise<void> {
   gap: 10px;
   flex-wrap: wrap;
   padding: 6px 8px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  background-color: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-ctrl, 8px);
+  background-color: var(--ds-card, #ffffff);
   box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.06));
 }
 
 .be-view-switch {
   display: flex;
   margin-left: auto;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 999px;
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-pill, 999px);
   overflow: hidden;
 }
 
 .be-view-btn {
   padding: 4px 12px;
   border: none;
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  background-color: var(--ds-card, #ffffff);
+  color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
 }
@@ -1301,10 +1321,10 @@ async function regenerateSlug(): Promise<void> {
   align-items: center;
   gap: 4px;
   padding: 4px 12px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 999px;
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-pill, 999px);
+  background-color: var(--ds-card, #ffffff);
+  color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
 }
@@ -1334,10 +1354,10 @@ async function regenerateSlug(): Promise<void> {
   width: 100%;
   height: 40px;
   padding: 0 12px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text, #0f172a);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-ctrl, 8px);
+  background-color: var(--ds-card, #ffffff);
+  color: var(--ds-text, #1f2329);
   font-family: inherit;
   font-size: var(--font-size-lg, 16px);
   font-weight: var(--font-weight-medium, 500);
@@ -1361,9 +1381,9 @@ async function regenerateSlug(): Promise<void> {
   flex-wrap: wrap;
   gap: 6px;
   padding: 6px 8px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  background-color: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-ctrl, 8px);
+  background-color: var(--ds-card, #ffffff);
   box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.06));
 }
 
@@ -1396,15 +1416,15 @@ async function regenerateSlug(): Promise<void> {
   align-self: stretch;
   width: 1px;
   margin: 2px 2px;
-  background-color: var(--color-border, #e2e8f0);
+  background-color: var(--ds-line, #ececf0);
 }
 
 .be-md-btn {
   padding: 4px 8px;
   border: 1px solid transparent;
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--ds-radius-ctrl, 8px);
   background-color: transparent;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-xs, 12px);
   line-height: 1.2;
   white-space: nowrap;
@@ -1412,8 +1432,8 @@ async function regenerateSlug(): Promise<void> {
 }
 
 .be-md-btn:hover {
-  background-color: var(--color-bg-2, #f1f5f9);
-  color: var(--color-text, #0f172a);
+  background-color: var(--ds-card-2, #f7f8fa);
+  color: var(--ds-text, #1f2329);
 }
 
 .be-md-btn:active {
@@ -1438,9 +1458,9 @@ async function regenerateSlug(): Promise<void> {
   flex: 1 1 0;
   min-width: 0;
   padding: 12px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-lg, 12px);
-  background-color: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-card, 12px);
+  background-color: var(--ds-card, #ffffff);
 }
 
 .be-md {
@@ -1449,7 +1469,7 @@ async function regenerateSlug(): Promise<void> {
 
 .be-preview {
   overflow-y: auto;
-  color: var(--color-text, #0f172a);
+  color: var(--ds-text, #1f2329);
   font-size: var(--font-size-sm, 14px);
   line-height: var(--line-height-relaxed, 1.75);
 }
@@ -1466,8 +1486,8 @@ async function regenerateSlug(): Promise<void> {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background-color: var(--color-bg-card, #ffffff);
-  border-left: 1px solid var(--color-border, #e2e8f0);
+  background-color: var(--ds-card, #ffffff);
+  border-left: 1px solid var(--ds-line, #ececf0);
   box-shadow: -8px 0 24px rgba(15, 23, 42, 0.10);
   transform: translateX(100%);
   transition: transform 0.25s ease;
@@ -1490,7 +1510,7 @@ async function regenerateSlug(): Promise<void> {
   margin: 0;
   font-size: var(--font-size-base, 14px);
   font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text, #0f172a);
+  color: var(--ds-text, #1f2329);
 }
 
 .be-side-close {
@@ -1500,10 +1520,10 @@ async function regenerateSlug(): Promise<void> {
   width: 28px;
   height: 28px;
   padding: 0;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 6px);
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-ctrl, 8px);
+  background-color: var(--ds-card, #ffffff);
+  color: var(--ds-text-2, #646a73);
   cursor: pointer;
 }
 
@@ -1529,16 +1549,16 @@ async function regenerateSlug(): Promise<void> {
 
 .be-block {
   padding: 12px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-lg, 12px);
-  background-color: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-card, 12px);
+  background-color: var(--ds-card, #ffffff);
 }
 
 .be-block-title {
   margin: 0 0 8px;
-  font-size: var(--font-size-sm, 13px);
+  font-size: var(--ds-fs-section, 16px);
   font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text, #0f172a);
+  color: var(--ds-text, #1f2329);
 }
 
 .be-field {
@@ -1549,12 +1569,12 @@ async function regenerateSlug(): Promise<void> {
 .be-label {
   display: block;
   margin-bottom: 4px;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-xs, 12px);
 }
 
 .be-static {
-  color: var(--color-text, #0f172a);
+  color: var(--ds-text, #1f2329);
   font-size: var(--font-size-sm, 13px);
 }
 
@@ -1569,10 +1589,10 @@ async function regenerateSlug(): Promise<void> {
 .be-mini {
   flex: 0 0 auto;
   padding: 4px 8px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 6px);
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-ctrl, 8px);
+  background-color: var(--ds-card, #ffffff);
+  color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
 }
@@ -1582,10 +1602,10 @@ async function regenerateSlug(): Promise<void> {
   width: 100%;
   height: 30px;
   padding: 0 8px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--color-bg-input, #ffffff);
-  color: var(--color-text, #0f172a);
+  color: var(--ds-text, #1f2329);
   font-family: inherit;
   font-size: var(--font-size-sm, 13px);
 }
@@ -1613,10 +1633,10 @@ async function regenerateSlug(): Promise<void> {
 
 .be-tag {
   padding: 2px 8px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 999px;
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-pill, 999px);
+  background-color: var(--ds-card, #ffffff);
+  color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
 }
@@ -1630,7 +1650,7 @@ async function regenerateSlug(): Promise<void> {
 .be-hint,
 .be-stat {
   margin: 0;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--ds-text-3, #9aa0a6);
   font-size: var(--font-size-xs, 11px);
   line-height: var(--line-height-relaxed, 1.6);
 }
@@ -1656,9 +1676,9 @@ async function regenerateSlug(): Promise<void> {
   min-width: 0;
   height: 56px;
   overflow: hidden;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 6px);
-  background-color: var(--color-bg-2, #f1f5f9);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-ctrl, 8px);
+  background-color: var(--ds-card-2, #f7f8fa);
 }
 
 .be-cover-thumb img {
@@ -1674,9 +1694,9 @@ async function regenerateSlug(): Promise<void> {
   gap: 12px;
   flex-wrap: wrap;
   padding: 10px 12px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-lg, 12px);
-  background-color: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-card, 12px);
+  background-color: var(--ds-card, #ffffff);
 }
 
 .be-errors {
@@ -1697,21 +1717,21 @@ async function regenerateSlug(): Promise<void> {
 
 .be-missing {
   padding: 40px 16px;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--ds-text-2, #646a73);
   text-align: center;
 }
 
 /* ===== Markdown 语法帮助弹框 ===== */
 .md-help-intro {
   margin: 0 0 14px;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-sm, 13px);
 }
 
 .md-help-row {
   margin-bottom: 14px;
   padding-bottom: 14px;
-  border-bottom: 1px dashed var(--color-border, #e2e8f0);
+  border-bottom: 1px dashed var(--ds-line, #ececf0);
 }
 
 .md-help-row:last-child {
@@ -1724,36 +1744,36 @@ async function regenerateSlug(): Promise<void> {
   margin: 0 0 6px;
   font-size: var(--font-size-sm, 13px);
   font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text, #0f172a);
+  color: var(--ds-text, #1f2329);
 }
 
 .md-help-code {
   margin: 0 0 6px;
   padding: 8px 10px;
-  background-color: var(--color-bg-2, #f1f5f9);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 6px);
+  background-color: var(--ds-card-2, #f7f8fa);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-ctrl, 8px);
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: var(--font-size-xs, 12px);
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-all;
-  color: var(--color-text, #0f172a);
+  color: var(--ds-text, #1f2329);
   overflow-x: auto;
 }
 
 .md-help-preview {
   margin: 0;
   padding: 8px 10px;
-  background-color: var(--color-bg-card, #ffffff);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 6px);
+  background-color: var(--ds-card, #ffffff);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-ctrl, 8px);
   font-size: var(--font-size-sm, 14px);
 }
 
 .md-help-note {
   margin: 0;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--ds-text-3, #9aa0a6);
   font-size: var(--font-size-xs, 12px);
 }
 
@@ -1762,7 +1782,7 @@ async function regenerateSlug(): Promise<void> {
   margin: 0;
   padding: 24px 8px;
   text-align: center;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--ds-text-3, #9aa0a6);
   font-size: var(--font-size-sm, 13px);
 }
 
@@ -1780,9 +1800,9 @@ async function regenerateSlug(): Promise<void> {
   flex-direction: column;
   gap: 6px;
   padding: 8px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  background-color: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-ctrl, 8px);
+  background-color: var(--ds-card, #ffffff);
 }
 
 .img-dialog-thumb {
@@ -1793,9 +1813,9 @@ async function regenerateSlug(): Promise<void> {
   height: 96px;
   padding: 0;
   overflow: hidden;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 6px);
-  background-color: var(--color-bg-2, #f1f5f9);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-ctrl, 8px);
+  background-color: var(--ds-card-2, #f7f8fa);
   cursor: pointer;
 }
 
@@ -1811,11 +1831,11 @@ async function regenerateSlug(): Promise<void> {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  background-color: var(--color-bg-2, #f1f5f9);
+  background-color: var(--ds-card-2, #f7f8fa);
 }
 
 .img-dialog-missing {
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--ds-text-3, #9aa0a6);
   font-size: var(--font-size-sm, 13px);
 }
 
@@ -1826,7 +1846,7 @@ async function regenerateSlug(): Promise<void> {
 }
 
 .img-dialog-idx {
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--ds-text-3, #9aa0a6);
   font-size: var(--font-size-xs, 11px);
 }
 
@@ -1835,7 +1855,7 @@ async function regenerateSlug(): Promise<void> {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  color: var(--color-text, #0f172a);
+  color: var(--ds-text, #1f2329);
   font-size: var(--font-size-xs, 12px);
 }
 
@@ -1847,10 +1867,10 @@ async function regenerateSlug(): Promise<void> {
 .img-dialog-op {
   flex: 1 1 auto;
   padding: 4px 0;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-sm, 6px);
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-ctrl, 8px);
+  background-color: var(--ds-card, #ffffff);
+  color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
 }
@@ -1869,7 +1889,7 @@ async function regenerateSlug(): Promise<void> {
 .be-tp-tip {
   margin-bottom: 6px;
   font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--ds-text-2, #646a73);
   text-align: center;
 }
 
@@ -1883,9 +1903,9 @@ async function regenerateSlug(): Promise<void> {
   width: 100%;
   aspect-ratio: 1 / 1;
   padding: 0;
-  border: 1px solid var(--color-border, #e2e8f0);
+  border: 1px solid var(--ds-line, #ececf0);
   border-radius: 3px;
-  background: var(--color-bg-card, #fff);
+  background: var(--ds-card, #ffffff);
   cursor: pointer;
 }
 
@@ -1910,7 +1930,7 @@ async function regenerateSlug(): Promise<void> {
   border: none;
   border-left: 2px solid transparent;
   background: none;
-  color: var(--color-text, #1e293b);
+  color: var(--ds-text, #1f2329);
   font-size: var(--font-size-xs, 12px);
   line-height: 1.5;
   text-align: left;
@@ -1922,7 +1942,7 @@ async function regenerateSlug(): Promise<void> {
 
 .be-outline-item.is-h3 {
   padding-left: 18px;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--ds-text-2, #646a73);
 }
 
 .be-outline-item:hover {
@@ -1940,7 +1960,7 @@ async function regenerateSlug(): Promise<void> {
   padding: 0 10px;
   border-radius: var(--radius-full, 9999px);
   font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--ds-text-2, #646a73);
   background: var(--color-bg-hover, #f1f5f9);
   white-space: nowrap;
 }
@@ -1979,7 +1999,7 @@ async function regenerateSlug(): Promise<void> {
   margin: 0;
   font-size: var(--font-size-xs, 12px);
   line-height: 1.6;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--ds-text-2, #646a73);
 }
 
 .be-wx-phone {
@@ -1987,8 +2007,8 @@ async function regenerateSlug(): Promise<void> {
   overflow-y: auto;
   padding: 16px 14px;
   background: #ffffff;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-ctrl, 8px);
 }
 
 .be-wx-body {

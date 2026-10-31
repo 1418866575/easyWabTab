@@ -109,8 +109,8 @@ function labelOf(key: SectionKey): string {
 .bsd-rail {
   width: 200px;
   flex-shrink: 0;
-  border-right: 1px solid var(--color-border, #e2e8f0);
-  background-color: var(--color-bg-2, #f7f8fa);
+  border-right: 1px solid var(--ds-line, #ececf0);
+  background-color: var(--ds-card, #ffffff);
   padding: 12px 10px;
   overflow-y: auto;
 }
@@ -126,18 +126,18 @@ html.dark .bsd-rail { background-color: rgba(255, 255, 255, 0.03); }
   padding: 9px 10px;
   border: none;
   background: transparent;
-  border-radius: var(--radius-md, 8px);
-  color: var(--color-text-secondary, #64748b);
+  border-radius: var(--ds-radius-ctrl, 8px);
+  color: var(--ds-text-2, #646a73);
   font-size: 13px;
   font-family: inherit;
   cursor: pointer;
   text-align: left;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
-.bsd-item:hover { background-color: var(--color-bg-hover, rgba(0, 0, 0, 0.04)); color: var(--color-text, #0f172a); }
+.bsd-item:hover { background-color: var(--color-bg-hover, rgba(0, 0, 0, 0.04)); color: var(--ds-text, #1f2329); }
 .bsd-item.active {
-  background-color: var(--color-primary-light, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  background-color: var(--ds-primary-soft, #eff6ff);
+  color: var(--ds-primary, #2563eb);
   font-weight: 600;
 }
 html.dark .bsd-item.active { background-color: rgba(96, 165, 250, 0.15); }
@@ -159,19 +159,19 @@ html.dark .bsd-item:hover { background-color: rgba(255, 255, 255, 0.06); }
   justify-content: space-between;
   gap: 12px;
   padding: 12px 20px;
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  border-bottom: 1px solid var(--ds-line, #ececf0);
   flex-shrink: 0;
 }
 
 .bsd-crumb {
   font-size: 13px;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--ds-text-3, #9aa0a6);
   display: flex;
   align-items: center;
   gap: 6px;
 }
-.bsd-crumb-group { color: var(--color-text-secondary, #64748b); }
-.bsd-crumb-item { color: var(--color-text, #0f172a); font-weight: 600; }
+.bsd-crumb-group { color: var(--ds-text-2, #646a73); }
+.bsd-crumb-item { color: var(--ds-text, #1f2329); font-weight: 600; }
 .bsd-crumb-sep { opacity: 0.5; }
 
 .bsd-scroll {
@@ -179,6 +179,7 @@ html.dark .bsd-item:hover { background-color: rgba(255, 255, 255, 0.06); }
   overflow-y: auto;
   padding: 20px;
   min-height: 0;
+  background-color: var(--ds-bg, #f7f8fa);
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 }
@@ -190,7 +191,7 @@ html.dark .bsd-item:hover { background-color: rgba(255, 255, 255, 0.06); }
     width: 100%;
     flex: 0 0 auto;
     border-right: none;
-    border-bottom: 1px solid var(--color-border, #e2e8f0);
+    border-bottom: 1px solid var(--ds-line, #ececf0);
     flex-direction: row;
     overflow-x: auto;
     overflow-y: hidden;

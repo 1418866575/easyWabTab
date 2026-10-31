@@ -83,6 +83,11 @@ async function handleMove(id: string, delta: number): Promise<void> {
 
 <template>
   <section class="bic">
+    <header class="bic-page">
+      <h2 class="bic-page-title">图库分类</h2>
+      <p class="bic-page-sub">分类仅用于后台图库的筛选与批量归类，不影响前台展示。删除分类不会删除图片，图片会回到「未分类」。</p>
+    </header>
+
     <header class="bic-head">
       <div class="bic-add">
         <el-input
@@ -99,9 +104,6 @@ async function handleMove(id: string, delta: number): Promise<void> {
           <span>新增分类</span>
         </el-button>
       </div>
-      <p class="bic-hint">
-        分类仅用于后台图库的筛选与批量归类，不影响前台展示。删除分类不会删除图片，图片会回到「未分类」。
-      </p>
     </header>
 
     <div v-if="list.length === 0" class="bic-empty" data-testid="blog-image-category-empty">
@@ -186,25 +188,33 @@ async function handleMove(id: string, delta: number): Promise<void> {
 
 .bic-input { width: 240px; max-width: 100%; }
 
-.bic-hint { margin: 0; color: var(--color-text-muted, #94a3b8); font-size: var(--font-size-xs, 12px); }
+.bic-page { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
+.bic-page-title { margin: 0; font-size: var(--ds-fs-section, 16px); font-weight: var(--font-weight-semibold, 600); color: var(--ds-text, #1f2329); }
+.bic-page-sub { margin: 0; font-size: var(--ds-fs-body-sm, 13px); color: var(--ds-text-3, #9aa0a6); }
 
 .bic-empty {
   padding: 28px 16px;
-  border: 1px dashed var(--color-border, #e2e8f0);
-  border-radius: var(--radius-lg, 12px);
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  border: 1px dashed var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-card, 12px);
+  background-color: var(--ds-card, #ffffff);
+  color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-sm, 13px);
   text-align: center;
 }
 
-.bic-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.bic-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 
 .bic-item {
-  padding: 10px 12px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-lg, 12px);
-  background-color: var(--color-bg-card, #ffffff);
+  padding: 12px 14px;
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-card, 12px);
+  background-color: var(--ds-card, #ffffff);
+  transition: border-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
+    box-shadow var(--motion-duration, 0.2s) var(--motion-ease, ease);
+}
+.bic-item:hover {
+  border-color: var(--ds-primary, #2563eb);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
 }
 
 .bic-row {
@@ -216,21 +226,21 @@ async function handleMove(id: string, delta: number): Promise<void> {
 }
 
 .bic-name {
-  color: var(--color-text, #0f172a);
+  color: var(--ds-text, #1f2329);
   font-size: var(--font-size-sm, 14px);
   font-weight: var(--font-weight-medium, 500);
 }
 
-.bic-count { color: var(--color-text-secondary, #64748b); font-size: var(--font-size-xs, 12px); }
+.bic-count { color: var(--ds-text-2, #646a73); font-size: var(--font-size-xs, 12px); }
 
 .bic-ops { display: flex; gap: 4px; margin-left: auto; flex-wrap: wrap; }
 
 .bic-mini {
   padding: 2px 8px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 999px;
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-pill, 999px);
+  background-color: var(--ds-card, #ffffff);
+  color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-xs, 11px);
   cursor: pointer;
 }
@@ -245,7 +255,7 @@ async function handleMove(id: string, delta: number): Promise<void> {
   flex-wrap: wrap;
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px dashed var(--color-border, #e2e8f0);
+  border-top: 1px dashed var(--ds-line, #ececf0);
 }
 
 .bic-edit :deep(.el-input) { max-width: 220px; }
