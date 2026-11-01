@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import { DIALOG_BTN } from '@/config/dialogText'
 import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
@@ -53,6 +54,12 @@ const appliedFilters = ref<TodoFilterCriteria>({})
 
 // ===== 分类筛选标签页（点击即时生效，与查询条件叠加；'' = 全部，选中值 = 分类名字符串）=====
 const activeCategoryId = ref('')
+
+/** 分类标签页：全部 + 各分类 */
+const catTabItems = computed(() => [
+  { value: '', label: '全部', testid: 'td-cat-all' },
+  ...store.tabCategories.map((c) => ({ value: c, label: c, testid: `td-cat-${c}` }))
+])
 
 function selectCategoryTab(name: string): void {
   activeCategoryId.value = name
@@ -399,15 +406,12 @@ onMounted(async () => {
 
     <!-- 分类筛选标签页（全部 + 可见分类，点击即时过滤）+ 新增待办按钮靠右 -->
     <div class="td-cat-tabs">
-      <el-radio-group v-model="activeCategoryId" class="td-cat-tabs-group" size="small" @update:model-value="selectCategoryTab">
-        <el-radio-button value="" data-testid="td-cat-all">全部</el-radio-button>
-        <el-radio-button
-          v-for="cat in store.tabCategories"
-          :key="cat"
-          :value="cat"
-          :data-testid="`td-cat-${cat}`"
-        >{{ cat }}</el-radio-button>
-      </el-radio-group>
+      <BaseTabs
+      v-model="activeCategoryId"
+      :items="catTabItems"
+      testid="td-cat"
+      @update:model-value="selectCategoryTab"
+    />
       <span class="toolbar-count" data-testid="td-toolbar-count">
         <template v-if="hasActiveFilter">筛选出 {{ filteredTodos.length }} / {{ store.orderedTodos.length }} 个</template>
         <template v-else>

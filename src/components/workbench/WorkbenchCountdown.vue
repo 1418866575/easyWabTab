@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import Icon from '../Icon.vue'
 import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
 import { showConfirm } from '@/utils/dialog'
@@ -27,6 +28,11 @@ const searchName = ref('')
 const searchRepeat = ref<'' | CountdownRepeatType>('')
 // 分类筛选走标签页（即时生效）；'' = 全部
 const activeCategoryTab = ref('')
+/** 分类标签页数据：全部 + 各分类（文案走 categoryLabel） */
+const catTabItems = computed(() => [
+  { value: '', label: '全部', testid: 'cd-cat-all' },
+  ...store.tabCategories.map((c) => ({ value: c, label: categoryLabel(c), testid: `cd-cat-${c}` }))
+])
 const appliedFilters = ref<CountdownFilterCriteria>({})
 
 function applySearch(): void {
@@ -354,17 +360,13 @@ onUnmounted(() => {
     </div>
 
     <!-- 分类标签页（即时过滤）+ 新增提醒按钮靠右 -->
-    <div class="cd-cat-tabs">
-      <el-radio-group v-model="activeCategoryTab" size="small" @update:model-value="selectCategoryTab">
-        <el-radio-button value="" data-testid="cd-cat-all">全部</el-radio-button>
-        <el-radio-button
-          v-for="c in store.tabCategories"
-          :key="c"
-          :value="c"
-          :data-testid="'cd-cat-' + c"
-        >{{ categoryLabel(c) }}</el-radio-button>
-      </el-radio-group>
-    </div>
+    <BaseTabs
+      v-model="activeCategoryTab"
+      :items="catTabItems"
+      testid="cd-cat"
+      class="cd-cat-tabs"
+      @update:model-value="selectCategoryTab"
+    />
 
     <!-- 表格工具条：左上新增 + 右上视图切换（常驻渲染，空列表/筛空时也能新增） -->
     <div class="ewt-table-toolbar is-split">

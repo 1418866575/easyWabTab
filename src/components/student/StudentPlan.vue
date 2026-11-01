@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
@@ -230,15 +231,7 @@ onMounted(() => {
 <template>
   <div class="sp-shell">
     <StudentToolbar title="学习计划" />
-
-    <el-radio-group v-model="activeTypeTab" class="sp-tabs" size="small">
-      <el-radio-button
-        v-for="tab in TYPE_TABS"
-        :key="tab.key"
-        :value="tab.key"
-        :data-testid="`sp-tab-${tab.key}`"
-      >{{ tab.label }}</el-radio-button>
-    </el-radio-group>
+    <BaseTabs v-model="activeTypeTab" :items="TYPE_TABS" value-field="key" testid="sp-tab" class="sp-tabs" />
 
     <div class="sp-stats">
       <div class="sp-stat-card">

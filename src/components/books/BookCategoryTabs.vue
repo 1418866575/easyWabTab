@@ -12,6 +12,7 @@
  * 撞车会让 `.bk-cat` 选择器同时命中页签和卡片徽标（实测页签数量因此虚高一倍）。
  */
 import { computed } from 'vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 
 const props = defineProps<{
   modelValue: string
@@ -30,70 +31,34 @@ function iconOf(name: string): string {
   return ICONS[h % ICONS.length]
 }
 
-const tabs = computed(() => [
-  { id: '', name: '全部', icon: '📚', count: props.totalCount },
-  ...props.categories.map((c) => ({ id: c.name, name: c.name, icon: iconOf(c.name), count: c.count }))
+/** 页签数据：全部 + 各分类（emoji 图标 + 数量） */
+const tabItems = computed(() => [
+  { value: '', label: '全部', emoji: '📚', badge: props.totalCount, testid: 'bk-tab-all' },
+  ...props.categories.map((c) => ({
+    value: c.name,
+    label: c.name,
+    emoji: iconOf(c.name),
+    badge: c.count,
+    testid: `bk-tab-${c.name}`
+  }))
 ])
+
+/** BaseTabs 用 v-model，这里把双向绑定透传出去 */
+const modelValueProxy = computed({
+  get: () => props.modelValue,
+  set: (v: string) => emit('update:modelValue', v)
+})
 </script>
 
 <template>
-  <div class="bk-tabs" role="group" aria-label="书籍分类筛选">
-    <button
-      v-for="t in tabs"
-      :key="t.id || 'all'"
-      type="button"
-      class="bk-tab"
-      :class="{ 'is-on': modelValue === t.id }"
-      :data-testid="'bk-tab-' + (t.id || 'all')"
-      :aria-pressed="modelValue === t.id"
-      @click="emit('update:modelValue', t.id)"
-    >
-      <span aria-hidden="true">{{ t.icon }}</span>
-      <span>{{ t.name }}</span>
-      <span class="bk-tab-cnt">{{ t.count }}</span>
-    </button>
+  <div class="bk-tabs">
+    <BaseTabs v-model="modelValueProxy" :items="tabItems" testid="bk-tab" />
   </div>
 </template>
 
 <style scoped>
-/* 与工具箱 .tb-cats 同构：flex-wrap + 8px 间距，数量多的分类自然折行 */
+/* 容器间距；页签皮肤见 common/BaseTabs.vue */
 .bk-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
   margin-bottom: 4px;
-}
-.bk-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 34px;
-  padding: 7px 14px;
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  font-family: var(--font-family);
-  background: var(--color-bg-card);
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-  transition: color var(--motion-duration) var(--motion-ease),
-    border-color var(--motion-duration) var(--motion-ease),
-    background-color var(--motion-duration) var(--motion-ease);
-}
-.bk-tab:hover {
-  color: var(--color-primary);
-  border-color: var(--color-primary);
-}
-.bk-tab.is-on {
-  background: var(--color-primary);
-  color: #fff;
-  border-color: var(--color-primary);
-}
-.bk-tab-cnt { font-size: var(--font-size-xs); opacity: 0.78; }
-
-/* 窄端：页签文字收紧，给药丸留出更多一行 */
-@media (max-width: 768px) {
-  .bk-tabs { gap: 6px; }
-  .bk-tab { padding: 6px 11px; min-height: 40px; }
 }
 </style>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useViewMode } from '@/composables/useViewMode'
@@ -278,14 +279,7 @@ onMounted(async () => {
     <StudentToolbar title="作业管理" />
 
     <div class="shw-filters">
-      <el-radio-group v-model="activeSubject" class="shw-subject-tabs" size="small">
-        <el-radio-button
-          v-for="tab in subjectTabs"
-          :key="tab.key"
-          :value="tab.key"
-          :data-testid="`shw-subject-${tab.key}`"
-        >{{ tab.label }}</el-radio-button>
-      </el-radio-group>
+      <BaseTabs v-model="activeSubject" :items="subjectTabs" value-field="key" testid="shw-subject" class="shw-subject-tabs" />
       <el-radio-group v-model="activeStatus" class="shw-status-tabs" size="small">
         <el-radio-button
           v-for="tab in STATUS_FILTERS"

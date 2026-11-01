@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useViewMode } from '@/composables/useViewMode'
@@ -54,6 +55,11 @@ const subjectOptions = computed<string[]>(() => settingsStore.subjects)
 const gradeLevels = computed<string[]>(() => [...STUDENT_GRADE_LEVELS])
 /** 学段分组（一级导航），来自 GRADE_STAGE_GROUPS */
 const stageGroups = GRADE_STAGE_GROUPS
+/** 学段标签页：全部 + 各学段 */
+const stageTabItems = computed(() => [
+  { value: '', label: '全部', testid: 'sg-stage-all' },
+  ...stageGroups.map((g) => ({ value: g.key, label: g.label, testid: `sg-stage-${g.key}` }))
+])
 /** 二级导航「总览」tab 文案：全学段时=全部年级，选定学段时=该学段全部 */
 const overviewLabel = computed(() => (store.activeStage ? '该学段全部' : '全部年级'))
 /** 当前学段显示名（用于空状态文案） */
@@ -315,22 +321,13 @@ onMounted(async () => {
     <StudentToolbar title="成绩记录" />
 
     <!-- 学段分组（一级导航） -->
-    <el-radio-group
+    <BaseTabs
       :model-value="store.activeStage"
+      :items="stageTabItems"
+      testid="sg-stage"
       class="sg-stage-group"
-      size="small"
-      data-testid="sg-stage-group"
-      @change="onStageChange"
-    >
-      <el-radio-button label="全部" value="" data-testid="sg-stage-all" />
-      <el-radio-button
-        v-for="g in stageGroups"
-        :key="g.key"
-        :label="g.label"
-        :value="g.key"
-        :data-testid="`sg-stage-${g.key}`"
-      />
-    </el-radio-group>
+      @update:model-value="onStageChange"
+    />
 
     <!-- 年级标签页（二级导航，按学段收敛） -->
     <el-tabs

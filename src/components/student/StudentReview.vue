@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 // 学生工作台复习计划面板（艾宾浩斯间隔复习，M3 批次1）
@@ -166,14 +167,7 @@ function daysClass(days: number): string {
     <StudentToolbar title="复习计划" />
 
     <div class="sr-tabs">
-      <el-radio-group v-model="activeSubject" size="small">
-        <el-radio-button
-          v-for="tab in subjectTabs"
-          :key="tab.key"
-          :value="tab.key"
-          :data-testid="`sr-tab-${tab.key}`"
-        >{{ tab.label }}</el-radio-button>
-      </el-radio-group>
+      <BaseTabs v-model="activeSubject" :items="subjectTabs" value-field="key" testid="sr-tab" />
     </div>
 
     <div class="sr-stats">

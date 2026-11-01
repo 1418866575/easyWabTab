@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 // 学生工作台学习目标面板
@@ -253,14 +254,7 @@ onMounted(() => {
     </div>
 
     <div class="sg-filters">
-      <el-radio-group v-model="activeSubject" class="sg-subject-tabs" size="small">
-        <el-radio-button
-          v-for="tab in subjectTabs"
-          :key="tab.key"
-          :value="tab.key"
-          :data-testid="`sg-subject-${tab.key}`"
-        >{{ tab.label }}</el-radio-button>
-      </el-radio-group>
+      <BaseTabs v-model="activeSubject" :items="subjectTabs" value-field="key" testid="sg-subject" class="sg-subject-tabs" />
       <el-radio-group v-model="activeStatus" class="sg-status-tabs" size="small">
         <el-radio-button
           v-for="tab in STATUS_TABS"

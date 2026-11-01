@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 // 学生工作台错题本面板（M3 批次1）
@@ -200,14 +201,7 @@ onMounted(() => {
     <StudentToolbar title="错题本" />
 
     <div class="sm-tabs">
-      <el-radio-group v-model="activeSubject" size="small">
-        <el-radio-button
-          v-for="tab in subjectTabs"
-          :key="tab.key"
-          :value="tab.key"
-          :data-testid="`sm-subject-${tab.key}`"
-        >{{ tab.label }}</el-radio-button>
-      </el-radio-group>
+      <BaseTabs v-model="activeSubject" :items="subjectTabs" value-field="key" testid="sm-subject" />
     </div>
 
     <div class="sm-filter-bar">

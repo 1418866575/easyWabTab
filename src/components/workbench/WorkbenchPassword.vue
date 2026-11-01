@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import { DIALOG_BTN } from '@/config/dialogText'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { showConfirm } from '@/utils/dialog'
@@ -150,6 +151,11 @@ const sortedCategories = computed(() =>
   [...passwordsStore.categories].sort((a, b) => (a.sort ?? 999) - (b.sort ?? 999))
 )
 const tabCategories = computed(() => sortedCategories.value.filter(c => c.showInTabs !== false))
+/** 分类标签页：全部 + 显示在页签里的分类 */
+const catTabItems = computed(() => [
+  { value: '', label: '全部', testid: 'pwd-cat-all' },
+  ...tabCategories.value.map((c) => ({ value: c.id, label: c.name, testid: `pwd-cat-${c.id}` }))
+])
 
 function categoryName(id?: string): string {
   if (!id) return '未分类'
@@ -483,15 +489,12 @@ watch(
 
       <!-- 分类标签页：全部 + 各分类（分类在「设置 → 密码分类管理」维护） -->
       <div v-if="tabCategories.length > 0" class="pwd-cat-tabs" data-testid="pwd-cat-tabs">
-        <el-radio-group v-model="activeCategoryId" class="pwd-cat-tabs-group" size="small" @update:model-value="selectCategory">
-          <el-radio-button value="" data-testid="pwd-cat-all">全部</el-radio-button>
-          <el-radio-button
-            v-for="cat in tabCategories"
-            :key="cat.id"
-            :value="cat.id"
-            :data-testid="`pwd-cat-${cat.id}`"
-          >{{ cat.name }}</el-radio-button>
-        </el-radio-group>
+        <BaseTabs
+      v-model="activeCategoryId"
+      :items="catTabItems"
+      testid="pwd-cat"
+      @update:model-value="selectCategory"
+    />
       </div>
 
       <!-- 空态 -->

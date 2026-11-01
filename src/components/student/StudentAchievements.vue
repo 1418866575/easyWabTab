@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 // 学生工作台成就勋章墙面板（M3 批次2）
 // 布局：标题 + 统计 + 分类 tabs + 5 列勋章网格 + 详情弹框
@@ -148,14 +149,7 @@ onMounted(async () => {
     </div>
 
     <div class="sa-tabs">
-      <el-radio-group v-model="activeCategory" size="small">
-        <el-radio-button
-          v-for="tab in CATEGORY_TABS"
-          :key="tab.key"
-          :value="tab.key"
-          :data-testid="`sa-cat-${tab.key}`"
-        >{{ tab.label }}</el-radio-button>
-      </el-radio-group>
+      <BaseTabs v-model="activeCategory" :items="CATEGORY_TABS" value-field="key" testid="sa-cat" />
       <span class="sa-count">{{ viewDefs.length }} 枚</span>
     </div>
 

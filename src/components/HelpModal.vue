@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import { ref, computed, watch } from 'vue'
 import { toastAlert } from '@/utils/dialog'
 import Icon from './Icon.vue'
@@ -726,22 +727,8 @@ const skillInstall = [
   <BaseDialog class="help-dialog" width="1000px" max-height="85vh" @close="emit('close')">
     <template #title><Icon name="lightbulb" /> 使用帮助</template>
 
-    <!-- 标签页导航 -->
-    <div class="help-tabs" role="tablist">
-      <button
-        v-for="tab in visibleTabs"
-        :key="tab.key"
-        class="help-tab"
-        :class="{ active: activeTab === tab.key }"
-        :aria-selected="activeTab === tab.key"
-        :data-testid="`help-tab-${tab.key}`"
-        role="tab"
-        @click="activeTab = tab.key"
-      >
-        <span class="help-tab-icon"><Icon :name="tab.icon" :size="16" /></span>
-        <span class="help-tab-label">{{ tab.label }}</span>
-      </button>
-    </div>
+    <!-- 标签页导航（统一走 common/BaseTabs） -->
+    <BaseTabs v-model="activeTab" :items="visibleTabs" value-field="key" testid="help-tab" />
 
     <!-- 各标签页正文：外壳滚动/内边距由 BaseDialog 的 .bd-body 提供，
          这里只保留正文自身的纵向排布（原 .modal-body 的 flex + gap） -->
@@ -1494,48 +1481,7 @@ const skillInstall = [
   flex-shrink: 0;
 }
 
-/* 标签页导航：原为头部与正文之间的整宽条，现落在 .bd-body 内，
-   用负外边距抵消基类正文 padding 保持通栏观感 */
-.help-tabs {
-  display: flex;
-  /* 9 个标签在窄屏下换行而不是横向滚出可视区（曾致首个标签被滚走、用户以为功能缺失） */
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 0 16px;
-  margin: 0 calc(-1 * var(--space-6, 24px)) 20px;
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
-  flex-shrink: 0;
-}
-
-.help-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 14px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--color-text-secondary, #64748b);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: color 0.2s, border-color 0.2s;
-}
-
-.help-tab:hover {
-  color: var(--color-primary, #3b82f6);
-}
-
-.help-tab.active {
-  color: var(--color-primary, #3b82f6);
-  border-bottom-color: var(--color-primary, #3b82f6);
-}
-
-.help-tab-icon {
-  display: inline-flex;
-  align-items: center;
-}
+/* 标签页皮肤由 common/BaseTabs.vue 提供（原下划线通栏页签已移除） */
 
 /* 模块说明 */
 .panel-intro {
@@ -1719,10 +1665,6 @@ const skillInstall = [
     gap: 6px;
   }
 
-  .help-tab {
-    padding: 10px;
-    font-size: 12px;
-  }
 
   .download-card {
     flex-direction: column;

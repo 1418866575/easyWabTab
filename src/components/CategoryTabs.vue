@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useSitesStore } from '../stores/sites'
 import { useCategoriesStore } from '../stores/categories'
 import { isImageIcon } from '../composables/categoryIcon'
+import BaseTabs from './common/BaseTabs.vue'
 
 const store = useSitesStore()
 const categoriesStore = useCategoriesStore()
@@ -31,122 +32,37 @@ const countByCategory = computed(() => {
 // 全部站点数量
 const totalCount = computed(() => store.sites.length)
 
-const handleCategoryClick = (categoryId: string) => {
-  if (store.selectedCategory === categoryId) {
-    store.setCategory('')
-  } else {
-    store.setCategory(categoryId)
-  }
-}
+/** 分类页签：全部 + 各分类（图标可能是图片 URL，也可能是 emoji） */
+const tabItems = computed(() => [
+  { value: '', label: '全部', badge: totalCount.value },
+  ...categories.value.map((cat) => ({
+    value: cat.id,
+    label: cat.name,
+    image: isImageIcon(cat.icon) ? cat.icon : '',
+    emoji: isImageIcon(cat.icon) ? '' : cat.icon,
+    badge: countByCategory.value[cat.id] ?? 0
+  }))
+])
 </script>
 
 <template>
   <div class="category-tabs-wrapper">
-    <div class="category-tabs">
-      <button
-        class="category-tab"
-        :class="{ active: store.selectedCategory === '' }"
-        @click="store.setCategory('')"
-      >
-        全部
-        <span class="count-badge">{{ totalCount }}</span>
-      </button>
-      <button
-        v-for="cat in categories"
-        :key="cat.id"
-        class="category-tab"
-        :class="{ active: store.selectedCategory === cat.id }"
-        @click="handleCategoryClick(cat.id)"
-      >
-        <img v-if="isImageIcon(cat.icon)" :src="cat.icon" class="cat-tab-icon" alt="" />
-        <span v-else class="cat-tab-emoji">{{ cat.icon }}</span>
-        {{ cat.name }}
-        <span class="category-count">({{ countByCategory[cat.id] ?? 0 }})</span>
-      </button>
-    </div>
+    <BaseTabs
+      :model-value="store.selectedCategory"
+      :items="tabItems"
+      deselectable
+      @update:model-value="store.setCategory($event)"
+    />
   </div>
 </template>
 
 <style scoped>
+/* 外壳留白由这里负责；页签皮肤见 common/BaseTabs.vue（不要再写 .category-tab） */
 .category-tabs-wrapper {
   margin-bottom: 20px;
   padding: 12px;
   background-color: white;
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.category-tabs {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 4px;
-}
-
-.category-tab {
-  position: relative;
-  padding: 8px 16px;
-  border: 1px solid var(--ds-line);
-  border-radius: 20px;
-  background-color: white;
-  font-size: 13px;
-  color: var(--ds-text-2);
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-/* 分类图标：图片（图标库）与旧 emoji 文本两种形态共存 */
-.cat-tab-icon {
-  width: 16px;
-  height: 16px;
-  margin-right: 4px;
-  object-fit: contain;
-  vertical-align: -3px;
-}
-
-.cat-tab-emoji {
-  margin-right: 2px;
-}
-
-.category-tab:hover {
-  border-color: var(--ds-primary);
-  color: var(--ds-primary);
-}
-
-.category-tab.active {
-  background-color: var(--ds-primary);
-  border-color: var(--ds-primary);
-  color: white;
-}
-
-.category-count {
-  color: #000;
-}
-
-.category-tab.active .category-count {
-  color: inherit;
-}
-
-.count-badge {
-  position: absolute;
-  top: -8px;
-  right: -10px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 8px;
-  background-color: var(--ds-primary);
-  color: white;
-  font-size: 10px;
-  line-height: 16px;
-  font-weight: 600;
-  text-align: center;
-  box-sizing: border-box;
-}
-
-.category-tab.active .count-badge {
-  background-color: white;
-  color: var(--ds-primary);
 }
 </style>

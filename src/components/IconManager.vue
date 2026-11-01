@@ -77,6 +77,8 @@ const CATEGORIES = computed(() => {
 })
 
 const activeCategory = ref('全部')
+/** 分类页签数据 */
+const catTabItems = computed(() => CATEGORIES.value.map((c) => ({ value: c, label: c })))
 
 // 过滤后的图标列表
 const filteredIcons = computed(() => {
@@ -300,17 +302,7 @@ function usedSiteNames(icon: MergedIcon): string {
         />
       </div>
 
-      <div class="category-tabs">
-        <button
-          v-for="cat in CATEGORIES"
-          :key="cat"
-          class="category-tab"
-          :class="{ active: activeCategory === cat }"
-          @click="activeCategory = cat"
-        >
-          {{ cat }}
-        </button>
-      </div>
+      <BaseTabs v-model="activeCategory" :items="catTabItems" class="icon-cat-tabs" />
 
       <!-- 图标网格 -->
       <div class="icon-manager-grid">
@@ -428,42 +420,9 @@ function usedSiteNames(icon: MergedIcon): string {
   width: 100%;
 }
 
-/* 分类选项卡 */
-.category-tabs {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+/* 分类页签：皮肤由 common/BaseTabs.vue 提供，这里只保留底部间距 */
+.icon-cat-tabs {
   margin-bottom: 16px;
-}
-
-/* 分类筛选 chip：与其它胶囊控件统一（--radius-full、30px 高、13px 字） */
-.category-tab {
-  display: inline-flex;
-  align-items: center;
-  height: 30px;
-  padding: 0 var(--space-3, 12px);
-  border-radius: var(--radius-full, 9999px);
-  border: 1px solid var(--color-border, #e2e8f0);
-  background: var(--color-bg, #f8fafc);
-  color: var(--color-text-secondary, #64748b);
-  font-size: var(--font-size-sm, 13px);
-  cursor: pointer;
-  transition:
-    background-color var(--motion-duration, 220ms) var(--motion-ease, ease),
-    border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
-    color var(--motion-duration, 220ms) var(--motion-ease, ease);
-  white-space: nowrap;
-}
-
-.category-tab:hover {
-  background: var(--color-bg-active, #e2e8f0);
-  color: var(--color-text, #1e293b);
-}
-
-.category-tab.active {
-  background: var(--color-primary, #3b82f6);
-  border-color: var(--color-primary, #3b82f6);
-  color: white;
 }
 
 /* 图标网格 */

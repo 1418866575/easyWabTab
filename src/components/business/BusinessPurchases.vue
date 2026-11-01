@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
@@ -73,6 +74,11 @@ const store = useWorkbenchBusinessStore()
 
 const activeCat = ref('all')
 const tabs = computed(() => visibleProductCategories(store.productCategories))
+/** 分类标签页：全部 + 可见分类 */
+const catTabItems = computed(() => [
+  { value: 'all', label: '全部', testid: 'bizpur-cat-all' },
+  ...tabs.value.map((c) => ({ value: c.id, label: c.name, testid: `bizpur-cat-${c.id}` }))
+])
 const filtered = computed(() => filterPurchasesByCategory(store.purchases, store.products, activeCat.value))
 
 function productNameOf(id: string): string {
@@ -565,15 +571,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
     <!-- 分类 tabs + 新增 -->
     <div class="bizpur-bar">
       <div class="bizpur-tabs">
-        <el-radio-group v-model="activeCat" size="small">
-          <el-radio-button value="all" data-testid="bizpur-cat-all">全部</el-radio-button>
-          <el-radio-button
-            v-for="cat in tabs"
-            :key="cat.id"
-            :value="cat.id"
-            :data-testid="`bizpur-cat-${cat.id}`"
-          >{{ cat.name }}</el-radio-button>
-        </el-radio-group>
+        <BaseTabs v-model="activeCat" :items="catTabItems" testid="bizpur-cat" />
       </div>
     </div>
 

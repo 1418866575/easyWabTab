@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import { DIALOG_BTN } from '@/config/dialogText'
 import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
@@ -126,6 +127,12 @@ const sortedCategories = computed<NoteCategory[]>(() =>
 
 // 标签页可见分类：showInTabs !== false（undefined/true 显示，false 隐藏）——公式走 noteCore.tabCategoriesOf 纯函数，组件禁止重算
 const tabCategories = computed<NoteCategory[]>(() => tabCategoriesOf(sortedCategories.value))
+/** 分类页签：全部 / 未分类 / 可见分类（「全部」用 'all'，与 selectCategoryTab 的 undefined 映射保持一致） */
+const catTabItems = computed(() => [
+  { value: 'all', label: '全部', testid: 'nt-cat-all' },
+  { value: 'uncategorized', label: '未分类', testid: 'nt-cat-uncategorized' },
+  ...tabCategories.value.map((c) => ({ value: c.id, label: c.name, testid: `nt-cat-${c.id}` }))
+])
 
 // 过滤后的便签列表：先 store.sortedNotes（置顶→updatedAt 降序）再走 noteCore.filterNotes（类型/分类/关键词），过滤公式一律走 noteCore
 const filteredNotes = computed<WorkbenchNote[]>(() =>
@@ -484,16 +491,12 @@ onUnmounted(() => {
 
     <!-- 分类筛选标签页（全部/未分类/可见分类，即时过滤）+ 新增便签按钮靠右 -->
     <div class="nt-cat-tabs">
-      <el-radio-group :model-value="activeCategoryId" @update:model-value="selectCategoryTab($event === 'all' ? undefined : $event)">
-        <el-radio-button :value="undefined" data-testid="nt-cat-all">全部</el-radio-button>
-        <el-radio-button value="uncategorized" data-testid="nt-cat-uncategorized">未分类</el-radio-button>
-        <el-radio-button
-          v-for="cat in tabCategories"
-          :key="cat.id"
-          :value="cat.id"
-          :data-testid="`nt-cat-${cat.id}`"
-        >{{ cat.name }}</el-radio-button>
-      </el-radio-group>
+      <BaseTabs
+        :model-value="activeCategoryId ?? 'all'"
+        :items="catTabItems"
+        testid="nt-cat"
+        @update:model-value="selectCategoryTab($event === 'all' ? undefined : $event)"
+      />
       <span class="nt-toolbar-count" data-testid="nt-toolbar-count">
         <template v-if="hasActiveFilter">{{ countText }}</template>
       </span>

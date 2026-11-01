@@ -609,23 +609,15 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
       <!-- 工具条 -->
       <StudentToolbar title="👨‍👩‍👧 家长协同控制台" />
 
-      <!-- Tabs 标签栏（样式参考健康管理 WorkbenchHealth.vue 的 hd-tabs/hd-tab） -->
-      <nav class="hd-tabs stp-tabs" role="tablist" data-testid="stp-tabs">
-        <button
-          v-for="t in TABS"
-          :key="t.key"
-          role="tab"
-          type="button"
-          class="hd-tab stp-tab"
-          :class="{ active: activeTab === t.key }"
-          :aria-selected="activeTab === t.key"
-          :data-testid="`stp-tab-${t.key}`"
-          @click="activeTab = t.key"
-        >
-          <span class="hd-tab-icon stp-tab-icon"><Icon :name="t.icon" /></span>
-          <span class="hd-tab-label">{{ t.label }}</span>
-        </button>
-      </nav>
+      <!-- Tabs 标签栏：统一走 common/BaseTabs（原自绘 hd-tabs 副本已移除） -->
+      <BaseTabs
+        v-model="activeTab"
+        :items="TABS"
+        value-field="key"
+        testid="stp-tab"
+        class="stp-tabs"
+        data-testid="stp-tabs"
+      />
 
       <div class="stp-tab-content">
         <!-- Tab 1: 统计（4 张统计卡 + 重置操作卡） -->
@@ -990,55 +982,9 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
 .stp-reset-desc { font-size: 12px; color: var(--color-text-secondary, #6b7280); }
 .stp-reset-actions { display: flex; gap: 10px; flex-shrink: 0; }
 
-/* ============================================================
-   Tabs：复用健康管理 WorkbenchHealth.vue 的 hd-tabs/hd-tab 样式。
-   以下只覆盖局部差异：底部间距、暗色下 stp-tab-icon 与图标字色。
-   （hd-tabs/hd-tab/hd-tab-icon/hd-tab-label/暗色覆盖 均已在 WorkbenchHealth.vue 定义了
-   全局无 scope 的等价规则是不存在的，因此这里就地补全 hd-tabs/hd-tab 的完整健康管理样式
-   以保证 StudentParent.vue scoped 下也能生效。）
-   ============================================================ */
+/* Tabs：皮肤统一由 common/BaseTabs.vue 提供，这里只保留底部间距 */
 .stp-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
   margin-bottom: 16px;
-}
-.stp-tab {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 8px;
-  background-color: var(--color-surface, #ffffff);
-  color: var(--color-text-secondary, #64748b);
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.stp-tab-icon { display: inline-flex; align-items: center; justify-content: center; }
-.stp-tab:hover {
-  background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-primary, #10b981);
-}
-.stp-tab.active {
-  background-color: var(--color-primary-light, #ecfdf5);
-  color: var(--color-primary, #10b981);
-  font-weight: 600;
-}
-/* 暗色模式（视觉对齐健康管理 WorkbenchHealth.vue:91-105） */
-html.dark .stp-tab {
-  background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
-  border-color: var(--color-border, #374151);
-}
-html.dark .stp-tab:hover {
-  background-color: var(--color-bg-hover, #374151);
-  color: var(--color-text, #f9fafb);
-}
-html.dark .stp-tab.active {
-  background-color: #1e3a5f;
-  color: #60a5fa;
 }
 
 .stp-tab-content {

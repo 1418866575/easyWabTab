@@ -335,6 +335,74 @@ import { DIALOG_BTN } from '@/config/dialogText'
 > `style.css` 另有 `--z-dropdown/modal/tooltip/overlay`（100/200/300/400），>   
 > 但 **BaseDialog 实际固定 300**，以本表为准；特殊叠层用组件 class 覆盖。
 
+### 2.7 标签页（`BaseTabs`）⭐
+
+**唯一标签页组件**：`src/components/common/BaseTabs.vue`。
+**禁止**再自建 `*-tabs` / `*-tab` 的按钮皮肤（此前 20+ 处各写一份，样式漂移）。视觉蓝本＝个人工作台 → 健康管理。
+
+#### API
+
+| Prop           | 默认        | 说明                                     |
+| -------------- | --------- | -------------------------------------- |
+| `modelValue`   | —         | 当前选中值（配合 `v-model`）                    |
+| `items`        | —         | 标签数组，元素至少含 value/label                 |
+| `valueField`   | `'value'` | 取值字段名（兼容 `{key,label}` 的既有数组传 `'key'`） |
+| `labelField`   | `'label'` | 取文案字段名                                 |
+| `iconField`    | `'icon'`  | 取图标字段名；该项无值则不渲染图标                      |
+| `badgeField`   | `'badge'` | 右侧计数；无值不渲染                             |
+| `testidField`  | `'testid'`| 单项自带 `data-testid`（优先于前缀生成）            |
+| `testid`       | `''`      | 前缀，生成 `${testid}-${value}`             |
+| `imageField`   | `'image'` | 图片图标（URL / dataURI），优先级最高              |
+| `emojiField`   | `'emoji'` | 文本图标（emoji），优先于 `icon`（SVG 名）         |
+| `deselectable` | `false`   | 允许再次点击已选项取消选中（emit `''`）              |
+
+图标优先级：`image`（图片）＞ `emoji`（文本）＞ `icon`（SVG 名）。
+
+事件：`update:modelValue`（单选，与 `v-model` 配套）。
+
+#### 标准用法
+
+```vue
+<script setup lang="ts">
+import BaseTabs from '@/components/common/BaseTabs.vue'
+const active = ref('all')
+const tabs = computed(() => [
+  { value: 'all', label: '全部', testid: 'xx-cat-all' },
+  ...store.categories.map((c) => ({ value: c.id, label: c.name, testid: `xx-cat-${c.id}` })),
+])
+</script>
+
+<template>
+  <BaseTabs v-model="active" :items="tabs" testid="xx-cat" />
+</template>
+```
+
+#### 视觉规格（组件内已固定，不要再覆盖）
+
+| 项 | 值 |
+| --- | --- |
+| 容器 | `flex-wrap` + `gap: 8px` |
+| 单块 | `padding: 8px 16px`、圆角 `--radius-md`(8px)、1px `--color-border` 描边、白底、次要文字色、**14px** |
+| hover | 底色 `--color-bg-hover` + 文字主色 |
+| 选中 | 底色 `--color-primary-light` + 文字主色 + 主色描边 + 字重 600 |
+| 暗色 | 三态各一套覆盖（白底→`--color-bg-card` 深色、选中→`#1e3a5f` + `#60a5fa`） |
+| 图标 | 与文字间距 6px，垂直居中 |
+
+#### 约定
+
+- **不要写 `--font-size-base`**：那是 15~16px 的响应式字号，会把页签撑大；页签固定 14px。
+- 「全部 / 未分类」这类固定项也走 `items`（自带 `testid`），不要再在外面拼 `el-radio-button`。
+- 需要「再次点击取消筛选」的页签（学生成绩 → 学科筛选）**不适用**本组件——`el-radio-group` 天然互斥；
+  这类交互单独实现并注释原因，不要为了统一而丢功能。
+- 页签是**视图切换 / 筛选**，不是表单单选；表单里的单选按钮继续用 `el-radio-group` 原样，不要套 `BaseTabs`。
+- **可取消筛选**用 `deselectable`：族谱、成绩学科筛选这类「再点一次回到全部」的页签，
+  传 `deselectable` 即可，仍在组件内实现，不要另写一套。
+- 存量已全部迁移（2026-11）：`fg-tab`（族谱）、`help-tab`（帮助）、`bk-tab`（书架）、
+  `category-tab`（首页分类，`deselectable`）、`stp-tabs`（家长协同，原为 hd-tabs 副本）、
+  `se-tab`（成绩学科，`deselectable`）。
+  仅 `wbcat-tab-*`（设置里分类可见性的**复选行**）与 `stp-tab-pane`（页签**内容面板**）保持原样——
+  它们不是页签。
+
 ---
 
 ## 3. 代码风格

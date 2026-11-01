@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 // 商品管理：分类 tabs（全部 + 可见分类）+ 商品卡片网格 + 新增/编辑弹框 + ⚙️ 分类管理
 // P1-3：跨模块联动跳转（商品名可点击跳转「库存」页）
 // P2-2：商品详情抽屉
@@ -34,6 +35,11 @@ const toast = useToast()
 const activeCat = ref('all')
 
 const tabs = computed(() => visibleProductCategories(store.productCategories))
+/** 分类标签页：全部 + 可见分类 */
+const catTabItems = computed(() => [
+  { value: 'all', label: '全部', testid: 'bizprod-cat-all' },
+  ...tabs.value.map((c) => ({ value: c.id, label: c.name, testid: `bizprod-cat-${c.id}` }))
+])
 
 const filteredProducts = computed(() => {
   const all = sortProducts(store.products)
@@ -342,15 +348,7 @@ function drawerMarkupRate(): number | null {
     <!-- 分类 tabs + 新增/分类管理 -->
     <div class="bizprod-bar">
       <div class="bizprod-tabs">
-        <el-radio-group v-model="activeCat">
-          <el-radio-button value="all" data-testid="bizprod-cat-all">全部</el-radio-button>
-          <el-radio-button
-            v-for="cat in tabs"
-            :key="cat.id"
-            :value="cat.id"
-            :data-testid="`bizprod-cat-${cat.id}`"
-          >{{ cat.name }}</el-radio-button>
-        </el-radio-group>
+        <BaseTabs v-model="activeCat" :items="catTabItems" testid="bizprod-cat" />
       </div>
       <el-button type="primary" data-testid="bizprod-add" @click="startAdd">＋ 新增商品</el-button>
     </div>

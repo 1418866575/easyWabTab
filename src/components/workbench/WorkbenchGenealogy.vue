@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { showConfirm } from '@/utils/dialog'
 import { useViewMode } from '@/composables/useViewMode'
@@ -39,6 +40,12 @@ const NAME_GENDER_LABEL: Record<string, string> = { male: '男', female: '女', 
 // ===== Tab：成员管理 / 家谱树 / 取名记录 =====
 type TabKey = 'members' | 'tree' | 'names'
 const activeTab = ref<TabKey>('members')
+/** 页签数据（value 即 TabKey） */
+const TAB_ITEMS: { value: TabKey; label: string; testid: string }[] = [
+  { value: 'members', label: '成员管理', testid: 'fg-tab-members' },
+  { value: 'tree', label: '家谱树', testid: 'fg-tab-tree' },
+  { value: 'names', label: '取名记录', testid: 'fg-tab-names' }
+]
 
 // ===== 搜索（按姓名）=====
 const searchName = ref('')
@@ -720,33 +727,8 @@ onUnmounted(() => {
 
 <template>
   <div class="wb-genealogy">
-    <!-- Tab 切换：成员管理 / 家谱树 -->
-    <div class="fg-tabs" role="tablist">
-      <button
-        class="fg-tab"
-        :class="{ active: activeTab === 'members' }"
-        role="tab"
-        :aria-selected="activeTab === 'members'"
-        data-testid="fg-tab-members"
-        @click="activeTab = 'members'"
-      >成员管理</button>
-      <button
-        class="fg-tab"
-        :class="{ active: activeTab === 'tree' }"
-        role="tab"
-        :aria-selected="activeTab === 'tree'"
-        data-testid="fg-tab-tree"
-        @click="activeTab = 'tree'"
-      >家谱树</button>
-      <button
-        class="fg-tab"
-        :class="{ active: activeTab === 'names' }"
-        role="tab"
-        :aria-selected="activeTab === 'names'"
-        data-testid="fg-tab-names"
-        @click="activeTab = 'names'"
-      >取名记录</button>
-    </div>
+    <!-- Tab 切换：成员管理 / 家谱树 / 取名记录（统一走 common/BaseTabs） -->
+    <BaseTabs v-model="activeTab" :items="TAB_ITEMS" testid="fg-tab" />
 
     <!-- ========== 成员管理 ========== -->
     <template v-if="activeTab === 'members'">
@@ -1335,28 +1317,7 @@ onUnmounted(() => {
   gap: 16px;
 }
 
-/* ===== Tab ===== */
-.fg-tabs {
-  display: flex;
-  gap: 8px;
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
-}
-.fg-tab {
-  padding: 8px 18px;
-  font-size: 14px;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--color-text-secondary, #64748b);
-  cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
-}
-.fg-tab:hover { color: var(--color-primary, #3b82f6); }
-.fg-tab.active {
-  color: var(--color-primary, #3b82f6);
-  border-bottom-color: var(--color-primary, #3b82f6);
-  font-weight: 600;
-}
+/* Tab 皮肤由 common/BaseTabs.vue 提供（原下划线式页签已移除） */
 
 /* ===== 搜索 / 工具栏 ===== */
 .fg-search { width: 200px; }
@@ -1615,8 +1576,6 @@ html.dark .fg-age-preview { border-color: var(--color-border, #374151); }
 html.dark .avatar-preview { background: var(--color-bg-card, #1f2937); }
 
 /* ===== 暗色覆盖 ===== */
-html.dark .fg-tab { color: var(--color-text-secondary, #d1d5db); }
-html.dark .fg-tab:hover, html.dark .fg-tab.active { color: var(--color-primary, #60a5fa); border-bottom-color: var(--color-primary, #3b82f6); }
 /* html.dark .empty-state 背景已由全局 .empty-state 的 --color-bg-card token 自动跟随 */
 html.dark .fg-name { color: var(--color-text, #f9fafb); }
 html.dark .fn-name { color: var(--color-text, #f9fafb); }

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 // 学生工作台考试倒计时面板（M2）
@@ -38,10 +39,8 @@ const activeCategoryTab = ref<string>('')
 // 题型 tabs：不再展示「全部」按钮；空值 = 全部，再次点击已选题型可取消筛选回到全部
 const typeTabs = computed<string[]>(() => examTypeOptions(stage.value, store.customCategories))
 
-function toggleCategoryTab(tab: string): void {
-  activeCategoryTab.value = activeCategoryTab.value === tab ? '' : tab
-  goto(1)
-}
+/** 学科页签：可再次点击取消（BaseTabs deselectable） */
+const examTabItems = computed(() => typeTabs.value.map((t) => ({ value: t, label: t, testid: `se-tab-${t}` })))
 
 const appliedFilters = computed<CountdownFilterCriteria>(() => ({
   category: (activeCategoryTab.value || undefined) as CountdownCategory | undefined
@@ -221,15 +220,13 @@ onMounted(async () => {
     <StudentToolbar title="考试倒计时" />
 
     <div class="se-tabs">
-      <el-radio-group :model-value="activeCategoryTab" size="small">
-        <el-radio-button
-          v-for="tab in typeTabs"
-          :key="tab"
-          :value="tab"
-          :data-testid="`se-tab-${tab}`"
-          @click="toggleCategoryTab(tab)"
-        >{{ tab }}</el-radio-button>
-      </el-radio-group>
+      <BaseTabs
+      v-model="activeCategoryTab"
+      :items="examTabItems"
+      testid="se-tab"
+      deselectable
+      @update:model-value="goto(1)"
+    />
     </div>
 
     <div class="se-stats">

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useViewMode } from '@/composables/useViewMode'
 import RecordsCard from '@/components/common/RecordsCard.vue'
@@ -41,6 +42,11 @@ const activeView = ref<ViewTab>('rewards')
 
 // ===== 统计卡数据 =====
 const stats = computed(() => store.stats())
+/** 视图标签页：奖励项 / 交易记录（带笔数） */
+const viewTabItems = computed(() => [
+  { value: 'rewards', label: '奖励项', testid: 'sr-tab-rewards' },
+  { value: 'history', label: '交易记录', badge: stats.value.txnCount, testid: 'sr-tab-history' }
+])
 
 // ===== 奖励项网格视图（行高 152px，参考学习计划 4 列 150px 高卡片） =====
 const mainEl = ref<HTMLElement | null>(null)
@@ -161,10 +167,7 @@ onMounted(async () => {
       </div>
     </div>
 
-    <el-radio-group v-model="activeView" class="sr-tabs">
-      <el-radio-button value="rewards" data-testid="sr-tab-rewards">奖励项</el-radio-button>
-      <el-radio-button value="history" data-testid="sr-tab-history">交易记录 <span class="sr-tab-count">({{ stats.txnCount }})</span></el-radio-button>
-    </el-radio-group>
+    <BaseTabs v-model="activeView" :items="viewTabItems" testid="sr-tab" class="sr-tabs" />
 
     <!-- 奖励项视图 -->
     <div v-if="activeView === 'rewards'" ref="mainEl" class="sr-main">

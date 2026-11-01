@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 // 学生工作台习惯打卡面板（M2）
@@ -298,14 +299,7 @@ onMounted(async () => {
       </el-button>
     </StudentToolbar>
 
-    <el-radio-group v-model="activeCategory" class="sh-cat-tabs" size="small">
-      <el-radio-button
-        v-for="tab in categoryTabs"
-        :key="tab.key"
-        :value="tab.key"
-        :data-testid="`sh-cat-${tab.key}`"
-      >{{ tab.label }}</el-radio-button>
-    </el-radio-group>
+    <BaseTabs v-model="activeCategory" :items="categoryTabs" value-field="key" testid="sh-cat" class="sh-cat-tabs" />
 
     <div class="sh-main">
       <div v-if="store.habits.length === 0" class="empty-state" data-testid="sh-empty">
