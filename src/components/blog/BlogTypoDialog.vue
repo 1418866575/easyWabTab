@@ -1,39 +1,49 @@
 <script setup lang="ts">
 /**
  * 排版主题选择弹框。
+ * - 顶部搜索框：按主题名称（颜色名）/ 描述过滤
+ * - 「最近使用」分组置顶（localStorage 记录最近 5 个，应用即记录）
  * - 点卡片：应用到本篇并选中（✓ 徽章）；选中卡片的「使用」按钮 = 应用并关闭
  * - 点卡片脚「设默认」：改全站默认主题（emit setDefault；再点一次回落 classic，防默认悬空）
  * - 卡片 = 该主题 token 渲染的迷你示例（非截图，主题扩充自动生成）
- * 视觉按参考稿 typesetting-theme-picker.html：宽弹框 + 3 列高卡片 + 选中 ✓。
  * 壳走 BaseDialog（规范 §2.2：弹框唯一基类，禁止自建 overlay）。
  */
 import { computed, ref } from 'vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
+import Icon from '@/components/Icon.vue'
 import { TYPO_THEMES } from '@/composables/blogTypoCore'
-import type { TypoGroup, TypoTheme } from '@/composables/blogTypoCore'
+import type { TypoTheme } from '@/composables/blogTypoCore'
 import { decorateTypoHtml } from '@/composables/blogTypoDecor'
 
 const props = defineProps<{ themeId: string; defaultId: string }>()
 const emit = defineEmits<{ apply: [id: string]; setDefault: [id: string]; close: [] }>()
 
-type PillKey = 'all' | TypoGroup
-const pill = ref<PillKey>('all')
+/** 「最近使用」：UI 偏好，localStorage 记录最近 5 个主题 id（最新在前、去重） */
+const RECENT_KEY = 'blog-typo-recent'
+const RECENT_MAX = 5
 
-const PILLS: Array<{ k: PillKey; n: string }> = [
-  { k: 'all', n: '全部' },
-  { k: 'zhaotab', n: '找Tab' },
-  { k: 'color', n: '彩色' },
-  { k: 'simple', n: '简约' },
-  { k: 'wechat', n: '公众号' }
-]
-
-const list = computed(() => TYPO_THEMES.filter((t) => pill.value === 'all' || t.group === pill.value))
-
-function countOf(k: PillKey): number {
-  return k === 'all' ? TYPO_THEMES.length : TYPO_THEMES.filter((t) => t.group === k).length
+function loadRecent(): string[] {
+  try {
+    const raw = localStorage.getItem(RECENT_KEY)
+    const arr: unknown = raw ? JSON.parse(raw) : []
+    if (!Array.isArray(arr)) return []
+    return arr.filter((x): x is string => typeof x === 'string' && TYPO_THEMES.some((t) => t.id === x))
+  } catch {
+    return []
+  }
 }
 
+const recentIds = ref<string[]>(loadRecent())
+
+const query = ref('')
+
 function onApply(id: string): void {
+  recentIds.value = [id, ...recentIds.value.filter((x) => x !== id)].slice(0, RECENT_MAX)
+  try {
+    localStorage.setItem(RECENT_KEY, JSON.stringify(recentIds.value))
+  } catch {
+    /* 隐私模式等场景写不进就算了：分组只是便利，不影响功能 */
+  }
   emit('apply', id)
 }
 
@@ -46,6 +56,30 @@ function onUse(id: string): void {
 function onSetDefault(id: string): void {
   emit('setDefault', id === props.defaultId ? 't_classic' : id)
 }
+
+/** 过滤：主题名称（颜色名）与描述都参与匹配，空查询 = 全部 */
+const q = computed(() => query.value.trim().toLowerCase())
+
+function matchTheme(t: TypoTheme): boolean {
+  if (!q.value) return true
+  return t.name.toLowerCase().includes(q.value) || t.desc.toLowerCase().includes(q.value)
+}
+
+const recentList = computed(() =>
+  recentIds.value
+    .map((id) => TYPO_THEMES.find((t) => t.id === id))
+    .filter((t): t is TypoTheme => !!t && matchTheme(t))
+)
+
+const allList = computed(() => TYPO_THEMES.filter((t) => !recentIds.value.includes(t.id) && matchTheme(t)))
+
+/** 渲染分组：最近使用置顶，其余归入「全部主题 / 搜索结果」；空组不显示 */
+const sections = computed(() => {
+  const out: Array<{ key: string; title: string; count: number; items: TypoTheme[] }> = []
+  if (recentList.value.length) out.push({ key: 'recent', title: '最近使用', count: recentList.value.length, items: recentList.value })
+  if (allList.value.length) out.push({ key: 'all', title: q.value ? '搜索结果' : '全部主题', count: allList.value.length, items: allList.value })
+  return out
+})
 
 /** 迷你示例：真实标签渲染（markdown.css + 主题 token + 找Tab 装饰/结构样式原样呈现） */
 const SAMPLE_HTML =
@@ -75,67 +109,76 @@ function miniStyle(t: TypoTheme): Record<string, string> {
     @close="emit('close')"
   >
     <div class="td">
-      <div class="td-pills" role="group" aria-label="主题分类筛选">
-        <button
-          v-for="p in PILLS"
-          :key="p.k"
-          type="button"
-          class="td-pill"
-          :class="{ 'is-on': pill === p.k }"
-          :data-testid="`blog-typo-pill-${p.k}`"
-          @click="pill = p.k"
-        >
-          {{ p.n }} {{ countOf(p.k) }}
-        </button>
+      <div class="ui-search td-search" role="search">
+        <Icon name="search" :size="14" />
+        <input
+          v-model="query"
+          class="ui-search-input"
+          type="text"
+          placeholder="按颜色名或描述搜索，如：青提 / 藏蓝 / 公众号…"
+          data-testid="blog-typo-search"
+        />
       </div>
 
-      <div class="td-grid" data-testid="blog-typo-grid">
-        <div
-          v-for="t in list"
-          :key="t.id"
-          class="td-card"
-          :class="{ 'is-on': t.id === themeId }"
-          :title="t.desc"
-          :data-testid="`blog-typo-card-${t.id}`"
-          role="button"
-          tabindex="0"
-          @click="onApply(t.id)"
-          @keydown.enter="onApply(t.id)"
-        >
-          <span v-if="t.id === themeId" class="td-check" aria-hidden="true">✓</span>
+      <div class="td-scroll">
+        <section v-for="sec in sections" :key="sec.key" class="td-section">
+          <h3 class="td-group-title">
+            {{ sec.title }}
+            <span class="td-group-count">{{ sec.count }}</span>
+          </h3>
+          <div class="td-grid" :data-testid="`blog-typo-grid-${sec.key}`">
+            <div
+              v-for="t in sec.items"
+              :key="t.id"
+              class="td-card"
+              :class="{ 'is-on': t.id === themeId }"
+              :title="t.desc"
+              :data-testid="`blog-typo-card-${t.id}`"
+              role="button"
+              tabindex="0"
+              @click="onApply(t.id)"
+              @keydown.enter="onApply(t.id)"
+            >
+              <span v-if="t.id === themeId" class="td-check" aria-hidden="true">✓</span>
 
-          <!-- 迷你示例：真实标签渲染（token + 找Tab 装饰/结构样式） -->
-          <div
-            class="td-mini md-body"
-            :style="miniStyle(t)"
-            :data-typo="t.id"
-            v-html="miniHtml(t)"
-          ></div>
+              <!-- 迷你示例：真实标签渲染（token + 找Tab 装饰/结构样式） -->
+              <div
+                class="td-mini md-body"
+                :style="miniStyle(t)"
+                :data-typo="t.id"
+                v-html="miniHtml(t)"
+              ></div>
 
-          <span class="td-foot">
-            <span class="td-name">
-              <span class="td-swatch" :style="{ background: t.swatch }" aria-hidden="true"></span>
-              {{ t.name }}
-            </span>
-            <span class="td-ops">
-              <span
-                class="td-def"
-                role="button"
-                tabindex="0"
-                :data-testid="`blog-typo-default-${t.id}`"
-                @click.stop="onSetDefault(t.id)"
-                @keydown.enter.stop="onSetDefault(t.id)"
-              >{{ defaultId === t.id ? '已默认' : '设默认' }}</span>
-              <span v-if="defaultId === t.id" class="td-badge">默认</span>
-              <button
-                v-if="t.id === themeId"
-                type="button"
-                class="td-use"
-                data-testid="blog-typo-use"
-                @click.stop="onUse(t.id)"
-              >使用</button>
-            </span>
-          </span>
+              <span class="td-foot">
+                <span class="td-name">
+                  <span class="td-swatch" :style="{ background: t.swatch }" aria-hidden="true"></span>
+                  {{ t.name }}
+                </span>
+                <span class="td-ops">
+                  <span
+                    class="td-def"
+                    role="button"
+                    tabindex="0"
+                    :data-testid="`blog-typo-default-${t.id}`"
+                    @click.stop="onSetDefault(t.id)"
+                    @keydown.enter.stop="onSetDefault(t.id)"
+                  >{{ defaultId === t.id ? '已默认' : '设默认' }}</span>
+                  <span v-if="defaultId === t.id" class="td-badge">默认</span>
+                  <button
+                    v-if="t.id === themeId"
+                    type="button"
+                    class="td-use"
+                    data-testid="blog-typo-use"
+                    @click.stop="onUse(t.id)"
+                  >使用</button>
+                </span>
+              </span>
+            </div>
+          </div>
+        </section>
+
+        <div v-if="sections.length === 0" class="td-empty" data-testid="blog-typo-empty">
+          没有匹配「{{ query }}」的主题，换个关键词试试
         </div>
       </div>
 
@@ -145,26 +188,54 @@ function miniStyle(t: TypoTheme): Record<string, string> {
 </template>
 
 <style scoped>
-.td { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+.td { display: flex; flex-direction: column; gap: 14px; min-height: 0; height: 100%; }
 
-.td-pills { display: flex; flex-wrap: wrap; gap: 10px; }
-.td-pill {
-  min-height: 30px;
-  padding: 0 16px;
-  border: 1px solid var(--ds-line, #ececf0);
-  border-radius: var(--ds-radius-pill, 999px);
-  background: var(--ds-card, #ffffff);
-  color: var(--ds-text-2, #646a73);
+/* 搜索框：全站 .ui-search 外壳（描边/焦点环在壳上），内层透明 */
+.td-search { flex: none; }
+.td-search .ui-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--ds-text, #1f2329);
   font-family: inherit;
   font-size: 13px;
-  cursor: pointer;
-  transition: border-color 0.15s, background-color 0.15s, color 0.15s;
 }
-.td-pill:hover { border-color: var(--color-border-strong, #cbd5e1); }
-.td-pill.is-on {
-  border-color: var(--color-primary, #3b82f6);
-  background: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+
+/* 分组列表区：统一滚动容器（原 3 列网格各自滚动改为整体滚动） */
+.td-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-right: 4px;
+}
+
+.td-section { display: flex; flex-direction: column; gap: 10px; }
+
+.td-group-title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--ds-text, #1f2329);
+}
+
+.td-group-count {
+  min-width: 18px;
+  padding: 0 6px;
+  border-radius: var(--ds-radius-pill, 999px);
+  background: var(--ds-bg, #f7f8fa);
+  color: var(--ds-text-3, #9aa0a6);
+  font-size: 11px;
+  font-weight: var(--font-weight-medium, 500);
+  line-height: 18px;
+  text-align: center;
 }
 
 /* 3 列高卡片；窄屏降列 */
@@ -172,8 +243,6 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
-  overflow-y: auto;
-  min-height: 0;
 }
 
 .td-card {
@@ -255,7 +324,18 @@ function miniStyle(t: TypoTheme): Record<string, string> {
 }
 .td-use:hover { background: var(--color-primary-soft, #eff6ff); }
 
-.td-hint { margin: 0; font-size: 11px; color: var(--ds-text-3, #9aa0a6); }
+/* 无匹配：虚线空态（与列表空态同语言） */
+.td-empty {
+  padding: 48px 16px;
+  border: 1px dashed var(--ds-line, #ececf0);
+  border-radius: var(--ds-radius-card, 12px);
+  background: var(--ds-card, #ffffff);
+  color: var(--ds-text-2, #646a73);
+  font-size: 13px;
+  text-align: center;
+}
+
+.td-hint { margin: 0; flex: none; font-size: 11px; color: var(--ds-text-3, #9aa0a6); }
 
 @media (max-width: 960px) {
   .td-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
