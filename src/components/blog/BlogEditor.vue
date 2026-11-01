@@ -1388,8 +1388,7 @@ async function regenerateSlug(): Promise<void> {
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: transparent;
   color: var(--ds-text-2, #646a73);
-  font-size: 13px;
-  font-weight: var(--font-weight-semibold, 600);
+  font-size: 14px;
   line-height: 1.2;
   white-space: nowrap;
   cursor: pointer;
