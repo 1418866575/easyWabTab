@@ -311,14 +311,20 @@ function openSite(url: string) {
      会导致它和输入框各占一半宽度（「下拉框太宽」的根因）。
      去原生箭头换自绘 chevron，右侧加分隔线，与输入区分开。 */
   flex: none;
+  /* 高度与右侧 .search-btn 一致：同为 stretch + 3px 外边距（内高 - 6px） */
+  align-self: stretch;
+  margin: 3px 0 3px 3px;
   width: auto;
   min-width: 92px;
   max-width: 132px;
   padding: 0 24px 0 14px;
   border: 0;
   border-right: 1px solid var(--color-border);
-  border-radius: 0;
-  background-color: transparent;
+  /* 与按钮同款圆角（内圆角 = 外壳圆角 - 2px） */
+  border-radius: calc(var(--input-radius, 8px) - 2px);
+  /* 卡片色与输入区（--color-bg-input）区分：亮色下白块嵌在浅灰框里，
+     暗色下 --color-bg-card 比 --color-bg-input 更深，层次同样成立 */
+  background-color: var(--color-bg-card, #ffffff);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 8px center;
