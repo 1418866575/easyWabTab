@@ -658,7 +658,7 @@ onMounted(async () => {
             <el-button class="btn-cancel" data-testid="ld-cancel" @click="cancelForm">{{ DIALOG_BTN.close }}</el-button>
             <!-- 原生提交类型必须用 native-type：el-button 的 type 只作用于样式（按钮外观），
                  写成 type="submit" 会渲染成 type="button" → 点它不会提交表单，handleSave 永不触发。 -->
-            <el-button native-type="submit" class="btn-save" :disabled="!isFormValid" data-testid="ld-save">{{ DIALOG_BTN.save }}</el-button>
+            <el-button type="primary" native-type="submit" class="btn-save" :disabled="!isFormValid" data-testid="ld-save">{{ DIALOG_BTN.save }}</el-button>
             <el-button v-if="editingId" type="danger" native-type="button" data-testid="ld-record-delete" @click="handleDelete(editingId)">删除</el-button>
           </div>
         </form>
@@ -1295,27 +1295,6 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   justify-content: flex-end;
 }
 
-.btn-save {
-  padding: 9px 18px;
-  background: var(--color-primary, var(--color-primary));
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  cursor: pointer;
-  color: #fff;
-  white-space: nowrap;
-  transition: background-color var(--transition-fast, 0.15s ease);
-}
-
-.btn-save:hover:not(:disabled) {
-  background: var(--color-primary-hover, var(--color-primary-hover));
-}
-
-.btn-save:disabled {
-  background: var(--color-text-muted, var(--color-text-muted));
-  cursor: not-allowed;
-}
-
 /* .btn-cancel 视觉已统一到全局 .ui-btn（style.css） */
 
 /* ===== 分组管理 ===== */
@@ -1500,11 +1479,6 @@ html.dark .today-btn {
 }
 
 /* 禁用态保存按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */
-html.dark .btn-save:disabled {
-  background-color: var(--color-bg-input, #374151);
-  color: var(--color-text-muted, #9ca3af);
-}
-
 /* html.dark .btn-add:disabled 视觉已统一到全局 .ui-btn--primary（style.css） */
 
 html.dark .form-input,

@@ -213,6 +213,12 @@ import { DIALOG_BTN } from '@/config/dialogText'
 
 - 组件里**不要裸写**「取消 / 新增 / 添加 / 保存」，一律引用 `DIALOG_BTN`；改配置即全站生效。
 - 已是「关闭」「保存」的不用动；危险操作按钮（删除 / 清空 / 驳回）保持各自语义。
+- **视觉与教师工作台 `.tw-btn` 对齐**：胶囊圆角（999px）、36px 高、13px / 字重 500；
+  关闭 = 白底 + `--color-border` 描边 + 正文色，hover 换 `--color-bg-hover`；
+  保存 = 实心 `--color-primary` + 白字，hover 用 `--color-primary-hover`，禁用 = 主色 + `opacity .5`。
+  由 `src/styles/element-theme.css` 末尾的「弹框底部按钮」段统一提供，作用域为 `.bd-footer` /
+  `.ewt-dialog-footer` / `.biz-form-actions` / `.site-form-actions` / `.pwd-form-actions` / `.form-actions`。
+  **各面板不要再自绘 `.btn-save` 之类的按钮皮肤**（会盖住全局规则）。
 - **例外**：`ConfirmHost`（`showConfirm` 的确认框）沿用「取消 / 确定」——它表达的是「取消本次操作」而非「关闭弹框」。
 
 

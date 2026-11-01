@@ -488,8 +488,8 @@ onUnmounted(() => {
       <input ref="fileInputRef" type="file" accept="image/*" multiple hidden @change="handleImageFiles" />
 
       <template #footer>
-        <button class="btn-cancel" data-testid="hb-detail-cancel" @click="closeDetail">{{ DIALOG_BTN.close }}</button>
-        <button class="btn-submit" data-testid="hb-detail-save" :disabled="!detailDirty" @click="saveDetail">
+        <button class="tw-btn" data-testid="hb-detail-cancel" @click="closeDetail">{{ DIALOG_BTN.close }}</button>
+        <button class="tw-btn tw-btn-primary" data-testid="hb-detail-save" :disabled="!detailDirty" @click="saveDetail">
           保存
         </button>
       </template>
@@ -792,10 +792,6 @@ html.is-touch .habit-detail-remove {
   color: var(--color-text-muted, #94a3b8);
 }
 
-.btn-submit:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 
 /* 预览层：层级低于 toast、高于 BaseDialog（300），保证放大图盖在详情弹框之上 */
 .habit-detail-preview {

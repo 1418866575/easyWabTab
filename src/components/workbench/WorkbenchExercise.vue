@@ -445,7 +445,7 @@ onMounted(async () => {
               </el-button>
               <span class="form-actions-spacer"></span>
               <el-button native-type="button" class="btn-cancel" data-testid="ex-cancel" @click="closeTargetDialog">{{ DIALOG_BTN.close }}</el-button>
-              <el-button native-type="submit" class="btn-save" :disabled="!isTargetValid" data-testid="ex-save">保存</el-button>
+              <el-button type="primary" native-type="submit" class="btn-save" :disabled="!isTargetValid" data-testid="ex-save">保存</el-button>
             </div>
           </form>
       </BaseDialog>
@@ -569,7 +569,7 @@ onMounted(async () => {
 
             <div class="form-actions ewt-dialog-footer">
               <el-button native-type="button" class="btn-cancel" data-testid="ex-cancel-record" @click="cancelRecordForm">{{ DIALOG_BTN.close }}</el-button>
-              <el-button native-type="submit" class="btn-save" :disabled="!isFormValid" data-testid="ex-save-record">{{ DIALOG_BTN.save }}</el-button>
+              <el-button type="primary" native-type="submit" class="btn-save" :disabled="!isFormValid" data-testid="ex-save-record">{{ DIALOG_BTN.save }}</el-button>
               <el-button v-if="editingId" type="danger" native-type="button" data-testid="ex-record-delete" @click="handleDeleteRecord(editingId)">删除</el-button>
             </div>
           </form>
@@ -809,27 +809,6 @@ onMounted(async () => {
   flex: 1;
 }
 
-.btn-save {
-  padding: 9px 18px;
-  background: var(--color-primary, var(--color-primary));
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  cursor: pointer;
-  color: #fff;
-  white-space: nowrap;
-  transition: background-color var(--transition-fast, 0.15s ease);
-}
-
-.btn-save:hover:not(:disabled) {
-  background: var(--color-primary-hover, var(--color-primary-hover));
-}
-
-.btn-save:disabled {
-  background: var(--color-text-muted, var(--color-text-muted));
-  cursor: not-allowed;
-}
-
 /* .btn-cancel 视觉已统一到全局 .ui-btn（style.css） */
 
 /* ===== 暗色模式覆盖 ===== */
@@ -862,11 +841,6 @@ html.dark .ex-progress {
 /* html.dark .btn-clear 视觉已统一到全局 .ui-btn--danger（style.css） */
 
 /* 禁用态保存按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */
-html.dark .btn-save:disabled {
-  background-color: var(--color-bg-input, #374151);
-  color: var(--color-text-muted, #9ca3af);
-}
-
 html.dark .form-input,
 html.dark select.form-input,
 html.dark input.form-input {
