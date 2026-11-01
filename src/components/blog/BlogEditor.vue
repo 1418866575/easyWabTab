@@ -809,6 +809,10 @@ async function regenerateSlug(): Promise<void> {
         @click="helpOpen = true"
       >
         <Icon name="info" :size="14" />
+        <button type="button" class="be-side-toggle" data-testid="blog-editor-close" @click="handleClose">
+          <Icon name="close" :size="14" />
+          <span>关闭</span>
+        </button>
         <span>帮助</span>
       </button>
     </header>
@@ -816,6 +820,8 @@ async function regenerateSlug(): Promise<void> {
     <div class="be-body">
       <!-- 左：正文 -->
       <div class="be-main">
+      <!-- 固定区：Markdown 工具栏 + 标题（sticky，相对 .ba-content 吸顶） -->
+      <div class="be-fixed-head">
         <!-- Markdown 工具栏：置于标题上方；向下滚动时相对 .ba-content 吸顶（sticky）。
              右上角为底部操作条同款快捷按钮（保存草稿 / 发布 / 发布到公众号，同一 handler 与状态）。 -->
         <div v-if="viewMode !== 'preview'" class="be-md-toolbar" role="toolbar" aria-label="Markdown 编辑工具栏">
@@ -942,6 +948,18 @@ async function regenerateSlug(): Promise<void> {
           aria-label="标题"
           data-testid="blog-editor-title"
         />
+      </div>
+
+      <!-- 发布校验错误 / 公众号发布进度：固定区下方，发布后不用滚到底部也能看到 -->
+      <div v-if="visibleErrors.length || wechat.publishing.value" class="be-alerts">
+        <ul v-if="visibleErrors.length" class="be-errors" data-testid="blog-editor-errors">
+          <li v-for="e in visibleErrors" :key="e">{{ e }}</li>
+        </ul>
+        <p v-if="wechat.publishing.value" class="be-hint" data-testid="blog-editor-wechat-status">
+          {{ wechat.progressMsg.value }}<span v-if="wechat.progressTotal.value">（{{ wechat.progressStep.value }}/{{ wechat.progressTotal.value }}）</span>
+        </p>
+      </div>
+
         <div class="be-editor-wrap" :class="`is-${viewMode}`">
           <textarea
             v-if="viewMode !== 'preview'"
@@ -1116,71 +1134,7 @@ async function regenerateSlug(): Promise<void> {
         </div>
     </aside>
 
-    <!-- 底部操作条 -->
-    <footer class="be-foot">
-      <ul v-if="visibleErrors.length" class="be-errors" data-testid="blog-editor-errors">
-        <li v-for="e in visibleErrors" :key="e">{{ e }}</li>
-      </ul>
-      <div class="be-foot-ops">
-        <button type="button" class="ui-btn ui-btn--sm" @click="handleClose">关闭</button>
-        <button type="button" class="ui-btn ui-btn--sm" data-testid="blog-editor-save" @click="saveDraft()">保存草稿</button>
-        <button
-          type="button"
-          class="ui-btn ui-btn--sm be-typo-btn"
-          title="排版主题"
-          data-testid="blog-editor-typo"
-          @click="typoOpen = true"
-        >
-          <span class="be-typo-dot" :style="{ background: typoTheme.swatch }" aria-hidden="true"></span>
-          {{ typoTheme.name }}
-        </button>
-        <button
-          type="button"
-          class="ui-btn ui-btn--sm ui-btn--primary"
-          :disabled="visibleErrors.length > 0"
-          data-testid="blog-editor-publish"
-          @click="handlePublish()"
-        >
-          发布
-        </button>
-        <button
-          type="button"
-          class="ui-btn ui-btn--sm"
-          title="按公众号草稿箱的排版规则预览正文"
-          data-testid="blog-editor-wechat-preview"
-          @click="openWechatPreview()"
-        >
-          公众号预览
-        </button>
-        <button
-          type="button"
-          class="ui-btn ui-btn--sm"
-          :class="{ 'ui-btn--primary': !wechat.publishing.value }"
-          :disabled="wechat.publishing.value || visibleErrors.length > 0"
-          data-testid="blog-editor-publish-wechat"
-          @click="handlePublishWechat()"
-        >
-          <span v-if="wechat.publishing.value" class="btn-spinner" aria-hidden="true"></span>
-          {{ wechat.publishing.value ? '发布中' : '发布到公众号' }}
-        </button>
-        <button
-          type="button"
-          class="ui-btn ui-btn--sm"
-          :class="{ 'ui-btn--primary': !isSharing() }"
-          :disabled="article?.status !== 'published' || isSharing()"
-          :title="article?.status !== 'published' ? '仅已发布可共享' : (article?.sharedAt ? '取消共享' : '共享到服务器')"
-          data-testid="blog-editor-share"
-          @click="onShare()"
-        >
-          {{ isSharing() ? '共享中…' : shareLabel() }}
-        </button>
-      </div>
-      <p v-if="wechat.publishing.value" class="be-hint" data-testid="blog-editor-wechat-status">
-        {{ wechat.progressMsg.value }}<span v-if="wechat.progressTotal.value">（{{ wechat.progressStep.value }}/{{ wechat.progressTotal.value }}）</span>
-      </p>
-      <p v-else-if="wechat.error.value" class="be-warn" data-testid="blog-editor-wechat-error">{{ wechat.error.value }}</p>
-      <p v-else-if="wechat.result.value" class="be-hint" data-testid="blog-editor-wechat-ok">✓ 已发布到公众号草稿箱</p>
-    </footer>
+
 
     <!-- Markdown 语法帮助弹框 -->
     <BaseDialog v-if="helpOpen" title="Markdown 语法帮助" width="760px" max-height="86vh" @close="helpOpen = false">
@@ -1372,11 +1326,20 @@ async function regenerateSlug(): Promise<void> {
 /* ===== Markdown 工具栏 ===== */
 /* 吸顶：相对滚动容器 .ba-content（BlogAdminView）；sticky 保留原占位，无布局跳动。
    z-index 20：高于普通流内容，低于右侧设置抽屉(200)与弹框(300)。 */
-.be-md-toolbar {
+.be-fixed-head {
   position: sticky;
-  top: 0;
+  /* top 取负值补掉 .ba-content 的顶部 padding：否则那 16px 会透出滚动内容 */
+  top: calc(-1 * var(--space-4, 16px));
   z-index: 20;
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background-color: var(--ds-bg, #f7f8fa);
+  padding: var(--space-4, 16px) 0 10px;
+  margin-bottom: 8px;
+}
+
+.be-md-toolbar {  display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
@@ -1425,7 +1388,8 @@ async function regenerateSlug(): Promise<void> {
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: transparent;
   color: var(--ds-text-2, #646a73);
-  font-size: var(--font-size-xs, 12px);
+  font-size: 13px;
+  font-weight: var(--font-weight-semibold, 600);
   line-height: 1.2;
   white-space: nowrap;
   cursor: pointer;
@@ -1465,6 +1429,7 @@ async function regenerateSlug(): Promise<void> {
 
 .be-md {
   resize: vertical;
+  font-size: 16px;
 }
 
 .be-preview {
@@ -1687,33 +1652,25 @@ async function regenerateSlug(): Promise<void> {
   object-fit: cover;
 }
 
-.be-foot {
+
+.be-alerts {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 10px 12px;
-  border: 1px solid var(--ds-line, #ececf0);
-  border-radius: var(--ds-radius-card, 12px);
-  background-color: var(--ds-card, #ffffff);
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: var(--ds-radius-ctrl, 8px);
+  background-color: rgba(239, 68, 68, 0.06);
 }
 
 .be-errors {
-  flex: 1 1 320px;
   margin: 0;
-  padding-left: 18px;
+  padding-left: 16px;
   color: var(--color-error, #ef4444);
   font-size: var(--font-size-xs, 12px);
   line-height: var(--line-height-relaxed, 1.7);
 }
 
-.be-foot-ops {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
 
 .be-missing {
   padding: 40px 16px;
@@ -2028,7 +1985,5 @@ async function regenerateSlug(): Promise<void> {
   /* 工具栏快捷操作窄屏独占一行，与底部操作条同款拉伸，避免溢出/重叠 */
   .be-md-actions { width: 100%; margin-left: 0; justify-content: flex-end; }
   .be-md-actions .ui-btn { flex: 1 1 auto; min-height: 44px; }
-  .be-foot-ops { width: 100%; }
-  .be-foot-ops .ui-btn { flex: 1 1 auto; min-height: 44px; }
 }
 </style>

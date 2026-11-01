@@ -229,6 +229,7 @@ onMounted(async () => {
         <BlogPosts
           v-else-if="activePage === 'posts'"
           @edit="editArticle"
+          @create="startNewArticle"
         />
         <BlogGallery v-else-if="activePage === 'gallery'" ref="galleryRef" />
         <BlogTrash v-else-if="activePage === 'trash'" @restore="selectPage('posts')" />

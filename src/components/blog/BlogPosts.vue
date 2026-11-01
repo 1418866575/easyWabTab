@@ -28,7 +28,7 @@ import Icon from '@/components/Icon.vue'
 import { showConfirm, toastAlert } from '@/utils/dialog'
 import type { ArticleStatus, BlogArticle, BlogSort } from '@/types'
 
-const emit = defineEmits<{ edit: [id: string] }>()
+const emit = defineEmits<{ edit: [id: string]; create: [] }>()
 
 const store = useBlogStore()
 const vm = useViewMode()
@@ -49,6 +49,12 @@ function triggerImport(): void {
 
 function triggerImportFiles(): void {
   fileInputEl.value?.click()
+}
+
+/** 「导入 ▾」下拉命令分发 */
+function onImportCommand(command: string): void {
+  if (command === 'folder') triggerImport()
+  else if (command === 'files') triggerImportFiles()
 }
 
 async function onImportChange(e: Event): Promise<void> {
@@ -315,31 +321,33 @@ function displayTime(row: BlogArticle): string {
         </label>
       </div>
       <div class="ba-query-actions">
+        <ViewModeToggle v-if="total > 0" :mode="vm.mode" @toggle="vm.toggle" />
+        <el-dropdown trigger="click" @command="onImportCommand">
+          <el-button size="small" data-testid="blog-posts-import">
+            <Icon name="plus" :size="14" />
+            <span>导入</span>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="folder" data-testid="blog-posts-import-folder">导入文件夹</el-dropdown-item>
+              <el-dropdown-item command="files" data-testid="blog-posts-import-files">选文件导入</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+        <input ref="importInputEl" class="ba-import-input" type="file" multiple @change="onImportChange" />
+        <input ref="fileInputEl" class="ba-import-input" type="file" multiple accept=".md,image/*" @change="onImportChange" />
         <el-button type="primary" size="small" data-testid="blog-posts-search" @click="applyFilter">查询</el-button>
         <el-button size="small" data-testid="blog-posts-reset" @click="resetFilter">重置</el-button>
       </div>
     </div>
 
-    <!-- 工具栏：左写文章 / 右视图切换（紧贴表格上方） -->
-    <div class="ewt-table-toolbar is-split">
-      <div class="ba-posts-actions">
-        <!-- 主操作「写文章」已提到面板页头（BlogAdminView），这里只留导入入口 -->
-        <el-button data-testid="blog-posts-import" @click="triggerImport">
-          <Icon name="plus" :size="14" />
-          <span>导入文件夹</span>
-        </el-button>
-        <el-button data-testid="blog-posts-import-files" @click="triggerImportFiles">
-          <Icon name="plus" :size="14" />
-          <span>选文件导入</span>
-        </el-button>
-        <input ref="importInputEl" class="ba-import-input" type="file" multiple @change="onImportChange" />
-        <input ref="fileInputEl" class="ba-import-input" type="file" multiple accept=".md,image/*" @change="onImportChange" />
-      </div>
-      <ViewModeToggle v-if="total > 0" :mode="vm.mode" @toggle="vm.toggle" />
-    </div>
-
     <div v-if="total === 0" class="ba-empty" data-testid="blog-posts-empty">
-      {{ hasFilter ? '没有符合条件的文章，试试重置查询条件' : '还没有文章，点击上方「写文章」开始第一篇' }}
+      <Icon name="document" :size="28" class="ba-empty-icon" />
+      <p class="ba-empty-text">
+        {{ hasFilter ? '没有符合条件的文章，试试调整或重置查询条件' : '还没有文章，写下第一篇吧' }}
+      </p>
+      <el-button v-if="hasFilter" size="small" @click="resetFilter">重置查询</el-button>
+      <el-button v-else type="primary" size="small" data-testid="blog-posts-empty-create" @click="emit('create')">写文章</el-button>
     </div>
 
     <!-- 列表视图 -->
@@ -516,7 +524,7 @@ function displayTime(row: BlogArticle): string {
 .ba-posts {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--ds-gap-card, 16px);
 }
 
 .ba-posts-actions {
@@ -524,6 +532,7 @@ function displayTime(row: BlogArticle): string {
   align-items: center;
   gap: 8px;
 }
+
 
 .ba-import-input {
   display: none;
@@ -562,29 +571,42 @@ function displayTime(row: BlogArticle): string {
 }
 
 .ba-query-input {
-  width: 220px;
+  width: 200px;
   max-width: 100%;
 }
 
 .ba-query-select {
-  width: 130px;
+  width: 118px;
 }
 
 .ba-query-actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: 8px;
   margin-left: auto;
 }
 
 .ba-empty {
-  padding: 32px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 16px;
   border: 1px dashed var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-card, 12px);
   background-color: var(--ds-card, #ffffff);
   color: var(--ds-text-2, #646a73);
   font-size: var(--ds-fs-body-sm, 13px);
   text-align: center;
+}
+
+.ba-empty-icon {
+  color: var(--ds-text-3, #a8abb2);
+}
+
+.ba-empty-text {
+  margin: 0;
 }
 
 html.dark .ba-query {
