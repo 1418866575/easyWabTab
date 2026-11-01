@@ -397,6 +397,11 @@ const tabs = computed(() => [
 - 页签是**视图切换 / 筛选**，不是表单单选；表单里的单选按钮继续用 `el-radio-group` 原样，不要套 `BaseTabs`。
 - **可取消筛选**用 `deselectable`：族谱、成绩学科筛选这类「再点一次回到全部」的页签，
   传 `deselectable` 即可，仍在组件内实现，不要另写一套。
+- **导航站分类标签是定制变体**（`src/components/CategoryTabs.vue`）：结构与交互仍走 `BaseTabs`，
+  但视觉在组件内局部覆盖为「胶囊 + 1px `--ds-line` 边框 + 选中实心主色白字」。
+  原因：首页是卡片网格，实心胶囊与站点头像/卡片语言一致，块状浅底页签会与整页脱节。
+  覆盖时带 `.ui-tabs` 前缀提升特异性（`.category-tabs-wrapper :deep(.ui-tabs .xxx)`），
+  并在 `html.dark` 下补一份，否则会被 BaseTabs 的 scoped 规则压回默认皮肤。
 - 存量已全部迁移（2026-11）：`fg-tab`（族谱）、`help-tab`（帮助）、`bk-tab`（书架）、
   `category-tab`（首页分类，`deselectable`）、`stp-tabs`（家长协同，原为 hd-tabs 副本）、
   `se-tab`（成绩学科，`deselectable`）。
