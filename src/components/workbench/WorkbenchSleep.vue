@@ -778,11 +778,11 @@ html.dark .btn-toggle-list {
 }
 
 /* 睡眠质量文字色（sl-quality-1..5） */
-.sl-quality-1 { color:#ef4444; font-weight:600; }
+.sl-quality-1 { color:var(--ds-danger); font-weight:600; }
 .sl-quality-2 { color:#f97316; font-weight:600; }
-.sl-quality-3 { color:#3b82f6; font-weight:600; }
-.sl-quality-4 { color:#10b981; font-weight:700; }
-.sl-quality-5 { color:#059669; font-weight:700; }
+.sl-quality-3 { color:var(--ds-primary); font-weight:600; }
+.sl-quality-4 { color:var(--ds-success); font-weight:700; }
+.sl-quality-5 { color:var(--ds-success); font-weight:700; }
 
 /* 移动端 ≤768px：header 换行，按钮组独占一行 */
 @media (max-width: 768px) {

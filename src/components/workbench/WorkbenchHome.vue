@@ -941,20 +941,20 @@ async function handleQuickNote(): Promise<void> {
 
 .prio-high {
   color: #b91c1c;
-  background: #fee2e2;
+  background: var(--ds-danger-soft);
   border-color: #fca5a5;
 }
 
 .prio-medium {
   color: #b45309;
-  background: #fef3c7;
+  background: var(--ds-warning-soft);
   border-color: #fcd34d;
 }
 
 .prio-low {
-  color: #475569;
-  background: #f1f5f9;
-  border-color: #cbd5e1;
+  color: var(--ds-text-2);
+  background: var(--ds-bg-hover);
+  border-color: var(--ds-line-strong);
 }
 
 /* ===== 倒计时剩余状态色 ===== */

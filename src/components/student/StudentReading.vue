@@ -468,7 +468,7 @@ onMounted(async () => {
   font-size: 12px;
   font-weight: 500;
   background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
+  color: var(--ds-success);
 }
 :global(html.dark) .sr-duration-badge {
   background: rgba(16, 185, 129, 0.2);
@@ -481,7 +481,7 @@ onMounted(async () => {
   font-size: 11px;
   font-weight: 600;
   background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
+  color: var(--ds-success);
 }
 .sr-unsigned {
   font-size: 12px;
@@ -493,7 +493,7 @@ onMounted(async () => {
   color: var(--color-link, #3b82f6);
 }
 .sr-delete-btn {
-  color: #ef4444;
+  color: var(--ds-danger);
 }
 
 /* ===== 弹框 ===== */

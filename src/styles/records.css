@@ -59,7 +59,7 @@
    用法：<section class="ewt-inline-section"> + <div class="ewt-inline-head"> + <h3 class="ewt-inline-title"> */
 .ewt-inline-section {
   padding-top: 16px;
-  border-top: 1px solid var(--color-border, #e5e7eb);
+  border-top: 1px solid var(--ds-line, var(--color-border, #e5e7eb));
 }
 
 .ewt-inline-head {
@@ -73,7 +73,7 @@
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: var(--color-text, #1f2937);
+  color: var(--ds-text, var(--color-text, #1f2937));
 }
 
 /* 3 个工作台记录编辑弹框底部按钮统一：集中在右下角，顺序 取消 / 保存 / 删除 */

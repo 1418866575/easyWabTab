@@ -347,14 +347,14 @@ const sortedCustomCategories = computed(() =>
 .add-form {
   margin-bottom: 24px;
   padding-bottom: 24px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--ds-line);
 }
 
 .add-form h3,
 .category-list h3 {
   font-size: 14px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--ds-text-2);
   margin: 0 0 12px 0;
 }
 
@@ -433,7 +433,7 @@ const sortedCustomCategories = computed(() =>
 
 .section-title {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--ds-text-3);
   margin-bottom: 8px;
 }
 
@@ -442,7 +442,7 @@ const sortedCustomCategories = computed(() =>
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  background: #f8fafc;
+  background: var(--ds-bg);
   border-radius: 8px;
   margin-bottom: 8px;
 }
@@ -450,12 +450,12 @@ const sortedCustomCategories = computed(() =>
 /* 内置分类：不可编辑/删除。仅锁图标淡化表示"只读"，
    整行不再压低透明度——内置分类现在带可用的「导出」按钮，压暗会影响可用性感知。 */
 .category-item.built-in {
-  background: #fef3c7;
+  background: var(--ds-warning-soft);
 }
 
 .category-item.custom {
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--ds-card);
+  border: 1px solid var(--ds-line);
 }
 
 .sort-hint {
@@ -510,12 +510,12 @@ const sortedCustomCategories = computed(() =>
 .category-name {
   flex: 1;
   font-size: 14px;
-  color: #1e293b;
+  color: var(--ds-text);
 }
 
 .site-count {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--ds-text-3);
   margin-right: 8px;
 }
 
@@ -568,7 +568,7 @@ const sortedCustomCategories = computed(() =>
 
 .empty-custom {
   text-align: center;
-  color: #94a3b8;
+  color: var(--ds-text-3);
   font-size: 14px;
   padding: 20px;
 }

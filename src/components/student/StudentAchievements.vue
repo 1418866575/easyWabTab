@@ -282,12 +282,12 @@ onMounted(async () => {
   font-weight: 600;
 }
 .sa-stat-value.locked {
-  color: #9ca3af;
+  color: var(--ds-text-3);
 }
 .sa-stat-all {
   background: rgba(16, 185, 129, 0.12);
-  color: #10b981;
-  border-color: #10b981;
+  color: var(--ds-success);
+  border-color: var(--ds-success);
   font-weight: 600;
 }
 
@@ -350,7 +350,7 @@ onMounted(async () => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 .sa-badge-card.unlocked {
-  border-color: #f59e0b;
+  border-color: var(--ds-warning);
   background: linear-gradient(180deg, rgba(245, 158, 11, 0.08), var(--color-surface, #fff));
 }
 .sa-badge-card.locked {
@@ -376,7 +376,7 @@ onMounted(async () => {
   gap: 4px;
 }
 .sa-badge-status.unlocked {
-  color: #f59e0b;
+  color: var(--ds-warning);
   font-size: 11px;
   font-weight: 600;
 }
@@ -395,7 +395,7 @@ onMounted(async () => {
 }
 .sa-badge-progress-fill {
   height: 100%;
-  background: #3b82f6;
+  background: var(--ds-primary);
   transition: width 0.3s;
 }
 
@@ -454,7 +454,7 @@ onMounted(async () => {
 
 .sa-dialog-unlocked {
   background: rgba(245, 158, 11, 0.08);
-  border: 1px solid #f59e0b;
+  border: 1px solid var(--ds-warning);
   border-radius: 8px;
   padding: 12px;
   display: flex;
@@ -462,7 +462,7 @@ onMounted(async () => {
   gap: 6px;
 }
 .sa-dialog-unlocked-badge {
-  color: #f59e0b;
+  color: var(--ds-warning);
   font-size: 14px;
   font-weight: 600;
 }
@@ -501,7 +501,7 @@ onMounted(async () => {
 }
 .sa-dialog-progress-fill {
   height: 100%;
-  background: #3b82f6;
+  background: var(--ds-primary);
   transition: width 0.3s;
 }
 .sa-dialog-progress-percent {

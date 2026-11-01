@@ -1210,9 +1210,9 @@ html.dark .bs-fab-action {
   cursor: progress !important;
 }
 .wb-sync-btn.wb-sync-btn-conflict {
-  background-color: #f59e0b;
+  background-color: var(--ds-warning);
   color: #fff;
-  border-color: #f59e0b;
+  border-color: var(--ds-warning);
 }
 .wb-sync-btn.wb-sync-btn-error {
   background-color: var(--color-error, #ef4444);

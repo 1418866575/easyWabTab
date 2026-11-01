@@ -741,7 +741,7 @@ function truncate(text: string, n = 30): string {
 }
 .tk-cat-badge {
   background: rgba(16, 185, 129, 0.12);
-  color: #10b981;
+  color: var(--ds-success);
 }
 .tk-tag {
   display: inline-block;
@@ -750,8 +750,8 @@ function truncate(text: string, n = 30): string {
   font-size: 12px;
   color: #fff;
 }
-.tk-tag.is-warn { background-color: #f59e0b; }
-.tk-tag.is-ok { background-color: #10b981; }
+.tk-tag.is-warn { background-color: var(--ds-warning); }
+.tk-tag.is-ok { background-color: var(--ds-success); }
 
 /* 表格内按钮 */
 .btn-detail {

@@ -258,8 +258,8 @@ const toggleAutoBackup = () => {
 
 .toggle-btn.active {
   background: #dcfce7;
-  border-color: #22c55e;
-  color: #16a34a;
+  border-color: var(--ds-success);
+  color: var(--ds-success);
 }
 
 .action-buttons {

@@ -679,15 +679,15 @@ onMounted(async () => {
 
 /* status colors on the hero big number */
 .status-normal .se-hero-big { color: var(--se-color); }
-.status-urgent .se-hero-big { color: #f59e0b; }
-.status-critical .se-hero-big { color: #ef4444; }
+.status-urgent .se-hero-big { color: var(--ds-warning); }
+.status-critical .se-hero-big { color: var(--ds-danger); }
 .status-expired .se-hero-big { color: var(--color-text-muted, #9ca3af); }
 
 /* 表格倒计时单元格配色（与 hero 口径一致） */
 .se-countdown-cell { font-weight: 600; }
 .se-countdown-cell.status-normal { color: var(--color-primary, #3b82f6); }
-.se-countdown-cell.status-urgent { color: #f59e0b; }
-.se-countdown-cell.status-critical { color: #ef4444; }
+.se-countdown-cell.status-urgent { color: var(--ds-warning); }
+.se-countdown-cell.status-critical { color: var(--ds-danger); }
 .se-countdown-cell.status-expired { color: var(--color-text-muted, #9ca3af); font-weight: 500; }
 
 /* expired / invalid / today special states */

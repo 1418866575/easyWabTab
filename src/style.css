@@ -197,6 +197,8 @@
   --ds-card: #ffffff;          /* 卡片/面板表面 */
   --ds-card-2: #f7f8fa;        /* 卡内嵌浅灰区（预览面板等） */
   --ds-line: #ececf0;          /* 分隔线 */
+  --ds-line-strong: #cbd5e1;   /* 深一级分隔线（可聚焦边框 / 分段控件） */
+  --ds-bg-hover: #f3f4f6;      /* 表面 hover 态（列表行 / 菜单项） */
 
   /* 三级文字：层级靠灰度，不靠彩色 */
   --ds-text: #1f2329;
@@ -213,6 +215,8 @@
   --ds-danger-soft: #fee2e2;
   --ds-success: #16a34a;
   --ds-success-soft: #e8f8ef;
+  --ds-warning: #f59e0b;
+  --ds-warning-soft: #fef3c7;
 
   /* 圆角：卡片 12 / 控件 8 / 标签全圆 */
   --ds-radius-card: 12px;

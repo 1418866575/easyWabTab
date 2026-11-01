@@ -1278,13 +1278,13 @@ const skillInstall = [
   font-weight: 600;
   padding: 3px 8px;
   border-radius: 6px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--ds-line-strong);
   white-space: nowrap;
 }
 
 .shortcut-action {
   font-size: 13px;
-  color: #475569;
+  color: var(--ds-text-2);
 }
 
 /* 页面模式 */
@@ -1312,7 +1312,7 @@ const skillInstall = [
 }
 
 .mode-admin {
-  background-color: #eff6ff;
+  background-color: var(--ds-primary-soft);
   color: var(--color-primary, #3b82f6);
 }
 
@@ -1342,7 +1342,7 @@ const skillInstall = [
 
 .storage-list li {
   font-size: 13px;
-  color: #475569;
+  color: var(--ds-text-2);
   line-height: 1.6;
 }
 
@@ -1445,9 +1445,9 @@ const skillInstall = [
 .btn-copy {
   padding: 2px 10px;
   font-size: 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--ds-line-strong);
   background: var(--color-bg-card, #ffffff);
-  color: #475569;
+  color: var(--ds-text-2);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s;
@@ -1545,7 +1545,7 @@ const skillInstall = [
   border-radius: 10px;
   border: 1px solid var(--color-border, #e2e8f0);
   font-size: 13px;
-  color: #475569;
+  color: var(--ds-text-2);
   line-height: 1.6;
 }
 
@@ -1645,7 +1645,7 @@ const skillInstall = [
 .formula-expr {
   font-size: 12px;
   color: var(--color-primary, #3b82f6);
-  background-color: #eff6ff;
+  background-color: var(--ds-primary-soft);
   padding: 3px 8px;
   border-radius: 6px;
   white-space: nowrap;
@@ -1694,7 +1694,7 @@ const skillInstall = [
 
 .flow-text {
   font-size: 13px;
-  color: #475569;
+  color: var(--ds-text-2);
   line-height: 1.5;
 }
 
@@ -1790,11 +1790,11 @@ const skillInstall = [
   gap: 6px;
   margin: 4px 0 0 0;
   padding: 10px 12px;
-  background-color: #eff6ff;
+  background-color: var(--ds-primary-soft);
   border: 1px solid #dbeafe;
   border-radius: 8px;
   font-size: 12px;
-  color: #475569;
+  color: var(--ds-text-2);
   line-height: 1.5;
 }
 

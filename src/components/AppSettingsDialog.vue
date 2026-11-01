@@ -5351,7 +5351,7 @@ html.dark .remind-label {
 .site-invalid-count {
   margin-left: 4px;
   font-weight: 600;
-  color: #ef4444;
+  color: var(--ds-danger);
 }
 
 /* ============================================================
@@ -5399,7 +5399,7 @@ html.dark .site-action-btn.danger:hover:not(:disabled) {
 }
 .danger-hint {
   margin-top: 12px;
-  color: #dc2626;
+  color: var(--ds-danger);
   font-weight: 600;
 }
 html.dark .danger-hint {
@@ -5734,14 +5734,14 @@ html.dark .rail-item:hover { background-color: rgba(255, 255, 255, 0.06); }
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #16a34a;
+  color: var(--ds-success);
   background-color: rgba(22, 163, 74, 0.1);
   border: 1px solid rgba(22, 163, 74, 0.25);
   padding: 4px 10px;
   border-radius: 999px;
   white-space: nowrap;
 }
-.status-dot { width: 6px; height: 6px; border-radius: 50%; background-color: #16a34a; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background-color: var(--ds-success); }
 html.dark .status-pill { color: #4ade80; background-color: rgba(74, 222, 128, 0.12); border-color: rgba(74, 222, 128, 0.3); }
 
 .settings-scroll {

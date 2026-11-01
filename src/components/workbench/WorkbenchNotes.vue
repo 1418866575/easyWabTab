@@ -936,7 +936,7 @@ onUnmounted(() => {
  * 但 RecordsCard 的 maxFields 默认 4 只渲染前四项（标题/内容/分类/状态），
  * 所以移动端卡片视图本来就不展示这两项——与本次删列无关，勿误以为是回归。 */
 .nt-edit-btn { color: var(--color-link, #3b82f6); }
-.nt-delete-btn { color: #ef4444; }
+.nt-delete-btn { color: var(--ds-danger); }
 .nt-pin-btn { opacity: 1; }
 .nt-pin-btn.active { color: var(--el-color-warning, #e6a23c); border-color: var(--el-color-warning, #e6a23c); }
 
@@ -1046,10 +1046,10 @@ onUnmounted(() => {
 .color-option.active { border-color: var(--color-primary, var(--color-primary)); color: var(--color-text, var(--color-text)); }
 .color-swatch { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
 .color-yellow .color-swatch { background: #eab308; }
-.color-blue .color-swatch { background: #3b82f6; }
-.color-green .color-swatch { background: #22c55e; }
+.color-blue .color-swatch { background: var(--ds-primary); }
+.color-green .color-swatch { background: var(--ds-success); }
 .color-pink .color-swatch { background: #ec4899; }
-.color-red .color-swatch { background: #ef4444; }
+.color-red .color-swatch { background: var(--ds-danger); }
 .color-orange .color-swatch { background: #f97316; }
 .color-cyan .color-swatch { background: #06b6d4; }
 .color-purple .color-swatch { background: #a855f7; }

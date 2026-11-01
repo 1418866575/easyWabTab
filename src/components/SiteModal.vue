@@ -612,7 +612,7 @@ const handleSubmit = () => {
   width: 84px;
   font-size: 14px;
   font-weight: 500;
-  color: #374151;
+  color: var(--ds-text);
 }
 
 /* 网站图标字段：标签相对 48px 预览图垂直居中，而非整个图标列 */
@@ -709,7 +709,7 @@ const handleSubmit = () => {
   background: var(--color-bg-hover, #f1f5f9);
   border-radius: 4px;
   font-size: 13px;
-  color: #475569;
+  color: var(--ds-text-2);
   cursor: pointer;
   transition: all 0.2s;
 }

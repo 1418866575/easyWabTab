@@ -585,9 +585,9 @@ onMounted(() => {
   color: #fff;
   white-space: nowrap;
 }
-.sp-type-weekly { background: #3b82f6; }
+.sp-type-weekly { background: var(--ds-primary); }
 .sp-type-monthly { background: #a855f7; }
-.sp-type-term { background: #10b981; }
+.sp-type-term { background: var(--ds-success); }
 
 /* ===== 进度条（表格内嵌） ===== */
 .sp-progress-cell {

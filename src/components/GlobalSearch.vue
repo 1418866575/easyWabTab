@@ -378,7 +378,7 @@ function openSite(url: string) {
   left: 0;
   right: 0;
   background: white;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--ds-line);
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   z-index: 100;
@@ -404,12 +404,12 @@ function openSite(url: string) {
   justify-content: space-between;
   align-items: center;
   padding: 10px 12px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--ds-line);
 }
 
 .history-title {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--ds-text-3);
   font-weight: 500;
 }
 
@@ -435,7 +435,7 @@ function openSite(url: string) {
 }
 
 .history-item:hover {
-  background: #f8fafc;
+  background: var(--ds-bg);
 }
 
 .history-icon {
@@ -445,7 +445,7 @@ function openSite(url: string) {
 
 .history-text {
   font-size: 14px;
-  color: #1e293b;
+  color: var(--ds-text);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -463,7 +463,7 @@ function openSite(url: string) {
 }
 
 .local-search-item:hover {
-  background: #f8fafc;
+  background: var(--ds-bg);
 }
 
 .site-icon {
@@ -471,7 +471,7 @@ function openSite(url: string) {
   height: 24px;
   border-radius: 4px;
   object-fit: contain;
-  background: #f1f5f9;
+  background: var(--ds-bg-hover);
 }
 
 .site-icon-placeholder {
@@ -480,7 +480,7 @@ function openSite(url: string) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f1f5f9;
+  background: var(--ds-bg-hover);
   border-radius: 4px;
   font-size: 14px;
 }
@@ -495,12 +495,12 @@ function openSite(url: string) {
 
 .site-category {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--ds-text-3);
 }
 
 .result-count {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--ds-text-3);
 }
 
 /* 暗色模式 */

@@ -367,7 +367,7 @@ onBeforeUnmount(stopTimer)
 }
 
 .rd-gender.rd-male {
-  color: #2563eb;
+  color: var(--ds-primary);
 }
 
 .rd-gender.rd-female {

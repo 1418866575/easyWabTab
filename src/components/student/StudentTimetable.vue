@@ -186,7 +186,7 @@ function exportToExcel() {
 
   const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
 <head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>课程表</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
-<style>td,th{border:1px solid #999;padding:6px 8px;font-size:14px;}th{background:#3b82f6;color:#fff;font-weight:bold;text-align:center;}.period{background:#f0f9ff;font-weight:bold;text-align:center;}</style>
+<style>td,th{border:1px solid #999;padding:6px 8px;font-size:14px;}th{background:var(--ds-primary);color:#fff;font-weight:bold;text-align:center;}.period{background:#f0f9ff;font-weight:bold;text-align:center;}</style>
 </head><body><table><thead><tr><th class="period">节次</th>${dayLabels.map((d) => '<th>' + d + '</th>').join('')}</tr></thead><tbody>
 ${rows.slice(1).map((r) => '<tr><td class="period">' + r[0] + '</td>' + r.slice(1).map((c) => '<td>' + (c || '&nbsp;') + '</td>').join('') + '</tr>').join('\n')}
 </tbody></table></body></html>`

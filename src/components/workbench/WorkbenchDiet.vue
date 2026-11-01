@@ -675,8 +675,8 @@ onMounted(async () => {
 
 /* 早餐：琥珀 */
 .dt-meal-breakfast {
-  color: #d97706;
-  background: #fef3c7;
+  color: var(--ds-warning);
+  background: var(--ds-warning-soft);
   border-color: rgba(217, 119, 6, 0.3);
 }
 
@@ -689,8 +689,8 @@ onMounted(async () => {
 
 /* 加餐：绿 */
 .dt-meal-snack {
-  color: #059669;
-  background: #d1fae5;
+  color: var(--ds-success);
+  background: var(--ds-success-soft);
   border-color: rgba(5, 150, 105, 0.3);
 }
 

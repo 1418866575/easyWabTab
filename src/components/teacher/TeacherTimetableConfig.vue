@@ -494,10 +494,10 @@ onMounted(async () => {
   background: var(--color-hover, #f3f4f6);
   color: var(--color-text-secondary, #4b5563);
 }
-.sttc-stat.is-ok { background: rgba(16, 185, 129, 0.14); color: #059669; }
-.sttc-stat.is-new { background: rgba(59, 130, 246, 0.14); color: #2563eb; }
+.sttc-stat.is-ok { background: rgba(16, 185, 129, 0.14); color: var(--ds-success); }
+.sttc-stat.is-new { background: rgba(59, 130, 246, 0.14); color: var(--ds-primary); }
 .sttc-stat.is-upd { background: rgba(245, 158, 11, 0.16); color: #b45309; }
-.sttc-stat.is-err { background: rgba(239, 68, 68, 0.14); color: #dc2626; }
+.sttc-stat.is-err { background: rgba(239, 68, 68, 0.14); color: var(--ds-danger); }
 
 .sttc-errors {
   margin-bottom: 10px;
@@ -529,7 +529,7 @@ onMounted(async () => {
 .sttc-error-row {
   flex: 0 0 auto;
   font-weight: 600;
-  color: #dc2626;
+  color: var(--ds-danger);
 }
 .sttc-error-subject {
   flex: 0 0 auto;

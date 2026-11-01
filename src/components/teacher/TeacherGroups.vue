@@ -801,11 +801,11 @@ watch(showForm, (v) => {
 }
 .grp-type.is-fixed {
   background: rgba(16, 185, 129, 0.12);
-  color: #10b981;
+  color: var(--ds-success);
 }
 .grp-type.is-temp {
   background: rgba(245, 158, 11, 0.12);
-  color: #f59e0b;
+  color: var(--ds-warning);
 }
 .ewt-card-grid {
   align-content: start;
@@ -870,7 +870,7 @@ watch(showForm, (v) => {
 }
 .tw-chip.is-boy {
   background: rgba(59, 130, 246, 0.12);
-  color: #3b82f6;
+  color: var(--ds-primary);
 }
 .tw-chip.is-girl {
   background: rgba(236, 72, 153, 0.12);
@@ -1028,7 +1028,7 @@ watch(showForm, (v) => {
   margin: 0;
 }
 .grp-rg-warn {
-  color: #f59e0b;
+  color: var(--ds-warning);
   margin-left: 4px;
 }
 .grp-rg-constraints {
@@ -1061,7 +1061,7 @@ watch(showForm, (v) => {
 }
 .grp-warn-chip {
   font-size: 12px;
-  color: #f59e0b;
+  color: var(--ds-warning);
 }
 .grp-rg-results {
   display: flex;

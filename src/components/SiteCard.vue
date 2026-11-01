@@ -455,7 +455,7 @@ const handleClick = () => {
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: #334155;
+  color: var(--ds-text);
   font-size: 13px;
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;

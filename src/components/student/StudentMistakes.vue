@@ -538,9 +538,9 @@ onMounted(() => {
   font-size: 18px;
   font-weight: 600;
 }
-.sm-stat-value.fresh { color: #ef4444; }
-.sm-stat-value.reviewing { color: #f59e0b; }
-.sm-stat-value.mastered { color: #10b981; }
+.sm-stat-value.fresh { color: var(--ds-danger); }
+.sm-stat-value.reviewing { color: var(--ds-warning); }
+.sm-stat-value.mastered { color: var(--ds-success); }
 
 .sm-main {
   flex: 1;
@@ -674,22 +674,22 @@ onMounted(() => {
 }
 .sm-status-new {
   background: rgba(239, 68, 68, 0.12);
-  color: #ef4444;
+  color: var(--ds-danger);
 }
 .sm-status-reviewing {
   background: rgba(245, 158, 11, 0.12);
-  color: #f59e0b;
+  color: var(--ds-warning);
 }
 .sm-status-mastered {
   background: rgba(16, 185, 129, 0.12);
-  color: #10b981;
+  color: var(--ds-success);
 }
 .sm-del-btn {
   flex-shrink: 0;
   color: var(--color-text-soft, #6b7280);
 }
 .sm-del-btn:hover {
-  color: #ef4444;
+  color: var(--ds-danger);
 }
 
 .sm-card-body {
@@ -740,15 +740,15 @@ onMounted(() => {
   margin-top: 2px;
 }
 .sm-advance-btn {
-  color: #10b981;
-  border-color: #10b981;
+  color: var(--ds-success);
+  border-color: var(--ds-success);
 }
 .sm-advance-btn:hover {
   background: rgba(16, 185, 129, 0.12);
 }
 .sm-reset-btn {
-  color: #f59e0b;
-  border-color: #f59e0b;
+  color: var(--ds-warning);
+  border-color: var(--ds-warning);
 }
 .sm-reset-btn:hover {
   background: rgba(245, 158, 11, 0.12);
@@ -775,7 +775,7 @@ onMounted(() => {
   font-weight: 600;
 }
 .sm-required {
-  color: #ef4444;
+  color: var(--ds-danger);
 }
 
 @media (max-width: 768px) {

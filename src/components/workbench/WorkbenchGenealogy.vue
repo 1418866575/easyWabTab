@@ -1515,7 +1515,7 @@ html.dark .fn-paibei-sep { color: var(--color-border, #374151); }
   white-space: nowrap;
 }
 .fg-stat-chip b { font-size: 14px; color: var(--color-text, #111827); }
-.fg-stat-chip b.is-male { color: #3b82f6; }
+.fg-stat-chip b.is-male { color: var(--ds-primary); }
 .fg-stat-chip b.is-female { color: #ec4899; }
 .fg-stat-total { background: var(--color-primary-light, #eff6ff); }
 .fg-stat-unknown { opacity: 0.85; }

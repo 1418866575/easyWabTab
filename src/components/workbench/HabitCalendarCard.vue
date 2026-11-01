@@ -418,7 +418,7 @@ function onCardClick(): void {
 
 .hb-cal-img.has {
   background: rgba(255, 255, 255, 0.92);
-  color: #1f2937;
+  color: var(--ds-text);
   box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.06));
 }
 

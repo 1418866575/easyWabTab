@@ -236,7 +236,7 @@ function stageColor(stage: number): string {
   border-radius: 12px;
   padding: 12px 10px;
   text-align: center;
-  color: #1f2937;
+  color: var(--ds-text);
   border: 1px solid rgba(0, 0, 0, 0.06);
 }
 .ts-band-age {

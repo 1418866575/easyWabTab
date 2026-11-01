@@ -909,8 +909,8 @@ onMounted(async () => {
   font-variant-numeric: tabular-nums;
 }
 
-.ld-trend-total-inc b { color: #10b981; }
-.ld-trend-total-exp b { color: #ef4444; }
+.ld-trend-total-inc b { color: var(--ds-success); }
+.ld-trend-total-exp b { color: var(--ds-danger); }
 html.dark .ld-trend-total-inc b { color: #34d399; }
 html.dark .ld-trend-total-exp b { color: #f87171; }
 
@@ -1666,7 +1666,7 @@ html.dark .ld-daily-bar {
   color: var(--color-text-secondary, #6b7280);
 }
 .ld-daily-total b {
-  color: #ef4444;
+  color: var(--ds-danger);
 }
 html.dark .ld-daily-total b {
   color: #f87171;

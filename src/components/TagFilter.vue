@@ -54,23 +54,23 @@ const store = useSitesStore()
 
 .tag {
   padding: 6px 14px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--ds-line);
   border-radius: 20px;
   background-color: white;
   font-size: 13px;
-  color: #64748b;
+  color: var(--ds-text-2);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .tag:hover {
-  border-color: #3b82f6;
-  color: #3b82f6;
+  border-color: var(--ds-primary);
+  color: var(--ds-primary);
 }
 
 .tag.active {
-  background-color: #3b82f6;
-  border-color: #3b82f6;
+  background-color: var(--ds-primary);
+  border-color: var(--ds-primary);
   color: white;
 }
 
@@ -82,36 +82,36 @@ const store = useSitesStore()
 
 .invalid-toggle {
   padding: 6px 14px;
-  border: 1px solid #f59e0b;
+  border: 1px solid var(--ds-warning);
   border-radius: 20px;
   background-color: #fffbeb;
-  color: #d97706;
+  color: var(--ds-warning);
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .invalid-toggle:hover {
-  background-color: #fef3c7;
-  border-color: #f59e0b;
+  background-color: var(--ds-warning-soft);
+  border-color: var(--ds-warning);
 }
 
 .invalid-toggle.active {
-  background-color: #f59e0b;
-  border-color: #f59e0b;
+  background-color: var(--ds-warning);
+  border-color: var(--ds-warning);
   color: white;
 }
 
 .clear-btn {
   background: none;
   border: none;
-  color: #64748b;
+  color: var(--ds-text-2);
   font-size: 13px;
   cursor: pointer;
   text-decoration: underline;
 }
 
 .clear-btn:hover {
-  color: #3b82f6;
+  color: var(--ds-primary);
 }
 </style>

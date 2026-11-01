@@ -399,10 +399,10 @@ function exportCsv(): void {
   white-space: nowrap;
 }
 
-.lv-tag.is-warn { background-color: #f59e0b; }
-.lv-tag.is-info { background-color: #3b82f6; }
-.lv-tag.is-danger { background-color: #ef4444; }
-.lv-tag.is-ok { background-color: #10b981; }
+.lv-tag.is-warn { background-color: var(--ds-warning); }
+.lv-tag.is-info { background-color: var(--ds-primary); }
+.lv-tag.is-danger { background-color: var(--ds-danger); }
+.lv-tag.is-ok { background-color: var(--ds-success); }
 
 .lv-ops {
   display: flex;

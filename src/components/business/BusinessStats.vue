@@ -742,7 +742,7 @@ function printReport(): void {
 }
 
 .dot.cost {
-  background: #f59e0b;
+  background: var(--ds-warning);
 }
 
 .dot.profit {

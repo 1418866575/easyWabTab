@@ -683,15 +683,15 @@ function exportInventoryExcel(): void {
 
 /* 三色区分：进货合计（蓝）、带出合计（橙）、库存剩余（绿） */
 .bizinv-metric.num-purchase .metric-value b {
-  color: #3b82f6;
+  color: var(--ds-primary);
 }
 
 .bizinv-metric.num-brought .metric-value b {
-  color: #f59e0b;
+  color: var(--ds-warning);
 }
 
 .bizinv-metric.num-stock .metric-value b {
-  color: #22c55e;
+  color: var(--ds-success);
 }
 
 /* 查看溯源按钮（卡片右上角） */

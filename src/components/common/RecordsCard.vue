@@ -53,18 +53,19 @@ function display(v?: string | number | null): string {
   flex-direction: column;
   gap: 8px;
   padding: 12px;
-  background: var(--color-surface, #fff);
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 10px;
+  background: var(--ds-card, var(--color-surface, #fff));
+  border: 1px solid var(--ds-line, var(--color-border, #e5e7eb));
+  border-radius: var(--ds-radius-card, 12px);
   box-sizing: border-box;
   height: 156px;
   overflow: hidden;
   cursor: pointer;
-  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
 }
 .ewt-card:hover {
-  border-color: var(--color-primary, #3b82f6);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  border-color: var(--ds-primary, var(--color-primary, #3b82f6));
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+  transform: translateY(-1px);
 }
 .ewt-card:active {
   transform: scale(0.99);
@@ -74,10 +75,10 @@ function display(v?: string | number | null): string {
   flex-shrink: 0;
   min-width: 0;
   padding-bottom: 8px;
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
+  border-bottom: 1px solid var(--ds-line, var(--color-border, #e5e7eb));
 }
 :global(html.dark) .ewt-card-header {
-  border-bottom-color: var(--color-border, #374151);
+  border-bottom-color: var(--ds-line, var(--color-border, #374151));
 }
 /* 带操作区：高度自适应，保证按钮行完整可见（移动端全局规则已放开 height，这里覆盖桌面） */
 .ewt-card.has-actions {

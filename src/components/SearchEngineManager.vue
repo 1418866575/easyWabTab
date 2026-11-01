@@ -424,7 +424,7 @@ function truncateUrl(url: string, maxLength = 40) {
 }
 
 .engine-item.is-default {
-  background: #fef3c7;
+  background: var(--ds-warning-soft);
   border-color: #fbbf24;
 }
 
@@ -557,7 +557,7 @@ function truncateUrl(url: string, maxLength = 40) {
 
 .btn-icon.set-default.is-active {
   opacity: 1;
-  color: #f59e0b;
+  color: var(--ds-warning);
 }
 
 .btn-icon.set-default:disabled {

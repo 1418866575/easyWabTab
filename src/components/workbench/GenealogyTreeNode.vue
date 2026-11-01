@@ -117,7 +117,7 @@ function toggle() {
   padding: 0 6px;
   border-radius: 999px;
   color: #b45309;
-  background: #fef3c7;
+  background: var(--ds-warning-soft);
 }
 .gtn-avatar {
   width: 28px;

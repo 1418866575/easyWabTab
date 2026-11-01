@@ -524,9 +524,9 @@ onMounted(() => {
   display: inline-flex; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 600;
 }
 .sg-badge-active { background: var(--color-primary-soft, #e9f0ff); color: var(--color-primary, #5b8def); }
-.sg-badge-completed { background: rgba(16,185,129,0.12); color: #10b981; }
-.sg-badge-overdue { background: #fdf3d8; color: #d97706; }
-.sg-badge-abandoned { background: rgba(239,68,68,0.12); color: #ef4444; }
+.sg-badge-completed { background: rgba(16,185,129,0.12); color: var(--ds-success); }
+.sg-badge-overdue { background: #fdf3d8; color: var(--ds-warning); }
+.sg-badge-abandoned { background: rgba(239,68,68,0.12); color: var(--ds-danger); }
 
 .sg-list-pager {
   flex: 0 0 auto;
@@ -549,8 +549,8 @@ onMounted(() => {
   margin: 0 2px;
 }
 /* .btn-edit 视觉已统一到全局 .ui-btn（style.css） */
-.btn-done { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.3); color: #10b981; }
-.btn-warn { background: rgba(224,168,0,0.12); border-color: rgba(224,168,0,0.3); color: #d97706; }
+.btn-done { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.3); color: var(--ds-success); }
+.btn-warn { background: rgba(224,168,0,0.12); border-color: rgba(224,168,0,0.3); color: var(--ds-warning); }
 /* .btn-delete 视觉已统一到全局 .ui-btn--danger（style.css） */
 
 .dialog-body { display: flex; flex-direction: column; gap: 12px; }

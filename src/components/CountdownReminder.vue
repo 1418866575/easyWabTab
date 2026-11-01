@@ -203,7 +203,7 @@ html.dark .reminder-label {
 
 .cd-email-switch:checked::after {
   transform: translateX(14px);
-  background-color: #fff;
+  background-color: var(--ds-card);
 }
 
 html.dark .cd-email-switch {

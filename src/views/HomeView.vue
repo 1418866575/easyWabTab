@@ -1024,7 +1024,7 @@ onUnmounted(() => {
 .nav-filter-hint {
   font-size: 12px;
   color: #b45309;
-  background: #fef3c7;
+  background: var(--ds-warning-soft);
   border-radius: 999px;
   padding: 1px 8px;
 }
@@ -1236,9 +1236,9 @@ html.dark .nav-add-site {
   cursor: progress !important;
 }
 .wb-sync-btn.wb-sync-btn-conflict {
-  background-color: #f59e0b !important;
+  background-color: var(--ds-warning) !important;
   color: #fff !important;
-  border-color: #f59e0b !important;
+  border-color: var(--ds-warning) !important;
 }
 .wb-sync-btn.wb-sync-btn-error {
   background-color: var(--color-error, #ef4444) !important;

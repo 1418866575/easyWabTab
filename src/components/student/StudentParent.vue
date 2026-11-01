@@ -953,7 +953,7 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
   text-align: center;
 }
-.stp-lock-icon { font-size: 40px; color: #f59e0b; margin-bottom: 12px; display: flex; justify-content: center; }
+.stp-lock-icon { font-size: 40px; color: var(--ds-warning); margin-bottom: 12px; display: flex; justify-content: center; }
 .stp-lock-title { margin: 0 0 8px; font-size: 18px; font-weight: 600; }
 .stp-lock-desc { margin: 0 0 20px; font-size: 14px; line-height: 1.6; color: var(--color-text-secondary, #6b7280); }
 
@@ -984,7 +984,7 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
   border-radius: 12px; padding: 12px 16px;
 }
 .stp-reset-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.stp-reset-title { font-size: 14px; font-weight: 600; color: #dc2626; }
+.stp-reset-title { font-size: 14px; font-weight: 600; color: var(--ds-danger); }
 .stp-reset-desc { font-size: 12px; color: var(--color-text-secondary, #6b7280); }
 .stp-reset-actions { display: flex; gap: 10px; flex-shrink: 0; }
 
@@ -1065,7 +1065,7 @@ html.dark .stp-tab.active {
 .stp-date-chip {
   font-weight: 600;
   color: var(--color-text, #1f2937);
-  background: #fff;
+  background: var(--ds-card);
   padding: 4px 10px;
   border-radius: 999px;
   border: 1px solid var(--color-border, #e5e7eb);

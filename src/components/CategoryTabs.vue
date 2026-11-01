@@ -86,11 +86,11 @@ const handleCategoryClick = (categoryId: string) => {
 .category-tab {
   position: relative;
   padding: 8px 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--ds-line);
   border-radius: 20px;
   background-color: white;
   font-size: 13px;
-  color: #64748b;
+  color: var(--ds-text-2);
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
@@ -110,13 +110,13 @@ const handleCategoryClick = (categoryId: string) => {
 }
 
 .category-tab:hover {
-  border-color: #3b82f6;
-  color: #3b82f6;
+  border-color: var(--ds-primary);
+  color: var(--ds-primary);
 }
 
 .category-tab.active {
-  background-color: #3b82f6;
-  border-color: #3b82f6;
+  background-color: var(--ds-primary);
+  border-color: var(--ds-primary);
   color: white;
 }
 
@@ -136,7 +136,7 @@ const handleCategoryClick = (categoryId: string) => {
   height: 16px;
   padding: 0 4px;
   border-radius: 8px;
-  background-color: #3b82f6;
+  background-color: var(--ds-primary);
   color: white;
   font-size: 10px;
   line-height: 16px;
@@ -147,6 +147,6 @@ const handleCategoryClick = (categoryId: string) => {
 
 .category-tab.active .count-badge {
   background-color: white;
-  color: #3b82f6;
+  color: var(--ds-primary);
 }
 </style>

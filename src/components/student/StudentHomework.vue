@@ -576,13 +576,13 @@ onMounted(async () => {
   border-left: 3px solid #6b7280;
 }
 .shw-list > :global(.el-table .el-table__row.shw-row-doing td.el-table__cell:first-child) {
-  border-left: 3px solid #3b82f6;
+  border-left: 3px solid var(--ds-primary);
 }
 .shw-list > :global(.el-table .el-table__row.shw-row-overdue td.el-table__cell:first-child) {
-  border-left: 3px solid #ef4444;
+  border-left: 3px solid var(--ds-danger);
 }
 .shw-list > :global(.el-table .el-table__row.shw-row-done td.el-table__cell:first-child) {
-  border-left: 3px solid #10b981;
+  border-left: 3px solid var(--ds-success);
 }
 .shw-list > :global(.el-table .el-table__row.shw-row-done td.el-table__cell) {
   opacity: 0.75;
@@ -622,9 +622,9 @@ onMounted(async () => {
 }
 
 .shw-due { font-weight: 500; }
-.shw-due.overdue { color: #ef4444; }
-.shw-due.today { color: #f59e0b; }
-.shw-due.tomorrow { color: #3b82f6; }
+.shw-due.overdue { color: var(--ds-danger); }
+.shw-due.today { color: var(--ds-warning); }
+.shw-due.tomorrow { color: var(--ds-primary); }
 .shw-due-text {
   font-size: 10px;
   margin-top: 2px;
@@ -640,9 +640,9 @@ onMounted(async () => {
   white-space: nowrap;
   line-height: 1.6;
 }
-.shw-priority-high { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
-.shw-priority-normal { background: rgba(107, 114, 128, 0.15); color: #6b7280; }
-.shw-priority-low { background: rgba(156, 163, 175, 0.15); color: #9ca3af; }
+.shw-priority-high { background: rgba(239, 68, 68, 0.12); color: var(--ds-danger); }
+.shw-priority-normal { background: rgba(107, 114, 128, 0.15); color: var(--ds-text-2); }
+.shw-priority-low { background: rgba(156, 163, 175, 0.15); color: var(--ds-text-3); }
 .shw-status {
   padding: 2px 8px;
   border-radius: 999px;
@@ -650,10 +650,10 @@ onMounted(async () => {
   font-size: 11px;
   white-space: nowrap;
 }
-.shw-status.shw-status-pending { background: #f3f4f6; color: #6b7280; }
-.shw-status.shw-status-doing { background: rgba(59, 130, 246, 0.12); color: #3b82f6; }
-.shw-status.shw-status-overdue { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
-.shw-status.shw-status-done { background: rgba(16, 185, 129, 0.12); color: #10b981; }
+.shw-status.shw-status-pending { background: var(--ds-bg-hover); color: var(--ds-text-2); }
+.shw-status.shw-status-doing { background: rgba(59, 130, 246, 0.12); color: var(--ds-primary); }
+.shw-status.shw-status-overdue { background: rgba(239, 68, 68, 0.12); color: var(--ds-danger); }
+.shw-status.shw-status-done { background: rgba(16, 185, 129, 0.12); color: var(--ds-success); }
 
 /* ===== 卡片头部：标题 + 状态徽章（移动端核心，确保状态可见） ===== */
 .shw-card-head {
@@ -805,14 +805,14 @@ onMounted(async () => {
 .shw-advance-btn:hover {
   background: var(--color-hover, #f3f4f6);
 }
-.shw-advance-btn.shw-status-pending { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
-.shw-advance-btn.shw-status-doing { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-.shw-advance-btn.shw-status-overdue { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+.shw-advance-btn.shw-status-pending { background: rgba(59, 130, 246, 0.1); color: var(--ds-primary); }
+.shw-advance-btn.shw-status-doing { background: rgba(16, 185, 129, 0.1); color: var(--ds-success); }
+.shw-advance-btn.shw-status-overdue { background: rgba(59, 130, 246, 0.1); color: var(--ds-primary); }
 .shw-done-mark {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: #10b981;
+  color: var(--ds-success);
   font-size: 11px;
 }
 

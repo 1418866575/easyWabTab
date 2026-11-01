@@ -893,20 +893,20 @@ onMounted(async () => {
 
 .prio-high {
   color: #b91c1c;
-  background: #fee2e2;
+  background: var(--ds-danger-soft);
   border-color: #fca5a5;
 }
 
 .prio-medium {
   color: #b45309;
-  background: #fef3c7;
+  background: var(--ds-warning-soft);
   border-color: #fcd34d;
 }
 
 .prio-low {
-  color: #475569;
-  background: #f1f5f9;
-  border-color: #cbd5e1;
+  color: var(--ds-text-2);
+  background: var(--ds-bg-hover);
+  border-color: var(--ds-line-strong);
 }
 
 /* ===== 状态徽章（未完成 / 进行中 / 已完成 / 已归档）===== */
@@ -921,14 +921,14 @@ onMounted(async () => {
 }
 
 .st-pending {
-  color: #475569;
-  background: #f1f5f9;
-  border-color: #cbd5e1;
+  color: var(--ds-text-2);
+  background: var(--ds-bg-hover);
+  border-color: var(--ds-line-strong);
 }
 
 .st-in-progress {
-  color: #1d4ed8;
-  background: #dbeafe;
+  color: var(--ds-primary);
+  background: var(--ds-primary-soft);
   border-color: #93c5fd;
 }
 
@@ -939,9 +939,9 @@ onMounted(async () => {
 }
 
 .st-archived {
-  color: #6b7280;
-  background: #f3f4f6;
-  border-color: #d1d5db;
+  color: var(--ds-text-2);
+  background: var(--ds-bg-hover);
+  border-color: var(--ds-line-strong);
 }
 
 /* 逾期天数：红色高亮 + 等宽数字，便于纵向比对（与截止日期列的「已逾期 N 天」同一色系） */

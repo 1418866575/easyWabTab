@@ -72,11 +72,14 @@ html.dark {
   --ds-card: #1e293b;
   --ds-card-2: #0f172a;
   --ds-line: #334155;
+  --ds-line-strong: #475569;
+  --ds-bg-hover: #334155;
   --ds-text: #f1f5f9;
   --ds-text-2: #94a3b8;
   --ds-text-3: #64748b;
   --ds-danger-soft: rgba(239, 68, 68, 0.16);
   --ds-success-soft: rgba(22, 163, 74, 0.16);
+  --ds-warning-soft: rgba(245, 158, 11, 0.16);
 }
 
 /* 通用组件 */

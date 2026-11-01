@@ -183,9 +183,9 @@ const overlayStyle = computed(() => (props.zIndex ? { zIndex: props.zIndex } : {
   display: flex;
   flex-direction: column;
   width: 100%;
-  background-color: var(--color-bg-card, #ffffff);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-lg, 12px);
+  background-color: var(--ds-card, var(--color-bg-card, #ffffff));
+  border: 1px solid var(--ds-line, var(--color-border, #e2e8f0));
+  border-radius: var(--ds-radius-card, var(--radius-lg, 12px));
   box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.15));
   overflow: hidden;
 }
@@ -230,9 +230,9 @@ const overlayStyle = computed(() => (props.zIndex ? { zIndex: props.zIndex } : {
   justify-content: space-between;
   align-items: center;
   gap: var(--space-3, 12px);
-  padding: var(--space-5, 20px) var(--space-6, 24px);
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
-  background: var(--color-bg-card, #ffffff);
+  padding: var(--space-4, 16px) var(--space-5, 20px);
+  border-bottom: 1px solid var(--ds-line, var(--color-border, #e2e8f0));
+  background: var(--ds-card, var(--color-bg-card, #ffffff));
   flex-shrink: 0;
 }
 .bd-header-actions {
@@ -243,9 +243,9 @@ const overlayStyle = computed(() => (props.zIndex ? { zIndex: props.zIndex } : {
 }
 .bd-title {
   margin: 0;
-  font-size: var(--font-size-xl, 18px);
-  font-weight: 600;
-  color: var(--color-text, #1e293b);
+  font-size: var(--ds-fs-section, 16px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--ds-text, var(--color-text, #1e293b));
   display: flex;
   align-items: center;
   gap: var(--space-2, 8px);
@@ -272,9 +272,11 @@ const overlayStyle = computed(() => (props.zIndex ? { zIndex: props.zIndex } : {
 .bd-footer {
   display: flex;
   justify-content: flex-end;
-  gap: var(--space-3, 12px);
-  padding: var(--space-4, 16px) var(--space-6, 24px);
-  border-top: 1px solid var(--color-border, #e2e8f0);
+  align-items: center;
+  gap: var(--space-2, 8px);
+  padding: var(--space-3, 12px) var(--space-5, 20px);
+  border-top: 1px solid var(--ds-line, var(--color-border, #e2e8f0));
+  background: var(--ds-card, var(--color-bg-card, #ffffff));
   flex-shrink: 0;
 }
 

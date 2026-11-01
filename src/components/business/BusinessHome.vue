@@ -1290,7 +1290,7 @@ html.dark .sk-block::after {
   color: var(--color-success, #16a34a);
 }
 .target-sub.behind {
-  color: #f59e0b;
+  color: var(--ds-warning);
 }
 
 /* ===== M-08 首次使用引导卡 ===== */

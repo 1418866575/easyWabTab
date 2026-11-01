@@ -362,9 +362,9 @@ onMounted(async () => {
   color: var(--color-text-soft, #6b7280);
 }
 .sr-stat-value { font-size: 16px; font-weight: 600; }
-.sr-stat-value.earn { color: #10b981; }
-.sr-stat-value.redeem { color: #ef4444; }
-.sr-stat-value.muted { color: #9ca3af; }
+.sr-stat-value.earn { color: var(--ds-success); }
+.sr-stat-value.redeem { color: var(--ds-danger); }
+.sr-stat-value.muted { color: var(--ds-text-3); }
 
 .sr-tabs {
   flex-shrink: 0;
@@ -507,7 +507,7 @@ html.dark .sr-detail-value { color: #f9fafb; }
   display: inline-flex;
   align-items: baseline;
   gap: 2px;
-  color: #f59e0b;
+  color: var(--ds-warning);
   flex-shrink: 0;
 }
 .sr-reward-cost-num {
@@ -533,8 +533,8 @@ html.dark .sr-detail-value { color: #f9fafb; }
   color: var(--color-text-soft, #6b7280);
   flex-shrink: 0;
 }
-.sr-reward-stock.zero { color: #ef4444; }
-.sr-reward-stock.unlimited { color: #10b981; }
+.sr-reward-stock.zero { color: var(--ds-danger); }
+.sr-reward-stock.unlimited { color: var(--ds-success); }
 .sr-reward-foot {
   margin-top: auto;
   display: flex;
@@ -545,7 +545,7 @@ html.dark .sr-detail-value { color: #f9fafb; }
 .sr-redeem-btn {
   padding: 4px 12px;
   border: none;
-  background: #10b981;
+  background: var(--ds-success);
   color: #fff;
   border-radius: 6px;
   font-size: 12px;
@@ -553,7 +553,7 @@ html.dark .sr-detail-value { color: #f9fafb; }
   cursor: pointer;
   white-space: nowrap;
 }
-.sr-redeem-btn:hover { background: #059669; }
+.sr-redeem-btn:hover { background: var(--ds-success); }
 .sr-redeem-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -621,8 +621,8 @@ html.dark .sr-detail-value { color: #f9fafb; }
   font-size: 14px;
   font-variant-numeric: tabular-nums;
 }
-.sr-txn-points.earn { color: #059669; }
-.sr-txn-points.redeem { color: #dc2626; }
+.sr-txn-points.earn { color: var(--ds-success); }
+.sr-txn-points.redeem { color: var(--ds-danger); }
 
 /* 类型标签：加分绿底 / 兑换红底 */
 .sr-txn-type-tag {
@@ -635,11 +635,11 @@ html.dark .sr-detail-value { color: #f9fafb; }
 }
 .sr-txn-type-tag.earn {
   background: rgba(16, 185, 129, 0.12);
-  color: #059669;
+  color: var(--ds-success);
 }
 .sr-txn-type-tag.redeem {
   background: rgba(239, 68, 68, 0.12);
-  color: #dc2626;
+  color: var(--ds-danger);
 }
 
 /* ===== 弹框 ===== */
@@ -676,7 +676,7 @@ html.dark .sr-detail-value { color: #f9fafb; }
 .sr-rules-action { color: var(--color-text, #1f2937); }
 .sr-rules-points {
   font-weight: 600;
-  color: #f59e0b;
+  color: var(--ds-warning);
 }
 
 /* ===== 移动端：统计卡换行、奖励网格降为 2 列、表格横向滚动 ===== */

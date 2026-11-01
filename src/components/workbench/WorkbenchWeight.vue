@@ -600,8 +600,8 @@ onMounted(async () => {
 }
 
 .bmi-under {
-  color: #1d4ed8;
-  background: #dbeafe;
+  color: var(--ds-primary);
+  background: var(--ds-primary-soft);
   border-color: #93c5fd;
 }
 
@@ -619,7 +619,7 @@ onMounted(async () => {
 
 .bmi-obese {
   color: #b91c1c;
-  background: #fee2e2;
+  background: var(--ds-danger-soft);
   border-color: #fca5a5;
 }
 
@@ -737,8 +737,8 @@ onMounted(async () => {
 /* BMI 颜色分级（与 classifyBmi 返回值映射：underweight/normal/overweight/obese） */
 .bmi-underweight { color: var(--color-link, #3b82f6); font-weight:600; }
 .bmi-normal { color: var(--color-success, #16a34a); font-weight:700; }
-.bmi-overweight { color: #f59e0b; font-weight:600; }
-.bmi-obese { color: #ef4444; font-weight:700; }
+.bmi-overweight { color: var(--ds-warning); font-weight:600; }
+.bmi-obese { color: var(--ds-danger); font-weight:700; }
 
 .wt-record-item {
   display: flex;

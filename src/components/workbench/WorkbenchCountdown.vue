@@ -794,8 +794,8 @@ onUnmounted(() => {
   padding: 1px 6px;
   border-radius: var(--radius-full, 9999px);
   background: rgba(34, 197, 94, 0.12);
-  color: #22c55e;
-  border: 1px solid #22c55e;
+  color: var(--ds-success);
+  border: 1px solid var(--ds-success);
 }
 
 html.dark .reminded-badge {
@@ -814,14 +814,14 @@ html.dark .reminded-badge {
 }
 
 .cat-work {
-  color: #3b82f6;
-  border: 1px solid #3b82f6;
+  color: var(--ds-primary);
+  border: 1px solid var(--ds-primary);
   background: rgba(59, 130, 246, 0.12);
 }
 
 .cat-life {
-  color: #22c55e;
-  border: 1px solid #22c55e;
+  color: var(--ds-success);
+  border: 1px solid var(--ds-success);
   background: rgba(34, 197, 94, 0.12);
 }
 
@@ -838,8 +838,8 @@ html.dark .reminded-badge {
 }
 
 .cat-diet {
-  color: #f59e0b;
-  border: 1px solid #f59e0b;
+  color: var(--ds-warning);
+  border: 1px solid var(--ds-warning);
   background: rgba(245, 158, 11, 0.12);
 }
 
@@ -851,7 +851,7 @@ html.dark .reminded-badge {
 
 /* 自定义分类徽标：统一默认灰 */
 .cat-default {
-  color: #6b7280;
+  color: var(--ds-text-2);
   border: 1px solid #6b7280;
   background: rgba(107, 114, 128, 0.12);
 }

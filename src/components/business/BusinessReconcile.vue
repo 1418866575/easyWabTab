@@ -458,7 +458,7 @@ function exportExpenseExcel(): void {
   font-size: 12px;
   font-weight: 600;
   color: #fff;
-  background: #d97706;
+  background: var(--ds-warning);
   border: none;
   border-radius: 7px;
   cursor: pointer;

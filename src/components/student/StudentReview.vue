@@ -447,9 +447,9 @@ function daysClass(days: number): string {
   font-weight: 600;
   margin-top: 2px;
 }
-.sr-stat-value.due { color: #f59e0b; }
-.sr-stat-value.overdue { color: #ef4444; }
-.sr-stat-value.mastered { color: #10b981; }
+.sr-stat-value.due { color: var(--ds-warning); }
+.sr-stat-value.overdue { color: var(--ds-danger); }
+.sr-stat-value.mastered { color: var(--ds-success); }
 
 .sr-main {
   flex: 1;
@@ -553,7 +553,7 @@ function daysClass(days: number): string {
   font-size: 11px;
   font-weight: 600;
   color: #fff;
-  background: #3b82f6;
+  background: var(--ds-primary);
   flex-shrink: 0;
 }
 
@@ -581,7 +581,7 @@ function daysClass(days: number): string {
   color: var(--color-text-secondary, #6b7280);
 }
 .sr-del-btn:hover {
-  color: #ef4444;
+  color: var(--ds-danger);
 }
 
 .sr-card-meta {
@@ -600,13 +600,13 @@ function daysClass(days: number): string {
 .sr-next-date {
   font-weight: 600;
 }
-.sr-next-date.overdue { color: #ef4444; }
-.sr-next-date.due-today { color: #f59e0b; }
+.sr-next-date.overdue { color: var(--ds-danger); }
+.sr-next-date.due-today { color: var(--ds-warning); }
 .sr-next-date.upcoming { color: var(--color-text-secondary, #6b7280); }
 
 .sr-mastered-tag {
   font-weight: 600;
-  color: #10b981;
+  color: var(--ds-success);
 }
 
 .sr-learn-date {
@@ -620,16 +620,16 @@ function daysClass(days: number): string {
 }
 
 .sr-advance-btn {
-  color: #10b981;
-  border-color: #10b981;
+  color: var(--ds-success);
+  border-color: var(--ds-success);
 }
 .sr-advance-btn:hover {
   background: rgba(16, 185, 129, 0.12);
 }
 
 .sr-reset-btn {
-  color: #f59e0b;
-  border-color: #f59e0b;
+  color: var(--ds-warning);
+  border-color: var(--ds-warning);
 }
 .sr-reset-btn:hover {
   background: rgba(245, 158, 11, 0.12);

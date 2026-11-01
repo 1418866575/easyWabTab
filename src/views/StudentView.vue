@@ -518,7 +518,7 @@ async function onOnboardingComplete() {
   filter: brightness(1.06);
   transform: translateY(-0.5px);
 }
-.st-parent-bar.unlocked .st-parent-bar-btn { color: #b91c1c; border-color: rgba(185, 28, 28, 0.35); background: #fff; }
+.st-parent-bar.unlocked .st-parent-bar-btn { color: #b91c1c; border-color: rgba(185, 28, 28, 0.35); background: var(--ds-card); }
 .st-parent-bar.unlocked .st-parent-bar-btn:hover { background: rgba(185, 28, 28, 0.08); }
 
 /* ===== 右上角云同步按钮（头部设置按钮左侧）状态视觉 ===== */
@@ -528,7 +528,7 @@ async function onOnboardingComplete() {
 }
 .st-sync-btn:disabled { cursor: not-allowed; opacity: 0.7; }
 .st-sync-btn-pending {
-  color: #2563eb;
+  color: var(--ds-primary);
   animation: st-sync-pulse 1.4s ease-in-out infinite;
 }
 .st-sync-btn-conflict { color: #b45309; }
