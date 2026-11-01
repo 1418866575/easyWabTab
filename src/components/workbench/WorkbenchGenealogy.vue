@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { showConfirm } from '@/utils/dialog'
 import { useViewMode } from '@/composables/useViewMode'
@@ -1077,13 +1078,12 @@ onUnmounted(() => {
     </template>
 
     <!-- 成员新增/编辑弹框 -->
-    <el-dialog
-      :model-value="showMemberDialog"
+    <BaseDialog
+      v-if="showMemberDialog"
       :title="editingId ? '编辑成员' : '新增成员'"
       width="80%"
       data-testid="fg-member-dialog"
       @close="cancelMember"
-      @update:model-value="(v: boolean) => { if (!v) cancelMember() }"
     >
       <form class="dialog-body" @submit.prevent="handleSaveMember">
         <div class="fg-form-grid">
@@ -1190,16 +1190,15 @@ onUnmounted(() => {
           <el-button v-if="editingId && store.rootId !== editingId" size="small" type="warning" class="mobile-only-action" data-testid="fg-edit-root-button" @click="setRootFromEdit">设主根</el-button>
         </div>
       </form>
-    </el-dialog>
+    </BaseDialog>
 
     <!-- 关系管理弹框 -->
-    <el-dialog
-      :model-value="showRelDialog"
+    <BaseDialog
+      v-if="showRelDialog"
       :title="relMember ? `关系管理 · ${relMember.name}` : '关系管理'"
       width="480px"
       data-testid="fg-rel-dialog"
       @close="closeRel"
-      @update:model-value="(v: boolean) => { if (!v) closeRel() }"
     >
       <div v-if="relMember" class="fg-rel-body">
         <div class="fg-rel-section">
@@ -1240,16 +1239,15 @@ onUnmounted(() => {
       <div class="form-actions ewt-dialog-footer">
         <el-button size="small" @click="closeRel">关闭</el-button>
       </div>
-    </el-dialog>
+    </BaseDialog>
 
     <!-- 取名记录新增/编辑弹框 -->
-    <el-dialog
-      :model-value="showNameDialog"
+    <BaseDialog
+      v-if="showNameDialog"
       :title="nameEditingId ? '编辑取名记录' : '新增取名记录'"
       width="80%"
       data-testid="fn-name-dialog"
       @close="cancelName"
-      @update:model-value="(v: boolean) => { if (!v) cancelName() }"
     >
       <form class="dialog-body" @submit.prevent="handleSaveName">
         <div class="fg-form-grid">
@@ -1307,16 +1305,15 @@ onUnmounted(() => {
           <el-button v-if="nameEditingId" type="danger" size="small" native-type="button" data-testid="fn-record-delete" @click="handleDeleteName(nameEditingId)">删除</el-button>
         </div>
       </form>
-    </el-dialog>
+    </BaseDialog>
 
     <!-- 族谱排辈（字辈歌，只读参考）-->
-    <el-dialog
-      :model-value="showPaibeiDialog"
+    <BaseDialog
+      v-if="showPaibeiDialog"
       :title="PAIBEI_TITLE"
       width="560px"
       data-testid="fn-paibei-dialog"
       @close="showPaibeiDialog = false"
-      @update:model-value="(v: boolean) => { if (!v) showPaibeiDialog = false }"
     >
       <div class="fn-paibei" data-testid="fn-paibei-body">
         <div v-for="(row, i) in PAIBEI_ROWS" :key="i" class="fn-paibei-row">
@@ -1328,7 +1325,7 @@ onUnmounted(() => {
       <div class="form-actions ewt-dialog-footer">
         <el-button size="small" data-testid="fn-paibei-close" @click="showPaibeiDialog = false">关闭</el-button>
       </div>
-    </el-dialog>
+    </BaseDialog>
 
   </div>
 <WorkbenchFab @click="startAdd" />

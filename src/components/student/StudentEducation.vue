@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useViewMode } from '@/composables/useViewMode'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
@@ -286,11 +287,11 @@ const degreeOptions = DEGREE_OPTIONS
     </div>
 
     <!-- 新增/编辑弹框 -->
-    <el-dialog
-      v-model="dialogVisible"
+    <BaseDialog
+      v-if="dialogVisible"
       :title="editingId ? '编辑教育经历' : '新增教育经历'"
       width="480px"
-      @close="closeDialog"
+      @close="dialogVisible = false; closeDialog"
     >
       <div class="edu-dialog-body">
         <div class="edu-form-row">
@@ -350,11 +351,11 @@ const degreeOptions = DEGREE_OPTIONS
           <el-button v-if="editingId" type="danger" @click="askDelete(store.sortedEntries.find(e => e.id === editingId)!)">删除</el-button>
         </div>
       </template>
-    </el-dialog>
+    </BaseDialog>
 
     <!-- 删除确认 -->
-    <el-dialog
-      v-model="deleteConfirmVisible"
+    <BaseDialog
+      v-if="deleteConfirmVisible"
       title="确认删除"
       width="340px"
       @close="deleteConfirmVisible = false"
@@ -364,7 +365,7 @@ const degreeOptions = DEGREE_OPTIONS
         <el-button @click="deleteConfirmVisible = false">取消</el-button>
         <el-button type="danger" @click="confirmDelete">删除</el-button>
       </template>
-    </el-dialog>
+    </BaseDialog>
   </section>
 </template>
 
@@ -518,20 +519,6 @@ const degreeOptions = DEGREE_OPTIONS
   color: var(--color-text, #606266);
   text-align: center;
   margin: 0;
-}
-/* el-dialog 圆角/阴影对齐项目卡片风格 */
-.edu-panel :deep(.el-dialog) {
-  border-radius: 12px;
-}
-.edu-panel :deep(.el-dialog__title) {
-  font-size: 15px;
-  font-weight: 600;
-}
-.edu-panel :deep(.el-dialog__body) {
-  padding-top: 16px;
-}
-.edu-panel :deep(.el-dialog__footer) {
-  padding-top: 12px;
 }
 /* el-input/el-select 宽度撑满 */
 .edu-panel :deep(.el-input),

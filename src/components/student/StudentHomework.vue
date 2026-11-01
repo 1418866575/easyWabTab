@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
@@ -423,7 +424,7 @@ onMounted(async () => {
       </div>
     </div>
 
-    <el-dialog
+    <BaseDialog
       v-model="showEditDialog"
       :title="editingId ? '编辑作业' : '新增作业'"
       width="80%"
@@ -500,7 +501,7 @@ onMounted(async () => {
           <el-button v-if="editingId" type="danger" data-testid="shw-form-delete" @click="handleDelete(editingId)">删除</el-button>
         </div>
       </template>
-    </el-dialog>
+    </BaseDialog>
   </div>
 </template>
 
@@ -871,10 +872,6 @@ onMounted(async () => {
 }
 
 @media (max-width: 480px) {
-  .shw-dialog :deep(.el-dialog) {
-    width: 80vw !important;
-    max-width: 80vw;
-  }
 }
 
 .shw-toolbar-left {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 // 学生工作台错题本面板（M3 批次1）
 // 布局：工具条 + 学科/状态 tabs + 搜索 + 统计卡 + 表格/卡片双视图（与学习计划一致）+ el-pagination + 编辑弹框
 // 数据：useStudentMistakesStore（独立 IDB store 'student_mistakes'，严格隔离成人数据）
@@ -412,12 +413,12 @@ onMounted(() => {
     </div>
 
     <!-- 编辑弹框 -->
-    <el-dialog
-      v-model="showEditDialog"
+    <BaseDialog
+      v-if="showEditDialog"
       :title="editingId !== null ? '编辑错题' : '新增错题'"
       width="560px"
       data-testid="sm-dialog"
-      @close="closeEditDialog"
+      @close="showEditDialog = false; closeEditDialog"
     >
       <div class="sm-dialog-body">
         <div class="sm-form-row">
@@ -481,7 +482,7 @@ onMounted(() => {
           <el-button v-if="editingId" type="danger" data-testid="sm-form-delete" @click="handleDelete(editingId)">删除</el-button>
         </div>
       </template>
-    </el-dialog>
+    </BaseDialog>
   </div>
 </template>
 
@@ -796,10 +797,6 @@ onMounted(() => {
 }
 
 @media (max-width: 480px) {
-  .sm-dialog :deep(.el-dialog) {
-    width: 92vw !important;
-    max-width: 92vw;
-  }
 }
 
 .sm-toolbar-left {

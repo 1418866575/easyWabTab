@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 // 学生工作台考试倒计时面板（M2）
 // 布局：顶部工具条 + 题型筛选 tabs + 统计卡 + 表格/卡片双视图（与学习计划一致）+ el-pagination + 编辑弹框
 // 数据：useStudentExamStore（独立 IDB store 'student_countdowns'，严格隔离成人数据）
@@ -383,13 +384,13 @@ onMounted(async () => {
       </template>
     </div>
 
-    <el-dialog
-      v-model="showEditDialog"
+    <BaseDialog
+      v-if="showEditDialog"
       :title="editingId ? '编辑考试' : '新增考试'"
       width="480px"
       class="se-dialog"
-      append-to-body
-      @close="closeEditDialog"
+      teleport
+      @close="showEditDialog = false; closeEditDialog"
     >
       <div class="dialog-body">
         <div class="form-field">
@@ -442,7 +443,7 @@ onMounted(async () => {
           <el-button v-if="editingId" type="danger" data-testid="se-form-delete" @click="handleDelete(editingId)">删除</el-button>
         </div>
       </template>
-    </el-dialog>
+    </BaseDialog>
   </div>
 </template>
 
@@ -739,26 +740,6 @@ onMounted(async () => {
   font-size: 14px;
 }
 
-/* ===== 编辑弹框（el-dialog） ===== */
-.se-dialog :deep(.el-dialog__header) {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
-  margin-right: 0;
-}
-
-.se-dialog :deep(.el-dialog__body) {
-  padding: 20px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.se-dialog :deep(.el-dialog__footer) {
-  padding: 12px 20px;
-  border-top: 1px solid var(--color-border, #e5e7eb);
-}
-
 .form-field {
   display: flex;
   flex-direction: column;
@@ -812,10 +793,6 @@ onMounted(async () => {
 }
 
 @media (max-width: 480px) {
-  .se-dialog :deep(.el-dialog) {
-    width: 92vw !important;
-    max-width: 92vw;
-  }
 }
 
 .se-toolbar-left {

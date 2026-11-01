@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 // 作业记录（全员可见：班主任、代课老师都能用）：新建作业 → 按名册为每位同学生成一条未交记录；
 // 同学补交后人工标记「已补交」（可填补交时间/备注，留空则保持空）；一键导出未交名单 Excel。
 // 数据挂在班级桶 homeworks[]（学期×班级隔离），计算走 teacherCore 纯函数，store 只做读写。
@@ -343,12 +344,12 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
     </div>
 
     <!-- 新建 / 编辑弹框 -->
-    <el-dialog
-      v-model="showForm"
+    <BaseDialog
+      v-if="showForm"
       :title="editingId !== null ? '编辑作业' : '新建作业'"
       width="560px"
       data-testid="hw-form-dialog"
-      @close="closeForm"
+      @close="showForm = false; closeForm"
     >
       <div class="hw-dialog-body">
         <div class="hw-form-row">
@@ -388,11 +389,11 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
           <el-button type="primary" data-testid="hw-form-save" :disabled="!formValid" @click="saveForm">保存</el-button>
         </div>
       </template>
-    </el-dialog>
+    </BaseDialog>
 
     <!-- 详情弹框：未交名单 -->
-    <el-dialog
-      v-model="showDetail"
+    <BaseDialog
+      v-if="showDetail"
       title="作业记录"
       width="80%"
       data-testid="hw-detail-dialog"
@@ -476,15 +477,15 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
           <el-button @click="showDetail = false">关闭</el-button>
         </div>
       </template>
-    </el-dialog>
+    </BaseDialog>
 
     <!-- 标记已补交弹窗 -->
-    <el-dialog
-      v-model="showMark"
+    <BaseDialog
+      v-if="showMark"
       title="已补交"
       width="420px"
       data-testid="hw-mark-dialog"
-      @close="closeMark"
+      @close="showMark = false; closeMark"
     >
       <div class="hw-dialog-body">
         <div class="hw-form-row">
@@ -502,7 +503,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
           <el-button type="primary" data-testid="hw-mark-save" @click="saveMark">确认</el-button>
         </div>
       </template>
-    </el-dialog>
+    </BaseDialog>
   </div>
 </template>
 
@@ -794,9 +795,5 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
 }
 
 @media (max-width: 480px) {
-  .hw-shell :deep(.el-dialog) {
-    width: 92vw !important;
-    max-width: 92vw;
-  }
 }
 </style>

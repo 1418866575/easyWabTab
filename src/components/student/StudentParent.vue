@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 // 家长协同控制台面板（学生工作台的「家长协同」section）
 // 6 个 Tabs：📊 统计 / 📝 每日任务 / 📑 孩子报告 / ➕ 手动加分 / 🏅 发放勋章 / 🎁 配置奖励
 // （容器样式参考个人工作台健康管理 WorkbenchHealth.vue 的 tabs 容器）
@@ -871,8 +872,8 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
     </template>
 
     <!-- 任务表单弹框 -->
-    <el-dialog
-      v-model="taskFormVisible"
+    <BaseDialog
+      v-if="taskFormVisible"
       :title="taskFormMode === 'add' ? '新增任务' : '编辑任务'"
       width="440px"
       class="stp-task-dialog"
@@ -892,11 +893,11 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
         <el-button @click="taskFormVisible = false">取消</el-button>
         <el-button type="primary" @click="submitTaskForm">保存</el-button>
       </template>
-    </el-dialog>
+    </BaseDialog>
 
     <!-- 奖励表单弹框 -->
-    <el-dialog
-      v-model="rewardFormVisible"
+    <BaseDialog
+      v-if="rewardFormVisible"
       :title="rewardFormMode === 'add' ? '新增奖励项' : '编辑奖励项'"
       width="440px"
       class="stp-reward-dialog"
@@ -929,7 +930,7 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
         <el-button @click="rewardFormVisible = false">取消</el-button>
         <el-button type="primary" @click="submitRewardForm">保存</el-button>
       </template>
-    </el-dialog>
+    </BaseDialog>
   </section>
 </template>
 
@@ -1296,20 +1297,6 @@ html.dark .stp-reward-card.has-bg::before { background: rgba(17, 24, 39, 0.55); 
 .stp-reward-card.has-bg > * { position: relative; z-index: 1; }
 
 .stp-modal-body { display: flex; flex-direction: column; gap: 14px; }
-/* el-dialog 对齐项目卡片风格 */
-.st-parent-panel :deep(.el-dialog) {
-  border-radius: 14px;
-}
-.st-parent-panel :deep(.el-dialog__title) {
-  font-size: 16px;
-  font-weight: 600;
-}
-.st-parent-panel :deep(.el-dialog__body) {
-  padding-top: 16px;
-}
-.st-parent-panel :deep(.el-dialog__footer) {
-  padding-top: 12px;
-}
 .st-parent-panel :deep(.el-input) {
   width: 100%;
 }
@@ -1341,11 +1328,5 @@ html.dark .stp-reward-card.has-bg::before { background: rgba(17, 24, 39, 0.55); 
 @media (max-width: 480px) {
   .stp-stats-grid { grid-template-columns: 1fr; }
   .stp-task-grid, .stp-reward-grid, .stp-badge-grid, .stp-summary-grid { grid-template-columns: 1fr; }
-  /* 弹框在小屏改为视口宽度，避免 440px 固定宽度溢出 */
-  .stp-task-dialog :deep(.el-dialog),
-  .stp-reward-dialog :deep(.el-dialog) {
-    width: 92vw !important;
-    max-width: 92vw;
-  }
 }
 </style>

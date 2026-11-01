@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
 import { useToast } from '@/composables/useToast'
@@ -36,7 +37,6 @@ import {
 } from '@/composables/businessCore'
 import { exportXlsx } from '@/composables/xlsxExport'
 import type { BusinessExpenseDaily } from '@/types'
-import Icon from '@/components/Icon.vue'
 import { usePageSize } from '@/composables/usePageSize'
 
 const store = useWorkbenchBusinessStore()
@@ -438,21 +438,14 @@ async function handleDeleteFromDialog(): Promise<void> {
     </template>
 
     <!-- 新增/编辑弹框：一天可记多个产品支出（动态产品行） -->
-    <el-dialog
+    <BaseDialog
       v-if="showDialog"
-      :model-value="true"
-      :show-close="false"
       width="80%"
       class="bizexp-dialog"
       data-testid="bizexp-dialog"
       @close="showDialog = false"
+      :title="editingDailyId ? '编辑支出' : '新增支出'"
     >
-      <template #header>
-        <div class="biz-dialog-header">
-          <h3>{{ editingDailyId ? '编辑支出' : '新增支出' }}</h3>
-          <button class="biz-dialog-close" @click="showDialog = false"><Icon name="close" /></button>
-        </div>
-      </template>
       <form class="biz-dialog-body" @submit.prevent="handleSave">
         <!-- 日期（日级字段，独立成行：左字段名 / 右控件） -->
         <div class="biz-kv-row">
@@ -607,7 +600,7 @@ async function handleDeleteFromDialog(): Promise<void> {
           >删除</el-button>
         </div>
       </form>
-    </el-dialog>
+    </BaseDialog>
   </div>
 </template>
 
@@ -928,25 +921,6 @@ async function handleDeleteFromDialog(): Promise<void> {
   margin: 2px 0 0;
   font-size: 12px;
   color: var(--color-error, #dc2626);
-}
-
-/* ===== 弹框：骨架样式（header/body/field/actions/.req）已抽到 src/styles/biz-dialog.css ===== */
-
-.bizexp-dialog :deep(.el-dialog) {
-  border-radius: var(--radius-lg, 12px);
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
-}
-.bizexp-dialog :deep(.el-dialog__header) {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
-  margin-right: 0;
-  flex-shrink: 0;
-}
-.bizexp-dialog :deep(.el-dialog__body) {
-  padding: 0;
-  overflow-y: auto;
 }
 
 /* ===== 暗色模式 ===== */

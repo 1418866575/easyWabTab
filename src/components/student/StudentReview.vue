@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 // 学生工作台复习计划面板（艾宾浩斯间隔复习，M3 批次1）
 // 布局：工具条 + 学科 tabs + 统计卡 + 表格/卡片双视图（与学习计划一致）+ el-pagination + 编辑弹框
 // 数据：useStudentReviewStore（独立 IDB store 'student_review'）
@@ -347,11 +348,11 @@ function daysClass(days: number): string {
     </div>
 
     <!-- 新增/编辑弹框 -->
-    <el-dialog
-      v-model="showEditDialog"
+    <BaseDialog
+      v-if="showEditDialog"
       :title="editingId !== null ? '编辑复习条目' : '新增复习条目'"
       width="480px"
-      @close="closeEditDialog"
+      @close="showEditDialog = false; closeEditDialog"
     >
       <div class="sr-dialog-body">
         <div class="sr-field">
@@ -404,7 +405,7 @@ function daysClass(days: number): string {
           <el-button v-if="editingId" type="danger" data-testid="sr-form-delete" @click="handleDelete(editingId)">删除</el-button>
         </div>
       </template>
-    </el-dialog>
+    </BaseDialog>
   </div>
 </template>
 

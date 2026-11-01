@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
@@ -552,21 +553,13 @@ async function handleDelete(id: string | null): Promise<void> {
     </template>
 
     <!-- 编辑弹框（商品行动态增删） -->
-    <el-dialog
+    <BaseDialog
       v-if="showDialog"
-      :model-value="true"
-      :show-close="false"
+      :title="editingRecordId ? '编辑销售记录' : '新增销售记录'"
       width="80%"
       data-testid="bizday-dialog"
       @close="showDialog = false"
     >
-      <template #header>
-        <div class="biz-dialog-header">
-          <!-- M-15：标题区分新增/编辑（此前两者都是「销售记录」，编辑时不知道自己在改什么） -->
-          <h3>{{ editingRecordId ? '编辑销售记录' : '新增销售记录' }}</h3>
-          <button class="biz-dialog-close" @click="showDialog = false"><Icon name="close" /></button>
-        </div>
-      </template>
       <form class="biz-dialog-body" @submit.prevent="handleSave">
         <div class="biz-field">
           <label>日期<span class="req">*</span>（同一天重复保存将覆盖）</label>
@@ -813,7 +806,7 @@ async function handleDelete(id: string | null): Promise<void> {
           <el-button v-if="editingRecordId" type="danger" native-type="button" data-testid="bizday-record-delete" @click="handleDelete(editingRecordId)">删除</el-button>
         </div>
       </form>
-    </el-dialog>
+    </BaseDialog>
   </div>
 </template>
 
@@ -1350,22 +1343,6 @@ html.dark .biz-input {
 }
 
 /* el-dialog 外壳对齐原弹框 */
-.bizday :deep(.el-dialog) {
-  padding: 0;
-  border-radius: var(--radius-lg, 12px);
-  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
-  max-height: 85vh;
-  overflow-y: auto;
-}
-
-.bizday :deep(.el-dialog__header) {
-  padding: 0;
-}
-
-.bizday :deep(.el-dialog__body) {
-  padding: 0;
-}
-
 .bizday :deep(.el-date-editor) {
   width: 100%;
 }

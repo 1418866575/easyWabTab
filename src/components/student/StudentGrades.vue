@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
@@ -484,13 +485,13 @@ onMounted(async () => {
     </div>
 
     <!-- 录入/编辑弹框 -->
-    <el-dialog
-      v-model="showDialog"
+    <BaseDialog
+      v-if="showDialog"
       :title="editingId ? '编辑成绩' : '新增成绩'"
       width="560px"
       class="sg-dialog"
-      append-to-body
-      @close="closeDialog"
+      teleport
+      @close="showDialog = false; closeDialog"
     >
       <div class="sg-form">
         <div class="sg-form-row">
@@ -586,7 +587,7 @@ onMounted(async () => {
           <el-button v-if="editingId" type="danger" data-testid="sg-form-delete" @click="handleDelete(editingId)">删除</el-button>
         </div>
       </template>
-    </el-dialog>
+    </BaseDialog>
   </div>
 </template>
 
@@ -759,12 +760,6 @@ onMounted(async () => {
   width: 100%;
   height: 100%;
 }
-
-/* ===== 录入弹框 ===== */
-.sg-dialog :deep(.el-dialog__body) {
-  padding: 18px 20px;
-  overflow-y: auto;
-}
 .sg-form {
   display: flex;
   flex-direction: column;
@@ -849,10 +844,6 @@ html.dark .sg-summary-soft {
 }
 
 @media (max-width: 480px) {
-  .sg-dialog :deep(.el-dialog) {
-    width: 92vw !important;
-    max-width: 92vw;
-  }
 }
 
 .sg-toolbar-left {

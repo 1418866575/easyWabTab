@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 // 班级小组（全员可见：班主任、科任都能用）：长期固定分组 + 活动临时分组 + 随机分组 + 分组快照。
 // 数据挂在班级桶 groups[] / snapshots[]（学期×班级隔离），计算走 teacherCore 纯函数，store 只做读写。
 // 布局 / 交互对齐其它教师面板：列表+卡片双视图 + el-pagination + el-dialog(ewt-dialog-footer) + showConfirm/useToast。
@@ -543,13 +544,12 @@ watch(showForm, (v) => {
     </div>
 
     <!-- 新建 / 编辑小组弹框 -->
-    <el-dialog
-      v-model="showForm"
+    <BaseDialog
+      v-if="showForm"
       :title="editingId !== null ? '编辑小组' : '新建小组'"
       width="620px"
-      destroy-on-close
       data-testid="grp-form-dialog"
-      @close="closeForm"
+      @close="showForm = false; closeForm"
     >
       <div class="grp-dialog-body">
         <div class="grp-form-row">
@@ -599,16 +599,16 @@ watch(showForm, (v) => {
           <el-button type="primary" data-testid="grp-form-save" :disabled="!formValid" @click="saveForm">保存</el-button>
         </div>
       </template>
-    </el-dialog>
+    </BaseDialog>
 
     <!-- 随机分组弹框 -->
-    <el-dialog
-      v-model="showRandom"
+    <BaseDialog
+      v-if="showRandom"
       title="随机分组"
       width="92%"
       class="grp-random-dialog"
-      destroy-on-close
       data-testid="grp-random-dialog"
+      max-height="88vh"
       @close="showRandom = false"
     >
       <div class="grp-rg">
@@ -703,14 +703,13 @@ watch(showForm, (v) => {
           <el-button type="primary" data-testid="rg-save-temp" @click="saveRandomAsTemp">保存为临时组</el-button>
         </div>
       </template>
-    </el-dialog>
+    </BaseDialog>
 
     <!-- 分组快照弹框 -->
-    <el-dialog
-      v-model="showSnap"
+    <BaseDialog
+      v-if="showSnap"
       title="分组快照"
       width="560px"
-      destroy-on-close
       data-testid="grp-snap-dialog"
       @close="showSnap = false"
     >
@@ -742,7 +741,7 @@ watch(showForm, (v) => {
           <el-button @click="showSnap = false">关闭</el-button>
         </div>
       </template>
-    </el-dialog>
+    </BaseDialog>
   </div>
 </template>
 
@@ -1139,24 +1138,5 @@ watch(showForm, (v) => {
     padding-left: 0;
     padding-top: 12px;
   }
-}
-@media (max-width: 480px) {
-  .grp-shell :deep(.el-dialog) {
-    width: 92vw !important;
-    max-width: 92vw;
-  }
-}
-</style>
-
-<!-- 随机分组弹框根元素被 Teleport 到 body，scoped 样式无法命中；此处用唯一 class 做整体高度约束：
-     正常分组数时右侧预览区随列高铺满全部信息，不再出现「4 排就滚动 + 底部留白」；
-     极端大班（多组多生）时整体不超过视口，由弹框 body 统一滚动，避免撑爆视口。 -->
-<style>
-.grp-random-dialog.el-dialog {
-  max-height: 88vh;
-}
-.grp-random-dialog .el-dialog__body {
-  max-height: calc(88vh - 140px);
-  overflow-y: auto;
 }
 </style>

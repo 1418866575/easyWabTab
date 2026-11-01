@@ -41,6 +41,14 @@
   gap: 12px;
 }
 
+/* 销售/支出/进货/产品四个业务弹框已改用 BaseDialog：
+   正文自带 20px 内边距，基类 .bd-body 的 24px 不再叠加（否则合计 44px）。
+   特异性说明：.bd-body(0,1,0) + :has 内的 .biz-dialog-body → 0,3,0，
+   高于 BaseDialog scoped 的 .bd-body[data-v-x] (0,2,0)。 */
+.bd-body:has(> .biz-dialog-body) {
+  padding: 0;
+}
+
 .biz-field {
   display: flex;
   flex-direction: column;

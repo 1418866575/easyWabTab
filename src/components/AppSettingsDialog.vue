@@ -4431,11 +4431,11 @@ function toggleFullscreen(): void {
   />
 
     <!-- 数据清理二次确认弹框（危险操作） -->
-    <el-dialog
-      v-model="clearConfirmVisible"
+    <BaseDialog
+      v-if="clearConfirmVisible"
       title="确认清空数据"
       width="420px"
-      align-center
+      @close="clearConfirmVisible = false"
     >
       <div class="clear-confirm">
         <p class="clear-confirm-warn">⚠ 危险操作，不可恢复</p>
@@ -4447,7 +4447,7 @@ function toggleFullscreen(): void {
           <el-button type="danger" @click="doClear">确认清空</el-button>
         </div>
       </template>
-    </el-dialog>
+    </BaseDialog>
 </template>
 
 <style scoped>

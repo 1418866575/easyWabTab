@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useViewMode } from '@/composables/useViewMode'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
@@ -270,7 +271,7 @@ onMounted(async () => {
     </div>
 
     <!-- 积分规则弹框 -->
-    <el-dialog v-model="showRulesDialog" title="积分规则" width="420px" append-to-body data-testid="sr-rules-dialog">
+    <BaseDialog v-if="showRulesDialog" title="积分规则" width="420px" teleport data-testid="sr-rules-dialog" @close="showRulesDialog = false">
       <div class="sr-dialog-body">
         <ul class="sr-rules-list">
           <li v-for="(rule, idx) in rules" :key="idx" class="sr-rules-item">
@@ -286,10 +287,10 @@ onMounted(async () => {
       <template #footer>
         <el-button type="primary" @click="showRulesDialog = false">知道了</el-button>
       </template>
-    </el-dialog>
+    </BaseDialog>
 
     <!-- 奖励详情弹窗（背景图作 hero banner） -->
-    <el-dialog v-model="rewardDetailVisible" title="奖励详情" width="460px" append-to-body data-testid="sr-detail-dialog">
+    <BaseDialog v-if="rewardDetailVisible" title="奖励详情" width="460px" teleport data-testid="sr-detail-dialog" @close="rewardDetailVisible = false">
       <div v-if="detailItem" class="sr-detail">
         <div
           class="sr-detail-hero"
@@ -321,7 +322,7 @@ onMounted(async () => {
           :data-testid="`sr-detail-redeem-${detailItem?.id ?? ''}`"
         >立即兑换</el-button>
       </template>
-    </el-dialog>
+    </BaseDialog>
   </div>
 </template>
 

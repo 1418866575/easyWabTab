@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 // 学生工作台习惯打卡面板（M2）
 // 复刻成人 WorkbenchHabits 布局，差异：
 // 1. 使用 useStudentHabitsStore（独立 IDB store 'student_habits'，严格隔离成人数据）
@@ -327,12 +328,12 @@ onMounted(async () => {
       </div>
     </div>
 
-    <el-dialog
-      v-model="showEditDialog"
+    <BaseDialog
+      v-if="showEditDialog"
       :title="editingId ? '编辑习惯' : '新增习惯'"
       width="480px"
       class="sh-dialog"
-      @close="closeEditDialog"
+      @close="showEditDialog = false; closeEditDialog"
     >
       <div class="dialog-body">
         <div class="form-field">
@@ -374,14 +375,15 @@ onMounted(async () => {
           </div>
         </div>
       </template>
-    </el-dialog>
+    </BaseDialog>
   </div>
     <!-- 打卡记录新增/编辑弹框：可自定义本次打卡积分（0-100，默认 5） -->
-    <el-dialog
-      v-model="recordDialogVisible"
+    <BaseDialog
+      v-if="recordDialogVisible"
       :title="recordEditingId ? '编辑打卡记录' : '新增打卡记录'"
       width="440px"
       data-testid="sh-record-dialog"
+      @close="recordDialogVisible = false"
     >
       <div class="dialog-body">
         <div class="field">
@@ -423,14 +425,15 @@ onMounted(async () => {
           <el-button type="primary" data-testid="sh-record-save" @click="saveRecordDialog">保存</el-button>
         </div>
       </template>
-    </el-dialog>
+    </BaseDialog>
     <!-- 打卡记录弹框（工具栏「查看」打开）：日期/习惯/积分/来源，支持新增与编辑 -->
-    <el-dialog
-      v-model="recordListVisible"
+    <BaseDialog
+      v-if="recordListVisible"
       title="打卡记录"
       width="720px"
       class="sh-dialog"
       data-testid="sh-record-list-dialog"
+      @close="recordListVisible = false"
     >
       <div class="sh-records">
         <div class="sh-records-head">
@@ -452,7 +455,7 @@ onMounted(async () => {
           </div>
         </div>
       </div>
-    </el-dialog>
+    </BaseDialog>
 </template>
 
 <style scoped>
@@ -655,10 +658,6 @@ onMounted(async () => {
 }
 
 @media (max-width: 480px) {
-  .sh-dialog :deep(.el-dialog) {
-    width: 92vw !important;
-    max-width: 92vw;
-  }
 }
 /* ===== 打卡记录列表 ===== */
 .sh-records {

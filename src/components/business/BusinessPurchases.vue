@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
@@ -748,20 +749,13 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
     </template>
 
     <!-- 新增/编辑弹框（原型 v2：多行批量录入） -->
-    <el-dialog
+    <BaseDialog
       v-if="showDialog"
-      :model-value="true"
-      :show-close="false"
       width="90%"
       data-testid="bizpur-dialog"
       @close="showDialog = false"
+      :title="editingId ? '编辑库存' : '新增库存'"
     >
-      <template #header>
-        <div class="biz-dialog-header">
-          <h3>{{ editingId ? '编辑库存' : '新增库存' }}</h3>
-          <button class="biz-dialog-close" @click="showDialog = false"><Icon name="close" /></button>
-        </div>
-      </template>
       <form class="biz-dialog-body" @submit.prevent="handleSave">
         <!-- 第一行：日期 -->
         <div class="biz-field">
@@ -895,7 +889,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
           </el-button>
         </div>
       </form>
-    </el-dialog>
+    </BaseDialog>
   </div>
 </template>
 
@@ -1402,23 +1396,6 @@ html.dark .biz-input {
 
 .bizpur :deep(.el-input-number) {
   width: 100%;
-}
-
-/* el-dialog 外壳对齐原弹框 */
-.bizpur :deep(.el-dialog) {
-  padding: 0;
-  border-radius: var(--radius-lg, 12px);
-  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
-  max-height: 85vh;
-  overflow-y: auto;
-}
-
-.bizpur :deep(.el-dialog__header) {
-  padding: 0;
-}
-
-.bizpur :deep(.el-dialog__body) {
-  padding: 0;
 }
 
 /* ===== 原型 v2：多行批量录入弹框 ===== */

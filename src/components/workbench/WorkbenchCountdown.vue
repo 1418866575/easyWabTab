@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '../Icon.vue'
 import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
 import { showConfirm } from '@/utils/dialog'
@@ -516,8 +517,8 @@ onUnmounted(() => {
     </div>
 
     <!-- 新增/编辑弹框 -->
-    <el-dialog
-      :model-value="showDialog"
+    <BaseDialog
+      v-if="showDialog"
       :title="editingId ? '编辑倒计时' : '新增倒计时'"
       width="480px"
       data-testid="cd-dialog"
@@ -636,7 +637,7 @@ onUnmounted(() => {
           </el-button>
         </div>
       </form>
-    </el-dialog>
+    </BaseDialog>
 
   </div>
 <WorkbenchFab @click="startAdd" />

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
@@ -379,11 +380,10 @@ onMounted(() => {
     </div>
 
     <!-- 新增/编辑弹框 -->
-    <el-dialog
-      v-model="showEditDialog"
+    <BaseDialog
+      v-if="showEditDialog"
       :title="editingId !== null ? '编辑计划' : '新增计划'"
       width="480px"
-      class="sp-dialog"
       @close="closeEditDialog"
     >
       <div class="dialog-body">
@@ -464,7 +464,7 @@ onMounted(() => {
           <el-button v-if="editingId" type="danger" data-testid="sp-form-delete" @click="handleDelete(editingId)">删除</el-button>
         </div>
       </template>
-    </el-dialog>
+    </BaseDialog>
   </div>
 </template>
 
@@ -734,13 +734,6 @@ onMounted(() => {
   .sp-shell { padding: 12px; }
   .sp-stats { grid-template-columns: repeat(2, 1fr); }
   .sp-field-row { flex-direction: column; }
-}
-
-@media (max-width: 480px) {
-  .sp-dialog :deep(.el-dialog) {
-    width: 92vw !important;
-    max-width: 92vw;
-  }
 }
 
 .sp-toolbar-left {

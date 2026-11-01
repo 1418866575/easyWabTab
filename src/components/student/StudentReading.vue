@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
@@ -280,12 +281,12 @@ onMounted(async () => {
     </div>
 
     <!-- 新增/编辑弹框 -->
-    <el-dialog
-      v-model="showEditDialog"
+    <BaseDialog
+      v-if="showEditDialog"
       :title="editingId ? '编辑阅读记录' : '新增阅读记录'"
       width="480px"
       class="sr-dialog"
-      @close="closeEditDialog"
+      @close="showEditDialog = false; closeEditDialog"
     >
       <div class="dialog-body">
         <div class="form-field">
@@ -357,7 +358,7 @@ onMounted(async () => {
           >删除</el-button>
         </div>
       </template>
-    </el-dialog>
+    </BaseDialog>
   </div>
 </template>
 
@@ -541,10 +542,6 @@ onMounted(async () => {
 }
 
 @media (max-width: 480px) {
-  .sr-dialog :deep(.el-dialog) {
-    width: 92vw !important;
-    max-width: 92vw;
-  }
 }
 
 .sr-toolbar-left {

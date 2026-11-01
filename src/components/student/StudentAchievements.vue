@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 // 学生工作台成就勋章墙面板（M3 批次2）
 // 布局：标题 + 统计 + 分类 tabs + 5 列勋章网格 + 详情弹框
 // 数据：useStudentAchievementsStore（独立 IDB store 'student_achievements'，单对象 {definitions, unlocked}）
@@ -186,21 +187,11 @@ onMounted(async () => {
     </div>
 
     <!-- 详情弹框 -->
-    <el-dialog
+    <BaseDialog
       v-model="showDetailDialog"
       width="420px"
-      :show-close="false"
       @close="closeDetail"
     >
-      <template #header>
-        <div v-if="detailDef" class="sa-dialog-head" data-testid="sa-dialog">
-          <span class="sa-dialog-emoji">{{ detailDef.emoji }}</span>
-          <h3 class="sa-dialog-name">{{ detailDef.name }}</h3>
-          <button class="sa-dialog-close" @click="closeDetail" title="关闭">
-            <Icon name="close" :size="18" />
-          </button>
-        </div>
-      </template>
       <div v-if="detailDef" class="sa-dialog-body">
         <p class="sa-dialog-desc">{{ detailDef.description }}</p>
 
@@ -228,7 +219,7 @@ onMounted(async () => {
           <span class="sa-dialog-meta-item">分类：{{ store.categoryText(detailDef.category) }}</span>
         </div>
       </div>
-    </el-dialog>
+    </BaseDialog>
   </div>
 </template>
 
@@ -427,17 +418,6 @@ onMounted(async () => {
 }
 .sa-dialog-close:hover {
   opacity: 1;
-}
-.sa-shell :deep(.el-dialog) {
-  border-radius: 12px;
-}
-.sa-shell :deep(.el-dialog__header) {
-  padding: 12px 16px;
-  margin-right: 0;
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
-}
-.sa-shell :deep(.el-dialog__body) {
-  padding: 16px;
 }
 .sa-dialog-body {
   padding: 16px;

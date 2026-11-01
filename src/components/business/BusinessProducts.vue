@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 // 商品管理：分类 tabs（全部 + 可见分类）+ 商品卡片网格 + 新增/编辑弹框 + ⚙️ 分类管理
 // P1-3：跨模块联动跳转（商品名可点击跳转「库存」页）
 // P2-2：商品详情抽屉
@@ -417,9 +418,8 @@ function drawerMarkupRate(): number | null {
     </div>
 
     <!-- 新增/编辑弹框 -->
-    <el-dialog
+    <BaseDialog
       v-if="showDialog"
-      :model-value="true"
       width="480px"
       :title="editingId ? '编辑商品' : '新增商品'"
       data-testid="bizprod-dialog"
@@ -521,7 +521,7 @@ function drawerMarkupRate(): number | null {
           <el-button v-if="editingId" type="danger" data-testid="bizprod-dialog-del" @click="handleDeleteCurrent">删除</el-button>
         </div>
       </form>
-    </el-dialog>
+    </BaseDialog>
 
     <!-- 商品分类管理已迁移到「设置 → 销售记账 → 基础设置」 -->
 
@@ -900,24 +900,6 @@ function drawerMarkupRate(): number | null {
 }
 
 /* el-dialog 外壳对齐原弹框 */
-.bizprod :deep(.el-dialog) {
-  border-radius: var(--radius-lg, 12px);
-  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.bizprod :deep(.el-dialog__header) {
-  flex-shrink: 0;
-}
-
-.bizprod :deep(.el-dialog__body) {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-
 html.dark .bizprod-card {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 // 数据管理（工作台首页）：班级信息、统计卡、三类表格导入、备份/恢复、学期与班级管理。
 // 导入统一走 teacherImportCore（表头归一、缺列明确报错、重名不静默错配）。
 //
@@ -543,12 +544,13 @@ async function onClearSemesterData(): Promise<void> {
       </table>
       <p v-else class="tw-note">暂无班级，点击「新增」添加第一个班级。</p>
 
-      <el-dialog
-        v-model="dialogVisible"
+      <BaseDialog
+        v-if="dialogVisible"
         :title="dialogMode === 'add' ? '新增班级' : '编辑班级'"
         width="420px"
-        append-to-body
+        teleport
         class="dm-dialog"
+        @close="dialogVisible = false"
       >
         <div class="dm-form">
           <label class="dm-field">
@@ -595,7 +597,7 @@ async function onClearSemesterData(): Promise<void> {
           <button type="button" class="tw-btn" @click="dialogVisible = false">取消</button>
           <button type="button" class="tw-btn tw-btn-primary" @click="onSave">保存</button>
         </template>
-      </el-dialog>
+      </BaseDialog>
     </section>
 
     <p v-if="message" class="tw-note" :class="{ 'tw-note-warn': messageKind === 'warn' }">{{ message }}</p>

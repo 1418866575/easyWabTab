@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 // 学生工作台学习目标面板
 // 布局：工具条 + 统计卡 + 学科/状态筛选 + 表格/卡片双视图 + 分页 + 新增/编辑弹框
 // 数据：useStudentGoalsStore（独立 IDB store 'student_goals'，严格隔离）
@@ -362,12 +363,12 @@ onMounted(() => {
       </template>
     </div>
 
-    <el-dialog
-      v-model="showEditDialog"
+    <BaseDialog
+      v-if="showEditDialog"
       :title="editingId !== null ? '编辑目标' : '新增目标'"
       width="480px"
       class="sg-dialog"
-      @close="closeEditDialog"
+      @close="showEditDialog = false; closeEditDialog"
     >
       <div class="dialog-body">
         <div class="sg-field">
@@ -425,7 +426,7 @@ onMounted(() => {
           <el-button v-if="editingId" type="danger" data-testid="sg-form-delete" @click="handleDelete(editingId)">删除</el-button>
         </div>
       </template>
-    </el-dialog>
+    </BaseDialog>
   </div>
 </template>
 
@@ -565,6 +566,5 @@ onMounted(() => {
   .sg-field-row { flex-direction: column; }
 }
 @media (max-width: 480px) {
-  .sg-dialog :deep(.el-dialog) { width: 92vw !important; max-width: 92vw; }
 }
 </style>

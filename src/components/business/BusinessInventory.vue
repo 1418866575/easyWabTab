@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 // 库存管理：库存总览卡片网格（商品/单位/进货合计/带出合计）+ 低库存预警清单 + 阈值可配置
 // P1-2：库存卡片增加展开溯源功能（进货明细 + 销售带出记录）
 import { computed, ref } from 'vue'
@@ -248,9 +249,8 @@ function exportInventoryExcel(): void {
     </div>
 
     <!-- 批次明细弹框（FIFO 剩余量 / 库龄 / 占用资金） -->
-    <el-dialog
+    <BaseDialog
       v-if="batchProductId"
-      :model-value="true"
       width="560px"
       class="bizinv-batch"
       data-testid="bizinv-batch-modal"
@@ -278,12 +278,11 @@ function exportInventoryExcel(): void {
           </p>
         </template>
       </div>
-    </el-dialog>
+    </BaseDialog>
 
     <!-- 溯源弹框（屏幕居中） -->
-    <el-dialog
+    <BaseDialog
       v-if="traceModalProductId"
-      :model-value="true"
       width="480px"
       class="bizinv-trace"
       data-testid="bizinv-trace"
@@ -309,7 +308,7 @@ function exportInventoryExcel(): void {
           </span>
         </div>
       </div>
-    </el-dialog>
+    </BaseDialog>
   </div>
 </template>
 
@@ -849,27 +848,6 @@ function exportInventoryExcel(): void {
 .biz-input:focus {
   outline: none;
   border-color: var(--color-primary, var(--color-primary));
-}
-
-/* el-dialog 换皮：溯源弹框 */
-.bizinv-trace :deep(.el-dialog) {
-  max-height: calc(100vh - 32px);
-  max-height: calc(100dvh - 32px);
-  display: flex;
-  flex-direction: column;
-}
-
-.bizinv-trace :deep(.el-dialog__header) {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
-  margin-right: 0;
-  flex-shrink: 0;
-}
-
-.bizinv-trace :deep(.el-dialog__body) {
-  padding: 0;
-  flex: 1;
-  overflow-y: auto;
 }
 
 html.dark .bizinv-alert,

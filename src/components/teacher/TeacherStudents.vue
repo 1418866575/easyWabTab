@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 // 学生信息：统计卡 + 班级花名册（男蓝/女粉、特异体质红色「!」角标）+ 可编辑明细表（含家庭地址）。
 // 明细表改动即存（onchange → store → IndexedDB），与项目其它面板「修改后自动保存」一致。
 // 「导入学生信息 / 下载模板」复用设置页「导入数据」的既有能力（teacherImportCore + store.importStudents），
@@ -402,7 +403,7 @@ async function downloadTemplate(): Promise<void> {
     </section>
 
     <!-- 添加学生弹框 -->
-    <el-dialog v-model="showAdd" title="添加学生" width="520px" destroy-on-close @close="closeAddDialog">
+    <BaseDialog v-if="showAdd" title="添加学生" width="520px" @close="showAdd = false; closeAddDialog">
       <div class="stu-add-form">
         <div class="stu-form-row">
           <label class="stu-form-label">姓名 <span class="stu-req">*</span></label>
@@ -457,7 +458,7 @@ async function downloadTemplate(): Promise<void> {
           <el-button type="primary" :disabled="!form.name.trim()" data-testid="stu-add-save" @click="saveAdd">保存</el-button>
         </div>
       </template>
-    </el-dialog>
+    </BaseDialog>
   </div>
 </template>
 

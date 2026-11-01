@@ -352,19 +352,13 @@ onUnmounted(() => {
     </div>
 
     <!-- 新增/编辑弹框（顶部按钮与卡片点击共用） -->
-    <el-dialog
-      :model-value="showEditDialog"
+    <BaseDialog
       :title="editingId ? '编辑习惯' : '新增习惯'"
       width="440px"
       :aria-label="editingId ? '编辑习惯' : '新增习惯'"
       @close="closeEditDialog"
       @update:model-value="(v: boolean) => { if (!v) closeEditDialog() }"
     >
-      <template #header>
-        <div class="dialog-header">
-          <span class="dialog-title">{{ editingId ? '编辑习惯' : '新增习惯' }}</span>
-        </div>
-      </template>
       <div class="dialog-body">
         <div class="field">
           <label class="field-label">名称 *</label>
@@ -421,7 +415,7 @@ onUnmounted(() => {
           </el-button>
         </div>
       </template>
-    </el-dialog>
+    </BaseDialog>
 
     <!-- 某天打卡详情（图片）：由日历格子的图片角标进入；外壳统一用 BaseDialog -->
     <BaseDialog

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 // 教师工作台课程表面板（复刻学生课程表富模型，按班级隔离）
 // 布局：顶部工具条（周次/导出/清空） + 今日速览条 + 学科图例 + 7列网格（首列&表头 sticky）
 // 配置入口：设置弹窗「课程表配置」子页（内嵌 TeacherTimetableConfig）
@@ -473,7 +474,7 @@ onBeforeUnmount(() => {
 
 
     <!-- cell 编辑弹框 -->
-    <el-dialog v-model="showCellDialog" :title="getCell(editingDay, editingPeriod) ? '编辑课程' : '新增课程'" width="460px" class="stt-cell-dialog" append-to-body>
+    <BaseDialog v-if="showCellDialog" :title="getCell(editingDay, editingPeriod) ? '编辑课程' : '新增课程'" width="460px" class="stt-cell-dialog" teleport @close="showCellDialog = false">
       <div class="dialog-body">
         <div class="stt-dialog-meta">
           {{ weekdayLabel(editingDay) }} · 第 {{ editingPeriod }} 节
@@ -515,7 +516,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
       </template>
-    </el-dialog>
+    </BaseDialog>
   </div>
 </template>
 
@@ -971,12 +972,5 @@ onBeforeUnmount(() => {
   .stt-period-time { font-size: 10px; }
   .stt-subject { font-size: 14px; }
   .form-row { flex-direction: column; }
-}
-
-@media (max-width: 480px) {
-  .stt-cell-dialog :deep(.el-dialog) {
-    width: 92vw !important;
-    max-width: 92vw;
-  }
 }
 </style>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseDialog from '@/components/common/BaseDialog.vue'
 // 家校谈话记录（班主任专属）：新建/编辑/删除谈话 → 列表+卡片双视图 + 筛选 + 统计 + 导出 Excel。
 // 数据挂在班级桶 talks[]（学期×班级隔离），计算走 teacherCore 纯函数，store 只做读写。
 // 布局 / 交互对齐 TeacherHomework：双视图 + el-pagination + el-dialog(ewt-dialog-footer) + showConfirm/useToast。
@@ -421,12 +422,12 @@ function truncate(text: string, n = 30): string {
     </div>
 
     <!-- 新建 / 编辑弹框 -->
-    <el-dialog
-      v-model="showForm"
+    <BaseDialog
+      v-if="showForm"
       :title="editingId !== null ? '编辑谈话记录' : '新建谈话记录'"
       width="600px"
       data-testid="tk-form-dialog"
-      @close="closeForm"
+      @close="showForm = false; closeForm"
     >
       <div class="tk-dialog-body">
         <div class="tk-form-row">
@@ -518,11 +519,11 @@ function truncate(text: string, n = 30): string {
           <el-button type="primary" data-testid="tk-form-save" :disabled="!formValid" @click="saveForm">保存</el-button>
         </div>
       </template>
-    </el-dialog>
+    </BaseDialog>
 
     <!-- 详情弹框 -->
-    <el-dialog
-      v-model="showDetail"
+    <BaseDialog
+      v-if="showDetail"
       title="谈话记录详情"
       width="600px"
       data-testid="tk-detail-dialog"
@@ -560,7 +561,7 @@ function truncate(text: string, n = 30): string {
           <el-button @click="showDetail = false">关闭</el-button>
         </div>
       </template>
-    </el-dialog>
+    </BaseDialog>
   </div>
 </template>
 
@@ -877,9 +878,5 @@ function truncate(text: string, n = 30): string {
 }
 
 @media (max-width: 480px) {
-  .tk-shell :deep(.el-dialog) {
-    width: 92vw !important;
-    max-width: 92vw;
-  }
 }
 </style>
