@@ -425,7 +425,7 @@ onMounted(async () => {
     </div>
 
     <BaseDialog
-      v-model="showEditDialog"
+      v-if="showEditDialog"
       :title="editingId ? '编辑作业' : '新增作业'"
       width="80%"
       class="shw-dialog"

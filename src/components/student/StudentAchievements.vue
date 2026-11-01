@@ -188,7 +188,8 @@ onMounted(async () => {
 
     <!-- 详情弹框 -->
     <BaseDialog
-      v-model="showDetailDialog"
+      v-if="showDetailDialog"
+      :title="detailDef ? `${detailDef.emoji} ${detailDef.name}` : '成就详情'"
       width="420px"
       @close="closeDetail"
     >

@@ -353,11 +353,11 @@ onUnmounted(() => {
 
     <!-- 新增/编辑弹框（顶部按钮与卡片点击共用） -->
     <BaseDialog
+      v-if="showEditDialog"
       :title="editingId ? '编辑习惯' : '新增习惯'"
       width="440px"
       :aria-label="editingId ? '编辑习惯' : '新增习惯'"
       @close="closeEditDialog"
-      @update:model-value="(v: boolean) => { if (!v) closeEditDialog() }"
     >
       <div class="dialog-body">
         <div class="field">
