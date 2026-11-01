@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import BaseTabs from '@/components/common/BaseTabs.vue'
 import { DIALOG_BTN } from '@/config/dialogText'
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
@@ -722,11 +723,16 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 编辑浮层（新增/编辑共用） -->
-    <div v-if="formOpen" class="note-overlay" data-testid="note-overlay" @click.self="cancelForm">
-      <div class="note-form">
-        <h3 class="note-form-title">{{ editingId ? '编辑便签' : '新增便签' }}</h3>
-
+    <!-- 编辑弹框（新增/编辑共用）：统一走 common/BaseDialog，右上角自带关闭按钮 -->
+    <BaseDialog
+      v-if="formOpen"
+      :title="editingId ? '编辑便签' : '新增便签'"
+      :width="'var(--dlg-w-notes, 1000px)'"
+      max-height="90vh"
+      data-testid="note-overlay"
+      @close="cancelForm"
+    >
+      <div class="note-form-body">
         <el-input
           v-model="formTitle"
           type="text"
@@ -793,24 +799,23 @@ onUnmounted(() => {
         <el-input
           v-model="formContent"
           type="textarea"
-          :rows="5"
+          :autosize="{ minRows: 18, maxRows: 30 }"
           class="note-content-input"
           data-testid="note-content-input"
           :placeholder="formType === 'timeline' ? '便签内容（时光轴可为空，条目在卡片上追加）' : '便签内容…'"
         />
-
-        <div class="note-form-actions ewt-dialog-footer">
-          <el-button type="button" class="btn-cancel" data-testid="note-cancel-button" @click="cancelForm">{{ DIALOG_BTN.close }}</el-button>
-          <el-button
-            type="button"
-            class="btn-save"
-            :disabled="!isFormValid"
-            data-testid="note-save-button"
-            @click="handleSave">{{ DIALOG_BTN.save }}</el-button>
-          <el-button v-if="editingId" type="danger" native-type="button" data-testid="note-record-delete" @click="handleDelete(editingId)">删除</el-button>
-        </div>
       </div>
-    </div>
+
+      <template #footer>
+        <el-button type="button" class="btn-cancel" data-testid="note-cancel-button" @click="cancelForm">{{ DIALOG_BTN.close }}</el-button>
+        <el-button
+          type="primary"
+          :disabled="!isFormValid"
+          data-testid="note-save-button"
+          @click="handleSave">{{ DIALOG_BTN.save }}</el-button>
+        <el-button v-if="editingId" type="danger" native-type="button" data-testid="note-record-delete" @click="handleDelete(editingId)">删除</el-button>
+      </template>
+    </BaseDialog>
   </div>
 
 <WorkbenchFab @click="startAdd" />
@@ -1015,21 +1020,16 @@ onUnmounted(() => {
 .timeline-expand-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-shrink: 0; }
 .timeline-expand-list { flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; }
 
-.note-form {
-  width: 100%; max-width: var(--dlg-w-notes, 1000px);
-  height: var(--dlg-h-notes, 90vh); max-height: calc(100vh - 40px); overflow-y: auto;
-  height: var(--dlg-h-notes, 90dvh); max-height: calc(100dvh - 40px); overflow-y: auto;
-  display: flex; flex-direction: column; gap: 12px; padding: 20px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-lg, 12px);
-  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
+/* 弹框正文：纵向排布（原 .note-form 的 flex column + gap 由这里承担） */
+.note-form-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* 面板高度 90vh 固定，这里让正文撑开，textarea 才能像原来那样填满剩余空间 */
+  min-height: calc(90vh - 180px);
 }
-.note-form-title { margin: 0; font-size: 16px; font-weight: 600; color: var(--color-text, var(--color-text)); }
-/* 输入框视觉统一到全局 .ui-input（模板里已不再给 el-input 挂 .form-input，
-   避免把边框/圆角/底色套在 EP 外层 div 上形成双层框） */
-.note-content-input { flex: 1 1 auto; min-height: 240px; }
-.note-content-input :deep(.el-textarea__inner) { height: 100%; min-height: 240px; resize: none; }
+.note-content-input { flex: 1 1 auto; }
+.note-content-input :deep(.el-textarea__inner) { resize: none; }
 .note-form-row { display: flex; align-items: center; gap: 10px; }
 .note-form-label { flex: 0 0 auto; min-width: 44px; font-size: 13px; font-weight: 600; color: var(--color-text-secondary, var(--color-text-secondary)); }
 .note-type-radios { display: flex; gap: 8px; }
@@ -1052,7 +1052,6 @@ onUnmounted(() => {
 .color-orange .color-swatch { background: #f97316; }
 .color-cyan .color-swatch { background: #06b6d4; }
 .color-purple .color-swatch { background: #a855f7; }
-.note-form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: auto; }
 .btn-save {
   padding: 9px 18px; font-size: 14px; color: #fff; white-space: nowrap; cursor: pointer;
   background: var(--color-primary, var(--color-primary)); border: none; border-radius: var(--radius-md, 8px);
@@ -1062,7 +1061,6 @@ onUnmounted(() => {
 
 /* ===== 暗色模式覆盖 ===== */
 html.dark .note-overlay { background: rgba(0, 0, 0, 0.7); }
-html.dark .note-form { background-color: var(--color-bg-card, #1f2937); }
 html.dark .timeline-expand-panel { background-color: var(--color-bg-card, #1f2937); }
 /* html.dark .empty-state 背景已由全局 .empty-state 的 --color-bg-card token 自动跟随 */
 html.dark .btn-save:disabled { background-color: var(--color-bg-input, #374151); color: var(--color-text-muted, #9ca3af); }
