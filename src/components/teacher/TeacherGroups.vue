@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 // 班级小组（全员可见：班主任、科任都能用）：长期固定分组 + 活动临时分组 + 随机分组 + 分组快照。
 // 数据挂在班级桶 groups[] / snapshots[]（学期×班级隔离），计算走 teacherCore 纯函数，store 只做读写。
@@ -595,7 +596,7 @@ watch(showForm, (v) => {
       </div>
       <template #footer>
         <div class="ewt-dialog-footer">
-          <el-button @click="closeForm">取消</el-button>
+          <el-button @click="closeForm">{{ DIALOG_BTN.close }}</el-button>
           <el-button type="primary" data-testid="grp-form-save" :disabled="!formValid" @click="saveForm">保存</el-button>
         </div>
       </template>
@@ -698,7 +699,7 @@ watch(showForm, (v) => {
       </div>
       <template #footer>
         <div class="ewt-dialog-footer">
-          <el-button @click="showRandom = false">取消</el-button>
+          <el-button @click="showRandom = false">{{ DIALOG_BTN.close }}</el-button>
           <el-button data-testid="rg-save-snapshot" @click="saveRandomAsSnapshot">存为快照</el-button>
           <el-button type="primary" data-testid="rg-save-temp" @click="saveRandomAsTemp">保存为临时组</el-button>
         </div>

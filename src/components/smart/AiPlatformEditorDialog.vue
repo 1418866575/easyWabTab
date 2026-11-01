@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 /**
  * 智能网页端 新增 / 编辑弹框
  * 只记录链接与标识（不存密码/密钥）；网址实时校验，仅允许 https。
@@ -245,7 +246,7 @@ const iconPreview = computed(() => {
     </form>
 
     <template #footer>
-      <button type="button" class="ui-btn" @click="emit('close')">取消</button>
+      <button type="button" class="ui-btn" @click="emit('close')">{{ DIALOG_BTN.close }}</button>
       <button type="button" class="ui-btn ui-btn--primary" data-testid="ai-platform-editor-save" @click="submit">保存</button>
     </template>
   </BaseDialog>

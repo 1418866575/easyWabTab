@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 /**
  * 智能工作台 · 导入预览弹框（技能 / 提示词共用）
  * 导入前把「新增 N / 更新 M / 跳过 K」和逐条名称摆出来，用户确认才落库 —— 避免盲改数据。
@@ -54,7 +55,7 @@ const emit = defineEmits<{ close: []; confirm: [] }>()
     </div>
 
     <template #footer>
-      <el-button size="small" @click="emit('close')">取消</el-button>
+      <el-button size="small" @click="emit('close')">{{ DIALOG_BTN.close }}</el-button>
       <el-button type="primary" size="small" data-testid="smart-import-confirm" @click="emit('confirm')">确认导入</el-button>
     </template>
   </BaseDialog>

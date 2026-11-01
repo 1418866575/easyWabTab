@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
@@ -669,12 +670,8 @@ onMounted(async () => {
         </div>
 
         <div class="form-actions ewt-dialog-footer">
-          <el-button size="small" data-testid="td-cancel-button" @click="cancelForm">
-            取消
-          </el-button>
-          <el-button type="primary" size="small" :disabled="!isFormValid" data-testid="td-save-button" @click="handleSave">
-            {{ editingId ? '保存' : '添加' }}
-          </el-button>
+          <el-button size="small" data-testid="td-cancel-button" @click="cancelForm">{{ DIALOG_BTN.close }}</el-button>
+          <el-button type="primary" size="small" :disabled="!isFormValid" data-testid="td-save-button" @click="handleSave">{{ DIALOG_BTN.save }}</el-button>
           <el-button v-if="editingId" type="danger" size="small" native-type="button" data-testid="td-record-delete" @click="handleDelete(editingId)">删除</el-button>
         </div>
       </form>

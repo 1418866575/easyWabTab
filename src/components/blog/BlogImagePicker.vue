@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 /**
  * 博客图库选择器（弹框）
  *
@@ -94,7 +95,7 @@ function confirmSelect(): void {
     </div>
 
     <template v-if="multiple" #footer>
-      <button type="button" class="ui-btn ui-btn--sm" @click="emit('close')">取消</button>
+      <button type="button" class="ui-btn ui-btn--sm" @click="emit('close')">{{ DIALOG_BTN.close }}</button>
       <button
         type="button"
         class="ui-btn ui-btn--sm ui-btn--primary"

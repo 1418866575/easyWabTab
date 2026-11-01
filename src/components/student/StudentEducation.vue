@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useViewMode } from '@/composables/useViewMode'
 import RecordsCard from '@/components/common/RecordsCard.vue'
@@ -346,7 +347,7 @@ const degreeOptions = DEGREE_OPTIONS
       </div>
       <template #footer>
         <div class="ewt-dialog-footer">
-          <el-button @click="closeDialog">取消</el-button>
+          <el-button @click="closeDialog">{{ DIALOG_BTN.close }}</el-button>
           <el-button type="primary" @click="submitForm">保存</el-button>
           <el-button v-if="editingId" type="danger" @click="askDelete(store.sortedEntries.find(e => e.id === editingId)!)">删除</el-button>
         </div>
@@ -362,7 +363,7 @@ const degreeOptions = DEGREE_OPTIONS
     >
       <p class="edu-confirm-text">确定要删除这条教育经历吗？此操作不可撤销。</p>
       <template #footer>
-        <el-button @click="deleteConfirmVisible = false">取消</el-button>
+        <el-button @click="deleteConfirmVisible = false">{{ DIALOG_BTN.close }}</el-button>
         <el-button type="danger" @click="confirmDelete">删除</el-button>
       </template>
     </BaseDialog>

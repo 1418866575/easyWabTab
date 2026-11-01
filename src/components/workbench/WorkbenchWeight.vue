@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import { showConfirm } from '@/utils/dialog'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 
@@ -376,9 +377,7 @@ onMounted(async () => {
             <div class="field-hint">请输入 100-250 之间的整数</div>
           </div>
           <div class="form-actions">
-            <el-button native-type="button" class="btn-cancel" data-testid="wt-height-cancel" @click="closeHeightDialog">
-              取消
-            </el-button>
+            <el-button native-type="button" class="btn-cancel" data-testid="wt-height-cancel" @click="closeHeightDialog">{{ DIALOG_BTN.close }}</el-button>
             <el-button native-type="submit" class="btn-save" :disabled="!isHeightValid" data-testid="wt-height-save">保存</el-button>
           </div>
         </form>
@@ -435,12 +434,8 @@ onMounted(async () => {
           </div>
 
           <div class="form-actions ewt-dialog-footer">
-            <el-button native-type="button" class="btn-cancel" data-testid="wt-cancel-record" @click="cancelRecordForm">
-              取消
-            </el-button>
-            <el-button native-type="submit" class="btn-save" :disabled="!isRecordValid" data-testid="wt-save-record">
-              {{ editingId ? '保存' : '添加' }}
-            </el-button>
+            <el-button native-type="button" class="btn-cancel" data-testid="wt-cancel-record" @click="cancelRecordForm">{{ DIALOG_BTN.close }}</el-button>
+            <el-button native-type="submit" class="btn-save" :disabled="!isRecordValid" data-testid="wt-save-record">{{ DIALOG_BTN.save }}</el-button>
             <el-button v-if="editingId" type="danger" native-type="button" data-testid="wt-record-delete" @click="handleDeleteRecord(editingId)">删除</el-button>
           </div>
         </form>

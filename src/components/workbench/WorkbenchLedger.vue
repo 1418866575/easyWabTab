@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import { showConfirm } from '@/utils/dialog'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import LedgerSwitcher from '@/components/workbench/LedgerSwitcher.vue'
@@ -654,12 +655,10 @@ onMounted(async () => {
           </div>
 
           <div class="form-actions ewt-dialog-footer">
-            <el-button class="btn-cancel" data-testid="ld-cancel" @click="cancelForm">取消</el-button>
+            <el-button class="btn-cancel" data-testid="ld-cancel" @click="cancelForm">{{ DIALOG_BTN.close }}</el-button>
             <!-- 原生提交类型必须用 native-type：el-button 的 type 只作用于样式（按钮外观），
                  写成 type="submit" 会渲染成 type="button" → 点它不会提交表单，handleSave 永不触发。 -->
-            <el-button native-type="submit" class="btn-save" :disabled="!isFormValid" data-testid="ld-save">
-              {{ editingId ? '保存' : '添加' }}
-            </el-button>
+            <el-button native-type="submit" class="btn-save" :disabled="!isFormValid" data-testid="ld-save">{{ DIALOG_BTN.save }}</el-button>
             <el-button v-if="editingId" type="danger" native-type="button" data-testid="ld-record-delete" @click="handleDelete(editingId)">删除</el-button>
           </div>
         </form>

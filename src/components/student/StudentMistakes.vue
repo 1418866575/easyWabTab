@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 // 学生工作台错题本面板（M3 批次1）
 // 布局：工具条 + 学科/状态 tabs + 搜索 + 统计卡 + 表格/卡片双视图（与学习计划一致）+ el-pagination + 编辑弹框
@@ -477,7 +478,7 @@ onMounted(() => {
       </div>
       <template #footer>
         <div class="ewt-dialog-footer">
-          <el-button @click="closeEditDialog">取消</el-button>
+          <el-button @click="closeEditDialog">{{ DIALOG_BTN.close }}</el-button>
           <el-button type="primary" data-testid="sm-form-save" @click="saveEditDialog">保存</el-button>
           <el-button v-if="editingId" type="danger" data-testid="sm-form-delete" @click="handleDelete(editingId)">删除</el-button>
         </div>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 // 家校谈话记录（班主任专属）：新建/编辑/删除谈话 → 列表+卡片双视图 + 筛选 + 统计 + 导出 Excel。
 // 数据挂在班级桶 talks[]（学期×班级隔离），计算走 teacherCore 纯函数，store 只做读写。
@@ -515,7 +516,7 @@ function truncate(text: string, n = 30): string {
       </div>
       <template #footer>
         <div class="ewt-dialog-footer">
-          <el-button @click="closeForm">取消</el-button>
+          <el-button @click="closeForm">{{ DIALOG_BTN.close }}</el-button>
           <el-button type="primary" data-testid="tk-form-save" :disabled="!formValid" @click="saveForm">保存</el-button>
         </div>
       </template>

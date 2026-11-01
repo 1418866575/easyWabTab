@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 // 学生信息：统计卡 + 班级花名册（男蓝/女粉、特异体质红色「!」角标）+ 可编辑明细表（含家庭地址）。
 // 明细表改动即存（onchange → store → IndexedDB），与项目其它面板「修改后自动保存」一致。
@@ -454,7 +455,7 @@ async function downloadTemplate(): Promise<void> {
       </div>
       <template #footer>
         <div class="ewt-dialog-footer">
-          <el-button @click="closeAddDialog">取消</el-button>
+          <el-button @click="closeAddDialog">{{ DIALOG_BTN.close }}</el-button>
           <el-button type="primary" :disabled="!form.name.trim()" data-testid="stu-add-save" @click="saveAdd">保存</el-button>
         </div>
       </template>

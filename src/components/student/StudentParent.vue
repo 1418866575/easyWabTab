@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 // 家长协同控制台面板（学生工作台的「家长协同」section）
 // 6 个 Tabs：📊 统计 / 📝 每日任务 / 📑 孩子报告 / ➕ 手动加分 / 🏅 发放勋章 / 🎁 配置奖励
@@ -890,7 +891,7 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
         </label>
       </div>
       <template #footer>
-        <el-button @click="taskFormVisible = false">取消</el-button>
+        <el-button @click="taskFormVisible = false">{{ DIALOG_BTN.close }}</el-button>
         <el-button type="primary" @click="submitTaskForm">保存</el-button>
       </template>
     </BaseDialog>
@@ -927,7 +928,7 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
         </label>
       </div>
       <template #footer>
-        <el-button @click="rewardFormVisible = false">取消</el-button>
+        <el-button @click="rewardFormVisible = false">{{ DIALOG_BTN.close }}</el-button>
         <el-button type="primary" @click="submitRewardForm">保存</el-button>
       </template>
     </BaseDialog>

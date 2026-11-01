@@ -187,6 +187,7 @@
 ```vue
 <script setup lang="ts">
 import BaseDialog from '@/components/common/BaseDialog.vue'
+import { DIALOG_BTN } from '@/config/dialogText'
 </script>
 
 <template>
@@ -194,12 +195,26 @@ import BaseDialog from '@/components/common/BaseDialog.vue'
     <form @submit.prevent="onSave"> ... </form>
 
     <template #footer>
-      <button class="btn-cancel" @click="onClose">取消</button>
-      <button class="btn-submit" @click="onSave">保存</button>
+      <button class="btn-cancel" @click="onClose">{{ DIALOG_BTN.close }}</button>
+      <button class="btn-submit" @click="onSave">{{ DIALOG_BTN.save }}</button>
     </template>
   </BaseDialog>
 </template>
 ```
+
+#### 底部按钮文案（全局统一，2026-11）
+
+**唯一来源**：`src/config/dialogText.ts` 的 `DIALOG_BTN`。
+
+| 键 | 文案 | 取代 |
+| --- | --- | --- |
+| `DIALOG_BTN.close` | 关闭 | 「取消」 |
+| `DIALOG_BTN.save` | 保存 | 「新增 / 添加」（编辑态原本就是「保存」，合并为一） |
+
+- 组件里**不要裸写**「取消 / 新增 / 添加 / 保存」，一律引用 `DIALOG_BTN`；改配置即全站生效。
+- 已是「关闭」「保存」的不用动；危险操作按钮（删除 / 清空 / 驳回）保持各自语义。
+- **例外**：`ConfirmHost`（`showConfirm` 的确认框）沿用「取消 / 确定」——它表达的是「取消本次操作」而非「关闭弹框」。
+
 
 #### 约定
 

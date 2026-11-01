@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 // 商品管理：分类 tabs（全部 + 可见分类）+ 商品卡片网格 + 新增/编辑弹框 + ⚙️ 分类管理
 // P1-3：跨模块联动跳转（商品名可点击跳转「库存」页）
@@ -420,7 +421,7 @@ function drawerMarkupRate(): number | null {
     <!-- 新增/编辑弹框 -->
     <BaseDialog
       v-if="showDialog"
-      width="480px"
+      width="600px"
       :title="editingId ? '编辑商品' : '新增商品'"
       data-testid="bizprod-dialog"
       @close="showDialog = false"
@@ -456,7 +457,7 @@ function drawerMarkupRate(): number | null {
             </el-select>
           </div>
           <div class="biz-field">
-            <label>成本价（自动·由进货记录计算）</label>
+            <label>成本价（自动）</label>
             <el-input-number
               size="small"
               :min="0"
@@ -506,7 +507,7 @@ function drawerMarkupRate(): number | null {
           <el-checkbox v-model="formActive" data-testid="bizprod-form-active">上架在售</el-checkbox>
         </div>
         <div class="biz-form-actions">
-          <el-button @click="showDialog = false">取消</el-button>
+          <el-button @click="showDialog = false">{{ DIALOG_BTN.close }}</el-button>
           <!-- M-17：保存按钮按校验结果置灰（此前只绑 :disabled="saving"，提交时才toast 报错，
              与销售/进货/支出三个面板的交互风格不一致） -->
           <el-button
@@ -514,10 +515,7 @@ function drawerMarkupRate(): number | null {
             native-type="submit"
             :disabled="!isFormValid || saving"
             :loading="saving"
-            data-testid="bizprod-save"
-          >
-            {{ editingId ? '保存' : '添加' }}
-          </el-button>
+            data-testid="bizprod-save">{{ DIALOG_BTN.save }}</el-button>
           <el-button v-if="editingId" type="danger" data-testid="bizprod-dialog-del" @click="handleDeleteCurrent">删除</el-button>
         </div>
       </form>
@@ -886,10 +884,8 @@ function drawerMarkupRate(): number | null {
 }
 
 /* 弹框：骨架样式（body/field/form-row/actions/.req）见全局 src/styles/biz-dialog.css
-   本弹框沿用 el-dialog 自带标题栏与内边距，故 body 不再重复加 padding */
-.biz-dialog-body {
-  padding: 0;
-}
+   正文内边距也由全局 .biz-dialog-body 提供（20px）；此前这里写过 padding:0 是因为
+   旧版用 el-dialog 自带标题栏 + 内边距，迁到 BaseDialog 后会把留白清零，已移除。 */
 
 /* el-* 表单控件撑满字段 */
 .bizprod :deep(.el-input-number) {

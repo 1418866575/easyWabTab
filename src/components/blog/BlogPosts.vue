@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 /**
  * 博客文章列表（后台）
  *
@@ -503,7 +504,7 @@ function displayTime(row: BlogArticle): string {
         ></textarea>
       </label>
       <template #footer>
-        <button type="button" class="btn-cancel" @click="rejectRow = null">取消</button>
+        <button type="button" class="btn-cancel" @click="rejectRow = null">{{ DIALOG_BTN.close }}</button>
         <button type="button" class="btn-submit" data-testid="blog-reject-submit" @click="submitReject">确定驳回</button>
       </template>
     </BaseDialog>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
@@ -587,10 +588,8 @@ async function handleDeleteFromDialog(): Promise<void> {
 
 
         <div class="biz-form-actions ewt-dialog-footer">
-          <el-button size="small" @click="showDialog = false">取消</el-button>
-          <el-button type="primary" size="small" native-type="submit" :disabled="!isFormValid || saving" :loading="saving" data-testid="bizexp-save">
-            {{ editingDailyId ? '保存' : '添加' }}
-          </el-button>
+          <el-button size="small" @click="showDialog = false">{{ DIALOG_BTN.close }}</el-button>
+          <el-button type="primary" size="small" native-type="submit" :disabled="!isFormValid || saving" :loading="saving" data-testid="bizexp-save">{{ DIALOG_BTN.save }}</el-button>
           <el-button
             v-if="editingDailyId"
             size="small"

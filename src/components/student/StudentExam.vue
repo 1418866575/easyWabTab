@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 // 学生工作台考试倒计时面板（M2）
 // 布局：顶部工具条 + 题型筛选 tabs + 统计卡 + 表格/卡片双视图（与学习计划一致）+ el-pagination + 编辑弹框
@@ -438,7 +439,7 @@ onMounted(async () => {
       </div>
       <template #footer>
         <div class="ewt-dialog-footer">
-          <el-button @click="closeEditDialog">取消</el-button>
+          <el-button @click="closeEditDialog">{{ DIALOG_BTN.close }}</el-button>
           <el-button type="primary" data-testid="se-form-save" @click="saveEditDialog">保存</el-button>
           <el-button v-if="editingId" type="danger" data-testid="se-form-delete" @click="handleDelete(editingId)">删除</el-button>
         </div>

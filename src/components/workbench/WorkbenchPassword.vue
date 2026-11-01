@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { showConfirm } from '@/utils/dialog'
 import { usePasswordsStore } from '@/stores/passwords'
@@ -670,10 +671,10 @@ watch(
               @click="handleDeleteInForm"
             >删除</el-button>
 <el-button type="button" class="pwd-btn-cancel" data-testid="pwd-cancel-btn" @click="cancelForm">
-              取消
+              {{ DIALOG_BTN.close }}
             </el-button>
             <el-button type="primary" native-type="submit" class="pwd-btn-primary" data-testid="pwd-save-btn" :disabled="!isFormValid">
-              {{ editingId ? '保存' : '添加' }}
+              {{ DIALOG_BTN.save }}
             </el-button>
           </div>
         </form>

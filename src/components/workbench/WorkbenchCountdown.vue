@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '../Icon.vue'
 import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
@@ -629,12 +630,8 @@ onUnmounted(() => {
         </div>
 
         <div class="form-actions">
-          <el-button type="button" size="small" data-testid="cd-cancel-button" @click="cancelForm">
-            取消
-          </el-button>
-          <el-button type="primary" size="small" native-type="submit" :disabled="!isFormValid" data-testid="cd-save-button">
-            {{ editingId ? '保存' : '添加' }}
-          </el-button>
+          <el-button type="button" size="small" data-testid="cd-cancel-button" @click="cancelForm">{{ DIALOG_BTN.close }}</el-button>
+          <el-button type="primary" size="small" native-type="submit" :disabled="!isFormValid" data-testid="cd-save-button">{{ DIALOG_BTN.save }}</el-button>
         </div>
       </form>
     </BaseDialog>

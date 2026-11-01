@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 /**
  * 博客图库管理（后台·左侧菜单「文章 → 图库」）
  *
@@ -503,7 +504,7 @@ async function doRemove(ids: string[]): Promise<void> {
         </label>
       </div>
       <template #footer>
-        <button type="button" class="ui-btn ui-btn--sm" data-testid="blog-gallery-rename-cancel" @click="renaming = null">取消</button>
+        <button type="button" class="ui-btn ui-btn--sm" data-testid="blog-gallery-rename-cancel" @click="renaming = null">{{ DIALOG_BTN.close }}</button>
         <button
           type="button"
           class="ui-btn ui-btn--sm ui-btn--primary"

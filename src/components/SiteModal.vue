@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import Icon from './Icon.vue'
 import BaseDialog from './common/BaseDialog.vue'
 import IconPickerDialog from './IconPickerDialog.vue'
@@ -511,10 +512,8 @@ const handleSubmit = () => {
 
         <!-- 表单操作区：保持在 <form> 内（提交按钮依赖 form 归属），故不用基类 #footer 插槽 -->
       <div class="site-form-actions">
-        <button v-if="!embedded" type="button" class="btn-cancel" @click="emit('close')">取消</button>
-        <button type="submit" class="btn-submit">
-          {{ isEditing ? '保存' : '添加' }}
-        </button>
+        <button v-if="!embedded" type="button" class="btn-cancel" @click="emit('close')">{{ DIALOG_BTN.close }}</button>
+        <button type="submit" class="btn-submit">{{ DIALOG_BTN.save }}</button>
       </div>
       </form>
     </BaseDialog>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 // 教师工作台课程表面板（复刻学生课程表富模型，按班级隔离）
 // 布局：顶部工具条（周次/导出/清空） + 今日速览条 + 学科图例 + 7列网格（首列&表头 sticky）
@@ -511,7 +512,7 @@ onBeforeUnmount(() => {
             删除
           </el-button>
           <div class="dialog-footer-right">
-            <el-button @click="closeCellDialog">取消</el-button>
+            <el-button @click="closeCellDialog">{{ DIALOG_BTN.close }}</el-button>
             <el-button type="primary" @click="saveCell">保存</el-button>
           </div>
         </div>

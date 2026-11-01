@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 /**
  * 编辑本机上传书籍的元信息（书名 / 分类 / 简介 / 标签）
  *
@@ -141,7 +142,7 @@ async function onSave(): Promise<void> {
     </div>
 
     <template #footer>
-      <button type="button" class="ui-btn" data-testid="bk-edit-cancel" @click="onClose">取消</button>
+      <button type="button" class="ui-btn" data-testid="bk-edit-cancel" @click="onClose">{{ DIALOG_BTN.close }}</button>
       <button
         type="button"
         class="ui-btn ui-btn--primary"

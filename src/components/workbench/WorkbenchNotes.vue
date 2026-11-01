@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
@@ -796,18 +797,13 @@ onUnmounted(() => {
         />
 
         <div class="note-form-actions ewt-dialog-footer">
-          <el-button type="button" class="btn-cancel" data-testid="note-cancel-button" @click="cancelForm">
-            取消
-          </el-button>
+          <el-button type="button" class="btn-cancel" data-testid="note-cancel-button" @click="cancelForm">{{ DIALOG_BTN.close }}</el-button>
           <el-button
             type="button"
             class="btn-save"
             :disabled="!isFormValid"
             data-testid="note-save-button"
-            @click="handleSave"
-          >
-            {{ editingId ? '保存' : '添加' }}
-          </el-button>
+            @click="handleSave">{{ DIALOG_BTN.save }}</el-button>
           <el-button v-if="editingId" type="danger" native-type="button" data-testid="note-record-delete" @click="handleDelete(editingId)">删除</el-button>
         </div>
       </div>

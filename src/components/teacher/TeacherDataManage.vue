@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 // 数据管理（工作台首页）：班级信息、统计卡、三类表格导入、备份/恢复、学期与班级管理。
 // 导入统一走 teacherImportCore（表头归一、缺列明确报错、重名不静默错配）。
@@ -594,7 +595,7 @@ async function onClearSemesterData(): Promise<void> {
           </label>
         </div>
         <template #footer>
-          <button type="button" class="tw-btn" @click="dialogVisible = false">取消</button>
+          <button type="button" class="tw-btn" @click="dialogVisible = false">{{ DIALOG_BTN.close }}</button>
           <button type="button" class="tw-btn tw-btn-primary" @click="onSave">保存</button>
         </template>
       </BaseDialog>

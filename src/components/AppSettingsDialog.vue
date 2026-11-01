@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import { reactive, ref, computed, onMounted, onUnmounted, watch, nextTick, toRaw, defineAsyncComponent, type Component } from 'vue'
 import { showConfirm } from '@/utils/dialog'
 import {
@@ -4443,7 +4444,7 @@ function toggleFullscreen(): void {
       </div>
       <template #footer>
         <div class="ewt-dialog-footer">
-          <el-button @click="clearConfirmVisible = false">取消</el-button>
+          <el-button @click="clearConfirmVisible = false">{{ DIALOG_BTN.close }}</el-button>
           <el-button type="danger" @click="doClear">确认清空</el-button>
         </div>
       </template>

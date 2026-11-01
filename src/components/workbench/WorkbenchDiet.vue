@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import { showConfirm } from '@/utils/dialog'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
@@ -408,7 +409,7 @@ onMounted(async () => {
                 清除目标
               </el-button>
               <span class="form-actions-spacer"></span>
-              <el-button native-type="button" class="btn-cancel" data-testid="dt-cancel" @click="closeTargetDialog">取消</el-button>
+              <el-button native-type="button" class="btn-cancel" data-testid="dt-cancel" @click="closeTargetDialog">{{ DIALOG_BTN.close }}</el-button>
               <el-button native-type="submit" class="btn-save" :disabled="!isTargetValid" data-testid="dt-save">保存</el-button>
             </div>
           </form>
@@ -436,7 +437,7 @@ onMounted(async () => {
             删除
           </el-button>
           <span class="form-actions-spacer"></span>
-          <el-button size="small" data-testid="dt-plan-cancel" @click="planDialogOpen = false">取消</el-button>
+          <el-button size="small" data-testid="dt-plan-cancel" @click="planDialogOpen = false">{{ DIALOG_BTN.close }}</el-button>
           <el-button type="primary" native-type="submit" size="small" data-testid="dt-plan-save">保存</el-button>
         </div>
       </form>
@@ -512,12 +513,8 @@ onMounted(async () => {
           </div>
 
           <div class="form-actions ewt-dialog-footer">
-            <el-button native-type="button" class="btn-cancel" data-testid="dt-cancel-record" @click="cancelRecordForm">
-              取消
-            </el-button>
-            <el-button native-type="submit" class="btn-save" :disabled="!isFormValid" data-testid="dt-save-record">
-              {{ editingId ? '保存' : '添加' }}
-            </el-button>
+            <el-button native-type="button" class="btn-cancel" data-testid="dt-cancel-record" @click="cancelRecordForm">{{ DIALOG_BTN.close }}</el-button>
+            <el-button native-type="submit" class="btn-save" :disabled="!isFormValid" data-testid="dt-save-record">{{ DIALOG_BTN.save }}</el-button>
             <el-button v-if="editingId" type="danger" native-type="button" data-testid="dt-record-delete" @click="handleDeleteRecord(editingId)">删除</el-button>
           </div>
         </form>

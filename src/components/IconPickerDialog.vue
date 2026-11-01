@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import BaseDialog from './common/BaseDialog.vue'
 import Icon from './Icon.vue'
@@ -308,7 +309,7 @@ onUnmounted(() => {
 
     <template #footer>
       <el-button size="small" :disabled="!props.current" @click="handleReset">恢复默认</el-button>
-      <el-button size="small" type="primary" @click="emit('close')">取消</el-button>
+      <el-button size="small" type="primary" @click="emit('close')">{{ DIALOG_BTN.close }}</el-button>
     </template>
   </BaseDialog>
 </template>

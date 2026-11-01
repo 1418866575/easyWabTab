@@ -12,10 +12,12 @@
  *   <BaseDialog title="标题" @close="onClose">
  *     弹框内容
  *     <template #footer>
- *       <button class="btn-cancel" @click="onClose">取消</button>
- *       <button class="btn-submit" @click="onOk">确定</button>
+ *       <button class="btn-cancel" @click="onClose">{{ DIALOG_BTN.close }}</button>
+ *       <button class="btn-submit" @click="onOk">{{ DIALOG_BTN.save }}</button>
  *     </template>
  *   </BaseDialog>
+ *
+ * 底部按钮文案统一取 `@/config/dialogText` 的 DIALOG_BTN（关闭 / 保存），不要裸写「取消/新增/添加」。
  *
  * - 完整自定义头部/结构：用 #panel 插槽整体覆盖（此时请自行放置 .close-btn）。
  * - 嵌套在 el-dialog 内的子面板用 `embedded`（不渲染遮罩、不固定定位，随父级流式排布）。

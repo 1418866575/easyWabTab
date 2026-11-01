@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { showConfirm } from '@/utils/dialog'
@@ -1180,10 +1181,8 @@ onUnmounted(() => {
           <el-input v-model="formNote" type="textarea" :rows="2" placeholder="补充说明…" data-testid="fg-note" />
         </div>
         <div class="form-actions ewt-dialog-footer">
-          <el-button size="small" data-testid="fg-cancel-button" @click="cancelMember">取消</el-button>
-          <el-button type="primary" size="small" :disabled="!isMemberFormValid" data-testid="fg-save-button" @click="handleSaveMember">
-            {{ editingId ? '保存' : '添加' }}
-          </el-button>
+          <el-button size="small" data-testid="fg-cancel-button" @click="cancelMember">{{ DIALOG_BTN.close }}</el-button>
+          <el-button type="primary" size="small" :disabled="!isMemberFormValid" data-testid="fg-save-button" @click="handleSaveMember">{{ DIALOG_BTN.save }}</el-button>
           <el-button v-if="editingId" type="danger" size="small" native-type="button" data-testid="fg-record-delete" @click="handleDelete({ id: editingId, name: formName } as FamilyMember)">删除</el-button>
           <!-- 移动端独占：编辑页快捷入口，PC 端隐藏 -->
           <el-button v-if="editingId" size="small" class="mobile-only-action" data-testid="fg-edit-rel-button" @click="openRelFromEdit">关系</el-button>
@@ -1298,10 +1297,8 @@ onUnmounted(() => {
           <el-input v-model="fnNote" type="textarea" :rows="2" maxlength="500" show-word-limit placeholder="补充说明…" data-testid="fn-note" />
         </div>
         <div class="form-actions ewt-dialog-footer">
-          <el-button size="small" data-testid="fn-cancel-button" @click="cancelName">取消</el-button>
-          <el-button type="primary" size="small" :disabled="!isNameFormValid" data-testid="fn-save-button" @click="handleSaveName">
-            {{ nameEditingId ? '保存' : '添加' }}
-          </el-button>
+          <el-button size="small" data-testid="fn-cancel-button" @click="cancelName">{{ DIALOG_BTN.close }}</el-button>
+          <el-button type="primary" size="small" :disabled="!isNameFormValid" data-testid="fn-save-button" @click="handleSaveName">{{ DIALOG_BTN.save }}</el-button>
           <el-button v-if="nameEditingId" type="danger" size="small" native-type="button" data-testid="fn-record-delete" @click="handleDeleteName(nameEditingId)">删除</el-button>
         </div>
       </form>

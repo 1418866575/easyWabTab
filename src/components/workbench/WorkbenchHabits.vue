@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { showConfirm } from '@/utils/dialog'
 import { compressImageFile } from '@/utils/imageCompress'
@@ -394,16 +395,13 @@ onUnmounted(() => {
       </div>
       <template #footer>
         <div class="dialog-footer">
-          <el-button size="small" data-testid="hb-dialog-cancel" @click="closeEditDialog">取消</el-button>
+          <el-button size="small" data-testid="hb-dialog-cancel" @click="closeEditDialog">{{ DIALOG_BTN.close }}</el-button>
           <el-button
             type="primary"
             size="small"
             :disabled="!dialogName.trim()"
             data-testid="hb-dialog-save"
-            @click="saveEditDialog"
-          >
-            {{ editingId ? '保存' : '添加' }}
-          </el-button>
+            @click="saveEditDialog">{{ DIALOG_BTN.save }}</el-button>
           <el-button
             v-if="editingId"
             size="small"
@@ -490,7 +488,7 @@ onUnmounted(() => {
       <input ref="fileInputRef" type="file" accept="image/*" multiple hidden @change="handleImageFiles" />
 
       <template #footer>
-        <button class="btn-cancel" data-testid="hb-detail-cancel" @click="closeDetail">取消</button>
+        <button class="btn-cancel" data-testid="hb-detail-cancel" @click="closeDetail">{{ DIALOG_BTN.close }}</button>
         <button class="btn-submit" data-testid="hb-detail-save" :disabled="!detailDirty" @click="saveDetail">
           保存
         </button>

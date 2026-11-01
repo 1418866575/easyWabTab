@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 // 学生工作台习惯打卡面板（M2）
 // 复刻成人 WorkbenchHabits 布局，差异：
@@ -370,7 +371,7 @@ onMounted(async () => {
             删除
           </el-button>
           <div class="dialog-footer-right">
-            <el-button @click="closeEditDialog">取消</el-button>
+            <el-button @click="closeEditDialog">{{ DIALOG_BTN.close }}</el-button>
             <el-button type="primary" data-testid="sh-form-save" @click="saveEditDialog">保存</el-button>
           </div>
         </div>
@@ -421,7 +422,7 @@ onMounted(async () => {
       </div>
       <template #footer>
         <div class="ewt-dialog-footer">
-          <el-button @click="recordDialogVisible = false">取消</el-button>
+          <el-button @click="recordDialogVisible = false">{{ DIALOG_BTN.close }}</el-button>
           <el-button type="primary" data-testid="sh-record-save" @click="saveRecordDialog">保存</el-button>
         </div>
       </template>

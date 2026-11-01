@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 /**
  * 智能工作台 · 工作流编辑弹框
  * 字段：名称 / 描述 / 分类 / 作者 / 版本 / 标签 / 定义（自由文本）/ 收藏。
@@ -181,10 +182,8 @@ const nameTaken = computed(() => {
     </template>
 
     <template #footer>
-      <el-button size="small" @click="emit('close')">取消</el-button>
-      <el-button type="primary" size="small" data-testid="smart-workflow-editor-save" @click="submit">
-        {{ editingId ? '保存' : '添加' }}
-      </el-button>
+      <el-button size="small" @click="emit('close')">{{ DIALOG_BTN.close }}</el-button>
+      <el-button type="primary" size="small" data-testid="smart-workflow-editor-save" @click="submit">{{ DIALOG_BTN.save }}</el-button>
     </template>
   </BaseDialog>
 </template>

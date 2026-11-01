@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 // 学生工作台学习目标面板
 // 布局：工具条 + 统计卡 + 学科/状态筛选 + 表格/卡片双视图 + 分页 + 新增/编辑弹框
@@ -419,10 +420,8 @@ onMounted(() => {
       </div>
       <template #footer>
         <div class="ewt-dialog-footer">
-          <el-button @click="closeEditDialog">取消</el-button>
-          <el-button type="primary" data-testid="sg-form-save" @click="saveEditDialog">
-            {{ editingId !== null ? '保存' : '新增' }}
-          </el-button>
+          <el-button @click="closeEditDialog">{{ DIALOG_BTN.close }}</el-button>
+          <el-button type="primary" data-testid="sg-form-save" @click="saveEditDialog">{{ DIALOG_BTN.save }}</el-button>
           <el-button v-if="editingId" type="danger" data-testid="sg-form-delete" @click="handleDelete(editingId)">删除</el-button>
         </div>
       </template>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useViewMode } from '@/composables/useViewMode'
 import { showConfirm } from '@/utils/dialog'
@@ -457,10 +458,8 @@ onMounted(() => {
       </div>
       <template #footer>
         <div class="ewt-dialog-footer">
-          <el-button @click="closeEditDialog">取消</el-button>
-          <el-button type="primary" data-testid="sp-form-save" @click="saveEditDialog">
-            {{ editingId !== null ? '保存' : '新增' }}
-          </el-button>
+          <el-button @click="closeEditDialog">{{ DIALOG_BTN.close }}</el-button>
+          <el-button type="primary" data-testid="sp-form-save" @click="saveEditDialog">{{ DIALOG_BTN.save }}</el-button>
           <el-button v-if="editingId" type="danger" data-testid="sp-form-delete" @click="handleDelete(editingId)">删除</el-button>
         </div>
       </template>

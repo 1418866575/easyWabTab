@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 // 作业记录（全员可见：班主任、代课老师都能用）：新建作业 → 按名册为每位同学生成一条未交记录；
 // 同学补交后人工标记「已补交」（可填补交时间/备注，留空则保持空）；一键导出未交名单 Excel。
@@ -385,7 +386,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
       </div>
       <template #footer>
         <div class="ewt-dialog-footer">
-          <el-button @click="closeForm">取消</el-button>
+          <el-button @click="closeForm">{{ DIALOG_BTN.close }}</el-button>
           <el-button type="primary" data-testid="hw-form-save" :disabled="!formValid" @click="saveForm">保存</el-button>
         </div>
       </template>
@@ -499,7 +500,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
       </div>
       <template #footer>
         <div class="ewt-dialog-footer">
-          <el-button @click="closeMark">取消</el-button>
+          <el-button @click="closeMark">{{ DIALOG_BTN.close }}</el-button>
           <el-button type="primary" data-testid="hw-mark-save" @click="saveMark">确认</el-button>
         </div>
       </template>

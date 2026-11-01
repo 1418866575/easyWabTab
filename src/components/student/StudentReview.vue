@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 // 学生工作台复习计划面板（艾宾浩斯间隔复习，M3 批次1）
 // 布局：工具条 + 学科 tabs + 统计卡 + 表格/卡片双视图（与学习计划一致）+ el-pagination + 编辑弹框
@@ -398,10 +399,8 @@ function daysClass(days: number): string {
       </div>
       <template #footer>
         <div class="ewt-dialog-footer">
-          <el-button @click="closeEditDialog">取消</el-button>
-          <el-button type="primary" data-testid="sr-form-save" @click="saveEditDialog">
-            {{ editingId !== null ? '保存' : '新增' }}
-          </el-button>
+          <el-button @click="closeEditDialog">{{ DIALOG_BTN.close }}</el-button>
+          <el-button type="primary" data-testid="sr-form-save" @click="saveEditDialog">{{ DIALOG_BTN.save }}</el-button>
           <el-button v-if="editingId" type="danger" data-testid="sr-form-delete" @click="handleDelete(editingId)">删除</el-button>
         </div>
       </template>

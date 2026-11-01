@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DIALOG_BTN } from '@/config/dialogText'
 /**
  * 智能工作台 · 技能编辑弹框（v2：字段与 skill.md 一一对应）
  * ------------------------------------------------------------------
@@ -423,10 +424,8 @@ async function copySkillMd(): Promise<void> {
     </template>
 
     <template #footer>
-      <el-button size="small" @click="emit('close')">取消</el-button>
-      <el-button type="primary" size="small" data-testid="skill-editor-save" @click="submit">
-        {{ editingId ? '保存' : '添加' }}
-      </el-button>
+      <el-button size="small" @click="emit('close')">{{ DIALOG_BTN.close }}</el-button>
+      <el-button type="primary" size="small" data-testid="skill-editor-save" @click="submit">{{ DIALOG_BTN.save }}</el-button>
     </template>
   </BaseDialog>
 </template>
