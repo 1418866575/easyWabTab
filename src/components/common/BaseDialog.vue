@@ -234,6 +234,10 @@ const overlayStyle = computed(() => (props.zIndex ? { zIndex: props.zIndex } : {
   border-bottom: 1px solid var(--ds-line, var(--color-border, #e2e8f0));
   background: var(--ds-card, var(--color-bg-card, #ffffff));
   flex-shrink: 0;
+  /* 头部永远压在本体内容之上：本体若出现负 margin / 绝对定位的子元素，
+     会盖住关闭按钮导致「点 X 没反应」，这里做一层兜底。 */
+  position: relative;
+  z-index: 1;
 }
 .bd-header-actions {
   display: flex;
