@@ -493,7 +493,7 @@ function excerpt(w: SmartWorkflow): string {
 .wm-toolbar-left, .wm-toolbar-right { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .wm-result { font-size: 12px; color: var(--color-text-muted, #9ca3af); }
 .wm-select {
-  height: 24px;
+  height: 36px;
   padding: 0 6px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 8px);
@@ -502,7 +502,8 @@ function excerpt(w: SmartWorkflow): string {
   font-size: 13px;
 }
 .wm-fav {
-  padding: 4px 10px;
+  height: 36px;
+  padding: 0 10px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
   background: transparent;
@@ -643,7 +644,7 @@ function excerpt(w: SmartWorkflow): string {
 
 @media (max-width: 768px) {
   .wm-list { grid-template-columns: 1fr; }
-  .wm-cat-pill, .wm-fav { min-height: 40px; }
+  .wm-cat-pill { min-height: 40px; }
   .wm-toolbar-left, .wm-toolbar-right { width: 100%; }
   .wm-pager { justify-content: center; }
   .wm-pager :deep(.el-pagination__sizes),
@@ -651,6 +652,5 @@ function excerpt(w: SmartWorkflow): string {
   .wm-btn {height: 36px;
   padding: 0 12px;
   font-size: 12px;}
-  .wm-select { height: 44px; font-size: 16px; }
 }
 </style>

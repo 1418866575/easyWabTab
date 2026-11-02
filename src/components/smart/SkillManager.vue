@@ -510,7 +510,7 @@ function relTime(ts: number): string {
 .sm-toolbar-left, .sm-toolbar-right { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .sm-result { font-size: 12px; color: var(--color-text-muted, #9ca3af); }
 .sm-select {
-  height: 24px;
+  height: 36px;
   padding: 0 6px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 8px);
@@ -667,7 +667,7 @@ function relTime(ts: number): string {
 
 /* 收藏筛选 + 卡片星标：与提示词 / 工作流同款 */
 .sm-fav {
-  height: 24px;
+  height: 36px;
   padding: 0 8px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 8px);
@@ -717,7 +717,6 @@ function relTime(ts: number): string {
   .sm-btn {height: 36px;
   padding: 0 12px;
   font-size: 12px;}
-  .sm-select { height: 44px; font-size: 16px; }
   /* 触屏没有 hover，小铅笔常驻提示可点；放大到 34px 便于点按 */
   .sm-icon-btn {width: 34px;
   height: 36px;}

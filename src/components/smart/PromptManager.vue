@@ -433,7 +433,7 @@ function excerpt(p: SmartPrompt): string {
 .pm-toolbar-left, .pm-toolbar-right { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .pm-result { font-size: 12px; color: var(--color-text-muted, #9ca3af); }
 .pm-select {
-  height: 24px;
+  height: 36px;
   padding: 0 6px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 8px);
@@ -442,7 +442,8 @@ function excerpt(p: SmartPrompt): string {
   font-size: 13px;
 }
 .pm-fav {
-  padding: 4px 10px;
+  height: 36px;
+  padding: 0 10px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
   background: transparent;
@@ -555,7 +556,7 @@ function excerpt(p: SmartPrompt): string {
 
 @media (max-width: 768px) {
   .pm-list { grid-template-columns: 1fr; }
-  .pm-cat-pill, .pm-fav { min-height: 40px; }
+  .pm-cat-pill { min-height: 40px; }
   .pm-toolbar-left, .pm-toolbar-right { width: 100%; }
   .pm-pager { justify-content: center; }
   .pm-pager :deep(.el-pagination__sizes),
@@ -563,6 +564,5 @@ function excerpt(p: SmartPrompt): string {
   .pm-btn {height: 36px;
   padding: 0 12px;
   font-size: 12px;}
-  .pm-select { height: 44px; font-size: 16px; }
 }
 </style>
