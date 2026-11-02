@@ -111,6 +111,19 @@ async function onSemesterChange(val: unknown): Promise<void> {
   if (v) await store.selectSemester(v)
 }
 
+/** 学期下拉宽度：按最长选项文案估算（CJK≈12px、半角≈6.7px），另加内边距与箭头余量；下限 96px、上限 220px */
+const semSelectWidth = computed((): string => {
+  const textWidth = (t: string): number =>
+    [...t].reduce((w, ch) => w + (ch.charCodeAt(0) > 255 ? 12 : 6.7), 0)
+  const longest = Math.max(
+    ...store.semesters.map((s) =>
+      textWidth(`${s.year} ${s.term}${store.isDefaultSemester(s.id) ? '（默认）' : ''}`)
+    ),
+    48
+  )
+  return `${Math.min(220, Math.ceil(longest) + 44)}px`
+})
+
 /** 顶部栏只读展示的任教学科（当前班级任教科目） */
 const readonlySubject = computed(() => store.cls?.subject || '未设学科')
 
@@ -185,7 +198,12 @@ onMounted(() => {
         <div class="tv-selectors">
           <label class="tw-label">
             学期
-            <el-select size="small" :model-value="store.data.current.sem" @change="onSemesterChange">
+            <el-select
+              size="small"
+              :style="{ width: semSelectWidth }"
+              :model-value="store.data.current.sem"
+              @change="onSemesterChange"
+            >
               <el-option
                 v-for="s in store.semesters"
                 :key="s.id"
