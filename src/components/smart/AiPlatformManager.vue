@@ -197,7 +197,7 @@ onDeactivated(() => {
     <!-- 工具栏 -->
     <div class="ap-toolbar">
       <div class="ap-toolbar-left">
-        <el-select v-model="sort" size="small" class="ap-sort" aria-label="排序方式" data-testid="ai-platform-sort">
+        <el-select v-model="sort" class="ap-sort" aria-label="排序方式" data-testid="ai-platform-sort">
           <el-option value="manual" label="手动顺序" />
           <el-option value="recent" label="最近打开" />
           <el-option value="usage" label="使用次数" />
@@ -361,7 +361,7 @@ onDeactivated(() => {
   width: 116px;
 }
 .ap-toggle {
-  height: 30px;
+  height: 36px;
   padding: 0 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
