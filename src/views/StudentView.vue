@@ -493,9 +493,8 @@ async function onOnboardingComplete() {
 }
 .st-parent-bar-icon { font-size: 14px; line-height: 1; }
 .st-parent-bar-text { font-weight: 500; }
-.st-parent-bar-btn {
-  border: 0;
-  padding: 3px 10px;
+.st-parent-bar-btn {border: 0;
+  padding: 0 12px;
   border-radius: 999px;
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #d1d5db);
@@ -504,7 +503,7 @@ async function onOnboardingComplete() {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.12s;
-}
+  height: 24px;}
 .st-parent-bar-btn:hover {
   background: var(--color-hover, #f3f4f6);
   color: var(--color-text, #1f2937);
@@ -682,9 +681,7 @@ async function onOnboardingComplete() {
     flex: 1 1 auto;
     min-width: 0;
   }
-  .st-btn {
-    min-height: 44px;
-  }
+  .st-btn {height: 24px;}
 
   /* 菜单降级为底部固定 Tab Bar（与「个人工作台」WorkbenchView 移动端一致）：
      脱离文档流常驻拇指区，图标+名称常显，菜单项过多时整条横向滚动 */

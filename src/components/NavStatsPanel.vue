@@ -652,12 +652,11 @@ onMounted(() => {
   line-height: 18px;
 }
 /* 小尺寸按钮：与全局 .ui-btn--sm 同规格（30px 高 / 12px 字 / 8px 圆角） */
-.ns-mini-btn {
-  display: inline-flex;
+.ns-mini-btn {display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 30px;
-  padding: 0 var(--space-3, 12px);
+  height: 24px;
+  padding: 0 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   background-color: var(--color-bg-card);
@@ -667,8 +666,7 @@ onMounted(() => {
   transition:
     border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
     color var(--motion-duration, 220ms) var(--motion-ease, ease),
-    background-color var(--motion-duration, 220ms) var(--motion-ease, ease);
-}
+    background-color var(--motion-duration, 220ms) var(--motion-ease, ease);}
 .ns-mini-btn:hover:not(:disabled) {
   border-color: var(--color-primary);
   color: var(--color-primary);
@@ -690,19 +688,17 @@ onMounted(() => {
   border-radius: var(--radius-full, 9999px);
   background-color: var(--color-bg-hover);
 }
-.ns-range-btn {
-  display: inline-flex;
+.ns-range-btn {display: inline-flex;
   align-items: center;
-  height: 26px;
-  padding: 0 var(--space-2, 8px);
+  height: 24px;
+  padding: 0 12px;
   border: none;
   border-radius: var(--radius-full, 9999px);
   background-color: transparent;
   color: var(--color-text-secondary);
   font-size: var(--font-size-xs, 12px);
   line-height: 1;
-  cursor: pointer;
-}
+  cursor: pointer;}
 .ns-range-btn:hover {
   color: var(--color-primary);
 }
@@ -944,12 +940,11 @@ onMounted(() => {
   color: var(--color-text-muted);
   font-size: var(--font-size-xs, 12px);
 }
-.ns-danger-btn {
-  display: inline-flex;
+.ns-danger-btn {display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 30px;
-  padding: 0 var(--space-3, 12px);
+  height: 24px;
+  padding: 0 12px;
   border: 1px solid var(--color-error, #ef4444);
   border-radius: var(--radius-md, 8px);
   background-color: transparent;
@@ -958,8 +953,7 @@ onMounted(() => {
   cursor: pointer;
   transition:
     background-color var(--motion-duration, 220ms) var(--motion-ease, ease),
-    border-color var(--motion-duration, 220ms) var(--motion-ease, ease);
-}
+    border-color var(--motion-duration, 220ms) var(--motion-ease, ease);}
 .ns-danger-btn:hover {
   background-color: var(--color-error-soft, #fef2f2);
 }

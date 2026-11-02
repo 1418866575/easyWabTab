@@ -748,9 +748,8 @@ onMounted(async () => {
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
-.month-btn {
-  padding: 8px 14px;
-  font-size: 13px;
+.month-btn {padding: 0 12px;
+  font-size: 12px;
   border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
@@ -758,7 +757,7 @@ onMounted(async () => {
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
-}
+  height: 24px;}
 
 .month-btn:hover {
   background: var(--color-primary, var(--color-primary));
@@ -1083,17 +1082,16 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 
 /* .btn-add 视觉已统一到全局 .ui-btn--primary（style.css） */
 
-.btn-manage {
-  padding: 10px 16px;
+.btn-manage {padding: 0 12px;
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
-  font-size: 14px;
+  font-size: 12px;
   color: var(--color-text-secondary, var(--color-text-secondary));
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
-}
+  height: 24px;}
 
 .btn-manage:hover {
   color: var(--color-primary, var(--color-primary));

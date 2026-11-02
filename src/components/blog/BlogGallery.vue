@@ -883,17 +883,13 @@ async function doRemove(ids: string[]): Promise<void> {
     margin-left: 0;
     width: 100%;
   }
-  .bg-query-ops .ui-btn {
-    flex: 1 1 auto;
-    min-height: 44px;
-  }
+  .bg-query-ops .ui-btn {flex: 1 1 auto;
+  height: 24px;}
   .bg-batch-ops {
     margin-left: 0;
     width: 100%;
   }
-  .bg-batch-ops .ui-btn {
-    min-height: 44px;
-  }
+  .bg-batch-ops .ui-btn {height: 24px;}
   .bg-grid {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   }

@@ -132,24 +132,22 @@ function testidOf(item: TabItem): string | undefined {
 }
 
 /* 单块页签：白底 + 常规描边 + 次要文字色 */
-.ui-tabs :deep(.el-radio-button__inner) {
-  display: inline-flex;
+.ui-tabs :deep(.el-radio-button__inner) {display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
+  padding: 0 12px;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   background-color: var(--color-bg-card, #ffffff);
   color: var(--color-text-secondary, #64748b);
-  /* 固定 14px：与健康管理样板一致；不用 --font-size-base（那是 15~16px 的响应式字号，
-     会把页签撑大，也与全站页签观感不符） */
-  font-size: 14px;
+  /* 2026-11 按钮统一：12px 字（原 14px） */
+  font-size: 12px;
   box-shadow: none;
   transition:
     background-color var(--motion-duration, 0.15s) var(--motion-ease, ease),
     border-color var(--motion-duration, 0.15s) var(--motion-ease, ease),
     color var(--motion-duration, 0.15s) var(--motion-ease, ease);
-}
+  height: 24px;}
 
 .ui-tab-icon {
   display: inline-flex;

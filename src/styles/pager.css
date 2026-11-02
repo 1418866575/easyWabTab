@@ -120,10 +120,5 @@ html.dark .ewt-pager .el-pagination__total {
     display: inline-flex !important;
   }
 
-  /* 触控目标放大到 40px（对齐项目既有「移动端图标按钮 ≥40px」约定，
-     满足 WCAG 2.2 目标尺寸要求；EP small 默认仅 ~24px 偏小） */
-  .ewt-pager .el-pagination button {
-    min-width: 40px !important;
-    min-height: 40px !important;
-  }
+  /* 2026-11 按钮统一：移动端分页按钮不再放大触控目标，与全站同为 24px */
 }

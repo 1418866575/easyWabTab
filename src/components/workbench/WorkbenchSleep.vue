@@ -486,17 +486,16 @@ onMounted(async () => {
 }
 /* .btn-add 视觉已统一到全局 .ui-btn--primary（style.css） */
 
-.btn-toggle-list {
-  padding: 10px 16px;
+.btn-toggle-list {padding: 0 12px;
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
-  font-size: 14px;
+  font-size: 12px;
   color: var(--color-text-secondary, var(--color-text-secondary));
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
-}
+  height: 24px;}
 
 .btn-toggle-list:hover {
   color: var(--color-primary, var(--color-primary));

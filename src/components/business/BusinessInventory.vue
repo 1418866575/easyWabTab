@@ -694,17 +694,16 @@ function exportInventoryExcel(): void {
 }
 
 /* 查看溯源按钮（卡片右上角） */
-.bizinv-trace-btn {
-  align-self: flex-end;
-  padding: 2px 10px;
-  font-size: 11px;
+.bizinv-trace-btn {align-self: flex-end;
+  padding: 0 12px;
+  font-size: 12px;
   cursor: pointer;
   color: var(--color-primary, var(--color-primary));
   background: none;
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm, 4px);
   transition: all var(--transition-fast, 0.15s ease);
-}
+  height: 24px;}
 
 .bizinv-trace-btn:hover {
   color: var(--color-primary, var(--color-primary));

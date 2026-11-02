@@ -174,6 +174,8 @@ function clearAll() {
 .uz-size { width: 90px; font-family: var(--font-family-mono); }
 .uz-op { width: 130px; }
 .uz-path { word-break: break-all; }
-.uz-btn { min-height: 26px; padding: 2px 8px; font-size: 12px; }
+.uz-btn {height: 24px;
+  padding: 0 12px;
+  font-size: 12px;}
 .uz-text { max-height: 260px; }
 </style>

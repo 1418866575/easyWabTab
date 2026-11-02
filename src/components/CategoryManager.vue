@@ -364,21 +364,19 @@ const sortedCustomCategories = computed(() =>
 }
 
 /* 分类图标按钮：点击弹出图标管理（图标库）选择；图片类图标用 <img>，旧 emoji 仍按文本显示 */
-.cat-icon-btn {
-  flex: none;
+.cat-icon-btn {flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 36px;
-  height: 36px;
-  padding: 3px;
+  height: 24px;
+  padding: 0;
   background-color: var(--color-bg-input, var(--color-bg-card));
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   cursor: pointer;
   overflow: hidden;
-  transition: border-color 0.2s, background-color 0.2s;
-}
+  transition: border-color 0.2s, background-color 0.2s;}
 
 .cat-icon-btn:hover {
   border-color: var(--color-primary);
@@ -508,12 +506,11 @@ const sortedCustomCategories = computed(() =>
 
 /* 操作栏文字按钮（导出/编辑/删除）：小号文字 + 轻边框，hover 时边框与文字加深。
    尺寸对齐全局 .ui-btn--sm（30px 高 / 8px 圆角 / 12px 字） */
-.btn-icon {
-  display: inline-flex;
+.btn-icon {display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 30px;
-  padding: 0 var(--space-2, 8px);
+  height: 24px;
+  padding: 0 12px;
   background: none;
   border: 1px solid transparent;
   border-radius: var(--radius-md, 8px);
@@ -522,8 +519,7 @@ const sortedCustomCategories = computed(() =>
   line-height: 1;
   color: var(--color-text-secondary, #475569);
   opacity: 0.75;
-  transition: opacity 0.2s, border-color 0.2s, color 0.2s, background-color 0.2s;
-}
+  transition: opacity 0.2s, border-color 0.2s, color 0.2s, background-color 0.2s;}
 
 .btn-icon:hover:not(:disabled) {
   opacity: 1;

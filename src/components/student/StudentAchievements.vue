@@ -287,10 +287,9 @@ onMounted(async () => {
 .sa-tabs :deep(.el-radio-group) {
   flex-wrap: wrap;
 }
-.sa-tabs :deep(.el-radio-button__inner) {
-  font-size: 13px;
-  padding: 8px 14px;
-}
+.sa-tabs :deep(.el-radio-button__inner) {font-size: 12px;
+  padding: 0 12px;
+  height: 24px;}
 .sa-count {
   margin-left: auto;
   font-size: 12px;

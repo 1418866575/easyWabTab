@@ -1429,8 +1429,7 @@ const skillInstall = [
   color: var(--color-text-secondary, #64748b);
 }
 
-.btn-copy {
-  padding: 2px 10px;
+.btn-copy {padding: 0 12px;
   font-size: 12px;
   border: 1px solid var(--ds-line-strong);
   background: var(--color-bg-card, #ffffff);
@@ -1438,7 +1437,7 @@ const skillInstall = [
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s;
-}
+  height: 24px;}
 
 .btn-copy:hover {
   border-color: var(--color-primary, #3b82f6);
@@ -1453,22 +1452,21 @@ const skillInstall = [
   line-height: 1.6;
 }
 
-.btn-download {
-  display: flex;
+.btn-download {display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
+  padding: 0 12px;
   background-color: var(--color-primary, #3b82f6);
   color: white;
   border: none;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
   transition: background-color 0.2s;
-}
+  height: 24px;}
 
 .btn-download:hover {
   background-color: var(--color-primary-hover, #2563eb);

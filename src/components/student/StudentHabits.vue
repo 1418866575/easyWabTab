@@ -549,21 +549,20 @@ onMounted(async () => {
   border-radius: 8px;
   background: var(--color-hover, #f3f4f6);
 }
-.sh-check-btn {
-  display: inline-flex;
+.sh-check-btn {display: inline-flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 6px 10px;
+  padding: 0 12px;
   border: 1px solid var(--sh-color, #3b82f6);
   border-radius: 6px;
   background: transparent;
   color: var(--sh-color, #3b82f6);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
   transition: all 0.15s;
   flex-shrink: 0;
-}
+  height: 24px;}
 .sh-check-btn:hover {
   background: var(--sh-color, #3b82f6);
   color: #fff;

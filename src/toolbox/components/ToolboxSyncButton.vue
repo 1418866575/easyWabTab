@@ -88,19 +88,18 @@ async function handleClick(): Promise<void> {
 </template>
 
 <style scoped>
-.tb-sync-btn {
-  display: inline-flex;
+.tb-sync-btn {display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  font-size: 12.5px;
+  padding: 0 12px;
+  font-size: 12px;
   color: var(--color-text-secondary, #475569);
   background: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #cbd5e1);
   border-radius: 8px;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s, background 0.15s;
-}
+  height: 24px;}
 
 .tb-sync-btn:hover:not(:disabled) {
   color: var(--color-text, #0f172a);

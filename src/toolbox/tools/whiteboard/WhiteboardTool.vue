@@ -276,5 +276,7 @@ function exportPng() {
 .wb-canvas { display: block; touch-action: none; cursor: crosshair; }
 .wb-text-box { position: absolute; display: flex; gap: 6px; align-items: center; }
 .wb-text-input { width: 200px; }
-.wb-text-btn { min-height: 28px; padding: 3px 10px; font-size: 12px; }
+.wb-text-btn {height: 24px;
+  padding: 0 12px;
+  font-size: 12px;}
 </style>

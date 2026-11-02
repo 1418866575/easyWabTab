@@ -471,16 +471,15 @@ onMounted(async () => {
   margin-left: 0;
 }
 
-.se-tabs :deep(.el-radio-button__inner) {
-  border: 1px solid var(--color-border, #e5e7eb);
+.se-tabs :deep(.el-radio-button__inner) {border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 14px;
   background: transparent;
   color: var(--color-text-muted, #6b7280);
   font-size: 12px;
-  padding: 4px 12px;
+  padding: 0 12px;
   box-shadow: none;
   transition: all 0.15s;
-}
+  height: 24px;}
 
 .se-tabs :deep(.el-radio-button__inner:hover) {
   color: var(--color-primary, #10b981);
@@ -708,12 +707,11 @@ onMounted(async () => {
 }
 .se-datetime { font-size: 10px; }
 
-.se-del-btn {
-  position: absolute;
+.se-del-btn {position: absolute;
   top: 6px;
   right: 6px;
   width: 22px;
-  height: 22px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -723,8 +721,7 @@ onMounted(async () => {
   color: var(--color-text-muted, #9ca3af);
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.15s, background 0.15s;
-}
+  transition: opacity 0.15s, background 0.15s;}
 .se-card:hover .se-del-btn { opacity: 1; }
 .se-del-btn:hover { background: rgba(239, 68, 68, 0.12); color: var(--color-error, #ef4444); }
 

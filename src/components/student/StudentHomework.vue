@@ -766,11 +766,10 @@ onMounted(async () => {
 :global(html.dark) .shw-img-add { border-color: var(--color-border, #4b5563); }
 :global(html.dark) .shw-img-mini { border-color: var(--color-border, #374151); }
 
-.shw-edit-btn {
-  display: inline-flex;
+.shw-edit-btn {display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 2px 9px;
+  padding: 0 12px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
   background: transparent;
@@ -779,25 +778,24 @@ onMounted(async () => {
   font-size: 12px;
   margin-right: 6px;
   transition: all 0.15s;
-}
+  height: 24px;}
 .shw-edit-btn:hover {
   background: var(--color-hover, #f3f4f6);
   color: var(--color-link, #3b82f6);
   border-color: rgba(59, 130, 246, 0.4);
 }
-.shw-advance-btn {
-  display: inline-flex;
+.shw-advance-btn {display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 2px 8px;
+  padding: 0 12px;
   border-radius: 6px;
   border: 1px solid transparent;
   background: transparent;
   color: var(--color-text-secondary, #6b7280);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
   transition: all 0.15s;
-}
+  height: 24px;}
 .shw-advance-btn:hover {
   background: var(--color-hover, #f3f4f6);
 }

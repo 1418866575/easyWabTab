@@ -1319,10 +1319,9 @@ html.dark .sk-block::after {
   line-height: 1.6;
   color: var(--color-text-secondary, #64748b);
 }
-.bizhome-onboard-btn {
-  flex-shrink: 0;
-  padding: 8px 16px;
-  font-size: 13px;
+.bizhome-onboard-btn {flex-shrink: 0;
+  padding: 0 12px;
+  font-size: 12px;
   font-weight: 600;
   color: #fff;
   background: var(--color-primary, #3b82f6);
@@ -1330,7 +1329,7 @@ html.dark .sk-block::after {
   border-radius: 8px;
   cursor: pointer;
   transition: background-color 0.15s;
-}
+  height: 24px;}
 .bizhome-onboard-btn:hover {
   background: var(--color-primary-hover, #2563eb);
 }
@@ -1648,10 +1647,9 @@ html.dark .mini-bar-col:hover .mini-bar {
     gap: 10px;
   }
 
-  .bizhome-onboard-btn {
-    width: 100%;
-    min-height: 44px; /* 触控目标 ≥44px */
-  }
+  .bizhome-onboard-btn {width: 100%;
+  height: 24px;
+  /* 触控目标 ≥44px */;}
 
   /* M-13 问题条：窄屏允许换行，动作按钮独占可点区域 */
   .bizhome-issue {

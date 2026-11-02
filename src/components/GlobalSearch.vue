@@ -359,19 +359,18 @@ function openSite(url: string) {
   color: var(--color-text-muted);
 }
 
-/* 按钮内嵌 4px：外壳 44px、按钮 36px，圆角比外壳小 2px，形成搜索条的「框中框」 */
-.search-btn {
-  align-self: stretch;
-  margin: 3px 3px 3px 0;
-  padding: 0 var(--space-5, 20px);
+/* 2026-11 按钮统一：按钮固定 24px，在 44px 外壳内垂直居中 */
+.search-btn {align-self: center;
+  margin: 0 3px 0 0;
+  padding: 0 12px;
   border: none;
   background-color: var(--color-primary);
   color: #fff;
-  font-size: 18px;
+  font-size: 12px;
   cursor: pointer;
   transition: background-color var(--motion-duration, 220ms) var(--motion-ease, ease);
   border-radius: calc(var(--input-radius) - 2px);
-}
+  height: 24px;}
 
 .search-btn:hover {
   background-color: var(--color-primary-hover);
@@ -583,8 +582,7 @@ html.dark .site-category {
     padding: 0 var(--space-3, 12px);
   }
 
-  .search-btn {
-    padding: 0 var(--space-4, 16px);
-  }
+  .search-btn {padding: 0 12px;
+  height: 24px;}
 }
 </style>

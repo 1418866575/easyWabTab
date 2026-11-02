@@ -780,17 +780,16 @@ watch(
 }
 
 /* ===== 主按钮 ===== */
-.pwd-btn-primary {
-  padding: 10px 18px;
+.pwd-btn-primary {padding: 0 12px;
   background: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
-  font-size: 14px;
+  font-size: 12px;
   cursor: pointer;
   color: #fff;
   white-space: nowrap;
   transition: background-color var(--transition-fast, 0.15s ease);
-}
+  height: 24px;}
 
 .pwd-btn-primary:hover:not(:disabled) {
   background: var(--color-primary-hover, var(--color-primary-hover));
@@ -878,9 +877,8 @@ html.dark .pwd-cat-badge {
   flex-shrink: 0;
 }
 
-.pwd-btn-lock {
-  padding: 9px 14px;
-  font-size: 13px;
+.pwd-btn-lock {padding: 0 12px;
+  font-size: 12px;
   border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
@@ -888,7 +886,7 @@ html.dark .pwd-cat-badge {
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
-}
+  height: 24px;}
 
 .pwd-btn-lock:hover {
   color: var(--color-primary, var(--color-primary));
@@ -995,27 +993,26 @@ html.dark .pwd-cat-badge {
  * 5 列网格下单卡宽约 200px，三个中文按钮一行放不下时会自动换行，故允许 flex-wrap。
  * 选择器写成 .pwd-actions .pwd-action-btn（而非单类）：Element Plus 的 .el-button.is-text
  * 与本类同特异性，靠后代选择器抬一级才能稳定覆盖其 padding / margin-left。 */
-.pwd-actions .pwd-action-btn {
-  margin-left: 0;
-  padding: 2px 4px;
+.pwd-actions .pwd-action-btn {margin-left: 0;
+  padding: 0;
   min-height: 0;
   height: auto;
   font-size: 12px;
   line-height: 1.4;
   color: var(--color-text-secondary, #64748b);
-}
+  min-width: 24px;
+  height: 24px;}
 
 .pwd-actions .pwd-action-btn:hover {
   color: var(--color-primary, #3b82f6);
   background: var(--color-bg-hover, #f1f5f9);
 }
 
-.pwd-icon-btn {
-  padding: 3px 4px;
+.pwd-icon-btn {padding: 0;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1;
   opacity: 0.6;
   transition: opacity var(--transition-fast, 0.15s ease);
@@ -1025,7 +1022,8 @@ html.dark .pwd-cat-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-}
+  min-width: 24px;
+  height: 24px;}
 
 .pwd-icon-btn:hover {
   opacity: 1;
@@ -1111,19 +1109,19 @@ html.dark .pwd-cat-badge {
   position: relative;
 }
 
-.pwd-eye-btn {
-  position: absolute;
+.pwd-eye-btn {position: absolute;
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 15px;
-  padding: 2px;
+  font-size: 12px;
+  padding: 0;
   opacity: 0.7;
   transition: opacity var(--transition-fast, 0.15s ease);
-}
+  min-width: 24px;
+  height: 24px;}
 
 .pwd-eye-btn:hover {
   opacity: 1;
@@ -1132,19 +1130,15 @@ html.dark .pwd-cat-badge {
 /* ===== P3-14 移动端触控目标：图标按钮点击区放大 ===== */
 @media (max-width: 768px) {
   /* 行内操作图标按钮（复制/显示密码/删除）≥40px */
-  .pwd-icon-btn {
-    min-width: 40px;
-    min-height: 40px;
-    padding: 6px 8px;
-    opacity: 0.85;
-  }
+  .pwd-icon-btn {min-width: 40px;
+  height: 24px;
+  padding: 0 12px;
+  opacity: 0.85;}
 
   /* 密码输入框内嵌的眼睛按钮受输入高度限制，给 32px（仍明显大于默认） */
-  .pwd-eye-btn {
-    min-width: 32px;
-    min-height: 32px;
-    padding: 4px;
-  }
+  .pwd-eye-btn {min-width: 32px;
+  height: 24px;
+  padding: 0;}
 }
 
 .pwd-form-actions {
@@ -1159,17 +1153,16 @@ html.dark .pwd-cat-badge {
   margin-right: auto;
 }
 
-.pwd-btn-cancel {
-  padding: 9px 16px;
+.pwd-btn-cancel {padding: 0 12px;
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
-  font-size: 14px;
+  font-size: 12px;
   cursor: pointer;
   color: var(--color-text-secondary, var(--color-text-secondary));
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
-}
+  height: 24px;}
 
 .pwd-btn-cancel:hover {
   background: var(--color-bg-hover, var(--color-bg-active));

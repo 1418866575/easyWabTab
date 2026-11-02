@@ -947,7 +947,9 @@ onUnmounted(() => {
 .nt-timeline-item-actions { display: flex; gap: 6px; margin-top: 4px; }
 /* .btn-edit/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
 .nt-timeline-item-edit { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.nt-timeline-item-edit .btn-save { padding: 4px 12px; font-size: 12px; }
+.nt-timeline-item-edit .btn-save {padding: 0 12px;
+  font-size: 12px;
+  height: 24px;}
 .nt-timeline-add-row {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   margin-top: 8px; padding-top: 10px;
@@ -959,14 +961,16 @@ onUnmounted(() => {
 
 /* ===== 时光轴全量条目浮层（保留原样式）===== */
 .timeline-title { font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.timeline-more-btn {
-  margin: 2px 0 6px; padding: 6px 12px;
+.timeline-more-btn {margin: 2px 0 6px;
+  padding: 0 12px;
   border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   background: color-mix(in srgb, var(--color-primary, #3b82f6) 8%, transparent);
   color: var(--color-primary, var(--color-primary));
-  font-size: 13px; font-weight: 600; cursor: pointer;
-}
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  height: 24px;}
 .timeline-item { position: relative; display: flex; gap: 10px; padding: 6px 0; }
 .timeline-item::before {
   content: ''; position: absolute; left: 7px; top: 20px; bottom: -6px; width: 2px;
@@ -986,7 +990,9 @@ onUnmounted(() => {
 .timeline-item:hover .timeline-item-actions { opacity: 1; }
 /* .timeline-item-actions .btn-edit/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
 .timeline-item-edit { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.timeline-item-edit .btn-save { padding: 4px 12px; font-size: 12px; }
+.timeline-item-edit .btn-save {padding: 0 12px;
+  font-size: 12px;
+  height: 24px;}
 
 /* ===== 空态：.empty-state 已收敛到全局基类（src/style.css） ===== */
 
@@ -1040,10 +1046,15 @@ onUnmounted(() => {
 .color-orange .color-swatch { background: #f97316; }
 .color-cyan .color-swatch { background: #06b6d4; }
 .color-purple .color-swatch { background: #a855f7; }
-.btn-save {
-  padding: 9px 18px; font-size: 14px; color: #fff; white-space: nowrap; cursor: pointer;
-  background: var(--color-primary, var(--color-primary)); border: none; border-radius: var(--radius-md, 8px);
-}
+.btn-save {padding: 0 12px;
+  font-size: 12px;
+  color: #fff;
+  white-space: nowrap;
+  cursor: pointer;
+  background: var(--color-primary, var(--color-primary));
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  height: 24px;}
 .btn-save:disabled { background: var(--color-text-muted, var(--color-text-muted)); cursor: not-allowed; }
 /* .btn-cancel/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
 

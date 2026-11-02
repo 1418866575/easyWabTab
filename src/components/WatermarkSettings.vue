@@ -287,13 +287,12 @@ function setMode(v: WatermarkMode): void {
 }
 
 /* 开关式 chip：与全局小按钮同规格（30px 高 / 8px 圆角 / 13px 字） */
-.wm-seg-btn {
-  display: inline-flex;
+.wm-seg-btn {display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 30px;
-  padding: 0 var(--space-3, 12px);
-  font-size: var(--font-size-sm, 13px);
+  height: 24px;
+  padding: 0 12px;
+  font-size: 12px;
   color: var(--color-text-secondary);
   background: var(--color-bg-card, transparent);
   border: 1px solid var(--color-border);
@@ -302,8 +301,7 @@ function setMode(v: WatermarkMode): void {
   transition:
     color var(--motion-duration, 160ms) var(--motion-ease, ease),
     border-color var(--motion-duration, 160ms) var(--motion-ease, ease),
-    background-color var(--motion-duration, 160ms) var(--motion-ease, ease);
-}
+    background-color var(--motion-duration, 160ms) var(--motion-ease, ease);}
 
 .wm-seg-btn.is-on {
   color: var(--color-primary);

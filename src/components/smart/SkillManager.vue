@@ -665,16 +665,14 @@ function relTime(ts: number): string {
 
 .sm-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: auto; }
 .sm-spacer { flex: 1 1 auto; }
-.sm-btn {
-  min-height: 28px;
-  padding: 4px 10px;
+.sm-btn {height: 24px;
+  padding: 0 12px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
   background: transparent;
   color: var(--color-text-secondary, #6b7280);
   font-size: 12px;
-  cursor: pointer;
-}
+  cursor: pointer;}
 .sm-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
 .sm-btn.is-danger:hover { border-color: var(--color-error, #dc2626); color: var(--color-error, #dc2626); }
 /* 主 CTA：与提示词 / 工作流卡片一致——第一颗按钮是该资产的主动作（技能 = 详情） */
@@ -738,10 +736,13 @@ function relTime(ts: number): string {
   .sm-list { grid-template-columns: 1fr; }
   .sm-cat-pill { min-height: 40px; }
   .sm-toolbar-left, .sm-toolbar-right { width: 100%; }
-  .sm-btn { min-height: 44px; padding: 8px 12px; font-size: 13px; }
+  .sm-btn {height: 24px;
+  padding: 0 12px;
+  font-size: 12px;}
   .sm-select { height: 44px; font-size: 16px; }
   /* 触屏没有 hover，小铅笔常驻提示可点；放大到 34px 便于点按 */
-  .sm-icon-btn { width: 34px; height: 34px; }
+  .sm-icon-btn {width: 34px;
+  height: 24px;}
   .sm-icon-text { font-size: 20px; }
   .sm-icon-edit { opacity: 1; }
   /* 窄屏隐藏「每页条数」与「跳转」，只留 总数 + 上一页/下一页（pager.css 已处理居中与触控尺寸） */

@@ -480,14 +480,13 @@ async function copySkillMd(): Promise<void> {
 .sk-field--icon-inline { flex-direction: row; align-items: center; gap: 10px; }
 .sk-field--icon-inline .sk-label { flex: 0 0 auto; }
 .sk-field--icon-inline .sk-icon-row { flex: 1 1 auto; }
-.sk-icon-btn {
-  flex: none;
+.sk-icon-btn {flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 34px;
-  height: 34px;
-  padding: 3px;
+  height: 24px;
+  padding: 0;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
   background-color: var(--color-bg-card, #ffffff);
@@ -495,8 +494,7 @@ async function copySkillMd(): Promise<void> {
   cursor: pointer;
   overflow: hidden;
   transition: border-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
-    color var(--motion-duration, 0.2s) var(--motion-ease, ease);
-}
+    color var(--motion-duration, 0.2s) var(--motion-ease, ease);}
 .sk-icon-btn:hover {
   border-color: var(--color-primary, #3b82f6);
   color: var(--color-primary, #3b82f6);

@@ -282,26 +282,24 @@ async function handleSyncNowClick(): Promise<void> {
   white-space: nowrap;
 }
 
-.sv-btn {
-  display: inline-flex;
+.sv-btn {display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 36px;
-  padding: 0 14px;
+  height: 24px;
+  padding: 0 12px;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 999px;
   background-color: var(--color-bg-card, #ffffff);
   color: var(--color-text, #0f172a);
   font-family: inherit;
-  font-size: var(--font-size-sm, 13px);
+  font-size: 12px;
   font-weight: var(--font-weight-medium, 500);
   cursor: pointer;
   transition: background-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
     border-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
     color var(--motion-duration, 0.2s) var(--motion-ease, ease),
-    opacity 120ms ease;
-}
+    opacity 120ms ease;}
 
 .sv-btn:hover { background-color: var(--color-bg-hover, #f1f5f9); }
 
@@ -315,11 +313,9 @@ async function handleSyncNowClick(): Promise<void> {
   cursor: not-allowed;
 }
 
-.sv-btn-sm {
-  min-height: 30px;
-  padding: 0 10px;
-  font-size: var(--font-size-xs, 12px);
-}
+.sv-btn-sm {height: 24px;
+  padding: 0 12px;
+  font-size: var(--font-size-xs, 12px);}
 
 /* 云同步按钮：状态色与首页/教师工作台完全一致 */
 .sv-sync-btn {
@@ -509,8 +505,10 @@ async function handleSyncNowClick(): Promise<void> {
   .sv-sync-text,
   .sv-settings-text { display: none; }
 
-  .sv-btn { min-height: 44px; padding: 0 16px; }
-  .sv-btn-sm { min-height: 44px; padding: 0 12px; }
+  .sv-btn {height: 24px;
+  padding: 0 12px;}
+  .sv-btn-sm {height: 24px;
+  padding: 0 12px;}
 }
 
 @media (prefers-reduced-motion: reduce) {

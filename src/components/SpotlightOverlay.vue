@@ -330,15 +330,13 @@ watch(query, () => {
   color: var(--color-text-secondary, #64748b);
 }
 
-.sp-close-btn {
-  flex-shrink: 0;
+.sp-close-btn {flex-shrink: 0;
   width: 28px;
-  height: 28px;
+  height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* 视觉已统一到全局 .close-btn（style.css） */
-}
+  /* 视觉已统一到全局 .close-btn（style.css） */;}
 
 .sp-close-btn:hover {
   /* 视觉已统一到全局 .close-btn（style.css） */

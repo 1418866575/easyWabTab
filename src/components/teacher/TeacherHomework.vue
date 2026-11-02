@@ -659,8 +659,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
 /* .btn-detail 视觉已上收至全局 style.css（2026-11 按钮收敛） */
 .btn-madeup,
 .btn-submit,
-.btn-pending {
-  padding: 5px 12px;
+.btn-pending {padding: 0 12px;
   font-size: 12px;
   border: 1px solid transparent;
   border-radius: 6px;
@@ -668,7 +667,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
   font-weight: 500;
   line-height: 1.5;
   white-space: nowrap;
-}
+  height: 24px;}
 /* .btn-edit 视觉已统一到全局 .ui-btn（style.css） */
 /* .btn-delete 视觉已统一到全局 .ui-btn--danger（style.css） */
 .btn-madeup {

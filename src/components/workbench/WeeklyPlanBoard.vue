@@ -207,17 +207,15 @@ function onCell(rowKey: string, day: number): void {
   gap: 4px;
 }
 
-.wp-nav-btn {
-  min-width: 26px;
-  height: 26px;
-  padding: 0 8px;
+.wp-nav-btn {min-width: 26px;
+  height: 24px;
+  padding: 0 12px;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #fff);
   color: var(--color-text-secondary, #64748b);
   font-size: var(--font-size-xs, 11px);
-  cursor: pointer;
-}
+  cursor: pointer;}
 
 .wp-nav-btn:hover {
   border-color: var(--color-border-strong, #cbd5e1);

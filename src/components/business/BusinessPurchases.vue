@@ -1618,9 +1618,7 @@ html.dark .rd {
     flex-wrap: wrap;
     width: 100%;
   }
-  .bizpur-toolbar-left :deep(.el-button) {
-    min-height: 44px;
-  }
+  .bizpur-toolbar-left :deep(.el-button) {height: 24px;}
 
   /* 筛选 chip 独占一行时也给足点击高度 */
   .bizpur-filter-chip {
@@ -1632,10 +1630,8 @@ html.dark .rd {
     flex-direction: column;
     gap: 4px;
   }
-  .bizpur-table-wrap :deep(.bizpur-actions .el-button) {
-    margin-left: 0 !important;
-    min-height: 40px;
-  }
+  .bizpur-table-wrap :deep(.bizpur-actions .el-button) {margin-left: 0 !important;
+  height: 24px;}
 }
 
 /* 操作列取消固定：el-table 的 fixed 会给单元格加 .el-table-fixed-column，

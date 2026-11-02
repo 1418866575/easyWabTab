@@ -536,12 +536,16 @@ onMounted(() => {
   background: var(--color-bg-hover, #111827);
 }
 
-.btn-done, .btn-warn {
-  padding: 5px 10px; font-size: 12px;
-  border: 1px solid transparent; border-radius: 6px;
-  cursor: pointer; font-weight: 500; line-height: 1.5; white-space: nowrap;
+.btn-done, .btn-warn {padding: 0 12px;
+  font-size: 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
   margin: 0 2px;
-}
+  height: 24px;}
 /* .btn-edit 视觉已统一到全局 .ui-btn（style.css） */
 .btn-done { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.3); color: var(--ds-success); }
 .btn-warn { background: rgba(224,168,0,0.12); border-color: rgba(224,168,0,0.3); color: var(--ds-warning); }

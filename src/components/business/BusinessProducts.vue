@@ -699,16 +699,15 @@ function drawerMarkupRate(): number | null {
   margin-left: 0;
 }
 
-.bizprod-tabs :deep(.el-radio-button__inner) {
-  padding: 7px 14px;
-  font-size: 13px;
+.bizprod-tabs :deep(.el-radio-button__inner) {padding: 0 12px;
+  font-size: 12px;
   color: var(--color-text-secondary, var(--color-text-secondary));
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-full, 9999px);
   box-shadow: none;
   transition: all var(--transition-fast, 0.15s ease);
-}
+  height: 24px;}
 
 .bizprod-tabs :deep(.el-radio-button__inner:hover) {
   color: var(--color-primary, var(--color-primary));

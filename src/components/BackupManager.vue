@@ -247,14 +247,13 @@ const toggleAutoBackup = () => {
   font-size: 14px;
 }
 
-.toggle-btn {
-  padding: 4px 12px;
+.toggle-btn {padding: 0 12px;
   border-radius: 4px;
   border: 1px solid var(--color-border, #e2e8f0);
   background: var(--color-bg-card, #ffffff);
   cursor: pointer;
-  font-size: 13px;
-}
+  font-size: 12px;
+  height: 24px;}
 
 .toggle-btn.active {
   background: #dcfce7;
@@ -269,15 +268,14 @@ const toggleAutoBackup = () => {
   flex-wrap: wrap;
 }
 
-.action-btn {
-  padding: 8px 16px;
+.action-btn {padding: 0 12px;
   border-radius: 6px;
   border: 1px solid var(--color-border, #e2e8f0);
   background: var(--color-bg-card, #ffffff);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 12px;
   transition: all 0.2s;
-}
+  height: 24px;}
 
 .action-btn:hover {
   background: var(--color-bg-hover, #f1f5f9);
@@ -353,29 +351,27 @@ const toggleAutoBackup = () => {
   gap: 8px;
 }
 
-.restore-btn {
-  padding: 4px 12px;
+.restore-btn {padding: 0 12px;
   border-radius: 4px;
   border: none;
   background: var(--color-primary, #3b82f6);
   color: white;
   font-size: 12px;
   cursor: pointer;
-}
+  height: 24px;}
 
 .restore-btn:hover {
   background: var(--color-primary-hover, #2563eb);
 }
 
-.delete-btn {
-  padding: 4px 12px;
+.delete-btn {padding: 0 12px;
   border-radius: 4px;
   border: 1px solid var(--color-border, #e2e8f0);
   background: var(--color-bg-card, #ffffff);
   color: var(--color-text-secondary, #64748b);
   font-size: 12px;
   cursor: pointer;
-}
+  height: 24px;}
 
 .delete-btn:hover {
   background: #fef2f2;

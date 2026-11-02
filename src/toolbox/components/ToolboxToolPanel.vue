@@ -306,16 +306,14 @@ onBeforeUnmount(() => {
   background: var(--color-bg-card);
 }
 .tb-modal-tip { font-size: 11.5px; color: var(--color-text-muted); }
-.tb-modal-btn {
-  margin-left: auto;
-  min-height: 30px;
-  padding: 4px 14px;
-  font-size: 12.5px;
+.tb-modal-btn {margin-left: auto;
+  height: 24px;
+  padding: 0 12px;
+  font-size: 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   background: transparent;
-  color: var(--color-text-secondary);
-}
+  color: var(--color-text-secondary);}
 .tb-modal-btn:hover { color: var(--color-primary); border-color: var(--color-primary); }
 
 .tb-modal-loading,

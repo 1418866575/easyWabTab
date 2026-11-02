@@ -58,19 +58,17 @@ const COPY = {
   border-radius: 4px;
   font-size: 12px;
 }
-.tb-empty-btn {
-  display: inline-flex;
+.tb-empty-btn {display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 36px;
-  padding: 8px 14px;
+  height: 24px;
+  padding: 0 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-primary);
   background: transparent;
   color: var(--color-primary);
-  font-size: 13px;
+  font-size: 12px;
   transition: background-color var(--motion-duration) var(--motion-ease),
-    color var(--motion-duration) var(--motion-ease);
-}
+    color var(--motion-duration) var(--motion-ease);}
 .tb-empty-btn:hover { background: var(--color-primary); color: #fff; }
 </style>

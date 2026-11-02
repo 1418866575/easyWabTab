@@ -258,10 +258,9 @@ watch(query, () => {
   color: var(--color-text-secondary, #64748b);
 }
 
-.sp-close-btn {
-  flex-shrink: 0;
+.sp-close-btn {flex-shrink: 0;
   width: 28px;
-  height: 28px;
+  height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -269,10 +268,9 @@ watch(query, () => {
   border-radius: 6px;
   background: transparent;
   color: var(--color-text-secondary, #64748b);
-  font-size: 14px;
+  font-size: 12px;
   cursor: pointer;
-  transition: all 0.15s;
-}
+  transition: all 0.15s;}
 
 .sp-close-btn:hover {
   background-color: var(--color-bg-hover, #f1f5f9);

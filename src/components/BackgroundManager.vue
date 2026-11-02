@@ -545,21 +545,20 @@ function clearBackground() {
   flex-wrap: wrap;
 }
 
-.type-btn {
-  flex: 1;
+.type-btn {flex: 1;
   min-width: 80px;
-  padding: var(--space-3, 12px) var(--space-4, 16px);
+  padding: 0 12px;
   border: 2px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #ffffff);
-  font-size: var(--font-size-sm, 13px);
+  font-size: 12px;
   cursor: pointer;
   transition:
     border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
     background-color var(--motion-duration, 220ms) var(--motion-ease, ease),
     color var(--motion-duration, 220ms) var(--motion-ease, ease);
   color: var(--color-text-secondary, #64748b);
-}
+  height: 24px;}
 
 .type-btn:hover {
   border-color: var(--color-primary, #3b82f6);
@@ -632,12 +631,11 @@ function clearBackground() {
   position: relative;
 }
 
-.custom-background-item .delete-btn {
-  position: absolute;
+.custom-background-item .delete-btn {position: absolute;
   top: -6px;
   right: -6px;
   width: 22px;
-  height: 22px;
+  height: 24px;
   border-radius: 50%;
   background: var(--color-error, #ef4444);
   color: white;
@@ -646,11 +644,10 @@ function clearBackground() {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: bold;
   opacity: 0;
-  transition: opacity 0.2s;
-}
+  transition: opacity 0.2s;}
 
 .custom-background-item:hover .delete-btn {
   opacity: 1;
@@ -825,10 +822,9 @@ function clearBackground() {
     grid-template-columns: repeat(3, 1fr);
   }
   
-  .type-btn {
-    min-width: 70px;
-    padding: 10px 12px;
-    font-size: 13px;
-  }
+  .type-btn {min-width: 70px;
+  padding: 0 12px;
+  font-size: 12px;
+  height: 24px;}
 }
 </style>

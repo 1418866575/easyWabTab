@@ -264,15 +264,14 @@ const sortedCustomCategories = computed(() =>
   color: var(--color-text-muted, #94a3b8);
 }
 
-.dm-icon-btn {
-  padding: 4px 8px;
+.dm-icon-btn {padding: 0 12px;
   background: var(--color-bg-hover, #f1f5f9);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-sm, 4px);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 12px;
   transition: all 0.2s;
-}
+  height: 24px;}
 
 .dm-icon-btn:hover,
 .dm-icon-btn.active {
@@ -322,20 +321,18 @@ const sortedCustomCategories = computed(() =>
   gap: 2px;
 }
 
-.dm-btn-sort {
-  width: 20px;
-  height: 16px;
+.dm-btn-sort {width: 20px;
+  height: 24px;
   padding: 0;
   background: var(--color-bg-hover, #f1f5f9);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-sm, 4px);
   cursor: pointer;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--color-text-secondary, #64748b);
   display: flex;
   align-items: center;
-  justify-content: center;
-}
+  justify-content: center;}
 
 .dm-btn-sort:hover:not(:disabled) {
   background: var(--color-border, #e2e8f0);
@@ -382,17 +379,16 @@ const sortedCustomCategories = computed(() =>
   color: var(--color-text, #1e293b);
 }
 
-.dm-btn-icon {
-  padding: 4px 8px;
+.dm-btn-icon {padding: 0 12px;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 12px;
   opacity: 0.6;
   transition: opacity 0.2s;
   color: var(--color-text-secondary, #64748b);
   display: inline-flex;
-}
+  height: 24px;}
 
 .dm-btn-icon:hover {
   opacity: 1;
@@ -429,18 +425,14 @@ const sortedCustomCategories = computed(() =>
     flex-direction: row;
     gap: 6px;
   }
-  .dm-btn-sort {
-    width: 32px;
-    height: 28px;
-    font-size: 12px;
-  }
+  .dm-btn-sort {width: 32px;
+  height: 24px;
+  font-size: 12px;}
 
   /* 编辑/删除按钮触控目标 44px（原约 22px，误删风险高） */
-  .dm-btn-icon {
-    min-width: 44px;
-    min-height: 44px;
-    align-items: center;
-    justify-content: center;
-  }
+  .dm-btn-icon {min-width: 44px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;}
 }
 </style>

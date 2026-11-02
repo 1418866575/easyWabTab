@@ -1256,14 +1256,13 @@ async function regenerateSlug(): Promise<void> {
   overflow: hidden;
 }
 
-.be-view-btn {
-  padding: 4px 12px;
+.be-view-btn {padding: 0 12px;
   border: none;
   background-color: var(--ds-card, #ffffff);
   color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
-}
+  height: 24px;}
 
 .be-view-btn.active {
   background-color: var(--color-primary-soft, #eff6ff);
@@ -1382,17 +1381,16 @@ async function regenerateSlug(): Promise<void> {
   background-color: var(--ds-line, #ececf0);
 }
 
-.be-md-btn {
-  padding: 4px 8px;
+.be-md-btn {padding: 0 12px;
   border: 1px solid transparent;
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: transparent;
   color: var(--ds-text-2, #646a73);
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1.2;
   white-space: nowrap;
   cursor: pointer;
-}
+  height: 24px;}
 
 .be-md-btn:hover {
   background-color: var(--ds-card-2, #f7f8fa);
@@ -1983,6 +1981,7 @@ async function regenerateSlug(): Promise<void> {
   .be-editor-wrap { flex-direction: column; min-height: 320px; }
   /* 工具栏快捷操作窄屏独占一行，与底部操作条同款拉伸，避免溢出/重叠 */
   .be-md-actions { width: 100%; margin-left: 0; justify-content: flex-end; }
-  .be-md-actions .ui-btn { flex: 1 1 auto; min-height: 44px; }
+  .be-md-actions .ui-btn {flex: 1 1 auto;
+  height: 24px;}
 }
 </style>

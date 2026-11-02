@@ -271,7 +271,9 @@ onBeforeUnmount(() => {
 <style scoped>
 .tf-inline { margin-bottom: 0; }
 .tf-narrow { width: auto; min-width: 150px; }
-.tf-btn { min-height: 28px; padding: 3px 10px; font-size: 12px; }
+.tf-btn {height: 24px;
+  padding: 0 12px;
+  font-size: 12px;}
 .tf-item { margin-bottom: 8px; }
 .tf-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .tf-name { font-size: 13px; font-weight: 600; color: var(--color-text); }

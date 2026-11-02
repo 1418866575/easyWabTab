@@ -833,13 +833,12 @@ const handleSubmit = () => {
 }
 
 /* 图标区的小动作按钮（获取图标/清除）：与全局 .ui-btn--sm 同规格（30px / 8px 圆角 / 12px 字） */
-.btn-icon-action {
-  display: inline-flex;
+.btn-icon-action {display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-1, 4px);
-  min-height: 30px;
-  padding: 0 var(--space-3, 12px);
+  height: 24px;
+  padding: 0 12px;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #ffffff);
@@ -850,8 +849,7 @@ const handleSubmit = () => {
     border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
     color var(--motion-duration, 220ms) var(--motion-ease, ease),
     background-color var(--motion-duration, 220ms) var(--motion-ease, ease);
-  white-space: nowrap;
-}
+  white-space: nowrap;}
 
 .btn-icon-action:hover:not(:disabled) {
   border-color: var(--color-primary, #3b82f6);
@@ -864,11 +862,10 @@ const handleSubmit = () => {
   cursor: not-allowed;
 }
 
-.btn-icon-clear {
-  padding: 6px 8px;
+.btn-icon-clear {padding: 0 12px;
   color: var(--color-text-muted, #94a3b8);
   border-color: transparent;
-}
+  height: 24px;}
 
 .btn-icon-clear:hover {
   color: var(--color-error, #ef4444);
@@ -884,19 +881,18 @@ const handleSubmit = () => {
   color: var(--color-text-secondary, #64748b);
 }
 
-.btn-suggestion {
-  display: inline-flex;
+.btn-suggestion {display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 0 12px;
   border: 1px solid var(--color-primary, #3b82f6);
   border-radius: 6px;
   background: var(--color-primary-light, #eff6ff);
   color: var(--color-primary, #3b82f6);
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
   transition: all 0.15s;
-}
+  height: 24px;}
 
 .btn-suggestion:hover {
   background: var(--color-primary, #3b82f6);

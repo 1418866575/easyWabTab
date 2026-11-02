@@ -147,21 +147,20 @@ function relTime(ts: number): string {
 .ov-dot.is-workflow { background: var(--color-success, #10b981); }
 
 .ov-recent { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
-.ov-recent-btn {
-  display: grid;
+.ov-recent-btn {display: grid;
   grid-template-columns: 44px minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
   width: 100%;
+  /* 列表行（非动作按钮）：不参与 24px 按钮统一，保持行高舒适 */
   padding: 6px 8px;
   border: none;
   border-radius: 6px;
   background: transparent;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--color-text, #111827);
   text-align: left;
-  cursor: pointer;
-}
+  cursor: pointer;}
 .ov-recent-btn:hover { background: var(--color-bg-hover, #f3f4f6); }
 .ov-recent-type { font-size: 11px; color: var(--color-text-muted, #9ca3af); }
 .ov-recent-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -170,7 +169,6 @@ function relTime(ts: number): string {
 .ov-empty { margin: 0; font-size: 13px; color: var(--color-text-muted, #9ca3af); }
 
 @media (max-width: 768px) {
-  .ov-recent-btn { min-height: 44px; }
   .ov-card { min-height: 44px; }
 }
 </style>

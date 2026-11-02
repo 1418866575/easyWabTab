@@ -334,11 +334,10 @@ onUnmounted(() => {
   display: none;
 }
 
-.ipd-action-btn {
-  display: inline-flex;
+.ipd-action-btn {display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 0 12px;
   background: var(--color-bg-card, #ffffff);
   color: var(--color-text-secondary, #64748b);
   border: 1px solid var(--color-border, #e2e8f0);
@@ -347,7 +346,7 @@ onUnmounted(() => {
   line-height: 1;
   cursor: pointer;
   transition: background-color 0.15s, color 0.15s, border-color 0.15s;
-}
+  height: 24px;}
 
 .ipd-action-btn:hover:not(:disabled) {
   background: var(--color-bg-hover, #f1f5f9);

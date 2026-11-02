@@ -144,16 +144,15 @@ const handleSizeChange = (value: number | string) => {
   gap: 8px;
 }
 
-.page-btn {
-  padding: 8px 14px;
+.page-btn {padding: 0 12px;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
   background-color: var(--color-bg-card, #ffffff);
   color: var(--color-text-secondary, #64748b);
-  font-size: 14px;
+  font-size: 12px;
   cursor: pointer;
   transition: all 0.2s;
-}
+  height: 24px;}
 
 .page-btn:hover:not(:disabled) {
   border-color: var(--color-primary, #3b82f6);
@@ -219,13 +218,11 @@ const handleSizeChange = (value: number | string) => {
     display: none;
   }
 
-  .page-btn {
-    flex: 0 0 auto;
-    min-width: 44px;
-    min-height: 44px;
-    padding: 8px 12px;
-    font-size: 15px;
-  }
+  .page-btn {flex: 0 0 auto;
+  min-width: 44px;
+  height: 24px;
+  padding: 0 12px;
+  font-size: 12px;}
 
   .page-size-selector {
     flex: 0 0 auto;

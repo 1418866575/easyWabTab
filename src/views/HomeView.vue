@@ -1144,9 +1144,8 @@ html.dark .nav-add-site {
   }
 
   .btn-help,
-  :deep(.ws-trigger) {
-    padding: 8px 10px;
-  }
+  :deep(.ws-trigger) {padding: 0 12px;
+  height: 24px;}
 
   .container {
     padding-top: 112px;

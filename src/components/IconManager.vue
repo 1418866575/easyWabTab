@@ -548,15 +548,14 @@ function usedSiteNames(icon: MergedIcon): string {
 }
 
 /* 按钮 */
-.btn-icon {
-  padding: 4px 8px;
+.btn-icon {padding: 0 12px;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 12px;
   opacity: 0.6;
   transition: opacity 0.2s;
-}
+  height: 24px;}
 
 .btn-icon:hover {
   opacity: 1;

@@ -216,13 +216,12 @@ function stageNameOf(s: StudentStage): string {
   border-top: 1px solid var(--color-border, #e5e7eb);
 }
 .ob-btn-secondary,
-.ob-btn-primary {
-  padding: 6px 16px;
+.ob-btn-primary {padding: 0 12px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
   border: 1px solid var(--color-border, #e5e7eb);
-}
+  height: 24px;}
 .ob-btn-secondary {
   background: transparent;
   color: inherit;

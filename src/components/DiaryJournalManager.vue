@@ -207,16 +207,15 @@ function setCurrent(j: WorkbenchJournal) {
   display: flex;
   gap: 4px;
 }
-.djm-btn-icon {
-  padding: 4px 10px;
+.djm-btn-icon {padding: 0 12px;
   background: none;
   border: 1px solid transparent;
   border-radius: var(--radius-sm, 4px);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--color-text-secondary, #64748b);
   transition: all 0.15s ease;
-}
+  height: 24px;}
 .djm-btn-icon:hover:not(:disabled) {
   background: var(--color-bg-card, #fff);
   border-color: var(--color-border, #e2e8f0);
@@ -256,14 +255,10 @@ function setCurrent(j: WorkbenchJournal) {
   }
 
   /* 触控目标放大到 44px（原约 24px） */
-  .djm-btn-icon {
-    min-width: 44px;
-    min-height: 44px;
-    padding: 4px 12px;
-  }
-  .djm-btn-add {
-    min-height: 44px;
-  }
+  .djm-btn-icon {min-width: 44px;
+  height: 24px;
+  padding: 0 12px;}
+  .djm-btn-add {height: 24px;}
 
   /* 新增行允许换行，避免输入框在 375px 被压到不可用宽度 */
   .djm-add-row {

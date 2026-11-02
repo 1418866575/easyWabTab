@@ -835,14 +835,13 @@ const renderedPreview = computed(() =>
   overflow: hidden;
 }
 
-.dj-view-btn {
-  padding: 4px 14px;
+.dj-view-btn {padding: 0 12px;
   border: none;
   background-color: var(--color-bg-card, #fff);
   color: var(--color-text-secondary, #64748b);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
-}
+  height: 24px;}
 
 .dj-view-btn.active {
   background-color: var(--color-primary-soft, #eff6ff);
@@ -875,8 +874,7 @@ const renderedPreview = computed(() =>
   background-color: var(--color-border, #e2e8f0);
 }
 
-.dj-md-btn {
-  padding: 4px 8px;
+.dj-md-btn {padding: 0 12px;
   border: 1px solid transparent;
   border-radius: var(--radius-sm, 6px);
   background-color: transparent;
@@ -885,7 +883,7 @@ const renderedPreview = computed(() =>
   line-height: 1.2;
   white-space: nowrap;
   cursor: pointer;
-}
+  height: 24px;}
 
 .dj-md-btn:hover {
   background-color: var(--color-bg-2, #f1f5f9);
@@ -1342,9 +1340,8 @@ const renderedPreview = computed(() =>
   flex-shrink: 0;
 }
 
-.dj-kind-toggle :deep(.el-radio-button__inner) {
-  padding: 6px 12px;
-}
+.dj-kind-toggle :deep(.el-radio-button__inner) {padding: 0 12px;
+  height: 24px;}
 
 /* 卡片「灵感」徽标 */
 .dj-card-idea {

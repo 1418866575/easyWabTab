@@ -235,6 +235,8 @@ onMounted(async () => {
 .tl-status { min-height: 26px; padding: 2px 10px; font-size: 12px; }
 .tl-text { flex: 1; min-width: 0; font-size: 13px; color: var(--color-text); word-break: break-all; }
 .tl-edit { width: auto; flex: 1; min-width: 0; }
-.tl-btn { min-height: 26px; padding: 2px 8px; font-size: 12px; }
+.tl-btn {height: 24px;
+  padding: 0 12px;
+  font-size: 12px;}
 .tl-badge { font-size: 11px; color: var(--color-text-muted); border: 1px solid var(--color-border); border-radius: var(--radius-full); padding: 1px 8px; }
 </style>

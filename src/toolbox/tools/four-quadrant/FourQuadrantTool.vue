@@ -164,7 +164,8 @@ onMounted(async () => {
 .fq-title { margin: 0; font-size: 13px; font-weight: 600; color: var(--color-text); }
 .fq-sub { font-size: 11.5px; color: var(--color-text-muted); }
 .fq-add { display: flex; gap: 6px; }
-.fq-add-btn { min-height: 32px; padding: 4px 12px; }
+.fq-add-btn {height: 24px;
+  padding: 0 12px;}
 .fq-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .fq-item { display: flex; align-items: center; gap: 6px; }
 .fq-item.is-done .fq-text { text-decoration: line-through; color: var(--color-text-muted); }
@@ -172,6 +173,8 @@ onMounted(async () => {
 .fq-text { flex: 1; min-width: 0; font-size: 12.5px; color: var(--color-text); word-break: break-all; cursor: text; }
 .fq-edit { width: auto; flex: 1; min-width: 0; }
 .fq-move { min-height: 26px; font-size: 11.5px; padding: 2px 4px; max-width: 110px; }
-.fq-btn { min-height: 26px; padding: 2px 8px; font-size: 12px; }
+.fq-btn {height: 24px;
+  padding: 0 12px;
+  font-size: 12px;}
 .fq-empty { margin: 0; }
 </style>

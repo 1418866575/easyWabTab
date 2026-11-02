@@ -41,16 +41,15 @@ defineEmits<{ prev: []; next: [] }>()
 }
 
 /* 翻页按钮：视觉对齐 WorkbenchView .wb-btn token look（--color-* 亮色 token + hex 兜底） */
-.pp-btn {
-  padding: 6px 12px;
+.pp-btn {padding: 0 12px;
   background-color: var(--color-bg-card, #ffffff);
   color: var(--color-text-secondary, #64748b);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
   transition: all 0.2s;
-}
+  height: 24px;}
 
 .pp-btn:hover:not(:disabled) {
   background-color: var(--color-bg-hover, #f1f5f9);

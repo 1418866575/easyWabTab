@@ -492,14 +492,12 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
 .ws-input::placeholder {
   color: var(--color-text-secondary, #64748b);
 }
-.ws-close-btn {
-  flex-shrink: 0;
+.ws-close-btn {flex-shrink: 0;
   width: 28px;
-  height: 28px;
+  height: 24px;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-}
+  justify-content: center;}
 
 .ws-list {
   overflow-y: auto;

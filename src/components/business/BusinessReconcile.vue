@@ -452,9 +452,8 @@ function exportExpenseExcel(): void {
   min-width: 160px;
   line-height: 1.6;
 }
-.bizrec-fix-btn {
-  flex-shrink: 0;
-  padding: 7px 14px;
+.bizrec-fix-btn {flex-shrink: 0;
+  padding: 0 12px;
   font-size: 12px;
   font-weight: 600;
   color: #fff;
@@ -462,8 +461,7 @@ function exportExpenseExcel(): void {
   border: none;
   border-radius: 7px;
   cursor: pointer;
-  min-height: 36px;
-}
+  height: 24px;}
 .bizrec-fix-btn:hover {
   background: #b45309;
 }

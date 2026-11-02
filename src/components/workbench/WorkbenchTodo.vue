@@ -717,33 +717,31 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-.search-btn {
-  padding: 9px 16px;
+.search-btn {padding: 0 12px;
   background: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
-  font-size: 14px;
+  font-size: 12px;
   color: #fff;
   cursor: pointer;
   white-space: nowrap;
   transition: background-color var(--transition-fast, 0.15s ease);
-}
+  height: 24px;}
 
 .search-btn:hover {
   background: var(--color-primary-hover, var(--color-primary-hover));
 }
 
-.search-reset-btn {
-  padding: 9px 14px;
+.search-reset-btn {padding: 0 12px;
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
-  font-size: 14px;
+  font-size: 12px;
   color: var(--color-text-secondary, var(--color-text-secondary));
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
-}
+  height: 24px;}
 
 .search-reset-btn:hover {
   color: var(--color-primary, var(--color-primary));
@@ -1165,17 +1163,16 @@ onMounted(async () => {
   justify-content: flex-end;
 }
 
-.btn-save {
-  padding: 9px 18px;
+.btn-save {padding: 0 12px;
   background: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
-  font-size: 14px;
+  font-size: 12px;
   cursor: pointer;
   color: #fff;
   white-space: nowrap;
   transition: background-color var(--transition-fast, 0.15s ease);
-}
+  height: 24px;}
 
 .btn-save:hover:not(:disabled) {
   background: var(--color-primary-hover, var(--color-primary-hover));

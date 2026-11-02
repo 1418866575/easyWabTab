@@ -80,19 +80,18 @@ onMounted(async () => {
   margin-left: 0;
 }
 
-.sth-tabs :deep(.el-radio-button__inner) {
-  display: inline-flex;
+.sth-tabs :deep(.el-radio-button__inner) {display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
+  padding: 0 12px;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
   background-color: var(--color-bg-card, #ffffff);
   color: var(--color-text-secondary, #64748b);
-  font-size: 14px;
+  font-size: 12px;
   box-shadow: none;
   transition: all 0.15s ease;
-}
+  height: 24px;}
 
 .sth-tab-icon {
   display: inline-flex;
@@ -131,9 +130,8 @@ html.dark .sth-tabs :deep(.el-radio-button__original-radio:checked + .el-radio-b
 }
 
 @media (max-width: 768px) {
-  .sth-tabs :deep(.el-radio-button__inner) {
-    padding: 6px 12px;
-    font-size: 13px;
-  }
+  .sth-tabs :deep(.el-radio-button__inner) {padding: 0 12px;
+  font-size: 12px;
+  height: 24px;}
 }
 </style>

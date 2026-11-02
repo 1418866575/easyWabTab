@@ -95,13 +95,13 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  min-height: 30px;
-  padding: 4px 12px;
+  height: 24px;
+  padding: 0 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   background: var(--color-bg-card);
   color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
+  font-size: 12px;
   font-family: var(--font-family);
   transition: color var(--motion-duration) var(--motion-ease),
     border-color var(--motion-duration) var(--motion-ease),
@@ -144,14 +144,14 @@
 
 /* 统计行里的次要按钮（如「重置统计」） */
 .bk-mini-btn {
-  padding: 3px 10px;
+  padding: 0 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-bg-card);
   color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
   font-family: var(--font-family);
-  min-height: 30px;
+  height: 24px;
   transition: color var(--motion-duration) var(--motion-ease),
     border-color var(--motion-duration) var(--motion-ease);
 }
@@ -260,19 +260,19 @@
   .bk-subbar .bk-chip,
   .bk-subbar .bk-mini-btn,
   .bk-subbar .bk-sort {
-    min-height: 40px;
-    padding: 8px 14px;
+    height: 24px;
+    padding: 0 12px;
   }
   .bk-reader-bar { padding: 8px 12px; gap: 8px; }
   .bk-reader-title { font-size: var(--font-size-sm, 13px); }
   .bk-reader-actions .bk-reader-btn-text { display: none; }
-  /* 移动端触控下限 32px：.ui-btn--sm 是 30px，读页工具栏与顶栏按钮都抬到 40px */
+  /* 移动端与全站同高 24px（2026-11 按钮统一，取消 40px 触控放大） */
   .bk-reader-actions .ui-btn,
   .bk-topbar-right .ui-btn,
   .bk-topbar-right .bk-mini-btn,
   .bk-topbar-right .bk-sync-btn {
-    min-height: 40px;
-    padding: 8px 14px;
+    height: 24px;
+    padding: 0 12px;
   }
 }
 
@@ -281,8 +281,8 @@
    从父级样式表用后代选择器无法命中 scoped 组件内部（Vue 会加 data-v 属性）。 */
 @media (max-width: 768px) {
   .bk-item .ui-btn {
-    min-height: 40px;
-    padding: 8px 12px;
+    height: 24px;
+    padding: 0 12px;
   }
 }
 

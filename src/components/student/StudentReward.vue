@@ -546,8 +546,7 @@ html.dark .sr-detail-value { color: #f9fafb; }
   align-items: center;
   flex-shrink: 0;
 }
-.sr-redeem-btn {
-  padding: 4px 12px;
+.sr-redeem-btn {padding: 0 12px;
   border: none;
   background: var(--ds-success);
   color: #fff;
@@ -556,7 +555,7 @@ html.dark .sr-detail-value { color: #f9fafb; }
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
-}
+  height: 24px;}
 .sr-redeem-btn:hover { background: var(--ds-success); }
 .sr-redeem-btn:disabled {
   opacity: 0.5;

@@ -102,14 +102,13 @@ const store = useSitesStore()
   color: white;
 }
 
-.clear-btn {
-  background: none;
+.clear-btn {background: none;
   border: none;
   color: var(--ds-text-2);
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
   text-decoration: underline;
-}
+  height: 24px;}
 
 .clear-btn:hover {
   color: var(--ds-primary);

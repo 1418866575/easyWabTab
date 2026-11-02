@@ -34,9 +34,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 36px;
-  padding: 8px 14px;
-  font-size: 13px;
+  height: 24px;
+  padding: 0 12px;
+  font-size: 12px;
   font-family: var(--font-family);
   color: #fff;
   background: var(--color-primary);
@@ -140,9 +140,9 @@
   overflow: hidden;
 }
 .tu-seg button {
-  min-height: 30px;
-  padding: 4px 12px;
-  font-size: 12.5px;
+  height: 24px;
+  padding: 0 12px;
+  font-size: 12px;
   font-family: var(--font-family);
   color: var(--color-text-secondary);
   background: transparent;

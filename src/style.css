@@ -373,13 +373,13 @@ body {
   align-items: center;
   justify-content: center;
   gap: var(--space-2, 8px);
-  min-height: 36px;
-  padding: 8px 14px;
+  height: 24px;
+  padding: 0 12px;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   background-color: var(--color-bg-card, #ffffff);
   color: var(--color-text-secondary, #64748b);
-  font-size: var(--font-size-sm, 13px);
+  font-size: 12px;
   cursor: pointer;
   transition:
     transform var(--motion-duration, 220ms) var(--motion-ease, ease),
@@ -477,13 +477,14 @@ body {
 /* —— 面板小号按钮（2026-11 按钮收敛：原各面板 scoped 重复定义上收至此） —— */
 /* 「详情」淡主色按钮（教师作业/访谈表格；原 rgba 硬编码改 token，随 accent 变色） */
 .btn-detail {
-  padding: 5px 12px;
+  height: 24px;
+  padding: 0 12px;
   font-size: 12px;
   border: 1px solid transparent;
   border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
-  line-height: 1.5;
+  line-height: 1;
   white-space: nowrap;
   background: var(--color-primary-soft);
   border-color: var(--color-primary-soft);
@@ -503,7 +504,7 @@ body {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-text-secondary);
   display: flex;
   align-items: center;
@@ -518,16 +519,16 @@ body {
   cursor: not-allowed;
 }
 
-/* 课表周切换箭头（28×28 透明底；移动端 44px 触控目标仍在各课表 scoped 媒体查询里） */
+/* 课表周切换箭头（24×24 透明底，与全站按钮同高） */
 .stt-week-btn {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border: none;
   background: transparent;
   color: var(--color-text-secondary);
   border-radius: 5px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 12px;
   line-height: 1;
   transition: background var(--motion-duration) var(--motion-ease), color var(--motion-duration) var(--motion-ease);
 }
@@ -543,7 +544,8 @@ body {
 /* 健康面板「设定目标」主色胶囊（el-button 载体走 EP 变量桥接，写裸 background 会被 EP 压掉） */
 .nav-btn {
   flex-shrink: 0;
-  padding: 4px 10px;
+  height: 24px;
+  padding: 0 12px;
   font-size: 12px;
   border-radius: var(--radius-full);
   background: var(--color-bg-card);
@@ -584,12 +586,13 @@ body {
   transform: none;
 }
 
-/* —— 小尺寸（叠加于基础/次要语义） —— */
+/* —— 小尺寸（叠加于基础/次要语义）：2026-11 起 base 已是 24px/12px，
+   小号不再单独放大缩小，规则保留占位以免模板别名悬空 —— */
 .ui-btn--sm,
 .wb-menu-btn, .row-reset, .mini-btn {
-  min-height: 30px;
-  padding: 5px 10px;
-  font-size: var(--font-size-xs, 12px);
+  height: 24px;
+  padding: 0 12px;
+  font-size: 12px;
 }
 
 /* —— 图标关闭按钮（全局统一一处，纯图标方块形态保留区分） —— */
@@ -598,8 +601,8 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);

@@ -259,16 +259,14 @@ function resetFilters() {
 
 .tb-hits-total { font-size: 12px; color: var(--color-text-muted); }
 
-.tb-mini-btn {
-  min-height: 26px;
-  padding: 2px 8px;
+.tb-mini-btn {height: 24px;
+  padding: 0 12px;
   font-size: 12px;
   font-family: var(--font-family);
   color: var(--color-text-secondary);
   background: transparent;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
+  border-radius: var(--radius-md);}
 .tb-mini-btn:hover { color: var(--color-primary); border-color: var(--color-primary); }
 
 .tb-note {

@@ -4495,11 +4495,10 @@ function toggleFullscreen(): void {
   border-bottom: 1px solid var(--color-border, var(--color-border));
   flex-wrap: wrap;
 }
-.sub-tab-btn {
-  padding: 6px 12px !important;
+.sub-tab-btn {padding: 0 12px !important;
   font-size: 12px !important;
   border-radius: calc(var(--radius-md, 8px) - 2px) !important;
-}
+  height: 24px !important;}
 .sub-tab-btn.active {
   border-color: var(--color-primary, var(--color-primary)) !important;
   box-shadow: 0 0 0 1px var(--color-primary, var(--color-primary)) inset;
@@ -4509,16 +4508,15 @@ html.dark .sub-tab-btn.active {
   box-shadow: 0 0 0 1px #60a5fa inset;
 }
 
-.tab-btn {
-  padding: 8px 16px;
+.tab-btn {padding: 0 12px;
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md);
   background-color: var(--color-bg-card, var(--color-bg-card));
   color: var(--color-text-secondary, var(--color-text-secondary));
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
   transition: all var(--transition-fast, 0.15s ease);
-}
+  height: 24px;}
 
 .tab-btn:hover {
   background-color: var(--color-bg-card, var(--color-bg-hover));
@@ -4859,14 +4857,13 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
 }
 
 /* 入口图标按钮：显示当前图标缩略图（未设置时为占位图标），点击从图标管理库选择 */
-.wb-menu-icon-btn {
-  flex: none;
+.wb-menu-icon-btn {flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
   width: 36px;
-  height: 36px;
+  height: 24px;
   padding: 0;
   color: var(--color-text-secondary);
   background-color: var(--color-bg-input, var(--color-bg-card));
@@ -4876,8 +4873,7 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
   transition:
     border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
     color var(--motion-duration, 220ms) var(--motion-ease, ease),
-    background-color var(--motion-duration, 220ms) var(--motion-ease, ease);
-}
+    background-color var(--motion-duration, 220ms) var(--motion-ease, ease);}
 
 .wb-menu-icon-btn:hover {
   color: var(--color-primary);
@@ -5844,12 +5840,10 @@ html.dark .status-pill { color: #4ade80; background-color: rgba(74, 222, 128, 0.
     margin-bottom: 6px;
     text-align: left;
   }
-  .bl-col-ops .el-button {
-    height: auto;
-    min-height: 44px;
-    padding: 0 14px;
-    margin: 0 6px 6px 0;
-  }
+  .bl-col-ops .el-button {height: auto;
+  height: 24px;
+  padding: 0 12px;
+  margin: 0 6px 6px 0;}
 
   /* 新建账本：标签收窄，给输入框留出更多横向空间 */
   .bl-block .remind-label { width: 72px; }

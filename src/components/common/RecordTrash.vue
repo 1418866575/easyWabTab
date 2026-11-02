@@ -164,6 +164,7 @@ async function onClear(): Promise<void> {
 
 @media (max-width: 768px) {
   .rt-ops { width: 100%; margin-left: 0; }
-  .rt-ops .ui-btn { flex: 1 1 auto; min-height: 44px; }
+  .rt-ops .ui-btn {flex: 1 1 auto;
+  height: 24px;}
 }
 </style>

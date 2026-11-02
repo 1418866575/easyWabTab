@@ -1047,19 +1047,17 @@ html.dark .stp-date-chip {
   margin-left: auto;
   margin-right: auto;
 }
-.stp-pager-btn {
-  display: inline-flex;
+.stp-pager-btn {display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 32px;
-  height: 32px;
+  height: 24px;
   border-radius: 6px;
   border: 1px solid var(--color-border, #d1d5db);
   background: var(--color-surface, #fff);
   color: var(--color-text-secondary, #6b7280);
   cursor: pointer;
-  transition: all 0.12s;
-}
+  transition: all 0.12s;}
 .stp-pager-btn:hover:not(:disabled) {
   background: var(--color-primary, #10b981);
   border-color: var(--color-primary, #10b981);

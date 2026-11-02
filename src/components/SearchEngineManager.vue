@@ -499,13 +499,12 @@ function truncateUrl(url: string, maxLength = 40) {
 
 /* 行内图标操作按钮（编辑/删除/设为默认/启用开关）：对齐全局 .ui-btn--sm 的尺寸，
    原先无边框无圆角、14px 字，和左边 13px 的输入框不同字号 */
-.btn-icon {
-  display: inline-flex;
+.btn-icon {display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 30px;
-  min-height: 30px;
-  padding: 0 var(--space-2, 8px);
+  height: 24px;
+  padding: 0 12px;
   background: none;
   border: 1px solid transparent;
   border-radius: var(--radius-md, 8px);
@@ -513,8 +512,7 @@ function truncateUrl(url: string, maxLength = 40) {
   font-size: var(--font-size-xs, 12px);
   line-height: 1;
   opacity: 0.65;
-  transition: opacity 0.2s, border-color 0.2s, background-color 0.2s;
-}
+  transition: opacity 0.2s, border-color 0.2s, background-color 0.2s;}
 
 .btn-icon:hover {
   opacity: 1;

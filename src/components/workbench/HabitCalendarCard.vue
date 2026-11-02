@@ -300,21 +300,19 @@ function onCardClick(): void {
   flex-shrink: 0;
 }
 
-.hb-cal-navbtn {
-  width: 22px;
-  height: 22px;
+.hb-cal-navbtn {width: 22px;
+  height: 24px;
   border: none;
   background: transparent;
   color: var(--color-text-secondary, var(--color-text-secondary));
-  font-size: 16px;
+  font-size: 12px;
   line-height: 1;
   border-radius: var(--radius-sm, 4px);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background-color var(--transition-fast, 0.15s ease), color var(--transition-fast, 0.15s ease);
-}
+  transition: background-color var(--transition-fast, 0.15s ease), color var(--transition-fast, 0.15s ease);}
 
 .hb-cal-navbtn:hover {
   background: var(--color-bg-hover, var(--color-bg-input));

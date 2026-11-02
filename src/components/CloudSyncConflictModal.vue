@@ -264,16 +264,15 @@ const hasConflict = computed(() => conflictRows.value.length > 0)
   flex-wrap: wrap;
   flex-shrink: 0;
 }
-.conflict-btn {
-  padding: 8px 14px;
+.conflict-btn {padding: 0 12px;
   border-radius: 6px;
   border: 1px solid var(--color-border);
   background: var(--color-bg);
   color: var(--color-text);
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
   transition: all 0.15s ease;
-}
+  height: 24px;}
 .conflict-btn:hover {
   transform: translateY(-1px);
 }

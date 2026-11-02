@@ -73,14 +73,13 @@ const tabItems = computed(() => [
  * 块状浅底页签放在这里会与整页观感脱节。
  * 覆盖带 .ui-tabs 前缀以提升特异性，压过 BaseTabs 的 scoped 规则。
  * ============================================================ */
-.category-tabs-wrapper :deep(.ui-tabs .el-radio-button__inner) {
-  padding: 8px 16px;
+.category-tabs-wrapper :deep(.ui-tabs .el-radio-button__inner) {padding: 0 12px;
   border: 1px solid var(--ds-line, var(--color-border, #e2e8f0));
   border-radius: var(--radius-full, 9999px);
   background-color: #ffffff;
   color: var(--ds-text-2, var(--color-text-secondary, #475569));
-  font-size: 13px;
-}
+  font-size: 12px;
+  height: 24px;}
 
 .category-tabs-wrapper :deep(.ui-tabs .el-radio-button__inner:hover) {
   border-color: var(--ds-primary, var(--color-primary, #3b82f6));

@@ -177,7 +177,7 @@ html.dark .bs-content.panel-scope .bizinv-low-card {
    变成带内边距的胶囊，挤坏表格行高。 */
 .panel-scope .el-button:not(.is-link):not(.is-text):not(.is-circle) {
   border-radius: var(--radius-full, 999px);
-  font-size: var(--font-size-sm, 13px);
+  font-size: 12px;
 }
 
 /* 面板里的原生按钮走的是语义类名（.btn-add / .btn-save 等），el-button 覆盖不到。
@@ -192,7 +192,7 @@ html.dark .bs-content.panel-scope .bizinv-low-card {
 .panel-scope button.btn-primary,
 .panel-scope button.btn-secondary {
   border-radius: var(--radius-full, 999px);
-  font-size: var(--font-size-sm, 13px);
+  font-size: 12px;
 }
 
 /* 主操作按钮在 el-button 上不生效的补救：
