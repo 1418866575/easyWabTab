@@ -106,8 +106,52 @@ export async function copyText(text: string, successMsg = '已复制到剪贴板
   }
 }
 
+/**
+ * 复制富文本（HTML）到剪贴板：粘贴到公众号 / Word 等富文本编辑器保留排版。
+ * 同时写入 text/plain 兜底（纯文本编辑器只得到文字）。
+ * 不支持 ClipboardItem 时降级为「临时容器选中 + execCommand('copy')」。
+ */
+export async function copyRichHtml(html: string, plainText = '', successMsg = '已复制到剪贴板'): Promise<boolean> {
+  const plain = plainText || html.replace(/<[^>]+>/g, '')
+  try {
+    if (navigator.clipboard && window.isSecureContext && typeof ClipboardItem !== 'undefined') {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([plain], { type: 'text/plain' })
+        })
+      ])
+      useToast().success(successMsg)
+      return true
+    }
+    // 降级：临时 contenteditable 容器，选中后走 execCommand
+    const holder = document.createElement('div')
+    holder.contentEditable = 'true'
+    holder.innerHTML = html
+    holder.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none'
+    document.body.appendChild(holder)
+    const range = document.createRange()
+    range.selectNodeContents(holder)
+    const sel = window.getSelection()
+    sel?.removeAllRanges()
+    sel?.addRange(range)
+    const ok = document.execCommand('copy')
+    sel?.removeAllRanges()
+    document.body.removeChild(holder)
+    if (ok) {
+      useToast().success(successMsg)
+      return true
+    }
+    useToast().warning('当前环境无法自动复制，请手动选中后复制')
+    return false
+  } catch (e) {
+    console.error('[clipboard] 富文本复制失败', e)
+    useToast().warning('复制失败，请手动选中后复制')
+    return false
+  }
+}
+
 /** `YYYYMMDD` 日期串，用于导出文件名 */
-export function dateStamp(d = new Date()): string {
-  const p = (n: number) => (n < 10 ? '0' + n : String(n))
+export function dateStamp(d = new Date()): string {  const p = (n: number) => (n < 10 ? '0' + n : String(n))
   return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`
 }

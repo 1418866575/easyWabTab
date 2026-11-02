@@ -24,6 +24,7 @@ import type { MdBlockKind, MdTransformOptions } from '@/composables/blogEditorMd
 import { imageRef, parseImageRefs, removeImageRefs, resolveImageRefs } from '@/composables/blogImages'
 import { renderMarkdown } from '@/composables/noteMarkdown'
 import { buildWechatContentHtml } from '@/composables/useWechatPublish'
+import { copyRichHtml } from '@/utils/download'
 import { resolveTypo, typoHrStyle, typoVars } from '@/composables/blogTypoCore'
 import { decorateTypoHtml } from '@/composables/blogTypoDecor'
 import type { BlogTypo } from '@/types'
@@ -680,6 +681,21 @@ async function handlePublishWechat(): Promise<void> {
   }
 }
 
+/** 复制公众号排版正文到剪贴板：与「发布到公众号」同一套转换，粘贴到公众号编辑器即保留格式 */
+async function handleCopyWechat(): Promise<void> {
+  if (!form.contentMarkdown.trim()) {
+    toastAlert('正文内容为空，没有可复制的内容', 'info')
+    return
+  }
+  const html = buildWechatContentHtml(
+    form.contentMarkdown,
+    (id) => store.imageUrlById.get(id),
+    form.typo,
+    store.settings.defaultTypoId
+  )
+  await copyRichHtml(html, form.contentMarkdown, '已复制公众号排版，去公众号编辑器粘贴即可')
+}
+
 // ---------- 关闭（有未保存改动时先问） ----------
 async function handleClose(): Promise<void> {
   if (dirty.value) {
@@ -927,6 +943,15 @@ async function regenerateSlug(): Promise<void> {
             >
               <span v-if="wechat.publishing.value" class="btn-spinner" aria-hidden="true"></span>
               {{ wechat.publishing.value ? '发布中' : '发布到公众号' }}
+            </button>
+            <button
+              type="button"
+              class="ui-btn ui-btn--sm"
+              title="按公众号排版规则复制正文，粘贴到公众号编辑器即可（不发送到草稿箱）"
+              data-testid="blog-editor-copy-wechat-top"
+              @click="handleCopyWechat()"
+            >
+              复制到公众号
             </button>
             <button
               type="button"
