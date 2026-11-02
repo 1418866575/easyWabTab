@@ -51,12 +51,6 @@ function triggerImportFiles(): void {
   fileInputEl.value?.click()
 }
 
-/** 「导入 ▾」下拉命令分发 */
-function onImportCommand(command: string): void {
-  if (command === 'folder') triggerImport()
-  else if (command === 'files') triggerImportFiles()
-}
-
 async function onImportChange(e: Event): Promise<void> {
   const input = e.target as HTMLInputElement
   const files = Array.from(input.files ?? [])
@@ -322,18 +316,14 @@ function displayTime(row: BlogArticle): string {
       </div>
       <div class="ba-query-actions">
         <ViewModeToggle v-if="total > 0" :mode="vm.mode" @toggle="vm.toggle" />
-        <el-dropdown trigger="click" @command="onImportCommand">
-          <el-button size="small" data-testid="blog-posts-import">
-            <Icon name="plus" :size="14" />
-            <span>导入</span>
-          </el-button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="folder" data-testid="blog-posts-import-folder">导入文件夹</el-dropdown-item>
-              <el-dropdown-item command="files" data-testid="blog-posts-import-files">选文件导入</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
+        <el-button size="small" data-testid="blog-posts-import" @click="triggerImportFiles">
+          <Icon name="plus" :size="14" />
+          <span>导入</span>
+        </el-button>
+        <el-button size="small" data-testid="blog-posts-import-folder" @click="triggerImport">
+          <Icon name="folder" :size="14" />
+          <span>导入文件夹</span>
+        </el-button>
         <input ref="importInputEl" class="ba-import-input" type="file" multiple @change="onImportChange" />
         <input ref="fileInputEl" class="ba-import-input" type="file" multiple accept=".md,image/*" @change="onImportChange" />
         <el-button type="primary" size="small" data-testid="blog-posts-search" @click="applyFilter">查询</el-button>
@@ -589,6 +579,12 @@ function displayTime(row: BlogArticle): string {
   justify-content: flex-end;
   gap: 8px;
   margin-left: auto;
+}
+/* 按钮内「图标 + 文字」留 4px 间距，避免贴在一起 */
+.ba-query-actions :deep(.el-button > span) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .ba-empty {
