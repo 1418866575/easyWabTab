@@ -318,7 +318,7 @@ function displayTime(row: BlogArticle): string {
         <ViewModeToggle v-if="total > 0" :mode="vm.mode" @toggle="vm.toggle" />
         <el-button size="small" data-testid="blog-posts-import" @click="triggerImportFiles">
           <Icon name="plus" :size="14" />
-          <span>导入</span>
+          <span>导入文件</span>
         </el-button>
         <el-button size="small" data-testid="blog-posts-import-folder" @click="triggerImport">
           <Icon name="folder" :size="14" />
@@ -576,9 +576,8 @@ function displayTime(row: BlogArticle): string {
 .ba-query-actions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 8px;
-  margin-left: auto;
 }
 /* 按钮内「图标 + 文字」留 4px 间距，避免贴在一起 */
 .ba-query-actions :deep(.el-button > span) {
