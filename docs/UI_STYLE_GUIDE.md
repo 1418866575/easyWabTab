@@ -126,6 +126,14 @@
 
 禁用态统一 `opacity: 0.5; cursor: not-allowed`；`:active` 统一 `--motion-press`。
 
+**面板小号按钮（2026-11 上收全局，禁止再在各面板 scoped 里重定义）**：
+`.nav-btn`（健康面板「设定目标」主色胶囊；el-button 载体走 `.el-button.nav-btn` EP 变量桥接）、
+`.btn-sort`（分类/搜索引擎排序 24×24 小方块）、
+`.stt-week-btn`（课表周切换 28×28 箭头）、
+`.btn-detail`（教师表格「详情」淡主色底按钮，token 化随 accent 变色）。
+定义统一在 `style.css`「面板小号按钮」段；各组件 scoped 只保留布局规则（如移动端 44px 触控媒体查询）。
+另注意：表格行按钮上的**语义着色**（如 `.sm-advance-btn { color: var(--ds-success) }`）是对标准按钮的合法局部强调，不算双轨道，无需上收。
+
 #### ⚠️ el-button 主操作必须纳入全局组
 
 ```vue

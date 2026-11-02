@@ -474,6 +474,101 @@ body {
   box-shadow: var(--shadow-md);
 }
 
+/* —— 面板小号按钮（2026-11 按钮收敛：原各面板 scoped 重复定义上收至此） —— */
+/* 「详情」淡主色按钮（教师作业/访谈表格；原 rgba 硬编码改 token，随 accent 变色） */
+.btn-detail {
+  padding: 5px 12px;
+  font-size: 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary-soft);
+  color: var(--color-link, var(--color-primary));
+}
+.btn-detail:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
+}
+
+/* 分类/搜索引擎排序小方块（24×24，可点区域下限） */
+.btn-sort {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: var(--color-bg-hover);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-sort:hover:not(:disabled) {
+  background: var(--color-bg-active);
+  color: var(--color-primary);
+}
+.btn-sort:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* 课表周切换箭头（28×28 透明底；移动端 44px 触控目标仍在各课表 scoped 媒体查询里） */
+.stt-week-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  transition: background var(--motion-duration) var(--motion-ease), color var(--motion-duration) var(--motion-ease);
+}
+.stt-week-btn:hover:not(:disabled) {
+  background: var(--color-hover);
+  color: var(--color-primary);
+}
+.stt-week-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* 健康面板「设定目标」主色胶囊（el-button 载体走 EP 变量桥接，写裸 background 会被 EP 压掉） */
+.nav-btn {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  color: var(--color-primary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--motion-duration) var(--motion-ease);
+}
+.nav-btn:hover:not(:disabled) {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+.el-button.nav-btn {
+  --el-button-bg-color: var(--color-bg-card);
+  --el-button-border-color: var(--color-border);
+  --el-button-text-color: var(--color-primary);
+  --el-button-hover-bg-color: var(--color-primary);
+  --el-button-hover-border-color: var(--color-primary);
+  --el-button-hover-text-color: #fff;
+  --el-button-active-bg-color: var(--color-primary);
+  --el-button-active-border-color: var(--color-primary);
+}
+
 /* —— 文字按钮（次要/链接型） —— */
 .ui-btn--text {
   background-color: transparent;

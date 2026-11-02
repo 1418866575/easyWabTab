@@ -755,23 +755,7 @@ function truncate(text: string, n = 30): string {
 .tk-tag.is-warn { background-color: var(--ds-warning); }
 .tk-tag.is-ok { background-color: var(--ds-success); }
 
-/* 表格内按钮 */
-.btn-detail {
-  padding: 5px 12px;
-  font-size: 12px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  line-height: 1.5;
-  white-space: nowrap;
-}
-.btn-detail {
-  background: rgba(59, 130, 246, 0.1);
-  border-color: rgba(59, 130, 246, 0.3);
-  color: var(--color-link, #3b82f6);
-}
-.btn-detail:hover { background: rgba(59, 130, 246, 0.18); }
+/* 表格内按钮：.btn-detail 视觉已上收至全局 style.css（2026-11 按钮收敛） */
 /* .btn-edit 视觉已统一到全局 .ui-btn（style.css） */
 /* .btn-delete 视觉已统一到全局 .ui-btn--danger（style.css） */
 

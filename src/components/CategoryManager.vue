@@ -471,31 +471,7 @@ const sortedCustomCategories = computed(() =>
   gap: 2px;
 }
 
-/* 上/下移排序：原 20×16 + 10px 字，低于 24px 的可点区域下限；放大到 24×24 并走 token */
-.btn-sort {
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  background: var(--color-bg-hover, #f1f5f9);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm, 4px);
-  cursor: pointer;
-  font-size: 11px;
-  color: var(--color-text-secondary, #64748b);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-sort:hover:not(:disabled) {
-  background: var(--color-bg-active, #e2e8f0);
-  color: var(--color-primary);
-}
-
-.btn-sort:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
+/* 上/下移排序按钮：视觉已上收至全局 style.css .btn-sort（2026-11 按钮收敛） */
 
 .category-icon {
   display: inline-flex;

@@ -542,26 +542,7 @@ onBeforeUnmount(() => {
   border-radius: 6px;
   padding: 2px;
 }
-.stt-week-btn {
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: transparent;
-  color: var(--color-text-secondary, #4b5563);
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 16px;
-  line-height: 1;
-  transition: background 0.15s, color 0.15s;
-}
-.stt-week-btn:hover:not(:disabled) {
-  background: var(--color-hover, #f3f4f6);
-  color: var(--color-primary, #3b82f6);
-}
-.stt-week-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
+/* .stt-week-btn 视觉已上收至全局 style.css（2026-11 按钮收敛），此处仅保留 44px 触控媒体查询 */
 .stt-week-label {
   min-width: 64px;
   text-align: center;

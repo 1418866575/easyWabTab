@@ -485,8 +485,8 @@ onUnmounted(() => {
         </label>
       </div>
       <div class="nt-search-actions" data-testid="nt-search-actions">
-        <el-button class="nt-btn-query" data-testid="nt-search-btn" @click="applyFilters">查询</el-button>
-        <el-button class="nt-btn-reset" data-testid="nt-reset-btn" @click="resetFilters">重置</el-button>
+        <el-button type="primary" data-testid="nt-search-btn" @click="applyFilters">查询</el-button>
+        <el-button data-testid="nt-reset-btn" @click="resetFilters">重置</el-button>
       </div>
     </div>
 
@@ -507,7 +507,7 @@ onUnmounted(() => {
     <!-- 工具条：左上新增 + 右上视图切换 -->
     <div class="ewt-table-toolbar is-split">
       <div class="nt-toolbar-left">
-        <el-button class="nt-btn-add" data-testid="note-add-button" @click="startAdd">＋ 新增便签</el-button>
+        <el-button type="primary" class="btn-add" data-testid="note-add-button" @click="startAdd">＋ 新增便签</el-button>
       </div>
       <div class="nt-toolbar-right">
         <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
@@ -848,25 +848,13 @@ onUnmounted(() => {
 .nt-field-label { font-size: 13px; color: var(--color-text-secondary, var(--color-text-secondary)); }
 .nt-search-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .nt-field-select { width: 130px; flex-shrink: 0; }
-.nt-btn-query {
-  padding: 9px 16px; background: var(--color-primary, var(--color-primary)); border: none;
-  border-radius: var(--radius-md, 8px); font-size: 14px; color: #fff; cursor: pointer; white-space: nowrap;
-}
-.nt-btn-reset {
-  padding: 9px 14px; background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px); font-size: 14px; color: var(--color-text-secondary, var(--color-text-secondary));
-  cursor: pointer; white-space: nowrap;
-}
+/* .nt-btn-query / .nt-btn-reset 改用 el-button 标准形态（2026-11 按钮收敛） */
 
 /* ===== 分类筛选标签页 + 新增按钮 ===== */
 .nt-cat-tabs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .nt-toolbar-count { margin-left: auto; font-size: 14px; color: var(--color-text-secondary, var(--color-text-secondary)); }
 .nt-section-title { font-size: 13px; font-weight: 600; color: var(--color-text-secondary, var(--color-text-secondary)); margin: 2px 0 -4px; }
-.nt-btn-add {
-  padding: 10px 16px; background: var(--color-primary, var(--color-primary)); border: none;
-  border-radius: var(--radius-md, 8px); font-size: 14px; color: #fff; cursor: pointer; white-space: nowrap;
-}
+/* .nt-btn-add 改用全局 .btn-add（2026-11 按钮收敛） */
 
 /* ===== el-table 表格容器（参考 StudentReading）===== */
 .nt-table-wrap {
@@ -1066,7 +1054,6 @@ html.dark .timeline-expand-panel { background-color: var(--color-bg-card, #1f293
 html.dark .btn-save:disabled { background-color: var(--color-bg-input, #374151); color: var(--color-text-muted, #9ca3af); }
 /* html.dark .btn-add:disabled 视觉已统一到全局 .ui-btn--primary（style.css） */
 html.dark .nt-search { background-color: var(--color-bg-card, #1f2937); box-shadow: none; }
-html.dark .nt-btn-reset { background-color: var(--color-bg-card, #1f2937); color: var(--color-text-secondary, #d1d5db); border-color: var(--color-border, #374151); }
 html.dark .nt-cat-badge { color: #93c5fd; background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.45); }
 html.dark .timeline-item-time { color: var(--color-text-secondary, #d1d5db); }
 html.dark .timeline-item::before { background: var(--color-border, #374151); }

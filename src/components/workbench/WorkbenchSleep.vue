@@ -438,24 +438,7 @@ onMounted(async () => {
 
 /* 卡片外框 / 卡片标题 / 统计数字的统一取值在全局 styles/workbench.css（.wb-content .stat-*），
    面板内不再各抄一份 —— 这是此前 6 份重复定义漂移的根因。 */
-.nav-btn {
-  flex-shrink: 0;
-  padding: 4px 10px;
-  font-size: 12px;
-  border-radius: var(--radius-full, 9999px);
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  color: var(--color-primary, var(--color-primary));
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.nav-btn:hover {
-  background: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-  color: #fff;
-}
+/* .nav-btn 视觉已上收至全局 style.css（2026-11 按钮收敛），此处仅保留布局规则 */
 
 .stat-value {
   font-size: 26px;
