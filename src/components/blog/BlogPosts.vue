@@ -364,21 +364,25 @@ function displayTime(row: BlogArticle): string {
         row-key="id"
         empty-text="暂无文章"
       >
-        <el-table-column label="标题" min-width="240">
+        <el-table-column label="标题" min-width="312">
           <template #default="{ row }">
             <div class="ba-cell-title">
-              <span v-if="row.pinned" class="ba-pin" title="已置顶">置顶</span>
-              <button type="button" class="ba-link" @click="emit('edit', row.id)">
-                {{ row.title || '（无标题）' }}
-              </button>
+              <el-tooltip :content="row.title || '（无标题）'" placement="top" :show-after="250">
+                <button type="button" class="ba-link" @click="emit('edit', row.id)">
+                  {{ row.title || '（无标题）' }}
+                </button>
+              </el-tooltip>
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="100" align="center">
+        <el-table-column label="状态" width="150" align="center">
           <template #default="{ row }">
-            <span class="ba-status-tag" :class="statusClass(row.status)">
-              {{ ARTICLE_STATUS_LABELS[row.status as ArticleStatus] }}
-            </span>
+            <div class="ba-cell-status">
+              <span class="ba-status-tag" :class="statusClass(row.status)">
+                {{ ARTICLE_STATUS_LABELS[row.status as ArticleStatus] }}
+              </span>
+              <span v-if="row.pinned" class="ba-pin" title="已置顶">置顶</span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="分类" width="120" align="center">
@@ -617,7 +621,16 @@ html.dark .ba-query {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* 状态列：状态标签 + （已置顶）置顶标记，横向居中排布 */
+.ba-cell-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  max-width: 100%;
 }
 
 .ba-pin {
@@ -637,6 +650,12 @@ html.dark .ba-query {
   font-size: var(--font-size-sm, 13px);
   text-align: left;
   cursor: pointer;
+  /* 标题单行省略：超出部分隐藏，完整内容由外层 el-tooltip 悬浮显示 */
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ba-cell-muted {
