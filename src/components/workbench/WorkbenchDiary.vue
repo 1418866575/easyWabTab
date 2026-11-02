@@ -855,6 +855,8 @@ const renderedPreview = computed(() =>
   flex-wrap: wrap;
   gap: 6px;
   padding: 6px 8px;
+  /* 与下方编辑区留白（与标题栏 margin-bottom 10px 同口径） */
+  margin-bottom: 10px;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   background-color: var(--color-bg-card, #fff);
@@ -1436,6 +1438,8 @@ const renderedPreview = computed(() =>
   display: flex;
   flex-direction: column;
   gap: 10px;
+  /* 与上方编辑器卡片留白（table-section 在 .wb-diary 之外，无外层 gap 可叠加） */
+  margin-top: 16px;
   padding: 16px 18px;
   background: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #e2e8f0);
