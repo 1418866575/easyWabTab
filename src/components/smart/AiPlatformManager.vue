@@ -145,10 +145,6 @@ async function onRemove(p: AiPlatform): Promise<void> {
   if (store.deletePlatform(p.id)) toast.success('已删除')
 }
 
-function onTogglePin(p: AiPlatform): void {
-  store.togglePlatformPinned(p.id)
-}
-
 function restoreDefaults(): void {
   const added = store.restoreDefaultPlatforms()
   if (added > 0) toast.success(`已恢复 ${added} 个预置网页`)
@@ -240,7 +236,6 @@ onDeactivated(() => {
             @open="onOpen(p, $event)"
             @edit="openEdit(p)"
             @remove="onRemove(p)"
-            @toggle-pin="onTogglePin(p)"
           />
         </div>
       </section>

@@ -18,7 +18,6 @@ const emit = defineEmits<{
   open: []
   edit: []
   remove: []
-  togglePin: []
 }>()
 
 const p = computed(() => props.platform)
@@ -69,11 +68,6 @@ function onEdit(): void {
   emit('edit')
 }
 
-function onTogglePin(): void {
-  closeMenu()
-  emit('togglePin')
-}
-
 function onRemove(): void {
   closeMenu()
   emit('remove')
@@ -84,7 +78,7 @@ function onRemove(): void {
   <article
     ref="cardRef"
     class="ap-card"
-    :class="{ 'is-invalid': invalid, 'is-pinned': p.pinned, 'is-menu-open': menuOpen }"
+    :class="{ 'is-invalid': invalid, 'is-menu-open': menuOpen }"
     role="button"
     tabindex="0"
     :aria-label="`打开 ${p.name}`"
@@ -117,10 +111,6 @@ function onRemove(): void {
             <Icon name="pencil" :size="14" />
             <span>编辑</span>
           </button>
-          <button type="button" class="card-menu-item" role="menuitem" @click.stop="onTogglePin">
-            <Icon name="pin" :size="14" />
-            <span>{{ p.pinned ? '取消置顶' : '置顶' }}</span>
-          </button>
           <button type="button" class="card-menu-item is-danger" role="menuitem" @click.stop="onRemove">
             <Icon name="trash" :size="14" />
             <span>删除</span>
@@ -140,7 +130,6 @@ function onRemove(): void {
     </div>
 
     <h3 class="ap-name">
-      <Icon v-if="p.pinned" name="pin" :size="12" class="ap-pin-mark" />
       <span class="ap-name-text" :title="p.name">{{ p.name }}</span>
     </h3>
   </article>
@@ -168,12 +157,6 @@ function onRemove(): void {
 .ap-card:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
-}
-/* 置顶卡左侧加一条主色细边，扫视时能一眼分出来（用 inset 阴影，不挤压内边距） */
-.ap-card.is-pinned {
-  box-shadow:
-    inset 3px 0 0 0 var(--color-primary),
-    0 1px 3px rgba(0, 0, 0, 0.08);
 }
 .ap-card.is-invalid {
   opacity: 0.72;
@@ -247,10 +230,6 @@ function onRemove(): void {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.ap-pin-mark {
-  flex: none;
-  color: var(--color-primary);
 }
 
 /* ⋯ 操作区：常驻但悬停才显现（触屏/窄屏常显，同导航站） */
