@@ -684,6 +684,12 @@ const handleSubmit = () => {
   position: relative;
 }
 
+/* 标签输入框撑满行宽：wrapper 已 flex:1，但原生 input(.ui-input) 无 width:100%，
+   实测只有 ~185px（其余行 638~696px），这里显式撑满对齐其它行。 */
+.tag-input-wrapper .ui-input {
+  width: 100%;
+}
+
 .tag-suggestions {
   position: absolute;
   top: 100%;

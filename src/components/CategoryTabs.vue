@@ -102,6 +102,13 @@ const tabItems = computed(() => [
   opacity: 0.72;
 }
 
+/* 修复：选中(实心主色胶囊)态下 BaseTabs 的 checked 规则会把徽标写成主色——
+   红底配红字导致「全部」的总数徽标不可见。这里以更高特异性压回白字。 */
+.category-tabs-wrapper :deep(.ui-tabs .el-radio-button__original-radio:checked + .el-radio-button__inner .ui-tab-badge) {
+  color: #ffffff;
+  opacity: 0.9;
+}
+
 /* 暗色：边框/底色跟随深色 token，选中态同样实心 */
 html.dark .category-tabs-wrapper :deep(.ui-tabs .el-radio-button__inner) {
   background-color: var(--color-bg-card, #1f2937);
