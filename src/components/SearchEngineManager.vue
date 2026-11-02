@@ -503,7 +503,7 @@ function truncateUrl(url: string, maxLength = 40) {
   align-items: center;
   justify-content: center;
   min-width: 30px;
-  height: 24px;
+  height: 36px;
   padding: 0 12px;
   background: none;
   border: 1px solid transparent;

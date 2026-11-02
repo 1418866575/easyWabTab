@@ -667,7 +667,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
   font-weight: 500;
   line-height: 1.5;
   white-space: nowrap;
-  height: 24px;}
+  height: 36px;}
 /* .btn-edit 视觉已统一到全局 .ui-btn（style.css） */
 /* .btn-delete 视觉已统一到全局 .ui-btn--danger（style.css） */
 .btn-madeup {

@@ -61,7 +61,7 @@ const COPY = {
 .tb-empty-btn {display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 24px;
+  height: 36px;
   padding: 0 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-primary);

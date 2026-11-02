@@ -102,8 +102,8 @@ const to = computed(() => `/blog/article/${props.article.slug}`)
   top: 8px;
   right: 8px;
   z-index: 2;
-  width: 24px;
-  height: 24px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;

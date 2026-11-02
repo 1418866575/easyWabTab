@@ -713,7 +713,7 @@ html.dark .wb-content {
     min-width: 44px;
   }
 
-  .wb-btn {height: 24px;}
+  .wb-btn {height: 36px;}
 
   /* 窄屏间距压缩：内容区内边距收窄；底部留白需同时避让两样固定元素：
    *   ① 底部 Tab Bar（.wb-menu，移动端降级为 fixed bottom:0，约 56px + 安全区）

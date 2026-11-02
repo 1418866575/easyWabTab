@@ -223,22 +223,28 @@ html .el-pagination .el-select__wrapper {
 }
 
 /* ============================================================
- * 按钮圆角/高度对齐全站按钮规范（2026-11 起统一 24px 高 / 12px 字）
+ * 按钮圆角/高度对齐全站按钮规范（2026-11 二次调整：36px 高 / 12px 字）
  * 消除 el-button（EP 默认 32px/14px）与自定义按钮的割裂。
- * small 变体 EP 默认即 24px/12px，无需处理；large 也压到 24px。
+ * 默认/large/small 全部统一 36px。
  * ============================================================ */
 .el-button {
   border-radius: var(--radius-md, 8px);
   font-size: 12px;
 }
 .el-button:not(.el-button--small):not(.el-button--large) {
-  height: 24px;
-  min-height: 24px;
+  height: 36px;
+  min-height: 36px;
   padding: 0 12px;
 }
 .el-button--large {
-  height: 24px;
-  min-height: 24px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+.el-button--small {
+  height: 36px;
+  min-height: 36px;
   padding: 0 12px;
   font-size: 12px;
 }
@@ -246,15 +252,15 @@ html .el-pagination .el-select__wrapper {
 /* 单块页签（el-radio-button）同高：EP 内侧不读 --el-component-size 的高度
    由这里钉死，scoped 里只覆写配色。 */
 .el-radio-button__inner {
-  height: 24px;
-  line-height: 22px;
+  height: 36px;
+  line-height: 34px;
   padding: 0 12px;
   font-size: 12px;
   box-sizing: border-box;
 }
 
 /* ============================================================
- * 弹框底部按钮：同全站 24px / 12px（胶囊圆角 999px 保留）
+ * 弹框底部按钮：同全站 36px / 12px（胶囊圆角 999px 保留）
  * 作用域限定在弹框操作区（.bd-footer 及未走 footer 插槽的自定义操作行），
  * 不波及工具栏、表格里的 el-button。
  * ============================================================ */
@@ -264,8 +270,8 @@ html .el-pagination .el-select__wrapper {
 .site-form-actions .el-button,
 .pwd-form-actions .el-button,
 .form-actions .el-button {
-  min-height: 24px;
-  height: 24px;
+  min-height: 36px;
+  height: 36px;
   padding: 0 12px;
   border-radius: 999px;
   font-size: 12px;

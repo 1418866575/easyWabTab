@@ -1051,7 +1051,7 @@ html.dark .stp-date-chip {
   align-items: center;
   justify-content: center;
   width: 32px;
-  height: 24px;
+  height: 36px;
   border-radius: 6px;
   border: 1px solid var(--color-border, #d1d5db);
   background: var(--color-surface, #fff);

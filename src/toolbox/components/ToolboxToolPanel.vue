@@ -307,7 +307,7 @@ onBeforeUnmount(() => {
 }
 .tb-modal-tip { font-size: 11.5px; color: var(--color-text-muted); }
 .tb-modal-btn {margin-left: auto;
-  height: 24px;
+  height: 36px;
   padding: 0 12px;
   font-size: 12px;
   border-radius: var(--radius-md);

@@ -49,7 +49,7 @@ defineEmits<{ prev: []; next: [] }>()
   font-size: 12px;
   cursor: pointer;
   transition: all 0.2s;
-  height: 24px;}
+  height: 36px;}
 
 .pp-btn:hover:not(:disabled) {
   background-color: var(--color-bg-hover, #f1f5f9);

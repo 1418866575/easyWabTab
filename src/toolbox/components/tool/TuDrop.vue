@@ -95,5 +95,5 @@ function onDragOver(e: DragEvent) {
   border-radius: var(--radius-full);
   background: var(--color-primary-soft);
   color: var(--color-primary);
-  height: 24px;}
+  height: 36px;}
 </style>

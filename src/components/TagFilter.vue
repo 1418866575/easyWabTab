@@ -108,7 +108,7 @@ const store = useSitesStore()
   font-size: 12px;
   cursor: pointer;
   text-decoration: underline;
-  height: 24px;}
+  height: 36px;}
 
 .clear-btn:hover {
   color: var(--ds-primary);

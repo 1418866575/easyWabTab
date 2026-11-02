@@ -284,7 +284,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 24px;
+  height: 36px;
   padding: 0 12px;
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: 999px;
@@ -311,7 +311,7 @@ onMounted(async () => {
   cursor: not-allowed;
 }
 
-.ba-btn-sm {height: 24px;
+.ba-btn-sm {height: 36px;
   padding: 0 12px;
   font-size: var(--font-size-xs, 12px);}
 
@@ -542,9 +542,9 @@ onMounted(async () => {
   .ba-shell.is-collapsed .ba-nav-count { display: inline; }
 
   .ba-sync-text { display: none; }
-  .ba-btn {height: 24px;
+  .ba-btn {height: 36px;
   padding: 0 12px;}
-  .ba-btn-sm {height: 24px;
+  .ba-btn-sm {height: 36px;
   padding: 0 12px;}
 }
 

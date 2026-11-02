@@ -147,7 +147,7 @@ function testidOf(item: TabItem): string | undefined {
     background-color var(--motion-duration, 0.15s) var(--motion-ease, ease),
     border-color var(--motion-duration, 0.15s) var(--motion-ease, ease),
     color var(--motion-duration, 0.15s) var(--motion-ease, ease);
-  height: 24px;}
+  height: 36px;}
 
 .ui-tab-icon {
   display: inline-flex;

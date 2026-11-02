@@ -562,7 +562,7 @@ onMounted(async () => {
   font-size: 12px;
   transition: all 0.15s;
   flex-shrink: 0;
-  height: 24px;}
+  height: 36px;}
 .sh-check-btn:hover {
   background: var(--sh-color, #3b82f6);
   color: #fff;

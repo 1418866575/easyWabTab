@@ -152,7 +152,7 @@ const handleSizeChange = (value: number | string) => {
   font-size: 12px;
   cursor: pointer;
   transition: all 0.2s;
-  height: 24px;}
+  height: 36px;}
 
 .page-btn:hover:not(:disabled) {
   border-color: var(--color-primary, #3b82f6);
@@ -220,7 +220,7 @@ const handleSizeChange = (value: number | string) => {
 
   .page-btn {flex: 0 0 auto;
   min-width: 44px;
-  height: 24px;
+  height: 36px;
   padding: 0 12px;
   font-size: 12px;}
 

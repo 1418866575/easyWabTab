@@ -1293,6 +1293,6 @@ html.dark .cat-default {
   }
 
   /* 触控目标 ≥36px（与工作台移动端 P3-14 约定一致，不破坏单行按钮排布） */
-  .cd-actions .el-button {height: 24px;}
+  .cd-actions .el-button {height: 36px;}
 }
 </style>

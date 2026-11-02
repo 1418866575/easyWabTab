@@ -555,7 +555,7 @@ function usedSiteNames(icon: MergedIcon): string {
   font-size: 12px;
   opacity: 0.6;
   transition: opacity 0.2s;
-  height: 24px;}
+  height: 36px;}
 
 .btn-icon:hover {
   opacity: 1;

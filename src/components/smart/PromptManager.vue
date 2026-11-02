@@ -531,7 +531,7 @@ function excerpt(p: SmartPrompt): string {
 
 .pm-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: auto; }
 .pm-spacer { flex: 1 1 auto; }
-.pm-btn {height: 24px;
+.pm-btn {height: 36px;
   padding: 0 12px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
@@ -560,7 +560,7 @@ function excerpt(p: SmartPrompt): string {
   .pm-pager { justify-content: center; }
   .pm-pager :deep(.el-pagination__sizes),
   .pm-pager :deep(.el-pagination__jump) { display: none; }
-  .pm-btn {height: 24px;
+  .pm-btn {height: 36px;
   padding: 0 12px;
   font-size: 12px;}
   .pm-select { height: 44px; font-size: 16px; }

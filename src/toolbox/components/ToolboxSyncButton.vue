@@ -99,7 +99,7 @@ async function handleClick(): Promise<void> {
   border-radius: 8px;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s, background 0.15s;
-  height: 24px;}
+  height: 36px;}
 
 .tb-sync-btn:hover:not(:disabled) {
   color: var(--color-text, #0f172a);

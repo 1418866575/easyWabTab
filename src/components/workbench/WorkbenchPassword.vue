@@ -789,7 +789,7 @@ watch(
   color: #fff;
   white-space: nowrap;
   transition: background-color var(--transition-fast, 0.15s ease);
-  height: 24px;}
+  height: 36px;}
 
 .pwd-btn-primary:hover:not(:disabled) {
   background: var(--color-primary-hover, var(--color-primary-hover));
@@ -886,7 +886,7 @@ html.dark .pwd-cat-badge {
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
-  height: 24px;}
+  height: 36px;}
 
 .pwd-btn-lock:hover {
   color: var(--color-primary, var(--color-primary));
@@ -1000,8 +1000,8 @@ html.dark .pwd-cat-badge {
   font-size: 12px;
   line-height: 1.4;
   color: var(--color-text-secondary, #64748b);
-  min-width: 24px;
-  height: 24px;}
+  min-width: 36px;
+  height: 36px;}
 
 .pwd-actions .pwd-action-btn:hover {
   color: var(--color-primary, #3b82f6);
@@ -1022,8 +1022,8 @@ html.dark .pwd-cat-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 24px;
-  height: 24px;}
+  min-width: 36px;
+  height: 36px;}
 
 .pwd-icon-btn:hover {
   opacity: 1;
@@ -1120,8 +1120,8 @@ html.dark .pwd-cat-badge {
   padding: 0;
   opacity: 0.7;
   transition: opacity var(--transition-fast, 0.15s ease);
-  min-width: 24px;
-  height: 24px;}
+  min-width: 36px;
+  height: 36px;}
 
 .pwd-eye-btn:hover {
   opacity: 1;
@@ -1131,13 +1131,13 @@ html.dark .pwd-cat-badge {
 @media (max-width: 768px) {
   /* 行内操作图标按钮（复制/显示密码/删除）≥40px */
   .pwd-icon-btn {min-width: 40px;
-  height: 24px;
+  height: 36px;
   padding: 0 12px;
   opacity: 0.85;}
 
   /* 密码输入框内嵌的眼睛按钮受输入高度限制，给 32px（仍明显大于默认） */
   .pwd-eye-btn {min-width: 32px;
-  height: 24px;
+  height: 36px;
   padding: 0;}
 }
 
@@ -1162,7 +1162,7 @@ html.dark .pwd-cat-badge {
   color: var(--color-text-secondary, var(--color-text-secondary));
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
-  height: 24px;}
+  height: 36px;}
 
 .pwd-btn-cancel:hover {
   background: var(--color-bg-hover, var(--color-bg-active));

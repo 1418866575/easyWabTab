@@ -301,7 +301,7 @@ function onCardClick(): void {
 }
 
 .hb-cal-navbtn {width: 22px;
-  height: 24px;
+  height: 36px;
   border: none;
   background: transparent;
   color: var(--color-text-secondary, var(--color-text-secondary));

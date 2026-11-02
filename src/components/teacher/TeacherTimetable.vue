@@ -679,7 +679,7 @@ onBeforeUnmount(() => {
 
   /* 周次切换按钮触控目标 44px（原 28×28px） */
   .stt-week-btn {min-width: 44px;
-  height: 24px;}
+  height: 36px;}
 }
 .stt-grid {
   --stt-period-col: 74px;

@@ -82,6 +82,6 @@ watch(current, (req) => {
   /* 移动端触控目标 ≥44px（WCAG 2.2 下限），与项目移动端基线一致 */
   :deep(.bd-footer .btn-cancel),
   :deep(.bd-footer .btn-submit) {flex: 1 1 0;
-  height: 24px;}
+  height: 36px;}
 }
 </style>

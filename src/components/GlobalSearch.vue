@@ -370,7 +370,7 @@ function openSite(url: string) {
   cursor: pointer;
   transition: background-color var(--motion-duration, 220ms) var(--motion-ease, ease);
   border-radius: calc(var(--input-radius) - 2px);
-  height: 24px;}
+  height: 36px;}
 
 .search-btn:hover {
   background-color: var(--color-primary-hover);
@@ -583,6 +583,6 @@ html.dark .site-category {
   }
 
   .search-btn {padding: 0 12px;
-  height: 24px;}
+  height: 36px;}
 }
 </style>

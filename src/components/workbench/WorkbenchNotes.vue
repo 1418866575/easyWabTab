@@ -949,7 +949,7 @@ onUnmounted(() => {
 .nt-timeline-item-edit { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .nt-timeline-item-edit .btn-save {padding: 0 12px;
   font-size: 12px;
-  height: 24px;}
+  height: 36px;}
 .nt-timeline-add-row {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   margin-top: 8px; padding-top: 10px;
@@ -970,7 +970,7 @@ onUnmounted(() => {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  height: 24px;}
+  height: 36px;}
 .timeline-item { position: relative; display: flex; gap: 10px; padding: 6px 0; }
 .timeline-item::before {
   content: ''; position: absolute; left: 7px; top: 20px; bottom: -6px; width: 2px;
@@ -992,7 +992,7 @@ onUnmounted(() => {
 .timeline-item-edit { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .timeline-item-edit .btn-save {padding: 0 12px;
   font-size: 12px;
-  height: 24px;}
+  height: 36px;}
 
 /* ===== 空态：.empty-state 已收敛到全局基类（src/style.css） ===== */
 
@@ -1054,7 +1054,7 @@ onUnmounted(() => {
   background: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
-  height: 24px;}
+  height: 36px;}
 .btn-save:disabled { background: var(--color-text-muted, var(--color-text-muted)); cursor: not-allowed; }
 /* .btn-cancel/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
 

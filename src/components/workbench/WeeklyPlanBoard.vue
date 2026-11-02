@@ -208,7 +208,7 @@ function onCell(rowKey: string, day: number): void {
 }
 
 .wp-nav-btn {min-width: 26px;
-  height: 24px;
+  height: 36px;
   padding: 0 12px;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);

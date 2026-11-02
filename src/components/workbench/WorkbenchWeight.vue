@@ -670,7 +670,7 @@ onMounted(async () => {
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
-  height: 24px;}
+  height: 36px;}
 
 .btn-toggle-list:hover {
   color: var(--color-primary, var(--color-primary));
@@ -783,7 +783,7 @@ onMounted(async () => {
   border-radius: var(--radius-md, 8px);
   cursor: pointer;
   font-size: 12px;
-  height: 24px;}
+  height: 36px;}
 
 .btn-add-inline:hover {
   opacity: 0.9;
@@ -807,7 +807,7 @@ onMounted(async () => {
   cursor: pointer;
   color: var(--color-text-secondary, var(--color-text-secondary));
   transition: all var(--transition-fast, 0.15s ease);
-  height: 24px;}
+  height: 36px;}
 
 .wt-pager-btn:hover:not(:disabled) {
   background: var(--color-bg-hover, var(--color-bg-active));

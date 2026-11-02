@@ -1437,7 +1437,7 @@ const skillInstall = [
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s;
-  height: 24px;}
+  height: 36px;}
 
 .btn-copy:hover {
   border-color: var(--color-primary, #3b82f6);
@@ -1466,7 +1466,7 @@ const skillInstall = [
   white-space: nowrap;
   flex-shrink: 0;
   transition: background-color 0.2s;
-  height: 24px;}
+  height: 36px;}
 
 .btn-download:hover {
   background-color: var(--color-primary-hover, #2563eb);

@@ -83,7 +83,7 @@ const genText = computed(() => generated.value.join('\n'))
 .im-inline { margin-bottom: 0; }
 .im-narrow { width: 140px; }
 .im-num { width: 90px; }
-.im-btn {height: 24px;
+.im-btn {height: 36px;
   padding: 0 12px;
   font-size: 12px;}
 .im-nomargin { margin-bottom: 0; }

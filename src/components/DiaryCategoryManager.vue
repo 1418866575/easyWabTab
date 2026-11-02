@@ -271,7 +271,7 @@ const sortedCustomCategories = computed(() =>
   cursor: pointer;
   font-size: 12px;
   transition: all 0.2s;
-  height: 24px;}
+  height: 36px;}
 
 .dm-icon-btn:hover,
 .dm-icon-btn.active {
@@ -322,7 +322,7 @@ const sortedCustomCategories = computed(() =>
 }
 
 .dm-btn-sort {width: 20px;
-  height: 24px;
+  height: 36px;
   padding: 0;
   background: var(--color-bg-hover, #f1f5f9);
   border: 1px solid var(--color-border, #e2e8f0);
@@ -388,7 +388,7 @@ const sortedCustomCategories = computed(() =>
   transition: opacity 0.2s;
   color: var(--color-text-secondary, #64748b);
   display: inline-flex;
-  height: 24px;}
+  height: 36px;}
 
 .dm-btn-icon:hover {
   opacity: 1;
@@ -426,12 +426,12 @@ const sortedCustomCategories = computed(() =>
     gap: 6px;
   }
   .dm-btn-sort {width: 32px;
-  height: 24px;
+  height: 36px;
   font-size: 12px;}
 
   /* 编辑/删除按钮触控目标 44px（原约 22px，误删风险高） */
   .dm-btn-icon {min-width: 44px;
-  height: 24px;
+  height: 36px;
   align-items: center;
   justify-content: center;}
 }

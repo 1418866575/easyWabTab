@@ -590,7 +590,7 @@ onMounted(async () => {
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
-  height: 24px;}
+  height: 36px;}
 
 .btn-toggle-list:hover {
   color: var(--color-primary, var(--color-primary));

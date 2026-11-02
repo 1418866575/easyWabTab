@@ -1262,7 +1262,7 @@ async function regenerateSlug(): Promise<void> {
   color: var(--ds-text-2, #646a73);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
-  height: 24px;}
+  height: 36px;}
 
 .be-view-btn.active {
   background-color: var(--color-primary-soft, #eff6ff);
@@ -1390,7 +1390,7 @@ async function regenerateSlug(): Promise<void> {
   line-height: 1.2;
   white-space: nowrap;
   cursor: pointer;
-  height: 24px;}
+  height: 36px;}
 
 .be-md-btn:hover {
   background-color: var(--ds-card-2, #f7f8fa);
@@ -1982,6 +1982,6 @@ async function regenerateSlug(): Promise<void> {
   /* 工具栏快捷操作窄屏独占一行，与底部操作条同款拉伸，避免溢出/重叠 */
   .be-md-actions { width: 100%; margin-left: 0; justify-content: flex-end; }
   .be-md-actions .ui-btn {flex: 1 1 auto;
-  height: 24px;}
+  height: 36px;}
 }
 </style>

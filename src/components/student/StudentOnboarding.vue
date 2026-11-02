@@ -221,7 +221,7 @@ function stageNameOf(s: StudentStage): string {
   font-size: 12px;
   cursor: pointer;
   border: 1px solid var(--color-border, #e5e7eb);
-  height: 24px;}
+  height: 36px;}
 .ob-btn-secondary {
   background: transparent;
   color: inherit;

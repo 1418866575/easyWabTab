@@ -289,7 +289,7 @@ onMounted(async () => {
 }
 .sa-tabs :deep(.el-radio-button__inner) {font-size: 12px;
   padding: 0 12px;
-  height: 24px;}
+  height: 36px;}
 .sa-count {
   margin-left: auto;
   font-size: 12px;

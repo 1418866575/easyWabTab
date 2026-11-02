@@ -837,7 +837,7 @@ const handleSubmit = () => {
   align-items: center;
   justify-content: center;
   gap: var(--space-1, 4px);
-  height: 24px;
+  height: 36px;
   padding: 0 12px;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
@@ -865,7 +865,7 @@ const handleSubmit = () => {
 .btn-icon-clear {padding: 0 12px;
   color: var(--color-text-muted, #94a3b8);
   border-color: transparent;
-  height: 24px;}
+  height: 36px;}
 
 .btn-icon-clear:hover {
   color: var(--color-error, #ef4444);
@@ -892,7 +892,7 @@ const handleSubmit = () => {
   font-size: 12px;
   cursor: pointer;
   transition: all 0.15s;
-  height: 24px;}
+  height: 36px;}
 
 .btn-suggestion:hover {
   background: var(--color-primary, #3b82f6);

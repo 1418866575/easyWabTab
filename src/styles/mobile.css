@@ -107,7 +107,7 @@
   .el-dialog__footer .el-button {
     flex: 1 1 auto !important;
     margin: 0 !important;
-    height: 24px;
+    height: 36px;
   }
 }
 

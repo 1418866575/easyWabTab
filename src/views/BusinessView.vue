@@ -1056,7 +1056,7 @@ html.dark .bs-stall-name {
     min-width: 44px;
   }
 
-  .bs-btn {height: 24px;}
+  .bs-btn {height: 36px;}
 
   /* 窄屏间距压缩：内容区内边距收窄、首页卡片间距收紧；底部留白避让固定 Tab Bar。
      实测（iPhone13 390×664）底栏实际高 57px，原 64px 留白扣除后只剩 7px 间距，

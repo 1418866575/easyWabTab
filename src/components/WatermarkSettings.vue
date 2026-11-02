@@ -290,7 +290,7 @@ function setMode(v: WatermarkMode): void {
 .wm-seg-btn {display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 24px;
+  height: 36px;
   padding: 0 12px;
   font-size: 12px;
   color: var(--color-text-secondary);

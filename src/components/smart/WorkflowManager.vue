@@ -539,7 +539,7 @@ function excerpt(w: SmartWorkflow): string {
 .wm-selall { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--color-text-secondary, #6b7280); cursor: pointer; }
 .wm-batch-count { font-size: 13px; color: var(--color-text, #111827); font-weight: 600; }
 .wm-spacer { flex: 1 1 auto; }
-.wm-batch-btn {height: 24px;
+.wm-batch-btn {height: 36px;
   padding: 0 12px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
@@ -619,7 +619,7 @@ function excerpt(w: SmartWorkflow): string {
 
 .wm-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: auto; }
 .wm-spacer { flex: 1 1 auto; }
-.wm-btn {height: 24px;
+.wm-btn {height: 36px;
   padding: 0 12px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
@@ -648,7 +648,7 @@ function excerpt(w: SmartWorkflow): string {
   .wm-pager { justify-content: center; }
   .wm-pager :deep(.el-pagination__sizes),
   .wm-pager :deep(.el-pagination__jump) { display: none; }
-  .wm-btn {height: 24px;
+  .wm-btn {height: 36px;
   padding: 0 12px;
   font-size: 12px;}
   .wm-select { height: 44px; font-size: 16px; }

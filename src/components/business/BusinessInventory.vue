@@ -703,7 +703,7 @@ function exportInventoryExcel(): void {
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm, 4px);
   transition: all var(--transition-fast, 0.15s ease);
-  height: 24px;}
+  height: 36px;}
 
 .bizinv-trace-btn:hover {
   color: var(--color-primary, var(--color-primary));

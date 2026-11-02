@@ -841,7 +841,7 @@ const renderedPreview = computed(() =>
   color: var(--color-text-secondary, #64748b);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
-  height: 24px;}
+  height: 36px;}
 
 .dj-view-btn.active {
   background-color: var(--color-primary-soft, #eff6ff);
@@ -883,7 +883,7 @@ const renderedPreview = computed(() =>
   line-height: 1.2;
   white-space: nowrap;
   cursor: pointer;
-  height: 24px;}
+  height: 36px;}
 
 .dj-md-btn:hover {
   background-color: var(--color-bg-2, #f1f5f9);
@@ -1341,7 +1341,7 @@ const renderedPreview = computed(() =>
 }
 
 .dj-kind-toggle :deep(.el-radio-button__inner) {padding: 0 12px;
-  height: 24px;}
+  height: 36px;}
 
 /* 卡片「灵感」徽标 */
 .dj-card-idea {

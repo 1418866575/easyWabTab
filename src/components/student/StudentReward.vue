@@ -555,7 +555,7 @@ html.dark .sr-detail-value { color: #f9fafb; }
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
-  height: 24px;}
+  height: 36px;}
 .sr-redeem-btn:hover { background: var(--ds-success); }
 .sr-redeem-btn:disabled {
   opacity: 0.5;

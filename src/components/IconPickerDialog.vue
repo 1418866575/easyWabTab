@@ -346,7 +346,7 @@ onUnmounted(() => {
   line-height: 1;
   cursor: pointer;
   transition: background-color 0.15s, color 0.15s, border-color 0.15s;
-  height: 24px;}
+  height: 36px;}
 
 .ipd-action-btn:hover:not(:disabled) {
   background: var(--color-bg-hover, #f1f5f9);

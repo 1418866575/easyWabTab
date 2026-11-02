@@ -655,7 +655,7 @@ function printReport(): void {
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-full, 9999px);
   transition: all var(--transition-fast, 0.15s ease);
-  height: 24px;}
+  height: 36px;}
 
 .bizstats-btn.active {
   color: #fff;

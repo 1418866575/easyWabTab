@@ -494,7 +494,7 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
 }
 .ws-close-btn {flex-shrink: 0;
   width: 28px;
-  height: 24px;
+  height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;}

@@ -139,6 +139,6 @@ async function handleEmpty(): Promise<void> {
 @media (max-width: 768px) {
   .br-ops { width: 100%; margin-left: 0; }
   .br-ops .ui-btn {flex: 1 1 auto;
-  height: 24px;}
+  height: 36px;}
 }
 </style>

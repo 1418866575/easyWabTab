@@ -369,7 +369,7 @@ const sortedCustomCategories = computed(() =>
   align-items: center;
   justify-content: center;
   width: 36px;
-  height: 24px;
+  height: 36px;
   padding: 0;
   background-color: var(--color-bg-input, var(--color-bg-card));
   border: 1px solid var(--color-border);
@@ -509,7 +509,7 @@ const sortedCustomCategories = computed(() =>
 .btn-icon {display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 24px;
+  height: 36px;
   padding: 0 12px;
   background: none;
   border: 1px solid transparent;

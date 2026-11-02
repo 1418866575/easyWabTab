@@ -110,9 +110,9 @@
 
 ### 2.1 按钮（`.ui-btn` 体系）⭐
 
-**唯一按钮基类**：`src/style.css` 的 `.ui-btn`。基类样式（inline-flex、**height 24px、padding 0 12px、12px 字号**、1px 边框、`--radius-md` 8px、transition）**已包含全部旧 class 别名**，因此历史 class 无需改名即可统一。
+**唯一按钮基类**：`src/style.css` 的 `.ui-btn`。基类样式（inline-flex、**height 36px、padding 0 12px、12px 字号**、1px 边框、`--radius-md` 8px、transition）**已包含全部旧 class 别名**，因此历史 class 无需改名即可统一。
 
-> **2026-11 全站按钮尺寸统一（重要）**：所有按钮（含弹框底部、表格行、工具栏、EP el-button 各档）一律 **固定高度 24px / 字号 12px / 宽度由内容决定（padding 0 12px）**，蓝本＝个人工作台日记面板「保存」按钮（EP small）。此前 22~44px 的各档自定义高度与移动端 40/44px 触控放大媒体查询已全部归一；图标类按钮（排序方块、周切换箭头、关闭钮等）为 24×24 方块。语义变体的差异只体现在配色，不再体现在尺寸。
+> **2026-11 全站按钮尺寸统一（重要）**：所有按钮（含弹框底部、表格行、工具栏、EP el-button 各档含 small/large）一律 **固定高度 36px / 字号 12px / 宽度由内容决定（padding 0 12px）**。此前 22~44px 的各档自定义高度与移动端 40/44px 触控放大媒体查询已全部归一；图标类按钮（排序方块、周切换箭头、关闭钮等）为 36×36 方块。语义变体的差异只体现在配色，不再体现在尺寸。（高度口径 2026-11 当日由 24px 调整为 36px）
 
 #### 语义变体
 
@@ -123,15 +123,15 @@
 | **次要/取消/关闭/重置**         | `.ui-btn`、`.btn-cancel`、`.cancel-btn`、`.btn-edit`、`.btn-secondary`、`.btn-help`、`.bs-btn`、`.wb-btn`、`.st-btn` …                                                                              | 卡片面 + 边框 + 次文字；hover 主色描边                  |
 | **成功/上传**               | `.ui-btn--success`、`.upload-btn`、`.btn-fetch`                                                                                                                                               | 成功绿底白字                                     |
 | **文字按钮**                | `.ui-btn--text`                                                                                                                                                                             | 透明底；hover 主色软底                             |
-| **小尺寸**                 | `.ui-btn--sm`（叠加在上述任一之上）                                                                                                                                                                    | 与基类同尺寸（24px/12px），仅语义占位     |
-| **图标关闭**                | `.close-btn`                                                                                                                                                                                | 24×24 方块，1px 边框 + 8px 圆角；hover 主色          |
+| **小尺寸**                 | `.ui-btn--sm`（叠加在上述任一之上）                                                                                                                                                                    | 与基类同尺寸（36px/12px），仅语义占位     |
+| **图标关闭**                | `.close-btn`                                                                                                                                                                                | 36×36 方块，1px 边框 + 8px 圆角；hover 主色          |
 
 禁用态统一 `opacity: 0.5; cursor: not-allowed`；`:active` 统一 `--motion-press`。
 
 **面板小号按钮（2026-11 上收全局，禁止再在各面板 scoped 里重定义）**：
 `.nav-btn`（健康面板「设定目标」主色胶囊；el-button 载体走 `.el-button.nav-btn` EP 变量桥接）、
-`.btn-sort`（分类/搜索引擎排序 24×24 小方块）、
-`.stt-week-btn`（课表周切换 24×24 箭头）、
+`.btn-sort`（分类/搜索引擎排序 36×36 小方块）、
+`.stt-week-btn`（课表周切换 36×36 箭头）、
 `.btn-detail`（教师表格「详情」淡主色底按钮，token 化随 accent 变色）。
 定义统一在 `style.css`「面板小号按钮」段；各组件 scoped 只保留布局规则。
 另注意：表格行按钮上的**语义着色**（如 `.sm-advance-btn { color: var(--ds-success) }`）是对标准按钮的合法局部强调，不算双轨道，无需上收。
@@ -226,7 +226,7 @@ import { DIALOG_BTN } from '@/config/dialogText'
 
 - 组件里**不要裸写**「取消 / 新增 / 添加 / 保存」，一律引用 `DIALOG_BTN`；改配置即全站生效。
 - 已是「关闭」「保存」的不用动；危险操作按钮（删除 / 清空 / 驳回）保持各自语义。
-- **视觉与全站按钮统一（2026-11 起）**：胶囊圆角（999px）、**24px 高、12px 字 / 字重 500 / padding 0 12px**；
+- **视觉与全站按钮统一（2026-11 起）**：胶囊圆角（999px）、**36px 高、12px 字 / 字重 500 / padding 0 12px**；
   关闭 = 白底 + `--color-border` 描边 + 正文色，hover 换 `--color-bg-hover`；
   保存 = 实心 `--color-primary` + 白字，hover 用 `--color-primary-hover`，禁用 = 主色 + `opacity .5`。
   由 `src/styles/element-theme.css` 末尾的「弹框底部按钮」段统一提供，作用域为 `.bd-footer` /
@@ -333,7 +333,7 @@ import { DIALOG_BTN } from '@/config/dialogText'
 
 ### 2.5 图标 / 关闭按钮
 
-- 关闭按钮统一 `.close-btn`（24×24），**不要**自定义尺寸
+- 关闭按钮统一 `.close-btn`（36×36），**不要**自定义尺寸
 - 图标统一用 `<Icon name="..." />`，图标资源放 `public/icons/`
 
 ### 2.6 z-index 分层
@@ -459,7 +459,7 @@ const tabs = computed(() => [
 
 - **按需自动导入**（`vite.config.js` 的 `unplugin-vue-components` + `ElementPlusResolver`），**无需**逐组件 import；
   `main.ts` 只保留 `element-plus/theme-chalk/dark/css-vars.css`
-- el-button 圆角/高度已由 `styles/element-theme.css` 对齐全站按钮规范（2026-11 起统一 24px 高 / 12px 字，含 large；small 本就一致）
+- el-button 圆角/高度已由 `styles/element-theme.css` 对齐全站按钮规范（2026-11 起统一 36px 高 / 12px 字，默认/large/small 全档）
 - **输入控件**由同一文件的 `html:root { --el-component-size: 36px… }` 与 `html .el-input { --el-input-* }` 桥接：
   EP 把 `--el-input-*` 声明在 `.el-input` **元素自身**，写在 `:root` 是空操作；焦点 3px 外环用 `html` 前缀提特异性，
   **不要用 `!important`**（会压死表格单元格无框编辑、错误态、打印归一化三处合法覆盖）

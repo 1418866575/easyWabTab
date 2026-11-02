@@ -476,6 +476,6 @@ function exportCsv(): void {
     flex: 0 0 auto;
   }
 
-  .lv-ops .tw-btn {height: 24px;}
+  .lv-ops .tw-btn {height: 36px;}
 }
 </style>

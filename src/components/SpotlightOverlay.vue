@@ -332,7 +332,7 @@ watch(query, () => {
 
 .sp-close-btn {flex-shrink: 0;
   width: 28px;
-  height: 24px;
+  height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;

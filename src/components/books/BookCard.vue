@@ -434,7 +434,7 @@ const downloadTitle = computed(() =>
   .bk-recent { display: none; }
   /* 抬到 40px：.ui-btn--sm 是 30px，低于移动端 32px 的舒适触控下限 */
   .bk-actions :deep(.ui-btn),
-  .bk-admin :deep(.ui-btn) {height: 24px;
+  .bk-admin :deep(.ui-btn) {height: 36px;
   padding: 0 12px;}
 }
 </style>

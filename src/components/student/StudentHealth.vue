@@ -91,7 +91,7 @@ onMounted(async () => {
   font-size: 12px;
   box-shadow: none;
   transition: all 0.15s ease;
-  height: 24px;}
+  height: 36px;}
 
 .sth-tab-icon {
   display: inline-flex;
@@ -132,6 +132,6 @@ html.dark .sth-tabs :deep(.el-radio-button__original-radio:checked + .el-radio-b
 @media (max-width: 768px) {
   .sth-tabs :deep(.el-radio-button__inner) {padding: 0 12px;
   font-size: 12px;
-  height: 24px;}
+  height: 36px;}
 }
 </style>

@@ -231,6 +231,6 @@ async function handleExportStatic(): Promise<void> {
 
 @media (max-width: 768px) {
   .bs-grid { grid-template-columns: 1fr; }
-  .bs-foot .ui-btn {height: 24px;}
+  .bs-foot .ui-btn {height: 36px;}
 }
 </style>

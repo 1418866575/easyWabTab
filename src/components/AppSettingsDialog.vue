@@ -4498,7 +4498,7 @@ function toggleFullscreen(): void {
 .sub-tab-btn {padding: 0 12px !important;
   font-size: 12px !important;
   border-radius: calc(var(--radius-md, 8px) - 2px) !important;
-  height: 24px !important;}
+  height: 36px !important;}
 .sub-tab-btn.active {
   border-color: var(--color-primary, var(--color-primary)) !important;
   box-shadow: 0 0 0 1px var(--color-primary, var(--color-primary)) inset;
@@ -4516,7 +4516,7 @@ html.dark .sub-tab-btn.active {
   font-size: 12px;
   cursor: pointer;
   transition: all var(--transition-fast, 0.15s ease);
-  height: 24px;}
+  height: 36px;}
 
 .tab-btn:hover {
   background-color: var(--color-bg-card, var(--color-bg-hover));
@@ -4863,7 +4863,7 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
   justify-content: center;
   box-sizing: border-box;
   width: 36px;
-  height: 24px;
+  height: 36px;
   padding: 0;
   color: var(--color-text-secondary);
   background-color: var(--color-bg-input, var(--color-bg-card));
@@ -5841,7 +5841,7 @@ html.dark .status-pill { color: #4ade80; background-color: rgba(74, 222, 128, 0.
     text-align: left;
   }
   .bl-col-ops .el-button {height: auto;
-  height: 24px;
+  height: 36px;
   padding: 0 12px;
   margin: 0 6px 6px 0;}
 

@@ -757,7 +757,7 @@ onMounted(async () => {
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
-  height: 24px;}
+  height: 36px;}
 
 .month-btn:hover {
   background: var(--color-primary, var(--color-primary));
@@ -1091,7 +1091,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
-  height: 24px;}
+  height: 36px;}
 
 .btn-manage:hover {
   color: var(--color-primary, var(--color-primary));

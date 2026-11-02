@@ -479,7 +479,7 @@ onMounted(async () => {
   padding: 0 12px;
   box-shadow: none;
   transition: all 0.15s;
-  height: 24px;}
+  height: 36px;}
 
 .se-tabs :deep(.el-radio-button__inner:hover) {
   color: var(--color-primary, #10b981);
@@ -711,7 +711,7 @@ onMounted(async () => {
   top: 6px;
   right: 6px;
   width: 22px;
-  height: 24px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;

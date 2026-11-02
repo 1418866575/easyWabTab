@@ -79,7 +79,7 @@ const tabItems = computed(() => [
   background-color: #ffffff;
   color: var(--ds-text-2, var(--color-text-secondary, #475569));
   font-size: 12px;
-  height: 24px;}
+  height: 36px;}
 
 .category-tabs-wrapper :deep(.ui-tabs .el-radio-button__inner:hover) {
   border-color: var(--ds-primary, var(--color-primary, #3b82f6));

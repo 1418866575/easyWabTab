@@ -224,7 +224,7 @@ onMounted(async () => {
 .td-status { min-height: 26px; padding: 2px 10px; font-size: 12px; }
 .td-text { flex: 1; min-width: 0; font-size: 13px; color: var(--color-text); word-break: break-all; }
 .td-edit { width: auto; flex: 1; min-width: 0; }
-.td-btn {height: 24px;
+.td-btn {height: 36px;
   padding: 0 12px;
   font-size: 12px;}
 .td-cat-input { width: auto; min-width: 160px; }

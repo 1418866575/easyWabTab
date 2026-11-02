@@ -485,7 +485,7 @@ async function copySkillMd(): Promise<void> {
   align-items: center;
   justify-content: center;
   width: 34px;
-  height: 24px;
+  height: 36px;
   padding: 0;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;

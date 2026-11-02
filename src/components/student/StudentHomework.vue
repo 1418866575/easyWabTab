@@ -778,7 +778,7 @@ onMounted(async () => {
   font-size: 12px;
   margin-right: 6px;
   transition: all 0.15s;
-  height: 24px;}
+  height: 36px;}
 .shw-edit-btn:hover {
   background: var(--color-hover, #f3f4f6);
   color: var(--color-link, #3b82f6);
@@ -795,7 +795,7 @@ onMounted(async () => {
   cursor: pointer;
   font-size: 12px;
   transition: all 0.15s;
-  height: 24px;}
+  height: 36px;}
 .shw-advance-btn:hover {
   background: var(--color-hover, #f3f4f6);
 }

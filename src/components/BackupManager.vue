@@ -253,7 +253,7 @@ const toggleAutoBackup = () => {
   background: var(--color-bg-card, #ffffff);
   cursor: pointer;
   font-size: 12px;
-  height: 24px;}
+  height: 36px;}
 
 .toggle-btn.active {
   background: #dcfce7;
@@ -275,7 +275,7 @@ const toggleAutoBackup = () => {
   cursor: pointer;
   font-size: 12px;
   transition: all 0.2s;
-  height: 24px;}
+  height: 36px;}
 
 .action-btn:hover {
   background: var(--color-bg-hover, #f1f5f9);
@@ -358,7 +358,7 @@ const toggleAutoBackup = () => {
   color: white;
   font-size: 12px;
   cursor: pointer;
-  height: 24px;}
+  height: 36px;}
 
 .restore-btn:hover {
   background: var(--color-primary-hover, #2563eb);
@@ -371,7 +371,7 @@ const toggleAutoBackup = () => {
   color: var(--color-text-secondary, #64748b);
   font-size: 12px;
   cursor: pointer;
-  height: 24px;}
+  height: 36px;}
 
 .delete-btn:hover {
   background: #fef2f2;

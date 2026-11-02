@@ -373,7 +373,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: var(--space-2, 8px);
-  height: 24px;
+  height: 36px;
   padding: 0 12px;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
@@ -477,7 +477,7 @@ body {
 /* —— 面板小号按钮（2026-11 按钮收敛：原各面板 scoped 重复定义上收至此） —— */
 /* 「详情」淡主色按钮（教师作业/访谈表格；原 rgba 硬编码改 token，随 accent 变色） */
 .btn-detail {
-  height: 24px;
+  height: 36px;
   padding: 0 12px;
   font-size: 12px;
   border: 1px solid transparent;
@@ -495,10 +495,10 @@ body {
   border-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
-/* 分类/搜索引擎排序小方块（24×24，可点区域下限） */
+/* 分类/搜索引擎排序小方块（36×36，与全站按钮同高） */
 .btn-sort {
-  width: 24px;
-  height: 24px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   background: var(--color-bg-hover);
   border: 1px solid var(--color-border);
@@ -519,10 +519,10 @@ body {
   cursor: not-allowed;
 }
 
-/* 课表周切换箭头（24×24 透明底，与全站按钮同高） */
+/* 课表周切换箭头（36×36 透明底，与全站按钮同高） */
 .stt-week-btn {
-  width: 24px;
-  height: 24px;
+  width: 36px;
+  height: 36px;
   border: none;
   background: transparent;
   color: var(--color-text-secondary);
@@ -544,7 +544,7 @@ body {
 /* 健康面板「设定目标」主色胶囊（el-button 载体走 EP 变量桥接，写裸 background 会被 EP 压掉） */
 .nav-btn {
   flex-shrink: 0;
-  height: 24px;
+  height: 36px;
   padding: 0 12px;
   font-size: 12px;
   border-radius: var(--radius-full);
@@ -586,11 +586,10 @@ body {
   transform: none;
 }
 
-/* —— 小尺寸（叠加于基础/次要语义）：2026-11 起 base 已是 24px/12px，
-   小号不再单独放大缩小，规则保留占位以免模板别名悬空 —— */
+/* —— 小尺寸（叠加于基础/次要语义）：2026-11 起与 base 同为 36px/12px —— */
 .ui-btn--sm,
 .wb-menu-btn, .row-reset, .mini-btn {
-  height: 24px;
+  height: 36px;
   padding: 0 12px;
   font-size: 12px;
 }
@@ -601,8 +600,8 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);

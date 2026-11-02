@@ -707,7 +707,7 @@ function drawerMarkupRate(): number | null {
   border-radius: var(--radius-full, 9999px);
   box-shadow: none;
   transition: all var(--transition-fast, 0.15s ease);
-  height: 24px;}
+  height: 36px;}
 
 .bizprod-tabs :deep(.el-radio-button__inner:hover) {
   color: var(--color-primary, var(--color-primary));

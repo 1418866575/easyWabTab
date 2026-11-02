@@ -95,7 +95,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: 24px;
+  height: 36px;
   padding: 0 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
@@ -151,7 +151,7 @@
   color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
   font-family: var(--font-family);
-  height: 24px;
+  height: 36px;
   transition: color var(--motion-duration) var(--motion-ease),
     border-color var(--motion-duration) var(--motion-ease);
 }
@@ -260,7 +260,7 @@
   .bk-subbar .bk-chip,
   .bk-subbar .bk-mini-btn,
   .bk-subbar .bk-sort {
-    height: 24px;
+    height: 36px;
     padding: 0 12px;
   }
   .bk-reader-bar { padding: 8px 12px; gap: 8px; }
@@ -271,7 +271,7 @@
   .bk-topbar-right .ui-btn,
   .bk-topbar-right .bk-mini-btn,
   .bk-topbar-right .bk-sync-btn {
-    height: 24px;
+    height: 36px;
     padding: 0 12px;
   }
 }
@@ -281,7 +281,7 @@
    从父级样式表用后代选择器无法命中 scoped 组件内部（Vue 会加 data-v 属性）。 */
 @media (max-width: 768px) {
   .bk-item .ui-btn {
-    height: 24px;
+    height: 36px;
     padding: 0 12px;
   }
 }

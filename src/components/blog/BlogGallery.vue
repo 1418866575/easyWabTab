@@ -884,12 +884,12 @@ async function doRemove(ids: string[]): Promise<void> {
     width: 100%;
   }
   .bg-query-ops .ui-btn {flex: 1 1 auto;
-  height: 24px;}
+  height: 36px;}
   .bg-batch-ops {
     margin-left: 0;
     width: 100%;
   }
-  .bg-batch-ops .ui-btn {height: 24px;}
+  .bg-batch-ops .ui-btn {height: 36px;}
   .bg-grid {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   }

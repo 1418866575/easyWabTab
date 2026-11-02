@@ -286,7 +286,7 @@ async function handleSyncNowClick(): Promise<void> {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 24px;
+  height: 36px;
   padding: 0 12px;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 999px;
@@ -313,7 +313,7 @@ async function handleSyncNowClick(): Promise<void> {
   cursor: not-allowed;
 }
 
-.sv-btn-sm {height: 24px;
+.sv-btn-sm {height: 36px;
   padding: 0 12px;
   font-size: var(--font-size-xs, 12px);}
 
@@ -505,9 +505,9 @@ async function handleSyncNowClick(): Promise<void> {
   .sv-sync-text,
   .sv-settings-text { display: none; }
 
-  .sv-btn {height: 24px;
+  .sv-btn {height: 36px;
   padding: 0 12px;}
-  .sv-btn-sm {height: 24px;
+  .sv-btn-sm {height: 36px;
   padding: 0 12px;}
 }
 

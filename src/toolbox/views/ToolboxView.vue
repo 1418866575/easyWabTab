@@ -259,7 +259,7 @@ function resetFilters() {
 
 .tb-hits-total { font-size: 12px; color: var(--color-text-muted); }
 
-.tb-mini-btn {height: 24px;
+.tb-mini-btn {height: 36px;
   padding: 0 12px;
   font-size: 12px;
   font-family: var(--font-family);

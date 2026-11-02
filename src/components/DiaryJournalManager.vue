@@ -215,7 +215,7 @@ function setCurrent(j: WorkbenchJournal) {
   font-size: 12px;
   color: var(--color-text-secondary, #64748b);
   transition: all 0.15s ease;
-  height: 24px;}
+  height: 36px;}
 .djm-btn-icon:hover:not(:disabled) {
   background: var(--color-bg-card, #fff);
   border-color: var(--color-border, #e2e8f0);
@@ -256,9 +256,9 @@ function setCurrent(j: WorkbenchJournal) {
 
   /* 触控目标放大到 44px（原约 24px） */
   .djm-btn-icon {min-width: 44px;
-  height: 24px;
+  height: 36px;
   padding: 0 12px;}
-  .djm-btn-add {height: 24px;}
+  .djm-btn-add {height: 36px;}
 
   /* 新增行允许换行，避免输入框在 375px 被压到不可用宽度 */
   .djm-add-row {

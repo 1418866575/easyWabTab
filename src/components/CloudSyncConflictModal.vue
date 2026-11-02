@@ -272,7 +272,7 @@ const hasConflict = computed(() => conflictRows.value.length > 0)
   font-size: 12px;
   cursor: pointer;
   transition: all 0.15s ease;
-  height: 24px;}
+  height: 36px;}
 .conflict-btn:hover {
   transform: translateY(-1px);
 }

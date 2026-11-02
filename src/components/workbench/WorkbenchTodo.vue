@@ -726,7 +726,7 @@ onMounted(async () => {
   cursor: pointer;
   white-space: nowrap;
   transition: background-color var(--transition-fast, 0.15s ease);
-  height: 24px;}
+  height: 36px;}
 
 .search-btn:hover {
   background: var(--color-primary-hover, var(--color-primary-hover));
@@ -741,7 +741,7 @@ onMounted(async () => {
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
-  height: 24px;}
+  height: 36px;}
 
 .search-reset-btn:hover {
   color: var(--color-primary, var(--color-primary));
@@ -1172,7 +1172,7 @@ onMounted(async () => {
   color: #fff;
   white-space: nowrap;
   transition: background-color var(--transition-fast, 0.15s ease);
-  height: 24px;}
+  height: 36px;}
 
 .btn-save:hover:not(:disabled) {
   background: var(--color-primary-hover, var(--color-primary-hover));

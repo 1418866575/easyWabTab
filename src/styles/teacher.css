@@ -137,7 +137,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 24px;
+  height: 36px;
   padding: 0 12px;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 999px;
@@ -189,7 +189,7 @@
 }
 
 .tw-btn-sm {
-  height: 24px;
+  height: 36px;
   padding: 0 12px;
   font-size: 12px;
 }
@@ -417,7 +417,7 @@
   }
 
   .tw-btn {
-    height: 24px;
+    height: 36px;
     padding: 0 12px;
   }
 

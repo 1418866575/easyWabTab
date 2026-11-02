@@ -461,7 +461,7 @@ function exportExpenseExcel(): void {
   border: none;
   border-radius: 7px;
   cursor: pointer;
-  height: 24px;}
+  height: 36px;}
 .bizrec-fix-btn:hover {
   background: #b45309;
 }

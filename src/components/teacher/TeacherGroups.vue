@@ -901,7 +901,7 @@ watch(showForm, (v) => {
   font-weight: 500;
   line-height: 1.5;
   white-space: nowrap;
-  height: 24px;}
+  height: 36px;}
 /* .btn-edit 视觉已统一到全局 .ui-btn（style.css） */
 .btn-copy {
   background: rgba(139, 92, 246, 0.1);

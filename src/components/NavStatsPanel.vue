@@ -655,7 +655,7 @@ onMounted(() => {
 .ns-mini-btn {display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 24px;
+  height: 36px;
   padding: 0 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
@@ -690,7 +690,7 @@ onMounted(() => {
 }
 .ns-range-btn {display: inline-flex;
   align-items: center;
-  height: 24px;
+  height: 36px;
   padding: 0 12px;
   border: none;
   border-radius: var(--radius-full, 9999px);
@@ -943,7 +943,7 @@ onMounted(() => {
 .ns-danger-btn {display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 24px;
+  height: 36px;
   padding: 0 12px;
   border: 1px solid var(--color-error, #ef4444);
   border-radius: var(--radius-md, 8px);

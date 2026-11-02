@@ -576,8 +576,8 @@ function relTime(ts: number): string {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   border: 1px solid transparent;
   border-radius: var(--radius-sm, 8px);
@@ -665,7 +665,7 @@ function relTime(ts: number): string {
 
 .sm-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: auto; }
 .sm-spacer { flex: 1 1 auto; }
-.sm-btn {height: 24px;
+.sm-btn {height: 36px;
   padding: 0 12px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
@@ -736,13 +736,13 @@ function relTime(ts: number): string {
   .sm-list { grid-template-columns: 1fr; }
   .sm-cat-pill { min-height: 40px; }
   .sm-toolbar-left, .sm-toolbar-right { width: 100%; }
-  .sm-btn {height: 24px;
+  .sm-btn {height: 36px;
   padding: 0 12px;
   font-size: 12px;}
   .sm-select { height: 44px; font-size: 16px; }
   /* 触屏没有 hover，小铅笔常驻提示可点；放大到 34px 便于点按 */
   .sm-icon-btn {width: 34px;
-  height: 24px;}
+  height: 36px;}
   .sm-icon-text { font-size: 20px; }
   .sm-icon-edit { opacity: 1; }
   /* 窄屏隐藏「每页条数」与「跳转」，只留 总数 + 上一页/下一页（pager.css 已处理居中与触控尺寸） */

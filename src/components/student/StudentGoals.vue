@@ -545,7 +545,7 @@ onMounted(() => {
   line-height: 1.5;
   white-space: nowrap;
   margin: 0 2px;
-  height: 24px;}
+  height: 36px;}
 /* .btn-edit 视觉已统一到全局 .ui-btn（style.css） */
 .btn-done { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.3); color: var(--ds-success); }
 .btn-warn { background: rgba(224,168,0,0.12); border-color: rgba(224,168,0,0.3); color: var(--ds-warning); }

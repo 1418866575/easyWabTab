@@ -713,8 +713,8 @@ html.dark .ba-query {
 
 .ba-pin-btn {
   flex: 0 0 auto;
-  width: 24px;
-  height: 24px;
+  width: 36px;
+  height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;

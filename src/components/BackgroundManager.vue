@@ -558,7 +558,7 @@ function clearBackground() {
     background-color var(--motion-duration, 220ms) var(--motion-ease, ease),
     color var(--motion-duration, 220ms) var(--motion-ease, ease);
   color: var(--color-text-secondary, #64748b);
-  height: 24px;}
+  height: 36px;}
 
 .type-btn:hover {
   border-color: var(--color-primary, #3b82f6);
@@ -635,7 +635,7 @@ function clearBackground() {
   top: -6px;
   right: -6px;
   width: 22px;
-  height: 24px;
+  height: 36px;
   border-radius: 50%;
   background: var(--color-error, #ef4444);
   color: white;
@@ -825,6 +825,6 @@ function clearBackground() {
   .type-btn {min-width: 70px;
   padding: 0 12px;
   font-size: 12px;
-  height: 24px;}
+  height: 36px;}
 }
 </style>
