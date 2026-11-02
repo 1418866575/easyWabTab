@@ -820,15 +820,15 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
   max-width: 100%;
 }
-/* 课程表中与「当前班级任教科目」相同的格子：沿用学科自身色系（略深软底 + 同色细描边），
-   替代原橙色重高亮——与格子左侧色条、文字同色系，整体更协调、不抢眼 */
+/* 课程表中与「当前班级任教科目」相同的格子：沿用学科自身色系做极轻量标识
+   （淡软底 + 半透明细描边），与整体风格协调、不抢眼 */
 .stt-body-cell.is-teaching {
-  background: color-mix(in srgb, var(--c, #3b82f6) 18%, transparent);
-  box-shadow: inset 0 0 0 1.5px var(--c, var(--color-primary, #3b82f6));
+  background: color-mix(in srgb, var(--c, #3b82f6) 10%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c, #3b82f6) 45%, transparent);
 }
 .stt-chip.is-teaching {
-  background: color-mix(in srgb, var(--c, #64748b) 18%, transparent);
-  box-shadow: inset 0 0 0 1.5px var(--c, #64748b);
+  background: color-mix(in srgb, var(--c, #64748b) 10%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c, #64748b) 45%, transparent);
 }
 .stt-teacher {
   font-weight: 500;
