@@ -315,7 +315,12 @@ function displayTime(row: BlogArticle): string {
         </label>
       </div>
       <div class="ba-query-actions">
+        <el-button type="primary" size="small" data-testid="blog-posts-search" @click="applyFilter">查询</el-button>
+        <el-button size="small" data-testid="blog-posts-reset" @click="resetFilter">重置</el-button>
         <ViewModeToggle v-if="total > 0" :mode="vm.mode" @toggle="vm.toggle" />
+      </div>
+      <!-- 导入：独占一行、靠左 -->
+      <div class="ba-query-imports">
         <el-button size="small" data-testid="blog-posts-import" @click="triggerImportFiles">
           <Icon name="plus" :size="14" />
           <span>导入文件</span>
@@ -326,8 +331,6 @@ function displayTime(row: BlogArticle): string {
         </el-button>
         <input ref="importInputEl" class="ba-import-input" type="file" multiple @change="onImportChange" />
         <input ref="fileInputEl" class="ba-import-input" type="file" multiple accept=".md,image/*" @change="onImportChange" />
-        <el-button type="primary" size="small" data-testid="blog-posts-search" @click="applyFilter">查询</el-button>
-        <el-button size="small" data-testid="blog-posts-reset" @click="resetFilter">重置</el-button>
       </div>
     </div>
 
@@ -576,8 +579,16 @@ function displayTime(row: BlogArticle): string {
 .ba-query-actions {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: flex-end;
   gap: 8px;
+  margin-left: auto;
+}
+/* 导入按钮组独占一行、靠左 */
+.ba-query-imports {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 100%;
 }
 /* 按钮内「图标 + 文字」留 4px 间距，避免贴在一起 */
 .ba-query-actions :deep(.el-button > span) {

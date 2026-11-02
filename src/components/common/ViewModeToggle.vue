@@ -21,7 +21,8 @@ defineEmits<{ toggle: [] }>()
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 5px 10px;
+  height: 36px;
+  padding: 0 10px;
   font-size: 13px;
   line-height: 1;
   color: var(--color-text, #374151);
