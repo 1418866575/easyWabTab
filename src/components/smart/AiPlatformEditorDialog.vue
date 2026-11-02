@@ -123,7 +123,7 @@ function onIconSelected(src: string): void {
 
 const iconPreview = computed(() => {
   const icon = draft.value.icon
-  if (!icon) return { kind: 'letter' as const, value: '' }
+  if (!icon) return { kind: 'builtin' as const, value: 'link' }
   if (icon.startsWith('builtin:')) return { kind: 'builtin' as const, value: icon.replace(/^builtin:/, '') }
   return { kind: 'image' as const, value: icon }
 })
@@ -217,18 +217,24 @@ const iconPreview = computed(() => {
       </section>
 
       <section class="apf-sec">
-        <h4 class="apf-sec-title">图标与标记</h4>
+        <h4 class="apf-sec-title">
+          图标
+          <span class="apf-sec-hint">（显示在卡片上方，可选内置图标或上传图片）</span>
+        </h4>
 
         <!-- 图标与两个开关并成一行，减少弹框高度（否则 80vh 下要滚动才能看到开关） -->
         <div class="apf-icon-row">
-          <span class="apf-icon-preview" aria-hidden="true">
-            <Icon v-if="iconPreview.kind === 'builtin'" :name="iconPreview.value" :size="18" />
-            <img v-else-if="iconPreview.kind === 'image'" :src="iconPreview.value" alt="" referrerpolicy="no-referrer" />
-            <template v-else>{{ (draft.name || '?').trim().slice(0, 1).toUpperCase() }}</template>
-          </span>
-          <button type="button" class="ui-btn ui-btn--sm" data-testid="ai-platform-editor-icon" @click="showIconPicker = true">
-            选择图标
+          <button
+            type="button"
+            class="apf-icon-preview"
+            title="点击选择图标"
+            data-testid="ai-platform-editor-icon"
+            @click="showIconPicker = true"
+          >
+            <Icon v-if="iconPreview.kind === 'builtin'" :name="iconPreview.value" :size="20" />
+            <img v-else :src="iconPreview.value" alt="" referrerpolicy="no-referrer" />
           </button>
+          <button type="button" class="ui-btn ui-btn--sm" @click="showIconPicker = true">选择图标</button>
           <button v-if="draft.icon" type="button" class="ui-btn ui-btn--sm" @click="draft.icon = ''">恢复默认</button>
 
           <span class="apf-divider" aria-hidden="true"></span>
@@ -336,15 +342,25 @@ const iconPreview = computed(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   background: var(--color-bg-hover);
   color: var(--color-text-secondary);
-  font-weight: 600;
   overflow: hidden;
   flex: none;
+  cursor: pointer;
+  transition: border-color var(--motion-duration, 220ms) var(--motion-ease, ease);
+}
+.apf-icon-preview:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+.apf-icon-preview:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
 }
 .apf-icon-preview img {
   width: 100%;

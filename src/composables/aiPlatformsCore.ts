@@ -159,6 +159,31 @@ export function builtinPlatformId(builtinKey: string): string {
   return `ai_builtin_${builtinKey}`
 }
 
+/**
+ * 预置网页的语义化默认图标（仅渲染兜底，不写入用户数据）。
+ * 用户自定义 icon 永远优先；清空自定义图标后回到这里的语义图标，而不是空白。
+ */
+const BUILTIN_ICONS: Record<string, string> = {
+  qianwen: 'lightbulb',
+  deepseek: 'database',
+  kimi: 'document',
+  doubao: 'heart',
+  yuanbao: 'cloud',
+  ernie: 'pencil',
+  chatglm: 'grid',
+  spark: 'trending-up',
+  metaso: 'search',
+  minimax: 'palette'
+}
+
+/** 卡片展示用图标：自定义 → 预置语义图标 → 通用链接图标 */
+export function platformDisplayIcon(platform: { id: string; icon: string }): string {
+  if (platform.icon) return platform.icon
+  const key = platform.id.startsWith('ai_builtin_') ? platform.id.slice('ai_builtin_'.length) : ''
+  const icon = key ? BUILTIN_ICONS[key] : ''
+  return `builtin:${icon || 'link'}`
+}
+
 export function defaultAiPlatforms(): AiPlatform[] {
   return BUILTIN_SEEDS.map((seed, i) => ({
     id: builtinPlatformId(seed.builtinKey),

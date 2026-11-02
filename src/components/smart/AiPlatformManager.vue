@@ -20,7 +20,6 @@ import {
 import { openAiPlatform, openAiPlatformInTab } from '@/composables/useAiPlatformWindow'
 import { useSmartStore } from '@/stores/smart'
 import { useToast } from '@/composables/useToast'
-import { copyText } from '@/utils/download'
 import { showConfirm } from '@/utils/dialog'
 import type { AiPlatform } from '@/types'
 
@@ -110,14 +109,6 @@ function onOpen(p: AiPlatform, e?: MouseEvent): void {
   store.reportPlatformOpened(p.id)
 }
 
-async function onCopy(p: AiPlatform): Promise<void> {
-  if (!p.url) {
-    toast.warning('该网页还没有有效链接')
-    return
-  }
-  await copyText(p.url, `已复制「${p.name}」的链接`)
-}
-
 // ---------- 增删改 ----------
 
 function openCreate(): void {
@@ -156,10 +147,6 @@ async function onRemove(p: AiPlatform): Promise<void> {
 
 function onTogglePin(p: AiPlatform): void {
   store.togglePlatformPinned(p.id)
-}
-
-function onToggleFavorite(p: AiPlatform): void {
-  store.togglePlatformFavorite(p.id)
 }
 
 function restoreDefaults(): void {
@@ -254,8 +241,6 @@ onDeactivated(() => {
             @edit="openEdit(p)"
             @remove="onRemove(p)"
             @toggle-pin="onTogglePin(p)"
-            @toggle-favorite="onToggleFavorite(p)"
-            @copy-link="onCopy(p)"
           />
         </div>
       </section>
@@ -421,7 +406,7 @@ onDeactivated(() => {
 }
 .ap-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 12px;
 }
 
