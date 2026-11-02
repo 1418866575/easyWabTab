@@ -24,7 +24,6 @@ import {
   classifySkillIcon,
   normalizeSkill,
   SMART_CONTENT_MAX,
-  UNCATEGORIZED,
   validateSkill,
   type SkillIconInfo
 } from '@/composables/smartCore'
@@ -68,25 +67,6 @@ const {
 const editorOpen = ref(false)
 const editingId = ref<string | null>(null)
 const form = ref<Partial<SmartSkill>>({})
-
-function openAdd(): void {
-  editingId.value = null
-  form.value = {
-    name: '',
-    description: '',
-    category: UNCATEGORIZED,
-    tags: [],
-    version: '1.0.0',
-    author: '',
-    whenToUse: '',
-    tools: [],
-    license: '',
-    extra: {},
-    body: '',
-    resources: []
-  }
-  editorOpen.value = true
-}
 
 function openEdit(s: SmartSkill): void {
   editingId.value = s.id
@@ -318,7 +298,6 @@ function relTime(ts: number): string {
         <span v-if="hasFilter" class="sm-result">筛选出 {{ filtered.length }} 个</span>
       </div>
       <div class="sm-toolbar-right">
-        <el-button size="small" data-testid="smart-skill-add" @click="openAdd">＋ 新增技能</el-button>
         <el-button size="small" data-testid="smart-skill-import-folder" @click="importFromFolder">导入技能（目录）</el-button>
         <el-button size="small" data-testid="smart-skill-import-zip" @click="importFromZip">导入技能（zip）</el-button>
         <el-button size="small" data-testid="smart-skill-export-all" @click="exportAllZip">导出技能</el-button>
@@ -407,7 +386,6 @@ function relTime(ts: number): string {
       </p>
       <div class="sm-empty-actions">
         <el-button v-if="hasFilter" size="small" @click="resetFilter">清空筛选</el-button>
-        <el-button v-else size="small" type="primary" @click="openAdd">＋ 新增技能</el-button>
         <el-button size="small" @click="importFromFolder">导入技能（目录）</el-button>
         <el-button size="small" @click="importFromZip">导入技能（zip）</el-button>
       </div>
