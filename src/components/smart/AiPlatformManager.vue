@@ -404,9 +404,10 @@ onDeactivated(() => {
   font-weight: 400;
   color: var(--color-text-muted);
 }
+/* 与导航站 .sites-grid 一致：160px 最小列宽 + 12px 间距 */
 .ap-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 12px;
 }
 
