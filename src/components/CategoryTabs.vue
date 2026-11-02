@@ -78,7 +78,8 @@ const tabItems = computed(() => [
   border-radius: var(--radius-full, 9999px);
   background-color: #ffffff;
   color: var(--ds-text-2, var(--color-text-secondary, #475569));
-  font-size: 12px;
+  /* 2026-11 导航站优化：分类名增大一号（12→13px） */
+  font-size: 13px;
   height: 36px;}
 
 .category-tabs-wrapper :deep(.ui-tabs .el-radio-button__inner:hover) {

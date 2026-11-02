@@ -761,7 +761,8 @@ onUnmounted(() => {
   cursor: pointer;
   text-align: left;
   color: var(--color-text-secondary, #64748b);
-  font-size: 14px;
+  /* 2026-11 导航站优化：侧边栏分类名增大一号（14→15px） */
+  font-size: 15px;
   transition: background-color 0.15s, color 0.15s;
 }
 .nav-menu-item:hover {

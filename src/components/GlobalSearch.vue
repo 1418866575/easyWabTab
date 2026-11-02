@@ -413,9 +413,9 @@ function openSite(url: string) {
 }
 
 .history-title {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ds-text-3);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .clear-history {
@@ -449,7 +449,8 @@ function openSite(url: string) {
 }
 
 .history-text {
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 600;
   color: var(--ds-text);
   flex: 1;
   overflow: hidden;
