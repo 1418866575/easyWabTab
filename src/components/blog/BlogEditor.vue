@@ -974,13 +974,16 @@ async function regenerateSlug(): Promise<void> {
           </div>
         </div>
         </div>
-        <input
-          v-model="form.title"
-          class="be-title-input"
-          placeholder="标题"
-          aria-label="标题"
-          data-testid="blog-editor-title"
-        />
+        <label class="be-title-field">
+          <span class="be-title-label">标题</span>
+          <input
+            v-model="form.title"
+            class="be-title-input"
+            placeholder="请输入文章标题"
+            aria-label="标题"
+            data-testid="blog-editor-title"
+          />
+        </label>
       </div>
 
       <!-- 发布校验错误 / 公众号发布进度：固定区下方，发布后不用滚到底部也能看到 -->
@@ -1354,7 +1357,26 @@ async function regenerateSlug(): Promise<void> {
   gap: 8px;
 }
 
+/* 标题行：固定文案「标题」+ 输入框（标签常显，不依赖 placeholder） */
+.be-title-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.be-title-label {
+  flex: none;
+  color: var(--ds-text-2, #646a73);
+  font-size: var(--font-size-xs, 12px);
+  font-weight: var(--font-weight-medium, 500);
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .be-title-input {
+  flex: 1 1 auto;
+  min-width: 0;
   width: 100%;
   height: 40px;
   padding: 0 12px;
