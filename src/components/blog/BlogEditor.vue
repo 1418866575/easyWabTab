@@ -860,12 +860,13 @@ async function regenerateSlug(): Promise<void> {
               <button
                 type="button"
                 class="ui-btn ui-btn--sm be-typo-btn"
-                title="排版主题"
+                :title="`排版主题：${typoTheme.name}（点击更换）`"
                 data-testid="blog-editor-typo-top"
                 @click="typoOpen = true"
               >
+                <!-- 色点只提示当前主题配色，文案固定为「主题」，不随主题名长短变化 -->
                 <span class="be-typo-dot" :style="{ background: typoTheme.swatch }" aria-hidden="true"></span>
-                {{ typoTheme.name }}
+                主题
               </button>
               <button
                 type="button"
@@ -1618,7 +1619,8 @@ async function regenerateSlug(): Promise<void> {
 }
 
 /* 顶栏 / 底部操作条的「主题」按钮：主题色点 + 名称 */
-.be-typo-btn { gap: 6px; }
+/* 「主题」按钮：文案固定两个字，色点仅提示当前配色；不换行、不随主题名长短变宽 */
+.be-typo-btn { gap: 6px; white-space: nowrap; flex: none; }
 .be-typo-dot {
   width: 9px;
   height: 9px;
