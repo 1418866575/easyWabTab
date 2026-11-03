@@ -864,9 +864,10 @@ async function regenerateSlug(): Promise<void> {
                 data-testid="blog-editor-typo-top"
                 @click="typoOpen = true"
               >
-                <!-- 色点只提示当前主题配色，文案固定为「主题」，不随主题名长短变化 -->
+                <!-- 「主题」二字固定不变，其后用当前主题色点分隔、再接当前主题名 -->
+                <span class="be-typo-label">主题</span>
                 <span class="be-typo-dot" :style="{ background: typoTheme.swatch }" aria-hidden="true"></span>
-                主题
+                <span class="be-typo-name" data-testid="blog-editor-typo-name">{{ typoTheme.name }}</span>
               </button>
               <button
                 type="button"
@@ -1640,9 +1641,16 @@ async function regenerateSlug(): Promise<void> {
   resize: vertical;
 }
 
-/* 顶栏 / 底部操作条的「主题」按钮：主题色点 + 名称 */
-/* 「主题」按钮：文案固定两个字，色点仅提示当前配色；不换行、不随主题名长短变宽 */
+/* 顶栏 / 底部操作条的「主题」按钮：「主题」固定文案 + 主题色点 + 当前主题名 */
 .be-typo-btn { gap: 6px; white-space: nowrap; flex: none; }
+.be-typo-label { flex: none; }
+/* 主题名最长 5 字（经典公众号），限宽 + 省略兜底，避免任何异常名称把按钮撑爆 */
+.be-typo-name {
+  flex: none;
+  max-width: 6em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .be-typo-dot {
   width: 9px;
   height: 9px;
