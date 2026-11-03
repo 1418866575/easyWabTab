@@ -709,7 +709,7 @@ onMounted(async () => {
 .td-field { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
 .td-field-grow { flex: 0 0 auto; min-width: 0; }
 .td-field-grow :is(.td-field-desc, .td-field-title) { width: 200px; }
-.td-field-label { font-size: 13px; color: var(--color-text-secondary, var(--color-text-secondary)); }
+.td-field-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, var(--color-text-secondary)); }
 .td-search-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
 .search-select {
@@ -721,7 +721,7 @@ onMounted(async () => {
   background: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: #fff;
   cursor: pointer;
   white-space: nowrap;
@@ -736,7 +736,7 @@ onMounted(async () => {
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   cursor: pointer;
   white-space: nowrap;
@@ -759,7 +759,7 @@ onMounted(async () => {
 
 .toolbar-count {
   margin-left: auto;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -782,7 +782,7 @@ onMounted(async () => {
 
 .td-cat-tab {
   padding: 5px 14px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
@@ -815,7 +815,7 @@ onMounted(async () => {
   flex: 1 1 auto;
   min-height: 220px;
   width: 100% !important;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -861,13 +861,13 @@ onMounted(async () => {
 
 .td-col-empty {
   color: var(--color-text-muted, var(--color-text-muted));
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
 }
 
 .td-title {
   flex: 1;
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
   overflow: hidden;
@@ -883,7 +883,7 @@ onMounted(async () => {
 /* 优先级徽章 */
 .prio-badge {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   padding: 2px 10px;
   border-radius: var(--radius-full, 9999px);
@@ -911,7 +911,7 @@ onMounted(async () => {
 /* ===== 状态徽章（未完成 / 进行中 / 已完成 / 已归档）===== */
 .td-status-badge {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   padding: 2px 10px;
   border-radius: var(--radius-full, 9999px);
@@ -955,7 +955,7 @@ onMounted(async () => {
 .td-archived-badge {
   display: inline-block;
   margin-left: 6px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   padding: 1px 8px;
   border-radius: var(--radius-full, 9999px);
@@ -975,7 +975,7 @@ onMounted(async () => {
 }
 .td-status-btn { min-width: 104px; }
 .td-status-select { width: 140px; flex: none; }
-.td-status-tip { font-size: 12px; color: var(--color-text-secondary, #9ca3af); }
+.td-status-tip { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary, #9ca3af); }
 
 /* 待办描述输入框：高度 300px（el-input 的 textarea 需 :deep 穿透内部元素） */
 .td-desc-input :deep(.el-textarea__inner) {
@@ -988,7 +988,7 @@ onMounted(async () => {
 }
 
 .td-desc {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   display: -webkit-box;
   -webkit-line-clamp: 1;
@@ -1000,7 +1000,7 @@ onMounted(async () => {
 /* 分类徽标（镜像 .note-cat-badge） */
 .td-cat-badge {
   align-self: flex-start;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   padding: 2px 10px;
   border-radius: var(--radius-full, 9999px);
@@ -1011,7 +1011,7 @@ onMounted(async () => {
 
 /* 截止日期：本列只显示日期本身，逾期信息由「逾期天数」列承载 */
 .td-date {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
 }
@@ -1056,7 +1056,7 @@ onMounted(async () => {
 }
 
 .form-group > label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -1073,7 +1073,7 @@ onMounted(async () => {
 }
 
 .field-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -1136,14 +1136,14 @@ onMounted(async () => {
 }
 
 .color-custom-value {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
 }
 
 .color-reset {
   padding: 5px 10px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-full, 9999px);
@@ -1167,7 +1167,7 @@ onMounted(async () => {
   background: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
   color: #fff;
   white-space: nowrap;

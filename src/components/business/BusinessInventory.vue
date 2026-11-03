@@ -356,7 +356,7 @@ function exportInventoryExcel(): void {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text, #1e293b);
 }
@@ -375,7 +375,7 @@ function exportInventoryExcel(): void {
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   background: var(--color-bg-hover, #f9fafb);
   border-radius: var(--radius-sm, 4px);
   font-variant-numeric: tabular-nums;
@@ -409,7 +409,7 @@ function exportInventoryExcel(): void {
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   background: var(--color-bg-hover, #f9fafb);
   border-radius: var(--radius-sm, 4px);
   font-variant-numeric: tabular-nums;
@@ -443,7 +443,7 @@ function exportInventoryExcel(): void {
   flex-shrink: 0;
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
 }
 
 .bizinv-batch-status.done {
@@ -458,7 +458,7 @@ function exportInventoryExcel(): void {
 
 .bizinv-batch-summary {
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
 }
 
@@ -501,7 +501,7 @@ function exportInventoryExcel(): void {
 }
 
 .bizinv-alert-title {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
@@ -516,7 +516,7 @@ function exportInventoryExcel(): void {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -526,7 +526,7 @@ function exportInventoryExcel(): void {
 
 .bizinv-empty {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted, var(--color-text-muted));
 }
 
@@ -547,7 +547,7 @@ function exportInventoryExcel(): void {
 }
 
 .bizinv-low-name {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
   overflow: hidden;
@@ -556,7 +556,7 @@ function exportInventoryExcel(): void {
 }
 
 .bizinv-low-stock {
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   font-weight: 700;
   color: var(--color-error, var(--color-error));
   font-variant-numeric: tabular-nums;
@@ -605,7 +605,7 @@ function exportInventoryExcel(): void {
   flex-shrink: 0;
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
 }
 
@@ -624,7 +624,7 @@ function exportInventoryExcel(): void {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -649,19 +649,19 @@ function exportInventoryExcel(): void {
 }
 
 .metric-label {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .metric-value {
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--color-text, var(--color-text));
 }
 
 .bizinv-name {
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
   overflow: hidden;
@@ -670,12 +670,12 @@ function exportInventoryExcel(): void {
 }
 
 .bizinv-unit {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text, var(--color-text));
 }
 
 .bizinv-num {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
 }
@@ -696,7 +696,7 @@ function exportInventoryExcel(): void {
 /* 查看溯源按钮（卡片右上角） */
 .bizinv-trace-btn {align-self: flex-end;
   padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
   color: var(--color-primary, var(--color-primary));
   background: none;
@@ -747,14 +747,14 @@ function exportInventoryExcel(): void {
 }
 
 .bizinv-trace-title {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
 }
 
 .bizinv-trace-close {
   padding: 2px 8px;
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   line-height: 1;
   cursor: pointer;
   color: var(--color-text-muted, var(--color-text-muted));
@@ -782,7 +782,7 @@ function exportInventoryExcel(): void {
   margin: 0;
   padding: 20px 0;
   text-align: center;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted, var(--color-text-muted));
 }
 
@@ -791,7 +791,7 @@ function exportInventoryExcel(): void {
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
   border-radius: var(--radius-sm, 4px);
@@ -806,7 +806,7 @@ function exportInventoryExcel(): void {
 .bizinv-source-type {
   flex-shrink: 0;
   padding: 1px 6px;
-  font-size: 10px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   border-radius: var(--radius-full, 9999px);
 }
@@ -840,7 +840,7 @@ function exportInventoryExcel(): void {
   background-color: var(--color-bg-input, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text, var(--color-text));
 }
 

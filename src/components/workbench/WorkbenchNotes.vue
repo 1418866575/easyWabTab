@@ -845,15 +845,15 @@ onUnmounted(() => {
 .nt-field { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .nt-field-grow { flex: 0 0 auto; }
 .nt-field-grow .nt-field-keyword { width: 250px; }
-.nt-field-label { font-size: 13px; color: var(--color-text-secondary, var(--color-text-secondary)); }
+.nt-field-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, var(--color-text-secondary)); }
 .nt-search-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .nt-field-select { width: 130px; flex-shrink: 0; }
 /* .nt-btn-query / .nt-btn-reset 改用 el-button 标准形态（2026-11 按钮收敛） */
 
 /* ===== 分类筛选标签页 + 新增按钮 ===== */
 .nt-cat-tabs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.nt-toolbar-count { margin-left: auto; font-size: 14px; color: var(--color-text-secondary, var(--color-text-secondary)); }
-.nt-section-title { font-size: 13px; font-weight: 600; color: var(--color-text-secondary, var(--color-text-secondary)); margin: 2px 0 -4px; }
+.nt-toolbar-count { margin-left: auto; font-size: var(--fs-body, 14px); color: var(--color-text-secondary, var(--color-text-secondary)); }
+.nt-section-title { font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text-secondary, var(--color-text-secondary)); margin: 2px 0 -4px; }
 /* .nt-btn-add 改用全局 .btn-add（2026-11 按钮收敛） */
 
 /* ===== el-table 表格容器（参考 StudentReading）===== */
@@ -868,7 +868,7 @@ onUnmounted(() => {
   flex: 1 1 auto;
   min-height: 220px;
   width: 100% !important;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -913,10 +913,10 @@ onUnmounted(() => {
 /* ===== 表格内徽章/标签 ===== */
 .nt-content-preview {
   color: var(--color-text-secondary, #6b7280);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
 }
 .nt-cat-badge {
-  font-size: 12px; font-weight: 600; padding: 2px 10px;
+  font-size: var(--fs-caption, 12px); font-weight: 600; padding: 2px 10px;
   border-radius: var(--radius-full, 9999px);
   color: var(--color-primary, var(--color-primary));
   background: var(--color-primary-light, #eff6ff);
@@ -935,20 +935,20 @@ onUnmounted(() => {
 /* ===== 时光轴 expand 行（表格内展开）===== */
 .nt-timeline-expand { padding: 12px 24px 12px 48px; }
 .nt-timeline-expand-title {
-  font-size: 13px; font-weight: 600;
+  font-size: var(--fs-sm, 13px); font-weight: 600;
   color: var(--color-text-secondary, #6b7280);
   margin-bottom: 8px;
 }
 .nt-timeline-list { display: flex; flex-direction: column; margin: 4px 0 2px; }
 .nt-timeline-item { display: flex; gap: 10px; padding: 6px 0; }
 .nt-timeline-item-body { flex: 1; min-width: 0; }
-.nt-timeline-item-time { font-size: 12px; font-weight: 600; color: var(--color-text-secondary, #6b7280); font-variant-numeric: tabular-nums; }
-.nt-timeline-item-content { font-size: 13px; line-height: 1.5; word-break: break-word; }
+.nt-timeline-item-time { font-size: var(--fs-caption, 12px); font-weight: 600; color: var(--color-text-secondary, #6b7280); font-variant-numeric: tabular-nums; }
+.nt-timeline-item-content { font-size: var(--fs-sm, 13px); line-height: 1.5; word-break: break-word; }
 .nt-timeline-item-actions { display: flex; gap: 6px; margin-top: 4px; }
 /* .btn-edit/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
 .nt-timeline-item-edit { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .nt-timeline-item-edit .btn-save {padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   height: 36px;}
 .nt-timeline-add-row {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
@@ -960,14 +960,14 @@ onUnmounted(() => {
 /* .nt-timeline-add-row .btn-add 视觉已统一到全局 .ui-btn--primary（style.css） */
 
 /* ===== 时光轴全量条目浮层（保留原样式）===== */
-.timeline-title { font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.timeline-title { font-size: var(--fs-md, 15px); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .timeline-more-btn {margin: 2px 0 6px;
   padding: 0 12px;
   border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   background: color-mix(in srgb, var(--color-primary, #3b82f6) 8%, transparent);
   color: var(--color-primary, var(--color-primary));
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   cursor: pointer;
   height: 36px;}
@@ -984,14 +984,14 @@ onUnmounted(() => {
   z-index: 1;
 }
 .timeline-item-body { flex: 1; min-width: 0; }
-.timeline-item-time { font-size: 12px; font-weight: 600; color: var(--color-text-secondary, var(--color-text-secondary)); font-variant-numeric: tabular-nums; }
-.timeline-item-content { font-size: 14px; line-height: 1.5; word-break: break-word; }
+.timeline-item-time { font-size: var(--fs-caption, 12px); font-weight: 600; color: var(--color-text-secondary, var(--color-text-secondary)); font-variant-numeric: tabular-nums; }
+.timeline-item-content { font-size: var(--fs-body, 14px); line-height: 1.5; word-break: break-word; }
 .timeline-item-actions { display: flex; gap: 6px; margin-top: 4px; opacity: 0; transition: opacity var(--transition-fast, 0.15s ease); }
 .timeline-item:hover .timeline-item-actions { opacity: 1; }
 /* .timeline-item-actions .btn-edit/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
 .timeline-item-edit { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .timeline-item-edit .btn-save {padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   height: 36px;}
 
 /* ===== 空态：.empty-state 已收敛到全局基类（src/style.css） ===== */
@@ -1025,12 +1025,12 @@ onUnmounted(() => {
 .note-content-input { flex: 1 1 auto; }
 .note-content-input :deep(.el-textarea__inner) { resize: none; }
 .note-form-row { display: flex; align-items: center; gap: 10px; }
-.note-form-label { flex: 0 0 auto; min-width: 44px; font-size: 13px; font-weight: 600; color: var(--color-text-secondary, var(--color-text-secondary)); }
+.note-form-label { flex: 0 0 auto; min-width: 44px; font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text-secondary, var(--color-text-secondary)); }
 .note-type-radios { display: flex; gap: 8px; }
 .note-cat-select { flex: 1; min-width: 180px; }
 .note-color-picker { display: flex; gap: 10px; flex-wrap: wrap; }
 .color-option {
-  display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; font-size: 13px;
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; font-size: var(--fs-sm, 13px);
   cursor: pointer; color: var(--color-text-secondary, var(--color-text-secondary));
   border: 2px solid transparent; border-radius: var(--radius-full, 9999px);
   transition: all var(--transition-fast, 0.15s ease);
@@ -1047,7 +1047,7 @@ onUnmounted(() => {
 .color-cyan .color-swatch { background: #06b6d4; }
 .color-purple .color-swatch { background: #a855f7; }
 .btn-save {padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: #fff;
   white-space: nowrap;
   cursor: pointer;
@@ -1084,22 +1084,22 @@ html.dark .timeline-item::before { background: var(--color-border, #374151); }
 }
 
 /* ===== 合并表格：便签类型徽标 + 普通行隐藏展开箭头 ===== */
-.nt-type-badge { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: var(--radius-full, 9999px); white-space: nowrap; }
+.nt-type-badge { font-size: var(--fs-caption, 12px); font-weight: 600; padding: 2px 10px; border-radius: var(--radius-full, 9999px); white-space: nowrap; }
 .nt-type-badge.is-normal { color: var(--color-primary, #3b82f6); background: var(--color-primary-light, #eff6ff); border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent); }
 .nt-type-badge.is-timeline { color: var(--color-success, #22c55e); background: color-mix(in srgb, var(--color-success, #22c55e) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-success, #22c55e) 35%, transparent); }
 
 /* ===== 便签状态（处理中/已处理/逾期）与截止日期 ===== */
 /* 逾期为派生状态：仅「未处理 + 截止日已过」时出现，随日期自动变化 */
-.nt-status-badge { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: var(--radius-full, 9999px); white-space: nowrap; }
+.nt-status-badge { font-size: var(--fs-caption, 12px); font-weight: 600; padding: 2px 10px; border-radius: var(--radius-full, 9999px); white-space: nowrap; }
 .nt-status-badge.is-pending { color: var(--color-warning, #f59e0b); background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-warning, #f59e0b) 35%, transparent); }
 .nt-status-badge.is-done { color: var(--color-success, #22c55e); background: color-mix(in srgb, var(--color-success, #22c55e) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-success, #22c55e) 35%, transparent); }
 .nt-status-badge.is-overdue { color: var(--color-error, #ef4444); background: color-mix(in srgb, var(--color-error, #ef4444) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-error, #ef4444) 35%, transparent); }
-.nt-due-cell { font-size: 11px; color: var(--color-text-secondary, #9ca3af); margin-top: 2px; white-space: nowrap; }
+.nt-due-cell { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary, #9ca3af); margin-top: 2px; white-space: nowrap; }
 .nt-due-cell.is-overdue { color: var(--color-error, #ef4444); font-weight: 600; }
 /* 表单内「已逾期」提示（选了过去的截止日期 + 仍为处理中时） */
 .nt-overdue-hint {
   margin-left: 8px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-error, #ef4444);
   white-space: nowrap;
 }
@@ -1109,11 +1109,11 @@ html.dark .timeline-item::before { background: var(--color-border, #374151); }
 
 /* ===== 便签/时光轴内容 Markdown 排版 ===== */
 .nt-timeline-item-content :deep(h1),
-.timeline-item-content :deep(h1) { font-size: 15px; font-weight: 700; margin: 0.35em 0; }
+.timeline-item-content :deep(h1) { font-size: var(--fs-md, 15px); font-weight: 700; margin: 0.35em 0; }
 .nt-timeline-item-content :deep(h2),
-.timeline-item-content :deep(h2) { font-size: 14px; font-weight: 700; margin: 0.35em 0; }
+.timeline-item-content :deep(h2) { font-size: var(--fs-body, 14px); font-weight: 700; margin: 0.35em 0; }
 .nt-timeline-item-content :deep(h3),
-.timeline-item-content :deep(h3) { font-size: 14px; font-weight: 600; margin: 0.35em 0; }
+.timeline-item-content :deep(h3) { font-size: var(--fs-body, 14px); font-weight: 600; margin: 0.35em 0; }
 .nt-timeline-item-content :deep(p),
 .timeline-item-content :deep(p) { margin: 0.35em 0; }
 .nt-timeline-item-content :deep(ul),
@@ -1127,11 +1127,11 @@ html.dark .timeline-item::before { background: var(--color-border, #374151); }
 .nt-timeline-item-content :deep(code),
 .timeline-item-content :deep(code) { background: color-mix(in srgb, currentColor 12%, transparent); padding: 1px 4px; border-radius: var(--radius-sm, 4px); font-size: 0.9em; }
 .nt-timeline-item-content :deep(pre),
-.timeline-item-content :deep(pre) { background: color-mix(in srgb, currentColor 12%, transparent); margin: 0.4em 0; padding: 8px 10px; border-radius: 6px; overflow-x: auto; max-width: 100%; font-size: 12px; line-height: 1.4; }
+.timeline-item-content :deep(pre) { background: color-mix(in srgb, currentColor 12%, transparent); margin: 0.4em 0; padding: 8px 10px; border-radius: 6px; overflow-x: auto; max-width: 100%; font-size: var(--fs-caption, 12px); line-height: 1.4; }
 .nt-timeline-item-content :deep(blockquote),
 .timeline-item-content :deep(blockquote) { margin: 0.4em 0; padding-left: 0.6em; border-left: 3px solid color-mix(in srgb, currentColor 35%, transparent); opacity: 0.85; }
 .nt-timeline-item-content :deep(table),
-.timeline-item-content :deep(table) { border-collapse: collapse; margin: 0.4em 0; font-size: 12px; max-width: 100%; }
+.timeline-item-content :deep(table) { border-collapse: collapse; margin: 0.4em 0; font-size: var(--fs-caption, 12px); max-width: 100%; }
 .nt-timeline-item-content :deep(th),
 .timeline-item-content :deep(th),
 .nt-timeline-item-content :deep(td),

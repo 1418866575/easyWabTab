@@ -227,7 +227,7 @@ onMounted(async () => {
 }
 
 .sa-trophy {
-  font-size: 20px;
+  font-size: var(--fs-title, 18px);
 }
 
 .sa-stats-row {
@@ -245,7 +245,7 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 .sa-stat-main {
   background: linear-gradient(135deg, #f59e0b, #f97316);
@@ -253,18 +253,18 @@ onMounted(async () => {
   border-color: transparent;
 }
 .sa-stat-emoji {
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
 }
 .sa-stat-text strong {
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   font-weight: 700;
 }
 .sa-stat-label {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-soft, #6b7280);
 }
 .sa-stat-value {
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   font-weight: 600;
 }
 .sa-stat-value.locked {
@@ -287,12 +287,12 @@ onMounted(async () => {
 .sa-tabs :deep(.el-radio-group) {
   flex-wrap: wrap;
 }
-.sa-tabs :deep(.el-radio-button__inner) {font-size: 12px;
+.sa-tabs :deep(.el-radio-button__inner) {font-size: var(--fs-caption, 12px);
   padding: 0 12px;
   height: 36px;}
 .sa-count {
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-soft, #6b7280);
 }
 
@@ -307,7 +307,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   color: var(--color-text-soft, #6b7280);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   min-height: 200px;
 }
 
@@ -348,7 +348,7 @@ onMounted(async () => {
   line-height: 1;
 }
 .sa-badge-name {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   color: var(--color-text, #1f2937);
   line-height: 1.3;
@@ -362,14 +362,14 @@ onMounted(async () => {
 }
 .sa-badge-status.unlocked {
   color: var(--ds-warning);
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
 }
 .sa-badge-status.locked {
   color: var(--color-text-soft, #6b7280);
 }
 .sa-badge-progress-text {
-  font-size: 10px;
+  font-size: var(--fs-caption, 12px);
 }
 .sa-badge-progress-bar {
   width: 100%;
@@ -396,7 +396,7 @@ onMounted(async () => {
   line-height: 1;
 }
 .sa-dialog-name {
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   font-weight: 600;
   margin: 0;
   flex: 1;
@@ -421,7 +421,7 @@ onMounted(async () => {
 }
 .sa-dialog-desc {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-soft, #6b7280);
   line-height: 1.6;
 }
@@ -437,11 +437,11 @@ onMounted(async () => {
 }
 .sa-dialog-unlocked-badge {
   color: var(--ds-warning);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
 }
 .sa-dialog-unlocked-time {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-soft, #6b7280);
 }
 
@@ -458,7 +458,7 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
 }
 .sa-dialog-progress-label {
   color: var(--color-text-soft, #6b7280);
@@ -479,7 +479,7 @@ onMounted(async () => {
   transition: width 0.3s;
 }
 .sa-dialog-progress-percent {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-soft, #6b7280);
   text-align: right;
 }
@@ -487,7 +487,7 @@ onMounted(async () => {
   display: flex;
   align-items: flex-start;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-soft, #6b7280);
   line-height: 1.5;
   padding-top: 4px;
@@ -498,7 +498,7 @@ onMounted(async () => {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-soft, #6b7280);
   padding-top: 4px;
   border-top: 1px dashed var(--color-border, #e5e7eb);

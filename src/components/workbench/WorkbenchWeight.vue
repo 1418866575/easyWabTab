@@ -535,14 +535,14 @@ onMounted(async () => {
 /* .nav-btn 视觉已上收至全局 style.css（2026-11 按钮收敛），此处仅保留布局规则 */
 
 .stat-value {
-  font-size: 26px;
+  font-size: var(--fs-h2, 22px);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
 
 .stat-sub {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -555,14 +555,14 @@ onMounted(async () => {
 }
 
 .wt-bmi-value {
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   font-weight: 700;
   color: var(--color-primary, var(--color-primary));
   font-variant-numeric: tabular-nums;
 }
 
 .wt-bmi-dash {
-  font-size: 24px;
+  font-size: var(--fs-h2, 22px);
   font-weight: 700;
   color: var(--color-text-muted, var(--color-text-muted));
 }
@@ -570,7 +570,7 @@ onMounted(async () => {
 /* BMI 状态徽章（四色，参照 prio-badge 体系） */
 .wt-status-badge {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   padding: 2px 10px;
   border-radius: var(--radius-full, 9999px);
@@ -610,7 +610,7 @@ onMounted(async () => {
 }
 
 .wt-advice-item {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
@@ -646,7 +646,7 @@ onMounted(async () => {
   padding: 36px 16px;
   text-align: center;
   color: var(--color-text-muted, var(--color-text-muted));
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
 }
 
 /* ===== 操作栏（wt-headbar 已废弃：stat-panel-actions 替代） ===== */
@@ -665,7 +665,7 @@ onMounted(async () => {
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   cursor: pointer;
   white-space: nowrap;
@@ -725,7 +725,7 @@ onMounted(async () => {
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 
 .wt-record-head {
@@ -736,26 +736,26 @@ onMounted(async () => {
 }
 
 .wt-record-date {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
 }
 
 .wt-record-weight {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 700;
   color: var(--color-primary, var(--color-primary));
   font-variant-numeric: tabular-nums;
 }
 
 .wt-record-bmi {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .wt-record-note {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -782,7 +782,7 @@ onMounted(async () => {
   border: none;
   border-radius: var(--radius-md, 8px);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   height: 36px;}
 
 .btn-add-inline:hover {
@@ -803,7 +803,7 @@ onMounted(async () => {
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm, 4px);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
   color: var(--color-text-secondary, var(--color-text-secondary));
   transition: all var(--transition-fast, 0.15s ease);
@@ -819,7 +819,7 @@ onMounted(async () => {
 }
 
 .wt-pager-info {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   font-variant-numeric: tabular-nums;
 }
@@ -831,12 +831,12 @@ onMounted(async () => {
 }
 
 .form-group > label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .field-hint {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
 }
 
@@ -853,7 +853,7 @@ onMounted(async () => {
 }
 
 .field-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 

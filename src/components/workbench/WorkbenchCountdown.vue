@@ -676,7 +676,7 @@ onUnmounted(() => {
 }
 
 .search-label {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   white-space: nowrap;
   flex-shrink: 0;
@@ -698,7 +698,7 @@ onUnmounted(() => {
 }
 
 .sort-hint {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   flex-shrink: 0;
 }
@@ -769,7 +769,7 @@ onUnmounted(() => {
 }
 
 .cd-name {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
   overflow: hidden;
@@ -779,7 +779,7 @@ onUnmounted(() => {
 
 .repeat-badge {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   padding: 1px 8px;
   border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-hover));
@@ -790,7 +790,7 @@ onUnmounted(() => {
 
 .reminded-badge {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   padding: 1px 6px;
   border-radius: var(--radius-full, 9999px);
   background: rgba(34, 197, 94, 0.12);
@@ -807,7 +807,7 @@ html.dark .reminded-badge {
 /* 分类徽章：工作=蓝 / 生活=绿 / 学习=紫 */
 .cat-badge {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   padding: 1px 8px;
   border-radius: var(--radius-full, 9999px);
   opacity: 0.85;
@@ -866,13 +866,13 @@ html.dark .reminded-badge {
 }
 
 .cd-remaining-label {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 500;
   opacity: 0.65;
 }
 
 .cd-remaining-value {
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.3px;
@@ -906,7 +906,7 @@ html.dark .reminded-badge {
 }
 
 .cd-time {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   font-variant-numeric: tabular-nums;
 }
@@ -915,7 +915,7 @@ html.dark .reminded-badge {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   cursor: pointer;
   white-space: nowrap;
@@ -962,7 +962,7 @@ html.dark .reminded-badge {
 }
 
 .form-group > label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -979,7 +979,7 @@ html.dark .reminded-badge {
 }
 
 .field-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -1005,7 +1005,7 @@ html.dark .reminded-badge {
 
 .form-hint {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
 }
 
@@ -1025,7 +1025,7 @@ html.dark .reminded-badge {
 }
 
 .panel-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   white-space: nowrap;
 }
@@ -1074,7 +1074,7 @@ html.dark .reminded-badge {
 }
 
 .color-custom-value {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
 }
@@ -1091,18 +1091,18 @@ html.dark .reminded-badge {
 }
 
 .preview-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .preview-value {
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
 .preview-time {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
 }
 
@@ -1221,7 +1221,7 @@ html.dark .cat-default {
 /* 表格内徽章字号略缩，避免挤压 */
 .ewt-table .cd-t-name .repeat-badge,
 .ewt-table .cd-t-name .reminded-badge {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
 }
 
 /* 底部分页器（与 WorkbenchTodo 统一：el-pagination total/prev/next/jumper） */
@@ -1289,7 +1289,7 @@ html.dark .cat-default {
   }
 
   .cd-remaining-value {
-    font-size: 15px;
+    font-size: var(--fs-md, 15px);
   }
 
   /* 触控目标 ≥36px（与工作台移动端 P3-14 约定一致，不破坏单行按钮排布） */

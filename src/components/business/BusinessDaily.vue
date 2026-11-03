@@ -829,7 +829,7 @@ async function handleDelete(id: string | null): Promise<void> {
 .bizday-empty {
   padding: 40px 20px;
   text-align: center;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text-muted, var(--color-text-muted));
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px dashed var(--color-border, var(--color-border));
@@ -848,7 +848,7 @@ async function handleDelete(id: string | null): Promise<void> {
   flex: 1 1 auto;
   min-height: 220px;
   width: 100% !important;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -907,7 +907,7 @@ async function handleDelete(id: string | null): Promise<void> {
 }
 .bizday-note-text {
   color: var(--color-text-secondary, #6b7280);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
 }
 .bizday-actions {
   display: flex;
@@ -918,7 +918,7 @@ async function handleDelete(id: string | null): Promise<void> {
 /* ===== 展开行内商品明细 ===== */
 .bizday-expand { padding: 12px 24px 12px 48px; }
 .bizday-expand-title {
-  font-size: 13px; font-weight: 600;
+  font-size: var(--fs-sm, 13px); font-weight: 600;
   color: var(--color-text-secondary, #6b7280);
   margin-bottom: 8px;
 }
@@ -926,7 +926,7 @@ async function handleDelete(id: string | null): Promise<void> {
   display: grid;
   grid-template-columns: minmax(80px, 1.4fr) minmax(40px, 0.5fr) minmax(40px, 0.5fr) minmax(40px, 0.5fr) minmax(60px, 0.7fr) minmax(70px, 0.85fr);
   gap: 6px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   padding: 0 4px 6px;
   border-bottom: 1px solid var(--color-border, var(--color-border));
@@ -944,7 +944,7 @@ async function handleDelete(id: string | null): Promise<void> {
   grid-template-columns: minmax(80px, 1.4fr) minmax(40px, 0.5fr) minmax(40px, 0.5fr) minmax(40px, 0.5fr) minmax(60px, 0.7fr) minmax(70px, 0.85fr);
   gap: 6px;
   padding: 4px 4px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
   align-items: center;
@@ -999,13 +999,13 @@ async function handleDelete(id: string | null): Promise<void> {
   min-width: 0;
 }
 .bizday-frequent-label {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   white-space: nowrap;
 }
 .bizday-frequent-chip {
   padding: 3px 10px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-primary, #3b82f6);
   background: var(--color-primary-light, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 40%, transparent);
@@ -1034,7 +1034,7 @@ async function handleDelete(id: string | null): Promise<void> {
   width: 100%;
   min-width: 1180px;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 .bizday-table thead th {
   position: sticky;
@@ -1105,7 +1105,7 @@ async function handleDelete(id: string | null): Promise<void> {
   gap: 2px;
   margin-right: 4px;
   padding: 3px 7px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
   background: transparent;
   border: 1px solid var(--color-border, #e2e8f0);
@@ -1143,12 +1143,12 @@ async function handleDelete(id: string | null): Promise<void> {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
 }
 .bizday-more-field :deep(.el-input-number) { width: 100px; }
 .bizday-more-hint {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   font-variant-numeric: tabular-nums;
 }
@@ -1156,7 +1156,7 @@ async function handleDelete(id: string | null): Promise<void> {
 /* 行级校验错误（跨列表格行） */
 .bizday-row-issue-row .bizday-row-issue {
   padding: 6px 10px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-error, #dc2626);
   background: color-mix(in srgb, var(--color-error, #dc2626) 8%, transparent);
 }
@@ -1165,7 +1165,7 @@ async function handleDelete(id: string | null): Promise<void> {
 .bizday-row-context {
   display: flex;
   gap: 8px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   flex-wrap: wrap;
   margin-top: 4px;
@@ -1174,7 +1174,7 @@ async function handleDelete(id: string | null): Promise<void> {
   font-variant-numeric: tabular-nums;
 }
 .bizday-row-member {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   color: var(--color-warning, #f59e0b);
   font-variant-numeric: tabular-nums;
@@ -1187,7 +1187,7 @@ async function handleDelete(id: string | null): Promise<void> {
 
 /* 手填营业额偏离提示 */
 .bizday-revenue-warn {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-warning, #b45309);
   background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--color-warning, #f59e0b) 30%, transparent);
@@ -1235,7 +1235,7 @@ async function handleDelete(id: string | null): Promise<void> {
 .bizday-revenue-manual-tag {
   padding: 1px 6px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   background: var(--color-primary-soft, #eff6ff);
   color: var(--color-primary, #3b82f6);
 }
@@ -1248,7 +1248,7 @@ async function handleDelete(id: string | null): Promise<void> {
 
 .bizday-revenue-hint {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
 }
 
@@ -1263,7 +1263,7 @@ async function handleDelete(id: string | null): Promise<void> {
 .bizday-note-label {
   flex-shrink: 0;
   padding-top: 7px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, #64748b);
 }
 .bizday-note-row :deep(.el-textarea) {
@@ -1287,11 +1287,11 @@ async function handleDelete(id: string | null): Promise<void> {
   border-radius: var(--radius-md, 8px);
 }
 .bizday-summary-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, #6b7280);
 }
 .bizday-summary-value {
-  font-size: 20px;
+  font-size: var(--fs-title, 18px);
   font-weight: 600;
   color: var(--color-success, #16a34a);
   font-variant-numeric: tabular-nums;
@@ -1303,7 +1303,7 @@ async function handleDelete(id: string | null): Promise<void> {
   color: var(--color-text, #111827);
 }
 .bizday-summary-hint {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
 }
 
@@ -1315,7 +1315,7 @@ async function handleDelete(id: string | null): Promise<void> {
   background-color: var(--color-bg-input, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text, var(--color-text));
 }
 

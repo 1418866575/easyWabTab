@@ -528,14 +528,14 @@ async function handleQuickNote(): Promise<void> {
 
 .greeting-title {
   margin: 0;
-  font-size: 22px;
+  font-size: var(--fs-h2, 22px);
   font-weight: 700;
   color: var(--color-text, var(--color-text));
 }
 
 .greeting-sub {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -556,7 +556,7 @@ async function handleQuickNote(): Promise<void> {
 }
 
 .greeting-date {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -600,7 +600,7 @@ async function handleQuickNote(): Promise<void> {
 }
 
 .ov-value {
-  font-size: 26px;
+  font-size: var(--fs-h2, 22px);
   font-weight: 700;
   line-height: 1.1;
   color: var(--color-text, var(--color-text));
@@ -608,7 +608,7 @@ async function handleQuickNote(): Promise<void> {
 }
 
 .ov-label {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   white-space: nowrap;
 }
@@ -629,7 +629,7 @@ async function handleQuickNote(): Promise<void> {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
@@ -656,7 +656,7 @@ async function handleQuickNote(): Promise<void> {
 
 .stat-value {
   min-width: 0;
-  font-size: 20px;
+  font-size: var(--fs-title, 18px);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
@@ -667,7 +667,7 @@ async function handleQuickNote(): Promise<void> {
 
 .stat-sub {
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   white-space: nowrap;
   overflow: hidden;
@@ -696,7 +696,7 @@ async function handleQuickNote(): Promise<void> {
 }
 
 .todo-stat-value {
-  font-size: 18px;
+  font-size: var(--fs-title, 18px);
   font-weight: 700;
   line-height: 1.2;
   color: var(--color-text, var(--color-text));
@@ -704,7 +704,7 @@ async function handleQuickNote(): Promise<void> {
 }
 
 .todo-stat-label {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   white-space: nowrap;
 }
@@ -762,7 +762,7 @@ async function handleQuickNote(): Promise<void> {
 .habit-detail-name {
   flex: 1;
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 500;
   color: var(--color-text, var(--color-text));
   overflow: hidden;
@@ -772,7 +772,7 @@ async function handleQuickNote(): Promise<void> {
 
 .habit-detail-count {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary, var(--color-text-secondary));
   display: inline-flex;
@@ -841,7 +841,7 @@ async function handleQuickNote(): Promise<void> {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
@@ -869,7 +869,7 @@ async function handleQuickNote(): Promise<void> {
 
 .panel-header h3 {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
   overflow: hidden;
@@ -914,7 +914,7 @@ async function handleQuickNote(): Promise<void> {
 .home-list-title {
   flex: 1;
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 500;
   color: var(--color-text, var(--color-text));
   overflow: hidden;
@@ -924,7 +924,7 @@ async function handleQuickNote(): Promise<void> {
 
 .home-list-meta {
   flex-shrink: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -932,7 +932,7 @@ async function handleQuickNote(): Promise<void> {
 /* ===== 优先级徽章（同 WorkbenchTodo.vue）===== */
 .prio-badge {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   padding: 2px 10px;
   border-radius: var(--radius-full, 9999px);
@@ -984,7 +984,7 @@ async function handleQuickNote(): Promise<void> {
 .home-empty {
   text-align: center;
   color: var(--color-text-muted, var(--color-text-muted));
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   padding: 24px 12px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px dashed var(--color-border, var(--color-border));

@@ -1323,7 +1323,7 @@ onUnmounted(() => {
 .fg-search { width: 200px; }
 .fn-gender-filter, .fn-sort { width: 120px; }
 .fn-member-select { width: 100%; }
-.fn-name { font-size: 13px; font-weight: 600; color: var(--color-text, #111827); }
+.fn-name { font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text, #111827); }
 
 /* ===== 族谱排辈 字辈歌 ===== */
 .fn-paibei {
@@ -1346,7 +1346,7 @@ onUnmounted(() => {
 .fn-paibei-sep {
   letter-spacing: 0;
   color: var(--color-border, #d1d5db);
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
 }
 html.dark .fn-paibei-row { color: var(--color-text, #f9fafb); }
 html.dark .fn-paibei-sep { color: var(--color-border, #374151); }
@@ -1366,7 +1366,7 @@ html.dark .fn-paibei-sep { color: var(--color-border, #374151); }
   flex: 1 1 auto;
   min-height: 220px;
   width: 100% !important;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -1410,20 +1410,20 @@ html.dark .fn-paibei-sep { color: var(--color-border, #374151); }
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text, #111827);
 }
 .fg-root-badge {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   padding: 1px 6px;
   border-radius: 999px;
   color: #fff;
   background: var(--color-primary, #3b82f6);
 }
-.fg-rel { font-size: 12px; color: var(--color-text-secondary, #6b7280); }
-.td-col-empty { color: var(--color-text-muted, #9ca3af); font-size: 12px; }
+.fg-rel { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary, #6b7280); }
+.td-col-empty { color: var(--color-text-muted, #9ca3af); font-size: var(--fs-caption, 12px); }
 
 .td-actions {
   display: flex;
@@ -1463,20 +1463,20 @@ html.dark .fn-paibei-sep { color: var(--color-border, #374151); }
   align-items: baseline;
   gap: 4px;
   padding: 3px 10px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
   background: var(--color-bg-hover, #f1f5f9);
   border-radius: 999px;
   white-space: nowrap;
 }
-.fg-stat-chip b { font-size: 14px; color: var(--color-text, #111827); }
+.fg-stat-chip b { font-size: var(--fs-body, 14px); color: var(--color-text, #111827); }
 .fg-stat-chip b.is-male { color: var(--ds-primary); }
 .fg-stat-chip b.is-female { color: #ec4899; }
 .fg-stat-total { background: var(--color-primary-light, #eff6ff); }
 .fg-stat-unknown { opacity: 0.85; }
 /* 年龄预览（编辑弹框只读） */
 .fg-age-preview {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text-secondary, #64748b);
   padding: 6px 10px;
   border: 1px dashed var(--color-border, #e5e7eb);
@@ -1487,10 +1487,10 @@ html.dark .fg-stat-chip { background-color: var(--color-bg-hover, #374151); }
 html.dark .fg-stat-chip b { color: var(--color-text, #f9fafb); }
 html.dark .fg-age-preview { border-color: var(--color-border, #374151); }
 
-.fg-tree-info { font-size: 13px; color: var(--color-text-secondary, #64748b); }
+.fg-tree-info { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #64748b); }
 .fg-tree-muted { color: var(--color-text-muted, #9ca3af); }
 .fg-mindmap { display: flex; flex-direction: column; gap: 6px; padding: 4px 0; flex: 0 0 auto; min-height: 0;  }
-.fg-rel { font-size: 12px; color: var(--color-text-secondary, #6b7280); }
+.fg-rel { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary, #6b7280); }
 
 /* ===== 关系弹框 ===== */
 .fg-rel-body { display: flex; flex-direction: column; gap: 18px; }
@@ -1502,12 +1502,12 @@ html.dark .fg-age-preview { border-color: var(--color-border, #374151); }
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 10px;
 }
-.fg-rel-title { font-size: 13px; font-weight: 600; color: var(--color-text, #111827); }
-.fg-rel-empty { font-size: 12px; color: var(--color-text-muted, #9ca3af); }
-.fg-rel-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--color-text, #111827); }
+.fg-rel-title { font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text, #111827); }
+.fg-rel-empty { font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
+.fg-rel-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: var(--fs-sm, 13px); color: var(--color-text, #111827); }
 .fg-rel-add { display: flex; gap: 8px; }
 .fg-rel-select { flex: 1; }
-.fg-rel-hint { font-size: 12px; color: var(--color-text-muted, #9ca3af); }
+.fg-rel-hint { font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
 
 /* ===== 弹框通用 ===== */
 .dialog-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
@@ -1519,12 +1519,12 @@ html.dark .fg-age-preview { border-color: var(--color-border, #374151); }
 .form-group { display: flex; flex-direction: column; gap: 6px; }
 /* 占满整行（身份证号这类长字段用） */
 .fg-form-grid .form-group--full { grid-column: 1 / -1; }
-.fg-idcard-hint { font-size: 12px; line-height: 1.5; color: var(--color-text-secondary, #64748b); }
+.fg-idcard-hint { font-size: var(--fs-caption, 12px); line-height: 1.5; color: var(--color-text-secondary, #64748b); }
 .fg-idcard-hint.is-warn { color: var(--color-warning, #d97706); }
-.form-group > label { font-size: 13px; color: var(--color-text-secondary, #64748b); }
+.form-group > label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #64748b); }
 .form-row-fields { display: flex; gap: 10px; flex-wrap: wrap; }
 .field { display: flex; flex-direction: column; gap: 6px; }
-.field-label { font-size: 13px; color: var(--color-text-secondary, #64748b); }
+.field-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #64748b); }
 .field-gender { width: 140px; }
 .field-date { width: 170px; }
 .form-actions { display: flex; gap: 8px; justify-content: flex-end; }
@@ -1556,7 +1556,7 @@ html.dark .fg-age-preview { border-color: var(--color-border, #374151); }
   flex-shrink: 0;
 }
 .avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
-.avatar-placeholder { font-size: 12px; color: var(--color-text-muted, #9ca3af); }
+.avatar-placeholder { font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
 .avatar-actions { display: flex; align-items: center; gap: 8px; }
 .avatar-file { display: none; }
 .fg-name-avatar { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
@@ -1568,7 +1568,7 @@ html.dark .fg-age-preview { border-color: var(--color-border, #374151); }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   color: #fff;
   background: var(--color-primary, #3b82f6);

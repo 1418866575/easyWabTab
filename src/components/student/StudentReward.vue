@@ -352,20 +352,20 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 .sr-stat-main {
   background: linear-gradient(135deg, #f59e0b, #f97316);
   color: #fff;
   border-color: transparent;
 }
-.sr-stat-emoji { font-size: 16px; }
-.sr-stat-text strong { font-size: 18px; font-weight: 700; }
+.sr-stat-emoji { font-size: var(--fs-lg, 16px); }
+.sr-stat-text strong { font-size: var(--fs-title, 18px); font-weight: 700; }
 .sr-stat-label {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-soft, #6b7280);
 }
-.sr-stat-value { font-size: 16px; font-weight: 600; }
+.sr-stat-value { font-size: var(--fs-lg, 16px); font-weight: 600; }
 .sr-stat-value.earn { color: var(--ds-success); }
 .sr-stat-value.redeem { color: var(--ds-danger); }
 .sr-stat-value.muted { color: var(--ds-text-3); }
@@ -376,7 +376,7 @@ onMounted(async () => {
   padding-bottom: 2px;
 }
 .sr-tab-count {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-soft, #9ca3af);
 }
 
@@ -393,7 +393,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   color: var(--color-text-soft, #9ca3af);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
 }
 
 .sr-grid {
@@ -477,10 +477,10 @@ html.dark .sr-reward-card.has-bg::before { background: rgba(17, 24, 39, 0.55); }
   width: 100%;
   color: #fff;
 }
-.sr-detail-cost { font-size: 13px; opacity: 0.92; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
-.sr-detail-cost-num { font-size: 22px; font-weight: 700; }
+.sr-detail-cost { font-size: var(--fs-sm, 13px); opacity: 0.92; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
+.sr-detail-cost-num { font-size: var(--fs-h2, 22px); font-weight: 700; }
 .sr-detail-name {
-  font-size: 18px;
+  font-size: var(--fs-title, 18px);
   font-weight: 700;
   margin-top: 2px;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
@@ -495,7 +495,7 @@ html.dark .sr-reward-card.has-bg::before { background: rgba(17, 24, 39, 0.55); }
   border-radius: 10px;
   padding: 12px 14px;
 }
-.sr-detail-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+.sr-detail-row { display: flex; justify-content: space-between; align-items: center; font-size: var(--fs-body, 14px); }
 .sr-detail-label { color: var(--color-text-secondary, #6b7280); }
 .sr-detail-value { font-weight: 600; color: var(--color-text, #1f2937); }
 html.dark .sr-detail-meta { background: #111827; border-color: #374151; }
@@ -515,14 +515,14 @@ html.dark .sr-detail-value { color: #f9fafb; }
   flex-shrink: 0;
 }
 .sr-reward-cost-num {
-  font-size: 22px;
+  font-size: var(--fs-h2, 22px);
   font-weight: 700;
 }
 .sr-reward-cost-unit {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
 }
 .sr-reward-name {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text, #1f2937);
   word-break: break-all;
@@ -533,7 +533,7 @@ html.dark .sr-detail-value { color: #f9fafb; }
   flex-shrink: 0;
 }
 .sr-reward-stock {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-soft, #6b7280);
   flex-shrink: 0;
 }
@@ -551,7 +551,7 @@ html.dark .sr-detail-value { color: #f9fafb; }
   background: var(--ds-success);
   color: #fff;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
@@ -576,7 +576,7 @@ html.dark .sr-detail-value { color: #f9fafb; }
   flex: 1 1 auto;
   min-height: 220px;
   width: 100% !important;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -621,7 +621,7 @@ html.dark .sr-detail-value { color: #f9fafb; }
 /* 积分变动：加分绿 / 兑换红 */
 .sr-txn-points {
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-variant-numeric: tabular-nums;
 }
 .sr-txn-points.earn { color: var(--ds-success); }
@@ -630,7 +630,7 @@ html.dark .sr-detail-value { color: #f9fafb; }
 /* 类型标签：加分绿底 / 兑换红底 */
 .sr-txn-type-tag {
   display: inline-block;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   padding: 2px 10px;
   border-radius: 999px;
@@ -654,7 +654,7 @@ html.dark .sr-detail-value { color: #f9fafb; }
   overflow-y: auto;
 }
 .sr-hint {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-soft, #9ca3af);
   margin: 0;
 }
@@ -674,7 +674,7 @@ html.dark .sr-detail-value { color: #f9fafb; }
   padding: 8px 10px;
   background: var(--color-bg, #f9fafb);
   border-radius: 4px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 .sr-rules-action { color: var(--color-text, #1f2937); }
 .sr-rules-points {
@@ -689,10 +689,10 @@ html.dark .sr-detail-value { color: #f9fafb; }
   }
   .sr-stat-card {
     padding: 6px 10px;
-    font-size: 12px;
+    font-size: var(--fs-caption, 12px);
   }
   .sr-stat-text strong {
-    font-size: 16px;
+    font-size: var(--fs-lg, 16px);
   }
   .sr-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -772,11 +772,11 @@ watch(showForm, (v) => {
   width: 160px;
 }
 .grp-count {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, #64748b);
 }
 .grp-list-area :deep(.el-table) {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -796,7 +796,7 @@ watch(showForm, (v) => {
   display: inline-block;
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
 }
 .grp-type.is-fixed {
@@ -831,14 +831,14 @@ watch(showForm, (v) => {
   justify-content: space-between;
 }
 .grp-card-desc {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .grp-card-meta {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #94a3b8);
 }
 .grp-card-members {
@@ -863,7 +863,7 @@ watch(showForm, (v) => {
   gap: 2px;
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
   color: var(--color-primary, #3b82f6);
   max-width: 100%;
@@ -883,18 +883,18 @@ watch(showForm, (v) => {
 }
 .tw-chip-role {
   font-style: normal;
-  font-size: 10px;
+  font-size: var(--fs-caption, 12px);
   opacity: 0.75;
   margin-left: 2px;
 }
 .grp-more {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #94a3b8);
 }
 
 /* 列表内操作按钮 */
 .btn-copy {padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   border: 1px solid transparent;
   border-radius: 6px;
   cursor: pointer;
@@ -939,7 +939,7 @@ watch(showForm, (v) => {
   justify-content: center;
   min-height: 160px;
   color: var(--color-text-soft, #6b7280);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
 }
 
 /* 弹框 */
@@ -964,7 +964,7 @@ watch(showForm, (v) => {
   flex: 1;
 }
 .grp-form-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
 }
 .grp-required {
@@ -984,7 +984,7 @@ watch(showForm, (v) => {
 }
 .grp-role-name {
   width: 90px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1022,7 +1022,7 @@ watch(showForm, (v) => {
   gap: 4px;
 }
 .grp-rg-hint {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
   margin: 0;
 }
@@ -1041,7 +1041,7 @@ watch(showForm, (v) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
 }
 .grp-rg-con-item {
@@ -1050,7 +1050,7 @@ watch(showForm, (v) => {
   padding: 8px;
 }
 .grp-rg-preview-head {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
 }
 .grp-rg-warns {
@@ -1059,7 +1059,7 @@ watch(showForm, (v) => {
   gap: 4px;
 }
 .grp-warn-chip {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--ds-warning);
 }
 .grp-rg-results {
@@ -1076,7 +1076,7 @@ watch(showForm, (v) => {
   padding: 8px 10px;
 }
 .grp-rg-group-name {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   margin-bottom: 4px;
 }
@@ -1111,10 +1111,10 @@ watch(showForm, (v) => {
 }
 .grp-snap-name {
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
 }
 .grp-snap-meta {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
 }
 .grp-snap-actions {
