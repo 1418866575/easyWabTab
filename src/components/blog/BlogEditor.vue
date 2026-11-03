@@ -781,8 +781,13 @@ async function regenerateSlug(): Promise<void> {
 
 <template>
   <section v-if="canRead" ref="rootEl" class="be">
-    <!-- 顶部：视图切换 + 文章设置 -->
+    <!-- 顶部：关闭 + 视图切换 + 文章设置 -->
     <header class="be-head">
+      <!-- 关闭放在最左（视图切换组有 margin-left:auto，其余仍靠右） -->
+      <button type="button" class="be-side-toggle" data-testid="blog-editor-close" @click="handleClose">
+        <Icon name="close" :size="14" />
+        <span>关闭</span>
+      </button>
       <div class="be-view-switch" role="group" aria-label="编辑器视图">
         <button
           v-for="m in (['edit', 'split', 'preview'] as const)"
@@ -827,10 +832,6 @@ async function regenerateSlug(): Promise<void> {
         @click="helpOpen = true"
       >
         <Icon name="info" :size="14" />
-        <button type="button" class="be-side-toggle" data-testid="blog-editor-close" @click="handleClose">
-          <Icon name="close" :size="14" />
-          <span>关闭</span>
-        </button>
         <span>帮助</span>
       </button>
     </header>
