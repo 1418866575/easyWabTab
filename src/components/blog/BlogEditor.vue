@@ -24,7 +24,7 @@ import type { MdBlockKind, MdTransformOptions } from '@/composables/blogEditorMd
 import { imageRef, parseImageRefs, removeImageRefs, resolveImageRefs } from '@/composables/blogImages'
 import { renderMarkdown } from '@/composables/noteMarkdown'
 import { buildWechatContentHtml } from '@/composables/useWechatPublish'
-import { copyRichHtml } from '@/utils/download'
+import { copyRichHtml, copyText } from '@/utils/download'
 import { resolveTypo, typoHrStyle, typoVars } from '@/composables/blogTypoCore'
 import { decorateTypoHtml } from '@/composables/blogTypoDecor'
 import type { BlogTypo } from '@/types'
@@ -678,9 +678,17 @@ async function handlePublishWechat(): Promise<void> {
   } else if (wechat.notConfigured.value) {
     // 未配置凭证：引导去博客设置页「微信公众号」
     blogSettings.openBlogSettings('wechat')
+  } else if (wechat.egressIp.value) {
+    // 白名单类失败：完整指引（含 IP）常驻在上方提示区，这里只给一次轻提示
+    toastAlert('服务器出口 IP 未加入公众号白名单，请按上方提示操作', 'error')
   } else {
     toastAlert(wechat.error.value || '发布失败', 'error')
   }
+}
+
+/** 复制服务器出口 IP（公众号后台「IP 白名单」要填的就是它） */
+function copyEgressIp(): void {
+  void copyText(wechat.egressIp.value, '服务器出口 IP 已复制')
 }
 
 /** 复制公众号排版正文到剪贴板：与「发布到公众号」同一套转换，粘贴到公众号编辑器即保留格式 */
@@ -987,14 +995,25 @@ async function regenerateSlug(): Promise<void> {
         </label>
       </div>
 
-      <!-- 发布校验错误 / 公众号发布进度：固定区下方，发布后不用滚到底部也能看到 -->
-      <div v-if="visibleErrors.length || wechat.publishing.value" class="be-alerts">
+      <!-- 发布校验错误 / 公众号发布进度 / 公众号发布失败：固定区下方，发布后不用滚到底部也能看到 -->
+      <div v-if="visibleErrors.length || wechat.publishing.value || wechat.error.value" class="be-alerts">
         <ul v-if="visibleErrors.length" class="be-errors" data-testid="blog-editor-errors">
           <li v-for="e in visibleErrors" :key="e">{{ e }}</li>
         </ul>
         <p v-if="wechat.publishing.value" class="be-hint" data-testid="blog-editor-wechat-status">
           {{ wechat.progressMsg.value }}<span v-if="wechat.progressTotal.value">（{{ wechat.progressStep.value }}/{{ wechat.progressTotal.value }}）</span>
         </p>
+        <!-- 公众号发布失败常驻展示：toast 几秒就消失，白名单类错误需要照着 IP 去后台配置 -->
+        <div v-else-if="wechat.error.value" class="be-wx-error" data-testid="blog-editor-wechat-error">
+          <p class="be-wx-msg">{{ wechat.error.value }}</p>
+          <div v-if="wechat.egressIp.value" class="be-wx-ip" data-testid="blog-editor-egress-ip">
+            <!-- 文案里已含 IP，这里只给可复制的一颗「胶囊」，不再重复标签 -->
+            <code class="be-wx-ip-val">{{ wechat.egressIp.value }}</code>
+            <button type="button" class="ui-btn ui-btn--sm" data-testid="blog-editor-copy-egress-ip" @click="copyEgressIp">复制 IP</button>
+            <a class="be-wx-link" href="https://mp.weixin.qq.com/" target="_blank" rel="noopener noreferrer">打开公众号后台</a>
+            <span class="be-wx-alt">或改用「复制到公众号」手动粘贴</span>
+          </div>
+        </div>
       </div>
 
         <div class="be-editor-wrap" :class="`is-${viewMode}`">
@@ -1738,6 +1757,52 @@ async function regenerateSlug(): Promise<void> {
   color: var(--color-error, #ef4444);
   font-size: var(--font-size-xs, 12px);
   line-height: var(--line-height-relaxed, 1.7);
+}
+
+/* 公众号发布失败：文案 + 出口 IP（可复制）+ 后台入口；窄屏自动换行 */
+.be-wx-error {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.be-wx-msg {
+  margin: 0;
+  color: var(--color-error, #ef4444);
+  font-size: var(--font-size-xs, 12px);
+  line-height: var(--line-height-relaxed, 1.7);
+}
+
+.be-wx-ip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.be-wx-ip-val {
+  padding: 3px 8px;
+  border: 1px solid var(--ds-line, #ececf0);
+  border-radius: 6px;
+  background-color: var(--ds-card, #ffffff);
+  color: var(--ds-text, #1f2329);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+.be-wx-link {
+  color: var(--color-primary, #3b82f6);
+  font-size: var(--font-size-xs, 12px);
+  text-decoration: none;
+}
+
+.be-wx-link:hover {
+  text-decoration: underline;
+}
+
+.be-wx-alt {
+  color: var(--ds-text-3, #9aa0a6);
+  font-size: var(--font-size-xs, 12px);
 }
 
 

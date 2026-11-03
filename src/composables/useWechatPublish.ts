@@ -24,11 +24,14 @@ const API_BASE = '/api/wechat'
 export class WechatPublishError extends Error {
   code?: string
   notConfigured?: boolean
-  constructor(message: string, opts: { code?: string; notConfigured?: boolean } = {}) {
+  /** IP 白名单类错误（40164/61004）时，代理从微信 errmsg 解析出的服务器出口 IP */
+  egressIp?: string
+  constructor(message: string, opts: { code?: string; notConfigured?: boolean; egressIp?: string } = {}) {
     super(message)
     this.name = 'WechatPublishError'
     this.code = opts.code
     this.notConfigured = opts.notConfigured
+    this.egressIp = opts.egressIp
   }
 }
 
@@ -73,7 +76,7 @@ async function uploadContentImage(dataUrl: string, appId: string, appSecret: str
   })
   const data = await res.json()
   if (!data.ok || !data.url) {
-    throw new WechatPublishError(data.error || '正文图片上传失败', { code: data.code })
+    throw new WechatPublishError(data.error || '正文图片上传失败', { code: data.code, egressIp: data.egressIp })
   }
   return data.url
 }
@@ -86,7 +89,7 @@ async function uploadCoverImage(dataUrl: string, appId: string, appSecret: strin
   })
   const data = await res.json()
   if (!data.ok || !data.mediaId) {
-    throw new WechatPublishError(data.error || '封面上传失败', { code: data.code })
+    throw new WechatPublishError(data.error || '封面上传失败', { code: data.code, egressIp: data.egressIp })
   }
   return data.mediaId
 }
@@ -417,6 +420,8 @@ export function useWechatPublish() {
   const progressStep = ref(0)
   const progressTotal = ref(0)
   const error = ref('')
+  /** 白名单类失败时由代理解析出的服务器出口 IP，供界面一键复制 */
+  const egressIp = ref('')
   const result = ref<{ mediaId: string } | null>(null)
   const notConfigured = ref(false)
 
@@ -431,6 +436,7 @@ export function useWechatPublish() {
     typo?: BlogTypo
   }): Promise<boolean> {
     error.value = ''
+    egressIp.value = ''
     notConfigured.value = false
     result.value = null
     publishing.value = true
@@ -507,7 +513,7 @@ export function useWechatPublish() {
       })
       const draft = await draftRes.json()
       if (!draft.ok || !draft.mediaId) {
-        throw new WechatPublishError(draft.error || '草稿创建失败', { code: draft.code })
+        throw new WechatPublishError(draft.error || '草稿创建失败', { code: draft.code, egressIp: draft.egressIp })
       }
       result.value = { mediaId: draft.mediaId }
       progressMsg.value = '已发布到公众号草稿箱'
@@ -515,6 +521,7 @@ export function useWechatPublish() {
     } catch (e) {
       if (e instanceof WechatPublishError) {
         error.value = e.message
+        if (e.egressIp) egressIp.value = e.egressIp
       } else if (e instanceof Error) {
         error.value = '发布失败：' + e.message
       } else {
@@ -532,6 +539,7 @@ export function useWechatPublish() {
     progressStep,
     progressTotal,
     error,
+    egressIp,
     result,
     notConfigured,
     publish

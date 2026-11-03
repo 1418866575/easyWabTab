@@ -11,6 +11,7 @@
 //   3. 封面上传：material/add_material?type=image（返回 media_id 作 thumb_media_id）
 //   4. 草稿创建：draft/add
 //   5. /config 仅做格式 + liveness 校验（尝试取 token），不落盘
+//   6. /egress-ip 探测本机**出站**公网 IP + 10 分钟缓存（公众号 IP 白名单要填的就是它）
 //
 // 设计原则：
 //   - 零额外依赖（Node 标准库）：multipart 手工构造、token 缓存用 crypto 哈希做 key。
@@ -24,7 +25,8 @@
 //
 // 前置（用户侧）：
 //   - 已认证公众号，拿到 AppID / AppSecret
-//   - 公众号后台「基本配置 → IP 白名单」加入本机出口公网 IP（否则 40164/61004）
+//   - 公众号后台「基本配置 → IP 白名单」加入本机出口公网 IP（否则 40164/61004）；
+//     该 IP 可用 GET /api/wechat/egress-ip 查询，前端设置页会直接展示并支持复制
 
 const http = require('http')
 const https = require('https')
@@ -37,12 +39,52 @@ const MAX_BODY = 12 * 1024 * 1024 // 单请求上限 12MB（封面/正文图可�
 
 // ---------------------------------------------------------------------------
 // 错误类型：携带微信 errcode，便于前端给出明确反馈
+//   egressIp  : IP 白名单类错误（40164/61004）下从 errmsg 里解析出的**调用方出口 IP**
+//   wxErrmsg  : 微信原始英文 errmsg，保留给前端做细节展示/排查
 // ---------------------------------------------------------------------------
+const WHITELIST_CODES = new Set(['40164', '61004'])
+const IPV4_RE = /\b(\d{1,3}(?:\.\d{1,3}){3})\b/
+
 class WechatError extends Error {
-  constructor(code, message) {
+  constructor(code, message, extra = {}) {
     super(message)
     this.code = code
+    this.egressIp = extra.egressIp || ''
+    this.wxErrmsg = extra.wxErrmsg || ''
   }
+}
+
+/**
+ * 从微信 errmsg 里抠出调用方 IP。
+ * 微信 40164 的原文形如：
+ *   invalid ip 1.2.3.4 ipv6 ::ffff:1.2.3.4, not in whitelist rid: 65e0...
+ * 优先取 "invalid ip" 后面那一个（IPv4），退化时取首个 IPv4 段。
+ */
+function pickIpFromErrmsg(msg) {
+  const s = String(msg || '')
+  const named = /(?:invalid ip|ipv4)\s+(\d{1,3}(?:\.\d{1,3}){3})/i.exec(s)
+  const hit = named ? named[1] : (IPV4_RE.exec(s) || [])[1] || ''
+  // 0.0.0.0 / 回环不是可用的白名单目标，宁可空着交给前端展示通用文案
+  if (!hit || hit === '0.0.0.0' || hit.startsWith('127.')) return ''
+  return hit
+}
+
+/**
+ * 微信接口返回体 → 错误对象。
+ * IP 白名单类错误额外把 IP 提取出来，并给出**中文可操作**文案，
+ * 前端可直接展示 + 一键复制（常见于「别人部署的服务器 IP 我不知道」的场景）。
+ */
+function toWxError(body, fallbackMessage) {
+  const code = String((body && body.errcode) || 'WX_API_FAIL')
+  const errmsg = String((body && body.errmsg) || fallbackMessage || '微信接口调用失败')
+  if (WHITELIST_CODES.has(code)) {
+    const ip = pickIpFromErrmsg(errmsg)
+    const message = ip
+      ? `服务器出口 IP ${ip} 不在该公众号的 IP 白名单中，请到公众号后台「设置与开发 → 基本配置 → IP 白名单」添加后重试（微信 ${code}）`
+      : `调用方 IP 不在该公众号的 IP 白名单中，请到公众号后台「设置与开发 → 基本配置 → IP 白名单」添加本服务器出口 IP 后重试（微信 ${code}）`
+    return new WechatError(code, message, { egressIp: ip, wxErrmsg: errmsg })
+  }
+  return new WechatError(code, errmsg, { wxErrmsg: errmsg })
 }
 
 // ---------------------------------------------------------------------------
@@ -76,7 +118,7 @@ async function getAccessToken(appId, appSecret) {
     tokenCache.set(key, entry)
     return entry.token
   }
-  throw new WechatError(String(res.body?.errcode || 'WX_TOKEN_FAIL'), res.body?.errmsg || '获取 access_token 失败')
+  throw toWxError(res.body, '获取 access_token 失败')
 }
 
 function maskAppId(appId) {
@@ -157,7 +199,7 @@ async function uploadImage(dataUrl, appId, appSecret) {
   const res = await wxRequest('POST', `/cgi-bin/media/uploadimg?access_token=${token}`,
     { bodyBuffer: mp.body, contentType: mp.contentType })
   if (res.body && res.body.url) return res.body.url
-  throw new WechatError(String(res.body?.errcode || 'UPLOAD_IMG_FAIL'), res.body?.errmsg || '正文图片上传失败')
+  throw toWxError(res.body, '正文图片上传失败')
 }
 
 async function uploadCover(dataUrl, appId, appSecret) {
@@ -167,7 +209,7 @@ async function uploadCover(dataUrl, appId, appSecret) {
   const res = await wxRequest('POST', `/cgi-bin/material/add_material?access_token=${token}&type=image`,
     { bodyBuffer: mp.body, contentType: mp.contentType })
   if (res.body && res.body.media_id) return res.body.media_id
-  throw new WechatError(String(res.body?.errcode || 'UPLOAD_COVER_FAIL'), res.body?.errmsg || '封面上传失败')
+  throw toWxError(res.body, '封面上传失败')
 }
 
 async function createDraft(article, appId, appSecret) {
@@ -175,7 +217,7 @@ async function createDraft(article, appId, appSecret) {
   const res = await wxRequest('POST', `/cgi-bin/draft/add?access_token=${token}`,
     { json: { articles: [article] } })
   if (res.body && res.body.media_id) return res.body.media_id
-  throw new WechatError(String(res.body?.errcode || 'DRAFT_FAIL'), res.body?.errmsg || '草稿创建失败')
+  throw toWxError(res.body, '草稿创建失败')
 }
 
 // ---------------------------------------------------------------------------
@@ -186,6 +228,100 @@ function validateAppId(appId) {
 }
 function validateAppSecret(appSecret) {
   return /^[a-zA-Z0-9]{32,64}$/.test(appSecret)
+}
+
+// ---------------------------------------------------------------------------
+// 出口 IP 探测
+//
+// 公众号 IP 白名单要填的是本机**出站**公网 IP —— 只有部署者知道，
+// 站点其它使用者在自己的公众号后台配置时无从得知，于是发布就报 40164。
+// 这里由服务端代查并返回，前端设置页直接展示 + 一键复制。
+//
+// 实现要点：
+//   - 多源兜底（国内源优先），任一成功即返回；
+//   - 优先 family=4（白名单填的就是 IPv4），IPv4 全部失败时再试默认族；
+//   - 整体 9s 软截止，避免设置页被慢网络拖住；
+//   - 结果缓存 10 分钟，`?refresh=1` 强制刷新。
+// ---------------------------------------------------------------------------
+const EGRESS_TTL = 10 * 60 * 1000
+/** 强制刷新最小间隔：防止被脚本反复刷成"对外打外部回显服务"的放大器 */
+const EGRESS_MIN_REFRESH = 30 * 1000
+let egressCache = { ip: '', source: '', at: 0 }
+/** 并发去重：同一时刻只跑一次探测，其余请求复用同一个 Promise */
+let egressInflight = null
+
+const EGRESS_SOURCES = [
+  { name: 'ipip.net', url: 'https://myip.ipip.net/', parse: (t) => (IPV4_RE.exec(t) || [])[1] || '' },
+  { name: 'ip-api.com', url: 'http://ip-api.com/json/?fields=query', parse: (t) => { try { return String(JSON.parse(t).query || '') } catch { return '' } } },
+  { name: 'ipify.org', url: 'https://api.ipify.org?format=json', parse: (t) => { try { return String(JSON.parse(t).ip || '') } catch { return '' } } },
+  { name: 'ifconfig.co', url: 'https://ifconfig.co/json', parse: (t) => { try { return String(JSON.parse(t).ip || '') } catch { return '' } } }
+]
+
+/** 极简 GET 文本（零依赖，跟随一次 30x，超时/大小都设上限） */
+function httpGetText(rawUrl, { timeout = 3000, family } = {}) {
+  return new Promise((resolve, reject) => {
+    let u
+    try {
+      u = new URL(rawUrl)
+    } catch (e) {
+      reject(e)
+      return
+    }
+    const mod = u.protocol === 'http:' ? http : https
+    const req = mod.request({
+      hostname: u.hostname,
+      port: u.port || (u.protocol === 'http:' ? 80 : 443),
+      path: u.pathname + u.search,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'easy-web-tab-egress-probe',
+        Accept: 'application/json, text/plain, */*'
+      },
+      ...(family ? { family } : {})
+    }, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        res.resume()
+        let next
+        try {
+          next = new URL(res.headers.location, rawUrl).href
+        } catch (e) {
+          reject(e)
+          return
+        }
+        httpGetText(next, { timeout, family }).then(resolve, reject)
+        return
+      }
+      const chunks = []
+      let total = 0
+      res.on('data', (c) => {
+        total += c.length
+        if (total <= 65536) chunks.push(c)
+      })
+      res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
+    })
+    req.setTimeout(timeout, () => req.destroy(new Error('timeout')))
+    req.on('error', reject)
+    req.end()
+  })
+}
+
+async function probeEgressIp() {
+  const tried = []
+  const deadline = Date.now() + 9000
+  for (const family of [4, 0]) {
+    for (const src of EGRESS_SOURCES) {
+      if (Date.now() > deadline) return { ip: '', source: '', tried }
+      try {
+        const text = await httpGetText(src.url, { timeout: 3000, family: family || undefined })
+        const ip = String(src.parse(text) || '').trim()
+        if (IPV4_RE.test(ip) && ip !== '0.0.0.0') return { ip, source: src.name, tried }
+        tried.push(`${src.name}: 响应中未找到 IPv4`)
+      } catch (e) {
+        tried.push(`${src.name}: ${String((e && e.message) || e)}`)
+      }
+    }
+  }
+  return { ip: '', source: '', tried }
 }
 
 // ---------------------------------------------------------------------------
@@ -227,6 +363,43 @@ async function handle(req, res) {
   }
 
   try {
+    // /egress-ip：本服务器出口公网 IP（公众号 IP 白名单要填的就是它）
+    if (p === '/egress-ip' && req.method === 'GET') {
+      const refresh = u.searchParams.get('refresh') === '1'
+      const age = Date.now() - egressCache.at
+      const fresh = !!egressCache.ip && age < EGRESS_TTL
+      // 缓存命中，或强制刷新但距上次成功探测不足 EGRESS_MIN_REFRESH → 直接复用
+      if (fresh && (!refresh || age < EGRESS_MIN_REFRESH)) {
+        sendJson(res, 200, {
+          ok: true,
+          ip: egressCache.ip,
+          source: egressCache.source,
+          cached: true,
+          throttled: refresh && age < EGRESS_MIN_REFRESH,
+          at: egressCache.at
+        })
+        return
+      }
+      if (!egressInflight) {
+        egressInflight = probeEgressIp()
+        // 无论成功失败都要释放，否则一次异常会把探测口彻底堵死
+        egressInflight.then(() => { egressInflight = null }, () => { egressInflight = null })
+      }
+      const r = await egressInflight
+      if (r.ip) {
+        egressCache = { ip: r.ip, source: r.source, at: Date.now() }
+        sendJson(res, 200, { ok: true, ip: r.ip, source: r.source, cached: false, at: egressCache.at })
+      } else {
+        // 探测失败不算接口错误：前端按 ok:false 展示软提示，不影响凭证保存
+        sendJson(res, 200, {
+          ok: false,
+          error: '未能探测到服务器出口 IP（外网回显服务均不可达），请让使用者在部署机上执行 curl ifconfig.me 获取',
+          tried: r.tried.slice(0, 6)
+        })
+      }
+      return
+    }
+
     // /config：客户端自管理凭证，本服务只做校验，不落盘
     if (p === '/config') {
       if (req.method === 'GET') {
@@ -250,11 +423,15 @@ async function handle(req, res) {
         // liveness 校验：尝试用该凭证取 token（不发往微信的字段不做持久化）
         let tokenOk = false
         let wxError = null
+        let egressIp = ''
+        let whitelistHit = false
         try {
           await getAccessToken(String(appId), String(appSecret))
           tokenOk = true
         } catch (e) {
-          wxError = { code: e.code, message: e.message }
+          egressIp = e.egressIp || ''
+          whitelistHit = WHITELIST_CODES.has(String(e.code || ''))
+          wxError = { code: String(e.code || ''), message: e.message, errmsg: e.wxErrmsg || e.message }
         }
 
         sendJson(res, 200, {
@@ -265,7 +442,14 @@ async function handle(req, res) {
           appSecretConfigured: true,
           ...(tokenOk
             ? { message: '凭证有效（已通过微信校验）' }
-            : { error: '凭证格式正确，但微信校验未通过（请检查 AppSecret 与 IP 白名单）', wx: wxError })
+            : {
+                // 白名单类错误直接用（已含 IP 的中文）文案；其余错误给通用提示 + 原始 errmsg
+                error: whitelistHit || egressIp
+                  ? wxError.message
+                  : '凭证格式正确，但微信校验未通过（请检查 AppSecret 是否正确，或该服务器出口 IP 是否已加入公众号 IP 白名单）',
+                ...(egressIp ? { egressIp } : {}),
+                wx: wxError
+              })
         })
         return
       }
@@ -322,8 +506,13 @@ async function handle(req, res) {
   } catch (e) {
     const code = e.code || 'INTERNAL'
     const status = code === 'BODY_TOO_LARGE' ? 413 : 500
-    // 微信常见 errcode 直接透传给前端
-    sendJson(res, status, { ok: false, code, error: e.message })
+    // 微信常见 errcode 直接透传给前端；白名单类错误附带已解析出的出口 IP
+    sendJson(res, status, {
+      ok: false,
+      code,
+      error: e.message,
+      ...(e.egressIp ? { egressIp: e.egressIp } : {})
+    })
   }
 }
 

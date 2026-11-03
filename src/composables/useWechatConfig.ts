@@ -21,7 +21,19 @@ export interface WechatConfigView {
   appSecretConfigured?: boolean
   message?: string
   error?: string
-  wx?: { code: string; message: string }
+  /** 白名单类错误（40164/61004）时，微信 errmsg 里解析出的服务器出口 IP */
+  egressIp?: string
+  wx?: { code: string; message: string; errmsg?: string }
+}
+
+export interface EgressIpView {
+  ok: boolean
+  ip?: string
+  source?: string
+  cached?: boolean
+  at?: number
+  error?: string
+  tried?: string[]
 }
 
 // 与后端 wechat-proxy.cjs 校验保持一致：AppID 16-32 位字母数字，AppSecret 32-64 位
@@ -56,6 +68,37 @@ export function useWechatConfig() {
   /** liveness 校验（连微信取 token）是否成功；null = 未校验（代理不可达或尚未保存） */
   const verified = ref<boolean | null>(null)
 
+  // 服务器出口 IP：公众号后台「IP 白名单」必须包含它，否则调用微信接口报 40164。
+  // 由代理代查（多源探测 + 10 分钟缓存），设置页常显并支持一键复制。
+  const egressIp = ref('')
+  const egressSource = ref('')
+  const egressChecking = ref(false)
+  const egressError = ref('')
+
+  /** 探测服务器出口 IP；force=true 绕过代理缓存重新探测 */
+  async function probeEgressIp(force = false): Promise<void> {
+    if (egressChecking.value) return
+    egressChecking.value = true
+    egressError.value = ''
+    try {
+      const res = await fetch(`${API_BASE}/egress-ip${force ? '?refresh=1' : ''}`, {
+        headers: { Accept: 'application/json' }
+      })
+      const data = (await res.json()) as EgressIpView
+      if (data.ok && data.ip) {
+        egressIp.value = data.ip
+        egressSource.value = data.source || ''
+      } else {
+        // 探测失败不清空上次结果（IP 通常不变），只提示
+        egressError.value = data.error || '未获取到服务器出口 IP'
+      }
+    } catch {
+      egressError.value = '代理不可达，无法探测出口 IP（部署代理后可自动获取）'
+    } finally {
+      egressChecking.value = false
+    }
+  }
+
   // 本地是否已配置（直接读 store，无需网络）
   const locallyConfigured = computed(() => store.wechatConfigured)
 
@@ -69,6 +112,8 @@ export function useWechatConfig() {
     // AppSecret 不预填（避免明文残留在输入框；留空 = 沿用已保存值）
     appSecret.value = ''
     verified.value = null
+    // 顺带探测出口 IP（代理不可达时静默失败，不影响本地面板）
+    void probeEgressIp()
   }
 
   /** 仅做格式校验 + 把凭证写入本地 store（随云同步）；再 best-effort 连微信做 liveness */
@@ -123,8 +168,10 @@ export function useWechatConfig() {
       } else {
         verified.value = false
         error.value = data.error || '微信校验未通过'
-        if (data.wx && data.wx.code) {
-          error.value += `（微信：${data.wx.code} ${data.wx.message || ''}）`.trim()
+        // 白名单类错误：代理已把微信看到的出口 IP 解析出来，这里落地供展示/复制
+        if (data.egressIp) egressIp.value = data.egressIp
+        if (data.wx && data.wx.code && !data.egressIp) {
+          error.value += `（微信：${data.wx.code} ${data.wx.errmsg || data.wx.message || ''}）`.trim()
         }
       }
     } catch {
@@ -151,6 +198,11 @@ export function useWechatConfig() {
     appSecretConfigured,
     verified,
     locallyConfigured,
+    egressIp,
+    egressSource,
+    egressChecking,
+    egressError,
+    probeEgressIp,
     loadConfig,
     saveConfig
   }
