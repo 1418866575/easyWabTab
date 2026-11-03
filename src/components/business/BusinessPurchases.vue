@@ -926,7 +926,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   align-items: center;
   gap: 4px;
   padding: 3px 6px 3px 10px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-primary, #3b82f6);
   background: var(--color-primary-light, #eff6ff);
   border: 1px solid var(--color-primary, #3b82f6);
@@ -963,7 +963,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 .bizpur-empty {
   padding: 40px 20px;
   text-align: center;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text-muted, var(--color-text-muted));
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px dashed var(--color-border, var(--color-border));
@@ -983,7 +983,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 
 .bizpur-card-date {
   flex: 0 0 auto;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text-secondary, #6b7280);
   white-space: nowrap;
@@ -992,7 +992,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 .bizpur-card-count {
   flex: 1 1 auto;
   text-align: right;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
 }
 
@@ -1013,7 +1013,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 }
 
 .bizpur-day-cell-count {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   padding: 1px 8px;
   border-radius: var(--radius-full, 9999px);
   color: var(--color-primary, #3b82f6);
@@ -1038,7 +1038,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   flex: 1 1 auto;
   min-height: 220px;
   width: 100% !important;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -1094,7 +1094,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   align-items: center;
   justify-content: center;
   padding: 2px 10px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   line-height: 1.6;
   color: var(--color-primary, var(--color-primary));
   background: color-mix(in srgb, var(--color-primary, var(--color-primary)) 12%, transparent);
@@ -1111,7 +1111,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 /* ===== 进货优化：关联支出（多选列表 + 搜索 + 分页 + 关联笔数徽章） ===== */
 .bizpur-expense-empty {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #9ca3af);
 }
 
@@ -1140,7 +1140,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   gap: 8px;
   padding: 6px 8px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text, #111827);
   cursor: pointer;
 }
@@ -1172,7 +1172,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   border-radius: 4px;
   background: var(--color-bg-tag, #f1f5f9);
   color: var(--color-text-muted, #6b7280);
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -1192,21 +1192,21 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 /* 录入校验：只保留一行中性灰说明（红色校验提示已移除，见模板 bizpur-form-hint 注释） */
 .bizpur-form-hint {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   line-height: 1.6;
   color: var(--color-text-muted, #6b7280);
 }
 
 .bizpur-expense-hint {
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
 }
 
 /* 需求 D：数量由关联支出派生时的只读提示 */
 .bizpur-qty-derived {
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-primary, #3b82f6);
   background: var(--color-primary-soft, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
@@ -1226,7 +1226,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   align-items: center;
   gap: 4px;
   padding: 2px 10px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   line-height: 1.6;
   border-radius: var(--radius-full, 9999px);
   border: 1px solid transparent;
@@ -1253,7 +1253,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 .bizpur-stock-oldest {
   padding: 0 5px;
   border-radius: var(--radius-full, 9999px);
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   background: var(--color-bg-hover, #f1f5f9);
   color: var(--color-text-muted, #6b7280);
 }
@@ -1262,7 +1262,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   margin-left: 6px;
   padding: 1px 6px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 400;
   background: var(--color-primary-soft, #eff6ff);
   color: var(--color-primary, #3b82f6);
@@ -1282,7 +1282,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 }
 .bizpur-note-text {
   color: var(--color-text-secondary, #6b7280);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
 }
 .bizpur-actions {
   display: flex;
@@ -1295,7 +1295,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-variant-numeric: tabular-nums;
 }
 .bizpur-cost-current {
@@ -1306,7 +1306,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   color: var(--color-text-muted, #9ca3af);
 }
 .bizpur-cost-next {
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   font-weight: 700;
   color: var(--color-text, #1f2937);
 }
@@ -1314,7 +1314,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   color: var(--color-primary, #3b82f6);
 }
 .bizpur-cost-tip {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #9ca3af);
 }
 :global(html.dark) .bizpur-cost-next {
@@ -1323,13 +1323,13 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 
 /* P0-2：编辑弹框售价参考 */
 .bizpur-form-price-ref {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   font-variant-numeric: tabular-nums;
 }
 
 .bizpur-total-preview {
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   font-weight: 700;
   color: var(--color-primary, var(--color-primary));
   font-variant-numeric: tabular-nums;
@@ -1343,7 +1343,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   background-color: var(--color-bg-input, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text, var(--color-text));
 }
 
@@ -1413,7 +1413,7 @@ html.dark .biz-input {
   width: 100%;
   min-width: 920px;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 
 .bizpur-line-table thead th {
@@ -1479,7 +1479,7 @@ html.dark .biz-input {
   background: var(--color-bg-hover, #f3f4f6);
   color: var(--color-text-secondary, #6b7280);
   font-weight: 600;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1506,7 +1506,7 @@ html.dark .biz-input {
   gap: 8px;
   padding: 5px 6px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text, #111827);
   cursor: pointer;
   white-space: nowrap;
@@ -1535,7 +1535,7 @@ html.dark .biz-input {
   border-radius: 4px;
   background: var(--color-bg-tag, #f1f5f9);
   color: var(--color-text-muted, #6b7280);
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
 }
 
 .exp .exp-amt {
@@ -1547,14 +1547,14 @@ html.dark .biz-input {
 
 .exps-empty {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #9ca3af);
 }
 
 .bizpur-empty-row {
   text-align: center;
   color: var(--color-text-muted, #9ca3af);
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   padding: 16px 10px;
 }
 

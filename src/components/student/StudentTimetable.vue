@@ -188,7 +188,7 @@ function exportToExcel() {
 
   const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
 <head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>课程表</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
-<style>td,th{border:1px solid #999;padding:6px 8px;font-size:14px;}th{background:var(--ds-primary);color:#fff;font-weight:bold;text-align:center;}.period{background:#f0f9ff;font-weight:bold;text-align:center;}</style>
+<style>td,th{border:1px solid #999;padding:6px 8px;font-size:var(--fs-body, 14px);}th{background:var(--ds-primary);color:#fff;font-weight:bold;text-align:center;}.period{background:#f0f9ff;font-weight:bold;text-align:center;}</style>
 </head><body><table><thead><tr><th class="period">节次</th>${dayLabels.map((d) => '<th>' + d + '</th>').join('')}</tr></thead><tbody>
 ${rows.slice(1).map((r) => '<tr><td class="period">' + r[0] + '</td>' + r.slice(1).map((c) => '<td>' + (c || '&nbsp;') + '</td>').join('') + '</tr>').join('\n')}
 </tbody></table></body></html>`
@@ -529,7 +529,7 @@ onBeforeUnmount(() => {
 }
 
 .stt-meta {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text-muted, #6b7280);
 }
 
@@ -546,7 +546,7 @@ onBeforeUnmount(() => {
 .stt-week-label {
   min-width: 64px;
   text-align: center;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
 }
 
@@ -566,11 +566,11 @@ onBeforeUnmount(() => {
 }
 .stt-today-head h3 {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
 }
 .stt-today-tag {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   padding: 2px 8px;
   border-radius: 999px;
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
@@ -598,16 +598,16 @@ onBeforeUnmount(() => {
   outline-offset: 1px;
 }
 .stt-chip-subject {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--c-strong, var(--color-text, #1f2937));
 }
 .stt-chip-meta {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
 }
 .stt-chip-state {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
 }
 .stt-chip-empty .stt-chip-subject {
@@ -625,7 +625,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, #4b5563);
 }
 .stt-legend-dot {
@@ -661,7 +661,7 @@ onBeforeUnmount(() => {
 
   /* 格子字号收敛，配合更紧凑的布局 */
   .stt-cell {
-    font-size: 12px;
+    font-size: var(--fs-caption, 12px);
   }
 
   /* 周次切换按钮触控目标 44px（原 28×28px） */
@@ -687,7 +687,7 @@ onBeforeUnmount(() => {
   justify-content: center;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   overflow: hidden;
 }
 .stt-corner {
@@ -708,7 +708,7 @@ onBeforeUnmount(() => {
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
   color: var(--color-primary, #3b82f6);
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   min-height: 38px;
 }
 .stt-head-cell.today {
@@ -718,7 +718,7 @@ onBeforeUnmount(() => {
 .stt-head-cell.today::after {
   content: '今天';
   display: block;
-  font-size: 10px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 500;
   opacity: 0.9;
   margin-top: 1px;
@@ -735,11 +735,11 @@ onBeforeUnmount(() => {
   padding: 2px;
 }
 .stt-period-name {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   white-space: nowrap;
 }
 .stt-period-time {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 500;
   color: var(--color-text-muted, #9ca3af);
   white-space: nowrap;
@@ -751,7 +751,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   padding: 0 10px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   letter-spacing: 2px;
   color: var(--color-primary, #3b82f6);
@@ -799,7 +799,7 @@ onBeforeUnmount(() => {
   border-style: solid;
 }
 .stt-subject {
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   font-weight: 600;
   color: var(--c-strong, var(--color-text, #1f2937));
   white-space: nowrap;
@@ -809,11 +809,11 @@ onBeforeUnmount(() => {
 }
 .stt-teacher {
   font-weight: 500;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted, #9ca3af);
 }
 .stt-time {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--c, var(--color-primary, #3b82f6));
   font-weight: 500;
   margin-top: 2px;
@@ -825,7 +825,7 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
 }
 .stt-badge {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #e5e7eb);
@@ -833,7 +833,7 @@ onBeforeUnmount(() => {
   padding: 1px 5px;
 }
 .stt-add-mark {
-  font-size: 22px;
+  font-size: var(--fs-h2, 22px);
   color: var(--color-text-muted, #d1d5db);
   font-weight: 300;
 }
@@ -850,19 +850,19 @@ onBeforeUnmount(() => {
 }
 .stt-empty-banner p {
   margin: 2px 0;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
 }
 .stt-empty-hint {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 
 .stt-tip {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text-muted, #6b7280);
 }
 .stt-dialog-time {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text-muted, #6b7280);
   padding: 8px 10px;
   background: var(--color-hover, #f3f4f6);
@@ -886,7 +886,7 @@ onBeforeUnmount(() => {
   gap: 6px;
 }
 .form-field label {
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   font-weight: 500;
 }
 .form-row {
@@ -895,7 +895,7 @@ onBeforeUnmount(() => {
 }
 .form-row .form-field { flex: 1; }
 .stt-dialog-meta {
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   color: var(--color-text-muted, #6b7280);
   padding: 6px 10px;
   background: var(--color-hover, #f3f4f6);
@@ -905,7 +905,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   font-weight: 400;
   color: var(--color-text-muted, #6b7280);
   cursor: pointer;
@@ -928,9 +928,9 @@ onBeforeUnmount(() => {
 @media (max-width: 768px) {
   .stt-shell { padding: 12px; --stt-grid-min: 480px; }
   .stt-grid { --stt-period-col: 60px; --stt-head-h: 36px; --stt-sec-h: 30px; --stt-row-min: 54px; }
-  .stt-period-name { font-size: 12px; }
-  .stt-period-time { font-size: 10px; }
-  .stt-subject { font-size: 14px; }
+  .stt-period-name { font-size: var(--fs-caption, 12px); }
+  .stt-period-time { font-size: var(--fs-caption, 12px); }
+  .stt-subject { font-size: var(--fs-body, 14px); }
   .form-row { flex-direction: column; }
 }
 </style>
