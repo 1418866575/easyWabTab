@@ -237,7 +237,7 @@ function daysClass(days: number): string {
             <el-table-column label="来源" min-width="120" align="left" show-overflow-tooltip>
               <template #default="{ row }">
                 <span v-if="row.source">{{ row.source }}</span>
-                <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
+                <span v-else style="color: var(--color-text-secondary);">—</span>
               </template>
             </el-table-column>
             <el-table-column label="阶段" width="110" align="center">
@@ -433,7 +433,7 @@ function daysClass(days: number): string {
 
 .sr-stat-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
 }
 
 .sr-stat-value {
@@ -471,19 +471,19 @@ function daysClass(days: number): string {
 }
 .sr-list-area > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #f3f4f6) !important;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-weight: 600;
   user-select: none;
 }
 .sr-list-area > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #111827);
+  color: var(--color-text);
 }
 :global(html.dark) .sr-list-area > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #111827) !important;
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 :global(html.dark) .sr-list-area > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 .sr-list-area > :global(.el-table .el-table__body-wrapper .cell),
 .sr-list-area > :global(.el-table .el-table__header-wrapper .cell) {
@@ -562,7 +562,7 @@ function daysClass(days: number): string {
 
 .sr-source {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   flex-shrink: 0;
   max-width: 120px;
   white-space: nowrap;
@@ -572,7 +572,7 @@ function daysClass(days: number): string {
 
 .sr-del-btn {
   flex-shrink: 0;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
 }
 .sr-del-btn:hover {
   color: var(--ds-danger);
@@ -583,12 +583,12 @@ function daysClass(days: number): string {
   align-items: center;
   gap: 10px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
 }
 
 .sr-stage {
   font-weight: 500;
-  color: var(--color-text, #1f2937);
+  color: var(--color-text);
 }
 
 .sr-next-date {
@@ -596,7 +596,7 @@ function daysClass(days: number): string {
 }
 .sr-next-date.overdue { color: var(--ds-danger); }
 .sr-next-date.due-today { color: var(--ds-warning); }
-.sr-next-date.upcoming { color: var(--color-text-secondary, #6b7280); }
+.sr-next-date.upcoming { color: var(--color-text-secondary); }
 
 .sr-mastered-tag {
   font-weight: 600;
@@ -630,7 +630,7 @@ function daysClass(days: number): string {
 }
 
 .sr-edit-btn {
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
 }
 
 /* ===== 表格内编辑/删除按钮（与学习计划一致） ===== */
@@ -650,7 +650,7 @@ function daysClass(days: number): string {
 
 .sr-field label {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
 }
 
 .empty-state {
@@ -658,7 +658,7 @@ function daysClass(days: number): string {
   justify-content: center;
   align-items: center;
   flex: 1;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-size: var(--fs-body, 14px);
 }
 

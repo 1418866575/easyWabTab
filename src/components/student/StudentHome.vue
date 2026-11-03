@@ -233,7 +233,7 @@ function onActionClick(section: string) {
 }
 .greeting-sub {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 /* 平铺区（原轮播容器）：三块内容纵向依次展开，间距 16px */
@@ -288,7 +288,7 @@ function onActionClick(section: string) {
 }
 .action-count {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 .action-cta {
   margin-top: 4px;
@@ -327,11 +327,11 @@ function onActionClick(section: string) {
 .overview-value {
   font-size: var(--fs-title, 18px);
   font-weight: 700;
-  color: var(--color-text, #111827);
+  color: var(--color-text);
 }
 .overview-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
 }
 
 .tools-grid {

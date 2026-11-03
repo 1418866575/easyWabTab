@@ -146,15 +146,15 @@ const previewText = computed(() => {
   margin: 0;
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text, #111827);
+  color: var(--color-text);
   border-left: 3px solid var(--color-primary, #3b82f6);
   padding-left: 8px;
 }
 
 .skd-fm { margin: 0; display: grid; grid-template-columns: 140px 1fr; gap: 4px 10px; font-size: var(--fs-sm, 13px); }
-.skd-fm-key { color: var(--color-text-muted, #9ca3af); font-family: ui-monospace, monospace; }
-.skd-fm-extra { margin-left: 6px; font-size: var(--fs-caption, 12px); font-family: inherit; color: var(--color-text-muted, #9ca3af); }
-.skd-fm-val { margin: 0; color: var(--color-text, #111827); overflow-wrap: anywhere; }
+.skd-fm-key { color: var(--color-text-muted); font-family: ui-monospace, monospace; }
+.skd-fm-extra { margin-left: 6px; font-size: var(--fs-caption, 12px); font-family: inherit; color: var(--color-text-muted); }
+.skd-fm-val { margin: 0; color: var(--color-text); overflow-wrap: anywhere; }
 
 .skd-content {
   padding: 12px;
@@ -163,7 +163,7 @@ const previewText = computed(() => {
   background: var(--color-bg-card, #fff);
   font-size: var(--fs-sm, 13px);
   line-height: 1.7;
-  color: var(--color-text, #111827);
+  color: var(--color-text);
   overflow-wrap: anywhere;
 }
 .skd-content :deep(p) { margin: 0 0 8px; }
@@ -200,7 +200,7 @@ const previewText = computed(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.skd-res-size { flex: 0 0 auto; font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
+.skd-res-size { flex: 0 0 auto; font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 .skd-preview {
   margin: 0;
   padding: 10px;
@@ -214,5 +214,5 @@ const previewText = computed(() => {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.skd-res-empty { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
+.skd-res-empty { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 </style>

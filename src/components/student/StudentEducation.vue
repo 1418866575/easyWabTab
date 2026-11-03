@@ -208,7 +208,7 @@ const degreeOptions = DEGREE_OPTIONS
         <el-table-column label="专业" width="110" align="left" show-overflow-tooltip>
           <template #default="{ row }">
             <span v-if="row.major">{{ row.major }}</span>
-            <span v-else style="color: var(--color-text-secondary,#9ca3af);">—</span>
+            <span v-else style="color: var(--color-text-secondary);">—</span>
           </template>
         </el-table-column>
         <el-table-column label="入学时间" width="120" align="center">
@@ -218,31 +218,31 @@ const degreeOptions = DEGREE_OPTIONS
           <template #default="{ row }">
             <span v-if="row.endDate">{{ row.endDate }}</span>
             <span v-else-if="row.isActive" class="edu-enddate-today">至今</span>
-            <span v-else style="color: var(--color-text-secondary,#9ca3af);">—</span>
+            <span v-else style="color: var(--color-text-secondary);">—</span>
           </template>
         </el-table-column>
         <el-table-column label="班主任" width="110" align="left" show-overflow-tooltip>
           <template #default="{ row }">
             <span v-if="row.classTeacher">{{ row.classTeacher }}</span>
-            <span v-else style="color: var(--color-text-secondary,#9ca3af);">—</span>
+            <span v-else style="color: var(--color-text-secondary);">—</span>
           </template>
         </el-table-column>
         <el-table-column label="课老师" width="110" align="left" show-overflow-tooltip>
           <template #default="{ row }">
             <span v-if="row.courseTeacher">{{ row.courseTeacher }}</span>
-            <span v-else style="color: var(--color-text-secondary,#9ca3af);">—</span>
+            <span v-else style="color: var(--color-text-secondary);">—</span>
           </template>
         </el-table-column>
         <el-table-column label="电话号码" width="140" align="left" show-overflow-tooltip>
           <template #default="{ row }">
             <span v-if="row.phone" style="font-variant-numeric: tabular-nums;">{{ row.phone }}</span>
-            <span v-else style="color: var(--color-text-secondary,#9ca3af);">—</span>
+            <span v-else style="color: var(--color-text-secondary);">—</span>
           </template>
         </el-table-column>
         <el-table-column label="备注" min-width="200" align="left" show-overflow-tooltip>
           <template #default="{ row }">
             <span v-if="row.note">{{ row.note }}</span>
-            <span v-else style="color: var(--color-text-secondary,#9ca3af);">—</span>
+            <span v-else style="color: var(--color-text-secondary);">—</span>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="90" align="center">
@@ -402,19 +402,19 @@ const degreeOptions = DEGREE_OPTIONS
 }
 .edu-list > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #f3f4f6) !important;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-weight: 600;
   user-select: none;
 }
 .edu-list > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #111827);
+  color: var(--color-text);
 }
 :global(html.dark) .edu-list > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #111827) !important;
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 :global(html.dark) .edu-list > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 /* 每个 cell 最小内容宽兜底：避免 11 列时只剩学校+操作 */
 .edu-list > :global(.el-table .el-table__body-wrapper .cell),
@@ -501,7 +501,7 @@ const degreeOptions = DEGREE_OPTIONS
   display: block;
   margin-bottom: 6px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #606266);
+  color: var(--color-text-secondary);
 }
 .edu-req { color: #f56c6c; margin-right: 2px; }
 .edu-form-errors {
@@ -517,7 +517,7 @@ const degreeOptions = DEGREE_OPTIONS
 }
 .edu-confirm-text {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text, #606266);
+  color: var(--color-text);
   text-align: center;
   margin: 0;
 }

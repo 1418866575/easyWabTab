@@ -158,7 +158,7 @@ function stageNameOf(s: StudentStage): string {
 .ob-hint {
   margin: 0;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   line-height: 1.6;
 }
 .ob-stage-grid {
@@ -205,7 +205,7 @@ function stageNameOf(s: StudentStage): string {
 }
 .ob-stage-desc {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   margin-left: auto;
 }
 .ob-footer {
@@ -255,6 +255,6 @@ function stageNameOf(s: StudentStage): string {
 /* 输入框视觉统一到全局 .ui-input（别名列表已含 .ob-birthday-input） */
 .ob-birthday-hint {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 </style>

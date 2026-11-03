@@ -264,7 +264,7 @@ function exportArchive(): void {
   border: none;
   border-radius: var(--radius-sm, 4px);
   background-color: transparent;
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
   font-family: inherit;
   font-size: var(--font-size-sm, 13px);
   text-align: left;
@@ -293,7 +293,7 @@ function exportArchive(): void {
   padding: 0 5px;
   border-radius: 999px;
   background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
   line-height: 18px;
   text-align: center;
@@ -408,18 +408,18 @@ function exportArchive(): void {
 
 .gr-date {
   font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 .gr-item-title {
   font-size: var(--font-size-base, 15px);
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
 }
 
 .gr-content {
   margin: 4px 0 0;
   font-size: var(--font-size-sm, 13px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   line-height: var(--line-height-normal, 1.5);
   white-space: pre-wrap;
 }

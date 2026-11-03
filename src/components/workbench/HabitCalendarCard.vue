@@ -423,7 +423,7 @@ function onCardClick(): void {
 /* 未附图：常态弱存在（半透明），hover 格子时提亮，既不抢日期数字也不至于看不见 */
 .hb-cal-img:not(.has) {
   background: transparent;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   opacity: 0.55;
 }
 
@@ -477,10 +477,10 @@ html.dark .hb-cal-day:hover:not(.blank):not(.checked):not(:disabled) {
 html.dark .hb-cal-wk,
 html.dark .hb-cal-sub,
 html.dark .hb-cal-month {
-  color: #9ca3af;
+  color: var(--color-text-muted);
 }
 
 html.dark .hb-cal-day.future {
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 </style>

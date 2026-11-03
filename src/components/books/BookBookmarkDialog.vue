@@ -185,7 +185,7 @@ function onDelete(b: UserBookmark): void {
 .bk-bm-label {
   font-size: var(--font-size-sm, 13px);
   font-weight: var(--font-weight-medium, 500);
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
 }
 /* 输入框/多行输入视觉统一到全局（.ui-input / .ui-textarea），这里只保留宽度 */
 .bk-bm-input,
@@ -195,7 +195,7 @@ function onDelete(b: UserBookmark): void {
 .bk-bm-count {
   align-self: flex-end;
   font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 .bk-bm-error {
   margin: -4px 0 0;
@@ -225,7 +225,7 @@ function onDelete(b: UserBookmark): void {
 }
 .bk-bm-table thead th {
   background: var(--color-bg-subtle, #f8fafc);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-weight: var(--font-weight-medium, 500);
   white-space: nowrap;
 }
@@ -243,7 +243,7 @@ function onDelete(b: UserBookmark): void {
   background: var(--color-primary-soft, #eff6ff);
 }
 .bk-bm-td-title {
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
   font-weight: var(--font-weight-medium, 500);
   /* 超长书名单行截断，避免撑破固定布局 */
   overflow: hidden;
@@ -251,7 +251,7 @@ function onDelete(b: UserBookmark): void {
   white-space: nowrap;
 }
 .bk-bm-td-content {
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   word-break: break-word;
   white-space: pre-wrap;
 }
@@ -261,7 +261,7 @@ function onDelete(b: UserBookmark): void {
 }
 .bk-bm-empty {
   text-align: center;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   padding: 24px 12px;
 }
 

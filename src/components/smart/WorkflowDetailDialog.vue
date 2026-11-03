@@ -58,13 +58,13 @@ const updatedText = computed(() => {
   padding: 1px 8px;
   border-radius: 999px;
   background: var(--color-bg-hover, #f3f4f6);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
 }
 .wd-chip.is-tag { color: var(--color-primary, #3b82f6); }
-.wd-desc { margin: 0; font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #6b7280); }
+.wd-desc { margin: 0; font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
 
-.wd-section-label { font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text-secondary, #6b7280); }
+.wd-section-label { font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text-secondary); }
 
 .wd-content {
   padding: 12px;
@@ -73,10 +73,10 @@ const updatedText = computed(() => {
   background: var(--color-bg-card, #fff);
   font-size: var(--fs-sm, 13px);
   line-height: 1.7;
-  color: var(--color-text, #111827);
+  color: var(--color-text);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   white-space: normal;
   overflow-wrap: anywhere;
 }
-.wd-updated { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
+.wd-updated { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 </style>

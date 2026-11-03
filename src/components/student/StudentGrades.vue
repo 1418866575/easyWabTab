@@ -643,13 +643,13 @@ onMounted(async () => {
 }
 .sg-summary-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 .sg-summary-value {
   margin-top: 4px;
   font-size: var(--fs-h2, 22px);
   font-weight: 600;
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
 }
 .sg-summary-sm {
@@ -661,7 +661,7 @@ onMounted(async () => {
 .sg-summary-sub {
   margin-top: 2px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 /* 各科均分 chips */
@@ -676,10 +676,10 @@ onMounted(async () => {
   background: var(--color-bg-hover, #f1f5f9);
   border: 1px solid var(--color-border, #e2e8f0);
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 .sg-subj-chip b {
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -700,10 +700,10 @@ onMounted(async () => {
 }
 .sg-t-name {
   font-weight: 500;
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
 }
 .sg-t-avg {
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -715,7 +715,7 @@ onMounted(async () => {
 .sg-empty {
   padding: 28px;
   text-align: center;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   border: 1px dashed var(--color-border, #e2e8f0);
   border-radius: 12px;
   background: var(--color-bg-card, #fff);
@@ -745,7 +745,7 @@ onMounted(async () => {
   margin: 0;
   font-size: var(--fs-md, 15px);
   font-weight: 600;
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
 }
 .sg-trend-select {
   width: 200px;
@@ -771,7 +771,7 @@ onMounted(async () => {
 .sg-form-field label {
   font-size: var(--fs-sm, 13px);
   font-weight: 500;
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
 }
 .sg-form-row {
   display: flex;
@@ -806,7 +806,7 @@ onMounted(async () => {
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 6px;
   background: transparent;
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
   cursor: pointer;
 }
 .sg-subj-remove:hover:not(:disabled) { background: rgba(239, 68, 68, 0.1); color: var(--color-error, #ef4444); }

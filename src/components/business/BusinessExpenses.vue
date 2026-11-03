@@ -648,19 +648,19 @@ async function handleDeleteFromDialog(): Promise<void> {
 }
 .bizexp-table-wrap > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #f3f4f6) !important;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-weight: 600;
   user-select: none;
 }
 .bizexp-table-wrap > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #111827);
+  color: var(--color-text);
 }
 :global(html.dark) .bizexp-table-wrap > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #111827) !important;
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 :global(html.dark) .bizexp-table-wrap > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 .bizexp-table-wrap > :global(.el-table .el-table__body-wrapper .cell),
 .bizexp-table-wrap > :global(.el-table .el-table__header-wrapper .cell) {
@@ -703,7 +703,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 .bizexp-expand { padding: 12px 24px 12px 48px; }
 .bizexp-expand-title {
   font-size: var(--fs-sm, 13px); font-weight: 600;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   margin-bottom: 8px;
 }
 .bizexp-detail-head {
@@ -767,7 +767,7 @@ async function handleDeleteFromDialog(): Promise<void> {
   flex: 0 0 auto;
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
 .bizexp-card-count {
@@ -777,7 +777,7 @@ async function handleDeleteFromDialog(): Promise<void> {
   color: var(--color-text-muted, var(--color-text-muted));
 }
 :global(html.dark) .bizexp-card-date {
-  color: var(--color-text-secondary, #9ca3af);
+  color: var(--color-text-secondary);
 }
 
 /* ===== 弹框：支出信息表格（每行一笔产品，列即字段） ===== */
@@ -806,7 +806,7 @@ async function handleDeleteFromDialog(): Promise<void> {
   grid-column: 1 / -1;
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
@@ -815,7 +815,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 .bizexp-shared-hint {
   font-size: var(--fs-caption, 12px);
   font-weight: 400;
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 .bizexp-table {
   width: 100%;
@@ -833,7 +833,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 .bizexp-table thead th {
   background: var(--color-bg-hover, #f7f8fa);
   font-weight: 600;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   white-space: nowrap;
   position: sticky;
   top: 0;
@@ -842,7 +842,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 .bizexp-table .col-idx {
   width: 36px;
   text-align: center;
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 .bizexp-table .col-ops {
   width: 72px;
@@ -893,7 +893,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 .biz-kv-label {
   flex: 0 0 96px;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   text-align: right;
   line-height: 1.4;
 }
@@ -934,7 +934,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 }
 :global(html.dark) .bizexp-table thead th {
   background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 :global(html.dark) .bizexp-table .bizexp-prod-row:hover td {
   background-color: var(--color-bg-hover, #111827);
@@ -947,13 +947,13 @@ async function handleDeleteFromDialog(): Promise<void> {
   border-color: var(--color-border, #374151);
 }
 :global(html.dark) .bizexp-shared-title {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 :global(html.dark) .biz-kv-row {
   border-bottom-color: var(--color-border, #374151);
 }
 :global(html.dark) .biz-kv-label {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 /* 移动端：工具行换行 + 表单栅格降列 + 控件撑满

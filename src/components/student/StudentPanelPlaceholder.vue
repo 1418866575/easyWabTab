@@ -61,7 +61,7 @@ const ROADMAP: Record<string, string> = {
   border-radius: 12px;
 }
 .ph-icon {
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 .ph-title {
   font-size: var(--fs-title, 18px);
@@ -80,7 +80,7 @@ const ROADMAP: Record<string, string> = {
 .ph-desc {
   font-size: var(--fs-sm, 13px);
   line-height: 1.6;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   margin: 0;
 }
 </style>

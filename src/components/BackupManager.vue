@@ -238,12 +238,12 @@ const toggleAutoBackup = () => {
 }
 
 .label {
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--fs-body, 14px);
 }
 
 .value {
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   font-size: var(--fs-body, 14px);
 }
 
@@ -310,14 +310,14 @@ const toggleAutoBackup = () => {
 
 .backup-list h3 {
   font-size: var(--fs-body, 14px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   margin: 0 0 12px 0;
 }
 
 .empty {
   text-align: center;
   padding: 40px 20px;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   font-size: var(--fs-body, 14px);
 }
 
@@ -337,13 +337,13 @@ const toggleAutoBackup = () => {
 
 .backup-time {
   font-size: var(--fs-body, 14px);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   margin-bottom: 4px;
 }
 
 .backup-summary {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .backup-actions {
@@ -368,7 +368,7 @@ const toggleAutoBackup = () => {
   border-radius: 4px;
   border: 1px solid var(--color-border, #e2e8f0);
   background: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
   height: 36px;}
@@ -384,7 +384,7 @@ const toggleAutoBackup = () => {
   border-radius: 8px;
   padding: 12px 16px;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .help-text p {
@@ -398,6 +398,6 @@ const toggleAutoBackup = () => {
 
 .help-text li {
   margin-bottom: 4px;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 </style>

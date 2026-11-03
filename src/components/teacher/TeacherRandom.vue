@@ -228,13 +228,13 @@ onBeforeUnmount(stopTimer)
 .rd-display {
   font-size: 40px;
   font-weight: var(--font-weight-bold, 700);
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
   letter-spacing: 0.08em;
   transition: color var(--motion-duration, 0.2s) var(--motion-ease, ease);
 }
 
 .rd-display.is-rolling {
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .rd-display.is-picked {
@@ -299,7 +299,7 @@ onBeforeUnmount(stopTimer)
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 999px;
   background: var(--color-bg-card, #fff);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm, 13px);
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
@@ -318,7 +318,7 @@ onBeforeUnmount(stopTimer)
 .rd-filter-summary {
   margin: 0 0 8px;
   font-size: var(--font-size-sm, 13px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .rd-stats {
@@ -330,13 +330,13 @@ onBeforeUnmount(stopTimer)
 
 .rd-stat {
   font-size: var(--font-size-sm, 13px);
-  color: var(--color-text, #334155);
+  color: var(--color-text);
 }
 
 .rd-stat::before {
   content: '·';
   margin-right: 6px;
-  color: var(--color-border, #cbd5e1);
+  color: var(--color-border);
 }
 
 .rd-roster {
@@ -352,7 +352,7 @@ onBeforeUnmount(stopTimer)
   padding: 4px 10px;
   border-radius: 999px;
   background: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-text, #334155);
+  color: var(--color-text);
   font-size: var(--font-size-sm, 13px);
 }
 

@@ -64,12 +64,12 @@ const emit = defineEmits<{ close: []; confirm: [] }>()
 <style scoped>
 /* 高度与滚动交给 BaseDialog 的 .bd-body（统一 padding + overflow-y:auto），这里只管内容排布 */
 .si-body { display: flex; flex-direction: column; gap: 12px; }
-.si-summary { margin: 0; font-size: var(--fs-sm, 13px); color: var(--color-text, #111827); }
+.si-summary { margin: 0; font-size: var(--fs-sm, 13px); color: var(--color-text); }
 .si-block { display: flex; flex-direction: column; gap: 4px; }
 .si-title { margin: 0; font-size: var(--fs-caption, 12px); font-weight: 600; }
 .si-title.is-add { color: var(--color-success, #16a34a); }
 .si-title.is-upd { color: var(--color-primary, #3b82f6); }
 .si-title.is-warn { color: var(--color-warning, #d97706); }
-.si-list { margin: 0; padding-left: 18px; font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #6b7280); }
-.si-tip { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
+.si-list { margin: 0; padding-left: 18px; font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
+.si-tip { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 </style>

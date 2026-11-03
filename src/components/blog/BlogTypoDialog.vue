@@ -347,7 +347,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   border: none;
   background: transparent;
   outline: none;
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
   font-family: inherit;
   font-size: 13px;
 }
@@ -372,7 +372,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   gap: 6px;
   font-size: 13px;
   font-weight: var(--font-weight-semibold, 600);
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
 }
 
 .td-group-count {
@@ -380,7 +380,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   padding: 0 6px;
   border-radius: var(--ds-radius-pill, 999px);
   background: var(--ds-bg, #f7f8fa);
-  color: var(--ds-text-3, #9aa0a6);
+  color: var(--ds-text-3);
   font-size: 11px;
   font-weight: var(--font-weight-medium, 500);
   line-height: 18px;
@@ -446,12 +446,12 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   padding-top: 10px;
   border-top: 1px solid var(--ds-line, #ececf0);
   font-size: 11.5px;
-  color: var(--ds-text-3, #9aa0a6);
+  color: var(--ds-text-3);
 }
 .td-name { display: inline-flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .td-swatch { width: 7px; height: 7px; border-radius: 50%; flex: none; }
 .td-ops { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; flex: none; }
-.td-def { border: none; background: transparent; padding: 2px 3px; color: var(--ds-text-3, #9aa0a6); font-size: 11px; cursor: pointer; white-space: nowrap; }
+.td-def { border: none; background: transparent; padding: 2px 3px; color: var(--ds-text-3); font-size: 11px; cursor: pointer; white-space: nowrap; }
 .td-def:hover { color: var(--color-primary, #3b82f6); }
 .td-badge {
   flex: none;
@@ -467,7 +467,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 7px);
   background: var(--ds-card, #ffffff);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   padding: 2px 8px;
   font-family: inherit;
   font-size: 11px;
@@ -502,7 +502,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
   background: var(--ds-card, #ffffff);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   padding: 4px 10px;
   font-family: inherit;
   font-size: 12px;
@@ -558,7 +558,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   margin: 0 auto;
   font-size: 16px;
   line-height: 1.75;
-  color: #3f3f3f;
+  color: var(--color-text);
   word-wrap: break-word;
   word-break: break-word;
 }
@@ -569,7 +569,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
 .tdp-empty {
   margin: 0;
   padding: 40px 12px;
-  color: var(--ds-text-3, #9aa0a6);
+  color: var(--ds-text-3);
   font-size: 12.5px;
   line-height: 1.7;
   text-align: center;
@@ -589,7 +589,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
   background: var(--ds-card, #ffffff);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-family: inherit;
   font-size: 12px;
   cursor: pointer;
@@ -608,12 +608,12 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   border: 1px dashed var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-card, 12px);
   background: var(--ds-card, #ffffff);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: 13px;
   text-align: center;
 }
 
-.td-hint { margin: 0; flex: none; font-size: 11px; color: var(--ds-text-3, #9aa0a6); }
+.td-hint { margin: 0; flex: none; font-size: 11px; color: var(--ds-text-3); }
 
 /* 窄屏降列：3 → 2 → 1，保证每张卡不会被压到放不下页脚按钮 */
 @media (max-width: 1024px) {

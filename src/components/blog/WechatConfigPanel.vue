@@ -29,7 +29,7 @@ function copyEgressIp(): void {
       <span
         v-else
         class="status-pill"
-        style="color: var(--ds-text-3, #9aa0a6); background-color: var(--color-bg-input); border-color: var(--ds-line, #ececf0);"
+        style="color: var(--ds-text-3); background-color: var(--color-bg-input); border-color: var(--ds-line, #ececf0);"
       ><span class="status-dot" style="background-color: var(--ds-text-3, #9aa0a6);"></span>未配置</span>
     </div>
     <p class="wb-menu-hint">
@@ -67,7 +67,7 @@ function copyEgressIp(): void {
 
     <div v-if="cfg.configured.value" class="remind-field" style="margin-top: 8px;">
       <span class="remind-label">当前 AppID</span>
-      <span class="wb-menu-name-input" style="display: inline-flex; align-items: center; color: var(--ds-text-2, #646a73);">{{ cfg.appIdMasked.value || '—' }}</span>
+      <span class="wb-menu-name-input" style="display: inline-flex; align-items: center; color: var(--ds-text-2);">{{ cfg.appIdMasked.value || '—' }}</span>
     </div>
 
     <div class="remind-fields" style="margin-top: 12px;">
@@ -96,7 +96,7 @@ function copyEgressIp(): void {
       </label>
     </div>
 
-    <p class="wb-menu-hint" style="color: var(--ds-text-3, #9aa0a6); opacity: 0.7; font-size: var(--fs-caption, 12px); margin-top: 4px;">
+    <p class="wb-menu-hint" style="color: var(--ds-text-3); opacity: 0.7; font-size: var(--fs-caption, 12px); margin-top: 4px;">
       提示：保存后会尝试调用微信接口校验凭证有效性（需部署代理且可达）。若校验未通过，先确认 AppSecret 是否正确；
       若提示 IP 白名单，把上面的「服务器出口 IP」加到公众号后台即可。
     </p>
@@ -148,13 +148,13 @@ function copyEgressIp(): void {
   margin: 0;
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
 }
 
 .wb-menu-hint {
   margin: 6px 0 12px;
   font-size: var(--fs-caption, 12px);
-  color: var(--ds-text-3, #9aa0a6);
+  color: var(--ds-text-3);
 }
 
 /* 行内文本输入：视觉统一到全局 .ui-input（别名已含 .wb-menu-name-input），这里只保留布局 */
@@ -182,7 +182,7 @@ function copyEgressIp(): void {
   flex-shrink: 0;
   width: 92px;
   font-size: var(--fs-sm, 13px);
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
 }
 .remind-actions {
   margin-top: 12px;
@@ -210,7 +210,7 @@ function copyEgressIp(): void {
   text-align: center;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: var(--fs-sm, 13px);
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
   background-color: var(--ds-card, #ffffff);
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: 6px;

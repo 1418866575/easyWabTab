@@ -606,7 +606,7 @@ function truncate(text: string, n = 30): string {
 }
 .tk-filter-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 .tk-select {
   width: 140px;
@@ -626,7 +626,7 @@ function truncate(text: string, n = 30): string {
 }
 .tk-count {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .tk-list-area {
@@ -639,20 +639,20 @@ function truncate(text: string, n = 30): string {
 }
 .tk-list-area :deep(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #f3f4f6) !important;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-weight: 600;
 }
 :deep(html.dark) .tk-list-area .el-table th.el-table__cell {
   background-color: var(--color-bg-hover, #111827) !important;
-  color: var(--color-text-soft, #d1d5db);
+  color: var(--color-text-soft);
 }
 .tk-cell-time {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-soft, #94a3b8);
+  color: var(--color-text-soft);
 }
 .tk-cell-sub {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-soft, #94a3b8);
+  color: var(--color-text-soft);
 }
 
 .tk-list {
@@ -689,11 +689,11 @@ function truncate(text: string, n = 30): string {
   align-items: center;
   gap: 8px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 .tk-card-content {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text, #334155);
+  color: var(--color-text);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -704,7 +704,7 @@ function truncate(text: string, n = 30): string {
   margin-top: auto;
 }
 .tk-detail-btn { color: var(--color-link, #3b82f6); }
-.tk-edit-btn { color: var(--color-text-secondary, #64748b); }
+.tk-edit-btn { color: var(--color-text-secondary); }
 .tk-del-btn { color: var(--color-error, #ef4444); }
 
 .tk-list-pager {
@@ -726,7 +726,7 @@ function truncate(text: string, n = 30): string {
   align-items: center;
   justify-content: center;
   min-height: 160px;
-  color: var(--color-text-soft, #6b7280);
+  color: var(--color-text-soft);
   font-size: var(--fs-body, 14px);
 }
 
@@ -826,7 +826,7 @@ function truncate(text: string, n = 30): string {
   gap: 12px;
   flex-wrap: wrap;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 .tk-detail-block {
   display: flex;
@@ -836,11 +836,11 @@ function truncate(text: string, n = 30): string {
 .tk-detail-title {
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 .tk-detail-text {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text, #334155);
+  color: var(--color-text);
   white-space: pre-wrap;
   word-break: break-word;
   margin: 0;

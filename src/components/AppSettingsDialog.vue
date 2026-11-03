@@ -4531,13 +4531,13 @@ html.dark .sub-tab-btn.active {
 
 html.dark .tab-btn {
   background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
   border-color: var(--color-border, #374151);
 }
 
 html.dark .tab-btn:hover {
   background-color: var(--color-bg-hover, #374151);
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .tab-btn.active {
@@ -4635,7 +4635,7 @@ html.dark .tab-btn.active {
   border: none;
   cursor: pointer;
   text-align: left;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 .bl-entry:hover { background-color: var(--color-bg-hover, rgba(0, 0, 0, 0.04)); }
 .bl-entry > svg:first-child { color: var(--color-primary, #3b82f6); flex-shrink: 0; }
@@ -4646,12 +4646,12 @@ html.dark .tab-btn.active {
 .bl-entry-sub {
   flex: 1;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.bl-entry-caret { flex-shrink: 0; color: var(--color-text-muted, #94a3b8); }
+.bl-entry-caret { flex-shrink: 0; color: var(--color-text-muted); }
 
 .bl-entry-body {
   padding: 4px 16px 16px;
@@ -4671,7 +4671,7 @@ html.dark .tab-btn.active {
 .bl-cat-label {
   font-size: var(--fs-caption, 12px);
   font-weight: 600;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   padding-top: 4px;
   flex-shrink: 0;
 }
@@ -4689,7 +4689,7 @@ html.dark .tab-btn.active {
   border-radius: 999px;
   background-color: var(--color-bg, #f1f5f9);
   border: 1px solid var(--color-border, #e2e8f0);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 .bl-cat-badge b {
   font-family: var(--font-mono, monospace);
@@ -4721,7 +4721,7 @@ html.dark .tab-btn.active {
   margin: 0 0 2px;
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .bl-scopes {
@@ -4736,7 +4736,7 @@ html.dark .tab-btn.active {
   gap: 8px;
   font-size: var(--fs-caption, 12px);
   line-height: 1.6;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   cursor: pointer;
 }
 
@@ -4770,21 +4770,21 @@ html.dark .tab-btn.active {
   padding: 9px 12px;
   text-align: left;
   border-bottom: 1px solid var(--color-border, #e2e8f0);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 .bl-table thead th {
   background-color: var(--color-bg, #f1f5f9);
   font-weight: 600;
-  color: var(--color-text-muted, #64748b);
+  color: var(--color-text-muted);
   white-space: nowrap;
 }
 .bl-table tbody tr:last-child td { border-bottom: none; }
-.bl-col-index { width: 56px; text-align: center; color: var(--color-text-secondary, #6b7280); }
+.bl-col-index { width: 56px; text-align: center; color: var(--color-text-secondary); }
 .bl-col-year { width: 84px; }
 .bl-col-ops { width: 220px; white-space: nowrap; }
 .bl-col-name { min-width: 200px; }
 /* 个人记账「账本列表」专用：记录数列（销售记账账本表无此列） */
-.bl-col-count { width: 84px; text-align: center; color: var(--color-text-secondary, #6b7280); }
+.bl-col-count { width: 84px; text-align: center; color: var(--color-text-secondary); }
 .bl-code-badge {
   display: inline-block;
   margin-right: 8px;
@@ -4813,7 +4813,7 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
   margin: 0 0 8px;
   font-size: var(--fs-caption, 12px);
   font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 .wb-menu-list {
@@ -5101,32 +5101,32 @@ html.dark .wb-city-config {
 }
 
 html.dark .wb-menu-title {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .wb-menu-hint {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 html.dark .wb-menu-name-input {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
   background-color: var(--color-bg-input, #111827);
   border-color: var(--color-border, #374151);
 }
 
 html.dark .wb-menu-btn {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
   background-color: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
 }
 
 html.dark .wb-snapshot-time {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .wb-snapshot-source,
 html.dark .wb-snapshot-empty {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 /* 提醒设置区块：邮件配置字段行（输入框复用 .wb-menu-name-input，仅补标签列与操作区） */
@@ -5167,7 +5167,7 @@ html.dark .wb-snapshot-empty {
 }
 
 html.dark .remind-label {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 @media (max-width: 640px) {
@@ -5427,7 +5427,7 @@ html.dark .danger-hint {
 }
 .beian-values {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, #475569);
+  color: var(--color-text-secondary);
 }
 .beian-link {
   color: var(--color-primary, #3b82f6);
@@ -5441,7 +5441,7 @@ html.dark .danger-hint {
   opacity: 0.6;
 }
 .beian-empty {
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 /* ===== 记账分类：类型徽标（支出蓝 / 收入绿）+ 内置徽标 ===== */
@@ -5463,7 +5463,7 @@ html.dark .danger-hint {
 .ld-builtin-tag {
   flex-shrink: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #9ca3af);
+  color: var(--color-text-secondary);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 999px;
   padding: 2px 10px;
@@ -5479,7 +5479,7 @@ html.dark .ld-cat-type-badge.is-income {
   border-color: rgba(34, 197, 94, 0.45);
 }
 html.dark .ld-builtin-tag {
-  color: #9ca3af;
+  color: var(--color-text-muted);
   border-color: #4b5563;
 }
 
@@ -5538,7 +5538,7 @@ html.dark .ld-builtin-tag {
 }
 .student-stage-desc {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   margin-left: auto;
 }
 
@@ -5550,7 +5550,7 @@ html.dark .ld-builtin-tag {
 }
 .wb-field-label {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   width: 56px;
   flex-shrink: 0;
 }
@@ -5560,7 +5560,7 @@ html.dark .ld-builtin-tag {
 }
 .wb-menu-hint-inline {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 .student-subject-chips {
@@ -5588,7 +5588,7 @@ html.dark .ld-builtin-tag {
   border: none;
   border-radius: 50%;
   background: transparent;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   cursor: pointer;
   padding: 0;
 }
@@ -5598,7 +5598,7 @@ html.dark .ld-builtin-tag {
 }
 .student-subject-empty {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   font-style: italic;
 }
 .student-subject-add {
@@ -5813,7 +5813,7 @@ html.dark .status-pill { color: #4ade80; background-color: rgba(74, 222, 128, 0.
     content: attr(data-label);
     flex: 0 0 auto;
     font-size: var(--fs-caption, 12px);
-    color: var(--color-text-secondary, #64748b);
+    color: var(--color-text-secondary);
   }
 
   /* 名称列：编号徽标 + 名称较长，改为整行堆叠 */

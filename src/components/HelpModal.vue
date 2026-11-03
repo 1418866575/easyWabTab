@@ -1232,13 +1232,13 @@ const skillInstall = [
   margin: 0 0 4px 0;
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .feature-content p {
   margin: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   line-height: 1.5;
 }
 
@@ -1306,7 +1306,7 @@ const skillInstall = [
 .mode-item p {
   margin: 0;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   line-height: 1.5;
 }
 
@@ -1334,7 +1334,7 @@ const skillInstall = [
 }
 
 .storage-list strong {
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .storage-list code {
@@ -1389,13 +1389,13 @@ const skillInstall = [
   margin: 0 0 4px 0;
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .download-info p {
   margin: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   line-height: 1.5;
 }
 
@@ -1426,7 +1426,7 @@ const skillInstall = [
 .sync-label {
   flex-shrink: 0;
   width: 56px;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .btn-copy {padding: 0 12px;
@@ -1534,13 +1534,13 @@ const skillInstall = [
   margin: 0;
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .panel-desc {
   margin: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   line-height: 1.6;
 }
 
@@ -1552,7 +1552,7 @@ const skillInstall = [
   padding-top: 6px;
   border-top: 1px dashed var(--color-border, #e2e8f0);
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   line-height: 1.5;
 }
 
@@ -1582,7 +1582,7 @@ const skillInstall = [
 .formula-label {
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   white-space: nowrap;
 }
 
@@ -1598,7 +1598,7 @@ const skillInstall = [
 .formula-note {
   margin: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   line-height: 1.6;
 }
 
@@ -1679,13 +1679,13 @@ const skillInstall = [
   margin: 4px 0 0 0;
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .sub-desc {
   margin: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   line-height: 1.5;
 }
 

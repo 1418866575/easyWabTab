@@ -380,7 +380,7 @@ onMounted(async () => {
 .sttc-card-title {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text-secondary, #4b5563);
+  color: var(--color-text-secondary);
   border-left: 3px solid var(--color-primary, #3b82f6);
   padding-left: 8px;
   margin-bottom: 12px;
@@ -388,7 +388,7 @@ onMounted(async () => {
 .sttc-sub-title {
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text-secondary, #4b5563);
+  color: var(--color-text-secondary);
   border-left: 3px solid var(--color-primary, #3b82f6);
   padding-left: 8px;
   margin: 4px 0;
@@ -406,7 +406,7 @@ onMounted(async () => {
 .form-field label {
   font-size: var(--fs-sm, 13px);
   font-weight: 500;
-  color: var(--color-text-secondary, #4b5563);
+  color: var(--color-text-secondary);
 }
 .form-row {
   display: flex;
@@ -419,7 +419,7 @@ onMounted(async () => {
 }
 .sttc-preview {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   background: var(--color-hover, #f3f4f6);
   border-radius: 6px;
   padding: 8px 10px;
@@ -431,7 +431,7 @@ onMounted(async () => {
 }
 .sttc-tip {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   margin: 0 0 8px;
   line-height: 1.6;
 }
@@ -456,12 +456,12 @@ onMounted(async () => {
   margin-bottom: 8px;
 }
 .sttc-result-file {
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   word-break: break-all;
 }
 .sttc-result-summary {
   font-weight: 600;
-  color: var(--color-text, #1f2937);
+  color: var(--color-text);
 }
 .sttc-stat-row {
   display: flex;
@@ -474,7 +474,7 @@ onMounted(async () => {
   padding: 2px 8px;
   border-radius: 999px;
   background: var(--color-hover, #f3f4f6);
-  color: var(--color-text-secondary, #4b5563);
+  color: var(--color-text-secondary);
 }
 .sttc-stat.is-ok { background: rgba(16, 185, 129, 0.14); color: var(--ds-success); }
 .sttc-stat.is-new { background: rgba(59, 130, 246, 0.14); color: var(--ds-primary); }
@@ -517,17 +517,17 @@ onMounted(async () => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--color-text, #1f2937);
+  color: var(--color-text);
 }
 .sttc-error-reason {
   flex: 1;
   min-width: 0;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 .sttc-error-more {
   padding: 6px 10px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 @media (max-width: 768px) {

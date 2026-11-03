@@ -509,7 +509,7 @@ function clearBackground() {
   margin: 16px 0 10px 0;
   font-size: var(--fs-sm, 13px);
   font-weight: 500;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 /* 预览区域 */
@@ -534,7 +534,7 @@ function clearBackground() {
 }
 
 .preview-text {
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   font-size: var(--fs-body, 14px);
 }
 
@@ -557,7 +557,7 @@ function clearBackground() {
     border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
     background-color var(--motion-duration, 220ms) var(--motion-ease, ease),
     color var(--motion-duration, 220ms) var(--motion-ease, ease);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   height: 36px;}
 
 .type-btn:hover {
@@ -710,7 +710,7 @@ function clearBackground() {
 
 .upload-hint {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 /* 内容区域透明度 */
@@ -750,7 +750,7 @@ function clearBackground() {
 .opacity-hint {
   margin: 8px 0 0 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 /* 自定义渐变 */
@@ -786,7 +786,7 @@ function clearBackground() {
 
 .color-picker-group label, .angle-picker-group label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-weight: 500;
 }
 

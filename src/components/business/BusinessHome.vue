@@ -857,13 +857,13 @@ html.dark .sk-block::after {
 .bizhome-low-stopped {
   margin-left: 4px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 .bizhome-stock-summary {
   margin: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 .bizhome-low-stock {
@@ -1127,7 +1127,7 @@ html.dark .sk-block::after {
   gap: 5px;
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 .bizhome-today-none {
   margin-left: auto;
@@ -1163,13 +1163,13 @@ html.dark .sk-block::after {
 }
 .bizhome-today-card .today-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
 .bizhome-today-card .today-value {
   font-size: var(--fs-lg, 16px);
   font-weight: 600;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1178,7 +1178,7 @@ html.dark .sk-block::after {
 .bizhome-today-card .today-value small {
   font-size: var(--fs-caption, 12px);
   font-weight: 400;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   margin-left: 2px;
 }
 .bizhome-today-card .today-value.negative {
@@ -1202,7 +1202,7 @@ html.dark .sk-block::after {
   padding: 10px 2px 2px;
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   border-top: 1px solid var(--color-border, #e2e8f0);
 }
 .bizhome-cumulative-hint {
@@ -1220,7 +1220,7 @@ html.dark .sk-block::after {
   flex-shrink: 0;
   padding: 7px 12px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   background: var(--color-bg-card, #ffffff);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
@@ -1266,7 +1266,7 @@ html.dark .sk-block::after {
   justify-content: center;
   font-size: var(--fs-caption, 12px);
   font-weight: 600;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   background: var(--color-bg, #f8fafc);
   border-radius: 50%;
   font-variant-numeric: tabular-nums;
@@ -1279,7 +1279,7 @@ html.dark .sk-block::after {
 }
 .target-amount {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1317,7 +1317,7 @@ html.dark .sk-block::after {
   margin: 0;
   font-size: var(--fs-caption, 12px);
   line-height: 1.6;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 .bizhome-onboard-btn {flex-shrink: 0;
   padding: 0 12px;
@@ -1361,7 +1361,7 @@ html.dark .sk-block::after {
 }
 /* info = 提醒（今天还没记账） */
 .bizhome-issue.info {
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   background: var(--color-bg-card, #ffffff);
   border: 1px dashed var(--color-border, #e2e8f0);
 }
@@ -1461,7 +1461,7 @@ html.dark .sk-block::after {
 .mini-bar-label {
   flex-shrink: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1556,7 +1556,7 @@ html.dark .bizhome-greeting {
 }
 
 html.dark .bizhome-greeting-title {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .bizhome-scope {
@@ -1565,7 +1565,7 @@ html.dark .bizhome-scope {
 }
 
 html.dark .scope-label {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .formula-main {
@@ -1671,12 +1671,12 @@ html.dark .bizhome-onboard-title {
   color: #60a5fa;
 }
 html.dark .bizhome-onboard-desc {
-  color: #d1d5db;
+  color: var(--color-text-secondary);
 }
 html.dark .bizhome-issue.info {
   background: #1f2937;
   border-color: #374151;
-  color: #d1d5db;
+  color: var(--color-text-secondary);
 }
 html.dark .bizhome-issue.warn {
   color: #fcd34d;
@@ -1693,7 +1693,7 @@ html.dark .bizhome-today {
   border-color: var(--color-border, #374151);
 }
 html.dark .bizhome-today-title {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 html.dark .bizhome-today-none {
   color: #fcd34d;
@@ -1708,14 +1708,14 @@ html.dark .bizhome-today-card.clickable:hover {
   background: #1f2937;
 }
 html.dark .bizhome-today-card .today-value {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 html.dark .bizhome-today-card .today-label,
 html.dark .bizhome-today-card .today-sub {
-  color: #9ca3af;
+  color: var(--color-text-muted);
 }
 html.dark .bizhome-cumulative-head {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
   border-top-color: #374151;
 }
 

@@ -530,7 +530,7 @@ onBeforeUnmount(() => {
 
 .stt-meta {
   font-size: var(--fs-body, 14px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 .stt-week-switch {
@@ -604,14 +604,14 @@ onBeforeUnmount(() => {
 }
 .stt-chip-meta {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 .stt-chip-state {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 .stt-chip-empty .stt-chip-subject {
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 /* 图例 */
@@ -626,7 +626,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 6px;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, #4b5563);
+  color: var(--color-text-secondary);
 }
 .stt-legend-dot {
   width: 10px;
@@ -697,7 +697,7 @@ onBeforeUnmount(() => {
   z-index: 5;
   background: var(--color-surface, #fff);
   font-weight: 600;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   min-height: 38px;
   min-width: 48px;
 }
@@ -729,7 +729,7 @@ onBeforeUnmount(() => {
   gap: 2px;
   background: var(--color-hover, #f3f4f6);
   font-weight: 600;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   min-width: 0;
   min-height: 0;
   padding: 2px;
@@ -741,7 +741,7 @@ onBeforeUnmount(() => {
 .stt-period-time {
   font-size: var(--fs-caption, 12px);
   font-weight: 500;
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
   white-space: nowrap;
 }
 /* 上午 / 下午分段标题：独占一行、横跨所有列 */
@@ -810,7 +810,7 @@ onBeforeUnmount(() => {
 .stt-teacher {
   font-weight: 500;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 .stt-time {
   font-size: var(--fs-sm, 13px);
@@ -826,7 +826,7 @@ onBeforeUnmount(() => {
 }
 .stt-badge {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 4px;
@@ -834,7 +834,7 @@ onBeforeUnmount(() => {
 }
 .stt-add-mark {
   font-size: var(--fs-h2, 22px);
-  color: var(--color-text-muted, #d1d5db);
+  color: var(--color-text-muted);
   font-weight: 300;
 }
 
@@ -845,7 +845,7 @@ onBeforeUnmount(() => {
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.08));
   border: 1px dashed var(--color-primary, #3b82f6);
   border-radius: 8px;
-  color: var(--color-text-secondary, #4b5563);
+  color: var(--color-text-secondary);
   text-align: center;
 }
 .stt-empty-banner p {
@@ -859,11 +859,11 @@ onBeforeUnmount(() => {
 .stt-tip {
   margin: 0;
   font-size: var(--fs-body, 14px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 .stt-dialog-time {
   font-size: var(--fs-body, 14px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   padding: 8px 10px;
   background: var(--color-hover, #f3f4f6);
   border-radius: 6px;
@@ -896,7 +896,7 @@ onBeforeUnmount(() => {
 .form-row .form-field { flex: 1; }
 .stt-dialog-meta {
   font-size: var(--fs-md, 15px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   padding: 6px 10px;
   background: var(--color-hover, #f3f4f6);
   border-radius: 6px;
@@ -907,7 +907,7 @@ onBeforeUnmount(() => {
   gap: 4px;
   font-size: var(--fs-md, 15px);
   font-weight: 400;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   cursor: pointer;
 }
 .dialog-footer-right {

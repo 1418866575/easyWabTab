@@ -509,7 +509,7 @@ async function handleDelete(id: string | null): Promise<void> {
           <el-table-column label="备注" min-width="160" align="left" show-overflow-tooltip>
             <template #default="{ row }">
               <span v-if="row.note" class="bizday-note-text">{{ row.note }}</span>
-              <span v-else style="color: var(--color-text-muted, #9ca3af);">—</span>
+              <span v-else style="color: var(--color-text-muted);">—</span>
             </template>
           </el-table-column>
           <el-table-column label="操作" class-name="ewt-op-col" width="140" align="center" fixed="right">
@@ -854,19 +854,19 @@ async function handleDelete(id: string | null): Promise<void> {
 }
 .bizday-table-wrap > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #f3f4f6) !important;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-weight: 600;
   user-select: none;
 }
 .bizday-table-wrap > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #111827);
+  color: var(--color-text);
 }
 :global(html.dark) .bizday-table-wrap > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #111827) !important;
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 :global(html.dark) .bizday-table-wrap > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 .bizday-table-wrap > :global(.el-table .el-table__body-wrapper .cell),
 .bizday-table-wrap > :global(.el-table .el-table__header-wrapper .cell) {
@@ -906,7 +906,7 @@ async function handleDelete(id: string | null): Promise<void> {
   font-variant-numeric: tabular-nums;
 }
 .bizday-note-text {
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
 }
 .bizday-actions {
@@ -919,7 +919,7 @@ async function handleDelete(id: string | null): Promise<void> {
 .bizday-expand { padding: 12px 24px 12px 48px; }
 .bizday-expand-title {
   font-size: var(--fs-sm, 13px); font-weight: 600;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   margin-bottom: 8px;
 }
 .bizday-detail-head {
@@ -1040,7 +1040,7 @@ async function handleDelete(id: string | null): Promise<void> {
   position: sticky;
   top: 0;
   background: var(--color-bg-hover, #f3f4f6);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-weight: 600;
   text-align: center;
   padding: 8px 10px;
@@ -1051,14 +1051,14 @@ async function handleDelete(id: string | null): Promise<void> {
   padding: 8px 10px;
   border-bottom: 1px solid var(--color-border, #e5e7eb);
   vertical-align: top;
-  color: var(--color-text, #111827);
+  color: var(--color-text);
 }
 .bizday-table tbody tr:hover {
   background: var(--color-bg-hover, #f9fafb);
 }
 .bizday-th-index { width: 44px; }
 .bizday-th-op { width: 76px; }
-.bizday-td-index { text-align: center; color: var(--color-text-muted, #9ca3af); }
+.bizday-td-index { text-align: center; color: var(--color-text-muted); }
 .bizday-td-num { text-align: center; white-space: nowrap; }
 .bizday-row-sold {
   font-weight: 600;
@@ -1106,7 +1106,7 @@ async function handleDelete(id: string | null): Promise<void> {
   margin-right: 4px;
   padding: 3px 7px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   background: transparent;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 6px;
@@ -1144,7 +1144,7 @@ async function handleDelete(id: string | null): Promise<void> {
   align-items: center;
   gap: 6px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 .bizday-more-field :deep(.el-input-number) { width: 100px; }
 .bizday-more-hint {
@@ -1197,10 +1197,10 @@ async function handleDelete(id: string | null): Promise<void> {
 
 :global(html.dark) .bizday-table thead th {
   background-color: var(--color-bg-hover, #111827);
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 :global(html.dark) .bizday-table tbody td {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
   border-bottom-color: var(--color-border, #374151);
 }
 :global(html.dark) .bizday-table tbody tr:hover {
@@ -1212,8 +1212,8 @@ async function handleDelete(id: string | null): Promise<void> {
 }
 :global(html.dark) .bizday-summary-value { color: #4ade80; }
 :global(html.dark) .bizday-summary-cost { color: #fbbf24; }
-:global(html.dark) .bizday-summary-label { color: var(--color-text-secondary, #d1d5db); }
-:global(html.dark) .bizday-summary-hint { color: var(--color-text-muted, #9ca3af); }
+:global(html.dark) .bizday-summary-label { color: var(--color-text-secondary); }
+:global(html.dark) .bizday-summary-hint { color: var(--color-text-muted); }
 
 /* M-02 暗色：售出主列底色 + 展开行 + 「更多」按钮 */
 :global(html.dark) .bizday-th-sold,
@@ -1224,7 +1224,7 @@ async function handleDelete(id: string | null): Promise<void> {
   background: rgba(17, 24, 39, 0.6);
   border-bottom-color: var(--color-border, #374151);
 }
-:global(html.dark) .bizday-more-field { color: var(--color-text-secondary, #d1d5db); }
+:global(html.dark) .bizday-more-field { color: var(--color-text-secondary); }
 :global(html.dark) .bizday-more-toggle.active {
   color: #60a5fa;
   background: #1e3a5f;
@@ -1249,7 +1249,7 @@ async function handleDelete(id: string | null): Promise<void> {
 .bizday-revenue-hint {
   margin-top: 4px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 /* 汇总网格（一行2列）：总营业额 / 总实际营业额 / 总成本 / 总利润 / 交易笔数 */
@@ -1264,7 +1264,7 @@ async function handleDelete(id: string | null): Promise<void> {
   flex-shrink: 0;
   padding-top: 7px;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 .bizday-note-row :deep(.el-textarea) {
   flex: 1;
@@ -1288,7 +1288,7 @@ async function handleDelete(id: string | null): Promise<void> {
 }
 .bizday-summary-label {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
 }
 .bizday-summary-value {
   font-size: var(--fs-title, 18px);
@@ -1300,11 +1300,11 @@ async function handleDelete(id: string | null): Promise<void> {
   color: var(--color-warning, #d97706);
 }
 .bizday-summary-count {
-  color: var(--color-text, #111827);
+  color: var(--color-text);
 }
 .bizday-summary-hint {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 /* 弹框：骨架样式（header/body/field/actions/.req）已抽到 src/styles/biz-dialog.css，此处只留本页专属 */
@@ -1339,7 +1339,7 @@ html.dark .bizday-row {
 
 html.dark .biz-input {
   background-color: var(--color-bg-input, #374151);
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
   border-color: var(--color-border, #374151);
 }
 

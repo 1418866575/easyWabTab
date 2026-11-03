@@ -624,12 +624,12 @@ async function onClearSemesterData(): Promise<void> {
 .dm-table th {
   background: var(--color-bg-hover, #f1f5f9);
   font-weight: 600;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
 
 .dm-table td {
-  color: var(--color-text, #334155);
+  color: var(--color-text);
 }
 
 .dm-op-col {
@@ -655,7 +655,7 @@ async function onClearSemesterData(): Promise<void> {
 
 .dm-field-label {
   font-size: var(--font-size-sm, 13px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .dm-select,
@@ -700,12 +700,12 @@ async function onClearSemesterData(): Promise<void> {
 
 .dm-ro-label {
   font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 .dm-ro-value {
   font-size: var(--font-size-sm, 13px);
-  color: var(--color-text, #334155);
+  color: var(--color-text);
   font-weight: 500;
   word-break: break-all;
 }

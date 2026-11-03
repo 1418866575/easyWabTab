@@ -821,19 +821,19 @@ onMounted(async () => {
 }
 .td-table-wrap > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #f3f4f6) !important;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-weight: 600;
   user-select: none;
 }
 .td-table-wrap > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #111827);
+  color: var(--color-text);
 }
 :global(html.dark) .td-table-wrap > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #111827) !important;
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 :global(html.dark) .td-table-wrap > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 .td-table-wrap > :global(.el-table .el-table__body-wrapper .cell),
 .td-table-wrap > :global(.el-table .el-table__header-wrapper .cell) {
@@ -959,7 +959,7 @@ onMounted(async () => {
   font-weight: 600;
   padding: 1px 8px;
   border-radius: var(--radius-full, 9999px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   background: var(--color-bg-hover, #f1f5f9);
   border: 1px solid var(--color-border, #e2e8f0);
   vertical-align: middle;
@@ -975,7 +975,7 @@ onMounted(async () => {
 }
 .td-status-btn { min-width: 104px; }
 .td-status-select { width: 140px; flex: none; }
-.td-status-tip { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary, #9ca3af); }
+.td-status-tip { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary); }
 
 /* 待办描述输入框：高度 300px（el-input 的 textarea 需 :deep 穿透内部元素） */
 .td-desc-input :deep(.el-textarea__inner) {
@@ -1197,44 +1197,44 @@ html.dark .td-search {
 /* html.dark .empty-state 背景已由全局 .empty-state 的 --color-bg-card token 自动跟随 */
 
 html.dark .td-title {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .td-title.is-done {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 html.dark .td-desc {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 html.dark .td-date {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 /* 禁用态按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */
 html.dark .btn-save:disabled {
   background-color: var(--color-bg-input, #374151);
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 html.dark .form-input,
 html.dark select.form-input,
 html.dark input.form-input {
   background-color: var(--color-bg-input, #374151);
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
   border-color: var(--color-border, #374151);
 }
 
 html.dark .color-reset {
   background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
   border-color: var(--color-border, #374151);
 }
 
 html.dark .search-reset-btn {
   background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
   border-color: var(--color-border, #374151);
 }
 
@@ -1251,13 +1251,13 @@ html.dark .prio-medium {
 }
 
 html.dark .prio-low {
-  color: #cbd5e1;
+  color: var(--color-text-secondary);
   background: rgba(71, 85, 105, 0.35);
   border-color: #475569;
 }
 
 html.dark .st-pending {
-  color: #cbd5e1;
+  color: var(--color-text-secondary);
   background: rgba(71, 85, 105, 0.35);
   border-color: #475569;
 }
@@ -1275,7 +1275,7 @@ html.dark .st-completed {
 }
 
 html.dark .st-archived {
-  color: #9ca3af;
+  color: var(--color-text-muted);
   background: rgba(107, 114, 128, 0.35);
   border-color: #4b5563;
 }
@@ -1286,7 +1286,7 @@ html.dark .td-overdue-days {
 
 html.dark .td-cat-tab {
   background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
   border-color: var(--color-border, #374151);
 }
 

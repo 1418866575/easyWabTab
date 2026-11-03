@@ -100,7 +100,7 @@ const centerStyle = computed(() => ({
 }
 
 .app-watermark-single {
-  color: var(--color-text, #111827);
+  color: var(--color-text);
   font-weight: 500;
   white-space: nowrap;
   line-height: 1.4;

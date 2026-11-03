@@ -372,7 +372,7 @@ html.dark .pm-ring-fg.phase-longBreak {
 }
 
 html.dark .pm-time {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 /* .btn-secondary / .btn-primary:disabled 暗色态已统一到全局 token（style.css），删除避免重复覆盖 */
@@ -381,7 +381,7 @@ html.dark .form-input,
 html.dark select.form-input,
 html.dark input.form-input {
   background-color: var(--color-bg-input, #374151);
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
   border-color: var(--color-border, #374151);
 }
 

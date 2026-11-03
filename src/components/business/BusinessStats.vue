@@ -543,7 +543,7 @@ function printReport(): void {
 .bizstats-month-value {
   font-size: var(--fs-caption, 12px);
   font-variant-numeric: tabular-nums;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
 
@@ -573,13 +573,13 @@ function printReport(): void {
 .bizstats-month-label {
   flex-shrink: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 .bizstats-month-total {
   margin: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
 }
 
 .bizstats-card {
@@ -623,7 +623,7 @@ function printReport(): void {
 .bizstats-profit-tip {
   margin: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 .bizstats-member-tag {
@@ -635,7 +635,7 @@ function printReport(): void {
 }
 
 .bizstats-member-none {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 .bizstats-profit :deep(.negative) {
@@ -870,7 +870,7 @@ html.dark .bizstats-card {
 
 html.dark .bizstats-btn {
   background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
   border-color: var(--color-border, #374151);
 }
 

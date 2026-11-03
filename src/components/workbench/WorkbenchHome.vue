@@ -1007,7 +1007,7 @@ html.dark .greeting-title,
 html.dark .stat-value,
 html.dark .panel-header h3,
 html.dark .home-list-title {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .ov-cell:hover {
@@ -1015,7 +1015,7 @@ html.dark .ov-cell:hover {
 }
 
 html.dark .ov-value {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .ov-icon {
@@ -1034,7 +1034,7 @@ html.dark .greeting-sub,
 html.dark .stat-label,
 html.dark .stat-sub,
 html.dark .ring-text {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 html.dark .home-list-item {
@@ -1053,7 +1053,7 @@ html.dark .habit-detail {
 }
 
 html.dark .habit-detail-name {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .habit-detail-bar {
@@ -1073,7 +1073,7 @@ html.dark .prio-medium {
 }
 
 html.dark .prio-low {
-  color: #cbd5e1;
+  color: var(--color-text-secondary);
   background: rgba(71, 85, 105, 0.35);
   border-color: #475569;
 }

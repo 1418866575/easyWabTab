@@ -128,7 +128,7 @@ function onSelect(id: string): void {
 .bls-title {
   margin: 0 0 8px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .bls-list {
@@ -151,7 +151,7 @@ function onSelect(id: string): void {
   border: 1px solid transparent;
   border-radius: 8px;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   cursor: pointer;
   text-align: left;
 }
@@ -170,7 +170,7 @@ function onSelect(id: string): void {
   font-weight: 700;
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .bs-ledger-name {
@@ -178,7 +178,7 @@ function onSelect(id: string): void {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .bs-ledger-item.active .bs-ledger-name {

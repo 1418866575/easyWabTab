@@ -736,7 +736,7 @@ const handleSubmit = () => {
 .form-hint {
   display: block;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   margin-top: 4px;
 }
 
@@ -820,7 +820,7 @@ const handleSubmit = () => {
 .icon-path {
   margin-left: 8px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   word-break: break-all;
 }
 
@@ -829,7 +829,7 @@ const handleSubmit = () => {
   align-items: center;
   justify-content: center;
   background: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 .icon-actions {
@@ -848,7 +848,7 @@ const handleSubmit = () => {
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
   transition:
@@ -869,7 +869,7 @@ const handleSubmit = () => {
 }
 
 .btn-icon-clear {padding: 0 12px;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   border-color: transparent;
   height: 36px;}
 
@@ -884,7 +884,7 @@ const handleSubmit = () => {
   align-items: center;
   gap: 8px;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .btn-suggestion {display: inline-flex;

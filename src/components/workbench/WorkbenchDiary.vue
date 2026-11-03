@@ -687,7 +687,7 @@ const renderedPreview = computed(() =>
   font-size: var(--fs-h2, 22px);
   font-weight: 700;
   letter-spacing: 0.5px;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .dj-entry-badge {
@@ -700,7 +700,7 @@ const renderedPreview = computed(() =>
 }
 
 .dj-entry-badge.is-empty {
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   background: var(--color-bg-hover, #f1f5f9);
 }
 
@@ -711,7 +711,7 @@ const renderedPreview = computed(() =>
 
 .dj-char-count {
   font-size: var(--fs-body, 14px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
 
@@ -754,7 +754,7 @@ const renderedPreview = computed(() =>
 }
 
 .dj-title-input::placeholder {
-  color: var(--color-text-secondary, #94a3b8);
+  color: var(--color-text-secondary);
   font-weight: 400;
 }
 
@@ -766,7 +766,7 @@ const renderedPreview = computed(() =>
 .dj-title-count {
   flex: none;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #94a3b8);
+  color: var(--color-text-secondary);
 }
 
 /* 列表：标题 / 内容摘要单元格 */
@@ -776,7 +776,7 @@ const renderedPreview = computed(() =>
 }
 
 .dj-content-cell {
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 /* ===== 编辑器三态容器 ===== */
@@ -811,7 +811,7 @@ const renderedPreview = computed(() =>
   font-size: var(--fs-md, 15px);
   line-height: 1.7;
   word-break: break-word;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   background: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
@@ -838,7 +838,7 @@ const renderedPreview = computed(() =>
 .dj-view-btn {padding: 0 12px;
   border: none;
   background-color: var(--color-bg-card, #fff);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
   height: 36px;}
@@ -880,7 +880,7 @@ const renderedPreview = computed(() =>
   border: 1px solid transparent;
   border-radius: var(--radius-sm, 6px);
   background-color: transparent;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-xs, 12px);
   line-height: 1.2;
   white-space: nowrap;
@@ -889,7 +889,7 @@ const renderedPreview = computed(() =>
 
 .dj-md-btn:hover {
   background-color: var(--color-bg-2, #f1f5f9);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .dj-md-btn:active {
@@ -924,7 +924,7 @@ const renderedPreview = computed(() =>
 .dj-img-bar-title {
   flex: 0 0 auto;
   padding-top: 4px;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-xs, 12px);
 }
 
@@ -969,7 +969,7 @@ const renderedPreview = computed(() =>
 }
 
 .dj-img-missing {
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs, 12px);
 }
 
@@ -986,7 +986,7 @@ const renderedPreview = computed(() =>
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-xs, 11px);
 }
 
@@ -995,7 +995,7 @@ const renderedPreview = computed(() =>
   padding: 0 4px;
   border: none;
   background: none;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs, 11px);
   cursor: pointer;
 }
@@ -1054,7 +1054,7 @@ const renderedPreview = computed(() =>
 .dj-card-date {
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1077,7 +1077,7 @@ const renderedPreview = computed(() =>
   min-width: 0;
   font-size: var(--fs-body, 14px);
   line-height: 1.5;
-  color: var(--color-text-secondary, #475569);
+  color: var(--color-text-secondary);
   word-break: break-word;
   overflow: hidden;
   display: -webkit-box;
@@ -1099,7 +1099,7 @@ const renderedPreview = computed(() =>
   justify-content: space-between;
   gap: 8px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 .dj-card-read {
@@ -1227,7 +1227,7 @@ const renderedPreview = computed(() =>
 
 .dj-mood-label {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   margin-right: 2px;
 }
 
@@ -1273,7 +1273,7 @@ const renderedPreview = computed(() =>
 
 .dj-filter-count {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 /* ===== 卡片头部徽标（心情 / 置顶 / 分类） ===== */
@@ -1324,7 +1324,7 @@ const renderedPreview = computed(() =>
   gap: 14px;
   flex-wrap: wrap;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .dj-stat b {
@@ -1334,7 +1334,7 @@ const renderedPreview = computed(() =>
 }
 
 .dj-stat-journal {
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 /* 日记/灵感 类型切换 */
@@ -1456,7 +1456,7 @@ const renderedPreview = computed(() =>
 .dj-table-title {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 /* 顶部筛选条：日记本选择 → 分类 → 日期 → 今日 → 已删除 */
@@ -1475,7 +1475,7 @@ const renderedPreview = computed(() =>
 }
 
 .dj-muted {
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 .dj-cat-tag {
   font-size: var(--fs-caption, 12px);
@@ -1491,7 +1491,7 @@ const renderedPreview = computed(() =>
 }
 .dj-table-empty {
   text-align: center;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   font-size: var(--fs-body, 14px);
   padding: 32px 20px;
 }

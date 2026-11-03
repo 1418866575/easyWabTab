@@ -740,7 +740,7 @@ onUnmounted(() => {
 }
 .nav-sidebar-section-title {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #94a3b8);
+  color: var(--color-text-secondary);
   padding: 8px 8px 6px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -760,14 +760,14 @@ onUnmounted(() => {
   border-radius: 8px;
   cursor: pointer;
   text-align: left;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   /* 2026-11 导航站优化：侧边栏分类名增大一号（14→15px） */
   font-size: var(--fs-md, 15px);
   transition: background-color 0.15s, color 0.15s;
 }
 .nav-menu-item:hover {
   background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 .nav-menu-item.active {
   background-color: rgba(59, 130, 246, 0.14);
@@ -804,7 +804,7 @@ onUnmounted(() => {
 }
 .nav-menu-count {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #94a3b8);
+  color: var(--color-text-secondary);
   background: var(--color-bg-hover, #f1f5f9);
   border-radius: 999px;
   padding: 1px 8px;
@@ -843,7 +843,7 @@ onUnmounted(() => {
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
   background: transparent;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   cursor: pointer;
 }
 .view-hamburger svg {
@@ -898,7 +898,7 @@ onUnmounted(() => {
   margin-top: 16px;
   padding: 8px 16px;
   background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 20px;
   font-size: var(--fs-sm, 13px);
@@ -940,7 +940,7 @@ onUnmounted(() => {
 
 .nav-filter-count {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   white-space: nowrap;
 }
 
@@ -968,7 +968,7 @@ onUnmounted(() => {
 }
 
 .nsf-input::placeholder {
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 .nsf-clear {
@@ -982,7 +982,7 @@ onUnmounted(() => {
   border: none;
   border-radius: 50%;
   background: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--fs-body, 14px);
   line-height: 1;
   cursor: pointer;
@@ -997,7 +997,7 @@ onUnmounted(() => {
   flex: none;
   padding: 7px 12px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   background: transparent;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 18px;
@@ -1033,7 +1033,7 @@ onUnmounted(() => {
 .empty-state {
   text-align: center;
   padding: 60px 20px;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--fs-lg, 16px);
 }
 
@@ -1045,7 +1045,7 @@ html.dark .app-bar {
 
 /* 顶栏按钮暗色（工作台切换触发器 .ws-trigger 的暗色样式自包含在子组件内） */
 html.dark .app-bar .btn-help {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 html.dark .app-bar .btn-help:hover {
@@ -1060,11 +1060,11 @@ html.dark .nav-sidebar {
   border-right-color: var(--color-border, #374151);
 }
 html.dark .nav-menu-item {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 html.dark .nav-menu-item:hover {
   background-color: var(--color-bg-hover, #374151);
-  color: var(--color-text, #e5e7eb);
+  color: var(--color-text);
 }
 html.dark .nav-menu-item.active {
   background-color: rgba(59, 130, 246, 0.22);
@@ -1072,7 +1072,7 @@ html.dark .nav-menu-item.active {
 }
 html.dark .nav-menu-count {
   background: var(--color-bg-hover, #374151);
-  color: var(--color-text-secondary, #9ca3af);
+  color: var(--color-text-secondary);
 }
 html.dark .nav-menu-item.active .nav-menu-count {
   background: rgba(59, 130, 246, 0.32);
@@ -1083,21 +1083,21 @@ html.dark .nav-sidebar-divider {
 }
 html.dark .view-hamburger {
   border-color: var(--color-border, #374151);
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 html.dark .nav-site-filter {
   background-color: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
 }
 html.dark .nsf-input {
-  color: var(--color-text, #e5e7eb);
+  color: var(--color-text);
 }
 html.dark .nsf-clear {
   background-color: var(--color-bg-hover, #374151);
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 html.dark .nav-filter-clear {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
   border-color: var(--color-border, #374151);
 }
 

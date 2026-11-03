@@ -281,7 +281,7 @@ function ledgerLabel(e: LedgerEntry): string {
   max-width: 720px;
   font-size: var(--font-size-sm, 13px);
   line-height: 1.6;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .tr-total {
@@ -291,7 +291,7 @@ function ledgerLabel(e: LedgerEntry): string {
   border: 1px solid var(--color-border, #e2e8f0);
   background-color: var(--color-bg-card, #fff);
   font-size: var(--font-size-sm, 13px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .tr-empty {
@@ -299,7 +299,7 @@ function ledgerLabel(e: LedgerEntry): string {
   border: 1px dashed var(--color-border, #e2e8f0);
   border-radius: var(--radius-lg, 12px);
   background-color: var(--color-bg-card, #fff);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm, 13px);
   text-align: center;
 }

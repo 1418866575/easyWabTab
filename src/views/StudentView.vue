@@ -421,7 +421,7 @@ async function onOnboardingComplete() {
   flex-direction: column;
   height: 100dvh;
   background: var(--color-bg, #f5f5f5);
-  color: var(--color-text, #1f2937);
+  color: var(--color-text);
 }
 
 .st-header {
@@ -475,7 +475,7 @@ async function onOnboardingComplete() {
   border-radius: 999px;
   border: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-surface-2, #fafafa);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
   transition: all 0.15s;
   user-select: none;
@@ -498,7 +498,7 @@ async function onOnboardingComplete() {
   border-radius: 999px;
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #d1d5db);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
   font-weight: 500;
   cursor: pointer;
@@ -506,7 +506,7 @@ async function onOnboardingComplete() {
   height: 36px;}
 .st-parent-bar-btn:hover {
   background: var(--color-hover, #f3f4f6);
-  color: var(--color-text, #1f2937);
+  color: var(--color-text);
 }
 .st-parent-bar-btn.primary {
   background: var(--color-primary, #10b981);

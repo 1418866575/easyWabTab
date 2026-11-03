@@ -187,12 +187,12 @@ async function handleExportStatic(): Promise<void> {
   margin: 0 0 10px;
   font-size: var(--ds-fs-section, 16px);
   font-weight: var(--font-weight-semibold, 600);
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
 }
 
 .bs-field { display: block; margin-bottom: 10px; }
 
-.bs-label { display: block; margin-bottom: 4px; color: var(--ds-text-2, #646a73); font-size: var(--ds-fs-label, 12px); }
+.bs-label { display: block; margin-bottom: 4px; color: var(--ds-text-2); font-size: var(--ds-fs-label, 12px); }
 
 .bs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
 
@@ -203,7 +203,7 @@ async function handleExportStatic(): Promise<void> {
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--color-bg-input, #ffffff);
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
   font-size: var(--font-size-xs, 12px);
 }
 
@@ -212,7 +212,7 @@ async function handleExportStatic(): Promise<void> {
   resize: vertical;
 }
 
-.bs-hint { margin: 0; color: var(--ds-text-3, #9aa0a6); font-size: var(--ds-fs-label, 12px); }
+.bs-hint { margin: 0; color: var(--ds-text-3); font-size: var(--ds-fs-label, 12px); }
 
 .bs-errors {
   margin: 0;

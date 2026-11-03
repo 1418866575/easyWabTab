@@ -99,7 +99,7 @@
   margin: 0;
   padding-left: 20px;
   font-size: var(--font-size-sm, 13px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   line-height: var(--line-height-relaxed, 1.7);
 }
 
@@ -111,12 +111,12 @@
 .hp-faq dt {
   margin-top: 10px;
   font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
 }
 
 .hp-faq dd {
   margin: 4px 0 0;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   line-height: var(--line-height-normal, 1.5);
 }
 </style>

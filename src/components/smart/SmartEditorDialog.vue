@@ -268,11 +268,11 @@ const nameTaken = computed(() => {
 .se-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .se-field { display: flex; flex-direction: column; gap: 6px; flex: 1 1 220px; min-width: 0; }
 .se-field-sm { flex: 0 1 160px; }
-.se-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #6b7280); }
-.se-hint { color: var(--color-text-muted, #9ca3af); font-size: var(--fs-caption, 12px); }
+.se-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
+.se-hint { color: var(--color-text-muted); font-size: var(--fs-caption, 12px); }
 .req { color: var(--color-error, #dc2626); }
 .se-error { font-size: var(--fs-caption, 12px); color: var(--color-error, #dc2626); }
-.se-vars { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary, #6b7280); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.se-vars { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .se-var {
   padding: 1px 6px;
   border-radius: 4px;
@@ -280,7 +280,7 @@ const nameTaken = computed(() => {
   color: var(--color-primary, #3b82f6);
   font-size: var(--fs-caption, 12px);
 }
-.se-check { display: flex; align-items: center; gap: 6px; font-size: var(--fs-sm, 13px); color: var(--color-text, #111827); }
+.se-check { display: flex; align-items: center; gap: 6px; font-size: var(--fs-sm, 13px); color: var(--color-text); }
 
 .se-images { gap: 6px; }
 .se-img-grid { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -316,7 +316,7 @@ const nameTaken = computed(() => {
   border: 1px dashed var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 8px);
   background: transparent;
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
   font-size: var(--fs-sm, 13px);
   cursor: pointer;
 }

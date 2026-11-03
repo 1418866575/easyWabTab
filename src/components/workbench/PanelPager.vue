@@ -43,7 +43,7 @@ defineEmits<{ prev: []; next: [] }>()
 /* 翻页按钮：视觉对齐 WorkbenchView .wb-btn token look（--color-* 亮色 token + hex 兜底） */
 .pp-btn {padding: 0 12px;
   background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
   font-size: var(--fs-caption, 12px);
@@ -64,14 +64,14 @@ defineEmits<{ prev: []; next: [] }>()
 
 .pp-info {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 /* 暗色模式覆盖：--color-* 仅定义于 style.css :root（亮色），dark.css 只覆写 legacy --bg-/--text-/--border-/--accent- 家族，
    故沿用 WorkbenchView html.dark .wb-btn 的既有约定（legacy theme-aware token + hex 兜底）。 */
 html.dark .pp-btn {
   background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
   border-color: var(--color-border, #374151);
 }
 
@@ -82,6 +82,6 @@ html.dark .pp-btn:hover:not(:disabled) {
 }
 
 html.dark .pp-info {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 </style>

@@ -235,5 +235,5 @@ html.dark .opacity-section {
 }
 
 html.dark .opacity-hint {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }

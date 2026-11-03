@@ -72,7 +72,7 @@ watch(current, (req) => {
   margin: 0;
   font-size: var(--font-size-base, 15px);
   line-height: var(--line-height-base, 1.6);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   overflow-wrap: anywhere;
   /* 保留 \n 换行（原 ElMessageBox 适配的行为），纯文本插值无 XSS 风险 */
   white-space: pre-line;

@@ -444,12 +444,12 @@ function excerpt(w: SmartWorkflow): string {
   max-width: 720px;
 }
 
-.wm-search-icon { color: var(--color-text-muted, #9ca3af); flex: none; }
+.wm-search-icon { color: var(--color-text-muted); flex: none; }
 .wm-search-input {
   flex: 1;
   min-width: 0;
 }
-.wm-search-input::placeholder { color: var(--color-text-muted, #9ca3af); }
+.wm-search-input::placeholder { color: var(--color-text-muted); }
 .wm-search-clear {
   flex: none;
   min-height: 24px;
@@ -457,7 +457,7 @@ function excerpt(w: SmartWorkflow): string {
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
   font-size: var(--fs-md, 15px);
   line-height: 1;
   cursor: pointer;
@@ -475,7 +475,7 @@ function excerpt(w: SmartWorkflow): string {
   border-radius: 999px;
   border: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-card, #fff);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-family: inherit;
   font-size: var(--fs-sm, 13px);
   font-weight: 500;
@@ -491,14 +491,14 @@ function excerpt(w: SmartWorkflow): string {
 /* 排序 + 收藏 + 操作行 */
 .wm-toolbar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
 .wm-toolbar-left, .wm-toolbar-right { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.wm-result { font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
+.wm-result { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 .wm-select {
   height: 36px;
   padding: 0 6px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #fff);
-  color: var(--color-text, #111827);
+  color: var(--color-text);
   font-size: var(--fs-sm, 13px);
 }
 .wm-fav {
@@ -507,7 +507,7 @@ function excerpt(w: SmartWorkflow): string {
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
   background: transparent;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
 }
@@ -519,12 +519,12 @@ function excerpt(w: SmartWorkflow): string {
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 999px;
   background: transparent;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
 }
 .wm-tag.is-on { border-color: var(--color-primary, #3b82f6); background: var(--color-primary-soft, #eff6ff); color: var(--color-primary, #3b82f6); }
-.wm-tag-reset { color: var(--color-text-muted, #9ca3af); }
+.wm-tag-reset { color: var(--color-text-muted); }
 
 /* 批量条：与工具栏同款胶囊按钮，浮现于列表上方 */
 .wm-batchbar {
@@ -537,15 +537,15 @@ function excerpt(w: SmartWorkflow): string {
   border-radius: var(--radius-md, 10px);
   background: var(--color-primary-soft, #eff6ff);
 }
-.wm-selall { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #6b7280); cursor: pointer; }
-.wm-batch-count { font-size: var(--fs-sm, 13px); color: var(--color-text, #111827); font-weight: 600; }
+.wm-selall { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); cursor: pointer; }
+.wm-batch-count { font-size: var(--fs-sm, 13px); color: var(--color-text); font-weight: 600; }
 .wm-spacer { flex: 1 1 auto; }
 .wm-batch-btn {height: 36px;
   padding: 0 12px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
   background: var(--color-bg-card, #fff);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;}
 .wm-batch-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
@@ -574,7 +574,7 @@ function excerpt(w: SmartWorkflow): string {
   padding: 0;
   border: none;
   background: none;
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
   font-size: var(--fs-lg, 16px);
   line-height: 1.2;
   cursor: pointer;
@@ -585,7 +585,7 @@ function excerpt(w: SmartWorkflow): string {
   padding: 0;
   border: none;
   background: none;
-  color: var(--color-text, #111827);
+  color: var(--color-text);
   font-size: var(--fs-body, 14px);
   font-weight: 600;
   text-align: left;
@@ -595,21 +595,21 @@ function excerpt(w: SmartWorkflow): string {
   white-space: nowrap;
 }
 .wm-name:hover { color: var(--color-primary, #3b82f6); }
-.wm-meta { font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); display: flex; gap: 4px; flex-wrap: wrap; }
+.wm-meta { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); display: flex; gap: 4px; flex-wrap: wrap; }
 .wm-dot { opacity: .6; }
 .wm-builtin {
   flex: 0 0 auto;
   padding: 1px 6px;
   border-radius: 4px;
   background: var(--color-bg-hover, #f3f4f6);
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
   font-size: var(--fs-caption, 12px);
 }
-.wm-desc { margin: 0; font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #6b7280); }
+.wm-desc { margin: 0; font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
 .wm-excerpt {
   margin: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -625,7 +625,7 @@ function excerpt(w: SmartWorkflow): string {
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
   background: transparent;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;}
 .wm-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
@@ -638,8 +638,8 @@ function excerpt(w: SmartWorkflow): string {
   border: 1px dashed var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 10px);
 }
-.wm-empty-title { margin: 0 0 4px; font-size: var(--fs-body, 14px); font-weight: 600; color: var(--color-text, #111827); }
-.wm-empty-hint { margin: 0 0 12px; font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #6b7280); }
+.wm-empty-title { margin: 0 0 4px; font-size: var(--fs-body, 14px); font-weight: 600; color: var(--color-text); }
+.wm-empty-hint { margin: 0 0 12px; font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
 .wm-empty-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 
 @media (max-width: 768px) {

@@ -148,7 +148,7 @@ const handleSizeChange = (value: number | string) => {
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
   background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
   transition: all 0.2s;
@@ -171,7 +171,7 @@ const handleSizeChange = (value: number | string) => {
 }
 
 .ellipsis {
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   padding: 0 4px;
 }
 
@@ -186,7 +186,7 @@ const handleSizeChange = (value: number | string) => {
 }
 
 .page-info {
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--fs-body, 14px);
   padding: 8px 12px;
 }

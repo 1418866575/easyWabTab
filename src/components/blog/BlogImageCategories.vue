@@ -189,15 +189,15 @@ async function handleMove(id: string, delta: number): Promise<void> {
 .bic-input { width: 240px; max-width: 100%; }
 
 .bic-page { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
-.bic-page-title { margin: 0; font-size: var(--ds-fs-section, 16px); font-weight: var(--font-weight-semibold, 600); color: var(--ds-text, #1f2329); }
-.bic-page-sub { margin: 0; font-size: var(--ds-fs-body-sm, 13px); color: var(--ds-text-3, #9aa0a6); }
+.bic-page-title { margin: 0; font-size: var(--ds-fs-section, 16px); font-weight: var(--font-weight-semibold, 600); color: var(--ds-text); }
+.bic-page-sub { margin: 0; font-size: var(--ds-fs-body-sm, 13px); color: var(--ds-text-3); }
 
 .bic-empty {
   padding: 28px 16px;
   border: 1px dashed var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-card, 12px);
   background-color: var(--ds-card, #ffffff);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--font-size-sm, 13px);
   text-align: center;
 }
@@ -226,12 +226,12 @@ async function handleMove(id: string, delta: number): Promise<void> {
 }
 
 .bic-name {
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
   font-size: var(--font-size-sm, 14px);
   font-weight: var(--font-weight-medium, 500);
 }
 
-.bic-count { color: var(--ds-text-2, #646a73); font-size: var(--font-size-xs, 12px); }
+.bic-count { color: var(--ds-text-2); font-size: var(--font-size-xs, 12px); }
 
 .bic-ops { display: flex; gap: 4px; margin-left: auto; flex-wrap: wrap; }
 
@@ -240,7 +240,7 @@ async function handleMove(id: string, delta: number): Promise<void> {
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-pill, 999px);
   background-color: var(--ds-card, #ffffff);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--font-size-xs, 11px);
   cursor: pointer;
 }

@@ -566,7 +566,7 @@ function displayTime(row: BlogArticle): string {
 
 .ba-query-label {
   font-size: var(--ds-fs-label, 12px);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
 }
 
 .ba-query-input {
@@ -608,13 +608,13 @@ function displayTime(row: BlogArticle): string {
   border: 1px dashed var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-card, 12px);
   background-color: var(--ds-card, #ffffff);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--ds-fs-body-sm, 13px);
   text-align: center;
 }
 
 .ba-empty-icon {
-  color: var(--ds-text-3, #a8abb2);
+  color: var(--ds-text-3);
 }
 
 .ba-empty-text {
@@ -678,7 +678,7 @@ html.dark .ba-query {
 }
 
 .ba-cell-muted {
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--ds-fs-label, 12px);
 }
 
@@ -688,13 +688,13 @@ html.dark .ba-query {
   font-size: var(--ds-fs-label, 12px);
   line-height: 18px;
   background-color: var(--ds-card-2, #f7f8fa);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
 }
 
-.ba-status-draft { background-color: var(--color-bg-hover, #f1f5f9); color: var(--ds-text-2, #646a73); }
+.ba-status-draft { background-color: var(--color-bg-hover, #f1f5f9); color: var(--ds-text-2); }
 .ba-status-reviewing { background-color: var(--color-warning-soft, #fef3c7); color: var(--color-warning, #b45309); }
 .ba-status-published { background-color: var(--color-success-soft, #dcfce7); color: var(--color-success, #16a34a); }
-.ba-status-offline { background-color: var(--color-bg-hover, #f1f5f9); color: var(--ds-text-3, #9aa0a6); }
+.ba-status-offline { background-color: var(--color-bg-hover, #f1f5f9); color: var(--ds-text-3); }
 .ba-status-rejected { background-color: var(--color-error-soft, #fee2e2); color: var(--color-error, #ef4444); }
 
 .ba-chip {
@@ -703,7 +703,7 @@ html.dark .ba-query {
   padding: 0 6px;
   border-radius: var(--ds-radius-pill, 999px);
   background-color: var(--ds-card-2, #f7f8fa);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--ds-fs-label, 12px);
   line-height: 18px;
 }
@@ -742,7 +742,7 @@ html.dark .ba-query {
   border: none;
   background: transparent;
   padding: 0;
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
   font-size: var(--ds-fs-body, 14px);
   font-weight: var(--font-weight-medium, 500);
   text-align: left;
@@ -759,7 +759,7 @@ html.dark .ba-query {
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-pill, 999px);
   background-color: var(--ds-card, #ffffff);
-  color: var(--ds-text-3, #9aa0a6);
+  color: var(--ds-text-3);
   cursor: pointer;
 }
 
@@ -776,7 +776,7 @@ html.dark .ba-query {
 
 .ba-card-excerpt {
   margin: 0;
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--font-size-xs, 12px);
   line-height: var(--line-height-relaxed, 1.6);
   display: -webkit-box;
@@ -813,7 +813,7 @@ html.dark .ba-query {
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-pill, 999px);
   background-color: var(--ds-card, #ffffff);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--ds-fs-label, 12px);
   cursor: pointer;
 }
@@ -830,7 +830,7 @@ html.dark .ba-query {
 /* ---------- 弹框内 ---------- */
 .ba-dialog-text {
   margin: 0 0 12px;
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--font-size-sm, 13px);
 }
 
@@ -841,7 +841,7 @@ html.dark .ba-query {
 }
 
 .ba-field-label {
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--font-size-xs, 12px);
 }
 

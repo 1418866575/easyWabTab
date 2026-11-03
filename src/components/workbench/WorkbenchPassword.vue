@@ -837,7 +837,7 @@ watch(
 .pwd-form-hint {
   margin: 4px 0 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 html.dark .pwd-cat-badge {
   background: #1e3a5f;
@@ -999,7 +999,7 @@ html.dark .pwd-cat-badge {
   height: auto;
   font-size: var(--fs-caption, 12px);
   line-height: 1.4;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   min-width: 36px;
   height: 36px;}
 
@@ -1179,15 +1179,15 @@ html.dark .pwd-item {
 }
 
 html.dark .pwd-auth-card h3 {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .pwd-auth-hint {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 html.dark .pwd-reset-link {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 html.dark .pwd-reset-link:hover:not(:disabled) {
@@ -1196,14 +1196,14 @@ html.dark .pwd-reset-link:hover:not(:disabled) {
 
 html.dark .pwd-search {
   background-color: var(--color-bg-input, #374151);
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
   border-color: var(--color-border, #374151);
 }
 
 html.dark .pwd-btn-lock,
 html.dark .pwd-btn-cancel {
   background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
   border-color: var(--color-border, #374151);
 }
 
@@ -1212,11 +1212,11 @@ html.dark .pwd-icon-btn:hover {
 }
 
 html.dark .pwd-site-name {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .pwd-details {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 html.dark .pwd-site-dropdown {
@@ -1233,16 +1233,16 @@ html.dark .pwd-site-option:hover {
 }
 
 html.dark .pwd-site-option-name {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .pwd-site-option-url {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 /* 禁用态主按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */
 html.dark .pwd-btn-primary:disabled {
   background-color: var(--color-bg-input, #374151);
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 </style>

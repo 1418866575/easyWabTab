@@ -425,7 +425,7 @@ function exportCsv(): void {
 }
 
 .lv-type-name {
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .lv-type-bar {
@@ -443,7 +443,7 @@ function exportCsv(): void {
 
 .lv-type-count {
   text-align: right;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 /* 移动端：表格转卡片流（表头隐藏，单元格前置字段名） */
@@ -471,7 +471,7 @@ function exportCsv(): void {
 
   .lv-table tbody td::before {
     content: attr(data-label);
-    color: var(--color-text-secondary, #64748b);
+    color: var(--color-text-secondary);
     font-size: var(--fs-caption, 12px);
     flex: 0 0 auto;
   }

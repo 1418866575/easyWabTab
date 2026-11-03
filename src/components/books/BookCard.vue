@@ -281,7 +281,7 @@ const downloadTitle = computed(() =>
   margin: 0;
   font-size: var(--font-size-base, 15px);
   font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
   line-height: var(--line-height-tight, 1.3);
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -294,7 +294,7 @@ const downloadTitle = computed(() =>
 
 .bk-desc {
   margin: 0;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm, 13px);
   line-height: var(--line-height-relaxed, 1.6);
   display: -webkit-box;
@@ -303,7 +303,7 @@ const downloadTitle = computed(() =>
   overflow: hidden;
 }
 .bk-desc--muted {
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs, 12px);
 }
 
@@ -312,11 +312,11 @@ const downloadTitle = computed(() =>
   align-items: center;
   flex-wrap: wrap;
   gap: 5px;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs, 12px);
 }
 .bk-cat { color: var(--color-primary, #3b82f6); }
-.bk-dot { color: var(--color-text-muted, #94a3b8); }
+.bk-dot { color: var(--color-text-muted); }
 
 .bk-tags {
   display: flex;
@@ -340,7 +340,7 @@ const downloadTitle = computed(() =>
   align-self: flex-start;
   max-width: 100%;
   margin-top: auto;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-xs, 11px);
 }
 .bk-progress-inner {
@@ -386,7 +386,7 @@ const downloadTitle = computed(() =>
 }
 .bk-recent {
   margin-left: auto;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs, 11px);
   white-space: nowrap;
 }
@@ -404,7 +404,7 @@ const downloadTitle = computed(() =>
   border: none;
   border-radius: 999px;
   background-color: rgba(255, 255, 255, 0.85);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   font-size: var(--fs-title, 18px);
   line-height: 1;
   cursor: pointer;

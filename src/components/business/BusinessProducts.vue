@@ -899,7 +899,7 @@ html.dark .bizprod-card {
 }
 
 html.dark .bizprod-name {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .bizprod-price-auto {

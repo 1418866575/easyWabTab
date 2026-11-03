@@ -223,7 +223,7 @@ async function handleSyncNowClick(): Promise<void> {
   height: 100dvh;
   min-height: 100vh;
   background-color: var(--color-bg, #f8fafc);
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
 }
 
 /* ---------- 顶栏 ---------- */
@@ -256,7 +256,7 @@ async function handleSyncNowClick(): Promise<void> {
   font-size: var(--font-size-2xl, 20px);
   font-weight: var(--font-weight-semibold, 600);
   line-height: var(--line-height-tight, 1.3);
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -265,7 +265,7 @@ async function handleSyncNowClick(): Promise<void> {
 .sv-sub {
   margin: 0;
   font-size: var(--font-size-sm, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -291,7 +291,7 @@ async function handleSyncNowClick(): Promise<void> {
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 999px;
   background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
   font-family: inherit;
   font-size: var(--fs-caption, 12px);
   font-weight: var(--font-weight-medium, 500);
@@ -392,7 +392,7 @@ async function handleSyncNowClick(): Promise<void> {
   border: none;
   border-radius: var(--radius-sm, 8px);
   background-color: transparent;
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
   font-family: inherit;
   font-size: var(--font-size-sm, 13px);
   text-align: left;
@@ -435,7 +435,7 @@ async function handleSyncNowClick(): Promise<void> {
   padding: 0 6px;
   border-radius: 999px;
   background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs, 11px);
 }
 

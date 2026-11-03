@@ -189,15 +189,15 @@ async function handleMove(id: string, delta: number): Promise<void> {
 .bc-input { width: 240px; max-width: 100%; }
 
 .bc-page { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
-.bc-page-title { margin: 0; font-size: var(--ds-fs-section, 16px); font-weight: var(--font-weight-semibold, 600); color: var(--ds-text, #1f2329); }
-.bc-page-sub { margin: 0; font-size: var(--ds-fs-body-sm, 13px); color: var(--ds-text-3, #9aa0a6); }
+.bc-page-title { margin: 0; font-size: var(--ds-fs-section, 16px); font-weight: var(--font-weight-semibold, 600); color: var(--ds-text); }
+.bc-page-sub { margin: 0; font-size: var(--ds-fs-body-sm, 13px); color: var(--ds-text-3); }
 
 .bc-empty {
   padding: 28px 16px;
   border: 1px dashed var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-card, 12px);
   background-color: var(--ds-card, #ffffff);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--font-size-sm, 13px);
   text-align: center;
 }
@@ -230,15 +230,15 @@ async function handleMove(id: string, delta: number): Promise<void> {
   border-top: 1px dashed var(--ds-line, #ececf0);
 }
 
-.bc-name { color: var(--ds-text, #1f2329); font-size: var(--font-size-sm, 14px); font-weight: var(--font-weight-medium, 500); }
+.bc-name { color: var(--ds-text); font-size: var(--font-size-sm, 14px); font-weight: var(--font-weight-medium, 500); }
 
 /* 分类图标（emoji）：列表内联展示 + 编辑框窄宽度 */
 .bc-icon { font-size: var(--font-size-sm, 14px); line-height: 1; }
 .bc-edit :deep(.el-input.bc-icon-input) { max-width: 90px; }
 
-.bc-slug { color: var(--ds-text-3, #9aa0a6); font-size: var(--font-size-xs, 11px); }
+.bc-slug { color: var(--ds-text-3); font-size: var(--font-size-xs, 11px); }
 
-.bc-count { color: var(--ds-text-2, #646a73); font-size: var(--font-size-xs, 12px); }
+.bc-count { color: var(--ds-text-2); font-size: var(--font-size-xs, 12px); }
 
 .bc-ops { display: flex; gap: 4px; margin-left: auto; flex-wrap: wrap; }
 
@@ -247,7 +247,7 @@ async function handleMove(id: string, delta: number): Promise<void> {
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-pill, 999px);
   background-color: var(--ds-card, #ffffff);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--font-size-xs, 11px);
   cursor: pointer;
 }
@@ -255,7 +255,7 @@ async function handleMove(id: string, delta: number): Promise<void> {
 .bc-mini:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
 .bc-mini.is-danger:hover { border-color: var(--color-error, #ef4444); color: var(--color-error, #ef4444); }
 
-.bc-desc { margin: 4px 0 0; color: var(--ds-text-3, #9aa0a6); font-size: var(--font-size-xs, 12px); }
+.bc-desc { margin: 4px 0 0; color: var(--ds-text-3); font-size: var(--font-size-xs, 12px); }
 
 .bc-edit,
 .bc-add-child {

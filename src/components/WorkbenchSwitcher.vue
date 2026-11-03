@@ -423,7 +423,7 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
   gap: 6px;
   padding: 8px 12px;
   background-color: transparent;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   border: 1px solid transparent;
   border-radius: 8px;
   font-size: var(--fs-sm, 13px);
@@ -483,14 +483,14 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
 }
 .ws-search-icon {
   flex-shrink: 0;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 .ws-input {
   flex: 1;
   min-width: 0;
 }
 .ws-input::placeholder {
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 .ws-close-btn {flex-shrink: 0;
   width: 28px;
@@ -545,7 +545,7 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
   flex: 1;
   min-width: 0;
   font-size: var(--fs-body, 14px);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -566,19 +566,19 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
 .ws-item-kbd {
   flex: none;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #94a3b8);
+  color: var(--color-text-secondary);
 }
 .ws-item-newtab {
   flex: none;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, #94a3b8);
+  color: var(--color-text-secondary);
 }
 .ws-empty {
   margin: 0;
   padding: 28px 16px;
   text-align: center;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .ws-foot {
@@ -588,7 +588,7 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
   padding: 8px 14px;
   border-top: 1px solid var(--color-border, #e2e8f0);
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 .ws-kbd {
   font-family: inherit;
@@ -636,7 +636,7 @@ html.dark .ws-foot {
   border-color: var(--color-border, #374151);
 }
 html.dark .ws-input {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 html.dark .ws-item:hover {
   background-color: var(--color-bg-hover, #374151);
@@ -645,7 +645,7 @@ html.dark .ws-item.active {
   background-color: #1e3a5f;
 }
 html.dark .ws-item-name {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 html.dark .ws-item.current .ws-item-name,
 html.dark .ws-item-svg {

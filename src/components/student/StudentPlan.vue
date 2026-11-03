@@ -334,7 +334,7 @@ onMounted(() => {
           <el-table-column label="复盘" min-width="150" align="left" show-overflow-tooltip>
             <template #default="{ row }">
               <span v-if="row.review">{{ row.review }}</span>
-              <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
+              <span v-else style="color: var(--color-text-secondary);">—</span>
             </template>
           </el-table-column>
           <el-table-column label="操作" class-name="ewt-op-col" width="140" align="center" fixed="right">
@@ -493,7 +493,7 @@ onMounted(() => {
 }
 .sp-stat-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
 }
 .sp-stat-value {
   font-size: var(--fs-title, 18px);
@@ -528,19 +528,19 @@ onMounted(() => {
 }
 .sp-list > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #f3f4f6) !important;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-weight: 600;
   user-select: none;
 }
 .sp-list > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #111827);
+  color: var(--color-text);
 }
 :global(html.dark) .sp-list > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #111827) !important;
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 :global(html.dark) .sp-list > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 .sp-list > :global(.el-table .el-table__body-wrapper .cell),
 .sp-list > :global(.el-table .el-table__header-wrapper .cell) {
@@ -601,7 +601,7 @@ onMounted(() => {
 }
 .sp-progress-text {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   white-space: nowrap;
   width: 36px;
   text-align: right;
@@ -614,7 +614,7 @@ onMounted(() => {
 .sp-goals-expand-title {
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   margin-bottom: 8px;
 }
 .sp-goal {
@@ -664,7 +664,7 @@ onMounted(() => {
 }
 .sp-goal-percent {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   width: 36px;
   text-align: right;
 }
@@ -685,7 +685,7 @@ onMounted(() => {
 }
 .sp-field label {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
 }
 .sp-field-row {
   display: flex;
@@ -706,7 +706,7 @@ onMounted(() => {
   flex: 1;
 }
 .sp-goal-remove {
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   padding: 4px 8px;
 }
 .sp-goal-add {

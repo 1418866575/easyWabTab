@@ -300,7 +300,7 @@ function exportExpenseExcel(): void {
   gap: 6px;
   font-size: var(--fs-md, 15px);
   font-weight: 600;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .bizrec-stats {
@@ -320,13 +320,13 @@ function exportExpenseExcel(): void {
 
 .bizrec-stat-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 .bizrec-stat-value {
   font-size: var(--fs-md, 15px);
   font-weight: 700;
-  color: var(--color-text, #111827);
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -341,7 +341,7 @@ function exportExpenseExcel(): void {
 .bizrec-empty {
   margin: 0;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 .bizrec-tag {
@@ -356,7 +356,7 @@ function exportExpenseExcel(): void {
 }
 
 .bizrec-tag.auto {
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   background: var(--color-bg-hover, #f1f5f9);
 }
 
@@ -385,18 +385,18 @@ function exportExpenseExcel(): void {
 
 .bizrec-month-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 .bizrec-month-actual {
   font-size: var(--fs-body, 14px);
   font-weight: 700;
-  color: var(--color-text, #111827);
+  color: var(--color-text);
 }
 
 .bizrec-month-diff {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 .bizrec-month-diff.negative {
@@ -410,7 +410,7 @@ function exportExpenseExcel(): void {
 .bizrec-tip {
   margin: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 .bizrec-sub {
@@ -421,7 +421,7 @@ function exportExpenseExcel(): void {
 .bizrec-subtitle {
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .bizrec-list {
@@ -507,7 +507,7 @@ function exportExpenseExcel(): void {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
   font-size: var(--fs-caption, 12px);
 }
 

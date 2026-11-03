@@ -555,7 +555,7 @@ async function doRemove(ids: string[]): Promise<void> {
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-pill, 999px);
   background-color: var(--ds-card, #ffffff);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-family: inherit;
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
@@ -578,7 +578,7 @@ async function doRemove(ids: string[]): Promise<void> {
   padding: 0 5px;
   border-radius: var(--ds-radius-pill, 999px);
   background-color: var(--ds-card-2, #f7f8fa);
-  color: var(--ds-text-3, #9aa0a6);
+  color: var(--ds-text-3);
   font-size: var(--fs-caption, 12px);
 }
 
@@ -608,7 +608,7 @@ async function doRemove(ids: string[]): Promise<void> {
 }
 
 .bg-query-label {
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--ds-fs-label, 12px);
 }
 
@@ -625,7 +625,7 @@ async function doRemove(ids: string[]): Promise<void> {
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--color-bg-input, #ffffff);
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
   font-family: inherit;
   font-size: var(--font-size-sm, 13px);
 }
@@ -676,7 +676,7 @@ async function doRemove(ids: string[]): Promise<void> {
 .bg-batch-hint {
   flex: 1 1 100%;
   margin: 0;
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--font-size-xs, 12px);
 }
 
@@ -684,13 +684,13 @@ async function doRemove(ids: string[]): Promise<void> {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
 }
 
 .bg-total {
-  color: var(--ds-text-3, #9aa0a6);
+  color: var(--ds-text-3);
   font-size: var(--font-size-xs, 12px);
 }
 
@@ -713,7 +713,7 @@ async function doRemove(ids: string[]): Promise<void> {
   padding: 40px 12px;
   border: 1px dashed var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--font-size-sm, 13px);
   text-align: center;
 }
@@ -783,13 +783,13 @@ async function doRemove(ids: string[]): Promise<void> {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
   font-size: var(--font-size-sm, 13px);
 }
 
 .bg-sub,
 .bg-usage {
-  color: var(--ds-text-3, #9aa0a6);
+  color: var(--ds-text-3);
   font-size: var(--font-size-xs, 11px);
 }
 
@@ -800,7 +800,7 @@ async function doRemove(ids: string[]): Promise<void> {
   padding: 1px 7px;
   border-radius: var(--ds-radius-pill, 999px);
   background-color: var(--ds-card-2, #f7f8fa);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--fs-caption, 12px);
 }
 
@@ -810,7 +810,7 @@ async function doRemove(ids: string[]): Promise<void> {
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--ds-card, #ffffff);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
 }
@@ -838,7 +838,7 @@ async function doRemove(ids: string[]): Promise<void> {
 
 .bg-del:disabled:hover {
   border-color: var(--ds-line, #ececf0);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
 }
 
 /* 重命名弹框：缩略图 + 名称输入 */
@@ -874,7 +874,7 @@ async function doRemove(ids: string[]): Promise<void> {
 }
 
 .bg-rename-label {
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--font-size-xs, 12px);
 }
 

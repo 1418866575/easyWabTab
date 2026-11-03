@@ -578,7 +578,7 @@ function handleAdd(): void {
 }
 .bizcat-tag-hidden {
   background: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-text-muted, #64748b);
+  color: var(--color-text-muted);
 }
 
 /* 单元格控件撑满列宽 */
@@ -614,7 +614,7 @@ function handleAdd(): void {
 }
 .bizcat-add-field > label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #64748b);
+  color: var(--color-text-muted);
   white-space: nowrap;
 }
 .bizcat-add-btn {
@@ -634,7 +634,7 @@ function handleAdd(): void {
   padding: 2px 8px;
   border-radius: 4px;
   background: var(--color-bg-tag, #f1f5f9);
-  color: var(--color-text, #111827);
+  color: var(--color-text);
   font-size: var(--fs-caption, 12px);
   font-variant-numeric: tabular-nums;
   text-align: center;
@@ -642,11 +642,11 @@ function handleAdd(): void {
 }
 :global(html.dark) .bizcat-prodprice {
   background: var(--color-bg-tag-dark, #1f2937);
-  color: var(--color-text, #e5e7eb);
+  color: var(--color-text);
 }
 
 :global(html.dark) .bizcat-add-field > label {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 :global(html.dark) .bizcat-add-row {
   background: var(--color-surface-2, #0f172a);
@@ -695,7 +695,7 @@ function handleAdd(): void {
 
 /* 暗色模式 */
 html.dark .bizcat-hint {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 /* 移动端（≤768px）：

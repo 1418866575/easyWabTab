@@ -223,7 +223,7 @@ function onRemove(): void {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
   line-height: 1.4;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   min-width: 0;
 }
 .ap-name-text {
@@ -251,7 +251,7 @@ function onRemove(): void {
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   cursor: pointer;
   opacity: 0;
   transition:

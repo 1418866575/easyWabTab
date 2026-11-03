@@ -358,7 +358,7 @@ function exportInventoryExcel(): void {
   gap: 6px;
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .bizinv-warn-list {
@@ -383,13 +383,13 @@ function exportInventoryExcel(): void {
 
 .bizinv-warn-name {
   font-weight: 600;
-  color: var(--color-text, #111827);
+  color: var(--color-text);
   flex-shrink: 0;
 }
 
 .bizinv-warn-meta {
   flex: 1;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .bizinv-warn-days {
@@ -426,7 +426,7 @@ function exportInventoryExcel(): void {
 
 .bizinv-batch-detail {
   flex: 1;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .bizinv-batch-price {
@@ -459,7 +459,7 @@ function exportInventoryExcel(): void {
 .bizinv-batch-summary {
   margin: 4px 0 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 @media (max-width: 768px) {
@@ -615,7 +615,7 @@ function exportInventoryExcel(): void {
 }
 
 .bizinv-badge.off {
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   background: var(--color-bg-hover, #f1f5f9);
 }
 
@@ -629,7 +629,7 @@ function exportInventoryExcel(): void {
 }
 
 .bizinv-meta-sep {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 /* 三项指标：横向等分铺开 */
@@ -860,7 +860,7 @@ html.dark .bizinv-low-card {
 }
 
 html.dark .bizinv-name {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .bizinv-low-stock {
@@ -892,7 +892,7 @@ html.dark .bizinv-source-row:hover {
 
 html.dark .biz-input {
   background-color: var(--color-bg-input, #374151);
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
   border-color: var(--color-border, #374151);
 }
 

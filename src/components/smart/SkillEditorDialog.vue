@@ -439,11 +439,11 @@ async function copySkillMd(): Promise<void> {
   margin: 0;
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text, #111827);
+  color: var(--color-text);
   border-left: 3px solid var(--color-primary, #3b82f6);
   padding-left: 8px;
 }
-.sk-sec-hint { font-weight: 400; font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
+.sk-sec-hint { font-weight: 400; font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 .sk-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .sk-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 /* 仅「基础信息」行内字段按 240px 弹性分配宽度；独立成行的字段（说明 / 标签 / 图标 / 触发条件 / 工具）
@@ -451,9 +451,9 @@ async function copySkillMd(): Promise<void> {
 .sk-row .sk-field { flex: 1 1 240px; }
 .sk-row .sk-field-sm { flex: 0 1 180px; }
 .sk-md { display: flex; flex-direction: column; gap: 12px; }
-.sk-md-tip { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
+.sk-md-tip { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 .sk-md-block { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.sk-md-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #6b7280); }
+.sk-md-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
 .sk-md-fm {
   margin: 0;
   padding: 8px 10px;
@@ -467,10 +467,10 @@ async function copySkillMd(): Promise<void> {
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-all;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
 }
-.sk-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #6b7280); }
-.sk-hint { color: var(--color-text-muted, #9ca3af); font-size: var(--fs-caption, 12px); }
+.sk-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
+.sk-hint { color: var(--color-text-muted); font-size: var(--fs-caption, 12px); }
 .req { color: var(--color-error, #dc2626); }
 .sk-error { font-size: var(--fs-caption, 12px); color: var(--color-error, #dc2626); }
 
@@ -490,7 +490,7 @@ async function copySkillMd(): Promise<void> {
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
   background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   cursor: pointer;
   overflow: hidden;
   transition: border-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
@@ -503,13 +503,13 @@ async function copySkillMd(): Promise<void> {
   outline: 2px solid var(--color-primary, #3b82f6);
   outline-offset: 2px;
 }
-.sk-icon-btn.is-empty { color: var(--color-text-muted, #94a3b8); }
+.sk-icon-btn.is-empty { color: var(--color-text-muted); }
 .sk-icon-img { width: 100%; height: 100%; object-fit: contain; border-radius: 4px; }
 .sk-icon-text { font-size: var(--fs-title, 18px); line-height: 1; }
-.sk-icon-name { font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
+.sk-icon-name { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 
 .sk-res-bar { display: flex; align-items: center; gap: 10px; }
-.sk-res-sum { font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
+.sk-res-sum { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 /* 列表不设内部滚动（原 max-height:180px + overflow-y:auto 会让资源多时出现嵌套滚动条）：
    高度随内容自然撑满，超出部分由弹框 body 整体滚动 */
 .sk-res-list {
@@ -538,17 +538,17 @@ async function copySkillMd(): Promise<void> {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--color-text, #111827);
+  color: var(--color-text);
 }
-.sk-res-size { color: var(--color-text-muted, #9ca3af); flex: 0 0 auto; }
-.sk-res-enc { color: var(--color-text-muted, #9ca3af); flex: 0 0 auto; }
+.sk-res-size { color: var(--color-text-muted); flex: 0 0 auto; }
+.sk-res-enc { color: var(--color-text-muted); flex: 0 0 auto; }
 .sk-res-del {
   flex: 0 0 auto;
   padding: 2px 8px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 4px;
   background: transparent;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
 }
@@ -574,7 +574,7 @@ async function copySkillMd(): Promise<void> {
   cursor: pointer;
 }
 .sk-res-open:hover { border-color: var(--color-primary, #3b82f6); }
-.sk-res-empty { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
+.sk-res-empty { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 
 
 @media (max-width: 768px) {

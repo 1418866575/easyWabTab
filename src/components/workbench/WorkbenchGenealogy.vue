@@ -1323,7 +1323,7 @@ onUnmounted(() => {
 .fg-search { width: 200px; }
 .fn-gender-filter, .fn-sort { width: 120px; }
 .fn-member-select { width: 100%; }
-.fn-name { font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text, #111827); }
+.fn-name { font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text); }
 
 /* ===== 族谱排辈 字辈歌 ===== */
 .fn-paibei {
@@ -1340,15 +1340,15 @@ onUnmounted(() => {
   font-size: 19px;
   line-height: 1.6;
   letter-spacing: 8px;
-  color: var(--color-text, #111827);
+  color: var(--color-text);
 }
 .fn-paibei-half { white-space: nowrap; }
 .fn-paibei-sep {
   letter-spacing: 0;
-  color: var(--color-border, #d1d5db);
+  color: var(--color-border);
   font-size: var(--fs-lg, 16px);
 }
-html.dark .fn-paibei-row { color: var(--color-text, #f9fafb); }
+html.dark .fn-paibei-row { color: var(--color-text); }
 html.dark .fn-paibei-sep { color: var(--color-border, #374151); }
 .td-toolbar-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 /* 工具栏右侧组：导入 / 导出 紧贴视图切换（卡片）按钮，is-split 下贴右侧、小屏自动换行 */
@@ -1372,19 +1372,19 @@ html.dark .fn-paibei-sep { color: var(--color-border, #374151); }
 }
 .fg-table-wrap > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #f3f4f6) !important;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-weight: 600;
   user-select: none;
 }
 .fg-table-wrap > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #111827);
+  color: var(--color-text);
 }
 :global(html.dark) .fg-table-wrap > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #111827) !important;
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 :global(html.dark) .fg-table-wrap > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 /* ===== 分页条（沿用双视图面板惯例 + 显式上色覆盖）===== */
@@ -1412,7 +1412,7 @@ html.dark .fn-paibei-sep { color: var(--color-border, #374151); }
   gap: 6px;
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text, #111827);
+  color: var(--color-text);
 }
 .fg-root-badge {
   font-size: var(--fs-caption, 12px);
@@ -1422,8 +1422,8 @@ html.dark .fn-paibei-sep { color: var(--color-border, #374151); }
   color: #fff;
   background: var(--color-primary, #3b82f6);
 }
-.fg-rel { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary, #6b7280); }
-.td-col-empty { color: var(--color-text-muted, #9ca3af); font-size: var(--fs-caption, 12px); }
+.fg-rel { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary); }
+.td-col-empty { color: var(--color-text-muted); font-size: var(--fs-caption, 12px); }
 
 .td-actions {
   display: flex;
@@ -1464,12 +1464,12 @@ html.dark .fn-paibei-sep { color: var(--color-border, #374151); }
   gap: 4px;
   padding: 3px 10px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   background: var(--color-bg-hover, #f1f5f9);
   border-radius: 999px;
   white-space: nowrap;
 }
-.fg-stat-chip b { font-size: var(--fs-body, 14px); color: var(--color-text, #111827); }
+.fg-stat-chip b { font-size: var(--fs-body, 14px); color: var(--color-text); }
 .fg-stat-chip b.is-male { color: var(--ds-primary); }
 .fg-stat-chip b.is-female { color: #ec4899; }
 .fg-stat-total { background: var(--color-primary-light, #eff6ff); }
@@ -1477,20 +1477,20 @@ html.dark .fn-paibei-sep { color: var(--color-border, #374151); }
 /* 年龄预览（编辑弹框只读） */
 .fg-age-preview {
   font-size: var(--fs-body, 14px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   padding: 6px 10px;
   border: 1px dashed var(--color-border, #e5e7eb);
   border-radius: 6px;
 }
 html.dark .fg-stats { background-color: var(--color-bg-card, #1f2937); border-color: var(--color-border, #374151); }
 html.dark .fg-stat-chip { background-color: var(--color-bg-hover, #374151); }
-html.dark .fg-stat-chip b { color: var(--color-text, #f9fafb); }
+html.dark .fg-stat-chip b { color: var(--color-text); }
 html.dark .fg-age-preview { border-color: var(--color-border, #374151); }
 
-.fg-tree-info { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #64748b); }
-.fg-tree-muted { color: var(--color-text-muted, #9ca3af); }
+.fg-tree-info { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
+.fg-tree-muted { color: var(--color-text-muted); }
 .fg-mindmap { display: flex; flex-direction: column; gap: 6px; padding: 4px 0; flex: 0 0 auto; min-height: 0;  }
-.fg-rel { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary, #6b7280); }
+.fg-rel { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary); }
 
 /* ===== 关系弹框 ===== */
 .fg-rel-body { display: flex; flex-direction: column; gap: 18px; }
@@ -1502,12 +1502,12 @@ html.dark .fg-age-preview { border-color: var(--color-border, #374151); }
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 10px;
 }
-.fg-rel-title { font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text, #111827); }
-.fg-rel-empty { font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
-.fg-rel-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: var(--fs-sm, 13px); color: var(--color-text, #111827); }
+.fg-rel-title { font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text); }
+.fg-rel-empty { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
+.fg-rel-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: var(--fs-sm, 13px); color: var(--color-text); }
 .fg-rel-add { display: flex; gap: 8px; }
 .fg-rel-select { flex: 1; }
-.fg-rel-hint { font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
+.fg-rel-hint { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 
 /* ===== 弹框通用 ===== */
 .dialog-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
@@ -1519,12 +1519,12 @@ html.dark .fg-age-preview { border-color: var(--color-border, #374151); }
 .form-group { display: flex; flex-direction: column; gap: 6px; }
 /* 占满整行（身份证号这类长字段用） */
 .fg-form-grid .form-group--full { grid-column: 1 / -1; }
-.fg-idcard-hint { font-size: var(--fs-caption, 12px); line-height: 1.5; color: var(--color-text-secondary, #64748b); }
+.fg-idcard-hint { font-size: var(--fs-caption, 12px); line-height: 1.5; color: var(--color-text-secondary); }
 .fg-idcard-hint.is-warn { color: var(--color-warning, #d97706); }
-.form-group > label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #64748b); }
+.form-group > label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
 .form-row-fields { display: flex; gap: 10px; flex-wrap: wrap; }
 .field { display: flex; flex-direction: column; gap: 6px; }
-.field-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #64748b); }
+.field-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
 .field-gender { width: 140px; }
 .field-date { width: 170px; }
 .form-actions { display: flex; gap: 8px; justify-content: flex-end; }
@@ -1556,7 +1556,7 @@ html.dark .fg-age-preview { border-color: var(--color-border, #374151); }
   flex-shrink: 0;
 }
 .avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
-.avatar-placeholder { font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
+.avatar-placeholder { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 .avatar-actions { display: flex; align-items: center; gap: 8px; }
 .avatar-file { display: none; }
 .fg-name-avatar { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
@@ -1577,12 +1577,12 @@ html.dark .avatar-preview { background: var(--color-bg-card, #1f2937); }
 
 /* ===== 暗色覆盖 ===== */
 /* html.dark .empty-state 背景已由全局 .empty-state 的 --color-bg-card token 自动跟随 */
-html.dark .fg-name { color: var(--color-text, #f9fafb); }
-html.dark .fn-name { color: var(--color-text, #f9fafb); }
+html.dark .fg-name { color: var(--color-text); }
+html.dark .fn-name { color: var(--color-text); }
 html.dark .fg-tree-bar { background-color: var(--color-bg-card, #1f2937); }
 html.dark .fg-rel-section { background-color: var(--color-bg-card, #1f2937); border-color: var(--color-border, #374151); }
-html.dark .fg-rel-title { color: var(--color-text, #f9fafb); }
-html.dark .fg-rel-item { color: var(--color-text, #f9fafb); }
-html.dark .form-group > label, html.dark .field-label { color: var(--color-text-secondary, #d1d5db); }
+html.dark .fg-rel-title { color: var(--color-text); }
+html.dark .fg-rel-item { color: var(--color-text); }
+html.dark .form-group > label, html.dark .field-label { color: var(--color-text-secondary); }
 /* html.dark .btn-cancel 视觉已统一到全局 .ui-btn（style.css） */
 </style>

@@ -113,7 +113,7 @@ const tabItems = computed(() => [
 html.dark .category-tabs-wrapper :deep(.ui-tabs .el-radio-button__inner) {
   background-color: var(--color-bg-card, #1f2937);
   border-color: var(--ds-line, var(--color-border, #374151));
-  color: var(--ds-text-2, #d1d5db);
+  color: var(--ds-text-2);
 }
 
 html.dark .category-tabs-wrapper :deep(.ui-tabs .el-radio-button__inner:hover) {

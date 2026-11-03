@@ -127,14 +127,14 @@ html.dark .bsd-rail { background-color: rgba(255, 255, 255, 0.03); }
   border: none;
   background: transparent;
   border-radius: var(--ds-radius-ctrl, 8px);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--fs-sm, 13px);
   font-family: inherit;
   cursor: pointer;
   text-align: left;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
-.bsd-item:hover { background-color: var(--color-bg-hover, rgba(0, 0, 0, 0.04)); color: var(--ds-text, #1f2329); }
+.bsd-item:hover { background-color: var(--color-bg-hover, rgba(0, 0, 0, 0.04)); color: var(--ds-text); }
 .bsd-item.active {
   background-color: var(--ds-primary-soft, #eff6ff);
   color: var(--ds-primary, #2563eb);
@@ -165,13 +165,13 @@ html.dark .bsd-item:hover { background-color: rgba(255, 255, 255, 0.06); }
 
 .bsd-crumb {
   font-size: var(--fs-sm, 13px);
-  color: var(--ds-text-3, #9aa0a6);
+  color: var(--ds-text-3);
   display: flex;
   align-items: center;
   gap: 6px;
 }
-.bsd-crumb-group { color: var(--ds-text-2, #646a73); }
-.bsd-crumb-item { color: var(--ds-text, #1f2329); font-weight: 600; }
+.bsd-crumb-group { color: var(--ds-text-2); }
+.bsd-crumb-item { color: var(--ds-text); font-weight: 600; }
 .bsd-crumb-sep { opacity: 0.5; }
 
 .bsd-scroll {

@@ -139,7 +139,7 @@ function testidOf(item: TabItem): string | undefined {
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   /* 2026-11 按钮统一：12px 字（原 14px） */
   font-size: var(--fs-caption, 12px);
   box-shadow: none;
@@ -170,7 +170,7 @@ function testidOf(item: TabItem): string | undefined {
 
 .ui-tab-badge {
   font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -193,13 +193,13 @@ function testidOf(item: TabItem): string | undefined {
 /* 暗色三态 */
 html.dark .ui-tabs :deep(.el-radio-button__inner) {
   background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
   border-color: var(--color-border, #374151);
 }
 
 html.dark .ui-tabs :deep(.el-radio-button__inner:hover) {
   background-color: var(--color-bg-hover, #374151);
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .ui-tabs :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {

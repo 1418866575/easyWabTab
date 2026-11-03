@@ -30,7 +30,7 @@
 .ewt-pager.el-pagination .el-pager li {
   background-color: var(--color-bg-card, #ffffff) !important;
   border: 1px solid var(--color-border, #e5e7eb) !important;
-  color: var(--color-text-secondary, #6b7280) !important;
+  color: var(--color-text-secondary) !important;
 }
 
 /* 当前页（亮色） */
@@ -48,7 +48,7 @@ html.dark .ewt-pager.el-pagination button,
 html.dark .ewt-pager.el-pagination .el-pager li {
   background-color: var(--color-bg-card, #1f2937) !important;
   border-color: var(--color-border, #374151) !important;
-  color: var(--color-text-secondary, #d1d5db) !important;
+  color: var(--color-text-secondary) !important;
 }
 
 html.dark .ewt-pager > .el-pagination .el-pager li.is-active,
@@ -63,12 +63,12 @@ html.dark .ewt-pager.el-pagination .el-pager li.is-active {
    而 __total 实际嵌在 .el-pagination 内部，那条规则从来没匹配上（死规则）。
    这里改用后代选择器，让总条数配色真正生效。 */
 .ewt-pager .el-pagination__total {
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-size: var(--fs-sm, 13px);
 }
 
 html.dark .ewt-pager .el-pagination__total {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 /* 键盘可达性：焦点可见（WCAG 2.4.7），只影响键盘 Tab 触发的焦点 */

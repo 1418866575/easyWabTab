@@ -445,7 +445,7 @@ onMounted(() => {
   padding: 8px 10px;
   text-align: center;
 }
-.sg-stat-label { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary, #6b7280); }
+.sg-stat-label { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary); }
 .sg-stat-value { font-size: var(--fs-title, 18px); font-weight: 600; margin-top: 2px; }
 .sg-filters {
   display: flex;
@@ -462,7 +462,7 @@ onMounted(() => {
   flex-direction: column;
   overflow: hidden;
 }
-.sg-count { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary, #6b7280); }
+.sg-count { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary); }
 
 .sg-list {
   flex: 1 1 auto;
@@ -482,19 +482,19 @@ onMounted(() => {
 }
 .sg-list > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #f3f4f6) !important;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-weight: 600;
   user-select: none;
 }
 .sg-list > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #111827);
+  color: var(--color-text);
 }
 :global(html.dark) .sg-list > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #111827) !important;
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 :global(html.dark) .sg-list > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 .sg-subject-tag {
   display: inline-flex;
@@ -511,8 +511,8 @@ onMounted(() => {
   border-radius: 4px; overflow: hidden; min-width: 50px;
 }
 .sg-progress-fill { height: 100%; transition: width 0.3s, background-color 0.3s; }
-.sg-progress-text { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary, #6b7280); white-space: nowrap; width: 36px; text-align: right; }
-.sg-left-text { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary, #9ca3af); margin-top: 2px; }
+.sg-progress-text { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary); white-space: nowrap; width: 36px; text-align: right; }
+.sg-left-text { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary); margin-top: 2px; }
 .sg-overdue-text { color: #e0a800 !important; }
 .sg-badge {
   display: inline-flex; padding: 2px 10px; border-radius: 10px; font-size: var(--fs-caption, 12px); font-weight: 600;
@@ -553,7 +553,7 @@ onMounted(() => {
 
 .dialog-body { display: flex; flex-direction: column; gap: 12px; }
 .sg-field { display: flex; flex-direction: column; gap: 4px; }
-.sg-field label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #6b7280); }
+.sg-field label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
 .sg-field-row { display: flex; gap: 12px; }
 .sg-field-row .sg-field { flex: 1; }
 

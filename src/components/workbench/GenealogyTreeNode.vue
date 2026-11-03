@@ -80,7 +80,7 @@ function toggle() {
   flex-shrink: 0;
   background: none;
   border: none;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   cursor: pointer;
   font-size: var(--fs-caption, 12px);
   line-height: 1;
@@ -99,7 +99,7 @@ function toggle() {
   background: var(--color-bg-card, #fff);
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text, #111827);
+  color: var(--color-text);
   white-space: nowrap;
 }
 .gtn-card.root {
@@ -109,7 +109,7 @@ function toggle() {
 .gtn-gender {
   font-size: var(--fs-caption, 12px);
   font-weight: 400;
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 .gtn-zodiac {
   font-size: var(--fs-caption, 12px);
@@ -196,14 +196,14 @@ function toggle() {
 /* 暗色覆盖 */
 :global(html.dark) .gtn-card {
   background: var(--color-bg-card, #1f2937);
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 :global(html.dark) .gtn-card.root {
   border-color: #3b82f6;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
 }
 :global(html.dark) .gtn-gender {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 :global(html.dark) .gtn-zodiac {
   color: #fbbf24;

@@ -412,7 +412,7 @@ watch(readIdFromRoute, async (next, prev) => {
 
 <style scoped>
 .bk-reader-progress {
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs, 12px);
   white-space: nowrap;
 }

@@ -567,7 +567,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   background-color: var(--color-bg, #f8fafc);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .bs-header {
@@ -594,13 +594,13 @@ onMounted(async () => {
 .bs-header-left h1 {
   font-size: var(--font-size-2xl, 20px);
   font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   white-space: nowrap;
 }
 
 .bs-stall-name {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: 999px;
@@ -661,14 +661,14 @@ onMounted(async () => {
   margin: 0 0 8px;
   font-size: var(--fs-title, 18px);
   font-weight: 600;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .bs-gate-desc {
   margin: 0 0 16px;
   font-size: var(--fs-sm, 13px);
   line-height: 1.7;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .bs-gate-form {
@@ -682,7 +682,7 @@ onMounted(async () => {
   display: grid;
   gap: 4px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 /* 账本创建门的年份/名称输入已改用 el-input（自带边框、聚焦环、暗色），
@@ -754,7 +754,7 @@ onMounted(async () => {
   border: 1px solid transparent;
   border-radius: var(--radius-sm, 4px);
   background-color: transparent;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm, 13px);
   text-align: left;
   cursor: pointer;
@@ -811,13 +811,13 @@ html.dark .bs-header {
 }
 
 html.dark .bs-header-left h1 {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .bs-btn,
 html.dark .bs-header-right :deep(.bs-btn) {
   background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
   border-color: var(--color-border, #374151);
 }
 
@@ -836,12 +836,12 @@ html.dark .bs-menu {
 /* 收起按钮的暗色由 .tw-btn 的 token 自动翻转，这里不再单独覆盖
    （旧的自写暗色会把文字压成 secondary、hover 改色，与教师台不一致） */
 html.dark .bs-menu-item {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 html.dark .bs-menu-item:hover {
   background-color: var(--color-bg-hover, #374151);
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .bs-menu-item.active {
@@ -855,7 +855,7 @@ html.dark .bs-content {
 
 html.dark .bs-stall-name {
   background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
   border-color: var(--color-border, #374151);
 }
 
@@ -1165,7 +1165,7 @@ html.dark .bs-stall-name {
   padding: 8px 14px;
   font-size: var(--fs-sm, 13px);
   font-weight: 500;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   background: var(--color-bg-card, #ffffff);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 999px;
@@ -1180,7 +1180,7 @@ html.dark .bs-stall-name {
   border-color: var(--color-primary, #3b82f6);
 }
 html.dark .bs-fab-action {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
   background: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
 }

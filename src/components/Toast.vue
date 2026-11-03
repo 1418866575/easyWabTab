@@ -166,7 +166,7 @@ async function onCopy(toast: ToastItem): Promise<void> {
   min-width: 0;
   font-size: var(--fs-body, 14px);
   line-height: 20px;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   white-space: pre-wrap;
   word-break: break-word;
   /* 长错误信息内部滚动：鼠标仍在 toast 内，暂停不会被打断 */
@@ -190,7 +190,7 @@ async function onCopy(toast: ToastItem): Promise<void> {
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   border-radius: 4px;
   cursor: pointer;
   transition: background var(--anim-fast, 150ms), color var(--anim-fast, 150ms);
@@ -198,7 +198,7 @@ async function onCopy(toast: ToastItem): Promise<void> {
 
 .toast-action:hover {
   background: var(--color-border, #e2e8f0);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .toast-action:focus-visible {
@@ -276,7 +276,7 @@ html.dark .toast {
 }
 
 html.dark .toast-message {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .toast-action:hover {

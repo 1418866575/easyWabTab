@@ -199,7 +199,7 @@ const sortedCustomCategories = computed(() =>
 .dm-title {
   font-size: var(--fs-title, 18px);
   font-weight: 600;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   margin: 0 0 20px 0;
 }
 
@@ -213,7 +213,7 @@ const sortedCustomCategories = computed(() =>
 .dm-list h3 {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   margin: 0 0 12px 0;
 }
 
@@ -230,7 +230,7 @@ const sortedCustomCategories = computed(() =>
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-sm, 4px);
   background: var(--color-bg, #fff);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 /* 输入框视觉统一到全局 .ui-input，这里只保留布局 */
@@ -261,7 +261,7 @@ const sortedCustomCategories = computed(() =>
 
 .dm-icon-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 .dm-icon-btn {padding: 0 12px;
@@ -285,7 +285,7 @@ const sortedCustomCategories = computed(() =>
 
 .dm-section-title {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   margin-bottom: 8px;
 }
 
@@ -312,7 +312,7 @@ const sortedCustomCategories = computed(() =>
 .dm-sort-hint {
   font-size: var(--fs-caption, 12px);
   width: 24px;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 .dm-sort-controls {
@@ -329,7 +329,7 @@ const sortedCustomCategories = computed(() =>
   border-radius: var(--radius-sm, 4px);
   cursor: pointer;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;}
@@ -351,12 +351,12 @@ const sortedCustomCategories = computed(() =>
 .dm-cat-name {
   flex: 1;
   font-size: var(--fs-body, 14px);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .dm-count {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   margin-right: 8px;
 }
 
@@ -367,7 +367,7 @@ const sortedCustomCategories = computed(() =>
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-sm, 4px);
   background: var(--color-bg, #fff);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .dm-edit-name {
@@ -376,7 +376,7 @@ const sortedCustomCategories = computed(() =>
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-sm, 4px);
   background: var(--color-bg, #fff);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .dm-btn-icon {padding: 0 12px;
@@ -386,7 +386,7 @@ const sortedCustomCategories = computed(() =>
   font-size: var(--fs-caption, 12px);
   opacity: 0.6;
   transition: opacity 0.2s;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   display: inline-flex;
   height: 36px;}
 
@@ -400,7 +400,7 @@ const sortedCustomCategories = computed(() =>
 
 .dm-empty {
   text-align: center;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   font-size: var(--fs-body, 14px);
   padding: 20px;
 }

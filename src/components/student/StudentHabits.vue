@@ -542,7 +542,7 @@ onMounted(async () => {
   align-items: center;
   gap: 2px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 .sh-badge-cat {
   padding: 1px 6px;
@@ -570,7 +570,7 @@ onMounted(async () => {
 .sh-check-btn.is-checked {
   background: var(--color-hover, #f3f4f6);
   border-color: var(--color-border, #e5e7eb);
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
   cursor: default;
 }
 
@@ -591,7 +591,7 @@ onMounted(async () => {
   justify-content: center;
   height: 100%;
   min-height: 200px;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   font-size: var(--fs-body, 14px);
 }
 
@@ -674,11 +674,11 @@ onMounted(async () => {
 .sh-records-count {
   flex: 1;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 .sh-records-empty {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   padding: 10px 0;
 }
 .sh-records-list {
@@ -724,7 +724,7 @@ onMounted(async () => {
 }
 .sh-record-tag-plain {
   background: transparent;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   border: 1px solid var(--color-border, var(--color-border));
 }
 .sh-record-ops {
@@ -734,6 +734,6 @@ onMounted(async () => {
 .sh-record-hint {
   margin: 6px 0 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 </style>

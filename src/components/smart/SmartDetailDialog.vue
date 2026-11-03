@@ -81,11 +81,11 @@ const title = computed(() => props.item.title)
   padding: 1px 8px;
   border-radius: 999px;
   background: var(--color-bg-hover, #f3f4f6);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
 }
 .sd-chip.is-tag { color: var(--color-primary, #3b82f6); }
-.sd-subtitle { margin: 0 0 6px; font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text, #111827); }
+.sd-subtitle { margin: 0 0 6px; font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text); }
 .sd-img-grid { display: flex; flex-wrap: wrap; gap: 10px; }
 .sd-img {
   width: 110px;
@@ -99,7 +99,7 @@ const title = computed(() => props.item.title)
 }
 .sd-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .sd-img:hover { border-color: var(--color-primary, #3b82f6); }
-.sd-desc { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #6b7280); }
+.sd-desc { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
 
 .sd-content {
   padding: 12px;
@@ -108,7 +108,7 @@ const title = computed(() => props.item.title)
   background: var(--color-bg-card, #fff);
   font-size: var(--fs-sm, 13px);
   line-height: 1.7;
-  color: var(--color-text, #111827);
+  color: var(--color-text);
   overflow-wrap: anywhere;
 }
 .sd-content.is-plain { font-family: inherit; white-space: normal; }
@@ -128,6 +128,6 @@ const title = computed(() => props.item.title)
 .sd-content :deep(p:last-child) { margin-bottom: 0; }
 .sd-content :deep(ul), .sd-content :deep(ol) { margin: 0 0 8px; padding-left: 20px; }
 
-.sd-vars { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.sd-vars { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .sd-var-inline { padding: 1px 6px; border-radius: 4px; background: var(--color-bg-hover, #f3f4f6); color: var(--color-primary, #3b82f6); }
 </style>

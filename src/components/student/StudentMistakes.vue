@@ -290,7 +290,7 @@ onMounted(() => {
             <el-table-column label="标题" min-width="160" align="left" show-overflow-tooltip>
               <template #default="{ row }">
                 <span v-if="row.title" style="font-weight: 600;">{{ row.title }}</span>
-                <span v-else style="color: var(--color-text-soft, #9ca3af);">—</span>
+                <span v-else style="color: var(--color-text-soft);">—</span>
               </template>
             </el-table-column>
             <el-table-column label="题干" min-width="200" align="left" show-overflow-tooltip>
@@ -307,7 +307,7 @@ onMounted(() => {
             <el-table-column label="标签" min-width="120" align="left" show-overflow-tooltip>
               <template #default="{ row }">
                 <span v-if="row.tags.length">{{ row.tags.join('、') }}</span>
-                <span v-else style="color: var(--color-text-soft, #9ca3af);">—</span>
+                <span v-else style="color: var(--color-text-soft);">—</span>
               </template>
             </el-table-column>
             <el-table-column label="状态操作" width="170" align="center">
@@ -527,7 +527,7 @@ onMounted(() => {
 }
 .sm-stat-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-soft, #6b7280);
+  color: var(--color-text-soft);
   margin-bottom: 2px;
 }
 .sm-stat-value {
@@ -565,19 +565,19 @@ onMounted(() => {
 }
 .sm-list-area > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #f3f4f6) !important;
-  color: var(--color-text-soft, #6b7280);
+  color: var(--color-text-soft);
   font-weight: 600;
   user-select: none;
 }
 .sm-list-area > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #111827);
+  color: var(--color-text);
 }
 :global(html.dark) .sm-list-area > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #111827) !important;
-  color: var(--color-text-soft, #d1d5db);
+  color: var(--color-text-soft);
 }
 :global(html.dark) .sm-list-area > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 .sm-list-area > :global(.el-table .el-table__body-wrapper .cell),
 .sm-list-area > :global(.el-table .el-table__header-wrapper .cell) {
@@ -605,7 +605,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-soft, #6b7280);
+  color: var(--color-text-soft);
   font-size: var(--fs-body, 14px);
   min-height: 200px;
 }
@@ -682,7 +682,7 @@ onMounted(() => {
 }
 .sm-del-btn {
   flex-shrink: 0;
-  color: var(--color-text-soft, #6b7280);
+  color: var(--color-text-soft);
 }
 .sm-del-btn:hover {
   color: var(--ds-danger);
@@ -700,7 +700,7 @@ onMounted(() => {
 }
 .sm-q-label, .sm-a-label, .sm-an-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-soft, #6b7280);
+  color: var(--color-text-soft);
   font-weight: 600;
 }
 .sm-q-content, .sm-a-content, .sm-an-content {
@@ -726,7 +726,7 @@ onMounted(() => {
   background: var(--color-hover, #f3f4f6);
   border-radius: 3px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-soft, #6b7280);
+  color: var(--color-text-soft);
 }
 
 .sm-card-foot {
@@ -750,7 +750,7 @@ onMounted(() => {
   background: rgba(245, 158, 11, 0.12);
 }
 .sm-edit-btn {
-  color: var(--color-text-soft, #6b7280);
+  color: var(--color-text-soft);
 }
 
 /* ===== 表格内编辑/删除按钮（与学习计划一致） ===== */

@@ -362,7 +362,7 @@ onMounted(() => {
   height: 100dvh;
   min-height: 100vh;
   background-color: var(--color-bg, #f8fafc);
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
 }
 
 /* ---------- 顶栏 ---------- */
@@ -406,11 +406,11 @@ onMounted(() => {
 }
 
 .tv-field-label {
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 .tv-field-value {
-  color: var(--color-text, #334155);
+  color: var(--color-text);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -485,7 +485,7 @@ onMounted(() => {
   padding: 0 8px;
   font-size: var(--font-size-xs, 12px);
   font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   letter-spacing: 0.04em;
 }
 
@@ -499,7 +499,7 @@ onMounted(() => {
   border: none;
   border-radius: var(--radius-sm, 4px);
   background-color: transparent;
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
   font-family: inherit;
   font-size: var(--font-size-sm, 13px);
   text-align: left;

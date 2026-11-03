@@ -409,7 +409,7 @@ const handleClick = () => {
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.15s ease, color 0.15s ease, background-color 0.15s ease;
@@ -494,7 +494,7 @@ const handleClick = () => {
 .site-name {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   margin: 0;
   text-align: center;
   white-space: nowrap;
@@ -511,7 +511,7 @@ const handleClick = () => {
   bottom: calc(100% + 10px);
   transform: translateX(-50%);
   background: var(--color-bg-card, #ffffff);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
@@ -534,13 +534,13 @@ const handleClick = () => {
   cursor: pointer;
   font-size: var(--fs-lg, 16px);
   line-height: 1;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   padding: 2px 6px;
   border-radius: 6px;
   transition: color 0.15s, background-color 0.15s;
 }
 .desc-popup-close:hover {
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   background-color: var(--color-bg-hover, #f1f5f9);
 }
 
@@ -549,7 +549,7 @@ const handleClick = () => {
   padding-right: 18px;
   word-break: break-word;
   white-space: pre-wrap;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .desc-popup-arrow {
@@ -608,7 +608,7 @@ const handleClick = () => {
 /* ================ 暗色主题 ================ */
 :global(.dark) .menu-trigger {
   background: transparent;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 :global(.dark) .menu-trigger:hover {
   background: var(--color-primary-soft, rgba(96, 165, 250, 0.18));
@@ -621,7 +621,7 @@ const handleClick = () => {
 }
 
 :global(.dark) .card-menu-item {
-  color: #cbd5e1;
+  color: var(--color-text-secondary);
 }
 
 :global(.dark) .card-menu-item:hover {
@@ -640,19 +640,19 @@ const handleClick = () => {
 
 :global(.dark) .desc-popup {
   background: var(--color-bg-card, #1e293b);
-  color: var(--color-text, #e2e8f0);
+  color: var(--color-text);
   border-color: #334155;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
 }
 :global(.dark) .desc-popup-close {
-  color: var(--color-text-muted, #64748b);
+  color: var(--color-text-muted);
 }
 :global(.dark) .desc-popup-close:hover {
-  color: var(--color-text, #f8fafc);
+  color: var(--color-text);
   background-color: #334155;
 }
 :global(.dark) .desc-popup-text {
-  color: var(--color-text, #e2e8f0);
+  color: var(--color-text);
 }
 :global(.dark) .desc-popup-arrow {
   border-top-color: #334155;

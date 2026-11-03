@@ -132,12 +132,12 @@ function display(v?: string | number | null): string {
 }
 .ewt-card-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-soft, #6b7280);
+  color: var(--color-text-soft);
   white-space: nowrap;
 }
 .ewt-card-value {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text, #1f2937);
+  color: var(--color-text);
   word-break: break-word;
   margin: 0;
 }
@@ -146,6 +146,6 @@ function display(v?: string | number | null): string {
   color: var(--color-primary, #3b82f6);
 }
 :global(html.dark) .ewt-card-value {
-  color: var(--color-text, #e5e7eb);
+  color: var(--color-text);
 }
 </style>

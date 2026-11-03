@@ -325,7 +325,7 @@ onMounted(async () => {
           <el-table-column label="内容" min-width="200" align="left" show-overflow-tooltip>
             <template #default="{ row }">
               <span v-if="row.content">{{ row.content }}</span>
-              <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
+              <span v-else style="color: var(--color-text-secondary);">—</span>
             </template>
           </el-table-column>
           <el-table-column label="优先级" width="90" align="center">
@@ -351,7 +351,7 @@ onMounted(async () => {
           </el-table-column>
           <el-table-column label="图片" width="90" align="center">
             <template #default="{ row }">
-              <span v-if="!row.images || row.images.length === 0" style="color: var(--color-text-secondary, #9ca3af);">—</span>
+              <span v-if="!row.images || row.images.length === 0" style="color: var(--color-text-secondary);">—</span>
               <span v-else class="shw-img-cell">
                 <img :src="row.images[0]" class="shw-img-mini" alt="" />
                 <span v-if="row.images.length > 1" class="shw-img-count">+{{ row.images.length - 1 }}</span>
@@ -548,19 +548,19 @@ onMounted(async () => {
 }
 .shw-list > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #f3f4f6) !important;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-weight: 600;
   user-select: none;
 }
 .shw-list > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #111827);
+  color: var(--color-text);
 }
 :global(html.dark) .shw-list > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #111827) !important;
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 :global(html.dark) .shw-list > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 .shw-list > :global(.el-table .el-table__body-wrapper .cell),
 .shw-list > :global(.el-table .el-table__header-wrapper .cell) {
@@ -624,7 +624,7 @@ onMounted(async () => {
 .shw-due-text {
   font-size: var(--fs-caption, 12px);
   margin-top: 2px;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 .shw-due-text:empty { display: none; }
 .shw-priority {
@@ -661,12 +661,12 @@ onMounted(async () => {
 .shw-card-title {
   font-weight: 600;
   font-size: var(--fs-body, 14px);
-  color: var(--color-text, #111827);
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-:global(html.dark) .shw-card-title { color: var(--color-text, #f9fafb); }
+:global(html.dark) .shw-card-title { color: var(--color-text); }
 .shw-card-thumbs {
   display: flex;
   gap: 4px;
@@ -687,7 +687,7 @@ onMounted(async () => {
   height: 40px;
   border-radius: 6px;
   background: var(--color-bg-hover, #f3f4f6);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
 }
 :global(html.dark) .shw-card-thumb { border-color: var(--color-border, #374151); }
@@ -752,7 +752,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
   transition: all .15s;
@@ -773,7 +773,7 @@ onMounted(async () => {
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
   background: transparent;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   cursor: pointer;
   font-size: var(--fs-caption, 12px);
   margin-right: 6px;
@@ -791,7 +791,7 @@ onMounted(async () => {
   border-radius: 6px;
   border: 1px solid transparent;
   background: transparent;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   cursor: pointer;
   font-size: var(--fs-caption, 12px);
   transition: all 0.15s;
@@ -832,7 +832,7 @@ onMounted(async () => {
 .shw-custom-toggle {
   font-size: var(--fs-caption, 12px);
   font-weight: 400;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 .dialog-footer {
   display: flex;

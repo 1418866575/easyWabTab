@@ -190,17 +190,17 @@ html.dark .weather-card {
 html.dark .wx-placeholder-text,
 html.dark .wx-row-2,
 html.dark .wx-loading {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 html.dark .wx-city,
 html.dark .wx-temp,
 html.dark .wx-desc {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .wx-feels {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 html.dark .wx-divider {

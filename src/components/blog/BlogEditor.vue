@@ -1333,7 +1333,7 @@ async function regenerateSlug(): Promise<void> {
 .be-view-btn {padding: 0 12px;
   border: none;
   background-color: var(--ds-card, #ffffff);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
   height: 36px;}
@@ -1351,7 +1351,7 @@ async function regenerateSlug(): Promise<void> {
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-pill, 999px);
   background-color: var(--ds-card, #ffffff);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
 }
@@ -1387,7 +1387,7 @@ async function regenerateSlug(): Promise<void> {
 
 .be-title-label {
   flex: none;
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--font-size-xs, 12px);
   font-weight: var(--font-weight-medium, 500);
   line-height: 1;
@@ -1403,7 +1403,7 @@ async function regenerateSlug(): Promise<void> {
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--ds-card, #ffffff);
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
   font-family: inherit;
   font-size: var(--font-size-lg, 16px);
   font-weight: var(--font-weight-medium, 500);
@@ -1468,7 +1468,7 @@ async function regenerateSlug(): Promise<void> {
   border: 1px solid transparent;
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: transparent;
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--fs-caption, 12px);
   line-height: 1.2;
   white-space: nowrap;
@@ -1477,7 +1477,7 @@ async function regenerateSlug(): Promise<void> {
 
 .be-md-btn:hover {
   background-color: var(--ds-card-2, #f7f8fa);
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
 }
 
 .be-md-btn:active {
@@ -1514,7 +1514,7 @@ async function regenerateSlug(): Promise<void> {
 
 .be-preview {
   overflow-y: auto;
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
   font-size: var(--font-size-sm, 14px);
   line-height: var(--line-height-relaxed, 1.75);
 }
@@ -1555,7 +1555,7 @@ async function regenerateSlug(): Promise<void> {
   margin: 0;
   font-size: var(--font-size-base, 14px);
   font-weight: var(--font-weight-semibold, 600);
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
 }
 
 .be-side-close {
@@ -1568,7 +1568,7 @@ async function regenerateSlug(): Promise<void> {
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--ds-card, #ffffff);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   cursor: pointer;
 }
 
@@ -1603,7 +1603,7 @@ async function regenerateSlug(): Promise<void> {
   margin: 0 0 8px;
   font-size: var(--ds-fs-section, 16px);
   font-weight: var(--font-weight-semibold, 600);
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
 }
 
 .be-field {
@@ -1614,12 +1614,12 @@ async function regenerateSlug(): Promise<void> {
 .be-label {
   display: block;
   margin-bottom: 4px;
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--font-size-xs, 12px);
 }
 
 .be-static {
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
   font-size: var(--font-size-sm, 13px);
 }
 
@@ -1637,7 +1637,7 @@ async function regenerateSlug(): Promise<void> {
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--ds-card, #ffffff);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
 }
@@ -1650,7 +1650,7 @@ async function regenerateSlug(): Promise<void> {
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--color-bg-input, #ffffff);
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
   font-family: inherit;
   font-size: var(--font-size-sm, 13px);
 }
@@ -1689,7 +1689,7 @@ async function regenerateSlug(): Promise<void> {
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-pill, 999px);
   background-color: var(--ds-card, #ffffff);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
 }
@@ -1703,7 +1703,7 @@ async function regenerateSlug(): Promise<void> {
 .be-hint,
 .be-stat {
   margin: 0;
-  color: var(--ds-text-3, #9aa0a6);
+  color: var(--ds-text-3);
   font-size: var(--font-size-xs, 11px);
   line-height: var(--line-height-relaxed, 1.6);
 }
@@ -1785,7 +1785,7 @@ async function regenerateSlug(): Promise<void> {
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: 6px;
   background-color: var(--ds-card, #ffffff);
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: var(--fs-caption, 12px);
 }
@@ -1801,21 +1801,21 @@ async function regenerateSlug(): Promise<void> {
 }
 
 .be-wx-alt {
-  color: var(--ds-text-3, #9aa0a6);
+  color: var(--ds-text-3);
   font-size: var(--font-size-xs, 12px);
 }
 
 
 .be-missing {
   padding: 40px 16px;
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   text-align: center;
 }
 
 /* ===== Markdown 语法帮助弹框 ===== */
 .md-help-intro {
   margin: 0 0 14px;
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--font-size-sm, 13px);
 }
 
@@ -1835,7 +1835,7 @@ async function regenerateSlug(): Promise<void> {
   margin: 0 0 6px;
   font-size: var(--font-size-sm, 13px);
   font-weight: var(--font-weight-semibold, 600);
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
 }
 
 .md-help-code {
@@ -1849,7 +1849,7 @@ async function regenerateSlug(): Promise<void> {
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-all;
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
   overflow-x: auto;
 }
 
@@ -1864,7 +1864,7 @@ async function regenerateSlug(): Promise<void> {
 
 .md-help-note {
   margin: 0;
-  color: var(--ds-text-3, #9aa0a6);
+  color: var(--ds-text-3);
   font-size: var(--font-size-xs, 12px);
 }
 
@@ -1873,7 +1873,7 @@ async function regenerateSlug(): Promise<void> {
   margin: 0;
   padding: 24px 8px;
   text-align: center;
-  color: var(--ds-text-3, #9aa0a6);
+  color: var(--ds-text-3);
   font-size: var(--font-size-sm, 13px);
 }
 
@@ -1926,7 +1926,7 @@ async function regenerateSlug(): Promise<void> {
 }
 
 .img-dialog-missing {
-  color: var(--ds-text-3, #9aa0a6);
+  color: var(--ds-text-3);
   font-size: var(--font-size-sm, 13px);
 }
 
@@ -1937,7 +1937,7 @@ async function regenerateSlug(): Promise<void> {
 }
 
 .img-dialog-idx {
-  color: var(--ds-text-3, #9aa0a6);
+  color: var(--ds-text-3);
   font-size: var(--font-size-xs, 11px);
 }
 
@@ -1946,7 +1946,7 @@ async function regenerateSlug(): Promise<void> {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
   font-size: var(--font-size-xs, 12px);
 }
 
@@ -1961,7 +1961,7 @@ async function regenerateSlug(): Promise<void> {
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--ds-card, #ffffff);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
 }
@@ -1980,7 +1980,7 @@ async function regenerateSlug(): Promise<void> {
 .be-tp-tip {
   margin-bottom: 6px;
   font-size: var(--font-size-xs, 12px);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   text-align: center;
 }
 
@@ -2021,7 +2021,7 @@ async function regenerateSlug(): Promise<void> {
   border: none;
   border-left: 2px solid transparent;
   background: none;
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
   font-size: var(--font-size-xs, 12px);
   line-height: 1.5;
   text-align: left;
@@ -2033,7 +2033,7 @@ async function regenerateSlug(): Promise<void> {
 
 .be-outline-item.is-h3 {
   padding-left: 18px;
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
 }
 
 .be-outline-item:hover {
@@ -2051,7 +2051,7 @@ async function regenerateSlug(): Promise<void> {
   padding: 0 10px;
   border-radius: var(--radius-full, 9999px);
   font-size: var(--font-size-xs, 12px);
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   background: var(--color-bg-hover, #f1f5f9);
   white-space: nowrap;
 }
@@ -2090,7 +2090,7 @@ async function regenerateSlug(): Promise<void> {
   margin: 0;
   font-size: var(--font-size-xs, 12px);
   line-height: 1.6;
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
 }
 
 .be-wx-phone {
@@ -2108,7 +2108,7 @@ async function regenerateSlug(): Promise<void> {
   margin: 0 auto;
   font-size: var(--fs-lg, 16px);
   line-height: 1.75;
-  color: #3f3f3f;
+  color: var(--color-text);
   word-wrap: break-word;
   word-break: break-word;
 }

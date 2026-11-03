@@ -149,7 +149,7 @@ function genderClass(g: '男' | '女'): string {
 }
 .tsp-selected-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 .tsp-chips {
   display: flex;
@@ -159,7 +159,7 @@ function genderClass(g: '男' | '女'): string {
 }
 .tsp-empty {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 .tw-chip {
   display: inline-flex;

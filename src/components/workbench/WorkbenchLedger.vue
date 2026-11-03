@@ -701,7 +701,7 @@ onMounted(async () => {
         <el-table-column label="备注" min-width="200" align="center" show-overflow-tooltip>
           <template #default="{ row }: { row: LedgerEntry }">
             <span v-if="row.note">{{ row.note }}</span>
-            <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
+            <span v-else style="color: var(--color-text-secondary);">—</span>
           </template>
         </el-table-column>
         <!-- 列宽 170：两个按钮（编辑/删除）在一行内横排放下，不折行（.ewt-op-col 内部已有 gap:6px） -->
@@ -807,7 +807,7 @@ onMounted(async () => {
 .stat-unit {
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   margin-left: 3px;
 }
 
@@ -897,7 +897,7 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--color-text-secondary, #666);
+  color: var(--color-text-secondary);
 }
 
 .ld-trend-total b {
@@ -1222,7 +1222,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   margin: 0;
   font-size: var(--fs-md, 15px);
   font-weight: 600;
-  color: var(--color-text, #1f2937);
+  color: var(--color-text);
 }
 
 /* 表格内金额样式：沿用旧.ld-record-amount，确保 + 绿 / - 蓝 主题色 */
@@ -1400,16 +1400,16 @@ html.dark .dialog-header {
 }
 
 html.dark .ld-date {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .ld-note,
 html.dark .ld-ratio-val {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 html.dark .ld-amount {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .ld-amount.is-income {
@@ -1453,14 +1453,14 @@ html.dark .ld-cat-row {
 }
 
 html.dark .ld-cat-name {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .btn-manage,
 html.dark .month-btn,
 html.dark .ld-charts-toggle {
   background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
   border-color: var(--color-border, #374151);
 }
 
@@ -1483,7 +1483,7 @@ html.dark .form-input,
 html.dark select.form-input,
 html.dark input.form-input {
   background-color: var(--color-bg-input, #374151);
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
   border-color: var(--color-border, #374151);
 }
 
@@ -1600,7 +1600,7 @@ html.dark input.form-input {
 }
 .ld-daily-range {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
 /* 宽度撑满、高度随 viewBox 等比自适应（5~200） */
@@ -1626,7 +1626,7 @@ html.dark .ld-daily-bar {
   padding: 14px;
   text-align: center;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 .ld-daily-footer {
   margin-top: 6px;
@@ -1634,7 +1634,7 @@ html.dark .ld-daily-bar {
 }
 .ld-daily-total {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
 }
 .ld-daily-total b {
   color: var(--ds-danger);

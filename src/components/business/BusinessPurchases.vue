@@ -658,7 +658,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
           <el-table-column label="售价" width="100" align="right">
             <template #default="{ row }">
               <span v-if="!isDayRow(row) && findProduct(store.products, row.productId)">{{ formatYuanOf(productSellingPrice(row.productId)!) }}/{{ productUnitOf(row.productId) }}</span>
-              <span v-else-if="!isDayRow(row)" style="color: var(--color-text-muted, #9ca3af);">—</span>
+              <span v-else-if="!isDayRow(row)" style="color: var(--color-text-muted);">—</span>
             </template>
           </el-table-column>
           <el-table-column label="加价率" width="100" align="center">
@@ -671,7 +671,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
                   'rate-low': (markupRateOf(row.productId, row.unitPrice) ?? 0) <= 0
                 }"
               >{{ markupRateOf(row.productId, row.unitPrice) }}%</span>
-              <span v-else-if="!isDayRow(row)" style="color: var(--color-text-muted, #9ca3af);">—</span>
+              <span v-else-if="!isDayRow(row)" style="color: var(--color-text-muted);">—</span>
             </template>
           </el-table-column>
           <!-- 剩余状态：按销售售出数量先进先出消耗，判定该批（最旧批次优先）是否已全部售出 -->
@@ -692,7 +692,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
           <el-table-column label="备注" min-width="140" align="left" show-overflow-tooltip>
             <template #default="{ row }">
               <span v-if="!isDayRow(row) && row.note" class="bizpur-note-text">{{ row.note }}</span>
-              <span v-else-if="!isDayRow(row)" style="color: var(--color-text-muted, #9ca3af);">—</span>
+              <span v-else-if="!isDayRow(row)" style="color: var(--color-text-muted);">—</span>
             </template>
           </el-table-column>
           <el-table-column label="操作" class-name="ewt-op-col" width="200" align="center" fixed="right">
@@ -985,7 +985,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   flex: 0 0 auto;
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
 
@@ -997,7 +997,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 }
 
 :global(html.dark) .bizpur-card-date {
-  color: var(--color-text-secondary, #9ca3af);
+  color: var(--color-text-secondary);
 }
 
 /* ===== 表格分组行：日期列内「日期 + N 笔 + 当天合计」===== */
@@ -1044,19 +1044,19 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 }
 .bizpur-table-wrap > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #f3f4f6) !important;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-weight: 600;
   user-select: none;
 }
 .bizpur-table-wrap > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #111827);
+  color: var(--color-text);
 }
 :global(html.dark) .bizpur-table-wrap > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #111827) !important;
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 :global(html.dark) .bizpur-table-wrap > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 .bizpur-table-wrap > :global(.el-table .el-table__body-wrapper .cell),
 .bizpur-table-wrap > :global(.el-table .el-table__header-wrapper .cell) {
@@ -1112,7 +1112,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 .bizpur-expense-empty {
   margin: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 .bizpur-expense-search {
@@ -1141,7 +1141,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   padding: 6px 8px;
   border-radius: 6px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text, #111827);
+  color: var(--color-text);
   cursor: pointer;
 }
 
@@ -1171,14 +1171,14 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   padding: 1px 6px;
   border-radius: 4px;
   background: var(--color-bg-tag, #f1f5f9);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   font-size: var(--fs-caption, 12px);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 :global(html.dark) .bizpur-expense-qty {
   background: var(--color-bg-tag-dark, #1f2937);
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 .bizpur-expense-note {
@@ -1186,7 +1186,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 /* 录入校验：只保留一行中性灰说明（红色校验提示已移除，见模板 bizpur-form-hint 注释） */
@@ -1194,13 +1194,13 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   margin: 0;
   font-size: var(--fs-caption, 12px);
   line-height: 1.6;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 .bizpur-expense-hint {
   margin: 4px 0 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 /* 需求 D：数量由关联支出派生时的只读提示 */
@@ -1247,7 +1247,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 }
 
 .bizpur-stock.none {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 .bizpur-stock-oldest {
@@ -1255,7 +1255,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   border-radius: var(--radius-full, 9999px);
   font-size: var(--fs-caption, 12px);
   background: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 .bizpur-linked-badge {
@@ -1281,7 +1281,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   font-weight: 600;
 }
 .bizpur-note-text {
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
 }
 .bizpur-actions {
@@ -1299,26 +1299,26 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   font-variant-numeric: tabular-nums;
 }
 .bizpur-cost-current {
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   text-decoration: line-through;
 }
 .bizpur-cost-arrow {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 .bizpur-cost-next {
   font-size: var(--fs-lg, 16px);
   font-weight: 700;
-  color: var(--color-text, #1f2937);
+  color: var(--color-text);
 }
 .bizpur-cost-next.changed {
   color: var(--color-primary, #3b82f6);
 }
 .bizpur-cost-tip {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 :global(html.dark) .bizpur-cost-next {
-  color: var(--color-text, #e5e7eb);
+  color: var(--color-text);
 }
 
 /* P0-2：编辑弹框售价参考 */
@@ -1371,7 +1371,7 @@ html.dark .bizpur-stock.unsold {
 
 html.dark .bizpur-stock-oldest {
   background: rgba(148, 163, 184, 0.2);
-  color: #cbd5e1;
+  color: var(--color-text-secondary);
 }
 
 html.dark .bizpur-cat-badge {
@@ -1382,7 +1382,7 @@ html.dark .bizpur-cat-badge {
 
 html.dark .biz-input {
   background-color: var(--color-bg-input, #374151);
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
   border-color: var(--color-border, #374151);
 }
 
@@ -1420,7 +1420,7 @@ html.dark .biz-input {
   position: sticky;
   top: 0;
   background: var(--color-bg-hover, #f3f4f6);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-weight: 600;
   text-align: center;
   padding: 9px 10px;
@@ -1448,7 +1448,7 @@ html.dark .biz-input {
 .bizpur-line-table .col-idx {
   width: 40px;
   text-align: center;
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 .bizpur-line-table .col-op {
@@ -1477,7 +1477,7 @@ html.dark .biz-input {
   padding: 3px 10px;
   border-radius: 999px;
   background: var(--color-bg-hover, #f3f4f6);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-weight: 600;
   font-size: var(--fs-caption, 12px);
   font-variant-numeric: tabular-nums;
@@ -1507,7 +1507,7 @@ html.dark .biz-input {
   padding: 5px 6px;
   border-radius: 6px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text, #111827);
+  color: var(--color-text);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -1534,7 +1534,7 @@ html.dark .biz-input {
   padding: 1px 6px;
   border-radius: 4px;
   background: var(--color-bg-tag, #f1f5f9);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   font-size: var(--fs-caption, 12px);
 }
 
@@ -1548,12 +1548,12 @@ html.dark .biz-input {
 .exps-empty {
   margin: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 .bizpur-empty-row {
   text-align: center;
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
   font-size: var(--fs-sm, 13px);
   padding: 16px 10px;
 }
@@ -1565,7 +1565,7 @@ html.dark .bizpur-row-table {
 
 html.dark .bizpur-line-table thead th {
   background: var(--color-bg-hover, #111827);
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 html.dark .bizpur-line-table tbody td {
@@ -1583,7 +1583,7 @@ html.dark .exps {
 
 html.dark .rd {
   background: var(--color-bg-hover, #111827);
-  color: #cbd5e1;
+  color: var(--color-text-secondary);
 }
 
 /* ===== M-09（2026-10-06）移动端适配（本面板此前零 @media，是 8 个面板里唯一完全没做面板级适配的）=====

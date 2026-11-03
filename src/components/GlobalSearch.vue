@@ -518,11 +518,11 @@ html.dark .engine-select {
 }
 
 html.dark .search-input {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .search-input::placeholder {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 html.dark .history-dropdown {
@@ -535,7 +535,7 @@ html.dark .history-header {
 }
 
 html.dark .history-title {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 html.dark .clear-history {
@@ -551,7 +551,7 @@ html.dark .history-item:hover {
 }
 
 html.dark .history-text {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .local-search-item:hover {
@@ -564,7 +564,7 @@ html.dark .site-icon-placeholder {
 }
 
 html.dark .site-category {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 @media (max-width: 768px) {

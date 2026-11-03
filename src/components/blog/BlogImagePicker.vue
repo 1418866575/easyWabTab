@@ -135,21 +135,21 @@ function confirmSelect(): void {
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--color-bg-input, #ffffff);
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
   font-family: inherit;
   font-size: var(--font-size-sm, 13px);
 }
 
 .bip-count {
   flex: 0 0 auto;
-  color: var(--ds-text-3, #9aa0a6);
+  color: var(--ds-text-3);
   font-size: var(--font-size-xs, 12px);
 }
 
 .bip-empty {
   margin: 0;
   padding: 24px 8px;
-  color: var(--ds-text-2, #646a73);
+  color: var(--ds-text-2);
   font-size: var(--font-size-sm, 13px);
   text-align: center;
 }
@@ -175,7 +175,7 @@ function confirmSelect(): void {
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--ds-card, #ffffff);
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
   font-family: inherit;
   text-align: left;
   cursor: pointer;
@@ -214,7 +214,7 @@ function confirmSelect(): void {
 }
 
 .bip-meta {
-  color: var(--ds-text-3, #9aa0a6);
+  color: var(--ds-text-3);
   font-size: var(--font-size-xs, 11px);
 }
 

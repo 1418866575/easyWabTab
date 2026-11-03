@@ -339,7 +339,7 @@ onUnmounted(() => {
   gap: 6px;
   padding: 0 12px;
   background: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
   font-size: var(--fs-caption, 12px);
@@ -361,7 +361,7 @@ onUnmounted(() => {
 
 .ipd-action-hint {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 /* 搜索框视觉统一到全局 .ui-input（别名列表已含 .ipd-search），这里只保留宽度 */
@@ -381,7 +381,7 @@ onUnmounted(() => {
   background: transparent;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 999px;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s, background-color 0.15s;
@@ -442,7 +442,7 @@ onUnmounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .ipd-item.active .ipd-item-label {
@@ -454,7 +454,7 @@ onUnmounted(() => {
   margin: 16px 0;
   text-align: center;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 @media (max-width: 768px) {

@@ -385,7 +385,7 @@ const sortedCustomCategories = computed(() =>
 
 /* 未设置图标时以浅色占位提示可点击 */
 .cat-icon-btn.is-empty {
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 .cat-icon-img {
@@ -517,14 +517,14 @@ const sortedCustomCategories = computed(() =>
   cursor: pointer;
   font-size: var(--font-size-xs, 12px);
   line-height: 1;
-  color: var(--color-text-secondary, #475569);
+  color: var(--color-text-secondary);
   opacity: 0.75;
   transition: opacity 0.2s, border-color 0.2s, color 0.2s, background-color 0.2s;}
 
 .btn-icon:hover:not(:disabled) {
   opacity: 1;
   border-color: var(--color-border, #cbd5e1);
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
 }
 
 /* 删除：常态即用警示色，避免误点 */

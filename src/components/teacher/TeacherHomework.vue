@@ -536,7 +536,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
 
 .hw-count {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 /* ===== 列表/卡片双视图 ===== */
@@ -550,12 +550,12 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
 }
 .hw-list-area :deep(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #f3f4f6) !important;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-weight: 600;
 }
 :deep(html.dark) .hw-list-area .el-table th.el-table__cell {
   background-color: var(--color-bg-hover, #111827) !important;
-  color: var(--color-text-soft, #d1d5db);
+  color: var(--color-text-soft);
 }
 
 .hw-list {
@@ -593,7 +593,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
 }
 .hw-card-dates {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 .hw-card-misses {
   display: flex;
@@ -606,7 +606,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
   margin-top: auto;
 }
 .hw-detail-btn { color: var(--color-link, #3b82f6); }
-.hw-edit-btn { color: var(--color-text-secondary, #64748b); }
+.hw-edit-btn { color: var(--color-text-secondary); }
 .hw-del-btn { color: var(--color-error, #ef4444); }
 
 /* ===== 分页 ===== */
@@ -629,7 +629,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
   align-items: center;
   justify-content: center;
   min-height: 160px;
-  color: var(--color-text-soft, #6b7280);
+  color: var(--color-text-soft);
   font-size: var(--fs-body, 14px);
 }
 
@@ -758,11 +758,11 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
   gap: 12px;
   flex-wrap: wrap;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 .hw-detail-content {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text, #334155);
+  color: var(--color-text);
   white-space: pre-wrap;
 }
 .hw-export-hint {

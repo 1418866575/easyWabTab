@@ -132,12 +132,12 @@ async function exportExcelFile(): Promise<void> {
 
 .sp-name {
   font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
 }
 
 .sp-meta {
   font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 .sp-grid {

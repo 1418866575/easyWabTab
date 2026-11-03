@@ -112,12 +112,12 @@ function setCurrent(j: WorkbenchJournal) {
 .djm-title {
   font-size: var(--fs-md, 15px);
   font-weight: 600;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   margin: 0 0 6px 0;
 }
 .djm-hint {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   margin: 0 0 16px 0;
   line-height: 1.5;
 }
@@ -129,7 +129,7 @@ function setCurrent(j: WorkbenchJournal) {
 .djm-add-label {
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text-secondary, #475569);
+  color: var(--color-text-secondary);
   margin: 0 0 8px 0;
 }
 .djm-add-row {
@@ -171,7 +171,7 @@ function setCurrent(j: WorkbenchJournal) {
 .djm-name {
   flex: 1;
   font-size: var(--fs-body, 14px);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -188,7 +188,7 @@ function setCurrent(j: WorkbenchJournal) {
 }
 .djm-tag-default {
   background: var(--color-bg-hover, #e2e8f0);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 .djm-edit {
   flex: 1;
@@ -196,7 +196,7 @@ function setCurrent(j: WorkbenchJournal) {
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-sm, 4px);
   background: var(--color-bg, #fff);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   font-size: var(--fs-body, 14px);
   outline: none;
 }
@@ -213,7 +213,7 @@ function setCurrent(j: WorkbenchJournal) {
   border-radius: var(--radius-sm, 4px);
   cursor: pointer;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   transition: all 0.15s ease;
   height: 36px;}
 .djm-btn-icon:hover:not(:disabled) {

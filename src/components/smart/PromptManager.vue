@@ -384,12 +384,12 @@ function excerpt(p: SmartPrompt): string {
   max-width: 720px;
 }
 
-.pm-search-icon { color: var(--color-text-muted, #9ca3af); flex: none; }
+.pm-search-icon { color: var(--color-text-muted); flex: none; }
 .pm-search-input {
   flex: 1;
   min-width: 0;
 }
-.pm-search-input::placeholder { color: var(--color-text-muted, #9ca3af); }
+.pm-search-input::placeholder { color: var(--color-text-muted); }
 .pm-search-clear {
   flex: none;
   min-height: 24px;
@@ -397,7 +397,7 @@ function excerpt(p: SmartPrompt): string {
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
   font-size: var(--fs-md, 15px);
   line-height: 1;
   cursor: pointer;
@@ -415,7 +415,7 @@ function excerpt(p: SmartPrompt): string {
   border-radius: 999px;
   border: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-card, #fff);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-family: inherit;
   font-size: var(--fs-sm, 13px);
   font-weight: 500;
@@ -431,14 +431,14 @@ function excerpt(p: SmartPrompt): string {
 /* 排序 + 收藏 + 操作行 */
 .pm-toolbar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
 .pm-toolbar-left, .pm-toolbar-right { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.pm-result { font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
+.pm-result { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 .pm-select {
   height: 36px;
   padding: 0 6px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #fff);
-  color: var(--color-text, #111827);
+  color: var(--color-text);
   font-size: var(--fs-sm, 13px);
 }
 .pm-fav {
@@ -447,7 +447,7 @@ function excerpt(p: SmartPrompt): string {
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
   background: transparent;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
 }
@@ -460,12 +460,12 @@ function excerpt(p: SmartPrompt): string {
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 999px;
   background: transparent;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
 }
 .pm-tag.is-on { border-color: var(--color-primary, #3b82f6); background: var(--color-primary-soft, #eff6ff); color: var(--color-primary, #3b82f6); }
-.pm-tag-reset { color: var(--color-text-muted, #9ca3af); }
+.pm-tag-reset { color: var(--color-text-muted); }
 
 .pm-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
 /* 分页容器：只负责间距与右对齐，控件观感由 styles/pager.css 的 .ewt-pager 统一接管 */
@@ -485,7 +485,7 @@ function excerpt(p: SmartPrompt): string {
   padding: 0;
   border: none;
   background: none;
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
   font-size: var(--fs-lg, 16px);
   line-height: 1.2;
   cursor: pointer;
@@ -496,7 +496,7 @@ function excerpt(p: SmartPrompt): string {
   padding: 0;
   border: none;
   background: none;
-  color: var(--color-text, #111827);
+  color: var(--color-text);
   font-size: var(--fs-body, 14px);
   font-weight: 600;
   text-align: left;
@@ -506,20 +506,20 @@ function excerpt(p: SmartPrompt): string {
   white-space: nowrap;
 }
 .pm-name:hover { color: var(--color-primary, #3b82f6); }
-.pm-meta { font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); display: flex; gap: 4px; flex-wrap: wrap; }
+.pm-meta { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); display: flex; gap: 4px; flex-wrap: wrap; }
 .pm-dot { opacity: .6; }
 .pm-builtin {
   flex: 0 0 auto;
   padding: 1px 6px;
   border-radius: 4px;
   background: var(--color-bg-hover, #f3f4f6);
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
   font-size: var(--fs-caption, 12px);
 }
 .pm-excerpt {
   margin: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -527,7 +527,7 @@ function excerpt(p: SmartPrompt): string {
 }
 .pm-card-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: var(--fs-caption, 12px); }
 .pm-chip { color: var(--color-primary, #3b82f6); }
-.pm-vars { color: var(--color-text-muted, #9ca3af); display: inline-flex; align-items: center; gap: 3px; }
+.pm-vars { color: var(--color-text-muted); display: inline-flex; align-items: center; gap: 3px; }
 .pm-vars svg { flex: none; }
 
 .pm-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: auto; }
@@ -537,7 +537,7 @@ function excerpt(p: SmartPrompt): string {
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
   background: transparent;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;}
 .pm-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
@@ -550,8 +550,8 @@ function excerpt(p: SmartPrompt): string {
   border: 1px dashed var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 10px);
 }
-.pm-empty-title { margin: 0 0 4px; font-size: var(--fs-body, 14px); font-weight: 600; color: var(--color-text, #111827); }
-.pm-empty-hint { margin: 0 0 12px; font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #6b7280); }
+.pm-empty-title { margin: 0 0 4px; font-size: var(--fs-body, 14px); font-weight: 600; color: var(--color-text); }
+.pm-empty-hint { margin: 0 0 12px; font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
 .pm-empty-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 
 @media (max-width: 768px) {

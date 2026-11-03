@@ -773,7 +773,7 @@ watch(showForm, (v) => {
 }
 .grp-count {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 .grp-list-area :deep(.el-table) {
   font-size: var(--fs-sm, 13px);
@@ -782,12 +782,12 @@ watch(showForm, (v) => {
 }
 .grp-list-area :deep(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #f3f4f6) !important;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-weight: 600;
 }
 :deep(html.dark) .grp-list-area .el-table th.el-table__cell {
   background-color: var(--color-bg-hover, #111827) !important;
-  color: var(--color-text-soft, #d1d5db);
+  color: var(--color-text-soft);
 }
 .grp-name {
   font-weight: 600;
@@ -832,14 +832,14 @@ watch(showForm, (v) => {
 }
 .grp-card-desc {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .grp-card-meta {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 .grp-card-members {
   display: flex;
@@ -853,7 +853,7 @@ watch(showForm, (v) => {
   margin-top: auto;
 }
 .grp-edit-btn { color: var(--color-link, #3b82f6); }
-.grp-copy-btn { color: var(--color-text-secondary, #64748b); }
+.grp-copy-btn { color: var(--color-text-secondary); }
 .grp-del-btn { color: var(--color-error, #ef4444); }
 
 /* 成员 chip（男蓝 / 女粉 / 已移除灰） */
@@ -878,7 +878,7 @@ watch(showForm, (v) => {
 }
 .tw-chip.is-removed {
   background: rgba(148, 163, 184, 0.16);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   font-style: italic;
 }
 .tw-chip-role {
@@ -889,7 +889,7 @@ watch(showForm, (v) => {
 }
 .grp-more {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 /* 列表内操作按钮 */
@@ -938,7 +938,7 @@ watch(showForm, (v) => {
   align-items: center;
   justify-content: center;
   min-height: 160px;
-  color: var(--color-text-soft, #6b7280);
+  color: var(--color-text-soft);
   font-size: var(--fs-body, 14px);
 }
 
@@ -1023,7 +1023,7 @@ watch(showForm, (v) => {
 }
 .grp-rg-hint {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   margin: 0;
 }
 .grp-rg-warn {
@@ -1115,7 +1115,7 @@ watch(showForm, (v) => {
 }
 .grp-snap-meta {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 .grp-snap-actions {
   display: flex;

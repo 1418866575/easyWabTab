@@ -25,7 +25,7 @@ defineEmits<{ toggle: [] }>()
   padding: 0 10px;
   font-size: var(--fs-sm, 13px);
   line-height: 1;
-  color: var(--color-text, #374151);
+  color: var(--color-text);
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
@@ -42,7 +42,7 @@ defineEmits<{ toggle: [] }>()
 }
 :global(html.dark) .ewt-view-toggle {
   background: var(--color-surface, #1f2937);
-  color: var(--color-text, #e5e7eb);
+  color: var(--color-text);
   border-color: var(--color-border, #374151);
 }
 </style>

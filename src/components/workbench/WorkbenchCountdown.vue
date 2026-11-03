@@ -1171,7 +1171,7 @@ html.dark .status-critical {
 }
 
 html.dark .cat-default {
-  color: #9ca3af;
+  color: var(--color-text-muted);
   border-color: #6b7280;
   background: rgba(107, 114, 128, 0.15);
 }
@@ -1215,7 +1215,7 @@ html.dark .cat-default {
   border-color: var(--color-primary, #3b82f6);
 }
 .cd-t-ops .btn-show-off {
-  color: var(--color-text-secondary, #9ca3af);
+  color: var(--color-text-secondary);
 }
 
 /* 表格内徽章字号略缩，避免挤压 */

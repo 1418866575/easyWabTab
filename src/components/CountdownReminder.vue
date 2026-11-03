@@ -138,7 +138,7 @@ html.dark .reminder-card {
 }
 
 html.dark .reminder-title {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .reminder-item {
@@ -146,7 +146,7 @@ html.dark .reminder-item {
 }
 
 html.dark .reminder-name {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .reminder-label {

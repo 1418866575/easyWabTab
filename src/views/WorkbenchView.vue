@@ -409,7 +409,7 @@ async function handleSyncNowClick(): Promise<void> {
   display: flex;
   flex-direction: column;
   background-color: var(--color-bg, #f8fafc);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .wb-header {
@@ -436,7 +436,7 @@ async function handleSyncNowClick(): Promise<void> {
 .wb-header-left h1 {
   font-size: var(--font-size-2xl, 20px);
   font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   white-space: nowrap;
 }
 
@@ -512,7 +512,7 @@ async function handleSyncNowClick(): Promise<void> {
   border: 1px solid transparent;
   border-radius: var(--radius-sm, 4px);
   background-color: transparent;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm, 13px);
   text-align: left;
   cursor: pointer;
@@ -576,12 +576,12 @@ html.dark .wb-header {
 }
 
 html.dark .wb-header-left h1 {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .wb-btn {
   background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
   border-color: var(--color-border, #374151);
 }
 
@@ -599,12 +599,12 @@ html.dark .wb-menu {
 /* 收起按钮的暗色由 .tw-btn 的 token 自动翻转，这里不再单独覆盖
    （旧的自写暗色会把文字压成 secondary、hover 改色，与教师台不一致） */
 html.dark .wb-menu-item {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 html.dark .wb-menu-item:hover {
   background-color: var(--color-bg-hover, #374151);
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .wb-menu-item.active {

@@ -374,7 +374,7 @@ const chartOption = computed(() => {
 
 .sth-field-label {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .sth-date {
@@ -411,21 +411,21 @@ const chartOption = computed(() => {
 
 .sth-summary-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .sth-summary-value {
   margin-top: 4px;
   font-size: var(--fs-h2, 22px);
   font-weight: 600;
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
 }
 
 .sth-summary-sub {
   margin-top: 2px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .sth-up {
@@ -439,7 +439,7 @@ const chartOption = computed(() => {
 }
 
 .sth-muted {
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .sth-num {
@@ -460,7 +460,7 @@ const chartOption = computed(() => {
   margin: 0 0 10px;
   font-size: var(--fs-md, 15px);
   font-weight: 600;
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
 }
 
 .sth-chart-wrap {
@@ -476,7 +476,7 @@ const chartOption = computed(() => {
 .sth-empty {
   padding: 20px;
   text-align: center;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   border: 1px dashed var(--color-border, #e2e8f0);
   border-radius: 12px;
   background-color: var(--color-bg-card, #ffffff);

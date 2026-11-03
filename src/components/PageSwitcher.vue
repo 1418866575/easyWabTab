@@ -156,7 +156,7 @@ onBeforeUnmount(() => {
   border: 1px solid transparent;
   border-radius: 10px;
   background-color: transparent;
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
   font-family: inherit;
   font-size: var(--font-size-2xl, 20px);
   font-weight: var(--font-weight-semibold, 600);
@@ -194,7 +194,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   transition: transform var(--motion-duration, 0.2s) var(--motion-ease, ease);
 }
 
@@ -227,7 +227,7 @@ onBeforeUnmount(() => {
   border: none;
   border-radius: 8px;
   background-color: transparent;
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
   font-family: inherit;
   font-size: var(--font-size-base, 15px);
   font-weight: var(--font-weight-normal, 400);

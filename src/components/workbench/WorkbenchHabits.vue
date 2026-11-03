@@ -626,7 +626,7 @@ onUnmounted(() => {
   gap: var(--space-2, 8px);
   margin-bottom: var(--space-3, 12px);
   font-size: var(--font-size-sm, 13px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .habit-detail-chip {
@@ -636,12 +636,12 @@ onUnmounted(() => {
   padding: 2px 10px;
   border-radius: var(--radius-full, 999px);
   background: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 html.dark .habit-detail-chip {
   background: var(--color-bg-hover, #334155);
-  color: var(--color-text, #e5e7eb);
+  color: var(--color-text);
 }
 
 .habit-detail-chip i {
@@ -667,7 +667,7 @@ html.dark .habit-detail-chip {
 .habit-detail-statustitle {
   font-size: var(--font-size-sm, 13px);
   font-weight: 600;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .habit-detail-label {
@@ -681,13 +681,13 @@ html.dark .habit-detail-chip {
   margin: 0;
   font-size: var(--font-size-base, 14px);
   font-weight: 600;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .habit-detail-count,
 .habit-detail-bar {
   font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
@@ -760,7 +760,7 @@ html.is-touch .habit-detail-remove {
   border: 1px dashed var(--color-border-strong, #94a3b8);
   border-radius: var(--radius-md, 8px);
   background: transparent;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
   transition: border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
@@ -789,7 +789,7 @@ html.is-touch .habit-detail-remove {
   margin: var(--space-3, 12px) 0 0;
   font-size: var(--font-size-xs, 12px);
   line-height: 1.7;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 
@@ -831,7 +831,7 @@ html.is-touch .habit-detail-remove {
 /* ===== 暗色模式覆盖 ===== */
 html.dark .dialog-header,
 html.dark .dialog-title {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
   background-color: var(--color-bg-card, #1f2937);
 }
 

@@ -117,9 +117,9 @@ function relTime(ts: number): string {
 .ov-card:hover { border-color: var(--color-primary, #3b82f6); }
 .ov-card-icon { color: var(--color-primary, #3b82f6); }
 .ov-card-body { display: flex; align-items: baseline; gap: 6px; }
-.ov-card-value { font-size: var(--fs-h2, 22px); font-weight: 700; color: var(--color-text, #111827); }
-.ov-card-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #6b7280); }
-.ov-card-hint { font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
+.ov-card-value { font-size: var(--fs-h2, 22px); font-weight: 700; color: var(--color-text); }
+.ov-card-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
+.ov-card-hint { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 
 .ov-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
 .ov-panel {
@@ -128,19 +128,19 @@ function relTime(ts: number): string {
   border-radius: var(--radius-md, 10px);
   background: var(--color-bg-card, #fff);
 }
-.ov-panel-title { margin: 0 0 10px; font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text, #111827); }
+.ov-panel-title { margin: 0 0 10px; font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text); }
 
 .ov-cats { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
 .ov-cat { display: grid; grid-template-columns: 80px minmax(0, 1fr) 32px; gap: 8px; align-items: center; font-size: var(--fs-caption, 12px); }
-.ov-cat-name { color: var(--color-text-secondary, #6b7280); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-cat-name { color: var(--color-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ov-cat-bar { display: flex; height: 8px; border-radius: 999px; overflow: hidden; background: var(--color-bg-hover, #f3f4f6); }
 .ov-cat-skills { background: var(--color-primary, #3b82f6); }
 /* 提示词段用橙色：走 --color-warning 令牌（规范 §1.5：语义色不写死） */
 .ov-cat-prompts { background: var(--color-warning, #f59e0b); }
 /* 工作流段用绿色：走 --color-success 令牌 */
 .ov-cat-workflows { background: var(--color-success, #10b981); }
-.ov-cat-num { text-align: right; color: var(--color-text-muted, #9ca3af); }
-.ov-legend { margin: 10px 0 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); display: flex; gap: 12px; align-items: center; }
+.ov-cat-num { text-align: right; color: var(--color-text-muted); }
+.ov-legend { margin: 10px 0 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted); display: flex; gap: 12px; align-items: center; }
 .ov-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
 .ov-dot.is-skill { background: var(--color-primary, #3b82f6); }
 .ov-dot.is-prompt { background: var(--color-warning, #f59e0b); }
@@ -158,15 +158,15 @@ function relTime(ts: number): string {
   border-radius: 6px;
   background: transparent;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text, #111827);
+  color: var(--color-text);
   text-align: left;
   cursor: pointer;}
 .ov-recent-btn:hover { background: var(--color-bg-hover, #f3f4f6); }
-.ov-recent-type { font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
+.ov-recent-type { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 .ov-recent-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ov-recent-time { font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
+.ov-recent-time { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 
-.ov-empty { margin: 0; font-size: var(--fs-sm, 13px); color: var(--color-text-muted, #9ca3af); }
+.ov-empty { margin: 0; font-size: var(--fs-sm, 13px); color: var(--color-text-muted); }
 
 @media (max-width: 768px) {
   .ov-card { min-height: 44px; }

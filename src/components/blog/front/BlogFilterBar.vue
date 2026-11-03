@@ -177,19 +177,19 @@ const visibleTags = computed(() =>
 
 .bf-search-icon {
   flex: none;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   pointer-events: none;
 }
 .bf-search-input {
   flex: 1;
   min-width: 0;
 }
-.bf-search-input::placeholder { color: var(--color-text-muted, #94a3b8); }
+.bf-search-input::placeholder { color: var(--color-text-muted); }
 .bf-search-clear {
   flex: none;
   border: none;
   background: transparent;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   font-size: var(--fs-lg, 16px);
   line-height: 1;
   padding: 2px 6px;
@@ -220,7 +220,7 @@ const visibleTags = computed(() =>
   border-radius: var(--radius-full, 999px);
   border: 1px solid var(--color-border, #e2e8f0);
   background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm, 13px);
   font-weight: var(--font-weight-medium, 500);
   font-family: inherit;
@@ -255,7 +255,7 @@ const visibleTags = computed(() =>
 }
 .bf-meta-label {
   font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 /* 视觉统一到全局 .ui-input（别名已含 .bf-select） */
 .bf-clear {
@@ -264,7 +264,7 @@ const visibleTags = computed(() =>
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   background-color: transparent;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm, 13px);
   font-family: inherit;
   cursor: pointer;

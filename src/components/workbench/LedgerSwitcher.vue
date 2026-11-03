@@ -89,7 +89,7 @@ function onSelect(id: string): void {
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   font-size: var(--fs-body, 14px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
@@ -141,7 +141,7 @@ function onSelect(id: string): void {
 .wls-title {
   margin: 0 0 8px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .wls-list {
@@ -164,7 +164,7 @@ function onSelect(id: string): void {
   border: 1px solid transparent;
   border-radius: 8px;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   cursor: pointer;
   text-align: left;
 }
@@ -183,7 +183,7 @@ function onSelect(id: string): void {
   font-weight: 700;
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .wls-item-name {
@@ -191,7 +191,7 @@ function onSelect(id: string): void {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .wls-item.active .wls-item-name {
@@ -209,7 +209,7 @@ function onSelect(id: string): void {
 
 html.dark .wls-trigger {
   background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
   border-color: var(--color-border, #374151);
 }
 

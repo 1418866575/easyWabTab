@@ -382,7 +382,7 @@ function usedSiteNames(icon: MergedIcon): string {
 .add-form h3 {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   margin: 0 0 12px 0;
 }
 
@@ -407,7 +407,7 @@ function usedSiteNames(icon: MergedIcon): string {
 
 .upload-hint {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 /* 搜索 + 过滤 */
@@ -504,7 +504,7 @@ function usedSiteNames(icon: MergedIcon): string {
 
 .icon-manager-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   text-align: center;
   max-width: 100%;
   overflow: hidden;
@@ -522,7 +522,7 @@ function usedSiteNames(icon: MergedIcon): string {
 
 .icon-manager-category {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   background: var(--color-bg-hover, #f1f5f9);
   padding: 1px 6px;
   border-radius: 10px;
@@ -530,7 +530,7 @@ function usedSiteNames(icon: MergedIcon): string {
 
 .icon-manager-size {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 .icon-manager-actions {
@@ -585,14 +585,14 @@ function usedSiteNames(icon: MergedIcon): string {
 
 .import-export-hint {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   margin-left: auto;
 }
 
 /* 空状态 */
 .empty-custom {
   text-align: center;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   font-size: var(--fs-body, 14px);
   padding: 40px 20px;
 }

@@ -93,7 +93,7 @@ async function handleClick(): Promise<void> {
   gap: 6px;
   padding: 0 12px;
   font-size: 12px;
-  color: var(--color-text-secondary, #475569);
+  color: var(--color-text-secondary);
   background: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #cbd5e1);
   border-radius: 8px;
@@ -102,13 +102,13 @@ async function handleClick(): Promise<void> {
   height: 36px;}
 
 .tb-sync-btn:hover:not(:disabled) {
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
   border-color: var(--color-primary, #3b82f6);
 }
 
 /* 进行中：弱化 + 禁用，防连点 */
 .tb-sync-btn.is-busy {
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   cursor: progress;
   opacity: 0.75;
 }
@@ -122,7 +122,7 @@ async function handleClick(): Promise<void> {
 
 /* 未配置云同步：整体弱化，提示需去设置 */
 .tb-sync-btn.is-off {
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   border-style: dashed;
 }
 

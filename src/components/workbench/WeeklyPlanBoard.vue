@@ -119,7 +119,7 @@ function onCell(rowKey: string, day: number): void {
               <svg v-if="row.icon === 'sun'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning, #f59e0b)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1" /></svg>
               <svg v-else-if="row.icon === 'moon'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-secondary, #64748b)" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" /></svg>
               <svg v-else-if="row.icon === 'bowl'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning, #f59e0b)" stroke-width="2" stroke-linecap="round"><path d="M4 11h16a8 8 0 0 1-16 0z" /><path d="M8 11V7M12 11V5M16 11V8" /></svg>
-              <span v-else style="font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #64748b); line-height: 1;">Σ</span>
+              <span v-else style="font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); line-height: 1;">Σ</span>
               <span>{{ row.label }}</span>
             </div>
           </td>
@@ -192,13 +192,13 @@ function onCell(rowKey: string, day: number): void {
 .wp-title {
   font-size: var(--font-size-base, 14px);
   font-weight: 500;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   line-height: 1.3;
 }
 
 .wp-week {
   font-size: var(--font-size-xs, 11px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 
 .wp-nav {
@@ -213,13 +213,13 @@ function onCell(rowKey: string, day: number): void {
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #fff);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-xs, 11px);
   cursor: pointer;}
 
 .wp-nav-btn:hover {
   border-color: var(--color-border-strong, #cbd5e1);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .wp-stat {
@@ -276,7 +276,7 @@ function onCell(rowKey: string, day: number): void {
 .wp-day-label {
   font-size: var(--font-size-xs, 11px);
   font-weight: 500;
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .wp-day-head.is-today .wp-day-label,
@@ -286,7 +286,7 @@ function onCell(rowKey: string, day: number): void {
 
 .wp-day-date {
   font-size: var(--font-size-xs, 11px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 .wp-row-head {
@@ -308,7 +308,7 @@ function onCell(rowKey: string, day: number): void {
   gap: 2px;
   padding: 4px 0;
   font-size: var(--font-size-xs, 11px);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
 }
 
 .wp-cell {
@@ -340,7 +340,7 @@ function onCell(rowKey: string, day: number): void {
 
 .wp-item-name {
   font-size: var(--font-size-xs, 11px);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -367,12 +367,12 @@ function onCell(rowKey: string, day: number): void {
   border-radius: var(--radius-full, 9999px);
   padding: 2px 10px;
   font-size: var(--font-size-xs, 11px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   display: inline-block;
 }
 
 .wp-add {
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm, 13px);
 }
 
@@ -381,7 +381,7 @@ function onCell(rowKey: string, day: number): void {
   gap: 14px;
   padding: 0 16px 12px;
   font-size: var(--font-size-xs, 11px);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   flex-wrap: wrap;
 }
 

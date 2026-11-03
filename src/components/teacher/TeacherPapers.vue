@@ -220,7 +220,7 @@ async function exportExcelFile(): Promise<void> {
 .pp-chart {
   width: 100%;
   height: auto;
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
 }
 
 .pp-no,

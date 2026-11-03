@@ -144,12 +144,12 @@ html.dark .health-reminders {
 
 html.dark .hr-title,
 html.dark .hr-repeat {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 html.dark .hr-name,
 html.dark .hr-time {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .hr-item {

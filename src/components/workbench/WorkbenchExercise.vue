@@ -365,7 +365,7 @@ onMounted(async () => {
             <template v-if="DISTANCE_TYPES.has(row.exerciseType) && row.distanceKm !== undefined">
               {{ Number(row.distanceKm).toFixed(1) }} km
             </template>
-            <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
+            <span v-else style="color: var(--color-text-secondary);">—</span>
           </template>
         </el-table-column>
         <el-table-column label="消耗" width="110" align="right">
@@ -378,7 +378,7 @@ onMounted(async () => {
         <el-table-column label="备注" min-width="200" align="center" show-overflow-tooltip>
           <template #default="{ row }">
             <span v-if="row.note">{{ row.note }}</span>
-            <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
+            <span v-else style="color: var(--color-text-secondary);">—</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="170" align="center" fixed="right" class-name="ewt-op-col">
@@ -803,12 +803,12 @@ html.dark .ex-item {
 /* html.dark .empty-state 背景已由全局 .empty-state 的 --color-bg-card token 自动跟随 */
 
 html.dark .ex-date {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .ex-meta,
 html.dark .ex-note {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 html.dark .ex-type-badge {
@@ -828,7 +828,7 @@ html.dark .form-input,
 html.dark select.form-input,
 html.dark input.form-input {
   background-color: var(--color-bg-input, #374151);
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
   border-color: var(--color-border, #374151);
 }
 

@@ -261,7 +261,7 @@ onMounted(async () => {
 }
 .sa-stat-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-soft, #6b7280);
+  color: var(--color-text-soft);
 }
 .sa-stat-value {
   font-size: var(--fs-lg, 16px);
@@ -293,7 +293,7 @@ onMounted(async () => {
 .sa-count {
   margin-left: auto;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-soft, #6b7280);
+  color: var(--color-text-soft);
 }
 
 /* 页面级滚动：勋章墙随内容自然撑开，由页面统一滚动（不再自建内部滚动容器） */
@@ -306,7 +306,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-soft, #6b7280);
+  color: var(--color-text-soft);
   font-size: var(--fs-body, 14px);
   min-height: 200px;
 }
@@ -350,7 +350,7 @@ onMounted(async () => {
 .sa-badge-name {
   font-size: var(--fs-caption, 12px);
   font-weight: 600;
-  color: var(--color-text, #1f2937);
+  color: var(--color-text);
   line-height: 1.3;
 }
 .sa-badge-status {
@@ -366,7 +366,7 @@ onMounted(async () => {
   font-weight: 600;
 }
 .sa-badge-status.locked {
-  color: var(--color-text-soft, #6b7280);
+  color: var(--color-text-soft);
 }
 .sa-badge-progress-text {
   font-size: var(--fs-caption, 12px);
@@ -422,7 +422,7 @@ onMounted(async () => {
 .sa-dialog-desc {
   margin: 0;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-soft, #6b7280);
+  color: var(--color-text-soft);
   line-height: 1.6;
 }
 
@@ -442,7 +442,7 @@ onMounted(async () => {
 }
 .sa-dialog-unlocked-time {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-soft, #6b7280);
+  color: var(--color-text-soft);
 }
 
 .sa-dialog-locked {
@@ -461,7 +461,7 @@ onMounted(async () => {
   font-size: var(--fs-caption, 12px);
 }
 .sa-dialog-progress-label {
-  color: var(--color-text-soft, #6b7280);
+  color: var(--color-text-soft);
 }
 .sa-dialog-progress-value {
   font-weight: 600;
@@ -480,7 +480,7 @@ onMounted(async () => {
 }
 .sa-dialog-progress-percent {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-soft, #6b7280);
+  color: var(--color-text-soft);
   text-align: right;
 }
 .sa-dialog-howto {
@@ -488,7 +488,7 @@ onMounted(async () => {
   align-items: flex-start;
   gap: 6px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-soft, #6b7280);
+  color: var(--color-text-soft);
   line-height: 1.5;
   padding-top: 4px;
   border-top: 1px dashed var(--color-border, #e5e7eb);
@@ -499,7 +499,7 @@ onMounted(async () => {
   gap: 12px;
   flex-wrap: wrap;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-soft, #6b7280);
+  color: var(--color-text-soft);
   padding-top: 4px;
   border-top: 1px dashed var(--color-border, #e5e7eb);
 }

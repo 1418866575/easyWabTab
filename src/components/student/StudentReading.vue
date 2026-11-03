@@ -226,7 +226,7 @@ onMounted(async () => {
           <el-table-column label="读后感" min-width="200" align="left" show-overflow-tooltip>
             <template #default="{ row }">
               <span v-if="row.impression">{{ row.impression }}</span>
-              <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
+              <span v-else style="color: var(--color-text-secondary);">—</span>
             </template>
           </el-table-column>
           <el-table-column label="家长签字" width="100" align="center">
@@ -388,13 +388,13 @@ onMounted(async () => {
 }
 .sr-stat-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   margin-bottom: 4px;
 }
 .sr-stat-value {
   font-size: var(--fs-lg, 16px);
   font-weight: 600;
-  color: var(--color-text, #1f2937);
+  color: var(--color-text);
 }
 
 .sr-main {
@@ -424,19 +424,19 @@ onMounted(async () => {
 }
 .sr-list > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #f3f4f6) !important;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-weight: 600;
   user-select: none;
 }
 .sr-list > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #111827);
+  color: var(--color-text);
 }
 :global(html.dark) .sr-list > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #111827) !important;
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 :global(html.dark) .sr-list > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 .sr-list > :global(.el-table .el-table__body-wrapper .cell),
 .sr-list > :global(.el-table .el-table__header-wrapper .cell) {
@@ -487,7 +487,7 @@ onMounted(async () => {
 }
 .sr-unsigned {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 /* ===== 表格内编辑/删除按钮 ===== */
@@ -522,7 +522,7 @@ onMounted(async () => {
   font-weight: 400;
 }
 .sr-sign-toggle.is-locked {
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 .dialog-footer {
   display: flex;

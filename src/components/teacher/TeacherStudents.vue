@@ -501,14 +501,14 @@ async function downloadTemplate(): Promise<void> {
   flex: 0 0 72px;
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text-secondary, #475569);
+  color: var(--color-text-secondary);
 }
 .stu-req {
   color: var(--color-error, #ef4444);
 }
 .stu-form-static {
   font-size: var(--fs-body, 14px);
-  color: var(--color-text, #334155);
+  color: var(--color-text);
 }
 .stu-avatar-box {
   display: flex;
@@ -527,7 +527,7 @@ async function downloadTemplate(): Promise<void> {
   align-items: center;
   justify-content: center;
   background: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   font-size: var(--fs-caption, 12px);
 }
 .stu-avatar-preview img {
@@ -543,7 +543,7 @@ async function downloadTemplate(): Promise<void> {
   flex-basis: 100%;
   margin: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 /* 明细表组合搜索区：允许换行，避免控件挤压 */

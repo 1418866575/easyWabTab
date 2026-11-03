@@ -181,14 +181,14 @@
   border: 1px dashed var(--color-border, #e2e8f0);
   border-radius: var(--radius-lg, 12px);
   background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm, 13px);
   text-align: center;
 }
 .bk-empty-hint {
   margin: 8px 0 16px;
   font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
 }
 
 .bk-pager {
@@ -216,7 +216,7 @@
   margin: 0;
   font-size: var(--font-size-base, 15px);
   font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -245,7 +245,7 @@
   text-align: center;
 }
 .bk-reader-fallback-text {
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm, 13px);
 }
 

@@ -355,7 +355,7 @@ onMounted(async () => {
           <template #default="{ row }"><span style="font-weight:700;color:var(--color-success,#16a34a);font-variant-numeric: tabular-nums;">{{ row.calories }} kcal</span></template>
         </el-table-column>
         <el-table-column label="备注" min-width="200" align="center" show-overflow-tooltip>
-          <template #default="{ row }"><span v-if="row.note">{{ row.note }}</span><span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span></template>
+          <template #default="{ row }"><span v-if="row.note">{{ row.note }}</span><span v-else style="color: var(--color-text-secondary);">—</span></template>
         </el-table-column>
         <el-table-column label="操作" width="170" align="center" fixed="right" class-name="ewt-op-col">
           <template #default="{ row }"><el-button class="btn-edit" :data-testid="`dt-edit-${row.id}`" @click="startEditRecord(row.id)">编辑</el-button><el-button class="btn-delete" :data-testid="`dt-delete-${row.id}`" @click="handleDeleteRecord(row.id)">删除</el-button></template>
@@ -784,12 +784,12 @@ html.dark .dt-item {
 /* html.dark .empty-state 背景已由全局 .empty-state 的 --color-bg-card token 自动跟随 */
 
 html.dark .dt-date {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .dt-meta,
 html.dark .dt-note {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 html.dark .dt-meal-lunch {
@@ -827,13 +827,13 @@ html.dark .form-input,
 html.dark select.form-input,
 html.dark input.form-input {
   background-color: var(--color-bg-input, #374151);
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
   border-color: var(--color-border, #374151);
 }
 
 html.dark .btn-toggle-list {
   background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
   border-color: var(--color-border, #374151);
 }
 

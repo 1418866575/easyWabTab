@@ -168,7 +168,7 @@ async function onSave(): Promise<void> {
   gap: 4px;
 }
 .bk-label {
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm, 13px);
 }
 .bk-req {
@@ -182,7 +182,7 @@ async function onSave(): Promise<void> {
 }
 .bk-form-note {
   margin: 0;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs, 12px);
   line-height: var(--line-height-relaxed, 1.6);
 }

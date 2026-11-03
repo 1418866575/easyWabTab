@@ -283,7 +283,7 @@ onMounted(async () => {
             <el-table-column label="题型" width="110" align="center">
               <template #default="{ row }">
                 <span v-if="row.category" class="se-type-badge">{{ row.category }}</span>
-                <span v-else style="color: var(--color-text-muted, #9ca3af);">—</span>
+                <span v-else style="color: var(--color-text-muted);">—</span>
               </template>
             </el-table-column>
             <el-table-column label="倒计时" width="110" align="center">
@@ -474,7 +474,7 @@ onMounted(async () => {
 .se-tabs :deep(.el-radio-button__inner) {border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 14px;
   background: transparent;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   font-size: var(--fs-caption, 12px);
   padding: 0 12px;
   box-shadow: none;
@@ -506,13 +506,13 @@ onMounted(async () => {
 }
 .se-stat-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   margin-bottom: 4px;
 }
 .se-stat-value {
   font-size: var(--fs-lg, 16px);
   font-weight: 600;
-  color: var(--color-text, #1f2937);
+  color: var(--color-text);
 }
 
 .se-main {
@@ -542,19 +542,19 @@ onMounted(async () => {
 }
 .se-list-area > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #f3f4f6) !important;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   font-weight: 600;
   user-select: none;
 }
 .se-list-area > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #111827);
+  color: var(--color-text);
 }
 :global(html.dark) .se-list-area > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #111827) !important;
-  color: var(--color-text-muted, #d1d5db);
+  color: var(--color-text-muted);
 }
 :global(html.dark) .se-list-area > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 .se-list-area > :global(.el-table .el-table__body-wrapper .cell),
 .se-list-area > :global(.el-table .el-table__header-wrapper .cell) {
@@ -626,7 +626,7 @@ onMounted(async () => {
   text-overflow: ellipsis;
   flex: 1;
   min-width: 0;
-  color: var(--color-text, #1f2937);
+  color: var(--color-text);
 }
 .se-type-badge {
   font-size: var(--fs-caption, 12px);
@@ -670,7 +670,7 @@ onMounted(async () => {
 }
 .se-hero-sub {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   font-weight: 500;
   line-height: 1.3;
 }
@@ -679,14 +679,14 @@ onMounted(async () => {
 .status-normal .se-hero-big { color: var(--se-color); }
 .status-urgent .se-hero-big { color: var(--ds-warning); }
 .status-critical .se-hero-big { color: var(--ds-danger); }
-.status-expired .se-hero-big { color: var(--color-text-muted, #9ca3af); }
+.status-expired .se-hero-big { color: var(--color-text-muted); }
 
 /* 表格倒计时单元格配色（与 hero 口径一致） */
 .se-countdown-cell { font-weight: 600; }
 .se-countdown-cell.status-normal { color: var(--color-primary, #3b82f6); }
 .se-countdown-cell.status-urgent { color: var(--ds-warning); }
 .se-countdown-cell.status-critical { color: var(--ds-danger); }
-.se-countdown-cell.status-expired { color: var(--color-text-muted, #9ca3af); font-weight: 500; }
+.se-countdown-cell.status-expired { color: var(--color-text-muted); font-weight: 500; }
 
 /* expired / invalid / today special states */
 .se-hero-expired { opacity: 0.55; }
@@ -700,7 +700,7 @@ onMounted(async () => {
   justify-content: center;
   align-items: center;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
   border-top: 1px solid color-mix(in srgb, var(--se-color) 10%, var(--color-border, #e5e7eb));
   padding-top: 5px;
   letter-spacing: 0.02em;
@@ -718,7 +718,7 @@ onMounted(async () => {
   border: none;
   border-radius: 50%;
   background: transparent;
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.15s, background 0.15s;}
@@ -731,7 +731,7 @@ onMounted(async () => {
   justify-content: center;
   height: 100%;
   min-height: 200px;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   font-size: var(--fs-body, 14px);
 }
 

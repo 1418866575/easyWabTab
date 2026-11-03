@@ -591,7 +591,7 @@ onUnmounted(() => {
         <el-table-column label="分类" width="150" align="center" show-overflow-tooltip>
           <template #default="{ row }">
             <span v-if="catNameOf(row)" class="nt-cat-badge">{{ catNameOf(row) }}</span>
-            <span v-else style="color: var(--color-text-secondary, #9ca3af);">未分类</span>
+            <span v-else style="color: var(--color-text-secondary);">未分类</span>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="110" align="center">
@@ -874,19 +874,19 @@ onUnmounted(() => {
 }
 .nt-table-wrap > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #f3f4f6) !important;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-weight: 600;
   user-select: none;
 }
 .nt-table-wrap > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #111827);
+  color: var(--color-text);
 }
 :global(html.dark) .nt-table-wrap > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #111827) !important;
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 :global(html.dark) .nt-table-wrap > :global(.el-table td.el-table__cell) {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 .nt-table-wrap > :global(.el-table .el-table__body-wrapper .cell),
 .nt-table-wrap > :global(.el-table .el-table__header-wrapper .cell) {
@@ -912,7 +912,7 @@ onUnmounted(() => {
 
 /* ===== 表格内徽章/标签 ===== */
 .nt-content-preview {
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
 }
 .nt-cat-badge {
@@ -936,13 +936,13 @@ onUnmounted(() => {
 .nt-timeline-expand { padding: 12px 24px 12px 48px; }
 .nt-timeline-expand-title {
   font-size: var(--fs-sm, 13px); font-weight: 600;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   margin-bottom: 8px;
 }
 .nt-timeline-list { display: flex; flex-direction: column; margin: 4px 0 2px; }
 .nt-timeline-item { display: flex; gap: 10px; padding: 6px 0; }
 .nt-timeline-item-body { flex: 1; min-width: 0; }
-.nt-timeline-item-time { font-size: var(--fs-caption, 12px); font-weight: 600; color: var(--color-text-secondary, #6b7280); font-variant-numeric: tabular-nums; }
+.nt-timeline-item-time { font-size: var(--fs-caption, 12px); font-weight: 600; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
 .nt-timeline-item-content { font-size: var(--fs-sm, 13px); line-height: 1.5; word-break: break-word; }
 .nt-timeline-item-actions { display: flex; gap: 6px; margin-top: 4px; }
 /* .btn-edit/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
@@ -1062,11 +1062,11 @@ onUnmounted(() => {
 html.dark .note-overlay { background: rgba(0, 0, 0, 0.7); }
 html.dark .timeline-expand-panel { background-color: var(--color-bg-card, #1f2937); }
 /* html.dark .empty-state 背景已由全局 .empty-state 的 --color-bg-card token 自动跟随 */
-html.dark .btn-save:disabled { background-color: var(--color-bg-input, #374151); color: var(--color-text-muted, #9ca3af); }
+html.dark .btn-save:disabled { background-color: var(--color-bg-input, #374151); color: var(--color-text-muted); }
 /* html.dark .btn-add:disabled 视觉已统一到全局 .ui-btn--primary（style.css） */
 html.dark .nt-search { background-color: var(--color-bg-card, #1f2937); box-shadow: none; }
 html.dark .nt-cat-badge { color: #93c5fd; background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.45); }
-html.dark .timeline-item-time { color: var(--color-text-secondary, #d1d5db); }
+html.dark .timeline-item-time { color: var(--color-text-secondary); }
 html.dark .timeline-item::before { background: var(--color-border, #374151); }
 
 @media (max-width: 640px) {
@@ -1094,7 +1094,7 @@ html.dark .timeline-item::before { background: var(--color-border, #374151); }
 .nt-status-badge.is-pending { color: var(--color-warning, #f59e0b); background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-warning, #f59e0b) 35%, transparent); }
 .nt-status-badge.is-done { color: var(--color-success, #22c55e); background: color-mix(in srgb, var(--color-success, #22c55e) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-success, #22c55e) 35%, transparent); }
 .nt-status-badge.is-overdue { color: var(--color-error, #ef4444); background: color-mix(in srgb, var(--color-error, #ef4444) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-error, #ef4444) 35%, transparent); }
-.nt-due-cell { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary, #9ca3af); margin-top: 2px; white-space: nowrap; }
+.nt-due-cell { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary); margin-top: 2px; white-space: nowrap; }
 .nt-due-cell.is-overdue { color: var(--color-error, #ef4444); font-weight: 600; }
 /* 表单内「已逾期」提示（选了过去的截止日期 + 仍为处理中时） */
 .nt-overdue-hint {

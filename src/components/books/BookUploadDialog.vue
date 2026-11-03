@@ -266,13 +266,13 @@ async function onDelete(book: UploadedBook): Promise<void> {
 <style scoped>
 .bk-upload-hint p {
   margin: 0 0 6px;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm, 13px);
   line-height: var(--line-height-relaxed, 1.6);
 }
 .bk-upload-limit {
   font-size: var(--font-size-xs, 12px) !important;
-  color: var(--color-text-muted, #94a3b8) !important;
+  color: var(--color-text-muted) !important;
 }
 .bk-upload-hint code {
   padding: 1px 4px;
@@ -298,13 +298,13 @@ async function onDelete(book: UploadedBook): Promise<void> {
 }
 .bk-dropzone-title {
   margin: 0 0 4px;
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
   font-size: var(--font-size-base, 15px);
   font-weight: var(--font-weight-medium, 500);
 }
 .bk-dropzone-sub {
   margin: 0;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs, 12px);
 }
 
@@ -324,13 +324,13 @@ async function onDelete(book: UploadedBook): Promise<void> {
 .bk-rejects-list {
   margin: 0;
   padding-left: 18px;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-xs, 12px);
 }
 
 .bk-uploaded-title {
   margin: 0 0 6px;
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
   font-size: var(--font-size-sm, 13px);
   font-weight: var(--font-weight-medium, 500);
 }
@@ -360,17 +360,17 @@ async function onDelete(book: UploadedBook): Promise<void> {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
   font-size: var(--font-size-sm, 13px);
 }
 .bk-uploaded-size {
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs, 12px);
   white-space: nowrap;
 }
 .bk-uploaded-empty {
   margin: 0;
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs, 12px);
 }
 

@@ -247,7 +247,7 @@ onMounted(async () => {
   height: 100dvh;
   min-height: 100vh;
   background-color: var(--ds-bg, #f7f8fa);
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
 }
 
 /* ---------- 顶栏 ---------- */
@@ -289,7 +289,7 @@ onMounted(async () => {
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: 999px;
   background-color: var(--ds-card, #ffffff);
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
   font-family: inherit;
   font-size: var(--fs-caption, 12px);
   font-weight: var(--font-weight-medium, 500);
@@ -402,7 +402,7 @@ onMounted(async () => {
   border: none;
   border-radius: var(--radius-sm, 8px);
   background-color: transparent;
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
   font-family: inherit;
   font-size: var(--font-size-sm, 13px);
   text-align: left;
@@ -445,7 +445,7 @@ onMounted(async () => {
   padding: 0 6px;
   border-radius: var(--ds-radius-pill, 999px);
   background-color: var(--ds-card-2, #f7f8fa);
-  color: var(--ds-text-3, #9aa0a6);
+  color: var(--ds-text-3);
   font-size: var(--font-size-xs, 11px);
 }
 
@@ -472,13 +472,13 @@ onMounted(async () => {
   font-size: var(--ds-fs-title, 24px);
   font-weight: var(--font-weight-bold, 700);
   line-height: 1.3;
-  color: var(--ds-text, #1f2329);
+  color: var(--ds-text);
 }
 
 .ba-page-sub {
   margin: 4px 0 0;
   font-size: var(--ds-fs-body-sm, 13px);
-  color: var(--ds-text-3, #9aa0a6);
+  color: var(--ds-text-3);
 }
 
 .ba-page-actions {
