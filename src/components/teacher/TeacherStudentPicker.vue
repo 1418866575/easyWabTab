@@ -132,7 +132,7 @@ function genderClass(g: '男' | '女'): string {
   display: inline-block;
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
 }
 .tsp-gender.is-boy {
@@ -148,7 +148,7 @@ function genderClass(g: '男' | '女'): string {
   padding-top: 8px;
 }
 .tsp-selected-label {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
 }
 .tsp-chips {
@@ -158,7 +158,7 @@ function genderClass(g: '男' | '女'): string {
   margin-top: 6px;
 }
 .tsp-empty {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #94a3b8);
 }
 .tw-chip {
@@ -167,7 +167,7 @@ function genderClass(g: '男' | '女'): string {
   gap: 2px;
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
   color: var(--color-primary, #3b82f6);
 }
@@ -179,7 +179,7 @@ function genderClass(g: '男' | '女'): string {
   border: none;
   background: transparent;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   line-height: 1;
   color: inherit;
   padding: 0 0 0 2px;

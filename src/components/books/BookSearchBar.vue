@@ -105,7 +105,7 @@ defineExpose({ focus: () => inputRef.value?.focus() })
   border: none;
   background: transparent;
   color: var(--color-text-muted);
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   line-height: 1;
   padding: 2px 6px;
   border-radius: 6px;

@@ -959,7 +959,7 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
   display: flex; flex-direction: column; gap: 4px;
 }
 .stp-stat-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #6b7280); }
-.stp-stat-value { font-size: 26px; font-weight: 700; color: var(--color-text, #1f2937); line-height: 1.2; }
+.stp-stat-value { font-size: var(--fs-h2, 22px); font-weight: 700; color: var(--color-text, #1f2937); line-height: 1.2; }
 .stp-stat-sub { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary, #6b7280); }
 .stp-stat-accent {
   background: linear-gradient(135deg, var(--color-primary, #10b981), #059669);
@@ -1184,7 +1184,7 @@ html.dark .stp-pager-info {
   display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px;
 }
 .stp-badge-card.unlocked { border-color: var(--color-primary, #10b981); background: rgba(16, 185, 129, 0.08); }
-.stp-badge-icon { font-size: 26px; line-height: 1; }
+.stp-badge-icon { font-size: var(--fs-h2, 22px); line-height: 1; }
 .stp-badge-name { font-size: var(--fs-sm, 13px); font-weight: 600; line-height: 1.2; }
 .stp-badge-desc {
   font-size: var(--fs-caption, 12px); color: var(--color-text-secondary, #6b7280);

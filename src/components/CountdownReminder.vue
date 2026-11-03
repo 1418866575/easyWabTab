@@ -77,7 +77,7 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
 
 .reminder-title {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
 }
@@ -101,7 +101,7 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
   padding: 10px 12px;
   background: var(--color-bg-hover, #f1f5f9);
   border-radius: var(--radius-md, 8px);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
 }
 
 .reminder-name {
@@ -160,12 +160,12 @@ html.dark .reminder-label {
   gap: 4px;
   flex-shrink: 0;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   user-select: none;
 }
 
 .reminder-email-icon {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   line-height: 1;
 }
 

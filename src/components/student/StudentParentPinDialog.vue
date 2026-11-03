@@ -331,10 +331,10 @@ const KEYPAD_ROWS: string[][] = [
   display: flex; align-items: center; gap: 8px;
   padding: 10px 14px; border-radius: 10px;
   background: rgba(239, 68, 68, 0.1); color: var(--ds-danger);
-  font-size: 14px; width: 100%; justify-content: center;
+  font-size: var(--fs-body, 14px); width: 100%; justify-content: center;
 }
 .st-pin-hint {
-  margin: 0; font-size: 13px;
+  margin: 0; font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, #6b7280);
   line-height: 1.5; text-align: center; min-height: 20px;
 }
@@ -348,7 +348,7 @@ const KEYPAD_ROWS: string[][] = [
   background: var(--color-surface-2, #f9fafb);
   color: var(--color-text, #1f2937);
   height: 52px; border-radius: 12px;
-  font-size: 20px; font-weight: 500;
+  font-size: var(--fs-title, 18px); font-weight: 500;
   cursor: pointer; transition: all 0.12s;
 }
 .st-pin-key:hover:not(:disabled) {
@@ -359,13 +359,13 @@ const KEYPAD_ROWS: string[][] = [
 .st-pin-key:active:not(:disabled) { transform: scale(0.96); }
 .st-pin-key:disabled { opacity: 0.45; cursor: not-allowed; }
 .st-pin-key-back {
-  background: transparent; font-size: 18px;
+  background: transparent; font-size: var(--fs-title, 18px);
   color: var(--color-text-secondary, #6b7280);
 }
 .st-pin-key-empty { visibility: hidden; }
 @media (max-width: 420px) {
   .st-pin-body { gap: 16px; }
-  .st-pin-key { height: 48px; font-size: 18px; }
+  .st-pin-key { height: 48px; font-size: var(--fs-title, 18px); }
   .st-pin-dot { width: 12px; height: 12px; }
   .st-pin-dots { gap: 12px; }
 }
@@ -377,7 +377,7 @@ const KEYPAD_ROWS: string[][] = [
   border-radius: 8px;
   background: var(--color-primary, #3b82f6);
   color: #fff;
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   font-weight: 600;
   cursor: pointer;
   transition: opacity 0.15s, background 0.15s;

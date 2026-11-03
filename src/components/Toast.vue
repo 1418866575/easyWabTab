@@ -156,7 +156,7 @@ async function onCopy(toast: ToastItem): Promise<void> {
 
 .toast-icon {
   flex: none;
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   font-weight: bold;
   line-height: 20px;
 }
@@ -164,7 +164,7 @@ async function onCopy(toast: ToastItem): Promise<void> {
 .toast-message {
   flex: 1;
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   line-height: 20px;
   color: var(--color-text, #1e293b);
   white-space: pre-wrap;

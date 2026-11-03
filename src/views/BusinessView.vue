@@ -599,7 +599,7 @@ onMounted(async () => {
 }
 
 .bs-stall-name {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, #64748b);
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
@@ -659,14 +659,14 @@ onMounted(async () => {
 
 .bs-gate-title {
   margin: 0 0 8px;
-  font-size: 18px;
+  font-size: var(--fs-title, 18px);
   font-weight: 600;
   color: var(--color-text, #1e293b);
 }
 
 .bs-gate-desc {
   margin: 0 0 16px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   line-height: 1.7;
   color: var(--color-text-secondary, #64748b);
 }
@@ -681,7 +681,7 @@ onMounted(async () => {
 .bs-gate-field {
   display: grid;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
 }
 
@@ -691,7 +691,7 @@ onMounted(async () => {
 
 .bs-gate-error {
   margin: 0 0 10px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-error, #ef4444);
 }
 
@@ -706,7 +706,7 @@ onMounted(async () => {
   background-color: #fffbeb;
   border: 1px solid #fcd34d;
   border-radius: 10px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: #92400e;
 }
 
@@ -767,7 +767,7 @@ onMounted(async () => {
   justify-content: center;
   flex-shrink: 0;
   width: 20px;
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
 }
 
 .bs-menu-label {
@@ -1086,7 +1086,7 @@ html.dark .bs-stall-name {
 }
 
 .bs-mobile-ledger :deep(.bls-code) {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   padding: 1px 5px;
 }
 
@@ -1163,7 +1163,7 @@ html.dark .bs-stall-name {
   gap: 8px;
   min-height: 40px;
   padding: 8px 14px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 500;
   color: var(--color-text, #1e293b);
   background: var(--color-bg-card, #ffffff);

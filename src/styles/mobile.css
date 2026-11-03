@@ -171,7 +171,7 @@
    ============================================================ */
 @media (max-width: 768px) {
   html:root {
-    --input-font-size: 16px;
+    --input-font-size: var(--fs-lg, 16px);
     --input-font-size-sm: 16px;
   }
   html .el-input__inner,
@@ -180,6 +180,6 @@
   html .el-textarea__inner,
   html .el-select .el-select__wrapper,
   html .el-select.el-select--small .el-select__wrapper {
-    font-size: 16px;
+    font-size: var(--fs-lg, 16px);
   }
 }

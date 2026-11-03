@@ -396,7 +396,7 @@ const degreeOptions = DEGREE_OPTIONS
   flex: 1 1 auto;
   min-height: 220px;
   width: 100% !important;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -443,7 +443,7 @@ const degreeOptions = DEGREE_OPTIONS
 .edu-badge {
   padding: 3px 10px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -461,7 +461,7 @@ const degreeOptions = DEGREE_OPTIONS
   display: inline-block;
   padding: 2px 10px;
   border-radius: 10px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   white-space: nowrap;
   line-height: 1.6;
@@ -500,7 +500,7 @@ const degreeOptions = DEGREE_OPTIONS
 .edu-label {
   display: block;
   margin-bottom: 6px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #606266);
 }
 .edu-req { color: #f56c6c; margin-right: 2px; }
@@ -512,11 +512,11 @@ const degreeOptions = DEGREE_OPTIONS
 }
 .edu-form-error {
   color: #f56c6c;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   line-height: 1.6;
 }
 .edu-confirm-text {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text, #606266);
   text-align: center;
   margin: 0;

@@ -279,14 +279,14 @@ const iconPreview = computed(() => {
 }
 .apf-sec-title {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text);
 }
 .apf-sec-hint {
   font-weight: 400;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
 }
 .apf-row {
   display: flex;
@@ -302,7 +302,7 @@ const iconPreview = computed(() => {
   gap: 6px;
 }
 .apf-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 500;
   color: var(--color-text-secondary);
 }
@@ -311,7 +311,7 @@ const iconPreview = computed(() => {
   margin-left: 2px;
 }
 .apf-hint {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   line-height: 1.5;
   color: var(--color-text-muted);
 }
@@ -322,7 +322,7 @@ const iconPreview = computed(() => {
   color: var(--color-error);
 }
 .apf-error {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-error);
 }
 
@@ -372,7 +372,7 @@ const iconPreview = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary);
   cursor: pointer;
 }

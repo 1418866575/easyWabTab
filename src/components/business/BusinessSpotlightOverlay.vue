@@ -268,7 +268,7 @@ watch(query, () => {
   border-radius: 6px;
   background: transparent;
   color: var(--color-text-secondary, #64748b);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
   transition: all 0.15s;}
 
@@ -281,7 +281,7 @@ watch(query, () => {
 .sp-empty {
   padding: 28px 16px;
   text-align: center;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, #64748b);
 }
 
@@ -292,7 +292,7 @@ watch(query, () => {
 
 .sp-group {
   padding: 8px 12px 4px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   color: var(--color-text-secondary, #64748b);
 }
@@ -320,7 +320,7 @@ watch(query, () => {
 }
 
 .sp-result-title {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text, #1e293b);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -328,7 +328,7 @@ watch(query, () => {
 }
 
 .sp-result-sub {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
   overflow: hidden;
   text-overflow: ellipsis;

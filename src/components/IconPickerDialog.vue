@@ -342,7 +342,7 @@ onUnmounted(() => {
   color: var(--color-text-secondary, #64748b);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   line-height: 1;
   cursor: pointer;
   transition: background-color 0.15s, color 0.15s, border-color 0.15s;
@@ -360,7 +360,7 @@ onUnmounted(() => {
 }
 
 .ipd-action-hint {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #94a3b8);
 }
 
@@ -382,7 +382,7 @@ onUnmounted(() => {
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 999px;
   color: var(--color-text-secondary, #64748b);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s, background-color 0.15s;
 }
@@ -441,7 +441,7 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
 }
 
@@ -453,7 +453,7 @@ onUnmounted(() => {
   grid-column: 1 / -1;
   margin: 16px 0;
   text-align: center;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted, #94a3b8);
 }
 

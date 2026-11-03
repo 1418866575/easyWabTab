@@ -378,7 +378,7 @@ onMounted(async () => {
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 .sttc-card-title {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text-secondary, #4b5563);
   border-left: 3px solid var(--color-primary, #3b82f6);
@@ -386,7 +386,7 @@ onMounted(async () => {
   margin-bottom: 12px;
 }
 .sttc-sub-title {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text-secondary, #4b5563);
   border-left: 3px solid var(--color-primary, #3b82f6);
@@ -404,7 +404,7 @@ onMounted(async () => {
   gap: 6px;
 }
 .form-field label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 500;
   color: var(--color-text-secondary, #4b5563);
 }
@@ -418,7 +418,7 @@ onMounted(async () => {
   min-width: 150px;
 }
 .sttc-preview {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted, #6b7280);
   background: var(--color-hover, #f3f4f6);
   border-radius: 6px;
@@ -430,7 +430,7 @@ onMounted(async () => {
   gap: 8px;
 }
 .sttc-tip {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted, #6b7280);
   margin: 0 0 8px;
   line-height: 1.6;
@@ -452,7 +452,7 @@ onMounted(async () => {
   justify-content: space-between;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   margin-bottom: 8px;
 }
 .sttc-result-file {
@@ -467,7 +467,7 @@ onMounted(async () => {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   margin-bottom: 10px;
 }
 .sttc-stat {
@@ -489,7 +489,7 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   margin-bottom: 6px;
 }
@@ -502,7 +502,7 @@ onMounted(async () => {
   display: flex;
   gap: 8px;
   padding: 6px 10px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   border-bottom: 1px solid var(--color-border, #f3f4f6);
 }
 .sttc-error-item:last-child { border-bottom: none; }
@@ -526,7 +526,7 @@ onMounted(async () => {
 }
 .sttc-error-more {
   padding: 6px 10px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
 }
 

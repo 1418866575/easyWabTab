@@ -294,7 +294,7 @@ function exportArchive(): void {
   border-radius: 999px;
   background-color: var(--color-bg-hover, #f1f5f9);
   color: var(--color-text-secondary, #64748b);
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   line-height: 18px;
   text-align: center;
 }
@@ -367,7 +367,7 @@ function exportArchive(): void {
   border-radius: 50%;
   background-color: var(--color-danger, #ef4444);
   color: #fff;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   line-height: 20px;
   cursor: pointer;
 }

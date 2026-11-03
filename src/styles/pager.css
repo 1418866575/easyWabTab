@@ -64,7 +64,7 @@ html.dark .ewt-pager.el-pagination .el-pager li.is-active {
    这里改用后代选择器，让总条数配色真正生效。 */
 .ewt-pager .el-pagination__total {
   color: var(--color-text-secondary, #6b7280);
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 
 html.dark .ewt-pager .el-pagination__total {

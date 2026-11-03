@@ -278,7 +278,7 @@ function onCardClick(): void {
 }
 
 .hb-cal-name {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
   overflow: hidden;
@@ -287,7 +287,7 @@ function onCardClick(): void {
 }
 
 .hb-cal-sub {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
 }
@@ -305,7 +305,7 @@ function onCardClick(): void {
   border: none;
   background: transparent;
   color: var(--color-text-secondary, var(--color-text-secondary));
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   line-height: 1;
   border-radius: var(--radius-sm, 4px);
   cursor: pointer;
@@ -320,7 +320,7 @@ function onCardClick(): void {
 }
 
 .hb-cal-month {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   min-width: 64px;
   text-align: center;
@@ -336,7 +336,7 @@ function onCardClick(): void {
 
 .hb-cal-wk {
   text-align: center;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   padding: 2px 0;
 }
@@ -349,7 +349,7 @@ function onCardClick(): void {
   border-radius: 8px;
   background: transparent;
   color: var(--color-text, var(--color-text));
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-variant-numeric: tabular-nums;
   cursor: pointer;
   display: inline-flex;

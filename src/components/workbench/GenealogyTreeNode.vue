@@ -82,7 +82,7 @@ function toggle() {
   border: none;
   color: var(--color-text-secondary, #64748b);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   line-height: 1;
 }
 .gtn-caret-placeholder {
@@ -97,7 +97,7 @@ function toggle() {
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 10px;
   background: var(--color-bg-card, #fff);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text, #111827);
   white-space: nowrap;
@@ -107,12 +107,12 @@ function toggle() {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary, #3b82f6) 22%, transparent);
 }
 .gtn-gender {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 400;
   color: var(--color-text-muted, #9ca3af);
 }
 .gtn-zodiac {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 400;
   padding: 0 6px;
   border-radius: 999px;
@@ -130,12 +130,12 @@ function toggle() {
   justify-content: center;
   background: var(--color-primary, #3b82f6);
   color: #fff;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
 }
 .gtn-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .gtn-root-badge {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   padding: 1px 6px;
   border-radius: 999px;
@@ -143,7 +143,7 @@ function toggle() {
   background: var(--color-primary, #3b82f6);
 }
 .gtn-spouse {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: #db2777;
 }
 

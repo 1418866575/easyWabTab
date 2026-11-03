@@ -366,7 +366,7 @@ function openSite(url: string) {
   border: none;
   background-color: var(--color-primary);
   color: #fff;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
   transition: background-color var(--motion-duration, 220ms) var(--motion-ease, ease);
   border-radius: calc(var(--input-radius) - 2px);
@@ -413,7 +413,7 @@ function openSite(url: string) {
 }
 
 .history-title {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--ds-text-3);
   font-weight: 600;
 }
@@ -449,7 +449,7 @@ function openSite(url: string) {
 }
 
 .history-text {
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   font-weight: 600;
   color: var(--ds-text);
   flex: 1;
@@ -488,7 +488,7 @@ function openSite(url: string) {
   justify-content: center;
   background: var(--ds-bg-hover);
   border-radius: 4px;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
 }
 
 .site-info {
@@ -500,12 +500,12 @@ function openSite(url: string) {
 }
 
 .site-category {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--ds-text-3);
 }
 
 .result-count {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--ds-text-3);
 }
 

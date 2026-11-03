@@ -174,7 +174,7 @@ async function toggleEmailReminder(item: CountdownItem) {
   gap: 6px;
   padding-top: 8px;
   border-top: 1px dashed var(--color-border, var(--color-border));
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   cursor: pointer;
   user-select: none;
@@ -203,7 +203,7 @@ async function toggleEmailReminder(item: CountdownItem) {
 }
 
 .countdown-name {
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
   overflow: hidden;
@@ -213,7 +213,7 @@ async function toggleEmailReminder(item: CountdownItem) {
 
 .repeat-badge {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   padding: 1px 8px;
   border-radius: var(--radius-full);
   background: var(--color-bg-card, var(--color-bg-hover));
@@ -225,7 +225,7 @@ async function toggleEmailReminder(item: CountdownItem) {
 /* 分类徽章：工作=蓝 / 生活=绿 / 学习=紫 / 运动=橙 / 饮食=琥珀 / 睡眠=青 */
 .cat-badge {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   padding: 1px 8px;
   border-radius: var(--radius-full, 9999px);
   opacity: 0.85;
@@ -317,13 +317,13 @@ html.dark .cat-default {
 }
 
 .countdown-time {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
 }
 
 .countdown-remaining {
   flex-shrink: 0;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   text-align: right;
 }
@@ -349,7 +349,7 @@ html.dark .cat-default {
 .empty-state {
   text-align: center;
   color: var(--color-text-muted, var(--color-text-muted));
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   padding: 40px 20px;
   background: var(--color-bg-card, var(--color-bg-hover));
   border-radius: var(--radius-md);

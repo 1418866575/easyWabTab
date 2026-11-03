@@ -394,7 +394,7 @@ function exportCsv(): void {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: #fff;
   white-space: nowrap;
 }
@@ -421,7 +421,7 @@ function exportCsv(): void {
   grid-template-columns: 48px minmax(0, 1fr) 32px;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 
 .lv-type-name {
@@ -472,7 +472,7 @@ function exportCsv(): void {
   .lv-table tbody td::before {
     content: attr(data-label);
     color: var(--color-text-secondary, #64748b);
-    font-size: 12px;
+    font-size: var(--fs-caption, 12px);
     flex: 0 0 auto;
   }
 

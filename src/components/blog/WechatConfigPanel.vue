@@ -96,7 +96,7 @@ function copyEgressIp(): void {
       </label>
     </div>
 
-    <p class="wb-menu-hint" style="color: var(--ds-text-3, #9aa0a6); opacity: 0.7; font-size: 12px; margin-top: 4px;">
+    <p class="wb-menu-hint" style="color: var(--ds-text-3, #9aa0a6); opacity: 0.7; font-size: var(--fs-caption, 12px); margin-top: 4px;">
       提示：保存后会尝试调用微信接口校验凭证有效性（需部署代理且可达）。若校验未通过，先确认 AppSecret 是否正确；
       若提示 IP 白名单，把上面的「服务器出口 IP」加到公众号后台即可。
     </p>
@@ -146,14 +146,14 @@ function copyEgressIp(): void {
 
 .wb-menu-title {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--ds-text, #1f2329);
 }
 
 .wb-menu-hint {
   margin: 6px 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--ds-text-3, #9aa0a6);
 }
 
@@ -181,7 +181,7 @@ function copyEgressIp(): void {
 .remind-label {
   flex-shrink: 0;
   width: 92px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--ds-text, #1f2329);
 }
 .remind-actions {
@@ -209,7 +209,7 @@ function copyEgressIp(): void {
   padding: 4px 8px;
   text-align: center;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--ds-text, #1f2329);
   background-color: var(--ds-card, #ffffff);
   border: 1px solid var(--ds-line, #ececf0);
@@ -246,7 +246,7 @@ html.dark .egress-box {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: #16a34a;
   background-color: rgba(22, 163, 74, 0.1);
   border: 1px solid rgba(22, 163, 74, 0.25);

@@ -71,7 +71,7 @@
 
 .ewt-inline-title {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   font-weight: 600;
   color: var(--ds-text, var(--color-text, #1f2937));
 }

@@ -220,7 +220,7 @@ function onRemove(): void {
   justify-content: center;
   gap: 4px;
   margin: 0;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   line-height: 1.4;
   color: var(--color-text, #1e293b);
@@ -298,7 +298,7 @@ function onRemove(): void {
   border-radius: 8px;
   background: transparent;
   color: var(--color-text);
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   cursor: pointer;
   transition:
     background-color 0.15s ease,

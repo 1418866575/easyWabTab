@@ -57,7 +57,7 @@ const store = useSitesStore()
   border: 1px solid var(--ds-line);
   border-radius: 20px;
   background-color: white;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--ds-text-2);
   cursor: pointer;
   transition: all 0.2s;
@@ -86,7 +86,7 @@ const store = useSitesStore()
   border-radius: 20px;
   background-color: #fffbeb;
   color: var(--ds-warning);
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -105,7 +105,7 @@ const store = useSitesStore()
 .clear-btn {background: none;
   border: none;
   color: var(--ds-text-2);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
   text-decoration: underline;
   height: 36px;}

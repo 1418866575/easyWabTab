@@ -500,7 +500,7 @@ function handleAdd(): void {
 
 .bizcat-hint {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
 }
 
@@ -569,7 +569,7 @@ function handleAdd(): void {
   flex: none;
   padding: 1px 6px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   white-space: nowrap;
 }
 .bizcat-tag-builtin {
@@ -613,7 +613,7 @@ function handleAdd(): void {
   gap: 4px;
 }
 .bizcat-add-field > label {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #64748b);
   white-space: nowrap;
 }
@@ -635,7 +635,7 @@ function handleAdd(): void {
   border-radius: 4px;
   background: var(--color-bg-tag, #f1f5f9);
   color: var(--color-text, #111827);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-variant-numeric: tabular-nums;
   text-align: center;
   white-space: nowrap;
@@ -661,7 +661,7 @@ function handleAdd(): void {
 
 .bizcat-icon {
   flex-shrink: 0;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
 }
 
 :deep(.bizcat-row .el-input),
@@ -672,7 +672,7 @@ function handleAdd(): void {
 
 :deep(.bizcat-row .el-input__inner),
 :deep(.bizcat-add .el-input__inner) {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 
 :deep(.bizcat-row .el-checkbox) {

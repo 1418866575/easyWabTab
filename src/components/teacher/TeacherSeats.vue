@@ -205,7 +205,7 @@ async function exportExcelFile(): Promise<void> {
   border-radius: 15px;
   background: var(--color-bg-hover, #eef1f5);
   color: var(--color-text-secondary, #8a93a0);
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 500;
 }
 

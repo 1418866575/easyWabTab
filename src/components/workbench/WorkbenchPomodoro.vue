@@ -276,7 +276,7 @@ onUnmounted(() => {
 }
 
 .pm-phase {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
@@ -323,7 +323,7 @@ onUnmounted(() => {
 }
 
 .pm-today {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-primary, var(--color-primary));
   font-variant-numeric: tabular-nums;
@@ -343,7 +343,7 @@ onUnmounted(() => {
 }
 
 .field-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 

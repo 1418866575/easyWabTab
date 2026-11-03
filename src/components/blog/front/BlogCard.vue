@@ -111,7 +111,7 @@ const to = computed(() => `/blog/article/${props.article.slug}`)
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.85);
   color: var(--color-text-muted, #94a3b8);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   line-height: 1;
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);

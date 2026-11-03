@@ -292,7 +292,7 @@ function setMode(v: WatermarkMode): void {
   justify-content: center;
   height: 36px;
   padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary);
   background: var(--color-bg-card, transparent);
   border: 1px solid var(--color-border);
@@ -325,7 +325,7 @@ function setMode(v: WatermarkMode): void {
 .wm-warn {
   margin: 8px 0 0;
   padding: 7px 10px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-warning, #b45309);
   background: color-mix(in srgb, var(--color-warning, #b45309) 10%, transparent);
   border-radius: 6px;
@@ -348,7 +348,7 @@ function setMode(v: WatermarkMode): void {
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: var(--color-bg-hover);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-tertiary, var(--color-text-secondary));
 }
 
@@ -379,7 +379,7 @@ function setMode(v: WatermarkMode): void {
 }
 
 .wm-slider-val {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }

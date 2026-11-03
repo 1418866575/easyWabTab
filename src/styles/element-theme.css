@@ -243,7 +243,7 @@ html .el-pagination .el-select__wrapper {
  * ============================================================ */
 .el-button {
   border-radius: var(--radius-md, 8px);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
 }
 .el-button:not(.el-button--small):not(.el-button--large) {
   height: 36px;
@@ -254,13 +254,13 @@ html .el-pagination .el-select__wrapper {
   height: 36px;
   min-height: 36px;
   padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
 }
 .el-button--small {
   height: 36px;
   min-height: 36px;
   padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
 }
 
 /* 单块页签（el-radio-button）同高：EP 内侧不读 --el-component-size 的高度
@@ -269,7 +269,7 @@ html .el-pagination .el-select__wrapper {
   height: 36px;
   line-height: 34px;
   padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   box-sizing: border-box;
 }
 
@@ -288,7 +288,7 @@ html .el-pagination .el-select__wrapper {
   height: 36px;
   padding: 0 12px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: var(--font-weight-medium, 500);
 }
 

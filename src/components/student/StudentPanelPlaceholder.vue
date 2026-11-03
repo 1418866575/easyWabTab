@@ -64,7 +64,7 @@ const ROADMAP: Record<string, string> = {
   color: var(--color-text-muted, #6b7280);
 }
 .ph-title {
-  font-size: 18px;
+  font-size: var(--fs-title, 18px);
   font-weight: 600;
   margin: 0;
 }
@@ -74,11 +74,11 @@ const ROADMAP: Record<string, string> = {
   border-radius: 10px;
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
   color: var(--color-primary, #3b82f6);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   margin: 0;
 }
 .ph-desc {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   line-height: 1.6;
   color: var(--color-text-muted, #6b7280);
   margin: 0;

@@ -441,20 +441,20 @@ onMounted(async () => {
 /* .nav-btn 视觉已上收至全局 style.css（2026-11 按钮收敛），此处仅保留布局规则 */
 
 .stat-value {
-  font-size: 26px;
+  font-size: var(--fs-h2, 22px);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
 
 .stat-sub {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 /* 达标行 + 进度条（--color-primary） */
 .ex-attainment {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-primary, var(--color-primary));
   font-variant-numeric: tabular-nums;
@@ -490,7 +490,7 @@ onMounted(async () => {
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   cursor: pointer;
   white-space: nowrap;
@@ -532,7 +532,7 @@ onMounted(async () => {
 .ex-date {
   flex: 1;
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
@@ -540,7 +540,7 @@ onMounted(async () => {
 
 .ex-type-badge {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   padding: 2px 10px;
   border-radius: var(--radius-full, 9999px);
@@ -550,13 +550,13 @@ onMounted(async () => {
 }
 
 .ex-meta {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
 }
 
 .ex-note {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -593,7 +593,7 @@ onMounted(async () => {
 }
 
 .form-group > label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -610,7 +610,7 @@ onMounted(async () => {
 }
 
 .field-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -635,7 +635,7 @@ onMounted(async () => {
 
 /* 入睡=起床（24h 规则）提示 */
 .form-hint {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-error, var(--color-error));
 }
 

@@ -492,11 +492,11 @@ onMounted(() => {
   text-align: center;
 }
 .sp-stat-label {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #6b7280);
 }
 .sp-stat-value {
-  font-size: 18px;
+  font-size: var(--fs-title, 18px);
   font-weight: 600;
   margin-top: 2px;
 }
@@ -522,7 +522,7 @@ onMounted(() => {
   flex: 1 1 auto;
   min-height: 220px;
   width: 100% !important;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -571,7 +571,7 @@ onMounted(() => {
   justify-content: center;
   padding: 2px 10px;
   border-radius: 10px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   line-height: 1.6;
   color: #fff;
@@ -600,7 +600,7 @@ onMounted(() => {
   transition: width 0.3s, background-color 0.3s;
 }
 .sp-progress-text {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #6b7280);
   white-space: nowrap;
   width: 36px;
@@ -612,7 +612,7 @@ onMounted(() => {
   padding: 12px 24px 12px 48px;
 }
 .sp-goals-expand-title {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text-secondary, #6b7280);
   margin-bottom: 8px;
@@ -647,7 +647,7 @@ onMounted(() => {
 }
 .sp-goal-content {
   flex: 1;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -663,7 +663,7 @@ onMounted(() => {
   min-width: 60px;
 }
 .sp-goal-percent {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #6b7280);
   width: 36px;
   text-align: right;
@@ -684,7 +684,7 @@ onMounted(() => {
   gap: 4px;
 }
 .sp-field label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, #6b7280);
 }
 .sp-field-row {
@@ -713,7 +713,7 @@ onMounted(() => {
   align-self: flex-start;
   border-style: dashed;
   color: var(--color-primary, #3b82f6);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
 }
 .dialog-footer {
   display: flex;

@@ -274,7 +274,7 @@ onBeforeUnmount(stopTimer)
   border-radius: 50%;
   background: transparent;
   color: inherit;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   line-height: 1;
   cursor: pointer;
   opacity: 0.55;
@@ -376,13 +376,13 @@ onBeforeUnmount(stopTimer)
 
 .rd-role {
   font-style: normal;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   opacity: 0.9;
 }
 
 @media (max-width: 768px) {
   .rd-display {
-    font-size: 30px;
+    font-size: var(--fs-h1, 28px);
   }
 }
 

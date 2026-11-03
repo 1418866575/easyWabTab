@@ -526,12 +526,12 @@ onMounted(() => {
   text-align: center;
 }
 .sm-stat-label {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-soft, #6b7280);
   margin-bottom: 2px;
 }
 .sm-stat-value {
-  font-size: 18px;
+  font-size: var(--fs-title, 18px);
   font-weight: 600;
 }
 .sm-stat-value.fresh { color: var(--ds-danger); }
@@ -559,7 +559,7 @@ onMounted(() => {
   flex: 1 1 auto;
   min-height: 220px;
   width: 100% !important;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -606,7 +606,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   color: var(--color-text-soft, #6b7280);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   min-height: 200px;
 }
 
@@ -648,12 +648,12 @@ onMounted(() => {
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
   color: var(--color-primary, #3b82f6);
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   flex-shrink: 0;
 }
 .sm-card-title {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -664,7 +664,7 @@ onMounted(() => {
 .sm-status-badge {
   padding: 2px 8px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -699,12 +699,12 @@ onMounted(() => {
   gap: 2px;
 }
 .sm-q-label, .sm-a-label, .sm-an-label {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-soft, #6b7280);
   font-weight: 600;
 }
 .sm-q-content, .sm-a-content, .sm-an-content {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   line-height: 1.4;
   white-space: pre-wrap;
   word-break: break-word;
@@ -725,7 +725,7 @@ onMounted(() => {
   padding: 1px 6px;
   background: var(--color-hover, #f3f4f6);
   border-radius: 3px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-soft, #6b7280);
 }
 
@@ -767,7 +767,7 @@ onMounted(() => {
   gap: 4px;
 }
 .sm-form-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
 }
 .sm-required {

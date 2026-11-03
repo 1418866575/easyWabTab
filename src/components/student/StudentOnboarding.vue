@@ -134,7 +134,7 @@ function stageNameOf(s: StudentStage): string {
   border-bottom: 1px solid var(--color-border, #e5e7eb);
 }
 .ob-title {
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   font-weight: 600;
   margin: 0;
 }
@@ -157,7 +157,7 @@ function stageNameOf(s: StudentStage): string {
 }
 .ob-hint {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted, #6b7280);
   line-height: 1.6;
 }
@@ -194,17 +194,17 @@ function stageNameOf(s: StudentStage): string {
   height: 28px;
   border-radius: 50%;
   color: #ffffff;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 700;
   flex-shrink: 0;
 }
 .ob-stage-name {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   flex-shrink: 0;
 }
 .ob-stage-desc {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
   margin-left: auto;
 }
@@ -218,7 +218,7 @@ function stageNameOf(s: StudentStage): string {
 .ob-btn-secondary,
 .ob-btn-primary {padding: 0 12px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
   border: 1px solid var(--color-border, #e5e7eb);
   height: 36px;}
@@ -248,13 +248,13 @@ function stageNameOf(s: StudentStage): string {
 }
 
 .ob-birthday-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 500;
   white-space: nowrap;
 }
 /* 输入框视觉统一到全局 .ui-input（别名列表已含 .ob-birthday-input） */
 .ob-birthday-hint {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
 }
 </style>

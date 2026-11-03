@@ -148,20 +148,20 @@ function clearAll(): void {
 .pu-grid { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 14px; align-items: start; }
 .pu-form { display: flex; flex-direction: column; gap: 10px; }
 .pu-form-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.pu-title { margin: 0; font-size: 13px; font-weight: 600; color: var(--color-text, #111827); }
+.pu-title { margin: 0; font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text, #111827); }
 .pu-form-actions { display: flex; gap: 8px; }
 .pu-link {
   padding: 0;
   border: none;
   background: none;
   color: var(--color-primary, #3b82f6);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
 }
 .pu-field { display: flex; flex-direction: column; gap: 4px; }
-.pu-label { font-size: 12px; color: var(--color-text-secondary, #6b7280); }
+.pu-label { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary, #6b7280); }
 .pu-desc { color: var(--color-text-muted, #9ca3af); }
-.pu-warn { margin: 0; font-size: 12px; color: var(--color-error, #dc2626); }
+.pu-warn { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-error, #dc2626); }
 
 .pu-result { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .pu-preview {
@@ -173,12 +173,12 @@ function clearAll(): void {
   border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #fff);
   color: var(--color-text, #111827);
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   line-height: 1.7;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.pu-tip { margin: 0; font-size: 12px; color: var(--color-text-secondary, #6b7280); }
+.pu-tip { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-secondary, #6b7280); }
 .pu-plain { display: flex; flex-direction: column; gap: 8px; }
 
 .pu-images { display: flex; flex-direction: column; gap: 8px; }

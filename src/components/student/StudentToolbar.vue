@@ -27,7 +27,7 @@ defineProps<{
   align-items: center;
 }
 .st-title {
-  font-size: 18px;
+  font-size: var(--fs-title, 18px);
   font-weight: 600;
   margin: 0;
 }

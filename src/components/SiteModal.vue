@@ -609,7 +609,7 @@ const handleSubmit = () => {
 .form-group label {
   flex-shrink: 0;
   width: 84px;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 500;
   color: var(--ds-text);
 }
@@ -713,7 +713,7 @@ const handleSubmit = () => {
   padding: 4px 10px;
   background: var(--color-bg-hover, #f1f5f9);
   border-radius: 4px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--ds-text-2);
   cursor: pointer;
   transition: all 0.2s;
@@ -728,14 +728,14 @@ const handleSubmit = () => {
    原按 .error 类给 input/textarea 加红框的规则已随之移除。 */
 .error-msg {
   display: block;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-error, #ef4444);
   margin-top: 4px;
 }
 
 .form-hint {
   display: block;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #94a3b8);
   margin-top: 4px;
 }
@@ -819,7 +819,7 @@ const handleSubmit = () => {
 
 .icon-path {
   margin-left: 8px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #94a3b8);
   word-break: break-all;
 }
@@ -883,7 +883,7 @@ const handleSubmit = () => {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, #64748b);
 }
 
@@ -895,7 +895,7 @@ const handleSubmit = () => {
   border-radius: 6px;
   background: var(--color-primary-light, #eff6ff);
   color: var(--color-primary, #3b82f6);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
   transition: all 0.15s;
   height: 36px;}

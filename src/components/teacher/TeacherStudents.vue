@@ -499,7 +499,7 @@ async function downloadTemplate(): Promise<void> {
 }
 .stu-form-label {
   flex: 0 0 72px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text-secondary, #475569);
 }
@@ -507,7 +507,7 @@ async function downloadTemplate(): Promise<void> {
   color: var(--color-error, #ef4444);
 }
 .stu-form-static {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text, #334155);
 }
 .stu-avatar-box {
@@ -528,7 +528,7 @@ async function downloadTemplate(): Promise<void> {
   justify-content: center;
   background: var(--color-bg-hover, #f1f5f9);
   color: var(--color-text-muted, #94a3b8);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
 }
 .stu-avatar-preview img {
   width: 100%;
@@ -542,7 +542,7 @@ async function downloadTemplate(): Promise<void> {
 .stu-avatar-tip {
   flex-basis: 100%;
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #94a3b8);
 }
 

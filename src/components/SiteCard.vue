@@ -380,7 +380,7 @@ const handleClick = () => {
   position: absolute;
   top: 6px;
   left: 6px;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
   animation: pulse 2s infinite;
 }
@@ -456,7 +456,7 @@ const handleClick = () => {
   border-radius: 8px;
   background: transparent;
   color: var(--ds-text);
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
@@ -492,7 +492,7 @@ const handleClick = () => {
 }
 
 .site-name {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text, #1e293b);
   margin: 0;
@@ -519,7 +519,7 @@ const handleClick = () => {
   width: 240px;
   max-width: 80vw;
   z-index: 1500;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   line-height: 1.5;
   text-align: left;
   cursor: default;
@@ -532,7 +532,7 @@ const handleClick = () => {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   line-height: 1;
   color: var(--color-text-muted, #94a3b8);
   padding: 2px 6px;

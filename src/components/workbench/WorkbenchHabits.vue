@@ -548,7 +548,7 @@ onUnmounted(() => {
 }
 
 .field-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -561,7 +561,7 @@ onUnmounted(() => {
 
 .field-hint {
   margin: -6px 0 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   line-height: 1.6;
   color: var(--color-text-muted, var(--color-text-muted));
 }
@@ -588,7 +588,7 @@ onUnmounted(() => {
 }
 
 .dialog-title {
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
 }
@@ -746,7 +746,7 @@ html.is-touch .habit-detail-remove {
   padding: 3px 6px;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.62), transparent);
   color: #fff;
-  font-size: 10px;
+  font-size: var(--fs-caption, 12px);
   font-variant-numeric: tabular-nums;
 }
 

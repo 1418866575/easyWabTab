@@ -128,7 +128,7 @@ html.dark .bsd-rail { background-color: rgba(255, 255, 255, 0.03); }
   background: transparent;
   border-radius: var(--ds-radius-ctrl, 8px);
   color: var(--ds-text-2, #646a73);
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-family: inherit;
   cursor: pointer;
   text-align: left;
@@ -164,7 +164,7 @@ html.dark .bsd-item:hover { background-color: rgba(255, 255, 255, 0.06); }
 }
 
 .bsd-crumb {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--ds-text-3, #9aa0a6);
   display: flex;
   align-items: center;
@@ -199,6 +199,6 @@ html.dark .bsd-item:hover { background-color: rgba(255, 255, 255, 0.06); }
   }
   .bsd-nav { flex-direction: row; gap: 6px; }
   .bsd-item { width: auto; white-space: nowrap; padding: 7px 12px; }
-  .bsd-item-label { font-size: 12px; }
+  .bsd-item-label { font-size: var(--fs-caption, 12px); }
 }
 </style>

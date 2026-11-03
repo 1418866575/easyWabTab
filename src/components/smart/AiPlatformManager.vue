@@ -296,7 +296,7 @@ onDeactivated(() => {
   border-radius: var(--radius-full);
   background: transparent;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
 }
 .ap-search-clear:hover {
@@ -321,7 +321,7 @@ onDeactivated(() => {
   border-radius: var(--radius-full);
   background: var(--color-bg-card);
   color: var(--color-text-secondary);
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   cursor: pointer;
   transition:
     border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
@@ -338,7 +338,7 @@ onDeactivated(() => {
   color: var(--color-primary);
 }
 .ap-pill-cnt {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   opacity: 0.75;
 }
 
@@ -367,7 +367,7 @@ onDeactivated(() => {
   border-radius: var(--radius-md);
   background: var(--color-bg-card);
   color: var(--color-text-secondary);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
 }
 .ap-toggle.is-on {
@@ -376,7 +376,7 @@ onDeactivated(() => {
   color: var(--color-primary);
 }
 .ap-count {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted);
 }
 
@@ -388,7 +388,7 @@ onDeactivated(() => {
 }
 .ap-section-title {
   margin: 0 0 8px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text-secondary);
   display: flex;
@@ -421,7 +421,7 @@ onDeactivated(() => {
 }
 .ap-empty p {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 .ap-empty-actions {
   display: flex;

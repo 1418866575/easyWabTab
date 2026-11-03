@@ -119,7 +119,7 @@ function onCell(rowKey: string, day: number): void {
               <svg v-if="row.icon === 'sun'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning, #f59e0b)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1" /></svg>
               <svg v-else-if="row.icon === 'moon'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-secondary, #64748b)" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" /></svg>
               <svg v-else-if="row.icon === 'bowl'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning, #f59e0b)" stroke-width="2" stroke-linecap="round"><path d="M4 11h16a8 8 0 0 1-16 0z" /><path d="M8 11V7M12 11V5M16 11V8" /></svg>
-              <span v-else style="font-size: 13px; color: var(--color-text-secondary, #64748b); line-height: 1;">Σ</span>
+              <span v-else style="font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #64748b); line-height: 1;">Σ</span>
               <span>{{ row.label }}</span>
             </div>
           </td>

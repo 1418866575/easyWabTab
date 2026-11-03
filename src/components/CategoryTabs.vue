@@ -79,7 +79,7 @@ const tabItems = computed(() => [
   background-color: #ffffff;
   color: var(--ds-text-2, var(--color-text-secondary, #475569));
   /* 2026-11 导航站优化：分类名增大一号（12→13px） */
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   height: 36px;}
 
 .category-tabs-wrapper :deep(.ui-tabs .el-radio-button__inner:hover) {
@@ -98,7 +98,7 @@ const tabItems = computed(() => [
 /* 数量与文字同色（选中态随白字） */
 .category-tabs-wrapper :deep(.ui-tab-badge) {
   color: inherit;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   opacity: 0.72;
 }
 

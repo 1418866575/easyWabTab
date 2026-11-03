@@ -432,12 +432,12 @@ function daysClass(days: number): string {
 }
 
 .sr-stat-label {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #6b7280);
 }
 
 .sr-stat-value {
-  font-size: 18px;
+  font-size: var(--fs-title, 18px);
   font-weight: 600;
   margin-top: 2px;
 }
@@ -465,7 +465,7 @@ function daysClass(days: number): string {
   flex: 1 1 auto;
   min-height: 220px;
   width: 100% !important;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -544,7 +544,7 @@ function daysClass(days: number): string {
   justify-content: center;
   padding: 1px 8px;
   border-radius: 10px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   color: #fff;
   background: var(--ds-primary);
@@ -553,7 +553,7 @@ function daysClass(days: number): string {
 
 .sr-knowledge {
   flex: 1;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -561,7 +561,7 @@ function daysClass(days: number): string {
 }
 
 .sr-source {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #6b7280);
   flex-shrink: 0;
   max-width: 120px;
@@ -582,7 +582,7 @@ function daysClass(days: number): string {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #6b7280);
 }
 
@@ -649,7 +649,7 @@ function daysClass(days: number): string {
 }
 
 .sr-field label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, #6b7280);
 }
 
@@ -659,7 +659,7 @@ function daysClass(days: number): string {
   align-items: center;
   flex: 1;
   color: var(--color-text-secondary, #6b7280);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
 }
 
 /* ===== 移动端：统计卡与复习卡片降列、按钮换行 ===== */

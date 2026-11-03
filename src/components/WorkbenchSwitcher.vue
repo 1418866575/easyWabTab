@@ -426,7 +426,7 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
   color: var(--color-text-secondary, #64748b);
   border: 1px solid transparent;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   cursor: pointer;
   transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
 }
@@ -544,7 +544,7 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
 .ws-item-name {
   flex: 1;
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text, #1e293b);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -556,7 +556,7 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
 }
 .ws-item-cur {
   flex: none;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   line-height: 1;
   padding: 3px 7px;
   border-radius: 999px;
@@ -565,19 +565,19 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
 }
 .ws-item-kbd {
   flex: none;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #94a3b8);
 }
 .ws-item-newtab {
   flex: none;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, #94a3b8);
 }
 .ws-empty {
   margin: 0;
   padding: 28px 16px;
   text-align: center;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, #64748b);
 }
 
@@ -587,12 +587,12 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
   gap: 14px;
   padding: 8px 14px;
   border-top: 1px solid var(--color-border, #e2e8f0);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
 }
 .ws-kbd {
   font-family: inherit;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   padding: 1px 5px;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 4px;

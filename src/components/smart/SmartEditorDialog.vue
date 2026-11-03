@@ -268,19 +268,19 @@ const nameTaken = computed(() => {
 .se-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .se-field { display: flex; flex-direction: column; gap: 6px; flex: 1 1 220px; min-width: 0; }
 .se-field-sm { flex: 0 1 160px; }
-.se-label { font-size: 13px; color: var(--color-text-secondary, #6b7280); }
-.se-hint { color: var(--color-text-muted, #9ca3af); font-size: 12px; }
+.se-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #6b7280); }
+.se-hint { color: var(--color-text-muted, #9ca3af); font-size: var(--fs-caption, 12px); }
 .req { color: var(--color-error, #dc2626); }
-.se-error { font-size: 12px; color: var(--color-error, #dc2626); }
-.se-vars { font-size: 12px; color: var(--color-text-secondary, #6b7280); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.se-error { font-size: var(--fs-caption, 12px); color: var(--color-error, #dc2626); }
+.se-vars { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary, #6b7280); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .se-var {
   padding: 1px 6px;
   border-radius: 4px;
   background: var(--color-bg-hover, #f3f4f6);
   color: var(--color-primary, #3b82f6);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
 }
-.se-check { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--color-text, #111827); }
+.se-check { display: flex; align-items: center; gap: 6px; font-size: var(--fs-sm, 13px); color: var(--color-text, #111827); }
 
 .se-images { gap: 6px; }
 .se-img-grid { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -305,7 +305,7 @@ const nameTaken = computed(() => {
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.55);
   color: #fff;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   line-height: 1;
   cursor: pointer;
 }
@@ -317,7 +317,7 @@ const nameTaken = computed(() => {
   border-radius: var(--radius-md, 8px);
   background: transparent;
   color: var(--color-text-muted, #9ca3af);
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   cursor: pointer;
 }
 .se-img-add:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }

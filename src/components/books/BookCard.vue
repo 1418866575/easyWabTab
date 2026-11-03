@@ -405,7 +405,7 @@ const downloadTitle = computed(() =>
   border-radius: 999px;
   background-color: rgba(255, 255, 255, 0.85);
   color: var(--color-text-muted, #94a3b8);
-  font-size: 18px;
+  font-size: var(--fs-title, 18px);
   line-height: 1;
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);

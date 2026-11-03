@@ -757,7 +757,7 @@ function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
 
 .ss-rail-group-label {
   padding: 0 8px 8px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   letter-spacing: 0.04em;
   color: var(--color-text-muted, #94a3b8);
@@ -777,7 +777,7 @@ function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
   background: transparent;
   color: var(--color-text-secondary, #64748b);
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   text-align: left;
   cursor: pointer;
   transition: background-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
@@ -824,7 +824,7 @@ function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
   border-bottom: 1px solid var(--color-border, #e2e8f0);
 }
 
-.ss-crumb { display: flex; align-items: center; gap: 6px; font-size: 13px; min-width: 0; }
+.ss-crumb { display: flex; align-items: center; gap: 6px; font-size: var(--fs-sm, 13px); min-width: 0; }
 .ss-crumb-item {
   color: var(--color-text, #0f172a);
   font-weight: 600;
@@ -845,7 +845,7 @@ function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
   background-color: rgba(22, 163, 74, 0.1);
   /* 绿色走 --color-success 令牌（规范 §1.5：语义色不写死） */
   color: var(--color-success, #16a34a);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   white-space: nowrap;
 }
 .ss-saved-dot {
@@ -866,8 +866,8 @@ function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
 /* ---------- 通用区块 ---------- */
 .ss-pane { display: flex; flex-direction: column; gap: 10px; }
 .ss-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.ss-title { margin: 0; font-size: 14px; font-weight: var(--font-weight-semibold, 600); color: var(--color-text, #0f172a); }
-.ss-hint { margin: 0; font-size: 12px; line-height: 1.6; color: var(--color-text-secondary, #64748b); }
+.ss-title { margin: 0; font-size: var(--fs-body, 14px); font-weight: var(--font-weight-semibold, 600); color: var(--color-text, #0f172a); }
+.ss-hint { margin: 0; font-size: var(--fs-caption, 12px); line-height: 1.6; color: var(--color-text-secondary, #64748b); }
 
 .ss-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
 
@@ -884,7 +884,7 @@ function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
 .ss-row.is-hidden { opacity: 0.55; }
 .ss-row.is-dragover { border-color: var(--color-primary, #3b82f6); }
 
-.ss-drag { flex: 0 0 auto; color: var(--color-text-muted, #94a3b8); cursor: grab; font-size: 14px; }
+.ss-drag { flex: 0 0 auto; color: var(--color-text-muted, #94a3b8); cursor: grab; font-size: var(--fs-body, 14px); }
 .ss-icon {
   flex: 0 0 auto;
   display: inline-flex;
@@ -894,7 +894,7 @@ function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
   color: var(--color-text-secondary, #64748b);
 }
 .ss-name { flex: 1 1 auto; min-width: 0; }
-.ss-count { flex: 0 0 auto; font-size: 12px; color: var(--color-text-muted, #94a3b8); }
+.ss-count { flex: 0 0 auto; font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #94a3b8); }
 .ss-actions { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; }
 
 .ss-cat-main { display: flex; align-items: center; gap: 10px; }
@@ -925,10 +925,10 @@ function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text, #0f172a);
 }
-.ss-empty-inline { margin: 0; font-size: 12px; color: var(--color-text-muted, #94a3b8); }
+.ss-empty-inline { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #94a3b8); }
 
 /* 删除按钮：与技能/提示词列表同款的危险色（命中 el-button 根节点） */
 .is-danger { color: var(--color-error, #dc2626); }
@@ -945,8 +945,8 @@ function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
   border: 1px dashed var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 10px);
 }
-.ss-empty-title { margin: 0 0 4px; font-size: 14px; font-weight: var(--font-weight-semibold, 600); color: var(--color-text, #0f172a); }
-.ss-empty-hint { margin: 0; font-size: 12px; color: var(--color-text-secondary, #64748b); }
+.ss-empty-title { margin: 0 0 4px; font-size: var(--fs-body, 14px); font-weight: var(--font-weight-semibold, 600); color: var(--color-text, #0f172a); }
+.ss-empty-hint { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-secondary, #64748b); }
 
 /* 开关不再自造：统一用 el-switch（原 .switch-btn / .switch-thumb 已删除） */
 

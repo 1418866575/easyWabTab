@@ -355,7 +355,7 @@ function truncateUrl(url: string, maxLength = 40) {
 }
 
 .add-form h3 {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text-secondary, #64748b);
   margin: 0 0 12px 0;
@@ -397,7 +397,7 @@ function truncateUrl(url: string, maxLength = 40) {
 }
 
 .engine-list h3 {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text-secondary, #64748b);
   margin: 0 0 12px 0;
@@ -406,7 +406,7 @@ function truncateUrl(url: string, maxLength = 40) {
 .empty-state {
   text-align: center;
   color: var(--color-text-muted, #94a3b8);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   padding: 20px;
   background: var(--color-bg, #f8fafc);
   border-radius: 8px;
@@ -441,7 +441,7 @@ function truncateUrl(url: string, maxLength = 40) {
 }
 
 .disabled-tag {
-  font-size: 10px;
+  font-size: var(--fs-caption, 12px);
   padding: 2px 6px;
   background: var(--color-bg-active, #e2e8f0);
   color: var(--color-text-secondary, #64748b);
@@ -467,7 +467,7 @@ function truncateUrl(url: string, maxLength = 40) {
 }
 
 .engine-url {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #94a3b8);
   max-width: 200px;
   overflow: hidden;
@@ -476,7 +476,7 @@ function truncateUrl(url: string, maxLength = 40) {
 }
 
 .default-tag {
-  font-size: 10px;
+  font-size: var(--fs-caption, 12px);
   padding: 2px 6px;
   background: #fbbf24;
   color: white;

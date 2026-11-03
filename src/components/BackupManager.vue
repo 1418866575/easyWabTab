@@ -239,12 +239,12 @@ const toggleAutoBackup = () => {
 
 .label {
   color: var(--color-text-secondary, #64748b);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
 }
 
 .value {
   color: var(--color-text, #1e293b);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
 }
 
 .toggle-btn {padding: 0 12px;
@@ -252,7 +252,7 @@ const toggleAutoBackup = () => {
   border: 1px solid var(--color-border, #e2e8f0);
   background: var(--color-bg-card, #ffffff);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   height: 36px;}
 
 .toggle-btn.active {
@@ -273,7 +273,7 @@ const toggleAutoBackup = () => {
   border: 1px solid var(--color-border, #e2e8f0);
   background: var(--color-bg-card, #ffffff);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   transition: all 0.2s;
   height: 36px;}
 
@@ -309,7 +309,7 @@ const toggleAutoBackup = () => {
 }
 
 .backup-list h3 {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text-secondary, #64748b);
   margin: 0 0 12px 0;
 }
@@ -318,7 +318,7 @@ const toggleAutoBackup = () => {
   text-align: center;
   padding: 40px 20px;
   color: var(--color-text-muted, #94a3b8);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
 }
 
 .backup-item {
@@ -336,13 +336,13 @@ const toggleAutoBackup = () => {
 }
 
 .backup-time {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text, #1e293b);
   margin-bottom: 4px;
 }
 
 .backup-summary {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
 }
 
@@ -356,7 +356,7 @@ const toggleAutoBackup = () => {
   border: none;
   background: var(--color-primary, #3b82f6);
   color: white;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
   height: 36px;}
 
@@ -369,7 +369,7 @@ const toggleAutoBackup = () => {
   border: 1px solid var(--color-border, #e2e8f0);
   background: var(--color-bg-card, #ffffff);
   color: var(--color-text-secondary, #64748b);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
   height: 36px;}
 
@@ -383,7 +383,7 @@ const toggleAutoBackup = () => {
   background: #f0f9ff;
   border-radius: 8px;
   padding: 12px 16px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text, #1e293b);
 }
 

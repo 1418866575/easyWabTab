@@ -59,24 +59,24 @@ const updatedText = computed(() => {
   border-radius: 999px;
   background: var(--color-bg-hover, #f3f4f6);
   color: var(--color-text-secondary, #6b7280);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
 }
 .wd-chip.is-tag { color: var(--color-primary, #3b82f6); }
-.wd-desc { margin: 0; font-size: 13px; color: var(--color-text-secondary, #6b7280); }
+.wd-desc { margin: 0; font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #6b7280); }
 
-.wd-section-label { font-size: 13px; font-weight: 600; color: var(--color-text-secondary, #6b7280); }
+.wd-section-label { font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text-secondary, #6b7280); }
 
 .wd-content {
   padding: 12px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #fff);
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   line-height: 1.7;
   color: var(--color-text, #111827);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   white-space: normal;
   overflow-wrap: anywhere;
 }
-.wd-updated { margin: 0; font-size: 12px; color: var(--color-text-muted, #9ca3af); }
+.wd-updated { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
 </style>

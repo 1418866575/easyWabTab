@@ -642,25 +642,25 @@ onMounted(async () => {
   background-color: var(--color-bg-hover, #f8fafc);
 }
 .sg-summary-label {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
 }
 .sg-summary-value {
   margin-top: 4px;
-  font-size: 24px;
+  font-size: var(--fs-h2, 22px);
   font-weight: 600;
   color: var(--color-text, #0f172a);
   font-variant-numeric: tabular-nums;
 }
 .sg-summary-sm {
-  font-size: 18px;
+  font-size: var(--fs-title, 18px);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .sg-summary-sub {
   margin-top: 2px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
 }
 
@@ -675,7 +675,7 @@ onMounted(async () => {
   border-radius: 999px;
   background: var(--color-bg-hover, #f1f5f9);
   border: 1px solid var(--color-border, #e2e8f0);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
 }
 .sg-subj-chip b {
@@ -743,7 +743,7 @@ onMounted(async () => {
 }
 .sg-block-title {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   font-weight: 600;
   color: var(--color-text, #0f172a);
 }
@@ -769,7 +769,7 @@ onMounted(async () => {
   gap: 6px;
 }
 .sg-form-field label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 500;
   color: var(--color-text, #0f172a);
 }

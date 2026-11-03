@@ -739,7 +739,7 @@ onUnmounted(() => {
   padding: 12px;
 }
 .nav-sidebar-section-title {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #94a3b8);
   padding: 8px 8px 6px;
   text-transform: uppercase;
@@ -762,7 +762,7 @@ onUnmounted(() => {
   text-align: left;
   color: var(--color-text-secondary, #64748b);
   /* 2026-11 导航站优化：侧边栏分类名增大一号（14→15px） */
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   transition: background-color 0.15s, color 0.15s;
 }
 .nav-menu-item:hover {
@@ -786,7 +786,7 @@ onUnmounted(() => {
   height: 20px;
   flex: none;
   text-align: center;
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   overflow: hidden;
 }
 /* 分类图标来自图标管理时为图片地址，按图片渲染（旧的 emoji 仍走文本） */
@@ -803,7 +803,7 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 .nav-menu-count {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #94a3b8);
   background: var(--color-bg-hover, #f1f5f9);
   border-radius: 999px;
@@ -901,7 +901,7 @@ onUnmounted(() => {
   color: var(--color-text-secondary, #64748b);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 20px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -939,7 +939,7 @@ onUnmounted(() => {
 }
 
 .nav-filter-count {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #94a3b8);
   white-space: nowrap;
 }
@@ -983,7 +983,7 @@ onUnmounted(() => {
   border-radius: 50%;
   background: var(--color-bg-hover, #f1f5f9);
   color: var(--color-text-secondary, #64748b);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   line-height: 1;
   cursor: pointer;
 }
@@ -996,7 +996,7 @@ onUnmounted(() => {
 .nav-filter-clear {
   flex: none;
   padding: 7px 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
   background: transparent;
   border: 1px solid var(--color-border, #e2e8f0);
@@ -1018,12 +1018,12 @@ onUnmounted(() => {
 /* .nav-add-site:hover 视觉已统一到全局 .ui-btn--primary:hover（style.css）：蓝色主操作 hover + 抬升 + 阴影 */
 
 .nas-plus {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   line-height: 1;
 }
 
 .nav-filter-hint {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: #b45309;
   background: var(--ds-warning-soft);
   border-radius: 999px;
@@ -1034,7 +1034,7 @@ onUnmounted(() => {
   text-align: center;
   padding: 60px 20px;
   color: var(--color-text-secondary, #64748b);
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
 }
 
 /* 暗色模式 */
@@ -1178,7 +1178,7 @@ html.dark .nav-add-site {
 
   .empty-state {
     padding: 40px 16px;
-    font-size: 15px;
+    font-size: var(--fs-md, 15px);
   }
 
   /* 移动端侧边栏：改为抽屉（默认移出视口，open 时滑入）

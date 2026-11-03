@@ -373,7 +373,7 @@ const chartOption = computed(() => {
 }
 
 .sth-field-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, #64748b);
 }
 
@@ -410,13 +410,13 @@ const chartOption = computed(() => {
 }
 
 .sth-summary-label {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
 }
 
 .sth-summary-value {
   margin-top: 4px;
-  font-size: 22px;
+  font-size: var(--fs-h2, 22px);
   font-weight: 600;
   color: var(--color-text, #0f172a);
   font-variant-numeric: tabular-nums;
@@ -424,7 +424,7 @@ const chartOption = computed(() => {
 
 .sth-summary-sub {
   margin-top: 2px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
 }
 
@@ -458,7 +458,7 @@ const chartOption = computed(() => {
 
 .sth-block-title {
   margin: 0 0 10px;
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   font-weight: 600;
   color: var(--color-text, #0f172a);
 }
@@ -484,7 +484,7 @@ const chartOption = computed(() => {
 
 .sth-empty-small {
   padding: 12px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 
 /* 暗色：el-table 与学生端其他表格一致，透过 element 变量跟随主题 */

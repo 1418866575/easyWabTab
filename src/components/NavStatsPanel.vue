@@ -733,7 +733,7 @@ onMounted(() => {
   border-radius: 4px;
   background-color: var(--color-bg-card);
   color: var(--color-text);
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
 }
 
 /* ---------- Vercount 交叉校验 ---------- */
@@ -773,7 +773,7 @@ onMounted(() => {
 }
 .ns-kpi-value {
   color: var(--color-text);
-  font-size: 20px;
+  font-size: var(--fs-title, 18px);
   font-weight: var(--font-weight-semibold, 600);
   line-height: 1.2;
   font-variant-numeric: tabular-nums;

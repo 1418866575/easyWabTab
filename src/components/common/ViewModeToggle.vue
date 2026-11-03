@@ -23,7 +23,7 @@ defineEmits<{ toggle: [] }>()
   gap: 4px;
   height: 36px;
   padding: 0 10px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   line-height: 1;
   color: var(--color-text, #374151);
   background: var(--color-surface, #fff);
@@ -38,7 +38,7 @@ defineEmits<{ toggle: [] }>()
   color: var(--color-primary, #3b82f6);
 }
 .ewt-view-toggle-icon {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
 }
 :global(html.dark) .ewt-view-toggle {
   background: var(--color-surface, #1f2937);

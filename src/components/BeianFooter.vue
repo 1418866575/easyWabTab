@@ -35,7 +35,7 @@ onMounted(() => {
   right: 0;
   z-index: 40; /* 低于视图工具栏(50+)/弹窗(200+)层级 */
   text-align: center;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   line-height: 1.4;
   color: var(--color-text-muted);
   opacity: 0.75;

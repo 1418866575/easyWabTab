@@ -141,7 +141,7 @@ function testidOf(item: TabItem): string | undefined {
   background-color: var(--color-bg-card, #ffffff);
   color: var(--color-text-secondary, #64748b);
   /* 2026-11 按钮统一：12px 字（原 14px） */
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   box-shadow: none;
   transition:
     background-color var(--motion-duration, 0.15s) var(--motion-ease, ease),
@@ -164,7 +164,7 @@ function testidOf(item: TabItem): string | undefined {
 
 /* 文本图标（emoji）：字号跟随文字，不用 SVG */
 .ui-tab-emoji {
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   line-height: 1;
 }
 

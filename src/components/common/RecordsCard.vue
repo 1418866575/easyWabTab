@@ -131,12 +131,12 @@ function display(v?: string | number | null): string {
   display: contents;
 }
 .ewt-card-label {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-soft, #6b7280);
   white-space: nowrap;
 }
 .ewt-card-value {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text, #1f2937);
   word-break: break-word;
   margin: 0;

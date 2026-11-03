@@ -500,14 +500,14 @@ function clearBackground() {
 
 .section-title {
   margin: 0 0 12px 0;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-primary, #3b82f6);
 }
 
 .subsection-title {
   margin: 16px 0 10px 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 500;
   color: var(--color-text-secondary, #64748b);
 }
@@ -535,7 +535,7 @@ function clearBackground() {
 
 .preview-text {
   color: var(--color-text-muted, #94a3b8);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
 }
 
 /* 类型选择 */
@@ -551,7 +551,7 @@ function clearBackground() {
   border: 2px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #ffffff);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
   transition:
     border-color var(--motion-duration, 220ms) var(--motion-ease, ease),
@@ -591,7 +591,7 @@ function clearBackground() {
   padding: 10px 14px;
   border: 2px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-family: monospace;
 }
 
@@ -644,7 +644,7 @@ function clearBackground() {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: bold;
   opacity: 0;
   transition: opacity 0.2s;}
@@ -709,7 +709,7 @@ function clearBackground() {
 /* .upload-btn 视觉已统一到全局 .ui-btn--success */
 
 .upload-hint {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #94a3b8);
 }
 
@@ -733,7 +733,7 @@ function clearBackground() {
 }
 
 .opacity-value {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-primary, #3b82f6);
   min-width: 44px;
@@ -749,7 +749,7 @@ function clearBackground() {
 
 .opacity-hint {
   margin: 8px 0 0 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #94a3b8);
 }
 
@@ -785,7 +785,7 @@ function clearBackground() {
 }
 
 .color-picker-group label, .angle-picker-group label {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
   font-weight: 500;
 }
@@ -824,7 +824,7 @@ function clearBackground() {
   
   .type-btn {min-width: 70px;
   padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   height: 36px;}
 }
 </style>

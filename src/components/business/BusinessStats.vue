@@ -541,7 +541,7 @@ function printReport(): void {
 }
 
 .bizstats-month-value {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary, #6b7280);
   white-space: nowrap;
@@ -572,13 +572,13 @@ function printReport(): void {
 
 .bizstats-month-label {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #9ca3af);
 }
 
 .bizstats-month-total {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #6b7280);
 }
 
@@ -595,7 +595,7 @@ function printReport(): void {
 
 .bizstats-card h3 {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
@@ -622,14 +622,14 @@ function printReport(): void {
 /* 毛利报表 */
 .bizstats-profit-tip {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
 }
 
 .bizstats-member-tag {
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-warning, #b45309);
   background: color-mix(in srgb, var(--color-warning, #f59e0b) 15%, transparent);
 }
@@ -648,7 +648,7 @@ function printReport(): void {
 }
 
 .bizstats-btn {padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
   color: var(--color-text-secondary, var(--color-text-secondary));
   background: var(--color-bg-card, var(--color-bg-hover));
@@ -719,7 +719,7 @@ function printReport(): void {
 .bizstats-legend {
   display: flex;
   gap: 16px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -809,7 +809,7 @@ function printReport(): void {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -842,7 +842,7 @@ function printReport(): void {
   margin: 0;
   padding: 20px 0;
   text-align: center;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted, var(--color-text-muted));
   /* 无数据时保持占位高度、内容垂直居中，避免页面折叠 */
   display: flex;

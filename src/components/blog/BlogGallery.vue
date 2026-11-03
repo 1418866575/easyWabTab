@@ -579,7 +579,7 @@ async function doRemove(ids: string[]): Promise<void> {
   border-radius: var(--ds-radius-pill, 999px);
   background-color: var(--ds-card-2, #f7f8fa);
   color: var(--ds-text-3, #9aa0a6);
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
 }
 
 .bg-chip.is-on .bg-chip-count {
@@ -801,7 +801,7 @@ async function doRemove(ids: string[]): Promise<void> {
   border-radius: var(--ds-radius-pill, 999px);
   background-color: var(--ds-card-2, #f7f8fa);
   color: var(--ds-text-2, #646a73);
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
 }
 
 .bg-del {

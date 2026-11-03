@@ -48,7 +48,7 @@
   border-radius: 9999px;
   background: var(--color-primary, #c8102e);
   color: #fff;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: var(--font-weight-semibold, 600);
   line-height: 1;
 }
@@ -101,7 +101,7 @@
   border-radius: var(--radius-full);
   background: var(--color-bg-card);
   color: var(--color-text-secondary);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-family: var(--font-family);
   transition: color var(--motion-duration) var(--motion-ease),
     border-color var(--motion-duration) var(--motion-ease),
@@ -126,7 +126,7 @@
 }
 .bk-section-title {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   font-weight: 600;
   color: var(--color-text);
 }

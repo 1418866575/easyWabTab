@@ -445,8 +445,8 @@ onMounted(() => {
   padding: 8px 10px;
   text-align: center;
 }
-.sg-stat-label { font-size: 12px; color: var(--color-text-secondary, #6b7280); }
-.sg-stat-value { font-size: 18px; font-weight: 600; margin-top: 2px; }
+.sg-stat-label { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary, #6b7280); }
+.sg-stat-value { font-size: var(--fs-title, 18px); font-weight: 600; margin-top: 2px; }
 .sg-filters {
   display: flex;
   align-items: center;
@@ -462,7 +462,7 @@ onMounted(() => {
   flex-direction: column;
   overflow: hidden;
 }
-.sg-count { font-size: 12px; color: var(--color-text-secondary, #6b7280); }
+.sg-count { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary, #6b7280); }
 
 .sg-list {
   flex: 1 1 auto;
@@ -476,7 +476,7 @@ onMounted(() => {
   flex: 1 1 auto;
   min-height: 220px;
   width: 100% !important;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -500,7 +500,7 @@ onMounted(() => {
   display: inline-flex;
   padding: 1px 8px;
   border-radius: 10px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   background: var(--color-primary-soft, #e9f0ff);
   color: var(--color-primary, #5b8def);
 }
@@ -511,11 +511,11 @@ onMounted(() => {
   border-radius: 4px; overflow: hidden; min-width: 50px;
 }
 .sg-progress-fill { height: 100%; transition: width 0.3s, background-color 0.3s; }
-.sg-progress-text { font-size: 12px; color: var(--color-text-secondary, #6b7280); white-space: nowrap; width: 36px; text-align: right; }
-.sg-left-text { font-size: 11px; color: var(--color-text-secondary, #9ca3af); margin-top: 2px; }
+.sg-progress-text { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary, #6b7280); white-space: nowrap; width: 36px; text-align: right; }
+.sg-left-text { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary, #9ca3af); margin-top: 2px; }
 .sg-overdue-text { color: #e0a800 !important; }
 .sg-badge {
-  display: inline-flex; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 600;
+  display: inline-flex; padding: 2px 10px; border-radius: 10px; font-size: var(--fs-caption, 12px); font-weight: 600;
 }
 .sg-badge-active { background: var(--color-primary-soft, #e9f0ff); color: var(--color-primary, #5b8def); }
 .sg-badge-completed { background: rgba(16,185,129,0.12); color: var(--ds-success); }
@@ -537,7 +537,7 @@ onMounted(() => {
 }
 
 .btn-done, .btn-warn {padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   border: 1px solid transparent;
   border-radius: 6px;
   cursor: pointer;
@@ -553,7 +553,7 @@ onMounted(() => {
 
 .dialog-body { display: flex; flex-direction: column; gap: 12px; }
 .sg-field { display: flex; flex-direction: column; gap: 4px; }
-.sg-field label { font-size: 13px; color: var(--color-text-secondary, #6b7280); }
+.sg-field label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #6b7280); }
 .sg-field-row { display: flex; gap: 12px; }
 .sg-field-row .sg-field { flex: 1; }
 

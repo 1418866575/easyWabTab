@@ -228,11 +228,11 @@ function onActionClick(section: string) {
   gap: 4px;
 }
 .greeting-text {
-  font-size: 18px;
+  font-size: var(--fs-title, 18px);
   font-weight: 600;
 }
 .greeting-sub {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted, #6b7280);
 }
 
@@ -252,7 +252,7 @@ function onActionClick(section: string) {
   gap: 16px;
 }
 .slide-title {
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   font-weight: 600;
   margin: 0;
 }
@@ -280,14 +280,14 @@ function onActionClick(section: string) {
   background: var(--color-hover, #f3f4f6);
 }
 .action-icon {
-  font-size: 24px;
+  font-size: var(--fs-h2, 22px);
 }
 .action-label {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 500;
 }
 .action-count {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
 }
 .action-cta {
@@ -296,7 +296,7 @@ function onActionClick(section: string) {
   border-radius: 16px;
   background: var(--color-primary, #3b82f6);
   color: #ffffff;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
 }
 
 .overview-grid {
@@ -325,12 +325,12 @@ function onActionClick(section: string) {
   justify-content: center;
 }
 .overview-value {
-  font-size: 18px;
+  font-size: var(--fs-title, 18px);
   font-weight: 700;
   color: var(--color-text, #111827);
 }
 .overview-label {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #6b7280);
 }
 
@@ -357,10 +357,10 @@ function onActionClick(section: string) {
   background: var(--color-hover, #f3f4f6);
 }
 .tool-icon {
-  font-size: 28px;
+  font-size: var(--fs-h1, 28px);
 }
 .tool-label {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
 }
 
 @media (max-width: 768px) {
@@ -370,7 +370,7 @@ function onActionClick(section: string) {
   }
 }
 .greeting-age {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 500;
   color: var(--color-primary, #3b82f6);
   margin-left: 6px;

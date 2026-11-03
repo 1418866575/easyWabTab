@@ -85,7 +85,7 @@ onMounted(async () => {
 
 .hr-title {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
@@ -107,7 +107,7 @@ onMounted(async () => {
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm, 4px);
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 
 .hr-name {
@@ -132,7 +132,7 @@ onMounted(async () => {
 }
 
 .hr-repeat {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 

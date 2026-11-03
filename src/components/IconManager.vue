@@ -380,7 +380,7 @@ function usedSiteNames(icon: MergedIcon): string {
 }
 
 .add-form h3 {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text-secondary, #64748b);
   margin: 0 0 12px 0;
@@ -406,7 +406,7 @@ function usedSiteNames(icon: MergedIcon): string {
 }
 
 .upload-hint {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #94a3b8);
 }
 
@@ -458,7 +458,7 @@ function usedSiteNames(icon: MergedIcon): string {
   right: 4px;
   padding: 1px 6px;
   border-radius: 999px;
-  font-size: 10px;
+  font-size: var(--fs-caption, 12px);
   line-height: 16px;
   font-weight: 600;
   color: #fff;
@@ -467,7 +467,7 @@ function usedSiteNames(icon: MergedIcon): string {
   pointer-events: none; /* 不影响点击编辑/删除 */
 }
 .icon-used-count {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-primary, #3b82f6);
   font-weight: 600;
 }
@@ -503,7 +503,7 @@ function usedSiteNames(icon: MergedIcon): string {
 }
 
 .icon-manager-label {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text, #1e293b);
   text-align: center;
   max-width: 100%;
@@ -521,7 +521,7 @@ function usedSiteNames(icon: MergedIcon): string {
 }
 
 .icon-manager-category {
-  font-size: 10px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #94a3b8);
   background: var(--color-bg-hover, #f1f5f9);
   padding: 1px 6px;
@@ -529,7 +529,7 @@ function usedSiteNames(icon: MergedIcon): string {
 }
 
 .icon-manager-size {
-  font-size: 10px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #94a3b8);
 }
 
@@ -552,7 +552,7 @@ function usedSiteNames(icon: MergedIcon): string {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   opacity: 0.6;
   transition: opacity 0.2s;
   height: 36px;}
@@ -584,7 +584,7 @@ function usedSiteNames(icon: MergedIcon): string {
 }
 
 .import-export-hint {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #94a3b8);
   margin-left: auto;
 }
@@ -593,7 +593,7 @@ function usedSiteNames(icon: MergedIcon): string {
 .empty-custom {
   text-align: center;
   color: var(--color-text-muted, #94a3b8);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   padding: 40px 20px;
 }
 </style>

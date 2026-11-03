@@ -149,7 +149,7 @@ const handleSizeChange = (value: number | string) => {
   border-radius: 8px;
   background-color: var(--color-bg-card, #ffffff);
   color: var(--color-text-secondary, #64748b);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
   transition: all 0.2s;
   height: 36px;}
@@ -187,7 +187,7 @@ const handleSizeChange = (value: number | string) => {
 
 .page-info {
   color: var(--color-text-secondary, #64748b);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   padding: 8px 12px;
 }
 
@@ -222,7 +222,7 @@ const handleSizeChange = (value: number | string) => {
   min-width: 44px;
   height: 36px;
   padding: 0 12px;
-  font-size: 12px;}
+  font-size: var(--fs-caption, 12px);}
 
   .page-size-selector {
     flex: 0 0 auto;
@@ -230,11 +230,11 @@ const handleSizeChange = (value: number | string) => {
 
   .page-size-select {
     min-height: 44px;
-    font-size: 15px;
+    font-size: var(--fs-md, 15px);
   }
 
   .page-info {
-    font-size: 15px;
+    font-size: var(--fs-md, 15px);
   }
 }
 </style>

@@ -387,12 +387,12 @@ onMounted(async () => {
   text-align: center;
 }
 .sr-stat-label {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
   margin-bottom: 4px;
 }
 .sr-stat-value {
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   font-weight: 600;
   color: var(--color-text, #1f2937);
 }
@@ -418,7 +418,7 @@ onMounted(async () => {
   flex: 1 1 auto;
   min-height: 220px;
   width: 100% !important;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -467,7 +467,7 @@ onMounted(async () => {
   gap: 3px;
   padding: 2px 8px;
   border-radius: 10px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 500;
   background: rgba(16, 185, 129, 0.1);
   color: var(--ds-success);
@@ -480,13 +480,13 @@ onMounted(async () => {
   align-items: center;
   padding: 2px 8px;
   border-radius: 10px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   background: rgba(16, 185, 129, 0.15);
   color: var(--ds-success);
 }
 .sr-unsigned {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #9ca3af);
 }
 
@@ -510,7 +510,7 @@ onMounted(async () => {
   gap: 6px;
 }
 .form-field label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 500;
 }
 .form-row { display: flex; gap: 12px; }

@@ -121,7 +121,7 @@ const anchors = computed<AnchorRow[]>(() => {
 
 .anchor-header h3 {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
 }
@@ -143,13 +143,13 @@ const anchors = computed<AnchorRow[]>(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text, var(--color-text));
 }
 
 .anchor-icon {
   flex-shrink: 0;
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   line-height: 1;
 }
 
@@ -163,7 +163,7 @@ const anchors = computed<AnchorRow[]>(() => {
 
 .anchor-guide {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 </style>

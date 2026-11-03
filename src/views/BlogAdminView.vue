@@ -291,7 +291,7 @@ onMounted(async () => {
   background-color: var(--ds-card, #ffffff);
   color: var(--ds-text, #1f2329);
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: var(--font-weight-medium, 500);
   cursor: pointer;
   transition: background-color var(--motion-duration, 0.2s) var(--motion-ease, ease),

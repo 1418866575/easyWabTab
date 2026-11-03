@@ -352,7 +352,7 @@ const sortedCustomCategories = computed(() =>
 
 .add-form h3,
 .category-list h3 {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--ds-text-2);
   margin: 0 0 12px 0;
@@ -396,7 +396,7 @@ const sortedCustomCategories = computed(() =>
 }
 
 .cat-icon-emoji {
-  font-size: 18px;
+  font-size: var(--fs-title, 18px);
   line-height: 1;
 }
 
@@ -430,7 +430,7 @@ const sortedCustomCategories = computed(() =>
 }
 
 .section-title {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--ds-text-3);
   margin-bottom: 8px;
 }
@@ -457,7 +457,7 @@ const sortedCustomCategories = computed(() =>
 }
 
 .sort-hint {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   width: 24px;
   /* 内置分类的"只读"提示：淡化锁图标 */
   opacity: 0.5;
@@ -477,18 +477,18 @@ const sortedCustomCategories = computed(() =>
   justify-content: center;
   width: 22px;
   height: 22px;
-  font-size: 18px;
+  font-size: var(--fs-title, 18px);
   overflow: hidden;
 }
 
 .category-name {
   flex: 1;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--ds-text);
 }
 
 .site-count {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--ds-text-3);
   margin-right: 8px;
 }
@@ -541,7 +541,7 @@ const sortedCustomCategories = computed(() =>
 .empty-custom {
   text-align: center;
   color: var(--ds-text-3);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   padding: 20px;
 }
 </style>

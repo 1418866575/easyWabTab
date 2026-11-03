@@ -441,7 +441,7 @@ async function onOnboardingComplete() {
 }
 
 .st-header-left h1 {
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   font-weight: 600;
   margin: 0;
 }
@@ -454,7 +454,7 @@ async function onOnboardingComplete() {
   height: 22px;
   border-radius: 50%;
   color: #ffffff;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 700;
 }
 
@@ -476,7 +476,7 @@ async function onOnboardingComplete() {
   border: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-surface-2, #fafafa);
   color: var(--color-text-secondary, #6b7280);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   transition: all 0.15s;
   user-select: none;
 }
@@ -491,7 +491,7 @@ async function onOnboardingComplete() {
   background: rgba(245, 158, 11, 0.08);
   border-color: rgba(245, 158, 11, 0.35);
 }
-.st-parent-bar-icon { font-size: 14px; line-height: 1; }
+.st-parent-bar-icon { font-size: var(--fs-body, 14px); line-height: 1; }
 .st-parent-bar-text { font-weight: 500; }
 .st-parent-bar-btn {border: 0;
   padding: 0 12px;
@@ -499,7 +499,7 @@ async function onOnboardingComplete() {
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #d1d5db);
   color: var(--color-text-secondary, #6b7280);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.12s;
@@ -608,7 +608,7 @@ async function onOnboardingComplete() {
   background: transparent;
   color: inherit;
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   transition: background 0.15s;
 }
 .st-menu-item:hover {
@@ -628,7 +628,7 @@ async function onOnboardingComplete() {
 }
 
 .st-menu-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 
 .st-content {
@@ -742,7 +742,7 @@ async function onOnboardingComplete() {
     box-shadow: inset 0 -3px 0 var(--color-primary, #3b82f6);
   }
   .st-menu-label {
-    font-size: 12px;
+    font-size: var(--fs-caption, 12px);
     overflow: visible;
     text-overflow: clip;
     white-space: nowrap;

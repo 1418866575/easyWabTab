@@ -593,7 +593,7 @@ onMounted(async () => {
 .stat-pill {
   flex-shrink: 0;
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
@@ -602,7 +602,7 @@ onMounted(async () => {
 }
 
 .stat-value {
-  font-size: 26px;
+  font-size: var(--fs-h2, 22px);
   font-weight: 700;
   color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
@@ -610,13 +610,13 @@ onMounted(async () => {
 }
 
 .stat-sub {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 /* 达标行 + 进度条（--color-primary） */
 .ex-attainment {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-primary, var(--color-primary));
   font-variant-numeric: tabular-nums;
@@ -669,7 +669,7 @@ onMounted(async () => {
    但这里 scoped + 同名样式会被覆盖，重新定义一次保证运动/饮食/睡眠/体重等面板也生效 */
 .ld-cat-type-badge {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   padding: 2px 10px;
   border-radius: 999px;
@@ -733,7 +733,7 @@ onMounted(async () => {
 }
 
 .form-group > label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -750,7 +750,7 @@ onMounted(async () => {
 }
 
 .field-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 

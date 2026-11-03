@@ -46,7 +46,7 @@ defineEmits<{ prev: []; next: [] }>()
   color: var(--color-text-secondary, #64748b);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
   transition: all 0.2s;
   height: 36px;}
@@ -63,7 +63,7 @@ defineEmits<{ prev: []; next: [] }>()
 }
 
 .pp-info {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, #64748b);
 }
 

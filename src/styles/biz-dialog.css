@@ -20,7 +20,7 @@
 
 .biz-dialog-header h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
 }
@@ -28,7 +28,7 @@
 .biz-dialog-close {
   background: none;
   border: none;
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   color: var(--color-text-muted, var(--color-text-muted));
   cursor: pointer;
 }
@@ -56,7 +56,7 @@
 }
 
 .biz-field > label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 

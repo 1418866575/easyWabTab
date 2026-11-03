@@ -102,11 +102,11 @@ watch(
 }
 
 .wx-placeholder-icon {
-  font-size: 22px;
+  font-size: var(--fs-h2, 22px);
 }
 
 .wx-placeholder-text {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -139,35 +139,35 @@ watch(
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .wx-city {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
 }
 
 .wx-emoji {
-  font-size: 22px;
+  font-size: var(--fs-h2, 22px);
   line-height: 1;
 }
 
 .wx-temp {
-  font-size: 22px;
+  font-size: var(--fs-h2, 22px);
   font-weight: 700;
   color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
 }
 
 .wx-feels {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .wx-desc {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text, var(--color-text));
   font-weight: 500;
 }
@@ -177,7 +177,7 @@ watch(
 }
 
 .wx-loading {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 

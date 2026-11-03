@@ -526,7 +526,7 @@ onMounted(async () => {
   gap: 2px;
 }
 .sh-card-name {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -541,7 +541,7 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
 }
 .sh-badge-cat {
@@ -559,7 +559,7 @@ onMounted(async () => {
   background: transparent;
   color: var(--sh-color, #3b82f6);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   transition: all 0.15s;
   flex-shrink: 0;
   height: 36px;}
@@ -592,7 +592,7 @@ onMounted(async () => {
   height: 100%;
   min-height: 200px;
   color: var(--color-text-muted, #6b7280);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
 }
 
 .dialog-body {
@@ -606,7 +606,7 @@ onMounted(async () => {
   gap: 6px;
 }
 .form-field label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 500;
 }
 .form-color {
@@ -667,17 +667,17 @@ onMounted(async () => {
 }
 .sh-records-title {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
 }
 .sh-records-count {
   flex: 1;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
 }
 .sh-records-empty {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted, #6b7280);
   padding: 10px 0;
 }
@@ -694,7 +694,7 @@ onMounted(async () => {
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm, 4px);
   background: var(--color-bg-card, var(--color-bg-card));
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text, var(--color-text));
 }
 .sh-record-date {
@@ -716,7 +716,7 @@ onMounted(async () => {
   color: var(--color-primary, var(--color-primary));
 }
 .sh-record-tag {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   padding: 1px 6px;
   border-radius: 999px;
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
@@ -733,7 +733,7 @@ onMounted(async () => {
 }
 .sh-record-hint {
   margin: 6px 0 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
 }
 </style>
