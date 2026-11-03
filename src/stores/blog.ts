@@ -349,6 +349,17 @@ export const useBlogStore = defineStore('blog', () => {
     return purged
   }
 
+  /**
+   * 记录「已发送公众号」：只在发布到公众号草稿箱成功后调用。
+   * 属于展示态而非内容变更，故不递增 revision（避免编辑器持有旧 revision 触发冲突提示）。
+   */
+  async function setWechatSentAt(id: string, at: string | undefined): Promise<void> {
+    const index = articles.value.findIndex(a => a.id === id)
+    if (index === -1) return
+    articles.value[index] = { ...articles.value[index], wechatSentAt: at }
+    await saveBlog()
+  }
+
   async function togglePin(id: string): Promise<{ ok: boolean; reason?: string }> {
     const article = findArticle(id)
     if (!article) return { ok: false, reason: '文章不存在' }
@@ -861,6 +872,7 @@ export const useBlogStore = defineStore('blog', () => {
     purgeArticle,
     gcPurgedArticles,
     togglePin,
+    setWechatSentAt,
     publishArticle,
     submitForReview,
     approveArticle,

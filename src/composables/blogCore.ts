@@ -221,6 +221,7 @@ export function normalizeArticle(raw: unknown, when = nowIso()): BlogArticle {
     auditRemark: typeof src.auditRemark === 'string' ? src.auditRemark : undefined,
     authorName: typeof src.authorName === 'string' ? src.authorName : undefined,
     sharedAt: typeof src.sharedAt === 'string' ? src.sharedAt : undefined,
+    wechatSentAt: typeof src.wechatSentAt === 'string' ? src.wechatSentAt : undefined,
     // 排版主题：逐字段重建对象，漏带会让主题在 IDB / 云同步往返后静默丢失
     typo: normalizeTypo(src.typo),
     revision: clampNumber(src.revision, 1, Number.MAX_SAFE_INTEGER, 1)

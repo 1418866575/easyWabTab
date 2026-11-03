@@ -672,6 +672,8 @@ async function handlePublishWechat(): Promise<void> {
     typo: { ...form.typo }
   })
   if (ok) {
+    // 记「已发送公众号」：列表状态列据此显示「公众号」，随 blog.json 落盘并上云
+    await store.setWechatSentAt(props.articleId, new Date().toISOString())
     toastAlert('已发布到公众号草稿箱', 'success')
   } else if (wechat.notConfigured.value) {
     // 未配置凭证：引导去博客设置页「微信公众号」

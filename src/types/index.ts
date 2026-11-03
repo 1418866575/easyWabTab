@@ -1859,6 +1859,7 @@ export interface BlogArticle {
   revision: number          // 保存即自增，用于草稿冲突判定
   authorName?: string       // 共享发布时写入的展示作者名（多作者预留；缺省回落站点名）
   sharedAt?: string         // 最近一次成功「共享」到服务器的本地时间戳（仅前端展示用）
+  wechatSentAt?: string     // 最近一次成功「发送到公众号草稿箱」的本地时间戳（状态列「公众号」标识依据）
   /**
    * 排版主题（单篇覆盖）：blogTypoCore 解析为 `--t-*` Token，
    * 编辑器预览 / 博客前台 / 公众号三端共用。缺省 = 跟随 settings.defaultTypoId。

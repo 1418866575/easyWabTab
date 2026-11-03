@@ -368,12 +368,13 @@ function displayTime(row: BlogArticle): string {
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="150" align="center">
+        <el-table-column label="状态" width="180" align="center">
           <template #default="{ row }">
             <div class="ba-cell-status">
               <span class="ba-status-tag" :class="statusClass(row.status)">
                 {{ ARTICLE_STATUS_LABELS[row.status as ArticleStatus] }}
               </span>
+              <span v-if="row.wechatSentAt" class="ba-wx" :title="`已发送公众号：${formatDateTime(row.wechatSentAt)}`">公众号</span>
               <span v-if="row.pinned" class="ba-pin" title="已置顶">置顶</span>
             </div>
           </template>
@@ -443,6 +444,7 @@ function displayTime(row: BlogArticle): string {
             <span class="ba-status-tag" :class="statusClass(row.status)">
               {{ ARTICLE_STATUS_LABELS[row.status as ArticleStatus] }}
             </span>
+            <span v-if="row.wechatSentAt" class="ba-wx" :title="`已发送公众号：${formatDateTime(row.wechatSentAt)}`">公众号</span>
             <span class="ba-cell-muted">{{ store.categoryName(row.categoryId) }}</span>
           </div>
           <p v-if="row.excerpt" class="ba-card-excerpt">{{ row.excerpt }}</p>
@@ -646,6 +648,17 @@ html.dark .ba-query {
   color: var(--color-warning, #b45309);
   font-size: var(--font-size-xs, 11px);
   line-height: 18px;
+}
+
+/* 「公众号」标记：仅在成功发送到公众号草稿箱后显示 */
+.ba-wx {
+  padding: 0 6px;
+  border-radius: var(--ds-radius-pill, 999px);
+  background-color: var(--color-success-soft, #d1fae5);
+  color: var(--color-success, #047857);
+  font-size: var(--font-size-xs, 11px);
+  line-height: 18px;
+  white-space: nowrap;
 }
 
 .ba-link {
