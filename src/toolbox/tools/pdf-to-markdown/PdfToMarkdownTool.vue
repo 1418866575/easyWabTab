@@ -199,7 +199,7 @@ function dl() {
   min-height: 360px;
   max-height: 60vh;
   overflow: auto;
-  font-size: 14px;
+  font-size: var(--fs-body);
   line-height: 1.7;
   color: var(--color-text);
 }

@@ -103,7 +103,7 @@ function print() {
 <style scoped>
 .cb-inline { margin-bottom: 0; }
 .cb-range { width: 120px; }
-.cb-input { font-size: 15px; }
+.cb-input { font-size: var(--fs-md); }
 .cb-page {
   padding: 20px;
   background: #ffffff;

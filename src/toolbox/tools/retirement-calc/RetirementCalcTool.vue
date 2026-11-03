@@ -260,12 +260,12 @@ useDirtyFlag(() => !!parsed.value)
   color: var(--color-primary);
 }
 .rc-banner-sub {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--color-text-secondary);
 }
 .rc-banner-rem {
   margin-top: 2px;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--color-text);
 }
@@ -284,12 +284,12 @@ useDirtyFlag(() => !!parsed.value)
 }
 
 .rc-small {
-  font-size: 15px;
+  font-size: var(--fs-md);
 }
 
 .rc-today {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--color-text-secondary);
 }
 
@@ -310,7 +310,7 @@ useDirtyFlag(() => !!parsed.value)
   box-shadow: 0 0 0 3px var(--color-primary-soft);
 }
 .rc-ym-caret {
-  font-size: 12px;
+  font-size: var(--fs-caption);
   color: var(--color-text-muted);
 }
 .rc-ym-pop {

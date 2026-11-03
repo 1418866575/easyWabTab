@@ -176,6 +176,6 @@ function clearAll() {
 .uz-path { word-break: break-all; }
 .uz-btn {height: 36px;
   padding: 0 12px;
-  font-size: 12px;}
+  font-size: var(--fs-caption);}
 .uz-text { max-height: 260px; }
 </style>

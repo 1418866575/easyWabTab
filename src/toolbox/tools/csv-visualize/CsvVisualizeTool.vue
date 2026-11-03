@@ -168,7 +168,7 @@ function copyTable() {
 <style scoped>
 .break { word-break: break-all; }
 .tu-chart { margin-top:8px; border:1px solid var(--color-border); border-radius:var(--radius-md); padding:10px; background:var(--color-bg-input); max-height:300px; overflow:auto; }
-.tu-chart-row { display:flex; align-items:center; gap:8px; margin:4px 0; font-size:12px; }
+.tu-chart-row { display:flex; align-items:center; gap:8px; margin:4px 0; font-size: var(--fs-caption); }
 .tu-chart-label { width:90px; flex:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--color-text-secondary); }
 .tu-chart-bar { height:14px; min-width:2px; background:var(--color-primary); border-radius:3px; transition:width .2s; }
 .tu-chart-val { flex:none; color:var(--color-text); font-family:var(--font-family-mono); }

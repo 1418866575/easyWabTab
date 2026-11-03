@@ -55,6 +55,6 @@ function copyOne(kind: CaseKind) {
 </template>
 
 <style scoped>
-.cc-val { font-size: 14px; margin-bottom: 6px; }
-.cc-copy { min-height: 28px; padding: 3px 10px; font-size: 12px; }
+.cc-val { font-size: var(--fs-body); margin-bottom: 6px; }
+.cc-copy { min-height: 28px; padding: 3px 10px; font-size: var(--fs-caption); }
 </style>

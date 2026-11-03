@@ -166,11 +166,11 @@ const monthText = computed(() =>
 </template>
 
 <style scoped>
-.tu-cal-title { font-size: 14px; font-weight: 600; }
+.tu-cal-title { font-size: var(--fs-body); font-weight: 600; }
 .tu-warn {
   margin: 0 0 8px;
   padding: 7px 10px;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   line-height: 1.6;
   color: var(--color-warning, #b88230);
   background: var(--color-warning-soft, #fdf6ec);
@@ -200,7 +200,7 @@ const monthText = computed(() =>
 .tu-cal-cell.is-makeup { background: var(--color-warning-soft); border-color: var(--color-warning); }
 .tu-cal-cell.is-today { outline: 2px solid var(--color-primary); }
 .tu-cal-cell.is-active { box-shadow: inset 0 0 0 2px var(--color-primary); }
-.tu-cal-day { font-size: 13px; }
+.tu-cal-day { font-size: var(--fs-sm); }
 .tu-cal-tag { display: block; font-size: 10px; color: var(--color-text-secondary); }
 .tu-legend { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--color-text-secondary); }
 .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; border: 1px solid var(--color-border); }
@@ -214,6 +214,6 @@ const monthText = computed(() =>
   max-height: 180px;
   overflow: auto;
   font-family: var(--font-family-mono);
-  font-size: 12px;
+  font-size: var(--fs-caption);
 }
 </style>

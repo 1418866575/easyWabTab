@@ -504,13 +504,13 @@ function parts(text: string): { t: string; hit: boolean }[] {
   margin-bottom: 10px;
 }
 .cr-title {
-  font-size: 16px;
+  font-size: var(--fs-lg);
   margin: 0;
   color: var(--color-text);
 }
 .cr-code {
   font-family: var(--font-family-mono);
-  font-size: 12px;
+  font-size: var(--fs-caption);
   color: var(--color-text-muted);
   background: var(--color-bg-input);
   padding: 2px 6px;
@@ -544,7 +544,7 @@ function parts(text: string): { t: string; hit: boolean }[] {
   color: var(--color-text-secondary);
 }
 .cr-sub-title {
-  font-size: 12px;
+  font-size: var(--fs-caption);
   color: var(--color-text-secondary);
   margin: 12px 0 6px;
 }
@@ -622,7 +622,7 @@ function parts(text: string): { t: string; hit: boolean }[] {
   margin: 8px 0;
   line-height: 1.7;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: var(--fs-caption);
 }
 .cr-ver {
   margin: 8px 0;

@@ -23,7 +23,7 @@ defineProps<{
 <style scoped>
 .tb-section { margin-top: 26px; }
 .tb-section-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; }
-.tb-section-head h2 { margin: 0; font-size: 16px; font-weight: 600; color: var(--color-text); }
-.tb-section-sub { font-size: 12px; color: var(--color-text-muted); }
+.tb-section-head h2 { margin: 0; font-size: var(--fs-lg); font-weight: 600; color: var(--color-text); }
+.tb-section-sub { font-size: var(--fs-caption); color: var(--color-text-muted); }
 .tb-section-extra { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; }
 </style>

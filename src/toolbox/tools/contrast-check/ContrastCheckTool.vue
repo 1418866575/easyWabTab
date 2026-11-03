@@ -68,7 +68,7 @@ const passAAA = (large: boolean) => ratio.value != null && ratio.value >= (large
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   text-align: center;
-  font-size: 18px;
+  font-size: var(--fs-title);
   font-weight: 600;
 }
 .ok { color: var(--color-success); font-weight: 600; }

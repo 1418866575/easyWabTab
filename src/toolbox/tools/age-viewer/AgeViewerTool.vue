@@ -96,7 +96,7 @@ const zodiacAges = computed<ZodiacAges[]>(() => {
 }
 .av-year-unit {
   color: var(--color-text-muted);
-  font-size: 14px;
+  font-size: var(--fs-body);
 }
 
 /* 12 生肖卡片网格 */
@@ -120,12 +120,12 @@ const zodiacAges = computed<ZodiacAges[]>(() => {
   border-bottom: 1px dashed var(--color-border);
 }
 .av-sx-icon {
-  font-size: 18px;
+  font-size: var(--fs-title);
   font-weight: 800;
   color: var(--color-text);
 }
 .av-sx-name {
-  font-size: 12px;
+  font-size: var(--fs-caption);
   color: var(--color-text-muted);
 }
 .av-ages {
@@ -134,7 +134,7 @@ const zodiacAges = computed<ZodiacAges[]>(() => {
   gap: 6px;
 }
 .av-age {
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-weight: 600;
   padding: 2px 9px;
   border-radius: 999px;
@@ -149,7 +149,7 @@ const zodiacAges = computed<ZodiacAges[]>(() => {
     grid-template-columns: repeat(2, 1fr);
   }
   .av-year-num {
-    font-size: 28px;
+    font-size: var(--fs-h1);
   }
 }
 </style>

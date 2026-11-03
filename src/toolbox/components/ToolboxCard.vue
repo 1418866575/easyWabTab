@@ -126,7 +126,7 @@ const ariaLabel = computed(
   color: var(--color-primary);
 }
 .tb-card-name {
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--color-text);
   overflow: hidden;
@@ -153,7 +153,7 @@ const ariaLabel = computed(
   flex: none;
   border: none;
   background: transparent;
-  font-size: 15px;
+  font-size: var(--fs-md);
   line-height: 1;
   padding: 6px;
   border-radius: 6px;

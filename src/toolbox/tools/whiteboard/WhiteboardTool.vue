@@ -278,5 +278,5 @@ function exportPng() {
 .wb-text-input { width: 200px; }
 .wb-text-btn {height: 36px;
   padding: 0 12px;
-  font-size: 12px;}
+  font-size: var(--fs-caption);}
 </style>

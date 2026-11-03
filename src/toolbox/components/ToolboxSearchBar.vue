@@ -256,7 +256,7 @@ defineExpose({ focus: () => nextTick(() => inputRef.value?.focus()) })
   border: none;
   background: transparent;
   color: var(--color-text-muted);
-  font-size: 16px;
+  font-size: var(--fs-lg);
   line-height: 1;
   padding: 2px 6px;
   border-radius: 6px;
@@ -292,14 +292,14 @@ defineExpose({ focus: () => nextTick(() => inputRef.value?.focus()) })
   padding: 6px 8px 4px;
 }
 .tb-panel-title {
-  font-size: 12px;
+  font-size: var(--fs-caption);
   color: var(--color-text-muted);
 }
 .tb-panel-clear {
   border: none;
   background: transparent;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: var(--fs-caption);
   padding: 2px 6px;
   border-radius: 6px;
 }
@@ -314,7 +314,7 @@ defineExpose({ focus: () => nextTick(() => inputRef.value?.focus()) })
   border-radius: var(--radius-md);
   cursor: pointer;
   color: var(--color-text);
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 .tb-panel-item:hover { background: var(--color-primary-soft); }
 .tb-item-icon { flex: none; color: var(--color-text-muted); width: 16px; text-align: center; }
@@ -323,7 +323,7 @@ defineExpose({ focus: () => nextTick(() => inputRef.value?.focus()) })
   flex: none;
   max-width: 45%;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: var(--fs-caption);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

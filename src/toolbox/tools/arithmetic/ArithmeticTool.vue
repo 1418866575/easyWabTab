@@ -117,7 +117,7 @@ function printPage() {
 .ar-inline { margin-bottom: 0; }
 .ar-num { width: 90px; }
 .ar-range { width: 100px; }
-.ar-col { font-size: 12px; color: var(--color-text-muted); }
+.ar-col { font-size: var(--fs-caption); color: var(--color-text-muted); }
 .ar-seed { width: 120px; }
 .ar-page {
   padding: 20px;
@@ -126,11 +126,11 @@ function printPage() {
   border-radius: var(--radius-md);
   color: #111;
 }
-.ar-title { margin: 0 0 14px; font-size: 15px; }
+.ar-title { margin: 0 0 14px; font-size: var(--fs-md); }
 .ar-cols { display: grid; gap: 8px 24px; }
-.ar-list { margin: 0; padding-left: 22px; font-size: 14px; }
+.ar-list { margin: 0; padding-left: 22px; font-size: var(--fs-body); }
 .ar-item { line-height: 2; }
-.ar-answers { margin-top: 16px; padding-top: 12px; border-top: 1px dashed #bbb; font-size: 12px; color: #333; }
+.ar-answers { margin-top: 16px; padding-top: 12px; border-top: 1px dashed #bbb; font-size: var(--fs-caption); color: #333; }
 
 @media print {
   .ar-screen :deep(.tu-row),

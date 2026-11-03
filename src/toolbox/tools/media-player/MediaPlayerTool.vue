@@ -181,7 +181,7 @@ onBeforeUnmount(() => {
   background: var(--color-primary-soft);
 }
 .mp-drop-icon { font-size: 34px; line-height: 1; }
-.mp-drop-title { font-size: 13px; color: var(--color-text); }
+.mp-drop-title { font-size: var(--fs-sm); color: var(--color-text); }
 .mp-drop-sub { font-size: 11.5px; color: var(--color-text-muted); }
 .mp-stage {
   border: 1px solid var(--color-border);
@@ -190,5 +190,5 @@ onBeforeUnmount(() => {
   padding: 10px;
 }
 .mp-media { width: 100%; display: block; outline: none; }
-.mp-name { font-size: 14px; word-break: break-all; }
+.mp-name { font-size: var(--fs-body); word-break: break-all; }
 </style>

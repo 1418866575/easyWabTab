@@ -92,7 +92,7 @@ async function handleClick(): Promise<void> {
   align-items: center;
   gap: 6px;
   padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   color: var(--color-text-secondary);
   background: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #cbd5e1);

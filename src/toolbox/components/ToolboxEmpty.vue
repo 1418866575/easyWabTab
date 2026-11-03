@@ -50,13 +50,13 @@ const COPY = {
   border-radius: var(--radius-lg);
 }
 .tb-empty-icon { font-size: 32px; display: block; margin-bottom: 10px; opacity: .8; }
-.tb-empty p { margin: 0 0 12px; font-size: 14px; }
+.tb-empty p { margin: 0 0 12px; font-size: var(--fs-body); }
 .tb-empty-kw { color: var(--color-primary); font-weight: 600; }
 .tb-empty code {
   background: var(--color-bg-hover);
   padding: 1px 5px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--fs-caption);
 }
 .tb-empty-btn {display: inline-flex;
   align-items: center;
@@ -67,7 +67,7 @@ const COPY = {
   border: 1px solid var(--color-primary);
   background: transparent;
   color: var(--color-primary);
-  font-size: 12px;
+  font-size: var(--fs-caption);
   transition: background-color var(--motion-duration) var(--motion-ease),
     color var(--motion-duration) var(--motion-ease);}
 .tb-empty-btn:hover { background: var(--color-primary); color: #fff; }

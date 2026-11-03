@@ -139,7 +139,7 @@ const HTML_SHELL = (body: string, title: string) =>
 }
 .tu-md :deep(h1) { font-size: 20px; margin: 12px 0 8px; }
 .tu-md :deep(h2) { font-size: 17px; margin: 12px 0 8px; }
-.tu-md :deep(h3) { font-size: 15px; margin: 10px 0 6px; }
+.tu-md :deep(h3) { font-size: var(--fs-md); margin: 10px 0 6px; }
 .tu-md :deep(p) { margin: 8px 0; }
 .tu-md :deep(pre) {
   background: var(--color-bg-input);

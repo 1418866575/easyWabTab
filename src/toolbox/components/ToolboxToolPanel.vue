@@ -264,10 +264,10 @@ onBeforeUnmount(() => {
 }
 .tb-modal-icon { font-size: 20px; line-height: 1.4; }
 .tb-modal-titlebox { min-width: 0; }
-.tb-modal-titlebox h2 { margin: 0; font-size: 15px; font-weight: 600; color: var(--color-text); }
+.tb-modal-titlebox h2 { margin: 0; font-size: var(--fs-md); font-weight: 600; color: var(--color-text); }
 .tb-modal-titlebox p {
   margin: 2px 0 0;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   color: var(--color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -283,7 +283,7 @@ onBeforeUnmount(() => {
   min-height: 34px;
   padding: 0;
   font-family: var(--font-family);
-  font-size: 15px;
+  font-size: var(--fs-md);
   line-height: 1;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -309,7 +309,7 @@ onBeforeUnmount(() => {
 .tb-modal-btn {margin-left: auto;
   height: 36px;
   padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   background: transparent;
@@ -317,7 +317,7 @@ onBeforeUnmount(() => {
 .tb-modal-btn:hover { color: var(--color-primary); border-color: var(--color-primary); }
 
 .tb-modal-loading,
-.tb-modal-error { margin: 0; font-size: 13px; color: var(--color-text-secondary); }
+.tb-modal-error { margin: 0; font-size: var(--fs-sm); color: var(--color-text-secondary); }
 .tb-modal-error { color: var(--color-error); }
 
 @keyframes tb-fade {

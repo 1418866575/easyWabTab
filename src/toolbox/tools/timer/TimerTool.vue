@@ -118,5 +118,5 @@ onBeforeUnmount(stop)
   color: var(--color-text);
   letter-spacing: 1px;
 }
-.laps { margin: 6px 0 0; padding-left: 18px; font-family: var(--font-family-mono); font-size: 12px; color: var(--color-text-secondary); max-height: 160px; overflow: auto; }
+.laps { margin: 6px 0 0; padding-left: 18px; font-family: var(--font-family-mono); font-size: var(--fs-caption); color: var(--color-text-secondary); max-height: 160px; overflow: auto; }
 </style>

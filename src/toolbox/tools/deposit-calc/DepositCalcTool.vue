@@ -457,7 +457,7 @@ const showMassiveHint = computed(() => Number(principal.value) < PRINCIPAL_MIN |
   align-items: center;
 }
 .dp-rate-eq {
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-variant-numeric: tabular-nums;
   color: var(--color-text-muted);
 }
@@ -472,13 +472,13 @@ const showMassiveHint = computed(() => Number(principal.value) < PRINCIPAL_MIN |
 }
 .dp-card-sub {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   color: var(--color-text-muted);
 }
 .dp-warn {
   margin: 12px 0 0;
   padding-left: 18px;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   line-height: 1.7;
   color: var(--color-text-muted);
 }
@@ -492,7 +492,7 @@ const showMassiveHint = computed(() => Number(principal.value) < PRINCIPAL_MIN |
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--fs-caption);
 }
 .dp-bar-label {
   width: 40px;

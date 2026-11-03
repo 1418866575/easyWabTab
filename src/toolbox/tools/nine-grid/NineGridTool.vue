@@ -155,5 +155,5 @@ async function downloadAll() {
 .ng-meta { font-size: 11.5px; color: var(--color-text-muted); font-family: var(--font-family-mono); }
 .ng-btn {height: 36px;
   padding: 0 12px;
-  font-size: 12px;}
+  font-size: var(--fs-caption);}
 </style>

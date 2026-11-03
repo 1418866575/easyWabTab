@@ -176,7 +176,7 @@ function clearAll() {
 .pg-status.is-fail { color: var(--color-error); }
 .pg-ok { color: var(--color-success); }
 .pg-fail { color: var(--color-error); }
-.pg-msg { color: var(--color-text-secondary); font-size: 12px; }
+.pg-msg { color: var(--color-text-secondary); font-size: var(--fs-caption); }
 .pg-empty { margin: 0; font-size: 12.5px; color: var(--color-text-muted); }
 .tu-mono { font-family: var(--font-family-mono); }
 </style>

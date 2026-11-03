@@ -411,7 +411,7 @@ function fmtTime(ts: number): string {
   border-radius: var(--radius-md);
   background: var(--color-bg-card);
   color: var(--color-text);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   cursor: pointer;
   transition: all var(--motion-duration) var(--motion-ease);
 }
@@ -420,13 +420,13 @@ function fmtTime(ts: number): string {
   background: var(--color-primary-soft);
   color: var(--color-primary);
 }
-.lot-award-num { color: var(--color-text-muted); font-size: 12px; }
+.lot-award-num { color: var(--color-text-muted); font-size: var(--fs-caption); }
 .lot-award.is-on .lot-award-num { color: var(--color-primary); }
 
 /* 中奖记录 */
 .lot-wins + .lot-wins { margin-top: 10px; }
-.lot-wins-title { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 2px; }
-.lot-wins-time { color: var(--color-text-muted); font-size: 12px; margin-left: 6px; }
+.lot-wins-title { font-size: var(--fs-sm); color: var(--color-text-secondary); margin-bottom: 2px; }
+.lot-wins-time { color: var(--color-text-muted); font-size: var(--fs-caption); margin-left: 6px; }
 /* 自己定义列表样式：不用 <ol> 原生编号（会与手写 seq 撞成「1. 1.」双序号） */
 .lot-wins-list { margin: 0; padding: 0; list-style: none; font-size: 12.5px; line-height: 1.9; }
 .lot-win-item {
@@ -442,7 +442,7 @@ function fmtTime(ts: number): string {
   padding: 1px 6px;
   border-radius: 4px;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: var(--fs-caption);
   cursor: pointer;
   opacity: 0.55;
   transition: opacity var(--motion-duration) var(--motion-ease);
@@ -488,7 +488,7 @@ function fmtTime(ts: number): string {
   animation: lot-pop 0.5s var(--motion-ease);
 }
 .lot-stage-dept { font-size: clamp(15px, 2.4vw, 24px); color: var(--color-text-secondary); }
-.lot-stage-hint { font-size: 13px; color: var(--color-text-muted); }
+.lot-stage-hint { font-size: var(--fs-sm); color: var(--color-text-muted); }
 
 @keyframes lot-jitter {
   0% { transform: translateY(0); }

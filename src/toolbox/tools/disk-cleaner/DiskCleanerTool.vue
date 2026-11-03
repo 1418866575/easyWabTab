@@ -363,7 +363,7 @@ async function removeChecked(): Promise<void> {
   margin: -6px 0 0;
 }
 .dc-dir {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--color-text);
   max-width: 42%;
@@ -392,7 +392,7 @@ async function removeChecked(): Promise<void> {
 .dc-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 .dc-table th,
 .dc-table td {

@@ -246,7 +246,7 @@ function stageColor(stage: number): string {
 }
 .ts-band-desc {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-weight: 600;
   opacity: 0.85;
 }
@@ -259,7 +259,7 @@ function stageColor(stage: number): string {
   padding: 12px;
 }
 .ts-arch-title {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--color-text-secondary);
   margin-bottom: 6px;
@@ -280,7 +280,7 @@ function stageColor(stage: number): string {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   color: var(--color-text-secondary);
 }
 .ts-dot {
@@ -299,7 +299,7 @@ function stageColor(stage: number): string {
 .ts-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 .ts-table th,
 .ts-table td {
@@ -347,7 +347,7 @@ function stageColor(stage: number): string {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 700;
   color: var(--color-warning, #b88230);
   margin-bottom: 8px;
@@ -360,7 +360,7 @@ function stageColor(stage: number): string {
   color: #fff;
   display: grid;
   place-items: center;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 800;
 }
 .ts-highlight-body {

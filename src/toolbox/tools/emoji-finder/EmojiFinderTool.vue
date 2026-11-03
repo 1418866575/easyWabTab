@@ -112,7 +112,7 @@ onMounted(async () => {
 .ef-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 4px; }
 .ef-item {
   aspect-ratio: 1;
-  font-size: 22px;
+  font-size: var(--fs-h2);
   line-height: 1;
   border: 1px solid transparent;
   border-radius: var(--radius-md);
@@ -122,7 +122,7 @@ onMounted(async () => {
 }
 .ef-item:hover { background: var(--color-bg-hover); border-color: var(--color-border); }
 .ef-recent { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; margin-bottom: 12px; }
-.ef-recent-label { font-size: 12px; color: var(--color-text-muted); margin-right: 6px; }
-.ef-recent .ef-item { font-size: 18px; }
+.ef-recent-label { font-size: var(--fs-caption); color: var(--color-text-muted); margin-right: 6px; }
+.ef-recent .ef-item { font-size: var(--fs-title); }
 .ef-clear { min-height: 24px; padding: 2px 8px; font-size: 11.5px; }
 </style>

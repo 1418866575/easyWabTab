@@ -303,7 +303,7 @@ watch(activeIndex, v => {
   gap: 6px;
   min-height: 36px;
   padding: 6px 10px;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-family: var(--font-family);
   color: var(--color-text-secondary);
   background: var(--color-bg-card);
@@ -352,12 +352,12 @@ watch(activeIndex, v => {
   justify-content: space-between;
   padding: 6px 8px 4px;
 }
-.tb-recent-panel-title { font-size: 12px; color: var(--color-text-muted); }
+.tb-recent-panel-title { font-size: var(--fs-caption); color: var(--color-text-muted); }
 .tb-recent-clear {
   border: none;
   background: transparent;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: var(--fs-caption);
   padding: 2px 6px;
   border-radius: 6px;
 }
@@ -372,7 +372,7 @@ watch(activeIndex, v => {
   border-radius: var(--radius-md);
   cursor: pointer;
   color: var(--color-text);
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 .tb-recent-panel-item:hover,
 .tb-recent-panel-item[data-active='true'] { background: var(--color-primary-soft); }

@@ -98,7 +98,7 @@ const fullSource = computed(() => buildStandaloneHtml({ html: html.value, css: c
 .he-wrap { align-items: start; }
 .he-editors, .he-preview { min-width: 0; display: flex; flex-direction: column; }
 .he-area { font-family: var(--font-family-mono); font-size: 12.5px; margin-bottom: 10px; }
-.he-tpl { min-height: 28px; padding: 3px 10px; font-size: 12px; }
+.he-tpl { min-height: 28px; padding: 3px 10px; font-size: var(--fs-caption); }
 .he-inline { margin-bottom: 0; }
 .he-frame {
   width: 100%;

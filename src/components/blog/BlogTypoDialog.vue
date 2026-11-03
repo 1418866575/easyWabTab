@@ -349,7 +349,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   outline: none;
   color: var(--ds-text);
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 
 /* 分组列表区：统一滚动容器（原 3 列网格各自滚动改为整体滚动） */
@@ -370,7 +370,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: var(--font-weight-semibold, 600);
   color: var(--ds-text);
 }
@@ -505,7 +505,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   color: var(--ds-text-2);
   padding: 4px 10px;
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
 }
@@ -556,7 +556,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   width: 375px;
   max-width: 100%;
   margin: 0 auto;
-  font-size: 16px;
+  font-size: var(--fs-lg);
   line-height: 1.75;
   color: var(--color-text);
   word-wrap: break-word;
@@ -591,7 +591,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   background: var(--ds-card, #ffffff);
   color: var(--ds-text-2);
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   cursor: pointer;
 }
 .tdp-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
@@ -609,7 +609,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   border-radius: var(--ds-radius-card, 12px);
   background: var(--ds-card, #ffffff);
   color: var(--ds-text-2);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   text-align: center;
 }
 

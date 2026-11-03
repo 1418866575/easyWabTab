@@ -262,7 +262,7 @@ watch([bgKey, threshold, feather, sizeKey, fmt, manualHex, manualBg], render)
   border-radius: var(--radius-md);
   background: var(--color-bg-card);
   color: var(--color-text);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   cursor: pointer;
   transition: all var(--motion-duration) var(--motion-ease);
 }

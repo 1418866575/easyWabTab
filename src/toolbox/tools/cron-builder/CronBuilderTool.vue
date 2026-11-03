@@ -166,7 +166,7 @@ function reset() {
   flex: 1;
   padding: 8px 10px;
   font-family: var(--font-family-mono);
-  font-size: 14px;
+  font-size: var(--fs-body);
   letter-spacing: 1px;
   color: var(--color-text);
   background: var(--color-bg-input);

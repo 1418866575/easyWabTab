@@ -572,9 +572,9 @@ onBeforeUnmount(() => {
   padding-top: 8px;
   max-height: 230px; overflow: auto;
 }
-.legend-title { font-size: 13px; color: var(--color-text-secondary); margin: 0 0 8px; }
+.legend-title { font-size: var(--fs-sm); color: var(--color-text-secondary); margin: 0 0 8px; }
 .legend-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 2px 10px; }
-.legend-list li { display: flex; align-items: center; gap: 7px; font-size: 12px; padding: 3px 4px; color: var(--color-text); border-radius: var(--radius-sm); cursor: pointer; }
+.legend-list li { display: flex; align-items: center; gap: 7px; font-size: var(--fs-caption); padding: 3px 4px; color: var(--color-text); border-radius: var(--radius-sm); cursor: pointer; }
 .legend-list li:hover { background: var(--color-primary-soft); }
 .legend-list li.active { background: var(--color-primary-soft); outline: 1px solid var(--color-primary); }
 .legend-list .sw { width: 13px; height: 13px; border-radius: 3px; flex: 0 0 auto; border: 1px solid var(--color-border); }

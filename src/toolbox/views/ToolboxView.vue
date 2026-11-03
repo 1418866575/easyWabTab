@@ -257,11 +257,11 @@ function resetFilters() {
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
 }
 
-.tb-hits-total { font-size: 12px; color: var(--color-text-muted); }
+.tb-hits-total { font-size: var(--fs-caption); color: var(--color-text-muted); }
 
 .tb-mini-btn {height: 36px;
   padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-family: var(--font-family);
   color: var(--color-text-secondary);
   background: transparent;
@@ -290,7 +290,7 @@ function resetFilters() {
   background: var(--color-bg-hover);
   padding: 1px 5px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--fs-caption);
 }
 
 @media (max-width: 768px) {

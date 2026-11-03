@@ -88,9 +88,9 @@ function onDragOver(e: DragEvent) {
 .tu-drop:hover,
 .tu-drop.is-over { border-color: var(--color-primary); background: var(--color-bg-hover); }
 .tu-drop-input { display: none; }
-.tu-drop-icon { font-size: 22px; }
+.tu-drop-icon { font-size: var(--fs-h2); }
 .tu-drop-text { font-size: 12.5px; color: var(--color-text-secondary); }
-.tu-drop-btn {font-size: 12px;
+.tu-drop-btn {font-size: var(--fs-caption);
   padding: 0 12px;
   border-radius: var(--radius-full);
   background: var(--color-primary-soft);

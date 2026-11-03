@@ -124,9 +124,9 @@ const summary = computed(() =>
 <style scoped>
 .wc-inline { margin-bottom: 0; }
 .wc-range { width: 140px; }
-.wc-num { font-size: 12px; color: var(--color-text-muted); font-family: var(--font-family-mono); }
+.wc-num { font-size: var(--fs-caption); color: var(--color-text-muted); font-family: var(--font-family-mono); }
 .wc-spacer { flex: 1; }
-.wc-top-title { margin: 4px 0 8px; font-size: 13px; font-weight: 600; color: var(--color-text); }
+.wc-top-title { margin: 4px 0 8px; font-size: var(--fs-sm); font-weight: 600; color: var(--color-text); }
 .wc-idx { width: 44px; color: var(--color-text-muted); }
 .wc-cnt { width: 72px; font-family: var(--font-family-mono); }
 </style>

@@ -179,7 +179,7 @@ function dl() {
 </template>
 
 <style scoped>
-.diff-view { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-input); padding: 8px 10px; min-height: 360px; max-height: 60vh; overflow: auto; font-family: var(--font-mono, monospace); font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+.diff-view { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-input); padding: 8px 10px; min-height: 360px; max-height: 60vh; overflow: auto; font-family: var(--font-mono, monospace); font-size: var(--fs-sm); line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .diff-view :deep(.d-add) { background: var(--color-success-soft); color: var(--color-success); }
 .diff-view :deep(.d-del) { background: var(--color-error-soft); color: var(--color-error); }
 .diff-view :deep(.d-eq) { color: var(--color-text-muted); }

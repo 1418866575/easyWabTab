@@ -156,5 +156,5 @@ const rangeErr = computed(() => {
 .dc-inline { margin-bottom: 0; }
 .dc-date { width: auto; min-width: 150px; }
 .dc-num { width: 110px; }
-.dc-wd { margin-left: 8px; font-size: 13px; font-weight: 400; color: var(--color-text-muted); }
+.dc-wd { margin-left: 8px; font-size: var(--fs-sm); font-weight: 400; color: var(--color-text-muted); }
 </style>

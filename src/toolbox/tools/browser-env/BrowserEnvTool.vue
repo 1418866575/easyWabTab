@@ -136,12 +136,12 @@ onMounted(refresh)
 
 <style scoped>
 .be-group { display: flex; flex-direction: column; gap: 8px; }
-.be-title { margin: 8px 0 0; font-size: 13px; font-weight: 600; color: var(--color-text); }
+.be-title { margin: 8px 0 0; font-size: var(--fs-sm); font-weight: 600; color: var(--color-text); }
 .be-k { width: 140px; }
 .be-v { font-family: var(--font-family-mono); word-break: break-all; }
 .be-feats { display: flex; flex-wrap: wrap; gap: 8px; }
 .be-feat {
-  font-size: 12px;
+  font-size: var(--fs-caption);
   padding: 4px 10px;
   border-radius: var(--radius-full);
   border: 1px solid var(--color-border);

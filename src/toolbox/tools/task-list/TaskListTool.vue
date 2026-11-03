@@ -232,11 +232,11 @@ onMounted(async () => {
 .tl-row.is-done .tl-text { text-decoration: line-through; color: var(--color-text-muted); }
 .tl-fold { min-width: 18px; border: none; background: transparent; color: var(--color-text-secondary); cursor: pointer; }
 .tl-fold-empty { display: inline-block; }
-.tl-status { min-height: 26px; padding: 2px 10px; font-size: 12px; }
-.tl-text { flex: 1; min-width: 0; font-size: 13px; color: var(--color-text); word-break: break-all; }
+.tl-status { min-height: 26px; padding: 2px 10px; font-size: var(--fs-caption); }
+.tl-text { flex: 1; min-width: 0; font-size: var(--fs-sm); color: var(--color-text); word-break: break-all; }
 .tl-edit { width: auto; flex: 1; min-width: 0; }
 .tl-btn {height: 36px;
   padding: 0 12px;
-  font-size: 12px;}
+  font-size: var(--fs-caption);}
 .tl-badge { font-size: 11px; color: var(--color-text-muted); border: 1px solid var(--color-border); border-radius: var(--radius-full); padding: 1px 8px; }
 </style>

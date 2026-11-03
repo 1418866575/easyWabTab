@@ -273,14 +273,14 @@ onBeforeUnmount(() => {
 .tf-narrow { width: auto; min-width: 150px; }
 .tf-btn {height: 36px;
   padding: 0 12px;
-  font-size: 12px;}
+  font-size: var(--fs-caption);}
 .tf-item { margin-bottom: 8px; }
 .tf-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-.tf-name { font-size: 13px; font-weight: 600; color: var(--color-text); }
+.tf-name { font-size: var(--fs-sm); font-weight: 600; color: var(--color-text); }
 .tf-code {
   margin-left: auto;
   font-family: var(--font-family-mono);
-  font-size: 22px;
+  font-size: var(--fs-h2);
   font-weight: 600;
   color: var(--color-primary);
   cursor: pointer;

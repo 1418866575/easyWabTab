@@ -89,5 +89,5 @@ async function onFile(e: Event) {
 </template>
 
 <style scoped>
-.xrow { padding: 4px 8px; border-bottom: 1px solid var(--color-border); font-size: 13px; word-break: break-all }
+.xrow { padding: 4px 8px; border-bottom: 1px solid var(--color-border); font-size: var(--fs-sm); word-break: break-all }
 </style>

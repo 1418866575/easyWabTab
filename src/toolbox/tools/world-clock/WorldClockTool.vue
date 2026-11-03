@@ -176,5 +176,5 @@ const clockText = computed(() =>
 </template>
 
 <style scoped>
-.tu-mono { font-family: var(--font-family-mono); font-size: 18px; }
+.tu-mono { font-family: var(--font-family-mono); font-size: var(--fs-title); }
 </style>

@@ -8,7 +8,7 @@
 .tu-field { margin-bottom: 12px; }
 .tu-label {
   display: block;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   color: var(--color-text-secondary);
   margin-bottom: 6px;
 }
@@ -36,7 +36,7 @@
   gap: 6px;
   height: 36px;
   padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-family: var(--font-family);
   color: #fff;
   background: var(--color-primary);
@@ -72,7 +72,7 @@
 }
 .tu-hint {
   margin: 8px 0 0;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   color: var(--color-text-muted);
 }
 .tu-error { color: var(--color-error); }
@@ -109,7 +109,7 @@
   align-items: center;
   min-height: 36px;
   padding: 8px 14px;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--color-text-secondary);
   background: transparent;
   border: 1px solid var(--color-border);
@@ -142,7 +142,7 @@
 .tu-seg button {
   height: 36px;
   padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-family: var(--font-family);
   color: var(--color-text-secondary);
   background: transparent;
@@ -201,9 +201,9 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
-.tu-card-title { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 4px; }
+.tu-card-title { font-size: var(--fs-caption); color: var(--color-text-secondary); margin-bottom: 4px; }
 .tu-card-value {
-  font-size: 18px;
+  font-size: var(--fs-title);
   font-weight: 600;
   color: var(--color-text);
   font-family: var(--font-family-mono);

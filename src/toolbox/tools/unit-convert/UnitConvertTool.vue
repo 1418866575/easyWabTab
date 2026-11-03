@@ -128,6 +128,6 @@ function swap() {
 </template>
 
 <style scoped>
-.tu-mono { font-family: var(--font-family-mono); font-size: 13px; }
+.tu-mono { font-family: var(--font-family-mono); font-size: var(--fs-sm); }
 .break { word-break: break-all; }
 </style>

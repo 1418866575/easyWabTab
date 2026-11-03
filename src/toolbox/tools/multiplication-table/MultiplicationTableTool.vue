@@ -314,7 +314,7 @@ const allCount = countAll(MULT_MAX)
   align-items: center;
   justify-content: center;
   min-height: 24px;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-weight: 600;
   color: var(--color-text-secondary);
   background: var(--color-bg-hover);
@@ -326,7 +326,7 @@ const allCount = countAll(MULT_MAX)
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-weight: 600;
   color: var(--color-text-muted);
 }
@@ -383,13 +383,13 @@ html.dark .mt-cell.is-diag {
 .mt-table.is-formula .mt-cell { font-size: 11px; letter-spacing: -0.2px; }
 .mt-table.is-formula .mt-row { grid-template-columns: 28px repeat(19, minmax(52px, 1fr)); }
 .mt-table.is-chant .mt-row { grid-template-columns: 28px repeat(19, minmax(48px, 1fr)); }
-.mt-table.is-chant .mt-cell { font-size: 12px; letter-spacing: 0.5px; }
+.mt-table.is-chant .mt-cell { font-size: var(--fs-caption); letter-spacing: 0.5px; }
 .mt-pre {
   margin: 0;
   max-height: 220px;
   overflow: auto;
   font-family: var(--font-family-mono);
-  font-size: 12px;
+  font-size: var(--fs-caption);
   line-height: 1.6;
   white-space: pre;
 }
@@ -403,7 +403,7 @@ html.dark .mt-cell.is-diag {
   border-radius: var(--radius-md);
 }
 .mt-export-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.mt-export-title { margin: 0; font-size: 13px; font-weight: 600; color: var(--color-text); }
+.mt-export-title { margin: 0; font-size: var(--fs-sm); font-weight: 600; color: var(--color-text); }
 .mt-export-hint { font-size: 11.5px; color: var(--color-text-muted); }
 .mt-export-note { margin: 0; font-size: 11.5px; line-height: 1.7; color: var(--color-text-secondary); }
 .mt-export-note b { color: var(--color-text); }

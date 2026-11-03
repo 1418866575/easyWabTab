@@ -301,7 +301,7 @@ const summaryText = computed(() =>
   margin-left: 6px;
   padding: 0 6px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   line-height: 18px;
   white-space: nowrap;
   color: var(--color-primary);

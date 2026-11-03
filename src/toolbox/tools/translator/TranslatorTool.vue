@@ -169,11 +169,11 @@ onMounted(async () => {
 <style scoped>
 .tr-input { width: auto; flex: 1; min-width: 160px; }
 .tr-nomargin { margin-bottom: 0; }
-.tr-word { font-size: 22px; font-weight: 600; color: var(--color-text); margin-bottom: 4px; }
-.tr-trans { font-size: 13px; color: var(--color-text); margin-bottom: 10px; }
+.tr-word { font-size: var(--fs-h2); font-weight: 600; color: var(--color-text); margin-bottom: 4px; }
+.tr-trans { font-size: var(--fs-sm); color: var(--color-text); margin-bottom: 10px; }
 .tr-quiz { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--color-border); }
-.tr-quiz-word { margin: 0 0 6px; font-size: 18px; font-weight: 600; color: var(--color-text); }
-.tr-quiz-ans { margin: 0 0 10px; font-size: 13px; color: var(--color-primary); }
-.tr-level { font-size: 12px; color: var(--color-primary); margin-right: 6px; }
+.tr-quiz-word { margin: 0 0 6px; font-size: var(--fs-title); font-weight: 600; color: var(--color-text); }
+.tr-quiz-ans { margin: 0 0 10px; font-size: var(--fs-sm); color: var(--color-primary); }
+.tr-level { font-size: var(--fs-caption); color: var(--color-primary); margin-right: 6px; }
 .tr-mini { min-height: 22px; padding: 1px 7px; font-size: 11.5px; }
 </style>

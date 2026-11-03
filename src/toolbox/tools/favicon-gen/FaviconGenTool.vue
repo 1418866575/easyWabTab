@@ -228,7 +228,7 @@ async function downloadAll() {
   max-height: 200px;
   overflow: auto;
   font-family: var(--font-family-mono);
-  font-size: 12px;
+  font-size: var(--fs-caption);
   white-space: pre-wrap;
   word-break: break-all;
 }

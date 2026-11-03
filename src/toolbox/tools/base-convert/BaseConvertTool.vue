@@ -114,7 +114,7 @@ const BASES = [2, 8, 10, 16, 32, 36]
 .tu-code {
   margin: 0;
   font-family: var(--font-family-mono);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   white-space: pre-wrap;
   word-break: break-all;
 }

@@ -224,8 +224,8 @@ const ipSummary = computed(() => {
 </template>
 
 <style scoped>
-.ipq-myip { font-family: var(--font-family-mono); font-size: 14px; color: var(--color-text); }
-.ipq-sm { font-size: 14px; }
+.ipq-myip { font-family: var(--font-family-mono); font-size: var(--fs-body); color: var(--color-text); }
+.ipq-sm { font-size: var(--fs-body); }
 .ipq-xs { font-size: 11.5px; line-height: 1.5; }
 .ipq-inline { margin-bottom: 0; }
 .ipq-range { width: 220px; }

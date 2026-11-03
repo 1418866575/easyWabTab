@@ -221,11 +221,11 @@ onMounted(async () => {
   cursor: grab;
 }
 .td-item.is-done .td-text { text-decoration: line-through; color: var(--color-text-muted); }
-.td-status { min-height: 26px; padding: 2px 10px; font-size: 12px; }
-.td-text { flex: 1; min-width: 0; font-size: 13px; color: var(--color-text); word-break: break-all; }
+.td-status { min-height: 26px; padding: 2px 10px; font-size: var(--fs-caption); }
+.td-text { flex: 1; min-width: 0; font-size: var(--fs-sm); color: var(--color-text); word-break: break-all; }
 .td-edit { width: auto; flex: 1; min-width: 0; }
 .td-btn {height: 36px;
   padding: 0 12px;
-  font-size: 12px;}
+  font-size: var(--fs-caption);}
 .td-cat-input { width: auto; min-width: 160px; }
 </style>

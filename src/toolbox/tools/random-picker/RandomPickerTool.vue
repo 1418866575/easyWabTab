@@ -227,7 +227,7 @@ const segments = computed(() => {
   top: -4px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 18px;
+  font-size: var(--fs-title);
   color: var(--color-primary);
 }
 @media (prefers-reduced-motion: reduce) {

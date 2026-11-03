@@ -62,8 +62,8 @@ const { copy, save } = useToolActions()
   border-radius: var(--radius-md);
 }
 .tu-out-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.tu-out-title { font-size: 13px; font-weight: 600; color: var(--color-text); }
+.tu-out-title { font-size: var(--fs-sm); font-weight: 600; color: var(--color-text); }
 .tu-out-actions { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
-.tu-out-body { min-height: 40px; font-size: 13px; color: var(--color-text); overflow: auto; }
+.tu-out-body { min-height: 40px; font-size: var(--fs-sm); color: var(--color-text); overflow: auto; }
 .tu-out-empty { margin: 0; font-size: 12.5px; color: var(--color-text-muted); }
 </style>

@@ -268,7 +268,7 @@ onBeforeUnmount(() => {
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   color: #fff;
   background: var(--color-primary);
   border-radius: var(--radius-full);
