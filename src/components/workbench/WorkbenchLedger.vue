@@ -749,7 +749,7 @@ onMounted(async () => {
 }
 
 .month-btn {padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
@@ -794,7 +794,7 @@ onMounted(async () => {
 }
 
 .stat-value {
-  font-size: 24px;
+  font-size: var(--fs-h2, 22px);
   font-weight: 700;
   /* 全局 .wb-content .stat-value 会把数字染成主色（对齐教师工作台的彩色统计数字），
      但记账这一屏的数字本身带语义色（收入绿 / 支出红），中性指标再染主色会与
@@ -805,7 +805,7 @@ onMounted(async () => {
 }
 
 .stat-unit {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text-secondary, #6b7280);
   margin-left: 3px;
@@ -836,7 +836,7 @@ onMounted(async () => {
 }
 
 .ld-ratio-title {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
@@ -849,12 +849,12 @@ onMounted(async () => {
 }
 
 .ld-ratio-name {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text, var(--color-text));
 }
 
 .ld-ratio-val {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
 }
@@ -873,7 +873,7 @@ onMounted(async () => {
 
 .ld-card-title {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
@@ -890,7 +890,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 14px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 
 .ld-trend-total {
@@ -901,7 +901,7 @@ onMounted(async () => {
 }
 
 .ld-trend-total b {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text-primary, #1f2937);
   font-variant-numeric: tabular-nums;
@@ -948,7 +948,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   padding: 36px 16px;
   text-align: center;
   color: var(--color-text-muted, var(--color-text-muted));
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
 }
 
 /* ===== 支出分类占比环形图（总面积 SVG 220×220 不变，stroke-width: 32 增大色彩环面积）===== */
@@ -993,7 +993,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: var(--fs-title, 18px);
   font-weight: 700;
   color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
@@ -1041,7 +1041,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   align-self: flex-start;
   padding: 6px 14px;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text-secondary, var(--color-text-secondary));
   background: var(--color-bg-card, var(--color-bg-card));
@@ -1086,7 +1086,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   cursor: pointer;
   white-space: nowrap;
@@ -1102,11 +1102,11 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 /* ===== 空态：.empty-state / .empty-invite 已收敛到全局基类（src/style.css） ===== */
 
 .ld-empty-title {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
 }
 
 .ld-empty-sub {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
 }
 
@@ -1138,7 +1138,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 }
 
 .ld-date {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
@@ -1147,7 +1147,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 
 .ld-cat-badge {
   justify-self: start;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   padding: 2px 10px;
   border-radius: var(--radius-full, 9999px);
@@ -1164,7 +1164,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 
 .ld-note {
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   white-space: nowrap;
   overflow: hidden;
@@ -1172,7 +1172,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 }
 
 .ld-amount {
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   font-weight: 700;
   color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
@@ -1220,14 +1220,14 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 
 .ld-records-title {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   font-weight: 600;
   color: var(--color-text, #1f2937);
 }
 
 /* 表格内金额样式：沿用旧.ld-record-amount，确保 + 绿 / - 蓝 主题色 */
 .ld-record-amount {
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   font-weight: 700;
   color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
@@ -1250,7 +1250,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 }
 
 .form-group > label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -1267,7 +1267,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 }
 
 .field-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -1316,14 +1316,14 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 .ld-cat-name {
   flex: 1;
   min-width: 80px;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
 }
 
 .ld-cat-type-badge {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   padding: 2px 10px;
   border-radius: var(--radius-full, 9999px);
@@ -1340,7 +1340,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 
 .ld-builtin-tag {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-full, 9999px);
@@ -1599,7 +1599,7 @@ html.dark input.form-input {
   gap: 6px;
 }
 .ld-daily-range {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #6b7280);
   font-variant-numeric: tabular-nums;
 }
@@ -1625,7 +1625,7 @@ html.dark .ld-daily-bar {
 .ld-daily-empty {
   padding: 14px;
   text-align: center;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted, #9ca3af);
 }
 .ld-daily-footer {
@@ -1633,7 +1633,7 @@ html.dark .ld-daily-bar {
   text-align: right;
 }
 .ld-daily-total {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, #6b7280);
 }
 .ld-daily-total b {

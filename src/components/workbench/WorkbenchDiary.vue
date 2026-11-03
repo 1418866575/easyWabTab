@@ -684,14 +684,14 @@ const renderedPreview = computed(() =>
 }
 
 .dj-entry-date {
-  font-size: 22px;
+  font-size: var(--fs-h2, 22px);
   font-weight: 700;
   letter-spacing: 0.5px;
   color: var(--color-text, #1e293b);
 }
 
 .dj-entry-badge {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   padding: 2px 10px;
   border-radius: var(--radius-full, 9999px);
@@ -710,7 +710,7 @@ const renderedPreview = computed(() =>
 }
 
 .dj-char-count {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text-secondary, #64748b);
   white-space: nowrap;
 }
@@ -746,7 +746,7 @@ const renderedPreview = computed(() =>
   border-radius: var(--radius-md, 8px);
   background-color: var(--color-bg-card, #fff);
   color: var(--color-text-primary, #0f172a);
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   font-weight: 600;
   line-height: 1.5;
   outline: none;
@@ -765,7 +765,7 @@ const renderedPreview = computed(() =>
 
 .dj-title-count {
   flex: none;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #94a3b8);
 }
 
@@ -808,7 +808,7 @@ const renderedPreview = computed(() =>
   min-height: 360px;
   overflow-y: auto;
   padding: 16px 18px;
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   line-height: 1.7;
   word-break: break-word;
   color: var(--color-text, #1e293b);
@@ -1052,7 +1052,7 @@ const renderedPreview = computed(() =>
 }
 
 .dj-card-date {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text, #1e293b);
   white-space: nowrap;
@@ -1063,7 +1063,7 @@ const renderedPreview = computed(() =>
 /* 今天徽标 */
 .dj-card-today {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   padding: 1px 8px;
   border-radius: var(--radius-full, 9999px);
@@ -1075,7 +1075,7 @@ const renderedPreview = computed(() =>
 .dj-card-preview {
   flex: 1;
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   line-height: 1.5;
   color: var(--color-text-secondary, #475569);
   word-break: break-word;
@@ -1098,7 +1098,7 @@ const renderedPreview = computed(() =>
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #94a3b8);
 }
 
@@ -1111,21 +1111,21 @@ const renderedPreview = computed(() =>
 /* ===== Markdown 排版（v-html 注入子节点不带 data-v-*，必须 :deep() 匹配；镜像 WorkbenchNotes） ===== */
 .dj-preview :deep(h1),
 .dj-card-preview :deep(h1) {
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   font-weight: 700;
   margin: 0.35em 0;
 }
 
 .dj-preview :deep(h2),
 .dj-card-preview :deep(h2) {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 700;
   margin: 0.35em 0;
 }
 
 .dj-preview :deep(h3),
 .dj-card-preview :deep(h3) {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   margin: 0.35em 0;
 }
@@ -1171,7 +1171,7 @@ const renderedPreview = computed(() =>
   border-radius: 6px;
   overflow-x: auto;
   max-width: 100%;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   line-height: 1.4;
 }
 
@@ -1187,7 +1187,7 @@ const renderedPreview = computed(() =>
 .dj-card-preview :deep(table) {
   border-collapse: collapse;
   margin: 0.4em 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   max-width: 100%;
 }
 
@@ -1226,7 +1226,7 @@ const renderedPreview = computed(() =>
 }
 
 .dj-mood-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, #64748b);
   margin-right: 2px;
 }
@@ -1237,7 +1237,7 @@ const renderedPreview = computed(() =>
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: var(--fs-title, 18px);
   line-height: 1;
   padding: 0;
   border: 1px solid var(--color-border, #e2e8f0);
@@ -1272,23 +1272,23 @@ const renderedPreview = computed(() =>
 }
 
 .dj-filter-count {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #94a3b8);
 }
 
 /* ===== 卡片头部徽标（心情 / 置顶 / 分类） ===== */
 .dj-card-mood {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   line-height: 1;
 }
 
 .dj-card-pin {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   line-height: 1;
 }
 
 .dj-card-cat {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   padding: 1px 8px;
   border-radius: var(--radius-full, 9999px);
@@ -1323,13 +1323,13 @@ const renderedPreview = computed(() =>
   align-items: center;
   gap: 14px;
   flex-wrap: wrap;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, #64748b);
 }
 
 .dj-stat b {
   color: var(--color-primary, #3b82f6);
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   margin-right: 2px;
 }
 
@@ -1347,7 +1347,7 @@ const renderedPreview = computed(() =>
 
 /* 卡片「灵感」徽标 */
 .dj-card-idea {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   padding: 1px 8px;
   border-radius: var(--radius-full, 9999px);
@@ -1454,7 +1454,7 @@ const renderedPreview = computed(() =>
 }
 
 .dj-table-title {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text, #1e293b);
 }
@@ -1478,7 +1478,7 @@ const renderedPreview = computed(() =>
   color: var(--color-text-muted, #94a3b8);
 }
 .dj-cat-tag {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   padding: 1px 8px;
   border-radius: var(--radius-full, 9999px);
@@ -1487,12 +1487,12 @@ const renderedPreview = computed(() =>
   white-space: nowrap;
 }
 .dj-pin-cell {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 .dj-table-empty {
   text-align: center;
   color: var(--color-text-muted, #94a3b8);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   padding: 32px 20px;
 }
 

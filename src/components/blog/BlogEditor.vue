@@ -1469,7 +1469,7 @@ async function regenerateSlug(): Promise<void> {
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: transparent;
   color: var(--ds-text-2, #646a73);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   line-height: 1.2;
   white-space: nowrap;
   cursor: pointer;
@@ -1509,7 +1509,7 @@ async function regenerateSlug(): Promise<void> {
 
 .be-md {
   resize: vertical;
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
 }
 
 .be-preview {
@@ -1787,7 +1787,7 @@ async function regenerateSlug(): Promise<void> {
   background-color: var(--ds-card, #ffffff);
   color: var(--ds-text, #1f2329);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
 }
 
 .be-wx-link {
@@ -2106,7 +2106,7 @@ async function regenerateSlug(): Promise<void> {
   width: 375px;
   max-width: 100%;
   margin: 0 auto;
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   line-height: 1.75;
   color: #3f3f3f;
   word-wrap: break-word;

@@ -688,13 +688,13 @@ html.dark .sk-block::after {
 }
 
 .hero-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .hero-value {
-  font-size: 22px;
+  font-size: var(--fs-h2, 22px);
   font-weight: 700;
   line-height: 1.1;
   color: var(--color-success, var(--color-success));
@@ -715,14 +715,14 @@ html.dark .sk-block::after {
 }
 
 .hero-unit {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   margin-left: 2px;
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .hero-sub {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
 }
 
@@ -810,7 +810,7 @@ html.dark .sk-block::after {
 
 .bizhome-empty {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted, var(--color-text-muted));
 }
 
@@ -830,7 +830,7 @@ html.dark .sk-block::after {
   justify-content: space-between;
   gap: 8px;
   padding: 8px 12px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   background: var(--color-bg-card, var(--color-bg-hover));
   border-radius: var(--radius-sm, 4px);
   border-left: 3px solid transparent;
@@ -856,13 +856,13 @@ html.dark .sk-block::after {
 
 .bizhome-low-stopped {
   margin-left: 4px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #9ca3af);
 }
 
 .bizhome-stock-summary {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
 }
 
@@ -911,13 +911,13 @@ html.dark .sk-block::after {
 
 .bizhome-tree-arrow {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   width: 14px;
 }
 
 .bizhome-tree-cat-name {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
   flex: 1;
@@ -928,7 +928,7 @@ html.dark .sk-block::after {
 
 .bizhome-tree-cat-val {
   flex-shrink: 0;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 700;
   color: var(--color-primary, var(--color-primary));
   font-variant-numeric: tabular-nums;
@@ -936,7 +936,7 @@ html.dark .sk-block::after {
 
 .bizhome-tree-cat-sold {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   font-variant-numeric: tabular-nums;
 }
@@ -969,7 +969,7 @@ html.dark .sk-block::after {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 700;
   color: var(--color-text-secondary, var(--color-text-secondary));
   background: var(--color-bg-card, var(--color-bg-hover));
@@ -980,7 +980,7 @@ html.dark .sk-block::after {
   flex-shrink: 0;
   min-width: 60px;
   max-width: 120px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 500;
   color: var(--color-text, var(--color-text));
   overflow: hidden;
@@ -1006,7 +1006,7 @@ html.dark .sk-block::after {
 
 .bizhome-tree-prod-val {
   flex-shrink: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 700;
   color: var(--color-primary, var(--color-primary));
   font-variant-numeric: tabular-nums;
@@ -1014,7 +1014,7 @@ html.dark .sk-block::after {
 
 .bizhome-tree-prod-sold {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   font-variant-numeric: tabular-nums;
 }
@@ -1022,7 +1022,7 @@ html.dark .sk-block::after {
 .bizhome-tree-empty {
   margin: 0;
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
 }
 
@@ -1050,14 +1050,14 @@ html.dark .sk-block::after {
 
 .bizhome-greeting-title {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--fs-title, 18px);
   font-weight: 700;
   color: var(--color-text, var(--color-text));
 }
 
 .bizhome-greeting-sub {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -1087,7 +1087,7 @@ html.dark .sk-block::after {
 }
 
 .greeting-stat-value {
-  font-size: 22px;
+  font-size: var(--fs-h2, 22px);
   font-weight: 700;
   line-height: 1.1;
   color: var(--color-primary, var(--color-primary));
@@ -1095,14 +1095,14 @@ html.dark .sk-block::after {
 }
 
 .greeting-stat-unit {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   margin-left: 2px;
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .greeting-stat-label {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -1125,14 +1125,14 @@ html.dark .sk-block::after {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text, #1e293b);
 }
 .bizhome-today-none {
   margin-left: auto;
   padding: 2px 8px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: #92400e;
   background: #fffbeb;
   border: 1px solid #fcd34d;
@@ -1162,12 +1162,12 @@ html.dark .sk-block::after {
   border-color: var(--color-primary, #3b82f6);
 }
 .bizhome-today-card .today-label {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
   white-space: nowrap;
 }
 .bizhome-today-card .today-value {
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   font-weight: 600;
   color: var(--color-text, #1e293b);
   font-variant-numeric: tabular-nums;
@@ -1176,7 +1176,7 @@ html.dark .sk-block::after {
   white-space: nowrap;
 }
 .bizhome-today-card .today-value small {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 400;
   color: var(--color-text-secondary, #64748b);
   margin-left: 2px;
@@ -1188,7 +1188,7 @@ html.dark .sk-block::after {
   color: var(--color-primary, #3b82f6);
 }
 .bizhome-today-card .today-sub {
-  font-size: 10px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   white-space: nowrap;
 }
@@ -1200,14 +1200,14 @@ html.dark .sk-block::after {
   gap: 6px;
   margin-top: 4px;
   padding: 10px 2px 2px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text, #1e293b);
   border-top: 1px solid var(--color-border, #e2e8f0);
 }
 .bizhome-cumulative-hint {
   margin-left: auto;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 400;
   color: var(--color-text-muted, var(--color-text-muted));
 }
@@ -1219,7 +1219,7 @@ html.dark .sk-block::after {
   gap: 5px;
   flex-shrink: 0;
   padding: 7px 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
   background: var(--color-bg-card, #ffffff);
   border: 1px solid var(--color-border, #e2e8f0);
@@ -1264,7 +1264,7 @@ html.dark .sk-block::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   color: var(--color-text, #1e293b);
   background: var(--color-bg, #f8fafc);
@@ -1278,7 +1278,7 @@ html.dark .sk-block::after {
   min-width: 0;
 }
 .target-amount {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text, #1e293b);
   font-variant-numeric: tabular-nums;
   overflow: hidden;
@@ -1286,7 +1286,7 @@ html.dark .sk-block::after {
   white-space: nowrap;
 }
 .target-sub {
-  font-size: 10px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-success, #16a34a);
 }
 .target-sub.behind {
@@ -1308,20 +1308,20 @@ html.dark .sk-block::after {
   min-width: 0;
 }
 .bizhome-onboard-title {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-primary, #3b82f6);
   margin-bottom: 3px;
 }
 .bizhome-onboard-desc {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   line-height: 1.6;
   color: var(--color-text-secondary, #64748b);
 }
 .bizhome-onboard-btn {flex-shrink: 0;
   padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   color: #fff;
   background: var(--color-primary, #3b82f6);
@@ -1345,7 +1345,7 @@ html.dark .sk-block::after {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   border-radius: var(--radius-md, 8px);
 }
 .bizhome-issue .issue-text {
@@ -1369,7 +1369,7 @@ html.dark .sk-block::after {
   flex-shrink: 0;
   margin-left: auto;
   padding: 4px 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-primary, #3b82f6);
   background: transparent;
   border: 1px solid var(--color-primary, #3b82f6);
@@ -1408,7 +1408,7 @@ html.dark .sk-block::after {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 
 .scope-label {
@@ -1427,7 +1427,7 @@ html.dark .sk-block::after {
 }
 
 .formula-main {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 700;
   color: var(--color-primary, var(--color-primary));
   font-variant-numeric: tabular-nums;
@@ -1460,7 +1460,7 @@ html.dark .sk-block::after {
 /* 月份标签（12 个月柱状图） */
 .mini-bar-label {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #9ca3af);
   font-variant-numeric: tabular-nums;
 }

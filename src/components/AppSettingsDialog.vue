@@ -4094,7 +4094,7 @@ function toggleFullscreen(): void {
               <el-option label="自建服务（WebDAV）" value="selfHosted" />
               <el-option label="飞书表格" value="feishu" />
             </el-select>
-            <span class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px;">飞书表格用一张多维表格做统一镜像（与浏览器 IndexedDB 表名/结构一致），凭据仅存本机</span>
+            <span class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: var(--fs-caption, 12px);">飞书表格用一张多维表格做统一镜像（与浏览器 IndexedDB 表名/结构一致），凭据仅存本机</span>
           </div>
 
           <!-- WebDAV 渠道配置（第三方云平台 / 自建服务） -->
@@ -4170,7 +4170,7 @@ function toggleFullscreen(): void {
                 @input="store.setCloudSyncFeishuDatasourceUrl(($event.target as HTMLInputElement).value)"
               />
             </label>
-            <p class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px; margin-top: 4px;">
+            <p class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: var(--fs-caption, 12px); margin-top: 4px;">
               在飞书开放平台给该自建应用开通「查看、评论、编辑和管理多维表格」「查看、编辑和管理知识库」权限，并把应用加为对应知识库/多维表格的协作者；粘贴 wiki 或 base 链接即可（`?table=` 可省略）。同步采用「每个 IndexedDB 表一张同名飞书表」，目标表会在首次推送时自动创建。
             </p>
             <div class="feishu-table-actions">
@@ -4228,7 +4228,7 @@ function toggleFullscreen(): void {
             </button>
             <span data-testid="sync-last" class="wb-menu-hint sync-last-hint">上次同步：{{ lastSyncText }}</span>
           </div>
-          <p v-if="store.cloudSyncEnabled" class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px; margin-top: 6px;">
+          <p v-if="store.cloudSyncEnabled" class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: var(--fs-caption, 12px); margin-top: 6px;">
             用外部工具改过云端文件后若「立即同步」未生效，点「以云端覆盖本地」强制采纳云端（本地未推送的改动会被覆盖）。
           </p>
           <div v-if="store.cloudSyncEnabled" class="remind-field" style="margin-top: 8px;">
@@ -4238,7 +4238,7 @@ function toggleFullscreen(): void {
               data-testid="sync-auto-push"
               @update:model-value="store.setCloudSyncAutoPush"
             />
-            <span class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px;">任何增删改保存后约 1.5 秒自动以<strong>本地覆盖云端</strong>（只上传内容有变化的信封，连续保存合并成一次）。多设备同时编辑同一份数据时，云端那端的改动会被本地覆盖</span>
+            <span class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: var(--fs-caption, 12px);">任何增删改保存后约 1.5 秒自动以<strong>本地覆盖云端</strong>（只上传内容有变化的信封，连续保存合并成一次）。多设备同时编辑同一份数据时，云端那端的改动会被本地覆盖</span>
           </div>
           <div v-if="store.cloudSyncEnabled" class="remind-field" style="margin-top: 8px;">
             <span class="remind-label">自动同步间隔（分钟，0=关闭）</span>
@@ -4252,7 +4252,7 @@ function toggleFullscreen(): void {
               :value="store.cloudSyncInterval"
               @input="store.setCloudSyncInterval(Number(($event.target as HTMLInputElement).value)); cloudSync.startInterval()"
             />
-            <span class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px;">设为 0 则完全关闭自动同步（含切换标签页时的自动拉取），所有同步需手动触发</span>
+            <span class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: var(--fs-caption, 12px);">设为 0 则完全关闭自动同步（含切换标签页时的自动拉取），所有同步需手动触发</span>
           </div>
           <div v-if="store.cloudSyncEnabled" class="remind-field" style="margin-top: 8px;">
             <span class="remind-label">静默合并阈值（字符数，0=永不静默）</span>
@@ -4266,7 +4266,7 @@ function toggleFullscreen(): void {
               :value="store.cloudSyncSilentThreshold"
               @input="store.setCloudSyncSilentThreshold(Number(($event.target as HTMLInputElement).value))"
             />
-            <span class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px;">本地与云端内容差异小于此值时，后台自动静默合并而不弹冲突框</span>
+            <span class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: var(--fs-caption, 12px);">本地与云端内容差异小于此值时，后台自动静默合并而不弹冲突框</span>
           </div>
 
           <!-- CORS 兼容说明（排在云同步页最后：属排查类补充说明，不打断「开关 → 配置 → 操作」的主流程） -->
@@ -4476,7 +4476,7 @@ function toggleFullscreen(): void {
 }
 
 .hint {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   margin: 0 0 16px 0;
 }
@@ -4496,7 +4496,7 @@ function toggleFullscreen(): void {
   flex-wrap: wrap;
 }
 .sub-tab-btn {padding: 0 12px !important;
-  font-size: 12px !important;
+  font-size: var(--fs-caption, 12px) !important;
   border-radius: calc(var(--radius-md, 8px) - 2px) !important;
   height: 36px !important;}
 .sub-tab-btn.active {
@@ -4513,7 +4513,7 @@ html.dark .sub-tab-btn.active {
   border-radius: var(--radius-md);
   background-color: var(--color-bg-card, var(--color-bg-card));
   color: var(--color-text-secondary, var(--color-text-secondary));
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
   transition: all var(--transition-fast, 0.15s ease);
   height: 36px;}
@@ -4565,7 +4565,7 @@ html.dark .tab-btn.active {
 
 .grid-header {
   background: var(--color-bg-card, var(--color-bg-hover));
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 500;
   color: var(--color-text-muted, var(--color-text-muted));
 }
@@ -4575,7 +4575,7 @@ html.dark .tab-btn.active {
 }
 
 .row-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text, var(--color-text));
   white-space: nowrap;
   overflow: hidden;
@@ -4594,7 +4594,7 @@ html.dark .tab-btn.active {
 }
 
 .unit {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   white-space: nowrap;
 }
@@ -4640,12 +4640,12 @@ html.dark .tab-btn.active {
 .bl-entry:hover { background-color: var(--color-bg-hover, rgba(0, 0, 0, 0.04)); }
 .bl-entry > svg:first-child { color: var(--color-primary, #3b82f6); flex-shrink: 0; }
 .bl-entry-title {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
 }
 .bl-entry-sub {
   flex: 1;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #94a3b8);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4669,7 +4669,7 @@ html.dark .tab-btn.active {
   flex-wrap: wrap;
 }
 .bl-cat-label {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   color: var(--color-text-muted, #94a3b8);
   padding-top: 4px;
@@ -4685,7 +4685,7 @@ html.dark .tab-btn.active {
   align-items: center;
   gap: 5px;
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   border-radius: 999px;
   background-color: var(--color-bg, #f1f5f9);
   border: 1px solid var(--color-border, #e2e8f0);
@@ -4697,7 +4697,7 @@ html.dark .tab-btn.active {
 }
 .bl-cat-badge em {
   font-style: normal;
-  font-size: 10px;
+  font-size: var(--fs-caption, 12px);
   padding: 1px 5px;
   border-radius: 999px;
   background-color: var(--color-primary, #3b82f6);
@@ -4719,7 +4719,7 @@ html.dark .tab-btn.active {
 
 .bl-subtitle {
   margin: 0 0 2px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text, #1e293b);
 }
@@ -4734,7 +4734,7 @@ html.dark .tab-btn.active {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   line-height: 1.6;
   color: var(--color-text, #1e293b);
   cursor: pointer;
@@ -4763,7 +4763,7 @@ html.dark .tab-btn.active {
 .bl-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 .bl-table th,
 .bl-table td {
@@ -4790,7 +4790,7 @@ html.dark .tab-btn.active {
   margin-right: 8px;
   padding: 1px 7px;
   font-family: var(--font-mono, monospace);
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   border-radius: 6px;
   background-color: color-mix(in srgb, var(--color-primary, #3b82f6) 12%, transparent);
   color: var(--color-primary, #3b82f6);
@@ -4811,7 +4811,7 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
 
 .tc-menu-group-title {
   margin: 0 0 8px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: var(--font-weight-semibold, 600);
   color: var(--color-text-muted, #94a3b8);
 }
@@ -4979,7 +4979,7 @@ html.dark .seg-control {
 }
 
 .wb-cardsize-group-title {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   color: var(--color-text-muted, var(--color-text-muted));
   margin-bottom: 6px;
@@ -4992,7 +4992,7 @@ html.dark .seg-control {
 .wb-cardsize-name {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text, var(--color-text));
   overflow: hidden;
   text-overflow: ellipsis;
@@ -5004,7 +5004,7 @@ html.dark .seg-control {
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -5026,7 +5026,7 @@ html.dark .seg-control {
 }
 
 .wb-snapshot-time {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -5042,7 +5042,7 @@ html.dark .seg-control {
 
 /* 分类管理：子标题（内置分类 / 自定义分类） */
 .wb-cat-sub-title {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
   margin-bottom: 8px;
@@ -5061,7 +5061,7 @@ html.dark .seg-control {
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
@@ -5079,7 +5079,7 @@ html.dark .seg-control {
 .wb-snapshot-source {
   flex: 1;
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
 }
 
@@ -5089,7 +5089,7 @@ html.dark .seg-control {
 
 .wb-snapshot-empty {
   padding: 12px 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted, var(--color-text-muted));
 }
 
@@ -5152,7 +5152,7 @@ html.dark .wb-snapshot-empty {
 .remind-label {
   flex-shrink: 0;
   width: 92px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text, var(--color-text));
 }
 
@@ -5233,7 +5233,7 @@ html.dark .remind-label {
 }
 
 .about-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
 }
@@ -5241,7 +5241,7 @@ html.dark .remind-label {
 /* 免责声明：与其它 about-card 同结构，文字用次要色 + 稍小字号 */
 .about-disclaimer-text {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   line-height: 1.7;
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
@@ -5284,7 +5284,7 @@ html.dark .remind-label {
   width: 100%;
   height: 100%;
   color: var(--color-text-muted, var(--color-text-muted));
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
 }
 
 .about-mp-info {
@@ -5295,7 +5295,7 @@ html.dark .remind-label {
 }
 
 .about-mp-name {
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
 }
@@ -5325,13 +5325,13 @@ html.dark .remind-label {
 }
 
 .about-link-name {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
 }
 
 .about-link-url {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   word-break: break-all;
 }
@@ -5426,7 +5426,7 @@ html.dark .danger-hint {
   margin-top: 14px;
 }
 .beian-values {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, #475569);
 }
 .beian-link {
@@ -5447,7 +5447,7 @@ html.dark .danger-hint {
 /* ===== 记账分类：类型徽标（支出蓝 / 收入绿）+ 内置徽标 ===== */
 .ld-cat-type-badge {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   padding: 2px 10px;
   border-radius: 999px;
@@ -5462,7 +5462,7 @@ html.dark .danger-hint {
 }
 .ld-builtin-tag {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #9ca3af);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 999px;
@@ -5490,7 +5490,7 @@ html.dark .ld-builtin-tag {
   padding: 2px 10px;
   border-radius: 10px;
   color: #ffffff;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
 }
 .student-stage-grid {
@@ -5527,17 +5527,17 @@ html.dark .ld-builtin-tag {
   height: 28px;
   border-radius: 50%;
   color: #ffffff;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 700;
   flex-shrink: 0;
 }
 .student-stage-name {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   flex-shrink: 0;
 }
 .student-stage-desc {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
   margin-left: auto;
 }
@@ -5549,7 +5549,7 @@ html.dark .ld-builtin-tag {
   margin: 6px 0;
 }
 .wb-field-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted, #6b7280);
   width: 56px;
   flex-shrink: 0;
@@ -5559,7 +5559,7 @@ html.dark .ld-builtin-tag {
   min-width: 0;
 }
 .wb-menu-hint-inline {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
 }
 
@@ -5577,7 +5577,7 @@ html.dark .ld-builtin-tag {
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 14px;
   background: var(--color-surface, #ffffff);
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 .chip-remove {
   display: inline-flex;
@@ -5597,7 +5597,7 @@ html.dark .ld-builtin-tag {
   color: var(--color-danger, #ef4444);
 }
 .student-subject-empty {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted, #6b7280);
   font-style: italic;
 }
@@ -5633,7 +5633,7 @@ html.dark .ld-builtin-tag {
 }
 .wb-menu-name {
   flex: 1;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 .wb-menu-actions {
   display: flex;
@@ -5666,7 +5666,7 @@ html.dark .settings-rail { background-color: rgba(255, 255, 255, 0.03); }
 
 .rail-nav { display: flex; flex-direction: column; gap: 2px; }
 .rail-group-label {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -5684,7 +5684,7 @@ html.dark .settings-rail { background-color: rgba(255, 255, 255, 0.03); }
   background: transparent;
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   cursor: pointer;
   text-align: left;
   transition: background-color var(--transition-fast, 0.15s ease), color var(--transition-fast, 0.15s ease);
@@ -5716,7 +5716,7 @@ html.dark .rail-item:hover { background-color: rgba(255, 255, 255, 0.06); }
   flex-shrink: 0;
 }
 .settings-crumb {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted);
   display: flex;
   align-items: center;
@@ -5730,7 +5730,7 @@ html.dark .rail-item:hover { background-color: rgba(255, 255, 255, 0.06); }
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--ds-success);
   background-color: rgba(22, 163, 74, 0.1);
   border: 1px solid rgba(22, 163, 74, 0.25);
@@ -5767,7 +5767,7 @@ html.dark .status-pill { color: #4ade80; background-color: rgba(74, 222, 128, 0.
   .rail-nav { flex-direction: row; flex-wrap: nowrap; gap: 6px; }
   .rail-group-label { display: none; }
   .rail-item { width: auto; white-space: nowrap; padding: 7px 12px; }
-  .rail-item .rail-item-label { font-size: 12px; }
+  .rail-item .rail-item-label { font-size: var(--fs-caption, 12px); }
   .settings-content-head { padding: 12px 16px; }
   .settings-scroll { padding: 16px; }
   /* 云同步「上次同步」换到下一行整行显示（原与 4 个按钮同排，窄屏必然超出屏幕） */
@@ -5812,7 +5812,7 @@ html.dark .status-pill { color: #4ade80; background-color: rgba(74, 222, 128, 0.
   .bl-table tbody td::before {
     content: attr(data-label);
     flex: 0 0 auto;
-    font-size: 12px;
+    font-size: var(--fs-caption, 12px);
     color: var(--color-text-secondary, #64748b);
   }
 
