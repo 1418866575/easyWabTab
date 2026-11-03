@@ -37,6 +37,11 @@ html[data-accent='blue'] {
 }
 /* 蓝·浅：冷调蓝灰表面 */
 html:not(.dark)[data-accent='blue'] {
+  /* 4 级墨色：色相跟随本主题，亮度按对比度目标求解 */
+  --ink-1: #16233a;  /* 标题/正文 */
+  --ink-2: #445064;  /* 表头/标签 */
+  --ink-3: #5b677f;  /* 说明/时间戳 */
+  --ink-4: #6a7995;  /* 占位/禁用 */
   --color-bg: #f5f8fc;
   --color-bg-card: #ffffff;
   --color-bg-hover: #eaf1fa;
@@ -44,9 +49,6 @@ html:not(.dark)[data-accent='blue'] {
   --color-bg-input: #eef3fa;
   --color-border: #dbe4f0;
   --color-border-hover: #bccfe8;
-  --color-text: #16233a;
-  --color-text-secondary: #4f5d75;
-  --color-text-muted: #5f6c85;
   --color-surface: #ffffff;
   --color-surface-2: #f5f8fc;
   --color-hover: #eaf1fa;
@@ -55,6 +57,11 @@ html:not(.dark)[data-accent='blue'] {
 }
 /* 蓝·深 */
 html.dark[data-accent='blue'] {
+  /* 4 级墨色：色相跟随本主题，亮度按对比度目标求解 */
+  --ink-1: #eaf1fb;  /* 标题/正文 */
+  --ink-2: #a4b0c2;  /* 表头/标签 */
+  --ink-3: #8393ac;  /* 说明/时间戳 */
+  --ink-4: #6c7f9d;  /* 占位/禁用 */
   --color-bg: #0f1623;
   --color-bg-card: #172033;
   --color-bg-hover: #1f2a3f;
@@ -62,9 +69,6 @@ html.dark[data-accent='blue'] {
   --color-bg-input: #1c2637;
   --color-border: #2a3648;
   --color-border-hover: #3a4a63;
-  --color-text: #eaf1fb;
-  --color-text-secondary: #b9c6da;
-  --color-text-muted: #8b9ab2;
   --color-surface: #172033;
   --color-surface-2: #0f1623;
   --color-hover: #1f2a3f;
@@ -91,6 +95,11 @@ html[data-accent='brown'] {
 }
 /* 米黄·浅：暖调纸质表面，长时间阅读舒适 */
 html:not(.dark)[data-accent='brown'] {
+  /* 4 级墨色：色相跟随本主题，亮度按对比度目标求解 */
+  --ink-1: #44403a;  /* 标题/正文 */
+  --ink-2: #5a5347;  /* 表头/标签 */
+  --ink-3: #6f6757;  /* 说明/时间戳 */
+  --ink-4: #867d69;  /* 占位/禁用 */
   --color-bg: #f3ede2;
   --color-bg-card: #faf6ee;
   --color-bg-hover: #ece3d3;
@@ -98,9 +107,6 @@ html:not(.dark)[data-accent='brown'] {
   --color-bg-input: #f1e9da;
   --color-border: #e3d8c4;
   --color-border-hover: #d4c6ad;
-  --color-text: #44403a;
-  --color-text-secondary: #6b6354;
-  --color-text-muted: #6f6757;
   --color-surface: #faf6ee;
   --color-surface-2: #f3ede2;
   --color-hover: #ece3d3;
@@ -109,6 +115,11 @@ html:not(.dark)[data-accent='brown'] {
 }
 /* 米黄·深 */
 html.dark[data-accent='brown'] {
+  /* 4 级墨色：色相跟随本主题，亮度按对比度目标求解 */
+  --ink-1: #f2ece1;  /* 标题/正文 */
+  --ink-2: #b8ab94;  /* 表头/标签 */
+  --ink-3: #9d8f7a;  /* 说明/时间戳 */
+  --ink-4: #877a64;  /* 占位/禁用 */
   --color-bg: #1b1712;
   --color-bg-card: #241f18;
   --color-bg-hover: #2e2820;
@@ -116,9 +127,6 @@ html.dark[data-accent='brown'] {
   --color-bg-input: #2a241c;
   --color-border: #3a3227;
   --color-border-hover: #4c4234;
-  --color-text: #f2ece1;
-  --color-text-secondary: #d3c9b8;
-  --color-text-muted: #a89c89;
   --color-surface: #241f18;
   --color-surface-2: #1b1712;
   --color-hover: #2e2820;
@@ -145,6 +153,11 @@ html[data-accent='pink'] {
 }
 /* 樱粉·浅 */
 html:not(.dark)[data-accent='pink'] {
+  /* 4 级墨色：色相跟随本主题，亮度按对比度目标求解 */
+  --ink-1: #33212a;  /* 标题/正文 */
+  --ink-2: #604c57;  /* 表头/标签 */
+  --ink-3: #7b6371;  /* 说明/时间戳 */
+  --ink-4: #8f7384;  /* 占位/禁用 */
   --color-bg: #fdf6f9;
   --color-bg-card: #ffffff;
   --color-bg-hover: #fbe9f1;
@@ -152,9 +165,6 @@ html:not(.dark)[data-accent='pink'] {
   --color-bg-input: #fcedf4;
   --color-border: #f5dbe7;
   --color-border-hover: #eabfd6;
-  --color-text: #33212a;
-  --color-text-secondary: #6b5561;
-  --color-text-muted: #7d6473;
   --color-surface: #ffffff;
   --color-surface-2: #fdf6f9;
   --color-hover: #fbe9f1;
@@ -163,6 +173,11 @@ html:not(.dark)[data-accent='pink'] {
 }
 /* 樱粉·深 */
 html.dark[data-accent='pink'] {
+  /* 4 级墨色：色相跟随本主题，亮度按对比度目标求解 */
+  --ink-1: #fbecf3;  /* 标题/正文 */
+  --ink-2: #c4a7b6;  /* 表头/标签 */
+  --ink-3: #a38998;  /* 说明/时间戳 */
+  --ink-4: #947586;  /* 占位/禁用 */
   --color-bg: #1a1218;
   --color-bg-card: #241a21;
   --color-bg-hover: #2f222b;
@@ -170,9 +185,6 @@ html.dark[data-accent='pink'] {
   --color-bg-input: #2a1e26;
   --color-border: #3a2b34;
   --color-border-hover: #4d3944;
-  --color-text: #fbecf3;
-  --color-text-secondary: #dcc4d0;
-  --color-text-muted: #a88f9d;
   --color-surface: #241a21;
   --color-surface-2: #1a1218;
   --color-hover: #2f222b;
@@ -199,6 +211,11 @@ html[data-accent='green'] {
 }
 /* 青柠·浅 */
 html:not(.dark)[data-accent='green'] {
+  /* 4 级墨色：色相跟随本主题，亮度按对比度目标求解 */
+  --ink-1: #172a1d;  /* 标题/正文 */
+  --ink-2: #455649;  /* 表头/标签 */
+  --ink-3: #5c6e61;  /* 说明/时间戳 */
+  --ink-4: #6c8071;  /* 占位/禁用 */
   --color-bg: #f4faf5;
   --color-bg-card: #ffffff;
   --color-bg-hover: #e8f5ea;
@@ -206,9 +223,6 @@ html:not(.dark)[data-accent='green'] {
   --color-bg-input: #eef7ef;
   --color-border: #d9ebdd;
   --color-border-hover: #b7d8bf;
-  --color-text: #172a1d;
-  --color-text-secondary: #4e6153;
-  --color-text-muted: #5f7164;
   --color-surface: #ffffff;
   --color-surface-2: #f4faf5;
   --color-hover: #e8f5ea;
@@ -217,6 +231,11 @@ html:not(.dark)[data-accent='green'] {
 }
 /* 青柠·深 */
 html.dark[data-accent='green'] {
+  /* 4 级墨色：色相跟随本主题，亮度按对比度目标求解 */
+  --ink-1: #e9f5ec;  /* 标题/正文 */
+  --ink-2: #96b9a0;  /* 表头/标签 */
+  --ink-3: #7f9987;  /* 说明/时间戳 */
+  --ink-4: #6a8572;  /* 占位/禁用 */
   --color-bg: #101a13;
   --color-bg-card: #18241c;
   --color-bg-hover: #203027;
@@ -224,9 +243,6 @@ html.dark[data-accent='green'] {
   --color-bg-input: #1c2a21;
   --color-border: #2a3b2f;
   --color-border-hover: #3a4f41;
-  --color-text: #e9f5ec;
-  --color-text-secondary: #bcd2c2;
-  --color-text-muted: #8ea595;
   --color-surface: #18241c;
   --color-surface-2: #101a13;
   --color-hover: #203027;
@@ -253,6 +269,11 @@ html[data-accent='purple'] {
 }
 /* 科技紫·浅 */
 html:not(.dark)[data-accent='purple'] {
+  /* 4 级墨色：色相跟随本主题，亮度按对比度目标求解 */
+  --ink-1: #221c38;  /* 标题/正文 */
+  --ink-2: #4f4968;  /* 表头/标签 */
+  --ink-3: #675f88;  /* 说明/时间戳 */
+  --ink-4: #78709b;  /* 占位/禁用 */
   --color-bg: #f8f6fd;
   --color-bg-card: #ffffff;
   --color-bg-hover: #efeaf9;
@@ -260,9 +281,6 @@ html:not(.dark)[data-accent='purple'] {
   --color-bg-input: #f3effb;
   --color-border: #e4dcf5;
   --color-border-hover: #c8bcea;
-  --color-text: #221c38;
-  --color-text-secondary: #5b5478;
-  --color-text-muted: #6d6590;
   --color-surface: #ffffff;
   --color-surface-2: #f8f6fd;
   --color-hover: #efeaf9;
@@ -271,6 +289,11 @@ html:not(.dark)[data-accent='purple'] {
 }
 /* 科技紫·深 */
 html.dark[data-accent='purple'] {
+  /* 4 级墨色：色相跟随本主题，亮度按对比度目标求解 */
+  --ink-1: #efeafd;  /* 标题/正文 */
+  --ink-2: #b0a8c5;  /* 表头/标签 */
+  --ink-3: #9289b0;  /* 说明/时间戳 */
+  --ink-4: #8175a3;  /* 占位/禁用 */
   --color-bg: #141122;
   --color-bg-card: #1d1930;
   --color-bg-hover: #272140;
@@ -278,9 +301,6 @@ html.dark[data-accent='purple'] {
   --color-bg-input: #221d38;
   --color-border: #322a4e;
   --color-border-hover: #443a68;
-  --color-text: #efeafd;
-  --color-text-secondary: #c7bee0;
-  --color-text-muted: #968cb4;
   --color-surface: #1d1930;
   --color-surface-2: #141122;
   --color-hover: #272140;
@@ -307,6 +327,11 @@ html[data-accent='red'] {
 }
 /* 中国红·浅：暖调朱红表面（默认主题，切换后卡片与底色整体转暖） */
 html:not(.dark)[data-accent='red'] {
+  /* 4 级墨色：色相跟随本主题，亮度按对比度目标求解 */
+  --ink-1: #2c1a1a;  /* 标题/正文 */
+  --ink-2: #614543;  /* 表头/标签 */
+  --ink-3: #7a5c5a;  /* 说明/时间戳 */
+  --ink-4: #8f6c69;  /* 占位/禁用 */
   --color-bg: #fdf6f5;
   --color-bg-card: #ffffff;
   --color-bg-hover: #fbe9e7;
@@ -314,9 +339,6 @@ html:not(.dark)[data-accent='red'] {
   --color-bg-input: #fceeeb;
   --color-border: #f4dcd8;
   --color-border-hover: #e8bcb5;
-  --color-text: #2c1a1a;
-  --color-text-secondary: #6b4c4a;
-  --color-text-muted: #7f605d;
   --color-surface: #ffffff;
   --color-surface-2: #fdf6f5;
   --color-hover: #fbe9e7;
@@ -325,6 +347,11 @@ html:not(.dark)[data-accent='red'] {
 }
 /* 中国红·深 */
 html.dark[data-accent='red'] {
+  /* 4 级墨色：色相跟随本主题，亮度按对比度目标求解 */
+  --ink-1: #fbeceb;  /* 标题/正文 */
+  --ink-2: #c4a8a6;  /* 表头/标签 */
+  --ink-3: #a48a88;  /* 说明/时间戳 */
+  --ink-4: #947674;  /* 占位/禁用 */
   --color-bg: #1a1012;
   --color-bg-card: #241619;
   --color-bg-hover: #301d21;
@@ -332,9 +359,6 @@ html.dark[data-accent='red'] {
   --color-bg-input: #2b1a1e;
   --color-border: #3c262a;
   --color-border-hover: #503338;
-  --color-text: #fbeceb;
-  --color-text-secondary: #dcc4c2;
-  --color-text-muted: #a8908e;
   --color-surface: #241619;
   --color-surface-2: #1a1012;
   --color-hover: #301d21;
@@ -361,6 +385,11 @@ html[data-accent='gray'] {
 }
 /* 莫兰迪·浅：低饱和暖灰表面 */
 html:not(.dark)[data-accent='gray'] {
+  /* 4 级墨色：色相跟随本主题，亮度按对比度目标求解 */
+  --ink-1: #4a4844;  /* 标题/正文 */
+  --ink-2: #56534f;  /* 表头/标签 */
+  --ink-3: #6b675f;  /* 说明/时间戳 */
+  --ink-4: #817c74;  /* 占位/禁用 */
   --color-bg: #eceae6;
   --color-bg-card: #f6f5f2;
   --color-bg-hover: #e3e1dc;
@@ -368,9 +397,6 @@ html:not(.dark)[data-accent='gray'] {
   --color-bg-input: #efece7;
   --color-border: #d9d6d0;
   --color-border-hover: #c8c4bc;
-  --color-text: #4a4844;
-  --color-text-secondary: #6c6964;
-  --color-text-muted: #69655e;
   --color-surface: #f6f5f2;
   --color-surface-2: #eeece8;
   --color-hover: #e3e1dc;
@@ -379,6 +405,11 @@ html:not(.dark)[data-accent='gray'] {
 }
 /* 莫兰迪·深 */
 html.dark[data-accent='gray'] {
+  /* 4 级墨色：色相跟随本主题，亮度按对比度目标求解 */
+  --ink-1: #eceaea;  /* 标题/正文 */
+  --ink-2: #aeaaa6;  /* 表头/标签 */
+  --ink-3: #93908c;  /* 说明/时间戳 */
+  --ink-4: #7d7a75;  /* 占位/禁用 */
   --color-bg: #141516;
   --color-bg-card: #1d1f21;
   --color-bg-hover: #282b2d;
@@ -386,9 +417,6 @@ html.dark[data-accent='gray'] {
   --color-bg-input: #232628;
   --color-border: #33373a;
   --color-border-hover: #454a4e;
-  --color-text: #eceaea;
-  --color-text-secondary: #c6c3c0;
-  --color-text-muted: #979490;
   --color-surface: #1d1f21;
   --color-surface-2: #141516;
   --color-hover: #282b2d;

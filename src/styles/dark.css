@@ -4,11 +4,12 @@
 html.dark {
   --color-bg: #111827;
   --color-bg-card: #1f2937;
-  --color-text: #f9fafb;
-  --color-text-secondary: #d1d5db;
-  --color-text-muted: #9ca3af;
-  /* 墨色（暗色）：小字用纯白，与亮色的 #020617 对称 */
-  --text-strong: #ffffff;
+  /* 墨色阶梯（暗色兜底）：改用与亮色同族的 Slate，不再亮色 Slate / 暗色 Gray 混用，
+     避免切换明暗时中性色相跳变。accent 主题会各自覆盖这四个值。 */
+  --ink-1: #f1f5f9;  /* 标题/正文      13.4:1 */
+  --ink-2: #cbd5e1;  /* 表头/标签       9.9:1 */
+  --ink-3: #94a3b8;  /* 说明/时间戳     5.7:1 */
+  --ink-4: #64748b;  /* 占位/禁用       3.1:1 */
   --color-border: #374151;
   --color-border-hover: #4b5563;
   --color-primary: #3b82f6;
@@ -76,9 +77,9 @@ html.dark {
   --ds-line: #334155;
   --ds-line-strong: #475569;
   --ds-bg-hover: #334155;
-  --ds-text: #f1f5f9;
-  --ds-text-2: #94a3b8;
-  --ds-text-3: #64748b;
+  --ds-text: var(--ink-1, #f1f5f9);
+  --ds-text-2: var(--ink-2, #94a3b8);
+  --ds-text-3: var(--ink-3, #64748b);
   --ds-danger-soft: rgba(239, 68, 68, 0.16);
   --ds-success-soft: rgba(22, 163, 74, 0.16);
   --ds-warning-soft: rgba(245, 158, 11, 0.16);
@@ -704,7 +705,7 @@ html.dark .history-icon {
 }
 
 html.dark .history-text {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .history-item:hover {
@@ -712,7 +713,7 @@ html.dark .history-item:hover {
 }
 
 html.dark .history-item .history-text {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 /* ========================================
@@ -733,7 +734,7 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 
 html.dark .btn-icon-action {
   background: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
   border-color: var(--color-border, #374151);
 }
 
@@ -746,7 +747,7 @@ html.dark .btn-icon-action:hover:not(:disabled) {
 html.dark .btn-icon-clear {
   background: transparent;
   border-color: transparent;
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 html.dark .btn-icon-clear:hover {
@@ -762,7 +763,7 @@ html.dark .icon-picker-panel {
 
 html.dark .icon-category-tab {
   background: var(--color-bg-input, #374151);
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
   border-color: var(--color-border, #374151);
 }
 
@@ -770,7 +771,7 @@ html.dark .icon-search-input,
 html.dark .icon-url-input {
   background: var(--color-bg-input, #374151);
   border-color: var(--color-border, #374151);
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .icon-search-input:focus,
@@ -800,7 +801,7 @@ html.dark .icon-preview {
 
 html.dark .icon-preview-empty {
   background: var(--color-bg-card, #1f2937);
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 /* ========================================
@@ -874,7 +875,7 @@ html.dark .pagination-wrapper {
 html.dark .page-size-select {
   background-color: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
   cursor: pointer;
 }
 
@@ -890,7 +891,7 @@ html.dark .page-size-select:focus {
 
 html.dark .page-size-select option {
   background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 /* ========================================
@@ -906,7 +907,7 @@ html.dark .modal-header {
 }
 
 html.dark .modal-header h2 {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 
@@ -925,11 +926,11 @@ html.dark .feature-item {
 }
 
 html.dark .feature-content h4 {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .feature-content p {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 html.dark .shortcut-item {
@@ -942,7 +943,7 @@ html.dark .shortcut-key {
 }
 
 html.dark .shortcut-action {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 html.dark .mode-item {
@@ -950,7 +951,7 @@ html.dark .mode-item {
 }
 
 html.dark .mode-item p {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 html.dark .mode-item code {
@@ -959,11 +960,11 @@ html.dark .mode-item code {
 }
 
 html.dark .storage-list li {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 html.dark .storage-list strong {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .storage-list code {
@@ -982,7 +983,7 @@ html.dark .help-tabs {
 }
 
 html.dark .help-tab {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 html.dark .help-tab:hover,
@@ -998,7 +999,7 @@ html.dark .help-tab.active {
 html.dark .panel-intro {
   background-color: var(--color-bg, #111827);
   border-color: var(--color-border, #374151);
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 html.dark .panel-intro code {
@@ -1012,15 +1013,15 @@ html.dark .panel-item {
 }
 
 html.dark .panel-head h4 {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .panel-desc {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 html.dark .panel-tips {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
   border-top-color: var(--color-border, #374151);
 }
 
@@ -1031,7 +1032,7 @@ html.dark .formula-item {
 }
 
 html.dark .formula-label {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .formula-expr {
@@ -1040,7 +1041,7 @@ html.dark .formula-expr {
 }
 
 html.dark .formula-note {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 html.dark .flow-list li {
@@ -1049,16 +1050,16 @@ html.dark .flow-list li {
 }
 
 html.dark .flow-text {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 /* 帮助弹窗：技能说明暗色模式 */
 html.dark .sub-title {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .sub-desc {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 html.dark .skill-prompt {
@@ -1073,7 +1074,7 @@ html.dark .skill-prompt-label {
 html.dark .skill-note {
   background-color: rgba(96, 165, 250, 0.08);
   border-color: #1e40af;
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 html.dark .skill-note svg {
@@ -1087,11 +1088,11 @@ html.dark .download-card {
 }
 
 html.dark .download-info h4 {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .download-info p {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 html.dark .download-info code {
@@ -1100,7 +1101,7 @@ html.dark .download-info code {
 }
 
 html.dark .sync-label {
-  color: #94a3b8;
+  color: var(--color-text-secondary);
 }
 
 
@@ -1118,11 +1119,11 @@ html.dark .tooltip-arrow {
 }
 
 html.dark .tooltip-name {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .tooltip-desc {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 html.dark .action-btn {
@@ -1168,20 +1169,20 @@ html.dark .icon-manager-preview {
 }
 
 html.dark .icon-manager-label {
-  color: var(--color-text, #f9fafb);
+  color: var(--color-text);
 }
 
 html.dark .icon-manager-category {
   background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 html.dark .icon-manager-size {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 html.dark .icon-manager-actions {
-  color: var(--color-text-secondary, #d1d5db);
+  color: var(--color-text-secondary);
 }
 
 html.dark .add-form-row {
@@ -1189,7 +1190,7 @@ html.dark .add-form-row {
 }
 
 html.dark .upload-hint {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 
 html.dark .filter-bar {
@@ -1202,6 +1203,6 @@ html.dark .import-export-bar {
 }
 
 html.dark .import-export-hint {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 

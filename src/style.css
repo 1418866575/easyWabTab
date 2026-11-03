@@ -55,10 +55,16 @@
 
   --color-shadow: rgba(0, 0, 0, 0.08);
 
-  /* 文字色 */
-  --color-text: #1e293b;
-  --color-text-secondary: #64748b;
-  --color-text-muted: #64748b;
+  /* ===== 文字色 =====
+     唯一真源是 4 级墨色 --ink-1..4（见下方「墨色阶梯」）。
+     下面四个语义名是公开 API，全部指向墨色，**不要在组件里再写字面量**。
+     accent 主题在 themes.css 里各自覆盖 --ink-1..4，因此这里只给基础兜底值。 */
+  --color-text: var(--ink-1, #1e293b);
+  --color-text-secondary: var(--ink-2, #445064);
+  --color-text-muted: var(--ink-3, #5b677f);
+  /* 第四级：占位符 / 禁用 / 非关键元信息。历史上被引用了 34 次却从未定义，
+     一直靠各行 var() 里的 fallback 生效（共 4 种不同值），现正式补齐。 */
+  --color-text-soft: var(--ink-4, #6a7995);
 
   /* 边框色 */
   --color-border: #e2e8f0;
@@ -166,8 +172,18 @@
   --lh-body: 1.6;      /* 正文 */
   --lh-relaxed: 1.8;   /* 长文（博客、日记） */
 
-  /* 墨色：字号越小墨色越深，抵消小字视觉变淡（fs-lg 及以下统一用它） */
-  --text-strong: #020617;
+  /* ===== 墨色阶梯（文字色唯一真源）=====
+     4 级语义墨色，accent 主题在 themes.css 里按「色相跟随本主题 + 对比度目标」各自覆盖。
+     对比度目标（对该主题卡片底）：ink-1 ≥ 9、ink-2 ≥ 7、ink-3 ≥ 5.2、ink-4 ≥ 3.8。
+     用法：≤13px 只用 ink-1/ink-2；ink-3 用于说明文字；ink-4 只给占位符与禁用态。
+     下面是基础兜底值（无 accent 或首屏时生效）。 */
+  --ink-1: #1e293b;
+  --ink-2: #445064;
+  --ink-3: #5b677f;
+  --ink-4: #6a7995;
+
+  /* 小字加深：语义上等同 ink-1，保留旧名以兼容存量引用 */
+  --text-strong: var(--ink-1, #1e293b);
 
   /* 过渡 */
   --transition-fast: 0.15s ease;
@@ -221,10 +237,10 @@
   --ds-line-strong: #cbd5e1;   /* 深一级分隔线（可聚焦边框 / 分段控件） */
   --ds-bg-hover: #f3f4f6;      /* 表面 hover 态（列表行 / 菜单项） */
 
-  /* 三级文字：层级靠灰度，不靠彩色 */
-  --ds-text: #1f2329;
-  --ds-text-2: #646a73;
-  --ds-text-3: #9aa0a6;
+  /* 三级文字：层级靠灰度，不靠彩色（统一指向墨色阶梯，跟随 accent 主题） */
+  --ds-text: var(--ink-1, #1f2329);
+  --ds-text-2: var(--ink-2, #646a73);
+  --ds-text-3: var(--ink-3, #9aa0a6);
 
   /* 强调色：只出现在「该点」的地方（主按钮 / 链接 / 选中态） */
   --ds-primary: var(--color-primary, #2563eb);
@@ -410,7 +426,7 @@ optgroup {
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
   transition:

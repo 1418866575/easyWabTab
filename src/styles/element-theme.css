@@ -57,23 +57,23 @@ html.dark {
   --el-border-color-dark: var(--color-border-hover);
   --el-border-color-darker: var(--color-border-hover);
 
-  /* 文字 */
+  /* 文字（一律指向墨色阶梯：主文 ink-1 / 次要 ink-2 / 辅助 ink-3 / 占位禁用 ink-4） */
   --el-text-color-primary: var(--color-text);
   --el-text-color-regular: var(--color-text);
   --el-text-color-secondary: var(--color-text-secondary);
   --el-text-color-placeholder: var(--color-text-muted);
-  --el-text-color-disabled: var(--color-text-muted);
+  --el-text-color-disabled: var(--color-text-soft);
 
   /* 禁用态 */
   --el-disabled-bg-color: var(--color-bg-hover);
   --el-disabled-border-color: var(--color-border);
-  --el-disabled-text-color: var(--color-text-muted);
+  --el-disabled-text-color: var(--color-text-soft);
 
   /* 表格：底色/表头/hover 全部跟随主题（hover 用 accent 柔光底，随主色变化） */
   --el-table-bg-color: var(--color-bg-card);
   --el-table-tr-bg-color: var(--color-bg-card);
   --el-table-header-bg-color: var(--color-bg-hover);
-  --el-table-header-text-color: var(--color-text);
+  --el-table-header-text-color: var(--color-text-secondary);
   --el-table-text-color: var(--color-text);
   --el-table-border-color: var(--color-border);
   --el-table-border: 1px solid var(--color-border);
