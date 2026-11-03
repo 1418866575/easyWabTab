@@ -85,7 +85,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="bf-shell">
+  <main class="bf-shell bf-shell--wide">
     <BlogFilterBar
       :keyword="kw"
       :active-category="listing.categoryId"

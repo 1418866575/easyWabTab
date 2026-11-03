@@ -164,6 +164,11 @@ const to = computed(() => `/blog/article/${props.article.slug}`)
   -webkit-line-clamp: 2;
   overflow: hidden;
 }
+/* 无封面时收藏星标浮在卡片右上角（有封面时它落在封面图上），标题右侧让出 34px 避免被星标压住文字。
+   4 列窄卡下标题更容易顶到星标，这里统一兜住。 */
+.bf-card-body:first-child .bf-card-title {
+  padding-right: 34px;
+}
 .bf-card-excerpt {
   margin: 0;
   color: var(--color-text-secondary, #64748b);
