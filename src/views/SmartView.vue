@@ -293,7 +293,7 @@ async function handleSyncNowClick(): Promise<void> {
   background-color: var(--color-bg-card, #ffffff);
   color: var(--color-text, #0f172a);
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: var(--font-weight-medium, 500);
   cursor: pointer;
   transition: background-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
