@@ -1,0 +1,54 @@
+/**
+ * 博客后台细体排版
+ *
+ * 目的：对齐参考观感的「纤细、笔画均匀、无衬线」——用各平台 Light 字族 + 300 字重 + 抗锯齿，
+ * 让正文、标签、列表、导航等非强调文本呈现细体，而标题/按钮沿用自身显式字重保持层级。
+ *
+ * 作用域：选择器全部是博客后台专用根类，不影响导航站 / 工作台 / 学生台 / 工具箱等其它模块。
+ * - .ba-shell     主壳（列表 / 编辑器 / 图库 / 回收站都继承）
+ * - .bsd-dialog   博客设置弹框（BaseDialog 的 Teleport 根，需单独覆盖，继承不到 .ba-shell）
+ * - .btyp-dialog  排版主题 / 公众号预览弹框
+ * - .bipk-dialog  图库图片选择弹框
+ *
+ * 一并改写的两个变量：
+ * - --font-family     全局字体栈，被 .ui-btn 等消费，改后按钮与正文同族
+ * - --el-font-family  Element Plus 默认栈（落微软雅黑），改后输入框 / 下拉 / 表格同族
+ * 代码块仍是 ui-monospace 自身声明，不受影响。
+ */
+
+.ba-shell,
+.bsd-dialog,
+.btyp-dialog,
+.bipk-dialog {
+  /* 细体字族：优先各平台 Light 变体，再回落常规体 */
+  --ba-thin-font:
+    'PingFang SC',
+    'HarmonyOS Sans SC',
+    'Source Han Sans SC',
+    'Noto Sans SC',
+    'Microsoft YaHei Light',
+    'Microsoft YaHei',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  --font-family: var(--ba-thin-font);
+  --el-font-family: var(--ba-thin-font);
+
+  font-family: var(--ba-thin-font);
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 表单控件与按钮：浏览器 UA 对 button/input/textarea/select 强制 font-family: Arial，
+   会截断继承。这里显式 inherit，让它们跟随上面的细体栈（含 Element Plus 的输入框）。 */
+:is(.ba-shell, .bsd-dialog, .btyp-dialog, .bipk-dialog) :is(button, input, textarea, select) {
+  font-family: inherit;
+}
+
+/* 细体下 12px 小字容易发虚：微型辅助文字（计数、提示）保持 400，保证可读 */
+.ba-shell .ba-nav-count,
+.bsd-dialog .wb-menu-hint {
+  font-weight: 400;
+}

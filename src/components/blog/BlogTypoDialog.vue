@@ -206,6 +206,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
 
 <template>
   <BaseDialog
+    class="btyp-dialog"
     :title="previewTheme ? `公众号预览 · ${previewTheme.name}` : '选择排版主题'"
     :width="previewTheme ? 'min(560px, 94vw)' : 'min(1180px, 92vw)'"
     max-height="86vh"

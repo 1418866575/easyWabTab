@@ -58,7 +58,7 @@ function confirmSelect(): void {
 </script>
 
 <template>
-  <BaseDialog :title="title" width="760px" max-height="86vh" data-testid="blog-image-picker" @close="emit('close')">
+  <BaseDialog class="bipk-dialog" :title="title" width="760px" max-height="86vh" data-testid="blog-image-picker" @close="emit('close')">
     <div class="bip">
       <div class="bip-toolbar">
         <el-input v-model="keyword" size="small" class="bip-search" placeholder="搜索图片名称" clearable />
