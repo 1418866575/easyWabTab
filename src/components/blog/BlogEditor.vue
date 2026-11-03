@@ -781,69 +781,146 @@ async function regenerateSlug(): Promise<void> {
 
 <template>
   <section v-if="canRead" ref="rootEl" class="be">
-    <!-- 顶部：关闭 + 视图切换 + 文章设置 -->
-    <header class="be-head">
-      <!-- 关闭放在最左（视图切换组有 margin-left:auto，其余仍靠右） -->
-      <button type="button" class="be-side-toggle" data-testid="blog-editor-close" @click="handleClose">
-        <Icon name="close" :size="14" />
-        <span>关闭</span>
-      </button>
-      <div class="be-view-switch" role="group" aria-label="编辑器视图">
-        <button
-          v-for="m in (['edit', 'split', 'preview'] as const)"
-          :key="m"
-          type="button"
-          class="be-view-btn"
-          :class="{ active: viewMode === m }"
-          :data-testid="`blog-editor-view-${m}`"
-          @click="viewMode = m"
-        >
-          {{ m === 'edit' ? '编辑' : m === 'split' ? '分屏' : '预览' }}
-        </button>
-      </div>
-      <button
-        type="button"
-        class="be-side-toggle"
-        :class="{ active: sideOpen }"
-        :aria-expanded="sideOpen"
-        aria-controls="blog-editor-side"
-        data-testid="blog-editor-side-toggle"
-        @click="toggleSide"
-      >
-        <span>文章设置</span>
-      </button>
-      <!-- 保存状态：比 toast 更让人安心（未保存 / 保存中 / 已保存 hh:mm） -->
-      <span
-        class="be-save-state"
-        :class="`is-${saveState}`"
-        data-testid="blog-editor-save-state"
-        :title="dirty ? '有改动尚未保存（Ctrl/Cmd+S 保存）' : '内容已保存'"
-      >
-        <span class="be-save-dot" aria-hidden="true"></span>
-        <template v-if="saveState === 'saving'">保存中…</template>
-        <template v-else-if="saveState === 'unsaved'">未保存</template>
-        <template v-else>已保存{{ savedAt ? ` ${savedAt}` : '' }}</template>
-      </span>
-      <button
-        type="button"
-        class="be-side-toggle"
-        data-testid="blog-editor-help"
-        aria-haspopup="dialog"
-        @click="helpOpen = true"
-      >
-        <Icon name="info" :size="14" />
-        <span>帮助</span>
-      </button>
-    </header>
-
     <div class="be-body">
       <!-- 左：正文 -->
       <div class="be-main">
-      <!-- 固定区：Markdown 工具栏 + 标题（sticky，相对 .ba-content 吸顶） -->
+      <!-- 固定区：顶栏（状态 + 操作）+ Markdown 工具栏 + 标题（sticky，相对 .ba-content 吸顶） -->
       <div class="be-fixed-head">
-        <!-- Markdown 工具栏：置于标题上方；向下滚动时相对 .ba-content 吸顶（sticky）。
-             右上角为底部操作条同款快捷按钮（保存草稿 / 发布 / 发布到公众号，同一 handler 与状态）。 -->
-        <div v-if="viewMode !== 'preview'" class="be-md-toolbar" role="toolbar" aria-label="Markdown 编辑工具栏">
+        <!-- 单卡片两行：① 左侧状态 / 右侧操作，中间留白 ② Markdown 工具栏 -->
+        <div class="be-topcard">
+          <div class="be-head">
+            <!-- 左半：退出 + 视图 + 设置 + 保存状态 + 帮助 -->
+            <div class="be-head-l">
+              <button type="button" class="be-side-toggle" data-testid="blog-editor-close" @click="handleClose">
+                <Icon name="close" :size="14" />
+                <span>关闭</span>
+              </button>
+              <div class="be-view-switch" role="group" aria-label="编辑器视图">
+                <button
+                  v-for="m in (['edit', 'split', 'preview'] as const)"
+                  :key="m"
+                  type="button"
+                  class="be-view-btn"
+                  :class="{ active: viewMode === m }"
+                  :data-testid="`blog-editor-view-${m}`"
+                  @click="viewMode = m"
+                >
+                  {{ m === 'edit' ? '编辑' : m === 'split' ? '分屏' : '预览' }}
+                </button>
+              </div>
+              <button
+                type="button"
+                class="be-side-toggle"
+                :class="{ active: sideOpen }"
+                :aria-expanded="sideOpen"
+                aria-controls="blog-editor-side"
+                data-testid="blog-editor-side-toggle"
+                @click="toggleSide"
+              >
+                <span>文章设置</span>
+              </button>
+              <!-- 保存状态：比 toast 更让人安心（未保存 / 保存中 / 已保存 hh:mm） -->
+              <span
+                class="be-save-state"
+                :class="`is-${saveState}`"
+                data-testid="blog-editor-save-state"
+                :title="dirty ? '有改动尚未保存（Ctrl/Cmd+S 保存）' : '内容已保存'"
+              >
+                <span class="be-save-dot" aria-hidden="true"></span>
+                <template v-if="saveState === 'saving'">保存中…</template>
+                <template v-else-if="saveState === 'unsaved'">未保存</template>
+                <template v-else>已保存{{ savedAt ? ` ${savedAt}` : '' }}</template>
+              </span>
+              <button
+                type="button"
+                class="be-side-toggle"
+                data-testid="blog-editor-help"
+                aria-haspopup="dialog"
+                @click="helpOpen = true"
+              >
+                <Icon name="info" :size="14" />
+                <span>帮助</span>
+              </button>
+            </div>
+
+            <!-- 右半：保存 / 发布 / 共享；窄屏整组换行到第二行，不会被拆散 -->
+            <div class="be-head-r">
+              <button type="button" class="ui-btn ui-btn--sm" data-testid="blog-editor-save-top" @click="saveDraft()">保存草稿</button>
+              <!-- 文中图：列出正文已插入的所有图片，便于快速查看（预览/分屏均可用） -->
+              <button
+                type="button"
+                class="ui-btn ui-btn--sm"
+                :disabled="articleImages.length === 0"
+                :title="articleImages.length === 0 ? '正文还没有插入图片' : `查看文中图片（${articleImages.length}）`"
+                data-testid="blog-editor-images-top"
+                @click="imageDialogOpen = true"
+              >
+                文中图{{ articleImages.length ? `（${articleImages.length}）` : '' }}
+              </button>
+              <button
+                type="button"
+                class="ui-btn ui-btn--sm be-typo-btn"
+                title="排版主题"
+                data-testid="blog-editor-typo-top"
+                @click="typoOpen = true"
+              >
+                <span class="be-typo-dot" :style="{ background: typoTheme.swatch }" aria-hidden="true"></span>
+                {{ typoTheme.name }}
+              </button>
+              <button
+                type="button"
+                class="ui-btn ui-btn--sm ui-btn--primary"
+                :disabled="visibleErrors.length > 0"
+                data-testid="blog-editor-publish-top"
+                @click="handlePublish()"
+              >
+                发布
+              </button>
+              <button
+                type="button"
+                class="ui-btn ui-btn--sm"
+                title="按公众号草稿箱的排版规则预览正文（列表/表格/代码块已转换）"
+                data-testid="blog-editor-wechat-preview-top"
+                @click="openWechatPreview()"
+              >
+                公众号预览
+              </button>
+              <button
+                type="button"
+                class="ui-btn ui-btn--sm"
+                :class="{ 'ui-btn--primary': !wechat.publishing.value }"
+                :disabled="wechat.publishing.value || visibleErrors.length > 0"
+                data-testid="blog-editor-publish-wechat-top"
+                @click="handlePublishWechat()"
+              >
+                <span v-if="wechat.publishing.value" class="btn-spinner" aria-hidden="true"></span>
+                {{ wechat.publishing.value ? '发布中' : '发布到公众号' }}
+              </button>
+              <button
+                type="button"
+                class="ui-btn ui-btn--sm"
+                title="按公众号排版规则复制正文，粘贴到公众号编辑器即可（不发送到草稿箱）"
+                data-testid="blog-editor-copy-wechat-top"
+                @click="handleCopyWechat()"
+              >
+                复制到公众号
+              </button>
+              <button
+                type="button"
+                class="ui-btn ui-btn--sm"
+                :class="{ 'ui-btn--primary': !isSharing() }"
+                :disabled="article?.status !== 'published' || isSharing()"
+                :title="article?.status !== 'published' ? '仅已发布可共享' : (article?.sharedAt ? '取消共享' : '共享到服务器')"
+                data-testid="blog-editor-share-top"
+                @click="onShare()"
+              >
+                {{ isSharing() ? '共享中…' : shareLabel() }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Markdown 工具栏：第二行 -->
+          <div v-if="viewMode !== 'preview'" class="be-md-toolbar" role="toolbar" aria-label="Markdown 编辑工具栏">
           <div class="be-md-groups">
             <template v-for="grp in toolbarGroups" :key="grp.group">
               <span class="be-md-sep" aria-hidden="true"></span>
@@ -894,80 +971,7 @@ async function regenerateSlug(): Promise<void> {
               </div>
             </template>
           </div>
-          <!-- 快捷操作：与底部操作条同文案/同状态/同点击行为；底部按钮保留不变 -->
-          <div class="be-md-actions">
-            <button type="button" class="ui-btn ui-btn--sm" data-testid="blog-editor-save-top" @click="saveDraft()">保存草稿</button>
-            <!-- 文中图：列出正文已插入的所有图片，便于快速查看（预览/分屏均可用） -->
-            <button
-              type="button"
-              class="ui-btn ui-btn--sm"
-              :disabled="articleImages.length === 0"
-              :title="articleImages.length === 0 ? '正文还没有插入图片' : `查看文中图片（${articleImages.length}）`"
-              data-testid="blog-editor-images-top"
-              @click="imageDialogOpen = true"
-            >
-              文中图{{ articleImages.length ? `（${articleImages.length}）` : '' }}
-            </button>
-            <button
-              type="button"
-              class="ui-btn ui-btn--sm be-typo-btn"
-              title="排版主题"
-              data-testid="blog-editor-typo-top"
-              @click="typoOpen = true"
-            >
-              <span class="be-typo-dot" :style="{ background: typoTheme.swatch }" aria-hidden="true"></span>
-              {{ typoTheme.name }}
-            </button>
-            <button
-              type="button"
-              class="ui-btn ui-btn--sm ui-btn--primary"
-              :disabled="visibleErrors.length > 0"
-              data-testid="blog-editor-publish-top"
-              @click="handlePublish()"
-            >
-              发布
-            </button>
-            <button
-              type="button"
-              class="ui-btn ui-btn--sm"
-              title="按公众号草稿箱的排版规则预览正文（列表/表格/代码块已转换）"
-              data-testid="blog-editor-wechat-preview-top"
-              @click="openWechatPreview()"
-            >
-              公众号预览
-            </button>
-            <button
-              type="button"
-              class="ui-btn ui-btn--sm"
-              :class="{ 'ui-btn--primary': !wechat.publishing.value }"
-              :disabled="wechat.publishing.value || visibleErrors.length > 0"
-              data-testid="blog-editor-publish-wechat-top"
-              @click="handlePublishWechat()"
-            >
-              <span v-if="wechat.publishing.value" class="btn-spinner" aria-hidden="true"></span>
-              {{ wechat.publishing.value ? '发布中' : '发布到公众号' }}
-            </button>
-            <button
-              type="button"
-              class="ui-btn ui-btn--sm"
-              title="按公众号排版规则复制正文，粘贴到公众号编辑器即可（不发送到草稿箱）"
-              data-testid="blog-editor-copy-wechat-top"
-              @click="handleCopyWechat()"
-            >
-              复制到公众号
-            </button>
-            <button
-              type="button"
-              class="ui-btn ui-btn--sm"
-              :class="{ 'ui-btn--primary': !isSharing() }"
-              :disabled="article?.status !== 'published' || isSharing()"
-              :title="article?.status !== 'published' ? '仅已发布可共享' : (article?.sharedAt ? '取消共享' : '共享到服务器')"
-              data-testid="blog-editor-share-top"
-              @click="onShare()"
-            >
-              {{ isSharing() ? '共享中…' : shareLabel() }}
-            </button>
-          </div>
+        </div>
         </div>
         <input
           v-model="form.title"
@@ -1265,22 +1269,38 @@ async function regenerateSlug(): Promise<void> {
   gap: 10px;
 }
 
-/* 顶行卡片：视图切换 + 文章设置 + 帮助 收进一张卡片，与下方 Markdown 工具栏卡片同款视觉 */
-.be-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding: 6px 8px;
+/* 顶部单卡片：第 1 行（状态 + 操作）+ 第 2 行（Markdown 工具栏），共用一层边框/阴影 */
+.be-topcard {
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--ds-card, #ffffff);
   box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.06));
+  overflow: hidden;
 }
+
+/* 第 1 行：左半状态、右半操作，中间留白（space-between） */
+.be-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--ds-line, #ececf0);
+}
+.be-head-l,
+.be-head-r {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.be-head-l { gap: 8px; }
+/* 右半：操作按钮。gap/padding 略收紧，保证 1440 屏下与左半同排放下 */
+.be-head-r { gap: 5px; margin-left: auto; justify-content: flex-end; }
+.be-head-r > .ui-btn { padding: 0 10px; }
 
 .be-view-switch {
   display: flex;
-  margin-left: auto;
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-pill, 999px);
   overflow: hidden;
@@ -1368,18 +1388,16 @@ async function regenerateSlug(): Promise<void> {
   margin-bottom: 8px;
 }
 
-.be-md-toolbar {  display: flex;
+/* 第 2 行：Markdown 工具栏（边框/阴影由 .be-topcard 提供） */
+.be-md-toolbar {
+  display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 6px 8px;
-  border: 1px solid var(--ds-line, #ececf0);
-  border-radius: var(--ds-radius-ctrl, 8px);
-  background-color: var(--ds-card, #ffffff);
-  box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.06));
+  padding: 5px 8px;
 }
 
-/* 工具栏左侧：原有 Markdown 按钮分组（包一层便于与右侧快捷操作分列两端） */
+/* 工具栏按钮分组（模板里的表格弹层与普通按钮共用） */
 .be-md-groups {
   display: flex;
   align-items: center;
@@ -1388,14 +1406,6 @@ async function regenerateSlug(): Promise<void> {
   min-width: 0;
 }
 
-/* 工具栏右侧快捷操作：与底部操作条同款按钮，窄屏独占一行右对齐 */
-.be-md-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-  flex-wrap: wrap;
-}
 
 .be-md-group {
   display: flex;
@@ -1411,7 +1421,7 @@ async function regenerateSlug(): Promise<void> {
   background-color: var(--ds-line, #ececf0);
 }
 
-.be-md-btn {padding: 0 12px;
+.be-md-btn {padding: 0 10px;
   border: 1px solid transparent;
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: transparent;
