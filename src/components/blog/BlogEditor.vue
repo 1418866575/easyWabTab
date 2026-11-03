@@ -1228,6 +1228,8 @@ async function regenerateSlug(): Promise<void> {
       v-if="typoOpen"
       :theme-id="form.typo.themeId"
       :default-id="store.settings.defaultTypoId ?? ''"
+      :content-markdown="form.contentMarkdown"
+      :typo="form.typo"
       @apply="onApplyTypo"
       @set-default="(id) => void store.updateSettings({ defaultTypoId: id })"
       @close="typoOpen = false"
