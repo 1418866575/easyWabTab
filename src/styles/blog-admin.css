@@ -1,19 +1,20 @@
 /**
- * 博客后台细体排版
+ * 博客后台字体（细体观感 · 可读优先）
  *
- * 目的：对齐参考观感的「纤细、笔画均匀、无衬线」——用各平台 Light 字族 + 300 字重 + 抗锯齿，
- * 让正文、标签、列表、导航等非强调文本呈现细体，而标题/按钮沿用自身显式字重保持层级。
+ * 目标：保留参考截图那种干净、纤细的无衬线调性，但 UI 小字（12–13px 的标签 / 表头 /
+ * 分页 / 工具栏按钮）不再发虚——这类字号在 Windows 上降到 300 会明显变淡。
+ *
+ * 策略：
+ * - 基础字重 400：UI 文本清晰可读。
+ * - 只把「阅读型正文」保留 300：编辑器正文与预览区，字号大、笔画细才好看且不影响操作。
+ * - 字族统一走 --ba-thin-font，并改写 --font-family / --el-font-family，
+ *   让 .ui-btn、Element Plus 输入框与正文同族（否则按钮落 Arial、EP 落微软雅黑）。
  *
  * 作用域：选择器全部是博客后台专用根类，不影响导航站 / 工作台 / 学生台 / 工具箱等其它模块。
  * - .ba-shell     主壳（列表 / 编辑器 / 图库 / 回收站都继承）
- * - .bsd-dialog   博客设置弹框（BaseDialog 的 Teleport 根，需单独覆盖，继承不到 .ba-shell）
+ * - .bsd-dialog   博客设置弹框（BaseDialog 的 Teleport 根，继承不到 .ba-shell）
  * - .btyp-dialog  排版主题 / 公众号预览弹框
  * - .bipk-dialog  图库图片选择弹框
- *
- * 一并改写的两个变量：
- * - --font-family     全局字体栈，被 .ui-btn 等消费，改后按钮与正文同族
- * - --el-font-family  Element Plus 默认栈（落微软雅黑），改后输入框 / 下拉 / 表格同族
- * 代码块仍是 ui-monospace 自身声明，不受影响。
  */
 
 .ba-shell,
@@ -36,19 +37,20 @@
   --el-font-family: var(--ba-thin-font);
 
   font-family: var(--ba-thin-font);
-  font-weight: 300;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-weight: 400;
 }
 
 /* 表单控件与按钮：浏览器 UA 对 button/input/textarea/select 强制 font-family: Arial，
-   会截断继承。这里显式 inherit，让它们跟随上面的细体栈（含 Element Plus 的输入框）。 */
+   会截断继承。这里显式 inherit，让它们跟随上面的字族（含 Element Plus 的输入框）。 */
 :is(.ba-shell, .bsd-dialog, .btyp-dialog, .bipk-dialog) :is(button, input, textarea, select) {
   font-family: inherit;
 }
 
-/* 细体下 12px 小字容易发虚：微型辅助文字（计数、提示）保持 400，保证可读 */
-.ba-shell .ba-nav-count,
-.bsd-dialog .wb-menu-hint {
-  font-weight: 400;
+/* 阅读型正文保留细体：字号大，300 才有「纤细」观感且不伤可读性。
+   子元素（标题/加粗）自身带字重的仍然保留，层级不受影响。 */
+.ba-shell .be-md,
+.ba-shell .be-preview,
+.bsd-dialog .be-preview,
+.btyp-dialog .be-preview {
+  font-weight: 300;
 }
