@@ -193,13 +193,13 @@ function miniHtml(t: TypoTheme): string {
   return decorateTypoHtml(SAMPLE_HTML, t)
 }
 
-/** 注入该主题 token（字号固定，只比结构与配色） */
+/** 注入该主题 token（字号按缩小后的卡片等比下调，只比结构与配色） */
 function miniStyle(t: TypoTheme): Record<string, string> {
   return {
     ...t.tokens,
-    '--t-font-size': '12.5px',
-    '--t-line-height': '1.75',
-    '--t-paragraph-gap': '0.5em'
+    '--t-font-size': '11.5px',
+    '--t-line-height': '1.65',
+    '--t-paragraph-gap': '0.4em'
   }
 }
 </script>
@@ -335,7 +335,8 @@ function miniStyle(t: TypoTheme): Record<string, string> {
 </template>
 
 <style scoped>
-.td { display: flex; flex-direction: column; gap: 14px; min-height: 0; height: 100%; }
+/* 弹框内边距：BaseDialog 的 flex-column 会归零 padding，这里补一指宽左右留白（约 16px） */
+.td { display: flex; flex-direction: column; gap: 12px; min-height: 0; height: 100%; padding: 0 16px; }
 
 /* 搜索框：全站 .ui-search 外壳（描边/焦点环在壳上），内层透明 */
 .td-search { flex: none; }
@@ -385,21 +386,21 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   text-align: center;
 }
 
-/* 3 列高卡片；窄屏降列 */
+/* 4 列小卡（1180px 面板下每卡约 276px）；窄屏逐级降列，不做无限挤压 */
 .td-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
 }
 
 .td-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: 224px;
-  padding: 18px;
+  min-height: 186px;
+  padding: 14px;
   border: 1px solid var(--ds-line, #ececf0);
-  border-radius: var(--ds-radius-card, 12px);
+  border-radius: var(--ds-radius-card, 10px);
   background: var(--ds-card, #ffffff);
   font-family: inherit;
   cursor: pointer;
@@ -414,44 +415,46 @@ function miniStyle(t: TypoTheme): Record<string, string> {
 /* 选中徽章：右上角圆形 ✓（参考稿样式） */
 .td-check {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 20px;
-  height: 20px;
+  top: 8px;
+  right: 8px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: var(--color-primary, #3b82f6);
   color: #ffffff;
-  font-size: 12px;
-  line-height: 20px;
+  font-size: 11px;
+  line-height: 18px;
   text-align: center;
 }
 
-/* 迷你示例容器：真实标签渲染（markdown.css + 主题 token + 找Tab 结构样式/装饰） */
+/* 迷你示例容器：真实标签渲染（markdown.css + 主题 token + 找Tab 结构样式/装饰）
+   max-height 兜住示例高度：4 列窄卡下只展示「标题 + 一段正文 + 引用」，不做顶部截断式的溢出。 */
 .td-mini {
   display: block;
   flex: 1 1 auto;
   min-height: 0;
+  max-height: 120px;
   overflow: hidden;
 }
 
 .td-foot {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   margin-top: auto;
-  padding-top: 12px;
+  padding-top: 10px;
   border-top: 1px solid var(--ds-line, #ececf0);
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--ds-text-3, #9aa0a6);
 }
-.td-name { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.td-swatch { width: 8px; height: 8px; border-radius: 50%; flex: none; }
-.td-ops { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; flex: none; }
-.td-def { border: none; background: transparent; padding: 2px 4px; color: var(--ds-text-3, #9aa0a6); font-size: 11.5px; cursor: pointer; white-space: nowrap; }
+.td-name { display: inline-flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.td-swatch { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.td-ops { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; flex: none; }
+.td-def { border: none; background: transparent; padding: 2px 3px; color: var(--ds-text-3, #9aa0a6); font-size: 11px; cursor: pointer; white-space: nowrap; }
 .td-def:hover { color: var(--color-primary, #3b82f6); }
 .td-badge {
   flex: none;
-  padding: 1px 6px;
+  padding: 1px 5px;
   border-radius: var(--ds-radius-pill, 999px);
   background: var(--color-primary-soft, #eff6ff);
   color: var(--color-primary, #3b82f6);
@@ -461,12 +464,12 @@ function miniStyle(t: TypoTheme): Record<string, string> {
 /* 「公众号预览」按钮：所有卡片都显示（不必先选中才能看效果） */
 .td-prev {
   border: 1px solid var(--ds-line, #ececf0);
-  border-radius: var(--ds-radius-ctrl, 8px);
+  border-radius: var(--ds-radius-ctrl, 7px);
   background: var(--ds-card, #ffffff);
   color: var(--ds-text-2, #646a73);
-  padding: 3px 10px;
+  padding: 2px 8px;
   font-family: inherit;
-  font-size: 11.5px;
+  font-size: 11px;
   white-space: nowrap;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s, background-color 0.15s;
@@ -484,6 +487,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   gap: 12px;
   min-height: 0;
   height: 100%;
+  padding: 0 16px;
 }
 
 .tdp-head {
@@ -610,11 +614,17 @@ function miniStyle(t: TypoTheme): Record<string, string> {
 
 .td-hint { margin: 0; flex: none; font-size: 11px; color: var(--ds-text-3, #9aa0a6); }
 
-@media (max-width: 960px) {
+/* 窄屏降列：3 → 2 → 1，保证每张卡不会被压到放不下页脚按钮 */
+@media (max-width: 1024px) {
+  .td-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 820px) {
   .td-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 640px) {
   .td-grid { grid-template-columns: 1fr; }
   .td-card { min-height: 0; }
+  .td { padding: 0 12px; }
+  .tdp { padding: 0 12px; }
 }
 </style>
