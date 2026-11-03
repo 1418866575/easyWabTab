@@ -209,8 +209,8 @@ function dl() {
 .md-preview :deep(p) { margin: 0.4em 0; }
 .md-preview :deep(ul), .md-preview :deep(ol) { padding-left: 1.4em; margin: 0.4em 0; }
 .md-preview :deep(a) { color: var(--color-primary); }
-.md-preview :deep(pre) { background: var(--color-bg-soft); padding: 8px 10px; border-radius: 6px; overflow: auto; }
-.md-preview :deep(code) { background: var(--color-bg-soft); padding: 1px 4px; border-radius: 4px; }
-.md-preview :deep(strong) { color: var(--color-text-strong); }
+.md-preview :deep(pre) { background: var(--color-bg-hover); padding: 8px 10px; border-radius: 6px; overflow: auto; }
+.md-preview :deep(code) { background: var(--color-bg-hover); padding: 1px 4px; border-radius: 4px; }
+.md-preview :deep(strong) { color: var(--color-text); }
 .md-preview :deep(hr) { border: none; border-top: 1px dashed var(--color-border); margin: 1em 0; }
 </style>

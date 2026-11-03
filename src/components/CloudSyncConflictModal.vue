@@ -193,7 +193,7 @@ const hasConflict = computed(() => conflictRows.value.length > 0)
   margin-bottom: 16px;
 }
 .conflict-file-row {
-  background: var(--color-bg-muted);
+  background: var(--color-bg-hover);
   border-radius: 8px;
   padding: 12px 14px;
   border: 1px solid var(--color-border);

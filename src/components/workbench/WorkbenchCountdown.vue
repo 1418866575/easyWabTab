@@ -1048,25 +1048,6 @@ html.dark .reminded-badge {
   flex-wrap: wrap;
 }
 
-.color-option {
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border-radius: 50%;
-  background: var(--swatch);
-  border: 2px solid transparent;
-  cursor: pointer;
-  transition: transform var(--transition-fast, 0.15s ease), box-shadow var(--transition-fast, 0.15s ease);
-}
-
-.color-option:hover {
-  transform: scale(1.15);
-}
-
-.color-option.active {
-  box-shadow: 0 0 0 2px var(--color-bg-card, #ffffff), 0 0 0 4px var(--swatch);
-}
-
 .color-custom {
   display: flex;
   align-items: center;

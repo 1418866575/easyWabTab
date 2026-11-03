@@ -27,7 +27,7 @@
 ## 1. Design Token
 
 所有 token 定义在 `src/style.css`（`:root`）。主题覆盖在 `src/styles/themes.css`。  
-**永远通过 `var(--token, fallback)` 使用**，fallback 保留原值以防 token 缺失。
+**一律写 `var(--token)`，不带字面量兜底**（2026-11 起）。历史上满屏的 `var(--color-primary, #3b82f6)` 已于 `83e6ccf` 全部移除，原因很直接：兜底会把「令牌名写错 / 令牌没定义」变成静默降级——`--color-text-soft` 就曾长期未定义、34 处各自兜到 4 个不同 hex，肉眼完全看不出来。缺令牌要在 `npm run lint` 里报错，而不是藏起来。真正需要「取不到就用这个」的语义兜底可保留（如 `var(--preview-color, #667eea)`）。
 
 ### 1.1 颜色
 
@@ -43,9 +43,24 @@
 | 悬停面  | `--color-bg-hover` / `--color-bg-active`                            | hover / active 背景  |
 | 输入面  | `--color-bg-input`                                                  | 输入框底               |
 | 边框   | `--color-border` / `--color-border-hover` / `--color-border-strong` | 常规/悬停/强调边框         |
-| 文字   | `--color-text` / `--color-text-secondary` / `--color-text-muted`    | 正文/次要/弱化           |
+| 文字   | `--color-text` / `-secondary` / `-muted` / `-soft`                  | 正文/次要/弱化/禁用（均指向墨色阶梯） |
 
 > 另有 `--color-slate-50..900` 中性灰阶、`--color-surface` / `--color-surface-2`、`--color-shadow`。
+
+#### 墨色阶梯 `--ink-1..4`（文字色唯一真源，2026-11 新增）
+
+`--color-text*` / `--ds-text*` / `--text-strong` 全部只是**别名**，真值只有这四级。每套主题（7 accent × 明暗，共 14 组）各自定义一份：色相跟随本主题次要色、饱和度封顶 20%，亮度按对比度目标反解。
+
+| 令牌 | 角色 | 对比度目标（vs 本主题 `--color-bg-card`） | 蓝色主题亮色实测 |
+| --- | --- | --- | --- |
+| `--ink-1` | 标题 / 正文 | ≥ 9:1 | `#16233a` |
+| `--ink-2` | 表头 / 标签 | ≥ 7:1 | `#445064` |
+| `--ink-3` | 说明 / 时间戳 / 占位 | ≥ 5.2:1 | `#5b677f` |
+| `--ink-4` | 禁用态 | ≥ 3.8:1 | `#6a7995` |
+
+**组件里不要再写 `#333` / `#666` / `#999` / `#94a3b8` 这类灰**——它们是 7 套主题 × 明暗下的赌运气，任何单一字面灰必然在其中一半主题里不达标。这是本项目历史上最大的排版债，已于 `f0824f8` 收敛。
+
+> 米黄 / 莫兰迪两套配色的正文色刻意保持原值（用户偏好暖色低对比观感），只加深了 ink-3/4，不要再往上提。
 
 ### 1.2 间距
 
@@ -56,7 +71,7 @@
 
 - 圆角：`--radius-sm 4` / `--radius-md 8`（**控件默认**）/ `--radius-lg 12`（弹框、卡片）/ `--radius-xl 16` / `--radius-full`
 - 阴影：`--shadow-sm` / `--shadow-md`（悬浮）/ `--shadow-lg` / `--shadow-card` / `--shadow-card-hover` / `--shadow-modal`（弹框）/ `--shadow-dropdown`
-- 字号：`--font-size-xs/sm/base/lg/xl/2xl/3xl/4xl`；行高 `--line-height-tight/base/relaxed`
+- 字号：**8 级 `--fs-*` 是唯一真源**（2026-11 起），见 §1.7；行高 `--line-height-tight/base/relaxed`
 - 动效：`--motion-duration 220ms` / `--motion-ease` / `--motion-hover-rise`（上浮 1px）/ `--motion-press`（缩放 0.97）
 - 兼容旧写法：`--transition-fast/base/slow`（仍在用，尽量迁移到 `--motion-*`）
 
@@ -71,9 +86,9 @@
 
 | 场景     | ❌ 禁止                        | ✅ 正确                                             |
 | ------ | --------------------------- | ------------------------------------------------ |
-| 组件里的主色 | `color: #3b82f6`            | `color: var(--color-primary, #3b82f6)`           |
-| 边框     | `border: 1px solid #e2e8f0` | `border: 1px solid var(--color-border, #e2e8f0)` |
-| 卡片底    | `background: #fff`          | `background: var(--color-bg-card, #ffffff)`      |
+| 组件里的主色 | `color: #3b82f6`            | `color: var(--color-primary)`                    |
+| 边框     | `border: 1px solid #e2e8f0` | `border: 1px solid var(--color-border)`          |
+| 卡片底    | `background: #fff`          | `background: var(--color-bg-card)`               |
 
 **只有以下情况可保留字面色**（它们本就不该跟随主题）：
 
@@ -85,6 +100,8 @@
 - 暗色模式专用手调色板（被 `html.dark` 包裹的刻意高对比组合）
 
 > **判断标准**：切换主题色时，这个颜色**该不该跟着变**？该变 → 用 token；不该变 → 保留。
+
+色值类违规已由 `npm run lint:style` 自动拦截，规则与豁免见 §1.7。
 
 ---
 
@@ -103,6 +120,45 @@
 | 留白 | `--ds-gap-card` 16 / `--ds-gap-block` 24 | 卡片内边距 / 区块间距（其余间距复用 `--space-*`） |
 
 当前消费方：博客后台全部页面（`BlogAdminView` / `BlogPosts` / `BlogGallery` / `BlogTrash` / `BlogSettingsPanel` / `BlogEditor` 侧栏区块标题）。新页面若要采用同一 look，直接引用本表，**不要**再复制一份值。
+
+### 1.7 字号阶梯与 lint 守卫（2026-11 新增）
+
+8 级，定义在 `src/style.css` 的 `:root`：
+
+| 令牌 | 值 | 用途 |
+| --- | --- | --- |
+| `--fs-caption` | 12px | 辅助说明 / 时间戳 / 表头 |
+| `--fs-sm` | 13px | 表格内容 / 表单标签 / 次要正文 |
+| `--fs-body` | 14px | 默认 UI 正文（存量最高频） |
+| `--fs-md` | 15px | 宽松正文 / 大号输入 |
+| `--fs-lg` | 16px | 阅读正文 / 卡片标题 |
+| `--fs-title` | 18px | 区块标题 |
+| `--fs-h2` | 22px | 页面标题 |
+| `--fs-h1` | 28px | 页面大标题 / 数据大屏 |
+
+`--font-size-*`（`xs`..`4xl`）是 v1 旧阶梯，与 `--fs-*` 并存但**不再新增引用**，迁移完再删。
+
+**12px 是下限。** 9 / 10 / 11px 一律上提到 `--fs-caption`；唯一例外是图标角标这类视觉微调，且需在说明里写清原因（现存违例：`HabitCalendarCard` 的日历角标 2 处 9px）。
+
+#### 守卫怎么用
+
+```bash
+npm run lint:style          # 只报「超出基线的新增」，日常与 CI 用（已串进 npm run lint）
+npm run lint:style:report   # 全量总账，用于排治理计划
+node scripts/check-style-tokens.mjs --update-baseline   # 治理一处后收紧基线
+```
+
+三条规则：
+
+1. `font-size` 必须是 `var(--fs-*)` —— 禁止 `12px` / `0.9em` / `90%`；
+2. 文字色（`color` / `-webkit-text-fill-color`）必须是 `var(--*)` —— 禁止 `#hex` / `rgb()` / 颜色关键字；
+3. `var(--x)` 引用的令牌必须真有定义 —— 专防「名字猜错」这一类：`--color-text-primary`、`--color-danger`、`--color-link` 等 20 多个别名从来没被定义过，全靠兜底 hex 装死。
+
+**只扫 CSS 上下文**：`.css` 全文、`.vue` 的 `<style>` 块、模板里的静态 `style=""`。`<script>` 里的 ECharts / Canvas 配置与 `:style` / `v-bind:style` 绑定不参与 —— 那是图表配色和 JS 对象，不归令牌体系管（否则近半数命中都是假阳性）。
+
+存量按文件计数记在 `scripts/style-token-baseline.json`，ratchet 只允许变小。截至 2026-11-04：**688 处字面量**，大头是 `src/toolbox/**`（约 300 处，布局密集需逐工具目视核对）、`blogTypoZhaotab.css`（脚本生成的排版主题包，已豁免）、以及调色板上约 160 处 `color: #fff` 压色白字。
+
+> **压色白字的未决项**：`color:#fff` 配彩色实底目前一律写死，尚无 `--color-on-accent` 令牌。若要收敛，先确认各主题 `--color-primary` 的亮度是否都足以托住白字，再新增令牌统一替换 —— 别在没验证前批量改。
 
 ---
 

@@ -829,7 +829,7 @@ function printReport(): void {
 
 .bizstats-pie-legend-val {
   font-weight: 600;
-  color: var(--color-text, var(--color-text-primary));
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
 }
 

@@ -507,8 +507,8 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
-  ro && ro.disconnect()
-  chart && chart.dispose()
+  ro?.disconnect()
+  chart?.dispose()
   chart = null
 })
 </script>
