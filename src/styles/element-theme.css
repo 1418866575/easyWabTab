@@ -97,6 +97,9 @@ html.dark {
 html:root {
   --el-component-size: 36px;
   --el-component-size-large: 44px;
+  /* EP 自带 --el-font-family 默认栈（落 Arial / 微软雅黑），与正文不同族。
+     统一指向项目的 --font-family，输入框 / 下拉 / 表格文字才与全局一致。 */
+  --el-font-family: var(--font-family);
   /* 注意：**不要**改 --el-component-size-small。
      实测它同时驱动 el-pagination 的小号（分页按钮 24 → 32 会连带改变已有版式），
      小号输入框改为在下方按类点名设置 --el-input-height，只影响输入类控件。 */
@@ -105,6 +108,17 @@ html:root {
   /* 不要设 --el-font-size-base：EP 默认就是 14px，设了等于没设，
      却会连带把 el-pagination 容器从 24px 撑到 32px（它的行高吃这个值）。
      输入框字号在下方按类点名（html .el-input--small 等）。 */
+}
+
+/* ============================================================
+ * 数字等宽对齐
+ * ------------------------------------------------------------
+ * 表格里的金额 / 数量 / 日期列若用比例数字，各位宽度不同会让列内左右抖动。
+ * tabular-nums 让数字等宽，纵向对齐更整齐（不影响中英文）。
+ * ============================================================ */
+html .el-table th .cell,
+html .el-table td .cell {
+  font-variant-numeric: tabular-nums;
 }
 
 /* ============================================================

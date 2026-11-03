@@ -7,6 +7,8 @@ html.dark {
   --color-text: #f9fafb;
   --color-text-secondary: #d1d5db;
   --color-text-muted: #9ca3af;
+  /* 墨色（暗色）：小字用纯白，与亮色的 #020617 对称 */
+  --text-strong: #ffffff;
   --color-border: #374151;
   --color-border-hover: #4b5563;
   --color-primary: #3b82f6;
