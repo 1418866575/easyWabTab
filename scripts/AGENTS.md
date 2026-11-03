@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-4 helper scripts + 31 pure-function test runners (`node --experimental-strip-types`，其中 15 个学生 core 测试需 extensionless loader) + 1 Playwright UI QA。
+4 helper scripts + 31 pure-function test runners (`node --experimental-strip-types`，其中 15 个学生 core 测试需 extensionless loader) + 3 Playwright UI QA。
 一次性 Playwright QA 脚本（`qa-*.mjs` ×36）与已废弃的 IDB 版本校验脚本（`check-idb-v4/v8.ts`）已于开源清理中移除。
 
 **关键：学生 core 测试（test:student-*）必须带 `--experimental-loader ./scripts/resolve-extensionless.mjs`**
@@ -20,6 +20,7 @@ scripts/
 ├── stats-only.cjs            # 独立统计服务（端口 16723；npm run stats）
 ├── resolve-extensionless.mjs # Node 自定义 loader：解析无扩展名相对导入（`./countdownCore`）+ `@/` 别名 → 学生 core 测试运行必需
 ├── qa-student-ui.mjs         # Playwright UI QA：学生工作台 UI（npm run qa:student-ui）
+├── qa-visual.mjs             # Playwright 视觉回归：逐子面板测溢出/小字/对比度/控制台错误（npm run qa:visual）
 ├── test-countdown-core.ts    # countdownCore.ts（16 断言；npm run test:countdown）
 ├── test-reminder-core.ts     # reminderCore.ts（10 断言 T1-T10；npm run test:reminder）
 ├── test-todo-core.ts         # todoCore.ts（16 断言 T1-T16；npm run test:todo）
@@ -66,6 +67,7 @@ scripts/
 | 全网访问统计（独立进程） | `stats-only.cjs` | `npm run stats`；端口 16723（可 `STATS_HOST`/`STATS_PORT` 覆盖）；只做 HTTP 壳 + `/healthz`，逻辑全在 `statsService.cjs`；SIGTERM 时补一次 `flushNow()` |
 | 核心纯函数测试 | `test-*-core.ts` | `node --experimental-strip-types` 直跑，自研 assert 断言；被测核心禁止 import vue/pinia |
 | 学生 core 纯函数测试 | `test-student-*-core.ts` + `resolve-extensionless.mjs` | 14 个 `test:student-*`，每个都带 `--experimental-loader ./scripts/resolve-extensionless.mjs`；`npm run test:student` 聚合全部 |
+| 全局视觉回归 | `qa-visual.mjs` | `npm run qa:visual`（需先 build 并起静态服务，默认 `http://127.0.0.1:16718`）。**路由只有 9 个顶层，子面板靠点菜单进入** —— 直接 goto `/workbench/notes` 拿到的是空壳，这正是本脚本要解决的假绿。每个视图先测整页，再按菜单选择器（`.wb-menu-item` / `.st-menu-item` / `.sv-nav-item` / `.el-tabs__item`）逐个点开子面板；每屏四查：横向溢出（已排除可滚容器、省略号截断、1px 隐藏控件、页脚访问计数）、<12px 正文、WCAG AA 对比度、控制台错误。参数 `--url --dark --accent <name> --only <key,...> --json --verbose --fail-contrast --width --height`；控制台错误或溢出 >0 退出码 1。空状态视图（未建账本/学期）标注「空状态，未建数据」 |
 | 学生工作台 UI QA | `qa-student-ui.mjs` | `npm run qa:student-ui`；48 断言 / S1–S13：骨架与 16 项菜单、首页三块平铺（回归「轮播残留」）、习惯日历打卡、作业/复习/错题的状态推进、课程表周切换、阅读统计、勋章与积分、家长锁态 + PIN 弹框、16 面板逐个渲染、移动端 390px。**UI 操作驱动、pinia store 校验结果**（分页/筛选不断言 DOM 数量）。用 `findChromium()` 取本机 chromium，不做 playwright install |
 
 ## CONVENTIONS

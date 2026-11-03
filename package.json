@@ -54,6 +54,7 @@
     "test:xlsx": "node --experimental-strip-types scripts/test-xlsx-export.ts",
     "qa:student-ui": "node scripts/qa-student-ui.mjs",
     "qa:smart-ai": "node scripts/qa-smart-ai-platforms.mjs",
+    "qa:visual": "node scripts/qa-visual.mjs",
     "test:student-menu": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-menu-core.ts",
     "test:student-habits": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-habits-core.ts",
     "test:student-homework": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-homework-core.ts",
