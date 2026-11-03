@@ -190,8 +190,8 @@ const MD_TOOLBAR: MdToolbarButton[] = [
   { kind: 'image', label: '图片', title: '插入图片（选择本地图片，存入图片库）', group: 3 },
   { kind: 'table', label: '表格', title: '插入表格', group: 3 },
   { kind: 'hr', label: '分割线', title: '插入分割线', group: 3 },
-  { kind: 'scroll-top', label: '返回顶部', title: '滚动到编辑器顶部', group: 4 },
-  { kind: 'scroll-bottom', label: '返回底部', title: '滚动到编辑器底部', group: 4 }
+  { kind: 'scroll-top', label: '顶部', title: '滚动到编辑器顶部', group: 4 },
+  { kind: 'scroll-bottom', label: '底部', title: '滚动到编辑器底部', group: 4 }
 ]
 
 const toolbarGroups = computed(() => {
