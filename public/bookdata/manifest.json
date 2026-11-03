@@ -13,7 +13,7 @@
     "order": 10,
     "entry": "/bookdata/daodejing/index.html",
     "size": 347386,
-    "updatedAt": "2026-10-22T00:57:29.295Z",
+    "updatedAt": "2026-10-16T02:11:23.707Z",
     "hasMeta": true,
     "source": "static"
   },
@@ -31,7 +31,26 @@
     "order": 20,
     "entry": "/bookdata/sunzibingfa/index.html",
     "size": 228453,
-    "updatedAt": "2026-10-22T00:57:29.348Z",
+    "updatedAt": "2026-10-16T02:11:23.751Z",
+    "hasMeta": true,
+    "source": "static"
+  },
+  {
+    "id": "tangshi300",
+    "title": "唐诗三百首",
+    "description": "清代蘅塘退士编选的唐诗经典选本，收诗三百余首，涵盖李白、杜甫、王维等名家名篇，中国古典诗歌的入门必读。",
+    "cover": "",
+    "category": "诗词文学",
+    "tags": [
+      "唐诗",
+      "古典诗歌",
+      "唐代",
+      "蘅塘退士"
+    ],
+    "order": 25,
+    "entry": "/bookdata/tangshi300/index.html",
+    "size": 898836,
+    "updatedAt": "2026-11-03T05:59:41.577Z",
     "hasMeta": true,
     "source": "static"
   },
@@ -49,7 +68,7 @@
     "order": 30,
     "entry": "/bookdata/gushi/index.html",
     "size": 601745,
-    "updatedAt": "2026-10-22T00:57:29.304Z",
+    "updatedAt": "2026-10-16T02:11:23.734Z",
     "hasMeta": true,
     "source": "static"
   },
@@ -68,7 +87,7 @@
     "order": 40,
     "entry": "/bookdata/opencode-study/index.html",
     "size": 331142,
-    "updatedAt": "2026-10-22T00:57:29.342Z",
+    "updatedAt": "2026-10-16T02:11:23.744Z",
     "hasMeta": true,
     "source": "static"
   },
@@ -87,8 +106,8 @@
     ],
     "order": 45,
     "entry": "/bookdata/opencodeV2/index.html",
-    "size": 328811,
-    "updatedAt": "2026-10-29T02:31:24.156Z",
+    "size": 331099,
+    "updatedAt": "2026-10-30T05:35:57.333Z",
     "hasMeta": true,
     "source": "static"
   },
@@ -108,7 +127,7 @@
     "order": 50,
     "entry": "/bookdata/how-to-live-better/index.html",
     "size": 2834101,
-    "updatedAt": "2026-10-22T00:57:29.334Z",
+    "updatedAt": "2026-10-23T08:57:19.975Z",
     "hasMeta": true,
     "source": "static"
   }
