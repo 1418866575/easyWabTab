@@ -325,7 +325,7 @@ function stageColor(stage: number): string {
   margin-left: 6px;
   padding: 1px 7px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 600;
   background: var(--color-bg-hover);
   color: var(--color-text-muted);

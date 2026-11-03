@@ -381,7 +381,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   border-radius: var(--ds-radius-pill, 999px);
   background: var(--ds-bg, #f7f8fa);
   color: var(--ds-text-3);
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: var(--font-weight-medium, 500);
   line-height: 18px;
   text-align: center;
@@ -423,7 +423,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   border-radius: 50%;
   background: var(--color-primary, #3b82f6);
   color: #ffffff;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   line-height: 18px;
   text-align: center;
 }
@@ -445,13 +445,13 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   margin-top: auto;
   padding-top: 10px;
   border-top: 1px solid var(--ds-line, #ececf0);
-  font-size: 11.5px;
+  font-size: var(--fs-caption);
   color: var(--ds-text-3);
 }
 .td-name { display: inline-flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .td-swatch { width: 7px; height: 7px; border-radius: 50%; flex: none; }
 .td-ops { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; flex: none; }
-.td-def { border: none; background: transparent; padding: 2px 3px; color: var(--ds-text-3); font-size: 11px; cursor: pointer; white-space: nowrap; }
+.td-def { border: none; background: transparent; padding: 2px 3px; color: var(--ds-text-3); font-size: var(--fs-caption); cursor: pointer; white-space: nowrap; }
 .td-def:hover { color: var(--color-primary, #3b82f6); }
 .td-badge {
   flex: none;
@@ -470,7 +470,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   color: var(--ds-text-2);
   padding: 2px 8px;
   font-family: inherit;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   white-space: nowrap;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s, background-color 0.15s;
@@ -514,7 +514,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
 .tdp-live {
   margin-left: auto;
   color: var(--color-success, #047857);
-  font-size: 11px;
+  font-size: var(--fs-caption);
   white-space: nowrap;
 }
 
@@ -526,7 +526,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   border-radius: var(--ds-radius-ctrl, 8px);
   background: var(--color-warning-soft, #fef3c7);
   color: var(--color-warning-text, #92400e);
-  font-size: 11.5px;
+  font-size: var(--fs-caption);
   line-height: 1.6;
 }
 
@@ -613,7 +613,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   text-align: center;
 }
 
-.td-hint { margin: 0; flex: none; font-size: 11px; color: var(--ds-text-3); }
+.td-hint { margin: 0; flex: none; font-size: var(--fs-caption); color: var(--ds-text-3); }
 
 /* 窄屏降列：3 → 2 → 1，保证每张卡不会被压到放不下页脚按钮 */
 @media (max-width: 1024px) {

@@ -344,7 +344,7 @@ onMounted(async () => {
 }
 
 .sa-badge-emoji {
-  font-size: 32px;
+  font-size: var(--fs-display);
   line-height: 1;
 }
 .sa-badge-name {
@@ -392,7 +392,7 @@ onMounted(async () => {
   padding: 0;
 }
 .sa-dialog-emoji {
-  font-size: 32px;
+  font-size: var(--fs-display);
   line-height: 1;
 }
 .sa-dialog-name {

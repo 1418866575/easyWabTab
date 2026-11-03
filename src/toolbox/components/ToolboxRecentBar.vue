@@ -326,7 +326,7 @@ watch(activeIndex, v => {
   border-radius: 999px;
   background: var(--color-primary);
   color: #fff;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   line-height: 18px;
   text-align: center;
 }
@@ -381,23 +381,23 @@ watch(activeIndex, v => {
 .tb-recent-panel-cat {
   flex: none;
   color: var(--color-text-muted);
-  font-size: 11px;
+  font-size: var(--fs-caption);
   padding: 0 5px;
   border-radius: 999px;
   background: var(--color-bg-hover);
 }
-.tb-recent-panel-time { flex: none; color: var(--color-text-muted); font-size: 11px; }
+.tb-recent-panel-time { flex: none; color: var(--color-text-muted); font-size: var(--fs-caption); }
 .tb-recent-panel-hits {
   flex: none;
   color: var(--color-text-muted);
-  font-size: 11px;
+  font-size: var(--fs-caption);
   padding: 0 5px;
   border-radius: 999px;
   background: var(--color-bg-hover);
 }
 .tb-recent-panel-hint {
   margin: 4px 8px 2px;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--color-text-muted);
 }
 

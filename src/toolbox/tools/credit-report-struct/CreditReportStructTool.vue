@@ -480,7 +480,7 @@ function parts(text: string): { t: string; hit: boolean }[] {
 .cr-tag {
   margin-left: auto;
   font-family: var(--font-family-mono);
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--color-text-muted);
   background: var(--color-bg-input);
   padding: 1px 5px;
@@ -517,7 +517,7 @@ function parts(text: string): { t: string; hit: boolean }[] {
   border-radius: 6px;
 }
 .cr-domain {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--color-primary);
   background: var(--color-primary-soft);
   padding: 2px 8px;
@@ -589,7 +589,7 @@ function parts(text: string): { t: string; hit: boolean }[] {
 }
 .cr-ct-count {
   margin-left: 6px;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--color-text-muted);
   font-weight: 400;
 }

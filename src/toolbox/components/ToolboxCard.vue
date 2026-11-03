@@ -177,7 +177,7 @@ const ariaLabel = computed(
 }
 .tb-card-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: auto; }
 .tb-tag {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   padding: 1px 7px;
   border-radius: var(--radius-full);
   background: var(--color-bg-hover);
@@ -185,7 +185,7 @@ const ariaLabel = computed(
   border: 1px solid var(--color-border);
 }
 .tb-hits {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   padding: 1px 7px;
   border-radius: var(--radius-full);
   font-weight: 600;
@@ -194,7 +194,7 @@ const ariaLabel = computed(
   border: 1px solid transparent;
 }
 .tb-badge {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   padding: 1px 7px;
   border-radius: var(--radius-full);
   font-weight: 600;

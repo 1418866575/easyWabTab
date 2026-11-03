@@ -450,7 +450,7 @@ async function removeChecked(): Promise<void> {
   display: inline-block;
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 11.5px;
+  font-size: var(--fs-caption);
   font-weight: 600;
   background: var(--color-primary-soft);
   color: var(--color-primary);

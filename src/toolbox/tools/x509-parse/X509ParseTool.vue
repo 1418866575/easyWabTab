@@ -72,5 +72,5 @@ function parse() {
 </template>
 
 <style scoped>
-.mono { font-family: var(--font-family-mono); font-size: 11.5px; word-break: break-all; }
+.mono { font-family: var(--font-family-mono); font-size: var(--fs-caption); word-break: break-all; }
 </style>

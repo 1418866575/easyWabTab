@@ -180,7 +180,7 @@ const monthText = computed(() =>
 .tu-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
 .tu-cal-head {
   text-align: center;
-  font-size: 11.5px;
+  font-size: var(--fs-caption);
   padding: 4px 0;
   color: var(--color-text-muted);
 }
@@ -202,7 +202,7 @@ const monthText = computed(() =>
 .tu-cal-cell.is-active { box-shadow: inset 0 0 0 2px var(--color-primary); }
 .tu-cal-day { font-size: var(--fs-sm); }
 .tu-cal-tag { display: block; font-size: 10px; color: var(--color-text-secondary); }
-.tu-legend { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--color-text-secondary); }
+.tu-legend { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-caption); color: var(--color-text-secondary); }
 .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; border: 1px solid var(--color-border); }
 .dot.workday { background: var(--color-bg-card); }
 .dot.weekend { background: var(--color-bg-hover); }

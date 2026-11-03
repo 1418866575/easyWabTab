@@ -226,7 +226,7 @@ onMounted(async () => {
 }
 .rn-book.is-active { border-color: var(--color-primary); background: var(--color-primary-soft); }
 .rn-book-title { font-size: var(--fs-sm); font-weight: 600; color: var(--color-text); }
-.rn-book-meta { font-size: 11px; color: var(--color-text-muted); margin: 2px 0 6px; }
+.rn-book-meta { font-size: var(--fs-caption); color: var(--color-text-muted); margin: 2px 0 6px; }
 .rn-bar { height: 4px; background: var(--color-bg-input); border-radius: var(--radius-full); overflow: hidden; }
 .rn-bar-fill { height: 100%; background: var(--color-primary); }
 .rn-detail { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -244,6 +244,6 @@ onMounted(async () => {
 .rn-note.is-quote { background: var(--color-primary-soft); }
 .rn-quote-mark { color: var(--color-primary); font-size: var(--fs-body); }
 .rn-note-text { flex: 1; min-width: 0; font-size: 12.5px; color: var(--color-text); word-break: break-all; }
-.rn-note-page { font-size: 11px; color: var(--color-text-muted); font-family: var(--font-family-mono); }
+.rn-note-page { font-size: var(--fs-caption); color: var(--color-text-muted); font-family: var(--font-family-mono); }
 .rn-mini { min-height: 22px; padding: 1px 7px; font-size: var(--fs-caption); }
 </style>

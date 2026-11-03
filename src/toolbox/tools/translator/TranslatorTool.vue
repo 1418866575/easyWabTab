@@ -175,5 +175,5 @@ onMounted(async () => {
 .tr-quiz-word { margin: 0 0 6px; font-size: var(--fs-title); font-weight: 600; color: var(--color-text); }
 .tr-quiz-ans { margin: 0 0 10px; font-size: var(--fs-sm); color: var(--color-primary); }
 .tr-level { font-size: var(--fs-caption); color: var(--color-primary); margin-right: 6px; }
-.tr-mini { min-height: 22px; padding: 1px 7px; font-size: 11.5px; }
+.tr-mini { min-height: 22px; padding: 1px 7px; font-size: var(--fs-caption); }
 </style>

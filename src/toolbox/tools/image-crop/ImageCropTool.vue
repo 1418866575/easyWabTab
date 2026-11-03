@@ -264,7 +264,7 @@ onBeforeUnmount(() => {
   position: absolute;
   top: -18px;
   left: 0;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   padding: 0 5px;
   border-radius: 4px;
   background: var(--color-primary);

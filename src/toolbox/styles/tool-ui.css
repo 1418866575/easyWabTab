@@ -274,7 +274,7 @@
 .tu-alert.ok { background: var(--color-success-soft); color: var(--color-success); }
 
 /* 统计条 */
-.tu-stat { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11.5px; color: var(--color-text-muted); }
+.tu-stat { display: flex; gap: 12px; flex-wrap: wrap; font-size: var(--fs-caption); color: var(--color-text-muted); }
 
 /* 高亮 token（JSON 等） */
 .tu-tok.key { color: var(--color-primary); }
@@ -288,12 +288,12 @@
 .tu-tree { font-family: var(--font-family-mono); font-size: 12.5px; }
 .tu-tree-row { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
 .tu-tree-key { color: var(--color-primary); }
-.tu-tree-type { color: var(--color-text-muted); font-size: 11px; }
+.tu-tree-type { color: var(--color-text-muted); font-size: var(--fs-caption); }
 .tu-tree-toggle {
   min-width: 18px;
   border: none;
   background: transparent;
   color: var(--color-text-secondary);
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--fs-caption);
 }

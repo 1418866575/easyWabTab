@@ -169,7 +169,7 @@ const cssText = computed(() =>
 <style scoped>
 .tu-bars { display: flex; flex-direction: column; gap: 6px; }
 .tu-bar-row { display: flex; align-items: center; gap: 8px; }
-.tu-bar-label { width: 78px; font-family: var(--font-family-mono); font-size: 11.5px; }
+.tu-bar-label { width: 78px; font-family: var(--font-family-mono); font-size: var(--fs-caption); }
 .tu-bar { height: 14px; border-radius: 3px; min-width: 8px; }
 .tu-scale { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; }
 .tu-scale-cell {

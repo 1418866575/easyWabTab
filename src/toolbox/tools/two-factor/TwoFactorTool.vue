@@ -286,10 +286,10 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 .tf-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
-.tf-meta { font-size: 11.5px; color: var(--color-text-muted); }
+.tf-meta { font-size: var(--fs-caption); color: var(--color-text-muted); }
 .tf-secret {
   font-family: var(--font-family-mono);
-  font-size: 11.5px;
+  font-size: var(--fs-caption);
   color: var(--color-text-muted);
   cursor: pointer;
   word-break: break-all;

@@ -123,7 +123,7 @@
 
 ### 1.7 字号阶梯与 lint 守卫（2026-11 新增）
 
-8 级，定义在 `src/style.css` 的 `:root`：
+10 档，定义在 `src/style.css` 的 `:root`：
 
 | 令牌 | 值 | 用途 |
 | --- | --- | --- |
@@ -134,11 +134,26 @@
 | `--fs-lg` | 16px | 阅读正文 / 卡片标题 |
 | `--fs-title` | 18px | 区块标题 |
 | `--fs-h2` | 22px | 页面标题 |
-| `--fs-h1` | 28px | 页面大标题 / 数据大屏 |
+| `--fs-h1` | 28px | 页面大标题 |
+| `--fs-display` | 32px | 统计数值：分数 / 勋章数 / 倒计时天数 |
+| `--fs-hero` | 40px | 计时器 / 倒计时 / 封面大字 |
 
 `--font-size-*`（`xs`..`4xl`）是 v1 旧阶梯，与 `--fs-*` 并存但**不再新增引用**，迁移完再删。
 
-**12px 是下限。** 9 / 10 / 11px 一律上提到 `--fs-caption`；唯一例外是图标角标这类视觉微调，且需在说明里写清原因（现存违例：`HabitCalendarCard` 的日历角标 2 处 9px）。
+**12px 是下限。** 11 / 11.5 / 12.5px 一律并到 `--fs-caption` 或 `--fs-sm`（2026-11-04 已把 58 处 11/11.5px 全部提到 `--fs-caption`，工具箱小字从 369 处降到 0）。
+
+**唯一例外：固定网格内的可视化标注可以用 9 / 10px。** 判据是「放大之后会不会撑破格子」，成立才允许，且必须在注释里写明原因。当前合法清单：
+
+| 位置 | 字号 | 原因 |
+| --- | --- | --- |
+| `PeriodicTableTool` `.pt-num` 原子序号 / `.pt-cn` 中文名 | 9 / 10px | 元素格尺寸固定，118 个格子同时放大必溢出 |
+| `MultiplicationTableTool` `.mt-cell` @≤480px | 10px | 移动端压缩表格 |
+| `PianoTool` `.pn-label` 音名 | 10px | 琴键宽度固定 |
+| `ChartColorTool` 色块标注 | 10px | 图形注记 |
+| `CalendarTool` `.tu-cal-tag` 格内标签 | 10px | 日历格子窄 |
+| `HabitCalendarCard` 打卡角标 | 9px | 日格角标，放大压字 |
+
+这些不追求令牌化 —— 它们不是 UI 正文，属图形注记，跟图表轴标签同级。
 
 #### 守卫怎么用
 
@@ -156,7 +171,7 @@ node scripts/check-style-tokens.mjs --update-baseline   # 治理一处后收紧�
 
 **只扫 CSS 上下文**：`.css` 全文、`.vue` 的 `<style>` 块、模板里的静态 `style=""`。`<script>` 里的 ECharts / Canvas 配置与 `:style` / `v-bind:style` 绑定不参与 —— 那是图表配色和 JS 对象，不归令牌体系管（否则近半数命中都是假阳性）。
 
-存量按文件计数记在 `scripts/style-token-baseline.json`，ratchet 只允许变小。截至 2026-11-04：**688 处字面量**，大头是 `src/toolbox/**`（约 300 处，布局密集需逐工具目视核对）、`blogTypoZhaotab.css`（脚本生成的排版主题包，已豁免）、以及调色板上约 160 处 `color: #fff` 压色白字。
+存量按文件计数记在 `scripts/style-token-baseline.json`，ratchet 只允许变小。截至 2026-11-04：**470 处字面量**（已从 688 收敛）+ 74 处死别名引用。剩下的主要是三类：`src/toolbox/**` 里逐断点的装饰尺寸（如退休计算 38px↔30px、考试 32px↔36px，并成单一令牌会破坏断点行为）、约 160 处 `color: #fff` 压色白字（缺 `--color-on-accent` 令牌）、以及 12.5px（卡在 caption 与 sm 之间，几乎全在工具箱密集区）。
 
 > **压色白字的未决项**：`color:#fff` 配彩色实底目前一律写死，尚无 `--color-on-accent` 令牌。若要收敛，先确认各主题 `--color-primary` 的亮度是否都足以托住白字，再新增令牌统一替换 —— 别在没验证前批量改。
 

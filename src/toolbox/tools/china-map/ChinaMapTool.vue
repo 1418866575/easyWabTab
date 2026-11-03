@@ -579,7 +579,7 @@ onBeforeUnmount(() => {
 .legend-list li.active { background: var(--color-primary-soft); outline: 1px solid var(--color-primary); }
 .legend-list .sw { width: 13px; height: 13px; border-radius: 3px; flex: 0 0 auto; border: 1px solid var(--color-border); }
 .legend-list .cap { color: var(--color-primary); font-weight: 600; }
-.legend-note { font-size: 11px; color: var(--color-text-secondary); margin: 10px 0 0; line-height: 1.5; }
+.legend-note { font-size: var(--fs-caption); color: var(--color-text-secondary); margin: 10px 0 0; line-height: 1.5; }
 .legend-note.src { color: var(--color-text-muted); }
 
 .scale-box {
@@ -595,7 +595,7 @@ onBeforeUnmount(() => {
   border-left: 2px solid #2b2f36; border-right: 2px solid #2b2f36;
   border-top: 2px solid #2b2f36; background: rgba(43, 47, 54, .12);
 }
-.scale-text { font-size: 11px; color: var(--color-text); margin-top: 4px; white-space: nowrap; }
+.scale-text { font-size: var(--fs-caption); color: var(--color-text); margin-top: 4px; white-space: nowrap; }
 
 .map-error { position: absolute; inset: 0; margin: auto; height: fit-content; width: fit-content; max-width: 80%; }
 @media (min-width: 1100px) {

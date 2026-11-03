@@ -274,7 +274,7 @@ onBeforeUnmount(() => {
   border-radius: var(--radius-full);
 }
 .is-thumb { width: 48px; height: 48px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--color-border); flex: 0 0 auto; }
-.is-meta { font-size: 11.5px; color: var(--color-text-muted); font-family: var(--font-family-mono); }
+.is-meta { font-size: var(--fs-caption); color: var(--color-text-muted); font-family: var(--font-family-mono); }
 .is-item-actions { margin-left: auto; display: flex; gap: 4px; }
 .is-generate { align-self: flex-start; }
 </style>

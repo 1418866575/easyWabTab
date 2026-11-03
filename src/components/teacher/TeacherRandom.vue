@@ -226,7 +226,7 @@ onBeforeUnmount(stopTimer)
 }
 
 .rd-display {
-  font-size: 40px;
+  font-size: var(--fs-hero);
   font-weight: var(--font-weight-bold, 700);
   color: var(--color-text);
   letter-spacing: 0.08em;

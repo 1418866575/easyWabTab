@@ -162,7 +162,7 @@ onMounted(async () => {
 .fq-cell { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .fq-head { display: flex; align-items: baseline; gap: 8px; }
 .fq-title { margin: 0; font-size: var(--fs-sm); font-weight: 600; color: var(--color-text); }
-.fq-sub { font-size: 11.5px; color: var(--color-text-muted); }
+.fq-sub { font-size: var(--fs-caption); color: var(--color-text-muted); }
 .fq-add { display: flex; gap: 6px; }
 .fq-add-btn {height: 36px;
   padding: 0 12px;}
@@ -172,7 +172,7 @@ onMounted(async () => {
 .fq-check { display: inline-flex; margin: 0; }
 .fq-text { flex: 1; min-width: 0; font-size: 12.5px; color: var(--color-text); word-break: break-all; cursor: text; }
 .fq-edit { width: auto; flex: 1; min-width: 0; }
-.fq-move { min-height: 26px; font-size: 11.5px; padding: 2px 4px; max-width: 110px; }
+.fq-move { min-height: 26px; font-size: var(--fs-caption); padding: 2px 4px; max-width: 110px; }
 .fq-btn {height: 36px;
   padding: 0 12px;
   font-size: var(--fs-caption);}

@@ -144,7 +144,7 @@ function print() {
   color: #111;
   pointer-events: none;
 }
-.cb-page-no { margin: 10px 0 0; text-align: right; font-size: 11px; color: #888; }
+.cb-page-no { margin: 10px 0 0; text-align: right; font-size: var(--fs-caption); color: #888; }
 
 @media print {
   .cb-screen :deep(.tu-row),

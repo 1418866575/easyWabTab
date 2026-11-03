@@ -336,7 +336,7 @@ const allCount = countAll(MULT_MAX)
   justify-content: center;
   min-height: 26px;
   padding: 2px 3px;
-  font-size: 11.5px;
+  font-size: var(--fs-caption);
   color: var(--color-text-secondary);
   text-align: center;
   background: var(--color-bg-card);
@@ -380,7 +380,7 @@ html.dark .mt-cell.is-diag {
 /* 口诀模式下超范围（>9×9）的格子回落为积，压暗以示「无口诀」 */
 .mt-cell.is-nochant { opacity: 0.55; }
 /* 算式模式需要更宽的格 */
-.mt-table.is-formula .mt-cell { font-size: 11px; letter-spacing: -0.2px; }
+.mt-table.is-formula .mt-cell { font-size: var(--fs-caption); letter-spacing: -0.2px; }
 .mt-table.is-formula .mt-row { grid-template-columns: 28px repeat(19, minmax(52px, 1fr)); }
 .mt-table.is-chant .mt-row { grid-template-columns: 28px repeat(19, minmax(48px, 1fr)); }
 .mt-table.is-chant .mt-cell { font-size: var(--fs-caption); letter-spacing: 0.5px; }
@@ -404,10 +404,10 @@ html.dark .mt-cell.is-diag {
 }
 .mt-export-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .mt-export-title { margin: 0; font-size: var(--fs-sm); font-weight: 600; color: var(--color-text); }
-.mt-export-hint { font-size: 11.5px; color: var(--color-text-muted); }
-.mt-export-note { margin: 0; font-size: 11.5px; line-height: 1.7; color: var(--color-text-secondary); }
+.mt-export-hint { font-size: var(--fs-caption); color: var(--color-text-muted); }
+.mt-export-note { margin: 0; font-size: var(--fs-caption); line-height: 1.7; color: var(--color-text-secondary); }
 .mt-export-note b { color: var(--color-text); }
-.tu-legend { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--color-text-secondary); }
+.tu-legend { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-caption); color: var(--color-text-secondary); }
 .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; border: 1px solid var(--color-border); }
 .dot.small { background: var(--color-primary-soft); border-color: var(--color-primary-soft); }
 .dot.plain { background: var(--color-bg-card); }

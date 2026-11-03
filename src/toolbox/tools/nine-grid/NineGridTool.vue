@@ -152,7 +152,7 @@ async function downloadAll() {
   overflow: hidden;
 }
 .ng-thumb { max-width: 100%; max-height: 120px; display: block; }
-.ng-meta { font-size: 11.5px; color: var(--color-text-muted); font-family: var(--font-family-mono); }
+.ng-meta { font-size: var(--fs-caption); color: var(--color-text-muted); font-family: var(--font-family-mono); }
 .ng-btn {height: 36px;
   padding: 0 12px;
   font-size: var(--fs-caption);}

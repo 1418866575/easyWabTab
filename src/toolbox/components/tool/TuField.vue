@@ -25,5 +25,5 @@ defineProps<{
 <style scoped>
 .tu-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .tu-field-head { display: flex; align-items: center; gap: 8px; }
-.tu-field-extra { margin-left: auto; font-size: 11px; color: var(--color-text-muted); }
+.tu-field-extra { margin-left: auto; font-size: var(--fs-caption); color: var(--color-text-muted); }
 </style>

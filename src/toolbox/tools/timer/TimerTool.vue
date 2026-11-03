@@ -112,7 +112,7 @@ onBeforeUnmount(stop)
 <style scoped>
 .clock {
   font-family: var(--font-family-mono);
-  font-size: 40px;
+  font-size: var(--fs-hero);
   font-weight: 600;
   text-align: center;
   color: var(--color-text);

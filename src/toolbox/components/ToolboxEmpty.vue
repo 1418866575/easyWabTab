@@ -49,7 +49,7 @@ const COPY = {
   border: 1px dashed var(--color-border);
   border-radius: var(--radius-lg);
 }
-.tb-empty-icon { font-size: 32px; display: block; margin-bottom: 10px; opacity: .8; }
+.tb-empty-icon { font-size: var(--fs-display); display: block; margin-bottom: 10px; opacity: .8; }
 .tb-empty p { margin: 0 0 12px; font-size: var(--fs-body); }
 .tb-empty-kw { color: var(--color-primary); font-weight: 600; }
 .tb-empty code {

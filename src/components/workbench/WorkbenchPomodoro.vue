@@ -282,7 +282,7 @@ onUnmounted(() => {
 }
 
 .pm-time {
-  font-size: 40px;
+  font-size: var(--fs-hero);
   font-weight: 700;
   color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;

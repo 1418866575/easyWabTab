@@ -305,7 +305,7 @@ onBeforeUnmount(() => {
   border-top: 1px solid var(--color-border);
   background: var(--color-bg-card);
 }
-.tb-modal-tip { font-size: 11.5px; color: var(--color-text-muted); }
+.tb-modal-tip { font-size: var(--fs-caption); color: var(--color-text-muted); }
 .tb-modal-btn {margin-left: auto;
   height: 36px;
   padding: 0 12px;

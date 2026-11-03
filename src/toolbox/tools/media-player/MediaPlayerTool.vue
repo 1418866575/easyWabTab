@@ -182,7 +182,7 @@ onBeforeUnmount(() => {
 }
 .mp-drop-icon { font-size: 34px; line-height: 1; }
 .mp-drop-title { font-size: var(--fs-sm); color: var(--color-text); }
-.mp-drop-sub { font-size: 11.5px; color: var(--color-text-muted); }
+.mp-drop-sub { font-size: var(--fs-caption); color: var(--color-text-muted); }
 .mp-stage {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);

@@ -238,5 +238,5 @@ onMounted(async () => {
 .tl-btn {height: 36px;
   padding: 0 12px;
   font-size: var(--fs-caption);}
-.tl-badge { font-size: 11px; color: var(--color-text-muted); border: 1px solid var(--color-border); border-radius: var(--radius-full); padding: 1px 8px; }
+.tl-badge { font-size: var(--fs-caption); color: var(--color-text-muted); border: 1px solid var(--color-border); border-radius: var(--radius-full); padding: 1px 8px; }
 </style>

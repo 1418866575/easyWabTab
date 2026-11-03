@@ -656,7 +656,7 @@ onMounted(async () => {
   gap: 1px;
 }
 .se-hero-big {
-  font-size: 32px;
+  font-size: var(--fs-display);
   font-weight: 800;
   line-height: 1.1;
   letter-spacing: -0.02em;
@@ -779,7 +779,7 @@ onMounted(async () => {
   .se-grid { grid-template-columns: 1fr; }
   .se-card { height: auto; min-height: 150px; }
   .se-hero-big { font-size: 36px; }
-  .se-hero-today { font-size: 32px; }
+  .se-hero-today { font-size: var(--fs-display); }
   /* 触屏无 hover：删除按钮改为常显，保证可达 */
   .se-del-btn {
     opacity: 1;
