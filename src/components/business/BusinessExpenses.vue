@@ -623,7 +623,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 .bizexp-empty {
   padding: 40px 20px;
   text-align: center;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text-muted, var(--color-text-muted));
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px dashed var(--color-border, var(--color-border));
@@ -642,7 +642,7 @@ async function handleDeleteFromDialog(): Promise<void> {
   flex: 1 1 auto;
   min-height: 220px;
   width: 100% !important;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -702,7 +702,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 /* ===== 展开行内产品明细 ===== */
 .bizexp-expand { padding: 12px 24px 12px 48px; }
 .bizexp-expand-title {
-  font-size: 13px; font-weight: 600;
+  font-size: var(--fs-sm, 13px); font-weight: 600;
   color: var(--color-text-secondary, #6b7280);
   margin-bottom: 8px;
 }
@@ -710,7 +710,7 @@ async function handleDeleteFromDialog(): Promise<void> {
   display: grid;
   grid-template-columns: minmax(80px, 1.4fr) minmax(40px, 0.6fr) minmax(40px, 0.6fr) minmax(60px, 0.7fr) minmax(70px, 0.85fr) minmax(70px, 0.8fr) minmax(80px, 1.4fr);
   gap: 6px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   padding: 0 4px 6px;
   border-bottom: 1px solid var(--color-border, var(--color-border));
@@ -728,7 +728,7 @@ async function handleDeleteFromDialog(): Promise<void> {
   grid-template-columns: minmax(80px, 1.4fr) minmax(40px, 0.6fr) minmax(40px, 0.6fr) minmax(60px, 0.7fr) minmax(70px, 0.85fr) minmax(70px, 0.8fr) minmax(80px, 1.4fr);
   gap: 6px;
   padding: 4px 4px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
   align-items: center;
@@ -750,7 +750,7 @@ async function handleDeleteFromDialog(): Promise<void> {
   color: var(--color-error, var(--color-error));
 }
 .bizexp-detail-empty {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   padding: 6px 4px;
 }
@@ -765,7 +765,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 }
 .bizexp-card-date {
   flex: 0 0 auto;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text-secondary, #6b7280);
   white-space: nowrap;
@@ -773,7 +773,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 .bizexp-card-count {
   flex: 1 1 auto;
   text-align: right;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
 }
 :global(html.dark) .bizexp-card-date {
@@ -804,7 +804,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 }
 .bizexp-shared-title {
   grid-column: 1 / -1;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text-secondary, #6b7280);
   display: flex;
@@ -813,7 +813,7 @@ async function handleDeleteFromDialog(): Promise<void> {
   gap: 8px;
 }
 .bizexp-shared-hint {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 400;
   color: var(--color-text-muted, #9ca3af);
 }
@@ -821,7 +821,7 @@ async function handleDeleteFromDialog(): Promise<void> {
   width: 100%;
   min-width: 820px;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 .bizexp-table th,
 .bizexp-table td {
@@ -874,7 +874,7 @@ async function handleDeleteFromDialog(): Promise<void> {
   min-width: 110px;
 }
 .bizexp-row-issue-row .bizexp-row-issue {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-error, #dc2626);
   background: var(--color-bg-hover, #fef2f2);
 }
@@ -892,7 +892,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 }
 .biz-kv-label {
   flex: 0 0 96px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, #6b7280);
   text-align: right;
   line-height: 1.4;
@@ -911,14 +911,14 @@ async function handleDeleteFromDialog(): Promise<void> {
   max-width: 240px;
 }
 .biz-kv-amount {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 700;
   color: var(--color-error, #dc2626);
   font-variant-numeric: tabular-nums;
 }
 .bizexp-row-issue {
   margin: 2px 0 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-error, #dc2626);
 }
 

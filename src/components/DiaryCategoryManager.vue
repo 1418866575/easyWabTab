@@ -197,7 +197,7 @@ const sortedCustomCategories = computed(() =>
 
 /* 内嵌面板无自带头部，标题作为正文区首行 */
 .dm-title {
-  font-size: 18px;
+  font-size: var(--fs-title, 18px);
   font-weight: 600;
   color: var(--color-text, #1e293b);
   margin: 0 0 20px 0;
@@ -211,7 +211,7 @@ const sortedCustomCategories = computed(() =>
 
 .dm-add-form h3,
 .dm-list h3 {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text-secondary, #64748b);
   margin: 0 0 12px 0;
@@ -225,7 +225,7 @@ const sortedCustomCategories = computed(() =>
 .dm-icon-input {
   width: 48px;
   text-align: center;
-  font-size: 18px;
+  font-size: var(--fs-title, 18px);
   padding: 8px;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-sm, 4px);
@@ -260,7 +260,7 @@ const sortedCustomCategories = computed(() =>
 }
 
 .dm-icon-label {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #94a3b8);
 }
 
@@ -269,7 +269,7 @@ const sortedCustomCategories = computed(() =>
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-sm, 4px);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   transition: all 0.2s;
   height: 36px;}
 
@@ -284,7 +284,7 @@ const sortedCustomCategories = computed(() =>
 }
 
 .dm-section-title {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #94a3b8);
   margin-bottom: 8px;
 }
@@ -310,7 +310,7 @@ const sortedCustomCategories = computed(() =>
 }
 
 .dm-sort-hint {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   width: 24px;
   color: var(--color-text-muted, #94a3b8);
 }
@@ -328,7 +328,7 @@ const sortedCustomCategories = computed(() =>
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-sm, 4px);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
   display: flex;
   align-items: center;
@@ -345,17 +345,17 @@ const sortedCustomCategories = computed(() =>
 }
 
 .dm-cat-icon {
-  font-size: 18px;
+  font-size: var(--fs-title, 18px);
 }
 
 .dm-cat-name {
   flex: 1;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text, #1e293b);
 }
 
 .dm-count {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #94a3b8);
   margin-right: 8px;
 }
@@ -383,7 +383,7 @@ const sortedCustomCategories = computed(() =>
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   opacity: 0.6;
   transition: opacity 0.2s;
   color: var(--color-text-secondary, #64748b);
@@ -401,7 +401,7 @@ const sortedCustomCategories = computed(() =>
 .dm-empty {
   text-align: center;
   color: var(--color-text-muted, #94a3b8);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   padding: 20px;
 }
 
@@ -427,7 +427,7 @@ const sortedCustomCategories = computed(() =>
   }
   .dm-btn-sort {width: 32px;
   height: 36px;
-  font-size: 12px;}
+  font-size: var(--fs-caption, 12px);}
 
   /* 编辑/删除按钮触控目标 44px（原约 22px，误删风险高） */
   .dm-btn-icon {min-width: 44px;

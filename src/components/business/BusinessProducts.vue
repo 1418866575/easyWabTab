@@ -700,7 +700,7 @@ function drawerMarkupRate(): number | null {
 }
 
 .bizprod-tabs :deep(.el-radio-button__inner) {padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
@@ -724,7 +724,7 @@ function drawerMarkupRate(): number | null {
 .bizprod-empty {
   padding: 40px 20px;
   text-align: center;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text-muted, var(--color-text-muted));
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px dashed var(--color-border, var(--color-border));
@@ -776,7 +776,7 @@ function drawerMarkupRate(): number | null {
 
 .bizprod-name {
   min-width: 0;
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
   overflow: hidden;
@@ -786,7 +786,7 @@ function drawerMarkupRate(): number | null {
 
 .bizprod-cat {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   padding: 2px 10px;
   border-radius: var(--radius-full, 9999px);
   color: var(--color-primary, var(--color-primary));
@@ -801,7 +801,7 @@ function drawerMarkupRate(): number | null {
 }
 
 .bizprod-price {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
@@ -822,7 +822,7 @@ function drawerMarkupRate(): number | null {
   margin-left: 4px;
   padding: 0 5px;
   border-radius: var(--radius-full, 9999px);
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 400;
   color: var(--color-primary, #3b82f6);
   background: var(--color-primary-light, #eff6ff);
@@ -830,7 +830,7 @@ function drawerMarkupRate(): number | null {
 
 .bizprod-form-hint {
   margin: -4px 0 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
 }
 
@@ -838,7 +838,7 @@ function drawerMarkupRate(): number | null {
 .bizprod-field-error {
   display: block;
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-error, #ef4444);
   line-height: 1.4;
 }
@@ -846,7 +846,7 @@ function drawerMarkupRate(): number | null {
 .bizprod-form-avg {
   padding: 8px 10px;
   border-radius: var(--radius-sm, 4px);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-primary, #3b82f6);
   background: var(--color-primary-light, #eff6ff);
   font-variant-numeric: tabular-nums;
@@ -863,7 +863,7 @@ function drawerMarkupRate(): number | null {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   cursor: pointer;
   margin-right: 0;
@@ -871,7 +871,7 @@ function drawerMarkupRate(): number | null {
 
 .bizprod-active :deep(.el-checkbox__label) {
   padding-left: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -948,7 +948,7 @@ html.dark .bizprod-form-avg {
 }
 
 .bizprod-drawer-section-title {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text-secondary, var(--color-text-secondary));
   padding-bottom: 6px;
@@ -960,7 +960,7 @@ html.dark .bizprod-form-avg {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 
 .bizprod-drawer-label {
@@ -977,12 +977,12 @@ html.dark .bizprod-form-avg {
 
 .bizprod-drawer-markup.rate-high {
   color: var(--color-success, var(--color-success));
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
 }
 
 .bizprod-drawer-markup.rate-low {
   color: var(--color-error, var(--color-error));
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
 }
 
 .bizprod-drawer-value.status-active {
@@ -1009,12 +1009,12 @@ html.dark .bizprod-form-avg {
 }
 
 .bizprod-drawer-stat-label {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
 }
 
 .bizprod-drawer-stat-value {
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   font-weight: 700;
   color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
@@ -1026,7 +1026,7 @@ html.dark .bizprod-form-avg {
 
 .bizprod-drawer-empty {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted, var(--color-text-muted));
 }
 
@@ -1041,7 +1041,7 @@ html.dark .bizprod-form-avg {
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   background: var(--color-bg-card, var(--color-bg-hover));
   border-radius: var(--radius-sm, 4px);

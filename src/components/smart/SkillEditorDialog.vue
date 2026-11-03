@@ -437,13 +437,13 @@ async function copySkillMd(): Promise<void> {
 .sk-sec--res { flex: 1 1 auto; }
 .sk-sec-title {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text, #111827);
   border-left: 3px solid var(--color-primary, #3b82f6);
   padding-left: 8px;
 }
-.sk-sec-hint { font-weight: 400; font-size: 12px; color: var(--color-text-muted, #9ca3af); }
+.sk-sec-hint { font-weight: 400; font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
 .sk-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .sk-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 /* 仅「基础信息」行内字段按 240px 弹性分配宽度；独立成行的字段（说明 / 标签 / 图标 / 触发条件 / 工具）
@@ -451,9 +451,9 @@ async function copySkillMd(): Promise<void> {
 .sk-row .sk-field { flex: 1 1 240px; }
 .sk-row .sk-field-sm { flex: 0 1 180px; }
 .sk-md { display: flex; flex-direction: column; gap: 12px; }
-.sk-md-tip { margin: 0; font-size: 12px; color: var(--color-text-muted, #9ca3af); }
+.sk-md-tip { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
 .sk-md-block { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.sk-md-label { font-size: 13px; color: var(--color-text-secondary, #6b7280); }
+.sk-md-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #6b7280); }
 .sk-md-fm {
   margin: 0;
   padding: 8px 10px;
@@ -463,16 +463,16 @@ async function copySkillMd(): Promise<void> {
   border-radius: 6px;
   background-color: var(--color-bg-subtle, rgba(148, 163, 184, 0.08));
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-all;
   color: var(--color-text-secondary, #6b7280);
 }
-.sk-label { font-size: 13px; color: var(--color-text-secondary, #6b7280); }
-.sk-hint { color: var(--color-text-muted, #9ca3af); font-size: 12px; }
+.sk-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #6b7280); }
+.sk-hint { color: var(--color-text-muted, #9ca3af); font-size: var(--fs-caption, 12px); }
 .req { color: var(--color-error, #dc2626); }
-.sk-error { font-size: 12px; color: var(--color-error, #dc2626); }
+.sk-error { font-size: var(--fs-caption, 12px); color: var(--color-error, #dc2626); }
 
 /* 技能图标选择行：图标按钮 + 当前图标说明 + 恢复默认（与分类管理的 .cat-icon-btn 同款） */
 .sk-icon-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -505,11 +505,11 @@ async function copySkillMd(): Promise<void> {
 }
 .sk-icon-btn.is-empty { color: var(--color-text-muted, #94a3b8); }
 .sk-icon-img { width: 100%; height: 100%; object-fit: contain; border-radius: 4px; }
-.sk-icon-text { font-size: 18px; line-height: 1; }
-.sk-icon-name { font-size: 12px; color: var(--color-text-muted, #9ca3af); }
+.sk-icon-text { font-size: var(--fs-title, 18px); line-height: 1; }
+.sk-icon-name { font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
 
 .sk-res-bar { display: flex; align-items: center; gap: 10px; }
-.sk-res-sum { font-size: 12px; color: var(--color-text-muted, #9ca3af); }
+.sk-res-sum { font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
 /* 列表不设内部滚动（原 max-height:180px + overflow-y:auto 会让资源多时出现嵌套滚动条）：
    高度随内容自然撑满，超出部分由弹框 body 整体滚动 */
 .sk-res-list {
@@ -530,7 +530,7 @@ async function copySkillMd(): Promise<void> {
   padding: 4px 8px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
 }
 .sk-res-path {
   flex: 1 1 auto;
@@ -549,7 +549,7 @@ async function copySkillMd(): Promise<void> {
   border-radius: 4px;
   background: transparent;
   color: var(--color-text-secondary, #6b7280);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
 }
 .sk-res-del:hover { border-color: var(--color-error, #dc2626); color: var(--color-error, #dc2626); }
@@ -559,7 +559,7 @@ async function copySkillMd(): Promise<void> {
   flex: 0 0 auto;
   padding: 1px 6px;
   border-radius: 10px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-warning, #d97706);
   background-color: var(--color-warning-soft, rgba(217, 119, 6, 0.12));
 }
@@ -570,11 +570,11 @@ async function copySkillMd(): Promise<void> {
   border-radius: 4px;
   background: transparent;
   color: var(--color-primary, #3b82f6);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
 }
 .sk-res-open:hover { border-color: var(--color-primary, #3b82f6); }
-.sk-res-empty { margin: 0; font-size: 12px; color: var(--color-text-muted, #9ca3af); }
+.sk-res-empty { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
 
 
 @media (max-width: 768px) {

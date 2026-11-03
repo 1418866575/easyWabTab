@@ -298,7 +298,7 @@ function exportExpenseExcel(): void {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   font-weight: 600;
   color: var(--color-text, #1e293b);
 }
@@ -319,12 +319,12 @@ function exportExpenseExcel(): void {
 }
 
 .bizrec-stat-label {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
 }
 
 .bizrec-stat-value {
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   font-weight: 700;
   color: var(--color-text, #111827);
   font-variant-numeric: tabular-nums;
@@ -340,14 +340,14 @@ function exportExpenseExcel(): void {
 
 .bizrec-empty {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted, #9ca3af);
 }
 
 .bizrec-tag {
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
 }
 
 .bizrec-tag.manual {
@@ -384,18 +384,18 @@ function exportExpenseExcel(): void {
 }
 
 .bizrec-month-label {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
 }
 
 .bizrec-month-actual {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 700;
   color: var(--color-text, #111827);
 }
 
 .bizrec-month-diff {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
 }
 
@@ -409,7 +409,7 @@ function exportExpenseExcel(): void {
 
 .bizrec-tip {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
 }
 
@@ -419,7 +419,7 @@ function exportExpenseExcel(): void {
 }
 
 .bizrec-subtitle {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text-secondary, #64748b);
 }
@@ -441,7 +441,7 @@ function exportExpenseExcel(): void {
   flex-wrap: wrap;
   margin-top: 10px;
   padding: 10px 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: #92400e;
   background: #fffbeb;
   border: 1px solid #fcd34d;
@@ -454,7 +454,7 @@ function exportExpenseExcel(): void {
 }
 .bizrec-fix-btn {flex-shrink: 0;
   padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   color: #fff;
   background: var(--ds-warning);
@@ -476,7 +476,7 @@ function exportExpenseExcel(): void {
   align-items: center;
   gap: 10px;
   padding: 6px 10px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   background: var(--color-bg-hover, #f9fafb);
   border-radius: var(--radius-sm, 4px);
   font-variant-numeric: tabular-nums;
@@ -491,7 +491,7 @@ function exportExpenseExcel(): void {
   flex-shrink: 0;
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-primary, #3b82f6);
   background: color-mix(in srgb, var(--color-primary, #3b82f6) 12%, transparent);
 }
@@ -508,7 +508,7 @@ function exportExpenseExcel(): void {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--color-text-muted, #9ca3af);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
 }
 
 /* 对账表容器：应收表 8 列 / 已关联表 7 列，窄屏允许横滑，避免数字列被压扁 */

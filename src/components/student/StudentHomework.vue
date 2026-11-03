@@ -542,7 +542,7 @@ onMounted(async () => {
   flex: 1 1 auto;
   min-height: 220px;
   width: 100% !important;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -607,7 +607,7 @@ onMounted(async () => {
   padding: 2px 10px;
   border-radius: 999px;
   background: rgba(59, 130, 246, 0.12);
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   color: var(--color-link, #3b82f6);
   white-space: nowrap;
@@ -622,7 +622,7 @@ onMounted(async () => {
 .shw-due.today { color: var(--ds-warning); }
 .shw-due.tomorrow { color: var(--ds-primary); }
 .shw-due-text {
-  font-size: 10px;
+  font-size: var(--fs-caption, 12px);
   margin-top: 2px;
   color: var(--color-text-muted, #6b7280);
 }
@@ -631,7 +631,7 @@ onMounted(async () => {
   display: inline-block;
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 500;
   white-space: nowrap;
   line-height: 1.6;
@@ -643,7 +643,7 @@ onMounted(async () => {
   padding: 2px 8px;
   border-radius: 999px;
   font-weight: 500;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   white-space: nowrap;
 }
 .shw-status.shw-status-pending { background: var(--ds-bg-hover); color: var(--ds-text-2); }
@@ -660,7 +660,7 @@ onMounted(async () => {
 }
 .shw-card-title {
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text, #111827);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -688,7 +688,7 @@ onMounted(async () => {
   border-radius: 6px;
   background: var(--color-bg-hover, #f3f4f6);
   color: var(--color-text-secondary, #6b7280);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
 }
 :global(html.dark) .shw-card-thumb { border-color: var(--color-border, #374151); }
 :global(html.dark) .shw-card-thumb-more { background: var(--color-bg-hover, #111827); }
@@ -708,7 +708,7 @@ onMounted(async () => {
   bottom: -6px;
   background: var(--color-primary, #3b82f6);
   color: #fff;
-  font-size: 10px;
+  font-size: var(--fs-caption, 12px);
   line-height: 1;
   padding: 2px 4px;
   border-radius: 999px;
@@ -735,7 +735,7 @@ onMounted(async () => {
   border: none;
   background: rgba(0,0,0,0.6);
   color: #fff;
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   line-height: 1;
   cursor: pointer;
   display: flex;
@@ -753,7 +753,7 @@ onMounted(async () => {
   justify-content: center;
   gap: 4px;
   color: var(--color-text-secondary, #6b7280);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
   transition: all .15s;
 }
@@ -775,7 +775,7 @@ onMounted(async () => {
   background: transparent;
   color: var(--color-text-secondary, #6b7280);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   margin-right: 6px;
   transition: all 0.15s;
   height: 36px;}
@@ -793,7 +793,7 @@ onMounted(async () => {
   background: transparent;
   color: var(--color-text-secondary, #6b7280);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   transition: all 0.15s;
   height: 36px;}
 .shw-advance-btn:hover {
@@ -807,7 +807,7 @@ onMounted(async () => {
   align-items: center;
   gap: 4px;
   color: var(--ds-success);
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
 }
 
 .dialog-body {
@@ -821,7 +821,7 @@ onMounted(async () => {
   gap: 6px;
 }
 .form-field label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 500;
 }
 .form-row {
@@ -830,7 +830,7 @@ onMounted(async () => {
 }
 .form-row .form-field { flex: 1; }
 .shw-custom-toggle {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 400;
   color: var(--color-text-muted, #6b7280);
 }

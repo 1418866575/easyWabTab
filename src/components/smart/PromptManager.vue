@@ -398,7 +398,7 @@ function excerpt(p: SmartPrompt): string {
   border-radius: 6px;
   background: transparent;
   color: var(--color-text-muted, #9ca3af);
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   line-height: 1;
   cursor: pointer;
 }
@@ -417,7 +417,7 @@ function excerpt(p: SmartPrompt): string {
   background: var(--color-bg-card, #fff);
   color: var(--color-text-secondary, #6b7280);
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 500;
   cursor: pointer;
   transition: color var(--motion-duration, 0.2s) var(--motion-ease, ease),
@@ -426,12 +426,12 @@ function excerpt(p: SmartPrompt): string {
 }
 .pm-cat-pill:hover { color: var(--color-primary, #3b82f6); border-color: var(--color-primary, #3b82f6); }
 .pm-cat-pill.is-on { background: var(--color-primary, #3b82f6); color: #fff; border-color: var(--color-primary, #3b82f6); }
-.pm-cat-pill-cnt { font-size: 12px; opacity: 0.78; }
+.pm-cat-pill-cnt { font-size: var(--fs-caption, 12px); opacity: 0.78; }
 
 /* 排序 + 收藏 + 操作行 */
 .pm-toolbar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
 .pm-toolbar-left, .pm-toolbar-right { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.pm-result { font-size: 12px; color: var(--color-text-muted, #9ca3af); }
+.pm-result { font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
 .pm-select {
   height: 36px;
   padding: 0 6px;
@@ -439,7 +439,7 @@ function excerpt(p: SmartPrompt): string {
   border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #fff);
   color: var(--color-text, #111827);
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 .pm-fav {
   height: 36px;
@@ -448,7 +448,7 @@ function excerpt(p: SmartPrompt): string {
   border-radius: 6px;
   background: transparent;
   color: var(--color-text-secondary, #6b7280);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
 }
 /* 收藏态用橙色：走 --color-warning 令牌（规范 §1.5：语义色不写死） */
@@ -461,7 +461,7 @@ function excerpt(p: SmartPrompt): string {
   border-radius: 999px;
   background: transparent;
   color: var(--color-text-secondary, #6b7280);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
 }
 .pm-tag.is-on { border-color: var(--color-primary, #3b82f6); background: var(--color-primary-soft, #eff6ff); color: var(--color-primary, #3b82f6); }
@@ -486,7 +486,7 @@ function excerpt(p: SmartPrompt): string {
   border: none;
   background: none;
   color: var(--color-text-muted, #9ca3af);
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   line-height: 1.2;
   cursor: pointer;
 }
@@ -497,7 +497,7 @@ function excerpt(p: SmartPrompt): string {
   border: none;
   background: none;
   color: var(--color-text, #111827);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   text-align: left;
   cursor: pointer;
@@ -506,7 +506,7 @@ function excerpt(p: SmartPrompt): string {
   white-space: nowrap;
 }
 .pm-name:hover { color: var(--color-primary, #3b82f6); }
-.pm-meta { font-size: 12px; color: var(--color-text-muted, #9ca3af); display: flex; gap: 4px; flex-wrap: wrap; }
+.pm-meta { font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); display: flex; gap: 4px; flex-wrap: wrap; }
 .pm-dot { opacity: .6; }
 .pm-builtin {
   flex: 0 0 auto;
@@ -514,18 +514,18 @@ function excerpt(p: SmartPrompt): string {
   border-radius: 4px;
   background: var(--color-bg-hover, #f3f4f6);
   color: var(--color-text-muted, #9ca3af);
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
 }
 .pm-excerpt {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #6b7280);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.pm-card-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 12px; }
+.pm-card-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: var(--fs-caption, 12px); }
 .pm-chip { color: var(--color-primary, #3b82f6); }
 .pm-vars { color: var(--color-text-muted, #9ca3af); display: inline-flex; align-items: center; gap: 3px; }
 .pm-vars svg { flex: none; }
@@ -538,7 +538,7 @@ function excerpt(p: SmartPrompt): string {
   border-radius: 6px;
   background: transparent;
   color: var(--color-text-secondary, #6b7280);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;}
 .pm-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
 .pm-btn.is-primary { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); font-weight: 600; }
@@ -550,8 +550,8 @@ function excerpt(p: SmartPrompt): string {
   border: 1px dashed var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 10px);
 }
-.pm-empty-title { margin: 0 0 4px; font-size: 14px; font-weight: 600; color: var(--color-text, #111827); }
-.pm-empty-hint { margin: 0 0 12px; font-size: 13px; color: var(--color-text-secondary, #6b7280); }
+.pm-empty-title { margin: 0 0 4px; font-size: var(--fs-body, 14px); font-weight: 600; color: var(--color-text, #111827); }
+.pm-empty-hint { margin: 0 0 12px; font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #6b7280); }
 .pm-empty-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 
 @media (max-width: 768px) {
@@ -563,6 +563,6 @@ function excerpt(p: SmartPrompt): string {
   .pm-pager :deep(.el-pagination__jump) { display: none; }
   .pm-btn {height: 36px;
   padding: 0 12px;
-  font-size: 12px;}
+  font-size: var(--fs-caption, 12px);}
 }
 </style>

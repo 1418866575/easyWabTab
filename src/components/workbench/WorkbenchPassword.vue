@@ -721,14 +721,14 @@ watch(
 }
 
 .pwd-auth-card h3 {
-  font-size: 18px;
+  font-size: var(--fs-title, 18px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
   margin: 0 0 6px 0;
 }
 
 .pwd-auth-hint {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   margin: 0 0 18px 0;
 }
@@ -743,7 +743,7 @@ watch(
 
 .pwd-auth-error {
   color: var(--color-error, #ef4444);
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   margin: 0 0 12px 0;
 }
 
@@ -756,7 +756,7 @@ watch(
   background: none;
   border: none;
   color: var(--color-text-muted, var(--color-text-muted));
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   cursor: pointer;
   text-decoration: underline;
   padding: 4px 8px;
@@ -784,7 +784,7 @@ watch(
   background: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
   color: #fff;
   white-space: nowrap;
@@ -825,7 +825,7 @@ watch(
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   padding: 1px 8px;
   border-radius: var(--radius-full, 9999px);
   color: var(--color-primary, #3b82f6);
@@ -836,7 +836,7 @@ watch(
 }
 .pwd-form-hint {
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #9ca3af);
 }
 html.dark .pwd-cat-badge {
@@ -862,7 +862,7 @@ html.dark .pwd-cat-badge {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   padding: 2px 4px;
   border-radius: var(--radius-sm, 4px);
@@ -878,7 +878,7 @@ html.dark .pwd-cat-badge {
 }
 
 .pwd-btn-lock {padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
@@ -952,7 +952,7 @@ html.dark .pwd-cat-badge {
 .pwd-site-name {
   flex: 1;
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
   overflow: hidden;
@@ -965,7 +965,7 @@ html.dark .pwd-cat-badge {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
@@ -997,7 +997,7 @@ html.dark .pwd-cat-badge {
   padding: 0;
   min-height: 0;
   height: auto;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   line-height: 1.4;
   color: var(--color-text-secondary, #64748b);
   min-width: 36px;
@@ -1012,7 +1012,7 @@ html.dark .pwd-cat-badge {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   line-height: 1;
   opacity: 0.6;
   transition: opacity var(--transition-fast, 0.15s ease);
@@ -1047,7 +1047,7 @@ html.dark .pwd-cat-badge {
 
 .form-group label {
   display: block;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 500;
   color: var(--color-text-secondary, var(--color-text-secondary));
   margin-bottom: 6px;
@@ -1091,13 +1091,13 @@ html.dark .pwd-cat-badge {
 }
 
 .pwd-site-option-name {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   color: var(--color-text, var(--color-text));
   font-weight: 500;
 }
 
 .pwd-site-option-url {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1116,7 +1116,7 @@ html.dark .pwd-cat-badge {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   padding: 0;
   opacity: 0.7;
   transition: opacity var(--transition-fast, 0.15s ease);
@@ -1157,7 +1157,7 @@ html.dark .pwd-cat-badge {
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
   color: var(--color-text-secondary, var(--color-text-secondary));
   white-space: nowrap;

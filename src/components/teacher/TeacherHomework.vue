@@ -535,7 +535,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
 }
 
 .hw-count {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, #64748b);
 }
 
@@ -544,7 +544,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
   width: 100%;
 }
 .hw-list-area :deep(.el-table) {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -583,7 +583,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
   gap: 8px;
 }
 .hw-card-title {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -592,7 +592,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
   min-width: 0;
 }
 .hw-card-dates {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
 }
 .hw-card-misses {
@@ -630,7 +630,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
   justify-content: center;
   min-height: 160px;
   color: var(--color-text-soft, #6b7280);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
 }
 
 /* ===== 学科/状态徽标 ===== */
@@ -639,7 +639,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
   color: var(--color-primary, #3b82f6);
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -647,7 +647,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
   display: inline-block;
   padding: 1px 7px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   margin: 0 2px;
 }
@@ -660,7 +660,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
 .btn-madeup,
 .btn-submit,
 .btn-pending {padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   border: 1px solid transparent;
   border-radius: 6px;
   cursor: pointer;
@@ -693,7 +693,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: #fff;
 }
 .hw-tag.is-danger { background-color: var(--ds-danger); }
@@ -722,7 +722,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
   flex: 1;
 }
 .hw-form-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
 }
 .hw-required {
@@ -750,28 +750,28 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
   gap: 8px;
 }
 .hw-detail-title {
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
 }
 .hw-detail-sub {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
 }
 .hw-detail-content {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text, #334155);
   white-space: pre-wrap;
 }
 .hw-export-hint {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   opacity: 0.7;
   margin-left: 2px;
 }
 .hw-miss-area :deep(.el-table) {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   border-radius: 10px;
   overflow: hidden;
 }

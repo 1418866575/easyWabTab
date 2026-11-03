@@ -475,7 +475,7 @@ function relTime(ts: number): string {
   border-radius: 6px;
   background: transparent;
   color: var(--color-text-muted, #9ca3af);
-  font-size: 15px;
+  font-size: var(--fs-md, 15px);
   line-height: 1;
   cursor: pointer;
 }
@@ -494,7 +494,7 @@ function relTime(ts: number): string {
   background: var(--color-bg-card, #fff);
   color: var(--color-text-secondary, #6b7280);
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 500;
   cursor: pointer;
   transition: color var(--motion-duration, 0.2s) var(--motion-ease, ease),
@@ -503,12 +503,12 @@ function relTime(ts: number): string {
 }
 .sm-cat-pill:hover { color: var(--color-primary, #3b82f6); border-color: var(--color-primary, #3b82f6); }
 .sm-cat-pill.is-on { background: var(--color-primary, #3b82f6); color: #fff; border-color: var(--color-primary, #3b82f6); }
-.sm-cat-pill-cnt { font-size: 12px; opacity: 0.78; }
+.sm-cat-pill-cnt { font-size: var(--fs-caption, 12px); opacity: 0.78; }
 
 /* 排序 + 操作行 */
 .sm-toolbar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
 .sm-toolbar-left, .sm-toolbar-right { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.sm-result { font-size: 12px; color: var(--color-text-muted, #9ca3af); }
+.sm-result { font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); }
 .sm-select {
   height: 36px;
   padding: 0 6px;
@@ -516,7 +516,7 @@ function relTime(ts: number): string {
   border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #fff);
   color: var(--color-text, #111827);
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 
 .sm-tags { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -526,7 +526,7 @@ function relTime(ts: number): string {
   border-radius: 999px;
   background: transparent;
   color: var(--color-text-secondary, #6b7280);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
 }
 .sm-tag.is-on {
@@ -582,7 +582,7 @@ function relTime(ts: number): string {
 
 .sm-icon-img { width: 100%; height: 100%; object-fit: contain; }
 
-.sm-icon-text { font-size: 16px; line-height: 1; }
+.sm-icon-text { font-size: var(--fs-lg, 16px); line-height: 1; }
 
 /* hover 时右下角浮出小铅笔，提示「可点击更换」 */
 .sm-icon-edit {
@@ -609,7 +609,7 @@ function relTime(ts: number): string {
   border: none;
   background: none;
   color: var(--color-text, #111827);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
   text-align: left;
   cursor: pointer;
@@ -618,7 +618,7 @@ function relTime(ts: number): string {
   white-space: nowrap;
 }
 .sm-name:hover { color: var(--color-primary, #3b82f6); }
-.sm-meta { font-size: 12px; color: var(--color-text-muted, #9ca3af); display: flex; gap: 4px; flex-wrap: wrap; }
+.sm-meta { font-size: var(--fs-caption, 12px); color: var(--color-text-muted, #9ca3af); display: flex; gap: 4px; flex-wrap: wrap; }
 .sm-cat { color: var(--color-text-secondary, #6b7280); }
 .sm-dot { opacity: .6; }
 .sm-builtin {
@@ -627,11 +627,11 @@ function relTime(ts: number): string {
   border-radius: 4px;
   background: var(--color-bg-hover, #f3f4f6);
   color: var(--color-text-muted, #9ca3af);
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
 }
 .sm-desc {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, #6b7280);
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -639,7 +639,7 @@ function relTime(ts: number): string {
   overflow: hidden;
 }
 .sm-card-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-.sm-chip { font-size: 12px; color: var(--color-primary, #3b82f6); }
+.sm-chip { font-size: var(--fs-caption, 12px); color: var(--color-primary, #3b82f6); }
 
 .sm-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: auto; }
 .sm-spacer { flex: 1 1 auto; }
@@ -649,7 +649,7 @@ function relTime(ts: number): string {
   border-radius: 6px;
   background: transparent;
   color: var(--color-text-secondary, #6b7280);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;}
 .sm-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
 .sm-btn.is-danger:hover { border-color: var(--color-error, #dc2626); color: var(--color-error, #dc2626); }
@@ -673,7 +673,7 @@ function relTime(ts: number): string {
   border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #fff);
   color: var(--color-text-secondary, #6b7280);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   cursor: pointer;
 }
 .sm-fav.is-on {
@@ -686,7 +686,7 @@ function relTime(ts: number): string {
   border: none;
   background: none;
   color: var(--color-text-muted, #9ca3af);
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   line-height: 1.2;
   cursor: pointer;
 }
@@ -705,8 +705,8 @@ function relTime(ts: number): string {
   border: 1px dashed var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 10px);
 }
-.sm-empty-title { margin: 0 0 4px; font-size: 14px; font-weight: 600; color: var(--color-text, #111827); }
-.sm-empty-hint { margin: 0 0 12px; font-size: 13px; color: var(--color-text-secondary, #6b7280); }
+.sm-empty-title { margin: 0 0 4px; font-size: var(--fs-body, 14px); font-weight: 600; color: var(--color-text, #111827); }
+.sm-empty-hint { margin: 0 0 12px; font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, #6b7280); }
 .sm-empty-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 
 /* 移动端：单列 + 触控目标 ≥44px */
@@ -716,11 +716,11 @@ function relTime(ts: number): string {
   .sm-toolbar-left, .sm-toolbar-right { width: 100%; }
   .sm-btn {height: 36px;
   padding: 0 12px;
-  font-size: 12px;}
+  font-size: var(--fs-caption, 12px);}
   /* 触屏没有 hover，小铅笔常驻提示可点；放大到 34px 便于点按 */
   .sm-icon-btn {width: 34px;
   height: 36px;}
-  .sm-icon-text { font-size: 20px; }
+  .sm-icon-text { font-size: var(--fs-title, 18px); }
   .sm-icon-edit { opacity: 1; }
   /* 窄屏隐藏「每页条数」与「跳转」，只留 总数 + 上一页/下一页（pager.css 已处理居中与触控尺寸） */
   .sm-pager { justify-content: center; }

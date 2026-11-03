@@ -475,7 +475,7 @@ onMounted(async () => {
   border-radius: 14px;
   background: transparent;
   color: var(--color-text-muted, #6b7280);
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   padding: 0 12px;
   box-shadow: none;
   transition: all 0.15s;
@@ -505,12 +505,12 @@ onMounted(async () => {
   text-align: center;
 }
 .se-stat-label {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
   margin-bottom: 4px;
 }
 .se-stat-value {
-  font-size: 16px;
+  font-size: var(--fs-lg, 16px);
   font-weight: 600;
   color: var(--color-text, #1f2937);
 }
@@ -536,7 +536,7 @@ onMounted(async () => {
   flex: 1 1 auto;
   min-height: 220px;
   width: 100% !important;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -619,7 +619,7 @@ onMounted(async () => {
   margin-bottom: 4px;
 }
 .se-card-title {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -629,7 +629,7 @@ onMounted(async () => {
   color: var(--color-text, #1f2937);
 }
 .se-type-badge {
-  font-size: 10px;
+  font-size: var(--fs-caption, 12px);
   padding: 1px 6px;
   border-radius: 8px;
   background: color-mix(in srgb, var(--se-color) 10%, transparent);
@@ -638,7 +638,7 @@ onMounted(async () => {
   line-height: 1.4;
 }
 .se-repeat-badge {
-  font-size: 10px;
+  font-size: var(--fs-caption, 12px);
   padding: 1px 6px;
   border-radius: 8px;
   background: color-mix(in srgb, var(--se-color) 12%, transparent);
@@ -663,13 +663,13 @@ onMounted(async () => {
   font-variant-numeric: tabular-nums;
 }
 .se-hero-unit {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 500;
   margin-left: 1px;
   opacity: 0.7;
 }
 .se-hero-sub {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #6b7280);
   font-weight: 500;
   line-height: 1.3;
@@ -692,20 +692,20 @@ onMounted(async () => {
 .se-hero-expired { opacity: 0.55; }
 .se-hero-today {
   color: var(--color-primary, #10b981);
-  font-size: 28px;
+  font-size: var(--fs-h1, 28px);
 }
 
 .se-meta {
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 10px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, #9ca3af);
   border-top: 1px solid color-mix(in srgb, var(--se-color) 10%, var(--color-border, #e5e7eb));
   padding-top: 5px;
   letter-spacing: 0.02em;
 }
-.se-datetime { font-size: 10px; }
+.se-datetime { font-size: var(--fs-caption, 12px); }
 
 .se-del-btn {position: absolute;
   top: 6px;
@@ -732,7 +732,7 @@ onMounted(async () => {
   height: 100%;
   min-height: 200px;
   color: var(--color-text-muted, #6b7280);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
 }
 
 .form-field {
@@ -741,7 +741,7 @@ onMounted(async () => {
   gap: 6px;
 }
 .form-field label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 500;
 }
 .form-field :deep(.el-select) {

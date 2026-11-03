@@ -605,7 +605,7 @@ function truncate(text: string, n = 30): string {
   gap: 4px;
 }
 .tk-filter-label {
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
 }
 .tk-select {
@@ -625,7 +625,7 @@ function truncate(text: string, n = 30): string {
   flex-wrap: wrap;
 }
 .tk-count {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, #64748b);
 }
 
@@ -633,7 +633,7 @@ function truncate(text: string, n = 30): string {
   width: 100%;
 }
 .tk-list-area :deep(.el-table) {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -647,11 +647,11 @@ function truncate(text: string, n = 30): string {
   color: var(--color-text-soft, #d1d5db);
 }
 .tk-cell-time {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-soft, #94a3b8);
 }
 .tk-cell-sub {
-  font-size: 11px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-soft, #94a3b8);
 }
 
@@ -681,18 +681,18 @@ function truncate(text: string, n = 30): string {
   flex-wrap: wrap;
 }
 .tk-card-student {
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
   font-weight: 600;
 }
 .tk-card-sub {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
 }
 .tk-card-content {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text, #334155);
   white-space: pre-wrap;
   word-break: break-word;
@@ -727,7 +727,7 @@ function truncate(text: string, n = 30): string {
   justify-content: center;
   min-height: 160px;
   color: var(--color-text-soft, #6b7280);
-  font-size: 14px;
+  font-size: var(--fs-body, 14px);
 }
 
 /* 徽标 / 标签 */
@@ -737,7 +737,7 @@ function truncate(text: string, n = 30): string {
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
   color: var(--color-primary, #3b82f6);
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -749,7 +749,7 @@ function truncate(text: string, n = 30): string {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: #fff;
 }
 .tk-tag.is-warn { background-color: var(--ds-warning); }
@@ -784,7 +784,7 @@ function truncate(text: string, n = 30): string {
   width: 100%;
 }
 .tk-form-label {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
 }
 .tk-required {
@@ -825,7 +825,7 @@ function truncate(text: string, n = 30): string {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  font-size: 12px;
+  font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, #64748b);
 }
 .tk-detail-block {
@@ -834,12 +834,12 @@ function truncate(text: string, n = 30): string {
   gap: 4px;
 }
 .tk-detail-title {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text-secondary, #64748b);
 }
 .tk-detail-text {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--color-text, #334155);
   white-space: pre-wrap;
   word-break: break-word;
