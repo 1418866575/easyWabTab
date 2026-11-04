@@ -562,7 +562,7 @@ const issues = computed(() => {
 .bizhome {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
   
 }
 
@@ -588,7 +588,7 @@ const issues = computed(() => {
   min-height: 120px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 /* shimmer：从左上到右下的高光扫过，暗色下降低对比 */
@@ -632,14 +632,14 @@ html.dark .sk-block::after {
 .bizhome-hero-skeleton {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 /* 分组容器：纵向堆叠三组，组间用间距 + 分隔线区分 */
 .bizhome-hero {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 /* 每组为一行：等宽单元格 + 组内竖向分隔线 */
@@ -669,8 +669,8 @@ html.dark .sk-block::after {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 16px 12px;
+  gap: var(--space-1);
+  padding: var(--space-4) var(--space-3);
   transition: background var(--transition-fast, 0.15s ease);
 }
 
@@ -752,7 +752,7 @@ html.dark .sk-block::after {
 .bizhome-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .bizhome-row {
@@ -763,7 +763,7 @@ html.dark .sk-block::after {
 .bizhome-split-row {
   display: flex;
   flex-direction: row;
-  gap: 16px;
+  gap: var(--space-4);
   align-items: stretch;
 }
 .bizhome-col { flex: 0 0 auto; min-width: 0; }
@@ -776,7 +776,7 @@ html.dark .sk-block::after {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 16px;
+  padding: var(--space-4);
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-lg, 12px);
@@ -788,7 +788,7 @@ html.dark .sk-block::after {
 .bizhome-card-title {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   font-size: var(--font-size-base, 15px);
   font-weight: var(--font-weight-semibold, 600);
   color: var(--color-text, var(--color-text));
@@ -828,8 +828,8 @@ html.dark .sk-block::after {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   font-size: var(--fs-sm, 13px);
   background: var(--color-bg-card, var(--color-bg-hover));
   border-radius: var(--radius-sm, 4px);
@@ -855,7 +855,7 @@ html.dark .sk-block::after {
 }
 
 .bizhome-low-stopped {
-  margin-left: 4px;
+  margin-left: var(--space-1);
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted);
 }
@@ -885,7 +885,7 @@ html.dark .sk-block::after {
 .bizhome-tree {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .bizhome-tree-node {
@@ -897,7 +897,7 @@ html.dark .sk-block::after {
 .bizhome-tree-cat {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 8px 10px;
   background: var(--color-bg-card, var(--color-bg-hover));
   border-radius: var(--radius-md, 8px);
@@ -944,14 +944,14 @@ html.dark .sk-block::after {
 .bizhome-tree-products {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 4px 0 4px 24px;
+  gap: var(--space-1);
+  padding: var(--space-1) 0 var(--space-1) var(--space-6);
 }
 
 .bizhome-tree-prod {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 4px 10px;
   border-radius: var(--radius-sm, 4px);
   cursor: pointer;
@@ -1031,7 +1031,7 @@ html.dark .sk-block::after {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--space-4);
   padding: 16px 18px;
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--color-primary, #3b82f6) 10%, transparent), transparent),
@@ -1044,7 +1044,7 @@ html.dark .sk-block::after {
 .bizhome-greeting-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   min-width: 0;
 }
 
@@ -1110,7 +1110,7 @@ html.dark .sk-block::after {
 .bizhome-today {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 12px 14px;
   background: var(--color-bg-card, #ffffff);
   border: 1px solid var(--color-border, #e2e8f0);
@@ -1119,7 +1119,7 @@ html.dark .sk-block::after {
 .bizhome-today-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .bizhome-today-title {
   display: inline-flex;
@@ -1141,7 +1141,7 @@ html.dark .sk-block::after {
 .bizhome-today-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--space-2);
 }
 .bizhome-today-card {
   display: flex;
@@ -1198,7 +1198,7 @@ html.dark .sk-block::after {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 4px;
+  margin-top: var(--space-1);
   padding: 10px 2px 2px;
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
@@ -1320,7 +1320,7 @@ html.dark .sk-block::after {
   color: var(--color-text-secondary);
 }
 .bizhome-onboard-btn {flex-shrink: 0;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);
   font-weight: 600;
   color: #fff;
@@ -1343,8 +1343,8 @@ html.dark .sk-block::after {
 .bizhome-issue {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   font-size: var(--fs-sm, 13px);
   border-radius: var(--radius-md, 8px);
 }
@@ -1368,7 +1368,7 @@ html.dark .sk-block::after {
 .issue-go {
   flex-shrink: 0;
   margin-left: auto;
-  padding: 4px 12px;
+  padding: var(--space-1) var(--space-3);
   font-size: var(--fs-caption, 12px);
   color: var(--color-primary-text);
   background: transparent;
@@ -1406,7 +1406,7 @@ html.dark .sk-block::after {
 .scope-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
   font-size: var(--fs-sm, 13px);
 }
@@ -1443,7 +1443,7 @@ html.dark .sk-block::after {
   align-items: flex-end;
   gap: 3px;
   height: 96px;
-  padding-top: 8px;
+  padding-top: var(--space-2);
 }
 
 .mini-bar-col {
@@ -1454,7 +1454,7 @@ html.dark .sk-block::after {
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 /* 月份标签（12 个月柱状图） */
@@ -1586,7 +1586,7 @@ html.dark .mini-bar-col:hover .mini-bar {
 
 @media (max-width: 900px) {
   .bizhome {
-    gap: 12px;
+    gap: var(--space-3);
   }
 
   .bizhome-stats {
@@ -1607,7 +1607,7 @@ html.dark .mini-bar-col:hover .mini-bar {
   .bizhome-greeting {
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .bizhome-greeting-stat {

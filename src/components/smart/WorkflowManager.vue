@@ -434,7 +434,7 @@ function excerpt(w: SmartWorkflow): string {
 </template>
 
 <style scoped>
-.wm-wrap { display: flex; flex-direction: column; gap: 12px; }
+.wm-wrap { display: flex; flex-direction: column; gap: var(--space-3); }
 
 /* 搜索框：工具箱同款（父容器内居中、卡片式、聚焦高亮） */
 .wm-search-wrap { display: flex; justify-content: center; }
@@ -465,7 +465,7 @@ function excerpt(w: SmartWorkflow): string {
 .wm-search-clear:hover { color: var(--color-primary-text); background: var(--color-bg-hover, #f1f5f9); }
 
 /* 分类药丸：工具箱同款 */
-.wm-cats { display: flex; flex-wrap: wrap; gap: 8px; }
+.wm-cats { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .wm-cat-pill {
   display: inline-flex;
   align-items: center;
@@ -490,7 +490,7 @@ function excerpt(w: SmartWorkflow): string {
 
 /* 排序 + 收藏 + 操作行 */
 .wm-toolbar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
-.wm-toolbar-left, .wm-toolbar-right { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.wm-toolbar-left, .wm-toolbar-right { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
 .wm-result { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 .wm-select {
   height: 36px;
@@ -532,7 +532,7 @@ function excerpt(w: SmartWorkflow): string {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-primary-soft, #bfdbfe);
   border-radius: var(--radius-md, 10px);
   background: var(--color-primary-soft, #eff6ff);
@@ -541,7 +541,7 @@ function excerpt(w: SmartWorkflow): string {
 .wm-batch-count { font-size: var(--fs-sm, 13px); color: var(--color-text); font-weight: 600; }
 .wm-spacer { flex: 1 1 auto; }
 .wm-batch-btn {height: 36px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
   background: var(--color-bg-card, #fff);
@@ -551,14 +551,14 @@ function excerpt(w: SmartWorkflow): string {
 .wm-batch-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary-text); }
 .wm-batch-btn.is-danger:hover { border-color: var(--color-error, #dc2626); color: var(--color-error-text); }
 
-.wm-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.wm-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--space-3); }
 /* 分页容器：只负责间距与右对齐，控件观感由 styles/pager.css 的 .ewt-pager 统一接管 */
-.wm-pager { display: flex; justify-content: flex-end; margin-top: 12px; }
+.wm-pager { display: flex; justify-content: flex-end; margin-top: var(--space-3); }
 .wm-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 14px 14px 14px 38px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 10px);
@@ -568,7 +568,7 @@ function excerpt(w: SmartWorkflow): string {
 .wm-check { position: absolute; top: 14px; left: 12px; display: inline-flex; align-items: center; }
 .wm-check input { width: 16px; height: 16px; cursor: pointer; }
 
-.wm-card-head { display: flex; gap: 8px; align-items: flex-start; }
+.wm-card-head { display: flex; gap: var(--space-2); align-items: flex-start; }
 .wm-star {
   flex: 0 0 auto;
   padding: 0;
@@ -595,7 +595,7 @@ function excerpt(w: SmartWorkflow): string {
   white-space: nowrap;
 }
 .wm-name:hover { color: var(--color-primary-text); }
-.wm-meta { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); display: flex; gap: 4px; flex-wrap: wrap; }
+.wm-meta { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); display: flex; gap: var(--space-1); flex-wrap: wrap; }
 .wm-dot { opacity: .6; }
 .wm-builtin {
   flex: 0 0 auto;
@@ -615,13 +615,13 @@ function excerpt(w: SmartWorkflow): string {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.wm-card-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: var(--fs-caption, 12px); }
+.wm-card-foot { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; font-size: var(--fs-caption, 12px); }
 .wm-chip { color: var(--color-primary-text); }
 
 .wm-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: auto; }
 .wm-spacer { flex: 1 1 auto; }
 .wm-btn {height: 36px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
   background: transparent;
@@ -638,9 +638,9 @@ function excerpt(w: SmartWorkflow): string {
   border: 1px dashed var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 10px);
 }
-.wm-empty-title { margin: 0 0 4px; font-size: var(--fs-body, 14px); font-weight: 600; color: var(--color-text); }
-.wm-empty-hint { margin: 0 0 12px; font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
-.wm-empty-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.wm-empty-title { margin: 0 0 var(--space-1); font-size: var(--fs-body, 14px); font-weight: 600; color: var(--color-text); }
+.wm-empty-hint { margin: 0 0 var(--space-3); font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
+.wm-empty-actions { display: flex; gap: var(--space-2); justify-content: center; flex-wrap: wrap; }
 
 @media (max-width: 768px) {
   .wm-list { grid-template-columns: 1fr; }
@@ -650,7 +650,7 @@ function excerpt(w: SmartWorkflow): string {
   .wm-pager :deep(.el-pagination__sizes),
   .wm-pager :deep(.el-pagination__jump) { display: none; }
   .wm-btn {height: 36px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);}
 }
 </style>

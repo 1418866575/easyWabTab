@@ -70,7 +70,7 @@ function toggle() {
 .gtn-self {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   position: relative;
   padding: 6px 0;
 }
@@ -93,7 +93,7 @@ function toggle() {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 10px;
   background: var(--color-bg-card, #fff);
@@ -152,8 +152,8 @@ function toggle() {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  margin-left: 16px;
-  padding-left: 24px;
+  margin-left: var(--space-4);
+  padding-left: var(--space-6);
   position: relative;
 }
 /* 主干（竖向脊柱） */

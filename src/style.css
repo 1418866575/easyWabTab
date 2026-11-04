@@ -50,6 +50,12 @@
   --color-info-hover:    #2563eb;
   --color-info-soft:     #dbeafe;
 
+  /* 彩色实底上的前景字（主色/成功/危险实心按钮与选中分段）。
+     语义上永远是「最亮的前景」，与 --color-bg-card 无关（暗色卡片底是深色，不能拿来压字）。
+     值等同各主题 --color-primary(500 级) 上一直在用的 #fff，故引入它不改变任何现有效果。
+     仅用于「实底 + 白字」这一种场景；浅色表面上的彩色文字仍走 --color-primary-text / -text 三兄弟。 */
+  --color-on-accent: #ffffff;
+
   /* 背景色 */
   --color-bg: #f8fafc;
   --color-bg-card: #ffffff;
@@ -445,8 +451,10 @@ optgroup {
   align-items: center;
   justify-content: center;
   gap: var(--space-2, 8px);
-  height: 36px;
-  padding: 0 12px;
+  /* 高度取界面美化调节项（默认 36px，见 styles/ui-style.css）。
+     用变量而不是硬值：调「控件高度」时按钮与输入框必须一起动，否则一排控件高低不齐。 */
+  height: var(--ui-ctrl-h);
+  padding: 0 var(--space-3);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   background-color: var(--color-bg-card, #ffffff);
@@ -549,8 +557,8 @@ optgroup {
 /* —— 面板小号按钮（2026-11 按钮收敛：原各面板 scoped 重复定义上收至此） —— */
 /* 「详情」淡主色按钮（教师作业/访谈表格；原 rgba 硬编码改 token，随 accent 变色） */
 .btn-detail {
-  height: 36px;
-  padding: 0 12px;
+  height: var(--ui-ctrl-h);
+  padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);
   border: 1px solid transparent;
   border-radius: 6px;
@@ -569,8 +577,8 @@ optgroup {
 
 /* 分类/搜索引擎排序小方块（36×36，与全站按钮同高） */
 .btn-sort {
-  width: 36px;
-  height: 36px;
+  width: var(--ui-ctrl-h);
+  height: var(--ui-ctrl-h);
   padding: 0;
   background: var(--color-bg-hover);
   border: 1px solid var(--color-border);
@@ -593,8 +601,8 @@ optgroup {
 
 /* 课表周切换箭头（36×36 透明底，与全站按钮同高） */
 .stt-week-btn {
-  width: 36px;
-  height: 36px;
+  width: var(--ui-ctrl-h);
+  height: var(--ui-ctrl-h);
   border: none;
   background: transparent;
   color: var(--color-text-secondary);
@@ -616,8 +624,8 @@ optgroup {
 /* 健康面板「设定目标」主色胶囊（el-button 载体走 EP 变量桥接，写裸 background 会被 EP 压掉） */
 .nav-btn {
   flex-shrink: 0;
-  height: 36px;
-  padding: 0 12px;
+  height: var(--ui-ctrl-h);
+  padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);
   border-radius: var(--radius-full);
   background: var(--color-bg-card);
@@ -661,8 +669,8 @@ optgroup {
 /* —— 小尺寸（叠加于基础/次要语义）：2026-11 起与 base 同为 36px/12px —— */
 .ui-btn--sm,
 .wb-menu-btn, .row-reset, .mini-btn {
-  height: 36px;
-  padding: 0 12px;
+  height: var(--ui-ctrl-h);
+  padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);
 }
 
@@ -672,8 +680,8 @@ optgroup {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: var(--ui-ctrl-h);
+  height: var(--ui-ctrl-h);
   padding: 0;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -709,6 +717,64 @@ optgroup {
   box-shadow: var(--shadow-card-hover, 0 8px 24px rgba(0, 0, 0, 0.12));
 }
 
+/* ============================================================
+   分段控件（.seg-control + .seg-opt）
+   ------------------------------------------------------------
+   二选一 / 多选一的横向分段开关，用于设置页的「经典-侧边栏」「点击频率-自定义」
+   「控件高度 32/36/40」这类枚举选项。
+   2026-11 从 AppSettingsDialog 的 scoped 上收为全局：界面美化面板（子组件）要用
+   同一套皮肤，scoped 规则无法穿透子组件，复制一份又成双轨道。
+   高度与按钮/输入对齐（容器 36 = 内段 30 + 上下 padding 2×2 + 边框 2），
+   并随界面美化的「控件高度」联动（见 styles/ui-style.css）。
+   ============================================================ */
+.seg-control {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  height: var(--ui-ctrl-h);
+  padding: 2px;
+  background-color: var(--color-bg-hover, #f1f5f9);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-full, 9999px);
+  box-sizing: border-box;
+}
+
+.seg-opt {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0 var(--space-4, 16px);
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm, 13px);
+  line-height: 1;
+  border-radius: var(--radius-full, 9999px);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    color var(--motion-duration, 220ms) var(--motion-ease, ease),
+    background-color var(--motion-duration, 220ms) var(--motion-ease, ease);
+}
+
+.seg-opt.active {
+  background-color: var(--color-primary);
+  color: var(--color-on-accent);
+}
+
+.seg-opt:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+html.dark .seg-control {
+  background-color: var(--color-bg-hover, #374151);
+  border-color: var(--color-border, #374151);
+}
+
 /* ===== 空态基类（个人工作台各面板共用） =====
  * 原 WorkbenchTodo/Notes/Countdown/Ledger/Habits/Exercise/Diet/Sleep/Weight/Genealogy
  * 各持一份逐字重复的 scoped 副本（规范 §5 双轨道），现统一收敛于此。
@@ -725,7 +791,7 @@ optgroup {
   text-align: center;
   color: var(--color-text-muted, var(--color-text-muted));
   font-size: var(--font-size-sm, 13px);
-  padding: 32px 16px;
+  padding: var(--space-8) var(--space-4);
 }
 
 /* 可点击邀请态（空 → 「＋ 新增第一个」）。column+gap 同时兼容单行文案与
@@ -754,7 +820,7 @@ optgroup {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 /* ============================================================

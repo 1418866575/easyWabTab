@@ -325,7 +325,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
   margin-bottom: 10px;
 }
 
@@ -337,7 +337,7 @@ onUnmounted(() => {
 .ipd-action-btn {display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   background: var(--color-bg-card, #ffffff);
   color: var(--color-text-secondary);
   border: 1px solid var(--color-border, #e2e8f0);
@@ -403,9 +403,9 @@ onUnmounted(() => {
 .ipd-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
-  gap: 8px;
+  gap: var(--space-2);
   min-height: 120px;
-  padding: 4px;
+  padding: var(--space-1);
 }
 
 .ipd-item {
@@ -413,7 +413,7 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 5px;
-  padding: 8px 4px;
+  padding: var(--space-2) var(--space-1);
   background: transparent;
   border: 1px solid transparent;
   border-radius: 10px;
@@ -451,7 +451,7 @@ onUnmounted(() => {
 
 .ipd-empty {
   grid-column: 1 / -1;
-  margin: 16px 0;
+  margin: var(--space-4) 0;
   text-align: center;
   font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted);

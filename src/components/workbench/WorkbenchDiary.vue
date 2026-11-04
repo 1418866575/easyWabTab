@@ -661,14 +661,14 @@ const renderedPreview = computed(() =>
 .wb-diary {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 /* ===== 顶部：大标题 + 工具栏（手记风格「纸面」头部） ===== */
 .dj-head {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   padding: 16px 18px;
   background: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #e2e8f0);
@@ -719,7 +719,7 @@ const renderedPreview = computed(() =>
 .dj-main {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
   min-height: 0;
 }
 
@@ -741,7 +741,7 @@ const renderedPreview = computed(() =>
 .dj-title-input {
   flex: 1;
   min-width: 0;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 8px);
   background-color: var(--color-bg-card, #fff);
@@ -835,7 +835,7 @@ const renderedPreview = computed(() =>
   overflow: hidden;
 }
 
-.dj-view-btn {padding: 0 12px;
+.dj-view-btn {padding: 0 var(--space-3);
   border: none;
   background-color: var(--color-bg-card, #fff);
   color: var(--color-text-secondary);
@@ -865,7 +865,7 @@ const renderedPreview = computed(() =>
 .dj-md-group {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   flex-wrap: wrap;
 }
 
@@ -876,7 +876,7 @@ const renderedPreview = computed(() =>
   background-color: var(--color-border, #e2e8f0);
 }
 
-.dj-md-btn {padding: 0 12px;
+.dj-md-btn {padding: 0 var(--space-3);
   border: 1px solid transparent;
   border-radius: var(--radius-sm, 6px);
   background-color: transparent;
@@ -914,7 +914,7 @@ const renderedPreview = computed(() =>
   display: flex;
   align-items: flex-start;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 8px 10px;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
@@ -923,7 +923,7 @@ const renderedPreview = computed(() =>
 
 .dj-img-bar-title {
   flex: 0 0 auto;
-  padding-top: 4px;
+  padding-top: var(--space-1);
   color: var(--color-text-secondary);
   font-size: var(--font-size-xs, 12px);
 }
@@ -977,7 +977,7 @@ const renderedPreview = computed(() =>
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .dj-img-name {
@@ -992,7 +992,7 @@ const renderedPreview = computed(() =>
 
 .dj-img-remove {
   flex: 0 0 auto;
-  padding: 0 4px;
+  padding: 0 var(--space-1);
   border: none;
   background: none;
   color: var(--color-text-muted);
@@ -1008,20 +1008,20 @@ const renderedPreview = computed(() =>
 .dj-history {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   min-height: 0;
 }
 /* 卡片网格：弹框内固定每行 4 个（minmax(0,1fr) 防长内容溢出） */
 .dj-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .dj-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 14px;
   min-height: 190px;
   background: var(--color-bg-card, #fff);
@@ -1097,7 +1097,7 @@ const renderedPreview = computed(() =>
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted);
 }
@@ -1302,14 +1302,14 @@ const renderedPreview = computed(() =>
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 
 .dj-journal-switch {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
@@ -1342,7 +1342,7 @@ const renderedPreview = computed(() =>
   flex-shrink: 0;
 }
 
-.dj-kind-toggle :deep(.el-radio-button__inner) {padding: 0 12px;
+.dj-kind-toggle :deep(.el-radio-button__inner) {padding: 0 var(--space-3);
   height: 36px;}
 
 /* 卡片「灵感」徽标 */
@@ -1363,7 +1363,7 @@ const renderedPreview = computed(() =>
     min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--space-4);
   }
 
   .dj-editor {
@@ -1401,7 +1401,7 @@ const renderedPreview = computed(() =>
     flex: 1;
     min-height: 0;
     display: flex;
-    gap: 16px;
+    gap: var(--space-4);
   }
 
   .dj-main > * {
@@ -1439,7 +1439,7 @@ const renderedPreview = computed(() =>
   flex-direction: column;
   gap: 10px;
   /* 与上方编辑器卡片留白（table-section 在 .wb-diary 之外，无外层 gap 可叠加） */
-  margin-top: 16px;
+  margin-top: var(--space-4);
   padding: 16px 18px;
   background: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #e2e8f0);
@@ -1493,7 +1493,7 @@ const renderedPreview = computed(() =>
   text-align: center;
   color: var(--color-text-muted);
   font-size: var(--fs-body, 14px);
-  padding: 32px 20px;
+  padding: var(--space-8) var(--space-5);
 }
 
 /* 表格行手型（正常视图可点击载入编辑） */

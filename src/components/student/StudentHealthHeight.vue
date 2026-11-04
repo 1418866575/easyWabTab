@@ -340,7 +340,7 @@ const chartOption = computed(() => {
 .sth-height {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .sth-add-btn {
@@ -354,7 +354,7 @@ const chartOption = computed(() => {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 12px;
+  gap: var(--space-3);
   padding: 14px 16px;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 12px;
@@ -383,14 +383,14 @@ const chartOption = computed(() => {
 
 .sth-form-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 /* ===== 统计卡 ===== */
 .sth-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .sth-summary-card {
@@ -415,7 +415,7 @@ const chartOption = computed(() => {
 }
 
 .sth-summary-value {
-  margin-top: 4px;
+  margin-top: var(--space-1);
   font-size: var(--fs-h2, 22px);
   font-weight: 600;
   color: var(--color-text);
@@ -474,7 +474,7 @@ const chartOption = computed(() => {
 }
 
 .sth-empty {
-  padding: 20px;
+  padding: var(--space-5);
   text-align: center;
   color: var(--color-text-secondary);
   border: 1px dashed var(--color-border, #e2e8f0);
@@ -483,7 +483,7 @@ const chartOption = computed(() => {
 }
 
 .sth-empty-small {
-  padding: 12px;
+  padding: var(--space-3);
   font-size: var(--fs-sm, 13px);
 }
 

@@ -157,8 +157,8 @@ html.dark .bsd-item:hover { background-color: rgba(255, 255, 255, 0.06); }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 20px;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
   border-bottom: 1px solid var(--ds-line, #ececf0);
   flex-shrink: 0;
 }
@@ -177,7 +177,7 @@ html.dark .bsd-item:hover { background-color: rgba(255, 255, 255, 0.06); }
 .bsd-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: var(--space-5);
   min-height: 0;
   background-color: var(--ds-bg, #f7f8fa);
   -webkit-overflow-scrolling: touch;

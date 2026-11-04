@@ -21,16 +21,16 @@ const props = withDefaults(
 
 <style scoped>
 .ewt-skeleton {
-  padding: 16px;
+  padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .ewt-skeleton-row {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .ewt-skeleton-block {

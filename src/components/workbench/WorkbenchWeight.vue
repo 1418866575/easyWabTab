@@ -520,14 +520,14 @@ onMounted(async () => {
 .wb-weight {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 /* ===== 顶部信息区（一排两卡）===== */
 .wt-top-cards {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 /* 卡片外框 / 卡片标题 / 统计数字的统一取值在全局 styles/workbench.css（.wb-content .stat-*），
@@ -550,7 +550,7 @@ onMounted(async () => {
 .wt-bmi-row {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 
@@ -605,7 +605,7 @@ onMounted(async () => {
 .wt-advice-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 
@@ -656,12 +656,12 @@ onMounted(async () => {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-shrink: 0;
 }
 /* .btn-add 视觉已统一到全局 .ui-btn--primary（style.css） */
 
-.btn-toggle-list {padding: 0 12px;
+.btn-toggle-list {padding: 0 var(--space-3);
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
@@ -698,7 +698,7 @@ onMounted(async () => {
 
 .wt-list-pager {
   flex: 0 0 auto;
-  padding: 12px 20px 16px;
+  padding: var(--space-3) var(--space-5) var(--space-4);
   border-top: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-input, #f9fafb);
   border-radius: 0 0 14px 14px;
@@ -720,7 +720,7 @@ onMounted(async () => {
 .wt-record-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   padding: 10px 12px;
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
@@ -775,8 +775,8 @@ onMounted(async () => {
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
-.btn-add-inline {margin-top: 12px;
-  padding: 0 12px;
+.btn-add-inline {margin-top: var(--space-3);
+  padding: 0 var(--space-3);
   background: var(--color-primary, var(--color-primary));
   color: #fff;
   border: none;
@@ -794,12 +794,12 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 8px 0 4px;
+  gap: var(--space-3);
+  padding: var(--space-2) 0 var(--space-1);
   border-top: 1px solid var(--color-border, var(--color-border));
 }
 
-.wt-pager-btn {padding: 0 12px;
+.wt-pager-btn {padding: 0 var(--space-3);
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm, 4px);
@@ -875,7 +875,7 @@ onMounted(async () => {
 .form-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   justify-content: flex-end;
 }
 

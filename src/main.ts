@@ -29,10 +29,15 @@ import './styles/teacher.css'
 import './styles/workbench.css'
 // 销售记账弹框通用骨架（商品/进货/库存/销售 四个弹框共用）
 import './styles/biz-dialog.css'
+// 界面美化派生层：把设置里的 --ui-* 调节项映射成既有 token（默认值不改视觉）。
+// 放最后：它是「覆盖层」，语义上必须在所有 token 与组件原语之后。
+import './styles/ui-style.css'
 import { useThemeStore } from './stores/theme'
 import { useAppSettingsStore } from './stores/settings'
 import { flushSmartUsageIfCreated } from './stores/smart'
 import { useNavPrefs } from './composables/useNavPrefs'
+// 界面美化：把 nav 偏好里的 --ui-* 调节项写到 <html>（本机偏好，不进云同步）
+import { initUiStyle } from './composables/useUiStyle'
 import { configureNavMetaStorage, persistNavMeta } from './composables/navMeta'
 import { idbGet, idbPut } from './composables/useIdb'
 import type { NavMetaRecord } from './composables/navMeta'
@@ -87,6 +92,8 @@ async function bootstrap() {
   const themeStore = useThemeStore()
   themeStore.initTheme()
   themeStore.initBackground()
+  // 界面美化在主题之后应用：它写的是 <html> 上的内联变量，主题只切 class/属性，互不覆盖。
+  initUiStyle()
   useAppSettingsStore().initSettings()
   initScrollLock()
   // 必须在 app.mount 之前注册：这样首屏进入的模块也会被计入（首次进入即拉取该模块）

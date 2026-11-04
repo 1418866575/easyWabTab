@@ -465,23 +465,23 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  gap: 12px;
-  padding: 16px;
+  gap: var(--space-3);
+  padding: var(--space-4);
 }
 
 
 .sp-tabs {
   display: flex;
   flex-wrap: wrap;
-  padding: 0 4px;
+  padding: 0 var(--space-1);
   flex-shrink: 0;
 }
 
 .sp-stats {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
-  padding: 0 4px;
+  gap: var(--space-2);
+  padding: 0 var(--space-1);
   flex-shrink: 0;
 }
 .sp-stat-card {
@@ -554,7 +554,7 @@ onMounted(() => {
   border-top: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-input, #f9fafb);
   border-radius: 0 0 14px 14px;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -585,7 +585,7 @@ onMounted(() => {
 .sp-progress-cell {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .sp-progress-bar {
   flex: 1;
@@ -615,12 +615,12 @@ onMounted(() => {
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text-secondary);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 .sp-goal {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 6px 10px;
   border-radius: 6px;
   background: var(--color-hover, #f3f4f6);
@@ -676,12 +676,12 @@ onMounted(() => {
 .dialog-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .sp-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .sp-field label {
   font-size: var(--fs-sm, 13px);
@@ -689,7 +689,7 @@ onMounted(() => {
 }
 .sp-field-row {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .sp-field-row .sp-field { flex: 1; }
 .sp-goals-edit {
@@ -707,7 +707,7 @@ onMounted(() => {
 }
 .sp-goal-remove {
   color: var(--color-text-secondary);
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
 }
 .sp-goal-add {
   align-self: flex-start;
@@ -718,12 +718,12 @@ onMounted(() => {
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
 }
 
 @media (max-width: 768px) {
-  .sp-shell { padding: 12px; }
+  .sp-shell { padding: var(--space-3); }
   .sp-stats { grid-template-columns: repeat(2, 1fr); }
   .sp-field-row { flex-direction: column; }
 }
@@ -731,7 +731,7 @@ onMounted(() => {
 .sp-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 </style>

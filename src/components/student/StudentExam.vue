@@ -450,15 +450,15 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  gap: 12px;
-  padding: 16px;
+  gap: var(--space-3);
+  padding: var(--space-4);
 }
 
 /* ===== 题型筛选 tabs（el-radio-group 药丸，保持过滤逻辑与激活态绑定 activeCategoryTab） ===== */
 .se-tabs {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
@@ -476,7 +476,7 @@ onMounted(async () => {
   background: transparent;
   color: var(--color-text-muted);
   font-size: var(--fs-caption, 12px);
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   box-shadow: none;
   transition: all 0.15s;
   height: 36px;}
@@ -507,7 +507,7 @@ onMounted(async () => {
 .se-stat-label {
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted);
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 .se-stat-value {
   font-size: var(--fs-lg, 16px);
@@ -568,7 +568,7 @@ onMounted(async () => {
   border-top: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-input, #f9fafb);
   border-radius: 0 0 14px 14px;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -616,7 +616,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 5px;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 .se-card-title {
   font-size: var(--fs-sm, 13px);
@@ -747,12 +747,12 @@ onMounted(async () => {
 .form-field :deep(.el-select) {
   width: 100%;
 }
-.form-row { display: flex; gap: 12px; }
+.form-row { display: flex; gap: var(--space-3); }
 .form-row .form-field { flex: 1; }
 
 .se-color-picker {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 .se-color-dot {
@@ -774,7 +774,7 @@ onMounted(async () => {
 /* .btn-edit/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
 
 @media (max-width: 768px) {
-  .se-shell { padding: 12px; }
+  .se-shell { padding: var(--space-3); }
   .se-stats { grid-template-columns: repeat(2, 1fr); }
   .se-grid { grid-template-columns: 1fr; }
   .se-card { height: auto; min-height: 150px; }
@@ -793,7 +793,7 @@ onMounted(async () => {
 .se-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 </style>

@@ -172,10 +172,10 @@ async function handleExportStatic(): Promise<void> {
 </template>
 
 <style scoped>
-.bs { display: flex; flex-direction: column; gap: 16px; max-width: 720px; }
+.bs { display: flex; flex-direction: column; gap: var(--space-4); max-width: 720px; }
 
 .bs-block {
-  padding: 20px;
+  padding: var(--space-5);
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-card, 12px);
   background-color: var(--ds-card, #ffffff);
@@ -192,14 +192,14 @@ async function handleExportStatic(): Promise<void> {
 
 .bs-field { display: block; margin-bottom: 10px; }
 
-.bs-label { display: block; margin-bottom: 4px; color: var(--ds-text-2); font-size: var(--ds-fs-label, 12px); }
+.bs-label { display: block; margin-bottom: var(--space-1); color: var(--ds-text-2); font-size: var(--ds-fs-label, 12px); }
 
 .bs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
 
 .bs-select {
   width: 100%;
   height: 28px;
-  padding: 0 8px;
+  padding: 0 var(--space-2);
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--color-bg-input, #ffffff);
@@ -225,7 +225,7 @@ async function handleExportStatic(): Promise<void> {
   line-height: var(--line-height-relaxed, 1.7);
 }
 
-.bs-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.bs-foot { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 
 .bs-spacer { flex: 1 1 auto; }
 

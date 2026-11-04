@@ -107,7 +107,7 @@ async function toggleEmailReminder(item: CountdownItem) {
 .countdown-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
   align-items: start;
 }
 
@@ -117,7 +117,7 @@ async function toggleEmailReminder(item: CountdownItem) {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 14px 16px 14px 18px;
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
@@ -163,7 +163,7 @@ async function toggleEmailReminder(item: CountdownItem) {
 .countdown-main-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   min-width: 0;
 }
 
@@ -172,7 +172,7 @@ async function toggleEmailReminder(item: CountdownItem) {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding-top: 8px;
+  padding-top: var(--space-2);
   border-top: 1px dashed var(--color-border, var(--color-border));
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
@@ -198,7 +198,7 @@ async function toggleEmailReminder(item: CountdownItem) {
 .countdown-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   margin-bottom: 2px;
 }
 
@@ -379,8 +379,8 @@ html.dark .cat-default {
 
   .countdown-main-row {
     flex-wrap: wrap;
-    row-gap: 4px;
-    column-gap: 12px;
+    row-gap: var(--space-1);
+    column-gap: var(--space-3);
     align-items: center;
   }
 

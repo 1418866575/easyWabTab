@@ -113,7 +113,7 @@ function genderClass(g: '男' | '女'): string {
 .tsp {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .tsp-search {
   gap: 6px;
@@ -145,7 +145,7 @@ function genderClass(g: '男' | '女'): string {
 }
 .tsp-selected {
   border-top: 1px dashed var(--color-border, #e5e7eb);
-  padding-top: 8px;
+  padding-top: var(--space-2);
 }
 .tsp-selected-label {
   font-size: var(--fs-caption, 12px);

@@ -160,12 +160,12 @@ async function onSave(): Promise<void> {
 .bk-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .bk-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .bk-label {
   color: var(--color-text-secondary);

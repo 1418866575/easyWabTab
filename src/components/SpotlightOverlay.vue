@@ -352,11 +352,11 @@ watch(query, () => {
 
 .sp-results {
   overflow-y: auto;
-  padding: 8px;
+  padding: var(--space-2);
 }
 
 .sp-group {
-  padding: 8px 12px 4px;
+  padding: var(--space-2) var(--space-3) var(--space-1);
   font-size: var(--fs-caption, 12px);
   font-weight: 600;
   color: var(--color-text-secondary);

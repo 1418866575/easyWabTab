@@ -492,7 +492,7 @@ onMounted(() => {
 .sm-tabs {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   flex-wrap: wrap;
   flex-shrink: 0;
 }
@@ -505,7 +505,7 @@ onMounted(() => {
 }
 .sm-status-tabs {
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .sm-search {
   flex: 1;
@@ -515,7 +515,7 @@ onMounted(() => {
 .sm-stats {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--space-2);
   flex-shrink: 0;
 }
 .sm-stat-card {
@@ -591,7 +591,7 @@ onMounted(() => {
   border-top: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-input, #f9fafb);
   border-radius: 0 0 14px 14px;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -615,7 +615,7 @@ onMounted(() => {
   min-height: 0;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--space-2);
   
 }
 
@@ -626,7 +626,7 @@ onMounted(() => {
   padding: 6px 10px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   height: 150px;
   min-height: 150px;
   overflow: hidden;
@@ -641,7 +641,7 @@ onMounted(() => {
 .sm-card-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .sm-subject-badge {
   padding: 2px 8px;
@@ -719,7 +719,7 @@ onMounted(() => {
 .sm-card-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .sm-tag {
   padding: 1px 6px;
@@ -759,12 +759,12 @@ onMounted(() => {
 .sm-dialog-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .sm-form-row {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .sm-form-label {
   font-size: var(--fs-sm, 13px);
@@ -797,7 +797,7 @@ onMounted(() => {
 .sm-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 </style>

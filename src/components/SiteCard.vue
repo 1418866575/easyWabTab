@@ -448,7 +448,7 @@ const handleClick = () => {
 .card-menu-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
   min-height: 40px;
   padding: 0 10px;

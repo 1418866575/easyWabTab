@@ -282,8 +282,8 @@ async function onDelete(book: UploadedBook): Promise<void> {
 }
 
 .bk-dropzone {
-  margin: 12px 0;
-  padding: 24px 16px;
+  margin: var(--space-3) 0;
+  padding: var(--space-6) var(--space-4);
   border: 1px dashed var(--color-border, #e2e8f0);
   border-radius: var(--radius-lg, 12px);
   background-color: var(--color-bg-card, #ffffff);
@@ -297,7 +297,7 @@ async function onDelete(book: UploadedBook): Promise<void> {
   background-color: var(--color-primary-soft, #eff6ff);
 }
 .bk-dropzone-title {
-  margin: 0 0 4px;
+  margin: 0 0 var(--space-1);
   color: var(--color-text);
   font-size: var(--font-size-base, 15px);
   font-weight: var(--font-weight-medium, 500);
@@ -309,14 +309,14 @@ async function onDelete(book: UploadedBook): Promise<void> {
 }
 
 .bk-rejects {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
   padding: 10px 12px;
   border: 1px solid var(--color-error, #ef4444);
   border-radius: var(--radius-md, 8px);
   background-color: var(--color-error-soft, #fef2f2);
 }
 .bk-rejects-title {
-  margin: 0 0 4px;
+  margin: 0 0 var(--space-1);
   color: var(--color-error-text);
   font-size: var(--font-size-sm, 13px);
   font-weight: var(--font-weight-medium, 500);
@@ -340,14 +340,14 @@ async function onDelete(book: UploadedBook): Promise<void> {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   max-height: 180px;
   overflow-y: auto;
 }
 .bk-uploaded-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
   padding: 6px 8px;
   border-radius: var(--radius-md, 8px);

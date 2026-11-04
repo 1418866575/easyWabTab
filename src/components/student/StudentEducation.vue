@@ -379,7 +379,7 @@ const degreeOptions = DEGREE_OPTIONS
 .edu-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 /* ===== 列表容器（学生工作台无强制一屏：直接 flex 列撑满即可） ===== */
@@ -387,7 +387,7 @@ const degreeOptions = DEGREE_OPTIONS
   flex: 1 1 auto;
   min-height: 240px;
   width: 100%;
-  padding: 0 16px 0;
+  padding: 0 var(--space-4) 0;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -429,7 +429,7 @@ const degreeOptions = DEGREE_OPTIONS
   border-top: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-input, #f9fafb);
   border-radius: 0 0 14px 14px;
-  margin: 0 16px 8px;
+  margin: 0 var(--space-4) var(--space-2);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -494,7 +494,7 @@ const degreeOptions = DEGREE_OPTIONS
 }
 .edu-form-row-2col {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .edu-form-row-2col > div { flex: 1; }
 .edu-label {
@@ -505,8 +505,8 @@ const degreeOptions = DEGREE_OPTIONS
 }
 .edu-req { color: #f56c6c; margin-right: 2px; }
 .edu-form-errors {
-  margin-top: 4px;
-  padding: 8px;
+  margin-top: var(--space-1);
+  padding: var(--space-2);
   background: rgba(245, 108, 108, 0.1);
   border-radius: 4px;
 }
@@ -534,15 +534,15 @@ const degreeOptions = DEGREE_OPTIONS
 /* ===== 移动端：表格横向滚动、分页条换行 ===== */
 @media (max-width: 768px) {
   .edu-list {
-    padding: 0 12px;
+    padding: 0 var(--space-3);
     overflow-x: auto;
   }
   .edu-list > :global(.el-table) {
     min-width: 720px;
   }
   .edu-list-pager {
-    margin: 0 12px 8px;
-    padding: 12px 8px;
+    margin: 0 var(--space-3) var(--space-2);
+    padding: var(--space-3) var(--space-2);
   }
   .edu-list-pager > :deep(.el-pagination) {
     flex-wrap: wrap;
@@ -552,7 +552,7 @@ const degreeOptions = DEGREE_OPTIONS
 .edu-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 </style>

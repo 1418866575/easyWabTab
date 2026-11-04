@@ -514,8 +514,8 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  gap: 12px;
-  padding: 16px;
+  gap: var(--space-3);
+  padding: var(--space-4);
   /* 页面级滚动：工具栏 / 今日速览 / 图例 / 课程网格作为一个整体滚动，
      网格自身不再产生内部滚动条 —— 滚动条只出现在页面这一层 */
   -webkit-overflow-scrolling: touch;
@@ -536,7 +536,7 @@ onBeforeUnmount(() => {
 .stt-week-switch {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   background: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
@@ -555,13 +555,13 @@ onBeforeUnmount(() => {
   background: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
-  padding: 12px;
+  padding: var(--space-3);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 .stt-today-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   margin-bottom: 10px;
 }
 .stt-today-head h3 {
@@ -580,7 +580,7 @@ onBeforeUnmount(() => {
 .stt-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .stt-chip {
   flex: 0 0 auto;
@@ -588,7 +588,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 2px;
   min-width: 104px;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   border-radius: 8px;
   border-left: 3px solid var(--c, #64748b);
   background: var(--c-soft, var(--color-hover, #f3f4f6));
@@ -678,8 +678,8 @@ onBeforeUnmount(() => {
   width: 100%;
   display: grid;
   grid-template-columns: var(--stt-period-col) repeat(7, minmax(0, 1fr));
-  gap: 4px;
-  padding: 4px;
+  gap: var(--space-1);
+  padding: var(--space-1);
 }
 .stt-cell {
   display: flex;
@@ -749,7 +749,7 @@ onBeforeUnmount(() => {
   grid-column: 1 / -1;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 0 10px;
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
@@ -761,7 +761,7 @@ onBeforeUnmount(() => {
 .stt-body-cell {
   align-items: center;
   justify-content: center;
-  padding: 4px;
+  padding: var(--space-1);
   cursor: pointer;
   min-width: 0;
   min-height: 0;
@@ -821,7 +821,7 @@ onBeforeUnmount(() => {
 .stt-badges {
   display: flex;
   gap: 6px;
-  margin-top: 4px;
+  margin-top: var(--space-1);
   flex-wrap: wrap;
 }
 .stt-badge {
@@ -841,7 +841,7 @@ onBeforeUnmount(() => {
 /* 空状态提示条（始终保留下方网格，保证可点击空白格新增课程） */
 .stt-empty-banner {
   padding: 12px 14px;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.08));
   border: 1px dashed var(--color-primary, #3b82f6);
   border-radius: 8px;
@@ -891,7 +891,7 @@ onBeforeUnmount(() => {
 }
 .form-row {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .form-row .form-field { flex: 1; }
 .stt-dialog-meta {
@@ -904,7 +904,7 @@ onBeforeUnmount(() => {
 .stt-custom-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   font-size: var(--fs-md, 15px);
   font-weight: 400;
   color: var(--color-text-muted);
@@ -912,7 +912,7 @@ onBeforeUnmount(() => {
 }
 .dialog-footer-right {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   margin-left: auto;
 }
 .stt-dialog-footer {
@@ -926,7 +926,7 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 768px) {
-  .stt-shell { padding: 12px; --stt-grid-min: 480px; }
+  .stt-shell { padding: var(--space-3); --stt-grid-min: 480px; }
   .stt-grid { --stt-period-col: 60px; --stt-head-h: 36px; --stt-sec-h: 30px; --stt-row-min: 54px; }
   .stt-period-name { font-size: var(--fs-caption, 12px); }
   .stt-period-time { font-size: var(--fs-caption, 12px); }

@@ -233,7 +233,7 @@ onMounted(async () => {
 .sa-stats-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
   flex-shrink: 0;
 }
@@ -280,7 +280,7 @@ onMounted(async () => {
 .sa-tabs {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   flex-wrap: wrap;
   flex-shrink: 0;
 }
@@ -288,7 +288,7 @@ onMounted(async () => {
   flex-wrap: wrap;
 }
 .sa-tabs :deep(.el-radio-button__inner) {font-size: var(--fs-caption, 12px);
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   height: 36px;}
 .sa-count {
   margin-left: auto;
@@ -321,7 +321,7 @@ onMounted(async () => {
   background: var(--color-surface, #fff);
   border: 2px solid var(--color-border, #e5e7eb);
   border-radius: 10px;
-  padding: 12px 8px;
+  padding: var(--space-3) var(--space-2);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -358,7 +358,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .sa-badge-status.unlocked {
   color: var(--color-warning-text);
@@ -406,7 +406,7 @@ onMounted(async () => {
   background: transparent;
   color: inherit;
   cursor: pointer;
-  padding: 4px;
+  padding: var(--space-1);
   opacity: 0.6;
   display: inline-flex;
 }
@@ -414,10 +414,10 @@ onMounted(async () => {
   opacity: 1;
 }
 .sa-dialog-body {
-  padding: 16px;
+  padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .sa-dialog-desc {
   margin: 0;
@@ -430,7 +430,7 @@ onMounted(async () => {
   background: rgba(245, 158, 11, 0.08);
   border: 1px solid var(--ds-warning);
   border-radius: 8px;
-  padding: 12px;
+  padding: var(--space-3);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -449,10 +449,10 @@ onMounted(async () => {
   background: rgba(59, 130, 246, 0.06);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
-  padding: 12px;
+  padding: var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .sa-dialog-progress-row {
   display: flex;
@@ -490,17 +490,17 @@ onMounted(async () => {
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-soft);
   line-height: 1.5;
-  padding-top: 4px;
+  padding-top: var(--space-1);
   border-top: 1px dashed var(--color-border, #e5e7eb);
 }
 
 .sa-dialog-meta {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-soft);
-  padding-top: 4px;
+  padding-top: var(--space-1);
   border-top: 1px dashed var(--color-border, #e5e7eb);
 }
 

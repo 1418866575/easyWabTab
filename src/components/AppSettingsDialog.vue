@@ -79,6 +79,8 @@ import {
 import type { ContainerId } from '@/composables/useHomeLayout'
 import Icon from '@/components/Icon.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
+// 界面美化：同类元素默认规则的集中调节面板（设置 → 个性化 → 界面美化）
+import UiStylePanel from '@/components/common/UiStylePanel.vue'
 import BusinessCategoryManager from '@/components/business/BusinessCategoryManager.vue'
 import StudentTimetableConfig from '@/components/student/StudentTimetableConfig.vue'
 import TeacherDataManage from '@/components/teacher/TeacherDataManage.vue'
@@ -113,6 +115,7 @@ type NavSubTab =
   | 'nav-appearance'
   | 'nav-stats'
   | 'nav-display'
+  | 'nav-uistyle'
   | 'nav-workbench'
   | 'nav-backup-restore'
   | 'nav-add-site'
@@ -187,6 +190,7 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student' | 'teacher', SubTab
     { key: 'nav-appearance',      label: '站点外观' },
     { key: 'nav-stats',           label: '访问统计' },
     { key: 'nav-display',         label: '显示控制' },
+    { key: 'nav-uistyle',         label: '界面美化' },
     { key: 'nav-workbench',       label: '工作台设置' },
     { key: 'nav-backup-restore',  label: '备份恢复' },
     { key: 'nav-add-site',        label: '添加网址' },
@@ -382,6 +386,8 @@ const NAV_GROUPS: NavGroup[] = [
     label: '个性化',
     items: [
       { key: 'theme', label: '主题', icon: 'palette', tab: 'nav', sub: 'nav-display' },
+      // 界面美化：同类元素的默认规则（布局留白 / 控件尺寸 / 字号行高 / 间距圆角）
+      { key: 'nav-uistyle', label: '界面美化', icon: 'scale', tab: 'nav', sub: 'nav-uistyle' },
       { key: 'nav-workbench', label: '工作台设置', icon: 'toolbox', tab: 'nav', sub: 'nav-workbench' },
       { key: 'nav-appearance', label: '站点外观', icon: 'monitor', tab: 'nav', sub: 'nav-appearance' },
       { key: 'nav-stats', label: '访问统计', icon: 'chart', tab: 'nav', sub: 'nav-stats' },
@@ -2292,6 +2298,15 @@ function toggleFullscreen(): void {
         </div>
 
         <!-- 主题与视图模式（导航设置 tab - 显示控制）：主题切换 + 经典/侧边栏视图，置于导航筛选栏之上 -->
+        <!-- 界面美化：把「同类元素的默认规则」集中到一处调节（布局留白 / 控件尺寸 / 字号行高 / 间距圆角）。
+             面板组件只渲染配置清单，写变量与持久化在 useUiStyle，派生 CSS 在 styles/ui-style.css。 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-uistyle'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">界面美化</h3>
+          </div>
+          <UiStylePanel />
+        </div>
+
         <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">主题</h3>
@@ -4478,24 +4493,24 @@ function toggleFullscreen(): void {
 .hint {
   font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
-  margin: 0 0 16px 0;
+  margin: 0 0 var(--space-4) 0;
 }
 
 /* 顶部 tab 栏（视觉对齐 workbench 面板 tabs，如 WorkbenchHealth.vue 的 .hd-tab） */
 .settings-tabs {
   display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
 }
 
 /* 第二层：子 tab 条（视觉层级稍低——字号更小、padding 更紧凑，作为主 tab 条下的内容分组切换） */
 .settings-tabs.settings-tabs-sub {
   margin-bottom: 14px;
-  padding-bottom: 12px;
+  padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--color-border, var(--color-border));
   flex-wrap: wrap;
 }
-.sub-tab-btn {padding: 0 12px !important;
+.sub-tab-btn {padding: 0 var(--space-3) !important;
   font-size: var(--fs-caption, 12px) !important;
   border-radius: calc(var(--radius-md, 8px) - 2px) !important;
   height: 36px !important;}
@@ -4508,7 +4523,7 @@ html.dark .sub-tab-btn.active {
   box-shadow: 0 0 0 1px #60a5fa inset;
 }
 
-.tab-btn {padding: 0 12px;
+.tab-btn {padding: 0 var(--space-3);
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md);
   background-color: var(--color-bg-card, var(--color-bg-card));
@@ -4559,7 +4574,7 @@ html.dark .tab-btn.active {
   display: grid;
   grid-template-columns: minmax(100px, 1.4fr) minmax(120px, 1fr) minmax(110px, 1fr) 92px;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   padding: 10px 14px;
 }
 
@@ -4605,7 +4620,7 @@ html.dark .tab-btn.active {
 /* 工作台菜单/城市配置区块（独立于 .settings-grid，不复用其列定义——R6） */
 .wb-menu-config,
 .wb-city-config {
-  margin-bottom: 20px;
+  margin-bottom: var(--space-5);
   padding: 14px;
   background-color: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
@@ -4654,7 +4669,7 @@ html.dark .tab-btn.active {
 .bl-entry-caret { flex-shrink: 0; color: var(--color-text-muted); }
 
 .bl-entry-body {
-  padding: 4px 16px 16px;
+  padding: var(--space-1) var(--space-4) var(--space-4);
   display: grid;
   /* minmax(0, 1fr)：grid item 默认 min-width:auto 会被表格的 min-content 撑开，
      整列超出卡片后被 .bl-manage-card 的 overflow:hidden 裁掉 → 移动端既看不见也滑不动 */
@@ -4672,13 +4687,13 @@ html.dark .tab-btn.active {
   font-size: var(--fs-caption, 12px);
   font-weight: 600;
   color: var(--color-text-muted);
-  padding-top: 4px;
+  padding-top: var(--space-1);
   flex-shrink: 0;
 }
 .bl-cat-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .bl-cat-badge {
   display: inline-flex;
@@ -4733,7 +4748,7 @@ html.dark .tab-btn.active {
 .bl-radio {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--space-2);
   font-size: var(--fs-caption, 12px);
   line-height: 1.6;
   color: var(--color-text);
@@ -4787,7 +4802,7 @@ html.dark .tab-btn.active {
 .bl-col-count { width: 84px; text-align: center; color: var(--color-text-secondary); }
 .bl-code-badge {
   display: inline-block;
-  margin-right: 8px;
+  margin-right: var(--space-2);
   padding: 1px 7px;
   font-family: var(--font-mono, monospace);
   font-size: var(--fs-caption, 12px);
@@ -4810,7 +4825,7 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
 }
 
 .tc-menu-group-title {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   font-size: var(--fs-caption, 12px);
   font-weight: var(--font-weight-semibold, 600);
   color: var(--color-text-muted);
@@ -4819,7 +4834,7 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
 .wb-menu-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .wb-menu-row {
@@ -4923,50 +4938,8 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
 
 /* .wb-menu-btn 视觉已统一到全局 .ui-btn（次按钮 sm） */
 
-/* 分段控件（显示控制：经典 / 侧边栏、站点排序 二选一）
-   高度与 36px 的按钮/输入框对齐：容器 36 = 内段 30 + 上下 padding 2×2 + 边框 2 */
-.seg-control {
-  display: inline-flex;
-  align-items: center;
-  flex: none;
-  height: 36px;
-  padding: 2px;
-  background-color: var(--color-bg-hover, #f1f5f9);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-full, 9999px);
-  box-sizing: border-box;
-}
-.seg-opt {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 30px;
-  padding: 0 var(--space-4, 16px);
-  border: none;
-  background: transparent;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm, 13px);
-  line-height: 1;
-  border-radius: var(--radius-full, 9999px);
-  cursor: pointer;
-  transition: color var(--motion-duration, 220ms) var(--motion-ease, ease),
-    background-color var(--motion-duration, 220ms) var(--motion-ease, ease);
-  white-space: nowrap;
-}
-.seg-opt.active {
-  background-color: var(--color-primary);
-  color: #fff;
-}
-.seg-opt:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 1px;
-}
-html.dark .seg-control {
-  background-color: var(--color-bg-hover, #374151);
-  border-color: var(--color-border, #374151);
-}
+/* 分段控件（.seg-control / .seg-opt）已于 2026-11 上收全局（src/style.css）：
+   界面美化面板是子组件，scoped 规则穿透不到，复用必须走全局基类。 */
 
 /* 菜单行开关关闭时的弱化态（行内输入/按钮整体降透明度提示） */
 .wb-menu-row.is-disabled-item {
@@ -5002,7 +4975,7 @@ html.dark .seg-control {
 .wb-cardsize-field {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   flex-shrink: 0;
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
@@ -5016,7 +4989,7 @@ html.dark .seg-control {
 .wb-snapshot-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .wb-snapshot-row {
@@ -5045,14 +5018,14 @@ html.dark .seg-control {
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text, var(--color-text));
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 /* 分类管理：标签页显示复选行（用于内置分类的 tab 可见性） */
 .wbcat-tab-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
   margin-bottom: 14px;
 }
 
@@ -5088,7 +5061,7 @@ html.dark .seg-control {
 }
 
 .wb-snapshot-empty {
-  padding: 12px 0;
+  padding: var(--space-3) 0;
   font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted, var(--color-text-muted));
 }
@@ -5133,7 +5106,7 @@ html.dark .wb-snapshot-empty {
 .remind-fields {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .remind-field {
@@ -5157,7 +5130,7 @@ html.dark .wb-snapshot-empty {
 }
 
 .remind-actions {
-  margin-top: 12px;
+  margin-top: var(--space-3);
 }
 
 /* 上次同步时间：桌面靠右与按钮同排；窄屏独占一行，避免与 4 个同步按钮挤在一行被裁掉 */
@@ -5182,7 +5155,7 @@ html.dark .remind-label {
   }
   /* 遮罩内边距收窄，给上面的全屏面板留出左右各 12px 呼吸位 */
   .manager-overlay {
-    padding: 12px;
+    padding: var(--space-3);
   }
 
   .grid-header {
@@ -5191,7 +5164,7 @@ html.dark .remind-label {
 
   .settings-row {
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .row-label {
@@ -5250,7 +5223,7 @@ html.dark .remind-label {
 .about-mp-row {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-4);
   flex-wrap: wrap;
 }
 
@@ -5305,7 +5278,7 @@ html.dark .remind-label {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
   padding-top: 10px;
   border-top: 1px dashed var(--color-border, var(--color-border));
@@ -5319,7 +5292,7 @@ html.dark .remind-label {
 .about-link-main {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   min-width: 0;
   flex: 1;
 }
@@ -5346,7 +5319,7 @@ html.dark .remind-label {
 }
 
 .site-invalid-count {
-  margin-left: 4px;
+  margin-left: var(--space-1);
   font-weight: 600;
   color: var(--color-error-text);
 }
@@ -5395,7 +5368,7 @@ html.dark .site-action-btn.danger:hover:not(:disabled) {
   border-color: #dc2626;
 }
 .danger-hint {
-  margin-top: 12px;
+  margin-top: var(--space-3);
   color: var(--color-error-text);
   font-weight: 600;
 }
@@ -5407,7 +5380,7 @@ html.dark .danger-hint {
 .site-favicon-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
@@ -5496,14 +5469,14 @@ html.dark .ld-builtin-tag {
 .student-stage-grid {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 8px;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 .student-stage-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
   background: transparent;
@@ -5566,13 +5539,13 @@ html.dark .ld-builtin-tag {
 .student-subject-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin: 8px 0;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
 }
 .student-subject-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   padding: 4px 8px 4px 10px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 14px;
@@ -5603,8 +5576,8 @@ html.dark .ld-builtin-tag {
 }
 .student-subject-add {
   display: flex;
-  gap: 8px;
-  margin-top: 8px;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 .student-subject-add .wb-menu-name-input {
   flex: 1;
@@ -5614,13 +5587,13 @@ html.dark .ld-builtin-tag {
 .wb-menu-list {
   list-style: none;
   padding: 0;
-  margin: 8px 0 0;
+  margin: var(--space-2) 0 0;
 }
 .wb-menu-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
   margin-bottom: 6px;
@@ -5638,7 +5611,7 @@ html.dark .ld-builtin-tag {
 .wb-menu-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
 }
 /* .mini-btn 视觉已统一到全局 .ui-btn（次按钮 sm） */
 
@@ -5650,7 +5623,7 @@ html.dark .ld-builtin-tag {
   background-color: var(--color-bg-2, #f7f8fa);
   display: flex;
   flex-direction: column;
-  padding: 16px 12px;
+  padding: var(--space-4) var(--space-3);
   overflow-y: auto;
 }
 html.dark .settings-rail { background-color: rgba(255, 255, 255, 0.03); }
@@ -5710,7 +5683,7 @@ html.dark .rail-item:hover { background-color: rgba(255, 255, 255, 0.06); }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   padding: 14px 24px;
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
@@ -5744,7 +5717,7 @@ html.dark .status-pill { color: #4ade80; background-color: rgba(74, 222, 128, 0.
 .settings-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 24px;
+  padding: var(--space-5) var(--space-6);
   min-height: 0;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
@@ -5760,16 +5733,16 @@ html.dark .status-pill { color: #4ade80; background-color: rgba(74, 222, 128, 0.
     flex-direction: row;
     overflow-x: auto;
     overflow-y: hidden;
-    padding: 8px 12px;
-    gap: 8px;
+    padding: var(--space-2) var(--space-3);
+    gap: var(--space-2);
   }
   .rail-search { display: none; }
   .rail-nav { flex-direction: row; flex-wrap: nowrap; gap: 6px; }
   .rail-group-label { display: none; }
   .rail-item { width: auto; white-space: nowrap; padding: 7px 12px; }
   .rail-item .rail-item-label { font-size: var(--fs-caption, 12px); }
-  .settings-content-head { padding: 12px 16px; }
-  .settings-scroll { padding: 16px; }
+  .settings-content-head { padding: var(--space-3) var(--space-4); }
+  .settings-scroll { padding: var(--space-4); }
   /* 云同步「上次同步」换到下一行整行显示（原与 4 个按钮同排，窄屏必然超出屏幕） */
   .sync-last-hint {
     margin-left: 0;
@@ -5783,8 +5756,8 @@ html.dark .status-pill { color: #4ade80; background-color: rgba(74, 222, 128, 0.
 @media (max-width: 768px) {
   .bl-manage-card { border-radius: 10px; }
   .bl-entry { padding: 12px 14px; }
-  .bl-entry-body { padding: 4px 14px 14px; gap: 12px; }
-  .bl-block + .bl-block { padding-top: 12px; }
+  .bl-entry-body { padding: 4px 14px 14px; gap: var(--space-3); }
+  .bl-block + .bl-block { padding-top: var(--space-3); }
 
   /* 表头隐藏、每行一张卡：字段名由 ::before 取 data-label 前置，不再依赖横向滚动 */
   .bl-table-wrap {
@@ -5823,7 +5796,7 @@ html.dark .status-pill { color: #4ade80; background-color: rgba(74, 222, 128, 0.
   }
   .bl-table tbody td.bl-col-name::before {
     display: block;
-    margin-bottom: 4px;
+    margin-bottom: var(--space-1);
     text-align: left;
   }
   .bl-edit-input { width: 100%; }
@@ -5831,8 +5804,8 @@ html.dark .status-pill { color: #4ade80; background-color: rgba(74, 222, 128, 0.
   /* 操作列独占一行，按钮自动换行且触控高度 ≥44px */
   .bl-table tbody td.bl-col-ops {
     display: block;
-    margin-top: 4px;
-    padding-top: 8px;
+    margin-top: var(--space-1);
+    padding-top: var(--space-2);
     border-top: 1px dashed var(--color-border, #e2e8f0);
   }
   .bl-table tbody td.bl-col-ops::before {
@@ -5842,7 +5815,7 @@ html.dark .status-pill { color: #4ade80; background-color: rgba(74, 222, 128, 0.
   }
   .bl-col-ops .el-button {height: auto;
   height: 36px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   margin: 0 6px 6px 0;}
 
   /* 新建账本：标签收窄，给输入框留出更多横向空间 */
@@ -5851,7 +5824,7 @@ html.dark .status-pill { color: #4ade80; background-color: rgba(74, 222, 128, 0.
 
 /* 飞书「创建表」按钮：wb-menu-btn 无内置 loading，用内联旋转指示器表示进行中 */
 .feishu-table-actions {
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 .btn-spinner {

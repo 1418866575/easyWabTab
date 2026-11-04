@@ -756,7 +756,7 @@ function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
 }
 
 .ss-rail-group-label {
-  padding: 0 8px 8px;
+  padding: 0 var(--space-2) var(--space-2);
   font-size: var(--fs-caption, 12px);
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -818,9 +818,9 @@ function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   flex-shrink: 0;
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--color-border, #e2e8f0);
 }
 
@@ -859,7 +859,7 @@ function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding: 16px;
+  padding: var(--space-4);
   -webkit-overflow-scrolling: touch;
 }
 
@@ -869,7 +869,7 @@ function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
 .ss-title { margin: 0; font-size: var(--fs-body, 14px); font-weight: var(--font-weight-semibold, 600); color: var(--color-text); }
 .ss-hint { margin: 0; font-size: var(--fs-caption, 12px); line-height: 1.6; color: var(--color-text-secondary); }
 
-.ss-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.ss-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-2); }
 
 .ss-row {
   display: flex;
@@ -880,7 +880,7 @@ function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
   border-radius: var(--radius-sm, 8px);
   background-color: var(--color-bg-card, #ffffff);
 }
-.ss-row.is-cat { flex-direction: column; align-items: stretch; gap: 8px; }
+.ss-row.is-cat { flex-direction: column; align-items: stretch; gap: var(--space-2); }
 .ss-row.is-hidden { opacity: 0.55; }
 .ss-row.is-dragover { border-color: var(--color-primary, #3b82f6); }
 
@@ -901,22 +901,22 @@ function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
 .ss-cat-detail {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 8px;
+  gap: var(--space-2);
+  padding: var(--space-2);
   border-radius: var(--radius-sm, 8px);
   background-color: var(--color-bg-hover, #f1f5f9);
 }
-.ss-add { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ss-add { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .ss-add-input { width: 160px; }
 .ss-pick { flex: 1 1 200px; min-width: 0; }
 
-.ss-skill-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.ss-skill-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-1); }
 .ss-skill-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 4px 8px;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm, 8px);
   background-color: var(--color-bg-card, #ffffff);
 }
@@ -945,7 +945,7 @@ function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
   border: 1px dashed var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 10px);
 }
-.ss-empty-title { margin: 0 0 4px; font-size: var(--fs-body, 14px); font-weight: var(--font-weight-semibold, 600); color: var(--color-text); }
+.ss-empty-title { margin: 0 0 var(--space-1); font-size: var(--fs-body, 14px); font-weight: var(--font-weight-semibold, 600); color: var(--color-text); }
 .ss-empty-hint { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-secondary); }
 
 /* 开关不再自造：统一用 el-switch（原 .switch-btn / .switch-thumb 已删除） */
@@ -960,7 +960,7 @@ function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
     width: 100%;
     flex-direction: row;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
     padding: 8px 10px;
     border-right: none;
     border-bottom: 1px solid var(--color-border, #e2e8f0);
@@ -985,7 +985,7 @@ function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
 
   .ss-content-head { padding: 10px 12px; }
 
-  .ss-scroll { padding: 12px; }
+  .ss-scroll { padding: var(--space-3); }
 
   .ss-row { flex-wrap: wrap; }
   .ss-add-input { width: 100%; }

@@ -1318,7 +1318,7 @@ async function regenerateSlug(): Promise<void> {
   align-items: center;
   flex-wrap: wrap;
 }
-.be-head-l { gap: 8px; }
+.be-head-l { gap: var(--space-2); }
 /* 右半：操作按钮。gap/padding 略收紧，保证 1440 屏下与左半同排放下 */
 .be-head-r { gap: 5px; margin-left: auto; justify-content: flex-end; }
 .be-head-r > .ui-btn { padding: 0 10px; }
@@ -1330,7 +1330,7 @@ async function regenerateSlug(): Promise<void> {
   overflow: hidden;
 }
 
-.be-view-btn {padding: 0 12px;
+.be-view-btn {padding: 0 var(--space-3);
   border: none;
   background-color: var(--ds-card, #ffffff);
   color: var(--ds-text-2);
@@ -1346,8 +1346,8 @@ async function regenerateSlug(): Promise<void> {
 .be-side-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 12px;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-pill, 999px);
   background-color: var(--ds-card, #ffffff);
@@ -1364,7 +1364,7 @@ async function regenerateSlug(): Promise<void> {
 
 .be-body {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
   align-items: stretch;
   flex-wrap: wrap;
 }
@@ -1374,14 +1374,14 @@ async function regenerateSlug(): Promise<void> {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 /* 标题行：固定文案「标题」+ 输入框（标签常显，不依赖 placeholder） */
 .be-title-field {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   min-width: 0;
 }
 
@@ -1399,7 +1399,7 @@ async function regenerateSlug(): Promise<void> {
   min-width: 0;
   width: 100%;
   height: 40px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--ds-card, #ffffff);
@@ -1411,7 +1411,7 @@ async function regenerateSlug(): Promise<void> {
 
 .be-editor-wrap {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   min-height: 420px;
 }
 
@@ -1425,10 +1425,10 @@ async function regenerateSlug(): Promise<void> {
   z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   background-color: var(--ds-bg, #f7f8fa);
   padding: var(--space-4, 16px) 0 10px;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 /* 第 2 行：Markdown 工具栏（边框/阴影由 .be-topcard 提供） */
@@ -1453,7 +1453,7 @@ async function regenerateSlug(): Promise<void> {
 .be-md-group {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   flex-wrap: wrap;
 }
 
@@ -1501,7 +1501,7 @@ async function regenerateSlug(): Promise<void> {
 .be-preview {
   flex: 1 1 0;
   min-width: 0;
-  padding: 12px;
+  padding: var(--space-3);
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-card, 12px);
   background-color: var(--ds-card, #ffffff);
@@ -1527,10 +1527,10 @@ async function regenerateSlug(): Promise<void> {
   width: 320px;
   max-width: 86vw;
   height: 100vh;
-  padding: 16px;
+  padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   background-color: var(--ds-card, #ffffff);
   border-left: 1px solid var(--ds-line, #ececf0);
   box-shadow: -8px 0 24px rgba(15, 23, 42, 0.10);
@@ -1547,7 +1547,7 @@ async function regenerateSlug(): Promise<void> {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
   margin-bottom: 2px;
 }
 
@@ -1593,14 +1593,14 @@ async function regenerateSlug(): Promise<void> {
 }
 
 .be-block {
-  padding: 12px;
+  padding: var(--space-3);
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-card, 12px);
   background-color: var(--ds-card, #ffffff);
 }
 
 .be-block-title {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   font-size: var(--ds-fs-section, 16px);
   font-weight: var(--font-weight-semibold, 600);
   color: var(--ds-text);
@@ -1613,7 +1613,7 @@ async function regenerateSlug(): Promise<void> {
 
 .be-label {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
   color: var(--ds-text-2);
   font-size: var(--font-size-xs, 12px);
 }
@@ -1633,7 +1633,7 @@ async function regenerateSlug(): Promise<void> {
 
 .be-mini {
   flex: 0 0 auto;
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--ds-card, #ffffff);
@@ -1646,7 +1646,7 @@ async function regenerateSlug(): Promise<void> {
 .be-input {
   width: 100%;
   height: 30px;
-  padding: 0 8px;
+  padding: 0 var(--space-2);
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--color-bg-input, #ffffff);
@@ -1718,7 +1718,7 @@ async function regenerateSlug(): Promise<void> {
 .be-cover-pick {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .be-cover-thumb {
@@ -1745,7 +1745,7 @@ async function regenerateSlug(): Promise<void> {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   border: 1px solid rgba(239, 68, 68, 0.35);
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: rgba(239, 68, 68, 0.06);
@@ -1753,7 +1753,7 @@ async function regenerateSlug(): Promise<void> {
 
 .be-errors {
   margin: 0;
-  padding-left: 16px;
+  padding-left: var(--space-4);
   color: var(--color-error-text);
   font-size: var(--font-size-xs, 12px);
   line-height: var(--line-height-relaxed, 1.7);
@@ -1777,7 +1777,7 @@ async function regenerateSlug(): Promise<void> {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .be-wx-ip-val {
@@ -1871,7 +1871,7 @@ async function regenerateSlug(): Promise<void> {
 /* ===== 文中图片清单弹框 ===== */
 .img-dialog-empty {
   margin: 0;
-  padding: 24px 8px;
+  padding: var(--space-6) var(--space-2);
   text-align: center;
   color: var(--ds-text-3);
   font-size: var(--font-size-sm, 13px);
@@ -1880,7 +1880,7 @@ async function regenerateSlug(): Promise<void> {
 .img-dialog-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1890,7 +1890,7 @@ async function regenerateSlug(): Promise<void> {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 8px;
+  padding: var(--space-2);
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--ds-card, #ffffff);
@@ -1957,7 +1957,7 @@ async function regenerateSlug(): Promise<void> {
 
 .img-dialog-op {
   flex: 1 1 auto;
-  padding: 4px 0;
+  padding: var(--space-1) 0;
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--ds-card, #ffffff);
@@ -1987,7 +1987,7 @@ async function regenerateSlug(): Promise<void> {
 .be-tp-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .be-tp-cell {
@@ -2083,7 +2083,7 @@ async function regenerateSlug(): Promise<void> {
 .be-wx-preview {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .be-wx-tip {

@@ -178,10 +178,10 @@ const hasConflict = computed(() => conflictRows.value.length > 0)
   color: #E8463A;
 }
 .conflict-body {
-  padding: 20px 24px;
+  padding: var(--space-5) var(--space-6);
 }
 .conflict-intro {
-  margin: 0 0 16px;
+  margin: 0 0 var(--space-4);
   font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted);
   line-height: 1.5;
@@ -189,8 +189,8 @@ const hasConflict = computed(() => conflictRows.value.length > 0)
 .conflict-files {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 .conflict-file-row {
   background: var(--color-bg-hover);
@@ -201,9 +201,9 @@ const hasConflict = computed(() => conflictRows.value.length > 0)
 .conflict-file-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   margin-bottom: 10px;
-  padding-bottom: 8px;
+  padding-bottom: var(--space-2);
   border-bottom: 1px dashed var(--color-border);
 }
 .conflict-file-name {
@@ -250,21 +250,21 @@ const hasConflict = computed(() => conflictRows.value.length > 0)
   color: var(--color-primary-text);
 }
 .merge-hint {
-  margin: 12px 0 0;
+  margin: var(--space-3) 0 0;
   font-size: var(--fs-caption, 12px);
   color: var(--color-success-text);
   line-height: 1.5;
 }
 .conflict-foot {
-  padding: 12px 24px;
+  padding: var(--space-3) var(--space-6);
   border-top: 1px solid var(--color-border);
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   justify-content: flex-end;
   flex-wrap: wrap;
   flex-shrink: 0;
 }
-.conflict-btn {padding: 0 12px;
+.conflict-btn {padding: 0 var(--space-3);
   border-radius: 6px;
   border: 1px solid var(--color-border);
   background: var(--color-bg);
@@ -302,12 +302,12 @@ const hasConflict = computed(() => conflictRows.value.length > 0)
   overflow: hidden;
 }
 .conflict-head {
-  padding: 16px 24px;
+  padding: var(--space-4) var(--space-6);
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 .conflict-body {
-  padding: 20px 24px;
+  padding: var(--space-5) var(--space-6);
   flex: 1;
   min-height: 0;
   overflow-y: auto;

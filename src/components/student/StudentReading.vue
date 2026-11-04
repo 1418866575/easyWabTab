@@ -368,8 +368,8 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  gap: 12px;
-  padding: 16px;
+  gap: var(--space-3);
+  padding: var(--space-4);
 }
 
 
@@ -389,7 +389,7 @@ onMounted(async () => {
 .sr-stat-label {
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted);
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 .sr-stat-value {
   font-size: var(--fs-lg, 16px);
@@ -450,7 +450,7 @@ onMounted(async () => {
   border-top: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-input, #f9fafb);
   border-radius: 0 0 14px 14px;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -513,7 +513,7 @@ onMounted(async () => {
   font-size: var(--fs-sm, 13px);
   font-weight: 500;
 }
-.form-row { display: flex; gap: 12px; }
+.form-row { display: flex; gap: var(--space-3); }
 .form-row .form-field { flex: 1; }
 .sr-form-number {
   width: 100%;
@@ -532,12 +532,12 @@ onMounted(async () => {
 }
 .dialog-footer-right {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   margin-left: auto;
 }
 
 @media (max-width: 768px) {
-  .sr-shell { padding: 12px; }
+  .sr-shell { padding: var(--space-3); }
   .sr-stats { grid-template-columns: repeat(2, 1fr); }
   .form-row { flex-direction: column; }
 }
@@ -548,7 +548,7 @@ onMounted(async () => {
 .sr-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 </style>

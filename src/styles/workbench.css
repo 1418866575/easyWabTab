@@ -49,7 +49,7 @@
 }
 
 .panel-scope .panel-page-sub {
-  margin: 4px 0 0;
+  margin: var(--space-1) 0 0;
   font-size: var(--font-size-sm, 13px);
   color: var(--color-text-muted);
 }
@@ -61,7 +61,9 @@
   flex-direction: column;
   gap: var(--space-3, 12px);
   min-width: 0;
-  padding: var(--space-4, 16px);
+  /* 卡片内边距由界面美化「卡片内边距」调节（--ui-card-pad，默认 16px）。
+     不用 --space-4：那样会和「组件间距」缩放重复叠加，两处都调等于调两次。 */
+  padding: var(--ui-card-pad);
   background-color: var(--color-bg-card, #ffffff);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-lg, 12px);
@@ -122,7 +124,7 @@ html.dark .bs-content.panel-scope .bizinv-low-card {
 .panel-scope .stat-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   min-width: 0;
 }
 
@@ -239,7 +241,7 @@ html.dark .bs-content.panel-scope .bizinv-low-card {
    反而比原来更挤（实测便签「类型/状态」标签被挤到省略号）。
    故：td 只留纵向 8px，横向交给 .cell 的 10px，合计正好等于教师表格的 8px 10px。 */
 .panel-scope .ewt-table .el-table__cell {
-  padding: 8px 0;
+  padding: var(--space-2) 0;
 }
 
 .panel-scope .ewt-table .el-table__cell > .cell {

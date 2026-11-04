@@ -231,10 +231,10 @@ async function handleSyncNowClick(): Promise<void> {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   /* 不换行：右侧操作区（含最右的「设置」）始终固定在同一行最右端 */
   flex-wrap: nowrap;
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   background-color: var(--color-bg-card, #ffffff);
   border-bottom: 1px solid var(--color-border, #e2e8f0);
 }
@@ -242,7 +242,7 @@ async function handleSyncNowClick(): Promise<void> {
 .sv-topbar-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-4);
   min-width: 0;
   /* 左侧可压缩（标题过长时省略），保证右侧按钮组不被挤出可视区 */
   flex: 0 1 auto;
@@ -275,7 +275,7 @@ async function handleSyncNowClick(): Promise<void> {
 .sv-topbar-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   /* 固定在最右侧：不伸缩、不换行、不被左侧内容挤走 */
   flex: 0 0 auto;
   margin-left: auto;
@@ -287,7 +287,7 @@ async function handleSyncNowClick(): Promise<void> {
   justify-content: center;
   gap: 6px;
   height: 36px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 999px;
   background-color: var(--color-bg-card, #ffffff);
@@ -314,7 +314,7 @@ async function handleSyncNowClick(): Promise<void> {
 }
 
 .sv-btn-sm {height: 36px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   font-size: var(--font-size-xs, 12px);}
 
 /* 云同步按钮：状态色与首页/教师工作台完全一致 */
@@ -379,13 +379,13 @@ async function handleSyncNowClick(): Promise<void> {
   width: 100%;
   flex-shrink: 0;
   justify-content: flex-start;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 
 .sv-nav-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
   min-height: 38px;
   padding: 0 10px;
@@ -506,9 +506,9 @@ async function handleSyncNowClick(): Promise<void> {
   .sv-settings-text { display: none; }
 
   .sv-btn {height: 36px;
-  padding: 0 12px;}
+  padding: 0 var(--space-3);}
   .sv-btn-sm {height: 36px;
-  padding: 0 12px;}
+  padding: 0 var(--space-3);}
 }
 
 @media (prefers-reduced-motion: reduce) {

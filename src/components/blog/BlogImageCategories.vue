@@ -180,15 +180,15 @@ async function handleMove(id: string, delta: number): Promise<void> {
 </template>
 
 <style scoped>
-.bic { display: flex; flex-direction: column; gap: 12px; }
+.bic { display: flex; flex-direction: column; gap: var(--space-3); }
 
 .bic-head { display: flex; flex-direction: column; gap: 6px; }
 
-.bic-add { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.bic-add { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
 
 .bic-input { width: 240px; max-width: 100%; }
 
-.bic-page { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
+.bic-page { display: flex; flex-direction: column; gap: var(--space-1); margin-bottom: var(--space-1); }
 .bic-page-title { margin: 0; font-size: var(--ds-fs-section, 16px); font-weight: var(--font-weight-semibold, 600); color: var(--ds-text); }
 .bic-page-sub { margin: 0; font-size: var(--ds-fs-body-sm, 13px); color: var(--ds-text-3); }
 
@@ -202,7 +202,7 @@ async function handleMove(id: string, delta: number): Promise<void> {
   text-align: center;
 }
 
-.bic-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.bic-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
 
 .bic-item {
   padding: 12px 14px;
@@ -220,7 +220,7 @@ async function handleMove(id: string, delta: number): Promise<void> {
 .bic-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
   min-height: 32px;
 }
@@ -233,7 +233,7 @@ async function handleMove(id: string, delta: number): Promise<void> {
 
 .bic-count { color: var(--ds-text-2); font-size: var(--font-size-xs, 12px); }
 
-.bic-ops { display: flex; gap: 4px; margin-left: auto; flex-wrap: wrap; }
+.bic-ops { display: flex; gap: var(--space-1); margin-left: auto; flex-wrap: wrap; }
 
 .bic-mini {
   padding: 2px 8px;
@@ -250,11 +250,11 @@ async function handleMove(id: string, delta: number): Promise<void> {
 
 .bic-edit {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
   flex-wrap: wrap;
-  margin-top: 8px;
-  padding-top: 8px;
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
   border-top: 1px dashed var(--ds-line, #ececf0);
 }
 

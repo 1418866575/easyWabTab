@@ -20,7 +20,7 @@ defineEmits<{ toggle: [] }>()
 .ewt-view-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   height: 36px;
   padding: 0 10px;
   font-size: var(--fs-sm, 13px);

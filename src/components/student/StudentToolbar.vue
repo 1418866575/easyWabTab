@@ -34,7 +34,7 @@ defineProps<{
 .st-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
@@ -43,7 +43,7 @@ defineProps<{
   .st-toolbar {
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
+    gap: var(--space-2);
   }
   .st-actions {
     width: 100%;

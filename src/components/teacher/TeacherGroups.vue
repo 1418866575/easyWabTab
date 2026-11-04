@@ -750,12 +750,12 @@ watch(showForm, (v) => {
 .grp-shell {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .grp-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--space-2);
 }
 .grp-main {
   display: flex;
@@ -765,7 +765,7 @@ watch(showForm, (v) => {
 .grp-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 .grp-search {
@@ -827,7 +827,7 @@ watch(showForm, (v) => {
 .grp-card-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   justify-content: space-between;
 }
 .grp-card-desc {
@@ -844,7 +844,7 @@ watch(showForm, (v) => {
 .grp-card-members {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .grp-card-foot {
   display: flex;
@@ -893,7 +893,7 @@ watch(showForm, (v) => {
 }
 
 /* 列表内操作按钮 */
-.btn-copy {padding: 0 12px;
+.btn-copy {padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);
   border: 1px solid transparent;
   border-radius: 6px;
@@ -916,7 +916,7 @@ watch(showForm, (v) => {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-input, #f9fafb);
   border-radius: 0 0 14px 14px;
@@ -929,7 +929,7 @@ watch(showForm, (v) => {
 /* 操作条 */
 .grp-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
@@ -946,21 +946,21 @@ watch(showForm, (v) => {
 .grp-dialog-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .grp-form-row {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .grp-form-row.grp-form-inline {
   flex-direction: row;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .grp-form-col {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   flex: 1;
 }
 .grp-form-label {
@@ -980,7 +980,7 @@ watch(showForm, (v) => {
 .grp-role-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .grp-role-name {
   width: 90px;
@@ -996,7 +996,7 @@ watch(showForm, (v) => {
 /* 随机分组弹框 */
 .grp-rg {
   display: flex;
-  gap: 16px;
+  gap: var(--space-4);
   align-items: stretch;
 }
 .grp-rg-left {
@@ -1011,15 +1011,15 @@ watch(showForm, (v) => {
   min-width: 0;
   min-height: 0;
   border-left: 1px solid var(--color-border, #e5e7eb);
-  padding-left: 16px;
+  padding-left: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .grp-rg-row {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .grp-rg-hint {
   font-size: var(--fs-caption, 12px);
@@ -1028,14 +1028,14 @@ watch(showForm, (v) => {
 }
 .grp-rg-warn {
   color: var(--color-warning-text);
-  margin-left: 4px;
+  margin-left: var(--space-1);
 }
 .grp-rg-constraints {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   border-top: 1px dashed var(--color-border, #e5e7eb);
-  padding-top: 8px;
+  padding-top: var(--space-2);
 }
 .grp-rg-con-head {
   display: flex;
@@ -1047,7 +1047,7 @@ watch(showForm, (v) => {
 .grp-rg-con-item {
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
-  padding: 8px;
+  padding: var(--space-2);
 }
 .grp-rg-preview-head {
   font-size: var(--fs-sm, 13px);
@@ -1056,7 +1056,7 @@ watch(showForm, (v) => {
 .grp-rg-warns {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .grp-warn-chip {
   font-size: var(--fs-caption, 12px);
@@ -1065,7 +1065,7 @@ watch(showForm, (v) => {
 .grp-rg-results {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -1078,25 +1078,25 @@ watch(showForm, (v) => {
 .grp-rg-group-name {
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 .grp-rg-members {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 /* 快照列表 */
 .grp-snap-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .grp-snap-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
   padding: 8px 10px;
@@ -1105,7 +1105,7 @@ watch(showForm, (v) => {
 .grp-snap-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
   min-width: 0;
 }
@@ -1136,7 +1136,7 @@ watch(showForm, (v) => {
     border-left: none;
     border-top: 1px solid var(--color-border, #e5e7eb);
     padding-left: 0;
-    padding-top: 12px;
+    padding-top: var(--space-3);
   }
 }
 </style>

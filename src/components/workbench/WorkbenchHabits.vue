@@ -518,7 +518,7 @@ onUnmounted(() => {
 .wb-habits {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .hb-toolbar {
@@ -579,7 +579,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--color-border, var(--color-border));
   position: sticky;
   top: 0;
@@ -594,7 +594,7 @@ onUnmounted(() => {
 }
 
 .dialog-body {
-  padding: 20px;
+  padding: var(--space-5);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -755,7 +755,7 @@ html.is-touch .habit-detail-remove {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: var(--space-1);
   aspect-ratio: 1 / 1;
   border: 1px dashed var(--color-border-strong, #94a3b8);
   border-radius: var(--radius-md, 8px);

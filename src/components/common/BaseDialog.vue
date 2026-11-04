@@ -244,7 +244,7 @@ const overlayStyle = computed(() => (props.zIndex ? { zIndex: props.zIndex } : {
 .bd-header-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   flex-shrink: 0;
 }
 .bd-title {

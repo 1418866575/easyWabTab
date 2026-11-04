@@ -113,13 +113,13 @@ function confirmSelect(): void {
 .bip {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .bip-toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
@@ -131,7 +131,7 @@ function confirmSelect(): void {
 .bip-sort {
   flex: 0 0 auto;
   height: 30px;
-  padding: 0 8px;
+  padding: 0 var(--space-2);
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--color-bg-input, #ffffff);
@@ -148,7 +148,7 @@ function confirmSelect(): void {
 
 .bip-empty {
   margin: 0;
-  padding: 24px 8px;
+  padding: var(--space-6) var(--space-2);
   color: var(--ds-text-2);
   font-size: var(--font-size-sm, 13px);
   text-align: center;

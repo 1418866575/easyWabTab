@@ -52,7 +52,7 @@ const updatedText = computed(() => {
 
 <style scoped>
 /* 高度与滚动交给 BaseDialog 的 .bd-body（统一 padding + overflow-y:auto），这里只管内容排布 */
-.wd-body { display: flex; flex-direction: column; gap: 12px; }
+.wd-body { display: flex; flex-direction: column; gap: var(--space-3); }
 .wd-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .wd-chip {
   padding: 1px 8px;
@@ -67,7 +67,7 @@ const updatedText = computed(() => {
 .wd-section-label { font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text-secondary); }
 
 .wd-content {
-  padding: 12px;
+  padding: var(--space-3);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #fff);

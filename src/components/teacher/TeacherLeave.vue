@@ -420,7 +420,7 @@ function exportCsv(): void {
   display: grid;
   grid-template-columns: 48px minmax(0, 1fr) 32px;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   font-size: var(--fs-sm, 13px);
 }
 
@@ -465,7 +465,7 @@ function exportCsv(): void {
     justify-content: space-between;
     gap: 10px;
     border-bottom: none;
-    padding: 4px 0;
+    padding: var(--space-1) 0;
     text-align: right;
   }
 

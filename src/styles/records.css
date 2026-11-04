@@ -24,8 +24,8 @@
 .ewt-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
-  padding: 4px 0;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
 }
 @media (max-width: 768px) {
   .ewt-card-grid {
@@ -45,7 +45,7 @@
 .ewt-table-toolbar {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 /* 左侧放操作按钮、右侧放视图切换（与进货/销售的工具条一致） */
 .ewt-table-toolbar.is-split {
@@ -58,7 +58,7 @@
    容器/标题/操作区三件套在这里集中定义，四个面板共用，避免各写一份。
    用法：<section class="ewt-inline-section"> + <div class="ewt-inline-head"> + <h3 class="ewt-inline-title"> */
 .ewt-inline-section {
-  padding-top: 16px;
+  padding-top: var(--space-4);
   border-top: 1px solid var(--ds-line, var(--color-border, #e5e7eb));
 }
 
@@ -66,7 +66,7 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .ewt-inline-title {
@@ -81,7 +81,7 @@
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
 }
 .ewt-dialog-footer .el-button + .el-button {

@@ -131,9 +131,9 @@ const handleSizeChange = (value: number | string) => {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 20px;
-  margin-top: 32px;
-  padding: 20px 0;
+  gap: var(--space-5);
+  margin-top: var(--space-8);
+  padding: var(--space-5) 0;
   flex-wrap: wrap;
 }
 
@@ -141,10 +141,10 @@ const handleSizeChange = (value: number | string) => {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
-.page-btn {padding: 0 12px;
+.page-btn {padding: 0 var(--space-3);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
   background-color: var(--color-bg-card, #ffffff);
@@ -172,7 +172,7 @@ const handleSizeChange = (value: number | string) => {
 
 .ellipsis {
   color: var(--color-text-muted);
-  padding: 0 4px;
+  padding: 0 var(--space-1);
 }
 
 .page-size-selector {
@@ -188,7 +188,7 @@ const handleSizeChange = (value: number | string) => {
 .page-info {
   color: var(--color-text-secondary);
   font-size: var(--fs-body, 14px);
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
 }
 
 /* 暗色由 --color-* token 自动跟随，无需 .dark 覆盖；el-select 亦自带暗色 */
@@ -221,7 +221,7 @@ const handleSizeChange = (value: number | string) => {
   .page-btn {flex: 0 0 auto;
   min-width: 44px;
   height: 36px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);}
 
   .page-size-selector {

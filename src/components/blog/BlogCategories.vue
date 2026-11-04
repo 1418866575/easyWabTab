@@ -180,15 +180,15 @@ async function handleMove(id: string, delta: number): Promise<void> {
 </template>
 
 <style scoped>
-.bc { display: flex; flex-direction: column; gap: 12px; }
+.bc { display: flex; flex-direction: column; gap: var(--space-3); }
 
 .bc-head { display: flex; flex-direction: column; gap: 6px; }
 
-.bc-add { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.bc-add { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
 
 .bc-input { width: 240px; max-width: 100%; }
 
-.bc-page { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
+.bc-page { display: flex; flex-direction: column; gap: var(--space-1); margin-bottom: var(--space-1); }
 .bc-page-title { margin: 0; font-size: var(--ds-fs-section, 16px); font-weight: var(--font-weight-semibold, 600); color: var(--ds-text); }
 .bc-page-sub { margin: 0; font-size: var(--ds-fs-body-sm, 13px); color: var(--ds-text-3); }
 
@@ -202,7 +202,7 @@ async function handleMove(id: string, delta: number): Promise<void> {
   text-align: center;
 }
 
-.bc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.bc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
 
 .bc-item {
   padding: 12px 14px;
@@ -220,7 +220,7 @@ async function handleMove(id: string, delta: number): Promise<void> {
 .bc-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
   min-height: 32px;
 }
@@ -240,7 +240,7 @@ async function handleMove(id: string, delta: number): Promise<void> {
 
 .bc-count { color: var(--ds-text-2); font-size: var(--font-size-xs, 12px); }
 
-.bc-ops { display: flex; gap: 4px; margin-left: auto; flex-wrap: wrap; }
+.bc-ops { display: flex; gap: var(--space-1); margin-left: auto; flex-wrap: wrap; }
 
 .bc-mini {
   padding: 2px 8px;
@@ -255,23 +255,23 @@ async function handleMove(id: string, delta: number): Promise<void> {
 .bc-mini:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary-text); }
 .bc-mini.is-danger:hover { border-color: var(--color-error, #ef4444); color: var(--color-error-text); }
 
-.bc-desc { margin: 4px 0 0; color: var(--ds-text-3); font-size: var(--font-size-xs, 12px); }
+.bc-desc { margin: var(--space-1) 0 0; color: var(--ds-text-3); font-size: var(--font-size-xs, 12px); }
 
 .bc-edit,
 .bc-add-child {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
   flex-wrap: wrap;
-  margin-top: 8px;
-  padding-top: 8px;
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
   border-top: 1px dashed var(--ds-line, #ececf0);
 }
 
 .bc-edit :deep(.el-input) { max-width: 220px; }
 .bc-edit-ops { display: flex; gap: 6px; margin-left: auto; }
 
-.bc-children { list-style: none; margin: 8px 0 0; padding: 0; }
+.bc-children { list-style: none; margin: var(--space-2) 0 0; padding: 0; }
 
 @media (max-width: 768px) {
   .bc-input { width: 100%; }

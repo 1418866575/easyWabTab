@@ -111,8 +111,8 @@ const anchors = computed<AnchorRow[]>(() => {
 .anchor-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
+  gap: var(--space-3);
+  padding: var(--space-4);
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
@@ -127,7 +127,7 @@ const anchors = computed<AnchorRow[]>(() => {
 }
 
 .anchor-title-icon {
-  margin-right: 4px;
+  margin-right: var(--space-1);
 }
 
 .anchor-list {
@@ -136,13 +136,13 @@ const anchors = computed<AnchorRow[]>(() => {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .anchor-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   font-size: var(--fs-body, 14px);
   color: var(--color-text, var(--color-text));
 }

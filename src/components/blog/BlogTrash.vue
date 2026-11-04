@@ -90,9 +90,9 @@ async function handleEmpty(): Promise<void> {
 </template>
 
 <style scoped>
-.br { display: flex; flex-direction: column; gap: 12px; }
+.br { display: flex; flex-direction: column; gap: var(--space-3); }
 
-.br-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.br-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
 
 .br-hint { margin: 0; color: var(--ds-text-2); font-size: var(--ds-fs-body-sm, 13px); }
 
@@ -112,13 +112,13 @@ async function handleEmpty(): Promise<void> {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .br-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
   padding: 10px 12px;
   border: 1px solid var(--ds-line, #ececf0);

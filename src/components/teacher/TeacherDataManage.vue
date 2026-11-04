@@ -637,20 +637,20 @@ async function onClearSemesterData(): Promise<void> {
 }
 
 .dm-op-col .tw-btn {
-  margin-right: 4px;
+  margin-right: var(--space-1);
 }
 
 /* 新增 / 编辑弹框表单 */
 .dm-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .dm-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .dm-field-label {
@@ -685,7 +685,7 @@ async function onClearSemesterData(): Promise<void> {
 .dm-readonly-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .dm-readonly-item {

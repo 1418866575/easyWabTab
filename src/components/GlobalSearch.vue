@@ -362,7 +362,7 @@ function openSite(url: string) {
 /* 2026-11 按钮统一：按钮固定 24px，在 44px 外壳内垂直居中 */
 .search-btn {align-self: center;
   margin: 0 3px 0 0;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: none;
   background-color: var(--color-primary);
   color: #fff;
@@ -387,7 +387,7 @@ function openSite(url: string) {
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   z-index: 100;
-  margin-top: 4px;
+  margin-top: var(--space-1);
   max-height: 320px;
   overflow-y: auto;
   animation: dropdownIn 0.15s ease;
@@ -427,13 +427,13 @@ function openSite(url: string) {
 }
 
 .history-list {
-  padding: 4px 0;
+  padding: var(--space-1) 0;
 }
 
 .history-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 10px 12px;
   cursor: pointer;
   transition: background-color 0.15s;
@@ -462,7 +462,7 @@ function openSite(url: string) {
 .local-search-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   padding: 10px 12px;
   cursor: pointer;
   transition: background-color 0.15s;
@@ -583,7 +583,7 @@ html.dark .site-category {
     padding: 0 var(--space-3, 12px);
   }
 
-  .search-btn {padding: 0 12px;
+  .search-btn {padding: 0 var(--space-3);
   height: 36px;}
 }
 </style>

@@ -616,7 +616,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 .bizexp-toolbar-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
@@ -674,7 +674,7 @@ async function handleDeleteFromDialog(): Promise<void> {
   border-top: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-input, #f9fafb);
   border-radius: 0 0 14px 14px;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -704,7 +704,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 .bizexp-expand-title {
   font-size: var(--fs-sm, 13px); font-weight: 600;
   color: var(--color-text-secondary);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 .bizexp-detail-head {
   display: grid;
@@ -727,7 +727,7 @@ async function handleDeleteFromDialog(): Promise<void> {
   display: grid;
   grid-template-columns: minmax(80px, 1.4fr) minmax(40px, 0.6fr) minmax(40px, 0.6fr) minmax(60px, 0.7fr) minmax(70px, 0.85fr) minmax(70px, 0.8fr) minmax(80px, 1.4fr);
   gap: 6px;
-  padding: 4px 4px;
+  padding: var(--space-1) var(--space-1);
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
@@ -759,7 +759,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 .bizexp-card-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   min-width: 0;
   line-height: 1.4;
 }
@@ -793,14 +793,14 @@ async function handleDeleteFromDialog(): Promise<void> {
   margin: 2px 0 8px;
 }
 .bizexp-shared-fields {
-  margin-top: 4px;
-  padding: 12px;
+  margin-top: var(--space-1);
+  padding: var(--space-3);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, var(--color-bg-hover));
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 .bizexp-shared-title {
   grid-column: 1 / -1;
@@ -810,7 +810,7 @@ async function handleDeleteFromDialog(): Promise<void> {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .bizexp-shared-hint {
   font-size: var(--fs-caption, 12px);
@@ -883,7 +883,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 .biz-kv-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   padding: 6px 0;
   border-bottom: 1px solid var(--color-border, #eef0f2);
 }
@@ -902,7 +902,7 @@ async function handleDeleteFromDialog(): Promise<void> {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
   min-width: 0;
 }
 .biz-kv-ctrl .el-select,
@@ -962,7 +962,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 @media (max-width: 768px) {
   .ewt-table-toolbar.is-split {
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--space-2);
   }
   .bizexp-toolbar-left {
     flex-wrap: wrap;
@@ -971,7 +971,7 @@ async function handleDeleteFromDialog(): Promise<void> {
   .biz-kv-row {
     flex-direction: column;
     align-items: stretch;
-    gap: 4px;
+    gap: var(--space-1);
   }
   .biz-kv-label {
     flex-basis: auto;

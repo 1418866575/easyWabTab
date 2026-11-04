@@ -219,7 +219,7 @@ onUnmounted(() => {
 .wb-pomodoro {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
   max-width: 520px;
 }
 
@@ -271,7 +271,7 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: var(--space-1);
   pointer-events: none;
 }
 
@@ -293,7 +293,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 
 .btn-primary {
@@ -332,7 +332,7 @@ onUnmounted(() => {
 /* ===== 设置卡 ===== */
 .pm-settings-row {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 

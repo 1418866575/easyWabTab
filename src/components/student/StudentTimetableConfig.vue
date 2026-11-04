@@ -360,7 +360,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 16px;
+  padding: var(--space-4);
   min-height: 0;
 }
 /* 嵌入设置弹窗：由外层容器负责内边距与滚动，自身不再撑满高度 */
@@ -382,21 +382,21 @@ onMounted(async () => {
   font-weight: 600;
   color: var(--color-text-secondary);
   border-left: 3px solid var(--color-primary, #3b82f6);
-  padding-left: 8px;
-  margin-bottom: 12px;
+  padding-left: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 .sttc-sub-title {
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text-secondary);
   border-left: 3px solid var(--color-primary, #3b82f6);
-  padding-left: 8px;
-  margin: 4px 0;
+  padding-left: var(--space-2);
+  margin: var(--space-1) 0;
 }
 .sttc-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .form-field {
   display: flex;
@@ -410,7 +410,7 @@ onMounted(async () => {
 }
 .form-row {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 .form-row .form-field {
@@ -427,12 +427,12 @@ onMounted(async () => {
 .sttc-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .sttc-tip {
   font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted);
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   line-height: 1.6;
 }
 /* 隐藏原生 file input，由工具栏按钮触发（避免默认控件样式与面板不一致） */
@@ -444,16 +444,16 @@ onMounted(async () => {
 .sttc-result {
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
-  padding: 12px;
+  padding: var(--space-3);
   background: var(--color-bg, #f9fafb);
 }
 .sttc-result-head {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
   font-size: var(--fs-sm, 13px);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 .sttc-result-file {
   color: var(--color-text-muted);
@@ -488,7 +488,7 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
   margin-bottom: 6px;
@@ -500,7 +500,7 @@ onMounted(async () => {
 }
 .sttc-error-item {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 6px 10px;
   font-size: var(--fs-caption, 12px);
   border-bottom: 1px solid var(--color-border, #f3f4f6);
@@ -531,7 +531,7 @@ onMounted(async () => {
 }
 
 @media (max-width: 768px) {
-  .sttc-shell { padding: 12px; }
+  .sttc-shell { padding: var(--space-3); }
   .sttc-actions { justify-content: stretch; }
   .sttc-actions > * { flex: 1; }
 }

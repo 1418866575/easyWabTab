@@ -894,7 +894,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 .bizpur {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   flex: 1;
   min-height: 0;
 }
@@ -903,28 +903,28 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 
 .bizpur-tabs {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
 .bizpur-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 /* 联动筛选提示 chip（仅看某商品 ▾清除） */
 .bizpur-filter-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   padding: 3px 6px 3px 10px;
   font-size: var(--fs-caption, 12px);
   color: var(--color-primary-text);
@@ -976,7 +976,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 .bizpur-card-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   min-width: 0;
   line-height: 1.4;
 }
@@ -1004,7 +1004,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 .bizpur-day-cell {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   justify-content: center;
 }
 
@@ -1070,7 +1070,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   border-top: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-input, #f9fafb);
   border-radius: 0 0 14px 14px;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -1128,7 +1128,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 .bizpur-expense-list {
   display: grid;
   gap: 6px;
-  padding: 8px;
+  padding: var(--space-2);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
   background: var(--color-bg-input, #f9fafb);
@@ -1137,7 +1137,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 .bizpur-expense-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 6px 8px;
   border-radius: 6px;
   font-size: var(--fs-caption, 12px);
@@ -1198,20 +1198,20 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 }
 
 .bizpur-expense-hint {
-  margin: 4px 0 0;
+  margin: var(--space-1) 0 0;
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted);
 }
 
 /* 需求 D：数量由关联支出派生时的只读提示 */
 .bizpur-qty-derived {
-  margin: 4px 0 0;
+  margin: var(--space-1) 0 0;
   font-size: var(--fs-caption, 12px);
   color: var(--color-primary-text);
   background: var(--color-primary-soft, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
   border-radius: 6px;
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
   font-variant-numeric: tabular-nums;
 }
 :global(html.dark) .bizpur-qty-derived {
@@ -1224,7 +1224,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 .bizpur-stock {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   padding: 2px 10px;
   font-size: var(--fs-caption, 12px);
   line-height: 1.6;
@@ -1294,7 +1294,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 .bizpur-cost-preview {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   font-size: var(--fs-body, 14px);
   font-variant-numeric: tabular-nums;
 }
@@ -1497,13 +1497,13 @@ html.dark .biz-input {
   padding: 6px 8px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .exp {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 5px 6px;
   border-radius: 6px;
   font-size: var(--fs-caption, 12px);
@@ -1628,7 +1628,7 @@ html.dark .rd {
   /* 操作列：窄屏 3 个按钮（编辑/复制/删除）换行排布，避免 200px 固定列宽挤占数据区 */
   .bizpur-table-wrap :deep(.bizpur-actions) {
     flex-direction: column;
-    gap: 4px;
+    gap: var(--space-1);
   }
   .bizpur-table-wrap :deep(.bizpur-actions .el-button) {margin-left: 0 !important;
   height: 36px;}

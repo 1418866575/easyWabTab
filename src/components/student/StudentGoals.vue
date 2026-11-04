@@ -428,14 +428,14 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  gap: 12px;
-  padding: 16px;
+  gap: var(--space-3);
+  padding: var(--space-4);
 }
 .sg-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  padding: 0 4px;
+  gap: var(--space-2);
+  padding: 0 var(--space-1);
   flex-shrink: 0;
 }
 .sg-stat-card {
@@ -450,9 +450,9 @@ onMounted(() => {
 .sg-filters {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
-  padding: 0 4px;
+  padding: 0 var(--space-1);
   flex-shrink: 0;
 }
 .sg-main {
@@ -504,7 +504,7 @@ onMounted(() => {
   background: var(--color-primary-soft, #e9f0ff);
   color: var(--color-primary-text);
 }
-.sg-progress-cell { display: flex; align-items: center; gap: 8px; }
+.sg-progress-cell { display: flex; align-items: center; gap: var(--space-2); }
 .sg-progress-bar {
   flex: 1; height: 6px;
   background: var(--color-hover, #f3f4f6);
@@ -528,7 +528,7 @@ onMounted(() => {
   border-top: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-input, #f9fafb);
   border-radius: 0 0 14px 14px;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   display: flex; justify-content: center; align-items: center;
 }
 :global(html.dark) .sg-list-pager {
@@ -536,7 +536,7 @@ onMounted(() => {
   background: var(--color-bg-hover, #111827);
 }
 
-.btn-done, .btn-warn {padding: 0 12px;
+.btn-done, .btn-warn {padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);
   border: 1px solid transparent;
   border-radius: 6px;
@@ -551,14 +551,14 @@ onMounted(() => {
 .btn-warn { background: rgba(224,168,0,0.12); border-color: rgba(224,168,0,0.3); color: var(--color-warning-text); }
 /* .btn-delete 视觉已统一到全局 .ui-btn--danger（style.css） */
 
-.dialog-body { display: flex; flex-direction: column; gap: 12px; }
-.sg-field { display: flex; flex-direction: column; gap: 4px; }
+.dialog-body { display: flex; flex-direction: column; gap: var(--space-3); }
+.sg-field { display: flex; flex-direction: column; gap: var(--space-1); }
 .sg-field label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
-.sg-field-row { display: flex; gap: 12px; }
+.sg-field-row { display: flex; gap: var(--space-3); }
 .sg-field-row .sg-field { flex: 1; }
 
 @media (max-width: 768px) {
-  .sg-shell { padding: 12px; }
+  .sg-shell { padding: var(--space-3); }
   .sg-stats { grid-template-columns: repeat(2, 1fr); }
   .sg-field-row { flex-direction: column; }
 }

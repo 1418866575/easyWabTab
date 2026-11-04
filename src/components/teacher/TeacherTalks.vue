@@ -570,13 +570,13 @@ function truncate(text: string, n = 30): string {
 .tk-shell {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .tk-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .tk-main {
@@ -602,7 +602,7 @@ function truncate(text: string, n = 30): string {
 .tk-filter {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .tk-filter-label {
   font-size: var(--fs-caption, 12px);
@@ -621,7 +621,7 @@ function truncate(text: string, n = 30): string {
 .tk-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 .tk-count {
@@ -658,7 +658,7 @@ function truncate(text: string, n = 30): string {
 .tk-list {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--space-2);
 }
 .tk-card {
   background: var(--color-surface, #fff);
@@ -687,7 +687,7 @@ function truncate(text: string, n = 30): string {
 .tk-card-sub {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary);
 }
@@ -711,7 +711,7 @@ function truncate(text: string, n = 30): string {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-input, #f9fafb);
   border-radius: 0 0 14px 14px;
@@ -763,21 +763,21 @@ function truncate(text: string, n = 30): string {
 .tk-dialog-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .tk-form-row {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .tk-form-inline {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .tk-form-col {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   flex: 1;
 }
 .tk-form-control {
@@ -793,7 +793,7 @@ function truncate(text: string, n = 30): string {
 .tk-form-switch {
   flex-direction: row;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .tk-form-switch .tk-form-label {
   margin-bottom: 0;
@@ -803,7 +803,7 @@ function truncate(text: string, n = 30): string {
 .tk-detail {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .tk-detail-meta {
   background: var(--color-bg-hover, #f8fafc);
@@ -817,13 +817,13 @@ function truncate(text: string, n = 30): string {
 .tk-detail-line {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 .tk-detail-sub {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary);
@@ -831,7 +831,7 @@ function truncate(text: string, n = 30): string {
 .tk-detail-block {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .tk-detail-title {
   font-size: var(--fs-sm, 13px);

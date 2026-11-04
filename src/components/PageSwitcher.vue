@@ -149,7 +149,7 @@ onBeforeUnmount(() => {
 .ps-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   max-width: 100%;
   min-height: 36px;
   padding: 6px 10px;
@@ -220,7 +220,7 @@ onBeforeUnmount(() => {
 .ps-menu-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
   min-height: 40px;
   padding: 8px 10px;

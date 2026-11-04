@@ -626,16 +626,16 @@ onMounted(() => {
 .ns-sec {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .ns-sec + .ns-sec {
-  padding-top: 20px;
+  padding-top: var(--space-5);
   border-top: 1px solid var(--color-border);
 }
 .ns-sec-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .ns-title {
   margin: 0;
@@ -656,7 +656,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   height: 36px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   background-color: var(--color-bg-card);
@@ -691,7 +691,7 @@ onMounted(() => {
 .ns-range-btn {display: inline-flex;
   align-items: center;
   height: 36px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: none;
   border-radius: var(--radius-full, 9999px);
   background-color: transparent;
@@ -729,7 +729,7 @@ onMounted(() => {
   line-height: var(--line-height-relaxed, 1.6);
 }
 .ns-notice-body code {
-  padding: 0 4px;
+  padding: 0 var(--space-1);
   border-radius: 4px;
   background-color: var(--color-bg-card);
   color: var(--color-text);
@@ -749,7 +749,7 @@ onMounted(() => {
 }
 .ns-cross-note::before {
   content: '·';
-  margin: 0 4px;
+  margin: 0 var(--space-1);
 }
 
 /* ---------- KPI ---------- */
@@ -761,7 +761,7 @@ onMounted(() => {
 .ns-kpi {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   padding: 10px 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
@@ -783,12 +783,12 @@ onMounted(() => {
 .ns-block {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .ns-block-head {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .ns-block-title {
   color: var(--color-text);
@@ -808,7 +808,7 @@ onMounted(() => {
   align-items: flex-end;
   gap: 3px;
   height: 92px;
-  padding: 4px 0;
+  padding: var(--space-1) 0;
   border-bottom: 1px solid var(--color-border);
 }
 .ns-bar-col {
@@ -871,7 +871,7 @@ onMounted(() => {
 .ns-grid2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
+  gap: var(--space-5);
 }
 .ns-ranks {
   margin: 0;
@@ -879,12 +879,12 @@ onMounted(() => {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .ns-rank-line {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--space-2);
   font-size: var(--font-size-xs, 12px);
 }
 .ns-rank-name {
@@ -928,7 +928,7 @@ onMounted(() => {
   line-height: var(--line-height-relaxed, 1.6);
 }
 .ns-empty {
-  padding: 24px 12px;
+  padding: var(--space-6) var(--space-3);
   border: 1px dashed var(--color-border);
   border-radius: var(--radius-md, 8px);
   color: var(--color-text-muted);
@@ -944,7 +944,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   height: 36px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--color-error, #ef4444);
   border-radius: var(--radius-md, 8px);
   background-color: transparent;
@@ -965,7 +965,7 @@ onMounted(() => {
   }
   .ns-grid2 {
     grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
+    gap: var(--space-4);
   }
   .ns-sec-head {
     flex-wrap: wrap;

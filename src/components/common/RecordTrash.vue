@@ -118,9 +118,9 @@ async function onClear(): Promise<void> {
 </template>
 
 <style scoped>
-.rt { display: flex; flex-direction: column; gap: 12px; }
+.rt { display: flex; flex-direction: column; gap: var(--space-3); }
 
-.rt-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.rt-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
 
 .rt-hint { margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-sm, 13px); }
 
@@ -140,13 +140,13 @@ async function onClear(): Promise<void> {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .rt-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
   padding: 10px 12px;
   border: 1px solid var(--color-border, #e2e8f0);

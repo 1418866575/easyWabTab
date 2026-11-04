@@ -165,15 +165,15 @@ async function handleRemove(id: string): Promise<void> {
 </template>
 
 <style scoped>
-.bt { display: flex; flex-direction: column; gap: 12px; }
+.bt { display: flex; flex-direction: column; gap: var(--space-3); }
 
 .bt-head { display: flex; flex-direction: column; gap: 6px; }
 
-.bt-add { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.bt-add { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
 
 .bt-input { width: 240px; max-width: 100%; }
 
-.bt-page { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
+.bt-page { display: flex; flex-direction: column; gap: var(--space-1); margin-bottom: var(--space-1); }
 .bt-page-title { margin: 0; font-size: var(--ds-fs-section, 16px); font-weight: var(--font-weight-semibold, 600); color: var(--ds-text); }
 .bt-page-sub { margin: 0; font-size: var(--ds-fs-body-sm, 13px); color: var(--ds-text-3); }
 
@@ -187,7 +187,7 @@ async function handleRemove(id: string): Promise<void> {
   text-align: center;
 }
 
-.bt-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.bt-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-3); }
 
 .bt-item {
   padding: 12px 14px;
@@ -202,7 +202,7 @@ async function handleRemove(id: string): Promise<void> {
   box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
 }
 
-.bt-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 30px; }
+.bt-row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; min-height: 30px; }
 
 .bt-name { color: var(--ds-text); font-size: var(--font-size-sm, 14px); font-weight: var(--font-weight-medium, 500); }
 
@@ -210,7 +210,7 @@ async function handleRemove(id: string): Promise<void> {
 
 .bt-count { color: var(--ds-text-2); font-size: var(--font-size-xs, 12px); }
 
-.bt-ops { display: flex; gap: 4px; margin-left: auto; flex-wrap: wrap; }
+.bt-ops { display: flex; gap: var(--space-1); margin-left: auto; flex-wrap: wrap; }
 
 .bt-mini {
   padding: 2px 8px;
@@ -227,18 +227,18 @@ async function handleRemove(id: string): Promise<void> {
 
 .bt-panel {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
   flex-wrap: wrap;
-  margin-top: 8px;
-  padding-top: 8px;
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
   border-top: 1px dashed var(--ds-line, #ececf0);
 }
 
 .bt-select {
   flex: 1 1 140px;
   height: 28px;
-  padding: 0 8px;
+  padding: 0 var(--space-2);
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--color-bg-input, #ffffff);

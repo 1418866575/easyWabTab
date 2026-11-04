@@ -1,0 +1,110 @@
+/* ============================================================
+   界面美化派生层（UiStyle）
+   ------------------------------------------------------------
+   作用：把设置 → 个性化 →「界面美化」里的调节项（`--ui-*`）派生成项目既有的
+   Design Token 与同类元素的默认规则，**不新增第二套视觉**。
+
+   三层结构（改任何一层前先读 docs/UI_STYLE_GUIDE.md §1.8）：
+     1. 本文件 `:root`：`--ui-*` 的默认值。默认值 = 项目规范现值，逐项相等。
+     2. 本文件 `html:root[data-ui-style]`：派生规则，把 `--ui-*` 映射到
+        `--input-height*` / `--space-*` / `--fs-*` / `--radius-*` / EP 变量。
+     3. src/composables/useUiStyle.ts：运行时把调整过的项以内联变量写到 <html>。
+        内联优先级最高，因此无需 !important，也不依赖本文件的加载顺序。
+
+   特异性说明：派生块用 `html:root[data-ui-style]`（0,2,1），稳定压过 `:root`（0,1,0）
+   与 element-theme.css 的 `html:root`（0,1,1），这是本项目 EP 桥接的既有写法。
+   ============================================================ */
+
+:root {
+  /* —— 默认值（= 当前项目规范，勿随手改）—— */
+  --ui-content-pad: 16px;    /* 内容区四周留白：.wb-content / .bs-content / .st-content / .tv-content */
+  /* 移动端内容区留白：默认比桌面少 4px（16 → 12），随桌面档位一起走，
+     避免「桌面调宽了、手机还是 12px」的两套值。 */
+  --ui-content-pad-sm: calc(var(--ui-content-pad) - 4px);
+  --ui-card-pad: 16px;       /* 面板卡内边距：.tw-card / .panel-scope .stat-card */
+  --ui-ctrl-h: 36px;         /* 控件高度：按钮 / 输入 / 下拉 / 分段控件 */
+  --ui-table-cell-py: 8px;   /* el-table 单元格上下内边距 */
+  --ui-fs-scale: 1;          /* 全站字号缩放系数 */
+  --ui-line-height: 1.6;     /* 正文行高 */
+  --ui-space-scale: 1;       /* 7 档间距缩放系数 */
+  --ui-radius-ctrl: 8px;     /* 控件圆角（--radius-md） */
+  --ui-radius-card: 12px;    /* 卡片圆角（--radius-lg） */
+}
+
+html:root[data-ui-style] {
+  /* —— 1. 尺寸：控件三档同源 —— */
+  --input-height: var(--ui-ctrl-h);
+  --input-height-sm: calc(var(--ui-ctrl-h) - 4px);
+  --input-height-lg: calc(var(--ui-ctrl-h) + 8px);
+  --el-component-size: var(--ui-ctrl-h);
+
+  /* —— 2. 间距：7 档同比缩放（4 / 8 / 12 / 16 / 20 / 24 / 32） —— */
+  --space-1: calc(4px * var(--ui-space-scale));
+  --space-2: calc(8px * var(--ui-space-scale));
+  --space-3: calc(12px * var(--ui-space-scale));
+  --space-4: calc(16px * var(--ui-space-scale));
+  --space-5: calc(20px * var(--ui-space-scale));
+  --space-6: calc(24px * var(--ui-space-scale));
+  --space-8: calc(32px * var(--ui-space-scale));
+
+  /* —— 3. 字号：v2 十档 + v1 旧阶梯（旧阶梯仍有组件在用，两套一起缩，避免半屏变大） —— */
+  --fs-caption: calc(12px * var(--ui-fs-scale));
+  --fs-sm: calc(13px * var(--ui-fs-scale));
+  --fs-body: calc(14px * var(--ui-fs-scale));
+  --fs-md: calc(15px * var(--ui-fs-scale));
+  --fs-lg: calc(16px * var(--ui-fs-scale));
+  --fs-title: calc(18px * var(--ui-fs-scale));
+  --fs-h2: calc(22px * var(--ui-fs-scale));
+  --fs-h1: calc(28px * var(--ui-fs-scale));
+  --fs-display: calc(32px * var(--ui-fs-scale));
+  --fs-hero: calc(40px * var(--ui-fs-scale));
+
+  --font-size-xs: calc(12px * var(--ui-fs-scale));
+  --font-size-sm: calc(13px * var(--ui-fs-scale));
+  --font-size-base: calc(clamp(15px, 0.6vw + 13.4px, 16px) * var(--ui-fs-scale));
+  --font-size-lg: calc(16px * var(--ui-fs-scale));
+  --font-size-xl: calc(clamp(18px, 1vw + 15px, 20px) * var(--ui-fs-scale));
+  --font-size-2xl: calc(clamp(20px, 1.6vw + 16px, 24px) * var(--ui-fs-scale));
+  --font-size-3xl: calc(clamp(24px, 2.2vw + 18px, 30px) * var(--ui-fs-scale));
+  --font-size-4xl: calc(clamp(28px, 3vw + 20px, 40px) * var(--ui-fs-scale));
+
+  /* —— 4. 行高 —— */
+  --line-height-base: var(--ui-line-height);
+
+  /* —— 5. 圆角 —— */
+  --radius-md: var(--ui-radius-ctrl);
+  --radius-lg: var(--ui-radius-card);
+  --el-border-radius-base: var(--ui-radius-ctrl);
+}
+
+/* —— 6. 表格行距 ——
+   EP 默认 8px 0；个人/销售工作台的 .ewt-table 另有 8px 0 的显式规则（0,3,0），
+   本规则 0,4,1 压得住，故不必再改那些组件样式。 */
+html:root[data-ui-style] .el-table td.el-table__cell,
+html:root[data-ui-style] .el-table th.el-table__cell {
+  padding-top: var(--ui-table-cell-py);
+  padding-bottom: var(--ui-table-cell-py);
+}
+
+/* —— 7. EP 按钮 / 分段控件高度 ——
+   element-theme.css 里 36px 硬值分布在 .el-button 的四个变体与弹框底部规则上，
+   统一在这里压一次（0,3,1 以上），比改四处硬值更好维护。
+   作用范围只到「有高度语义的按钮」，纯文字/链接按钮不受影响。 */
+html:root[data-ui-style] .el-button:not(.is-text):not(.is-link),
+html:root[data-ui-style] .el-radio-button__inner {
+  height: var(--ui-ctrl-h);
+  min-height: var(--ui-ctrl-h);
+}
+
+html:root[data-ui-style] .el-radio-button__inner {
+  line-height: calc(var(--ui-ctrl-h) - 2px);
+}
+
+/* 设置页的分段控件（全局类，见 style.css「分段控件」段）：容器与内段同比例 */
+html:root[data-ui-style] .seg-control {
+  height: var(--ui-ctrl-h);
+}
+
+html:root[data-ui-style] .seg-opt {
+  height: calc(var(--ui-ctrl-h) - 6px);
+}

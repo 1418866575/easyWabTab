@@ -107,7 +107,7 @@ function setCurrent(j: WorkbenchJournal) {
   background-color: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
-  padding: 20px 24px;
+  padding: var(--space-5) var(--space-6);
 }
 .djm-title {
   font-size: var(--fs-md, 15px);
@@ -118,23 +118,23 @@ function setCurrent(j: WorkbenchJournal) {
 .djm-hint {
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted);
-  margin: 0 0 16px 0;
+  margin: 0 0 var(--space-4) 0;
   line-height: 1.5;
 }
 .djm-add-block {
-  margin-top: 16px;
-  padding-top: 16px;
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
   border-top: 1px dashed var(--color-border, #e2e8f0);
 }
 .djm-add-label {
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text-secondary);
-  margin: 0 0 8px 0;
+  margin: 0 0 var(--space-2) 0;
 }
 .djm-add-row {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 /* 输入框视觉统一到全局 .ui-input，这里只保留布局 */
 .djm-input {
@@ -153,12 +153,12 @@ function setCurrent(j: WorkbenchJournal) {
 .djm-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .djm-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 10px 12px;
   background: var(--color-bg-hover, #f8fafc);
   border: 1px solid var(--color-border, #e2e8f0);
@@ -205,9 +205,9 @@ function setCurrent(j: WorkbenchJournal) {
 }
 .djm-actions {
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
 }
-.djm-btn-icon {padding: 0 12px;
+.djm-btn-icon {padding: 0 var(--space-3);
   background: none;
   border: 1px solid transparent;
   border-radius: var(--radius-sm, 4px);
@@ -243,7 +243,7 @@ function setCurrent(j: WorkbenchJournal) {
   /* 列表项改两行：名称独占首行，操作区换到次行右对齐，长名称不再与按钮重叠 */
   .djm-item {
     flex-wrap: wrap;
-    row-gap: 8px;
+    row-gap: var(--space-2);
   }
   .djm-name {
     flex: 1 1 100%;
@@ -257,7 +257,7 @@ function setCurrent(j: WorkbenchJournal) {
   /* 触控目标放大到 44px（原约 24px） */
   .djm-btn-icon {min-width: 44px;
   height: 36px;
-  padding: 0 12px;}
+  padding: 0 var(--space-3);}
   .djm-btn-add {height: 36px;}
 
   /* 新增行允许换行，避免输入框在 375px 被压到不可用宽度 */

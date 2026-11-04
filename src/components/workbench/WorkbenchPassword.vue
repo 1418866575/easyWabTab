@@ -692,7 +692,7 @@ watch(
 .wb-password {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 /* 已解锁主体（工具栏 + 列表 + 分页条）：flex 列，让 .pwd-list 的 flex:1 撑满剩余高度供 RO 测量
@@ -700,7 +700,7 @@ watch(
 .pwd-main {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 /* ===== 认证区（设置/解锁共用）===== */
@@ -716,7 +716,7 @@ watch(
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
-  padding: 24px;
+  padding: var(--space-6);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
@@ -734,7 +734,7 @@ watch(
 }
 
 .pwd-auth-card .el-input {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .pwd-auth-card .pwd-btn-primary {
@@ -744,7 +744,7 @@ watch(
 .pwd-auth-error {
   color: var(--color-error-text);
   font-size: var(--fs-sm, 13px);
-  margin: 0 0 12px 0;
+  margin: 0 0 var(--space-3) 0;
 }
 
 .pwd-reset-hint {
@@ -759,7 +759,7 @@ watch(
   font-size: var(--fs-sm, 13px);
   cursor: pointer;
   text-decoration: underline;
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm, 4px);
   transition: color var(--transition-fast, 0.15s ease);
 }
@@ -780,7 +780,7 @@ watch(
 }
 
 /* ===== 主按钮 ===== */
-.pwd-btn-primary {padding: 0 12px;
+.pwd-btn-primary {padding: 0 var(--space-3);
   background: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
@@ -813,7 +813,7 @@ watch(
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .pwd-cat-tabs-group {
   flex-wrap: wrap;
@@ -835,7 +835,7 @@ watch(
   width: 100%;
 }
 .pwd-form-hint {
-  margin: 4px 0 0;
+  margin: var(--space-1) 0 0;
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted);
 }
@@ -877,7 +877,7 @@ html.dark .pwd-cat-badge {
   flex-shrink: 0;
 }
 
-.pwd-btn-lock {padding: 0 12px;
+.pwd-btn-lock {padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);
   border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-card));
@@ -985,7 +985,7 @@ html.dark .pwd-cat-badge {
   flex-wrap: wrap;
   gap: 2px 4px;
   margin-top: auto;
-  padding-top: 4px;
+  padding-top: var(--space-1);
   border-top: 1px solid var(--color-border, var(--color-border));
 }
 
@@ -1132,7 +1132,7 @@ html.dark .pwd-cat-badge {
   /* 行内操作图标按钮（复制/显示密码/删除）≥40px */
   .pwd-icon-btn {min-width: 40px;
   height: 36px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   opacity: 0.85;}
 
   /* 密码输入框内嵌的眼睛按钮受输入高度限制，给 32px（仍明显大于默认） */
@@ -1153,7 +1153,7 @@ html.dark .pwd-cat-badge {
   margin-right: auto;
 }
 
-.pwd-btn-cancel {padding: 0 12px;
+.pwd-btn-cancel {padding: 0 var(--space-3);
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);

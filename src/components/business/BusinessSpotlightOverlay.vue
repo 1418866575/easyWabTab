@@ -287,11 +287,11 @@ watch(query, () => {
 
 .sp-results {
   overflow-y: auto;
-  padding: 8px;
+  padding: var(--space-2);
 }
 
 .sp-group {
-  padding: 8px 12px 4px;
+  padding: var(--space-2) var(--space-3) var(--space-1);
   font-size: var(--fs-caption, 12px);
   font-weight: 600;
   color: var(--color-text-secondary);
@@ -386,7 +386,7 @@ html.dark .sp-result-title {
 /* 移动端：浮层贴顶展开（12vh 在小屏浪费垂直空间），面板高度放开 */
 @media (max-width: 768px) {
   .sp-overlay {
-    padding: 8px 8px 8px;
+    padding: var(--space-2) var(--space-2) var(--space-2);
     align-items: flex-start;
   }
 

@@ -92,7 +92,7 @@ function onPg(e: Event): void {
 .tp-row { display: flex; align-items: center; gap: 7px; }
 .tp-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
 .tp-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm, 13px); color: var(--ds-text); }
-.tp-slider { display: flex; align-items: center; gap: 8px; font-size: var(--fs-caption, 12px); color: var(--ds-text-2); }
+.tp-slider { display: flex; align-items: center; gap: var(--space-2); font-size: var(--fs-caption, 12px); color: var(--ds-text-2); }
 .tp-slider span { flex: 0 0 auto; width: 26px; }
 .tp-slider input { flex: 1 1 auto; min-width: 0; }
 .tp-slider b { flex: 0 0 46px; text-align: right; font-weight: 400; font-variant-numeric: tabular-nums; color: var(--ds-text); }

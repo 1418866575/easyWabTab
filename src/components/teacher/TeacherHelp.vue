@@ -97,7 +97,7 @@
 <style scoped>
 .hp-list {
   margin: 0;
-  padding-left: 20px;
+  padding-left: var(--space-5);
   font-size: var(--font-size-sm, 13px);
   color: var(--color-text-secondary);
   line-height: var(--line-height-relaxed, 1.7);
@@ -115,7 +115,7 @@
 }
 
 .hp-faq dd {
-  margin: 4px 0 0;
+  margin: var(--space-1) 0 0;
   color: var(--color-text-secondary);
   line-height: var(--line-height-normal, 1.5);
 }

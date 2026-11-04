@@ -117,7 +117,7 @@ watch(
 .wx-body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
 }
 
@@ -137,7 +137,7 @@ watch(
 .wx-row-2 {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));

@@ -264,7 +264,7 @@ const nameTaken = computed(() => {
 </template>
 
 <style scoped>
-.se-form { display: flex; flex-direction: column; gap: 12px; }
+.se-form { display: flex; flex-direction: column; gap: var(--space-3); }
 .se-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .se-field { display: flex; flex-direction: column; gap: 6px; flex: 1 1 220px; min-width: 0; }
 .se-field-sm { flex: 0 1 160px; }

@@ -428,7 +428,7 @@ async function onOnboardingComplete() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 16px;
+  padding: var(--space-2) var(--space-4);
   background: var(--color-surface, #ffffff);
   border-bottom: 1px solid var(--color-border, #e5e7eb);
   min-height: 48px;
@@ -437,7 +437,7 @@ async function onOnboardingComplete() {
 .st-header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .st-header-left h1 {
@@ -461,7 +461,7 @@ async function onOnboardingComplete() {
 .st-header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 /* .st-btn 视觉已统一到全局 .ui-btn（次按钮） */
@@ -470,7 +470,7 @@ async function onOnboardingComplete() {
 .st-parent-bar {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 4px 8px 4px 10px;
   border-radius: 999px;
   border: 1px solid var(--color-border, #e5e7eb);
@@ -494,7 +494,7 @@ async function onOnboardingComplete() {
 .st-parent-bar-icon { font-size: var(--fs-body, 14px); line-height: 1; }
 .st-parent-bar-text { font-weight: 500; }
 .st-parent-bar-btn {border: 0;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border-radius: 999px;
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #d1d5db);
@@ -522,7 +522,7 @@ async function onOnboardingComplete() {
 
 /* ===== 右上角云同步按钮（头部设置按钮左侧）状态视觉 ===== */
 .st-sync-btn {
-  gap: 4px;
+  gap: var(--space-1);
   position: relative;
 }
 .st-sync-btn:disabled { cursor: not-allowed; opacity: 0.7; }
@@ -550,7 +550,7 @@ async function onOnboardingComplete() {
   background: var(--color-surface, #ffffff);
   display: flex;
   flex-direction: column;
-  padding: 8px 0;
+  padding: var(--space-2) 0;
   min-height: 0;
   transition: width 0.2s;
 }
@@ -571,7 +571,7 @@ async function onOnboardingComplete() {
   flex-direction: column;
   scrollbar-width: thin;
   scrollbar-color: var(--color-border, #e5e7eb) transparent;
-  padding-bottom: 8px;
+  padding-bottom: var(--space-2);
 }
 .st-menu-list::-webkit-scrollbar {
   width: 6px;
@@ -590,7 +590,7 @@ async function onOnboardingComplete() {
   width: auto;
   flex-shrink: 0;
   justify-content: flex-start;
-  margin: 0 8px 4px;
+  margin: 0 var(--space-2) var(--space-1);
 }
 .st-menu.collapsed .st-sidebar-toggle {
   justify-content: center;
@@ -635,7 +635,8 @@ async function onOnboardingComplete() {
   flex: 1;
   min-width: 0;
   overflow-y: auto;
-  padding: 16px;
+  /* 与另三个工作台一致，由界面美化「内容区边距」调节（--ui-content-pad，默认 16px） */
+  padding: var(--ui-content-pad);
 }
 
 @media (min-width: 769px) {
@@ -664,8 +665,8 @@ async function onOnboardingComplete() {
   .st-header {
     flex-direction: column;
     align-items: stretch;
-    gap: 8px;
-    padding: 8px 12px;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
   }
   .st-header-left {
     width: 100%;
@@ -695,7 +696,7 @@ async function onOnboardingComplete() {
     height: auto;
     flex: 0 0 auto;
     flex-direction: row;
-    gap: 4px;
+    gap: var(--space-1);
     padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
     overflow-x: auto;
     scroll-snap-type: x proximity;
@@ -738,7 +739,7 @@ async function onOnboardingComplete() {
      用 inset box-shadow 避免 border 引起的布局抖动 */
   .st-menu-item.active {
     border-left: none;
-    padding-left: 12px;
+    padding-left: var(--space-3);
     box-shadow: inset 0 -3px 0 var(--color-primary, #3b82f6);
   }
   .st-menu-label {
@@ -747,9 +748,9 @@ async function onOnboardingComplete() {
     text-overflow: clip;
     white-space: nowrap;
   }
-  /* 内容区底部留白避让固定 Tab Bar（44px 触控 + 内边距 + 安全区） */
+  /* 内容区底部留白避让固定 Tab Bar（44px 触控 + 内边距 + 安全区）；左右留白随「内容区边距」档位走 */
   .st-content {
-    padding: 12px 12px calc(64px + env(safe-area-inset-bottom, 0px));
+    padding: var(--ui-content-pad-sm) var(--ui-content-pad-sm) calc(64px + env(safe-area-inset-bottom, 0px));
     min-height: 0;
     -webkit-overflow-scrolling: touch;
   }

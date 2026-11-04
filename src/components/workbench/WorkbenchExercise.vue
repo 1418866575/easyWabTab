@@ -583,7 +583,7 @@ onMounted(async () => {
 .wb-exercise {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 /* 卡片外框 / 卡片标题 / 统计数字的统一取值在全局 styles/workbench.css（.wb-content .stat-*），
@@ -641,7 +641,7 @@ onMounted(async () => {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 /* .btn-add 视觉已统一到全局 .ui-btn--primary（style.css） */
 
@@ -656,7 +656,7 @@ onMounted(async () => {
 
 
 .ex-list-pager {
-  padding: 12px 20px;
+  padding: var(--space-3) var(--space-5);
   border-top: 1px solid var(--color-border, #e5e7eb);
   display: flex;
   justify-content: flex-end;
@@ -784,7 +784,7 @@ onMounted(async () => {
 .form-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   justify-content: flex-end;
 }
 
@@ -858,7 +858,7 @@ html.dark input.form-input {
 
 
 .ex-list-pager {
-  padding: 12px 20px;
+  padding: var(--space-3) var(--space-5);
   border-top: 1px solid var(--color-border, #e5e7eb);
   display: flex;
   justify-content: flex-end;

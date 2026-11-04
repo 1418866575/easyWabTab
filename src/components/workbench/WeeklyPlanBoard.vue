@@ -174,7 +174,7 @@ function onCell(rowKey: string, day: number): void {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   background: var(--color-surface-2, #f8fafc);
   border-bottom: 1px solid var(--color-border, #e2e8f0);
 }
@@ -204,12 +204,12 @@ function onCell(rowKey: string, day: number): void {
 .wp-nav {
   margin-left: auto;
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .wp-nav-btn {min-width: 26px;
   height: 36px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #fff);
@@ -224,7 +224,7 @@ function onCell(rowKey: string, day: number): void {
 
 .wp-stat {
   height: 26px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border-radius: var(--radius-full, 9999px);
   font-size: var(--font-size-xs, 11px);
   display: flex;
@@ -243,7 +243,7 @@ function onCell(rowKey: string, day: number): void {
 }
 
 .wp-scroll {
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   overflow-x: auto;
 }
 
@@ -306,7 +306,7 @@ function onCell(rowKey: string, day: number): void {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 4px 0;
+  padding: var(--space-1) 0;
   font-size: var(--font-size-xs, 11px);
   color: var(--color-text);
 }
@@ -379,7 +379,7 @@ function onCell(rowKey: string, day: number): void {
 .wp-legend {
   display: flex;
   gap: 14px;
-  padding: 0 16px 12px;
+  padding: 0 var(--space-4) var(--space-3);
   font-size: var(--font-size-xs, 11px);
   color: var(--color-text-secondary);
   flex-wrap: wrap;
@@ -390,7 +390,7 @@ function onCell(rowKey: string, day: number): void {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  margin-right: 4px;
+  margin-right: var(--space-1);
 }
 
 .wp-hint {

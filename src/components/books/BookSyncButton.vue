@@ -90,7 +90,7 @@ async function handleClick(): Promise<void> {
 .bk-sync-btn {display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary);
   background: var(--color-bg-card, #fff);

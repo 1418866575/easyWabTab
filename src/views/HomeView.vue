@@ -689,7 +689,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   padding: 10px 16px;
   background-color: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(12px);
@@ -702,7 +702,7 @@ onUnmounted(() => {
 .app-bar-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   min-width: 0;
 }
 
@@ -736,7 +736,7 @@ onUnmounted(() => {
 .nav-sidebar-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 12px;
+  padding: var(--space-3);
 }
 .nav-sidebar-section-title {
   font-size: var(--fs-caption, 12px);
@@ -748,7 +748,7 @@ onUnmounted(() => {
 .nav-sidebar-menu {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .nav-menu-item {
   display: flex;
@@ -816,7 +816,7 @@ onUnmounted(() => {
 .nav-sidebar-divider {
   height: 1px;
   background: var(--color-border, #e2e8f0);
-  margin: 12px 4px;
+  margin: var(--space-3) var(--space-1);
 }
 .nav-sidebar-backdrop {
   position: fixed;
@@ -854,7 +854,7 @@ onUnmounted(() => {
 .header-top {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .header-top .search-section {
   flex: 1;
@@ -863,19 +863,19 @@ onUnmounted(() => {
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 24px;
+  padding: var(--space-6);
   padding-top: 84px; /* 为顶部统一 App Bar 留出空间 */
-  padding-bottom: 32px;
+  padding-bottom: var(--space-8);
 }
 
 .header {
-  margin-bottom: 24px;
+  margin-bottom: var(--space-6);
 }
 
 .search-section {
   display: flex;
   justify-content: center;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .global-search-bar {
@@ -886,17 +886,17 @@ onUnmounted(() => {
 .sites-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 12px;
-  margin-top: 16px;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
 }
 
 /* 分类 · 标签筛选栏折叠开关（默认收起；设置 → 导航设置 → 导航筛选栏可切换模式） */
 .nav-filter-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 16px;
-  padding: 8px 16px;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding: var(--space-2) var(--space-4);
   background-color: var(--color-bg-card, #ffffff);
   color: var(--color-text-secondary);
   border: 1px solid var(--color-border, #e2e8f0);
@@ -931,7 +931,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  margin-top: 16px;
+  margin-top: var(--space-4);
 }
 
 .nav-toolbar .nav-filter-toggle {
@@ -1112,13 +1112,13 @@ html.dark .nav-add-site {
 @media (max-width: 768px) {
   .app-bar {
     padding: 8px 10px;
-    gap: 8px;
+    gap: var(--space-2);
     flex-wrap: wrap;
   }
 
   .app-bar-left,
   .app-bar-right {
-    gap: 4px;
+    gap: var(--space-1);
     flex: 1 1 100%;
   }
 
@@ -1145,14 +1145,14 @@ html.dark .nav-add-site {
   }
 
   .btn-help,
-  :deep(.ws-trigger) {padding: 0 12px;
+  :deep(.ws-trigger) {padding: 0 var(--space-3);
   height: 36px;}
 
   .container {
     padding-top: 112px;
     /* 左右内边距收窄，给卡片网格让出宽度 */
-    padding-left: 12px;
-    padding-right: 12px;
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
     /* 分页已回归文档流，底部仅保留安全区与少量留白 */
     padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   }
@@ -1164,8 +1164,8 @@ html.dark .nav-add-site {
   }
 
   .nav-toolbar {
-    margin-top: 12px;
-    gap: 8px;
+    margin-top: var(--space-3);
+    gap: var(--space-2);
   }
 
   /* 窄屏：筛选框独占一行，避免和折叠开关互相挤压 */
@@ -1206,7 +1206,7 @@ html.dark .nav-add-site {
   }
   /* 移动端侧边栏模式下容器不预留左侧空间（抽屉覆盖） */
   .container.container-sidebar {
-    padding-left: 12px;
+    padding-left: var(--space-3);
   }
 }
 

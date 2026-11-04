@@ -35,13 +35,13 @@ defineEmits<{ prev: []; next: [] }>()
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-shrink: 0;
-  padding: 4px 0;
+  padding: var(--space-1) 0;
 }
 
 /* 翻页按钮：视觉对齐 WorkbenchView .wb-btn token look（--color-* 亮色 token + hex 兜底） */
-.pp-btn {padding: 0 12px;
+.pp-btn {padding: 0 var(--space-3);
   background-color: var(--color-bg-card, #ffffff);
   color: var(--color-text-secondary);
   border: 1px solid var(--color-border, #e2e8f0);

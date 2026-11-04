@@ -500,14 +500,14 @@ function printReport(): void {
 .bizstats {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
   
 }
 
 /* 布局：趋势图 70% + 环形图 30%，左右排列；高度对齐 */
 .bizstats-main {
   display: flex;
-  gap: 16px;
+  gap: var(--space-4);
   align-items: stretch;
 }
 
@@ -518,15 +518,15 @@ function printReport(): void {
 
 /* ===== 近 12 个月（限定当前年份，不跨年；空月为 0） ===== */
 .bizstats-monthly {
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 
 .bizstats-month-bars {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
+  gap: var(--space-2);
   height: 350px;
-  padding: 16px 4px 0;
+  padding: var(--space-4) var(--space-1) 0;
 }
 
 .bizstats-month-col {
@@ -537,7 +537,7 @@ function printReport(): void {
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .bizstats-month-value {
@@ -585,8 +585,8 @@ function printReport(): void {
 .bizstats-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
+  gap: var(--space-3);
+  padding: var(--space-4);
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
@@ -604,7 +604,7 @@ function printReport(): void {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 
@@ -647,7 +647,7 @@ function printReport(): void {
   gap: 6px;
 }
 
-.bizstats-btn {padding: 0 12px;
+.bizstats-btn {padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
   color: var(--color-text-secondary, var(--color-text-secondary));
@@ -666,7 +666,7 @@ function printReport(): void {
 .bizstats-svg-wrap {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .bizstats-svg {
@@ -718,7 +718,7 @@ function printReport(): void {
 
 .bizstats-legend {
   display: flex;
-  gap: 16px;
+  gap: var(--space-4);
   font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
@@ -771,7 +771,7 @@ function printReport(): void {
 .bizstats-pies {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
   flex: 3 1 0;
   min-width: 0;
   min-height: 0;
@@ -786,7 +786,7 @@ function printReport(): void {
 .bizstats-pie-wrap {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-4);
   flex: 1;
   min-height: 0;
 }
@@ -800,7 +800,7 @@ function printReport(): void {
 .bizstats-pie-legend {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   flex: 1;
   min-width: 0;
 }
@@ -840,7 +840,7 @@ function printReport(): void {
 
 .bizstats-empty {
   margin: 0;
-  padding: 20px 0;
+  padding: var(--space-5) 0;
   text-align: center;
   font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted, var(--color-text-muted));

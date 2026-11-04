@@ -458,8 +458,8 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  gap: 12px;
-  padding: 16px;
+  gap: var(--space-3);
+  padding: var(--space-4);
 }
 
 .sh-cat-tabs {
@@ -511,7 +511,7 @@ onMounted(async () => {
 .sh-card-top {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   height: 100%;
 }
 .sh-card-icon {
@@ -553,7 +553,7 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--sh-color, #3b82f6);
   border-radius: 6px;
   background: transparent;
@@ -598,7 +598,7 @@ onMounted(async () => {
 .dialog-body {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 .form-field {
   display: flex;
@@ -620,7 +620,7 @@ onMounted(async () => {
 }
 .dialog-footer-right {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   margin-left: auto;
 }
 
@@ -638,7 +638,7 @@ onMounted(async () => {
   .st-habits {
     height: auto;
     min-height: 0;
-    padding: 12px;
+    padding: var(--space-3);
   }
   .sh-main {
     flex: none;
@@ -657,13 +657,13 @@ onMounted(async () => {
 .sh-records {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .sh-records-head {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 .sh-records-title {
   margin: 0;
@@ -729,7 +729,7 @@ onMounted(async () => {
 }
 .sh-record-ops {
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .sh-record-hint {
   margin: 6px 0 0;

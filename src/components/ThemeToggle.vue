@@ -159,8 +159,8 @@ onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
 .theme-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   min-height: 36px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
@@ -298,7 +298,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
     width: 100%;
     max-height: 60vh;
     border-radius: var(--radius-xl, 16px) var(--radius-xl, 16px) 0 0;
-    padding: 12px;
+    padding: var(--space-3);
     padding-bottom: calc(12px + env(safe-area-inset-bottom));
     box-shadow: var(--shadow-modal);
     animation: theme-sheet-up var(--anim-base, 250ms) var(--ease-out, cubic-bezier(0.34, 1.56, 0.64, 1));

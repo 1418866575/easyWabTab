@@ -421,7 +421,7 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   background-color: transparent;
   color: var(--color-text-secondary);
   border: 1px solid transparent;

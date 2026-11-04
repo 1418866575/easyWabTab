@@ -51,8 +51,8 @@ function display(v?: string | number | null): string {
 .ewt-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px;
+  gap: var(--space-2);
+  padding: var(--space-3);
   background: var(--ds-card, var(--color-surface, #fff));
   border: 1px solid var(--ds-line, var(--color-border, #e5e7eb));
   border-radius: var(--ds-radius-card, 12px);
@@ -74,7 +74,7 @@ function display(v?: string | number | null): string {
 .ewt-card-header {
   flex-shrink: 0;
   min-width: 0;
-  padding-bottom: 8px;
+  padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--ds-line, var(--color-border, #e5e7eb));
 }
 :global(html.dark) .ewt-card-header {
@@ -90,8 +90,8 @@ function display(v?: string | number | null): string {
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 8px;
-  padding-top: 8px;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
   border-top: 1px dashed var(--color-border, #e5e7eb);
   flex-shrink: 0;
 }
@@ -104,8 +104,8 @@ function display(v?: string | number | null): string {
     margin-left: 0;
   }
   .ewt-card-actions :deep(.el-button--small) {
-    padding-left: 8px;
-    padding-right: 8px;
+    padding-left: var(--space-2);
+    padding-right: var(--space-2);
   }
 }
 :global(html.dark) .ewt-card-actions {
@@ -118,7 +118,7 @@ function display(v?: string | number | null): string {
 .ewt-card-fields {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 4px 12px;
+  gap: var(--space-1) var(--space-3);
   margin: 0;
   /* 关键修复：移动端卡片 height:auto 时，flex-basis:0% + min-height:0 + overflow:hidden
      会让字段区塌缩为 0 高（min-content 被当成 0），导致卡片不显示内容。

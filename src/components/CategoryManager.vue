@@ -345,8 +345,8 @@ const sortedCustomCategories = computed(() =>
    本组件仅保留分类列表、添加表单、图标按钮等内容样式 */
 
 .add-form {
-  margin-bottom: 24px;
-  padding-bottom: 24px;
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-6);
   border-bottom: 1px solid var(--ds-line);
 }
 
@@ -355,12 +355,12 @@ const sortedCustomCategories = computed(() =>
   font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--ds-text-2);
-  margin: 0 0 12px 0;
+  margin: 0 0 var(--space-3) 0;
 }
 
 .add-form-row {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 /* 分类图标按钮：点击弹出图标管理（图标库）选择；图片类图标用 <img>，旧 emoji 仍按文本显示 */
@@ -426,23 +426,23 @@ const sortedCustomCategories = computed(() =>
 }
 
 .list-section {
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .section-title {
   font-size: var(--fs-caption, 12px);
   color: var(--ds-text-3);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .category-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 10px 12px;
   background: var(--ds-bg);
   border-radius: 8px;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 /* 内置分类：不可编辑/删除。仅锁图标淡化表示"只读"，
@@ -490,7 +490,7 @@ const sortedCustomCategories = computed(() =>
 .site-count {
   font-size: var(--fs-caption, 12px);
   color: var(--ds-text-3);
-  margin-right: 8px;
+  margin-right: var(--space-2);
 }
 
 /* 输入框视觉统一到全局 .ui-input（别名列表已含 .edit-input） */
@@ -510,7 +510,7 @@ const sortedCustomCategories = computed(() =>
   align-items: center;
   justify-content: center;
   height: 36px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   background: none;
   border: 1px solid transparent;
   border-radius: var(--radius-md, 8px);
@@ -542,6 +542,6 @@ const sortedCustomCategories = computed(() =>
   text-align: center;
   color: var(--ds-text-3);
   font-size: var(--fs-body, 14px);
-  padding: 20px;
+  padding: var(--space-5);
 }
 </style>

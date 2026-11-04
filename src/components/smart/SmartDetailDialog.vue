@@ -75,7 +75,7 @@ const title = computed(() => props.item.title)
 
 <style scoped>
 /* 高度与滚动交给 BaseDialog 的 .bd-body（统一 padding + overflow-y:auto），这里只管内容排布 */
-.sd-body { display: flex; flex-direction: column; gap: 12px; }
+.sd-body { display: flex; flex-direction: column; gap: var(--space-3); }
 .sd-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .sd-chip {
   padding: 1px 8px;
@@ -102,7 +102,7 @@ const title = computed(() => props.item.title)
 .sd-desc { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
 
 .sd-content {
-  padding: 12px;
+  padding: var(--space-3);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #fff);
@@ -124,9 +124,9 @@ const title = computed(() => props.item.title)
   background: var(--color-bg-hover, #f3f4f6);
   overflow-x: auto;
 }
-.sd-content :deep(p) { margin: 0 0 8px; }
+.sd-content :deep(p) { margin: 0 0 var(--space-2); }
 .sd-content :deep(p:last-child) { margin-bottom: 0; }
-.sd-content :deep(ul), .sd-content :deep(ol) { margin: 0 0 8px; padding-left: 20px; }
+.sd-content :deep(ul), .sd-content :deep(ol) { margin: 0 0 var(--space-2); padding-left: var(--space-5); }
 
 .sd-vars { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .sd-var-inline { padding: 1px 6px; border-radius: 4px; background: var(--color-bg-hover, #f3f4f6); color: var(--color-primary-text); }

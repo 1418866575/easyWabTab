@@ -220,7 +220,7 @@ onBeforeUnmount(stopTimer)
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px 12px;
+  padding: var(--space-6) var(--space-3);
   border-radius: var(--radius-md, 8px);
   background-color: var(--color-bg-hover, #f1f5f9);
 }
@@ -254,7 +254,7 @@ onBeforeUnmount(stopTimer)
 .rd-tag {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   padding: 3px 4px 3px 10px;
   border-radius: 999px;
   background-color: var(--color-primary-soft, #eff6ff);
@@ -290,7 +290,7 @@ onBeforeUnmount(stopTimer)
 .rd-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
   margin-bottom: 10px;
 }
 
@@ -316,7 +316,7 @@ onBeforeUnmount(stopTimer)
 }
 
 .rd-filter-summary {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   font-size: var(--font-size-sm, 13px);
   color: var(--color-text-secondary);
 }
@@ -325,7 +325,7 @@ onBeforeUnmount(stopTimer)
   display: flex;
   flex-wrap: wrap;
   gap: 6px 18px;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .rd-stat {
@@ -348,7 +348,7 @@ onBeforeUnmount(stopTimer)
 .rd-roster-tag {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   padding: 4px 10px;
   border-radius: 999px;
   background: var(--color-bg-hover, #f1f5f9);

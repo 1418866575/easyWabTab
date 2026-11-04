@@ -114,11 +114,11 @@ async function exportExcelFile(): Promise<void> {
 .sp-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .sp-item {
-  padding: 12px;
+  padding: var(--space-3);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
 }
@@ -126,8 +126,8 @@ async function exportExcelFile(): Promise<void> {
 .sp-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 .sp-name {
@@ -143,27 +143,27 @@ async function exportExcelFile(): Promise<void> {
 .sp-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .sp-grid .tw-label {
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .sp-notes {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
-  margin-top: 8px;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
 }
 
 .sp-textarea {
   width: 100%;
   min-height: 56px;
-  padding: 8px;
+  padding: var(--space-2);
   line-height: var(--line-height-normal, 1.5);
 }
 </style>

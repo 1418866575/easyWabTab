@@ -118,12 +118,12 @@ function testidOf(item: TabItem): string | undefined {
 .ui-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .ui-tabs :deep(.el-radio-group) {
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 /* EP 默认给相邻按钮加 margin-left，这里用 gap 统一控制 */
@@ -135,7 +135,7 @@ function testidOf(item: TabItem): string | undefined {
 .ui-tabs :deep(.el-radio-button__inner) {display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   background-color: var(--color-bg-card, #ffffff);

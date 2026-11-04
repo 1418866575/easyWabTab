@@ -260,7 +260,7 @@ const downloadTitle = computed(() =>
   display: flex;
   flex-direction: column;
   gap: 7px;
-  padding: 12px;
+  padding: var(--space-3);
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -321,7 +321,7 @@ const downloadTitle = computed(() =>
 .bk-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .bk-tag {
   padding: 0 6px;
@@ -349,7 +349,7 @@ const downloadTitle = computed(() =>
   align-items: center;
   max-width: 100%;
   height: 18px;
-  padding: 0 8px;
+  padding: 0 var(--space-2);
   border-radius: 999px;
   background-color: var(--color-bg-hover, #f1f5f9);
   overflow: hidden;
@@ -380,8 +380,8 @@ const downloadTitle = computed(() =>
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 8px;
-  padding-top: 8px;
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
   border-top: 1px dashed var(--color-border, #e2e8f0);
 }
 .bk-recent {
@@ -435,6 +435,6 @@ const downloadTitle = computed(() =>
   /* 抬到 40px：.ui-btn--sm 是 30px，低于移动端 32px 的舒适触控下限 */
   .bk-actions :deep(.ui-btn),
   .bk-admin :deep(.ui-btn) {height: 36px;
-  padding: 0 12px;}
+  padding: 0 var(--space-3);}
 }
 </style>

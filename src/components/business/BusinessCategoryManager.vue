@@ -495,7 +495,7 @@ function handleAdd(): void {
 .bizcat-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .bizcat-hint {
@@ -507,7 +507,7 @@ function handleAdd(): void {
 .bizcat-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 /* product 模式：每个分类项（卡片列表） */
@@ -515,7 +515,7 @@ function handleAdd(): void {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding-bottom: 8px;
+  padding-bottom: var(--space-2);
   border-bottom: 1px dashed var(--color-border, var(--color-border));
 }
 .bizcat-item:last-child {
@@ -528,7 +528,7 @@ function handleAdd(): void {
 .bizcat-toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .bizcat-search {
   width: 180px;
@@ -546,7 +546,7 @@ function handleAdd(): void {
 .bizcat-name-cell {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   width: 100%;
   min-width: 0;
 }
@@ -557,7 +557,7 @@ function handleAdd(): void {
 .bizcat-name-cell :deep(.el-input__wrapper) {
   box-shadow: none;
   background: transparent;
-  padding-left: 4px;
+  padding-left: var(--space-1);
 }
 .bizcat-name-cell :deep(.el-input__wrapper.is-focus),
 .bizcat-name-cell :deep(.el-input__wrapper:hover) {
@@ -601,7 +601,7 @@ function handleAdd(): void {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 8px 12px;
+  gap: var(--space-2) var(--space-3);
   padding: 10px 12px;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 6px;
@@ -610,7 +610,7 @@ function handleAdd(): void {
 .bizcat-add-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .bizcat-add-field > label {
   font-size: var(--fs-caption, 12px);
@@ -656,7 +656,7 @@ function handleAdd(): void {
 .bizcat-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .bizcat-icon {
@@ -688,8 +688,8 @@ function handleAdd(): void {
 .bizcat-add {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding-top: 4px;
+  gap: var(--space-2);
+  padding-top: var(--space-1);
   border-top: 1px dashed var(--color-border, var(--color-border));
 }
 

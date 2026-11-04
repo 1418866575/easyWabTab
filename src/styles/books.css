@@ -21,7 +21,7 @@
   z-index: 10;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   padding: 10px 16px;
   background: var(--color-bg-card);
   border-bottom: 1px solid var(--color-border);
@@ -30,7 +30,7 @@
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 /* 顶栏「书签」按钮的数量徽标（仅在有书签时显示） */
@@ -44,7 +44,7 @@
   justify-content: center;
   min-width: 16px;
   height: 16px;
-  padding: 0 4px;
+  padding: 0 var(--space-1);
   border-radius: 9999px;
   background: var(--color-primary, #c8102e);
   color: #fff;
@@ -78,7 +78,7 @@
 }
 .bk-sort {
   height: 30px;
-  padding: 0 8px;
+  padding: 0 var(--space-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-bg-input);
@@ -94,9 +94,9 @@
 .bk-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   height: 36px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   background: var(--color-bg-card);
@@ -116,13 +116,13 @@
 
 /* ---------- 分区（收藏 / 最近阅读 / 全部） ---------- */
 .bk-section {
-  margin-bottom: 24px;
+  margin-bottom: var(--space-6);
 }
 .bk-section-head {
   display: flex;
   align-items: baseline;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 .bk-section-title {
   margin: 0;
@@ -139,12 +139,12 @@
   margin-left: auto;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 /* 统计行里的次要按钮（如「重置统计」） */
 .bk-mini-btn {
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-bg-card);
@@ -168,7 +168,7 @@
 .bk-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px;
+  gap: var(--space-4);
 }
 /* 桌面端多列时所有行等高 → 卡片高度统一；移动端单列不加，保持自然高度 */
 @media (min-width: 769px) {
@@ -186,7 +186,7 @@
   text-align: center;
 }
 .bk-empty-hint {
-  margin: 8px 0 16px;
+  margin: var(--space-2) 0 var(--space-4);
   font-size: var(--font-size-xs, 12px);
   color: var(--color-text-muted);
 }
@@ -194,7 +194,7 @@
 .bk-pager {
   display: flex;
   justify-content: center;
-  margin-top: 20px;
+  margin-top: var(--space-5);
 }
 
 /* ---------- 阅读页 ---------- */
@@ -239,9 +239,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: var(--space-3);
   flex: 1 1 auto;
-  padding: 24px;
+  padding: var(--space-6);
   text-align: center;
 }
 .bk-reader-fallback-text {
@@ -255,15 +255,15 @@
 @media (max-width: 768px) {
   .bk-shell { padding: var(--space-4, 16px) var(--space-3, 12px) var(--space-6, 24px); }
   .bk-grid { grid-template-columns: 1fr; }
-  .bk-topbar { padding: 8px 12px; }
+  .bk-topbar { padding: var(--space-2) var(--space-3); }
   /* 次级控制项抬到 40px 触控下限 */
   .bk-subbar .bk-chip,
   .bk-subbar .bk-mini-btn,
   .bk-subbar .bk-sort {
     height: 36px;
-    padding: 0 12px;
+    padding: 0 var(--space-3);
   }
-  .bk-reader-bar { padding: 8px 12px; gap: 8px; }
+  .bk-reader-bar { padding: var(--space-2) var(--space-3); gap: var(--space-2); }
   .bk-reader-title { font-size: var(--font-size-sm, 13px); }
   .bk-reader-actions .bk-reader-btn-text { display: none; }
   /* 移动端与全站同高 24px（2026-11 按钮统一，取消 40px 触控放大） */
@@ -272,7 +272,7 @@
   .bk-topbar-right .bk-mini-btn,
   .bk-topbar-right .bk-sync-btn {
     height: 36px;
-    padding: 0 12px;
+    padding: 0 var(--space-3);
   }
 }
 
@@ -282,7 +282,7 @@
 @media (max-width: 768px) {
   .bk-item .ui-btn {
     height: 36px;
-    padding: 0 12px;
+    padding: 0 var(--space-3);
   }
 }
 

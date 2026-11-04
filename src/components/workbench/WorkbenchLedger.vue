@@ -722,7 +722,7 @@ onMounted(async () => {
 .wb-ledger {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
   /* 页面级滚动：本面板随内容自然撑开（.wb-content > * 已由 flex:1 改为 flex:0 0 auto），
      纵向滚动统一交给 .wb-content，面板内不再自建滚动容器 */
 }
@@ -739,7 +739,7 @@ onMounted(async () => {
 .ld-month-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
   padding: 12px 14px;
   background: var(--color-bg-card, var(--color-bg-card));
@@ -748,7 +748,7 @@ onMounted(async () => {
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
-.month-btn {padding: 0 12px;
+.month-btn {padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);
   border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-hover));
@@ -790,7 +790,7 @@ onMounted(async () => {
 .ld-stats {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .stat-value {
@@ -827,7 +827,7 @@ onMounted(async () => {
 .ld-ratio-block {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   padding: 14px 16px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
@@ -845,7 +845,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .ld-ratio-name {
@@ -863,7 +863,7 @@ onMounted(async () => {
 .ld-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   padding: 14px 16px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
@@ -882,7 +882,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 
@@ -896,7 +896,7 @@ onMounted(async () => {
 .ld-trend-total {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   color: var(--color-text-secondary);
 }
 
@@ -955,7 +955,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 .ld-donut-layout {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: var(--space-5);
   flex-wrap: wrap;
 }
 
@@ -998,7 +998,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
   pointer-events: none;
-  padding: 0 20px;
+  padding: 0 var(--space-5);
   text-align: center;
 }
 
@@ -1013,7 +1013,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 .ld-donut-legend-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .ld-donut-dot {
@@ -1037,7 +1037,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 .ld-charts-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   align-self: flex-start;
   padding: 6px 14px;
   font: inherit;
@@ -1069,7 +1069,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 
@@ -1077,12 +1077,12 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 /* .btn-add 视觉已统一到全局 .ui-btn--primary（style.css） */
 
-.btn-manage {padding: 0 12px;
+.btn-manage {padding: 0 var(--space-3);
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
@@ -1123,7 +1123,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   display: grid;
   grid-template-columns: 100px 90px 110px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   padding: 10px 16px;
   border-bottom: 1px solid var(--color-border, var(--color-border));
   transition: background-color var(--transition-fast, 0.15s ease);
@@ -1188,7 +1188,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--space-2);
   white-space: nowrap;
 }
 
@@ -1206,8 +1206,8 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 
 /* 底部本月记录区：内联展示、随页面滚动，与面板整体留白/分隔线风格一致 */
 .ld-records-section {
-  margin-top: 20px;
-  padding-top: 16px;
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
   border-top: 1px solid var(--color-border, #e5e7eb);
 }
 
@@ -1215,7 +1215,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .ld-records-title {
@@ -1289,7 +1289,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 
 .form-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   justify-content: flex-end;
 }
 
@@ -1299,15 +1299,15 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 .ld-cat-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .ld-cat-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
@@ -1356,9 +1356,9 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 .ld-cat-add-form {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
-  padding: 12px;
+  padding: var(--space-3);
   border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
 }
@@ -1519,7 +1519,7 @@ html.dark input.form-input {
 /* 移动端 ≤768px：月份操作区改为整齐 2×2 网格，四个按钮等宽对齐；日期选择器自适应，避免与上月/下月/本月按钮抢空间 */
 @media (max-width: 768px) {
   .ld-month-bar {
-    padding: 12px;
+    padding: var(--space-3);
     gap: 10px;
   }
 
@@ -1567,7 +1567,7 @@ html.dark input.form-input {
   .ld-charts-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 16px;
+    gap: var(--space-4);
     align-items: stretch;
   }
 
@@ -1589,7 +1589,7 @@ html.dark input.form-input {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
   margin-bottom: 6px;
 }

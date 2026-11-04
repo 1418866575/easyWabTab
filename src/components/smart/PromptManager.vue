@@ -374,7 +374,7 @@ function excerpt(p: SmartPrompt): string {
 </template>
 
 <style scoped>
-.pm-wrap { display: flex; flex-direction: column; gap: 12px; }
+.pm-wrap { display: flex; flex-direction: column; gap: var(--space-3); }
 
 /* 搜索框：工具箱同款（父容器内居中、卡片式、聚焦高亮） */
 .pm-search-wrap { display: flex; justify-content: center; }
@@ -405,7 +405,7 @@ function excerpt(p: SmartPrompt): string {
 .pm-search-clear:hover { color: var(--color-primary-text); background: var(--color-bg-hover, #f1f5f9); }
 
 /* 分类药丸：工具箱同款 */
-.pm-cats { display: flex; flex-wrap: wrap; gap: 8px; }
+.pm-cats { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .pm-cat-pill {
   display: inline-flex;
   align-items: center;
@@ -430,7 +430,7 @@ function excerpt(p: SmartPrompt): string {
 
 /* 排序 + 收藏 + 操作行 */
 .pm-toolbar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
-.pm-toolbar-left, .pm-toolbar-right { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pm-toolbar-left, .pm-toolbar-right { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
 .pm-result { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 .pm-select {
   height: 36px;
@@ -467,19 +467,19 @@ function excerpt(p: SmartPrompt): string {
 .pm-tag.is-on { border-color: var(--color-primary, #3b82f6); background: var(--color-primary-soft, #eff6ff); color: var(--color-primary-text); }
 .pm-tag-reset { color: var(--color-text-muted); }
 
-.pm-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.pm-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--space-3); }
 /* 分页容器：只负责间距与右对齐，控件观感由 styles/pager.css 的 .ewt-pager 统一接管 */
-.pm-pager { display: flex; justify-content: flex-end; margin-top: 12px; }
+.pm-pager { display: flex; justify-content: flex-end; margin-top: var(--space-3); }
 .pm-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 14px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 10px);
   background: var(--color-bg-card, #fff);
 }
-.pm-card-head { display: flex; gap: 8px; align-items: flex-start; }
+.pm-card-head { display: flex; gap: var(--space-2); align-items: flex-start; }
 .pm-star {
   flex: 0 0 auto;
   padding: 0;
@@ -506,7 +506,7 @@ function excerpt(p: SmartPrompt): string {
   white-space: nowrap;
 }
 .pm-name:hover { color: var(--color-primary-text); }
-.pm-meta { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); display: flex; gap: 4px; flex-wrap: wrap; }
+.pm-meta { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); display: flex; gap: var(--space-1); flex-wrap: wrap; }
 .pm-dot { opacity: .6; }
 .pm-builtin {
   flex: 0 0 auto;
@@ -525,7 +525,7 @@ function excerpt(p: SmartPrompt): string {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.pm-card-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: var(--fs-caption, 12px); }
+.pm-card-foot { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; font-size: var(--fs-caption, 12px); }
 .pm-chip { color: var(--color-primary-text); }
 .pm-vars { color: var(--color-text-muted); display: inline-flex; align-items: center; gap: 3px; }
 .pm-vars svg { flex: none; }
@@ -533,7 +533,7 @@ function excerpt(p: SmartPrompt): string {
 .pm-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: auto; }
 .pm-spacer { flex: 1 1 auto; }
 .pm-btn {height: 36px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
   background: transparent;
@@ -550,9 +550,9 @@ function excerpt(p: SmartPrompt): string {
   border: 1px dashed var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 10px);
 }
-.pm-empty-title { margin: 0 0 4px; font-size: var(--fs-body, 14px); font-weight: 600; color: var(--color-text); }
-.pm-empty-hint { margin: 0 0 12px; font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
-.pm-empty-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.pm-empty-title { margin: 0 0 var(--space-1); font-size: var(--fs-body, 14px); font-weight: 600; color: var(--color-text); }
+.pm-empty-hint { margin: 0 0 var(--space-3); font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
+.pm-empty-actions { display: flex; gap: var(--space-2); justify-content: center; flex-wrap: wrap; }
 
 @media (max-width: 768px) {
   .pm-list { grid-template-columns: 1fr; }
@@ -562,7 +562,7 @@ function excerpt(p: SmartPrompt): string {
   .pm-pager :deep(.el-pagination__sizes),
   .pm-pager :deep(.el-pagination__jump) { display: none; }
   .pm-btn {height: 36px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);}
 }
 </style>

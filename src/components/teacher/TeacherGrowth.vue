@@ -244,7 +244,7 @@ function exportArchive(): void {
 
 .gr-search {
   width: 100%;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .gr-students {
@@ -260,7 +260,7 @@ function exportArchive(): void {
   align-items: center;
   gap: 6px;
   min-height: 34px;
-  padding: 0 8px;
+  padding: 0 var(--space-2);
   border: none;
   border-radius: var(--radius-sm, 4px);
   background-color: transparent;
@@ -308,15 +308,15 @@ function exportArchive(): void {
 
 .gr-form {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .gr-form .tw-label {
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .gr-flex {
@@ -325,12 +325,12 @@ function exportArchive(): void {
 
 .gr-textarea {
   width: 100%;
-  padding: 8px;
+  padding: var(--space-2);
   line-height: var(--line-height-normal, 1.5);
 }
 
 .gr-photo-bar {
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 .gr-file {
@@ -341,7 +341,7 @@ function exportArchive(): void {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 .gr-photo {
@@ -402,7 +402,7 @@ function exportArchive(): void {
 .gr-item-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
@@ -417,7 +417,7 @@ function exportArchive(): void {
 }
 
 .gr-content {
-  margin: 4px 0 0;
+  margin: var(--space-1) 0 0;
   font-size: var(--font-size-sm, 13px);
   color: var(--color-text-secondary);
   line-height: var(--line-height-normal, 1.5);

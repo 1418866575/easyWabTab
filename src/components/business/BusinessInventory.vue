@@ -316,7 +316,7 @@ function exportInventoryExcel(): void {
 .bizinv {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
   flex: 1;
   min-height: 0;
 }
@@ -332,13 +332,13 @@ function exportInventoryExcel(): void {
 .bizinv-warns {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .bizinv-warn {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 12px 14px;
   background: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #e2e8f0);
@@ -349,7 +349,7 @@ function exportInventoryExcel(): void {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .bizinv-warn-title {
@@ -367,13 +367,13 @@ function exportInventoryExcel(): void {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .bizinv-warn-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 6px 8px;
   font-size: var(--fs-caption, 12px);
   background: var(--color-bg-hover, #f9fafb);
@@ -457,7 +457,7 @@ function exportInventoryExcel(): void {
 }
 
 .bizinv-batch-summary {
-  margin: 4px 0 0;
+  margin: var(--space-1) 0 0;
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted);
 }
@@ -471,11 +471,11 @@ function exportInventoryExcel(): void {
 .bizinv-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding-right: 4px;
+  padding-right: var(--space-1);
 }
 @media (max-width: 768px) {
   .bizinv { min-height: 0; }
@@ -486,7 +486,7 @@ function exportInventoryExcel(): void {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 16px;
+  padding: var(--space-4);
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
@@ -497,7 +497,7 @@ function exportInventoryExcel(): void {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .bizinv-alert-title {
@@ -509,13 +509,13 @@ function exportInventoryExcel(): void {
 .bizinv-alert-actions {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .bizinv-threshold {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
@@ -539,7 +539,7 @@ function exportInventoryExcel(): void {
 .bizinv-low-card {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   padding: 10px 14px;
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid color-mix(in srgb, var(--color-error, #ef4444) 40%, transparent);
@@ -566,7 +566,7 @@ function exportInventoryExcel(): void {
 .bizinv-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
   align-content: start;
 }
 
@@ -591,13 +591,13 @@ function exportInventoryExcel(): void {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .bizinv-card-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   min-width: 0;
 }
 
@@ -636,7 +636,7 @@ function exportInventoryExcel(): void {
 .bizinv-card-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--space-2);
   padding-top: 10px;
   border-top: 1px dashed var(--color-border, #e2e8f0);
 }
@@ -695,7 +695,7 @@ function exportInventoryExcel(): void {
 
 /* 查看溯源按钮（卡片右上角） */
 .bizinv-trace-btn {align-self: flex-end;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
   color: var(--color-primary-text);
@@ -742,7 +742,7 @@ function exportInventoryExcel(): void {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--color-border, var(--color-border));
 }
 
@@ -772,15 +772,15 @@ function exportInventoryExcel(): void {
 .bizinv-trace-body {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .bizinv-trace-empty {
   margin: 0;
-  padding: 20px 0;
+  padding: var(--space-5) 0;
   text-align: center;
   font-size: var(--fs-sm, 13px);
   color: var(--color-text-muted, var(--color-text-muted));
@@ -789,7 +789,7 @@ function exportInventoryExcel(): void {
 .bizinv-source-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 6px 8px;
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));

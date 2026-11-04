@@ -49,6 +49,7 @@
     "test:toolbox-p1": "node --experimental-strip-types scripts/test-toolbox-p1-core.ts",
     "test:toolbox-p2": "node --experimental-strip-types scripts/test-toolbox-p2-core.ts",
     "test:stats": "node --experimental-strip-types scripts/test-stats-core.ts",
+    "test:uistyle": "node --experimental-strip-types scripts/test-ui-style-core.ts",
     "test:nav-guard": "node --experimental-strip-types scripts/test-nav-guard.ts",
     "test:nav-meta": "node --experimental-strip-types scripts/test-nav-meta.ts",
     "test:nav-storage": "node --experimental-strip-types scripts/test-nav-storage.ts",

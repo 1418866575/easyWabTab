@@ -52,8 +52,8 @@ const ROADMAP: Record<string, string> = {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 32px 24px;
+  gap: var(--space-3);
+  padding: var(--space-8) var(--space-6);
   max-width: 480px;
   text-align: center;
   background: var(--color-surface, #ffffff);

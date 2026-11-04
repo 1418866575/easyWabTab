@@ -529,7 +529,7 @@ function displayTime(row: BlogArticle): string {
 .ba-posts-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 
@@ -554,13 +554,13 @@ function displayTime(row: BlogArticle): string {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px 16px;
+  gap: var(--space-3) var(--space-4);
 }
 
 .ba-query-field {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   white-space: nowrap;
 }
 
@@ -582,21 +582,21 @@ function displayTime(row: BlogArticle): string {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--space-2);
   margin-left: auto;
 }
 /* 导入按钮组独占一行、靠左 */
 .ba-query-imports {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex: 0 0 100%;
 }
 /* 按钮内「图标 + 文字」留 4px 间距，避免贴在一起 */
 .ba-query-actions :deep(.el-button > span) {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .ba-empty {
@@ -683,7 +683,7 @@ html.dark .ba-query {
 }
 
 .ba-status-tag {
-  padding: 0 8px;
+  padding: 0 var(--space-2);
   border-radius: var(--ds-radius-pill, 999px);
   font-size: var(--ds-fs-label, 12px);
   line-height: 18px;
@@ -699,7 +699,7 @@ html.dark .ba-query {
 
 .ba-chip {
   display: inline-block;
-  margin-right: 4px;
+  margin-right: var(--space-1);
   padding: 0 6px;
   border-radius: var(--ds-radius-pill, 999px);
   background-color: var(--ds-card-2, #f7f8fa);
@@ -734,7 +734,7 @@ html.dark .ba-query {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .ba-card-title {
@@ -771,7 +771,7 @@ html.dark .ba-query {
 .ba-card-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .ba-card-excerpt {
@@ -788,14 +788,14 @@ html.dark .ba-query {
 .ba-card-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .ba-card-foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
   margin-top: auto;
   padding-top: 6px;
   border-top: 1px solid var(--ds-line, #ececf0);
@@ -804,7 +804,7 @@ html.dark .ba-query {
 .ba-card-ops {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--space-1);
   justify-content: flex-end;
 }
 
@@ -824,12 +824,12 @@ html.dark .ba-query {
 .ba-pager {
   display: flex;
   justify-content: flex-end;
-  margin-top: 12px;
+  margin-top: var(--space-3);
 }
 
 /* ---------- 弹框内 ---------- */
 .ba-dialog-text {
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-3);
   color: var(--ds-text-2);
   font-size: var(--font-size-sm, 13px);
 }
@@ -837,7 +837,7 @@ html.dark .ba-query {
 .ba-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .ba-field-label {

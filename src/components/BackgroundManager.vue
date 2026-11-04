@@ -495,11 +495,11 @@ function clearBackground() {
 .bg-body {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--space-5);
 }
 
 .section-title {
-  margin: 0 0 12px 0;
+  margin: 0 0 var(--space-3) 0;
   font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-primary-text);
@@ -514,7 +514,7 @@ function clearBackground() {
 
 /* 预览区域 */
 .preview-section {
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .background-preview {
@@ -547,7 +547,7 @@ function clearBackground() {
 
 .type-btn {flex: 1;
   min-width: 80px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 2px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #ffffff);
@@ -574,7 +574,7 @@ function clearBackground() {
 /* 颜色选择 */
 .color-picker {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
   align-items: center;
 }
 
@@ -655,7 +655,7 @@ function clearBackground() {
 
 /* 添加自定义 */
 .add-custom-section {
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .add-btn {
@@ -669,7 +669,7 @@ function clearBackground() {
 
 .custom-input {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 /* 布局：撑满剩余宽度；视觉（边框/圆角/聚焦环/暗色）由全局 .ui-input 统一 */
@@ -687,7 +687,7 @@ function clearBackground() {
   width: 100%;
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 /* .btn-clear 视觉已统一到全局 .ui-btn--danger */
@@ -702,8 +702,8 @@ function clearBackground() {
 .upload-section {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 /* .upload-btn 视觉已统一到全局 .ui-btn--success */
@@ -715,11 +715,11 @@ function clearBackground() {
 
 /* 内容区域透明度 */
 .opacity-section {
-  padding: 16px;
+  padding: var(--space-4);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 12px;
   background: var(--color-bg, #f8fafc);
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .opacity-header {
@@ -742,20 +742,20 @@ function clearBackground() {
 
 .opacity-slider {
   width: 100%;
-  margin-top: 12px;
+  margin-top: var(--space-3);
   accent-color: var(--color-primary, #3b82f6);
   cursor: pointer;
 }
 
 .opacity-hint {
-  margin: 8px 0 0 0;
+  margin: var(--space-2) 0 0 0;
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted);
 }
 
 /* 自定义渐变 */
 .custom-gradient-section {
-  margin-top: 16px;
+  margin-top: var(--space-4);
 }
 
 /* .add-gradient-btn 视觉已统一到全局 .ui-btn--primary；保留整宽布局 */
@@ -764,7 +764,7 @@ function clearBackground() {
 }
 
 .gradient-creator {
-  padding: 16px;
+  padding: var(--space-4);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 12px;
   background: var(--color-bg, #f8fafc);
@@ -772,10 +772,10 @@ function clearBackground() {
 
 .gradient-creator-row {
   display: flex;
-  gap: 16px;
+  gap: var(--space-4);
   align-items: center;
   flex-wrap: wrap;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .color-picker-group, .angle-picker-group {
@@ -807,13 +807,13 @@ function clearBackground() {
   width: 100%;
   height: 60px;
   border-radius: 8px;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
   border: 1px solid var(--color-border, #e2e8f0);
 }
 
 .gradient-creator-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 /* 响应式 */
@@ -823,7 +823,7 @@ function clearBackground() {
   }
   
   .type-btn {min-width: 70px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);
   height: 36px;}
 }

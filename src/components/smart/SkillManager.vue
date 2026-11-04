@@ -451,7 +451,7 @@ function relTime(ts: number): string {
 </template>
 
 <style scoped>
-.sm-wrap { display: flex; flex-direction: column; gap: 12px; }
+.sm-wrap { display: flex; flex-direction: column; gap: var(--space-3); }
 
 /* 搜索框：工具箱同款（父容器内居中、卡片式、聚焦高亮） */
 .sm-search-wrap { display: flex; justify-content: center; }
@@ -482,7 +482,7 @@ function relTime(ts: number): string {
 .sm-search-clear:hover { color: var(--color-primary-text); background: var(--color-bg-hover, #f1f5f9); }
 
 /* 分类药丸：工具箱同款 */
-.sm-cats { display: flex; flex-wrap: wrap; gap: 8px; }
+.sm-cats { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .sm-cat-pill {
   display: inline-flex;
   align-items: center;
@@ -507,7 +507,7 @@ function relTime(ts: number): string {
 
 /* 排序 + 操作行 */
 .sm-toolbar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
-.sm-toolbar-left, .sm-toolbar-right { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sm-toolbar-left, .sm-toolbar-right { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
 .sm-result { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 .sm-select {
   height: 36px;
@@ -536,11 +536,11 @@ function relTime(ts: number): string {
 }
 .sm-tag-reset { color: var(--color-text-muted); }
 
-.sm-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.sm-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--space-3); }
 .sm-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 14px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 10px);
@@ -618,7 +618,7 @@ function relTime(ts: number): string {
   white-space: nowrap;
 }
 .sm-name:hover { color: var(--color-primary-text); }
-.sm-meta { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); display: flex; gap: 4px; flex-wrap: wrap; }
+.sm-meta { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); display: flex; gap: var(--space-1); flex-wrap: wrap; }
 .sm-cat { color: var(--color-text-secondary); }
 .sm-dot { opacity: .6; }
 .sm-builtin {
@@ -644,7 +644,7 @@ function relTime(ts: number): string {
 .sm-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: auto; }
 .sm-spacer { flex: 1 1 auto; }
 .sm-btn {height: 36px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
   background: transparent;
@@ -668,7 +668,7 @@ function relTime(ts: number): string {
 /* 收藏筛选 + 卡片星标：与提示词 / 工作流同款 */
 .sm-fav {
   height: 36px;
-  padding: 0 8px;
+  padding: 0 var(--space-2);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #fff);
@@ -696,7 +696,7 @@ function relTime(ts: number): string {
 .sm-pager {
   display: flex;
   justify-content: flex-end;
-  margin-top: 12px;
+  margin-top: var(--space-3);
 }
 
 .sm-empty {
@@ -705,9 +705,9 @@ function relTime(ts: number): string {
   border: 1px dashed var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 10px);
 }
-.sm-empty-title { margin: 0 0 4px; font-size: var(--fs-body, 14px); font-weight: 600; color: var(--color-text); }
-.sm-empty-hint { margin: 0 0 12px; font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
-.sm-empty-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.sm-empty-title { margin: 0 0 var(--space-1); font-size: var(--fs-body, 14px); font-weight: 600; color: var(--color-text); }
+.sm-empty-hint { margin: 0 0 var(--space-3); font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
+.sm-empty-actions { display: flex; gap: var(--space-2); justify-content: center; flex-wrap: wrap; }
 
 /* 移动端：单列 + 触控目标 ≥44px */
 @media (max-width: 768px) {
@@ -715,7 +715,7 @@ function relTime(ts: number): string {
   .sm-cat-pill { min-height: 40px; }
   .sm-toolbar-left, .sm-toolbar-right { width: 100%; }
   .sm-btn {height: 36px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);}
   /* 触屏没有 hover，小铅笔常驻提示可点；放大到 34px 便于点按 */
   .sm-icon-btn {width: 34px;

@@ -594,7 +594,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 4px;
+  padding: var(--space-1);
   min-height: 0;
   
 }
@@ -626,7 +626,7 @@ onMounted(async () => {
 .sg-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 .sg-summary-card {
   padding: 12px 14px;
@@ -646,7 +646,7 @@ onMounted(async () => {
   color: var(--color-text-secondary);
 }
 .sg-summary-value {
-  margin-top: 4px;
+  margin-top: var(--space-1);
   font-size: var(--fs-h2, 22px);
   font-weight: 600;
   color: var(--color-text);
@@ -668,7 +668,7 @@ onMounted(async () => {
 .sg-subj-averages {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .sg-subj-chip {
   padding: 4px 10px;
@@ -775,7 +775,7 @@ onMounted(async () => {
 }
 .sg-form-row {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .sg-form-row .sg-form-field { flex: 1; }
 .sg-subj-label {
@@ -786,12 +786,12 @@ onMounted(async () => {
 .sg-subj-rows {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .sg-subj-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .sg-subj-name { flex: 1 1 auto; min-width: 0; }
 .sg-subj-score { width: 92px; }
@@ -820,7 +820,7 @@ onMounted(async () => {
 }
 .dialog-footer-right {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   margin-left: auto;
 }
 
@@ -847,7 +847,7 @@ html.dark .sg-summary-soft {
 .sg-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 </style>

@@ -130,7 +130,7 @@ function copyEgressIp(): void {
 
 <style scoped>
 .wb-menu-config {
-  margin-bottom: 20px;
+  margin-bottom: var(--space-5);
   padding: 14px;
   background-color: var(--ds-card, #ffffff);
   border: 1px solid var(--ds-line, #ececf0);
@@ -141,7 +141,7 @@ function copyEgressIp(): void {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .wb-menu-title {
@@ -166,7 +166,7 @@ function copyEgressIp(): void {
 .remind-fields {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .remind-field {
   display: flex;
@@ -185,7 +185,7 @@ function copyEgressIp(): void {
   color: var(--ds-text);
 }
 .remind-actions {
-  margin-top: 12px;
+  margin-top: var(--space-3);
 }
 
 /* 出口 IP 行：等宽字体展示，窄屏自动换行、不挤压按钮 */
@@ -200,13 +200,13 @@ function copyEgressIp(): void {
 .egress-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
 .egress-ip {
   min-width: 126px;
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
   text-align: center;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: var(--fs-sm, 13px);
@@ -221,7 +221,7 @@ function copyEgressIp(): void {
 }
 
 .egress-hint {
-  margin: 8px 0 0;
+  margin: var(--space-2) 0 0;
 }
 
 .egress-link {

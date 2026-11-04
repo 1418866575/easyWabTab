@@ -340,7 +340,7 @@ onMounted(async () => {
 .sr-stats-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
   flex-shrink: 0;
 }
@@ -489,7 +489,7 @@ html.dark .sr-reward-card.has-bg::before { background: rgba(17, 24, 39, 0.55); }
 .sr-detail-meta {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   background: var(--color-bg, #f9fafb);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 10px;
@@ -546,7 +546,7 @@ html.dark .sr-detail-value { color: #f9fafb; }
   align-items: center;
   flex-shrink: 0;
 }
-.sr-redeem-btn {padding: 0 12px;
+.sr-redeem-btn {padding: 0 var(--space-3);
   border: none;
   background: var(--ds-success);
   color: #fff;
@@ -608,7 +608,7 @@ html.dark .sr-detail-value { color: #f9fafb; }
   border-top: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-input, #f9fafb);
   border-radius: 0 0 14px 14px;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -650,7 +650,7 @@ html.dark .sr-detail-value { color: #f9fafb; }
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   overflow-y: auto;
 }
 .sr-hint {
@@ -665,7 +665,7 @@ html.dark .sr-detail-value { color: #f9fafb; }
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .sr-rules-item {
   display: flex;
@@ -696,7 +696,7 @@ html.dark .sr-detail-value { color: #f9fafb; }
   }
   .sr-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: var(--space-2);
   }
   .sr-reward-card {
     height: 132px;

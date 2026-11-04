@@ -255,9 +255,9 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: nowrap;
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   background-color: var(--ds-card, #ffffff);
   border-bottom: 1px solid var(--ds-line, #ececf0);
 }
@@ -265,7 +265,7 @@ onMounted(async () => {
 .ba-topbar-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-4);
   min-width: 0;
   flex: 0 1 auto;
   overflow: hidden;
@@ -274,7 +274,7 @@ onMounted(async () => {
 .ba-topbar-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex: 0 0 auto;
   margin-left: auto;
   white-space: nowrap;
@@ -285,7 +285,7 @@ onMounted(async () => {
   justify-content: center;
   gap: 6px;
   height: 36px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: 999px;
   background-color: var(--ds-card, #ffffff);
@@ -312,7 +312,7 @@ onMounted(async () => {
 }
 
 .ba-btn-sm {height: 36px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   font-size: var(--font-size-xs, 12px);}
 
 /* 主操作与全局 .ui-btn--primary 同款（不复用类名是避免牵动全局按钮组） */
@@ -389,13 +389,13 @@ onMounted(async () => {
   width: 100%;
   flex-shrink: 0;
   justify-content: flex-start;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 
 .ba-nav-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
   min-height: 38px;
   padding: 0 10px;
@@ -476,7 +476,7 @@ onMounted(async () => {
 }
 
 .ba-page-sub {
-  margin: 4px 0 0;
+  margin: var(--space-1) 0 0;
   font-size: var(--ds-fs-body-sm, 13px);
   color: var(--ds-text-3);
 }
@@ -543,9 +543,9 @@ onMounted(async () => {
 
   .ba-sync-text { display: none; }
   .ba-btn {height: 36px;
-  padding: 0 12px;}
+  padding: 0 var(--space-3);}
   .ba-btn-sm {height: 36px;
-  padding: 0 12px;}
+  padding: 0 var(--space-3);}
 }
 
 @media (prefers-reduced-motion: reduce) {

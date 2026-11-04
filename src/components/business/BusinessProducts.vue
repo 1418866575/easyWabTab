@@ -661,7 +661,7 @@ function drawerMarkupRate(): number | null {
 .bizprod-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   flex: 1;
   min-height: 0;
 }
@@ -678,28 +678,28 @@ function drawerMarkupRate(): number | null {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 
 .bizprod-tabs {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
 /* 分类 tabs 药丸样式（el-radio-button 覆写，对齐原 .bizprod-tab） */
 .bizprod-tabs :deep(.el-radio-group) {
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .bizprod-tabs :deep(.el-radio-button + .el-radio-button) {
   margin-left: 0;
 }
 
-.bizprod-tabs :deep(.el-radio-button__inner) {padding: 0 12px;
+.bizprod-tabs :deep(.el-radio-button__inner) {padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   background: var(--color-bg-card, var(--color-bg-card));
@@ -734,7 +734,7 @@ function drawerMarkupRate(): number | null {
 .bizprod-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
   align-content: start;
 }
 
@@ -771,7 +771,7 @@ function drawerMarkupRate(): number | null {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .bizprod-name {
@@ -819,7 +819,7 @@ function drawerMarkupRate(): number | null {
 
 /* 进货价自动反显标记（未售完批次均价） */
 .bizprod-price-auto {
-  margin-left: 4px;
+  margin-left: var(--space-1);
   padding: 0 5px;
   border-radius: var(--radius-full, 9999px);
   font-size: var(--fs-caption, 12px);
@@ -837,7 +837,7 @@ function drawerMarkupRate(): number | null {
 /* 字段级校验错误（提交尝试后展示）：红色说明「为什么不能保存」 */
 .bizprod-field-error {
   display: block;
-  margin-top: 4px;
+  margin-top: var(--space-1);
   font-size: var(--fs-caption, 12px);
   color: var(--color-error-text);
   line-height: 1.4;
@@ -856,7 +856,7 @@ function drawerMarkupRate(): number | null {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .bizprod-active {
@@ -938,13 +938,13 @@ html.dark .bizprod-form-avg {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .bizprod-drawer-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .bizprod-drawer-section-title {
@@ -959,7 +959,7 @@ html.dark .bizprod-form-avg {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
   font-size: var(--fs-sm, 13px);
 }
 
@@ -996,7 +996,7 @@ html.dark .bizprod-form-avg {
 .bizprod-drawer-stats {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .bizprod-drawer-stat {
@@ -1033,13 +1033,13 @@ html.dark .bizprod-form-avg {
 .bizprod-drawer-records {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .bizprod-drawer-record {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 6px 10px;
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
@@ -1076,7 +1076,7 @@ html.dark .bizprod-form-avg {
 /* el-drawer 外壳对齐原抽屉 */
 .bizprod :deep(.el-drawer__header) {
   margin-bottom: 0;
-  padding-bottom: 16px;
+  padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--color-border, var(--color-border));
 }
 

@@ -63,9 +63,9 @@ const emit = defineEmits<{ close: []; confirm: [] }>()
 
 <style scoped>
 /* 高度与滚动交给 BaseDialog 的 .bd-body（统一 padding + overflow-y:auto），这里只管内容排布 */
-.si-body { display: flex; flex-direction: column; gap: 12px; }
+.si-body { display: flex; flex-direction: column; gap: var(--space-3); }
 .si-summary { margin: 0; font-size: var(--fs-sm, 13px); color: var(--color-text); }
-.si-block { display: flex; flex-direction: column; gap: 4px; }
+.si-block { display: flex; flex-direction: column; gap: var(--space-1); }
 .si-title { margin: 0; font-size: var(--fs-caption, 12px); font-weight: 600; }
 .si-title.is-add { color: var(--color-success-text); }
 .si-title.is-upd { color: var(--color-primary-text); }

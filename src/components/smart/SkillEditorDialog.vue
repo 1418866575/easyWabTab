@@ -441,7 +441,7 @@ async function copySkillMd(): Promise<void> {
   font-weight: 600;
   color: var(--color-text);
   border-left: 3px solid var(--color-primary, #3b82f6);
-  padding-left: 8px;
+  padding-left: var(--space-2);
 }
 .sk-sec-hint { font-weight: 400; font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 .sk-row { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -450,7 +450,7 @@ async function copySkillMd(): Promise<void> {
    不再被 flex-basis:240px 撑成 240px 高的大块空白，改按内容自然高度 */
 .sk-row .sk-field { flex: 1 1 240px; }
 .sk-row .sk-field-sm { flex: 0 1 180px; }
-.sk-md { display: flex; flex-direction: column; gap: 12px; }
+.sk-md { display: flex; flex-direction: column; gap: var(--space-3); }
 .sk-md-tip { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 .sk-md-block { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .sk-md-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
@@ -518,7 +518,7 @@ async function copySkillMd(): Promise<void> {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   flex: 1 1 auto;
   max-height: none;
   overflow: visible;
@@ -526,8 +526,8 @@ async function copySkillMd(): Promise<void> {
 .sk-res-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
   font-size: var(--fs-caption, 12px);

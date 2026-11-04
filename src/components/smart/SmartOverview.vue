@@ -102,7 +102,7 @@ function relTime(ts: number): string {
 <style scoped>
 .ov-wrap { display: flex; flex-direction: column; gap: 14px; }
 
-.ov-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.ov-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-3); }
 .ov-card {
   display: flex;
   flex-direction: column;
@@ -121,7 +121,7 @@ function relTime(ts: number): string {
 .ov-card-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
 .ov-card-hint { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 
-.ov-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.ov-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-3); }
 .ov-panel {
   padding: 14px;
   border: 1px solid var(--color-border, #e5e7eb);
@@ -130,8 +130,8 @@ function relTime(ts: number): string {
 }
 .ov-panel-title { margin: 0 0 10px; font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text); }
 
-.ov-cats { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
-.ov-cat { display: grid; grid-template-columns: 80px minmax(0, 1fr) 32px; gap: 8px; align-items: center; font-size: var(--fs-caption, 12px); }
+.ov-cats { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-2); }
+.ov-cat { display: grid; grid-template-columns: 80px minmax(0, 1fr) 32px; gap: var(--space-2); align-items: center; font-size: var(--fs-caption, 12px); }
 .ov-cat-name { color: var(--color-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ov-cat-bar { display: flex; height: 8px; border-radius: 999px; overflow: hidden; background: var(--color-bg-hover, #f3f4f6); }
 .ov-cat-skills { background: var(--color-primary, #3b82f6); }
@@ -140,16 +140,16 @@ function relTime(ts: number): string {
 /* 工作流段用绿色：走 --color-success 令牌 */
 .ov-cat-workflows { background: var(--color-success, #10b981); }
 .ov-cat-num { text-align: right; color: var(--color-text-muted); }
-.ov-legend { margin: 10px 0 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted); display: flex; gap: 12px; align-items: center; }
-.ov-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
+.ov-legend { margin: 10px 0 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted); display: flex; gap: var(--space-3); align-items: center; }
+.ov-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: var(--space-1); }
 .ov-dot.is-skill { background: var(--color-primary, #3b82f6); }
 .ov-dot.is-prompt { background: var(--color-warning, #f59e0b); }
 .ov-dot.is-workflow { background: var(--color-success, #10b981); }
 
-.ov-recent { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.ov-recent { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-1); }
 .ov-recent-btn {display: grid;
   grid-template-columns: 44px minmax(0, 1fr) auto;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
   width: 100%;
   /* 列表行（非动作按钮）：不参与 24px 按钮统一，保持行高舒适 */

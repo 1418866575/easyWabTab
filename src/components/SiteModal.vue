@@ -559,7 +559,7 @@ const handleSubmit = () => {
 .skeleton-name {
   height: 18px;
   width: 60%;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .skeleton-desc {
@@ -603,7 +603,7 @@ const handleSubmit = () => {
   flex-wrap: wrap;
   align-items: center;
   gap: 10px 12px;
-  margin-bottom: 20px;
+  margin-bottom: var(--space-5);
 }
 
 .form-group label {
@@ -666,7 +666,7 @@ const handleSubmit = () => {
 
 .url-input-group {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .url-input-group .el-input {
@@ -700,11 +700,11 @@ const handleSubmit = () => {
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 10;
-  padding: 8px;
+  padding: var(--space-2);
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 4px;
+  margin-top: var(--space-1);
   max-height: 200px;
   overflow-y: auto;
 }
@@ -730,22 +730,22 @@ const handleSubmit = () => {
   display: block;
   font-size: var(--fs-caption, 12px);
   color: var(--color-error-text);
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 
 .form-hint {
   display: block;
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted);
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 
 /* 表单操作区（位于 form 内，非弹框底部条） */
 .site-form-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
-  padding-top: 8px;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
 }
 
 /* .btn-cancel 视觉已统一到全局 .ui-btn（次按钮） */
@@ -818,7 +818,7 @@ const handleSubmit = () => {
 }
 
 .icon-path {
-  margin-left: 8px;
+  margin-left: var(--space-2);
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted);
   word-break: break-all;
@@ -834,7 +834,7 @@ const handleSubmit = () => {
 
 .icon-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
 }
 
@@ -844,7 +844,7 @@ const handleSubmit = () => {
   justify-content: center;
   gap: var(--space-1, 4px);
   height: 36px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #ffffff);
@@ -868,7 +868,7 @@ const handleSubmit = () => {
   cursor: not-allowed;
 }
 
-.btn-icon-clear {padding: 0 12px;
+.btn-icon-clear {padding: 0 var(--space-3);
   color: var(--color-text-muted);
   border-color: transparent;
   height: 36px;}
@@ -882,7 +882,7 @@ const handleSubmit = () => {
 .icon-suggestion {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary);
 }
@@ -890,7 +890,7 @@ const handleSubmit = () => {
 .btn-suggestion {display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--color-primary, #3b82f6);
   border-radius: 6px;
   background: var(--color-primary-light, #eff6ff);

@@ -95,7 +95,7 @@ html.dark .ewt-pager .el-pagination__total {
   .ewt-pager.el-pagination {
     flex-wrap: wrap !important;
     justify-content: center !important;
-    row-gap: 8px !important;
+    row-gap: var(--space-2) !important;
   }
 
   /* 弹框内的分页器（健康/记账等「查看」弹框）：钉在弹框底部、右对齐，

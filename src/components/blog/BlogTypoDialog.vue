@@ -337,7 +337,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
 
 <style scoped>
 /* 弹框内边距：BaseDialog 的 flex-column 会归零 padding，这里补一指宽左右留白（约 16px） */
-.td { display: flex; flex-direction: column; gap: 12px; min-height: 0; height: 100%; padding: 0 16px; }
+.td { display: flex; flex-direction: column; gap: var(--space-3); min-height: 0; height: 100%; padding: 0 var(--space-4); }
 
 /* 搜索框：全站 .ui-search 外壳（描边/焦点环在壳上），内层透明 */
 .td-search { flex: none; }
@@ -359,8 +359,8 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding-right: 4px;
+  gap: var(--space-4);
+  padding-right: var(--space-1);
 }
 
 .td-section { display: flex; flex-direction: column; gap: 10px; }
@@ -485,10 +485,10 @@ function miniStyle(t: TypoTheme): Record<string, string> {
 .tdp {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   min-height: 0;
   height: 100%;
-  padding: 0 16px;
+  padding: 0 var(--space-4);
 }
 
 .tdp-head {
@@ -578,9 +578,9 @@ function miniStyle(t: TypoTheme): Record<string, string> {
 .tdp-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--space-2);
   flex: none;
-  padding-top: 4px;
+  padding-top: var(--space-1);
 }
 
 .tdp-btn {
@@ -625,7 +625,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
 @media (max-width: 640px) {
   .td-grid { grid-template-columns: 1fr; }
   .td-card { min-height: 0; }
-  .td { padding: 0 12px; }
-  .tdp { padding: 0 12px; }
+  .td { padding: 0 var(--space-3); }
+  .tdp { padding: 0 var(--space-3); }
 }
 </style>

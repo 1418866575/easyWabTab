@@ -823,7 +823,7 @@ async function handleDelete(id: string | null): Promise<void> {
 .bizday-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .bizday-empty {
@@ -880,7 +880,7 @@ async function handleDelete(id: string | null): Promise<void> {
   border-top: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-input, #f9fafb);
   border-radius: 0 0 14px 14px;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -920,7 +920,7 @@ async function handleDelete(id: string | null): Promise<void> {
 .bizday-expand-title {
   font-size: var(--fs-sm, 13px); font-weight: 600;
   color: var(--color-text-secondary);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 .bizday-detail-head {
   display: grid;
@@ -943,7 +943,7 @@ async function handleDelete(id: string | null): Promise<void> {
   display: grid;
   grid-template-columns: minmax(80px, 1.4fr) minmax(40px, 0.5fr) minmax(40px, 0.5fr) minmax(40px, 0.5fr) minmax(60px, 0.7fr) minmax(70px, 0.85fr);
   gap: 6px;
-  padding: 4px 4px;
+  padding: var(--space-1) var(--space-1);
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
@@ -980,7 +980,7 @@ async function handleDelete(id: string | null): Promise<void> {
 .bizday-add-bar {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 /* ===== M-03 录入提效条：复制上日 + 常卖商品 chip ===== */
@@ -989,7 +989,7 @@ async function handleDelete(id: string | null): Promise<void> {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 .bizday-frequent {
   display: flex;
@@ -1103,7 +1103,7 @@ async function handleDelete(id: string | null): Promise<void> {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  margin-right: 4px;
+  margin-right: var(--space-1);
   padding: 3px 7px;
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary);
@@ -1164,11 +1164,11 @@ async function handleDelete(id: string | null): Promise<void> {
 /* 商品进价/售价/库存上下文（单元格内辅助信息） */
 .bizday-row-context {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   flex-wrap: wrap;
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 .bizday-row-price {
   font-variant-numeric: tabular-nums;
@@ -1243,11 +1243,11 @@ async function handleDelete(id: string | null): Promise<void> {
 .bizday-revenue-field {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .bizday-revenue-hint {
-  margin-top: 4px;
+  margin-top: var(--space-1);
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted);
 }
@@ -1257,7 +1257,7 @@ async function handleDelete(id: string | null): Promise<void> {
 .bizday-note-row {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--space-2);
   margin-top: 10px;
 }
 .bizday-note-label {
@@ -1274,8 +1274,8 @@ async function handleDelete(id: string | null): Promise<void> {
 .bizday-summary-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 4px;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
 }
 .bizday-summary-cell {
   display: flex;
@@ -1359,7 +1359,7 @@ html.dark .biz-input {
 @media (max-width: 768px) {
   .ewt-table-toolbar.is-split {
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--space-2);
   }
   .bizday-toolbar-left {
     flex-wrap: wrap;

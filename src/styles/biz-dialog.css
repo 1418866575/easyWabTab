@@ -14,7 +14,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--color-border, var(--color-border));
 }
 
@@ -35,10 +35,10 @@
 
 /* 表单主体 */
 .biz-dialog-body {
-  padding: 20px;
+  padding: var(--space-5);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 /* 销售/支出/进货/产品四个业务弹框已改用 BaseDialog：
@@ -80,6 +80,6 @@
 /* 底部操作按钮区 */
 .biz-form-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   justify-content: flex-end;
 }

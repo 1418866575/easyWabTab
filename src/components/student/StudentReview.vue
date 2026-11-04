@@ -407,20 +407,20 @@ function daysClass(days: number): string {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .sr-tabs {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
-  padding: 0 4px;
+  padding: 0 var(--space-1);
 }
 .sr-stats {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 8px;
-  padding: 0 4px;
+  gap: var(--space-2);
+  padding: 0 var(--space-1);
 }
 
 .sr-stat-card {
@@ -497,7 +497,7 @@ function daysClass(days: number): string {
   border-top: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-input, #f9fafb);
   border-radius: 0 0 14px 14px;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -512,7 +512,7 @@ function daysClass(days: number): string {
   min-height: 0;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--space-2);
   
 }
 .sr-card {
@@ -522,7 +522,7 @@ function daysClass(days: number): string {
   padding: 6px 10px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   height: 150px;
   min-height: 150px;
   overflow: hidden;
@@ -535,7 +535,7 @@ function daysClass(days: number): string {
 .sr-card-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .sr-subject-badge {
@@ -609,7 +609,7 @@ function daysClass(days: number): string {
 
 .sr-card-foot {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   justify-content: flex-end;
 }
 
@@ -645,7 +645,7 @@ function daysClass(days: number): string {
 .sr-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .sr-field label {
@@ -686,7 +686,7 @@ function daysClass(days: number): string {
 .sr-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 </style>

@@ -528,7 +528,7 @@ onMounted(async () => {
 .wb-diet {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 /* 卡片外框 / 卡片标题 / 统计数字的统一取值在全局 styles/workbench.css（.wb-content .stat-*），
@@ -576,12 +576,12 @@ onMounted(async () => {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-shrink: 0;
 }
 /* .btn-add 视觉已统一到全局 .ui-btn--primary（style.css） */
 
-.btn-toggle-list {padding: 0 12px;
+.btn-toggle-list {padding: 0 var(--space-3);
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
@@ -604,7 +604,7 @@ onMounted(async () => {
 .dt-item {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 14px 16px 12px;
   background: var(--color-bg-card, var(--color-bg-card));
   background-image: linear-gradient(
@@ -621,7 +621,7 @@ onMounted(async () => {
 .dt-item-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .dt-date {
@@ -692,7 +692,7 @@ onMounted(async () => {
 .dt-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   margin-top: auto;
 }
 
@@ -765,7 +765,7 @@ onMounted(async () => {
 .form-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   justify-content: flex-end;
 }
 
@@ -849,7 +849,7 @@ html.dark .btn-toggle-list {
 
 .dt-list-pager {
   flex: 0 0 auto;
-  padding: 12px 20px 16px;
+  padding: var(--space-3) var(--space-5) var(--space-4);
   border-top: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-input, #f9fafb);
   border-radius: 0 0 14px 14px;
@@ -865,7 +865,7 @@ html.dark .btn-toggle-list {
 @media (max-width: 768px) {
   .stat-header {
     flex-wrap: wrap;
-    row-gap: 8px;
+    row-gap: var(--space-2);
   }
   .stat-panel-actions {
     order: 3;

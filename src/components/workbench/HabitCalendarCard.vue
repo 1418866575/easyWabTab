@@ -258,7 +258,7 @@ function onCardClick(): void {
 .hb-cal-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .hb-cal-dot {
@@ -331,7 +331,7 @@ function onCardClick(): void {
 .hb-cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .hb-cal-wk {

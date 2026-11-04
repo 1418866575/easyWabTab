@@ -130,7 +130,7 @@ function onSelect(id: string): void {
   left: 0;
   z-index: 61;
   width: 280px;
-  padding: 12px;
+  padding: var(--space-3);
   background-color: var(--color-bg-card, #ffffff);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 10px;
@@ -139,7 +139,7 @@ function onSelect(id: string): void {
 }
 
 .wls-title {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary);
 }
@@ -151,14 +151,14 @@ function onSelect(id: string): void {
   max-height: 260px;
   overflow-y: auto;
   display: grid;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .wls-item {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 8px 10px;
   background: transparent;
   border: 1px solid transparent;

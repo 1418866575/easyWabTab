@@ -1201,7 +1201,7 @@ const skillInstall = [
   font-size: var(--fs-md, 15px);
   font-weight: 600;
   color: var(--color-primary-text);
-  padding-bottom: 8px;
+  padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--color-border, #e2e8f0);
 }
 
@@ -1209,14 +1209,14 @@ const skillInstall = [
 .features-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .feature-item {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 12px;
+  padding: var(--space-3);
   background-color: var(--color-bg, #f8fafc);
   border-radius: 10px;
   border: 1px solid var(--color-border, #e2e8f0);
@@ -1229,7 +1229,7 @@ const skillInstall = [
 }
 
 .feature-content h4 {
-  margin: 0 0 4px 0;
+  margin: 0 0 var(--space-1) 0;
   font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text);
@@ -1246,14 +1246,14 @@ const skillInstall = [
 .shortcuts-list {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .shortcut-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   background-color: var(--color-bg, #f8fafc);
   border-radius: 8px;
 }
@@ -1284,8 +1284,8 @@ const skillInstall = [
 .mode-item {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 12px;
+  gap: var(--space-3);
+  padding: var(--space-3);
   background-color: var(--color-bg, #f8fafc);
   border-radius: 10px;
 }
@@ -1321,10 +1321,10 @@ const skillInstall = [
 /* 数据存储 */
 .storage-list {
   margin: 0;
-  padding-left: 20px;
+  padding-left: var(--space-5);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .storage-list li {
@@ -1364,8 +1364,8 @@ const skillInstall = [
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 16px;
+  gap: var(--space-4);
+  padding: var(--space-4);
   background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
   border-radius: 12px;
   border: 1px solid #bfdbfe;
@@ -1374,7 +1374,7 @@ const skillInstall = [
 .download-info {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: var(--space-3);
   flex: 1;
   min-width: 0;
 }
@@ -1386,7 +1386,7 @@ const skillInstall = [
 }
 
 .download-info h4 {
-  margin: 0 0 4px 0;
+  margin: 0 0 var(--space-1) 0;
   font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text);
@@ -1410,7 +1410,7 @@ const skillInstall = [
 .sync-account {
   list-style: none;
   padding: 0;
-  margin: 8px 0;
+  margin: var(--space-2) 0;
   display: grid;
   gap: 6px;
 }
@@ -1418,7 +1418,7 @@ const skillInstall = [
 .sync-account li {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   font-size: var(--fs-sm, 13px);
   flex-wrap: wrap;
 }
@@ -1429,7 +1429,7 @@ const skillInstall = [
   color: var(--color-text-secondary);
 }
 
-.btn-copy {padding: 0 12px;
+.btn-copy {padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);
   border: 1px solid var(--ds-line-strong);
   background: var(--color-bg-card, #ffffff);
@@ -1447,15 +1447,15 @@ const skillInstall = [
 .download-info .sync-note {
   display: flex;
   align-items: flex-start;
-  gap: 4px;
-  margin-top: 8px;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
   line-height: 1.6;
 }
 
 .btn-download {display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   background-color: var(--color-primary, #3b82f6);
   color: white;
   border: none;
@@ -1475,7 +1475,7 @@ const skillInstall = [
 .download-actions {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   flex-shrink: 0;
 }
 
@@ -1504,7 +1504,7 @@ const skillInstall = [
 .panels-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .panel-item {
@@ -1520,7 +1520,7 @@ const skillInstall = [
 .panel-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .panel-icon {
@@ -1565,7 +1565,7 @@ const skillInstall = [
 .formula-list {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .formula-item {
@@ -1609,7 +1609,7 @@ const skillInstall = [
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .flow-list li {
@@ -1676,7 +1676,7 @@ const skillInstall = [
 
 /* 技能说明 */
 .sub-title {
-  margin: 4px 0 0 0;
+  margin: var(--space-1) 0 0 0;
   font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text);
@@ -1698,7 +1698,7 @@ const skillInstall = [
 .skill-prompt {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   padding: 12px 14px;
   background-color: var(--color-bg, #f8fafc);
   border: 1px solid var(--color-border, #e2e8f0);
@@ -1728,7 +1728,7 @@ const skillInstall = [
   display: flex;
   align-items: flex-start;
   gap: 6px;
-  margin: 4px 0 0 0;
+  margin: var(--space-1) 0 0 0;
   padding: 10px 12px;
   background-color: var(--ds-primary-soft);
   border: 1px solid #dbeafe;

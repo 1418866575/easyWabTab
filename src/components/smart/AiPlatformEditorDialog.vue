@@ -290,7 +290,7 @@ const iconPreview = computed(() => {
 }
 .apf-row {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .apf-row > .apf-field {
   flex: 1;
@@ -371,7 +371,7 @@ const iconPreview = computed(() => {
 .apf-switch {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary);
   cursor: pointer;

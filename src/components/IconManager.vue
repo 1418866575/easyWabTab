@@ -374,8 +374,8 @@ function usedSiteNames(icon: MergedIcon): string {
 
 /* 上传区域 */
 .add-form {
-  margin-bottom: 24px;
-  padding-bottom: 24px;
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-6);
   border-bottom: 1px solid var(--color-border, #e2e8f0);
 }
 
@@ -383,12 +383,12 @@ function usedSiteNames(icon: MergedIcon): string {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text-secondary);
-  margin: 0 0 12px 0;
+  margin: 0 0 var(--space-3) 0;
 }
 
 .add-form-row {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
 }
 
@@ -412,7 +412,7 @@ function usedSiteNames(icon: MergedIcon): string {
 
 /* 搜索 + 过滤 */
 .filter-bar {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 /* 输入框视觉统一到全局 .ui-input，这里只保留宽度 */
@@ -422,15 +422,15 @@ function usedSiteNames(icon: MergedIcon): string {
 
 /* 分类页签：皮肤由 common/BaseTabs.vue 提供，这里只保留底部间距 */
 .icon-cat-tabs {
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 /* 图标网格 */
 .icon-manager-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 12px;
-  margin-bottom: 24px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
 }
 
 .icon-manager-item {
@@ -438,7 +438,7 @@ function usedSiteNames(icon: MergedIcon): string {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px 8px;
+  padding: var(--space-3) var(--space-2);
   border-radius: 8px;
   border: 1px solid var(--color-border, #e2e8f0);
   background: var(--color-bg, #f8fafc);
@@ -490,7 +490,7 @@ function usedSiteNames(icon: MergedIcon): string {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
   border-radius: 8px;
   overflow: hidden;
   background: var(--color-bg-hover, #f1f5f9);
@@ -515,9 +515,9 @@ function usedSiteNames(icon: MergedIcon): string {
 
 .icon-manager-meta {
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
   align-items: center;
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 
 .icon-manager-category {
@@ -544,11 +544,11 @@ function usedSiteNames(icon: MergedIcon): string {
 .edit-input {
   width: 100%;
   text-align: center;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 
 /* 按钮 */
-.btn-icon {padding: 0 12px;
+.btn-icon {padding: 0 var(--space-3);
   background: none;
   border: none;
   cursor: pointer;
@@ -577,9 +577,9 @@ function usedSiteNames(icon: MergedIcon): string {
 /* 导入导出 */
 .import-export-bar {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
-  padding-top: 20px;
+  padding-top: var(--space-5);
   border-top: 1px solid var(--color-border, #e2e8f0);
 }
 

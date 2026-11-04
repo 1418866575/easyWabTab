@@ -647,14 +647,14 @@ onUnmounted(() => {
 .wb-countdown {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 /* ===== 查询卡片（第一行字段 + 第二行按钮靠右） ===== */
 .cd-search-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   padding: 14px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
@@ -665,14 +665,14 @@ onUnmounted(() => {
 .cd-search-fields {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
 .cd-search-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .search-label {
@@ -763,7 +763,7 @@ onUnmounted(() => {
 .cd-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
   min-width: 0;
 }
@@ -860,7 +860,7 @@ html.dark .reminded-badge {
 .cd-remaining {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--space-2);
   flex-shrink: 0;
   font-weight: 700;
 }
@@ -901,7 +901,7 @@ html.dark .reminded-badge {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
@@ -914,7 +914,7 @@ html.dark .reminded-badge {
 .front-toggle {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted, var(--color-text-muted));
   cursor: pointer;
@@ -927,21 +927,21 @@ html.dark .reminded-badge {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
   margin-top: auto;
 }
 
 .move-btns {
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 /* ===== 分类标签页 ===== */
 .cd-cat-tabs {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
@@ -949,7 +949,7 @@ html.dark .reminded-badge {
 
 /* ===== 表单（新增/编辑弹框）===== */
 .dialog-body {
-  padding: 20px;
+  padding: var(--space-5);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -1044,7 +1044,7 @@ html.dark .reminded-badge {
 .color-picker {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
@@ -1064,7 +1064,7 @@ html.dark .reminded-badge {
 .preview-row {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 10px 12px;
   background: var(--color-bg-card, var(--color-bg-hover));
   border-radius: var(--radius-md, 8px);
@@ -1089,7 +1089,7 @@ html.dark .reminded-badge {
 
 .form-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   justify-content: flex-end;
 }
 
@@ -1221,7 +1221,7 @@ html.dark .cat-default {
 .cd-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
@@ -1248,7 +1248,7 @@ html.dark .cat-default {
   }
 
   .cd-card {
-    gap: 8px;
+    gap: var(--space-2);
     padding: 12px 12px 12px 14px;
   }
 

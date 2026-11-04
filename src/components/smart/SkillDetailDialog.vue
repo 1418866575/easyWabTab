@@ -141,14 +141,14 @@ const previewText = computed(() => {
 <style scoped>
 /* 高度与滚动交给 BaseDialog 的 .bd-body（统一 padding + overflow-y:auto），这里只管内容排布 */
 .skd-body { display: flex; flex-direction: column; gap: 14px; }
-.skd-sec { display: flex; flex-direction: column; gap: 8px; }
+.skd-sec { display: flex; flex-direction: column; gap: var(--space-2); }
 .skd-title {
   margin: 0;
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text);
   border-left: 3px solid var(--color-primary, #3b82f6);
-  padding-left: 8px;
+  padding-left: var(--space-2);
 }
 
 .skd-fm { margin: 0; display: grid; grid-template-columns: 140px 1fr; gap: 4px 10px; font-size: var(--fs-sm, 13px); }
@@ -157,7 +157,7 @@ const previewText = computed(() => {
 .skd-fm-val { margin: 0; color: var(--color-text); overflow-wrap: anywhere; }
 
 .skd-content {
-  padding: 12px;
+  padding: var(--space-3);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 8px);
   background: var(--color-bg-card, #fff);
@@ -166,7 +166,7 @@ const previewText = computed(() => {
   color: var(--color-text);
   overflow-wrap: anywhere;
 }
-.skd-content :deep(p) { margin: 0 0 8px; }
+.skd-content :deep(p) { margin: 0 0 var(--space-2); }
 .skd-content :deep(p:last-child) { margin-bottom: 0; }
 .skd-content :deep(pre) {
   padding: 10px;
@@ -175,14 +175,14 @@ const previewText = computed(() => {
   overflow-x: auto;
 }
 .skd-content :deep(code) { padding: 1px 5px; border-radius: 4px; background: var(--color-bg-hover, #f3f4f6); font-size: var(--fs-caption, 12px); }
-.skd-content :deep(ul), .skd-content :deep(ol) { margin: 0 0 8px; padding-left: 20px; }
+.skd-content :deep(ul), .skd-content :deep(ol) { margin: 0 0 var(--space-2); padding-left: var(--space-5); }
 
-.skd-res { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.skd-res { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-1); }
 .skd-res-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
 }

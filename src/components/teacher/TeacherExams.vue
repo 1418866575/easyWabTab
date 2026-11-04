@@ -282,7 +282,7 @@ async function downloadTemplate(): Promise<void> {
 
 <style scoped>
 .ex-add {
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 /* 头部左侧分组：标题 + 导入/下载工具条同处左侧，与右侧打印/导出分隔 */

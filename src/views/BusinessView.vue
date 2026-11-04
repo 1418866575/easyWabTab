@@ -577,9 +577,9 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--space-4);
   /* 左右留白对齐教师顶栏（12px 16px）与个人工作台（12px 16px），三处顶栏对齐线一致 */
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   background-color: var(--color-bg-card, #ffffff);
   border-bottom: 1px solid var(--color-border, #e2e8f0);
 }
@@ -587,7 +587,7 @@ onMounted(async () => {
 .bs-header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   min-width: 0;
 }
 
@@ -611,7 +611,7 @@ onMounted(async () => {
 .bs-header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-shrink: 0;
 }
 
@@ -628,8 +628,8 @@ onMounted(async () => {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 12px 8px;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-2);
   background-color: var(--color-bg-card, #ffffff);
   border-right: 1px solid var(--color-border, #e2e8f0);
   transition: width 0.2s ease;
@@ -643,14 +643,14 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: var(--space-6);
   overflow-y: auto;
 }
 
 .bs-gate-card {
   width: 100%;
   max-width: 460px;
-  padding: 24px;
+  padding: var(--space-6);
   background-color: var(--color-bg-card, #ffffff);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 14px;
@@ -658,14 +658,14 @@ onMounted(async () => {
 }
 
 .bs-gate-title {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   font-size: var(--fs-title, 18px);
   font-weight: 600;
   color: var(--color-text);
 }
 
 .bs-gate-desc {
-  margin: 0 0 16px;
+  margin: 0 0 var(--space-4);
   font-size: var(--fs-sm, 13px);
   line-height: 1.7;
   color: var(--color-text-secondary);
@@ -680,7 +680,7 @@ onMounted(async () => {
 
 .bs-gate-field {
   display: grid;
-  gap: 4px;
+  gap: var(--space-1);
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary);
 }
@@ -699,9 +699,9 @@ onMounted(async () => {
 .bs-year-banner {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
   padding: 10px 14px;
   background-color: #fffbeb;
   border: 1px solid #fcd34d;
@@ -726,7 +726,7 @@ onMounted(async () => {
   width: 100%;
   flex-shrink: 0;
   justify-content: flex-start;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 
 /* 收起态（56px 仅图标）：与教师台 .tv-shell.is-collapsed .tv-nav-collapse 一致——居中且去掉横向内边距 */
@@ -749,7 +749,7 @@ onMounted(async () => {
 .bs-menu-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 9px 10px;
   border: 1px solid transparent;
   border-radius: var(--radius-sm, 4px);
@@ -790,8 +790,9 @@ onMounted(async () => {
 .bs-content {
   flex: 1;
   /* 与教师工作台内容区（.tv-content 16px）、个人工作台（.wb-content 16px）一致；
-     移动端由下方 @media 覆盖为 12px + 底栏留白 */
-  padding: 16px;
+     移动端由下方 @media 覆盖为 12px + 底栏留白。
+     具体值由界面美化「内容区边距」调节（--ui-content-pad，默认 16px）。 */
+  padding: var(--ui-content-pad);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -918,7 +919,7 @@ html.dark .bs-stall-name {
   .bs-header {
     flex-direction: column;
     align-items: stretch;
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .bs-header-left {
@@ -966,7 +967,7 @@ html.dark .bs-stall-name {
     width: 100%;
     flex: 0 0 auto;
     flex-direction: row;
-    gap: 4px;
+    gap: var(--space-1);
     padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
     overflow-x: auto;
     overflow-y: hidden;
@@ -1062,7 +1063,8 @@ html.dark .bs-stall-name {
      实测（iPhone13 390×664）底栏实际高 57px，原 64px 留白扣除后只剩 7px 间距，
      分页器/末条内容紧贴菜单栏，视觉上像「点不到」→ 提到 76px，留出约 19px 呼吸位。 */
   .bs-content {
-    padding: 12px 12px calc(76px + env(safe-area-inset-bottom, 0px));
+    /* 左右留白随「内容区边距」档位走（默认 16 → 移动端 12）；底部仍是避让固定底栏的固定值 */
+    padding: var(--ui-content-pad-sm) var(--ui-content-pad-sm) calc(76px + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -1155,12 +1157,12 @@ html.dark .bs-stall-name {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .bs-fab-action {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   min-height: 40px;
   padding: 8px 14px;
   font-size: var(--fs-sm, 13px);

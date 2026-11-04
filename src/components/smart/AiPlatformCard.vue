@@ -218,7 +218,7 @@ function onRemove(): void {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: var(--space-1);
   margin: 0;
   font-size: var(--fs-body, 14px);
   font-weight: 600;
@@ -290,7 +290,7 @@ function onRemove(): void {
 .card-menu-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
   min-height: 36px;
   padding: 0 10px;

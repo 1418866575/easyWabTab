@@ -200,12 +200,12 @@ const sortedCustomCategories = computed(() =>
   font-size: var(--fs-title, 18px);
   font-weight: 600;
   color: var(--color-text);
-  margin: 0 0 20px 0;
+  margin: 0 0 var(--space-5) 0;
 }
 
 .dm-add-form {
-  margin-bottom: 24px;
-  padding-bottom: 24px;
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-6);
   border-bottom: 1px solid var(--color-border, #e2e8f0);
 }
 
@@ -214,19 +214,19 @@ const sortedCustomCategories = computed(() =>
   font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text-secondary);
-  margin: 0 0 12px 0;
+  margin: 0 0 var(--space-3) 0;
 }
 
 .dm-add-row {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .dm-icon-input {
   width: 48px;
   text-align: center;
   font-size: var(--fs-title, 18px);
-  padding: 8px;
+  padding: var(--space-2);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-sm, 4px);
   background: var(--color-bg, #fff);
@@ -252,10 +252,10 @@ const sortedCustomCategories = computed(() =>
 }
 
 .dm-icon-suggestions {
-  margin-top: 8px;
+  margin-top: var(--space-2);
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   flex-wrap: wrap;
 }
 
@@ -264,7 +264,7 @@ const sortedCustomCategories = computed(() =>
   color: var(--color-text-muted);
 }
 
-.dm-icon-btn {padding: 0 12px;
+.dm-icon-btn {padding: 0 var(--space-3);
   background: var(--color-bg-hover, #f1f5f9);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-sm, 4px);
@@ -280,23 +280,23 @@ const sortedCustomCategories = computed(() =>
 }
 
 .dm-section {
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .dm-section-title {
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .dm-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 10px 12px;
   background: var(--color-bg-hover, #f8fafc);
   border-radius: var(--radius-sm, 4px);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .dm-item.built-in {
@@ -357,7 +357,7 @@ const sortedCustomCategories = computed(() =>
 .dm-count {
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-muted);
-  margin-right: 8px;
+  margin-right: var(--space-2);
 }
 
 .dm-edit-icon {
@@ -379,7 +379,7 @@ const sortedCustomCategories = computed(() =>
   color: var(--color-text);
 }
 
-.dm-btn-icon {padding: 0 12px;
+.dm-btn-icon {padding: 0 var(--space-3);
   background: none;
   border: none;
   cursor: pointer;
@@ -402,7 +402,7 @@ const sortedCustomCategories = computed(() =>
   text-align: center;
   color: var(--color-text-muted);
   font-size: var(--fs-body, 14px);
-  padding: 20px;
+  padding: var(--space-5);
 }
 
 /* ===== 移动端适配 =====
@@ -417,7 +417,7 @@ const sortedCustomCategories = computed(() =>
   /* 列表项允许换行，避免名称与操作区互相挤压 */
   .dm-item {
     flex-wrap: wrap;
-    row-gap: 8px;
+    row-gap: var(--space-2);
   }
 
   /* 排序按钮放大到可点（原 20×16px 几乎无法命中），并改为横向排列便于点击 */

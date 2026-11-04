@@ -690,7 +690,7 @@ onMounted(async () => {
 .wb-todo {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 /* ===== 查询区 ===== */
@@ -705,19 +705,19 @@ onMounted(async () => {
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
-.td-search-fields { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+.td-search-fields { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-4); }
 .td-field { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
 .td-field-grow { flex: 0 0 auto; min-width: 0; }
 .td-field-grow :is(.td-field-desc, .td-field-title) { width: 200px; }
 .td-field-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, var(--color-text-secondary)); }
-.td-search-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.td-search-actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
 
 .search-select {
   width: 130px;
   flex-shrink: 0;
 }
 
-.search-btn {padding: 0 12px;
+.search-btn {padding: 0 var(--space-3);
   background: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
@@ -732,7 +732,7 @@ onMounted(async () => {
   background: var(--color-primary-hover, var(--color-primary-hover));
 }
 
-.search-reset-btn {padding: 0 12px;
+.search-reset-btn {padding: 0 var(--space-3);
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
@@ -753,7 +753,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 
@@ -768,7 +768,7 @@ onMounted(async () => {
 .td-headbar-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
@@ -776,7 +776,7 @@ onMounted(async () => {
 .td-cat-tabs {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
@@ -847,7 +847,7 @@ onMounted(async () => {
   border-top: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-input, #f9fafb);
   border-radius: 0 0 14px 14px;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -966,11 +966,11 @@ onMounted(async () => {
 }
 
 /* 编辑页状态操作区：移动端补齐状态入口，按钮 + 轻提示 */
-.td-status-group { margin-bottom: 12px; }
+.td-status-group { margin-bottom: var(--space-3); }
 .td-status-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 .td-status-btn { min-width: 104px; }
@@ -1021,7 +1021,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--space-2);
   margin-top: auto;
 }
 
@@ -1096,7 +1096,7 @@ onMounted(async () => {
 .color-picker {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
@@ -1140,11 +1140,11 @@ onMounted(async () => {
 
 .form-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   justify-content: flex-end;
 }
 
-.btn-save {padding: 0 12px;
+.btn-save {padding: 0 var(--space-3);
   background: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
@@ -1310,13 +1310,13 @@ html.dark .td-cat-badge {
 .td-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 .td-toolbar-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
   justify-content: flex-end;
 }

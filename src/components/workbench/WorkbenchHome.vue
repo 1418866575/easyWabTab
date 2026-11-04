@@ -451,14 +451,14 @@ async function handleQuickNote(): Promise<void> {
 .wb-home {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 /* ===== 概览网格（单网格：所有卡统一密度；桌面 6 列 / 平板 3 列 / 手机 1 列） ===== */
 .home-overview-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
   align-items: start;
 }
 
@@ -469,8 +469,8 @@ async function handleQuickNote(): Promise<void> {
 .bento-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 16px;
+  gap: var(--space-2);
+  padding: var(--space-4);
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-lg, 12px);
@@ -513,7 +513,7 @@ async function handleQuickNote(): Promise<void> {
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--space-4);
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--color-primary, #3b82f6) 8%, transparent), transparent),
     var(--color-bg-card, var(--color-bg-card));
@@ -522,7 +522,7 @@ async function handleQuickNote(): Promise<void> {
 .greeting-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   min-width: 0;
 }
 
@@ -565,7 +565,7 @@ async function handleQuickNote(): Promise<void> {
   flex-direction: row;
   align-items: stretch;
   gap: 0;
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
 }
 
 .ov-cell {
@@ -575,7 +575,7 @@ async function handleQuickNote(): Promise<void> {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 12px 8px;
+  padding: var(--space-3) var(--space-2);
   background: transparent;
   border: none;
   border-radius: var(--radius-md, 8px);
@@ -616,7 +616,7 @@ async function handleQuickNote(): Promise<void> {
 .ov-sep {
   width: 1px;
   align-self: stretch;
-  margin: 12px 0;
+  margin: var(--space-3) 0;
   background: var(--color-border, var(--color-border));
 }
 
@@ -636,7 +636,7 @@ async function handleQuickNote(): Promise<void> {
 
 .quick-add-row {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .quick-add-input {
@@ -678,7 +678,7 @@ async function handleQuickNote(): Promise<void> {
 .todo-stat-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--space-2);
   margin-top: 10px;
 }
 
@@ -688,7 +688,7 @@ async function handleQuickNote(): Promise<void> {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  padding: 8px 4px;
+  padding: var(--space-2) var(--space-1);
   min-width: 0;
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
@@ -722,8 +722,8 @@ async function handleQuickNote(): Promise<void> {
   z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px;
+  gap: var(--space-2);
+  padding: var(--space-3);
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-primary, var(--color-primary));
   border-radius: var(--radius-md, 8px);
@@ -749,14 +749,14 @@ async function handleQuickNote(): Promise<void> {
 .habit-detail-row {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .habit-detail-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .habit-detail-name {
@@ -807,7 +807,7 @@ async function handleQuickNote(): Promise<void> {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .ring-wrap {
@@ -849,7 +849,7 @@ async function handleQuickNote(): Promise<void> {
 
 /* ===== 列表面板 ===== */
 .bento-panel {
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .bento-panel.is-clickable {
@@ -864,7 +864,7 @@ async function handleQuickNote(): Promise<void> {
 .panel-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .panel-header h3 {
@@ -880,7 +880,7 @@ async function handleQuickNote(): Promise<void> {
 .panel-icon {
   display: inline-flex;
   align-items: center;
-  margin-right: 4px;
+  margin-right: var(--space-1);
 }
 
 /* ===== 列表 ===== */
@@ -890,7 +890,7 @@ async function handleQuickNote(): Promise<void> {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   /* 列表卡限高 + 内部滚动，避免长列表把整行撑高、破坏单屏一瞥 */
   max-height: 224px;
   overflow-y: auto;
@@ -985,7 +985,7 @@ async function handleQuickNote(): Promise<void> {
   text-align: center;
   color: var(--color-text-muted, var(--color-text-muted));
   font-size: var(--fs-sm, 13px);
-  padding: 24px 12px;
+  padding: var(--space-6) var(--space-3);
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);

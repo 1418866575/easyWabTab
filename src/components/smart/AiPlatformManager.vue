@@ -269,7 +269,7 @@ onDeactivated(() => {
 .ap-wrap {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   min-width: 0;
 }
 
@@ -308,7 +308,7 @@ onDeactivated(() => {
 .ap-groups {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
   justify-content: center;
 }
 .ap-pill {
@@ -316,7 +316,7 @@ onDeactivated(() => {
   align-items: center;
   gap: 6px;
   height: 30px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   background: var(--color-bg-card);
@@ -347,14 +347,14 @@ onDeactivated(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 .ap-toolbar-left,
 .ap-toolbar-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 .ap-sort {
@@ -384,10 +384,10 @@ onDeactivated(() => {
 .ap-sections {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 .ap-section-title {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
   color: var(--color-text-secondary);
@@ -403,7 +403,7 @@ onDeactivated(() => {
 .ap-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 /* ---------- 空态 ---------- */
@@ -425,8 +425,8 @@ onDeactivated(() => {
 }
 .ap-empty-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 4px;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
 }
 
 @media (max-width: 768px) {

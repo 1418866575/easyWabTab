@@ -482,7 +482,7 @@ async function downloadTemplate(): Promise<void> {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   margin-bottom: 10px;
 }
 
@@ -495,7 +495,7 @@ async function downloadTemplate(): Promise<void> {
 .stu-form-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .stu-form-label {
   flex: 0 0 72px;
@@ -537,7 +537,7 @@ async function downloadTemplate(): Promise<void> {
 }
 .stu-avatar-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .stu-avatar-tip {
   flex-basis: 100%;
@@ -549,11 +549,11 @@ async function downloadTemplate(): Promise<void> {
 /* 明细表组合搜索区：允许换行，避免控件挤压 */
 .stu-search {
   flex-wrap: wrap;
-  row-gap: 8px;
+  row-gap: var(--space-2);
 }
 
 .stu-list-pager {
-  margin-top: 12px;
+  margin-top: var(--space-3);
 }
 
 @media (max-width: 768px) {

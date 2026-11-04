@@ -1314,7 +1314,7 @@ onUnmounted(() => {
 .wb-genealogy {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 /* Tab 皮肤由 common/BaseTabs.vue 提供（原下划线式页签已移除） */
@@ -1330,7 +1330,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 8px 4px;
+  padding: var(--space-2) var(--space-1);
 }
 .fn-paibei-row {
   display: flex;
@@ -1350,9 +1350,9 @@ onUnmounted(() => {
 }
 html.dark .fn-paibei-row { color: var(--color-text); }
 html.dark .fn-paibei-sep { color: var(--color-border, #374151); }
-.td-toolbar-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.td-toolbar-left { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 /* 工具栏右侧组：导入 / 导出 紧贴视图切换（卡片）按钮，is-split 下贴右侧、小屏自动换行 */
-.td-toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.td-toolbar-right { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; justify-content: flex-end; }
 
 /* ===== 表格容器 ===== */
 .fg-table-wrap {
@@ -1394,7 +1394,7 @@ html.dark .fn-paibei-sep { color: var(--color-border, #374151); }
   border-top: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-input, #f9fafb);
   border-radius: 0 0 14px 14px;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -1429,7 +1429,7 @@ html.dark .fn-paibei-sep { color: var(--color-border, #374151); }
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--space-2);
   margin-top: auto;
 }
 /* .btn-delete 视觉已统一到全局 .ui-btn--danger（style.css） */
@@ -1441,7 +1441,7 @@ html.dark .fn-paibei-sep { color: var(--color-border, #374151); }
 .fg-tree-bar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   padding: 10px 14px;
   background: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #e5e7eb);
@@ -1457,11 +1457,11 @@ html.dark .fn-paibei-sep { color: var(--color-border, #374151); }
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 10px;
 }
-.fg-stats-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fg-stats-row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .fg-stat-chip {
   display: inline-flex;
   align-items: baseline;
-  gap: 4px;
+  gap: var(--space-1);
   padding: 3px 10px;
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary);
@@ -1489,7 +1489,7 @@ html.dark .fg-age-preview { border-color: var(--color-border, #374151); }
 
 .fg-tree-info { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
 .fg-tree-muted { color: var(--color-text-muted); }
-.fg-mindmap { display: flex; flex-direction: column; gap: 6px; padding: 4px 0; flex: 0 0 auto; min-height: 0;  }
+.fg-mindmap { display: flex; flex-direction: column; gap: 6px; padding: var(--space-1) 0; flex: 0 0 auto; min-height: 0;  }
 .fg-rel { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary); }
 
 /* ===== 关系弹框 ===== */
@@ -1497,20 +1497,20 @@ html.dark .fg-age-preview { border-color: var(--color-border, #374151); }
 .fg-rel-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px;
+  gap: var(--space-2);
+  padding: var(--space-3);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 10px;
 }
 .fg-rel-title { font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text); }
 .fg-rel-empty { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
-.fg-rel-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: var(--fs-sm, 13px); color: var(--color-text); }
-.fg-rel-add { display: flex; gap: 8px; }
+.fg-rel-item { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: var(--fs-sm, 13px); color: var(--color-text); }
+.fg-rel-add { display: flex; gap: var(--space-2); }
 .fg-rel-select { flex: 1; }
 .fg-rel-hint { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 
 /* ===== 弹框通用 ===== */
-.dialog-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.dialog-body { padding: var(--space-5); display: flex; flex-direction: column; gap: 14px; }
 /* 新增/编辑弹框：两列网格（除备注整行），降低弹框高度 */
 .fg-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
 .fg-form-grid :deep(.el-input),
@@ -1527,7 +1527,7 @@ html.dark .fg-age-preview { border-color: var(--color-border, #374151); }
 .field-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
 .field-gender { width: 140px; }
 .field-date { width: 170px; }
-.form-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.form-actions { display: flex; gap: var(--space-2); justify-content: flex-end; }
 
 /* PC 端隐藏移动端独占按钮 */
 .mobile-only-action { display: none !important; }
@@ -1557,7 +1557,7 @@ html.dark .fg-age-preview { border-color: var(--color-border, #374151); }
 }
 .avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
 .avatar-placeholder { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
-.avatar-actions { display: flex; align-items: center; gap: 8px; }
+.avatar-actions { display: flex; align-items: center; gap: var(--space-2); }
 .avatar-file { display: none; }
 .fg-name-avatar { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
 .fg-name-initial {

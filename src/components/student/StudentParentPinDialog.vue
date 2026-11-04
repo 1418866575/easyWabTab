@@ -313,7 +313,7 @@ const KEYPAD_ROWS: string[][] = [
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: var(--space-5);
 }
 .st-pin-dots { display: flex; gap: 14px; justify-content: center; }
 .st-pin-dot {
@@ -328,7 +328,7 @@ const KEYPAD_ROWS: string[][] = [
   transform: scale(1.08);
 }
 .st-pin-locked {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: var(--space-2);
   padding: 10px 14px; border-radius: 10px;
   background: rgba(239, 68, 68, 0.1); color: var(--color-error-text);
   font-size: var(--fs-body, 14px); width: 100%; justify-content: center;
@@ -364,15 +364,15 @@ const KEYPAD_ROWS: string[][] = [
 }
 .st-pin-key-empty { visibility: hidden; }
 @media (max-width: 420px) {
-  .st-pin-body { gap: 16px; }
+  .st-pin-body { gap: var(--space-4); }
   .st-pin-key { height: 48px; font-size: var(--fs-title, 18px); }
   .st-pin-dot { width: 12px; height: 12px; }
-  .st-pin-dots { gap: 12px; }
+  .st-pin-dots { gap: var(--space-3); }
 }
 .st-pin-confirm {
   width: 100%;
-  padding: 12px;
-  margin-top: 8px;
+  padding: var(--space-3);
+  margin-top: var(--space-2);
   border: none;
   border-radius: 8px;
   background: var(--color-primary, #3b82f6);

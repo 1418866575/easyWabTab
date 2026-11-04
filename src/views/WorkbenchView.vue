@@ -419,9 +419,9 @@ async function handleSyncNowClick(): Promise<void> {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--space-4);
   /* 左右留白对齐教师顶栏 .tv-topbar（12px 16px），避免顶部与内容区的对齐线错开 */
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   background-color: var(--color-bg-card, #ffffff);
   border-bottom: 1px solid var(--color-border, #e2e8f0);
 }
@@ -429,7 +429,7 @@ async function handleSyncNowClick(): Promise<void> {
 .wb-header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   min-width: 0;
 }
 
@@ -443,7 +443,7 @@ async function handleSyncNowClick(): Promise<void> {
 .wb-header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-shrink: 0;
 }
 
@@ -460,8 +460,8 @@ async function handleSyncNowClick(): Promise<void> {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 12px 8px;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-2);
   background-color: var(--color-bg-card, #ffffff);
   border-right: 1px solid var(--color-border, #e2e8f0);
   transition: width 0.2s ease;
@@ -484,7 +484,7 @@ async function handleSyncNowClick(): Promise<void> {
   width: 100%;
   flex-shrink: 0;
   justify-content: flex-start;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 
 /* 收起态（56px 仅图标）：与教师台 .tv-shell.is-collapsed .tv-nav-collapse 一致——居中且去掉横向内边距 */
@@ -507,7 +507,7 @@ async function handleSyncNowClick(): Promise<void> {
 .wb-menu-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 9px 10px;
   border: 1px solid transparent;
   border-radius: var(--radius-sm, 4px);
@@ -555,8 +555,9 @@ async function handleSyncNowClick(): Promise<void> {
 .wb-content {
   flex: 1;
   /* 与教师工作台内容区（.tv-content，16px）一致；此前 20px 使得同样的卡片在两处
-     留白不同，切换工作台时疏密感不一致。 */
-  padding: 16px;
+     留白不同，切换工作台时疏密感不一致。
+     具体值由界面美化「内容区边距」调节（--ui-content-pad，默认 16px）。 */
+  padding: var(--ui-content-pad);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -646,7 +647,7 @@ html.dark .wb-content {
   .wb-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .wb-body {
@@ -662,7 +663,7 @@ html.dark .wb-content {
     z-index: 60;
     width: 100%;
     flex-direction: row;
-    gap: 4px;
+    gap: var(--space-1);
     padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
     overflow-x: auto;
     scroll-snap-type: x proximity;

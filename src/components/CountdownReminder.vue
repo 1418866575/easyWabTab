@@ -58,7 +58,7 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: var(--space-5);
   background: rgba(0, 0, 0, 0.5);
 }
 
@@ -67,8 +67,8 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
   max-width: 460px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 20px;
+  gap: var(--space-3);
+  padding: var(--space-5);
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-lg, 12px);
@@ -88,7 +88,7 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   max-height: 40vh;
   overflow-y: auto;
 }
@@ -97,7 +97,7 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   padding: 10px 12px;
   background: var(--color-bg-hover, #f1f5f9);
   border-radius: var(--radius-md, 8px);
@@ -157,7 +157,7 @@ html.dark .reminder-label {
 .reminder-email-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   flex-shrink: 0;
   cursor: pointer;
   font-size: var(--fs-sm, 13px);

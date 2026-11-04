@@ -189,7 +189,7 @@ const nameTaken = computed(() => {
 </template>
 
 <style scoped>
-.we-form { display: flex; flex-direction: column; gap: 12px; }
+.we-form { display: flex; flex-direction: column; gap: var(--space-3); }
 .we-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .we-field { display: flex; flex-direction: column; gap: 6px; flex: 1 1 220px; min-width: 0; }
 .we-field-sm { flex: 0 1 160px; }

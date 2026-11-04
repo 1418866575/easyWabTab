@@ -512,13 +512,13 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
 .hw-shell {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .hw-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .hw-main {
@@ -530,7 +530,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
 .hw-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
@@ -561,7 +561,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
 .hw-list {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--space-2);
 }
 .hw-card {
   background: var(--color-surface, #fff);
@@ -580,7 +580,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
 .hw-card-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .hw-card-title {
   font-size: var(--fs-body, 14px);
@@ -614,7 +614,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-input, #f9fafb);
   border-radius: 0 0 14px 14px;
@@ -659,7 +659,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
 /* .btn-detail 视觉已上收至全局 style.css（2026-11 按钮收敛） */
 .btn-madeup,
 .btn-submit,
-.btn-pending {padding: 0 12px;
+.btn-pending {padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);
   border: 1px solid transparent;
   border-radius: 6px;
@@ -704,21 +704,21 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
 .hw-dialog-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .hw-form-row {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .hw-form-row.hw-form-inline {
   flex-direction: row;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .hw-form-col {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   flex: 1;
 }
 .hw-form-label {
@@ -747,7 +747,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
 .hw-detail-line {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .hw-detail-title {
   font-size: var(--fs-md, 15px);
@@ -755,7 +755,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
 .hw-detail-sub {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
   font-size: var(--fs-caption, 12px);
   color: var(--color-text-secondary);

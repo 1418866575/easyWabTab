@@ -138,7 +138,7 @@ const to = computed(() => `/blog/article/${props.article.slug}`)
   position: absolute;
   top: 8px;
   left: 8px;
-  padding: 0 8px;
+  padding: 0 var(--space-2);
   border-radius: 999px;
   background-color: var(--color-warning, #f59e0b);
   color: #fff;
@@ -149,7 +149,7 @@ const to = computed(() => `/blog/article/${props.article.slug}`)
 .bf-card-body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 14px;
   flex: 1 1 auto;
 }
@@ -192,7 +192,7 @@ const to = computed(() => `/blog/article/${props.article.slug}`)
 .bf-card-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--space-1);
   margin-top: auto;
 }
 .bf-card-tag {

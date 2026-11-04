@@ -537,14 +537,14 @@ async function doRemove(ids: string[]): Promise<void> {
 .bg-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 /* ---------- 分类筛选 ---------- */
 .bg-filter {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .bg-chip {
@@ -603,7 +603,7 @@ async function doRemove(ids: string[]): Promise<void> {
 .bg-query-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   min-width: 160px;
 }
 
@@ -615,13 +615,13 @@ async function doRemove(ids: string[]): Promise<void> {
 .bg-query-ops {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   margin-left: auto;
 }
 
 .bg-select {
   height: 30px;
-  padding: 0 8px;
+  padding: 0 var(--space-2);
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--color-bg-input, #ffffff);
@@ -669,7 +669,7 @@ async function doRemove(ids: string[]): Promise<void> {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
   margin-left: auto;
 }
 
@@ -721,7 +721,7 @@ async function doRemove(ids: string[]): Promise<void> {
 .bg-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -732,7 +732,7 @@ async function doRemove(ids: string[]): Promise<void> {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 8px;
+  padding: var(--space-2);
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--ds-card, #ffffff);
@@ -869,7 +869,7 @@ async function doRemove(ids: string[]): Promise<void> {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   min-width: 0;
 }
 

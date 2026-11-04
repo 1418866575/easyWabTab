@@ -222,15 +222,15 @@ const toggleAutoBackup = () => {
 .backup-status {
   background: var(--color-bg, #f8fafc);
   border-radius: 8px;
-  padding: 12px 16px;
-  margin-bottom: 16px;
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
 }
 
 .status-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 .status-item:last-child {
@@ -247,7 +247,7 @@ const toggleAutoBackup = () => {
   font-size: var(--fs-body, 14px);
 }
 
-.toggle-btn {padding: 0 12px;
+.toggle-btn {padding: 0 var(--space-3);
   border-radius: 4px;
   border: 1px solid var(--color-border, #e2e8f0);
   background: var(--color-bg-card, #ffffff);
@@ -263,12 +263,12 @@ const toggleAutoBackup = () => {
 
 .action-buttons {
   display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
   flex-wrap: wrap;
 }
 
-.action-btn {padding: 0 12px;
+.action-btn {padding: 0 var(--space-3);
   border-radius: 6px;
   border: 1px solid var(--color-border, #e2e8f0);
   background: var(--color-bg-card, #ffffff);
@@ -305,13 +305,13 @@ const toggleAutoBackup = () => {
 }
 
 .backup-list {
-  margin-bottom: 20px;
+  margin-bottom: var(--space-5);
 }
 
 .backup-list h3 {
   font-size: var(--fs-body, 14px);
   color: var(--color-text-secondary);
-  margin: 0 0 12px 0;
+  margin: 0 0 var(--space-3) 0;
 }
 
 .empty {
@@ -325,10 +325,10 @@ const toggleAutoBackup = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px;
+  padding: var(--space-3);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .backup-info {
@@ -338,7 +338,7 @@ const toggleAutoBackup = () => {
 .backup-time {
   font-size: var(--fs-body, 14px);
   color: var(--color-text);
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 
 .backup-summary {
@@ -348,10 +348,10 @@ const toggleAutoBackup = () => {
 
 .backup-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
-.restore-btn {padding: 0 12px;
+.restore-btn {padding: 0 var(--space-3);
   border-radius: 4px;
   border: none;
   background: var(--color-primary, #3b82f6);
@@ -364,7 +364,7 @@ const toggleAutoBackup = () => {
   background: var(--color-primary-hover, #2563eb);
 }
 
-.delete-btn {padding: 0 12px;
+.delete-btn {padding: 0 var(--space-3);
   border-radius: 4px;
   border: 1px solid var(--color-border, #e2e8f0);
   background: var(--color-bg-card, #ffffff);
@@ -382,22 +382,22 @@ const toggleAutoBackup = () => {
 .help-text {
   background: #f0f9ff;
   border-radius: 8px;
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   font-size: var(--fs-sm, 13px);
   color: var(--color-text);
 }
 
 .help-text p {
-  margin: 0 0 8px 0;
+  margin: 0 0 var(--space-2) 0;
 }
 
 .help-text ul {
   margin: 0;
-  padding-left: 20px;
+  padding-left: var(--space-5);
 }
 
 .help-text li {
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
   color: var(--color-text-secondary);
 }
 </style>

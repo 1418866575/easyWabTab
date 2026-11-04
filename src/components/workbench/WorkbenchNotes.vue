@@ -827,7 +827,7 @@ onUnmounted(() => {
 .wb-notes {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 /* ===== 查询区 ===== */
@@ -841,17 +841,17 @@ onUnmounted(() => {
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
-.nt-search-fields { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.nt-search-fields { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
 .nt-field { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .nt-field-grow { flex: 0 0 auto; }
 .nt-field-grow .nt-field-keyword { width: 250px; }
 .nt-field-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, var(--color-text-secondary)); }
-.nt-search-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.nt-search-actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
 .nt-field-select { width: 130px; flex-shrink: 0; }
 /* .nt-btn-query / .nt-btn-reset 改用 el-button 标准形态（2026-11 按钮收敛） */
 
 /* ===== 分类筛选标签页 + 新增按钮 ===== */
-.nt-cat-tabs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.nt-cat-tabs { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .nt-toolbar-count { margin-left: auto; font-size: var(--fs-body, 14px); color: var(--color-text-secondary, var(--color-text-secondary)); }
 .nt-section-title { font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text-secondary, var(--color-text-secondary)); margin: 2px 0 -4px; }
 /* .nt-btn-add 改用全局 .btn-add（2026-11 按钮收敛） */
@@ -900,7 +900,7 @@ onUnmounted(() => {
   border-top: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-input, #f9fafb);
   border-radius: 0 0 14px 14px;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -937,22 +937,22 @@ onUnmounted(() => {
 .nt-timeline-expand-title {
   font-size: var(--fs-sm, 13px); font-weight: 600;
   color: var(--color-text-secondary);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 .nt-timeline-list { display: flex; flex-direction: column; margin: 4px 0 2px; }
 .nt-timeline-item { display: flex; gap: 10px; padding: 6px 0; }
 .nt-timeline-item-body { flex: 1; min-width: 0; }
 .nt-timeline-item-time { font-size: var(--fs-caption, 12px); font-weight: 600; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
 .nt-timeline-item-content { font-size: var(--fs-sm, 13px); line-height: 1.5; word-break: break-word; }
-.nt-timeline-item-actions { display: flex; gap: 6px; margin-top: 4px; }
+.nt-timeline-item-actions { display: flex; gap: 6px; margin-top: var(--space-1); }
 /* .btn-edit/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
 .nt-timeline-item-edit { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.nt-timeline-item-edit .btn-save {padding: 0 12px;
+.nt-timeline-item-edit .btn-save {padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);
   height: 36px;}
 .nt-timeline-add-row {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-  margin-top: 8px; padding-top: 10px;
+  margin-top: var(--space-2); padding-top: 10px;
   border-top: 1px dashed var(--color-border, var(--color-border));
 }
 .nt-timeline-dt-input { flex: 0 1 150px; min-width: 130px; }
@@ -962,7 +962,7 @@ onUnmounted(() => {
 /* ===== 时光轴全量条目浮层（保留原样式）===== */
 .timeline-title { font-size: var(--fs-md, 15px); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .timeline-more-btn {margin: 2px 0 6px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   background: color-mix(in srgb, var(--color-primary, #3b82f6) 8%, transparent);
@@ -986,11 +986,11 @@ onUnmounted(() => {
 .timeline-item-body { flex: 1; min-width: 0; }
 .timeline-item-time { font-size: var(--fs-caption, 12px); font-weight: 600; color: var(--color-text-secondary, var(--color-text-secondary)); font-variant-numeric: tabular-nums; }
 .timeline-item-content { font-size: var(--fs-body, 14px); line-height: 1.5; word-break: break-word; }
-.timeline-item-actions { display: flex; gap: 6px; margin-top: 4px; opacity: 0; transition: opacity var(--transition-fast, 0.15s ease); }
+.timeline-item-actions { display: flex; gap: 6px; margin-top: var(--space-1); opacity: 0; transition: opacity var(--transition-fast, 0.15s ease); }
 .timeline-item:hover .timeline-item-actions { opacity: 1; }
 /* .timeline-item-actions .btn-edit/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
 .timeline-item-edit { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.timeline-item-edit .btn-save {padding: 0 12px;
+.timeline-item-edit .btn-save {padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);
   height: 36px;}
 
@@ -999,7 +999,7 @@ onUnmounted(() => {
 /* ===== 编辑浮层 ===== */
 .note-overlay {
   position: fixed; inset: 0; z-index: 1000;
-  display: flex; align-items: center; justify-content: center; padding: 20px;
+  display: flex; align-items: center; justify-content: center; padding: var(--space-5);
   background: rgba(0, 0, 0, 0.5);
 }
 .timeline-expand-overlay { z-index: 1100; }
@@ -1011,14 +1011,14 @@ onUnmounted(() => {
   border-radius: var(--radius-lg, 12px);
   box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
 }
-.timeline-expand-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-shrink: 0; }
-.timeline-expand-list { flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; }
+.timeline-expand-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); flex-shrink: 0; }
+.timeline-expand-list { flex: 1; min-height: 0; overflow-y: auto; padding-right: var(--space-1); }
 
 /* 弹框正文：纵向排布（原 .note-form 的 flex column + gap 由这里承担） */
 .note-form-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   /* 面板高度 90vh 固定，这里让正文撑开，textarea 才能像原来那样填满剩余空间 */
   min-height: calc(90vh - 180px);
 }
@@ -1026,7 +1026,7 @@ onUnmounted(() => {
 .note-content-input :deep(.el-textarea__inner) { resize: none; }
 .note-form-row { display: flex; align-items: center; gap: 10px; }
 .note-form-label { flex: 0 0 auto; min-width: 44px; font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text-secondary, var(--color-text-secondary)); }
-.note-type-radios { display: flex; gap: 8px; }
+.note-type-radios { display: flex; gap: var(--space-2); }
 .note-cat-select { flex: 1; min-width: 180px; }
 .note-color-picker { display: flex; gap: 10px; flex-wrap: wrap; }
 .color-option {
@@ -1046,7 +1046,7 @@ onUnmounted(() => {
 .color-orange .color-swatch { background: #f97316; }
 .color-cyan .color-swatch { background: #06b6d4; }
 .color-purple .color-swatch { background: #a855f7; }
-.btn-save {padding: 0 12px;
+.btn-save {padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);
   color: #fff;
   white-space: nowrap;
@@ -1098,7 +1098,7 @@ html.dark .timeline-item::before { background: var(--color-border, #374151); }
 .nt-due-cell.is-overdue { color: var(--color-error-text); font-weight: 600; }
 /* 表单内「已逾期」提示（选了过去的截止日期 + 仍为处理中时） */
 .nt-overdue-hint {
-  margin-left: 8px;
+  margin-left: var(--space-2);
   font-size: var(--fs-caption, 12px);
   color: var(--color-error-text);
   white-space: nowrap;
@@ -1146,13 +1146,13 @@ html.dark .timeline-item::before { background: var(--color-border, #374151); }
 .nt-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 .nt-toolbar-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
   justify-content: flex-end;
 }

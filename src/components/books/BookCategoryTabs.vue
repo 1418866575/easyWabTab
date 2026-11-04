@@ -59,6 +59,6 @@ const modelValueProxy = computed({
 <style scoped>
 /* 容器间距；页签皮肤见 common/BaseTabs.vue */
 .bk-tabs {
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 </style>

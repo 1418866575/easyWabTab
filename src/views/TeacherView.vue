@@ -370,9 +370,9 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   background-color: var(--color-bg-card, #ffffff);
   border-bottom: 1px solid var(--color-border, #e2e8f0);
 }
@@ -380,7 +380,7 @@ onMounted(() => {
 .tv-topbar-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-4);
   flex-wrap: wrap;
   min-width: 0;
 }
@@ -398,7 +398,7 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   height: 28px;
-  padding: 0 8px;
+  padding: 0 var(--space-2);
   border: 1px dashed var(--color-border, #e2e8f0);
   border-radius: var(--radius-sm, 4px);
   background: var(--color-bg-hover, #f1f5f9);
@@ -423,7 +423,7 @@ onMounted(() => {
 
 /* ---------- 引导 ---------- */
 .tv-guide {
-  padding: 24px 16px;
+  padding: var(--space-6) var(--space-4);
 }
 
 .tv-guide-card {
@@ -441,7 +441,7 @@ onMounted(() => {
 .tv-guide-form .tw-label {
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 /* ---------- 主体 ---------- */
@@ -476,13 +476,13 @@ onMounted(() => {
 .tv-nav-collapse {
   justify-content: flex-start;
   flex-shrink: 0;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 
 /* 分组标题（基础功能 / 特色功能）已不再渲染，此规则保留仅为向后兼容 */
 .tv-nav-group {
   margin: 10px 0 4px;
-  padding: 0 8px;
+  padding: 0 var(--space-2);
   font-size: var(--font-size-xs, 12px);
   font-weight: var(--font-weight-semibold, 600);
   color: var(--color-text-muted);
@@ -492,7 +492,7 @@ onMounted(() => {
 .tv-nav-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
   min-height: 38px;
   padding: 0 10px;
@@ -542,13 +542,14 @@ onMounted(() => {
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
-  padding: 16px;
+  /* 由界面美化「内容区边距」调节（--ui-content-pad，默认 16px） */
+  padding: var(--ui-content-pad);
   overflow-y: auto;
   overflow-x: hidden;
 }
 
 .tv-content-head {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 /* 提示条已独立成块（上方不再有外壳标题），无需顶部间距 */
@@ -606,7 +607,7 @@ onMounted(() => {
   .tv-nav-item {
     flex: 0 0 auto;
     min-height: 44px;
-    padding: 0 12px;
+    padding: 0 var(--space-3);
     white-space: nowrap;
   }
 
@@ -616,7 +617,7 @@ onMounted(() => {
   }
 
   .tv-content {
-    padding: 12px;
+    padding: var(--space-3);
     padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   }
 

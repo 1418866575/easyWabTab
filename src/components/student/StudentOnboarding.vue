@@ -130,7 +130,7 @@ function stageNameOf(s: StudentStage): string {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
+  padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--color-border, #e5e7eb);
 }
 .ob-title {
@@ -139,7 +139,7 @@ function stageNameOf(s: StudentStage): string {
   margin: 0;
 }
 .ob-close {
-  padding: 4px;
+  padding: var(--space-1);
   border: none;
   background: transparent;
   color: inherit;
@@ -150,10 +150,10 @@ function stageNameOf(s: StudentStage): string {
   opacity: 1;
 }
 .ob-body {
-  padding: 20px;
+  padding: var(--space-5);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 .ob-hint {
   margin: 0;
@@ -164,13 +164,13 @@ function stageNameOf(s: StudentStage): string {
 .ob-stage-grid {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .ob-stage-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
   background: transparent;
@@ -211,12 +211,12 @@ function stageNameOf(s: StudentStage): string {
 .ob-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  padding: 12px 20px;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
   border-top: 1px solid var(--color-border, #e5e7eb);
 }
 .ob-btn-secondary,
-.ob-btn-primary {padding: 0 12px;
+.ob-btn-primary {padding: 0 var(--space-3);
   border-radius: 6px;
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
@@ -240,7 +240,7 @@ function stageNameOf(s: StudentStage): string {
 .ob-birthday-field {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 .ob-birthday-field :deep(.el-date-editor) {

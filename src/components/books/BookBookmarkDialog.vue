@@ -167,7 +167,7 @@ function onDelete(b: UserBookmark): void {
 .bk-bm-add-row {
   display: flex;
   align-items: flex-end;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .bk-bm-field {
   display: flex;
@@ -205,7 +205,7 @@ function onDelete(b: UserBookmark): void {
 
 /* ---------- 记录表格 ---------- */
 .bk-bm-table-wrap {
-  margin-top: 16px;
+  margin-top: var(--space-4);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   overflow: hidden;
@@ -262,7 +262,7 @@ function onDelete(b: UserBookmark): void {
 .bk-bm-empty {
   text-align: center;
   color: var(--color-text-muted);
-  padding: 24px 12px;
+  padding: var(--space-6) var(--space-3);
 }
 
 /* 移动端：弹框宽度回归满屏（60% 在窄屏过窄） */

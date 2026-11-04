@@ -214,7 +214,7 @@ async function exportExcelFile(): Promise<void> {
 
 <style scoped>
 .pp-add {
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 .pp-chart {

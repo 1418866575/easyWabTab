@@ -251,14 +251,14 @@ function ledgerLabel(e: LedgerEntry): string {
 .wb-trash {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .tr-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--space-4);
   flex-wrap: wrap;
 }
 
@@ -319,7 +319,7 @@ function ledgerLabel(e: LedgerEntry): string {
   font-size: var(--font-size-md, 14px);
   font-weight: 600;
   color: var(--color-text);
-  padding-left: 8px;
+  padding-left: var(--space-2);
   border-left: 3px solid var(--color-primary, #3b82f6);
   line-height: 1.1;
 }

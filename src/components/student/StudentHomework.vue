@@ -505,15 +505,15 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  gap: 12px;
-  padding: 16px;
+  gap: var(--space-3);
+  padding: var(--space-4);
 }
 
 
 .shw-filters {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .shw-subject-tabs,
 .shw-status-tabs {
@@ -591,7 +591,7 @@ onMounted(async () => {
   border-top: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-input, #f9fafb);
   border-radius: 0 0 14px 14px;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -656,7 +656,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .shw-card-title {
   font-weight: 600;
@@ -669,7 +669,7 @@ onMounted(async () => {
 :global(html.dark) .shw-card-title { color: var(--color-text); }
 .shw-card-thumbs {
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
   margin-top: 6px;
 }
 .shw-card-thumb {
@@ -751,7 +751,7 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: var(--space-1);
   color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
@@ -769,7 +769,7 @@ onMounted(async () => {
 .shw-edit-btn {display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
   background: transparent;
@@ -787,7 +787,7 @@ onMounted(async () => {
 .shw-advance-btn {display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border-radius: 6px;
   border: 1px solid transparent;
   background: transparent;
@@ -805,7 +805,7 @@ onMounted(async () => {
 .shw-done-mark {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   color: var(--color-success-text);
   font-size: var(--fs-caption, 12px);
 }
@@ -826,7 +826,7 @@ onMounted(async () => {
 }
 .form-row {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .form-row .form-field { flex: 1; }
 .shw-custom-toggle {
@@ -842,12 +842,12 @@ onMounted(async () => {
 }
 .dialog-footer-right {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   margin-left: auto;
 }
 
 @media (max-width: 768px) {
-  .shw-shell { padding: 12px; }
+  .shw-shell { padding: var(--space-3); }
   /* 移动端卡片视图：每行一张卡，占满整行（仅作用于本面板，不改全局 2 列规则） */
   .shw-shell .ewt-card-grid {
     grid-template-columns: 1fr;
@@ -870,7 +870,7 @@ onMounted(async () => {
 .shw-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 </style>

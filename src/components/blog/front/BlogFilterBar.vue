@@ -159,7 +159,7 @@ const visibleTags = computed(() =>
 .bf-filter {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 /* 搜索行：水平居中 + 上限宽，宽屏不铺满、窄屏自适应 */
@@ -207,7 +207,7 @@ const visibleTags = computed(() =>
 .bf-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 /* pill：对齐工具箱 .tb-cat —— 图标 + 名称 + 数量徽标，选中为实心主色填充 */
@@ -251,7 +251,7 @@ const visibleTags = computed(() =>
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .bf-meta-label {
   font-size: var(--font-size-xs, 12px);
@@ -260,7 +260,7 @@ const visibleTags = computed(() =>
 /* 视觉统一到全局 .ui-input（别名已含 .bf-select） */
 .bf-clear {
   height: 34px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   background-color: transparent;

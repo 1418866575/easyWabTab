@@ -74,7 +74,7 @@ onMounted(async () => {
 .health-reminders {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 12px 14px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
@@ -93,7 +93,7 @@ onMounted(async () => {
 .hr-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 8px;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -102,7 +102,7 @@ onMounted(async () => {
 .hr-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   padding: 10px 12px;
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
@@ -122,7 +122,7 @@ onMounted(async () => {
 .hr-meta {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--space-2);
   font-variant-numeric: tabular-nums;
 }
 

@@ -208,7 +208,7 @@ function onActionClick(section: string) {
 .student-home {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
   /* 页面级滚动：不再钉满一屏（原 height:100% + 各 slide 内部滚动），
      内容随三块平铺区自然撑开，纵向滚动交回 .st-content */
 }
@@ -217,7 +217,7 @@ function onActionClick(section: string) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
+  padding: var(--space-4) var(--space-5);
   background: var(--color-surface, #ffffff);
   border-radius: 12px;
   border: 1px solid var(--color-border, #e5e7eb);
@@ -225,7 +225,7 @@ function onActionClick(section: string) {
 .greeting-left {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .greeting-text {
   font-size: var(--fs-title, 18px);
@@ -240,16 +240,16 @@ function onActionClick(section: string) {
 .carousel.student-flat {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
   border-radius: 12px;
   background: var(--color-surface, #ffffff);
   border: 1px solid var(--color-border, #e5e7eb);
 }
 .slide {
-  padding: 24px;
+  padding: var(--space-6);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 .slide-title {
   font-size: var(--fs-lg, 16px);
@@ -260,7 +260,7 @@ function onActionClick(section: string) {
 .action-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
   align-content: start;
 }
 .action-card {
@@ -268,7 +268,7 @@ function onActionClick(section: string) {
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  padding: 16px;
+  padding: var(--space-4);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 10px;
   background: transparent;
@@ -291,8 +291,8 @@ function onActionClick(section: string) {
   color: var(--color-text-muted);
 }
 .action-cta {
-  margin-top: 4px;
-  padding: 4px 12px;
+  margin-top: var(--space-1);
+  padding: var(--space-1) var(--space-3);
   border-radius: 16px;
   background: var(--color-primary, #3b82f6);
   color: #ffffff;
@@ -302,7 +302,7 @@ function onActionClick(section: string) {
 .overview-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
   align-content: start;
   flex: 1;
 }
@@ -311,8 +311,8 @@ function onActionClick(section: string) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 12px 8px;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-2);
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
@@ -337,15 +337,15 @@ function onActionClick(section: string) {
 .tools-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
   align-content: start;
 }
 .tool-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 20px;
+  gap: var(--space-2);
+  padding: var(--space-5);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 10px;
   background: transparent;
@@ -387,7 +387,7 @@ function onActionClick(section: string) {
     overflow: visible;
   }
   .slide {
-    padding: 16px;
+    padding: var(--space-4);
   }
   .action-grid,
   .tools-grid,

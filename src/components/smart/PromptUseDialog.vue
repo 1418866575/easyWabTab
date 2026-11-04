@@ -144,12 +144,12 @@ function clearAll(): void {
 </template>
 
 <style scoped>
-.pu-body { display: flex; flex-direction: column; gap: 12px; }
+.pu-body { display: flex; flex-direction: column; gap: var(--space-3); }
 .pu-grid { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 14px; align-items: start; }
 .pu-form { display: flex; flex-direction: column; gap: 10px; }
-.pu-form-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.pu-form-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .pu-title { margin: 0; font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text); }
-.pu-form-actions { display: flex; gap: 8px; }
+.pu-form-actions { display: flex; gap: var(--space-2); }
 .pu-link {
   padding: 0;
   border: none;
@@ -158,7 +158,7 @@ function clearAll(): void {
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
 }
-.pu-field { display: flex; flex-direction: column; gap: 4px; }
+.pu-field { display: flex; flex-direction: column; gap: var(--space-1); }
 .pu-label { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary); }
 .pu-desc { color: var(--color-text-muted); }
 .pu-warn { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-error-text); }
@@ -166,7 +166,7 @@ function clearAll(): void {
 .pu-result { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .pu-preview {
   margin: 0;
-  padding: 12px;
+  padding: var(--space-3);
   max-height: 46vh;
   overflow: auto;
   border: 1px solid var(--color-border, #e5e7eb);
@@ -179,9 +179,9 @@ function clearAll(): void {
   overflow-wrap: anywhere;
 }
 .pu-tip { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-secondary); }
-.pu-plain { display: flex; flex-direction: column; gap: 8px; }
+.pu-plain { display: flex; flex-direction: column; gap: var(--space-2); }
 
-.pu-images { display: flex; flex-direction: column; gap: 8px; }
+.pu-images { display: flex; flex-direction: column; gap: var(--space-2); }
 .pu-img-grid { display: flex; flex-wrap: wrap; gap: 10px; }
 .pu-img {
   width: 110px;

@@ -23,7 +23,7 @@
 }
 
 .bf-count {
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-3);
   font-size: var(--font-size-xs, 12px);
   color: var(--color-text-muted);
 }
@@ -34,7 +34,7 @@
 .bf-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: var(--space-4);
 }
 @media (max-width: 1199px) {
   .bf-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -53,13 +53,13 @@
 
 /* ---------- 收藏 / 最近阅读 分区（列表上方，沿用工具箱 section 风格，空时自动隐藏） ---------- */
 .bf-section {
-  margin-bottom: 24px;
+  margin-bottom: var(--space-6);
 }
 .bf-section-head {
   display: flex;
   align-items: baseline;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 .bf-section-title {
   margin: 0;
@@ -85,12 +85,12 @@
 .bf-pager {
   display: flex;
   justify-content: center;
-  margin-top: 20px;
+  margin-top: var(--space-5);
 }
 
 .bf-footer {
-  margin-top: 32px;
-  padding-top: 16px;
+  margin-top: var(--space-8);
+  padding-top: var(--space-4);
   border-top: 1px solid var(--color-border, #e2e8f0);
   text-align: center;
   color: var(--color-text-muted);
@@ -101,13 +101,13 @@
 .bf-post {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 .bf-back {
   align-self: flex-start;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm, 13px);
   text-decoration: none;
@@ -129,7 +129,7 @@
   color: var(--color-text);
 }
 .bf-post-sub {
-  margin: 4px 0 0;
+  margin: var(--space-1) 0 0;
   font-size: var(--font-size-lg, 18px);
   color: var(--color-text-secondary);
 }
@@ -137,10 +137,10 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   color: var(--color-text-muted);
   font-size: var(--font-size-xs, 12px);
-  padding-bottom: 12px;
+  padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--color-border, #e2e8f0);
 }
 .bf-post-meta .bf-dot { color: var(--color-text-muted); }
@@ -165,12 +165,12 @@
 
 /* ---------- 相关文章 ---------- */
 .bf-related {
-  margin-top: 8px;
-  padding-top: 16px;
+  margin-top: var(--space-2);
+  padding-top: var(--space-4);
   border-top: 1px solid var(--color-border, #e2e8f0);
 }
 .bf-related-title {
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-3);
   font-size: var(--font-size-base, 15px);
   font-weight: var(--font-weight-semibold, 600);
   color: var(--color-text);
@@ -178,11 +178,11 @@
 .bf-related-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 .bf-related-item {
   display: block;
-  padding: 12px;
+  padding: var(--space-3);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   background-color: var(--color-bg-card, #ffffff);
@@ -204,7 +204,7 @@
   overflow: hidden;
 }
 .bf-related-item-meta {
-  margin-top: 4px;
+  margin-top: var(--space-1);
   font-size: var(--font-size-xs, 11px);
   color: var(--color-text-muted);
 }
@@ -215,13 +215,13 @@
   text-align: center;
 }
 .bf-404-title {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   font-size: var(--font-size-xl, 20px);
   font-weight: var(--font-weight-semibold, 600);
   color: var(--color-text);
 }
 .bf-404-text {
-  margin: 0 0 16px;
+  margin: 0 0 var(--space-4);
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm, 13px);
 }

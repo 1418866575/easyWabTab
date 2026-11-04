@@ -62,6 +62,7 @@ easy-web-tab/
 | Add new route | `src/router/index.ts` | Eager-loaded (no lazy loading); 4 routes: `/`, `/workbench`, `/business`, `/student` |
 | Add new type | `src/types/index.ts` | Single file, all interfaces（`AppSettingsData` 含 6 个提醒设置可选字段 + `Countdown.emailReminder` opt-in + Business 摆摊进销存全部接口与种子常量 `DEFAULT_BUSINESS_EXPENSE_CATEGORIES`/`DEFAULT_BUSINESS_PRODUCT_CATEGORIES` + 学生工作台 STUDENT_MENU_KEYS/StudentParentTask/StudentStage；`WORKBENCH_DATA_VERSION=9` + `STUDENT_DATA_VERSION=1`（v8 起备份内嵌 passwordsSalt/passwordVerification 密码加密身份）） |
 | Dark mode styles | `src/styles/dark.css` | CSS variables, class toggle |
+| 界面美化（同类元素默认规则） | `src/config/uiStyle.ts` + `src/styles/ui-style.css` + `src/composables/useUiStyle.ts` + `src/components/common/UiStylePanel.vue` | 调节项清单 / 派生 token / 运行时写入 / 设置页面板；规范见 `docs/UI_STYLE_GUIDE.md` §1.8；`npm run test:uistyle`、`node scripts/qa-ui-style.mjs` |
 | Sample data | `public/data/sites.zip` | Fetched by `HelpModal.vue` (「下载示例数据」source；zip 可直传管理后台「导入」) |
 | Keyboard shortcuts | `src/composables/useKeyboardShortcuts.ts` | Ctrl+N/B/D, Esc |
 | Icon caching | `src/composables/useIconCache.ts` | localStorage, 30-day expiry |

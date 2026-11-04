@@ -231,6 +231,76 @@ node scripts/check-style-tokens.mjs --update-baseline   # 治理一处后收紧�
 
 ---
 
+## 1.8 界面美化（UiStyle，2026-11 新增）
+
+**一句话**：把「同类元素的默认规则」从散落的 CSS 收拢成一份**带默认值与取值域的清单**，既能集中管理，也允许按设备调整。**默认 = 现状**，不调任何一项时视觉零变化。
+
+### 定位与文件
+
+| 层 | 文件 | 职责 |
+| --- | --- | --- |
+| 配置（唯一真源） | `src/config/uiStyle.ts` | 有哪些项、默认多少、能取哪些值。**不含 CSS** |
+| 纯逻辑 | `src/composables/uiStyleCore.ts` | `normalizeUiStyle` / `compileUiStyleVars` / `uiStyleCssText`，可单测（`npm run test:uistyle`，7 断言） |
+| 运行时 | `src/composables/useUiStyle.ts` | 写 `<html>` 内联变量 + 持久化（nav 偏好键 `ui-style`） |
+| 派生 CSS | `src/styles/ui-style.css` | `--ui-*` → 既有 token 与 EP 变量，`main.ts` 中**最后**引入 |
+| 面板 | `src/components/common/UiStylePanel.vue` | 设置 → 个性化 → 界面美化 |
+
+### 覆盖项总表
+
+| 组 | 项 | CSS 变量 | 默认 | 可选值 | 实际消费者 |
+| --- | --- | --- | --- | --- | --- |
+| 布局 | 内容区边距 | `--ui-content-pad` | 16px | 12 / 16 / 20 / 24 | `.wb-content` / `.bs-content` / `.st-content` / `.tv-content` |
+| 布局 | 卡片内边距 | `--ui-card-pad` | 16px | 12 / 16 / 20 / 24 | `.tw-card`、`.panel-scope .stat-card` |
+| 尺寸 | 控件高度 | `--ui-ctrl-h` | 36px | 32 / 36 / 40 / 44 | `--input-height(-sm/-lg)`、`.ui-btn`、`.el-button`、`.el-radio-button__inner`、`.seg-control/.seg-opt`、`.close-btn` 及同组关闭按钮、`.btn-sort`、`.stt-week-btn`、`.btn-detail`、`.nav-btn`、`--el-component-size` |
+| 尺寸 | 表格行距 | `--ui-table-cell-py` | 8px | 6 / 8 / 12 | `el-table` 的 `td/th.el-table__cell` 上下内边距 |
+| 字号 | 字号缩放 | `--ui-fs-scale` | 1 | 0.9 / 0.95 / 1 / 1.05 / 1.1 | `--fs-*` 十档 + 旧阶梯 `--font-size-*`（两套同比缩，避免半屏变大） |
+| 字号 | 正文行高 | `--ui-line-height` | 1.6 | 1.5 / 1.6 / 1.75 | `--line-height-base` |
+| 字号 | 辅助文字 | （离散） | 标准 | 标准 / 加深 | 加深时 `--color-text-muted → var(--ink-2)`、`--color-text-soft → var(--ink-3)`，仍跟随 accent |
+| 间距 | 组件间距 | `--ui-space-scale` | 1 | 0.85 / 1 / 1.15 | `--space-1..8` 七档同比缩放（2026-11 已把 1665 处 gap/padding/margin 从字面量改为 `var(--space-N)`） |
+| 圆角 | 控件圆角 | `--ui-radius-ctrl` | 8px | 4 / 8 / 12 | `--radius-md`、`--el-border-radius-base`、输入框 `--input-radius` |
+| 圆角 | 卡片圆角 | `--ui-radius-card` | 12px | 8 / 12 / 16 | `--radius-lg`（卡片、弹框、面板） |
+
+> **字段展示与排列**没有独立开关：它由「字号缩放 + 正文行高 + 组件间距 + 卡片内边距 + 表格行距」共同决定——这五项合起来就是字段的疏密与层级，单独再造一个「排列」开关只会与它们互相打架。
+
+**覆盖边界（必须知道，否则会误判为 bug）**
+
+| 范围 | 是否跟随 | 说明 |
+| --- | --- | --- |
+| `--space-*` 七档（4/8/12/16/20/24/32） | ✅ | 2026-11 已批量收敛为 token，覆盖主应用约 55% 的间距声明（其余是 6/10/14px 微间距，见下） |
+| 6 / 10 / 14 / 2px 等**组件内部微间距** | ❌ | 不走阶梯：0.85 档会把图标与文字挤在一起，故有意保留原值。看到「多数地方变紧、个别没变」属正常 |
+| `src/toolbox/**` | ❌ | 工具箱是独立 token 体系（68 个工具自带版面），纳入统一缩放会破坏工具布局 |
+| `blogTypoZhaotab.css` | ❌ | 脚本生成的 35 套博客排版主题包，跟随用户选择的排版主题，与 App 阶梯无关（§3 豁免清单） |
+| 胶囊按钮 `border-radius: 999px` | ❌ | 弹框底部操作、标签等胶囊形态恒为全圆角，改「卡片圆角」不影响它们 |
+| 移动端内容区留白 | ✅ | 走 `--ui-content-pad-sm`（= 桌面档 −4px，默认 12px），不再单写死 12px |
+| 字号字面量 | ✅ 99% | 主应用仅剩 9 处非阶梯值（34px 大数字、9px 日历微标等），见 `grep 'font-size: [0-9]*px'` 结果 |
+
+**预设配方**：`UI_STYLE_PRESETS`（标准 / 紧凑 / 大字护眼）是同一份 state 的批量赋值，不是第二套机制。套用逻辑是「以默认值为底再叠加配方」；用户任意微调后，`matchesPreset` 不再成立，按钮高亮自动熄灭。
+
+**导出/导入**：`复制 CSS 覆盖` 用于固化成项目默认；`导出配置/导入配置` 是同一份 state 的 JSON，用于换设备或同事复用（导入经 `normalizeUiStyle` 校验，非法项静默回默认）。
+
+### 实现要点（改之前必读）
+
+1. **派生块用 `html:root[data-ui-style]`（特异性 0,2,1）**，稳定压过 `:root`（0,1,0）与 `element-theme.css` 的 `html:root`（0,1,1）。运行时写的是 `<html>` **内联变量**，优先级最高，因此全程不需要 `!important`，也不依赖加载顺序。
+2. **只编译与默认不同的项**：全默认 → 空对象 → 不写内联变量，**并且不挂 `data-ui-style` 属性**（派生块整体不参与计算，视觉 100% 由 `style.css` 原 token 决定）。这样「没调过」与「调回默认」完全一致，不会残留 `calc(16px * 1)` 之类的差异。
+3. **默认值必须逐项等于规范现值**（36 / 16 / 8 / 1.6 / 1）。改默认值＝改全站视觉，必须同步改 `docs` 与本表。
+4. **不进云同步**：字号与密度是设备相关偏好（手机要大、桌面要密）。该键刻意不在 `NAV_SYNC_KEYS` / `WORKBENCH_PREFS_KEYS` / `SMART_PREFS_KEYS` 内，与 `books-prefs` 同理。
+5. **`--ui-*` 的默认值写在 `ui-style.css` 的 `:root`**，`style.css` / `element-theme.css` 里直接 `var(--ui-ctrl-h)` 引用即可（同为 `:root`，变量在计算期解析，与加载顺序无关）。
+6. **持久化用 `setPrefNow`（非防抖）**：一次调节就是一次点击、写入只有几百字节，但用户常「调完就刷新」，防抖队列会在 pagehide 时赶不上 IDB 事务提交（实测丢配置）。
+
+### 新增一个调节项（5 步）
+
+1. `src/config/uiStyle.ts`：在对应分组加 `{ key, label, affects, default, options }`，并把 key 加进 `UiStyleKnobKey` 联合类型。
+2. `src/composables/uiStyleCore.ts`：在 `KNOB_VAR` 里登记 CSS 变量名（离散枚举则在 `compileUiStyleVars` 里特判）。
+3. `src/styles/ui-style.css`：`:root` 写默认值，`html:root[data-ui-style]` 写派生规则。
+4. 找一个**已有的**消费者改写它（如本次把 `.wb-content` 的 `padding: 16px` 换成 `var(--ui-content-pad)`）。**没有消费者的项不要加**——面板上点了没反应比没有这个开关更糟。
+5. 跑 `npm run test:uistyle` + `npm run build`，并按 §3.5 做浏览器抽检（亮/暗 × 2 套 accent × 首末两档）。
+
+### 固化（把调试结果变成项目默认）
+
+面板上调好后点「复制 CSS 覆盖」，把片段粘到 `src/styles/ui-style.css` 末尾即可全设备同款；片段里只有与默认值不同的项。若希望它成为**新的出厂默认**，则改 `config` 里的 `default` 与 `ui-style.css` 的 `:root`，并同步本表。
+
+---
+
 ## 2. 组件规范
 
 ### 2.1 按钮（`.ui-btn` 体系）⭐
@@ -260,6 +330,8 @@ node scripts/check-style-tokens.mjs --update-baseline   # 治理一处后收紧�
 `.btn-detail`（教师表格「详情」淡主色底按钮，token 化随 accent 变色）。
 定义统一在 `style.css`「面板小号按钮」段；各组件 scoped 只保留布局规则。
 另注意：表格行按钮上的**语义着色**（如 `.sm-advance-btn { color: var(--ds-success) }`）是对标准按钮的合法局部强调，不算双轨道，无需上收。
+
+**分段控件（2026-11 上收全局）**：`.seg-control`（容器 36px 胶囊）+ `.seg-opt`（内段 30px，选中实心主色）定义在 `style.css`，供设置页的枚举选项与「界面美化」面板共用。此前藏在 `AppSettingsDialog` 的 scoped 里，子组件穿透不到，复制一份就是双轨道。高度随界面美化的「控件高度」联动（见 §1.8）。
 
 **已知尺寸例外**（有意保留，不属于按钮统一范围）：
 整行可点的**列表行**（如智能工作台「最近使用」`.ov-recent-btn`、图书卡标题 `.bk-title-btn`）保持行高/content 宽；操作栏内 `flex:1` 等宽分布的多按钮行、移动端整宽 CTA 属布局意图，不视为「宽度不由内容决定」。
@@ -731,6 +803,7 @@ src/
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | Token 定义 / 按钮基类 / 全局基础类 | `src/style.css`                                                                                                             |
 | 主题（7 套 accent）          | `src/styles/themes.css`                                                                                                     |
+| 界面美化（同类元素默认规则 + 覆盖层） | `src/config/uiStyle.ts`（清单）、`src/styles/ui-style.css`（派生）、`src/composables/useUiStyle.ts`（运行时）、`src/components/common/UiStylePanel.vue`（面板） |
 | 暗色                      | `src/styles/dark.css`                                                                                                       |
 | EP 桥接 + el-button 尺寸对齐  | `src/styles/element-theme.css`                                                                                              |
 | 教师工作台面板原语（tw-*）        | `src/styles/teacher.css`                                                                                                    |

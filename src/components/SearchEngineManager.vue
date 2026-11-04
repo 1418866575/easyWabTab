@@ -349,8 +349,8 @@ function truncateUrl(url: string, maxLength = 40) {
    本组件仅保留引擎列表、添加表单等内容样式 */
 
 .add-form {
-  margin-bottom: 24px;
-  padding-bottom: 24px;
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-6);
   border-bottom: 1px solid var(--color-border, #e2e8f0);
 }
 
@@ -358,13 +358,13 @@ function truncateUrl(url: string, maxLength = 40) {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text-secondary);
-  margin: 0 0 12px 0;
+  margin: 0 0 var(--space-3) 0;
 }
 
 .form-row {
   display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 .input-name {
@@ -400,14 +400,14 @@ function truncateUrl(url: string, maxLength = 40) {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
   color: var(--color-text-secondary);
-  margin: 0 0 12px 0;
+  margin: 0 0 var(--space-3) 0;
 }
 
 .empty-state {
   text-align: center;
   color: var(--color-text-muted);
   font-size: var(--fs-body, 14px);
-  padding: 20px;
+  padding: var(--space-5);
   background: var(--color-bg, #f8fafc);
   border-radius: 8px;
 }
@@ -415,12 +415,12 @@ function truncateUrl(url: string, maxLength = 40) {
 .engine-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 10px 12px;
   background: var(--color-bg-card, #ffffff);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .engine-item.is-default {
@@ -504,7 +504,7 @@ function truncateUrl(url: string, maxLength = 40) {
   justify-content: center;
   min-width: 30px;
   height: 36px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   background: none;
   border: 1px solid transparent;
   border-radius: var(--radius-md, 8px);
@@ -543,7 +543,7 @@ function truncateUrl(url: string, maxLength = 40) {
 }
 
 .btn-reset {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
   /* 视觉已统一到全局 .ui-btn（style.css） */
 }
 

@@ -164,7 +164,7 @@ async function exportExcelFile(): Promise<void> {
 }
 
 .st-tip {
-  margin-top: 12px;
+  margin-top: var(--space-3);
 }
 
 .tw-seat-placeholder {
@@ -201,7 +201,7 @@ async function exportExcelFile(): Promise<void> {
   justify-content: center;
   min-width: 30px;
   height: 30px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border-radius: 15px;
   background: var(--color-bg-hover, #eef1f5);
   color: var(--color-text-secondary);

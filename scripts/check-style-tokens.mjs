@@ -162,6 +162,17 @@ const exemptSet = new Map(EXEMPT.map((e) => [e.file, e.reason]))
 
 const violations = [] // { file, line, prop, message }
 const tokenRefs = [] // { file, line, token }
+/**
+ * 间距字面量提醒（**不参与退出码**，只提示）。
+ * 2026-11 的界面美化把「全站 7 档间距」做成可调项，前提是间距走 `var(--space-*)`；
+ * 新代码若又写 `gap: 16px`，该项就会渐渐失灵。这里只报「值恰好是 7 档之一」的情况
+ * （6px / 14px 这类微间距本就不在阶梯内，刷屏无意义），且不做基线比对、不阻断提交。
+ */
+const spacingHints = []
+const SPACING_RES = [
+  { re: /(?:^|[;{\s])(?:gap|row-gap|column-gap|padding|margin|padding-(?:top|right|bottom|left)|margin-(?:top|right|bottom|left))\s*:\s*([^;{}]+)/g }
+]
+const LADDER_VALUES = new Set([4, 8, 12, 16, 20, 24, 32])
 
 for (const rel of files) {
   if (exemptSet.has(rel)) continue
@@ -194,6 +205,27 @@ for (const rel of files) {
     let vm
     while ((vm = varRe.exec(text))) {
       tokenRefs.push({ file: rel, line: lineOf(raw, chunk.start + vm.index), token: vm[1] })
+    }
+
+    for (const { re } of SPACING_RES) {
+      // 工具箱是独立 token 体系（界面美化不覆盖它），提示里不掺进来
+      if (rel.startsWith('src/toolbox/')) break
+      // 模板 inline style 不在收敛范围（一次性行内样式改用 token 反而更难读）
+      if (chunk.kind === 'attr') break
+      re.lastIndex = 0
+      let sm
+      while ((sm = re.exec(text))) {
+        const value = cleanValue(sm[1])
+        if (!value || /var\(\s*--|calc\(|auto|%|em\b|!important/.test(value)) continue
+        // 只有「值整体都能落到 7 档」才提示：`16px 6px` 这种混合值转不了，报了也是噪声
+        const parts = value.split(/\s+/).filter(Boolean)
+        if (!parts.length || parts.length > 4) continue
+        const convertible = parts.every((t) => t === '0' || /^(4|8|12|16|20|24|32)px$/.test(t))
+        if (!convertible) continue
+        // 全是 0（padding: 0）本来就不需要令牌
+        if (parts.every((t) => t === '0')) continue
+        spacingHints.push({ file: rel, line: lineOf(raw, chunk.start + sm.index), value })
+      }
     }
   }
 }
@@ -370,6 +402,18 @@ if (newMissingToken.length) {
 if (improved.length && OPT.verbose) {
   console.log(`\n↓ 已比基线少 ${improved.length} 个条目，可 --update-baseline 收紧：`)
   for (const i of improved.slice(0, 20)) console.log(`  ${i.key}  ${i.was} → ${i.now}`)
+}
+
+// 间距字面量：只提示，不影响退出码（存量仍有微间距未收敛，报错会一路红到底）
+if (spacingHints.length) {
+  console.log(
+    `\n⚠ 间距字面量 ${spacingHints.length} 处可用 var(--space-N)（不影响退出码）` +
+      `：界面美化的「组件间距」只对 --space-* 生效，${OPT.verbose ? '' : '加 --verbose 看清单'}`
+  )
+  if (OPT.verbose) {
+    for (const h of spacingHints.slice(0, 40)) console.log(`  ${h.file}:${h.line}  ${h.value}`)
+    if (spacingHints.length > 40) console.log(`  ...其余 ${spacingHints.length - 40} 处`)
+  }
 }
 
 if (OPT.verbose && (OPT.strict || newViolations.length)) {

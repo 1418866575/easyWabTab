@@ -269,7 +269,7 @@ function exportExpenseExcel(): void {
 .bizrec {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
   
   flex: 0 0 auto;
   min-height: 0;
@@ -278,7 +278,7 @@ function exportExpenseExcel(): void {
 .bizrec-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   padding: 14px 16px;
   background: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #e2e8f0);
@@ -289,7 +289,7 @@ function exportExpenseExcel(): void {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 
@@ -364,7 +364,7 @@ function exportExpenseExcel(): void {
 .bizrec-month-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .bizrec-month {
@@ -414,7 +414,7 @@ function exportExpenseExcel(): void {
 }
 
 .bizrec-sub {
-  padding-top: 4px;
+  padding-top: var(--space-1);
   border-top: 1px dashed var(--color-border, #e2e8f0);
 }
 
@@ -430,7 +430,7 @@ function exportExpenseExcel(): void {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 /* M-13 修复闭环入口 */
@@ -453,7 +453,7 @@ function exportExpenseExcel(): void {
   line-height: 1.6;
 }
 .bizrec-fix-btn {flex-shrink: 0;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);
   font-weight: 600;
   color: #fff;

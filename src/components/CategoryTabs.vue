@@ -59,8 +59,8 @@ const tabItems = computed(() => [
 <style scoped>
 /* 外壳留白由这里负责；页签皮肤见 common/BaseTabs.vue（不要再写 .category-tab） */
 .category-tabs-wrapper {
-  margin-bottom: 20px;
-  padding: 12px;
+  margin-bottom: var(--space-5);
+  padding: var(--space-3);
   background-color: white;
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -73,7 +73,7 @@ const tabItems = computed(() => [
  * 块状浅底页签放在这里会与整页观感脱节。
  * 覆盖带 .ui-tabs 前缀以提升特异性，压过 BaseTabs 的 scoped 规则。
  * ============================================================ */
-.category-tabs-wrapper :deep(.ui-tabs .el-radio-button__inner) {padding: 0 12px;
+.category-tabs-wrapper :deep(.ui-tabs .el-radio-button__inner) {padding: 0 var(--space-3);
   border: 1px solid var(--ds-line, var(--color-border, #e2e8f0));
   border-radius: var(--radius-full, 9999px);
   background-color: #ffffff;
