@@ -22,6 +22,8 @@ import { useViewMode } from '@/composables/useViewMode'
 import { usePageSize } from '@/composables/usePageSize'
 import { useBlogShare } from '@/composables/blogShare'
 import { importMarkdownFolder } from '@/composables/blogImport'
+import { importHtmlFiles } from '@/composables/blogHtmlImport'
+import type { ImportResult } from '@/composables/blogImport'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '@/components/Icon.vue'
@@ -37,6 +39,8 @@ const { share: doShare, unshare: doUnshare, sharingId } = useBlogShare()
 // ---------- 导入 Markdown（选择整个文章目录，自动配封面、归入「信贷晨读」分类） ----------
 const importInputEl = ref<HTMLInputElement | null>(null)
 const fileInputEl = ref<HTMLInputElement | null>(null)
+/** HTML 导入：选中后先转成 Markdown，再走与「导入 MD」相同的落库链路 */
+const htmlInputEl = ref<HTMLInputElement | null>(null)
 
 onMounted(() => {
   // 通过属性设置目录选择，避免模板上的非标准属性触发类型检查告警
@@ -51,21 +55,40 @@ function triggerImportFiles(): void {
   fileInputEl.value?.click()
 }
 
-async function onImportChange(e: Event): Promise<void> {
-  const input = e.target as HTMLInputElement
-  const files = Array.from(input.files ?? [])
-  if (files.length === 0) return
-  const res = await importMarkdownFolder(files, { categoryName: '信贷晨读' })
-  input.value = ''
+function triggerImportHtml(): void {
+  htmlInputEl.value?.click()
+}
+
+/** 导入结果的统一提示（Markdown / HTML 两条入口共用） */
+function notifyImport(res: ImportResult, doneLabel = '已导入'): void {
   if (res.imported > 0) {
     const skip = res.skipped > 0 ? `，跳过 ${res.skipped} 篇` : ''
-    toastAlert(`已导入 ${res.imported} 篇${skip}`, 'success')
+    toastAlert(`${doneLabel} ${res.imported} 篇${skip}`, 'success')
   } else if (res.skipped > 0) {
     toastAlert(`没有新增文章（${res.skipped} 篇已存在或为空）`, 'warning')
   }
   if (res.errors.length > 0) {
     toastAlert(res.errors.slice(0, 3).join('；'), 'error')
   }
+}
+
+async function onImportChange(e: Event): Promise<void> {
+  const input = e.target as HTMLInputElement
+  const files = Array.from(input.files ?? [])
+  if (files.length === 0) return
+  const res = await importMarkdownFolder(files, { categoryName: '信贷晨读' })
+  input.value = ''
+  notifyImport(res)
+}
+
+async function onImportHtmlChange(e: Event): Promise<void> {
+  const input = e.target as HTMLInputElement
+  const files = Array.from(input.files ?? [])
+  if (files.length === 0) return
+  // HTML 在同一次选择里可带同名图片（accept 已放开 image/*），一并交给导入层匹配
+  const res = await importHtmlFiles(files, { categoryName: '信贷晨读' })
+  input.value = ''
+  notifyImport(res, '已转换并导入')
 }
 
 // ---------- 筛选与排序 ----------
@@ -323,14 +346,19 @@ function displayTime(row: BlogArticle): string {
       <div class="ba-query-imports">
         <el-button size="small" data-testid="blog-posts-import" @click="triggerImportFiles">
           <Icon name="plus" :size="14" />
-          <span>导入文件</span>
+          <span>导入 MD</span>
+        </el-button>
+        <el-button size="small" data-testid="blog-posts-import-html" @click="triggerImportHtml">
+          <Icon name="document" :size="14" />
+          <span>导入 HTML</span>
         </el-button>
         <el-button size="small" data-testid="blog-posts-import-folder" @click="triggerImport">
           <Icon name="folder" :size="14" />
           <span>导入文件夹</span>
         </el-button>
         <input ref="importInputEl" class="ba-import-input" type="file" multiple @change="onImportChange" />
-        <input ref="fileInputEl" class="ba-import-input" type="file" multiple accept=".md,image/*" @change="onImportChange" />
+        <input ref="fileInputEl" class="ba-import-input" type="file" multiple accept=".md,text/markdown,image/*" @change="onImportChange" />
+        <input ref="htmlInputEl" class="ba-import-input" type="file" multiple accept=".html,.htm,text/html,image/*" @change="onImportHtmlChange" />
       </div>
     </div>
 
