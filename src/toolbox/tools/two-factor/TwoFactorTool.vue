@@ -282,7 +282,7 @@ onBeforeUnmount(() => {
   font-family: var(--font-family-mono);
   font-size: var(--fs-h2);
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   cursor: pointer;
 }
 .tf-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; }

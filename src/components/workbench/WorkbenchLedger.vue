@@ -753,7 +753,7 @@ onMounted(async () => {
   border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
@@ -903,7 +903,7 @@ onMounted(async () => {
 .ld-trend-total b {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text-primary, #1f2937);
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1052,7 +1052,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 }
 
 .ld-charts-toggle:hover {
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   border-color: var(--color-primary, var(--color-primary));
 }
 
@@ -1094,7 +1094,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   height: 36px;}
 
 .btn-manage:hover {
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   border-color: var(--color-primary, var(--color-primary));
 }
 
@@ -1151,7 +1151,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   font-weight: 600;
   padding: 2px 10px;
   border-radius: var(--radius-full, 9999px);
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   background: var(--color-primary-light, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
 }
@@ -1327,7 +1327,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   font-weight: 600;
   padding: 2px 10px;
   border-radius: var(--radius-full, 9999px);
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   background: var(--color-primary-light, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
 }

@@ -289,7 +289,7 @@ const downloadTitle = computed(() =>
   overflow: hidden;
 }
 .bk-title-btn:hover .bk-title {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .bk-desc {
@@ -315,7 +315,7 @@ const downloadTitle = computed(() =>
   color: var(--color-text-muted);
   font-size: var(--font-size-xs, 12px);
 }
-.bk-cat { color: var(--color-primary, #3b82f6); }
+.bk-cat { color: var(--color-primary-text); }
 .bk-dot { color: var(--color-text-muted); }
 
 .bk-tags {
@@ -327,7 +327,7 @@ const downloadTitle = computed(() =>
   padding: 0 6px;
   border-radius: var(--radius-sm, 6px);
   background-color: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-size: var(--font-size-xs, 11px);
   line-height: 18px;
 }

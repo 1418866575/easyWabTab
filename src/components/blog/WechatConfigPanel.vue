@@ -122,7 +122,7 @@ function copyEgressIp(): void {
     <p
       v-if="cfg.error.value"
       class="wb-menu-hint"
-      style="color: var(--color-danger, #dc2626); margin-top: 8px;"
+      style="color: var(--color-error-text); margin-top: 8px;"
       data-testid="wechat-error"
     >{{ cfg.error.value }}</p>
   </div>
@@ -226,7 +226,7 @@ function copyEgressIp(): void {
 
 .egress-link {
   margin-left: 2px;
-  color: var(--color-primary, #2563eb);
+  color: var(--color-primary-text);
   text-decoration: none;
 }
 
@@ -235,7 +235,7 @@ function copyEgressIp(): void {
 }
 
 .egress-err {
-  color: var(--color-danger, #dc2626);
+  color: var(--color-error-text);
 }
 
 html.dark .egress-box {

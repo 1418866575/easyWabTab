@@ -336,7 +336,7 @@ const sortedCustomCategories = computed(() =>
 
 .dm-btn-sort:hover:not(:disabled) {
   background: var(--color-border, #e2e8f0);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .dm-btn-sort:disabled {

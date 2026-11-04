@@ -228,7 +228,7 @@ const segments = computed(() => {
   left: 50%;
   transform: translateX(-50%);
   font-size: var(--fs-title);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 @media (prefers-reduced-motion: reduce) {
   .tu-wheel { transition: none !important; }

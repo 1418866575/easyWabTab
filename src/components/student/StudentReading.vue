@@ -492,7 +492,7 @@ onMounted(async () => {
 
 /* ===== 表格内编辑/删除按钮 ===== */
 .sr-edit-btn {
-  color: var(--color-link, #3b82f6);
+  color: var(--color-primary-text);
 }
 .sr-delete-btn {
   color: var(--color-error-text);

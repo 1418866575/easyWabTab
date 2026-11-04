@@ -61,7 +61,7 @@ const updatedText = computed(() => {
   color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
 }
-.wd-chip.is-tag { color: var(--color-primary, #3b82f6); }
+.wd-chip.is-tag { color: var(--color-primary-text); }
 .wd-desc { margin: 0; font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
 
 .wd-section-label { font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text-secondary); }

@@ -527,7 +527,7 @@ async function onOnboardingComplete() {
 }
 .st-sync-btn:disabled { cursor: not-allowed; opacity: 0.7; }
 .st-sync-btn-pending {
-  color: var(--ds-primary);
+  color: var(--ds-primary-text);
   animation: st-sync-pulse 1.4s ease-in-out infinite;
 }
 .st-sync-btn-conflict { color: #b45309; }

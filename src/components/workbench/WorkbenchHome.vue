@@ -551,7 +551,7 @@ async function handleQuickNote(): Promise<void> {
   font-size: 34px;
   font-weight: 700;
   line-height: 1.1;
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   font-variant-numeric: tabular-nums;
 }
 

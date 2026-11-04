@@ -304,7 +304,7 @@ function setMode(v: WatermarkMode): void {
     background-color var(--motion-duration, 160ms) var(--motion-ease, ease);}
 
 .wm-seg-btn.is-on {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   border-color: var(--color-primary);
   background: var(--color-primary-soft, transparent);
 }

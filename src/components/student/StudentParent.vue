@@ -1172,7 +1172,7 @@ html.dark .stp-pager-info {
   border-radius: 8px; font-size: var(--fs-sm, 13px);
 }
 .stp-txn-pts { font-weight: 700; }
-.stp-txn-pts.earn { color: var(--color-primary, #10b981); }
+.stp-txn-pts.earn { color: var(--color-primary-text); }
 .stp-txn-reason { color: var(--color-text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stp-txn-date { color: var(--color-text-secondary); font-size: var(--fs-caption, 12px); font-variant-numeric: tabular-nums; }
 
@@ -1206,7 +1206,7 @@ html.dark .stp-pager-info {
 }
 .stp-reward-card.out-of-stock { opacity: 0.55; }
 .stp-reward-name { font-size: var(--fs-body, 14px); font-weight: 600; word-break: break-word; }
-.stp-reward-cost { font-size: var(--fs-lg, 16px); color: var(--color-primary, #10b981); font-weight: 700; }
+.stp-reward-cost { font-size: var(--fs-lg, 16px); color: var(--color-primary-text); font-weight: 700; }
 .stp-reward-stock { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary); }
 .stp-reward-actions { display: flex; gap: 6px; width: 100%; }
 

@@ -707,7 +707,7 @@ html.dark .sk-block::after {
 
 /* 支出拆分：已关联库存（主色蓝）/ 未关联库存（警示橙） */
 .hero-value.linked {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .hero-value.unlinked {
@@ -930,7 +930,7 @@ html.dark .sk-block::after {
   flex-shrink: 0;
   font-size: var(--fs-body, 14px);
   font-weight: 700;
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1008,7 +1008,7 @@ html.dark .sk-block::after {
   flex-shrink: 0;
   font-size: var(--fs-sm, 13px);
   font-weight: 700;
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1090,7 +1090,7 @@ html.dark .sk-block::after {
   font-size: var(--fs-h2, 22px);
   font-weight: 700;
   line-height: 1.1;
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1185,7 +1185,7 @@ html.dark .sk-block::after {
   color: var(--color-error-text);
 }
 .bizhome-today-card .today-value.accent {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 .bizhome-today-card .today-sub {
   font-size: var(--fs-caption, 12px);
@@ -1229,7 +1229,7 @@ html.dark .sk-block::after {
   transition: all 0.15s;
 }
 .bizhome-export:hover:not(:disabled) {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   border-color: var(--color-primary, #3b82f6);
 }
 .bizhome-export:disabled {
@@ -1310,7 +1310,7 @@ html.dark .sk-block::after {
 .bizhome-onboard-title {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   margin-bottom: 3px;
 }
 .bizhome-onboard-desc {
@@ -1370,7 +1370,7 @@ html.dark .sk-block::after {
   margin-left: auto;
   padding: 4px 12px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   background: transparent;
   border: 1px solid var(--color-primary, #3b82f6);
   border-radius: 6px;
@@ -1384,7 +1384,7 @@ html.dark .sk-block::after {
 
 /* 空态里的行动链接 */
 .bizhome-empty-action {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   cursor: pointer;
   font-weight: 600;
 }
@@ -1429,7 +1429,7 @@ html.dark .sk-block::after {
 .formula-main {
   font-size: var(--fs-body, 14px);
   font-weight: 700;
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   font-variant-numeric: tabular-nums;
 }
 

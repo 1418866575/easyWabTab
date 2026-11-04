@@ -447,12 +447,12 @@ const degreeOptions = DEGREE_OPTIONS
   font-weight: 600;
   white-space: nowrap;
 }
-.edu-badge-active { background: rgba(59, 130, 246, 0.15); color: var(--ds-primary); }
+.edu-badge-active { background: rgba(59, 130, 246, 0.15); color: var(--ds-primary-text); }
 .edu-badge-done   { background: rgba(16, 185, 129, 0.15); color: var(--color-success-text); }
 
 /* ===== 毕业时间「至今」绿色文字 ===== */
 .edu-enddate-today {
-  color: var(--color-primary, #10b981);
+  color: var(--color-primary-text);
   font-weight: 600;
 }
 
@@ -468,7 +468,7 @@ const degreeOptions = DEGREE_OPTIONS
 }
 .edu-degree-kindergarten { background: #fdf2f8; color: #db2777; } /* 幼儿园 - 粉红 */
 .edu-degree-primary      { background: #ecfdf5; color: var(--color-success-text); } /* 小学   - 浅绿 */
-.edu-degree-junior       { background: var(--ds-primary-soft); color: var(--ds-primary); } /* 初中   - 蓝 */
+.edu-degree-junior       { background: var(--ds-primary-soft); color: var(--ds-primary-text); } /* 初中   - 蓝 */
 .edu-degree-high         { background: #ede9fe; color: #7c3aed; } /* 高中   - 紫 */
 .edu-degree-vocational   { background: #ffedd5; color: #ea580c; } /* 中职   - 橙 */
 .edu-degree-college      { background: #fef9c3; color: #ca8a04; } /* 专科   - 琥珀黄 */

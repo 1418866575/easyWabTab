@@ -646,7 +646,7 @@ onMounted(() => {
 .sm-subject-badge {
   padding: 2px 8px;
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   border-radius: 4px;
   font-size: var(--fs-caption, 12px);
   font-weight: 600;

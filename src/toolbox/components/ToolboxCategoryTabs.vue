@@ -75,7 +75,7 @@ const tabs = computed(() => [
     background-color var(--motion-duration) var(--motion-ease);
 }
 .tb-cat:hover {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   border-color: var(--color-primary);
 }
 .tb-cat.is-on {

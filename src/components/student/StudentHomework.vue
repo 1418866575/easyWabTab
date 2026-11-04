@@ -609,7 +609,7 @@ onMounted(async () => {
   background: rgba(59, 130, 246, 0.12);
   font-size: var(--fs-caption, 12px);
   font-weight: 600;
-  color: var(--color-link, #3b82f6);
+  color: var(--color-primary-text);
   white-space: nowrap;
   line-height: 1.6;
 }
@@ -620,7 +620,7 @@ onMounted(async () => {
 .shw-due { font-weight: 500; }
 .shw-due.overdue { color: var(--color-error-text); }
 .shw-due.today { color: var(--color-warning-text); }
-.shw-due.tomorrow { color: var(--ds-primary); }
+.shw-due.tomorrow { color: var(--ds-primary-text); }
 .shw-due-text {
   font-size: var(--fs-caption, 12px);
   margin-top: 2px;
@@ -647,7 +647,7 @@ onMounted(async () => {
   white-space: nowrap;
 }
 .shw-status.shw-status-pending { background: var(--ds-bg-hover); color: var(--ds-text-2); }
-.shw-status.shw-status-doing { background: rgba(59, 130, 246, 0.12); color: var(--ds-primary); }
+.shw-status.shw-status-doing { background: rgba(59, 130, 246, 0.12); color: var(--ds-primary-text); }
 .shw-status.shw-status-overdue { background: rgba(239, 68, 68, 0.12); color: var(--color-error-text); }
 .shw-status.shw-status-done { background: rgba(16, 185, 129, 0.12); color: var(--color-success-text); }
 
@@ -759,7 +759,7 @@ onMounted(async () => {
 }
 .shw-img-add:hover {
   border-color: var(--color-primary, #3b82f6);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 .shw-img-input { display: none; }
 :global(html.dark) .shw-img { border-color: var(--color-border, #374151); }
@@ -781,7 +781,7 @@ onMounted(async () => {
   height: 36px;}
 .shw-edit-btn:hover {
   background: var(--color-hover, #f3f4f6);
-  color: var(--color-link, #3b82f6);
+  color: var(--color-primary-text);
   border-color: rgba(59, 130, 246, 0.4);
 }
 .shw-advance-btn {display: inline-flex;
@@ -799,9 +799,9 @@ onMounted(async () => {
 .shw-advance-btn:hover {
   background: var(--color-hover, #f3f4f6);
 }
-.shw-advance-btn.shw-status-pending { background: rgba(59, 130, 246, 0.1); color: var(--ds-primary); }
+.shw-advance-btn.shw-status-pending { background: rgba(59, 130, 246, 0.1); color: var(--ds-primary-text); }
 .shw-advance-btn.shw-status-doing { background: rgba(16, 185, 129, 0.1); color: var(--color-success-text); }
-.shw-advance-btn.shw-status-overdue { background: rgba(59, 130, 246, 0.1); color: var(--ds-primary); }
+.shw-advance-btn.shw-status-overdue { background: rgba(59, 130, 246, 0.1); color: var(--ds-primary-text); }
 .shw-done-mark {
   display: inline-flex;
   align-items: center;

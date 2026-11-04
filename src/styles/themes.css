@@ -53,6 +53,7 @@ html:not(.dark)[data-accent='blue'] {
   --color-surface-2: #f5f8fc;
   --color-hover: #eaf1fa;
   --color-primary-soft: rgba(59, 130, 246, 0.10);
+  --color-primary-text: #1d4ed8;  /* on primary-soft 5.96:1 */
   --color-border-strong: #a9c0de;
 }
 /* 蓝·深 */
@@ -73,6 +74,8 @@ html.dark[data-accent='blue'] {
   --color-surface-2: #0f1623;
   --color-hover: #1f2a3f;
   --color-primary-soft: rgba(96, 165, 250, 0.20);
+  --color-primary-text: #93c5fd;  /* on primary-soft 6.26:1 */
+  --color-primary-light: rgba(96, 165, 250, 0.12);
   --color-border-strong: #46586f;
 }
 
@@ -111,6 +114,7 @@ html:not(.dark)[data-accent='brown'] {
   --color-surface-2: #f3ede2;
   --color-hover: #ece3d3;
   --color-primary-soft: rgba(164, 117, 81, 0.14);
+  --color-primary-text: #6f4a30;  /* on primary-soft 6.20:1 */
   --color-border-strong: #d9c8ad;
 }
 /* 米黄·深 */
@@ -131,6 +135,8 @@ html.dark[data-accent='brown'] {
   --color-surface-2: #1b1712;
   --color-hover: #2e2820;
   --color-primary-soft: rgba(196, 149, 105, 0.22);
+  --color-primary-text: #d6b693;  /* on primary-soft 5.82:1 */
+  --color-primary-light: rgba(196, 149, 105, 0.12);
   --color-border-strong: #5b4f3f;
 }
 
@@ -169,6 +175,7 @@ html:not(.dark)[data-accent='pink'] {
   --color-surface-2: #fdf6f9;
   --color-hover: #fbe9f1;
   --color-primary-soft: rgba(236, 72, 153, 0.10);
+  --color-primary-text: #be185d;  /* on primary-soft 5.35:1 */
   --color-border-strong: #dfa8c4;
 }
 /* 樱粉·深 */
@@ -189,6 +196,8 @@ html.dark[data-accent='pink'] {
   --color-surface-2: #1a1218;
   --color-hover: #2f222b;
   --color-primary-soft: rgba(244, 114, 182, 0.20);
+  --color-primary-text: #f9a8d4;  /* on primary-soft 6.59:1 */
+  --color-primary-light: rgba(244, 114, 182, 0.12);
   --color-border-strong: #5d4653;
 }
 
@@ -227,6 +236,7 @@ html:not(.dark)[data-accent='green'] {
   --color-surface-2: #f4faf5;
   --color-hover: #e8f5ea;
   --color-primary-soft: rgba(34, 197, 94, 0.10);
+  --color-primary-text: #166534;  /* on primary-soft 6.54:1 */
   --color-border-strong: #9dc8a8;
 }
 /* 青柠·深 */
@@ -247,6 +257,8 @@ html.dark[data-accent='green'] {
   --color-surface-2: #101a13;
   --color-hover: #203027;
   --color-primary-soft: rgba(74, 222, 128, 0.20);
+  --color-primary-text: #4ade80;  /* on primary-soft 5.84:1 */
+  --color-primary-light: rgba(74, 222, 128, 0.12);
   --color-border-strong: #47604d;
 }
 
@@ -285,6 +297,7 @@ html:not(.dark)[data-accent='purple'] {
   --color-surface-2: #f8f6fd;
   --color-hover: #efeaf9;
   --color-primary-soft: rgba(139, 92, 246, 0.10);
+  --color-primary-text: #7c3aed;  /* on primary-soft 5.04:1 */
   --color-border-strong: #b0a1dc;
 }
 /* 科技紫·深 */
@@ -305,6 +318,8 @@ html.dark[data-accent='purple'] {
   --color-surface-2: #141122;
   --color-hover: #272140;
   --color-primary-soft: rgba(167, 139, 250, 0.22);
+  --color-primary-text: #c4b5fd;  /* on primary-soft 6.33:1 */
+  --color-primary-light: rgba(167, 139, 250, 0.12);
   --color-border-strong: #52457c;
 }
 
@@ -343,6 +358,7 @@ html:not(.dark)[data-accent='red'] {
   --color-surface-2: #fdf6f5;
   --color-hover: #fbe9e7;
   --color-primary-soft: rgba(200, 16, 46, 0.10);
+  --color-primary-text: #a60d24;  /* on primary-soft 6.54:1 */
   --color-border-strong: #dc9f96;
 }
 /* 中国红·深 */
@@ -363,6 +379,8 @@ html.dark[data-accent='red'] {
   --color-surface-2: #1a1012;
   --color-hover: #301d21;
   --color-primary-soft: rgba(224, 83, 83, 0.22);
+  --color-primary-text: #ea7e7e;  /* on primary-soft 4.91:1 */
+  --color-primary-light: rgba(224, 83, 83, 0.12);
   --color-border-strong: #613e44;
 }
 
@@ -401,6 +419,7 @@ html:not(.dark)[data-accent='gray'] {
   --color-surface-2: #eeece8;
   --color-hover: #e3e1dc;
   --color-primary-soft: rgba(108, 122, 140, 0.14);
+  --color-primary-text: #495463;  /* on primary-soft 6.03:1 */
   --color-border-strong: #c8c4bc;
 }
 /* 莫兰迪·深 */
@@ -421,5 +440,7 @@ html.dark[data-accent='gray'] {
   --color-surface-2: #141516;
   --color-hover: #282b2d;
   --color-primary-soft: rgba(145, 158, 171, 0.22);
+  --color-primary-text: #9fadb6;  /* on primary-soft 4.91:1 */
+  --color-primary-light: rgba(145, 158, 171, 0.12);
   --color-border-strong: #53585d;
 }

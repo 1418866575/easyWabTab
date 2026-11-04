@@ -852,7 +852,7 @@ watch(showForm, (v) => {
   justify-content: flex-end;
   margin-top: auto;
 }
-.grp-edit-btn { color: var(--color-link, #3b82f6); }
+.grp-edit-btn { color: var(--color-primary-text); }
 .grp-copy-btn { color: var(--color-text-secondary); }
 .grp-del-btn { color: var(--color-error-text); }
 
@@ -865,12 +865,12 @@ watch(showForm, (v) => {
   border-radius: 999px;
   font-size: var(--fs-caption, 12px);
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   max-width: 100%;
 }
 .tw-chip.is-boy {
   background: rgba(59, 130, 246, 0.12);
-  color: var(--ds-primary);
+  color: var(--ds-primary-text);
 }
 .tw-chip.is-girl {
   background: rgba(236, 72, 153, 0.12);

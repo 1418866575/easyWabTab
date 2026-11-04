@@ -51,7 +51,7 @@ const COPY = {
 }
 .tb-empty-icon { font-size: var(--fs-display); display: block; margin-bottom: 10px; opacity: .8; }
 .tb-empty p { margin: 0 0 12px; font-size: var(--fs-body); }
-.tb-empty-kw { color: var(--color-primary); font-weight: 600; }
+.tb-empty-kw { color: var(--color-primary-text); font-weight: 600; }
 .tb-empty code {
   background: var(--color-bg-hover);
   padding: 1px 5px;
@@ -66,7 +66,7 @@ const COPY = {
   border-radius: var(--radius-md);
   border: 1px solid var(--color-primary);
   background: transparent;
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   font-size: var(--fs-caption);
   transition: background-color var(--motion-duration) var(--motion-ease),
     color var(--motion-duration) var(--motion-ease);}

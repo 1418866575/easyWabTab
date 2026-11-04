@@ -94,6 +94,6 @@ function onDragOver(e: DragEvent) {
   padding: 0 12px;
   border-radius: var(--radius-full);
   background: var(--color-primary-soft);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   height: 36px;}
 </style>

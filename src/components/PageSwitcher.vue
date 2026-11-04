@@ -239,7 +239,7 @@ onBeforeUnmount(() => {
 
 .ps-menu-item:hover {
   background-color: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .ps-menu-item:focus-visible {

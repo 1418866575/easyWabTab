@@ -104,7 +104,7 @@ run()
 .md-seed { width: 140px; }
 .md-area { font-family: var(--font-family-mono); font-size: 12.5px; }
 .md-phs { display: flex; flex-wrap: wrap; gap: 8px 16px; }
-.md-ph code { font-family: var(--font-family-mono); color: var(--color-primary); margin-right: 4px; }
+.md-ph code { font-family: var(--font-family-mono); color: var(--color-primary-text); margin-right: 4px; }
 .md-idx { width: 48px; color: var(--color-text-muted); }
 .md-cell { max-width: 260px; word-break: break-all; font-family: var(--font-family-mono); font-size: var(--fs-caption); }
 .md-json { max-height: 320px; }

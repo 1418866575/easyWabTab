@@ -156,7 +156,7 @@ const handleSizeChange = (value: number | string) => {
 
 .page-btn:hover:not(:disabled) {
   border-color: var(--color-primary, #3b82f6);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .page-btn:disabled {

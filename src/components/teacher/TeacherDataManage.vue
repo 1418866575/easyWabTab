@@ -715,7 +715,7 @@ async function onClearSemesterData(): Promise<void> {
   padding: 2px 8px;
   border-radius: 10px;
   font-size: var(--font-size-xs, 12px);
-  color: var(--color-primary, #6da3d8);
+  color: var(--color-primary-text);
   background: var(--color-primary-soft, #eaf2fb);
 }
 

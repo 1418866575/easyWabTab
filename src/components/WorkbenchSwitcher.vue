@@ -432,7 +432,7 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
 }
 .ws-trigger:hover {
   background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   border-color: var(--color-border, #e2e8f0);
 }
 .ws-trigger-svg,
@@ -551,7 +551,7 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
   white-space: nowrap;
 }
 .ws-item.current .ws-item-name {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-weight: 500;
 }
 .ws-item-cur {
@@ -561,7 +561,7 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
   padding: 3px 7px;
   border-radius: 999px;
   background-color: var(--color-primary-light, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 .ws-item-kbd {
   flex: none;

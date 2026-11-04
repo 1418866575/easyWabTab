@@ -338,7 +338,7 @@ function openSite(url: string) {
 }
 
 .engine-select:hover {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 
 

@@ -325,7 +325,7 @@ onUnmounted(() => {
 .pm-today {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   font-variant-numeric: tabular-nums;
 }
 

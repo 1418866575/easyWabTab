@@ -402,7 +402,7 @@ function excerpt(p: SmartPrompt): string {
   line-height: 1;
   cursor: pointer;
 }
-.pm-search-clear:hover { color: var(--color-primary, #3b82f6); background: var(--color-bg-hover, #f1f5f9); }
+.pm-search-clear:hover { color: var(--color-primary-text); background: var(--color-bg-hover, #f1f5f9); }
 
 /* 分类药丸：工具箱同款 */
 .pm-cats { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -424,7 +424,7 @@ function excerpt(p: SmartPrompt): string {
     border-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
     background-color var(--motion-duration, 0.2s) var(--motion-ease, ease);
 }
-.pm-cat-pill:hover { color: var(--color-primary, #3b82f6); border-color: var(--color-primary, #3b82f6); }
+.pm-cat-pill:hover { color: var(--color-primary-text); border-color: var(--color-primary, #3b82f6); }
 .pm-cat-pill.is-on { background: var(--color-primary, #3b82f6); color: #fff; border-color: var(--color-primary, #3b82f6); }
 .pm-cat-pill-cnt { font-size: var(--fs-caption, 12px); opacity: 0.78; }
 
@@ -464,7 +464,7 @@ function excerpt(p: SmartPrompt): string {
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
 }
-.pm-tag.is-on { border-color: var(--color-primary, #3b82f6); background: var(--color-primary-soft, #eff6ff); color: var(--color-primary, #3b82f6); }
+.pm-tag.is-on { border-color: var(--color-primary, #3b82f6); background: var(--color-primary-soft, #eff6ff); color: var(--color-primary-text); }
 .pm-tag-reset { color: var(--color-text-muted); }
 
 .pm-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
@@ -505,7 +505,7 @@ function excerpt(p: SmartPrompt): string {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.pm-name:hover { color: var(--color-primary, #3b82f6); }
+.pm-name:hover { color: var(--color-primary-text); }
 .pm-meta { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); display: flex; gap: 4px; flex-wrap: wrap; }
 .pm-dot { opacity: .6; }
 .pm-builtin {
@@ -526,7 +526,7 @@ function excerpt(p: SmartPrompt): string {
   overflow: hidden;
 }
 .pm-card-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: var(--fs-caption, 12px); }
-.pm-chip { color: var(--color-primary, #3b82f6); }
+.pm-chip { color: var(--color-primary-text); }
 .pm-vars { color: var(--color-text-muted); display: inline-flex; align-items: center; gap: 3px; }
 .pm-vars svg { flex: none; }
 
@@ -540,8 +540,8 @@ function excerpt(p: SmartPrompt): string {
   color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;}
-.pm-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
-.pm-btn.is-primary { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); font-weight: 600; }
+.pm-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary-text); }
+.pm-btn.is-primary { border-color: var(--color-primary, #3b82f6); color: var(--color-primary-text); font-weight: 600; }
 .pm-btn.is-danger:hover { border-color: var(--color-error, #dc2626); color: var(--color-error-text); }
 
 .pm-empty {

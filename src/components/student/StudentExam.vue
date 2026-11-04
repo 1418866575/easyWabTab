@@ -482,12 +482,12 @@ onMounted(async () => {
   height: 36px;}
 
 .se-tabs :deep(.el-radio-button__inner:hover) {
-  color: var(--color-primary, #10b981);
+  color: var(--color-primary-text);
 }
 
 .se-tabs :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
   border-color: var(--color-primary, #10b981);
-  color: var(--color-primary, #10b981);
+  color: var(--color-primary-text);
   background: color-mix(in srgb, var(--color-primary, #10b981) 8%, transparent);
   box-shadow: none;
 }
@@ -683,7 +683,7 @@ onMounted(async () => {
 
 /* 表格倒计时单元格配色（与 hero 口径一致） */
 .se-countdown-cell { font-weight: 600; }
-.se-countdown-cell.status-normal { color: var(--color-primary, #3b82f6); }
+.se-countdown-cell.status-normal { color: var(--color-primary-text); }
 .se-countdown-cell.status-urgent { color: var(--color-warning-text); }
 .se-countdown-cell.status-critical { color: var(--color-error-text); }
 .se-countdown-cell.status-expired { color: var(--color-text-muted); font-weight: 500; }
@@ -691,7 +691,7 @@ onMounted(async () => {
 /* expired / invalid / today special states */
 .se-hero-expired { opacity: 0.55; }
 .se-hero-today {
-  color: var(--color-primary, #10b981);
+  color: var(--color-primary-text);
   font-size: var(--fs-h1, 28px);
 }
 

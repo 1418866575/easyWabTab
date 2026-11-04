@@ -266,7 +266,7 @@ function onRemove(): void {
 }
 .menu-trigger:hover {
   background: var(--color-primary-soft);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 .menu-trigger:focus-visible {
   outline: 2px solid var(--color-primary);
@@ -306,7 +306,7 @@ function onRemove(): void {
 }
 .card-menu-item:hover {
   background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 .card-menu-item:focus-visible {
   outline: 2px solid var(--color-primary);

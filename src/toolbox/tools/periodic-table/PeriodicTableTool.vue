@@ -211,7 +211,7 @@ function kToC(k: number | null): string {
   font-size: var(--fs-caption);
   cursor: pointer;
 }
-.pt-placeholder:hover { transform: none; box-shadow: none; color: var(--color-primary); border-color: var(--color-primary); }
+.pt-placeholder:hover { transform: none; box-shadow: none; color: var(--color-primary-text); border-color: var(--color-primary); }
 
 .pt-legend-title { font-size: var(--fs-caption); color: var(--color-text-secondary); margin-bottom: 6px; }
 .pt-chips { display: flex; flex-wrap: wrap; gap: 6px; }

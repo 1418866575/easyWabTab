@@ -73,7 +73,7 @@ const ROADMAP: Record<string, string> = {
   padding: 2px 10px;
   border-radius: 10px;
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-size: var(--fs-caption, 12px);
   margin: 0;
 }

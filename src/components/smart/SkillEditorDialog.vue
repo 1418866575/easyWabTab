@@ -569,7 +569,7 @@ async function copySkillMd(): Promise<void> {
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 4px;
   background: transparent;
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
 }

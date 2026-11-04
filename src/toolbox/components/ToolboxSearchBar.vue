@@ -265,7 +265,7 @@ defineExpose({ focus: () => nextTick(() => inputRef.value?.focus()) })
     background-color var(--motion-duration) var(--motion-ease);
 }
 .tb-search-clear:hover {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   background: var(--color-bg-hover);
 }
 

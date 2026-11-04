@@ -894,7 +894,7 @@ const handleSubmit = () => {
   border: 1px solid var(--color-primary, #3b82f6);
   border-radius: 6px;
   background: var(--color-primary-light, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
   transition: all 0.15s;
@@ -911,7 +911,7 @@ const handleSubmit = () => {
   border-radius: 4px;
 }
 .icon-grid-item.active .grid-icon-label {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 /* 分类下拉后的「新增分类」按钮：与下拉同行右置，紧凑不抢视觉 */

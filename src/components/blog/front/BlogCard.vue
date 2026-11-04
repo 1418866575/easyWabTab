@@ -187,7 +187,7 @@ const to = computed(() => `/blog/article/${props.article.slug}`)
   color: var(--color-text-muted);
   font-size: var(--font-size-xs, 12px);
 }
-.bf-card-cat { color: var(--color-primary, #3b82f6); }
+.bf-card-cat { color: var(--color-primary-text); }
 .bf-card-dot { color: var(--color-text-muted); }
 .bf-card-tags {
   display: flex;
@@ -199,7 +199,7 @@ const to = computed(() => `/blog/article/${props.article.slug}`)
   padding: 0 6px;
   border-radius: var(--radius-sm, 6px);
   background-color: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-size: var(--font-size-xs, 11px);
   line-height: 18px;
 }

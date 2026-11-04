@@ -68,7 +68,7 @@ const emit = defineEmits<{ close: []; confirm: [] }>()
 .si-block { display: flex; flex-direction: column; gap: 4px; }
 .si-title { margin: 0; font-size: var(--fs-caption, 12px); font-weight: 600; }
 .si-title.is-add { color: var(--color-success-text); }
-.si-title.is-upd { color: var(--color-primary, #3b82f6); }
+.si-title.is-upd { color: var(--color-primary-text); }
 .si-title.is-warn { color: var(--color-warning-text); }
 .si-list { margin: 0; padding-left: 18px; font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
 .si-tip { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }

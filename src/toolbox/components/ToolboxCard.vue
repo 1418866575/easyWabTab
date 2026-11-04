@@ -144,7 +144,7 @@ const ariaLabel = computed(
 .tb-card-name mark.is-hit,
 .tb-card-desc mark.is-hit {
   background: var(--color-primary-soft);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   border-radius: 3px;
   padding: 0 1px;
 }
@@ -189,7 +189,7 @@ const ariaLabel = computed(
   padding: 1px 7px;
   border-radius: var(--radius-full);
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   background: var(--color-primary-soft);
   border: 1px solid transparent;
 }

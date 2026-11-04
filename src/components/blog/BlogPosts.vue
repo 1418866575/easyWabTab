@@ -665,7 +665,7 @@ html.dark .ba-query {
   border: none;
   background: transparent;
   padding: 0;
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-size: var(--font-size-sm, 13px);
   text-align: left;
   cursor: pointer;
@@ -818,7 +818,7 @@ html.dark .ba-query {
   cursor: pointer;
 }
 
-.ba-mini:hover { border-color: var(--ds-primary, #2563eb); color: var(--ds-primary, #2563eb); }
+.ba-mini:hover { border-color: var(--ds-primary, #2563eb); color: var(--ds-primary-text); }
 .ba-mini.is-danger:hover { border-color: var(--ds-danger, #ef4444); color: var(--color-error-text); }
 
 .ba-pager {

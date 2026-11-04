@@ -502,7 +502,7 @@ onMounted(() => {
   border-radius: 10px;
   font-size: var(--fs-caption, 12px);
   background: var(--color-primary-soft, #e9f0ff);
-  color: var(--color-primary, #5b8def);
+  color: var(--color-primary-text);
 }
 .sg-progress-cell { display: flex; align-items: center; gap: 8px; }
 .sg-progress-bar {
@@ -517,7 +517,7 @@ onMounted(() => {
 .sg-badge {
   display: inline-flex; padding: 2px 10px; border-radius: 10px; font-size: var(--fs-caption, 12px); font-weight: 600;
 }
-.sg-badge-active { background: var(--color-primary-soft, #e9f0ff); color: var(--color-primary, #5b8def); }
+.sg-badge-active { background: var(--color-primary-soft, #e9f0ff); color: var(--color-primary-text); }
 .sg-badge-completed { background: rgba(16,185,129,0.12); color: var(--color-success-text); }
 .sg-badge-overdue { background: #fdf3d8; color: var(--color-warning-text); }
 .sg-badge-abandoned { background: rgba(239,68,68,0.12); color: var(--color-error-text); }

@@ -247,7 +247,7 @@ const hasConflict = computed(() => conflictRows.value.length > 0)
 .conflict-vs {
   font-weight: 700;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 .merge-hint {
   margin: 12px 0 0;

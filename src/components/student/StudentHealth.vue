@@ -101,12 +101,12 @@ onMounted(async () => {
 
 .sth-tabs :deep(.el-radio-button__inner:hover) {
   background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .sth-tabs :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
   background-color: var(--color-primary-light, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-weight: 600;
   border-color: var(--color-primary, #3b82f6);
 }

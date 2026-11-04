@@ -277,7 +277,7 @@ function exportArchive(): void {
 
 .gr-student.active {
   background-color: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .gr-student-name {

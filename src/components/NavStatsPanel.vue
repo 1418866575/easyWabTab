@@ -647,7 +647,7 @@ onMounted(() => {
   padding: 0 6px;
   border-radius: var(--radius-sm, 6px);
   background-color: var(--color-primary-soft);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   font-size: var(--font-size-xs, 11px);
   line-height: 18px;
 }
@@ -669,7 +669,7 @@ onMounted(() => {
     background-color var(--motion-duration, 220ms) var(--motion-ease, ease);}
 .ns-mini-btn:hover:not(:disabled) {
   border-color: var(--color-primary);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   background-color: var(--color-primary-soft);
 }
 .ns-mini-btn:disabled {
@@ -700,11 +700,11 @@ onMounted(() => {
   line-height: 1;
   cursor: pointer;}
 .ns-range-btn:hover {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 .ns-range-btn.is-active {
   background-color: var(--color-bg-card);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   font-weight: var(--font-weight-medium, 500);
 }
 

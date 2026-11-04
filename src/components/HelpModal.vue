@@ -1200,7 +1200,7 @@ const skillInstall = [
   margin: 0;
   font-size: var(--fs-md, 15px);
   font-weight: 600;
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   padding-bottom: 8px;
   border-bottom: 1px solid var(--color-border, #e2e8f0);
 }
@@ -1260,7 +1260,7 @@ const skillInstall = [
 
 .shortcut-key {
   background-color: var(--color-bg-active, #e2e8f0);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-size: var(--fs-caption, 12px);
   font-weight: 600;
   padding: 3px 8px;
@@ -1300,7 +1300,7 @@ const skillInstall = [
 
 .mode-admin {
   background-color: var(--ds-primary-soft);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .mode-item p {
@@ -1315,7 +1315,7 @@ const skillInstall = [
   padding: 1px 5px;
   border-radius: 4px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 /* 数据存储 */
@@ -1342,7 +1342,7 @@ const skillInstall = [
   padding: 1px 5px;
   border-radius: 4px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 /* 底部 */
@@ -1404,7 +1404,7 @@ const skillInstall = [
   padding: 1px 5px;
   border-radius: 4px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .sync-account {
@@ -1441,7 +1441,7 @@ const skillInstall = [
 
 .btn-copy:hover {
   border-color: var(--color-primary, #3b82f6);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .download-info .sync-note {
@@ -1498,7 +1498,7 @@ const skillInstall = [
   padding: 1px 5px;
   border-radius: 4px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .panels-grid {
@@ -1588,7 +1588,7 @@ const skillInstall = [
 
 .formula-expr {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   background-color: var(--ds-primary-soft);
   padding: 3px 8px;
   border-radius: 6px;
@@ -1708,7 +1708,7 @@ const skillInstall = [
 .skill-prompt-label {
   font-size: var(--fs-caption, 12px);
   font-weight: 600;
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .code-block {

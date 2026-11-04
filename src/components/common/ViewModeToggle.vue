@@ -35,7 +35,7 @@ defineEmits<{ toggle: [] }>()
 }
 .ewt-view-toggle:hover {
   border-color: var(--color-primary, #3b82f6);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 .ewt-view-toggle-icon {
   font-size: var(--fs-body, 14px);

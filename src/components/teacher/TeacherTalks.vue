@@ -703,7 +703,7 @@ function truncate(text: string, n = 30): string {
   justify-content: flex-end;
   margin-top: auto;
 }
-.tk-detail-btn { color: var(--color-link, #3b82f6); }
+.tk-detail-btn { color: var(--color-primary-text); }
 .tk-edit-btn { color: var(--color-text-secondary); }
 .tk-del-btn { color: var(--color-error-text); }
 
@@ -735,7 +735,7 @@ function truncate(text: string, n = 30): string {
 .tk-cat-badge {
   padding: 2px 8px;
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   border-radius: 4px;
   font-size: var(--fs-caption, 12px);
   font-weight: 600;

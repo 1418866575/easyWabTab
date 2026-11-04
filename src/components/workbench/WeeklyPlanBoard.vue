@@ -281,7 +281,7 @@ function onCell(rowKey: string, day: number): void {
 
 .wp-day-head.is-today .wp-day-label,
 .wp-day-head.is-today .wp-day-date {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .wp-day-date {
@@ -351,7 +351,7 @@ function onCell(rowKey: string, day: number): void {
 }
 
 .wp-item-sub.is-primary {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .wp-item-sub.is-success {

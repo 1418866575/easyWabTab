@@ -182,7 +182,7 @@ async function toggleEmailReminder(item: CountdownItem) {
 }
 
 .countdown-email-toggle:hover {
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
 }
 
 .email-toggle-input {
@@ -217,7 +217,7 @@ async function toggleEmailReminder(item: CountdownItem) {
   padding: 1px 8px;
   border-radius: var(--radius-full);
   background: var(--color-bg-card, var(--color-bg-hover));
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   border: 1px solid var(--color-primary, var(--color-primary));
   opacity: 0.85;
 }
@@ -232,7 +232,7 @@ async function toggleEmailReminder(item: CountdownItem) {
 }
 
 .cat-work {
-  color: var(--ds-primary);
+  color: var(--ds-primary-text);
   border: 1px solid var(--ds-primary);
   background: rgba(59, 130, 246, 0.12);
 }

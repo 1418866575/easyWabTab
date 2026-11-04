@@ -828,7 +828,7 @@ watch(
   font-size: var(--fs-caption, 12px);
   padding: 1px 8px;
   border-radius: var(--radius-full, 9999px);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   background: var(--color-primary-light, #eff6ff);
 }
 .pwd-form-cat {
@@ -889,7 +889,7 @@ html.dark .pwd-cat-badge {
   height: 36px;}
 
 .pwd-btn-lock:hover {
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   border-color: var(--color-primary, var(--color-primary));
 }
 
@@ -1004,7 +1004,7 @@ html.dark .pwd-cat-badge {
   height: 36px;}
 
 .pwd-actions .pwd-action-btn:hover {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   background: var(--color-bg-hover, #f1f5f9);
 }
 

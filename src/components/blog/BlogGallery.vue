@@ -564,13 +564,13 @@ async function doRemove(ids: string[]): Promise<void> {
 
 .bg-chip:hover {
   border-color: var(--color-primary, #3b82f6);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .bg-chip.is-on {
   border-color: var(--color-primary, #3b82f6);
   background-color: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-weight: 600;
 }
 
@@ -584,7 +584,7 @@ async function doRemove(ids: string[]): Promise<void> {
 
 .bg-chip.is-on .bg-chip-count {
   background-color: rgba(59, 130, 246, 0.16);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 /* 查询卡片：与其它工作台 .td-search / .ba-query 同款 */
@@ -698,7 +698,7 @@ async function doRemove(ids: string[]): Promise<void> {
   padding: 0;
   border: none;
   background: none;
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
 }
@@ -828,7 +828,7 @@ async function doRemove(ids: string[]): Promise<void> {
 
 .bg-rename:hover {
   border-color: var(--color-primary, #3b82f6);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .bg-del:disabled {

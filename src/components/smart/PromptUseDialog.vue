@@ -154,7 +154,7 @@ function clearAll(): void {
   padding: 0;
   border: none;
   background: none;
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
 }

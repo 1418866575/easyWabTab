@@ -420,7 +420,7 @@ onMounted(async () => {
 
 .ba-nav-item.active {
   background-color: var(--ds-primary-soft, #eff6ff);
-  color: var(--ds-primary, #2563eb);
+  color: var(--ds-primary-text);
   font-weight: var(--font-weight-medium, 500);
 }
 

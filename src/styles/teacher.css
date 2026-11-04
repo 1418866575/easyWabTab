@@ -179,7 +179,7 @@
 }
 
 .tw-btn-danger {
-  color: var(--color-danger, #ef4444);
+  color: var(--color-error-text);
   border-color: var(--color-danger, #ef4444);
   background-color: transparent;
 }

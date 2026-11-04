@@ -14,6 +14,8 @@ html.dark {
   --color-border-hover: #4b5563;
   --color-primary: #3b82f6;
   --color-primary-hover: #2563eb;
+  /* 强调色当文字用：亮色侧是 600~800 级（压在白底上够深），深底上必须反过来用 300 级 */
+  --color-primary-text: #93c5fd;
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-error: #ef4444;
@@ -30,6 +32,10 @@ html.dark {
   --color-surface-2: #111827;
   --color-hover: #374151;
   --color-primary-soft: rgba(59, 130, 246, 0.18);
+  /* --color-primary-light 是「更淡一档的主色底」（选中页签、统计卡、日历今天列）。
+     亮色侧它是 #eff6ff 这类近白，暗色下若不覆写就是深色界面上贴一块白补丁 —— 而且
+     压在它上面的文字已经提亮到 300 级，实测 .wp-day-head.is-today 只有 2.36:1。 */
+  --color-primary-light: rgba(59, 130, 246, 0.12);
   --color-border-strong: #4b5563;
 
   /* 暗色阴影覆盖 */
@@ -311,7 +317,7 @@ html.dark .settings-btn {
 
 html.dark .settings-btn:hover {
   background-color: var(--color-bg-hover);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 
 /* 分类管理 */
@@ -891,7 +897,7 @@ html.dark .page-size-select {
 
 html.dark .page-size-select:hover {
   border-color: var(--color-primary, #3b82f6);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 html.dark .page-size-select:focus {

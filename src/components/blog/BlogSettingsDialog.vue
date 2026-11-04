@@ -137,7 +137,7 @@ html.dark .bsd-rail { background-color: rgba(255, 255, 255, 0.03); }
 .bsd-item:hover { background-color: var(--color-bg-hover, rgba(0, 0, 0, 0.04)); color: var(--ds-text); }
 .bsd-item.active {
   background-color: var(--ds-primary-soft, #eff6ff);
-  color: var(--ds-primary, #2563eb);
+  color: var(--ds-primary-text);
   font-weight: 600;
 }
 html.dark .bsd-item.active { background-color: rgba(96, 165, 250, 0.15); }

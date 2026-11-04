@@ -171,7 +171,7 @@ function dl() {
       <p class="tu-hint">仅比对文本层内容；图片型/扫描件或版式差异无法识别。差异以“行”为单位。</p>
     </div>
     <div class="tu-t1">
-      <label class="tu-label">差异结果（<span style="color:var(--color-danger)">红=删除</span> / <span style="color:var(--color-success-text)">绿=新增</span>）</label>
+      <label class="tu-label">差异结果（<span style="color:var(--color-error-text)">红=删除</span> / <span style="color:var(--color-success-text)">绿=新增</span>）</label>
       <div class="diff-view" v-html="diffHtml"></div>
       <div v-if="!diffHtml && !busy" class="tu-preview">选择两份 PDF 后在此显示差异</div>
     </div>

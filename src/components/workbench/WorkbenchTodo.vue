@@ -744,7 +744,7 @@ onMounted(async () => {
   height: 36px;}
 
 .search-reset-btn:hover {
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   border-color: var(--color-primary, var(--color-primary));
 }
 
@@ -793,7 +793,7 @@ onMounted(async () => {
 }
 
 .td-cat-tab:hover {
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   border-color: var(--color-primary, var(--color-primary));
 }
 
@@ -926,7 +926,7 @@ onMounted(async () => {
 }
 
 .st-in-progress {
-  color: var(--ds-primary);
+  color: var(--ds-primary-text);
   background: var(--ds-primary-soft);
   border-color: #93c5fd;
 }
@@ -1004,7 +1004,7 @@ onMounted(async () => {
   font-weight: 600;
   padding: 2px 10px;
   border-radius: var(--radius-full, 9999px);
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   background: var(--color-primary-light, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
 }
@@ -1134,7 +1134,7 @@ onMounted(async () => {
 }
 
 .color-reset:hover {
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   border-color: var(--color-primary, var(--color-primary));
 }
 
@@ -1272,7 +1272,7 @@ html.dark .td-cat-tab {
 }
 
 html.dark .td-cat-tab:hover {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   border-color: var(--color-primary, #3b82f6);
 }
 

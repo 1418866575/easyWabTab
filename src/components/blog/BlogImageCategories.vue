@@ -245,7 +245,7 @@ async function handleMove(id: string, delta: number): Promise<void> {
   cursor: pointer;
 }
 
-.bic-mini:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
+.bic-mini:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary-text); }
 .bic-mini.is-danger:hover { border-color: var(--color-error, #ef4444); color: var(--color-error-text); }
 
 .bic-edit {

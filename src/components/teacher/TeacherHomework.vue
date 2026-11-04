@@ -605,7 +605,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
   justify-content: flex-end;
   margin-top: auto;
 }
-.hw-detail-btn { color: var(--color-link, #3b82f6); }
+.hw-detail-btn { color: var(--color-primary-text); }
 .hw-edit-btn { color: var(--color-text-secondary); }
 .hw-del-btn { color: var(--color-error-text); }
 
@@ -637,7 +637,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
 .hw-subject-badge {
   padding: 2px 8px;
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   border-radius: 4px;
   font-size: var(--fs-caption, 12px);
   font-weight: 600;
@@ -653,7 +653,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
 }
 .hw-miss-badge.is-danger { background: rgba(239, 68, 68, 0.12); color: var(--color-error-text); }
 .hw-miss-badge.is-ok { background: rgba(16, 185, 129, 0.12); color: var(--color-success-text); }
-.hw-miss-badge.is-info { background: rgba(59, 130, 246, 0.12); color: var(--ds-primary); }
+.hw-miss-badge.is-info { background: rgba(59, 130, 246, 0.12); color: var(--ds-primary-text); }
 
 /* ===== 表格内按钮（与 StudentMistakes 一致） ===== */
 /* .btn-detail 视觉已上收至全局 style.css（2026-11 按钮收敛） */
@@ -673,7 +673,7 @@ async function onPending(miss: TeacherHomeworkMiss): Promise<void> {
 .btn-madeup {
   background: rgba(59, 130, 246, 0.1);
   border-color: rgba(59, 130, 246, 0.3);
-  color: var(--ds-primary);
+  color: var(--ds-primary-text);
 }
 .btn-madeup:hover { background: rgba(59, 130, 246, 0.18); }
 .btn-submit {

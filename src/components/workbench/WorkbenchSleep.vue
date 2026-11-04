@@ -456,7 +456,7 @@ onMounted(async () => {
 .ex-attainment {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -498,7 +498,7 @@ onMounted(async () => {
   height: 36px;}
 
 .btn-toggle-list:hover {
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   border-color: var(--color-primary, var(--color-primary));
 }
 
@@ -544,7 +544,7 @@ onMounted(async () => {
   font-weight: 600;
   padding: 2px 10px;
   border-radius: var(--radius-full, 9999px);
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   background: var(--color-primary-light, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
 }
@@ -731,7 +731,7 @@ html.dark .btn-toggle-list {
 /* 睡眠质量文字色（sl-quality-1..5） */
 .sl-quality-1 { color:var(--color-error-text); font-weight:600; }
 .sl-quality-2 { color:#f97316; font-weight:600; }
-.sl-quality-3 { color:var(--ds-primary); font-weight:600; }
+.sl-quality-3 { color:var(--ds-primary-text); font-weight:600; }
 .sl-quality-4 { color:var(--color-success-text); font-weight:700; }
 .sl-quality-5 { color:var(--color-success-text); font-weight:700; }
 

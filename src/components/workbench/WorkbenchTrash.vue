@@ -273,7 +273,7 @@ function ledgerLabel(e: LedgerEntry): string {
   margin: 0;
   font-size: var(--font-size-lg, 16px);
   font-weight: 600;
-  color: var(--color-text-primary, #0f172a);
+  color: var(--color-text);
 }
 
 .tr-sub {
@@ -318,7 +318,7 @@ function ledgerLabel(e: LedgerEntry): string {
   margin: 0;
   font-size: var(--font-size-md, 14px);
   font-weight: 600;
-  color: var(--color-text-primary, #0f172a);
+  color: var(--color-text);
   padding-left: 8px;
   border-left: 3px solid var(--color-primary, #3b82f6);
   line-height: 1.1;

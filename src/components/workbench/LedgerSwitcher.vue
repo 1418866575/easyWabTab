@@ -96,7 +96,7 @@ function onSelect(id: string): void {
 }
 
 .wls-trigger:hover {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   border-color: var(--color-primary, #3b82f6);
 }
 
@@ -108,7 +108,7 @@ function onSelect(id: string): void {
   font-size: var(--fs-caption, 12px);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   background: var(--color-primary-soft, #eff6ff);
 }
 
@@ -176,7 +176,7 @@ function onSelect(id: string): void {
 .wls-item.active {
   background-color: var(--color-primary-soft, #eff6ff);
   border-color: var(--color-primary, #3b82f6);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .wls-item-code {

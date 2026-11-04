@@ -372,7 +372,7 @@ function onActionClick(section: string) {
 .greeting-age {
   font-size: var(--fs-sm, 13px);
   font-weight: 500;
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   margin-left: 6px;
 }
 

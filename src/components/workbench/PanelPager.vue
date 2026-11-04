@@ -53,7 +53,7 @@ defineEmits<{ prev: []; next: [] }>()
 
 .pp-btn:hover:not(:disabled) {
   background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   border-color: var(--color-primary, #3b82f6);
 }
 
@@ -77,7 +77,7 @@ html.dark .pp-btn {
 
 html.dark .pp-btn:hover:not(:disabled) {
   background-color: var(--color-bg-hover, #374151);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   border-color: var(--color-primary, #3b82f6);
 }
 

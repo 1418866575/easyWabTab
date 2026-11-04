@@ -452,13 +452,13 @@ function miniStyle(t: TypoTheme): Record<string, string> {
 .td-swatch { width: 7px; height: 7px; border-radius: 50%; flex: none; }
 .td-ops { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; flex: none; }
 .td-def { border: none; background: transparent; padding: 2px 3px; color: var(--ds-text-3); font-size: var(--fs-caption); cursor: pointer; white-space: nowrap; }
-.td-def:hover { color: var(--color-primary, #3b82f6); }
+.td-def:hover { color: var(--color-primary-text); }
 .td-badge {
   flex: none;
   padding: 1px 5px;
   border-radius: var(--ds-radius-pill, 999px);
   background: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-size: 10px;
 }
 
@@ -478,7 +478,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
 .td-prev:hover {
   border-color: var(--color-primary, #3b82f6);
   background: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 /* ---------- 公众号预览视图 ---------- */
@@ -509,7 +509,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
 }
-.tdp-back:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
+.tdp-back:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary-text); }
 
 .tdp-live {
   margin-left: auto;
@@ -594,7 +594,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
   font-size: var(--fs-caption);
   cursor: pointer;
 }
-.tdp-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
+.tdp-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary-text); }
 .tdp-btn--primary {
   border-color: var(--color-primary, #3b82f6);
   background: var(--color-primary, #3b82f6);

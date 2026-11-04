@@ -479,7 +479,7 @@ function relTime(ts: number): string {
   line-height: 1;
   cursor: pointer;
 }
-.sm-search-clear:hover { color: var(--color-primary, #3b82f6); background: var(--color-bg-hover, #f1f5f9); }
+.sm-search-clear:hover { color: var(--color-primary-text); background: var(--color-bg-hover, #f1f5f9); }
 
 /* 分类药丸：工具箱同款 */
 .sm-cats { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -501,7 +501,7 @@ function relTime(ts: number): string {
     border-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
     background-color var(--motion-duration, 0.2s) var(--motion-ease, ease);
 }
-.sm-cat-pill:hover { color: var(--color-primary, #3b82f6); border-color: var(--color-primary, #3b82f6); }
+.sm-cat-pill:hover { color: var(--color-primary-text); border-color: var(--color-primary, #3b82f6); }
 .sm-cat-pill.is-on { background: var(--color-primary, #3b82f6); color: #fff; border-color: var(--color-primary, #3b82f6); }
 .sm-cat-pill-cnt { font-size: var(--fs-caption, 12px); opacity: 0.78; }
 
@@ -532,7 +532,7 @@ function relTime(ts: number): string {
 .sm-tag.is-on {
   border-color: var(--color-primary, #3b82f6);
   background: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 .sm-tag-reset { color: var(--color-text-muted); }
 
@@ -617,7 +617,7 @@ function relTime(ts: number): string {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.sm-name:hover { color: var(--color-primary, #3b82f6); }
+.sm-name:hover { color: var(--color-primary-text); }
 .sm-meta { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); display: flex; gap: 4px; flex-wrap: wrap; }
 .sm-cat { color: var(--color-text-secondary); }
 .sm-dot { opacity: .6; }
@@ -639,7 +639,7 @@ function relTime(ts: number): string {
   overflow: hidden;
 }
 .sm-card-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-.sm-chip { font-size: var(--fs-caption, 12px); color: var(--color-primary, #3b82f6); }
+.sm-chip { font-size: var(--fs-caption, 12px); color: var(--color-primary-text); }
 
 .sm-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: auto; }
 .sm-spacer { flex: 1 1 auto; }
@@ -651,13 +651,13 @@ function relTime(ts: number): string {
   color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;}
-.sm-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
+.sm-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary-text); }
 .sm-btn.is-danger:hover { border-color: var(--color-error, #dc2626); color: var(--color-error-text); }
 /* 主 CTA：与提示词 / 工作流卡片一致——第一颗按钮是该资产的主动作（技能 = 详情） */
 .sm-btn.is-primary {
   border-color: var(--color-primary, #3b82f6);
   background-color: var(--color-primary-soft, rgba(59, 130, 246, 0.08));
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 .sm-btn.is-primary:hover {
   border-color: var(--color-primary, #3b82f6);

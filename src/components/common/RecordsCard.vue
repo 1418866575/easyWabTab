@@ -143,7 +143,7 @@ function display(v?: string | number | null): string {
 }
 .ewt-card-value.ewt-emphasis {
   font-weight: 600;
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 :global(html.dark) .ewt-card-value {
   color: var(--color-text);

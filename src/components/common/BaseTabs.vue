@@ -176,18 +176,18 @@ function testidOf(item: TabItem): string | undefined {
 
 .ui-tabs :deep(.el-radio-button__inner:hover) {
   background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .ui-tabs :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
   background-color: var(--color-primary-light, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   border-color: var(--color-primary, #3b82f6);
   font-weight: var(--font-weight-semibold, 600);
 }
 
 .ui-tabs :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner .ui-tab-badge) {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 /* 暗色三态 */

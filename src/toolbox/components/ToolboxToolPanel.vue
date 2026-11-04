@@ -293,8 +293,8 @@ onBeforeUnmount(() => {
     border-color var(--motion-duration) var(--motion-ease),
     background-color var(--motion-duration) var(--motion-ease);
 }
-.tb-modal-ico:hover { color: var(--color-primary); border-color: var(--color-primary); }
-.tb-modal-ico.is-on { color: var(--color-primary); border-color: var(--color-primary); background: var(--color-primary-soft); }
+.tb-modal-ico:hover { color: var(--color-primary-text); border-color: var(--color-primary); }
+.tb-modal-ico.is-on { color: var(--color-primary-text); border-color: var(--color-primary); background: var(--color-primary-soft); }
 
 .tb-modal-content { padding: 16px; overflow: auto; flex: 1; }
 .tb-modal-foot {
@@ -314,7 +314,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--color-border);
   background: transparent;
   color: var(--color-text-secondary);}
-.tb-modal-btn:hover { color: var(--color-primary); border-color: var(--color-primary); }
+.tb-modal-btn:hover { color: var(--color-primary-text); border-color: var(--color-primary); }
 
 .tb-modal-loading,
 .tb-modal-error { margin: 0; font-size: var(--fs-sm); color: var(--color-text-secondary); }

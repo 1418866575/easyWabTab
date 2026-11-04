@@ -137,7 +137,7 @@ function genderClass(g: '男' | '女'): string {
 }
 .tsp-gender.is-boy {
   background: rgba(59, 130, 246, 0.12);
-  color: var(--ds-primary);
+  color: var(--ds-primary-text);
 }
 .tsp-gender.is-girl {
   background: rgba(236, 72, 153, 0.12);
@@ -169,7 +169,7 @@ function genderClass(g: '男' | '女'): string {
   border-radius: 999px;
   font-size: var(--fs-caption, 12px);
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 .tw-chip.is-girl {
   background: rgba(236, 72, 153, 0.12);

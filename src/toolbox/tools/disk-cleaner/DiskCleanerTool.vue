@@ -414,7 +414,7 @@ async function removeChecked(): Promise<void> {
   user-select: none;
 }
 .dc-table th.is-sort:hover {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 .dc-table tbody tr:hover {
   background: var(--color-primary-soft);
@@ -453,7 +453,7 @@ async function removeChecked(): Promise<void> {
   font-size: var(--fs-caption);
   font-weight: 600;
   background: var(--color-primary-soft);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   white-space: nowrap;
 }
 .is-danger {

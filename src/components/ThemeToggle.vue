@@ -176,11 +176,11 @@ onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
 }
 .theme-toggle:hover:not(:disabled) {
   border-color: var(--color-primary);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 .theme-toggle.is-open {
   border-color: var(--color-primary);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 .theme-toggle:active:not(:disabled) {
   transform: var(--motion-press, scale(0.97));
@@ -258,7 +258,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
   background-color: var(--color-bg-hover);
 }
 .theme-option.is-selected {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   font-weight: 500;
 }
 .theme-option-name {
@@ -275,7 +275,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
 .theme-check {
   width: 16px;
   height: 16px;
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   flex: 0 0 auto;
 }
 

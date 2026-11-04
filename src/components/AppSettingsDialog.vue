@@ -4520,12 +4520,12 @@ html.dark .sub-tab-btn.active {
 
 .tab-btn:hover {
   background-color: var(--color-bg-card, var(--color-bg-hover));
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
 }
 
 .tab-btn.active {
   background-color: var(--color-primary-light, #eff6ff);
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   font-weight: 600;
 }
 
@@ -4693,7 +4693,7 @@ html.dark .tab-btn.active {
 }
 .bl-cat-badge b {
   font-family: var(--font-mono, monospace);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 .bl-cat-badge em {
   font-style: normal;
@@ -4748,7 +4748,7 @@ html.dark .tab-btn.active {
 
 /* 校验/阻断提示（红色，区别于普通 hint） */
 .bl-error {
-  color: var(--color-danger, #ef4444);
+  color: var(--color-error-text);
   margin: 6px 0 0;
 }
 
@@ -4793,7 +4793,7 @@ html.dark .tab-btn.active {
   font-size: var(--fs-caption, 12px);
   border-radius: 6px;
   background-color: color-mix(in srgb, var(--color-primary, #3b82f6) 12%, transparent);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   vertical-align: middle;
 }
 .bl-edit-input { width: 200px; }
@@ -5430,7 +5430,7 @@ html.dark .danger-hint {
   color: var(--color-text-secondary);
 }
 .beian-link {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   text-decoration: none;
 }
 .beian-link:hover {
@@ -5451,7 +5451,7 @@ html.dark .danger-hint {
   font-weight: 600;
   padding: 2px 10px;
   border-radius: 999px;
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   background: var(--color-primary-light, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
 }
@@ -5594,7 +5594,7 @@ html.dark .ld-builtin-tag {
 }
 .chip-remove:hover {
   background: var(--color-hover, #f3f4f6);
-  color: var(--color-danger, #ef4444);
+  color: var(--color-error-text);
 }
 .student-subject-empty {
   font-size: var(--fs-sm, 13px);
@@ -5692,7 +5692,7 @@ html.dark .settings-rail { background-color: rgba(255, 255, 255, 0.03); }
 .rail-item:hover { background-color: var(--color-bg-hover, rgba(0, 0, 0, 0.04)); color: var(--color-text); }
 .rail-item.active {
   background-color: var(--color-primary-light, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-weight: 600;
 }
 html.dark .rail-item.active { background-color: rgba(96, 165, 250, 0.15); }

@@ -35,6 +35,7 @@
 | ---- | ------------------------------------------------------------------- | ------------------ |
 | 主色   | `--color-primary` / `--color-primary-hover`                         | 主按钮、选中态、focus 环、链接 |
 | 主色软底 | `--color-primary-soft`                                              | 选中行底、标签底           |
+| 主色**当文字** | `--color-primary-text`                                        | 只要是 `color:`，一律用它（7 套 accent 各自取值） |
 | 成功   | `--color-success` / `-hover` / `-soft`                              | 成功提示、启用态           |
 | 警告   | `--color-warning` / `-hover` / `-soft`                              | 警告徽标               |
 | 危险   | `--color-error` / `-hover` / `-soft`                                | 删除按钮、错误态、校验错误      |
@@ -61,7 +62,42 @@
 
 **配套的坑**：`-soft` 浅底是固定浅色（`#d1fae5` 等），暗色下若不覆写，就是「深色界面上贴一块浅色补丁」，再配上已提亮的 `-text` 就是浅字压浅底（实测 `wp-stat.is-success` 从 3.32 掉到 1.7）。`dark.css` 已把三个 `-soft` 改成 `rgba(...,0.16)` 低透明度彩色，与 `--ds-*-soft` / `--color-primary-soft` 同一写法。
 
+**同一个坑还有一个没堵**：`--color-primary-light`（更淡一档的主色底，用于选中页签、统计卡、日历今天列）亮色侧是 `#eff6ff` 这类近白，`themes.css` 的 `html[data-accent='x']` 无条件块在暗色下也生效 → 近白底 + 已提亮的 300 级字，`.wp-day-head.is-today` 实测只剩 **2.36:1**。已在 `dark.css` 与 7 个 `html.dark[data-accent='x']` 块补 `rgba(主色, 0.12)`。
+
+> 判断口径：凡是**承载文字的浅色表面**令牌（`-soft` / `-light` / `-50` / `-100`），都必须有一个暗色版本。只写亮色版本 = 暗色下白补丁。
+
 > 同类问题还剩一类没解决：`--color-primary` 当文字压在 `--color-primary-soft` 上（图书馆标签、智能工作台导航，暗色 1.96~2.24）。要修得给 7 套 accent 各配一个 `--color-primary-text`，属独立工作量。
+
+#### 强调色也分两套：`--color-primary` vs `--color-primary-text`（2026-11 新增）
+
+同一个坑，只是换到了主色上：`--color-primary` 是 **500 级**，做**实底 / 边框 / 图标**没问题，但一旦写进 `color:` 就不够——
+
+| 场景 | `--color-primary` 实测对比度 |
+| --- | --- |
+| 白底 | 3.68:1（蓝） / 2.09:1（绿） |
+| `--color-primary-soft` 合成底 | 3.27（蓝） / 3.19（米黄） / 2.09（绿） / **1.96（暗色图书馆标签）** |
+
+因此新增 `--color-primary-text`，**规则只有一条：只要声明是 `color:`（含 `-webkit-text-fill-color`），就用 `-text`；`background` / `border-color` / `fill` / `stroke` 继续用 `--color-primary`。**
+
+取值方式不是「统一写 700」，而是**每套 accent 取「在 `primary-soft` 合成底色上 ≥4.8:1 的最浅一档」**（留 0.3 余量，防止合成取整后跌破 4.5）。结果各主题档位并不一致——绿色主色太亮，要到 800 级，紫/红 600 就够：
+
+| accent | 亮色 `-text` | 档位 | 对比度 | 暗色 `-text` | 档位 | 对比度 |
+| --- | --- | --- | --- | --- | --- | --- |
+| blue | `#1d4ed8` | 700 | 5.96 | `#93c5fd` | 300 | 6.26 |
+| brown | `#6f4a30` | 700 | 6.20 | `#d6b693` | 300 | 5.82 |
+| pink | `#be185d` | 700 | 5.35 | `#f9a8d4` | 300 | 6.59 |
+| green | `#166534` | 800 | 6.54 | `#4ade80` | 400 | 5.84 |
+| purple | `#7c3aed` | 600 | 5.04 | `#c4b5fd` | 300 | 6.33 |
+| red | `#a60d24` | 600 | 6.54 | `#ea7e7e` | 300 | 4.91 |
+| gray | `#495463` | 700 | 6.03 | `#9fadb6` | 300 | 4.91 |
+
+**为什么必须先算「合成底」**：`--color-primary-soft` 是 `rgba()`，实际底色 = 该色以 alpha 叠在 `--color-bg-card` 上。7 套主题的 `-bg-card` 和 alpha 都不同（米黄/莫兰迪的卡片本身不是纯白），所以亮色对比度要在**各自的合成色**上验，不能拿白底套。
+
+**暗色侧为什么跳这么多档**：亮色是「加深」思路（500→600~800），暗色必须反过来「提亮」（500→300/400），700 级在深底上等于隐形。这和功能色 `-text` 的暗色处理是同一个道理。
+
+**别碰图标**：`color:` 也常被用来给内联 SVG 上色（`stroke/fill: currentColor`）。把图标一起换成 `-text` 会让暗色下的图标发灰发淡。批量迁移时按选择器排除：含 `svg` / `el-icon` / `::before` / `::after`，以及 `.panel-icon`、`.tb-card-icon`、`.ov-card-icon` 这类具名图标类（共 22 处，留 `--color-primary`）。
+
+**一个反例**：乘法表 `.mt-cell.is-focus` 原本 `color` 与 `background` 都是 `--color-primary`（1:1，完全看不见），口诀模式靠 `.is-small` 的 `#fff` 掩盖了它。这种「实底上放字」属于另一类问题（白字压饱和色），必须压白字，**不能**换 `-text`。
 
 > 另有 `--color-slate-50..900` 中性灰阶、`--color-surface` / `--color-surface-2`、`--color-shadow`。
 

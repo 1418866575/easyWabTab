@@ -159,7 +159,7 @@ html.dark .bs-content.panel-scope .bizinv-low-card {
 /* 只补颜色与数字对齐：字号由各面板自己定（记账 7 列并排需要更小号，
    教师 6 列统计卡可用 26-30px），面板 scoped 规则会按需覆盖字号。 */
 .panel-scope .stat-value {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-variant-numeric: tabular-nums;
   line-height: 1.15;
 }

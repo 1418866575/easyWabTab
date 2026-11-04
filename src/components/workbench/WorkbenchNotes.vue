@@ -918,7 +918,7 @@ onUnmounted(() => {
 .nt-cat-badge {
   font-size: var(--fs-caption, 12px); font-weight: 600; padding: 2px 10px;
   border-radius: var(--radius-full, 9999px);
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   background: var(--color-primary-light, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
 }
@@ -927,7 +927,7 @@ onUnmounted(() => {
  * 数据层未动：cardFields 里仍保留 '颜色'/'置顶' 两条（便于将来卡片放宽字段数时直接生效），
  * 但 RecordsCard 的 maxFields 默认 4 只渲染前四项（标题/内容/分类/状态），
  * 所以移动端卡片视图本来就不展示这两项——与本次删列无关，勿误以为是回归。 */
-.nt-edit-btn { color: var(--color-link, #3b82f6); }
+.nt-edit-btn { color: var(--color-primary-text); }
 .nt-delete-btn { color: var(--color-error-text); }
 .nt-pin-btn { opacity: 1; }
 .nt-pin-btn.active { color: var(--el-color-warning, #e6a23c); border-color: var(--el-color-warning, #e6a23c); }
@@ -966,7 +966,7 @@ onUnmounted(() => {
   border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   background: color-mix(in srgb, var(--color-primary, #3b82f6) 8%, transparent);
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   font-size: var(--fs-caption, 12px);
   font-weight: 600;
   cursor: pointer;
@@ -1085,7 +1085,7 @@ html.dark .timeline-item::before { background: var(--color-border, #374151); }
 
 /* ===== 合并表格：便签类型徽标 + 普通行隐藏展开箭头 ===== */
 .nt-type-badge { font-size: var(--fs-caption, 12px); font-weight: 600; padding: 2px 10px; border-radius: var(--radius-full, 9999px); white-space: nowrap; }
-.nt-type-badge.is-normal { color: var(--color-primary, #3b82f6); background: var(--color-primary-light, #eff6ff); border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent); }
+.nt-type-badge.is-normal { color: var(--color-primary-text); background: var(--color-primary-light, #eff6ff); border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent); }
 .nt-type-badge.is-timeline { color: var(--color-success-text); background: color-mix(in srgb, var(--color-success, #22c55e) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-success, #22c55e) 35%, transparent); }
 
 /* ===== 便签状态（处理中/已处理/逾期）与截止日期 ===== */
@@ -1123,7 +1123,7 @@ html.dark .timeline-item::before { background: var(--color-border, #374151); }
 .nt-timeline-item-content :deep(li),
 .timeline-item-content :deep(li) { margin: 0.15em 0; }
 .nt-timeline-item-content :deep(a),
-.timeline-item-content :deep(a) { color: var(--color-primary, var(--color-primary)); text-decoration: underline; word-break: break-all; }
+.timeline-item-content :deep(a) { color: var(--color-primary-text); text-decoration: underline; word-break: break-all; }
 .nt-timeline-item-content :deep(code),
 .timeline-item-content :deep(code) { background: color-mix(in srgb, currentColor 12%, transparent); padding: 1px 4px; border-radius: var(--radius-sm, 4px); font-size: 0.9em; }
 .nt-timeline-item-content :deep(pre),

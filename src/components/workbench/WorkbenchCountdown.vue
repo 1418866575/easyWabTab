@@ -783,7 +783,7 @@ onUnmounted(() => {
   padding: 1px 8px;
   border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-hover));
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   border: 1px solid var(--color-primary, var(--color-primary));
   opacity: 0.85;
 }
@@ -814,7 +814,7 @@ html.dark .reminded-badge {
 }
 
 .cat-work {
-  color: var(--ds-primary);
+  color: var(--ds-primary-text);
   border: 1px solid var(--ds-primary);
   background: rgba(59, 130, 246, 0.12);
 }
@@ -1192,7 +1192,7 @@ html.dark .cat-default {
 }
 /* 操作列：前台显示切换按钮（文字=当前是否上墙显示，点击切换） */
 .cd-t-ops .btn-show-on {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   border-color: var(--color-primary, #3b82f6);
 }
 .cd-t-ops .btn-show-off {

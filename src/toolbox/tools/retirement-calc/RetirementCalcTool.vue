@@ -251,13 +251,13 @@ useDirtyFlag(() => !!parsed.value)
 .rc-banner-label {
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 .rc-banner-age {
   font-size: 38px;
   font-weight: 800;
   line-height: 1.1;
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 .rc-banner-sub {
   font-size: var(--fs-sm);
@@ -353,12 +353,12 @@ useDirtyFlag(() => !!parsed.value)
 }
 .rc-ym-year:hover,
 .rc-ym-month:hover {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   background: var(--color-primary-soft);
 }
 .rc-ym-year.on,
 .rc-ym-month.on {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   font-weight: 600;
   background: var(--color-primary-soft);
   border-color: var(--color-primary);
@@ -376,7 +376,7 @@ useDirtyFlag(() => !!parsed.value)
   line-height: 1.6;
 }
 .rc-source a {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   text-decoration: underline;
   text-underline-offset: 2px;
   word-break: break-all;

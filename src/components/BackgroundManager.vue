@@ -502,7 +502,7 @@ function clearBackground() {
   margin: 0 0 12px 0;
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .subsection-title {
@@ -562,13 +562,13 @@ function clearBackground() {
 
 .type-btn:hover {
   border-color: var(--color-primary, #3b82f6);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .type-btn.active {
   border-color: var(--color-primary, #3b82f6);
   background: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 /* 颜色选择 */
@@ -735,7 +735,7 @@ function clearBackground() {
 .opacity-value {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   min-width: 44px;
   text-align: right;
 }

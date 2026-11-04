@@ -462,7 +462,7 @@ function excerpt(w: SmartWorkflow): string {
   line-height: 1;
   cursor: pointer;
 }
-.wm-search-clear:hover { color: var(--color-primary, #3b82f6); background: var(--color-bg-hover, #f1f5f9); }
+.wm-search-clear:hover { color: var(--color-primary-text); background: var(--color-bg-hover, #f1f5f9); }
 
 /* 分类药丸：工具箱同款 */
 .wm-cats { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -484,7 +484,7 @@ function excerpt(w: SmartWorkflow): string {
     border-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
     background-color var(--motion-duration, 0.2s) var(--motion-ease, ease);
 }
-.wm-cat-pill:hover { color: var(--color-primary, #3b82f6); border-color: var(--color-primary, #3b82f6); }
+.wm-cat-pill:hover { color: var(--color-primary-text); border-color: var(--color-primary, #3b82f6); }
 .wm-cat-pill.is-on { background: var(--color-primary, #3b82f6); color: #fff; border-color: var(--color-primary, #3b82f6); }
 .wm-cat-pill-cnt { font-size: var(--fs-caption, 12px); opacity: 0.78; }
 
@@ -523,7 +523,7 @@ function excerpt(w: SmartWorkflow): string {
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
 }
-.wm-tag.is-on { border-color: var(--color-primary, #3b82f6); background: var(--color-primary-soft, #eff6ff); color: var(--color-primary, #3b82f6); }
+.wm-tag.is-on { border-color: var(--color-primary, #3b82f6); background: var(--color-primary-soft, #eff6ff); color: var(--color-primary-text); }
 .wm-tag-reset { color: var(--color-text-muted); }
 
 /* 批量条：与工具栏同款胶囊按钮，浮现于列表上方 */
@@ -548,7 +548,7 @@ function excerpt(w: SmartWorkflow): string {
   color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;}
-.wm-batch-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
+.wm-batch-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary-text); }
 .wm-batch-btn.is-danger:hover { border-color: var(--color-error, #dc2626); color: var(--color-error-text); }
 
 .wm-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
@@ -594,7 +594,7 @@ function excerpt(w: SmartWorkflow): string {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.wm-name:hover { color: var(--color-primary, #3b82f6); }
+.wm-name:hover { color: var(--color-primary-text); }
 .wm-meta { font-size: var(--fs-caption, 12px); color: var(--color-text-muted); display: flex; gap: 4px; flex-wrap: wrap; }
 .wm-dot { opacity: .6; }
 .wm-builtin {
@@ -616,7 +616,7 @@ function excerpt(w: SmartWorkflow): string {
   overflow: hidden;
 }
 .wm-card-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: var(--fs-caption, 12px); }
-.wm-chip { color: var(--color-primary, #3b82f6); }
+.wm-chip { color: var(--color-primary-text); }
 
 .wm-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: auto; }
 .wm-spacer { flex: 1 1 auto; }
@@ -628,8 +628,8 @@ function excerpt(w: SmartWorkflow): string {
   color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;}
-.wm-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
-.wm-btn.is-primary { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); font-weight: 600; }
+.wm-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary-text); }
+.wm-btn.is-primary { border-color: var(--color-primary, #3b82f6); color: var(--color-primary-text); font-weight: 600; }
 .wm-btn.is-danger:hover { border-color: var(--color-error, #dc2626); color: var(--color-error-text); }
 
 .wm-empty {

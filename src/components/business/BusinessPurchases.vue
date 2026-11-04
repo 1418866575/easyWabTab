@@ -927,7 +927,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   gap: 4px;
   padding: 3px 6px 3px 10px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   background: var(--color-primary-light, #eff6ff);
   border: 1px solid var(--color-primary, #3b82f6);
   border-radius: 999px;
@@ -1016,13 +1016,13 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   font-size: var(--fs-caption, 12px);
   padding: 1px 8px;
   border-radius: var(--radius-full, 9999px);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   background: color-mix(in srgb, var(--color-primary, #3b82f6) 12%, transparent);
 }
 
 .bizpur-day-cell-total {
   font-weight: 600;
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1082,7 +1082,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 
 /* ===== 表格内徽章/链接/标签 ===== */
 .bizpur-product-link {
-  color: var(--color-link, var(--color-primary, #3b82f6));
+  color: var(--color-primary-text);
   cursor: pointer;
   text-decoration: underline;
 }
@@ -1096,7 +1096,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   padding: 2px 10px;
   font-size: var(--fs-caption, 12px);
   line-height: 1.6;
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   background: color-mix(in srgb, var(--color-primary, var(--color-primary)) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--color-primary, var(--color-primary)) 30%, transparent);
   border-radius: var(--radius-full, 9999px);
@@ -1104,7 +1104,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 }
 .bizpur-total-text {
   font-weight: 700;
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1161,7 +1161,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 }
 
 .bizpur-expense-amount {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -1207,7 +1207,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 .bizpur-qty-derived {
   margin: 4px 0 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   background: var(--color-primary-soft, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
   border-radius: 6px;
@@ -1265,7 +1265,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   font-size: var(--fs-caption, 12px);
   font-weight: 400;
   background: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 :global(html.dark) .bizpur-expense-list {
@@ -1311,7 +1311,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   color: var(--color-text);
 }
 .bizpur-cost-next.changed {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 .bizpur-cost-tip {
   font-size: var(--fs-caption, 12px);
@@ -1331,7 +1331,7 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 .bizpur-total-preview {
   font-size: var(--fs-lg, 16px);
   font-weight: 700;
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1540,7 +1540,7 @@ html.dark .biz-input {
 
 .exp .exp-amt {
   margin-left: auto;
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }

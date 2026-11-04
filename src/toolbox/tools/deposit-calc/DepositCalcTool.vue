@@ -531,7 +531,7 @@ const showMassiveHint = computed(() => Number(principal.value) < PRINCIPAL_MIN |
   font-size: var(--fs-caption);
   line-height: 17px;
   white-space: nowrap;
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   background: var(--color-primary-soft);
 }
 </style>

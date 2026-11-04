@@ -277,7 +277,7 @@ const nameTaken = computed(() => {
   padding: 1px 6px;
   border-radius: 4px;
   background: var(--color-bg-hover, #f3f4f6);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-size: var(--fs-caption, 12px);
 }
 .se-check { display: flex; align-items: center; gap: 6px; font-size: var(--fs-sm, 13px); color: var(--color-text); }
@@ -320,7 +320,7 @@ const nameTaken = computed(() => {
   font-size: var(--fs-sm, 13px);
   cursor: pointer;
 }
-.se-img-add:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
+.se-img-add:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary-text); }
 
 @media (max-width: 768px) {
   .se-field-sm { flex: 1 1 100%; }

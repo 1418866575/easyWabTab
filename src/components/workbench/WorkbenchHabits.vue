@@ -770,7 +770,7 @@ html.is-touch .habit-detail-remove {
 
 .habit-detail-add:hover:not(:disabled) {
   border-color: var(--color-primary, #3b82f6);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   background: var(--color-primary-soft, #eff6ff);
 }
 

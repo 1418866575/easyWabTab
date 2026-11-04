@@ -84,7 +84,7 @@ const tabItems = computed(() => [
 
 .category-tabs-wrapper :deep(.ui-tabs .el-radio-button__inner:hover) {
   border-color: var(--ds-primary, var(--color-primary, #3b82f6));
-  color: var(--ds-primary, var(--color-primary, #3b82f6));
+  color: var(--ds-primary-text);
   background-color: #ffffff;
 }
 
@@ -118,7 +118,7 @@ html.dark .category-tabs-wrapper :deep(.ui-tabs .el-radio-button__inner) {
 
 html.dark .category-tabs-wrapper :deep(.ui-tabs .el-radio-button__inner:hover) {
   border-color: var(--ds-primary, #60a5fa);
-  color: var(--ds-primary, #60a5fa);
+  color: var(--ds-primary-text);
   background-color: var(--color-bg-card, #1f2937);
 }
 

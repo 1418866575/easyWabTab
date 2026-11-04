@@ -418,10 +418,10 @@ function fmtTime(ts: number): string {
 .lot-award.is-on {
   border-color: var(--color-primary);
   background: var(--color-primary-soft);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 .lot-award-num { color: var(--color-text-muted); font-size: var(--fs-caption); }
-.lot-award.is-on .lot-award-num { color: var(--color-primary); }
+.lot-award.is-on .lot-award-num { color: var(--color-primary-text); }
 
 /* 中奖记录 */
 .lot-wins + .lot-wins { margin-top: 10px; }
@@ -484,7 +484,7 @@ function fmtTime(ts: number): string {
   animation: lot-jitter 0.12s linear infinite;
 }
 .lot-stage.is-won .lot-stage-name {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   animation: lot-pop 0.5s var(--motion-ease);
 }
 .lot-stage-dept { font-size: clamp(15px, 2.4vw, 24px); color: var(--color-text-secondary); }

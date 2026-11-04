@@ -65,7 +65,7 @@ const store = useSitesStore()
 
 .tag:hover {
   border-color: var(--ds-primary);
-  color: var(--ds-primary);
+  color: var(--ds-primary-text);
 }
 
 .tag.active {
@@ -111,6 +111,6 @@ const store = useSitesStore()
   height: 36px;}
 
 .clear-btn:hover {
-  color: var(--ds-primary);
+  color: var(--ds-primary-text);
 }
 </style>

@@ -208,7 +208,7 @@ function dl() {
 .md-preview :deep(h3) { font-size: 1.12em; margin: 0.5em 0 0.3em; }
 .md-preview :deep(p) { margin: 0.4em 0; }
 .md-preview :deep(ul), .md-preview :deep(ol) { padding-left: 1.4em; margin: 0.4em 0; }
-.md-preview :deep(a) { color: var(--color-primary); }
+.md-preview :deep(a) { color: var(--color-primary-text); }
 .md-preview :deep(pre) { background: var(--color-bg-hover); padding: 8px 10px; border-radius: 6px; overflow: auto; }
 .md-preview :deep(code) { background: var(--color-bg-hover); padding: 1px 4px; border-radius: 4px; }
 .md-preview :deep(strong) { color: var(--color-text); }

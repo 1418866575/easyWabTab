@@ -710,7 +710,7 @@ function drawerMarkupRate(): number | null {
   height: 36px;}
 
 .bizprod-tabs :deep(.el-radio-button__inner:hover) {
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   border-color: var(--color-primary, var(--color-primary));
 }
 
@@ -789,7 +789,7 @@ function drawerMarkupRate(): number | null {
   font-size: var(--fs-caption, 12px);
   padding: 2px 10px;
   border-radius: var(--radius-full, 9999px);
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   background: var(--color-primary-light, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
 }
@@ -824,7 +824,7 @@ function drawerMarkupRate(): number | null {
   border-radius: var(--radius-full, 9999px);
   font-size: var(--fs-caption, 12px);
   font-weight: 400;
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   background: var(--color-primary-light, #eff6ff);
 }
 
@@ -847,7 +847,7 @@ function drawerMarkupRate(): number | null {
   padding: 8px 10px;
   border-radius: var(--radius-sm, 4px);
   font-size: var(--fs-caption, 12px);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   background: var(--color-primary-light, #eff6ff);
   font-variant-numeric: tabular-nums;
 }
@@ -929,7 +929,7 @@ html.dark .bizprod-form-avg {
 }
 
 .bizprod-name:hover {
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   text-decoration: underline;
 }
 
@@ -1070,7 +1070,7 @@ html.dark .bizprod-form-avg {
 .bizprod-drawer-record-total {
   flex-shrink: 0;
   font-weight: 700;
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
 }
 
 /* el-drawer 外壳对齐原抽屉 */

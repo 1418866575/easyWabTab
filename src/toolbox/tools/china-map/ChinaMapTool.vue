@@ -578,7 +578,7 @@ onBeforeUnmount(() => {
 .legend-list li:hover { background: var(--color-primary-soft); }
 .legend-list li.active { background: var(--color-primary-soft); outline: 1px solid var(--color-primary); }
 .legend-list .sw { width: 13px; height: 13px; border-radius: 3px; flex: 0 0 auto; border: 1px solid var(--color-border); }
-.legend-list .cap { color: var(--color-primary); font-weight: 600; }
+.legend-list .cap { color: var(--color-primary-text); font-weight: 600; }
 .legend-note { font-size: var(--fs-caption); color: var(--color-text-secondary); margin: 10px 0 0; line-height: 1.5; }
 .legend-note.src { color: var(--color-text-muted); }
 

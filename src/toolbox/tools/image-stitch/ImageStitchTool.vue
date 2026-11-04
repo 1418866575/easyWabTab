@@ -251,7 +251,7 @@ onBeforeUnmount(() => {
   border-radius: var(--radius-md);
   cursor: pointer;
 }
-.is-drop:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.is-drop:hover { border-color: var(--color-primary); color: var(--color-primary-text); }
 .is-list { display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow: auto; }
 .is-item {
   display: flex;

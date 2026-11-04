@@ -468,7 +468,7 @@ function usedSiteNames(icon: MergedIcon): string {
 }
 .icon-used-count {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-weight: 600;
 }
 

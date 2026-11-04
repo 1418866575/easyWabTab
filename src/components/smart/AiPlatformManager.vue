@@ -330,12 +330,12 @@ onDeactivated(() => {
 }
 .ap-pill:hover {
   border-color: var(--color-primary);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 .ap-pill.is-on {
   border-color: var(--color-primary);
   background: var(--color-primary-soft);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 .ap-pill-cnt {
   font-size: var(--fs-caption, 12px);
@@ -373,7 +373,7 @@ onDeactivated(() => {
 .ap-toggle.is-on {
   border-color: var(--color-primary);
   background: var(--color-primary-soft);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 .ap-count {
   font-size: var(--fs-caption, 12px);

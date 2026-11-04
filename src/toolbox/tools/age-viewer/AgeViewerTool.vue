@@ -85,14 +85,14 @@ const zodiacAges = computed<ZodiacAges[]>(() => {
   margin-bottom: 10px;
 }
 .av-year-label {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   font-weight: 600;
 }
 .av-year-num {
   font-size: 34px;
   font-weight: 800;
   line-height: 1;
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 .av-year-unit {
   color: var(--color-text-muted);
@@ -139,7 +139,7 @@ const zodiacAges = computed<ZodiacAges[]>(() => {
   padding: 2px 9px;
   border-radius: 999px;
   background: var(--color-primary-soft);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   white-space: nowrap;
 }
 

@@ -1340,7 +1340,7 @@ async function regenerateSlug(): Promise<void> {
 
 .be-view-btn.active {
   background-color: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .be-side-toggle {
@@ -1358,7 +1358,7 @@ async function regenerateSlug(): Promise<void> {
 
 .be-side-toggle.active {
   background-color: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   border-color: var(--color-primary, #3b82f6);
 }
 
@@ -1482,7 +1482,7 @@ async function regenerateSlug(): Promise<void> {
 
 .be-md-btn:active {
   background-color: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 /* 隐藏的图片文件选择框：不应占据任何布局空间 */
@@ -1573,7 +1573,7 @@ async function regenerateSlug(): Promise<void> {
 }
 
 .be-side-close:hover {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   border-color: var(--color-primary, #3b82f6);
 }
 
@@ -1697,7 +1697,7 @@ async function regenerateSlug(): Promise<void> {
 .be-tag.is-on {
   border-color: var(--color-primary, #3b82f6);
   background-color: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .be-hint,
@@ -1791,7 +1791,7 @@ async function regenerateSlug(): Promise<void> {
 }
 
 .be-wx-link {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-size: var(--font-size-xs, 12px);
   text-decoration: none;
 }
@@ -1967,7 +1967,7 @@ async function regenerateSlug(): Promise<void> {
 }
 
 .img-dialog-op:hover {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   border-color: var(--color-primary, #3b82f6);
 }
 
@@ -2037,7 +2037,7 @@ async function regenerateSlug(): Promise<void> {
 }
 
 .be-outline-item:hover {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   border-left-color: var(--color-primary, #3b82f6);
   background: var(--color-bg-hover, #f1f5f9);
 }
@@ -2070,7 +2070,7 @@ async function regenerateSlug(): Promise<void> {
 }
 
 .be-save-state.is-saving {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.1));
 }
 

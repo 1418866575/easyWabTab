@@ -350,7 +350,7 @@ onUnmounted(() => {
 
 .ipd-action-btn:hover:not(:disabled) {
   background: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   border-color: var(--color-primary, #3b82f6);
 }
 
@@ -388,14 +388,14 @@ onUnmounted(() => {
 }
 
 .ipd-cat:hover {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   border-color: var(--color-primary, #3b82f6);
 }
 
 .ipd-cat.active {
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
   border-color: var(--color-primary, #3b82f6);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-weight: 600;
 }
 
@@ -446,7 +446,7 @@ onUnmounted(() => {
 }
 
 .ipd-item.active .ipd-item-label {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .ipd-empty {

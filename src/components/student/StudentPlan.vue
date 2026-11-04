@@ -712,7 +712,7 @@ onMounted(() => {
 .sp-goal-add {
   align-self: flex-start;
   border-style: dashed;
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-size: var(--fs-caption, 12px);
 }
 .dialog-footer {

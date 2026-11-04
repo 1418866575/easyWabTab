@@ -84,7 +84,7 @@ const title = computed(() => props.item.title)
   color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
 }
-.sd-chip.is-tag { color: var(--color-primary, #3b82f6); }
+.sd-chip.is-tag { color: var(--color-primary-text); }
 .sd-subtitle { margin: 0 0 6px; font-size: var(--fs-sm, 13px); font-weight: 600; color: var(--color-text); }
 .sd-img-grid { display: flex; flex-wrap: wrap; gap: 10px; }
 .sd-img {
@@ -129,5 +129,5 @@ const title = computed(() => props.item.title)
 .sd-content :deep(ul), .sd-content :deep(ol) { margin: 0 0 8px; padding-left: 20px; }
 
 .sd-vars { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.sd-var-inline { padding: 1px 6px; border-radius: 4px; background: var(--color-bg-hover, #f3f4f6); color: var(--color-primary, #3b82f6); }
+.sd-var-inline { padding: 1px 6px; border-radius: 4px; background: var(--color-bg-hover, #f3f4f6); color: var(--color-primary-text); }
 </style>

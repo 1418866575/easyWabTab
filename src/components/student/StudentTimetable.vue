@@ -574,7 +574,7 @@ onBeforeUnmount(() => {
   padding: 2px 8px;
   border-radius: 999px;
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-weight: 600;
 }
 .stt-chips {
@@ -706,7 +706,7 @@ onBeforeUnmount(() => {
   top: 0;
   z-index: 3;
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-weight: 600;
   font-size: var(--fs-body, 14px);
   min-height: 38px;
@@ -754,7 +754,7 @@ onBeforeUnmount(() => {
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
   letter-spacing: 2px;
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.1));
   border-radius: 6px;
 }
@@ -869,7 +869,7 @@ onBeforeUnmount(() => {
   border-radius: 6px;
 }
 .stt-dialog-time b {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-weight: 600;
 }
 

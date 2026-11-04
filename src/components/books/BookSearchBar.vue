@@ -114,7 +114,7 @@ defineExpose({ focus: () => inputRef.value?.focus() })
     background-color var(--motion-duration) var(--motion-ease);
 }
 .bk-search-clear:hover {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   background: var(--color-bg-hover);
 }
 

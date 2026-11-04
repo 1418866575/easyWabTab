@@ -574,7 +574,7 @@ function handleAdd(): void {
 }
 .bizcat-tag-builtin {
   background: var(--color-primary-light, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 .bizcat-tag-hidden {
   background: var(--color-bg-hover, #f1f5f9);

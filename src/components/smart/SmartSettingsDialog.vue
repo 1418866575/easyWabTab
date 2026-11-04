@@ -792,7 +792,7 @@ function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
 /* 选中高亮：与个人工作台设置弹框 .rail-item.active 同款 */
 .ss-rail-item.active {
   background-color: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-weight: 600;
 }
 

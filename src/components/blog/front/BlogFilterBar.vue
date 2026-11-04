@@ -199,7 +199,7 @@ const visibleTags = computed(() =>
   transition: color var(--motion-duration, 220ms), background-color var(--motion-duration, 220ms);
 }
 .bf-search-clear:hover {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   background: var(--color-bg-hover, rgba(0, 0, 0, 0.04));
 }
 
@@ -230,7 +230,7 @@ const visibleTags = computed(() =>
     background-color var(--motion-duration, 220ms);
 }
 .bf-chip:hover {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   border-color: var(--color-primary, #3b82f6);
 }
 /* 选中态：对齐工具箱分类 pill —— 实心主色填充 + 白字 */
@@ -269,7 +269,7 @@ const visibleTags = computed(() =>
   font-family: inherit;
   cursor: pointer;
 }
-.bf-clear:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
+.bf-clear:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary-text); }
 
 @media (max-width: 768px) {
   .bf-filter-meta { justify-content: flex-start; }

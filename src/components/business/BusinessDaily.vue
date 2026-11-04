@@ -964,7 +964,7 @@ async function handleDelete(id: string | null): Promise<void> {
   white-space: nowrap;
 }
 .bizday-detail-row:not(.deleted) .bizday-detail-td.name:hover {
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   text-decoration: underline;
 }
 .bizday-detail-td.sold-bold {
@@ -1006,7 +1006,7 @@ async function handleDelete(id: string | null): Promise<void> {
 .bizday-frequent-chip {
   padding: 3px 10px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   background: var(--color-primary-light, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 40%, transparent);
   border-radius: 999px;
@@ -1062,7 +1062,7 @@ async function handleDelete(id: string | null): Promise<void> {
 .bizday-td-num { text-align: center; white-space: nowrap; }
 .bizday-row-sold {
   font-weight: 600;
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-variant-numeric: tabular-nums;
 }
 .bizday-td-money { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -1115,12 +1115,12 @@ async function handleDelete(id: string | null): Promise<void> {
   white-space: nowrap;
 }
 .bizday-more-toggle:hover {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   border-color: var(--color-primary, #3b82f6);
 }
 /* 剩余/损耗非零时高亮，提示用户「折叠态下已填了进阶值」 */
 .bizday-more-toggle.active {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   background: var(--color-primary-light, #eff6ff);
   border-color: var(--color-primary, #3b82f6);
 }
@@ -1237,7 +1237,7 @@ async function handleDelete(id: string | null): Promise<void> {
   border-radius: 999px;
   font-size: var(--fs-caption, 12px);
   background: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .bizday-revenue-field {

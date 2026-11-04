@@ -422,7 +422,7 @@ const handleClick = () => {
 
 .menu-trigger:hover {
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.1));
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .menu-trigger:focus-visible {
@@ -463,7 +463,7 @@ const handleClick = () => {
 
 .card-menu-item:hover {
   background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .card-menu-item:focus-visible {
@@ -626,7 +626,7 @@ const handleClick = () => {
 
 :global(.dark) .card-menu-item:hover {
   background-color: #334155;
-  color: var(--color-primary, #60a5fa);
+  color: var(--color-primary-text);
 }
 
 :global(.dark) .card-menu-item.is-danger {

@@ -320,8 +320,8 @@ const allCount = countAll(MULT_MAX)
   background: var(--color-bg-hover);
   border-radius: var(--radius-sm);
 }
-.mt-head .mt-h { color: var(--color-primary); background: var(--color-primary-soft); }
-.mt-h.is-row.is-hl { color: var(--color-primary); background: var(--color-primary-soft); }
+.mt-head .mt-h { color: var(--color-primary-text); background: var(--color-primary-soft); }
+.mt-h.is-row.is-hl { color: var(--color-primary-text); background: var(--color-primary-soft); }
 .mt-corner {
   display: flex;
   align-items: center;
@@ -369,9 +369,11 @@ html.dark .mt-cell.is-diag {
 }
 .mt-cell.is-blank { background: transparent; border-color: transparent; cursor: default; }
 .mt-cell.is-line { border-color: var(--color-primary); }
-.mt-cell.is-mirror { color: var(--color-primary); border-color: var(--color-primary); }
+.mt-cell.is-mirror { color: var(--color-primary-text); border-color: var(--color-primary); }
 .mt-cell.is-focus {
-  color: var(--color-primary);
+  /* 实底 primary 上必须压白字：原本写的是 var(--color-primary)，
+     与 background 同色 = 1:1 完全看不见（口诀模式的 .is-small 另有一份 #fff 掩盖了它）。 */
+  color: #fff;
   background: var(--color-primary);
   border-color: var(--color-primary);
   font-weight: 600;

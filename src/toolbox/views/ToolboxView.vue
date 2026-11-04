@@ -267,7 +267,7 @@ function resetFilters() {
   background: transparent;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);}
-.tb-mini-btn:hover { color: var(--color-primary); border-color: var(--color-primary); }
+.tb-mini-btn:hover { color: var(--color-primary-text); border-color: var(--color-primary); }
 
 .tb-note {
   margin-top: 34px;

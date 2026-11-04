@@ -436,7 +436,7 @@ function exportInventoryExcel(): void {
 .bizinv-batch-amount {
   flex-shrink: 0;
   font-weight: 700;
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .bizinv-batch-status {
@@ -682,7 +682,7 @@ function exportInventoryExcel(): void {
 
 /* 三色区分：进货合计（蓝）、带出合计（橙）、库存剩余（绿） */
 .bizinv-metric.num-purchase .metric-value b {
-  color: var(--ds-primary);
+  color: var(--ds-primary-text);
 }
 
 .bizinv-metric.num-brought .metric-value b {
@@ -698,7 +698,7 @@ function exportInventoryExcel(): void {
   padding: 0 12px;
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   background: none;
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm, 4px);
@@ -706,7 +706,7 @@ function exportInventoryExcel(): void {
   height: 36px;}
 
 .bizinv-trace-btn:hover {
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   border-color: var(--color-primary, var(--color-primary));
   background: color-mix(in srgb, var(--color-primary, var(--color-primary)) 8%, transparent);
 }
@@ -812,7 +812,7 @@ function exportInventoryExcel(): void {
 }
 
 .bizinv-source-type.purchase {
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   background: color-mix(in srgb, var(--color-primary, var(--color-primary)) 12%, transparent);
 }
 

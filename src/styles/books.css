@@ -107,7 +107,7 @@
     border-color var(--motion-duration) var(--motion-ease),
     background-color var(--motion-duration) var(--motion-ease);
 }
-.bk-chip:hover { color: var(--color-primary); border-color: var(--color-primary); }
+.bk-chip:hover { color: var(--color-primary-text); border-color: var(--color-primary); }
 .bk-chip.is-on {
   background: var(--color-primary);
   border-color: var(--color-primary);

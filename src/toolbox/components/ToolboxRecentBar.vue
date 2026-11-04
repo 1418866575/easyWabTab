@@ -316,7 +316,7 @@ watch(activeIndex, v => {
 }
 .tb-recent-trigger:hover,
 .tb-recent-trigger.is-open {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   border-color: var(--color-primary);
   background: var(--color-primary-soft);
 }

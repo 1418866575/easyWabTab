@@ -548,7 +548,7 @@ async function handleSyncNowClick(): Promise<void> {
 
 .wb-menu-item.active {
   background-color: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-weight: var(--font-weight-medium, 500);
 }
 
@@ -587,7 +587,7 @@ html.dark .wb-btn {
 
 html.dark .wb-btn:hover {
   background-color: var(--color-bg-hover, #374151);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   border-color: var(--color-primary, #3b82f6);
 }
 

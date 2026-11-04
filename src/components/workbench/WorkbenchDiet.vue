@@ -551,7 +551,7 @@ onMounted(async () => {
 .dt-attainment {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -593,7 +593,7 @@ onMounted(async () => {
   height: 36px;}
 
 .btn-toggle-list:hover {
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   border-color: var(--color-primary, var(--color-primary));
 }
 
@@ -640,14 +640,14 @@ onMounted(async () => {
   font-weight: 600;
   padding: 2px 10px;
   border-radius: var(--radius-full, 9999px);
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   background: var(--color-primary-light, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
 }
 
 /* 午餐：蓝（默认同徽章基色） */
 .dt-meal-lunch {
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   background: var(--color-primary-light, #eff6ff);
   border-color: color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
 }

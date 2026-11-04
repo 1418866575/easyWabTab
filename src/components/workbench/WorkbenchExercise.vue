@@ -618,7 +618,7 @@ onMounted(async () => {
 .ex-attainment {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -673,7 +673,7 @@ onMounted(async () => {
   font-weight: 600;
   padding: 2px 10px;
   border-radius: 999px;
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   background: var(--color-primary-light, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
 }

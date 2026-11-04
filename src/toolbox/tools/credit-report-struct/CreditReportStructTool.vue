@@ -426,7 +426,7 @@ function parts(text: string): { t: string; hit: boolean }[] {
   flex-wrap: wrap;
 }
 .cr-match {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   font-weight: 600;
 }
 .cr-tree-wrap {
@@ -467,7 +467,7 @@ function parts(text: string): { t: string; hit: boolean }[] {
   background: var(--color-bg-card);
 }
 .cr-lvl-block {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   border-color: var(--color-primary);
 }
 .cr-lvl-segment {
@@ -518,7 +518,7 @@ function parts(text: string): { t: string; hit: boolean }[] {
 }
 .cr-domain {
   font-size: var(--fs-caption);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   background: var(--color-primary-soft);
   padding: 2px 8px;
   border-radius: 999px;

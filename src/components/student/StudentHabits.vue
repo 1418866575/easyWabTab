@@ -713,14 +713,14 @@ onMounted(async () => {
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
 }
 .sh-record-tag {
   font-size: var(--fs-caption, 12px);
   padding: 1px 6px;
   border-radius: 999px;
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
 }
 .sh-record-tag-plain {
   background: transparent;

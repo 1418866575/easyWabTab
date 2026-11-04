@@ -783,7 +783,7 @@ onMounted(async () => {
 
 .bs-menu-item.active {
   background-color: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-weight: var(--font-weight-medium, 500);
 }
 
@@ -824,7 +824,7 @@ html.dark .bs-header-right :deep(.bs-btn) {
 html.dark .bs-btn:hover,
 html.dark .bs-header-right :deep(.bs-btn:hover) {
   background-color: var(--color-bg-hover, #374151);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   border-color: var(--color-primary, #3b82f6);
 }
 
@@ -1012,7 +1012,7 @@ html.dark .bs-stall-name {
      指示条用 top:0（不是负值）：父级 .bs-menu 是 overflow-x:auto，
      计算上 overflow-y 也变成 auto，负偏移的指示条会被裁掉。 */
   .bs-menu-item.active {
-    color: var(--color-primary, #3b82f6);
+    color: var(--color-primary-text);
     background-color: var(--color-primary-light, #eff6ff);
   }
 

@@ -557,7 +557,7 @@ onMounted(async () => {
 .wt-bmi-value {
   font-size: var(--fs-lg, 16px);
   font-weight: 700;
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -578,7 +578,7 @@ onMounted(async () => {
 }
 
 .bmi-under {
-  color: var(--ds-primary);
+  color: var(--ds-primary-text);
   background: var(--ds-primary-soft);
   border-color: #93c5fd;
 }
@@ -673,7 +673,7 @@ onMounted(async () => {
   height: 36px;}
 
 .btn-toggle-list:hover {
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   border-color: var(--color-primary, var(--color-primary));
 }
 
@@ -712,7 +712,7 @@ onMounted(async () => {
 }
 
 /* BMI 颜色分级（与 classifyBmi 返回值映射：underweight/normal/overweight/obese） */
-.bmi-underweight { color: var(--color-link, #3b82f6); font-weight:600; }
+.bmi-underweight { color: var(--color-primary-text); font-weight:600; }
 .bmi-normal { color: var(--color-success-text); font-weight:700; }
 .bmi-overweight { color: var(--color-warning-text); font-weight:600; }
 .bmi-obese { color: var(--color-error-text); font-weight:700; }
@@ -745,7 +745,7 @@ onMounted(async () => {
 .wt-record-weight {
   font-size: var(--fs-body, 14px);
   font-weight: 700;
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   font-variant-numeric: tabular-nums;
 }
 

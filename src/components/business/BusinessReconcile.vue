@@ -492,7 +492,7 @@ function exportExpenseExcel(): void {
   padding: 1px 8px;
   border-radius: 999px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   background: color-mix(in srgb, var(--color-primary, #3b82f6) 12%, transparent);
 }
 

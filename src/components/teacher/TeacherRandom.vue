@@ -238,7 +238,7 @@ onBeforeUnmount(stopTimer)
 }
 
 .rd-display.is-picked {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .rd-start {
@@ -258,7 +258,7 @@ onBeforeUnmount(stopTimer)
   padding: 3px 4px 3px 10px;
   border-radius: 999px;
   background-color: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-size: var(--font-size-sm, 13px);
 }
 
@@ -358,7 +358,7 @@ onBeforeUnmount(stopTimer)
 
 .rd-roster-tag.is-committee {
   background: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 .rd-gender {
@@ -367,7 +367,7 @@ onBeforeUnmount(stopTimer)
 }
 
 .rd-gender.rd-male {
-  color: var(--ds-primary);
+  color: var(--ds-primary-text);
 }
 
 .rd-gender.rd-female {

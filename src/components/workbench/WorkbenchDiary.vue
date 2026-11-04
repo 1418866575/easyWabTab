@@ -745,7 +745,7 @@ const renderedPreview = computed(() =>
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 8px);
   background-color: var(--color-bg-card, #fff);
-  color: var(--color-text-primary, #0f172a);
+  color: var(--color-text);
   font-size: var(--fs-md, 15px);
   font-weight: 600;
   line-height: 1.5;
@@ -772,7 +772,7 @@ const renderedPreview = computed(() =>
 /* 列表：标题 / 内容摘要单元格 */
 .dj-title-cell {
   font-weight: 600;
-  color: var(--color-text-primary, #0f172a);
+  color: var(--color-text);
 }
 
 .dj-content-cell {
@@ -845,7 +845,7 @@ const renderedPreview = computed(() =>
 
 .dj-view-btn.active {
   background-color: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 /* ===== Markdown 工具栏 ===== */
@@ -894,7 +894,7 @@ const renderedPreview = computed(() =>
 
 .dj-md-btn:active {
   background-color: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
 }
 
 /* 隐藏的图片文件选择框：不应占据任何布局空间 */
@@ -1150,7 +1150,7 @@ const renderedPreview = computed(() =>
 
 .dj-preview :deep(a),
 .dj-card-preview :deep(a) {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   text-decoration: underline;
   word-break: break-all;
 }
@@ -1292,7 +1292,7 @@ const renderedPreview = computed(() =>
   font-weight: 600;
   padding: 1px 8px;
   border-radius: var(--radius-full, 9999px);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   background: var(--color-primary-soft, #eff6ff);
   white-space: nowrap;
 }
@@ -1328,7 +1328,7 @@ const renderedPreview = computed(() =>
 }
 
 .dj-stat b {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   font-size: var(--fs-lg, 16px);
   margin-right: 2px;
 }
@@ -1482,7 +1482,7 @@ const renderedPreview = computed(() =>
   font-weight: 600;
   padding: 1px 8px;
   border-radius: var(--radius-full, 9999px);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   background: var(--color-primary-soft, #eff6ff);
   white-space: nowrap;
 }

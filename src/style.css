@@ -19,6 +19,14 @@
   --color-primary-800: #1e40af;
   --color-primary-900: #1e3a8a;
   --color-primary-light: #eff6ff;
+  /* 强调色的「当文字用」版本（2026-11 新增）
+     --color-primary 是 500 级，给实底/边框/图标用。当文字放白底只有 3.68:1，
+     放在 --color-primary-soft 浅底上更低（蓝 3.27、绿 2.09），一律不达 AA 的 4.5:1。
+     取值规则：各 accent 取「在 primary-soft 合成底色上 ≥4.8:1 的最浅一档」，
+     7 套主题各自的档位不同（绿要到 800、紫/红 600 就够），不要统一写死 700。
+     暗色侧反过来——700 级在深底上是看不见的，必须用 300/400 级。
+     注意：primary-soft 是 rgba，合成底色随 --color-bg-card 变，故 themes.css 里按主题分别求解。 */
+  --color-primary-text: #1d4ed8;  /* on primary-soft 5.96:1 */
 
   /* 功能色（base / hover / soft 浅底三态） */
   --color-success:       #10b981;
@@ -259,6 +267,9 @@
   --ds-primary: var(--color-primary, #2563eb);
   --ds-primary-hover: var(--color-primary-hover, #1d4ed8);
   --ds-primary-soft: var(--color-primary-soft, #eff6ff);
+  /* 当文字用（链接 / 文字按钮 / 标签字）：与 --color-primary-text 同源，
+     7 套 accent 的取值规则见 docs/UI_STYLE_GUIDE.md §1.6 */
+  --ds-primary-text: var(--color-primary-text);
 
   /* 语义色点缀（必填星号 / 推荐徽章 / 危险操作），小面积使用 */
   --ds-danger: #ef4444;
@@ -364,7 +375,7 @@ optgroup {
 /* 选中样式 */
 ::selection {
   background: var(--color-primary-light);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 
 /* ============================================
@@ -453,7 +464,7 @@ optgroup {
 .ui-btn:hover:not(:disabled) {
   transform: var(--motion-hover-rise, translateY(-1px));
   border-color: var(--color-primary, #3b82f6);
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-text);
   box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.08));
 }
 
@@ -549,7 +560,7 @@ optgroup {
   white-space: nowrap;
   background: var(--color-primary-soft);
   border-color: var(--color-primary-soft);
-  color: var(--color-link, var(--color-primary));
+  color: var(--color-primary-text);
 }
 .btn-detail:hover:not(:disabled) {
   background: color-mix(in srgb, var(--color-primary) 18%, transparent);
@@ -573,7 +584,7 @@ optgroup {
 }
 .btn-sort:hover:not(:disabled) {
   background: var(--color-bg-active);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 .btn-sort:disabled {
   opacity: 0.3;
@@ -595,7 +606,7 @@ optgroup {
 }
 .stt-week-btn:hover:not(:disabled) {
   background: var(--color-hover);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 .stt-week-btn:disabled {
   opacity: 0.4;
@@ -611,7 +622,7 @@ optgroup {
   border-radius: var(--radius-full);
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--motion-duration) var(--motion-ease);
@@ -636,12 +647,12 @@ optgroup {
 .ui-btn--text {
   background-color: transparent;
   border-color: transparent;
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   box-shadow: none;
 }
 .ui-btn--text:hover:not(:disabled) {
   background-color: var(--color-primary-soft);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   border-color: transparent;
   box-shadow: none;
   transform: none;
@@ -678,7 +689,7 @@ optgroup {
 .sp-close-btn:hover:not(:disabled), .ipd-close:hover:not(:disabled),
 .sa-dialog-close:hover:not(:disabled), .toast-close:hover:not(:disabled),
 .reminder-close:hover:not(:disabled) {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   border-color: var(--color-primary);
   background-color: var(--color-bg-hover);
 }
@@ -734,7 +745,7 @@ optgroup {
 }
 
 .wb-content .empty-invite:hover {
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   border-color: var(--color-primary, var(--color-primary));
 }
 

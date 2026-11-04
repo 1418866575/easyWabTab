@@ -115,7 +115,7 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
 
 .reminder-label {
   flex-shrink: 0;
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary-text);
   font-variant-numeric: tabular-nums;
 }
 
