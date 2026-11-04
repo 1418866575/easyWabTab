@@ -253,7 +253,7 @@ async function handleMove(id: string, delta: number): Promise<void> {
 }
 
 .bc-mini:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
-.bc-mini.is-danger:hover { border-color: var(--color-error, #ef4444); color: var(--color-error, #ef4444); }
+.bc-mini.is-danger:hover { border-color: var(--color-error, #ef4444); color: var(--color-error-text); }
 
 .bc-desc { margin: 4px 0 0; color: var(--ds-text-3); font-size: var(--font-size-xs, 12px); }
 

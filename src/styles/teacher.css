@@ -406,7 +406,7 @@
 
 .tw-note-warn {
   background-color: var(--color-warning-soft, #fffbeb);
-  color: var(--color-warning, #b45309);
+  color: var(--color-warning-text);
 }
 
 /* ---------- 移动端 ---------- */

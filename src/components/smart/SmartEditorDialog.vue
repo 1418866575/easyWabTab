@@ -270,8 +270,8 @@ const nameTaken = computed(() => {
 .se-field-sm { flex: 0 1 160px; }
 .se-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
 .se-hint { color: var(--color-text-muted); font-size: var(--fs-caption, 12px); }
-.req { color: var(--color-error, #dc2626); }
-.se-error { font-size: var(--fs-caption, 12px); color: var(--color-error, #dc2626); }
+.req { color: var(--color-error-text); }
+.se-error { font-size: var(--fs-caption, 12px); color: var(--color-error-text); }
 .se-vars { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .se-var {
   padding: 1px 6px;

@@ -947,7 +947,7 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
   text-align: center;
 }
-.stp-lock-icon { font-size: var(--fs-hero); color: var(--ds-warning); margin-bottom: 12px; display: flex; justify-content: center; }
+.stp-lock-icon { font-size: var(--fs-hero); color: var(--color-warning-text); margin-bottom: 12px; display: flex; justify-content: center; }
 .stp-lock-title { margin: 0 0 8px; font-size: var(--fs-title, 18px); font-weight: 600; }
 .stp-lock-desc { margin: 0 0 20px; font-size: var(--fs-body, 14px); line-height: 1.6; color: var(--color-text-secondary); }
 
@@ -978,7 +978,7 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
   border-radius: 12px; padding: 12px 16px;
 }
 .stp-reset-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.stp-reset-title { font-size: var(--fs-body, 14px); font-weight: 600; color: var(--ds-danger); }
+.stp-reset-title { font-size: var(--fs-body, 14px); font-weight: 600; color: var(--color-error-text); }
 .stp-reset-desc { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary); }
 .stp-reset-actions { display: flex; gap: 10px; flex-shrink: 0; }
 

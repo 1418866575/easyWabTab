@@ -893,7 +893,7 @@ async function handleDelete(id: string | null): Promise<void> {
 /* ===== 表格内文本样式 ===== */
 .bizday-revenue-text {
   font-weight: 700;
-  color: var(--color-success, var(--color-success));
+  color: var(--color-success-text);
   font-variant-numeric: tabular-nums;
 }
 .bizday-profit-text {
@@ -902,7 +902,7 @@ async function handleDelete(id: string | null): Promise<void> {
   font-variant-numeric: tabular-nums;
 }
 .bizday-loss-text {
-  color: var(--color-error, var(--color-error));
+  color: var(--color-error-text);
   font-variant-numeric: tabular-nums;
 }
 .bizday-note-text {
@@ -973,7 +973,7 @@ async function handleDelete(id: string | null): Promise<void> {
 }
 .bizday-detail-td.sub-bold {
   font-weight: 700;
-  color: var(--color-success, var(--color-success));
+  color: var(--color-success-text);
 }
 
 /* 添加销售按钮条（日期后、表格上方，右对齐，参考支出新增弹框） */
@@ -1157,7 +1157,7 @@ async function handleDelete(id: string | null): Promise<void> {
 .bizday-row-issue-row .bizday-row-issue {
   padding: 6px 10px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-error, #dc2626);
+  color: var(--color-error-text);
   background: color-mix(in srgb, var(--color-error, #dc2626) 8%, transparent);
 }
 
@@ -1176,19 +1176,19 @@ async function handleDelete(id: string | null): Promise<void> {
 .bizday-row-member {
   font-size: var(--fs-caption, 12px);
   font-weight: 600;
-  color: var(--color-warning, #f59e0b);
+  color: var(--color-warning-text);
   font-variant-numeric: tabular-nums;
 }
 .bizday-row-subtotal {
   font-variant-numeric: tabular-nums;
-  color: var(--color-success, var(--color-success));
+  color: var(--color-success-text);
   font-weight: 600;
 }
 
 /* 手填营业额偏离提示 */
 .bizday-revenue-warn {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-warning, #b45309);
+  color: var(--color-warning-text);
   background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--color-warning, #f59e0b) 30%, transparent);
   border-radius: 6px;
@@ -1293,11 +1293,11 @@ async function handleDelete(id: string | null): Promise<void> {
 .bizday-summary-value {
   font-size: var(--fs-title, 18px);
   font-weight: 600;
-  color: var(--color-success, #16a34a);
+  color: var(--color-success-text);
   font-variant-numeric: tabular-nums;
 }
 .bizday-summary-cost {
-  color: var(--color-warning, #d97706);
+  color: var(--color-warning-text);
 }
 .bizday-summary-count {
   color: var(--color-text);

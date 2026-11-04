@@ -156,7 +156,7 @@
     border-color var(--motion-duration) var(--motion-ease);
 }
 .bk-mini-btn:hover {
-  color: var(--color-error);
+  color: var(--color-error-text);
   border-color: var(--color-error);
 }
 .bk-hits-total {

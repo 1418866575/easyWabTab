@@ -172,10 +172,10 @@ function clearAll() {
 /* 状态徽标：通过=绿、拒绝=红（同时带 ✔/✘ 图标与「通过/拒绝」文字） */
 .pg-status { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; white-space: nowrap; }
 .pg-icon { font-weight: 700; }
-.pg-status.is-ok { color: var(--color-success); }
-.pg-status.is-fail { color: var(--color-error); }
-.pg-ok { color: var(--color-success); }
-.pg-fail { color: var(--color-error); }
+.pg-status.is-ok { color: var(--color-success-text); }
+.pg-status.is-fail { color: var(--color-error-text); }
+.pg-ok { color: var(--color-success-text); }
+.pg-fail { color: var(--color-error-text); }
 .pg-msg { color: var(--color-text-secondary); font-size: var(--fs-caption); }
 .pg-empty { margin: 0; font-size: 12.5px; color: var(--color-text-muted); }
 .tu-mono { font-family: var(--font-family-mono); }

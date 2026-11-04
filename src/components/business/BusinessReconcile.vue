@@ -331,11 +331,11 @@ function exportExpenseExcel(): void {
 }
 
 .bizrec-stat-value.negative {
-  color: var(--color-error, #dc2626);
+  color: var(--color-error-text);
 }
 
 .bizrec-stat-value.positive {
-  color: var(--color-success, #16a34a);
+  color: var(--color-success-text);
 }
 
 .bizrec-empty {
@@ -351,7 +351,7 @@ function exportExpenseExcel(): void {
 }
 
 .bizrec-tag.manual {
-  color: var(--color-warning, #b45309);
+  color: var(--color-warning-text);
   background: color-mix(in srgb, var(--color-warning, #f59e0b) 15%, transparent);
 }
 
@@ -400,11 +400,11 @@ function exportExpenseExcel(): void {
 }
 
 .bizrec-month-diff.negative {
-  color: var(--color-error, #dc2626);
+  color: var(--color-error-text);
 }
 
 .bizrec-month-diff.positive {
-  color: var(--color-success, #16a34a);
+  color: var(--color-success-text);
 }
 
 .bizrec-tip {
@@ -499,7 +499,7 @@ function exportExpenseExcel(): void {
 .bizrec-list-amount {
   flex-shrink: 0;
   font-weight: 700;
-  color: var(--color-error, #dc2626);
+  color: var(--color-error-text);
 }
 
 .bizrec-list-note {

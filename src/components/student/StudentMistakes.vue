@@ -534,9 +534,9 @@ onMounted(() => {
   font-size: var(--fs-title, 18px);
   font-weight: 600;
 }
-.sm-stat-value.fresh { color: var(--ds-danger); }
-.sm-stat-value.reviewing { color: var(--ds-warning); }
-.sm-stat-value.mastered { color: var(--ds-success); }
+.sm-stat-value.fresh { color: var(--color-error-text); }
+.sm-stat-value.reviewing { color: var(--color-warning-text); }
+.sm-stat-value.mastered { color: var(--color-success-text); }
 
 .sm-main {
   flex: 1;
@@ -670,22 +670,22 @@ onMounted(() => {
 }
 .sm-status-new {
   background: rgba(239, 68, 68, 0.12);
-  color: var(--ds-danger);
+  color: var(--color-error-text);
 }
 .sm-status-reviewing {
   background: rgba(245, 158, 11, 0.12);
-  color: var(--ds-warning);
+  color: var(--color-warning-text);
 }
 .sm-status-mastered {
   background: rgba(16, 185, 129, 0.12);
-  color: var(--ds-success);
+  color: var(--color-success-text);
 }
 .sm-del-btn {
   flex-shrink: 0;
   color: var(--color-text-soft);
 }
 .sm-del-btn:hover {
-  color: var(--ds-danger);
+  color: var(--color-error-text);
 }
 
 .sm-card-body {
@@ -736,14 +736,14 @@ onMounted(() => {
   margin-top: 2px;
 }
 .sm-advance-btn {
-  color: var(--ds-success);
+  color: var(--color-success-text);
   border-color: var(--ds-success);
 }
 .sm-advance-btn:hover {
   background: rgba(16, 185, 129, 0.12);
 }
 .sm-reset-btn {
-  color: var(--ds-warning);
+  color: var(--color-warning-text);
   border-color: var(--ds-warning);
 }
 .sm-reset-btn:hover {
@@ -771,7 +771,7 @@ onMounted(() => {
   font-weight: 600;
 }
 .sm-required {
-  color: var(--ds-danger);
+  color: var(--color-error-text);
 }
 
 @media (max-width: 768px) {

@@ -187,7 +187,7 @@ const summaryText = computed(() => {
 <style scoped>
 .tu-alert--warn {
   margin-top: 12px;
-  color: var(--color-warning);
+  color: var(--color-warning-text);
   background: var(--color-warning-soft);
   border: 1px solid var(--color-warning);
   border-radius: var(--radius-md);

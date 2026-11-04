@@ -258,7 +258,7 @@ const toggleAutoBackup = () => {
 .toggle-btn.active {
   background: #dcfce7;
   border-color: var(--ds-success);
-  color: var(--ds-success);
+  color: var(--color-success-text);
 }
 
 .action-buttons {
@@ -292,7 +292,7 @@ const toggleAutoBackup = () => {
 }
 
 .action-btn.danger {
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
 }
 
 .action-btn.danger:hover {
@@ -375,7 +375,7 @@ const toggleAutoBackup = () => {
 
 .delete-btn:hover {
   background: #fef2f2;
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
   border-color: var(--color-error, #ef4444);
 }
 

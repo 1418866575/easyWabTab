@@ -677,15 +677,15 @@ onMounted(async () => {
 
 /* status colors on the hero big number */
 .status-normal .se-hero-big { color: var(--se-color); }
-.status-urgent .se-hero-big { color: var(--ds-warning); }
-.status-critical .se-hero-big { color: var(--ds-danger); }
+.status-urgent .se-hero-big { color: var(--color-warning-text); }
+.status-critical .se-hero-big { color: var(--color-error-text); }
 .status-expired .se-hero-big { color: var(--color-text-muted); }
 
 /* 表格倒计时单元格配色（与 hero 口径一致） */
 .se-countdown-cell { font-weight: 600; }
 .se-countdown-cell.status-normal { color: var(--color-primary, #3b82f6); }
-.se-countdown-cell.status-urgent { color: var(--ds-warning); }
-.se-countdown-cell.status-critical { color: var(--ds-danger); }
+.se-countdown-cell.status-urgent { color: var(--color-warning-text); }
+.se-countdown-cell.status-critical { color: var(--color-error-text); }
 .se-countdown-cell.status-expired { color: var(--color-text-muted); font-weight: 500; }
 
 /* expired / invalid / today special states */
@@ -723,7 +723,7 @@ onMounted(async () => {
   opacity: 0;
   transition: opacity 0.15s, background 0.15s;}
 .se-card:hover .se-del-btn { opacity: 1; }
-.se-del-btn:hover { background: rgba(239, 68, 68, 0.12); color: var(--color-error, #ef4444); }
+.se-del-btn:hover { background: rgba(239, 68, 68, 0.12); color: var(--color-error-text); }
 
 .empty-state {
   display: flex;

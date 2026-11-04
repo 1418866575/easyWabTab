@@ -330,7 +330,7 @@ const KEYPAD_ROWS: string[][] = [
 .st-pin-locked {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 14px; border-radius: 10px;
-  background: rgba(239, 68, 68, 0.1); color: var(--ds-danger);
+  background: rgba(239, 68, 68, 0.1); color: var(--color-error-text);
   font-size: var(--fs-body, 14px); width: 100%; justify-content: center;
 }
 .st-pin-hint {
@@ -338,7 +338,7 @@ const KEYPAD_ROWS: string[][] = [
   color: var(--color-text-secondary);
   line-height: 1.5; text-align: center; min-height: 20px;
 }
-.st-pin-hint.warn { color: var(--ds-danger); font-weight: 500; }
+.st-pin-hint.warn { color: var(--color-error-text); font-weight: 500; }
 .st-pin-keypad {
   display: grid; grid-template-columns: repeat(3, 1fr);
   gap: 10px; width: 100%; max-width: 280px;

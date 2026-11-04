@@ -115,7 +115,7 @@ async function handleClick(): Promise<void> {
 /* 冲突 / 错误：警示色 */
 .bk-sync-btn.is-conflict,
 .bk-sync-btn.is-error {
-  color: var(--color-error, #dc2626);
+  color: var(--color-error-text);
   border-color: var(--color-error, #dc2626);
 }
 

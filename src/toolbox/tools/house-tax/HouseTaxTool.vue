@@ -222,7 +222,7 @@ const summaryText = computed(() => {
 /* 政策类工具统一加一条警示条：结果只是估算，不能当缴税依据 */
 .tu-alert--warn {
   margin-top: 12px;
-  color: var(--color-warning);
+  color: var(--color-warning-text);
   background: var(--color-warning-soft);
   border: 1px solid var(--color-warning);
   border-radius: var(--radius-md);

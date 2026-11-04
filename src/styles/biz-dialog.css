@@ -62,7 +62,7 @@
 
 /* 必填标识：四个弹框统一为红色星号（原先「裸 * 」与红色星号混用） */
 .req {
-  color: var(--color-error, #dc2626);
+  color: var(--color-error-text);
 }
 
 /* 同一行并排多个字段 */

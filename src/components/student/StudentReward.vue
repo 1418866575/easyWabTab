@@ -366,8 +366,8 @@ onMounted(async () => {
   color: var(--color-text-soft);
 }
 .sr-stat-value { font-size: var(--fs-lg, 16px); font-weight: 600; }
-.sr-stat-value.earn { color: var(--ds-success); }
-.sr-stat-value.redeem { color: var(--ds-danger); }
+.sr-stat-value.earn { color: var(--color-success-text); }
+.sr-stat-value.redeem { color: var(--color-error-text); }
 .sr-stat-value.muted { color: var(--ds-text-3); }
 
 .sr-tabs {
@@ -511,7 +511,7 @@ html.dark .sr-detail-value { color: #f9fafb; }
   display: inline-flex;
   align-items: baseline;
   gap: 2px;
-  color: var(--ds-warning);
+  color: var(--color-warning-text);
   flex-shrink: 0;
 }
 .sr-reward-cost-num {
@@ -537,8 +537,8 @@ html.dark .sr-detail-value { color: #f9fafb; }
   color: var(--color-text-soft);
   flex-shrink: 0;
 }
-.sr-reward-stock.zero { color: var(--ds-danger); }
-.sr-reward-stock.unlimited { color: var(--ds-success); }
+.sr-reward-stock.zero { color: var(--color-error-text); }
+.sr-reward-stock.unlimited { color: var(--color-success-text); }
 .sr-reward-foot {
   margin-top: auto;
   display: flex;
@@ -624,8 +624,8 @@ html.dark .sr-detail-value { color: #f9fafb; }
   font-size: var(--fs-body, 14px);
   font-variant-numeric: tabular-nums;
 }
-.sr-txn-points.earn { color: var(--ds-success); }
-.sr-txn-points.redeem { color: var(--ds-danger); }
+.sr-txn-points.earn { color: var(--color-success-text); }
+.sr-txn-points.redeem { color: var(--color-error-text); }
 
 /* 类型标签：加分绿底 / 兑换红底 */
 .sr-txn-type-tag {
@@ -638,11 +638,11 @@ html.dark .sr-detail-value { color: #f9fafb; }
 }
 .sr-txn-type-tag.earn {
   background: rgba(16, 185, 129, 0.12);
-  color: var(--ds-success);
+  color: var(--color-success-text);
 }
 .sr-txn-type-tag.redeem {
   background: rgba(239, 68, 68, 0.12);
-  color: var(--ds-danger);
+  color: var(--color-error-text);
 }
 
 /* ===== 弹框 ===== */
@@ -679,7 +679,7 @@ html.dark .sr-detail-value { color: #f9fafb; }
 .sr-rules-action { color: var(--color-text); }
 .sr-rules-points {
   font-weight: 600;
-  color: var(--ds-warning);
+  color: var(--color-warning-text);
 }
 
 /* ===== 移动端：统计卡换行、奖励网格降为 2 列、表格横向滚动 ===== */

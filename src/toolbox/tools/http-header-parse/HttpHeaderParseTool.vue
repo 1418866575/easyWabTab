@@ -45,7 +45,7 @@ function copyAll() { copyText(rows.value.map(r => r.key + ': ' + r.value).join('
         <div class="tu-grid">
           <div v-for="s in secStatus" :key="s.name" class="tu-card" :style="s.ok ? 'border-color:var(--color-success)' : 'border-color:var(--color-border)'">
             <div class="tu-card-title">{{ s.name }}</div>
-            <div class="tu-card-value" :style="s.ok ? 'color:var(--color-success);font-size:13px' : 'color:var(--color-text-muted);font-size:13px'">{{ s.ok ? '已配置' : '缺失' }}</div>
+            <div class="tu-card-value" :style="s.ok ? 'color:var(--color-success-text);font-size:13px' : 'color:var(--color-text-muted);font-size:13px'">{{ s.ok ? '已配置' : '缺失' }}</div>
           </div>
         </div>
       </div>

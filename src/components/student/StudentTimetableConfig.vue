@@ -476,10 +476,10 @@ onMounted(async () => {
   background: var(--color-hover, #f3f4f6);
   color: var(--color-text-secondary);
 }
-.sttc-stat.is-ok { background: rgba(16, 185, 129, 0.14); color: var(--ds-success); }
+.sttc-stat.is-ok { background: rgba(16, 185, 129, 0.14); color: var(--color-success-text); }
 .sttc-stat.is-new { background: rgba(59, 130, 246, 0.14); color: var(--ds-primary); }
 .sttc-stat.is-upd { background: rgba(245, 158, 11, 0.16); color: #b45309; }
-.sttc-stat.is-err { background: rgba(239, 68, 68, 0.14); color: var(--ds-danger); }
+.sttc-stat.is-err { background: rgba(239, 68, 68, 0.14); color: var(--color-error-text); }
 
 .sttc-errors {
   margin-bottom: 10px;
@@ -509,7 +509,7 @@ onMounted(async () => {
 .sttc-error-row {
   flex: 0 0 auto;
   font-weight: 600;
-  color: var(--ds-danger);
+  color: var(--color-error-text);
 }
 .sttc-error-subject {
   flex: 0 0 auto;

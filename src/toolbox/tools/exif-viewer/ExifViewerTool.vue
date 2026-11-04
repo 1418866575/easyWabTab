@@ -207,7 +207,7 @@ function downloadCleaned() {
   padding: 0 5px;
   border-radius: 4px;
   background: var(--color-error-soft);
-  color: var(--color-error);
+  color: var(--color-error-text);
 }
 .tu-table tr.is-sensitive td { background: var(--color-error-soft); }
 </style>

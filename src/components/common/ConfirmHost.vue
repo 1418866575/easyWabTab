@@ -65,7 +65,7 @@ watch(current, (req) => {
   height: 28px;
   border-radius: var(--radius-full, 9999px);
   background: var(--color-warning-soft, #fef3c7);
-  color: var(--color-warning, #f59e0b);
+  color: var(--color-warning-text);
 }
 
 .confirm-message {

@@ -504,7 +504,7 @@ async function downloadTemplate(): Promise<void> {
   color: var(--color-text-secondary);
 }
 .stu-req {
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
 }
 .stu-form-static {
   font-size: var(--fs-body, 14px);

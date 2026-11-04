@@ -697,12 +697,12 @@ html.dark .sk-block::after {
   font-size: var(--fs-h2, 22px);
   font-weight: 700;
   line-height: 1.1;
-  color: var(--color-success, var(--color-success));
+  color: var(--color-success-text);
   font-variant-numeric: tabular-nums;
 }
 
 .hero-value.negative {
-  color: var(--color-error, var(--color-error));
+  color: var(--color-error-text);
 }
 
 /* 支出拆分：已关联库存（主色蓝）/ 未关联库存（警示橙） */
@@ -711,7 +711,7 @@ html.dark .sk-block::after {
 }
 
 .hero-value.unlinked {
-  color: var(--color-warning, #b45309);
+  color: var(--color-warning-text);
 }
 
 .hero-unit {
@@ -874,11 +874,11 @@ html.dark .sk-block::after {
 }
 
 .bizhome-low-stock.low {
-  color: var(--color-error, #dc2626);
+  color: var(--color-error-text);
 }
 
 .bizhome-low-stock.ok {
-  color: var(--color-success, #16a34a);
+  color: var(--color-success-text);
 }
 
 /* P1-1：树状排行 */
@@ -1182,7 +1182,7 @@ html.dark .sk-block::after {
   margin-left: 2px;
 }
 .bizhome-today-card .today-value.negative {
-  color: var(--color-error, #dc2626);
+  color: var(--color-error-text);
 }
 .bizhome-today-card .today-value.accent {
   color: var(--color-primary, #3b82f6);
@@ -1287,10 +1287,10 @@ html.dark .sk-block::after {
 }
 .target-sub {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-success, #16a34a);
+  color: var(--color-success-text);
 }
 .target-sub.behind {
-  color: var(--ds-warning);
+  color: var(--color-warning-text);
 }
 
 /* ===== M-08 首次使用引导卡 ===== */

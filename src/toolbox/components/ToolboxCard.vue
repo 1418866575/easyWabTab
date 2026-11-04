@@ -163,8 +163,8 @@ const ariaLabel = computed(
   transition: color var(--motion-duration) var(--motion-ease),
     background-color var(--motion-duration) var(--motion-ease);
 }
-.tb-card-fav:hover { background: var(--color-bg-hover); color: var(--color-warning); }
-.tb-card-fav[aria-pressed="true"] { color: var(--color-warning); }
+.tb-card-fav:hover { background: var(--color-bg-hover); color: var(--color-warning-text); }
+.tb-card-fav[aria-pressed="true"] { color: var(--color-warning-text); }
 .tb-card-desc {
   font-size: 12.5px;
   color: var(--color-text-secondary);
@@ -200,7 +200,7 @@ const ariaLabel = computed(
   font-weight: 600;
   border: 1px solid transparent;
 }
-.tb-badge.maintenance { background: var(--color-warning-soft); color: var(--color-warning); }
+.tb-badge.maintenance { background: var(--color-warning-soft); color: var(--color-warning-text); }
 .tb-badge.coming { background: var(--color-bg-hover); color: var(--color-text-secondary); }
-.tb-badge.internal { background: var(--color-success-soft); color: var(--color-success); }
+.tb-badge.internal { background: var(--color-success-soft); color: var(--color-success-text); }
 </style>

@@ -288,17 +288,17 @@ const tableToText = (title: string, header: string[], rows: string[][]) =>
 <style scoped>
 .tu-alert--warn {
   margin-top: 12px;
-  color: var(--color-warning);
+  color: var(--color-warning-text);
   background: var(--color-warning-soft);
   border: 1px solid var(--color-warning);
   border-radius: var(--radius-md);
 }
 
 .tu-card-value.is-up {
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
 }
 
 .tu-card-value.is-down {
-  color: var(--color-success, #16a34a);
+  color: var(--color-success-text);
 }
 </style>

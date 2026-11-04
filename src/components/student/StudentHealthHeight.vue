@@ -429,12 +429,12 @@ const chartOption = computed(() => {
 }
 
 .sth-up {
-  color: var(--color-success, #10b981);
+  color: var(--color-success-text);
   font-weight: 600;
 }
 
 .sth-down {
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
   font-weight: 600;
 }
 

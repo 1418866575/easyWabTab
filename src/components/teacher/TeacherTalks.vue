@@ -705,7 +705,7 @@ function truncate(text: string, n = 30): string {
 }
 .tk-detail-btn { color: var(--color-link, #3b82f6); }
 .tk-edit-btn { color: var(--color-text-secondary); }
-.tk-del-btn { color: var(--color-error, #ef4444); }
+.tk-del-btn { color: var(--color-error-text); }
 
 .tk-list-pager {
   display: flex;
@@ -743,7 +743,7 @@ function truncate(text: string, n = 30): string {
 }
 .tk-cat-badge {
   background: rgba(16, 185, 129, 0.12);
-  color: var(--ds-success);
+  color: var(--color-success-text);
 }
 .tk-tag {
   display: inline-block;
@@ -788,7 +788,7 @@ function truncate(text: string, n = 30): string {
   font-weight: 600;
 }
 .tk-required {
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
 }
 .tk-form-switch {
   flex-direction: row;

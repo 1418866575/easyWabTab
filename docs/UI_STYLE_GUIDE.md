@@ -38,12 +38,30 @@
 | 成功   | `--color-success` / `-hover` / `-soft`                              | 成功提示、启用态           |
 | 警告   | `--color-warning` / `-hover` / `-soft`                              | 警告徽标               |
 | 危险   | `--color-error` / `-hover` / `-soft`                                | 删除按钮、错误态、校验错误      |
+| 功能色**当文字** | `--color-success-text` / `--color-warning-text` / `--color-error-text` | 只要是 `color:`，一律用它仨 |
 | 页面底  | `--color-bg`                                                        | 页面最底层背景            |
 | 卡片面  | `--color-bg-card`                                                   | 卡片/弹框/面板表面         |
 | 悬停面  | `--color-bg-hover` / `--color-bg-active`                            | hover / active 背景  |
 | 输入面  | `--color-bg-input`                                                  | 输入框底               |
 | 边框   | `--color-border` / `--color-border-hover` / `--color-border-strong` | 常规/悬停/强调边框         |
 | 文字   | `--color-text` / `-secondary` / `-muted` / `-soft`                  | 正文/次要/弱化/禁用（均指向墨色阶梯） |
+
+> 另有 `--color-slate-50..900` 中性灰阶、`--color-surface` / `--color-surface-2`、`--color-shadow`。
+
+#### 功能色分两套：做实底的 vs 当文字的（2026-11 新增）
+
+`--color-success`（#10b981）当文字放白底只有 **2.9:1**，`--color-error`（#ef4444）是 **3.8:1**，都过不了 AA 的 4.5:1。所以每个功能色有两个用途不同的令牌：
+
+| 用途 | 用哪个 | 值 |
+| --- | --- | --- |
+| 实底 / 边框 / 图标 | `--color-success` `-warning` `-error`（500 级） | 亮 `#10b981` / `#f59e0b` / `#ef4444`，暗同值 |
+| **文字**（`color:`） | `--color-success-text` `-warning-text` `-error-text` | 亮 700 级 `#047857` / `#b45309` / `#b91c1c`，暗 400 级 `#34d399` / `#fbbf24` / `#f87171` |
+
+暗色之所以要反过来提亮：暗底上 700 级反而看不清。
+
+**配套的坑**：`-soft` 浅底是固定浅色（`#d1fae5` 等），暗色下若不覆写，就是「深色界面上贴一块浅色补丁」，再配上已提亮的 `-text` 就是浅字压浅底（实测 `wp-stat.is-success` 从 3.32 掉到 1.7）。`dark.css` 已把三个 `-soft` 改成 `rgba(...,0.16)` 低透明度彩色，与 `--ds-*-soft` / `--color-primary-soft` 同一写法。
+
+> 同类问题还剩一类没解决：`--color-primary` 当文字压在 `--color-primary-soft` 上（图书馆标签、智能工作台导航，暗色 1.96~2.24）。要修得给 7 套 accent 各配一个 `--color-primary-text`，属独立工作量。
 
 > 另有 `--color-slate-50..900` 中性灰阶、`--color-surface` / `--color-surface-2`、`--color-shadow`。
 

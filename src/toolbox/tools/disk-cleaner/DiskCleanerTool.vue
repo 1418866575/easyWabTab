@@ -379,7 +379,7 @@ async function removeChecked(): Promise<void> {
   max-width: 96px;
 }
 .dc-warn {
-  color: var(--color-warning, #b88230);
+  color: var(--color-warning-text);
 }
 
 .dc-wrap {
@@ -457,7 +457,7 @@ async function removeChecked(): Promise<void> {
   white-space: nowrap;
 }
 .is-danger {
-  color: var(--color-error, #dc2626);
+  color: var(--color-error-text);
   border-color: var(--color-error, #dc2626);
 }
 .is-danger:hover:not(:disabled) {

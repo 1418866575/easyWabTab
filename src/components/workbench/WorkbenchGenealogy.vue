@@ -1520,7 +1520,7 @@ html.dark .fg-age-preview { border-color: var(--color-border, #374151); }
 /* 占满整行（身份证号这类长字段用） */
 .fg-form-grid .form-group--full { grid-column: 1 / -1; }
 .fg-idcard-hint { font-size: var(--fs-caption, 12px); line-height: 1.5; color: var(--color-text-secondary); }
-.fg-idcard-hint.is-warn { color: var(--color-warning, #d97706); }
+.fg-idcard-hint.is-warn { color: var(--color-warning-text); }
 .form-group > label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
 .form-row-fields { display: flex; gap: 10px; flex-wrap: wrap; }
 .field { display: flex; flex-direction: column; gap: 6px; }

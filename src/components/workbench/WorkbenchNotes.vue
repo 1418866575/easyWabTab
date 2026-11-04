@@ -928,7 +928,7 @@ onUnmounted(() => {
  * 但 RecordsCard 的 maxFields 默认 4 只渲染前四项（标题/内容/分类/状态），
  * 所以移动端卡片视图本来就不展示这两项——与本次删列无关，勿误以为是回归。 */
 .nt-edit-btn { color: var(--color-link, #3b82f6); }
-.nt-delete-btn { color: var(--ds-danger); }
+.nt-delete-btn { color: var(--color-error-text); }
 .nt-pin-btn { opacity: 1; }
 .nt-pin-btn.active { color: var(--el-color-warning, #e6a23c); border-color: var(--el-color-warning, #e6a23c); }
 
@@ -1086,21 +1086,21 @@ html.dark .timeline-item::before { background: var(--color-border, #374151); }
 /* ===== 合并表格：便签类型徽标 + 普通行隐藏展开箭头 ===== */
 .nt-type-badge { font-size: var(--fs-caption, 12px); font-weight: 600; padding: 2px 10px; border-radius: var(--radius-full, 9999px); white-space: nowrap; }
 .nt-type-badge.is-normal { color: var(--color-primary, #3b82f6); background: var(--color-primary-light, #eff6ff); border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent); }
-.nt-type-badge.is-timeline { color: var(--color-success, #22c55e); background: color-mix(in srgb, var(--color-success, #22c55e) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-success, #22c55e) 35%, transparent); }
+.nt-type-badge.is-timeline { color: var(--color-success-text); background: color-mix(in srgb, var(--color-success, #22c55e) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-success, #22c55e) 35%, transparent); }
 
 /* ===== 便签状态（处理中/已处理/逾期）与截止日期 ===== */
 /* 逾期为派生状态：仅「未处理 + 截止日已过」时出现，随日期自动变化 */
 .nt-status-badge { font-size: var(--fs-caption, 12px); font-weight: 600; padding: 2px 10px; border-radius: var(--radius-full, 9999px); white-space: nowrap; }
-.nt-status-badge.is-pending { color: var(--color-warning, #f59e0b); background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-warning, #f59e0b) 35%, transparent); }
-.nt-status-badge.is-done { color: var(--color-success, #22c55e); background: color-mix(in srgb, var(--color-success, #22c55e) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-success, #22c55e) 35%, transparent); }
-.nt-status-badge.is-overdue { color: var(--color-error, #ef4444); background: color-mix(in srgb, var(--color-error, #ef4444) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-error, #ef4444) 35%, transparent); }
+.nt-status-badge.is-pending { color: var(--color-warning-text); background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-warning, #f59e0b) 35%, transparent); }
+.nt-status-badge.is-done { color: var(--color-success-text); background: color-mix(in srgb, var(--color-success, #22c55e) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-success, #22c55e) 35%, transparent); }
+.nt-status-badge.is-overdue { color: var(--color-error-text); background: color-mix(in srgb, var(--color-error, #ef4444) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-error, #ef4444) 35%, transparent); }
 .nt-due-cell { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary); margin-top: 2px; white-space: nowrap; }
-.nt-due-cell.is-overdue { color: var(--color-error, #ef4444); font-weight: 600; }
+.nt-due-cell.is-overdue { color: var(--color-error-text); font-weight: 600; }
 /* 表单内「已逾期」提示（选了过去的截止日期 + 仍为处理中时） */
 .nt-overdue-hint {
   margin-left: 8px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
   white-space: nowrap;
 }
 .note-due-input { width: 180px; }

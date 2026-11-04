@@ -174,7 +174,7 @@ function reset() {
   border-radius: var(--radius-md);
   word-break: break-all;
 }
-.cb-expr.is-error { color: var(--color-error); border-color: var(--color-error); }
+.cb-expr.is-error { color: var(--color-error-text); border-color: var(--color-error); }
 .tu-mono { font-family: var(--font-family-mono); font-size: 12.5px; }
 .tu-list { margin: 0; padding-left: 20px; font-size: 12.5px; line-height: 1.8; }
 </style>

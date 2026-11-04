@@ -59,7 +59,7 @@ onBeforeUnmount(closeConn)
         <div v-for="(l, i) in logs" :key="i" style="white-space:pre-wrap;word-break:break-all">
           <span class="tu-tree-type">{{ new Date(l.ts).toLocaleTimeString() }}</span>
           <span v-if="l.dir === 'send'" style="color:var(--color-primary)">▶ 发送</span>
-          <span v-else-if="l.dir === 'recv'" style="color:var(--color-success)">◀ 接收</span>
+          <span v-else-if="l.dir === 'recv'" style="color:var(--color-success-text)">◀ 接收</span>
           <span v-else style="color:var(--color-text-muted)">· 系统</span>
           {{ ' ' + l.text }}
         </div>

@@ -172,7 +172,7 @@ const monthText = computed(() =>
   padding: 7px 10px;
   font-size: var(--fs-caption);
   line-height: 1.6;
-  color: var(--color-warning, #b88230);
+  color: var(--color-warning-text);
   background: var(--color-warning-soft, #fdf6ec);
   border: 1px solid var(--color-warning, #b88230);
   border-radius: var(--radius-md);

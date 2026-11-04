@@ -1235,13 +1235,13 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
 }
 
 .bizpur-stock.sold-out {
-  color: var(--color-success, #16a34a);
+  color: var(--color-success-text);
   background: color-mix(in srgb, var(--color-success, #16a34a) 12%, transparent);
   border-color: color-mix(in srgb, var(--color-success, #16a34a) 32%, transparent);
 }
 
 .bizpur-stock.unsold {
-  color: var(--color-warning, #b45309);
+  color: var(--color-warning-text);
   background: color-mix(in srgb, var(--color-warning, #f59e0b) 14%, transparent);
   border-color: color-mix(in srgb, var(--color-warning, #f59e0b) 34%, transparent);
 }
@@ -1273,11 +1273,11 @@ async function handleDeleteDay(g: PurchaseDayGroup): Promise<void> {
   border-color: var(--color-border, #374151);
 }
 .bizpur-markup-rate.rate-high {
-  color: var(--color-success, var(--color-success));
+  color: var(--color-success-text);
   font-weight: 600;
 }
 .bizpur-markup-rate.rate-low {
-  color: var(--color-error, var(--color-error));
+  color: var(--color-error-text);
   font-weight: 600;
 }
 .bizpur-note-text {
@@ -1484,7 +1484,7 @@ html.dark .biz-input {
 }
 
 .rd-money {
-  color: var(--color-success, #16a34a);
+  color: var(--color-success-text);
 }
 
 /* 关联支出：多选框列表 */

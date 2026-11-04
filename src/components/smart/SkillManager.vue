@@ -652,7 +652,7 @@ function relTime(ts: number): string {
   font-size: var(--fs-caption, 12px);
   cursor: pointer;}
 .sm-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
-.sm-btn.is-danger:hover { border-color: var(--color-error, #dc2626); color: var(--color-error, #dc2626); }
+.sm-btn.is-danger:hover { border-color: var(--color-error, #dc2626); color: var(--color-error-text); }
 /* 主 CTA：与提示词 / 工作流卡片一致——第一颗按钮是该资产的主动作（技能 = 详情） */
 .sm-btn.is-primary {
   border-color: var(--color-primary, #3b82f6);
@@ -678,7 +678,7 @@ function relTime(ts: number): string {
 }
 .sm-fav.is-on {
   border-color: var(--color-warning, #f59e0b);
-  color: var(--color-warning, #f59e0b);
+  color: var(--color-warning-text);
 }
 .sm-star {
   flex: 0 0 auto;
@@ -690,7 +690,7 @@ function relTime(ts: number): string {
   line-height: 1.2;
   cursor: pointer;
 }
-.sm-star.is-on { color: var(--color-warning, #f59e0b); }
+.sm-star.is-on { color: var(--color-warning-text); }
 
 /* 分页容器：只负责间距与右对齐，控件观感由 styles/pager.css 的 .ewt-pager 统一接管 */
 .sm-pager {

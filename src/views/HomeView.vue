@@ -990,7 +990,7 @@ onUnmounted(() => {
 
 .nsf-clear:hover {
   background: var(--color-border, #e2e8f0);
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
 }
 
 .nav-filter-clear {
@@ -1006,7 +1006,7 @@ onUnmounted(() => {
 }
 
 .nav-filter-clear:hover {
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
   border-color: var(--color-error, #ef4444);
 }
 

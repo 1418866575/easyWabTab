@@ -57,7 +57,7 @@ function copySubject() { copyText(subject.value) }
     </div>
     <p v-if="errorMsg" class="tu-alert">{{ errorMsg }}</p>
     <div v-if="attrs.length" class="tu-grid">
-      <div class="tu-card"><div class="tu-card-title">签名校验</div><div class="tu-card-value" :style="verified ? 'color:var(--color-success);font-size:14px' : 'color:var(--color-error);font-size:14px'">{{ verified ? '通过' : '未通过' }}</div></div>
+      <div class="tu-card"><div class="tu-card-title">签名校验</div><div class="tu-card-value" :style="verified ? 'color:var(--color-success-text);font-size:14px' : 'color:var(--color-error-text);font-size:14px'">{{ verified ? '通过' : '未通过' }}</div></div>
       <div class="tu-card"><div class="tu-card-title">签名算法 OID</div><div class="tu-card-value" style="font-size:13px">{{ sigAlg }}</div></div>
       <div class="tu-card"><div class="tu-card-title">公钥长度</div><div class="tu-card-value">{{ pubBits }} 位</div></div>
     </div>

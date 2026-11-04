@@ -511,7 +511,7 @@ function excerpt(w: SmartWorkflow): string {
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
 }
-.wm-fav.is-on { border-color: var(--color-warning, #f59e0b); color: var(--color-warning, #f59e0b); }
+.wm-fav.is-on { border-color: var(--color-warning, #f59e0b); color: var(--color-warning-text); }
 
 .wm-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .wm-tag, .wm-tag-reset {
@@ -549,7 +549,7 @@ function excerpt(w: SmartWorkflow): string {
   font-size: var(--fs-caption, 12px);
   cursor: pointer;}
 .wm-batch-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
-.wm-batch-btn.is-danger:hover { border-color: var(--color-error, #dc2626); color: var(--color-error, #dc2626); }
+.wm-batch-btn.is-danger:hover { border-color: var(--color-error, #dc2626); color: var(--color-error-text); }
 
 .wm-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
 /* 分页容器：只负责间距与右对齐，控件观感由 styles/pager.css 的 .ewt-pager 统一接管 */
@@ -579,7 +579,7 @@ function excerpt(w: SmartWorkflow): string {
   line-height: 1.2;
   cursor: pointer;
 }
-.wm-star.is-on { color: var(--color-warning, #f59e0b); }
+.wm-star.is-on { color: var(--color-warning-text); }
 .wm-card-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
 .wm-name {
   padding: 0;
@@ -630,7 +630,7 @@ function excerpt(w: SmartWorkflow): string {
   cursor: pointer;}
 .wm-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
 .wm-btn.is-primary { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); font-weight: 600; }
-.wm-btn.is-danger:hover { border-color: var(--color-error, #dc2626); color: var(--color-error, #dc2626); }
+.wm-btn.is-danger:hover { border-color: var(--color-error, #dc2626); color: var(--color-error-text); }
 
 .wm-empty {
   padding: 40px 16px;

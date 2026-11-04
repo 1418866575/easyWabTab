@@ -521,7 +521,7 @@ function truncateUrl(url: string, maxLength = 40) {
 }
 
 .btn-icon.delete:hover {
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
 }
 
 /* 设为默认：未选中为常规图标按钮，已是默认时高亮为金色且不可点击 */
@@ -531,7 +531,7 @@ function truncateUrl(url: string, maxLength = 40) {
 
 .btn-icon.set-default.is-active {
   opacity: 1;
-  color: var(--ds-warning);
+  color: var(--color-warning-text);
 }
 
 .btn-icon.set-default:disabled {

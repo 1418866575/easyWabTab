@@ -31,6 +31,14 @@
   --color-error-hover:   #dc2626;
   --color-error-soft:    #fee2e2;
   --color-info:          #3b82f6;
+
+  /* 功能色的「当文字用」版本（2026-11 新增）
+     base 三态是给实底/边框/图标用的：#10b981 当文字放白底只有 2.9:1，#ef4444 是 3.8:1，
+     全部不满足 WCAG AA 的 4.5:1。凡是 color: 用它仨，一律改用 -text 变体（700 级）。
+     反过来，白字压在 --color-success/-warning/-error 实底上（徽标）是另一回事，不在本组范围内。 */
+  --color-success-text:  #047857;  /* on #fff 5.5:1 */
+  --color-warning-text:  #b45309;  /* on #fff 5.0:1 */
+  --color-error-text:    #b91c1c;  /* on #fff 6.5:1 */
   --color-info-hover:    #2563eb;
   --color-info-soft:     #dbeafe;
 
@@ -499,7 +507,7 @@ optgroup {
 .ui-btn--danger,
 .btn-clear, .btn-delete, .btn-danger,
 .site-action-btn.danger, .site-action-btn.stop {
-  color: var(--color-error);
+  color: var(--color-error-text);
   border-color: var(--color-error);
   background-color: transparent;
 }
@@ -507,7 +515,7 @@ optgroup {
 .btn-clear:hover:not(:disabled), .btn-delete:hover:not(:disabled), .btn-danger:hover:not(:disabled),
 .site-action-btn.danger:hover:not(:disabled), .site-action-btn.stop:hover:not(:disabled) {
   background-color: var(--color-error-soft);
-  color: var(--color-error);
+  color: var(--color-error-text);
   border-color: var(--color-error);
 }
 

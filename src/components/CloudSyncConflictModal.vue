@@ -252,7 +252,7 @@ const hasConflict = computed(() => conflictRows.value.length > 0)
 .merge-hint {
   margin: 12px 0 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--ds-success);
+  color: var(--color-success-text);
   line-height: 1.5;
 }
 .conflict-foot {
@@ -292,7 +292,7 @@ const hasConflict = computed(() => conflictRows.value.length > 0)
 }
 .conflict-btn-merge {
   background: color-mix(in srgb, var(--ds-success) 12%, var(--color-bg));
-  color: var(--ds-success);
+  color: var(--color-success-text);
   border-color: color-mix(in srgb, var(--ds-success) 40%, var(--color-border));
 }
 /* 面板内部改为纵向 flex：头部/底部固定，中间文件列表滚动（原 .conflict-dialog 整体 overflow） */

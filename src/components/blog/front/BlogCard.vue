@@ -121,10 +121,10 @@ const to = computed(() => `/blog/article/${props.article.slug}`)
 }
 .bf-card-star:hover {
   transform: scale(1.12);
-  color: var(--color-warning, #f59e0b);
+  color: var(--color-warning-text);
 }
 .bf-card-star.is-fav {
-  color: var(--color-warning, #f59e0b);
+  color: var(--color-warning-text);
   background: rgba(255, 255, 255, 0.95);
 }
 

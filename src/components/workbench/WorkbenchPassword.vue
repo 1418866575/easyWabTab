@@ -742,7 +742,7 @@ watch(
 }
 
 .pwd-auth-error {
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
   font-size: var(--fs-sm, 13px);
   margin: 0 0 12px 0;
 }
@@ -765,7 +765,7 @@ watch(
 }
 
 .pwd-reset-link:hover:not(:disabled) {
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
 }
 
 .pwd-reset-link:disabled {
@@ -1191,7 +1191,7 @@ html.dark .pwd-reset-link {
 }
 
 html.dark .pwd-reset-link:hover:not(:disabled) {
-  color: var(--color-error, #f87171);
+  color: var(--color-error-text);
 }
 
 html.dark .pwd-search {

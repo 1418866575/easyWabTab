@@ -729,7 +729,7 @@ const handleSubmit = () => {
 .error-msg {
   display: block;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
   margin-top: 4px;
 }
 
@@ -874,7 +874,7 @@ const handleSubmit = () => {
   height: 36px;}
 
 .btn-icon-clear:hover {
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
   border-color: transparent;
   background: #fef2f2;
 }

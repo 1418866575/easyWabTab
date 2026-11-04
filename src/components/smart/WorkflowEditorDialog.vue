@@ -195,8 +195,8 @@ const nameTaken = computed(() => {
 .we-field-sm { flex: 0 1 160px; }
 .we-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
 .we-hint { color: var(--color-text-muted); font-size: var(--fs-caption, 12px); }
-.req { color: var(--color-error, #dc2626); }
-.we-error { font-size: var(--fs-caption, 12px); color: var(--color-error, #dc2626); }
+.req { color: var(--color-error-text); }
+.we-error { font-size: var(--fs-caption, 12px); color: var(--color-error-text); }
 .we-check { display: flex; align-items: center; gap: 6px; font-size: var(--fs-sm, 13px); color: var(--color-text); }
 
 @media (max-width: 768px) {

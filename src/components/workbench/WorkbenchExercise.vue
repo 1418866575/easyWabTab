@@ -370,7 +370,7 @@ onMounted(async () => {
         </el-table-column>
         <el-table-column label="消耗" width="110" align="right">
           <template #default="{ row }">
-            <span style="font-weight: 700; color: var(--color-success, #16a34a); font-variant-numeric: tabular-nums;">
+            <span style="font-weight: 700; color: var(--color-success-text); font-variant-numeric: tabular-nums;">
               {{ row.calories }} kcal
             </span>
           </template>

@@ -318,7 +318,7 @@ onBeforeUnmount(() => {
 
 .tb-modal-loading,
 .tb-modal-error { margin: 0; font-size: var(--fs-sm); color: var(--color-text-secondary); }
-.tb-modal-error { color: var(--color-error); }
+.tb-modal-error { color: var(--color-error-text); }
 
 @keyframes tb-fade {
   from { opacity: 0; }

@@ -326,7 +326,7 @@ function setMode(v: WatermarkMode): void {
   margin: 8px 0 0;
   padding: 7px 10px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-warning, #b45309);
+  color: var(--color-warning-text);
   background: color-mix(in srgb, var(--color-warning, #b45309) 10%, transparent);
   border-radius: 6px;
 }

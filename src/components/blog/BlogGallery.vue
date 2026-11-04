@@ -817,7 +817,7 @@ async function doRemove(ids: string[]): Promise<void> {
 
 .bg-del:hover {
   border-color: var(--color-error, #ef4444);
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
 }
 
 .bg-ops {

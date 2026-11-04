@@ -361,7 +361,7 @@ watch(activeIndex, v => {
   padding: 2px 6px;
   border-radius: 6px;
 }
-.tb-recent-clear:hover { color: var(--color-error); background: var(--color-bg-hover); }
+.tb-recent-clear:hover { color: var(--color-error-text); background: var(--color-bg-hover); }
 
 .tb-recent-panel-list { list-style: none; margin: 0; padding: 0; }
 .tb-recent-panel-item {

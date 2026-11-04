@@ -630,7 +630,7 @@ function printReport(): void {
   padding: 1px 8px;
   border-radius: 999px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-warning, #b45309);
+  color: var(--color-warning-text);
   background: color-mix(in srgb, var(--color-warning, #f59e0b) 15%, transparent);
 }
 
@@ -639,7 +639,7 @@ function printReport(): void {
 }
 
 .bizstats-profit :deep(.negative) {
-  color: var(--color-error, #dc2626);
+  color: var(--color-error-text);
 }
 
 .bizstats-days {

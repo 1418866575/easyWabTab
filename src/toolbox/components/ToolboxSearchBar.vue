@@ -303,7 +303,7 @@ defineExpose({ focus: () => nextTick(() => inputRef.value?.focus()) })
   padding: 2px 6px;
   border-radius: 6px;
 }
-.tb-panel-clear:hover { color: var(--color-error); background: var(--color-bg-hover); }
+.tb-panel-clear:hover { color: var(--color-error-text); background: var(--color-bg-hover); }
 
 .tb-panel-list { list-style: none; margin: 0; padding: 0; }
 .tb-panel-item {

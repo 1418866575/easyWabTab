@@ -349,7 +349,7 @@ function stageColor(stage: number): string {
   gap: 8px;
   font-size: var(--fs-md);
   font-weight: 700;
-  color: var(--color-warning, #b88230);
+  color: var(--color-warning-text);
   margin-bottom: 8px;
 }
 .ts-highlight-icon {
@@ -370,7 +370,7 @@ function stageColor(stage: number): string {
   color: var(--color-text);
 }
 .ts-highlight-body strong {
-  color: var(--color-warning, #b88230);
+  color: var(--color-warning-text);
 }
 
 /* 窄屏适配 */

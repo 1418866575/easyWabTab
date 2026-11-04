@@ -948,7 +948,7 @@ onMounted(() => {
   border: 1px solid var(--color-error, #ef4444);
   border-radius: var(--radius-md, 8px);
   background-color: transparent;
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
   font-size: var(--font-size-xs, 12px);
   cursor: pointer;
   transition:

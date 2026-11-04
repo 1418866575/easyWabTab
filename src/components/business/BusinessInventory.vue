@@ -394,7 +394,7 @@ function exportInventoryExcel(): void {
 
 .bizinv-warn-days {
   flex-shrink: 0;
-  color: var(--color-warning, #b45309);
+  color: var(--color-warning-text);
 }
 
 /* 批次明细 */
@@ -447,12 +447,12 @@ function exportInventoryExcel(): void {
 }
 
 .bizinv-batch-status.done {
-  color: var(--color-success, #16a34a);
+  color: var(--color-success-text);
   background: color-mix(in srgb, var(--color-success, #16a34a) 12%, transparent);
 }
 
 .bizinv-batch-status.open {
-  color: var(--color-warning, #b45309);
+  color: var(--color-warning-text);
   background: color-mix(in srgb, var(--color-warning, #f59e0b) 14%, transparent);
 }
 
@@ -558,7 +558,7 @@ function exportInventoryExcel(): void {
 .bizinv-low-stock {
   font-size: var(--fs-lg, 16px);
   font-weight: 700;
-  color: var(--color-error, var(--color-error));
+  color: var(--color-error-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -610,7 +610,7 @@ function exportInventoryExcel(): void {
 }
 
 .bizinv-badge.on {
-  color: var(--color-success, #16a34a);
+  color: var(--color-success-text);
   background: color-mix(in srgb, var(--color-success, #16a34a) 12%, transparent);
 }
 
@@ -686,11 +686,11 @@ function exportInventoryExcel(): void {
 }
 
 .bizinv-metric.num-brought .metric-value b {
-  color: var(--ds-warning);
+  color: var(--color-warning-text);
 }
 
 .bizinv-metric.num-stock .metric-value b {
-  color: var(--ds-success);
+  color: var(--color-success-text);
 }
 
 /* 查看溯源按钮（卡片右上角） */
@@ -817,7 +817,7 @@ function exportInventoryExcel(): void {
 }
 
 .bizinv-source-type.daily {
-  color: var(--color-success, var(--color-success));
+  color: var(--color-success-text);
   background: color-mix(in srgb, var(--color-success, var(--color-success)) 12%, transparent);
 }
 
@@ -864,7 +864,7 @@ html.dark .bizinv-name {
 }
 
 html.dark .bizinv-low-stock {
-  color: var(--color-error, #f87171);
+  color: var(--color-error-text);
 }
 
 /* 暗色模式：三色适配 */

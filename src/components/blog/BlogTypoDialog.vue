@@ -513,7 +513,7 @@ function miniStyle(t: TypoTheme): Record<string, string> {
 
 .tdp-live {
   margin-left: auto;
-  color: var(--color-success, #047857);
+  color: var(--color-success-text);
   font-size: var(--fs-caption);
   white-space: nowrap;
 }

@@ -262,7 +262,7 @@ onMounted(async () => {
         </el-table-column>
         <el-table-column label="时长(h)" width="110" align="right">
           <template #default="{ row }">
-            <span style="font-weight:700;color:var(--color-success,#16a34a);font-variant-numeric: tabular-nums;">
+            <span style="font-weight:700;color:var(--color-success-text);font-variant-numeric: tabular-nums;">
               {{ fmtHours(row.durationHours) }} h
             </span>
           </template>
@@ -636,7 +636,7 @@ onMounted(async () => {
 /* 入睡=起床（24h 规则）提示 */
 .form-hint {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-error, var(--color-error));
+  color: var(--color-error-text);
 }
 
 .form-actions {
@@ -729,11 +729,11 @@ html.dark .btn-toggle-list {
 }
 
 /* 睡眠质量文字色（sl-quality-1..5） */
-.sl-quality-1 { color:var(--ds-danger); font-weight:600; }
+.sl-quality-1 { color:var(--color-error-text); font-weight:600; }
 .sl-quality-2 { color:#f97316; font-weight:600; }
 .sl-quality-3 { color:var(--ds-primary); font-weight:600; }
-.sl-quality-4 { color:var(--ds-success); font-weight:700; }
-.sl-quality-5 { color:var(--ds-success); font-weight:700; }
+.sl-quality-4 { color:var(--color-success-text); font-weight:700; }
+.sl-quality-5 { color:var(--color-success-text); font-weight:700; }
 
 /* 移动端 ≤768px：header 换行，按钮组独占一行 */
 @media (max-width: 768px) {

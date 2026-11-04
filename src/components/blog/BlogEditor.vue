@@ -1710,7 +1710,7 @@ async function regenerateSlug(): Promise<void> {
 
 .be-warn {
   margin: -6px 0 10px;
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
   font-size: var(--font-size-xs, 12px);
 }
 
@@ -1754,7 +1754,7 @@ async function regenerateSlug(): Promise<void> {
 .be-errors {
   margin: 0;
   padding-left: 16px;
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
   font-size: var(--font-size-xs, 12px);
   line-height: var(--line-height-relaxed, 1.7);
 }
@@ -1768,7 +1768,7 @@ async function regenerateSlug(): Promise<void> {
 
 .be-wx-msg {
   margin: 0;
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
   font-size: var(--font-size-xs, 12px);
   line-height: var(--line-height-relaxed, 1.7);
 }
@@ -1972,7 +1972,7 @@ async function regenerateSlug(): Promise<void> {
 }
 
 .img-dialog-op--danger:hover {
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
   border-color: var(--color-error, #ef4444);
 }
 
@@ -2065,7 +2065,7 @@ async function regenerateSlug(): Promise<void> {
 }
 
 .be-save-state.is-unsaved {
-  color: var(--color-warning-hover, #b45309);
+  color: var(--color-warning-text);
   background: var(--color-warning-soft, #fef3c7);
 }
 
@@ -2075,7 +2075,7 @@ async function regenerateSlug(): Promise<void> {
 }
 
 .be-save-state.is-saved {
-  color: var(--color-success-hover, #059669);
+  color: var(--color-success-text);
   background: var(--color-success-soft, #d1fae5);
 }
 

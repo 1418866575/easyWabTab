@@ -945,7 +945,7 @@ onMounted(async () => {
 
 /* 逾期天数：红色高亮 + 等宽数字，便于纵向比对（与截止日期列的「已逾期 N 天」同一色系） */
 .td-overdue-days {
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }

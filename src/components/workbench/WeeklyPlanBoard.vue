@@ -234,12 +234,12 @@ function onCell(rowKey: string, day: number): void {
 
 .wp-stat.is-success {
   background: var(--color-success-soft, #d1fae5);
-  color: var(--color-success-hover, #059669);
+  color: var(--color-success-text);
 }
 
 .wp-stat.is-warning {
   background: var(--color-warning-soft, #fef3c7);
-  color: var(--color-warning-hover, #b45309);
+  color: var(--color-warning-text);
 }
 
 .wp-scroll {
@@ -355,11 +355,11 @@ function onCell(rowKey: string, day: number): void {
 }
 
 .wp-item-sub.is-success {
-  color: var(--color-success-hover, #059669);
+  color: var(--color-success-text);
 }
 
 .wp-item-sub.is-warning {
-  color: var(--color-warning-hover, #b45309);
+  color: var(--color-warning-text);
 }
 
 .wp-tag {

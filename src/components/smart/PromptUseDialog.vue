@@ -161,7 +161,7 @@ function clearAll(): void {
 .pu-field { display: flex; flex-direction: column; gap: 4px; }
 .pu-label { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary); }
 .pu-desc { color: var(--color-text-muted); }
-.pu-warn { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-error, #dc2626); }
+.pu-warn { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-error-text); }
 
 .pu-result { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .pu-preview {

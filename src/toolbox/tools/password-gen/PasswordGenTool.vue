@@ -144,5 +144,5 @@ generate()
 <style scoped>
 .tu-mono { font-family: var(--font-family-mono); font-size: 12.5px; }
 .break { word-break: break-all; }
-.is-off { color: var(--color-error); }
+.is-off { color: var(--color-error-text); }
 </style>

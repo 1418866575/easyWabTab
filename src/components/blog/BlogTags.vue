@@ -223,7 +223,7 @@ async function handleRemove(id: string): Promise<void> {
 }
 
 .bt-mini:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
-.bt-mini.is-danger:hover { border-color: var(--color-error, #ef4444); color: var(--color-error, #ef4444); }
+.bt-mini.is-danger:hover { border-color: var(--color-error, #ef4444); color: var(--color-error-text); }
 
 .bt-panel {
   display: flex;

@@ -272,7 +272,7 @@ onMounted(async () => {
 }
 .sa-stat-all {
   background: rgba(16, 185, 129, 0.12);
-  color: var(--ds-success);
+  color: var(--color-success-text);
   border-color: var(--ds-success);
   font-weight: 600;
 }
@@ -361,7 +361,7 @@ onMounted(async () => {
   gap: 4px;
 }
 .sa-badge-status.unlocked {
-  color: var(--ds-warning);
+  color: var(--color-warning-text);
   font-size: var(--fs-caption, 12px);
   font-weight: 600;
 }
@@ -436,7 +436,7 @@ onMounted(async () => {
   gap: 6px;
 }
 .sa-dialog-unlocked-badge {
-  color: var(--ds-warning);
+  color: var(--color-warning-text);
   font-size: var(--fs-body, 14px);
   font-weight: 600;
 }

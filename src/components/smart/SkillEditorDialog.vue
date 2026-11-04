@@ -471,8 +471,8 @@ async function copySkillMd(): Promise<void> {
 }
 .sk-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
 .sk-hint { color: var(--color-text-muted); font-size: var(--fs-caption, 12px); }
-.req { color: var(--color-error, #dc2626); }
-.sk-error { font-size: var(--fs-caption, 12px); color: var(--color-error, #dc2626); }
+.req { color: var(--color-error-text); }
+.sk-error { font-size: var(--fs-caption, 12px); color: var(--color-error-text); }
 
 /* 技能图标选择行：图标按钮 + 当前图标说明 + 恢复默认（与分类管理的 .cat-icon-btn 同款） */
 .sk-icon-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -552,7 +552,7 @@ async function copySkillMd(): Promise<void> {
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
 }
-.sk-res-del:hover { border-color: var(--color-error, #dc2626); color: var(--color-error, #dc2626); }
+.sk-res-del:hover { border-color: var(--color-error, #dc2626); color: var(--color-error-text); }
 /* skill.md 固定条目：淡主色底 + 可点开的「查看 / 编辑」按钮 */
 .sk-res-item--main { background-color: var(--color-primary-soft, rgba(59, 130, 246, 0.07)); }
 .sk-res-tag {
@@ -560,7 +560,7 @@ async function copySkillMd(): Promise<void> {
   padding: 1px 6px;
   border-radius: 10px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-warning, #d97706);
+  color: var(--color-warning-text);
   background-color: var(--color-warning-soft, rgba(217, 119, 6, 0.12));
 }
 .sk-res-open {

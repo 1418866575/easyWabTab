@@ -126,6 +126,9 @@ const PROBE = () => {
     if (!own) continue;
     const cs = getComputedStyle(el);
     if (cs.visibility === 'hidden' || cs.display === 'none' || parseFloat(cs.opacity) === 0) continue;
+    // aria-hidden 的装饰性字形（工具箱卡片上的 emoji 图标等）不是文字，不参与字号与对比度判定；
+    // 它们属「非文本内容」，WCAG 只要求 3:1 且仅针对有语义的图形。不过滤的话工具箱一次报 157 条噪声。
+    if (el.closest('[aria-hidden="true"]') || el.getAttribute('aria-hidden') === 'true') continue;
     const rect = el.getBoundingClientRect();
     if (rect.width < 2 || rect.height < 2) continue;
     textNodes++;

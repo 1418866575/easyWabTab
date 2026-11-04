@@ -1001,7 +1001,7 @@ const renderedPreview = computed(() =>
 }
 
 .dj-img-remove:hover {
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
 }
 
 /* ===== 历史区 ===== */
@@ -1351,7 +1351,7 @@ const renderedPreview = computed(() =>
   font-weight: 600;
   padding: 1px 8px;
   border-radius: var(--radius-full, 9999px);
-  color: var(--color-warning, #f59e0b);
+  color: var(--color-warning-text);
   background: color-mix(in srgb, var(--color-warning, #f59e0b) 14%, transparent);
   white-space: nowrap;
 }

@@ -452,7 +452,7 @@ function excerpt(p: SmartPrompt): string {
   cursor: pointer;
 }
 /* 收藏态用橙色：走 --color-warning 令牌（规范 §1.5：语义色不写死） */
-.pm-fav.is-on { border-color: var(--color-warning, #f59e0b); color: var(--color-warning, #f59e0b); }
+.pm-fav.is-on { border-color: var(--color-warning, #f59e0b); color: var(--color-warning-text); }
 
 .pm-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .pm-tag, .pm-tag-reset {
@@ -490,7 +490,7 @@ function excerpt(p: SmartPrompt): string {
   line-height: 1.2;
   cursor: pointer;
 }
-.pm-star.is-on { color: var(--color-warning, #f59e0b); }
+.pm-star.is-on { color: var(--color-warning-text); }
 .pm-card-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
 .pm-name {
   padding: 0;
@@ -542,7 +542,7 @@ function excerpt(p: SmartPrompt): string {
   cursor: pointer;}
 .pm-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
 .pm-btn.is-primary { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); font-weight: 600; }
-.pm-btn.is-danger:hover { border-color: var(--color-error, #dc2626); color: var(--color-error, #dc2626); }
+.pm-btn.is-danger:hover { border-color: var(--color-error, #dc2626); color: var(--color-error-text); }
 
 .pm-empty {
   padding: 40px 16px;

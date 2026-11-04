@@ -807,13 +807,13 @@ function drawerMarkupRate(): number | null {
 }
 
 .bizprod-price.sell {
-  color: var(--color-success, var(--color-success));
+  color: var(--color-success-text);
   font-weight: 600;
 }
 
 /* 会员价 */
 .bizprod-price.member {
-  color: var(--color-warning, #f59e0b);
+  color: var(--color-warning-text);
   font-weight: 600;
 }
 
@@ -839,7 +839,7 @@ function drawerMarkupRate(): number | null {
   display: block;
   margin-top: 4px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
   line-height: 1.4;
 }
 
@@ -976,17 +976,17 @@ html.dark .bizprod-form-avg {
 }
 
 .bizprod-drawer-markup.rate-high {
-  color: var(--color-success, var(--color-success));
+  color: var(--color-success-text);
   font-size: var(--fs-caption, 12px);
 }
 
 .bizprod-drawer-markup.rate-low {
-  color: var(--color-error, var(--color-error));
+  color: var(--color-error-text);
   font-size: var(--fs-caption, 12px);
 }
 
 .bizprod-drawer-value.status-active {
-  color: var(--color-success, var(--color-success));
+  color: var(--color-success-text);
 }
 
 .bizprod-drawer-value.status-inactive {
@@ -1021,7 +1021,7 @@ html.dark .bizprod-form-avg {
 }
 
 .bizprod-drawer-stat-value.negative {
-  color: var(--color-error, var(--color-error));
+  color: var(--color-error-text);
 }
 
 .bizprod-drawer-empty {

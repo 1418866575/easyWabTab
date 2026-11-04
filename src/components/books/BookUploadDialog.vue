@@ -317,7 +317,7 @@ async function onDelete(book: UploadedBook): Promise<void> {
 }
 .bk-rejects-title {
   margin: 0 0 4px;
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
   font-size: var(--font-size-sm, 13px);
   font-weight: var(--font-weight-medium, 500);
 }

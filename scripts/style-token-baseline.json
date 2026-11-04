@@ -182,7 +182,6 @@
     "src/components/SiteModal.vue::--dlg-h-site": 1,
     "src/components/SkeletonBlock.vue::--color-background-tertiary": 1,
     "src/components/WatermarkSettings.vue::--color-text-tertiary": 1,
-    "src/components/blog/BlogTypoDialog.vue::--color-warning-text": 1,
     "src/components/blog/WechatConfigPanel.vue::--color-bg-subtle": 1,
     "src/components/blog/WechatConfigPanel.vue::--color-danger": 2,
     "src/components/books/BookBookmarkDialog.vue::--color-bg-subtle": 1,

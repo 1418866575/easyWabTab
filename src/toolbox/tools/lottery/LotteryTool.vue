@@ -449,7 +449,7 @@ function fmtTime(ts: number): string {
 }
 .lot-del:hover {
   opacity: 1;
-  color: var(--color-error);
+  color: var(--color-error-text);
   background: var(--color-error-soft);
 }
 

@@ -173,7 +173,7 @@ async function onSave(): Promise<void> {
 }
 .bk-req {
   margin-left: 2px;
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
   font-style: normal;
 }
 /* 输入框视觉统一到全局 .ui-input，这里只保留宽度 */

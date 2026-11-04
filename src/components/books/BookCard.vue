@@ -414,9 +414,9 @@ const downloadTitle = computed(() =>
 }
 .bk-star:hover {
   transform: scale(1.12);
-  color: var(--color-warning, #f59e0b);
+  color: var(--color-warning-text);
 }
-.bk-star.is-fav { color: var(--color-warning, #f59e0b); }
+.bk-star.is-fav { color: var(--color-warning-text); }
 /* 星标桌面 30px 就够（鼠标操作）；移动端抬到 40px 满足触控下限 */
 @media (max-width: 768px) {
   .bk-star {

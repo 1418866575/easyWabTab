@@ -441,9 +441,9 @@ function daysClass(days: number): string {
   font-weight: 600;
   margin-top: 2px;
 }
-.sr-stat-value.due { color: var(--ds-warning); }
-.sr-stat-value.overdue { color: var(--ds-danger); }
-.sr-stat-value.mastered { color: var(--ds-success); }
+.sr-stat-value.due { color: var(--color-warning-text); }
+.sr-stat-value.overdue { color: var(--color-error-text); }
+.sr-stat-value.mastered { color: var(--color-success-text); }
 
 .sr-main {
   flex: 1;
@@ -575,7 +575,7 @@ function daysClass(days: number): string {
   color: var(--color-text-secondary);
 }
 .sr-del-btn:hover {
-  color: var(--ds-danger);
+  color: var(--color-error-text);
 }
 
 .sr-card-meta {
@@ -594,13 +594,13 @@ function daysClass(days: number): string {
 .sr-next-date {
   font-weight: 600;
 }
-.sr-next-date.overdue { color: var(--ds-danger); }
-.sr-next-date.due-today { color: var(--ds-warning); }
+.sr-next-date.overdue { color: var(--color-error-text); }
+.sr-next-date.due-today { color: var(--color-warning-text); }
 .sr-next-date.upcoming { color: var(--color-text-secondary); }
 
 .sr-mastered-tag {
   font-weight: 600;
-  color: var(--ds-success);
+  color: var(--color-success-text);
 }
 
 .sr-learn-date {
@@ -614,7 +614,7 @@ function daysClass(days: number): string {
 }
 
 .sr-advance-btn {
-  color: var(--ds-success);
+  color: var(--color-success-text);
   border-color: var(--ds-success);
 }
 .sr-advance-btn:hover {
@@ -622,7 +622,7 @@ function daysClass(days: number): string {
 }
 
 .sr-reset-btn {
-  color: var(--ds-warning);
+  color: var(--color-warning-text);
   border-color: var(--ds-warning);
 }
 .sr-reset-btn:hover {

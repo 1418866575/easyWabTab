@@ -562,7 +562,7 @@ function usedSiteNames(icon: MergedIcon): string {
 }
 
 .btn-icon.delete:hover {
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
 }
 
 .btn-secondary {

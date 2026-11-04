@@ -165,11 +165,11 @@ function partsOf(parts?: DiffPart[]) {
 }
 .tu-chr-add {
   background: var(--color-success-soft);
-  color: var(--color-success);
+  color: var(--color-success-text);
 }
 .tu-chr-del {
   background: var(--color-error-soft);
-  color: var(--color-error);
+  color: var(--color-error-text);
   text-decoration: line-through;
 }
 </style>

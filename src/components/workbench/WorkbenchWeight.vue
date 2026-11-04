@@ -713,9 +713,9 @@ onMounted(async () => {
 
 /* BMI 颜色分级（与 classifyBmi 返回值映射：underweight/normal/overweight/obese） */
 .bmi-underweight { color: var(--color-link, #3b82f6); font-weight:600; }
-.bmi-normal { color: var(--color-success, #16a34a); font-weight:700; }
-.bmi-overweight { color: var(--ds-warning); font-weight:600; }
-.bmi-obese { color: var(--ds-danger); font-weight:700; }
+.bmi-normal { color: var(--color-success-text); font-weight:700; }
+.bmi-overweight { color: var(--color-warning-text); font-weight:600; }
+.bmi-obese { color: var(--color-error-text); font-weight:700; }
 
 .wt-record-item {
   display: flex;

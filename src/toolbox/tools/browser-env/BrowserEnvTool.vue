@@ -147,6 +147,6 @@ onMounted(refresh)
   border: 1px solid var(--color-border);
   color: var(--color-text-secondary);
 }
-.be-feat.is-ok { color: var(--color-success); border-color: var(--color-success); background: var(--color-success-soft); }
+.be-feat.is-ok { color: var(--color-success-text); border-color: var(--color-success); background: var(--color-success-soft); }
 .be-ua { word-break: break-all; }
 </style>

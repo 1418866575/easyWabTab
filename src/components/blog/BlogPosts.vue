@@ -645,7 +645,7 @@ html.dark .ba-query {
   padding: 0 6px;
   border-radius: var(--ds-radius-pill, 999px);
   background-color: var(--color-warning-soft, #fef3c7);
-  color: var(--color-warning, #b45309);
+  color: var(--color-warning-text);
   font-size: var(--font-size-xs, 11px);
   line-height: 18px;
 }
@@ -655,7 +655,7 @@ html.dark .ba-query {
   padding: 0 6px;
   border-radius: var(--ds-radius-pill, 999px);
   background-color: var(--color-success-soft, #d1fae5);
-  color: var(--color-success, #047857);
+  color: var(--color-success-text);
   font-size: var(--font-size-xs, 11px);
   line-height: 18px;
   white-space: nowrap;
@@ -692,10 +692,10 @@ html.dark .ba-query {
 }
 
 .ba-status-draft { background-color: var(--color-bg-hover, #f1f5f9); color: var(--ds-text-2); }
-.ba-status-reviewing { background-color: var(--color-warning-soft, #fef3c7); color: var(--color-warning, #b45309); }
-.ba-status-published { background-color: var(--color-success-soft, #dcfce7); color: var(--color-success, #16a34a); }
+.ba-status-reviewing { background-color: var(--color-warning-soft, #fef3c7); color: var(--color-warning-text); }
+.ba-status-published { background-color: var(--color-success-soft, #dcfce7); color: var(--color-success-text); }
 .ba-status-offline { background-color: var(--color-bg-hover, #f1f5f9); color: var(--ds-text-3); }
-.ba-status-rejected { background-color: var(--color-error-soft, #fee2e2); color: var(--color-error, #ef4444); }
+.ba-status-rejected { background-color: var(--color-error-soft, #fee2e2); color: var(--color-error-text); }
 
 .ba-chip {
   display: inline-block;
@@ -709,7 +709,7 @@ html.dark .ba-query {
 }
 
 .ba-op-danger.el-button {
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
 }
 
 /* ---------- 卡片视图 ---------- */
@@ -765,7 +765,7 @@ html.dark .ba-query {
 
 .ba-pin-btn.is-on {
   border-color: var(--color-warning, #f59e0b);
-  color: var(--color-warning, #f59e0b);
+  color: var(--color-warning-text);
 }
 
 .ba-card-meta {
@@ -819,7 +819,7 @@ html.dark .ba-query {
 }
 
 .ba-mini:hover { border-color: var(--ds-primary, #2563eb); color: var(--ds-primary, #2563eb); }
-.ba-mini.is-danger:hover { border-color: var(--ds-danger, #ef4444); color: var(--ds-danger, #ef4444); }
+.ba-mini.is-danger:hover { border-color: var(--ds-danger, #ef4444); color: var(--color-error-text); }
 
 .ba-pager {
   display: flex;

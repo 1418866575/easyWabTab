@@ -220,7 +220,7 @@ async function handleExportStatic(): Promise<void> {
   border: 1px solid var(--color-error, #ef4444);
   border-radius: var(--ds-radius-ctrl, 8px);
   background-color: var(--color-error-soft, #fee2e2);
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
   font-size: var(--font-size-xs, 12px);
   line-height: var(--line-height-relaxed, 1.7);
 }

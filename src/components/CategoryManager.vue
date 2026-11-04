@@ -529,7 +529,7 @@ const sortedCustomCategories = computed(() =>
 
 /* 删除：常态即用警示色，避免误点 */
 .btn-icon.delete {
-  color: var(--color-error, #dc2626);
+  color: var(--color-error-text);
 }
 
 /* 禁用态（如分类下无网站可导出）：不可点且视觉更淡，避免误以为能导出 */

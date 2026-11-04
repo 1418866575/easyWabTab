@@ -65,9 +65,9 @@ const total = computed(() => list.value.length)
   font-family: var(--font-family-mono);
   font-size: 12.5px;
 }
-.hs-ok { background: var(--color-success-soft); color: var(--color-success); }
+.hs-ok { background: var(--color-success-soft); color: var(--color-success-text); }
 .hs-info { background: var(--color-primary-soft); color: var(--color-primary); }
-.hs-err { background: var(--color-error-soft); color: var(--color-error); }
+.hs-err { background: var(--color-error-soft); color: var(--color-error-text); }
 .hs-cn { font-size: var(--fs-sm); color: var(--color-text); }
 .hs-phrase { font-size: var(--fs-caption); color: var(--color-text-muted); font-family: var(--font-family-mono); }
 .hs-scene { font-size: var(--fs-caption); color: var(--color-text-secondary); }

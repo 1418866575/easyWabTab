@@ -261,7 +261,7 @@ function dl() {
       </div>
 
       <div v-for="f in active.fields" :key="f.key" class="tu-field">
-        <label class="tu-label">{{ f.label }}<span v-if="f.required" style="color:var(--color-error)"> *</span></label>
+        <label class="tu-label">{{ f.label }}<span v-if="f.required" style="color:var(--color-error-text)"> *</span></label>
         <textarea
           v-if="f.type === 'textarea'"
           v-model="form[f.key]"

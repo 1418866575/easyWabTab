@@ -352,7 +352,7 @@ onMounted(async () => {
           <template #default="{ row }">{{ row.content }}</template>
         </el-table-column>
         <el-table-column label="热量(kcal)" width="130" align="right">
-          <template #default="{ row }"><span style="font-weight:700;color:var(--color-success,#16a34a);font-variant-numeric: tabular-nums;">{{ row.calories }} kcal</span></template>
+          <template #default="{ row }"><span style="font-weight:700;color:var(--color-success-text);font-variant-numeric: tabular-nums;">{{ row.calories }} kcal</span></template>
         </el-table-column>
         <el-table-column label="备注" min-width="200" align="center" show-overflow-tooltip>
           <template #default="{ row }"><span v-if="row.note">{{ row.note }}</span><span v-else style="color: var(--color-text-secondary);">—</span></template>
@@ -654,7 +654,7 @@ onMounted(async () => {
 
 /* 早餐：琥珀 */
 .dt-meal-breakfast {
-  color: var(--ds-warning);
+  color: var(--color-warning-text);
   background: var(--ds-warning-soft);
   border-color: rgba(217, 119, 6, 0.3);
 }
@@ -668,7 +668,7 @@ onMounted(async () => {
 
 /* 加餐：绿 */
 .dt-meal-snack {
-  color: var(--ds-success);
+  color: var(--color-success-text);
   background: var(--ds-success-soft);
   border-color: rgba(5, 150, 105, 0.3);
 }

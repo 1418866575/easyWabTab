@@ -270,7 +270,7 @@ useDirtyFlag(() => !!parsed.value)
   color: var(--color-text);
 }
 .rc-banner-rem.is-done {
-  color: var(--color-success);
+  color: var(--color-success-text);
 }
 
 .rc-cats {

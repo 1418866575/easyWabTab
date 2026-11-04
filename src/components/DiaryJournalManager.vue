@@ -222,7 +222,7 @@ function setCurrent(j: WorkbenchJournal) {
   color: var(--color-primary, #3b82f6);
 }
 .djm-btn-icon.danger:hover:not(:disabled) {
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
   border-color: var(--color-error, #ef4444);
 }
 .djm-btn-icon:disabled {

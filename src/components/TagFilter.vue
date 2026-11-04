@@ -85,7 +85,7 @@ const store = useSitesStore()
   border: 1px solid var(--ds-warning);
   border-radius: 20px;
   background-color: #fffbeb;
-  color: var(--ds-warning);
+  color: var(--color-warning-text);
   font-size: var(--fs-sm, 13px);
   cursor: pointer;
   transition: all 0.2s;

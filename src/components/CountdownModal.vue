@@ -238,7 +238,7 @@ async function toggleEmailReminder(item: CountdownItem) {
 }
 
 .cat-life {
-  color: var(--ds-success);
+  color: var(--color-success-text);
   border: 1px solid var(--ds-success);
   background: rgba(34, 197, 94, 0.12);
 }
@@ -256,7 +256,7 @@ async function toggleEmailReminder(item: CountdownItem) {
 }
 
 .cat-diet {
-  color: var(--ds-warning);
+  color: var(--color-warning-text);
   border: 1px solid var(--ds-warning);
   background: rgba(245, 158, 11, 0.12);
 }
@@ -330,15 +330,15 @@ html.dark .cat-default {
 
 /* 剩余时间状态色 */
 .status-normal {
-  color: var(--color-success, var(--color-success));
+  color: var(--color-success-text);
 }
 
 .status-urgent {
-  color: var(--color-warning, var(--color-warning));
+  color: var(--color-warning-text);
 }
 
 .status-critical {
-  color: var(--color-error, var(--color-error));
+  color: var(--color-error-text);
 }
 
 .status-expired {

@@ -812,15 +812,15 @@ onMounted(async () => {
 }
 
 .stat-value.is-income {
-  color: var(--color-success, var(--color-success));
+  color: var(--color-success-text);
 }
 
 .stat-value.is-expense {
-  color: var(--color-error, var(--color-error));
+  color: var(--color-error-text);
 }
 
 .stat-value.is-negative {
-  color: var(--color-error, var(--color-error));
+  color: var(--color-error-text);
 }
 
 /* ===== 支出分类占比条 ===== */
@@ -907,8 +907,8 @@ onMounted(async () => {
   font-variant-numeric: tabular-nums;
 }
 
-.ld-trend-total-inc b { color: var(--ds-success); }
-.ld-trend-total-exp b { color: var(--ds-danger); }
+.ld-trend-total-inc b { color: var(--color-success-text); }
+.ld-trend-total-exp b { color: var(--color-error-text); }
 html.dark .ld-trend-total-inc b { color: #34d399; }
 html.dark .ld-trend-total-exp b { color: #f87171; }
 
@@ -1181,7 +1181,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 }
 
 .ld-amount.is-income {
-  color: var(--color-success, var(--color-success));
+  color: var(--color-success-text);
 }
 
 .ld-actions {
@@ -1233,7 +1233,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   font-variant-numeric: tabular-nums;
 }
 .ld-record-amount.is-income {
-  color: var(--color-success, var(--color-success));
+  color: var(--color-success-text);
 }
 
 /* 表单内容区（原 .dialog-body：外壳主体已由 BaseDialog 的 .bd-body 承担，此处只留排版） */
@@ -1637,7 +1637,7 @@ html.dark .ld-daily-bar {
   color: var(--color-text-secondary);
 }
 .ld-daily-total b {
-  color: var(--ds-danger);
+  color: var(--color-error-text);
 }
 html.dark .ld-daily-total b {
   color: #f87171;

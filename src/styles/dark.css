@@ -17,6 +17,10 @@ html.dark {
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-error: #ef4444;
+  /* 功能色当文字用：亮色模式的 -text 是 700 级（在白底上够深），暗底上必须反过来用 400 级 */
+  --color-success-text: #34d399;
+  --color-warning-text: #fbbf24;
+  --color-error-text: #f87171;
   --color-shadow: rgba(0, 0, 0, 0.4);
   --color-bg-hover: #374151;
   --color-bg-input: #374151;
@@ -83,6 +87,12 @@ html.dark {
   --ds-danger-soft: rgba(239, 68, 68, 0.16);
   --ds-success-soft: rgba(22, 163, 74, 0.16);
   --ds-warning-soft: rgba(245, 158, 11, 0.16);
+  /* 功能色浅底：亮色模式是固定的浅色块（#d1fae5 等），暗色下必须换成低透明度彩色，
+     否则等于「深色界面上贴一块浅色补丁」，并且与已提亮到 400 级的 -text 组成浅字压浅底。
+     与上面的 --ds-*-soft / --color-primary-soft 保持同一写法（alpha 0.16~0.18）。 */
+  --color-success-soft: rgba(16, 185, 129, 0.16);
+  --color-warning-soft: rgba(245, 158, 11, 0.16);
+  --color-error-soft: rgba(239, 68, 68, 0.16);
 }
 
 /* 通用组件 */
@@ -280,7 +290,7 @@ html.dark .theme-toggle {
 
 html.dark .theme-toggle:hover {
   background-color: var(--color-bg-hover);
-  color: var(--color-warning);
+  color: var(--color-warning-text);
 }
 
 /* 空状态 */
@@ -320,7 +330,7 @@ html.dark .form-hint {
 }
 
 html.dark .error-msg {
-  color: var(--color-error);
+  color: var(--color-error-text);
 }
 
 /* 搜索建议 */
@@ -567,7 +577,7 @@ html.dark .btn-icon:hover {
 }
 
 html.dark .btn-icon.delete:hover {
-  color: var(--color-error);
+  color: var(--color-error-text);
 }
 
 /* 空状态 */
@@ -751,7 +761,7 @@ html.dark .btn-icon-clear {
 }
 
 html.dark .btn-icon-clear:hover {
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
   background: #3f1414;
 }
 

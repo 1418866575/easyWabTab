@@ -794,7 +794,7 @@ onUnmounted(() => {
   padding: 1px 6px;
   border-radius: var(--radius-full, 9999px);
   background: rgba(34, 197, 94, 0.12);
-  color: var(--ds-success);
+  color: var(--color-success-text);
   border: 1px solid var(--ds-success);
 }
 
@@ -820,7 +820,7 @@ html.dark .reminded-badge {
 }
 
 .cat-life {
-  color: var(--ds-success);
+  color: var(--color-success-text);
   border: 1px solid var(--ds-success);
   background: rgba(34, 197, 94, 0.12);
 }
@@ -838,7 +838,7 @@ html.dark .reminded-badge {
 }
 
 .cat-diet {
-  color: var(--ds-warning);
+  color: var(--color-warning-text);
   border: 1px solid var(--ds-warning);
   background: rgba(245, 158, 11, 0.12);
 }
@@ -881,15 +881,15 @@ html.dark .reminded-badge {
 
 /* 剩余时间状态色 */
 .status-normal {
-  color: var(--color-success, var(--color-success));
+  color: var(--color-success-text);
 }
 
 .status-urgent {
-  color: var(--color-warning, var(--color-warning));
+  color: var(--color-warning-text);
 }
 
 .status-critical {
-  color: var(--color-error, var(--color-error));
+  color: var(--color-error-text);
 }
 
 .status-expired {

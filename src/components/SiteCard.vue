@@ -472,12 +472,12 @@ const handleClick = () => {
 }
 
 .card-menu-item.is-danger {
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
 }
 
 .card-menu-item.is-danger:hover {
   background-color: #fef2f2;
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
 }
 
 .card-menu-fade-enter-active,

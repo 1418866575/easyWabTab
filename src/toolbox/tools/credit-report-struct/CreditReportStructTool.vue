@@ -489,7 +489,7 @@ function parts(text: string): { t: string; hit: boolean }[] {
 }
 .cr-mark {
   background: var(--color-warning-soft);
-  color: var(--color-warning);
+  color: var(--color-warning-text);
   border-radius: 2px;
   padding: 0 1px;
 }
@@ -531,13 +531,13 @@ function parts(text: string): { t: string; hit: boolean }[] {
   font-weight: 600;
 }
 .cr-req-M {
-  color: var(--color-error);
+  color: var(--color-error-text);
 }
 .cr-req-O {
   color: var(--color-text-muted);
 }
 .cr-req-R {
-  color: var(--color-warning);
+  color: var(--color-warning-text);
 }
 .cr-remark {
   line-height: 1.7;

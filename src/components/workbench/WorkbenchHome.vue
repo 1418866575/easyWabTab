@@ -781,12 +781,12 @@ async function handleQuickNote(): Promise<void> {
 }
 
 .habit-detail-count.met {
-  color: var(--color-success, var(--color-success));
+  color: var(--color-success-text);
   font-weight: 600;
 }
 
 .habit-detail-check {
-  color: var(--color-success, var(--color-success));
+  color: var(--color-success-text);
 }
 
 .habit-detail-bar {
@@ -959,15 +959,15 @@ async function handleQuickNote(): Promise<void> {
 
 /* ===== 倒计时剩余状态色 ===== */
 .cd-normal {
-  color: var(--color-success, var(--color-success));
+  color: var(--color-success-text);
 }
 
 .cd-urgent {
-  color: var(--color-warning, var(--color-warning));
+  color: var(--color-warning-text);
 }
 
 .cd-critical {
-  color: var(--color-error, var(--color-error));
+  color: var(--color-error-text);
 }
 
 /* ===== 截止日期 ===== */
@@ -976,7 +976,7 @@ async function handleQuickNote(): Promise<void> {
 }
 
 .due.overdue {
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
   font-weight: 600;
 }
 

@@ -692,7 +692,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 }
 .bizexp-amt {
   font-weight: 700;
-  color: var(--color-error, var(--color-error));
+  color: var(--color-error-text);
   font-variant-numeric: tabular-nums;
 }
 .bizexp-note {
@@ -747,7 +747,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 }
 .bizexp-detail-td.sub-bold {
   font-weight: 700;
-  color: var(--color-error, var(--color-error));
+  color: var(--color-error-text);
 }
 .bizexp-detail-empty {
   font-size: var(--fs-caption, 12px);
@@ -875,7 +875,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 }
 .bizexp-row-issue-row .bizexp-row-issue {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-error, #dc2626);
+  color: var(--color-error-text);
   background: var(--color-bg-hover, #fef2f2);
 }
 
@@ -913,13 +913,13 @@ async function handleDeleteFromDialog(): Promise<void> {
 .biz-kv-amount {
   font-size: var(--fs-body, 14px);
   font-weight: 700;
-  color: var(--color-error, #dc2626);
+  color: var(--color-error-text);
   font-variant-numeric: tabular-nums;
 }
 .bizexp-row-issue {
   margin: 2px 0 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-error, #dc2626);
+  color: var(--color-error-text);
 }
 
 /* ===== 暗色模式 ===== */

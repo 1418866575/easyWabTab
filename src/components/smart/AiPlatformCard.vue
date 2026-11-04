@@ -199,7 +199,7 @@ function onRemove(): void {
   position: absolute;
   top: 0;
   left: 2px;
-  color: var(--color-error);
+  color: var(--color-error-text);
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
   animation: pulse 2s infinite;
 }
@@ -313,11 +313,11 @@ function onRemove(): void {
   outline-offset: -2px;
 }
 .card-menu-item.is-danger {
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
 }
 .card-menu-item.is-danger:hover {
   background-color: var(--color-primary-soft);
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
 }
 
 .card-menu-fade-enter-active,

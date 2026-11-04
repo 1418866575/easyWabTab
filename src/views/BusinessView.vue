@@ -692,7 +692,7 @@ onMounted(async () => {
 .bs-gate-error {
   margin: 0 0 10px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
 }
 
 /* ===== 跨年提示条（不阻断） ===== */

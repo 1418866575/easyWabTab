@@ -307,7 +307,7 @@ const iconPreview = computed(() => {
   color: var(--color-text-secondary);
 }
 .apf-req {
-  color: var(--color-error);
+  color: var(--color-error-text);
   margin-left: 2px;
 }
 .apf-hint {
@@ -316,14 +316,14 @@ const iconPreview = computed(() => {
   color: var(--color-text-muted);
 }
 .apf-hint.is-ok {
-  color: var(--color-success);
+  color: var(--color-success-text);
 }
 .apf-hint.is-error {
-  color: var(--color-error);
+  color: var(--color-error-text);
 }
 .apf-error {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-error);
+  color: var(--color-error-text);
 }
 
 .apf-icon-row {

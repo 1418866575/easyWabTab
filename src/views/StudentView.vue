@@ -483,7 +483,7 @@ async function onOnboardingComplete() {
 .st-parent-bar.unlocked {
   border-color: var(--color-success);
   background: var(--color-success-soft);
-  color: var(--color-success);
+  color: var(--color-success-text);
 }
 .st-parent-bar.no-pin {
   border-style: dashed;

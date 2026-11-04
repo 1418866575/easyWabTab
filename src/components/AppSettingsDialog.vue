@@ -3175,7 +3175,7 @@ function toggleFullscreen(): void {
             管理密码面板的分类标签页（全部 + 各分类）；删除分类后该分类下的密码条目将变为未分类。
             分类与密码条目一起加密保存，<b>需先解锁密码库</b>才能读写。
           </p>
-          <p v-if="!pwdVaultUnlocked" class="wb-menu-hint" data-testid="wbcfg-pwd-locked" style="color: var(--color-warning, #f59e0b);">
+          <p v-if="!pwdVaultUnlocked" class="wb-menu-hint" data-testid="wbcfg-pwd-locked" style="color: var(--color-warning-text);">
             当前密码库未解锁，请先到「个人工作台 → 密码」输入主密码解锁，再回来管理分类。
           </p>
           <div class="wb-menu-list">
@@ -5348,7 +5348,7 @@ html.dark .remind-label {
 .site-invalid-count {
   margin-left: 4px;
   font-weight: 600;
-  color: var(--ds-danger);
+  color: var(--color-error-text);
 }
 
 /* ============================================================
@@ -5396,7 +5396,7 @@ html.dark .site-action-btn.danger:hover:not(:disabled) {
 }
 .danger-hint {
   margin-top: 12px;
-  color: var(--ds-danger);
+  color: var(--color-error-text);
   font-weight: 600;
 }
 html.dark .danger-hint {
@@ -5731,7 +5731,7 @@ html.dark .rail-item:hover { background-color: rgba(255, 255, 255, 0.06); }
   align-items: center;
   gap: 6px;
   font-size: var(--fs-caption, 12px);
-  color: var(--ds-success);
+  color: var(--color-success-text);
   background-color: rgba(22, 163, 74, 0.1);
   border: 1px solid rgba(22, 163, 74, 0.25);
   padding: 4px 10px;

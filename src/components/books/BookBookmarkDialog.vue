@@ -200,7 +200,7 @@ function onDelete(b: UserBookmark): void {
 .bk-bm-error {
   margin: -4px 0 0;
   font-size: var(--font-size-xs, 12px);
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
 }
 
 /* ---------- 记录表格 ---------- */

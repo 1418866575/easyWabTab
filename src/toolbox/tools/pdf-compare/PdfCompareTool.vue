@@ -171,7 +171,7 @@ function dl() {
       <p class="tu-hint">仅比对文本层内容；图片型/扫描件或版式差异无法识别。差异以“行”为单位。</p>
     </div>
     <div class="tu-t1">
-      <label class="tu-label">差异结果（<span style="color:var(--color-danger)">红=删除</span> / <span style="color:var(--color-success)">绿=新增</span>）</label>
+      <label class="tu-label">差异结果（<span style="color:var(--color-danger)">红=删除</span> / <span style="color:var(--color-success-text)">绿=新增</span>）</label>
       <div class="diff-view" v-html="diffHtml"></div>
       <div v-if="!diffHtml && !busy" class="tu-preview">选择两份 PDF 后在此显示差异</div>
     </div>
@@ -180,7 +180,7 @@ function dl() {
 
 <style scoped>
 .diff-view { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-input); padding: 8px 10px; min-height: 360px; max-height: 60vh; overflow: auto; font-family: var(--font-mono, monospace); font-size: var(--fs-sm); line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
-.diff-view :deep(.d-add) { background: var(--color-success-soft); color: var(--color-success); }
-.diff-view :deep(.d-del) { background: var(--color-error-soft); color: var(--color-error); }
+.diff-view :deep(.d-add) { background: var(--color-success-soft); color: var(--color-success-text); }
+.diff-view :deep(.d-del) { background: var(--color-error-soft); color: var(--color-error-text); }
 .diff-view :deep(.d-eq) { color: var(--color-text-muted); }
 </style>

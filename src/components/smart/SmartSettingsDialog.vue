@@ -844,7 +844,7 @@ function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
   border-radius: 999px;
   background-color: rgba(22, 163, 74, 0.1);
   /* 绿色走 --color-success 令牌（规范 §1.5：语义色不写死） */
-  color: var(--color-success, #16a34a);
+  color: var(--color-success-text);
   font-size: var(--fs-caption, 12px);
   white-space: nowrap;
 }
@@ -931,10 +931,10 @@ function onMovePromptCategory(name: string, dir: 'up' | 'down'): void {
 .ss-empty-inline { margin: 0; font-size: var(--fs-caption, 12px); color: var(--color-text-muted); }
 
 /* 删除按钮：与技能/提示词列表同款的危险色（命中 el-button 根节点） */
-.is-danger { color: var(--color-error, #dc2626); }
+.is-danger { color: var(--color-error-text); }
 .is-danger:hover {
   border-color: var(--color-error, #dc2626);
-  color: var(--color-error, #dc2626);
+  color: var(--color-error-text);
   background-color: transparent;
 }
 

@@ -801,11 +801,11 @@ watch(showForm, (v) => {
 }
 .grp-type.is-fixed {
   background: rgba(16, 185, 129, 0.12);
-  color: var(--ds-success);
+  color: var(--color-success-text);
 }
 .grp-type.is-temp {
   background: rgba(245, 158, 11, 0.12);
-  color: var(--ds-warning);
+  color: var(--color-warning-text);
 }
 .ewt-card-grid {
   align-content: start;
@@ -854,7 +854,7 @@ watch(showForm, (v) => {
 }
 .grp-edit-btn { color: var(--color-link, #3b82f6); }
 .grp-copy-btn { color: var(--color-text-secondary); }
-.grp-del-btn { color: var(--color-error, #ef4444); }
+.grp-del-btn { color: var(--color-error-text); }
 
 /* 成员 chip（男蓝 / 女粉 / 已移除灰） */
 .tw-chip {
@@ -968,7 +968,7 @@ watch(showForm, (v) => {
   font-weight: 600;
 }
 .grp-required {
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
 }
 .grp-role-list {
   display: flex;
@@ -1027,7 +1027,7 @@ watch(showForm, (v) => {
   margin: 0;
 }
 .grp-rg-warn {
-  color: var(--ds-warning);
+  color: var(--color-warning-text);
   margin-left: 4px;
 }
 .grp-rg-constraints {
@@ -1060,7 +1060,7 @@ watch(showForm, (v) => {
 }
 .grp-warn-chip {
   font-size: var(--fs-caption, 12px);
-  color: var(--ds-warning);
+  color: var(--color-warning-text);
 }
 .grp-rg-results {
   display: flex;
@@ -1122,7 +1122,7 @@ watch(showForm, (v) => {
   gap: 6px;
 }
 .grp-snap-del {
-  color: var(--color-error, #ef4444);
+  color: var(--color-error-text);
 }
 
 @media (max-width: 768px) {
