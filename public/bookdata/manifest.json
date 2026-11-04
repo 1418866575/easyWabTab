@@ -55,6 +55,25 @@
     "source": "static"
   },
   {
+    "id": "personal-credit-report",
+    "title": "个人信用报告结构说明（授信机构版）",
+    "description": "面向授信机构的个人信用报告数据结构说明，涵盖报告各段落与字段定义、取值规范及版本管理，是信贷系统对接个人征信接口的参考资料。",
+    "cover": "",
+    "category": "征信参考",
+    "tags": [
+      "信用报告",
+      "个人征信",
+      "授信机构",
+      "信贷对接"
+    ],
+    "order": 30,
+    "entry": "/bookdata/personal-credit-report/index.html",
+    "size": 350048,
+    "updatedAt": "2026-11-04T03:31:13.848Z",
+    "hasMeta": true,
+    "source": "static"
+  },
+  {
     "id": "gushi",
     "title": "小中高必背古诗词",
     "description": "小学到高中课标要求背诵的历代经典诗词，按学段与朝代编排，支持逐首对照与注释。",
@@ -69,6 +88,44 @@
     "entry": "/bookdata/gushi/index.html",
     "size": 601745,
     "updatedAt": "2026-10-16T02:11:23.734Z",
+    "hasMeta": true,
+    "source": "static"
+  },
+  {
+    "id": "enterprise-credit-report",
+    "title": "企业信用报告结构说明 V5.0",
+    "description": "企业信用报告（V5.0）的数据结构与字段说明，含报告各章节定义、版本管理及取值规范，适用于企业征信数据的接入、解析与落库。",
+    "cover": "",
+    "category": "征信参考",
+    "tags": [
+      "信用报告",
+      "企业征信",
+      "V5.0",
+      "信贷对接"
+    ],
+    "order": 31,
+    "entry": "/bookdata/enterprise-credit-report/index.html",
+    "size": 251888,
+    "updatedAt": "2026-11-04T03:31:13.916Z",
+    "hasMeta": true,
+    "source": "static"
+  },
+  {
+    "id": "junior-math-notes",
+    "title": "初中数学笔记 · 样板",
+    "description": "初中数学笔记排版样板，以手写楷体风格展示典型题型的归纳与解题批注格式，可作为整理数学笔记的范本参考。",
+    "cover": "",
+    "category": "学习笔记",
+    "tags": [
+      "初中数学",
+      "数学笔记",
+      "笔记样板",
+      "手写笔记"
+    ],
+    "order": 32,
+    "entry": "/bookdata/junior-math-notes/index.html",
+    "size": 217627,
+    "updatedAt": "2026-11-04T07:01:21.274Z",
     "hasMeta": true,
     "source": "static"
   },
