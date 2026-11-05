@@ -240,8 +240,8 @@ function onCardClick(): void {
   flex-direction: column;
   gap: 10px;
   padding: 14px 16px 12px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   cursor: pointer;
@@ -249,7 +249,7 @@ function onCardClick(): void {
 }
 
 .hb-cal-card:hover {
-  border-color: var(--hb-color, var(--color-primary, var(--color-primary)));
+  border-color: var(--hb-color, var(--color-primary));
   /* 卡片 hover 抬升走阴影 token（原字面值作为 fallback 保留，视觉几乎一致） */
   box-shadow: var(--shadow-md, 0 4px 14px rgba(0, 0, 0, 0.1));
 }
@@ -265,7 +265,7 @@ function onCardClick(): void {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background-color: var(--hb-color, var(--color-primary, var(--color-primary)));
+  background-color: var(--hb-color, var(--color-primary));
   flex-shrink: 0;
 }
 
@@ -280,7 +280,7 @@ function onCardClick(): void {
 .hb-cal-name {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -288,7 +288,7 @@ function onCardClick(): void {
 
 .hb-cal-sub {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
@@ -304,7 +304,7 @@ function onCardClick(): void {
   height: 36px;
   border: none;
   background: transparent;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
   line-height: 1;
   border-radius: var(--radius-sm, 4px);
@@ -316,12 +316,12 @@ function onCardClick(): void {
 
 .hb-cal-navbtn:hover {
   background: var(--color-bg-hover, var(--color-bg-input));
-  color: var(--hb-color, var(--color-primary, var(--color-primary)));
+  color: var(--hb-color, var(--color-primary));
 }
 
 .hb-cal-month {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   min-width: 64px;
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -337,7 +337,7 @@ function onCardClick(): void {
 .hb-cal-wk {
   text-align: center;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   padding: 2px 0;
 }
 
@@ -348,7 +348,7 @@ function onCardClick(): void {
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   font-size: var(--fs-sm, 13px);
   font-variant-numeric: tabular-nums;
   cursor: pointer;
@@ -377,18 +377,18 @@ function onCardClick(): void {
 }
 
 .hb-cal-day.checked {
-  background: var(--hb-color, var(--color-primary, var(--color-primary)));
+  background: var(--hb-color, var(--color-primary));
   color: #fff;
   font-weight: 600;
-  border-color: var(--hb-color, var(--color-primary, var(--color-primary)));
+  border-color: var(--hb-color, var(--color-primary));
 }
 
 .hb-cal-day.today {
-  border-color: var(--hb-color, var(--color-primary, var(--color-primary)));
+  border-color: var(--hb-color, var(--color-primary));
 }
 
 .hb-cal-day.future {
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   cursor: not-allowed;
   opacity: 0.5;
 }

@@ -440,7 +440,7 @@ html.dark .sp-result:hover {
 }
 
 html.dark .sp-result.active {
-  background-color: #1e3a5f;
+  background-color: var(--dark-accent-surface);
 }
 
 html.dark .sp-result-title {

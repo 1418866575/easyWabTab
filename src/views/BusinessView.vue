@@ -602,7 +602,7 @@ onMounted(async () => {
   font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary);
   background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: 999px;
   padding: 2px 10px;
   white-space: nowrap;
@@ -846,8 +846,8 @@ html.dark .bs-menu-item:hover {
 }
 
 html.dark .bs-menu-item.active {
-  background-color: #1e3a5f;
-  color: #60a5fa;
+  background-color: var(--dark-accent-surface);
+  color: var(--dark-accent-text);
 }
 
 html.dark .bs-content {
@@ -1097,7 +1097,7 @@ html.dark .bs-stall-name {
   /* 底部激活项：加一条顶部高亮条 + 图标着色，与未激活项拉开辨识度。
      移动端底栏是最重要的导航，仅靠浅蓝底色在低亮度阳光下不够醒目。 */
   html.dark .bs-menu-item.active {
-    background: #1e3a5f;
+    background: var(--dark-accent-surface);
   }
 }
 

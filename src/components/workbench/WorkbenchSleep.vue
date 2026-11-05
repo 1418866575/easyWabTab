@@ -449,7 +449,7 @@ onMounted(async () => {
 
 .stat-sub {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 /* 达标行 + 进度条（--color-primary） */
@@ -470,7 +470,7 @@ onMounted(async () => {
 .ex-progress-fill {
   height: 100%;
   border-radius: var(--radius-full, 9999px);
-  background: var(--color-primary, var(--color-primary));
+  background: var(--color-primary);
   transition: width var(--transition-fast, 0.15s ease);
 }
 
@@ -488,10 +488,10 @@ onMounted(async () => {
 
 .btn-toggle-list {padding: 0 var(--space-3);
   background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
@@ -499,7 +499,7 @@ onMounted(async () => {
 
 .btn-toggle-list:hover {
   color: var(--color-primary-text);
-  border-color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary);
 }
 
 /* .btn-add 视觉已统一到全局 .ui-btn--primary（style.css） */
@@ -511,14 +511,14 @@ onMounted(async () => {
   flex-direction: column;
   gap: var(--space-2);
   padding: 14px 16px 12px;
-  background: var(--color-bg-card, var(--color-bg-card));
+  background: var(--color-bg-card);
   background-image: linear-gradient(
     135deg,
     color-mix(in srgb, var(--color-primary, #3b82f6) 7%, transparent),
     transparent 55%
   );
-  border: 1px solid var(--color-border, var(--color-border));
-  border-left: 4px solid var(--color-primary, var(--color-primary));
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-primary);
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -534,7 +534,7 @@ onMounted(async () => {
   min-width: 0;
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -551,13 +551,13 @@ onMounted(async () => {
 
 .ex-meta {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
 .ex-note {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -594,7 +594,7 @@ onMounted(async () => {
 
 .form-group > label {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .form-row-fields {
@@ -611,7 +611,7 @@ onMounted(async () => {
 
 .field-label {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .field-date {
@@ -678,9 +678,9 @@ html.dark .ex-note {
 }
 
 html.dark .ex-type-badge {
-  color: #93c5fd;
-  background: rgba(59, 130, 246, 0.2);
-  border-color: rgba(59, 130, 246, 0.45);
+  color: var(--dark-accent-text);
+  background: var(--color-primary-soft);
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 
 html.dark .ex-progress {

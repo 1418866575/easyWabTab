@@ -624,9 +624,9 @@ async function handleDeleteFromDialog(): Promise<void> {
   padding: 40px 20px;
   text-align: center;
   font-size: var(--fs-body, 14px);
-  color: var(--color-text-muted, var(--color-text-muted));
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px dashed var(--color-border, var(--color-border));
+  color: var(--color-text-muted);
+  background: var(--color-bg-card);
+  border: 1px dashed var(--color-border);
   border-radius: var(--radius-md, 8px);
 }
 
@@ -696,7 +696,7 @@ async function handleDeleteFromDialog(): Promise<void> {
   font-variant-numeric: tabular-nums;
 }
 .bizexp-note {
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 /* ===== 展开行内产品明细 ===== */
@@ -711,9 +711,9 @@ async function handleDeleteFromDialog(): Promise<void> {
   grid-template-columns: minmax(80px, 1.4fr) minmax(40px, 0.6fr) minmax(40px, 0.6fr) minmax(60px, 0.7fr) minmax(70px, 0.85fr) minmax(70px, 0.8fr) minmax(80px, 1.4fr);
   gap: 6px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   padding: 0 4px 6px;
-  border-bottom: 1px solid var(--color-border, var(--color-border));
+  border-bottom: 1px solid var(--color-border);
 }
 .bizexp-detail-th {
   text-align: right;
@@ -729,7 +729,7 @@ async function handleDeleteFromDialog(): Promise<void> {
   gap: 6px;
   padding: var(--space-1) var(--space-1);
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
   align-items: center;
 }
@@ -743,7 +743,7 @@ async function handleDeleteFromDialog(): Promise<void> {
   white-space: nowrap;
 }
 .bizexp-detail-note {
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 .bizexp-detail-td.sub-bold {
   font-weight: 700;
@@ -751,7 +751,7 @@ async function handleDeleteFromDialog(): Promise<void> {
 }
 .bizexp-detail-empty {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   padding: 6px 4px;
 }
 
@@ -774,7 +774,7 @@ async function handleDeleteFromDialog(): Promise<void> {
   flex: 1 1 auto;
   text-align: right;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 :global(html.dark) .bizexp-card-date {
   color: var(--color-text-secondary);

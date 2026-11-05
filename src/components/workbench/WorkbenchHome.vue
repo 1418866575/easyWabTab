@@ -471,8 +471,8 @@ async function handleQuickNote(): Promise<void> {
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-4);
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg, 12px);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   transition: box-shadow var(--transition-fast, 0.15s ease);
@@ -516,7 +516,7 @@ async function handleQuickNote(): Promise<void> {
   gap: var(--space-4);
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--color-primary, #3b82f6) 8%, transparent), transparent),
-    var(--color-bg-card, var(--color-bg-card));
+    var(--color-bg-card);
 }
 
 .greeting-info {
@@ -530,13 +530,13 @@ async function handleQuickNote(): Promise<void> {
   margin: 0;
   font-size: var(--fs-h2, 22px);
   font-weight: 700;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 .greeting-sub {
   margin: 0;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .greeting-clock {
@@ -557,7 +557,7 @@ async function handleQuickNote(): Promise<void> {
 
 .greeting-date {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 /* ===== 今日概览聚合卡（顶部三合一）===== */
@@ -596,20 +596,20 @@ async function handleQuickNote(): Promise<void> {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary);
 }
 
 .ov-value {
   font-size: var(--fs-h2, 22px);
   font-weight: 700;
   line-height: 1.1;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
 }
 
 .ov-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
 
@@ -617,7 +617,7 @@ async function handleQuickNote(): Promise<void> {
   width: 1px;
   align-self: stretch;
   margin: var(--space-3) 0;
-  background: var(--color-border, var(--color-border));
+  background: var(--color-border);
 }
 
 /* ===== 快捷添加待办 ===== */
@@ -631,7 +631,7 @@ async function handleQuickNote(): Promise<void> {
   gap: 6px;
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .quick-add-row {
@@ -668,7 +668,7 @@ async function handleQuickNote(): Promise<void> {
 .stat-sub {
   min-width: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -690,22 +690,22 @@ async function handleQuickNote(): Promise<void> {
   gap: 2px;
   padding: var(--space-2) var(--space-1);
   min-width: 0;
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
-  background: var(--color-bg-2, var(--color-bg-2));
+  background: var(--color-bg-2);
 }
 
 .todo-stat-value {
   font-size: var(--fs-title, 18px);
   font-weight: 700;
   line-height: 1.2;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
 }
 
 .todo-stat-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
 
@@ -724,8 +724,8 @@ async function handleQuickNote(): Promise<void> {
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-primary, var(--color-primary));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-primary);
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 6px 18px rgba(0, 0, 0, 0.18));
   opacity: 0;
@@ -764,7 +764,7 @@ async function handleQuickNote(): Promise<void> {
   min-width: 0;
   font-size: var(--fs-sm, 13px);
   font-weight: 500;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -774,7 +774,7 @@ async function handleQuickNote(): Promise<void> {
   flex-shrink: 0;
   font-size: var(--fs-caption, 12px);
   font-variant-numeric: tabular-nums;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -792,7 +792,7 @@ async function handleQuickNote(): Promise<void> {
 .habit-detail-bar {
   height: 6px;
   border-radius: 999px;
-  background: var(--color-border, var(--color-border));
+  background: var(--color-border);
   overflow: hidden;
 }
 
@@ -824,12 +824,12 @@ async function handleQuickNote(): Promise<void> {
 }
 
 .ring-track {
-  stroke: var(--color-border, var(--color-border));
+  stroke: var(--color-border);
   stroke-width: 3;
 }
 
 .ring-bar {
-  stroke: var(--color-primary, var(--color-primary));
+  stroke: var(--color-primary);
   stroke-width: 3;
   stroke-linecap: round;
   transition: stroke-dasharray var(--transition-fast, 0.3s ease);
@@ -843,7 +843,7 @@ async function handleQuickNote(): Promise<void> {
   justify-content: center;
   font-size: var(--fs-caption, 12px);
   font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
@@ -871,7 +871,7 @@ async function handleQuickNote(): Promise<void> {
   margin: 0;
   font-size: var(--fs-md, 15px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -902,13 +902,13 @@ async function handleQuickNote(): Promise<void> {
   gap: 10px;
   padding: 10px 12px;
   background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm, 4px);
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .home-list-item:hover {
-  border-color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary);
 }
 
 .home-list-title {
@@ -916,7 +916,7 @@ async function handleQuickNote(): Promise<void> {
   min-width: 0;
   font-size: var(--fs-body, 14px);
   font-weight: 500;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -972,7 +972,7 @@ async function handleQuickNote(): Promise<void> {
 
 /* ===== 截止日期 ===== */
 .due {
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .due.overdue {
@@ -983,11 +983,11 @@ async function handleQuickNote(): Promise<void> {
 /* ===== 空态 ===== */
 .home-empty {
   text-align: center;
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   font-size: var(--fs-sm, 13px);
   padding: var(--space-6) var(--space-3);
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px dashed var(--color-border, var(--color-border));
+  background: var(--color-bg-card);
+  border: 1px dashed var(--color-border);
   border-radius: var(--radius-md, 8px);
 }
 
@@ -1019,7 +1019,7 @@ html.dark .ov-value {
 }
 
 html.dark .ov-icon {
-  color: #60a5fa;
+  color: var(--dark-accent-text);
 }
 
 html.dark .ov-sep {
@@ -1027,7 +1027,7 @@ html.dark .ov-sep {
 }
 
 html.dark .greeting-time {
-  color: #60a5fa;
+  color: var(--dark-accent-text);
 }
 
 html.dark .greeting-sub,

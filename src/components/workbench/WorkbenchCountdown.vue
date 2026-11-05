@@ -656,8 +656,8 @@ onUnmounted(() => {
   flex-direction: column;
   gap: var(--space-3);
   padding: 14px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -677,7 +677,7 @@ onUnmounted(() => {
 
 .search-label {
   font-size: var(--fs-body, 14px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -699,7 +699,7 @@ onUnmounted(() => {
 
 .sort-hint {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   flex-shrink: 0;
 }
 
@@ -736,9 +736,9 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 6px;
   padding: 10px;
-  background-color: var(--color-bg-card, var(--color-bg-card));
+  background-color: var(--color-bg-card);
   background-image: linear-gradient(135deg, color-mix(in srgb, var(--cd-color) 8%, transparent), transparent 55%);
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-left: 4px solid var(--cd-color);
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
@@ -771,7 +771,7 @@ onUnmounted(() => {
 .cd-name {
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -784,7 +784,7 @@ onUnmounted(() => {
   border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-hover));
   color: var(--color-primary-text);
-  border: 1px solid var(--color-primary, var(--color-primary));
+  border: 1px solid var(--color-primary);
   opacity: 0.85;
 }
 
@@ -893,7 +893,7 @@ html.dark .reminded-badge {
 }
 
 .status-expired {
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   font-weight: 500;
 }
 
@@ -907,7 +907,7 @@ html.dark .reminded-badge {
 
 .cd-time {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -916,7 +916,7 @@ html.dark .reminded-badge {
   align-items: center;
   gap: var(--space-1);
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
@@ -963,7 +963,7 @@ html.dark .reminded-badge {
 
 .form-group > label {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .form-row-fields {
@@ -980,7 +980,7 @@ html.dark .reminded-badge {
 
 .field-label {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .field-date {
@@ -1006,7 +1006,7 @@ html.dark .reminded-badge {
 .form-hint {
   margin: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 /* 每周重复选项 */
@@ -1026,7 +1026,7 @@ html.dark .reminded-badge {
 
 .panel-label {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
 
@@ -1056,7 +1056,7 @@ html.dark .reminded-badge {
 
 .color-custom-value {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1073,7 +1073,7 @@ html.dark .reminded-badge {
 
 .preview-label {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .preview-value {
@@ -1084,7 +1084,7 @@ html.dark .reminded-badge {
 
 .preview-time {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 .form-actions {
@@ -1107,8 +1107,8 @@ html.dark .cd-card {
 /* html.dark .empty-state 背景已由全局 .empty-state 的 --color-bg-card token 自动跟随 */
 
 html.dark .cat-work {
-  color: #60a5fa;
-  border-color: #3b82f6;
+  color: var(--dark-accent-text);
+  border-color: var(--dark-accent-border);
 }
 
 html.dark .cat-life {
@@ -1175,7 +1175,7 @@ html.dark .cat-default {
 }
 
 .cd-t-empty {
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 .cd-t-remain {

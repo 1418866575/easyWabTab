@@ -113,8 +113,8 @@ const anchors = computed<AnchorRow[]>(() => {
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -123,7 +123,7 @@ const anchors = computed<AnchorRow[]>(() => {
   margin: 0;
   font-size: var(--fs-md, 15px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 .anchor-title-icon {
@@ -144,7 +144,7 @@ const anchors = computed<AnchorRow[]>(() => {
   align-items: center;
   gap: var(--space-2);
   font-size: var(--fs-body, 14px);
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 .anchor-icon {
@@ -164,6 +164,6 @@ const anchors = computed<AnchorRow[]>(() => {
 .anchor-guide {
   margin: 0;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 </style>

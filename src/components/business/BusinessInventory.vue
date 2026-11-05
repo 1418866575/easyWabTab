@@ -487,8 +487,8 @@ function exportInventoryExcel(): void {
   flex-direction: column;
   gap: 10px;
   padding: var(--space-4);
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -503,7 +503,7 @@ function exportInventoryExcel(): void {
 .bizinv-alert-title {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .bizinv-alert-actions {
@@ -517,7 +517,7 @@ function exportInventoryExcel(): void {
   align-items: center;
   gap: var(--space-2);
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .bizinv-th-input {
@@ -527,7 +527,7 @@ function exportInventoryExcel(): void {
 .bizinv-empty {
   margin: 0;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 .bizinv-low-grid {
@@ -549,7 +549,7 @@ function exportInventoryExcel(): void {
 .bizinv-low-name {
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -575,15 +575,15 @@ function exportInventoryExcel(): void {
   flex-direction: column;
   gap: 10px;
   padding: 14px 18px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .bizinv-card:hover {
-  border-color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary);
 }
 
 /* 卡片头：商品名 + 在售/停售徽标（左） + 操作按钮（右） */
@@ -625,7 +625,7 @@ function exportInventoryExcel(): void {
   align-items: center;
   gap: 6px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .bizinv-meta-sep {
@@ -650,20 +650,20 @@ function exportInventoryExcel(): void {
 
 .metric-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .metric-value {
   font-size: var(--fs-md, 15px);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 .bizinv-name {
   font-size: var(--fs-md, 15px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -671,12 +671,12 @@ function exportInventoryExcel(): void {
 
 .bizinv-unit {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 .bizinv-num {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
@@ -700,15 +700,15 @@ function exportInventoryExcel(): void {
   cursor: pointer;
   color: var(--color-primary-text);
   background: none;
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm, 4px);
   transition: all var(--transition-fast, 0.15s ease);
   height: 36px;}
 
 .bizinv-trace-btn:hover {
   color: var(--color-primary-text);
-  border-color: var(--color-primary, var(--color-primary));
-  background: color-mix(in srgb, var(--color-primary, var(--color-primary)) 8%, transparent);
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
 }
 
 /* 溯源弹框遮罩 */
@@ -732,8 +732,8 @@ function exportInventoryExcel(): void {
   max-height: calc(100dvh - 32px);
   display: flex;
   flex-direction: column;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
 }
@@ -743,13 +743,13 @@ function exportInventoryExcel(): void {
   align-items: center;
   justify-content: space-between;
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--color-border, var(--color-border));
+  border-bottom: 1px solid var(--color-border);
 }
 
 .bizinv-trace-title {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 .bizinv-trace-close {
@@ -757,7 +757,7 @@ function exportInventoryExcel(): void {
   font-size: var(--fs-lg, 16px);
   line-height: 1;
   cursor: pointer;
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   background: none;
   border: none;
   border-radius: var(--radius-sm, 4px);
@@ -765,7 +765,7 @@ function exportInventoryExcel(): void {
 }
 
 .bizinv-trace-close:hover {
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   background: var(--color-bg-card, var(--color-bg-hover));
 }
 
@@ -783,7 +783,7 @@ function exportInventoryExcel(): void {
   padding: var(--space-5) 0;
   text-align: center;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 .bizinv-source-row {
@@ -792,7 +792,7 @@ function exportInventoryExcel(): void {
   gap: var(--space-2);
   padding: 6px 8px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
   border-radius: var(--radius-sm, 4px);
   cursor: pointer;
@@ -813,18 +813,18 @@ function exportInventoryExcel(): void {
 
 .bizinv-source-type.purchase {
   color: var(--color-primary-text);
-  background: color-mix(in srgb, var(--color-primary, var(--color-primary)) 12%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
 }
 
 .bizinv-source-type.daily {
   color: var(--color-success-text);
-  background: color-mix(in srgb, var(--color-success, var(--color-success)) 12%, transparent);
+  background: color-mix(in srgb, var(--color-success) 12%, transparent);
 }
 
 .bizinv-source-date {
   flex-shrink: 0;
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 .bizinv-source-detail {
@@ -838,15 +838,15 @@ function exportInventoryExcel(): void {
   box-sizing: border-box;
   padding: 9px 12px;
   background-color: var(--color-bg-input, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   font-size: var(--fs-body, 14px);
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 .biz-input:focus {
   outline: none;
-  border-color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary);
 }
 
 html.dark .bizinv-alert,
@@ -869,7 +869,7 @@ html.dark .bizinv-low-stock {
 
 /* 暗色模式：三色适配 */
 html.dark .bizinv-metric.num-purchase .metric-value b {
-  color: #60a5fa;
+  color: var(--dark-accent-text);
 }
 
 html.dark .bizinv-metric.num-brought .metric-value b {

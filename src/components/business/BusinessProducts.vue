@@ -701,9 +701,9 @@ function drawerMarkupRate(): number | null {
 
 .bizprod-tabs :deep(.el-radio-button__inner) {padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  color: var(--color-text-secondary);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-full, 9999px);
   box-shadow: none;
   transition: all var(--transition-fast, 0.15s ease);
@@ -711,12 +711,12 @@ function drawerMarkupRate(): number | null {
 
 .bizprod-tabs :deep(.el-radio-button__inner:hover) {
   color: var(--color-primary-text);
-  border-color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary);
 }
 
 .bizprod-tabs :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
-  background: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
+  background: var(--color-primary);
+  border-color: var(--color-primary);
   color: #fff;
   box-shadow: none;
 }
@@ -725,9 +725,9 @@ function drawerMarkupRate(): number | null {
   padding: 40px 20px;
   text-align: center;
   font-size: var(--fs-body, 14px);
-  color: var(--color-text-muted, var(--color-text-muted));
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px dashed var(--color-border, var(--color-border));
+  color: var(--color-text-muted);
+  background: var(--color-bg-card);
+  border: 1px dashed var(--color-border);
   border-radius: var(--radius-md, 8px);
 }
 
@@ -743,8 +743,8 @@ function drawerMarkupRate(): number | null {
   flex-direction: column;
   gap: 10px;
   padding: 14px 16px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   cursor: pointer;
@@ -752,14 +752,14 @@ function drawerMarkupRate(): number | null {
 }
 
 .bizprod-card:hover {
-  border-color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary);
   box-shadow: var(--shadow-card-hover, 0 4px 12px rgba(0, 0, 0, 0.12));
   transform: translateY(-2px);
 }
 
 .bizprod-card:focus-visible {
   outline: none;
-  border-color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-focus-ring, rgba(59, 130, 246, 0.35));
 }
 
@@ -778,7 +778,7 @@ function drawerMarkupRate(): number | null {
   min-width: 0;
   font-size: var(--fs-md, 15px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -803,7 +803,7 @@ function drawerMarkupRate(): number | null {
 .bizprod-price {
   font-size: var(--fs-sm, 13px);
   font-variant-numeric: tabular-nums;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .bizprod-price.sell {
@@ -831,7 +831,7 @@ function drawerMarkupRate(): number | null {
 .bizprod-form-hint {
   margin: -4px 0 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 /* 字段级校验错误（提交尝试后展示）：红色说明「为什么不能保存」 */
@@ -864,7 +864,7 @@ function drawerMarkupRate(): number | null {
   align-items: center;
   gap: 6px;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   cursor: pointer;
   margin-right: 0;
 }
@@ -872,7 +872,7 @@ function drawerMarkupRate(): number | null {
 .bizprod-active :deep(.el-checkbox__label) {
   padding-left: 0;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .bizprod-actions {
@@ -903,12 +903,12 @@ html.dark .bizprod-name {
 }
 
 html.dark .bizprod-price-auto {
-  color: #93c5fd;
-  background: rgba(59, 130, 246, 0.2);
+  color: var(--dark-accent-text);
+  background: var(--color-primary-soft);
 }
 
 html.dark .bizprod-form-avg {
-  color: #93c5fd;
+  color: var(--dark-accent-text);
   background: rgba(59, 130, 246, 0.15);
 }
 
@@ -920,8 +920,8 @@ html.dark .bizprod-form-avg {
 
 /* P1-3：高亮商品 */
 .bizprod-card.highlighted {
-  border-color: var(--color-primary, var(--color-primary));
-  box-shadow: 0 0 0 2px var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary);
 }
 
 .bizprod-name {
@@ -950,9 +950,9 @@ html.dark .bizprod-form-avg {
 .bizprod-drawer-section-title {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   padding-bottom: 6px;
-  border-bottom: 1px solid var(--color-border, var(--color-border));
+  border-bottom: 1px solid var(--color-border);
 }
 
 .bizprod-drawer-info-row {
@@ -964,13 +964,13 @@ html.dark .bizprod-form-avg {
 }
 
 .bizprod-drawer-label {
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   flex-shrink: 0;
 }
 
 .bizprod-drawer-value {
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
@@ -990,7 +990,7 @@ html.dark .bizprod-form-avg {
 }
 
 .bizprod-drawer-value.status-inactive {
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 .bizprod-drawer-stats {
@@ -1010,13 +1010,13 @@ html.dark .bizprod-form-avg {
 
 .bizprod-drawer-stat-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 .bizprod-drawer-stat-value {
   font-size: var(--fs-lg, 16px);
   font-weight: 700;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1027,7 +1027,7 @@ html.dark .bizprod-form-avg {
 .bizprod-drawer-empty {
   margin: 0;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 .bizprod-drawer-records {
@@ -1042,7 +1042,7 @@ html.dark .bizprod-form-avg {
   gap: var(--space-2);
   padding: 6px 10px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   background: var(--color-bg-card, var(--color-bg-hover));
   border-radius: var(--radius-sm, 4px);
   cursor: pointer;
@@ -1051,13 +1051,13 @@ html.dark .bizprod-form-avg {
 }
 
 .bizprod-drawer-record:hover {
-  background: var(--color-bg-card, var(--color-bg-card));
+  background: var(--color-bg-card);
 }
 
 .bizprod-drawer-record-date {
   flex-shrink: 0;
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 .bizprod-drawer-record-detail {
@@ -1077,7 +1077,7 @@ html.dark .bizprod-form-avg {
 .bizprod :deep(.el-drawer__header) {
   margin-bottom: 0;
   padding-bottom: var(--space-4);
-  border-bottom: 1px solid var(--color-border, var(--color-border));
+  border-bottom: 1px solid var(--color-border);
 }
 
 html.dark .bizprod-drawer-stat {

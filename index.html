@@ -7,6 +7,35 @@
          全面屏机型底部操作区会被 Home 指示条遮挡 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>网页导航</title>
+    <script>
+      /* 首屏主题预置：主题偏好存在 IndexedDB，main.ts 要等异步 ensureLoaded()
+         才能 applyTheme()，在此之前页面会用 :root 的蓝色兜底渲染 —— 出厂默认
+         是「中国红·浅」，切过主题的用户会看到一次蓝→目标色的闪屏。
+         这里同步读取 nav 的 localStorage 影子副本（见 composables/navShadow.ts），
+         在首次绘制前把 data-accent / dark / data-theme 写好。
+         映射须与 stores/theme.ts 的 THEMES 同步，由 scripts/probe-theme-tokens.mjs 校验。 */
+      (function () {
+        var MAP = {
+          'light-blue': ['blue', 0], 'eye': ['brown', 0], 'pink': ['pink', 0],
+          'purple': ['purple', 1], 'lime': ['green', 0], 'china-red': ['red', 0],
+          'morandi': ['gray', 0], 'system': ['blue', null]
+        };
+        try {
+          var id = localStorage.getItem('ewt-nav-shadow::user-theme') || localStorage.getItem('user-theme');
+          var e = MAP[id];
+          if (id === 'light') e = ['blue', 0];
+          if (id === 'dark' || id === 'dark-blue') e = ['purple', 1];
+          if (!e) e = ['red', 0];
+          var dark = e[1] === null
+            ? window.matchMedia('(prefers-color-scheme: dark)').matches
+            : !!e[1];
+          var r = document.documentElement;
+          r.setAttribute('data-accent', e[0]);
+          r.setAttribute('data-theme', id || 'china-red');
+          if (dark) r.classList.add('dark');
+        } catch (_) { /* 隐私模式禁用 localStorage：交给 main.ts 正常初始化 */ }
+      }());
+    </script>
   </head>
   <body>
     <div id="app"></div>

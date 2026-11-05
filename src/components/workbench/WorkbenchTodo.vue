@@ -699,8 +699,8 @@ onMounted(async () => {
   flex-direction: column;
   gap: 10px;
   padding: 12px 14px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -709,7 +709,7 @@ onMounted(async () => {
 .td-field { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
 .td-field-grow { flex: 0 0 auto; min-width: 0; }
 .td-field-grow :is(.td-field-desc, .td-field-title) { width: 200px; }
-.td-field-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary, var(--color-text-secondary)); }
+.td-field-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
 .td-search-actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
 
 .search-select {
@@ -718,7 +718,7 @@ onMounted(async () => {
 }
 
 .search-btn {padding: 0 var(--space-3);
-  background: var(--color-primary, var(--color-primary));
+  background: var(--color-primary);
   border: none;
   border-radius: var(--radius-md, 8px);
   font-size: var(--fs-caption, 12px);
@@ -729,15 +729,15 @@ onMounted(async () => {
   height: 36px;}
 
 .search-btn:hover {
-  background: var(--color-primary-hover, var(--color-primary-hover));
+  background: var(--color-primary-hover);
 }
 
 .search-reset-btn {padding: 0 var(--space-3);
   background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
@@ -745,7 +745,7 @@ onMounted(async () => {
 
 .search-reset-btn:hover {
   color: var(--color-primary-text);
-  border-color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary);
 }
 
 /* ===== 操作栏 ===== */
@@ -760,7 +760,7 @@ onMounted(async () => {
 .toolbar-count {
   margin-left: auto;
   font-size: var(--fs-body, 14px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 /* .btn-add 视觉已统一到全局 .ui-btn--primary（style.css） */
@@ -785,8 +785,8 @@ onMounted(async () => {
   font-size: var(--fs-sm, 13px);
   border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
@@ -794,13 +794,13 @@ onMounted(async () => {
 
 .td-cat-tab:hover {
   color: var(--color-primary-text);
-  border-color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary);
 }
 
 .td-cat-tab.active {
   color: #fff;
-  background: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
+  background: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 /* ===== el-table 表格容器（参考 WorkbenchNotes）===== */
@@ -860,7 +860,7 @@ onMounted(async () => {
 /* ===== 表格内徽章/标签 ===== */
 
 .td-col-empty {
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   font-size: var(--fs-caption, 12px);
 }
 
@@ -869,7 +869,7 @@ onMounted(async () => {
   min-width: 0;
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -877,7 +877,7 @@ onMounted(async () => {
 
 .td-title.is-done {
   text-decoration: line-through;
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 /* 优先级徽章 */
@@ -989,7 +989,7 @@ onMounted(async () => {
 
 .td-desc {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
@@ -1012,7 +1012,7 @@ onMounted(async () => {
 /* 截止日期：本列只显示日期本身，逾期信息由「逾期天数」列承载 */
 .td-date {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1034,7 +1034,7 @@ onMounted(async () => {
   width: 16px;
   height: 16px;
   cursor: pointer;
-  accent-color: var(--color-primary, var(--color-primary));
+  accent-color: var(--color-primary);
 }
 
 /* .btn-edit/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
@@ -1057,7 +1057,7 @@ onMounted(async () => {
 
 .form-group > label {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .form-row-fields {
@@ -1074,7 +1074,7 @@ onMounted(async () => {
 
 .field-label {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .field-prio {
@@ -1110,7 +1110,7 @@ onMounted(async () => {
   width: 36px;
   height: 28px;
   padding: 0;
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm, 4px);
   background: none;
   cursor: pointer;
@@ -1118,7 +1118,7 @@ onMounted(async () => {
 
 .color-custom-value {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1126,16 +1126,16 @@ onMounted(async () => {
   padding: 5px 10px;
   font-size: var(--fs-caption, 12px);
   background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-full, 9999px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .color-reset:hover {
   color: var(--color-primary-text);
-  border-color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary);
 }
 
 .form-actions {
@@ -1145,7 +1145,7 @@ onMounted(async () => {
 }
 
 .btn-save {padding: 0 var(--space-3);
-  background: var(--color-primary, var(--color-primary));
+  background: var(--color-primary);
   border: none;
   border-radius: var(--radius-md, 8px);
   font-size: var(--fs-caption, 12px);
@@ -1156,11 +1156,11 @@ onMounted(async () => {
   height: 36px;}
 
 .btn-save:hover:not(:disabled) {
-  background: var(--color-primary-hover, var(--color-primary-hover));
+  background: var(--color-primary-hover);
 }
 
 .btn-save:disabled {
-  background: var(--color-text-muted, var(--color-text-muted));
+  background: var(--color-text-muted);
   cursor: not-allowed;
 }
 
@@ -1244,7 +1244,7 @@ html.dark .st-pending {
 }
 
 html.dark .st-in-progress {
-  color: #93c5fd;
+  color: var(--dark-accent-text);
   background: rgba(29, 78, 216, 0.35);
   border-color: #1e40af;
 }
@@ -1284,9 +1284,9 @@ html.dark .td-cat-tab.active {
 }
 
 html.dark .td-cat-badge {
-  color: #93c5fd;
-  background: rgba(59, 130, 246, 0.2);
-  border-color: rgba(59, 130, 246, 0.45);
+  color: var(--dark-accent-text);
+  background: var(--color-primary-soft);
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 
 /* html.dark .btn-add:disabled 视觉已统一到全局 .ui-btn--primary（style.css） */

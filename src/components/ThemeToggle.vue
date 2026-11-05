@@ -8,31 +8,14 @@ const menuRef = ref<HTMLElement | null>(null)
 const triggerRef = ref<HTMLButtonElement | null>(null)
 const activeIndex = ref(0)
 
-// accent → 真实色（与 themes.css 保持一致，用于色点预览）
-const accentColor: Record<string, string> = {
-  blue: '#3b82f6',
-  brown: '#a47551',
-  pink: '#ec4899',
-  green: '#22c55e',
-  purple: '#8b5cf6',
-  red: '#c8102e',
-  gray: '#6c7a8c',
-  system: '#94a3b8'
-}
-// accent → 该主题的表面底色（与 themes.css 的 --color-bg-card 一致，用于色块预览）
-// 预览用「表面 + 主色」双色块：切主题后变化最大的是表面，单点主色无法反映真实观感
-const surfaceColor: Record<string, string> = {
-  blue: '#ffffff',
-  brown: '#faf6ee',
-  pink: '#ffffff',
-  green: '#ffffff',
-  purple: '#1d1930',
-  red: '#ffffff',
-  gray: '#f6f5f2',
-  system: '#f8fafc'
-}
-const dotColor = (accent: ThemeAccent | null) => accentColor[accent ?? 'system']
-const surfaceOf = (accent: ThemeAccent | null) => surfaceColor[accent ?? 'system']
+// 预览色值唯一真源在 styles/themes.css 的 --theme-<accent>-* 变量：
+// 主题块反向引用同一批变量，此处只拼变量名，不再复制第二份色表。
+// 双色块＝该主题的表面底色 + 主色（切主题后变化最大的是表面，单点主色反映不出观感）。
+const previewVar = (accent: ThemeAccent | null, key: string) =>
+  `var(--theme-${accent ?? 'system'}-${key})`
+const dotColor = (accent: ThemeAccent | null) => previewVar(accent, 'primary')
+const surfaceOf = (accent: ThemeAccent | null, dark = false) =>
+  previewVar(accent, dark ? 'surface-dark' : 'surface')
 // 明暗标注：帮助理解"为什么切换后整体明暗会变"，不拆成两个控件（维持一键切换）
 const modeLabel = (id: string) => {
   const t = THEMES.find(x => x.id === id)
@@ -105,7 +88,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
     >
       <span
         class="theme-swatch"
-        :style="{ '--sw-surface': surfaceOf(currentTheme.accent), '--sw-accent': dotColor(currentTheme.accent) }"
+        :style="{ '--sw-surface': surfaceOf(currentTheme.accent, currentTheme.mode === 'dark'), '--sw-accent': dotColor(currentTheme.accent) }"
       ></span>
       <span class="theme-name">{{ currentTheme.name }}</span>
       <svg class="theme-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -135,7 +118,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
       >
         <span
           class="theme-swatch"
-          :style="{ '--sw-surface': surfaceOf(t.accent), '--sw-accent': dotColor(t.accent) }"
+          :style="{ '--sw-surface': surfaceOf(t.accent, t.mode === 'dark'), '--sw-accent': dotColor(t.accent) }"
         ></span>
         <span class="theme-option-name">{{ t.name }}</span>
         <span class="theme-option-mode">{{ modeLabel(t.id) }}</span>

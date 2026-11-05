@@ -138,7 +138,7 @@ const donutSegments = computed<DonutSegment[]>(() => {
       total: item.total,
       percent: item.percent,
       color:
-        idx === 0 ? 'var(--color-primary, var(--color-primary))' : LEDGER_CATEGORY_COLORS[idx % LEDGER_CATEGORY_COLORS.length],
+        idx === 0 ? 'var(--color-primary)' : LEDGER_CATEGORY_COLORS[idx % LEDGER_CATEGORY_COLORS.length],
       dashLen,
       dashOffset: -acc,
       linecap: byCategory.length <= 3 ? 'round' : 'butt'
@@ -742,8 +742,8 @@ onMounted(async () => {
   gap: var(--space-2);
   flex-wrap: wrap;
   padding: 12px 14px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -752,7 +752,7 @@ onMounted(async () => {
   font-size: var(--fs-caption, 12px);
   border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   color: var(--color-primary-text);
   cursor: pointer;
   white-space: nowrap;
@@ -760,20 +760,20 @@ onMounted(async () => {
   height: 36px;}
 
 .month-btn:hover {
-  background: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
+  background: var(--color-primary);
+  border-color: var(--color-primary);
   color: #fff;
 }
 
 .today-btn {
   color: #fff;
-  background: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
+  background: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 .today-btn:hover {
-  background: var(--color-primary-hover, var(--color-primary-hover));
-  border-color: var(--color-primary-hover, var(--color-primary-hover));
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
 }
 
 .month-input {
@@ -799,7 +799,7 @@ onMounted(async () => {
   /* 全局 .wb-content .stat-value 会把数字染成主色（对齐教师工作台的彩色统计数字），
      但记账这一屏的数字本身带语义色（收入绿 / 支出红），中性指标再染主色会与
      「红 = 支出」直接冲突，故此处显式回到正文色，只让 .is-income/.is-expense/.is-negative 上色。 */
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
@@ -829,8 +829,8 @@ onMounted(async () => {
   flex-direction: column;
   gap: var(--space-3);
   padding: 14px 16px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -838,7 +838,7 @@ onMounted(async () => {
 .ld-ratio-title {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .ld-ratio-head {
@@ -850,12 +850,12 @@ onMounted(async () => {
 
 .ld-ratio-name {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 .ld-ratio-val {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
@@ -865,8 +865,8 @@ onMounted(async () => {
   flex-direction: column;
   gap: var(--space-3);
   padding: 14px 16px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -875,7 +875,7 @@ onMounted(async () => {
   margin: 0;
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .ld-trend-header {
@@ -937,7 +937,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 
 /* 收入柱 = 应用主色；支出柱 = LEDGER_CATEGORY_COLORS[1] */
 .ld-trend-bar.is-income {
-  fill: var(--color-primary, var(--color-primary));
+  fill: var(--color-primary);
 }
 
 .ld-trend-bar.is-expense {
@@ -947,7 +947,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 .ld-trend-empty {
   padding: 36px 16px;
   text-align: center;
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   font-size: var(--fs-body, 14px);
 }
 
@@ -984,7 +984,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 }
 
 .ld-donut-seg.is-accent {
-  stroke: var(--color-primary, var(--color-primary));
+  stroke: var(--color-primary);
 }
 
 .ld-donut-center {
@@ -995,7 +995,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   justify-content: center;
   font-size: var(--fs-title, 18px);
   font-weight: 700;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
   pointer-events: none;
   padding: 0 var(--space-5);
@@ -1024,7 +1024,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 }
 
 .ld-donut-dot.is-accent {
-  background: var(--color-primary, var(--color-primary));
+  background: var(--color-primary);
 }
 
 /* ===== 图表区折叠开关 ===== */
@@ -1043,9 +1043,9 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   font: inherit;
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  color: var(--color-text-secondary);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-full, 9999px);
   cursor: pointer;
   transition: all var(--transition-fast, 0.15s ease);
@@ -1053,7 +1053,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 
 .ld-charts-toggle:hover {
   color: var(--color-primary-text);
-  border-color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary);
 }
 
 .ld-charts-chevron {
@@ -1084,10 +1084,10 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 
 .btn-manage {padding: 0 var(--space-3);
   background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
@@ -1095,7 +1095,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 
 .btn-manage:hover {
   color: var(--color-primary-text);
-  border-color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary);
 }
 
 /* ===== 空月态 ===== */
@@ -1113,8 +1113,8 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 /* ===== 记录列表（表格行式：日期 | 分组 | 金额 | 备注 | 操作）===== */
 .ld-list {
   overflow-x: auto;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -1125,7 +1125,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   align-items: center;
   gap: var(--space-3);
   padding: 10px 16px;
-  border-bottom: 1px solid var(--color-border, var(--color-border));
+  border-bottom: 1px solid var(--color-border);
   transition: background-color var(--transition-fast, 0.15s ease);
 }
 
@@ -1134,13 +1134,13 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 }
 
 .ld-item:hover {
-  background-color: var(--color-bg-hover, var(--color-bg-hover));
+  background-color: var(--color-bg-hover);
 }
 
 .ld-date {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -1165,7 +1165,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 .ld-note {
   min-width: 0;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1174,7 +1174,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 .ld-amount {
   font-size: var(--fs-lg, 16px);
   font-weight: 700;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
   text-align: right;
   white-space: nowrap;
@@ -1229,7 +1229,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 .ld-record-amount {
   font-size: var(--fs-md, 15px);
   font-weight: 700;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
 }
 .ld-record-amount.is-income {
@@ -1251,7 +1251,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 
 .form-group > label {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .form-row-fields {
@@ -1268,7 +1268,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 
 .field-label {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .field-date {
@@ -1309,7 +1309,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   flex-wrap: wrap;
   padding: var(--space-2) var(--space-3);
   background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
 }
 
@@ -1318,7 +1318,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   min-width: 80px;
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 .ld-cat-type-badge {
@@ -1341,8 +1341,8 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 .ld-builtin-tag {
   flex-shrink: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
-  border: 1px solid var(--color-border, var(--color-border));
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-full, 9999px);
   padding: 2px 10px;
 }
@@ -1359,7 +1359,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   gap: var(--space-2);
   flex-wrap: wrap;
   padding: var(--space-3);
-  border: 1px dashed var(--color-border, var(--color-border));
+  border: 1px dashed var(--color-border);
   border-radius: var(--radius-md, 8px);
 }
 
@@ -1426,9 +1426,9 @@ html.dark .stat-value.is-negative {
 }
 
 html.dark .ld-cat-badge {
-  color: #93c5fd;
-  background: rgba(59, 130, 246, 0.2);
-  border-color: rgba(59, 130, 246, 0.45);
+  color: var(--dark-accent-text);
+  background: var(--color-primary-soft);
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 
 html.dark .ld-cat-badge.is-income,
@@ -1439,9 +1439,9 @@ html.dark .ld-cat-type-badge.is-income {
 }
 
 html.dark .ld-cat-type-badge {
-  color: #93c5fd;
-  background: rgba(59, 130, 246, 0.2);
-  border-color: rgba(59, 130, 246, 0.45);
+  color: var(--dark-accent-text);
+  background: var(--color-primary-soft);
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 
 html.dark .ld-donut-track {
@@ -1465,15 +1465,15 @@ html.dark .ld-charts-toggle {
 }
 
 html.dark .month-btn:hover {
-  background: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
+  background: var(--color-primary);
+  border-color: var(--color-primary);
   color: #fff;
 }
 
 html.dark .today-btn {
   color: #fff;
-  background: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
+  background: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 /* 禁用态保存按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */

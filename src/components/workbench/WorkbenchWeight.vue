@@ -543,7 +543,7 @@ onMounted(async () => {
 
 .stat-sub {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 /* ===== 最近体重 + BMI 行 ===== */
@@ -564,7 +564,7 @@ onMounted(async () => {
 .wt-bmi-dash {
   font-size: var(--fs-h2, 22px);
   font-weight: 700;
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 /* BMI 状态徽章（四色，参照 prio-badge 体系） */
@@ -612,7 +612,7 @@ onMounted(async () => {
 .wt-advice-item {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -635,17 +635,17 @@ onMounted(async () => {
 }
 
 .wt-chart-line {
-  stroke: var(--color-primary, var(--color-primary));
+  stroke: var(--color-primary);
 }
 
 .wt-chart-dot {
-  fill: var(--color-primary, var(--color-primary));
+  fill: var(--color-primary);
 }
 
 .wt-chart-empty {
   padding: 36px 16px;
   text-align: center;
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   font-size: var(--fs-body, 14px);
 }
 
@@ -663,10 +663,10 @@ onMounted(async () => {
 
 .btn-toggle-list {padding: 0 var(--space-3);
   background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
@@ -674,7 +674,7 @@ onMounted(async () => {
 
 .btn-toggle-list:hover {
   color: var(--color-primary-text);
-  border-color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary);
 }
 
 /* .btn-add 视觉已统一到全局 .ui-btn--primary（style.css） */
@@ -723,7 +723,7 @@ onMounted(async () => {
   gap: var(--space-1);
   padding: 10px 12px;
   background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   font-size: var(--fs-sm, 13px);
 }
@@ -738,7 +738,7 @@ onMounted(async () => {
 .wt-record-date {
   font-size: var(--fs-caption, 12px);
   font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
@@ -751,12 +751,12 @@ onMounted(async () => {
 
 .wt-record-bmi {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .wt-record-note {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -772,12 +772,12 @@ onMounted(async () => {
 .wt-records-empty {
   text-align: center;
   padding: 40px 20px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .btn-add-inline {margin-top: var(--space-3);
   padding: 0 var(--space-3);
-  background: var(--color-primary, var(--color-primary));
+  background: var(--color-primary);
   color: #fff;
   border: none;
   border-radius: var(--radius-md, 8px);
@@ -796,16 +796,16 @@ onMounted(async () => {
   justify-content: center;
   gap: var(--space-3);
   padding: var(--space-2) 0 var(--space-1);
-  border-top: 1px solid var(--color-border, var(--color-border));
+  border-top: 1px solid var(--color-border);
 }
 
 .wt-pager-btn {padding: 0 var(--space-3);
   background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm, 4px);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   transition: all var(--transition-fast, 0.15s ease);
   height: 36px;}
 
@@ -820,7 +820,7 @@ onMounted(async () => {
 
 .wt-pager-info {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -832,12 +832,12 @@ onMounted(async () => {
 
 .form-group > label {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .field-hint {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 .form-row-fields {
@@ -854,7 +854,7 @@ onMounted(async () => {
 
 .field-label {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .field-date {
@@ -903,9 +903,9 @@ html.dark .wt-record-item {
 }
 
 html.dark .bmi-under {
-  color: #93c5fd;
-  background: rgba(59, 130, 246, 0.2);
-  border-color: rgba(59, 130, 246, 0.45);
+  color: var(--dark-accent-text);
+  background: var(--color-primary-soft);
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 
 html.dark .bmi-normal {

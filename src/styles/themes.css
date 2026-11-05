@@ -1,26 +1,71 @@
 /* ============================================================
-   多主题强调色覆盖 (accent)
+   多主题强调色覆盖 (accent)  ——  7 套 accent × 明暗
 
    每个 accent 提供三层，缺一不可：
-     1) 主色系   --color-primary*                  （明暗通用，无条件覆盖）
-     2) 浅色表面系 html:not(.dark)[data-accent='x'] （页面底色/卡片/边框/文字）
-     3) 深色表面系 html.dark[data-accent='x']
+     1) 主色系   html[data-accent='x']                 （明暗通用）
+     2) 浅色表面 html:not(.dark)[data-accent='x']       （页面底色/卡片/边框/墨色）
+     3) 深色表面 html.dark[data-accent='x']
 
-   为什么必须有表面系：导航站与三个工作台的主体是"卡片 + 页面背景"，
-   只改 --color-primary* 时观感几乎无变化（切换无感）。表面系才是主题辨识度的来源。
+   --color-primary      500 级：实底以外（边框 / 图标 / focus 环）用。
+   --color-primary-text 当文字用：各主题按 primary-soft 合成底求解 ≥4.8:1。
+   --color-primary-solid / -hover  给「实底 + 白字」用（主按钮 / 选中页签）。
+     500 级白字对比度仅 blue 3.68 / green 2.28，6 套不达 AA 4.5，
+     故各主题取「白字 ≥4.5 的最浅档位」，只是按钮底略深，主题主色不变。
+   --color-primary-light 选中态淡底：亮色统一取 50 档、暗色用 400 档 12% 透明，
+     由文件末尾两条统一规则提供，勿在各主题块里重复声明。
 
-   为什么必须区分明暗作用域：本文件加载在 dark.css 之后，若像早期那样无条件
-   覆盖表面色，浅色米黄/莫兰迪表面会在深色模式下把底色刷白。因此浅色表面限定
-   html:not(.dark)，深色表面另给 html.dark 版本。
+   文件顶部的 --theme-*-* 是主题预览的**唯一色值真源**：
+   主题块反向引用它，ThemeToggle 也读它，避免色表复制第二份。
 
-   对比度：--color-text / -secondary / -muted 均按正文标准 ≥4.5:1 校准（WCAG AA）。
-
-   加载顺序须在 dark.css 之后（main.ts 末行 import），确保覆盖其 primary。
+   加载位置：App.vue 的 <style> 里 @import（在 dark.css 之后），
+   不是 main.ts —— 顺序保证 themes.css 覆盖 dark.css 的兜底主色。
    ============================================================ */
+
+/* 主题预览元数据（唯一色值真源，供主题块与 ThemeToggle 共同引用） */
+:root {
+  --theme-blue-primary: #3b82f6;
+  --theme-blue-surface: #ffffff;
+  --theme-blue-surface-dark: #172033;
+  --theme-blue-solid: #2563eb;
+  --theme-blue-solid-hover: #1d4ed8;
+  --theme-brown-primary: #a47551;
+  --theme-brown-surface: #faf6ee;
+  --theme-brown-surface-dark: #241f18;
+  --theme-brown-solid: #8c5e3f;
+  --theme-brown-solid-hover: #6f4a30;
+  --theme-pink-primary: #ec4899;
+  --theme-pink-surface: #ffffff;
+  --theme-pink-surface-dark: #241a21;
+  --theme-pink-solid: #db2777;
+  --theme-pink-solid-hover: #be185d;
+  --theme-green-primary: #22c55e;
+  --theme-green-surface: #ffffff;
+  --theme-green-surface-dark: #18241c;
+  --theme-green-solid: #15803d;
+  --theme-green-solid-hover: #166534;
+  --theme-purple-primary: #8b5cf6;
+  --theme-purple-surface: #ffffff;
+  --theme-purple-surface-dark: #1d1930;
+  --theme-purple-solid: #7c3aed;
+  --theme-purple-solid-hover: #6d28d9;
+  --theme-red-primary: #c8102e;
+  --theme-red-surface: #ffffff;
+  --theme-red-surface-dark: #241619;
+  --theme-red-solid: #c8102e;
+  --theme-red-solid-hover: #a60d24;
+  --theme-gray-primary: #6c7a8c;
+  --theme-gray-surface: #f6f5f2;
+  --theme-gray-surface-dark: #1d1f21;
+  --theme-gray-solid: #5a6779;
+  --theme-gray-solid-hover: #495463;
+  --theme-system-primary: #94a3b8;
+  --theme-system-surface: #f8fafc;
+  --theme-system-surface-dark: #1e293b;
+}
 
 /* ============================== 经典蓝 ============================== */
 html[data-accent='blue'] {
-  --color-primary: #3b82f6;
+  --color-primary: var(--theme-blue-primary);
   --color-primary-hover: #2563eb;
   --color-primary-50:  #eff6ff;
   --color-primary-100: #dbeafe;
@@ -32,8 +77,9 @@ html[data-accent='blue'] {
   --color-primary-700: #1d4ed8;
   --color-primary-800: #1e40af;
   --color-primary-900: #1e3a8a;
-  --color-primary-light: #eff6ff;
   --color-border-focus: #3b82f6;
+  --color-primary-solid: var(--theme-blue-solid);
+  --color-primary-solid-hover: var(--theme-blue-solid-hover);
 }
 /* 蓝·浅：冷调蓝灰表面 */
 html:not(.dark)[data-accent='blue'] {
@@ -43,7 +89,7 @@ html:not(.dark)[data-accent='blue'] {
   --ink-3: #5b677f;  /* 说明/时间戳 */
   --ink-4: #6a7995;  /* 占位/禁用 */
   --color-bg: #f5f8fc;
-  --color-bg-card: #ffffff;
+  --color-bg-card: var(--theme-blue-surface);
   --color-bg-hover: #eaf1fa;
   --color-bg-active: #dce8f6;
   --color-bg-input: #eef3fa;
@@ -64,7 +110,7 @@ html.dark[data-accent='blue'] {
   --ink-3: #8393ac;  /* 说明/时间戳 */
   --ink-4: #6c7f9d;  /* 占位/禁用 */
   --color-bg: #0f1623;
-  --color-bg-card: #172033;
+  --color-bg-card: var(--theme-blue-surface-dark);
   --color-bg-hover: #1f2a3f;
   --color-bg-active: #26364f;
   --color-bg-input: #1c2637;
@@ -75,13 +121,12 @@ html.dark[data-accent='blue'] {
   --color-hover: #1f2a3f;
   --color-primary-soft: rgba(96, 165, 250, 0.20);
   --color-primary-text: #93c5fd;  /* on primary-soft 6.26:1 */
-  --color-primary-light: rgba(96, 165, 250, 0.12);
   --color-border-strong: #46586f;
 }
 
 /* ============================== 护眼·米黄 ============================== */
 html[data-accent='brown'] {
-  --color-primary: #a47551;
+  --color-primary: var(--theme-brown-primary);
   --color-primary-hover: #8c5e3f;
   --color-primary-50:  #faf5ef;
   --color-primary-100: #f3e7da;
@@ -93,8 +138,9 @@ html[data-accent='brown'] {
   --color-primary-700: #6f4a30;
   --color-primary-800: #5a3d29;
   --color-primary-900: #4a3222;
-  --color-primary-light: #faf5ef;
   --color-border-focus: #a47551;
+  --color-primary-solid: var(--theme-brown-solid);
+  --color-primary-solid-hover: var(--theme-brown-solid-hover);
 }
 /* 米黄·浅：暖调纸质表面，长时间阅读舒适 */
 html:not(.dark)[data-accent='brown'] {
@@ -102,9 +148,9 @@ html:not(.dark)[data-accent='brown'] {
   --ink-1: #44403a;  /* 标题/正文 */
   --ink-2: #5a5347;  /* 表头/标签 */
   --ink-3: #6f6757;  /* 说明/时间戳 */
-  --ink-4: #867d69;  /* 占位/禁用 */
+  --ink-4: #847b66;  /* 占位/禁用（3.89:1，原 #867d69 只有 3.78，低于 3.8 目标） */
   --color-bg: #f3ede2;
-  --color-bg-card: #faf6ee;
+  --color-bg-card: var(--theme-brown-surface);
   --color-bg-hover: #ece3d3;
   --color-bg-active: #e2d8c6;
   --color-bg-input: #f1e9da;
@@ -125,7 +171,7 @@ html.dark[data-accent='brown'] {
   --ink-3: #9d8f7a;  /* 说明/时间戳 */
   --ink-4: #877a64;  /* 占位/禁用 */
   --color-bg: #1b1712;
-  --color-bg-card: #241f18;
+  --color-bg-card: var(--theme-brown-surface-dark);
   --color-bg-hover: #2e2820;
   --color-bg-active: #382f25;
   --color-bg-input: #2a241c;
@@ -136,13 +182,12 @@ html.dark[data-accent='brown'] {
   --color-hover: #2e2820;
   --color-primary-soft: rgba(196, 149, 105, 0.22);
   --color-primary-text: #d6b693;  /* on primary-soft 5.82:1 */
-  --color-primary-light: rgba(196, 149, 105, 0.12);
   --color-border-strong: #5b4f3f;
 }
 
 /* ============================== 樱粉 ============================== */
 html[data-accent='pink'] {
-  --color-primary: #ec4899;
+  --color-primary: var(--theme-pink-primary);
   --color-primary-hover: #db2777;
   --color-primary-50:  #fdf2f6;
   --color-primary-100: #fce7f3;
@@ -154,8 +199,9 @@ html[data-accent='pink'] {
   --color-primary-700: #be185d;
   --color-primary-800: #9d174d;
   --color-primary-900: #831843;
-  --color-primary-light: #fce7f3;
   --color-border-focus: #ec4899;
+  --color-primary-solid: var(--theme-pink-solid);
+  --color-primary-solid-hover: var(--theme-pink-solid-hover);
 }
 /* 樱粉·浅 */
 html:not(.dark)[data-accent='pink'] {
@@ -165,7 +211,7 @@ html:not(.dark)[data-accent='pink'] {
   --ink-3: #7b6371;  /* 说明/时间戳 */
   --ink-4: #8f7384;  /* 占位/禁用 */
   --color-bg: #fdf6f9;
-  --color-bg-card: #ffffff;
+  --color-bg-card: var(--theme-pink-surface);
   --color-bg-hover: #fbe9f1;
   --color-bg-active: #f6d8e6;
   --color-bg-input: #fcedf4;
@@ -186,7 +232,7 @@ html.dark[data-accent='pink'] {
   --ink-3: #a38998;  /* 说明/时间戳 */
   --ink-4: #947586;  /* 占位/禁用 */
   --color-bg: #1a1218;
-  --color-bg-card: #241a21;
+  --color-bg-card: var(--theme-pink-surface-dark);
   --color-bg-hover: #2f222b;
   --color-bg-active: #3a2a35;
   --color-bg-input: #2a1e26;
@@ -197,13 +243,12 @@ html.dark[data-accent='pink'] {
   --color-hover: #2f222b;
   --color-primary-soft: rgba(244, 114, 182, 0.20);
   --color-primary-text: #f9a8d4;  /* on primary-soft 6.59:1 */
-  --color-primary-light: rgba(244, 114, 182, 0.12);
   --color-border-strong: #5d4653;
 }
 
 /* ============================== 青柠 ============================== */
 html[data-accent='green'] {
-  --color-primary: #22c55e;
+  --color-primary: var(--theme-green-primary);
   --color-primary-hover: #16a34a;
   --color-primary-50:  #f0fdf4;
   --color-primary-100: #dcfce7;
@@ -215,8 +260,9 @@ html[data-accent='green'] {
   --color-primary-700: #15803d;
   --color-primary-800: #166534;
   --color-primary-900: #14532d;
-  --color-primary-light: #dcfce7;
   --color-border-focus: #22c55e;
+  --color-primary-solid: var(--theme-green-solid);
+  --color-primary-solid-hover: var(--theme-green-solid-hover);
 }
 /* 青柠·浅 */
 html:not(.dark)[data-accent='green'] {
@@ -226,7 +272,7 @@ html:not(.dark)[data-accent='green'] {
   --ink-3: #5c6e61;  /* 说明/时间戳 */
   --ink-4: #6c8071;  /* 占位/禁用 */
   --color-bg: #f4faf5;
-  --color-bg-card: #ffffff;
+  --color-bg-card: var(--theme-green-surface);
   --color-bg-hover: #e8f5ea;
   --color-bg-active: #d8ecdc;
   --color-bg-input: #eef7ef;
@@ -247,7 +293,7 @@ html.dark[data-accent='green'] {
   --ink-3: #7f9987;  /* 说明/时间戳 */
   --ink-4: #6a8572;  /* 占位/禁用 */
   --color-bg: #101a13;
-  --color-bg-card: #18241c;
+  --color-bg-card: var(--theme-green-surface-dark);
   --color-bg-hover: #203027;
   --color-bg-active: #283a2f;
   --color-bg-input: #1c2a21;
@@ -258,13 +304,12 @@ html.dark[data-accent='green'] {
   --color-hover: #203027;
   --color-primary-soft: rgba(74, 222, 128, 0.20);
   --color-primary-text: #4ade80;  /* on primary-soft 5.84:1 */
-  --color-primary-light: rgba(74, 222, 128, 0.12);
   --color-border-strong: #47604d;
 }
 
 /* ============================== 科技紫 ============================== */
 html[data-accent='purple'] {
-  --color-primary: #8b5cf6;
+  --color-primary: var(--theme-purple-primary);
   --color-primary-hover: #7c3aed;
   --color-primary-50:  #f5f3ff;
   --color-primary-100: #ede9fe;
@@ -276,8 +321,9 @@ html[data-accent='purple'] {
   --color-primary-700: #6d28d9;
   --color-primary-800: #5b21b6;
   --color-primary-900: #4c1d95;
-  --color-primary-light: #ede9fe;
   --color-border-focus: #8b5cf6;
+  --color-primary-solid: var(--theme-purple-solid);
+  --color-primary-solid-hover: var(--theme-purple-solid-hover);
 }
 /* 科技紫·浅 */
 html:not(.dark)[data-accent='purple'] {
@@ -287,7 +333,7 @@ html:not(.dark)[data-accent='purple'] {
   --ink-3: #675f88;  /* 说明/时间戳 */
   --ink-4: #78709b;  /* 占位/禁用 */
   --color-bg: #f8f6fd;
-  --color-bg-card: #ffffff;
+  --color-bg-card: var(--theme-purple-surface);
   --color-bg-hover: #efeaf9;
   --color-bg-active: #e2daf4;
   --color-bg-input: #f3effb;
@@ -308,7 +354,7 @@ html.dark[data-accent='purple'] {
   --ink-3: #9289b0;  /* 说明/时间戳 */
   --ink-4: #8175a3;  /* 占位/禁用 */
   --color-bg: #141122;
-  --color-bg-card: #1d1930;
+  --color-bg-card: var(--theme-purple-surface-dark);
   --color-bg-hover: #272140;
   --color-bg-active: #30294e;
   --color-bg-input: #221d38;
@@ -319,13 +365,12 @@ html.dark[data-accent='purple'] {
   --color-hover: #272140;
   --color-primary-soft: rgba(167, 139, 250, 0.22);
   --color-primary-text: #c4b5fd;  /* on primary-soft 6.33:1 */
-  --color-primary-light: rgba(167, 139, 250, 0.12);
   --color-border-strong: #52457c;
 }
 
 /* ============================== 中国红 ============================== */
 html[data-accent='red'] {
-  --color-primary: #c8102e;
+  --color-primary: var(--theme-red-primary);
   --color-primary-hover: #a60d24;
   --color-primary-50:  #fdecec;
   --color-primary-100: #f9d4d4;
@@ -337,8 +382,9 @@ html[data-accent='red'] {
   --color-primary-700: #840a1d;
   --color-primary-800: #630816;
   --color-primary-900: #420510;
-  --color-primary-light: #fdecec;
   --color-border-focus: #c8102e;
+  --color-primary-solid: var(--theme-red-solid);
+  --color-primary-solid-hover: var(--theme-red-solid-hover);
 }
 /* 中国红·浅：暖调朱红表面（默认主题，切换后卡片与底色整体转暖） */
 html:not(.dark)[data-accent='red'] {
@@ -348,7 +394,7 @@ html:not(.dark)[data-accent='red'] {
   --ink-3: #7a5c5a;  /* 说明/时间戳 */
   --ink-4: #8f6c69;  /* 占位/禁用 */
   --color-bg: #fdf6f5;
-  --color-bg-card: #ffffff;
+  --color-bg-card: var(--theme-red-surface);
   --color-bg-hover: #fbe9e7;
   --color-bg-active: #f6d9d5;
   --color-bg-input: #fceeeb;
@@ -369,7 +415,7 @@ html.dark[data-accent='red'] {
   --ink-3: #a48a88;  /* 说明/时间戳 */
   --ink-4: #947674;  /* 占位/禁用 */
   --color-bg: #1a1012;
-  --color-bg-card: #241619;
+  --color-bg-card: var(--theme-red-surface-dark);
   --color-bg-hover: #301d21;
   --color-bg-active: #3b252a;
   --color-bg-input: #2b1a1e;
@@ -380,13 +426,12 @@ html.dark[data-accent='red'] {
   --color-hover: #301d21;
   --color-primary-soft: rgba(224, 83, 83, 0.22);
   --color-primary-text: #ea7e7e;  /* on primary-soft 4.91:1 */
-  --color-primary-light: rgba(224, 83, 83, 0.12);
   --color-border-strong: #613e44;
 }
 
 /* ============================== 莫兰迪·灰 ============================== */
 html[data-accent='gray'] {
-  --color-primary: #6c7a8c;
+  --color-primary: var(--theme-gray-primary);
   --color-primary-hover: #5a6779;
   --color-primary-50:  #f1f3f4;
   --color-primary-100: #dfe4e7;
@@ -398,8 +443,9 @@ html[data-accent='gray'] {
   --color-primary-700: #495463;
   --color-primary-800: #3b4552;
   --color-primary-900: #2f3640;
-  --color-primary-light: #eef1f2;
   --color-border-focus: #6c7a8c;
+  --color-primary-solid: var(--theme-gray-solid);
+  --color-primary-solid-hover: var(--theme-gray-solid-hover);
 }
 /* 莫兰迪·浅：低饱和暖灰表面 */
 html:not(.dark)[data-accent='gray'] {
@@ -409,7 +455,7 @@ html:not(.dark)[data-accent='gray'] {
   --ink-3: #6b675f;  /* 说明/时间戳 */
   --ink-4: #817c74;  /* 占位/禁用 */
   --color-bg: #eceae6;
-  --color-bg-card: #f6f5f2;
+  --color-bg-card: var(--theme-gray-surface);
   --color-bg-hover: #e3e1dc;
   --color-bg-active: #d8d5ce;
   --color-bg-input: #efece7;
@@ -430,7 +476,7 @@ html.dark[data-accent='gray'] {
   --ink-3: #93908c;  /* 说明/时间戳 */
   --ink-4: #7d7a75;  /* 占位/禁用 */
   --color-bg: #141516;
-  --color-bg-card: #1d1f21;
+  --color-bg-card: var(--theme-gray-surface-dark);
   --color-bg-hover: #282b2d;
   --color-bg-active: #333638;
   --color-bg-input: #232628;
@@ -441,6 +487,18 @@ html.dark[data-accent='gray'] {
   --color-hover: #282b2d;
   --color-primary-soft: rgba(145, 158, 171, 0.22);
   --color-primary-text: #9fadb6;  /* on primary-soft 4.91:1 */
-  --color-primary-light: rgba(145, 158, 171, 0.12);
   --color-border-strong: #53585d;
+}
+
+/* ============================== 跨主题统一规则 ==============================
+   亮色选中淡底统一取各主题 50 档（此前 blue/brown/red 用 50、pink/green/purple
+   用 100、gray 是色阶外的自造值，7 套深浅差近 50%）。
+   暗色选中淡底统一用 400 档 12% 透明，替代原先 7 份手写 rgba。
+   特异性：html.dark[data-accent] (0,2,1) 高于 html[data-accent] (0,2,0)，
+   且高于 dark.css 的 html.dark (0,1,1)，两条规则各在自己的作用域生效。 */
+html[data-accent] {
+  --color-primary-light: var(--color-primary-50);
+}
+html.dark[data-accent] {
+  --color-primary-light: color-mix(in srgb, var(--color-primary-400) 12%, transparent);
 }

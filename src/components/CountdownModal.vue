@@ -120,7 +120,7 @@ async function toggleEmailReminder(item: CountdownItem) {
   gap: var(--space-2);
   padding: 14px 16px 14px 18px;
   background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   overflow: hidden;
   transition: border-color var(--transition-fast, 0.15s ease),
@@ -155,7 +155,7 @@ async function toggleEmailReminder(item: CountdownItem) {
 }
 
 .countdown-item:hover {
-  border-color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary);
   box-shadow: var(--shadow-sm, 0 2px 10px rgba(0, 0, 0, 0.06));
 }
 
@@ -173,9 +173,9 @@ async function toggleEmailReminder(item: CountdownItem) {
   align-items: center;
   gap: 6px;
   padding-top: var(--space-2);
-  border-top: 1px dashed var(--color-border, var(--color-border));
+  border-top: 1px dashed var(--color-border);
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   cursor: pointer;
   user-select: none;
   transition: color var(--transition-fast, 0.15s ease);
@@ -205,7 +205,7 @@ async function toggleEmailReminder(item: CountdownItem) {
 .countdown-name {
   font-size: var(--fs-md, 15px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -218,7 +218,7 @@ async function toggleEmailReminder(item: CountdownItem) {
   border-radius: var(--radius-full);
   background: var(--color-bg-card, var(--color-bg-hover));
   color: var(--color-primary-text);
-  border: 1px solid var(--color-primary, var(--color-primary));
+  border: 1px solid var(--color-primary);
   opacity: 0.85;
 }
 
@@ -275,8 +275,8 @@ async function toggleEmailReminder(item: CountdownItem) {
 }
 
 html.dark .cat-work {
-  color: #60a5fa;
-  border-color: #3b82f6;
+  color: var(--dark-accent-text);
+  border-color: var(--dark-accent-border);
   background: rgba(59, 130, 246, 0.18);
 }
 
@@ -318,7 +318,7 @@ html.dark .cat-default {
 
 .countdown-time {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 .countdown-remaining {
@@ -342,13 +342,13 @@ html.dark .cat-default {
 }
 
 .status-expired {
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 /* 空状态 */
 .empty-state {
   text-align: center;
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   font-size: var(--fs-body, 14px);
   padding: 40px 20px;
   background: var(--color-bg-card, var(--color-bg-hover));

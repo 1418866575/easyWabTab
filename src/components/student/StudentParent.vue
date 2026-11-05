@@ -1083,8 +1083,8 @@ html.dark .stp-pager-btn {
   color: var(--color-text-secondary);
 }
 html.dark .stp-pager-btn:hover:not(:disabled) {
-  background: #3b82f6;
-  border-color: #3b82f6;
+  background: var(--dark-accent-border);
+  border-color: var(--dark-accent-border);
   color: #fff;
 }
 html.dark .stp-pager-info {

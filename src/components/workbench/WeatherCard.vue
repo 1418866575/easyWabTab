@@ -87,9 +87,9 @@ watch(
   display: flex;
   align-items: center;
   padding: 14px 16px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-top: 2px solid var(--color-primary, var(--color-primary));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-top: 2px solid var(--color-primary);
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -107,7 +107,7 @@ watch(
 
 .wx-placeholder-text {
   font-size: var(--fs-body, 14px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .wx-setup-btn {
@@ -130,7 +130,7 @@ watch(
 
 .wx-divider {
   height: 1px;
-  background: var(--color-border, var(--color-border));
+  background: var(--color-border);
   opacity: 0.6;
 }
 
@@ -140,13 +140,13 @@ watch(
   gap: var(--space-3);
   flex-wrap: wrap;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .wx-city {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 .wx-emoji {
@@ -157,18 +157,18 @@ watch(
 .wx-temp {
   font-size: var(--fs-h2, 22px);
   font-weight: 700;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
 }
 
 .wx-feels {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .wx-desc {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   font-weight: 500;
 }
 
@@ -178,7 +178,7 @@ watch(
 
 .wx-loading {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 /* ===== 暗色模式覆盖 ===== */

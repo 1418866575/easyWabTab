@@ -60,6 +60,16 @@ html.dark {
   /* 暗色骨架屏 */
   --skeleton-color-1: #2d3748;
   --skeleton-color-2: #374151;
+
+  /* 暗色高亮面 / 高亮文字 / 高亮描边（2026-11 主题收敛）
+     早期只有蓝主题，#1e3a5f（深蓝实底）/ #60a5fa / #93c5fd 被硬编码到
+     30+ 个面板的 html.dark 规则里，切到红/绿/粉主题会冒出一块蓝。
+     现统一收敛为三个变量，跟随 themes.css 的 accent：
+       surface 用主色 28% 叠在卡面上，还原原先深蓝实底的观感；
+       text / border 分别复用「当文字用」与 base 主色。 */
+  --dark-accent-surface: color-mix(in srgb, var(--color-primary) 28%, var(--color-bg-card));
+  --dark-accent-text: var(--color-primary-text);
+  --dark-accent-border: var(--color-primary);
 }
 
 /* 全局暗色样式 */
@@ -700,11 +710,11 @@ html.dark .category-tabs-wrapper {
    ======================================== */
 
 html.dark .action-btn.edit {
-  color: #60a5fa;
+  color: var(--dark-accent-text);
 }
 
 html.dark .action-btn.edit:hover {
-  background-color: #1e3a5f;
+  background-color: var(--dark-accent-surface);
 }
 
 html.dark .action-btn.delete:hover {
@@ -757,7 +767,7 @@ html.dark .btn-icon-action {
 html.dark .btn-icon-action:hover:not(:disabled) {
   border-color: var(--color-primary, #3b82f6);
   color: var(--color-primary, #3b82f6);
-  background: #1e3a5f;
+  background: var(--dark-accent-surface);
 }
 
 html.dark .btn-icon-clear {
@@ -802,12 +812,12 @@ html.dark .icon-grid-item {
 
 html.dark .icon-grid-item:hover {
   border-color: var(--color-primary, #3b82f6);
-  background: #1e3a5f;
+  background: var(--dark-accent-surface);
 }
 
 html.dark .icon-grid-item.active {
   border-color: var(--color-primary, #3b82f6);
-  background: #1e3a5f;
+  background: var(--dark-accent-surface);
 }
 
 html.dark .icon-preview {
@@ -932,7 +942,7 @@ html.dark .modal-body {
 }
 
 html.dark .section-title {
-  color: #60a5fa;
+  color: var(--dark-accent-text);
   border-bottom-color: var(--color-border, #374151);
 }
 
@@ -972,7 +982,7 @@ html.dark .mode-item p {
 
 html.dark .mode-item code {
   background-color: var(--color-bg-hover, #374151);
-  color: #60a5fa;
+  color: var(--dark-accent-text);
 }
 
 html.dark .storage-list li {
@@ -985,7 +995,7 @@ html.dark .storage-list strong {
 
 html.dark .storage-list code {
   background-color: var(--color-bg-hover, #374151);
-  color: #60a5fa;
+  color: var(--dark-accent-text);
 }
 
 html.dark .modal-footer {
@@ -1004,11 +1014,11 @@ html.dark .help-tab {
 
 html.dark .help-tab:hover,
 html.dark .help-tab.active {
-  color: #60a5fa;
+  color: var(--dark-accent-text);
 }
 
 html.dark .help-tab.active {
-  border-bottom-color: #60a5fa;
+  border-bottom-color: var(--dark-accent-text);
 }
 
 /* ===== 帮助弹窗：模块说明暗色模式 ===== */
@@ -1020,7 +1030,7 @@ html.dark .panel-intro {
 
 html.dark .panel-intro code {
   background-color: var(--color-bg-hover, #374151);
-  color: #60a5fa;
+  color: var(--dark-accent-text);
 }
 
 html.dark .panel-item {
@@ -1052,8 +1062,8 @@ html.dark .formula-label {
 }
 
 html.dark .formula-expr {
-  background-color: #1e3a5f;
-  color: #93c5fd;
+  background-color: var(--dark-accent-surface);
+  color: var(--dark-accent-text);
 }
 
 html.dark .formula-note {
@@ -1084,7 +1094,7 @@ html.dark .skill-prompt {
 }
 
 html.dark .skill-prompt-label {
-  color: #60a5fa;
+  color: var(--dark-accent-text);
 }
 
 html.dark .skill-note {
@@ -1094,12 +1104,12 @@ html.dark .skill-note {
 }
 
 html.dark .skill-note svg {
-  color: #60a5fa;
+  color: var(--dark-accent-text);
 }
 
 /* 示例数据下载暗色模式 */
 html.dark .download-card {
-  background: linear-gradient(135deg, #1e3a5f 0%, #1a2e1a 100%);
+  background: linear-gradient(135deg, var(--dark-accent-surface) 0%, var(--color-bg-card) 100%);
   border-color: #2563eb;
 }
 
@@ -1113,7 +1123,7 @@ html.dark .download-info p {
 
 html.dark .download-info code {
   background-color: var(--color-bg-hover, #374151);
-  color: #60a5fa;
+  color: var(--dark-accent-text);
 }
 
 html.dark .sync-label {

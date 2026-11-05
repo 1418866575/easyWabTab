@@ -36,6 +36,7 @@
 | 主色   | `--color-primary` / `--color-primary-hover`                         | 主按钮、选中态、focus 环、链接 |
 | 主色软底 | `--color-primary-soft`                                              | 选中行底、标签底           |
 | 主色**当文字** | `--color-primary-text`                                        | 只要是 `color:`，一律用它（7 套 accent 各自取值） |
+| 主色**实底+白字** | `--color-primary-solid` / `-solid-hover`                    | 主按钮、选中分段；各 accent 取「白字 ≥4.5:1」的档位，见 §1.4 |
 | 成功   | `--color-success` / `-hover` / `-soft`                              | 成功提示、启用态           |
 | 警告   | `--color-warning` / `-hover` / `-soft`                              | 警告徽标               |
 | 危险   | `--color-error` / `-hover` / `-soft`                                | 删除按钮、错误态、校验错误      |
@@ -131,10 +132,22 @@
 
 ### 1.4 主题（accent）
 
-`themes.css` 提供 **7 套**：`blue`（默认）/ `brown` / `pink` / `green` / `purple` / `red` / `gray`，  
-通过 `html[data-accent='x']` 切换，**明暗各一套**（`html.dark[data-accent='x']`）。
+`themes.css` 提供 **7 套**：`blue`（`:root` 兜底）/ `brown` / `pink` / `green` / `purple` / `red` / `gray`，
+通过 `html[data-accent='x']` 切换。每套三层：无条件主色块 + `html:not(.dark)` 浅色表面块 + `html.dark` 深色表面块。
+出厂默认是 `china-red`（`stores/theme.ts` 的 `DEFAULT_THEME_ID`），`跟随系统` 为附加项。
 
-`themes.css` 必须在 `dark.css` **之后**加载（见 `main.ts`），否则浅色表面会覆盖深色。
+| 规则 | 说明 |
+| --- | --- |
+| 色值唯一真源 | 文件顶部 `:root` 的 `--theme-<accent>-primary/surface/surface-dark/solid/solid-hover`；主题块反向引用，`ThemeToggle` 预览也只读它。**禁止再复制第二份色表** |
+| `--color-primary` | 500 级，只用于边框 / 图标 / focus 环；`color:` 一律用 `--color-primary-text` |
+| `--color-primary-solid` | 「实底 + 白字」专用。500 级白字对比度 blue 3.68 / green 2.28，6/7 主题不达 AA 4.5，故各主题取「白字 ≥4.5 的最浅档位」。在 `.ui-btn--primary` 别名组、`.seg-opt.active` 与 `html .el-button--primary` 上重定义 `--color-primary` 指向它，组件 scoped 里的 `var(--color-primary)` 背景会自动继承，无需逐个改 |
+| `--color-primary-light` | 选中态淡底由文件末尾两条统一规则提供：亮色取 `--color-primary-50`、暗色 `color-mix(400 档 12%)`。**不要在各主题块里再声明**（此前 7 套取 50/100/自造档，深浅差近 50%） |
+| 暗色高亮面 | `--dark-accent-surface/text/border` 定义在 `dark.css` 的 `html.dark` 块，替代散落在 30+ 面板的 `#1e3a5f` / `#60a5fa` / `#93c5fd`，跟随 accent |
+| 首屏 | `index.html` 内联脚本读 nav 的 localStorage 影子副本，在首次绘制前写好 `data-accent` / `dark` / `data-theme`；**改 THEMES 时必须同步这份映射**，由 `scripts/probe-theme-tokens.mjs` 校验 |
+| info 语义 | 刻意中性（EP `--el-color-info` 灰），不随 accent；项目侧不再定义恒蓝的 `--color-info*` |
+
+加载位置：`dark.css` 与 `themes.css` 都在 **`App.vue` 的 `<style>` 里 `@import`**（dark 在前），
+不是 `main.ts`。顺序保证 themes.css 覆盖 dark.css 的兜底主色。守卫：`npm run qa:theme`。
 
 ### 1.5 硬编码色禁令
 
@@ -227,7 +240,9 @@ node scripts/check-style-tokens.mjs --update-baseline   # 治理一处后收紧�
 
 存量按文件计数记在 `scripts/style-token-baseline.json`，ratchet 只允许变小。截至 2026-11-04：**470 处字面量**（已从 688 收敛）+ 74 处死别名引用。剩下的主要是三类：`src/toolbox/**` 里逐断点的装饰尺寸（如退休计算 38px↔30px、考试 32px↔36px，并成单一令牌会破坏断点行为）、约 160 处 `color: #fff` 压色白字（缺 `--color-on-accent` 令牌）、以及 12.5px（卡在 caption 与 sm 之间，几乎全在工具箱密集区）。
 
-> **压色白字的未决项**：`color:#fff` 配彩色实底目前一律写死，尚无 `--color-on-accent` 令牌。若要收敛，先确认各主题 `--color-primary` 的亮度是否都足以托住白字，再新增令牌统一替换 —— 别在没验证前批量改。
+> **压色白字（2026-11 结论）**：`--color-on-accent` 已定义（`#fff`），全局按钮基类与 EP 弹框按钮已消费；
+> 但存量仍有约 160 处 `color:#fff` 写在组件 scoped 里（含压图片/深底的场景），未机械替换。
+> 白字可读性不靠改前景解决，而是把实底换成 `--color-primary-solid`（§1.4）——各主题实测 ≥4.5:1。
 
 ---
 
@@ -803,6 +818,8 @@ src/
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | Token 定义 / 按钮基类 / 全局基础类 | `src/style.css`                                                                                                             |
 | 主题（7 套 accent）          | `src/styles/themes.css`                                                                                                     |
+| 主题首屏预置 / 预览色值       | `index.html` 内联脚本、`themes.css` 的 `--theme-*-*`、`src/components/ThemeToggle.vue`                                       |
+| 7×2 主题令牌守卫              | `scripts/probe-theme-tokens.mjs`（`npm run qa:theme`）                                                                        |
 | 界面美化（同类元素默认规则 + 覆盖层） | `src/config/uiStyle.ts`（清单）、`src/styles/ui-style.css`（派生）、`src/composables/useUiStyle.ts`（运行时）、`src/components/common/UiStylePanel.vue`（面板） |
 | 暗色                      | `src/styles/dark.css`                                                                                                       |
 | EP 桥接 + el-button 尺寸对齐  | `src/styles/element-theme.css`                                                                                              |

@@ -199,7 +199,7 @@ function toggle() {
   color: var(--color-text);
 }
 :global(html.dark) .gtn-card.root {
-  border-color: #3b82f6;
+  border-color: var(--dark-accent-border);
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
 }
 :global(html.dark) .gtn-gender {

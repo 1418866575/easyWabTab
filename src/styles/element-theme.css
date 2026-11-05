@@ -1,8 +1,8 @@
 /* ============================================================
- * Element Plus 绿色主题覆盖
- * 全局将 Element Plus 主色调为项目主色 #10b981（与品牌一致）。
- * 必须在 element-plus/dist/index.css 之后、dark css-vars 之后引入方覆盖生效。
- * 亮/暗共用同一主色调色板（light-3..9 / dark-2 由 EP 主色推导）。
+ * Element Plus 主题桥接
+ * EP 主色跟随项目 --color-primary（7 套 accent × 明暗），success 保留语义绿。
+ * 必须在 dark css-vars 之后引入（见 main.ts 第 9-10 行）。
+ * 「实底 + 白字」的 EP 主按钮另走 --color-primary-solid，见下方按钮段。
  * ============================================================ */
 
 :root,
@@ -317,15 +317,15 @@ html .el-pagination .el-select__wrapper {
 .site-form-actions .el-button--primary,
 .pwd-form-actions .el-button--primary,
 .form-actions .el-button--primary {
-  --el-button-bg-color: var(--color-primary, #3b82f6);
-  --el-button-border-color: var(--color-primary, #3b82f6);
-  --el-button-text-color: #ffffff;
-  --el-button-hover-bg-color: var(--color-primary-hover, #2563eb);
-  --el-button-hover-border-color: var(--color-primary-hover, #2563eb);
-  --el-button-hover-text-color: #ffffff;
-  --el-button-active-bg-color: var(--color-primary-700, #1d4ed8);
-  --el-button-active-border-color: var(--color-primary-700, #1d4ed8);
-  --el-button-active-text-color: #ffffff;
+  --el-button-bg-color: var(--color-primary-solid);
+  --el-button-border-color: var(--color-primary-solid);
+  --el-button-text-color: var(--color-on-accent);
+  --el-button-hover-bg-color: var(--color-primary-solid-hover);
+  --el-button-hover-border-color: var(--color-primary-solid-hover);
+  --el-button-hover-text-color: var(--color-on-accent);
+  --el-button-active-bg-color: var(--color-primary-800);
+  --el-button-active-border-color: var(--color-primary-800);
+  --el-button-active-text-color: var(--color-on-accent);
 }
 
 /* 内距 / 图标间距（padding:0 12px、gap:6px）。
@@ -348,8 +348,19 @@ html .el-pagination .el-select__wrapper {
 .site-form-actions .el-button--primary.is-disabled,
 .pwd-form-actions .el-button--primary.is-disabled,
 .form-actions .el-button--primary.is-disabled {
-  background-color: var(--color-primary, #3b82f6);
-  border-color: var(--color-primary, #3b82f6);
-  color: #ffffff;
+  background-color: var(--color-primary-solid);
+  border-color: var(--color-primary-solid);
+  color: var(--color-on-accent);
   opacity: 0.5;
+}
+
+/* 非弹框场景（表格行 / 工具栏 / 面板内）的 EP 主按钮：
+   EP 在 .el-button--primary 上用 --el-color-primary 派生背景与 hover，
+   故在元素上重定义为「实底档」，让这些按钮与全局 .ui-btn--primary 一致。
+   light-3 是 EP 的 hover 档，改指 solid-hover，避免 hover 反而变浅导致白字不可读。 */
+html .el-button--primary {
+  --el-color-primary: var(--color-primary-solid);
+  --el-color-primary-light-3: var(--color-primary-solid-hover);
+  --el-color-primary-light-5: var(--color-primary-solid-hover);
+  --el-color-primary-dark-2: var(--color-primary-800);
 }

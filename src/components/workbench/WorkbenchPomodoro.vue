@@ -249,7 +249,7 @@ onUnmounted(() => {
 
 .pm-ring-fg {
   fill: none;
-  stroke: var(--color-primary, var(--color-primary));
+  stroke: var(--color-primary);
   stroke-width: 12;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.4s linear, stroke 0.3s ease;
@@ -278,13 +278,13 @@ onUnmounted(() => {
 .pm-phase {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .pm-time {
   font-size: var(--fs-hero);
   font-weight: 700;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
 }
@@ -344,7 +344,7 @@ onUnmounted(() => {
 
 .field-label {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .field-short {
@@ -360,7 +360,7 @@ html.dark .pm-ring-track {
 }
 
 html.dark .pm-ring-fg {
-  stroke: #60a5fa;
+  stroke: var(--dark-accent-text);
 }
 
 html.dark .pm-ring-fg.phase-break {

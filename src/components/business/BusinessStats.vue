@@ -587,8 +587,8 @@ function printReport(): void {
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -597,7 +597,7 @@ function printReport(): void {
   margin: 0;
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .bizstats-head {
@@ -650,17 +650,17 @@ function printReport(): void {
 .bizstats-btn {padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-full, 9999px);
   transition: all var(--transition-fast, 0.15s ease);
   height: 36px;}
 
 .bizstats-btn.active {
   color: #fff;
-  background: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
+  background: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 .bizstats-svg-wrap {
@@ -691,7 +691,7 @@ function printReport(): void {
 }
 
 .bizstats-bar.revenue {
-  fill: var(--color-primary, var(--color-primary));
+  fill: var(--color-primary);
 }
 
 .bizstats-bar.cost {
@@ -699,7 +699,7 @@ function printReport(): void {
 }
 
 .bizstats-bar.profit {
-  fill: var(--color-success, var(--color-success));
+  fill: var(--color-success);
 }
 
 .bizstats-bar.loss {
@@ -720,7 +720,7 @@ function printReport(): void {
   display: flex;
   gap: var(--space-4);
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .bizstats-legend-item {
@@ -737,7 +737,7 @@ function printReport(): void {
 }
 
 .dot.revenue {
-  background: var(--color-primary, var(--color-primary));
+  background: var(--color-primary);
 }
 
 .dot.cost {
@@ -745,7 +745,7 @@ function printReport(): void {
 }
 
 .dot.profit {
-  background: var(--color-success, var(--color-success));
+  background: var(--color-success);
 }
 
 .dot.loss {
@@ -810,7 +810,7 @@ function printReport(): void {
   align-items: center;
   gap: 6px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .bizstats-pie-legend-item .dot {
@@ -834,7 +834,7 @@ function printReport(): void {
 }
 
 .bizstats-pie-legend-rev {
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -843,7 +843,7 @@ function printReport(): void {
   padding: var(--space-5) 0;
   text-align: center;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   /* 无数据时保持占位高度、内容垂直居中，避免页面折叠 */
   display: flex;
   align-items: center;
@@ -883,7 +883,7 @@ html.dark .bizstats-bar.profit {
 }
 
 html.dark .bizstats-bar.count {
-  fill: #60a5fa;
+  fill: var(--dark-accent-text);
 }
 
 html.dark .bizstats-bar.loss {

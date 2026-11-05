@@ -669,7 +669,7 @@ onMounted(async () => {
   margin: 0;
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 .sh-records-count {
   flex: 1;
@@ -691,11 +691,11 @@ onMounted(async () => {
   align-items: center;
   gap: 10px;
   padding: 6px 10px;
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm, 4px);
-  background: var(--color-bg-card, var(--color-bg-card));
+  background: var(--color-bg-card);
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 .sh-record-date {
   font-variant-numeric: tabular-nums;
@@ -725,7 +725,7 @@ onMounted(async () => {
 .sh-record-tag-plain {
   background: transparent;
   color: var(--color-text-muted);
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
 }
 .sh-record-ops {
   display: flex;

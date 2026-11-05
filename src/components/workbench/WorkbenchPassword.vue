@@ -713,8 +713,8 @@ watch(
 .pwd-auth-card {
   width: 100%;
   max-width: 360px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   padding: var(--space-6);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
@@ -723,13 +723,13 @@ watch(
 .pwd-auth-card h3 {
   font-size: var(--fs-title, 18px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   margin: 0 0 6px 0;
 }
 
 .pwd-auth-hint {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   margin: 0 0 18px 0;
 }
 
@@ -755,7 +755,7 @@ watch(
 .pwd-reset-link {
   background: none;
   border: none;
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   font-size: var(--fs-sm, 13px);
   cursor: pointer;
   text-decoration: underline;
@@ -781,7 +781,7 @@ watch(
 
 /* ===== 主按钮 ===== */
 .pwd-btn-primary {padding: 0 var(--space-3);
-  background: var(--color-primary, var(--color-primary));
+  background: var(--color-primary);
   border: none;
   border-radius: var(--radius-md, 8px);
   font-size: var(--fs-caption, 12px);
@@ -792,11 +792,11 @@ watch(
   height: 36px;}
 
 .pwd-btn-primary:hover:not(:disabled) {
-  background: var(--color-primary-hover, var(--color-primary-hover));
+  background: var(--color-primary-hover);
 }
 
 .pwd-btn-primary:disabled {
-  background: var(--color-text-muted, var(--color-text-muted));
+  background: var(--color-text-muted);
   cursor: not-allowed;
 }
 
@@ -840,8 +840,8 @@ watch(
   color: var(--color-text-muted);
 }
 html.dark .pwd-cat-badge {
-  background: #1e3a5f;
-  color: #60a5fa;
+  background: var(--dark-accent-surface);
+  color: var(--dark-accent-text);
 }
 
 .pwd-search-wrap {
@@ -863,13 +863,13 @@ html.dark .pwd-cat-badge {
   border: none;
   cursor: pointer;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   padding: 2px 4px;
   border-radius: var(--radius-sm, 4px);
 }
 
 .pwd-search-clear:hover {
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   background: var(--color-bg-card, var(--color-bg-hover));
 }
 
@@ -880,9 +880,9 @@ html.dark .pwd-cat-badge {
 .pwd-btn-lock {padding: 0 var(--space-3);
   font-size: var(--fs-caption, 12px);
   border-radius: var(--radius-full, 9999px);
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
@@ -890,7 +890,7 @@ html.dark .pwd-cat-badge {
 
 .pwd-btn-lock:hover {
   color: var(--color-primary-text);
-  border-color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary);
 }
 
 /* ===== 列表（卡片网格）===== */
@@ -914,8 +914,8 @@ html.dark .pwd-cat-badge {
   gap: 5px;
   min-width: 0;
   padding: 8px 10px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   transition: border-color var(--transition-fast, 0.15s ease);
@@ -924,7 +924,7 @@ html.dark .pwd-cat-badge {
 }
 
 .pwd-item:hover {
-  border-color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary);
 }
 
 /* 键盘可达：卡片现在是可聚焦的「编辑」触发器，必须有可见焦点环 */
@@ -954,7 +954,7 @@ html.dark .pwd-cat-badge {
   min-width: 0;
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -966,7 +966,7 @@ html.dark .pwd-cat-badge {
   gap: 2px;
   min-width: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .pwd-username,
@@ -986,7 +986,7 @@ html.dark .pwd-cat-badge {
   gap: 2px 4px;
   margin-top: auto;
   padding-top: var(--space-1);
-  border-top: 1px solid var(--color-border, var(--color-border));
+  border-top: 1px solid var(--color-border);
 }
 
 /* 卡片内的动作按钮：文字版（原来是眼睛/复制图标，看不出功能）。
@@ -1049,7 +1049,7 @@ html.dark .pwd-cat-badge {
   display: block;
   font-size: var(--fs-sm, 13px);
   font-weight: 500;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   margin-bottom: 6px;
 }
 
@@ -1063,8 +1063,8 @@ html.dark .pwd-cat-badge {
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   max-height: 200px;
   overflow-y: auto;
@@ -1076,7 +1076,7 @@ html.dark .pwd-cat-badge {
 .pwd-site-option {
   padding: 10px 12px;
   cursor: pointer;
-  border-bottom: 1px solid var(--color-border, var(--color-border));
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -1092,13 +1092,13 @@ html.dark .pwd-cat-badge {
 
 .pwd-site-option-name {
   font-size: var(--fs-body, 14px);
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   font-weight: 500;
 }
 
 .pwd-site-option-url {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1155,11 +1155,11 @@ html.dark .pwd-cat-badge {
 
 .pwd-btn-cancel {padding: 0 var(--space-3);
   background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
   height: 36px;}

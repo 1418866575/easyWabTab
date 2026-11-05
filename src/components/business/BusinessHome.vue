@@ -645,10 +645,10 @@ html.dark .sk-block::after {
 /* 每组为一行：等宽单元格 + 组内竖向分隔线 */
 .bizhome-hero-group {
   display: grid;
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg, 12px);
   overflow: hidden;
-  background: var(--color-bg-card, var(--color-bg-card));
+  background: var(--color-bg-card);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
@@ -662,7 +662,7 @@ html.dark .sk-block::after {
 
 /* 组内各项之间竖向分隔线（首列无） */
 .bizhome-hero-group .bizhome-hero-card + .bizhome-hero-card {
-  border-left: 1px solid var(--color-border, var(--color-border));
+  border-left: 1px solid var(--color-border);
 }
 
 .bizhome-hero-card {
@@ -683,14 +683,14 @@ html.dark .sk-block::after {
 }
 
 .bizhome-hero-card.clickable:focus-visible {
-  outline: 2px solid var(--color-primary, var(--color-primary));
+  outline: 2px solid var(--color-primary);
   outline-offset: -2px;
 }
 
 .hero-label {
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .hero-value {
@@ -718,12 +718,12 @@ html.dark .sk-block::after {
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
   margin-left: 2px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .hero-sub {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 /* ===== 卡片悬浮反馈 =====
@@ -745,7 +745,7 @@ html.dark .sk-block::after {
 }
 
 .bizhome-card.clickable:focus-visible {
-  outline: 2px solid var(--color-primary, var(--color-primary));
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
@@ -777,8 +777,8 @@ html.dark .sk-block::after {
   flex-direction: column;
   gap: 10px;
   padding: var(--space-4);
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg, 12px);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
@@ -791,7 +791,7 @@ html.dark .sk-block::after {
   gap: var(--space-2);
   font-size: var(--font-size-base, 15px);
   font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 .bizhome-card-title::before {
@@ -800,18 +800,18 @@ html.dark .sk-block::after {
   width: 4px;
   height: 16px;
   border-radius: 2px;
-  background-color: var(--color-primary, var(--color-primary));
+  background-color: var(--color-primary);
 }
 
 .bizhome-card-title :deep(svg) {
   flex-shrink: 0;
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary);
 }
 
 .bizhome-empty {
   margin: 0;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 .bizhome-low-list {
@@ -851,7 +851,7 @@ html.dark .sk-block::after {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 .bizhome-low-stopped {
@@ -870,7 +870,7 @@ html.dark .sk-block::after {
   flex-shrink: 0;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 .bizhome-low-stock.low {
@@ -906,20 +906,20 @@ html.dark .sk-block::after {
 }
 
 .bizhome-tree-cat:hover {
-  background: color-mix(in srgb, var(--color-primary, var(--color-primary)) 10%, var(--color-bg-card, var(--color-bg-hover)));
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-bg-card, var(--color-bg-hover)));
 }
 
 .bizhome-tree-arrow {
   flex-shrink: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   width: 14px;
 }
 
 .bizhome-tree-cat-name {
   font-size: var(--fs-body, 14px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -937,7 +937,7 @@ html.dark .sk-block::after {
 .bizhome-tree-cat-sold {
   flex-shrink: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -971,7 +971,7 @@ html.dark .sk-block::after {
   justify-content: center;
   font-size: var(--fs-caption, 12px);
   font-weight: 700;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   background: var(--color-bg-card, var(--color-bg-hover));
   border-radius: 50%;
 }
@@ -982,7 +982,7 @@ html.dark .sk-block::after {
   max-width: 120px;
   font-size: var(--fs-sm, 13px);
   font-weight: 500;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -999,7 +999,7 @@ html.dark .sk-block::after {
 
 .bizhome-tree-prod-fill {
   height: 100%;
-  background: var(--color-primary, var(--color-primary));
+  background: var(--color-primary);
   border-radius: 999px;
   transition: width 0.3s ease;
 }
@@ -1015,7 +1015,7 @@ html.dark .sk-block::after {
 .bizhome-tree-prod-sold {
   flex-shrink: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1023,7 +1023,7 @@ html.dark .sk-block::after {
   margin: 0;
   padding: 4px 10px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 /* ===== 问候头：问候语 + 今日/本月切换 + 目标进度环 ===== */
@@ -1035,8 +1035,8 @@ html.dark .sk-block::after {
   padding: 16px 18px;
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--color-primary, #3b82f6) 10%, transparent), transparent),
-    var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+    var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg, 12px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -1052,13 +1052,13 @@ html.dark .sk-block::after {
   margin: 0;
   font-size: var(--fs-title, 18px);
   font-weight: 700;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 .bizhome-greeting-sub {
   margin: 0;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 /* 出摊总天数：问候头右上角，点击进入销售记录 */
@@ -1078,12 +1078,12 @@ html.dark .sk-block::after {
 }
 
 .bizhome-greeting-stat.clickable:focus-visible {
-  outline: 2px solid var(--color-primary, var(--color-primary));
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
 .bizhome-greeting-stat:hover {
-  background: color-mix(in srgb, var(--color-primary, var(--color-primary)) 10%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
 }
 
 .greeting-stat-value {
@@ -1098,12 +1098,12 @@ html.dark .sk-block::after {
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
   margin-left: 2px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .greeting-stat-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 /* ===== M-07 今日维度卡片组 ===== */
@@ -1189,7 +1189,7 @@ html.dark .sk-block::after {
 }
 .bizhome-today-card .today-sub {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   white-space: nowrap;
 }
 
@@ -1209,7 +1209,7 @@ html.dark .sk-block::after {
   margin-left: auto;
   font-size: var(--fs-caption, 12px);
   font-weight: 400;
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 /* M-16 汇总导出按钮 */
@@ -1398,8 +1398,8 @@ html.dark .sk-block::after {
   flex-direction: column;
   gap: 6px;
   padding: 12px 14px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
 }
 
@@ -1413,11 +1413,11 @@ html.dark .sk-block::after {
 
 .scope-label {
   font-weight: 700;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 .scope-hint {
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .scope-formula {
@@ -1485,7 +1485,7 @@ html.dark .sk-block::after {
 }
 
 .mini-bar-col:hover .mini-bar {
-  background: var(--color-success, var(--color-success));
+  background: var(--color-success);
 }
 
 html.dark .bizhome-card,
@@ -1511,7 +1511,7 @@ html.dark .hero-value.negative {
 }
 
 html.dark .hero-value.linked {
-  color: #60a5fa;
+  color: var(--dark-accent-text);
 }
 
 html.dark .hero-value.unlinked {
@@ -1569,15 +1569,15 @@ html.dark .scope-label {
 }
 
 html.dark .formula-main {
-  color: #93c5fd;
+  color: var(--dark-accent-text);
 }
 
 html.dark .greeting-stat-value {
-  color: #93c5fd;
+  color: var(--dark-accent-text);
 }
 
 html.dark .mini-bar {
-  background: linear-gradient(180deg, #60a5fa, rgba(96, 165, 250, 0.5));
+  background: linear-gradient(180deg, var(--dark-accent-text), color-mix(in srgb, var(--color-primary) 50%, transparent));
 }
 
 html.dark .mini-bar-col:hover .mini-bar {
@@ -1627,7 +1627,7 @@ html.dark .mini-bar-col:hover .mini-bar {
   }
   .bizhome-hero-group .bizhome-hero-card + .bizhome-hero-card {
     border-left: none;
-    border-top: 1px solid var(--color-border, var(--color-border));
+    border-top: 1px solid var(--color-border);
   }
 }
 
@@ -1664,11 +1664,11 @@ html.dark .mini-bar-col:hover .mini-bar {
 
 /* M-08 暗色 */
 html.dark .bizhome-onboard {
-  background: #1e3a5f;
-  border-color: #60a5fa;
+  background: var(--dark-accent-surface);
+  border-color: var(--dark-accent-text);
 }
 html.dark .bizhome-onboard-title {
-  color: #60a5fa;
+  color: var(--dark-accent-text);
 }
 html.dark .bizhome-onboard-desc {
   color: var(--color-text-secondary);
@@ -1684,7 +1684,7 @@ html.dark .bizhome-issue.warn {
   border-color: rgba(252, 211, 77, 0.5);
 }
 html.dark .bizhome-empty-action {
-  color: #60a5fa;
+  color: var(--dark-accent-text);
 }
 
 /* M-07 暗色 */

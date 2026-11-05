@@ -203,8 +203,8 @@ html.dark .ui-tabs :deep(.el-radio-button__inner:hover) {
 }
 
 html.dark .ui-tabs :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
-  background-color: #1e3a5f;
-  color: #60a5fa;
-  border-color: #60a5fa;
+  background-color: var(--dark-accent-surface);
+  color: var(--dark-accent-text);
+  border-color: var(--dark-accent-text);
 }
 </style>

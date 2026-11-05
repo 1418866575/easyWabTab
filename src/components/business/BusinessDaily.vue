@@ -830,9 +830,9 @@ async function handleDelete(id: string | null): Promise<void> {
   padding: 40px 20px;
   text-align: center;
   font-size: var(--fs-body, 14px);
-  color: var(--color-text-muted, var(--color-text-muted));
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px dashed var(--color-border, var(--color-border));
+  color: var(--color-text-muted);
+  background: var(--color-bg-card);
+  border: 1px dashed var(--color-border);
   border-radius: var(--radius-md, 8px);
 }
 
@@ -898,7 +898,7 @@ async function handleDelete(id: string | null): Promise<void> {
 }
 .bizday-profit-text {
   font-weight: 700;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
 }
 .bizday-loss-text {
@@ -927,9 +927,9 @@ async function handleDelete(id: string | null): Promise<void> {
   grid-template-columns: minmax(80px, 1.4fr) minmax(40px, 0.5fr) minmax(40px, 0.5fr) minmax(40px, 0.5fr) minmax(60px, 0.7fr) minmax(70px, 0.85fr);
   gap: 6px;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   padding: 0 4px 6px;
-  border-bottom: 1px solid var(--color-border, var(--color-border));
+  border-bottom: 1px solid var(--color-border);
 }
 .bizday-detail-th {
   text-align: right;
@@ -945,7 +945,7 @@ async function handleDelete(id: string | null): Promise<void> {
   gap: 6px;
   padding: var(--space-1) var(--space-1);
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
   align-items: center;
 }
@@ -969,7 +969,7 @@ async function handleDelete(id: string | null): Promise<void> {
 }
 .bizday-detail-td.sold-bold {
   font-weight: 700;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 .bizday-detail-td.sub-bold {
   font-weight: 700;
@@ -1000,7 +1000,7 @@ async function handleDelete(id: string | null): Promise<void> {
 }
 .bizday-frequent-label {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   white-space: nowrap;
 }
 .bizday-frequent-chip {
@@ -1020,9 +1020,9 @@ async function handleDelete(id: string | null): Promise<void> {
   border-color: var(--color-primary, #3b82f6);
 }
 :global(html.dark) .bizday-frequent-chip {
-  color: #60a5fa;
-  background: #1e3a5f;
-  border-color: #60a5fa;
+  color: var(--dark-accent-text);
+  background: var(--dark-accent-surface);
+  border-color: var(--dark-accent-text);
 }
 
 /* 商品明细表格（带出/剩余/损耗/小计） */
@@ -1149,7 +1149,7 @@ async function handleDelete(id: string | null): Promise<void> {
 .bizday-more-field :deep(.el-input-number) { width: 100px; }
 .bizday-more-hint {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1166,7 +1166,7 @@ async function handleDelete(id: string | null): Promise<void> {
   display: flex;
   gap: var(--space-2);
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   flex-wrap: wrap;
   margin-top: var(--space-1);
 }
@@ -1226,9 +1226,9 @@ async function handleDelete(id: string | null): Promise<void> {
 }
 :global(html.dark) .bizday-more-field { color: var(--color-text-secondary); }
 :global(html.dark) .bizday-more-toggle.active {
-  color: #60a5fa;
-  background: #1e3a5f;
-  border-color: #60a5fa;
+  color: var(--dark-accent-text);
+  background: var(--dark-accent-surface);
+  border-color: var(--dark-accent-text);
 }
 
 /* ===== 销售优化：手动营业额（笔数之后） ===== */
@@ -1313,15 +1313,15 @@ async function handleDelete(id: string | null): Promise<void> {
   box-sizing: border-box;
   padding: 9px 12px;
   background-color: var(--color-bg-input, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   font-size: var(--fs-body, 14px);
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 .biz-input:focus {
   outline: none;
-  border-color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary);
 }
 
 html.dark .biz-dialog {

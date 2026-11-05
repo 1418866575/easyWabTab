@@ -501,7 +501,7 @@ function handleAdd(): void {
 .bizcat-hint {
   margin: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 .bizcat-list {
@@ -516,7 +516,7 @@ function handleAdd(): void {
   flex-direction: column;
   gap: 6px;
   padding-bottom: var(--space-2);
-  border-bottom: 1px dashed var(--color-border, var(--color-border));
+  border-bottom: 1px dashed var(--color-border);
 }
 .bizcat-item:last-child {
   border-bottom: none;
@@ -690,7 +690,7 @@ function handleAdd(): void {
   align-items: center;
   gap: var(--space-2);
   padding-top: var(--space-1);
-  border-top: 1px dashed var(--color-border, var(--color-border));
+  border-top: 1px dashed var(--color-border);
 }
 
 /* 暗色模式 */

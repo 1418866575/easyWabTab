@@ -609,8 +609,8 @@ html.dark .wb-menu-item:hover {
 }
 
 html.dark .wb-menu-item.active {
-  background-color: #1e3a5f;
-  color: #60a5fa;
+  background-color: var(--dark-accent-surface);
+  color: var(--dark-accent-text);
 }
 
 html.dark .wb-content {

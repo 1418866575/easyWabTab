@@ -642,17 +642,17 @@ html.dark .ws-item:hover {
   background-color: var(--color-bg-hover, #374151);
 }
 html.dark .ws-item.active {
-  background-color: #1e3a5f;
+  background-color: var(--dark-accent-surface);
 }
 html.dark .ws-item-name {
   color: var(--color-text);
 }
 html.dark .ws-item.current .ws-item-name,
 html.dark .ws-item-svg {
-  color: #93c5fd;
+  color: var(--dark-accent-text);
 }
 html.dark .ws-item-cur {
-  background-color: #1e3a5f;
-  color: #93c5fd;
+  background-color: var(--dark-accent-surface);
+  color: var(--dark-accent-text);
 }
 </style>

@@ -549,7 +549,7 @@ onUnmounted(() => {
 
 .field-label {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 /* 开关行：标签左 + 开关右（与 .field 的纵向堆叠互补） */
@@ -563,7 +563,7 @@ onUnmounted(() => {
   margin: -6px 0 0;
   font-size: var(--fs-caption, 12px);
   line-height: 1.6;
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 /* ===== 习惯卡片网格（多列并排，月历卡片） ===== */
@@ -580,17 +580,17 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: var(--space-4) var(--space-5);
-  border-bottom: 1px solid var(--color-border, var(--color-border));
+  border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
-  background: var(--color-bg-card, var(--color-bg-card));
+  background: var(--color-bg-card);
   border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
 }
 
 .dialog-title {
   font-size: var(--fs-lg, 16px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 .dialog-body {
@@ -606,7 +606,7 @@ onUnmounted(() => {
   justify-content: flex-end;
   gap: 10px;
   padding: 14px 20px;
-  border-top: 1px solid var(--color-border, var(--color-border));
+  border-top: 1px solid var(--color-border);
 }
 
 .btn-danger {

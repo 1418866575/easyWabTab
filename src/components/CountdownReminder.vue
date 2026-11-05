@@ -69,8 +69,8 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-5);
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg, 12px);
   box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
 }
@@ -79,7 +79,7 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
   margin: 0;
   font-size: var(--fs-lg, 16px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 .reminder-list {
@@ -109,7 +109,7 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   font-weight: 500;
 }
 
@@ -150,7 +150,7 @@ html.dark .reminder-name {
 }
 
 html.dark .reminder-label {
-  color: #60a5fa;
+  color: var(--dark-accent-text);
 }
 
 /* 邮件提醒开关（行内，与名称/时间同行） */
@@ -173,7 +173,7 @@ html.dark .reminder-label {
   width: 32px;
   height: 18px;
   border-radius: 9px;
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   background-color: var(--color-bg-card, var(--color-bg-hover));
   cursor: pointer;
   padding: 0;
@@ -192,13 +192,13 @@ html.dark .reminder-label {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background-color: var(--color-text-muted, var(--color-text-muted));
+  background-color: var(--color-text-muted);
   transition: transform 0.15s ease, background-color 0.15s ease;
 }
 
 .cd-email-switch:checked {
-  background-color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 .cd-email-switch:checked::after {

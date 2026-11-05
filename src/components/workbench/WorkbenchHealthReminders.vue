@@ -76,9 +76,9 @@ onMounted(async () => {
   flex-direction: column;
   gap: var(--space-2);
   padding: 12px 14px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-top: 2px solid var(--color-primary, var(--color-primary));
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-top: 2px solid var(--color-primary);
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -87,7 +87,7 @@ onMounted(async () => {
   margin: 0;
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .hr-list {
@@ -105,7 +105,7 @@ onMounted(async () => {
   gap: var(--space-1);
   padding: 10px 12px;
   background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm, 4px);
   font-size: var(--fs-sm, 13px);
 }
@@ -113,7 +113,7 @@ onMounted(async () => {
 .hr-name {
   min-width: 0;
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -128,12 +128,12 @@ onMounted(async () => {
 
 .hr-time {
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 .hr-repeat {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 /* ===== 暗色模式覆盖 ===== */

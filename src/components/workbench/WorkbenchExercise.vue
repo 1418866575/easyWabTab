@@ -596,7 +596,7 @@ onMounted(async () => {
   font-size: var(--fs-caption, 12px);
   border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   color: var(--color-text-muted, var(--color-text-secondary));
   white-space: nowrap;
 }
@@ -604,14 +604,14 @@ onMounted(async () => {
 .stat-value {
   font-size: var(--fs-h2, 22px);
   font-weight: 700;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
 
 .stat-sub {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 /* 达标行 + 进度条（--color-primary） */
@@ -632,7 +632,7 @@ onMounted(async () => {
 .ex-progress-fill {
   height: 100%;
   border-radius: var(--radius-full, 9999px);
-  background: var(--color-primary, var(--color-primary));
+  background: var(--color-primary);
   transition: width var(--transition-fast, 0.15s ease);
 }
 
@@ -678,9 +678,9 @@ onMounted(async () => {
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
 }
 :global(html.dark) .ld-cat-type-badge {
-  color: #93c5fd;
-  background: rgba(59, 130, 246, 0.2);
-  border-color: rgba(59, 130, 246, 0.45);
+  color: var(--dark-accent-text);
+  background: var(--color-primary-soft);
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 
 @media (max-width: 640px) {
@@ -734,7 +734,7 @@ onMounted(async () => {
 
 .form-group > label {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .form-row-fields {
@@ -751,7 +751,7 @@ onMounted(async () => {
 
 .field-label {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .field-date {
@@ -812,9 +812,9 @@ html.dark .ex-note {
 }
 
 html.dark .ex-type-badge {
-  color: #93c5fd;
-  background: rgba(59, 130, 246, 0.2);
-  border-color: rgba(59, 130, 246, 0.45);
+  color: var(--dark-accent-text);
+  background: var(--color-primary-soft);
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 
 html.dark .ex-progress {
@@ -834,9 +834,9 @@ html.dark input.form-input {
 
 /* 暗色适配：ld-cat-type-badge 暗色（:global 穿透 scoped）*/
 :global(html.dark) .ld-cat-type-badge {
-  color: #93c5fd;
-  background: rgba(59, 130, 246, 0.2);
-  border-color: rgba(59, 130, 246, 0.45);
+  color: var(--dark-accent-text);
+  background: var(--color-primary-soft);
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 
 

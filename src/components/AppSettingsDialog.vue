@@ -4492,7 +4492,7 @@ function toggleFullscreen(): void {
 
 .hint {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   margin: 0 0 var(--space-4) 0;
 }
 
@@ -4507,7 +4507,7 @@ function toggleFullscreen(): void {
 .settings-tabs.settings-tabs-sub {
   margin-bottom: 14px;
   padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--color-border, var(--color-border));
+  border-bottom: 1px solid var(--color-border);
   flex-wrap: wrap;
 }
 .sub-tab-btn {padding: 0 var(--space-3) !important;
@@ -4515,19 +4515,19 @@ function toggleFullscreen(): void {
   border-radius: calc(var(--radius-md, 8px) - 2px) !important;
   height: 36px !important;}
 .sub-tab-btn.active {
-  border-color: var(--color-primary, var(--color-primary)) !important;
-  box-shadow: 0 0 0 1px var(--color-primary, var(--color-primary)) inset;
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 1px var(--color-primary) inset;
 }
 html.dark .sub-tab-btn.active {
-  border-color: #60a5fa !important;
-  box-shadow: 0 0 0 1px #60a5fa inset;
+  border-color: var(--dark-accent-text) !important;
+  box-shadow: 0 0 0 1px var(--dark-accent-text) inset;
 }
 
 .tab-btn {padding: 0 var(--space-3);
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background-color: var(--color-bg-card, var(--color-bg-card));
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  background-color: var(--color-bg-card);
+  color: var(--color-text-secondary);
   font-size: var(--fs-caption, 12px);
   cursor: pointer;
   transition: all var(--transition-fast, 0.15s ease);
@@ -4556,15 +4556,15 @@ html.dark .tab-btn:hover {
 }
 
 html.dark .tab-btn.active {
-  background-color: #1e3a5f;
-  color: #60a5fa;
+  background-color: var(--dark-accent-surface);
+  color: var(--dark-accent-text);
 }
 
 /* 设置表格 */
 .settings-grid {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   overflow: hidden;
 }
@@ -4582,16 +4582,16 @@ html.dark .tab-btn.active {
   background: var(--color-bg-card, var(--color-bg-hover));
   font-size: var(--fs-caption, 12px);
   font-weight: 500;
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 .settings-row {
-  border-top: 1px solid var(--color-border, var(--color-border));
+  border-top: 1px solid var(--color-border);
 }
 
 .row-label {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4610,7 +4610,7 @@ html.dark .tab-btn.active {
 
 .unit {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   white-space: nowrap;
 }
 
@@ -4622,8 +4622,8 @@ html.dark .tab-btn.active {
 .wb-city-config {
   margin-bottom: var(--space-5);
   padding: 14px;
-  background-color: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
 
@@ -4898,8 +4898,8 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
 
 /* 已设置自定义图标：主色描边提示 */
 .wb-menu-icon-btn.is-set {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 .wb-menu-icon-img {
@@ -4954,7 +4954,7 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
 .wb-cardsize-group-title {
   font-size: var(--fs-caption, 12px);
   font-weight: 600;
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   margin-bottom: 6px;
 }
 
@@ -4966,7 +4966,7 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
   flex: 1 1 auto;
   min-width: 0;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -4978,7 +4978,7 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
   gap: var(--space-1);
   flex-shrink: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 .wb-cardsize-field .num-input {
@@ -5000,7 +5000,7 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
 
 .wb-snapshot-time {
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -5017,7 +5017,7 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
 .wb-cat-sub-title {
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
   margin-bottom: var(--space-2);
 }
 
@@ -5037,8 +5037,8 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
   font-size: var(--fs-sm, 13px);
   border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   cursor: pointer;
 }
 
@@ -5046,14 +5046,14 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
   width: 14px;
   height: 14px;
   cursor: pointer;
-  accent-color: var(--color-primary, var(--color-primary));
+  accent-color: var(--color-primary);
 }
 
 .wb-snapshot-source {
   flex: 1;
   min-width: 0;
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 .wb-snapshot-restore {
@@ -5063,7 +5063,7 @@ html.dark .bl-cat-badge { background-color: var(--color-bg-hover, #374151); }
 .wb-snapshot-empty {
   padding: var(--space-3) 0;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
 }
 
 /* 暗色模式：沿用文件现有 html.dark 变量覆盖惯例，确保区块文字可读 */
@@ -5126,7 +5126,7 @@ html.dark .wb-snapshot-empty {
   flex-shrink: 0;
   width: 92px;
   font-size: var(--fs-sm, 13px);
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 .remind-actions {
@@ -5200,15 +5200,15 @@ html.dark .remind-label {
   gap: 10px;
   margin-top: 14px;
   padding: 14px;
-  border: 1px solid var(--color-border, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: 10px;
-  background-color: var(--color-bg-hover, var(--color-bg-hover));
+  background-color: var(--color-bg-hover);
 }
 
 .about-label {
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 /* 免责声明：与其它 about-card 同结构，文字用次要色 + 稍小字号 */
@@ -5216,7 +5216,7 @@ html.dark .remind-label {
   margin: 0;
   font-size: var(--fs-sm, 13px);
   line-height: 1.7;
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
 }
 
 /* 公众号：二维码 + 名称/引导文案横排（窄屏自动换行） */
@@ -5235,8 +5235,8 @@ html.dark .remind-label {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -5256,7 +5256,7 @@ html.dark .remind-label {
   gap: 6px;
   width: 100%;
   height: 100%;
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   font-size: var(--fs-caption, 12px);
 }
 
@@ -5270,7 +5270,7 @@ html.dark .remind-label {
 .about-mp-name {
   font-size: var(--fs-md, 15px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 /* 开源地址：每行 = 信息（名称/clone 地址/说明）+ 前往按钮 */
@@ -5281,7 +5281,7 @@ html.dark .remind-label {
   gap: var(--space-3);
   flex-wrap: wrap;
   padding-top: 10px;
-  border-top: 1px dashed var(--color-border, var(--color-border));
+  border-top: 1px dashed var(--color-border);
 }
 
 .about-link-row:first-of-type {
@@ -5300,12 +5300,12 @@ html.dark .remind-label {
 .about-link-name {
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
-  color: var(--color-text, var(--color-text));
+  color: var(--color-text);
 }
 
 .about-link-url {
   font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary);
   word-break: break-all;
 }
 
@@ -5442,9 +5442,9 @@ html.dark .danger-hint {
   padding: 2px 10px;
 }
 html.dark .ld-cat-type-badge {
-  color: #93c5fd;
-  background: rgba(59, 130, 246, 0.2);
-  border-color: rgba(59, 130, 246, 0.45);
+  color: var(--dark-accent-text);
+  background: var(--color-primary-soft);
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 html.dark .ld-cat-type-badge.is-income {
   color: #4ade80;

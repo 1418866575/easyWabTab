@@ -27,6 +27,11 @@
      暗色侧反过来——700 级在深底上是看不见的，必须用 300/400 级。
      注意：primary-soft 是 rgba，合成底色随 --color-bg-card 变，故 themes.css 里按主题分别求解。 */
   --color-primary-text: #1d4ed8;  /* on primary-soft 5.96:1 */
+  /* 「实底 + 白字」专用（主按钮 / 选中分段）。500 级主色白字仅 3.68:1，
+     不达 AA 4.5；各 accent 在 themes.css 覆盖为「白字 ≥4.5 的最浅档位」。
+     500 级保留给边框 / 图标 / focus 环，主题辨识度不变。 */
+  --color-primary-solid: #2563eb;
+  --color-primary-solid-hover: #1d4ed8;
 
   /* 功能色（base / hover / soft 浅底三态） */
   --color-success:       #10b981;
@@ -38,8 +43,6 @@
   --color-error:         #ef4444;
   --color-error-hover:   #dc2626;
   --color-error-soft:    #fee2e2;
-  --color-info:          #3b82f6;
-
   /* 功能色的「当文字用」版本（2026-11 新增）
      base 三态是给实底/边框/图标用的：#10b981 当文字放白底只有 2.9:1，#ef4444 是 3.8:1，
      全部不满足 WCAG AA 的 4.5:1。凡是 color: 用它仨，一律改用 -text 变体（700 级）。
@@ -47,8 +50,9 @@
   --color-success-text:  #047857;  /* on #fff 5.5:1 */
   --color-warning-text:  #b45309;  /* on #fff 5.0:1 */
   --color-error-text:    #b91c1c;  /* on #fff 6.5:1 */
-  --color-info-hover:    #2563eb;
-  --color-info-soft:     #dbeafe;
+  /* info 语义刻意保持中性：EP 的 --el-color-info 就是中性灰，
+     不随 accent 变色。此前这里另有一份恒蓝的 --color-info* 三兄弟，
+     全库零消费且与 EP 灰并行成双轨，已移除。 */
 
   /* 彩色实底上的前景字（主色/成功/危险实心按钮与选中分段）。
      语义上永远是「最亮的前景」，与 --color-bg-card 无关（暗色卡片底是深色，不能拿来压字）。
@@ -502,9 +506,13 @@ optgroup {
 .nav-add-site, .btn-add-category, .dm-btn-add, .djm-btn-add, .sth-add-btn,
 .student-subject-add-btn, .ob-btn-primary, .bs-btn-primary,
 .btn-save, .pwd-btn-primary, .tw-btn-primary {
+  /* 在元素上重定义主色为「实底档」：本规则与组件 scoped 里所有
+     var(--color-primary) 背景声明都会解析到它，无需逐个改 130+ 个面板。 */
+  --color-primary: var(--color-primary-solid);
+  --color-primary-hover: var(--color-primary-solid-hover);
   background-color: var(--color-primary);
   border-color: var(--color-primary);
-  color: #fff;
+  color: var(--color-on-accent);
 }
 .ui-btn--primary:hover:not(:disabled),
 .btn-add:hover:not(:disabled), .btn-submit:hover:not(:disabled),
@@ -517,7 +525,7 @@ optgroup {
 .btn-save:hover:not(:disabled), .pwd-btn-primary:hover:not(:disabled), .tw-btn-primary:hover:not(:disabled) {
   background-color: var(--color-primary-hover);
   border-color: var(--color-primary-hover);
-  color: #fff;
+  color: var(--color-on-accent);
   transform: var(--motion-hover-rise);
   box-shadow: var(--shadow-md);
 }
@@ -761,6 +769,7 @@ optgroup {
 }
 
 .seg-opt.active {
+  --color-primary: var(--color-primary-solid);
   background-color: var(--color-primary);
   color: var(--color-on-accent);
 }
@@ -789,7 +798,7 @@ html.dark .seg-control {
  * 需要「可放置区域」的视觉提示，教师侧空态不可点所以没有这一层。 */
 .wb-content .empty-state {
   text-align: center;
-  color: var(--color-text-muted, var(--color-text-muted));
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm, 13px);
   padding: var(--space-8) var(--space-4);
 }
@@ -803,16 +812,16 @@ html.dark .seg-control {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px dashed var(--color-border, var(--color-border));
+  color: var(--color-text-secondary);
+  background: var(--color-bg-card);
+  border: 1px dashed var(--color-border);
   border-radius: var(--radius-md, 8px);
   transition: color var(--transition-fast, 0.15s ease), border-color var(--transition-fast, 0.15s ease);
 }
 
 .wb-content .empty-invite:hover {
   color: var(--color-primary-text);
-  border-color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary);
 }
 
 /* 筛选无结果态（空 → 「没有符合条件 + 重置按钮」） */
