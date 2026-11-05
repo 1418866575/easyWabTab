@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 7 套 accent × 明暗 主题令牌守卫。
+ * 8 套 accent × 明暗 主题令牌守卫。
  *
  * 为什么需要它：主题是纯 CSS 变量层叠，构建通过、甚至页面能打开都证明不了
  * 「7 套都生效」。历史事故：--color-primary-light 在暗色下是近白补丁、
@@ -23,7 +23,7 @@ const arg = (name, dflt) => {
   return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : dflt;
 };
 const BASE = arg('url', 'http://127.0.0.1:16718').replace(/\/$/, '');
-const ACCENTS = ['blue', 'brown', 'pink', 'green', 'purple', 'red', 'gray'];
+const ACCENTS = ['blue', 'brown', 'pink', 'green', 'purple', 'red', 'gray', 'graphite'];
 
 /* ---------- 静态：首屏映射与 THEMES 必须一致 ---------- */
 function checkMapping() {
@@ -182,7 +182,7 @@ for (const c of cells) {
   ok(c.elInfo === '#909399', `EP info 不再是中性灰（${c.elInfo}）`);
 }
 
-console.log(`主题守卫：${cells.length} 组（7 accent × 明暗）`);
+console.log(`主题守卫：${cells.length} 组（${ACCENTS.length} accent × 明暗）`);
 console.table(cells.map((c) => ({
   主题: `${c.accent}/${c.mode}`,
   主色: c.primary,

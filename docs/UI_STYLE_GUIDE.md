@@ -132,7 +132,7 @@
 
 ### 1.4 主题（accent）
 
-`themes.css` 提供 **7 套**：`blue`（`:root` 兜底）/ `brown` / `pink` / `green` / `purple` / `red` / `gray`，
+`themes.css` 提供 **8 套**：`blue`（`:root` 兜底）/ `brown` / `pink` / `green` / `purple` / `red` / `gray` / `graphite`，
 通过 `html[data-accent='x']` 切换。每套三层：无条件主色块 + `html:not(.dark)` 浅色表面块 + `html.dark` 深色表面块。
 出厂默认是 `china-red`（`stores/theme.ts` 的 `DEFAULT_THEME_ID`），`跟随系统` 为附加项。
 
@@ -144,6 +144,7 @@
 | `--color-primary-light` | 选中态淡底由文件末尾两条统一规则提供：亮色取 `--color-primary-50`、暗色 `color-mix(400 档 12%)`。**不要在各主题块里再声明**（此前 7 套取 50/100/自造档，深浅差近 50%） |
 | 暗色高亮面 | `--dark-accent-surface/text/border` 定义在 `dark.css` 的 `html.dark` 块，替代散落在 30+ 面板的 `#1e3a5f` / `#60a5fa` / `#93c5fd`，跟随 accent |
 | 首屏 | `index.html` 内联脚本读 nav 的 localStorage 影子副本，在首次绘制前写好 `data-accent` / `dark` / `data-theme`；**改 THEMES 时必须同步这份映射**，由 `scripts/probe-theme-tokens.mjs` 校验 |
+| 极简形态层 | `graphite` 额外覆盖留白 / 圆角 / 阴影 / 动效（`themes.css` 末尾），仅 `html[data-accent='graphite']` 生效；同步覆盖 `--ui-*` 以兼容界面美化派生层，用户自定义值走内联变量优先 |
 | info 语义 | 刻意中性（EP `--el-color-info` 灰），不随 accent；项目侧不再定义恒蓝的 `--color-info*` |
 
 加载位置：`dark.css` 与 `themes.css` 都在 **`App.vue` 的 `<style>` 里 `@import`**（dark 在前），
@@ -817,9 +818,9 @@ src/
 | 主题                      | 文件                                                                                                                          |
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | Token 定义 / 按钮基类 / 全局基础类 | `src/style.css`                                                                                                             |
-| 主题（7 套 accent）          | `src/styles/themes.css`                                                                                                     |
+| 主题（8 套 accent）          | `src/styles/themes.css`                                                                                                     |
 | 主题首屏预置 / 预览色值       | `index.html` 内联脚本、`themes.css` 的 `--theme-*-*`、`src/components/ThemeToggle.vue`                                       |
-| 7×2 主题令牌守卫              | `scripts/probe-theme-tokens.mjs`（`npm run qa:theme`）                                                                        |
+| 8×2 主题令牌守卫              | `scripts/probe-theme-tokens.mjs`（`npm run qa:theme`）                                                                        |
 | 界面美化（同类元素默认规则 + 覆盖层） | `src/config/uiStyle.ts`（清单）、`src/styles/ui-style.css`（派生）、`src/composables/useUiStyle.ts`（运行时）、`src/components/common/UiStylePanel.vue`（面板） |
 | 暗色                      | `src/styles/dark.css`                                                                                                       |
 | EP 桥接 + el-button 尺寸对齐  | `src/styles/element-theme.css`                                                                                              |

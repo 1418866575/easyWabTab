@@ -21,7 +21,7 @@ export interface CustomBackground {
 // 多主题皮肤：外观模式(mode) × 强调色(accent)
 // data-accent 驱动主色系（themes.css），html.dark 驱动明度（dark.css）
 // ========================================
-export type ThemeAccent = 'blue' | 'brown' | 'pink' | 'green' | 'purple' | 'red' | 'gray'
+export type ThemeAccent = 'blue' | 'brown' | 'pink' | 'green' | 'purple' | 'red' | 'gray' | 'graphite'
 
 export interface ThemeDef {
   id: string
@@ -39,6 +39,9 @@ export const THEMES: ThemeDef[] = [
   { id: 'lime', name: '青柠·浅', mode: 'light', accent: 'green' },
   { id: 'china-red', name: '中国红·浅', mode: 'light', accent: 'red' },
   { id: 'morandi', name: '莫兰迪·灰', mode: 'light', accent: 'gray' },
+  // 极简（graphite）：同一套视觉语言的明暗两面，形态层见 themes.css 末尾
+  { id: 'minimal-light', name: '简白·极简', mode: 'light', accent: 'graphite' },
+  { id: 'minimal-dark', name: '墨黑·极简', mode: 'dark', accent: 'graphite' },
   { id: 'system', name: '跟随系统', mode: 'light', accent: null, system: true },
 ]
 

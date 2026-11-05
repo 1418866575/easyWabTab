@@ -213,7 +213,8 @@ onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
   right: 0;
   top: calc(100% + 8px);
   width: 200px;
-  max-height: 360px;
+  /* 10 个主题项完整可见，不把「跟随系统」藏进滚动区 */
+  max-height: 400px;
   overflow-y: auto;
   background-color: var(--color-bg-card);
   border: 1px solid var(--color-border);

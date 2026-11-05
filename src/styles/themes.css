@@ -1,5 +1,5 @@
 /* ============================================================
-   多主题强调色覆盖 (accent)  ——  7 套 accent × 明暗
+   多主题强调色覆盖 (accent)  ——  8 套 accent × 明暗
 
    每个 accent 提供三层，缺一不可：
      1) 主色系   html[data-accent='x']                 （明暗通用）
@@ -58,6 +58,11 @@
   --theme-gray-surface-dark: #1d1f21;
   --theme-gray-solid: #5a6779;
   --theme-gray-solid-hover: #495463;
+  --theme-graphite-primary: #4f6b8b;
+  --theme-graphite-surface: #ffffff;
+  --theme-graphite-surface-dark: #1c1f23;
+  --theme-graphite-solid: #3f5b7d;
+  --theme-graphite-solid-hover: #344b68;
   --theme-system-primary: #94a3b8;
   --theme-system-surface: #f8fafc;
   --theme-system-surface-dark: #1e293b;
@@ -490,6 +495,66 @@ html.dark[data-accent='gray'] {
   --color-border-strong: #53585d;
 }
 
+/* ============================== 简白 / 墨黑·极简（graphite） ==============================
+   中性雾蓝石墨 + 近白/中性深灰表面；同色的形态层在文件末尾，仅对本 accent 生效。 */
+html[data-accent='graphite'] {
+  --color-primary: var(--theme-graphite-primary);
+  --color-primary-hover: #3f5b7d;
+  --color-primary-50:  #f2f5f8;
+  --color-primary-100: #e6ecf2;
+  --color-primary-200: #ccd8e4;
+  --color-primary-300: #a7bad0;
+  --color-primary-400: #7b96b4;
+  --color-primary-500: #4f6b8b;
+  --color-primary-600: #3f5b7d;
+  --color-primary-700: #344b68;
+  --color-primary-800: #2c3e56;
+  --color-primary-900: #243347;
+  --color-border-focus: #4f6b8b;
+  --color-primary-solid: var(--theme-graphite-solid);
+  --color-primary-solid-hover: var(--theme-graphite-solid-hover);
+}
+/* 简白·极简·浅：近白冷灰底 + 纯白卡片，边界极轻 */
+html:not(.dark)[data-accent='graphite'] {
+  --ink-1: #1d2430;
+  --ink-2: #414c5c;
+  --ink-3: #5a6676;
+  --ink-4: #74808f;
+  --color-bg: #f5f6f8;
+  --color-bg-card: var(--theme-graphite-surface);
+  --color-bg-hover: #eef1f5;
+  --color-bg-active: #e4e9ef;
+  --color-bg-input: #f7f8fa;
+  --color-border: #e6e9ee;
+  --color-border-hover: #d3d9e1;
+  --color-surface: #ffffff;
+  --color-surface-2: #f5f6f8;
+  --color-hover: #eef1f5;
+  --color-primary-soft: rgba(79, 107, 139, 0.10);
+  --color-primary-text: #344b68;  /* on primary-soft 7.80:1 */
+  --color-border-strong: #c2cbd6;
+}
+/* 墨黑·极简·深：中性深灰，不用纯黑 */
+html.dark[data-accent='graphite'] {
+  --ink-1: #eef1f5;
+  --ink-2: #b7c0cb;
+  --ink-3: #98a3b0;
+  --ink-4: #7e8a97;
+  --color-bg: #131518;
+  --color-bg-card: var(--theme-graphite-surface-dark);
+  --color-bg-hover: #262a2f;
+  --color-bg-active: #30353b;
+  --color-bg-input: #22262b;
+  --color-border: #2e333a;
+  --color-border-hover: #3d444d;
+  --color-surface: #1c1f23;
+  --color-surface-2: #131518;
+  --color-hover: #262a2f;
+  --color-primary-soft: rgba(123, 150, 180, 0.20);
+  --color-primary-text: #a7bad0;  /* on primary-soft 6.07:1 */
+  --color-border-strong: #4c545e;
+}
+
 /* ============================== 跨主题统一规则 ==============================
    亮色选中淡底统一取各主题 50 档（此前 blue/brown/red 用 50、pink/green/purple
    用 100、gray 是色阶外的自造值，7 套深浅差近 50%）。
@@ -501,4 +566,87 @@ html[data-accent] {
 }
 html.dark[data-accent] {
   --color-primary-light: color-mix(in srgb, var(--color-primary-400) 12%, transparent);
+}
+
+/* ============================== 极简主题形态层（仅 graphite） ==============================
+   只覆盖既有 token，不写组件选择器：上面的颜色块负责全局背景/文字/边框/按钮/卡片/
+   导航/表单，这里补齐留白、圆角、层次与过渡。其他 7 套 accent 不受任何影响。
+   界面美化派生层（ui-style.css）挂上时靠同步覆盖 --ui-* 保持一致；用户在面板里
+   调过的值走 <html> 内联变量，优先级最高，仍然生效。 */
+html[data-accent='graphite'] {
+  /* 排版：行高略松，字号阶梯不动（响应式与界面美化缩放照旧） */
+  --line-height-base: 1.65;
+  --line-height-relaxed: 1.8;
+  --lh-body: 1.65;
+  --ui-line-height: 1.65;
+  /* 充足留白：内容区 / 卡片内边距（窄屏回落到原有密度） */
+  --ui-content-pad: 20px;
+  --ui-card-pad: 20px;
+  /* 细腻圆角：控件 10 / 卡片 14 / 大面板 18 */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --ds-radius-ctrl: 10px;
+  --ds-radius-card: 14px;
+  --ui-radius-ctrl: 10px;
+  --ui-radius-card: 14px;
+  /* 轻柔层次：低对比、大扩散阴影 */
+  --color-shadow: rgba(16, 24, 40, 0.06);
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-md: 0 4px 14px rgba(16, 24, 40, 0.07);
+  --shadow-lg: 0 12px 32px rgba(16, 24, 40, 0.09);
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 6px 20px rgba(16, 24, 40, 0.04);
+  --shadow-card-hover: 0 2px 6px rgba(16, 24, 40, 0.05), 0 12px 28px rgba(16, 24, 40, 0.08);
+  --shadow-modal: 0 24px 64px rgba(16, 24, 40, 0.14);
+  --shadow-dropdown: 0 6px 20px rgba(16, 24, 40, 0.09);
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-blur: blur(20px) saturate(180%);
+  /* 轻量过渡：短时长 + 平滑减速曲线，无弹跳 */
+  --motion-duration: 180ms;
+  --motion-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --motion-press: scale(0.985);
+  --transition-fast: 150ms var(--motion-ease);
+  --transition-base: 180ms var(--motion-ease);
+  --transition-slow: 300ms var(--motion-ease);
+  --anim-fast: 150ms;
+  --anim-base: 220ms;
+  --anim-slow: 360ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* 状态反馈：浅色下把三态语义色压到低饱和，实底仍保住白字 ≥4.5:1 */
+html:not(.dark)[data-accent='graphite'] {
+  --color-success: #2f855a;
+  --color-success-hover: #256b48;
+  --color-success-soft: #e8f4ee;
+  --color-success-text: #1c6b47;
+  --color-warning: #966512;
+  --color-warning-hover: #7a4e0c;
+  --color-warning-soft: #fbf2e2;
+  --color-warning-text: #7a4e0c;
+  --color-error: #b23b3b;
+  --color-error-hover: #9c2f2f;
+  --color-error-soft: #fbeaea;
+  --color-error-text: #9c2f2f;
+}
+/* 暗色：只换深色阴影，功能色沿用 dark.css 的低透明软底与 400 级文字 */
+html.dark[data-accent='graphite'] {
+  --app-bar-dark-bg: rgba(28, 31, 35, 0.82);
+  --color-shadow: rgba(0, 0, 0, 0.36);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.42);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.28);
+  --shadow-card-hover: 0 8px 26px rgba(0, 0, 0, 0.42);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.6);
+  --shadow-dropdown: 0 6px 20px rgba(0, 0, 0, 0.44);
+  --glass-bg: rgba(28, 31, 35, 0.72);
+}
+/* 窄屏留白回落，避免增大内边距后挤压内容；用户自定义值仍走内联变量优先 */
+@media (max-width: 768px) {
+  html[data-accent='graphite'] {
+    --ui-content-pad: 16px;
+    --ui-card-pad: 16px;
+  }
 }

@@ -1039,7 +1039,8 @@ onUnmounted(() => {
 
 /* 暗色模式 */
 html.dark .app-bar {
-  background-color: rgba(31, 41, 55, 0.82);
+  /* 极简深主题可覆盖此 token；其余暗色主题仍用原值兜底 */
+  background-color: var(--app-bar-dark-bg, rgba(31, 41, 55, 0.82));
   border-bottom-color: var(--color-border, #374151);
 }
 
