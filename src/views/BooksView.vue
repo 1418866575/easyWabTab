@@ -24,6 +24,7 @@ import BookUploadDialog from '@/components/books/BookUploadDialog.vue'
 import BookEditDialog from '@/components/books/BookEditDialog.vue'
 import BookBookmarkDialog from '@/components/books/BookBookmarkDialog.vue'
 import BookSyncButton from '@/components/books/BookSyncButton.vue'
+import BookRecentMenu from '@/components/books/BookRecentMenu.vue'
 import WorkbenchSwitcher from '@/components/WorkbenchSwitcher.vue'
 import { useAppSettingsStore } from '@/stores/settings'
 import { useToast } from '@/composables/useToast'
@@ -31,7 +32,6 @@ import {
   BOOK_SORTS,
   categoryList,
   filterBooks,
-  matchKeyword,
   normalizeBooks,
   paginate,
   safePage,
@@ -119,23 +119,16 @@ const filtered = computed(() => {
 /**
  * 分区去重：同一本书只应出现一次。
  *
- * 优先级 = 用户关心的顺序：收藏 > 最近阅读 > 全部书籍。
- * 三处都要去，缺一处就会重复 —— 只在「全部书籍」里排除是**不够**的：
- * 一本已收藏且刚读过的书会同时出现在「收藏」和「最近阅读」两个分区里。
+ * 2026-11 起「最近阅读」改为顶栏下拉（BookRecentMenu，最多 10 本），不再是页面分区，
+ * 所以页面里只剩「收藏」与「全部书籍」两块需要去重：
+ * 已收藏的书在「★ 我的收藏」里出现过，就不该在下面再出现一次。
  *
- * 顶部分区也要遵守筛选条件：勾了「仅收藏」就不该再冒出一个非收藏的「最近阅读」分区。
+ * 关键细节：**只有收藏分区真的渲染时才排除**。勾了「仅收藏」时该分区是隐藏的，
+ * 此时若仍把收藏项从「全部书籍」里剔掉，页面就会变成一片空白（历史 bug）。
  *
  * 下面按「原始集合 → 可见集合 → 去重 → 分页」的顺序排列：派生的 computed 必须
  * 写在它依赖的 computed 之后，否则读代码时得往回翻才能确认谁是谁。
  */
-const recentBooks = computed(() => {
-  const byId = new Map(allBooks.value.map((b) => [b.id, b]))
-  return prefs
-    .recentIds()
-    .map((id) => byId.get(id))
-    .filter((b): b is BookItem => !!b)
-})
-
 const favoriteBooks = computed(() => {
   const byId = new Map(allBooks.value.map((b) => [b.id, b]))
   return prefs.favorites.value
@@ -155,15 +148,14 @@ const favoriteBooksVisible = computed(() =>
   )
 )
 
-/** 最近阅读排除收藏（收藏是主动行为，优先级更高） */
-const favoritedIds = computed(() => new Set(favoriteBooksVisible.value.map((b) => b.id)))
-const recentBooksVisible = computed(() =>
-  recentBooks.value.filter((b) => !favoritedIds.value.has(b.id) && matchKeyword(b, keyword.value) && (!activeCategory.value || b.category === activeCategory.value))
+/** 收藏分区是否渲染：「仅收藏」时它隐藏（收藏项改由「全部书籍」承载，见下方 topSectionIds） */
+const favSectionVisible = computed(
+  () => favoriteBooksVisible.value.length > 0 && !favoritesOnly.value
 )
 
-/** 全部书籍里排除上面两者 */
+/** 已在「★ 我的收藏」分区出现过的书，不再重复出现在「全部书籍」里 */
 const topSectionIds = computed(
-  () => new Set([...favoriteBooksVisible.value, ...recentBooksVisible.value].map((b) => b.id))
+  () => new Set(favSectionVisible.value ? favoriteBooksVisible.value.map((b) => b.id) : [])
 )
 const mainBooks = computed(() => filtered.value.filter((b) => !topSectionIds.value.has(b.id)))
 
@@ -180,6 +172,11 @@ const SORT_LABEL: Record<BookSort, string> = {
   'updated-desc': '最近更新',
   'size-desc': '体积'
 }
+
+/** 分区标题：勾了「仅收藏」时这一块本身就是在展示收藏，别叫「其它筛选结果」 */
+const mainBooksTitle = computed(() =>
+  favoritesOnly.value ? '★ 我的收藏' : hasFilter.value ? '其它筛选结果' : '全部书籍'
+)
 
 /** 分区头副标题：「N 本 · 按XX排序」，与工具箱同款信息密度 */
 const mainBooksSub = computed(
@@ -365,12 +362,12 @@ function onSortChange(e: Event): void {
   page.value = 1
 }
 
-/** 清空全部打开次数（连同最近阅读时间一起抹掉，"按最近打开"排序才有意义） */
+/** 清空全部打开次数与最近阅读记录（只清统计，收藏 / 阅读位置书签不动） */
 async function resetClicks(): Promise<void> {
   // 走项目统一的 showConfirm，不用原生 window.confirm（见 UI_STYLE_GUIDE §184）
   const ok = await showConfirm('清空全部打开次数与最近阅读记录？此操作不可撤销。', '重置统计')
   if (!ok) return
-  for (const b of allBooks.value) prefs.forgetBook(b.id)
+  prefs.resetStats()
   prefs.flushBooksPrefs()
   toast.success('已重置统计')
 }
@@ -419,6 +416,8 @@ onUnmounted(() => {
           {{ bookmarkCount }}
         </span>
       </button>
+      <!-- 最近阅读：顶栏下拉（最多 10 本），点条目直接进站内阅读 -->
+      <BookRecentMenu :books="allBooks" @read="onRead" />
       <button
         v-if="totalClicks > 0"
         type="button"
@@ -504,8 +503,8 @@ onUnmounted(() => {
 
     <div v-else-if="loading" class="bk-empty" data-testid="bk-loading">正在装载书架…</div>
 
-    <!-- 收藏 / 最近阅读分区：空时自动隐藏 -->
-    <section v-if="favoriteBooksVisible.length && !favoritesOnly" class="bk-section" data-testid="bk-fav-section">
+    <!-- 收藏分区：空时自动隐藏；「仅收藏」时也不显示（收藏项由下方「全部书籍」承载） -->
+    <section v-if="favSectionVisible" class="bk-section" data-testid="bk-fav-section">
       <header class="bk-section-head">
         <h2 class="bk-section-title">★ 我的收藏</h2>
         <span class="bk-section-sub">{{ favoriteBooksVisible.length }} 本</span>
@@ -530,36 +529,11 @@ onUnmounted(() => {
       </div>
     </section>
 
-    <section v-if="recentBooksVisible.length" class="bk-section" data-testid="bk-recent-section">
-      <header class="bk-section-head">
-        <h2 class="bk-section-title">🕘 最近阅读</h2>
-        <span class="bk-section-sub">{{ recentBooksVisible.length }} 本</span>
-      </header>
-      <div class="bk-grid">
-        <BookCard
-          v-for="b in recentBooksVisible"
-          :key="`recent-${b.id}`"
-          :book="b"
-          :favorite="prefs.isFavorite(b.id)"
-          :recent-ts="prefs.recent.value[b.id] ?? 0"
-          :click-count="prefs.clicks.value[b.id] ?? 0"
-          :bookmark="prefs.getBookmark(b.id)"
-          :downloading="downloadingId === b.id"
-          @open="onOpen"
-          @read="onRead"
-          @toggle-fav="onToggleFav"
-          @download="onDownload"
-          @edit="onEdit"
-          @remove="onRemove"
-        />
-      </div>
-    </section>
-
-    <!-- 全部书籍（排除已在顶部收藏/最近分区展示过的书，避免同一本出现三次） -->
+    <!-- 全部书籍（排除已在「★ 我的收藏」分区展示过的书，避免同一本出现两次） -->
     <section v-if="mainBooks.length > 0" class="bk-section">
       <!-- 分区头始终显示：它同时承载「N 本 · 按XX排序」这行统计（与工具箱一致） -->
       <header class="bk-section-head">
-        <h2 class="bk-section-title">{{ hasFilter ? '其它筛选结果' : '全部书籍' }}</h2>
+        <h2 class="bk-section-title">{{ mainBooksTitle }}</h2>
         <span class="bk-section-sub">{{ mainBooksSub }}</span>
         <span class="bk-section-extra">
           <span v-if="totalClicks > 0" class="bk-hits-total">累计阅读 {{ totalClicks }} 次</span>

@@ -53,6 +53,9 @@ export const BOOK_DEFAULT_CATEGORY = '未分类'
 /** 最近打开保留条数 */
 export const BOOKS_RECENT_LIMIT = 12
 
+/** 顶栏「最近阅读」下拉最多展示条数（存量可保留 12 条，下拉只露最新 10 条） */
+export const BOOKS_RECENT_MENU_LIMIT = 10
+
 // ==================== 归一化 ====================
 
 function str(value: unknown, fallback = ''): string {
@@ -249,6 +252,39 @@ export function safePage(page: number, total: number, pageSize: number): number 
   return Math.min(Math.max(1, page), totalPages)
 }
 
+// ==================== 最近阅读 ====================
+
+/**
+ * 把「id → 最近打开时间戳」映射成书架里的书，按时间倒序取前 N 条。
+ *
+ * 与 `useBooksPrefs().recentIds()` 的差别：
+ * - `recentIds()` 只返回到上限的 id 列表，拿不到书就留个空位；
+ * - 这里**先配对书目再截断**，所以「书已被删除 / 本机上传书已删」的脏 id
+ *   不会占掉一个展示位（否则最近阅读只剩 8 条却没人知道为什么）。
+ *
+ * 时间戳非法（非有限值 / ≤0）的记录直接忽略；limit ≤0 时返回空数组。
+ */
+export function recentBooksOf(
+  books: BookItem[],
+  recent: Record<string, number>,
+  limit: number = BOOKS_RECENT_MENU_LIMIT
+): Array<{ book: BookItem; ts: number }> {
+  const max = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 0
+  if (!max) return []
+  const byId = new Map(books.map((b) => [b.id, b]))
+  const sorted = Object.entries(recent)
+    .filter(([, ts]) => typeof ts === 'number' && Number.isFinite(ts) && ts > 0)
+    .sort((a, b) => b[1] - a[1])
+  const out: Array<{ book: BookItem; ts: number }> = []
+  for (const [id, ts] of sorted) {
+    const book = byId.get(id)
+    if (!book) continue
+    out.push({ book, ts })
+    if (out.length >= max) break
+  }
+  return out
+}
+
 // ==================== 格式化 ====================
 
 /** 字节 → 人类可读（KB/MB/GB，与前端展示一致） */
@@ -266,6 +302,17 @@ export function formatSize(bytes: number): string {
 export function formatTotalSize(books: BookItem[]): string {
   const total = books.reduce((sum, b) => sum + (Number.isFinite(b.size) ? b.size : 0), 0)
   return formatSize(total)
+}
+
+/**
+ * 按 id 派生的稳定色相（0..359），用于无封面时的占位色块。
+ * 同一本书每次刷新颜色一致 —— 换成随机色会让网格每次重新加载都在跳。
+ */
+export function bookHue(id: string): number {
+  let h = 0
+  const s = id || ''
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360
+  return h
 }
 
 /** 相对时间（最近打开用）：刚刚 / N 分钟前 / N 小时前 / N 天前 / 日期 */

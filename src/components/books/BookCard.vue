@@ -16,6 +16,7 @@
  */
 import { computed } from 'vue'
 import {
+  bookHue,
   formatClicks,
   formatProgress,
   formatRelative,
@@ -47,13 +48,7 @@ const emit = defineEmits<{
 }>()
 
 /** 按 id 派生的稳定色相：字符串 hash → 0..359，保证同一本书每次颜色一致 */
-const hue = computed(() => {
-  let h = 0
-  for (let i = 0; i < props.book.id.length; i++) {
-    h = (h * 31 + props.book.id.charCodeAt(i)) % 360
-  }
-  return h
-})
+const hue = computed(() => bookHue(props.book.id))
 
 /** 首字作为无封面时的占位字（大字号居中） */
 const initial = computed(() => (props.book.title || '书').slice(0, 1))

@@ -292,6 +292,19 @@ export function useBooksPrefs() {
       .slice(0, BOOKS_RECENT_LIMIT)
       .map(([id]) => id)
 
+  /**
+   * 清空「打开次数 + 最近阅读」这两项统计（书架页「重置统计」）。
+   *
+   * 刻意**不用 forgetBook**：那个是删书用的，会连收藏、阅读位置书签一起抹掉 ——
+   * 拿它来重置统计，用户点一下「重置统计」就会静默丢掉全部收藏，属于数据丢失。
+   */
+  const resetStats = (): void => {
+    if (!Object.keys(clicks.value).length && !Object.keys(recent.value).length) return
+    clicks.value = {}
+    recent.value = {}
+    persist()
+  }
+
   const getBookmark = (id: string): BookBookmark | null => bookmarks.value[id] ?? null
 
   /** 写书签；label 省略时沿用旧书签的标题（自动保存不该抹掉用户手动起的名字） */
@@ -385,6 +398,7 @@ export function useBooksPrefs() {
     toggleFavorite,
     markOpened,
     recentIds,
+    resetStats,
     getBookmark,
     setBookmark,
     renameBookmark,

@@ -10,11 +10,13 @@ import {
   BOOK_LARGE_ORDER,
   BOOK_SUBPAGE_LIMIT,
   BOOKS_RECENT_LIMIT,
+  BOOKS_RECENT_MENU_LIMIT,
   BOOKS_UPLOAD_MAX_BYTES,
   type BookItem,
   type BookSort,
   bookDirOf,
   bookEntryName,
+  bookHue,
   categoryCounts,
   categoryList,
   checkUploadFile,
@@ -33,6 +35,7 @@ import {
   paginate,
   pickScrollTarget,
   ratioToScrollTop,
+  recentBooksOf,
   safePage,
   scrollRatio,
   scrollTargetIndex,
@@ -802,6 +805,56 @@ test('extractBookSubPages：limit 生效（挡住超大目录页）', () => {
   a.equal(extractBookSubPages(html, { limit: 2 }).length, 2)
   // 不给 limit 时用默认上限，且不会超过它
   a.ok(BOOK_SUBPAGE_LIMIT > 0)
+})
+
+// ============ 最近阅读（顶栏下拉） ============
+
+test('recentBooksOf：按打开时间倒序，最多 10 条', () => {
+  const books = Array.from({ length: 15 }, (_, i) => mkBook({ id: `b${i}` }))
+  const recent: Record<string, number> = {}
+  books.forEach((b, i) => (recent[b.id] = 1000 + i))
+  const out = recentBooksOf(books, recent)
+  a.equal(out.length, BOOKS_RECENT_MENU_LIMIT)
+  a.equal(out.length, 10)
+  a.deepEqual(out.map((x) => x.book.id), ['b14', 'b13', 'b12', 'b11', 'b10', 'b9', 'b8', 'b7', 'b6', 'b5'])
+  a.deepEqual(out.map((x) => x.ts), [1014, 1013, 1012, 1011, 1010, 1009, 1008, 1007, 1006, 1005])
+})
+
+test('recentBooksOf：已删除书目的脏 id 不占展示位（先配对再截断）', () => {
+  const books = [mkBook({ id: 'alive' })]
+  const recent = { ghost1: 900, ghost2: 800, alive: 700 }
+  const out = recentBooksOf(books, recent, 2)
+  a.equal(out.length, 1)
+  a.equal(out[0].book.id, 'alive')
+})
+
+test('recentBooksOf：忽略非法时间戳，limit≤0 返回空', () => {
+  const books = [mkBook({ id: 'a' }), mkBook({ id: 'b' }), mkBook({ id: 'c' })]
+  const out = recentBooksOf(books, { a: 0, b: -5, c: 1234 })
+  a.equal(out.length, 1)
+  a.equal(out[0].book.id, 'c')
+  a.deepEqual(recentBooksOf(books, { c: 1 }, 0), [])
+  a.deepEqual(recentBooksOf(books, { c: 1 }, -3), [])
+  a.deepEqual(recentBooksOf([], { c: 1 }), [])
+  a.deepEqual(recentBooksOf(books, {}), [])
+})
+
+test('recentBooksOf：limit 可覆盖默认值（取最新 3 条）', () => {
+  const books = ['a', 'b', 'c', 'd'].map((id) => mkBook({ id }))
+  const recent = { a: 1, b: 2, c: 3, d: 4 }
+  a.deepEqual(
+    recentBooksOf(books, recent, 3).map((x) => x.book.id),
+    ['d', 'c', 'b']
+  )
+})
+
+test('bookHue：同 id 稳定、落在 0..359、空 id 为 0', () => {
+  const h = bookHue('gushi-300')
+  a.equal(h, bookHue('gushi-300'))
+  a.ok(h >= 0 && h < 360)
+  a.equal(bookHue(''), 0)
+  // 不同 id 至少要有区分度（否则占位色会一片同色）
+  a.notEqual(bookHue('alpha'), bookHue('beta'))
 })
 
 // ============ runner ============

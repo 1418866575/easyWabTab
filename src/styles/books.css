@@ -46,8 +46,9 @@
   height: 16px;
   padding: 0 var(--space-1);
   border-radius: 9999px;
-  background: var(--color-primary, #c8102e);
-  color: #fff;
+  /* 实底+白字必须用 -solid 档（500 级主色压白字在 6/7 套主题下不足 4.5:1），见 UI_STYLE_GUIDE §1.4 */
+  background: var(--color-primary-solid, #c8102e);
+  color: var(--color-on-accent, #fff);
   font-size: var(--fs-caption, 12px);
   font-weight: var(--font-weight-semibold, 600);
   line-height: 1;
@@ -256,6 +257,11 @@
   .bk-shell { padding: var(--space-4, 16px) var(--space-3, 12px) var(--space-6, 24px); }
   .bk-grid { grid-template-columns: 1fr; }
   .bk-topbar { padding: var(--space-2) var(--space-3); }
+  /* 顶栏右侧已有 5 个动作（书签 / 最近阅读 / 重置统计 / 云同步 / 上传），390px 一行放不下：
+     允许整组换到第二行，并禁止按钮内文字折成竖排（「书签」曾被打成两行竖字）。 */
+  .bk-topbar { flex-wrap: wrap; row-gap: var(--space-2); }
+  .bk-topbar-right { flex-wrap: wrap; justify-content: flex-end; }
+  .bk-topbar-right > * { white-space: nowrap; flex: none; }
   /* 次级控制项抬到 40px 触控下限 */
   .bk-subbar .bk-chip,
   .bk-subbar .bk-mini-btn,
