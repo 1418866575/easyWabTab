@@ -10,7 +10,9 @@
  *   GET  /api/stats/summary?days=30                               → 聚合 JSON
  *
  * 存储：`data/stats/<YYYY-MM-DD>.json`（一天一个文件，gitignore）
- *   { pv: number, uv: string[], paths: {路由名: 次数}, refs: {来源分类: 次数} }
+ *   { pv: number, uv: string[], paths: {路由名: 次数}, refs: {来源分类: 次数},
+ *     uvByPath: {路由名: string[]} }
+ *   uvByPath 是「今日首页访客」口径的基础：老文件没有该字段时按空处理，不臆造。
  *
  * 隐私设计（刻意的）：
  *   - **不存 IP 明文**，只存 sha256(盐 + 日期 + IP + UA) 的前 16 位；盐是本机随机生成后落盘
@@ -42,6 +44,8 @@ const FLUSH_DELAY = 500
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 /** 路由名白名单式校验：只允许字母数字与连字符，其它一律归 other */
 const NAME_RE = /^[A-Za-z0-9_-]{1,40}$/
+/** 导航首页的路由名（今日 KPI 只统计它，趋势/区间/排行仍为全站） */
+const HOME_NAME = 'home'
 
 /** 搜索引擎域名片段（命中归「搜索引擎」） */
 const SEARCH_HOSTS = ['baidu.', 'google.', 'bing.', 'sogou.', 'so.com', 'sm.cn', 'yandex.', 'duckduckgo.']
@@ -72,6 +76,18 @@ function obj(v) {
   const out = {}
   if (!v || typeof v !== 'object' || Array.isArray(v)) return out
   for (const [k, n] of Object.entries(v)) if (num(n) > 0) out[String(k).slice(0, 60)] = num(n)
+  return out
+}
+
+/** 老日文件没有 uvByPath；坏数据/非白名单路由名一律丢弃，按空分桶处理 */
+function uvByPathRecord(v) {
+  const out = {}
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return out
+  for (const [k, list] of Object.entries(v)) {
+    if (!NAME_RE.test(k) || !Array.isArray(list)) continue
+    const set = new Set(list.filter((s) => typeof s === 'string'))
+    if (set.size) out[k] = set
+  }
   return out
 }
 
@@ -113,25 +129,25 @@ function visitorHash(day, ip, ua) {
 }
 
 /** ---------- 内存缓存 + 落盘 ---------- */
-/** key → { pv, uv:Set, paths, refs } */
+/** key → { pv, uv:Set, paths, refs, uvByPath:{路由名:Set} } */
 const cache = new Map()
 const dirty = new Set()
 let flushTimer = null
 
 function loadDay(key) {
   if (cache.has(key)) return cache.get(key)
-  let rec = { pv: 0, uv: [], paths: {}, refs: {} }
+  let raw = null
   try {
-    const raw = JSON.parse(fs.readFileSync(fileOf(key), 'utf8'))
-    rec = { pv: num(raw.pv), uv: Array.isArray(raw.uv) ? raw.uv : [], paths: obj(raw.paths), refs: obj(raw.refs) }
+    raw = JSON.parse(fs.readFileSync(fileOf(key), 'utf8'))
   } catch {
     /* 文件不存在 / 坏数据 → 空天 */
   }
   const view = {
-    pv: rec.pv,
-    uv: new Set(rec.uv.filter((s) => typeof s === 'string')),
-    paths: rec.paths,
-    refs: rec.refs
+    pv: num(raw && raw.pv),
+    uv: new Set(Array.isArray(raw && raw.uv) ? raw.uv.filter((s) => typeof s === 'string') : []),
+    paths: obj(raw && raw.paths),
+    refs: obj(raw && raw.refs),
+    uvByPath: uvByPathRecord(raw && raw.uvByPath)
   }
   cache.set(key, view)
   return view
@@ -157,7 +173,8 @@ function flushNow() {
       pv: day.pv,
       uv: Array.from(day.uv),
       paths: day.paths,
-      refs: day.refs
+      refs: day.refs,
+      uvByPath: Object.fromEntries(Object.entries(day.uvByPath).map(([k, set]) => [k, Array.from(set)]))
     }
     try {
       fs.writeFileSync(fileOf(key), JSON.stringify(payload))
@@ -280,7 +297,17 @@ async function handleCollect(req, res) {
   const key = dayKey()
   const day = loadDay(key)
   day.pv += 1
-  if (day.uv.size < MAX_UV_PER_DAY) day.uv.add(visitorHash(key, ip, ua))
+  // 同一访客哈希同时进「全站 UV」与「该路由 UV 分桶」，后者供今日首页口径使用
+  const hash = day.uv.size < MAX_UV_PER_DAY ? visitorHash(key, ip, ua) : ''
+  if (hash) {
+    day.uv.add(hash)
+    let bucket = day.uvByPath[name]
+    if (!bucket) {
+      bucket = new Set()
+      day.uvByPath[name] = bucket
+    }
+    if (bucket.size < MAX_UV_PER_DAY) bucket.add(hash)
+  }
   day.paths[name] = (day.paths[name] || 0) + 1
   day.refs[ref] = (day.refs[ref] || 0) + 1
   dirty.add(key)
@@ -319,7 +346,15 @@ function handleSummary(req, res) {
     series.push({ date: key, pv, uv })
   }
 
-  const today = series[series.length - 1] || { date: dayKey(), pv: 0, uv: 0 }
+  // 今日 KPI 只统计导航首页；range / series / paths / refs 仍是全站口径。
+  // 老日文件没有 uvByPath，今日访客从本次升级生效起才累计（不能用 paths.home 冒充 UV）。
+  const todayKey = keys[keys.length - 1] || dayKey()
+  const todayDay = cache.has(todayKey) ? cache.get(todayKey) : loadDayIfExists(todayKey)
+  const today = {
+    date: todayKey,
+    pv: todayDay ? todayDay.paths[HOME_NAME] || 0 : 0,
+    uv: todayDay && todayDay.uvByPath[HOME_NAME] ? todayDay.uvByPath[HOME_NAME].size : 0
+  }
   const files = listDayFiles()
 
   sendJson(res, 200, {

@@ -207,7 +207,7 @@ server {
 - WebDAV：`POST /api/webdav-proxy`，请求头 `X-Webdav-Auth: Basic <base64(用户名:密码)>`，body 为 `{ target, method, body? }`。监听地址 / 端口可用 `WEBDAV_PROXY_HOST` / `WEBDAV_PROXY_PORT` 覆盖；`GET /healthz` 可作健康检查。
 - fetch-meta：`POST /api/fetch-meta`，body 为 `{ url }`，返回 `{ title, description, icon }`。监听地址 / 端口可用 `FETCH_META_HOST` / `FETCH_META_PORT` 覆盖；`GET /healthz` 可作健康检查。
 - wechat：`/api/wechat/*` 通用转发到微信开放接口，**无状态多租户** —— 代理本身不落盘任何 AppID / Secret，凭证随每次请求发送。监听地址 / 端口可用 `WEBCHAT_HOST` / `WEBCHAT_PORT` 覆盖。
-- stats：`POST /api/stats/collect`（body `{ n: 路由名, r: 来源 URL }` → `204`）+ `GET /api/stats/summary?days=30`（→ 今日 / 区间 PV·UV、按天序列、页面排行、来源构成）。监听地址 / 端口可用 `STATS_HOST` / `STATS_PORT` 覆盖；`GET /healthz` 可作健康检查。数据落在 `data/stats/<YYYY-MM-DD>.json`（**已 gitignore**），不存明文 IP。
+- stats：`POST /api/stats/collect`（body `{ n: 路由名, r: 来源 URL }` → `204`）+ `GET /api/stats/summary?days=30`（→ 今日首页口径 / 全站区间 PV·UV、按天序列、页面排行、来源构成）。监听地址 / 端口可用 `STATS_HOST` / `STATS_PORT` 覆盖；`GET /healthz` 可作健康检查。数据落在 `data/stats/<YYYY-MM-DD>.json`（**已 gitignore**），不存明文 IP。
 
 > 前两个代理**零运行时依赖**（仅 Node 内置模块），`metascraper` / `playwright` 未安装时自动回退正则解析，无需 `npm install`。
 > 开发环境不需要这些进程 —— `vite.config.js` 已内置同协议 dev proxy（统计接口是直接在 dev 中间件里挂载
@@ -397,9 +397,10 @@ server {
 
 | 区块 | 数据来源 | 内容 |
 |------|----------|------|
-| 全网访问 | 自家服务端 `/api/stats/*`（`scripts/statsService.cjs`） | 今日 / 区间（7·30·90 天）的 **PV 与 UV**、按天趋势柱状图、访问最多的页面排行、访客来源构成（直接访问 / 站内 / 搜索引擎 / 社交分享 / 具体域名）；底部附 Vercount 第三方累计数做交叉校验 |
+| 全网访问 | 自家服务端 `/api/stats/*`（`scripts/statsService.cjs`） | 今日首页访问 / 访客、区间（7·30·90 天）全站 **PV 与 UV**、按天趋势柱状图、访问最多的页面排行、访客来源构成（直接访问 / 站内 / 搜索引擎 / 社交分享 / 具体域名）；底部附 Vercount 第三方累计数做交叉校验 |
 | 我的使用 | 本机 IndexedDB（`nav` store 的 `stats:day:<日期>` 记录） | 今日 / 近 7 天 / 近 30 天 / 累计访问，近 30 天趋势柱状图、24 小时活跃时段、近 30 天模块分布、最常访问的站点 Top5、最常用的工具 Top5 |
 
+- **仅「今日」看首页**：「今日首页访问 / 访客」只统计导航首页，与全站趋势的最后一根柱子口径不同；区间、趋势、页面排行、来源构成都是全站。首页访客由服务端 `uvByPath` 按路由分桶得出，历史当天的 UV 无法拆分，从本次升级生效起累计。
 - **全网 = 所有访客**：需要服务端（见上文「需要同源后端」第 4 条）。没接入时该区块会显示明确的「未接入」原因与部署命令，**不影响**其它功能与「我的使用」。
 - **匿名口径**：只上报路由名与来源 URL，服务端**不存明文 IP**（UV = `sha256(盐 + 日期 + IP + UA)` 前 16 位，按天去重）、不设 cookie、不带凭据；盐首次运行随机生成并落在 `data/stats/.salt`，换盐即切断历史与将来的关联。数据保留 180 天（`EWT_STATS_KEEP_DAYS` 可调），一天一个 JSON，删旧数据就是删文件。
 - **我的使用只记录本机**：一天一条记录，保留 90 天自动裁剪；不上传、不进云同步信封，换设备或清缓存即归零。可随时「清空本机访问记录」。

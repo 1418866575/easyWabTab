@@ -71,7 +71,8 @@ function check(name, ok, detail = '') {
   console.log(`${ok ? '  PASS' : '  FAIL'}  ${name}${detail ? '  ' + detail : ''}`)
 }
 
-const browser = await chromium.launch({ executablePath: findChromium() })
+const exe = findChromium()
+const browser = await chromium.launch(exe ? { executablePath: exe } : { channel: 'msedge' })
 try {
   const base = await ensureDevServer()
   console.log('[qa] dev =', base)
@@ -115,18 +116,13 @@ try {
   check('S2 /books 图标是图片', /^data:image\//.test(books[0]?.icon || ''), (books[0]?.icon || '').slice(0, 40))
   check('S5 默认名称正确', blog[0]?.name === '博客前台' && books[0]?.name === '图书馆', `${blog[0]?.name} / ${books[0]?.name}`)
 
-  // 工作台弹框：不应再有 blog-front / books
-  await page.click('[data-testid="ws-trigger"]')
-  await page.waitForSelector('[data-testid="ws-panel"]', { timeout: 10000 })
-  const hasBlogFront = await page.locator('[data-testid="ws-item-blog-front"]').count()
-  const hasBooks = await page.locator('[data-testid="ws-item-books"]').count()
-  const hasBlogAdmin = await page.locator('[data-testid="ws-item-blog"]').count()
-  const panelText = (await page.locator('[data-testid="ws-panel"]').innerText()) || ''
-  check('S3 弹框内已无「博客前台」项', hasBlogFront === 0, `count=${hasBlogFront}`)
-  check('S3 弹框内已无「图书馆」项', hasBooks === 0, `count=${hasBooks}`)
-  check('S3 弹框内「博客后台」仍存在', hasBlogAdmin === 1, `count=${hasBlogAdmin}`)
-  check('S3 弹框文案无残留', !panelText.includes('博客前台') && !panelText.includes('图书馆'), panelText.replace(/\s+/g, ' ').slice(0, 80))
-  await page.click('[data-testid="ws-close"]')
+  // 导航站首页已无切换器；工作台跳转与站内模块一起固定在卡片列表
+  const triggerCount = await page.locator('[data-testid="ws-trigger"]').count()
+  check('S3 首页已无工作台切换器', triggerCount === 0, `count=${triggerCount}`)
+  const pinnedCount = await page.locator('.site-card[data-site-url="/teacher"], .site-card[data-site-url="/business"], .site-card[data-site-url="/blog/admin"]').count()
+  check('S3 工作台固定入口卡存在', pinnedCount === 3, `count=${pinnedCount}`)
+  check('S3 不再有「导航站」自身入口卡',
+    (await page.locator('.site-card[data-site-url="/"]').count()) === 0)
 
   // S4 点击卡片能真正打开站内路由
   for (const [url, label] of [['/blog', '博客前台'], ['/books', '图书馆']]) {

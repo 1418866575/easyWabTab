@@ -3,7 +3,7 @@ import { computed, ref, toRaw } from 'vue'
 import { NOTE_STATUSES } from '@/types'
 import type { NoteCategory, NoteColor, NoteData, NoteStatus, NoteType, TimelineEntry, WorkbenchNote } from '@/types'
 import { emptyNoteData, normalizeNoteData, normalizeDueDate, sortNotes } from '../composables/noteCore'
-import { activeOnly, clearDeleted, gcTombstones as gcTombstonesCore, markDeleted, trashedItems } from '../composables/tombstoneCore'
+import { activeOnly, bumpStamp, clearDeleted, gcTombstones as gcTombstonesCore, markDeleted, trashedItems } from '../composables/tombstoneCore'
 import { idbGet, idbPut } from '../composables/useIdb'
 import { getClientId, markDirty } from '@/composables/useCloudSync'
 
@@ -38,6 +38,11 @@ export const useWorkbenchNotesStore = defineStore('workbenchNotes', () => {
     }
   }
 
+  /** 普通编辑推进 ver：compareStamp 先比 ver 再比 updatedAt，不推进会被远端旧记录整条覆盖 */
+  function touch(note: WorkbenchNote): void {
+    Object.assign(note, bumpStamp(toRaw(note), { clientId: getClientId() }))
+  }
+
   async function addNote(input: { title?: string; content: string; color: NoteColor; type?: NoteType; categoryId?: string; entries?: TimelineEntry[]; dueDate?: string; status?: NoteStatus }): Promise<void> {
     const now = new Date().toISOString()
     notes.value.push({
@@ -55,7 +60,11 @@ export const useWorkbenchNotesStore = defineStore('workbenchNotes', () => {
       dueDate: normalizeDueDate(input.dueDate),
       status: (NOTE_STATUSES as readonly string[]).includes(input.status as string)
         ? (input.status as NoteStatus)
-        : 'pending'
+        : 'pending',
+      // 状态变更时间与版本戳从新建起就有，否则首次同步时字段级保护与 ver 比较都会失效
+      statusUpdatedAt: now,
+      ver: 1,
+      clientId: getClientId()
     })
     await saveNotes()
   }
@@ -69,9 +78,8 @@ export const useWorkbenchNotesStore = defineStore('workbenchNotes', () => {
       // 因为整条 updatedAt 更新，把本端刚改的状态一起覆盖回去。
       const statusChanged = patch.status !== undefined && patch.status !== prev.status
       notes.value[index] = {
-        ...prev,
+        ...bumpStamp(toRaw(prev), { now, clientId: getClientId() }),
         ...patch,
-        updatedAt: now,
         ...(statusChanged ? { statusUpdatedAt: now } : {})
       }
       await saveNotes()
@@ -124,7 +132,7 @@ export const useWorkbenchNotesStore = defineStore('workbenchNotes', () => {
     const note = notes.value.find(n => n.id === id)
     if (note) {
       note.pinned = !note.pinned
-      note.updatedAt = new Date().toISOString()
+      touch(note)
       await saveNotes()
     }
   }
@@ -184,7 +192,9 @@ export const useWorkbenchNotesStore = defineStore('workbenchNotes', () => {
     categories.value = toRaw(categories.value).filter(c => c.id !== id)
     // 归未分类：必须在 toRaw 的原始数组上 map（同 deleteNote 的 toRaw filter 模式），
     // 直接 notes.value.map 会产生 Proxy 元素 → IDB 结构化克隆 DataCloneError
-    notes.value = toRaw(notes.value).map(n => (n.categoryId === id ? { ...n, categoryId: undefined } : n))
+    notes.value = toRaw(notes.value).map(n => n.categoryId === id
+      ? bumpStamp({ ...n, categoryId: undefined }, { clientId: getClientId() })
+      : n)
     await saveNotes()
     return true
   }
@@ -205,6 +215,7 @@ export const useWorkbenchNotesStore = defineStore('workbenchNotes', () => {
       createdAt: new Date().toISOString()
     })
     note.entries = entries
+    touch(note)
     await saveNotes()
     return true
   }
@@ -217,6 +228,7 @@ export const useWorkbenchNotesStore = defineStore('workbenchNotes', () => {
     const index = entries.findIndex(e => e.id === entryId)
     if (index !== -1) {
       entries[index] = { ...entries[index], ...patch }
+      touch(note)
       await saveNotes()
     }
   }
@@ -227,6 +239,7 @@ export const useWorkbenchNotesStore = defineStore('workbenchNotes', () => {
     const entries = note?.entries
     if (!entries) return
     note.entries = toRaw(entries).filter(e => e.id !== entryId)
+    touch(note)
     await saveNotes()
   }
 

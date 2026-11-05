@@ -2,7 +2,7 @@
 // npm run test:toolbox-p2
 // 覆盖：测速统计、树状任务、公众号排版草稿、离线翻译、代码高亮卡片、IMEI、
 //       HTTP 状态码、UA 解析、Mock 数据、随机头像、印章 SVG、钢琴音表、
-//       Emoji 查询、字帖排版、口算题、读书笔记
+//       Emoji 查询、字帖排版、口算题
 import assert from 'node:assert/strict'
 
 import {
@@ -54,17 +54,6 @@ import { NOTES, freqOf, isBlack, voiceParams } from '../src/toolbox/tools/piano/
 import { EMOJI_TOTAL, normalizeRecent, recordRecentEmoji, searchEmoji } from '../src/toolbox/tools/emoji-finder/emojiData.ts'
 import { GRID_KINDS, clampCols, clampRows, layoutChars, traceAlpha } from '../src/toolbox/tools/copybook/copybookCore.ts'
 import { genPaper, genQuestion, formatAnswer, splitColumns } from '../src/toolbox/tools/arithmetic/arithmeticCore.ts'
-import {
-  addBook,
-  addNote,
-  exportMarkdown,
-  normalizeReadingData,
-  progressPercent,
-  removeNote,
-  searchBooks,
-  statsOf,
-  updateBook
-} from '../src/toolbox/tools/reading-notes/readingCore.ts'
 
 /* ---------------- 测速统计 ---------------- */
 {
@@ -404,48 +393,6 @@ const THEMES_CARD_DARK = {
   assert.equal(formatAnswer(paper[0]), `${paper[0].text} ${paper[0].answer}`)
   const cols = splitColumns([1, 2, 3, 4, 5], 2)
   assert.deepEqual(cols.map((c) => c.length), [3, 2])
-}
-
-/* ---------------- 读书笔记 ---------------- */
-{
-  let data = normalizeReadingData({ books: [] })
-  assert.deepEqual(data.books, [])
-  const added = addBook(data, '  三体  ', '刘慈欣', '科技')
-  assert.ok(added.ok)
-  data = added.data
-  assert.equal(data.books[0].title, '三体')
-  assert.equal(data.books[0].status, 'wish')
-  const dup = addBook(data, '', 'x', '科技')
-  assert.equal(dup.ok, false)
-  data = updateBook(data, data.books[0].id, { status: 'reading', current: 80, total: 400 })
-  assert.equal(progressPercent(data.books[0]), 20)
-  // 已设页数时按页数计算（done 不强制 100，仅未设页数时兜底）
-  assert.equal(progressPercent({ ...data.books[0], status: 'done' }), 20)
-  assert.equal(progressPercent({ ...data.books[0], current: 0, total: 0, status: 'done' }), 100)
-  const note = addNote(data, data.books[0].id, '  弱小和无知不是生存的障碍  ', 66, true)
-  assert.ok(note.ok)
-  data = note.data
-  assert.equal(data.books[0].notes.length, 1)
-  const emptyNote = addNote(data, data.books[0].id, '   ', 1, false)
-  assert.equal(emptyNote.ok, false)
-  data = updateBook(data, data.books[0].id, { status: 'done' })
-  assert.deepEqual(statsOf(data), { wish: 0, reading: 0, done: 1, notes: 1, quotes: 1 })
-  assert.ok(searchBooks(data, '三体').length === 1)
-  assert.ok(searchBooks(data, '障碍').length === 1)
-  assert.equal(searchBooks(data, 'zzz').length, 0)
-  const md = exportMarkdown(data)
-  assert.ok(md.includes('# 读书笔记') && md.includes('## 三体') && md.includes('> 弱小和无知不是生存的障碍（P66）'))
-  data = removeNote(data, data.books[0].id, data.books[0].notes[0].id)
-  assert.equal(data.books[0].notes.length, 0)
-  // normalize 兜底：非法字段过滤、超长截断
-  const norm = normalizeReadingData({
-    books: [{ id: 'b1', title: 'x'.repeat(200), status: 'bogus', notes: [{ id: 'n1', text: 'ok' }, { bad: 1 }] }]
-  })
-  assert.equal(norm.books.length, 1)
-  assert.equal(norm.books[0].title.length, 80)
-  assert.equal(norm.books[0].status, 'wish')
-  assert.equal(norm.books[0].notes.length, 1)
-  assert.equal(norm.books[0].category, '其他')
 }
 
 console.log('P2 工具箱 core 测试全部通过')

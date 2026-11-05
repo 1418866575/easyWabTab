@@ -1,17 +1,10 @@
 <script setup lang="ts">
-// 左上角「工作台切换」命令面板（方案 B：Quick Switcher / 命令面板）。
-// 全站 6 个视图（导航站 + 教师/个人工作台/销售记账/学生/智能工作台 + 工具箱页）共用本组件：
-// 触发器显示当前页图标 + 名称，点击或 Alt+W 弹出居中浮层，输入即过滤，↑↓/Enter/Esc 键盘操作，
-// Alt+1..9 直达第 N 个工作台。
-// 交互范式对齐 SpotlightOverlay（Alt+K 全局搜索）：居中浮层 + 半透明遮罩 + Esc 关闭，
-// 复用同一套键位（↑↓ 选择 / Enter 进入 / Esc 关闭），用户无需额外学习。
-// 相比旧 WorkbenchManagePanel（下拉卡片面板）的变化：
-//   1. 「下拉面板」→「命令面板」：新增搜索框、键盘导航、当前项高亮；
-//   2. 原导航站左上角独立的「工具箱」跳转按钮合并进本面板（设置里的名称/图标/可见性开关沿用，
-//      只是作用对象从"按钮"变成"面板里的一项"）；
-//   3. 工具箱页原先只有「返回导航站」，现同样挂本组件，全站入口统一；
-//   4. 已在目标页的工作台不再隐藏，改为"当前"徽标高亮，避免列表数量跳变。
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+// 左上角「工作台切换」下拉菜单。
+// 导航站首页的工作台跳转已迁到卡片列表；其余 8 个页面（教师/个人/销售/学生/智能/
+// 工具箱/图书馆/博客后台）复用本组件，点击触发器或 Alt+W 在按钮下方展开下拉。
+// 面板只列 7 个工作台入口（图标 + 名称 + 当前徽章），无搜索框、无全屏遮罩；
+// 键盘能力保留：Alt+W 唤起 / Alt+1..9 直达 / ↑↓ Home End 选择 / Enter 进入 / Esc 关闭。
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Icon from './Icon.vue'
 import { useAppSettingsStore } from '../stores/settings'
@@ -45,8 +38,6 @@ interface Entry {
   /** 自定义图标（图标库路径 / dataUrl）；空串表示回退内置图标 */
   icon: string
   builtin: string
-  /** 搜索关键词（含中英文别名，用户改过名称后仍可搜到） */
-  kw: string
   visible: boolean
   /**
    * 「当前所在页」判定（缺省用 path 精确匹配 + 子路径前缀匹配）。
@@ -71,7 +62,6 @@ const allEntries = computed<Entry[]>(() => [
     name: '导航站',
     icon: store.siteFavicon || '',
     builtin: 'home',
-    kw: '导航站 首页 home nav',
     visible: true
   },
   {
@@ -80,7 +70,6 @@ const allEntries = computed<Entry[]>(() => [
     name: store.teacherPageDisplayName,
     icon: store.teacherPageIcon,
     builtin: 'teacher',
-    kw: '教师 teacher',
     visible: store.teacherPageVisible !== false
   },
   {
@@ -89,7 +78,6 @@ const allEntries = computed<Entry[]>(() => [
     name: store.workbenchPageDisplayName,
     icon: store.workbenchPageIcon,
     builtin: 'toolbox',
-    kw: '个人工作台 workbench personal',
     visible: store.workbenchPageVisible !== false
   },
   {
@@ -98,7 +86,6 @@ const allEntries = computed<Entry[]>(() => [
     name: store.businessPageDisplayName,
     icon: store.businessPageIcon,
     builtin: 'store',
-    kw: '销售记账 business 生意 摆摊',
     visible: store.businessPageVisible !== false
   },
   {
@@ -107,7 +94,6 @@ const allEntries = computed<Entry[]>(() => [
     name: store.studentPageDisplayName,
     icon: store.studentPageIcon,
     builtin: 'notes',
-    kw: '学生 student',
     visible: store.studentPageVisible !== false
   },
   {
@@ -116,7 +102,6 @@ const allEntries = computed<Entry[]>(() => [
     name: store.smartPageDisplayName,
     icon: store.smartPageIcon,
     builtin: 'lightbulb',
-    kw: '智能工作台 smart 技能 提示词 工作流',
     visible: store.smartPageVisible !== false
   },
   {
@@ -128,7 +113,6 @@ const allEntries = computed<Entry[]>(() => [
     name: store.blogAdminPageDisplayName,
     icon: store.blogAdminPageIcon,
     builtin: 'notes',
-    kw: '博客后台 blog 管理 写作',
     visible: store.blogAdminPageVisible !== false
   }
   // 注意：「博客前台（/blog）」与「个人图书馆（/books）」已迁出本面板，
@@ -150,25 +134,24 @@ const currentKey = computed<string>(() => {
 })
 
 const open = ref(false)
-const query = ref('')
 const activeIndex = ref(0)
 const triggerRef = ref<HTMLElement | null>(null)
-const inputRef = ref<HTMLInputElement | null>(null)
 const listRef = ref<HTMLDivElement | null>(null)
+const panelRef = ref<HTMLElement | null>(null)
+/** fixed 定位坐标：某些工作台顶栏左容器 overflow:hidden，absolute 会被裁掉 */
+const panelStyle = ref<Record<string, string>>({})
 
-const filtered = computed<Entry[]>(() => {
-  const q = query.value.trim().toLowerCase()
-  if (!q) return visibleEntries.value
-  return visibleEntries.value.filter((e) => e.name.toLowerCase().includes(q) || e.kw.toLowerCase().includes(q))
-})
-
-/** 当前选中项（安全取值：过滤结果变化 / 越界时返回 null，供 aria-activedescendant 与 Enter 使用） */
-const activeEntry = computed<Entry | null>(() => filtered.value[activeIndex.value] ?? null)
-
-/** Alt+1..9 的序号：按可见项顺序连续编号（被关闭的工作台不占号） */
-function altIndexOf(entry: Entry): number {
-  return visibleEntries.value.indexOf(entry) + 1
+function updatePanelPosition(): void {
+  const el = triggerRef.value
+  if (!el) return
+  const r = el.getBoundingClientRect()
+  const width = 240
+  const left = Math.max(8, Math.min(r.left, window.innerWidth - width - 8))
+  panelStyle.value = { top: `${Math.round(r.bottom + 8)}px`, left: `${Math.round(left)}px` }
 }
+
+/** 当前选中项（越界时返回 null，供 aria-activedescendant 与 Enter 使用） */
+const activeEntry = computed<Entry | null>(() => visibleEntries.value[activeIndex.value] ?? null)
 
 function isCurrent(entry: Entry): boolean {
   return entry.key === currentKey.value
@@ -181,26 +164,24 @@ function isTypingTarget(target: EventTarget | null): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable
 }
 
-async function openPalette(): Promise<void> {
+function openPalette(): void {
   if (open.value) return
-  query.value = ''
   activeIndex.value = 0
+  updatePanelPosition()
   open.value = true
-  await nextTick()
-  inputRef.value?.focus()
-  inputRef.value?.select()
+  // 刻意不把焦点挪进下拉：聚焦面板会让某些工作台（如博客后台）的内部滚动容器
+  // 自动滚到焦点处，把顶栏触发器顶出视口。键盘事件挂在 window 上，不依赖焦点位置。
 }
 
 function closePalette(): void {
   if (!open.value) return
   open.value = false
-  query.value = ''
   triggerRef.value?.focus()
 }
 
 function togglePalette(): void {
   if (open.value) closePalette()
-  else void openPalette()
+  else openPalette()
 }
 
 function openExternal(path: string): void {
@@ -216,7 +197,6 @@ function openExternal(path: string): void {
 
 function go(entry: Entry): void {
   open.value = false
-  query.value = ''
   if (entry.openInNewTab) {
     openExternal(entry.path)
   } else if (entry.path !== route.path) {
@@ -231,7 +211,7 @@ function scrollActiveIntoView(): void {
 }
 
 function move(dir: number): void {
-  const n = filtered.value.length
+  const n = visibleEntries.value.length
   if (n === 0) return
   activeIndex.value = (activeIndex.value + dir + n) % n
   scrollActiveIntoView()
@@ -241,11 +221,13 @@ function selectActive(): void {
   if (activeEntry.value) go(activeEntry.value)
 }
 
-// 查询变化 → 选中项回到第一项（与 SpotlightOverlay 的"重置选中"同思路，但默认选中首项，
-// 这样输完关键词直接回车即可进第一个结果）
-watch(query, () => {
-  activeIndex.value = 0
-})
+// 点外部关闭：面板 Teleport 到 body，需同时排除触发器与面板本身
+function onClickOutside(event: MouseEvent): void {
+  if (!open.value) return
+  const target = event.target as Node
+  if (panelRef.value?.contains(target) || triggerRef.value?.contains(target)) return
+  closePalette()
+}
 
 function handleKeydown(event: KeyboardEvent): void {
   const plainAlt = event.altKey && !event.ctrlKey && !event.shiftKey && !event.metaKey
@@ -254,11 +236,11 @@ function handleKeydown(event: KeyboardEvent): void {
   if (plainAlt && event.key.toLowerCase() === 'w') {
     event.preventDefault()
     if (open.value) closePalette()
-    else if (!isTypingTarget(event.target)) void openPalette()
+    else if (!isTypingTarget(event.target)) openPalette()
     return
   }
 
-  // Alt+1..9：直达第 N 个工作台（面板打开时数字用于输入过滤，不响应）
+  // Alt+1..9：直达第 N 个工作台（下拉已打开时不响应，避免与 ↑↓ 选择混淆）
   if (plainAlt && !open.value && /^[1-9]$/.test(event.key)) {
     if (isTypingTarget(event.target)) return
     const entry = visibleEntries.value[Number(event.key) - 1]
@@ -291,7 +273,7 @@ function handleKeydown(event: KeyboardEvent): void {
       break
     case 'End':
       event.preventDefault()
-      activeIndex.value = Math.max(0, filtered.value.length - 1)
+      activeIndex.value = Math.max(0, visibleEntries.value.length - 1)
       scrollActiveIntoView()
       break
     case 'Enter':
@@ -305,9 +287,16 @@ function handleKeydown(event: KeyboardEvent): void {
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
+  document.addEventListener('click', onClickOutside)
+  window.addEventListener('resize', updatePanelPosition)
+  // capture=true：页面内部滚动容器滚动时也要跟随触发器重新定位
+  window.addEventListener('scroll', updatePanelPosition, true)
 })
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
+  document.removeEventListener('click', onClickOutside)
+  window.removeEventListener('resize', updatePanelPosition)
+  window.removeEventListener('scroll', updatePanelPosition, true)
 })
 
 const triggerText = computed(() => props.triggerLabel || store.workbenchManageDisplayName)
@@ -322,7 +311,7 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
       type="button"
       class="ws-trigger"
       :aria-expanded="open"
-      aria-haspopup="dialog"
+      aria-haspopup="listbox"
       :title="triggerTitle"
       :aria-label="triggerTitle"
       data-testid="ws-trigger"
@@ -339,67 +328,44 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
       <Transition name="ws-fade">
         <div
           v-if="open"
-          class="ws-overlay"
-          data-testid="ws-overlay"
-          @click.self="closePalette"
+          ref="panelRef"
+          class="ws-panel"
+          :style="panelStyle"
+          role="dialog"
+          aria-label="切换工作台"
+          data-testid="ws-panel"
         >
-          <div class="ws-panel" role="dialog" aria-modal="true" aria-label="切换工作台" data-testid="ws-panel">
-            <div class="ws-search">
-              <Icon name="search" :size="18" class="ws-search-icon" />
-              <input
-                ref="inputRef"
-                v-model="query"
-                class="ws-input"
-                data-testid="ws-input"
-                type="text"
-                placeholder="搜索工作台 / 工具…"
-                spellcheck="false"
-                role="combobox"
-                aria-autocomplete="list"
-                aria-controls="ws-listbox"
-                :aria-expanded="true"
-                :aria-activedescendant="activeEntry ? `ws-opt-${activeEntry.key}` : undefined"
-              />
-              <button class="ws-close-btn" data-testid="ws-close" title="关闭 (Esc)" @click="closePalette">
-                <Icon name="close" />
-              </button>
-            </div>
-
-            <div id="ws-listbox" ref="listRef" class="ws-list" role="listbox" aria-label="工作台列表">
-              <button
-                v-for="(entry, i) in filtered"
-                :id="`ws-opt-${entry.key}`"
-                :key="entry.key"
-                type="button"
-                class="ws-item"
-                :class="{ active: i === activeIndex, current: isCurrent(entry) }"
-                :data-idx="i"
-                :data-testid="`ws-item-${entry.key}`"
-                role="option"
-                :aria-selected="i === activeIndex"
-                @click="go(entry)"
-                @mouseenter="activeIndex = i"
-              >
-                <span class="ws-item-icon">
-                  <img v-if="entry.icon" :src="entry.icon" :alt="entry.name" class="ws-item-img" />
-                  <Icon v-else :name="entry.builtin" :size="20" class="ws-item-svg" />
-                </span>
-                <span class="ws-item-name">{{ entry.name }}</span>
-                <span v-if="entry.openInNewTab" class="ws-item-newtab" title="在新标签打开">↗</span>
-                <span v-if="isCurrent(entry)" class="ws-item-cur">当前</span>
-                <span class="ws-item-kbd">Alt+{{ altIndexOf(entry) }}</span>
-              </button>
-              <p v-if="filtered.length === 0" class="ws-empty" data-testid="ws-empty">
-                未找到「{{ query.trim() }}」相关的工作台
-              </p>
-            </div>
-
-            <div class="ws-foot">
-              <span><kbd class="ws-kbd">↑↓</kbd> 选择</span>
-              <span><kbd class="ws-kbd">Enter</kbd> 进入</span>
-              <span><kbd class="ws-kbd">Esc</kbd> 关闭</span>
-              <span><kbd class="ws-kbd">Alt+W</kbd> 唤起</span>
-            </div>
+          <div
+            id="ws-listbox"
+            ref="listRef"
+            class="ws-list"
+            role="listbox"
+            tabindex="-1"
+            aria-label="工作台列表"
+            :aria-activedescendant="activeEntry ? `ws-opt-${activeEntry.key}` : undefined"
+          >
+            <button
+              v-for="(entry, i) in visibleEntries"
+              :id="`ws-opt-${entry.key}`"
+              :key="entry.key"
+              type="button"
+              class="ws-item"
+              :class="{ active: i === activeIndex, current: isCurrent(entry) }"
+              :data-idx="i"
+              :data-testid="`ws-item-${entry.key}`"
+              role="option"
+              :aria-selected="i === activeIndex"
+              @click="go(entry)"
+              @mouseenter="activeIndex = i"
+            >
+              <span class="ws-item-icon">
+                <img v-if="entry.icon" :src="entry.icon" :alt="entry.name" class="ws-item-img" />
+                <Icon v-else :name="entry.builtin" :size="20" class="ws-item-svg" />
+              </span>
+              <span class="ws-item-name">{{ entry.name }}</span>
+              <span v-if="entry.openInNewTab" class="ws-item-newtab" title="在新标签打开">↗</span>
+              <span v-if="isCurrent(entry)" class="ws-item-cur">当前</span>
+            </button>
           </div>
         </div>
       </Transition>
@@ -409,6 +375,7 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
 
 <style scoped>
 .ws-root {
+  position: relative;
   display: inline-flex;
   align-items: center;
   /* 顶栏空间紧张时不被压缩（与 BusinessView 的原 :deep(.wmp-root){flex-shrink:0} 同意图，
@@ -454,54 +421,27 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
   border-radius: 3px;
 }
 
-/* 浮层：范式对齐 SpotlightOverlay（居中 + 遮罩 + Esc 关闭），z-index 同为 3000 */
-.ws-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 3000;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 12vh 16px 16px;
-  background-color: rgba(15, 23, 42, 0.45);
-}
-
+/* 下拉面板：Teleport 到 body + fixed 定位（坐标由触发器 rect 计算）。
+   不少工作台顶栏左容器有 overflow:hidden，放在组件内 absolute 会被裁掉。 */
 .ws-panel {
-  width: min(520px, 100%);
-  max-height: 70vh;
+  position: fixed;
+  z-index: var(--z-dropdown, 100);
+  width: 240px;
+  max-width: calc(100vw - 24px);
+  max-height: 60vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: 14px;
+  border-radius: var(--radius-lg, 12px);
   background-color: var(--color-bg-card, #ffffff);
   border: 1px solid var(--color-border, #e2e8f0);
-  box-shadow: 0 24px 64px rgba(2, 6, 23, 0.35);
+  box-shadow: var(--shadow-dropdown, 0 4px 16px rgba(0, 0, 0, 0.12));
 }
-
-.ws-search {
-  gap: 10px;
-}
-.ws-search-icon {
-  flex-shrink: 0;
-  color: var(--color-text-secondary);
-}
-.ws-input {
-  flex: 1;
-  min-width: 0;
-}
-.ws-input::placeholder {
-  color: var(--color-text-secondary);
-}
-.ws-close-btn {flex-shrink: 0;
-  width: 28px;
-  height: 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;}
 
 .ws-list {
   overflow-y: auto;
   padding: 6px;
+  outline: none;
 }
 .ws-item {
   display: flex;
@@ -563,42 +503,11 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
   background-color: var(--color-primary-light, #eff6ff);
   color: var(--color-primary-text);
 }
-.ws-item-kbd {
-  flex: none;
-  font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary);
-}
 .ws-item-newtab {
   flex: none;
   font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary);
 }
-.ws-empty {
-  margin: 0;
-  padding: 28px 16px;
-  text-align: center;
-  font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary);
-}
-
-.ws-foot {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  padding: 8px 14px;
-  border-top: 1px solid var(--color-border, #e2e8f0);
-  font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary);
-}
-.ws-kbd {
-  font-family: inherit;
-  font-size: var(--fs-caption, 12px);
-  padding: 1px 5px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 4px;
-  background-color: var(--color-bg-hover, #f8fafc);
-}
-
 .ws-fade-enter-active,
 .ws-fade-leave-active {
   transition: opacity 0.15s ease, transform 0.15s ease;
@@ -609,34 +518,21 @@ const triggerTitle = computed(() => `${triggerText.value} · 点击或 Alt+W 切
   transform: translateY(-6px);
 }
 
-/* 移动端：浮层更靠上、触控目标 ≥44px、隐藏快捷键提示（屏幕窄） */
+/* 窄屏 / 触屏：下拉加高、触控目标 ≥44px */
 @media (max-width: 768px), (pointer: coarse) {
-  .ws-overlay {
-    padding: 8vh 12px 12px;
+  .ws-panel {
+    max-height: 70vh;
   }
   .ws-item {
     min-height: 44px;
   }
-  .ws-item-kbd {
-    display: none;
-  }
 }
 
-/* 暗色模式（跟随 SpotlightOverlay 的变量口径） */
-html.dark .ws-overlay {
-  background-color: rgba(2, 6, 23, 0.6);
-}
+/* 暗色模式（沿用组件原有变量口径） */
 html.dark .ws-panel {
   background-color: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
-}
-html.dark .ws-search,
-html.dark .ws-foot {
-  border-color: var(--color-border, #374151);
-}
-html.dark .ws-input {
-  color: var(--color-text);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
 }
 html.dark .ws-item:hover {
   background-color: var(--color-bg-hover, #374151);

@@ -66,6 +66,7 @@ import { useToast } from './useToast'
 import { getStoredSaltHex, getStoredVerification } from './useCrypto'
 import { mergeFamily } from './genealogyCore'
 import { compareStamp } from './tombstoneCore'
+import { mergeNoteStatus } from './noteMergeCore'
 import { compareSmartStamp, type SmartStamp } from './smartCore'
 import { hasSmartExplicitDelete, readSmartCountBaseline, writeSmartCountBaseline } from './smartSyncGuard'
 import { mergeBusinessStore } from './businessCore'
@@ -822,24 +823,12 @@ function mergeNotes(l: NoteData | undefined, r: NoteData | undefined): NoteData 
     const localNote = ln.find(n => n.id === note.id)
     const remoteNote = rn.find(n => n.id === note.id)
 
-    // ===== 状态字段级合并（核心修复）=====
-    // mergeById 是**记录级** LWW：整条记录一起换。于是「对端只改了标题/置顶/截止日期」
-    // （或对端时钟偏快、updatedAt 更新）就会带着它的旧 status 赢下整条记录，
-    // 把本端刚改的「已处理」覆盖回「处理中」，表现为「改完状态一同步又变回去」。
-    // 这里把 status 单独按 statusUpdatedAt 取新；旧数据缺该字段时维持记录级结果（不臆造）。
-    let merged = note
-    if (localNote && remoteNote && localNote.status !== remoteNote.status) {
-      const lt = localNote.statusUpdatedAt ?? ''
-      const rt = remoteNote.statusUpdatedAt ?? ''
-      if (lt && rt && lt !== rt) {
-        const takeLocal = lt > rt
-        merged = {
-          ...note,
-          status: takeLocal ? localNote.status : remoteNote.status,
-          statusUpdatedAt: takeLocal ? lt : rt
-        }
-      }
-    }
+    // ===== 状态字段级合并（实现见 noteMergeCore.ts）=====
+    // 缺 statusUpdatedAt 的旧数据也要保住状态：此前要求两端都有该字段，
+    // 只要一端缺失就退回记录级 LWW，正是「改完状态一同步又变回去」的漏网口。
+    let merged = localNote && remoteNote
+      ? mergeNoteStatus(localNote, remoteNote, note)
+      : note
 
     if (merged.type !== 'timeline') return merged
     if (localNote?.entries && remoteNote?.entries) {

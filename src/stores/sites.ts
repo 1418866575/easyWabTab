@@ -57,10 +57,13 @@ import { useToast } from '@/composables/useToast'
 export const TOOLBOX_URL = '/toolbox'
 /** 站内入口卡的识别标记（由 store 注入，不是用户数据） */
 export const MODULE_SITE_TAG = '站内模块'
-/** 站内入口卡的列表顺序：工具箱 → 博客前台 → 图书馆（永远排在任何普通站点之前） */
-export const MODULE_SITE_ORDER = [TOOLBOX_URL, '/blog', '/books']
+/** 站内入口卡的列表顺序：原 3 张站内模块在前，其后是原左上角切换面板里的 6 个工作台跳转（不含「导航站」自身） */
+export const MODULE_SITE_ORDER = [
+  TOOLBOX_URL, '/blog', '/books',
+  '/teacher', '/workbench', '/business', '/student', '/smart', '/blog/admin'
+]
 
-/** 是否为站内入口卡（工具箱 / 博客前台 / 图书馆） */
+/** 是否为站内入口卡（站内模块 + 工作台跳转，均由 store 注入，不是用户数据） */
 export function isModuleSite(site: { tags?: string[] }): boolean {
   return (site.tags || []).includes(MODULE_SITE_TAG)
 }
@@ -253,16 +256,16 @@ export const useSitesStore = defineStore('sites', () => {
 
   const { parseSitesFromMarkdown } = useMarkdown()
 
-  // 总页数
+  // 总页数：入口卡每页都在，不占分页名额；至少 1 页（入口卡本身要显示）
   const totalPages = computed(() => {
-    return Math.ceil(filteredSites.value.length / pageSize.value)
+    return Math.max(1, Math.ceil(regularSites.value.length / pageSize.value))
   })
 
-  // 当前页数据
+  // 当前页数据：固定的入口卡 + 当页普通站点
   const paginatedSites = computed(() => {
+    const pinned = filteredSites.value.filter(isModuleSite)
     const start = (currentPage.value - 1) * pageSize.value
-    const end = start + pageSize.value
-    return filteredSites.value.slice(start, end)
+    return [...pinned, ...regularSites.value.slice(start, start + pageSize.value)]
   })
 
   // 筛选变化或分页大小变化时重置页码
@@ -310,8 +313,13 @@ export const useSitesStore = defineStore('sites', () => {
   })
 
   const filteredSites = computed(() => {
-    // 先过滤（已排除分类值为数值 0 的站点）
-    const filtered = visibleSites.value.filter(site => {
+    // 站内入口卡真恒显：不参与分类 / 搜索 / 标签 / 断链过滤，按 MODULE_SITE_ORDER 钉在最前。
+    const pinned = visibleSites.value
+      .filter(isModuleSite)
+      .sort((a, b) => moduleRank(a) - moduleRank(b))
+    // 其余站点走原有筛选（已排除分类值为数值 0 的站点）
+    const regular = visibleSites.value.filter(site => {
+      if (isModuleSite(site)) return false
       // 分类过滤
       if (selectedCategory.value && site.category !== selectedCategory.value) {
         return false
@@ -336,27 +344,21 @@ export const useSitesStore = defineStore('sites', () => {
         }
       }
 
+      // 断链过滤：只看无效站点
+      if (showOnlyInvalid.value && site.isValid !== false) return false
       return true
     })
 
-    // 断链过滤：只看无效站点
-    if (showOnlyInvalid.value) {
-      return filtered
-        .filter(site => site.isValid === false)
-        .sort((a, b) => {
-          const sortA = a.sort ?? 1
-          const sortB = b.sort ?? 1
-          return sortB - sortA
-        })
-    }
-
-    // 排序：站内入口卡（工具箱 → 博客前台 → 图书馆）永远在最前，其余按 sort 降序（点击频率高的在前）。
-    // 入口卡不能靠 sort 值抬高：拖拽 swapSort、点击 incrementClick 都会改 sort，早晚被换走。
-    filtered.sort(
-      (a, b) => moduleRank(a) - moduleRank(b) || (b.sort ?? 1) - (a.sort ?? 1)
-    )
-    return filtered
+    // 普通站点按 sort 降序（点击频率高的在前）；入口卡靠 moduleRank 钉顶，
+    // 不受 swapSort / incrementClick 改 sort 的影响。
+    regular.sort((a, b) => (b.sort ?? 1) - (a.sort ?? 1))
+    return [...pinned, ...regular]
   })
+
+  /** 参与分页与计数的普通站点（入口卡恒显、每页置顶，不占分页名额） */
+  const regularSites = computed(() => filteredSites.value.filter(s => !isModuleSite(s)))
+  /** 普通站点总数（不含入口卡），供「共 N 个」与筛选计数使用 */
+  const regularTotal = computed(() => visibleSites.value.filter(s => !isModuleSite(s)).length)
 
   // 按分类分组的网站
   const sitesByCategory = computed(() => {
@@ -456,6 +458,16 @@ export const useSitesStore = defineStore('sites', () => {
       '<path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>'
   )
 
+  /** 工作台入口卡默认图标：与工具箱/博客/图书馆同一套渐变方块，避免各自造图 */
+  const MODULE_WORKSPACE_ICONS: Record<string, string> = {
+    '/teacher': moduleIcon('#FDBA74', '#F97316', '<path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>'),
+    '/workbench': moduleIcon('#93C5FD', '#3B82F6', '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>'),
+    '/business': moduleIcon('#FCA5A5', '#EF4444', '<path d="M3 9h18l-1.5-5h-15L3 9Z"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/>'),
+    '/student': moduleIcon('#86EFAC', '#22C55E', '<path d="M4 5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2V5Z"/><path d="M8 7h7"/><path d="M8 11h7"/>'),
+    '/smart': moduleIcon('#FDE68A', '#F59E0B', '<path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V18h8v-3.3A7 7 0 0 0 12 2Z"/>'),
+    '/blog/admin': moduleIcon('#C4B5FD', '#8B5CF6', '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>')
+  }
+
   /** 依据当前设置生成应当出现在导航列表里的站内模块入口 */
   function buildModuleSites(): Site[] {
     let settings: ReturnType<typeof useAppSettingsStore>
@@ -499,6 +511,30 @@ export const useSitesStore = defineStore('sites', () => {
         category: 'other',
         tags: [MODULE_TAG],
         icon: settings.booksPageIcon || MODULE_BOOKS_ICON,
+        sort: 0,
+        createdAt: MODULE_SINCE
+      })
+    }
+    // 原左上角「工作台切换」面板里的跳转，统一改成列表里的固定入口卡（不含「导航站」自身：
+    // 它就在当前页，放一张指向自己的卡只会占位置）。
+    // 显隐 / 名称 / 图标继续跟随各工作台设置（个人工作台默认关闭 → 默认不出现）。
+    const workspaces: Array<{ url: string; name: string; icon?: string; visible: boolean; description: string }> = [
+      { url: '/teacher', name: settings.teacherPageDisplayName, icon: settings.teacherPageIcon, visible: settings.teacherPageVisible !== false, description: '教师工作台：班级、学生与作业管理' },
+      { url: '/workbench', name: settings.workbenchPageDisplayName, icon: settings.workbenchPageIcon, visible: settings.workbenchPageVisible !== false, description: '个人工作台：待办、便签、记账与健康' },
+      { url: '/business', name: settings.businessPageDisplayName, icon: settings.businessPageIcon, visible: settings.businessPageVisible !== false, description: '销售记账：进货、销售与库存' },
+      { url: '/student', name: settings.studentPageDisplayName, icon: settings.studentPageIcon, visible: settings.studentPageVisible !== false, description: '学生工作台：课表、作业与错题' },
+      { url: '/smart', name: settings.smartPageDisplayName, icon: settings.smartPageIcon, visible: settings.smartPageVisible !== false, description: '智能工作台：技能、提示词与工作流' },
+      { url: '/blog/admin', name: settings.blogAdminPageDisplayName, icon: settings.blogAdminPageIcon, visible: settings.blogAdminPageVisible !== false, description: '博客后台：文章与图片库管理' }
+    ]
+    for (const w of workspaces) {
+      if (!w.visible) continue
+      out.push({
+        name: w.name,
+        url: w.url,
+        description: w.description,
+        category: 'other',
+        tags: [MODULE_TAG],
+        icon: w.icon || MODULE_WORKSPACE_ICONS[w.url] || MODULE_TOOLBOX_ICON,
         sort: 0,
         createdAt: MODULE_SINCE
       })
@@ -738,7 +774,8 @@ export const useSitesStore = defineStore('sites', () => {
         warnOnGuard(blockReason)
         console.error('[sites] 已跳过本次 user-sites 回写，避免覆盖真实数据：', blockReason)
       } else {
-        setPrefNow('user-sites', JSON.stringify(sites.value))
+        // 站内入口卡由 store 每次装载时注入，不是用户数据：不落盘、不进 nav.json
+        setPrefNow('user-sites', JSON.stringify(sites.value.filter(s => !isModuleSite(s))))
       }
     } catch {
       // 配额不足等异常保持原行为（IDB 写入失败由 setPrefNow 内部 catch 静默）
@@ -781,7 +818,25 @@ export const useSitesStore = defineStore('sites', () => {
         settingsStore.blogFrontPageVisible,
         settingsStore.booksPageDisplayName,
         settingsStore.booksPageIcon,
-        settingsStore.booksPageVisible
+        settingsStore.booksPageVisible,
+        settingsStore.teacherPageDisplayName,
+        settingsStore.teacherPageIcon,
+        settingsStore.teacherPageVisible,
+        settingsStore.workbenchPageDisplayName,
+        settingsStore.workbenchPageIcon,
+        settingsStore.workbenchPageVisible,
+        settingsStore.businessPageDisplayName,
+        settingsStore.businessPageIcon,
+        settingsStore.businessPageVisible,
+        settingsStore.studentPageDisplayName,
+        settingsStore.studentPageIcon,
+        settingsStore.studentPageVisible,
+        settingsStore.smartPageDisplayName,
+        settingsStore.smartPageIcon,
+        settingsStore.smartPageVisible,
+        settingsStore.blogAdminPageDisplayName,
+        settingsStore.blogAdminPageIcon,
+        settingsStore.blogAdminPageVisible
       ],
       () => {
         // 只在已有站点数据时对齐，避免首屏 loadSites 之前就往空列表里塞入口
@@ -1226,6 +1281,8 @@ ${sub}
     allTags,
     tagsByCategory,
     filteredSites,
+    regularSites,
+    regularTotal,
     sitesByCategory,
     currentPage,
     pageSize,

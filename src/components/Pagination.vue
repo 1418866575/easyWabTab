@@ -71,7 +71,7 @@ const handleSizeChange = (value: number | string) => {
 </script>
 
 <template>
-  <div v-if="store.filteredSites.length > 0" class="pagination-wrapper">
+  <div v-if="store.regularSites.length > 0" class="pagination-wrapper">
     <!-- 分页按钮（非全部模式时显示） -->
     <div v-if="!isAllMode" class="pagination">
       <button
@@ -121,7 +121,7 @@ const handleSizeChange = (value: number | string) => {
 
     <!-- 全部时显示总数 -->
     <div v-if="isAllMode" class="page-info">
-      共 {{ store.filteredSites.length }} 条
+      共 {{ store.regularSites.length }} 条
     </div>
   </div>
 </template>

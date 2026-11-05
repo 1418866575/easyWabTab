@@ -37,7 +37,8 @@ function check(name, ok, detail = '') {
   console.log(`${ok ? '  ✓' : '  ✗'} ${name}${detail ? ` — ${detail}` : ''}`)
 }
 
-const browser = await chromium.launch({ executablePath: findChromium() })
+const exe = findChromium()
+const browser = await chromium.launch(exe ? { executablePath: exe } : { channel: 'msedge' })
 
 // ---------- 桌面视口 ----------
 {
@@ -94,16 +95,19 @@ const browser = await chromium.launch({ executablePath: findChromium() })
   if (panelVisible) {
     const itemCount = await page.locator('.ws-item').count()
     check('桌面：面板列出各工作台入口', itemCount >= 5, `${itemCount} 个入口`)
-    // 图书馆自身应标记为「当前」（模板里是 .ws-item.current）
-    const currentCount = await page.locator('.ws-item.current').count()
-    const currentName = currentCount
-      ? await page.locator('.ws-item.current .ws-item-name').first().innerText()
-      : ''
-    check(
-      '桌面：面板内把图书馆标记为当前页',
-      currentCount === 1 && /图书馆/.test(currentName),
-      `当前项「${currentName.trim()}」×${currentCount}`
-    )
+    // 图书馆入口已迁到导航站卡片列表，切换下拉里只剩各工作台；
+    // 这里验下拉形态（触发器下方、非全屏浮层）而不是陈旧的「图书馆当前项」断言。
+    const dropdownOk = await page.evaluate(() => {
+      const panel = document.querySelector('[data-testid="ws-panel"]')
+      const trigger = document.querySelector('[data-testid="ws-trigger"]')
+      if (!panel || !trigger) return false
+      const a = panel.getBoundingClientRect()
+      const b = trigger.getBoundingClientRect()
+      return getComputedStyle(panel).position === 'fixed' && a.top > b.bottom && a.left >= 0 && !document.querySelector('.ws-overlay')
+    })
+    check('桌面：切换器为触发器下方下拉（非居中浮层）', dropdownOk)
+    const itemNames = await page.locator('.ws-item-name').allTextContents()
+    check('桌面：下拉内不含已迁走的图书馆项', !itemNames.some((s) => s.includes('图书馆')), itemNames.join(' , '))
     await page.keyboard.press('Escape')
     await page.waitForSelector('[data-testid="ws-panel"]', { state: 'detached', timeout: 5000 })
   }

@@ -1,7 +1,7 @@
 // 工具箱 P1 批次（找Tab 补齐）纯函数测试
 // npm run test:toolbox-p1
 // 覆盖：字数统计、命名格式转换、日期计算、IP 解析、HTML 沙箱拼装、SVG 清洗、
-//       九宫格切分、ZIP 条目清洗、画板历史栈、四象限、待办、TOTP Base32
+//       九宫格切分、ZIP 条目清洗、画板历史栈、四象限、TOTP Base32
 import assert from 'node:assert/strict'
 
 import { countText } from '../src/toolbox/tools/word-count/wordCountCore.ts'
@@ -37,15 +37,6 @@ import {
   normalizeQuadrantData,
   QUADRANTS
 } from '../src/toolbox/tools/four-quadrant/quadrantCore.ts'
-import {
-  addCategory,
-  addTodo,
-  cycleStatus,
-  moveTodo,
-  normalizeTodoData,
-  removeCategory,
-  statsOf
-} from '../src/toolbox/tools/todo/todoToolCore.ts'
 import {
   base32Decode,
   base32Encode,
@@ -210,36 +201,6 @@ import {
   assert.equal(countByQuadrant(d).q2, 1, '移动象限')
   assert.equal(countByQuadrant(d).q1, 0, '原象限清空')
   assert.equal(normalizeQuadrantData({ items: [{ id: 'x', text: 't', q: 'bad' }] }).items[0].q, 'q1', '非法象限回落')
-}
-
-/* ---------------- 待办 ---------------- */
-{
-  let d = normalizeTodoData(null)
-  assert.equal(d.categories.length, 3, '默认三个分类')
-  d = addTodo(d, '买菜', 'life').data
-  d = addTodo(d, '写文档', 'work').data
-  assert.equal(d.items.length, 2, '新增两条')
-  assert.equal(addTodo(d, '', 'work').ok, false, '空文本被拒')
-  const wid = d.items.find((i) => i.text === '写文档')?.id as string
-  d = cycleStatus(d, wid)
-  assert.equal(d.items.find((i) => i.id === wid)?.status, 'doing', '状态流转到进行中')
-  d = cycleStatus(d, wid)
-  d = cycleStatus(d, wid)
-  assert.equal(d.items.find((i) => i.id === wid)?.status, 'pending', '三次循环回到待办')
-  const before = d.items.map((i) => i.text)
-  d = moveTodo(d, 'work', 0, 0)
-  assert.deepEqual(d.items.map((i) => i.text), before, '同位置移动无变化')
-  const added = addCategory(d, '健身').data
-  assert.equal(added.categories.length, 4, '新增分类')
-  assert.equal(addCategory(added, '健身').ok, false, '重名被拒')
-  const fitId = added.categories[3].id
-  d = addTodo(added, '跑步', fitId).data
-  d = removeCategory(d, fitId)
-  assert.equal(d.categories.length, 3, '删除自定义分类')
-  assert.equal(d.items.every((i) => i.cat !== fitId), true, '分类删除后条目回落')
-  assert.equal(removeCategory(d, 'work').categories.length, 3, '内置分类不可删')
-  assert.deepEqual(statsOf(d.items), { pending: 3, doing: 0, done: 0 }, '统计')
-  assert.equal(normalizeTodoData({ items: [{ id: '1', text: 't', status: 'x', cat: 'nope' }] }).items[0].cat, 'work', '非法分类回落')
 }
 
 /* ---------------- TOTP / Base32 ---------------- */

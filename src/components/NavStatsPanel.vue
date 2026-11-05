@@ -2,7 +2,7 @@
 /**
  * 设置 → 导航设置 → 访问统计（面板）
  *
- * 两块数据，来源与口径完全不同，界面上也分开放：
+ * 两块数据，来源与口径完全不同，用 BaseTabs 拆成两个标签页（全网访问默认第一）：
  *
  * 1. **全网访问**：自家服务端的匿名采集（`/api/stats/*`，见 scripts/statsService.cjs），
  *    统计公网所有访客的今日 / 区间 PV·UV、按天趋势、模块排行、来源构成。
@@ -18,6 +18,7 @@
  *    全部只留本机，不上传、不进云同步信封。
  */
 import { computed, onMounted, ref } from 'vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import { useToast } from '@/composables/useToast'
 import { showConfirm } from '@/utils/dialog'
 import { getPref } from '@/composables/useNavPrefs'
@@ -50,6 +51,14 @@ import {
 } from '@/composables/useSiteStats'
 
 const toast = useToast()
+
+/** 访问统计的两个标签页：全网访问在前（默认），我的使用在后 */
+type StatsTab = 'net' | 'local'
+const activeStatsTab = ref<StatsTab>('net')
+const STATS_TABS = [
+  { value: 'net', label: '全网访问', testid: 'ns-tab-net' },
+  { value: 'local', label: '我的使用', testid: 'ns-tab-local' }
+]
 
 /** ---------- 全网访问（自家服务端聚合） ---------- */
 /** 可查区间：服务端上限 90 天，再长也只会被截断，不如不给 */
@@ -285,8 +294,10 @@ onMounted(() => {
 
 <template>
   <div class="ns-panel">
-    <!-- ===== 全网访问 ===== -->
-    <section class="ns-sec">
+    <BaseTabs v-model="activeStatsTab" :items="STATS_TABS" testid="ns-tab" class="ns-tabs" />
+
+    <!-- ===== 全网访问（今日 KPI 只统计导航首页） ===== -->
+    <section v-if="activeStatsTab === 'net'" class="ns-sec" data-testid="ns-sec-net">
       <header class="ns-sec-head">
         <h3 class="ns-title">全网访问</h3>
         <span class="ns-badge">所有访客</span>
@@ -340,11 +351,11 @@ onMounted(() => {
       <template v-else>
         <div class="ns-kpis">
           <div class="ns-kpi">
-            <span class="ns-kpi-label">今日访问</span>
+            <span class="ns-kpi-label">今日首页访问</span>
             <b class="ns-kpi-value" data-testid="ns-net-pv-today">{{ netData?.today.pv ?? 0 }}</b>
           </div>
           <div class="ns-kpi">
-            <span class="ns-kpi-label">今日访客</span>
+            <span class="ns-kpi-label">今日首页访客</span>
             <b class="ns-kpi-value" data-testid="ns-net-uv-today">{{ netData?.today.uv ?? 0 }}</b>
           </div>
           <div class="ns-kpi">
@@ -425,6 +436,8 @@ onMounted(() => {
         </div>
 
         <p class="ns-hint">
+          「今日首页访问 / 访客」只统计导航首页，因此与下方全站趋势的最后一根柱子口径不同；
+          区间、趋势、页面排行与来源构成均为全站。首页访客自本次统计升级生效起累计（历史当天 UV 无法拆分）。
           只记录路由名与来源分类，不记 IP 明文（UV 是「加盐哈希 + 当日」去重），不设 cookie；
           数据保留 {{ netKeepDays || 180 }} 天<template v-if="netSince">，自 {{ netSince }} 起</template>。
           同一个人换设备或换浏览器会算作新的访客。
@@ -442,7 +455,7 @@ onMounted(() => {
     </section>
 
     <!-- ===== 我的使用 ===== -->
-    <section class="ns-sec">
+    <section v-else class="ns-sec" data-testid="ns-sec-local">
       <header class="ns-sec-head">
         <h3 class="ns-title">我的使用</h3>
         <span class="ns-badge">仅本机</span>

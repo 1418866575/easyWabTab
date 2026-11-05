@@ -57,13 +57,13 @@ const headUrls = await page.locator('.sites-grid .site-card').evaluateAll(nodes 
 )
 check('前三张是 工具箱/博客前台/图书馆', JSON.stringify(headUrls) === JSON.stringify(['/toolbox', '/blog', '/books']), headUrls.join(' , '))
 
-const normalBeforeModule = await page.locator('.sites-grid .site-card').evaluateAll(nodes => {
+const PINNED = ['/toolbox', '/blog', '/books', '/teacher', '/business', '/student', '/smart', '/blog/admin']
+const normalBeforeModule = await page.locator('.sites-grid .site-card').evaluateAll((nodes, moduleUrls) => {
   const urls = nodes.map(n => n.getAttribute('data-site-url'))
-  const moduleUrls = ['/toolbox', '/blog', '/books']
   const lastModule = Math.max(...moduleUrls.map(u => urls.indexOf(u)))
   const firstNormal = urls.findIndex(u => !moduleUrls.includes(u))
   return firstNormal === -1 || firstNormal > lastModule
-})
+}, PINNED)
 check('没有普通站点插到入口卡前面', normalBeforeModule)
 
 const moduleIcons = await page.locator('.sites-grid .site-card').evaluateAll(nodes =>
@@ -84,44 +84,47 @@ await first.screenshot({ path: path.join(OUT, 'card-toolbox.png') })
 const iconSrc = await first.locator('img').first().getAttribute('src')
 check('卡片图标为内联 SVG', (iconSrc || '').startsWith('data:image/svg+xml'), (iconSrc || '无').slice(0, 34))
 
-// 左上角工作台面板：工具箱项已移除
-await page.locator('[data-testid=ws-trigger]').click()
-await page.locator('[data-testid=ws-panel]').waitFor({ state: 'visible', timeout: 8000 })
-const panelToolbox = await page.locator('[data-testid=ws-item-toolbox]').count()
-const panelSmart = await page.locator('[data-testid=ws-item-smart]').count()
-check('工作台面板已无工具箱项', panelToolbox === 0, `找到 ${panelToolbox} 项`)
-check('工作台面板其余项正常', panelSmart === 1, `智能工作台 ${panelSmart} 项`)
-await page.screenshot({ path: path.join(OUT, 'workbench-panel.png') })
-await page.keyboard.press('Escape')
-await page.waitForTimeout(300)
+// 左上角切换器已下线：7 个工作台跳转全部转为列表里的固定入口卡
+const triggerCount = await page.locator('[data-testid=ws-trigger]').count()
+check('导航站首页已无工作台切换触发器', triggerCount === 0, `找到 ${triggerCount} 个`)
+const pinnedUrls = await page.locator('.sites-grid .site-card').evaluateAll((nodes, n) =>
+  nodes.slice(0, n).map(el => el.getAttribute('data-site-url')), PINNED.length)
+check('固定入口卡顺序正确', JSON.stringify(pinnedUrls) === JSON.stringify(PINNED), pinnedUrls.join(' , '))
+check('个人工作台默认关闭 → 卡片不显示',
+  (await page.locator('.site-card[data-site-url="/workbench"]').count()) === 0)
+check('固定入口卡均不可拖拽', await page.locator('.sites-grid .site-card').evaluateAll((nodes, n) =>
+  nodes.slice(0, n).every(el => el.getAttribute('draggable') === 'false'), PINNED.length))
 
-// 分类筛选：展开筛选面板 → 切到「其他」后仍在第一
+// 分类筛选：展开筛选面板 → 切到「其他」后固定卡仍全部在最前
 const filterToggle = page.locator('[data-testid=nav-filter-toggle]')
 if (await filterToggle.count()) {
   await filterToggle.click()
   await page.waitForTimeout(400)
 }
-const otherTab = page.locator('.category-tab').filter({ hasText: '其他' }).first()
+const tabSel = '.category-tabs-wrapper .el-radio-button__inner'
+const otherTab = page.locator(tabSel).filter({ hasText: '其他' }).first()
 if (await otherTab.count()) {
   await otherTab.click()
   await page.waitForTimeout(400)
-  const urlAfterCat = await page.locator('.sites-grid .site-card').first().getAttribute('data-site-url')
-  check('切到「其他」分类后仍第一', urlAfterCat === '/toolbox', urlAfterCat || '无')
+  const urlsAfterCat = await page.locator('.sites-grid .site-card').evaluateAll((nodes, n) =>
+    nodes.slice(0, n).map(el => el.getAttribute('data-site-url')), PINNED.length)
+  check('切到「其他」分类后固定卡仍全部在最前', JSON.stringify(urlsAfterCat) === JSON.stringify(PINNED), urlsAfterCat.join(' , '))
   // 复位到全部
-  const allTab = page.locator('.category-tab').filter({ hasText: '全部' }).first()
+  const allTab = page.locator(tabSel).filter({ hasText: '全部' }).first()
   if (await allTab.count()) await allTab.click()
   await page.waitForTimeout(300)
 } else {
-  check('切到「其他」分类后仍第一', false, '未找到分类 tab')
+  check('切到「其他」分类后固定卡仍全部在最前', false, '未找到分类 tab')
 }
 
-// 搜索：「工具」关键词下仍第一
+// 搜索：「工具」关键词不命中大部分入口卡，恒显机制应让它们仍在最前
 const search = page.locator('.nav-site-filter input, input[placeholder*="筛选本站"]').first()
 if (await search.count()) {
   await search.fill('工具')
   await page.waitForTimeout(400)
-  const urlAfterSearch = await page.locator('.sites-grid .site-card').first().getAttribute('data-site-url')
-  check('搜索「工具」后仍第一', urlAfterSearch === '/toolbox', urlAfterSearch || '无')
+  const urlsAfterSearch = await page.locator('.sites-grid .site-card').evaluateAll((nodes, n) =>
+    nodes.slice(0, n).map(el => el.getAttribute('data-site-url')), PINNED.length)
+  check('搜索「工具」后固定卡仍全部在最前', JSON.stringify(urlsAfterSearch) === JSON.stringify(PINNED), urlsAfterSearch.join(' , '))
   await search.fill('')
   await page.waitForTimeout(300)
 } else {
