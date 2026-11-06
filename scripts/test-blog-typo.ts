@@ -105,7 +105,7 @@ test('T7 typoInlineStyle(classic)：行内元素 / 代码 / 引用 / 列表 / �
   assert.equal(typoInlineStyle('em', {}, CLASSIC), 'font-style:italic;')
   assert.equal(
     typoInlineStyle('code', {}, CLASSIC),
-    'background-color:#f6f8fa;color:#c7254e;padding:2px 6px;border-radius:3px;font-family:Consolas,Menlo,monospace;font-size:14px;word-break:break-all;'
+    'background-color:#f6f8fa;color:#c7254e;padding:2px 6px;border-radius:3px;font-family:Consolas,Menlo,monospace;font-size:14px;word-break:normal;overflow-wrap:anywhere;'
   )
   assert.equal(
     typoInlineStyle('code', { isCodeInPre: true }, CLASSIC),
@@ -122,9 +122,9 @@ test('T7 typoInlineStyle(classic)：行内元素 / 代码 / 引用 / 列表 / �
   assert.equal(typoInlineStyle('ul', {}, CLASSIC), 'padding-left:1.8em;margin:1em 0;')
   assert.equal(typoInlineStyle('li', {}, CLASSIC), 'margin:0.4em 0;')
   assert.equal(typoInlineStyle('hr', {}, CLASSIC), 'border:none;border-top:1px solid #eee;margin:1.5em 0;')
-  assert.equal(typoInlineStyle('table', {}, CLASSIC), 'border-collapse:collapse;width:100%;margin:1em 0;font-size:14px;')
-  assert.equal(typoInlineStyle('th', {}, CLASSIC), 'border:1px solid #e0e0e0;padding:6px 10px;text-align:left;background-color:#f6f8fa;font-weight:bold;')
-  assert.equal(typoInlineStyle('td', {}, CLASSIC), 'border:1px solid #e0e0e0;padding:6px 10px;text-align:left;')
+  assert.equal(typoInlineStyle('table', {}, CLASSIC), 'border-collapse:collapse;width:100%;margin:1em 0;font-size:14px;table-layout:fixed;word-break:normal;overflow-wrap:anywhere;')
+  assert.equal(typoInlineStyle('th', {}, CLASSIC), 'border:1px solid #d0d7de;padding:8px 10px;text-align:left;background-color:#1976d2;color:#ffffff;font-weight:bold;word-break:normal;overflow-wrap:anywhere;')
+  assert.equal(typoInlineStyle('td', {}, CLASSIC), 'border:1px solid #e0e0e0;padding:8px 10px;text-align:left;vertical-align:top;word-break:normal;overflow-wrap:anywhere;')
   assert.equal(typoInlineStyle('section', {}, CLASSIC), '')
 })
 

@@ -432,7 +432,9 @@ export function typoInlineStyle(
       if (opts.isCodeInPre) {
         return `background:none;padding:0;color:${tk['--t-pre-color']};font-family:Consolas,Menlo,monospace;font-size:14px;`
       }
-      return `background-color:${tk['--t-code-bg']};color:${tk['--t-code-color']};padding:2px 6px;border-radius:3px;font-family:Consolas,Menlo,monospace;font-size:14px;word-break:break-all;`
+      // 行内代码不能再 break-all：会把 apply(ctx, config) 拆成「confi g」、package.json 拆成「packag e.json」。
+      // overflow-wrap:anywhere 只在超长无空格串才断，普通代码优先在空格/标点处折行。
+      return `background-color:${tk['--t-code-bg']};color:${tk['--t-code-color']};padding:2px 6px;border-radius:3px;font-family:Consolas,Menlo,monospace;font-size:14px;word-break:normal;overflow-wrap:anywhere;`
     case 'pre':
       // 公众号会丢掉 overflow-x，长代码行会被直接裁掉 → 用 pre-wrap 自动折行（缩进仍保留）
       return `background-color:${tk['--t-pre-bg']};padding:12px 16px;border-radius:6px;margin:1em 0;font-size:13px;line-height:1.65;white-space:pre-wrap;word-wrap:break-word;word-break:break-all;tab-size:2;`
@@ -446,11 +448,12 @@ export function typoInlineStyle(
     case 'hr':
       return 'border:none;border-top:1px solid #eee;margin:1.5em 0;'
     case 'table':
-      return 'border-collapse:collapse;width:100%;margin:1em 0;font-size:14px;'
+      // 公众号只认内联样式：固定列宽 + 单元格自动换行，避免宽表在手机上被压缩/裁切
+      return 'border-collapse:collapse;width:100%;margin:1em 0;font-size:14px;table-layout:fixed;word-break:normal;overflow-wrap:anywhere;'
     case 'th':
-      return 'border:1px solid #e0e0e0;padding:6px 10px;text-align:left;background-color:#f6f8fa;font-weight:bold;'
+      return 'border:1px solid #d0d7de;padding:8px 10px;text-align:left;background-color:#1976d2;color:#ffffff;font-weight:bold;word-break:normal;overflow-wrap:anywhere;'
     case 'td':
-      return 'border:1px solid #e0e0e0;padding:6px 10px;text-align:left;'
+      return 'border:1px solid #e0e0e0;padding:8px 10px;text-align:left;vertical-align:top;word-break:normal;overflow-wrap:anywhere;'
     default:
       return ''
   }

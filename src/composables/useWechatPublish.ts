@@ -237,66 +237,6 @@ function flattenLists(root: HTMLElement): void {
   }
 }
 
-/**
- * 表格安全化：把 <table> 摊平成「一行一张卡片」。
- *
- * 公众号对 table 的支持同样不可靠（列宽被压、合并单元格塌、宽表在手机上溢出裁切），
- * 与其赌它渲染正确，不如转成移动端天然可读的卡片：
- * - 每张卡片 = 一行；首列作为卡片标题（加粗）
- * - 其余列按表头标注「表头：值」逐行展示，窄屏也不会挤
- * - 保留单元格内部 HTML（行内 code / strong 等样式不丢）
- * Markdown 表格必有表头行，故默认第一行为表头；无 thead 时用第一行当表头。
- */
-function flattenTables(root: HTMLElement): void {
-  const doc = root.ownerDocument
-  const tables = Array.from(root.querySelectorAll('table'))
-
-  for (const table of tables) {
-    const rows = Array.from(table.querySelectorAll('tr')) as HTMLElement[]
-    if (rows.length === 0) {
-      table.remove()
-      continue
-    }
-    const headRow = (table.querySelector('thead tr') as HTMLElement | null) ?? rows[0]
-    const headCells = Array.from(headRow.children) as HTMLElement[]
-    const labels = headCells.map((c) => (c.textContent || '').trim())
-    const bodyRows = rows.filter((r) => r !== headRow)
-
-    const container = doc.createElement('section')
-    container.setAttribute('style', 'margin:1em 0;')
-
-    for (const row of bodyRows) {
-      const cells = Array.from(row.children) as HTMLElement[]
-      if (cells.length === 0) continue
-      const card = doc.createElement('section')
-      card.setAttribute(
-        'style',
-        'border:1px solid #eceff3;border-radius:6px;padding:10px 12px;margin:0.6em 0;background-color:#fafbfc;'
-      )
-      // 首列 = 卡片标题
-      const title = doc.createElement('section')
-      title.setAttribute('style', 'font-size:15px;font-weight:bold;color:#1f1f1f;line-height:1.5;margin-bottom:4px;')
-      title.innerHTML = (cells[0].innerHTML || '').trim() || '&nbsp;'
-      card.appendChild(title)
-      // 其余列 = 「表头：值」
-      for (let i = 1; i < cells.length; i++) {
-        const val = (cells[i].innerHTML || '').trim()
-        if (!val) continue
-        const label = labels[i] ?? ''
-        const line = doc.createElement('section')
-        line.setAttribute('style', 'font-size:14px;color:#3f3f3f;line-height:1.75;')
-        line.innerHTML = label
-          ? `<span style="color:#8a8f99;">${label}：</span>${val}`
-          : val
-        card.appendChild(line)
-      }
-      container.appendChild(card)
-    }
-
-    table.replaceWith(container)
-  }
-}
-
 /** 公众号不认 <mark>：转成带浅黄底的 <span>，保住高亮效果 */
 function convertMarks(root: HTMLElement): void {
   const doc = root.ownerDocument
@@ -308,17 +248,17 @@ function convertMarks(root: HTMLElement): void {
   })
 }
 
-/** 微信正文统一处理入口：列表摊平 + 表格卡片化 + 分割线结构替换 + 全标签内联样式（导出便于回归测试）。
+/** 微信正文统一处理入口：列表摊平 + 分割线结构替换 + 全标签内联样式（导出便于回归测试）。
+ *  表格保留真实 <table>，由 typoInlineStyle 注入内联样式（table-layout:fixed + 单元格自动换行）。
  *  theme 非空（找Tab 移植主题）时：标题/引用先落装饰真实节点，逐标签 CSS 取主题 tagStyles。 */
 export function normalizeWechatBody(
   root: HTMLElement,
   tokens: Record<string, string> = {},
   theme?: TypoTheme | null
 ): void {
-  // 顺序有讲究：先摊平列表（表格若在列表项里会被提到顶层），再卡片化表格、转 mark，
+  // 顺序有讲究：先摊平列表（表格若在列表项里会被提到顶层），再转 mark、
   // 然后替换分割线结构（dots 落成真实节点，必须在样式化之前否则没机会内联），最后统一内联样式
   flattenLists(root)
-  flattenTables(root)
   convertMarks(root)
   decorateHeadings(root, theme)
   if (theme?.decor?.hr) decorateHrMarkup(root, theme.decor.hr)

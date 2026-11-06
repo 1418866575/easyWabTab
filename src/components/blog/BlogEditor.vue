@@ -746,7 +746,7 @@ function openWechatPreview(): void {
     toastAlert('正文内容为空，无需预览', 'info')
     return
   }
-  // 与「发布到公众号」走完全相同的转换（列表摊平 / 表格卡片化 / 代码块折行 / 内联样式）
+  // 与「发布到公众号」走完全相同的转换（列表摊平 / 表格保留 / 代码块折行 / 内联样式）
   wechatPreviewHtml.value = buildWechatContentHtml(
     form.contentMarkdown,
     (id) => store.imageUrlById.get(id),
@@ -1245,7 +1245,7 @@ async function regenerateSlug(): Promise<void> {
       @close="wechatPreviewOpen = false"
     >
       <div class="be-wx-preview">
-        <p class="be-wx-tip">按草稿箱规则转换后的正文（375px 宽）。列表、表格、代码块均已处理，实际效果以公众号为准。</p>
+        <p class="be-wx-tip">按草稿箱规则转换后的正文（375px 宽）。列表、代码块已处理，表格保留真实表头与列，实际效果以公众号为准。</p>
         <div class="be-wx-phone">
           <div class="be-wx-body" data-testid="blog-editor-wechat-preview-body" v-html="wechatPreviewHtml"></div>
         </div>

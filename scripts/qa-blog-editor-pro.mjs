@@ -5,7 +5,7 @@
  *  S1 顶栏保存状态：初始「已保存」→ 输入后「未保存」
  *  S2 有未保存改动时 beforeunload 被拦截（defaultPrevented=true）
  *  S3 Ctrl+S 触发保存：store 正文更新 + 状态回到「已保存」
- *  S4 公众号预览：弹框渲染、无 ul/li、含圆点与表格卡片（#fafbfc）
+ *  S4 公众号预览：弹框渲染、无 ul/li、含圆点与真实表格（保留 table 标签）
  *  S5 图片压缩：2400px 宽大图 → 最长边 ≤1600 且体积明显变小
  *  S6 无页面级 JS 异常
  *
@@ -73,7 +73,8 @@ function check(name, ok, detail = '') {
 const TITLE = 'QA编辑器增强文章'
 const MD = '## 技术选型\n\n以本项目为例，技术选型是：\n\n- **框架**\n  ：Vue 3（`<script setup>`）\n\n- **状态**\n  ：Pinia 3\n\n| 方案 | 优点 |\n| --- | --- |\n| Vue 3 | 组合式 API |\n'
 
-const browser = await chromium.launch({ executablePath: findChromium() })
+const exe = findChromium()
+const browser = await chromium.launch(exe ? { executablePath: exe } : { channel: 'msedge' })
 try {
   const base = await ensureDevServer()
   console.log('[qa] dev =', base)
@@ -147,7 +148,7 @@ try {
   const bodyHtml = await body.innerHTML()
   check('S4 预览渲染列表（圆点 + 内容同行）', bodyText.includes('•') && /框架\s*：Vue3/.test(bodyText), bodyText.slice(0, 60))
   check('S4 预览已无 ul/li 标签', !/<ul|<li/i.test(bodyHtml), `hasUl=${/<ul|<li/i.test(bodyHtml)}`)
-  check('S4 预览表格已卡片化', bodyHtml.includes('#fafbfc'), String(bodyHtml.includes('#fafbfc')))
+  check('S4 预览保留真实表格（不再卡片化）', /<table[\s>]/i.test(bodyHtml) && !bodyHtml.includes('#fafbfc'), String(/<table[\s>]/i.test(bodyHtml)))
   check('S4 预览列表项内无 <br>（不会被劈成两行）', !/<br\s*\/?>/i.test(bodyHtml), /<br\s*\/?>/i.test(bodyHtml) ? 'has-br' : 'ok')
   await page.click('[data-testid="blog-editor-wechat-preview-dialog"] .bd-close, [data-testid="blog-editor-wechat-preview-dialog"] .close-btn').catch(() => {})
   await page.waitForTimeout(300)

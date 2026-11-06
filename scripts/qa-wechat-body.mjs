@@ -1,13 +1,15 @@
 /**
  * QA：公众号正文转换回归（列表 / 表格 / 代码块）
  *
- * 背景：博客发文到公众号草稿箱后样式变样。公众号编辑器对 ul/ol/li、table 支持都不可靠，
- * 且会丢掉 overflow —— 列表被拆成「空圆点 + 独立行」、宽表溢出裁切、长代码行被切掉。
+ * 背景：博客发文到公众号草稿箱后样式变样。公众号编辑器对 ul/ol/li 支持不可靠，
+ * 且会丢掉 overflow —— 列表被拆成「空圆点 + 独立行」、长代码行被切掉。
+ * 表格原先降级成「一行一张卡片」，行内代码被 break-all 拆词（confi g / packag e.json），观感差。
  *
- * 修复（useWechatPublish.normalizeWechatBody）：
- *   1) flattenLists  —— li → section + 悬挂缩进，项内段落合并成一行，空项丢弃
- *   2) flattenTables —— 一行一张卡片：首列当标题，其余列「表头：值」
- *   3) pre 样式改 pre-wrap（不靠 overflow 滚动，长行自动折行）
+ * 修复（useWechatPublish.normalizeWechatBody + blogTypoCore.typoInlineStyle）：
+ *   1) flattenLists —— li → section + 悬挂缩进，项内段落合并成一行，空项丢弃
+ *   2) 表格保留真实 <table>（table-layout:fixed + 蓝底白字表头 + 单元格自动换行），不再卡片化
+ *   3) 行内 code 去掉 break-all，改 word-break:normal + overflow-wrap:anywhere
+ *   4) pre 样式改 pre-wrap（不靠 overflow 滚动，长行自动折行）
  *
  * 断言：
  *  S1 松散列表：无 ul/li、两条=两个圆点、条目内无 <br>、「框架：Vue 3」连续
@@ -16,7 +18,7 @@
  *  S4 有序列表保留 1. 2. 3. 编号
  *  S5 空列表项不产生空圆点
  *  S6 普通段落未受影响
- *  S7 表格：无 table/tr/td/th，一行一张卡片，含首列标题与「表头：值」
+ *  S7 表格：保留真实 table（1 表 / 3 行 / 3 表头 / 6 单元格）、蓝底白字表头、无卡片、行内 code 不断词
  *  S8 代码块：pre 用 pre-wrap 且不含 overflow-x（公众号会裁掉滚动）
  *
  * 用法：node scripts/qa-wechat-body.mjs
@@ -80,7 +82,8 @@ function check(name, ok, detail = '') {
   console.log(`${ok ? '  PASS' : '  FAIL'}  ${name}${detail ? '  ' + detail : ''}`)
 }
 
-const browser = await chromium.launch({ executablePath: findChromium() })
+const exe = findChromium()
+const browser = await chromium.launch(exe ? { executablePath: exe } : { channel: 'msedge' })
 try {
   const base = await ensureDevServer()
   console.log('[qa] dev =', base)
@@ -122,12 +125,17 @@ try {
       orderedMarkers: (ordered.match(/>[1-3]\.&nbsp;/g) || []),
       emptyBullets: count(emptyItem, /•/g),
       tableStats: {
-        tags: count(table, /<(table|tr|td|th)[\s>]/gi),
+        tables: count(table, /<table[\s>]/gi),
+        rows: count(table, /<tr[\s>]/gi),
+        headCells: count(table, /<th[\s>]/gi),
+        cells: count(table, /<td[\s>]/gi),
         cards: count(table, /background-color:#fafbfc/g),
-        labels: /优点：/.test(table) && /缺点：/.test(table),
-        firstColTitle: /font-weight:bold[^>]*>Vue 3</.test(table) || /font-weight:bold;[^"]*"[^>]*>Vue 3</.test(table)
+        headers: /方案/.test(table) && /优点/.test(table) && /缺点/.test(table),
+        blueHead: /background-color:#1976d2/.test(table) && /color:#ffffff/.test(table),
+        fixedLayout: /table-layout:fixed/.test(table)
       },
       tableCodeInline: /background-color:#f6f8fa/.test(tableWithCode),
+      tableCodeNoBreakAll: !/word-break:break-all/.test(tableWithCode),
       markStats: { hasMark: /<mark/i.test(mark), hasBg: mark.includes('#fff3bf'), text: mark.includes('重点结论') },
       taskStats: { box: tasks.includes('☐'), checked: tasks.includes('☑'), noBracket: !/\[ \]|\[x\]/.test(tasks) },
       codeStats: {
@@ -162,11 +170,14 @@ try {
 
   check('S6 普通段落未受影响', out.plain.includes('第一段') && out.plain.includes('第二段') && !out.plain.includes('•'), out.plain.length)
 
-  check('S7 表格标签已全部去除', out.tableStats.tags === 0, `tags=${out.tableStats.tags}`)
-  check('S7 一行一张卡片（2 行 = 2 张）', out.tableStats.cards === 2, `cards=${out.tableStats.cards}`)
-  check('S7 卡片含「表头：值」标注', out.tableStats.labels, String(out.tableStats.labels))
-  check('S7 卡片首列作为加粗标题', out.tableStats.firstColTitle, String(out.tableStats.firstColTitle))
+  check('S7 表格保留真实 table（1 表 / 3 行 / 3 表头 / 6 单元格）',
+    out.tableStats.tables === 1 && out.tableStats.rows === 3 && out.tableStats.headCells === 3 && out.tableStats.cells === 6,
+    JSON.stringify(out.tableStats))
+  check('S7 不再生成卡片（#fafbfc = 0）', out.tableStats.cards === 0, `cards=${out.tableStats.cards}`)
+  check('S7 表头文字与蓝底白字样式保留', out.tableStats.headers && out.tableStats.blueHead, JSON.stringify(out.tableStats))
+  check('S7 固定列宽 + 单元格自动换行', out.tableStats.fixedLayout, String(out.tableStats.fixedLayout))
   check('S7 单元格内行内 code 样式保留', out.tableCodeInline, String(out.tableCodeInline))
+  check('S7 行内 code 不再 break-all 断词', out.tableCodeNoBreakAll, String(out.tableCodeNoBreakAll))
 
   check('S10 任务列表 ☐/☑ 正常进入公众号正文',
     out.taskStats.box && out.taskStats.checked && out.taskStats.noBracket, JSON.stringify(out.taskStats))
