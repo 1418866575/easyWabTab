@@ -123,6 +123,8 @@ const dragOverUrl = ref<string | null>(null)
 
 /** 站内入口卡（工具箱 / 博客前台 / 图书馆）固定在列表最前：既不发起拖拽，也不作为落点 */
 const isPinnedSite = (site: Site) => isModuleSite(site)
+/** 第一个并入分页的固定入口卡（按 MODULE_SITE_ORDER 首位）：仅它走站内跳转 */
+const firstFixedUrl = computed(() => store.mergedFixedSites[0]?.url ?? '')
 
 const handleDragStart = (site: Site) => {
   if (isPinnedSite(site)) return
@@ -303,8 +305,10 @@ const hasAnyFilter = computed(
 )
 
 const filterCountText = computed(() => {
-  const total = store.regularTotal
-  const shown = store.regularSites.length
+  // 前 N 个固定入口卡已并入分页池，计数需一并计入；其余恒显入口卡（/smart /blog/admin）不计入
+  const mergedFixed = store.mergedFixedSites.length
+  const shown = mergedFixed + store.regularSites.length
+  const total = mergedFixed + store.regularTotal
   return hasAnyFilter.value ? `筛选出 ${shown} / ${total} 个` : `共 ${total} 个`
 })
 
@@ -612,6 +616,7 @@ onUnmounted(() => {
           :is-drag-over="dragOverUrl === site.url"
           :is-dragging="dragSourceUrl === site.url"
           :draggable="!isPinnedSite(site)"
+          :internal-jump="site.url === firstFixedUrl"
           @edit="handleEdit"
           @delete="handleDelete"
           @unmark="handleUnmark"
@@ -625,7 +630,7 @@ onUnmounted(() => {
 
       <Pagination @pageChange="handlePageChange" />
 
-      <div v-if="store.regularSites.length === 0" class="empty-state">
+      <div v-if="store.paginatedSites.length === 0" class="empty-state">
         <p v-if="store.showOnlyInvalid">没有检测到无效链接 <Icon name="check" /></p>
         <p v-else>没有找到匹配的网站</p>
       </div>

@@ -256,16 +256,16 @@ export const useSitesStore = defineStore('sites', () => {
 
   const { parseSitesFromMarkdown } = useMarkdown()
 
-  // 总页数：入口卡每页都在，不占分页名额；至少 1 页（入口卡本身要显示）
+  // 总页数：前 N 个入口卡已并入分页池、占分页名额；其余入口卡恒显置顶、不占名额；至少 1 页
   const totalPages = computed(() => {
-    return Math.max(1, Math.ceil(regularSites.value.length / pageSize.value))
+    return Math.max(1, Math.ceil(listTotal.value / pageSize.value))
   })
 
-  // 当前页数据：固定的入口卡 + 当页普通站点
+  // 当前页数据：分页池（前 N 个入口卡 + 普通站点）按页切片，剩余入口卡恒显置顶
   const paginatedSites = computed(() => {
-    const pinned = filteredSites.value.filter(isModuleSite)
     const start = (currentPage.value - 1) * pageSize.value
-    return [...pinned, ...regularSites.value.slice(start, start + pageSize.value)]
+    const pool = [...mergedFixedSites.value, ...regularSites.value]
+    return [...pool.slice(start, start + pageSize.value), ...pinnedFixedSites.value]
   })
 
   // 筛选变化或分页大小变化时重置页码
@@ -359,6 +359,19 @@ export const useSitesStore = defineStore('sites', () => {
   const regularSites = computed(() => filteredSites.value.filter(s => !isModuleSite(s)))
   /** 普通站点总数（不含入口卡），供「共 N 个」与筛选计数使用 */
   const regularTotal = computed(() => visibleSites.value.filter(s => !isModuleSite(s)).length)
+
+  /**
+   * 前 N 个入口卡并入分页池：计入「共 N 个」与页码计算，按 MODULE_SITE_ORDER 原顺序随页流动；
+   * 其余入口卡（如 /smart /blog/admin）仍恒显置顶、不占分页名额、不计入总数。
+   * N 取自 MODULE_SITE_ORDER 前段长度；若某入口卡被设置关闭，则实际并入数量按可见项计算。
+   */
+  const MODULE_SITE_MERGE_COUNT = 7
+  // filteredSites 已把入口卡按 moduleRank 排在最前，直接首尾切分即可
+  const moduleSites = computed(() => filteredSites.value.filter(s => isModuleSite(s)))
+  const mergedFixedSites = computed(() => moduleSites.value.slice(0, MODULE_SITE_MERGE_COUNT))
+  const pinnedFixedSites = computed(() => moduleSites.value.slice(MODULE_SITE_MERGE_COUNT))
+  /** 计入总数 / 页码的卡片数：前 N 个入口卡 + 普通站点 */
+  const listTotal = computed(() => mergedFixedSites.value.length + regularSites.value.length)
 
   // 按分类分组的网站
   const sitesByCategory = computed(() => {
@@ -1283,6 +1296,7 @@ ${sub}
     filteredSites,
     regularSites,
     regularTotal,
+    mergedFixedSites,
     sitesByCategory,
     currentPage,
     pageSize,

@@ -38,6 +38,7 @@ function bindCardDocListeners(): void {
 <script setup lang="ts">
 import Icon from './Icon.vue'
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import type { Site } from '../types'
 import { getFaviconImgSrc, getIconUrl, ensureIconCached } from '../composables/useIconCache'
 import { useSitesStore } from '../stores/sites'
@@ -47,6 +48,8 @@ const props = defineProps<{
   readonly?: boolean
   isDragOver?: boolean
   isDragging?: boolean
+  /** 内部跳转：true 时走站内 SPA 跳转（同标签），仅第一个固定入口卡使用 */
+  internalJump?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -56,6 +59,7 @@ const emit = defineEmits<{
 }>()
 
 const sitesStore = useSitesStore()
+const router = useRouter()
 
 // ========================================
 // 描述弹框：hover 3s 打开 / 2s 自动关 / 鼠标在弹框中不关 / 点叉即关
@@ -212,9 +216,13 @@ const handleIconError = (event: Event) => {
 const handleClick = () => {
   // 记录点击次数（使用频率排序）
   sitesStore.incrementClick(props.site.url)
-  // 一律新标签打开：站内入口卡（/toolbox /blog /books）同样开新标签，
-  // 保留当前导航站页面的筛选与滚动位置，不需要用户回退。
+  // 第一个固定入口卡走站内 SPA 跳转（同标签），避免离开导航站再回退；
+  // 其余卡片（含其余固定项）一律新标签打开，保留当前导航站页面的筛选与滚动位置。
   // noopener：不让新标签通过 window.opener 反向操作本页（tabnabbing）；noreferrer 顺带不泄露来源。
+  if (props.internalJump) {
+    router.push(props.site.url)
+    return
+  }
   window.open(props.site.url, '_blank', 'noopener,noreferrer')
 }
 </script>

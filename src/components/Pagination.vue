@@ -71,7 +71,7 @@ const handleSizeChange = (value: number | string) => {
 </script>
 
 <template>
-  <div v-if="store.regularSites.length > 0" class="pagination-wrapper">
+  <div v-if="store.paginatedSites.length > 0" class="pagination-wrapper">
     <!-- 分页按钮（非全部模式时显示） -->
     <div v-if="!isAllMode" class="pagination">
       <button
@@ -119,9 +119,9 @@ const handleSizeChange = (value: number | string) => {
       </el-select>
     </div>
 
-    <!-- 全部时显示总数 -->
+    <!-- 全部时显示总数（含并入分页的固定入口卡，不含其余恒显入口卡） -->
     <div v-if="isAllMode" class="page-info">
-      共 {{ store.regularSites.length }} 条
+      共 {{ store.mergedFixedSites.length + store.regularSites.length }} 条
     </div>
   </div>
 </template>
