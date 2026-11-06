@@ -439,12 +439,7 @@ const renderedPreview = computed(() =>
           :shortcuts="dateShortcuts"
           @change="selectDate"
         />
-        <el-button type="primary" size="small" data-testid="dj-save-btn" @click="handleSave">保存</el-button>
-        <div class="dj-stats" data-testid="dj-stats">
-          <span class="dj-stat"><b data-testid="dj-streak">{{ store.stats.streak }}</b> 天连续</span>
-          <span class="dj-stat"><b data-testid="dj-total">{{ store.stats.total }}</b> 篇记录</span>
-          <span class="dj-char-count" data-testid="dj-char-count">{{ charCount }} 字</span>
-        </div>
+        <!-- 「保存」主操作已移到编辑器工具条右端常驻；统计数字已移进记录表头 -->
       </div>
 
 
@@ -479,17 +474,21 @@ const renderedPreview = computed(() =>
           />
           <span class="dj-title-count">{{ draftTitle.length }}/100</span>
         </div>
-        <!-- 视图切换：编辑 / 分屏 / 预览 -->
-        <div class="dj-view-switch" role="group" aria-label="编辑器视图">
-          <button
-            v-for="m in (['edit', 'split', 'preview'] as const)"
-            :key="m"
-            type="button"
-            class="dj-view-btn"
-            :class="{ active: viewMode === m }"
-            :data-testid="`dj-view-${m}`"
-            @click="viewMode = m"
-          >{{ m === 'edit' ? '编辑' : m === 'split' ? '分屏' : '预览' }}</button>
+        <!-- 编辑器工具条：左端视图切换，右端常驻「保存」主操作（从页头筛选行移入，
+             不受 viewMode 影响，预览态也能保存） -->
+        <div class="dj-editor-bar">
+          <div class="dj-view-switch" role="group" aria-label="编辑器视图">
+            <button
+              v-for="m in (['edit', 'split', 'preview'] as const)"
+              :key="m"
+              type="button"
+              class="dj-view-btn"
+              :class="{ active: viewMode === m }"
+              :data-testid="`dj-view-${m}`"
+              @click="viewMode = m"
+            >{{ m === 'edit' ? '编辑' : m === 'split' ? '分屏' : '预览' }}</button>
+          </div>
+          <el-button type="primary" size="small" data-testid="dj-save-btn" @click="handleSave">保存</el-button>
         </div>
 
         <!-- Markdown 工具栏（非预览视图显示；图片按钮另走文件选择） -->
@@ -561,13 +560,26 @@ const renderedPreview = computed(() =>
           data-testid="dj-image-input"
           @change="onPickImages"
         />
+        <!-- 共享博客图库选择器（日记正文插图，复用博客图片库） -->
+        <BlogImagePicker
+          v-if="libraryOpen"
+          multiple
+          title="从图库插入图片"
+          @select="insertFromLibrary"
+          @close="libraryOpen = false"
+        />
       </div>
-    </div>
-  </div>
-    <!-- 日记记录列表（表格 + 每页 10 条分页） -->
+    <!-- 日记记录列表：作为 .dj-main 的最后一个通栏块，位于编辑器正下方（页面底部），
+         全宽铺满内容区；各断点一律单列堆叠，由父容器 gap 统一留白 -->
     <div class="dj-table-section" data-testid="dj-table-section">
       <div class="dj-table-toolbar">
         <span class="dj-table-title">{{ showDeleted ? '已删除日记' : '日记记录' }}（{{ tableEntries.length }}）</span>
+        <!-- 统计数字从页头筛选行移进记录表头（保留 dj-stats / dj-streak / dj-total / dj-char-count） -->
+        <div class="dj-stats" data-testid="dj-stats">
+          <span class="dj-stat"><b data-testid="dj-streak">{{ store.stats.streak }}</b> 天连续</span>
+          <span class="dj-stat"><b data-testid="dj-total">{{ store.stats.total }}</b> 篇记录</span>
+          <span class="dj-char-count" data-testid="dj-char-count">{{ charCount }} 字</span>
+        </div>
       </div>
       <el-table
         :data="pageItems"
@@ -646,15 +658,8 @@ const renderedPreview = computed(() =>
         {{ showDeleted ? '没有已删除的日记' : '还没有日记，写下今天的第一篇吧' }}
       </div>
     </div>
-
-    <!-- 共享博客图库选择器（日记正文插图，复用博客图片库） -->
-    <BlogImagePicker
-      v-if="libraryOpen"
-      multiple
-      title="从图库插入图片"
-      @select="insertFromLibrary"
-      @close="libraryOpen = false"
-    />
+    </div>
+  </div>
 </template>
 <style scoped>
 /* 面板容器（与 WorkbenchNotes .wb-notes 同构） */
@@ -665,6 +670,7 @@ const renderedPreview = computed(() =>
 }
 
 /* ===== 顶部：大标题 + 工具栏（手记风格「纸面」头部） ===== */
+/* 页头圆角统一到共享 12px 口径（--radius-lg），仅 scoped 覆盖 */
 .dj-head {
   display: flex;
   flex-direction: column;
@@ -672,7 +678,7 @@ const renderedPreview = computed(() =>
   padding: 16px 18px;
   background: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
+  border-radius: var(--radius-lg, 12px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.06));
 }
 
@@ -802,6 +808,7 @@ const renderedPreview = computed(() =>
   resize: vertical;
 }
 
+/* 预览区圆角统一到共享 12px 口径（--radius-lg） */
 .dj-preview {
   flex: 1 1 0;
   min-width: 0;
@@ -814,7 +821,7 @@ const renderedPreview = computed(() =>
   color: var(--color-text);
   background: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
+  border-radius: var(--radius-lg, 12px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.06));
 }
 
@@ -827,9 +834,17 @@ const renderedPreview = computed(() =>
 }
 
 /* ===== 视图切换（编辑 / 分屏 / 预览） ===== */
+/* 编辑器工具条：视图切换靠左、保存主操作靠右，常驻不随 viewMode 隐藏 */
+.dj-editor-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
 .dj-view-switch {
   display: flex;
-  align-self: flex-start;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 999px;
   overflow: hidden;
@@ -1356,7 +1371,7 @@ const renderedPreview = computed(() =>
   white-space: nowrap;
 }
 
-/* ===== 桌面 769-1099px：单列堆叠、写作区 80% / 历史 20%、历史网格高度受限（自适应分页测量基准） ===== */
+/* ===== 桌面 769-1099px：单列堆叠，编辑器与记录表由 .dj-main 的统一 gap 分隔 ===== */
 @media (min-width: 769px) and (max-width: 1099.98px) {
   .dj-main {
     flex: 1;
@@ -1366,23 +1381,6 @@ const renderedPreview = computed(() =>
     gap: var(--space-4);
   }
 
-  .dj-editor {
-    flex: 4;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .dj-history {
-    flex: 1;
-    min-height: 0;
-  }
-
-  .dj-grid {
-    flex: 1;
-    min-height: 0;
-  }
-
   /* 页面级滚动后面板不再钉满一屏：原 height:100% 依赖父链撑满已失效，
      改为显式最小高度，保证编辑/预览区体感稳定（内容超出随页面滚动） */
   .dj-main .dj-md,
@@ -1395,30 +1393,32 @@ const renderedPreview = computed(() =>
   }
 }
 
-/* ===== 桌面 ≥1100px：编辑器 | 历史 双栏 ===== */
+/* ===== 桌面 ≥1100px：编辑器在上、日记记录列表通栏贴在底部 =====
+   旧规则本想做左右两栏，却漏写 flex-direction（继承到 column），又叠加
+   align-items:flex-start + 子元素 flex:1 按高度均分：编辑器被压到 267px
+   （内部 .dj-editor-wrap min-height:360px 直接溢出），记录列表则缩成一张窄卡片，
+   看起来既不在底部也没铺满。这里明确单列 + 自然高度，列表作为页面最后一个通栏块。 */
 @media (min-width: 1100px) {
   .dj-main {
-    flex: 1;
+    flex: 0 0 auto;
     min-height: 0;
     display: flex;
+    flex-direction: column;
+    align-items: stretch;
     gap: var(--space-4);
   }
 
   .dj-main > * {
-    flex: 1;
+    flex: 0 0 auto;
+    width: 100%;
     min-width: 0;
     display: flex;
     flex-direction: column;
     min-height: 0;
   }
 
-  .dj-grid {
-    flex: 1;
-    min-height: 0;
-  }
-
-  /* 页面级滚动后面板不再钉满一屏：原 height:100% 依赖父链撑满已失效，
-     改为显式最小高度，保证编辑/预览区体感稳定（内容超出随页面滚动） */
+  /* 页面级滚动后面板不再钉满一屏：编辑区保持稳定的最小高度，
+     内容超出由 .wb-content 统一滚动，记录列表始终随在编辑器下方。 */
   .dj-main .dj-md,
   .dj-main .dj-preview {
     min-height: 420px;
@@ -1428,22 +1428,20 @@ const renderedPreview = computed(() =>
     max-height: none;
   }
 }
-
-/* 历史区改为可滚动列表：桌面作用域内 .dj-grid-scroll 启用内部滚动；移动端页面滚动（.wb-content overflow-y:auto），不在此叠加 */
-@media (min-width: 769px) {
-
-}
 /* ===== 日记记录表格（底部列表，每页 10 条）===== */
+/* 记录表已收回进 .dj-main：留白改由父容器的统一 gap 承担，去掉手写 margin-top；
+   圆角统一到共享 12px 口径（--radius-lg） */
 .dj-table-section {
   display: flex;
   flex-direction: column;
+  flex: none;
+  width: 100%;
+  min-width: 0;
   gap: 10px;
-  /* 与上方编辑器卡片留白（table-section 在 .wb-diary 之外，无外层 gap 可叠加） */
-  margin-top: var(--space-4);
   padding: 16px 18px;
   background: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
+  border-radius: var(--radius-lg, 12px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.06));
 }
 
@@ -1470,7 +1468,8 @@ const renderedPreview = computed(() =>
   width: 140px;
   flex-shrink: 0;
 }
-.dj-filter-bar .dj-stats {
+/* 统计数字已移进记录表头，靠 .dj-table-toolbar 的 space-between 推到右侧 */
+.dj-table-toolbar .dj-stats {
   margin-left: auto;
 }
 
@@ -1502,7 +1501,8 @@ const renderedPreview = computed(() =>
 }
 
 @media (max-width: 768px) {
-  .dj-filter-bar .dj-stats {
+  .dj-table-toolbar { flex-wrap: wrap; }
+  .dj-table-toolbar .dj-stats {
     margin-left: 0;
     width: 100%;
   }

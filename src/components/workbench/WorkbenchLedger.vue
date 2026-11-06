@@ -9,10 +9,9 @@ import { useToast } from '@/composables/useToast'
 const PANEL_WIDTH = 'var(--dlg-w-wb-ledger, 480px)'
 const PANEL_MAX_HEIGHT = 'var(--dlg-h-wb-ledger, 85vh)'
 
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import Icon from '@/components/Icon.vue'
-import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
 import {
   calcDailyExpenseSeries,
   calcDepositTotal,
@@ -31,6 +30,7 @@ import {
 import type { TrendChartScale, TrendMonth } from '@/composables/ledgerCore'
 import type { LedgerCategory, LedgerEntry } from '@/types'
 import { exportXlsx } from '@/composables/xlsxExport'
+import { usePageSize } from '@/composables/usePageSize'
 
 const store = useWorkbenchLedgerStore()
 const toast = useToast()
@@ -193,6 +193,24 @@ const monthEntries = computed(() =>
     .sort((a, b) => (a.date === b.date ? (a.createdAt < b.createdAt ? 1 : -1) : a.date < b.date ? 1 : -1))
 )
 
+// ===== 本月记录分页（口径对齐其它面板：每页 10 条，可切 20/50）=====
+// 只切「显示用」数组；导出 Excel 与标题计数仍取全量 monthEntries，功能不变。
+const RECORD_PAGE_SIZE = 10
+const { pageSize: recordPageSize, PAGE_SIZES: RECORD_PAGE_SIZES } = usePageSize('ld-records-pager', RECORD_PAGE_SIZE)
+const recordPage = ref(1)
+const pagedMonthEntries = computed(() => {
+  const start = (recordPage.value - 1) * recordPageSize.value
+  return monthEntries.value.slice(start, start + recordPageSize.value)
+})
+// 切月 / 增删记录导致条数变少时把页码收回合法范围（对齐其它面板 watch 口径）
+watch(
+  () => monthEntries.value.length,
+  (n) => {
+    const maxPage = Math.max(1, Math.ceil(n / recordPageSize.value))
+    if (recordPage.value > maxPage) recordPage.value = maxPage
+  }
+)
+
 // ===== 一键导出 Excel（当前选中月记录，真正的 .xlsx，动态 import xlsx）=====
 async function exportLedgerXlsx(): Promise<void> {
   const headers = ['日期', '分类', '类型', '金额', '备注']
@@ -211,8 +229,8 @@ interface EntryView {
   cat: LedgerCategory | undefined
 }
 
-// ===== 图表区展开/折叠（默认展开）=====
-const chartsExpanded = ref(true)
+// ===== 图表区展开/折叠（默认收起：3 个自写 SVG 图表不铺首屏，点「图表」一键展开，展开后功能不变）=====
+const chartsExpanded = ref(false)
 
 // ===== 记录表单（新增/编辑共用弹框）=====
 const showDialog = ref(false)
@@ -313,7 +331,7 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- 统计卡 6 张（一行 stat-card） -->
+    <!-- 统计卡 7 张（自适应 auto-fit 网格，随容器宽度自动换行） -->
     <div class="ld-stats">
       <div class="stat-card" data-testid="ld-stat-income">
         <div class="stat-header">
@@ -366,8 +384,8 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- 图表区（可折叠，默认展开）：趋势图 + 环形图。桌面中低宽度（769-1599px）并排压缩纵向占用（一屏契约 R1），
-         ≥1600px 上下堆叠；展开记录时自动收起图表，为记录列表腾出空间 -->
+    <!-- 图表区（可折叠，默认收起）：3 个自写 SVG 图表（趋势 / 环形 / 近 7 日）默认不铺首屏，
+         点「图表」一键展开，展开后原图表功能不变；桌面中低宽度（769-1599px）并排压缩纵向占用，≥1600px 上下堆叠 -->
     <div class="ld-charts-section">
       <el-button
         type="button"
@@ -671,14 +689,14 @@ onMounted(async () => {
       </div>
       <el-table
         class="ewt-table"
-        :data="monthEntries"
+        :data="pagedMonthEntries"
         stripe
         border
         size="default"
         style="width: 100%"
         empty-text="本月暂无记录"
       >
-        <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => i + 1" />
+        <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (recordPage - 1) * recordPageSize + i + 1" />
         <el-table-column prop="date" label="日期" width="130" align="center" />
         <el-table-column label="分类" width="160" align="center">
           <template #default="{ row }: { row: LedgerEntry }">
@@ -712,9 +730,24 @@ onMounted(async () => {
           </template>
         </el-table-column>
       </el-table>
+      <!-- 分页条：口径对齐其它面板（每页 10 条，可切 20/50），避免 monthEntries 全量渲染拖累首屏 -->
+      <div class="ld-records-pager ewt-pager">
+        <el-pagination
+          v-model:current-page="recordPage"
+          @size-change="recordPage = 1"
+          v-model:page-size="recordPageSize"
+          :page-sizes="RECORD_PAGE_SIZES"
+          layout="total, prev, pager, next, jumper"
+          :total="monthEntries.length"
+          background
+          small
+          prev-text="上一页"
+          next-text="下一页"
+          data-testid="ld-pagination"
+        />
+      </div>
     </section>
   </div>
-<WorkbenchFab @click="startAdd" />
 </template>
 
 <style scoped>
@@ -736,19 +769,21 @@ onMounted(async () => {
 }
 
 /* ===== 月份选择条 ===== */
+/* 8 控件重排为紧凑一条：缩小间距/内边距/控件高度，右侧操作贴右，flex-wrap 仅作窄屏兜底；
+   不隐藏任何按钮，保证 QA 能直接点击 ld-toggle-amounts / ld-add。 */
 .ld-month-bar {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 6px;
   flex-wrap: wrap;
-  padding: 12px 14px;
+  padding: 8px 10px;
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
-.month-btn {padding: 0 var(--space-3);
+.month-btn {padding: 0 10px;
   font-size: var(--fs-caption, 12px);
   border-radius: var(--radius-full, 9999px);
   background: var(--color-bg-card, var(--color-bg-hover));
@@ -757,7 +792,7 @@ onMounted(async () => {
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
-  height: 36px;}
+  height: 32px;}
 
 .month-btn:hover {
   background: var(--color-primary);
@@ -777,7 +812,7 @@ onMounted(async () => {
 }
 
 .month-input {
-  width: 150px;
+  width: 140px;
   flex-shrink: 0;
 }
 
@@ -786,10 +821,10 @@ onMounted(async () => {
   width: 100%;
 }
 
-/* ===== 统计卡 6 张 ===== */
+/* ===== 统计卡 7 张（注释原写「6 张」与实际 7 张不符，已修正；改 auto-fit 自适应列，随宽度自动换行） ===== */
 .ld-stats {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: var(--space-3);
 }
 
@@ -1077,12 +1112,12 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 6px;
 }
 
 /* .btn-add 视觉已统一到全局 .ui-btn--primary（style.css） */
 
-.btn-manage {padding: 0 var(--space-3);
+.btn-manage {padding: 0 10px;
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
@@ -1091,7 +1126,7 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
-  height: 36px;}
+  height: 32px;}
 
 .btn-manage:hover {
   color: var(--color-primary-text);
@@ -1199,9 +1234,10 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
    遮罩/面板/头部/关闭/主体已统一到 common/BaseDialog.vue，
    此处仅保留新增/编辑弹框的层级覆盖（保证浮于页面其它层之上） */
 
-/* 新增/编辑弹框：BaseDialog 统一 z-index: 300，此处显式提升一层避免被面板内容遮挡 */
+/* 新增/编辑弹框层级：与其它工作台面板一致统一引用 --wb-dialog-z（BaseDialog 基准 300），
+   不再自写 z-index:400 造成层级分叉（变量未定义时 fallback 300 兜底）。 */
 .ld-dialog-top {
-  z-index: 400;
+  z-index: var(--wb-dialog-z, 300);
 }
 
 /* 底部本月记录区：内联展示、随页面滚动，与面板整体留白/分隔线风格一致 */
@@ -1223,6 +1259,14 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   font-size: var(--fs-md, 15px);
   font-weight: 600;
   color: var(--color-text);
+}
+
+/* 分页条：居中、留白与其它面板 ewt-pager 口径一致 */
+.ld-records-pager {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px 0 4px;
 }
 
 /* 表格内金额样式：沿用旧.ld-record-amount，确保 + 绿 / - 蓝 主题色 */

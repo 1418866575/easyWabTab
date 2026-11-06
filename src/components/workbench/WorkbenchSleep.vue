@@ -12,7 +12,6 @@ const PANEL_MAX_HEIGHT = '85vh'
 
 import { computed, onMounted, ref } from 'vue'
 import Icon from '@/components/Icon.vue'
-import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
 import WorkbenchHealthReminders from './WorkbenchHealthReminders.vue'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { injectHealthStore, type HealthStoreLike } from '@/composables/healthStoreContext'
@@ -193,7 +192,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="wb-exercise">
+  <div class="wb-sleep">
     <!-- 顶部目标卡（复用 stat-card 结构） -->
     <div class="stat-card">
       <div class="stat-header">
@@ -425,12 +424,11 @@ onMounted(async () => {
         </form>
     </BaseDialog>
   </div>
-<WorkbenchFab @click="startAddRecord" />
 </template>
 
 <style scoped>
-/* 面板容器（样式体系与 WorkbenchExercise.vue 完全一致，仅业务字段不同） */
-.wb-exercise {
+/* 面板容器：根节点改用本面板自己的 wb-sleep（此前误沿用 WorkbenchExercise 的 wb-exercise） */
+.wb-sleep {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -752,19 +750,15 @@ html.dark .btn-toggle-list {
   }
 }
 
-/* ===== 弹框层级（BaseDialog 统一 z-index: 300）===== */
-.sl-record-overlay { z-index: 320; }
+/* ===== 弹框层级：统一引用外壳定义的 --wb-dialog-z（BaseDialog 基准 300），不再各写 z-index:320 ===== */
+.sl-record-overlay { z-index: var(--wb-dialog-z, 300); }
 
 
 
 /* ===== 桌面端 ≥769px：面板根钉满 tab 内容区 ===== */
 @media (min-width: 769px) {
-  :global(.wb-health) {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .wb-exercise {
+  /* flex 列布局由 WorkbenchHealth.vue 自己承担，此处不再用 :global() 重复注入 */
+  .wb-sleep {
     flex: 1;
     min-height: 0;
   }

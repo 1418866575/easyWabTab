@@ -1,19 +1,20 @@
 /**
- * QA：工作台「悬浮新增 FAB / 移动端底部 Tab Bar」是否遮挡面板内可点元素
+ * QA：工作台「悬浮新增 FAB / 移动端侧栏抽屉」是否遮挡面板内可点元素
  *
- * 背景：WorkbenchFab 与移动端 .wb-menu（降级为固定底部 Tab Bar）都是 position:fixed，
- *       脱离文档流，不会把内容顶开。若内容区底部留白不足，滚到底时最后一屏的按钮/分值
- *       会被压在浮层下面 —— 看起来在、实际点不到。
+ * 背景：新版布局移除全局顶栏，移动端 .wb-menu 由固定底部 Tab Bar 改为左侧抽屉
+ *       （默认 translateX(-102%) 收起，页头按钮唤出）。FAB 仍是 position:fixed，
+ *       脱离文档流不会把内容顶开；内容区底部留白不足时，滚到底的按钮会被压在浮层下 ——
+ *       看起来在、实际点不到。
  *
  * 判据：以「元素中心点 elementFromPoint 命中的是否还是它自己（或子孙）」为准。
- *       中心点被 FAB / TabBar 接管 = 真的点不到，计为遮挡。
+ *       中心点被 FAB / 侧栏接管 = 真的点不到，计为遮挡。
  *       纯几何相交但中心点空的，不算（边缘擦到不影响操作）。
  *
  * 断言：
  *  S1 桌面 1440x900：每个面板滚到底，无元素被 FAB 遮挡
  *  S2 移动 390x844：每个面板滚到底，无元素被 FAB 遮挡
- *  S3 移动 390x844：每个面板滚到底，无元素被底部 Tab Bar 遮挡
- *  S4 移动端 Tab Bar 未遮挡内容区可点元素（含横向滚动条区域）
+ *  S3 移动 390x844：每个面板滚到底，无元素被侧栏抽屉遮挡
+ *  S4 侧栏默认收起 / 可唤出 / 内含 12 项菜单与「云同步 + 设置」两枚底部按钮
  *
  * 用法：node scripts/qa-workbench-mobile-overlap.mjs
  *      VERBOSE=1 打印每条遮挡明细
@@ -213,10 +214,19 @@ async function scanOverlap(page) {
   })
 }
 
-/** 遍历所有面板，返回 { name: { hits, metrics } } */
-async function sweep(page, label) {
+/** 遍历所有面板，返回 { name: { hits, metrics } }。
+ *  移动端新版布局里侧栏是左侧抽屉（默认收起），点菜单前须先点页头按钮唤出，
+ *  选中后外壳会自动收起抽屉（navigateTo → closeMobileMenu）。 */
+async function sweep(page, label, isMobile = false) {
   const out = {}
   for (const [key, name] of SECTIONS) {
+    if (isMobile) {
+      const trigger = page.locator('[data-testid="wb-menu-trigger"]')
+      if (await trigger.count()) {
+        await trigger.first().click()
+        await page.waitForTimeout(280)
+      }
+    }
     const btn = page.locator(`[data-testid="wb-menu-${key}"]`)
     if (!(await btn.count())) { out[name] = { hits: [], metrics: { skipped: true } }; continue }
     await btn.first().click()
@@ -289,20 +299,47 @@ try {
   const seedMob = await seed(mob)
   check('S0 移动：种子数据齐备（6 个面板）', Object.values(seedMob).every((n) => n > 0), JSON.stringify(seedMob))
   console.log('[qa] 扫描移动 390x844 …')
-  const mobSweep = await sweep(mob, 'mobile')
+  const mobSweep = await sweep(mob, 'mobile', true)
   const mobFab = summarize(mobSweep, "FAB")
   const mobBar = summarize(mobSweep, "TABBAR")
   check('S2 移动：无元素被 FAB 遮挡', mobFab.ok, mobFab.detail)
-  check('S3 移动：无元素被底部 Tab Bar 遮挡', mobBar.ok, mobBar.detail)
+  check('S3 移动：无元素被侧栏抽屉遮挡', mobBar.ok, mobBar.detail)
 
-  // S4 TabBar 自身可用性：12 项都应能横向滚动到可见（移动端菜单是 overflow-x:auto）
-  const barCheck = await mob.evaluate(() => {
+  // S4 新版移动端：底栏已取消，验证左侧抽屉默认收起 / 可唤出 / 内含全量菜单与两枚底部按钮
+  const drawerCheck = await mob.evaluate(() => {
     const bar = document.querySelector('.wb-menu')
     if (!bar) return { ok: false, why: '未找到 .wb-menu' }
-    const br = bar.getBoundingClientRect()
-    return { ok: br.bottom <= window.innerHeight + 1 && br.height >= 40, h: Math.round(br.height), bottom: Math.round(br.bottom) }
+    const app = document.querySelector('.wb-body') || document.querySelector('.wb-shell')
+    const r = bar.getBoundingClientRect()
+    const a = app.getBoundingClientRect()
+    return {
+      ok: r.right <= a.left + 1,
+      right: Math.round(r.right), left: Math.round(a.left),
+      items: bar.querySelectorAll('.wb-menu-item').length,
+      footBtns: bar.querySelectorAll('.wb-side-foot button').length
+    }
   })
-  check('S4 移动端底部 Tab Bar 贴底且高度合理', barCheck.ok, `h=${barCheck.h} bottom=${barCheck.bottom}`)
+  check('S4a 移动端侧栏默认收起（无底部 Tab Bar）', drawerCheck.ok,
+    `right=${drawerCheck.right} appLeft=${drawerCheck.left} ${drawerCheck.why || ''}`)
+  await mob.locator('[data-testid="wb-menu-trigger"]').click()
+  await mob.waitForTimeout(280)
+  const drawerOpen = await mob.evaluate(() => {
+    const bar = document.querySelector('.wb-menu')
+    const app = document.querySelector('.wb-body') || document.querySelector('.wb-shell')
+    const r = bar.getBoundingClientRect()
+    const a = app.getBoundingClientRect()
+    const foot = bar.querySelectorAll('.wb-side-foot button')
+    return {
+      opened: r.left >= a.left - 1 && r.width > 200,
+      items: bar.querySelectorAll('.wb-menu-item').length,
+      footBtns: [...foot].map(b => b.getAttribute('data-testid')).join(','),
+      scrim: !!document.querySelector('[data-testid="wb-menu-scrim"]')
+    }
+  })
+  check('S4b 抽屉可唤出且含 12 项菜单 + 遮罩', drawerOpen.opened && drawerOpen.items === 12 && drawerOpen.scrim,
+    `items=${drawerOpen.items} scrim=${drawerOpen.scrim}`)
+  check('S4c 抽屉底部只有云同步 + 设置', drawerOpen.footBtns === 'wb-sync-now,wb-settings', drawerOpen.footBtns)
+  await mob.locator('[data-testid="wb-menu-scrim"]').click({ position: { x: 300, y: 400 } })
 
   check('S5 全过程无页面级 JS 异常', errs.length === 0, errs.join(' | ').slice(0, 200))
   await mobCtx.close()

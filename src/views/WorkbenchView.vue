@@ -120,12 +120,41 @@ const activeSection = ref<SectionKey>(
     ? (route.query.section as SectionKey)
     : 'home'
 )
-watch(activeSection, (v) => {
-  router.replace({ query: { ...route.query, section: v } }).catch(() => {})
+// 健康管理面板当前激活 tab（点击菜单「健康」不传 tab → 保留上次激活）。
+// 与 section 一起写进 URL：原型要求健康子 tab 刷新/分享后仍停在同一子面板。
+const activeHealthTab = ref<HealthModule>(
+  (HEALTH_TABS as readonly string[]).includes(route.query.tab as string)
+    ? (route.query.tab as HealthModule)
+    : 'exercise'
+)
+
+// 两个状态共用一个 watcher，避免 section 与 tab 各自 router.replace 造成竞态丢参数。
+watch([activeSection, activeHealthTab], ([sec, tab]) => {
+  router.replace({ query: { ...route.query, section: sec, tab } }).catch(() => {})
 })
 
-// 健康管理面板当前激活 tab（点击菜单「健康」不传 tab → 保留上次激活）
-const activeHealthTab = ref<HealthModule>('exercise')
+// ===== 分组菜单（原型：日常 / 专注 / 资产；顺序与改名仍由设置 store 驱动）=====
+// 分组只做归类，不改变设置里配置的相对顺序；未在分组表里的新菜单项落到「其它」，
+// 这样以后新增面板忘了登记分组也不会从侧栏消失。
+const MENU_GROUP_DEFS = [
+  { label: '日常', keys: ['home', 'todos', 'notes', 'diary', 'countdowns'] },
+  { label: '专注', keys: ['pomodoro', 'habits', 'health'] },
+  { label: '资产', keys: ['passwords', 'ledger', 'genealogy', 'trash'] }
+] as const
+const menuGroups = computed(() => {
+  const groups: { label: string; items: typeof menuItems.value }[] = MENU_GROUP_DEFS.map(g => ({
+    label: g.label,
+    items: menuItems.value.filter(i => (g.keys as readonly string[]).includes(i.key))
+  }))
+  const grouped = new Set<string>(MENU_GROUP_DEFS.flatMap(g => g.keys as readonly string[]))
+  const rest = menuItems.value.filter(i => !grouped.has(i.key))
+  if (rest.length) groups.push({ label: '其它', items: rest })
+  return groups.filter(g => g.items.length > 0)
+})
+
+// 移动端左侧抽屉（原型：不退回底部 Tab Bar，页头菜单按钮唤出完整 12 项菜单）
+const mobileMenuOpen = ref(false)
+function closeMobileMenu(): void { mobileMenuOpen.value = false }
 
 // WorkbenchHome 通过 @navigate 请求跳转（emits 声明为 string，这里做白名单收窄）。
 // 菜单开关关闭的功能不可进入（白名单 + 开关双重守卫）。
@@ -135,6 +164,8 @@ function navigateTo(section: string, tab?: string) {
     if (section === 'health' && tab !== undefined && (HEALTH_TABS as readonly string[]).includes(tab)) {
       activeHealthTab.value = tab as HealthModule
     }
+    // 抽屉里点菜单后自动收起，否则选中项被遮罩挡着看不到
+    closeMobileMenu()
   }
 }
 
@@ -152,6 +183,33 @@ const activePageTitle = computed(() => {
 })
 const activePageDesc = computed(() => MENU_DESCRIPTIONS[activeSection.value] ?? '')
 const showPageHead = computed(() => activeSection.value !== 'home' && activePageDesc.value !== '')
+
+// 面板切换改 KeepAlive + 单节点 <component :is>：切走再回来保留筛选 / 分页 / 滚动 / 子 tab 状态。
+// ⚠️ KeepAlive 只接受单个子节点，模板里不能放并列 v-if 分支，也不能在它内部写注释（注释也算一个子节点）。
+const PANEL_BY_KEY: Record<SectionKey, Component> = {
+  home: WorkbenchHome,
+  todos: WorkbenchTodo,
+  notes: WorkbenchNotes,
+  diary: WorkbenchDiary,
+  countdowns: WorkbenchCountdown,
+  pomodoro: WorkbenchPomodoro,
+  habits: WorkbenchHabits,
+  passwords: WorkbenchPassword,
+  health: WorkbenchHealth,
+  ledger: WorkbenchLedger,
+  genealogy: WorkbenchGenealogy,
+  trash: WorkbenchTrash
+}
+const activePanel = computed<Component>(() => PANEL_BY_KEY[activeSection.value])
+// 只给真正声明了该 emit 的面板挂监听：若把 @change 无差别透传给其它面板，
+// 它会作为原生 change 事件落在根 DOM 上，输入框一改就把 tab 写成 Event 对象。
+const activePanelBindings = computed<Record<string, unknown>>(() => ({
+  ...(activeSection.value === 'health' ? { activeTab: activeHealthTab.value } : {}),
+  ...(activeSection.value === 'home' ? { onNavigate: navigateTo } : {}),
+  ...(activeSection.value === 'health'
+    ? { onChange: (v: HealthModule) => { activeHealthTab.value = v } }
+    : {})
+}))
 
 // 菜单开关变化（设置弹窗切换）→ 当前激活区被关闭时回退到首个可见菜单项（home 恒可见）
 watch(
@@ -177,14 +235,14 @@ watch(activeSection, async () => {
   }
 })
 
-// 侧栏折叠态：undefined（未设置）视为展开；持久化经 settingsStore（IDB store 'settings'）
+// 侧栏折叠态：undefined（未设置）视为展开；持久化经 settingsStore（IDB store 'settings'）。
+// 两个入口共用同一份状态：「日常」分组标题右端的侧边栏按钮，以及设置弹窗里的折叠开关。
 const sidebarCollapsed = computed(() => settingsStore.workbenchSidebarCollapsed ?? false)
-
-function toggleSidebar() {
+function toggleSidebar(): void {
   settingsStore.setWorkbenchSidebarCollapsed(!sidebarCollapsed.value)
 }
 
-// ===== 全局搜索（右上角按钮 / Alt+K 打开）=====
+// ===== 全局搜索（侧栏顶部搜索框 / Alt+K 打开）=====
 const spotlightOpen = ref(false)
 const showSettingsDialog = ref(false)
 
@@ -281,108 +339,150 @@ const syncStatusClass = computed(
   })
 )
 const syncLabel = computed((): string => {
+  if (!cloudEnabled.value) return '云同步未开启'
   switch (cloudSync.status.value as SyncStatus) {
     case 'pulling': return '拉取中…'
     case 'pushing': return '推送中…'
     case 'conflict': return '处理冲突'
     case 'error': return '同步失败'
-    default: return '云同步'
+    default: return '云同步 · 已同步'
   }
 })
+// 底部按钮只显示「云同步 / 设置」纯文字，状态不再占副行：
+// 同步态改由 :title（完整时刻）+ syncStatusClass 的底色 + :aria-label（syncLabel）承载。
 const syncTip = computed((): string => {
+  if (!cloudEnabled.value) return '云同步未开启；点击打开设置'
   const t = cloudSync.lastSyncAt.value
   if (!t) return '未同步过；点击立即同步'
   const d = new Date(t)
   return `上次同步：${formatDate(d)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}；点击立即同步`
 })
 async function handleSyncNowClick(): Promise<void> {
+  // 未开启时这枚按钮就是「去设置」的入口，保证侧栏底部恒定只有两枚按钮
+  if (!cloudEnabled.value) {
+    closeMobileMenu()
+    showSettingsDialog.value = true
+    return
+  }
   if (syncBusy.value) return
   syncBusy.value = true
-  await cloudSync.syncNow()
-  syncBusy.value = false
+  try {
+    await cloudSync.syncNow()
+  } finally {
+    syncBusy.value = false
+  }
 }
+
+// ===== 工作台切换入口（原顶栏已移除）=====
+// 触发器不占界面，入口只有 Alt+W（键盘监听在 WorkbenchSwitcher 内部）。
+// 设置弹窗里的「切换工作台」按钮与它的 `ewt:open-workbench-switcher` 桥接已删除，
+// 组件仍必须挂载：它提供下拉锚点与全局键盘监听，不能只留一个快捷键。
 </script>
 
 <template>
-  <div class="wb-shell">
-    <!-- 头部：左 = 返回 + 标题；右 = 全局搜索 + 云同步（开关显示）+ 设置 -->
-    <header class="wb-header">
-      <div class="wb-header-left">
-        <!-- 左上角「工作台切换」命令面板入口：站点图标 + 点击弹出切换面板（Alt+W 唤起，与导航站一致） -->
-        <WorkbenchSwitcher
-          :trigger-icon="settingsStore.workbenchPageIcon"
-          trigger-builtin="toolbox"
-          :trigger-label="settingsStore.workbenchPageDisplayName"
-          force-show
-        />
-      </div>
-      <div class="wb-header-right">
-        <button class="wb-btn" data-testid="wb-spotlight-open" title="全局搜索 (Alt+K)" @click="spotlightOpen = true"><Icon name="search" /> 全局搜索</button>
-        <button
-          v-if="cloudEnabled"
-          class="wb-btn wb-sync-btn"
-          :class="syncStatusClass"
-          :title="syncTip"
-          data-testid="wb-sync-now"
-          :disabled="syncBusy || cloudSync.status.value === 'pulling' || cloudSync.status.value === 'pushing'"
-          @click="handleSyncNowClick"
-        ><Icon name="cloud" :size="14" /> {{ syncLabel }}</button>
-        <button class="wb-btn" title="设置" data-testid="wb-settings" @click="showSettingsDialog = true"><Icon name="cog" :size="15" /> 设置</button>
-      </div>
-    </header>
+  <div class="wb-shell wb-scope">
+    <!-- 工作台切换：触发器收进视觉隐藏容器，入口只保留 Alt+W。
+         组件必须挂载：它提供下拉锚点与全局键盘监听，不能只留一个快捷键。 -->
+    <div class="wb-switcher-anchor" aria-hidden="true">
+      <WorkbenchSwitcher
+        :trigger-icon="settingsStore.workbenchPageIcon"
+        trigger-builtin="toolbox"
+        :trigger-label="settingsStore.workbenchPageDisplayName"
+        force-show
+      />
+    </div>
 
-    <!-- 主体：左菜单 + 右内容区 -->
+    <!-- 主体：左 = 全量菜单（搜索置顶 / 分组导航 / 底部两枚按钮），右 = 内容区。无全局顶栏。 -->
     <div class="wb-body">
-      <nav ref="menuNavRef" class="wb-menu" :class="{ collapsed: sidebarCollapsed }">
-        <button
-          class="tw-btn tw-btn-sm wb-sidebar-toggle"
-          data-testid="wb-sidebar-toggle"
-          :title="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
-          :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
-          @click="toggleSidebar"
-        >
-          <span class="wb-menu-icon">
-            <Icon :name="sidebarCollapsed ? 'chevron-right' : 'chevron-left'" :size="14" />
-          </span>
-          <span class="wb-menu-label">{{ sidebarCollapsed ? '展开' : '收起' }}</span>
-        </button>
-        <button
-          v-for="item in menuItems"
-          :key="item.key"
-          class="wb-menu-item"
-          :class="{ active: activeSection === item.key }"
-          :title="item.label"
-          :aria-label="item.label"
-          :data-testid="`wb-menu-${item.key}`"
-          @mouseenter="prefetchPanel(item.key)"
-          @click="navigateTo(item.key)"
-        >
-          <span class="wb-menu-icon"><Icon :name="item.icon" /></span>
-          <span class="wb-menu-label">{{ item.label }}</span>
-        </button>
+      <nav ref="menuNavRef" class="wb-menu" :class="{ collapsed: sidebarCollapsed, open: mobileMenuOpen }">
+        <div class="wb-side-top">
+          <button class="wb-search" data-testid="wb-spotlight-open" title="全局搜索 (Alt+K)" @click="spotlightOpen = true; closeMobileMenu()">
+            <span class="wb-search-ic"><Icon name="search" :size="14" /></span>
+            <span class="wb-search-text">搜索全部…</span>
+            <kbd class="wb-search-kbd">Alt+K</kbd>
+          </button>
+        </div>
+
+        <div class="wb-side-nav">
+          <template v-for="group in menuGroups" :key="group.label">
+            <div class="wb-group-label" :class="{ 'is-first': group.label === '日常' }">
+              <span class="wb-group-label-text">{{ group.label }}</span>
+              <!-- 「日常」分组右上角：侧边栏收起/展开按钮。放这里既不占搜索行，
+                   也不破坏底部「云同步 + 设置」两枚按钮的约定；折叠态仍保留为纯图标入口。 -->
+              <button
+                v-if="group.label === '日常'"
+                class="wb-group-collapse"
+                data-testid="wb-sidebar-toggle"
+                :title="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
+                :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
+                @click="toggleSidebar"
+              >
+                <Icon :name="sidebarCollapsed ? 'chevron-right' : 'chevron-left'" :size="14" />
+              </button>
+            </div>
+            <button
+              v-for="item in group.items"
+              :key="item.key"
+              class="wb-menu-item"
+              :class="{ active: activeSection === item.key }"
+              :title="item.label"
+              :aria-label="item.label"
+              :data-testid="`wb-menu-${item.key}`"
+              @mouseenter="prefetchPanel(item.key)"
+              @click="navigateTo(item.key)"
+            >
+              <span class="wb-menu-icon"><Icon :name="item.icon" /></span>
+              <span class="wb-menu-label">{{ item.label }}</span>
+            </button>
+          </template>
+        </div>
+
+        <!-- 侧栏底部恒定两枚按钮，同一行各占一半，只显示「云同步」「设置」纯文字。
+             图标仅在 60px 折叠态出现（那时文字放不下），状态靠 title / aria-label / 底色表达。 -->
+        <div class="wb-side-foot" data-testid="wb-side-foot">
+          <button
+            class="wb-side-btn wb-sync-btn"
+            :class="syncStatusClass"
+            :title="syncTip"
+            :aria-label="syncLabel"
+            data-testid="wb-sync-now"
+            :disabled="cloudEnabled && (syncBusy || cloudSync.status.value === 'pulling' || cloudSync.status.value === 'pushing')"
+            @click="handleSyncNowClick"
+          >
+            <span class="wb-side-btn-ic" aria-hidden="true"><Icon name="cloud" :size="14" /></span>
+            <span class="wb-side-btn-text">云同步</span>
+          </button>
+          <button
+            class="wb-side-btn"
+            title="设置"
+            aria-label="设置"
+            data-testid="wb-settings"
+            @click="showSettingsDialog = true; closeMobileMenu()"
+          >
+            <span class="wb-side-btn-ic" aria-hidden="true"><Icon name="cog" :size="15" /></span>
+            <span class="wb-side-btn-text">设置</span>
+          </button>
+        </div>
       </nav>
 
+      <!-- 移动端抽屉遮罩：层级低于侧栏、高于内容区 -->
+      <div v-if="mobileMenuOpen" class="wb-scrim" data-testid="wb-menu-scrim" @click="closeMobileMenu"></div>
+
       <main class="wb-content panel-scope">
+        <button class="wb-menu-trigger" data-testid="wb-menu-trigger" title="全部菜单" aria-label="打开全部菜单" @click="mobileMenuOpen = true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
         <SkeletonBlock v-if="initializing" :rows="5" label="正在加载工作台数据" />
         <template v-else>
-          <!-- 面板页头（对齐教师工作台 .tw-head）：标题 + 一行说明，样式在 styles/workbench.css。
-               panel-scope 是共享视觉层的挂载标记，销售台的内容容器也挂了同一个类。 -->
+          <!-- 面板页头：样式在共享 styles/workbench.css。panel-scope 个人台与销售台共用，
+               本视图只在 .wb-scope 下覆写变量，绝不改共享层。 -->
           <div v-if="showPageHead" class="panel-page-head" data-testid="wb-page-head">
             <h2 class="panel-page-title" data-testid="wb-page-title">{{ activePageTitle }}</h2>
             <p class="panel-page-sub" data-testid="wb-page-sub">{{ activePageDesc }}</p>
           </div>
-          <WorkbenchHome v-if="activeSection === 'home'" @navigate="navigateTo" />
-          <WorkbenchTodo v-else-if="activeSection === 'todos'" />
-          <WorkbenchNotes v-else-if="activeSection === 'notes'" />
-          <WorkbenchDiary v-else-if="activeSection === 'diary'" />
-          <WorkbenchCountdown v-else-if="activeSection === 'countdowns'" />
-          <WorkbenchPomodoro v-else-if="activeSection === 'pomodoro'" />
-          <WorkbenchHabits v-else-if="activeSection === 'habits'" />
-          <WorkbenchPassword v-else-if="activeSection === 'passwords'" />
-          <WorkbenchHealth v-else-if="activeSection === 'health'" :active-tab="activeHealthTab" @change="activeHealthTab = $event" />
-          <WorkbenchLedger v-else-if="activeSection === 'ledger'" />
-          <WorkbenchGenealogy v-else-if="activeSection === 'genealogy'" />
-          <WorkbenchTrash v-else-if="activeSection === 'trash'" />
+          <KeepAlive :max="12">
+            <component :is="activePanel" v-bind="activePanelBindings" />
+          </KeepAlive>
         </template>
       </main>
     </div>
@@ -412,95 +512,136 @@ async function handleSyncNowClick(): Promise<void> {
   color: var(--color-text);
 }
 
-.wb-header {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  /* 左右留白对齐教师顶栏 .tv-topbar（12px 16px），避免顶部与内容区的对齐线错开 */
-  padding: var(--space-3) var(--space-4);
-  background-color: var(--color-bg-card, #ffffff);
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
+/* ===== 布局隔离出口 =====
+   个人台只覆写这些变量；共享 styles/workbench.css 的 .panel-scope 规则一字未改，
+   销售台（.bs-content.panel-scope）计算样式不受本视图影响。 */
+.wb-scope {
+  --wb-sidebar-w: 200px;
+  --wb-sidebar-w-collapsed: 60px;
+  --wb-content-pad: var(--ui-content-pad, 16px);
+  --wb-card-min: 180px;
+  --wb-bottom-safe: 0px;
 }
 
-.wb-header-left {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-width: 0;
+/* 工作台切换触发器：组件保留挂载（Alt+W + 下拉锚点），但不占界面 */
+.wb-switcher-anchor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  clip-path: inset(50%);
 }
-
-.wb-header-left h1 {
-  font-size: var(--font-size-2xl, 20px);
-  font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text);
-  white-space: nowrap;
-}
-
-.wb-header-right {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-shrink: 0;
-}
-
-/* .wb-btn 视觉已统一到全局 .ui-btn（次按钮） */
 
 .wb-body {
   flex: 1;
   display: flex;
   min-height: 0;
+  position: relative;
 }
 
 .wb-menu {
-  width: 200px;
+  width: var(--wb-sidebar-w);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-3) var(--space-2);
+  min-height: 0;
+  padding: 0;
   background-color: var(--color-bg-card, #ffffff);
   border-right: 1px solid var(--color-border, #e2e8f0);
   transition: width 0.2s ease;
 }
 
-/* 侧栏折叠：56px 仅图标（label 隐藏、图标居中），展开宽度 200px 平滑过渡 */
-.wb-menu.collapsed {
-  width: 56px;
-  /* 横向内边距收到 6px：56 − 12 = 44px 的收起胶囊宽，与教师台 .tv-shell.is-collapsed 的 .tv-sidebar 同宽 */
-  padding-left: 6px;
-  padding-right: 6px;
+/* 顶部：搜索框是侧栏第一个元素（无品牌区）。
+   与下方菜单做成「一个整体」：去掉把两者切开的分隔线，搜索行改成浅底内嵌行
+   （无边框、8px 圆角、左右内边距与菜单项对齐同一 8px 槽），不再是浮在栏上方的一颗胶囊。 */
+.wb-side-top { flex: none; padding: 10px 8px 2px; }
+.wb-search {
+  display: flex; align-items: center; gap: 8px; width: 100%; height: 34px;
+  padding: 0 8px 0 10px; border: 1px solid transparent;
+  border-radius: var(--radius-md, 8px); background-color: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-text-secondary); font-size: 12px; text-align: left; cursor: pointer;
+  transition: background-color var(--motion-duration, 220ms) ease, border-color var(--motion-duration, 220ms) ease, color var(--motion-duration, 220ms) ease;
+}
+.wb-search:hover {
+  border-color: var(--color-primary, #3b82f6);
+  background-color: var(--color-bg-card, #fff);
+  color: var(--color-text);
+}
+.wb-search-ic { display: inline-flex; flex: none; }
+.wb-search-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wb-search-kbd {
+  flex: none; font: 10px/1.6 inherit; padding: 0 4px;
+  border: 1px solid var(--color-border, #e2e8f0); border-radius: 5px;
+  background-color: var(--color-bg-card, #fff); color: var(--color-text-muted, #94a3b8);
 }
 
-/* 收起 / 展开：外观直接复用教师台 `.tw-btn .tw-btn-sm`（白底描边胶囊、30px 高、12px/500、
-   hover 只变底色），本类只补侧栏的布局差异——整行铺满 + 左对齐 + 与菜单项同宽。
-   这里刻意不再写圆角/字号/边框/悬浮色：三个工作台的这颗按钮从此同一套取值，
-   改教师台那边，个人/销售工作台自动跟着变（模板上也是 tw-btn tw-btn-sm 同款类名）。 */
-.wb-sidebar-toggle {
-  display: flex;
-  width: 100%;
-  flex-shrink: 0;
-  justify-content: flex-start;
-  margin-bottom: var(--space-1);
+/* 中部：分组全量菜单（12 项，顺序/名称仍由设置 store 驱动） */
+.wb-side-nav { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 2px 8px 8px; }
+/* 分组标题：字号 11px → 13px、加粗并用正文字色，作为分段的锚点而不是灰色小注脚 */
+.wb-group-label {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  min-height: 26px;
+  padding: 12px 8px 4px 10px; font-size: 13px; font-weight: 600; letter-spacing: .02em;
+  color: var(--color-text-secondary, #475569); white-space: nowrap;
 }
+.wb-group-label-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* 「日常」标题行右端的侧边栏按钮：轻量图标钮，不抢菜单项的视觉权重 */
+.wb-group-collapse {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; flex: none;
+  padding: 0; border: 0; border-radius: 6px;
+  background: transparent; color: var(--color-text-muted, #94a3b8);
+  cursor: pointer;
+  transition: background-color var(--motion-duration, 220ms) ease, color var(--motion-duration, 220ms) ease;
+}
+.wb-group-collapse:hover {
+  background-color: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-primary-text, #1d4ed8);
+}
+.wb-group-collapse:active { transform: var(--motion-press, scale(0.97)); }
 
-/* 收起态（56px 仅图标）：与教师台 .tv-shell.is-collapsed .tv-nav-collapse 一致——居中且去掉横向内边距 */
-.wb-menu.collapsed .wb-sidebar-toggle {
-  justify-content: center;
-  padding: 0;
+/* 底部：恒定只有「云同步 + 设置」两枚按钮，同一行各占 50%，只显示纯文字。
+   状态不占文案：同步态靠 syncStatusClass 底色 + :title + :aria-label 表达。 */
+.wb-side-foot {
+  flex: none; display: flex; flex-direction: row; gap: 6px;
+  padding: 8px 10px 10px; border-top: 1px solid var(--color-border, #e2e8f0);
 }
+.wb-side-btn {
+  flex: 1 1 0; min-width: 0; height: 32px;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 0 6px; border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px); background-color: var(--color-bg-hover, #f8fafc);
+  color: var(--color-text-secondary); font-size: 12px; white-space: nowrap; cursor: pointer;
+}
+.wb-side-btn:hover { background-color: var(--color-bg-hover, #f1f5f9); color: var(--color-text); }
+.wb-side-btn-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* 展开态只显示文字；图标留给 60px 折叠态 */
+.wb-side-btn-ic { display: none; flex: none; color: var(--color-primary, #3b82f6); }
 
-.wb-menu.collapsed .wb-menu-label {
-  display: none;
-}
+/* 折叠态：60px 图标条；搜索收成圆形、分组标签变分隔线、底部按钮只留图标 */
+.wb-menu.collapsed { width: var(--wb-sidebar-w-collapsed); }
+.wb-menu.collapsed .wb-side-top { padding: 8px; }
+.wb-menu.collapsed .wb-search { height: 32px; padding: 0; justify-content: center; }
+.wb-menu.collapsed .wb-search-text, .wb-menu.collapsed .wb-search-kbd { display: none; }
+.wb-menu.collapsed .wb-side-nav { padding: 8px 6px; }
+.wb-menu.collapsed .wb-group-label { min-height: 0; font-size: 0; padding: 6px 0 2px; margin: 4px 3px 0; border-top: 1px solid var(--color-border, #e2e8f0); justify-content: center; }
+.wb-menu.collapsed .wb-group-label-text { display: none; }
+/* 折叠态：分组标题缩成分隔线，但「日常」这一行仍保留可点的展开图标 */
+.wb-menu.collapsed .wb-group-label.is-first { min-height: 30px; }
+.wb-menu.collapsed .wb-group-collapse { width: 26px; height: 26px; }
+.wb-menu.collapsed .wb-menu-item { justify-content: center; padding: 9px 0; }
+.wb-menu.collapsed .wb-menu-label { display: none; }
+/* 折叠态 60px：仍是一行两枚，但文字放不下 → 只留图标，两枚各占一半 */
+.wb-menu.collapsed .wb-side-foot { padding: 8px; gap: 4px; }
+.wb-menu.collapsed .wb-side-btn { padding: 0; gap: 0; }
+.wb-menu.collapsed .wb-side-btn-text { display: none; }
+.wb-menu.collapsed .wb-side-btn-ic { display: inline-flex; }
 
-.wb-menu.collapsed .wb-menu-item {
-  justify-content: center;
-  padding: 10px 0;
-}
+/* 移动端抽屉遮罩 / 页头菜单按钮，桌面不渲染 */
+.wb-scrim { display: none; }
+.wb-menu-trigger { display: none; }
 
 /* 侧栏项取值对齐教师工作台 .tv-nav-item（13px / --radius-sm / 主色软底选中 / hover 只变底色）：
    此前是 14px + 8px 圆角 + hover 变主色文字，两个工作台并排看像两套导航。 */
@@ -571,26 +712,20 @@ html.dark .wb-shell {
   background-color: var(--color-bg, #111827);
 }
 
-html.dark .wb-header {
-  background-color: var(--color-bg-card, #1f2937);
-  border-bottom-color: var(--color-border, #374151);
-}
-
-html.dark .wb-header-left h1 {
-  color: var(--color-text);
-}
-
-html.dark .wb-btn {
-  background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary);
+html.dark .wb-side-top, html.dark .wb-side-foot {
   border-color: var(--color-border, #374151);
 }
-
-html.dark .wb-btn:hover {
-  background-color: var(--color-bg-hover, #374151);
-  color: var(--color-primary-text);
-  border-color: var(--color-primary, #3b82f6);
+html.dark .wb-search, html.dark .wb-side-btn {
+  background-color: var(--color-bg-hover, #182233);
+  border-color: var(--color-border, #374151);
+  color: var(--color-text-secondary);
 }
+html.dark .wb-search-kbd { background-color: var(--color-bg-card, #1f2937); border-color: var(--color-border, #374151); }
+html.dark .wb-side-btn:hover { background-color: var(--color-bg-hover, #374151); color: var(--color-text); }
+html.dark .wb-group-label { color: var(--color-text-muted, #94a3b8); }
+html.dark .wb-group-collapse { color: var(--color-text-muted, #94a3b8); }
+html.dark .wb-group-collapse:hover { background-color: var(--color-bg-hover, #374151); color: var(--dark-accent-text); }
+html.dark .wb-side-btn-ic { color: var(--color-primary, #60a5fa); }
 
 html.dark .wb-menu {
   background-color: var(--color-bg-card, #1f2937);
@@ -617,14 +752,11 @@ html.dark .wb-content {
   background-color: var(--color-bg, #111827);
 }
 
-/* 移动端底部 Tab Bar 顶边框（原为侧栏右/底边框），暗色下需覆盖 */
+/* 移动端左侧抽屉：暗色下补右侧投影，替代原底部 Tab Bar 的顶边阴影 */
 @media (max-width: 768px) {
   html.dark .wb-menu {
-    border-top-color: var(--color-border, #374151);
-  }
-
-  html.dark .wb-menu {
-    box-shadow: 0 -2px 12px var(--color-shadow, rgba(0, 0, 0, 0.4));
+    border-right-color: var(--color-border, #374151);
+    box-shadow: 2px 0 16px var(--color-shadow, rgba(0, 0, 0, 0.4));
   }
 }
 
@@ -644,84 +776,74 @@ html.dark .wb-content {
   .wb-content { overflow-y: auto; }
   .wb-content > * { flex: none; }
 
-  .wb-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-2);
-  }
-
-  .wb-body {
-    flex-direction: column;
-  }
-
-  /* 侧栏降级为底部固定 Tab Bar：脱离文档流、常驻拇指区，保留全部菜单项横向滚动 */
+  /* 原型：移动端不退回底部 Tab Bar，改由页头按钮唤出左侧抽屉，
+     抽屉里仍是搜索框 + 12 项分组菜单 + 底部两枚按钮。 */
   .wb-menu {
-    position: fixed;
+    position: absolute;
     left: 0;
-    right: 0;
+    top: 0;
     bottom: 0;
-    z-index: 60;
-    width: 100%;
-    flex-direction: row;
-    gap: var(--space-1);
-    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
-    overflow-x: auto;
-    scroll-snap-type: x proximity;
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
-    border-right: none;
-    border-top: 1px solid var(--color-border, #e2e8f0);
-    border-bottom: none;
-    background-color: var(--color-bg-card, #ffffff);
-    box-shadow: 0 -2px 12px var(--color-shadow, rgba(0, 0, 0, 0.08));
+    z-index: 46;
+    width: min(264px, 82%);
+    transform: translateX(-102%);
+    transition: transform 220ms ease;
+    border-right: 1px solid var(--color-border, #e2e8f0);
+    box-shadow: 2px 0 12px var(--color-shadow, rgba(0, 0, 0, 0.12));
+  }
+  .wb-menu.open { transform: none; }
+
+  /* 抽屉内忽略桌面折叠态，标签与底部文案完整显示 */
+  .wb-menu.collapsed { width: min(264px, 82%); }
+  .wb-menu.collapsed .wb-search { height: 34px; padding: 0 8px 0 10px; justify-content: flex-start; }
+  .wb-menu.collapsed .wb-search-text, .wb-menu.collapsed .wb-search-kbd { display: inline; }
+  .wb-menu.collapsed .wb-group-label { font-size: 11px; padding: 8px 10px 2px; margin: 0; border-top: 0; }
+  .wb-menu.collapsed .wb-group-label.is-first { min-height: 0; }
+  .wb-menu.collapsed .wb-group-label-text { display: inline; }
+  /* 抽屉里折叠态不生效，这颗按钮点了也不会有视觉变化 → 隐藏，避免出现死按钮 */
+  .wb-group-collapse, .wb-menu.collapsed .wb-group-collapse { display: none; }
+  .wb-menu.collapsed .wb-menu-item { justify-content: flex-start; padding: 9px 10px; }
+  .wb-menu.collapsed .wb-menu-label { display: inline; }
+  /* 抽屉里无论桌面折叠态如何，底部始终一行两枚、显示纯文字 */
+  .wb-menu.collapsed .wb-side-foot { padding: 8px 10px 10px; gap: 6px; }
+  .wb-menu.collapsed .wb-side-btn { justify-content: center; padding: 0 6px; gap: 6px; }
+  .wb-menu.collapsed .wb-side-btn-text { display: inline; }
+  .wb-menu.collapsed .wb-side-btn-ic { display: none; }
+
+  /* 遮罩低于抽屉（46）、高于内容区；抽屉（60）仍在其上 */
+  .wb-scrim {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 45;
+    background: rgba(15, 23, 42, .32);
   }
 
-  /* 移动端横排布局：忽略折叠态（始终全宽 + 显示 label），隐藏折叠按钮 */
-  .wb-menu.collapsed {
-    width: 100%;
+  .wb-menu-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: flex-start;
+    width: 32px;
+    height: 32px;
+    flex: none;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    margin-bottom: 8px;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: var(--radius-sm, 4px);
+    background-color: var(--color-bg-card, #fff);
+    color: var(--color-text-secondary);
   }
 
-  .wb-menu.collapsed .wb-menu-label {
-    display: inline;
-  }
+  .wb-menu-item { min-height: 44px; min-width: 44px; }
+  .wb-menu-label { overflow: visible; text-overflow: clip; white-space: nowrap; }
+  /* 移动端两枚按钮触控目标 40px，仍保持同一行 */
+  .wb-side-btn { height: 40px; min-height: 40px; }
 
-  .wb-menu.collapsed .wb-menu-item {
-    justify-content: flex-start;
-    padding: 10px 12px;
-  }
-
-  .wb-sidebar-toggle {
-    display: none;
-  }
-
-  .wb-menu-item {
-    flex: 0 0 auto; /* 不收缩：名称完整显示，超出由底部 Tab Bar 横向滚动 */
-    white-space: nowrap;
-    scroll-snap-align: start;
-  }
-
-  /* 移动端取消 label 省略号截断，确保菜单名称完整呈现（仿学生工作台图标+文字） */
-  .wb-menu-label {
-    overflow: visible;
-    text-overflow: clip;
-    white-space: nowrap;
-  }
-
-  /* 移动端触控目标 ≥44px（侧栏菜单项 / 头部按钮）：
-     原为 40px，低于 iOS/Android 44px 触控下限，误触率偏高 */
-  .wb-menu-item {
-    min-height: 44px;
-    min-width: 44px;
-  }
-
-  .wb-btn {height: 36px;}
-
-  /* 窄屏间距压缩：内容区内边距收窄；底部留白需同时避让两样固定元素：
-   *   ① 底部 Tab Bar（.wb-menu，移动端降级为 fixed bottom:0，约 56px + 安全区）
-   *   ② 悬浮新增 FAB（移动端 bottom:64px、高 48px → 顶端距视口底 112px）
-   * 原值只算了 ①（64px），实测习惯面板的日历日期格会被 FAB 压住、点不动
-   * （qa-workbench-mobile-overlap.mjs S2）。按 ② 的 112px + 8px 间隔取 120px。
-   * 无 FAB 的面板（首页/日记/番茄钟/回收站）只是滚到底多一段空白，不影响操作。 */
+  /* 底部 Tab Bar 已取消，只需避让面板自带的悬浮 FAB
+     （移动端 bottom:64px + 48px 高 → 顶端距视口底 112px，再加 8px 间隔取 120px）。
+     qa-workbench-mobile-overlap.mjs 的 S2 依赖这段留白。 */
   .wb-content {
     padding: 12px 12px calc(120px + env(safe-area-inset-bottom, 0px));
   }

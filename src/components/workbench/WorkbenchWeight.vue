@@ -17,7 +17,6 @@ import { calcBmi, classifyBmi, dietCalories, weightChartScale, weightTarget } fr
 import type { WeightChartPoint } from '@/composables/healthCore'
 import { localToday } from '@/composables/todoCore'
 import Icon from '@/components/Icon.vue'
-import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
 
 // store 来源可注入：默认成人端 store，学生端容器 provide 自己的 store 后自动改为学生数据（见 healthStoreContext）
 const store = (injectHealthStore() ?? useWorkbenchHealthStore()) as HealthStoreLike
@@ -512,7 +511,6 @@ onMounted(async () => {
       </div>
     </section>
   </div>
-<WorkbenchFab @click="startAddRecord" />
 </template>
 
 <style scoped>
@@ -691,8 +689,8 @@ onMounted(async () => {
   gap: 14px;
 }
 
-/* 编辑/新增记录弹框层级：确保浮于页面其它层之上（BaseDialog 统一 z-index: 300） */
-.wt-record-overlay { z-index: 320; }
+/* ===== 弹框层级：统一引用外壳定义的 --wb-dialog-z（BaseDialog 基准 300），不再各写 z-index:320 ===== */
+.wt-record-overlay { z-index: var(--wb-dialog-z, 300); }
 
 
 

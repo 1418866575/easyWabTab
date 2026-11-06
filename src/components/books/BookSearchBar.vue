@@ -8,7 +8,9 @@
  */
 import { ref } from 'vue'
 
-defineProps<{
+// 需要用 props.modelValue 在脚本里判断 Esc 是否该清空；此前只写 defineProps() 不接收返回值，
+// 脚本作用域里没有 modelValue 这个标识符（vue-tsc 会报 TS2304）。
+const props = defineProps<{
   modelValue: string
   placeholder?: string
 }>()
@@ -32,7 +34,7 @@ function onClear(): void {
 
 function onEsc(e: KeyboardEvent): void {
   // Esc 清空：搜索类输入框的通用预期，比等用户手动删更快
-  if (e.key === 'Escape' && modelValue) {
+  if (e.key === 'Escape' && props.modelValue) {
     e.preventDefault()
     onClear()
   }
