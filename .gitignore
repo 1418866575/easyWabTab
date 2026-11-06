@@ -109,3 +109,8 @@ qa-blog-html/
 
 # 公众号稿件草稿（AI 产出，不入库）
 _drafts/
+
+# Playwright 持久化 profile 的整目录备份（.backup/profile-<时间戳>/）
+# 内含 Default/Login Data（已保存密码库）、Default/Network/Cookies、History、Web Data，约 52MB，
+# 等同于明文账号凭据；本仓库是公开仓库，绝不可入库
+.backup/

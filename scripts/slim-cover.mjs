@@ -29,7 +29,8 @@ const browser = await chromium.launchPersistentContext(PROFILE, {
 })
 const page = browser.pages()[0] || (await browser.newPage())
 await page.goto(SITE, { waitUntil: 'domcontentloaded', timeout: 60000 })
-await page.waitForSelector('text=选文件导入', { timeout: 40000 })
+// 2026-11-01 列表页改版后「选文件导入」菜单项常驻 DOM 但隐藏，改等隐藏的 file input 挂载
+await page.locator('input[type=file][accept*=".md"]').first().waitFor({ state: 'attached', timeout: 40000 })
 await page.waitForTimeout(2000)
 
 const out = await page.evaluate(async (title) => {
