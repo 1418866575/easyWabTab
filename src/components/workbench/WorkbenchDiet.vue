@@ -2,7 +2,6 @@
 import { DIALOG_BTN } from '@/config/dialogText'
 import { showConfirm } from '@/utils/dialog'
 import BaseDialog from '@/components/common/BaseDialog.vue'
-import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
 
 /** 表单弹框尺寸（沿用原 .dialog 的固定尺寸，非设置项） */
 const PANEL_WIDTH = '480px'
@@ -520,7 +519,6 @@ onMounted(async () => {
         </form>
       </BaseDialog>
   </div>
-<WorkbenchFab @click="startAddRecord" />
 </template>
 
 <style scoped>
@@ -878,18 +876,14 @@ html.dark .btn-toggle-list {
   }
 }
 
-/* ===== 弹框层级（BaseDialog 统一 z-index: 300）===== */
-.dt-record-overlay { z-index: 320; }
+/* ===== 弹框层级：统一引用外壳定义的 --wb-dialog-z（BaseDialog 基准 300），不再各写 z-index:320 ===== */
+.dt-record-overlay { z-index: var(--wb-dialog-z, 300); }
 
 
 
 /* ===== 桌面端 ≥769px：面板根钉满 tab 内容区 ===== */
 @media (min-width: 769px) {
-  :global(.wb-health) {
-    display: flex;
-    flex-direction: column;
-  }
-
+  /* flex 列布局由 WorkbenchHealth.vue 自己承担，此处不再用 :global() 重复注入 */
   .wb-diet {
     flex: 1;
     min-height: 0;

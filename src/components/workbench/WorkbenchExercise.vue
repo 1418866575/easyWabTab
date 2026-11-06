@@ -11,7 +11,6 @@ import { localToday } from '@/composables/todoCore'
 import { EXERCISE_TYPES, type HealthPlanMetric } from '@/types'
 import WorkbenchHealthReminders from './WorkbenchHealthReminders.vue'
 import Icon from '@/components/Icon.vue'
-import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 
 /** 表单弹框尺寸（沿用原 .dialog 的固定尺寸，非设置项） */
@@ -575,7 +574,6 @@ onMounted(async () => {
           </form>
       </BaseDialog>
   </div>
-<WorkbenchFab @click="startAddRecord" />
 </template>
 
 <style scoped>
@@ -649,8 +647,8 @@ onMounted(async () => {
 .ex-headbar { display: none; }
 .btn-toggle-list { display: none; }
 
-/* ===== 弹框层级（BaseDialog 统一 z-index: 300）===== */
-.ex-record-overlay { z-index: 320; }
+/* ===== 弹框层级：统一引用外壳定义的 --wb-dialog-z（BaseDialog 基准 300），不再各写 z-index:320 ===== */
+.ex-record-overlay { z-index: var(--wb-dialog-z, 300); }
 
 
 
@@ -698,10 +696,7 @@ onMounted(async () => {
 
 /* ===== 桌面端 ≥769px：面板钉满健康 tab 容器 ===== */
 @media (min-width: 769px) {
-  :global(.wb-health) {
-    display: flex;
-    flex-direction: column;
-  }
+  /* flex 列布局由 WorkbenchHealth.vue 自己承担，此处不再用 :global() 重复注入 */
   .wb-exercise {
     flex: 1;
     min-height: 0;
@@ -851,8 +846,8 @@ html.dark input.form-input {
   .field-distance { width: 100%; }
 }
 
-/* ===== 弹框层级（BaseDialog 统一 z-index: 300）===== */
-.ex-record-overlay { z-index: 320; }
+/* ===== 弹框层级：统一引用外壳定义的 --wb-dialog-z（BaseDialog 基准 300），不再各写 z-index:320 ===== */
+.ex-record-overlay { z-index: var(--wb-dialog-z, 300); }
 
 
 
@@ -869,10 +864,7 @@ html.dark input.form-input {
 
 /* ===== 桌面端 ≥769px：面板钉满健康 tab 容器 ===== */
 @media (min-width: 769px) {
-  :global(.wb-health) {
-    display: flex;
-    flex-direction: column;
-  }
+  /* flex 列布局由 WorkbenchHealth.vue 自己承担，此处不再用 :global() 重复注入 */
   .wb-exercise {
     flex: 1;
     min-height: 0;

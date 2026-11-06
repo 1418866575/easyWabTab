@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { DIALOG_BTN } from '@/config/dialogText'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { showConfirm } from '@/utils/dialog'
 import { compressImageFile } from '@/utils/imageCompress'
 import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
@@ -300,21 +300,10 @@ function closePreview(): void {
   previewSrc.value = ''
 }
 
-// 预览层在 document 捕获阶段拦截 ESC：否则 BaseDialog 的 window 监听会连带关闭详情弹框
-function onPreviewKeydown(event: KeyboardEvent): void {
-  if (event.key !== 'Escape' || !previewSrc.value) return
-  event.stopPropagation()
-  closePreview()
-}
-
-// 面板自管理数据加载
+// 面板自管理数据加载。预览的遮罩 / ESC / 关闭 / 层级统一交给 BaseDialog，
+// 不再自挂 document 捕获阶段 ESC 监听（原为拦截 BaseDialog 的 window 监听而写，现已多余）。
 onMounted(() => {
   void store.loadHabits()
-  document.addEventListener('keydown', onPreviewKeydown, true)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('keydown', onPreviewKeydown, true)
 })
 </script>
 
@@ -360,7 +349,9 @@ onUnmounted(() => {
       :aria-label="editingId ? '编辑习惯' : '新增习惯'"
       @close="closeEditDialog"
     >
-      <div class="dialog-body">
+      <!-- 字段直接放默认插槽，外壳的 padding/滚动由 BaseDialog 的 .bd-body 承担，
+           不再套一层 .dialog-body 造成双重内边距；这里只保留字段间的纵向间距。 -->
+      <div class="hb-edit-fields">
         <div class="field">
           <label class="field-label">名称 *</label>
           <el-input
@@ -394,32 +385,33 @@ onUnmounted(() => {
         </p>
       </div>
       <template #footer>
-        <div class="dialog-footer">
-          <el-button size="small" data-testid="hb-dialog-cancel" @click="closeEditDialog">{{ DIALOG_BTN.close }}</el-button>
-          <el-button
-            type="primary"
-            size="small"
-            :disabled="!dialogName.trim()"
-            data-testid="hb-dialog-save"
-            @click="saveEditDialog">{{ DIALOG_BTN.save }}</el-button>
-          <el-button
-            v-if="editingId"
-            size="small"
-            class="btn-danger"
-            data-testid="hb-dialog-delete"
-            @click="deleteCurrent"
-          >
-            删除
-          </el-button>
-        </div>
+        <!-- 底部按钮直接放 #footer，布局由 BaseDialog 的 .bd-footer 承担，删掉重复外壳 .dialog-footer -->
+        <el-button size="small" data-testid="hb-dialog-cancel" @click="closeEditDialog">{{ DIALOG_BTN.close }}</el-button>
+        <el-button
+          type="primary"
+          size="small"
+          :disabled="!dialogName.trim()"
+          data-testid="hb-dialog-save"
+          @click="saveEditDialog">{{ DIALOG_BTN.save }}</el-button>
+        <el-button
+          v-if="editingId"
+          size="small"
+          class="btn-danger"
+          data-testid="hb-dialog-delete"
+          @click="deleteCurrent"
+        >
+          删除
+        </el-button>
       </template>
     </BaseDialog>
 
-    <!-- 某天打卡详情（图片）：由日历格子的图片角标进入；外壳统一用 BaseDialog -->
+    <!-- 某天打卡详情（图片）：由日历格子的图片角标进入；外壳统一用 BaseDialog。
+         预览打开时让出 ESC（close-on-escape=false），只关预览不连带关闭详情，替代原 document 捕获监听 -->
     <BaseDialog
       v-if="showDetailDialog"
       :title="detailTitle"
       :width="'480px'"
+      :close-on-escape="!previewSrc"
       data-testid="hb-detail-dialog"
       @close="closeDetail"
     >
@@ -495,20 +487,19 @@ onUnmounted(() => {
       </template>
     </BaseDialog>
 
-    <!-- 图片预览：层级高于详情弹框，ESC 先关预览（由 document 捕获阶段拦截） -->
-    <Teleport to="body">
-      <div
-        v-if="previewSrc"
-        class="habit-detail-preview"
-        data-testid="hb-detail-preview"
-        @click.self="closePreview"
-      >
-        <button class="close-btn habit-detail-preview-close" type="button" aria-label="关闭预览" @click="closePreview">
-          <Icon name="close" :size="16" />
-        </button>
+    <!-- 图片预览：遮罩 / ESC / 关闭 / 层级统一交给项目已有的 BaseDialog（照抄同目录面板用法），
+         不再自写 Teleport + fixed inset:0 z-index:400 全屏遮罩；层级靠 DOM 顺序浮在详情弹框之上 -->
+    <BaseDialog
+      v-if="previewSrc"
+      title="图片预览"
+      width="min(92vw, 720px)"
+      data-testid="hb-detail-preview"
+      @close="closePreview"
+    >
+      <div class="hb-preview-img">
         <img :src="previewSrc" alt="图片预览" />
       </div>
-    </Teleport>
+    </BaseDialog>
   </div>
 <WorkbenchFab @click="openAddDialog" />
 </template>
@@ -574,39 +565,13 @@ onUnmounted(() => {
   align-content: start;
 }
 
-/* ===== 弹框（新增/编辑）===== */
-.dialog-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-4) var(--space-5);
-  border-bottom: 1px solid var(--color-border);
-  position: sticky;
-  top: 0;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
-}
-
-.dialog-title {
-  font-size: var(--fs-lg, 16px);
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.dialog-body {
-  padding: var(--space-5);
+/* ===== 弹框（新增/编辑）：header/body/footer 全部由 BaseDialog 承担 =====
+   删掉与 .bd-body/.bd-footer 重复的 .dialog-body/.dialog-footer，
+   以及从未使用的 .dialog-header/.dialog-title 死样式；只保留字段间的纵向间距。 */
+.hb-edit-fields {
   display: flex;
   flex-direction: column;
   gap: 14px;
-}
-
-.dialog-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 14px 20px;
-  border-top: 1px solid var(--color-border);
 }
 
 .btn-danger {
@@ -714,12 +679,14 @@ html.dark .habit-detail-chip {
   cursor: zoom-in;
 }
 
+/* 删除钮常显：原 opacity:0 仅 hover/触屏才显示，用户看不到「删图」入口；
+   32×32 满足最小触控目标（原 22×22 太小）。 */
 .habit-detail-remove {
   position: absolute;
   top: 4px;
   right: 4px;
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -728,14 +695,6 @@ html.dark .habit-detail-chip {
   background: rgba(15, 23, 42, 0.66);
   color: #fff;
   cursor: pointer;
-  opacity: 0;
-  transition: opacity var(--motion-duration, 220ms) var(--motion-ease, ease);
-}
-
-/* 触屏无 hover：删除按钮常显，避免「看得到图片却删不掉」 */
-.habit-detail-tile:hover .habit-detail-remove,
-html.is-touch .habit-detail-remove {
-  opacity: 1;
 }
 
 .habit-detail-size {
@@ -793,47 +752,23 @@ html.is-touch .habit-detail-remove {
 }
 
 
-/* 预览层：层级低于 toast、高于 BaseDialog（300），保证放大图盖在详情弹框之上 */
-.habit-detail-preview {
-  position: fixed;
-  inset: 0;
-  z-index: 400;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-6, 24px);
-  background: rgba(0, 0, 0, 0.82);
-}
-
-.habit-detail-preview img {
-  max-width: 92vw;
-  max-height: 88vh;
+/* 图片预览：外壳/遮罩/关闭/层级已由 BaseDialog 承担，这里只约束图片本身尺寸 */
+.hb-preview-img img {
+  display: block;
+  max-width: 100%;
+  max-height: 70vh;
+  margin: 0 auto;
   border-radius: var(--radius-md, 8px);
-  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.15));
-}
-
-.habit-detail-preview-close {
-  position: absolute;
-  top: var(--space-4, 16px);
-  right: var(--space-4, 16px);
 }
 
 @media (max-width: 768px) {
   .habit-detail-grid {
     gap: var(--space-2, 8px);
   }
-
-  .habit-detail-preview {
-    padding: var(--space-4, 16px);
-  }
 }
 
 /* ===== 暗色模式覆盖 ===== */
-html.dark .dialog-header,
-html.dark .dialog-title {
-  color: var(--color-text);
-  background-color: var(--color-bg-card, #1f2937);
-}
+/* html.dark .dialog-header/.dialog-title 死样式已随弹框外壳收敛一并删除 */
 
 /* html.dark .empty-state 背景已由全局 .empty-state 的 --color-bg-card token 自动跟随 */
 

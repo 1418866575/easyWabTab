@@ -3,10 +3,13 @@ import { computed, ref } from 'vue'
 import { useGenealogyStore } from '@/stores/genealogy'
 import { calcZodiac } from '@/composables/genealogyCore'
 import type { FamilyTreeNode } from '@/composables/genealogyCore'
+import type { FamilyMember } from '@/types'
 
 defineOptions({ name: 'GenealogyTreeNode' })
 
 const props = defineProps<{ node: FamilyTreeNode }>()
+// 节点内直接编辑：把成员对象 emit 给父面板复用已有 startEdit，无需切回「成员管理」tab。
+const emit = defineEmits<{ edit: [member: FamilyMember] }>()
 const store = useGenealogyStore()
 const collapsed = ref(false)
 
@@ -50,6 +53,14 @@ function toggle() {
             <span>{{ s.name }}</span><span v-if="s.zodiac" class="gtn-zodiac">{{ s.zodiac }}</span><template v-if="i < spouseInfos.length - 1">、</template>
           </template>
         </span>
+        <!-- 节点内直接编辑入口：emit 给父面板复用 startEdit，不必切回成员列表 tab -->
+        <button
+          type="button"
+          class="gtn-edit"
+          :aria-label="`编辑 ${node.member.name}`"
+          :data-testid="`fg-tree-edit-${node.member.id}`"
+          @click.stop="emit('edit', node.member)"
+        >编辑</button>
       </div>
     </div>
     <div v-if="hasChildren && !collapsed" class="gtn-children">
@@ -57,6 +68,7 @@ function toggle() {
         v-for="child in node.children"
         :key="child.member.id"
         :node="child"
+        @edit="emit('edit', $event)"
       />
     </div>
   </div>
@@ -146,6 +158,21 @@ function toggle() {
   font-size: var(--fs-caption, 12px);
   color: #db2777;
 }
+
+/* 节点内编辑按钮：弱化小胶囊，不破坏卡片 nowrap 布局 */
+.gtn-edit {
+  margin-left: 2px;
+  padding: 1px 7px;
+  font-size: var(--fs-caption, 12px);
+  line-height: 1.4;
+  color: var(--color-primary-text, var(--color-primary));
+  background: transparent;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.gtn-edit:hover { border-color: var(--color-primary, #3b82f6); }
 
 /* 思维导图连线：曲线（主干竖线 + 各子节点引出的圆角弧线，仅显示关系、无操作按钮） */
 .gtn-children {

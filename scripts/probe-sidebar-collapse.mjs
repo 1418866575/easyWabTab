@@ -1,8 +1,14 @@
 /**
- * 探针：六个工作台的「侧栏收起/展开」按钮是否同一套外观
+ * 探针：五个工作台的「侧栏收起/展开」按钮是否同一套外观
  *
- * 目的：教师工作台（/teacher）是基准，其余五台（个人 /workbench、销售 /business、
- *      学生 /student、智能 /smart、博客后台 /blog/admin）的收起按钮外观与字体必须与之一致
+ * 目的：教师工作台（/teacher）是基准，其余四台（销售 /business、学生 /student、
+ *      智能 /smart、博客后台 /blog/admin）的收起按钮外观与字体必须与之一致。
+ *      ⚠️ 个人工作台 /workbench 自 2026-11-06 布局改版后不再参与：
+ *      顶栏移除，折叠入口收进「设置」弹窗（settings-toggle-sidebar）以及
+ *      「日常」分组标题右端的轻量图标钮（wb-sidebar-toggle）；两者都不再复用
+ *      .tw-btn/.tw-btn-sm，折叠宽度也从 56px 改为 60px，与教师台外观基准不可比。
+ *      它的新版布局由 qa-workbench-layout-v2.mjs（S2-10/11、S3-5/6）与
+ *      qa-workbench-mobile-overlap.mjs 的 S4 组单独守卫。
  *      —— 模板上都用 .tw-btn + .tw-btn-sm，各自只保留布局类
  *      （.wb- / .bs- / .st- sidebar-toggle、.ba- / .sv- nav-collapse）。
  *      本脚本实测各边的计算样式并截图（含收起态），防止以后又各自长出一套圆角/字号。
@@ -98,12 +104,11 @@ function check(name, ok, detail = '') {
 }
 
 /**
- * 六个台子的入口配置。teacher 为基准，其余逐一比对。
+ * 五个台子的入口配置。teacher 为基准，其余逐一比对（个人台已改版，见文件头说明）。
  * ready = 根容器（引导表单阶段就已存在，可安全早等）；side = 侧栏；btn = 收起按钮。
  */
 const VIEWS = [
   { key: 'teacher', label: '教师', route: '/teacher', ready: '.tv-shell', btn: '.tv-nav-collapse', side: '.tv-sidebar', idx: 1 },
-  { key: 'workbench', label: '个人', route: '/workbench', ready: '.wb-shell', btn: '[data-testid="wb-sidebar-toggle"]', side: '.wb-menu', idx: 3 },
   { key: 'business', label: '销售', route: '/business', ready: '.bs-shell', btn: '[data-testid="bs-sidebar-toggle"]', side: '[data-testid="bs-menu"]', idx: 5 },
   { key: 'student', label: '学生', route: '/student', ready: '.st-shell', btn: '.st-sidebar-toggle', side: '.st-menu', idx: 7 },
   { key: 'smart', label: '智能', route: '/smart', ready: '.sv-shell', btn: '[data-testid="smart-collapse-sidebar"]', side: '.sv-sidebar', idx: 9 },
@@ -193,45 +198,59 @@ try {
 
   const table = {}
   for (const v of VIEWS) table[v.label] = expanded[v.key]
-  console.log('\n[probe] 六边实测（展开态）：')
+  console.log('\n[probe] 五边实测（展开态）：')
   console.table(table)
 
   // ---------- 断言：能体现「同一套外观」的项必须与教师台相等 ----------
-  const keys = ['fontSize', 'fontWeight', 'fontFamily', 'height', 'paddingLeft', 'gap', 'borderRadius', 'borderWidth', 'background', 'color', 'iconSize']
+  const keys = ['fontSize', 'fontWeight', 'height', 'paddingLeft', 'gap', 'borderRadius', 'borderWidth', 'background', 'color', 'iconSize']
   for (const k of keys) {
     const vals = VIEWS.map((v) => expanded[v.key]?.[k])
     check(`等教师台 · ${k}`, vals.every((v) => v === vals[0] && v != null), vals.join(' | '))
   }
-  check('六边都渲染出收起按钮', VIEWS.every((v) => !!expanded[v.key]))
-  check('六边文案都是「收起」', VIEWS.every((v) => expanded[v.key]?.text === '收起'),
+  // 博客后台刻意用 --ba-thin-font（以 PingFang SC 起头）做排版区分，属既有设计约定，
+  // 不参与字族一致性比对；其余四台仍必须与教师台完全同族。
+  const ffViews = VIEWS.filter((v) => v.key !== 'blog')
+  const ff = ffViews.map((v) => expanded[v.key]?.fontFamily)
+  check('等教师台 · fontFamily（博客后台自有细体字除外）',
+    ff.every((v) => v === ff[0] && v != null), ff.join(' | '))
+  check('博客后台仍使用自有细体字',
+    !!expanded.blog?.fontFamily && expanded.blog.fontFamily !== expanded.teacher?.fontFamily,
+    `${expanded.teacher?.fontFamily} → ${expanded.blog?.fontFamily}`)
+  check('五边都渲染出收起按钮', VIEWS.every((v) => !!expanded[v.key]))
+  check('五边文案都是「收起」', VIEWS.every((v) => expanded[v.key]?.text === '收起'),
     VIEWS.map((v) => `${v.label}:${expanded[v.key]?.text}`).join(' '))
 
   // 收起态：侧栏 56px；两侧留白 6px（学生台是 margin 6px）→ 胶囊同为 43（含 border-right 1px）
-  check('收起态 · 高都还是 30px',
-    VIEWS.every((v) => collapsed[v.key]?.height === 30),
-    VIEWS.map((v) => `${v.label}:${collapsed[v.key]?.height}`).join(' '))
+  // 高度改判「五边相等」而非写死 30：全局 .tw-btn 的控制高度已随界面美化 token 变为 36px，
+  // 写死 30 会让五边一起误报；这里守的是「同一套外观」，不是某个历史数值。
+  const ch = VIEWS.map((v) => collapsed[v.key]?.height)
+  check('收起态 · 高度五边相等（与展开态一致）',
+    ch.every((h) => h != null && h === ch[0] && h === expanded[VIEWS[0].key]?.height),
+    VIEWS.map((v, i) => `${v.label}:${ch[i]}`).join(' '))
   check('收起态 · 侧栏宽度都 56px',
     VIEWS.every((v) => collapsedCapsule[v.key]?.side === 56),
     VIEWS.map((v) => `${v.label}:${collapsedCapsule[v.key]?.side}`).join(' '))
-  // 只断言「六边相等」，不写死 44：侧栏若带 border，clientWidth 会少 1px，
+  // 只断言「五边相等」，不写死 44：侧栏若带 border，clientWidth 会少 1px，
   // 那是侧栏的事，不是按钮的事；横向宽度本就不在「同一套外观」的判定范围内
   const capW = VIEWS.map((v) => collapsedCapsule[v.key]?.capsule)
-  check('收起态 · 胶囊宽度六边相等',
+  check('收起态 · 胶囊宽度五边相等',
     capW.every((w) => w != null && Math.abs(w - capW[0]) < 0.6),
     VIEWS.map((v, i) => `${v.label}:${capW[i]}`).join(' '))
   check('收起态 · 字号不变（12px）',
     VIEWS.every((v) => collapsed[v.key]?.fontSize === '12px'),
     VIEWS.map((v) => `${v.label}:${collapsed[v.key]?.fontSize}`).join(' '))
 
-  // 暗色：底色/描边/文字全部由 token 翻转，六边也必须相等
+  // 暗色：底色/描边/文字全部由 token 翻转，五边也必须相等
   // （个人 / 销售曾各自写了一套 html.dark 覆盖，把文字压成 secondary、hover 改色，
   //   与教师台不一致 —— 那两条已删，这里守住不许再长回来）
   for (const k of ['background', 'color', 'borderColor']) {
     const vals = VIEWS.map((v) => dark[v.key]?.[k])
     check(`暗色等教师台 · ${k}`, vals.every((v) => v === vals[0] && v != null), vals.join(' | '))
   }
-  check('暗色 · 高仍 30px', VIEWS.every((v) => dark[v.key]?.height === 30),
-    VIEWS.map((v) => `${v.label}:${dark[v.key]?.height}`).join(' '))
+  const dh = VIEWS.map((v) => dark[v.key]?.height)
+  check('暗色 · 高度五边相等且不漂移',
+    dh.every((h) => h != null && h === dh[0] && h === expanded[VIEWS[0].key]?.height),
+    VIEWS.map((v, i) => `${v.label}:${dh[i]}`).join(' '))
 
   check('无页面 JS 异常', errs.length === 0, errs.slice(0, 2).join(' | '))
 

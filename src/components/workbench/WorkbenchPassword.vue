@@ -194,6 +194,24 @@ const showFormPassword = ref(false)
 const siteSearchQuery = ref('')
 const showSiteDropdown = ref(false)
 
+// 下拉 Teleport 到 body 后不再随 DOM 自动定位，改用 fixed + 输入框可视矩形定位：
+// 这样脱离 BaseDialog .bd-body(overflow-y:auto) / .bd-panel(overflow:hidden) 的裁剪，选项不会被裁掉。
+const siteInputWrapRef = ref<HTMLElement | null>(null)
+const dropdownPos = ref({ top: 0, left: 0, width: 0 })
+const dropdownStyle = computed(() => ({
+  top: `${dropdownPos.value.top}px`,
+  left: `${dropdownPos.value.left}px`,
+  width: `${dropdownPos.value.width}px`
+}))
+
+/** 定位浮层：getBoundingClientRect 与 position:fixed 同为视口坐标系 */
+function updateDropdownPos(): void {
+  const el = siteInputWrapRef.value
+  if (!el) return
+  const r = el.getBoundingClientRect()
+  dropdownPos.value = { top: r.bottom + 4, left: r.left, width: r.width }
+}
+
 const availableSites = computed(() => {
   const query = siteSearchQuery.value.toLowerCase()
   return sitesStore.sites
@@ -207,6 +225,12 @@ const availableSites = computed(() => {
 function onSiteNameInput(): void {
   showSiteDropdown.value = true
   siteSearchQuery.value = formSiteName.value
+  updateDropdownPos()
+}
+
+function onSiteNameFocus(): void {
+  showSiteDropdown.value = true
+  updateDropdownPos()
 }
 
 function onSiteNameBlur(): void {
@@ -313,7 +337,7 @@ async function handleSave(): Promise<void> {
 
 /**
  * 删除条目。返回是否真的删掉了（弹框侧据此决定要不要关闭）。
- * 卡片上已无删除按钮，删除入口统一在编辑弹框里（见 handleDeleteInForm）。
+ * 卡片上的常显删除入口与编辑弹框内的删除按钮共用本方法，二次确认逻辑只此一份。
  */
 async function handleDelete(id: string): Promise<boolean> {
   if (!(await showConfirm('确定要删除这个密码条目吗？'))) return false
@@ -369,10 +393,15 @@ onMounted(() => {
   if (sitesStore.sites.length === 0) {
     sitesStore.loadSites()
   }
+  // 弹框内部滚动 / 窗口缩放时让 Teleport 浮层继续跟随输入框
+  window.addEventListener('resize', updateDropdownPos)
+  window.addEventListener('scroll', updateDropdownPos, true)
 })
 
 onUnmounted(() => {
   stopIdleWatch()
+  window.removeEventListener('resize', updateDropdownPos)
+  window.removeEventListener('scroll', updateDropdownPos, true)
 })
 
 // P0-3：解锁态变化时启停空闲锁定监听（immediate 处理挂载时已是解锁态的情况）
@@ -545,7 +574,7 @@ watch(
               {{ isPasswordVisible(entry.id) ? entry.password : '••••••••' }}
             </span>
           </div>
-          <!-- 卡片内只保留三个查看/复制动作；编辑靠点整张卡片，删除移到编辑弹框里 -->
+          <!-- 卡片内保留三个查看/复制动作（编辑靠点整张卡片）；删除另给常显入口 -->
           <div class="pwd-actions" @click.stop @keydown.stop>
             <el-button
               text
@@ -566,6 +595,16 @@ watch(
               @click="copyToClipboard(entry.password, '密码')"
             >复制密码</el-button>
           </div>
+          <!-- 卡片常显删除入口：单独一行，不与三个查看/复制动作混排避免误点；
+               @click.stop 防止连带打开编辑弹框；handleDelete 自带二次确认 -->
+          <div class="pwd-del-row" @click.stop @keydown.stop>
+            <button
+              type="button"
+              class="pwd-del-btn"
+              :data-testid="`pwd-remove-${entry.id}`"
+              @click="handleDelete(entry.id)"
+            >删除</button>
+          </div>
         </div>
         </TransitionGroup>
       </div>
@@ -584,7 +623,7 @@ watch(
       <form class="pwd-form-body" @submit.prevent="handleSave">
             <div class="form-group">
               <label>网站名称</label>
-              <div class="pwd-site-input-wrap">
+              <div ref="siteInputWrapRef" class="pwd-site-input-wrap">
                 <el-input
                   v-model="formSiteName"
                   type="text"
@@ -593,20 +632,8 @@ watch(
                   data-testid="pwd-form-site"
                   @input="onSiteNameInput"
                   @blur="onSiteNameBlur"
-                  @focus="showSiteDropdown = true"
+                  @focus="onSiteNameFocus"
                 />
-                <div v-if="showSiteDropdown && availableSites.length > 0" class="pwd-site-dropdown">
-                  <div
-                    v-for="site in availableSites"
-                    :key="site.url"
-                    class="pwd-site-option"
-                    data-testid="pwd-site-option"
-                    @mousedown.prevent="selectSite(site)"
-                  >
-                    <span class="pwd-site-option-name">{{ site.name }}</span>
-                    <span class="pwd-site-option-url">{{ site.url }}</span>
-                  </div>
-                </div>
               </div>
             </div>
             <div class="form-group">
@@ -663,7 +690,7 @@ watch(
               <p class="pwd-form-hint">分类在「设置 → 密码分类管理」中维护</p>
             </div>
             <div class="pwd-form-actions">
-            <!-- 删除入口只在编辑态存在（新增态没有可删对象）；卡片上已不再提供删除按钮 -->
+            <!-- 编辑弹框内删除只在编辑态存在（新增态无可删对象）；卡片另有常显删除入口 -->
             <el-button
               v-if="editingId"
               type="danger"
@@ -682,6 +709,28 @@ watch(
           </div>
         </form>
     </BaseDialog>
+
+    <!-- 站点关联下拉 Teleport 到 body：脱离 BaseDialog .bd-body(overflow-y:auto)/.bd-panel(overflow:hidden) 裁剪，
+         fixed + 输入框 getBoundingClientRect 定位（dropdownStyle），选项完整可见可点。
+         保留 data-testid="pwd-site-option" 与 selectSite 逻辑不变。 -->
+    <Teleport to="body">
+      <div
+        v-if="showForm && showSiteDropdown && availableSites.length > 0"
+        class="pwd-site-dropdown"
+        :style="dropdownStyle"
+      >
+        <div
+          v-for="site in availableSites"
+          :key="site.url"
+          class="pwd-site-option"
+          data-testid="pwd-site-option"
+          @mousedown.prevent="selectSite(site)"
+        >
+          <span class="pwd-site-option-name">{{ site.name }}</span>
+          <span class="pwd-site-option-url">{{ site.url }}</span>
+        </div>
+      </div>
+    </Teleport>
   </div>
 <WorkbenchFab @click="startAdd" />
 
@@ -703,11 +752,13 @@ watch(
   gap: var(--space-4);
 }
 
-/* ===== 认证区（设置/解锁共用）===== */
+/* ===== 认证区（设置/解锁共用）：在可用高度内居中 =====
+   原 padding:48px 0 是固定留白，短屏挤、长屏不居中；改成 flex 居中 + 视口高度下限自适应。 */
 .pwd-auth {
   display: flex;
+  align-items: center;
   justify-content: center;
-  padding: 48px 0;
+  min-height: 60vh;
 }
 
 .pwd-auth-card {
@@ -893,10 +944,10 @@ html.dark .pwd-cat-badge {
   border-color: var(--color-primary);
 }
 
-/* ===== 列表（卡片网格）===== */
+/* ===== 列表（卡片网格）：auto-fill 随可用宽度自适应列数，不再固定 5 列 ===== */
 .pwd-list {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 10px;
   align-content: start;
 }
@@ -1008,14 +1059,36 @@ html.dark .pwd-cat-badge {
   background: var(--color-bg-hover, #f1f5f9);
 }
 
+/* 卡片常显删除入口：独立一行，与三个查看/复制动作分开，避免误点；
+   不放进 .pwd-actions，动作区仍保持 3 个按钮 */
+.pwd-del-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.pwd-del-btn {
+  min-height: 32px;
+  padding: 2px 8px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  color: var(--color-error-text);
+  font-size: var(--fs-caption, 12px);
+  cursor: pointer;
+}
+
+.pwd-del-btn:hover {
+  background: var(--color-bg-hover, #f1f5f9);
+}
+
+/* 「打开网站 ↗」常显：原 opacity:0.6 让入口半隐，移动端更难发现；
+   去掉透明度及只服务于它的 transition / hover opacity */
 .pwd-icon-btn {padding: 0;
   background: none;
   border: none;
   cursor: pointer;
   font-size: var(--fs-caption, 12px);
   line-height: 1;
-  opacity: 0.6;
-  transition: opacity var(--transition-fast, 0.15s ease);
   border-radius: var(--radius-sm, 4px);
   text-decoration: none;
   color: inherit;
@@ -1026,12 +1099,11 @@ html.dark .pwd-cat-badge {
   height: 36px;}
 
 .pwd-icon-btn:hover {
-  opacity: 1;
   background: var(--color-bg-card, var(--color-bg-hover));
 }
 
-/* 原 .pwd-icon-btn.pwd-delete:hover 已随卡片删除按钮一并移除：
- * 删除入口现在只在编辑弹框里（.pwd-btn-delete）。 */
+/* 删除入口：卡片常显按钮见 .pwd-del-row，编辑弹框内保留 .pwd-btn-delete；
+   两者共用 handleDelete 的二次确认逻辑。 */
 
 /* ===== 空态：复用全局 .empty-state（src/style.css，.wb-content 作用域） ===== */
 
@@ -1058,17 +1130,16 @@ html.dark .pwd-cat-badge {
   position: relative;
 }
 
+/* Teleport 到 body + position:fixed：脱离 BaseDialog 的 overflow 裁剪；
+   top/left/width 由 dropdownStyle 按输入框可视矩形注入，层级走 --z-overlay 浮在弹框之上 */
 .pwd-site-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
+  position: fixed;
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   max-height: 200px;
   overflow-y: auto;
-  z-index: 10;
+  z-index: var(--z-overlay, 400);
   /* 下拉浮层统一走 --shadow-dropdown（原字面值作为 fallback 保留） */
   box-shadow: var(--shadow-dropdown, 0 4px 12px rgba(0, 0, 0, 0.12));
 }
@@ -1129,11 +1200,10 @@ html.dark .pwd-cat-badge {
 
 /* ===== P3-14 移动端触控目标：图标按钮点击区放大 ===== */
 @media (max-width: 768px) {
-  /* 行内操作图标按钮（复制/显示密码/删除）≥40px */
+  /* 卡片头「打开网站 ↗」等图标按钮点击区 ≥40px（常显，不再压透明度） */
   .pwd-icon-btn {min-width: 40px;
   height: 36px;
-  padding: 0 var(--space-3);
-  opacity: 0.85;}
+  padding: 0 var(--space-3);}
 
   /* 密码输入框内嵌的眼睛按钮受输入高度限制，给 32px（仍明显大于默认） */
   .pwd-eye-btn {min-width: 32px;

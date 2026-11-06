@@ -13,19 +13,28 @@ export type ContainerId = 'overview'
 /**
  * 主页卡片统一归入单一「概览」网格（2026-10-29 合并原 action/overview/tools 三容器，
  * 支撑「单屏一瞥总览」：所有卡同网格、密度一致、可整体拖拽排序）。
- * 默认顺序：关键数字卡在前（待办/统计/提醒/记账/打卡/健康/便签/密码），
- * 输入与列表卡在后（即将到期/未完成待办/快速添加/日历/天气）；用户可拖拽重排。
+ *
+ * 默认顺序（2026-11-06 按用户给定的纸面稿重排，分三条信息带）：
+ *   带 1 输入与提醒：快速添加待办 / 快速添加便签（各占 2 列）+ 提醒 + 记账
+ *   带 2 数字与习惯：打卡 / 便签 / 待办统计 / 待办任务（+ 健康四卡、密码，未开则自然不占位）
+ *   带 3 列表与天气：未完成待办 / 即将到期提醒 / 日历锚点 / 天气（天气固定收尾）
+ * ⚠️ 网格的视觉顺序来自这里的下标（HomeLayoutCard 以 CSS order 渲染），
+ *    所以调默认顺序改这个数组即可，不必动 WorkbenchHome.vue 里的模板书写顺序。
+ * 用户拖拽过的卡片会在 settingsStore.homeCardLayout 里存自定义 o，优先级高于此处默认。
+ *
  * maxCols 桌面 6 列、平板 3 列、手机 1 列（由 WorkbenchHome.vue 的媒体查询控制栅格，
  * 此处仅作卡片宽度上限，避免拖宽后越界）。设置面板「卡片尺寸」按此容器自动分组渲染。
- * 注：'todo-stats' 此前漏登记在容器内（渲染为卡但不可拖拽、order 回退 0），此处补入。
  */
 export const LAYOUT_CONTAINERS: Record<ContainerId, { ids: string[]; maxCols: number }> = {
   overview: {
     ids: [
-      'todos', 'todo-stats', 'countdowns', 'ledger', 'habits',
-      'exercise', 'diet', 'sleep', 'weight', 'notes', 'passwords',
-      'upcoming', 'pending-todos', 'quick-add-todo', 'quick-add-note',
-      'calendar-anchor', 'weather'
+      // 带 1：输入与提醒
+      'quick-add-todo', 'quick-add-note', 'countdowns', 'ledger',
+      // 带 2：数字与习惯（含健康四卡 / 密码，可被菜单开关与卡片开关隐藏）
+      'habits', 'notes', 'todo-stats', 'todos',
+      'exercise', 'diet', 'sleep', 'weight', 'passwords',
+      // 带 3：列表与天气，天气固定最后
+      'pending-todos', 'upcoming', 'calendar-anchor', 'weather'
     ],
     maxCols: 6
   }

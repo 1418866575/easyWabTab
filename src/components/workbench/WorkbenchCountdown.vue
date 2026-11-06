@@ -3,7 +3,6 @@ import { DIALOG_BTN } from '@/config/dialogText'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
 import Icon from '../Icon.vue'
-import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
 import { showConfirm } from '@/utils/dialog'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useCountdownsStore, calcRemaining } from '@/stores/countdowns'
@@ -377,8 +376,9 @@ onUnmounted(() => {
     </div>
 
     <!-- 空态 / 卡片墙 -->
-    <div v-if="store.itemsWithRemaining.length === 0" class="empty-state empty-invite" data-testid="cd-empty" @click="startAdd">
-      ＋ 新增第一个提醒
+    <!-- 新增入口只保留顶部常驻主按钮：空态整块不再可点，去掉与 FAB / 主按钮的重复触发 -->
+    <div v-if="store.itemsWithRemaining.length === 0" class="empty-state empty-invite" data-testid="cd-empty">
+      暂无提醒，点击右上角「＋ 新增提醒」开始添加
     </div>
 
     <div v-else-if="filteredItems.length === 0" class="empty-state filter-empty" data-testid="cd-filter-empty">
@@ -397,7 +397,7 @@ onUnmounted(() => {
         :style="{ '--cd-color': item.color ?? DEFAULT_COUNTDOWN_COLOR }"
         role="button"
         tabindex="0"
-        @click="startEdit(item)"
+        @click.self="startEdit(item)"
         @keyup.enter="startEdit(item)"
       >
         <div class="cd-card-head">
@@ -422,11 +422,13 @@ onUnmounted(() => {
             :title="item.showOnDisplay === false ? '前台隐藏' : '前台显示'"
             size="small"
             @update:model-value="store.setShowOnDisplay(item.id, $event)"
-            @click.stop
           >前台显示</el-checkbox>
         </div>
 
-        <div class="cd-actions" @click.stop>
+        <!-- 卡片改用 @click.self 编辑：点空白区编辑，点内部控件不误触，
+             故不再需要 .cd-actions / .front-toggle 上的 @click.stop 硬隔离；
+             补一个显式「编辑」按钮，保证点内容区也能进入编辑 -->
+        <div class="cd-actions">
           <div v-if="isManual" class="move-btns">
             <el-button
               class="btn-move"
@@ -443,6 +445,7 @@ onUnmounted(() => {
               @click="store.moveCountdown(item.id, 'down')"
             >▼</el-button>
           </div>
+          <el-button class="btn-edit" size="small" @click="startEdit(item)">编辑</el-button>
           <el-button class="btn-delete" size="small" @click="handleDelete(item.id)">删除</el-button>
         </div>
       </div>
@@ -450,7 +453,7 @@ onUnmounted(() => {
       </TransitionGroup>
       </div>
       <div v-else class="cd-table-wrap">
-        <el-table class="ewt-table" :data="pageItems" data-testid="cd-table" @row-click="rowClick" stripe border size="default" style="width: 100%" height="100%">
+        <el-table class="ewt-table" :data="pageItems" data-testid="cd-table" @row-click="rowClick" stripe border size="default" style="width: 100%">
           <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (currentPage - 1) * pageSize + i + 1" />
           <el-table-column label="名称" min-width="200" align="center" show-overflow-tooltip>
             <template #default="{ row }">
@@ -639,7 +642,6 @@ onUnmounted(() => {
     </BaseDialog>
 
   </div>
-<WorkbenchFab @click="startAdd" />
 </template>
 
 <style scoped>
@@ -703,28 +705,23 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-/* ===== 卡片墙 ===== */
+/* ===== 卡片墙 / 列表：去掉 el-table height:100% + .cd-viewport flex:1 的脆弱高度链，
+   改页面级自然滚动（表格按内容自然高度，内容超出由外层 .wb-content 滚动） ===== */
 .cd-viewport {
   display: flex;
   flex-direction: column;
-  min-height: 0;
 }
 
-/* 列表视图：表格外层定高容器（flex 撑满列表区剩余高度）。
-   若把 height:100% 的 el-table 直接放进非 flex 的 .cd-viewport，
-   工具条 + 表格 两者高度相加会溢出列表区，el-table（position:relative）
-   会盖住底部分页条（与 WorkbenchTodo 的 .td-table-wrap 同解法）。 */
 .cd-table-wrap {
-  flex: 1 1 auto;
-  min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
+/* 固定 5 列 → 按可用宽度 auto-fill 自适应列；行高由内容撑开，避免长文案溢出 */
 .cd-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  grid-auto-rows: 150px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-auto-rows: auto;
   gap: 10px;
   align-content: start;
 }
@@ -946,6 +943,8 @@ html.dark .reminded-badge {
 }
 
 /* ===== 空态：.empty-state / .empty-invite / .filter-empty 已收敛到全局基类（src/style.css） ===== */
+/* 空态整块不再可点新增：去掉邀请态手型光标，视觉上与只读提示一致 */
+.wb-countdown .empty-invite { cursor: default; }
 
 /* ===== 表单（新增/编辑弹框）===== */
 .dialog-body {
@@ -1157,13 +1156,7 @@ html.dark .cat-default {
   background: rgba(107, 114, 128, 0.15);
 }
 
-/* ===== 桌面端列表区撑满（表格 height:100% 生效） ===== */
-@media (min-width: 769px) {
-  .cd-viewport {
-    flex: 1;
-    min-height: 0;
-  }
-}
+/* 改页面级自然滚动后，桌面端不再用 flex:1 撑满列表区（原为 height:100% 表格服务，已移除） */
 
 /* 列表视图表格（与卡片共享分页数据 pageItems） */
 .cd-t-name {
@@ -1225,21 +1218,11 @@ html.dark .cat-default {
   flex-wrap: wrap;
 }
 
-/* ===== 平板 / 窄桌面（769–1024px）：固定 5 列同样会挤压卡片 =====
-   侧栏占位后内容区仅 ~700–900px，5 列时每列约 150–170px，
-   「剩余 4 小时 24 分」等长文案会贴边。此处改为按 190px 最小宽自适应列数，
-   宽屏（>1024px）仍保持设计稿的 5 列不变。 */
-@media (min-width: 769px) and (max-width: 1024px) {
-  .cd-grid {
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  }
-}
+/* 基础规则已统一为 auto-fill 自适应列，平板/窄桌面不再需要单独的列数覆盖 */
 
-/* ===== 移动端（≤768px）：卡片墙单列铺满，行高由内容决定 =====
-   原桌面规则固定 5 列 + grid-auto-rows:150px，窄屏（约 390px）下每张卡仅 ~60px 宽，
-   卡内文字被迫逐字竖排；内容又高于 150px 行高，溢出后压住底部分页条。
-   改为单列 + grid-auto-rows:auto：卡片按内容自然撑开，
-   列表整体交回 .wb-content 垂直滚动（内容超出可下滑查看，R-Mobile 定时提醒展示异常）。 */
+/* ===== 移动端（≤768px）：卡片墙进一步收敛为单列铺满，行高由内容决定 =====
+   基础规则已是 auto-fill + grid-auto-rows:auto；窄屏再固定单列，避免卡片被挤窄、
+   卡内文字逐字竖排。列表整体交回 .wb-content 页面级垂直滚动（内容超出可下滑查看）。 */
 @media (max-width: 768px) {
   .cd-grid {
     grid-template-columns: 1fr;
@@ -1273,7 +1256,13 @@ html.dark .cat-default {
     font-size: var(--fs-md, 15px);
   }
 
-  /* 触控目标 ≥36px（与工作台移动端 P3-14 约定一致，不破坏单行按钮排布） */
-  .cd-actions .el-button {height: 36px;}
+  /* 操作按钮常显（不依赖 hover），触控目标 ≥44px，避免触屏误触 */
+  .cd-actions { opacity: 1; visibility: visible; }
+  .cd-actions .el-button {
+    min-height: 44px;
+    min-width: 44px;
+    height: auto;
+  }
+  .front-toggle { min-height: 44px; }
 }
 </style>
