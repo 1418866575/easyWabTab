@@ -72,7 +72,7 @@ const to = computed(() => `/blog/article/${props.article.slug}`)
 <style scoped>
 .bf-card-wrap {
   position: relative;
-  /* 卡片高度固定：网格项在行高上被拉伸，内层卡片需撑满，避免无封面卡片比有封面卡片矮 */
+  /* 网格项被行高拉伸，内层卡片需撑满，避免无封面卡片比有封面卡片矮 */
   height: 100%;
 }
 .bf-card {
@@ -80,100 +80,105 @@ const to = computed(() => `/blog/article/${props.article.slug}`)
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-lg, 12px);
-  background-color: var(--color-bg-card, #ffffff);
-  box-shadow: var(--shadow-card, 0 1px 2px rgba(0, 0, 0, 0.06));
+  border: 1px solid var(--bf-line);
+  border-radius: var(--bf-radius);
+  background-color: var(--bf-card);
   color: inherit;
   text-decoration: none;
-  transition: transform var(--motion-duration, 220ms) var(--motion-ease, ease),
-    box-shadow var(--motion-duration, 220ms) var(--motion-ease, ease),
-    border-color var(--motion-duration, 220ms) var(--motion-ease, ease);
+  transition: border-color var(--motion-duration) var(--motion-ease),
+    transform var(--motion-duration) var(--motion-ease);
 }
+/* 编辑式卡片：层级靠发丝线与留白，hover 只换描边 + 1px 上浮，不加投影 */
 .bf-card-wrap:hover .bf-card {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-card-hover, 0 8px 20px rgba(0, 0, 0, 0.1));
-  border-color: var(--color-primary, #3b82f6);
+  border-color: var(--bf-accent-line);
+  transform: var(--motion-hover-rise);
+}
+.bf-card:focus-visible {
+  outline: 2px solid var(--bf-accent-line);
+  outline-offset: 2px;
 }
 
-/* 收藏星标：绝对定位于卡片右上角，作为 RouterLink 的兄弟节点（避免 a 内嵌 button 的非法嵌套） */
+/* 收藏星标：RouterLink 的兄弟节点（避免 a 内嵌 button 的非法嵌套） */
 .bf-card-star {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: var(--space-2);
+  right: var(--space-2);
   z-index: 2;
   width: 36px;
   height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: none;
+  border: 1px solid var(--bf-line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.85);
-  color: var(--color-text-muted);
-  font-size: var(--fs-caption, 12px);
+  background: var(--bf-card);
+  color: var(--bf-ink-2);
+  font-size: var(--fs-caption);
   line-height: 1;
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-  transition: color var(--motion-duration, 220ms) var(--motion-ease, ease),
-    transform var(--motion-duration, 220ms) var(--motion-ease, ease),
-    background-color var(--motion-duration, 220ms) var(--motion-ease, ease);
+  transition: color var(--motion-duration), border-color var(--motion-duration),
+    transform var(--motion-duration);
 }
 .bf-card-star:hover {
-  transform: scale(1.12);
-  color: var(--color-warning-text);
+  transform: scale(1.08);
+  color: var(--bf-accent);
+  border-color: var(--bf-accent-line);
 }
 .bf-card-star.is-fav {
-  color: var(--color-warning-text);
-  background: rgba(255, 255, 255, 0.95);
+  color: var(--bf-accent);
+  border-color: var(--bf-accent-line);
+}
+.bf-card-star:focus-visible {
+  outline: 2px solid var(--bf-accent-line);
+  outline-offset: 2px;
 }
 
 .bf-card-cover {
   position: relative;
-  height: 140px;
+  height: 200px;
   background-size: cover;
   background-position: center;
 }
 .bf-card-pin {
   position: absolute;
-  top: 8px;
-  left: 8px;
+  top: var(--space-2);
+  left: var(--space-2);
   padding: 0 var(--space-2);
   border-radius: 999px;
-  background-color: var(--color-warning, #f59e0b);
-  color: #fff;
-  font-size: var(--font-size-xs, 11px);
-  line-height: 18px;
+  background-color: var(--color-warning);
+  color: var(--bf-on-accent);
+  font-size: var(--fs-caption);
+  line-height: 20px;
 }
 
 .bf-card-body {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding: 14px;
+  padding: var(--space-5);
   flex: 1 1 auto;
 }
 .bf-card-title {
   margin: 0;
-  font-size: var(--font-size-base, 15px);
-  font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text);
-  line-height: var(--line-height-tight, 1.3);
+  font-family: var(--bf-serif);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--bf-ink);
+  line-height: var(--line-height-tight);
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
 }
-/* 无封面时收藏星标浮在卡片右上角（有封面时它落在封面图上），标题右侧让出 34px 避免被星标压住文字。
-   4 列窄卡下标题更容易顶到星标，这里统一兜住。 */
+/* 无封面时收藏星标浮在卡片右上角，标题右侧让出空间避免被压住 */
 .bf-card-body:first-child .bf-card-title {
-  padding-right: 34px;
+  padding-right: var(--space-8);
 }
 .bf-card-excerpt {
   margin: 0;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm, 13px);
-  line-height: var(--line-height-relaxed, 1.6);
+  color: var(--bf-ink-2);
+  font-size: var(--fs-sm);
+  line-height: var(--line-height-relaxed);
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
@@ -184,11 +189,11 @@ const to = computed(() => `/blog/article/${props.article.slug}`)
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-xs, 12px);
+  color: var(--bf-ink-2);
+  font-size: var(--fs-caption);
 }
-.bf-card-cat { color: var(--color-primary-text); }
-.bf-card-dot { color: var(--color-text-muted); }
+.bf-card-cat { color: var(--bf-accent); }
+.bf-card-dot { color: var(--bf-ink-3); }
 .bf-card-tags {
   display: flex;
   flex-wrap: wrap;
@@ -196,16 +201,17 @@ const to = computed(() => `/blog/article/${props.article.slug}`)
   margin-top: auto;
 }
 .bf-card-tag {
-  padding: 0 6px;
-  border-radius: var(--radius-sm, 6px);
-  background-color: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary-text);
-  font-size: var(--font-size-xs, 11px);
-  line-height: 18px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--bf-line);
+  border-radius: var(--bf-radius);
+  background-color: var(--bf-accent-soft);
+  color: var(--bf-accent);
+  font-size: var(--fs-caption);
+  line-height: 20px;
 }
 
 @media (max-width: 768px) {
-  .bf-card-cover { height: 120px; }
+  .bf-card-cover { height: 180px; }
+  .bf-card-body { padding: var(--space-4); }
 }
-html.dark .bf-card { box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.35)); }
 </style>

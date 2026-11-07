@@ -1,236 +1,301 @@
+
 /**
  * 博客前台（阅读器）共享样式
  *
  * 作用域：BlogHomeView / BlogPostView 及前台组件。
- * 全局类沿用项目 Design Token（见 docs/UI_STYLE_GUIDE.md）；不引入新色彩/间距体系。
+ * 视觉语言走 --bf-* 局部 token，全部别名到项目 Design Token（见 docs/UI_STYLE_GUIDE.md），
+ * 因此跟随 8 套 accent / 暗色 / 界面美化派生层；不引入第二套色彩、字号或间距体系。
  * 与后台 .ba-* 样式互不耦合，前台是独立阅读界面。
+ *
+ * 设计取向：编辑式阅读版面 —— 层级靠字号阶梯 + 留白 + 1px 发丝线，卡片去投影、圆角收敛到 4px。
  */
 
 .bf-shell {
+  /* 局部 token：只做语义别名，值全部来自全局体系；子组件通过继承取用 */
+  --bf-card: var(--color-bg-card);
+  --bf-line: var(--color-border);
+  --bf-ink: var(--color-text);
+  --bf-ink-2: var(--color-text-secondary);
+  --bf-ink-3: var(--color-text-muted);
+  --bf-accent: var(--color-primary-text);
+  --bf-accent-line: var(--color-primary);
+  --bf-accent-soft: var(--color-primary-soft);
+  --bf-accent-solid: var(--color-primary-solid);
+  --bf-on-accent: var(--color-on-accent);
+  --bf-radius: var(--radius-sm);
+  /* 与 blogTypoZhaotab.css 的 magazine 主题同栈，不新引字体文件 */
+  --bf-serif: Georgia, "Songti SC", "STSong", "SimSun", "Noto Serif SC", serif;
+
   max-width: 980px;
   margin: 0 auto;
-  padding: var(--space-6, 24px) var(--space-4, 16px) var(--space-8, 32px);
+  padding: var(--space-8) var(--space-6) var(--space-8);
+  color: var(--bf-ink);
 }
-/**
- * 列表页加宽版：4 列图文卡片需要更宽的画布。
- * 只给 BlogHomeView 用——文章详情页继续走 .bf-shell 的 980px，保持正文行长适合阅读。
- * 左右留白用 clamp 随视口增长（最窄 16px 兜底、最宽 48px），大屏下标题与卡片不会贴边。
- */
+
+/* 列表页加宽版：3 列图文卡片需要更宽的画布；文章详情继续走 980px 保持正文字长。 */
 .bf-shell--wide {
-  max-width: 1320px;
-  padding-left: clamp(16px, 4vw, 48px);
-  padding-right: clamp(16px, 4vw, 48px);
+  max-width: 1200px;
+  padding-left: clamp(var(--space-4), 4vw, var(--space-8));
+  padding-right: clamp(var(--space-4), 4vw, var(--space-8));
 }
 
 .bf-count {
-  margin: 0 0 var(--space-3);
-  font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-muted);
+  margin: 0 0 var(--space-5);
+  font-size: var(--fs-caption);
+  color: var(--bf-ink-2);
+  letter-spacing: 0.04em;
 }
 
 /* ---------- 列表网格 ---------- */
-/* 桌面端每行固定 4 列、等宽对齐（minmax(0,1fr) 让列宽严格均分，
-   长标题/长标签也不会把列撑宽导致横向溢出）；窄屏逐级降列，避免卡片被压扁。 */
 .bf-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-4);
-}
-@media (max-width: 1199px) {
-  .bf-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-6);
 }
 @media (max-width: 991px) {
   .bf-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-@media (max-width: 768px) {
+@media (max-width: 640px) {
   .bf-grid { grid-template-columns: minmax(0, 1fr); }
 }
-/* 桌面端多列：所有行等高 → 卡片高度统一（有/无封面卡片对齐）。
-   移动端单列时不加，保持卡片自然高度，避免短卡片被拉到与长卡片同高、留出大块空白。 */
-@media (min-width: 769px) {
+/* 多列时行等高，有/无封面卡片对齐；单列保持自然高度 */
+@media (min-width: 641px) {
   .bf-grid { grid-auto-rows: 1fr; }
 }
 
-/* ---------- 收藏 / 最近阅读 分区（列表上方，沿用工具箱 section 风格，空时自动隐藏） ---------- */
-.bf-section {
-  margin-bottom: var(--space-6);
-}
+/* ---------- 收藏 / 最近阅读 分区 ---------- */
+.bf-section { margin-bottom: var(--space-8); }
 .bf-section-head {
   display: flex;
   align-items: baseline;
-  gap: var(--space-2);
-  margin-bottom: var(--space-3);
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--bf-line);
 }
 .bf-section-title {
   margin: 0;
-  font-size: var(--font-size-base, 15px);
-  font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text);
+  font-family: var(--bf-serif);
+  font-size: var(--fs-title);
+  font-weight: 600;
+  color: var(--bf-ink);
+  letter-spacing: 0.02em;
 }
 .bf-section-sub {
-  font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-muted);
+  font-size: var(--fs-caption);
+  color: var(--bf-ink-3);
 }
 
+/* ---------- 空状态：虚线框 + 装饰字 + 说明（不新增 DOM，用伪元素承载图标） ---------- */
 .bf-empty {
-  padding: 40px 16px;
-  border: 1px dashed var(--color-border, #e2e8f0);
-  border-radius: var(--radius-lg, 12px);
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm, 13px);
+  padding: var(--space-8) var(--space-6);
+  border: 1px dashed var(--bf-line);
+  border-radius: var(--bf-radius);
+  background-color: var(--bf-card);
+  color: var(--bf-ink-2);
+  font-size: var(--fs-sm);
+  line-height: var(--line-height-relaxed);
   text-align: center;
+}
+.bf-empty::before {
+  content: "\25CC";
+  display: block;
+  margin-bottom: var(--space-3);
+  font-family: var(--bf-serif);
+  font-size: var(--fs-hero);
+  line-height: 1;
+  color: var(--bf-ink-3);
 }
 
 .bf-pager {
   display: flex;
   justify-content: center;
-  margin-top: var(--space-5);
+  margin-top: var(--space-6);
 }
 
 .bf-footer {
   margin-top: var(--space-8);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--color-border, #e2e8f0);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--bf-line);
   text-align: center;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-xs, 12px);
+  color: var(--bf-ink-3);
+  font-family: var(--bf-serif);
+  font-size: var(--fs-caption);
+  letter-spacing: 0.04em;
 }
 
 /* ---------- 文章详情 ---------- */
 .bf-post {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-6);
 }
 .bf-back {
   align-self: flex-start;
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm, 13px);
+  color: var(--bf-ink-2);
+  font-size: var(--fs-sm);
   text-decoration: none;
   cursor: pointer;
 }
-.bf-back:hover { color: var(--color-primary-text); }
+.bf-back:hover { color: var(--bf-accent); }
+.bf-back:focus-visible {
+  outline: 2px solid var(--bf-accent-line);
+  outline-offset: 3px;
+}
 
 .bf-post-hero {
-  height: 200px;
-  border-radius: var(--radius-lg, 12px);
+  height: 360px;
+  border: 1px solid var(--bf-line);
+  border-radius: var(--bf-radius);
   background-size: cover;
   background-position: center;
 }
+/* 标题与正文收进 780px 阅读栏，封面仍占满 shell 宽度 */
+.bf-post > header {
+  max-width: 780px;
+  margin-inline: auto;
+  text-align: center;
+}
 .bf-post-title {
   margin: 0;
-  font-size: var(--font-size-3xl, 28px);
-  font-weight: var(--font-weight-bold, 700);
-  line-height: var(--line-height-tight, 1.25);
-  color: var(--color-text);
+  font-family: var(--bf-serif);
+  font-size: clamp(var(--fs-h2), 3.6vw, var(--fs-hero));
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  color: var(--bf-ink);
 }
 .bf-post-sub {
-  margin: var(--space-1) 0 0;
-  font-size: var(--font-size-lg, 18px);
-  color: var(--color-text-secondary);
+  margin: var(--space-3) 0 0;
+  font-size: var(--fs-md);
+  color: var(--bf-ink-2);
+  line-height: var(--line-height-relaxed);
 }
 .bf-post-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: var(--space-2);
-  color: var(--color-text-muted);
-  font-size: var(--font-size-xs, 12px);
-  padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  color: var(--bf-ink-2);
+  font-size: var(--fs-caption);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--bf-line);
 }
-.bf-post-meta .bf-dot { color: var(--color-text-muted); }
-.bf-post-cat { color: var(--color-primary-text); }
+.bf-post-meta .bf-dot { color: var(--bf-ink-3); }
+.bf-post-cat { color: var(--bf-accent); }
 
+/* 正文字号交由博客排版主题 --t-* 接管，此处只约束行长 */
 .bf-post-body {
-  font-size: var(--font-size-base, 15px);
+  max-width: 780px;
+  margin-inline: auto;
 }
 
 .bf-post-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-2);
+  max-width: 780px;
+  margin-inline: auto;
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--bf-line);
 }
 .bf-post-tag {
-  padding: 2px 10px;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--bf-line);
   border-radius: 999px;
-  background-color: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary-text);
-  font-size: var(--font-size-xs, 12px);
+  background-color: var(--bf-card);
+  color: var(--bf-ink-2);
+  font-size: var(--fs-caption);
+  line-height: var(--line-height-base);
+  transition: border-color var(--motion-duration), color var(--motion-duration);
+}
+.bf-post-tag:hover {
+  border-color: var(--bf-accent-line);
+  color: var(--bf-accent);
 }
 
 /* ---------- 相关文章 ---------- */
 .bf-related {
-  margin-top: var(--space-2);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--color-border, #e2e8f0);
+  max-width: 780px;
+  margin: var(--space-8) auto 0;
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--bf-line);
 }
 .bf-related-title {
-  margin: 0 0 var(--space-3);
-  font-size: var(--font-size-base, 15px);
-  font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text);
+  margin: 0 0 var(--space-4);
+  font-family: var(--bf-serif);
+  font-size: var(--fs-title);
+  font-weight: 600;
+  color: var(--bf-ink);
 }
 .bf-related-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
 }
 .bf-related-item {
   display: block;
-  padding: var(--space-3);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  background-color: var(--color-bg-card, #ffffff);
+  padding: var(--space-4);
+  border: 1px solid var(--bf-line);
+  border-radius: var(--bf-radius);
+  background-color: var(--bf-card);
   color: inherit;
   text-decoration: none;
-  transition: border-color var(--motion-duration, 220ms), transform var(--motion-duration, 220ms);
+  transition: border-color var(--motion-duration) var(--motion-ease),
+    transform var(--motion-duration) var(--motion-ease);
 }
 .bf-related-item:hover {
-  border-color: var(--color-primary, #3b82f6);
-  transform: translateY(-2px);
+  border-color: var(--bf-accent-line);
+  transform: var(--motion-hover-rise);
+}
+.bf-related-item:focus-visible {
+  outline: 2px solid var(--bf-accent-line);
+  outline-offset: 2px;
 }
 .bf-related-item-title {
-  font-size: var(--font-size-sm, 13px);
-  font-weight: var(--font-weight-medium, 500);
-  color: var(--color-text);
+  font-family: var(--bf-serif);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--bf-ink);
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
 }
 .bf-related-item-meta {
-  margin-top: var(--space-1);
-  font-size: var(--font-size-xs, 11px);
-  color: var(--color-text-muted);
+  margin-top: var(--space-2);
+  font-size: var(--fs-caption);
+  color: var(--bf-ink-2);
 }
 
 /* ---------- 404 / 未找到 ---------- */
 .bf-404 {
-  padding: 60px 16px;
+  padding: var(--space-8) var(--space-4);
   text-align: center;
 }
 .bf-404-title {
   margin: 0 0 var(--space-2);
-  font-size: var(--font-size-xl, 20px);
-  font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text);
+  font-family: var(--bf-serif);
+  font-size: var(--fs-h2);
+  font-weight: 600;
+  color: var(--bf-ink);
 }
 .bf-404-text {
   margin: 0 0 var(--space-4);
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm, 13px);
+  color: var(--bf-ink-2);
+  font-size: var(--fs-sm);
 }
 
 @media (max-width: 768px) {
+  .bf-shell { padding: var(--space-6) var(--space-4) var(--space-8); }
+  .bf-grid { gap: var(--space-4); }
   .bf-related-grid { grid-template-columns: 1fr; }
-  .bf-post-hero { height: 150px; }
-  .bf-post-title { font-size: var(--font-size-2xl, 22px); }
+  .bf-post-hero { height: 220px; }
+  .bf-post-title { font-size: var(--fs-h2); }
+  .bf-post > header { text-align: left; }
+  .bf-post-meta { justify-content: flex-start; }
 }
-
-html.dark .bf-empty,
-html.dark .bf-related-item { box-shadow: none; }
