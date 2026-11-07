@@ -9,6 +9,7 @@ import type {
   HealthPlan,
   HealthPlanMetric,
   HealthPlanPeriod,
+  HealthPlanPrefs,
   HealthPlans,
   HeightRecord,
   MealType,
@@ -158,6 +159,31 @@ export function normalizeWeeklyPlans(raw: unknown): HealthWeeklyPlans | undefine
   return out
 }
 
+/** 方案偏好归一：只认三个已知键，其余丢弃 */
+export function normalizePlanPrefs(raw: unknown): HealthPlanPrefs | undefined {
+  if (typeof raw !== 'object' || raw === null) return undefined
+  const p = raw as Record<string, unknown>
+  const out: HealthPlanPrefs = {}
+  if (typeof p.exercisePlanId === 'string' && p.exercisePlanId) out.exercisePlanId = p.exercisePlanId
+  if (typeof p.dietPlanId === 'string' && p.dietPlanId) out.dietPlanId = p.dietPlanId
+  if (typeof p.dietPlanStart === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(p.dietPlanStart)) {
+    out.dietPlanStart = p.dietPlanStart
+  }
+  return Object.keys(out).length > 0 ? out : undefined
+}
+
+/** 勾选进度归一：键必须是日期、值必须是字符串数组，空数组直接丢掉 */
+export function normalizePlanProgress(raw: unknown): Record<string, string[]> {
+  if (typeof raw !== 'object' || raw === null) return {}
+  const out: Record<string, string[]> = {}
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(k) || !Array.isArray(v)) continue
+    const keys = v.filter((x): x is string => typeof x === 'string' && x.length > 0)
+    if (keys.length > 0) out[k] = keys
+  }
+  return out
+}
+
 export function normalizeHealthData(raw: Partial<HealthData> | undefined): HealthData {
   const data = raw ?? {}
   const height =
@@ -183,6 +209,8 @@ export function normalizeHealthData(raw: Partial<HealthData> | undefined): Healt
     plans,
     weeklyPlans: normalizeWeeklyPlans(data.weeklyPlans),
     plansUpdatedAt: typeof data.plansUpdatedAt === 'string' ? data.plansUpdatedAt : undefined,
+    planPrefs: normalizePlanPrefs(data.planPrefs),
+    planProgress: normalizePlanProgress(data.planProgress),
     records: {
       exercise: toArr(rec.exercise).map(r => normalizeExerciseRecord(r)),
       diet: toArr(rec.diet).map(r => normalizeDietRecord(r)),

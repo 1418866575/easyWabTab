@@ -21,6 +21,16 @@ import { chromium } from 'playwright'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
+/** 本周一 / 下周一的 YYYY-MM-DD 键。
+ *  旧脚本把周键硬编码成 '2026-11-02'，跨周后必然误读成「本周」而把已完成态算进复制结果。
+ *  这里按运行当天动态计算，测试不再随日期失效。 */
+function mondayKey(offsetWeeks = 0) {
+  const d = new Date()
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7) + offsetWeeks * 7)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+const NEXT_WEEK_KEY = mondayKey(1)
+
 function findChromium() {
   const root = path.join(os.homedir(), 'AppData', 'Local', 'ms-playwright')
   if (!fs.existsSync(root)) return undefined
@@ -151,6 +161,10 @@ try {
   await page.reload({ waitUntil: 'commit', timeout: 120000 })
   await page.waitForSelector('[data-testid="wb-menu-health"]', { timeout: 120000 })
   await page.click('[data-testid="wb-menu-health"]')
+  // 新版把健康子 tab 写进 URL（?section=health&tab=...），刷新后会停在刷新前的子面板；
+  // 本用例前面切过「饮食」，因此需显式切回「运动」再等 ex-plan-board，而不是依赖默认回落。
+  await page.waitForSelector('[data-testid="hd-tabs"]', { timeout: 30000 })
+  await page.click('[data-testid="hd-tab-exercise"]')
   await page.waitForSelector('[data-testid="ex-plan-board"]', { timeout: 60000 })
   await page.waitForTimeout(600)
   const persisted = await page.evaluate(async () => {
@@ -171,18 +185,18 @@ try {
   await page.waitForTimeout(900)
   const nextCell = (await page.locator('[data-testid="wp-cell-morning-2"]').innerText()).replace(/\s+/g, '')
   check('S7 切到下周自动复制上周内容（晨跑、无 ✓）', nextCell.includes('晨跑') && !nextCell.includes('✓'), nextCell)
-  const copiedState = await page.evaluate(async () => {
+  const copiedState = await page.evaluate(async (weekKey) => {
     const m = await import('/src/stores/workbenchHealth.ts')
     const s = m.useWorkbenchHealthStore()
     const weeks = s.weeklyPlans ?? {}
-    const wk = weeks['2026-11-02']
+    const wk = weeks[weekKey]
     return {
       exists: !!wk,
       exCount: wk?.exercise.length ?? 0,
       allUndone: (wk?.exercise ?? []).every(x => !x.done),
       dietCount: wk?.diet.length ?? 0
     }
-  })
+  }, NEXT_WEEK_KEY)
   check('S7 复制落库：exercise/diet 均复制、done 全部重置',
     copiedState.exists && copiedState.exCount >= 1 && copiedState.allUndone && copiedState.dietCount >= 1, JSON.stringify(copiedState))
   // 幂等：切走再切回，条目不重复
@@ -190,12 +204,12 @@ try {
   await page.waitForTimeout(600)
   await page.click('[data-testid="wp-prev"]')
   await page.waitForTimeout(900)
-  const idem = await page.evaluate(async () => {
+  const idem = await page.evaluate(async (weekKey) => {
     const m = await import('/src/stores/workbenchHealth.ts')
     const s = m.useWorkbenchHealthStore()
-    const wk = s.weeklyPlans?.['2026-11-02']
+    const wk = s.weeklyPlans?.[weekKey]
     return wk?.exercise.filter(x => x.rowKey === 'morning' && x.day === 2).length ?? -1
-  })
+  }, NEXT_WEEK_KEY)
   check('S7 幂等：切走再切回不重复复制', idem === 1, `morning-2 count=${idem}`)
 
   check('无页面级 JS 异常', errs.length === 0, errs.join(' | ').slice(0, 200))

@@ -6,7 +6,6 @@ import { showConfirm } from '@/utils/dialog'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
-import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
 
 /** 面板尺寸：宽度固定 80%（BaseDialog 将 width 作为 maxWidth 应用，面板 width:100% → 实际即 80%）；
  *  高度仍沿用「设置 → 弹窗尺寸」写入的 CSS 变量，未配置时回退默认值。 */
@@ -65,14 +64,6 @@ function selectCategoryTab(name: string): void {
   activeCategoryId.value = name
   listPage.value = 1
 }
-
-const hasActiveFilter = computed(() =>
-  (appliedFilters.value.title ?? '').trim() !== '' ||
-  (appliedFilters.value.description ?? '').trim() !== '' ||
-  Boolean(appliedFilters.value.priority) ||
-  Boolean(appliedFilters.value.status) ||
-  activeCategoryId.value !== ''
-)
 
 function applySearch(): void {
   appliedFilters.value = {
@@ -355,8 +346,12 @@ onMounted(async () => {
 
 <template>
   <div class="wb-todo">
-    <!-- 查询区（标题/描述/优先级/状态 + 右侧查询重置按钮） -->
-    <div class="td-search">
+    <!-- 原「第一卡片」（计数 + 筛选 + 视图 + 新增那一框）已整块删除：
+         它把四类东西塞进一个框里，又和下面的查询区、表格各占一张卡，观感最乱。
+         现在改成分工明确的三段：查询一行 → 表格操作行（左新增 / 右视图）→ 表格卡片。 -->
+
+    <!-- 查询区域：常驻第一行，不再折叠（少一次点击），也不再单独包卡片 -->
+    <div class="td-filter-panel" data-testid="td-filter-panel">
       <div class="td-search-fields">
         <label class="td-field td-field-grow">
           <span class="td-field-label">标题</span>
@@ -382,14 +377,14 @@ onMounted(async () => {
         </label>
         <label class="td-field">
           <span class="td-field-label">优先级</span>
-          <el-select v-model="searchPriority" class="search-select" data-testid="td-search-priority" size="small">
+          <el-select v-model="searchPriority" class="search-select" placeholder="全部优先级" data-testid="td-search-priority" size="small">
             <el-option value="" label="全部优先级" />
             <el-option v-for="opt in PRIORITY_OPTIONS" :key="opt.value" :value="opt.value" :label="opt.label" />
           </el-select>
         </label>
         <label class="td-field">
           <span class="td-field-label">状态</span>
-          <el-select v-model="searchStatus" class="search-select" data-testid="td-search-status" size="small">
+          <el-select v-model="searchStatus" class="search-select" placeholder="全部状态" data-testid="td-search-status" size="small">
             <el-option value="" label="全部状态" />
             <el-option value="pending" label="未完成" data-testid="td-search-status-pending" />
             <el-option value="in_progress" label="进行中" data-testid="td-search-status-in-progress" />
@@ -404,44 +399,38 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- 分类筛选标签页（全部 + 可见分类，点击即时过滤）+ 新增待办按钮靠右 -->
-    <div class="td-cat-tabs">
-      <BaseTabs
-      v-model="activeCategoryId"
-      :items="catTabItems"
-      testid="td-cat"
-      @update:model-value="selectCategoryTab"
-    />
-      <span class="toolbar-count" data-testid="td-toolbar-count">
-        <template v-if="hasActiveFilter">筛选出 {{ filteredTodos.length }} / {{ store.orderedTodos.length }} 个</template>
-        <template v-else>
-          未完成 {{ store.pendingCount }} · 进行中 {{ store.inProgressCount }} · 已完成 {{ store.completedCount }}<template v-if="store.archivedCount > 0"> · 已归档 {{ store.archivedCount }}</template>
-        </template>
-      </span>
-    </div>
-
-    <!-- 表格工具条：左上新增 + 右上视图切换（常驻渲染，空列表/筛空时也能新增） -->
-    <div class="ewt-table-toolbar is-split">
-      <div class="td-toolbar-left">
-        <el-button type="primary" size="small" class="btn-add" data-testid="td-add-button" @click="startAdd">＋ 新增待办</el-button>
-      </div>
-      <div class="td-toolbar-right">
-        <ViewModeToggle v-if="filteredTodos.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
-      </div>
-    </div>
-
     <!-- 空态 / 卡片墙 -->
     <div v-if="store.orderedTodos.length === 0" class="empty-state empty-invite" data-testid="td-empty" @click="startAdd">
       ＋ 新增第一个待办
     </div>
 
-    <div v-else-if="filteredTodos.length === 0" class="empty-state filter-empty" data-testid="td-filter-empty">
-      <span>没有符合查询条件的待办</span>
-      <button class="btn-cancel" @click="resetSearch">重置查询</button>
-    </div>
-
     <template v-else>
-      <div class="td-table-wrap">
+      <!-- 表格操作行：左「＋ 新增待办」，右「卡片 / 列表」视图切换。
+           两者都属表格级操作，贴在表格上方左右两端，不再和查询条件抢同一行。 -->
+      <div class="td-table-bar" data-testid="td-table-bar">
+        <el-button type="primary" size="small" class="btn-add" data-testid="td-add-button" @click="startAdd">＋ 新增待办</el-button>
+        <ViewModeToggle v-if="filteredTodos.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
+      </div>
+
+      <!-- 查询条件收进可折叠面板后，筛空态需要一个就地清除入口，避免用户找不到「重置」 -->
+      <div v-if="filteredTodos.length === 0" class="empty-state filter-empty" data-testid="td-filter-empty">
+        <span>没有符合查询条件的待办</span>
+        <el-button size="small" class="td-filter-empty-reset" data-testid="td-filter-empty-reset" @click="resetSearch">清除筛选</el-button>
+      </div>
+
+      <div v-else class="td-table-wrap">
+        <!-- 分类标签页紧贴表格上方，与表格同属一个卡片容器（不再是工具条里的孤立 chip） -->
+        <div class="td-table-tabs" data-testid="td-table-tabs">
+          <div class="td-cat-tabs">
+            <BaseTabs
+              v-model="activeCategoryId"
+              :items="catTabItems"
+              testid="td-cat"
+              @update:model-value="selectCategoryTab"
+            />
+          </div>
+          <span class="td-table-tabs-meta" data-testid="td-table-tabs-count">共 {{ filteredTodos.length }} 条</span>
+        </div>
         <el-table v-if="vm.mode === 'list'" class="ewt-table"
           :data="pageTodos"
           :row-key="rowKeyOf"
@@ -560,21 +549,23 @@ onMounted(async () => {
           </div>
         </div>
 
-      </div>
-      <div class="td-list-pager ewt-pager">
-        <el-pagination
-          v-model:current-page="listPage"
-          @size-change="listPage = 1"
-          v-model:page-size="activePageSize"
-          :page-sizes="PAGE_SIZES"
-          layout="total, prev, pager, next, jumper"
-          :total="viewTodos.length"
-          background
-          small
-          prev-text="上一页"
-          next-text="下一页"
-          data-testid="td-pagination"
-        />
+        <!-- 分页条收进同一张卡片做表尾：原先它带着 `border-radius: 0 0 14px` 假装是卡片底部，
+             实际却是 .td-table-wrap 的兄弟节点、被 16px 间距隔开，观感像断开的第二块。 -->
+        <div class="td-list-pager ewt-pager">
+          <el-pagination
+            v-model:current-page="listPage"
+            @size-change="listPage = 1"
+            v-model:page-size="activePageSize"
+            :page-sizes="PAGE_SIZES"
+            layout="total, prev, pager, next, jumper"
+            :total="viewTodos.length"
+            background
+            small
+            prev-text="上一页"
+            next-text="下一页"
+            data-testid="td-pagination"
+          />
+        </div>
       </div>
     </template>
 
@@ -682,7 +673,6 @@ onMounted(async () => {
     </BaseDialog>
 
   </div>
-<WorkbenchFab @click="startAdd" />
 </template>
 
 <style scoped>
@@ -693,28 +683,48 @@ onMounted(async () => {
   gap: var(--space-4);
 }
 
-/* ===== 查询区 ===== */
-.td-search {
+/* ===== 查询区域（第一行常驻，卡片形态）=====
+   与便签面板 .nt-search 保持同一套视觉：12px 圆角卡片 + 1px 边框 + 轻阴影，
+   内边距 12/14，字段行在上、操作按钮在下一行靠右，标签与控件同行内联。 */
+.td-filter-panel {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-width: 0;
   padding: 12px 14px;
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md, 8px);
+  border-radius: var(--radius-lg, 12px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
-.td-search-fields { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-4); }
-.td-field { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
-.td-field-grow { flex: 0 0 auto; min-width: 0; }
-.td-field-grow :is(.td-field-desc, .td-field-title) { width: 200px; }
-.td-field-label { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
+/* ===== 表格操作行（表格上方：左新增 / 右视图切换）===== */
+.td-table-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* 字段行：与便签一致——标签在控件左侧内联，整行 flex 自动换行 */
+.td-search-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  min-width: 0;
+}
+.td-field { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.td-field-grow { flex: 0 0 auto; }
+.td-field-grow :is(.td-field-desc, .td-field-title) { width: 210px; }
+.td-field-label { flex: none; font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
 .td-search-actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
 
 .search-select {
-  width: 130px;
-  flex-shrink: 0;
+  width: 140px;
+  flex: 0 0 auto;
 }
 
 .search-btn {padding: 0 var(--space-3);
@@ -748,36 +758,34 @@ onMounted(async () => {
   border-color: var(--color-primary);
 }
 
-/* ===== 操作栏 ===== */
-.td-headbar {
+/* .btn-add 视觉已统一到全局 .ui-btn--primary（style.css） */
+
+/* ===== 分类筛选标签页：紧贴表格上方，与表格组成一个卡片 ===== */
+.td-table-tabs {
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
-  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--color-bg-card, #fff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-bottom: 0;
+  border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
 }
-
-.toolbar-count {
-  margin-left: auto;
-  font-size: var(--fs-body, 14px);
-  color: var(--color-text-secondary);
+.td-table-tabs-meta {
+  flex: none;
+  font-size: 11px;
+  color: var(--color-text-muted, #94a3b8);
+  white-space: nowrap;
 }
-
-/* .btn-add 视觉已统一到全局 .ui-btn--primary（style.css） */
-
-.td-headbar-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-/* ===== 分类筛选标签页（全部 + 可见分类，即时过滤；镜像 .nt-cat-tabs）===== */
 .td-cat-tabs {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .td-cat-tab {
@@ -816,7 +824,8 @@ onMounted(async () => {
   min-height: 220px;
   width: 100% !important;
   font-size: var(--fs-sm, 13px);
-  border-radius: 10px;
+  /* 与上方标签页、下方分页条共用一个卡片：底部圆角交给 .td-list-pager 收口 */
+  border-radius: 0;
   overflow: hidden;
 }
 .td-table-wrap > :global(.el-table th.el-table__cell) {
@@ -843,11 +852,13 @@ onMounted(async () => {
 /* ===== 分页条（参考 WorkbenchNotes）===== */
 .td-list-pager {
   flex: 0 0 auto;
-  padding: 14px 16px 18px;
-  border-top: 1px solid var(--color-border, #e5e7eb);
-  background: var(--color-bg-input, #f9fafb);
-  border-radius: 0 0 14px 14px;
-  margin: 0 0 var(--space-2);
+  padding: 8px 14px;
+  /* 表尾：左右+下边框补齐卡片轮廓，上边框交给表格自身的下边框，避免出现 2px 双线 */
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-top: 0;
+  background: var(--color-bg-card, #fff);
+  border-radius: 0 0 var(--radius-lg, 12px) var(--radius-lg, 12px);
+  margin: 0;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -966,7 +977,8 @@ onMounted(async () => {
 }
 
 /* 编辑页状态操作区：移动端补齐状态入口，按钮 + 轻提示 */
-.td-status-group { margin-bottom: var(--space-3); }
+/* 间距统一交给 .td-form 的 gap，不再额外加 margin-bottom 造成节奏不齐 */
+.td-status-group { margin-bottom: 0; }
 .td-status-actions {
   display: flex;
   align-items: center;
@@ -977,10 +989,12 @@ onMounted(async () => {
 .td-status-select { width: 140px; flex: none; }
 .td-status-tip { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary); }
 
-/* 待办描述输入框：高度 300px（el-input 的 textarea 需 :deep 穿透内部元素） */
+/* 描述框原先固定 300px，把「优先级 / 截止日期」和操作按钮挤出弹框可视区。
+   收到 3 行高度（可手动拉高），保证新增/编辑态一屏看全所有字段与底部按钮。 */
 .td-desc-input :deep(.el-textarea__inner) {
-  height: 300px;
-  min-height: 300px;
+  height: 92px;
+  min-height: 92px;
+  max-height: 260px;
   resize: vertical;
   line-height: 1.6;
   overflow-y: auto;
@@ -1040,6 +1054,9 @@ onMounted(async () => {
 /* .btn-edit/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
 
 /* ===== 空态：.empty-state / .empty-invite / .filter-empty 已收敛到全局基类（src/style.css） ===== */
+/* 筛空态里多了一个就地「清除筛选」按钮，补一条纵向排列即可，其余沿用全局基类 */
+.filter-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.td-filter-empty-reset { flex: none; }
 
 /* ===== 表单（新增/编辑弹框内容区）=====
    弹框外壳（遮罩/面板/头部/关闭/主体）已统一到 common/BaseDialog.vue */
@@ -1060,16 +1077,18 @@ onMounted(async () => {
   color: var(--color-text-secondary);
 }
 
+/* 优先级 / 截止日期并排两列，控件铺满各自列，不再出现固定窄宽 + 大片右侧留白 */
 .form-row-fields {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .field {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .field-label {
@@ -1077,12 +1096,18 @@ onMounted(async () => {
   color: var(--color-text-secondary);
 }
 
-.field-prio {
-  width: 140px;
+.field-prio,
+.field-date {
+  width: 100%;
+  min-width: 0;
+}
+.field :deep(.el-select),
+.field :deep(.el-date-editor) {
+  width: 100%;
 }
 
-.field-date {
-  width: 170px;
+@media (max-width: 640px) {
+  .form-row-fields { grid-template-columns: 1fr; }
 }
 
 /* 输入框视觉统一到全局 .ui-input（src/style.css 的别名列表已含 .form-input）；
@@ -1138,10 +1163,14 @@ onMounted(async () => {
   border-color: var(--color-primary);
 }
 
+/* 表单底部操作区：加一条分隔线，与字段区明确分层，按钮始终在可视区末尾 */
 .form-actions {
   display: flex;
   gap: var(--space-2);
   justify-content: flex-end;
+  margin-top: 2px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border, #e2e8f0);
 }
 
 .btn-save {padding: 0 var(--space-3);
@@ -1169,10 +1198,15 @@ onMounted(async () => {
 /* 禁用态（添加按钮）：亮灰底 + 白字在暗色下对比度不足，暗色覆盖见下 */
 /* .btn-add:disabled 视觉已统一到全局 .ui-btn--primary（style.css） */
 
-/* ===== 暗色模式覆盖 ===== */
-html.dark .td-search {
+/* ===== 暗色模式覆盖 =====
+   查询区恢复成卡片后与便签 .nt-search 同款：底色跟 token 翻转、去掉亮色阴影。 */
+html.dark .td-filter-panel {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
+}
+html.dark .td-table-tabs {
+  background-color: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
 }
 
 /* html.dark .empty-state 背景已由全局 .empty-state 的 --color-bg-card token 自动跟随 */
@@ -1291,12 +1325,17 @@ html.dark .td-cat-badge {
 
 /* html.dark .btn-add:disabled 视觉已统一到全局 .ui-btn--primary（style.css） */
 
+/* 中屏：字段行靠 flex 自动换行即可（不再是列数问题），操作按钮独占一行靠右 */
+@media (max-width: 900px) {
+  .td-search-actions { width: 100%; }
+}
+
+/* 窄屏：两个文本框各占整行，标签仍在左侧、输入框吃掉剩余宽度 */
 @media (max-width: 640px) {
-  .search-input,
-  .td-field-title,
-  .td-field-grow {
-    width: 100%;
-  }
+  .td-field-grow { width: 100%; }
+  .td-field-grow :is(.td-field-desc, .td-field-title) { width: auto; flex: 1 1 auto; min-width: 0; }
+  .td-table-tabs { padding: 8px 10px; }
+  .td-table-tabs-meta { display: none; }
 }
 
 /* 移动端卡片视图：卡片正方形（每页 6 个，见 MOBILE_PAGE_SIZE）。
@@ -1307,19 +1346,6 @@ html.dark .td-cat-badge {
   }
 }
 
-.td-toolbar-left {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-.td-toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
 /* 卡片视图拖拽手工排序：grab 光标 + 拖拽中半透明 + 落点虚线高亮 */
 .td-card-wrap {
   cursor: grab;

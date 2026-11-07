@@ -531,43 +531,20 @@ onUnmounted(() => {
           <template #default="{ row }">
             <div v-if="isTimeline(row)" class="nt-timeline-expand" @click.stop>
               <div class="nt-timeline-expand-title">时光记录（{{ sortedEntriesOf(row).length }} 条）</div>
+              <!-- editingEntry 收敛：原「表格展开行内嵌编辑」与「全屏浮层」两套编辑 UI 重复
+                   （同名 testid 同时渲染两份）。展开行改为只读预览 + 唯一入口，
+                   编辑/删除/添加统一收敛到下方全屏浮层，功能与 testid 全部保留。 -->
               <div class="nt-timeline-list">
-                <div
-                  v-for="entry in inlineEntriesOf(row)"
-                  :key="entry.id"
-                  class="nt-timeline-item"
-                  :data-testid="`nt-entry-${entry.id}`"
-                >
-                  <template v-if="editingEntry && editingEntry.noteId === row.id && editingEntry.entryId === entry.id">
-                    <div class="nt-timeline-item-edit">
-                      <el-input v-model="entryEditDatetime" type="text" :data-testid="`nt-entry-edit-dt-${entry.id}`" placeholder="YYYY-MM-DD HH:mm" size="small" />
-                      <el-input v-model="entryEditContent" type="text" :data-testid="`nt-entry-edit-content-${entry.id}`" placeholder="记录内容" size="small" />
-                      <div class="nt-timeline-item-actions">
-                        <el-button type="button" class="btn-save" :disabled="!canSaveEntry()" :data-testid="`nt-entry-save-${entry.id}`" @click="handleSaveEntry(row.id, entry.id)">保存</el-button>
-                        <el-button type="button" class="btn-cancel" :data-testid="`nt-entry-cancel-${entry.id}`" @click="cancelEditEntry">取消</el-button>
-                      </div>
-                    </div>
-                  </template>
-                  <template v-else>
-                    <div class="nt-timeline-item-body">
-                      <div class="nt-timeline-item-time">{{ entry.datetime }}</div>
-                      <div class="nt-timeline-item-content" v-html="renderedContent(entry.content)"></div>
-                      <div class="nt-timeline-item-actions">
-                        <el-button type="button" class="btn-edit" :data-testid="`nt-entry-edit-${entry.id}`" @click.stop="startEditEntry(row.id, entry)">编辑</el-button>
-                        <el-button type="button" class="btn-delete" :data-testid="`nt-entry-del-${entry.id}`" @click.stop="handleDeleteEntry(row.id, entry.id)">删除</el-button>
-                      </div>
-                    </div>
-                  </template>
+                <div v-for="entry in inlineEntriesOf(row)" :key="entry.id" class="nt-timeline-item">
+                  <div class="nt-timeline-item-body">
+                    <div class="nt-timeline-item-time">{{ entry.datetime }}</div>
+                    <div class="nt-timeline-item-content" v-html="renderedContent(entry.content)"></div>
+                  </div>
                 </div>
               </div>
-              <el-button v-if="hiddenEntryCount(row) > 0" type="button" class="timeline-more-btn" :data-testid="`nt-entry-more-${row.id}`" @click.stop="openTimelineExpand(row.id)">
-                +{{ hiddenEntryCount(row) }} 条
+              <el-button type="button" class="timeline-more-btn" :data-testid="`nt-entry-more-${row.id}`" @click.stop="openTimelineExpand(row.id)">
+                {{ hiddenEntryCount(row) > 0 ? `查看 / 编辑全部（还有 ${hiddenEntryCount(row)} 条）` : '查看 / 编辑全部' }}
               </el-button>
-              <div class="nt-timeline-add-row">
-                <el-input v-model="entryDraftDatetime[row.id]" type="text" class="nt-timeline-dt-input" :data-testid="`nt-entry-dt-${row.id}`" placeholder="YYYY-MM-DD HH:mm" size="small" />
-                <el-input v-model="entryDraftContent[row.id]" type="text" class="nt-timeline-content-input" :data-testid="`nt-entry-content-${row.id}`" placeholder="添加时光记录…" @keydown.enter="handleAddEntry(row)" size="small" />
-                <el-button type="button" class="btn-add" :disabled="!canAddEntry(row)" data-testid="nt-entry-add" @click="handleAddEntry(row)">添加</el-button>
-              </div>
             </div>
             <div v-else></div>
           </template>
@@ -720,6 +697,12 @@ onUnmounted(() => {
             </template>
           </div>
         </div>
+        <!-- 添加条目控件从表格展开行迁入浮层：全量查看 / 编辑 / 删除 / 添加统一到这一套 UI -->
+        <div class="nt-timeline-add-row">
+          <el-input v-model="entryDraftDatetime[expandedTimelineNote.id]" type="text" class="nt-timeline-dt-input" :data-testid="`nt-entry-dt-${expandedTimelineNote.id}`" placeholder="YYYY-MM-DD HH:mm" size="small" />
+          <el-input v-model="entryDraftContent[expandedTimelineNote.id]" type="text" class="nt-timeline-content-input" :data-testid="`nt-entry-content-${expandedTimelineNote.id}`" placeholder="添加时光记录…" @keydown.enter="handleAddEntry(expandedTimelineNote)" size="small" />
+          <el-button type="button" class="btn-add" :disabled="!canAddEntry(expandedTimelineNote)" data-testid="nt-entry-add" @click="handleAddEntry(expandedTimelineNote)">添加</el-button>
+        </div>
       </div>
     </div>
 
@@ -830,7 +813,9 @@ onUnmounted(() => {
   gap: var(--space-3);
 }
 
-/* ===== 查询区 ===== */
+/* ===== 查询区 =====
+   与待办 .td-search 共用同一套查询容器视觉：圆角统一到共享 12px 口径（--radius-lg），
+   padding / 背景 / 边框 / 阴影均保持一致；仅 scoped 覆盖，不改 workbench.css。 */
 .nt-search {
   display: flex;
   flex-direction: column;
@@ -838,7 +823,7 @@ onUnmounted(() => {
   padding: 12px 14px;
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md, 8px);
+  border-radius: var(--radius-lg, 12px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 .nt-search-fields { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
@@ -986,8 +971,8 @@ onUnmounted(() => {
 .timeline-item-body { flex: 1; min-width: 0; }
 .timeline-item-time { font-size: var(--fs-caption, 12px); font-weight: 600; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
 .timeline-item-content { font-size: var(--fs-body, 14px); line-height: 1.5; word-break: break-word; }
-.timeline-item-actions { display: flex; gap: 6px; margin-top: var(--space-1); opacity: 0; transition: opacity var(--transition-fast, 0.15s ease); }
-.timeline-item:hover .timeline-item-actions { opacity: 1; }
+/* 编辑/删除动作常显：hover 才显示在触屏（移动端）永远点不到；浮层已是唯一编辑入口 */
+.timeline-item-actions { display: flex; gap: 6px; margin-top: var(--space-1); opacity: 1; }
 /* .timeline-item-actions .btn-edit/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
 .timeline-item-edit { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .timeline-item-edit .btn-save {padding: 0 var(--space-3);
@@ -1013,6 +998,8 @@ onUnmounted(() => {
 }
 .timeline-expand-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); flex-shrink: 0; }
 .timeline-expand-list { flex: 1; min-height: 0; overflow-y: auto; padding-right: var(--space-1); }
+/* 浮层内添加行固定在可滚动列表下方，不被 flex 压缩 */
+.timeline-expand-panel .nt-timeline-add-row { flex: 0 0 auto; }
 
 /* 弹框正文：纵向排布（原 .note-form 的 flex column + gap 由这里承担） */
 .note-form-body {
@@ -1075,11 +1062,16 @@ html.dark .timeline-item::before { background: var(--color-border, #374151); }
   .nt-field-grow .nt-field-keyword { width: 100%; }
 }
 
-/* 移动端卡片视图：卡片正方形（每页 6 个，见 MOBILE_PAGE_SIZE）。
-   仅作用于本组件内的 .ewt-card-grid（scoped 后代选择器），不影响其它复用该全局类的面板 */
+/* 移动端便签卡：去掉正方形 aspect-ratio:1，改自适应列 + 内容自适应高度。
+   便签内容长短不一，正方形会裁掉长内容；高度交给全局 .ewt-card 的 height:auto 撑开，
+   列数按可用宽度 auto-fill（窄屏自然收敛为 1 列），不再硬编码固定 2 列。
+   仅作用于本组件内的 .ewt-card-grid，不影响其它复用该全局类的面板。 */
 @media (max-width: 768px) {
+  .ewt-card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr));
+  }
   .ewt-card-grid :deep(.ewt-card) {
-    aspect-ratio: 1;
+    aspect-ratio: auto;
   }
 }
 

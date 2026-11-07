@@ -11,7 +11,12 @@ import { fetchWeather, weatherEmoji, weatherDesc, formatTime, type WeatherInfo }
  *   第一行：城市名 + emoji + 温度 + 体感温度 + 天气描述
  *   第二行：湿度 + 风速 + 日出日落 + 高低温 + UV 指数
  * 加载中显示轻量占位，获取失败保持占位（静默降级，不 toast 不报错，无隐藏分支）。
+ * compact：紧凑形态——去掉卡片外壳与明细行，只留城市/温度/一句话。当前无调用方
+ *   （2026-11-06 起主页首行改成纯「时间 + 日期 + 周序号」，天气只在概览网格末尾出现一张完整卡），
+ *   保留是因为它是一份独立的渲染分支、随时可复用到窄容器，不参与主页逻辑。
+ * 只保留城市 / 天气 / 温度 / 简述 + 一行高低温，数据获取逻辑与普通卡完全共用。
  */
+const props = withDefaults(defineProps<{ compact?: boolean }>(), { compact: false })
 const settingsStore = useAppSettingsStore()
 const { openAppSettings } = useAppSettingsDialog()
 
@@ -39,7 +44,7 @@ watch(
 </script>
 
 <template>
-  <div class="weather-card" data-testid="wx-card">
+  <div class="weather-card" :class="{ 'is-compact': props.compact }" data-testid="wx-card">
     <!-- 未配置：固定占位 + 去设置（不做隐藏分支） -->
     <div v-if="!city" class="wx-placeholder">
       <span class="wx-placeholder-icon">🌤️</span>
@@ -66,11 +71,16 @@ watch(
         <span v-else class="wx-loading" data-testid="wx-loading">{{ loading ? '加载中…' : '--°C' }}</span>
       </div>
 
+      <!-- 紧凑形态：一行高低温收尾，不再渲染分割线与 6 项明细 -->
+      <div v-if="props.compact && weather" class="wx-compact-detail" data-testid="wx-compact-detail">
+        {{ city }} · {{ weatherDesc(weather.code, weather.isDay) }} · {{ Math.round(weather.dailyHigh) }}° / {{ Math.round(weather.dailyLow) }}°
+      </div>
+
       <!-- 分割线 -->
-      <div class="wx-divider"></div>
+      <div v-if="!props.compact" class="wx-divider"></div>
 
       <!-- 第二行：湿度 + 风速 + 日出日落 + 高低温 + UV -->
-      <div v-if="weather" class="wx-row-2">
+      <div v-if="!props.compact && weather" class="wx-row-2">
         <span class="wx-detail-item" data-testid="wx-humidity">💧 湿度 {{ weather.humidity }}%</span>
         <span class="wx-detail-item" data-testid="wx-wind">🌬️ 风速 {{ weather.windSpeed }} km/h</span>
         <span class="wx-detail-item" data-testid="wx-sunrise">🌅 日出 {{ formatTime(weather.sunrise) }}</span>
@@ -92,6 +102,26 @@ watch(
   border-top: 2px solid var(--color-primary);
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
+}
+
+/* 紧凑形态：嵌进首页首行「日期 / 天气 各 50%」信息带，去掉独立卡片外壳 */
+.weather-card.is-compact {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.weather-card.is-compact .wx-body { gap: 3px; }
+.weather-card.is-compact .wx-row-1 { gap: 8px; }
+.weather-card.is-compact .wx-city { font-size: 12px; font-weight: 500; color: var(--color-text-secondary); }
+.weather-card.is-compact .wx-temp { font-size: 20px; }
+.weather-card.is-compact .wx-feels { display: none; }
+.wx-compact-detail {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .wx-placeholder {
@@ -184,6 +214,11 @@ watch(
 /* ===== 暗色模式覆盖 ===== */
 html.dark .weather-card {
   background-color: var(--color-bg-card, #1f2937);
+  box-shadow: none;
+}
+
+html.dark .weather-card.is-compact {
+  background-color: transparent;
   box-shadow: none;
 }
 

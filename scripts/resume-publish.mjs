@@ -92,7 +92,7 @@ let exit = 0
 try {
   // ---- 安全校验：本地必须是远端超集，否则整包推送会覆盖别人新增的内容 ----
   await page.goto(SITE, { waitUntil: 'domcontentloaded', timeout: 60000 })
-  await page.waitForSelector('text=选文件导入', { timeout: 40000 })
+  await page.locator('input[type=file][accept*=".md"]').first().waitFor({ state: 'attached', timeout: 40000 })
   await page.waitForTimeout(1800)
   const localArts = await readLocalArticles(page)
   const guard = await readRemoteBlog()
@@ -161,7 +161,7 @@ try {
     log(`公众号草稿：${DATE} 已发过，跳过`)
   } else {
     await page.goto(SITE, { waitUntil: 'domcontentloaded', timeout: 60000 })
-    await page.waitForSelector('text=选文件导入', { timeout: 40000 })
+    await page.locator('input[type=file][accept*=".md"]').first().waitFor({ state: 'attached', timeout: 40000 })
     await page.waitForTimeout(1500)
     const link = page.getByText(TITLE, { exact: true }).first()
     await link.waitFor({ state: 'visible', timeout: 20000 })
@@ -170,11 +170,27 @@ try {
     await pubBtn.waitFor({ state: 'visible', timeout: 30000 })
     log('已进入编辑器，点击「发送公众号草稿箱」…')
     await clearToasts(page)
+    // 以接口返回为准：/api/wechat/draft 返回 {ok:true, mediaId} 就是真发出去了。
+    // （页面有时不回写 blog-editor-wechat-ok 标记，只看 UI 会误判超时 → 重试 → 重复建草稿）
+    let draftOk = false
+    const onDraftResp = async (r) => {
+      if (!/\/api\/wechat\/draft\/?$/.test(r.url()) || r.status() !== 200) return
+      try {
+        const j = await r.json()
+        if (j && j.ok) draftOk = true
+      } catch { /* 忽略 */ }
+    }
+    page.on('response', onDraftResp)
     await pubBtn.click()
+    try {
 
     const deadline = Date.now() + 180000
     let outcome = ''
     while (Date.now() < deadline) {
+      if (draftOk) {
+        outcome = 'ok'
+        break
+      }
       if (await page.locator('[data-testid="blog-editor-wechat-ok"]').first().isVisible().catch(() => false)) {
         outcome = 'ok'
         break
@@ -190,6 +206,15 @@ try {
           outcome = 'nocred'
           break
         }
+      }
+      // 发送前可能弹确认框（封面确认/二次确认），不点掉会一直卡住直到超时
+      const confirmBtn = page
+        .locator('.el-message-box__btns .el-button--primary, .el-message-box__btns button:has-text("确定")')
+        .first()
+      if (await confirmBtn.isVisible().catch(() => false)) {
+        await confirmBtn.click().catch(() => {})
+        await page.waitForTimeout(600)
+        continue
       }
       await page.waitForTimeout(500)
     }
@@ -207,6 +232,9 @@ try {
     } else {
       log('发送结果未知（超时）', toastTxt)
       exit = 1
+    }
+    } finally {
+      page.off('response', onDraftResp)
     }
   }
 } catch (e) {

@@ -148,7 +148,7 @@ onUnmounted(() => {
     <!-- 计时器卡：大号环形进度 + 阶段标签 + 控制按钮 + 今日统计 -->
     <div class="stat-card pm-timer-card">
       <div class="pm-ring-wrap">
-        <svg class="pm-ring-svg" viewBox="0 0 220 220" width="220" height="220" data-testid="pm-timer-ring">
+        <svg class="pm-ring-svg" viewBox="0 0 220 220" data-testid="pm-timer-ring">
           <circle class="pm-ring-track" cx="110" cy="110" :r="RING_R" />
           <circle
             class="pm-ring-fg"
@@ -215,12 +215,12 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* 面板容器（复用 WorkbenchExercise/Weight stat-card 结构） */
+/* 面板容器：铺满工作台内容区（去掉 max-width:520px 的左对齐留白）。
+   计时主区由 .pm-timer-card 的 align-items:center 居中，设置次区走左右双列铺满。 */
 .wb-pomodoro {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-width: 520px;
 }
 
 /* ===== 计时器卡 ===== */
@@ -228,17 +228,18 @@ onUnmounted(() => {
   align-items: center;
 }
 
-/* 大号环形进度（SVG stroke-dashoffset） */
+/* 圆环随视口缩放：固定 220×220 小屏溢出、大屏偏小；
+   clamp() 给 160px 下限 / 220px 上限，SVG 按 100% 填满外层（viewBox 仍用 220 坐标系）。 */
 .pm-ring-wrap {
   position: relative;
-  width: 220px;
-  height: 220px;
+  width: clamp(160px, 45vw, 220px);
+  height: clamp(160px, 45vw, 220px);
 }
 
 .pm-ring-svg {
   display: block;
-  width: 220px;
-  height: 220px;
+  width: 100%;
+  height: 100%;
 }
 
 .pm-ring-track {
@@ -255,13 +256,14 @@ onUnmounted(() => {
   transition: stroke-dashoffset 0.4s linear, stroke 0.3s ease;
 }
 
-/* 阶段配色：专注=主色 / 短休=绿 / 长休=紫 */
+/* 阶段配色：专注=主色 / 短休=绿 / 长休=紫。
+   裸写 #10b981/#8b5cf6 换成项目已有 token（--color-success / --theme-purple-primary）。 */
 .pm-ring-fg.phase-break {
-  stroke: #10b981;
+  stroke: var(--color-success);
 }
 
 .pm-ring-fg.phase-longBreak {
-  stroke: #8b5cf6;
+  stroke: var(--theme-purple-primary, var(--color-primary));
 }
 
 .pm-ring-center {
@@ -296,30 +298,11 @@ onUnmounted(() => {
   margin-top: var(--space-1);
 }
 
-.btn-primary {
-  white-space: nowrap;
-  /* 视觉已统一到全局 .ui-btn--primary（style.css）：蓝色主操作，36px 高 + 8px 圆角 + 1px 边框 */
-}
-
-.btn-primary:hover:not(:disabled) {
-  /* 视觉已统一到全局 .ui-btn--primary（style.css） */
-}
-
-.btn-primary:disabled {
-  /* 视觉已统一到全局 .ui-btn--primary（style.css） */
-}
-
+/* 四条空 hover/disabled 规则已删：按钮视觉统一到全局 .ui-btn / .ui-btn--primary（style.css），
+   空规则留着只会让覆盖优先级产生歧义；这里只保留布局相关的 nowrap。 */
+.btn-primary,
 .btn-secondary {
   white-space: nowrap;
-  /* 视觉已统一到全局 .ui-btn（style.css）：次要按钮，浅底 + 边框 + 8px 圆角 + hover 主色 */
-}
-
-.btn-secondary:hover:not(:disabled) {
-  /* 视觉已统一到全局 .ui-btn（style.css） */
-}
-
-.btn-secondary:disabled {
-  /* 视觉已统一到全局 .ui-btn（style.css） */
 }
 
 .pm-today {
@@ -329,11 +312,11 @@ onUnmounted(() => {
   font-variant-numeric: tabular-nums;
 }
 
-/* ===== 设置卡 ===== */
+/* ===== 设置卡：两个字段左右双列铺满（原 flex-wrap 挤在 520px 窄栏里） ===== */
 .pm-settings-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
-  flex-wrap: wrap;
 }
 
 .field {
@@ -348,7 +331,8 @@ onUnmounted(() => {
 }
 
 .field-short {
-  width: 140px;
+  /* 输入框跟随 grid 单元宽度，不再固定 140px */
+  width: 100%;
 }
 
 /* 输入框视觉统一到全局 .ui-input（src/style.css 的别名列表已含 .form-input）；
@@ -363,12 +347,13 @@ html.dark .pm-ring-fg {
   stroke: var(--dark-accent-text);
 }
 
+/* 暗色阶段配色同步 token 化：--color-success-text 在 dark.css 中即 #34d399 */
 html.dark .pm-ring-fg.phase-break {
-  stroke: #34d399;
+  stroke: var(--color-success-text);
 }
 
 html.dark .pm-ring-fg.phase-longBreak {
-  stroke: #a78bfa;
+  stroke: var(--theme-purple-primary, var(--color-primary));
 }
 
 html.dark .pm-time {
@@ -385,9 +370,10 @@ html.dark input.form-input {
   border-color: var(--color-border, #374151);
 }
 
-@media (max-width: 640px) {
-  .field-short {
-    width: 100%;
+/* 断点对齐全站 768px：窄屏设置区收成单列 */
+@media (max-width: 768px) {
+  .pm-settings-row {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>

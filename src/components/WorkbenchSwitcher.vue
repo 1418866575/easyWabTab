@@ -184,6 +184,10 @@ function togglePalette(): void {
   else openPalette()
 }
 
+// 个人工作台移除全局顶栏后，触发器收进视觉隐藏容器；设置弹窗里的「切换工作台」
+// 通过父组件 ref 调用本方法唤起同一个下拉（键盘 Alt+W 走原生监听，行为不变）。
+defineExpose({ openPalette, togglePalette })
+
 function openExternal(path: string): void {
   const url = path.startsWith('/') ? `${window.location.origin}${path}` : path
   const a = document.createElement('a')

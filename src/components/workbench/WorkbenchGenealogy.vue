@@ -33,6 +33,9 @@ const store = useGenealogyStore()
 const vm = useViewMode()
 const toast = useToast()
 
+/** 4 个弹框统一宽度（原 80% / 480px / 560px 各自为政，统一成一套，避免宽窄不一） */
+const DIALOG_WIDTH = '640px'
+
 const GENDER_LABEL: Record<string, string> = { male: '男', female: '女', '': '未知' }
 /** 取名记录语境：'' 表示"通用 / 不限"（区别于家谱成员的"未知"） */
 const NAME_GENDER_LABEL: Record<string, string> = { male: '男', female: '女', '': '通用' }
@@ -730,10 +733,11 @@ onUnmounted(() => {
     <!-- Tab 切换：成员管理 / 家谱树 / 取名记录（统一走 common/BaseTabs） -->
     <BaseTabs v-model="activeTab" :items="TAB_ITEMS" testid="fg-tab" />
 
-    <!-- ========== 成员管理 ========== -->
-    <template v-if="activeTab === 'members'">
-      <div class="ewt-table-toolbar is-split">
-        <div class="td-toolbar-left">
+    <!-- 共享工具条：三个 tab 原本各一套工具栏，现合并成一条；左右控件按 activeTab 切换。
+         所有 data-testid / v-model / @事件 / 模板 ref 原样保留，功能不变。 -->
+    <div class="ewt-table-toolbar is-split fg-shared-toolbar">
+      <div class="td-toolbar-left">
+        <template v-if="activeTab === 'members'">
           <el-button type="primary" size="small" class="btn-add" data-testid="fg-add-button" @click="startAdd">＋ 新增成员</el-button>
           <el-input
             v-model="searchName"
@@ -745,15 +749,43 @@ onUnmounted(() => {
             @keyup.enter="listPage = 1"
             @clear="listPage = 1"
           />
-        </div>
-        <!-- 右侧：导入 / 导出 紧贴视图切换（卡片）按钮，小屏自动换行 -->
-        <div class="td-toolbar-right">
-          <el-button size="small" class="btn-cancel" data-testid="fg-export-button" @click="handleExport">
-            导出
-          </el-button>
-          <el-button size="small" class="btn-cancel" data-testid="fg-import-button" @click="importInput?.click()">
-            导入
-          </el-button>
+        </template>
+        <template v-else-if="activeTab === 'names'">
+          <el-button type="primary" size="small" class="btn-add" data-testid="fn-add-button" @click="startAddName">＋ 新增取名记录</el-button>
+          <el-input
+            v-model="nameSearch"
+            size="small"
+            class="fg-search"
+            placeholder="搜索名字/寓意/备注…"
+            clearable
+            data-testid="fn-search"
+            @keyup.enter="namePage = 1"
+            @clear="namePage = 1"
+          />
+          <el-select v-model="nameGenderFilter" size="small" class="fn-gender-filter" data-testid="fn-gender-filter" @change="namePage = 1">
+            <el-option value="all" label="全部性别" />
+            <el-option value="" label="通用" />
+            <el-option value="male" label="男" />
+            <el-option value="female" label="女" />
+          </el-select>
+          <el-select v-model="nameSort" size="small" class="fn-sort" data-testid="fn-sort" @change="namePage = 1">
+            <el-option value="namingDate" label="按取名日期" />
+            <el-option value="updatedAt" label="按更新时间" />
+            <el-option value="name" label="按名字" />
+          </el-select>
+        </template>
+        <template v-else>
+          <template v-if="hasRoot">
+            <span class="fg-tree-info">主根：<b>{{ rootName() }}</b></span>
+            <el-button size="small" class="btn-cancel" data-testid="fg-clear-root" @click="clearRoot">取消主根</el-button>
+          </template>
+          <span v-else class="fg-tree-info fg-tree-muted">未设主根，按「无父母的成员」展示为多棵根树</span>
+        </template>
+      </div>
+      <div class="td-toolbar-right">
+        <template v-if="activeTab === 'members'">
+          <el-button size="small" class="btn-cancel" data-testid="fg-export-button" @click="handleExport">导出</el-button>
+          <el-button size="small" class="btn-cancel" data-testid="fg-import-button" @click="importInput?.click()">导入</el-button>
           <input
             ref="importInput"
             type="file"
@@ -763,9 +795,26 @@ onUnmounted(() => {
             @change="handleImportFile"
           />
           <ViewModeToggle v-if="filteredMembers.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
-        </div>
+        </template>
+        <template v-else-if="activeTab === 'names'">
+          <el-button size="small" class="btn-cancel" data-testid="fn-export-button" @click="handleExportNames">导出</el-button>
+          <el-button size="small" class="btn-cancel" data-testid="fn-import-button" @click="nameImportInput?.click()">导入</el-button>
+          <el-button size="small" class="btn-cancel" data-testid="fn-paibei-button" @click="openPaibei">族谱排辈</el-button>
+          <input
+            ref="nameImportInput"
+            type="file"
+            accept="application/json,.json"
+            hidden
+            data-testid="fn-import-input"
+            @change="handleImportNamesFile"
+          />
+          <ViewModeToggle v-if="filteredNames.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
+        </template>
       </div>
+    </div>
 
+    <!-- ========== 成员管理 ========== -->
+    <template v-if="activeTab === 'members'">
       <div v-if="store.activeMembers.length === 0" class="empty-state empty-invite" data-testid="fg-empty" @click="startAdd">
         ＋ 新增第一个家庭成员
       </div>
@@ -787,7 +836,6 @@ onUnmounted(() => {
             border
             size="default"
             style="width: 100%"
-            height="100%"
             empty-text="没有符合搜索条件的成员"
           >
             <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (listPage - 1) * pageSize + i + 1" />
@@ -874,47 +922,6 @@ onUnmounted(() => {
 
     <!-- ========== 取名记录 ========== -->
     <template v-else-if="activeTab === 'names'">
-      <div class="ewt-table-toolbar is-split">
-        <div class="td-toolbar-left">
-          <el-button type="primary" size="small" class="btn-add" data-testid="fn-add-button" @click="startAddName">＋ 新增取名记录</el-button>
-          <el-input
-            v-model="nameSearch"
-            size="small"
-            class="fg-search"
-            placeholder="搜索名字/寓意/备注…"
-            clearable
-            data-testid="fn-search"
-            @keyup.enter="namePage = 1"
-            @clear="namePage = 1"
-          />
-          <el-select v-model="nameGenderFilter" size="small" class="fn-gender-filter" data-testid="fn-gender-filter" @change="namePage = 1">
-            <el-option value="all" label="全部性别" />
-            <el-option value="" label="通用" />
-            <el-option value="male" label="男" />
-            <el-option value="female" label="女" />
-          </el-select>
-          <el-select v-model="nameSort" size="small" class="fn-sort" data-testid="fn-sort" @change="namePage = 1">
-            <el-option value="namingDate" label="按取名日期" />
-            <el-option value="updatedAt" label="按更新时间" />
-            <el-option value="name" label="按名字" />
-          </el-select>
-        </div>
-        <div class="td-toolbar-right">
-          <el-button size="small" class="btn-cancel" data-testid="fn-export-button" @click="handleExportNames">导出</el-button>
-          <el-button size="small" class="btn-cancel" data-testid="fn-import-button" @click="nameImportInput?.click()">导入</el-button>
-          <el-button size="small" class="btn-cancel" data-testid="fn-paibei-button" @click="openPaibei">族谱排辈</el-button>
-          <input
-            ref="nameImportInput"
-            type="file"
-            accept="application/json,.json"
-            hidden
-            data-testid="fn-import-input"
-            @change="handleImportNamesFile"
-          />
-          <ViewModeToggle v-if="filteredNames.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
-        </div>
-      </div>
-
       <div v-if="store.activeNames.length === 0" class="empty-state empty-invite" data-testid="fn-empty" @click="startAddName">
         ＋ 新增第一条取名记录
       </div>
@@ -936,7 +943,6 @@ onUnmounted(() => {
             border
             size="default"
             style="width: 100%"
-            height="100%"
             empty-text="没有符合搜索条件的取名记录"
           >
             <el-table-column type="index" label="序号" width="70" align="center" class-name="ewt-index-col" :index="(i: number) => (namePage - 1) * namePageSize + i + 1" />
@@ -1006,14 +1012,6 @@ onUnmounted(() => {
 
     <!-- ========== 家谱树（思维导图式递归）========== -->
     <template v-else>
-      <div class="fg-tree-bar">
-        <template v-if="hasRoot">
-          <span class="fg-tree-info">主根：<b>{{ rootName() }}</b></span>
-          <el-button size="small" class="btn-cancel" data-testid="fg-clear-root" @click="clearRoot">取消主根</el-button>
-        </template>
-        <span v-else class="fg-tree-info fg-tree-muted">未设主根，按「无父母的成员」展示为多棵根树</span>
-      </div>
-
       <!-- 人口统计：总数 / 男女 / 年龄段（年龄段按国家规定口径，悬停看判定依据） -->
       <div class="fg-stats" data-testid="fg-stats">
         <div class="fg-stats-row">
@@ -1056,6 +1054,7 @@ onUnmounted(() => {
           :key="root.member.id"
           :node="root"
           data-testid="fg-tree-root-node"
+          @edit="startEdit"
         />
       </div>
     </template>
@@ -1064,7 +1063,7 @@ onUnmounted(() => {
     <BaseDialog
       v-if="showMemberDialog"
       :title="editingId ? '编辑成员' : '新增成员'"
-      width="80%"
+      :width="DIALOG_WIDTH"
       data-testid="fg-member-dialog"
       @close="cancelMember"
     >
@@ -1177,7 +1176,7 @@ onUnmounted(() => {
     <BaseDialog
       v-if="showRelDialog"
       :title="relMember ? `关系管理 · ${relMember.name}` : '关系管理'"
-      width="480px"
+      :width="DIALOG_WIDTH"
       data-testid="fg-rel-dialog"
       @close="closeRel"
     >
@@ -1226,7 +1225,7 @@ onUnmounted(() => {
     <BaseDialog
       v-if="showNameDialog"
       :title="nameEditingId ? '编辑取名记录' : '新增取名记录'"
-      width="80%"
+      :width="DIALOG_WIDTH"
       data-testid="fn-name-dialog"
       @close="cancelName"
     >
@@ -1290,7 +1289,7 @@ onUnmounted(() => {
     <BaseDialog
       v-if="showPaibeiDialog"
       :title="PAIBEI_TITLE"
-      width="560px"
+      :width="DIALOG_WIDTH"
       data-testid="fn-paibei-dialog"
       @close="showPaibeiDialog = false"
     >
@@ -1315,6 +1314,8 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  /* 页面级自然滚动：面板随内容撑开，纵向滚动统一交给外壳 .wb-content（唯一滚动容器）。 */
+  flex: 0 0 auto;
 }
 
 /* Tab 皮肤由 common/BaseTabs.vue 提供（原下划线式页签已移除） */
@@ -1350,21 +1351,22 @@ onUnmounted(() => {
 }
 html.dark .fn-paibei-row { color: var(--color-text); }
 html.dark .fn-paibei-sep { color: var(--color-border, #374151); }
+/* 共享工具条：固定在内容顶部、不参与 flex 高度压缩 */
+.fg-shared-toolbar { flex: 0 0 auto; }
 .td-toolbar-left { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 /* 工具栏右侧组：导入 / 导出 紧贴视图切换（卡片）按钮，is-split 下贴右侧、小屏自动换行 */
 .td-toolbar-right { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; justify-content: flex-end; }
 
 /* ===== 表格容器 ===== */
+/* 高度链已去掉：原 flex:1 + min-height 让表格钉满一屏并内部自滚，
+   与外壳「唯一滚动容器」契约冲突；改为随内容自然撑开。 */
 .fg-table-wrap {
-  flex: 1 1 auto;
-  min-height: 240px;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
 }
 .fg-table-wrap > :global(.el-table) {
-  flex: 1 1 auto;
-  min-height: 220px;
   width: 100% !important;
   font-size: var(--fs-sm, 13px);
   border-radius: 10px;
@@ -1489,7 +1491,19 @@ html.dark .fg-age-preview { border-color: var(--color-border, #374151); }
 
 .fg-tree-info { font-size: var(--fs-sm, 13px); color: var(--color-text-secondary); }
 .fg-tree-muted { color: var(--color-text-muted); }
-.fg-mindmap { display: flex; flex-direction: column; gap: 6px; padding: var(--space-1) 0; flex: 0 0 auto; min-height: 0;  }
+/* 家谱树向右逐级展开：容器自身提供横向滚动，深层节点不再被外壳桌面 overflow-x:hidden 裁掉；
+   align-items:flex-start 让子项按内容宽度撑开，才能触发横向滚动条。 */
+.fg-mindmap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-1) 0;
+  flex: 0 0 auto;
+  min-height: 0;
+  align-items: flex-start;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
 .fg-rel { font-size: var(--fs-caption, 12px); color: var(--color-text-secondary); }
 
 /* ===== 关系弹框 ===== */

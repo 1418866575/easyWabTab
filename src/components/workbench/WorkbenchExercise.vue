@@ -10,8 +10,9 @@ import type { HealthWeeklyPlanItem } from '@/types'
 import { localToday } from '@/composables/todoCore'
 import { EXERCISE_TYPES, type HealthPlanMetric } from '@/types'
 import WorkbenchHealthReminders from './WorkbenchHealthReminders.vue'
+import WorkbenchExercisePlanCard from './WorkbenchExercisePlanCard.vue'
+import { EXERCISE_PLAN_TEMPLATES, buildExerciseWeekItems } from '@/composables/healthPlanTemplates'
 import Icon from '@/components/Icon.vue'
-import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 
 /** 表单弹框尺寸（沿用原 .dialog 的固定尺寸，非设置项） */
@@ -95,6 +96,35 @@ async function deletePlanItem(): Promise<void> {
   if (!cell || !store.setWeeklyPlanItems) return
   await store.setWeeklyPlanItems(planWeekStart.value, 'exercise', planItems.value.filter(x => !(x.rowKey === cell.rowKey && x.day === cell.day)))
   planDialogOpen.value = false
+}
+
+// ===== 跟练方案卡（模板是内置常量，只持久化「启用哪套」与勾选进度）=====
+const canPlanTemplate = computed(() => !!store.planPrefs && !!store.togglePlanProgress)
+const activePlanTemplate = computed(() => {
+  const id = store.planPrefs?.exercisePlanId
+  return EXERCISE_PLAN_TEMPLATES.find(t => t.id === id) ?? EXERCISE_PLAN_TEMPLATES[0]
+})
+const planProgressMap = computed<Record<string, string[]>>(() => store.planProgress ?? {})
+/** 本周是否已经排进过这套方案（按条目名判断，避免重复套用） */
+const planAppliedThisWeek = computed(() =>
+  planItems.value.some(i => i.name === activePlanTemplate.value.name)
+)
+function onPlanToggle(dateKey: string, key: string): void {
+  void store.togglePlanProgress?.(dateKey, key)
+}
+function onPlanReset(dateKey: string): void {
+  void store.resetPlanProgress?.(dateKey)
+}
+/** 套用到本周：已有内容时先确认（整组替换，避免和手排的计划混在一起） */
+async function onPlanApply(): Promise<void> {
+  if (!store.setWeeklyPlanItems) return
+  const items = buildExerciseWeekItems(activePlanTemplate.value)
+  const hasOther = planItems.value.some(i => i.name !== activePlanTemplate.value.name && i.name !== '休息' && i.name !== '拉伸放松')
+  if (hasOther) {
+    const ok = await showConfirm('本周计划里已有其它内容，套用方案会整组替换掉它们。确定覆盖？', '覆盖本周运动计划？')
+    if (!ok) return
+  }
+  await store.setWeeklyPlanItems(planWeekStart.value, 'exercise', items)
 }
 
 // ===== 顶部目标卡 =====
@@ -303,6 +333,18 @@ onMounted(async () => {
       </template>
       <div v-else class="stat-sub">尚未设定周目标</div>
     </div>
+
+    <!-- 跟练方案（模板处方；排在目标卡与周计划之间） -->
+    <WorkbenchExercisePlanCard
+      v-if="canPlanTemplate"
+      :template="activePlanTemplate"
+      :week-start="planWeekStart"
+      :progress="planProgressMap"
+      :applied="planAppliedThisWeek"
+      @toggle="onPlanToggle"
+      @reset="onPlanReset"
+      @apply="onPlanApply"
+    />
 
     <!-- 本周计划（早晨/傍晚） -->
     <WeeklyPlanBoard
@@ -575,7 +617,6 @@ onMounted(async () => {
           </form>
       </BaseDialog>
   </div>
-<WorkbenchFab @click="startAddRecord" />
 </template>
 
 <style scoped>
@@ -649,8 +690,8 @@ onMounted(async () => {
 .ex-headbar { display: none; }
 .btn-toggle-list { display: none; }
 
-/* ===== 弹框层级（BaseDialog 统一 z-index: 300）===== */
-.ex-record-overlay { z-index: 320; }
+/* ===== 弹框层级：统一引用外壳定义的 --wb-dialog-z（BaseDialog 基准 300），不再各写 z-index:320 ===== */
+.ex-record-overlay { z-index: var(--wb-dialog-z, 300); }
 
 
 
@@ -698,10 +739,7 @@ onMounted(async () => {
 
 /* ===== 桌面端 ≥769px：面板钉满健康 tab 容器 ===== */
 @media (min-width: 769px) {
-  :global(.wb-health) {
-    display: flex;
-    flex-direction: column;
-  }
+  /* flex 列布局由 WorkbenchHealth.vue 自己承担，此处不再用 :global() 重复注入 */
   .wb-exercise {
     flex: 1;
     min-height: 0;
@@ -851,8 +889,8 @@ html.dark input.form-input {
   .field-distance { width: 100%; }
 }
 
-/* ===== 弹框层级（BaseDialog 统一 z-index: 300）===== */
-.ex-record-overlay { z-index: 320; }
+/* ===== 弹框层级：统一引用外壳定义的 --wb-dialog-z（BaseDialog 基准 300），不再各写 z-index:320 ===== */
+.ex-record-overlay { z-index: var(--wb-dialog-z, 300); }
 
 
 
@@ -869,10 +907,7 @@ html.dark input.form-input {
 
 /* ===== 桌面端 ≥769px：面板钉满健康 tab 容器 ===== */
 @media (min-width: 769px) {
-  :global(.wb-health) {
-    display: flex;
-    flex-direction: column;
-  }
+  /* flex 列布局由 WorkbenchHealth.vue 自己承担，此处不再用 :global() 重复注入 */
   .wb-exercise {
     flex: 1;
     min-height: 0;

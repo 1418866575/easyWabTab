@@ -53,16 +53,9 @@ function navTo(section: string, tab?: string): void {
   emit('navigate', section, tab)
 }
 
-// ===== 问候 + 时间（按 now 时段问候：早上好/下午好/晚上好）=====
+// ===== 时间 / 日期（首行信息带：时间 + 日期星期 + 周序号，不再有时段问候）=====
 const now = ref(new Date())
 let nowTimer = 0
-
-const greeting = computed(() => {
-  const h = now.value.getHours()
-  if (h < 12) return '早上好'
-  if (h < 18) return '下午好'
-  return '晚上好'
-})
 
 const timeText = computed(() =>
   now.value.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
@@ -71,6 +64,14 @@ const timeText = computed(() =>
 const dateText = computed(() =>
   now.value.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })
 )
+
+// 首行右上角周序号（ISO 周：把日期挪到所在周的周四再按年初算周数）
+const weekNo = computed(() => {
+  const d = new Date(Date.UTC(now.value.getFullYear(), now.value.getMonth(), now.value.getDate()))
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7))
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+})
 
 // 时钟刷新间隔（原先直接内联 30000，提成常量便于统一调整）
 const CLOCK_TICK_MS = 30000
@@ -133,15 +134,14 @@ async function handleQuickNote(): Promise<void> {
 
 <template>
   <div class="wb-home">
-    <!-- 问候条（静态，全宽） -->
+    <!-- 首行信息带：时间 + 日期（含星期）+ 周序号，一行三段。
+         时段问候（早上好/下午好/晚上好）已去掉——它只复述时间，对信息量没有贡献；
+         天气也不再在这里出现，避免与概览网格末尾的天气卡重复，天气卡固定收尾。 -->
     <section class="bento-card bento-greeting" data-testid="home-greeting">
-      <div class="greeting-info">
-        <h2 class="greeting-title">{{ greeting }}，欢迎回来</h2>
-        <p class="greeting-sub">把今天要做的事，一件一件完成吧</p>
-      </div>
-      <div class="greeting-clock">
-        <div class="greeting-time">{{ timeText }}</div>
-        <div class="greeting-date">{{ dateText }}</div>
+      <div class="greeting-row" data-testid="home-greeting-row">
+        <span class="greeting-time" data-testid="home-greeting-time">{{ timeText }}</span>
+        <span class="greeting-date" data-testid="home-greeting-date">{{ dateText }}</span>
+        <span class="greeting-week" data-testid="home-greeting-week">第 {{ weekNo }} 周</span>
       </div>
     </section>
 
@@ -457,7 +457,7 @@ async function handleQuickNote(): Promise<void> {
 /* ===== 概览网格（单网格：所有卡统一密度；桌面 6 列 / 平板 3 列 / 手机 1 列） ===== */
 .home-overview-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(var(--wb-card-min, 180px), 1fr));
   gap: var(--space-3);
   align-items: start;
 }
@@ -508,47 +508,40 @@ async function handleQuickNote(): Promise<void> {
   transform: scale(0.98);
 }
 
-/* ===== 问候条 ===== */
+/* ===== 首行信息带：时间 + 日期星期 + 周序号，单行三段 =====
+   去掉时段问候与内侧天气后不再需要上下分栏与竖分隔线，整条只剩一行信息。 */
 .bento-greeting {
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--color-primary, #3b82f6) 8%, transparent), transparent),
     var(--color-bg-card);
 }
 
-.greeting-info {
+.greeting-row {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  align-items: center;
+  gap: 14px;
   min-width: 0;
+  padding: 14px 20px;
 }
 
-.greeting-title {
-  margin: 0;
-  font-size: var(--fs-h2, 22px);
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.greeting-sub {
-  margin: 0;
-  font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary);
-}
-
-.greeting-clock {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  flex-shrink: 0;
+.greeting-week {
+  flex: none;
+  margin-left: 2px;
+  font-size: 11px;
+  color: var(--color-text-muted, #94a3b8);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 2px 10px;
+  background: var(--color-bg-card);
+  white-space: nowrap;
 }
 
 .greeting-time {
-  font-size: 34px;
+  flex: none;
+  font-size: 32px;
   font-weight: 700;
   line-height: 1.1;
   color: var(--color-primary-text);
@@ -556,8 +549,12 @@ async function handleQuickNote(): Promise<void> {
 }
 
 .greeting-date {
+  min-width: 0;
   font-size: var(--fs-sm, 13px);
   color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ===== 今日概览聚合卡（顶部三合一）===== */
@@ -1003,7 +1000,6 @@ html.dark .bento-greeting {
     var(--color-bg-card, #1f2937);
 }
 
-html.dark .greeting-title,
 html.dark .stat-value,
 html.dark .panel-header h3,
 html.dark .home-list-title {
@@ -1030,7 +1026,6 @@ html.dark .greeting-time {
   color: var(--dark-accent-text);
 }
 
-html.dark .greeting-sub,
 html.dark .stat-label,
 html.dark .stat-sub,
 html.dark .ring-text {
@@ -1090,26 +1085,26 @@ html.dark .cd-critical {
   color: #f87171;
 }
 
-/* ===== 响应式：平板双列 / 手机单列 ===== */
-@media (max-width: 1100px) {
-  .home-overview-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+/* ===== 响应式 =====
+   断点按容器宽度不按视口：auto-fit + minmax 让列数随内容区平滑变化，
+   不再出现「1150px 窗口时 6 列各约 145px、卡片标题必然省略」的死区。
+   --wb-card-min 由外壳 .wb-scope 提供，个人台单独调节不影响销售台。 */
+@media (min-width: 900px) {
+  /* 输入型 / 长列表型卡片占两列，形成 Hero → 数字带 → 内容区的密度层次；
+     若用户在整理布局里手动设过宽度，HomeLayoutCard 的内联 gridColumn 优先级更高，仍以用户为准。
+     天气卡不占两列：它是网格收尾的小卡，占两列会在它前面留出空洞。 */
+  .home-overview-grid > .bento-card-wrap[data-card-id="quick-add-todo"],
+  .home-overview-grid > .bento-card-wrap[data-card-id="quick-add-note"],
+  .home-overview-grid > .bento-card-wrap[data-card-id="upcoming"] {
+    grid-column: span 2;
   }
 }
 
-@media (max-width: 640px) {
-  .home-overview-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .bento-greeting {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .greeting-clock {
-    align-items: flex-start;
-  }
+@media (max-width: 768px) {
+  .greeting-row { padding: 12px 14px; gap: 10px; flex-wrap: wrap; }
+  .greeting-time { font-size: 24px; }
+  .greeting-date { font-size: 11px; }
+  .greeting-week { font-size: 10px; padding: 1px 8px; }
 }
 
 </style>

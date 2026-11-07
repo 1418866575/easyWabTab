@@ -39,6 +39,18 @@ const emit = defineEmits<{ change: [tab: HealthModule] }>()
 <style scoped>
 .wb-health {
   width: 100%;
+  /* 健康子面板弹框统一层级：变量在此唯一定义，4 个子面板只引用、不再各写 z-index:320。
+     取值对齐 BaseDialog 基准层级 300（见 common/BaseDialog.vue .bd-overlay）；
+     学生端等独立容器若未套 .wb-health，由子面板的 var() fallback 兜底。 */
+  --wb-dialog-z: 300;
 }
 
+/* flex 列布局由外壳自己承担（原由 4 个子面板各自用 :global(.wb-health) 重复注入）：
+   桌面端让当前激活子面板 flex:1 钉满内容区，移动端保持块级堆叠不变。 */
+@media (min-width: 769px) {
+  .wb-health {
+    display: flex;
+    flex-direction: column;
+  }
+}
 </style>

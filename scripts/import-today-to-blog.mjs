@@ -125,6 +125,41 @@ function pickTodayFiles() {
   return { mdPath, coverPath, title: mds[0] }
 }
 
+/**
+ * 收集正文里需要随 .md 一起上传到图库的配图（相对路径引用 → 实际文件）。
+ *
+ * 背景：博客正文图片用 `img:<id>` 短引用，图片本体存图库（BlogData.images）。
+ * 导入器（blogImport）只会对「出现在文件选择列表里、且被 md 用相对路径引用」的图片
+ * 自动入库并改写成 `img:<id>`；若只传 .md+封面，正文里的相对路径图会被当"匹配不到"删掉。
+ * 故这里把 <md目录> 下的 图表/images/charts/assets 子目录里的 png（排除封面）一并交给导入器。
+ */
+function collectBodyImages(mdPath, coverPath) {
+  const dir = path.dirname(mdPath)
+  const coverBase = (coverPath ? path.basename(coverPath) : '').toLowerCase()
+  let md = ''
+  try {
+    md = fs.readFileSync(mdPath, 'utf8')
+  } catch {
+    return []
+  }
+  // 只收 md 里以相对路径**真实引用**的图，绝不整目录扫。
+  // （整目录扫会把 images/ 下所有封面都塞进导入列表，blog.json 立刻爆到 10MB 以上 → 云同步 413）
+  const out = []
+  const seen = new Set()
+  for (const m of md.matchAll(/!\[[^\]]*\]\(([^)\s]+)\)/g)) {
+    const rel = m[1].trim()
+    if (/^https?:/i.test(rel)) continue
+    const abs = path.resolve(dir, rel)
+    if (!fs.existsSync(abs)) continue
+    const base = path.basename(abs).toLowerCase()
+    if (coverBase && base === coverBase) continue
+    if (seen.has(abs)) continue
+    seen.add(abs)
+    out.push(abs)
+  }
+  return out
+}
+
 /** 取 md 的一级标题——博客用它作为文章标题，也是云端复核的依据 */
 function readMdTitle(mdPath) {
   try {
@@ -223,6 +258,28 @@ async function dismissHelpOverlay(page) {
     }
   }
   await page.waitForTimeout(300)
+}
+
+/**
+ * 等文章列表页就绪。
+ *
+ * 2026-11-01「列表页重排」把「导入」改成了 el-dropdown，`选文件导入` 那个菜单项
+ * 常驻 DOM 但 `display:none`，用 waitForSelector('text=选文件导入') 判可见会永远超时。
+ * 真正用到的入口是隐藏的 `<input type=file accept=.md>`（setInputFiles 直传，不需要弹窗），
+ * 所以改成等这个 input 挂载；它没出现再退回去点「导入」触发下拉。
+ */
+async function waitListReady(page) {
+  const input = page.locator('input[type=file][accept*=".md"]').first()
+  for (let i = 0; i < 20; i++) {
+    if (await input.count().catch(() => 0)) return
+    if (i === 4) {
+      // 兜底：有些版本 input 随下拉一起懒挂载
+      await page.locator('button:has-text("导入"), .el-dropdown:has-text("导入")').first()
+        .click().catch(() => {})
+    }
+    await page.waitForTimeout(500)
+  }
+  throw new Error('文章列表页未就绪：找不到导入用的 file input')
 }
 
 /**
@@ -450,7 +507,7 @@ async function patchLocalWechat(page, wx) {
   )
   if (patched.ok) {
     await page.reload({ waitUntil: 'domcontentloaded' })
-    await page.waitForSelector('text=选文件导入', { timeout: 40000 })
+    await waitListReady(page)
     await page.waitForTimeout(1500)
   }
   return patched.ok
@@ -588,7 +645,7 @@ async function ensureCategoryExists(page, name) {
  */
 async function setArticleCategory(page, title, categoryName) {
   await page.goto(SITE, { waitUntil: 'domcontentloaded', timeout: 60000 })
-  await page.waitForSelector('text=选文件导入', { timeout: 40000 })
+  await waitListReady(page)
   await page.waitForTimeout(1500)
   await dismissHelpOverlay(page)
 
@@ -672,7 +729,7 @@ async function sendToWechatDraft(page, title) {
   log(`公众号草稿：凭证已配置（appId ${String(wx.appId).slice(0, 6)}****），开始发送…`)
 
   await page.goto(SITE, { waitUntil: 'domcontentloaded', timeout: 60000 })
-  await page.waitForSelector('text=选文件导入', { timeout: 40000 })
+  await waitListReady(page)
   await page.waitForTimeout(1500)
 
   // 打开该文章（列表里点标题进编辑器）
@@ -683,12 +740,27 @@ async function sendToWechatDraft(page, title) {
   await pubBtn.waitFor({ state: 'visible', timeout: 30000 })
   log('  已进入编辑器，点击「发送公众号草稿箱」…')
   await clearToasts(page)
+  // 以接口返回为准：/api/wechat/draft 回 {ok:true, mediaId} 即真发出去了。
+  // 页面偶尔不回写 blog-editor-wechat-ok，只看 UI 会误判超时，重试就重复建草稿。
+  let draftOk = false
+  const onDraftResp = async (r) => {
+    if (!/\/api\/wechat\/draft\/?$/.test(r.url()) || r.status() !== 200) return
+    try {
+      const j = await r.json()
+      if (j && j.ok) draftOk = true
+    } catch { /* 忽略 */ }
+  }
+  page.on('response', onDraftResp)
   await pubBtn.click()
 
   // 三态收敛：成功 / 报错 / 弹出了凭证设置（未配置）
   const deadline = Date.now() + 180000
   let outcome = ''
   while (Date.now() < deadline) {
+    if (draftOk) {
+      outcome = 'ok'
+      break
+    }
     if (await page.locator('[data-testid="blog-editor-wechat-ok"]').first().isVisible().catch(() => false)) {
       outcome = 'ok'
       break
@@ -711,6 +783,7 @@ async function sendToWechatDraft(page, title) {
   }
 
   const toastTxt = await readToast(page, 5000)
+  page.off('response', onDraftResp)
   if (outcome === 'ok') {
     log(`  发送成功${toastTxt ? `：${toastTxt}` : ''}`)
     ledger[DATE] = { at: new Date().toISOString(), title }
@@ -760,7 +833,7 @@ try {
   } else {
     log('回到博客后台', SITE)
     await page.goto(SITE, { waitUntil: 'domcontentloaded', timeout: 60000 })
-    await page.waitForSelector('text=选文件导入', { timeout: 40000 })
+    await waitListReady(page)
     await page.waitForTimeout(1500) // 等 store.loadBlog 完成
 
     // ---- 步骤 1：先拉远端 ----
@@ -787,9 +860,11 @@ try {
     // ---- 步骤 2：只导入当天文件 ----
     const beforeImport = new Set((afterPull?.articles ?? []).map((a) => a.id))
     await clearToasts(page)
-    log('导入当天文件（.md + 封面 png）…')
+    const bodyImgs = collectBodyImages(files.mdPath, files.coverPath)
+    const importFiles = [files.mdPath, files.coverPath, ...bodyImgs]
+    log(`导入当天文件（.md + 封面 + 正文配图 ${bodyImgs.length} 张，共 ${importFiles.length} 个）…`)
     const t0 = Date.now()
-    await page.locator('input[type=file][accept*=".md"]').first().setInputFiles([files.mdPath, files.coverPath])
+    await page.locator('input[type=file][accept*=".md"]').first().setInputFiles(importFiles)
     const importToast = await readToast(page, 90000)
     log(`导入提示：${importToast}  (${((Date.now() - t0) / 1000).toFixed(1)}s)`)
 
