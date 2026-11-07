@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, toRaw } from 'vue'
-import type { HealthData, HealthModule, HealthPlan, HealthPlans, HealthRecord, HealthWeeklyPlanItem, HealthWeeklyPlans } from '@/types'
+import type { HealthData, HealthModule, HealthPlan, HealthPlanPrefs, HealthPlans, HealthRecord, HealthWeeklyPlanItem, HealthWeeklyPlans } from '@/types'
 import { shiftDateKey } from '@/composables/healthCore'
+import { localToday } from '@/composables/todoCore'
 import {
   copyWeeklyPlanWeek,
   normalizeDietRecord,
@@ -30,6 +31,18 @@ const NORMALIZERS: Record<HealthModule, (raw: any) => HealthRecord> = {
   weight: normalizeWeightRecord
 }
 
+// 跟练勾选进度只保留最近 120 天：每天条目很小，但按天累积没有上限，
+// 而 health 整包随云同步信封走，必须给个封顶。
+const PLAN_PROGRESS_KEEP_DAYS = 120
+
+function prunePlanProgress(map: Record<string, string[]>): Record<string, string[]> {
+  const keys = Object.keys(map).sort()
+  if (keys.length <= PLAN_PROGRESS_KEEP_DAYS) return map
+  const out: Record<string, string[]> = {}
+  for (const k of keys.slice(-PLAN_PROGRESS_KEEP_DAYS)) out[k] = map[k]
+  return out
+}
+
 // 工作台健康管理 store（数据存 IndexedDB store 'health'，key 'items'）
 export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
   const height = ref<number | undefined>(undefined)
@@ -37,6 +50,9 @@ export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
   const records = ref<HealthData['records']>({ exercise: [], diet: [], sleep: [], weight: [] })
   // 周计划（运动/饮食）：键 = 周一日期键；整体 LWW 同步（plansUpdatedAt）
   const weeklyPlans = ref<HealthWeeklyPlans>({})
+  // 方案模板偏好（启用了哪套跟练/食谱）与跟练勾选进度（键 = 日期）
+  const planPrefs = ref<HealthPlanPrefs>({})
+  const planProgress = ref<Record<string, string[]>>({})
 
   async function loadHealth(): Promise<void> {
     try {
@@ -45,6 +61,8 @@ export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
       height.value = data.height
       plans.value = data.plans
       weeklyPlans.value = data.weeklyPlans ?? {}
+      planPrefs.value = data.planPrefs ?? {}
+      planProgress.value = prunePlanProgress(data.planProgress ?? {})
       records.value = data.records
     } catch (e) {
       // 加载失败降级为空态（保持默认值），不向上抛
@@ -64,6 +82,8 @@ export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
         // （toRaw 只解最外层，内层 Proxy 会让 structuredClone 抛 DataCloneError → 保存静默失败）。
         // 条目全是原始值，直接 JSON 深拷贝成纯对象再落库。
         weeklyPlans: JSON.parse(JSON.stringify(weeklyPlans.value ?? {})),
+        planPrefs: JSON.parse(JSON.stringify(planPrefs.value ?? {})),
+        planProgress: JSON.parse(JSON.stringify(planProgress.value ?? {})),
         records: toRaw(records.value)
       })
       markDirty()
@@ -106,6 +126,42 @@ export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
       ...JSON.parse(JSON.stringify(weeklyPlans.value)),
       [weekStart]: { ...copied, updatedAt: new Date().toISOString() }
     }
+    await saveHealth()
+  }
+
+  /**
+   * 启用某套方案模板。切到食谱方案时顺便记下启用日期——
+   * 面板据此推算「今天该执行第几周」，避免用户自己数。
+   */
+  async function setActivePlan(kind: 'exercise' | 'diet', id: string): Promise<void> {
+    const next: HealthPlanPrefs = { ...planPrefs.value }
+    if (kind === 'exercise') {
+      next.exercisePlanId = id
+    } else {
+      next.dietPlanId = id
+      next.dietPlanStart = localToday()
+    }
+    planPrefs.value = next
+    await saveHealth()
+  }
+
+  /** 勾选/取消某个训练组（键由 healthPlanTemplates.progressKey 生成） */
+  async function togglePlanProgress(dateKey: string, key: string): Promise<void> {
+    const cur = planProgress.value[dateKey] ?? []
+    const nextList = cur.includes(key) ? cur.filter(k => k !== key) : [...cur, key]
+    const map: Record<string, string[]> = { ...planProgress.value }
+    if (nextList.length > 0) map[dateKey] = nextList
+    else delete map[dateKey]
+    planProgress.value = map
+    await saveHealth()
+  }
+
+  /** 清空某一天的勾选（「重置」按钮） */
+  async function resetPlanProgress(dateKey: string): Promise<void> {
+    if (!planProgress.value[dateKey]) return
+    const map: Record<string, string[]> = { ...planProgress.value }
+    delete map[dateKey]
+    planProgress.value = map
     await saveHealth()
   }
 
@@ -178,6 +234,8 @@ export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
     height,
     plans,
     weeklyPlans,
+    planPrefs,
+    planProgress,
     records,
     loadHealth,
     saveHealth,
@@ -185,6 +243,9 @@ export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
     setPlan,
     setWeeklyPlanItems,
     ensureWeeklyPlanCopied,
+    setActivePlan,
+    togglePlanProgress,
+    resetPlanProgress,
     addRecord,
     updateRecord,
     deleteRecord

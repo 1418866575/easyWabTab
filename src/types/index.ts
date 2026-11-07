@@ -597,6 +597,10 @@ export interface HealthData {
   weeklyPlans?: HealthWeeklyPlans
   /** weeklyPlans 最后一次修改时间（合并时整体取较新一侧的依据） */
   plansUpdatedAt?: string
+  /** 健康方案模板偏好（启用了哪套跟练 / 食谱方案） */
+  planPrefs?: HealthPlanPrefs
+  /** 跟练方案勾选进度：键 = 日期 'YYYY-MM-DD'，值 = 已勾选的组键数组（progressKey 生成） */
+  planProgress?: Record<string, string[]>
 }
 
 /** 周计划条目：运动（value=强度、done=已完成）与饮食（value=展示、kcal=求和用）共用同一形态 */
@@ -617,6 +621,118 @@ export interface HealthWeeklyPlanWeek {
 }
 
 export type HealthWeeklyPlans = Record<string, HealthWeeklyPlanWeek>
+
+// ---------- 健康方案模板（跟练计划 / 食谱方案）----------
+// 模板内容是内置常量（见 composables/healthPlanTemplates.ts），不落库；
+// 落库的只有「启用了哪套」与「跟练勾选进度」。
+
+/** 跟练方案里的单个动作 */
+export interface ExercisePlanMove {
+  name: string
+  /** 部位标签：背 / 手臂 / 胸 / 肩 / 腹部 */
+  part: string
+  partTone: 'back' | 'arm' | 'shoulder' | 'chest'
+  /** 组数（勾选进度的格子数） */
+  sets: number
+  /** 展示用剂量文案，如 '2 组 × 6–8 次' */
+  dose: string
+}
+
+/** 跟练方案里的单个训练日（day：1=周一 … 7=周日） */
+export interface ExercisePlanDay {
+  day: number
+  role: string
+  isRest: boolean
+  /** 组间休息文案，如 '组间休息 60s' */
+  restText?: string
+  /** 卡片底部脚注：训练后拉伸 / 减负 / 减量 */
+  foot?: string
+  moves: ExercisePlanMove[]
+}
+
+/** 区域选择图例项 */
+export interface ExercisePlanZone {
+  tone: string
+  label: string
+  color: string
+}
+
+export interface ExercisePlanTemplate {
+  id: string
+  kind: 'exercise'
+  name: string
+  desc: string
+  goal: string
+  minutes: string
+  mode: string
+  advance: string
+  regress: string
+  zones: ExercisePlanZone[]
+  caution: string
+  days: ExercisePlanDay[]
+}
+
+/** 食谱方案的一餐 */
+export interface DietPlanMeal {
+  key: string
+  label: string
+  time?: string
+  items: string[]
+}
+
+/** 食谱方案的推进周（增肌方案为 4 周） */
+export interface DietPlanWeek {
+  week: number
+  title: string
+  desc: string
+  goal: string
+  meals: DietPlanMeal[]
+}
+
+/** 30 天餐单里的某一天 */
+export interface DietPlanStageDay {
+  day: number
+  breakfast: string
+  lunch: string
+  dinner: string
+}
+
+/** 30 天餐单的阶段（每段 10 天） */
+export interface DietPlanStage {
+  range: string
+  name: string
+  /** OCR 核验状态：UI 必须如实展示，不得当作已确认数据 */
+  trust: 'high' | 'mid' | 'low'
+  days: DietPlanStageDay[]
+}
+
+export interface DietPlanSwap {
+  title: string
+  text: string
+}
+
+export interface DietPlanTemplate {
+  id: string
+  kind: 'diet'
+  name: string
+  desc: string
+  meta: string[]
+  rules: string[]
+  weeks?: DietPlanWeek[]
+  stages?: DietPlanStage[]
+  swaps?: DietPlanSwap[]
+  targets?: string[]
+  prePost?: string[]
+  footer?: string
+}
+
+/** 健康方案偏好（当前启用哪套模板） */
+export interface HealthPlanPrefs {
+  exercisePlanId?: string
+  dietPlanId?: string
+  /** 食谱方案启用日期 'YYYY-MM-DD'，用于推算今天该执行第几周 */
+  dietPlanStart?: string
+}
 
 // ==================== 记账本 ====================
 

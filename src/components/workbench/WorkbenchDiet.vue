@@ -17,6 +17,8 @@ import type { HealthWeeklyPlanItem } from '@/types'
 import { localToday } from '@/composables/todoCore'
 import { MEAL_TYPES, type MealType } from '@/types'
 import WorkbenchHealthReminders from './WorkbenchHealthReminders.vue'
+import WorkbenchDietPlanCard from './WorkbenchDietPlanCard.vue'
+import { DIET_PLAN_TEMPLATES } from '@/composables/healthPlanTemplates'
 
 // store 来源可注入：默认成人端 store，学生端容器 provide 自己的 store 后自动改为学生数据（见 healthStoreContext）
 const store = (injectHealthStore() ?? useWorkbenchHealthStore()) as HealthStoreLike
@@ -122,6 +124,18 @@ async function deletePlanItem(): Promise<void> {
   planDialogOpen.value = false
 }
 
+// ===== 食谱方案卡（模板内置，只持久化「启用哪套」）=====
+const canPlanTemplate = computed(() => !!store.planPrefs && !!store.setActivePlan)
+const activeDietPlanId = computed(() => store.planPrefs?.dietPlanId ?? DIET_PLAN_TEMPLATES[0].id)
+function onActivateDietPlan(id: string): void {
+  if (id === activeDietPlanId.value) return
+  void store.setActivePlan?.('diet', id)
+}
+/** 记入记录：不写死热量（海报没给每餐热量），打开新增弹框预填，热量由用户自己填 */
+function onLogPlanMeal(meal: MealType, content: string): void {
+  startAddRecordWith(meal, content)
+}
+
 // ===== 顶部目标卡 =====
 const todayStr = localToday()
 
@@ -224,6 +238,16 @@ function startAddRecord(): void {
   showRecordDialog.value = true
 }
 
+/**
+ * 由方案卡「记入记录」触发的预填：带上餐次与内容，热**量不猜**——
+ * 海报没有给每餐热量，写死一个数是假数据，留给用户在弹框里填。
+ */
+function startAddRecordWith(meal: MealType, content: string): void {
+  startAddRecord()
+  formMeal.value = meal
+  formContent.value = content.slice(0, 200)
+}
+
 function startEditRecord(id: string): void {
   const rec = store.records.diet.find(r => r.id === id)
   if (!rec) return
@@ -303,6 +327,17 @@ onMounted(async () => {
       </template>
       <div v-else class="stat-sub">尚未设定每日热量目标</div>
     </div>
+
+    <!-- 食谱方案（模板处方；排在目标卡与周计划之间） -->
+    <WorkbenchDietPlanCard
+      v-if="canPlanTemplate"
+      :templates="DIET_PLAN_TEMPLATES"
+      :active-id="activeDietPlanId"
+      :plan-start="store.planPrefs?.dietPlanStart"
+      :today="todayStr"
+      @activate="onActivateDietPlan"
+      @log-meal="onLogPlanMeal"
+    />
 
     <!-- 本周饮食计划（早/午/晚 + 合计） -->
     <WeeklyPlanBoard

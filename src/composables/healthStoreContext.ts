@@ -26,7 +26,20 @@ export type HealthStoreLike = Pick<
 > &
   // 周计划（运动/饮食）为可选能力：成人 store 已实现，学生端 store 暂未实现——
   // 面板侧用 hasWeeklyPlan 守卫，学生端隐藏周计划看板（后续学生端需要时再补齐）
-  Partial<Pick<ReturnType<typeof useWorkbenchHealthStore>, 'weeklyPlans' | 'setWeeklyPlanItems' | 'ensureWeeklyPlanCopied'>>
+  // 方案模板（跟练/食谱）同为成人端可选能力：学生端不提供时面板隐藏方案卡
+  Partial<
+    Pick<
+      ReturnType<typeof useWorkbenchHealthStore>,
+      | 'weeklyPlans'
+      | 'setWeeklyPlanItems'
+      | 'ensureWeeklyPlanCopied'
+      | 'planPrefs'
+      | 'planProgress'
+      | 'setActivePlan'
+      | 'togglePlanProgress'
+      | 'resetPlanProgress'
+    >
+  >
 
 const HEALTH_STORE_KEY = Symbol('healthStore') as InjectionKey<HealthStoreLike>
 
