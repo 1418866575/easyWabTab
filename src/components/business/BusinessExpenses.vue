@@ -10,7 +10,7 @@ import { useBizSharedDefaults } from '@/composables/useBizSharedDefaults'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
-const vm = useViewMode()
+const vm = useViewMode('biz-expenses') // 视图偏好按面板 key 持久化 + 云同步
 
 // 卡片视图：一张卡 = 一天的支出日记账（日期 + 当天支出合计 + 产品数 + 备注）
 function cardFields(d: BusinessExpenseDaily) {

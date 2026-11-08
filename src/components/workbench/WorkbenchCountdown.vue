@@ -16,7 +16,7 @@ import { COUNTDOWN_CATEGORIES, DEFAULT_COUNTDOWN_COLOR } from '@/types'
 import { usePageSize } from '@/composables/usePageSize'
 
 const store = useCountdownsStore()
-const vm = useViewMode()
+const vm = useViewMode('countdowns') // 视图偏好按面板 key 持久化 + 云同步
 
 function rowClick(row: CountdownItem): void {
   startEdit(row)

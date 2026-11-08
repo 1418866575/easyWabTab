@@ -30,7 +30,7 @@ import type { FamilyMember, FamilyNameRecord } from '@/types'
 import { usePageSize } from '@/composables/usePageSize'
 
 const store = useGenealogyStore()
-const vm = useViewMode()
+const vm = useViewMode('genealogy') // 视图偏好按面板 key 持久化 + 云同步
 const toast = useToast()
 
 /** 4 个弹框统一宽度（原 80% / 480px / 560px 各自为政，统一成一套，避免宽窄不一） */

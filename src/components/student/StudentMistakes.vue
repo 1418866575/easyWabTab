@@ -22,7 +22,7 @@ import { usePageSize } from '@/composables/usePageSize'
 const store = useStudentMistakesStore()
 const settingsStore = useStudentSettingsStore()
 const toast = useToast()
-const vm = useViewMode()
+const vm = useViewMode('stu-mistakes') // 视图偏好按面板 key 持久化 + 云同步
 
 // 状态 tabs
 const STATUS_TABS: { key: 'all' | StudentMistakeStatus; label: string }[] = [

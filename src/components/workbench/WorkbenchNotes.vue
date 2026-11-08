@@ -8,7 +8,7 @@ import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 import WorkbenchFab from '@/components/workbench/WorkbenchFab.vue'
 
-const vm = useViewMode()
+const vm = useViewMode('notes') // 视图偏好按面板 key 持久化 + 云同步
 
 function timelineCardFields(row: any) {
   const ents = sortedEntriesOf(row)

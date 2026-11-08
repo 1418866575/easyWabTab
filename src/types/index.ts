@@ -372,6 +372,9 @@ export interface AppSettingsData {
   cloudSyncFeishuAppSecret?: string    // 飞书自建应用 App Secret（仅本机，绝不进入任何同步数据流 / 提交）
   cloudSyncFeishuDatasourceUrl?: string // 飞书多维表格数据源地址（wiki 链接，含 domain + nodeToken + tableId，按链接解析）
   homeCardLayout?: Record<string, HomeCardLayout> // 工作台主页卡片布局（卡片 id → 列跨度/最小高度/排序）
+  // 个人工作台表格面板的「列表 / 卡片」视图偏好（key 白名单见 composables/viewModeCore.ts；
+  // 只存非默认的 'card'，缺省 = 'list'；随 settings 进 workbench.json / 飞书 settings 表云同步）
+  workbenchPanelViewModes?: Record<string, 'list' | 'card'>
   viewMode?: 'classic' | 'sidebar' // 导航站视图模式（经典网格 / 侧边栏导航；默认 'classic'，随 workbench 信封云同步）
   scrollbarMode?: 'auto' | 'ghost' | 'hidden' // 滚动条显示模式（auto = 浏览器默认；ghost = 隐形但保留槽位与拖动、悬停/聚焦显形；hidden = 常隐；默认 'auto'）
   navSortMode?: 'clicks' | 'custom' // 导航站排序方式：clicks = 点击频率自动置顶（默认）；custom = 以拖拽/新增顺序为准，点击只计数不改顺序

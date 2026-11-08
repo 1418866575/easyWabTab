@@ -33,7 +33,7 @@ import type { ArticleStatus, BlogArticle, BlogSort } from '@/types'
 const emit = defineEmits<{ edit: [id: string]; create: [] }>()
 
 const store = useBlogStore()
-const vm = useViewMode()
+const vm = useViewMode('blog-posts') // 视图偏好按面板 key 持久化 + 云同步
 const { share: doShare, unshare: doUnshare, sharingId } = useBlogShare()
 
 // ---------- 导入 Markdown（选择整个文章目录，自动配封面、归入「信贷晨读」分类） ----------

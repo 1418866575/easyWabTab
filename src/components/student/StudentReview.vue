@@ -23,7 +23,7 @@ import { usePageSize } from '@/composables/usePageSize'
 const store = useStudentReviewStore()
 const settingsStore = useStudentSettingsStore()
 const toast = useToast()
-const vm = useViewMode()
+const vm = useViewMode('stu-review') // 视图偏好按面板 key 持久化 + 云同步
 
 const today = localToday()
 
