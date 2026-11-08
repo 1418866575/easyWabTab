@@ -541,7 +541,7 @@ async function handleQuickNote(): Promise<void> {
 
 .greeting-time {
   flex: none;
-  font-size: 32px;
+  font-size: calc(var(--fs-h1) + 4px);
   font-weight: 700;
   line-height: 1.1;
   color: var(--color-primary-text);
@@ -1102,9 +1102,9 @@ html.dark .cd-critical {
 
 @media (max-width: 768px) {
   .greeting-row { padding: 12px 14px; gap: 10px; flex-wrap: wrap; }
-  .greeting-time { font-size: 24px; }
-  .greeting-date { font-size: 11px; }
-  .greeting-week { font-size: 10px; padding: 1px 8px; }
+  .greeting-time { font-size: calc(var(--fs-h2) + 2px); }
+  .greeting-date { font-size: calc(var(--fs-caption) - 1px); }
+  .greeting-week { font-size: calc(var(--fs-caption) - 2px); padding: 1px 8px; }
 }
 
 </style>

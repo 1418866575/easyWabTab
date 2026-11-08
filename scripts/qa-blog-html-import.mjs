@@ -78,7 +78,7 @@ if (await purge()) {
 
 // 1) 按钮文案与顺序
 const labels = await page.$$eval('.ba-query-imports .el-button', (els) => els.map((e) => e.innerText.trim()))
-check('按钮顺序：导入 MD / 导入 HTML / 导入文件夹', JSON.stringify(labels) === JSON.stringify(['导入 MD', '导入 HTML', '导入文件夹']), labels.join(' | '))
+check('按钮顺序：导入 MD / 导入 ZIP / 导入 HTML / 导入文件夹', JSON.stringify(labels) === JSON.stringify(['导入 MD', '导入 ZIP', '导入 HTML', '导入文件夹']), labels.join(' | '))
 
 // 2) 上传 HTML
 await page.setInputFiles('input[accept*=".html"]', SAMPLE)

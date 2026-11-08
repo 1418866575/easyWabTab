@@ -5,16 +5,16 @@
  * 编辑器、预览、公众号草稿都按 Markdown 渲染；直接塞 HTML 会绕过排版与图片引用约定。
  *
  * 复用 `importMarkdownFolder` 的好处是一次拿到全部既有能力：
- * 分类按名称创建、同标题查重、本地图片入图库并改写为 `img:<id>`、首图作封面、以草稿落库。
+ * 分类按名称创建、同标题查重、本地图片压缩入图库并改写为 `img:<id>`、首图作封面且保留正文、以草稿落库。
  * 做法是把转换结果包成「伪 .md 文件」（name 以 .md 结尾、text() 返回 Markdown），
  * 与用户手选 md 的路径完全一致。
  *
  * 图片：`<img src="images/x.png">` 转出 `![](images/x.png)`；若用户在同一次选择里
- * 一并选了这些图片文件（accept 已放开 image/*），会按文件名匹配入图库；只选 HTML 时
- * 相对路径图片会被移除（避免碎图），`http(s)` 外链原样保留。
+ * 一并选了这些图片文件（accept 已放开 image/*），会按路径/文件名匹配入图库；只选 HTML 时
+ * 相对路径图片会被移除（避免碎图）并计入缺图提示，`http(s)` 外链原样保留。
  */
 import TurndownService from 'turndown'
-import { importMarkdownFolder } from './blogImport'
+import { emptyImportResult, importMarkdownFolder } from './blogImport'
 import type { ImportResult } from './blogImport'
 
 const HTML_EXT_RE = /\.(html?|xhtml)$/i
@@ -70,7 +70,7 @@ export async function importHtmlFiles(
   const imageFiles = files.filter((f) => !HTML_EXT_RE.test(f.name))
 
   if (htmlFiles.length === 0) {
-    return { imported: 0, skipped: 0, errors: ['没有可导入的 HTML 文件'], titles: [] }
+    return emptyImportResult(['没有可导入的 HTML 文件'])
   }
 
   const converted: File[] = []
@@ -92,7 +92,7 @@ export async function importHtmlFiles(
   }
 
   if (converted.length === 0) {
-    return { imported: 0, skipped: htmlFiles.length, errors, titles: [] }
+    return { ...emptyImportResult(errors), skipped: htmlFiles.length }
   }
 
   const res = await importMarkdownFolder([...converted, ...imageFiles], opts)

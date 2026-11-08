@@ -775,7 +775,7 @@ onMounted(async () => {
 }
 .td-table-tabs-meta {
   flex: none;
-  font-size: 11px;
+  font-size: calc(var(--fs-caption) - 1px);
   color: var(--color-text-muted, #94a3b8);
   white-space: nowrap;
 }

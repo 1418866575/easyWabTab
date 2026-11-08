@@ -23,6 +23,7 @@ import { usePageSize } from '@/composables/usePageSize'
 import { useBlogShare } from '@/composables/blogShare'
 import { importMarkdownFolder } from '@/composables/blogImport'
 import { importHtmlFiles } from '@/composables/blogHtmlImport'
+import { importZipFiles } from '@/composables/blogImportZip'
 import type { ImportResult } from '@/composables/blogImport'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
@@ -36,9 +37,11 @@ const store = useBlogStore()
 const vm = useViewMode('blog-posts') // 视图偏好按面板 key 持久化 + 云同步
 const { share: doShare, unshare: doUnshare, sharingId } = useBlogShare()
 
-// ---------- 导入 Markdown（选择整个文章目录，自动配封面、归入「信贷晨读」分类） ----------
+// ---------- 导入（MD / ZIP / HTML / 文件夹，图片随文件一起选择才会自动上传入库） ----------
 const importInputEl = ref<HTMLInputElement | null>(null)
 const fileInputEl = ref<HTMLInputElement | null>(null)
+/** ZIP 导入：解出 md + images/ 后走与「导入文件夹」相同的落库链路 */
+const zipInputEl = ref<HTMLInputElement | null>(null)
 /** HTML 导入：选中后先转成 Markdown，再走与「导入 MD」相同的落库链路 */
 const htmlInputEl = ref<HTMLInputElement | null>(null)
 
@@ -55,6 +58,10 @@ function triggerImportFiles(): void {
   fileInputEl.value?.click()
 }
 
+function triggerImportZip(): void {
+  zipInputEl.value?.click()
+}
+
 function triggerImportHtml(): void {
   htmlInputEl.value?.click()
 }
@@ -63,9 +70,13 @@ function triggerImportHtml(): void {
 function notifyImport(res: ImportResult, doneLabel = '已导入'): void {
   if (res.imported > 0) {
     const skip = res.skipped > 0 ? `，跳过 ${res.skipped} 篇` : ''
-    toastAlert(`${doneLabel} ${res.imported} 篇${skip}`, 'success')
+    const imgs = res.imagesUploaded > 0 ? `，上传 ${res.imagesUploaded} 张图片` : ''
+    toastAlert(`${doneLabel} ${res.imported} 篇${imgs}${skip}`, 'success')
   } else if (res.skipped > 0) {
     toastAlert(`没有新增文章（${res.skipped} 篇已存在或为空）`, 'warning')
+  }
+  if (res.missingImages > 0) {
+    toastAlert(`${res.missingImages} 张图片未找到：请把 md 与图片一起选择，或改用「导入 ZIP」/「导入文件夹」`, 'warning')
   }
   if (res.errors.length > 0) {
     toastAlert(res.errors.slice(0, 3).join('；'), 'error')
@@ -77,6 +88,15 @@ async function onImportChange(e: Event): Promise<void> {
   const files = Array.from(input.files ?? [])
   if (files.length === 0) return
   const res = await importMarkdownFolder(files, { categoryName: '信贷晨读' })
+  input.value = ''
+  notifyImport(res)
+}
+
+async function onImportZipChange(e: Event): Promise<void> {
+  const input = e.target as HTMLInputElement
+  const files = Array.from(input.files ?? [])
+  if (files.length === 0) return
+  const res = await importZipFiles(files, { categoryName: '信贷晨读' })
   input.value = ''
   notifyImport(res)
 }
@@ -348,6 +368,10 @@ function displayTime(row: BlogArticle): string {
           <Icon name="plus" :size="14" />
           <span>导入 MD</span>
         </el-button>
+        <el-button size="small" data-testid="blog-posts-import-zip" @click="triggerImportZip">
+          <Icon name="archive" :size="14" />
+          <span>导入 ZIP</span>
+        </el-button>
         <el-button size="small" data-testid="blog-posts-import-html" @click="triggerImportHtml">
           <Icon name="document" :size="14" />
           <span>导入 HTML</span>
@@ -358,6 +382,7 @@ function displayTime(row: BlogArticle): string {
         </el-button>
         <input ref="importInputEl" class="ba-import-input" type="file" multiple @change="onImportChange" />
         <input ref="fileInputEl" class="ba-import-input" type="file" multiple accept=".md,text/markdown,image/*" @change="onImportChange" />
+        <input ref="zipInputEl" class="ba-import-input" type="file" multiple accept=".zip,application/zip" @change="onImportZipChange" />
         <input ref="htmlInputEl" class="ba-import-input" type="file" multiple accept=".html,.htm,text/html,image/*" @change="onImportHtmlChange" />
       </div>
     </div>
@@ -617,6 +642,8 @@ function displayTime(row: BlogArticle): string {
 .ba-query-imports {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  white-space: nowrap;
   gap: var(--space-2);
   flex: 0 0 100%;
 }

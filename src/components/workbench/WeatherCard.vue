@@ -113,11 +113,11 @@ watch(
 }
 .weather-card.is-compact .wx-body { gap: 3px; }
 .weather-card.is-compact .wx-row-1 { gap: 8px; }
-.weather-card.is-compact .wx-city { font-size: 12px; font-weight: 500; color: var(--color-text-secondary); }
-.weather-card.is-compact .wx-temp { font-size: 20px; }
+.weather-card.is-compact .wx-city { font-size: var(--fs-caption); font-weight: 500; color: var(--color-text-secondary); }
+.weather-card.is-compact .wx-temp { font-size: calc(var(--fs-title) + 2px); }
 .weather-card.is-compact .wx-feels { display: none; }
 .wx-compact-detail {
-  font-size: 11px;
+  font-size: calc(var(--fs-caption) - 1px);
   color: var(--color-text-secondary);
   white-space: nowrap;
   overflow: hidden;

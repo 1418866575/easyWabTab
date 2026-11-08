@@ -561,7 +561,7 @@ async function handleSyncNowClick(): Promise<void> {
   display: flex; align-items: center; gap: 8px; width: 100%; height: 34px;
   padding: 0 8px 0 10px; border: 1px solid transparent;
   border-radius: var(--radius-md, 8px); background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-text-secondary); font-size: 12px; text-align: left; cursor: pointer;
+  color: var(--color-text-secondary); font-size: var(--fs-caption); text-align: left; cursor: pointer;
   transition: background-color var(--motion-duration, 220ms) ease, border-color var(--motion-duration, 220ms) ease, color var(--motion-duration, 220ms) ease;
 }
 .wb-search:hover {
@@ -583,7 +583,7 @@ async function handleSyncNowClick(): Promise<void> {
 .wb-group-label {
   display: flex; align-items: center; justify-content: space-between; gap: 6px;
   min-height: 26px;
-  padding: 12px 8px 4px 10px; font-size: 13px; font-weight: 600; letter-spacing: .02em;
+  padding: 12px 8px 4px 10px; font-size: var(--fs-sm); font-weight: 600; letter-spacing: .02em;
   color: var(--color-text-secondary, #475569); white-space: nowrap;
 }
 .wb-group-label-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -613,7 +613,7 @@ async function handleSyncNowClick(): Promise<void> {
   display: flex; align-items: center; justify-content: center; gap: 6px;
   padding: 0 6px; border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px); background-color: var(--color-bg-hover, #f8fafc);
-  color: var(--color-text-secondary); font-size: 12px; white-space: nowrap; cursor: pointer;
+  color: var(--color-text-secondary); font-size: var(--fs-caption); white-space: nowrap; cursor: pointer;
 }
 .wb-side-btn:hover { background-color: var(--color-bg-hover, #f1f5f9); color: var(--color-text); }
 .wb-side-btn-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -626,7 +626,7 @@ async function handleSyncNowClick(): Promise<void> {
 .wb-menu.collapsed .wb-search { height: 32px; padding: 0; justify-content: center; }
 .wb-menu.collapsed .wb-search-text, .wb-menu.collapsed .wb-search-kbd { display: none; }
 .wb-menu.collapsed .wb-side-nav { padding: 8px 6px; }
-.wb-menu.collapsed .wb-group-label { min-height: 0; font-size: 0; padding: 6px 0 2px; margin: 4px 3px 0; border-top: 1px solid var(--color-border, #e2e8f0); justify-content: center; }
+.wb-menu.collapsed .wb-group-label { min-height: 0; font-size: calc(var(--fs-caption) * 0); padding: 6px 0 2px; margin: 4px 3px 0; border-top: 1px solid var(--color-border, #e2e8f0); justify-content: center; }
 .wb-menu.collapsed .wb-group-label-text { display: none; }
 /* 折叠态：分组标题缩成分隔线，但「日常」这一行仍保留可点的展开图标 */
 .wb-menu.collapsed .wb-group-label.is-first { min-height: 30px; }
@@ -796,7 +796,7 @@ html.dark .wb-content {
   .wb-menu.collapsed { width: min(264px, 82%); }
   .wb-menu.collapsed .wb-search { height: 34px; padding: 0 8px 0 10px; justify-content: flex-start; }
   .wb-menu.collapsed .wb-search-text, .wb-menu.collapsed .wb-search-kbd { display: inline; }
-  .wb-menu.collapsed .wb-group-label { font-size: 11px; padding: 8px 10px 2px; margin: 0; border-top: 0; }
+  .wb-menu.collapsed .wb-group-label { font-size: calc(var(--fs-caption) - 1px); padding: 8px 10px 2px; margin: 0; border-top: 0; }
   .wb-menu.collapsed .wb-group-label.is-first { min-height: 0; }
   .wb-menu.collapsed .wb-group-label-text { display: inline; }
   /* 抽屉里折叠态不生效，这颗按钮点了也不会有视觉变化 → 隐藏，避免出现死按钮 */

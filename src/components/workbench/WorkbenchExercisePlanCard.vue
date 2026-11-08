@@ -302,7 +302,7 @@ const weekSummary = computed(() => {
   border-radius: var(--radius-full, 9999px);
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.1));
   color: var(--color-primary-text, #1d4ed8);
-  font-size: 11px;
+  font-size: calc(var(--fs-caption) - 1px);
   font-weight: 600;
   letter-spacing: 0.02em;
 }
@@ -417,7 +417,7 @@ const weekSummary = computed(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: calc(var(--fs-caption) - 1px);
   color: var(--color-text-soft, #6a7995);
 }
 
@@ -498,29 +498,29 @@ const weekSummary = computed(() => {
   margin-left: 6px;
   padding: 0 6px;
   border-radius: var(--radius-sm, 4px);
-  font-size: 11px;
+  font-size: calc(var(--fs-caption) - 1px);
   line-height: 18px;
   vertical-align: 1px;
 }
 
 .p-back {
   background: #fee2e2;
-  color: #b91c1c;
+  color: var(--color-error-text);
 }
 
 .p-arm {
   background: #fef3c7;
-  color: #b45309;
+  color: var(--color-warning-text);
 }
 
 .p-shoulder {
   background: #d1fae5;
-  color: #047857;
+  color: var(--color-success-text);
 }
 
 .p-chest {
   background: #dbeafe;
-  color: #1d4ed8;
+  color: var(--color-primary-text);
 }
 
 .xp-move-dose {
@@ -545,7 +545,7 @@ const weekSummary = computed(() => {
   border-radius: 5px;
   background: var(--color-bg-card, #fff);
   font: inherit;
-  font-size: 10px;
+  font-size: calc(var(--fs-caption) - 2px);
   line-height: 1;
   color: transparent;
   cursor: pointer;
@@ -560,7 +560,7 @@ const weekSummary = computed(() => {
 .xp-pip.on {
   border-color: var(--color-success, #10b981);
   background: var(--color-success, #10b981);
-  color: #fff;
+  color: var(--color-on-accent);
 }
 
 .xp-pip.on::before {
@@ -677,13 +677,15 @@ const weekSummary = computed(() => {
   padding: 8px 11px;
   border-radius: var(--radius-md, 8px);
   background: #0f172a;
-  color: #cbd5e1;
+  --xp-caution-ink: #cbd5e1;
+  --xp-caution-hi: #fbbf24;
+  color: var(--xp-caution-ink);
   font-size: var(--fs-caption, 12px);
 }
 
 .xp-caution b {
   flex: none;
-  color: #fbbf24;
+  color: var(--xp-caution-hi);
 }
 
 .xp-footer {
@@ -692,7 +694,7 @@ const weekSummary = computed(() => {
   gap: 6px;
   padding: 8px 16px;
   border-top: 1px solid var(--color-border, #e2e8f0);
-  font-size: 11px;
+  font-size: calc(var(--fs-caption) - 1px);
   color: var(--color-text-soft, #6a7995);
 }
 
@@ -731,21 +733,17 @@ html.dark .xp-head {
 
 html.dark .p-back {
   background: rgba(239, 68, 68, 0.18);
-  color: #fca5a5;
 }
 
 html.dark .p-arm {
   background: rgba(245, 158, 11, 0.18);
-  color: #fcd34d;
 }
 
 html.dark .p-shoulder {
   background: rgba(16, 185, 129, 0.18);
-  color: #6ee7b7;
 }
 
 html.dark .p-chest {
   background: rgba(59, 130, 246, 0.18);
-  color: #93c5fd;
 }
 </style>

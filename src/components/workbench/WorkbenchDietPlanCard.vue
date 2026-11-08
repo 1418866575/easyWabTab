@@ -295,7 +295,7 @@ function stageDayStart(): number {
   border-radius: var(--radius-full, 9999px);
   background: rgba(245, 158, 11, 0.16);
   color: var(--color-warning-text, #b45309);
-  font-size: 11px;
+  font-size: calc(var(--fs-caption) - 1px);
   font-weight: 600;
   letter-spacing: 0.02em;
 }
@@ -377,7 +377,7 @@ function stageDayStart(): number {
 }
 
 .dp-switch-sub {
-  font-size: 10px;
+  font-size: calc(var(--fs-caption) - 2px);
   color: var(--color-text-soft, #6a7995);
 }
 
@@ -456,7 +456,7 @@ function stageDayStart(): number {
 }
 
 .dp-week-t {
-  font-size: 10px;
+  font-size: calc(var(--fs-caption) - 2px);
   color: var(--color-text-soft, #6a7995);
 }
 
@@ -514,7 +514,7 @@ function stageDayStart(): number {
 
 .dp-meal-time {
   margin-left: auto;
-  font-size: 10px;
+  font-size: calc(var(--fs-caption) - 2px);
   color: var(--color-text-soft, #6a7995);
 }
 
@@ -583,7 +583,7 @@ function stageDayStart(): number {
 
 .dp-footer-note {
   margin: 12px 0 0;
-  font-size: 11px;
+  font-size: calc(var(--fs-caption) - 1px);
   color: var(--color-text-soft, #6a7995);
 }
 
@@ -706,7 +706,7 @@ function stageDayStart(): number {
 .dp-trust {
   padding: 0 5px;
   border-radius: 3px;
-  font-size: 10px;
+  font-size: calc(var(--fs-caption) - 2px);
   line-height: 16px;
   background: var(--color-bg-hover, #f1f5f9);
   color: var(--color-text-soft, #6a7995);
@@ -724,7 +724,7 @@ function stageDayStart(): number {
 
 .dp-trust.tone-low {
   background: #fee2e2;
-  color: #b91c1c;
+  color: var(--color-error-text);
 }
 
 .dp-stage-pill {
@@ -762,7 +762,7 @@ function stageDayStart(): number {
 .dp-table th {
   padding: 7px 10px;
   text-align: left;
-  font-size: 11px;
+  font-size: calc(var(--fs-caption) - 1px);
   font-weight: 600;
   color: var(--color-text-muted, #5b677f);
   background: var(--color-bg-hover, #f1f5f9);
@@ -822,7 +822,7 @@ function stageDayStart(): number {
 
 .dp-trust-note.danger {
   background: #fee2e2;
-  color: #b91c1c;
+  color: var(--color-error-text);
 }
 
 /* ---------- 响应式 ---------- */
@@ -865,6 +865,5 @@ html.dark .dp-head {
 html.dark .dp-trust.tone-low,
 html.dark .dp-trust-note.danger {
   background: rgba(239, 68, 68, 0.16);
-  color: #fca5a5;
 }
 </style>
