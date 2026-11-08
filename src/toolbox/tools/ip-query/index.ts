@@ -6,7 +6,7 @@ const entry: ToolboxToolEntry = {
     id: 'ip-query',
     name: 'IP 查询',
     icon: '🌐',
-    description: '本机公网 IP 获取、IP 性质与网段解析、域名 DoH 解析，本地处理不上传',
+    description: '获取公网 IP、解析 IP 性质/网段、域名 DoH 解析（需联网）',
     category: 'dev',
     tags: ["IP", "公网IP", "DNS", "域名", "网段", "CIDR"],
     status: 'active',

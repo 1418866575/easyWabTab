@@ -5,7 +5,7 @@ const entry: ToolboxToolEntry = {
     id: 'pdf-extract',
     name: 'PDF 提取文字 / 转图',
     icon: '📤',
-    description: '提取 PDF 全部文字，或将每页渲染为 PNG 图片，纯本地',
+    description: '提取 PDF 文字，或将每页转为 PNG/JPG 图片，纯本地',
     category: 'pdf',
     tags: ['pdf', '提取', '文字', '转图', 'extract'],
     status: 'active',

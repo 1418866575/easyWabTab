@@ -5,7 +5,7 @@ const entry: ToolboxToolEntry = {
     id: 'salt-gen',
     name: '加盐值 (Salt) 生成',
     icon: '🧂',
-    description: '生成密码学随机盐值（Hex/Base64），用于口令哈希/密钥派生',
+    description: '生成密码学随机盐值（Hex/Base64URL/Base64），纯本地',
     category: 'cert',
     tags: ['salt', '盐值', '随机', '密钥派生'],
     status: 'active',

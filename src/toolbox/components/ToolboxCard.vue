@@ -1,11 +1,12 @@
 <script setup lang="ts">
 /**
- * 工具卡片：图标 / 名称 / 标签 / 形态与状态徽标 / 收藏按钮 + 悬停说明浮层。
+ * 工具卡片：大分类 / 图标 + 名称 / 使用次数 / 收藏按钮 + 悬停说明浮层。
  * - 说明文字默认隐藏，悬停满 1s 浮出、移出即收起（计时器按卡片实例独立）
  * - 收藏点击不冒泡，避免误触发打开
  * - 名称与说明按关键字高亮（片段渲染，不用 v-html）
  */
 import { computed, onBeforeUnmount, ref } from 'vue'
+import { categoryName } from '../config/categories'
 import { splitHighlight } from '../core/highlight'
 import type { ToolboxToolMeta } from '../types'
 
@@ -14,7 +15,7 @@ const props = withDefaults(
     meta: ToolboxToolMeta
     favorite: boolean
     keyword?: string
-    /** 点击次数（0 表示未使用过，不展示） */
+    /** 点击次数（0 也展示「使用 0 次」） */
     clicks?: number
   }>(),
   { keyword: '', clicks: 0 }
@@ -29,6 +30,7 @@ const disabled = computed(() => props.meta.status !== 'active')
 const statusLabel = computed(
   () => ({ active: '可用', maintenance: '维护中', coming: '即将上线' })[props.meta.status] || '未知'
 )
+const categoryLabel = computed(() => categoryName(props.meta.category))
 const nameParts = computed(() => splitHighlight(props.meta.name, props.keyword))
 const descParts = computed(() => splitHighlight(props.meta.description, props.keyword))
 const hits = computed(() => {
@@ -80,13 +82,8 @@ onBeforeUnmount(() => {
     @mouseleave="onCardLeave"
     @click="emit('open')"
   >
-    <!-- 图标在上、名称在下的上下结构；收藏星标脱离文档流，固定右上角 -->
-    <span class="tb-card-top">
-      <span class="tb-card-icon" aria-hidden="true">{{ meta.icon }}</span>
-      <span class="tb-card-name">
-        <mark v-for="(p, i) in nameParts" :key="'n' + i" :class="{ 'is-hit': p.hit }">{{ p.text }}</mark>
-      </span>
-    </span>
+    <!-- 顶部突出所属大分类；收藏星标脱离文档流，固定右上角 -->
+    <span class="tb-card-cat">{{ categoryLabel }}</span>
     <span
       class="tb-card-fav"
       role="button"
@@ -99,17 +96,20 @@ onBeforeUnmount(() => {
       @keydown.space.stop.prevent="emit('toggle-fav')"
     >{{ favorite ? '★' : '☆' }}</span>
 
+    <!-- 左侧图标、右侧名称的横向结构 -->
+    <span class="tb-card-top">
+      <span class="tb-card-icon" aria-hidden="true">{{ meta.icon }}</span>
+      <span class="tb-card-name">
+        <mark v-for="(p, i) in nameParts" :key="'n' + i" :class="{ 'is-hit': p.hit }">{{ p.text }}</mark>
+      </span>
+    </span>
+
     <!-- 说明默认隐藏；悬停满 1s 在卡片上方浮出小气泡，移出即收起。不吃鼠标事件，不影响相邻卡片 hover -->
     <span v-if="showDesc" class="tb-card-popover" role="tooltip">
       <mark v-for="(p, i) in descParts" :key="'d' + i" :class="{ 'is-hit': p.hit }">{{ p.text }}</mark>
     </span>
 
-    <span class="tb-card-meta">
-      <span v-for="t in meta.tags.slice(0, 3)" :key="t" class="tb-tag">{{ t }}</span>
-      <span v-if="hits" class="tb-hits" :title="`已使用 ${hits} 次`">🔥 {{ hits }}</span>
-      <span v-if="disabled" class="tb-badge" :class="meta.status">{{ statusLabel }}</span>
-      <span v-else-if="meta.kind === 'module'" class="tb-badge internal">站内模块</span>
-    </span>
+    <span class="tb-card-uses">使用 {{ hits }} 次</span>
   </button>
 </template>
 
@@ -144,8 +144,23 @@ onBeforeUnmount(() => {
   box-shadow: var(--shadow-card);
   border-color: var(--color-border);
 }
-/* 图标 / 名称上下居中排列 */
-.tb-card-top { display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; text-align: center; }
+/* 顶部：主色胶囊突出大分类 */
+.tb-card-cat {
+  align-self: flex-start;
+  max-width: calc(100% - 34px);
+  padding: 2px 8px;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-primary-text);
+  background: var(--color-primary-soft);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 图标左、名称右的横向结构 */
+.tb-card-top { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .tb-card-icon {
   width: 46px;
   height: 46px;
@@ -164,7 +179,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 100%;
+  min-width: 0;
 }
 .tb-card.is-disabled .tb-card-name { color: var(--color-text-secondary); }
 /* 未命中片段用透明 mark，保证结构一致且不产生视觉差异 */
@@ -243,32 +258,12 @@ onBeforeUnmount(() => {
 @media (prefers-reduced-motion: reduce) {
   .tb-card-popover { animation: none; }
 }
-.tb-card-meta { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; margin-top: auto; }
-.tb-tag {
+/* 底部：使用次数始终显示（含 0 次），弱化但不隐藏 */
+.tb-card-uses {
+  align-self: flex-end;
+  margin-top: auto;
   font-size: var(--fs-caption);
-  padding: 1px 7px;
-  border-radius: var(--radius-full);
-  background: var(--color-bg-hover);
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  white-space: nowrap;
 }
-.tb-hits {
-  font-size: var(--fs-caption);
-  padding: 1px 7px;
-  border-radius: var(--radius-full);
-  font-weight: 600;
-  color: var(--color-primary-text);
-  background: var(--color-primary-soft);
-  border: 1px solid transparent;
-}
-.tb-badge {
-  font-size: var(--fs-caption);
-  padding: 1px 7px;
-  border-radius: var(--radius-full);
-  font-weight: 600;
-  border: 1px solid transparent;
-}
-.tb-badge.maintenance { background: var(--color-warning-soft); color: var(--color-warning-text); }
-.tb-badge.coming { background: var(--color-bg-hover); color: var(--color-text-secondary); }
-.tb-badge.internal { background: var(--color-success-soft); color: var(--color-success-text); }
 </style>

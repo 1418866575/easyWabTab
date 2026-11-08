@@ -5,7 +5,7 @@ const entry: ToolboxToolEntry = {
     id: 'image-palette',
     name: '图片配色提取',
     icon: '🎨',
-    description: '上传图片提取主色配色方案，支持复制 HEX/CSS，纯本地处理',
+    description: '上传图片提取主色配色方案，支持复制 HEX 列表与 JSON，纯本地处理',
     category: 'image',
     tags: ['图片', '配色', '调色板', 'palette', '主色'],
     status: 'active',

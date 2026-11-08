@@ -5,7 +5,7 @@ const entry: ToolboxToolEntry = {
     id: 'image-watermark',
     name: '图片水印',
     icon: '💧',
-    description: '为图片叠加文字或图片水印，支持位置、透明度、旋转与平铺',
+    description: '为图片叠加文字或图片水印，支持透明度、旋转与平铺',
     category: 'image',
     tags: ['水印', '图片', 'watermark', '版权'],
     status: 'active',
