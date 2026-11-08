@@ -851,13 +851,13 @@ async function regenerateSlug(): Promise<void> {
               </button>
             </div>
 
-            <!-- 右半：保存 / 发布 / 共享；窄屏整组换行到第二行，不会被拆散 -->
+            <!-- 右半：保存 / 公众号动作 / 发布 / 共享；窄屏整组换行到第二行，不会被拆散 -->
             <div class="be-head-r">
-              <button type="button" class="ui-btn ui-btn--sm" data-testid="blog-editor-save-top" @click="saveDraft()">保存草稿</button>
+              <button type="button" class="ui-btn ui-btn--sm be-act be-act-save" data-testid="blog-editor-save-top" @click="saveDraft()">保存草稿</button>
               <!-- 文中图：列出正文已插入的所有图片，便于快速查看（预览/分屏均可用） -->
               <button
                 type="button"
-                class="ui-btn ui-btn--sm"
+                class="ui-btn ui-btn--sm be-act be-act-images"
                 :disabled="articleImages.length === 0"
                 :title="articleImages.length === 0 ? '正文还没有插入图片' : `查看文中图片（${articleImages.length}）`"
                 data-testid="blog-editor-images-top"
@@ -867,7 +867,7 @@ async function regenerateSlug(): Promise<void> {
               </button>
               <button
                 type="button"
-                class="ui-btn ui-btn--sm be-typo-btn"
+                class="ui-btn ui-btn--sm be-typo-btn be-act be-act-typo"
                 :title="`排版主题：${typoTheme.name}（点击更换）`"
                 data-testid="blog-editor-typo-top"
                 @click="typoOpen = true"
@@ -879,16 +879,7 @@ async function regenerateSlug(): Promise<void> {
               </button>
               <button
                 type="button"
-                class="ui-btn ui-btn--sm ui-btn--primary"
-                :disabled="visibleErrors.length > 0"
-                data-testid="blog-editor-publish-top"
-                @click="handlePublish()"
-              >
-                发布
-              </button>
-              <button
-                type="button"
-                class="ui-btn ui-btn--sm"
+                class="ui-btn ui-btn--sm be-act be-act-preview"
                 title="按公众号草稿箱的排版规则预览正文（列表/表格/代码块已转换）"
                 data-testid="blog-editor-wechat-preview-top"
                 @click="openWechatPreview()"
@@ -897,8 +888,7 @@ async function regenerateSlug(): Promise<void> {
               </button>
               <button
                 type="button"
-                class="ui-btn ui-btn--sm"
-                :class="{ 'ui-btn--primary': !wechat.publishing.value }"
+                class="ui-btn ui-btn--sm be-act be-act-wechat"
                 :disabled="wechat.publishing.value || visibleErrors.length > 0"
                 data-testid="blog-editor-publish-wechat-top"
                 @click="handlePublishWechat()"
@@ -908,17 +898,26 @@ async function regenerateSlug(): Promise<void> {
               </button>
               <button
                 type="button"
-                class="ui-btn ui-btn--sm"
+                class="ui-btn ui-btn--sm be-act be-act-copy"
                 title="按公众号排版规则复制正文，粘贴到公众号编辑器即可（不发送到草稿箱）"
                 data-testid="blog-editor-copy-wechat-top"
                 @click="handleCopyWechat()"
               >
                 复制到公众号
               </button>
+              <!-- 发布紧邻共享左侧：两步都是文章对外状态，放一起便于顺序操作 -->
               <button
                 type="button"
-                class="ui-btn ui-btn--sm"
-                :class="{ 'ui-btn--primary': !isSharing() }"
+                class="ui-btn ui-btn--sm be-act be-act-publish"
+                :disabled="visibleErrors.length > 0"
+                data-testid="blog-editor-publish-top"
+                @click="handlePublish()"
+              >
+                发布
+              </button>
+              <button
+                type="button"
+                class="ui-btn ui-btn--sm be-act be-act-share"
                 :disabled="article?.status !== 'published' || isSharing()"
                 :title="article?.status !== 'published' ? '仅已发布可共享' : (article?.sharedAt ? '取消共享' : '共享到服务器')"
                 data-testid="blog-editor-share-top"
@@ -1322,6 +1321,35 @@ async function regenerateSlug(): Promise<void> {
 /* 右半：操作按钮。gap/padding 略收紧，保证 1440 屏下与左半同排放下 */
 .be-head-r { gap: 5px; margin-left: auto; justify-content: flex-end; }
 .be-head-r > .ui-btn { padding: 0 10px; }
+
+/* 顶栏 8 个动作各一种低饱和底色：--be-tone 与卡片面混合出浅底，文字用 --be-ink。
+   暗色下 --ds-card 变深、--be-ink 提亮，无需另配浅色补丁。仅在编辑器顶栏生效。 */
+.be-head-r > .be-act {
+  background-color: color-mix(in srgb, var(--be-tone) 12%, var(--ds-card));
+  border-color: color-mix(in srgb, var(--be-tone) 30%, transparent);
+  color: var(--be-ink);
+}
+.be-head-r > .be-act:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--be-tone) 20%, var(--ds-card));
+  border-color: color-mix(in srgb, var(--be-tone) 48%, transparent);
+  color: var(--be-ink);
+}
+.be-act-save    { --be-tone: #6366f1; --be-ink: #3730a3; }
+.be-act-images  { --be-tone: #0891b2; --be-ink: #0e7490; }
+.be-act-typo    { --be-tone: #8b5cf6; --be-ink: #6d28d9; }
+.be-act-preview { --be-tone: #64748b; --be-ink: #475569; }
+.be-act-wechat  { --be-tone: #f59e0b; --be-ink: #b45309; }
+.be-act-copy    { --be-tone: #ec4899; --be-ink: #be185d; }
+.be-act-publish { --be-tone: #10b981; --be-ink: #047857; }
+.be-act-share   { --be-tone: #ef4444; --be-ink: #b91c1c; }
+html.dark .be-head-r > .be-act-save    { --be-ink: #a5b4fc; }
+html.dark .be-head-r > .be-act-images  { --be-ink: #67e8f9; }
+html.dark .be-head-r > .be-act-typo    { --be-ink: #c4b5fd; }
+html.dark .be-head-r > .be-act-preview { --be-ink: #cbd5e1; }
+html.dark .be-head-r > .be-act-wechat  { --be-ink: #fcd34d; }
+html.dark .be-head-r > .be-act-copy    { --be-ink: #f9a8d4; }
+html.dark .be-head-r > .be-act-publish { --be-ink: #6ee7b7; }
+html.dark .be-head-r > .be-act-share   { --be-ink: #fca5a5; }
 
 .be-view-switch {
   display: flex;
