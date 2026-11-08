@@ -313,10 +313,13 @@ export const useSitesStore = defineStore('sites', () => {
   })
 
   const filteredSites = computed(() => {
-    // 站内入口卡真恒显：不参与分类 / 搜索 / 标签 / 断链过滤，按 MODULE_SITE_ORDER 钉在最前。
-    const pinned = visibleSites.value
-      .filter(isModuleSite)
-      .sort((a, b) => moduleRank(a) - moduleRank(b))
+    // 选中具体分类时只显示该分类的网站，站内入口卡不再恒显；
+    // 「全部」+ 搜索 / 标签 / 断链筛选时仍按 MODULE_SITE_ORDER 钉在最前。
+    const pinned = selectedCategory.value
+      ? []
+      : visibleSites.value
+          .filter(isModuleSite)
+          .sort((a, b) => moduleRank(a) - moduleRank(b))
     // 其余站点走原有筛选（已排除分类值为数值 0 的站点）
     const regular = visibleSites.value.filter(site => {
       if (isModuleSite(site)) return false
