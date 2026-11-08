@@ -104,6 +104,8 @@
   --input-height: 36px;
   --input-height-sm: 32px;
   --input-height-lg: 44px;
+  /* 浮动标签字段专用：标签 + 输入文字两行，比常规控件高，不是第三档控件尺寸 */
+  --input-height-float: 52px;
   --input-padding-x: 12px;
   --input-padding-x-sm: 10px;
   --input-padding-x-lg: 16px;
@@ -956,6 +958,67 @@ html.dark .seg-control {
   min-height: var(--input-height-lg);
   padding: 0 var(--input-padding-x-lg);
   font-size: var(--input-font-size-lg);
+}
+
+/* ============================================================
+   浮动标签字段 .ui-field（2026-11 新增）
+   结构：.ui-field > input.ui-input.ui-field-input + label.ui-field-label [+ 同行附件]
+   空态：标签居中充当占位；聚焦 / 有值：标签缩小并上浮到框内顶部。
+   标签始终在框内（Bootstrap floating-label 形态，不跨描边线），因此不必与
+   父级背景对齐，暗色与 8 套 accent 全部由 token 自动跟随。
+   空态判定靠 input 的占位空格 placeholder=" " + :placeholder-shown，不用 :has()。
+   ============================================================ */
+.ui-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.ui-field > .ui-field-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: var(--input-height-float);
+  min-height: var(--input-height-float);
+  /* 上内边距给浮起的标签留位，输入文字落在下半部 */
+  padding: var(--space-6) var(--input-padding-x) var(--space-1);
+}
+
+.ui-field-label {
+  position: absolute;
+  left: var(--input-padding-x);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  font-size: var(--fs-body);
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  transition:
+    top var(--motion-duration) var(--motion-ease),
+    transform var(--motion-duration) var(--motion-ease),
+    font-size var(--motion-duration) var(--motion-ease),
+    color var(--motion-duration) var(--motion-ease);
+}
+
+.ui-field:focus-within > .ui-field-label,
+.ui-field > .ui-field-input:not(:placeholder-shown) + .ui-field-label {
+  top: var(--space-2);
+  transform: none;
+  font-size: var(--fs-caption);
+  color: var(--color-text-secondary);
+}
+
+/* 特异性需 ≥ 上一条且后声明，聚焦色才不会被压掉 */
+.ui-field:focus-within > .ui-field-input + .ui-field-label {
+  color: var(--color-primary-text);
+}
+
+/* 标题类字段：输入文字加重一档，保留标题感 */
+.ui-field--title > .ui-field-input {
+  font-size: var(--fs-md);
+  font-weight: 600;
 }
 
 /* ============================================================

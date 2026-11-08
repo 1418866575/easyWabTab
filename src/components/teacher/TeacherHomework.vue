@@ -20,7 +20,7 @@ import { HOMEWORK_MISS_STATUS_META } from '@/types/teacher'
 import SubjectSelect from '@/components/teacher/SubjectSelect.vue'
 
 const store = useTeacherStore()
-const vm = useViewMode()
+const vm = useViewMode('tea-homework') // 视图偏好按面板 key 持久化 + 云同步
 const toast = useToast()
 
 const b = computed(() => store.bucket)

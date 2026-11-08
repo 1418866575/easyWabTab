@@ -10,7 +10,7 @@ import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import type { PurchaseDayGroup } from '@/composables/businessCore'
 
-const vm = useViewMode()
+const vm = useViewMode('biz-purchases') // 视图偏好按面板 key 持久化 + 云同步
 
 /**
  * 卡片字段：只放「一天」的汇总口径，不放明细表格字段。

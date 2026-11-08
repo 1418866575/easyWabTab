@@ -17,7 +17,7 @@ import type { HomeSchoolTalkRecord } from '@/types/teacher'
 import { TALK_MODES, TALK_CATEGORIES, TALK_COUNTERPARTS } from '@/types/teacher'
 
 const store = useTeacherStore()
-const vm = useViewMode()
+const vm = useViewMode('tea-talks') // 视图偏好按面板 key 持久化 + 云同步
 const toast = useToast()
 
 const b = computed(() => store.bucket)

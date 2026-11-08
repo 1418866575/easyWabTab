@@ -3,7 +3,7 @@ import { useViewMode } from '@/composables/useViewMode'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
-const vm = useViewMode()
+const vm = useViewMode('stu-height') // 视图偏好按面板 key 持久化 + 云同步
 
 function cardFields(row: any) {
   const d = deltaOf(row.id)

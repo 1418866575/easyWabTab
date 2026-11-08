@@ -461,17 +461,20 @@ const renderedPreview = computed(() =>
     <!-- 主区：编辑器（三模式 + Markdown 工具栏 + 文中图片条） -->
     <div class="dj-main">
       <div class="dj-editor">
-        <!-- 标题（可选）：放在编辑列顶部（不能直接放 .dj-main 下——桌面端 .dj-main > * 会把它当第二栏挤压） -->
-        <div class="dj-title-bar">
+        <!-- 标题（可选）：放在编辑列顶部（不能直接放 .dj-main 下——桌面端 .dj-main > * 会把它当第二栏挤压）
+             浮动标签走全局 .ui-field（input 必须在 label 之前，占位空格用于判定空态） -->
+        <div class="dj-title-bar ui-field ui-field--title">
           <input
+            id="wb-diary-title"
             v-model="draftTitle"
             type="text"
-            class="dj-title-input"
-            placeholder="日记标题（可选）"
+            class="ui-input dj-title-input ui-field-input"
+            placeholder=" "
             maxlength="100"
-            aria-label="日记标题"
+            aria-label="日记标题（可选）"
             data-testid="dj-title-input"
           />
+          <label for="wb-diary-title" class="ui-field-label">日记标题（可选）</label>
           <span class="dj-title-count">{{ draftTitle.length }}/100</span>
         </div>
         <!-- 编辑器工具条：左端视图切换，右端常驻「保存」主操作（从页头筛选行移入，
@@ -735,38 +738,13 @@ const renderedPreview = computed(() =>
   min-height: 0;
 }
 
-/* ===== 标题输入（内容编辑区上方，对应列表首列「标题」） ===== */
+/* ===== 标题输入（内容编辑区上方，对应列表首列「标题」） =====
+   视觉全部走全局：.ui-input 别名组提供边框/底色/焦点环，.ui-field 提供浮动标签，
+   .ui-field--title 提供标题字号。这里只留布局，不再局部重绘输入皮肤。 */
 .dj-title-bar {
-  display: flex;
-  align-items: center;
   gap: 10px;
   flex: none;
   margin-bottom: 10px;
-}
-
-.dj-title-input {
-  flex: 1;
-  min-width: 0;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: var(--radius-md, 8px);
-  background-color: var(--color-bg-card, #fff);
-  color: var(--color-text);
-  font-size: var(--fs-md, 15px);
-  font-weight: 600;
-  line-height: 1.5;
-  outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.dj-title-input::placeholder {
-  color: var(--color-text-secondary);
-  font-weight: 400;
-}
-
-.dj-title-input:focus {
-  border-color: var(--color-primary, #3b82f6);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
 }
 
 .dj-title-count {

@@ -15,6 +15,12 @@ import {
 } from '@/composables/workbenchMenuCore'
 import type { WorkbenchMenuItem, WorkbenchMenuVisibility } from '@/composables/workbenchMenuCore'
 import type { AppSettingsData, HomeCardLayout, WatermarkMode, WatermarkType, SyncChannel } from '@/types'
+import {
+  normalizePanelViewModes,
+  withPanelViewMode,
+  isPanelViewModeKey
+} from '@/composables/viewModeCore'
+import type { PanelViewMode, PanelViewModeKey, PanelViewModeMap } from '@/composables/viewModeCore'
 
 // ========================================
 // 类型
@@ -469,6 +475,8 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   out.cloudSyncFeishuAppSecret = typeof data.cloudSyncFeishuAppSecret === 'string' ? data.cloudSyncFeishuAppSecret : ''
   out.cloudSyncFeishuDatasourceUrl = typeof data.cloudSyncFeishuDatasourceUrl === 'string' ? data.cloudSyncFeishuDatasourceUrl : ''
   out.homeCardLayout = normalizeHomeCardLayout(data.homeCardLayout)
+  // 面板视图偏好：白名单 key + 合法枚举（脏数据/旧数据一律回退默认 list）
+  out.workbenchPanelViewModes = normalizePanelViewModes(data.workbenchPanelViewModes)
   return out
 }
 
@@ -586,6 +594,10 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   // 工作台主页卡片布局（卡片 id → 列跨度/最小高度/排序）：默认空 = 全部用组件内置默认布局
   const homeCardLayout = ref<Record<string, HomeCardLayout>>({})
 
+  // 个人工作台表格面板「列表 / 卡片」视图偏好：默认空 = 全部列表。
+  // 随 settings 整体进 workbench.json（WebDAV）/ 飞书 settings 表；不另开 store，避免多一条同步链路。
+  const workbenchPanelViewModes = ref<PanelViewModeMap>({})
+
   // 云同步配置（6 字段）：默认关闭/空串/间隔0/静默阈值1000
   const cloudSyncEnabled = ref<boolean>(false)
   const cloudSyncUrl = ref<string>('')
@@ -684,7 +696,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       cloudSyncFeishuAppId: cloudSyncFeishuAppId.value,
       cloudSyncFeishuAppSecret: cloudSyncFeishuAppSecret.value,
       cloudSyncFeishuDatasourceUrl: cloudSyncFeishuDatasourceUrl.value,
-      homeCardLayout: toRaw(homeCardLayout.value)
+      homeCardLayout: toRaw(homeCardLayout.value),
+      // 面板视图偏好：随 settings 整包落 IDB → WebDAV workbench.json / 飞书 settings 表
+      workbenchPanelViewModes: toRaw(workbenchPanelViewModes.value)
     })).catch(() => {
       // IDB 写入失败静默忽略（fire-and-forget，不抛错）
     })
@@ -914,6 +928,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       }
       // 主页卡片布局：整包归一（IDB 直读路径不经过 parseSettingsData，此处必须自行 clamp）
       homeCardLayout.value = normalizeHomeCardLayout(effective.homeCardLayout)
+      // 面板视图偏好：同上，IDB 直读路径也要自行归一化（云拉取后本函数会重跑，
+      // ref 变化会驱动已挂载面板的 watch 切到云端值）
+      workbenchPanelViewModes.value = normalizePanelViewModes(effective.workbenchPanelViewModes)
       // 同步渠道 + 飞书凭据（IDB 直读路径不经过 parseSettingsData，此处直接取用）
       cloudSyncChannel.value =
         effective.cloudSyncChannel === 'thirdPartyCloud' || effective.cloudSyncChannel === 'selfHosted' || effective.cloudSyncChannel === 'feishu'
@@ -992,6 +1009,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     businessSidebarCollapsed.value = undefined
     businessActiveSection.value = undefined
     homeCardLayout.value = {}
+    workbenchPanelViewModes.value = {}
     navFiltersExpanded.value = false
     viewMode.value = 'classic'
     navSortMode.value = 'clicks'
@@ -1154,6 +1172,24 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   // 整页重置：清空全部自定义布局，回退组件内置默认（宽高与顺序）
   function resetHomeCardLayout() {
     homeCardLayout.value = {}
+    persist()
+  }
+
+  // ========================================
+  // 个人工作台表格面板「列表 / 卡片」视图偏好
+  // 写入经 persist() → markDirty()：WebDAV 自动同步按既有策略推送 workbench.json；
+  // 飞书渠道按项目约定仅手动同步，数据同样随 settings 记录进飞书表。
+  // ========================================
+
+  /** 读取单个面板偏好（缺省 = 'list'） */
+  function getPanelViewMode(key: PanelViewModeKey): PanelViewMode {
+    return workbenchPanelViewModes.value[key] ?? 'list'
+  }
+
+  /** 切换面板偏好：'list' 为默认值，删键不落库（避免多设备合并时覆盖云端 card） */
+  function setPanelViewMode(key: PanelViewModeKey, mode: PanelViewMode) {
+    if (!isPanelViewModeKey(key)) return
+    workbenchPanelViewModes.value = withPanelViewMode(toRaw(workbenchPanelViewModes.value), key, mode)
     persist()
   }
 
@@ -1655,6 +1691,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     cloudSyncFeishuAppSecret,
     cloudSyncFeishuDatasourceUrl,
     homeCardLayout,
+    workbenchPanelViewModes,
     initSettings,
     applySettings,
     setDialogSize,
@@ -1726,6 +1763,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     setCloudSyncFeishuDatasourceUrl,
     setHomeCardLayout,
     resetHomeCardLayout,
+    getPanelViewMode,
+    setPanelViewMode,
     resetDefaults,
     moveWorkbenchMenuItem,
     renameWorkbenchMenuItem,

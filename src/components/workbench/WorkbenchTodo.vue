@@ -12,7 +12,7 @@ import BaseDialog from '@/components/common/BaseDialog.vue'
 const PANEL_WIDTH = '80%'
 const PANEL_MAX_HEIGHT = 'var(--dlg-h-wb-todo, 85vh)'
 
-const vm = useViewMode()
+const vm = useViewMode('todos') // 视图偏好按面板 key 持久化 + 云同步
 
 function cardFields(row: any) {
   return [

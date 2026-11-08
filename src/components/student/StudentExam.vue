@@ -29,7 +29,7 @@ import { usePageSize } from '@/composables/usePageSize'
 const store = useStudentExamStore()
 const settingsStore = useStudentSettingsStore()
 const toast = useToast()
-const vm = useViewMode()
+const vm = useViewMode('stu-exam') // 视图偏好按面板 key 持久化 + 云同步
 
 const stage = computed(() => settingsStore.stage)
 
