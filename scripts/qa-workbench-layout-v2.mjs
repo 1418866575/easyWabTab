@@ -5,8 +5,8 @@
  * 与 qa-workbench-mobile-overlap.mjs 分工：那边管 FAB / 移动端抽屉遮挡，这边管结构与状态。
  *
  * 断言：
- *  S1 无全局顶栏；.wb-scope 作用域挂载；搜索框是侧栏第一个元素
- *  S2 12 项菜单 + 日常/专注/资产三组；底部恒定只有云同步 + 设置两枚按钮
+ *  S1 无全局顶栏；.wb-scope 作用域挂载；切换入口是侧栏第一个元素、搜索紧随其后
+ *  S2 13 项菜单 + 日常/专注/资产三组；底部恒定只有云同步 + 设置两枚按钮
  *  S3 搜索入口、设置弹窗只留侧栏折叠入口（无切换工作台/说明文案）、侧栏折叠可用
  *  S4 首页首行：日期 / 天气同一行各 50%，时间在前、天气在后，天气为 compact 卡
  *  S5 KeepAlive：切走再回来不重建面板 DOM；健康子 tab 与 section 一起写进 URL
@@ -91,10 +91,23 @@ try {
   check('S1-2 .wb-scope 作用域已挂载', await page.locator('.wb-shell.wb-scope').count() === 1)
   const top = await page.evaluate(() => {
     const t = document.querySelector('.wb-side-top')
-    const c = t && t.firstElementChild
-    return { first: c ? c.getAttribute('data-testid') : '', brand: !!document.querySelector('.side-brand') }
+    const kids = t ? [...t.children] : []
+    return {
+      first: kids[0]?.getAttribute('data-testid') ?? '',
+      second: kids[1]?.getAttribute('data-testid') ?? '',
+      switcherVisible: !!(kids[0]?.querySelector('[data-testid="ws-trigger"]')),
+      brand: !!document.querySelector('.side-brand')
+    }
   })
-  check('S1-3 搜索框是侧栏第一个元素', top.first === 'wb-spotlight-open', JSON.stringify(top))
+  check('S1-3 切换入口是侧栏第一个元素、搜索紧随其后',
+    top.first === 'wb-page-switcher' && top.second === 'wb-spotlight-open' && top.switcherVisible,
+    JSON.stringify(top))
+  check('S1-3b 切换入口可点开下拉', await (async () => {
+    await page.locator('[data-testid="wb-page-switcher"] [data-testid="ws-trigger"]').click()
+    const opened = await page.waitForSelector('[data-testid="ws-panel"]', { timeout: 5000 }).then(() => true).catch(() => false)
+    if (opened) await page.keyboard.press('Escape')
+    return opened
+  })())
   check('S1-4 无品牌区', !top.brand)
   check('S1-5 左右两栏几何正确', await page.evaluate(() => {
     const s = document.querySelector('.wb-menu').getBoundingClientRect()
@@ -122,7 +135,12 @@ try {
   check('S1-9 搜索框是 8px 圆角的内嵌行（不再 999px 胶囊）', bond.radius === '8px', bond.radius)
 
   /* ---------- S2 分组菜单 + 底部两枚按钮 ---------- */
-  check('S2-1 侧栏 12 项全量菜单', await page.locator('.wb-menu .wb-menu-item').count() === 12)
+  check('S2-1 侧栏 13 项全量菜单', await page.locator('.wb-menu .wb-menu-item').count() === 13)
+  check('S2-1b 留言板紧跟日记、落在「日常」分组', await page.evaluate(() => {
+    const items = [...document.querySelectorAll('.wb-side-nav .wb-menu-item')].map((e) => e.getAttribute('data-testid'))
+    return items.indexOf('wb-menu-messages') === items.indexOf('wb-menu-diary') + 1
+      && !!document.querySelector('[data-testid="wb-menu-messages"]')
+  }))
   const groups = await page.evaluate(() => [...document.querySelectorAll('.wb-group-label')].map(e => e.textContent.trim()).join(','))
   check('S2-2 三组标签 日常/专注/资产', groups === '日常,专注,资产', groups)
   const labelStyle = await page.evaluate(() => {

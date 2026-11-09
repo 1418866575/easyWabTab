@@ -11,6 +11,7 @@ import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
 import { useWorkbenchPomodoroStore } from '@/stores/workbenchPomodoro'
 import { useWorkbenchDiaryStore } from '@/stores/workbenchDiary'
+import { useWorkbenchMessagesStore } from '@/stores/workbenchMessages'
 import { useGenealogyStore } from '@/stores/genealogy'
 import { useAppSettingsStore } from '@/stores/settings'
 import WorkbenchSwitcher from '@/components/WorkbenchSwitcher.vue'
@@ -67,6 +68,7 @@ const WorkbenchPassword = lazyPanel('passwords', () => import('@/components/work
 const WorkbenchHealth = lazyPanel('health', () => import('@/components/workbench/WorkbenchHealth.vue'))
 const WorkbenchLedger = lazyPanel('ledger', () => import('@/components/workbench/WorkbenchLedger.vue'))
 const WorkbenchDiary = lazyPanel('diary', () => import('@/components/workbench/WorkbenchDiary.vue'))
+const WorkbenchMessages = lazyPanel('messages', () => import('@/components/workbench/WorkbenchMessages.vue'))
 const WorkbenchGenealogy = lazyPanel('genealogy', () => import('@/components/workbench/WorkbenchGenealogy.vue'))
 const WorkbenchTrash = lazyPanel('trash', () => import('@/components/workbench/WorkbenchTrash.vue'))
 
@@ -86,6 +88,7 @@ const ledgerStore = useWorkbenchLedgerStore()
 const habitsStore = useWorkbenchHabitsStore()
 const pomodoroStore = useWorkbenchPomodoroStore()
 const diaryStore = useWorkbenchDiaryStore()
+const messagesStore = useWorkbenchMessagesStore()
 const genealogyStore = useGenealogyStore()
 const settingsStore = useAppSettingsStore()
 const sitesStore = useSitesStore()
@@ -93,13 +96,14 @@ const sitesStore = useSitesStore()
 // 移动端菜单导航 ref（用于自动滚动到激活项）
 const menuNavRef = ref<HTMLElement | null>(null)
 
-// 左侧菜单导航白名单（12 项；菜单项顺序/名称/图标由 workbenchMenuCore 经设置 store 驱动）
+// 左侧菜单导航白名单（13 项；菜单项顺序/名称/图标由 workbenchMenuCore 经设置 store 驱动）
 // ⚠️ 新增菜单键时必须同步这里：navigateTo 用本白名单收窄，漏了会导致菜单点击无反应。
 const SECTION_KEYS = [
   'home',
   'todos',
   'notes',
   'diary',
+  'messages',
   'countdowns',
   'pomodoro',
   'habits',
@@ -137,7 +141,7 @@ watch([activeSection, activeHealthTab], ([sec, tab]) => {
 // 分组只做归类，不改变设置里配置的相对顺序；未在分组表里的新菜单项落到「其它」，
 // 这样以后新增面板忘了登记分组也不会从侧栏消失。
 const MENU_GROUP_DEFS = [
-  { label: '日常', keys: ['home', 'todos', 'notes', 'diary', 'countdowns'] },
+  { label: '日常', keys: ['home', 'todos', 'notes', 'diary', 'messages', 'countdowns'] },
   { label: '专注', keys: ['pomodoro', 'habits', 'health'] },
   { label: '资产', keys: ['passwords', 'ledger', 'genealogy', 'trash'] }
 ] as const
@@ -191,6 +195,7 @@ const PANEL_BY_KEY: Record<SectionKey, Component> = {
   todos: WorkbenchTodo,
   notes: WorkbenchNotes,
   diary: WorkbenchDiary,
+  messages: WorkbenchMessages,
   countdowns: WorkbenchCountdown,
   pomodoro: WorkbenchPomodoro,
   habits: WorkbenchHabits,
@@ -297,7 +302,7 @@ function formatDate(d: Date): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
 }
 
-// 首屏初始化占位：onMounted 需并发加载 10 个 store，期间内容区全空、用户无从判断是否在加载。
+// 首屏初始化占位：onMounted 需并发加载 11 个 store，期间内容区全空、用户无从判断是否在加载。
 // 骨架屏让「在忙」可见，加载完成后切换为真实面板（加载逻辑本身不变）。
 const initializing = ref(true)
 
@@ -310,6 +315,7 @@ onMounted(async () => {
       todosStore.loadTodos(),
       notesStore.loadNotes(),
       diaryStore.loadDiary(),
+      messagesStore.loadMessages(),
       countdownsStore.loadCountdowns(),
       healthStore.loadHealth(),
       ledgerStore.loadLedger(),
@@ -373,29 +379,27 @@ async function handleSyncNowClick(): Promise<void> {
   }
 }
 
-// ===== 工作台切换入口（原顶栏已移除）=====
-// 触发器不占界面，入口只有 Alt+W（键盘监听在 WorkbenchSwitcher 内部）。
-// 设置弹窗里的「切换工作台」按钮与它的 `ewt:open-workbench-switcher` 桥接已删除，
-// 组件仍必须挂载：它提供下拉锚点与全局键盘监听，不能只留一个快捷键。
+// ===== 工作台切换入口 =====
+// 入口已移到左侧栏 `.wb-side-top` 搜索框上方（参考销售记账左上角按钮），
+// Alt+W 键盘监听仍在 WorkbenchSwitcher 内部；下拉由组件 Teleport 到 body，不受侧栏裁剪。
 </script>
 
 <template>
   <div class="wb-shell wb-scope">
-    <!-- 工作台切换：触发器收进视觉隐藏容器，入口只保留 Alt+W。
-         组件必须挂载：它提供下拉锚点与全局键盘监听，不能只留一个快捷键。 -->
-    <div class="wb-switcher-anchor" aria-hidden="true">
-      <WorkbenchSwitcher
-        :trigger-icon="settingsStore.workbenchPageIcon"
-        trigger-builtin="toolbox"
-        :trigger-label="settingsStore.workbenchPageDisplayName"
-        force-show
-      />
-    </div>
-
-    <!-- 主体：左 = 全量菜单（搜索置顶 / 分组导航 / 底部两枚按钮），右 = 内容区。无全局顶栏。 -->
+    <!-- 主体：左 = 全量菜单（页面切换 / 搜索 / 分组导航 / 底部两枚按钮），右 = 内容区。无全局顶栏。 -->
     <div class="wb-body">
       <nav ref="menuNavRef" class="wb-menu" :class="{ collapsed: sidebarCollapsed, open: mobileMenuOpen }">
         <div class="wb-side-top">
+          <!-- 侧栏第一项：切换其它页面。与销售记账左上角同款 WorkbenchSwitcher，
+               点击或 Alt+W 唤起下拉；组件自带全局键盘监听，必须保持挂载。 -->
+          <div class="wb-side-switch" data-testid="wb-page-switcher">
+            <WorkbenchSwitcher
+              :trigger-icon="settingsStore.workbenchPageIcon"
+              trigger-builtin="toolbox"
+              :trigger-label="settingsStore.workbenchPageDisplayName"
+              force-show
+            />
+          </div>
           <button class="wb-search" data-testid="wb-spotlight-open" title="全局搜索 (Alt+K)" @click="spotlightOpen = true; closeMobileMenu()">
             <span class="wb-search-ic"><Icon name="search" :size="14" /></span>
             <span class="wb-search-text">搜索全部…</span>
@@ -480,7 +484,7 @@ async function handleSyncNowClick(): Promise<void> {
             <h2 class="panel-page-title" data-testid="wb-page-title">{{ activePageTitle }}</h2>
             <p class="panel-page-sub" data-testid="wb-page-sub">{{ activePageDesc }}</p>
           </div>
-          <KeepAlive :max="12">
+          <KeepAlive :max="13">
             <component :is="activePanel" v-bind="activePanelBindings" />
           </KeepAlive>
         </template>
@@ -523,15 +527,32 @@ async function handleSyncNowClick(): Promise<void> {
   --wb-bottom-safe: 0px;
 }
 
-/* 工作台切换触发器：组件保留挂载（Alt+W + 下拉锚点），但不占界面 */
-.wb-switcher-anchor {
-  position: absolute;
-  width: 1px;
-  height: 1px;
+/* 侧栏第一项「切换其它页面」：复用 WorkbenchSwitcher（与销售记账左上角同一组件），
+   这里只在 .wb-side-switch 作用域内把它压成与搜索行同宽、同槽位的内嵌行，
+   不写第二套触发器外观；下拉仍由组件 Teleport 到 body。 */
+.wb-side-switch { margin-bottom: 6px; }
+.wb-side-switch :deep(.ws-root) { display: flex; width: 100%; }
+.wb-side-switch :deep(.ws-trigger) {
+  width: 100%;
+  height: 34px;
+  gap: 8px;
+  padding: 0 8px 0 10px;
+  border-color: transparent;
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-hover);
+  color: var(--color-text-secondary);
+  font-size: var(--fs-caption);
+}
+.wb-side-switch :deep(.ws-trigger:hover) {
+  background-color: var(--color-bg-card);
+  border-color: var(--color-primary);
+  color: var(--color-text);
+}
+.wb-side-switch :deep(.ws-trigger-label) {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
-  opacity: 0;
-  pointer-events: none;
-  clip-path: inset(50%);
+  text-overflow: ellipsis;
 }
 
 .wb-body {
@@ -553,8 +574,8 @@ async function handleSyncNowClick(): Promise<void> {
   transition: width 0.2s ease;
 }
 
-/* 顶部：搜索框是侧栏第一个元素（无品牌区）。
-   与下方菜单做成「一个整体」：去掉把两者切开的分隔线，搜索行改成浅底内嵌行
+/* 顶部：第一项是「切换其它页面」，紧随其下是搜索框（无品牌区）。
+   两行与下方菜单做成「一个整体」：去掉把两者切开的分隔线，都改成浅底内嵌行
    （无边框、8px 圆角、左右内边距与菜单项对齐同一 8px 槽），不再是浮在栏上方的一颗胶囊。 */
 .wb-side-top { flex: none; padding: 10px 8px 2px; }
 .wb-search {
@@ -623,6 +644,10 @@ async function handleSyncNowClick(): Promise<void> {
 /* 折叠态：60px 图标条；搜索收成圆形、分组标签变分隔线、底部按钮只留图标 */
 .wb-menu.collapsed { width: var(--wb-sidebar-w-collapsed); }
 .wb-menu.collapsed .wb-side-top { padding: 8px; }
+.wb-menu.collapsed .wb-side-switch { margin-bottom: 4px; }
+.wb-menu.collapsed .wb-side-switch :deep(.ws-trigger) { height: 32px; padding: 0; justify-content: center; }
+.wb-menu.collapsed .wb-side-switch :deep(.ws-trigger-label),
+.wb-menu.collapsed .wb-side-switch :deep(.ws-trigger-caret) { display: none; }
 .wb-menu.collapsed .wb-search { height: 32px; padding: 0; justify-content: center; }
 .wb-menu.collapsed .wb-search-text, .wb-menu.collapsed .wb-search-kbd { display: none; }
 .wb-menu.collapsed .wb-side-nav { padding: 8px 6px; }
@@ -721,6 +746,8 @@ html.dark .wb-search, html.dark .wb-side-btn {
   color: var(--color-text-secondary);
 }
 html.dark .wb-search-kbd { background-color: var(--color-bg-card, #1f2937); border-color: var(--color-border, #374151); }
+html.dark .wb-side-switch :deep(.ws-trigger) { border-color: var(--color-border); }
+html.dark .wb-side-switch :deep(.ws-trigger:hover) { border-color: var(--color-primary); }
 html.dark .wb-side-btn:hover { background-color: var(--color-bg-hover, #374151); color: var(--color-text); }
 html.dark .wb-group-label { color: var(--color-text-muted, #94a3b8); }
 html.dark .wb-group-collapse { color: var(--color-text-muted, #94a3b8); }
@@ -796,6 +823,10 @@ html.dark .wb-content {
   .wb-menu.collapsed { width: min(264px, 82%); }
   .wb-menu.collapsed .wb-search { height: 34px; padding: 0 8px 0 10px; justify-content: flex-start; }
   .wb-menu.collapsed .wb-search-text, .wb-menu.collapsed .wb-search-kbd { display: inline; }
+  /* 抽屉里忽略桌面折叠态：切换入口恢复完整文字行 */
+  .wb-menu.collapsed .wb-side-switch :deep(.ws-trigger) { height: 34px; padding: 0 8px 0 10px; justify-content: flex-start; }
+  .wb-menu.collapsed .wb-side-switch :deep(.ws-trigger-label),
+  .wb-menu.collapsed .wb-side-switch :deep(.ws-trigger-caret) { display: inline; }
   .wb-menu.collapsed .wb-group-label { font-size: calc(var(--fs-caption) - 1px); padding: 8px 10px 2px; margin: 0; border-top: 0; }
   .wb-menu.collapsed .wb-group-label.is-first { min-height: 0; }
   .wb-menu.collapsed .wb-group-label-text { display: inline; }

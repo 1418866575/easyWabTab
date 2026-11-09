@@ -1,13 +1,14 @@
-// 工作台菜单纯逻辑模块：12 项菜单（home 恒居首位）的顺序归一化 / 上移下移 / 改名 / 解析渲染。
+// 工作台菜单纯逻辑模块：13 项菜单（home 恒居首位）的顺序归一化 / 上移下移 / 改名 / 解析渲染。
 // 零 vue/pinia 运行时依赖（node --experimental-strip-types 可运行），无 DOM，纯函数。
 // 默认名称即菜单显示文案（逐字由 scripts/test-workbench-menu-core.ts 断言，改默认值须同步更新该测试）。
 
-/** 菜单键集合（顺序即默认展示顺序）。 */
+/** 菜单键集合（顺序即默认展示顺序）。留言板紧跟日记，落在「日常」分组。 */
 export const WORKBENCH_MENU_KEYS: readonly string[] = [
   'home',
   'todos',
   'notes',
   'diary',
+  'messages',
   'countdowns',
   'pomodoro',
   'habits',
@@ -27,6 +28,7 @@ export const MENU_DEFAULT_LABELS: Record<string, string> = {
   todos: '待办',
   notes: '便签',
   diary: '日记',
+  messages: '留言板',
   countdowns: '提醒',
   pomodoro: '番茄钟',
   habits: '打卡',
@@ -46,6 +48,7 @@ export const MENU_DESCRIPTIONS: Record<string, string> = {
   todos: '按优先级与截止时间管理待办，支持状态筛选与批量操作。',
   notes: '速记便签，支持分类、置顶与 Markdown 正文。',
   diary: '按天记录的日记，支持心情、天气与全文搜索。',
+  messages: '给自己留一句话：随手记下心情、提醒与想法，卡片式浏览。',
   countdowns: '重要日期提醒，临近到期会在首页聚合成「即将到来」。',
   pomodoro: '番茄工作法计时：专注与休息循环，记录每日完成数。',
   habits: '每日习惯打卡，日历视图查看连续天数与完成率。',
@@ -62,6 +65,7 @@ export const MENU_ICONS: Record<string, string> = {
   todos: 'todos',
   notes: 'notes',
   diary: 'diary',
+  messages: 'message',
   countdowns: 'countdowns',
   pomodoro: 'pomodoro',
   habits: 'habits',
@@ -115,7 +119,7 @@ export function normalizeWorkbenchMenuVisibility(visibility?: unknown): Workbenc
 /**
  * 归一化菜单顺序与名称（幂等）：
  * order → 仅保留已知键、去重（首次出现优先）、home 强制 index 0（缺失则前插、后置则前移）、
- *         缺失已知键按默认序补全 → 恒 11 项；
+ *         缺失已知键按默认序补全 → 恒 13 项；
  * labels → 仅保留已知键、trim、去空、截断 12 code point。
  * 非数组 / 非对象输入按缺省处理（兜底默认）。
  */

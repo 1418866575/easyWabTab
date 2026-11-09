@@ -526,7 +526,7 @@ import { DIALOG_BTN } from '@/config/dialogText'
 | **网格/列表布局容器**      | `.ewt-card-grid`                             | 只有 `align-content`，**无表面**                                    | ❌ 不是卡片            |
 | **工具箱卡片**          | `.tu-card`（含 `-title`/`-value`）              | toolbox 独立体系                                                  | ❌ 见 §4.1 边界       |
 
-> **个人工作台已收口；销售台同源**：12 个（个人）/ 8 个（销售）面板原先各抄一份 `.stat-card` 与各自的**
+> **个人工作台已收口；销售台同源**：13 个（个人，含留言板）/ 8 个（销售）面板原先各抄一份 `.stat-card` 与各自的**
 > **`*-card`，同一段 CSS 逐字节复制多份。现统一到 `src/styles/workbench.css`，作用域标记为 `.panel-scope`
 > （`<main class="wb-content panel-scope">` / `<main class="bs-content panel-scope">`）。
 > 面板内**不要**再新增 `.stat-card` / `.stat-header` / `.stat-label` / `.stat-value` 的 scoped 副本

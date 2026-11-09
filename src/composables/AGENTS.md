@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-60 composable files for reusable business logic. One (`presetIcons.ts`) is auto-generated at build time. Includes the `student*Core.ts` pure-logic family (15 files, one per student store; diary reuses `diaryCore`) plus infra singletons `useCloudSync`/`useSnapshots`/`useHomeLayout`/`useHomeStats`/`useWeather`/`useBackup`/`useDeadLinkChecker`.
+61 composable files for reusable business logic（新增 `messageBoardCore.ts` 留言板纯逻辑）. One (`presetIcons.ts`) is auto-generated at build time. Includes the `student*Core.ts` pure-logic family (15 files, one per student store; diary reuses `diaryCore`) plus infra singletons `useCloudSync`/`useSnapshots`/`useHomeLayout`/`useHomeStats`/`useWeather`/`useBackup`/`useDeadLinkChecker`.
 
 ## STRUCTURE
 

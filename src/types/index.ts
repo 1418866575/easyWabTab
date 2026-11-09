@@ -284,6 +284,29 @@ export interface DiaryData {
   entries: WorkbenchDiary[]
 }
 
+// ===== 个人工作台 · 留言板（给自己留言，卡片式展示）=====
+/**
+ * 卡片色调：内置语义键（旧数据，配色走 CSS token）或取色器选出的 `#RRGGBB`（新数据，
+ * 由 CSS color-mix 派生背景/边框，暗色同样跟随）。非法值一律归一为 `default`。
+ */
+export type MessageColor = string
+
+/** 一条留言。删除走墓碑（SyncStamp），随 workbench.json / 飞书表同步到其他设备。 */
+export interface MessageBoardMessage extends SyncStamp {
+  id: string // 'mb_' 前缀
+  title?: string // 可选标题（≤40 字）
+  content: string // 正文（必填，保留换行）
+  color: MessageColor
+  pinned: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+/** 留言板数据（IDB store 'messages' 单对象） */
+export interface MessageBoardData {
+  messages: MessageBoardMessage[]
+}
+
 // 工作台主页单张卡片的自定义布局（三项均可选：缺失 = 用组件默认）
 export interface HomeCardLayout {
   w?: number // 列跨度（1 = 占 1 列；上限由所属网格列数决定）
@@ -393,6 +416,7 @@ export interface WorkbenchData {
   todos: WorkbenchTodo[]
   notes: NoteData
   diary: DiaryData
+  messages?: MessageBoardData // 留言板（可选：v1-v9 旧备份缺该字段时保留本机数据，不清空）
   countdowns: Countdown[]
   passwords: string // 整库加密 blob 字符串（useCrypto 现有格式）
   health: HealthData
@@ -1637,6 +1661,7 @@ export interface WorkbenchSyncData {
   todos: WorkbenchTodo[]
   notes: NoteData
   diary: DiaryData
+  messages?: MessageBoardData // 留言板（可选：旧信封缺该字段时回退本机，避免自动拉取清空）
   countdowns: Countdown[]
   passwords: string
   health: HealthData

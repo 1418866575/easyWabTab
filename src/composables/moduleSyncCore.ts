@@ -47,6 +47,7 @@ const WORKBENCH_STORES = [
   'todos',
   'notes',
   'diary',
+  'messages',
   'countdowns',
   'passwords',
   'health',
