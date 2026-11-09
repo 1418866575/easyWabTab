@@ -185,6 +185,7 @@ try {
     ['todos', '待办'],
     ['notes', '便签'],
     ['diary', '日记'],
+    ['messages', '留言板'],
     ['countdowns', '提醒'],
     ['habits', '打卡'],
     ['ledger', '记账'],

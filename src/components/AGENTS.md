@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-24 Vue 3 SFCs in the root plus 20 workbench + 22 student + 8 business SFCs (学生 15 面板已 Element Plus 全统一、4 手写保留) under `workbench/`/`student/`/`business/`, all using `<script setup lang="ts">` with scoped CSS, CSS custom properties, and class-based dark mode.
+24 Vue 3 SFCs in the root plus 21 workbench（含留言板 `WorkbenchMessages.vue`）+ 22 student + 8 business SFCs (学生 15 面板已 Element Plus 全统一、4 手写保留) under `workbench/`/`student/`/`business/`, all using `<script setup lang="ts">` with scoped CSS, CSS custom properties, and class-based dark mode.
 
 ## STRUCTURE
 

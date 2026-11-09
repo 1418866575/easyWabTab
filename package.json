@@ -37,6 +37,7 @@
     "test:blog-typo": "node --experimental-strip-types scripts/test-blog-typo.ts",
     "test:books": "node --experimental-strip-types scripts/test-books-core.ts",
     "test:menu": "node --experimental-strip-types scripts/test-workbench-menu-core.ts",
+    "test:messages": "node --experimental-strip-types scripts/test-message-board-core.ts",
     "test:spotlight": "node --experimental-strip-types scripts/test-spotlight-core.ts",
     "test:snapshot": "node --experimental-strip-types scripts/test-snapshot-core.ts",
     "test:pomodoro": "node --experimental-strip-types scripts/test-pomodoro-core.ts",

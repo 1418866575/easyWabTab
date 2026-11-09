@@ -7,10 +7,11 @@
  * 所有请求失败均 reject，由调用方自行 try/catch 降级（不做 localStorage 回退写）
  */
 import { WORKBENCH_DATA_VERSION, emptyAppSettingsData } from '../types'
-import type { AppSettingsData, AppSettingsDataNoCloudSync, BlogData, BlogSyncData, BlogFrontPrefs, BlogFrontSyncData, BusinessData, BusinessStoreData, BusinessSyncData, Countdown, DiaryData, GenealogyData, HealthData, IconsSyncData, LedgerData, LedgerStoreData, NavSyncData, NoteData, SmartSyncData, StudentSyncData, TeacherSyncData, WorkbenchData, WorkbenchSyncData, WorkbenchTodo } from '../types'
+import type { AppSettingsData, AppSettingsDataNoCloudSync, BlogData, BlogSyncData, BlogFrontPrefs, BlogFrontSyncData, BusinessData, BusinessStoreData, BusinessSyncData, Countdown, DiaryData, GenealogyData, HealthData, IconsSyncData, LedgerData, LedgerStoreData, MessageBoardData, NavSyncData, NoteData, SmartSyncData, StudentSyncData, TeacherSyncData, WorkbenchData, WorkbenchSyncData, WorkbenchTodo } from '../types'
 import { adoptPasswordIdentity, getStoredSaltHex, getStoredVerification } from './useCrypto'
 import { normalizeBusinessStore } from './businessCore.ts'
 import { emptyDiaryData } from './diaryCore'
+import { emptyMessageData, normalizeMessageData } from './messageBoardCore.ts'
 import { emptyGenealogyData } from './genealogyCore'
 import { emptyHabitsData } from './habitCore'
 import { emptyHealthData } from './healthCore'
@@ -28,9 +29,15 @@ export const DB_NAME = 'easy-web-tab'
 /** v21：新增 `iconcache` store（图标缓存移出 nav）；nav 同时改为按 key 多记录存储（见 idbPutKey） */
 /** v22：新增 `blog` store（博客后台单对象：settings + categories + tags + articles），随 blog.json 信封同步 */
 /** v23：新增 `books` store（浏览器端上传的 HTML 书架；与 public/bookdata 静态书是两套数据，互不影响） */
-export const DB_VERSION = 23
-/** 核心 9 store：随 JSON 备份导出/导入（v6 新增 business；v15 新增 family 家谱） */
-export const IDB_CORE_STORES = ['todos', 'notes', 'diary', 'countdowns', 'passwords', 'health', 'ledger', 'settings', 'business', 'family'] as const
+/**
+ * v25：新增 `messages` store（个人工作台留言板）。
+ * 刻意跳过 v24：废弃分支 20261013-cloudsync-opt 曾用过 v24 且 store 集合不同，
+ * 若这里也用 24，同域名下跑过该分支的浏览器会以「版本相同」直接打开却缺 store，
+ * 绕过 openIdb 的 VersionError 兜底。跳到 25 会触发 onupgradeneeded 幂等补建，数据完整保留。
+ */
+export const DB_VERSION = 25
+/** 核心 store：随 JSON 备份导出/导入（v6 新增 business；v15 新增 family 家谱；v25 新增 messages 留言板） */
+export const IDB_CORE_STORES = ['todos', 'notes', 'diary', 'messages', 'countdowns', 'passwords', 'health', 'ledger', 'settings', 'business', 'family'] as const
 /** 辅助 store：pomodoro/habits 随 v5 备份导出/导入；snapshots 仅本地使用，不参与备份 */
 export const IDB_AUX_STORES = ['pomodoro', 'habits', 'snapshots'] as const
 /** 自定义图标 store（v11 新增：原 localStorage 容量仅 ~5MB 易抛 QuotaExceededError，迁移至 IDB 获 50MB+ 容量） */
@@ -470,10 +477,11 @@ export async function applyPrefsToIdb(prefs: Record<string, string> | undefined)
 }
 
 export async function idbExportAll(): Promise<WorkbenchData> {
-  const [todos, notes, diary, countdowns, passwords, health, ledger, settings, pomodoro, habits, business, family] = await Promise.all([
+  const [todos, notes, diary, messages, countdowns, passwords, health, ledger, settings, pomodoro, habits, business, family] = await Promise.all([
     idbGet<WorkbenchTodo[]>('todos'),
     idbGet<NoteData>('notes'),
     idbGet<DiaryData>('diary'),
+    idbGet<MessageBoardData>('messages'),
     idbGet<Countdown[]>('countdowns'),
     idbGet<string>('passwords'),
     idbGet<HealthData>('health'),
@@ -490,6 +498,7 @@ export async function idbExportAll(): Promise<WorkbenchData> {
     todos: todos ?? [],
     notes: notes ?? emptyNoteData(),
     diary: diary ?? emptyDiaryData(),
+    messages: normalizeMessageData(messages ?? emptyMessageData()),
     countdowns: countdowns ?? [],
     passwords: passwords ?? '',
     health: health ?? emptyHealthData(),
@@ -551,6 +560,9 @@ export async function idbImportAll(data: WorkbenchData): Promise<{ adoptedPasswo
   // diary 兼容 v1-v5 备份（无该字段 → empty 兜底）；v6 备份原样透传。
   // 兜底同样放在写入循环之前 → 键存在性守卫对 diary 恒有键可写（v1-v5 导入后日记为空）
   data = { ...data, diary: data.diary ?? emptyDiaryData() }
+  // 留言板（v25 新增 store）：旧备份没有该字段时**不写入**该 store，保留本机留言；
+  // 只有备份明确携带 messages 才归一后覆盖，避免「恢复旧备份」静默清空较新的留言。
+  if (data.messages !== undefined) data = { ...data, messages: normalizeMessageData(data.messages) }
   // business 兼容 v1-v7 备份（无该字段 → 空账本容器兜底）；v8+ 原样归一（含内置种子分类契约）。
   // 统一走 normalizeBusinessStore：扁平 BusinessData（账本化之前的备份）迁入当年账本，历史数据不丢。
   data = { ...data, business: normalizeBusinessStore(data.business) }
@@ -738,6 +750,7 @@ export async function exportWorkbench(): Promise<WorkbenchSyncData> {
     todos: full.todos,
     notes: full.notes,
     diary: full.diary,
+    messages: full.messages,
     countdowns: full.countdowns,
     passwords: full.passwords,
     health: full.health,
@@ -762,12 +775,13 @@ export async function importWorkbenchData(remote: WorkbenchSyncData): Promise<{ 
   // 用它兜底保留本地家谱，避免每次自动拉取把本地数据静默清空
   // localLedger：记账多账本容器。远端信封若无 ledger 字段（旧版/尚未推送）必须回退本地，
   // 否则后台自动拉取会把本地全部账本静默清空（同 diary.journals / family 陷阱）
-  const [localSettings, localBusiness, localFamily, localDiary, localLedger] = await Promise.all([
+  const [localSettings, localBusiness, localFamily, localDiary, localLedger, localMessages] = await Promise.all([
     idbGet<AppSettingsData>('settings'),
     idbGet<BusinessStoreData | BusinessData>('business'),
     idbGet<GenealogyData>('family'),
     idbGet<DiaryData>('diary'),
-    idbGet<LedgerStoreData | LedgerData>('ledger')
+    idbGet<LedgerStoreData | LedgerData>('ledger'),
+    idbGet<MessageBoardData>('messages')
   ])
 
   // 合并：remote.settings（含同步偏好 cloudSyncInterval/cloudSyncSilentThreshold）+ 本机 cloudSync 凭证/开关 4 字段
@@ -789,6 +803,8 @@ export async function importWorkbenchData(remote: WorkbenchSyncData): Promise<{ 
       journals: remote.diary?.journals ?? localDiary?.journals ?? [],
       entries: remote.diary?.entries ?? []
     },
+    // 留言板：远端信封尚无该字段（旧版/尚未推送）时回退本机，避免后台自动拉取把留言清空
+    messages: normalizeMessageData(remote.messages ?? localMessages ?? emptyMessageData()),
     countdowns: remote.countdowns ?? [],
     passwords: remote.passwords ?? '',
     health: remote.health ?? emptyHealthData(),

@@ -4,7 +4,7 @@
  * 多份独立信封：nav.json / icons.json / workbench.json / business.json / student.json / teacher.json / toolbox.json / smart.json / blog.json / blog-prefs.json / books.json
  *   - nav.json：导航偏好（存 IDB nav store；user-sites/categories/engines/theme/background 等）
  *   - icons.json：自定义图标（localStorage user-custom-icons）
- *   - workbench.json：工作台核心 9 store（不含 business；settings 不含 cloudSync* 5 字段）
+ *   - workbench.json：工作台核心 10 store（含留言板 messages；不含 business；settings 不含 cloudSync* 5 字段）
  *   - business.json：销售记账独立信封
  *   - student.json：学生工作台 15 store 独立信封
  *   - teacher.json：教师工作台单对象（teacher_workbench；含 base64 图片，体积偏大）
@@ -65,6 +65,7 @@ import { toastAlert } from '@/utils/dialog'
 import { useToast } from './useToast'
 import { getStoredSaltHex, getStoredVerification } from './useCrypto'
 import { mergeFamily } from './genealogyCore'
+import { mergeMessages } from './messageBoardCore.ts'
 import { compareStamp } from './tombstoneCore'
 import { mergeNoteStatus } from './noteMergeCore'
 import { compareSmartStamp, type SmartStamp } from './smartCore'
@@ -542,7 +543,7 @@ function totalDiffSize(local: unknown, remote: unknown): number {
 
 /** workbench 字段级差异量（保留原 moduleDiffSize 行为，移除 business 字段） */
 function workbenchDiffSize(local: WorkbenchSyncData, remote: WorkbenchSyncData): number {
-  const keys: Array<keyof WorkbenchSyncData> = ['todos', 'notes', 'diary', 'countdowns', 'passwords', 'health', 'ledger', 'settings', 'pomodoro', 'habits', 'prefs']
+  const keys: Array<keyof WorkbenchSyncData> = ['todos', 'notes', 'diary', 'messages', 'countdowns', 'passwords', 'health', 'ledger', 'settings', 'pomodoro', 'habits', 'prefs']
   let total = 0
   for (const k of keys) {
     const lv = local[k]
@@ -1064,6 +1065,7 @@ function mergeWorkbench(local: WorkbenchSyncData, remote: WorkbenchSyncData): Wo
     todos: mergeTodos(local.todos, remote.todos),
     notes: mergeNotes(local.notes, remote.notes),
     diary: mergeDiary(local.diary, remote.diary),
+    messages: mergeMessages(local.messages, remote.messages),
     countdowns: mergeCountdowns(local.countdowns, remote.countdowns),
     // 密码整体取云端（永不拆分、永不并集），原因详见注释
     passwords: remote.passwords ?? local.passwords,
@@ -1319,10 +1321,11 @@ async function reloadWorkbenchStores(): Promise<void> {
   // 惰性导入避免循环依赖（各 store 在 WorkbenchView 里已 import，此处用动态导入走 onMounted init）
   // 例外：settings store 走**静态导入**——它已被 20+ 处组件静态引入，动态 import 不会把它移出主 chunk，
   // 反而触发 INEFFECTIVE_DYNAMIC_IMPORT 警告（同一模块被静态+动态混合引入时的标准告警）。
-  const [{ useWorkbenchTodosStore }, { useWorkbenchNotesStore }, { useWorkbenchDiaryStore }, { useCountdownsStore }, { useWorkbenchHealthStore }, { useWorkbenchLedgerStore }, { useWorkbenchPomodoroStore }, { useWorkbenchHabitsStore }, { useGenealogyStore }] = await Promise.all([
+  const [{ useWorkbenchTodosStore }, { useWorkbenchNotesStore }, { useWorkbenchDiaryStore }, { useWorkbenchMessagesStore }, { useCountdownsStore }, { useWorkbenchHealthStore }, { useWorkbenchLedgerStore }, { useWorkbenchPomodoroStore }, { useWorkbenchHabitsStore }, { useGenealogyStore }] = await Promise.all([
     import('../stores/workbenchTodos'),
     import('../stores/workbenchNotes'),
     import('../stores/workbenchDiary'),
+    import('../stores/workbenchMessages'),
     import('../stores/countdowns'),
     import('../stores/workbenchHealth'),
     import('../stores/workbenchLedger'),
@@ -1334,6 +1337,7 @@ async function reloadWorkbenchStores(): Promise<void> {
     useWorkbenchTodosStore().loadTodos(),
     useWorkbenchNotesStore().loadNotes(),
     useWorkbenchDiaryStore().loadDiary(),
+    useWorkbenchMessagesStore().loadMessages(),
     useCountdownsStore().loadCountdowns(),
     useWorkbenchHealthStore().loadHealth(),
     useWorkbenchLedgerStore().loadLedger(),
@@ -1931,11 +1935,12 @@ export async function forcePushLocal(silent = false): Promise<boolean> {
  * @returns 各模块合计清除的条数
  */
 async function runTombstoneGc(silent = false): Promise<number> {
-  const [{ useWorkbenchTodosStore }, { useWorkbenchNotesStore }, { useWorkbenchLedgerStore }, { useWorkbenchDiaryStore }, { useGenealogyStore }, { useBlogStore }, { useSmartStore }] = await Promise.all([
+  const [{ useWorkbenchTodosStore }, { useWorkbenchNotesStore }, { useWorkbenchLedgerStore }, { useWorkbenchDiaryStore }, { useWorkbenchMessagesStore }, { useGenealogyStore }, { useBlogStore }, { useSmartStore }] = await Promise.all([
     import('../stores/workbenchTodos'),
     import('../stores/workbenchNotes'),
     import('../stores/workbenchLedger'),
     import('../stores/workbenchDiary'),
+    import('../stores/workbenchMessages'),
     import('../stores/genealogy'),
     // 博客的「彻底删除」同样以墓碑形式随 blog.json 上云（见 blogStore.purgeArticle），
     // 到期由 gcPurgedArticles 清理
@@ -1948,6 +1953,7 @@ async function runTombstoneGc(silent = false): Promise<number> {
     useWorkbenchNotesStore(),
     useWorkbenchLedgerStore(),
     useWorkbenchDiaryStore(),
+    useWorkbenchMessagesStore(),
     useGenealogyStore()
   ]
   let total = 0

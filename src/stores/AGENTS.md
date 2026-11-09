@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-31 Pinia stores managing all application state. 16 workbench/business stores (`sites.ts` is the god store with highest centrality) + 15 student stores (`studentXxx.ts`, thin-delegates over `student*Core` pure functions).
+32 Pinia stores managing all application state. 17 workbench/business stores（含 `workbenchMessages.ts` 留言板） (`sites.ts` is the god store with highest centrality) + 15 student stores (`studentXxx.ts`, thin-delegates over `student*Core` pure functions).
 
 ## STRUCTURE
 

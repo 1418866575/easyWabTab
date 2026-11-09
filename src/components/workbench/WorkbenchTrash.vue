@@ -2,7 +2,7 @@
 /**
  * 工作台统一「回收站」面板
  *
- * 背景：各模块（待办 / 便签 / 日记 / 记账 / 家谱）此前各自挂一个「回收站」按钮 +
+ * 背景：各模块（待办 / 便签 / 日记 / 留言板 / 记账 / 家谱）此前各自挂一个「回收站」按钮 +
  * RecordTrash 弹框，入口分散、要逐个点开才知道哪里有东西。现在统一收到本面板：
  *   - 一个入口看全所有被删记录，并按模块分区（分区标题即「所属模块」）；
  *   - 每个分区复用 RecordTrash，保持与原有回收站完全一致的视觉与交互
@@ -18,8 +18,10 @@ import { showConfirm, toastAlert } from '@/utils/dialog'
 import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
 import { useWorkbenchDiaryStore } from '@/stores/workbenchDiary'
+import { useWorkbenchMessagesStore } from '@/stores/workbenchMessages'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import { useGenealogyStore } from '@/stores/genealogy'
+import { messageLabel } from '@/composables/messageBoardCore'
 import type {
   WorkbenchTodo,
   WorkbenchNote,
@@ -32,6 +34,7 @@ import type {
 const todos = useWorkbenchTodosStore()
 const notes = useWorkbenchNotesStore()
 const diary = useWorkbenchDiaryStore()
+const messages = useWorkbenchMessagesStore()
 const ledger = useWorkbenchLedgerStore()
 const genealogy = useGenealogyStore()
 
@@ -41,19 +44,21 @@ const totalCount = computed(
     todos.trashedTodos.length +
     notes.trashedNotes.length +
     diary.trashedEntries.length +
+    messages.trashedMessages.length +
     ledger.trashedEntries.length +
     genealogy.trashedMembers.length +
     genealogy.trashedNames.length
 )
 
 // ===== 按类型筛选（只控制分区显示，不改数据；默认 all 全显，兼容 QA 默认态）=====
-type TrashType = 'all' | 'todos' | 'notes' | 'diary' | 'ledger' | 'members' | 'names'
+type TrashType = 'all' | 'todos' | 'notes' | 'diary' | 'messages' | 'ledger' | 'members' | 'names'
 const typeFilter = ref<TrashType>('all')
 const TYPE_OPTIONS: { value: TrashType; label: string }[] = [
   { value: 'all', label: '全部类型' },
   { value: 'todos', label: '待办' },
   { value: 'notes', label: '便签' },
   { value: 'diary', label: '日记' },
+  { value: 'messages', label: '留言板' },
   { value: 'ledger', label: '记账' },
   { value: 'members', label: '家谱 · 成员' },
   { value: 'names', label: '家谱 · 取名记录' }
@@ -69,6 +74,7 @@ const visibleSectionCount = computed(() => {
     has('todos', todos.trashedTodos),
     has('notes', notes.trashedNotes),
     has('diary', diary.trashedEntries),
+    has('messages', messages.trashedMessages),
     has('ledger', ledger.trashedEntries),
     has('members', genealogy.trashedMembers),
     has('names', genealogy.trashedNames)
@@ -82,6 +88,7 @@ async function purgeEveryItem(): Promise<void> {
   for (const t of [...todos.trashedTodos]) await todos.purgeTodo(t.id)
   for (const n of [...notes.trashedNotes]) await notes.purgeNote(n.id)
   for (const e of [...diary.trashedEntries]) await diary.deleteEntry(e.id)
+  for (const m of [...messages.trashedMessages]) await messages.purgeMessage(m.id)
   for (const le of [...ledger.trashedEntries]) await ledger.purgeEntry(le.id)
   for (const m of [...genealogy.trashedMembers]) await genealogy.purgeMember(m.id)
   for (const n of [...genealogy.trashedNames]) await genealogy.purgeNameRecord(n.id)
@@ -139,6 +146,20 @@ async function purgeDiary(id: string): Promise<void> {
 async function clearDiary(): Promise<void> {
   for (const e of [...diary.trashedEntries]) await diary.deleteEntry(e.id)
   toastAlert('日记回收站已清空', 'success')
+}
+
+// ===== 留言板 =====
+async function restoreMessage(id: string): Promise<void> {
+  await messages.restoreMessage(id)
+  toastAlert('已恢复到留言板', 'success')
+}
+async function purgeMessage(id: string): Promise<void> {
+  await messages.purgeMessage(id)
+  toastAlert('已彻底删除', 'success')
+}
+async function clearMessages(): Promise<void> {
+  for (const m of [...messages.trashedMessages]) await messages.purgeMessage(m.id)
+  toastAlert('留言板回收站已清空', 'success')
 }
 
 // ===== 记账 =====
@@ -214,7 +235,7 @@ function ledgerLabel(e: LedgerEntry): string {
     </div>
 
     <div v-if="totalCount === 0" class="tr-empty" data-testid="trash-global-empty">
-      回收站是空的。删除待办、便签、日记、记账流水或家谱成员后，会出现在这里以便恢复。
+      回收站是空的。删除待办、便签、日记、留言、记账流水或家谱成员后，会出现在这里以便恢复。
     </div>
 
     <template v-else>
@@ -257,6 +278,20 @@ function ledgerLabel(e: LedgerEntry): string {
           @restore="restoreDiary"
           @purge="purgeDiary"
           @clear="clearDiary"
+        />
+      </section>
+
+      <!-- 留言板 -->
+      <section v-if="showSection('messages') && messages.trashedMessages.length > 0" class="tr-sec" data-testid="trash-section-messages">
+        <h3 class="tr-sec-title">留言板</h3>
+        <RecordTrash
+          :items="messages.trashedMessages"
+          :get-label="messageLabel"
+          empty-text="没有已删除的留言"
+          hint="这里是被删除的留言。"
+          @restore="restoreMessage"
+          @purge="purgeMessage"
+          @clear="clearMessages"
         />
       </section>
 

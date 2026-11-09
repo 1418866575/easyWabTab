@@ -14,7 +14,7 @@
  *  S1 桌面 1440x900：每个面板滚到底，无元素被 FAB 遮挡
  *  S2 移动 390x844：每个面板滚到底，无元素被 FAB 遮挡
  *  S3 移动 390x844：每个面板滚到底，无元素被侧栏抽屉遮挡
- *  S4 侧栏默认收起 / 可唤出 / 内含 12 项菜单与「云同步 + 设置」两枚底部按钮
+ *  S4 侧栏默认收起 / 可唤出 / 内含 13 项菜单与「云同步 + 设置」两枚底部按钮
  *
  * 用法：node scripts/qa-workbench-mobile-overlap.mjs
  *      VERBOSE=1 打印每条遮挡明细
@@ -29,12 +29,13 @@ import { chromium } from 'playwright'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
-// 12 个面板（与 WorkbenchView SECTION_KEYS 一致）
+// 13 个面板（与 WorkbenchView SECTION_KEYS 一致）
 const SECTIONS = [
   ['home', '首页'],
   ['todos', '待办'],
   ['notes', '便签'],
   ['diary', '日记'],
+  ['messages', '留言板'],
   ['countdowns', '倒计时'],
   ['pomodoro', '番茄钟'],
   ['habits', '习惯'],
@@ -322,7 +323,15 @@ try {
   check('S4a 移动端侧栏默认收起（无底部 Tab Bar）', drawerCheck.ok,
     `right=${drawerCheck.right} appLeft=${drawerCheck.left} ${drawerCheck.why || ''}`)
   await mob.locator('[data-testid="wb-menu-trigger"]').click()
-  await mob.waitForTimeout(280)
+  // 抽屉有 220ms transform 动画，固定 sleep 会偶发读到动画中间帧（S4b 历史偶发失败）→ 轮询等真正展开
+  await mob.waitForFunction(() => {
+    const bar = document.querySelector('.wb-menu')
+    const app = document.querySelector('.wb-body') || document.querySelector('.wb-shell')
+    if (!bar || !app) return false
+    const r = bar.getBoundingClientRect()
+    const a = app.getBoundingClientRect()
+    return r.left >= a.left - 1 && r.width > 200
+  }, null, { timeout: 5000 }).catch(() => {})
   const drawerOpen = await mob.evaluate(() => {
     const bar = document.querySelector('.wb-menu')
     const app = document.querySelector('.wb-body') || document.querySelector('.wb-shell')
@@ -336,7 +345,7 @@ try {
       scrim: !!document.querySelector('[data-testid="wb-menu-scrim"]')
     }
   })
-  check('S4b 抽屉可唤出且含 12 项菜单 + 遮罩', drawerOpen.opened && drawerOpen.items === 12 && drawerOpen.scrim,
+  check('S4b 抽屉可唤出且含 13 项菜单 + 遮罩', drawerOpen.opened && drawerOpen.items === 13 && drawerOpen.scrim,
     `items=${drawerOpen.items} scrim=${drawerOpen.scrim}`)
   check('S4c 抽屉底部只有云同步 + 设置', drawerOpen.footBtns === 'wb-sync-now,wb-settings', drawerOpen.footBtns)
   await mob.locator('[data-testid="wb-menu-scrim"]').click({ position: { x: 300, y: 400 } })
