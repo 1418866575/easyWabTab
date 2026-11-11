@@ -305,7 +305,7 @@ const hasAnyFilter = computed(
 )
 
 const filterCountText = computed(() => {
-  // 前 N 个固定入口卡已并入分页池，计数需一并计入；其余恒显入口卡（/smart /blog/admin）不计入
+  // 全部可见入口卡已并入分页池（数量随工作台开关动态变化），计数需一并计入
   const mergedFixed = store.mergedFixedSites.length
   const shown = mergedFixed + store.regularSites.length
   const total = mergedFixed + store.regularTotal
