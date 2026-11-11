@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>折叠面板</title>
+<style>
+:root{--brand:#2F5BEA;--ink:#1B2330;--muted:#6B7686;--line:#E3E7EE;--soft:#F5F7FB}
+*{box-sizing:border-box}
+body{margin:0;padding:20px 24px 24px;background:#fff;color:var(--ink);font:14px/1.6 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+h3{margin:0 0 14px;font-size:16px}
+.acc{max-width:440px;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.row+.row{border-top:1px solid var(--line)}
+.head{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:#fff;border:0;font:inherit;font-size:13.5px;font-weight:600;color:var(--ink);cursor:pointer;text-align:left}
+.head:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
+.plus{flex:0 0 auto;font-size:18px;font-weight:400;color:var(--brand);transition:transform .2s}
+.head[aria-expanded=true] .plus{transform:rotate(45deg)}
+.body{max-height:0;overflow:hidden;transition:max-height .2s ease;background:var(--soft)}
+.body p{margin:0;padding:0 16px 16px;color:var(--muted);font-size:12.5px;line-height:1.8}
+@media (prefers-reduced-motion:reduce){.body,.plus{transition:none}}
+</style></head><body>
+<h3>常见问题</h3>
+<div class="acc">
+<div class="row"><button class="head" type="button" aria-expanded="false" aria-controls="b1">怎么开始写第一个页面<span class="plus" aria-hidden="true">+</span></button><div class="body" id="b1"><p>先让 AI 生成一个只有结构和内容的单文件 HTML，用浏览器打开确认结构没问题，再分几次追加样式和交互。一次只加一件事。</p></div></div>
+<div class="row"><button class="head" type="button" aria-expanded="false" aria-controls="b2">提示词要写多细<span class="plus" aria-hidden="true">+</span></button><div class="body" id="b2"><p>写清页面里有哪些元素、各自什么状态、要不要键盘操作、能不能引外部库。越具体越不容易得到一套通用模板。</p></div></div>
+<div class="row"><button class="head" type="button" aria-expanded="false" aria-controls="b3">页面报错了怎么办<span class="plus" aria-hidden="true">+</span></button><div class="body" id="b3"><p>把控制台的报错原文和你刚改的那一处一起贴给 AI，让它先解释原因再给补丁，别一口气要求重写整个页面。</p></div></div>
+</div>
+<script>
+var heads=[].slice.call(document.querySelectorAll('.head'));
+function toggle(i){
+  heads.forEach(function(h,j){
+    var open=(i===j)&&h.getAttribute('aria-expanded')!=='true';
+    h.setAttribute('aria-expanded',open?'true':'false');
+    var b=document.getElementById(h.getAttribute('aria-controls'));
+    b.style.maxHeight=open?b.scrollHeight+'px':'0px';
+  });
+}
+heads.forEach(function(h,i){h.onclick=function(){toggle(i);};});
+toggle(0);
+</script>
+
+<script>(function(){function report(){try{var b=document.body,c=getComputedStyle(b),h=b.scrollHeight+(parseFloat(c.marginTop)||0)+(parseFloat(c.marginBottom)||0),mx=0;b.querySelectorAll("*").forEach(function(el){var r=el.getBoundingClientRect();if(r.height<=0||r.bottom<=h)return;var st=getComputedStyle(el);if((st.position==="absolute"||st.position==="fixed")&&st.display!=="none"&&r.bottom>mx)mx=r.bottom;});if(mx>h)h=mx;parent.postMessage({__demoHeight:true,id:"fp",height:h},"*");}catch(e){}}var t=0;function later(){clearTimeout(t);t=setTimeout(report,280);}if(window.ResizeObserver){try{new ResizeObserver(report).observe(document.body);}catch(e){}}if(window.MutationObserver){try{new MutationObserver(function(){report();later();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["style","class","hidden"]});}catch(e){}}window.addEventListener("load",report);window.addEventListener("resize",report);window.addEventListener("message",function(e){if(e.data&&e.data.__askHeight)report();});report();})();</script>
+</body></html>

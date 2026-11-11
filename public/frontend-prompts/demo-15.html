@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>消息提示</title>
+<style>
+:root{--brand:#2F5BEA;--ink:#1B2330;--muted:#6B7686;--line:#E3E7EE}
+*{box-sizing:border-box}
+body{margin:0;padding:20px 24px 24px;background:#fff;color:var(--ink);font:14px/1.6 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+h3{margin:0 0 4px;font-size:16px}
+.hint{margin:0 0 16px;color:var(--muted);font-size:12px}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.acts button{font:inherit;font-size:12.5px;font-weight:600;padding:8px 14px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink);cursor:pointer}
+.acts button:hover{border-color:var(--brand);color:var(--brand)}
+.acts button:focus-visible{outline:3px solid rgba(47,91,234,.25);outline-offset:2px}
+#stack{position:fixed;top:14px;right:14px;width:270px;display:flex;flex-direction:column;gap:10px;z-index:9}
+.toast{display:flex;align-items:flex-start;gap:9px;padding:11px 12px;border-radius:8px;border:1px solid;font-size:12.5px;line-height:1.55;box-shadow:0 6px 18px rgba(27,35,48,.1);animation:slide .18s ease-out;transition:opacity .18s,transform .18s}
+.toast.out{opacity:0;transform:translateX(12px)}
+.toast .ico{font-weight:700;flex:0 0 auto}
+.toast .txt{flex:1}
+.toast .x{border:0;background:transparent;cursor:pointer;font-size:14px;line-height:1;color:inherit;opacity:.6;padding:0}
+.ok{background:#F0FBF4;border-color:#BFE8CD;color:#1B6B3A}
+.warn{background:#FFF8EC;border-color:#F5DDAE;color:#8A5A10}
+.err{background:#FDF3F2;border-color:#F3C9C5;color:#B03A31}
+.info{background:#F1F5FF;border-color:#CFDBFF;color:#2549B8}
+@keyframes slide{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:translateX(0)}}
+@media (prefers-reduced-motion:reduce){.toast{animation:none}.toast,.toast.out{transition:none}}
+</style></head><body>
+<h3>消息提示</h3><p class="hint">点一个按钮试试，连续点会堆叠；鼠标悬停会暂停倒计时</p>
+<div class="acts"><button type="button" data-k="ok">成功</button><button type="button" data-k="warn">警告</button><button type="button" data-k="err">错误</button><button type="button" data-k="info">普通</button></div>
+<div id="stack" aria-live="polite"></div>
+<script>
+var stack=document.getElementById('stack');
+var types={ok:['✓','已保存，改动生效了'],warn:['!','有 2 项设置还没同步'],err:['×','提交失败，请检查网络'],info:['i','新版本已经准备好了']};
+function spawn(kind){
+  var d=types[kind],t=document.createElement('div');
+  t.className='toast '+kind;t.setAttribute('role','status');
+  t.innerHTML='<span class="ico">'+d[0]+'</span><span class="txt">'+d[1]+'</span><button class="x" type="button" aria-label="关闭提示">×</button>';
+  stack.appendChild(t);
+  var left=3000,start=Date.now(),done=false,timer=setTimeout(close,left);
+  function pause(){if(done)return;clearTimeout(timer);left-=Date.now()-start;}
+  function resume(){if(done)return;start=Date.now();timer=setTimeout(close,left);}
+  function close(){
+    if(done)return;done=true;clearTimeout(timer);
+    t.classList.add('out');
+    setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},200);
+  }
+  t.addEventListener('mouseenter',pause);
+  t.addEventListener('mouseleave',resume);
+  t.querySelector('.x').onclick=close;
+}
+document.querySelectorAll('.acts button').forEach(function(b){b.onclick=function(){spawn(b.getAttribute('data-k'));};});
+</script>
+
+<script>(function(){function report(){try{var b=document.body,c=getComputedStyle(b),h=b.scrollHeight+(parseFloat(c.marginTop)||0)+(parseFloat(c.marginBottom)||0),mx=0;b.querySelectorAll("*").forEach(function(el){var r=el.getBoundingClientRect();if(r.height<=0||r.bottom<=h)return;var st=getComputedStyle(el);if((st.position==="absolute"||st.position==="fixed")&&st.display!=="none"&&r.bottom>mx)mx=r.bottom;});if(mx>h)h=mx;parent.postMessage({__demoHeight:true,id:"fp",height:h},"*");}catch(e){}}var t=0;function later(){clearTimeout(t);t=setTimeout(report,280);}if(window.ResizeObserver){try{new ResizeObserver(report).observe(document.body);}catch(e){}}if(window.MutationObserver){try{new MutationObserver(function(){report();later();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["style","class","hidden"]});}catch(e){}}window.addEventListener("load",report);window.addEventListener("resize",report);window.addEventListener("message",function(e){if(e.data&&e.data.__askHeight)report();});report();})();</script>
+</body></html>

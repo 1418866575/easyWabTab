@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>搜索补全</title>
+<style>
+:root{--brand:#2F5BEA;--ink:#1B2330;--muted:#6B7686;--line:#E3E7EE;--soft:#F5F7FB}
+*{box-sizing:border-box}
+body{margin:0;padding:22px 24px 30px;background:#fff;color:var(--ink);font:14px/1.6 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+.lab{display:block;font-size:12px;font-weight:600;margin:0 0 7px}
+.box{position:relative;width:280px}
+input{width:100%;font:inherit;font-size:13px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;color:var(--ink)}
+input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(47,91,234,.15)}
+.list{position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:9px;padding:5px;box-shadow:0 12px 30px rgba(27,35,48,.14);z-index:5}
+.list[hidden]{display:none}
+.opt{width:100%;font:inherit;font-size:13px;padding:8px 10px;border:0;background:transparent;border-radius:6px;cursor:pointer;text-align:left;color:var(--ink)}
+.opt:hover,.opt.active{background:var(--soft);color:var(--brand)}
+mark{background:#FFF0A8;color:inherit;border-radius:2px}
+.empty{padding:14px 10px;color:var(--muted);font-size:12.5px;text-align:center}
+.note{margin:14px 0 0;font:11.5px/1.6 ui-monospace,monospace;color:var(--muted)}
+</style></head><body>
+<label class="lab" for="q">想去的城市</label>
+<div class="box"><input id="q" type="text" placeholder="输入城市名，比如「杭」" autocomplete="off" aria-autocomplete="list">
+<div class="list" id="list" hidden></div></div>
+<p class="note" id="note">试试输入「州」，或用上下键 + 回车选择</p>
+<script>
+var cities=['北京','上海','广州','深圳','杭州','成都','武汉','西安'];
+var q=document.getElementById('q'),list=document.getElementById('list'),note=document.getElementById('note'),idx=0,shown=[];
+function esc(s){return s.replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+function render(){
+  var kw=q.value.trim();
+  shown=kw?cities.filter(function(c){return c.indexOf(kw)>=0;}):cities.slice();
+  idx=0;
+  if(!shown.length){list.innerHTML='<div class="empty">没有找到这个城市，换个关键词试试</div>';list.hidden=false;return;}
+  list.innerHTML=shown.map(function(c,i){
+    var p=c.indexOf(kw),h=kw?(esc(c.slice(0,p))+'<mark>'+esc(kw)+'</mark>'+esc(c.slice(p+kw.length))):esc(c);
+    return '<button class="opt'+(i===0?' active':'')+'" type="button" data-i="'+i+'">'+h+'</button>';
+  }).join('');
+  list.hidden=false;
+  [].slice.call(list.querySelectorAll('.opt')).forEach(function(el){
+    el.onmouseenter=function(){idx=+el.getAttribute('data-i');paint();};
+    el.onclick=function(){pick(shown[+el.getAttribute('data-i')]);};
+  });
+}
+function paint(){[].slice.call(list.querySelectorAll('.opt')).forEach(function(el,i){el.classList.toggle('active',i===idx);});}
+function pick(c){q.value=c;list.hidden=true;note.textContent='已选择：'+c;}
+function close(){list.hidden=true;}
+q.addEventListener('input',render);
+q.addEventListener('focus',render);
+q.addEventListener('keydown',function(e){
+  if(list.hidden)return;
+  if(e.key==='Escape')close();
+  else if(e.key==='ArrowDown'&&shown.length){e.preventDefault();idx=(idx+1)%shown.length;paint();}
+  else if(e.key==='ArrowUp'&&shown.length){e.preventDefault();idx=(idx-1+shown.length)%shown.length;paint();}
+  else if(e.key==='Enter'&&shown.length){e.preventDefault();pick(shown[idx]);}
+});
+document.addEventListener('click',function(e){if(!e.target.closest('.box'))close();});
+</script>
+
+<script>(function(){function report(){try{var b=document.body,c=getComputedStyle(b),h=b.scrollHeight+(parseFloat(c.marginTop)||0)+(parseFloat(c.marginBottom)||0),mx=0;b.querySelectorAll("*").forEach(function(el){var r=el.getBoundingClientRect();if(r.height<=0||r.bottom<=h)return;var st=getComputedStyle(el);if((st.position==="absolute"||st.position==="fixed")&&st.display!=="none"&&r.bottom>mx)mx=r.bottom;});if(mx>h)h=mx;parent.postMessage({__demoHeight:true,id:"fp",height:h},"*");}catch(e){}}var t=0;function later(){clearTimeout(t);t=setTimeout(report,280);}if(window.ResizeObserver){try{new ResizeObserver(report).observe(document.body);}catch(e){}}if(window.MutationObserver){try{new MutationObserver(function(){report();later();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["style","class","hidden"]});}catch(e){}}window.addEventListener("load",report);window.addEventListener("resize",report);window.addEventListener("message",function(e){if(e.data&&e.data.__askHeight)report();});report();})();</script>
+</body></html>

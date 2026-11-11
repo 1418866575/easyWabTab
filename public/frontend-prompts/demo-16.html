@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>模态弹窗</title>
+<style>
+:root{--brand:#2F5BEA;--ink:#1B2330;--muted:#6B7686;--line:#E3E7EE}
+*{box-sizing:border-box}
+body{margin:0;padding:22px 24px 26px;background:#fff;color:var(--ink);font:14px/1.6 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+h3{margin:0 0 4px;font-size:16px}
+.hint{margin:0 0 18px;color:var(--muted);font-size:12px}
+button{font:inherit;font-size:13px;font-weight:600;padding:9px 15px;border-radius:7px;cursor:pointer}
+.danger{background:#D8453B;color:#fff;border:0}
+.ghost{background:#fff;border:1px solid var(--line);color:var(--ink)}
+button:focus-visible{outline:3px solid rgba(47,91,234,.3);outline-offset:2px}
+.note{margin-left:12px;font-size:12px;color:#1B6B3A}
+dialog{border:1px solid var(--line);border-radius:12px;padding:22px;width:min(380px,calc(100% - 32px));box-shadow:0 20px 60px rgba(27,35,48,.2);color:var(--ink)}
+dialog::backdrop{background:rgba(20,26,34,.45)}
+dialog h4{margin:0 0 8px;font-size:17px}
+dialog p{margin:0 0 20px;color:var(--muted);font-size:13px;line-height:1.7}
+.actions{display:flex;justify-content:flex-end;gap:8px}
+</style></head><body>
+<h3>项目设置</h3><p class="hint">打开弹窗后按 Esc、点遮罩，或确认后看焦点回到哪里</p>
+<button id="open" class="danger" type="button">删除项目</button><span class="note" id="note"></span>
+<dialog id="dlg" aria-labelledby="dlg-title">
+<h4 id="dlg-title">确定删除这个项目？</h4><p>删除后无法恢复，相关配置也会一起移除。</p>
+<div class="actions"><button class="ghost" id="cancel" type="button">取消</button><button class="danger" id="confirm" type="button">确认删除</button></div>
+</dialog>
+<script>
+var dlg=document.getElementById('dlg'),open=document.getElementById('open'),note=document.getElementById('note');
+open.onclick=function(){note.textContent='';dlg.showModal();};
+document.getElementById('cancel').onclick=function(){dlg.close();};
+document.getElementById('confirm').onclick=function(){dlg.close();note.textContent='已删除 · 演示用，没有真的删数据';};
+dlg.addEventListener('click',function(e){if(e.target===dlg)dlg.close();});
+dlg.addEventListener('close',function(){open.focus();});
+</script>
+
+<script>(function(){function report(){try{var b=document.body,c=getComputedStyle(b),h=b.scrollHeight+(parseFloat(c.marginTop)||0)+(parseFloat(c.marginBottom)||0),mx=0;b.querySelectorAll("*").forEach(function(el){var r=el.getBoundingClientRect();if(r.height<=0||r.bottom<=h)return;var st=getComputedStyle(el);if((st.position==="absolute"||st.position==="fixed")&&st.display!=="none"&&r.bottom>mx)mx=r.bottom;});if(mx>h)h=mx;parent.postMessage({__demoHeight:true,id:"fp",height:h},"*");}catch(e){}}var t=0;function later(){clearTimeout(t);t=setTimeout(report,280);}if(window.ResizeObserver){try{new ResizeObserver(report).observe(document.body);}catch(e){}}if(window.MutationObserver){try{new MutationObserver(function(){report();later();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["style","class","hidden"]});}catch(e){}}window.addEventListener("load",report);window.addEventListener("resize",report);window.addEventListener("message",function(e){if(e.data&&e.data.__askHeight)report();});report();})();</script>
+</body></html>

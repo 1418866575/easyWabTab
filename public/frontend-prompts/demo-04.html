@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CSS Grid</title>
+<style>
+:root{--brand:#2F5BEA;--ink:#1B2330;--muted:#6B7686;--line:#E3E7EE;--soft:#F5F7FB}
+*{box-sizing:border-box}
+body{margin:0;padding:22px 24px 26px;background:#fff;color:var(--ink);font:14px/1.6 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+h3{margin:0 0 4px;font-size:16px}
+.sub{margin:0 0 16px;color:var(--muted);font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+.kpi{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:15px}
+.kpi b{display:block;font-size:22px;letter-spacing:-.03em;line-height:1.25}
+.kpi span{font-size:11.5px;color:var(--muted)}
+.kpi.big{grid-column:span 2;grid-row:span 2;background:var(--brand);color:#fff;border-color:var(--brand);display:flex;flex-direction:column;justify-content:space-between;min-height:132px}
+.kpi.big b{font-size:38px}
+.kpi.big span{color:#DCE5FF}
+</style></head><body>
+<h3>本周数据</h3><p class="sub">列数由容器宽度决定，没有写死断点</p>
+<div class="grid">
+<div class="kpi big"><b>12,480</b><span>本周访问量 · 较上周 +18%</span></div>
+<div class="kpi"><b>386</b><span>新增用户</span></div>
+<div class="kpi"><b>4.2%</b><span>转化率</span></div>
+<div class="kpi"><b>03:12</b><span>平均停留</span></div>
+<div class="kpi"><b>1,204</b><span>订单数</span></div>
+<div class="kpi"><b>0.6%</b><span>退款率</span></div>
+</div>
+
+<script>(function(){function report(){try{var b=document.body,c=getComputedStyle(b),h=b.scrollHeight+(parseFloat(c.marginTop)||0)+(parseFloat(c.marginBottom)||0),mx=0;b.querySelectorAll("*").forEach(function(el){var r=el.getBoundingClientRect();if(r.height<=0||r.bottom<=h)return;var st=getComputedStyle(el);if((st.position==="absolute"||st.position==="fixed")&&st.display!=="none"&&r.bottom>mx)mx=r.bottom;});if(mx>h)h=mx;parent.postMessage({__demoHeight:true,id:"fp",height:h},"*");}catch(e){}}var t=0;function later(){clearTimeout(t);t=setTimeout(report,280);}if(window.ResizeObserver){try{new ResizeObserver(report).observe(document.body);}catch(e){}}if(window.MutationObserver){try{new MutationObserver(function(){report();later();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["style","class","hidden"]});}catch(e){}}window.addEventListener("load",report);window.addEventListener("resize",report);window.addEventListener("message",function(e){if(e.data&&e.data.__askHeight)report();});report();})();</script>
+</body></html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>级联选择</title>
+<style>
+:root{--brand:#2F5BEA;--ink:#1B2330;--muted:#6B7686;--line:#E3E7EE;--soft:#F5F7FB}
+*{box-sizing:border-box}
+body{margin:0;padding:22px 24px 30px;background:#fff;color:var(--ink);font:14px/1.6 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+.lab{display:block;font-size:12px;font-weight:600;margin:0 0 8px}
+.crumb{font-size:12.5px;color:var(--brand);background:#EFF3FF;border-radius:6px;padding:7px 11px;margin-bottom:10px}
+.cols{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:520px}
+.col{border:1px solid var(--line);border-radius:8px;max-height:160px;overflow-y:auto;background:#fff}
+.ci{padding:8px 10px;font-size:12.5px;cursor:pointer;border-left:2px solid transparent}
+.ci:hover{background:var(--soft)}
+.ci.on{border-left-color:var(--brand);background:var(--soft);color:var(--brand);font-weight:600}
+.blank{padding:12px 10px;color:#A6AFBD;font-size:11.5px}
+.foot{display:flex;align-items:center;gap:10px;margin-top:12px}
+button{font:inherit;font-size:12.5px;font-weight:600;padding:7px 14px;border:0;border-radius:6px;background:var(--brand);color:#fff;cursor:pointer}
+button:disabled{background:#D9DEE8;color:#9AA4B2;cursor:not-allowed}
+button:focus-visible,.ci:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.note{font:11.5px/1.6 ui-monospace,monospace;color:var(--muted)}
+@media (max-width:520px){.cols{grid-template-columns:1fr}}
+</style></head><body>
+<label class="lab">所在地区</label>
+<div class="crumb" id="crumb">请选择地区</div>
+<div class="cols"><div class="col" id="a"></div><div class="col" id="b"></div><div class="col" id="c"></div></div>
+<div class="foot"><button id="ok" type="button" disabled>确定</button><span class="note" id="note">从左边第一列开始选</span></div>
+<script>
+var data={'广东':{'广州':['天河区','越秀区','海珠区'],'深圳':['南山区','福田区','宝安区']},
+'浙江':{'杭州':['西湖区','滨江区','余杭区'],'宁波':['海曙区','鄞州区']},
+'四川':{'成都':['锦江区','武侯区','高新区'],'绵阳':['涪城区','游仙区']}};
+var s=['','',''],a=document.getElementById('a'),b=document.getElementById('b'),c=document.getElementById('c'),crumb=document.getElementById('crumb'),ok=document.getElementById('ok'),note=document.getElementById('note');
+function col(el,arr,level){
+  if(!arr||!arr.length){el.innerHTML='<div class="blank">先选上一列</div>';return;}
+  el.innerHTML=arr.map(function(x){return '<div class="ci'+(s[level]===x?' on':'')+'" tabindex="0" data-x="'+x+'">'+x+'</div>';}).join('');
+  [].slice.call(el.querySelectorAll('.ci')).forEach(function(it){
+    function go(){s[level]=it.getAttribute('data-x');for(var k=level+1;k<3;k++)s[k]='';note.textContent='从左边第一列开始选';draw();}
+    it.onclick=go;it.onkeydown=function(e){if(e.key==='Enter')go();};
+  });
+}
+function draw(){
+  col(a,Object.keys(data),0);
+  col(b,s[0]?Object.keys(data[s[0]]):null,1);
+  col(c,s[0]&&s[1]?data[s[0]][s[1]]:null,2);
+  var parts=s.filter(function(x){return x;});
+  crumb.textContent=parts.length?parts.join(' / '):'请选择地区';
+  ok.disabled=!(s[0]&&s[1]&&s[2]);
+}
+ok.onclick=function(){note.textContent='已选择：'+s.join(' / ');};
+draw();
+</script>
+
+<script>(function(){function report(){try{var b=document.body,c=getComputedStyle(b),h=b.scrollHeight+(parseFloat(c.marginTop)||0)+(parseFloat(c.marginBottom)||0),mx=0;b.querySelectorAll("*").forEach(function(el){var r=el.getBoundingClientRect();if(r.height<=0||r.bottom<=h)return;var st=getComputedStyle(el);if((st.position==="absolute"||st.position==="fixed")&&st.display!=="none"&&r.bottom>mx)mx=r.bottom;});if(mx>h)h=mx;parent.postMessage({__demoHeight:true,id:"fp",height:h},"*");}catch(e){}}var t=0;function later(){clearTimeout(t);t=setTimeout(report,280);}if(window.ResizeObserver){try{new ResizeObserver(report).observe(document.body);}catch(e){}}if(window.MutationObserver){try{new MutationObserver(function(){report();later();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["style","class","hidden"]});}catch(e){}}window.addEventListener("load",report);window.addEventListener("resize",report);window.addEventListener("message",function(e){if(e.data&&e.data.__askHeight)report();});report();})();</script>
+</body></html>

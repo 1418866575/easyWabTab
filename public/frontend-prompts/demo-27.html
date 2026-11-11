@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>月份选择</title>
+<style>
+:root{--brand:#2F5BEA;--ink:#1B2330;--muted:#6B7686;--line:#E3E7EE;--soft:#F5F7FB}
+*{box-sizing:border-box}
+body{margin:0;padding:22px 24px 28px;background:#fff;color:var(--ink);font:14px/1.6 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+.box{width:320px;border:1px solid var(--line);border-radius:10px;padding:12px}
+.head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.head b{font-size:14px}
+.nav{width:26px;height:26px;border:1px solid var(--line);background:#fff;border-radius:6px;cursor:pointer;font:inherit}
+.nav:focus-visible,.cell:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.cell{position:relative;height:44px;border:1px solid transparent;background:var(--soft);border-radius:7px;font:inherit;font-size:12.5px;cursor:pointer;color:var(--ink)}
+.cell:hover{border-color:var(--brand)}
+.cell.on{background:var(--brand);color:#fff;font-weight:600}
+.cell small{display:block;font-size:9.5px;color:var(--brand)}
+.cell.on small{color:#DCE5FF}
+.acts{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
+.note{margin:0;font:11.5px/1.6 ui-monospace,monospace;color:var(--muted)}
+button{font:inherit;font-size:11.5px;padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--brand);cursor:pointer}
+button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+</style></head><body>
+<div class="box"><div class="head"><button class="nav" id="prev" type="button" aria-label="上一年">‹</button><b id="title"></b><button class="nav" id="next" type="button" aria-label="下一年">›</button></div>
+<div class="grid" id="grid"></div>
+<div class="acts"><p class="note" id="note"></p><button id="back" type="button">回到本月</button></div></div>
+<script>
+var now=new Date(),vy=now.getFullYear(),sy=vy,sm=now.getMonth()+1;
+var grid=document.getElementById('grid'),title=document.getElementById('title'),note=document.getElementById('note');
+function draw(){
+  title.textContent=vy+' 年';
+  var h='';
+  for(var i=1;i<=12;i++){
+    var cur=vy===now.getFullYear()&&i===now.getMonth()+1,on=vy===sy&&i===sm;
+    h+='<button class="cell'+(on?' on':'')+'" type="button" data-m="'+i+'">'+i+' 月'+(cur?'<small>本月</small>':'')+'</button>';
+  }
+  grid.innerHTML=h;
+  [].slice.call(grid.children).forEach(function(b){b.onclick=function(){sm=+b.getAttribute('data-m');sy=vy;draw();};});
+  note.textContent='已选：'+sy+' 年 '+sm+' 月';
+}
+document.getElementById('prev').onclick=function(){vy--;draw();};
+document.getElementById('next').onclick=function(){vy++;draw();};
+document.getElementById('back').onclick=function(){vy=now.getFullYear();sy=vy;sm=now.getMonth()+1;draw();};
+draw();
+</script>
+
+<script>(function(){function report(){try{var b=document.body,c=getComputedStyle(b),h=b.scrollHeight+(parseFloat(c.marginTop)||0)+(parseFloat(c.marginBottom)||0),mx=0;b.querySelectorAll("*").forEach(function(el){var r=el.getBoundingClientRect();if(r.height<=0||r.bottom<=h)return;var st=getComputedStyle(el);if((st.position==="absolute"||st.position==="fixed")&&st.display!=="none"&&r.bottom>mx)mx=r.bottom;});if(mx>h)h=mx;parent.postMessage({__demoHeight:true,id:"fp",height:h},"*");}catch(e){}}var t=0;function later(){clearTimeout(t);t=setTimeout(report,280);}if(window.ResizeObserver){try{new ResizeObserver(report).observe(document.body);}catch(e){}}if(window.MutationObserver){try{new MutationObserver(function(){report();later();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["style","class","hidden"]});}catch(e){}}window.addEventListener("load",report);window.addEventListener("resize",report);window.addEventListener("message",function(e){if(e.data&&e.data.__askHeight)report();});report();})();</script>
+</body></html>

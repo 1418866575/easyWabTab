@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Flexbox</title>
+<style>
+:root{--brand:#2F5BEA;--ink:#1B2330;--muted:#6B7686;--line:#E3E7EE;--soft:#F5F7FB}
+*{box-sizing:border-box}
+body{margin:0;padding:22px 24px 26px;background:#fff;color:var(--ink);font:14px/1.65 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+.bar{display:flex;justify-content:space-between;align-items:center;padding-bottom:14px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.logo{font-weight:700;font-size:15px;letter-spacing:-.02em}
+.logo i{display:inline-block;width:9px;height:9px;background:var(--brand);border-radius:3px;margin-right:8px}
+.bar nav{display:flex;gap:18px}
+.bar nav a{color:var(--muted);text-decoration:none;font-size:13px}
+h3{margin:0 0 14px;font-size:16px}
+.row{display:flex;gap:14px;flex-wrap:wrap}
+.card{flex:1 1 180px;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:18px}
+.card .dot{width:20px;height:20px;border-radius:5px;background:#DCE5FF;margin-bottom:12px}
+.card:nth-child(2) .dot{background:#C6F13C}
+.card:nth-child(3) .dot{background:#FFD9C2}
+.card b{display:block;font-size:14px;margin-bottom:6px}
+.card p{margin:0;color:var(--muted);font-size:12.5px}
+</style></head><body>
+<div class="bar"><span class="logo"><i></i>前端练习</span><nav><a href="#">文档</a><a href="#">示例</a><a href="#">关于</a></nav></div>
+<h3>项目里的三块地基</h3>
+<div class="row">
+<div class="card"><div class="dot"></div><b>语义结构</b><p>先用正确的标签把内容层次搭起来，样式才有落脚点。</p></div>
+<div class="card"><div class="dot"></div><b>盒模型</b><p>内容、内边距、边框、外边距，决定每个元素占多大地方。</p></div>
+<div class="card"><div class="dot"></div><b>流动布局</b><p>元素默认从上往下排，Flexbox 让它们听话地排成一行。</p></div>
+</div>
+
+<script>(function(){function report(){try{var b=document.body,c=getComputedStyle(b),h=b.scrollHeight+(parseFloat(c.marginTop)||0)+(parseFloat(c.marginBottom)||0),mx=0;b.querySelectorAll("*").forEach(function(el){var r=el.getBoundingClientRect();if(r.height<=0||r.bottom<=h)return;var st=getComputedStyle(el);if((st.position==="absolute"||st.position==="fixed")&&st.display!=="none"&&r.bottom>mx)mx=r.bottom;});if(mx>h)h=mx;parent.postMessage({__demoHeight:true,id:"fp",height:h},"*");}catch(e){}}var t=0;function later(){clearTimeout(t);t=setTimeout(report,280);}if(window.ResizeObserver){try{new ResizeObserver(report).observe(document.body);}catch(e){}}if(window.MutationObserver){try{new MutationObserver(function(){report();later();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["style","class","hidden"]});}catch(e){}}window.addEventListener("load",report);window.addEventListener("resize",report);window.addEventListener("message",function(e){if(e.data&&e.data.__askHeight)report();});report();})();</script>
+</body></html>

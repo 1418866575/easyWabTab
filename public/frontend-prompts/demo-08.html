@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>数据渲染</title>
+<style>
+:root{--brand:#2F5BEA;--ink:#1B2330;--muted:#6B7686;--line:#E3E7EE;--soft:#F5F7FB}
+*{box-sizing:border-box}
+body{margin:0;padding:20px 24px 24px;background:#fff;color:var(--ink);font:14px/1.6 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+h3{font-size:16px;margin:0 0 14px}
+.filters{display:flex;gap:8px;margin:0 0 14px;flex-wrap:wrap}
+.filters button{background:#fff;border:1px solid var(--line);color:var(--muted);font:inherit;font-size:12px;padding:6px 13px;border-radius:20px;cursor:pointer}
+.filters button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.filters button:focus-visible{outline:3px solid rgba(47,91,234,.25);outline-offset:2px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+.card{border:1px solid var(--line);border-radius:9px;padding:14px;background:var(--soft)}
+.card .tag{display:inline-block;font-size:10.5px;color:var(--brand);background:#E5ECFF;border-radius:4px;padding:2px 7px;margin-bottom:9px}
+.card b{display:block;font-size:13.5px;margin-bottom:10px;line-height:1.4}
+.card .meta{font-size:11.5px;color:var(--muted);display:flex;justify-content:space-between}
+.empty{text-align:center;color:var(--muted);font-size:13px;padding:30px 0;border:1px dashed var(--line);border-radius:9px}
+</style></head><body>
+<h3>课程列表</h3>
+<div class="filters"><button type="button" data-k="all">全部</button><button type="button" data-k="入门">入门</button><button type="button" data-k="进阶">进阶</button><button type="button" data-k="none">清空</button></div>
+<div id="box" class="cards"></div>
+<script>
+var courses=[
+ {title:'HTML 语义化与文档结构',tag:'结构',duration:'35 分钟',level:'入门'},
+ {title:'CSS 变量与样式组织',tag:'样式',duration:'40 分钟',level:'入门'},
+ {title:'Flexbox 与 Grid 实战',tag:'布局',duration:'55 分钟',level:'进阶'},
+ {title:'异步数据与三态渲染',tag:'JS',duration:'50 分钟',level:'进阶'}
+];
+var level='all',box=document.getElementById('box');
+function render(){
+  var arr=level==='all'?courses:(level==='none'?[]:courses.filter(function(c){return c.level===level;}));
+  if(!arr.length){box.innerHTML='<div class="empty">没有符合条件的课程，换个筛选试试</div>';}
+  else{
+    box.innerHTML=arr.map(function(c){
+      return '<div class="card"><span class="tag">'+c.tag+'</span><b>'+c.title+'</b><div class="meta"><span>'+c.duration+'</span><span>'+c.level+'</span></div></div>';
+    }).join('');
+  }
+  document.querySelectorAll('.filters button').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-k')===level);});
+}
+document.querySelectorAll('.filters button').forEach(function(b){
+  b.onclick=function(){level=b.getAttribute('data-k');render();};
+});
+render();
+</script>
+
+<script>(function(){function report(){try{var b=document.body,c=getComputedStyle(b),h=b.scrollHeight+(parseFloat(c.marginTop)||0)+(parseFloat(c.marginBottom)||0),mx=0;b.querySelectorAll("*").forEach(function(el){var r=el.getBoundingClientRect();if(r.height<=0||r.bottom<=h)return;var st=getComputedStyle(el);if((st.position==="absolute"||st.position==="fixed")&&st.display!=="none"&&r.bottom>mx)mx=r.bottom;});if(mx>h)h=mx;parent.postMessage({__demoHeight:true,id:"fp",height:h},"*");}catch(e){}}var t=0;function later(){clearTimeout(t);t=setTimeout(report,280);}if(window.ResizeObserver){try{new ResizeObserver(report).observe(document.body);}catch(e){}}if(window.MutationObserver){try{new MutationObserver(function(){report();later();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["style","class","hidden"]});}catch(e){}}window.addEventListener("load",report);window.addEventListener("resize",report);window.addEventListener("message",function(e){if(e.data&&e.data.__askHeight)report();});report();})();</script>
+</body></html>

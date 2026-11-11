@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>异步三态</title>
+<style>
+:root{--brand:#2F5BEA;--ink:#1B2330;--muted:#6B7686;--line:#E3E7EE}
+*{box-sizing:border-box}
+body{margin:0;padding:20px 24px 24px;background:#fff;color:var(--ink);font:14px/1.6 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+.app{max-width:420px}
+h3{font-size:16px;margin:0 0 4px}
+.tip{margin:0 0 14px;color:var(--muted);font-size:12px}
+.member{display:flex;align-items:center;gap:11px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;margin-bottom:9px}
+.avatar{width:34px;height:34px;border-radius:50%;background:#E5ECFF;color:var(--brand);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex:0 0 auto}
+.member b{display:block;font-size:13px}.member span{font-size:11.5px;color:var(--muted)}
+.skel{height:56px;border-radius:8px;background:linear-gradient(90deg,#EDF0F5,#F7F9FC,#EDF0F5);background-size:200% 100%;animation:shimmer 1.1s linear infinite;margin-bottom:9px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.skel{animation:none}}
+.err{padding:14px;border:1px solid #F3C9C5;background:#FDF3F2;border-radius:8px;color:#B03A31;font-size:13px}
+.err button{margin-left:8px;padding:3px 9px;font:inherit;font-size:12px;border:1px solid #E6B4AF;background:#fff;color:#B03A31;border-radius:5px;cursor:pointer}
+.acts{display:flex;gap:8px;margin-top:14px}
+.acts button{background:#fff;border:1px solid var(--line);color:var(--ink);font:inherit;font-size:12px;padding:7px 13px;border-radius:6px;cursor:pointer}
+.acts button:disabled{opacity:.5;cursor:not-allowed}
+.acts button:focus-visible,.err button:focus-visible{outline:3px solid rgba(47,91,234,.25);outline-offset:2px}
+</style></head><body>
+<div class="app"><h3>团队成员</h3><p class="tip">用 setTimeout 模拟接口，三种状态都能手动切换</p>
+<div id="box"></div>
+<div class="acts"><button id="reload" type="button">重新加载</button><button id="fail" type="button">模拟失败</button></div></div>
+<script>
+var box=document.getElementById('box'),reload=document.getElementById('reload'),fail=document.getElementById('fail');
+function loadMembers(bad){return new Promise(function(resolve,reject){setTimeout(function(){
+  if(bad){reject(new Error('network'));return;}
+  resolve([{n:'林默',r:'前端 · 页面与交互'},{n:'陈一',r:'设计 · 视觉规范'},{n:'周可',r:'后端 · 接口与数据'}]);
+},900);});}
+function skeleton(){box.innerHTML='<div class="skel"></div><div class="skel"></div><div class="skel"></div>';}
+async function run(bad){
+  skeleton();reload.disabled=true;fail.disabled=true;
+  try{
+    var data=await loadMembers(bad);
+    box.innerHTML=data.map(function(m){return '<div class="member"><div class="avatar">'+m.n.charAt(0)+'</div><div><b>'+m.n+'</b><span>'+m.r+'</span></div></div>';}).join('');
+  }catch(e){
+    box.innerHTML='<div class="err">加载失败，接口没响应。<button type="button" data-retry="1">重试</button></div>';
+  }finally{reload.disabled=false;fail.disabled=false;}
+}
+box.addEventListener('click',function(e){if(e.target&&e.target.getAttribute('data-retry')){run(false);}});
+reload.onclick=function(){run(false);};
+fail.onclick=function(){run(true);};
+run(false);
+</script>
+
+<script>(function(){function report(){try{var b=document.body,c=getComputedStyle(b),h=b.scrollHeight+(parseFloat(c.marginTop)||0)+(parseFloat(c.marginBottom)||0),mx=0;b.querySelectorAll("*").forEach(function(el){var r=el.getBoundingClientRect();if(r.height<=0||r.bottom<=h)return;var st=getComputedStyle(el);if((st.position==="absolute"||st.position==="fixed")&&st.display!=="none"&&r.bottom>mx)mx=r.bottom;});if(mx>h)h=mx;parent.postMessage({__demoHeight:true,id:"fp",height:h},"*");}catch(e){}}var t=0;function later(){clearTimeout(t);t=setTimeout(report,280);}if(window.ResizeObserver){try{new ResizeObserver(report).observe(document.body);}catch(e){}}if(window.MutationObserver){try{new MutationObserver(function(){report();later();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["style","class","hidden"]});}catch(e){}}window.addEventListener("load",report);window.addEventListener("resize",report);window.addEventListener("message",function(e){if(e.data&&e.data.__askHeight)report();});report();})();</script>
+</body></html>

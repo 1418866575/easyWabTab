@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>待办清单</title>
+<style>
+:root{--brand:#2F5BEA;--ink:#1B2330;--muted:#6B7686;--line:#E3E7EE}
+*{box-sizing:border-box}
+body{margin:0;padding:20px 24px 24px;background:#fff;color:var(--ink);font:14px/1.6 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+.app{max-width:420px}
+h3{font-size:16px;margin:0 0 4px}
+.count{margin:0 0 14px;color:var(--muted);font-size:12px}
+.row{display:flex;gap:8px;margin-bottom:14px}
+input[type=text]{flex:1;min-width:0;font:inherit;font-size:13px;padding:9px 11px;border:1px solid var(--line);border-radius:7px}
+input[type=text]:focus-visible{outline:3px solid rgba(47,91,234,.2);outline-offset:1px}
+button{font:inherit;font-size:13px;font-weight:600;padding:9px 15px;border:0;border-radius:7px;background:var(--brand);color:#fff;cursor:pointer}
+button:focus-visible{outline:3px solid rgba(47,91,234,.35);outline-offset:2px}
+ul{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+li{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);font-size:13px}
+li:last-child{border-bottom:0}
+li input{accent-color:var(--brand);width:15px;height:15px}
+li span{flex:1}
+li span.done{text-decoration:line-through;color:#A6AFBD}
+li .del{background:transparent;color:var(--muted);font-size:12px;font-weight:400;padding:2px 6px}
+li .del:hover{color:#D8453B}
+li.empty{color:var(--muted);justify-content:center;font-size:12.5px;padding:18px}
+</style></head><body>
+<div class="app"><h3>今日待办</h3><p class="count" id="count"></p>
+<div class="row"><input id="task" type="text" placeholder="想做点什么？" aria-label="新任务"><button id="add" type="button">添加</button></div>
+<ul id="list"></ul></div>
+<script>
+var items=[{t:'读一遍 HTML 语义标签',done:false},{t:'把 CSS 变量改成自己的配色',done:true}];
+var list=document.getElementById('list'),count=document.getElementById('count'),input=document.getElementById('task');
+function render(){
+  list.innerHTML='';
+  if(!items.length){var e=document.createElement('li');e.className='empty';e.textContent='还没有任务，先加一条吧';list.appendChild(e);}
+  items.forEach(function(it,i){
+    var li=document.createElement('li');
+    var cb=document.createElement('input');cb.type='checkbox';cb.checked=it.done;cb.setAttribute('aria-label','完成：'+it.t);
+    cb.onchange=function(){items[i].done=cb.checked;render();};
+    var sp=document.createElement('span');sp.textContent=it.t;if(it.done)sp.className='done';
+    var del=document.createElement('button');del.type='button';del.className='del';del.textContent='删除';del.setAttribute('aria-label','删除：'+it.t);
+    del.onclick=function(){items.splice(i,1);render();};
+    li.appendChild(cb);li.appendChild(sp);li.appendChild(del);list.appendChild(li);
+  });
+  var left=items.filter(function(x){return !x.done;}).length;
+  count.textContent=items.length===0?'还没有任务':(left===0?'今天都做完了':'还剩 '+left+' 项未完成');
+}
+function add(){var v=input.value.trim();if(!v)return;items.push({t:v,done:false});input.value='';render();input.focus();}
+document.getElementById('add').onclick=add;
+input.addEventListener('keydown',function(e){if(e.key==='Enter')add();});
+render();
+</script>
+
+<script>(function(){function report(){try{var b=document.body,c=getComputedStyle(b),h=b.scrollHeight+(parseFloat(c.marginTop)||0)+(parseFloat(c.marginBottom)||0),mx=0;b.querySelectorAll("*").forEach(function(el){var r=el.getBoundingClientRect();if(r.height<=0||r.bottom<=h)return;var st=getComputedStyle(el);if((st.position==="absolute"||st.position==="fixed")&&st.display!=="none"&&r.bottom>mx)mx=r.bottom;});if(mx>h)h=mx;parent.postMessage({__demoHeight:true,id:"fp",height:h},"*");}catch(e){}}var t=0;function later(){clearTimeout(t);t=setTimeout(report,280);}if(window.ResizeObserver){try{new ResizeObserver(report).observe(document.body);}catch(e){}}if(window.MutationObserver){try{new MutationObserver(function(){report();later();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["style","class","hidden"]});}catch(e){}}window.addEventListener("load",report);window.addEventListener("resize",report);window.addEventListener("message",function(e){if(e.data&&e.data.__askHeight)report();});report();})();</script>
+</body></html>

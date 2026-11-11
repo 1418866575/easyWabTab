@@ -2,8 +2,9 @@
 /**
  * 智能工作台主视图（路由 /smart）
  * 布局与 TeacherView 一致：顶部工作台切换入口（WorkbenchSwitcher 命令面板，Alt+W）+ 左菜单 + 右内容。
- * 三个菜单项：概览 / 技能管理 / 提示词管理；不再单独放「返回导航站」按钮，
- * 导航站入口统一收进左上角的工作台切换面板（与其它工作台页面同款）。
+ * 菜单项来自设置（概览 / 智能网页端 / 技能 / 提示词 / 工作流 / 前端提示词）；
+ * 不再单独放「返回导航站」按钮，导航站入口统一收进左上角的工作台切换面板
+ * （与其它工作台页面同款）。
  */
 import { computed, ref, watch } from 'vue'
 import Icon from '@/components/Icon.vue'
@@ -13,13 +14,15 @@ import AiPlatformManager from '@/components/smart/AiPlatformManager.vue'
 import SkillManager from '@/components/smart/SkillManager.vue'
 import PromptManager from '@/components/smart/PromptManager.vue'
 import WorkflowManager from '@/components/smart/WorkflowManager.vue'
+import FrontendPromptManager from '@/components/smart/FrontendPromptManager.vue'
 import SmartSettingsDialog from '@/components/smart/SmartSettingsDialog.vue'
 import { useAppSettingsStore } from '@/stores/settings'
 import { useSmartStore } from '@/stores/smart'
 import { useCloudSync, type SyncStatus } from '@/composables/useCloudSync'
 import { useToast } from '@/composables/useToast'
+import { FRONTEND_PROMPTS } from '@/composables/frontendPromptsCore'
 
-type PageKey = 'overview' | 'platforms' | 'skills' | 'prompts' | 'workflows'
+type PageKey = 'overview' | 'platforms' | 'skills' | 'prompts' | 'workflows' | 'frontend'
 
 const settingsStore = useAppSettingsStore()
 const store = useSmartStore()
@@ -46,7 +49,8 @@ const menuItems = computed<MenuItem[]>(() =>
     ...(i.key === 'platforms' ? { count: store.platforms.length } : {}),
     ...(i.key === 'skills' ? { count: store.skills.length } : {}),
     ...(i.key === 'prompts' ? { count: store.prompts.length } : {}),
-    ...(i.key === 'workflows' ? { count: store.workflows.length } : {})
+    ...(i.key === 'workflows' ? { count: store.workflows.length } : {}),
+    ...(i.key === 'frontend' ? { count: FRONTEND_PROMPTS.length } : {})
   }))
 )
 
@@ -73,6 +77,7 @@ const activePageComponent = computed(() => {
     case 'skills': return SkillManager
     case 'prompts': return PromptManager
     case 'workflows': return WorkflowManager
+    case 'frontend': return FrontendPromptManager
     default: return SmartOverview
   }
 })
@@ -197,10 +202,10 @@ async function handleSyncNowClick(): Promise<void> {
       <main class="sv-content">
         <!-- KeepAlive：切页不销毁列表组件，保住搜索词 / 分类 / 标签 / 排序 / 页码
              （此前是裸 v-if，切走再切回筛选条件全丢）。缓存的组件按类型区分，互不干扰。 -->
-        <!-- KeepAlive 只接受「单个」子节点：四页必须收敛成一个动态组件。
-             曾经写成 v-if / v-else-if 四条并列分支，模板编译期直接报
+        <!-- KeepAlive 只接受「单个」子节点：所有页面必须收敛成一个动态组件。
+             曾经写成 v-if / v-else-if 多条并列分支，模板编译期直接报
              "<KeepAlive> expects exactly one child component"，整条 /smart 路由 500 白屏。
-             概览的统计卡会 emit goto 跳到对应菜单；另三页没有该事件，
+             概览的统计卡会 emit goto 跳到对应菜单；其它页没有该事件，
              故用条件 v-on 绑定，避免把 onGoto 透传到它们的根元素上。 -->
         <KeepAlive>
           <component

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>开关</title>
+<style>
+:root{--brand:#2F5BEA;--ink:#1B2330;--muted:#6B7686;--line:#E3E7EE}
+*{box-sizing:border-box}
+body{margin:0;padding:20px 24px 24px;background:#fff;color:var(--ink);font:14px/1.6 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+h3{margin:0 0 14px;font-size:16px}
+.panel{max-width:380px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.item{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 16px;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.item b{display:block;font-size:13.5px}
+.item small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+.sw{position:relative;display:inline-flex;cursor:pointer;flex:0 0 auto}
+.sw input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.track{display:block;width:42px;height:24px;border-radius:999px;background:#D9DEE8;transition:background .15s;position:relative}
+.knob{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .15s}
+.sw input:checked+.track{background:var(--brand)}
+.sw input:checked+.track .knob{transform:translateX(18px)}
+.sw input:focus-visible+.track{outline:3px solid rgba(47,91,234,.3);outline-offset:2px}
+.stat{margin:12px 0 0;font:11.5px/1.5 ui-monospace,monospace;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.track,.knob{transition:none}}
+</style></head><body>
+<h3>通知设置</h3>
+<div class="panel">
+<div class="item"><div><b>消息通知</b><small>有新动态时提醒我</small></div><label class="sw"><input type="checkbox" checked aria-label="消息通知"><span class="track"><span class="knob"></span></span></label></div>
+<div class="item"><div><b>深色模式</b><small>跟随系统或手动切换</small></div><label class="sw"><input type="checkbox" checked aria-label="深色模式"><span class="track"><span class="knob"></span></span></label></div>
+<div class="item"><div><b>自动保存</b><small>输入时写入本地草稿</small></div><label class="sw"><input type="checkbox" aria-label="自动保存"><span class="track"><span class="knob"></span></span></label></div>
+</div>
+<p class="stat" id="stat"></p>
+<script>
+var boxes=document.querySelectorAll('.sw input'),stat=document.getElementById('stat');
+function update(){var n=0;boxes.forEach(function(b){if(b.checked)n++;});stat.textContent='已开启 '+n+' 项 / 共 '+boxes.length+' 项';}
+boxes.forEach(function(b){b.addEventListener('change',update);});
+update();
+</script>
+
+<script>(function(){function report(){try{var b=document.body,c=getComputedStyle(b),h=b.scrollHeight+(parseFloat(c.marginTop)||0)+(parseFloat(c.marginBottom)||0),mx=0;b.querySelectorAll("*").forEach(function(el){var r=el.getBoundingClientRect();if(r.height<=0||r.bottom<=h)return;var st=getComputedStyle(el);if((st.position==="absolute"||st.position==="fixed")&&st.display!=="none"&&r.bottom>mx)mx=r.bottom;});if(mx>h)h=mx;parent.postMessage({__demoHeight:true,id:"fp",height:h},"*");}catch(e){}}var t=0;function later(){clearTimeout(t);t=setTimeout(report,280);}if(window.ResizeObserver){try{new ResizeObserver(report).observe(document.body);}catch(e){}}if(window.MutationObserver){try{new MutationObserver(function(){report();later();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["style","class","hidden"]});}catch(e){}}window.addEventListener("load",report);window.addEventListener("resize",report);window.addEventListener("message",function(e){if(e.data&&e.data.__askHeight)report();});report();})();</script>
+</body></html>
