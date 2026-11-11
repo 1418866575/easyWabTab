@@ -1,11 +1,11 @@
 /**
- * QA：智能工作台（/smart）的四页切换与 KeepAlive 缓存
+ * QA：智能工作台（/smart）的各页切换与 KeepAlive 缓存
  *
- * 背景：SmartView 的右侧内容区曾把四个页面写成 <KeepAlive> 下的四条并列 v-if 分支，
+ * 背景：SmartView 的右侧内容区曾把多个页面写成 <KeepAlive> 下的并列 v-if 分支，
  *      Vue 模板编译直接报 "<KeepAlive> expects exactly one child component"，
  *      整条 /smart 路由 500 白屏（且构建同样会失败）。现已收敛为单个 <component :is>。
  *      本脚本守住三件事：
- *      ① 路由能渲染（不再 500）；② 四页都能切换且内容非空；
+ *      ① 路由能渲染（不再 500）；② 各页都能切换且内容非空；
  *      ③ KeepAlive 真的还在工作 —— 技能页的搜索词切走再切回必须保留；
  *      ④ 概览统计卡的 goto 事件没有因为改成动态组件而丢。
  *
@@ -69,11 +69,14 @@ function check(name, ok, detail = '') {
   console.log(`${ok ? '  PASS' : '  FAIL'}  ${name}${detail ? '  ' + detail : ''}`)
 }
 
+// 一律用 data-testid 精确点菜单：新增「前端提示词」后，
+// :has-text("提示词") 会同时命中「提示词」与「前端提示词」两项，Playwright 严格模式直接报错。
 const MENU = [
-  { key: 'overview', label: '概览', marker: '.ov-wrap' },
-  { key: 'skills', label: '技能', marker: '[data-testid="smart-skill-search"]' },
-  { key: 'prompts', label: '提示词', marker: '.sv-content :is(input, .pm-wrap)' },
-  { key: 'workflows', label: '工作流', marker: '.sv-content :is(button, .wm-wrap)' }
+  { key: 'overview', label: '概览', sel: '[data-testid="smart-nav-overview"]' },
+  { key: 'skills', label: '技能', sel: '[data-testid="smart-nav-skills"]' },
+  { key: 'prompts', label: '提示词', sel: '[data-testid="smart-nav-prompts"]' },
+  { key: 'workflows', label: '工作流', sel: '[data-testid="smart-nav-workflows"]' },
+  { key: 'frontend', label: '前端提示词', sel: '[data-testid="smart-nav-frontend"]' }
 ]
 
 const browser = await chromium.launch({ executablePath: findChromium() })
@@ -94,31 +97,31 @@ try {
   check('S1 HTTP 200（不是编译 500）', (resp?.status() ?? 0) < 400, String(resp?.status()))
   check('S1 右侧内容区有子节点', await page.locator('.sv-content > *').count() > 0)
 
-  // ---------- S2 四个菜单页都能切 ----------
+  // ---------- S2 各菜单页都能切 ----------
   for (const m of MENU) {
-    await page.click(`.sv-nav-item:has-text("${m.label}")`)
+    await page.click(m.sel)
     await page.waitForTimeout(500)
     const n = await page.locator('.sv-content > *').count()
     check(`S2 切到「${m.label}」有渲染内容`, n > 0, `children=${n}`)
   }
 
   // ---------- S3 KeepAlive：搜索词切走再切回必须保留 ----------
-  await page.click('.sv-nav-item:has-text("技能")')
+  await page.click('[data-testid="smart-nav-skills"]')
   await page.waitForTimeout(400)
   const kw = 'KeepAlive-探针'
   await page.fill('[data-testid="smart-skill-search"] input, input[data-testid="smart-skill-search"]', kw).catch(async () => {
     await page.locator('[data-testid="smart-skill-search"]').first().fill(kw)
   })
   await page.waitForTimeout(300)
-  await page.click('.sv-nav-item:has-text("提示词")')
+  await page.click('[data-testid="smart-nav-prompts"]')
   await page.waitForTimeout(400)
-  await page.click('.sv-nav-item:has-text("技能")')
+  await page.click('[data-testid="smart-nav-skills"]')
   await page.waitForTimeout(500)
   const kept = await page.locator('[data-testid="smart-skill-search"] input, input[data-testid="smart-skill-search"]').first().inputValue().catch(() => '')
   check('S3 切走再切回，搜索词仍在（KeepAlive 生效）', kept === kw, `"${kept}"`)
 
   // ---------- S4 概览统计卡的 goto 事件没丢 ----------
-  await page.click('.sv-nav-item:has-text("概览")')
+  await page.click('[data-testid="smart-nav-overview"]')
   await page.waitForTimeout(400)
   const stat = page.locator('[data-testid="smart-stat-skills"]')
   check('S4 概览有「技能」统计卡', await stat.count() > 0)

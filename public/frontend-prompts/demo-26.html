@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>时间选择</title>
+<style>
+:root{--brand:#2F5BEA;--ink:#1B2330;--muted:#6B7686;--line:#E3E7EE;--soft:#F5F7FB}
+*{box-sizing:border-box}
+body{margin:0;padding:22px 24px 28px;background:#fff;color:var(--ink);font:14px/1.6 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+.val{font:700 24px/1.2 ui-monospace,monospace;letter-spacing:.04em;margin:0 0 12px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:260px}
+.col{border:1px solid var(--line);border-radius:8px;height:160px;overflow-y:auto}
+.lab{font-size:11px;color:var(--muted);padding:6px 10px;position:sticky;top:0;background:#fff}
+.ci{padding:6px 10px;font:12.5px ui-monospace,monospace;cursor:pointer;border-radius:5px;margin:0 4px}
+.ci:hover{background:var(--soft)}
+.ci.on{background:var(--brand);color:#fff}
+.col:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.acts{display:flex;align-items:center;gap:12px;margin-top:12px}
+button{font:inherit;font-size:12.5px;font-weight:600;padding:7px 14px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--brand);cursor:pointer}
+button:hover{border-color:var(--brand)}
+button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.tip{font-size:11.5px;color:var(--muted)}
+</style></head><body>
+<p class="val" id="val">14:30</p>
+<div class="cols"><div class="col" id="hs" tabindex="0"><div class="lab">时</div></div><div class="col" id="ms" tabindex="0"><div class="lab">分</div></div></div>
+<div class="acts"><button id="now" type="button">现在</button><span class="tip">24 小时制 · 分钟按 5 分钟一档</span></div>
+<script>
+var H=14,M=30,hs=document.getElementById('hs'),ms=document.getElementById('ms'),val=document.getElementById('val');
+var HH=[],MM=[];for(var i=0;i<24;i++)HH.push(i);for(var j=0;j<60;j+=5)MM.push(j);
+function pad(n){return n<10?'0'+n:''+n;}
+function build(){
+  hs.innerHTML='<div class="lab">时</div>'+HH.map(function(x){return '<div class="ci" data-v="'+x+'">'+pad(x)+'</div>';}).join('');
+  ms.innerHTML='<div class="lab">分</div>'+MM.map(function(x){return '<div class="ci" data-v="'+x+'">'+pad(x)+'</div>';}).join('');
+  [].slice.call(hs.querySelectorAll('.ci')).forEach(function(c){c.onclick=function(){H=+c.getAttribute('data-v');paint();};});
+  [].slice.call(ms.querySelectorAll('.ci')).forEach(function(c){c.onclick=function(){M=+c.getAttribute('data-v');paint();};});
+  paint();
+}
+function paint(){
+  [].slice.call(hs.querySelectorAll('.ci')).forEach(function(c){c.classList.toggle('on',+c.getAttribute('data-v')===H);});
+  [].slice.call(ms.querySelectorAll('.ci')).forEach(function(c){c.classList.toggle('on',+c.getAttribute('data-v')===M);});
+  val.textContent=pad(H)+':'+pad(M);
+}
+hs.onkeydown=function(ev){var i=HH.indexOf(H);if(ev.key==='ArrowDown')H=HH[(i+1)%HH.length];else if(ev.key==='ArrowUp')H=HH[(i-1+HH.length)%HH.length];else return;ev.preventDefault();paint();};
+ms.onkeydown=function(ev){var i=MM.indexOf(M);if(ev.key==='ArrowDown')M=MM[(i+1)%MM.length];else if(ev.key==='ArrowUp')M=MM[(i-1+MM.length)%MM.length];else return;ev.preventDefault();paint();};
+document.getElementById('now').onclick=function(){var t=new Date();H=t.getHours();M=Math.floor(t.getMinutes()/5)*5;paint();};
+build();
+</script>
+
+<script>(function(){function report(){try{var b=document.body,c=getComputedStyle(b),h=b.scrollHeight+(parseFloat(c.marginTop)||0)+(parseFloat(c.marginBottom)||0),mx=0;b.querySelectorAll("*").forEach(function(el){var r=el.getBoundingClientRect();if(r.height<=0||r.bottom<=h)return;var st=getComputedStyle(el);if((st.position==="absolute"||st.position==="fixed")&&st.display!=="none"&&r.bottom>mx)mx=r.bottom;});if(mx>h)h=mx;parent.postMessage({__demoHeight:true,id:"fp",height:h},"*");}catch(e){}}var t=0;function later(){clearTimeout(t);t=setTimeout(report,280);}if(window.ResizeObserver){try{new ResizeObserver(report).observe(document.body);}catch(e){}}if(window.MutationObserver){try{new MutationObserver(function(){report();later();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["style","class","hidden"]});}catch(e){}}window.addEventListener("load",report);window.addEventListener("resize",report);window.addEventListener("message",function(e){if(e.data&&e.data.__askHeight)report();});report();})();</script>
+</body></html>

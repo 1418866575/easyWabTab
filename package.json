@@ -44,6 +44,7 @@
     "test:business": "node --experimental-strip-types scripts/test-business-core.ts",
     "test:smart": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-smart-core.ts",
     "test:smart-settings": "node --experimental-strip-types scripts/test-smart-settings-core.ts",
+    "test:frontend-prompts": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-frontend-prompts-core.ts",
     "test:ai-platforms": "node --experimental-strip-types scripts/test-ai-platforms-core.ts",
     "test:loan-extra": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-loan-extra-core.ts",
     "test:deposit": "node --experimental-strip-types scripts/test-deposit-core.ts",

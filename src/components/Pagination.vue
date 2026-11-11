@@ -119,7 +119,7 @@ const handleSizeChange = (value: number | string) => {
       </el-select>
     </div>
 
-    <!-- 全部时显示总数（含并入分页的固定入口卡，不含其余恒显入口卡） -->
+    <!-- 全部时显示总数（含全部可见的固定入口卡） -->
     <div v-if="isAllMode" class="page-info">
       共 {{ store.mergedFixedSites.length + store.regularSites.length }} 条
     </div>

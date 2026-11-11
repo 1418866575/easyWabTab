@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>个人作品集</title></head>
+<body>
+<header><h1>林默 · 前端练习</h1>
+<nav><a href="#">首页</a> · <a href="#">项目</a> · <a href="#">关于</a></nav></header>
+<hr>
+<main>
+<h2>你好，我是林默</h2>
+<p>正在借助 AI 从零写一个前端项目，这里记录每一步的页面和代码。</p>
+<p><a href="#projects">查看我的项目 →</a></p>
+</main>
+<hr>
+<footer><p>© 2026 林默 · 用 AI 写着玩</p></footer>
+
+<script>(function(){function report(){try{var b=document.body,c=getComputedStyle(b),h=b.scrollHeight+(parseFloat(c.marginTop)||0)+(parseFloat(c.marginBottom)||0),mx=0;b.querySelectorAll("*").forEach(function(el){var r=el.getBoundingClientRect();if(r.height<=0||r.bottom<=h)return;var st=getComputedStyle(el);if((st.position==="absolute"||st.position==="fixed")&&st.display!=="none"&&r.bottom>mx)mx=r.bottom;});if(mx>h)h=mx;parent.postMessage({__demoHeight:true,id:"fp",height:h},"*");}catch(e){}}var t=0;function later(){clearTimeout(t);t=setTimeout(report,280);}if(window.ResizeObserver){try{new ResizeObserver(report).observe(document.body);}catch(e){}}if(window.MutationObserver){try{new MutationObserver(function(){report();later();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["style","class","hidden"]});}catch(e){}}window.addEventListener("load",report);window.addEventListener("resize",report);window.addEventListener("message",function(e){if(e.data&&e.data.__askHeight)report();});report();})();</script>
+</body></html>

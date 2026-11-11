@@ -89,10 +89,11 @@ try {
     await page.waitForTimeout(300)
   }
 
-  // 只看「其他」分类（两个模块入口默认归入 other），避免分页影响
+  // 入口卡只在「全部」分类出现（ad05f86 起）：具体分类会把站内入口卡过滤掉。
+  // 全部入口卡都并入分页池、数量不超过 pageSize，首屏即可看全，不受分页影响。
   await page.evaluate(async () => {
     const m = await import('/src/stores/sites.ts')
-    m.useSitesStore().setCategory('other')
+    m.useSitesStore().setCategory('')
   })
   await page.waitForTimeout(400)
 
@@ -108,13 +109,27 @@ try {
   )
   const blog = cards.filter((c) => c.url === '/blog')
   const books = cards.filter((c) => c.url === '/books')
-  console.log('[qa] other 分类卡片:', JSON.stringify(cards.map((c) => c.url)))
+  console.log('[qa] 全部分类卡片:', JSON.stringify(cards.map((c) => c.url)))
 
   check('S1 /blog 卡片存在且唯一', blog.length === 1, `count=${blog.length}`)
   check('S1 /books 卡片存在且唯一', books.length === 1, `count=${books.length}`)
   check('S2 /blog 图标是图片', /^data:image\//.test(blog[0]?.icon || ''), (blog[0]?.icon || '').slice(0, 40))
   check('S2 /books 图标是图片', /^data:image\//.test(books[0]?.icon || ''), (books[0]?.icon || '').slice(0, 40))
   check('S5 默认名称正确', blog[0]?.name === '博客前台' && books[0]?.name === '图书馆', `${blog[0]?.name} / ${books[0]?.name}`)
+
+  // 现行规则的反向守卫：选具体分类时站内入口卡不显示（旧版脚本曾在这里找 /blog、/books）
+  await page.evaluate(async () => {
+    const m = await import('/src/stores/sites.ts')
+    m.useSitesStore().setCategory('other')
+  })
+  await page.waitForTimeout(400)
+  const otherModuleCount = await page.locator('.site-card[data-site-url="/blog"], .site-card[data-site-url="/books"], .site-card[data-site-url="/blog/admin"]').count()
+  check('选具体分类时站内入口卡不显示', otherModuleCount === 0, `count=${otherModuleCount}`)
+  await page.evaluate(async () => {
+    const m = await import('/src/stores/sites.ts')
+    m.useSitesStore().setCategory('')
+  })
+  await page.waitForTimeout(400)
 
   // 导航站首页已无切换器；工作台跳转与站内模块一起固定在卡片列表
   const triggerCount = await page.locator('[data-testid="ws-trigger"]').count()

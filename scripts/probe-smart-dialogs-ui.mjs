@@ -56,11 +56,9 @@ await step('设置弹框', async () => {
 await closeDialog()
 
 await step('新增技能弹框', async () => {
-  // 默认停在「概览」页，先切到「技能」页再点新增
-  for (const n of await page.$$('[data-testid^="smart-nav-"]')) {
-    const t = (await n.textContent()) || ''
-    if (t.includes('技能')) { await n.click(); break }
-  }
+  // 默认停在「概览」页，先切到「技能」页再点新增。
+  // 用精确 testid：左侧另有「前端提示词」，按文字包含匹配会选错页。
+  await page.click('[data-testid="smart-nav-skills"]')
   await page.waitForTimeout(400)
   await page.click('[data-testid="smart-skill-add"]')
 })
@@ -68,12 +66,7 @@ await closeDialog()
 
 // 切到提示词库页：左侧导航
 await step('新增提示词弹框', async () => {
-  const navs = await page.$$('[data-testid^="smart-nav-"]')
-  // 找到「提示词」导航项
-  for (const n of navs) {
-    const t = (await n.textContent()) || ''
-    if (t.includes('提示词')) { await n.click(); break }
-  }
+  await page.click('[data-testid="smart-nav-prompts"]')
   await page.waitForTimeout(400)
   await page.click('[data-testid="smart-prompt-add"]')
 })

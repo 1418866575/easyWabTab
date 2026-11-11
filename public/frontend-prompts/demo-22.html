@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>右键菜单</title>
+<style>
+:root{--brand:#2F5BEA;--ink:#1B2330;--muted:#6B7686;--line:#E3E7EE;--soft:#F5F7FB}
+*{box-sizing:border-box}
+body{margin:0;padding:22px 24px 30px;background:#fff;color:var(--ink);font:14px/1.6 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+.zone{height:140px;border:1px dashed #B9C4D6;border-radius:10px;background:var(--soft);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px}
+.ctx{position:fixed;width:160px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px;box-shadow:0 12px 30px rgba(27,35,48,.16);z-index:9}
+.ctx[hidden]{display:none}
+.ci{width:100%;font:inherit;font-size:12.5px;padding:7px 9px;border:0;background:transparent;border-radius:5px;cursor:pointer;text-align:left;color:var(--ink)}
+.ci:hover{background:var(--soft);color:var(--brand)}
+.ci.red{color:#C0392B}.ci.red:hover{background:#FDF1EF}
+.ci:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
+.note{margin:14px 0 0;font:11.5px/1.6 ui-monospace,monospace;color:var(--muted)}
+</style></head><body>
+<div class="zone" id="zone">在这块区域里点右键</div>
+<div class="ctx" id="ctx" hidden>
+<button class="ci" type="button">复制</button><button class="ci" type="button">粘贴</button>
+<button class="ci" type="button">重命名</button><button class="ci red" type="button">删除</button>
+</div>
+<p class="note" id="note">靠近右边缘时菜单会自动翻到左侧</p>
+<script>
+var zone=document.getElementById('zone'),ctx=document.getElementById('ctx'),note=document.getElementById('note');
+function close(){ctx.hidden=true;}
+zone.addEventListener('contextmenu',function(e){
+  e.preventDefault();ctx.hidden=false;
+  var w=ctx.offsetWidth,h=ctx.offsetHeight;
+  var x=e.clientX+w+8>window.innerWidth?e.clientX-w:e.clientX;
+  var y=e.clientY+h+8>window.innerHeight?e.clientY-h:e.clientY;
+  ctx.style.left=Math.max(4,x)+'px';ctx.style.top=Math.max(4,y)+'px';
+});
+[].slice.call(ctx.querySelectorAll('.ci')).forEach(function(it){
+  it.onclick=function(){note.textContent='已执行：'+it.textContent;close();};
+});
+document.addEventListener('click',function(e){if(!ctx.contains(e.target))close();});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+window.addEventListener('scroll',close,true);
+</script>
+
+<script>(function(){function report(){try{var b=document.body,c=getComputedStyle(b),h=b.scrollHeight+(parseFloat(c.marginTop)||0)+(parseFloat(c.marginBottom)||0),mx=0;b.querySelectorAll("*").forEach(function(el){var r=el.getBoundingClientRect();if(r.height<=0||r.bottom<=h)return;var st=getComputedStyle(el);if((st.position==="absolute"||st.position==="fixed")&&st.display!=="none"&&r.bottom>mx)mx=r.bottom;});if(mx>h)h=mx;parent.postMessage({__demoHeight:true,id:"fp",height:h},"*");}catch(e){}}var t=0;function later(){clearTimeout(t);t=setTimeout(report,280);}if(window.ResizeObserver){try{new ResizeObserver(report).observe(document.body);}catch(e){}}if(window.MutationObserver){try{new MutationObserver(function(){report();later();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["style","class","hidden"]});}catch(e){}}window.addEventListener("load",report);window.addEventListener("resize",report);window.addEventListener("message",function(e){if(e.data&&e.data.__askHeight)report();});report();})();</script>
+</body></html>

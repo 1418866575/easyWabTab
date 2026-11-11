@@ -9,7 +9,8 @@
 
 // ==================== 左侧菜单 ====================
 
-export const SMART_MENU_KEYS = ['overview', 'platforms', 'skills', 'prompts', 'workflows'] as const
+/** 「前端提示词」是只读示范卡库，与用户可增删改的「提示词管理」是两回事，故单独占一项。 */
+export const SMART_MENU_KEYS = ['overview', 'platforms', 'skills', 'prompts', 'workflows', 'frontend'] as const
 export type SmartMenuKey = (typeof SMART_MENU_KEYS)[number]
 
 export const SMART_MENU_DEFAULT_LABELS: Record<string, string> = {
@@ -17,7 +18,8 @@ export const SMART_MENU_DEFAULT_LABELS: Record<string, string> = {
   platforms: '智能网页端',
   skills: '技能管理',
   prompts: '提示词管理',
-  workflows: '工作流管理'
+  workflows: '工作流管理',
+  frontend: '前端提示词'
 }
 
 export const SMART_MENU_ICONS: Record<string, string> = {
@@ -25,7 +27,8 @@ export const SMART_MENU_ICONS: Record<string, string> = {
   platforms: 'link',
   skills: 'toolbox',
   prompts: 'notes',
-  workflows: 'merge'
+  workflows: 'merge',
+  frontend: 'monitor'
 }
 
 /** 改名上限（按 code point，emoji 代理对算 1 个，绝不拆对） */

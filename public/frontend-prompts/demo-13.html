@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>标签页</title>
+<style>
+:root{--brand:#2F5BEA;--ink:#1B2330;--muted:#6B7686;--line:#E3E7EE;--soft:#F5F7FB}
+*{box-sizing:border-box}
+body{margin:0;padding:20px 24px 24px;background:#fff;color:var(--ink);font:14px/1.6 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+h3{margin:0 0 14px;font-size:16px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px}
+.tab{font:inherit;font-size:13px;font-weight:600;padding:10px 14px;background:transparent;border:0;border-bottom:2px solid transparent;color:var(--muted);cursor:pointer;margin-bottom:-1px}
+.tab[aria-selected=true]{color:var(--brand);border-bottom-color:var(--brand)}
+.tab:focus-visible{outline:2px solid var(--brand);outline-offset:-2px;border-radius:4px}
+.panel{border:1px solid var(--line);border-radius:9px;padding:16px;background:var(--soft);font-size:13px;line-height:1.8}
+.panel h4{margin:0 0 6px;font-size:14px}
+.panel p{margin:0;color:var(--muted)}
+.panel[hidden]{display:none}
+.hint{margin:12px 0 0;font:11px/1.5 ui-monospace,monospace;color:var(--muted)}
+</style></head><body>
+<h3>项目详情</h3>
+<div class="tabs" role="tablist" aria-label="项目详情">
+<button class="tab" role="tab" id="t1" aria-controls="q1" aria-selected="true" tabindex="0" type="button">概览</button>
+<button class="tab" role="tab" id="t2" aria-controls="q2" aria-selected="false" tabindex="-1" type="button">数据</button>
+<button class="tab" role="tab" id="t3" aria-controls="q3" aria-selected="false" tabindex="-1" type="button">设置</button>
+</div>
+<div class="panel" role="tabpanel" id="q1" aria-labelledby="t1"><h4>AI 前端练习册</h4><p>一个用提示词逐步搭起来的单文件项目，从 HTML 骨架一路长到异步数据和常用组件。</p></div>
+<div class="panel" role="tabpanel" id="q2" aria-labelledby="t2" hidden><h4>本周数据</h4><p>访问量 12,480，新增用户 386，转化率 4.2%。数据写死在页面里，方便离线查看。</p></div>
+<div class="panel" role="tabpanel" id="q3" aria-labelledby="t3" hidden><h4>偏好设置</h4><p>消息通知已开启，自动保存已开启。设置项的变化会实时显示在下方。</p></div>
+<p class="hint">聚焦标签后按 ← → 或 Home / End 也能切换</p>
+<script>
+var tabs=[].slice.call(document.querySelectorAll('[role=tab]'));
+function select(i){
+  tabs.forEach(function(t,j){
+    var on=i===j;
+    t.setAttribute('aria-selected',on?'true':'false');
+    t.setAttribute('tabindex',on?'0':'-1');
+    document.getElementById(t.getAttribute('aria-controls')).hidden=!on;
+  });
+  tabs[i].focus();
+}
+tabs.forEach(function(t,i){t.onclick=function(){select(i);};});
+document.querySelector('[role=tablist]').addEventListener('keydown',function(e){
+  var i=tabs.indexOf(document.activeElement);if(i<0)return;
+  var n=null;
+  if(e.key==='ArrowRight')n=(i+1)%tabs.length;
+  else if(e.key==='ArrowLeft')n=(i-1+tabs.length)%tabs.length;
+  else if(e.key==='Home')n=0;
+  else if(e.key==='End')n=tabs.length-1;
+  if(n!==null){e.preventDefault();select(n);}
+});
+</script>
+
+<script>(function(){function report(){try{var b=document.body,c=getComputedStyle(b),h=b.scrollHeight+(parseFloat(c.marginTop)||0)+(parseFloat(c.marginBottom)||0),mx=0;b.querySelectorAll("*").forEach(function(el){var r=el.getBoundingClientRect();if(r.height<=0||r.bottom<=h)return;var st=getComputedStyle(el);if((st.position==="absolute"||st.position==="fixed")&&st.display!=="none"&&r.bottom>mx)mx=r.bottom;});if(mx>h)h=mx;parent.postMessage({__demoHeight:true,id:"fp",height:h},"*");}catch(e){}}var t=0;function later(){clearTimeout(t);t=setTimeout(report,280);}if(window.ResizeObserver){try{new ResizeObserver(report).observe(document.body);}catch(e){}}if(window.MutationObserver){try{new MutationObserver(function(){report();later();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["style","class","hidden"]});}catch(e){}}window.addEventListener("load",report);window.addEventListener("resize",report);window.addEventListener("message",function(e){if(e.data&&e.data.__askHeight)report();});report();})();</script>
+</body></html>

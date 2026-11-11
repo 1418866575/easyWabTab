@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>容器查询</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:20px 22px 24px;background:#fff;color:#1B2330;font:14px/1.65 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+.hint{margin:0 0 12px;font:11.5px/1.5 ui-monospace,monospace;color:#6B7686}
+.wrap{resize:horizontal;overflow:auto;container-type:inline-size;width:100%;min-width:230px;max-width:100%;border:1px dashed #B9C4D6;border-radius:10px;padding:12px;background:#F5F7FB}
+.card{display:grid;gap:14px;background:#fff;border:1px solid #E3E7EE;border-radius:9px;padding:14px}
+.thumb{height:92px;border-radius:7px;background:linear-gradient(135deg,#2F5BEA,#9DB8FF)}
+h4{font-size:clamp(15px,3.2cqi,21px);line-height:1.3;margin:0 0 6px;letter-spacing:-.02em}
+.card p{margin:0 0 10px;color:#6B7686;font-size:12.5px}
+.card a{color:#2F5BEA;font-size:12.5px;font-weight:600;text-decoration:none}
+@container (min-width:460px){.card{grid-template-columns:120px 1fr}.thumb{height:100%;min-height:112px}}
+</style></head><body>
+<p class="hint">↔ 拖动虚线框右下角改变宽度，卡片会自己换排版</p>
+<div class="wrap"><div class="card"><div class="thumb"></div><div><h4>把布局交给容器，而不是窗口</h4><p>同一张卡片放进主栏是左右两栏，塞进侧栏自动变成上下排，不需要额外的类名或媒体查询。</p><a href="#">阅读全文 →</a></div></div></div>
+
+<script>(function(){function report(){try{var b=document.body,c=getComputedStyle(b),h=b.scrollHeight+(parseFloat(c.marginTop)||0)+(parseFloat(c.marginBottom)||0),mx=0;b.querySelectorAll("*").forEach(function(el){var r=el.getBoundingClientRect();if(r.height<=0||r.bottom<=h)return;var st=getComputedStyle(el);if((st.position==="absolute"||st.position==="fixed")&&st.display!=="none"&&r.bottom>mx)mx=r.bottom;});if(mx>h)h=mx;parent.postMessage({__demoHeight:true,id:"fp",height:h},"*");}catch(e){}}var t=0;function later(){clearTimeout(t);t=setTimeout(report,280);}if(window.ResizeObserver){try{new ResizeObserver(report).observe(document.body);}catch(e){}}if(window.MutationObserver){try{new MutationObserver(function(){report();later();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["style","class","hidden"]});}catch(e){}}window.addEventListener("load",report);window.addEventListener("resize",report);window.addEventListener("message",function(e){if(e.data&&e.data.__askHeight)report();});report();})();</script>
+</body></html>

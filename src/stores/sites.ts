@@ -256,16 +256,16 @@ export const useSitesStore = defineStore('sites', () => {
 
   const { parseSitesFromMarkdown } = useMarkdown()
 
-  // 总页数：前 N 个入口卡已并入分页池、占分页名额；其余入口卡恒显置顶、不占名额；至少 1 页
+  // 总页数：全部可见入口卡已并入分页池、占分页名额；至少 1 页
   const totalPages = computed(() => {
     return Math.max(1, Math.ceil(listTotal.value / pageSize.value))
   })
 
-  // 当前页数据：分页池（前 N 个入口卡 + 普通站点）按页切片，剩余入口卡恒显置顶
+  // 当前页数据：分页池（全部可见入口卡 + 普通站点）按页切片，翻页后入口卡不再重复出现
   const paginatedSites = computed(() => {
     const start = (currentPage.value - 1) * pageSize.value
     const pool = [...mergedFixedSites.value, ...regularSites.value]
-    return [...pool.slice(start, start + pageSize.value), ...pinnedFixedSites.value]
+    return pool.slice(start, start + pageSize.value)
   })
 
   // 筛选变化或分页大小变化时重置页码
@@ -313,8 +313,8 @@ export const useSitesStore = defineStore('sites', () => {
   })
 
   const filteredSites = computed(() => {
-    // 选中具体分类时只显示该分类的网站，站内入口卡不再恒显；
-    // 「全部」+ 搜索 / 标签 / 断链筛选时仍按 MODULE_SITE_ORDER 钉在最前。
+    // 选中具体分类时只显示该分类的网站，站内入口卡不参与（ad05f86 起）；
+    // 「全部」+ 搜索 / 标签 / 断链筛选时仍按 MODULE_SITE_ORDER 全部钉在最前、并入分页。
     const pinned = selectedCategory.value
       ? []
       : visibleSites.value
@@ -358,22 +358,23 @@ export const useSitesStore = defineStore('sites', () => {
     return [...pinned, ...regular]
   })
 
-  /** 参与分页与计数的普通站点（入口卡恒显、每页置顶，不占分页名额） */
+  /** 参与分页与计数的普通站点（入口卡同样参与分页，见 mergedFixedSites） */
   const regularSites = computed(() => filteredSites.value.filter(s => !isModuleSite(s)))
   /** 普通站点总数（不含入口卡），供「共 N 个」与筛选计数使用 */
   const regularTotal = computed(() => visibleSites.value.filter(s => !isModuleSite(s)).length)
 
   /**
-   * 前 N 个入口卡并入分页池：计入「共 N 个」与页码计算，按 MODULE_SITE_ORDER 原顺序随页流动；
-   * 其余入口卡（如 /smart /blog/admin）仍恒显置顶、不占分页名额、不计入总数。
-   * N 取自 MODULE_SITE_ORDER 前段长度；若某入口卡被设置关闭，则实际并入数量按可见项计算。
+   * 所有「当前可见」的站内入口卡都并入分页池：数量随设置里的工作台开关动态变化，
+   * 计入「共 N 个」与页码计算，按 MODULE_SITE_ORDER 原顺序随页流动。
+   *
+   * 不再写死切分数量：此前固定前 7 张并入、其余恒显置底，导致开关其它工作台时
+   * 排在末尾的 /smart、/blog/admin 时而进分页池、时而被挤进恒显段，
+   * 计数对不上、翻页还会重复出现。现在一律按实际可见数量处理。
    */
-  const MODULE_SITE_MERGE_COUNT = 8
-  // filteredSites 已把入口卡按 moduleRank 排在最前，直接首尾切分即可
+  // filteredSites 已把入口卡按 moduleRank 排在最前，取全部即为「置顶且参与分页」
   const moduleSites = computed(() => filteredSites.value.filter(s => isModuleSite(s)))
-  const mergedFixedSites = computed(() => moduleSites.value.slice(0, MODULE_SITE_MERGE_COUNT))
-  const pinnedFixedSites = computed(() => moduleSites.value.slice(MODULE_SITE_MERGE_COUNT))
-  /** 计入总数 / 页码的卡片数：前 N 个入口卡 + 普通站点 */
+  const mergedFixedSites = computed(() => moduleSites.value)
+  /** 计入总数 / 页码的卡片数：全部可见入口卡 + 普通站点 */
   const listTotal = computed(() => mergedFixedSites.value.length + regularSites.value.length)
 
   // 按分类分组的网站
