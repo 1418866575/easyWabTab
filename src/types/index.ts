@@ -364,6 +364,12 @@ export interface AppSettingsData {
   smartPageName?: string               // 智能工作台（/smart 技能库+提示词库）自定义名称（默认 '智能工作台'）
   smartPageVisible?: boolean           // 智能工作台页面可见性开关（默认 true；缺失 = 显示）
   smartPageIcon?: string               // 智能工作台入口自定义图标（图标库路径 / dataUrl；空串或缺失 = 内置默认）
+  healthPageName?: string              // 健康工作台（/health）自定义名称（默认 '健康管理'）
+  healthPageVisible?: boolean          // 健康工作台可见性开关（默认 true；缺失 = 显示）
+  healthPageIcon?: string              // 健康工作台入口自定义图标（空串或缺失 = 内置默认）
+  healthMenuOrder?: string[]           // 健康工作台左侧菜单顺序（界面偏好，随 settings 同步）
+  healthMenuLabels?: Record<string, string>      // 健康菜单自定义名称
+  healthMenuVisibility?: Record<string, boolean> // 健康菜单显隐（false = 隐藏）
   workbenchManageName?: string         // 导航站右上角「工作台管理」按钮自定义名称（默认 '工作台管理'）
   workbenchManageVisible?: boolean     // 「工作台管理」按钮可见性开关（默认 true；缺失 = 显示）
   workbenchManageIcon?: string         // 「工作台管理」按钮自定义图标（图标库路径 / dataUrl；空串或缺失 = 用内置默认图标）
@@ -1664,7 +1670,7 @@ export interface WorkbenchSyncData {
   messages?: MessageBoardData // 留言板（可选：旧信封缺该字段时回退本机，避免自动拉取清空）
   countdowns: Countdown[]
   passwords: string
-  health: HealthData
+  health?: HealthData // 仅兼容旧 workbench.json 读取；新数据走 health.json
   // 记账多账本：与 business 同款升级——旧信封为扁平 LedgerData，新结构为账本容器 LedgerStoreData，
   // 由 normalizeLedgerStore() 在导入/加载时统一迁移（旧数据迁入「当前年账本」），二者在信封层兼容共存
   ledger: LedgerData | LedgerStoreData
@@ -1675,6 +1681,15 @@ export interface WorkbenchSyncData {
   passwordVerification?: string
   prefs?: Record<string, string>
   family: GenealogyData            // 家庭家谱（并入 workbench 阶层，明文同步，不加密）
+}
+
+/** health.json：健康工作台独立云同步信封（与个人工作台 workbench.json 完全隔离） */
+export interface HealthSyncData {
+  version: 1
+  exportedAt: string
+  clientId?: string
+  pushedAt?: number
+  health: HealthData
 }
 
 /** BusinessSyncData：销售记账独立同步信封 */

@@ -328,18 +328,7 @@ onMounted(async () => {
       <div v-else class="stat-sub">尚未设定每日热量目标</div>
     </div>
 
-    <!-- 食谱方案（模板处方；排在目标卡与周计划之间） -->
-    <WorkbenchDietPlanCard
-      v-if="canPlanTemplate"
-      :templates="DIET_PLAN_TEMPLATES"
-      :active-id="activeDietPlanId"
-      :plan-start="store.planPrefs?.dietPlanStart"
-      :today="todayStr"
-      @activate="onActivateDietPlan"
-      @log-meal="onLogPlanMeal"
-    />
-
-    <!-- 本周饮食计划（早/午/晚 + 合计） -->
+    <!-- 饮食周计划（早/午/晚 + 合计） -->
     <WeeklyPlanBoard
       v-if="canPlan"
       title="饮食周计划"
@@ -355,6 +344,17 @@ onMounted(async () => {
       data-testid="dt-plan-board"
       @nav="onPlanNav"
       @cell-click="onPlanCellClick"
+    />
+
+    <!-- 食谱方案（模板处方） -->
+    <WorkbenchDietPlanCard
+      v-if="canPlanTemplate"
+      :templates="DIET_PLAN_TEMPLATES"
+      :active-id="activeDietPlanId"
+      :plan-start="store.planPrefs?.dietPlanStart"
+      :today="todayStr"
+      @activate="onActivateDietPlan"
+      @log-meal="onLogPlanMeal"
     />
 
     <!-- 定时提醒（只读小模块） -->

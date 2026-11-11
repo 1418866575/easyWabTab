@@ -4,6 +4,7 @@
 // 外壳通过 @navigate 接收面板跳转请求（WorkbenchView 已做白名单收窄）。
 // 菜单开关（设置 → 工作台设置 → 工作台菜单）关闭的功能：左菜单隐藏 + 主页对应统计/面板/快捷添加一并隐藏。
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
 import { useToast } from '@/composables/useToast'
@@ -49,7 +50,13 @@ const {
 const layout = useHomeLayout()
 
 // 导航：点击卡片跳转对应面板（卡片同时可拖拽排序，点击与拖拽互不冲突）
+// 健康统计卡已独立为 /health 工作台，直接走路由而非本视图的 section 白名单。
+const router = useRouter()
 function navTo(section: string, tab?: string): void {
+  if (section === 'health') {
+    void router.push({ path: '/health', query: tab ? { tab } : {} })
+    return
+  }
   emit('navigate', section, tab)
 }
 

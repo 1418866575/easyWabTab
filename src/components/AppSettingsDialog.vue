@@ -279,13 +279,14 @@ const mpQrFailed = ref(false)
 // ========================================
 // 入口图标选择（工作台 / 销售记账 / 学生 / 教师）：图标来自图标管理库，弹框形式选择
 // ========================================
-type IconTarget = 'workbench' | 'business' | 'student' | 'teacher' | 'smart' | 'manage' | 'favicon' | 'toolbox' | 'blog-admin' | 'blog-front' | 'books'
+type IconTarget = 'workbench' | 'business' | 'student' | 'teacher' | 'smart' | 'health' | 'manage' | 'favicon' | 'toolbox' | 'blog-admin' | 'blog-front' | 'books'
 const ICON_TARGET_LABEL: Record<IconTarget, string> = {
   workbench: '个人工作台',
   business: '销售记账',
   student: '学生工作台',
   teacher: '教师工作台',
   smart: '智能工作台',
+  health: '健康管理',
   manage: '工作台管理',
   favicon: '站点图标',
   toolbox: '工具箱',
@@ -311,6 +312,7 @@ const iconPickerCurrent = computed(() => {
     case 'student': return store.studentPageIcon
     case 'teacher': return store.teacherPageIcon
     case 'smart': return store.smartPageIcon
+    case 'health': return store.healthPageIcon
     case 'manage': return store.workbenchManageIcon
     case 'favicon': return store.siteFavicon
     case 'toolbox': return store.toolboxButtonIcon
@@ -328,6 +330,7 @@ function onPickIcon(src: string): void {
     case 'student': store.setStudentPageIcon(src); break
     case 'teacher': store.setTeacherPageIcon(src); break
     case 'smart': store.setSmartPageIcon(src); break
+    case 'health': store.setHealthPageIcon(src); break
     case 'manage': store.setWorkbenchManageIcon(src); break
     case 'favicon': store.setSiteFavicon(src); break
     case 'toolbox': store.setToolboxButtonIcon(src); break
@@ -2830,6 +2833,43 @@ function toggleFullscreen(): void {
           </div>
           <p class="wb-menu-hint">
             控制左上角工作台切换面板中是否显示智能工作台（自定义技能与提示词库）。关闭后面板中不显示，已保存的技能与提示词不受影响；也可在此改名与更换入口图标。
+          </p>
+        </div>
+
+        <!-- 健康管理（独立健康工作台 /health） -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-workbench'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <span class="wb-menu-label">健康管理</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                :value="store.healthPageName"
+                placeholder="健康管理"
+                maxlength="20"
+                data-testid="health-page-name-input"
+                @input="store.setHealthPageName(($event.target as HTMLInputElement).value)"
+              />
+              <button
+                type="button"
+                class="wb-menu-icon-btn"
+                :class="{ 'is-set': !!store.healthPageIcon }"
+                :title="store.healthPageIcon ? '已设置图标，点击更换' : '选择图标'"
+                data-testid="health-icon-btn"
+                @click="openIconPicker('health')"
+              >
+                <img v-if="store.healthPageIcon" :src="store.healthPageIcon" alt="" class="wb-menu-icon-img" />
+                <Icon v-else name="image" />
+              </button>
+              <el-switch
+                :model-value="store.healthPageVisible !== false"
+                data-testid="health-visible-switch"
+                @update:model-value="store.setHealthPageVisible"
+              />
+            </div>
+          </div>
+          <p class="wb-menu-hint">
+            控制导航站入口卡与工作台切换面板中是否显示「健康管理」。关闭后入口隐藏，但已保存的运动、饮食、睡眠、体重数据不受影响；也可在此改名与更换入口图标。
           </p>
         </div>
 

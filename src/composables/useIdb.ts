@@ -7,6 +7,7 @@
  * 所有请求失败均 reject，由调用方自行 try/catch 降级（不做 localStorage 回退写）
  */
 import { WORKBENCH_DATA_VERSION, emptyAppSettingsData } from '../types'
+import type { HealthSyncData } from '../types'
 import type { AppSettingsData, AppSettingsDataNoCloudSync, BlogData, BlogSyncData, BlogFrontPrefs, BlogFrontSyncData, BusinessData, BusinessStoreData, BusinessSyncData, Countdown, DiaryData, GenealogyData, HealthData, IconsSyncData, LedgerData, LedgerStoreData, MessageBoardData, NavSyncData, NoteData, SmartSyncData, StudentSyncData, TeacherSyncData, WorkbenchData, WorkbenchSyncData, WorkbenchTodo } from '../types'
 import { adoptPasswordIdentity, getStoredSaltHex, getStoredVerification } from './useCrypto'
 import { normalizeBusinessStore } from './businessCore.ts'
@@ -738,7 +739,19 @@ export async function migrateIconsFromLocalStorageIfNeeded(): Promise<{ migrated
   return { migrated: false, count: 0 }
 }
 
-// ---------- workbench.json（不含 business；settings 不含 cloudSync*） ----------
+// ---------- health.json（健康工作台独立信封，只读写 IDB health store） ----------
+export async function exportHealth(): Promise<HealthSyncData> {
+  const health = await idbGet<HealthData>('health')
+  return { version: 1, exportedAt: new Date().toISOString(), health: health ?? emptyHealthData() }
+}
+
+export async function importHealthData(remote: HealthSyncData): Promise<void> {
+  // 远端无 health 字段时不写库，避免把旧设备/空信封当成清空指令
+  if (!remote?.health) return
+  await idbPut('health', remote.health)
+}
+
+// ---------- workbench.json（不含 business / health；settings 不含 cloudSync*） ----------
 
 export async function exportWorkbench(): Promise<WorkbenchSyncData> {
   const full = await idbExportAll()
@@ -753,7 +766,6 @@ export async function exportWorkbench(): Promise<WorkbenchSyncData> {
     messages: full.messages,
     countdowns: full.countdowns,
     passwords: full.passwords,
-    health: full.health,
     ledger: full.ledger,
     // 剥离 cloudSync 凭证/开关 4 字段：workbench.json 不携带云同步凭证（仅本地保留，避免覆盖其他设备）；
     // cloudSyncInterval / cloudSyncSilentThreshold 作为同步偏好随 settings 一起同步
@@ -775,13 +787,14 @@ export async function importWorkbenchData(remote: WorkbenchSyncData): Promise<{ 
   // 用它兜底保留本地家谱，避免每次自动拉取把本地数据静默清空
   // localLedger：记账多账本容器。远端信封若无 ledger 字段（旧版/尚未推送）必须回退本地，
   // 否则后台自动拉取会把本地全部账本静默清空（同 diary.journals / family 陷阱）
-  const [localSettings, localBusiness, localFamily, localDiary, localLedger, localMessages] = await Promise.all([
+  const [localSettings, localBusiness, localFamily, localDiary, localLedger, localMessages, localHealth] = await Promise.all([
     idbGet<AppSettingsData>('settings'),
     idbGet<BusinessStoreData | BusinessData>('business'),
     idbGet<GenealogyData>('family'),
     idbGet<DiaryData>('diary'),
     idbGet<LedgerStoreData | LedgerData>('ledger'),
-    idbGet<MessageBoardData>('messages')
+    idbGet<MessageBoardData>('messages'),
+    idbGet<HealthData>('health')
   ])
 
   // 合并：remote.settings（含同步偏好 cloudSyncInterval/cloudSyncSilentThreshold）+ 本机 cloudSync 凭证/开关 4 字段
@@ -807,7 +820,10 @@ export async function importWorkbenchData(remote: WorkbenchSyncData): Promise<{ 
     messages: normalizeMessageData(remote.messages ?? localMessages ?? emptyMessageData()),
     countdowns: remote.countdowns ?? [],
     passwords: remote.passwords ?? '',
-    health: remote.health ?? emptyHealthData(),
+    // health 已独立为 health.json：workbench.json 不再写回该字段。
+    // 但 idbImportAll 会 clear 所有 core store，必须填回本地值，否则每次拉取都会清空健康数据；
+    // 本机无数据时回退旧信封的 remote.health，作为旧 workbench.json 的一次性迁移来源。
+    health: localHealth ?? remote.health ?? emptyHealthData(),
     // 记账多账本：远端优先、缺则回退本地，且无论新旧结构都归一为「账本容器」再落库，
     // 保证 store 读到的 LEDGER 一定带 ledgers 数组（旧扁平信封自动迁入当前年账本）
     ledger: normalizeLedgerStore(remote.ledger ?? localLedger),

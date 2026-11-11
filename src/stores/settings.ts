@@ -14,6 +14,7 @@ import {
   resolveMenuItems
 } from '@/composables/workbenchMenuCore'
 import type { WorkbenchMenuItem, WorkbenchMenuVisibility } from '@/composables/workbenchMenuCore'
+import { normalizeHealthMenu, resolveHealthMenuItems, emptyHealthMenuData, type HealthMenuData } from '@/composables/healthMenuCore'
 import type { AppSettingsData, HomeCardLayout, WatermarkMode, WatermarkType, SyncChannel } from '@/types'
 import {
   normalizePanelViewModes,
@@ -123,6 +124,9 @@ const SITE_FAVICON_KEY = 'site-favicon'
 // 「工作台」→「个人工作台」一次性改名标记：首次加载时清空旧名称，让新默认名生效（只跑一次）
 const WORKBENCH_PAGE_RENAMED_KEY = 'settings-workbench-page-renamed-v1'
 
+// 健康独立为单独工作台：旧「个人工作台菜单 → 健康」隐藏配置一次性迁移到新开关（只跑一次）
+const HEALTH_VISIBLE_MIGRATED_KEY = 'settings-health-visible-migrated-v1'
+
 // 全部弹窗 id（全量契约遍历来源）
 const DIALOG_IDS: DialogId[] = [
   'site',
@@ -227,6 +231,9 @@ function parseSettingsData(raw: unknown): AppSettingsData {
     workbenchMenuOrder: [...WORKBENCH_MENU_DEFAULT_ORDER],
     workbenchMenuLabels: {},
     workbenchMenuVisibility: {},
+    healthMenuOrder: [],
+    healthMenuLabels: {},
+    healthMenuVisibility: {},
     desktopNotifyEnabled: false,
     countdownPopupEnabled: true, // 倒计时弹框默认开启（保持既有行为）
     // ===== 工作台水印（默认关闭 + 空文案，由管理员自定义）=====
@@ -276,6 +283,14 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   out.workbenchMenuLabels = menu.labels
   // 工作台菜单开关：仅已知键布尔值（false = 隐藏）；非法/缺失一律显示
   out.workbenchMenuVisibility = normalizeWorkbenchMenuVisibility(data.workbenchMenuVisibility)
+  const healthMenu = normalizeHealthMenu({
+    order: data.healthMenuOrder,
+    labels: data.healthMenuLabels,
+    visibility: data.healthMenuVisibility
+  })
+  out.healthMenuOrder = healthMenu.order
+  out.healthMenuLabels = healthMenu.labels
+  out.healthMenuVisibility = healthMenu.visibility
   // 导航筛选栏展开态：仅采纳布尔；非法/缺失回退默认（收起）
   if (typeof data.navFiltersExpanded === 'boolean') {
     out.navFiltersExpanded = data.navFiltersExpanded
@@ -338,6 +353,15 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   }
   if (typeof data.smartPageIcon === 'string') {
     out.smartPageIcon = data.smartPageIcon
+  }
+  if (typeof data.healthPageName === 'string') {
+    out.healthPageName = data.healthPageName.trim()
+  }
+  if (typeof data.healthPageVisible === 'boolean') {
+    out.healthPageVisible = data.healthPageVisible
+  }
+  if (typeof data.healthPageIcon === 'string') {
+    out.healthPageIcon = data.healthPageIcon
   }
   // 博客后台 / 博客前台：名称仅采纳字符串；开关仅采纳布尔（缺失 = 显示）；图标原样透传
   if (typeof data.blogAdminPageName === 'string') {
@@ -532,6 +556,14 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const studentPageIcon = ref<string>('')
   const teacherPageIcon = ref<string>('')
   const smartPageIcon = ref<string>('')
+  // 健康工作台（/health）：与其它工作台同构，默认显示
+  const healthPageName = ref<string>('')
+  // 默认即为合法 4 项顺序：initSettings 异步加载前（或个人台未触发时）也能正确渲染与编辑菜单
+  const healthMenuOrder = ref<string[]>([...emptyHealthMenuData().order])
+  const healthMenuLabels = ref<Record<string, string>>({})
+  const healthMenuVisibility = ref<Record<string, boolean>>({})
+  const healthPageVisible = ref<boolean>(true)
+  const healthPageIcon = ref<string>('')
   // 导航站右上角「工作台管理」按钮：默认显示、默认名称「工作台管理」；
   // workbenchManageIcon 为该按钮的自定义图标（空串 = 用内置默认图标，可在 设置 → 个性化 → 工作台设置 中改）
   const workbenchManageName = ref<string>('')
@@ -648,6 +680,12 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       studentPageIcon: studentPageIcon.value,
       teacherPageIcon: teacherPageIcon.value,
       smartPageIcon: smartPageIcon.value,
+      healthPageName: healthPageName.value,
+      healthPageVisible: healthPageVisible.value,
+      healthPageIcon: healthPageIcon.value,
+      healthMenuOrder: toRaw(healthMenuOrder.value),
+      healthMenuLabels: toRaw(healthMenuLabels.value),
+      healthMenuVisibility: toRaw(healthMenuVisibility.value),
       workbenchManageName: workbenchManageName.value,
       workbenchManageVisible: workbenchManageVisible.value,
       workbenchManageIcon: workbenchManageIcon.value,
@@ -841,6 +879,25 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       studentPageIcon.value = typeof effective.studentPageIcon === 'string' ? effective.studentPageIcon : ''
       teacherPageIcon.value = typeof effective.teacherPageIcon === 'string' ? effective.teacherPageIcon : ''
       smartPageIcon.value = typeof effective.smartPageIcon === 'string' ? effective.smartPageIcon : ''
+      healthPageName.value = typeof effective.healthPageName === 'string' ? effective.healthPageName.trim() : ''
+      healthPageVisible.value = effective.healthPageVisible !== false
+      // 旧版把「健康」当个人台菜单项隐藏过：独立后尊重该选择，只迁移一次。
+      // 末尾 persist() 会把迁移结果写回；之后用户手动改开关不再被覆盖。
+      if (!localStorage.getItem(HEALTH_VISIBLE_MIGRATED_KEY)) {
+        if (effective.healthPageVisible === undefined && effective.workbenchMenuVisibility?.health === false) {
+          healthPageVisible.value = false
+        }
+        localStorage.setItem(HEALTH_VISIBLE_MIGRATED_KEY, '1')
+      }
+      healthPageIcon.value = typeof effective.healthPageIcon === 'string' ? effective.healthPageIcon : ''
+      const hm = normalizeHealthMenu({
+        order: effective.healthMenuOrder,
+        labels: effective.healthMenuLabels,
+        visibility: effective.healthMenuVisibility
+      })
+      healthMenuOrder.value = hm.order
+      healthMenuLabels.value = hm.labels
+      healthMenuVisibility.value = hm.visibility
       blogAdminPageName.value = typeof effective.blogAdminPageName === 'string' ? effective.blogAdminPageName.trim() : ''
       blogAdminPageVisible.value = effective.blogAdminPageVisible !== false
       blogAdminPageIcon.value = typeof effective.blogAdminPageIcon === 'string' ? effective.blogAdminPageIcon : ''
@@ -1029,6 +1086,12 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     studentPageIcon.value = ''
     teacherPageIcon.value = ''
     smartPageIcon.value = ''
+    healthPageName.value = ''
+    healthPageVisible.value = true
+    healthPageIcon.value = ''
+    healthMenuOrder.value = [...emptyHealthMenuData().order]
+    healthMenuLabels.value = {}
+    healthMenuVisibility.value = {}
     workbenchManageName.value = ''
     workbenchManageVisible.value = true
     workbenchManageIcon.value = ''
@@ -1255,6 +1318,28 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     smartPageIcon.value = s
     persist()
   }
+  function setHealthPageName(s: string) {
+    healthPageName.value = s
+    persist()
+  }
+  function setHealthPageVisible(v: boolean) {
+    healthPageVisible.value = v
+    persist()
+  }
+  function setHealthPageIcon(s: string) {
+    healthPageIcon.value = s
+    persist()
+  }
+  function setHealthMenu(data: HealthMenuData): void {
+    const n = normalizeHealthMenu(data)
+    healthMenuOrder.value = n.order
+    healthMenuLabels.value = n.labels
+    healthMenuVisibility.value = n.visibility
+    persist()
+  }
+  function resetHealthMenu(): void {
+    setHealthMenu(emptyHealthMenuData())
+  }
   // 博客后台 / 博客前台 setters（与其它页面三件套同构）
   function setBlogAdminPageName(s: string) {
     blogAdminPageName.value = s
@@ -1353,6 +1438,12 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const studentPageDisplayName = computed(() => studentPageName.value || '学生工作台')
   const teacherPageDisplayName = computed(() => teacherPageName.value || '教师工作台')
   const smartPageDisplayName = computed(() => smartPageName.value || '智能工作台')
+  const healthPageDisplayName = computed(() => healthPageName.value || '健康管理')
+  const healthMenuItems = computed(() => resolveHealthMenuItems({
+    order: healthMenuOrder.value,
+    labels: healthMenuLabels.value,
+    visibility: healthMenuVisibility.value
+  }))
   const blogAdminPageDisplayName = computed(() => blogAdminPageName.value || '博客后台')
   const blogFrontPageDisplayName = computed(() => blogFrontPageName.value || '博客前台')
   const booksPageDisplayName = computed(() => booksPageName.value || '图书馆')
@@ -1613,6 +1704,12 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     studentPageIcon,
     teacherPageIcon,
     smartPageIcon,
+    healthPageName,
+    healthPageVisible,
+    healthPageIcon,
+    healthMenuOrder,
+    healthMenuLabels,
+    healthMenuVisibility,
     workbenchManageName,
     workbenchManageVisible,
     workbenchManageIcon,
@@ -1647,6 +1744,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     studentPageDisplayName,
     teacherPageDisplayName,
     smartPageDisplayName,
+    healthPageDisplayName,
+    healthMenuItems,
     workbenchManageDisplayName,
     countdownButtonDisplayName,
     helpButtonDisplayName,
@@ -1723,6 +1822,11 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     setStudentPageIcon,
     setTeacherPageIcon,
     setSmartPageIcon,
+    setHealthPageName,
+    setHealthPageVisible,
+    setHealthPageIcon,
+    setHealthMenu,
+    resetHealthMenu,
     setWorkbenchManageName,
     setWorkbenchManageVisible,
     setWorkbenchManageIcon,

@@ -28,6 +28,7 @@ export type ModuleKey =
   | 'blogAdmin'
   | 'blogFront'
   | 'books'
+  | 'health'
 
 /** 一个模块的同步作用域：WebDAV 走信封，飞书走 IDB store + nav key 白名单 */
 export interface ModuleScope {
@@ -50,7 +51,6 @@ const WORKBENCH_STORES = [
   'messages',
   'countdowns',
   'passwords',
-  'health',
   'ledger',
   'settings',
   'pomodoro',
@@ -61,6 +61,7 @@ const WORKBENCH_STORES = [
 export const MODULE_SCOPES: Record<ModuleKey, ModuleScope> = {
   nav: { envelopes: ['nav.json', 'icons.json'], stores: ['icons'], navKeys: [...NAV_SYNC_KEYS] },
   workbench: { envelopes: ['workbench.json'], stores: WORKBENCH_STORES },
+  health: { envelopes: ['health.json'], stores: ['health'] },
   business: { envelopes: ['business.json'], stores: ['business'] },
   student: { envelopes: ['student.json'], stores: [...STUDENT_SYNC_STORES] },
   teacher: { envelopes: ['teacher.json'], stores: ['teacher_workbench'] },

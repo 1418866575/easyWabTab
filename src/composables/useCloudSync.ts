@@ -40,6 +40,8 @@ import {
   idbImportAll,
   exportWorkbench,
   importWorkbenchData,
+  exportHealth,
+  importHealthData,
   exportBusiness,
   importBusinessData,
   exportStudent,
@@ -59,6 +61,7 @@ import {
   idbGetKey,
   BLOG_PREFS_NAV_KEY
 } from './useIdb'
+import type { HealthSyncData } from '../types'
 import { useNavPrefs } from './useNavPrefs'
 import { useAppSettingsStore } from '../stores/settings'
 import { toastAlert } from '@/utils/dialog'
@@ -543,7 +546,7 @@ function totalDiffSize(local: unknown, remote: unknown): number {
 
 /** workbench 字段级差异量（保留原 moduleDiffSize 行为，移除 business 字段） */
 function workbenchDiffSize(local: WorkbenchSyncData, remote: WorkbenchSyncData): number {
-  const keys: Array<keyof WorkbenchSyncData> = ['todos', 'notes', 'diary', 'messages', 'countdowns', 'passwords', 'health', 'ledger', 'settings', 'pomodoro', 'habits', 'prefs']
+  const keys: Array<keyof WorkbenchSyncData> = ['todos', 'notes', 'diary', 'messages', 'countdowns', 'passwords', 'ledger', 'settings', 'pomodoro', 'habits', 'prefs']
   let total = 0
   for (const k of keys) {
     const lv = local[k]
@@ -881,12 +884,29 @@ function mergeHealth(l: HealthData | undefined, r: HealthData | undefined): Heal
   const lPlansAt = l?.plansUpdatedAt ?? ''
   const rPlansAt = r?.plansUpdatedAt ?? ''
   const takeLocalPlans = lPlansAt >= rPlansAt
+  // 跟练/食谱方案偏好与勾选进度：此前合并结果未回填，静默合并会丢
+  const planProgress: Record<string, string[]> = { ...(l?.planProgress ?? {}) }
+  for (const [k, v] of Object.entries(r?.planProgress ?? {})) {
+    planProgress[k] = Array.from(new Set([...(planProgress[k] ?? []), ...v]))
+  }
   return {
     height,
     plans,
     records,
     weeklyPlans: takeLocalPlans ? l?.weeklyPlans : r?.weeklyPlans,
-    plansUpdatedAt: takeLocalPlans ? lPlansAt : rPlansAt || lPlansAt
+    plansUpdatedAt: takeLocalPlans ? lPlansAt : rPlansAt || lPlansAt,
+    planPrefs: l?.planPrefs ?? r?.planPrefs,
+    planProgress
+  }
+}
+
+/** health.json 信封级合并：复用字段级 mergeHealth */
+function mergeHealthEnvelope(l: HealthSyncData, r: HealthSyncData): HealthSyncData {
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    clientId: getClientId(),
+    health: mergeHealth(l.health, r.health)
   }
 }
 
@@ -1071,7 +1091,6 @@ function mergeWorkbench(local: WorkbenchSyncData, remote: WorkbenchSyncData): Wo
     passwords: remote.passwords ?? local.passwords,
     passwordsSalt: remote.passwordsSalt ?? local.passwordsSalt,
     passwordVerification: remote.passwordVerification ?? local.passwordVerification,
-    health: mergeHealth(local.health, remote.health),
     ledger: mergeLedger(local.ledger, remote.ledger),
     // settings：按「本机 settings 自上次同步后是否被改过」取舍（详见 SETTINGS_SIG_KEY 注释）：
     // 没改过 → 采纳云端（修复水印/页面名/透明度等设置从其他设备推不上来）；
@@ -1321,13 +1340,12 @@ async function reloadWorkbenchStores(): Promise<void> {
   // 惰性导入避免循环依赖（各 store 在 WorkbenchView 里已 import，此处用动态导入走 onMounted init）
   // 例外：settings store 走**静态导入**——它已被 20+ 处组件静态引入，动态 import 不会把它移出主 chunk，
   // 反而触发 INEFFECTIVE_DYNAMIC_IMPORT 警告（同一模块被静态+动态混合引入时的标准告警）。
-  const [{ useWorkbenchTodosStore }, { useWorkbenchNotesStore }, { useWorkbenchDiaryStore }, { useWorkbenchMessagesStore }, { useCountdownsStore }, { useWorkbenchHealthStore }, { useWorkbenchLedgerStore }, { useWorkbenchPomodoroStore }, { useWorkbenchHabitsStore }, { useGenealogyStore }] = await Promise.all([
+  const [{ useWorkbenchTodosStore }, { useWorkbenchNotesStore }, { useWorkbenchDiaryStore }, { useWorkbenchMessagesStore }, { useCountdownsStore }, { useWorkbenchLedgerStore }, { useWorkbenchPomodoroStore }, { useWorkbenchHabitsStore }, { useGenealogyStore }] = await Promise.all([
     import('../stores/workbenchTodos'),
     import('../stores/workbenchNotes'),
     import('../stores/workbenchDiary'),
     import('../stores/workbenchMessages'),
     import('../stores/countdowns'),
-    import('../stores/workbenchHealth'),
     import('../stores/workbenchLedger'),
     import('../stores/workbenchPomodoro'),
     import('../stores/workbenchHabits'),
@@ -1339,13 +1357,18 @@ async function reloadWorkbenchStores(): Promise<void> {
     useWorkbenchDiaryStore().loadDiary(),
     useWorkbenchMessagesStore().loadMessages(),
     useCountdownsStore().loadCountdowns(),
-    useWorkbenchHealthStore().loadHealth(),
     useWorkbenchLedgerStore().loadLedger(),
     useWorkbenchPomodoroStore().loadPomodoro(),
     useWorkbenchHabitsStore().loadHabits(),
     useAppSettingsStore().initSettings(),
     useGenealogyStore().load()
   ])
+}
+
+// 健康工作台独立信封落地后只刷新 health store，不触发个人工作台其它 store 重载
+async function reloadHealthStore(): Promise<void> {
+  const { useWorkbenchHealthStore } = await import('../stores/workbenchHealth')
+  await useWorkbenchHealthStore().loadHealth()
 }
 
 async function reloadBusinessStore(): Promise<void> {
@@ -1449,6 +1472,7 @@ async function reloadBlogPrefsStores(): Promise<void> {
 export async function reloadAllStores(): Promise<void> {
   await Promise.all([
     reloadWorkbenchStores(),
+    reloadHealthStore(),
     reloadBusinessStore(),
     reloadStudentStores(),
     reloadTeacherStores(),
@@ -1558,6 +1582,15 @@ const FILE_CONFIGS: FileConfig[] = [
     diffSize: (l, r) => workbenchDiffSize(l as WorkbenchSyncData, r as WorkbenchSyncData)
   },
   {
+    name: 'health.json',
+    exportLocal: () => exportHealth(),
+    importRemote: async (data) => { await importHealthData(data as HealthSyncData); return undefined },
+    signature: (data) => envelopeSignature(data as unknown as Record<string, unknown>),
+    merge: (l, r) => mergeHealthEnvelope(l as HealthSyncData, r as HealthSyncData),
+    reload: reloadHealthStore,
+    diffSize: (l, r) => totalDiffSize(l, r)
+  },
+  {
     name: 'business.json',
     exportLocal: () => exportBusiness(),
     importRemote: async (data) => { await importBusinessData(data as BusinessSyncData); return undefined },
@@ -1650,7 +1683,7 @@ const FILE_CONFIGS: FileConfig[] = [
  * 首次迁移流程：
  * 1. 已读 backup.json（WorkbenchData）传入
  * 2. idbImportAll 落本地 IDB（含密码身份接管）
- * 3. 调用 7 个 export 函数从本地拆出 7 份信封
+ * 3. 调用 8 个 export 函数从本地拆出 8 份信封
  * 4. 为每份信封设置 clientId + pushedAt
  * 5. PUT 7 份到 cloud
  * 6. DELETE cloud 上的 backup.json
@@ -1668,13 +1701,14 @@ async function migrateFromLegacyBackup(
   const localVerificationBefore = getStoredVerification()
   // 2) 落本地 IDB（idbImportAll 会接管密码身份）
   const importResult = await idbImportAll(legacyBackup)
-  // 3) 7 个 export 函数从本地拆出 7 份信封
+  // 3) 8 个 export 函数从本地拆出 8 份信封
   const clientId = getClientId()
   const pushedAt = Date.now()
-  const [nav, icons, workbench, business, student, teacher, smart] = await Promise.all([
+  const [nav, icons, workbench, health, business, student, teacher, smart] = await Promise.all([
     exportNav(),
     exportIcons(),
     exportWorkbench(),
+    exportHealth(),
     exportBusiness(),
     exportStudent(),
     exportTeacher(),
@@ -1685,12 +1719,13 @@ async function migrateFromLegacyBackup(
     { name: 'nav.json', data: { ...(nav as unknown as Record<string, unknown>), clientId, pushedAt } },
     { name: 'icons.json', data: { ...(icons as unknown as Record<string, unknown>), clientId, pushedAt } },
     { name: 'workbench.json', data: { ...(workbench as unknown as Record<string, unknown>), clientId, pushedAt } },
+    { name: 'health.json', data: { ...(health as unknown as Record<string, unknown>), clientId, pushedAt } },
     { name: 'business.json', data: { ...(business as unknown as Record<string, unknown>), clientId, pushedAt } },
     { name: 'student.json', data: { ...(student as unknown as Record<string, unknown>), clientId, pushedAt } },
     { name: 'teacher.json', data: { ...(teacher as unknown as Record<string, unknown>), clientId, pushedAt } },
     { name: 'smart.json', data: { ...(smart as unknown as Record<string, unknown>), clientId, pushedAt } }
   ]
-  // 5) PUT 7 份到 cloud（任一失败标记 error 不中断后续）
+  // 5) PUT 8 份到 cloud（任一失败标记 error 不中断后续）
   let pushError: string | null = null
   for (const env of envelopes) {
     try {

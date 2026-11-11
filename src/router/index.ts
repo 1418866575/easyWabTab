@@ -23,6 +23,8 @@ const BlogPostView = () => import('../views/BlogPostView.vue')
 // 书籍数据来自 public/bookdata/manifest.json（构建期扫描生成）与本机 IndexedDB 上传项，两者合并展示。
 const BooksView = () => import('../views/BooksView.vue')
 const BookReaderView = () => import('../views/BookReaderView.vue')
+// 健康工作台：从个人工作台独立，数据后续走独立 health.json 云同步信封
+const HealthView = () => import('../views/HealthView.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -93,6 +95,11 @@ const router = createRouter({
       path: '/books',
       name: 'books',
       component: BooksView
+    },
+    {
+      path: '/health',
+      name: 'health',
+      component: HealthView
     }
   ]
 })

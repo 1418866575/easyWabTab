@@ -334,19 +334,7 @@ onMounted(async () => {
       <div v-else class="stat-sub">尚未设定周目标</div>
     </div>
 
-    <!-- 跟练方案（模板处方；排在目标卡与周计划之间） -->
-    <WorkbenchExercisePlanCard
-      v-if="canPlanTemplate"
-      :template="activePlanTemplate"
-      :week-start="planWeekStart"
-      :progress="planProgressMap"
-      :applied="planAppliedThisWeek"
-      @toggle="onPlanToggle"
-      @reset="onPlanReset"
-      @apply="onPlanApply"
-    />
-
-    <!-- 本周计划（早晨/傍晚） -->
+    <!-- 运动周计划（早晨/傍晚） -->
     <WeeklyPlanBoard
       v-if="canPlan"
       title="运动周计划"
@@ -362,6 +350,18 @@ onMounted(async () => {
       data-testid="ex-plan-board"
       @nav="onPlanNav"
       @cell-click="onPlanCellClick"
+    />
+
+    <!-- 跟练方案（模板处方） -->
+    <WorkbenchExercisePlanCard
+      v-if="canPlanTemplate"
+      :template="activePlanTemplate"
+      :week-start="planWeekStart"
+      :progress="planProgressMap"
+      :applied="planAppliedThisWeek"
+      @toggle="onPlanToggle"
+      @reset="onPlanReset"
+      @apply="onPlanApply"
     />
 
     <!-- 定时提醒（只读小模块） -->

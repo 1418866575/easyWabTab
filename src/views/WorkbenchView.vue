@@ -6,7 +6,6 @@ import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
 import { useCountdownsStore } from '@/stores/countdowns'
 import { usePasswordsStore } from '@/stores/passwords'
-import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
 import { useWorkbenchPomodoroStore } from '@/stores/workbenchPomodoro'
@@ -15,7 +14,6 @@ import { useWorkbenchMessagesStore } from '@/stores/workbenchMessages'
 import { useGenealogyStore } from '@/stores/genealogy'
 import { useAppSettingsStore } from '@/stores/settings'
 import WorkbenchSwitcher from '@/components/WorkbenchSwitcher.vue'
-import { HEALTH_TABS, type HealthModule } from '@/types'
 import Icon from '@/components/Icon.vue'
 import SkeletonBlock from '@/components/SkeletonBlock.vue'
 import type { SpotlightAction } from '@/components/SpotlightOverlay.vue'
@@ -65,7 +63,6 @@ const WorkbenchCountdown = lazyPanel('countdowns', () => import('@/components/wo
 const WorkbenchPomodoro = lazyPanel('pomodoro', () => import('@/components/workbench/WorkbenchPomodoro.vue'))
 const WorkbenchHabits = lazyPanel('habits', () => import('@/components/workbench/WorkbenchHabits.vue'))
 const WorkbenchPassword = lazyPanel('passwords', () => import('@/components/workbench/WorkbenchPassword.vue'))
-const WorkbenchHealth = lazyPanel('health', () => import('@/components/workbench/WorkbenchHealth.vue'))
 const WorkbenchLedger = lazyPanel('ledger', () => import('@/components/workbench/WorkbenchLedger.vue'))
 const WorkbenchDiary = lazyPanel('diary', () => import('@/components/workbench/WorkbenchDiary.vue'))
 const WorkbenchMessages = lazyPanel('messages', () => import('@/components/workbench/WorkbenchMessages.vue'))
@@ -83,7 +80,6 @@ const todosStore = useWorkbenchTodosStore()
 const notesStore = useWorkbenchNotesStore()
 const countdownsStore = useCountdownsStore()
 const passwordsStore = usePasswordsStore()
-const healthStore = useWorkbenchHealthStore()
 const ledgerStore = useWorkbenchLedgerStore()
 const habitsStore = useWorkbenchHabitsStore()
 const pomodoroStore = useWorkbenchPomodoroStore()
@@ -96,7 +92,7 @@ const sitesStore = useSitesStore()
 // 移动端菜单导航 ref（用于自动滚动到激活项）
 const menuNavRef = ref<HTMLElement | null>(null)
 
-// 左侧菜单导航白名单（13 项；菜单项顺序/名称/图标由 workbenchMenuCore 经设置 store 驱动）
+// 左侧菜单导航白名单（12 项；健康已独立为 /health 工作台）
 // ⚠️ 新增菜单键时必须同步这里：navigateTo 用本白名单收窄，漏了会导致菜单点击无反应。
 const SECTION_KEYS = [
   'home',
@@ -108,7 +104,6 @@ const SECTION_KEYS = [
   'pomodoro',
   'habits',
   'passwords',
-  'health',
   'ledger',
   'genealogy',
   'trash'
@@ -124,17 +119,14 @@ const activeSection = ref<SectionKey>(
     ? (route.query.section as SectionKey)
     : 'home'
 )
-// 健康管理面板当前激活 tab（点击菜单「健康」不传 tab → 保留上次激活）。
-// 与 section 一起写进 URL：原型要求健康子 tab 刷新/分享后仍停在同一子面板。
-const activeHealthTab = ref<HealthModule>(
-  (HEALTH_TABS as readonly string[]).includes(route.query.tab as string)
-    ? (route.query.tab as HealthModule)
-    : 'exercise'
-)
+// 健康已独立为 /health 工作台：旧书签 ?section=health&tab=... 保持可用
+if (route.query.section === 'health') {
+  void router.replace({ path: '/health', query: { tab: route.query.tab } })
+}
 
-// 两个状态共用一个 watcher，避免 section 与 tab 各自 router.replace 造成竞态丢参数。
-watch([activeSection, activeHealthTab], ([sec, tab]) => {
-  router.replace({ query: { ...route.query, section: sec, tab } }).catch(() => {})
+// 当前面板写入 URL，刷新/分享后仍停在同一面板。
+watch(activeSection, (sec) => {
+  router.replace({ query: { ...route.query, section: sec } }).catch(() => {})
 })
 
 // ===== 分组菜单（原型：日常 / 专注 / 资产；顺序与改名仍由设置 store 驱动）=====
@@ -142,7 +134,7 @@ watch([activeSection, activeHealthTab], ([sec, tab]) => {
 // 这样以后新增面板忘了登记分组也不会从侧栏消失。
 const MENU_GROUP_DEFS = [
   { label: '日常', keys: ['home', 'todos', 'notes', 'diary', 'messages', 'countdowns'] },
-  { label: '专注', keys: ['pomodoro', 'habits', 'health'] },
+  { label: '专注', keys: ['pomodoro', 'habits'] },
   { label: '资产', keys: ['passwords', 'ledger', 'genealogy', 'trash'] }
 ] as const
 const menuGroups = computed(() => {
@@ -162,12 +154,9 @@ function closeMobileMenu(): void { mobileMenuOpen.value = false }
 
 // WorkbenchHome 通过 @navigate 请求跳转（emits 声明为 string，这里做白名单收窄）。
 // 菜单开关关闭的功能不可进入（白名单 + 开关双重守卫）。
-function navigateTo(section: string, tab?: string) {
+function navigateTo(section: string, _tab?: string) {
   if ((SECTION_KEYS as readonly string[]).includes(section) && settingsStore.isWorkbenchMenuEnabled(section)) {
     activeSection.value = section as SectionKey
-    if (section === 'health' && tab !== undefined && (HEALTH_TABS as readonly string[]).includes(tab)) {
-      activeHealthTab.value = tab as HealthModule
-    }
     // 抽屉里点菜单后自动收起，否则选中项被遮罩挡着看不到
     closeMobileMenu()
   }
@@ -200,7 +189,6 @@ const PANEL_BY_KEY: Record<SectionKey, Component> = {
   pomodoro: WorkbenchPomodoro,
   habits: WorkbenchHabits,
   passwords: WorkbenchPassword,
-  health: WorkbenchHealth,
   ledger: WorkbenchLedger,
   genealogy: WorkbenchGenealogy,
   trash: WorkbenchTrash
@@ -209,11 +197,7 @@ const activePanel = computed<Component>(() => PANEL_BY_KEY[activeSection.value])
 // 只给真正声明了该 emit 的面板挂监听：若把 @change 无差别透传给其它面板，
 // 它会作为原生 change 事件落在根 DOM 上，输入框一改就把 tab 写成 Event 对象。
 const activePanelBindings = computed<Record<string, unknown>>(() => ({
-  ...(activeSection.value === 'health' ? { activeTab: activeHealthTab.value } : {}),
-  ...(activeSection.value === 'home' ? { onNavigate: navigateTo } : {}),
-  ...(activeSection.value === 'health'
-    ? { onChange: (v: HealthModule) => { activeHealthTab.value = v } }
-    : {})
+  ...(activeSection.value === 'home' ? { onNavigate: navigateTo } : {})
 }))
 
 // 菜单开关变化（设置弹窗切换）→ 当前激活区被关闭时回退到首个可见菜单项（home 恒可见）
@@ -317,7 +301,6 @@ onMounted(async () => {
       diaryStore.loadDiary(),
       messagesStore.loadMessages(),
       countdownsStore.loadCountdowns(),
-      healthStore.loadHealth(),
       ledgerStore.loadLedger(),
       sitesStore.loadSites(),
       pomodoroStore.loadPomodoro(),
@@ -484,7 +467,7 @@ async function handleSyncNowClick(): Promise<void> {
             <h2 class="panel-page-title" data-testid="wb-page-title">{{ activePageTitle }}</h2>
             <p class="panel-page-sub" data-testid="wb-page-sub">{{ activePageDesc }}</p>
           </div>
-          <KeepAlive :max="13">
+          <KeepAlive :max="12">
             <component :is="activePanel" v-bind="activePanelBindings" />
           </KeepAlive>
         </template>

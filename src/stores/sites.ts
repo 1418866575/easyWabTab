@@ -57,10 +57,10 @@ import { useToast } from '@/composables/useToast'
 export const TOOLBOX_URL = '/toolbox'
 /** 站内入口卡的识别标记（由 store 注入，不是用户数据） */
 export const MODULE_SITE_TAG = '站内模块'
-/** 站内入口卡的列表顺序：原 3 张站内模块在前，其后是原左上角切换面板里的 6 个工作台跳转（不含「导航站」自身） */
+/** 站内入口卡的列表顺序：原 3 张站内模块在前，其后是 7 个工作台跳转（不含「导航站」自身） */
 export const MODULE_SITE_ORDER = [
   TOOLBOX_URL, '/blog', '/books',
-  '/teacher', '/workbench', '/business', '/student', '/smart', '/blog/admin'
+  '/teacher', '/workbench', '/health', '/business', '/student', '/smart', '/blog/admin'
 ]
 
 /** 是否为站内入口卡（站内模块 + 工作台跳转，均由 store 注入，不是用户数据） */
@@ -368,7 +368,7 @@ export const useSitesStore = defineStore('sites', () => {
    * 其余入口卡（如 /smart /blog/admin）仍恒显置顶、不占分页名额、不计入总数。
    * N 取自 MODULE_SITE_ORDER 前段长度；若某入口卡被设置关闭，则实际并入数量按可见项计算。
    */
-  const MODULE_SITE_MERGE_COUNT = 7
+  const MODULE_SITE_MERGE_COUNT = 8
   // filteredSites 已把入口卡按 moduleRank 排在最前，直接首尾切分即可
   const moduleSites = computed(() => filteredSites.value.filter(s => isModuleSite(s)))
   const mergedFixedSites = computed(() => moduleSites.value.slice(0, MODULE_SITE_MERGE_COUNT))
@@ -481,7 +481,8 @@ export const useSitesStore = defineStore('sites', () => {
     '/business': moduleIcon('#FCA5A5', '#EF4444', '<path d="M3 9h18l-1.5-5h-15L3 9Z"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/>'),
     '/student': moduleIcon('#86EFAC', '#22C55E', '<path d="M4 5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2V5Z"/><path d="M8 7h7"/><path d="M8 11h7"/>'),
     '/smart': moduleIcon('#FDE68A', '#F59E0B', '<path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V18h8v-3.3A7 7 0 0 0 12 2Z"/>'),
-    '/blog/admin': moduleIcon('#C4B5FD', '#8B5CF6', '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>')
+    '/blog/admin': moduleIcon('#C4B5FD', '#8B5CF6', '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>'),
+    '/health': moduleIcon('#FBCFE8', '#EC4899', '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/><path d="M4 12h4l2-3 3 6 2-3h5"/>')
   }
 
   /** 依据当前设置生成应当出现在导航列表里的站内模块入口 */
@@ -540,7 +541,8 @@ export const useSitesStore = defineStore('sites', () => {
       { url: '/business', name: settings.businessPageDisplayName, icon: settings.businessPageIcon, visible: settings.businessPageVisible !== false, description: '销售记账：进货、销售与库存' },
       { url: '/student', name: settings.studentPageDisplayName, icon: settings.studentPageIcon, visible: settings.studentPageVisible !== false, description: '学生工作台：课表、作业与错题' },
       { url: '/smart', name: settings.smartPageDisplayName, icon: settings.smartPageIcon, visible: settings.smartPageVisible !== false, description: '智能工作台：技能、提示词与工作流' },
-      { url: '/blog/admin', name: settings.blogAdminPageDisplayName, icon: settings.blogAdminPageIcon, visible: settings.blogAdminPageVisible !== false, description: '博客后台：文章与图片库管理' }
+      { url: '/blog/admin', name: settings.blogAdminPageDisplayName, icon: settings.blogAdminPageIcon, visible: settings.blogAdminPageVisible !== false, description: '博客后台：文章与图片库管理' },
+      { url: '/health', name: settings.healthPageDisplayName, icon: settings.healthPageIcon, visible: settings.healthPageVisible !== false, description: '健康工作台：运动、饮食、睡眠与体重' }
     ]
     for (const w of workspaces) {
       if (!w.visible) continue
@@ -850,6 +852,9 @@ export const useSitesStore = defineStore('sites', () => {
         settingsStore.smartPageDisplayName,
         settingsStore.smartPageIcon,
         settingsStore.smartPageVisible,
+        settingsStore.healthPageDisplayName,
+        settingsStore.healthPageIcon,
+        settingsStore.healthPageVisible,
         settingsStore.blogAdminPageDisplayName,
         settingsStore.blogAdminPageIcon,
         settingsStore.blogAdminPageVisible

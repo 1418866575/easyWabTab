@@ -105,6 +105,14 @@ const allEntries = computed<Entry[]>(() => [
     visible: store.smartPageVisible !== false
   },
   {
+    key: 'health',
+    path: '/health',
+    name: store.healthPageDisplayName,
+    icon: store.healthPageIcon,
+    builtin: 'health',
+    visible: store.healthPageVisible !== false
+  },
+  {
     // 博客后台：数据走独立的 blog.json 云同步信封。
     // 名称/图标/可见性由「设置 → 个性化 → 主题（工具箱下方）」控制（blogAdminPage* 三件套），
     // 与其它工作台字段同构，一并进 workbench.json 信封跨设备云同步。

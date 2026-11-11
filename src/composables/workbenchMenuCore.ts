@@ -13,7 +13,6 @@ export const WORKBENCH_MENU_KEYS: readonly string[] = [
   'pomodoro',
   'habits',
   'passwords',
-  'health',
   'ledger',
   'genealogy',
   'trash'
@@ -33,7 +32,6 @@ export const MENU_DEFAULT_LABELS: Record<string, string> = {
   pomodoro: '番茄钟',
   habits: '打卡',
   passwords: '密码',
-  health: '健康',
   ledger: '记账',
   genealogy: '家谱',
   trash: '回收站'
@@ -53,7 +51,6 @@ export const MENU_DESCRIPTIONS: Record<string, string> = {
   pomodoro: '番茄工作法计时：专注与休息循环，记录每日完成数。',
   habits: '每日习惯打卡，日历视图查看连续天数与完成率。',
   passwords: '账号密码本地加密保存，支持一键复制与显示切换。',
-  health: '运动、饮食、睡眠、体重四项指标与目标进度。',
   ledger: '收支记账、分类统计与预算提醒。',
   genealogy: '家族成员档案与家谱树，记录关系与姓名用字。',
   trash: '已删除的条目保留在这里，可恢复或彻底清除。'
@@ -70,7 +67,6 @@ export const MENU_ICONS: Record<string, string> = {
   pomodoro: 'pomodoro',
   habits: 'habits',
   passwords: 'passwords',
-  health: 'health',
   ledger: 'ledger',
   genealogy: 'genealogy',
   trash: 'trash'
@@ -119,7 +115,7 @@ export function normalizeWorkbenchMenuVisibility(visibility?: unknown): Workbenc
 /**
  * 归一化菜单顺序与名称（幂等）：
  * order → 仅保留已知键、去重（首次出现优先）、home 强制 index 0（缺失则前插、后置则前移）、
- *         缺失已知键按默认序补全 → 恒 13 项；
+ *         缺失已知键按默认序补全 → 恒 12 项；
  * labels → 仅保留已知键、trim、去空、截断 12 code point。
  * 非数组 / 非对象输入按缺省处理（兜底默认）。
  */

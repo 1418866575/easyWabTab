@@ -16,11 +16,11 @@ function test(name: string, fn: () => void) {
   tests.push({ name, fn })
 }
 
-// T1 — normalizeWorkbenchMenu 缺省：无输入 → 默认 13 键顺序、home 首位、labels 为空
+// T1 — normalizeWorkbenchMenu 缺省：无输入 → 默认 12 键顺序、home 首位、labels 为空
 test('T1 normalizeWorkbenchMenu defaults', () => {
   const out = normalizeWorkbenchMenu(undefined, undefined)
   assert.deepEqual(out.order, WORKBENCH_MENU_DEFAULT_ORDER)
-  assert.equal(out.order.length, 13)
+  assert.equal(out.order.length, 12)
   assert.equal(out.order[0], 'home')
   assert.deepEqual(out.labels, {})
 })
@@ -43,16 +43,16 @@ test('T3 normalizeWorkbenchMenu dedupe', () => {
 // T4 — normalizeWorkbenchMenu home 强制 index 0（Metis F1）：输入中 home 后置也移到最前；
 //      缺失的 habit-week（输入为旧 10 键）按归一化规则补在末尾
 test('T4 normalizeWorkbenchMenu home forced to index 0', () => {
-  const out = normalizeWorkbenchMenu(['todos', 'home', 'notes', 'diary', 'countdowns', 'pomodoro', 'habits', 'passwords', 'health', 'ledger'])
+  const out = normalizeWorkbenchMenu(['todos', 'home', 'notes', 'diary', 'countdowns', 'pomodoro', 'habits', 'passwords', 'ledger'])
   assert.equal(out.order[0], 'home')
   // 旧 10 键顺序完整保留，缺失的 messages/genealogy/trash 按默认序追加在末尾
-  assert.deepEqual(out.order, ['home', 'todos', 'notes', 'diary', 'countdowns', 'pomodoro', 'habits', 'passwords', 'health', 'ledger', 'messages', 'genealogy', 'trash'])
+  assert.deepEqual(out.order, ['home', 'todos', 'notes', 'diary', 'countdowns', 'pomodoro', 'habits', 'passwords', 'ledger', 'messages', 'genealogy', 'trash'])
 })
 
-// T5 — normalizeWorkbenchMenu 缺失 key 按默认序补全 → 恒 13 项
+// T5 — normalizeWorkbenchMenu 缺失 key 按默认序补全 → 恒 12 项
 test('T5 normalizeWorkbenchMenu missing keys appended', () => {
   const out = normalizeWorkbenchMenu(['todos'])
-  assert.equal(out.order.length, 13)
+  assert.equal(out.order.length, 12)
   assert.deepEqual(out.order, WORKBENCH_MENU_DEFAULT_ORDER)
   const out2 = normalizeWorkbenchMenu(null)
   assert.deepEqual(out2.order, WORKBENCH_MENU_DEFAULT_ORDER)
@@ -86,7 +86,7 @@ test('T7 moveMenuItem home locked', () => {
 // T8 — moveMenuItem 边界：index 1 上移 / 末尾(ledger)下移 → boundary
 test('T8 moveMenuItem boundary', () => {
   assert.deepEqual(moveMenuItem(WORKBENCH_MENU_DEFAULT_ORDER, 'todos', 'up'), { ok: false, reason: 'boundary' })
-  assert.deepEqual(moveMenuItem(WORKBENCH_MENU_DEFAULT_ORDER, 'ledger', 'down'), { ok: true, reason: 'ok', order: ['home', 'todos', 'notes', 'diary', 'messages', 'countdowns', 'pomodoro', 'habits', 'passwords', 'health', 'genealogy', 'ledger', 'trash'] })
+  assert.deepEqual(moveMenuItem(WORKBENCH_MENU_DEFAULT_ORDER, 'ledger', 'down'), { ok: true, reason: 'ok', order: ['home', 'todos', 'notes', 'diary', 'messages', 'countdowns', 'pomodoro', 'habits', 'passwords', 'genealogy', 'ledger', 'trash'] })
 })
 
 // T9 — moveMenuItem 中段交换：邻居对调且 home 仍 index 0
@@ -94,11 +94,11 @@ test('T9 moveMenuItem middle swap keeps home at 0', () => {
   const up = moveMenuItem(WORKBENCH_MENU_DEFAULT_ORDER, 'notes', 'up')
   assert.equal(up.ok, true)
   assert.equal(up.reason, 'ok')
-  assert.deepEqual(up.order, ['home', 'notes', 'todos', 'diary', 'messages', 'countdowns', 'pomodoro', 'habits', 'passwords', 'health', 'ledger', 'genealogy', 'trash'])
+  assert.deepEqual(up.order, ['home', 'notes', 'todos', 'diary', 'messages', 'countdowns', 'pomodoro', 'habits', 'passwords', 'ledger', 'genealogy', 'trash'])
   assert.equal(up.order![0], 'home')
-  const down = moveMenuItem(WORKBENCH_MENU_DEFAULT_ORDER, 'health', 'down')
+  const down = moveMenuItem(WORKBENCH_MENU_DEFAULT_ORDER, 'pomodoro', 'down')
   assert.equal(down.ok, true)
-  assert.deepEqual(down.order, ['home', 'todos', 'notes', 'diary', 'messages', 'countdowns', 'pomodoro', 'habits', 'passwords', 'ledger', 'health', 'genealogy', 'trash'])
+  assert.deepEqual(down.order, ['home', 'todos', 'notes', 'diary', 'messages', 'countdowns', 'habits', 'pomodoro', 'passwords', 'ledger', 'genealogy', 'trash'])
   assert.equal(down.order![0], 'home')
 })
 
@@ -127,18 +127,18 @@ test('T11 renameMenuLabel', () => {
   assert.deepEqual(nf, { ok: false, reason: 'not-found' })
 })
 
-// T12 — resolveMenuItems：label 缺省回退默认、icon 查表、跟随 order、恒 13 项
+// T12 — resolveMenuItems：label 缺省回退默认、icon 查表、跟随 order、恒 12 项
 test('T12 resolveMenuItems', () => {
   const items = resolveMenuItems(WORKBENCH_MENU_DEFAULT_ORDER, { todos: '工作记录' })
-  assert.equal(items.length, 13)
+  assert.equal(items.length, 12)
   assert.equal(items[0].key, 'home')
   assert.equal(items[0].label, MENU_DEFAULT_LABELS.home)
   assert.equal(items[0].icon, MENU_ICONS.home)
   assert.equal(items[1].key, 'todos')
   assert.equal(items[1].label, '工作记录')
   assert.equal(items[1].icon, MENU_ICONS.todos)
-  const reordered = resolveMenuItems(['home', 'notes', 'todos', 'countdowns', 'pomodoro', 'habits', 'passwords', 'health', 'ledger'], {})
-  assert.deepEqual(reordered.map(i => i.key), ['home', 'notes', 'todos', 'countdowns', 'pomodoro', 'habits', 'passwords', 'health', 'ledger'])
+  const reordered = resolveMenuItems(['home', 'notes', 'todos', 'countdowns', 'pomodoro', 'habits', 'passwords', 'ledger'], {})
+  assert.deepEqual(reordered.map(i => i.key), ['home', 'notes', 'todos', 'countdowns', 'pomodoro', 'habits', 'passwords', 'ledger'])
   assert.equal(reordered[1].label, MENU_DEFAULT_LABELS.notes, '缺省回退默认名')
   for (const item of items) {
     assert.equal(typeof item.icon, 'string')
@@ -146,9 +146,9 @@ test('T12 resolveMenuItems', () => {
   }
 })
 
-// T13 — 常量完整性：13 键、默认序 = 键序、默认名逐字一致、图标映射齐
+// T13 — 常量完整性：12 键、默认序 = 键序、默认名逐字一致、图标映射齐
 test('T13 constants integrity', () => {
-  assert.deepEqual(WORKBENCH_MENU_KEYS, ['home', 'todos', 'notes', 'diary', 'messages', 'countdowns', 'pomodoro', 'habits', 'passwords', 'health', 'ledger', 'genealogy', 'trash'])
+  assert.deepEqual(WORKBENCH_MENU_KEYS, ['home', 'todos', 'notes', 'diary', 'messages', 'countdowns', 'pomodoro', 'habits', 'passwords', 'ledger', 'genealogy', 'trash'])
   assert.deepEqual(WORKBENCH_MENU_DEFAULT_ORDER, WORKBENCH_MENU_KEYS)
   assert.deepEqual(MENU_DEFAULT_LABELS, {
     home: '主页',
@@ -160,7 +160,6 @@ test('T13 constants integrity', () => {
     pomodoro: '番茄钟',
     habits: '打卡',
     passwords: '密码',
-    health: '健康',
     ledger: '记账',
     genealogy: '家谱',
     trash: '回收站'
@@ -175,23 +174,22 @@ test('T13 constants integrity', () => {
   assert.equal(MENU_ICONS.habits, 'habits')
   assert.equal(MENU_ICONS['genealogy'], 'genealogy')
   assert.equal(MENU_ICONS.passwords, 'passwords')
-  assert.equal(MENU_ICONS.health, 'health')
   assert.equal(MENU_ICONS.ledger, 'ledger')
   assert.equal(MENU_ICONS.trash, 'trash')
 })
 
-// T14 — 旧备份兼容（happy）：v3/v4 时代 7 项 order 经 normalize → 恒 13 项、旧 7 键顺序完整保留、
+// T14 — 旧备份兼容（happy）：v3/v4 时代 6 项 order 经 normalize → 恒 12 项、旧 6 键顺序完整保留、
 //      新键按默认序（diary/messages/pomodoro/habits…）补在末尾、home 仍 index 0、幂等
-test('T14 legacy 7-item order normalizes to 13 with new keys appended', () => {
-  const legacy = ['home', 'todos', 'notes', 'countdowns', 'passwords', 'health', 'ledger']
+test('T14 legacy 6-item order normalizes to 12 with new keys appended', () => {
+  const legacy = ['home', 'todos', 'notes', 'countdowns', 'passwords', 'ledger']
   const out = normalizeWorkbenchMenu(legacy)
-  assert.equal(out.order.length, 13)
+  assert.equal(out.order.length, 12)
   assert.equal(out.order[0], 'home')
-  assert.deepEqual(out.order.slice(0, 7), legacy)
-  assert.equal(out.order[7], 'diary')
-  assert.equal(out.order[8], 'messages')
-  assert.equal(out.order[9], 'pomodoro')
-  assert.equal(out.order[10], 'habits')
+  assert.deepEqual(out.order.slice(0, 6), legacy)
+  assert.equal(out.order[6], 'diary')
+  assert.equal(out.order[7], 'messages')
+  assert.equal(out.order[8], 'pomodoro')
+  assert.equal(out.order[9], 'habits')
   assert.deepEqual(normalizeWorkbenchMenu(out.order).order, out.order, '二次归一化幂等')
 })
 
@@ -216,7 +214,7 @@ test('T15 messages shift in resolve & move', () => {
   assert.equal(items[7].icon, MENU_ICONS.habits)
   const up = moveMenuItem(WORKBENCH_MENU_DEFAULT_ORDER, 'habits', 'up')
   assert.equal(up.ok, true)
-  assert.deepEqual(up.order, ['home', 'todos', 'notes', 'diary', 'messages', 'countdowns', 'habits', 'pomodoro', 'passwords', 'health', 'ledger', 'genealogy', 'trash'])
+  assert.deepEqual(up.order, ['home', 'todos', 'notes', 'diary', 'messages', 'countdowns', 'habits', 'pomodoro', 'passwords', 'ledger', 'genealogy', 'trash'])
 })
 
 // T16 — normalizeWorkbenchMenuVisibility：仅已知键布尔值；缺失/非法/非对象 → 全显示（{}）
@@ -236,15 +234,15 @@ test('T17 resolveMenuItems filters hidden keys', () => {
   const items = resolveMenuItems(WORKBENCH_MENU_DEFAULT_ORDER, {}, { todos: false, ledger: false, bogus: false })
   assert.deepEqual(
     items.map(i => i.key),
-    ['home', 'notes', 'diary', 'messages', 'countdowns', 'pomodoro', 'habits', 'passwords', 'health', 'genealogy', 'trash']
+    ['home', 'notes', 'diary', 'messages', 'countdowns', 'pomodoro', 'habits', 'passwords', 'genealogy', 'trash']
   )
   assert.equal(items[0].label, MENU_DEFAULT_LABELS.home)
 })
 
-// T18 — resolveMenuItems 无 visibility（旧两参调用）→ 恒 13 项全显示（向后兼容）
+// T18 — resolveMenuItems 无 visibility（旧两参调用）→ 恒 12 项全显示（向后兼容）
 test('T18 resolveMenuItems without visibility keeps all', () => {
   const items = resolveMenuItems(WORKBENCH_MENU_DEFAULT_ORDER, {})
-  assert.equal(items.length, 13)
+  assert.equal(items.length, 12)
   assert.deepEqual(items.map(i => i.key), [...WORKBENCH_MENU_KEYS])
 })
 
