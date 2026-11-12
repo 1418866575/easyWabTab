@@ -346,6 +346,9 @@ onMounted(async () => {
       @cell-click="onPlanCellClick"
     />
 
+    <!-- 定时提醒（只读小模块）：紧跟周计划看板，排在方案卡之前（PC / 窄屏同一顺序） -->
+    <WorkbenchHealthReminders module="diet" />
+
     <!-- 食谱方案（模板处方） -->
     <WorkbenchDietPlanCard
       v-if="canPlanTemplate"
@@ -357,8 +360,6 @@ onMounted(async () => {
       @log-meal="onLogPlanMeal"
     />
 
-    <!-- 定时提醒（只读小模块） -->
-    <WorkbenchHealthReminders module="diet" />
     <!-- 空态 -->
     <div
       v-if="store.records.diet.length === 0"

@@ -352,6 +352,9 @@ onMounted(async () => {
       @cell-click="onPlanCellClick"
     />
 
+    <!-- 定时提醒（只读小模块）：紧跟周计划看板，排在方案卡之前（PC / 窄屏同一顺序） -->
+    <WorkbenchHealthReminders module="exercise" />
+
     <!-- 跟练方案（模板处方） -->
     <WorkbenchExercisePlanCard
       v-if="canPlanTemplate"
@@ -363,9 +366,6 @@ onMounted(async () => {
       @reset="onPlanReset"
       @apply="onPlanApply"
     />
-
-    <!-- 定时提醒（只读小模块） -->
-    <WorkbenchHealthReminders module="exercise" />
 
     <!-- 空态 -->
     <div
