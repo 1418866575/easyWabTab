@@ -84,7 +84,13 @@ function toWxError(body, fallbackMessage) {
       : `调用方 IP 不在该公众号的 IP 白名单中，请到公众号后台「设置与开发 → 基本配置 → IP 白名单」添加本服务器出口 IP 后重试（微信 ${code}）`
     return new WechatError(code, message, { egressIp: ip, wxErrmsg: errmsg })
   }
-  return new WechatError(code, errmsg, { wxErrmsg: errmsg })
+  // 正文类违规微信只回 "invalid content hint: [...] rid: ..."，没有任何可用线索。
+  // 换成中文并带上 errcode，方便和前端本地自检的结果对照。
+  if (/invalid content/i.test(errmsg)) {
+    const message = `微信 ${code}：正文内容不被接受（invalid content）。常见原因：正文超过 2 万字符或 1MB、含非微信图床的外链图片、或被判定含非法标签/JS。请先按编辑器底部「发布自检」的提示处理；若自检全部通过，可精简正文或减少插图后重试。`
+    return new WechatError(code, message, { wxErrmsg: errmsg })
+  }
+  return new WechatError(code, `微信 ${code}：${errmsg}`, { wxErrmsg: errmsg })
 }
 
 // ---------------------------------------------------------------------------
@@ -479,13 +485,40 @@ async function handle(req, res) {
         sendJson(res, 400, { ok: false, error: '缺少必填字段（title / content / thumbMediaId）' })
         return
       }
+      // 微信官方硬约束（api_draft_add.html）：title ≤32 字 / author ≤16 字 / digest ≤120 字。
+      // 旧代码把 title 截到 64 字，超 32 字的标题会被微信整篇拒掉（invalid content 类错误）。
+      // 前端 wechatContentCore 会先自检并给中文提示，这里只做防御性截断（按码点算，不切坏 emoji）。
+      const take = (v, n) => Array.from(String(v || '')).slice(0, n).join('')
+      const contentStr = String(article.content)
+      // content 必须少于 2 万字符、小于 1MB；图片 URL 必须来自 uploadimg，外链会被过滤。
+      // 前端已有完整自检，这里是最小防御，避免旧版前端 / 直接调用把违规内容送去微信。
+      const contentChars = Array.from(contentStr).length
+      const contentBytes = Buffer.byteLength(contentStr, 'utf8')
+      if (contentChars >= 20000 || contentBytes >= 1024 * 1024) {
+        sendJson(res, 400, {
+          ok: false,
+          code: 'CONTENT_TOO_LARGE',
+          error: `正文 HTML ${contentChars} 字符 / ${Math.round(contentBytes / 1024)} KB，超过微信草稿箱上限（2 万字符、1MB）。请精简正文或减少插图后重试`
+        })
+        return
+      }
+      const foreignImgs = [...contentStr.matchAll(/<img\b[^>]*?\s+src\s*=\s*["']?([^"'\s>]+)/gi)]
+        .map((m) => m[1])
+        .filter((u) => !/^https?:\/\/(?:[a-z0-9-]+\.)*(?:mmbiz\.qpic\.cn|mmbiz\.qlogo\.cn|res\.wx\.qq\.com)\//i.test(u))
+      if (foreignImgs.length > 0) {
+        sendJson(res, 400, {
+          ok: false,
+          code: 'FOREIGN_IMAGE',
+          error: `正文含 ${foreignImgs.length} 张非微信图床图片（${foreignImgs[0].slice(0, 60)}…），微信会过滤外部图片并拒绝草稿。请把外链图下载后在编辑器重新插入`
+        })
+        return
+      }
       // 组装微信草稿文章：仅保留微信认可的字段，键名统一用下划线形式
-      // 标题硬上限 64 字、摘要 120 字（超出会被微信拒绝 45008，这里提前截断避免整篇失败）
       const wxArticle = {
-        title: String(article.title).slice(0, 64),
-        author: String(article.author || '').slice(0, 16),
-        digest: String(article.digest || '').slice(0, 120),
-        content: String(article.content),
+        title: take(article.title, 32),
+        author: take(article.author, 16),
+        digest: take(article.digest, 120),
+        content: contentStr,
         thumb_media_id: thumbMediaId,
         show_cover_pic: article.showCoverPic === false ? 0 : 1,
         need_open_comment: 0,

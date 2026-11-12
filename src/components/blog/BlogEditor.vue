@@ -1799,6 +1799,9 @@ html.dark .be-head-r > .be-act-share   { --be-ink: #fca5a5; }
   color: var(--color-error-text);
   font-size: var(--font-size-xs, 12px);
   line-height: var(--line-height-relaxed, 1.7);
+  /* 发布自检是多行编号清单 + 可能很长的外链 URL：保留换行、允许长串折行 */
+  white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 
 .be-wx-ip {

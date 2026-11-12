@@ -17,6 +17,7 @@ import { resolveImageRefs } from '@/composables/blogImages'
 import { renderMarkdown } from '@/composables/noteMarkdown'
 import { useBlogStore } from '@/stores/blog'
 import { hrMarkup, resolveTypo, typoInlineStyle, typoVars, type TypoTheme } from '@/composables/blogTypoCore'
+import { validateWechatArticle, formatWechatContentIssues } from '@/composables/wechatContentCore'
 import type { BlogTypo } from '@/types'
 
 const API_BASE = '/api/wechat'
@@ -428,7 +429,9 @@ export function useWechatPublish() {
       // 4. 正文图片逐张上传并替换 src
       for (let i = 0; i < imgs.length; i++) {
         const src = imgs[i].getAttribute('src') || ''
-        if (!src.startsWith('data:')) continue // 已是微信图床 URL（理论不会走到）
+        // 非 data URL（外链图 / 相对路径 / 已上传过的微信图床）不在这里处理：
+        // 外链会被下面第 5 步的自检精确指出，绝不能静默留进正文 —— 微信会过滤外部图片并回「invalid content」
+        if (!src.startsWith('data:')) continue
         progressStep.value = i + 2
         progressMsg.value = `上传图片 ${i + 1}/${imgs.length}…`
         const url = await uploadContentImage(await transcodeImage(src), appId, appSecret)
@@ -438,6 +441,18 @@ export function useWechatPublish() {
       // 5. 组装并创建草稿
       progressMsg.value = '创建草稿…'
       const content = root.outerHTML
+      // 微信 draft/add 违规只回一句「invalid content」，不带任何线索。
+      // 提交前把官方硬约束（字数 / 2 万字符 / 1MB / 图片必须来自 uploadimg / 无 JS）逐项测出来，
+      // 违规就直接给出带实测数值的中文提示，不再白白浪费一次微信调用。
+      const issues = validateWechatArticle({
+        title: opts.title,
+        author: opts.author || '',
+        digest: opts.digest || '',
+        content
+      })
+      if (issues.length > 0) {
+        throw new WechatPublishError(formatWechatContentIssues(issues), { code: 'CONTENT_PRECHECK' })
+      }
       const draftRes = await fetch(`${API_BASE}/draft`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },

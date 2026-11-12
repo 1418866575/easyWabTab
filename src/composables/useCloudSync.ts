@@ -450,6 +450,41 @@ async function readDavDiagnostics(res: Response): Promise<{ upstreamStatus: stri
   return { upstreamStatus, snippet, textBody }
 }
 
+// ========== 信封体积诊断（413 定位用）==========
+
+/** 字节数可读化，例如 12345678 → 11.8 MB */
+function formatEnvelopeBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+/** 用 UTF-8 字节数而非字符数：中文与 base64 在请求体里的真实占比差别很大 */
+function envelopeBytes(json: string): number {
+  return new TextEncoder().encode(json).length
+}
+
+/** 错误里带上「哪份信封 · 多大」，例如 blog.json · 11.8 MB */
+function describeEnvelope(name: string, bytes: number): string {
+  return `${name} · ${formatEnvelopeBytes(bytes)}`
+}
+
+/** 超过 8MB 提前预警，别等 413 发生才被动排查 */
+const LARGE_ENVELOPE_WARN_BYTES = 8 * 1024 * 1024
+
+/**
+ * 同步失败 toast：413 的排查步骤有多行，浮层里只留「结论 + 一个动作」两行，
+ * 完整版写进控制台（Toast 自带复制按钮，短版也够用户直接拿去改配置）。
+ */
+function syncErrorToast(prefix: string, msg: string): { text: string; duration: number } {
+  if (!msg.includes('413')) return { text: `${prefix}${msg}`, duration: 3000 }
+  console.warn('[CloudSync] 完整诊断：\n' + msg)
+  return {
+    text: `${prefix}${msg.split('\n')[0]}\n请放开服务器 nginx 的 client_max_body_size 32m 并 reload，或清理博客内嵌图片后重试。`,
+    duration: 8000
+  }
+}
+
 function davErrorLabel(method: string, upstreamStatus: string | null, snippet: string | null, textBody: string, fallbackStatus: number, direct = false): string {
   const st = upstreamStatus || String(fallbackStatus)
   const detail = snippet || textBody
@@ -480,7 +515,19 @@ function davErrorLabel(method: string, upstreamStatus: string | null, snippet: s
   if (st === '404') return `WebDAV ${method} 404：资源不存在（首次使用是正常的）`
   if (st === '405') return `WebDAV ${method} 405：服务器不允许该方法（MKCOL/GET/PUT）`
   if (st === '409') return `WebDAV ${method} 409：父目录不存在，请确认 WebDAV URL 指向的根路径已在坚果云手动创建`
-  if (st === '413' || st === '422' || st === '415') {
+  if (st === '413') {
+    // nginx 原生 413 是一整页 HTML（还带防 IE 友好错误页的 padding 注释），对用户毫无信息量。
+    // 只从里面留一个版本号，其余换成可操作的排查动作，不再把原始 HTML 甩到 Toast 上。
+    const server = detail.match(/nginx\/[\d.]+/)?.[0] || 'nginx'
+    const base = `WebDAV ${method} 413：同步数据超过服务端单请求体积上限（${server} 拒绝），本次未写入云端。`
+    const tips = [
+      '服务器 nginx 的 server 块（或 /api/webdav-proxy、/dav/ 两个 location）设 client_max_body_size 32m，再执行 nginx -t && nginx -s reload',
+      '响应头带 X-Upstream-Status: 413 → 上限在「上游 WebDAV 服务」；不带 → 是本站 nginx 在收请求时拒的',
+      '临时缓解：清理博客草稿/内嵌图片、智能工作台资源；代理通道会二次 JSON 转义，实际请求体比信封大 20%~40%'
+    ]
+    return base + tips.map((t, i) => `\n${i + 1}. ${t}`).join('')
+  }
+  if (st === '422' || st === '415') {
     const base = `WebDAV ${method} ${st}：请求被拒绝。`
     return detail ? `${base}\n服务端返回：${detail}` : base
   }
@@ -633,11 +680,23 @@ async function webdavHead(url: string, username: string, password: string): Prom
   }
 }
 
-async function webdavPut(url: string, username: string, password: string, body: string): Promise<void> {
+async function webdavPut(url: string, username: string, password: string, body: string, label?: string): Promise<void> {
   const res = await davRequest(url, 'PUT', username, password, body)
   if (!res.ok) {
     const diag = await readDavDiagnostics(res)
-    throw new Error(davErrorLabel('PUT', diag.upstreamStatus, diag.snippet, diag.textBody, res.status, shouldUseDirect(url)))
+    if (diag.upstreamStatus === '413' || res.status === 413) {
+      // 结构化诊断留控制台：一眼看出是哪份信封、多大、卡在直连还是代理的哪一层
+      console.warn('[CloudSync] 413 诊断', {
+        envelope: label ?? '(unknown)',
+        bodyBytes: envelopeBytes(body),
+        upstreamStatus: diag.upstreamStatus,
+        hasUpstreamStatusHeader: res.headers.has('X-Upstream-Status'),
+        direct: shouldUseDirect(url),
+        server: (diag.snippet || diag.textBody).match(/nginx\/[\d.]+/)?.[0] ?? '(unknown)'
+      })
+    }
+    const msg = davErrorLabel('PUT', diag.upstreamStatus, diag.snippet, diag.textBody, res.status, shouldUseDirect(url))
+    throw new Error(label ? `【${label}】${msg}` : msg)
   }
 }
 
@@ -1729,7 +1788,8 @@ async function migrateFromLegacyBackup(
   let pushError: string | null = null
   for (const env of envelopes) {
     try {
-      await webdavPut(`${dir}/${env.name}`, username, password, JSON.stringify(env.data))
+      const json = JSON.stringify(env.data)
+      await webdavPut(`${dir}/${env.name}`, username, password, json, describeEnvelope(env.name, envelopeBytes(json)))
     } catch (e) {
       if (!pushError) pushError = e instanceof Error ? e.message : '推送失败'
     }
@@ -1874,7 +1934,14 @@ async function pushNow(silent = false, skipRemoteGuard = false, onlyChanged = fa
           if (prev && sig === prev) continue
         }
         const envelope = { ...(local as Record<string, unknown>), clientId, pushedAt }
-        await webdavPut(`${dir}/${cfg.name}`, username, password, JSON.stringify(envelope))
+        const json = JSON.stringify(envelope)
+        const bytes = envelopeBytes(json)
+        const label = describeEnvelope(cfg.name, bytes)
+        // 大信封提前预警：服务端 client_max_body_size 偏小时，能第一时间定位到具体是哪份
+        if (bytes > LARGE_ENVELOPE_WARN_BYTES) {
+          console.warn(`[CloudSync] 信封 ${label} 偏大，服务端上传上限过小会返回 413`)
+        }
+        await webdavPut(`${dir}/${cfg.name}`, username, password, json, label)
         // 推送即同步：云端这一版就是本机内容，推进基线（用 pushedAt 近似服务端写入时刻，
         // REMOTE_TS_TOLERANCE_MS 已覆盖两端时钟偏差）
         writeRemoteTs(cfg.name, pushedAt)
@@ -1910,7 +1977,10 @@ async function pushNow(silent = false, skipRemoteGuard = false, onlyChanged = fa
     if (hasError) {
       status.value = 'error'
       errorMessage.value = firstError
-      if (!silent) useToast().error(`云同步推送部分失败：${firstError}`)
+      if (!silent) {
+        const t = syncErrorToast('云同步推送部分失败：', firstError)
+        useToast().error(t.text, t.duration)
+      }
       return false
     }
     // 一份都没推（内容全部未变）→ 只清脏标记，不推进 lastSyncAt：
@@ -1929,7 +1999,10 @@ async function pushNow(silent = false, skipRemoteGuard = false, onlyChanged = fa
   } catch (e) {
     status.value = 'error'
     errorMessage.value = e instanceof Error ? e.message : '推送失败'
-    if (!silent) useToast().error(`云同步推送失败：${errorMessage.value}`)
+    if (!silent) {
+      const t = syncErrorToast('云同步推送失败：', errorMessage.value)
+      useToast().error(t.text, t.duration)
+    }
     return false
   }
 }
@@ -2378,7 +2451,8 @@ export async function pushEnvelopes(names: string[]): Promise<boolean> {
       const prev = readPushedSig(cfg.name)
       if (prev && sig === prev) continue
       const envelope = { ...(local as Record<string, unknown>), clientId, pushedAt }
-      await webdavPut(`${dir}/${cfg.name}`, username, password, JSON.stringify(envelope))
+      const json = JSON.stringify(envelope)
+      await webdavPut(`${dir}/${cfg.name}`, username, password, json, describeEnvelope(cfg.name, envelopeBytes(json)))
       writePushedSig(cfg.name, sig)
       writeRemoteTs(cfg.name, pushedAt)
       if (cfg.name === 'smart.json') {
