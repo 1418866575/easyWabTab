@@ -34,6 +34,11 @@ const settings = useAppSettingsStore()
 const HealthSettingsDialog = defineAsyncComponent(() => import('@/components/health/HealthSettingsDialog.vue'))
 const initializing = ref(true)
 const showSettingsDialog = ref(false)
+/** 移动端左侧抽屉：默认收起，由页头菜单按钮唤出（与个人工作台同款，不再用 60px 常驻图标条） */
+const mobileMenuOpen = ref(false)
+function closeMobileMenu(): void {
+  mobileMenuOpen.value = false
+}
 
 // 侧栏底部「云同步 / 设置」：与个人工作台同款两枚按钮
 const cloudSync = useCloudSync()
@@ -126,6 +131,8 @@ const activePanel = computed<Component>(() => current.value.panel)
 
 function setTab(tab: HealthModule): void {
   activeTab.value = tab
+  // 抽屉里点菜单后自动收起，否则选中项被遮罩挡着看不到
+  closeMobileMenu()
   void router.replace({ query: { ...route.query, tab } })
 }
 
@@ -142,7 +149,7 @@ onMounted(async () => {
 <template>
   <div class="wb-shell wb-scope">
     <div class="wb-body">
-      <nav class="wb-menu" aria-label="健康指标导航">
+      <nav class="wb-menu" :class="{ open: mobileMenuOpen }" aria-label="健康指标导航">
         <div class="wb-side-top">
           <div class="wb-side-switch">
             <WorkbenchSwitcher :trigger-label="settings.healthPageDisplayName" force-show />
@@ -186,7 +193,7 @@ onMounted(async () => {
             title="设置"
             aria-label="设置"
             data-testid="hv-settings"
-            @click="showSettingsDialog = true"
+            @click="showSettingsDialog = true; closeMobileMenu()"
           >
             <span class="wb-side-btn-ic" aria-hidden="true"><Icon name="cog" :size="15" /></span>
             <span class="wb-side-btn-text">设置</span>
@@ -194,7 +201,13 @@ onMounted(async () => {
         </div>
       </nav>
 
+      <!-- 移动端抽屉遮罩：层级低于抽屉（46）、高于内容区 -->
+      <div v-if="mobileMenuOpen" class="wb-scrim" data-testid="hv-menu-scrim" @click="closeMobileMenu"></div>
+
       <main class="wb-content panel-scope">
+        <button class="wb-menu-trigger" data-testid="hv-menu-trigger" title="全部菜单" aria-label="打开全部菜单" @click="mobileMenuOpen = true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
         <div class="panel-page-head" data-testid="hv-page-head">
           <h2 class="panel-page-title" data-testid="hv-page-title">{{ current.label }}</h2>
           <p class="panel-page-sub" data-testid="hv-page-sub">{{ current.desc }}</p>
@@ -291,14 +304,82 @@ onMounted(async () => {
 .wb-health { width: 100%; --wb-dialog-z: 300; }
 .hv-loading { font-size: var(--fs-caption); color: var(--color-text-muted); }
 
+/* 桌面一屏契约：与个人工作台一致 —— 内容区是唯一滚动容器，面板随内容自然撑开 */
 @media (min-width: 769px) {
+  .wb-content { overflow-x: hidden; overflow-y: auto; }
+  .wb-content > * { flex: 0 0 auto; }
   .wb-health { display: flex; flex-direction: column; }
 }
+
+/* 桌面不渲染移动端抽屉的两个入口（窄端媒体查询放在其后，后声明胜出） */
+.wb-scrim, .wb-menu-trigger { display: none; }
+
+/* 移动端：对齐个人工作台的左侧抽屉 —— 默认收起、页头按钮唤出、遮罩点击关闭。
+   旧实现是把侧栏压成 60px 常驻图标条：菜单文字与底部按钮文案全被隐藏，
+   且没有遮罩与关闭手势，拇指区也够不到。 */
 @media (max-width: 768px) {
-  .wb-menu { width: 60px; }
-  .wb-menu-label, .wb-side-btn-text { display: none; }
-  .wb-menu-item { justify-content: center; padding: 9px 0; }
-  .wb-side-btn-ic { display: inline-flex; }
+  .wb-content { overflow-y: auto; }
+  .wb-content > * { flex: none; }
+
+  .wb-menu {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 46;
+    width: min(264px, 82%);
+    transform: translateX(-102%);
+    transition: transform 220ms ease;
+    border-right: 1px solid var(--color-border, #e2e8f0);
+    box-shadow: 2px 0 12px var(--color-shadow, rgba(0, 0, 0, 0.12));
+  }
+  .wb-menu.open { transform: none; }
+
+  /* 抽屉里恢复完整文字菜单与底部两枚纯文字按钮；触控目标对齐个人工作台 */
+  .wb-menu-item { justify-content: flex-start; padding: 9px 10px; min-height: 44px; min-width: 44px; }
+  .wb-menu-label { display: inline; overflow: visible; text-overflow: clip; white-space: nowrap; }
+  .wb-side-foot { padding: 8px 10px 10px; gap: 6px; }
+  .wb-side-btn { height: 40px; min-height: 40px; padding: 0 6px; gap: 6px; }
+  .wb-side-btn-text { display: inline; }
+  .wb-side-btn-ic { display: none; }
+
+  /* 遮罩低于抽屉（46）、高于内容区 */
+  .wb-scrim {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 45;
+    background: rgba(15, 23, 42, .32);
+  }
+
+  .wb-menu-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: flex-start;
+    width: 32px;
+    height: 32px;
+    flex: none;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    margin-bottom: 8px;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: var(--radius-sm, 4px);
+    background-color: var(--color-bg-card, #fff);
+    color: var(--color-text-secondary);
+  }
+
+  /* 健康工作台四个面板都没有悬浮 FAB（FAB 只在便签 / 密码 / 打卡 / 家谱），
+     故不照搬个人工作台的 120px 底部留白：只留常规呼吸空间 + 系统手势安全区。 */
+  .wb-content {
+    padding: 12px 12px calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+
+  html.dark .wb-menu {
+    border-right-color: var(--color-border, #374151);
+    box-shadow: 2px 0 16px var(--color-shadow, rgba(0, 0, 0, 0.4));
+  }
 }
 html.dark .wb-shell { background-color: var(--color-bg, #111827); }
 html.dark .wb-side-foot { border-color: var(--color-border, #374151); }
