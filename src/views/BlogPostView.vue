@@ -17,9 +17,16 @@ import { coverBackground } from '@/composables/blogFront'
 import { listPublishedArticles, formatDateTime, relativeTime } from '@/composables/blogCore'
 import { resolveImageRefs } from '@/composables/blogImages'
 import { renderMarkdown } from '@/composables/noteMarkdown'
-import { useBlogShared, sharedPostToArticle } from '@/composables/blogShared'
+import { useBlogShared, sharedPostToArticle, mergeTaxonomy } from '@/composables/blogShared'
 import { useBlogFrontPrefs } from '@/composables/blogFrontPrefs'
 import { resolveTypo, typoHrStyle, typoVars } from '@/composables/blogTypoCore'
+import {
+  BLOG_READER_FONT_MAX,
+  BLOG_READER_FONT_MIN,
+  changeReaderFontSize,
+  initBlogReaderFont,
+  readerFontSize
+} from '@/composables/blogReaderFont'
 import { decorateTypoHtml } from '@/composables/blogTypoDecor'
 import type { BlogArticle } from '@/types'
 import '@/styles/blog-front.css'
@@ -59,8 +66,16 @@ const cover = computed(() =>
     ? coverBackground(displayArticle.value, (id) => store.imageUrlById.get(id))
     : null
 )
-const categoryLabel = computed(() => (displayArticle.value ? store.categoryName(displayArticle.value.categoryId) : ''))
-const tagLabels = computed(() => (displayArticle.value ? store.tagNames(displayArticle.value.tagIds) : []))
+// 分类/标签名合并共享站点推送的表：访客本机查不到时也能显示真名，而不是一律「未分类」
+const allCategories = computed(() => mergeTaxonomy(store.categories, shared.taxonomy.value.categories))
+const allTags = computed(() => mergeTaxonomy(store.tags, shared.taxonomy.value.tags))
+const categoryNameOf = (id?: string): string => allCategories.value.find((c) => c.id === id)?.name ?? '未分类'
+const categoryLabel = computed(() => (displayArticle.value ? categoryNameOf(displayArticle.value.categoryId) : ''))
+const tagLabels = computed(() => {
+  if (!displayArticle.value) return []
+  const map = new Map(allTags.value.map((t) => [t.id, t.name]))
+  return displayArticle.value.tagIds.map((id) => map.get(id)).filter((n): n is string => !!n)
+})
 const dateLabel = computed(() => {
   const a = displayArticle.value
   if (!a) return ''
@@ -81,14 +96,22 @@ const related = computed<BlogArticle[]>(() => {
 const isDark = ref(false)
 let darkObserver: MutationObserver | null = null
 
-const typoVarStyle = computed(() =>
-  typoVars(displayArticle.value?.typo, store.settings.defaultTypoId, isDark.value)
-)
+/**
+ * 正文字号：读者在本机调的字号优先于文章排版主题（作者偏好），只注入到 .md-body，
+ * 因此标题 / 元信息 / 工具条按钮都不受影响。
+ */
+const typoVarStyle = computed(() => ({
+  ...typoVars(displayArticle.value?.typo, store.settings.defaultTypoId, isDark.value),
+  '--t-font-size': `${readerFontSize.value}px`
+}))
+const canDecFont = computed(() => readerFontSize.value > BLOG_READER_FONT_MIN)
+const canIncFont = computed(() => readerFontSize.value < BLOG_READER_FONT_MAX)
 const typoHr = computed(() => typoHrStyle(displayArticle.value?.typo, store.settings.defaultTypoId))
 /** 生效主题对象（供找Tab 主题的结构样式作用域 data-typo 与装饰） */
 const typoTheme = computed(() => resolveTypo(displayArticle.value?.typo, store.settings.defaultTypoId))
 
 onMounted(() => {
+  initBlogReaderFont() // 设备级偏好，仅首次挂载读取
   isDark.value = document.documentElement.classList.contains('dark')
   darkObserver = new MutationObserver(() => {
     isDark.value = document.documentElement.classList.contains('dark')
@@ -113,9 +136,37 @@ onMounted(async () => {
 <template>
   <main class="bf-shell">
     <template v-if="visible && displayArticle">
-      <RouterLink to="/blog" class="bf-back" data-testid="blog-post-back">
-        <span aria-hidden="true">←</span> 返回文章列表
-      </RouterLink>
+      <!-- 返回 + 正文字号：同一行，字号控件靠右（按钮沿用全局 .ui-btn 体系） -->
+      <div class="bf-post-toolbar" data-testid="blog-post-toolbar">
+        <RouterLink to="/blog" class="bf-back" data-testid="blog-post-back">
+          <span aria-hidden="true">←</span> 返回文章列表
+        </RouterLink>
+
+        <!-- 中间档位数不显示，控件只留两颗按钮；当前字号移到悬停提示与 aria-label，信息不丢 -->
+        <div
+          class="bf-font-size"
+          role="group"
+          aria-label="正文字号"
+          :title="`当前正文字号 ${readerFontSize}px`"
+        >
+          <button
+            type="button"
+            class="ui-btn ui-btn--sm bf-font-btn"
+            data-testid="blog-post-font-dec"
+            :disabled="!canDecFont"
+            :aria-label="`减小正文字号，当前 ${readerFontSize}px`"
+            @click="changeReaderFontSize(-1)"
+          >A−</button>
+          <button
+            type="button"
+            class="ui-btn ui-btn--sm bf-font-btn"
+            data-testid="blog-post-font-inc"
+            :disabled="!canIncFont"
+            :aria-label="`增大正文字号，当前 ${readerFontSize}px`"
+            @click="changeReaderFontSize(1)"
+          >A+</button>
+        </div>
+      </div>
 
       <article class="bf-post">
         <div v-if="cover" class="bf-post-hero" :style="{ background: cover }" />
@@ -162,7 +213,7 @@ onMounted(async () => {
           >
             <div class="bf-related-item-title">{{ r.title || '（无标题）' }}</div>
             <div class="bf-related-item-meta">
-              {{ store.categoryName(r.categoryId) }} · {{ r.readingMinutes }} 分钟
+              {{ categoryNameOf(r.categoryId) }} · {{ r.readingMinutes }} 分钟
             </div>
           </RouterLink>
         </div>

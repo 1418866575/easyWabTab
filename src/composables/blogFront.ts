@@ -188,10 +188,11 @@ export function useBlogListing(source?: Ref<BlogArticle[]>): BlogListing {
  * 封面背景（CSS background 值）。
  *
  * - `none` → 返回 null（调用方不渲染封面区）。
+ * - 有 `coverImageUrl` → 共享 / 静态发布副本自带的已解析封面（data URL 或
+ *   `/blog-share/covers/*` 路径），访客本机没有图片库也能显示真图，优先于图库解析。
  * - `gradient` / `solid` → 优先用 coverToken 指向的语义色 token（primary/success/warning/error）；
  *   若 token 不可识别则按 id 取一个稳定的色相，保证视觉效果一致且不随刷新跳变。
- * - `image` → 本仓库尚未落地 `blog_images` 存储（coverImageId 仅为预留字段），无法解析真实图片，
- *   故回落到与 gradient 同款的渐变占位，避免破图。
+ * - `image` → 由 `coverImageId` 从共享图库解析 data URL；解析不到（未同步/已删）时回落渐变占位，避免破图。
  *
  * 返回的是 CSS 字符串而非内联对象，便于 `:style` 直接绑定。
  */
@@ -216,7 +217,9 @@ export function coverBackground(
   resolveImage?: (id: string) => string | undefined
 ): string | null {
   if (article.coverKind === 'none') return null
-  // 图片封面：由图库解析出 data URL；图片缺失（未同步/已删）时回落到渐变占位，避免破图
+  // 共享 / 静态发布副本：封面 URL 随载荷送达，不依赖本机图片库
+  if (article.coverImageUrl) return `url("${article.coverImageUrl}") center/cover no-repeat`
+  // 本地文章的图片封面：由图库解析出 data URL；图片缺失（未同步/已删）时回落到渐变占位，避免破图
   if (article.coverKind === 'image') {
     const url = article.coverImageId && resolveImage ? resolveImage(article.coverImageId) : undefined
     if (url) return `url("${url}") center/cover no-repeat`
@@ -227,7 +230,7 @@ export function coverBackground(
   const base = pal ? pal.base : `hsl(${hue} 62% 55%)`
   const soft = pal ? pal.soft : `hsl(${hue} 75% 92%)`
   if (article.coverKind === 'solid') return base
-  // gradient / image 均用渐变占位（image 暂无 blog_images 存储可解析，回落占位）
+  // gradient / image 在拿不到封面图时均用渐变占位
   return `linear-gradient(135deg, ${base}, ${soft})`
 }
 

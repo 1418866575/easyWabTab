@@ -1997,6 +1997,9 @@ export interface BlogArticle {
   coverImageId?: string     // 封面图 id（指向 blog_images store）
   coverKind: BlogCoverKind
   coverToken?: string       // 纯色/渐变占位所用的主题 Token 名
+  /** 共享 / 静态发布副本专用：已解析的封面 URL（data URL 或 /blog-share/covers/* 路径）。
+   *  访客本机没有图片库，靠它显示真封面；本地文章不写此字段，也不落库。 */
+  coverImageUrl?: string
   contentMarkdown: string
   status: ArticleStatus
   authorId?: string
@@ -2051,6 +2054,9 @@ export interface BlogSharePost {
   tagNames: string[]        // 已解析
   coverKind: BlogCoverKind
   coverToken?: string
+  coverImageId?: string     // 原图库 id（保留供诊断 / 兼容）
+  /** 提交时为封面图 data URL；服务端落盘后改写为 /blog-share/covers/<id>.<ext> 路径 */
+  coverImageUrl?: string
   pinned: boolean
   readingMinutes: number
   viewCount: number
@@ -2069,6 +2075,11 @@ export interface BlogShareManifestEntry {
   slug: string
   title: string
   excerpt: string
+  /** 封面：清单只存静态路径，不塞 base64，避免访客每次进列表都拉几 MB。
+   *  旧版 manifest 无这些字段，全部可选，前台按缺省回落渐变/none。 */
+  coverKind?: BlogCoverKind
+  coverToken?: string
+  coverImageUrl?: string
   authorName: string
   categoryId: string
   categoryName: string
@@ -2082,6 +2093,11 @@ export interface BlogShareManifest {
   generatedAt: string
   count: number
   posts: BlogShareManifestEntry[]
+  /** 后台「共享」时顺带推送的全站分类表（含排序/图标/空分类）。
+   *  老版清单无此字段，前台会从 posts 条目反推，保持兼容。 */
+  categories?: BlogCategory[]
+  /** 同上，全站标签表 */
+  tags?: BlogTag[]
 }
 
 export interface BlogCategory {

@@ -35,7 +35,13 @@ async function share(article: BlogArticle): Promise<{ ok: boolean; error?: strin
     const res = await fetch('/api/blog-share', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(TOKEN ? { 'X-Blog-Share-Token': TOKEN } : {}) },
-      body: JSON.stringify(post)
+      body: JSON.stringify({
+        ...post,
+        // 顺带把全站分类/标签表推给共享站点：访客本机没有作者的分类表，
+        // 筛选条选项与卡片上的分类名都靠它。服务端会剥离这两个字段，不写进单篇文章文件。
+        categories: store.categories,
+        tags: store.tags
+      })
     })
     if (!res.ok) {
       const j = (await res.json().catch(() => ({}))) as { error?: string }

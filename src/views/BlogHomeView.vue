@@ -11,7 +11,7 @@ import { ref, watch, onMounted, computed } from 'vue'
 import { useBlogStore } from '@/stores/blog'
 import { listPublishedArticles } from '@/composables/blogCore'
 import { useBlogListing } from '@/composables/blogFront'
-import { useBlogShared, mergeArticlesForListing } from '@/composables/blogShared'
+import { useBlogShared, mergeArticlesForListing, mergeTaxonomy } from '@/composables/blogShared'
 import { useBlogFrontPrefs } from '@/composables/blogFrontPrefs'
 import BlogFilterBar from '@/components/blog/front/BlogFilterBar.vue'
 import BlogCard from '@/components/blog/front/BlogCard.vue'
@@ -41,6 +41,11 @@ const tagCounts = computed<Record<string, number>>(() => {
   for (const a of publishedArticles.value) for (const t of a.tagIds) m[t] = (m[t] ?? 0) + 1
   return m
 })
+
+// 筛选条选项：本地表 + 共享站点推送的分类/标签表。
+// 访客本机没有作者的分类表，只用 store.categories 会让分类/标签筛选条一片空白。
+const categories = computed(() => mergeTaxonomy(store.categories, shared.taxonomy.value.categories))
+const tags = computed(() => mergeTaxonomy(store.tags, shared.taxonomy.value.tags))
 
 // 收藏 / 最近阅读：仅取已发布文章，保持各自顺序（收藏按收藏顺序，最近阅读按时间倒序）
 const favArticles = computed<BlogArticle[]>(() => {
@@ -91,8 +96,8 @@ onMounted(async () => {
       :active-category="listing.categoryId"
       :active-tag="listing.tagId"
       :sort="listing.sort"
-      :categories="store.categories"
-      :tags="store.tags"
+      :categories="categories"
+      :tags="tags"
       :category-counts="categoryCounts"
       :tag-counts="tagCounts"
       :total-count="publishedArticles.length"

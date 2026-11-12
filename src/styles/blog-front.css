@@ -130,6 +130,25 @@
   flex-direction: column;
   gap: var(--space-6);
 }
+/* 返回链接 + 字号控件同一行：控件靠右；窄屏允许换行，按钮尺寸仍由 .ui-btn 统一 */
+.bf-post-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.bf-post-toolbar .bf-back { align-self: center; }
+.bf-font-size {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* 圆角 / 字号 / 边框 / 悬浮色一律交给 .ui-btn，本地只留布局 */
+.bf-font-btn {
+  min-width: 36px;
+  justify-content: center;
+}
 .bf-back {
   align-self: flex-start;
   display: inline-flex;
@@ -170,7 +189,8 @@
 }
 .bf-post-sub {
   margin: var(--space-3) 0 0;
-  font-size: var(--fs-md);
+  /* 阅读页副标题随正文一起放大一档，避免正文 18px 时副标题显得过小 */
+  font-size: var(--fs-lg);
   color: var(--bf-ink-2);
   line-height: var(--line-height-relaxed);
 }
@@ -181,7 +201,8 @@
   justify-content: center;
   gap: var(--space-2);
   color: var(--bf-ink-2);
-  font-size: var(--fs-caption);
+  /* 元信息从 12px 提到 13px，长文页整体字号观感更协调 */
+  font-size: var(--fs-sm);
   padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--bf-line);
 }

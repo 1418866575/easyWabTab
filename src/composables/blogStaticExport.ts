@@ -26,6 +26,8 @@ export interface BlogPublicPost {
   tagNames: string[]
   coverKind: BlogArticle['coverKind']
   coverToken?: string
+  coverImageId?: string
+  coverImageUrl?: string   // 图片封面内联 data URL（静态站点 / 访客本机没有图片库）
   pinned: boolean
   readingMinutes: number
   viewCount: number
@@ -49,6 +51,21 @@ export interface BlogPublic {
   categories: Array<{ id: string; name: string; slug: string }>
   tags: Array<{ id: string; name: string; slug: string }>
   posts: BlogPublicPost[]
+}
+
+/**
+ * 图片封面：从图库解析出 data URL，随载荷一起导出。
+ *
+ * 正文插图早就会把 `img:<id>` 内联成 data URL，但封面一直只带 coverKind/coverToken，
+ * 访客本机没有图片库 → coverImageId 解析不到 → 详情页和列表卡片都退化成渐变占位。
+ * 这里补上封面本体，由共享服务端落盘成静态文件后把 URL 回写进文章 / 清单。
+ */
+export function resolveCoverImageUrl(
+  article: BlogArticle,
+  imageMap: Map<string, string>
+): string | undefined {
+  if (article.coverKind !== 'image' || !article.coverImageId) return undefined
+  return imageMap.get(article.coverImageId) || undefined
 }
 
 /**
@@ -79,6 +96,8 @@ export function buildBlogPublic(
       tagNames: a.tagIds.map((id) => tagMap.get(id)?.name ?? '').filter(Boolean),
       coverKind: a.coverKind,
       coverToken: a.coverToken,
+      coverImageId: a.coverImageId,
+      coverImageUrl: resolveCoverImageUrl(a, imageMap),
       pinned: a.pinned,
       readingMinutes: a.readingMinutes,
       viewCount: a.viewCount,
@@ -133,6 +152,8 @@ export function buildSharedPost(
     tagNames: article.tagIds.map((id) => tagMap.get(id)?.name ?? '').filter(Boolean),
     coverKind: article.coverKind,
     coverToken: article.coverToken,
+    coverImageId: article.coverImageId,
+    coverImageUrl: resolveCoverImageUrl(article, imageMap),
     pinned: article.pinned,
     readingMinutes: article.readingMinutes,
     viewCount: article.viewCount,

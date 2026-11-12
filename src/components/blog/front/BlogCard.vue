@@ -4,7 +4,8 @@
  *
  * 纯展示：标题 / 摘要 / 分类 / 发布时间 / 阅读时长 / 标签 / 置顶标记。
  * 封面按 coverKind 渲染：none 不渲染封面区；gradient/solid 走 token 或稳定色相渐变；
- * image 由图库（BlogData.images）按 coverImageId 解析成 data URL，缺失时回落渐变占位。
+ * image 由图库（BlogData.images）按 coverImageId 解析成 data URL，缺失时回落渐变占位；
+ * 共享文章由 coverBackground 优先读随清单下发的 coverImageUrl（访客本机没有图片库）。
  * 整卡点击跳转到 /blog/article/:slug，使用 RouterLink 利于 SEO/前进后退。
  */
 import { computed } from 'vue'
@@ -13,12 +14,17 @@ import { useBlogStore } from '@/stores/blog'
 import { coverBackground } from '@/composables/blogFront'
 import { autoExcerpt, relativeTime } from '@/composables/blogCore'
 import { useBlogFrontPrefs } from '@/composables/blogFrontPrefs'
+import { useBlogShared, mergeTaxonomy } from '@/composables/blogShared'
 import type { BlogArticle } from '@/types'
 
 const props = defineProps<{ article: BlogArticle }>()
 
 const store = useBlogStore()
+const shared = useBlogShared()
 const { favorites, toggleFavorite } = useBlogFrontPrefs()
+// 访客本机的分类/标签表是空的，卡片上的分类名要合并共享站点推送的那份
+const allCategories = computed(() => mergeTaxonomy(store.categories, shared.taxonomy.value.categories))
+const allTags = computed(() => mergeTaxonomy(store.tags, shared.taxonomy.value.tags))
 const isFav = computed(() => favorites.value.includes(props.article.id))
 function onToggleFav(): void {
   toggleFavorite(props.article.id)
@@ -28,8 +34,13 @@ const cover = computed(() => coverBackground(props.article, id => store.imageUrl
 const excerpt = computed(() =>
   props.article.excerpt || autoExcerpt(props.article.contentMarkdown, store.settings.excerptLength)
 )
-const categoryLabel = computed(() => store.categoryName(props.article.categoryId))
-const tagLabels = computed(() => store.tagNames(props.article.tagIds))
+const categoryLabel = computed(
+  () => allCategories.value.find((c) => c.id === props.article.categoryId)?.name ?? '未分类'
+)
+const tagLabels = computed(() => {
+  const map = new Map(allTags.value.map((t) => [t.id, t.name]))
+  return props.article.tagIds.map((id) => map.get(id)).filter((n): n is string => !!n)
+})
 const dateLabel = computed(() =>
   props.article.publishedAt ? relativeTime(props.article.publishedAt) : relativeTime(props.article.updatedAt)
 )

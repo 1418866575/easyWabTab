@@ -37,6 +37,9 @@ const mimeTypes = {
   '.json': 'application/json',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon'
 }
@@ -604,13 +607,72 @@ async function readBlogShareManifest() {
   }
 }
 
-async function writeBlogShareManifest(posts) {
-  const data = JSON.stringify({ generatedAt: new Date().toISOString(), count: posts.length, posts }, null, 2)
+/**
+ * 写清单：传完整 manifest 对象，保留 categories / tags 等顶层字段。
+ * 分类 / 标签是全站级数据，不随单篇文章增删，只有后台再次「共享」才刷新；
+ * 取消共享时原样保留（否则删掉一篇文章会让其余文章的分类导航集体消失）。
+ */
+async function writeBlogShareManifest(manifest) {
+  const posts = Array.isArray(manifest.posts) ? manifest.posts : []
+  const data = JSON.stringify({
+    ...manifest,
+    generatedAt: new Date().toISOString(),
+    count: posts.length,
+    posts
+  }, null, 2)
   await fs.promises.mkdir(BLOG_SHARE_DIR, { recursive: true })
   const file = path.join(BLOG_SHARE_DIR, 'manifest.json')
   const tmp = file + '.tmp'
   await fs.promises.writeFile(tmp, data, 'utf8')
   await fs.promises.rename(tmp, file) // 原子替换，避免读到半截清单
+}
+
+// ---------------------------------------------------------------------------
+// 共享封面：post 提交的是封面图 data URL，这里落成独立静态文件 covers/<id>.<ext>，
+// 文章 JSON 与 manifest 只保留 /blog-share/covers/... 路径。
+// 好处：访客看得到真封面，清单又不会被几十 KB~几 MB 的 base64 撑爆（清单是每次进列表都要拉的）。
+// ---------------------------------------------------------------------------
+const COVER_MIME_EXT = {
+  'image/jpeg': '.jpg',
+  'image/jpg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/gif': '.gif'
+}
+
+/** 只允许图片白名单的 data URL，其它一律不落盘（防目录写入被滥用） */
+function parseCoverDataUrl(dataUrl) {
+  const m = /^data:(image\/[a-z0-9.+-]+);base64,([A-Za-z0-9+/=\s]+)$/i.exec(String(dataUrl || ''))
+  if (!m) return null
+  const ext = COVER_MIME_EXT[m[1].toLowerCase()]
+  if (!ext) return null
+  const buf = Buffer.from(m[2].replace(/\s+/g, ''), 'base64')
+  return buf.length ? { ext, buf } : null
+}
+
+async function writeBlogShareCover(id, dataUrl) {
+  const parsed = parseCoverDataUrl(dataUrl)
+  if (!parsed) return ''
+  const coverDir = blogShareWithinDir('covers')
+  const file = blogShareWithinDir('covers/' + id + parsed.ext)
+  if (!coverDir || !file) return ''
+  await fs.promises.mkdir(coverDir, { recursive: true })
+  // 换过封面（jpg→png）时旧扩展名会残留，先清同 id 的旧文件；id 已被 BLOG_SHARE_ID_RE 校验过
+  const prefix = id + '.'
+  const old = await fs.promises.readdir(coverDir).catch(() => [])
+  await Promise.all(old.filter((f) => f.startsWith(prefix) && f !== id + parsed.ext)
+    .map((f) => fs.promises.unlink(path.join(coverDir, f)).catch(() => {})))
+  await fs.promises.writeFile(file, parsed.buf)
+  return '/blog-share/covers/' + id + parsed.ext
+}
+
+async function removeBlogShareCovers(id) {
+  const coverDir = blogShareWithinDir('covers')
+  if (!coverDir) return
+  const prefix = id + '.'
+  const files = await fs.promises.readdir(coverDir).catch(() => [])
+  await Promise.all(files.filter((f) => f.startsWith(prefix))
+    .map((f) => fs.promises.unlink(path.join(coverDir, f)).catch(() => {})))
 }
 
 async function handleBlogShareApi(req, res) {
@@ -636,6 +698,17 @@ async function handleBlogShareApi(req, res) {
         res.end(JSON.stringify({ ok: false, error: 'missing id' }))
         return
       }
+      // 分类 / 标签表是全站级：只写进 manifest 顶层，不塞进单篇文章 JSON
+      const sharedCategories = Array.isArray(post.categories) ? post.categories : null
+      const sharedTags = Array.isArray(post.tags) ? post.tags : null
+      delete post.categories
+      delete post.tags
+      // 封面图 data URL → 独立静态文件；post 与 manifest 只保留路径（清单不塞 base64）
+      if (post.coverImageUrl && String(post.coverImageUrl).startsWith('data:')) {
+        const coverUrl = await writeBlogShareCover(String(post.id), post.coverImageUrl)
+        if (coverUrl) post.coverImageUrl = coverUrl
+        else delete post.coverImageUrl
+      }
       // 文章文件落到 posts/ 子目录，与前端读取路径 /blog-share/posts/<id>.json 及 nginx alias 结构一致
       const file = blogShareWithinDir('posts/' + String(post.id) + '.json')
       if (!file) {
@@ -658,13 +731,20 @@ async function handleBlogShareApi(req, res) {
         categoryName: String(post.categoryName || ''),
         tagIds: Array.isArray(post.tagIds) ? post.tagIds : [],
         tagNames: Array.isArray(post.tagNames) ? post.tagNames : [],
+        // 列表卡片封面：只存静态路径，旧版清单没有这些字段也能正常读
+        coverKind: ['none', 'image', 'gradient', 'solid'].includes(post.coverKind) ? post.coverKind : 'none',
+        coverToken: String(post.coverToken || ''),
+        ...(post.coverImageUrl ? { coverImageUrl: String(post.coverImageUrl) } : {}),
         updatedAt: String(post.updatedAt || new Date().toISOString()),
         size: Buffer.byteLength(JSON.stringify(post))
       }
+      // 每次共享都顺带刷新全站分类/标签（后台改名、调顺序、新增空分类都能同步过来）
+      if (sharedCategories) m.categories = sharedCategories
+      if (sharedTags) m.tags = sharedTags
       const idx = m.posts.findIndex((p) => p.id === entry.id)
       if (idx >= 0) m.posts[idx] = entry
       else m.posts.push(entry)
-      await writeBlogShareManifest(m.posts)
+      await writeBlogShareManifest(m)
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
       res.end(JSON.stringify({ ok: true }))
       return
@@ -678,9 +758,10 @@ async function handleBlogShareApi(req, res) {
     }
     const file = blogShareWithinDir('posts/' + id + '.json')
     if (file) { try { await fs.promises.unlink(file) } catch { /* 不存在即视为已删 */ } }
+    await removeBlogShareCovers(id) // 封面静态文件一并清理，避免目录里留孤儿图
     const m = await readBlogShareManifest()
     m.posts = m.posts.filter((p) => p.id !== id)
-    await writeBlogShareManifest(m.posts)
+    await writeBlogShareManifest(m) // categories / tags 原样保留（全站级）
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
     res.end(JSON.stringify({ ok: true }))
     return
