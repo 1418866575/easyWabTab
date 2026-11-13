@@ -433,12 +433,6 @@ const studentModules: PanelDoc[] = [
     tips: '数据独立存储，可导出随学生备份迁移。'
   },
   {
-    icon: 'health',
-    name: '健康管理',
-    desc: '复刻成人健康面板：运动 / 饮食 / 睡眠 / 体重 + 身高成长记录。',
-    tips: 'BMI 按国标 WS/T 428-2013 分级，身高单独留成长曲线。'
-  },
-  {
     icon: 'habits',
     name: '成就勋章',
     desc: '完成作业 / 习惯 / 阅读 / 番茄自动颁发勋章。',

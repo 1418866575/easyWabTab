@@ -115,18 +115,18 @@ function iso(offsetMs) { return new Date(Date.now() + (offsetMs || 0)).toISOStri
 
 // ============ 种子数据 ============
 const SUBJECTS = ['语文', '数学', '英语']
-/** 学生台全部 16 个菜单键（home 恒显示，其余按 menuVisibility 过滤） */
+/** 学生台全部 15 个菜单键（home 恒显示，其余按 menuVisibility 过滤） */
 const STUDENT_SECTIONS = [
   'home', 'habits', 'homework', 'timetable', 'plan', 'goal',
   'review', 'mistakes', 'reading', 'exam', 'grades', 'education',
-  'achievements', 'rewards', 'parent', 'health'
+  'achievements', 'rewards', 'parent'
 ]
 /** 菜单顺序 + 默认文案（与 types/index.ts 的 STUDENT_MENU_DEFAULT_LABELS 一致） */
 const MENU = [
   ['home', '主页'], ['habits', '习惯打卡'], ['homework', '作业管理'], ['timetable', '课程表'],
   ['plan', '学习计划'], ['review', '复习计划'], ['mistakes', '错题本'], ['reading', '阅读记录'],
   ['exam', '考试倒计时'], ['grades', '成绩记录'], ['goal', '学习目标'], ['education', '教育经历'],
-  ['health', '健康管理'], ['achievements', '成就勋章'], ['rewards', '奖励积分'], ['parent', '家长协同']
+  ['achievements', '成就勋章'], ['rewards', '奖励积分'], ['parent', '家长协同']
 ]
 
 function buildSettings() {

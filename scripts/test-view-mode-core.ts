@@ -33,11 +33,11 @@ test('S1 脏输入一律归一为空字典', () => {
 test('S2 五工作台 key 分组完整、无重复、前缀分明', () => {
   assert.equal(WORKBENCH_VIEW_MODE_KEYS.length, 4)
   assert.equal(BUSINESS_VIEW_MODE_KEYS.length, 3)
-  assert.equal(STUDENT_VIEW_MODE_KEYS.length, 11)
+  assert.equal(STUDENT_VIEW_MODE_KEYS.length, 10)
   assert.equal(TEACHER_VIEW_MODE_KEYS.length, 3)
   assert.equal(BLOG_VIEW_MODE_KEYS.length, 1)
-  assert.equal(PANEL_VIEW_MODE_KEYS.length, 22)
-  assert.equal(new Set(PANEL_VIEW_MODE_KEYS).size, 22)
+  assert.equal(PANEL_VIEW_MODE_KEYS.length, 21)
+  assert.equal(new Set(PANEL_VIEW_MODE_KEYS).size, 21)
   // 个人工作台 4 个 key 已落库，改名会让老用户偏好失效
   assert.deepEqual([...WORKBENCH_VIEW_MODE_KEYS], ['todos', 'notes', 'countdowns', 'genealogy'])
   for (const k of BUSINESS_VIEW_MODE_KEYS) assert.ok(k.startsWith('biz-'))

@@ -19,7 +19,7 @@ export const WORKBENCH_VIEW_MODE_KEYS = ['todos', 'notes', 'countdowns', 'geneal
 export const BUSINESS_VIEW_MODE_KEYS = ['biz-purchases', 'biz-expenses', 'biz-daily'] as const
 /** 学生工作台：stu- 前缀，与 STUDENT_MENU_KEYS 的面板一一对应 */
 export const STUDENT_VIEW_MODE_KEYS = [
-  'stu-education', 'stu-grades', 'stu-height', 'stu-homework', 'stu-goals',
+  'stu-education', 'stu-grades', 'stu-homework', 'stu-goals',
   'stu-mistakes', 'stu-exam', 'stu-plan', 'stu-reading', 'stu-review', 'stu-reward'
 ] as const
 

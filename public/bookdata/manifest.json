@@ -13,7 +13,7 @@
     "order": 10,
     "entry": "/bookdata/daodejing/index.html",
     "size": 347386,
-    "updatedAt": "2026-10-16T02:11:23.707Z",
+    "updatedAt": "2026-10-22T00:57:29.000Z",
     "hasMeta": true,
     "source": "static"
   },
@@ -31,7 +31,7 @@
     "order": 20,
     "entry": "/bookdata/sunzibingfa/index.html",
     "size": 228453,
-    "updatedAt": "2026-10-16T02:11:23.751Z",
+    "updatedAt": "2026-10-22T00:57:29.000Z",
     "hasMeta": true,
     "source": "static"
   },
@@ -49,8 +49,8 @@
     ],
     "order": 25,
     "entry": "/bookdata/tangshi300/index.html",
-    "size": 898836,
-    "updatedAt": "2026-11-03T05:59:41.577Z",
+    "size": 904522,
+    "updatedAt": "2026-11-03T12:24:30.941Z",
     "hasMeta": true,
     "source": "static"
   },
@@ -69,7 +69,7 @@
     "order": 30,
     "entry": "/bookdata/personal-credit-report/index.html",
     "size": 350048,
-    "updatedAt": "2026-11-04T03:31:13.848Z",
+    "updatedAt": "2026-11-04T12:25:22.750Z",
     "hasMeta": true,
     "source": "static"
   },
@@ -87,7 +87,7 @@
     "order": 30,
     "entry": "/bookdata/gushi/index.html",
     "size": 601745,
-    "updatedAt": "2026-10-16T02:11:23.734Z",
+    "updatedAt": "2026-10-22T00:57:29.000Z",
     "hasMeta": true,
     "source": "static"
   },
@@ -106,7 +106,7 @@
     "order": 31,
     "entry": "/bookdata/enterprise-credit-report/index.html",
     "size": 251888,
-    "updatedAt": "2026-11-04T03:31:13.916Z",
+    "updatedAt": "2026-11-04T12:25:22.721Z",
     "hasMeta": true,
     "source": "static"
   },
@@ -124,8 +124,8 @@
     ],
     "order": 32,
     "entry": "/bookdata/junior-math-notes/index.html",
-    "size": 217627,
-    "updatedAt": "2026-11-04T07:01:21.274Z",
+    "size": 219860,
+    "updatedAt": "2026-11-04T12:25:22.726Z",
     "hasMeta": true,
     "source": "static"
   },
@@ -144,7 +144,7 @@
     "order": 40,
     "entry": "/bookdata/opencode-study/index.html",
     "size": 331142,
-    "updatedAt": "2026-10-16T02:11:23.744Z",
+    "updatedAt": "2026-10-22T00:57:29.000Z",
     "hasMeta": true,
     "source": "static"
   },
@@ -164,7 +164,7 @@
     "order": 45,
     "entry": "/bookdata/opencodeV2/index.html",
     "size": 331099,
-    "updatedAt": "2026-10-30T05:35:57.333Z",
+    "updatedAt": "2026-10-30T10:20:21.405Z",
     "hasMeta": true,
     "source": "static"
   },
@@ -184,7 +184,25 @@
     "order": 50,
     "entry": "/bookdata/how-to-live-better/index.html",
     "size": 2834101,
-    "updatedAt": "2026-10-23T08:57:19.975Z",
+    "updatedAt": "2026-10-22T00:57:29.000Z",
+    "hasMeta": true,
+    "source": "static"
+  },
+  {
+    "id": "zongcai-de-shuangmian-pianai",
+    "title": "总裁的双面偏爱",
+    "description": "都市情感小说注释版：对外杀伐果决的陆氏总裁陆峥寒，唯独在清冷设计师温叙白面前收起锋芒、示弱求偏爱。生僻词与成语附悬浮注释，带章节目录、全文搜索与上下章导航。",
+    "cover": "",
+    "category": "都市小说",
+    "tags": [
+      "都市",
+      "总裁",
+      "注释版"
+    ],
+    "order": 60,
+    "entry": "/bookdata/zongcai-de-shuangmian-pianai/index.html",
+    "size": 758745,
+    "updatedAt": "2026-11-11T21:57:32.872Z",
     "hasMeta": true,
     "source": "static"
   }

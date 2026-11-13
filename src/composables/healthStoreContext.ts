@@ -1,9 +1,9 @@
 // 健康管理 store 注入上下文：让同一套健康子组件（Exercise/Diet/Sleep/Weight）
-// 既能跑在成人端（默认 useWorkbenchHealthStore），也能跑在学生端（注入 useStudentHealthStore），
+// 既能跑在默认 store（useWorkbenchHealthStore），也能由容器注入其它同形状的 store，
 // 从而实现「UI 零复制复用、数据严格隔离」。
 //
 // 用法：
-//   容器侧（如 StudentHealth.vue）：provideHealthStore(useStudentHealthStore())
+//   容器侧按需 provideHealthStore(...)，子面板不感知具体 store 实现
 //   子组件侧：const store = injectHealthStore() ?? useWorkbenchHealthStore()
 // 成人端没有 provide 时 inject 返回 undefined → 回退原 store，行为与改造前完全一致。
 

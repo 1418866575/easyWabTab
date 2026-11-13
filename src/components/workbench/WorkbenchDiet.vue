@@ -18,6 +18,7 @@ import { localToday } from '@/composables/todoCore'
 import { MEAL_TYPES, type MealType } from '@/types'
 import WorkbenchHealthReminders from './WorkbenchHealthReminders.vue'
 import WorkbenchDietPlanCard from './WorkbenchDietPlanCard.vue'
+import WorkbenchDietNutrients from './WorkbenchDietNutrients.vue'
 import { DIET_PLAN_TEMPLATES } from '@/composables/healthPlanTemplates'
 
 // store 来源可注入：默认成人端 store，学生端容器 provide 自己的 store 后自动改为学生数据（见 healthStoreContext）
@@ -327,6 +328,9 @@ onMounted(async () => {
       </template>
       <div v-else class="stat-sub">尚未设定每日热量目标</div>
     </div>
+
+    <!-- 七大营养（只读科普卡片）：排在饮食周计划看板上方 -->
+    <WorkbenchDietNutrients />
 
     <!-- 饮食周计划（早/午/晚 + 合计） -->
     <WeeklyPlanBoard

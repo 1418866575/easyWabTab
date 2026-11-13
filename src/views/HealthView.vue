@@ -23,6 +23,7 @@ import WorkbenchExercise from '@/components/workbench/WorkbenchExercise.vue'
 import WorkbenchDiet from '@/components/workbench/WorkbenchDiet.vue'
 import WorkbenchSleep from '@/components/workbench/WorkbenchSleep.vue'
 import WorkbenchWeight from '@/components/workbench/WorkbenchWeight.vue'
+import HealthRecipes from '@/components/health/HealthRecipes.vue'
 import WorkbenchSwitcher from '@/components/WorkbenchSwitcher.vue'
 import Icon from '@/components/Icon.vue'
 
@@ -92,12 +93,16 @@ async function handleSyncNowClick(): Promise<void> {
   }
 }
 
-/** 每个指标面板固定的描述与组件（与顺序/改名无关，仅按 key 映射） */
-const PANELS: Record<HealthModule, { desc: string; panel: Component }> = {
+/** 菜谱是内容页，不属于 4 个健康指标；单独扩一个视图 tab，避免污染被学生端复用的 HealthModule */
+type HealthViewTab = HealthModule | 'recipes'
+
+/** 每个面板固定的描述与组件（与顺序/改名无关，仅按 key 映射） */
+const PANELS: Record<HealthViewTab, { desc: string; panel: Component }> = {
   exercise: { desc: '记录运动时长与消耗，查看周目标与跟练进度。', panel: WorkbenchExercise },
   diet: { desc: '按餐次记录饮食与热量，查看日目标与食谱方案。', panel: WorkbenchDiet },
   sleep: { desc: '记录入睡与起床时间，查看睡眠时长与质量。', panel: WorkbenchSleep },
-  weight: { desc: '记录体重变化，查看 BMI 分级与趋势折线。', panel: WorkbenchWeight }
+  weight: { desc: '记录体重变化，查看 BMI 分级与趋势折线。', panel: WorkbenchWeight },
+  recipes: { desc: '按卡片浏览家常菜谱，查看成品图、食材、做法与食品安全注意事项。', panel: HealthRecipes }
 }
 /** 左侧菜单：顺序 / 改名 / 显隐来自 settings.healthMenuItems（在设置弹窗里调整即时生效）。
  *  store 初始化完成前 healthMenuItems 可能短暂为空，这里回退到 4 个默认项，避免首帧崩溃。 */
@@ -111,25 +116,34 @@ const menuSource = computed(() => {
         icon: HEALTH_MENU_ICONS[k]
       }))
 })
-const MENU = computed(() =>
-  menuSource.value.map((m) => ({
+const MENU = computed(() => [
+  ...menuSource.value.map((m) => ({
     key: m.key as HealthModule,
     label: m.label,
     icon: m.icon,
     desc: PANELS[m.key as HealthModule].desc,
     panel: PANELS[m.key as HealthModule].panel
-  }))
-)
+  })),
+  // 菜谱不纳入 settings 的排序 / 改名 / 显隐配置，固定追加在菜单末尾
+  {
+    key: 'recipes' as HealthViewTab,
+    label: '菜谱',
+    icon: 'recipe',
+    desc: PANELS.recipes.desc,
+    panel: PANELS.recipes.panel
+  }
+])
 
-const activeTab = ref<HealthModule>(
-  (HEALTH_TABS as readonly string[]).includes(route.query.tab as string)
-    ? (route.query.tab as HealthModule)
+const VIEW_TABS: readonly string[] = [...HEALTH_TABS, 'recipes']
+const activeTab = ref<HealthViewTab>(
+  VIEW_TABS.includes(route.query.tab as string)
+    ? (route.query.tab as HealthViewTab)
     : 'exercise'
 )
 const current = computed(() => MENU.value.find((m) => m.key === activeTab.value) ?? MENU.value[0])
 const activePanel = computed<Component>(() => current.value.panel)
 
-function setTab(tab: HealthModule): void {
+function setTab(tab: HealthViewTab): void {
   activeTab.value = tab
   // 抽屉里点菜单后自动收起，否则选中项被遮罩挡着看不到
   closeMobileMenu()
@@ -214,7 +228,7 @@ onMounted(async () => {
         </div>
         <p v-if="initializing" class="hv-loading">正在加载健康数据…</p>
         <div v-else class="wb-health">
-          <KeepAlive :max="4">
+          <KeepAlive :max="5">
             <component :is="activePanel" :key="activeTab" />
           </KeepAlive>
         </div>

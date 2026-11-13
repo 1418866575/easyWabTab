@@ -11,10 +11,8 @@ import type {
   HealthPlanPeriod,
   HealthPlanPrefs,
   HealthPlans,
-  HeightRecord,
   MealType,
   SleepRecord,
-  StudentHealthData,
   WeightRecord
 } from '../types'
 import { localToday } from './todoCore.ts'
@@ -291,44 +289,6 @@ export function normalizeWeightRecord(raw: unknown): WeightRecord {
     ...(typeof r.note === 'string' ? { note: r.note } : {}),
     createdAt: typeof r.createdAt === 'string' ? r.createdAt : isoNow(),
     updatedAt: typeof r.updatedAt === 'string' ? r.updatedAt : isoNow()
-  }
-}
-
-/** 归一化身高记录（module 强制 height，heightCm 越界剔除为 0；20-250cm 之外视为脏数据）。 */
-export function normalizeHeightRecord(raw: unknown): HeightRecord {
-  const r = (raw ?? {}) as Record<string, unknown>
-  const cm = num(r.heightCm)
-  return {
-    id: typeof r.id === 'string' && r.id ? r.id : genId('ht_'),
-    module: 'height',
-    date: isDateStr(r.date) ? r.date : localToday(),
-    heightCm: cm >= 20 && cm <= 250 ? cm : 0,
-    ...(typeof r.note === 'string' ? { note: r.note } : {}),
-    createdAt: typeof r.createdAt === 'string' ? r.createdAt : isoNow(),
-    updatedAt: typeof r.updatedAt === 'string' ? r.updatedAt : isoNow()
-  }
-}
-
-/** 空学生健康数据（比 HealthData 多一个 height 记录数组）。 */
-export function emptyStudentHealthData(): StudentHealthData {
-  return { plans: {}, records: { exercise: [], diet: [], sleep: [], weight: [], height: [] } }
-}
-
-/**
- * 归一化学生健康数据：与 normalizeHealthData 同源（height 越界剔除、计划逐模块校验、
- * 四大模块记录逐条走对应 normalize），额外把 records.height 也逐条归一化。脏输入不抛错。
- */
-export function normalizeStudentHealthData(raw: Partial<StudentHealthData> | undefined): StudentHealthData {
-  const base = normalizeHealthData(raw as Partial<HealthData> | undefined)
-  const rawRecords = (raw?.records ?? {}) as Record<string, unknown>
-  const heights = Array.isArray(rawRecords.height) ? rawRecords.height : []
-  return {
-    height: base.height,
-    plans: base.plans,
-    records: {
-      ...base.records,
-      height: heights.map(r => normalizeHeightRecord(r))
-    }
   }
 }
 

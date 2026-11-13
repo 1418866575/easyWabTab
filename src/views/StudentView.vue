@@ -10,11 +10,9 @@ import { useStudentRewardsStore } from '@/stores/studentRewards'
 import { useStudentHabitsStore } from '@/stores/studentHabits'
 import { useStudentHomeworkStore } from '@/stores/studentHomework'
 import { useStudentReadingStore } from '@/stores/studentReading'
-import { useStudentHealthStore } from '@/stores/studentHealth'
 import { useStudentGradesStore } from '@/stores/studentGrades'
 import { useAppSettingsStore } from '@/stores/settings'
 import WorkbenchSwitcher from '@/components/WorkbenchSwitcher.vue'
-import StudentHealth from '@/components/student/StudentHealth.vue'
 import StudentGrades from '@/components/student/StudentGrades.vue'
 import StudentHome from '@/components/student/StudentHome.vue'
 import StudentHabits from '@/components/student/StudentHabits.vue'
@@ -46,21 +44,20 @@ const rewardsStore = useStudentRewardsStore()
 const habitsStore = useStudentHabitsStore()
 const homeworkStore = useStudentHomeworkStore()
 const readingStore = useStudentReadingStore()
-const healthStore = useStudentHealthStore()
 const gradesStore = useStudentGradesStore()
 const showSettingsDialog = ref(false)
 
 // 学生菜单键白名单（与 STUDENT_MENU_KEYS 对齐；home 恒居首位）
-// 15 项（含 health 健康管理）；菜单显示顺序与开关由 studentSettings.menuItems 控制
+// 15 项；菜单显示顺序与开关由 studentSettings.menuItems 控制
 type StudentSectionKey =
   | 'home' | 'habits' | 'homework' | 'timetable' | 'plan' | 'goal'
   | 'review' | 'mistakes' | 'reading' | 'exam' | 'grades' | 'education'
-  | 'achievements' | 'rewards' | 'parent' | 'health'
+  | 'achievements' | 'rewards' | 'parent'
 
 const SECTION_KEYS: readonly StudentSectionKey[] = [
   'home', 'habits', 'homework', 'timetable', 'plan', 'goal',
   'review', 'mistakes', 'reading', 'exam', 'grades', 'education',
-  'achievements', 'rewards', 'parent', 'health'
+  'achievements', 'rewards', 'parent'
 ]
 
 const SECTION_SET: ReadonlySet<StudentSectionKey> = new Set(SECTION_KEYS)
@@ -237,7 +234,6 @@ onMounted(async () => {
       await habitsStore.loadHabits()
       await homeworkStore.loadHomework()
       await readingStore.loadReading()
-      await healthStore.loadHealth()
       await gradesStore.loadGrades()
       await rewardsStore.backfillFromAll({
         habits: habitsStore.habits,
@@ -379,7 +375,6 @@ async function onOnboardingComplete() {
             :parent-mode="parentModeUnlocked"
             @open-pin="openParentPinDialog"
           />
-          <StudentHealth v-else-if="activeSection === 'health'" />
           <StudentGrades v-else-if="activeSection === 'grades'" />
           <StudentPanelPlaceholder
             v-else

@@ -90,7 +90,6 @@ const EXPECTED_KEYS = {
   'src/components/business/BusinessDaily.vue': 'biz-daily',
   'src/components/student/StudentEducation.vue': 'stu-education',
   'src/components/student/StudentGrades.vue': 'stu-grades',
-  'src/components/student/StudentHealthHeight.vue': 'stu-height',
   'src/components/student/StudentHomework.vue': 'stu-homework',
   'src/components/student/StudentGoals.vue': 'stu-goals',
   'src/components/student/StudentMistakes.vue': 'stu-mistakes',
@@ -107,7 +106,7 @@ const EXPECTED_KEYS = {
 const misWired = Object.entries(EXPECTED_KEYS)
   .filter(([file, key]) => !fs.readFileSync(join(ROOT, file), 'utf8').includes(`useViewMode('${key}')`))
   .map(([file]) => file)
-check('S1 22 个面板全部登记 key', misWired.length === 0, misWired.join(', '))
+check('S1 21 个面板全部登记 key', misWired.length === 0, misWired.join(', '))
 // 全站不该再有漏接的切换面板（CategoryManager 例外，见下一条）
 const leftovers = []
 for (const dir of ['workbench', 'business', 'student', 'teacher', 'blog']) {

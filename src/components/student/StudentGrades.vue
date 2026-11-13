@@ -22,7 +22,7 @@ function cardFields(row: any) {
 // 学生工作台成绩记录面板
 // 布局：工具条 + 年级标签页(el-tabs) + 统计卡 + 表格(el-table, 每页10条分页) + 录入/编辑弹框 + 按科目 ECharts 趋势折线
 // 数据：useStudentGradesStore（独立 IDB store 'student_grades'，严格隔离成人数据）
-// 复用 studentGradesCore 的归一化/校验/统计/排序/过滤/分页纯函数；ECharts 走 echarts/core + vue-echarts（仿 StudentHealthHeight）
+// 复用 studentGradesCore 的归一化/校验/统计/排序/过滤/分页纯函数；ECharts 走 echarts/core + vue-echarts
 // 年级维度：每条记录带 grade（STUDENT_GRADE_LEVELS 之一），每个年级一个标签页，全部页保留跨年级总览
 // data-testid 前缀：sg-
 
