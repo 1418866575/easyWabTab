@@ -6,6 +6,7 @@
  * 数据层走 workbenchMessages store（IDB store 'messages'，墓碑删除，随云同步跨设备）。
  * 视觉：卡面复用全局 .ui-card；按钮 / 弹框 / 输入框分别复用 .ui-btn 体系、BaseDialog、el-input，
  * 本组件只写布局与色调派生，不另造一套控件皮肤。
+ * 卡片列表统一等高（--mb-card-h）：超长正文按行截断，完整内容仍在详情弹框里，网格不会高矮不齐。
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
@@ -570,6 +571,9 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .message-board {
+  /* 卡片统一高度：200px ≈ 标题 1 行 + 正文 4 行 + 脚注 1 行；
+     一屏（900px 视口）在工具栏 + 弹幕区之后仍能完整看到两行卡片。 */
+  --mb-card-h: 200px;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -595,7 +599,7 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
-/* 卡片网格：auto-fill 自适应列，窄屏自然收敛为一列 */
+/* 卡片网格：auto-fill 自适应列，窄屏自然收敛为一列；卡片统一等高，行内不再留空白 */
 .message-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
@@ -607,12 +611,14 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: var(--space-2);
   min-width: 0;
+  height: var(--mb-card-h); /* 固定高度：长留言不再把整行撑高 */
   padding: var(--space-4);
   border-left: 3px solid var(--color-border);
+  overflow: hidden; /* 窄屏脚注折行时兜底，保证卡片高度恒定 */
   cursor: pointer; /* 整卡即「查看详情」入口 */
 }
 .message-card:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-.message-card-top { display: flex; align-items: flex-start; gap: var(--space-2); }
+.message-card-top { flex: none; display: flex; align-items: flex-start; gap: var(--space-2); }
 .message-title {
   flex: 1;
   min-width: 0;
@@ -634,15 +640,22 @@ onBeforeUnmount(() => {
   background-color: var(--color-primary-soft);
 }
 .message-content {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0; /* 固定高度下允许被压缩，配合 line-clamp 才不会顶破卡片 */
   margin: 0;
   font-size: var(--fs-body);
   line-height: var(--line-height-relaxed);
   color: var(--color-text);
   white-space: pre-wrap;
   word-break: break-word;
+  /* 最多 4 行（≈ 卡片去掉标题/脚注后的可用高度），超出显示省略号；点卡片看全文 */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
 }
 .message-card-foot {
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -857,6 +870,7 @@ html.dark .message-marquee-label { box-shadow: none; }
   .message-search { flex: 1 1 100%; }
   .message-count { margin-left: 0; }
   .message-grid { grid-template-columns: 1fr; }
+  /* 窄屏仍是同一高度：列宽变大后 4 行正文能显示更多字，无需另设一套高度 */
   .message-card { padding: var(--space-3); }
   /* 触屏：操作按钮保持 ≥36px 的全局按钮高度，间隙略放宽避免误触 */
   .message-actions { gap: var(--space-2); }

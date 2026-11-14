@@ -1,10 +1,10 @@
 <script setup lang="ts">
 /**
  * 智能工作台主视图（路由 /smart）
- * 布局与 TeacherView 一致：顶部工作台切换入口（WorkbenchSwitcher 命令面板，Alt+W）+ 左菜单 + 右内容。
+ * 布局与个人工作台一致：无顶栏，左菜单三段 = 顶部工作台切换（WorkbenchSwitcher，Alt+W）
+ * + 中部功能导航 + 底部固定「云同步 / 设置」，右侧为内容区；移动端菜单为左侧抽屉。
  * 菜单项来自设置（概览 / 智能网页端 / 技能 / 提示词 / 工作流 / 前端提示词）；
- * 不再单独放「返回导航站」按钮，导航站入口统一收进左上角的工作台切换面板
- * （与其它工作台页面同款）。
+ * 导航站入口统一收进顶部的工作台切换面板（与其它工作台页面同款）。
  */
 import { computed, ref, watch } from 'vue'
 import Icon from '@/components/Icon.vue'
@@ -29,8 +29,13 @@ const store = useSmartStore()
 
 const activePage = ref<PageKey>('overview')
 const sidebarCollapsed = ref(false)
-/** 右上角「设置」入口：左侧菜单配置 + 技能分类管理 */
+/** 侧栏底部「设置」入口：左侧菜单配置 + 技能分类管理 */
 const showSettings = ref(false)
+/** 移动端左侧抽屉：默认收起，由内容区页头按钮唤出（与个人 / 健康工作台同款） */
+const mobileMenuOpen = ref(false)
+function closeMobileMenu(): void {
+  mobileMenuOpen.value = false
+}
 
 interface MenuItem {
   key: PageKey
@@ -67,6 +72,7 @@ watch(
 
 function selectPage(key: PageKey): void {
   activePage.value = key
+  closeMobileMenu()
 }
 
 /** 当前页对应的组件：交给 <KeepAlive> 下的单个 <component :is> 渲染。
@@ -82,7 +88,7 @@ const activePageComponent = computed(() => {
   }
 })
 
-// ---------- 右上角云同步（共享 useCloudSync 单例；智能工作台数据走独立的 smart.json 信封） ----------
+// ---------- 侧栏底部云同步（共享 useCloudSync 单例；智能工作台数据走独立的 smart.json 信封） ----------
 const cloudSync = useCloudSync()
 const cloudEnabled = computed((): boolean => settingsStore.cloudSyncEnabled === true)
 const syncBusy = computed(
@@ -126,48 +132,21 @@ async function handleSyncNowClick(): Promise<void> {
 
 <template>
   <div class="sv-shell" :class="{ 'is-collapsed': sidebarCollapsed }">
-    <!-- 顶部：工作台切换入口 + 标题 -->
-    <header class="sv-topbar">
-      <div class="sv-topbar-left">
-        <!-- 左上角「工作台切换」命令面板入口：点击弹出切换面板（Alt+W 唤起，与教师/销售/学生工作台一致） -->
-        <WorkbenchSwitcher
-          :trigger-icon="settingsStore.smartPageIcon"
-          trigger-builtin="lightbulb"
-          :trigger-label="settingsStore.smartPageDisplayName"
-          force-show
-        />
-      </div>
-      <div class="sv-topbar-actions">
-        <!-- 云同步：智能工作台数据走独立的 smart.json 信封 -->
-        <button
-          type="button"
-          class="sv-btn sv-btn-sm sv-sync-btn ui-btn--pill"
-          :class="syncStatusClass"
-          :title="syncTip"
-          data-testid="smart-sync-now"
-          :disabled="syncBusy"
-          @click="handleSyncNowClick"
-        >
-          <Icon name="cloud" :size="14" />
-          <span class="sv-sync-text">{{ syncLabel }}</span>
-        </button>
-        <!-- 最右侧固定「设置」：左侧菜单（改名 / 显隐 / 排序）+ 技能分类 -->
-        <button
-          type="button"
-          class="sv-btn sv-btn-sm sv-settings-btn ui-btn--pill"
-          title="左侧菜单 / 技能分类"
-          data-testid="smart-settings-entry"
-          @click="showSettings = true"
-        >
-          <Icon name="cog" :size="15" />
-          <span class="sv-settings-text">设置</span>
-        </button>
-      </div>
-    </header>
-
-    <!-- 主体：左菜单 + 右内容 -->
+    <!-- 主体：左菜单（顶部切换 / 中部导航 / 底部云同步 + 设置）+ 右内容。无全局顶栏，与个人工作台一致。 -->
     <div class="sv-body">
-      <aside class="sv-sidebar" aria-label="智能工作台功能导航">
+      <aside class="sv-sidebar" :class="{ open: mobileMenuOpen }" aria-label="智能工作台功能导航">
+        <!-- 侧栏第一项：切换其它页面，与个人 / 健康工作台同一槽位 -->
+        <div class="sv-side-top">
+          <div class="sv-side-switch" data-testid="smart-page-switcher">
+            <WorkbenchSwitcher
+              :trigger-icon="settingsStore.smartPageIcon"
+              trigger-builtin="lightbulb"
+              :trigger-label="settingsStore.smartPageDisplayName"
+              force-show
+            />
+          </div>
+        </div>
+
         <nav class="sv-nav">
           <!-- 收起 / 展开：位于左侧菜单顶部，与菜单项同宽左对齐 -->
           <button
@@ -197,14 +176,46 @@ async function handleSyncNowClick(): Promise<void> {
             <span v-if="p.count !== undefined" class="sv-nav-count">{{ p.count }}</span>
           </button>
         </nav>
+
+        <!-- 侧栏底部恒定两枚按钮：与个人 / 健康工作台同规格（各 50%、纯文字、折叠态仅图标） -->
+        <div class="sv-side-foot" data-testid="smart-side-foot">
+          <button
+            type="button"
+            class="sv-side-btn sv-sync-btn ui-btn--pill"
+            :class="syncStatusClass"
+            :title="syncTip"
+            :aria-label="syncLabel"
+            data-testid="smart-sync-now"
+            :disabled="syncBusy"
+            @click="handleSyncNowClick"
+          >
+            <span class="sv-side-btn-ic" aria-hidden="true"><Icon name="cloud" :size="14" /></span>
+            <span class="sv-side-btn-text">{{ syncLabel }}</span>
+          </button>
+          <button
+            type="button"
+            class="sv-side-btn ui-btn--pill"
+            title="左侧菜单 / 技能分类"
+            aria-label="设置"
+            data-testid="smart-settings-entry"
+            @click="showSettings = true; closeMobileMenu()"
+          >
+            <span class="sv-side-btn-ic" aria-hidden="true"><Icon name="cog" :size="15" /></span>
+            <span class="sv-side-btn-text">设置</span>
+          </button>
+        </div>
       </aside>
 
+      <!-- 移动端抽屉遮罩：层级低于抽屉（46）、高于内容区 -->
+      <div v-if="mobileMenuOpen" class="sv-scrim" data-testid="smart-menu-scrim" @click="closeMobileMenu"></div>
+
       <main class="sv-content">
-        <!-- KeepAlive：切页不销毁列表组件，保住搜索词 / 分类 / 标签 / 排序 / 页码
-             （此前是裸 v-if，切走再切回筛选条件全丢）。缓存的组件按类型区分，互不干扰。 -->
-        <!-- KeepAlive 只接受「单个」子节点：所有页面必须收敛成一个动态组件。
-             曾经写成 v-if / v-else-if 多条并列分支，模板编译期直接报
-             "<KeepAlive> expects exactly one child component"，整条 /smart 路由 500 白屏。
+        <!-- 移动端抽屉入口（桌面隐藏） -->
+        <button class="sv-menu-trigger" data-testid="smart-menu-trigger" title="全部菜单" aria-label="打开全部菜单" @click="mobileMenuOpen = true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <!-- KeepAlive：切页不销毁列表组件，保住搜索词 / 分类 / 标签 / 排序 / 页码。
+             KeepAlive 只接受「单个」子节点：所有页面必须收敛成一个动态组件。
              概览的统计卡会 emit goto 跳到对应菜单；其它页没有该事件，
              故用条件 v-on 绑定，避免把 onGoto 透传到它们的根元素上。 -->
         <KeepAlive>
@@ -231,149 +242,57 @@ async function handleSyncNowClick(): Promise<void> {
   color: var(--color-text);
 }
 
-/* ---------- 顶栏 ---------- */
-.sv-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  /* 不换行：右侧操作区（含最右的「设置」）始终固定在同一行最右端 */
-  flex-wrap: nowrap;
-  padding: var(--space-3) var(--space-4);
-  background-color: var(--color-bg-card, #ffffff);
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
-}
-
-.sv-topbar-left {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  min-width: 0;
-  /* 左侧可压缩（标题过长时省略），保证右侧按钮组不被挤出可视区 */
-  flex: 0 1 auto;
-  overflow: hidden;
-}
-
-.sv-heading { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-
-.sv-title {
-  margin: 0;
-  font-size: var(--font-size-2xl, 20px);
-  font-weight: var(--font-weight-semibold, 600);
-  line-height: var(--line-height-tight, 1.3);
-  color: var(--color-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sv-sub {
-  margin: 0;
-  font-size: var(--font-size-sm, 12px);
-  color: var(--color-text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ---------- 顶栏操作区：云同步 + 设置（固定最右，尺寸/圆角与个人工作台 .wb-btn 同款） ---------- */
-.sv-topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  /* 固定在最右侧：不伸缩、不换行、不被左侧内容挤走 */
-  flex: 0 0 auto;
-  margin-left: auto;
-  white-space: nowrap;
-}
-
-.sv-btn {display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 999px;
-  background-color: var(--color-bg-card, #ffffff);
-  color: var(--color-text);
-  font-family: inherit;
-  font-size: var(--fs-caption, 12px);
-  font-weight: var(--font-weight-medium, 500);
-  cursor: pointer;
-  transition: background-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
-    border-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
-    color var(--motion-duration, 0.2s) var(--motion-ease, ease),
-    opacity 120ms ease;}
-
-.sv-btn:hover { background-color: var(--color-bg-hover, #f1f5f9); }
-
-.sv-btn:focus-visible {
-  outline: 2px solid var(--color-primary, #3b82f6);
-  outline-offset: 2px;
-}
-
-.sv-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.sv-btn-sm {height: 36px;
-  padding: 0 var(--space-3);
-  font-size: var(--font-size-xs, 12px);}
-
-/* 云同步按钮：状态色与首页/教师工作台完全一致 */
-.sv-sync-btn {
-  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, opacity 120ms ease;
-}
-
-.sv-sync-btn.sv-sync-btn-pending {
-  background-color: var(--color-primary, #3b82f6);
-  border-color: var(--color-primary, #3b82f6);
-  color: #fff;
-  opacity: 0.88;
-  cursor: progress;
-}
-
-/* 冲突态用橙色：走 --color-warning 令牌（规范 §1.5：语义色不写死） */
-.sv-sync-btn.sv-sync-btn-conflict {
-  background-color: var(--color-warning, #f59e0b);
-  border-color: var(--color-warning, #f59e0b);
-  color: #fff;
-}
-
-.sv-sync-btn.sv-sync-btn-error {
-  background-color: var(--color-danger, #ef4444);
-  border-color: var(--color-danger, #ef4444);
-  color: #fff;
-}
-
-/* ---------- 主体 ---------- */
+/* ---------- 主体：左菜单 + 右内容（与个人工作台同构，无顶栏） ---------- */
 .sv-body {
   display: flex;
   align-items: stretch;
-  gap: 0;
   flex: 1 1 auto;
   min-height: 0;
-  overflow: hidden;
+  position: relative;
 }
 
 .sv-sidebar {
   flex: 0 0 200px;
   width: 200px;
-  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0;
   background-color: var(--color-bg-card, #ffffff);
   border-right: 1px solid var(--color-border, #e2e8f0);
-  position: sticky;
-  top: 0;
-  max-height: calc(100vh - 64px);
-  overflow-y: auto;
 }
 
+/* 侧栏第一项「切换其它页面」：与个人 / 健康工作台同槽位、同触发器外观；下拉仍由组件 Teleport 到 body */
+.sv-side-top { flex: none; padding: 10px 8px 2px; }
+.sv-side-switch { margin-bottom: 6px; }
+.sv-side-switch :deep(.ws-root) { display: flex; width: 100%; }
+.sv-side-switch :deep(.ws-trigger) {
+  width: 100%;
+  height: 34px;
+  gap: 8px;
+  padding: 0 8px 0 10px;
+  border-color: transparent;
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-hover);
+  color: var(--color-text-secondary);
+  font-size: var(--fs-caption);
+}
+.sv-side-switch :deep(.ws-trigger:hover) {
+  background-color: var(--color-bg-card);
+  border-color: var(--color-primary);
+  color: var(--color-text);
+}
+.sv-side-switch :deep(.ws-trigger-label) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* 中部：菜单可滚动，底部两枚按钮不随菜单滚走 */
 .sv-nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  padding: 2px 8px 8px;
 }
 
 /* 收起 / 展开：外观复用教师台 `.tw-btn .tw-btn-sm`（白底描边胶囊、30px 高、12px/500、
@@ -444,79 +363,137 @@ async function handleSyncNowClick(): Promise<void> {
   font-size: var(--font-size-xs, 11px);
 }
 
+/* 侧栏底部恒定两枚按钮：皮肤全部交给全局 .ui-btn--pill，本地只定布局。
+   与个人 / 健康 / 博客后台同规格：flex:1 各 50%、桌面 32px、展开纯文字、折叠仅图标。 */
+.sv-side-foot {
+  flex: none;
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px 10px;
+  border-top: 1px solid var(--color-border, #e2e8f0);
+}
+.sv-side-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.sv-side-btn-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sv-side-btn-ic { display: none; flex: none; color: var(--color-primary); }
+.sv-sync-btn { transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, opacity 120ms ease; }
+
 .sv-content {
   flex: 1 1 auto;
   min-width: 0;
   padding: 16px clamp(12px, 2vw, 24px) 32px;
   overflow-y: auto;
+  background-color: var(--color-bg, #f8fafc);
+  font-variant-numeric: tabular-nums;
 }
 
-/* ---------- 收起态 ---------- */
-.sv-shell.is-collapsed .sv-sidebar {
-  flex-basis: 56px;
-  width: 56px;
-  padding-left: 6px;
-  padding-right: 6px;
-}
-
+/* ---------- 收起态：56px 侧栏，切换控件与菜单项图标化 ---------- */
+.sv-shell.is-collapsed .sv-sidebar { flex-basis: 56px; width: 56px; }
+.sv-shell.is-collapsed .sv-side-top { padding: 10px 6px 2px; }
+.sv-shell.is-collapsed .sv-side-switch :deep(.ws-trigger) { height: 32px; padding: 0; justify-content: center; }
+.sv-shell.is-collapsed .sv-side-switch :deep(.ws-trigger-label),
+.sv-shell.is-collapsed .sv-side-switch :deep(.ws-trigger-caret) { display: none; }
+.sv-shell.is-collapsed .sv-nav { padding: 2px 6px 8px; }
 .sv-shell.is-collapsed .sv-nav-label,
 .sv-shell.is-collapsed .sv-nav-count,
-.sv-shell.is-collapsed .sv-collapse-text {
-  display: none;
-}
-
+.sv-shell.is-collapsed .sv-collapse-text { display: none; }
 .sv-shell.is-collapsed .sv-nav-item,
-.sv-shell.is-collapsed .sv-nav-collapse {
-  justify-content: center;
-  padding: 0;
-}
+.sv-shell.is-collapsed .sv-nav-collapse { justify-content: center; padding: 0; }
+.sv-shell.is-collapsed .sv-side-foot { padding: 8px 6px 10px; }
+.sv-shell.is-collapsed .sv-side-btn-text { display: none; }
+.sv-shell.is-collapsed .sv-side-btn-ic { display: inline-flex; }
 
-/* ---------- 移动端：菜单转为顶部横向滚动条，内容单列 ---------- */
+/* 桌面不渲染移动端抽屉的两个入口（窄端媒体查询放在其后，后声明胜出） */
+.sv-scrim, .sv-menu-trigger { display: none; }
+
+/* ---------- 移动端：与个人 / 健康工作台一致的左侧抽屉 ---------- */
 @media (max-width: 768px) {
-  .sv-body { flex-direction: column; }
-
   .sv-sidebar {
-    position: static;
-    flex: 0 0 auto;
-    width: 100%;
-    max-height: none;
-    border-right: none;
-    border-bottom: 1px solid var(--color-border, #e2e8f0);
-    overflow-x: auto;
-    overflow-y: hidden;
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 46;
+    width: min(264px, 82%);
+    flex-basis: auto;
+    transform: translateX(-102%);
+    transition: transform 220ms ease;
+    box-shadow: 2px 0 12px var(--color-shadow, rgba(0, 0, 0, 0.12));
   }
+  .sv-sidebar.open { transform: none; }
 
-  .sv-nav { flex-direction: row; gap: 6px; }
-
-  /* 移动端没有「收起」的必要：横向胶囊菜单本身已很省空间 */
+  /* 抽屉里恢复完整文字菜单与底部两枚纯文字按钮；触控目标对齐个人工作台 */
+  .sv-nav { flex-direction: column; gap: 2px; overflow-x: hidden; padding: 2px 8px 8px; }
   .sv-nav-collapse { display: none; }
-
   .sv-nav-item {
     flex: 0 0 auto;
-    width: auto;
+    width: 100%;
     min-height: 44px;
-    padding: 0 14px;
-    border: 1px solid var(--color-border, #e2e8f0);
-    border-radius: 999px;
+    min-width: 44px;
+    padding: 9px 10px;
+    border: 1px solid transparent;
   }
+  .sv-side-foot { padding: 8px 10px 10px; gap: 6px; }
+  .sv-side-btn { height: 40px; min-height: 40px; padding: 0 6px; gap: 6px; }
+  .sv-side-btn-text { display: inline; }
+  .sv-side-btn-ic { display: none; }
 
-  .sv-shell.is-collapsed .sv-sidebar { flex-basis: auto; width: 100%; }
-  .sv-shell.is-collapsed .sv-nav-item { padding: 0 14px; }
-  .sv-shell.is-collapsed .sv-nav-label { display: block; }
+  /* 抽屉内不沿用桌面折叠态：一律展开显示文字 */
+  .sv-shell.is-collapsed .sv-sidebar { width: min(264px, 82%); }
+  .sv-shell.is-collapsed .sv-side-top { padding: 10px 8px 2px; }
+  .sv-shell.is-collapsed .sv-side-switch :deep(.ws-trigger) { height: 34px; padding: 0 8px 0 10px; justify-content: flex-start; }
+  .sv-shell.is-collapsed .sv-side-switch :deep(.ws-trigger-label),
+  .sv-shell.is-collapsed .sv-side-switch :deep(.ws-trigger-caret) { display: inline; }
+  .sv-shell.is-collapsed .sv-nav { padding: 2px 8px 8px; }
+  .sv-shell.is-collapsed .sv-nav-label { display: inline; }
   .sv-shell.is-collapsed .sv-nav-count { display: inline; }
-  .sv-sub { display: none; }
+  .sv-shell.is-collapsed .sv-nav-item,
+  .sv-shell.is-collapsed .sv-nav-collapse { justify-content: flex-start; padding: 9px 10px; }
+  .sv-shell.is-collapsed .sv-side-foot { padding: 8px 10px 10px; }
+  .sv-shell.is-collapsed .sv-side-btn-text { display: inline; }
+  .sv-shell.is-collapsed .sv-side-btn-ic { display: none; }
 
-  /* 窄屏顶栏只留图标，避免换行 */
-  .sv-sync-text,
-  .sv-settings-text { display: none; }
-
-  .sv-btn {height: 36px;
-  padding: 0 var(--space-3);}
-  .sv-btn-sm {height: 36px;
-  padding: 0 var(--space-3);}
+  .sv-scrim {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 45;
+    background: rgba(15, 23, 42, .32);
+  }
+  .sv-menu-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex: none;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    margin-bottom: 8px;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: var(--radius-sm, 4px);
+    background-color: var(--color-bg-card, #fff);
+    color: var(--color-text-secondary);
+  }
+  .sv-content { padding: 12px 12px calc(24px + env(safe-area-inset-bottom, 0px)); }
+  html.dark .sv-sidebar {
+    border-right-color: var(--color-border, #374151);
+    box-shadow: 2px 0 16px var(--color-shadow, rgba(0, 0, 0, 0.4));
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sv-nav-item { transition: none; }
+  .sv-nav-item, .sv-sidebar { transition: none; }
 }
 </style>

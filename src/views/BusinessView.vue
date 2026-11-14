@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 销售记账独立页面（摆摊进销存）：布局复刻 WorkbenchView（左树 + 右内容，桌面一屏钉满、移动端横排菜单）
+// 销售记账独立页面（摆摊进销存）：布局与个人工作台一致（无顶栏，左菜单三段 + 右内容；移动端左侧抽屉）
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
@@ -42,6 +42,12 @@ function toggleSidebar(): void {
   settingsStore.setBusinessSidebarCollapsed(!sidebarCollapsed.value)
 }
 
+/** 移动端左侧抽屉：默认收起，由内容区页头按钮唤出（与个人 / 健康 / 智能工作台同款） */
+const mobileMenuOpen = ref(false)
+function closeMobileMenu(): void {
+  mobileMenuOpen.value = false
+}
+
 const activeSection = ref<SectionKey>((settingsStore.businessActiveSection as SectionKey) || 'home')
 
 // P1-3：跨模块联动过滤状态
@@ -52,6 +58,7 @@ const purchaseFilter = ref<string | undefined>(undefined)
 // 手动切走再回来仍被过滤，且无清除入口 → 用户误以为数据丢了，见 docs/optimization 销售记账优化方案 M-11）
 function selectSection(key: SectionKey): void {
   activeSection.value = key
+  closeMobileMenu()
   // P0-2：持久化当前模块，刷新后保持所在页
   settingsStore.setBusinessActiveSection(key)
   productFilter.value = undefined
@@ -83,119 +90,24 @@ async function quickAdd(section: string): Promise<void> {
   quickAddSection.value = null
 }
 
-// ===== 移动端底部 Tab 展示全部面板（2026-10-08）=====
-// 演进：原 8 项全塞进底栏（.bs-menu overflow-x:auto）→ 2026-10-06 收敛为 5 项
-// +「更多」弹层（MOBILE_TAB_KEYS 收纳库存预警/统计/对账 3 个低频分析页）→
-// 2026-10-08 按需求去掉「更多」，底栏直接展示全部 8 项（横向滚动）。
-// 桌面端左树同样保持完整 8 项。
-const MOBILE_MEDIA = '(max-width: 768px)'
-const isMobileNav = ref(false)
-let mobileMql: MediaQueryList | null = null
-function syncMobileNav(e: { matches: boolean } | MediaQueryList): void {
-  isMobileNav.value = e.matches
-}
+// ===== 移动端左侧抽屉（与个人 / 健康 / 智能工作台同款）=====
+// 桌面左树与移动端抽屉共用同一份 SECTIONS；切页后抽屉自动收起（见 selectSection）。
+const contentRef = ref<HTMLElement | null>(null)
 
 onMounted(() => {
-  mobileMql = window.matchMedia(MOBILE_MEDIA)
-  isMobileNav.value = mobileMql.matches
-  mobileMql.addEventListener('change', syncMobileNav)
-  // Esc 监听放document 捕获阶段：useWorkbenchShortcuts 在 window 冒泡监听 Esc，
+  // Esc 监听放 document 捕获阶段：useWorkbenchShortcuts 在 window 冒泡监听 Esc，
   // 冒泡会先到 window；捕获阶段 + stopPropagation 可避免「关浮层」同时触发其它 Esc 行为
   document.addEventListener('keydown', handleEsc, true)
 })
 onUnmounted(() => {
-  mobileMql?.removeEventListener('change', syncMobileNav)
-  mobileMql = null
   document.removeEventListener('keydown', handleEsc, true)
 })
 
-// ===== M-20（2026-10-07）移动端专用布局：固定头部 + 固定底栏 + 中间独立滚动 =====
-// 桌面端沿用原有「左树 + 右内容」布局，此处新增的逻辑全部由 isMobileNav 门控，
-// 桌面渲染结果与改动前完全一致。
-//
-// 2026-10-07 调整：原固定头部里的「日期切换 + 当日汇总」已移除 ——
-// 汇总数据属于「首页」的职责，放在固定头部每个面板都常驻 4 个数字，
-// 既挤占小屏内容高度，又与首页的今日卡片重复。固定头部只保留标题与操作按钮。
-
-// 2026-10-08 调整：移除了内容区左右滑动切换面板的手势（原 onSwipeStart/onSwipeEnd）。
-// 原因：滑动切页与列表横向滚动/表格横滑冲突（易误触横跳），且底部菜单已能直接
-// 切换，移动端不需要手势。切换入口统一收敛到底部菜单栏。
-
-// ===== 中间内容区高度：JS 兜底 + CSS 100dvh 双保险 =====
-// 为什么两者都要：
-// - 100dvh 覆盖绝大多数现代浏览器（含 iOS Safari 16+ 的动态工具栏适配）；
-// - 但旧 WebView / 部分国产浏览器内核 dvh 视作非法值会回退到 auto，
-//   此时 flex:1 会失效（内容溢出、底栏被顶出屏幕），故用 JS 实测写入 --bs-content-h 兜底。
-const contentRef = ref<HTMLElement | null>(null)
-/** 实测高度写入 CSS 变量（px）；0 表示交给 CSS 处理 */
-const contentHeight = ref(0)
-
-function measureContent(): void {
-  if (!isMobileNav.value) {
-    contentHeight.value = 0
-    return
-  }
-  const h = contentRef.value?.clientHeight ?? 0
-  // 变化超过 1px 才写，避免无谓的重排抖动
-  if (h > 0 && Math.abs(h - contentHeight.value) > 1) contentHeight.value = h
-}
-
-let contentResizeObserver: ResizeObserver | null = null
-let visualViewportHandler: (() => void) | null = null
-
-onMounted(() => {
-  if (typeof ResizeObserver !== 'undefined' && contentRef.value) {
-    contentResizeObserver = new ResizeObserver(() => measureContent())
-    contentResizeObserver.observe(contentRef.value)
-  }
-  // 移动端地址栏收放会改变可视高度，但不触发 window.resize（只在 visualViewport 上派发）。
-  // 不监听会导致「下拉地址栏后内容区仍按旧高度计算」，底栏与列表之间出现空隙/遮挡。
-  if (window.visualViewport) {
-    visualViewportHandler = () => measureContent()
-    window.visualViewport.addEventListener('resize', visualViewportHandler)
-  }
-  window.addEventListener('orientationchange', measureContent)
-  measureContent()
-})
-
-onUnmounted(() => {
-  contentResizeObserver?.disconnect()
-  contentResizeObserver = null
-  if (window.visualViewport && visualViewportHandler) {
-    window.visualViewport.removeEventListener('resize', visualViewportHandler)
-  }
-  visualViewportHandler = null
-  window.removeEventListener('orientationchange', measureContent)
-})
-
-/** 切面板后把中间内容区滚回顶部（否则从长列表切到短面板会停在中段） */
+/** 切面板后把内容区滚回顶部（否则从长列表切到短面板会停在中段） */
 watch(activeSection, async () => {
   await nextTick()
   if (contentRef.value) contentRef.value.scrollTop = 0
-  measureContent()
 })
-
-/** 底部菜单当前项的 DOM，用于切页后把该项滚动进可视区（窄屏 5 项可能溢出） */
-const menuEl = ref<HTMLElement | null>(null)
-/** 用 style 绑定高度变量：0 时不输出，让 CSS 的 100dvh 生效 */
-const contentStyle = computed(() =>
-  contentHeight.value > 0 ? { height: `${contentHeight.value}px` } : {}
-)
-
-/** 当前激活项对应的 DOM 节点（data-testid=bs-menu-<key>） */
-function scrollActiveIntoView(): void {
-  const root = menuEl.value
-  if (!root) return
-  const el = root.querySelector<HTMLElement>(`[data-testid="bs-menu-${activeSection.value}"]`)
-  // scrollIntoView 会连带滚动祖先（含中间内容区），故用 scrollLeft 手算，只平移底栏自身
-  if (!el || root.scrollWidth <= root.clientWidth) return
-  // scroll-snap-align:center 与此居中公式对应：滚动停止时该项落在视口中央
-  const target = el.offsetLeft - (root.clientWidth - el.offsetWidth) / 2
-  const max = root.scrollWidth - root.clientWidth
-  root.scrollTo({ left: Math.min(Math.max(0, target), max), behavior: 'smooth' })
-}
-
-watch(activeSection, () => { void nextTick(scrollActiveIntoView) })
 
 /** 侧栏/底栏实际渲染的菜单项：移动端与桌面均为全部 8 项（2026-10-08 去掉「更多」） */
 const visibleMenuItems = computed(() => [...SECTIONS])
@@ -264,7 +176,7 @@ useWorkbenchShortcuts({
   router
 })
 
-// ===== 右上角云同步按钮（与工作台复用同一套开关：cloudSyncEnabled 时在设置按钮左边显示） =====
+// ===== 侧栏底部云同步按钮（恒定显示；未开启时点击打开设置，与个人 / 健康工作台一致） =====
 const cloudSync = useCloudSync()
 const syncBusy = ref(false)
 const cloudEnabled = computed(() => !!settingsStore.cloudSyncEnabled)
@@ -294,6 +206,12 @@ const syncTip = computed((): string => {
   return `上次同步：${bizFmt(new Date(t))}；点击立即同步`
 })
 async function handleSyncNowClick(): Promise<void> {
+  // 未开启时这枚按钮就是「去设置」的入口
+  if (!cloudEnabled.value) {
+    showSettingsDialog.value = true
+    closeMobileMenu()
+    return
+  }
   if (syncBusy.value) return
   syncBusy.value = true
   await cloudSync.syncNow()
@@ -345,80 +263,87 @@ onMounted(async () => {
 
 <template>
   <div class="bs-shell">
-    <!-- 头部：左 = 工作台入口 + 账本信息；右 = 云同步（开关显示）+ 设置。
-         M-22（移动端）：账本信息提到第一行 —— 账本是全局数据上下文（按年隔离、跨账本不可见），
-         需要常驻可见；原先它与搜索/云同步/设置挤在第二行，375px 屏上按钮被压缩得只剩编号、名称几乎读不出来。
-         菜单名（页面标题）已按需求移除：底栏当前项已有主色指示条 + 高亮，标题属重复信息。 -->
-    <header class="bs-header" :class="{ 'is-mobile': isMobileNav }">
-      <div class="bs-header-left">
-        <!-- 左上角「工作台切换」命令面板入口：站点图标 + 点击弹出切换面板（Alt+W 唤起，与导航站一致） -->
-        <WorkbenchSwitcher
-          :trigger-icon="settingsStore.businessPageIcon"
-          trigger-builtin="store"
-          :trigger-label="settingsStore.businessPageDisplayName"
-          force-show
-        />
-        <!-- 账本切换（移动端在第一行，桌面端在右侧按钮区，见下方 bs-header-right） -->
-        <BusinessLedgerSwitcher v-if="isMobileNav && store.hasLedgers" class="bs-mobile-ledger" />
-        <span v-if="store.settings.stallName" class="bs-stall-name">{{ store.settings.stallName }}</span>
-      </div>
-      <div class="bs-header-right">
-        <!-- 账本切换（桌面端常驻入口）：有账本时才展示，无账本时由引导页承接 -->
-        <BusinessLedgerSwitcher v-if="!isMobileNav && store.hasLedgers" />
-        <button
-          class="bs-btn"
-          title="全局搜索 (Alt+K)：搜商品/支出分类，或直接搜「卖」「进货」「开销」快速记账"
-          data-testid="bs-spotlight-open"
-          @click="spotlightOpen = true"
-        ><Icon name="search" :size="14" /> 搜索</button>
-        <button
-          v-if="cloudEnabled"
-          class="bs-btn wb-sync-btn ui-btn--pill"
-          :class="syncStatusClass"
-          :title="syncTip"
-          data-testid="bs-sync-now"
-          :disabled="syncBusy || cloudSync.status.value === 'pulling' || cloudSync.status.value === 'pushing'"
-          @click="handleSyncNowClick"
-        ><Icon name="cloud" :size="14" /> {{ syncLabel }}</button>
-        <button class="bs-btn ui-btn--pill" title="设置" data-testid="bs-settings" @click="showSettingsDialog = true"><Icon name="cog" :size="15" /> 设置</button>
-      </div>
-    </header>
 
     <!-- 主体：左树 + 右内容区 -->
     <div class="bs-body">
       <nav
-        v-if="!gateVisible"
-        ref="menuEl"
         class="bs-menu"
-        :class="{ collapsed: sidebarCollapsed }"
+        :class="{ collapsed: sidebarCollapsed, open: mobileMenuOpen }"
         data-testid="bs-menu"
       >
-        <button
-          class="tw-btn tw-btn-sm bs-sidebar-toggle"
-          data-testid="bs-sidebar-toggle"
-          :title="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
-          :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
-          @click="toggleSidebar"
-        >
-          <span class="bs-menu-icon">
-            <Icon :name="sidebarCollapsed ? 'chevron-right' : 'chevron-left'" :size="14" />
-          </span>
-          <span class="bs-menu-label">{{ sidebarCollapsed ? '展开' : '收起' }}</span>
-        </button>
-        <button
-          v-for="item in visibleMenuItems"
-          :key="item.key"
-          class="bs-menu-item"
-          :class="{ active: activeSection === item.key }"
-          :title="item.label"
-          :aria-label="item.label"
-          :data-testid="`bs-menu-${item.key}`"
-          @click="selectSection(item.key)"
-        >
-          <span class="bs-menu-icon"><Icon :name="item.icon" /></span>
-          <span class="bs-menu-label">{{ item.label }}</span>
-        </button>
+        <!-- 侧栏顶部：工作台切换 + 账本切换（收起按钮上方）+ 摊位名 -->
+        <div class="bs-side-top">
+          <div class="bs-side-switch" data-testid="bs-page-switcher">
+            <WorkbenchSwitcher
+              :trigger-icon="settingsStore.businessPageIcon"
+              trigger-builtin="store"
+              :trigger-label="settingsStore.businessPageDisplayName"
+              force-show
+            />
+          </div>
+          <div v-if="store.hasLedgers" class="bs-side-ledger">
+            <BusinessLedgerSwitcher />
+          </div>
+          <span v-if="store.settings.stallName" class="bs-stall-name">{{ store.settings.stallName }}</span>
+        </div>
+
+        <div v-if="!gateVisible" class="bs-side-nav">
+          <button
+            class="tw-btn tw-btn-sm bs-sidebar-toggle"
+            data-testid="bs-sidebar-toggle"
+            :title="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
+            :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
+            @click="toggleSidebar"
+          >
+            <span class="bs-menu-icon">
+              <Icon :name="sidebarCollapsed ? 'chevron-right' : 'chevron-left'" :size="14" />
+            </span>
+            <span class="bs-menu-label">{{ sidebarCollapsed ? '展开' : '收起' }}</span>
+          </button>
+          <button
+            v-for="item in visibleMenuItems"
+            :key="item.key"
+            class="bs-menu-item"
+            :class="{ active: activeSection === item.key }"
+            :title="item.label"
+            :aria-label="item.label"
+            :data-testid="`bs-menu-${item.key}`"
+            @click="selectSection(item.key)"
+          >
+            <span class="bs-menu-icon"><Icon :name="item.icon" /></span>
+            <span class="bs-menu-label">{{ item.label }}</span>
+          </button>
+        </div>
+
+        <!-- 侧栏底部恒定两枚按钮：与个人 / 健康工作台同规格 -->
+        <div class="bs-side-foot" data-testid="bs-side-foot">
+          <button
+            class="bs-side-btn wb-sync-btn ui-btn--pill"
+            :class="syncStatusClass"
+            :title="syncTip"
+            :aria-label="syncLabel"
+            data-testid="bs-sync-now"
+            :disabled="syncBusy || cloudSync.status.value === 'pulling' || cloudSync.status.value === 'pushing'"
+            @click="handleSyncNowClick"
+          >
+            <span class="bs-side-btn-ic" aria-hidden="true"><Icon name="cloud" :size="14" /></span>
+            <span class="bs-side-btn-text">{{ syncLabel }}</span>
+          </button>
+          <button
+            class="bs-side-btn ui-btn--pill"
+            title="设置"
+            aria-label="设置"
+            data-testid="bs-settings"
+            @click="showSettingsDialog = true; closeMobileMenu()"
+          >
+            <span class="bs-side-btn-ic" aria-hidden="true"><Icon name="cog" :size="15" /></span>
+            <span class="bs-side-btn-text">设置</span>
+          </button>
+        </div>
       </nav>
+
+      <!-- 移动端抽屉遮罩：层级低于抽屉（46）、高于内容区 -->
+      <div v-if="mobileMenuOpen" class="bs-scrim" data-testid="bs-menu-scrim" @click="closeMobileMenu"></div>
 
       <!-- 中间内容区（M-20）：移动端为唯一滚动容器 —— 独立 overflow-y:auto，
            overscroll-behavior:contain 阻断滚动到底后的橡皮筋穿透到头部/底栏。
@@ -426,10 +351,12 @@ onMounted(async () => {
       <main
         ref="contentRef"
         class="bs-content panel-scope"
-        :class="{ 'is-mobile': isMobileNav }"
-        :style="contentStyle"
         data-testid="bs-content"
       >
+        <!-- 移动端抽屉入口（桌面隐藏） -->
+        <button class="bs-menu-trigger" data-testid="bs-menu-trigger" title="全部菜单" aria-label="打开全部菜单" @click="mobileMenuOpen = true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
         <SkeletonBlock v-if="initializing" :rows="5" label="正在加载销售记账数据" />
 
         <!-- 无账本：阻断式引导，必须先创建当年账本才能进入 -->
@@ -520,7 +447,7 @@ onMounted(async () => {
     </div>
 
     <!-- ===== M-12 全局「快速记一笔」悬浮按钮 =====
-         桌面端放右下角常驻圆钮；移动端为拇指热区，避开底部 Tab Bar。 -->
+         桌面端放右下角常驻圆钮；移动端隐藏（抽屉菜单已能直达各面板）。 -->
     <div v-if="!gateVisible" class="bs-fab-wrap" data-testid="bs-quickadd">
       <div v-if="quickAddOpen" class="bs-fab-actions">
         <button
@@ -570,49 +497,27 @@ onMounted(async () => {
   color: var(--color-text);
 }
 
-.bs-header {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  /* 左右留白对齐教师顶栏（12px 16px）与个人工作台（12px 16px），三处顶栏对齐线一致 */
-  padding: var(--space-3) var(--space-4);
-  background-color: var(--color-bg-card, #ffffff);
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
+/* ---------- 侧栏顶部：工作台切换 / 账本切换 / 摊位名 ---------- */
+.bs-side-top { flex: none; padding: 10px 8px 2px; }
+.bs-side-switch { margin-bottom: 6px; }
+.bs-side-switch :deep(.ws-root) { display: flex; width: 100%; }
+.bs-side-switch :deep(.ws-trigger) {
+  width: 100%; height: 34px; gap: 8px; padding: 0 8px 0 10px;
+  border-color: transparent; border-radius: var(--radius-md);
+  background-color: var(--color-bg-hover); color: var(--color-text-secondary);
+  font-size: var(--fs-caption);
 }
-
-.bs-header-left {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-width: 0;
+.bs-side-switch :deep(.ws-trigger:hover) {
+  background-color: var(--color-bg-card); border-color: var(--color-primary); color: var(--color-text);
 }
-
-.bs-header-left h1 {
-  font-size: var(--font-size-2xl, 20px);
-  font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text);
-  white-space: nowrap;
-}
-
+.bs-side-switch :deep(.ws-trigger-label) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.bs-side-ledger { margin-bottom: 6px; }
+.bs-side-ledger :deep(.bls-wrap) { width: 100%; }
+.bs-side-ledger :deep(.bls-trigger) { width: 100%; max-width: 100%; justify-content: flex-start; }
 .bs-stall-name {
-  font-size: var(--fs-sm, 13px);
-  color: var(--color-text-secondary);
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  padding: 2px 10px;
-  white-space: nowrap;
-}
-
-.bs-header-right {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-shrink: 0;
+  display: block; margin: 0 0 4px; padding: 2px 8px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: var(--fs-caption, 12px); color: var(--color-text-secondary);
 }
 
 /* .bs-btn 视觉已统一到全局 .ui-btn（次按钮）；全局类跨组件生效，无需 :deep 透传 */
@@ -621,6 +526,7 @@ onMounted(async () => {
   flex: 1;
   display: flex;
   min-height: 0;
+  position: relative;
 }
 
 .bs-menu {
@@ -628,12 +534,49 @@ onMounted(async () => {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-3) var(--space-2);
+  min-height: 0;
+  padding: 0;
   background-color: var(--color-bg-card, #ffffff);
   border-right: 1px solid var(--color-border, #e2e8f0);
   transition: width 0.2s ease;
 }
+
+/* 中部：菜单可滚动，底部两枚按钮不随菜单滚走 */
+.bs-side-nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: 2px 8px 8px;
+}
+
+/* 侧栏底部恒定两枚：皮肤交全局 .ui-btn--pill，本地只定布局 */
+.bs-side-foot {
+  flex: none;
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px 10px;
+  border-top: 1px solid var(--color-border, #e2e8f0);
+}
+.bs-side-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.bs-side-btn-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.bs-side-btn-ic { display: none; flex: none; color: var(--color-primary); }
+
+/* 桌面不渲染移动端抽屉的两个入口（窄端媒体查询放在其后，后声明胜出） */
+.bs-scrim, .bs-menu-trigger { display: none; }
 
 /* .bs-btn-primary 视觉已统一到全局 .ui-btn--primary */
 
@@ -710,17 +653,20 @@ onMounted(async () => {
   color: #92400e;
 }
 
-/* 侧栏折叠：56px 仅图标（label 隐藏、图标居中），展开宽度 200px 平滑过渡 */
-.bs-menu.collapsed {
-  width: 56px;
-  /* 横向内边距收到 6px：56 − 12 = 44px 的收起胶囊宽，与教师台 .tv-shell.is-collapsed 的 .tv-sidebar 同宽 */
-  padding-left: 6px;
-  padding-right: 6px;
-}
+/* 侧栏折叠：56px 仅图标；顶部切换 / 账本与底部按钮同步图标化 */
+.bs-menu.collapsed { width: 56px; }
+.bs-menu.collapsed .bs-side-top { padding: 10px 6px 2px; }
+.bs-menu.collapsed .bs-side-switch { margin-bottom: 4px; }
+.bs-menu.collapsed .bs-side-switch :deep(.ws-trigger) { height: 32px; padding: 0; justify-content: center; }
+.bs-menu.collapsed .bs-side-switch :deep(.ws-trigger-label),
+.bs-menu.collapsed .bs-side-switch :deep(.ws-trigger-caret) { display: none; }
+.bs-menu.collapsed .bs-side-ledger :deep(.bls-code),
+.bs-menu.collapsed .bs-side-ledger :deep(.bls-name) { display: none; }
+.bs-menu.collapsed .bs-side-ledger :deep(.bls-trigger) { justify-content: center; padding: 0; }
+.bs-menu.collapsed .bs-stall-name { display: none; }
+.bs-menu.collapsed .bs-side-nav { padding: 2px 6px 8px; }
 
-/* 收起 / 展开：外观直接复用教师台 `.tw-btn .tw-btn-sm`（白底描边胶囊、30px 高、12px/500、
-   hover 只变底色），本类只补侧栏的布局差异——整行铺满 + 左对齐 + 与菜单项同宽。
-   与个人工作台 .wb-sidebar-toggle 同款，别再本地写一套圆角/字号。 */
+/* 收起 / 展开：外观复用教师台 `.tw-btn .tw-btn-sm`，本类只留布局 */
 .bs-sidebar-toggle {
   display: flex;
   width: 100%;
@@ -728,21 +674,12 @@ onMounted(async () => {
   justify-content: flex-start;
   margin-bottom: var(--space-1);
 }
-
-/* 收起态（56px 仅图标）：与教师台 .tv-shell.is-collapsed .tv-nav-collapse 一致——居中且去掉横向内边距 */
-.bs-menu.collapsed .bs-sidebar-toggle {
-  justify-content: center;
-  padding: 0;
-}
-
-.bs-menu.collapsed .bs-menu-label {
-  display: none;
-}
-
-.bs-menu.collapsed .bs-menu-item {
-  justify-content: center;
-  padding: 10px 0;
-}
+.bs-menu.collapsed .bs-sidebar-toggle { justify-content: center; padding: 0; }
+.bs-menu.collapsed .bs-menu-label { display: none; }
+.bs-menu.collapsed .bs-menu-item { justify-content: center; padding: 10px 0; }
+.bs-menu.collapsed .bs-side-foot { padding: 8px 6px 10px; }
+.bs-menu.collapsed .bs-side-btn-text { display: none; }
+.bs-menu.collapsed .bs-side-btn-ic { display: inline-flex; }
 
 /* 侧栏项取值对齐教师 .tv-nav-item / 个人工作台 .wb-menu-item（13px / --radius-sm /
    主色软底选中 / hover 只变底色），三个工作台的导航观感保持一致 */
@@ -806,28 +743,6 @@ html.dark .bs-shell {
   background-color: var(--color-bg, #111827);
 }
 
-html.dark .bs-header {
-  background-color: var(--color-bg-card, #1f2937);
-  border-bottom-color: var(--color-border, #374151);
-}
-
-html.dark .bs-header-left h1 {
-  color: var(--color-text);
-}
-
-html.dark .bs-btn:not(.ui-btn--pill),
-html.dark .bs-header-right :deep(.bs-btn:not(.ui-btn--pill)) {
-  background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary);
-  border-color: var(--color-border, #374151);
-}
-
-html.dark .bs-btn:not(.ui-btn--pill):hover,
-html.dark .bs-header-right :deep(.bs-btn:not(.ui-btn--pill):hover) {
-  background-color: var(--color-bg-hover, #374151);
-  color: var(--color-primary-text);
-  border-color: var(--color-primary, #3b82f6);
-}
 
 html.dark .bs-menu {
   background-color: var(--color-bg-card, #1f2937);
@@ -854,260 +769,91 @@ html.dark .bs-content {
   background-color: var(--color-bg, #111827);
 }
 
-html.dark .bs-stall-name {
-  background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary);
-  border-color: var(--color-border, #374151);
-}
+html.dark .bs-stall-name { color: var(--color-text-secondary); }
+html.dark .bs-side-foot { border-top-color: var(--color-border, #374151); }
 
-/* 移动端：左树横排、页面滚动恢复（复刻 WorkbenchView 断点） */
+/* ---------- 移动端：与个人 / 健康 / 智能工作台一致的左侧抽屉 ---------- */
 @media (max-width: 768px) {
-  /* ===== M-20 移动端三段式布局：固定头部 / 独立滚动内容 / 固定底栏 =====
-     结构上做到「外壳不滚、内容单独滚」：
-       .bs-shell  100svh + min-height:0 + overflow:hidden（外壳本身永不滚动；
-                  高度取「小视口」保证其在有浏览器工具栏时仍等于实际可见高度，详见下方注释）
-       .bs-header flex:none（内容多高就多高，始终占住顶部，不被内容顶走）
-       .bs-content flex:1 + min-height:0 + overflow-y:auto（唯一滚动容器）
-       .bs-menu   position:fixed（脱离文档流，不占内容高度、不被内容遮挡）
-     min-height:0 是 flex 子项能真正收缩的前提：缺它时内容区按内容高度撑开，
-     底栏会被顶到屏幕外 —— 这是「底栏不见了」最常见的根因。 */
   .bs-shell {
-    /* dvh：动态视口高度，等于「地址栏/工具栏在当前收放状态下的可见高度」；
-       svh：小视口高度（工具栏展开时），常量，滚动过程中不会随工具栏收放跳变。
-       旧写法的根因修正：基础样式里的 min-height:100vh 在移动端没有被覆盖，
-       而 Chrome/Edge 的 100vh 等于「工具栏隐藏时」的大视口高度，
-       因此 min-height 恒 ≥ height —— 外壳被撑到比实际可见区域更高。后果有两个：
-         ① 内容区底部落在浏览器工具栏下方，看不见也够不着；
-         ② 多出来的高度让内容更容易「装得下」，一旦不溢出就没有滚动条，
-            手指滑动只能拉出橡皮筋然后回弹 —— 即 Edge 手机版「能滑一点但回弹」。
-       微信内置浏览器是全屏无工具栏，100vh 与可见高度一致，故表现正常，
-       这也反过来印证了「有浏览器工具栏」才是差异点。
-       这里改为显式 min-height:0 + svh，让内容区高度严格等于「始终可见」的高度：
-       内容必然溢出 → 必定产生滚动条，且滚动时高度不再跳变。 */
-    height: 100vh; /* 不支持 svh/dvh 的旧内核回退 */
+    height: 100vh;
     height: 100dvh;
     height: 100svh;
     min-height: 0;
     overflow: hidden;
   }
-
-  .bs-header {
-    flex: none;
-    /* 刘海屏/挖孔屏：顶部内边距补安全区，否则标题被状态栏压住 */
-    padding-top: calc(10px + env(safe-area-inset-top, 0px));
-  }
-
+  .bs-body { flex: 1; min-height: 0; flex-direction: column; }
   .bs-content {
-    /* min-height:0 是 flex 子项能收缩的前提，缺它时本元素按内容高度撑开，
-       外层 .bs-shell 又是 overflow:hidden —— 内容超出屏幕且被裁掉，
-       overflow-y:auto 因容器没有被压缩而不产生滚动条（商品页「无法下滑」即此因）。
-       .bs-body 移动端为 flex-direction:column，本元素是其子项，故必须显式归零。 */
     min-height: 0;
     overflow-y: auto;
-    /* 滚动到底后不把橡皮筋传递给外层文档（否则头部/底栏会跟着一起晃） */
     overscroll-behavior-y: contain;
     -webkit-overflow-scrolling: touch;
+    padding: 12px 12px calc(24px + env(safe-area-inset-bottom, 0px));
   }
+  .bs-content > * { flex: none; }
 
-  .bs-content > * {
-    flex: none;
-  }
-
-  /* 移动端头部：两行 —— 第1 行 = 工作台图标 + 账本信息，第 2 行 = 搜索/云同步/设置。
-     align-items:stretch + first 行 width:100% 让账本切换器能真正占满第一行宽度；
-     若保持 flex-start，账本按钮会按内容宽度收缩，长名称被 max-width 提前截断。 */
-  .bs-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-2);
-  }
-
-  .bs-header-left {
-    width: 100%;
-  }
-
-  /* 工作台图标是固定尺寸的入口，不参与压缩 —— 否则长账本名会把它压扁。
-     子组件根元素能继承父组件 scoped 样式，故直接用合并选择器。 */
-  .bs-header-left :deep(.ws-root) {
-    flex-shrink: 0;
-  }
-
-  /* 摊位名是次要信息，长名不该把账本挤扁：可压缩 + 截断 */
-  .bs-header-left .bs-stall-name {
-    flex-shrink: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  /* 第 2 行按钮区：搜索/云同步/设置靠右，不占满（避免被误读成第二个导航条） */
-  .bs-header-right {
-    width: 100%;
-    justify-content: flex-end;
-  }
-
-  .bs-body {
-    flex-direction: column;
-    /* 内容区外的剩余空间全部让给内容区 */
-    flex: 1;
-    min-height: 0;
-  }
-
-  /* 菜单降级为底部固定 Tab Bar（与「个人工作台」一致）：常驻拇指区。
-     M-21 起底栏改为「固定项宽 + 横向滚动」：5 个 Tab 各 78px + 「更多」66px
-     = 456px，375px 屏放不下整条，故保留 overflow-x:auto；
-     scroll-snap 让滑动停在整项上（不是停在半个字上）。
-     「更多」sticky right 钉在右缘，横向滑动时始终够得着。 */
   .bs-menu {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 60;
-    width: 100%;
-    flex: 0 0 auto;
-    flex-direction: row;
-    gap: var(--space-1);
-    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-snap-type: x proximity;
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
-    /* 横向可滚动的容器不应把橡皮筋传给纵向页面 */
-    overscroll-behavior-x: contain;
-    border-right: none;
-    border-top: 1px solid var(--color-border, #e2e8f0);
-    border-bottom: none;
-    background-color: var(--color-bg-card, #ffffff);
-    box-shadow: 0 -2px 12px var(--color-shadow, rgba(0, 0, 0, 0.08));
-  }
-
-  /* 移动端忽略折叠态（始终全宽 + 显示 label），隐藏折叠按钮 */
-  .bs-menu.collapsed {
-    width: 100%;
-  }
-
-  .bs-menu.collapsed .bs-menu-label {
-    display: inline;
-  }
-
-  .bs-menu.collapsed .bs-menu-item {
-    justify-content: flex-start;
-    padding: 10px 12px;
-  }
-
-  .bs-sidebar-toggle {
-    display: none;
-  }
-
-  /* 不收缩：图标+名称完整显示，超出由底部栏横向滚动 */
-  .bs-menu-item {
-    flex: 0 0 auto;
-    white-space: nowrap;
-    scroll-snap-align: center;
-    position: relative;
-  }
-
-  /* 激活项：顶部 2px 主色条 + 主色文字 + 浅底三重视觉，拇指区不看字也能判断当前位置。
-     指示条用 top:0（不是负值）：父级 .bs-menu 是 overflow-x:auto，
-     计算上 overflow-y 也变成 auto，负偏移的指示条会被裁掉。 */
-  .bs-menu-item.active {
-    color: var(--color-primary-text);
-    background-color: var(--color-primary-light, #eff6ff);
-  }
-
-  .bs-menu-item.active::before {
-    content: '';
     position: absolute;
+    left: 0;
     top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 22px;
-    height: 2px;
-    border-radius: 0 0 2px 2px;
-    background-color: var(--color-primary, #3b82f6);
+    bottom: 0;
+    z-index: 46;
+    width: min(264px, 82%);
+    transform: translateX(-102%);
+    transition: transform 220ms ease;
+    border-right: 1px solid var(--color-border, #e2e8f0);
+    box-shadow: 2px 0 12px var(--color-shadow, rgba(0, 0, 0, 0.12));
   }
+  .bs-menu.open { transform: none; }
+  .bs-menu.collapsed { width: min(264px, 82%); }
 
-  /* ===== 底栏加宽 + 消除重叠（2026-10-07 建立，2026-10-08 随「更多」移除同步调整）=====
-     原先 5 个 Tab 用 flex:1 1 0 均分，375px 屏每项只剩 ~62px；
-     而图标(20px) + gap(8px) + 二字标签(≈28px) + 左右 padding(12px) 实际需要 ~72px，
-     装不下时文字溢出到相邻项上 —— 表现为「底部菜单有部分重叠」。
-     改为固定最小宽度 + 整条横向滚动：每项都完整显示、永不重叠。
-     2026-10-08：底栏改为展示全部 8 项后，仍沿用该策略（横向滚动 + 不重叠），
-     原 `.bs-menu-item:not(.bs-menu-more)` 的排除选择器已无必要，去掉 `:not()`。 */
-  .bs-menu-item {
-    flex: 0 0 auto;
-    min-width: 78px;
+  /* 抽屉内一律展开文字，不沿用桌面折叠态 */
+  .bs-side-top, .bs-menu.collapsed .bs-side-top { padding: 10px 8px 2px; }
+  .bs-menu.collapsed .bs-side-switch :deep(.ws-trigger) { height: 34px; padding: 0 8px 0 10px; justify-content: flex-start; }
+  .bs-menu.collapsed .bs-side-switch :deep(.ws-trigger-label),
+  .bs-menu.collapsed .bs-side-switch :deep(.ws-trigger-caret) { display: inline; }
+  .bs-menu.collapsed .bs-side-ledger :deep(.bls-code),
+  .bs-menu.collapsed .bs-side-ledger :deep(.bls-name) { display: inline; }
+  .bs-menu.collapsed .bs-side-ledger :deep(.bls-trigger) { justify-content: flex-start; padding: 0 8px; }
+  .bs-menu.collapsed .bs-stall-name { display: block; }
+  .bs-side-nav, .bs-menu.collapsed .bs-side-nav { padding: 2px 8px 8px; }
+  .bs-sidebar-toggle { display: none; }
+  .bs-menu-item, .bs-menu.collapsed .bs-menu-item { min-height: 44px; min-width: 44px; justify-content: flex-start; padding: 9px 10px; }
+  .bs-menu.collapsed .bs-menu-label { display: inline; }
+  .bs-side-foot, .bs-menu.collapsed .bs-side-foot { padding: 8px 10px 10px; gap: 6px; }
+  .bs-side-btn, .bs-menu.collapsed .bs-side-btn { height: 40px; min-height: 40px; padding: 0 6px; gap: 6px; }
+  .bs-side-btn-text, .bs-menu.collapsed .bs-side-btn-text { display: inline; }
+  .bs-side-btn-ic, .bs-menu.collapsed .bs-side-btn-ic { display: none; }
+
+  .bs-scrim {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 45;
+    background: rgba(15, 23, 42, .32);
+  }
+  .bs-menu-trigger {
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
-    padding: 10px 8px;
+    width: 32px;
+    height: 32px;
+    flex: none;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    margin-bottom: 8px;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: var(--radius-sm, 4px);
+    background-color: var(--color-bg-card, #fff);
+    color: var(--color-text-secondary);
   }
-
-  /* 标签不溢出：这是「重叠」的第二根因 —— 原为 visible/clip，
-     文字超出按钮宽度后会直接压在下一项上。改为省略号截断兜底。 */
-  .bs-menu-label {
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  /* 移动端触控目标 ≥44px（侧栏菜单项 / 头部按钮）：
-     原为 40px，低于 iOS/Android 44px 触控下限，误触率偏高 */
-  .bs-menu-item {
-    min-height: 44px;
-    min-width: 44px;
-  }
-
-  .bs-btn {height: 36px;}
-
-  /* 窄屏间距压缩：内容区内边距收窄、首页卡片间距收紧；底部留白避让固定 Tab Bar。
-     实测（iPhone13 390×664）底栏实际高 57px，原 64px 留白扣除后只剩 7px 间距，
-     分页器/末条内容紧贴菜单栏，视觉上像「点不到」→ 提到 76px，留出约 19px 呼吸位。 */
-  .bs-content {
-    /* 左右留白随「内容区边距」档位走（默认 16 → 移动端 12）；底部仍是避让固定底栏的固定值 */
-    padding: var(--ui-content-pad-sm) var(--ui-content-pad-sm) calc(76px + env(safe-area-inset-bottom, 0px));
-  }
-}
-
-/* ===== M-22 移动端头部：账本信息提到第一行 =====
-   原先 .bs-mobile-title（菜单名）已按需求移除 —— 底栏当前项已有主色指示条 + 文字高亮，
-   标题是重复信息，且在小屏上白占一行高度。
-   现在第一行放账本切换器：账本是全局数据上下文（按年隔离），必须常驻可见。
-   宽度策略：flex:1 占满剩余空间 + min-width:0，让 .bls-name 真正参与 ellipsis 截断
-   （原先按内容宽度收缩，名称一长就把「摊位名」和右侧按钮挤出可视区）。 */
-.bs-mobile-ledger {
-  flex: 1;
-  min-width: 0;
-}
-
-.bs-mobile-ledger :deep(.bls-trigger) {
-  /* 移动端第一行可用宽度 ≈ 375 - 20(padding) - 40(工作台图标) - 8(gap) ≈ 307px，
-     子组件默认 max-width:220px 会让长名称提前截断，这里放开 */
-  max-width: 100%;
-  width: 100%;
-  justify-content: flex-start;
-}
-
-.bs-mobile-ledger :deep(.bls-code) {
-  font-size: var(--fs-caption, 12px);
-  padding: 1px 5px;
-}
-
-/* 移动端暗色兜底 */
-@media (max-width: 768px) {
-  /* 底部激活项：加一条顶部高亮条 + 图标着色，与未激活项拉开辨识度。
-     移动端底栏是最重要的导航，仅靠浅蓝底色在低亮度阳光下不够醒目。 */
-  html.dark .bs-menu-item.active {
-    background: var(--dark-accent-surface);
-  }
-}
-
-/* 移动端底部 Tab Bar 暗色兜底：边框改顶部 + 加深阴影（与 WorkbenchView 一致） */
-@media (max-width: 768px) {
   html.dark .bs-menu {
-    border-top-color: var(--color-border, #374151);
-    box-shadow: 0 -2px 12px var(--color-shadow, rgba(0, 0, 0, 0.4));
+    border-right-color: var(--color-border, #374151);
+    box-shadow: 2px 0 16px var(--color-shadow, rgba(0, 0, 0, 0.4));
   }
 }
+
+
 
 /* 桌面页面级滚动：内容区为唯一滚动容器，面板随内容自然撑开
    （原「一屏契约」把面板根钉满内容区，迫使各面板自建内部滚动条） */
@@ -1187,11 +933,10 @@ html.dark .bs-fab-action {
   border-color: var(--color-border, #374151);
 }
 
-/* 移动端：FAB 上移避让底部 Tab Bar；展开动作条改为向上堆叠（column-reverse 更贴近拇指） */
+/* 移动端隐藏 FAB（抽屉菜单已能直达各面板，FAB 会遮挡内容） */
 @media (max-width: 768px) {
-  /* 2026-10-08：移动端隐藏「快速记一笔」悬浮按钮（FAB）。
-     原因：移动端底部菜单栏已能直接进入各面板（且菜单已改为展开全部功能），
-     FAB 既遮挡内容又与底栏争抢右下角空间。桌面端保持不变。
+  /* 移动端隐藏「快速记一笔」悬浮按钮（FAB）：抽屉菜单已能直接进入各面板，
+     FAB 既遮挡内容又争抢右下角空间。桌面端保持不变。
      隐藏整个 wrapper 即可（.bs-fab-wrap 为 position:fixed 容器，内含 FAB 与展开项）。 */
   .bs-fab-wrap {
     display: none;
