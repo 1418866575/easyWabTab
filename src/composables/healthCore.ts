@@ -11,11 +11,11 @@ import type {
   HealthPlanPeriod,
   HealthPlanPrefs,
   HealthPlans,
-  HeightCategory,
-  HeightConfig,
-  HeightPerson,
   HeightRecord,
   MealType,
+  PersonCategory,
+  PersonConfig,
+  Person,
   SleepRecord,
   WeightRecord
 } from '../types'
@@ -74,7 +74,7 @@ function isValidPlan(p: unknown): p is HealthPlan {
 
 /** 空健康数据（工作台新初始化用）。 */
 export function emptyHealthData(): HealthData {
-  return { plans: {}, records: { exercise: [], diet: [], sleep: [], weight: [], height: [] }, heightConfig: normalizeHeightConfig(undefined) }
+  return { plans: {}, records: { exercise: [], diet: [], sleep: [], weight: [], height: [] }, personConfig: normalizePersonConfig(undefined) }
 }
 
 /** 归一化任意来源的健康数据：height 越界剔除、计划逐模块校验、记录逐条走对应 normalize。脏输入不抛错。 */
@@ -213,7 +213,7 @@ export function normalizeHealthData(raw: Partial<HealthData> | undefined): Healt
     plansUpdatedAt: typeof data.plansUpdatedAt === 'string' ? data.plansUpdatedAt : undefined,
     planPrefs: normalizePlanPrefs(data.planPrefs),
     planProgress: normalizePlanProgress(data.planProgress),
-    heightConfig: normalizeHeightConfig(data.heightConfig),
+    personConfig: normalizePersonConfig(data.personConfig),
     records: {
       exercise: toArr(rec.exercise).map(r => normalizeExerciseRecord(r)),
       diet: toArr(rec.diet).map(r => normalizeDietRecord(r)),
@@ -292,6 +292,7 @@ export function normalizeWeightRecord(raw: unknown): WeightRecord {
     module: 'weight',
     date: isDateStr(r.date) ? r.date : localToday(),
     weightKg: clampNonNeg(num(r.weightKg)),
+    personId: typeof r.personId === 'string' ? r.personId : '',
     ...(typeof r.note === 'string' ? { note: r.note } : {}),
     createdAt: typeof r.createdAt === 'string' ? r.createdAt : isoNow(),
     updatedAt: typeof r.updatedAt === 'string' ? r.updatedAt : isoNow()
@@ -314,11 +315,11 @@ export function normalizeHeightRecord(raw: unknown): HeightRecord {
   }
 }
 
-/** 归一化身高人员 / 分类配置：脏输入吞掉不抛错，名称截断 12 字。 */
-export function normalizeHeightConfig(raw: unknown): HeightConfig {
+/** 归一化健康人员 / 分类配置（身高、体重共用）：脏输入吞掉不抛错，名称截断 12 字，人员含可选身高基线。 */
+export function normalizePersonConfig(raw: unknown): PersonConfig {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
   const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
-  const categories: HeightCategory[] = arr(o.categories).map((x, i) => {
+  const categories: PersonCategory[] = arr(o.categories).map((x, i) => {
     const c = (x ?? {}) as Record<string, unknown>
     return {
       id: typeof c.id === 'string' && c.id ? c.id : genId('hc_'),
@@ -326,14 +327,15 @@ export function normalizeHeightConfig(raw: unknown): HeightConfig {
       createdAt: typeof c.createdAt === 'string' ? c.createdAt : isoNow()
     }
   })
-  const persons: HeightPerson[] = arr(o.persons).map((x, i) => {
+  const persons: Person[] = arr(o.persons).map((x, i) => {
     const p = (x ?? {}) as Record<string, unknown>
-    return {
+    const person: Person = {
       id: typeof p.id === 'string' && p.id ? p.id : genId('hp_'),
       name: typeof p.name === 'string' && p.name.trim() ? p.name.trim().slice(0, 12) : '成员' + (i + 1),
       ...(typeof p.categoryId === 'string' && p.categoryId ? { categoryId: p.categoryId } : {}),
       createdAt: typeof p.createdAt === 'string' ? p.createdAt : isoNow()
     }
+    return person
   })
   return {
     persons,
@@ -449,6 +451,21 @@ export function calcDailyAttainment(
     else current += r.durationHours
   }
   return { current, target: plan.target, percent: current / plan.target }
+}
+
+/**
+ * 取某人员最近一次身高记录（体重面板 BMI 依据）。
+ * date 降序、同日 createdAt 降序取第一条；忽略 heightCm<=0 的异常记录；
+ * personId 缺省按 '' 匹配（兼容旧单人 / 未分人数据）。
+ */
+export function latestHeightRecordOf(records: HeightRecord[], personId: string): HeightRecord | null {
+  const pid = personId || ''
+  const list = (records ?? [])
+    .filter(r => (r.personId ?? '') === pid && (r.heightCm ?? 0) > 0)
+    .sort((a, b) =>
+      a.date === b.date ? (a.createdAt < b.createdAt ? 1 : -1) : a.date < b.date ? 1 : -1
+    )
+  return list[0] ?? null
 }
 
 /** BMI = 体重(kg) / 身高(m)²，保留 1 位小数；任一缺失或非正数返回 null。 */

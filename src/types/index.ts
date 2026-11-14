@@ -572,6 +572,8 @@ export interface WeightRecord {
   module: 'weight'
   date: string
   weightKg: number
+  /** 所属人员 id（personConfig.persons） */
+  personId: string
   note?: string
   createdAt: string
   updatedAt: string
@@ -583,15 +585,15 @@ export interface HeightRecord {
   module: 'height'
   date: string
   heightCm: number
-  /** 所属人员 id（heightConfig.persons） */
+  /** 所属人员 id（personConfig.persons） */
   personId: string
   note?: string
   createdAt: string
   updatedAt: string
 }
 
-/** 身高人员（一人一个标签页）。 */
-export interface HeightPerson {
+/** 健康人员（身高/体重共用，一人一个标签页）。 */
+export interface Person {
   id: string
   name: string
   /** 所属分类 id，空 = 未分类 */
@@ -599,17 +601,17 @@ export interface HeightPerson {
   createdAt: string
 }
 
-/** 身高人员分组（设置里创建，面板用于筛选人员页签）。 */
-export interface HeightCategory {
+/** 健康人员分组（设置里创建，身高/体重面板共用，用于筛选人员页签）。 */
+export interface PersonCategory {
   id: string
   name: string
   createdAt: string
 }
 
-/** 身高人员与分类配置，随 health.json 同步；整体按 updatedAt LWW 合并。 */
-export interface HeightConfig {
-  persons: HeightPerson[]
-  categories: HeightCategory[]
+/** 健康人员与分类配置（身高/体重共用），随 health.json 同步；整体按 updatedAt LWW 合并。 */
+export interface PersonConfig {
+  persons: Person[]
+  categories: PersonCategory[]
   updatedAt?: string
 }
 
@@ -625,8 +627,8 @@ export interface HealthData {
   /** BMI 基准身高（体重面板用），不是身高成长记录 */
   height?: number
   plans: HealthPlans
-  /** 身高人员与分类配置 */
-  heightConfig?: HeightConfig
+  /** 健康人员与分类配置（身高/体重共用） */
+  personConfig?: PersonConfig
   records: {
     exercise: ExerciseRecord[]
     diet: DietRecord[]

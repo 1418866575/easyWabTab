@@ -1,68 +1,149 @@
 <script setup lang="ts">
+/**
+ * 健康工作台 · 体重记录（仅 /health 使用）。
+ * 与身高面板同构：按人员分标签页、按分类筛选人员；每条记录带 personId。
+ * BMI 身高来源 = 当前人员「身高记录」里最近一次（date 降序、同日 createdAt 降序），
+ * 由 healthCore.latestHeightRecordOf 从身高模块共享数据取回；兼容未建人员、仅有旧全局
+ * 默认身高的单人数据：合成「默认」人员回落 store.height。未读到身高则 BMI 显示「—」。
+ */
+import { computed, onMounted, ref, watch } from 'vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
+import Icon from '@/components/Icon.vue'
 import { DIALOG_BTN } from '@/config/dialogText'
 import { showConfirm } from '@/utils/dialog'
-import BaseDialog from '@/components/common/BaseDialog.vue'
+import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
+import { injectHealthStore, type HealthStoreLike } from '@/composables/healthStoreContext'
+import { calcBmi, classifyBmi, dietCalories, latestHeightRecordOf, weightChartScale, weightTarget } from '@/composables/healthCore'
+import type { WeightChartPoint } from '@/composables/healthCore'
+import { localToday } from '@/composables/todoCore'
+import type { HeightRecord, Person } from '@/types'
 
-/** 表单弹框尺寸（沿用原 .dialog 的固定尺寸，非设置项） */
+// 表单弹框尺寸（沿用原 .dialog 固定尺寸，非设置项）
 const PANEL_WIDTH = '480px'
 const PANEL_MAX_HEIGHT = '85vh'
 
+/** 体重合理范围（kg）：与身高一致做范围校验，越界视为异常。 */
+const WT_MIN = 2
+const WT_MAX = 400
 
+// ===== 图表尺寸 =====
+const CHART_W = 600
+const CHART_H = 220
+const CHART_PAD = 24 // 与 weightChartScale 默认 pad 一致
+const GRID_COUNT = 4
 
-
-import { computed, onMounted, ref } from 'vue'
-import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
-import { injectHealthStore, type HealthStoreLike } from '@/composables/healthStoreContext'
-import { calcBmi, classifyBmi, dietCalories, weightChartScale, weightTarget } from '@/composables/healthCore'
-import type { WeightChartPoint } from '@/composables/healthCore'
-import { localToday } from '@/composables/todoCore'
-import Icon from '@/components/Icon.vue'
+const LIST_PAGE_SIZE = 10
 
 // store 来源可注入：默认成人端 store，学生端容器 provide 自己的 store 后自动改为学生数据（见 healthStoreContext）
 const store = (injectHealthStore() ?? useWorkbenchHealthStore()) as HealthStoreLike
 
-// ===== BMI 状态徽章（四色，分类必须调 healthCore classifyBmi）=====
-type BmiClass = ReturnType<typeof classifyBmi>
+// ===== 人员 / 分类（与身高共用 personConfig） =====
+const config = computed(() => store.personConfig ?? { persons: [], categories: [] })
+const persons = computed(() => config.value.persons)
+const categories = computed(() => config.value.categories)
+const categoryFilter = ref('')
 
+// 旧单人数据（personId 为空）或尚未建人员时，提供一个合成「默认 / 未分类」人员，
+// 避免历史记录丢失，同时兼容「未分人」直接查看全部。
+const allWeightRecords = computed(() => store.records.weight ?? [])
+const hasOrphans = computed(() => allWeightRecords.value.some(r => !r.personId))
+const effectivePersons = computed<Person[]>(() => {
+  const real = persons.value
+  if (real.length === 0 || hasOrphans.value) {
+    return [...real, { id: '', name: real.length === 0 ? '默认' : '未分类', createdAt: '' }]
+  }
+  return real
+})
+const activePersonId = ref('')
+const visiblePersons = computed(() =>
+  categoryFilter.value
+    ? effectivePersons.value.filter(p => p.categoryId === categoryFilter.value)
+    : effectivePersons.value
+)
+const activePerson = computed(
+  () => visiblePersons.value.find(p => p.id === activePersonId.value) ?? visiblePersons.value[0] ?? null
+)
+// 切分类时重置到首位可见人员（避免选中已过滤掉的人员）
+watch(categoryFilter, () => {
+  activePersonId.value = visiblePersons.value[0]?.id ?? ''
+})
+// 初始默认选中首位
+if (activePerson.value) activePersonId.value = activePerson.value.id
+
+const personTabs = computed(() =>
+  visiblePersons.value.map(p => ({
+    value: p.id,
+    label: p.name,
+    badge: recordsOf(p.id).length,
+    testid: `wt-person-${p.id}`
+  }))
+)
+
+// BMI 身高来源：当前人员「身高记录」里最近一次（date 降序、同日 createdAt 降序）。
+// 兼容未建人员、仅有旧全局默认身高的单人数据：合成「默认」人员回落 store.height。
+const activeHeightRecord = computed<HeightRecord | null>(() =>
+  latestHeightRecordOf(store.records.height ?? [], activePerson.value?.id ?? '')
+)
+const activeHeightCm = computed<number | undefined>(() => {
+  if (activeHeightRecord.value) return activeHeightRecord.value.heightCm
+  if ((activePerson.value?.id ?? '') === '' && store.height !== undefined) return store.height
+  return undefined
+})
+
+function recordsOf(personId: string) {
+  return allWeightRecords.value.filter(r => r.personId === personId)
+}
+const currentRecords = computed(() => (activePerson.value ? recordsOf(activePerson.value.id) : []))
+
+// ===== 最近体重 + BMI（date 降序，同日 createdAt 降序取第一条） =====
+const sortedRecords = computed(() =>
+  [...currentRecords.value].sort((a, b) =>
+    a.date === b.date ? (a.createdAt < b.createdAt ? 1 : -1) : a.date < b.date ? 1 : -1
+  )
+)
+const recentWeight = computed(() => sortedRecords.value[0] ?? null)
+const firstWeight = computed(() => sortedRecords.value[sortedRecords.value.length - 1] ?? null)
+const deltaKg = computed(() =>
+  recentWeight.value && firstWeight.value
+    ? Math.round((recentWeight.value.weightKg - firstWeight.value.weightKg) * 10) / 10
+    : null
+)
+
+// BMI 必须调 healthCore 纯函数（组件禁止重算）；身高或体重缺失 → null → 显示「—」防 NaN
+const bmi = computed<number | null>(() => calcBmi(recentWeight.value?.weightKg, activeHeightCm.value))
+
+// BMI 状态徽章（四色，分类必须调 healthCore classifyBmi）
+type BmiClass = ReturnType<typeof classifyBmi>
 const BMI_META: Record<BmiClass, { label: string; className: string }> = {
   under: { label: '偏瘦', className: 'bmi-under' },
   normal: { label: '正常', className: 'bmi-normal' },
   overweight: { label: '超重', className: 'bmi-overweight' },
   obese: { label: '肥胖', className: 'bmi-obese' }
 }
-
-// ===== 最近体重 + BMI（date 降序，同日 createdAt 降序取第一条）=====
-const sortedWeightRecords = computed(() => {
-  return [...store.records.weight].sort((a, b) =>
-    a.date === b.date ? (a.createdAt < b.createdAt ? 1 : -1) : a.date < b.date ? 1 : -1
-  )
-})
-
-const recentWeight = computed(() => sortedWeightRecords.value[0] ?? null)
-
-// BMI 必须调 healthCore 纯函数（组件禁止重算）；身高或体重缺失 → null → 显示「—」防 NaN
-const bmi = computed<number | null>(() => calcBmi(recentWeight.value?.weightKg, store.height))
-
 const bmiStatus = computed<BmiClass | null>(() => (bmi.value === null ? null : classifyBmi(bmi.value)))
 
-// ===== 减肥建议卡（仅 overweight/obese 且身高已设置）=====
+// ===== 减肥建议卡（仅 overweight/obese 且身高已设置） =====
 const adviceTarget = computed<number | null>(() => {
-  if (store.height === undefined) return null
+  if (activeHeightCm.value === undefined) return null
   if (bmi.value === null) return null
   const status = classifyBmi(bmi.value)
   if (status !== 'overweight' && status !== 'obese') return null
-  return weightTarget(store.height)
+  return weightTarget(activeHeightCm.value)
 })
 
 const adviceCalories = computed<number>(() => (adviceTarget.value === null ? 0 : dietCalories(adviceTarget.value)))
 
-// ===== SVG 折线图（零依赖，坐标必须调 healthCore weightChartScale）=====
-const CHART_W = 600
-const CHART_H = 220
-const CHART_PAD = 24 // 与 weightChartScale 默认 pad 一致
-const GRID_COUNT = 4
-
-const chartScale = computed(() => weightChartScale(store.records.weight, CHART_W, CHART_H))
+// ===== SVG 折线图（零依赖，坐标必须调 healthCore weightChartScale） =====
+const chartScale = computed(() =>
+  weightChartScale(
+    [...currentRecords.value].sort((a, b) =>
+      a.date === b.date ? (a.createdAt < b.createdAt ? -1 : 1) : a.date < b.date ? -1 : 1
+    ),
+    CHART_W,
+    CHART_H
+  )
+)
 
 const chartPoints = computed<WeightChartPoint[]>(() => chartScale.value?.points ?? [])
 
@@ -97,17 +178,17 @@ function fmtAxis(v: number): string {
   return Number.isInteger(v) ? String(v) : v.toFixed(1)
 }
 
-// polyline 的 points 串：此前在模板里写 `chartPoints.map(p => p.x + ',' + p.y).join(' ')`，
-// 每次重渲染（新增记录、切暗色、hover 等任意父级更新）都会重新遍历拼接一遍。
-// 坐标只由 chartPoints 决定，提到 computed 后同一份点位只拼一次。
+// polyline 的 points 串：坐标只由 chartPoints 决定，提到 computed 后同一份点位只拼一次。
 const chartPolyline = computed(() => chartPoints.value.map(p => p.x + ',' + p.y).join(' '))
 
-// ===== 身高弹框 =====
+// ===== 身高弹框（BMI 依据：写入身高模块，作为当前人员最近一次身高记录） =====
 const showHeightDialog = ref(false)
+const formHeightDate = ref(localToday())
 const formHeight = ref('')
 
 function openHeightDialog(): void {
-  formHeight.value = store.height === undefined ? '' : String(store.height)
+  formHeightDate.value = localToday()
+  formHeight.value = activeHeightRecord.value ? String(activeHeightRecord.value.heightCm) : ''
   showHeightDialog.value = true
 }
 
@@ -115,59 +196,64 @@ function closeHeightDialog(): void {
   showHeightDialog.value = false
 }
 
-// 100-250 整数必填，越界/小数 → 保存按钮 disabled
+// 30-250 数值必填（可含 1 位小数），越界/非数值 → 保存按钮 disabled
 const isHeightValid = computed(() => {
   const h = Number(formHeight.value)
-  return formHeight.value !== '' && Number.isInteger(h) && h >= 100 && h <= 250
+  return formHeight.value !== '' && Number.isFinite(h) && h >= 30 && h <= 250
 })
 
 async function handleSaveHeight(): Promise<void> {
-  if (!isHeightValid.value) return
-  await store.setHeight(Number(formHeight.value))
+  if (!isHeightValid.value || !activePerson.value) return
+  const payload: Record<string, unknown> = {
+    date: formHeightDate.value,
+    heightCm: Number(formHeight.value),
+    personId: activePerson.value.id
+  }
+  await store.addRecord('height', payload)
   closeHeightDialog()
 }
 
-// ===== 记录表单（新增/编辑共用弹框）=====
+// ===== 记录表单（新增/编辑共用弹框） =====
 const showRecordDialog = ref(false)
 const editingId = ref<string | null>(null)
 const formDate = ref(localToday())
-const formWeightKg = ref('')
+const formWeightKg = ref<number | undefined>(undefined)
 const formNote = ref('')
 
-// ===== 体重记录弹框（Element Plus Table，每页 10 条）=====
-const listPage = ref(1)
-const LIST_PAGE_SIZE = 10
-
 // 与其他面板统一命名
-const sortedRecords = computed(() => sortedWeightRecords.value)
+const listPage = ref(1)
 
-const listPageItems = computed(() => {
-  const start = (listPage.value - 1) * LIST_PAGE_SIZE
-  return sortedRecords.value.slice(start, start + LIST_PAGE_SIZE)
-})
-
-
-
-// date 必填 + weightKg > 0（允许 1 位小数），否则保存按钮 disabled
-const isRecordValid = computed(() => {
-  const w = Number(formWeightKg.value)
-  return formDate.value !== '' && formWeightKg.value !== '' && Number.isFinite(w) && w > 0
+// date 必填 + weightKg 在合理范围（允许 1 位小数），否则保存按钮 disabled
+const isRecordValid = computed(() =>
+  formDate.value !== '' &&
+  formWeightKg.value !== undefined &&
+  Number.isFinite(formWeightKg.value) &&
+  formWeightKg.value >= WT_MIN &&
+  formWeightKg.value <= WT_MAX
+)
+// 异常提示：有输入但不在合理范围 / 非数值 / 缺日期
+const formError = computed(() => {
+  if (formDate.value === '') return '请选择测量日期'
+  if (formWeightKg.value === undefined || !Number.isFinite(formWeightKg.value)) return '请输入体重数值'
+  if (formWeightKg.value < WT_MIN || formWeightKg.value > WT_MAX) return `体重需在 ${WT_MIN}–${WT_MAX} kg 之间`
+  return ''
 })
 
 function startAddRecord(): void {
+  if (!activePerson.value) return
   editingId.value = null
   formDate.value = localToday()
-  formWeightKg.value = ''
+  formWeightKg.value = undefined
   formNote.value = ''
   showRecordDialog.value = true
 }
 
 function startEditRecord(id: string): void {
-  const rec = store.records.weight.find(r => r.id === id)
+  const rec = allWeightRecords.value.find(r => r.id === id)
   if (!rec) return
   editingId.value = id
   formDate.value = rec.date
-  formWeightKg.value = String(rec.weightKg)
+  formWeightKg.value = rec.weightKg
   formNote.value = rec.note ?? ''
   showRecordDialog.value = true
 }
@@ -178,7 +264,7 @@ function cancelRecordForm(): void {
 }
 
 async function handleSaveRecord(): Promise<void> {
-  if (!isRecordValid.value) return
+  if (!isRecordValid.value || !activePerson.value) return
   const note = formNote.value.trim()
   const payload: Record<string, unknown> = {
     date: formDate.value,
@@ -186,8 +272,10 @@ async function handleSaveRecord(): Promise<void> {
   }
   if (note) payload.note = note
   if (editingId.value) {
+    // 编辑时保留记录原有归属（personId），不跨人员改派
     await store.updateRecord('weight', editingId.value, payload)
   } else {
+    payload.personId = activePerson.value.id
     await store.addRecord('weight', payload)
   }
   cancelRecordForm()
@@ -198,6 +286,11 @@ async function handleDeleteRecord(id: string): Promise<void> {
     await store.deleteRecord('weight', id)
   }
 }
+
+const listPageItems = computed(() => {
+  const start = (listPage.value - 1) * LIST_PAGE_SIZE
+  return sortedRecords.value.slice(start, start + LIST_PAGE_SIZE)
+})
 
 // 面板自管理数据加载（WorkbenchView 后续集成后会统一加载，这里防御性幂等重载）
 onMounted(async () => {
@@ -215,19 +308,20 @@ onMounted(async () => {
   <div class="wb-weight">
     <!-- 顶部信息区（一排两卡） -->
     <div class="wt-top-cards">
-      <!-- 身高卡 -->
+      <!-- 身高卡（BMI 依据：当前人员最近一次身高记录；点击设置/更新即写入身高模块） -->
       <div class="stat-card" data-testid="wt-height-card">
         <div class="stat-header">
           <span class="stat-icon">📏</span>
-          <span class="stat-label">身高</span>
-          <el-button class="nav-btn" data-testid="wt-set-height" @click="openHeightDialog">
-            {{ store.height !== undefined ? '修改' : '设置' }}
+          <span class="stat-label">身高（{{ activePerson?.name ?? '默认' }}）</span>
+          <el-button class="nav-btn" data-testid="wt-set-height" :disabled="!activePerson" @click="openHeightDialog">
+            {{ activeHeightRecord ? '更新' : '设置' }}
           </el-button>
         </div>
-        <div v-if="store.height !== undefined" class="stat-value" data-testid="wt-height-value">
-          身高 {{ store.height }} cm
-        </div>
-        <div v-else class="stat-sub" data-testid="wt-height-empty">未设置身高</div>
+        <template v-if="activeHeightCm !== undefined">
+          <div class="stat-value" data-testid="wt-height-value">身高 {{ activeHeightCm }} cm</div>
+          <div v-if="activeHeightRecord" class="stat-sub" data-testid="wt-height-date">最新记录 · {{ activeHeightRecord.date }}</div>
+        </template>
+        <div v-else class="stat-sub" data-testid="wt-height-empty">未设置身高（BMI 暂不可算）</div>
       </div>
 
       <!-- 最近体重 + BMI 卡（右上角挂：新增） -->
@@ -236,7 +330,11 @@ onMounted(async () => {
           <Icon name="weight" :size="16" class="stat-icon" />
           <span class="stat-label">最近体重 · BMI</span>
           <div class="stat-panel-actions">
-            <el-button class="btn-add" data-testid="wt-add" @click="startAddRecord">＋ 新增</el-button>
+            <el-select v-model="categoryFilter" class="wt-cat-select" data-testid="wt-category-filter">
+              <el-option label="全部分类" value="" />
+              <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
+            </el-select>
+            <el-button class="btn-add" data-testid="wt-add" :disabled="!activePerson" @click="startAddRecord">＋ 新增</el-button>
           </div>
         </div>
         <div class="wt-bmi-row">
@@ -251,6 +349,24 @@ onMounted(async () => {
           </span>
         </div>
       </div>
+    </div>
+
+    <!-- 人员标签页（与身高面板同构） -->
+    <BaseTabs
+      v-if="personTabs.length"
+      v-model="activePersonId"
+      :items="personTabs"
+      testid="wt-person"
+    />
+    <div v-else class="empty-state" data-testid="wt-no-person">没有可显示的人员</div>
+
+    <!-- 累计变化 -->
+    <div class="stat-card" data-testid="wt-delta-card">
+      <div class="stat-header"><span class="stat-label">累计变化</span></div>
+      <div class="stat-value" data-testid="wt-delta">
+        {{ deltaKg === null ? '—' : (deltaKg > 0 ? '+' : '') + deltaKg.toFixed(1) + ' kg' }}
+      </div>
+      <div class="stat-sub">{{ firstWeight ? '首次 ' + firstWeight.date + ' · ' + firstWeight.weightKg + ' kg' : '至少需要两条记录' }}</div>
     </div>
 
     <!-- 减肥建议卡（仅 overweight/obese 且身高已设置） -->
@@ -338,22 +454,10 @@ onMounted(async () => {
       <div v-else class="wt-chart-empty" data-testid="wt-chart-empty">暂无体重记录</div>
     </div>
 
-    <!-- 操作栏（已移除：右上角 stat-panel-actions 代替） -->
-
-    <!-- 空态 -->
-    <div
-      v-if="store.records.weight.length === 0"
-      class="empty-state empty-invite"
-      data-testid="wt-empty"
-      @click="startAddRecord"
-    >
-      ＋ 新增第一条体重记录
-    </div>
-
-    <!-- 身高设置弹框 -->
+    <!-- 身高设置弹框（写入身高模块，作为当前人员 BMI 依据） -->
 <BaseDialog
       v-if="showHeightDialog"
-      title="设置身高"
+      :title="`设置身高（${activePerson?.name ?? '默认'}）`"
       :width="PANEL_WIDTH"
       :max-height="PANEL_MAX_HEIGHT"
       data-testid="wt-height-dialog"
@@ -361,19 +465,29 @@ onMounted(async () => {
     >
         <form class="dialog-body" @submit.prevent="handleSaveHeight">
           <div class="form-group">
+            <label>测量日期 *</label>
+            <el-date-picker
+              v-model="formHeightDate"
+              type="date"
+              value-format="YYYY-MM-DD"
+              class="field-date"
+              data-testid="wt-height-date-input"
+            />
+          </div>
+          <div class="form-group">
             <label>身高（cm）*</label>
             <el-input-number
               :model-value="formHeight === '' ? undefined : Number(formHeight)"
-              :min="100"
+              :min="30"
               :max="250"
-              :step="1"
-             
+              :step="0.1"
+              :precision="1"
               placeholder="例如：170"
               data-testid="wt-height-input"
               :controls="false"
               @update:model-value="formHeight = $event == null ? '' : String($event)"
             />
-            <div class="field-hint">请输入 100-250 之间的整数</div>
+            <div class="field-hint">BMI 依据为当前人员最近一次身高记录（30–250 cm，可含 1 位小数）。</div>
           </div>
           <div class="form-actions">
             <el-button native-type="button" class="btn-cancel" data-testid="wt-height-cancel" @click="closeHeightDialog">{{ DIALOG_BTN.close }}</el-button>
@@ -407,16 +521,15 @@ onMounted(async () => {
             <div class="field">
               <label class="field-label">体重（kg）*</label>
               <el-input-number
-                :model-value="formWeightKg === '' ? undefined : Number(formWeightKg)"
-                :min="0.1"
+                v-model="formWeightKg"
                 :step="0.1"
-                class="field-weight"
-                placeholder="例如：75"
-                data-testid="wt-form-weight"
-                :controls="false"
                 :precision="1"
-                @update:model-value="formWeightKg = $event == null ? '' : String($event)"
+                :controls="false"
+                class="field-weight"
+                :placeholder="`${WT_MIN}–${WT_MAX}`"
+                data-testid="wt-form-weight"
               />
+              <p v-if="formError" class="wt-form-error" data-testid="wt-form-error">{{ formError }}</p>
             </div>
           </div>
 
@@ -440,8 +553,18 @@ onMounted(async () => {
         </form>
     </BaseDialog>
 
+    <!-- 空态 -->
+    <div
+      v-if="currentRecords.length === 0"
+      class="empty-state empty-invite"
+      data-testid="wt-empty"
+      @click="startAddRecord"
+    >
+      ＋ 新增第一条体重记录
+    </div>
+
     <!-- 体重记录列表（面板底部内联展示，固定每页 10 条） -->
-    <section v-if="sortedRecords.length > 0" class="ewt-inline-section" data-testid="wt-records-section">
+    <section v-if="currentRecords.length > 0" class="ewt-inline-section" data-testid="wt-records-section">
       <div class="ewt-inline-head">
         <h3 class="ewt-inline-title">体重记录（{{ sortedRecords.length }} 条）</h3>
       </div>
@@ -464,8 +587,8 @@ onMounted(async () => {
         </el-table-column>
         <el-table-column label="BMI" width="130" align="right">
           <template #default="{ row }">
-            <span v-if="store.height !== undefined && bmi !== null" :class="BMI_META[classifyBmi(calcBmi(row.weightKg, store.height) ?? 20)].className">
-              {{ calcBmi(row.weightKg, store.height)?.toFixed(1) ?? '—' }}
+            <span v-if="activeHeightCm !== undefined" :class="BMI_META[classifyBmi(calcBmi(row.weightKg, activeHeightCm) ?? 20)].className">
+              {{ calcBmi(row.weightKg, activeHeightCm)?.toFixed(1) ?? '—' }}
             </span>
             <span v-else style="color: var(--color-text-secondary);">未设身高</span>
           </template>
@@ -659,23 +782,15 @@ onMounted(async () => {
 }
 /* .btn-add 视觉已统一到全局 .ui-btn--primary（style.css） */
 
-.btn-toggle-list {padding: 0 var(--space-3);
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md, 8px);
-  font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-  height: 36px;}
-
-.btn-toggle-list:hover {
-  color: var(--color-primary-text);
-  border-color: var(--color-primary);
+.wt-cat-select {
+  width: 130px;
 }
 
-/* .btn-add 视觉已统一到全局 .ui-btn--primary（style.css） */
+.wt-form-error {
+  margin: 0;
+  font-size: var(--fs-caption, 12px);
+  color: var(--color-error-text);
+}
 
 /* ===== 按钮（复用 WorkbenchTodo/Exercise 体系）===== */
 /* .btn-edit/.btn-delete 视觉已统一到全局 .ui-btn（style.css） */
@@ -691,8 +806,6 @@ onMounted(async () => {
 
 /* ===== 弹框层级：统一引用外壳定义的 --wb-dialog-z（BaseDialog 基准 300），不再各写 z-index:320 ===== */
 .wt-record-overlay { z-index: var(--wb-dialog-z, 300); }
-
-
 
 .wt-list-pager {
   flex: 0 0 auto;
@@ -714,113 +827,6 @@ onMounted(async () => {
 .bmi-normal { color: var(--color-success-text); font-weight:700; }
 .bmi-overweight { color: var(--color-warning-text); font-weight:600; }
 .bmi-obese { color: var(--color-error-text); font-weight:700; }
-
-.wt-record-item {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: 10px 12px;
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md, 8px);
-  font-size: var(--fs-sm, 13px);
-}
-
-.wt-record-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.wt-record-date {
-  font-size: var(--fs-caption, 12px);
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-
-.wt-record-weight {
-  font-size: var(--fs-body, 14px);
-  font-weight: 700;
-  color: var(--color-primary-text);
-  font-variant-numeric: tabular-nums;
-}
-
-.wt-record-bmi {
-  font-size: var(--fs-caption, 12px);
-  color: var(--color-text-secondary);
-}
-
-.wt-record-note {
-  font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.wt-record-actions {
-  display: flex;
-  gap: 6px;
-  margin-top: 2px;
-}
-
-.wt-records-empty {
-  text-align: center;
-  padding: 40px 20px;
-  color: var(--color-text-secondary);
-}
-
-.btn-add-inline {margin-top: var(--space-3);
-  padding: 0 var(--space-3);
-  background: var(--color-primary);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  cursor: pointer;
-  font-size: var(--fs-caption, 12px);
-  height: 36px;}
-
-.btn-add-inline:hover {
-  opacity: 0.9;
-}
-
-/* ===== 体重记录弹框分页 ===== */
-.wt-records-pager {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  padding: var(--space-2) 0 var(--space-1);
-  border-top: 1px solid var(--color-border);
-}
-
-.wt-pager-btn {padding: 0 var(--space-3);
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm, 4px);
-  font-size: var(--fs-caption, 12px);
-  cursor: pointer;
-  color: var(--color-text-secondary);
-  transition: all var(--transition-fast, 0.15s ease);
-  height: 36px;}
-
-.wt-pager-btn:hover:not(:disabled) {
-  background: var(--color-bg-hover, var(--color-bg-active));
-}
-
-.wt-pager-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.wt-pager-info {
-  font-size: var(--fs-caption, 12px);
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-}
 
 .form-group {
   display: flex;
@@ -877,15 +883,11 @@ onMounted(async () => {
   justify-content: flex-end;
 }
 
-/* .btn-cancel 视觉已统一到全局 .ui-btn（style.css） */
-
 /* ===== 暗色模式覆盖 ===== */
 html.dark .wt-item {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
-
-/* html.dark .empty-state 背景已由全局 .empty-state 的 --color-bg-card token 自动跟随 */
 
 html.dark .dialog {
   background-color: var(--color-bg-card, #1f2937);
@@ -893,11 +895,6 @@ html.dark .dialog {
 
 html.dark .dialog-header {
   background-color: var(--color-bg-card, #1f2937);
-}
-
-html.dark .wt-record-item {
-  background-color: var(--color-bg-card, #1f2937);
-  border-color: var(--color-border, #374151);
 }
 
 html.dark .bmi-under {
@@ -933,18 +930,6 @@ html.dark input.form-input {
   border-color: var(--color-border, #374151);
 }
 
-html.dark .btn-toggle-list {
-  background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary);
-  border-color: var(--color-border, #374151);
-}
-
-html.dark .wt-pager-btn {
-  background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary);
-  border-color: var(--color-border, #374151);
-}
-
 @media (max-width: 640px) {
   .wt-top-cards {
     grid-template-columns: 1fr;
@@ -953,10 +938,6 @@ html.dark .wt-pager-btn {
   .field-date,
   .field-weight {
     width: 100%;
-  }
-
-  .wt-records-grid {
-    grid-template-columns: 1fr 1fr;
   }
 }
 </style>

@@ -8,10 +8,11 @@ import {
   dietCalories,
   emptyHealthData,
   heightChartScale,
+  latestHeightRecordOf,
   normalizeDietRecord,
   normalizeExerciseRecord,
   normalizeHealthData,
-  normalizeHeightConfig,
+  normalizePersonConfig,
   normalizeHeightRecord,
   normalizeSleepRecord,
   normalizeWeightRecord,
@@ -272,7 +273,7 @@ test('T11 各记录 normalize 兜底', () => {
 test('T12 emptyHealthData 初始结构', () => {
   const e = emptyHealthData()
   assert.equal(e.height, undefined)
-  assert.deepEqual(e, { plans: {}, heightConfig: { persons: [], categories: [] }, records: { exercise: [], diet: [], sleep: [], weight: [], height: [] } })
+  assert.deepEqual(e, { plans: {}, personConfig: { persons: [], categories: [] }, records: { exercise: [], diet: [], sleep: [], weight: [], height: [] } })
 })
 
 // T13 — normalizeExerciseRecord distanceKm 透传/钳制/可选：合法值保留、负数钳 0、字符串剔除、缺省不污染
@@ -319,17 +320,22 @@ test('T15 normalizeHeightRecord 合理范围与脏数据兜底', () => {
   assert.match(normalizeHeightRecord({}).date, /^\d{4}-\d{2}-\d{2}$/)
 })
 
-// T16 — 身高人员/分类配置归一化：脏输入吞掉不抛错
-test('T16 normalizeHeightConfig 人员与分类兜底', () => {
-  assert.deepEqual(normalizeHeightConfig(undefined), { persons: [], categories: [] })
-  const cfg = normalizeHeightConfig({
-    persons: [{ id: 'p1', name: '  小明  ', categoryId: 'c1' }, null],
+// T16 — 人员/分类配置归一化（身高、体重共用）：脏输入吞掉不抛错，不再携带身高基线字段
+test('T16 normalizePersonConfig 人员与分类兜底', () => {
+  assert.deepEqual(normalizePersonConfig(undefined), { persons: [], categories: [] })
+  const cfg = normalizePersonConfig({
+    persons: [
+      { id: 'p1', name: '  小明  ', categoryId: 'c1', heightCm: 168.6 },
+      { id: 'p2', name: '小红', heightCm: 'abc' },
+      null
+    ],
     categories: { bad: true },
     updatedAt: '2026-11-14T00:00:00.000Z'
   })
-  assert.equal(cfg.persons.length, 2)
+  assert.equal(cfg.persons.length, 3)
   assert.equal(cfg.persons[0].name, '小明')
   assert.equal(cfg.persons[0].categoryId, 'c1')
+  assert.equal((cfg.persons[0] as unknown as { heightCm?: number }).heightCm, undefined) // 旧 heightCm 字段已不再保留
   assert.equal(cfg.categories.length, 0)
   assert.equal(cfg.updatedAt, '2026-11-14T00:00:00.000Z')
 })
@@ -352,6 +358,42 @@ test('T17 heightChartScale 空/单点/多点', () => {
   assert.equal(three?.points[0].x, 0)
   assert.equal(three?.points[1].x, 200)
   assert.equal(three?.points[2].x, 400)
+})
+
+// T18 — 体重记录 personId：透传、缺省归空串、多人记录互不污染（多人模式基础）
+test('T18 normalizeWeightRecord personId 透传与缺省', () => {
+  const withPerson = normalizeWeightRecord({ id: 'w1', date: '2026-08-05', weightKg: 70.5, personId: 'p1' })
+  assert.equal(withPerson.personId, 'p1')
+  assert.equal(withPerson.weightKg, 70.5)
+  const noPerson = normalizeWeightRecord({ weightKg: 60 })
+  assert.equal(noPerson.personId, '') // 旧单人不带 personId 的记录回落空串
+  // 不同 personId 的记录在组件层应被分别筛选（这里仅验证归一后字段互不影响）
+  assert.notEqual(withPerson.personId, noPerson.personId)
+})
+
+// T19 — 体重面板 BMI 依据：取当前人员最近一次身高记录（date 降序、同日 createdAt 降序）
+test('T19 latestHeightRecordOf 取最近一次身高记录', () => {
+  const mk = (id: string, date: string, cm: number, personId: string, createdAt: string) => ({
+    id, module: 'height' as const, date, heightCm: cm, personId, createdAt, updatedAt: createdAt
+  })
+  const recs = [
+    mk('a', '2026-08-01', 160, 'p1', '2026-08-01T08:00:00.000Z'),
+    mk('b', '2026-09-01', 162, 'p1', '2026-09-01T08:00:00.000Z'),
+    mk('c', '2026-08-01', 150, 'p2', '2026-08-01T08:00:00.000Z'),
+    mk('d', '2026-10-01', 0, 'p1', '2026-10-01T08:00:00.000Z') // 异常记录（heightCm=0）应被忽略
+  ]
+  const p1 = latestHeightRecordOf(recs, 'p1')
+  assert.equal(p1?.id, 'b') // 最近一次有效记录（9 月，越过 10 月异常记录）
+  assert.equal(p1?.heightCm, 162)
+  const p2 = latestHeightRecordOf(recs, 'p2')
+  assert.equal(p2?.id, 'c')
+  assert.equal(latestHeightRecordOf(recs, 'pX'), null) // 无记录 → null
+  // 同日多条：createdAt 较大者优先
+  const sameDay = [
+    mk('e', '2026-11-01', 170, 'p3', '2026-11-01T07:00:00.000Z'),
+    mk('f', '2026-11-01', 171, 'p3', '2026-11-01T09:00:00.000Z')
+  ]
+  assert.equal(latestHeightRecordOf(sameDay, 'p3')?.id, 'f')
 })
 
 let passed = 0

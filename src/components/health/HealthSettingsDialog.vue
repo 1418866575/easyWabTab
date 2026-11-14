@@ -14,7 +14,7 @@ import { useToast } from '@/composables/useToast'
 import { showConfirm } from '@/utils/dialog'
 import { useAppSettingsStore } from '@/stores/settings'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
-import type { HeightConfig } from '@/types'
+import type { PersonConfig } from '@/types'
 import {
   HEALTH_MENU_KEYS,
   HEALTH_MENU_DEFAULT_LABELS,
@@ -27,12 +27,12 @@ const emit = defineEmits<{ close: [] }>()
 const settings = useAppSettingsStore()
 const toast = useToast()
 
-type TabKey = 'general' | 'menu' | 'height'
+type TabKey = 'general' | 'menu' | 'people'
 const tab = ref<TabKey>('general')
 const SECTIONS: { key: TabKey; label: string; icon: string }[] = [
   { key: 'general', label: '常规', icon: 'cog' },
   { key: 'menu', label: '菜单设置', icon: 'grid' },
-  { key: 'height', label: '身高设置', icon: 'account-multiple' }
+  { key: 'people', label: '人员与分组', icon: 'account-multiple' }
 ]
 const currentSection = computed(() => SECTIONS.find((s) => s.key === tab.value) ?? SECTIONS[0])
 
@@ -170,13 +170,13 @@ async function onResetMenu(): Promise<void> {
 }
 
 
-// ==================== 身高设置（人员 + 分组） ====================
+// ==================== 人员与分组（身高、体重共用） ====================
 const healthStore = useWorkbenchHealthStore()
-const heightConfig = computed<HeightConfig>(
-  () => healthStore.heightConfig ?? { persons: [], categories: [] }
+const personConfig = computed<PersonConfig>(
+  () => healthStore.personConfig ?? { persons: [], categories: [] }
 )
-const hPersons = computed(() => heightConfig.value.persons)
-const hCategories = computed(() => heightConfig.value.categories)
+const hPersons = computed(() => personConfig.value.persons)
+const hCategories = computed(() => personConfig.value.categories)
 const renameDraft = ref<Record<string, string>>({})
 const newCategoryName = ref('')
 const newPersonName = ref('')
@@ -185,8 +185,8 @@ const newPersonCategory = ref('')
 function newId(prefix: string): string {
   return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
 }
-function writeHeightConfig(persons: HeightConfig['persons'], categories: HeightConfig['categories']): void {
-  void healthStore.setHeightConfig({ persons, categories })
+function writePersonConfig(persons: PersonConfig['persons'], categories: PersonConfig['categories']): void {
+  void healthStore.setPersonConfig({ persons, categories })
 }
 function draftOf(id: string, fallback: string): string {
   return renameDraft.value[id] ?? fallback
@@ -199,14 +199,17 @@ function clearDraft(id: string): void {
   delete next[id]
   renameDraft.value = next
 }
-function recordCountOf(personId: string): number {
+function heightRecordCountOf(personId: string): number {
   return (healthStore.records.height ?? []).filter(r => r.personId === personId).length
+}
+function weightRecordCountOf(personId: string): number {
+  return (healthStore.records.weight ?? []).filter(r => r.personId === personId).length
 }
 
 function addCategory(): void {
   const name = newCategoryName.value.trim().slice(0, 12)
   if (!name) return
-  writeHeightConfig(hPersons.value, [
+  writePersonConfig(hPersons.value, [
     ...hCategories.value,
     { id: newId('hc_'), name, createdAt: new Date().toISOString() }
   ])
@@ -217,13 +220,13 @@ function commitCategoryName(id: string): void {
   const raw = renameDraft.value[id]
   if (raw === undefined) return
   const name = raw.trim().slice(0, 12)
-  if (name) writeHeightConfig(hPersons.value, hCategories.value.map(c => (c.id === id ? { ...c, name } : c)))
+  if (name) writePersonConfig(hPersons.value, hCategories.value.map(c => (c.id === id ? { ...c, name } : c)))
   clearDraft(id)
 }
 async function removeCategory(id: string): Promise<void> {
   const affected = hPersons.value.filter(p => p.categoryId === id).length
   if (!(await showConfirm(`删除该分组？${affected} 位人员将变为「未分类」。`))) return
-  writeHeightConfig(
+  writePersonConfig(
     hPersons.value.map(p => (p.categoryId === id ? { ...p, categoryId: undefined } : p)),
     hCategories.value.filter(c => c.id !== id)
   )
@@ -231,7 +234,7 @@ async function removeCategory(id: string): Promise<void> {
 function addPerson(): void {
   const name = newPersonName.value.trim().slice(0, 12)
   if (!name) return
-  writeHeightConfig(
+  writePersonConfig(
     [
       ...hPersons.value,
       {
@@ -251,22 +254,27 @@ function commitPersonName(id: string): void {
   const raw = renameDraft.value[id]
   if (raw === undefined) return
   const name = raw.trim().slice(0, 12)
-  if (name) writeHeightConfig(hPersons.value.map(p => (p.id === id ? { ...p, name } : p)), hCategories.value)
+  if (name) writePersonConfig(hPersons.value.map(p => (p.id === id ? { ...p, name } : p)), hCategories.value)
   clearDraft(id)
 }
 function setPersonCategory(id: string, val: string): void {
-  writeHeightConfig(
+  writePersonConfig(
     hPersons.value.map(p => (p.id === id ? { ...p, ...(val ? { categoryId: val } : { categoryId: undefined }) } : p)),
     hCategories.value
   )
 }
 async function removePerson(id: string): Promise<void> {
-  const n = recordCountOf(id)
-  if (!(await showConfirm(`删除该人员？其 ${n} 条身高记录将一并删除。`))) return
+  const nH = heightRecordCountOf(id)
+  const nW = weightRecordCountOf(id)
+  const total = nH + nW
+  if (!(await showConfirm(`删除该人员？其 ${total} 条记录（身高 ${nH} / 体重 ${nW}）将一并删除。`))) return
   for (const r of (healthStore.records.height ?? []).filter(x => x.personId === id)) {
     await healthStore.deleteRecord('height', r.id)
   }
-  writeHeightConfig(hPersons.value.filter(p => p.id !== id), hCategories.value)
+  for (const r of (healthStore.records.weight ?? []).filter(x => x.personId === id)) {
+    await healthStore.deleteRecord('weight', r.id)
+  }
+  writePersonConfig(hPersons.value.filter(p => p.id !== id), hCategories.value)
 }
 
 onMounted(async () => {
@@ -439,12 +447,12 @@ onMounted(async () => {
             </ul>
           </section>
 
-          <!-- 身高设置：人员（一人一个标签页）与分组 -->
-          <section v-show="tab === 'height'" class="hs-pane" data-testid="hs-height-pane">
+          <!-- 人员与分组：身高、体重面板共用 -->
+          <section v-show="tab === 'people'" class="hs-pane" data-testid="hs-people-pane">
             <div class="hs-head">
-              <h3 class="hs-title">身高设置</h3>
+              <h3 class="hs-title">人员与分组</h3>
             </div>
-            <p class="hs-hint">创建人员与分组；身高面板按分组筛选人员，每人一个标签页。删除人员会一并删除其身高记录。</p>
+            <p class="hs-hint">创建人员与分组；身高/体重面板按分组筛选人员，每人一个标签页（体重面板还会按人员展示）。删除人员会一并删除其身高与体重记录。</p>
 
             <div class="hs-field hs-field-block">
               <span class="hs-field-label">人员分组</span>
@@ -508,7 +516,7 @@ onMounted(async () => {
                     <el-option v-for="c in hCategories" :key="c.id" :label="c.name" :value="c.id" />
                   </el-select>
                   <div class="hs-actions">
-                    <span class="hs-record-count">{{ recordCountOf(person.id) }} 条</span>
+                    <span class="hs-record-count">{{ heightRecordCountOf(person.id) }} 条</span>
                     <el-button size="small" class="btn-delete" :data-testid="`hs-person-delete-${person.id}`" @click="removePerson(person.id)">删除</el-button>
                   </div>
                 </li>
@@ -516,6 +524,7 @@ onMounted(async () => {
               </ul>
             </div>
           </section>
+
         </div>
       </section>
     </div>

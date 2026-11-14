@@ -941,9 +941,9 @@ function mergeHealth(l: HealthData | undefined, r: HealthData | undefined): Heal
   }
   const height = l?.height ?? r?.height
   // 人员/分类配置整体按 updatedAt LWW：条目级并集会把已删除的人员复活
-  const lCfg = l?.heightConfig
-  const rCfg = r?.heightConfig
-  const heightConfig = (lCfg?.updatedAt ?? '') >= (rCfg?.updatedAt ?? '') ? lCfg : (rCfg ?? lCfg)
+  const lCfg = l?.personConfig
+  const rCfg = r?.personConfig
+  const personConfig = (lCfg?.updatedAt ?? '') >= (rCfg?.updatedAt ?? '') ? lCfg : (rCfg ?? lCfg)
   // 周计划（运动/饮食）整体按 plansUpdatedAt LWW：条目级并集会把「删掉的计划项」复活
   const lPlansAt = l?.plansUpdatedAt ?? ''
   const rPlansAt = r?.plansUpdatedAt ?? ''
@@ -955,7 +955,7 @@ function mergeHealth(l: HealthData | undefined, r: HealthData | undefined): Heal
   }
   return {
     height,
-    heightConfig,
+    personConfig,
     plans,
     records,
     weeklyPlans: takeLocalPlans ? l?.weeklyPlans : r?.weeklyPlans,

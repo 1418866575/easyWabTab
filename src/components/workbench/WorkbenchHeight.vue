@@ -26,7 +26,7 @@ const LIST_PAGE_SIZE = 10
 
 const store = useWorkbenchHealthStore()
 
-const config = computed(() => store.heightConfig ?? { persons: [], categories: [] })
+const config = computed(() => store.personConfig ?? { persons: [], categories: [] })
 const persons = computed(() => config.value.persons)
 const categories = computed(() => config.value.categories)
 const categoryFilter = ref('')
