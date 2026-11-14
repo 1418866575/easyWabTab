@@ -373,14 +373,14 @@ onMounted(async () => {
         ><Icon name="search" :size="14" /> 搜索</button>
         <button
           v-if="cloudEnabled"
-          class="bs-btn wb-sync-btn"
+          class="bs-btn wb-sync-btn ui-btn--pill"
           :class="syncStatusClass"
           :title="syncTip"
           data-testid="bs-sync-now"
           :disabled="syncBusy || cloudSync.status.value === 'pulling' || cloudSync.status.value === 'pushing'"
           @click="handleSyncNowClick"
         ><Icon name="cloud" :size="14" /> {{ syncLabel }}</button>
-        <button class="bs-btn" title="设置" data-testid="bs-settings" @click="showSettingsDialog = true"><Icon name="cog" :size="15" /> 设置</button>
+        <button class="bs-btn ui-btn--pill" title="设置" data-testid="bs-settings" @click="showSettingsDialog = true"><Icon name="cog" :size="15" /> 设置</button>
       </div>
     </header>
 
@@ -815,15 +815,15 @@ html.dark .bs-header-left h1 {
   color: var(--color-text);
 }
 
-html.dark .bs-btn,
-html.dark .bs-header-right :deep(.bs-btn) {
+html.dark .bs-btn:not(.ui-btn--pill),
+html.dark .bs-header-right :deep(.bs-btn:not(.ui-btn--pill)) {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary);
   border-color: var(--color-border, #374151);
 }
 
-html.dark .bs-btn:hover,
-html.dark .bs-header-right :deep(.bs-btn:hover) {
+html.dark .bs-btn:not(.ui-btn--pill):hover,
+html.dark .bs-header-right :deep(.bs-btn:not(.ui-btn--pill):hover) {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-primary-text);
   border-color: var(--color-primary, #3b82f6);

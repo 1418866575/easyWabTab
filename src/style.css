@@ -492,6 +492,69 @@ optgroup {
 }
 
 /* ============================================================
+   云同步 / 设置按钮（跨视图唯一胶囊皮肤，规范 §2.1）
+   ------------------------------------------------------------
+   基准 = 智能工作台 .sv-btn。各视图只叠加 .ui-btn--pill，
+   不改名、不动布局类与 data-testid。
+   这里只声明「皮肤」：形状 / 描边 / 底色 / 文字 / 悬停 / 焦点 / 禁用；
+   height、padding、flex、width 一律留给各视图布局类
+   （侧栏底部等宽 32/40px、顶栏 --ui-ctrl-h 联动属已知差异）。
+   双重类 + html 前缀用于压过各视图 scoped 的旧皮肤声明。
+   ============================================================ */
+html .ui-btn--pill.ui-btn--pill {
+  gap: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background-color: var(--color-bg-card);
+  color: var(--color-text);
+  font-size: var(--fs-caption);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  transition: background-color var(--motion-duration) var(--motion-ease),
+    border-color var(--motion-duration) var(--motion-ease),
+    color var(--motion-duration) var(--motion-ease),
+    opacity 120ms ease;
+}
+html .ui-btn--pill.ui-btn--pill:hover {
+  transform: none;
+  border-color: var(--color-border);
+  background-color: var(--color-bg-hover);
+  color: var(--color-text);
+  box-shadow: none;
+}
+html .ui-btn--pill.ui-btn--pill:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+html .ui-btn--pill.ui-btn--pill:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+/* 状态色：兼容各视图既有状态类名（*-sync-btn-pending 等）与组件 is-* 态。
+   与上方 hover 同特异性、后声明胜出，hover 时状态底色不被冲掉。 */
+html .ui-btn--pill.ui-btn--pill[class*="sync-btn-pending"],
+html .ui-btn--pill.ui-btn--pill.is-busy,
+html .ui-btn--pill.ui-btn--pill.is-pending {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-accent);
+  opacity: 0.88;
+  cursor: progress;
+}
+html .ui-btn--pill.ui-btn--pill[class*="sync-btn-conflict"],
+html .ui-btn--pill.ui-btn--pill.is-conflict {
+  background: var(--color-warning);
+  border-color: var(--color-warning);
+  color: var(--color-on-accent);
+}
+html .ui-btn--pill.ui-btn--pill[class*="sync-btn-error"],
+html .ui-btn--pill.ui-btn--pill.is-error {
+  background: var(--color-error);
+  border-color: var(--color-error);
+  color: var(--color-on-accent);
+}
+
+/* ============================================================
    按钮语义变体（动作类统一规范，PRD §按钮一致性）
    目标：功能相同的按钮（提交/取消/删除…）一处定义、全站一致；
    功能不同的按钮（开关/胶囊分段/纯图标）保留形态区分。

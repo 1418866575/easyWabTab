@@ -505,9 +505,10 @@ export interface GenealogyData {
 
 // ==================== 健康管理 ====================
 
-export type HealthModule = 'exercise' | 'diet' | 'sleep' | 'weight'
+/** 健康记录模块键。height（身高成长记录）只在独立健康工作台 /health 使用，故不进 HEALTH_TABS。 */
+export type HealthModule = 'exercise' | 'diet' | 'sleep' | 'weight' | 'height'
 
-// 健康管理面板 tab 键（WorkbenchHealth 容器 + 导航白名单共用单一来源）
+// 健康管理面板 tab 键（个人工作台 WorkbenchHealth 容器 + 导航白名单共用单一来源；不含 height）
 export const HEALTH_TABS = ['exercise', 'diet', 'sleep', 'weight'] as const
 
 export const EXERCISE_TYPES = ['跑步', '游泳', '力量', '骑行', '瑜伽', '其他'] as const
@@ -576,7 +577,43 @@ export interface WeightRecord {
   updatedAt: string
 }
 
-export type HealthRecord = ExerciseRecord | DietRecord | SleepRecord | WeightRecord
+/** 身高成长记录：一人一条时间序列，单位 cm，合理范围 30–250（越界归一为 0，UI 不绘制）。 */
+export interface HeightRecord {
+  id: string
+  module: 'height'
+  date: string
+  heightCm: number
+  /** 所属人员 id（heightConfig.persons） */
+  personId: string
+  note?: string
+  createdAt: string
+  updatedAt: string
+}
+
+/** 身高人员（一人一个标签页）。 */
+export interface HeightPerson {
+  id: string
+  name: string
+  /** 所属分类 id，空 = 未分类 */
+  categoryId?: string
+  createdAt: string
+}
+
+/** 身高人员分组（设置里创建，面板用于筛选人员页签）。 */
+export interface HeightCategory {
+  id: string
+  name: string
+  createdAt: string
+}
+
+/** 身高人员与分类配置，随 health.json 同步；整体按 updatedAt LWW 合并。 */
+export interface HeightConfig {
+  persons: HeightPerson[]
+  categories: HeightCategory[]
+  updatedAt?: string
+}
+
+export type HealthRecord = ExerciseRecord | DietRecord | SleepRecord | WeightRecord | HeightRecord
 
 export interface HealthPlans {
   exercise?: HealthPlan
@@ -585,13 +622,17 @@ export interface HealthPlans {
 }
 
 export interface HealthData {
+  /** BMI 基准身高（体重面板用），不是身高成长记录 */
   height?: number
   plans: HealthPlans
+  /** 身高人员与分类配置 */
+  heightConfig?: HeightConfig
   records: {
     exercise: ExerciseRecord[]
     diet: DietRecord[]
     sleep: SleepRecord[]
     weight: WeightRecord[]
+    height: HeightRecord[]
   }
   /** 周计划（运动/饮食）：键 = 该周周一日期 'YYYY-MM-DD'。整体按 plansUpdatedAt LWW 同步。 */
   weeklyPlans?: HealthWeeklyPlans

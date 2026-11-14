@@ -10,7 +10,7 @@ import { computed, defineAsyncComponent, onMounted, ref, type Component } from '
 import { useRoute, useRouter } from 'vue-router'
 import { useCloudSync } from '@/composables/useCloudSync'
 import type { SyncStatus } from '@/composables/useCloudSync'
-import { HEALTH_TABS, type HealthModule } from '@/types'
+import type { HealthModule } from '@/types'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { useCountdownsStore } from '@/stores/countdowns'
 import { useAppSettingsStore } from '@/stores/settings'
@@ -23,6 +23,7 @@ import WorkbenchExercise from '@/components/workbench/WorkbenchExercise.vue'
 import WorkbenchDiet from '@/components/workbench/WorkbenchDiet.vue'
 import WorkbenchSleep from '@/components/workbench/WorkbenchSleep.vue'
 import WorkbenchWeight from '@/components/workbench/WorkbenchWeight.vue'
+import WorkbenchHeight from '@/components/workbench/WorkbenchHeight.vue'
 import HealthRecipes from '@/components/health/HealthRecipes.vue'
 import WorkbenchSwitcher from '@/components/WorkbenchSwitcher.vue'
 import Icon from '@/components/Icon.vue'
@@ -102,10 +103,11 @@ const PANELS: Record<HealthViewTab, { desc: string; panel: Component }> = {
   diet: { desc: '按餐次记录饮食与热量，查看日目标与食谱方案。', panel: WorkbenchDiet },
   sleep: { desc: '记录入睡与起床时间，查看睡眠时长与质量。', panel: WorkbenchSleep },
   weight: { desc: '记录体重变化，查看 BMI 分级与趋势折线。', panel: WorkbenchWeight },
-  recipes: { desc: '按卡片浏览家常菜谱，查看成品图、食材、做法与食品安全注意事项。', panel: HealthRecipes }
+  recipes: { desc: '按卡片浏览家常菜谱，查看成品图、食材、做法与食品安全注意事项。', panel: HealthRecipes },
+  height: { desc: '按人员记录身高变化，查看趋势折线图与历史记录。', panel: WorkbenchHeight }
 }
 /** 左侧菜单：顺序 / 改名 / 显隐来自 settings.healthMenuItems（在设置弹窗里调整即时生效）。
- *  store 初始化完成前 healthMenuItems 可能短暂为空，这里回退到 4 个默认项，避免首帧崩溃。 */
+ *  store 初始化完成前 healthMenuItems 可能短暂为空，这里回退到 6 个默认项，避免首帧崩溃。 */
 const menuSource = computed(() => {
   const items = settings.healthMenuItems
   return items.length
@@ -116,25 +118,17 @@ const menuSource = computed(() => {
         icon: HEALTH_MENU_ICONS[k]
       }))
 })
-const MENU = computed(() => [
-  ...menuSource.value.map((m) => ({
-    key: m.key as HealthModule,
+const MENU = computed(() =>
+  menuSource.value.map((m) => ({
+    key: m.key as HealthViewTab,
     label: m.label,
     icon: m.icon,
-    desc: PANELS[m.key as HealthModule].desc,
-    panel: PANELS[m.key as HealthModule].panel
-  })),
-  // 菜谱不纳入 settings 的排序 / 改名 / 显隐配置，固定追加在菜单末尾
-  {
-    key: 'recipes' as HealthViewTab,
-    label: '菜谱',
-    icon: 'recipe',
-    desc: PANELS.recipes.desc,
-    panel: PANELS.recipes.panel
-  }
-])
+    desc: PANELS[m.key as HealthViewTab].desc,
+    panel: PANELS[m.key as HealthViewTab].panel
+  }))
+)
 
-const VIEW_TABS: readonly string[] = [...HEALTH_TABS, 'recipes']
+const VIEW_TABS: readonly string[] = [...HEALTH_MENU_KEYS]
 const activeTab = ref<HealthViewTab>(
   VIEW_TABS.includes(route.query.tab as string)
     ? (route.query.tab as HealthViewTab)
@@ -190,7 +184,7 @@ onMounted(async () => {
         <div class="wb-side-foot" data-testid="hv-side-foot">
           <button
             type="button"
-            class="wb-side-btn wb-sync-btn"
+            class="wb-side-btn wb-sync-btn ui-btn--pill"
             :class="syncStatusClass"
             :title="syncTip"
             :aria-label="syncLabel"
@@ -203,7 +197,7 @@ onMounted(async () => {
           </button>
           <button
             type="button"
-            class="wb-side-btn"
+            class="wb-side-btn ui-btn--pill"
             title="设置"
             aria-label="设置"
             data-testid="hv-settings"
@@ -228,7 +222,7 @@ onMounted(async () => {
         </div>
         <p v-if="initializing" class="hv-loading">正在加载健康数据…</p>
         <div v-else class="wb-health">
-          <KeepAlive :max="5">
+          <KeepAlive :max="6">
             <component :is="activePanel" :key="activeTab" />
           </KeepAlive>
         </div>

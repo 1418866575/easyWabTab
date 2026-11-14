@@ -1,23 +1,27 @@
 /**
  * 健康工作台左侧菜单配置（纯逻辑，零 Vue / Pinia 依赖）
- * 与个人工作台 workbenchMenuCore 同构：4 个指标项，支持排序 / 改名 / 显隐。
+ * 与个人工作台 workbenchMenuCore 同构：6 项（4 个指标 + 菜谱 + 身高），支持排序 / 改名 / 显隐。
  * 数据作为界面偏好存 settings，随 workbench.json 同步；健康业务数据独立在 health.json。
  */
-export const HEALTH_MENU_KEYS = ['exercise', 'diet', 'sleep', 'weight'] as const
+export const HEALTH_MENU_KEYS = ['exercise', 'diet', 'sleep', 'weight', 'recipes', 'height'] as const
 export type HealthMenuKey = (typeof HEALTH_MENU_KEYS)[number]
 
 export const HEALTH_MENU_DEFAULT_LABELS: Record<HealthMenuKey, string> = {
   exercise: '运动',
   diet: '饮食',
   sleep: '睡眠',
-  weight: '体重'
+  weight: '体重',
+  recipes: '菜谱',
+  height: '身高'
 }
 
 export const HEALTH_MENU_ICONS: Record<HealthMenuKey, string> = {
   exercise: 'exercise',
   diet: 'diet',
   sleep: 'sleep',
-  weight: 'weight'
+  weight: 'weight',
+  recipes: 'recipe',
+  height: 'trending-up'
 }
 
 export interface HealthMenuData {

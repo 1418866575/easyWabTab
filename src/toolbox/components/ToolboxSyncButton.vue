@@ -75,7 +75,7 @@ async function handleClick(): Promise<void> {
 <template>
   <button
     type="button"
-    class="tb-sync-btn"
+    class="tb-sync-btn ui-btn--pill"
     :class="[stateClass, { 'is-off': !configured }]"
     :disabled="busy"
     :title="title"
@@ -122,7 +122,6 @@ async function handleClick(): Promise<void> {
 
 /* 未配置云同步：整体弱化，提示需去设置 */
 .tb-sync-btn.is-off {
-  color: var(--color-text-muted);
   border-style: dashed;
 }
 

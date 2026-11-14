@@ -7,9 +7,12 @@ import {
   classifyBmi,
   dietCalories,
   emptyHealthData,
+  heightChartScale,
   normalizeDietRecord,
   normalizeExerciseRecord,
   normalizeHealthData,
+  normalizeHeightConfig,
+  normalizeHeightRecord,
   normalizeSleepRecord,
   normalizeWeightRecord,
   sleepDurationHours,
@@ -269,7 +272,7 @@ test('T11 各记录 normalize 兜底', () => {
 test('T12 emptyHealthData 初始结构', () => {
   const e = emptyHealthData()
   assert.equal(e.height, undefined)
-  assert.deepEqual(e, { plans: {}, records: { exercise: [], diet: [], sleep: [], weight: [] } })
+  assert.deepEqual(e, { plans: {}, heightConfig: { persons: [], categories: [] }, records: { exercise: [], diet: [], sleep: [], weight: [], height: [] } })
 })
 
 // T13 — normalizeExerciseRecord distanceKm 透传/钳制/可选：合法值保留、负数钳 0、字符串剔除、缺省不污染
@@ -299,6 +302,56 @@ test('T14 calcYearDistanceTotals 年份过滤与累计', () => {
     ], '2026'),
     { 跑步: 8.3, 骑行: 10, 力量: 2 }
   )
+})
+
+
+// T15 — 身高记录归一化：合理范围、异常值归 0、人员 id、前缀兜底
+test('T15 normalizeHeightRecord 合理范围与脏数据兜底', () => {
+  const ok = normalizeHeightRecord({ id: 'x', date: '2026-08-05', heightCm: 168.6, personId: 'p1' })
+  assert.equal(ok.module, 'height')
+  assert.equal(ok.heightCm, 168.6)
+  assert.equal(ok.personId, 'p1')
+  assert.equal(ok.id, 'x')
+  assert.ok(normalizeHeightRecord({}).id.startsWith('hg_'))
+  assert.equal(normalizeHeightRecord({ heightCm: 10 }).heightCm, 0)
+  assert.equal(normalizeHeightRecord({ heightCm: 300 }).heightCm, 0)
+  assert.equal(normalizeHeightRecord({ heightCm: 'abc' }).heightCm, 0)
+  assert.match(normalizeHeightRecord({}).date, /^\d{4}-\d{2}-\d{2}$/)
+})
+
+// T16 — 身高人员/分类配置归一化：脏输入吞掉不抛错
+test('T16 normalizeHeightConfig 人员与分类兜底', () => {
+  assert.deepEqual(normalizeHeightConfig(undefined), { persons: [], categories: [] })
+  const cfg = normalizeHeightConfig({
+    persons: [{ id: 'p1', name: '  小明  ', categoryId: 'c1' }, null],
+    categories: { bad: true },
+    updatedAt: '2026-11-14T00:00:00.000Z'
+  })
+  assert.equal(cfg.persons.length, 2)
+  assert.equal(cfg.persons[0].name, '小明')
+  assert.equal(cfg.persons[0].categoryId, 'c1')
+  assert.equal(cfg.categories.length, 0)
+  assert.equal(cfg.updatedAt, '2026-11-14T00:00:00.000Z')
+})
+
+// T17 — 身高折线图坐标：空 → null；单点居中；多点按序铺满
+test('T17 heightChartScale 空/单点/多点', () => {
+  assert.equal(heightChartScale([], 400, 200), null)
+  const mk = (id: string, date: string, cm: number, createdAt: string) => ({
+    id, module: 'height' as const, date, heightCm: cm, personId: 'p1', createdAt, updatedAt: createdAt
+  })
+  const one = heightChartScale([mk('a', '2026-08-01', 120, 'x')], 400, 200)
+  assert.equal(one?.points[0].x, 200)
+  assert.equal(one?.points[0].y, 100)
+  const three = heightChartScale([
+    mk('a', '2026-08-01', 120, 'x'),
+    mk('b', '2026-08-02', 130, 'x'),
+    mk('c', '2026-08-03', 140, 'x')
+  ], 400, 200)
+  assert.equal(three?.points.length, 3)
+  assert.equal(three?.points[0].x, 0)
+  assert.equal(three?.points[1].x, 200)
+  assert.equal(three?.points[2].x, 400)
 })
 
 let passed = 0

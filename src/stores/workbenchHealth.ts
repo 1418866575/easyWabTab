@@ -1,13 +1,15 @@
 import { defineStore } from 'pinia'
 import { ref, toRaw } from 'vue'
-import type { HealthData, HealthModule, HealthPlan, HealthPlanPrefs, HealthPlans, HealthRecord, HealthWeeklyPlanItem, HealthWeeklyPlans } from '@/types'
+import type { HealthData, HeightConfig, HealthModule, HealthPlan, HealthPlanPrefs, HealthPlans, HealthRecord, HealthWeeklyPlanItem, HealthWeeklyPlans } from '@/types'
 import { shiftDateKey } from '@/composables/healthCore'
 import { localToday } from '@/composables/todoCore'
 import {
   copyWeeklyPlanWeek,
   normalizeDietRecord,
   normalizeExerciseRecord,
+  normalizeHeightConfig,
   normalizeHealthData,
+  normalizeHeightRecord,
   normalizeSleepRecord,
   normalizeWeightRecord
 } from '@/composables/healthCore'
@@ -19,7 +21,8 @@ const RECORD_PREFIX: Record<HealthModule, string> = {
   exercise: 'ex_',
   diet: 'dt_',
   sleep: 'sl_',
-  weight: 'wt_'
+  weight: 'wt_',
+  height: 'hg_'
 }
 
 // 各模块记录 normalize 函数映射（addRecord 按 module 分发）。
@@ -28,7 +31,8 @@ const NORMALIZERS: Record<HealthModule, (raw: any) => HealthRecord> = {
   exercise: normalizeExerciseRecord,
   diet: normalizeDietRecord,
   sleep: normalizeSleepRecord,
-  weight: normalizeWeightRecord
+  weight: normalizeWeightRecord,
+  height: normalizeHeightRecord
 }
 
 // 跟练勾选进度只保留最近 120 天：每天条目很小，但按天累积没有上限，
@@ -47,7 +51,9 @@ function prunePlanProgress(map: Record<string, string[]>): Record<string, string
 export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
   const height = ref<number | undefined>(undefined)
   const plans = ref<HealthPlans>({})
-  const records = ref<HealthData['records']>({ exercise: [], diet: [], sleep: [], weight: [] })
+  const records = ref<HealthData['records']>({ exercise: [], diet: [], sleep: [], weight: [], height: [] })
+  // 身高人员与分类配置（与身高记录同存 health，随 health.json 同步）
+  const heightConfig = ref(normalizeHeightConfig(undefined))
   // 周计划（运动/饮食）：键 = 周一日期键；整体 LWW 同步（plansUpdatedAt）
   const weeklyPlans = ref<HealthWeeklyPlans>({})
   // 方案模板偏好（启用了哪套跟练/食谱）与跟练勾选进度（键 = 日期）
@@ -63,6 +69,7 @@ export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
       weeklyPlans.value = data.weeklyPlans ?? {}
       planPrefs.value = data.planPrefs ?? {}
       planProgress.value = prunePlanProgress(data.planProgress ?? {})
+      heightConfig.value = data.heightConfig ?? normalizeHeightConfig(undefined)
       records.value = data.records
     } catch (e) {
       // 加载失败降级为空态（保持默认值），不向上抛
@@ -84,6 +91,7 @@ export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
         weeklyPlans: JSON.parse(JSON.stringify(weeklyPlans.value ?? {})),
         planPrefs: JSON.parse(JSON.stringify(planPrefs.value ?? {})),
         planProgress: JSON.parse(JSON.stringify(planProgress.value ?? {})),
+        heightConfig: JSON.parse(JSON.stringify(heightConfig.value ?? {})),
         records: toRaw(records.value)
       })
       markDirty()
@@ -165,6 +173,12 @@ export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
     await saveHealth()
   }
 
+  /** 覆盖身高人员/分类配置（设置弹窗整体写入），推进 updatedAt 供云同步 LWW 合并 */
+  async function setHeightConfig(next: HeightConfig): Promise<void> {
+    heightConfig.value = normalizeHeightConfig({ ...next, updatedAt: new Date().toISOString() })
+    await saveHealth()
+  }
+
   async function setHeight(cm: number): Promise<void> {
     if (!(Number.isInteger(cm) && cm >= 100 && cm <= 250)) {
       console.warn('[workbenchHealth] setHeight 非法值已忽略（需 100-250 整数）', cm)
@@ -232,6 +246,7 @@ export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
 
   return {
     height,
+    heightConfig,
     plans,
     weeklyPlans,
     planPrefs,
@@ -240,6 +255,7 @@ export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
     loadHealth,
     saveHealth,
     setHeight,
+    setHeightConfig,
     setPlan,
     setWeeklyPlanItems,
     ensureWeeklyPlanCopied,

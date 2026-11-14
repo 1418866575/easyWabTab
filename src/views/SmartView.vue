@@ -141,7 +141,7 @@ async function handleSyncNowClick(): Promise<void> {
         <!-- 云同步：智能工作台数据走独立的 smart.json 信封 -->
         <button
           type="button"
-          class="sv-btn sv-btn-sm sv-sync-btn"
+          class="sv-btn sv-btn-sm sv-sync-btn ui-btn--pill"
           :class="syncStatusClass"
           :title="syncTip"
           data-testid="smart-sync-now"
@@ -154,7 +154,7 @@ async function handleSyncNowClick(): Promise<void> {
         <!-- 最右侧固定「设置」：左侧菜单（改名 / 显隐 / 排序）+ 技能分类 -->
         <button
           type="button"
-          class="sv-btn sv-btn-sm sv-settings-btn"
+          class="sv-btn sv-btn-sm sv-settings-btn ui-btn--pill"
           title="左侧菜单 / 技能分类"
           data-testid="smart-settings-entry"
           @click="showSettings = true"

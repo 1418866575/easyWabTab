@@ -381,6 +381,33 @@ node scripts/check-style-tokens.mjs --update-baseline   # 治理一处后收紧�
 > 学生台侧栏没有横向内边距（菜单项通栏），故用 `margin: 0 8px 4px`、收起态 6px 做内缩等效。
 > 守卫：`scripts/probe-sidebar-collapse.mjs`（22 断言，含展开/收起/暗色三态与截图）。
 
+#### 云同步 / 设置按钮（跨视图唯一胶囊皮肤，2026-11 新增）
+
+**唯一皮肤类**：`src/style.css` 的 `.ui-btn--pill`。基准 = 智能工作台 `SmartView.vue` 顶栏 `.sv-btn`；8 个视图 + 2 个云同步组件全部叠加该类，**只叠加、不改名**。
+
+| 项 | 规定 |
+| --- | --- |
+| 形状 | `999px` 胶囊（`--radius-full`）、`1px --color-border` 描边、`--color-bg-card` 底 |
+| 内容 | `<Icon>` + 文字，gap `6px`，`--fs-caption` / `--font-weight-medium` / `--color-text`，`white-space: nowrap` |
+| 交互 | hover **只换** `--color-bg-hover`（不上浮、不加阴影、描边不变色）；`focus-visible` 主色 2px 环；disabled `opacity .5` |
+| 状态色 | pending `--color-primary` / conflict `--color-warning` / error `--color-error`，实底 + `--color-on-accent` 白字；由 `.ui-btn--pill` 统一匹配各视图既有 `*-sync-btn-*` 与组件 `is-*` 状态类名 |
+| 暗色 | **不自写** `html.dark` 覆盖，全走 token；历史暗色皮肤声明须用 `:not(.ui-btn--pill)` 排除目标按钮 |
+
+**只约束皮肤，不约束布局**：`height` / `padding` / `flex` / `width` 一律留给各视图布局类。已知差异（见本节「已知尺寸例外」）：
+
+- 侧栏底部三视图（个人 / 健康 / 博客后台）：两枚 `flex:1` 各 50%、桌面 32px、移动端 40px、展开态纯文字、折叠态仅图标、顺序固定 —— 由 `scripts/qa-workbench-layout-v2.mjs` / `qa-health-view-mobile.mjs` / `qa-blog-admin-mobile.mjs` 强断言，**不得改成内容宽胶囊**。
+- 顶栏视图走 `.ui-btn` 别名组的 `--ui-ctrl-h` 高度联动（界面美化可调 36/40/44px），属产品能力，不由本规范截断。
+- 工具箱 / 图书馆云同步按钮的 `is-off` 虚线弱化态（未配置云同步时引导）是业务态，保留。
+
+**禁止**：
+
+- 不要挂 `.ui-btn` / `.bs-btn` / `.st-btn` / `.btn-help` 等别名组来「顺便」得到胶囊 —— 它们是 8px 矩形、hover 上浮 + 主色描边、高度随 `--ui-ctrl-h` 联动，与基准冲突。
+- 不要在视图 scoped 里重定义圆角 / 底色 / 文字色 / hover；`.ui-btn--pill` 用 `html` 前缀 + 双重类提特异性压过 scoped，但**存量重复声明仍是双轨道**，登记在 §8 待清理。
+- 不要改 `.tw-btn`（六工作台侧栏收起按钮有 22 条断言守卫）。
+- 不要改 `data-testid` 与旧类名（`.btn-help` / `.ba-sync-btn` / `.wb-side-btn*` / `.ba-side-btn*`）：12+ QA 与运维脚本硬依赖。
+
+**清单**（叠加 `.ui-btn--pill` 的位置）：`SmartView` / `TeacherView` / `WorkbenchView` / `HealthView` / `BusinessView` / `StudentView` / `BlogAdminView` / `HomeView` 的云同步与设置按钮，以及 `ToolboxSyncButton.vue`、`BookSyncButton.vue`。新增视图的同类按钮一律照此办理。
+
 ### 2.2 弹框（`BaseDialog`）⭐
 
 **唯一弹框基类**：`src/components/common/BaseDialog.vue`。  
@@ -810,6 +837,8 @@ src/
 | ~~六个工作台侧栏「收起/展开」按钮各写一套外观~~ | **已收敛**（2026-10-30）：模板统一挂 `.tw-btn .tw-btn-sm` + 各自布局类（`.tv-nav-collapse` / `.wb-sidebar-toggle` / `.bs-sidebar-toggle` / `.st-sidebar-toggle` / `.sv-nav-collapse` / `.ba-nav-collapse`），本地 CSS 只留「整行铺满 + 左对齐 + margin-bottom 4px」，圆角/字号/边框/背景/hover 不再本地定义；收起态侧栏横向内边距对齐教师台 6px。实测六边 `font-size/weight/family/height/padding/gap/radius/border/bg/color/图标尺寸` 逐项相等，暗色下 bg/color/borderColor 也相等 | 顺带去掉 `.wb-` / `.bs-sidebar-toggle` 的「hover 变主色文字」与各自的 `html.dark` 覆盖（自写暗色会把文字压成 `--color-text-secondary`）；学生台侧栏无横向内边距，用 `margin` 内缩等效；守卫 `scripts/probe-sidebar-collapse.mjs`（22 断言，展开/收起/暗色三态 + 截图） |
 | ~~销售台面板视觉与教师台不一致~~ | **已收敛**（2026-10-29）：`workbench.css` 作用域由 `.wb-content` 泛化为标记类 `.panel-scope`，销售台 `<main class="bs-content panel-scope">` 直接复用同一套卡片/竖条/胶囊按钮/表格原语；内容区 padding 20→16px、`.bs-header` 12px 16px、`.bs-menu-item` 对齐 `.tv-nav-item`（9px 10px / 4px 圆角 / hover 只换底不换字色）；8 个面板补「标题 + 一行说明」页头（文案来自 `SECTIONS.hint`，与左树/搜索浮层同源）；`BusinessHome` 删掉从未挂载的 `.stat-*` 死代码，`.bizhome-card` 圆角 8→12px + 极轻阴影、卡片标题补 4px 主色竖条；6 类分区卡（商品/统计/对账/库存预警/今日/引导）圆角阴影统一到 12px | 顺带修掉一个**存量崩溃**：库存表「一天一父行 + 明细子行」的父行没有 `productId/unitPrice/total`，明细列却照样渲染 → `formatYuanOf(undefined).toFixed` 抛 TypeError，打断整页 patch（现象是**后续面板出现上一个面板的残留 DOM**，报错栈还指向下一次渲染，极难定位）。已按行类型 `isDayRow()` 判定，父行只留日期/笔数/当天合计，操作列也不出现在父行（父行 id 是 `day-xxx`，误点会用假 id 写库）；连带补 `default-expand-all`（否则默认折叠，桌面端每天只剩一行空壳）与页内连续序号。新增 `scripts/qa-biz-purchases-tree.mjs`（15 断言）守住这条链路 |
 | ~~个人工作台面板视觉与教师台不一致~~                                              | **已收敛**（2026-10-29）：新增 `src/styles/workbench.css`（全部选择器限定 `.wb-content`），把教师台的卡片/标题竖条/统计数字/胶囊按钮/表格取值落成一套原语；删除 6 个面板里逐字节重复的 `.stat-card/.stat-header/.stat-icon/.stat-label`（共 260 行）；面板补「标题 + 一行说明」页头；内容区 padding 20→16px 对齐 `.tv-content` | 两处**有意的局部差异**（已被面板 scoped 规则显式覆盖并写明原因）：① 记账 7 列统计卡保留正文色数字（红=支出，染主色会误读）；② 首页 6 列密集小卡不挂标题竖条（会把标题挤成省略号）。另修掉一处存量 bug：`.btn-primary` 等别名直接写 `background-color`，对 el-button 无效（被 EP 的 `--el-button-bg-color` 压掉），表现为主操作按钮全成白底描边——已在 workbench.css 用 EP 变量覆盖 |
+
+| 云同步 / 设置按钮存量 scoped 皮肤声明 | **视觉已统一**（2026-11）：全局 `.ui-btn--pill` 压过 8 个视图 + 2 个组件的本地皮肤；各视图旧 `*-btn` / `*-sync-btn-*` 的 scoped 圆角、底色、hover、状态色声明仍在，但已不生效 | 属 §5 禁止的双轨道残留，按 §2.1「云同步 / 设置按钮」条款逐步删除；删前须浏览器验证亮 / 暗 / 状态色三态，不要机械批量删除 |
 
 ---
 

@@ -3,7 +3,7 @@
  *
  * 守住「参考个人工作台」的改造结果：
  *   ① 桌面侧栏 200px 常驻、菜单文字可见、不渲染抽屉入口；
- *   ② 窄屏侧栏默认收起，页头按钮唤出抽屉 + 遮罩，抽屉内 4 项文字菜单与底部两枚纯文字按钮；
+ *   ② 窄屏侧栏默认收起，页头按钮唤出抽屉 + 遮罩，抽屉内 6 项文字菜单与底部两枚纯文字按钮；
  *   ③ 点菜单 / 点遮罩都能收起，切换指标同步写 URL；
  *   ④ 无横向溢出、底部留白不照搬个人台的 120px（健康面板没有悬浮 FAB）、无页面异常。
  *
@@ -124,14 +124,14 @@ try {
         scrim: document.querySelectorAll('[data-testid="hv-menu-scrim"]').length,
         // 只数抽屉内的指标项：hv-menu-trigger / hv-menu-scrim 也以 hv-menu- 开头，不能混进来
         items: document.querySelectorAll('.wb-menu [data-testid^="hv-menu-"]').length,
-        labelsShown: labels.length === 4 && labels.every(l => getComputedStyle(l).display !== 'none'),
+        labelsShown: labels.length === 6 && labels.every(l => getComputedStyle(l).display !== 'none'),
         foot: footBtns.join(','),
         footTextShown: [...document.querySelectorAll('.wb-side-btn-text')].every(t => getComputedStyle(t).display !== 'none')
       }
     })
     check(`S3 ${tag} 抽屉可唤出且贴左`, opened.open && opened.left === 0, `left=${opened.left}`)
     check(`S3 ${tag} 遮罩出现`, opened.scrim === 1)
-    check(`S3 ${tag} 4 项菜单文字完整`, opened.items === 4 && opened.labelsShown, `items=${opened.items}`)
+    check(`S3 ${tag} 6 项菜单文字完整`, opened.items === 6 && opened.labelsShown, `items=${opened.items}`)
     check(`S3 ${tag} 底部两枚纯文字按钮`, opened.foot === 'hv-sync-now,hv-settings' && opened.footTextShown, opened.foot)
     if (SHOTS && vp.width === 390) {
       fs.mkdirSync(SHOTS, { recursive: true })

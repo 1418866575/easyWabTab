@@ -472,14 +472,14 @@ onUnmounted(() => {
     <div class="app-bar-right">
       <button
         v-if="cloudEnabled"
-        class="btn-help wb-sync-btn"
+        class="btn-help wb-sync-btn ui-btn--pill"
         :class="syncStatusClass"
         :title="syncTip"
         data-testid="home-sync-now"
         :disabled="syncBusy || cloudSync.status.value === 'pulling' || cloudSync.status.value === 'pushing'"
         @click="handleSyncNowClick"
-      >{{ syncLabel }}</button>
-      <button class="btn-help" @click="showSettingsDialog = true" title="设置" aria-label="设置">设置</button>
+      ><Icon name="cloud" :size="14" /> {{ syncLabel }}</button>
+      <button class="btn-help ui-btn--pill" @click="showSettingsDialog = true" title="设置" aria-label="设置"><Icon name="cog" :size="15" /> 设置</button>
       <!-- 帮助按钮：可在 设置 → 个性化 → 主题 中关闭 / 改名 -->
       <button
         v-if="settingsStore.helpButtonVisible !== false"
@@ -1044,11 +1044,11 @@ html.dark .app-bar {
 }
 
 /* 顶栏按钮暗色（工作台切换触发器 .ws-trigger 的暗色样式自包含在子组件内） */
-html.dark .app-bar .btn-help {
+html.dark .app-bar .btn-help:not(.ui-btn--pill) {
   color: var(--color-text-secondary);
 }
 
-html.dark .app-bar .btn-help:hover {
+html.dark .app-bar .btn-help:not(.ui-btn--pill):hover {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-border, #374151);

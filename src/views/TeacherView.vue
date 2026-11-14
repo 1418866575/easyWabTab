@@ -231,7 +231,7 @@ onMounted(() => {
         <!-- 右上角「设置」入口：数据管理（学期与班级 / 班级信息 / 导入表格 / 备份与恢复）/ 使用说明 / 菜单设置 -->
         <button
           type="button"
-          class="tw-btn tw-btn-sm tv-settings-btn"
+          class="tw-btn tw-btn-sm tv-settings-btn ui-btn--pill"
           title="数据管理 / 使用说明 / 菜单设置"
           data-testid="teacher-settings-entry"
           @click="showSettings = true"
@@ -243,7 +243,7 @@ onMounted(() => {
         <!-- 最右上角：云同步（teacher.json 信封；未开启时禁用并引导去设置） -->
         <button
           type="button"
-          class="tw-btn tw-btn-sm tv-sync-btn"
+          class="tw-btn tw-btn-sm tv-sync-btn ui-btn--pill"
           :class="syncStatusClass"
           :title="syncTip"
           data-testid="teacher-sync-now"

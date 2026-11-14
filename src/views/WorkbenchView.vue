@@ -428,7 +428,7 @@ async function handleSyncNowClick(): Promise<void> {
              图标仅在 60px 折叠态出现（那时文字放不下），状态靠 title / aria-label / 底色表达。 -->
         <div class="wb-side-foot" data-testid="wb-side-foot">
           <button
-            class="wb-side-btn wb-sync-btn"
+            class="wb-side-btn wb-sync-btn ui-btn--pill"
             :class="syncStatusClass"
             :title="syncTip"
             :aria-label="syncLabel"
@@ -440,7 +440,7 @@ async function handleSyncNowClick(): Promise<void> {
             <span class="wb-side-btn-text">云同步</span>
           </button>
           <button
-            class="wb-side-btn"
+            class="wb-side-btn ui-btn--pill"
             title="设置"
             aria-label="设置"
             data-testid="wb-settings"
@@ -723,7 +723,7 @@ html.dark .wb-shell {
 html.dark .wb-side-top, html.dark .wb-side-foot {
   border-color: var(--color-border, #374151);
 }
-html.dark .wb-search, html.dark .wb-side-btn {
+html.dark .wb-search {
   background-color: var(--color-bg-hover, #182233);
   border-color: var(--color-border, #374151);
   color: var(--color-text-secondary);
@@ -731,7 +731,6 @@ html.dark .wb-search, html.dark .wb-side-btn {
 html.dark .wb-search-kbd { background-color: var(--color-bg-card, #1f2937); border-color: var(--color-border, #374151); }
 html.dark .wb-side-switch :deep(.ws-trigger) { border-color: var(--color-border); }
 html.dark .wb-side-switch :deep(.ws-trigger:hover) { border-color: var(--color-primary); }
-html.dark .wb-side-btn:hover { background-color: var(--color-bg-hover, #374151); color: var(--color-text); }
 html.dark .wb-group-label { color: var(--color-text-muted, #94a3b8); }
 html.dark .wb-group-collapse { color: var(--color-text-muted, #94a3b8); }
 html.dark .wb-group-collapse:hover { background-color: var(--color-bg-hover, #374151); color: var(--dark-accent-text); }

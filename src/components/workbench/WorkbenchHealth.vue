@@ -11,6 +11,8 @@ const TAB_META: Record<HealthModule, { label: string; icon: string }> = {
   diet: { label: '饮食', icon: 'diet' },
   sleep: { label: '睡眠', icon: 'sleep' },
   weight: { label: '体重', icon: 'weight' },
+  // height 只在独立健康工作台 /health 使用，不进 HEALTH_TABS（个人工作台不渲染该页签）
+  height: { label: '身高', icon: 'account-multiple' },
 }
 
 const tabItems = HEALTH_TABS.map((t) => ({ value: t, label: TAB_META[t].label, icon: TAB_META[t].icon }))

@@ -185,7 +185,7 @@ onMounted(async () => {
         <div class="ba-side-foot" data-testid="ba-side-foot">
           <button
             type="button"
-            class="ba-btn ba-btn-sm ba-sync-btn ba-side-btn"
+            class="ba-btn ba-btn-sm ba-sync-btn ba-side-btn ui-btn--pill"
             :class="syncStatusClass"
             :title="syncTip"
             :aria-label="syncLabel"
@@ -198,7 +198,7 @@ onMounted(async () => {
           </button>
           <button
             type="button"
-            class="ba-btn ba-btn-sm ba-side-btn"
+            class="ba-btn ba-btn-sm ba-side-btn ui-btn--pill"
             data-testid="blog-open-settings"
             @click="openBlogSettings(); closeMobileMenu()"
           >

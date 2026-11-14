@@ -11,6 +11,10 @@ import type {
   HealthPlanPeriod,
   HealthPlanPrefs,
   HealthPlans,
+  HeightCategory,
+  HeightConfig,
+  HeightPerson,
+  HeightRecord,
   MealType,
   SleepRecord,
   WeightRecord
@@ -70,7 +74,7 @@ function isValidPlan(p: unknown): p is HealthPlan {
 
 /** 空健康数据（工作台新初始化用）。 */
 export function emptyHealthData(): HealthData {
-  return { plans: {}, records: { exercise: [], diet: [], sleep: [], weight: [] } }
+  return { plans: {}, records: { exercise: [], diet: [], sleep: [], weight: [], height: [] }, heightConfig: normalizeHeightConfig(undefined) }
 }
 
 /** 归一化任意来源的健康数据：height 越界剔除、计划逐模块校验、记录逐条走对应 normalize。脏输入不抛错。 */
@@ -209,11 +213,13 @@ export function normalizeHealthData(raw: Partial<HealthData> | undefined): Healt
     plansUpdatedAt: typeof data.plansUpdatedAt === 'string' ? data.plansUpdatedAt : undefined,
     planPrefs: normalizePlanPrefs(data.planPrefs),
     planProgress: normalizePlanProgress(data.planProgress),
+    heightConfig: normalizeHeightConfig(data.heightConfig),
     records: {
       exercise: toArr(rec.exercise).map(r => normalizeExerciseRecord(r)),
       diet: toArr(rec.diet).map(r => normalizeDietRecord(r)),
       sleep: toArr(rec.sleep).map(r => normalizeSleepRecord(r)),
-      weight: toArr(rec.weight).map(r => normalizeWeightRecord(r))
+      weight: toArr(rec.weight).map(r => normalizeWeightRecord(r)),
+      height: toArr(rec.height).map(r => normalizeHeightRecord(r))
     }
   }
 }
@@ -290,6 +296,95 @@ export function normalizeWeightRecord(raw: unknown): WeightRecord {
     createdAt: typeof r.createdAt === 'string' ? r.createdAt : isoNow(),
     updatedAt: typeof r.updatedAt === 'string' ? r.updatedAt : isoNow()
   }
+}
+
+/** 归一化身高成长记录：module 强制 height，身高越界（30–250cm 外）归一为 0 视为异常记录。 */
+export function normalizeHeightRecord(raw: unknown): HeightRecord {
+  const r = (raw ?? {}) as Record<string, unknown>
+  const cm = num(r.heightCm)
+  return {
+    id: typeof r.id === 'string' && r.id ? r.id : genId('hg_'),
+    module: 'height',
+    date: isDateStr(r.date) ? r.date : localToday(),
+    heightCm: cm >= 30 && cm <= 250 ? Math.round(cm * 10) / 10 : 0,
+    personId: typeof r.personId === 'string' ? r.personId : '',
+    ...(typeof r.note === 'string' ? { note: r.note } : {}),
+    createdAt: typeof r.createdAt === 'string' ? r.createdAt : isoNow(),
+    updatedAt: typeof r.updatedAt === 'string' ? r.updatedAt : isoNow()
+  }
+}
+
+/** 归一化身高人员 / 分类配置：脏输入吞掉不抛错，名称截断 12 字。 */
+export function normalizeHeightConfig(raw: unknown): HeightConfig {
+  const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
+  const categories: HeightCategory[] = arr(o.categories).map((x, i) => {
+    const c = (x ?? {}) as Record<string, unknown>
+    return {
+      id: typeof c.id === 'string' && c.id ? c.id : genId('hc_'),
+      name: typeof c.name === 'string' && c.name.trim() ? c.name.trim().slice(0, 12) : '分类' + (i + 1),
+      createdAt: typeof c.createdAt === 'string' ? c.createdAt : isoNow()
+    }
+  })
+  const persons: HeightPerson[] = arr(o.persons).map((x, i) => {
+    const p = (x ?? {}) as Record<string, unknown>
+    return {
+      id: typeof p.id === 'string' && p.id ? p.id : genId('hp_'),
+      name: typeof p.name === 'string' && p.name.trim() ? p.name.trim().slice(0, 12) : '成员' + (i + 1),
+      ...(typeof p.categoryId === 'string' && p.categoryId ? { categoryId: p.categoryId } : {}),
+      createdAt: typeof p.createdAt === 'string' ? p.createdAt : isoNow()
+    }
+  })
+  return {
+    persons,
+    categories,
+    ...(typeof o.updatedAt === 'string' ? { updatedAt: o.updatedAt } : {})
+  }
+}
+
+/** 身高折线图坐标点。 */
+export interface HeightChartPoint {
+  x: number
+  y: number
+  date: string
+  heightCm: number
+}
+
+/** 身高折线图坐标换算：与 weightChartScale 同算法，date 升序（同日按 createdAt）；0 条 null；1 条居中。 */
+export function heightChartScale(
+  records: HeightRecord[],
+  width: number,
+  height: number,
+  pad = 24
+): { points: HeightChartPoint[]; minY: number; maxY: number } | null {
+  if (records.length === 0) return null
+  const sorted = [...records].sort((a, b) =>
+    a.date === b.date ? (a.createdAt < b.createdAt ? -1 : 1) : a.date < b.date ? -1 : 1
+  )
+  if (sorted.length === 1) {
+    const r = sorted[0]
+    return {
+      points: [{ x: width / 2, y: height / 2, date: r.date, heightCm: r.heightCm }],
+      minY: r.heightCm - 1,
+      maxY: r.heightCm + 1
+    }
+  }
+  const values = sorted.map(r => r.heightCm)
+  let minY = Math.floor(Math.min(...values)) - 1
+  let maxY = Math.ceil(Math.max(...values)) + 1
+  if (maxY - minY === 0) {
+    minY = values[0] - 1
+    maxY = values[0] + 1
+  }
+  const span = maxY - minY
+  const inner = height - 2 * pad
+  const points = sorted.map((r, i) => ({
+    x: (i / (sorted.length - 1)) * width,
+    y: Math.round((pad + (1 - (r.heightCm - minY) / span) * inner) * 100) / 100,
+    date: r.date,
+    heightCm: r.heightCm
+  }))
+  return { points, minY, maxY }
 }
 
 /** 日期所在周的周一（周一起点）'YYYY-MM-DD'。先 setDate 再取日期组件，防 DST 偏移。 */

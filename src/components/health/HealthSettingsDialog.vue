@@ -6,13 +6,15 @@
  * - 菜单设置：左侧指标菜单的拖拽排序 + 改名 + 上移/下移 + 显隐 + 恢复默认（参考智能工作台菜单设置）
  * - 数据：界面偏好存 settings（随 workbench.json 同步），健康业务数据独立在 health.json
  */
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import IconPickerDialog from '@/components/IconPickerDialog.vue'
 import Icon from '@/components/Icon.vue'
 import { useToast } from '@/composables/useToast'
 import { showConfirm } from '@/utils/dialog'
 import { useAppSettingsStore } from '@/stores/settings'
+import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
+import type { HeightConfig } from '@/types'
 import {
   HEALTH_MENU_KEYS,
   HEALTH_MENU_DEFAULT_LABELS,
@@ -25,11 +27,12 @@ const emit = defineEmits<{ close: [] }>()
 const settings = useAppSettingsStore()
 const toast = useToast()
 
-type TabKey = 'general' | 'menu'
+type TabKey = 'general' | 'menu' | 'height'
 const tab = ref<TabKey>('general')
 const SECTIONS: { key: TabKey; label: string; icon: string }[] = [
   { key: 'general', label: '常规', icon: 'cog' },
-  { key: 'menu', label: '菜单设置', icon: 'grid' }
+  { key: 'menu', label: '菜单设置', icon: 'grid' },
+  { key: 'height', label: '身高设置', icon: 'account-multiple' }
 ]
 const currentSection = computed(() => SECTIONS.find((s) => s.key === tab.value) ?? SECTIONS[0])
 
@@ -165,6 +168,114 @@ async function onResetMenu(): Promise<void> {
   menuEditing.value = {}
   toast.success('已恢复默认菜单')
 }
+
+
+// ==================== 身高设置（人员 + 分组） ====================
+const healthStore = useWorkbenchHealthStore()
+const heightConfig = computed<HeightConfig>(
+  () => healthStore.heightConfig ?? { persons: [], categories: [] }
+)
+const hPersons = computed(() => heightConfig.value.persons)
+const hCategories = computed(() => heightConfig.value.categories)
+const renameDraft = ref<Record<string, string>>({})
+const newCategoryName = ref('')
+const newPersonName = ref('')
+const newPersonCategory = ref('')
+
+function newId(prefix: string): string {
+  return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+}
+function writeHeightConfig(persons: HeightConfig['persons'], categories: HeightConfig['categories']): void {
+  void healthStore.setHeightConfig({ persons, categories })
+}
+function draftOf(id: string, fallback: string): string {
+  return renameDraft.value[id] ?? fallback
+}
+function setDraft(id: string, v: string): void {
+  renameDraft.value = { ...renameDraft.value, [id]: v }
+}
+function clearDraft(id: string): void {
+  const next = { ...renameDraft.value }
+  delete next[id]
+  renameDraft.value = next
+}
+function recordCountOf(personId: string): number {
+  return (healthStore.records.height ?? []).filter(r => r.personId === personId).length
+}
+
+function addCategory(): void {
+  const name = newCategoryName.value.trim().slice(0, 12)
+  if (!name) return
+  writeHeightConfig(hPersons.value, [
+    ...hCategories.value,
+    { id: newId('hc_'), name, createdAt: new Date().toISOString() }
+  ])
+  newCategoryName.value = ''
+  toast.success('已添加分组')
+}
+function commitCategoryName(id: string): void {
+  const raw = renameDraft.value[id]
+  if (raw === undefined) return
+  const name = raw.trim().slice(0, 12)
+  if (name) writeHeightConfig(hPersons.value, hCategories.value.map(c => (c.id === id ? { ...c, name } : c)))
+  clearDraft(id)
+}
+async function removeCategory(id: string): Promise<void> {
+  const affected = hPersons.value.filter(p => p.categoryId === id).length
+  if (!(await showConfirm(`删除该分组？${affected} 位人员将变为「未分类」。`))) return
+  writeHeightConfig(
+    hPersons.value.map(p => (p.categoryId === id ? { ...p, categoryId: undefined } : p)),
+    hCategories.value.filter(c => c.id !== id)
+  )
+}
+function addPerson(): void {
+  const name = newPersonName.value.trim().slice(0, 12)
+  if (!name) return
+  writeHeightConfig(
+    [
+      ...hPersons.value,
+      {
+        id: newId('hp_'),
+        name,
+        ...(newPersonCategory.value ? { categoryId: newPersonCategory.value } : {}),
+        createdAt: new Date().toISOString()
+      }
+    ],
+    hCategories.value
+  )
+  newPersonName.value = ''
+  newPersonCategory.value = ''
+  toast.success('已添加人员')
+}
+function commitPersonName(id: string): void {
+  const raw = renameDraft.value[id]
+  if (raw === undefined) return
+  const name = raw.trim().slice(0, 12)
+  if (name) writeHeightConfig(hPersons.value.map(p => (p.id === id ? { ...p, name } : p)), hCategories.value)
+  clearDraft(id)
+}
+function setPersonCategory(id: string, val: string): void {
+  writeHeightConfig(
+    hPersons.value.map(p => (p.id === id ? { ...p, ...(val ? { categoryId: val } : { categoryId: undefined }) } : p)),
+    hCategories.value
+  )
+}
+async function removePerson(id: string): Promise<void> {
+  const n = recordCountOf(id)
+  if (!(await showConfirm(`删除该人员？其 ${n} 条身高记录将一并删除。`))) return
+  for (const r of (healthStore.records.height ?? []).filter(x => x.personId === id)) {
+    await healthStore.deleteRecord('height', r.id)
+  }
+  writeHeightConfig(hPersons.value.filter(p => p.id !== id), hCategories.value)
+}
+
+onMounted(async () => {
+  // HealthView 已加载；此处只做防御性幂等补载，避免设置弹窗先于视图打开时读到空配置
+  const r = healthStore.records
+  if (r.exercise.length + r.diet.length + r.sleep.length + r.weight.length + r.height.length === 0) {
+    await healthStore.loadHealth()
+  }
+})
 </script>
 
 <template>
@@ -326,6 +437,84 @@ async function onResetMenu(): Promise<void> {
                 </div>
               </li>
             </ul>
+          </section>
+
+          <!-- 身高设置：人员（一人一个标签页）与分组 -->
+          <section v-show="tab === 'height'" class="hs-pane" data-testid="hs-height-pane">
+            <div class="hs-head">
+              <h3 class="hs-title">身高设置</h3>
+            </div>
+            <p class="hs-hint">创建人员与分组；身高面板按分组筛选人员，每人一个标签页。删除人员会一并删除其身高记录。</p>
+
+            <div class="hs-field hs-field-block">
+              <span class="hs-field-label">人员分组</span>
+              <div class="hs-new-row">
+                <el-input v-model="newCategoryName" size="small" class="hs-name" maxlength="12" placeholder="新分组名称，如：家人" data-testid="hs-new-category" @keydown.enter="addCategory" />
+                <el-button size="small" class="btn-add" :disabled="!newCategoryName.trim()" data-testid="hs-add-category" @click="addCategory">＋ 添加分组</el-button>
+              </div>
+              <ul class="hs-list">
+                <li v-for="c in hCategories" :key="c.id" class="hs-row" :data-testid="`hs-category-${c.id}`">
+                  <span class="hs-icon"><Icon name="tag" :size="16" /></span>
+                  <el-input
+                    class="hs-name"
+                    size="small"
+                    maxlength="12"
+                    :model-value="draftOf(c.id, c.name)"
+                    :data-testid="`hs-category-name-${c.id}`"
+                    @update:model-value="setDraft(c.id, $event)"
+                    @blur="commitCategoryName(c.id)"
+                    @keydown.enter="commitCategoryName(c.id)"
+                  />
+                  <div class="hs-actions">
+                    <span class="hs-record-count">{{ hPersons.filter(p => p.categoryId === c.id).length }} 人</span>
+                    <el-button size="small" class="btn-delete" :data-testid="`hs-category-delete-${c.id}`" @click="removeCategory(c.id)">删除</el-button>
+                  </div>
+                </li>
+                <li v-if="!hCategories.length" class="hs-empty">暂无分组，可直接添加</li>
+              </ul>
+            </div>
+
+            <div class="hs-field hs-field-block">
+              <span class="hs-field-label">人员</span>
+              <div class="hs-new-row">
+                <el-input v-model="newPersonName" size="small" class="hs-name" maxlength="12" placeholder="新人员名称" data-testid="hs-new-person" @keydown.enter="addPerson" />
+                <el-select v-model="newPersonCategory" size="small" class="hs-person-cat" clearable placeholder="未分类" data-testid="hs-new-person-category">
+                  <el-option v-for="c in hCategories" :key="c.id" :label="c.name" :value="c.id" />
+                </el-select>
+                <el-button size="small" class="btn-add" :disabled="!newPersonName.trim()" data-testid="hs-add-person" @click="addPerson">＋ 添加人员</el-button>
+              </div>
+              <ul class="hs-list">
+                <li v-for="person in hPersons" :key="person.id" class="hs-row" :data-testid="`hs-person-${person.id}`">
+                  <span class="hs-icon"><Icon name="account-multiple" :size="16" /></span>
+                  <el-input
+                    class="hs-name"
+                    size="small"
+                    maxlength="12"
+                    :model-value="draftOf(person.id, person.name)"
+                    :data-testid="`hs-person-name-${person.id}`"
+                    @update:model-value="setDraft(person.id, $event)"
+                    @blur="commitPersonName(person.id)"
+                    @keydown.enter="commitPersonName(person.id)"
+                  />
+                  <el-select
+                    size="small"
+                    class="hs-person-cat"
+                    :model-value="person.categoryId ?? ''"
+                    clearable
+                    placeholder="未分类"
+                    :data-testid="`hs-person-category-${person.id}`"
+                    @update:model-value="setPersonCategory(person.id, $event ?? '')"
+                  >
+                    <el-option v-for="c in hCategories" :key="c.id" :label="c.name" :value="c.id" />
+                  </el-select>
+                  <div class="hs-actions">
+                    <span class="hs-record-count">{{ recordCountOf(person.id) }} 条</span>
+                    <el-button size="small" class="btn-delete" :data-testid="`hs-person-delete-${person.id}`" @click="removePerson(person.id)">删除</el-button>
+                  </div>
+                </li>
+                <li v-if="!hPersons.length" class="hs-empty">暂无人员，添加后即可在身高面板记录</li>
+              </ul>
+            </div>
           </section>
         </div>
       </section>
@@ -543,4 +732,16 @@ html.dark .hs-rail { background-color: var(--color-bg-hover, #111827); border-co
 html.dark .hs-content { background-color: var(--color-bg-card, #1f2937); }
 html.dark .hs-row { background-color: var(--color-bg-card, #1f2937); border-color: var(--color-border, #374151); }
 html.dark .hs-text-input { background-color: var(--color-bg-card, #1f2937); border-color: var(--color-border, #374151); }
+
+/* 身高设置：分组 / 人员两块纵向排布 */
+.hs-field-block { flex-direction: column; align-items: stretch; gap: var(--space-2); }
+.hs-new-row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.hs-new-row .hs-name { flex: 1 1 160px; }
+.hs-person-cat { width: 120px; flex: none; }
+.hs-record-count { font-size: var(--fs-caption); color: var(--color-text-muted); white-space: nowrap; }
+.hs-empty { padding: var(--space-2); font-size: var(--fs-caption); color: var(--color-text-muted); }
+@media (max-width: 768px) {
+  .hs-person-cat { width: 100%; }
+  .hs-new-row .hs-name { flex: 1 1 100%; }
+}
 </style>

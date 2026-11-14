@@ -312,15 +312,15 @@ async function onOnboardingComplete() {
         </div>
         <button
           v-if="cloudEnabled"
-          class="st-btn st-sync-btn"
+          class="st-btn st-sync-btn ui-btn--pill"
           :class="syncStatusClass"
           :title="syncTip"
           data-testid="st-sync-now"
           :disabled="syncBusy || cloudSync.status.value === 'pulling' || cloudSync.status.value === 'pushing'"
           @click="handleSyncNowClick"
         ><Icon name="cloud" :size="14" /> {{ syncLabel }}</button>
-        <button class="st-btn" @click="showSettingsDialog = true" title="设置">
-          <Icon name="cog" />
+        <button class="st-btn ui-btn--pill" @click="showSettingsDialog = true" title="设置" aria-label="设置" data-testid="st-settings">
+          <Icon name="cog" :size="15" /> 设置
         </button>
       </div>
     </header>
