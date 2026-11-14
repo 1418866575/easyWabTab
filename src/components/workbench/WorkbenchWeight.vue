@@ -3,8 +3,8 @@
  * 健康工作台 · 体重记录（仅 /health 使用）。
  * 与身高面板同构：按人员分标签页、按分类筛选人员；每条记录带 personId。
  * BMI 身高来源 = 当前人员「身高记录」里最近一次（date 降序、同日 createdAt 降序），
- * 由 healthCore.latestHeightRecordOf 从身高模块共享数据取回；兼容未建人员、仅有旧全局
- * 默认身高的单人数据：合成「默认」人员回落 store.height。未读到身高则 BMI 显示「—」。
+ * 由 healthCore.latestHeightRecordOf 从身高模块共享数据取回；体重来源 = 当前人员最近
+ * 一次体重记录（同序）。二者经 calcBmi 计算，任一缺失则 BMI 显示「—」。
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
@@ -80,16 +80,12 @@ const personTabs = computed(() =>
   }))
 )
 
-// BMI 身高来源：当前人员「身高记录」里最近一次（date 降序、同日 createdAt 降序）。
-// 兼容未建人员、仅有旧全局默认身高的单人数据：合成「默认」人员回落 store.height。
+// BMI 身高来源唯一：当前人员「身高记录」里最近一次（date 降序、同日 createdAt 降序）。
+// 设置里的「体重设置」已删除，不再回落到旧全局默认身高 store.height。
 const activeHeightRecord = computed<HeightRecord | null>(() =>
   latestHeightRecordOf(store.records.height ?? [], activePerson.value?.id ?? '')
 )
-const activeHeightCm = computed<number | undefined>(() => {
-  if (activeHeightRecord.value) return activeHeightRecord.value.heightCm
-  if ((activePerson.value?.id ?? '') === '' && store.height !== undefined) return store.height
-  return undefined
-})
+const activeHeightCm = computed<number | undefined>(() => activeHeightRecord.value?.heightCm)
 
 function recordsOf(personId: string) {
   return allWeightRecords.value.filter(r => r.personId === personId)
@@ -478,8 +474,6 @@ onMounted(async () => {
             <label>身高（cm）*</label>
             <el-input-number
               :model-value="formHeight === '' ? undefined : Number(formHeight)"
-              :min="30"
-              :max="250"
               :step="0.1"
               :precision="1"
               placeholder="例如：170"
@@ -487,7 +481,7 @@ onMounted(async () => {
               :controls="false"
               @update:model-value="formHeight = $event == null ? '' : String($event)"
             />
-            <div class="field-hint">BMI 依据为当前人员最近一次身高记录（30–250 cm，可含 1 位小数）。</div>
+            <div class="field-hint">仅接受 30–250 cm（可含 1 位小数）；保存后作为当前人员最新身高记录参与 BMI 计算。</div>
           </div>
           <div class="form-actions">
             <el-button native-type="button" class="btn-cancel" data-testid="wt-height-cancel" @click="closeHeightDialog">{{ DIALOG_BTN.close }}</el-button>
