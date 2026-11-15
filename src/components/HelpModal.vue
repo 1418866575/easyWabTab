@@ -735,6 +735,46 @@ const skillInstall = [
     <div class="help-content">
     <!-- ===== 标签 1：网址导航 ===== -->
     <template v-if="activeTab === 'nav'">
+        <!-- 快速开始 -->
+        <section class="help-section">
+          <h3 class="section-title"><Icon name="target" /> 快速开始</h3>
+          <p class="formula-note">先在首页点「＋ 添加网站」录入常用网址，或从卡片进入任一工作台；云同步、示例数据与更多配置放在本页下方和右上角「设置」里。</p>
+        </section>
+
+        <!-- 功能介绍 -->
+        <section class="help-section">
+          <h3 class="section-title"><Icon name="target" /> 功能介绍</h3>
+          <div class="features-grid">
+            <div
+              v-for="feature in features"
+              :key="feature.title"
+              class="feature-item"
+            >
+              <span class="feature-icon"><Icon :name="feature.icon" /></span>
+              <div class="feature-content">
+                <h4>{{ feature.title }}</h4>
+                <p>{{ feature.desc }}</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 视图模式 -->
+        <section class="help-section">
+          <h3 class="section-title"><Icon name="grid" /> 视图模式</h3>
+          <div class="mode-info">
+            <div class="mode-item">
+              <span class="mode-badge mode-admin">经典</span>
+              <p>路由 <code>/</code>，卡片网格铺满整屏，适合宽屏浏览与快速点开。</p>
+            </div>
+            <div class="mode-item">
+              <span class="mode-badge mode-admin">侧边栏</span>
+              <p>左侧固定分类导航 + 右侧内容区，分类多时更省滚动；移动端侧栏自动收成抽屉。</p>
+            </div>
+          </div>
+          <p class="formula-note">切换入口：设置 → 导航设置 → 显示控制；选择随刷新保留。</p>
+        </section>
+
         <!-- 云同步体验账号 -->
         <section class="help-section">
           <div class="download-card">
@@ -800,41 +840,6 @@ const skillInstall = [
             </div>
           </div>
         </section>
-
-        <!-- 功能介绍 -->
-        <section class="help-section">
-          <h3 class="section-title"><Icon name="target" /> 功能介绍</h3>
-          <div class="features-grid">
-            <div
-              v-for="feature in features"
-              :key="feature.title"
-              class="feature-item"
-            >
-              <span class="feature-icon"><Icon :name="feature.icon" /></span>
-              <div class="feature-content">
-                <h4>{{ feature.title }}</h4>
-                <p>{{ feature.desc }}</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- 视图模式 -->
-        <section class="help-section">
-          <h3 class="section-title"><Icon name="grid" /> 视图模式</h3>
-          <div class="mode-info">
-            <div class="mode-item">
-              <span class="mode-badge mode-admin">经典</span>
-              <p>路由 <code>/</code>，卡片网格铺满整屏，适合宽屏浏览与快速点开。</p>
-            </div>
-            <div class="mode-item">
-              <span class="mode-badge mode-admin">侧边栏</span>
-              <p>左侧固定分类导航 + 右侧内容区，分类多时更省滚动；移动端侧栏自动收成抽屉。</p>
-            </div>
-          </div>
-          <p class="formula-note">切换入口：设置 → 导航设置 → 显示控制；选择随刷新保留。</p>
-        </section>
-
         </template>
 
         <!-- ===== 标签 2：个人工作台 ===== -->

@@ -424,7 +424,7 @@ const downloadTitle = computed(() =>
 /* 窄端：卡片始终纵向，只需微调封面高度与按钮尺寸 */
 @media (max-width: 768px) {
   .bk-cover {
-    height: 100px;
+    height: 84px;
   }
   .bk-recent { display: none; }
   /* 抬到 40px：.ui-btn--sm 是 30px，低于移动端 32px 的舒适触控下限 */

@@ -466,7 +466,7 @@ async function handleQuickNote(): Promise<void> {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(var(--wb-card-min, 180px), 1fr));
   gap: var(--space-3);
-  align-items: start;
+  align-items: stretch;
 }
 
 /* ===== 卡片基础（统一 .bento-card）=====
