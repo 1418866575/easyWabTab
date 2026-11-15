@@ -8,11 +8,12 @@
  * 沿用项目 BaseDialog 体系（见 docs/UI_STYLE_GUIDE.md §2.2），不自造弹框。
  * 布局：顶部「书名（可搜索图书馆书名）+ 添加书签按钮（右上角）」→ 用户输入框 → 下方表格。
  */
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useToast } from '@/composables/useToast'
 import { useBooksPrefs } from '@/composables/useBooksPrefs'
 import type { UserBookmark } from '@/composables/useBooksPrefs'
+import { BOOKMARK_TITLE_MAX, BOOKMARK_CONTENT_MAX } from '@/composables/booksSyncCore'
 
 const props = defineProps<{
   modelValue: boolean
@@ -40,30 +41,59 @@ function onClose(): void {
 const title = ref('')
 const content = ref('')
 const error = ref('')
+/** 正在编辑的书签 id；null 表示新增模式 */
+const editingId = ref<string | null>(null)
+const formRef = ref<HTMLElement | null>(null)
 
 /** 已添加书签（最新的在最前，与添加顺序一致） */
 const bookmarks = computed<UserBookmark[]>(() => prefs.userBookmarks.value)
+/** 编辑提示条用的原书名：随列表变化，改到一半也能对上正在编辑的那条 */
+const editingTitle = computed(() =>
+  editingId.value ? bookmarks.value.find((b) => b.id === editingId.value)?.title ?? '' : ''
+)
 
-/** 书名 / 内容长度上限（与 prefs.addUserBookmark 的截断保持一致，用于实时计数显示） */
-const TITLE_MAX = 80
-const CONTENT_MAX = 2000
+function resetForm(): void {
+  title.value = ''
+  content.value = ''
+  error.value = ''
+  editingId.value = null
+}
 
 function onSubmit(): void {
-  const res = prefs.addUserBookmark(title.value, content.value)
+  const res = editingId.value
+    ? prefs.updateUserBookmark(editingId.value, title.value, content.value)
+    : prefs.addUserBookmark(title.value, content.value)
   if (!res.ok) {
     error.value = res.message
     toast.error(res.message)
     return
   }
   toast.success(res.message)
-  // 保留弹框打开，让刚添加的书签出现在下方表格里；清空表单便于连续添加
-  title.value = ''
-  content.value = ''
+  // 保留弹框打开，让新增/修改后的书签出现在下方表格里；清空表单便于连续添加
+  resetForm()
+}
+
+/** 点行内「编辑」：把该条填回上方表单并滚回顶部，否则表格长时用户看不到表单 */
+function onEdit(b: UserBookmark): void {
+  editingId.value = b.id
+  title.value = b.title
+  content.value = b.content
   error.value = ''
+  void nextTick(() => {
+    // BaseDialog 根是 Teleport，:deep 选不到内部滚动容器，直接从表单元素反查
+    const scroller = formRef.value?.closest('.bd-body') as HTMLElement | null
+    if (scroller) scroller.scrollTop = 0
+  })
+}
+
+function onCancelEdit(): void {
+  resetForm()
 }
 
 function onDelete(b: UserBookmark): void {
   prefs.deleteUserBookmark(b.id)
+  // 删掉正在编辑的那条时不能留在编辑态（否则保存会指向不存在的 id）
+  if (editingId.value === b.id) resetForm()
   toast.info(`已删除书签「${b.title}」`)
 }
 </script>
@@ -76,7 +106,10 @@ function onDelete(b: UserBookmark): void {
     data-testid="bk-bookmark-dialog"
     @close="onClose"
   >
-    <div class="bk-bm-add">
+    <div ref="formRef" class="bk-bm-add">
+      <p v-if="editingId" class="bk-bm-editing-tip" data-testid="bk-bm-editing-tip">
+        正在编辑「{{ editingTitle }}」，改完点「保存修改」
+      </p>
       <div class="bk-bm-add-row">
         <label class="bk-bm-field bk-bm-field--title">
           <span class="bk-bm-label">书名</span>
@@ -86,19 +119,30 @@ function onDelete(b: UserBookmark): void {
             class="bk-bm-input"
             list="bk-book-titles"
             placeholder="输入或搜索图书馆里的书名"
-            :maxlength="TITLE_MAX"
+            :maxlength="BOOKMARK_TITLE_MAX"
             data-testid="bk-bm-title"
             @input="error = ''"
           />
         </label>
-        <button
-          type="button"
-          class="ui-btn ui-btn--primary bk-bm-add-btn"
-          data-testid="bk-bm-add"
-          @click="onSubmit"
-        >
-          添加书签
-        </button>
+        <div class="bk-bm-actions">
+          <button
+            v-if="editingId"
+            type="button"
+            class="ui-btn"
+            data-testid="bk-bm-cancel"
+            @click="onCancelEdit"
+          >
+            取消编辑
+          </button>
+          <button
+            type="button"
+            class="ui-btn ui-btn--primary bk-bm-add-btn"
+            data-testid="bk-bm-add"
+            @click="onSubmit"
+          >
+            {{ editingId ? '保存修改' : '添加书签' }}
+          </button>
+        </div>
       </div>
 
       <label class="bk-bm-field">
@@ -107,11 +151,11 @@ function onDelete(b: UserBookmark): void {
           v-model="content"
           class="bk-bm-textarea"
           placeholder="想记录的内容、摘录、感想……"
-          :maxlength="CONTENT_MAX"
+          :maxlength="BOOKMARK_CONTENT_MAX"
           rows="3"
           data-testid="bk-bm-content"
         ></textarea>
-        <span class="bk-bm-count">{{ content.length }}/{{ CONTENT_MAX }}</span>
+        <span class="bk-bm-count">{{ content.length }}/{{ BOOKMARK_CONTENT_MAX }}</span>
       </label>
 
       <p v-if="error" class="bk-bm-error" data-testid="bk-bm-error">{{ error }}</p>
@@ -131,18 +175,33 @@ function onDelete(b: UserBookmark): void {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="b in bookmarks" :key="b.id" class="bk-bm-row">
+          <tr
+            v-for="b in bookmarks"
+            :key="b.id"
+            class="bk-bm-row"
+            :class="{ 'is-editing': editingId === b.id }"
+          >
             <td class="bk-bm-td-title">{{ b.title }}</td>
             <td class="bk-bm-td-content">{{ b.content || '—' }}</td>
             <td class="bk-bm-td-op">
-              <button
-                type="button"
-                class="ui-btn ui-btn--sm ui-btn--danger"
-                :data-testid="`bk-bm-del-${b.id}`"
-                @click="onDelete(b)"
-              >
-                删除
-              </button>
+              <div class="bk-bm-ops">
+                <button
+                  type="button"
+                  class="ui-btn ui-btn--sm"
+                  :data-testid="`bk-bm-edit-${b.id}`"
+                  @click="onEdit(b)"
+                >
+                  编辑
+                </button>
+                <button
+                  type="button"
+                  class="ui-btn ui-btn--sm ui-btn--danger"
+                  :data-testid="`bk-bm-del-${b.id}`"
+                  @click="onDelete(b)"
+                >
+                  删除
+                </button>
+              </div>
             </td>
           </tr>
           <tr v-if="!bookmarks.length" class="bk-bm-empty-row">
@@ -164,10 +223,21 @@ function onDelete(b: UserBookmark): void {
   flex-direction: column;
   gap: 14px;
 }
+.bk-bm-editing-tip {
+  margin: 0;
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-primary-text);
+}
 .bk-bm-add-row {
   display: flex;
   align-items: flex-end;
   gap: var(--space-3);
+}
+.bk-bm-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
 }
 .bk-bm-field {
   display: flex;
@@ -233,7 +303,7 @@ function onDelete(b: UserBookmark): void {
   width: 28%;
 }
 .bk-bm-th-op {
-  width: 72px;
+  width: 128px;
   text-align: right;
 }
 .bk-bm-table tbody tr:last-child td {
@@ -259,6 +329,15 @@ function onDelete(b: UserBookmark): void {
   text-align: right;
   white-space: nowrap;
 }
+.bk-bm-ops {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.bk-bm-table tbody tr.is-editing .bk-bm-td-title {
+  color: var(--color-primary-text);
+}
 .bk-bm-empty {
   text-align: center;
   color: var(--color-text-muted);
@@ -274,14 +353,17 @@ function onDelete(b: UserBookmark): void {
     flex-direction: column;
     align-items: stretch;
   }
-  .bk-bm-add-btn {
+  .bk-bm-actions {
     width: 100%;
+  }
+  .bk-bm-actions .ui-btn {
+    flex: 1 1 0;
   }
   .bk-bm-th-title {
     width: 36%;
   }
   .bk-bm-th-op {
-    width: 60px;
+    width: 124px;
   }
 }
 </style>

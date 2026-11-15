@@ -43,8 +43,11 @@ import {
   sortBooks
 } from '../src/composables/booksCore.ts'
 import {
+  BOOKMARK_CONTENT_MAX,
+  BOOKMARK_TITLE_MAX,
   mergeBooksPrefsEnvelope,
   normalizeUserBookmark,
+  replaceUserBookmark,
   type BooksPrefsSyncData,
   type UserBookmark
 } from '../src/composables/booksSyncCore.ts'
@@ -855,6 +858,75 @@ test('bookHue：同 id 稳定、落在 0..359、空 id 为 0', () => {
   a.equal(bookHue(''), 0)
   // 不同 id 至少要有区分度（否则占位色会一片同色）
   a.notEqual(bookHue('alpha'), bookHue('beta'))
+})
+
+// ============ 用户自建书签：编辑（replaceUserBookmark）============
+
+test('replaceUserBookmark：原位替换书名/内容并刷新 ts，id 与顺序不变', () => {
+  const before = Date.now()
+  const list = [
+    mkMark({ id: 'a', title: '道德经', content: '原摘录', ts: 100 }),
+    mkMark({ id: 'b', title: '孙子兵法', ts: 200 })
+  ]
+  const out = replaceUserBookmark(list, 'a', '  道德经·新注  ', '新摘录')!
+  a.deepEqual(out.map((b) => b.id), ['a', 'b'])
+  a.equal(out[0].title, '道德经·新注', '书名 trim 后写入')
+  a.equal(out[0].content, '新摘录')
+  a.equal(out[1].title, '孙子兵法', '其余条目不动')
+  a.ok(out[0].ts > 100, 'ts 必须刷新')
+  a.ok(out[0].ts >= before)
+})
+
+test('replaceUserBookmark：不改入参（纯函数）', () => {
+  const list = [mkMark({ id: 'a', title: '旧', content: '旧摘录', ts: 1 })]
+  const snapshot = JSON.stringify(list)
+  const out = replaceUserBookmark(list, 'a', '新', '新摘录')!
+  a.equal(JSON.stringify(list), snapshot)
+  a.notEqual(out, list)
+})
+
+test('replaceUserBookmark：空书名 / 不存在的 id 返回 null', () => {
+  const list = [mkMark({ id: 'a', ts: 1 })]
+  a.equal(replaceUserBookmark(list, 'a', '   ', 'x'), null)
+  a.equal(replaceUserBookmark(list, 'zzz', '新', 'x'), null)
+  a.equal(replaceUserBookmark([], 'a', '新', 'x'), null)
+})
+
+test('replaceUserBookmark：ts 严格大于旧值（同毫秒 / 未来时间戳都不会相等）', () => {
+  const now = Date.now()
+  const sameMs = replaceUserBookmark([mkMark({ id: 'b', ts: now })], 'b', '一', '')!
+  a.ok(sameMs[0].ts > now, '同毫秒内编辑也必须变大，否则合并时远端 >= 会赢')
+  const future = now + 60_000
+  const first = replaceUserBookmark([mkMark({ id: 'a', ts: future })], 'a', '一', '')!
+  const second = replaceUserBookmark(first, 'a', '二', '')!
+  a.ok(first[0].ts > future)
+  a.ok(second[0].ts > first[0].ts)
+})
+
+test('replaceUserBookmark：编辑后的本地版本在跨设备合并中胜过远端旧版', () => {
+  const local = [mkMark({ id: 'x', title: '道德经', content: '旧摘录', ts: 1000 })]
+  const edited = replaceUserBookmark(local, 'x', '道德经·新注', '新摘录')!
+  const remoteOld = [mkMark({ id: 'x', title: '道德经', content: '旧摘录', ts: 1000 })]
+  const m = mergeBooksPrefsEnvelope(
+    mkSync({ userBookmarks: edited }),
+    mkSync({ userBookmarks: remoteOld })
+  )
+  a.equal(m.userBookmarks.length, 1)
+  a.equal(m.userBookmarks[0].title, '道德经·新注', '编辑结果不能被旧版本回滚')
+  a.equal(m.userBookmarks[0].content, '新摘录')
+})
+
+test('BOOKMARK_*_MAX：编辑截断与新增共用同一上限', () => {
+  a.equal(BOOKMARK_TITLE_MAX, 80)
+  a.equal(BOOKMARK_CONTENT_MAX, 2000)
+  const out = replaceUserBookmark(
+    [mkMark({ id: 'a', ts: 1 })],
+    'a',
+    '书'.repeat(100),
+    '内'.repeat(2100)
+  )!
+  a.equal(out[0].title.length, BOOKMARK_TITLE_MAX)
+  a.equal(out[0].content.length, BOOKMARK_CONTENT_MAX)
 })
 
 // ============ runner ============

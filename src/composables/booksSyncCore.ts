@@ -10,6 +10,10 @@
  */
 export const BOOKS_USER_BOOKMARKS_LIMIT = 500
 
+/** 用户自建书签字段上限：新增、编辑与弹框字符计数共用，避免三处各写一个数字 */
+export const BOOKMARK_TITLE_MAX = 80
+export const BOOKMARK_CONTENT_MAX = 2000
+
 /** 用户自建书签（右上角「书签」按钮添加，书名 + 自定义内容） */
 export interface UserBookmark {
   id: string
@@ -41,6 +45,37 @@ export function normalizeUserBookmark(v: unknown): UserBookmark | null {
   const content = typeof o.content === 'string' ? o.content : ''
   const ts = typeof o.ts === 'number' && Number.isFinite(o.ts) ? o.ts : Date.now()
   return { id, title, content, ts }
+}
+
+/**
+ * 编辑一条用户自建书签：按 id 原位替换书名与内容，并刷新 ts。
+ *
+ * ts 必须刷新 —— 云端合并（见 mergeBooksPrefsEnvelope）对同一 id 取 ts 较新的一侧；
+ * 只改内容不动 ts 时，另一台设备上的旧版本会在同步里把这次编辑盖回去。
+ *
+ * 书名 trim 后为空 / id 不存在 → 返回 null，由调用方给出提示。
+ * 纯函数：不改入参，返回新数组；顺序、其余条目与 id 均保持不变。
+ */
+export function replaceUserBookmark(
+  list: readonly UserBookmark[],
+  id: string,
+  title: string,
+  content: string
+): UserBookmark[] | null {
+  const t = (title ?? '').trim()
+  if (!t) return null
+  const i = list.findIndex((b) => b.id === id)
+  if (i < 0) return null
+  const next = list.slice()
+  next[i] = {
+    ...next[i],
+    title: t.slice(0, BOOKMARK_TITLE_MAX),
+    content: (content ?? '').slice(0, BOOKMARK_CONTENT_MAX),
+    // 严格大于旧 ts：同毫秒内连续编辑时 Date.now() 可能不变，而合并判定是「>=」远端胜，
+    // 相等会让这次编辑在同步里被旧版本盖回去。
+    ts: Math.max(Date.now(), next[i].ts + 1)
+  }
+  return next
 }
 
 function str(value: unknown): string[] {

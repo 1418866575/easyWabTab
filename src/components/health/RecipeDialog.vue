@@ -85,7 +85,6 @@ const emit = defineEmits<{ close: [] }>()
           <template v-if="recipe.allergens.length">{{ recipe.allergens.join('、') }}</template>
           <template v-else>无明显常见过敏原（仍请按实际配料表核对）</template>
         </p>
-        <p class="recipe-source">内容整理自 {{ recipe.source }}；成品图来自原文配图。仅供家庭烹饪参考，特殊人群请遵医嘱。</p>
       </section>
     </div>
 
@@ -273,12 +272,6 @@ const emit = defineEmits<{ close: [] }>()
   color: var(--color-text-secondary);
 }
 .recipe-allergens strong { color: var(--color-text); }
-.recipe-source {
-  margin: var(--space-2) 0 0;
-  font-size: var(--fs-caption);
-  line-height: var(--line-height-relaxed);
-  color: var(--color-text-muted);
-}
 
 @media (max-width: 768px) {
   .recipe-hero { height: 200px; }

@@ -27,9 +27,12 @@ import { idbGetKey, idbPutKey, BOOKS_PREFS_NAV_KEY } from './useIdb.ts'
 import { BOOKS_RECENT_LIMIT, normalizeBookmark, type BookBookmark } from './booksCore.ts'
 // 类型与合并逻辑归属纯文件 booksSyncCore（零依赖、可单测，与 blogSyncCore 同构）
 import {
+  BOOKMARK_CONTENT_MAX,
+  BOOKMARK_TITLE_MAX,
   BOOKS_USER_BOOKMARKS_LIMIT,
   mergeBooksPrefsEnvelope,
   normalizeUserBookmark,
+  replaceUserBookmark,
   type BooksPrefsSyncData,
   type UserBookmark
 } from './booksSyncCore.ts'
@@ -370,8 +373,8 @@ export function useBooksPrefs() {
     if (!t) return { ok: false, message: '书名不能为空' }
     const bm: UserBookmark = {
       id: `bm_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
-      title: t.slice(0, 80),
-      content: (content ?? '').slice(0, 2000),
+      title: t.slice(0, BOOKMARK_TITLE_MAX),
+      content: (content ?? '').slice(0, BOOKMARK_CONTENT_MAX),
       ts: Date.now()
     }
     const next = [bm, ...userBookmarks.value]
@@ -379,6 +382,24 @@ export function useBooksPrefs() {
       next.length > MAX_USER_BOOKMARKS ? next.slice(0, MAX_USER_BOOKMARKS) : next
     persist()
     return { ok: true, message: `已添加书签「${t}」` }
+  }
+
+  /**
+   * 编辑一条用户自建书签（按 id 改书名 / 内容）。
+   * 转成纯函数 replaceUserBookmark 是为了让「刷新 ts」这条云同步规则可被单测覆盖。
+   */
+  const updateUserBookmark = (
+    id: string,
+    title: string,
+    content: string
+  ): { ok: boolean; message: string } => {
+    if (!(title ?? '').trim()) return { ok: false, message: '书名不能为空' }
+    const next = replaceUserBookmark(userBookmarks.value, id, title, content)
+    if (!next) return { ok: false, message: '这条书签已不存在，请刷新后重试' }
+    const t = (title ?? '').trim().slice(0, BOOKMARK_TITLE_MAX)
+    userBookmarks.value = next
+    persist()
+    return { ok: true, message: `已更新书签「${t}」` }
   }
 
   /** 删除一条用户自建书签（按 id） */
@@ -406,6 +427,7 @@ export function useBooksPrefs() {
     bookmarkedIds,
     forgetBook,
     addUserBookmark,
+    updateUserBookmark,
     deleteUserBookmark,
     initBooksPrefs,
     flushBooksPrefs,

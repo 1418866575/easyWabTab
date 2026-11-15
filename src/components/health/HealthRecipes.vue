@@ -93,13 +93,6 @@ const filtered = computed(() => {
     </div>
     <p v-if="!filtered.length" class="empty-state recipe-empty">没有找到匹配的菜谱，换个关键词或页签试试。</p>
 
-    <p class="recipe-note">
-      {{ RECIPES.length }} 道菜整理自六篇公众号家常菜合集；重复的番茄炒蛋、洋葱炒牛肉、番茄鱼片、白菜炖豆腐已合并做法，第六篇凉菜主食 20 道与既有无同名重复。
-      「家常素菜」里有 4 道带鸡蛋的菜，纯素替换建议见各菜「小妙招」。
-      「食品安全」页签汇总了生品有毒或处理不当会产生毒素的菜（四季豆、荷兰豆、木耳泡发、隔夜米饭、毛豆、淡水鱼、死蟹与贝毒等），
-      详见每道菜弹框内的注意事项。成品图为原文配图，仅供家庭烹饪参考。
-    </p>
-
     <RecipeDialog
       v-if="activeRecipe"
       :recipe="activeRecipe"
@@ -127,17 +120,6 @@ const filtered = computed(() => {
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
 }
 .recipe-empty { margin: var(--space-4) 0; }
-.recipe-note {
-  margin: var(--space-5) 0 0;
-  padding: var(--space-3) var(--space-4);
-  font-size: var(--fs-caption);
-  line-height: var(--line-height-relaxed);
-  color: var(--color-text-secondary);
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-left: 3px solid var(--color-primary);
-  border-radius: var(--radius-md);
-}
 
 @media (max-width: 768px) {
   .recipe-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
