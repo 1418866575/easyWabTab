@@ -619,6 +619,9 @@ html[data-accent='graphite'] {
 html:not(.dark)[data-accent='graphite'] {
   --color-success: #2f855a;
   --color-success-hover: #256b48;
+  /* keep graphite low-saturation green (white text 4.54:1) */
+  --color-success-solid: #2f855a;
+  --color-success-solid-hover: #256b48;
   --color-success-soft: #e8f4ee;
   --color-success-text: #1c6b47;
   --color-warning: #966512;

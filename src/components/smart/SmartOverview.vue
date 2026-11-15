@@ -170,5 +170,7 @@ function relTime(ts: number): string {
 
 @media (max-width: 768px) {
   .ov-card { min-height: 44px; }
+  /* 5 张统计卡在 2 列下让末项横跨，避免右下留空 */
+  .ov-card:last-child { grid-column: 1 / -1; }
 }
 </style>

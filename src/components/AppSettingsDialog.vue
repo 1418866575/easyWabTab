@@ -2290,9 +2290,6 @@ function toggleFullscreen(): void {
             </span>
             <span v-else class="beian-values beian-empty">未配置</span>
           </div>
-          <p class="wb-menu-hint">
-            备案号在 <code>src/config/beian.ts</code> 中配置，修改后需重新构建部署生效。
-          </p>
         </div>
 
         <!-- 访问统计（导航设置 tab）：公开访问（Vercount，累计只有总数）+ 本机使用统计（按天趋势 / 模块分布 / 站点与工具 Top） -->

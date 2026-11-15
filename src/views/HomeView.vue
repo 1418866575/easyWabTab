@@ -30,6 +30,7 @@ import { useAppSettingsStore } from '../stores/settings'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { useHelpModal } from '../composables/useHelpModal'
 import { useCloudSync } from '../composables/useCloudSync'
+import { useToast } from '../composables/useToast'
 import { isImageIcon } from '../composables/categoryIcon'
 import type { SyncStatus } from '../composables/useCloudSync'
 
@@ -38,6 +39,7 @@ const categoriesStore = useCategoriesStore()
 const themeStore = useThemeStore()
 const settingsStore = useAppSettingsStore()
 const { showHelp, openHelp, closeHelp, maybeAutoOpenHelp } = useHelpModal()
+const toast = useToast()
 const router = useRouter()
 const route = useRoute()
 const showModal = ref(false)
@@ -367,6 +369,7 @@ const handleSave = async (site: Site) => {
   if (editingSite.value) {
     // 编辑模式 - 直接更新
     store.updateSite(editingSite.value.url, site)
+    toast.success(`已更新：${site.name}`)
     closeAllModals()
     return
   }
@@ -377,6 +380,7 @@ const handleSave = async (site: Site) => {
     const action = await showConfirm(`该网址已存在：${existing.name}\n\n确定更新？取消则跳过。`)
     if (action) {
       store.updateSite(site.url, site)
+      toast.success(`已更新：${site.name}`)
     }
     closeAllModals()
     return
@@ -384,6 +388,7 @@ const handleSave = async (site: Site) => {
 
   // 无重复 - 正常添加
   store.addSite(site)
+  toast.success(`已添加：${site.name}`)
   closeAllModals()
 }
 

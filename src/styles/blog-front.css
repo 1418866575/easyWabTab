@@ -98,7 +98,7 @@
   text-align: center;
 }
 .bf-empty::before {
-  content: "\25CC";
+  content: "\270E";
   display: block;
   margin-bottom: var(--space-3);
   font-family: var(--bf-serif);

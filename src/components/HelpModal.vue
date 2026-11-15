@@ -761,9 +761,9 @@ const skillInstall = [
                   </li>
                 </ul>
                 <p class="sync-note"><Icon name="info" :size="13" />
-                  在「设置 → 云同步」中填入以上三项后点「测试连接」即可。
+                  <span>在「设置 → 云同步」中填入以上三项后点「测试连接」即可。
                   该账号为 <strong>公共共享账号</strong>，<strong>每晚凌晨 2 点自动恢复初始数据</strong>，
-                  请勿存放重要或私密信息，也不要期待数据长期保留。
+                  请勿存放重要或私密信息，也不要期待数据长期保留。</span>
                 </p>
               </div>
             </div>
@@ -1451,6 +1451,7 @@ const skillInstall = [
   margin-top: var(--space-2);
   line-height: 1.6;
 }
+.download-info .sync-note > span { flex: 1; min-width: 0; }
 
 .btn-download {display: flex;
   align-items: center;

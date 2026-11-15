@@ -364,9 +364,7 @@ onMounted(async () => {
           <div class="bs-gate-card">
             <h2 class="bs-gate-title">还没有账本</h2>
             <p class="bs-gate-desc">
-              账本是销售记账的最外层容器，按自然年创建，同一年份可以创建多本（自动编号「年份-序号」，如 {{ thisYear }}-01）。
-              每本账本只记录其所属年份的数据，跨年数据不会混入同一账本。所有商品、进货、销售、支出都会记在账本下。
-              请先创建 {{ thisYear }} 年账本，再开始记账。
+              按自然年建账、跨年数据不混账。先创建 {{ thisYear }} 年账本，再开始记账。
             </p>
             <div class="bs-gate-form">
               <label class="bs-gate-field">

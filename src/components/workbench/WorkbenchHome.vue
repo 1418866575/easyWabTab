@@ -1111,7 +1111,7 @@ html.dark .cd-critical {
   .greeting-row { padding: 12px 14px; gap: 10px; flex-wrap: wrap; }
   .greeting-time { font-size: calc(var(--fs-h2) + 2px); }
   .greeting-date { font-size: calc(var(--fs-caption) - 1px); }
-  .greeting-week { font-size: calc(var(--fs-caption) - 2px); padding: 1px 8px; }
+  .greeting-week { font-size: var(--fs-caption); padding: 1px 8px; }
 }
 
 </style>

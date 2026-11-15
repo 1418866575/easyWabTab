@@ -37,6 +37,9 @@
   --color-success:       #10b981;
   --color-success-hover: #059669;
   --color-success-soft:  #d1fae5;
+  /* 实底 + 白字专用：500 级 #10b981 白字仅 2.54:1，取 700/800 级保 AA 4.5 */
+  --color-success-solid:       #047857;
+  --color-success-solid-hover: #065f46;
   --color-warning:       #f59e0b;
   --color-warning-hover: #d97706;
   --color-warning-soft:  #fef3c7;
@@ -614,15 +617,15 @@ html .ui-btn--pill.ui-btn--pill.is-error {
 /* —— 成功/上传（绿色主操作） —— */
 .ui-btn--success,
 .upload-btn, .btn-fetch {
-  background-color: var(--color-success);
-  border-color: var(--color-success);
-  color: #fff;
+  background-color: var(--color-success-solid);
+  border-color: var(--color-success-solid);
+  color: var(--color-on-accent);
 }
 .ui-btn--success:hover:not(:disabled),
 .upload-btn:hover:not(:disabled), .btn-fetch:hover:not(:disabled) {
-  background-color: var(--color-success-hover);
-  border-color: var(--color-success-hover);
-  color: #fff;
+  background-color: var(--color-success-solid-hover);
+  border-color: var(--color-success-solid-hover);
+  color: var(--color-on-accent);
   transform: var(--motion-hover-rise);
   box-shadow: var(--shadow-md);
 }
