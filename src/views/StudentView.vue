@@ -702,6 +702,9 @@ async function onOnboardingComplete() {
     border-bottom: none;
     background-color: var(--color-bg-card, #ffffff);
     box-shadow: 0 -2px 12px var(--color-shadow, rgba(0, 0, 0, 0.08));
+    /* 15 项横滚时右侧渐隐，提示后面还有菜单；末项 12px 内边距保证滚到底仍可读 */
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent);
   }
   /* 移动端忽略折叠态：始终全宽 + 显示名称 */
   .st-menu.collapsed .st-menu-label {

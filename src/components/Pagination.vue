@@ -165,9 +165,9 @@ const handleSizeChange = (value: number | string) => {
 }
 
 .page-btn.active {
-  background-color: var(--color-primary, #3b82f6);
-  border-color: var(--color-primary, #3b82f6);
-  color: #fff;
+  background-color: var(--color-primary-solid);
+  border-color: var(--color-primary-solid);
+  color: var(--color-on-accent);
 }
 
 .ellipsis {

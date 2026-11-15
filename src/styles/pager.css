@@ -36,9 +36,9 @@
 /* 当前页（亮色） */
 .ewt-pager > .el-pagination .el-pager li.is-active,
 .ewt-pager.el-pagination .el-pager li.is-active {
-  background-color: var(--color-primary, #3b82f6) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #3b82f6) !important;
+  background-color: var(--color-primary-solid) !important;
+  color: var(--color-on-accent) !important;
+  border-color: var(--color-primary-solid) !important;
 }
 
 /* 暗色模式 */
@@ -53,9 +53,9 @@ html.dark .ewt-pager.el-pagination .el-pager li {
 
 html.dark .ewt-pager > .el-pagination .el-pager li.is-active,
 html.dark .ewt-pager.el-pagination .el-pager li.is-active {
-  background-color: var(--color-primary, #3b82f6) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #3b82f6) !important;
+  background-color: var(--color-primary-solid) !important;
+  color: var(--color-on-accent) !important;
+  border-color: var(--color-primary-solid) !important;
 }
 
 /* 总条数

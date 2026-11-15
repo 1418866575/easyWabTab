@@ -113,6 +113,7 @@ const downloadTitle = computed(() =>
           <span class="bk-dot">·</span>
           <span>{{ clickLabel }}</span>
         </template>
+        <span class="bk-recent">{{ recentLabel }}</span>
       </div>
 
       <div v-if="book.tags.length" class="bk-tags">
@@ -158,7 +159,6 @@ const downloadTitle = computed(() =>
         >
           {{ downloading ? '下载中…' : '下载' }}
         </button>
-        <span class="bk-recent">{{ recentLabel }}</span>
       </div>
 
       <!-- 编辑 / 删除只对本机上传书开放（静态书由仓库维护，页面不该提供这两条路径）。
@@ -381,8 +381,6 @@ const downloadTitle = computed(() =>
 }
 .bk-recent {
   margin-left: auto;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-xs, 11px);
   white-space: nowrap;
 }
 
@@ -412,6 +410,10 @@ const downloadTitle = computed(() =>
   color: var(--color-warning-text);
 }
 .bk-star.is-fav { color: var(--color-warning-text); }
+/* 暗色下文字变浅，圆片却仍是 0.85 白 → 浅字压浅底（实测 2.4:1）。只换圆片底色，不动 is-fav 星色 */
+html.dark .bk-star {
+  background-color: var(--color-bg-card);
+}
 /* 星标桌面 30px 就够（鼠标操作）；移动端抬到 40px 满足触控下限 */
 @media (max-width: 768px) {
   .bk-star {

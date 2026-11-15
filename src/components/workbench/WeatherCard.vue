@@ -99,7 +99,6 @@ watch(
   padding: 14px 16px;
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
-  border-top: 2px solid var(--color-primary);
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
