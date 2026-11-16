@@ -25,6 +25,10 @@ const tabs = computed(() => [
     badge: RECIPES.filter((r) => r.category === '家常荤菜').length, testid: 'recipe-tab-meat'
   },
   {
+    value: '羊肉做法', label: '羊肉做法', emoji: '🐑',
+    badge: RECIPES.filter((r) => r.category === '羊肉做法').length, testid: 'recipe-tab-lamb'
+  },
+  {
     value: '下饭小炒', label: '下饭小炒', emoji: '🥘',
     badge: RECIPES.filter((r) => r.category === '下饭小炒').length, testid: 'recipe-tab-stir'
   },
