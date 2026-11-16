@@ -4,6 +4,7 @@
 //   1. 读取本地 store 凭证（AppID / AppSecret 随 blog.json 云同步；不再依赖服务端全局配置）
 //   2. 正文 Markdown → 还原图片短引用为 data URL → markdown-it 渲染为 HTML
 //   3. 用 DOMParser 给每个标签注入内联 style（微信公众号只认内联 style，禁外部 CSS/JS/class/id）
+//      并把 <a href> 降级为「锚文字（明文 URL）」——微信落库会删 href，留 <a> 等于丢链接
 //   4. webp/avif/bmp 走 canvas 转码为 jpeg（微信图床仅稳收 jpg/png）
 //   5. 封面：coverImageId → upload-cover 拿 thumb_media_id；无封面但有正文图则拿第一张兜底
 //   6. 正文图逐张 upload-img 拿到微信图床 URL，替换 <img src>
@@ -17,7 +18,7 @@ import { resolveImageRefs } from '@/composables/blogImages'
 import { renderMarkdown } from '@/composables/noteMarkdown'
 import { useBlogStore } from '@/stores/blog'
 import { hrMarkup, resolveTypo, typoInlineStyle, typoVars, type TypoTheme } from '@/composables/blogTypoCore'
-import { validateWechatArticle, formatWechatContentIssues } from '@/composables/wechatContentCore'
+import { validateWechatArticle, formatWechatContentIssues, wechatVisibleLinkUrl } from '@/composables/wechatContentCore'
 import type { BlogTypo } from '@/types'
 
 const API_BASE = '/api/wechat'
@@ -249,7 +250,45 @@ function convertMarks(root: HTMLElement): void {
   })
 }
 
-/** 微信正文统一处理入口：列表摊平 + 分割线结构替换 + 全标签内联样式（导出便于回归测试）。
+/**
+ * 外链降级：把 <a href> 改成「锚文字（明文 URL）」的纯文字，正文里一个 <a> 都不留。
+ *
+ * 为什么必须做（微信 draft/add 落库的真实行为）：平台会删掉 href / id 等属性，
+ * 站外 <a> 被剥成纯文字，于是 `[meta/astryx](https://github.com/meta/astryx)`
+ * 发出去只剩「meta/astryx」，地址彻底丢失；指向不存在文章的站内链接还会让整篇草稿
+ * 45166 拒收。既然标签保不住，就别指望它 —— 提前把地址写成可长按复制的明文，
+ * 编辑器预览、复制到公众号编辑器、draft/add 三条路径的所见即所得也终于一致。
+ *
+ * 处理规则：
+ * - 只补 http/https（mailto: 补邮箱）；#锚点 / 相对路径 / javascript: 不补（判定在 wechatVisibleLinkUrl）
+ * - 锚文字本身已是完整 URL（linkify 自动链接）→ 不重复输出
+ * - 子节点整体搬运，<strong>/<code>/<img> 等行内结构及其内联样式不丢
+ * - 明文 URL 单独一个 span，读者可只选地址复制；长 URL 允许折行，不撑破表格单元格
+ * - 放在 applyInlineStyles 之后：新节点自带内联 style，不会被逐标签样式覆盖
+ */
+function expandLinksToText(root: HTMLElement, tokens: Record<string, string>): void {
+  const doc = root.ownerDocument
+  const color = tokens['--t-link'] || '#576b95'
+  const style = `color:${color};word-break:break-all;overflow-wrap:anywhere;`
+  // querySelectorAll 返回静态快照；markdown-it 不会生成嵌套 <a>，逐个替换即可
+  for (const a of Array.from(root.querySelectorAll('a'))) {
+    const visible = wechatVisibleLinkUrl(a.getAttribute('href') || '', a.textContent || '')
+    const span = doc.createElement('span')
+    span.setAttribute('style', style)
+    while (a.firstChild) span.appendChild(a.firstChild)
+    if (visible) {
+      span.appendChild(doc.createTextNode('（'))
+      const url = doc.createElement('span')
+      url.setAttribute('style', `${style}font-size:0.9em;`)
+      url.textContent = visible
+      span.appendChild(url)
+      span.appendChild(doc.createTextNode('）'))
+    }
+    a.replaceWith(span)
+  }
+}
+
+/** 微信正文统一处理入口：列表摊平 + 分割线结构替换 + 全标签内联样式 + 外链明文化（导出便于回归测试）。
  *  表格保留真实 <table>，由 typoInlineStyle 注入内联样式（table-layout:fixed + 单元格自动换行）。
  *  theme 非空（找Tab 移植主题）时：标题/引用先落装饰真实节点，逐标签 CSS 取主题 tagStyles。 */
 export function normalizeWechatBody(
@@ -258,13 +297,15 @@ export function normalizeWechatBody(
   theme?: TypoTheme | null
 ): void {
   // 顺序有讲究：先摊平列表（表格若在列表项里会被提到顶层），再转 mark、
-  // 然后替换分割线结构（dots 落成真实节点，必须在样式化之前否则没机会内联），最后统一内联样式
+  // 然后替换分割线结构（dots 落成真实节点，必须在样式化之前否则没机会内联），
+  // 统一内联样式，最后才把 <a> 降级为明文 URL（新节点自带样式，不被覆盖）
   flattenLists(root)
   convertMarks(root)
   decorateHeadings(root, theme)
   if (theme?.decor?.hr) decorateHrMarkup(root, theme.decor.hr)
   else decorateHr(root, tokens)
   applyInlineStyles(root, tokens, theme)
+  expandLinksToText(root, tokens)
 }
 
 /** 找Tab 主题标题/引用装饰：h1/h2/h3 包装 + blockquote 首部装饰（span 不参与内联样式，样式保留） */

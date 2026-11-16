@@ -112,6 +112,35 @@ export function validateWechatArticle(article: WechatArticleLike): WechatContent
   return issues
 }
 
+/**
+ * 公众号外链降级：算出需要「明文补显示」的地址（纯逻辑，零 DOM / 零 Vue，便于 node 单测）。
+ *
+ * 微信 draft/add 落库时会整体删掉 href 属性，把站外 <a> 剥成纯文字；指向不存在文章的
+ * 站内链接甚至会让整篇草稿 45166 拒收。所以正文里不能留 <a>，得把地址以可复制的明文
+ * 写在锚文字后面（读者长按复制到浏览器打开）—— 这是公众号生态里唯一稳定的外链表达。
+ *
+ * 典型例子：`| 仓库 | [meta/astryx](https://github.com/meta/astryx) |`
+ * 原先发出去只剩「meta/astryx」，现在补全为「meta/astryx（https://github.com/meta/astryx）」。
+ *
+ * 返回值为需要追加的 URL；返回 '' 表示不追加（无有效地址，或锚文字已经把地址写全了）。
+ * 只放行 http/https 与 mailto：#页内锚点（微信会删 id，跳不了）、相对路径、javascript:
+ * 之类一律不输出，避免把无效/危险字符串塞进正文。
+ */
+export function wechatVisibleLinkUrl(href: string, label: string): string {
+  const raw = String(href ?? '').trim()
+  const text = String(label ?? '').trim()
+  let visible = ''
+  if (/^https?:\/\//i.test(raw)) visible = raw
+  else if (/^mailto:/i.test(raw)) visible = raw.slice(7).trim()
+  else return ''
+  if (!visible) return ''
+  // linkify 自动链接 / [url](url) / 锚文字里本来就写了完整地址 → 别重复输出两遍。
+  // 顺带按「去掉末尾斜杠」再比一次：[https://x.com](https://x.com/) 也视为已可见。
+  const bare = visible.replace(/\/+$/, '')
+  if (text.includes(visible) || (bare && text.includes(bare))) return ''
+  return visible
+}
+
 /** 组装成可直接展示在编辑器错误区的中文文案 */
 export function formatWechatContentIssues(issues: WechatContentIssue[]): string {
   if (!issues.length) return ''

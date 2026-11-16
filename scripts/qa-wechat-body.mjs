@@ -20,6 +20,9 @@
  *  S6 普通段落未受影响
  *  S7 表格：保留真实 table（1 表 / 3 行 / 3 表头 / 6 单元格）、蓝底白字表头、无卡片、行内 code 不断词
  *  S8 代码块：pre 用 pre-wrap 且不含 overflow-x（公众号会裁掉滚动）
+ *  S11 外链明文可见：draft/add 落库会删 href、把站外 <a> 剥成纯文字，
+ *      故正文里不留 <a>，改成「锚文字（明文 URL）」。覆盖表格 / 段落 / 列表 /
+ *      加粗链接 / linkify 自动链接 / 页内锚点，断言 URL 不丢、不重复、能折行。
  *
  * 用法：node scripts/qa-wechat-body.mjs
  */
@@ -110,9 +113,18 @@ try {
     const tasks = build('- [ ] 未完成\n- [x] 已完成\n')
     const code = build('```js\nconst veryLongVariableName = someFunction(argumentOne, argumentTwo, argumentThree)\n```\n')
 
+    // S11 外链：用户实测「| 仓库 | [meta/astryx](https://github.com/meta/astryx) |」发到公众号只剩 meta/astryx
+    const linkTable = build('| 项 | 内容 |\n| --- | --- |\n| 仓库 | [meta/astryx](https://github.com/meta/astryx) |\n')
+    const linkPara = build('项目地址见 [meta/astryx](https://github.com/meta/astryx)，欢迎提 issue。\n')
+    const linkAuto = build('直接访问 https://github.com/meta/astryx 即可。\n')
+    const linkAnchor = build('跳到 [第二节](#section-2)。\n')
+    const linkList = build('- 仓库：[meta/astryx](https://github.com/meta/astryx)\n- 文档：[docs](https://example.com/docs)\n')
+    const linkStrong = build('[**加粗链接**](https://example.com/bold)\n')
+
     const count = (html, re) => (html.match(re) || []).length
     return {
       loose, tight, nested, ordered, emptyItem, plain, table, tableWithCode, code,
+      links: { table: linkTable, para: linkPara, auto: linkAuto, anchor: linkAnchor, list: linkList, strong: linkStrong },
       looseStats: {
         ul: count(loose, /<ul/gi),
         li: count(loose, /<li/gi),
@@ -187,6 +199,32 @@ try {
 
   check('S8 代码块用 pre-wrap 自动折行', out.codeStats.preWrap, `pre-wrap=${out.codeStats.preWrap}`)
   check('S8 代码块不再依赖 overflow 滚动', !out.codeStats.overflow, `overflow-x=${out.codeStats.overflow}`)
+
+  // ---- S11 公众号外链明文可见（draft/add 会删 href，站外 <a> 只剩锚文字） ----
+  const L = out.links
+  const GITHUB = 'https://github.com/meta/astryx'
+  const linkPlain = (h) => h.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, '').replace(/\s+/g, '')
+  const urlCount = (h, url) => h.split(url).length - 1
+
+  check('S11 表格链接：发送后仍能看到完整 URL（用户报的原始用例）',
+    L.table.includes(GITHUB) && L.table.includes('meta/astryx'), `len=${L.table.length}`)
+  check('S11 表格链接：输出为「锚文字（URL）」且表格结构不破',
+    linkPlain(L.table).includes(`meta/astryx（${GITHUB}）`) && /<table[\s>]/i.test(L.table),
+    linkPlain(L.table).slice(0, 120))
+  check('S11 段落链接同样补全 URL',
+    linkPlain(L.para).includes(`meta/astryx（${GITHUB}）`), linkPlain(L.para).slice(0, 120))
+  check('S11 linkify 自动链接只出现一次 URL（不重复输出）',
+    urlCount(L.auto, GITHUB) === 1, `count=${urlCount(L.auto, GITHUB)}`)
+  check('S11 页内锚点不补出无效 URL、文字保留',
+    !/https?:\/\//.test(linkPlain(L.anchor)) && linkPlain(L.anchor).includes('第二节'), linkPlain(L.anchor))
+  check('S11 列表项内链接 URL 不丢（列表摊平后仍可展开）',
+    L.list.includes(GITHUB) && L.list.includes('https://example.com/docs'), `len=${L.list.length}`)
+  check('S11 加粗链接搬运子节点不丢（strong + URL 同在）',
+    /<strong[\s>]/i.test(L.strong) && L.strong.includes('https://example.com/bold'), L.strong.slice(0, 160))
+  check('S11 正文里一个 <a> / 一个 href 都不剩（微信删 href 也丢不了链接）',
+    Object.values(L).every((h) => !/<a[\s>]/i.test(h) && !/href=/i.test(h)))
+  check('S11 明文 URL 独立 span 且允许折行（不撑破表格单元格）',
+    /font-size:0\.9em/.test(L.table) && /overflow-wrap:anywhere/.test(L.table))
 
   check('无页面级 JS 异常', errs.length === 0, errs.join(' | ').slice(0, 200))
 

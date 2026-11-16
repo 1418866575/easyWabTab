@@ -8,6 +8,7 @@ import {
   formatWechatContentIssues,
   collectImageSources,
   isWxImageUrl,
+  wechatVisibleLinkUrl,
   WX_TITLE_MAX,
   WX_AUTHOR_MAX,
   WX_DIGEST_MAX,
@@ -96,6 +97,46 @@ check('isWxImageUrl 拒绝外链与非法 URL', () => {
   assert.equal(isWxImageUrl('data:image/png;base64,AAA'), false)
   assert.equal(isWxImageUrl('not-a-url'), false)
 })
+// ---- 公众号外链降级：链接明文可见（[meta/astryx](https://github.com/meta/astryx) 不再只剩锚文字） ----
+check('普通 Markdown 链接补全完整 URL', () => {
+  assert.equal(
+    wechatVisibleLinkUrl('https://github.com/meta/astryx', 'meta/astryx'),
+    'https://github.com/meta/astryx'
+  )
+})
+check('带查询串 / 锚点的 URL 原样补全（含 & 不被截断）', () => {
+  assert.equal(
+    wechatVisibleLinkUrl('https://example.com/s?a=1&b=2#part', '示例页'),
+    'https://example.com/s?a=1&b=2#part'
+  )
+})
+check('linkify 自动链接（锚文字=URL）不重复输出', () => {
+  assert.equal(wechatVisibleLinkUrl('https://example.com/a', 'https://example.com/a'), '')
+})
+check('锚文字里已写了完整地址不重复输出', () => {
+  assert.equal(wechatVisibleLinkUrl('https://example.com/a', '详见 https://example.com/a 的说明'), '')
+})
+check('仅末尾斜杠差异也视为已可见', () => {
+  assert.equal(wechatVisibleLinkUrl('https://example.com/a/', 'https://example.com/a'), '')
+  assert.equal(wechatVisibleLinkUrl('https://example.com/a/', '详见 https://example.com/a'), '')
+})
+check('mailto: 只补邮箱且锚文字已是邮箱时不重复', () => {
+  assert.equal(wechatVisibleLinkUrl('mailto:hi@example.com', '联系我'), 'hi@example.com')
+  assert.equal(wechatVisibleLinkUrl('mailto:hi@example.com', 'hi@example.com'), '')
+})
+check('页内锚点 / 相对路径 / javascript: / 空 href 一律不补', () => {
+  for (const href of ['#section-1', '/docs/a', './a.md', 'javascript:alert(1)', 'data:text/html,x', '', '   ']) {
+    assert.equal(wechatVisibleLinkUrl(href, '锚文字'), '', `href=${href}`)
+  }
+})
+check('协议大小写与首尾空白归一', () => {
+  assert.equal(wechatVisibleLinkUrl('  HTTPS://Example.com/A  ', '站点'), 'HTTPS://Example.com/A')
+  assert.equal(wechatVisibleLinkUrl('  https://example.com/a  ', '  站点  '), 'https://example.com/a')
+})
+check('锚文字为空（图片链接）仍补出地址', () => {
+  assert.equal(wechatVisibleLinkUrl('https://example.com/a.png', ''), 'https://example.com/a.png')
+})
+
 check('formatWechatContentIssues 空数组返回空串', () => assert.equal(formatWechatContentIssues([]), ''))
 check('formatWechatContentIssues 输出编号中文清单', () => {
   const s = formatWechatContentIssues(validateWechatArticle({ ...OK, title: '' }))
