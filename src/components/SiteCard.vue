@@ -613,6 +613,15 @@ const handleClick = () => {
   }
 }
 
+/* ===== 移动端：卡片右上角操作按钮（⋯）隐藏，不显示 =====
+   移动端只做浏览导航，网站管理在桌面端完成。只按视口宽度判定（≤768px），
+   不用 pointer:coarse——否则触屏笔记本等宽屏设备也会被误隐藏。 */
+@media (max-width: 768px) {
+  .card-actions {
+    display: none;
+  }
+}
+
 /* ================ 暗色主题 ================ */
 :global(.dark) .menu-trigger {
   background: transparent;
