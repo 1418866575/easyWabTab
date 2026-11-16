@@ -33,8 +33,20 @@ const tabs = computed(() => [
     badge: RECIPES.filter((r) => r.category === '白菜做法').length, testid: 'recipe-tab-cabbage'
   },
   {
-    value: '鱼虾豆腐', label: '鱼虾豆腐', emoji: '🐟',
-    badge: RECIPES.filter((r) => r.category === '鱼虾豆腐').length, testid: 'recipe-tab-seafood'
+    value: '鱼类做法', label: '鱼类做法', emoji: '🐟',
+    badge: RECIPES.filter((r) => r.category === '鱼类做法').length, testid: 'recipe-tab-fish'
+  },
+  {
+    value: '虾类做法', label: '虾类做法', emoji: '🦐',
+    badge: RECIPES.filter((r) => r.category === '虾类做法').length, testid: 'recipe-tab-shrimp'
+  },
+  {
+    value: '其他海鲜', label: '其他海鲜', emoji: '🦀',
+    badge: RECIPES.filter((r) => r.category === '其他海鲜').length, testid: 'recipe-tab-otherseafood'
+  },
+  {
+    value: '豆腐做法', label: '豆腐做法', emoji: '🍲',
+    badge: RECIPES.filter((r) => r.category === '豆腐做法').length, testid: 'recipe-tab-tofu'
   },
   {
     value: '家常素菜', label: '家常素菜', emoji: '🥬',
