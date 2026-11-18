@@ -114,3 +114,6 @@ _drafts/
 # 内含 Default/Login Data（已保存密码库）、Default/Network/Cookies、History、Web Data，约 52MB，
 # 等同于明文账号凭据；本仓库是公开仓库，绝不可入库
 .backup/
+
+# 健身教学图工作目录：母版照片与测点临时图约 126MB，只保留 public/fitness 下的成品图
+_fitness_img/

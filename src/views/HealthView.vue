@@ -25,6 +25,7 @@ import WorkbenchSleep from '@/components/workbench/WorkbenchSleep.vue'
 import WorkbenchWeight from '@/components/workbench/WorkbenchWeight.vue'
 import WorkbenchHeight from '@/components/workbench/WorkbenchHeight.vue'
 import HealthRecipes from '@/components/health/HealthRecipes.vue'
+import HealthFitness from '@/components/health/HealthFitness.vue'
 import WorkbenchSwitcher from '@/components/WorkbenchSwitcher.vue'
 import Icon from '@/components/Icon.vue'
 
@@ -95,7 +96,7 @@ async function handleSyncNowClick(): Promise<void> {
 }
 
 /** 菜谱是内容页，不属于 4 个健康指标；单独扩一个视图 tab，避免污染被学生端复用的 HealthModule */
-type HealthViewTab = HealthModule | 'recipes'
+type HealthViewTab = HealthModule | 'recipes' | 'fitness'
 
 /** 每个面板固定的描述与组件（与顺序/改名无关，仅按 key 映射） */
 const PANELS: Record<HealthViewTab, { desc: string; panel: Component }> = {
@@ -104,10 +105,11 @@ const PANELS: Record<HealthViewTab, { desc: string; panel: Component }> = {
   sleep: { desc: '记录入睡与起床时间，查看睡眠时长与质量。', panel: WorkbenchSleep },
   weight: { desc: '记录体重变化，查看 BMI 分级与趋势折线。', panel: WorkbenchWeight },
   recipes: { desc: '按卡片浏览家常菜谱，查看成品图、食材、做法与食品安全注意事项。', panel: HealthRecipes },
-  height: { desc: '按人员记录身高变化，查看趋势折线图与历史记录。', panel: WorkbenchHeight }
+  height: { desc: '按人员记录身高变化，查看趋势折线图与历史记录。', panel: WorkbenchHeight },
+  fitness: { desc: '按锻炼部位浏览健身动作，查看要点、常见错误与安全提示。', panel: HealthFitness }
 }
 /** 左侧菜单：顺序 / 改名 / 显隐来自 settings.healthMenuItems（在设置弹窗里调整即时生效）。
- *  store 初始化完成前 healthMenuItems 可能短暂为空，这里回退到 6 个默认项，避免首帧崩溃。 */
+ *  store 初始化完成前 healthMenuItems 可能短暂为空，这里回退到 7 个默认项，避免首帧崩溃。 */
 const menuSource = computed(() => {
   const items = settings.healthMenuItems
   return items.length

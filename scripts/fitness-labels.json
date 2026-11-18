@@ -1,0 +1,1608 @@
+{
+  "pushup": {
+    "src": "_fitness_img/base_pushup2.png",
+    "out": "public/fitness/push-up.jpg",
+    "maxw": 1280,
+    "face": [
+      505,
+      482,
+      112,
+      162
+    ],
+    "labels": [
+      {
+        "text": "胸大肌",
+        "role": "primary",
+        "pill": [
+          640,
+          170
+        ],
+        "target": [
+          675,
+          560
+        ],
+        "hl": [
+          80,
+          58
+        ],
+        "ang": -6
+      },
+      {
+        "text": "三角肌前束",
+        "role": "assist",
+        "pill": [
+          1075,
+          285
+        ],
+        "target": [
+          838,
+          488
+        ],
+        "hl": [
+          42,
+          40
+        ]
+      },
+      {
+        "text": "肱三头肌",
+        "role": "primary",
+        "pill": [
+          1250,
+          720
+        ],
+        "target": [
+          880,
+          578
+        ],
+        "hl": [
+          66,
+          44
+        ],
+        "ang": -30
+      }
+    ]
+  },
+  "dumbbell-curl": {
+    "src": "_fitness_img/base_curl2.png",
+    "out": "public/fitness/dumbbell-curl.jpg",
+    "maxw": 1280,
+    "face": [
+      496,
+      216,
+      104,
+      124
+    ],
+    "labels": [
+      {
+        "text": "肱二头肌",
+        "role": "primary",
+        "pill": [
+          230,
+          880
+        ],
+        "target": [
+          375,
+          540
+        ],
+        "hl": [
+          56,
+          44
+        ],
+        "ang": -20
+      },
+      {
+        "text": "肱桡肌",
+        "role": "assist",
+        "pill": [
+          110,
+          620
+        ],
+        "target": [
+          282,
+          645
+        ],
+        "hl": [
+          38,
+          30
+        ],
+        "ang": -15
+      }
+    ]
+  },
+  "kneeling-push-up": {
+    "src": "_fitness_img/base_kneeling-push-up.png",
+    "out": "public/fitness/kneeling-push-up.jpg",
+    "maxw": 1280,
+    "face": [
+      865,
+      385,
+      92,
+      90
+    ],
+    "labels": [
+      {
+        "text": "胸大肌",
+        "role": "primary",
+        "pill": [
+          640,
+          185
+        ],
+        "target": [
+          700,
+          460
+        ],
+        "hl": [
+          72,
+          52
+        ],
+        "ang": -8
+      },
+      {
+        "text": "三角肌前束",
+        "role": "assist",
+        "pill": [
+          1095,
+          175
+        ],
+        "target": [
+          795,
+          375
+        ],
+        "hl": [
+          40,
+          38
+        ]
+      },
+      {
+        "text": "肱三头肌",
+        "role": "primary",
+        "pill": [
+          1245,
+          620
+        ],
+        "target": [
+          848,
+          548
+        ],
+        "hl": [
+          52,
+          66
+        ],
+        "ang": -12
+      }
+    ]
+  },
+  "dumbbell-bench": {
+    "src": "_fitness_img/base_dumbbell-bench.png",
+    "out": "public/fitness/dumbbell-bench.jpg",
+    "maxw": 1280,
+    "face": [
+      210,
+      550,
+      92,
+      74
+    ],
+    "labels": [
+      {
+        "text": "胸大肌",
+        "role": "primary",
+        "pill": [
+          700,
+          300
+        ],
+        "target": [
+          420,
+          540
+        ],
+        "hl": [
+          80,
+          55
+        ],
+        "ang": -4
+      },
+      {
+        "text": "三角肌前束",
+        "role": "assist",
+        "pill": [
+          610,
+          145
+        ],
+        "target": [
+          390,
+          505
+        ],
+        "hl": [
+          40,
+          38
+        ]
+      }
+    ]
+  },
+  "bodyweight-squat": {
+    "src": "_fitness_img/base_bodyweight-squat.png",
+    "out": "public/fitness/bodyweight-squat.jpg",
+    "maxw": 1280,
+    "face": [
+      400,
+      235,
+      82,
+      100
+    ],
+    "labels": [
+      {
+        "text": "股四头肌",
+        "role": "primary",
+        "pill": [
+          870,
+          800
+        ],
+        "target": [
+          592,
+          972
+        ],
+        "hl": [
+          92,
+          68
+        ],
+        "ang": -20
+      },
+      {
+        "text": "臀大肌",
+        "role": "assist",
+        "pill": [
+          120,
+          800
+        ],
+        "target": [
+          425,
+          905
+        ],
+        "hl": [
+          72,
+          55
+        ],
+        "ang": -10
+      }
+    ]
+  },
+  "lunge": {
+    "src": "_fitness_img/base_lunge.png",
+    "out": "public/fitness/lunge.jpg",
+    "maxw": 1280,
+    "face": [
+      390,
+      170,
+      90,
+      130
+    ],
+    "labels": [
+      {
+        "text": "股四头肌",
+        "role": "primary",
+        "pill": [
+          125,
+          950
+        ],
+        "target": [
+          330,
+          1010
+        ],
+        "hl": [
+          80,
+          92
+        ],
+        "ang": -30
+      },
+      {
+        "text": "臀大肌",
+        "role": "assist",
+        "pill": [
+          125,
+          745
+        ],
+        "target": [
+          520,
+          862
+        ],
+        "hl": [
+          72,
+          60
+        ],
+        "ang": -12
+      }
+    ]
+  },
+  "superman": {
+    "src": "_fitness_img/base_superman.png",
+    "out": "public/fitness/superman.jpg",
+    "maxw": 1280,
+    "face": [
+      365,
+      550,
+      85,
+      72
+    ],
+    "labels": [
+      {
+        "text": "竖脊肌",
+        "role": "primary",
+        "pill": [
+          650,
+          240
+        ],
+        "target": [
+          760,
+          680
+        ],
+        "hl": [
+          85,
+          48
+        ],
+        "ang": 0
+      },
+      {
+        "text": "臀大肌",
+        "role": "assist",
+        "pill": [
+          1030,
+          300
+        ],
+        "target": [
+          880,
+          700
+        ],
+        "hl": [
+          62,
+          52
+        ]
+      }
+    ]
+  },
+  "glute-bridge": {
+    "src": "_fitness_img/base_glute-bridge.png",
+    "out": "public/fitness/glute-bridge.jpg",
+    "maxw": 1280,
+    "face": [
+      980,
+      650,
+      82,
+      78
+    ],
+    "labels": [
+      {
+        "text": "臀大肌",
+        "role": "primary",
+        "pill": [
+          760,
+          270
+        ],
+        "target": [
+          700,
+          540
+        ],
+        "hl": [
+          78,
+          58
+        ]
+      },
+      {
+        "text": "腘绳肌",
+        "role": "assist",
+        "pill": [
+          420,
+          300
+        ],
+        "target": [
+          450,
+          600
+        ],
+        "hl": [
+          70,
+          55
+        ]
+      }
+    ]
+  },
+  "dumbbell-squat": {
+    "src": "_fitness_img/base_dumbbell-squat.png",
+    "out": "public/fitness/dumbbell-squat.jpg",
+    "maxw": 1280,
+    "face": [
+      285,
+      350,
+      95,
+      110
+    ],
+    "labels": [
+      {
+        "text": "股四头肌",
+        "role": "primary",
+        "pill": [
+          760,
+          900
+        ],
+        "target": [
+          420,
+          960
+        ],
+        "hl": [
+          80,
+          90
+        ],
+        "ang": -20
+      },
+      {
+        "text": "臀大肌",
+        "role": "assist",
+        "pill": [
+          700,
+          620
+        ],
+        "target": [
+          250,
+          830
+        ],
+        "hl": [
+          70,
+          60
+        ]
+      }
+    ]
+  },
+  "dumbbell-deadlift": {
+    "src": "_fitness_img/base_dumbbell-deadlift.png",
+    "out": "public/fitness/dumbbell-deadlift.jpg",
+    "maxw": 1280,
+    "face": [
+      330,
+      340,
+      115,
+      120
+    ],
+    "labels": [
+      {
+        "text": "臀大肌",
+        "role": "primary",
+        "pill": [
+          680,
+          400
+        ],
+        "target": [
+          610,
+          790
+        ],
+        "hl": [
+          72,
+          60
+        ]
+      },
+      {
+        "text": "腘绳肌",
+        "role": "assist",
+        "pill": [
+          680,
+          900
+        ],
+        "target": [
+          525,
+          880
+        ],
+        "hl": [
+          70,
+          55
+        ]
+      }
+    ]
+  },
+  "dumbbell-press": {
+    "src": "_fitness_img/base_dumbbell-press.png",
+    "out": "public/fitness/dumbbell-press.jpg",
+    "maxw": 1280,
+    "face": [
+      290,
+      390,
+      68,
+      98
+    ],
+    "labels": [
+      {
+        "text": "三角肌前束",
+        "role": "primary",
+        "pill": [
+          700,
+          700
+        ],
+        "target": [
+          375,
+          500
+        ],
+        "hl": [
+          52,
+          46
+        ]
+      },
+      {
+        "text": "肱三头肌",
+        "role": "assist",
+        "pill": [
+          700,
+          400
+        ],
+        "target": [
+          445,
+          440
+        ],
+        "hl": [
+          40,
+          55
+        ]
+      }
+    ]
+  },
+  "lateral-raise": {
+    "src": "_fitness_img/base_lateral-raise.png",
+    "out": "public/fitness/lateral-raise.jpg",
+    "maxw": 1280,
+    "face": [
+      295,
+      225,
+      72,
+      120
+    ],
+    "labels": [
+      {
+        "text": "三角肌中束",
+        "role": "primary",
+        "pill": [
+          700,
+          300
+        ],
+        "target": [
+          430,
+          425
+        ],
+        "hl": [
+          50,
+          45
+        ]
+      }
+    ]
+  },
+  "rear-fly": {
+    "src": "_fitness_img/base_rear-fly.png",
+    "out": "public/fitness/rear-fly.jpg",
+    "maxw": 1280,
+    "face": [
+      415,
+      190,
+      68,
+      112
+    ],
+    "labels": [
+      {
+        "text": "三角肌后束",
+        "role": "primary",
+        "pill": [
+          1150,
+          250
+        ],
+        "target": [
+          785,
+          340
+        ],
+        "hl": [
+          52,
+          46
+        ]
+      },
+      {
+        "text": "斜方肌中部",
+        "role": "assist",
+        "pill": [
+          620,
+          120
+        ],
+        "target": [
+          560,
+          350
+        ],
+        "hl": [
+          62,
+          40
+        ]
+      }
+    ]
+  },
+  "dumbbell-row": {
+    "src": "_fitness_img/base_dumbbell-row.png",
+    "out": "public/fitness/dumbbell-row.jpg",
+    "maxw": 1280,
+    "face": [
+      650,
+      125,
+      80,
+      95
+    ],
+    "labels": [
+      {
+        "text": "背阔肌",
+        "role": "primary",
+        "pill": [
+          950,
+          250
+        ],
+        "target": [
+          520,
+          330
+        ],
+        "hl": [
+          80,
+          65
+        ]
+      },
+      {
+        "text": "三角肌后束",
+        "role": "assist",
+        "pill": [
+          1150,
+          120
+        ],
+        "target": [
+          610,
+          185
+        ],
+        "hl": [
+          46,
+          42
+        ]
+      }
+    ]
+  },
+  "incline-push-up": {
+    "src": "_fitness_img/base_incline-push-up.png",
+    "out": "public/fitness/incline-push-up.jpg",
+    "maxw": 1280,
+    "face": [
+      375,
+      420,
+      80,
+      88
+    ],
+    "labels": [
+      {
+        "text": "胸大肌上部",
+        "role": "primary",
+        "pill": [
+          620,
+          200
+        ],
+        "target": [
+          505,
+          555
+        ],
+        "hl": [
+          78,
+          52
+        ],
+        "ang": -8
+      },
+      {
+        "text": "三角肌前束",
+        "role": "assist",
+        "pill": [
+          980,
+          220
+        ],
+        "target": [
+          550,
+          415
+        ],
+        "hl": [
+          42,
+          38
+        ]
+      }
+    ]
+  },
+  "plank": {
+    "src": "_fitness_img/base_plank.png",
+    "out": "public/fitness/plank.jpg",
+    "maxw": 1280,
+    "face": [
+      333,
+      478,
+      64,
+      86
+    ],
+    "labels": [
+      {
+        "text": "腹直肌",
+        "role": "primary",
+        "pill": [
+          560,
+          250
+        ],
+        "target": [
+          550,
+          620
+        ],
+        "hl": [
+          80,
+          55
+        ]
+      },
+      {
+        "text": "竖脊肌",
+        "role": "assist",
+        "pill": [
+          900,
+          250
+        ],
+        "target": [
+          760,
+          580
+        ],
+        "hl": [
+          70,
+          45
+        ]
+      }
+    ]
+  },
+  "crunch": {
+    "src": "_fitness_img/base_crunch.png",
+    "out": "public/fitness/crunch.jpg",
+    "maxw": 1280,
+    "face": [
+      325,
+      620,
+      76,
+      80
+    ],
+    "labels": [
+      {
+        "text": "腹直肌上段",
+        "role": "primary",
+        "pill": [
+          600,
+          250
+        ],
+        "target": [
+          520,
+          550
+        ],
+        "hl": [
+          78,
+          50
+        ],
+        "ang": -6
+      }
+    ]
+  },
+  "reverse-crunch": {
+    "src": "_fitness_img/base_reverse-crunch.png",
+    "out": "public/fitness/reverse-crunch.jpg",
+    "maxw": 1280,
+    "face": [
+      320,
+      650,
+      72,
+      72
+    ],
+    "labels": [
+      {
+        "text": "腹直肌下段",
+        "role": "primary",
+        "pill": [
+          560,
+          270
+        ],
+        "target": [
+          505,
+          630
+        ],
+        "hl": [
+          72,
+          48
+        ],
+        "ang": -6
+      }
+    ]
+  },
+  "dead-bug": {
+    "src": "_fitness_img/base_dead-bug.png",
+    "out": "public/fitness/dead-bug.jpg",
+    "maxw": 1280,
+    "face": [
+      315,
+      665,
+      70,
+      76
+    ],
+    "labels": [
+      {
+        "text": "腹直肌",
+        "role": "primary",
+        "pill": [
+          700,
+          300
+        ],
+        "target": [
+          540,
+          670
+        ],
+        "hl": [
+          80,
+          52
+        ]
+      },
+      {
+        "text": "腹斜肌",
+        "role": "assist",
+        "pill": [
+          1000,
+          300
+        ],
+        "target": [
+          655,
+          680
+        ],
+        "hl": [
+          52,
+          50
+        ]
+      }
+    ]
+  },
+  "russian-twist": {
+    "src": "_fitness_img/base_russian-twist.png",
+    "out": "public/fitness/russian-twist.jpg",
+    "maxw": 1280,
+    "face": [
+      875,
+      330,
+      78,
+      92
+    ],
+    "labels": [
+      {
+        "text": "腹斜肌",
+        "role": "primary",
+        "pill": [
+          500,
+          250
+        ],
+        "target": [
+          760,
+          640
+        ],
+        "hl": [
+          62,
+          58
+        ]
+      }
+    ]
+  },
+  "plank-rotation": {
+    "src": "_fitness_img/base_plank-rotation.png",
+    "out": "public/fitness/plank-rotation.jpg",
+    "maxw": 1280,
+    "face": [
+      975,
+      520,
+      80,
+      96
+    ],
+    "labels": [
+      {
+        "text": "腹斜肌",
+        "role": "primary",
+        "pill": [
+          600,
+          300
+        ],
+        "target": [
+          770,
+          615
+        ],
+        "hl": [
+          60,
+          52
+        ]
+      }
+    ]
+  },
+  "chair-dip": {
+    "src": "_fitness_img/base_chair-dip.png",
+    "out": "public/fitness/chair-dip.jpg",
+    "maxw": 1280,
+    "face": [
+      550,
+      190,
+      86,
+      92
+    ],
+    "labels": [
+      {
+        "text": "肱三头肌",
+        "role": "primary",
+        "pill": [
+          200,
+          330
+        ],
+        "target": [
+          600,
+          560
+        ],
+        "hl": [
+          62,
+          72
+        ],
+        "ang": -12
+      }
+    ]
+  },
+  "hammer-curl": {
+    "src": "_fitness_img/base_hammer-curl.png",
+    "out": "public/fitness/hammer-curl.jpg",
+    "maxw": 1280,
+    "face": [
+      470,
+      110,
+      90,
+      92
+    ],
+    "labels": [
+      {
+        "text": "肱肌",
+        "role": "primary",
+        "pill": [
+          150,
+          850
+        ],
+        "target": [
+          365,
+          520
+        ],
+        "hl": [
+          52,
+          58
+        ],
+        "ang": -18
+      },
+      {
+        "text": "肱桡肌",
+        "role": "assist",
+        "pill": [
+          120,
+          950
+        ],
+        "target": [
+          295,
+          600
+        ],
+        "hl": [
+          38,
+          34
+        ],
+        "ang": -15
+      }
+    ]
+  },
+  "doorway-row": {
+    "src": "_fitness_img/base_doorway-row.png",
+    "out": "public/fitness/doorway-row.jpg",
+    "maxw": 1280,
+    "face": [
+      475,
+      355,
+      130,
+      105
+    ],
+    "labels": [
+      {
+        "text": "背阔肌",
+        "role": "primary",
+        "pill": [
+          110,
+          800
+        ],
+        "target": [
+          415,
+          620
+        ],
+        "hl": [
+          56,
+          64
+        ],
+        "ang": -8
+      },
+      {
+        "text": "三角肌后束",
+        "role": "assist",
+        "pill": [
+          105,
+          620
+        ],
+        "target": [
+          465,
+          520
+        ],
+        "hl": [
+          42,
+          40
+        ]
+      }
+    ]
+  },
+  "narrow-push-up": {
+    "src": "_fitness_img/base_narrow-push-up.png",
+    "out": "public/fitness/narrow-push-up.jpg",
+    "maxw": 1280,
+    "face": [
+      375,
+      400,
+      80,
+      102
+    ],
+    "labels": [
+      {
+        "text": "肱三头肌",
+        "role": "primary",
+        "pill": [
+          900,
+          250
+        ],
+        "target": [
+          630,
+          530
+        ],
+        "hl": [
+          68,
+          58
+        ],
+        "ang": -14
+      },
+      {
+        "text": "胸大肌",
+        "role": "assist",
+        "pill": [
+          500,
+          200
+        ],
+        "target": [
+          530,
+          620
+        ],
+        "hl": [
+          70,
+          60
+        ],
+        "ang": -6
+      }
+    ]
+  },
+  "jumping-jack": {
+    "src": "_fitness_img/base_jumping-jack.png",
+    "out": "public/fitness/jumping-jack.jpg",
+    "maxw": 1280,
+    "face": [
+      480,
+      340,
+      82,
+      108
+    ],
+    "labels": [
+      {
+        "text": "三角肌中束",
+        "role": "primary",
+        "pill": [
+          880,
+          540
+        ],
+        "target": [
+          650,
+          410
+        ],
+        "hl": [
+          52,
+          50
+        ]
+      },
+      {
+        "text": "腓肠肌",
+        "role": "assist",
+        "pill": [
+          870,
+          1150
+        ],
+        "target": [
+          640,
+          1110
+        ],
+        "hl": [
+          46,
+          64
+        ],
+        "ang": -20
+      }
+    ]
+  },
+  "mountain-climber": {
+    "src": "_fitness_img/base_mountain-climber.png",
+    "out": "public/fitness/mountain-climber.jpg",
+    "maxw": 1280,
+    "face": [
+      1015,
+      430,
+      70,
+      100
+    ],
+    "labels": [
+      {
+        "text": "腹直肌",
+        "role": "primary",
+        "pill": [
+          700,
+          250
+        ],
+        "target": [
+          760,
+          515
+        ],
+        "hl": [
+          72,
+          52
+        ]
+      },
+      {
+        "text": "髂腰肌",
+        "role": "assist",
+        "pill": [
+          420,
+          250
+        ],
+        "target": [
+          560,
+          580
+        ],
+        "hl": [
+          58,
+          52
+        ]
+      }
+    ]
+  },
+  "burpee": {
+    "src": "_fitness_img/base_burpee.png",
+    "out": "public/fitness/burpee.jpg",
+    "maxw": 1280,
+    "face": [
+      480,
+      400,
+      82,
+      112
+    ],
+    "labels": [
+      {
+        "text": "三角肌前束",
+        "role": "primary",
+        "pill": [
+          760,
+          450
+        ],
+        "target": [
+          600,
+          390
+        ],
+        "hl": [
+          50,
+          46
+        ]
+      },
+      {
+        "text": "股四头肌",
+        "role": "assist",
+        "pill": [
+          760,
+          950
+        ],
+        "target": [
+          570,
+          990
+        ],
+        "hl": [
+          62,
+          74
+        ],
+        "ang": -18
+      }
+    ]
+  },
+  "squat-press": {
+    "src": "_fitness_img/base_squat-press.png",
+    "out": "public/fitness/squat-press.jpg",
+    "maxw": 1280,
+    "face": [
+      450,
+      510,
+      74,
+      112
+    ],
+    "labels": [
+      {
+        "text": "三角肌前束",
+        "role": "primary",
+        "pill": [
+          830,
+          560
+        ],
+        "target": [
+          620,
+          640
+        ],
+        "hl": [
+          50,
+          46
+        ]
+      },
+      {
+        "text": "股四头肌",
+        "role": "assist",
+        "pill": [
+          800,
+          1050
+        ],
+        "target": [
+          560,
+          1070
+        ],
+        "hl": [
+          66,
+          66
+        ],
+        "ang": -20
+      }
+    ]
+  },
+  "wall-squat-press": {
+    "src": "_fitness_img/base_wall-squat-press.png",
+    "out": "public/fitness/wall-squat-press.jpg",
+    "maxw": 1280,
+    "face": [
+      375,
+      365,
+      125,
+      110
+    ],
+    "labels": [
+      {
+        "text": "三角肌前束",
+        "role": "primary",
+        "pill": [
+          700,
+          380
+        ],
+        "target": [
+          360,
+          480
+        ],
+        "hl": [
+          46,
+          44
+        ]
+      },
+      {
+        "text": "股四头肌",
+        "role": "assist",
+        "pill": [
+          700,
+          950
+        ],
+        "target": [
+          420,
+          1000
+        ],
+        "hl": [
+          64,
+          56
+        ],
+        "ang": -6
+      }
+    ]
+  },
+  "push-up-step1": {
+    "src": "_fitness_img/base_push-up-step1.png",
+    "out": "public/fitness/push-up-step1.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "起始位"
+  },
+  "push-up-step2": {
+    "src": "_fitness_img/base_push-up-step2.png",
+    "out": "public/fitness/push-up-step2.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "动作中段"
+  },
+  "kneeling-push-up-step1": {
+    "src": "_fitness_img/base_kneeling-push-up-step1.png",
+    "out": "public/fitness/kneeling-push-up-step1.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "起始位"
+  },
+  "kneeling-push-up-step2": {
+    "src": "_fitness_img/base_kneeling-push-up-step2.png",
+    "out": "public/fitness/kneeling-push-up-step2.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "动作中段"
+  },
+  "incline-push-up-step1": {
+    "src": "_fitness_img/base_incline-push-up-step1.png",
+    "out": "public/fitness/incline-push-up-step1.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "起始位"
+  },
+  "incline-push-up-step2": {
+    "src": "_fitness_img/base_incline-push-up-step2.png",
+    "out": "public/fitness/incline-push-up-step2.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "动作中段"
+  },
+  "dumbbell-bench-step1": {
+    "src": "_fitness_img/base_dumbbell-bench-step1.png",
+    "out": "public/fitness/dumbbell-bench-step1.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "起始位"
+  },
+  "dumbbell-bench-step2": {
+    "src": "_fitness_img/base_dumbbell-bench-step2.png",
+    "out": "public/fitness/dumbbell-bench-step2.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "动作中段"
+  },
+  "doorway-row-step1": {
+    "src": "_fitness_img/base_doorway-row-step1.png",
+    "out": "public/fitness/doorway-row-step1.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "起始位"
+  },
+  "doorway-row-step2": {
+    "src": "_fitness_img/base_doorway-row-step2.png",
+    "out": "public/fitness/doorway-row-step2.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "动作中段"
+  },
+  "dumbbell-row-step1": {
+    "src": "_fitness_img/base_dumbbell-row-step1.png",
+    "out": "public/fitness/dumbbell-row-step1.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "起始位"
+  },
+  "dumbbell-row-step2": {
+    "src": "_fitness_img/base_dumbbell-row-step2.png",
+    "out": "public/fitness/dumbbell-row-step2.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "动作中段"
+  },
+  "superman-step1": {
+    "src": "_fitness_img/base_superman-step1.png",
+    "out": "public/fitness/superman-step1.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "起始位"
+  },
+  "superman-step2": {
+    "src": "_fitness_img/base_superman-step2.png",
+    "out": "public/fitness/superman-step2.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "动作中段"
+  },
+  "dumbbell-deadlift-step1": {
+    "src": "_fitness_img/base_dumbbell-deadlift-step1.png",
+    "out": "public/fitness/dumbbell-deadlift-step1.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "起始位"
+  },
+  "dumbbell-deadlift-step2": {
+    "src": "_fitness_img/base_dumbbell-deadlift-step2.png",
+    "out": "public/fitness/dumbbell-deadlift-step2.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "动作中段"
+  },
+  "bodyweight-squat-step1": {
+    "src": "_fitness_img/base_bodyweight-squat-step1.png",
+    "out": "public/fitness/bodyweight-squat-step1.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "起始位"
+  },
+  "bodyweight-squat-step2": {
+    "src": "_fitness_img/base_bodyweight-squat-step2.png",
+    "out": "public/fitness/bodyweight-squat-step2.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "动作中段"
+  },
+  "lunge-step1": {
+    "src": "_fitness_img/base_lunge-step1.png",
+    "out": "public/fitness/lunge-step1.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "起始位"
+  },
+  "lunge-step2": {
+    "src": "_fitness_img/base_lunge-step2.png",
+    "out": "public/fitness/lunge-step2.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "动作中段"
+  },
+  "dumbbell-squat-step1": {
+    "src": "_fitness_img/base_dumbbell-squat-step1.png",
+    "out": "public/fitness/dumbbell-squat-step1.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "起始位"
+  },
+  "dumbbell-squat-step2": {
+    "src": "_fitness_img/base_dumbbell-squat-step2.png",
+    "out": "public/fitness/dumbbell-squat-step2.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "动作中段"
+  },
+  "glute-bridge-step1": {
+    "src": "_fitness_img/base_glute-bridge-step1.png",
+    "out": "public/fitness/glute-bridge-step1.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "起始位"
+  },
+  "glute-bridge-step2": {
+    "src": "_fitness_img/base_glute-bridge-step2.png",
+    "out": "public/fitness/glute-bridge-step2.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "动作中段"
+  },
+  "dumbbell-press-step1": {
+    "src": "_fitness_img/base_dumbbell-press-step1.png",
+    "out": "public/fitness/dumbbell-press-step1.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "起始位"
+  },
+  "dumbbell-press-step2": {
+    "src": "_fitness_img/base_dumbbell-press-step2.png",
+    "out": "public/fitness/dumbbell-press-step2.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "动作中段"
+  },
+  "lateral-raise-step1": {
+    "src": "_fitness_img/base_lateral-raise-step1.png",
+    "out": "public/fitness/lateral-raise-step1.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "起始位"
+  },
+  "lateral-raise-step2": {
+    "src": "_fitness_img/base_lateral-raise-step2.png",
+    "out": "public/fitness/lateral-raise-step2.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "动作中段"
+  },
+  "rear-fly-step1": {
+    "src": "_fitness_img/base_rear-fly-step1.png",
+    "out": "public/fitness/rear-fly-step1.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "起始位"
+  },
+  "rear-fly-step2": {
+    "src": "_fitness_img/base_rear-fly-step2.png",
+    "out": "public/fitness/rear-fly-step2.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "动作中段"
+  },
+  "wall-squat-press-step1": {
+    "src": "_fitness_img/base_wall-squat-press-step1.png",
+    "out": "public/fitness/wall-squat-press-step1.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "起始位"
+  },
+  "wall-squat-press-step2": {
+    "src": "_fitness_img/base_wall-squat-press-step2.png",
+    "out": "public/fitness/wall-squat-press-step2.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "动作中段"
+  },
+  "dumbbell-curl-step1": {
+    "src": "_fitness_img/base_dumbbell-curl-step1.png",
+    "out": "public/fitness/dumbbell-curl-step1.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "起始位"
+  },
+  "dumbbell-curl-step2": {
+    "src": "_fitness_img/base_dumbbell-curl-step2.png",
+    "out": "public/fitness/dumbbell-curl-step2.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "动作中段"
+  },
+  "chair-dip-step1": {
+    "src": "_fitness_img/base_chair-dip-step1.png",
+    "out": "public/fitness/chair-dip-step1.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "起始位"
+  },
+  "chair-dip-step2": {
+    "src": "_fitness_img/base_chair-dip-step2.png",
+    "out": "public/fitness/chair-dip-step2.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "动作中段"
+  },
+  "hammer-curl-step1": {
+    "src": "_fitness_img/base_hammer-curl-step1.png",
+    "out": "public/fitness/hammer-curl-step1.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "起始位"
+  },
+  "hammer-curl-step2": {
+    "src": "_fitness_img/base_hammer-curl-step2.png",
+    "out": "public/fitness/hammer-curl-step2.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "动作中段"
+  },
+  "narrow-push-up-step1": {
+    "src": "_fitness_img/base_narrow-push-up-step1.png",
+    "out": "public/fitness/narrow-push-up-step1.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "起始位"
+  },
+  "narrow-push-up-step2": {
+    "src": "_fitness_img/base_narrow-push-up-step2.png",
+    "out": "public/fitness/narrow-push-up-step2.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "动作中段"
+  },
+  "plank-step1": {
+    "src": "_fitness_img/base_plank-step1.png",
+    "out": "public/fitness/plank-step1.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "起始位"
+  },
+  "plank-step2": {
+    "src": "_fitness_img/base_plank-step2.png",
+    "out": "public/fitness/plank-step2.jpg",
+    "maxw": 1280,
+    "mode": "step",
+    "caption": "动作中段"
+  }
+}
