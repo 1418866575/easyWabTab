@@ -3,6 +3,7 @@ import Icon from './Icon.vue'
 import BaseDialog from './common/BaseDialog.vue'
 import { computed } from 'vue'
 import { useCloudSync } from '@/composables/useCloudSync'
+import { stableStringify } from '@/composables/stableStringify'
 
 const cloudSync = useCloudSync()
 
@@ -31,13 +32,6 @@ function formatTime(isoOrTs: string | number): string {
   if (Number.isNaN(d.getTime())) return '未记录'
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
-function stableStringify(obj: unknown): string {
-  if (obj === null || typeof obj !== 'object') return JSON.stringify(obj)
-  if (Array.isArray(obj)) return '[' + obj.map(stableStringify).join(',') + ']'
-  const keys = Object.keys(obj as Record<string, unknown>).sort()
-  return '{' + keys.map(k => JSON.stringify(k) + ':' + stableStringify((obj as Record<string, unknown>)[k])).join(',') + '}'
 }
 
 function getSize(v: unknown): number {

@@ -8,7 +8,31 @@
  */
 import type { BlogArticle, BlogCategory, BlogData, BlogFrontPrefs, BlogFrontSyncData, BlogImage, BlogImageCategory, BlogRecentItem, BlogSyncData, BlogTag } from '../types'
 import { BLOG_RECENT_LIMIT } from '../types'
-import { normalizeBlogData, normalizeCategory, normalizeTag, normalizeArticle, nowIso } from './blogCore'
+import { normalizeBlogData, normalizeCategory, normalizeTag, normalizeArticle, nowIso } from './blogCore.ts'
+
+/**
+ * 内容签名专用的信封净化：剔除所有「每次同步都会自动推进」的字段。
+ *
+ * - `exportedAt` / `pushedAt` / `clientId`：由上层 envelopeSignature 统一处理，这里一并剔除，
+ *   让本函数可作为 blog.json 的唯一签名入口。
+ * - `blog.updatedAt`：mergeBlogEnvelope 每次合并都会写 nowIso()，若参与签名比较，
+ *   拉取后本地签名永远与云端不一致 —— 表现为「没改任何东西，刚同步完又弹冲突」。
+ *   该字段仍保留在数据里供 merge 判断 settings/wechat 新旧，只是不参与内容比较。
+ */
+export function withoutVolatileBlogMeta(data: BlogSyncData | null | undefined): Record<string, unknown> | undefined {
+  if (!data || typeof data !== 'object') return undefined
+  const copy: Record<string, unknown> = { ...(data as unknown as Record<string, unknown>) }
+  delete copy.exportedAt
+  delete copy.pushedAt
+  delete copy.clientId
+  const blog = copy.blog
+  if (blog && typeof blog === 'object' && !Array.isArray(blog)) {
+    const cleanBlog = { ...(blog as Record<string, unknown>) }
+    delete cleanBlog.updatedAt
+    copy.blog = cleanBlog
+  }
+  return copy
+}
 
 /** 条目时间戳：用于新旧比较（缺失时回落到 createdAt） */
 function stampOf(item: { updatedAt?: string; createdAt?: string }): string {

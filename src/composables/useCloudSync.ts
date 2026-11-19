@@ -75,7 +75,8 @@ import { compareSmartStamp, type SmartStamp } from './smartCore'
 import { hasSmartExplicitDelete, readSmartCountBaseline, writeSmartCountBaseline } from './smartSyncGuard'
 import { mergeBusinessStore } from './businessCore'
 import { mergeLedgerStore } from './ledgerCore'
-import { mergeBlogEnvelope, mergeBlogPrefsEnvelope } from './blogSyncCore'
+import { mergeBlogEnvelope, mergeBlogPrefsEnvelope, withoutVolatileBlogMeta } from './blogSyncCore'
+import { stableStringify } from './stableStringify'
 // 个人图书馆云同步信封（books.json）：仅收藏 + 用户自建书签
 // export/import/reload 在本机偏好单例里（useBooksPrefs），合并纯函数放零依赖的 booksSyncCore
 import {
@@ -146,7 +147,7 @@ interface ConflictEntry {
 interface FileConfig {
   name: string
   exportLocal: () => Promise<unknown> | unknown
-  importRemote: (data: unknown) => Promise<unknown>
+  importRemote: (data: unknown, overwrite?: boolean) => Promise<unknown>
   signature: (data: unknown) => string
   merge: (local: unknown, remote: unknown) => unknown
   reload: () => Promise<void>
@@ -287,7 +288,8 @@ function writeRemoteTs(name: string, ts: number): void {
 //   无基线（新设备 / 老版本升级后首轮）→ 采纳云端，让设置先流起来。
 //
 // 写入时机 = 本地 settings 与云端达成一致的时刻：推送成功、拉取落地、合并落地。
-const SETTINGS_SIG_KEY = 'ewt.cloudSync.settingsSig'
+// v2：稳定序列化改为跳过 undefined 字段，旧基线算法不同，换 key 避免升级后误判「本机刚改过设置」
+const SETTINGS_SIG_KEY = 'ewt.cloudSync.settingsSig.v2'
 
 function readSettingsSig(): string {
   return localStorage.getItem(SETTINGS_SIG_KEY) || ''
@@ -541,14 +543,6 @@ function davErrorLabel(method: string, upstreamStatus: string | null, snippet: s
 
 // ========== 内容 hash（双兜底：优先 SubtleCrypto SHA-1，非安全上下文退化到 32bit FNV-1a）==========
 
-/** 递归排序 key 后 JSON 序列化——消除 key 顺序差异，使相同语义的数据 hash 一致 */
-function stableStringify(obj: unknown): string {
-  if (obj === null || typeof obj !== 'object') return JSON.stringify(obj)
-  if (Array.isArray(obj)) return '[' + obj.map(stableStringify).join(',') + ']'
-  const keys = Object.keys(obj as Record<string, unknown>).sort()
-  return '{' + keys.map(k => JSON.stringify(k) + ':' + stableStringify((obj as Record<string, unknown>)[k])).join(',') + '}'
-}
-
 /** 各信封通用签名：剔除 exportedAt/pushedAt/clientId 三个不稳定元数据字段后 stableStringify */
 function envelopeSignature(data: Record<string, unknown>): string {
   const copy: Record<string, unknown> = { ...data }
@@ -574,7 +568,7 @@ function sigBusiness(data: BusinessSyncData): string { return envelopeSignature(
 function sigStudent(data: StudentSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
 function sigTeacher(data: TeacherSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
 function sigSmart(data: SmartSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
-function sigBlog(data: BlogSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
+function sigBlog(data: BlogSyncData): string { return stableStringify(withoutVolatileBlogMeta(data) ?? {}) }
 function sigBlogPrefs(data: BlogFrontSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
 function sigBooksPrefs(data: BooksPrefsSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
 
@@ -1711,7 +1705,7 @@ const FILE_CONFIGS: FileConfig[] = [
     // 参与比较，避免「A 删了、B 还在编辑」把文章复活；settings 整体随 BlogData.updatedAt 较新的一侧
     name: 'blog.json',
     exportLocal: () => exportBlog(),
-    importRemote: async (data) => { await importBlogData(data as BlogSyncData); return undefined },
+    importRemote: async (data, overwrite) => { await importBlogData(data as BlogSyncData, overwrite); return undefined },
     signature: (data) => sigBlog(data as BlogSyncData),
     merge: (l, r) => mergeBlogEnvelope(l as BlogSyncData, r as BlogSyncData),
     reload: reloadBlogStores,
@@ -2098,19 +2092,19 @@ async function runTombstoneGc(silent = false): Promise<number> {
  * 应用远端到本地（workbench 文件额外检测密码身份变更）。
  * 注意：此函数仅写本地（IDB/localStorage），不 reload Vue stores —— reload 由调用方在所有文件处理完后统一执行。
  */
-async function applyFileRemote(cfg: FileConfig, remote: unknown): Promise<{ identityChanged: boolean }> {
+async function applyFileRemote(cfg: FileConfig, remote: unknown, overwrite = false): Promise<{ identityChanged: boolean }> {
   let identityChanged = false
   if (cfg.name === 'workbench.json') {
     const localSaltBefore = getStoredSaltHex()
     const localVerificationBefore = getStoredVerification()
-    const result = await cfg.importRemote(remote) as { adoptedPasswordIdentity?: boolean } | undefined
+    const result = await cfg.importRemote(remote, overwrite) as { adoptedPasswordIdentity?: boolean } | undefined
     const remoteData = remote as WorkbenchSyncData
     identityChanged = !!result?.adoptedPasswordIdentity
       && (remoteData.passwordsSalt !== localSaltBefore || remoteData.passwordVerification !== localVerificationBefore)
     // 云端 settings 已落本地 → 以它为基线（旧信封无 settings 字段时不写，避免把基线打成空值）
     if (remoteData.settings) writeSettingsSig(settingsEnvelopeSig(remoteData.settings))
   } else {
-    await cfg.importRemote(remote)
+    await cfg.importRemote(remote, overwrite)
   }
   return { identityChanged }
 }
@@ -2326,7 +2320,7 @@ export async function resolveConflict(decision: 'remote' | 'local' | 'cancel' | 
       for (const cfg of FILE_CONFIGS) {
         const entry = conflicts[cfg.name]
         if (!entry) continue
-        const result = await applyFileRemote(cfg, entry.remote)
+        const result = await applyFileRemote(cfg, entry.remote, true)
         if (result.identityChanged) workbenchIdentityChanged = true
       }
       const now = Date.now()
@@ -2648,7 +2642,7 @@ export async function forcePullRemote(silent = false): Promise<void> {
     for (const cfg of FILE_CONFIGS) {
       const result = await webdavGet(`${dir}/${cfg.name}`, username, password)
       if (!result.data) continue // 该信封云端不存在 → 保留本地
-      const appliedResult = await applyFileRemote(cfg, result.data)
+      const appliedResult = await applyFileRemote(cfg, result.data, true)
       if (appliedResult.identityChanged) workbenchIdentityChanged = true
       applied = true
       const ts = Math.max((result.data as { pushedAt?: number }).pushedAt ?? 0, result.lastModifiedMs)

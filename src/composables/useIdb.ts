@@ -1041,9 +1041,19 @@ export async function exportBlog(): Promise<BlogSyncData> {
  *
  * 与 family / ledger 等其它信封一致走合并语义；首次同步（本地为空）时合并结果仍是远端完整内容，
  * 不会丢数据。真正的冲突由上层 useCloudSync 的 merge + 冲突 UI 兜住。
+ *
+ * `overwrite=true` 仅用于用户**显式裁决「以云端为准」**（冲突弹窗「全部拉取」/ 强制拉取）：
+ * 此时必须整包替换，否则本地独有条目会被并集合并一直保留，导致刚同步完又冲突。
  */
-export async function importBlogData(remote: BlogSyncData): Promise<void> {
+export async function importBlogData(remote: BlogSyncData, overwrite = false): Promise<void> {
   if (!remote || !remote.blog) return
+  // 显式「以云端覆盖本地」（冲突裁决 / 强制拉取）：必须整包替换。
+  // 否则本地独有条目会被 mergeBlogEnvelope 的并集一直保留，本地永远比云端大一圈，
+  // 下一次同步又判为冲突，形成「同步完还冲突」的死循环。
+  if (overwrite) {
+    await idbPut('blog', normalizeBlogData(remote.blog))
+    return
+  }
   const local = await idbGet<BlogData>('blog')
   const localEnv: BlogSyncData = { version: 1, exportedAt: new Date().toISOString(), blog: normalizeBlogData(local) }
   const merged = mergeBlogEnvelope(localEnv, remote)
