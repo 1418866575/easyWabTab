@@ -3,7 +3,11 @@
 ## OVERVIEW
 
 5 helper scripts + 31 pure-function test runners (`node --experimental-strip-types`，其中 15 个学生 core 测试需 extensionless loader) + 3 Playwright UI QA + 1 样式令牌校验。
-一次性 Playwright QA 脚本（`qa-*.mjs` ×36）与已废弃的 IDB 版本校验脚本（`check-idb-v4/v8.ts`）已于开源清理中移除。
+
+**目录分级（2026-11-21 清理）**：`scripts/` 根目录只保留**有 npm script 入口 / 被构建与部署流程引用**的脚本。
+- `oneoff/` — 一次性 Playwright QA/probe（41 个，`qa-*.mjs` + `probe-*.mjs`）+ 无 npm 入口的历史测试（8 个 `test-*.ts`）。都**不参与** `npm run build` / `npm run lint` / `npm test`，保留仅供追溯。注意：搬进子目录后 `ROOT` 常量已由 `'..'` 改为 `'..', '..'`，新写脚本勿照抄旧写法。
+- `agents/` — 本机个人自动化（博客 slim-images/slim-cover 走 Playwright profile、frontend-prompt 页面生成），需外部站点/账号，CI 与构建均不用。
+- `img/` — 健身图素材流水线（`fitness-*.py` + `fitness-labels.json`），依赖 `_fitness_img/`（gitignored 的 126MB 母版照片）。
 
 **关键：学生 core 测试（test:student-*）必须带 `--experimental-loader ./scripts/resolve-extensionless.mjs`**
 （学生 cores 用无扩展名 `./countdownCore` 相对导入 + `@/` 别名，纯 `node --experimental-strip-types` 会

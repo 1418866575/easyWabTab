@@ -3,7 +3,7 @@
  * ------------------------------------------------------------------
  * 素材来源：AI前端项目-提示词教学页.html（10 个知识点 + 18 个组件）。
  * 一卡一组件 / 一卡一功能：列表渲染只读本文件的常量，效果预览是
- * public/frontend-prompts/demo-NN.html（由 scripts/gen-frontend-prompt-demos.mjs 生成）。
+ * public/frontend-prompts/demo-NN.html（由 scripts/agents/gen-frontend-prompt-demos.mjs 生成）。
  *
  * ⚠️ 内容约定（用户明确要求）：提示词**不涉及使用技术**，只描述组件或功能——
  * 不写语言、框架、库、样式属性、存储方式、接口等实现细节，只讲

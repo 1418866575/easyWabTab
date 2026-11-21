@@ -117,3 +117,10 @@ _drafts/
 
 # 健身教学图工作目录：母版照片与测点临时图约 126MB，只保留 public/fitness 下的成品图
 _fitness_img/
+
+# 本机工作残留目录（非源码，不入库）
+# .oil-ui/          界面审查（oil-ui skill）的探针脚本与截图，973 文件 / 64MB
+# _prototypes/      博客后台/字体配色等设计原型 HTML + 截图
+# __pycache__/      Python 字节码缓存
+.oil-ui/
+_prototypes/
