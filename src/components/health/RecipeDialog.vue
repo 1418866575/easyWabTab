@@ -25,9 +25,11 @@ const emit = defineEmits<{ close: [] }>()
     </template>
 
     <div class="recipe-detail">
-      <!-- 1. 成品图片 -->
-      <h3 class="recipe-hero-title">成品图</h3>
-      <img class="recipe-hero" :src="recipe.image" :alt="recipe.name + ' 成品图'" />
+      <!-- 1. 成品图片（原文无配图的菜不展示这一段） -->
+      <template v-if="recipe.image">
+        <h3 class="recipe-hero-title">成品图</h3>
+        <img class="recipe-hero" :src="recipe.image" :alt="recipe.name + ' 成品图'" />
+      </template>
       <div class="recipe-meta">
         <span>{{ recipe.category }}</span>
         <span>⏱ {{ recipe.time }}</span>

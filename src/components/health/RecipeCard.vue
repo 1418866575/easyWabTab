@@ -19,7 +19,8 @@ const emit = defineEmits<{ open: [] }>()
     @click="emit('open')"
   >
     <span class="recipe-media">
-      <img class="recipe-thumb" :src="recipe.image" :alt="recipe.name" loading="lazy" />
+      <img v-if="recipe.image" class="recipe-thumb" :src="recipe.image" :alt="recipe.name" loading="lazy" />
+      <span v-else class="recipe-thumb recipe-thumb-fallback" aria-hidden="true">{{ recipe.emoji }}</span>
     </span>
 
     <span class="recipe-body">
@@ -60,6 +61,16 @@ const emit = defineEmits<{ open: [] }>()
   object-fit: cover;
   object-position: center;
   background: var(--color-bg-hover);
+}
+
+/* 原文没配成品图的菜：用 emoji 色块占位，卡片高度与有图卡一致 */
+.recipe-thumb-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-hero);
+  line-height: 1;
+  background: linear-gradient(135deg, var(--color-bg-hover), var(--color-bg-card));
 }
 
 /* 分类胶囊与菜名同行靠右：卡面底 + 主色字 + 描边；窄屏放不下时自动换行到右侧 */
