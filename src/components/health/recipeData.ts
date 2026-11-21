@@ -26,6 +26,9 @@ export type RecipeCategory =
   | '其他海鲜'
   | '豆腐做法'
   | '家常素菜'
+  | '砂锅做法'
+  | '饺子做法'
+  | '炒饭做法'
   | '凉菜主食'
 export type SafetyLevel = 'safe' | 'caution' | 'danger'
 
@@ -2760,7 +2763,7 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'egg-fried-rice',
     name: '蛋炒饭',
-    category: '凉菜主食',
+    category: '炒饭做法',
     emoji: '🍚',
     time: '5 分钟',
     difficulty: '简单',
@@ -2792,7 +2795,7 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'soy-fried-rice',
     name: '酱油炒饭',
-    category: '凉菜主食',
+    category: '炒饭做法',
     emoji: '🍚',
     time: '5 分钟',
     difficulty: '简单',
@@ -2892,7 +2895,7 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'yangzhou-fried-rice',
     name: '扬州炒饭',
-    category: '凉菜主食',
+    category: '炒饭做法',
     emoji: '🍚',
     time: '10 分钟',
     difficulty: '简单',
@@ -2925,7 +2928,7 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'cabbage-pork-dumplings',
     name: '白菜猪肉饺子',
-    category: '凉菜主食',
+    category: '饺子做法',
     emoji: '🍲',
     time: '60 分钟',
     difficulty: '中等',
@@ -2959,7 +2962,7 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'chive-egg-dumplings',
     name: '韭菜鸡蛋饺子',
-    category: '凉菜主食',
+    category: '饺子做法',
     emoji: '🍲',
     time: '40 分钟',
     difficulty: '简单',
@@ -4658,7 +4661,7 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'lamb-dumplings',
     name: '羊肉水饺',
-    category: '羊肉做法',
+    category: '饺子做法',
     emoji: '🥟',
     time: '45 分钟',
     difficulty: '中等',
@@ -5093,7 +5096,7 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'claypot-lamb',
     name: '砂锅羊肉煲',
-    category: '羊肉做法',
+    category: '砂锅做法',
     emoji: '🍲',
     time: '90 分钟',
     difficulty: '中等',
@@ -5183,7 +5186,7 @@ const SEEDS: RecipeSeed[] = [
     name: '红烧牛腩',
     category: '牛肉做法',
     emoji: '🍲',
-    image: '',
+    image: '/recipes/hong-shao-niu-nan.jpg',
     time: '110 分钟',
     difficulty: '中等',
     intro: '先炒糖色再小火焖足 90 分钟，牛腩块颤而不散，汤汁红亮挂得住饭。',
@@ -5772,7 +5775,7 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'niu-rou-zheng-jiao',
     name: '牛肉蒸饺',
-    category: '凉菜主食',
+    category: '饺子做法',
     emoji: '🥟',
     image: '',
     time: '45 分钟',
@@ -9706,9 +9709,9 @@ const SEEDS: RecipeSeed[] = [
 {
     id: 'shaguo-ji-kuai-dun-xiang-gu',
     name: '砂锅鸡块炖香菇',
-    category: '禽类做法',
+    category: '砂锅做法',
     emoji: '🍲',
-    image: '',
+    image: '/recipes/shaguo-ji-kuai-dun-xiang-gu.jpg',
     time: '60 分钟',
     difficulty: '简单',
     intro: '鸡块先炒到微黄再入砂锅，与泡发香菇同炖 40 分钟，菌香压住腥味。',
@@ -9740,9 +9743,9 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'shaguo-dou-fu-dun-fen-tiao',
     name: '砂锅豆腐炖粉条',
-    category: '豆腐做法',
+    category: '砂锅做法',
     emoji: '🍲',
-    image: '',
+    image: '/recipes/shaguo-dou-fu-dun-fen-tiao.jpg',
     time: '35 分钟',
     difficulty: '简单',
     intro: '豆腐煎到两面金黄再炖粉条，豆腐外韧内嫩，粉条吸饱汤汁。',
@@ -9773,9 +9776,9 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'shaguo-ji-yu-dou-fu-tang',
     name: '砂锅鲫鱼豆腐汤',
-    category: '鱼类做法',
+    category: '砂锅做法',
     emoji: '🐟',
-    image: '',
+    image: '/recipes/shaguo-ji-yu-dou-fu-tang.jpg',
     time: '40 分钟',
     difficulty: '中等',
     intro: '鲫鱼煎透后移入砂锅冲开水，大火煮出奶白汤，豆腐吸足鲜味。',
@@ -9809,9 +9812,9 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'shaguo-yang-pai-dun-shan-yao',
     name: '砂锅羊排炖山药',
-    category: '羊肉做法',
+    category: '砂锅做法',
     emoji: '🍲',
-    image: '',
+    image: '/recipes/shaguo-yang-pai-dun-shan-yao.jpg',
     time: '90 分钟',
     difficulty: '简单',
     intro: '羊排小火炖足 60 分钟再下山药，汤清不膻、山药粉糯。',
@@ -9843,9 +9846,9 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'shaguo-ji-zhua-dun-huang-dou',
     name: '砂锅鸡爪炖黄豆',
-    category: '禽类做法',
+    category: '砂锅做法',
     emoji: '🍗',
-    image: '',
+    image: '/recipes/shaguo-ji-zhua-dun-huang-dou.jpg',
     time: '70 分钟',
     difficulty: '简单',
     intro: '黄豆泡足 4 小时与鸡爪同炖 50 分钟，鸡爪软烂、黄豆粉糯。',
@@ -9877,9 +9880,9 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'shaguo-jun-gu-ji-tang',
     name: '砂锅菌菇鸡汤',
-    category: '禽类做法',
+    category: '砂锅做法',
     emoji: '🍄',
-    image: '',
+    image: '/recipes/shaguo-jun-gu-ji-tang.jpg',
     time: '75 分钟',
     difficulty: '简单',
     intro: '三黄鸡慢炖 50 分钟后再下菌菇红枣，汤鲜不油。',
@@ -9911,9 +9914,9 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'shaguo-tu-dou-dun-ji-kuai',
     name: '砂锅土豆炖鸡块',
-    category: '禽类做法',
+    category: '砂锅做法',
     emoji: '🥔',
-    image: '',
+    image: '/recipes/shaguo-tu-dou-dun-ji-kuai.jpg',
     time: '55 分钟',
     difficulty: '简单',
     intro: '鸡块炒香后炖 30 分钟再下土豆，土豆吸汁、鸡块入味。',
@@ -9945,9 +9948,9 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'shaguo-dong-gua-wan-zi-tang',
     name: '砂锅冬瓜丸子汤',
-    category: '猪肉做法',
+    category: '砂锅做法',
     emoji: '🥣',
-    image: '',
+    image: '/recipes/shaguo-dong-gua-wan-zi-tang.jpg',
     time: '30 分钟',
     difficulty: '简单',
     intro: '肉丸先煮 10 分钟再下冬瓜，汤清鲜、冬瓜透明不烂。',
@@ -9978,9 +9981,9 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'shaguo-dou-chi-shao-yu-kuai',
     name: '砂锅豆豉烧鱼块',
-    category: '鱼类做法',
+    category: '砂锅做法',
     emoji: '🐟',
-    image: '',
+    image: '/recipes/shaguo-dou-chi-shao-yu-kuai.jpg',
     time: '30 分钟',
     difficulty: '中等',
     intro: '鱼块煎香后入砂锅，豆豉蒜末小火炖 12 分钟，酱香浓郁。',
@@ -10012,9 +10015,9 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'shaguo-you-dou-fu-dun-bai-cai',
     name: '砂锅油豆腐炖白菜',
-    category: '豆腐做法',
+    category: '砂锅做法',
     emoji: '🍲',
-    image: '',
+    image: '/recipes/shaguo-you-dou-fu-dun-bai-cai.jpg',
     time: '30 分钟',
     difficulty: '简单',
     intro: '油豆腐吸饱汤汁，白菜炖到软甜，一锅清淡下饭。',
@@ -10045,7 +10048,7 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'shaguo-mo-yu-dun-wu-hua-rou',
     name: '砂锅墨鱼炖五花肉',
-    category: '猪肉做法',
+    category: '砂锅做法',
     emoji: '🦑',
     image: '',
     time: '80 分钟',
@@ -10080,9 +10083,9 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'shaguo-dou-fu-dun-jun-gu',
     name: '砂锅豆腐炖菌菇',
-    category: '豆腐做法',
+    category: '砂锅做法',
     emoji: '🍄',
-    image: '',
+    image: '/recipes/shaguo-dou-fu-dun-jun-gu.jpg',
     time: '25 分钟',
     difficulty: '简单',
     intro: '嫩豆腐配金针菇香菇，清炖 15 分钟，鲜味全在汤里。',
@@ -10114,7 +10117,7 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'shaguo-sun-gan-dun-la-rou',
     name: '砂锅笋干炖腊肉',
-    category: '猪肉做法',
+    category: '砂锅做法',
     emoji: '🎋',
     image: '',
     time: '70 分钟',
@@ -10148,7 +10151,7 @@ const SEEDS: RecipeSeed[] = [
 {
     id: 'zhu-rou-jiu-cai-jiao-zi',
     name: '猪肉韭菜饺子',
-    category: '凉菜主食',
+    category: '饺子做法',
     emoji: '🥟',
     time: '60 分钟',
     difficulty: '中等',
@@ -10187,7 +10190,7 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'zhu-rou-qin-cai-jiao-zi',
     name: '猪肉芹菜饺子',
-    category: '凉菜主食',
+    category: '饺子做法',
     emoji: '🥬',
     time: '60 分钟',
     difficulty: '中等',
@@ -10221,7 +10224,7 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'zhu-rou-hui-xiang-jiao-zi',
     name: '猪肉茴香饺子',
-    category: '凉菜主食',
+    category: '饺子做法',
     emoji: '🌿',
     time: '60 分钟',
     difficulty: '中等',
@@ -10254,7 +10257,7 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'zhu-rou-xiang-gu-jiao-zi',
     name: '猪肉香菇饺子',
-    category: '凉菜主食',
+    category: '饺子做法',
     emoji: '🍄',
     time: '70 分钟',
     difficulty: '中等',
@@ -10288,7 +10291,7 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'niu-rou-da-cong-jiao-zi',
     name: '牛肉大葱饺子',
-    category: '凉菜主食',
+    category: '饺子做法',
     emoji: '🥩',
     time: '70 分钟',
     difficulty: '中等',
@@ -10328,7 +10331,7 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'yang-rou-hu-luo-bo-jiao-zi',
     name: '羊肉胡萝卜饺子',
-    category: '凉菜主食',
+    category: '饺子做法',
     emoji: '🥕',
     time: '70 分钟',
     difficulty: '中等',
@@ -10362,7 +10365,7 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'ba-yu-jiu-cai-jiao-zi',
     name: '鲅鱼韭菜饺子',
-    category: '凉菜主食',
+    category: '饺子做法',
     emoji: '🐟',
     time: '70 分钟',
     difficulty: '进阶',
@@ -10403,7 +10406,7 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'su-san-xian-jiao-zi',
     name: '素三鲜饺子',
-    category: '凉菜主食',
+    category: '饺子做法',
     emoji: '🥟',
     time: '60 分钟',
     difficulty: '中等',
@@ -10444,7 +10447,7 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'suan-cai-zhu-rou-jiao-zi',
     name: '酸菜猪肉饺子',
-    category: '凉菜主食',
+    category: '饺子做法',
     emoji: '🥬',
     time: '70 分钟',
     difficulty: '中等',
@@ -10483,9 +10486,9 @@ const SEEDS: RecipeSeed[] = [
 {
     id: 'huo-tui-yu-mi-chao-fan',
     name: '火腿玉米炒饭',
-    category: '凉菜主食',
+    category: '炒饭做法',
     emoji: '🌽',
-    image: '',
+    image: '/recipes/huo-tui-yu-mi-chao-fan.jpg',
     time: '15 分钟',
     difficulty: '简单',
     intro: '火腿丁与玉米粒的甜咸组合，配色亮、孩子爱吃。',
@@ -10518,9 +10521,9 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'la-chang-chao-fan',
     name: '腊肠炒饭',
-    category: '凉菜主食',
+    category: '炒饭做法',
     emoji: '🥓',
-    image: '',
+    image: '/recipes/la-chang-chao-fan.jpg',
     time: '15 分钟',
     difficulty: '简单',
     intro: '腊肠小火煸出油和香味，再用这层油炒饭，香气很有存在感。',
@@ -10552,9 +10555,9 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'niu-rou-li-chao-fan',
     name: '牛肉粒炒饭',
-    category: '凉菜主食',
+    category: '炒饭做法',
     emoji: '🥩',
-    image: '',
+    image: '/recipes/niu-rou-li-chao-fan.jpg',
     time: '25 分钟',
     difficulty: '中等',
     intro: '牛肉切小粒腌十分钟，大火快炒到变色就盛出，最后回锅拌饭才嫩。',
@@ -10586,9 +10589,9 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'pei-gen-mo-gu-chao-fan',
     name: '培根蘑菇炒饭',
-    category: '凉菜主食',
+    category: '炒饭做法',
     emoji: '🍄',
-    image: '',
+    image: '/recipes/pei-gen-mo-gu-chao-fan.jpg',
     time: '18 分钟',
     difficulty: '简单',
     intro: '培根先煎出油脂，蘑菇在培根油里炒到出水，再下洋葱和米饭。',
@@ -10620,9 +10623,9 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'xia-ren-chao-fan',
     name: '虾仁炒饭',
-    category: '凉菜主食',
+    category: '炒饭做法',
     emoji: '🦐',
-    image: '',
+    image: '/recipes/xia-ren-chao-fan.jpg',
     time: '20 分钟',
     difficulty: '简单',
     intro: '虾仁加料酒盐腌 5 分钟先焯到变色，最后回锅，虾不老、饭更鲜。',
@@ -10654,9 +10657,9 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'you-yu-chao-fan',
     name: '鱿鱼炒饭',
-    category: '凉菜主食',
+    category: '炒饭做法',
     emoji: '🦑',
-    image: '',
+    image: '/recipes/you-yu-chao-fan.jpg',
     time: '20 分钟',
     difficulty: '中等',
     intro: '鱿鱼焯水十秒捞出，热油炒香配菜再下鱿鱼和米饭，大火快炒更香。',
@@ -10688,9 +10691,9 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'hai-tai-xie-liu-chao-fan',
     name: '海苔蟹柳炒饭',
-    category: '凉菜主食',
+    category: '炒饭做法',
     emoji: '🍙',
-    image: '',
+    image: '/recipes/hai-tai-xie-liu-chao-fan.jpg',
     time: '15 分钟',
     difficulty: '简单',
     intro: '蟹柳撕条与玉米粒一起炒香，出锅前撒海苔碎，鲜香很特别。',
@@ -10722,9 +10725,9 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'pao-cai-chao-fan',
     name: '泡菜炒饭',
-    category: '凉菜主食',
+    category: '炒饭做法',
     emoji: '🌶️',
-    image: '',
+    image: '/recipes/pao-cai-chao-fan.jpg',
     time: '20 分钟',
     difficulty: '简单',
     intro: '五花肉丁煸到微焦，泡菜与韩式辣酱炒出香味，最后淋香油。',
@@ -10757,9 +10760,9 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'fan-qie-ji-dan-chao-fan',
     name: '番茄鸡蛋炒饭',
-    category: '凉菜主食',
+    category: '炒饭做法',
     emoji: '🍅',
-    image: '',
+    image: '/recipes/fan-qie-ji-dan-chao-fan.jpg',
     time: '18 分钟',
     difficulty: '简单',
     intro: '番茄炒出汁再加番茄酱提色，酸甜裹住每粒饭，比番茄炒蛋更下饭。',
@@ -10791,9 +10794,9 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'suan-dou-jiao-rou-mo-chao-fan',
     name: '酸豆角肉末炒饭',
-    category: '凉菜主食',
+    category: '炒饭做法',
     emoji: '🫘',
-    image: '',
+    image: '/recipes/suan-dou-jiao-rou-mo-chao-fan.jpg',
     time: '18 分钟',
     difficulty: '简单',
     intro: '酸豆角的酸脆配肉末，一点点糖提鲜，越嚼越开胃。',
@@ -10825,9 +10828,9 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'ga-li-chao-fan',
     name: '咖喱炒饭',
-    category: '凉菜主食',
+    category: '炒饭做法',
     emoji: '🍛',
-    image: '',
+    image: '/recipes/ga-li-chao-fan.jpg',
     time: '25 分钟',
     difficulty: '简单',
     intro: '鸡胸、土豆、胡萝卜炒熟后放咖喱块化开，再拌米饭，咖喱香浓入味。',
@@ -10860,9 +10863,9 @@ const SEEDS: RecipeSeed[] = [
   {
     id: 'bo-luo-chao-fan',
     name: '菠萝炒饭',
-    category: '凉菜主食',
+    category: '炒饭做法',
     emoji: '🍍',
-    image: '',
+    image: '/recipes/bo-luo-chao-fan.jpg',
     time: '20 分钟',
     difficulty: '中等',
     intro: '菠萝丁最后放，快炒几下就出锅，酸甜带果香不软塌。',

@@ -73,6 +73,18 @@ const tabs = computed(() => [
     badge: RECIPES.filter((r) => r.category === '家常素菜').length, testid: 'recipe-tab-veggie'
   },
   {
+    value: '砂锅做法', label: '砂锅做法', emoji: '🍲',
+    badge: RECIPES.filter((r) => r.category === '砂锅做法').length, testid: 'recipe-tab-claypot'
+  },
+  {
+    value: '饺子做法', label: '饺子做法', emoji: '🥟',
+    badge: RECIPES.filter((r) => r.category === '饺子做法').length, testid: 'recipe-tab-dumpling'
+  },
+  {
+    value: '炒饭做法', label: '炒饭做法', emoji: '🍚',
+    badge: RECIPES.filter((r) => r.category === '炒饭做法').length, testid: 'recipe-tab-friedrice'
+  },
+  {
     value: '凉菜主食', label: '凉菜主食', emoji: '🍜',
     badge: RECIPES.filter((r) => r.category === '凉菜主食').length, testid: 'recipe-tab-coldstaple'
   },
