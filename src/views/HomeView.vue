@@ -464,7 +464,7 @@ onUnmounted(() => {
   <!-- 顶部统一 App Bar：左=倒计时，右=云同步/设置/帮助；工作台跳转已迁到导航列表固定入口卡 -->
   <div ref="appBarRef" class="app-bar">
     <div class="app-bar-left">
-      <!-- 倒计时按钮：可在 设置 → 个性化 → 主题 中关闭 / 改名 -->
+      <!-- 倒计时按钮：可在 设置 → 个性化 → 导航开关 中关闭 / 改名 -->
       <button
         v-if="settingsStore.countdownButtonVisible !== false"
         class="btn-help"
@@ -485,7 +485,7 @@ onUnmounted(() => {
         @click="handleSyncNowClick"
       ><Icon name="cloud" :size="14" /> {{ syncLabel }}</button>
       <button class="btn-help ui-btn--pill" @click="showSettingsDialog = true" title="设置" aria-label="设置"><Icon name="cog" :size="15" /> 设置</button>
-      <!-- 帮助按钮：可在 设置 → 个性化 → 主题 中关闭 / 改名 -->
+      <!-- 帮助按钮：可在 设置 → 个性化 → 导航开关 中关闭 / 改名 -->
       <button
         v-if="settingsStore.helpButtonVisible !== false"
         class="btn-help"

@@ -2,7 +2,7 @@
 // 工作台主页仪表盘（轮播布局：问候条 + 三屏轮播「行动台 / 数据概览 / 工具」，6s 自动轮播、hover 暂停）
 // 只消费共享 store 的 state/computed，不新增 store、不直写 IDB。
 // 外壳通过 @navigate 接收面板跳转请求（WorkbenchView 已做白名单收窄）。
-// 菜单开关（设置 → 工作台设置 → 工作台菜单）关闭的功能：左菜单隐藏 + 主页对应统计/面板/快捷添加一并隐藏。
+// 菜单开关（设置 → 导航开关 → 工作台菜单）关闭的功能：左菜单隐藏 + 主页对应统计/面板/快捷添加一并隐藏。
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'

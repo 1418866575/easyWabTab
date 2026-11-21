@@ -44,6 +44,12 @@ import {
   VISIT_STATS_KEEP_DAYS
 } from '@/composables/useVisitStats'
 import {
+  clearHealthModuleClicks,
+  healthModuleLabel,
+  loadHealthModuleClicks
+} from '@/composables/useHealthStats'
+import { useAppSettingsStore } from '@/stores/settings'
+import {
   fetchSiteSummary,
   SITE_STATS_MAX_DAYS,
   type SiteSummary,
@@ -165,7 +171,9 @@ const ready = ref(false)
 const siteClicks = ref<Record<string, number>>({})
 const toolClicks = ref<Record<string, number>>({})
 const toolNames = ref<Map<string, string>>(new Map())
+const healthClicks = ref<Record<string, number>>({})
 const sitesStore = useSitesStore()
+const settings = useAppSettingsStore()
 
 /** url → 站点名（读现有站点数据，不另存一份名字） */
 const siteNames = computed(() => {
@@ -232,6 +240,15 @@ const toolTop = computed(() =>
 )
 const toolMax = computed(() => toolTop.value.reduce((m, e) => (e.count > m ? e.count : m), 0))
 
+/** 健康模块 Top：读用户自定义菜单名（改名与 HealthView 一致），未改名的用默认名 */
+const healthTop = computed(() =>
+  topEntries(healthClicks.value, 7).map((e) => ({
+    label: (settings.healthMenuLabels as Record<string, string>)[e.key] || healthModuleLabel(e.key),
+    count: e.count
+  }))
+)
+const healthMax = computed(() => healthTop.value.reduce((m, e) => (e.count > m ? e.count : m), 0))
+
 /** 取域名当站点名兜底（站点已被删掉但点击记录还在时） */
 function hostOf(url: string): string {
   try {
@@ -267,6 +284,13 @@ async function loadLocal(): Promise<void> {
     console.warn('[nav-stats] 工具点击统计读取失败:', e)
   }
 
+  // 健康模块点击次数（本机）
+  try {
+    healthClicks.value = await loadHealthModuleClicks()
+  } catch (e) {
+    console.warn('[nav-stats] 健康模块统计读取失败:', e)
+  }
+
   ready.value = true
 }
 
@@ -278,7 +302,9 @@ async function onClear(): Promise<void> {
   )
   if (!ok) return
   await clearVisitStats()
+  await clearHealthModuleClicks()
   days.value = {}
+  healthClicks.value = {}
   toast.success('已清空访问统计')
 }
 
@@ -603,18 +629,41 @@ onMounted(() => {
             <p v-else class="ns-empty-inline">还没有用过工具箱里的工具。</p>
           </div>
 
-          <div class="ns-block ns-block--note">
+          <div class="ns-block">
             <div class="ns-block-head">
-              <span class="ns-block-title">说明</span>
+              <span class="ns-block-title">最常使用的健康模块</span>
+              <span class="ns-block-sub">累计</span>
             </div>
-            <p class="ns-hint">
-              这些记录只存在当前设备的浏览器里，不上传服务器、不进云同步信封；换设备或清缓存即归零。
-              页面访问保留最近 {{ VISIT_STATS_KEEP_DAYS }} 天，超期自动清理。
-            </p>
-            <button type="button" class="ns-danger-btn" data-testid="ns-clear" @click="onClear">
-              清空本机访问记录
-            </button>
+            <ul v-if="healthTop.length" class="ns-ranks" data-testid="ns-health-modules">
+              <li v-for="e in healthTop" :key="e.label" class="ns-rank">
+                <div class="ns-rank-line">
+                  <span class="ns-rank-name" :title="e.label">{{ e.label }}</span>
+                  <span class="ns-rank-count">{{ e.count }}</span>
+                </div>
+                <div class="ns-rank-track">
+                  <div
+                    class="ns-rank-fill is-alt"
+                    :style="{ width: pct(healthMax > 0 ? Math.max(0.04, e.count / healthMax) : 0) }"
+                  ></div>
+                </div>
+              </li>
+            </ul>
+            <p v-else class="ns-empty-inline">还没进过健康管理。</p>
           </div>
+
+        </div>
+
+        <div class="ns-block ns-block--note">
+          <div class="ns-block-head">
+            <span class="ns-block-title">说明</span>
+          </div>
+          <p class="ns-hint">
+            这些记录只存在当前设备的浏览器里，不上传服务器、不进云同步信封；换设备或清缓存即归零。
+            页面访问保留最近 {{ VISIT_STATS_KEEP_DAYS }} 天，超期自动清理；健康模块点击次数为累计值。
+          </p>
+          <button type="button" class="ns-danger-btn" data-testid="ns-clear" @click="onClear">
+            清空本机访问记录
+          </button>
         </div>
       </template>
 

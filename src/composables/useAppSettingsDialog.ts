@@ -6,7 +6,7 @@ import { shallowRef, readonly } from 'vue'
 /** 定位到目标区块后需要额外自动触发的动作（省掉用户一次点击） */
 export type SettingsAction = 'product-cats' | 'expense-cats' | 'low-stock-threshold'
 
-/** 打开设置时要定位的目标区块（主 tab + 可选子 tab）；null = 默认行为（工作台设置 tab） */
+/** 打开设置时要定位的目标区块（主 tab + 可选子 tab）；null = 默认行为（导航开关 tab） */
 export interface SettingsTarget {
   tab: 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'sync'
   sub?: string
@@ -20,7 +20,7 @@ export function useAppSettingsDialog() {
   /**
    * 打开设置弹窗。
    * @param target 可选：指定要定位的主 tab / 子 tab（销售记账等页面的「去设置」入口用），
-   *               不传时沿用默认行为（定位到「工作台设置」tab，兼容 WeatherCard 老入口）。
+   *               不传时沿用默认行为（定位到「导航开关」tab，兼容 WeatherCard 老入口）。
    */
   const openAppSettings = (target?: SettingsTarget) => {
     settingsTarget.value = target ?? null

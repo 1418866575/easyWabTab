@@ -25,8 +25,24 @@ const tabs = computed(() => [
     badge: RECIPES.filter((r) => r.category === '家常荤菜').length, testid: 'recipe-tab-meat'
   },
   {
+    value: '猪肉做法', label: '猪肉做法', emoji: '🥓',
+    badge: RECIPES.filter((r) => r.category === '猪肉做法').length, testid: 'recipe-tab-pork'
+  },
+  {
+    value: '牛肉做法', label: '牛肉做法', emoji: '🐄',
+    badge: RECIPES.filter((r) => r.category === '牛肉做法').length, testid: 'recipe-tab-beef'
+  },
+  {
     value: '羊肉做法', label: '羊肉做法', emoji: '🐑',
     badge: RECIPES.filter((r) => r.category === '羊肉做法').length, testid: 'recipe-tab-lamb'
+  },
+  {
+    value: '禽类做法', label: '禽类做法', emoji: '🍗',
+    badge: RECIPES.filter((r) => r.category === '禽类做法').length, testid: 'recipe-tab-poultry'
+  },
+  {
+    value: '蛋类做法', label: '蛋类做法', emoji: '🥚',
+    badge: RECIPES.filter((r) => r.category === '蛋类做法').length, testid: 'recipe-tab-egg'
   },
   {
     value: '下饭小炒', label: '下饭小炒', emoji: '🥘',
@@ -55,6 +71,18 @@ const tabs = computed(() => [
   {
     value: '家常素菜', label: '家常素菜', emoji: '🥬',
     badge: RECIPES.filter((r) => r.category === '家常素菜').length, testid: 'recipe-tab-veggie'
+  },
+  {
+    value: '砂锅做法', label: '砂锅做法', emoji: '🍲',
+    badge: RECIPES.filter((r) => r.category === '砂锅做法').length, testid: 'recipe-tab-claypot'
+  },
+  {
+    value: '饺子做法', label: '饺子做法', emoji: '🥟',
+    badge: RECIPES.filter((r) => r.category === '饺子做法').length, testid: 'recipe-tab-dumpling'
+  },
+  {
+    value: '炒饭做法', label: '炒饭做法', emoji: '🍚',
+    badge: RECIPES.filter((r) => r.category === '炒饭做法').length, testid: 'recipe-tab-friedrice'
   },
   {
     value: '凉菜主食', label: '凉菜主食', emoji: '🍜',

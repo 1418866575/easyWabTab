@@ -191,6 +191,7 @@ export const PAGE_LABELS: Record<string, string> = {
   blog: '博客',
   'blog-admin': '博客后台',
   'blog-post': '博客文章',
+  health: '健康管理',
   books: '个人图书馆',
   'book-reader': '站内阅读'
 }

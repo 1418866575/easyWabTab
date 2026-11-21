@@ -19,6 +19,7 @@ import {
   HEALTH_MENU_DEFAULT_LABELS,
   HEALTH_MENU_ICONS
 } from '@/composables/healthMenuCore'
+import { recordHealthModuleClick } from '@/composables/useHealthStats'
 import WorkbenchExercise from '@/components/workbench/WorkbenchExercise.vue'
 import WorkbenchDiet from '@/components/workbench/WorkbenchDiet.vue'
 import WorkbenchSleep from '@/components/workbench/WorkbenchSleep.vue'
@@ -144,12 +145,16 @@ const activePanel = computed<Component>(() => current.value.panel)
 
 function setTab(tab: HealthViewTab): void {
   activeTab.value = tab
+  // 每次切模块记一次点击，供「我的使用 → 最常使用的健康模块」排行（仅本机）
+  void recordHealthModuleClick(tab)
   // 抽屉里点菜单后自动收起，否则选中项被遮罩挡着看不到
   closeMobileMenu()
   void router.replace({ query: { ...route.query, tab } })
 }
 
 onMounted(async () => {
+  // 首屏停留的模块也算一次访问（URL 带 tab 时记实际落地的模块）
+  void recordHealthModuleClick(activeTab.value)
   try {
     // 提醒区块只读 countdowns store（category = exercise/diet/sleep），需一并加载
     await Promise.all([healthStore.loadHealth(), countdownsStore.loadCountdowns()])
