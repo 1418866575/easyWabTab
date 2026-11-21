@@ -538,7 +538,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const scrollbarMode = ref<'auto' | 'ghost' | 'hidden'>('auto')
 
   // 页面命名与可见性（工作台/销售记账/学生工作台/教师工作台）
-  // 工作台默认「关闭」：需用户在「设置 → 个性化 → 工作台设置」主动打开后，导航站按钮与其设置页才显示
+  // 工作台默认「关闭」：需用户在「设置 → 个性化 → 导航开关」主动打开后，导航站按钮与其设置页才显示
   const workbenchPageName = ref<string>('')
   const workbenchPageVisible = ref<boolean>(false)
   const businessPageName = ref<string>('')
@@ -547,7 +547,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const studentPageVisible = ref<boolean>(true)
   const teacherPageName = ref<string>('')
   const teacherPageVisible = ref<boolean>(true)
-  // 智能工作台（/smart）：默认显示，便于新模块被发现；可在「工作台设置」中关闭 / 改名 / 换图标
+  // 智能工作台（/smart）：默认显示，便于新模块被发现；可在「导航开关」中关闭 / 改名 / 换图标
   const smartPageName = ref<string>('')
   const smartPageVisible = ref<boolean>(true)
   // 入口自定义图标（空串 = 用内置默认图标）：来源为图标管理 / 预置图标库的路径或 dataUrl
@@ -565,7 +565,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const healthPageVisible = ref<boolean>(true)
   const healthPageIcon = ref<string>('')
   // 导航站右上角「工作台管理」按钮：默认显示、默认名称「工作台管理」；
-  // workbenchManageIcon 为该按钮的自定义图标（空串 = 用内置默认图标，可在 设置 → 个性化 → 工作台设置 中改）
+  // workbenchManageIcon 为该按钮的自定义图标（空串 = 用内置默认图标，可在 设置 → 个性化 → 导航开关 中改）
   const workbenchManageName = ref<string>('')
   const workbenchManageVisible = ref<boolean>(true)
   const workbenchManageIcon = ref<string>('')
@@ -576,13 +576,13 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const helpButtonName = ref<string>('')
   const helpButtonVisible = ref<boolean>(true)
   // 导航站「工具箱」入口按钮：默认显示、默认名称「工具箱」、默认图标 🧰；
-  // toolboxButtonIcon 为自定义图标（空串 = 用内置默认图标，可在 设置 → 个性化 → 显示控制 中改）
+  // toolboxButtonIcon 为自定义图标（空串 = 用内置默认图标，可在 设置 → 个性化 → 导航开关 中改）
   const toolboxButtonName = ref<string>('')
   const toolboxButtonVisible = ref<boolean>(true)
   const toolboxButtonIcon = ref<string>('')
   // 博客后台 / 博客前台（/blog/admin、/blog）：名称 + 可见性 + 入口图标，默认显示。
   // 命名沿用页面三件套惯例，与其它工作台字段同构，一并进 workbench.json 信封跨设备云同步；
-  // 可在 设置 → 个性化 → 主题（工具箱下方） 关闭 / 改名 / 换图标
+  // 可在 设置 → 个性化 → 导航开关（工具箱卡片下方） 关闭 / 改名 / 换图标
   const blogAdminPageName = ref<string>('')
   const blogAdminPageVisible = ref<boolean>(true)
   const blogAdminPageIcon = ref<string>('')

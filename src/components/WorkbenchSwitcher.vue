@@ -52,7 +52,7 @@ interface Entry {
 }
 
 // 顺序：导航站 → 教师台 → 个人工作台 → 销售记账 → 学生台 → 智能工作台 → 博客后台。
-// 博客后台名称/图标/可见性走 blogAdminPage* 三件套（设置入口在「个性化 → 主题」）。
+// 博客后台名称/图标/可见性走 blogAdminPage* 三件套（设置入口在「个性化 → 导航开关」）。
 // 「工具箱 / 博客前台 / 个人图书馆」均已迁到导航站列表的站内入口卡片，不再出现在本面板
 // （工具箱固定在列表第一位，见 stores/sites.ts 的 TOOLBOX_URL）。
 const allEntries = computed<Entry[]>(() => [
@@ -114,7 +114,7 @@ const allEntries = computed<Entry[]>(() => [
   },
   {
     // 博客后台：数据走独立的 blog.json 云同步信封。
-    // 名称/图标/可见性由「设置 → 个性化 → 主题（工具箱下方）」控制（blogAdminPage* 三件套），
+    // 名称/图标/可见性由「设置 → 个性化 → 导航开关（工具箱卡片下方）」控制（blogAdminPage* 三件套），
     // 与其它工作台字段同构，一并进 workbench.json 信封跨设备云同步。
     key: 'blog',
     path: '/blog/admin',

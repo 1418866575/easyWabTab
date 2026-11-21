@@ -106,7 +106,7 @@ import CloudSyncConflictModal from './CloudSyncConflictModal.vue'
 // 作为 drafts/syncAll 的全量来源；渲染分组用下方导出的 NAV/WB 数组
 const DIALOG_IDS = Object.keys(DIALOG_DEFAULTS) as DialogId[]
 
-// 当前激活的设置分组 tab（导航设置 / 工作台设置 / 提醒设置 / 销售记账 / 学生工作台 / 教师工作台 / 云同步 / 关于）
+// 当前激活的设置分组 tab（导航设置 / 导航开关 / 提醒设置 / 销售记账 / 学生工作台 / 教师工作台 / 云同步 / 关于）
 type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'teacher' | 'sync' | 'about'
 // 子 tab keys：每个主 tab 下的子分组（仅内容多的主 tab 定义）
 // 导航站子 tab：原「站点管理」九动作已整体拆为独立页——导入/导出合并为「备份恢复」，
@@ -114,7 +114,6 @@ type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'teache
 type NavSubTab =
   | 'nav-appearance'
   | 'nav-stats'
-  | 'nav-display'
   | 'nav-uistyle'
   | 'nav-workbench'
   | 'nav-backup-restore'
@@ -189,9 +188,8 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student' | 'teacher', SubTab
   nav: [
     { key: 'nav-appearance',      label: '站点外观' },
     { key: 'nav-stats',           label: '访问统计' },
-    { key: 'nav-display',         label: '显示控制' },
     { key: 'nav-uistyle',         label: '界面美化' },
-    { key: 'nav-workbench',       label: '工作台设置' },
+    { key: 'nav-workbench',       label: '导航开关' },
     { key: 'nav-backup-restore',  label: '备份恢复' },
     { key: 'nav-add-site',        label: '添加网址' },
     { key: 'nav-check-links',     label: '检测断链' },
@@ -246,7 +244,7 @@ const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student' | 'teacher', SubTab
   ]
 }
 /** 当前激活的子 tab（主 tab 为 remind/sync 时此值无意义，模板不会渲染第二层） */
-const activeSubTab = ref<SubTabKey>((SUB_TABS[DEFAULT_TAB_FOR_SOURCE[props.source] as 'nav']?.[0]?.key as SubTabKey) ?? 'nav-display')
+const activeSubTab = ref<SubTabKey>((SUB_TABS[DEFAULT_TAB_FOR_SOURCE[props.source] as 'nav']?.[0]?.key as SubTabKey) ?? 'nav-uistyle')
 
 /** 当前主 tab 的子 tab 列表（用于模板渲染第二层子 tab 条；主 tab 无 sub-tabs 时返回空数组） */
 const currentSubTabs = computed<SubTabDef[]>(() => {
@@ -388,10 +386,10 @@ const NAV_GROUPS: NavGroup[] = [
     key: 'personal',
     label: '个性化',
     items: [
-      { key: 'theme', label: '主题', icon: 'palette', tab: 'nav', sub: 'nav-display' },
-      // 界面美化：同类元素的默认规则（布局留白 / 控件尺寸 / 字号行高 / 间距圆角）
+      // 主题切换已并入「界面美化」页顶部；其余开关并入「导航开关」页
+      // 界面美化：主题 + 同类元素的默认规则（布局留白 / 控件尺寸 / 字号行高 / 间距圆角）
       { key: 'nav-uistyle', label: '界面美化', icon: 'scale', tab: 'nav', sub: 'nav-uistyle' },
-      { key: 'nav-workbench', label: '工作台设置', icon: 'toolbox', tab: 'nav', sub: 'nav-workbench' },
+      { key: 'nav-workbench', label: '导航开关', icon: 'toolbox', tab: 'nav', sub: 'nav-workbench' },
       { key: 'nav-appearance', label: '站点外观', icon: 'monitor', tab: 'nav', sub: 'nav-appearance' },
       { key: 'nav-stats', label: '访问统计', icon: 'chart', tab: 'nav', sub: 'nav-stats' },
       { key: 'nav-watermark', label: '水印设置', icon: 'palette', tab: 'nav', sub: 'nav-watermark' }
@@ -787,7 +785,7 @@ function resetAll() {
 }
 
 // ========================================
-// 主页卡片尺寸（工作台设置 tab）：逐卡设置宽（占几列）/ 高（最小高度 px）
+// 主页卡片尺寸（导航开关 tab）：逐卡设置宽（占几列）/ 高（最小高度 px）
 // 落库走 store.homeCardLayout；改完由 useHomeLayout 内部 600ms 防抖 pushNow 直推云端
 // ========================================
 const layout = useHomeLayout()
@@ -863,7 +861,7 @@ function resetAllCardSizes() {
 }
 
 // ========================================
-// 工作台菜单（仅工作台设置 tab 展示）：排序 + 改名 + 区块恢复默认
+// 工作台菜单（仅导航开关 tab 展示）：排序 + 改名 + 区块恢复默认
 // ========================================
 
 // 改名输入直接绑定 store 状态（无草稿机制，Metis F11）：
@@ -940,7 +938,7 @@ function onResetTeacherMenu(): void {
 }
 
 // ========================================
-// 天气城市（仅工作台设置 tab）：v-model 直绑 store 显示用；change/blur 提交 setWorkbenchCity
+// 天气城市（仅导航开关 tab）：v-model 直绑 store 显示用；change/blur 提交 setWorkbenchCity
 // （store 负责 trim 与空串=清除持久化；提交后显示值回落到规范值）
 // ========================================
 function commitCity(): void {
@@ -948,7 +946,7 @@ function commitCity(): void {
 }
 
 // ========================================
-// 数据时光机（仅工作台设置 tab）：快照列表 + 立即备份 + 单条恢复
+// 数据时光机（仅导航开关 tab）：快照列表 + 立即备份 + 单条恢复
 // 数据存 IDB store 'snapshots'（不进 JSON 备份导出）；恢复流程镜像 WorkbenchView.handleImportFile
 // ========================================
 const toast = useToast()
@@ -1166,7 +1164,7 @@ async function handleTestEmail(): Promise<void> {
 }
 
 // ====================
-// 工作台导入/导出（仅工作台设置 tab；原 WorkbenchView 头部按钮迁移过来）
+// 工作台导入/导出（仅导航开关 tab；原 WorkbenchView 头部按钮迁移过来）
 // ====================
 const wbTodosStore = useWorkbenchTodosStore()
 const wbNotesStore = useWorkbenchNotesStore()
@@ -2088,7 +2086,7 @@ async function handlePlDelete(l: PersonalLedger): Promise<void> {
   toast.success(`账本「${l.name}」已删除`)
 }
 
-// 订阅「去设置」打开事件（useAppSettingsDialog 单例）：打开时切到工作台设置 tab 并聚焦城市输入框；
+// 订阅「去设置」打开事件（useAppSettingsDialog 单例）：打开时切到导航开关 tab 并聚焦城市输入框；
 // 一次性消费打开标志（closeAppSettings），避免后续挂载重复触发
 let stopWatchSettings: (() => void) | undefined
 
@@ -2113,7 +2111,7 @@ onMounted(async () => {
     async (open) => {
       if (open) {
         // 指定了定位目标（页面「去设置」入口，如销售记账的分类管理）→ 优先跳到该区块；
-        // 否则沿用老行为：WeatherCard 入口跳工作台设置 tab，极端来源回退首个可见 tab。
+        // 否则沿用老行为：WeatherCard 入口跳导航开关 tab，极端来源回退首个可见 tab。
         const target = appSettings.consumeSettingsTarget() as SettingsTarget | null
         let jumped = false
         if (target && visibleTabs.value.includes(target.tab)) {
@@ -2142,7 +2140,7 @@ onMounted(async () => {
   )
 })
 
-// 切到工作台设置 tab 时刷新快照列表（弹窗保持打开状态下重新加载）
+// 切到导航开关 tab 时刷新快照列表（弹窗保持打开状态下重新加载）
 watch(
   () => activeTab.value,
   (tab) => {
@@ -2297,9 +2295,16 @@ function toggleFullscreen(): void {
           <NavStatsPanel />
         </div>
 
-        <!-- 主题与视图模式（导航设置 tab - 显示控制）：主题切换 + 经典/侧边栏视图，置于导航筛选栏之上 -->
-        <!-- 界面美化：把「同类元素的默认规则」集中到一处调节（布局留白 / 控件尺寸 / 字号行高 / 间距圆角）。
+        <!-- 界面美化：主题模块置顶（原「主题」页迁入）+ 同类元素的默认规则集中调节。
              面板组件只渲染配置清单，写变量与持久化在 useUiStyle，派生 CSS 在 styles/ui-style.css。 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-uistyle'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">主题</h3>
+            <ThemeToggle />
+          </div>
+          <p class="wb-menu-hint">选择一个主题，页面底色、卡片、表格与弹框会整体跟随（不只是按钮主色）；修改即时生效并随云同步跨设备。</p>
+        </div>
+
         <div v-if="activeTab === 'nav' && activeSubTab === 'nav-uistyle'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">界面美化</h3>
@@ -2307,98 +2312,98 @@ function toggleFullscreen(): void {
           <UiStylePanel />
         </div>
 
-        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
-          <div class="wb-menu-head">
-            <h3 class="wb-menu-title">主题</h3>
-            <ThemeToggle />
-          </div>
-          <p class="wb-menu-hint">选择一个主题，页面底色、卡片、表格与弹框会整体跟随（不只是按钮主色）；修改即时生效并随云同步跨设备。</p>
-
-          <div class="wb-menu-head">
-            <h3 class="wb-menu-title">经典侧边栏</h3>
-            <div class="seg-control" role="group" aria-label="视图模式切换">
-              <button
-                type="button"
-                class="seg-opt"
-                :class="{ active: store.viewMode === 'classic' }"
-                :aria-pressed="store.viewMode === 'classic'"
-                @click="store.setViewMode('classic')"
-              >经典</button>
-              <button
-                type="button"
-                class="seg-opt"
-                :class="{ active: store.viewMode === 'sidebar' }"
-                :aria-pressed="store.viewMode === 'sidebar'"
-                @click="store.setViewMode('sidebar')"
-              >侧边栏</button>
+        <!-- 导航开关（nav-workbench）：7 个入口开关 + 从原「主题」页迁入的开关，统一 4 列紧凑卡片 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-workbench'" class="wb-setting-grid">
+          <div class="wb-menu-config">
+            <div class="wb-menu-head">
+              <h3 class="wb-menu-title">经典侧边栏</h3>
+              <div class="seg-control" role="group" aria-label="视图模式切换">
+                <button
+                  type="button"
+                  class="seg-opt"
+                  :class="{ active: store.viewMode === 'classic' }"
+                  :aria-pressed="store.viewMode === 'classic'"
+                  @click="store.setViewMode('classic')"
+                >经典</button>
+                <button
+                  type="button"
+                  class="seg-opt"
+                  :class="{ active: store.viewMode === 'sidebar' }"
+                  :aria-pressed="store.viewMode === 'sidebar'"
+                  @click="store.setViewMode('sidebar')"
+                >侧边栏</button>
+              </div>
             </div>
+            <p class="wb-menu-hint">导航站布局：经典 = 卡片网格铺满；侧边栏 = 左侧分类导航 + 右侧内容。选择随刷新保留。</p>
           </div>
-          <p class="wb-menu-hint">导航站布局：经典 = 卡片网格铺满；侧边栏 = 左侧分类导航 + 右侧内容。选择随刷新保留。</p>
 
           <!-- 站点排序方式：clicks = 点击频率自动置顶；custom = 以拖拽/新增顺序为准，点击只计数 -->
-          <div class="wb-menu-head">
-            <h3 class="wb-menu-title">站点排序</h3>
-            <div class="seg-control" role="group" aria-label="导航站排序方式">
-              <button
-                type="button"
-                class="seg-opt"
-                :class="{ active: store.navSortMode === 'clicks' }"
-                :aria-pressed="store.navSortMode === 'clicks'"
-                data-testid="nav-sort-clicks"
-                @click="store.setNavSortMode('clicks')"
-              >点击频率</button>
-              <button
-                type="button"
-                class="seg-opt"
-                :class="{ active: store.navSortMode === 'custom' }"
-                :aria-pressed="store.navSortMode === 'custom'"
-                data-testid="nav-sort-custom"
-                @click="store.setNavSortMode('custom')"
-              >自定义顺序</button>
+          <div class="wb-menu-config">
+            <div class="wb-menu-head">
+              <h3 class="wb-menu-title">站点排序</h3>
+              <div class="seg-control" role="group" aria-label="导航站排序方式">
+                <button
+                  type="button"
+                  class="seg-opt"
+                  :class="{ active: store.navSortMode === 'clicks' }"
+                  :aria-pressed="store.navSortMode === 'clicks'"
+                  data-testid="nav-sort-clicks"
+                  @click="store.setNavSortMode('clicks')"
+                >点击频率</button>
+                <button
+                  type="button"
+                  class="seg-opt"
+                  :class="{ active: store.navSortMode === 'custom' }"
+                  :aria-pressed="store.navSortMode === 'custom'"
+                  data-testid="nav-sort-custom"
+                  @click="store.setNavSortMode('custom')"
+                >自定义顺序</button>
+              </div>
             </div>
+            <p class="wb-menu-hint">
+              点击频率：点开次数多的站点自动靠前，每次点击都会顺带调整顺序；
+              自定义顺序：顺序只由拖拽与新增决定，点击只记次数、不再打散列表。
+            </p>
           </div>
-          <p class="wb-menu-hint">
-            点击频率：点开次数多的站点自动靠前，每次点击都会顺带调整顺序；
-            自定义顺序：顺序只由拖拽与新增决定，点击只记次数、不再打散列表。
-          </p>
 
           <!-- 滚动条显示模式（全局外观开关）：auto / ghost / hidden -->
-          <div class="wb-menu-head">
-            <h3 class="wb-menu-title">滚动条</h3>
-            <div class="seg-control" role="group" aria-label="滚动条显示模式">
-              <button
-                type="button"
-                class="seg-opt"
-                :class="{ active: store.scrollbarMode === 'auto' }"
-                :aria-pressed="store.scrollbarMode === 'auto'"
-                data-testid="scrollbar-mode-auto"
-                @click="store.setScrollbarMode('auto')"
-              >默认</button>
-              <button
-                type="button"
-                class="seg-opt"
-                :class="{ active: store.scrollbarMode === 'ghost' }"
-                :aria-pressed="store.scrollbarMode === 'ghost'"
-                data-testid="scrollbar-mode-ghost"
-                @click="store.setScrollbarMode('ghost')"
-              >隐形</button>
-              <button
-                type="button"
-                class="seg-opt"
-                :class="{ active: store.scrollbarMode === 'hidden' }"
-                :aria-pressed="store.scrollbarMode === 'hidden'"
-                data-testid="scrollbar-mode-hidden"
-                @click="store.setScrollbarMode('hidden')"
-              >常隐</button>
+          <div class="wb-menu-config">
+            <div class="wb-menu-head">
+              <h3 class="wb-menu-title">滚动条</h3>
+              <div class="seg-control" role="group" aria-label="滚动条显示模式">
+                <button
+                  type="button"
+                  class="seg-opt"
+                  :class="{ active: store.scrollbarMode === 'auto' }"
+                  :aria-pressed="store.scrollbarMode === 'auto'"
+                  data-testid="scrollbar-mode-auto"
+                  @click="store.setScrollbarMode('auto')"
+                >默认</button>
+                <button
+                  type="button"
+                  class="seg-opt"
+                  :class="{ active: store.scrollbarMode === 'ghost' }"
+                  :aria-pressed="store.scrollbarMode === 'ghost'"
+                  data-testid="scrollbar-mode-ghost"
+                  @click="store.setScrollbarMode('ghost')"
+                >隐形</button>
+                <button
+                  type="button"
+                  class="seg-opt"
+                  :class="{ active: store.scrollbarMode === 'hidden' }"
+                  :aria-pressed="store.scrollbarMode === 'hidden'"
+                  data-testid="scrollbar-mode-hidden"
+                  @click="store.setScrollbarMode('hidden')"
+                >常隐</button>
+              </div>
             </div>
+            <p class="wb-menu-hint">
+              默认 = 浏览器原生滚动条；隐形 = 平时看不见，鼠标移入或用键盘聚焦时才显形，滚轮、触控板、触屏滑动、方向键以及在原滑块位置拖动都照常可用（推荐）；常隐 = 始终不显示，但原滑块区域将无法拖动。三种模式互切不会改变内容宽度。
+            </p>
           </div>
-          <p class="wb-menu-hint">
-            默认 = 浏览器原生滚动条；隐形 = 平时看不见，鼠标移入或用键盘聚焦时才显形，滚轮、触控板、触屏滑动、方向键以及在原滑块位置拖动都照常可用（推荐）；常隐 = 始终不显示，但原滑块区域将无法拖动。三种模式互切不会改变内容宽度。
-          </p>
-        </div>
 
         <!-- 导航筛选栏（导航设置 tab - 显示控制）：控制导航站分类/标签栏展开或收起（默认收起） -->
-        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config nav-filter-config">
+        <div class="wb-menu-config nav-filter-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">导航筛选栏</h3>
             <el-switch
@@ -2413,7 +2418,7 @@ function toggleFullscreen(): void {
         </div>
 
         <!-- 倒计时按钮（导航站右上角）：名称 + 开关；固定文本按钮，不支持自定义图标 -->
-        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
+        <div class="wb-menu-config">
           <div class="wb-menu-head">
             <span class="wb-menu-label">倒计时</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -2439,7 +2444,7 @@ function toggleFullscreen(): void {
         </div>
 
         <!-- 帮助按钮（导航站右上角）：名称 + 开关；固定文本按钮，不支持自定义图标 -->
-        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
+        <div class="wb-menu-config">
           <div class="wb-menu-head">
             <span class="wb-menu-label">帮助</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -2465,7 +2470,7 @@ function toggleFullscreen(): void {
         </div>
 
         <!-- 工具箱入口按钮：名称 + 图标 + 开关（紧随「帮助」设置块之后，交互与工作台管理一致） -->
-        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
+        <div class="wb-menu-config">
           <div class="wb-menu-head">
             <span class="wb-menu-label">工具箱</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -2502,7 +2507,7 @@ function toggleFullscreen(): void {
         </div>
 
         <!-- 博客后台（/blog/admin）：名称 + 图标 + 开关（紧随「工具箱」之后，交互同款） -->
-        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
+        <div class="wb-menu-config">
           <div class="wb-menu-head">
             <span class="wb-menu-label">博客后台</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -2539,7 +2544,7 @@ function toggleFullscreen(): void {
         </div>
 
         <!-- 博客前台（/blog）：名称 + 图标 + 开关 -->
-        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
+        <div class="wb-menu-config">
           <div class="wb-menu-head">
             <span class="wb-menu-label">博客前台</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -2576,7 +2581,7 @@ function toggleFullscreen(): void {
         </div>
 
         <!-- 个人图书馆（/books）：名称 + 图标 + 开关 -->
-        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
+        <div class="wb-menu-config">
           <div class="wb-menu-head">
             <span class="wb-menu-label">图书馆</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -2612,11 +2617,11 @@ function toggleFullscreen(): void {
           </p>
         </div>
 
-        <!-- 工作台设置（个性化 → 工作台设置）：6 项各自独立成一个配置块，不再有「页面导航」分组标题；
+        <!-- 导航开关（个性化 → 导航开关）：6 项各自独立成一个配置块，不再有「页面导航」分组标题；
              块内顺序 = 工作台管理 → 个人工作台 → 销售记账 → 学生工作台 → 教师工作台 → 智能工作台 -->
 
-        <!-- 工作台管理（导航站右上角按钮）：名称 + 图标 + 开关，排在工作台设置首位 -->
-        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-workbench'" class="wb-menu-config">
+        <!-- 工作台管理（导航站右上角按钮）：名称 + 图标 + 开关，排在导航开关首位 -->
+        <div class="wb-menu-config">
           <div class="wb-menu-head">
             <span class="wb-menu-label">工作台管理</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -2652,7 +2657,7 @@ function toggleFullscreen(): void {
         </div>
 
         <!-- 个人工作台（原「工作台」，2026-10-12 改名与设置左侧分组名统一） -->
-        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-workbench'" class="wb-menu-config">
+        <div class="wb-menu-config">
           <div class="wb-menu-head">
             <span class="wb-menu-label">个人工作台</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -2689,7 +2694,7 @@ function toggleFullscreen(): void {
         </div>
 
         <!-- 销售记账 -->
-        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-workbench'" class="wb-menu-config">
+        <div class="wb-menu-config">
           <div class="wb-menu-head">
             <span class="wb-menu-label">销售记账</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -2725,7 +2730,7 @@ function toggleFullscreen(): void {
         </div>
 
         <!-- 学生工作台 -->
-        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-workbench'" class="wb-menu-config">
+        <div class="wb-menu-config">
           <div class="wb-menu-head">
             <span class="wb-menu-label">学生工作台</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -2760,8 +2765,8 @@ function toggleFullscreen(): void {
           </p>
         </div>
 
-        <!-- 教师工作台（已迁入「个性化 → 工作台设置」） -->
-        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-workbench'" class="wb-menu-config">
+        <!-- 教师工作台（已迁入「个性化 → 导航开关」） -->
+        <div class="wb-menu-config">
           <div class="wb-menu-head">
             <span class="wb-menu-label">教师工作台</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -2797,7 +2802,7 @@ function toggleFullscreen(): void {
         </div>
 
         <!-- 智能工作台（技能库 + 提示词库）：开关 / 名称 / 图标，与教师工作台同款配置行 -->
-        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-workbench'" class="wb-menu-config">
+        <div class="wb-menu-config">
           <div class="wb-menu-head">
             <span class="wb-menu-label">智能工作台</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -2834,7 +2839,7 @@ function toggleFullscreen(): void {
         </div>
 
         <!-- 健康管理（独立健康工作台 /health） -->
-        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-workbench'" class="wb-menu-config">
+        <div class="wb-menu-config">
           <div class="wb-menu-head">
             <span class="wb-menu-label">健康管理</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -2869,6 +2874,7 @@ function toggleFullscreen(): void {
             控制导航站入口卡与工作台切换面板中是否显示「健康管理」。关闭后入口隐藏，但已保存的运动、饮食、睡眠、体重数据不受影响；也可在此改名与更换入口图标。
           </p>
         </div>
+        </div><!-- /.wb-setting-grid -->
 
         <!-- 备份恢复（导航设置 tab - 备份恢复）：原「站点管理」的导入 + 导出合并为一页，两个动作都在此执行 -->
         <div v-if="activeTab === 'nav' && activeSubTab === 'nav-backup-restore'" class="wb-menu-config">
@@ -2957,7 +2963,7 @@ function toggleFullscreen(): void {
           <p class="wb-menu-hint danger-hint">⚠ 「一键清空所有数据」为危险操作：将彻底恢复出厂（个人工作台 + 记账 + 学生工作台 + 自定义图标 + 云同步凭据），不可恢复。</p>
         </div>
 
-        <!-- 天气城市（工作台设置 tab - 天气城市）：配置工作台天气卡显示城市；留空 = 未配置（天气卡显示占位） -->
+        <!-- 天气城市（导航开关 tab - 天气城市）：配置工作台天气卡显示城市；留空 = 未配置（天气卡显示占位） -->
         <div v-if="activeTab === 'wb' && activeSubTab === 'wb-city'" class="wb-city-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">天气城市</h3>
@@ -2972,7 +2978,7 @@ function toggleFullscreen(): void {
           />
         </div>
 
-        <!-- 工作台菜单（工作台设置 tab - 工作台菜单）：排序 + 改名 + 区块恢复默认；主页恒置顶不可动 -->
+        <!-- 工作台菜单（导航开关 tab - 工作台菜单）：排序 + 改名 + 区块恢复默认；主页恒置顶不可动 -->
         <div v-if="activeTab === 'wb' && activeSubTab === 'wb-menu'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">工作台菜单</h3>
@@ -3026,7 +3032,7 @@ function toggleFullscreen(): void {
           </div>
         </div>
 
-        <!-- 主页卡片尺寸（工作台设置 tab - 卡片尺寸）：逐卡设置宽（占几列）/ 高（最小高度 px） -->
+        <!-- 主页卡片尺寸（导航开关 tab - 卡片尺寸）：逐卡设置宽（占几列）/ 高（最小高度 px） -->
         <div v-if="activeTab === 'wb' && activeSubTab === 'wb-card'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">主页卡片尺寸</h3>
@@ -3081,7 +3087,7 @@ function toggleFullscreen(): void {
           </div>
         </div>
 
-        <!-- 待办分类管理（工作台设置 tab - 待办分类管理）：改名/上下移/删除/新增 + 标签页显示勾选 -->
+        <!-- 待办分类管理（导航开关 tab - 待办分类管理）：改名/上下移/删除/新增 + 标签页显示勾选 -->
         <div v-if="activeTab === 'wb' && activeSubTab === 'wb-todo-cat'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">待办分类</h3>
@@ -3120,7 +3126,7 @@ function toggleFullscreen(): void {
           </div>
         </div>
 
-        <!-- 倒计时分类管理（工作台设置 tab - 倒计时分类管理）：内置分类标签页显示 + 自定义分类改名/上下移/删除/新增 -->
+        <!-- 倒计时分类管理（导航开关 tab - 倒计时分类管理）：内置分类标签页显示 + 自定义分类改名/上下移/删除/新增 -->
         <div v-if="activeTab === 'wb' && activeSubTab === 'wb-cd-cat'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">倒计时分类</h3>
@@ -3179,7 +3185,7 @@ function toggleFullscreen(): void {
           </div>
         </div>
 
-        <!-- 便签分类管理（工作台设置 tab - 便签分类管理）：改名/上下移/删除/新增 -->
+        <!-- 便签分类管理（导航开关 tab - 便签分类管理）：改名/上下移/删除/新增 -->
         <div v-if="activeTab === 'wb' && activeSubTab === 'wb-note-cat'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">便签分类</h3>
@@ -3218,7 +3224,7 @@ function toggleFullscreen(): void {
           </div>
         </div>
 
-        <!-- 密码分类管理（工作台设置 tab - 密码分类管理）：改名/上下移/删除/新增/标签页显隐 -->
+        <!-- 密码分类管理（导航开关 tab - 密码分类管理）：改名/上下移/删除/新增/标签页显隐 -->
         <div v-if="activeTab === 'wb' && activeSubTab === 'wb-pwd-cat'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">密码分类</h3>
@@ -3439,7 +3445,7 @@ function toggleFullscreen(): void {
           </div>
         </div>
 
-        <!-- 日记分类管理（工作台设置 tab - 日记本设置）：内联渲染 DiaryCategoryManager -->
+        <!-- 日记分类管理（导航开关 tab - 日记本设置）：内联渲染 DiaryCategoryManager -->
         <div v-if="activeTab === 'wb' && activeSubTab === 'wb-diary-cat'" class="wb-menu-config diary-cat-config">
           <DiaryCategoryManager />
         </div>
@@ -3449,7 +3455,7 @@ function toggleFullscreen(): void {
           <DiaryJournalManager />
         </div>
 
-        <!-- 工作台导入/导出（工作台设置 tab - 工作台备份；原 WorkbenchView 头部按钮迁移入口） -->
+        <!-- 工作台导入/导出（导航开关 tab - 工作台备份；原 WorkbenchView 头部按钮迁移入口） -->
         <div v-if="activeTab === 'wb' && activeSubTab === 'wb-backup'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">工作台备份（导入/导出）</h3>
@@ -3461,7 +3467,7 @@ function toggleFullscreen(): void {
           </div>
         </div>
 
-        <!-- 数据时光机（工作台设置 tab - 数据时光机）：快照列表 + 立即备份 + 单条恢复；数据存 IDB store 'snapshots' -->
+        <!-- 数据时光机（导航开关 tab - 数据时光机）：快照列表 + 立即备份 + 单条恢复；数据存 IDB store 'snapshots' -->
         <div v-if="activeTab === 'wb' && activeSubTab === 'wb-snapshot'" class="wb-menu-config wb-snapshot-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">数据时光机</h3>
@@ -4663,6 +4669,66 @@ html.dark .tab-btn.active {
   background-color: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
+}
+
+/* ===== 导航开关页：4 列紧凑卡片网格 =====
+   原「主题」页的显示开关与工作台入口开关统一纳入，一行 4 个，简单整洁。
+   仅作用于 .wb-setting-grid 内，不改其它 sub-tab 的 .wb-menu-config。 */
+.wb-setting-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3, 12px);
+  align-items: stretch;
+}
+.wb-setting-grid .wb-menu-config {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+  padding: var(--space-3, 12px);
+  min-width: 0;
+}
+/* 卡片头：窄卡内允许换行，控件组不被挤压；标题/标签固定不缩 */
+.wb-setting-grid .wb-menu-head {
+  flex-wrap: wrap;
+  gap: var(--space-2, 8px);
+  min-height: 30px;
+}
+.wb-setting-grid .wb-menu-head > h3,
+.wb-setting-grid .wb-menu-head > .wb-menu-label {
+  flex: 1 1 100%;
+}
+/* 名称输入 + 图标 + 开关的组合行：在卡片内占满一行 */
+.wb-setting-grid .wb-menu-head > div {
+  width: 100%;
+  min-width: 0;
+}
+.wb-setting-grid .wb-menu-name-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+}
+/* hint 收到底部、最多 2 行：4 列窄卡里保持紧凑，避免长文案把整行撑高 */
+.wb-setting-grid .wb-menu-hint {
+  margin: var(--space-2, 8px) 0 0;
+  padding-top: var(--space-2, 8px);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--fs-caption, 11px);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.5;
+}
+/* 分段控件在窄卡内可折行 */
+.wb-setting-grid .seg-control {
+  flex-wrap: wrap;
+}
+/* 中屏 2 列 / 窄屏 1 列（只按视口宽度，不用 pointer）——放在基础规则之后确保胜出 */
+@media (max-width: 1100px) {
+  .wb-setting-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .wb-setting-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* .wb-menu-head / .wb-menu-label / .wb-menu-title / .wb-menu-hint
