@@ -26,6 +26,7 @@ import WorkbenchWeight from '@/components/workbench/WorkbenchWeight.vue'
 import WorkbenchHeight from '@/components/workbench/WorkbenchHeight.vue'
 import HealthRecipes from '@/components/health/HealthRecipes.vue'
 import HealthFitness from '@/components/health/HealthFitness.vue'
+import HealthRecycleBin from '@/components/health/HealthRecycleBin.vue'
 import WorkbenchSwitcher from '@/components/WorkbenchSwitcher.vue'
 import Icon from '@/components/Icon.vue'
 
@@ -37,6 +38,8 @@ const settings = useAppSettingsStore()
 const HealthSettingsDialog = defineAsyncComponent(() => import('@/components/health/HealthSettingsDialog.vue'))
 const initializing = ref(true)
 const showSettingsDialog = ref(false)
+const showRecycleBin = ref(false)
+const trashedCount = computed(() => healthStore.trashedRecords.length)
 /** 移动端左侧抽屉：默认收起，由页头菜单按钮唤出（与个人工作台同款，不再用 60px 常驻图标条） */
 const mobileMenuOpen = ref(false)
 function closeMobileMenu(): void {
@@ -181,6 +184,17 @@ onMounted(async () => {
             <span class="wb-menu-icon"><Icon :name="item.icon" /></span>
             <span class="wb-menu-label">{{ item.label }}</span>
           </button>
+          <button
+            type="button"
+            class="wb-menu-item"
+            title="回收站"
+            aria-label="回收站"
+            data-testid="hv-menu-recycle"
+            @click="showRecycleBin = true; closeMobileMenu()"
+          >
+            <span class="wb-menu-icon"><Icon name="trash" /></span>
+            <span class="wb-menu-label">回收站{{ trashedCount ? `（${trashedCount}）` : '' }}</span>
+          </button>
         </div>
 
         <div class="wb-side-foot" data-testid="hv-side-foot">
@@ -233,6 +247,10 @@ onMounted(async () => {
     <HealthSettingsDialog
       v-if="showSettingsDialog"
       @close="showSettingsDialog = false"
+    />
+    <HealthRecycleBin
+      v-if="showRecycleBin"
+      @close="showRecycleBin = false"
     />
   </div>
 </template>

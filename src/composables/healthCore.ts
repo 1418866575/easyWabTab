@@ -20,6 +20,7 @@ import type {
   WeightRecord
 } from '../types'
 import { localToday } from './todoCore.ts'
+import { keepStamp } from './tombstoneCore.ts'
 
 /** 健康计划合法枚举（运行时校验用）。 */
 const HEALTH_PLAN_METRICS: HealthPlanMetric[] = ['times', 'minutes', 'calories', 'duration']
@@ -227,7 +228,7 @@ export function normalizeHealthData(raw: Partial<HealthData> | undefined): Healt
 /** 归一化运动记录（脏输入吞掉不抛错，module 强制 exercise，duration/calories 负数钳 0）。 */
 export function normalizeExerciseRecord(raw: unknown): ExerciseRecord {
   const r = (raw ?? {}) as Record<string, unknown>
-  return {
+  return keepStamp({
     id: typeof r.id === 'string' && r.id ? r.id : genId('ex_'),
     module: 'exercise',
     date: isDateStr(r.date) ? r.date : localToday(),
@@ -238,7 +239,7 @@ export function normalizeExerciseRecord(raw: unknown): ExerciseRecord {
     ...(typeof r.note === 'string' ? { note: r.note } : {}),
     createdAt: typeof r.createdAt === 'string' ? r.createdAt : isoNow(),
     updatedAt: typeof r.updatedAt === 'string' ? r.updatedAt : isoNow()
-  }
+  }, r)
 }
 
 /** 归一化饮食记录（mealType 非法回退「早餐」，module 强制 diet，calories 负数钳 0）。 */
@@ -248,7 +249,7 @@ export function normalizeDietRecord(raw: unknown): DietRecord {
     typeof r.mealType === 'string' && (MEAL_TYPES as readonly string[]).includes(r.mealType)
       ? (r.mealType as MealType)
       : '早餐'
-  return {
+  return keepStamp({
     id: typeof r.id === 'string' && r.id ? r.id : genId('dt_'),
     module: 'diet',
     date: isDateStr(r.date) ? r.date : localToday(),
@@ -258,7 +259,7 @@ export function normalizeDietRecord(raw: unknown): DietRecord {
     ...(typeof r.note === 'string' ? { note: r.note } : {}),
     createdAt: typeof r.createdAt === 'string' ? r.createdAt : isoNow(),
     updatedAt: typeof r.updatedAt === 'string' ? r.updatedAt : isoNow()
-  }
+  }, r)
 }
 
 /** 归一化睡眠记录（durationHours 缺失/NaN 时按 sleepTime/wakeTime 补算，quality 钳到 1-5）。 */
@@ -270,7 +271,7 @@ export function normalizeSleepRecord(raw: unknown): SleepRecord {
     typeof r.sleepTime === 'string' ? r.sleepTime : '',
     typeof r.wakeTime === 'string' ? r.wakeTime : ''
   )
-  return {
+  return keepStamp({
     id: typeof r.id === 'string' && r.id ? r.id : genId('sl_'),
     module: 'sleep',
     date: isDateStr(r.date) ? r.date : localToday(),
@@ -281,13 +282,13 @@ export function normalizeSleepRecord(raw: unknown): SleepRecord {
     ...(typeof r.note === 'string' ? { note: r.note } : {}),
     createdAt: typeof r.createdAt === 'string' ? r.createdAt : isoNow(),
     updatedAt: typeof r.updatedAt === 'string' ? r.updatedAt : isoNow()
-  }
+  }, r)
 }
 
 /** 归一化体重记录（module 强制 weight，weightKg 负数钳 0）。 */
 export function normalizeWeightRecord(raw: unknown): WeightRecord {
   const r = (raw ?? {}) as Record<string, unknown>
-  return {
+  return keepStamp({
     id: typeof r.id === 'string' && r.id ? r.id : genId('wt_'),
     module: 'weight',
     date: isDateStr(r.date) ? r.date : localToday(),
@@ -296,14 +297,14 @@ export function normalizeWeightRecord(raw: unknown): WeightRecord {
     ...(typeof r.note === 'string' ? { note: r.note } : {}),
     createdAt: typeof r.createdAt === 'string' ? r.createdAt : isoNow(),
     updatedAt: typeof r.updatedAt === 'string' ? r.updatedAt : isoNow()
-  }
+  }, r)
 }
 
 /** 归一化身高成长记录：module 强制 height，身高越界（30–250cm 外）归一为 0 视为异常记录。 */
 export function normalizeHeightRecord(raw: unknown): HeightRecord {
   const r = (raw ?? {}) as Record<string, unknown>
   const cm = num(r.heightCm)
-  return {
+  return keepStamp({
     id: typeof r.id === 'string' && r.id ? r.id : genId('hg_'),
     module: 'height',
     date: isDateStr(r.date) ? r.date : localToday(),
@@ -312,7 +313,7 @@ export function normalizeHeightRecord(raw: unknown): HeightRecord {
     ...(typeof r.note === 'string' ? { note: r.note } : {}),
     createdAt: typeof r.createdAt === 'string' ? r.createdAt : isoNow(),
     updatedAt: typeof r.updatedAt === 'string' ? r.updatedAt : isoNow()
-  }
+  }, r)
 }
 
 /** 归一化健康人员 / 分类配置（身高、体重共用）：脏输入吞掉不抛错，名称截断 12 字，人员含可选身高基线。 */

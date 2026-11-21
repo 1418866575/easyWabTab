@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, toRaw } from 'vue'
+import { computed, ref, toRaw } from 'vue'
 import type { HealthData, HealthModule, HealthPlan, HealthPlanPrefs, HealthPlans, HealthRecord, HealthWeeklyPlanItem, HealthWeeklyPlans, PersonConfig } from '@/types'
 import { shiftDateKey } from '@/composables/healthCore'
 import { localToday } from '@/composables/todoCore'
@@ -14,7 +14,8 @@ import {
   normalizeWeightRecord
 } from '@/composables/healthCore'
 import { idbGet, idbPut } from '../composables/useIdb'
-import { markDirty } from '@/composables/useCloudSync'
+import { markDirty, getClientId } from '@/composables/useCloudSync'
+import { clearDeleted, isDeleted, markDeleted } from '@/composables/tombstoneCore'
 
 // 各模块记录 id 前缀
 const RECORD_PREFIX: Record<HealthModule, string> = {
@@ -47,11 +48,34 @@ function prunePlanProgress(map: Record<string, string[]>): Record<string, string
   return out
 }
 
+type HealthRecords = HealthData['records']
+
+/** 回收站条目：模块 + 原记录 + 删除时间（用于统一展示） */
+export interface HealthTrashedItem {
+  module: HealthModule
+  record: HealthRecord
+  deletedAt: string
+}
+
+const HEALTH_MODULES: HealthModule[] = ['exercise', 'diet', 'sleep', 'weight', 'height']
+
+function partitionRecords<T extends HealthRecord>(items: T[]): { active: T[]; deleted: T[] } {
+  const active: T[] = []
+  const deleted: T[] = []
+  for (const item of items) (isDeleted(item) ? deleted : active).push(item)
+  return { active, deleted }
+}
+
 // 工作台健康管理 store（数据存 IndexedDB store 'health'，key 'items'）
 export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
   const height = ref<number | undefined>(undefined)
   const plans = ref<HealthPlans>({})
   const records = ref<HealthData['records']>({ exercise: [], diet: [], sleep: [], weight: [], height: [] })
+  /**
+   * 回收站：软删除记录单独放在这里，不进 `records`。
+   * 这样现有面板继续只读活记录，不需要逐一改过滤；落库/上云时再把两侧合并回完整 records。
+   */
+  const deletedRecords = ref<HealthData['records']>({ exercise: [], diet: [], sleep: [], weight: [], height: [] })
   // 健康人员与分类配置（身高/体重共用，随 health.json 同步）
   const personConfig = ref(normalizePersonConfig(undefined))
   // 周计划（运动/饮食）：键 = 周一日期键；整体 LWW 同步（plansUpdatedAt）
@@ -70,7 +94,13 @@ export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
       planPrefs.value = data.planPrefs ?? {}
       planProgress.value = prunePlanProgress(data.planProgress ?? {})
       personConfig.value = data.personConfig ?? normalizePersonConfig(undefined)
-      records.value = data.records
+      const ex = partitionRecords(data.records.exercise)
+      const dt = partitionRecords(data.records.diet)
+      const sl = partitionRecords(data.records.sleep)
+      const wt = partitionRecords(data.records.weight)
+      const hg = partitionRecords(data.records.height)
+      records.value = { exercise: ex.active, diet: dt.active, sleep: sl.active, weight: wt.active, height: hg.active }
+      deletedRecords.value = { exercise: ex.deleted, diet: dt.deleted, sleep: sl.deleted, weight: wt.deleted, height: hg.deleted }
     } catch (e) {
       // 加载失败降级为空态（保持默认值），不向上抛
       console.error('[workbenchHealth] loadHealth', e)
@@ -92,7 +122,15 @@ export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
         planPrefs: JSON.parse(JSON.stringify(planPrefs.value ?? {})),
         planProgress: JSON.parse(JSON.stringify(planProgress.value ?? {})),
         personConfig: JSON.parse(JSON.stringify(personConfig.value ?? {})),
-        records: toRaw(records.value)
+        // 活记录 + 墓碑合并回一份完整 records 才落库：墓碑必须随 health.json 上云，
+        // 否则对端仍持有旧活记录，下次并集合并又把它「复活」。
+        records: JSON.parse(JSON.stringify({
+          exercise: [...toRaw(records.value.exercise), ...toRaw(deletedRecords.value.exercise)],
+          diet: [...toRaw(records.value.diet), ...toRaw(deletedRecords.value.diet)],
+          sleep: [...toRaw(records.value.sleep), ...toRaw(deletedRecords.value.sleep)],
+          weight: [...toRaw(records.value.weight), ...toRaw(deletedRecords.value.weight)],
+          height: [...toRaw(records.value.height), ...toRaw(deletedRecords.value.height)]
+        })) as HealthRecords
       })
       markDirty()
     } catch (e) {
@@ -232,17 +270,66 @@ export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
     await saveHealth()
   }
 
+  /**
+   * 删除记录：**软删除**（写墓碑），不再物理移除。
+   * 物理移除后本地「缺席」会被云同步并集合并当成远端新增补回 —— 正是体重删除后又被同步恢复的原因。
+   */
   async function deleteRecord(module: HealthModule, id: string): Promise<void> {
-    // 在 toRaw 的原始数组上 filter：reactive 代理上直接 filter 会得到 Proxy 元素（L1 变体）。
-    // 展开也必须取 toRaw 的原始对象——直接展开 records.value 会让其余模块数组以 reactive
-    // Proxy 残留（实测 structuredClone 抛 DataCloneError），saveHealth 的 toRaw 兜不住内层。
-    const raw = toRaw(records.value[module]) as HealthRecord[]
+    const active = toRaw(records.value[module]) as HealthRecord[]
+    const target = active.find(r => r.id === id)
+    if (!target) return
+    const tombstone = markDeleted(target, { clientId: getClientId() })
     records.value = {
       ...toRaw(records.value),
-      [module]: raw.filter(r => r.id !== id)
-    } as HealthData['records']
+      [module]: active.filter(r => r.id !== id)
+    } as HealthRecords
+    const trashed = toRaw(deletedRecords.value[module]) as HealthRecord[]
+    deletedRecords.value = {
+      ...toRaw(deletedRecords.value),
+      [module]: [...trashed.filter(r => r.id !== id), tombstone]
+    } as HealthRecords
     await saveHealth()
   }
+
+  /** 回收站还原：清墓碑并推进版本，否则对端仍视其为已删除。 */
+  async function restoreRecord(module: HealthModule, id: string): Promise<void> {
+    const trashed = toRaw(deletedRecords.value[module]) as HealthRecord[]
+    const target = trashed.find(r => r.id === id)
+    if (!target) return
+    const restored = clearDeleted(target, { clientId: getClientId() })
+    deletedRecords.value = {
+      ...toRaw(deletedRecords.value),
+      [module]: trashed.filter(r => r.id !== id)
+    } as HealthRecords
+    const active = toRaw(records.value[module]) as HealthRecord[]
+    records.value = {
+      ...toRaw(records.value),
+      [module]: [...active.filter(r => r.id !== id), restored]
+    } as HealthRecords
+    await saveHealth()
+  }
+
+  /** 回收站彻底删除：物理清除墓碑。若对端尚未同步到该墓碑，仍可能被当新增补回。 */
+  async function purgeRecord(module: HealthModule, id: string): Promise<void> {
+    const trashed = toRaw(deletedRecords.value[module]) as HealthRecord[]
+    if (!trashed.some(r => r.id === id)) return
+    deletedRecords.value = {
+      ...toRaw(deletedRecords.value),
+      [module]: trashed.filter(r => r.id !== id)
+    } as HealthRecords
+    await saveHealth()
+  }
+
+  /** 回收站统一视图：所有模块的墓碑按删除时间倒序。 */
+  const trashedRecords = computed<HealthTrashedItem[]>(() => {
+    const out: HealthTrashedItem[] = []
+    for (const module of HEALTH_MODULES) {
+      for (const record of deletedRecords.value[module]) {
+        if (record.deletedAt) out.push({ module, record, deletedAt: record.deletedAt })
+      }
+    }
+    return out.sort((a, b) => b.deletedAt.localeCompare(a.deletedAt))
+  })
 
   return {
     height,
@@ -252,6 +339,8 @@ export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
     planPrefs,
     planProgress,
     records,
+    deletedRecords,
+    trashedRecords,
     loadHealth,
     saveHealth,
     setHeight,
@@ -264,6 +353,8 @@ export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
     resetPlanProgress,
     addRecord,
     updateRecord,
-    deleteRecord
+    deleteRecord,
+    restoreRecord,
+    purgeRecord
   }
 })

@@ -24,6 +24,7 @@
     "test:habits": "node --experimental-strip-types scripts/test-habit-core.ts",
     "test:todo": "node --experimental-strip-types scripts/test-todo-core.ts",
     "test:health": "node --experimental-strip-types scripts/test-health-core.ts",
+    "test:health-recycle": "node --experimental-strip-types scripts/test-health-recycle.ts",
     "test:genealogy": "node --experimental-strip-types scripts/test-genealogy-core.ts",
     "test:naming": "node --experimental-strip-types scripts/test-naming-core.ts",
     "test:tombstone": "node --experimental-strip-types scripts/test-tombstone-core.ts",

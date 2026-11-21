@@ -529,7 +529,7 @@ export interface HealthPlan {
   updatedAt: string
 }
 
-export interface ExerciseRecord {
+export interface ExerciseRecord extends SyncStamp {
   id: string
   module: 'exercise'
   date: string
@@ -542,7 +542,7 @@ export interface ExerciseRecord {
   updatedAt: string
 }
 
-export interface DietRecord {
+export interface DietRecord extends SyncStamp {
   id: string
   module: 'diet'
   date: string
@@ -554,7 +554,7 @@ export interface DietRecord {
   updatedAt: string
 }
 
-export interface SleepRecord {
+export interface SleepRecord extends SyncStamp {
   id: string
   module: 'sleep'
   date: string
@@ -567,7 +567,7 @@ export interface SleepRecord {
   updatedAt: string
 }
 
-export interface WeightRecord {
+export interface WeightRecord extends SyncStamp {
   id: string
   module: 'weight'
   date: string
@@ -580,7 +580,7 @@ export interface WeightRecord {
 }
 
 /** 身高成长记录：一人一条时间序列，单位 cm，合理范围 30–250（越界归一为 0，UI 不绘制）。 */
-export interface HeightRecord {
+export interface HeightRecord extends SyncStamp {
   id: string
   module: 'height'
   date: string

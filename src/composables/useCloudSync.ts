@@ -69,7 +69,7 @@ import { useToast } from './useToast'
 import { getStoredSaltHex, getStoredVerification } from './useCrypto'
 import { mergeFamily } from './genealogyCore'
 import { mergeMessages } from './messageBoardCore.ts'
-import { compareStamp } from './tombstoneCore'
+import { compareStamp, mergeTombstonedById } from './tombstoneCore'
 import { mergeNoteStatus } from './noteMergeCore'
 import { compareSmartStamp, type SmartStamp } from './smartCore'
 import { hasSmartExplicitDelete, readSmartCountBaseline, writeSmartCountBaseline } from './smartSyncGuard'
@@ -915,11 +915,13 @@ function mergeHealth(l: HealthData | undefined, r: HealthData | undefined): Heal
   const lr = l?.records ?? { exercise: [], diet: [], sleep: [], weight: [], height: [] }
   const rr = r?.records ?? { exercise: [], diet: [], sleep: [], weight: [], height: [] }
   const records = {
-    exercise: mergeById(lr.exercise ?? [], rr.exercise ?? [], 'id', 'updatedAt'),
-    diet: mergeById(lr.diet ?? [], rr.diet ?? [], 'id', 'updatedAt'),
-    sleep: mergeById(lr.sleep ?? [], rr.sleep ?? [], 'id', 'updatedAt'),
-    weight: mergeById(lr.weight ?? [], rr.weight ?? [], 'id', 'updatedAt'),
-    height: mergeById(lr.height ?? [], rr.height ?? [], 'id', 'updatedAt')
+    // 墓碑感知：物理缺席不能当成「远端新增」，否则删除会被云同步复活。
+    // 同 id 用 ver → updatedAt → clientId 取新，墓碑可压过对端活记录。
+    exercise: mergeTombstonedById(lr.exercise ?? [], rr.exercise ?? [], 'updatedAt'),
+    diet: mergeTombstonedById(lr.diet ?? [], rr.diet ?? [], 'updatedAt'),
+    sleep: mergeTombstonedById(lr.sleep ?? [], rr.sleep ?? [], 'updatedAt'),
+    weight: mergeTombstonedById(lr.weight ?? [], rr.weight ?? [], 'updatedAt'),
+    height: mergeTombstonedById(lr.height ?? [], rr.height ?? [], 'updatedAt')
   }
   const lp: HealthData['plans'] = l?.plans ?? {}
   const rp: HealthData['plans'] = r?.plans ?? {}

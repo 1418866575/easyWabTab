@@ -40,6 +40,11 @@ export type HealthStoreLike = Pick<
       | 'setActivePlan'
       | 'togglePlanProgress'
       | 'resetPlanProgress'
+      // 回收站能力为可选：学生端 store 暂未实现，回收站 UI 只在成人端 /health 打开
+      | 'deletedRecords'
+      | 'trashedRecords'
+      | 'restoreRecord'
+      | 'purgeRecord'
     >
   >
 
