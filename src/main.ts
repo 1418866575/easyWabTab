@@ -48,6 +48,7 @@ import { initScrollLock } from './utils/scrollLock'
 import { initModuleSync } from './composables/useModuleSync'
 // 本机访问统计（一天一条记录，只存本机，不进云同步）
 import { flushVisitStats, initVisitStats } from './composables/useVisitStats'
+import { flushHealthStats } from './composables/useHealthStats'
 // 全网访问统计（匿名上报到自家 /api/stats，服务端见 scripts/statsService.cjs）
 import { initSiteStats } from './composables/useSiteStats'
 
@@ -109,6 +110,8 @@ async function bootstrap() {
     flushSmartUsageIfCreated()
     // 访问统计同样 1s 防抖，页面隐藏时补一次，避免最后几次跳转丢掉
     flushVisitStats()
+    // 健康模块点击统计同样 1s 防抖，隐藏时补落盘
+    flushHealthStats()
   }
   if (typeof window !== 'undefined') {
     window.addEventListener('pagehide', flushNav)
