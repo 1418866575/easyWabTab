@@ -187,8 +187,7 @@ function resetFilters() {
         data-testid="tb-section-all"
       >
         <template v-if="totalClicks > 0" #extra>
-          <span class="tb-hits-total">累计使用 {{ totalClicks }} 次</span>
-          <button type="button" class="tb-mini-btn" @click="onClearClicks">重置统计</button>
+          <button type="button" class="tb-mini-btn" @click="onClearClicks">重置使用次数</button>
         </template>
         <div class="tb-grid">
           <ToolboxCard
