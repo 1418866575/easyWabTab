@@ -5777,7 +5777,7 @@ const SEEDS: RecipeSeed[] = [
     name: '牛肉蒸饺',
     category: '饺子做法',
     emoji: '🥟',
-    image: '',
+    image: '/recipes/niu-rou-zheng-jiao.jpg',
     time: '45 分钟',
     difficulty: '中等',
     intro: '牛肉配韭菜做馅，蒸出来皮薄馅大、汁水足。',
