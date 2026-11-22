@@ -7,6 +7,8 @@
     "dev": "node node_modules/vite/bin/vite.js",
     "build": "node scripts/build-safe.cjs",
     "preview": "node node_modules/vite/bin/vite.js preview",
+    "push:all": "git push origin master && git push github master",
+    "push:branch": "git push origin --all && git push github --all",
     "typecheck": "node node_modules/vue-tsc/bin/vue-tsc.js -b",
     "lint": "node node_modules/eslint/bin/eslint.js . && node scripts/check-style-tokens.mjs",
     "lint:fix": "node node_modules/eslint/bin/eslint.js . --fix",

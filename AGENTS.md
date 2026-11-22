@@ -238,6 +238,21 @@ npm start            # Build + serve
 pm2 start pm2.config.cjs  # PM2 production (uses server.cjs, NO game rewrites, uses `serve` package)
 ```
 
+## GIT 推送规范（master 必须双推）
+
+**双远端，master 必须两边都推**（2026-11-22 用户明确要求）：
+
+| 远端 | 地址 | 认证 |
+| --- | --- | --- |
+| `origin` | `git@gitee.com:sifujiang/easy-web-tab.git` | SSH 公钥 |
+| `gitee`  | `git@gitee.com:sifujiang/easy-web-tab.git` | SSH 公钥（与 origin 同地址，保留历史习惯） |
+| `github` | `git@github.com:1418866575/easyWabTab.git` | SSH 公钥 |
+
+- **推 master：两个远端都要推**，缺一不可。用 `npm run push:all`（等价 `git push origin master && git push github master`）。
+- 推功能分支时按需分别推；分支名两边保持一致。
+- **Gitee 一律走 SSH，不要用 HTTPS + 令牌**：`origin` 曾是 HTTPS，因本机无凭据助手而报 `could not read Username`；令牌方式已弃用（且令牌会过期）。
+- **凭据绝不进仓库**：仓库是公开的，禁止把令牌/口令写进任何入库文件（含 remote URL 里的 `user:token@`）。需要凭证走 `config/*.env`（已 gitignore）。
+
 ## KEY GOTCHAS
 
 - `pm2.config.cjs` → `server.cjs` → `npx serve -s dist -l 16718` (no game rewrites); `server.cjs` auto-runs `npm run build` if `dist/` is missing. Dockerfile is the same (`serve -s`, serve.json never copied).
