@@ -7,6 +7,8 @@
  *      + 10 道烙饼 + 20 道砂锅炖菜 + 10 道饺子馅 + 15 道炒饭），
  * 重复的菜名合并做法细节后去重，共 322 道。
  * 成品图存 public/recipes/<id>.jpg，与原文配图按菜序一一对应；原文无配图的菜 image 为空串，降级展示 emoji。
+ * 其中 8 道补图来自 Wikimedia Commons / Pexels 的 CC 授权照片（详见 docs/菜谱配图来源.md），
+ * 未找到真实对应图源的 26 道仍保留 image: ''，不做「近似图凑数」以免张冠李戴。
  *
  * 安全字段是本模块的重点：每道菜给出「有毒 / 无毒」结论、具体毒理与处理要求、
  * 常见过敏原。做法与注意事项在原文基础上做了细化补充，仅为家庭烹饪参考。
@@ -5309,7 +5311,7 @@ const SEEDS: RecipeSeed[] = [
     name: '小炒黄牛肉',
     category: '牛肉做法',
     emoji: '🌶️',
-    image: '',
+    image: '/recipes/xiao-chao-huang-niu-rou.jpg',
     time: '15 分钟',
     difficulty: '中等',
     intro: '牛肉逆纹切薄片、上浆后大火快炒 30 秒，嫩滑带辣、锅气足。',
@@ -5344,7 +5346,7 @@ const SEEDS: RecipeSeed[] = [
     name: '水煮牛肉',
     category: '牛肉做法',
     emoji: '🔥',
-    image: '',
+    image: '/recipes/shui-zhu-niu-rou.jpg',
     time: '25 分钟',
     difficulty: '中等',
     intro: '牛肉滑嫩、豆芽垫底，最后泼一勺滚油激香干辣椒与花椒。',
@@ -5390,7 +5392,7 @@ const SEEDS: RecipeSeed[] = [
     name: '黑椒牛柳',
     category: '牛肉做法',
     emoji: '🥩',
-    image: '',
+    image: '/recipes/hei-jiao-niu-liu.jpg',
     time: '20 分钟',
     difficulty: '简单',
     intro: '牛柳滑炒后与洋葱彩椒合炒，黑胡椒的辛香压住油腻。',
@@ -5640,7 +5642,7 @@ const SEEDS: RecipeSeed[] = [
     name: '咖喱牛肉',
     category: '牛肉做法',
     emoji: '🍛',
-    image: '',
+    image: '/recipes/ga-li-niu-rou.jpg',
     time: '70 分钟',
     difficulty: '简单',
     intro: '牛腩炖软后下土豆与咖喱块，汤汁浓稠裹满食材，拌饭最佳。',
@@ -5675,7 +5677,7 @@ const SEEDS: RecipeSeed[] = [
     name: '酱牛肉',
     category: '牛肉做法',
     emoji: '🍶',
-    image: '',
+    image: '/recipes/jiang-niu-rou.jpg',
     time: '90 分钟 + 浸泡',
     difficulty: '中等',
     intro: '黄豆酱打底的北方做法，酱香厚重，切片配蒜泥更地道。',
@@ -5816,7 +5818,7 @@ const SEEDS: RecipeSeed[] = [
     name: '红酒炖牛肉',
     category: '牛肉做法',
     emoji: '🍷',
-    image: '',
+    image: '/recipes/hong-jiu-dun-niu-rou.jpg',
     time: '100 分钟',
     difficulty: '中等',
     intro: '红酒与洋葱胡萝卜慢煨，酒香转成醇厚果酸，牛肉酥而不烂。',
@@ -6067,7 +6069,7 @@ const SEEDS: RecipeSeed[] = [
     name: '黄豆炖五花肉',
     category: '猪肉做法',
     emoji: '🥩',
-    image: '',
+    image: '/recipes/huang-dou-dun-wu-hua-rou.jpg',
     time: '80 分钟',
     difficulty: '简单',
     intro: '干黄豆泡发后与五花肉同炖，豆香吸油解腻，肉块软糯不散。',
