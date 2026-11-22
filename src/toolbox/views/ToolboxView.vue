@@ -5,7 +5,7 @@
  * 职责：组装搜索 / 分类 / 分组 / 工具面板；所有过滤与排序都由 core 纯函数完成，
  * 本组件不含业务判断。工具列表完全来自 registry（自动扫描 tools/ 目录）。
  */
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
 import { useAppSettingsStore } from '../../stores/settings'
@@ -121,6 +121,29 @@ function resetFilters() {
   keyword.value = ''
   category.value = ''
 }
+
+/**
+ * 左侧分类栏的可用高度。
+ *
+ * 侧栏是 sticky，但起点在「顶栏 + 搜索框」之下（约 123px）。若只用
+ * max-height: calc(100vh - 顶栏)，小屏（如 1024×800）会出现
+ * 123 + 705 = 828 > 800，最后一项「其他」被切掉。
+ * 所以实测侧栏顶部偏移，写进 CSS 变量 --tb-rail-top，由组件算可用高度。
+ */
+const bodyEl = ref<HTMLElement | null>(null)
+function syncRailTop(): void {
+  const el = bodyEl.value
+  // 顶部距视口的高度 = 侧栏 sticky 的起始位置
+  const top = el ? Math.round(el.getBoundingClientRect().top + window.scrollY) : 131
+  document.documentElement.style.setProperty('--tb-rail-top', `${top}px`)
+}
+onMounted(() => {
+  syncRailTop()
+  window.addEventListener('resize', syncRailTop, { passive: true })
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', syncRailTop)
+})
 </script>
 
 <template>
@@ -150,74 +173,89 @@ function resetFilters() {
         @pick="openTool"
       />
 
-      <!-- 分类筛选 -->
-      <ToolboxCategoryTabs v-model="category" :tools="TOOLBOX_TOOLS" />
+      <!-- 分类筛选：桌面左侧常驻栏 / 移动端横排胶囊（CSS 媒体查询切换） -->
+      <div ref="bodyEl" class="tb-body">
+        <ToolboxCategoryTabs
+          v-model="category"
+          :tools="TOOLBOX_TOOLS"
+          class="tb-rail"
+        />
+        <div class="tb-content">
+          <!-- 移动端分类横排（同一组件、不同布局；桌面隐藏） -->
+          <ToolboxCategoryTabs
+            v-model="category"
+            :tools="TOOLBOX_TOOLS"
+            layout="bar"
+            class="tb-bar"
+          />
 
-      <!-- 常用工具（收藏） -->
-      <ToolboxSection
-        v-if="hasFavorite"
-        title="★ 常用工具"
-        sub="点击卡片右上角 ☆ 可收藏"
-        data-testid="tb-section-fav"
-      >
-        <div class="tb-grid">
-          <ToolboxCard
-            v-for="t in favoriteTools"
-            :key="t.id"
-            :meta="t"
-            :favorite="isFavorite(t.id)"
-            :keyword="keyword"
-            :clicks="clickCount(t.id)"
-            @open="openTool(t)"
-            @toggle-fav="onToggleFav(t)"
-          />
-          <ToolboxEmpty
-            v-if="!favoriteTools.length"
-            kind="no-result"
-            :keyword="keyword"
-            @reset="resetFilters"
-          />
+          <!-- 常用工具（收藏） -->
+          <ToolboxSection
+            v-if="hasFavorite"
+            title="★ 常用工具"
+            sub="点击卡片右上角 ☆ 可收藏"
+            data-testid="tb-section-fav"
+          >
+            <div class="tb-grid">
+              <ToolboxCard
+                v-for="t in favoriteTools"
+                :key="t.id"
+                :meta="t"
+                :favorite="isFavorite(t.id)"
+                :keyword="keyword"
+                :clicks="clickCount(t.id)"
+                @open="openTool(t)"
+                @toggle-fav="onToggleFav(t)"
+              />
+              <ToolboxEmpty
+                v-if="!favoriteTools.length"
+                kind="no-result"
+                :keyword="keyword"
+                @reset="resetFilters"
+              />
+            </div>
+          </ToolboxSection>
+
+          <!-- 全部工具 -->
+          <ToolboxSection
+            :title="category ? categoryName(category) : '全部工具'"
+            :sub="allSectionSub"
+            data-testid="tb-section-all"
+          >
+            <template v-if="totalClicks > 0" #extra>
+              <button type="button" class="tb-mini-btn" @click="onClearClicks">重置使用次数</button>
+            </template>
+            <div class="tb-grid">
+              <ToolboxCard
+                v-for="t in visibleTools"
+                :key="t.id"
+                :meta="t"
+                :favorite="isFavorite(t.id)"
+                :keyword="keyword"
+                :clicks="clickCount(t.id)"
+                @open="openTool(t)"
+                @toggle-fav="onToggleFav(t)"
+              />
+              <ToolboxEmpty
+                v-if="!visibleTools.length"
+                kind="no-result"
+                :keyword="keyword"
+                @reset="resetFilters"
+              />
+            </div>
+          </ToolboxSection>
+
+          <p class="tb-note">
+            工具全部为<strong>站内自建或站内已有模块</strong>，不会跳转任何第三方网站。
+            新增工具只需在 <code>src/toolbox/tools/</code> 下新建一个目录（<code>index.ts</code> 声明元数据 + 工具组件），
+            列表、搜索、筛选、收藏与最近使用<strong>全部自动生效</strong>。
+          </p>
+
+          <p class="tb-note tb-disclaimer" data-testid="tb-disclaimer">
+            <strong>免责声明：</strong>本站严禁用于非法用途，本站不承担任何因使用本站造成的损失及责任。
+          </p>
         </div>
-      </ToolboxSection>
-
-      <!-- 全部工具 -->
-      <ToolboxSection
-        :title="category ? categoryName(category) : '全部工具'"
-        :sub="allSectionSub"
-        data-testid="tb-section-all"
-      >
-        <template v-if="totalClicks > 0" #extra>
-          <button type="button" class="tb-mini-btn" @click="onClearClicks">重置使用次数</button>
-        </template>
-        <div class="tb-grid">
-          <ToolboxCard
-            v-for="t in visibleTools"
-            :key="t.id"
-            :meta="t"
-            :favorite="isFavorite(t.id)"
-            :keyword="keyword"
-            :clicks="clickCount(t.id)"
-            @open="openTool(t)"
-            @toggle-fav="onToggleFav(t)"
-          />
-          <ToolboxEmpty
-            v-if="!visibleTools.length"
-            kind="no-result"
-            :keyword="keyword"
-            @reset="resetFilters"
-          />
-        </div>
-      </ToolboxSection>
-
-      <p class="tb-note">
-        工具全部为<strong>站内自建或站内已有模块</strong>，不会跳转任何第三方网站。
-        新增工具只需在 <code>src/toolbox/tools/</code> 下新建一个目录（<code>index.ts</code> 声明元数据 + 工具组件），
-        列表、搜索、筛选、收藏与最近使用<strong>全部自动生效</strong>。
-      </p>
-
-      <p class="tb-note tb-disclaimer" data-testid="tb-disclaimer">
-        <strong>免责声明：</strong>本站严禁用于非法用途，本站不承担任何因使用本站造成的损失及责任。
-      </p>
+      </div>
     </main>
 
     <!-- 站内自建工具面板 -->
@@ -249,6 +287,22 @@ function resetFilters() {
 }
 
 .tb-main { padding-bottom: 96px; }
+/* 工具箱是「扫视 + 点选」场景，153 个同类卡片，宽容器能多排一列、少滚 25%。
+   只在本页放宽，不动全局 .wb-container（其它页面是单列阅读型，宽了反而难读）。 */
+.tb-main.wb-container { max-width: 1400px; }
+
+/* 桌面双栏：左分类栏 + 右工具区。
+   153 个工具要滚 6000+px，分类若横排会吃掉首屏 118px 且滚走即消失。 */
+.tb-body {
+  display: grid;
+  grid-template-columns: 184px minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+  margin-top: var(--space-4);
+}
+.tb-content { min-width: 0; }
+/* 移动端横排分类默认隐藏，桌面隐藏侧栏镜像 */
+.tb-bar { display: none; }
 
 .tb-grid {
   display: grid;
@@ -292,8 +346,12 @@ function resetFilters() {
   font-size: var(--fs-caption);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .tb-main { padding-bottom: 72px; }
+  /* 单栏：隐藏左侧栏，改用顶部横排分类 */
+  .tb-body { display: block; margin-top: var(--space-3); }
+  .tb-rail { display: none; }
+  .tb-bar { display: flex; margin-bottom: var(--space-3); }
   .tb-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
 }
 @media (max-width: 359px) {
