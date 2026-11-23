@@ -58,7 +58,12 @@ const favoriteTools = computed(() =>
   )
 )
 /** 最近使用由顶栏 ToolboxRecentBar 呈现（复用 prefs 单例，本视图不再重复计算） */
-const hasFavorite = computed(() => favorites.value.length > 0)
+/**
+ * 常用工具区块是否展示：看**当前筛选结果**里有没有收藏，而不是「有没有收藏」。
+ * 旧写法 hasFavorite = favorites.length > 0 只看全局收藏数，导致选中一个没有
+ * 收藏工具的分类时，区块仍然渲染出来却空着（只有一个「无结果」占位）。
+ */
+const hasFavoriteInView = computed(() => favoriteTools.value.length > 0)
 
 /** 累计点击次数（用于展示「按使用次数排序」与重置入口） */
 const totalClicks = computed(() =>
@@ -189,9 +194,10 @@ onBeforeUnmount(() => {
             class="tb-bar"
           />
 
-          <!-- 常用工具（收藏） -->
+          <!-- 常用工具（收藏）：仅当「当前筛选结果里有收藏」时才出现，
+               否则选中无收藏的分类会留下一个空区块 -->
           <ToolboxSection
-            v-if="hasFavorite"
+            v-if="hasFavoriteInView"
             title="★ 常用工具"
             sub="点击卡片右上角 ☆ 可收藏"
             data-testid="tb-section-fav"
@@ -206,12 +212,6 @@ onBeforeUnmount(() => {
                 :clicks="clickCount(t.id)"
                 @open="openTool(t)"
                 @toggle-fav="onToggleFav(t)"
-              />
-              <ToolboxEmpty
-                v-if="!favoriteTools.length"
-                kind="no-result"
-                :keyword="keyword"
-                @reset="resetFilters"
               />
             </div>
           </ToolboxSection>
