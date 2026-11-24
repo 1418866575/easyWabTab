@@ -14,6 +14,7 @@ import { idbGet, idbGetKey, idbPutKey, TOOLBOX_NAV_KEY } from '@/composables/use
 import { recordRecent } from '../core/recent'
 import { normalizeClicks, recordClick, clickCount as countOf, type ClickMap } from '../core/rank'
 import { normalizeSearchHistory, pushSearchHistory, SEARCH_HISTORY_LIMIT } from '../core/searchHistory'
+import { normalizeDisabled, toggleToolDisabled } from '../core/toolVisibility'
 
 /** IndexedDB 中的键名（nav object store 内的一个 key） */
 const IDB_KEY = TOOLBOX_NAV_KEY
@@ -25,6 +26,7 @@ function normalizePrefs(p: Partial<ToolboxPrefs> | undefined | null): {
   recent: ToolboxRecentItem[]
   clicks: ClickMap
   searchHistory: string[]
+  disabled: string[]
 } {
   return {
     favorites: Array.isArray(p?.favorites) ? p.favorites.filter(x => typeof x === 'string') : [],
@@ -33,7 +35,9 @@ function normalizePrefs(p: Partial<ToolboxPrefs> | undefined | null): {
       : [],
     clicks: normalizeClicks(p?.clicks),
     // searchHistory 在类型里是可选字段（旧数据可缺省），这里补齐为确定数组
-    searchHistory: normalizeSearchHistory(p?.searchHistory) ?? []
+    searchHistory: normalizeSearchHistory(p?.searchHistory) ?? [],
+    // disabled 缺省 = 全部开启（新用户 / 旧信封 / 脏数据都走这里）
+    disabled: normalizeDisabled(p?.disabled)
   }
 }
 
@@ -55,6 +59,8 @@ const favorites = ref<string[]>(legacy?.favorites ?? [])
 const recent = ref<ToolboxRecentItem[]>(legacy?.recent ?? [])
 const clicks = ref<ClickMap>(legacy?.clicks ?? {})
 const searchHistory = ref<string[]>(legacy?.searchHistory ?? [])
+/** 被关闭的工具 id；[] = 全部开启（默认） */
+const disabled = ref<string[]>(legacy?.disabled ?? [])
 
 /** 防抖落盘句柄 */
 let saveTimer: ReturnType<typeof setTimeout> | null = null
@@ -76,7 +82,8 @@ function persistNow(): void {
     favorites: favorites.value,
     recent: recent.value,
     clicks: clicks.value,
-    searchHistory: searchHistory.value
+    searchHistory: searchHistory.value,
+    disabled: disabled.value
   }
   idbPutKey('nav', IDB_KEY, JSON.stringify(payload)).catch((e) => {
     // 隐私模式 / 配额超限等：保持内存态，不抛错
@@ -146,6 +153,7 @@ export async function initToolboxPrefs(): Promise<void> {
       recent.value = n.recent
       clicks.value = n.clicks
       searchHistory.value = n.searchHistory
+      disabled.value = n.disabled
     } else if (legacy) {
       // 首次迁移：localStorage 有旧数据 → 写入 IndexedDB 并立即生效
       persistNow()
@@ -162,16 +170,18 @@ export function applyToolboxPrefs(next: Partial<ToolboxPrefs>): void {
   recent.value = n.recent
   clicks.value = n.clicks
   searchHistory.value = n.searchHistory
+  disabled.value = n.disabled
   persistNow()
 }
 
-/** 导出当前四项（供云同步 exportLocal 用） */
+/** 导出当前状态（供云同步 exportLocal 用） */
 export function getToolboxPrefsSnapshot(): ToolboxPrefs {
   return {
     favorites: favorites.value,
     recent: recent.value,
     clicks: clicks.value,
-    searchHistory: searchHistory.value
+    searchHistory: searchHistory.value,
+    disabled: disabled.value
   }
 }
 
@@ -232,11 +242,64 @@ export function useToolboxPrefs() {
     persist()
   }
 
+  /** 某工具是否开启（不在关闭列表即开启；默认全部开启） */
+  const isToolEnabled = (id: string): boolean => !disabled.value.includes(id)
+
+  /** 获取某工具的开关状态，供管理面板绑定 */
+  const toolEnabledMap = (): Record<string, boolean> => {
+    const off = new Set(disabled.value)
+    const out: Record<string, boolean> = {}
+    // 只记录关闭项，调用方用 isToolEnabled 兜底即可；这里给显式映射便于管理面板渲染
+    for (const id of off) out[id] = false
+    return out
+  }
+
+  /**
+   * 设置某工具开启/关闭。
+   * 关闭只影响展示，不删除工具实现、收藏、点击次数、最近使用。
+   * @returns 设置后的状态（true = 开启）
+   */
+  const setToolEnabled = (id: string, enabled: boolean): boolean => {
+    const res = toggleToolDisabled(disabled.value, id, enabled)
+    if (!res.ok) return !disabled.value.includes(id)
+    // 内容未变化时不触发落盘（避免无意义的同步脏标记）
+    if (res.disabled.length !== disabled.value.length) {
+      disabled.value = res.disabled
+      persist()
+    }
+    return !disabled.value.includes(id)
+  }
+
+  /** 全部开启（清空关闭列表） */
+  const enableAllTools = (): void => {
+    if (!disabled.value.length) return
+    disabled.value = []
+    persist()
+  }
+
+  /** 全部关闭（写入全部工具 id） */
+  const disableAllTools = (allIds: readonly string[]): void => {
+    const next = [...new Set(allIds)]
+    if (next.length === disabled.value.length && next.every((x) => disabled.value.includes(x))) return
+    disabled.value = next
+    persist()
+  }
+
+  /** 清理已不存在工具的关闭记录（工具目录删减后调用） */
+  const pruneDisabledTools = (allIds: readonly string[]): void => {
+    const alive = new Set(allIds)
+    const next = disabled.value.filter((id) => alive.has(id))
+    if (next.length === disabled.value.length) return
+    disabled.value = next
+    persist()
+  }
+
   return {
     favorites,
     recent,
     clicks,
     searchHistory,
+    disabled,
     isFavorite,
     toggleFavorite,
     pushRecent,
@@ -246,6 +309,12 @@ export function useToolboxPrefs() {
     clearClicks,
     pushSearch,
     clearSearchHistory,
+    isToolEnabled,
+    toolEnabledMap,
+    setToolEnabled,
+    enableAllTools,
+    disableAllTools,
+    pruneDisabledTools,
     // 云同步相关（页面 onMounted 时调initToolboxPrefs；云端拉取后调 applyToolboxPrefs）
     initToolboxPrefs,
     flushToolboxPrefs,

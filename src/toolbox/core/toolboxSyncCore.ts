@@ -24,6 +24,11 @@ export interface ToolboxSyncData {
   clicks?: Record<string, number>
   /** 搜索历史（最新的在前） */
   searchHistory?: string[]
+  /**
+   * 被关闭的工具 id（缺省 = 全部开启）。
+   * 合并策略见 mergeToolboxData：**取并集**（任一端关过就关），与 favorites 的并集方向一致。
+   */
+  disabled?: string[]
 }
 
 /** 与 useIdb / useCloudSync 中限定的搜索历史上限保持一致 */
@@ -87,14 +92,31 @@ export function normalizeSearchList(v: unknown, limit = SEARCH_HISTORY_LIMIT): s
   return out
 }
 
-/** 规范化整个信封的 4 个业务字段（脏数据安全：非法输入一律回落到空） */
+/**
+ * 规范化「被关闭的工具 id」：去空、去重。
+ * 非数组 / 脏数据 → []，即**全部开启**——这是新用户与旧信封的默认语义。
+ */
+export function normalizeDisabledList(v: unknown): string[] {
+  if (!Array.isArray(v)) return []
+  const out: string[] = []
+  for (const x of v) {
+    if (typeof x !== 'string') continue
+    const s = x.trim()
+    if (!s || out.includes(s)) continue
+    out.push(s)
+  }
+  return out
+}
+
+/** 规范化整个信封的业务字段（脏数据安全：非法输入一律回落到空 = 全部开启） */
 export function normalizeToolboxData(d: unknown): Required<Omit<ToolboxSyncData, 'version' | 'exportedAt' | 'clientId' | 'pushedAt'>> {
   const src = (d && typeof d === 'object' ? d : {}) as Record<string, unknown>
   return {
     favorites: normalizeFavorites(src.favorites),
     recent: normalizeRecent(src.recent),
     clicks: normalizeClicksMap(src.clicks),
-    searchHistory: normalizeSearchList(src.searchHistory)
+    searchHistory: normalizeSearchList(src.searchHistory),
+    disabled: normalizeDisabledList(src.disabled)
   }
 }
 
@@ -139,7 +161,16 @@ export function mergeToolboxData(
   // ④ 搜索历史：并集，本地在前（保持本机最近输入的排序），截断到上限
   const searchHistory = normalizeSearchList([...l.searchHistory, ...r.searchHistory])
 
-  return { favorites, recent, clicks, searchHistory }
+  // ⑤ 工具开关（disabled）：取**并集**（任一端关过就关）
+  //
+  // 为什么不用「本地覆盖远端」：本项目的云同步是「拉取即合并」，没有逐条时间戳；
+  // 若取本地，A 设备关闭的工具在 B 设备下次同步后会被"复活"——用户会认为同步没生效。
+  // 并集是唯一能让「关闭」这个动作在设备间可靠生效的方向，代价是「开启」在另一台
+  // 设备上尚未同步前可能被改回关闭，需要再同步一次（与 favorites 的取消收藏同款取舍，
+  // 本项目既有约定如此：见文件头「收藏取并集（删除只是'不再新增'）」）。
+  const disabled = normalizeDisabledList([...l.disabled, ...r.disabled])
+
+  return { favorites, recent, clicks, searchHistory, disabled }
 }
 
 /** 计算两份数据的差异大小（用于同步前的"是否需要上传"判断；0 = 无差异） */
@@ -158,11 +189,14 @@ export function toolboxDiffSize(local: unknown, remote: unknown): number {
   for (const [k, v] of Object.entries(r.clicks)) if (l.clicks[k] !== v) n++
   // 搜索历史：整体比较
   if (l.searchHistory.join('\u0001') !== r.searchHistory.join('\u0001')) n++
+  // 工具开关：对称差集计 1（与收藏同口径）
+  for (const id of l.disabled) if (!r.disabled.includes(id)) n++
+  for (const id of r.disabled) if (!l.disabled.includes(id)) n++
   return n
 }
 
 /** 签名：用于快速判断信封是否变化（变化才会参与冲突合并） */
 export function toolboxSignature(d: unknown): string {
   const n = normalizeToolboxData(d)
-  return JSON.stringify([n.favorites, n.recent, n.clicks, n.searchHistory])
+  return JSON.stringify([n.favorites, n.recent, n.clicks, n.searchHistory, n.disabled])
 }

@@ -21,7 +21,22 @@ import pluginVue from 'eslint-plugin-vue'
 export default [
   {
     // 构建产物、依赖、静态资源与工具脚本不参与应用代码规范
-    ignores: ['dist/**', 'node_modules/**', 'public/**', 'scripts/**', '**/*.min.js', '**/*.cjs']
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'public/**',
+      'scripts/**',
+      '**/*.min.js',
+      '**/*.cjs',
+      // 本机工作目录（已在 .gitignore 中忽略，但 eslint 不读 .gitignore）：
+      // _drafts/ 是公众号稿件与配图脚本、.oil-ui/ 是界面审查探针，均非应用代码。
+      // 它们含 Node 侧调用（fetch/process/console），在浏览器 globals 下必然报 no-undef。
+      '_drafts/**',
+      '.oil-ui/**',
+      '_prototypes/**',
+      // 临时验证脚本：放在项目根的 _*.mjs（跑完即删，不应阻断门禁）
+      '_*.mjs'
+    ]
   },
 
   js.configs.recommended,

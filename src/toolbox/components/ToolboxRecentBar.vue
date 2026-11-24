@@ -24,7 +24,10 @@ const props = defineProps<{
   onOpen: (meta: ToolboxToolMeta) => void
 }>()
 
-const { recent, clickCount, clearRecent } = useToolboxPrefs()
+const { recent, clickCount, clearRecent, disabled } = useToolboxPrefs()
+
+/** 被关闭的工具不进入「最近使用 / 最近上线」两个快捷条（与主列表保持一致） */
+const offSet = computed(() => new Set(disabled.value))
 
 /** 当前展开的面板：'' 为全部收起 */
 const openKind = ref<'' | 'recent' | 'new'>('')
@@ -43,18 +46,18 @@ interface BarItem {
   cat: string
 }
 
-/** 最近使用（元数据有效者），时间倒序（recent 已由 core 去重截断） */
+/** 最近使用（元数据有效者且未被关闭），时间倒序（recent 已由 core 去重截断） */
 const recentItems = computed<BarItem[]>(() =>
   recent.value
     .map(r => ({ ts: r.ts, tool: getToolMeta(r.id) }))
-    .filter((x): x is { ts: number; tool: ToolboxToolMeta } => !!x.tool)
+    .filter((x): x is { ts: number; tool: ToolboxToolMeta } => !!x.tool && !offSet.value.has(x.tool.id))
     .map(x => ({ tool: x.tool, time: relativeTime(x.ts), hits: clickCount(x.tool.id), cat: categoryName(x.tool.category) }))
 )
 
-/** 最近上线：addedAt 降序取前 NEW_LIMIT 个（只含可用工具） */
+/** 最近上线：addedAt 降序取前 NEW_LIMIT 个（只含可用且未被关闭的工具） */
 const newItems = computed<BarItem[]>(() =>
   TOOLBOX_TOOLS
-    .filter(t => t.status === 'active' && t.addedAt)
+    .filter(t => t.status === 'active' && t.addedAt && !offSet.value.has(t.id))
     .sort((a, b) => (b.addedAt || '').localeCompare(a.addedAt || ''))
     .slice(0, NEW_LIMIT)
     .map(t => ({ tool: t, time: (t.addedAt || '').slice(5) + ' 上线', hits: 0, cat: categoryName(t.category) }))

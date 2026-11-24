@@ -16,11 +16,13 @@ import ToolboxCard from '../components/ToolboxCard.vue'
 import ToolboxSection from '../components/ToolboxSection.vue'
 import ToolboxEmpty from '../components/ToolboxEmpty.vue'
 import ToolboxSyncButton from '../components/ToolboxSyncButton.vue'
+import ToolboxManageDialog from '../components/ToolboxManageDialog.vue'
 import ToolboxToolPanel from '../components/ToolboxToolPanel.vue'
 import WorkbenchSwitcher from '@/components/WorkbenchSwitcher.vue'
 import { TOOLBOX_TOOLS, getToolEntry } from '../registry'
 import { filterTools } from '../core/search'
 import { sortByClicks } from '../core/rank'
+import { filterEnabledTools } from '../core/toolVisibility'
 import { MODULE_CATEGORY_ID } from '../core/category'
 import { categoryName } from '../config/categories'
 import { useToolboxPrefs } from '../prefs/useToolboxPrefs'
@@ -33,22 +35,37 @@ const settingsStore = useAppSettingsStore()
 const {
   favorites,
   clicks,
+  disabled,
   isFavorite,
   toggleFavorite,
   pushRecent,
   clickCount,
   hitClick,
-  clearClicks
+  clearClicks,
+  setToolEnabled,
+  enableAllTools,
+  disableAllTools
 } = useToolboxPrefs()
 
 const keyword = ref('')
 const category = ref('')
 const activeEntry = ref<ToolboxToolEntry | null>(null)
 const panelVisible = ref(false)
+/** 管理弹框（工具箱管理：逐个开关工具） */
+const manageVisible = ref(false)
+
+/**
+ * 生效的工具集：先剔除被关闭的工具，再做搜索/分类/排序。
+ *
+ * 顺序很重要——先过滤再交给 filterTools：
+ *   1. 分类计数（左侧栏）会自动反映"可见工具数"，不会出现点进去是空的分类
+ *   2. 收藏/最近使用若指向已关闭工具，不会从别的入口漏出来
+ */
+const enabledTools = computed(() => filterEnabledTools(TOOLBOX_TOOLS, disabled.value))
 
 /** 全部（分类 + 关键字叠加筛选），按点击次数降序（次数相同保持 order 顺序） */
 const visibleTools = computed(() =>
-  filterTools(TOOLBOX_TOOLS, { q: keyword.value, category: category.value, clicks: clicks.value })
+  filterTools(enabledTools.value, { q: keyword.value, category: category.value, clicks: clicks.value })
 )
 /** 常用工具（收藏 ∩ 当前筛选），同样按点击次数降序 */
 const favoriteTools = computed(() =>
@@ -149,6 +166,30 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('resize', syncRailTop)
 })
+
+/**
+ * 管理弹框：切换单个工具开关（关闭只影响展示，数据全保留）。
+ * 这里**不弹 toast** —— 管理面板内开关本身就是最直接的状态反馈（轨道 + 「开启/关闭」文字），
+ * 逐项切换时连弹提示会堆叠并遮挡右上角的开关，反而妨碍连续操作。
+ * 批量操作（全部开启/关闭）会给一次 toast，因为那是"看不见结果范围"的破坏性动作。
+ */
+function onToggleTool(id: string, enabled: boolean): void {
+  setToolEnabled(id, enabled)
+}
+
+/** 全部开启 */
+function onEnableAllTools(): void {
+  const before = disabled.value.length
+  enableAllTools()
+  toast.success(before ? `已开启全部 ${TOOLBOX_TOOLS.length} 个工具` : '所有工具本就是开启状态')
+}
+
+/** 全部关闭 */
+function onDisableAllTools(): void {
+  const before = disabled.value.length
+  disableAllTools(TOOLBOX_TOOLS.map((t) => t.id))
+  toast.warning(before === TOOLBOX_TOOLS.length ? '所有工具已是关闭状态' : '已关闭全部工具，可在管理中重新开启')
+}
 </script>
 
 <template>
@@ -166,15 +207,27 @@ onBeforeUnmount(() => {
       <!-- 最近使用常驻快捷条（顶栏吸顶，随时可触发；Alt+R 唤起） -->
       <ToolboxRecentBar :on-open="openTool" />
 
-      <!-- 云同步：同步收藏 / 最近使用 / 点击次数 / 搜索历史（复用「设置 → 云同步」配置） -->
+      <!-- 云同步：同步收藏 / 最近使用 / 点击次数 / 搜索历史 / 工具开关（复用「设置 → 云同步」配置） -->
       <ToolboxSyncButton class="tb-topbar-sync" />
+
+      <!-- 工具箱管理：逐个开启/关闭工具（关闭只影响展示，不删数据） -->
+      <button
+        type="button"
+        class="ui-btn ui-btn--sm tb-topbar-manage"
+        data-testid="tb-manage-open"
+        title="管理工具箱：开启或关闭工具"
+        @click="manageVisible = true"
+      >
+        <span aria-hidden="true">⚙️</span>
+        <span class="tb-manage-label">管理</span>
+      </button>
     </header>
 
     <main class="tb-main wb-container">
       <!-- 搜索框（父容器内居中）：聚焦展开建议/历史下拉 -->
       <ToolboxSearchBar
         v-model="keyword"
-        :candidates="TOOLBOX_TOOLS"
+        :candidates="enabledTools"
         @pick="openTool"
       />
 
@@ -182,14 +235,14 @@ onBeforeUnmount(() => {
       <div ref="bodyEl" class="tb-body">
         <ToolboxCategoryTabs
           v-model="category"
-          :tools="TOOLBOX_TOOLS"
+          :tools="enabledTools"
           class="tb-rail"
         />
         <div class="tb-content">
           <!-- 移动端分类横排（同一组件、不同布局；桌面隐藏） -->
           <ToolboxCategoryTabs
             v-model="category"
-            :tools="TOOLBOX_TOOLS"
+            :tools="enabledTools"
             layout="bar"
             class="tb-bar"
           />
@@ -260,6 +313,16 @@ onBeforeUnmount(() => {
 
     <!-- 站内自建工具面板 -->
     <ToolboxToolPanel :entry="activeEntry" :visible="panelVisible" @close="closePanel" />
+
+    <!-- 工具箱管理：逐个开启/关闭工具 -->
+    <ToolboxManageDialog
+      v-if="manageVisible"
+      :disabled="disabled"
+      @close="manageVisible = false"
+      @toggle="onToggleTool"
+      @enable-all="onEnableAllTools"
+      @disable-all="onDisableAllTools"
+    />
   </div>
 </template>
 
@@ -284,6 +347,15 @@ onBeforeUnmount(() => {
 .tb-topbar-sync {
   margin-left: 10px;
   flex: none;
+}
+
+/* 工具箱管理入口：紧跟云同步按钮，同尺寸、不抢视觉焦点 */
+.tb-topbar-manage {
+  margin-left: 8px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .tb-main { padding-bottom: 96px; }

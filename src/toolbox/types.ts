@@ -88,6 +88,11 @@ export interface ToolboxPrefs {
   clicks: Record<string, number>
   /** 搜索历史：最近 5 条关键字（最新在前，FIFO 截断）；旧数据可缺省 */
   searchHistory?: string[]
+  /**
+   * 被关闭的工具 id（只存关闭项；缺省/空数组 = 全部开启）。
+   * 关闭只影响列表展示，不删除工具实现、收藏、点击次数等数据。
+   */
+  disabled?: string[]
 }
 
 /** 最近使用记录 */
