@@ -13,11 +13,8 @@ import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import type { ToolboxToolMeta } from '../types'
 import { relativeTime } from '../core/recent'
 import { useToolboxPrefs } from '../prefs/useToolboxPrefs'
-import { getToolMeta, TOOLBOX_TOOLS } from '../registry'
+import { getToolMeta } from '../registry'
 import { categoryName } from '../config/categories'
-
-/** 最近上线展示条数 */
-const NEW_LIMIT = 10
 
 const props = defineProps<{
   /** 打开工具（由父级注入，复用其 openTool 逻辑：状态校验 + 记录点击 + 打开） */
@@ -30,7 +27,7 @@ const { recent, clickCount, clearRecent, disabled } = useToolboxPrefs()
 const offSet = computed(() => new Set(disabled.value))
 
 /** 当前展开的面板：'' 为全部收起 */
-const openKind = ref<'' | 'recent' | 'new'>('')
+const openKind = ref<'' | 'recent'>('')
 /** 键盘选中下标（-1 为无选中） */
 const activeIndex = ref(-1)
 /** 触发按钮，用于关闭后回焦 */
@@ -46,7 +43,7 @@ interface BarItem {
   cat: string
 }
 
-/** 最近使用（元数据有效者且未被关闭），时间倒序（recent 已由 core 去重截断） */
+/** 最近使用（元数据有效者），时间倒序（recent 已由 core 去重截断）；已关闭的工具不出现 */
 const recentItems = computed<BarItem[]>(() =>
   recent.value
     .map(r => ({ ts: r.ts, tool: getToolMeta(r.id) }))
@@ -54,36 +51,25 @@ const recentItems = computed<BarItem[]>(() =>
     .map(x => ({ tool: x.tool, time: relativeTime(x.ts), hits: clickCount(x.tool.id), cat: categoryName(x.tool.category) }))
 )
 
-/** 最近上线：addedAt 降序取前 NEW_LIMIT 个（只含可用且未被关闭的工具） */
-const newItems = computed<BarItem[]>(() =>
-  TOOLBOX_TOOLS
-    .filter(t => t.status === 'active' && t.addedAt && !offSet.value.has(t.id))
-    .sort((a, b) => (b.addedAt || '').localeCompare(a.addedAt || ''))
-    .slice(0, NEW_LIMIT)
-    .map(t => ({ tool: t, time: (t.addedAt || '').slice(5) + ' 上线', hits: 0, cat: categoryName(t.category) }))
-)
-
 const hasRecent = computed(() => recentItems.value.length > 0)
-const hasNew = computed(() => newItems.value.length > 0)
-const hasAny = computed(() => hasRecent.value || hasNew.value)
 
 /** 当前展开面板对应的列表（键盘导航用） */
-const activeItems = computed<BarItem[]>(() => (openKind.value === 'recent' ? recentItems.value : newItems.value))
+const activeItems = computed<BarItem[]>(() => recentItems.value)
 
 function onSelect(meta: ToolboxToolMeta) {
   close()
   props.onOpen(meta)
 }
 
-function toggle(kind: 'recent' | 'new') {
-  if (openKind.value === kind) close()
-  else openPanel(kind)
+function toggle() {
+  if (openKind.value === 'recent') close()
+  else openPanel()
 }
 
-function openPanel(kind: 'recent' | 'new') {
-  openKind.value = kind
+function openPanel() {
+  openKind.value = 'recent'
   activeIndex.value = 0
-  itemRefs.value = [] // 切换面板时清掉上一个面板的节点引用
+  itemRefs.value = []
   nextTick(() => {
     // 移动端打开底部抽屉时锁背景滚动
     if (isMobile.value) document.body.style.overflow = 'hidden'
@@ -108,7 +94,7 @@ function onKeydown(e: KeyboardEvent) {
   if (e.altKey && (e.key === 'r' || e.key === 'R')) {
     e.preventDefault()
     if (openKind.value === 'recent') close()
-    else openPanel('recent')
+    else openPanel()
     return
   }
   if (!openKind.value) return
@@ -164,7 +150,7 @@ watch(activeIndex, v => {
 </script>
 
 <template>
-  <div v-if="hasAny" class="tb-recent-bar" ref="panelRef">
+  <div v-if="hasRecent" class="tb-recent-bar" ref="panelRef">
     <!-- 触发区：桌面折叠胶囊 / 移动端单图标 -->
     <button
       v-if="hasRecent"
@@ -176,28 +162,15 @@ watch(activeIndex, v => {
       :aria-expanded="openKind === 'recent'"
       aria-haspopup="menu"
       :title="`最近使用（${recentItems.length}）· 快捷键 Alt+R`"
-      @click="toggle('recent')"
+      @click="toggle()"
     >
       <span aria-hidden="true">🕘</span>
       <span class="tb-recent-trigger-label">最近使用</span>
       <span class="tb-recent-count">{{ recentItems.length }}</span>
     </button>
 
-    <button
-      v-if="hasNew"
-      type="button"
-      class="tb-recent-trigger"
-      :class="{ 'is-open': openKind === 'new' }"
-      data-testid="tb-new-trigger"
-      :aria-expanded="openKind === 'new'"
-      aria-haspopup="menu"
-      :title="`最近上线（${newItems.length}）`"
-      @click="toggle('new')"
-    >
-      <span aria-hidden="true">🆕</span>
-      <span class="tb-recent-trigger-label">最近上线</span>
-      <span class="tb-recent-count">{{ newItems.length }}</span>
-    </button>
+    <!-- 「最近上线」按钮已按需求隐藏（2026-11-24）。对应的面板与数据计算一并移除，
+         避免留下无法触达的死代码；如需恢复，从 git 历史找回本节与 newItems/hasNew。 -->
 
     <!-- 下拉面板（桌面）：最近使用 -->
     <Transition name="tb-rec-fade">
@@ -232,47 +205,14 @@ watch(activeIndex, v => {
       </div>
     </Transition>
 
-    <!-- 下拉面板（桌面）：最近上线 -->
-    <Transition name="tb-rec-fade">
-      <div
-        v-if="openKind === 'new' && !isMobile"
-        class="tb-recent-panel"
-        role="menu"
-        :aria-label="'最近上线的工具'"
-      >
-        <header class="tb-recent-panel-head">
-          <span class="tb-recent-panel-title">最近上线</span>
-        </header>
-        <ul class="tb-recent-panel-list">
-          <li
-            v-for="(it, i) in newItems"
-            :key="it.tool.id"
-            ref="itemRefs"
-            :data-active="i === activeIndex"
-            class="tb-recent-panel-item"
-            role="menuitem"
-            :title="it.tool.description"
-            @click="onSelect(it.tool)"
-            @mouseenter="activeIndex = i"
-          >
-            <span class="tb-recent-panel-icon" aria-hidden="true">{{ it.tool.icon }}</span>
-            <span class="tb-recent-panel-name" :title="it.tool.name">{{ it.tool.name }}</span>
-            <span class="tb-recent-panel-cat">{{ it.cat }}</span>
-            <span class="tb-recent-panel-time">{{ it.time }}</span>
-          </li>
-        </ul>
-        <p class="tb-recent-panel-hint">↑/↓ 选择 · Enter 打开 · Esc 关闭</p>
-      </div>
-    </Transition>
-
-    <!-- 底部抽屉（移动端）：内容随展开面板切换 -->
+    <!-- 底部抽屉（移动端）：只承载「最近使用」 -->
     <Transition name="tb-rec-sheet">
       <div v-if="openKind && isMobile" class="tb-recent-sheet-mask" @click="close">
-        <div class="tb-recent-sheet" role="menu" :aria-label="openKind === 'recent' ? '最近使用的工具' : '最近上线的工具'" @click.stop>
+        <div class="tb-recent-sheet" role="menu" aria-label="最近使用的工具" @click.stop>
           <div class="tb-recent-sheet-bar" aria-hidden="true"></div>
           <header class="tb-recent-panel-head">
-            <span class="tb-recent-panel-title">{{ openKind === 'recent' ? '最近使用' : '最近上线' }}</span>
-            <button v-if="openKind === 'recent'" type="button" class="tb-recent-clear" @click="onClear">清空</button>
+            <span class="tb-recent-panel-title">最近使用</span>
+            <button type="button" class="tb-recent-clear" @click="onClear">清空</button>
           </header>
           <ul class="tb-recent-panel-list">
             <li
@@ -284,7 +224,6 @@ watch(activeIndex, v => {
             >
               <span class="tb-recent-panel-icon" aria-hidden="true">{{ it.tool.icon }}</span>
               <span class="tb-recent-panel-name">{{ it.tool.name }}</span>
-              <span v-if="openKind === 'new'" class="tb-recent-panel-cat">{{ it.cat }}</span>
               <span class="tb-recent-panel-time">{{ it.time }}</span>
               <span v-if="it.hits" class="tb-recent-panel-hits">{{ it.hits }} 次</span>
             </li>
@@ -381,14 +320,6 @@ watch(activeIndex, v => {
 .tb-recent-panel-item[data-active='true'] { background: var(--color-primary-soft); }
 .tb-recent-panel-icon { flex: none; }
 .tb-recent-panel-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tb-recent-panel-cat {
-  flex: none;
-  color: var(--color-text-muted);
-  font-size: var(--fs-caption);
-  padding: 0 5px;
-  border-radius: 999px;
-  background: var(--color-bg-hover);
-}
 .tb-recent-panel-time { flex: none; color: var(--color-text-muted); font-size: var(--fs-caption); }
 .tb-recent-panel-hits {
   flex: none;
