@@ -207,9 +207,6 @@ function onDisableAllTools(): void {
       <!-- 最近使用常驻快捷条（顶栏吸顶，随时可触发；Alt+R 唤起） -->
       <ToolboxRecentBar :on-open="openTool" />
 
-      <!-- 云同步：同步收藏 / 最近使用 / 点击次数 / 搜索历史 / 工具开关（复用「设置 → 云同步」配置） -->
-      <ToolboxSyncButton class="tb-topbar-sync" />
-
       <!-- 工具箱管理：逐个开启/关闭工具（关闭只影响展示，不删数据） -->
       <button
         type="button"
@@ -221,6 +218,10 @@ function onDisableAllTools(): void {
         <span aria-hidden="true">⚙️</span>
         <span class="tb-manage-label">管理</span>
       </button>
+
+      <!-- 云同步：同步收藏 / 最近使用 / 点击次数 / 搜索历史 / 工具开关（复用「设置 → 云同步」配置）
+           放在顶栏最后一位，保证它始终贴在最右侧 -->
+      <ToolboxSyncButton class="tb-topbar-sync" />
     </header>
 
     <main class="tb-main wb-container">
@@ -341,15 +342,22 @@ function onDisableAllTools(): void {
   border-bottom: 1px solid var(--color-border);
 }
 
-/* 云同步按钮：顶栏内、紧随「最近使用」之后。
-   注意 .tb-recent-bar 自带 margin-left:auto（把自己推到右侧），所以这里只用左间距贴合，
-   不再给 auto——否则按钮会被推到「最近使用」右边的空白处、与其拉开距离。 */
+/*
+ * 顶栏布局：左侧「工作台切换」，右侧一组「最近使用 / 云同步 / 管理」全部贴右。
+ *
+ * 原先靠 .tb-recent-bar 自带的 margin-left:auto 把自己推到右边，于是它之后
+ * 的按钮只能「顺序跟在它后面」——同步按钮右侧如果还有按钮，同步就不是最右了。
+ * 改为：auto 作用在右侧组的第一项上，让整组一起贴右；组内顺序不受影响。
+ */
+.tb-topbar > .tb-recent-bar { margin-left: auto; }
+
+/* 云同步按钮：顶栏最后一位（永远贴最右），只需左侧与「管理」拉开间距 */
 .tb-topbar-sync {
   margin-left: 10px;
   flex: none;
 }
 
-/* 工具箱管理入口：紧跟云同步按钮，同尺寸、不抢视觉焦点 */
+/* 工具箱管理入口：位于「最近使用」与「云同步」之间，同尺寸、不抢视觉焦点 */
 .tb-topbar-manage {
   margin-left: 8px;
   flex: none;
