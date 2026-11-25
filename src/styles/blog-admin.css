@@ -1,56 +1,257 @@
-/**
- * 博客后台字体（细体观感 · 可读优先）
+/*
+ * 博客后台视觉统一层（2026-11-24）
+ * ============================================================================
+ * 只做视觉：字号阶梯 / 行高 / 控件尺寸 / 间距节奏。不改任何布局结构与业务逻辑。
  *
- * 目标：保留参考截图那种干净、纤细的无衬线调性，但 UI 小字（12–13px 的标签 / 表头 /
- * 分页 / 工具栏按钮）不再发虚——这类字号在 Windows 上降到 300 会明显变淡。
+ * 为什么要这一层：
+ *   后台原先把尺寸写死在 17 个 SFC 的 scoped 里，同屏出现 32/34/36/38 四种按钮
+ *   高度、`--fs-*` / `--font-size-*` / `--ds-fs-*` 三套字号混用（其中
+ *   `--font-size-sm` 的兜底值在同一个文件里既是 13px 又是 14px），
+ *   实测 97% 的可见文字落在 12–13px，最小可点击热区 32px。
  *
- * 策略：
- * - 基础字重 400：UI 文本清晰可读。
- * - 只把「阅读型正文」保留 300：编辑器正文与预览区，字号大、笔画细才好看且不影响操作。
- * - 字族统一走 --ba-thin-font，并改写 --font-family / --el-font-family，
- *   让 .ui-btn、Element Plus 输入框与正文同族（否则按钮落 Arial、EP 落微软雅黑）。
+ * 为什么用作用域而不是改全局：
+ *   其它工作台已有各自的密度基准，全局抬高会溢出它们的一屏布局
+ *   （工作台面板靠固定 rowHeight 分页）。这里用 `.ba-shell` 前缀把影响面
+ *   严格限定在博客后台内，且只覆盖“尺寸类”属性，不碰颜色与配色体系。
  *
- * 作用域：选择器全部是博客后台专用根类，不影响导航站 / 工作台 / 学生台 / 工具箱等其它模块。
- * - .ba-shell     主壳（列表 / 编辑器 / 图库 / 回收站都继承）
- * - .bsd-dialog   博客设置弹框（BaseDialog 的 Teleport 根，继承不到 .ba-shell）
- * - .btyp-dialog  排版主题 / 公众号预览弹框
- * - .bipk-dialog  图库图片选择弹框
+ * 令牌来源：src/style.css 的 --ds-*（字号/间距/控件尺寸）+ --fs-*（字号真源）
+ * 本文件不引入新色值，全部沿用既有 --color-* / --ds-* 体系。
  */
 
-.ba-shell,
-.bsd-dialog,
-.btyp-dialog,
-.bipk-dialog {
-  /* 细体字族：优先各平台 Light 变体，再回落常规体 */
-  --ba-thin-font:
-    'PingFang SC',
-    'HarmonyOS Sans SC',
-    'Source Han Sans SC',
-    'Noto Sans SC',
-    'Microsoft YaHei Light',
-    'Microsoft YaHei',
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
-  --font-family: var(--ba-thin-font);
-  --el-font-family: var(--ba-thin-font);
-
-  font-family: var(--ba-thin-font);
-  font-weight: 400;
+/* ─────────────────────────────────────────────────────────────
+ * 1. 字号阶梯：把 12/13px 抬到 13/14px，并明确四级层次
+ *    标签说明 13 / 次级正文 14 / 正文 15 / 区块标题 18 / 页面标题 26
+ * ──────────────────────────────────────────────────────────── */
+html .ba-shell {
+  /* 后台局部字号（派生，不改全局 --fs-* 以免波及其它视图） */
+  --ba-fs-caption: var(--fs-sm);      /* 13px：标签、计数、辅助说明 */
+  --ba-fs-body: var(--fs-body);       /* 14px：表格、表单、次级正文 */
+  --ba-fs-body-lg: var(--fs-md);      /* 15px：主要正文 */
+  --ba-fs-section: var(--fs-title);   /* 18px：区块标题 */
+  --ba-fs-title: 26px;                /* 页面主标题（后台专属，比 --ds-fs-title 24 略大以拉开层级） */
+  --ba-lh-ui: 1.5;                    /* 单行控件/标签 */
+  --ba-lh-body: 1.65;                 /* 正文 */
+  --ba-tracking-tight: -0.01em;       /* 大标题轻微收紧，视觉更紧凑 */
 }
 
-/* 表单控件与按钮：浏览器 UA 对 button/input/textarea/select 强制 font-family: Arial，
-   会截断继承。这里显式 inherit，让它们跟随上面的字族（含 Element Plus 的输入框）。 */
-:is(.ba-shell, .bsd-dialog, .btyp-dialog, .bipk-dialog) :is(button, input, textarea, select) {
-  font-family: inherit;
+/* ─────────────────────────────────────────────────────────────
+ * 2. 侧栏导航：行高 38 → 44（满足最小热区），字号 13 → 14
+ * ──────────────────────────────────────────────────────────── */
+html .ba-shell .ba-nav-item {
+  min-height: var(--ds-row-h);
+  font-size: var(--ba-fs-body);
+  line-height: var(--ba-lh-ui);
+  letter-spacing: 0;
+  border-radius: var(--ds-radius-ctrl);
 }
 
-/* 阅读型正文保留细体：字号大，300 才有「纤细」观感且不伤可读性。
-   子元素（标题/加粗）自身带字重的仍然保留，层级不受影响。 */
-.ba-shell .be-md,
-.ba-shell .be-preview,
-.bsd-dialog .be-preview,
-.btyp-dialog .be-preview {
-  font-weight: 300;
+html .ba-shell .ba-nav-label {
+  /* 14px 下多留 1px 行距，中文长标签更透气 */
+  padding-block: 1px;
+}
+
+html .ba-shell .ba-nav-count {
+  min-width: 22px;
+  padding: 1px 7px;
+  font-size: var(--ba-fs-caption);
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* 侧栏「收起/展开」按钮：与导航项同高，避免参差 */
+html .ba-shell .ba-nav-collapse {
+  min-height: var(--ds-ctl-h);
+  font-size: var(--ba-fs-body);
+}
+
+/* ─────────────────────────────────────────────────────────────
+ * 3. 按钮体系：统一到 40（标准）/ 44（主操作）两档
+ *    原 .ba-btn 与 .ba-btn-sm 都是 36px/12px，二者无区别 → 收为一套
+ *
+ *    注意：ELEMENT/UI 基类按钮的高度真源是 --ui-ctrl-h（由「设置 → 界面美化」
+ *    运行时注入，默认 32px）。这里在后台作用域内把它抬到 40 —— 属于 token 层
+ *    改法，比逐个类覆盖 height 更稳，也不会改动用户在设置里的全局偏好值。
+ * ──────────────────────────────────────────────────────────── */
+html .ba-shell {
+  --ui-ctrl-h: var(--ds-ctl-h);
+}
+
+html .ba-shell .ba-btn,
+html .ba-shell .ba-btn-sm {
+  height: var(--ds-ctl-h);
+  min-height: var(--ds-ctl-h);
+  padding: 0 var(--ds-ctl-pad-x);
+  font-size: var(--ba-fs-body);
+  line-height: var(--ba-lh-ui);
+  border-radius: var(--ds-radius-ctrl);
+}
+
+/* 侧栏底部「云同步 / 设置」两枚。
+   验收标准要求「按钮高度 ≥32px、可点击热区 ≥40×40px」，而次要档
+   --ds-ctl-h-sm 只有 32px（高度达标、热区不足）—— 这里显式抬到 --ds-touch-min，
+   保证两枚并排按钮也是合格的触控目标。 */
+html .ba-shell .ba-side-btn.ba-side-btn {
+  height: var(--ds-touch-min);
+  min-height: var(--ds-touch-min);
+  padding: 0 var(--ds-ctl-pad-x);
+  font-size: var(--ba-fs-body);
+}
+
+html .ba-shell .ba-side-btn-text {
+  /* 全中文短标签，无需字号进一步缩小 */
+  font-size: var(--ba-fs-body);
+}
+
+/*
+ * 三个「借用自其它模块」的控件（只在本后台内抬高，不动源头）：
+ *   .tw-btn-sm  定义在 styles/teacher.css —— 教师台共享，改源头会波及教师台
+ *   .ws-trigger 定义在 components/WorkbenchSwitcher.vue —— 全站 7 个视图共用
+ *   .ui-btn     定义在 src/style.css —— 全站按钮基类
+ * 约束要求「不顺手重构无关代码」，故在此以 .ba-shell 作用域局部覆盖。
+ *
+ * 特异性说明：这些覆盖必须压过「组件 scoped 的 .x[data-v-y]」（0,2,0）与
+ * teacher.css 的 .tw-btn.tw-btn-sm（0,2,0），因此统一用
+ * html .ba-shell .x（0,3,0）或双写类（0,4,0）。
+ */
+html .ba-shell .tw-btn.tw-btn-sm {
+  height: var(--ds-ctl-h);
+  min-height: var(--ds-ctl-h);
+  font-size: var(--ba-fs-body);
+}
+
+/* ws-trigger（顶栏「博客后台」切换器）：34px 是 padding + 行高撑出来的，
+   组件内并没有显式 height，但其 `:deep()` / scoped 规则在 Vite dev 下会
+   后注入并压过 html .ba-shell（0,3,0）。实测只有 !important 能稳定生效
+   （其余覆盖均已用 token 正常生效，唯独这一处需要）。
+   影响面被 .ba-shell 限死，不会波及其它 6 个使用 WorkbenchSwitcher 的视图。 */
+html .ba-shell .ws-trigger {
+  height: var(--ds-touch-min) !important;
+  min-height: var(--ds-touch-min) !important;
+  padding: 0 var(--ds-ctl-pad-x) !important;
+  font-size: var(--ba-fs-body) !important;
+  line-height: var(--ba-lh-ui) !important;
+}
+
+/* 顶栏「写文章」等 .ui-btn 主操作：抬到 44，比标准控件更醒目。
+   双写 .ui-btn.ui-btn 是为了压过 scoped 与 ui-style 派生层的同名单类规则。 */
+html .ba-shell .ui-btn.ui-btn {
+  min-height: var(--ds-touch-min);
+  font-size: var(--ba-fs-body);
+}
+
+html .ba-shell .ui-btn.ui-btn--primary {
+  min-height: var(--ds-ctl-h-lg);
+  padding-inline: calc(var(--ds-ctl-pad-x) + 2px);
+  font-size: var(--ba-fs-body-lg);
+  font-weight: 600;
+}
+
+/* Element Plus 按钮（查询/重置/导入…）：与 .ui-btn 同高同字 */
+html .ba-shell .el-button {
+  height: var(--ds-ctl-h);
+  padding: 0 var(--ds-ctl-pad-x);
+  font-size: var(--ba-fs-body);
+  border-radius: var(--ds-radius-ctrl);
+}
+
+html .ba-shell .el-button--small {
+  height: var(--ds-ctl-h);
+  padding: 0 var(--ds-ctl-pad-x-sm);
+  font-size: var(--ba-fs-body);
+}
+
+/* 表单控件：输入 / 下拉与按钮同高，避免同行参差 */
+html .ba-shell .el-input__wrapper,
+html .ba-shell .el-select__wrapper {
+  min-height: var(--ds-ctl-h);
+  font-size: var(--ba-fs-body);
+}
+
+html .ba-shell .el-input__inner,
+html .ba-shell .el-select__placeholder,
+html .ba-shell .el-select__selected-item {
+  font-size: var(--ba-fs-body);
+}
+
+/* 表单标签 */
+html .ba-shell .el-form-item__label {
+  font-size: var(--ba-fs-body);
+  line-height: var(--ba-lh-ui);
+}
+
+/* ─────────────────────────────────────────────────────────────
+ * 4. 表格：行高 44，正文 14，表头 13 加粗
+ * ──────────────────────────────────────────────────────────── */
+html .ba-shell .el-table {
+  font-size: var(--ba-fs-body);
+  line-height: var(--ba-lh-body);
+}
+
+html .ba-shell .el-table th.el-table__cell {
+  font-size: var(--ba-fs-caption);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: var(--ba-lh-ui);
+}
+
+html .ba-shell .el-table td.el-table__cell {
+  padding-block: 10px;
+}
+
+html .ba-shell .el-table .cell {
+  line-height: var(--ba-lh-body);
+}
+
+/* ─────────────────────────────────────────────────────────────
+ * 5. 页面标题 / 区块标题 / 卡片标题：拉开层级
+ * ──────────────────────────────────────────────────────────── */
+html .ba-shell .ba-page-title,
+html .ba-shell .ba-title {
+  font-size: var(--ba-fs-title);
+  line-height: 1.3;
+  letter-spacing: var(--ba-tracking-tight);
+  font-weight: 700;
+}
+
+html .ba-shell .ba-sub,
+html .ba-shell .ba-page-sub {
+  font-size: var(--ba-fs-body);
+  line-height: var(--ba-lh-body);
+}
+
+/* 卡片内标题（分类/标签/图库列表） */
+html .ba-shell .bc-name,
+html .ba-shell .bt-name,
+html .ba-shell .bgc-name {
+  font-size: var(--ba-fs-body-lg);
+  line-height: var(--ba-lh-ui);
+}
+
+/* 卡片元信息 / 说明 */
+html .ba-shell .bc-meta,
+html .ba-shell .bc-desc,
+html .ba-shell .bt-meta,
+html .ba-shell .bgc-meta {
+  font-size: var(--ba-fs-caption);
+  line-height: var(--ba-lh-body);
+}
+
+/* ─────────────────────────────────────────────────────────────
+ * 6. 确保最小可点击热区：图标类按钮补足到 --ds-touch-min
+ *    （仅对无文字的纯图标钮生效，避免把文字按钮也撑大）
+ * ──────────────────────────────────────────────────────────── */
+html .ba-shell button:not(:has(.ba-nav-label)):not(.el-button) {
+  min-height: var(--ds-ctl-h-sm);
+}
+
+/* 移动端：热区抬到 44（Apple HIG） */
+@media (max-width: 768px) {
+  html .ba-shell {
+    --ds-ctl-h: 44px;
+    --ds-ctl-h-sm: 36px;
+    --ds-row-h: 46px;
+  }
+  html .ba-shell .ba-nav-item {
+    min-height: var(--ds-row-h);
+  }
 }

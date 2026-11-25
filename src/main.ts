@@ -9,7 +9,6 @@ import router from './router'
 import 'element-plus/theme-chalk/dark/css-vars.css'
 import './styles/element-theme.css'
 import './style.css'
-import './styles/blog-admin.css'
 import './styles/background.css'
 import './styles/mobile.css'
 import './styles/records.css'
@@ -32,6 +31,10 @@ import './styles/biz-dialog.css'
 // 界面美化派生层：把设置里的 --ui-* 调节项映射成既有 token（默认值不改视觉）。
 // 放最后：它是「覆盖层」，语义上必须在所有 token 与组件原语之后。
 import './styles/ui-style.css'
+// 博客后台视觉统一层：必须放在最后 —— 它要覆盖 teacher.css 借来的 .tw-btn-sm、
+// 组件 scoped 注入的 .ba-* 尺寸，以及 ui-style 派生的 token。
+// 放前面（曾误置于 style.css 之后）会被后续样式链整体压掉，改了不生效。
+import './styles/blog-admin.css'
 import { useThemeStore } from './stores/theme'
 import { useAppSettingsStore } from './stores/settings'
 import { flushSmartUsageIfCreated } from './stores/smart'

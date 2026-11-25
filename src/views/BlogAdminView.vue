@@ -274,14 +274,14 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 36px;
+  height: var(--ds-ctl-h);
   padding: 0 var(--space-3);
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: 999px;
   background-color: var(--ds-card, #ffffff);
   color: var(--ds-text);
   font-family: inherit;
-  font-size: var(--fs-caption, 12px);
+  font-size: var(--fs-body);
   font-weight: var(--font-weight-medium, 500);
   cursor: pointer;
   transition: background-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
@@ -301,9 +301,9 @@ onMounted(async () => {
   cursor: not-allowed;
 }
 
-.ba-btn-sm {height: 36px;
+.ba-btn-sm {height: var(--ds-ctl-h);
   padding: 0 var(--space-3);
-  font-size: var(--font-size-xs, 12px);}
+  font-size: var(--fs-body);}
 
 /* 主操作与全局 .ui-btn--primary 同款（不复用类名是避免牵动全局按钮组） */
 .ba-btn-primary {
@@ -400,8 +400,9 @@ onMounted(async () => {
 .ba-side-btn {
   flex: 1 1 0;
   min-width: 0;
-  height: 32px;
-  padding: 0 6px;
+  height: var(--ds-touch-min);
+  min-height: var(--ds-touch-min);
+  padding: 0 var(--ds-ctl-pad-x-sm);
   border-radius: var(--radius-md, 8px);
   background-color: var(--color-bg-hover);
   color: var(--color-text-secondary);
@@ -438,7 +439,7 @@ onMounted(async () => {
   background-color: transparent;
   color: var(--ds-text);
   font-family: inherit;
-  font-size: var(--font-size-sm, 13px);
+  font-size: var(--fs-body);
   text-align: left;
   cursor: pointer;
   transition: background-color var(--motion-duration, 0.2s) var(--motion-ease, ease),
@@ -480,7 +481,7 @@ onMounted(async () => {
   border-radius: var(--ds-radius-pill, 999px);
   background-color: var(--ds-card-2, #f7f8fa);
   color: var(--ds-text-3);
-  font-size: var(--font-size-xs, 11px);
+  font-size: var(--fs-caption);
 }
 
 /* 内容区即唯一滚动容器（与工作台合计 Teams 的滚动约定一致） */
