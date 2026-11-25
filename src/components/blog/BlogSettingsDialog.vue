@@ -8,7 +8,7 @@
  *
  * 分区切换用本地 active 状态；弹框由父级 v-if 控制，关闭即卸载，下次打开回到默认分区。
  */
-import { onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '@/components/Icon.vue'
 import BlogSettingsPanel from './BlogSettingsPanel.vue'
@@ -43,15 +43,35 @@ const active = ref<SectionKey>('settings')
 onMounted(() => {
   const target = consumeBlogSettingsTarget()
   if (target) active.value = target
+  // 宽度：桌面 80%，窄屏 100%（原因见 dialogWidth 的注释）
+  syncNarrow()
+  window.addEventListener('resize', syncNarrow, { passive: true })
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', syncNarrow)
 })
 
 function labelOf(key: SectionKey): string {
   return NAV_ITEMS.find(i => i.key === key)?.label ?? ''
 }
+
+/**
+ * 弹框宽度。
+ *
+ * BaseDialog 把 width 当 **max-width** 用，所以传 '80%' 就是「最多占视口 80%」。
+ * 但窄屏下 overlay 还有 16px 内边距，80% 会再被扣一次 —— 390px 屏实测只剩
+ * 286px（73%），反而比原来的固定 920px 更窄。移动端直接铺满，横向留白交给
+ * overlay 的 padding。
+ */
+const isNarrow = ref(false)
+function syncNarrow(): void {
+  isNarrow.value = window.matchMedia('(max-width: 768px)').matches
+}
+const dialogWidth = computed(() => (isNarrow.value ? '100%' : '80%'))
 </script>
 
 <template>
-  <BaseDialog class="bsd-dialog" title="博客设置" width="920px" height="60vh" max-height="86vh" body-layout="flex-column" @close="emit('close')">
+  <BaseDialog class="bsd-dialog" title="博客设置" :width="dialogWidth" height="60vh" max-height="86vh" body-layout="flex-column" @close="emit('close')">
     <template #title><Icon name="cog" /> 博客设置</template>
 
     <div class="bsd-body">
