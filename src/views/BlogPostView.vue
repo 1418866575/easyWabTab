@@ -10,13 +10,13 @@
  * 关于阅读量：本视图只读展示 store.viewCount，不做自增写盘（避免每次打开都重写整包 blog 数据，
  * 写放大；如需真实统计应走分片计数，属后续优化）。
  */
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useBlogStore } from '@/stores/blog'
-import { coverBackground } from '@/composables/blogFront'
 import { listPublishedArticles, formatDateTime, relativeTime } from '@/composables/blogCore'
 import { resolveImageRefs } from '@/composables/blogImages'
 import { renderMarkdown } from '@/composables/noteMarkdown'
+import { buildBlogToc, type BlogTocItem } from '@/composables/blogToc'
 import { useBlogShared, sharedPostToArticle, mergeTaxonomy } from '@/composables/blogShared'
 import { useBlogFrontPrefs } from '@/composables/blogFrontPrefs'
 import { resolveTypo, typoHrStyle, typoVars } from '@/composables/blogTypoCore'
@@ -53,19 +53,29 @@ const visible = computed(
   () => !!displayArticle.value && displayArticle.value.status === 'published' && !displayArticle.value.deletedAt
 )
 
-const html = computed(() => {
-  if (!visible.value || !displayArticle.value) return ''
+// 正文渲染 + 大纲（同一次 HTML 遍历注入标题 id 与收集项，严格一一对应）
+const body = computed(() => {
+  if (!visible.value || !displayArticle.value) return { html: '', toc: [] as BlogTocItem[] }
   // 正文用 img:<id> 短引用指向图片库，渲染前还原为 data URL（与编辑器预览同源）；
   // 共享文章的正文在同步时已内联 dataURL，此处 resolveImageRefs 为无操作透传。
   const md = resolveImageRefs(displayArticle.value.contentMarkdown, (id) => store.imageUrlById.get(id))
   // 找Tab 主题装饰（亮色画布设计）只在不暗色时应用；暗色降级为纯 --t-* token
-  return decorateTypoHtml(renderMarkdown(md), isDark.value ? null : typoTheme.value)
+  const decorated = decorateTypoHtml(renderMarkdown(md), isDark.value ? null : typoTheme.value)
+  return buildBlogToc(decorated)
 })
-const cover = computed(() =>
-  visible.value && displayArticle.value
-    ? coverBackground(displayArticle.value, (id) => store.imageUrlById.get(id))
-    : null
-)
+const html = computed(() => body.value.html)
+const toc = computed(() => body.value.toc)
+const hasToc = computed(() => toc.value.length > 0)
+
+/** 点击大纲项：滚动到对应标题（纯 DOM 锚点，不改路由 hash，避免污染前进后退） */
+function jumpToHeading(item: BlogTocItem): void {
+  activeTocId.value = item.id
+  const el = document.getElementById(item.id)
+  el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+const activeTocId = ref('')
+/** 大纲面板展开态：桌面默认展开，窄屏默认收起（由 CSS 控制显隐，这里只管状态） */
+const tocOpen = ref(true)
 // 分类/标签名合并共享站点推送的表：访客本机查不到时也能显示真名，而不是一律「未分类」
 const allCategories = computed(() => mergeTaxonomy(store.categories, shared.taxonomy.value.categories))
 const allTags = computed(() => mergeTaxonomy(store.tags, shared.taxonomy.value.tags))
@@ -131,6 +141,49 @@ onMounted(async () => {
   // 进入已发布文章详情即记为一次「最近阅读」（失焦/卸载时由 flushBlogFrontPrefs 兜底落盘）
   if (visible.value && displayArticle.value) pushRecent(displayArticle.value.id)
 })
+
+/**
+ * 大纲滚动高亮：监听所有注入了 id 的标题，取当前滚动位置上方最近的一个作为 active。
+ * 用 scroll + rAF 节流而非 IntersectionObserver —— 后者在「标题恰好滚出视口顶部」
+ * 的时刻判定不稳定，且需要同时跟踪进入/离开方向；scroll 判定更直观。
+ */
+let tocScrollRaf = 0
+function updateActiveToc(): void {
+  if (!toc.value.length) return
+  const threshold = 140 // 视口顶部往下 140px 内的标题视为「当前阅读位置」
+  let current = toc.value[0].id
+  for (const item of toc.value) {
+    const el = document.getElementById(item.id)
+    if (el && el.getBoundingClientRect().top <= threshold) current = item.id
+    else break
+  }
+  activeTocId.value = current
+}
+function onTocScroll(): void {
+  if (tocScrollRaf) return
+  tocScrollRaf = window.requestAnimationFrame(() => {
+    tocScrollRaf = 0
+    updateActiveToc()
+  })
+}
+
+// 正文 DOM 在 html computed 变化后由 v-html 注入；用 watch 等渲染完成后挂滚动监听
+watch(html, async () => {
+  window.removeEventListener('scroll', onTocScroll)
+  if (tocScrollRaf) window.cancelAnimationFrame(tocScrollRaf)
+  tocScrollRaf = 0
+  await nextTick()
+  if (toc.value.length) {
+    window.addEventListener('scroll', onTocScroll, { passive: true })
+    updateActiveToc()
+  }
+}, { immediate: true })
+
+onBeforeUnmount(() => {
+  darkObserver?.disconnect()
+  window.removeEventListener('scroll', onTocScroll)
+  if (tocScrollRaf) window.cancelAnimationFrame(tocScrollRaf)
+})
 </script>
 
 <template>
@@ -168,9 +221,44 @@ onMounted(async () => {
         </div>
       </div>
 
-      <article class="bf-post">
-        <div v-if="cover" class="bf-post-hero" :style="{ background: cover }" />
+      <!-- 文章大纲：右上角浮动卡片，桌面常驻、窄屏折叠为按钮，点击项平滑滚动到对应标题 -->
+      <aside
+        v-if="hasToc"
+        class="bf-toc"
+        :class="{ 'is-open': tocOpen }"
+        data-testid="blog-post-toc"
+      >
+        <button
+          type="button"
+          class="bf-toc-toggle"
+          :aria-expanded="tocOpen"
+          aria-controls="bf-toc-list"
+          data-testid="blog-post-toc-toggle"
+          @click="tocOpen = !tocOpen"
+        >
+          <span aria-hidden="true">☰</span>
+          <span>文章大纲</span>
+          <span class="bf-toc-chevron" aria-hidden="true">{{ tocOpen ? '▾' : '▸' }}</span>
+        </button>
+        <nav
+          v-show="tocOpen"
+          id="bf-toc-list"
+          class="bf-toc-list"
+          aria-label="文章大纲"
+        >
+          <button
+            v-for="item in toc"
+            :key="item.id"
+            type="button"
+            class="bf-toc-item"
+            :class="['bf-toc-lv-' + item.level, { 'is-active': activeTocId === item.id }]"
+            :data-testid="'blog-post-toc-' + item.id"
+            @click="jumpToHeading(item)"
+          >{{ item.text }}</button>
+        </nav>
+      </aside>
 
+      <article class="bf-post">
         <header>
           <h1 class="bf-post-title">{{ displayArticle.title || '（无标题）' }}</h1>
           <p v-if="displayArticle.subtitle" class="bf-post-sub">{{ displayArticle.subtitle }}</p>

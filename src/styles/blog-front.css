@@ -215,6 +215,98 @@
   margin-inline: auto;
 }
 
+/* ── 文章大纲（右上角浮动卡片）────────────────────────────
+   设计：纯读取层，不改正文结构。宽屏固定在正文右侧空白区，滚动时常驻；
+   窄屏（≤1279px）收为右上角小按钮，点开后浮层列出章节，避免挤压 780px 正文。 */
+.bf-toc {
+  position: fixed;
+  top: var(--space-6);
+  right: var(--space-5);
+  z-index: 20;
+  width: 240px;
+  max-height: calc(100vh - var(--space-8));
+  display: flex;
+  flex-direction: column;
+  background: var(--bf-card);
+  border: 1px solid var(--bf-line);
+  border-radius: var(--bf-radius);
+  box-shadow: var(--shadow-card-hover);
+  overflow: hidden;
+}
+.bf-toc-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 38px;
+  padding: 0 var(--space-3);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--bf-line);
+  color: var(--bf-ink);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+.bf-toc-toggle:hover { background: var(--bf-accent-soft); }
+.bf-toc:not(.is-open) .bf-toc-toggle { border-bottom-color: transparent; }
+.bf-toc-chevron { margin-left: auto; color: var(--bf-ink-3); }
+
+.bf-toc-list {
+  overflow-y: auto;
+  padding: var(--space-2);
+  scrollbar-width: thin;
+}
+.bf-toc-item {
+  display: block;
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border: 0;
+  border-left: 2px solid transparent;
+  border-radius: var(--bf-radius);
+  color: var(--bf-ink-2);
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bf-toc-item:hover { background: var(--bf-accent-soft); color: var(--bf-ink); }
+.bf-toc-item.is-active {
+  border-left-color: var(--bf-accent-line);
+  background: var(--bf-accent-soft);
+  color: var(--bf-accent);
+  font-weight: 600;
+}
+/* 层级缩进：h2 起每级 +10px，最多缩进到 h4，避免深层级挤没文字 */
+.bf-toc-lv-2 { padding-left: var(--space-3); }
+.bf-toc-lv-3 { padding-left: calc(var(--space-3) + 10px); }
+.bf-toc-lv-4 { padding-left: calc(var(--space-3) + 20px); }
+.bf-toc-lv-5,
+.bf-toc-lv-6 { padding-left: calc(var(--space-3) + 30px); }
+
+/* 标题被固定元素遮挡时留出滚动落点：注入 id 的标题都带 .md-body 层级 */
+.md-body h1[id], .md-body h2[id], .md-body h3[id],
+.md-body h4[id], .md-body h5[id], .md-body h6[id] {
+  scroll-margin-top: var(--space-8);
+}
+
+/* 中等屏：正文左侧留白不足以容纳固定大纲，收为窄卡片（仅展开时占位） */
+@media (max-width: 1279px) {
+  .bf-toc { width: 200px; top: var(--space-4); right: var(--space-4); }
+  .bf-toc:not(.is-open) { width: auto; }
+  .bf-toc:not(.is-open) .bf-toc-list { display: none; }
+}
+/* 窄屏：贴到右上角、字号再收一档 */
+@media (max-width: 768px) {
+  .bf-toc { top: var(--space-3); right: var(--space-3); width: 180px; }
+  .bf-toc-item { font-size: var(--fs-caption); }
+}
+
 .bf-post-tags {
   display: flex;
   flex-wrap: wrap;
