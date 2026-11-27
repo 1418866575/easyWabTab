@@ -221,24 +221,36 @@ export const useThemeStore = defineStore('theme', () => {
     markDirty()
   }
 
+  /**
+   * 自定义背景是否可见：仅导航站首页（'/'）生效。
+   * 其它页面（工作台/销售/学生/工具箱/博客/图书馆/健康等）的 shell 底色不透明，
+   * 强行施加背景只会造成「部分透出、部分遮挡」的割裂感，用户明确要求仅导航站生效。
+   */
+  function isNavHomeRoute(): boolean {
+    if (typeof window === 'undefined') return true
+    // BASE_URL 默认 '/'；去掉尾斜杠后与去尾斜杠的 pathname 比较
+    const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
+    const home = base || '/'
+    const path = window.location.pathname.replace(/\/$/, '') || '/'
+    return path === home
+  }
+
   // 应用背景到 DOM
   function applyBackground() {
     const root = document.documentElement
     const body = document.body
     const app = document.getElementById('app')
 
-    if (backgroundType.value === 'none' || !backgroundValue.value) {
+    // 非导航站首页一律清除背景 class/变量（背景数据本身保留，回到首页会恢复）
+    if (!isNavHomeRoute() || backgroundType.value === 'none' || !backgroundValue.value) {
       root.style.removeProperty('--app-bg-type')
       root.style.removeProperty('--app-bg-value')
       root.style.removeProperty('--app-bg-image')
       root.style.removeProperty('--app-content-opacity')
-      root.classList.remove('app-has-background')
-      root.classList.remove('image')
-      body.classList.remove('app-has-background')
-      body.classList.remove('image')
+      root.classList.remove('app-has-background', 'image')
+      body.classList.remove('app-has-background', 'image')
       if (app) {
-        app.classList.remove('app-has-background')
-        app.classList.remove('image')
+        app.classList.remove('app-has-background', 'image')
       }
       return
     }

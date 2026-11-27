@@ -96,6 +96,10 @@ async function bootstrap() {
   const themeStore = useThemeStore()
   themeStore.initTheme()
   themeStore.initBackground()
+  // 自定义背景仅导航站首页生效：路由切换后重新同步背景 class/变量。
+  // initBackground 只覆盖首屏那一次导航（且它在 app.use(router) 之后跑），
+  // 后续前进/后退/切换模块必须靠这个钩子，否则离开/回到首页时背景不会增删。
+  router.afterEach(() => themeStore.applyBackground())
   // 界面美化在主题之后应用：它写的是 <html> 上的内联变量，主题只切 class/属性，互不覆盖。
   initUiStyle()
   useAppSettingsStore().initSettings()
