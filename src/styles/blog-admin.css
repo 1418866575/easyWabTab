@@ -255,3 +255,18 @@ html .ba-shell button:not(:has(.ba-nav-label)):not(.el-button) {
     min-height: var(--ds-row-h);
   }
 }
+
+/* ─────────────────────────────────────────────────────────────
+ * 7. 文章编辑器弹框（BlogEditor 的 BaseDialog 外壳）
+ *
+ *    为什么写在这里而不是 BlogEditor.vue 的 scoped 样式里：
+ *    BaseDialog 设了 inheritAttrs:false，调用方的 class 只落到遮罩 `.bd-overlay`，
+ *    而 `.bd-panel` / `.bd-body` 是 BaseDialog 自己的模板节点 —— 父组件的
+ *    `:deep(.bd-panel)` 永远匹配不到（scope id 打不到组件内部）。
+ *    本文件在 src/main.ts 的 import 链末尾，且遮罩默认原地渲染（teleport 未开）
+ *    仍在 .ba-shell 内，故用 `html .ba-shell .be-dialog ...` 可靠命中。
+ * ──────────────────────────────────────────────────────────── */
+/* 面板需 relative：右侧「文章设置」抽屉由 fixed 改 absolute，贴面板右缘而非视口右缘 */
+html .ba-shell .be-dialog .bd-panel {
+  position: relative;
+}

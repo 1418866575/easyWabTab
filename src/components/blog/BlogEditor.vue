@@ -788,7 +788,21 @@ async function regenerateSlug(): Promise<void> {
 </script>
 
 <template>
-  <section v-if="canRead" ref="rootEl" class="be">
+  <!-- 编辑器以弹框形式呈现（原先占满后台内容区）。
+       关闭动作统一走 handleClose：BaseDialog 的遮罩点击 / ESC 也汇到同一处，
+       这样「有未保存改动」的二次确认不会被绕过。 -->
+  <BaseDialog
+    v-if="canRead"
+    class="be-dialog"
+    hide-header
+    width="min(1400px, 96vw)"
+    height="90vh"
+    max-height="94vh"
+    body-layout="flex-column"
+    :close-on-overlay="false"
+    @close="handleClose"
+  >
+  <section ref="rootEl" class="be">
     <div class="be-body">
       <!-- 左：正文 -->
       <div class="be-main">
@@ -1279,6 +1293,7 @@ async function regenerateSlug(): Promise<void> {
     />
 
   </section>
+  </BaseDialog>
 
   <div v-else class="be-missing">
     这篇文章不存在或已被彻底删除。<button type="button" class="ui-btn ui-btn--sm" @click="emit('close')">返回列表</button>
@@ -1290,6 +1305,12 @@ async function regenerateSlug(): Promise<void> {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  /* 弹框形态：撑满 .bd-body 剩余高度并自己滚动（顶栏 sticky 依赖此滚动容器）。
+     原先在页面里它是随 `.ba-content` 滚动的普通 section。 */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 /* 顶部单卡片：第 1 行（状态 + 操作）+ 第 2 行（Markdown 工具栏），共用一层边框/阴影 */
@@ -1446,9 +1467,11 @@ html.dark .be-head-r > .be-act-share   { --be-ink: #fca5a5; }
 /* ===== Markdown 工具栏 ===== */
 /* 吸顶：相对滚动容器 .ba-content（BlogAdminView）；sticky 保留原占位，无布局跳动。
    z-index 20：高于普通流内容，低于右侧设置抽屉(200)与弹框(300)。 */
+/* 吸顶：滚动容器是 BaseDialog 的 .bd-body（已归零内边距）；
+   top 取负值补掉 .be 自身的 padding-top，否则那 16px 会透出滚动内容。
+   sticky 保留原占位，无布局跳动。z-index 20：高于普通流内容，低于设置抽屉(200)与其它弹框(300)。 */
 .be-fixed-head {
   position: sticky;
-  /* top 取负值补掉 .ba-content 的顶部 padding：否则那 16px 会透出滚动内容 */
   top: calc(-1 * var(--space-4, 16px));
   z-index: 20;
   display: flex;
@@ -1548,13 +1571,15 @@ html.dark .be-head-r > .be-act-share   { --be-ink: #fca5a5; }
 }
 
 .be-side {
-  position: fixed;
+  /* 抽屉贴在弹框面板右缘（面板已 position:relative），不再相对视口 fixed：
+     否则会滑出弹框、盖住遮罩与页面。 */
+  position: absolute;
   top: 0;
   right: 0;
+  bottom: 0;
   z-index: 200;
   width: 320px;
   max-width: 86vw;
-  height: 100vh;
   padding: var(--space-4);
   display: flex;
   flex-direction: column;
@@ -1606,7 +1631,8 @@ html.dark .be-head-r > .be-act-share   { --be-ink: #fca5a5; }
 }
 
 .be-side-overlay {
-  position: fixed;
+  /* 同 .be-side：只在弹框面板内铺一层，不能盖住整页遮罩 */
+  position: absolute;
   inset: 0;
   z-index: 150;
   background-color: rgba(15, 23, 42, 0.35);

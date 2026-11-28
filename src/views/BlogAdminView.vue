@@ -215,8 +215,8 @@ onMounted(async () => {
         <button class="ba-menu-trigger" data-testid="ba-menu-trigger" title="全部菜单" aria-label="打开全部菜单" @click="mobileMenuOpen = true">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
-        <!-- 面板页头：标题 + 副标题 + 该面板的主操作（编辑器打开时不显示） -->
-        <header v-if="!editingId" class="ba-page-head" data-testid="blog-page-head">
+        <!-- 面板页头：标题 + 副标题 + 该面板的主操作（编辑器已改弹框，列表始终在位） -->
+        <header class="ba-page-head" data-testid="blog-page-head">
           <div class="ba-page-head-text">
             <h1 class="ba-page-title">{{ pageHead.title }}</h1>
             <p class="ba-page-sub">{{ pageHead.sub }}</p>
@@ -243,9 +243,10 @@ onMounted(async () => {
           </div>
         </header>
 
+        <!-- 编辑器改弹框：列表保持在后面，弹框关闭即回到原位置 -->
         <BlogEditor v-if="editingId" :article-id="editingId" @close="closeEditor" />
         <BlogPosts
-          v-else-if="activePage === 'posts'"
+          v-if="activePage === 'posts'"
           @edit="editArticle"
           @create="startNewArticle"
         />
