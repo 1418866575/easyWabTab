@@ -790,14 +790,17 @@ async function regenerateSlug(): Promise<void> {
 <template>
   <!-- 编辑器以弹框形式呈现（原先占满后台内容区）。
        关闭动作统一走 handleClose：BaseDialog 的遮罩点击 / ESC 也汇到同一处，
-       这样「有未保存改动」的二次确认不会被绕过。 -->
+       这样「有未保存改动」的二次确认不会被绕过。
+       尺寸用 98vw/98vh 而不是 98%：BaseDialog 把 width 当 max-width、相对遮罩内边距盒计算，
+       写 % 会被遮罩 padding 二次扣减（实测只剩 95%）。遮罩内边距在 blog-admin.css 里
+       同步收成 1vh/1vw，两者相加正好铺满视口，面板即 98% × 98%。 -->
   <BaseDialog
     v-if="canRead"
     class="be-dialog"
     hide-header
-    width="min(1400px, 96vw)"
-    height="90vh"
-    max-height="94vh"
+    width="98vw"
+    height="98vh"
+    max-height="98vh"
     body-layout="flex-column"
     :close-on-overlay="false"
     @close="handleClose"
@@ -1416,6 +1419,9 @@ html.dark .be-head-r > .be-act-share   { --be-ink: #fca5a5; }
   gap: var(--space-3);
   align-items: stretch;
   flex-wrap: wrap;
+  /* 弹框形态下撑满剩余高度：正文区跟着面板一起长高，而不是留一大片空白 */
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .be-main {
@@ -1424,6 +1430,7 @@ html.dark .be-head-r > .be-act-share   { --be-ink: #fca5a5; }
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  min-height: 0;
 }
 
 /* 标题行：固定文案「标题」+ 输入框（标签常显，不依赖 placeholder） */
@@ -1461,6 +1468,8 @@ html.dark .be-head-r > .be-act-share   { --be-ink: #fca5a5; }
 .be-editor-wrap {
   display: flex;
   gap: var(--space-2);
+  /* 弹框形态：吃掉 .be-main 的剩余高度让编辑区填满（原 420px 是页面内的最小高） */
+  flex: 1 1 auto;
   min-height: 420px;
 }
 
@@ -1556,6 +1565,8 @@ html.dark .be-head-r > .be-act-share   { --be-ink: #fca5a5; }
   border: 1px solid var(--ds-line, #ececf0);
   border-radius: var(--ds-radius-card, 12px);
   background-color: var(--ds-card, #ffffff);
+  /* 跟随 .be-editor-wrap 撑满高度；编辑区自己滚，不把弹框顶长 */
+  min-height: 0;
 }
 
 .be-md {

@@ -270,3 +270,10 @@ html .ba-shell button:not(:has(.ba-nav-label)):not(.el-button) {
 html .ba-shell .be-dialog .bd-panel {
   position: relative;
 }
+
+/* 遮罩内边距收成 1vh/1vw：编辑器要 98% × 98% 的面板，
+   剩下的 2% 由这层 padding 提供（BaseDialog 的 width 是相对内边距盒的 max-width，
+   内边距越大面板越小 —— 默认 20px 会让 98vw 实际只剩 ~95%）。 */
+html .ba-shell .be-dialog {
+  padding: 1vh 1vw;
+}
