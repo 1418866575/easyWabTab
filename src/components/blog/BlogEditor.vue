@@ -273,12 +273,27 @@ function onToolbarClick(b: MdToolbarButton): void {
 }
 
 /**
- * 滚动到编辑器顶端/底端。页面级滚动容器是 .ba-content（见 BlogAdminView），
- * scrollIntoView 会作用于最近的滚动祖先，无需在此硬编码容器类名。
+ * 找最近的「可滚动」宿主：自身或祖先里第一个 overflow-y 为 auto/scroll
+ * 且内容确实溢出的元素。
+ *
+ * 为什么不能用 scrollIntoView：它只滚动**祖先**滚动容器，滚不到元素自身。
+ * 改弹框后 `.be` 自己就是滚动容器（overflow-y:auto），旧实现点了没反应。
  */
+function findScrollHost(start: HTMLElement | null): HTMLElement | null {
+  let el: HTMLElement | null = start
+  while (el) {
+    const overflowY = getComputedStyle(el).overflowY
+    if ((overflowY === 'auto' || overflowY === 'scroll') && el.scrollHeight > el.clientHeight) return el
+    el = el.parentElement
+  }
+  return null
+}
+
 const rootEl = ref<HTMLElement | null>(null)
 function scrollEditor(block: 'start' | 'end'): void {
-  rootEl.value?.scrollIntoView({ behavior: 'smooth', block })
+  const host = findScrollHost(rootEl.value)
+  if (!host) return
+  host.scrollTo({ top: block === 'start' ? 0 : host.scrollHeight, behavior: 'smooth' })
 }
 
 /** 正文快捷键：Ctrl/Cmd+B 加粗、+I 斜体、+K 链接 */
